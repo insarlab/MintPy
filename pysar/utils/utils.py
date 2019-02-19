@@ -39,70 +39,14 @@ from pysar.utils import (
     network as pnet,
 )
 
+from pysar.defaults.auto_path import autoPath
 from pysar.utils.utils0 import *
 from pysar.utils.utils1 import *
 from pysar.objects.coord import coordinate
 
 
-###############################################################################
-def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_lon=None):
-    """ Read time-series of one pixel with input lat/lon
-    Parameters: lat/lon     : float, latitude/longitude
-                ts_file     : string, filename of time-series HDF5 file
-                lookup_file : string, filename of lookup table file
-                ref_lat/lon : float, latitude/longitude of reference pixel
-    Returns:    dates : 1D np.array of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
-                dis   : 1D np.array of float in meter
-    """
-    # read date
-    obj = timeseries(ts_file)
-    obj.open(print_msg=False)
-    dates = ptime.date_list2vector(obj.dateList)[0]
-    dates = np.array(dates)
 
-    # read displacement
-    coord = coordinate(obj.metadata, lookup_file=lookup_file)
-    y, x = coord.geo2radar(lat, lon)[0:2]
-    box = (x, y, x+1, y+1)
-    dis = readfile.read(ts_file, box=box)[0]
-    # reference pixel
-    if ref_lat is not None:
-        ref_y, ref_x = coord.geo2radar(ref_lat, ref_lon)[0:2]
-        ref_box = (ref_x, ref_y, ref_x+1, ref_y+1)
-        dis -= readfile.read(ts_file, box=ref_box)[0]
-    #start at zero
-    dis -= dis[0]
-    return dates, dis
-
-
-def read_timeseries_yx(y, x, ts_file, lookup_file=None, ref_y=None, ref_x=None):
-    """ Read time-series of one pixel with input y/x
-    Parameters: y/x         : int, row/column number of interest
-                ts_file     : string, filename of time-series HDF5 file
-                lookup_file : string, filename of lookup table file
-                ref_y/x     : int, row/column number of reference pixel
-    Returns:    dates : 1D np.array of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
-                dis   : 1D np.array of float in meter
-    """
-    # read date
-    obj = timeseries(ts_file)
-    obj.open(print_msg=False)
-    dates = ptime.date_list2vector(obj.dateList)[0]
-    dates = np.array(dates)
-
-    # read displacement
-    box = (x, y, x+1, y+1)
-    dis = readfile.read(ts_file, box=box)[0]
-    # reference pixel
-    if ref_y is not None:
-        ref_box = (ref_x, ref_y, ref_x+1, ref_y+1)
-        dis -= readfile.read(ts_file, box=ref_box)[0]
-    #start at zero
-    dis -= dis[0]
-    return dates, dis
-
-
-###############################################################################
+#####################################  pysarApp utilities begin ############################################
 def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
     """Check the result of loading data for the following two rules:
         1. file existance
@@ -242,14 +186,38 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
     else:
         return loadComplete
 
-
-
 ############################################################
+def start_up(inps):
+    """The 1st step of pysarApp.py
+        Do: 1) grab project name if given
+            2) grab and go to work directory
+            3) read template(s) options
+    """
+    # 1. Project Name
+    inps.projectName = None
+    if inps.customTemplateFile:
+        inps.customTemplateFile = os.path.abspath(inps.customTemplateFile)
+        inps.projectName = os.path.splitext(os.path.basename(inps.customTemplateFile))[0]
+        print('Project name:', inps.projectName)
+
+    # 2. Work directory
+    if not inps.workDir:
+        if autoPath and 'SCRATCHDIR' in os.environ and inps.projectName:
+            inps.workDir = os.path.join(os.getenv('SCRATCHDIR'), inps.projectName, 'PYSAR')
+        else:
+            inps.workDir = os.getcwd()
+    inps.workDir = os.path.abspath(inps.workDir)
+
+    if not os.path.isdir(inps.workDir):
+        os.makedirs(inps.workDir)
+    os.chdir(inps.workDir)
+    print("Go to work directory:", inps.workDir)
+
+    #3. Read template options
+    inps, template, customTemplate = ut.read_pysarApp_template(inps)
+    return inps
 
 
-
-
-#####################################  pysarApp utilities begin ############################################
 def copy_aux_file(inps):
     # for Univ of Miami
     fileList = ['PROCESS/unavco_attributes.txt',
@@ -599,5 +567,63 @@ def plot_pysarApp(inps):
         if status is not 0:
             raise Exception('Error while plotting data files using {}'.format(plotCmd))
     return inps
+#####################################  pysarApp utilities end ######################################
 
-#####################################  pysarApp utilities end ##############################################
+
+
+##################################### Utilities Functions ##########################################
+def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_lon=None):
+    """ Read time-series of one pixel with input lat/lon
+    Parameters: lat/lon     : float, latitude/longitude
+                ts_file     : string, filename of time-series HDF5 file
+                lookup_file : string, filename of lookup table file
+                ref_lat/lon : float, latitude/longitude of reference pixel
+    Returns:    dates : 1D np.array of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
+                dis   : 1D np.array of float in meter
+    """
+    # read date
+    obj = timeseries(ts_file)
+    obj.open(print_msg=False)
+    dates = ptime.date_list2vector(obj.dateList)[0]
+    dates = np.array(dates)
+
+    # read displacement
+    coord = coordinate(obj.metadata, lookup_file=lookup_file)
+    y, x = coord.geo2radar(lat, lon)[0:2]
+    box = (x, y, x+1, y+1)
+    dis = readfile.read(ts_file, box=box)[0]
+    # reference pixel
+    if ref_lat is not None:
+        ref_y, ref_x = coord.geo2radar(ref_lat, ref_lon)[0:2]
+        ref_box = (ref_x, ref_y, ref_x+1, ref_y+1)
+        dis -= readfile.read(ts_file, box=ref_box)[0]
+    #start at zero
+    dis -= dis[0]
+    return dates, dis
+
+
+def read_timeseries_yx(y, x, ts_file, lookup_file=None, ref_y=None, ref_x=None):
+    """ Read time-series of one pixel with input y/x
+    Parameters: y/x         : int, row/column number of interest
+                ts_file     : string, filename of time-series HDF5 file
+                lookup_file : string, filename of lookup table file
+                ref_y/x     : int, row/column number of reference pixel
+    Returns:    dates : 1D np.array of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
+                dis   : 1D np.array of float in meter
+    """
+    # read date
+    obj = timeseries(ts_file)
+    obj.open(print_msg=False)
+    dates = ptime.date_list2vector(obj.dateList)[0]
+    dates = np.array(dates)
+
+    # read displacement
+    box = (x, y, x+1, y+1)
+    dis = readfile.read(ts_file, box=box)[0]
+    # reference pixel
+    if ref_y is not None:
+        ref_box = (ref_x, ref_y, ref_x+1, ref_y+1)
+        dis -= readfile.read(ts_file, box=ref_box)[0]
+    #start at zero
+    dis -= dis[0]
+    return dates, dis

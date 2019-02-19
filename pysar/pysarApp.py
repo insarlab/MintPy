@@ -17,21 +17,43 @@ import warnings
 import subprocess
 import numpy as np
 from pysar.objects import sensor
-from pysar.defaults.auto_path import autoPath
 from pysar.utils import readfile, utils as ut
 from pysar import version
 
 
 ##########################################################################
 EXAMPLE = """example:
-  pysarApp.py                                            #Run / Rerun
-  pysarApp.py  GalapagosSenDT128.template  --fast        #Fast processing
-  pysarApp.py  GalapagosSenDT128.template  --load-data   #Exit after loading data into HDF5 files
+  pysarApp.py                    #Run / Rerun
+  pysarApp.py <template_file>    #Run / Rerun
+  pysarApp.py -h / --help        #Help
+  pysarApp.py -H                 #Print all template options
 
-  # Template options
-  pysarApp.py -H                              #Print    default template
-  pysarApp.py -g                              #Generate default template
-  pysarApp.py -g GalapagosSenDT128.template   #Generate default template considering input custom template
+  # Run with --start/stop/dostep
+  pysarApp.py GalapagosSenDT128.template --dostep startup   #Do generate default_template from custom_template
+  pysarApp.py GalapagosSenDT128.template --stop load_data   #End processing after loading data
+"""
+
+
+STEP_HELP="""
+Command line options for steps processing are formed by
+combining the following three options as required:
+
+'--start=<step>', '--end=<step>', '--dostep=<step>'
+
+The step names are chosen from the following list:
+
+['startup', 'load_data', 'ref_point', 'stacking']
+['unw_cor', 'net_modify', 'net_inversion', 'temp_coh']
+['tropo', 'deramp', 'topo', 'resid_rms', 'ref_date', 'ts2vel']
+['geocode', 'google_earth', 'hdfeos5', 'plot']
+
+If --start is missing, then processing starts at the first step.
+If --end is missing, then processing ends at the final step.
+If --dostep is used, then only the named step is processed.
+
+In order to use either --start or --dostep, it is necessary that a
+previous run was done using one of the steps options to process at least
+through the step immediately preceding the starting step of the current run.
 """
 
 
@@ -90,6 +112,9 @@ def cmd_line_parse(iargs=None):
 
 
 ##########################################################################
+
+
+##########################################################################
 def main(iargs=None):
     start_time = time.time()
     inps = cmd_line_parse(iargs)
@@ -101,33 +126,14 @@ def main(iargs=None):
     #########################################
     print(version.logo)
 
-    # Project Name
-    inps.projectName = None
-    if inps.customTemplateFile:
-        inps.customTemplateFile = os.path.abspath(inps.customTemplateFile)
-        inps.projectName = os.path.splitext(os.path.basename(inps.customTemplateFile))[0]
-        print('Project name:', inps.projectName)
-
-    # Work directory
-    if not inps.workDir:
-        if autoPath and 'SCRATCHDIR' in os.environ and inps.projectName:
-            inps.workDir = os.path.join(os.getenv('SCRATCHDIR'), inps.projectName, 'PYSAR')
-        else:
-            inps.workDir = os.getcwd()
-    inps.workDir = os.path.abspath(inps.workDir)
-    if not os.path.isdir(inps.workDir):
-        os.makedirs(inps.workDir)
-    os.chdir(inps.workDir)
-    print("Go to work directory:", inps.workDir)
-
-    ut.copy_aux_file(inps)
-
-    inps, template, customTemplate = ut.read_pysarApp_template(inps)
+    
 
     #########################################
     # Loading Data
     #########################################
     print('\n**********  Load Data  **********')
+    ut.copy_aux_file(inps)
+
     loadCmd = 'load_data.py --template {}'.format(inps.templateFile)
     if inps.customTemplateFile:
         loadCmd += ' {}'.format(inps.customTemplateFile)
