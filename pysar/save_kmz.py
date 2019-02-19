@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013-2018, Heresh Fattahi, Zhang Yunjun     #
+# Copyright(c) 2013-2019, Heresh Fattahi, Zhang Yunjun     #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
 
@@ -25,18 +25,18 @@ from pysar.utils import readfile, ptime, utils as ut, plot as pp
 
 ############################################################
 EXAMPLE = """example:
-  save_kml.py geo_velocity_masked.h5 
-  save_kml.py geo_timeseries_masked.h5  20101120
-  save_kml.py geo_ifgramStack.h5        20101120_20110220
+  save_kmz.py geo_velocity_masked.h5 
+  save_kmz.py geo_timeseries_masked.h5  20101120
+  save_kmz.py geo_ifgramStack.h5        20101120_20110220
 
-  save_kml.py geo_velocity_masked.h5 -u cm -v -2 2
-  save_kml.py geo_velocity_masked.h5 -u cm --wrap --wrap-range -3 7
-  save_kml.py demGeo.h5 --cbar-label Elevation
+  save_kmz.py geo_velocity_masked.h5 -u cm -v -2 2
+  save_kmz.py geo_velocity_masked.h5 -u cm --wrap --wrap-range -3 7
+  save_kmz.py demGeo.h5 --cbar-label Elevation
 """
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Generate Google Earth KMZ file.',
+    parser = argparse.ArgumentParser(description='Generate Google Earth KMZ file with raster image.',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
@@ -103,6 +103,43 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
+def plot_colorbar(out_file, vmin, vmax, cmap='jet', figsize=(0.18, 3.6)):
+    fig, cax = plt.subplots(figsize=figsize)
+    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)  # normalize velocity colors between 0.0 and 1.0
+    cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, orientation='vertical')
+    cbar.set_label('{} [{}]'.format("Mean LOS velocity", "cm/year"), fontsize=12)
+    cbar.locator = mpl.ticker.MaxNLocator(nbins=7)
+    cbar.update_ticks()
+    cbar.ax.tick_params(which='both', labelsize=12)
+    fig.patch.set_facecolor('white')
+    fig.patch.set_alpha(0.7)
+    print('writing', out_file)
+    fig.savefig(out_file, bbox_inches='tight', facecolor=fig.get_facecolor(), dpi=300)
+    return out_file
+
+def generate_cbar_element(cbar_png_file, inps):
+    cbar_png_file = plot_colorbar(out_file=cbar_png_file,
+                                  vmin=inps.vlim[0],
+                                  vmax=inps.vlim[1],
+                                  cmap=inps.colormap)
+
+    cbar_overlay = KML.ScreenOverlay(
+        KML.name('Colorbar'),
+        KML.Icon(
+            KML.href("{}".format(cbar_png_file)),
+            KML.viewBoundScale(0.75)
+        ),
+        KML.overlayXY(x="0", y="0", xunits="fraction", yunits="fraction"),
+        KML.screenXY(x="0", y="0", xunits="fraction", yunits="fraction"),
+        KML.size(x="0", y="250", xunits="pixel", yunits="pixel"),
+        KML.rotation(0),
+        KML.visibility(1),
+        KML.open(0)
+    )
+    print('add colorbar.')
+    return cbar_overlay, cbar_png_file
+
+
 ############################################################
 def write_kmz_file(data, metadata, out_file, inps=None):
     """ Generate Google Earth KMZ file for input data matrix.
@@ -119,11 +156,11 @@ def write_kmz_file(data, metadata, out_file, inps=None):
         kmz_file - string, output KMZ filename
     Example:
         from pysar.utils import readfile, plot as pp
-        from pysar import save_kml
+        from pysar import save_kmz
         fname = 'geo_velocity_masked.h5'
         data, atr = readfile.read(fname)
         out_file = pp.auto_figure_title(fname, None)+'.kmz'
-        save_kml.write_kmz_file(data, atr, out_file)
+        save_kmz.write_kmz_file(data, atr, out_file)
     """
     if not inps:
         inps = cmd_line_parse()
@@ -176,27 +213,7 @@ def write_kmz_file(data, metadata, out_file, inps=None):
     data_png_file = out_name_base + '.png'
     print('writing {} with dpi={}'.format(data_png_file, inps.fig_dpi))
     plt.savefig(data_png_file, pad_inches=0.0,
-                transparent=True, dpi=inps.fig_dpi)
-
-    # 2.2 Making PNG file - colorbar
-    pc = plt.figure(figsize=(1, 8))
-    cax = pc.add_subplot(111)
-    norm = mpl.colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])
-    cbar = mpl.colorbar.ColorbarBase(cax, cmap=inps.colormap,
-                                     norm=norm, orientation='vertical')
-
-    cbar.set_label('{} [{}]'.format(inps.cbar_label, inps.disp_unit))
-    cbar.locator = mpl.ticker.MaxNLocator(nbins=inps.cbar_bin_num)
-    cbar.update_ticks()
-
-    pc.subplots_adjust(left=0.2, bottom=0.3, right=0.4, top=0.7)
-    pc.patch.set_facecolor('white')
-    pc.patch.set_alpha(0.7)
-
-    cbar_png_file = '{}_cbar.png'.format(out_name_base)
-    print('writing '+cbar_png_file)
-    pc.savefig(cbar_png_file, bbox_inches='tight',
-               facecolor=pc.get_facecolor(), dpi=inps.fig_dpi)
+                transparent=True, dpi=inps.fig_dpi)    
 
     # 2.3 Generate KML file
     print('generating kml file ...')
@@ -216,44 +233,9 @@ def write_kmz_file(data, metadata, out_file, inps=None):
     doc.Folder.append(slc)
 
     # Add colorbar png file
-    cb_rg = min(north - south, east - west)
-    cb_N = (north + south) / 2.0 + 0.5 * 0.5 * cb_rg
-    cb_W = east + 0.1*cb_rg
-
-    # Use mean height from existed DEM file
-    if not inps.cbar_height:
-        try:
-            fileList = ['geo_geometry*.h5', 'INPUTS/geometry*.h5',
-                        'dem*.h5', '*.dem', 'radar*.hgt']
-            dem_file = ut.get_file_list(fileList)[0]
-            print('use mean height from file: {} + 1000 m as colorbar height.'.format(dem_file))
-            dem_data = readfile.read(dem_file, datasetName='height')[0]
-            inps.cbar_height = np.rint(np.nanmean(dem_data)) + 1000.0
-        except:
-            pass
-    elif str(inps.cbar_height).lower().endswith('ground'):
-        inps.cbar_height = None
-
-    if inps.cbar_height:
-        print('set colorbar in height: %.2f m' % inps.cbar_height)
-        slc1 = KML.GroundOverlay(KML.name('colorbar'),
-                                 KML.Icon(KML.href(cbar_png_file)),
-                                 KML.altitude(str(inps.cbar_height)),
-                                 KML.altitudeMode('absolute'),
-                                 KML.LatLonBox(KML.north(str(cb_N)),
-                                               KML.south(str(cb_N-0.5*cb_rg)),
-                                               KML.west(str(cb_W)),
-                                               KML.east(str(cb_W+0.14*cb_rg))))
-    else:
-        print('set colorbar clampToGround')
-        slc1 = KML.GroundOverlay(KML.name('colorbar'),
-                                 KML.Icon(KML.href(cbar_png_file)),
-                                 KML.altitudeMode('clampToGround'),
-                                 KML.LatLonBox(KML.north(str(cb_N)),
-                                               KML.south(str(cb_N-0.5*cb_rg)),
-                                               KML.west(str(cb_W)),
-                                               KML.east(str(cb_W+0.14*cb_rg))))
-    doc.Folder.append(slc1)
+    cbar_png_file = '{}_cbar.png'.format(out_name_base)
+    cbar_overlay = generate_cbar_element(cbar_png_file, inps)[0]
+    doc.Folder.append(cbar_overlay)
     kmlstr = etree.tostring(doc, pretty_print=True).decode('utf8')
 
     # Write KML file

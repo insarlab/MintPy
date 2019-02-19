@@ -505,7 +505,7 @@ def main(iargs=None):
         print('\n--------------------------------------------')
         print('creating Google Earth KMZ file for geocoded velocity file: ...')
         outName = '{}.kmz'.format(os.path.splitext(os.path.basename(inps.velFile))[0])
-        kmlCmd = 'save_kml.py {} -o {}'.format(inps.velFile, outName)
+        kmlCmd = 'save_kmz.py {} -o {}'.format(inps.velFile, outName)
         print(kmlCmd)
         try:
             outFile = [i for i in [outName, 'PIC/{}'.format(outName)] if os.path.isfile(i)][0]

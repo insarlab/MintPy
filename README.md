@@ -24,18 +24,20 @@ PySAR reads a stack of interferograms (unwrapped interferograms, coherence, wrap
 
 #### [Example](https://github.com/yunjunz/PySAR/wiki/Example): Fernandina volcano, Galápagos with Sentinel-1 data    
 
-    wget https://zenodo.org/record/2562349/files/FernandinaSenDT128.tar.xz
+    wget https://zenodo.org/record/2571980/files/FernandinaSenDT128.tar.xz
     tar -xvJf FernandinaSenDT128.tar.xz
     cd FernandinaSenDT128/PYSAR
     pysarApp.py FernandinaSenDT128.txt   
 
 <p align="left">
-  <img width="600" src="https://yunjunzhang.files.wordpress.com/2019/02/fernandinasendt128_poi-3.jpg">
+  <img width="600" src="https://github.com/yunjunz/PySAR/blob/master/docs/resources/images/FernandinaSenDT128_POI.jpg">
 </p>    
 
 Inside pysarApp.py, it reads the unwrapped interferograms, references all of them to the same coherent pixel (reference point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the network of interferograms into time-series, calculates a parameter called "temporal coherence" which can be used to evaluate the quality of inversion, corrects local oscillator drift (for Envisat only), corrects stratified tropospheric delay (using pyaps or phase-elevation-ratio approach), removes phase ramps (if it has been asked for), corrects DEM error,... and finally estimates the velocity.   
 
 Check **./PIC** folder for auto-generated figures. More details about this test data are in [here](https://github.com/yunjunz/PySAR/wiki/Example).     
+
+Check **/exmaple/input_files** folder for example template file for different InSAR processors.
 
 #### Some useful scripts for information and visualization:   
 
@@ -45,7 +47,8 @@ Check **./PIC** folder for auto-generated figures. More details about this test 
     transect.py                #1D profile (interactive)
     plot_coherence_matrix.py   #plot coherence matrix for one pixel (interactive)
     plot_network.py            #plot network configuration of the dataset    
-    save_kml.py                #generate Google Earth KMZ file in raster image
+    save_kmz.py                #generate Google Earth KMZ file in raster image
+    save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
      
 #### Build your own processing recipe   
 
