@@ -212,7 +212,7 @@ def generate_description_string(coords, yx, v, vstd, disp, tcoh=None, font_size=
     des_str += "\n\n"
     return des_str
 
-def generate_js_datastring(dates, dygraph_file, num_date, ts, ts_max, ts_min):
+def generate_js_datastring(dates, dygraph_file, num_date, ts):
 
     js_data_string = "<script type='text/javascript' src='../../../" + dygraph_file + "'></script>"
     js_data_string += """
@@ -261,13 +261,12 @@ def generate_js_datastring(dates, dygraph_file, num_date, ts, ts_max, ts_min):
                     if(v >= 0){
                         return (' 000' + v.toFixed(2)).slice(-8)
                     }else{
-                        return (' -000' + Math.abs(v).toFixed(2)).slice(-8)
+                        return '-'+(' 000' + Math.abs(v).toFixed(2)).slice(-7)
                     }
                      
                  }
              }
          },
-         valueRange: [" + str(ts_min) + "," + str(ts_max) + "],
          ylabel: 'LOS displacement [cm]',
          yLabelWidth: 18,
          drawPoints: true,
@@ -326,9 +325,6 @@ def create_kml_document(inps, box_list, ts_obj, step):
         temp_coh = readfile.read(inps.tcoh_file, box=box)[0]
         mask = ~np.isnan(vel)
 
-        # 1.4 Get timeseries min and max values
-        ts_min = np.nanmin(ts_data)
-        ts_max = np.nanmax(ts_data)
 
         ## 2. Create KML Document
         print('create KML file.')
@@ -370,7 +366,7 @@ def create_kml_document(inps, box_list, ts_obj, step):
                     # 2.3.2 Create KML point element
                     point = KML.Point(KML.coordinates("{},{}".format(lon, lat)))
 
-                    js_data_string = generate_js_datastring(dates, dygraph_file, num_date, ts, ts_max, ts_min)
+                    js_data_string = generate_js_datastring(dates, dygraph_file, num_date, ts)
 
                     # 2.3.3 Create KML description element
                     stats_info = generate_description_string((lat, lon), (row, col), v, vstd, ts[-1], tcoh=tcoh)
@@ -651,8 +647,6 @@ def main(iargs=None):
     cmdDygraph = "cp {} {}".format(dygraph_path, dygraph_file)
     print("copying {} for interactive plotting.".format(dygraph_file))
     os.system(cmdDygraph)
-
-    # 8.4 move data KML files into new directory
 
     ## 9. Generate KMZ file
     cmdKMZ = 'zip -r {} {} {} {} {} {} {}'.format(kmz_file, kml_data_files_directory, kml_file_master, cbar_png_file, dygraph_file, dot_file, star_file)
