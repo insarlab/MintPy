@@ -23,10 +23,11 @@ from pysar import version
 
 ##########################################################################
 EXAMPLE = """example:
-  pysarApp.py                    #Run / Rerun
-  pysarApp.py <template_file>    #Run / Rerun
-  pysarApp.py -h / --help        #Help
-  pysarApp.py -H                 #Print all template options
+  pysarApp.py                       #Run / Rerun
+  pysarApp.py <template_file>       #Run / Rerun
+  pysarApp.py -h / --help           #Help on usage
+  pysarApp.py -h / --help --steps   #Help on 
+  pysarApp.py -H                    #Print all template options
 
   # Run with --start/stop/dostep
   pysarApp.py GalapagosSenDT128.template --dostep startup   #Do generate default_template from custom_template
@@ -76,14 +77,8 @@ def create_parser():
                         help='Generate default template (and merge with custom template), then exit.')
     parser.add_argument('-H', dest='print_auto_template', action='store_true',
                         help='Print/Show the example template file for routine processing.')
-    parser.add_argument('-v','--version', action='store_true', help='print version number')
-    parser.add_argument('--fast', action='store_true',
-                        help='Fast processing without using pixel-wised network inversion and DEM error correction')
+    parser.add_argument('-v','--version', action='store_true', help='print software version')
 
-    parser.add_argument('--reset', action='store_true',
-                        help='Reset files attributes to re-run pysarApp.py after loading data by:\n' +
-                             '    1) removing ref_y/x/lat/lon for ifgramStack.h5\n' +
-                             '    2) set "dropIfgram" dataset to all true for ifgramStack.h5')
     parser.add_argument('--load-data', dest='load_dataset', action='store_true',
                         help='Step 1. Load/check dataset, then exit')
     parser.add_argument('--modify-network', dest='modify_network', action='store_true',
@@ -99,18 +94,21 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
     inps.autoTemplateFile = os.path.join(os.path.dirname(__file__), '../docs/pysarApp_template.txt')
 
+    # software version
+    if inps.version:
+        raise SystemExit(version.description)
+
+    # full template
     if inps.print_auto_template:
         with open(inps.autoTemplateFile, 'r') as f:
             print(f.read())
         raise SystemExit()
 
+    # ignore if pysarApp_template.txt is input as custom template
     if (inps.customTemplateFile 
             and os.path.basename(inps.customTemplateFile) == 'pysarApp_template.txt'):
         inps.customTemplateFile = None
     return inps
-
-
-
 ##########################################################################
 
 
@@ -118,8 +116,6 @@ def cmd_line_parse(iargs=None):
 def main(iargs=None):
     start_time = time.time()
     inps = cmd_line_parse(iargs)
-    if inps.version:
-        raise SystemExit(version.description)
 
     #########################################
     # Initiation
@@ -161,16 +157,6 @@ def main(iargs=None):
             ut.plot_pysarApp(inps)
         raise SystemExit('Exit as planned after loading/checking the dataset.')
 
-    if inps.reset:
-        print('Reset dataset attributtes for a fresh re-run.\n'+'-'*50)
-        # Reset reference pixel
-        refPointCmd = 'reference_point.py {} --reset'.format(inps.stackFile)
-        print(refPointCmd)
-        status = subprocess.Popen(refPointCmd, shell=True).wait()
-        # Reset network modification
-        networkCmd = 'modify_network.py {} --reset'.format(inps.stackFile)
-        print(networkCmd)
-        status = subprocess.Popen(networkCmd, shell=True).wait()
 
     #########################################
     # Referencing Interferograms in Space
@@ -275,8 +261,6 @@ def main(iargs=None):
     print('\n**********  Invert Network of Interferograms into Time-series  **********')
     invCmd = 'ifgram_inversion.py {} --template {} --update '.format(inps.stackFile,
                                                                      inps.templateFile)
-    if inps.fast:
-        invCmd += ' --fast'
     if inps.waterMaskFile:
         invCmd += ' -m {}'.format(inps.waterMaskFile)
     print(invCmd)
@@ -365,8 +349,6 @@ def main(iargs=None):
     topoCmd = 'dem_error.py {i} -t {t} -o {o} --update '.format(i=inps.timeseriesFile,
                                                                 t=inps.templateFile,
                                                                 o=outName)
-    if not inps.fast:
-        topoCmd += ' -g {}'.format(inps.geomFile)
     print(topoCmd)
     inps.timeseriesResFile = None
     if template['pysar.topographicResidual']:
