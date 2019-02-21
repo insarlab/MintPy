@@ -93,6 +93,7 @@ NOTE = """NOTE:
 EXAMPLE = """example:
   load_data.py -t GalapagosSenDT128.tempalte
   load_data.py -t pysarApp_template.txt
+  load_data.py -t pysarApp_template.txt GalapagosSenDT128.tempalte --project GalapagosSenDT128
   load_data.py -H #Show example input template for ISCE/ROI_PAC/GAMMA products
 """
 

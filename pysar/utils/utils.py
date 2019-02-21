@@ -39,14 +39,13 @@ from pysar.utils import (
     network as pnet,
 )
 
-from pysar.defaults.auto_path import autoPath
 from pysar.utils.utils0 import *
 from pysar.utils.utils1 import *
 from pysar.objects.coord import coordinate
 
 
 
-#####################################  pysarApp utilities begin ############################################
+#####################################  pysarApp utilities begin ############################################    
 def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
     """Check the result of loading data for the following two rules:
         1. file existance
@@ -187,143 +186,6 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
         return loadComplete
 
 ############################################################
-def start_up(inps):
-    """The 1st step of pysarApp.py
-        Do: 1) grab project name if given
-            2) grab and go to work directory
-            3) read template(s) options
-    """
-    # 1. Project Name
-    inps.projectName = None
-    if inps.customTemplateFile:
-        inps.customTemplateFile = os.path.abspath(inps.customTemplateFile)
-        inps.projectName = os.path.splitext(os.path.basename(inps.customTemplateFile))[0]
-        print('Project name:', inps.projectName)
-
-    # 2. Work directory
-    if not inps.workDir:
-        if autoPath and 'SCRATCHDIR' in os.environ and inps.projectName:
-            inps.workDir = os.path.join(os.getenv('SCRATCHDIR'), inps.projectName, 'PYSAR')
-        else:
-            inps.workDir = os.getcwd()
-    inps.workDir = os.path.abspath(inps.workDir)
-
-    if not os.path.isdir(inps.workDir):
-        os.makedirs(inps.workDir)
-    os.chdir(inps.workDir)
-    print("Go to work directory:", inps.workDir)
-
-    #3. Read template options
-    inps, template, customTemplate = ut.read_pysarApp_template(inps)
-    return inps
-
-
-def copy_aux_file(inps):
-    # for Univ of Miami
-    fileList = ['PROCESS/unavco_attributes.txt',
-                'PROCESS/bl_list.txt',
-                'SLC/summary*slc.jpg']
-    try:
-        projectDir = os.path.join(os.getenv('SCRATCHDIR'), inps.projectName)
-        fileList = get_file_list([os.path.join(projectDir, i) for i in fileList],
-                                    abspath=True)
-        for file in fileList:
-            if run_or_skip(out_file=os.path.basename(file),
-                           in_file=file,
-                           check_readable=False) == 'run':
-                shutil.copy2(file, inps.workDir)
-                print('copy {} to work directory'.format(os.path.basename(file)))
-    except:
-        pass
-    return inps
-
-
-def check_obsolete_default_template(inps):
-    """Update pysarApp_template.txt file if it's obsolete, a.k.a. lack new option names"""
-    template_file = os.path.join(inps.workDir, 'pysarApp_template.txt')
-    obsolete_template = False
-    current_dict = readfile.read_template(template_file)
-    latest_dict = readfile.read_template(inps.autoTemplateFile)
-    for key in latest_dict.keys():
-        if key not in current_dict.keys():
-            obsolete_template = True
-
-    if obsolete_template:
-        print('obsolete default template detected, update to the latest template options.')
-        shutil.copy2(inps.autoTemplateFile, inps.workDir)
-        template_file = update_template_file(template_file, current_dict)
-    else:
-        print('latest template file detected:', template_file)
-    return template_file
-
-
-def read_pysarApp_template(inps):
-    print('\n**********  Read Template File  **********')
-    # default template
-    inps.templateFile = os.path.join(inps.workDir, 'pysarApp_template.txt')
-    if not os.path.isfile(inps.templateFile):
-        print('generate default template file:', inps.templateFile)
-        shutil.copy2(inps.autoTemplateFile, inps.workDir)
-    else:
-        check_obsolete_default_template(inps)
-
-    # custom template
-    customTemplate = None
-    if inps.customTemplateFile:
-        # Copy custom template file to work directory
-        inputs_dir = os.path.join(inps.workDir, 'INPUTS')
-        if run_or_skip(out_file=os.path.join(inputs_dir, os.path.basename(inps.customTemplateFile)),
-                       in_file=inps.customTemplateFile,
-                       check_readable=False) == 'run':
-            if not os.path.isdir(inputs_dir):
-                os.makedirs(inputs_dir)
-                print('create directory:', inputs_dir)
-            shutil.copy2(inps.customTemplateFile, inputs_dir)
-            print('copy {} to INPUTS directory'.format(os.path.basename(inps.customTemplateFile)))
-
-        # Read custom template
-        print('read custom template file:', inps.customTemplateFile)
-        customTemplate = readfile.read_template(inps.customTemplateFile)
-        # correct some loose type errors
-        standardValues = {'def':'auto', 'default':'auto',
-                          'y':'yes', 'on':'yes', 'true':'yes',
-                          'n':'no', 'off':'no', 'false':'no'
-                         }
-        for key, value in customTemplate.items():
-            if value in standardValues.keys():
-                customTemplate[key] = standardValues[value]
-        for key in ['pysar.deramp', 'pysar.troposphericDelay.method']:
-            if key in customTemplate.keys():
-                customTemplate[key] = customTemplate[key].lower().replace('-', '_')
-        if 'processor' in customTemplate.keys():
-            customTemplate['pysar.load.processor'] = customTemplate['processor']
-        for key in ['SUBSET_XMIN', 'SUBSET_YMIN']:
-            if key in customTemplate.keys():
-                customTemplate.pop(key)
-
-        # Update default template with custom input template
-        print('update default template based on input custom template')
-        inps.templateFile = update_template_file(inps.templateFile, customTemplate)
-
-    if inps.generate_template:
-        raise SystemExit('Exit as planned after template file generation.')
-
-    print('read default template file:', inps.templateFile)
-    template = readfile.read_template(inps.templateFile)
-    template = check_template_auto_value(template)
-
-    # Get existing files name: unavco_attributes.txt
-    try:
-        inps.unavcoMetadataFile = get_file_list('unavco_attribute*txt', abspath=True)[0]
-        print('UNAVCO metadata file:', inps.unavcoMetadataFile)
-    except:
-        inps.unavcoMetadataFile = None
-
-    inps.plot = template['pysar.plot']
-
-    return inps, template, customTemplate
-
-
 def correct_unwrap_error(inps, template):
     unw_cor_method = template['pysar.unwrapError.method']
     if unw_cor_method:
