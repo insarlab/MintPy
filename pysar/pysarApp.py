@@ -262,10 +262,26 @@ class TimeSeriesAnalysis:
     def configure(self):
         """
         """
-        config = argparse.Namespace
-        for step in STEP_list:
-            if step == 'loadData':
-                
+        self.config = argparse.Namespace
+        for sname in STEP_list:
+            step = argparse.Namespace
+            if sname == 'loadData':
+                step.cmd = ['load_data.py']
+                step.input = []
+                step.output = ['INPUTS/ifgramStack.h5']
+
+            elif sname == 'refPoint':
+                step.cmd = ['reference_point.py']
+                step.input = ['INPUTS/ifgramStack.h5']
+                step.output = ['INPUTS/ifgramStack.h5', ]
+
+            # flag - run the step or not
+            step.run = True
+            if sname not in self.runSteps:
+                step.run = False
+            vars(self.config)[sname] = step
+        return self.config
+
         
     def runLoadData(self):
         """Data preparation.
@@ -287,6 +303,9 @@ class TimeSeriesAnalysis:
         print(cmd)
         status = subprocess.Popen(cmd, shell=True).wait()
         os.chdir(self.workDir)
+
+        # check loading result
+        status = ut.check_loaded_dataset(self.workDir, print_msg=True)[0]
         return status, cmd
 
 
@@ -314,7 +333,10 @@ class TimeSeriesAnalysis:
 
     def runRefPoint(self):
         """"""
-        # check loaded dataset
+        # 
+        ut.check_loaded_dataset(self.workDir, print_msg=False)
+
+
 
     def run():
 

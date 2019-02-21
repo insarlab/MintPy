@@ -46,144 +46,94 @@ from pysar.objects.coord import coordinate
 
 
 #####################################  pysarApp utilities begin ############################################    
-def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
+def check_loaded_dataset(work_dir='./', print_msg=True):
     """Check the result of loading data for the following two rules:
         1. file existance
         2. file attribute readability
 
-    If inps is valid/not_empty: return updated inps;
-    Otherwise, return True/False if all recommended file are loaded and readably or not
-
-    Parameters: work_dir : string, PySAR working directory
-                inps : Namespace, optional, variable for pysarApp.py.
-                    Not needed for check loading result.
-    Returns:    loadComplete : bool, complete loading or not
-                    #if True, PROCESS, SLC folder could be removed.
-                or  inps : Namespace, if it's inputed
-                    atr : dict, metadata of found ifgramStack file
-    Example:    True = ut.check_loaded_dataset($SCRATCHDIR+'/SinabungT495F50AlosA/PYSAR')
-                inps, atr = ut.check_loaded_dataset(inps.workDir, inps)
+    Parameters: work_dir  : string, PySAR working directory
+                print_msg : bool, print out message
+    Returns:    True, if all required files and dataset exist; otherwise, ERROR
+                    If True, PROCESS, SLC folder could be removed.
+    Example:    work_dir = os.path.expandvars('$SCRATCHDIR/SinabungT495F50AlosA/PYSAR')
+                ut.check_loaded_dataset(work_dir)
     """
+    load_complete = True
+
     if not work_dir:
         work_dir = os.getcwd()
     work_dir = os.path.abspath(work_dir)
 
-    if inps:
-        inps.stackFile = None
-        inps.geomFile = None
-        inps.lookupFile = None
-
-    #--------------------------- Search file ------------------------#
-    # 1. interferograms stack
-    file_list = [os.path.join(work_dir, 'INPUTS/ifgramStack.h5')]
-    stack_file = is_file_exist(file_list, abspath=True)
-    if not stack_file:
-        if inps:
-            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT),
-                                    './INPUTS/ifgramStack.h5')
-            #return inps, None
-        else:
-            return False
-    else:
-        atr = readfile.read_attribute(stack_file)
-
-    # 2. geometry
-    if 'X_FIRST' in atr.keys():
-        geocoded = True
-        file_list = [os.path.join(work_dir, 'INPUTS/geometryGeo.h5')]
-    else:
-        geocoded = False
-        file_list = [os.path.join(work_dir, 'INPUTS/geometryRadar.h5')]
-    geom_file = is_file_exist(file_list, abspath=True)
-
-    # 3. lookup table
-    # could be different than geometry file in case of roipac and gamma
-    file_list = [os.path.join(work_dir, 'INPUTS/geometry*.h5')]
-    lookup_file = get_lookup_file(file_list,
-                                  abspath=True,
-                                  print_msg=print_msg)
-
-    #------------------ Check required datasets -----------------------#
-    # set loadComplete to False if any required dataset is missing
-    loadComplete = True
-
-    # 1. stack_file: unwrapPhase, coherence
+    # 1. interferograms stack file: unwrapPhase, coherence
+    flist = [os.path.join(work_dir, 'INPUTS/ifgramStack.h5')]
+    stack_file = is_file_exist(flist, abspath=True)
     if stack_file is not None:
-        stack_obj = ifgramStack(stack_file)
-        stack_obj.open(print_msg=False)
-        for dsName in ['unwrapPhase', 'coherence']:
-            if dsName not in stack_obj.datasetNames:
-                loadComplete = False
-                raise Exception(('required dataset "{}" is missing'
-                                 ' in file {}'.format(dsName, stack_file)))
+        obj = ifgramStack(stack_file)
+        obj.open(print_msg=False)
+        for dname in ['unwrapPhase', 'coherence']:
+            if dname not in obj.datasetNames:
+                raise ValueError('required dataset "{}" is missing in file {}'.format(dname, stack_file))
     else:
-        loadComplete = False
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT),
-                                './INPUTS/ifgramStack.h5')
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), './INPUTS/ifgramStack.h5')
+
+    atr = readfile.read_attribute(stack_file)
 
     # 2. geom_file: height
-    if geom_file is not None:
-        geom_obj = geometry(geom_file)
-        geom_obj.open(print_msg=False)
-        dsName = geometryDatasetNames[0]
-        if dsName not in geom_obj.datasetNames:
-            loadComplete = False
-            raise Exception(('required dataset "{}" is missing'
-                             ' in file {}'.format(dsName, geom_file)))
+    if 'X_FIRST' in atr.keys():
+        flist = [os.path.join(work_dir, 'INPUTS/geometryGeo.h5')]
     else:
-        loadComplete = False
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT),
-                                './INPUTS/geometry*.h5')
+        flist = [os.path.join(work_dir, 'INPUTS/geometryRadar.h5')]
+    geom_file = is_file_exist(flist, abspath=True)
+    if geom_file is not None:
+        obj = geometry(geom_file)
+        obj.open(print_msg=False)
+        dname = geometryDatasetNames[0]
+        if dname not in obj.datasetNames:
+            raise ValueError('required dataset "{}" is missing in file {}'.format(dname, geom_file))
+    else:
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), './INPUTS/geometry*.h5')
 
     # 3. lookup_file: latitude,longitude or rangeCoord,azimuthCoord
+    # could be different than geometry file in case of roipac and gamma
+    flist = [os.path.join(work_dir, 'INPUTS/geometry*.h5')]
+    lookup_file = get_lookup_file(flist, abspath=True, print_msg=print_msg)
     if lookup_file is not None:
-        lut_obj = geometry(lookup_file)
-        lut_obj.open(print_msg=False)
+        obj = geometry(lookup_file)
+        obj.open(print_msg=False)
 
         if atr['PROCESSOR'] in ['isce', 'doris']:
-            dsNames = [geometryDatasetNames[1],
-                       geometryDatasetNames[2]]
+            dnames = [geometryDatasetNames[1],
+                      geometryDatasetNames[2]]
         elif atr['PROCESSOR'] in ['gamma', 'roipac']:
-            dsNames = [geometryDatasetNames[3],
-                       geometryDatasetNames[4]]
+            dnames = [geometryDatasetNames[3],
+                      geometryDatasetNames[4]]
         else:
             raise AttributeError('InSAR processor: {}'.format(atr['PROCESSOR']))
 
-        for dsName in dsNames:
-            if dsName not in lut_obj.datasetNames:
-                loadComplete = False
-                raise Exception(('required dataset "{}" is missing'
-                                 ' in file {}'.format(dsName, lookup_file)))
+        for dname in dnames:
+            if dname not in obj.datasetNames:
+                load_complete = False
+                raise Exception('required dataset "{}" is missing in file {}'.format(dname, lookup_file))
     else:
-        loadComplete = False
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT),
-                                './INPUTS/geometry*.h5')
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), './INPUTS/geometry*.h5')
 
     # print message
     if print_msg:
         print(('Loaded dataset are processed by '
                'InSAR software: {}'.format(atr['PROCESSOR'])))
-        if geocoded:
+        if 'X_FIRST' in atr.keys():
             print('Loaded dataset is in GEO coordinates')
         else:
             print('Loaded dataset is in RADAR coordinates')
         print('Interferograms Stack: {}'.format(stack_file))
         print('Geometry File       : {}'.format(geom_file))
         print('Lookup Table File   : {}'.format(lookup_file))
-        if loadComplete:
-            print(('-'*50+'\nAll data needed found/loaded/copied. '
-                   'Processed 2-pass InSAR data can be removed.'))
+        if load_complete:
+            print('-'*50)
+            print('All data needed found/loaded/copied. Processed 2-pass InSAR data can be removed.')
         print('-'*50)
+    return load_complete
 
-    # Return & Update namespace inps if inputed
-    if inps:
-        inps.stackFile = stack_file
-        inps.geomFile = geom_file
-        inps.lookupFile = lookup_file
-        inps.geocoded = geocoded
-        return inps, atr
-    else:
-        return loadComplete
 
 ############################################################
 def correct_unwrap_error(inps, template):
