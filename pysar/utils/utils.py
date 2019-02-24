@@ -55,6 +55,9 @@ def check_loaded_dataset(work_dir='./', print_msg=True):
                 print_msg : bool, print out message
     Returns:    True, if all required files and dataset exist; otherwise, ERROR
                     If True, PROCESS, SLC folder could be removed.
+                stack_file  : 
+                geom_file   :
+                lookup_file :
     Example:    work_dir = os.path.expandvars('$SCRATCHDIR/SinabungT495F50AlosA/PYSAR')
                 ut.check_loaded_dataset(work_dir)
     """
@@ -132,37 +135,10 @@ def check_loaded_dataset(work_dir='./', print_msg=True):
             print('-'*50)
             print('All data needed found/loaded/copied. Processed 2-pass InSAR data can be removed.')
         print('-'*50)
-    return load_complete
+    return load_complete, stack_file, geom_file, lookup_file
 
 
 ############################################################
-def correct_unwrap_error(inps, template):
-    unw_cor_method = template['pysar.unwrapError.method']
-    if unw_cor_method:
-        print('\n**********  Unwrapping Error Correction **********')
-        cmd_bridging = 'unwrap_error_bridging.py {} -t {} --update'.format(inps.stackFile,
-                                                                           inps.templateFile)
-
-        cmd_closure = 'unwrap_error_phase_closure.py {} {} -t {} --update'.format(inps.stackFile,
-                                                                                  inps.maskFile,
-                                                                                  inps.templateFile)
-        if unw_cor_method == 'bridging':
-            unwCmd = cmd_bridging
-        elif unw_cor_method == 'phase_closure':
-            unwCmd = cmd_closure
-        elif unw_cor_method == 'bridging+phase_closure':
-            unwCmd = cmd_bridging + ' -i unwrapPhase -o unwrapPhase_bridging\n'
-            unwCmd += cmd_closure + ' -i unwrapPhase_bridging -o unwrapPhase_bridging_phaseClosure'
-        else:
-            raise ValueError('un-recognized method: {}'.format(unw_cor_method))
-
-        print(unwCmd)
-        status = subprocess.Popen(unwCmd, shell=True).wait()
-        if status is not 0:
-            raise Exception('Error while correcting phase unwrapping errors.\n')
-    return inps
-
-
 def get_temporal_coherence_mask(inps, template):
     """Generate mask from temporal coherence"""
     configKeys = ['pysar.networkInversion.minTempCoh']

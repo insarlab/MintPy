@@ -143,13 +143,11 @@ class TimeSeriesAnalysis:
         self.cwd = os.path.abspath(os.getcwd())
         return
 
-
     def startup(self):
-        """The starting point of the workflow. 
-        It runs everytime. 
-        It does: 1) grab project name if given
-                 2) grab and go to work directory
-                 3) get and read template(s) options
+        """The starting point of the workflow. It runs everytime. 
+        It 1) grab project name if given
+           2) grab and go to work directory
+           3) get and read template(s) options
         """
         #1. Get projectName
         self.projectName = None
@@ -283,30 +281,38 @@ class TimeSeriesAnalysis:
         return self.config
 
         
-    def runLoadData(self):
-        """Data preparation.
+    def run_load_data(self):
+        """step - loadData
         It 1) copy auxiliary files into PYSAR/PIC directory (for Unvi of Miami only)
            2) load all interferograms stack files into PYSAR/INPUTS directory.
+           3) check loading result
+           4) add custom metadata (optional, for HDF-EOS5 format only)
         """
-        if not self.doLoadData:
-            return 0, None
-
+        # 1) copy aux files (optional)
         self._copy_aux_file()
 
-        # cmd
+        # 2) loading data
         cmd = 'load_data.py --template {}'.format(self.templateFile)
         if self.customTemplateFile:
             cmd += ' {}'.format(self.customTemplateFile)
         if self.projectName:
             cmd += ' --project {}'.format(self.projectName)
-
+        # run
         print(cmd)
         status = subprocess.Popen(cmd, shell=True).wait()
         os.chdir(self.workDir)
 
-        # check loading result
-        status = ut.check_loaded_dataset(self.workDir, print_msg=True)[0]
-        return status, cmd
+        # 3) check loading result
+        status, stack_file = ut.check_loaded_dataset(self.workDir, print_msg=True)[0:2]
+
+        # 4) add custom metadata (optional)
+        if self.customTemplateFile:
+            print('updating {} metadata based on custom template file: {}'.format(
+                os.path.basename(stack_file), inps.customTemplateFile))
+            # use ut.add_attribute() instead of add_attribute.py because of
+            # better control of special metadata, such as SUBSET_X/YMIN
+            ut.add_attribute(stack_file, customTemplate)
+        return status
 
 
     def _copy_aux_file(self):
@@ -331,19 +337,160 @@ class TimeSeriesAnalysis:
         return
 
 
-    def runRefPoint(self):
-        """"""
-        # 
-        ut.check_loaded_dataset(self.workDir, print_msg=False)
+    def run_reference_point(self):
+        """step - refPoint
+        It 1) generate mask file from common conn comp
+           2) generate average spatial coherence
+           3) add REF_X/Y and/or REF_LAT/LON attribute to stack file
+        """
+        # check the existence of ifgramStack.h5
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        mask_file = 'maskConnComp.h5'
+        coh_file = 'avgSpatialCoh.h5'
 
+        # 1) generate mask file from the common connected components
+        cmd = 'generate_mask.py {} --nonzero -o {} --update'.format(stack_file, mask_file)
+        print(cmd)
+        subprocess.Popen(cmd, shell=True).wait()
+
+        # 2) generate average spatial coherence
+        cmd = 'temporal_average.py {} --dataset coherence -o {} --update'.format(stack_file, coh_file)
+        print(cmd)
+        subprocess.Popen(cmd, shell=True).wait()
+
+        # 3) select reference point
+        cmd = 'reference_point.py {} -t {} -c {}'.format(stack_file, self.templateFile, coh_file)
+        print(cmd)
+        status = subprocess.Popen(cmd, shell=True).wait()
+        return status
+
+
+    def run_ifgram_stacking(self):
+        """step - stacking
+        """
+        # check the existence of ifgramStack.h5
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        water_mask_file = 'waterMask.h5'
+        pha_vel_file = 'avgPhaseVelocity.h5'
+        coh_mask_file = 'maskSpatialCoh.h5'
+
+        # 1) stacking - average phase velocity
+        cmd = 'temporal_average.py {} --dataset unwrapPhase -o {} --update'.format(stack_file, pha_vel_file)
+        print(cmd)
+        status = subprocess.Popen(cmd, shell=True).wait()
+
+        # 2) generate mask based on average spatial coherence
+        if ut.run_or_skip(out_file=coh_mask_file, in_file=pha_vel_file) == 'run':
+            cmd = 'generate_mask.py {} -m 0.7 -o {}'.format(pha_vel_file, coh_mask_file)
+            if os.path.isfile(water_mask_file):
+                cmd += ' --base {}'.format(water_mask_file)
+            print(cmd)
+            subprocess.Popen(cmd, shell=True).wait()
+        return status
+
+
+    def run_unwrap_error_correction(self):
+        """step - unwCor
+        """
+        method = self.template['pysar.unwrapError.method']
+        if not method:
+            return True
+
+        # check the existence of ifgramStack.h5
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        mask_file = 'maskConnComp.h5'
+
+        cmd1 = 'unwrap_error_bridging.py {} -t {} --update'.format(stack_file, self.templateFile)
+        cmd2 = 'unwrap_error_phase_closure.py {} {} -t {} --update'.format(stack_file, mask_file, self.templateFile)
+
+        if method == 'bridging':
+            cmd = cmd1
+        elif method == 'phase_closure':
+            cmd = cmd2
+        elif method == 'bridging+phase_closure':
+            cmd = cmd1 + ' -i unwrapPhase -o unwrapPhase_bridging\n'
+            cmd += cmd2 + ' -i unwrapPhase_bridging -o unwrapPhase_bridging_phaseClosure'
+        else:
+            raise ValueError('un-recognized method: {}'.format(method))
+
+        print(cmd)
+        status = subprocess.Popen(cmd, shell=True).wait()
+        return status
+
+
+    def run_network_modification(self):
+        """step - netModify
+        """
+
+        # check the existence of ifgramStack.h5
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        coh_txt = '{}_coherence_spatialAvg.txt'.format(os.path.splitext(os.path.basename(stack_file))[0])
+        try:
+            net_fig = [i for i in ['Network.pdf', 'PIC/Network.pdf'] if os.path.isfile(i)][0]
+        except:
+            net_fig = None
+
+        # 1) modify network
+        cmd = 'modify_network.py {} -t {}'.format(stack_file, self.templateFile)
+        print(cmd)
+        status = subprocess.Popen(cmd, shell=True).wait()
+
+        # 2) plot network
+        cmd = 'plot_network.py {} -t {} --nodisplay'.format(stack_file, self.templateFile)
+        print(cmd)
+        if ut.run_or_skip(out_file=net_fig,
+                          in_file=[stack_file, coh_txt, self.templateFile],
+                          check_readable=False) == 'run':
+            subprocess.Popen(cmd, shell=True).wait()
+        return status
+
+
+    def run_network_inversion(self):
+        """step - netInversion
+        """
+        # check the existence of ifgramStack.h5
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+
+        # 1) invert ifgramStack for time-series
+        cmd = 'ifgram_inversion.py {} -t {} --update '.format(stack_file, self.templateFile)
+        print(cmd)
+        status = subprocess.Popen(cmd, shell=True).wait()
+
+        # 2) 
+        return status
 
 
     def run():
 
-        self.runLoadData()
+        self.run_load_data()
 
-        self.runRefPoint()
+        self.run_reference_point()
 
+        self.run_ifgram_stacking()
+
+        self.run_unwrap_error_correction()
+
+        self.run_network_modification()
+
+        self.run_network_inversion()
+
+        self.run_tropospheric_delay_correction()
+
+        self.run_phase_deramping()
+
+        self.run_topographic_residual_correction()
+
+        self.run_residual_phase_rms()
+
+        self.run_reference_date()
+
+        self.run_timeseries2velocity()
+
+        self.run_geocode()
+
+        self.run_save2google_earth()
+
+        self.run_save2hdfeos5()
 
         # plot results before exit
         self.plot()

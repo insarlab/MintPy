@@ -237,7 +237,7 @@ def main(iargs=None):
     plotCmd = 'plot_network.py {} --template {} --nodisplay'.format(inps.stackFile,
                                                                     inps.templateFile)
     print(plotCmd)
-    inps.cohSpatialAvgFile = '{}_coherence_spatialAverage.txt'.format(
+    inps.cohSpatialAvgFile = '{}_coherence_spatialAvg.txt'.format(
         os.path.splitext(os.path.basename(inps.stackFile))[0])
     try:
         outFile = [i for i in ['Network.pdf', 'PIC/Network.pdf'] if os.path.isfile(i)][0]
@@ -261,8 +261,6 @@ def main(iargs=None):
     print('\n**********  Invert Network of Interferograms into Time-series  **********')
     invCmd = 'ifgram_inversion.py {} --template {} --update '.format(inps.stackFile,
                                                                      inps.templateFile)
-    if inps.waterMaskFile:
-        invCmd += ' -m {}'.format(inps.waterMaskFile)
     print(invCmd)
     inps.timeseriesFile = 'timeseries.h5'
     inps.tempCohFile = 'temporalCoherence.h5'
