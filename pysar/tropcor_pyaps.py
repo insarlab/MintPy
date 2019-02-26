@@ -402,6 +402,7 @@ def get_delay_timeseries(inps, atr):
         trop_data = np.zeros((num_date, length, width), np.float32)
 
         print('calcualting delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
+        print('number of grib files used: {}'.format(num_date))
         prog_bar = ptime.progressBar(maxValue=num_date)
         for i in range(num_date):
             grib_file = inps.grib_file_list[i]
