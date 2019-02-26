@@ -15,11 +15,8 @@ import time
 from datetime import datetime as dt
 import shutil
 import argparse
-import warnings
 import subprocess
-
 import numpy as np
-
 from pysar.objects import sensor, RAMP_LIST
 from pysar.utils import readfile, utils as ut
 from pysar.defaults.auto_path import autoPath
@@ -152,10 +149,9 @@ def cmd_line_parse(iargs=None):
 
 ##########################################################################
 class TimeSeriesAnalysis:
-    """ Routine workflow object for InSAR time series analysis
-    The routine workflow consists a series of hardwired steps, each step has:
-        do${stepName} : bool, to mark whether to run this 
-    
+    """ Routine processing workflow for time series analysis of small baseline InSAR stacks
+    Reference: Yunjun, Z., H. Fattahi, F. Amelung, (2019), InSAR time series analysis: error
+    correction and noise reduction.
     """
     def __init__(self, customTemplateFile=None, workDir=None):
         self.customTemplateFile = customTemplateFile
@@ -372,8 +368,7 @@ class TimeSeriesAnalysis:
 
 
     def run_ifgram_stacking(self):
-        """step - stacking
-        """
+        """step - stacking"""
         # check the existence of ifgramStack.h5
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
         water_mask_file = 'waterMask.h5'
@@ -396,8 +391,7 @@ class TimeSeriesAnalysis:
 
 
     def run_unwrap_error_correction(self):
-        """step - unwCor
-        """
+        """step - unwCor"""
         status = 0
         method = self.template['pysar.unwrapError.method']
         if not method:
@@ -427,8 +421,7 @@ class TimeSeriesAnalysis:
 
 
     def run_network_modification(self):
-        """step - netModify
-        """
+        """step - netModify"""
         # check the existence of ifgramStack.h5
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
         coh_txt = '{}_coherence_spatialAvg.txt'.format(os.path.splitext(os.path.basename(stack_file))[0])
@@ -471,7 +464,7 @@ class TimeSeriesAnalysis:
 
 
     def generate_temporal_coherence_mask(self):
-        """"""
+        """Generate reliable pixel mask from temporal coherence"""
         geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
         tcoh_file = 'temporalCoherence.h5'
         mask_file = 'maskTempCoh.h5'
@@ -596,8 +589,8 @@ class TimeSeriesAnalysis:
 
 
     def run_local_oscillator_drift_correction(self):
-        """Correct local oscillator drift (LOD)
-        Automatically applied for Envisat data.
+        """step - LOD
+        Correct local oscillator drift (LOD). Automatically applied for Envisat data.
         """
         status = 0
         step = 'LOD'
@@ -618,8 +611,7 @@ class TimeSeriesAnalysis:
 
 
     def run_tropospheric_delay_correction(self):
-        """step - tropo
-        """
+        """step - tropo"""
         status = 0
         step = 'tropo'
         geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
@@ -678,8 +670,7 @@ class TimeSeriesAnalysis:
 
 
     def run_phase_deramping(self):
-        """step - deramp
-        """
+        """step - deramp"""
         step = 'deramp'
         mask_file = self.template['pysar.deramp.maskFile']
         method    = self.template['pysar.deramp']
@@ -701,6 +692,7 @@ class TimeSeriesAnalysis:
 
     def run_topographic_residual_correction(self):
         """step - topo
+        Topographic residual (DEM error) correction (optional).
         """
         step = 'topo'
         geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
@@ -721,7 +713,9 @@ class TimeSeriesAnalysis:
 
 
     def run_residual_phase_rms(self):
-        """step - residRms"""
+        """step - residRms
+        Noise evaluation based on the phase residual
+        """
         step = 'residRms'
         res_file = 'timeseriesResidual.h5'
         status = 0
@@ -735,7 +729,9 @@ class TimeSeriesAnalysis:
 
 
     def run_reference_date(self):
-        """step - refDate"""
+        """step - refDate
+        Change reference date for all time-series files (optional).
+        """
         status = 0
         step = 'refDate'
         if self.template['pysar.reference.date']:
@@ -814,6 +810,7 @@ class TimeSeriesAnalysis:
 
     def run_save2google_earth(self):
         """step - googleEarth
+        Save velocity file in geo coordinates into Google Earth raster image.
         """
         status = 0
         step = 'googleEarth'
@@ -842,7 +839,9 @@ class TimeSeriesAnalysis:
 
 
     def run_save2hdfeos5(self):
-        """step - hdfeos5"""
+        """step - hdfeos5
+        Save displacement time-series and its aux data in geo coordinate into HDF-EOS5 format
+        """
         status = 0
         step = 'hdfeos5'
         if self.template['pysar.save.hdfEos5'] is True:
@@ -884,6 +883,7 @@ class TimeSeriesAnalysis:
 
 
     def plot(self):
+        """Plot data files and save to figures in PIC folder"""
         if not self.template['pysar.plot']:
             return
 
@@ -1027,6 +1027,7 @@ def main(iargs=None):
     m, s = divmod(time.time()-start_time, 60)
     print('\nTotal time: {:02.0f} mins {:02.1f} secs'.format(m, s))
     return
+
 
 ###########################################################################################
 if __name__ == '__main__':
