@@ -997,17 +997,18 @@ class TimeSeriesAnalysis:
                 self.plot(print_aux=False)
 
                 # go back to original directory
-                print('Go to directory:', self.cwd)
+                print('Go back to directory:', self.cwd)
                 os.chdir(self.cwd)
 
                 # raise error
                 raise RuntimeError('step {} with status {}'.format(sname, status))
 
-        # plot result
-        self.plot(print_aux=True)
+        # plot result (show aux visualization message more multiple steps processing)
+        print_aux = len(steps) > 1
+        self.plot(print_aux=print_aux)
 
         # go back to original directory
-        print('Go to directory:', self.cwd)
+        print('Go back to directory:', self.cwd)
         os.chdir(self.cwd)
 
         # message
