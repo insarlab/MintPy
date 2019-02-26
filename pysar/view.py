@@ -30,10 +30,10 @@ from pysar.utils import (ptime,
                          utils as ut,
                          plot as pp)
 from pysar.multilook import multilook_data
-from pysar import subset
+from pysar import subset, version
+
 
 #fig = None
-
 
 ##################################################################################################
 EXAMPLE = """example:
@@ -108,6 +108,9 @@ def create_parser():
     infile.add_argument('--plot-setting', dest='disp_setting_file',
                         help='Template file with plot setting.\n'+PLOT_TEMPLATE)
 
+    parser.add_argument('--noverbose', dest='print_msg', action='store_false',
+                        help='Disable the verbose message printing.')
+
     parser = pp.add_data_disp_argument(parser)
     parser = pp.add_dem_argument(parser)
     parser = pp.add_figure_argument(parser)
@@ -148,11 +151,19 @@ def cmd_line_parse(iargs=None):
     if not inps.disp_axis:
         inps.disp_tick = False
 
+    # verbose print using --noverbose option
+    global vprint
+    vprint = print if inps.print_msg else lambda *args, **kwargs: None
+
+    # Backend setting
+    if not inps.disp_fig:
+        plt.switch_backend('Agg')
+
     return inps
 
 
 def run_or_skip(inps):
-    print('update mode: ON')
+    vprint('update mode: ON')
     flag = 'skip'
 
     # get existed output file names
@@ -171,8 +182,8 @@ def run_or_skip(inps):
         if ti > to:
             flag = 'run'
         else:
-            print('{} exist and are newer than input file: {}'.format(outfiles, inps.file))
-            print('skip the plotting.')
+            vprint('{} exist and are newer than input file: {}'.format(outfiles, inps.file))
+            vprint('skip the plotting.')
     return flag
 
 
@@ -191,9 +202,8 @@ def check_multilook_input(pixel_box, row_num, col_num):
     # Update multilook based on multilook_num
     if multilook_num > 1:
         multilook = True
-        print('number of data points per figure: '+'%.1E' %
-              (pixel_num_per_figure))
-        print('multilook with a factor of '+str(multilook_num)+' for display')
+        vprint('number of data points per figures: {:.1E}'.format(pixel_num_per_figure))
+        vprint('multilook with a factor of {} for display'.format(multilook_num))
     else:
         multilook = False
     return multilook, multilook_num
@@ -222,7 +232,7 @@ def update_inps_with_display_setting_file(inps, disp_set_file):
     return inps
 
 
-def update_inps_with_file_metadata(inps, metadata, print_msg=True):
+def update_inps_with_file_metadata(inps, metadata):
     # Subset
     # Convert subset input into bounding box in radar / geo coordinate
     # geo_box = None if atr is not geocoded.
@@ -232,19 +242,18 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
     inps.geo_box = coord.box_pixel2geo(inps.pix_box)
     # Out message
     data_box = (0, 0, inps.width, inps.length)
-    if print_msg:
-        print('data   coverage in y/x: '+str(data_box))
-        print('subset coverage in y/x: '+str(inps.pix_box))
-        print('data   coverage in lat/lon: '+str(coord.box_pixel2geo(data_box)))
-        print('subset coverage in lat/lon: '+str(inps.geo_box))
-        print('------------------------------------------------------------------------')
+    vprint('data   coverage in y/x: '+str(data_box))
+    vprint('subset coverage in y/x: '+str(inps.pix_box))
+    vprint('data   coverage in lat/lon: '+str(coord.box_pixel2geo(data_box)))
+    vprint('subset coverage in lat/lon: '+str(inps.geo_box))
+    vprint('------------------------------------------------------------------------')
 
     # DEM contour display
     if max(inps.pix_box[3] - inps.pix_box[1],
            inps.pix_box[2] - inps.pix_box[0]) > 2e3:
         inps.disp_dem_contour = False
-        if inps.dem_file and print_msg:
-            print('area exceed 2000 pixels, turn off default DEM contour display')
+        if inps.dem_file:
+            vprint('area exceed 2000 pixels, turn off default DEM contour display')
 
     # Multilook, if too many subplots in one figure for less memory and faster speed
     if inps.multilook_num > 1:
@@ -255,7 +264,7 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
                                             inps.colormap,
                                             datasetName=inps.dset[0],
                                             cmap_lut=inps.cmap_lut,
-                                            print_msg=print_msg)
+                                            print_msg=inps.print_msg)
 
     # Reference Point
     # Convert ref_lalo if existed, to ref_yx, and use ref_yx for the following
@@ -263,9 +272,8 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
     if inps.ref_lalo and inps.geo_box:
         inps.ref_yx = [coord.lalo2yx(inps.ref_lalo[0], coord_type='lat'),
                        coord.lalo2yx(inps.ref_lalo[1], coord_type='lon')]
-        if print_msg:
-            print('input reference point in lat/lon: {}'.format(inps.ref_lalo))
-            print('input reference point in y  /x  : {}'.format(inps.ref_yx))
+        vprint('input reference point in lat/lon: {}'.format(inps.ref_lalo))
+        vprint('input reference point in y  /x  : {}'.format(inps.ref_yx))
 
     # ref_lalo
     if inps.ref_yx and inps.geo_box:
@@ -305,26 +313,25 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
 
     # Flip Left-Right / Up-Down
     if inps.auto_flip:
-        inps.flip_lr, inps.flip_ud = pp.auto_flip_direction(metadata, print_msg=print_msg)
+        inps.flip_lr, inps.flip_ud = pp.auto_flip_direction(metadata, print_msg=inps.print_msg)
 
     # Figure Title
     if not inps.fig_title:
         inps.fig_title = pp.auto_figure_title(metadata['FILE_PATH'],
                                               datasetNames=inps.dset,
                                               inps_dict=vars(inps))
-    if print_msg:
-        print('figure title: '+inps.fig_title)
+    vprint('figure title: '+inps.fig_title)
 
     # Figure output file name
     if not inps.outfile:
         inps.outfile = ['{}{}'.format(inps.fig_title, inps.fig_ext)]
 
-    inps = update_figure_setting(inps, print_msg=print_msg)
+    inps = update_figure_setting(inps)
     return inps
 
 
 ##################################################################################################
-def update_data_with_plot_inps(data, metadata, inps, print_msg=True):
+def update_data_with_plot_inps(data, metadata, inps):
     # Seed Point
     if inps.ref_yx:   # and inps.ref_yx != [int(metadata['REF_Y']), int(metadata['REF_X'])]:
         try:
@@ -337,8 +344,7 @@ def update_data_with_plot_inps(data, metadata, inps, print_msg=True):
         elif len(data.shape) == 3:
             data -= np.tile(data[:, ref_y, ref_x].reshape(-1, 1, 1),
                             (1, data.shape[1], data.shape[2]))
-        if print_msg:
-            print('set reference pixel to: {}'.format(inps.ref_yx))
+        vprint('set reference pixel to: {}'.format(inps.ref_yx))
     else:
         inps.ref_yx = None
 
@@ -351,7 +357,7 @@ def update_data_with_plot_inps(data, metadata, inps, print_msg=True):
                                                      disp_unit=inps.disp_unit,
                                                      wrap=inps.wrap,
                                                      wrap_range=inps.wrap_range,
-                                                     print_msg=print_msg)
+                                                     print_msg=inps.print_msg)
     if inps.wrap:
         inps.vlim = inps.wrap_range
 
@@ -359,18 +365,16 @@ def update_data_with_plot_inps(data, metadata, inps, print_msg=True):
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
     if not inps.vlim:
         inps.vlim = [np.nanmin(data), np.nanmax(data)]
-    if print_msg:
-        print('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
-        print('display range: {} {}'.format(inps.vlim, inps.disp_unit))
+    vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
+    vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
 
     return data, inps
 
 
 ##################################################################################################
-def prep_slice(cmd, print_msg=True):
+def prep_slice(cmd):
     """Prepare data from command line as input, for easy call plot_slice() externally
     Parameters: cmd : string, command to be run in terminal
-                print_msg : bool
     Returns:    data : 2D np.ndarray, data to be plotted
                 atr  : dict, metadata 
                 inps : namespace, input argument for plot setup
@@ -382,21 +386,20 @@ def prep_slice(cmd, print_msg=True):
         cmd += '-c jet -v -3 10 --cbar-loc bottom --cbar-nbins 3 --cbar-ext both --cbar-size 5% '
         cmd += '--dem srtm1.dem --dem-nocontour '
         cmd += '--lalo-step 0.2 --lalo-loc 1 0 1 0 --scalebar 0.3 0.80 0.05 --notitle --fontsize 12 '
-        d_v, atr ,inps = view.prep_slice(cmd, print_msg=print_msg)
-        ax, inps, im, cbar = view.plot_slice(ax, d_v, atr, inps, print_msg=print_msg)
+        d_v, atr ,inps = view.prep_slice(cmd)
+        ax, inps, im, cbar = view.plot_slice(ax, d_v, atr, inps)
         plt.show()
     """
-    if print_msg:
-        print(cmd)
+    vprint(cmd)
     inps = cmd_line_parse(cmd.split()[1:])
-    inps, atr = check_input_file_info(inps, print_msg=print_msg)
-    inps = update_inps_with_file_metadata(inps, atr, print_msg=print_msg)
+    inps, atr = check_input_file_info(inps)
+    inps = update_inps_with_file_metadata(inps, atr)
 
     # read data
     data, atr = readfile.read(inps.file,
                               datasetName=inps.dset[0],
                               box=inps.pix_box,
-                              print_msg=print_msg)
+                              print_msg=inps.print_msg)
     # reference in time
     if inps.ref_date:
         data -= readfile.read(inps.file,
@@ -414,12 +417,12 @@ def prep_slice(cmd, print_msg=True):
                                  print_msg=False)[0]
         data[data != 0.] -= ref_data
 
-    data, inps = update_data_with_plot_inps(data, atr, inps, print_msg=print_msg)
+    data, inps = update_data_with_plot_inps(data, atr, inps)
     inps.msk, inps.mask_file = pp.read_mask(inps.file,
                                             mask_file=inps.mask_file,
                                             datasetName=inps.dset[0],
                                             box=inps.pix_box,
-                                            print_msg=print_msg)
+                                            print_msg=inps.print_msg)
     # mask
     if inps.zero_mask:
         data = np.ma.masked_where(data == 0., data)
@@ -428,7 +431,7 @@ def prep_slice(cmd, print_msg=True):
     return data, atr, inps
 
 
-def plot_slice(ax, data, metadata, inps=None, print_msg=True):
+def plot_slice(ax, data, metadata, inps=None):
     """Plot one slice of matrix 
     Parameters: ax : matplot.pyplot axes object
                 data : 2D np.array, 
@@ -458,19 +461,17 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
         dem, dem_metadata, dem_pix_box = pp.read_dem(inps.dem_file,
                                                      pix_box=inps.pix_box,
                                                      geo_box=inps.geo_box,
-                                                     print_msg=print_msg)
+                                                     print_msg=inps.print_msg)
 
-    if print_msg:
-        print('display data in transparency: '+str(inps.transparency))
+    vprint('display data in transparency: '+str(inps.transparency))
 
     #-------------------- 2.1 Plot in Geo-coordinate using Basemap --------------------------------#
     num_row, num_col = data.shape
     if inps.geo_box and inps.fig_coord == 'geo':
         # Map Setup
-        if print_msg:
-            print('plot in Lat/Lon coordinate')
-            print('map projection: '+inps.map_projection)
-            print('boundary database resolution: '+inps.resolution)
+        vprint('plot in Lat/Lon coordinate')
+        vprint('map projection: '+inps.map_projection)
+        vprint('boundary database resolution: '+inps.resolution)
         if inps.map_projection in ['cyl', 'merc', 'mill', 'cea', 'gall']:
             m = pp.BasemapExt(llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],
                               urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],
@@ -494,31 +495,26 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
 
         # Draw coastline
         if inps.coastline:
-            if print_msg:
-                print('draw coast line')
+            vprint('draw coast line')
             m.drawcoastlines()
 
         # Plot DEM
         if inps.dem_file:
-            if print_msg:
-                print('plotting DEM background ...')
+            vprint('plotting DEM background ...')
             m = pp.plot_dem_background(ax=m, geo_box=inps.geo_box,
                                        dem=dem, inps=inps,
-                                       print_msg=print_msg)
+                                       print_msg=inps.print_msg)
 
         # Plot Data
         coord = ut.coordinate(metadata)
-        if print_msg:
-            print('plotting Data ...')
+        vprint('plotting Data ...')
         if inps.disp_gps and inps.gps_component and inps.ref_gps_site:
             ref_site_lalo = GPS(site=inps.ref_gps_site).get_stat_lat_lon(print_msg=False)
             y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
             y -= inps.pix_box[1]
             x -= inps.pix_box[0]
             data -= data[y, x]
-            if print_msg:
-                print('referencing to GPS station: {} at {}'.format(inps.ref_gps_site,
-                                                                    ref_site_lalo))
+            vprint('referencing to GPS station: {} at {}'.format(inps.ref_gps_site, ref_site_lalo))
         im = m.imshow(data, cmap=inps.colormap, origin='upper',
                       vmin=inps.vlim[0], vmax=inps.vlim[1],
                       alpha=inps.transparency, interpolation='nearest',
@@ -526,8 +522,7 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
 
         # Scale Bar
         if inps.disp_scalebar:
-            if print_msg:
-                print('plot scale bar')
+            vprint('plot scale bar')
             m.draw_scale_bar(loc=inps.scalebar, ax=ax,
                              labelpad=inps.scalebar_pad,
                              font_size=inps.font_size,
@@ -535,15 +530,14 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
 
         # Lat Lon labels
         if inps.lalo_label:
-            if print_msg:
-                print('plot lat/lon labels')
+            vprint('plot lat/lon labels')
             m.draw_lalo_label(inps.geo_box, ax=ax,
                               lalo_step=inps.lalo_step,
                               lalo_loc=inps.lalo_loc,
                               lalo_max_num=inps.lalo_max_num,
                               font_size=inps.font_size,
                               color=inps.font_color,
-                              print_msg=print_msg)
+                              print_msg=inps.print_msg)
         else:
             ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
 
@@ -551,24 +545,21 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
         if inps.disp_ref_pixel and inps.ref_lalo:
             ax.plot(inps.ref_lalo[1], inps.ref_lalo[0],
                     inps.ref_marker, ms=inps.ref_marker_size)
-            if print_msg:
-                print('plot reference point')
+            vprint('plot reference point')
 
         # Plot points of interest
         if inps.pts_lalo is not None:
             ax.plot(inps.pts_lalo[:, 1], inps.pts_lalo[:, 0],
                     inps.pts_marker, ms=inps.pts_marker_size,
                     markeredgecolor='k', markerfacecolor='none')
-            if print_msg:
-                print('plot points of interest')
+            vprint('plot points of interest')
 
         # Show UNR GPS stations
         if inps.disp_gps:
             SNWE = (inps.geo_box[3], inps.geo_box[1],
                     inps.geo_box[0], inps.geo_box[2])
-            ax = pp.plot_gps(ax, SNWE, inps, metadata, print_msg=print_msg)
-            if print_msg:
-                print('displaying GPS stations')
+            ax = pp.plot_gps(ax, SNWE, inps, metadata, print_msg=inps.print_msg)
+            vprint('displaying GPS stations')
 
         # save basemapExt object
         inps.map = m
@@ -599,18 +590,15 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
     #-------------------- 2.2 Plot in Y/X-coordinate ------------------------------------------------#
     else:
         inps.fig_coord = 'radar'
-        if print_msg:
-            print('plotting in Y/X coordinate ...')
+        vprint('plotting in Y/X coordinate ...')
         # Plot DEM
         if inps.dem_file:
-            if print_msg:
-                print('plotting DEM background ...')
+            vprint('plotting DEM background ...')
             ax = pp.plot_dem_background(ax=ax, geo_box=None, dem=dem,
-                                        inps=inps, print_msg=print_msg)
+                                        inps=inps, print_msg=inps.print_msg)
 
         # Plot Data
-        if print_msg:
-            print('plotting Data ...')
+        vprint('plotting Data ...')
         extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
                   inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)   #(left, right, bottom, top) in data coordinates
         im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
@@ -627,16 +615,14 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
 
             if ref_y and ref_x:
                 ax.plot(ref_x, ref_y, inps.ref_marker, ms=inps.ref_marker_size)
-                if print_msg:
-                    print('plot reference point')
+                vprint('plot reference point')
 
         # Plot points of interest
         if inps.pts_yx is not None:
             ax.plot(inps.pts_yx[:, 1], inps.pts_yx[:, 0],
                     inps.pts_marker, ms=inps.ref_marker_size,
                     markeredgecolor='black')
-            if print_msg:
-                print('plot points of interest')
+            vprint('plot points of interest')
 
         ax.set_xlim(extent[0:2])
         ax.set_ylim(extent[2:4])
@@ -671,20 +657,17 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
 
     # 3.3 Flip Left-Right / Up-Down
     if inps.flip_lr:
-        if print_msg:
-            print('flip figure left and right')
+        vprint('flip figure left and right')
         ax.invert_xaxis()
 
     if inps.flip_ud:
-        if print_msg:
-            print('flip figure up and down')
+        vprint('flip figure up and down')
         ax.invert_yaxis()
 
     # 3.4 Turn off axis
     if not inps.disp_axis:
         ax.axis('off')
-        if print_msg:
-            print('turn off axis display')
+        vprint('turn off axis display')
 
     # 3.5 Turn off tick label
     if not inps.disp_tick:
@@ -696,7 +679,7 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
     return ax, inps, im, cbar
 
 
-def check_input_file_info(inps, print_msg=True):
+def check_input_file_info(inps):
     # File Baic Info
     atr = readfile.read_attribute(inps.file)
     msg = 'input file is '
@@ -705,9 +688,9 @@ def check_input_file_info(inps, print_msg=True):
     msg += '{} file: {}'.format(atr['FILE_TYPE'], os.path.abspath(inps.file))
     if 'DATA_TYPE' in atr.keys():
         msg += ' in {} format'.format(atr['DATA_TYPE'])
-    if print_msg:
-        print('\n******************** Display ********************')
-        print(msg)
+
+    vprint('run {} in {}'.format(os.path.basename(__file__), version.description))
+    vprint(msg)
 
     ## size and name
     inps.length = int(atr['LENGTH'])
@@ -715,14 +698,13 @@ def check_input_file_info(inps, print_msg=True):
     inps.key = atr['FILE_TYPE']
     inps.fileBase = os.path.splitext(os.path.basename(inps.file))[0]
     inps.fileExt = os.path.splitext(inps.file)[1]
-    if print_msg:
-        print('file size in y/x: {}'.format((inps.length, inps.width)))
+    vprint('file size in y/x: {}'.format((inps.length, inps.width)))
 
     # File dataset List
     inps.sliceList = readfile.get_slice_list(inps.file)
 
     # Read input list of dataset to display
-    inps, atr = read_dataset_input(inps, print_msg=print_msg)
+    inps, atr = read_dataset_input(inps)
 
     return inps, atr
 
@@ -746,14 +728,13 @@ def check_dataset_input(allList, inList=[], inNumList=[], globSearch=True):
     return outList, outNumList
 
 
-def read_dataset_input(inps, print_msg=True):
+def read_dataset_input(inps):
     """Check input / exclude / reference dataset input with file dataset list"""
     # read inps.dset + inps.dsetNumList --> inps.dsetNumList
     if len(inps.dset) > 0 or len(inps.dsetNumList) > 0:
         if inps.key == 'velocity':
             inps.globSearch = False
-            if print_msg:
-                print('turning glob search OFF for {} file'.format(inps.key))
+            vprint('turning glob search OFF for {} file'.format(inps.key))
         inps.dsetNumList = check_dataset_input(inps.sliceList,
                                                inps.dset,
                                                inps.dsetNumList,
@@ -799,39 +780,33 @@ def read_dataset_input(inps, print_msg=True):
                                        [],
                                        inps.globSearch)[0][0]
         if not ref_date:
-            if print_msg:
-                print('WARNING: input reference date is not included in input file!')
-                print('input reference date: '+inps.ref_date)
+            vprint('WARNING: input reference date is not included in input file!')
+            vprint('input reference date: '+inps.ref_date)
             inps.ref_date = None
         else:
             inps.ref_date = ref_date
 
-    if print_msg:
-        if inps.key in ['ifgramStack']:
-            print('num of datasets in file {}: {}'.format(os.path.basename(inps.file),
-                                                          len(inps.sliceList)))
-            print('num of datasets to exclude: {}'.format(len(inps.exDsetList)))
-            print('num of datasets to display: {}'.format(len(inps.dset)))
-        else:
-            print('num of datasets in file {}: {}'.format(os.path.basename(inps.file),
-                                                          len(inps.sliceList)))
-            print('datasets to exclude ({}):\n{}'.format(len(inps.exDsetList),
-                                                         inps.exDsetList))
-            print('datasets to display ({}):\n{}'.format(len(inps.dset),
-                                                         inps.dset))
-        if inps.ref_date and inps.key in timeseriesKeyNames:
-            print('input reference date: {}'.format(inps.ref_date))
+    if inps.key in ['ifgramStack']:
+        vprint('num of datasets in file {}: {}'.format(os.path.basename(inps.file), len(inps.sliceList)))
+        vprint('num of datasets to exclude: {}'.format(len(inps.exDsetList)))
+        vprint('num of datasets to display: {}'.format(len(inps.dset)))
+    else:
+        vprint('num of datasets in file {}: {}'.format(os.path.basename(inps.file), len(inps.sliceList)))
+        vprint('datasets to exclude ({}):\n{}'.format(len(inps.exDsetList), inps.exDsetList))
+        vprint('datasets to display ({}):\n{}'.format(len(inps.dset), inps.dset))
+    if inps.ref_date and inps.key in timeseriesKeyNames:
+        vprint('input reference date: {}'.format(inps.ref_date))
 
     if inps.dsetNum == 0:
-        print('ERROR: no input dataset found!')
-        print('available datasets:\n{}'.format(inps.sliceList))
-        raise Exception()
+        msg = 'No input dataset found!'
+        msg += '\navailable datasets:\n{}'.format(inps.sliceList)
+        raise Exception(msg)
 
     atr = readfile.read_attribute(inps.file, datasetName=inps.dset[0].split('-')[0])
     return inps, atr
 
 
-def update_figure_setting(inps, print_msg=True):
+def update_figure_setting(inps):
     """Update figure setting based on number of subplots/datasets
     1) fig_size and font_size
     2) for multi: figure/row/column number
@@ -857,15 +832,13 @@ def update_figure_setting(inps, print_msg=True):
                             pp.max_figsize_height/plot_shape[1])
             inps.fig_size = [i*fig_scale for i in plot_shape]
             #inps.fig_size = [np.floor(i*fig_scale*2)/2 for i in plot_shape]
-            if print_msg:
-                print('figure size : '+str(inps.fig_size))
+            vprint('figure size : '+str(inps.fig_size))
 
     # Multiple Plots
     else:
         if not inps.fig_size:
             inps.fig_size = pp.default_figsize_multi
-        if print_msg:
-            print('figure size : '+str(inps.fig_size))
+        vprint('figure size : '+str(inps.fig_size))
 
         # Figure number (<= 200 subplots per figure)
         if not inps.fig_num:
@@ -886,11 +859,10 @@ def update_figure_setting(inps, print_msg=True):
                                                      inps.fig_num)
         inps.fig_num = np.ceil(float(inps.dsetNum) / float(inps.fig_row_num * 
                                                            inps.fig_col_num)).astype(int)
-        if print_msg:
-            print('dataset number: '+str(inps.dsetNum))
-            print('row     number: '+str(inps.fig_row_num))
-            print('column  number: '+str(inps.fig_col_num))
-            print('figure  number: '+str(inps.fig_num))
+        vprint('dataset number: '+str(inps.dsetNum))
+        vprint('row     number: '+str(inps.fig_row_num))
+        vprint('column  number: '+str(inps.fig_col_num))
+        vprint('figure  number: '+str(inps.fig_num))
 
         if not inps.font_size:
             inps.font_size = 12
@@ -947,8 +919,8 @@ def read_data4figure(i_start, i_end, inps, metadata):
 
     # slow reading with one 2D matrix at a time
     else:
-        print('reading data ...')
-        prog_bar = ptime.progressBar(maxValue=i_end-i_start)
+        vprint('reading data ...')
+        prog_bar = ptime.progressBar(maxValue=i_end-i_start, print_msg=inps.print_msg)
         for i in range(i_start, i_end):
             d = readfile.read(inps.file,
                               datasetName=inps.dset[i],
@@ -960,7 +932,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
 
     # ref_date for timeseries
     if inps.ref_date:
-        print('consider input reference date: '+inps.ref_date)
+        vprint('consider input reference date: '+inps.ref_date)
         ref_data = readfile.read(inps.file,
                                  datasetName=inps.ref_date,
                                  box=inps.pix_box,
@@ -970,7 +942,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
     # v/dlim, adjust data if all subplots are the same type
     #metadata = readfile.read_attribute(inps.file)
     if len(inps.dsetFamilyList) == 1 or inps.key in ['velocity', 'timeseries']:
-        data, inps = update_data_with_plot_inps(data, metadata, inps, print_msg=False)
+        data, inps = update_data_with_plot_inps(data, metadata, inps)
         if (not inps.vlim 
                 and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)
                 and inps.dsetFamilyList[0] not in ['bperp']):
@@ -985,11 +957,11 @@ def read_data4figure(i_start, i_end, inps, metadata):
 
     # mask
     if inps.msk is not None:
-        print('masking data')
+        vprint('masking data')
         msk = np.tile(inps.msk, (data.shape[0], 1, 1))
         data = np.ma.masked_where(msk == 0., data)
     if inps.zero_mask:
-        print('masking pixels with zero value')
+        vprint('masking pixels with zero value')
         data = np.ma.masked_where(data == 0., data)
     return data
 
@@ -1100,8 +1072,8 @@ def plot_figure(j, inps, metadata):
     4) common colorbar and save
     """
     fig_title = 'Figure {} - {}'.format(str(j), inps.outfile[j-1])
-    print('----------------------------------------')
-    print(fig_title)
+    vprint('----------------------------------------')
+    vprint(fig_title)
 
     # Open a new figure object
     fig = plt.figure(j, figsize=inps.fig_size)
@@ -1113,8 +1085,8 @@ def plot_figure(j, inps, metadata):
     data = read_data4figure(i_start, i_end, inps, metadata)
 
     # Loop - Subplots
-    print('plotting ...')
-    prog_bar = ptime.progressBar(maxValue=i_end - i_start)
+    vprint('plotting ...')
+    prog_bar = ptime.progressBar(maxValue=i_end-i_start, print_msg=inps.print_msg)
     for i in range(i_start, i_end):
         idx = i - i_start
         ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, idx + 1)
@@ -1137,23 +1109,23 @@ def plot_figure(j, inps, metadata):
     # Min and Max for this figure
     inps.dlim_all = [np.nanmin([inps.dlim_all[0], inps.dlim[0]]), 
                      np.nanmax([inps.dlim_all[1], inps.dlim[1]])]
-    print('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
+    vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
     if inps.vlim:
-        print('display range: {} {}'.format(inps.vlim, inps.disp_unit))
+        vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
 
     # Colorbar
     if not inps.vlim:
-        print('Note: different color scale for EACH subplot!')
+        vprint('Note: different color scale for EACH subplot!')
     else:
         if inps.disp_cbar:
-            print('show colorbar')
+            vprint('show colorbar')
             fig.subplots_adjust(right=0.93)
             cax = fig.add_axes([0.94, 0.3, 0.005, 0.4])
             inps, cbar = pp.plot_colorbar(inps, im, cax)
 
     # Save Figure
     if inps.save_fig:
-        print('save figure to {} with dpi={}'.format(inps.outfile[j-1], inps.fig_dpi))
+        vprint('save figure to {} with dpi={}'.format(inps.outfile[j-1], inps.fig_dpi))
         fig.savefig(inps.outfile[j-1], bbox_inches='tight',
                     transparent=True, dpi=inps.fig_dpi)
         if not inps.disp_fig:
@@ -1192,11 +1164,11 @@ def prepare4multi_subplots(inps, metadata):
         length, width = int(metadata['LENGTH']), int(metadata['WIDTH'])
         if 0 <= ref_y < length and 0 <= ref_x < width:
             inps.file_ref_yx = [ref_y, ref_x]
-            print('consider reference pixel in y/x: {}'.format(inps.file_ref_yx))
+            vprint('consider reference pixel in y/x: {}'.format(inps.file_ref_yx))
 
     if inps.dsetNum > 10:
         inps.disp_ref_pixel = False
-        print('turn off reference pixel plot for more than 10 datasets to display')
+        vprint('turn off reference pixel plot for more than 10 datasets to display')
 
     # Check dropped interferograms
     inps.dropDatasetList = []
@@ -1206,13 +1178,13 @@ def prepare4multi_subplots(inps, metadata):
         dropDate12List = obj.get_drop_date12_list()
         for i in inps.dsetFamilyList:
             inps.dropDatasetList += ['{}-{}'.format(i, j) for j in dropDate12List]
-        print("mark interferograms with 'dropIfgram=False' in red colored title")
+        vprint("mark interferograms with 'dropIfgram=False' in red colored title")
 
     # Read DEM
     if inps.dem_file:
         dem_metadata = readfile.read_attribute(inps.dem_file)
         if all(dem_metadata[i] == metadata[i] for i in ['LENGTH', 'WIDTH']):
-            print('reading DEM: {} ... '.format(os.path.basename(inps.dem_file)))
+            vprint('reading DEM: {} ... '.format(os.path.basename(inps.dem_file)))
             dem = readfile.read(inps.dem_file,
                                 datasetName='height',
                                 box=inps.pix_box,
@@ -1225,17 +1197,13 @@ def prepare4multi_subplots(inps, metadata):
         else:
             inps.dem_file = None
             inps.transparency = 1.0
-            print('Input DEM file has different size than data file, ignore it.')
+            vprint('Input DEM file has different size than data file, ignore it.')
     return inps
 
 
 #########################################  Main Function  ########################################
 def main(iargs=None):
-    global fig
-
     inps = cmd_line_parse(iargs)
-    if not inps.disp_fig:
-        plt.switch_backend('Agg')  # Backend setting
 
     inps, atr = check_input_file_info(inps)
 
@@ -1250,11 +1218,12 @@ def main(iargs=None):
     inps.msk, inps.mask_file = pp.read_mask(inps.file,
                                             mask_file=inps.mask_file,
                                             datasetName=inps.dset[0],
-                                            box=inps.pix_box)
+                                            box=inps.pix_box,
+                                            print_msg=inps.print_msg)
 
     ############################### One Subplot ###############################
     if inps.dsetNum == 1:
-        print('reading data ...')
+        vprint('reading data ...')
         data, atr = readfile.read(inps.file,
                                   datasetName=inps.dset[0],
                                   box=inps.pix_box,
@@ -1278,10 +1247,10 @@ def main(iargs=None):
             data[data != 0.] -= ref_data
 
         if inps.zero_mask:
-            print('masking pixels with zero value')
+            vprint('masking pixels with zero value')
             data = np.ma.masked_where(data == 0., data)
         if inps.msk is not None:
-            print('masking data')
+            vprint('masking data')
             data = np.ma.masked_where(inps.msk == 0., data)
 
         data, inps = update_data_with_plot_inps(data, atr, inps)
@@ -1294,7 +1263,7 @@ def main(iargs=None):
 
         # Save figure
         if inps.save_fig:
-            print('save figure to {} with dpi={}'.format(inps.outfile[0], inps.fig_dpi))
+            vprint('save figure to {} with dpi={}'.format(inps.outfile[0], inps.fig_dpi))
             if not inps.disp_whitespace:
                 plt.savefig(inps.outfile[0], transparent=True, dpi=inps.fig_dpi, pad_inches=0.0)
             else:
@@ -1310,14 +1279,14 @@ def main(iargs=None):
             plot_figure(j, inps, metadata=atr)
 
         if inps.fig_num > 1:
-            print('----------------------------------------')
-            print('all data range: {} {}'.format(inps.dlim_all, inps.disp_unit))
+            vprint('----------------------------------------')
+            vprint('all data range: {} {}'.format(inps.dlim_all, inps.disp_unit))
             if inps.vlim:
-                print('display  range: {} {}'.format(inps.vlim, inps.disp_unit))
+                vprint('display  range: {} {}'.format(inps.vlim, inps.disp_unit))
 
     # Display Figure
     if inps.disp_fig:
-        print('showing ...')
+        vprint('showing ...')
         plt.show()
     return
 

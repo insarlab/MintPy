@@ -824,13 +824,14 @@ class TimeSeriesAnalysis:
 
             # output
             kmz_file = '{}.kmz'.format(os.path.splitext(os.path.basename(vel_file))[0])
+            cmd = 'save_kmz.py {} -o {}'.format(vel_file, kmz_file)
+            print(cmd)
+
+            # update mode
             try:
                 kmz_file = [i for i in [kmz_file, 'PIC/{}'.format(kmz_file)] if os.path.isfile(i)][0]
             except:
                 kmz_file = None
-
-            cmd = 'save_kmz.py {} -o {}'.format(vel_file, kmz_file)
-            print(cmd)
             if ut.run_or_skip(out_file=kmz_file, in_file=vel_file, check_readable=False) == 'run':
                 status = subprocess.Popen(cmd, shell=True).wait()
         else:
@@ -882,7 +883,7 @@ class TimeSeriesAnalysis:
         return status
 
 
-    def plot(self):
+    def plot(self, print_aux=True):
         """Plot data files and save to figures in PIC folder"""
         if not self.template['pysar.plot']:
             return
@@ -918,15 +919,18 @@ class TimeSeriesAnalysis:
         status = subprocess.Popen(cmd, shell=True).wait()
 
         # message for more visualization scripts
-        msg = '\n'+'-'*50
-        msg += '\nUse info.py to check the HDF5 file structure and metadata.'
-        msg += '\nUse the following scripts for more visualization options:'
-        msg += '\n    view.py                  - 2D map(s) view'
-        msg += '\n    tsview.py                - 1D point time-series (interactive)'
-        msg += '\n    transect.py              - 1D profile/transection (interactive)'
-        msg += '\n    plot_coherence_matrix.py - plot coherence matrix of one pixel (interactive)'
-        msg += '\n    plot_network.py          - plot network configuration of the whole dataset'
-        print(msg)
+        msg = """
+        info.py                    #check HDF5 file structure and metadata
+        view.py                    #2D map view
+        tsview.py                  #1D point time-series (interactive)   
+        transect.py                #1D profile (interactive)
+        plot_coherence_matrix.py   #plot coherence matrix for one pixel (interactive)
+        plot_network.py            #plot network configuration of the dataset    
+        save_kmz.py                #generate Google Earth KMZ file in raster image
+        save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
+        """
+        if print_aux:
+            print(msg)
 
         # check status
         if status is not 0:
@@ -990,7 +994,7 @@ class TimeSeriesAnalysis:
 
             if status is not 0:
                 # plot result if error occured
-                self.plot()
+                self.plot(print_aux=False)
 
                 # go back to original directory
                 print('Go to directory:', self.cwd)
@@ -1000,7 +1004,7 @@ class TimeSeriesAnalysis:
                 raise RuntimeError('step {} with status {}'.format(sname, status))
 
         # plot result
-        self.plot()
+        self.plot(print_aux=True)
 
         # go back to original directory
         print('Go to directory:', self.cwd)

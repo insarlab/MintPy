@@ -2,7 +2,7 @@
 ###############################################################
 # Plot Results from Routine Workflow with pysarApp.py
 # Author: Zhang Yunjun, 2017-07-23
-# Latest update: 2019-02-07
+# Latest update: 2019-02-26
 ###############################################################
 
 
@@ -26,12 +26,12 @@ touch $log_file
 
 ## Create PIC folder
 if [ ! -d "PIC" ]; then
-    echo 'Create PIC folder'
+    echo 'Create ./PIC folder'
     mkdir PIC
 fi
 
 ## common view.py option for all files
-view='view.py --nodisplay --dpi 150 --update '
+view='view.py --nodisplay --dpi 150 --update --noverbose '
 
 ## Plot Key files
 opt=' --dem INPUTS/geometryRadar.h5 --mask '$mask_file' -u cm '
@@ -112,7 +112,7 @@ fi
 
 
 ## Move picture files to PIC folder
-echo "Move *.png *.pdf into PIC folder"
+echo "Move *.png *.pdf into ./PIC folder"
 mv *.png PIC/
 mv *.pdf PIC/
 mv *.kmz PIC/
