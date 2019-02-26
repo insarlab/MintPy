@@ -25,13 +25,13 @@ from pysar.utils import readfile, ptime, utils as ut, plot as pp
 
 ############################################################
 EXAMPLE = """example:
-  save_kmz.py geo_velocity_masked.h5 
-  save_kmz.py geo_timeseries_masked.h5  20101120
-  save_kmz.py geo_ifgramStack.h5        20101120_20110220
+  save_kmz.py GEOCODE/geo_velocity.h5 
+  save_kmz.py GEOCODE/geo_velocity.h5 -u cm -v -2 2
+  save_kmz.py GEOCODE/geo_velocity.h5 -u cm --wrap --wrap-range -3 7
 
-  save_kmz.py geo_velocity_masked.h5 -u cm -v -2 2
-  save_kmz.py geo_velocity_masked.h5 -u cm --wrap --wrap-range -3 7
-  save_kmz.py demGeo.h5 --cbar-label Elevation
+  save_kmz.py GEOCODE/geo_timeseries_ECMWF_ramp_demErr.h5 20101120
+  save_kmz.py GEOCODE/geo_ifgramStack.h5 20101120_20110220
+  save_kmz.py GEOCODE/geo_geometryRadar.h5 --cbar-label Elevation
 """
 
 
@@ -43,6 +43,8 @@ def create_parser():
     parser.add_argument('file', help='file to be converted, in geo coordinate.')
     parser.add_argument('dset', nargs='?',
                         help='date of timeseries, or date12 of interferograms to be converted')
+    parser.add_argument('-m','--mask', dest='mask_file', metavar='FILE',
+                        help='mask file for display')
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file base name. Extension is fixed with .kmz')
 
@@ -264,6 +266,11 @@ def main(iargs=None):
 
     # Read data
     data, atr = readfile.read(inps.file, datasetName=inps.dset)
+
+    # mask
+    mask = pp.read_mask(inps.file, mask_file=inps.mask_file, datasetName=inps.dset, print_msg=True)[0]
+    if mask is not None:
+        data = np.ma.masked_where(mask == 0., data)
 
     # Data Operation - Display Unit & Rewrapping
     (data,
