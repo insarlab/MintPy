@@ -4,7 +4,9 @@
 # Author:  Zhang Yunjun                                    #
 ############################################################
 # Low level utilities script (independent)
-#
+# Recommend import:
+#   from pysar.utils import utils as ut
+
 
 import os
 import glob

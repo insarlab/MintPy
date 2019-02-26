@@ -3,8 +3,11 @@
 # Copyright(c) 2019, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
+# Recommend import:
+#   from pysar.utils import utils as ut
 
 
+from argparse import Namespace
 import numpy as np
 from pysar.utils import readfile
 from pysar.utils.utils0 import *

@@ -23,26 +23,16 @@ import matplotlib.pyplot as plt
 import multiprocessing
 
 from pysar.objects import (
-    deramp,
     geometryDatasetNames,
     geometry,
-    ifgramDatasetNames,
     ifgramStack,
-    sensor,
     timeseries,
 )
 
-from pysar.utils import (
-    ptime,
-    readfile,
-    writefile,
-    network as pnet,
-)
-
+from pysar.utils import ptime, readfile
 from pysar.utils.utils0 import *
 from pysar.utils.utils1 import *
 from pysar.objects.coord import coordinate
-
 
 
 #####################################  pysarApp utilities begin ############################################    
@@ -136,172 +126,6 @@ def check_loaded_dataset(work_dir='./', print_msg=True):
             print('All data needed found/loaded/copied. Processed 2-pass InSAR data can be removed.')
         print('-'*50)
     return load_complete, stack_file, geom_file, lookup_file
-
-
-############################################################
-def correct_tropospheric_delay(inps, template):
-    """Correct tropospheric delay with options from template"""
-    inps.tropPolyOrder = template['pysar.troposphericDelay.polyOrder']
-    inps.tropModel     = template['pysar.troposphericDelay.weatherModel']
-    inps.tropMethod    = template['pysar.troposphericDelay.method']
-
-    # check existing tropospheric delay file
-    try:
-        fileList = [os.path.join(inps.workDir, 'INPUTS/{}.h5'.format(inps.tropModel))]
-        inps.tropFile = get_file_list(fileList)[0]
-    except:
-        inps.tropFile = None
-
-    # run
-    if inps.tropMethod:
-        fbase = os.path.splitext(inps.timeseriesFile)[0]
-
-        # Phase/Elevation Ratio (Doin et al., 2009)
-        if inps.tropMethod == 'height_correlation':
-            outName = '{}_tropHgt.h5'.format(fbase)
-            print('tropospheric delay correction with height-correlation approach')
-            tropCmd = ('tropcor_phase_elevation.py {t} -g {d} -p {p}'
-                       ' -m {m} -o {o}').format(t=inps.timeseriesFile,
-                                                d=inps.geomFile,
-                                                p=inps.tropPolyOrder,
-                                                m=inps.maskFile,
-                                                o=outName)
-            print(tropCmd)
-            if run_or_skip(out_file=outName, in_file=inps.timeseriesFile) == 'run':
-                status = subprocess.Popen(tropCmd, shell=True).wait()
-                if status is not 0:
-                    raise Exception('Error while correcting tropospheric delay.\n')
-            inps.timeseriesFile = outName
-            inps.timeseriesFiles.append(outName)
-
-        # Weather Re-analysis Data (Jolivet et al., 2011;2014)
-        elif inps.tropMethod == 'pyaps':
-            inps.weatherDir = template['pysar.troposphericDelay.weatherDir']
-            outName = '{}_{}.h5'.format(fbase, inps.tropModel)
-            print(('Atmospheric correction using Weather Re-analysis dataset'
-                   ' (PyAPS, Jolivet et al., 2011)'))
-            print('Weather Re-analysis dataset:', inps.tropModel)
-            tropCmd = ('tropcor_pyaps.py -f {t} --model {m} -g {g}'
-                       ' -w {w}').format(t=inps.timeseriesFile,
-                                         m=inps.tropModel,
-                                         g=inps.geomFile,
-                                         w=inps.weatherDir)
-            print(tropCmd)
-            if run_or_skip(out_file=outName, in_file=inps.timeseriesFile) == 'run':
-                if inps.tropFile:
-                    tropCmd = 'diff.py {} {} -o {} --force'.format(inps.timeseriesFile,
-                                                                   inps.tropFile,
-                                                                   outName)
-                    print('--------------------------------------------')
-                    print('Use existed tropospheric delay file: {}'.format(inps.tropFile))
-                    print(tropCmd)
-                status = subprocess.Popen(tropCmd, shell=True).wait()
-                if status is not 0:
-                    print('\nError while correcting tropospheric delay, try the following:')
-                    print('1) Check the installation of PyAPS')
-                    print('   http://earthdef.caltech.edu/projects/pyaps/wiki/Main')
-                    print('   Try in command line: python -c "import pyaps"')
-                    print('2) Use other tropospheric correction method, height-correlation, for example')
-                    print('3) or turn off the option by setting pysar.troposphericDelay.method = no.\n')
-                    raise RuntimeError()
-            inps.timeseriesFile = outName
-            inps.timeseriesFiles.append(outName)
-        else:
-            print('Un-recognized atmospheric delay correction method: {}'.format(inps.tropMethod))
-
-    # Grab tropospheric delay file
-    try:
-        fileList = [os.path.join(inps.workDir, 'INPUTS/{}.h5'.format(inps.tropModel))]
-        inps.tropFile = get_file_list(fileList)[0]
-    except:
-        inps.tropFile = None
-    return
-
-
-
-
-def save_hdfeos5(inps, customTemplate=None):
-    if not inps.geocoded:
-        warnings.warn('Dataset is in radar coordinates, skip writting to HDF-EOS5 format.')
-    else:
-        # Add attributes from custom template to timeseries file
-        if customTemplate is not None:
-            add_attribute(inps.timeseriesFile, customTemplate)
-
-        # Save to HDF-EOS5 format
-        print('--------------------------------------------')
-        hdfeos5Cmd = ('save_hdfeos5.py {t} -c {c} -m {m} -g {g}'
-                      ' -t {e}').format(t=inps.timeseriesFile,
-                                        c=inps.tempCohFile,
-                                        m=inps.maskFile,
-                                        g=inps.geomFile,
-                                        e=inps.templateFile)
-        print(hdfeos5Cmd)
-        atr = readfile.read_attribute(inps.timeseriesFile)
-        SAT = sensor.get_unavco_mission_name(atr)
-        try:
-            inps.hdfeos5File = get_file_list('{}_*.he5'.format(SAT))[0]
-        except:
-            inps.hdfeos5File = None
-        if run_or_skip(out_file=inps.hdfeos5File, in_file=[inps.timeseriesFile,
-                                                           inps.tempCohFile,
-                                                           inps.maskFile,
-                                                           inps.geomFile]) == 'run':
-            status = subprocess.Popen(hdfeos5Cmd, shell=True).wait()
-            if status is not 0:
-                raise Exception('Error while generating HDF-EOS5 time-series file.\n')
-    return
-
-
-
-def plot_pysarApp(inps):
-    def grab_latest_update_date(fname, prefix='# Latest update:'):
-        with open(fname, 'r') as f:
-            lines = f.readlines()
-        try:
-            line = [i for i in lines if prefix in i][0]
-            t_update = re.findall('\d{4}-\d{2}-\d{2}', line)[0]
-            t_update = dt.strptime(t_update, '%Y-%m-%d')
-        except:
-            t_update = None
-        return t_update
-        
-    inps.plotShellFile = os.path.join(os.path.dirname(__file__), '../../sh/plot_pysarApp.sh')
-    plotCmd = './'+os.path.basename(inps.plotShellFile)
-    print('\n**********  Plot Results / Save to PIC  **********')
-    # copy to workding directory if not existed yet.
-    if not os.path.isfile(plotCmd):
-        print('copy {} to work directory: {}'.format(inps.plotShellFile, inps.workDir))
-        shutil.copy2(inps.plotShellFile, inps.workDir)
-    # rename and copy if obsolete file detected
-    else:
-        t_exist = grab_latest_update_date(plotCmd)
-        t_src = grab_latest_update_date(inps.plotShellFile)
-        if not t_exist or t_exist < t_src:
-            print('obsolete shell file detected.')
-            cmd = 'mv {f} {f}_obsolete'.format(f=os.path.basename(plotCmd))
-            print('rename existing file: {}'.format(cmd))
-            os.system(cmd)
-            print('copy {} to work directory: {}'.format(inps.plotShellFile, inps.workDir))
-            shutil.copy2(inps.plotShellFile, inps.workDir)
-
-    if os.path.isfile(plotCmd):
-        print(plotCmd)
-        status = subprocess.Popen(plotCmd, shell=True).wait()
-        msg = '\n'+'-'*50
-        msg += '\nUse info.py to check the HDF5 file structure and metadata.'
-        msg += '\nUse the following scripts for more visualization options:'
-        msg += '\n    view.py                  - 2D map(s) view'
-        msg += '\n    tsview.py                - 1D point time-series (interactive)'
-        msg += '\n    transect.py              - 1D profile/transection (interactive)'
-        msg += '\n    plot_coherence_matrix.py - plot coherence matrix of one pixel (interactive)'
-        msg += '\n    plot_network.py          - plot network configuration of the whole dataset'
-        print(msg)
-        if status is not 0:
-            raise Exception('Error while plotting data files using {}'.format(plotCmd))
-    return inps
-#####################################  pysarApp utilities end ######################################
-
 
 
 ##################################### Utilities Functions ##########################################

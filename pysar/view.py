@@ -32,7 +32,7 @@ from pysar.utils import (ptime,
 from pysar.multilook import multilook_data
 from pysar import subset
 
-fig = None
+#fig = None
 
 
 ##################################################################################################

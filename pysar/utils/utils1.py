@@ -4,7 +4,8 @@
 # Author:  Zhang Yunjun                                    #
 ############################################################
 # High level utilities script (independent within utils folder)
-#
+# Recommend import:
+#   from pysar.utils import utils as ut
 
 
 import os
