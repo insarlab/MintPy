@@ -19,7 +19,7 @@ import subprocess
 
 import numpy as np
 
-from pysar.objects import sensor
+from pysar.objects import sensor, RAMP_LIST
 from pysar.utils import readfile, utils as ut
 from pysar.defaults.auto_path import autoPath
 from pysar import version
@@ -162,7 +162,7 @@ class TimeSeriesAnalysis:
                 self.workDir = os.path.join(os.getenv('SCRATCHDIR'), self.projectName, 'PYSAR')
             else:
                 self.workDir = os.getcwd()
-        self.workDir = os.path.abspath(inps.workDir)
+        self.workDir = os.path.abspath(self.workDir)
 
         #2.2 Go to workDir
         if not os.path.isdir(self.workDir):
@@ -253,7 +253,15 @@ class TimeSeriesAnalysis:
 
         print('read default template file:', self.templateFile)
         self.template = readfile.read_template(self.templateFile)
-        self.template = ut.check_template_auto_value(self.template)    
+        self.template = ut.check_template_auto_value(self.template)
+
+        # correct some loose setup conflicts
+        if self.template['pysar.geocode'] is False:
+            for key in ['pysar.save.hdfEos5', 'pysar.save.kml']:
+                if self.template[key] is True:
+                    self.template['pysar.geocode'] = True
+                    print('Turn ON pysar.geocode in order to run {}.'.format(key))
+                    break
         return
 
 
@@ -261,7 +269,7 @@ class TimeSeriesAnalysis:
         """
         """
         self.config = argparse.Namespace
-        for sname in STEP_list:
+        for sname in STEP_LIST:
             step = argparse.Namespace
             if sname == 'loadData':
                 step.cmd = ['load_data.py']
@@ -278,6 +286,7 @@ class TimeSeriesAnalysis:
             if sname not in self.runSteps:
                 step.run = False
             vars(self.config)[sname] = step
+
         return self.config
 
         
@@ -447,6 +456,8 @@ class TimeSeriesAnalysis:
 
     def run_network_inversion(self):
         """step - netInversion
+        1) network inversion --> timeseries.h5, temporalCoherence.h5, numInvIfgram.h5
+        2) temporalCoherence.h5 --> maskTempCoh.h5
         """
         # check the existence of ifgramStack.h5
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
@@ -456,7 +467,378 @@ class TimeSeriesAnalysis:
         print(cmd)
         status = subprocess.Popen(cmd, shell=True).wait()
 
-        # 2) 
+        # 2) get reliable pixel mask: maskTempCoh.h5
+        self.generate_temporal_coherence_mask()
+        return status
+
+
+    def generate_temporal_coherence_mask(self):
+        """"""
+        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
+        tcoh_file = 'temporalCoherence.h5'
+        mask_file = 'maskTempCoh.h5'
+        tcoh_min = self.template['pysar.networkInversion.minTempCoh']
+
+        cmd = 'generate_mask.py {} -m {} -o {} --shadow {}'.format(tcoh_file, tcoh_min, mask_file, geom_file)
+        print(cmd)
+
+        # update mode checking, run if:
+        # 1) output file exists and newer than input file, AND
+        # 2) all config keys are the same
+        config_keys = ['pysar.networkInversion.minTempCoh']
+        run = False
+        if run_or_skip(out_file=mask_file, in_file=tcoh_file, print_msg=False) == 'run':
+            run = True
+        else:
+            print('  1) output file: {} already exists and newer than input file: {}'.format(mask_file, tcoh_file))
+            atr = readfile.read_attribute(mask_file)
+            if any(str(self.template[i]) != atr.get(i, 'False') for i in config_keys):
+                run = True
+                print('  2) NOT all key configration parameters are the same --> run.\n\t{}'.format(config_keys))
+            else:
+                print('  2) all key configuration parameters are the same:\n\t{}'.format(config_keys))
+        print('run this step:', run)
+
+        if run:
+            subprocess.Popen(cmd, shell=True).wait()
+            # update configKeys
+            atr = {}
+            for key in config_keys:
+                atr[key] = self.template[key]
+            add_attribute(mask_file, atr)
+
+        # check number of pixels selected in mask file for following analysis
+        num_pixel = np.sum(readfile.read(mask_file)[0] != 0.)
+        print('number of reliable pixels: {}'.format(num_pixel))
+
+        min_num_pixel = float(self.template['pysar.networkInversion.minNumPixel'])
+        if num_pixel < min_num_pixel:
+            msg = "Not enough reliable pixels (minimum of {}). ".format(int(min_num_pixel))
+            msg += "Try the following:\n"
+            msg += "1) Check the reference pixel and make sure it's not in areas with unwrapping errors\n"
+            msg += "2) Check the network and make sure it's fully connected without subsets"
+            raise RuntimeError(msg)
+        return
+
+
+    @staticmethod
+    def get_timeseries_filename(template):
+        """Get input/output time-series filename for each step
+        Parameters: template : dict, content of pysarApp_template.txt
+        Returns:    steps    : dict of dicts, input/output filenames for each step
+        """
+        steps = dict()
+        fname0 = 'timeseries.h5'
+        fname1 = 'timeseries.h5'
+
+        # loop for all steps
+        phase_correction_steps = ['LOD', 'tropo', 'deramp', 'topo']
+        for sname in phase_correction_steps:
+            # fname0 == fname1 if no valid correction method is set.
+            fname0 = fname1
+
+            if sname == 'LOD':
+                atr = readfile.read_attribute(fname0)
+                if atr['PLATFORM'].lower().startswith('env'):
+                    fname1 = '{}_LODcor.h5'.format(os.path.splitext(fname0)[0])
+
+            elif sname == 'tropo':
+                method = template['pysar.troposphericDelay.method']
+                model  = template['pysar.troposphericDelay.weatherModel']
+                if method:
+                    if method == 'height_correlation':
+                        fname1 = '{}_tropHgt.h5'.format(os.path.splitext(fname0)[0])
+
+                    elif method == 'pyaps':
+                        fname1 = '{}_{}.h5'.format(os.path.splitext(fname0)[0], model)
+
+                    else:
+                        msg = 'Un-recognized tropospheric  crrection method: {}'.format(method)
+                        raise ValueError(msg)
+
+            elif sname == 'deramp':
+                method = template['pysar.deramp']
+                if method:
+                    if method in RAMP_LIST:
+                        fname1 = '{}_ramp.h5'.format(os.path.splitext(fname0)[0])
+                    else:
+                        msg = 'un-recognized phase ramp type: {}'.format(method)
+                        msg += '\navailable ramp types:\n{}'.format(RAMP_LIST)
+                        raise ValueError(msg)
+
+            elif sname == 'topo':
+                method = template['pysar.topographicResidual']
+                if method:
+                    fname1 = '{}_demErr.h5'.format(os.path.splitext(fname0)[0])
+
+            step = dict()
+            step['input'] = fname0
+            step['output'] = fname1
+            steps[sname] = step
+
+        # step - refDate
+        fnames = [steps[sname]['output'] for sname in phase_correction_steps]
+        fnames += [steps[sname]['input'] for sname in phase_correction_steps]
+        fnames = sorted(list(set(fnames)))
+        step = dict()
+        step['input'] = fnames
+        steps['refDate'] = step
+
+        # step - ts2vel / geocode
+        step = dict()
+        step['input'] = steps['refDate']['input'][-1]
+        steps['ts2vel'] = step
+        steps['geocode'] = step
+        return steps
+
+
+    def run_local_oscillator_drift_correction(self):
+        """Correct local oscillator drift (LOD)
+        Automatically applied for Envisat data.
+        """
+        step = 'LOD'
+        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
+        fnames = get_timeseries_filename(self.template)[step]
+        in_file = fnames['input']
+        out_file = fnames['output']
+        status = True
+        if in_file != out_file:
+            print('\n******************** step - {} (auto for Envisat) ********************'.format(step))
+            cmd = 'local_oscilator_drift.py {} {} -o {}'.format(in_file, geom_file, out_file)
+            print(cmd)
+            if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
+                status = subprocess.Popen(cmd, shell=True).wait()
+        return status
+
+
+    def run_tropospheric_delay_correction(self):
+        """step - tropo
+        """
+        step = 'tropo'
+        print('\n******************** step - {} ********************'.format(step))
+        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
+        mask_file = 'maskTempCoh.h5'
+
+        fnames = get_timeseries_filename(self.template)[step]
+        in_file = fnames['input']
+        out_file = fnames['output']
+        status = True
+        if in_file != out_file:
+            poly_order  = self.template['pysar.troposphericDelay.polyOrder']
+            tropo_model = self.template['pysar.troposphericDelay.weatherModel']
+            weather_dir = self.template['pysar.troposphericDelay.weatherDir']
+            method      = self.template['pysar.troposphericDelay.method']
+
+            # Phase/Elevation Ratio (Doin et al., 2009)
+            if method == 'height_correlation':
+                cmd = 'tropcor_phase_elevation.py {f} -g {g} -p {p} -m {m} -o {o}'.format(f=in_file,
+                                                                                          g=geom_file,
+                                                                                          p=poly_order,
+                                                                                          m=mask_file,
+                                                                                          o=out_file)
+                print('tropospheric delay correction with height-correlation approach')
+                print(cmd)
+                if run_or_skip(out_file=out_file, in_file=in_file) == 'run':
+                    status = subprocess.Popen(cmd, shell=True).wait()
+
+            # Weather Re-analysis Data (Jolivet et al., 2011;2014)
+            elif method == 'pyaps':
+                cmd = 'tropcor_pyaps.py -f {f} --model {m} -g {g} -w {w}'.format(t=in_file,
+                                                                                 m=tropo_model,
+                                                                                 g=geom_file,
+                                                                                 w=weather_dir)
+                print('Atmospheric correction using Weather Re-analysis dataset (PyAPS, Jolivet et al., 2011)')
+                print('Weather Re-analysis dataset:', tropo_model)
+                print(cmd)
+                if run_or_skip(out_file=out_file, in_file=in_file) == 'run':
+                    tropo_file = './INPUTS/{}.h5'.format(tropo_model)
+                    if os.path.isfile(tropo_file):
+                        cmd = 'diff.py {f} {t} -o {o} --force'.format(f=in_file, t=tropo_file, o=out_file)
+                        print('--------------------------------------------')
+                        print('Use existed tropospheric delay file: {}'.format(tropo_file))
+                        print(cmd)
+                    status = subprocess.Popen(cmd, shell=True).wait()
+                    if status is not 0:
+                        msg = '\nError in step: tropo with {} method'.format(method)
+                        msg += '\nTry the following:'
+                        msg += '\n1) Check the installation of PyAPS'
+                        msg += '\n   http://earthdef.caltech.edu/projects/pyaps/wiki/Main'
+                        msg += '\n   Try in command line: python -c "import pyaps"'
+                        msg += '\n2) Use other tropospheric correction method, height-correlation, for example'
+                        msg += '\n3) or turn off the option by setting pysar.troposphericDelay.method = no.\n'
+                        print(msg)
+        else:
+            print('No tropospheric delay correction.')
+        return status
+
+
+    def run_phase_deramping(self):
+        """step - deramp
+        """
+        step = 'deramp'
+        print('\n******************** step - {} ********************'.format(step))
+        mask_file = self.template['pysar.deramp.maskFile']
+        method    = self.template['pysar.deramp']
+
+        fnames = get_timeseries_filename(self.template)[step]
+        in_file = fnames['input']
+        out_file = fnames['output']
+        status = True
+        if in_file != out_file:
+            print('Remove for each acquisition a phase ramp: {}'.format(method))
+            cmd = 'remove_ramp.py {f} -s {s} -m {m} -o {o}'.format(f=in_file, s=method, m=mask_file, o=out_file)
+            print(cmd)
+            if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
+                status = subprocess.Popen(cmd, shell=True).wait()
+        else:
+            print('No phase ramp removal.')
+        return status
+
+
+    def run_topographic_residual_correction(self):
+        """step - topo
+        """
+        step = 'topo'
+        print('\n******************** step - {} ********************'.format(step))
+        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
+        fnames = get_timeseries_filename(self.template)[step]
+        in_file = fnames['input']
+        out_file = fnames['output']
+        status = True
+        if in_file != out_file:
+            cmd = 'dem_error.py {f} -g {g} -t {t} -o {o} --update '.format(f=in_file,
+                                                                           g=geom_file,
+                                                                           t=self.templateFile,
+                                                                           o=out_file)
+            print(cmd)
+            status = subprocess.Popen(cmd, shell=True).wait()
+        else:
+            print('No topographic residual correction.')
+        return status
+
+
+    def run_residual_phase_rms(self):
+        """step - residRms"""
+        step = 'residRms'
+        print('\n******************** step - {} ********************'.format(step))
+        res_file = 'timeseriesResidual.h5'
+        status = True
+        if os.path.isfile(res_file):
+            cmd = 'timeseries_rms.py {} -t {}'.format(res_file, self.templateFile)
+            print(cmd)
+            status = subprocess.Popen(cmd, shell=True).wait()
+        else:
+            print('No residual phase file found! Skip residual RMS analysis.')
+        return status
+
+
+    def run_reference_date(self):
+        """step - refDate"""
+        status = True
+        step = 'refDate'
+        print('\n******************** step - {} ********************'.format(step))
+        if self.template['pysar.reference.date']:
+            in_files = get_timeseries_filename(self.template)[step]['input']
+            cmd = 'reference_date.py -t {} '.format(self.templateFile)
+            for in_file in in_files:
+                cmd += ' {}'.format(in_file)
+            print(cmd)
+            status = subprocess.Popen(cmd, shell=True).wait()
+        else:
+            print('No reference date change.')
+        return status
+
+
+    def run_timeseries2velocity(self):
+        """step - ts2vel"""
+        status = True
+        step = 'ts2vel'
+        print('\n******************** step - {} ********************'.format(step))
+        ts_file = get_timeseries_filename(self.template)[step]['input']
+        vel_file = 'velocity.h5'
+        cmd = 'timeseries2velocity.py {f} -t {t} -o {o} --update'.format(f=ts_file,
+                                                                         t=self.templateFile,
+                                                                         o=vel_file)
+        print(cmd)
+        status = subprocess.Popen(cmd, shell=True).wait()
+
+        # Velocity from estimated tropospheric delays
+        tropo_file = './INPUTS/{}.h5'.format(tropo_model)
+        if os.path.isfile(tropo_file):
+            suffix = os.path.splitext(os.path.basename(tropo_file))[0].title()
+            tropo_vel_file = '{}{}.h5'.format(os.path.splitext(vel_file)[0], suffix)
+            cmd = 'timeseries2velocity.py {f} -t {t} -o {o} --update'.format(f=tropo_file,
+                                                                             t=self.templateFile,
+                                                                             o=tropo_vel_file)
+            print(cmd)
+            subprocess.Popen(cmd, shell=True).wait()
+        return status
+
+
+    def run_geocode(self):
+        """step - geocode"""
+        status = True
+        step = 'geocode'
+        print('\n******************** step - {} ********************'.format(step))
+        if self.template['pysar.geocode']:
+            ts_file = get_timeseries_filename(self.template)[step]['input']
+            atr = readfile.read_attribute(ts_file)
+            if 'Y_FIRST' not in atr.keys():
+                # 1. geocode
+                geom_file, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2:4]
+                in_files = [geom_file, 'temporalCoherence.h5', ts_file, 'velocity.h5']
+                out_dir = os.path.join(self.workDir, 'GEOCODE')
+                geocode_script = os.path.join(os.path.dirname(__file__), 'geocode.py')
+
+                cmd = '{scp} -l {l} -t {t} --outdir {o} --update '.format(l=lookup_file, t=self.templateFile, o=out_dir)
+                for in_file in in_files:
+                    cmd += ' {}'.format(in_file)
+                print(cmd)
+                status = subprocess.Popen(cmd, shell=True).wait()
+
+                # 2. generate reliable pixel mask in geo coordinate
+                geom_file = os.path.join(out_dir, 'geo_{}'.format(os.path.basename(geom_file)))
+                tcoh_file = os.path.join(out_dir, 'geo_temporalCoherence.h5')
+                mask_file = os.path.join(out_dir, 'geo_maskTempCoh.h5')
+                tcoh_min = self.template['pysar.networkInversion.minTempCoh']
+                cmd = 'generate_mask.py {} -m {} -o {} --shadow {}'.format(tcoh_file, tcoh_min, mask_file, geom_file)
+                print(cmd)
+                if ut.run_or_skip(out_file=mask_file, in_file=tcoh_file) == 'run':
+                    subprocess.Popen(cmd, shell=True).wait()
+        return status
+
+
+    def run_save2google_earth(self):
+        """step - googleEarth
+        """
+        status = True
+        step = 'googleEarth'
+        if self.template['pysar.save.kml'] is True:
+            print('\n******************** step - {} ********************'.format(step))
+            print('creating Google Earth KMZ file for geocoded velocity file: ...')
+            # input
+            vel_file = 'velocity.h5'
+            atr = readfile.read_attribute(vel_file)
+            if 'Y_FIRST' not in atr.keys():
+                vel_file = os.path.join(self.workDir, 'GEOCODE/geo_velocity.h5')
+
+            # output
+            kmz_file = '{}.kmz'.format(os.path.splitext(os.path.basename(vel_file))[0])
+            try:
+                kmz_file = [i for i in [kmz_file, 'PIC/{}'.format(kmz_file)] if os.path.isfile(i)][0]
+            except:
+                kmz_file = None
+
+            cmd = 'save_kmz.py {} -o {}'.format(vel_file, kmz_file)
+            print(cmd)
+            if ut.run_or_skip(out_file=kmz_file, in_file=vel_file, check_readable=False) == 'run':
+                status = subprocess.Popen(cmd, shell=True).wait()
+        return status
+
+
+    def run_save2hdfeos5(self):
+        """step - hdfeos5"""
+        status = True
         return status
 
 
@@ -473,6 +855,8 @@ class TimeSeriesAnalysis:
         self.run_network_modification()
 
         self.run_network_inversion()
+
+        self.run_local_oscillator_drift_correction()
 
         self.run_tropospheric_delay_correction()
 

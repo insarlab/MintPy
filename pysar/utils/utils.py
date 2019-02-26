@@ -139,61 +139,6 @@ def check_loaded_dataset(work_dir='./', print_msg=True):
 
 
 ############################################################
-def get_temporal_coherence_mask(inps, template):
-    """Generate mask from temporal coherence"""
-    configKeys = ['pysar.networkInversion.minTempCoh']
-    inps.maskFile = 'maskTempCoh.h5'
-    inps.minTempCoh = template['pysar.networkInversion.minTempCoh']
-    maskCmd = 'generate_mask.py {} -m {} -o {} --shadow {}'.format(inps.tempCohFile,
-                                                                   inps.minTempCoh,
-                                                                   inps.maskFile,
-                                                                   inps.geomFile)
-    print(maskCmd)
-
-    # update mode checking
-    # run if 1) output file exists; 2) newer than input file and 3) all config keys are the same
-    run = False
-    if run_or_skip(out_file=inps.maskFile,
-                   in_file=inps.tempCohFile,
-                   print_msg=False) == 'run':
-        run = True
-    else:
-        print('  1) output file: {} already exists and newer than input file: {}'.format(inps.maskFile,
-                                                                                         inps.tempCohFile))
-        meta_dict = readfile.read_attribute(inps.maskFile)
-        if any(str(template[i]) != meta_dict.get(i, 'False') for i in configKeys):
-            run = True
-            print('  2) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
-        else:
-            print('  2) all key configuration parameters are the same:\n\t{}'.format(configKeys))
-    # result
-    print('run this step:', run)
-    if run:
-        status = subprocess.Popen(maskCmd, shell=True).wait()
-        if status is not 0:
-            raise Exception('Error while generating mask file from temporal coherence.')
-
-        # update configKeys
-        meta_dict = {}
-        for key in configKeys:
-            meta_dict[key] = template[key]
-        add_attribute(inps.maskFile, meta_dict)
-
-    # check number of pixels selected in mask file for following analysis
-    min_num_pixel = float(template['pysar.networkInversion.minNumPixel'])
-    msk = readfile.read(inps.maskFile)[0]
-    num_pixel = np.sum(msk != 0.)
-    print('number of reliable pixels: {}'.format(num_pixel))
-    if num_pixel < min_num_pixel:
-        msg = "Not enough reliable pixels (minimum of {}). ".format(int(min_num_pixel))
-        msg += "Try the following:\n"
-        msg += "1) Check the reference pixel and make sure it's not in areas with unwrapping errors\n"
-        msg += "2) Check the network and make sure it's fully connected without subsets"
-        raise RuntimeError(msg)
-    del msk
-    return
-
-
 def correct_tropospheric_delay(inps, template):
     """Correct tropospheric delay with options from template"""
     inps.tropPolyOrder = template['pysar.troposphericDelay.polyOrder']
