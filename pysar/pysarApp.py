@@ -171,6 +171,8 @@ def cmd_line_parse(iargs=None):
     else:
         print(version.logo)
     print('Run routine processing with {} on steps: {}'.format(os.path.basename(__file__), inps.runSteps))
+    if len(inps.runSteps) == 1:
+        print('Remaining steps: {}'.format(STEP_LIST[idx0+1:]))
     print('-'*50)
     return inps
 
@@ -230,8 +232,6 @@ class TimeSeriesAnalysis:
                 shutil.copy2(lfile, self.workDir)
                 #keep the existing option value from obsolete template file
                 template_file = ut.update_template_file(cfile, cdict)
-            else:
-                print('latest template file detected:', cfile)
         self.templateFile = cfile
 
         # 3.2 read (custom) template files into dicts
