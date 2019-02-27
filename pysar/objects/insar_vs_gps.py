@@ -4,7 +4,7 @@
 # Author:  Zhang Yunjun, 2018                              #
 ############################################################
 # Recommend import:
-#   from pysar.utils.insar_vs_gps import insar_vs_gps
+#   from pysar.objects.insar_vs_gps import insar_vs_gps
 
 
 import os

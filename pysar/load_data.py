@@ -93,6 +93,7 @@ NOTE = """NOTE:
 EXAMPLE = """example:
   load_data.py -t GalapagosSenDT128.tempalte
   load_data.py -t pysarApp_template.txt
+  load_data.py -t pysarApp_template.txt GalapagosSenDT128.tempalte --project GalapagosSenDT128
   load_data.py -H #Show example input template for ISCE/ROI_PAC/GAMMA products
 """
 
@@ -178,8 +179,9 @@ def read_inps2dict(inps):
 
     # PROJECT_NAME --> PLATFORM
     if not inpsDict['PROJECT_NAME']:
-        inpsDict['PROJECT_NAME'] = sensor.project_name2sensor_name(inps.template_file)[1]
-    inpsDict['PLATFORM'] = sensor.project_name2sensor_name(inpsDict['PROJECT_NAME'])[0]
+        cfile = [i for i in list(inps.template_file) if os.path.basename(i) != 'pysarApp_template.txt']
+        inpsDict['PROJECT_NAME'] = sensor.project_name2sensor_name(cfile)[1]
+    inpsDict['PLATFORM'] = str(sensor.project_name2sensor_name(str(inpsDict['PROJECT_NAME']))[0])
     if inpsDict['PLATFORM']:
         print('platform : {}'.format(inpsDict['PLATFORM']))
     print('processor: {}'.format(inpsDict['processor']))
@@ -482,7 +484,6 @@ def print_write_setting(inpsDict):
     print('compression: {}'.format(comp))
     box = inpsDict['box']
     boxGeo = inpsDict['box4geo_lut']
-
     return updateMode, comp, box, boxGeo
 
 
@@ -500,20 +501,25 @@ def get_extra_metadata(inpsDict):
 
 #################################################################
 def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-    if not os.path.isdir(inps.outdir):
-        os.makedirs(inps.outdir)
-        print('create directory: {}'.format(inps.outdir))
+    inps = cmd_line_parse(iargs)        
 
+    # read input options
     inpsDict = read_inps2dict(inps)
     inpsDict = read_subset_box(inpsDict)
     prepare_metadata(inpsDict)
     extraDict = get_extra_metadata(inpsDict)
 
+    # initiate objects
     stackObj = read_inps_dict2ifgram_stack_dict_object(inpsDict)
     geomRadarObj, geomGeoObj = read_inps_dict2geometry_dict_object(inpsDict)
 
+    # prepare wirte
     updateMode, comp, box, boxGeo = print_write_setting(inpsDict)
+    if any([stackObj, geomRadarObj, geomGeoObj]) and not os.path.isdir(inps.outdir):
+        os.makedirs(inps.outdir)
+        print('create directory: {}'.format(inps.outdir))
+
+    # write
     if stackObj and update_object(inps.outfile[0], stackObj, box, updateMode=updateMode):
         print('-'*50)
         stackObj.write2hdf5(outputFile=inps.outfile[0],

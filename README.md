@@ -72,7 +72,7 @@ Join our google group [https://groups.google.com/forum/#!forum/py-sar](https://g
 * Scott Baker
 * Joshua Zahner
 * Alfredo Terreco
-* David W Grossman
+* David Grossman
 * Yunmeng Cao
 * [_other community members_](https://github.com/yunjunz/PySAR/graphs/contributors)
 

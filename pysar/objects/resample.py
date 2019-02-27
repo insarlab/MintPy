@@ -17,7 +17,7 @@ import numpy as np
 from scipy import ndimage
 from scipy.interpolate import RegularGridInterpolator as RGI
 import multiprocessing
-from pysar.utils import readfile, ptime, utils as ut
+from pysar.utils import readfile, ptime, utils0 as ut
 
 
 class resample:

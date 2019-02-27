@@ -13,8 +13,8 @@ from datetime import datetime as dt
 import numpy as np
 from pyproj import Geod
 from urllib.request import urlretrieve
+from pysar.objects import timeseries
 from pysar.utils import ptime, readfile, utils as ut
-from pysar import timeseries2velocity as ts2vel
 
 
 unr_site_list_file = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
@@ -309,7 +309,7 @@ class GPS:
                                                     ref_site=ref_site,
                                                     gps_comp=gps_comp)[0:2]
         date_list = [dt.strftime(i, '%Y%m%d') for i in dates]
-        A = ts2vel.design_matrix(date_list)
+        A = timeseries.get_design_matrix4average_velocity(date_list)
         self.velocity = np.dot(np.linalg.pinv(A), dis)[0]
         return self.velocity
 

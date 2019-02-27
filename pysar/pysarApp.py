@@ -13,63 +13,93 @@ import re
 import glob
 import time
 from datetime import datetime as dt
-import argparse
-import warnings
 import shutil
+import argparse
 import subprocess
 import numpy as np
-from pysar.objects import sensor
-from pysar.defaults.auto_path import autoPath
+from pysar.objects import sensor, RAMP_LIST
 from pysar.utils import readfile, utils as ut
+from pysar.defaults.auto_path import autoPath
 from pysar import version
 
 
 ##########################################################################
-EXAMPLE = """example:
-  pysarApp.py                                            #Run / Rerun
-  pysarApp.py  GalapagosSenDT128.template  --fast        #Fast processing
-  pysarApp.py  GalapagosSenDT128.template  --load-data   #Exit after loading data into HDF5 files
+STEP_LIST = [
+    'loadData',
+    'refPoint',
+    'stacking',
+    'unwCor',
+    'netModify',
+    'netInversion',
+    'LOD',
+    'tropo',
+    'deramp',
+    'topo',
+    'residRms',
+    'refDate',
+    'ts2vel',
+    'geocode',
+    'googleEarth',
+    'hdfeos5',
+]
 
-  # Template options
-  pysarApp.py -H                              #Print    default template
-  pysarApp.py -g                              #Generate default template
-  pysarApp.py -g GalapagosSenDT128.template   #Generate default template considering input custom template
+STEP_HELP = """Command line options for steps processing with names are chosen from the following list:
+
+{}
+{}
+{}
+
+In order to use either --start or --dostep, it is necessary that a
+previous run was done using one of the steps options to process at least
+through the step immediately preceding the starting step of the current run.
+""".format(STEP_LIST[0:6], STEP_LIST[6:12], STEP_LIST[12:])
+
+EXAMPLE = """example:
+  pysarApp.py                         #Run with default template 'pysarApp_template.txt'
+  pysarApp.py <custom_template_file>  #Run with default and custom templates
+  pysarApp.py -h / --help             #Help
+  pysarApp.py -g                      #Generate default template (if it does not exist)
+  pysarApp.py -H                      #Print    default template options
+
+  # Run with --start/stop/dostep options
+  pysarApp.py GalapagosSenDT128.template --dostep ts2vel   #Run at step 'ts2vel' only
+  pysarApp.py GalapagosSenDT128.template --stop loadData   #End after step 'loadData'
 """
 
+REFERENCE = """reference:
+  Yunjun, Z., H. Fattahi, F. Amelung (2019), InSAR time series analysis: error
+  correction and noise reduction (under review).
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='PySAR Routine Time Series Analysis',
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+                                     epilog=REFERENCE+'\n'+EXAMPLE)
 
     parser.add_argument('customTemplateFile', nargs='?',
                         help='custom template with option settings.\n' +
-                             "It's equivalent to None if default pysarApp_template.txt is input.")
+                             "Ignored if the default pysarApp_template.txt is input.")
     parser.add_argument('--dir', dest='workDir',
-                        help='PySAR working directory, default is:\n' +
+                        help='Working directory, default:\n' +
                              'a) current directory, OR\n' +
                              'b) $SCRATCHDIR/projectName/PYSAR, if:\n' +
-                             '    1) autoPath = True in pysar/defaults/auto_path.py AND\n' +
+                             '    1) autoPath == True in $PYSAR_HOME/pysar/defaults/auto_path.py AND\n' +
                              '    2) environment variable $SCRATCHDIR exists AND\n' +
-                             '    3) input custom template named as: projectName.*\n')
-    parser.add_argument('-g', dest='generate_template', action='store_true',
-                        help='Generate default template (and merge with custom template), then exit.')
-    parser.add_argument('-H', dest='print_auto_template', action='store_true',
-                        help='Print/Show the example template file for routine processing.')
-    parser.add_argument('--version', action='store_true', help='print version number')
-    parser.add_argument('--fast', action='store_true',
-                        help='Fast processing without using pixel-wised network inversion and DEM error correction')
+                             '    3) customTemplateFile is specified (projectName.*)\n')
 
-    parser.add_argument('--reset', action='store_true',
-                        help='Reset files attributes to re-run pysarApp.py after loading data by:\n' +
-                             '    1) removing ref_y/x/lat/lon for ifgramStack.h5\n' +
-                             '    2) set "dropIfgram" dataset to all true for ifgramStack.h5')
-    parser.add_argument('--load-data', dest='load_dataset', action='store_true',
-                        help='Step 1. Load/check dataset, then exit')
-    parser.add_argument('--modify-network', dest='modify_network', action='store_true',
-                        help='Step 4. Modify the network, then exit')
-    parser.add_argument('--invert-network', dest='invert_network', action='store_true',
-                        help='Step 5. Inverse network of interferograms into time-series, then exit')
+    parser.add_argument('-g', dest='generate_template', action='store_true',
+                        help='Generate default template (if it does not exist).')
+    parser.add_argument('-H', dest='print_template', action='store_true',
+                        help='Print/Show the default template file for details parameter setup.')
+    parser.add_argument('-v','--version', action='store_true', help='print software version')
+
+    step = parser.add_argument_group('steps processing (start/end/dostep)', STEP_HELP)
+    step.add_argument('--start', dest='startStep', metavar='STEP', default=STEP_LIST[0],
+                      help='Start processing at the named step, default: {}'.format(STEP_LIST[0]))
+    step.add_argument('--end', dest='endStep', metavar='STEP',  default=STEP_LIST[-1],
+                      help='End processing at the named step, default: {}'.format(STEP_LIST[-1]))
+    step.add_argument('--dostep', dest='doStep', metavar='STEP',
+                      help='Run processing at the named step only')
     return parser
 
 
@@ -77,809 +107,958 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-    inps.autoTemplateFile = os.path.join(os.path.dirname(__file__), '../docs/pysarApp_template.txt')
 
-    if inps.print_auto_template:
-        with open(inps.autoTemplateFile, 'r') as f:
-            print(f.read())
+    template_file = os.path.join(os.path.dirname(__file__), 'defaults/pysarApp_template.txt')
+    # generate default template
+    if inps.generate_template:
+        dest_file = os.path.join(os.getcwd(), os.path.basename(template_file))
+        if not os.path.isfile(dest_file):
+            print('copy default template file {} to the current directory'.format(template_file))
+            shutil.copy2(template_file, os.getcwd())
+        else:
+            print('default template file exists in current directory: {}, skip.'.format(dest_file))
         raise SystemExit()
 
-    if (inps.customTemplateFile 
-            and os.path.basename(inps.customTemplateFile) == 'pysarApp_template.txt'):
-        inps.customTemplateFile = None
-    return inps
+    # print default template
+    if inps.print_template:
+        raise SystemExit(open(template_file, 'r').read())
 
+    # print software version
+    if inps.version:
+        raise SystemExit(version.description)
 
-def copy_aux_file(inps):
-    # for Univ of Miami
-    fileList = ['PROCESS/unavco_attributes.txt',
-                'PROCESS/bl_list.txt',
-                'SLC/summary*slc.jpg']
-    try:
-        projectDir = os.path.join(os.getenv('SCRATCHDIR'), inps.projectName)
-        fileList = ut.get_file_list([os.path.join(projectDir, i) for i in fileList],
-                                    abspath=True)
-        for file in fileList:
-            if ut.run_or_skip(out_file=os.path.basename(file),
-                              in_file=file,
-                              check_readable=False) == 'run':
-                shutil.copy2(file, inps.workDir)
-                print('copy {} to work directory'.format(os.path.basename(file)))
-    except:
-        pass
-    return inps
+    if not inps.customTemplateFile and not os.path.isfile(os.path.basename(template_file)):
+        parser.print_usage()
+        print(EXAMPLE)
+        msg = "ERROR: no template file found! It requires:"
+        msg += "\n  1) input a custom template file, OR"
+        msg += "\n  2) there is a default template 'pysarApp_template.txt' in current directory." 
+        print(msg)
+        raise SystemExit()
 
-
-def check_obsolete_default_template(inps):
-    """Update pysarApp_template.txt file if it's obsolete, a.k.a. lack new option names"""
-    template_file = os.path.join(inps.workDir, 'pysarApp_template.txt')
-    obsolete_template = False
-    current_dict = readfile.read_template(template_file)
-    latest_dict = readfile.read_template(inps.autoTemplateFile)
-    for key in latest_dict.keys():
-        if key not in current_dict.keys():
-            obsolete_template = True
-
-    if obsolete_template:
-        print('obsolete default template detected, update to the latest template options.')
-        shutil.copy2(inps.autoTemplateFile, inps.workDir)
-        template_file = ut.update_template_file(template_file, current_dict)
-    else:
-        print('latest template file detected:', template_file)
-    return template_file
-
-
-def read_template(inps):
-    print('\n**********  Read Template File  **********')
-    # default template
-    inps.templateFile = os.path.join(inps.workDir, 'pysarApp_template.txt')
-    if not os.path.isfile(inps.templateFile):
-        print('generate default template file:', inps.templateFile)
-        shutil.copy2(inps.autoTemplateFile, inps.workDir)
-    else:
-        check_obsolete_default_template(inps)
-
-    # custom template
-    customTemplate = None
+    # invalid input of custom template
     if inps.customTemplateFile:
-        # Copy custom template file to work directory
-        inputs_dir = os.path.join(inps.workDir, 'INPUTS')
-        if ut.run_or_skip(out_file=os.path.join(inputs_dir, os.path.basename(inps.customTemplateFile)),
-                          in_file=inps.customTemplateFile,
-                          check_readable=False) == 'run':
+        if not os.path.isfile(inps.customTemplateFile):
+            raise FileNotFoundError(inps.customTemplateFile)
+        elif os.path.basename(inps.customTemplateFile) == os.path.basename(template_file):
+            # ignore if pysarApp_template.txt is input as custom template
+            inps.customTemplateFile = None
+
+    # check input --start/end/dostep
+    for key in ['startStep', 'endStep', 'doStep']:
+        value = vars(inps)[key]
+        if value and value not in STEP_LIST:
+            msg = 'Input step not found: {}'.format(value)
+            msg += '\nAvailable steps: {}'.format(STEP_LIST)
+            raise ValueError(msg)
+
+    # ignore --start/end input if --dostep is specified
+    if inps.doStep:
+        inps.startStep = inps.doStep
+        inps.endStep = inps.doStep
+
+    # get list of steps to run
+    idx0 = STEP_LIST.index(inps.startStep)
+    idx1 = STEP_LIST.index(inps.endStep)
+    if idx0 > idx1:
+        msg = 'input start step "{}" is AFTER input end step "{}"'.format(inps.startStep, inps.endStep)
+        raise ValueError(msg)
+    inps.runSteps = STEP_LIST[idx0:idx1+1]
+
+    # message
+    if len(inps.runSteps) == 1:
+        print(version.description)
+    else:
+        print(version.logo)
+    print('Run routine processing with {} on steps: {}'.format(os.path.basename(__file__), inps.runSteps))
+    if len(inps.runSteps) == 1:
+        print('Remaining steps: {}'.format(STEP_LIST[idx0+1:]))
+    print('-'*50)
+    return inps
+
+
+##########################################################################
+class TimeSeriesAnalysis:
+    """ Routine processing workflow for time series analysis of small baseline InSAR stacks
+    """
+
+    def __init__(self, customTemplateFile=None, workDir=None):
+        self.customTemplateFile = customTemplateFile
+        self.workDir = workDir
+        self.cwd = os.path.abspath(os.getcwd())
+        return
+
+    def startup(self):
+        """The starting point of the workflow. It runs everytime. 
+        It 1) grab project name if given
+           2) grab and go to work directory
+           3) get and read template(s) options
+        """
+        #1. Get projectName
+        self.projectName = None
+        if self.customTemplateFile:
+            self.projectName = os.path.splitext(os.path.basename(self.customTemplateFile))[0]
+            print('Project name:', self.projectName)
+
+        #2. Go to the work directory
+        #2.1 Get workDir
+        if not self.workDir:
+            if autoPath and 'SCRATCHDIR' in os.environ and self.projectName:
+                self.workDir = os.path.join(os.getenv('SCRATCHDIR'), self.projectName, 'PYSAR')
+            else:
+                self.workDir = os.getcwd()
+        self.workDir = os.path.abspath(self.workDir)
+
+        #2.2 Go to workDir
+        if not os.path.isdir(self.workDir):
+            os.makedirs(self.workDir)
+            print('create directory:', self.workDir)
+        os.chdir(self.workDir)
+        print("Go to work directory:", self.workDir)
+
+        #3. Read templates
+        #3.1 Get default template file
+        lfile = os.path.join(os.path.dirname(__file__), 'defaults/pysarApp_template.txt')  #latest version
+        cfile = os.path.join(self.workDir, 'pysarApp_template.txt')                        #current version
+        if not os.path.isfile(cfile):
+            print('copy default template file {} to work directory'.format(lfile))
+            shutil.copy2(lfile, self.workDir)
+        else:
+            #cfile is obsolete if any key is missing
+            ldict = readfile.read_template(lfile)
+            cdict = readfile.read_template(cfile)
+            if any([key not in cdict.keys() for key in ldict.keys()]):
+                print('obsolete default template detected, update to the latest version.')
+                shutil.copy2(lfile, self.workDir)
+                #keep the existing option value from obsolete template file
+                template_file = ut.update_template_file(cfile, cdict)
+        self.templateFile = cfile
+
+        # 3.2 read (custom) template files into dicts
+        self._read_template()
+        return
+
+
+    def _read_template(self):
+        # read custom template, to:
+        # 1) update default template
+        # 2) add metadata to ifgramStack file and HDF-EOS5 file
+        self.customTemplate = None
+        if self.customTemplateFile:
+            cfile = self.customTemplateFile
+            # Copy custom template file to INPUTS directory for backup
+            inputs_dir = os.path.join(self.workDir, 'INPUTS')
             if not os.path.isdir(inputs_dir):
                 os.makedirs(inputs_dir)
                 print('create directory:', inputs_dir)
-            shutil.copy2(inps.customTemplateFile, inputs_dir)
-            print('copy {} to INPUTS directory'.format(os.path.basename(inps.customTemplateFile)))
+            if ut.run_or_skip(out_file=os.path.join(inputs_dir, os.path.basename(cfile)),
+                              in_file=cfile,
+                              check_readable=False) == 'run':
+                shutil.copy2(cfile, inputs_dir)
+                print('copy {} to INPUTS directory'.format(os.path.basename(cfile)))
 
-        # Read custom template
-        print('read custom template file:', inps.customTemplateFile)
-        customTemplate = readfile.read_template(inps.customTemplateFile)
-        # correct some loose type errors
-        standardValues = {'def':'auto', 'default':'auto',
-                          'y':'yes', 'on':'yes', 'true':'yes',
-                          'n':'no', 'off':'no', 'false':'no'
-                         }
-        for key, value in customTemplate.items():
-            if value in standardValues.keys():
-                customTemplate[key] = standardValues[value]
-        for key in ['pysar.deramp', 'pysar.troposphericDelay.method']:
-            if key in customTemplate.keys():
-                customTemplate[key] = customTemplate[key].lower().replace('-', '_')
-        if 'processor' in customTemplate.keys():
-            customTemplate['pysar.load.processor'] = customTemplate['processor']
-        for key in ['SUBSET_XMIN', 'SUBSET_YMIN']:
-            if key in customTemplate.keys():
-                customTemplate.pop(key)
+            # Read custom template
+            print('read custom template file:', cfile)
+            cdict = readfile.read_template(cfile)
 
-        # Update default template with custom input template
-        print('update default template based on input custom template')
-        inps.templateFile = ut.update_template_file(inps.templateFile, customTemplate)
+            # correct some loose type errors
+            standardValues = {'def':'auto', 'default':'auto',
+                              'y':'yes', 'on':'yes', 'true':'yes',
+                              'n':'no', 'off':'no', 'false':'no'
+                             }
+            for key, value in cdict.items():
+                if value in standardValues.keys():
+                    cdict[key] = standardValues[value]
 
-    if inps.generate_template:
-        raise SystemExit('Exit as planned after template file generation.')
+            for key in ['pysar.deramp', 'pysar.troposphericDelay.method']:
+                if key in cdict.keys():
+                    cdict[key] = cdict[key].lower().replace('-', '_')
 
-    print('read default template file:', inps.templateFile)
-    template = readfile.read_template(inps.templateFile)
-    template = ut.check_template_auto_value(template)
+            if 'processor' in cdict.keys():
+                cdict['pysar.load.processor'] = cdict['processor']
 
-    # Get existing files name: unavco_attributes.txt
-    try:
-        inps.unavcoMetadataFile = ut.get_file_list('unavco_attribute*txt', abspath=True)[0]
-        print('UNAVCO metadata file:', inps.unavcoMetadataFile)
-    except:
-        inps.unavcoMetadataFile = None
+            # these metadata are used in load_data.py only, not needed afterwards
+            # (in order to manually add extra offset when the lookup table is shifted)
+            # (seen in ROI_PAC product sometimes)
+            for key in ['SUBSET_XMIN', 'SUBSET_YMIN']:
+                if key in cdict.keys():
+                    cdict.pop(key)
 
-    inps.plot = template['pysar.plot']
+            self.customTemplate = dict(cdict)
 
-    return inps, template, customTemplate
+            # Update default template file based on custom template
+            print('update default template based on input custom template')
+            self.templateFile = ut.update_template_file(self.templateFile, self.customTemplate)
+
+        print('read default template file:', self.templateFile)
+        self.template = readfile.read_template(self.templateFile)
+        self.template = ut.check_template_auto_value(self.template)
+
+        # correct some loose setup conflicts
+        if self.template['pysar.geocode'] is False:
+            for key in ['pysar.save.hdfEos5', 'pysar.save.kml']:
+                if self.template[key] is True:
+                    self.template['pysar.geocode'] = True
+                    print('Turn ON pysar.geocode in order to run {}.'.format(key))
+                    break
+        return
 
 
-def get_temporal_coherence_mask(inps, template):
-    """Generate mask from temporal coherence"""
-    configKeys = ['pysar.networkInversion.minTempCoh']
-    inps.maskFile = 'maskTempCoh.h5'
-    inps.minTempCoh = template['pysar.networkInversion.minTempCoh']
-    maskCmd = 'generate_mask.py {} -m {} -o {} --shadow {}'.format(inps.tempCohFile,
-                                                                   inps.minTempCoh,
-                                                                   inps.maskFile,
-                                                                   inps.geomFile)
-    print(maskCmd)
+    def run_load_data(self):
+        """step - loadData
+        It 1) copy auxiliary files into work directory (for Unvi of Miami only)
+           2) load all interferograms stack files into PYSAR/INPUTS directory.
+           3) check loading result
+           4) add custom metadata (optional, for HDF-EOS5 format only)
+        """
+        # 1) copy aux files (optional)
+        self._copy_aux_file()
 
-    # update mode checking
-    # run if 1) output file exists; 2) newer than input file and 3) all config keys are the same
-    run = False
-    if ut.run_or_skip(out_file=inps.maskFile, in_file=inps.tempCohFile, print_msg=False) == 'run':
-        run = True
-    else:
-        print('  1) output file: {} already exists and newer than input file: {}'.format(inps.maskFile,
-                                                                                         inps.tempCohFile))
-        meta_dict = readfile.read_attribute(inps.maskFile)
-        if any(str(template[i]) != meta_dict.get(i, 'False') for i in configKeys):
+        # 2) loading data
+        cmd = 'load_data.py --template {}'.format(self.templateFile)
+        if self.customTemplateFile:
+            cmd += ' {}'.format(self.customTemplateFile)
+        if self.projectName:
+            cmd += ' --project {}'.format(self.projectName)
+        # run
+        print(cmd)
+        subprocess.Popen(cmd, shell=True).wait()
+        os.chdir(self.workDir)
+
+        # 3) check loading result
+        load_complete, stack_file = ut.check_loaded_dataset(self.workDir, print_msg=True)[0:2]
+        if load_complete:
+            status = 0
+        else:
+            status = 1
+
+        # 4) add custom metadata (optional)
+        if self.customTemplateFile:
+            print('updating {} metadata based on custom template file: {}'.format(
+                os.path.basename(stack_file), self.customTemplateFile))
+            # use ut.add_attribute() instead of add_attribute.py because of
+            # better control of special metadata, such as SUBSET_X/YMIN
+            ut.add_attribute(stack_file, self.customTemplate)
+        return status
+
+
+    def _copy_aux_file(self):
+        if not self.projectName:
+            return
+
+        # for Univ of Miami
+        flist = ['PROCESS/unavco_attributes.txt',
+                 'PROCESS/bl_list.txt',
+                 'SLC/summary*slc.jpg']
+        try:
+            proj_dir = os.path.join(os.getenv('SCRATCHDIR'), self.projectName)
+            flist = get_file_list([os.path.join(proj_dir, i) for i in flist], abspath=True)
+            for fname in flist:
+                if ut.run_or_skip(out_file=os.path.basename(fname), in_file=fname, check_readable=False) == 'run':
+                    shutil.copy2(fname, self.workDir)
+                    print('copy {} to work directory'.format(os.path.basename(fname)))
+        except:
+            pass
+        return
+
+
+    def run_reference_point(self):
+        """step - refPoint
+        It 1) generate mask file from common conn comp
+           2) generate average spatial coherence
+           3) add REF_X/Y and/or REF_LAT/LON attribute to stack file
+        """
+        # check the existence of ifgramStack.h5
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        mask_file = 'maskConnComp.h5'
+        coh_file = 'avgSpatialCoh.h5'
+
+        # 1) generate mask file from the common connected components
+        cmd = 'generate_mask.py {} --nonzero -o {} --update'.format(stack_file, mask_file)
+        print(cmd)
+        subprocess.Popen(cmd, shell=True).wait()
+
+        # 2) generate average spatial coherence
+        cmd = 'temporal_average.py {} --dataset coherence -o {} --update'.format(stack_file, coh_file)
+        print(cmd)
+        subprocess.Popen(cmd, shell=True).wait()
+
+        # 3) select reference point
+        cmd = 'reference_point.py {} -t {} -c {}'.format(stack_file, self.templateFile, coh_file)
+        print(cmd)
+        status = subprocess.Popen(cmd, shell=True).wait()
+        return status
+
+
+    def run_ifgram_stacking(self):
+        """step - stacking"""
+        # check the existence of ifgramStack.h5
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        water_mask_file = 'waterMask.h5'
+        pha_vel_file = 'avgPhaseVelocity.h5'
+        coh_mask_file = 'maskSpatialCoh.h5'
+
+        # 1) stacking - average phase velocity
+        cmd = 'temporal_average.py {} --dataset unwrapPhase -o {} --update'.format(stack_file, pha_vel_file)
+        print(cmd)
+        status = subprocess.Popen(cmd, shell=True).wait()
+
+        # 2) generate mask based on average spatial coherence
+        if ut.run_or_skip(out_file=coh_mask_file, in_file=pha_vel_file) == 'run':
+            cmd = 'generate_mask.py {} -m 0.7 -o {}'.format(pha_vel_file, coh_mask_file)
+            if os.path.isfile(water_mask_file):
+                cmd += ' --base {}'.format(water_mask_file)
+            print(cmd)
+            subprocess.Popen(cmd, shell=True).wait()
+        return status
+
+
+    def run_unwrap_error_correction(self):
+        """step - unwCor"""
+        status = 0
+        method = self.template['pysar.unwrapError.method']
+        if not method:
+            print('phase-unwrapping error correction is OFF.')
+            return status
+
+        # check the existence of ifgramStack.h5
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        mask_file = 'maskConnComp.h5'
+
+        cmd1 = 'unwrap_error_bridging.py {} -t {} --update'.format(stack_file, self.templateFile)
+        cmd2 = 'unwrap_error_phase_closure.py {} {} -t {} --update'.format(stack_file, mask_file, self.templateFile)
+
+        if method == 'bridging':
+            cmd = cmd1
+        elif method == 'phase_closure':
+            cmd = cmd2
+        elif method == 'bridging+phase_closure':
+            cmd = cmd1 + ' -i unwrapPhase -o unwrapPhase_bridging\n'
+            cmd += cmd2 + ' -i unwrapPhase_bridging -o unwrapPhase_bridging_phaseClosure'
+        else:
+            raise ValueError('un-recognized method: {}'.format(method))
+
+        print(cmd)
+        status = subprocess.Popen(cmd, shell=True).wait()
+        return status
+
+
+    def run_network_modification(self):
+        """step - netModify"""
+        # check the existence of ifgramStack.h5
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        coh_txt = '{}_coherence_spatialAvg.txt'.format(os.path.splitext(os.path.basename(stack_file))[0])
+        try:
+            net_fig = [i for i in ['Network.pdf', 'PIC/Network.pdf'] if os.path.isfile(i)][0]
+        except:
+            net_fig = None
+
+        # 1) modify network
+        cmd = 'modify_network.py {} -t {}'.format(stack_file, self.templateFile)
+        print(cmd)
+        status = subprocess.Popen(cmd, shell=True).wait()
+
+        # 2) plot network
+        cmd = 'plot_network.py {} -t {} --nodisplay'.format(stack_file, self.templateFile)
+        print(cmd)
+        if ut.run_or_skip(out_file=net_fig,
+                          in_file=[stack_file, coh_txt, self.templateFile],
+                          check_readable=False) == 'run':
+            subprocess.Popen(cmd, shell=True).wait()
+        return status
+
+
+    def run_network_inversion(self):
+        """step - netInversion
+        1) network inversion --> timeseries.h5, temporalCoherence.h5, numInvIfgram.h5
+        2) temporalCoherence.h5 --> maskTempCoh.h5
+        """
+        # check the existence of ifgramStack.h5
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+
+        # 1) invert ifgramStack for time-series
+        cmd = 'ifgram_inversion.py {} -t {} --update '.format(stack_file, self.templateFile)
+        print(cmd)
+        status = subprocess.Popen(cmd, shell=True).wait()
+
+        # 2) get reliable pixel mask: maskTempCoh.h5
+        self.generate_temporal_coherence_mask()
+        return status
+
+
+    def generate_temporal_coherence_mask(self):
+        """Generate reliable pixel mask from temporal coherence"""
+        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
+        tcoh_file = 'temporalCoherence.h5'
+        mask_file = 'maskTempCoh.h5'
+        tcoh_min = self.template['pysar.networkInversion.minTempCoh']
+
+        cmd = 'generate_mask.py {} -m {} -o {} --shadow {}'.format(tcoh_file, tcoh_min, mask_file, geom_file)
+        print(cmd)
+
+        # update mode checking, run if:
+        # 1) output file exists and newer than input file, AND
+        # 2) all config keys are the same
+        config_keys = ['pysar.networkInversion.minTempCoh']
+        run = False
+        if ut.run_or_skip(out_file=mask_file, in_file=tcoh_file, print_msg=False) == 'run':
             run = True
-            print('  2) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
         else:
-            print('  2) all key configuration parameters are the same:\n\t{}'.format(configKeys))
-    # result
-    print('run this step:', run)
-    if run:
-        status = subprocess.Popen(maskCmd, shell=True).wait()
+            print('  1) output file: {} already exists and newer than input file: {}'.format(mask_file, tcoh_file))
+            atr = readfile.read_attribute(mask_file)
+            if any(str(self.template[i]) != atr.get(i, 'False') for i in config_keys):
+                run = True
+                print('  2) NOT all key configration parameters are the same --> run.\n\t{}'.format(config_keys))
+            else:
+                print('  2) all key configuration parameters are the same:\n\t{}'.format(config_keys))
+        print('run this step:', run)
+
+        if run:
+            subprocess.Popen(cmd, shell=True).wait()
+            # update configKeys
+            atr = {}
+            for key in config_keys:
+                atr[key] = self.template[key]
+            ut.add_attribute(mask_file, atr)
+
+        # check number of pixels selected in mask file for following analysis
+        num_pixel = np.sum(readfile.read(mask_file)[0] != 0.)
+        print('number of reliable pixels: {}'.format(num_pixel))
+
+        min_num_pixel = float(self.template['pysar.networkInversion.minNumPixel'])
+        if num_pixel < min_num_pixel:
+            msg = "Not enough reliable pixels (minimum of {}). ".format(int(min_num_pixel))
+            msg += "Try the following:\n"
+            msg += "1) Check the reference pixel and make sure it's not in areas with unwrapping errors\n"
+            msg += "2) Check the network and make sure it's fully connected without subsets"
+            raise RuntimeError(msg)
+        return
+
+
+    @staticmethod
+    def get_timeseries_filename(template):
+        """Get input/output time-series filename for each step
+        Parameters: template : dict, content of pysarApp_template.txt
+        Returns:    steps    : dict of dicts, input/output filenames for each step
+        """
+        steps = dict()
+        fname0 = 'timeseries.h5'
+        fname1 = 'timeseries.h5'
+        atr = readfile.read_attribute(fname0)
+
+        # loop for all steps
+        phase_correction_steps = ['LOD', 'tropo', 'deramp', 'topo']
+        for sname in phase_correction_steps:
+            # fname0 == fname1 if no valid correction method is set.
+            fname0 = fname1
+            if sname == 'LOD':
+                if atr['PLATFORM'].lower().startswith('env'):
+                    fname1 = '{}_LODcor.h5'.format(os.path.splitext(fname0)[0])
+
+            elif sname == 'tropo':
+                method = template['pysar.troposphericDelay.method']
+                model  = template['pysar.troposphericDelay.weatherModel']
+                if method:
+                    if method == 'height_correlation':
+                        fname1 = '{}_tropHgt.h5'.format(os.path.splitext(fname0)[0])
+
+                    elif method == 'pyaps':
+                        fname1 = '{}_{}.h5'.format(os.path.splitext(fname0)[0], model)
+
+                    else:
+                        msg = 'Un-recognized tropospheric  crrection method: {}'.format(method)
+                        raise ValueError(msg)
+
+            elif sname == 'deramp':
+                method = template['pysar.deramp']
+                if method:
+                    if method in RAMP_LIST:
+                        fname1 = '{}_ramp.h5'.format(os.path.splitext(fname0)[0])
+                    else:
+                        msg = 'un-recognized phase ramp type: {}'.format(method)
+                        msg += '\navailable ramp types:\n{}'.format(RAMP_LIST)
+                        raise ValueError(msg)
+
+            elif sname == 'topo':
+                method = template['pysar.topographicResidual']
+                if method:
+                    fname1 = '{}_demErr.h5'.format(os.path.splitext(fname0)[0])
+
+            step = dict()
+            step['input'] = fname0
+            step['output'] = fname1
+            steps[sname] = step
+
+        # step - refDate
+        fnames = [steps[sname]['output'] for sname in phase_correction_steps]
+        fnames += [steps[sname]['input'] for sname in phase_correction_steps]
+        fnames = sorted(list(set(fnames)))
+        step = dict()
+        step['input'] = fnames
+        steps['refDate'] = step
+
+        # step - ts2vel / geocode
+        step = dict()
+        step['input'] = steps['refDate']['input'][-1]
+        steps['ts2vel'] = step
+        steps['geocode'] = step
+
+        # step - hdfeos5
+        if 'Y_FIRST' not in atr.keys():
+            step = dict()
+            step['input'] = './GEOCODE/geo_{}'.format(steps['refDate']['input'][-1])
+        steps['hdfeos5'] = step
+        return steps
+
+
+    def run_local_oscillator_drift_correction(self):
+        """step - LOD
+        Correct local oscillator drift (LOD). Automatically applied for Envisat data.
+        """
+        status = 0
+        step = 'LOD'
+        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
+        fnames = self.get_timeseries_filename(self.template)[step]
+        in_file = fnames['input']
+        out_file = fnames['output']
+        if in_file != out_file:
+            cmd = 'local_oscilator_drift.py {} {} -o {}'.format(in_file, geom_file, out_file)
+            print(cmd)
+            if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
+                status = subprocess.Popen(cmd, shell=True).wait()
+        else:
+            atr = readfile.read_attribute(in_file)
+            sat = atr.get('PLATFORM', None)
+            print('No local oscillator drift correction is needed for {}'.format(sat))
+        return status
+
+
+    def run_tropospheric_delay_correction(self):
+        """step - tropo"""
+        status = 0
+        step = 'tropo'
+        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
+        mask_file = 'maskTempCoh.h5'
+
+        fnames = self.get_timeseries_filename(self.template)[step]
+        in_file = fnames['input']
+        out_file = fnames['output']
+        if in_file != out_file:
+            poly_order  = self.template['pysar.troposphericDelay.polyOrder']
+            tropo_model = self.template['pysar.troposphericDelay.weatherModel']
+            weather_dir = self.template['pysar.troposphericDelay.weatherDir']
+            method      = self.template['pysar.troposphericDelay.method']
+
+            # Phase/Elevation Ratio (Doin et al., 2009)
+            if method == 'height_correlation':
+                cmd = 'tropcor_phase_elevation.py {f} -g {g} -p {p} -m {m} -o {o}'.format(f=in_file,
+                                                                                          g=geom_file,
+                                                                                          p=poly_order,
+                                                                                          m=mask_file,
+                                                                                          o=out_file)
+                print('tropospheric delay correction with height-correlation approach')
+                print(cmd)
+                if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
+                    status = subprocess.Popen(cmd, shell=True).wait()
+
+            # Weather Re-analysis Data (Jolivet et al., 2011;2014)
+            elif method == 'pyaps':
+                cmd = 'tropcor_pyaps.py -f {f} --model {m} -g {g} -w {w}'.format(f=in_file,
+                                                                                 m=tropo_model,
+                                                                                 g=geom_file,
+                                                                                 w=weather_dir)
+                print('Atmospheric correction using Weather Re-analysis dataset (PyAPS, Jolivet et al., 2011)')
+                print('Weather Re-analysis dataset:', tropo_model)
+                print(cmd)
+                if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
+                    tropo_file = './INPUTS/{}.h5'.format(tropo_model)
+                    if os.path.isfile(tropo_file):
+                        cmd = 'diff.py {f} {t} -o {o} --force'.format(f=in_file, t=tropo_file, o=out_file)
+                        print('--------------------------------------------')
+                        print('Use existed tropospheric delay file: {}'.format(tropo_file))
+                        print(cmd)
+                    status = subprocess.Popen(cmd, shell=True).wait()
+                    if status is not 0:
+                        msg = '\nError in step: tropo with {} method'.format(method)
+                        msg += '\nTry the following:'
+                        msg += '\n1) Check the installation of PyAPS'
+                        msg += '\n   http://earthdef.caltech.edu/projects/pyaps/wiki/Main'
+                        msg += '\n   Try in command line: python -c "import pyaps"'
+                        msg += '\n2) Use other tropospheric correction method, height-correlation, for example'
+                        msg += '\n3) or turn off the option by setting pysar.troposphericDelay.method = no.\n'
+                        print(msg)
+        else:
+            print('No tropospheric delay correction.')
+        return status
+
+
+    def run_phase_deramping(self):
+        """step - deramp"""
+        step = 'deramp'
+        mask_file = self.template['pysar.deramp.maskFile']
+        method    = self.template['pysar.deramp']
+
+        fnames = self.get_timeseries_filename(self.template)[step]
+        in_file = fnames['input']
+        out_file = fnames['output']
+        status = 0
+        if in_file != out_file:
+            print('Remove for each acquisition a phase ramp: {}'.format(method))
+            cmd = 'remove_ramp.py {f} -s {s} -m {m} -o {o}'.format(f=in_file, s=method, m=mask_file, o=out_file)
+            print(cmd)
+            if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
+                status = subprocess.Popen(cmd, shell=True).wait()
+        else:
+            print('No phase ramp removal.')
+        return status
+
+
+    def run_topographic_residual_correction(self):
+        """step - topo
+        Topographic residual (DEM error) correction (optional).
+        """
+        step = 'topo'
+        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
+        fnames = self.get_timeseries_filename(self.template)[step]
+        in_file = fnames['input']
+        out_file = fnames['output']
+        status = 0
+        if in_file != out_file:
+            cmd = 'dem_error.py {f} -g {g} -t {t} -o {o} --update '.format(f=in_file,
+                                                                           g=geom_file,
+                                                                           t=self.templateFile,
+                                                                           o=out_file)
+            print(cmd)
+            status = subprocess.Popen(cmd, shell=True).wait()
+        else:
+            print('No topographic residual correction.')
+        return status
+
+
+    def run_residual_phase_rms(self):
+        """step - residRms
+        Noise evaluation based on the phase residual
+        """
+        step = 'residRms'
+        res_file = 'timeseriesResidual.h5'
+        status = 0
+        if os.path.isfile(res_file):
+            cmd = 'timeseries_rms.py {} -t {}'.format(res_file, self.templateFile)
+            print(cmd)
+            status = subprocess.Popen(cmd, shell=True).wait()
+        else:
+            print('No residual phase file found! Skip residual RMS analysis.')
+        return status
+
+
+    def run_reference_date(self):
+        """step - refDate
+        Change reference date for all time-series files (optional).
+        """
+        status = 0
+        step = 'refDate'
+        if self.template['pysar.reference.date']:
+            in_files = self.get_timeseries_filename(self.template)[step]['input']
+            cmd = 'reference_date.py -t {} '.format(self.templateFile)
+            for in_file in in_files:
+                cmd += ' {}'.format(in_file)
+            print(cmd)
+            status = subprocess.Popen(cmd, shell=True).wait()
+        else:
+            print('No reference date change.')
+        return status
+
+
+    def run_timeseries2velocity(self):
+        """step - ts2vel"""
+        step = 'ts2vel'
+        ts_file = self.get_timeseries_filename(self.template)[step]['input']
+        vel_file = 'velocity.h5'
+        cmd = 'timeseries2velocity.py {f} -t {t} -o {o} --update'.format(f=ts_file,
+                                                                         t=self.templateFile,
+                                                                         o=vel_file)
+        print(cmd)
+        status = subprocess.Popen(cmd, shell=True).wait()
+
+        # Velocity from estimated tropospheric delays
+        tropo_model = self.template['pysar.troposphericDelay.weatherModel']
+        tropo_file = './INPUTS/{}.h5'.format(tropo_model)
+        if os.path.isfile(tropo_file):
+            suffix = os.path.splitext(os.path.basename(tropo_file))[0].title()
+            tropo_vel_file = '{}{}.h5'.format(os.path.splitext(vel_file)[0], suffix)
+            cmd = 'timeseries2velocity.py {f} -t {t} -o {o} --update'.format(f=tropo_file,
+                                                                             t=self.templateFile,
+                                                                             o=tropo_vel_file)
+            print(cmd)
+            subprocess.Popen(cmd, shell=True).wait()
+        return status
+
+
+    def run_geocode(self):
+        """step - geocode"""
+        status = 0
+        step = 'geocode'
+        if self.template['pysar.geocode']:
+            ts_file = self.get_timeseries_filename(self.template)[step]['input']
+            atr = readfile.read_attribute(ts_file)
+            if 'Y_FIRST' not in atr.keys():
+                # 1. geocode
+                out_dir = os.path.join(self.workDir, 'GEOCODE')
+                if not os.path.isdir(out_dir):
+                    os.makedirs(out_dir)
+                    print('create directory:', out_dir)
+
+                geom_file, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2:4]
+                in_files = [geom_file, 'temporalCoherence.h5', ts_file, 'velocity.h5']
+                geocode_script = os.path.join(os.path.dirname(__file__), 'geocode.py')
+
+                cmd = '{scp} -l {l} -t {t} --outdir {o} --update '.format(scp=geocode_script,
+                                                                          l=lookup_file,
+                                                                          t=self.templateFile,
+                                                                          o=out_dir)
+                for in_file in in_files:
+                    cmd += ' {}'.format(in_file)
+                print(cmd)
+                status = subprocess.Popen(cmd, shell=True).wait()
+
+                # 2. generate reliable pixel mask in geo coordinate
+                geom_file = os.path.join(out_dir, 'geo_{}'.format(os.path.basename(geom_file)))
+                tcoh_file = os.path.join(out_dir, 'geo_temporalCoherence.h5')
+                mask_file = os.path.join(out_dir, 'geo_maskTempCoh.h5')
+                tcoh_min = self.template['pysar.networkInversion.minTempCoh']
+                cmd = 'generate_mask.py {} -m {} -o {} --shadow {}'.format(tcoh_file, tcoh_min, mask_file, geom_file)
+                print(cmd)
+                if ut.run_or_skip(out_file=mask_file, in_file=tcoh_file) == 'run':
+                    subprocess.Popen(cmd, shell=True).wait()
+        else:
+            print('geocoding is OFF')
+        return status
+
+
+    def run_save2google_earth(self):
+        """step - googleEarth
+        Save velocity file in geo coordinates into Google Earth raster image.
+        """
+        status = 0
+        step = 'googleEarth'
+        if self.template['pysar.save.kml'] is True:
+            print('creating Google Earth KMZ file for geocoded velocity file: ...')
+            # input
+            vel_file = 'velocity.h5'
+            atr = readfile.read_attribute(vel_file)
+            if 'Y_FIRST' not in atr.keys():
+                vel_file = os.path.join(self.workDir, 'GEOCODE/geo_velocity.h5')
+
+            # output
+            kmz_file = '{}.kmz'.format(os.path.splitext(os.path.basename(vel_file))[0])
+            cmd = 'save_kmz.py {} -o {}'.format(vel_file, kmz_file)
+            print(cmd)
+
+            # update mode
+            try:
+                kmz_file = [i for i in [kmz_file, 'PIC/{}'.format(kmz_file)] if os.path.isfile(i)][0]
+            except:
+                kmz_file = None
+            if ut.run_or_skip(out_file=kmz_file, in_file=vel_file, check_readable=False) == 'run':
+                status = subprocess.Popen(cmd, shell=True).wait()
+        else:
+            print('save velocity to Google Earth format is OFF.')
+        return status
+
+
+    def run_save2hdfeos5(self):
+        """step - hdfeos5
+        Save displacement time-series and its aux data in geo coordinate into HDF-EOS5 format
+        """
+        status = 0
+        step = 'hdfeos5'
+        if self.template['pysar.save.hdfEos5'] is True:
+            # input
+            ts_file = self.get_timeseries_filename(self.template)[step]['input']
+            # Add attributes from custom template to timeseries file
+            if self.customTemplate is not None:
+                ut.add_attribute(ts_file, self.customTemplate)
+
+            tcoh_file = 'temporalCoherence.h5'
+            mask_file = 'geo_maskTempCoh.h5'
+            geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
+            if 'GEOCODE' in ts_file:
+                tcoh_file = './GEOCODE/geo_temporalCoherence.h5'
+                mask_file = './GEOCODE/geo_maskTempCoh.h5'
+                geom_file = './GEOCODE/geo_{}'.format(os.path.basename(geom_file))
+
+            # cmd
+            print('--------------------------------------------')
+            cmd = 'save_hdfeos5.py {f} -c {c} -m {m} -g {g} -t {t}'.format(f=ts_file,
+                                                                           c=tcoh_file,
+                                                                           m=mask_file,
+                                                                           g=geom_file,
+                                                                           t=self.templateFile)
+            print(cmd)
+
+            # output (check existing file)
+            atr = readfile.read_attribute(ts_file)
+            SAT = sensor.get_unavco_mission_name(atr)
+            try:
+                hdfeos5_file = get_file_list('{}_*.he5'.format(SAT))[0]
+            except:
+                hdfeos5_file = None
+            if ut.run_or_skip(out_file=hdfeos5_file, in_file=[ts_file, tcoh_file, mask_file, geom_file]) == 'run':
+                status = subprocess.Popen(cmd, shell=True).wait()
+        else:
+            print('save time-series to HDF-EOS5 format is OFF.')
+        return status
+
+
+    def plot(self, print_aux=True):
+        """Plot data files and save to figures in PIC folder"""
+        if not self.template['pysar.plot']:
+            return
+
+        def grab_latest_update_date(fname, prefix='# Latest update:'):
+            try:
+                lines = open(fname, 'r').readlines()
+                line = [i for i in lines if prefix in i][0]
+                t = re.findall('\d{4}-\d{2}-\d{2}', line)[0]
+                t = dt.strptime(t, '%Y-%m-%d')
+            except:
+                t = dt.strptime('2010-01-01', '%Y-%m-%d') #a arbitrary old date
+            return t
+
+        print('\n******************** plot / save to PIC ********************')
+        sh_file = os.path.join(os.path.dirname(__file__), '../sh/plot_pysarApp.sh')
+
+        # 1) copy to work directory (if not existed yet).
+        if not os.path.isfile(os.path.basename(sh_file)):
+            print('copy {} to work directory: {}'.format(sh_file, self.workDir))
+            shutil.copy2(sh_file, self.workDir)
+
+        # 2) copy to work directory (if obsolete file detected) and rename the existing one
+        elif grab_latest_update_date(os.path.basename(sh_file)) < grab_latest_update_date(sh_file):
+            os.system('mv {f} {f}_obsolete'.format(f=os.path.basename(sh_file)))
+            print('obsolete shell file detected, renamed it to: {}_obsolete'.format(os.path.basename(sh_file)))
+            print('copy {} to work directory: {}'.format(sh_file, self.workDir))
+            shutil.copy2(sh_file, self.workDir)
+
+        # cmd
+        cmd = './'+os.path.basename(sh_file)
+        print(cmd)
+        status = subprocess.Popen(cmd, shell=True).wait()
+
+        # message for more visualization scripts
+        msg = """
+        info.py                    #check HDF5 file structure and metadata
+        view.py                    #2D map view
+        tsview.py                  #1D point time-series (interactive)   
+        transect.py                #1D profile (interactive)
+        plot_coherence_matrix.py   #plot coherence matrix for one pixel (interactive)
+        plot_network.py            #plot network configuration of the dataset    
+        save_kmz.py                #generate Google Earth KMZ file in raster image
+        save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
+        """
+        if print_aux:
+            print(msg)
+
+        # check status
         if status is not 0:
-            raise Exception('Error while generating mask file from temporal coherence.')
-
-        # update configKeys
-        meta_dict = {}
-        for key in configKeys:
-            meta_dict[key] = template[key]
-        ut.add_attribute(inps.maskFile, meta_dict)
-
-    # check number of pixels selected in mask file for following analysis
-    min_num_pixel = float(template['pysar.networkInversion.minNumPixel'])
-    msk = readfile.read(inps.maskFile)[0]
-    num_pixel = np.sum(msk != 0.)
-    print('number of pixels selected: {}'.format(num_pixel))
-    if num_pixel < min_num_pixel:
-        msg = "Not enought coherent pixels selected (minimum of {}). ".format(int(min_num_pixel))
-        msg += "Try the following:\n"
-        msg += "1) Check the reference pixel and make sure it's not in areas with unwrapping errors\n"
-        msg += "2) Check the network and make sure it's fully connected without subsets"
-        raise RuntimeError(msg)
-    del msk
-    return
+            raise RuntimeError('Error while plotting results using {}'.format(cmd))
+        return
 
 
-def correct_unwrap_error(inps, template):
-    unw_cor_method = template['pysar.unwrapError.method']
-    if unw_cor_method:
-        print('\n**********  Unwrapping Error Correction **********')
-        cmd_bridging = 'unwrap_error_bridging.py {} -t {} --update'.format(inps.stackFile,
-                                                                           inps.templateFile)
+    def run(self, steps=STEP_LIST):
+        # run the chosen steps
+        for sname in steps:
+            status = 0
+            print('\n******************** step - {} ********************'.format(sname))
 
-        cmd_closure = 'unwrap_error_phase_closure.py {} {} -t {} --update'.format(inps.stackFile,
-                                                                                  inps.maskFile,
-                                                                                  inps.templateFile)
-        if unw_cor_method == 'bridging':
-            unwCmd = cmd_bridging
-        elif unw_cor_method == 'phase_closure':
-            unwCmd = cmd_closure
-        elif unw_cor_method == 'bridging+phase_closure':
-            unwCmd = cmd_bridging + ' -i unwrapPhase -o unwrapPhase_bridging\n'
-            unwCmd += cmd_closure + ' -i unwrapPhase_bridging -o unwrapPhase_bridging_phaseClosure'
-        else:
-            raise ValueError('un-recognized method: {}'.format(unw_cor_method))
+            if sname == 'loadData':
+                status = self.run_load_data()
 
-        print(unwCmd)
-        status = subprocess.Popen(unwCmd, shell=True).wait()
-        if status is not 0:
-            raise Exception('Error while correcting phase unwrapping errors.\n')
-    return inps
+            elif sname == 'refPoint':
+                status = self.run_reference_point()
 
+            elif sname == 'stacking':
+                status = self.run_ifgram_stacking()
 
-def correct_tropospheric_delay(inps, template):
-    """Correct tropospheric delay with options from template"""
-    inps.tropPolyOrder = template['pysar.troposphericDelay.polyOrder']
-    inps.tropModel     = template['pysar.troposphericDelay.weatherModel']
-    inps.tropMethod    = template['pysar.troposphericDelay.method']
+            elif sname == 'unwCor':
+                status = self.run_unwrap_error_correction()
 
-    # check existing tropospheric delay file
-    try:
-        fileList = [os.path.join(inps.workDir, 'INPUTS/{}.h5'.format(inps.tropModel))]
-        inps.tropFile = ut.get_file_list(fileList)[0]
-    except:
-        inps.tropFile = None
+            elif sname == 'netModify':
+                status = self.run_network_modification()
 
-    # run
-    if inps.tropMethod:
-        fbase = os.path.splitext(inps.timeseriesFile)[0]
+            elif sname == 'netInversion':
+                status = self.run_network_inversion()
 
-        # Phase/Elevation Ratio (Doin et al., 2009)
-        if inps.tropMethod == 'height_correlation':
-            outName = '{}_tropHgt.h5'.format(fbase)
-            print('tropospheric delay correction with height-correlation approach')
-            tropCmd = ('tropcor_phase_elevation.py {t} -g {d} -p {p}'
-                       ' -m {m} -o {o}').format(t=inps.timeseriesFile,
-                                                d=inps.geomFile,
-                                                p=inps.tropPolyOrder,
-                                                m=inps.maskFile,
-                                                o=outName)
-            print(tropCmd)
-            if ut.run_or_skip(out_file=outName, in_file=inps.timeseriesFile) == 'run':
-                status = subprocess.Popen(tropCmd, shell=True).wait()
-                if status is not 0:
-                    raise Exception('Error while correcting tropospheric delay.\n')
-            inps.timeseriesFile = outName
-            inps.timeseriesFiles.append(outName)
+            elif sname == 'LOD':
+                status = self.run_local_oscillator_drift_correction()
 
-        # Weather Re-analysis Data (Jolivet et al., 2011;2014)
-        elif inps.tropMethod == 'pyaps':
-            inps.weatherDir = template['pysar.troposphericDelay.weatherDir']
-            outName = '{}_{}.h5'.format(fbase, inps.tropModel)
-            print(('Atmospheric correction using Weather Re-analysis dataset'
-                   ' (PyAPS, Jolivet et al., 2011)'))
-            print('Weather Re-analysis dataset:', inps.tropModel)
-            tropCmd = ('tropcor_pyaps.py -f {t} --model {m} -g {g}'
-                       ' -w {w}').format(t=inps.timeseriesFile,
-                                         m=inps.tropModel,
-                                         g=inps.geomFile,
-                                         w=inps.weatherDir)
-            print(tropCmd)
-            if ut.run_or_skip(out_file=outName, in_file=inps.timeseriesFile) == 'run':
-                if inps.tropFile:
-                    tropCmd = 'diff.py {} {} -o {} --force'.format(inps.timeseriesFile,
-                                                                   inps.tropFile,
-                                                                   outName)
-                    print('--------------------------------------------')
-                    print('Use existed tropospheric delay file: {}'.format(inps.tropFile))
-                    print(tropCmd)
-                status = subprocess.Popen(tropCmd, shell=True).wait()
-                if status is not 0:
-                    print('\nError while correcting tropospheric delay, try the following:')
-                    print('1) Check the installation of PyAPS')
-                    print('   http://earthdef.caltech.edu/projects/pyaps/wiki/Main')
-                    print('   Try in command line: python -c "import pyaps"')
-                    print('2) Use other tropospheric correction method, height-correlation, for example')
-                    print('3) or turn off the option by setting pysar.troposphericDelay.method = no.\n')
-                    raise RuntimeError()
-            inps.timeseriesFile = outName
-            inps.timeseriesFiles.append(outName)
-        else:
-            print('Un-recognized atmospheric delay correction method: {}'.format(inps.tropMethod))
+            elif sname == 'tropo':
+                status = self.run_tropospheric_delay_correction()
 
-    # Grab tropospheric delay file
-    try:
-        fileList = [os.path.join(inps.workDir, 'INPUTS/{}.h5'.format(inps.tropModel))]
-        inps.tropFile = ut.get_file_list(fileList)[0]
-    except:
-        inps.tropFile = None
-    return
+            elif sname == 'deramp':
+                status = self.run_phase_deramping()
 
+            elif sname == 'topo':
+                status = self.run_topographic_residual_correction()
 
-def save_hdfeos5(inps, customTemplate=None):
-    if not inps.geocoded:
-        warnings.warn('Dataset is in radar coordinates, skip writting to HDF-EOS5 format.')
-    else:
-        # Add attributes from custom template to timeseries file
-        if customTemplate is not None:
-            ut.add_attribute(inps.timeseriesFile, customTemplate)
+            elif sname == 'residRms':
+                status = self.run_residual_phase_rms()
 
-        # Save to HDF-EOS5 format
-        print('--------------------------------------------')
-        hdfeos5Cmd = ('save_hdfeos5.py {t} -c {c} -m {m} -g {g}'
-                      ' -t {e}').format(t=inps.timeseriesFile,
-                                        c=inps.tempCohFile,
-                                        m=inps.maskFile,
-                                        g=inps.geomFile,
-                                        e=inps.templateFile)
-        print(hdfeos5Cmd)
-        atr = readfile.read_attribute(inps.timeseriesFile)
-        SAT = sensor.get_unavco_mission_name(atr)
-        try:
-            inps.hdfeos5File = ut.get_file_list('{}_*.he5'.format(SAT))[0]
-        except:
-            inps.hdfeos5File = None
-        if ut.run_or_skip(out_file=inps.hdfeos5File, in_file=[inps.timeseriesFile,
-                                                              inps.tempCohFile,
-                                                              inps.maskFile,
-                                                              inps.geomFile]) == 'run':
-            status = subprocess.Popen(hdfeos5Cmd, shell=True).wait()
+            elif sname == 'refDate':
+                status = self.run_reference_date()
+
+            elif sname == 'ts2vel':
+                status = self.run_timeseries2velocity()
+
+            elif sname == 'geocode':
+                status = self.run_geocode()
+
+            elif sname == 'googleEarth':
+                status = self.run_save2google_earth()
+
+            elif sname == 'hdfeos5':
+                status = self.run_save2hdfeos5()
+
             if status is not 0:
-                raise Exception('Error while generating HDF-EOS5 time-series file.\n')
-    return
+                # plot result if error occured
+                self.plot(print_aux=False)
 
+                # go back to original directory
+                print('Go back to directory:', self.cwd)
+                os.chdir(self.cwd)
 
-def plot_pysarApp(inps):
-    def grab_latest_update_date(fname, prefix='# Latest update:'):
-        with open(fname, 'r') as f:
-            lines = f.readlines()
-        try:
-            line = [i for i in lines if prefix in i][0]
-            t_update = re.findall('\d{4}-\d{2}-\d{2}', line)[0]
-            t_update = dt.strptime(t_update, '%Y-%m-%d')
-        except:
-            t_update = None
-        return t_update
-        
-    inps.plotShellFile = os.path.join(os.path.dirname(__file__), '../sh/plot_pysarApp.sh')
-    plotCmd = './'+os.path.basename(inps.plotShellFile)
-    print('\n**********  Plot Results / Save to PIC  **********')
-    # copy to workding directory if not existed yet.
-    if not os.path.isfile(plotCmd):
-        print('copy {} to work directory: {}'.format(inps.plotShellFile, inps.workDir))
-        shutil.copy2(inps.plotShellFile, inps.workDir)
-    # rename and copy if obsolete file detected
-    else:
-        t_exist = grab_latest_update_date(plotCmd)
-        t_src = grab_latest_update_date(inps.plotShellFile)
-        if not t_exist or t_exist < t_src:
-            print('obsolete shell file detected.')
-            cmd = 'mv {f} {f}_obsolete'.format(f=os.path.basename(plotCmd))
-            print('rename existing file: {}'.format(cmd))
-            os.system(cmd)
-            print('copy {} to work directory: {}'.format(inps.plotShellFile, inps.workDir))
-            shutil.copy2(inps.plotShellFile, inps.workDir)
+                # raise error
+                raise RuntimeError('step {} with status {}'.format(sname, status))
 
-    if os.path.isfile(plotCmd):
-        print(plotCmd)
-        status = subprocess.Popen(plotCmd, shell=True).wait()
-        msg = '\n'+'-'*50
-        msg += '\nUse info.py to check the HDF5 file structure and metadata.'
-        msg += '\nUse the following scripts for more visualization options:'
-        msg += '\n    view.py                  - 2D map(s) view'
-        msg += '\n    tsview.py                - 1D point time-series (interactive)'
-        msg += '\n    transect.py              - 1D profile/transection (interactive)'
-        msg += '\n    plot_coherence_matrix.py - plot coherence matrix of one pixel (interactive)'
-        msg += '\n    plot_network.py          - plot network configuration of the whole dataset'
+        # plot result (show aux visualization message more multiple steps processing)
+        print_aux = len(steps) > 1
+        self.plot(print_aux=print_aux)
+
+        # go back to original directory
+        print('Go back to directory:', self.cwd)
+        os.chdir(self.cwd)
+
+        # message
+        msg = '\n################################################'
+        msg += '\nNormal end of PySAR routine processing workflow!'
+        msg += '\n################################################'
         print(msg)
-        if status is not 0:
-            raise Exception('Error while plotting data files using {}'.format(plotCmd))
-    return inps
+        return
 
 
 ##########################################################################
 def main(iargs=None):
     start_time = time.time()
     inps = cmd_line_parse(iargs)
-    if inps.version:
-        raise SystemExit(version.version_description)
 
-    #########################################
-    # Initiation
-    #########################################
-    print(version.logo)
+    app = TimeSeriesAnalysis(inps.customTemplateFile, inps.workDir)
+    app.startup()
+    app.run(steps=inps.runSteps)
 
-    # Project Name
-    inps.projectName = None
-    if inps.customTemplateFile:
-        inps.customTemplateFile = os.path.abspath(inps.customTemplateFile)
-        inps.projectName = os.path.splitext(os.path.basename(inps.customTemplateFile))[0]
-        print('Project name:', inps.projectName)
-
-    # Work directory
-    if not inps.workDir:
-        if autoPath and 'SCRATCHDIR' in os.environ and inps.projectName:
-            inps.workDir = os.path.join(os.getenv('SCRATCHDIR'), inps.projectName, 'PYSAR')
-        else:
-            inps.workDir = os.getcwd()
-    inps.workDir = os.path.abspath(inps.workDir)
-    if not os.path.isdir(inps.workDir):
-        os.makedirs(inps.workDir)
-    os.chdir(inps.workDir)
-    print("Go to work directory:", inps.workDir)
-
-    copy_aux_file(inps)
-
-    inps, template, customTemplate = read_template(inps)
-
-    #########################################
-    # Loading Data
-    #########################################
-    print('\n**********  Load Data  **********')
-    loadCmd = 'load_data.py --template {}'.format(inps.templateFile)
-    if inps.customTemplateFile:
-        loadCmd += ' {}'.format(inps.customTemplateFile)
-    if inps.projectName:
-        loadCmd += ' --project {}'.format(inps.projectName)
-    print(loadCmd)
-    status = subprocess.Popen(loadCmd, shell=True).wait()
-    os.chdir(inps.workDir)
-
-    print('-'*50)
-    inps, atr = ut.check_loaded_dataset(inps.workDir, inps)
-
-    # Add template options into HDF5 file metadata
-    if inps.customTemplateFile:
-        #metaCmd = 'add_attribute.py {} {}'.format(inps.stackFile, inps.customTemplateFile)
-        #print(metaCmd)
-        #status = subprocess.Popen(metaCmd, shell=True).wait()
-        # better control of special metadata, such as SUBSET_X/YMIN
-        print('updating {} metadata based on custom template file: {}'.format(
-            os.path.basename(inps.stackFile), inps.customTemplateFile))
-        ut.add_attribute(inps.stackFile, customTemplate)
-
-    if inps.load_dataset:
-        if inps.plot:
-            plot_pysarApp(inps)
-        raise SystemExit('Exit as planned after loading/checking the dataset.')
-
-    if inps.reset:
-        print('Reset dataset attributtes for a fresh re-run.\n'+'-'*50)
-        # Reset reference pixel
-        refPointCmd = 'reference_point.py {} --reset'.format(inps.stackFile)
-        print(refPointCmd)
-        status = subprocess.Popen(refPointCmd, shell=True).wait()
-        # Reset network modification
-        networkCmd = 'modify_network.py {} --reset'.format(inps.stackFile)
-        print(networkCmd)
-        status = subprocess.Popen(networkCmd, shell=True).wait()
-
-    #########################################
-    # Referencing Interferograms in Space
-    #########################################
-    print('\n**********  Select Reference Point  **********')
-    # Initial mask (pixels with valid unwrapPhase or connectComponent in ALL interferograms)
-    inps.maskFile = 'maskConnComp.h5'
-    maskCmd = 'generate_mask.py {} --nonzero -o {} --update'.format(inps.stackFile, inps.maskFile)
-    print(maskCmd)
-    status = subprocess.Popen(maskCmd, shell=True).wait()
-
-    # Average spatial coherence
-    inps.avgSpatialCohFile = 'avgSpatialCoh.h5'
-    avgCmd = 'temporal_average.py {i} --dataset coherence -o {o} --update'.format(i=inps.stackFile,
-                                                                                  o=inps.avgSpatialCohFile)
-    print(avgCmd)
-    status = subprocess.Popen(avgCmd, shell=True).wait()
-
-    # Select reference point
-    refPointCmd = 'reference_point.py {} -t {} -c {}'.format(inps.stackFile,
-                                                             inps.templateFile,
-                                                             inps.avgSpatialCohFile)
-    print(refPointCmd)
-    status = subprocess.Popen(refPointCmd, shell=True).wait()
-    if status is not 0:
-        if inps.plot:
-            plot_pysarApp(inps)
-        raise Exception('Error while finding reference pixel in space.\n')
-
-    ###############################################
-    # Average velocity from interferogram stacking
-    ###############################################
-    print('\n**********  Quick assessment with interferogram stacking  **********')
-    inps.waterMaskFile = 'waterMask.h5'
-    if not os.path.isfile(inps.waterMaskFile):
-        inps.waterMaskFile = None
-
-    # Average phase velocity - Stacking
-    inps.avgPhaseVelFile = 'avgPhaseVelocity.h5'
-    avgCmd = 'temporal_average.py {i} --dataset unwrapPhase -o {o} --update'.format(i=inps.stackFile,
-                                                                                    o=inps.avgPhaseVelFile)
-    print(avgCmd)
-    status = subprocess.Popen(avgCmd, shell=True).wait()
-
-    # mask based on average spatial coherence
-    inps.maskSpatialCohFile = 'maskSpatialCoh.h5'
-    if ut.run_or_skip(out_file=inps.maskSpatialCohFile, in_file=inps.avgSpatialCohFile) == 'run':
-        maskCmd = 'generate_mask.py {i} -m 0.7 -o {o}'.format(i=inps.avgSpatialCohFile,
-                                                              o=inps.maskSpatialCohFile)
-        if inps.waterMaskFile:
-            maskCmd += ' --base {}'.format(inps.waterMaskFile)
-        print(maskCmd)
-        status = subprocess.Popen(maskCmd, shell=True).wait()
-
-
-    ############################################
-    # Unwrapping Error Correction (Optional)
-    #    based on the consistency of triplets
-    #    of interferograms
-    ############################################
-    correct_unwrap_error(inps, template)
-
-    #########################################
-    # Network Modification (Optional)
-    #########################################
-    print('\n**********  Modify Network  **********')
-    networkCmd = 'modify_network.py {} -t {}'.format(inps.stackFile,
-                                                     inps.templateFile)
-    print(networkCmd)
-    status = subprocess.Popen(networkCmd, shell=True).wait()
-    if status is not 0:
-        if inps.plot:
-            plot_pysarApp(inps)
-        raise Exception('Error while modifying the network of interferograms.\n')
-
-    # Plot network colored in spatial coherence
-    print('--------------------------------------------------')
-    plotCmd = 'plot_network.py {} --template {} --nodisplay'.format(inps.stackFile,
-                                                                    inps.templateFile)
-    print(plotCmd)
-    inps.cohSpatialAvgFile = '{}_coherence_spatialAverage.txt'.format(
-        os.path.splitext(os.path.basename(inps.stackFile))[0])
-    try:
-        outFile = [i for i in ['Network.pdf', 'PIC/Network.pdf'] if os.path.isfile(i)][0]
-    except:
-        outFile = None
-    if ut.run_or_skip(out_file=outFile,
-                      in_file=[inps.stackFile,
-                               inps.cohSpatialAvgFile,
-                               inps.templateFile],
-                      check_readable=False) == 'run':
-        status = subprocess.Popen(plotCmd, shell=True).wait()
-
-    if inps.modify_network:
-        if inps.plot:
-            plot_pysarApp(inps)
-        raise SystemExit('Exit as planned after network modification.')
-
-    #########################################
-    # Inversion of Interferograms
-    ########################################
-    print('\n**********  Invert Network of Interferograms into Time-series  **********')
-    invCmd = 'ifgram_inversion.py {} --template {} --update '.format(inps.stackFile,
-                                                                     inps.templateFile)
-    if inps.fast:
-        invCmd += ' --fast'
-    if inps.waterMaskFile:
-        invCmd += ' -m {}'.format(inps.waterMaskFile)
-    print(invCmd)
-    inps.timeseriesFile = 'timeseries.h5'
-    inps.tempCohFile = 'temporalCoherence.h5'
-    inps.timeseriesFiles = ['timeseries.h5']       #all ts files
-    status = subprocess.Popen(invCmd, shell=True).wait()
-    if status is not 0:
-        if inps.plot:
-            plot_pysarApp(inps)
-        raise Exception('Error while inverting network interferograms into timeseries')
-
-    print('\n--------------------------------------------')
-    print('Update Mask based on Temporal Coherence ...')
-    get_temporal_coherence_mask(inps, template)
-
-    if inps.invert_network:
-        if inps.plot:
-            plot_pysarApp(inps)
-        raise SystemExit('Exit as planned after network inversion.')
-
-    ##############################################
-    # LOD (Local Oscillator Drift) Correction
-    #   for Envisat data in radar coord only
-    ##############################################
-    if atr['PLATFORM'].lower().startswith('env'):
-        print('\n**********  Local Oscillator Drift Correction for Envisat  **********')
-        outName = os.path.splitext(inps.timeseriesFile)[0]+'_LODcor.h5'
-        lodCmd = 'local_oscilator_drift.py {} {} -o {}'.format(inps.timeseriesFile,
-                                                               inps.geomFile,
-                                                               outName)
-        print(lodCmd)
-        if ut.run_or_skip(out_file=outName, in_file=[inps.timeseriesFile, inps.geomFile]) == 'run':
-            status = subprocess.Popen(lodCmd, shell=True).wait()
-            if status is not 0:
-                if inps.plot:
-                    plot_pysarApp(inps)
-                raise Exception('Error while correcting Local Oscillator Drift.\n')
-        inps.timeseriesFile = outName
-        inps.timeseriesFiles.append(outName)
-
-    ##############################################
-    # Tropospheric Delay Correction (Optional)
-    ##############################################
-    print('\n**********  Tropospheric Delay Correction  **********')
-    correct_tropospheric_delay(inps, template)
-
-    ##############################################
-    # Phase Ramp Correction (Optional)
-    ##############################################
-    print('\n**********  Remove Phase Ramp  **********')
-    inps.derampMaskFile = template['pysar.deramp.maskFile']
-    inps.derampMethod = template['pysar.deramp']
-    if inps.derampMethod:
-        print('Phase Ramp Removal method: {}'.format(inps.derampMethod))
-        ramp_list = ['linear', 'quadratic',
-                     'linear_range', 'quadratic_range',
-                     'linear_azimuth', 'quadratic_azimuth']
-        if inps.derampMethod in ramp_list:
-            outName = '{}_ramp.h5'.format(os.path.splitext(inps.timeseriesFile)[0])
-            derampCmd = 'remove_ramp.py {} -s {} -m {} -o {}'.format(inps.timeseriesFile,
-                                                                     inps.derampMethod,
-                                                                     inps.derampMaskFile,
-                                                                     outName)
-            print(derampCmd)
-            if ut.run_or_skip(out_file=outName, in_file=inps.timeseriesFile) == 'run':
-                status = subprocess.Popen(derampCmd, shell=True).wait()
-                if status is not 0:
-                    if inps.plot:
-                        plot_pysarApp(inps)
-                    raise Exception('Error while removing phase ramp for time-series.\n')
-            inps.timeseriesFile = outName
-            inps.timeseriesFiles.append(outName)
-        else:
-            msg = 'un-recognized phase ramp method: {}'.format(inps.derampMethod)
-            msg += '\navailable ramp types:\n{}'.format(ramp_list)
-            raise ValueError(msg)
-    else:
-        print('No phase ramp removal.')
-
-    ##############################################
-    # Topographic (DEM) Residuals Correction (Optional)
-    ##############################################
-    print('\n**********  Topographic Residual (DEM error) Correction  **********')
-    outName = os.path.splitext(inps.timeseriesFile)[0]+'_demErr.h5'
-    topoCmd = 'dem_error.py {i} -t {t} -o {o} --update '.format(i=inps.timeseriesFile,
-                                                                t=inps.templateFile,
-                                                                o=outName)
-    if not inps.fast:
-        topoCmd += ' -g {}'.format(inps.geomFile)
-    print(topoCmd)
-    inps.timeseriesResFile = None
-    if template['pysar.topographicResidual']:
-        status = subprocess.Popen(topoCmd, shell=True).wait()
-        if status is not 0:
-            if inps.plot:
-                plot_pysarApp(inps)
-            raise Exception('Error while correcting topographic phase residual.\n')
-        inps.timeseriesFile = outName
-        inps.timeseriesResFile = 'timeseriesResidual.h5'
-        inps.timeseriesFiles.append(outName)
-    else:
-        print('No correction for topographic residuals.')
-
-    ##############################################
-    # Phase Residual for Noise Evaluation
-    ##############################################
-    # Timeseries Residual RMS
-    print('\n**********  Timeseries Residual Root Mean Square  **********')
-    if inps.timeseriesResFile:
-        rmsCmd = 'timeseries_rms.py {} -t {}'.format(inps.timeseriesResFile,
-                                                     inps.templateFile)
-        print(rmsCmd)
-        status = subprocess.Popen(rmsCmd, shell=True).wait()
-        if status is not 0:
-            if inps.plot:
-                plot_pysarApp(inps)
-            raise Exception('Error while calculating RMS of residual phase time-series.\n')
-    else:
-        print('No timeseries residual file found! Skip residual RMS analysis.')
-
-    # Reference in Time
-    print('\n**********  Select Reference Date  **********')
-    if template['pysar.reference.date']:
-        refCmd = 'reference_date.py -t {} '.format(inps.templateFile)
-        for fname in inps.timeseriesFiles:
-            refCmd += ' {}'.format(fname)
-        print(refCmd)
-        status = subprocess.Popen(refCmd, shell=True).wait()
-        if status is not 0:
-            if inps.plot:
-                plot_pysarApp(inps)
-            raise Exception('Error while changing reference date.\n')
-    else:
-        print('No reference change in time.')
-
-    #############################################
-    # Velocity and rmse maps
-    #############################################
-    print('\n**********  Estimate Velocity  **********')
-    inps.velFile = 'velocity.h5'
-    velCmd = 'timeseries2velocity.py {} -t {} -o {} --update'.format(inps.timeseriesFile,
-                                                                     inps.templateFile,
-                                                                     inps.velFile)
-    print(velCmd)
-    status = subprocess.Popen(velCmd, shell=True).wait()
-    if status is not 0:
-        if inps.plot:
-            plot_pysarApp(inps)
-        raise Exception('Error while estimating linear velocity from time-series.\n')
-
-    # Velocity from Tropospheric delay
-    if inps.tropFile:
-        suffix = os.path.splitext(os.path.basename(inps.tropFile))[0].title()
-        inps.tropVelFile = '{}{}.h5'.format(os.path.splitext(inps.velFile)[0], suffix)
-        velCmd = 'timeseries2velocity.py {} -t {} -o {} --update'.format(inps.tropFile,
-                                                                         inps.templateFile,
-                                                                         inps.tropVelFile)
-        print(velCmd)
-        status = subprocess.Popen(velCmd, shell=True).wait()
-
-    ############################################
-    # Post-processing
-    # Geocodeing --> Masking --> KMZ & HDF-EOS5
-    ############################################
-    print('\n**********  Post-processing  **********')
-    if template['pysar.save.hdfEos5'] is True and template['pysar.geocode'] is False:
-        print('Turn ON pysar.geocode to be able to save to HDF-EOS5 format.')
-        template['pysar.geocode'] = True
-
-    # Geocoding
-    if not inps.geocoded:
-        if template['pysar.geocode'] is True:
-            print('\n--------------------------------------------')
-            geo_dir = os.path.join(inps.workDir, 'GEOCODE')
-            geocode_script = os.path.join(os.path.dirname(__file__), 'geocode.py')
-            geoCmd = ('{scp} {v} {c} {t} {g} -l {l} -t {e}'
-                      ' --outdir {d} --update').format(scp=geocode_script,
-                                                       v=inps.velFile,
-                                                       c=inps.tempCohFile,
-                                                       t=inps.timeseriesFile,
-                                                       g=inps.geomFile,
-                                                       l=inps.lookupFile,
-                                                       e=inps.templateFile,
-                                                       d=geo_dir)
-            print(geoCmd)
-            status = subprocess.Popen(geoCmd, shell=True).wait()
-            if status is not 0:
-                if inps.plot:
-                    plot_pysarApp(inps)
-                raise Exception('Error while geocoding.\n')
-            else:
-                inps.velFile        = os.path.join(geo_dir, 'geo_'+os.path.basename(inps.velFile))
-                inps.tempCohFile    = os.path.join(geo_dir, 'geo_'+os.path.basename(inps.tempCohFile))
-                inps.timeseriesFile = os.path.join(geo_dir, 'geo_'+os.path.basename(inps.timeseriesFile))
-                inps.geomFile       = os.path.join(geo_dir, 'geo_'+os.path.basename(inps.geomFile))
-                inps.geocoded = True
-
-            # generate mask based on geocoded temporal coherence
-            print('\n--------------------------------------------')
-            outName = os.path.join(geo_dir, 'geo_maskTempCoh.h5')
-            genCmd = 'generate_mask.py {} -m {} -o {}'.format(inps.tempCohFile,
-                                                              inps.minTempCoh,
-                                                              outName)
-            print(genCmd)
-            if ut.run_or_skip(out_file=outName, in_file=inps.tempCohFile) == 'run':
-                status = subprocess.Popen(genCmd, shell=True).wait()
-            inps.maskFile = outName
-
-    # mask velocity file
-    if inps.velFile and inps.maskFile:
-        outName = '{}_masked.h5'.format(os.path.splitext(inps.velFile)[0])
-        maskCmd = 'mask.py {} -m {} -o {}'.format(inps.velFile,
-                                                  inps.maskFile,
-                                                  outName)
-        print(maskCmd)
-        if ut.run_or_skip(out_file=outName, in_file=[inps.velFile, inps.maskFile]) == 'run':
-            status = subprocess.Popen(maskCmd, shell=True).wait()
-        try:
-            inps.velFile = glob.glob(outName)[0]
-        except:
-            inps.velFile = None
-
-    # Save to Google Earth KML file
-    if inps.geocoded and inps.velFile and template['pysar.save.kml'] is True:
-        print('\n--------------------------------------------')
-        print('creating Google Earth KMZ file for geocoded velocity file: ...')
-        outName = '{}.kmz'.format(os.path.splitext(os.path.basename(inps.velFile))[0])
-        kmlCmd = 'save_kmz.py {} -o {}'.format(inps.velFile, outName)
-        print(kmlCmd)
-        try:
-            outFile = [i for i in [outName, 'PIC/{}'.format(outName)] if os.path.isfile(i)][0]
-        except:
-            outFile = None
-        if ut.run_or_skip(out_file=outFile, in_file=inps.velFile, check_readable=False) == 'run':
-            status = subprocess.Popen(kmlCmd, shell=True).wait()
-            if status is not 0:
-                if inps.plot:
-                    plot_pysarApp(inps)
-                raise Exception('Error while generating Google Earth KMZ file.')
-
-    #############################################
-    # Save Timeseries to HDF-EOS5 format
-    #############################################
-    if template['pysar.save.hdfEos5'] is True:
-        print('\n**********  Save Time-series in HDF-EOS5 Format  **********')
-        save_hdfeos5(inps, customTemplate)
-
-    #############################################
-    # Plot Figures
-    #############################################
-    if inps.plot:
-        plot_pysarApp(inps)
-
-    #############################################
-    # Timing                                    #
-    #############################################
+    # Timing
     m, s = divmod(time.time()-start_time, 60)
-    print('\n###############################################')
-    print('End of PySAR Routine Processing Workflow!')
-    print('###############################################\n')
-    print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))
+    print('\nTotal time: {:02.0f} mins {:02.1f} secs'.format(m, s))
+    return
 
 
 ###########################################################################################
