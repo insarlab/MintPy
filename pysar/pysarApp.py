@@ -55,20 +55,26 @@ through the step immediately preceding the starting step of the current run.
 """.format(STEP_LIST[0:6], STEP_LIST[6:12], STEP_LIST[12:])
 
 EXAMPLE = """example:
-  pysarApp.py                       #Run / Rerun
-  pysarApp.py <template_file>       #Run / Rerun
-  pysarApp.py -h / --help           #Help
-  pysarApp.py -H                    #Print all template options
+  pysarApp.py                         #Run with default template 'pysarApp_template.txt'
+  pysarApp.py <custom_template_file>  #Run with default and custom templates
+  pysarApp.py -h / --help             #Help
+  pysarApp.py -g                      #Generate default template (if it does not exist)
+  pysarApp.py -H                      #Print    default template options
 
   # Run with --start/stop/dostep options
-  pysarApp.py GalapagosSenDT128.template --dostep ts2vel   #Run at step ts2vel only
-  pysarApp.py GalapagosSenDT128.template --stop loadData   #End after step loadData
+  pysarApp.py GalapagosSenDT128.template --dostep ts2vel   #Run at step 'ts2vel' only
+  pysarApp.py GalapagosSenDT128.template --stop loadData   #End after step 'loadData'
+"""
+
+REFERENCE = """reference:
+  Yunjun, Z., H. Fattahi, F. Amelung (2019), InSAR time series analysis: error
+  correction and noise reduction (under review).
 """
 
 def create_parser():
     parser = argparse.ArgumentParser(description='PySAR Routine Time Series Analysis',
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+                                     epilog=REFERENCE+'\n'+EXAMPLE)
 
     parser.add_argument('customTemplateFile', nargs='?',
                         help='custom template with option settings.\n' +
@@ -81,8 +87,10 @@ def create_parser():
                              '    2) environment variable $SCRATCHDIR exists AND\n' +
                              '    3) customTemplateFile is specified (projectName.*)\n')
 
-    parser.add_argument('-H', dest='print_auto_template', action='store_true',
-                        help='Print/Show the example template file for routine processing.')
+    parser.add_argument('-g', dest='generate_template', action='store_true',
+                        help='Generate default template (if it does not exist).')
+    parser.add_argument('-H', dest='print_template', action='store_true',
+                        help='Print/Show the default template file for details parameter setup.')
     parser.add_argument('-v','--version', action='store_true', help='print software version')
 
     step = parser.add_argument_group('steps processing (start/end/dostep)', STEP_HELP)
@@ -100,21 +108,41 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # print full template
-    if inps.print_auto_template:
-        autoTemplateFile = os.path.join(os.path.dirname(__file__), 'defaults/pysarApp_template.txt')
-        print(open(autoTemplateFile, 'r').read())
+    template_file = os.path.join(os.path.dirname(__file__), 'defaults/pysarApp_template.txt')
+    # generate default template
+    if inps.generate_template:
+        dest_file = os.path.join(os.getcwd(), os.path.basename(template_file))
+        if not os.path.isfile(dest_file):
+            print('copy default template file {} to the current directory'.format(template_file))
+            shutil.copy2(template_file, os.getcwd())
+        else:
+            print('default template file exists in current directory: {}, skip.'.format(dest_file))
         raise SystemExit()
+
+    # print default template
+    if inps.print_template:
+        raise SystemExit(open(template_file, 'r').read())
 
     # print software version
     if inps.version:
-        print(version.description)
+        raise SystemExit(version.description)
+
+    if not inps.customTemplateFile and not os.path.isfile(os.path.basename(template_file)):
+        parser.print_usage()
+        print(EXAMPLE)
+        msg = "ERROR: no template file found! It requires:"
+        msg += "\n  1) input a custom template file, OR"
+        msg += "\n  2) there is a default template 'pysarApp_template.txt' in current directory." 
+        print(msg)
         raise SystemExit()
 
-    # ignore if pysarApp_template.txt is input as custom template
-    if (inps.customTemplateFile
-            and os.path.basename(inps.customTemplateFile) == 'pysarApp_template.txt'):
-        inps.customTemplateFile = None
+    # invalid input of custom template
+    if inps.customTemplateFile:
+        if not os.path.isfile(inps.customTemplateFile):
+            raise FileNotFoundError(inps.customTemplateFile)
+        elif os.path.basename(inps.customTemplateFile) == os.path.basename(template_file):
+            # ignore if pysarApp_template.txt is input as custom template
+            inps.customTemplateFile = None
 
     # check input --start/end/dostep
     for key in ['startStep', 'endStep', 'doStep']:
@@ -150,9 +178,8 @@ def cmd_line_parse(iargs=None):
 ##########################################################################
 class TimeSeriesAnalysis:
     """ Routine processing workflow for time series analysis of small baseline InSAR stacks
-    Reference: Yunjun, Z., H. Fattahi, F. Amelung, (2019), InSAR time series analysis: error
-    correction and noise reduction.
     """
+
     def __init__(self, customTemplateFile=None, workDir=None):
         self.customTemplateFile = customTemplateFile
         self.workDir = workDir
@@ -186,13 +213,6 @@ class TimeSeriesAnalysis:
             print('create directory:', self.workDir)
         os.chdir(self.workDir)
         print("Go to work directory:", self.workDir)
-
-        #2.3 Create sub-folders
-        for sub_folder in ['GEOCODE','INPUTS','PIC']:
-            sub_dir = os.path.join(self.workDir, sub_folder)
-            if not os.path.isdir(sub_dir):
-                os.makedirs(sub_dir)
-                print('create sub-directory:', sub_dir)
 
         #3. Read templates
         #3.1 Get default template file
@@ -228,6 +248,9 @@ class TimeSeriesAnalysis:
             cfile = self.customTemplateFile
             # Copy custom template file to INPUTS directory for backup
             inputs_dir = os.path.join(self.workDir, 'INPUTS')
+            if not os.path.isdir(inputs_dir):
+                os.makedirs(inputs_dir)
+                print('create directory:', inputs_dir)
             if ut.run_or_skip(out_file=os.path.join(inputs_dir, os.path.basename(cfile)),
                               in_file=cfile,
                               check_readable=False) == 'run':
@@ -283,7 +306,7 @@ class TimeSeriesAnalysis:
 
     def run_load_data(self):
         """step - loadData
-        It 1) copy auxiliary files into PYSAR/PIC directory (for Unvi of Miami only)
+        It 1) copy auxiliary files into work directory (for Unvi of Miami only)
            2) load all interferograms stack files into PYSAR/INPUTS directory.
            3) check loading result
            4) add custom metadata (optional, for HDF-EOS5 format only)
@@ -780,9 +803,13 @@ class TimeSeriesAnalysis:
             atr = readfile.read_attribute(ts_file)
             if 'Y_FIRST' not in atr.keys():
                 # 1. geocode
+                out_dir = os.path.join(self.workDir, 'GEOCODE')
+                if not os.path.isdir(out_dir):
+                    os.makedirs(out_dir)
+                    print('create directory:', out_dir)
+
                 geom_file, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2:4]
                 in_files = [geom_file, 'temporalCoherence.h5', ts_file, 'velocity.h5']
-                out_dir = os.path.join(self.workDir, 'GEOCODE')
                 geocode_script = os.path.join(os.path.dirname(__file__), 'geocode.py')
 
                 cmd = '{scp} -l {l} -t {t} --outdir {o} --update '.format(scp=geocode_script,
