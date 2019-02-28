@@ -18,9 +18,15 @@ PySAR is an open-source package in Python for InSAR (Interferometric Synthetic A
 
 PySAR reads a stack of interferograms (unwrapped interferograms, coherence, wrapped interferograms and connecting components from SNAPHU if available) and the geometry files (DEM, lookup table, etc.). You need to give the path to where the files are and PySAR takes care of the rest!   
  
-    pysarApp.py -h   #see the processing options.   
-    pysarApp.py -H   #see the default template options with explanation.   
-    pysarApp.py -g   #generate a default template file and see the detailed settings.   
+    pysarApp.py                         #Run with default template 'pysarApp_template.txt'
+    pysarApp.py <custom_template_file>  #Run with default and custom templates
+    pysarApp.py -h / --help             #Help
+    pysarApp.py -g                      #Generate default template (if it does not exist)
+    pysarApp.py -H                      #Print    default template options
+
+    # Run with --start/stop/dostep options
+    pysarApp.py GalapagosSenDT128.template --dostep ts2vel   #Run at step 'ts2vel' only
+    pysarApp.py GalapagosSenDT128.template --stop loadData   #End after step 'loadData'
 
 #### [Example](https://github.com/yunjunz/PySAR/wiki/Example): Fernandina volcano, Galápagos with Sentinel-1 data    
 
