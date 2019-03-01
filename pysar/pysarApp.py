@@ -924,7 +924,6 @@ class TimeSeriesAnalysis:
         # cmd
         cmd = './'+os.path.basename(sh_file)
         print(cmd)
-        import pdb; pdb.set_trace()
         status = subprocess.Popen(cmd, shell=True).wait()
 
         # message for more visualization scripts
