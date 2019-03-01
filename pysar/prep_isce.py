@@ -13,7 +13,7 @@ import glob
 import shelve
 import argparse
 import numpy as np
-from pysar.utils import readfile, writefile, utils as ut
+from pysar.utils import ptime, readfile, writefile, utils as ut
 
 
 EXAMPLE = """example:
@@ -391,7 +391,10 @@ def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), 
         raise FileNotFoundError('no file found in pattern: {}'.format(filePattern))
 
     # write .rsc file for each interferogram file
-    for isce_file in isce_files:
+    num_file = len(isce_files)
+    prog_bar = ptime.progressBar(maxValue=num_file)
+    for i in range(num_file):
+        isce_file = isce_files[i]
         # prepare metadata for current file
         ifg_metadata = readfile.read_attribute(isce_file, metafile_ext='.xml')
         ifg_metadata.update(metadata)
@@ -402,7 +405,9 @@ def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), 
         rsc_file = isce_file+'.rsc'
         writefile.write_roipac_rsc(ifg_metadata, rsc_file,
                                    update_mode=update_mode,
-                                   print_msg=True)
+                                   print_msg=False)
+        prog_bar.update(i+1, suffix='{}_{}'.format(dates[0], dates[1]))
+    prog_bar.close()
     return
 
 

@@ -365,23 +365,33 @@ class TimeSeriesAnalysis:
     def run_reference_point(self):
         """step - refPoint
         It 1) generate mask file from common conn comp
-           2) generate average spatial coherence
+           2) generate average spatial coherence and its mask
            3) add REF_X/Y and/or REF_LAT/LON attribute to stack file
         """
         # check the existence of ifgramStack.h5
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
-        mask_file = 'maskConnComp.h5'
+        water_mask_file = 'waterMask.h5'
+        cc_mask_file = 'maskConnComp.h5'
+        coh_mask_file = 'maskSpatialCoh.h5'
         coh_file = 'avgSpatialCoh.h5'
 
         # 1) generate mask file from the common connected components
-        cmd = 'generate_mask.py {} --nonzero -o {} --update'.format(stack_file, mask_file)
+        cmd = 'generate_mask.py {} --nonzero -o {} --update'.format(stack_file, cc_mask_file)
         print(cmd)
         subprocess.Popen(cmd, shell=True).wait()
 
-        # 2) generate average spatial coherence
+        # 2.1) generate average spatial coherence
         cmd = 'temporal_average.py {} --dataset coherence -o {} --update'.format(stack_file, coh_file)
         print(cmd)
         subprocess.Popen(cmd, shell=True).wait()
+
+        # 2.2) generate mask based on average spatial coherence
+        if ut.run_or_skip(out_file=coh_mask_file, in_file=coh_file) == 'run':
+            cmd = 'generate_mask.py {} -m 0.7 -o {}'.format(coh_file, coh_mask_file)
+            if os.path.isfile(water_mask_file):
+                cmd += ' --base {}'.format(water_mask_file)
+            print(cmd)
+            subprocess.Popen(cmd, shell=True).wait()
 
         # 3) select reference point
         cmd = 'reference_point.py {} -t {} -c {}'.format(stack_file, self.templateFile, coh_file)
@@ -394,22 +404,10 @@ class TimeSeriesAnalysis:
         """step - stacking"""
         # check the existence of ifgramStack.h5
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
-        water_mask_file = 'waterMask.h5'
         pha_vel_file = 'avgPhaseVelocity.h5'
-        coh_mask_file = 'maskSpatialCoh.h5'
-
-        # 1) stacking - average phase velocity
         cmd = 'temporal_average.py {} --dataset unwrapPhase -o {} --update'.format(stack_file, pha_vel_file)
         print(cmd)
         status = subprocess.Popen(cmd, shell=True).wait()
-
-        # 2) generate mask based on average spatial coherence
-        if ut.run_or_skip(out_file=coh_mask_file, in_file=pha_vel_file) == 'run':
-            cmd = 'generate_mask.py {} -m 0.7 -o {}'.format(pha_vel_file, coh_mask_file)
-            if os.path.isfile(water_mask_file):
-                cmd += ' --base {}'.format(water_mask_file)
-            print(cmd)
-            subprocess.Popen(cmd, shell=True).wait()
         return status
 
 
