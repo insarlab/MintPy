@@ -977,7 +977,8 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
                                     dem_shade=inps.dem_shade,
                                     dem_contour=inps.dem_contour,
                                     dem_contour_seq=inps.dem_contour_seq,
-                                    inps=inps)
+                                    inps=inps,
+                                    print_msg=inps.print_msg)
     # Plot Data
     vlim = inps.vlim
     if vlim is None:
@@ -1193,7 +1194,9 @@ def prepare4multi_subplots(inps, metadata):
                 dem = multilook_data(dem, inps.multilook_num, inps.multilook_num)
             (inps.dem_shade,
              inps.dem_contour,
-             inps.dem_contour_seq) = pp.prepare_dem_background(dem=dem, inps=inps)
+             inps.dem_contour_seq) = pp.prepare_dem_background(dem=dem,
+                                                               inps=inps,
+                                                               print_msg=inps.print_msg)
         else:
             inps.dem_file = None
             inps.transparency = 1.0
