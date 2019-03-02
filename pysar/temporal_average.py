@@ -17,11 +17,12 @@ from pysar.utils import utils as ut, readfile
 
 #################################  Usage  ####################################
 EXAMPLE = """example:
-  temporal_average.py ifgramStack.h5 -d coherence -o avgSpatialCoh.h5 --update
+  temporal_average.py ./INPUTS/ifgramStack.h5 -d unwrapPhase -o avgPhaseVelocity.h5
+  temporal_average.py ./INPUTS/ifgramStack.h5 -d coherence   -o avgSpatialCoh.h5
 """
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Calculate temporal average/mean of multi-temporal datasets',
+    parser = argparse.ArgumentParser(description='Calculate temporal average (stacking) of multi-temporal datasets',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
