@@ -23,7 +23,8 @@ sudo port selfupdate
 ```
    
 5. Restart terminal
-
+     
+     
 #### 1. Setup Paths    
 
 To use the package, you need to setup the environment. Depending on your shell, you may use commands below to setup PySAR, by adding the following to your source file. They are for:   
