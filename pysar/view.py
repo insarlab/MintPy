@@ -182,8 +182,7 @@ def run_or_skip(inps):
         if ti > to:
             flag = 'run'
         else:
-            vprint('{} exist and are newer than input file: {}'.format(outfiles, inps.file))
-            vprint('skip the plotting.')
+            vprint('{} exist and are newer than input file: {} --> skip.'.format(outfiles, inps.file))
     return flag
 
 

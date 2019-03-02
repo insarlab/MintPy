@@ -23,6 +23,9 @@ except KeyError:
 ## Modules dependency graph
 #/pysar
 #    # Level 0
+#    /simulation
+#        forward_model
+#        fractal
 #    /objects
 #        giantobj
 #        pysarobj
@@ -37,6 +40,8 @@ except KeyError:
 #        utils0
 #
 #    # Level 1 (depend on level 0)
+#    /simulation
+#        variance  (utils/ptime)
 #    /objects
 #        conncomp  (objects/ramp)
 #    /utils
@@ -59,4 +64,6 @@ except KeyError:
 #    # Level 3 (depends on level 0 + 1 + 2)
 #    /objects
 #        insar_vs_gps (objects/*, utils/{gps, plot}, simulation/*)
+#    /simulation
+#        simulation   (objects/*, utils/*, simulation/*, ./ifgram_inversion)
 #

@@ -2,7 +2,7 @@
 ###############################################################
 # Plot Results from Routine Workflow with pysarApp.py
 # Author: Zhang Yunjun, 2017-07-23
-# Latest update: 2019-02-28
+# Latest update: 2019-03-01
 ###############################################################
 
 
@@ -21,8 +21,11 @@ geo_mask_file='./GEOCODE/geo_maskTempCoh.h5'
 
 ## Log File
 log_file='plot_pysarApp.log'
-echo "touch log file: "$log_file
 touch $log_file
+echo "\n\n\n\n\n" >> $log_file
+echo "#############################  ./plot_pysarApp.sh  ###########################" >> $log_file
+date >> $log_file
+echo "##############################################################################" >> $log_file
 #use "echo 'yoyoyo' | tee -a log" to output message to both screen and file.
 #use "echo 'yoyoyo' >> log" to output message to file only.
 
@@ -58,10 +61,10 @@ fi
 
 ## Auxliary Files from loaded dataset
 if [ $plot_loaded_data_aux -eq 1 ]; then
-    file=avgPhaseVelocity.h5;   test -f $file && $view $file -m maskSptialCoh.h5 >> $log_file
-    file=avgSpatialCoh.h5;      test -f $file && $view $file -c gray --vlim 0 1  >> $log_file
-    file=maskSpatialCoh.h5;     test -f $file && $view $file -c gray --vlim 0 1  >> $log_file
-    file=maskConnComp.h5;       test -f $file && $view $file -c gray --vlim 0 1  >> $log_file
+    file=avgPhaseVelocity.h5;   test -f $file && $view $file -m maskSpatialCoh.h5 >> $log_file
+    file=avgSpatialCoh.h5;      test -f $file && $view $file -c gray --vlim 0 1   >> $log_file
+    file=maskSpatialCoh.h5;     test -f $file && $view $file -c gray --vlim 0 1   >> $log_file
+    file=maskConnComp.h5;       test -f $file && $view $file -c gray --vlim 0 1   >> $log_file
 fi
 
 
@@ -114,7 +117,7 @@ fi
 
 
 ## Move picture files to PIC folder
-echo "Move *.png *.pdf into ./PIC folder"
+echo "Move *.png/pdf/kmz files into ./PIC folder."
 mv *.png PIC/
 mv *.pdf PIC/
 mv *.kmz PIC/

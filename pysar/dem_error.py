@@ -108,9 +108,9 @@ def run_or_skip(inps):
     # check output file
     if not os.path.isfile(inps.outfile):
         flag = 'run'
-        print('  1) output file {} not found, --> run'.format(inps.outfile))
+        print('1) output file {} NOT found.'.format(inps.outfile))
     else:
-        print('  1) output file {} already exists.'.format(inps.outfile))
+        print('1) output file {} already exists.'.format(inps.outfile))
         infiles = [inps.timeseries_file]
         if inps.geom_file:
             infiles.append(inps.geom_file)
@@ -118,9 +118,9 @@ def run_or_skip(inps):
         to = os.path.getmtime(inps.outfile)
         if ti > to:
             flag = 'run'
-            print('  2) output file is NOT newer than input file: {} --> run.'.format(infiles))
+            print('2) output file is NOT newer than input file: {}.'.format(infiles))
         else:
-            print('  2) output file is newer than input file: {}.'.format(infiles))
+            print('2) output file is newer than input file: {}.'.format(infiles))
 
     # check configuration
     if flag == 'skip':
@@ -129,12 +129,12 @@ def run_or_skip(inps):
         atr = readfile.read_attribute(inps.outfile)
         if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in configKeys):
             flag = 'run'
-            print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
+            print('3) NOT all key configration parameters are the same:{}'.format(configKeys))
         else:
-            print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
+            print('3) all key configuration parameters are the same:{}'.format(configKeys))
 
     # result
-    print('check result:', flag)
+    print('run or skip: {}.'.format(flag))
     return flag
 
 

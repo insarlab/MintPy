@@ -430,7 +430,7 @@ def update_object(outFile, inObj, box, updateMode=True):
 
             if out_size == in_size and set(in_date12_list).issubset(set(out_date12_list)):
                 print(('All date12   exists in file {} with same size as required,'
-                       ' no need to re-load.'.format(outFile)))
+                       ' no need to re-load.'.format(os.path.basename(outFile))))
                 write_flag = False
 
         elif inObj.name == 'geometry':
@@ -439,7 +439,7 @@ def update_object(outFile, inObj, box, updateMode=True):
             if (outObj.get_size() == inObj.get_size(box=box)
                     and all(i in outObj.datasetNames for i in inObj.get_dataset_list())):
                 print(('All datasets exists in file {} with same size as required,'
-                       ' no need to re-load.'.format(outFile)))
+                       ' no need to re-load.'.format(os.path.basename(outFile))))
                 write_flag = False
     return write_flag
 

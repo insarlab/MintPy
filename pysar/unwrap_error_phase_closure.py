@@ -118,19 +118,19 @@ def run_or_skip(inps):
     with h5py.File(inps.ifgram_file, 'r') as f:
         if inps.datasetNameOut not in f.keys():
             flag = 'run'
-            print('  1) output dataset: {} not found --> run.'.format(inps.datasetNameOut))
+            print('1) output dataset: {} NOT found.'.format(inps.datasetNameOut))
         else:
-            print('  1) output dataset: {} exists'.format(inps.datasetNameOut))
+            print('1) output dataset: {} exists.'.format(inps.datasetNameOut))
             to = float(f[inps.datasetNameOut].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
             ti = float(f[inps.datasetNameIn].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
             if ti > to:
                 flag = 'run'
-                print('  2) output dataset is NOT newer than input dataset: {} --> run.'.format(inps.datasetNameIn))
+                print('2) output dataset is NOT newer than input dataset: {}.'.format(inps.datasetNameIn))
             else:
-                print('  2) output dataset is newer than input dataset: {}'.format(inps.datasetNameIn))
+                print('2) output dataset is newer than input dataset: {}.'.format(inps.datasetNameIn))
 
     # result
-    print('check result:', flag)
+    print('run or skip: {}.'.format(flag))
     return flag
 
 
