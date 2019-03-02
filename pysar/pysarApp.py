@@ -494,24 +494,25 @@ class TimeSeriesAnalysis:
         cmd = 'generate_mask.py {} -m {} -o {} --shadow {}'.format(tcoh_file, tcoh_min, mask_file, geom_file)
         print(cmd)
 
-        # update mode checking, run if:
+        # update mode: run only if:
         # 1) output file exists and newer than input file, AND
         # 2) all config keys are the same
         config_keys = ['pysar.networkInversion.minTempCoh']
-        run = False
+        print('update mode: ON')
+        flag = 'skip'
         if ut.run_or_skip(out_file=mask_file, in_file=tcoh_file, print_msg=False) == 'run':
-            run = True
+            flag = 'run'
         else:
-            print('  1) output file: {} already exists and newer than input file: {}'.format(mask_file, tcoh_file))
+            print('1) output file: {} already exists and newer than input file: {}'.format(mask_file, tcoh_file))
             atr = readfile.read_attribute(mask_file)
             if any(str(self.template[i]) != atr.get(i, 'False') for i in config_keys):
-                run = True
-                print('  2) NOT all key configration parameters are the same --> run.\n\t{}'.format(config_keys))
+                flag = 'run'
+                print('2) NOT all key configration parameters are the same: {}'.format(config_keys))
             else:
-                print('  2) all key configuration parameters are the same:\n\t{}'.format(config_keys))
-        print('run this step:', run)
+                print('2) all key configuration parameters are the same: {}'.format(config_keys))
+        print('run or skip: {}'.format(flag))
 
-        if run:
+        if flag == 'run':
             subprocess.Popen(cmd, shell=True).wait()
             # update configKeys
             atr = {}
@@ -924,10 +925,10 @@ class TimeSeriesAnalysis:
         # cmd
         cmd = './'+os.path.basename(sh_file)
         print(cmd)
-        status = subprocess.Popen(cmd, shell=True).wait()
+        subprocess.Popen(cmd, shell=True).wait()
 
         # message for more visualization scripts
-        msg = """
+        msg = """Explore more info & visualization options with the following scripts:
         info.py                    #check HDF5 file structure and metadata
         view.py                    #2D map view
         tsview.py                  #1D point time-series (interactive)   
@@ -939,12 +940,6 @@ class TimeSeriesAnalysis:
         """
         if print_aux:
             print(msg)
-
-        # check status
-        if status is not 0:
-            msg = 'Error while plotting results using {}'.format(cmd)
-            msg += '\nCheck ./plot_pysarApp.log file for detailed information.'
-            raise RuntimeError(msg)
         return
 
 
@@ -952,7 +947,7 @@ class TimeSeriesAnalysis:
         # run the chosen steps
         for sname in steps:
             status = 0
-            print('\n******************** step - {} ********************'.format(sname))
+            print('\n\n******************** step - {} ********************'.format(sname))
 
             if sname == 'load_data':
                 status = self.run_load_data(sname)

@@ -579,7 +579,7 @@ def run_or_skip(out_file, in_file=None, check_readable=True, print_msg=True):
             if t_in > t_out:
                 return 'run'
             elif print_msg:
-                print('{} exists and is newer than {}, skip updating.'.format(out_file, in_file))
+                print('{} exists and is newer than {} --> skip.'.format(out_file, in_file))
     return 'skip'
 
 

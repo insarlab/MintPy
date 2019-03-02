@@ -117,8 +117,8 @@ fi
 
 
 ## Move picture files to PIC folder
+echo "Move *.png/pdf/kmz files into ./PIC folder."
 mv *.png PIC/
 mv *.pdf PIC/
 mv *.kmz PIC/
-echo "Move *.png *.pdf into ./PIC folder"
 
