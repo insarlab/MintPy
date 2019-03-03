@@ -63,7 +63,7 @@ EXAMPLE = """example:
 
   # Run with --start/stop/dostep options
   pysarApp.py GalapagosSenDT128.template --dostep velocity  #Run at step 'velocity' only
-  pysarApp.py GalapagosSenDT128.template --stop load_data   #End after step 'load_data'
+  pysarApp.py GalapagosSenDT128.template --end load_data    #End after step 'load_data'
 """
 
 REFERENCE = """reference:

@@ -19,6 +19,7 @@ from pysar.utils import ptime, readfile, writefile, utils as ut
 EXAMPLE = """example:
   prep_isce.py -i ./merged/interferograms -m ./master/IW1.xml -b ./baselines -g ./merged/geom_master  #for topsStack
   prep_isce.py -i ./interferograms -m ./masterShelve/data.dat -b ./baselines -g ./geom_master         #for stripmapStack
+  prep_isce.py -m 20120507_slc_crop.xml -g ./geometry                                                 #for stripmapApp
 """
 
 def create_parser():
@@ -122,44 +123,50 @@ def extract_tops_metadata(xml_file):
     return metadata
 
 
-def extract_stripmap_metadata(shelve_file):
+def extract_stripmap_metadata(meta_file):
     """Read metadata from shelve file for StripMap stack from ISCE
-    Parameters: shelve_file : str, path of the shelve file, i.e. masterShelve/data.dat
-    Returns:    meta        : dict, metadata
+    Parameters: meta_file : str, path of the shelve file, i.e. masterShelve/data.dat
+    Returns:    meta      : dict, metadata
     """
     import isce
+    import isceobj
+    import isceobj.StripmapProc.StripmapProc as St
     from isceobj.Planet.Planet import Planet
 
-    shelve_file = os.path.splitext(shelve_file)[0]  #get rid of the file extension
-    with shelve.open(shelve_file, flag='r') as mdb:
-        burst = mdb['frame']
+    if meta_file == "data.dat":    #shelve file from stripmapStack
+        fbase = os.path.splitext(meta_file)[0]
+        with shelve.open(fbase, flag='r') as mdb:
+            frame = mdb['frame']
+
+    elif meta_file.endswith(".xml"):   #XML file from stripmapApp
+        frame = load_product(meta_file)
 
     metadata = {}
-    metadata['prf'] = burst.PRF
-    metadata['startUTC'] = burst.sensingStart
-    metadata['stopUTC'] = burst.sensingStop
-    metadata['radarWavelength'] = burst.radarWavelegth
-    metadata['rangePixelSize'] = burst.instrument.rangePixelSize
-    metadata['startingRange'] = burst.startingRange
-    metadata['polarization'] = burst.polarization.replace('/', '')
-    metadata['trackNumber'] = burst.trackNumber
-    metadata['orbitNumber'] = burst.orbitNumber
+    metadata['prf'] = frame.PRF
+    metadata['startUTC'] = frame.sensingStart
+    metadata['stopUTC'] = frame.sensingStop
+    metadata['radarWavelength'] = frame.radarWavelegth
+    metadata['rangePixelSize'] = frame.instrument.rangePixelSize
+    metadata['startingRange'] = frame.startingRange
+    metadata['polarization'] = frame.polarization.replace('/', '')
+    metadata['trackNumber'] = frame.trackNumber
+    metadata['orbitNumber'] = frame.orbitNumber
 
-    time_seconds = (burst.sensingStart.hour*3600.0 + 
-                    burst.sensingStart.minute*60.0 + 
-                    burst.sensingStart.second)
+    time_seconds = (frame.sensingStart.hour*3600.0 + 
+                    frame.sensingStart.minute*60.0 + 
+                    frame.sensingStart.second)
     metadata['CENTER_LINE_UTC'] = time_seconds
 
-    orbit = burst.orbit
-    peg = orbit.interpolateOrbit(burst.sensingMid, method='hermite')
+    orbit = frame.orbit
+    peg = orbit.interpolateOrbit(frame.sensingMid, method='hermite')
 
     Vs = np.linalg.norm(peg.getVelocity())
     metadata['satelliteSpeed'] = Vs
-    metadata['azimuthPixelSize'] = Vs/burst.PRF
+    metadata['azimuthPixelSize'] = Vs/frame.PRF
 
     refElp = Planet(pname='Earth').ellipsoid
     llh = refElp.xyz_to_llh(peg.getPosition())
-    refElp.setSCH(llh[0], llh[1], orbit.getENUHeading(burst.sensingMid))
+    refElp.setSCH(llh[0], llh[1], orbit.getENUHeading(frame.sensingMid))
     metadata['earthRadius'] = refElp.pegRadCur
     metadata['altitude'] = llh[2]
 
@@ -266,6 +273,8 @@ def extract_isce_metadata(meta_file, geom_dir=None, rsc_file=None, update_mode=T
         metadata = extract_tops_metadata(meta_file)
     elif fbase.startswith("data"):
         print('extract metadata from ISCE/stripmapStack shelve file:', meta_file)
+        metadata = extract_stripmap_metadata(meta_file)
+    elif fbase.endswith(".xml"):
         metadata = extract_stripmap_metadata(meta_file)
     else:
         raise ValueError("unrecognized ISCE metadata file: {}".format(meta_file))
