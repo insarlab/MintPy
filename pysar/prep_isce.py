@@ -149,6 +149,8 @@ def extract_stripmap_metadata(meta_file):
     metadata['rangePixelSize'] = frame.instrument.rangePixelSize
     metadata['startingRange'] = frame.startingRange
     metadata['polarization'] = frame.polarization.replace('/', '')
+    if metadata['polarization'].startswith("b'"):
+        metadata['polarization'] = metadata['polarization'][2:4]
     metadata['trackNumber'] = frame.trackNumber
     metadata['orbitNumber'] = frame.orbitNumber
 

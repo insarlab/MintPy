@@ -230,7 +230,7 @@ def reference_file(inps):
             obj.close()
         else:
             print('writing >>> '+inps.outfile)
-            data = readfile.read(inps.file)
+            data = readfile.read(inps.file)[0]
             data -= data[inps.ref_y, inps.ref_x]
             atr.update(atrNew)
             writefile.write(data, out_file=inps.outfile, metadata=atr)
