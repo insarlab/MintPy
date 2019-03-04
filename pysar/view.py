@@ -389,8 +389,8 @@ def prep_slice(cmd):
         ax, inps, im, cbar = view.plot_slice(ax, d_v, atr, inps)
         plt.show()
     """
-    vprint(cmd)
     inps = cmd_line_parse(cmd.split()[1:])
+    vprint(cmd)
     inps, atr = check_input_file_info(inps)
     inps = update_inps_with_file_metadata(inps, atr)
 
