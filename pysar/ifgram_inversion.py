@@ -20,6 +20,12 @@ from scipy.special import gamma
 from pysar.objects import ifgramStack, timeseries
 from pysar.utils import readfile, writefile, ptime, utils as ut
 
+from dask.distributed import Client, as_completed
+
+# David: dask_jobqueue is needed for HPC.
+# PBSCluster (similar to LSFCluster) should also work out of the box
+from dask_jobqueue import LSFCluster
+
 # key configuration parameter name
 key_prefix = 'pysar.networkInversion.'
 configKeys = ['unwDatasetName',
@@ -147,7 +153,6 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-    inps.parallel = False
 
     # check input file type
     atr = readfile.read_attribute(inps.ifgramStackFile)
@@ -556,6 +561,35 @@ def split_into_boxes(dataset_shape, chunk_size=100e6, print_msg=True):
         box_list.append(box)
     return box_list
 
+
+def subsplit_boxes_by_num_workers(box, num_workers, dimension='y'):
+    """ David: This is a bit hacky, but after creating the patches,
+    I wanted to further divide the box size into `num_subboxes` different subboxes.
+    Note that `split_into_boxes` only splits based on chunk_size (memory-based).
+
+    :param box: [x0, y0, x1, y1]: list[int] of size 4,
+    """
+
+    # Flip x and y coordinates if splitting along 'x' dimension
+    x0, y0, x1, y1 = box
+    subboxes = []
+
+    if dimension == 'y':
+        y_diff = y1 - y0
+        for i in range(num_workers):
+            start = (i * y_diff) // num_workers
+            end = ((i + 1) * y_diff) // num_workers if i + 1 != num_workers else y_diff
+            subboxes.append([x0, start, x1, end])
+    elif dimension == 'x':
+        x_diff = x1 - x0
+        for i in range(num_workers):
+            start = (i * x_diff) // num_workers
+            end = ((i + 1) * x_diff) // num_workers if i + 1 != num_workers else x_diff
+            subboxes.append([start, y0, end, y1])
+    else:
+        raise Exception("Unknown value for dimension parameter:", dimension)
+
+    return subboxes
 
 def check_design_matrix(ifgram_file, weight_func='var'):
     """Check Rank of Design matrix for weighted inversion"""
@@ -988,29 +1022,116 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         num_inv_ifg = np.zeros((length, width), np.int16)
 
         # Loop
-        for i in range(num_box):
-            box = box_list[i]
-            if num_box > 1:
-                print('\n------- Processing Patch {} out of {} --------------'.format(i+1, num_box))
-            (tsi,
-             temp_cohi,
-             ts_stdi,
-             ifg_numi) = ifgram_inversion_patch(ifgram_file,
-                                                box=box,
-                                                ref_phase=ref_phase,
-                                                unwDatasetName=inps.unwDatasetName,
-                                                weight_func=inps.weightFunc,
-                                                min_norm_velocity=inps.minNormVelocity,
-                                                mask_dataset_name=inps.maskDataset,
-                                                mask_threshold=inps.maskThreshold,
-                                                min_redundancy=inps.minRedundancy,
-                                                water_mask_file=inps.waterMaskFile,
-                                                skip_zero_phase=inps.skip_zero_phase)
+        if inps.parallel:
 
-            ts[:, box[1]:box[3], box[0]:box[2]] = tsi
-            ts_std[:, box[1]:box[3], box[0]:box[2]] = ts_stdi
-            temp_coh[box[1]:box[3], box[0]:box[2]] = temp_cohi
-            num_inv_ifg[box[1]:box[3], box[0]:box[2]] = ifg_numi
+            # Initialize Dask Workers.
+            # TODO: Should these params be moved into a config file?
+            # We could use our own config setup or Dask's config setup
+            NUM_WORKERS = 40
+            cluster = LSFCluster(project='insarlab',
+                                 name='pysar_worker_bee2',
+                                 queue='general',
+                                 # David: The first parameter is required by Pegasus. This actually changes memory usage.
+                                 job_extra=['-R "rusage[mem=6400]"',
+                                            # David: This second line will allow you to read your worker's output
+                                            "-o WORKER-%J.out"],
+                                 # David: This allows workers to write overflow memory to file. Unsure if necessary
+                                 local_directory='/scratch/projects/insarlab/dwg11/',
+                                 # David: Somehow, cores=2 is essential. When cores=1 it was super slow and
+                                 # when cores=3 it took forever for workers to go from PENDING to RUNNING
+                                 cores=2,
+                                 walltime='00:30',
+                                 # David: This line is required by dask_jobqueue
+                                 # but ignored by Pegasus as far as I can tell
+                                 memory='2GB',
+                                 # David: This line prevents the cluster from defaulting to the system Python.
+                                 # You need to point it to your dask environment's Python
+                                 python='/nethome/dwg11/anaconda2/envs/pysar_parallel/bin/python')
+            # David:  This line submits NUM_WORKERS number of jobs to Pegasus to start a bunch of workers
+            cluster.scale(NUM_WORKERS)
+            print("JOB FILE:", cluster.job_script())
+
+            # David: This line needs to be in an `if __name__ == "__main__":` block I believe. It should not
+            # be floating around or in code that workers might execute (note that if it is in no function,
+            # workers will execute it when loading the module)
+            #
+            client = Client(cluster)
+
+            all_boxes = []
+            for i in range(num_box):
+                # David: All "patches" are processed at once
+                # David: You can change the factor of `num_subboxes` to have smaller jobs per worker.
+                # This could be helpful with large jobs
+                all_boxes += subsplit_boxes_by_num_workers(box_list[i], num_workers=1 * NUM_WORKERS, dimension='x')
+
+            futures = []
+            start_time_subboxes = time.time()
+            for i, subbox in enumerate(all_boxes):
+                print(i, subbox)
+
+                data = (ifgram_file,
+                        subbox,
+                        ref_phase,
+                        inps.unwDatasetName,
+                        inps.weightFunc,
+                        inps.minNormVelocity,
+                        inps.maskDataset,
+                        inps.maskThreshold,
+                        inps.minRedundancy,
+                        inps.waterMaskFile,
+                        inps.skip_zero_phase)
+
+
+                # David: I haven't played with fussing with `retries`, however sometimes a future fails
+                # on a worker for an unknown reason. retrying will save the whole process from failing.
+                # David: TODO:  I don't know what to do if a future fails > 3 times. I don't think an error is
+                # thrown in that case, therefore I don't know how to recognize when this happens.
+                future = client.submit(parallel_ifgram_inversion_patch, data, retries=3)
+                futures.append(future)
+
+            # David: Some workers are slower than others. When #(futures to complete) < #workers, we should
+            # investigate whether `Client.replicate(future)` will speed up work on the final futures.
+            # It's a slight speedup, but depending how computationally complex each future is, this could be a
+            # decent speedup
+            i_future = 0
+            for future, result in as_completed(futures, with_results=True):
+                i_future += 1
+                print("FUTURE #" + str(i_future), "complete in", time.time() - start_time_subboxes,
+                      "seconds. Box:", subbox, "Time:", time.time())
+                tsi, temp_cohi, ts_stdi, ifg_numi, subbox = result
+
+                ts[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi
+                ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
+                temp_coh[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_cohi
+                num_inv_ifg[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_numi
+
+            # Shut down Dask workers gracefully
+            client.close()
+            cluster.close()
+        else:
+            for i in range(num_box):
+                box = box_list[i]
+                if num_box > 1:
+                    print('\n------- Processing Patch {} out of {} --------------'.format(i+1, num_box))
+                (tsi,
+                 temp_cohi,
+                 ts_stdi,
+                 ifg_numi) = ifgram_inversion_patch(ifgram_file,
+                                                    box=box,
+                                                    ref_phase=ref_phase,
+                                                    unwDatasetName=inps.unwDatasetName,
+                                                    weight_func=inps.weightFunc,
+                                                    min_norm_velocity=inps.minNormVelocity,
+                                                    mask_dataset_name=inps.maskDataset,
+                                                    mask_threshold=inps.maskThreshold,
+                                                    min_redundancy=inps.minRedundancy,
+                                                    water_mask_file=inps.waterMaskFile,
+                                                    skip_zero_phase=inps.skip_zero_phase)
+
+                ts[:, box[1]:box[3], box[0]:box[2]] = tsi
+                ts_std[:, box[1]:box[3], box[0]:box[2]] = ts_stdi
+                temp_coh[box[1]:box[3], box[0]:box[2]] = temp_cohi
+                num_inv_ifg[box[1]:box[3], box[0]:box[2]] = ifg_numi
 
         # reference pixel
         ref_y = int(stack_obj.metadata['REF_Y'])
@@ -1027,6 +1148,36 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     m, s = divmod(time.time()-start_time, 60)
     print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
     return
+
+
+def parallel_ifgram_inversion_patch(data):
+    """
+    David: This is the starting point for futures. Futures start executing code here.
+    :param data:
+    :return: The box
+    """
+    (ifgram_file, box, ref_phase, unwDatasetName,
+     weight_func, min_norm_velocity,
+     mask_dataset_name, mask_threshold,
+     min_redundancy, water_mask_file, skip_zero_phase) = data
+
+    print("BOX DIMS:", box)
+
+    # David: This is the main call. This code was copied from the old
+    # `ifgram_inversion` function
+    (tsi, temp_cohi, ts_stdi, ifg_numi) = ifgram_inversion_patch(ifgram_file,
+                                           box= box,
+                                           ref_phase= ref_phase,
+                                           unwDatasetName=unwDatasetName,
+                                           weight_func=weight_func,
+                                           min_norm_velocity=min_norm_velocity,
+                                           mask_dataset_name=mask_dataset_name,
+                                           mask_threshold=mask_threshold,
+                                           min_redundancy=min_redundancy,
+                                           water_mask_file=water_mask_file,
+                                           skip_zero_phase=skip_zero_phase)
+
+    return tsi, temp_cohi, ts_stdi, ifg_numi, box
 
 
 ################################################################################################
