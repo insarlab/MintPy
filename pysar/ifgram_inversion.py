@@ -20,11 +20,6 @@ from scipy.special import gamma
 from pysar.objects import ifgramStack, timeseries
 from pysar.utils import readfile, writefile, ptime, utils as ut
 
-from dask.distributed import Client, as_completed
-
-# David: dask_jobqueue is needed for HPC.
-# PBSCluster (similar to LSFCluster) should also work out of the box
-from dask_jobqueue import LSFCluster
 
 # key configuration parameter name
 key_prefix = 'pysar.networkInversion.'
@@ -1023,6 +1018,10 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
 
         # Loop
         if inps.parallel:
+            from dask.distributed import Client, as_completed
+            # David: dask_jobqueue is needed for HPC.
+            # PBSCluster (similar to LSFCluster) should also work out of the box
+            from dask_jobqueue import LSFCluster
 
             # Initialize Dask Workers.
             # TODO: Should these params be moved into a config file?
