@@ -74,6 +74,9 @@ def create_parser():
     parser.add_argument('--off','--offset', dest='offset', type=float,
                         help='Offset for each timeseries file.')
 
+    parser.add_argument('--noverbose', dest='print_msg', action='store_false',
+                        help='Disable the verbose message printing.')
+
     parser = pp.add_data_disp_argument(parser)
     parser = pp.add_dem_argument(parser)
     parser = pp.add_figure_argument(parser)
@@ -110,6 +113,10 @@ def cmd_line_parse(iargs=None):
         inps.colormap = 'jet'
     if not inps.fig_size:
         inps.fig_size = [8.0, 4.5]
+
+    # verbose print using --noverbose option
+    global vprint
+    vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
     return inps
 

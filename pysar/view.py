@@ -388,6 +388,8 @@ def plot_slice(ax, data, metadata, inps=None):
                 ax = pv.plot_slice(ax, data, atr)[0]
                 plt.show()
     """
+    global vprint
+    vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
     #----------------------- 0. Initial a inps Namespace if no inps input --------------------#
     if not inps:
@@ -1220,8 +1222,8 @@ class viewer():
         from pysar.view import viewer
         cmd = 'view.py timeseries.h5'
         obj = viewer(cmd)
-        obj.startup()
-        obj.plot()
+        inps = obj.open()
+        obj.plot(inps)
         plt.show()
     """
     def __init__(self, cmd=None, iargs=None):
