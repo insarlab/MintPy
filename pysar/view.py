@@ -33,8 +33,6 @@ from pysar.multilook import multilook_data
 from pysar import subset, version
 
 
-#fig = None
-
 ##################################################################################################
 EXAMPLE = """example:
   view.py velocity.h5
@@ -154,6 +152,9 @@ def cmd_line_parse(iargs=None):
     # verbose print using --noverbose option
     global vprint
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
+
+    if inps.disp_setting_file:
+        inps = update_inps_with_display_setting_file(inps, inps.disp_setting_file)
 
     # Backend setting
     if not inps.disp_fig:
@@ -371,65 +372,6 @@ def update_data_with_plot_inps(data, metadata, inps):
 
 
 ##################################################################################################
-def prep_slice(cmd):
-    """Prepare data from command line as input, for easy call plot_slice() externally
-    Parameters: cmd : string, command to be run in terminal
-    Returns:    data : 2D np.ndarray, data to be plotted
-                atr  : dict, metadata 
-                inps : namespace, input argument for plot setup
-    Example:
-        fig, ax = plt.subplots(figsize=[4, 3])
-        geo_box = (-91.670, -0.255, -91.370, -0.515)    # W, N, E, S
-        cmd = 'view.py geo_velocity.h5 velocity --mask geo_maskTempCoh.h5 '
-        cmd += '--sub-lon {w} {e} --sub-lat {s} {n} '.format(w=geo_box[0], n=geo_box[1], e=geo_box[2], s=geo_box[3])
-        cmd += '-c jet -v -3 10 --cbar-loc bottom --cbar-nbins 3 --cbar-ext both --cbar-size 5% '
-        cmd += '--dem srtm1.dem --dem-nocontour '
-        cmd += '--lalo-step 0.2 --lalo-loc 1 0 1 0 --scalebar 0.3 0.80 0.05 --notitle --fontsize 12 '
-        d_v, atr ,inps = view.prep_slice(cmd)
-        ax, inps, im, cbar = view.plot_slice(ax, d_v, atr, inps)
-        plt.show()
-    """
-    inps = cmd_line_parse(cmd.split()[1:])
-    vprint(cmd)
-    inps, atr = check_input_file_info(inps)
-    inps = update_inps_with_file_metadata(inps, atr)
-
-    # read data
-    data, atr = readfile.read(inps.file,
-                              datasetName=inps.dset[0],
-                              box=inps.pix_box,
-                              print_msg=inps.print_msg)
-    # reference in time
-    if inps.ref_date:
-        data -= readfile.read(inps.file,
-                              datasetName=inps.ref_date,
-                              box=inps.pix_box,
-                              print_msg=False)[0]
-    # reference in space for unwrapPhase
-    if (inps.key in ['ifgramStack']
-            and inps.dset[0].split('-')[0] == 'unwrapPhase'
-            and 'REF_Y' in atr.keys()):
-        ref_y, ref_x = int(atr['REF_Y']), int(atr['REF_X'])
-        ref_data = readfile.read(inps.file,
-                                 datasetName=inps.dset[0],
-                                 box=(ref_x, ref_y, ref_x+1, ref_y+1),
-                                 print_msg=False)[0]
-        data[data != 0.] -= ref_data
-
-    data, inps = update_data_with_plot_inps(data, atr, inps)
-    inps.msk, inps.mask_file = pp.read_mask(inps.file,
-                                            mask_file=inps.mask_file,
-                                            datasetName=inps.dset[0],
-                                            box=inps.pix_box,
-                                            print_msg=inps.print_msg)
-    # mask
-    if inps.zero_mask:
-        data = np.ma.masked_where(data == 0., data)
-    if inps.msk is not None:
-        data = np.ma.masked_where(inps.msk == 0., data)
-    return data, atr, inps
-
-
 def plot_slice(ax, data, metadata, inps=None):
     """Plot one slice of matrix 
     Parameters: ax : matplot.pyplot axes object
@@ -446,6 +388,8 @@ def plot_slice(ax, data, metadata, inps=None):
                 ax = pv.plot_slice(ax, data, atr)[0]
                 plt.show()
     """
+    global vprint
+    vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
     #----------------------- 0. Initial a inps Namespace if no inps input --------------------#
     if not inps:
@@ -825,7 +769,7 @@ def update_figure_setting(inps):
                 plot_shape = []
             plot_shape = [width*1.25, length]
             if not inps.disp_cbar:
-                plot_shape = [width, length]                
+                plot_shape = [width, length]
             fig_scale = min(pp.min_figsize_single/min(plot_shape),
                             pp.max_figsize_single/max(plot_shape),
                             pp.max_figsize_height/plot_shape[1])
@@ -1064,7 +1008,6 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
 
 
 def plot_figure(j, inps, metadata):
-    global fig
     """Plot one figure with multiple subplots
     1) create figure
     2) read all data into 3D array
@@ -1203,19 +1146,29 @@ def prepare4multi_subplots(inps, metadata):
     return inps
 
 
-#########################################  Main Function  ########################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-
+##################################################################################################
+def prep_slice(cmd, auto_fig=False):
+    """Prepare data from command line as input, for easy call plot_slice() externally
+    Parameters: cmd : string, command to be run in terminal
+    Returns:    data : 2D np.ndarray, data to be plotted
+                atr  : dict, metadata 
+                inps : namespace, input argument for plot setup
+    Example:
+        fig, ax = plt.subplots(figsize=[4, 3])
+        geo_box = (-91.670, -0.255, -91.370, -0.515)    # W, N, E, S
+        cmd = 'view.py geo_velocity.h5 velocity --mask geo_maskTempCoh.h5 '
+        cmd += '--sub-lon {w} {e} --sub-lat {s} {n} '.format(w=geo_box[0], n=geo_box[1], e=geo_box[2], s=geo_box[3])
+        cmd += '-c jet -v -3 10 --cbar-loc bottom --cbar-nbins 3 --cbar-ext both --cbar-size 5% '
+        cmd += '--dem srtm1.dem --dem-nocontour '
+        cmd += '--lalo-step 0.2 --lalo-loc 1 0 1 0 --scalebar 0.3 0.80 0.05 --notitle --fontsize 12 '
+        d_v, atr ,inps = view.prep_slice(cmd)
+        ax, inps, im, cbar = view.plot_slice(ax, d_v, atr, inps)
+        plt.show()
+    """
+    inps = cmd_line_parse(cmd.split()[1:])
+    vprint(cmd)
     inps, atr = check_input_file_info(inps)
-
-    if inps.disp_setting_file:
-        inps = update_inps_with_display_setting_file(inps, inps.disp_setting_file)
-
     inps = update_inps_with_file_metadata(inps, atr)
-    # --update option
-    if inps.update_mode and not inps.disp_fig and run_or_skip(inps) == 'skip':
-        return inps.outfile
 
     inps.msk, inps.mask_file = pp.read_mask(inps.file,
                                             mask_file=inps.mask_file,
@@ -1223,68 +1176,154 @@ def main(iargs=None):
                                             box=inps.pix_box,
                                             print_msg=inps.print_msg)
 
-    ############################### One Subplot ###############################
-    if inps.dsetNum == 1:
-        vprint('reading data ...')
-        data, atr = readfile.read(inps.file,
-                                  datasetName=inps.dset[0],
-                                  box=inps.pix_box,
-                                  print_msg=False)
-        # reference in time
-        if inps.ref_date:
-            data -= readfile.read(inps.file,
-                                  datasetName=inps.ref_date,
-                                  box=inps.pix_box,
-                                  print_msg=False)[0]
+    # read data
+    data, atr = readfile.read(inps.file,
+                              datasetName=inps.dset[0],
+                              box=inps.pix_box,
+                              print_msg=inps.print_msg)
+    # reference in time
+    if inps.ref_date:
+        data -= readfile.read(inps.file,
+                              datasetName=inps.ref_date,
+                              box=inps.pix_box,
+                              print_msg=False)[0]
+    # reference in space for unwrapPhase
+    if (inps.key in ['ifgramStack']
+            and inps.dset[0].split('-')[0] == 'unwrapPhase'
+            and 'REF_Y' in atr.keys()):
+        ref_y, ref_x = int(atr['REF_Y']), int(atr['REF_X'])
+        ref_data = readfile.read(inps.file,
+                                 datasetName=inps.dset[0],
+                                 box=(ref_x, ref_y, ref_x+1, ref_y+1),
+                                 print_msg=False)[0]
+        data[data != 0.] -= ref_data
+    # masking
+    if inps.zero_mask:
+        data = np.ma.masked_where(data == 0., data)
+    if inps.msk is not None:
+        data = np.ma.masked_where(inps.msk == 0., data)
 
-        # reference in space for unwrapPhase
-        if (inps.key in ['ifgramStack']
-                and inps.dset[0].split('-')[0] == 'unwrapPhase'
-                and 'REF_Y' in atr.keys()):
-            ref_y, ref_x = int(atr['REF_Y']), int(atr['REF_X'])
-            ref_data = readfile.read(inps.file,
-                                     datasetName=inps.dset[0],
-                                     box=(ref_x, ref_y, ref_x+1, ref_y+1),
-                                     print_msg=False)[0]
-            data[data != 0.] -= ref_data
+    data, inps = update_data_with_plot_inps(data, atr, inps)
 
-        if inps.zero_mask:
-            vprint('masking pixels with zero value')
-            data = np.ma.masked_where(data == 0., data)
-        if inps.msk is not None:
-            vprint('masking data')
-            data = np.ma.masked_where(inps.msk == 0., data)
-
-        data, inps = update_data_with_plot_inps(data, atr, inps)
-
-        fig, ax = plt.subplots(figsize=inps.fig_size, num='Figure')
-        if not inps.disp_whitespace:
-            fig.subplots_adjust(left=0,right=1,bottom=0,top=1)
-
-        ax, inps = plot_slice(ax, data, atr, inps)[0:2]
-
-        # Save figure
-        if inps.save_fig:
-            vprint('save figure to {} with dpi={}'.format(inps.outfile[0], inps.fig_dpi))
-            if not inps.disp_whitespace:
-                plt.savefig(inps.outfile[0], transparent=True, dpi=inps.fig_dpi, pad_inches=0.0)
-            else:
-                plt.savefig(inps.outfile[0], transparent=True, dpi=inps.fig_dpi, bbox_inches='tight')
-
-
-    ############################### Multiple Subplots #########################
+    # matplotlib.Axes
+    if auto_fig == True:
+        fig, ax = plt.subplots(figsize=[i/2.0 for i in inps.fig_size], num='Figure')
+        return data, atr, inps, ax
     else:
-        inps = prepare4multi_subplots(inps, metadata=atr)
+        return data, atr, inps
 
-        inps.dlim_all = [0., 0.]
-        for j in range(1, inps.fig_num + 1):
-            plot_figure(j, inps, metadata=atr)
 
-        if inps.fig_num > 1:
-            vprint('----------------------------------------')
-            vprint('all data range: {} {}'.format(inps.dlim_all, inps.disp_unit))
-            if inps.vlim:
-                vprint('display  range: {} {}'.format(inps.vlim, inps.disp_unit))
+##################################################################################################
+class viewer():
+    """Class for view.py
+
+    Example:
+        import matplotlib.pyplot as plt
+        from pysar.view import viewer
+        cmd = 'view.py timeseries.h5'
+        obj = viewer(cmd)
+        inps = obj.open()
+        obj.plot(inps)
+        plt.show()
+    """
+    def __init__(self, cmd=None, iargs=None):
+        if cmd:
+            iargs = cmd.split()[1:]
+        self.cmd = cmd
+        self.iargs =iargs
+        return
+
+
+    def open(self):
+        inps = cmd_line_parse(self.iargs)
+        inps, self.atr = check_input_file_info(inps)
+        inps = update_inps_with_file_metadata(inps, self.atr)
+
+        # read mask
+        inps.msk, inps.mask_file = pp.read_mask(inps.file,
+                                                mask_file=inps.mask_file,
+                                                datasetName=inps.dset[0],
+                                                box=inps.pix_box,
+                                                print_msg=inps.print_msg)
+        return inps
+
+
+    def plot(self, inps):
+        # One Subplot
+        if inps.dsetNum == 1:
+            vprint('reading data ...')
+            # read data
+            data, self.atr = readfile.read(inps.file,
+                                           datasetName=inps.dset[0],
+                                           box=inps.pix_box,
+                                           print_msg=False)
+            # reference in time
+            if inps.ref_date:
+                data -= readfile.read(inps.file,
+                                      datasetName=inps.ref_date,
+                                      box=inps.pix_box,
+                                      print_msg=False)[0]
+            # reference in space for unwrapPhase
+            if (inps.key in ['ifgramStack']
+                    and inps.dset[0].split('-')[0] == 'unwrapPhase'
+                    and 'REF_Y' in self.atr.keys()):
+                ref_y, ref_x = int(self.atr['REF_Y']), int(self.atr['REF_X'])
+                ref_data = readfile.read(inps.file,
+                                         datasetName=inps.dset[0],
+                                         box=(ref_x, ref_y, ref_x+1, ref_y+1),
+                                         print_msg=False)[0]
+                data[data != 0.] -= ref_data
+            # masking
+            if inps.zero_mask:
+                vprint('masking pixels with zero value')
+                data = np.ma.masked_where(data == 0., data)
+            if inps.msk is not None:
+                vprint('masking data')
+                data = np.ma.masked_where(inps.msk == 0., data)
+            # update data
+            data, inps = update_data_with_plot_inps(data, self.atr, inps)
+
+            # prepare figure
+            fig, ax = plt.subplots(figsize=inps.fig_size, num='Figure')
+            if not inps.disp_whitespace:
+                fig.subplots_adjust(left=0,right=1,bottom=0,top=1)
+
+            # plot
+            ax, inps, im, cbar = plot_slice(ax, data, self.atr, inps)
+
+            # Save figure
+            if inps.save_fig:
+                vprint('save figure to {} with dpi={}'.format(inps.outfile[0], inps.fig_dpi))
+                if not inps.disp_whitespace:
+                    plt.savefig(inps.outfile[0], transparent=True, dpi=inps.fig_dpi, pad_inches=0.0)
+                else:
+                    plt.savefig(inps.outfile[0], transparent=True, dpi=inps.fig_dpi, bbox_inches='tight')
+            return ax, inps, im, cbar
+
+        # Multiple Subplots
+        else:
+            # prepare
+            inps = prepare4multi_subplots(inps, metadata=self.atr)
+
+            # plot
+            inps.dlim_all = [0., 0.]
+            for j in range(1, inps.fig_num + 1):
+                plot_figure(j, inps, metadata=self.atr)
+
+            # stat
+            if inps.fig_num > 1:
+                vprint('----------------------------------------')
+                vprint('all data range: {} {}'.format(inps.dlim_all, inps.disp_unit))
+                if inps.vlim:
+                    vprint('display  range: {} {}'.format(inps.vlim, inps.disp_unit))
+        return
+
+
+#########################################  Main Function  ########################################
+def main(iargs=None):
+    obj = viewer(cmd=iargs)
+    inps = obj.open()
+    obj.plot(inps)
 
     # Display Figure
     if inps.disp_fig:
