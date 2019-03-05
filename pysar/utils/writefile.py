@@ -111,6 +111,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             data_list.append(datasetDict[key])
 
         # Write Data File
+        print('writing {}'.format(out_file))
         if ext in ['.unw', '.cor', '.hgt']:
             write_float32(data_list[0], out_file)
             metadata['DATA_TYPE'] = 'float32'
@@ -141,7 +142,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             return 0
 
         # Write .rsc File
-        write_roipac_rsc(metadata, out_file+'.rsc')
+        write_roipac_rsc(metadata, out_file+'.rsc', print_msg=True)
     return out_file
 
 

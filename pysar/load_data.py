@@ -278,23 +278,23 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
                                                    width=maxDigit,
                                                    path=inpsDict[key]))
 
-    # Check required dataset
+    # Check 1: required dataset
     dsName0 = 'unwrapPhase'
     if dsName0 not in dsPathDict.keys():
         print('WARNING: No reqired {} data files found!'.format(dsName0))
         return None
 
-    # Check number of files for all dataset types
+    # Check 2: number of files for all dataset types
     dsNumList = list(dsNumDict.values())
     if any(i != dsNumList[0] for i in dsNumList):
-        print('WARNING: Not all types of dataset have the same number of files:')
+        #print('WARNING: Not all types of dataset have the same number of files:')
+        msg = 'Not all types of dataset have the same number of files:'        
         for key, value in dsNumDict.items():
-            print('number of {:<{width}}: {num}'.format(key,
-                                                        width=maxDigit,
-                                                        num=value))
+            msg += '\nnumber of {:<{width}}: {num}'.format(key, width=maxDigit, num=value)
+        raise Exception(msg)
     print('number of files per type: {}'.format(dsNumList[0]))
 
-    # Check data dimension for all files
+    # Check 3: data dimension for all files
 
     # dsPathDict --> pairsDict --> stackObj
     dsNameList = list(dsPathDict.keys())
