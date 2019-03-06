@@ -95,8 +95,7 @@ def attributes2string(atr, sorting=True, max_meta_num=200):
     return atr_string
 
 
-def print_binary_attributes(fname, max_meta_num=200):
-    atr = readfile.read_attribute(fname)
+def print_attributes(atr, max_meta_num=200):
     atr_string = attributes2string(atr, max_meta_num=max_meta_num)
     print(atr_string)
 
@@ -250,7 +249,8 @@ def main(iargs=None):
         print_hdf5_structure(inps.file, max_meta_num=inps.max_meta_num)
     else:
         print('\n{} {:*<40}'.format('*'*20, 'Binary File Attributes '))
-        print_binary_attributes(inps.file, max_meta_num=inps.max_meta_num)
+        atr = readfile.read_attribute(inps.file)
+        print_attributes(atr, max_meta_num=inps.max_meta_num)
 
     return
 

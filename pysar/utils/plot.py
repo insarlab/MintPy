@@ -1578,10 +1578,12 @@ def prepare_dem_background(dem, inps=None, print_msg=True):
     if inps.disp_dem_shade:
         from matplotlib.colors import LightSource
         ls = LightSource(azdeg=inps.shade_azdeg, altdeg=inps.shade_altdeg)
-        dem_shade = ls.shade(dem, vert_exag=inps.shade_exag,
-                             cmap=ColormapExt('gray').colormap,
-                             vmin=inps.shade_min,
-                             vmax=inps.shade_max)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            dem_shade = ls.shade(dem, vert_exag=inps.shade_exag,
+                                 cmap=ColormapExt('gray').colormap,
+                                 vmin=inps.shade_min,
+                                 vmax=inps.shade_max)
         dem_shade[np.isnan(dem_shade[:, :, 0])] = np.nan
         if print_msg:
             print('show shaded relief DEM')

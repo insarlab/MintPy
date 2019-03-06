@@ -16,9 +16,14 @@ urls = ['https://zenodo.org/record/2557863/files/KujuAlosAT422F650.tar.xz',
 num_proj = len(proj_names)
 
 # check input argument
-if len(sys.argv) > 1 and sys.argv[1] in proj_names:
-    print('Test on selected project:', sys.argv[1])
-    idx = [proj_names.index(sys.argv[1])]
+if len(sys.argv) > 1:
+    if sys.argv[1] in proj_names:
+        print('Test on selected project:', sys.argv[1])
+        idx = [proj_names.index(sys.argv[1])]
+    else:
+        msg = 'ERROR: input dataset not found: {}'.format(sys.argv[1])
+        msg += '\navailable datasets: {}'.format(proj_names)
+        raise SystemExit(msg)
 else:
     idx = np.arange(num_proj)
 
