@@ -25,8 +25,8 @@ PySAR reads a stack of interferograms (unwrapped interferograms, coherence, wrap
     pysarApp.py -H                      #Print    default template options
 
     # Run with --start/stop/dostep options
-    pysarApp.py GalapagosSenDT128.template --dostep ts2vel   #Run at step 'ts2vel' only
-    pysarApp.py GalapagosSenDT128.template --stop loadData   #End after step 'loadData'
+    pysarApp.py GalapagosSenDT128.template --dostep velocity  #Run at step 'velocity' only
+    pysarApp.py GalapagosSenDT128.template --end load_data    #End after step 'load_data'
 
 #### [Example](https://github.com/yunjunz/PySAR/wiki/Example): Fernandina volcano, Galápagos with Sentinel-1 data    
 
