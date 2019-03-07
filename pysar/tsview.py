@@ -283,9 +283,10 @@ def read_timeseries_data(inps):
         try:
             ref_phase = data[:, inps.ref_yx[0]-inps.pix_box[1], inps.ref_yx[1]-inps.pix_box[0]]
             data -= np.tile(ref_phase.reshape(-1, 1, 1), (1, data.shape[-2], data.shape[-1]))
-            print('reference to pixel {}'.format(inps.ref_yx))
+            print('reference to pixel: {}'.format(inps.ref_yx))
         except:
             pass
+        print('reference to date: {}'.format(inps.date_list[inps.ref_idx]))
         data -= np.tile(data[inps.ref_idx, :, :], (inps.num_date, 1, 1))
 
         # Display Unit
@@ -296,7 +297,7 @@ def read_timeseries_data(inps):
                                                   disp_unit=inps.disp_unit)
         ts_data.append(data)
 
-    # Mask file: input mask file + non-zero ts pixels
+    # Mask file: input mask file + non-zero ts pixels - ref_point
     mask = np.ones(ts_data[0].shape[-2:], np.bool_)
     msk = pp.read_mask(inps.timeseries_file[0],
                        mask_file=inps.mask_file,
@@ -309,6 +310,8 @@ def read_timeseries_data(inps):
     mask[ts_stack == 0.] = False
     mask[np.isnan(ts_stack)] = False
     del ts_stack
+
+    mask[inps.ref_yx[0], inps.ref_yx[1]] = True  #do not mask the reference point
 
     #print('masking data')
     #ts_mask = np.tile(mask, (inps.num_date, 1, 1))
