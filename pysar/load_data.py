@@ -505,8 +505,9 @@ def main(iargs=None):
 
     # read input options
     inpsDict = read_inps2dict(inps)
-    inpsDict = read_subset_box(inpsDict)
     prepare_metadata(inpsDict)
+
+    inpsDict = read_subset_box(inpsDict)
     extraDict = get_extra_metadata(inpsDict)
 
     # initiate objects
