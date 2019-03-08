@@ -466,7 +466,7 @@ class TimeSeriesAnalysis:
 
         # 2) plot network
         cmd = 'plot_network.py {} -t {} --nodisplay'.format(stack_file, self.templateFile)
-        print(cmd)
+        print('\n'+cmd)
         if ut.run_or_skip(out_file=net_fig,
                           in_file=[stack_file, coh_txt, self.templateFile],
                           check_readable=False) == 'run':
