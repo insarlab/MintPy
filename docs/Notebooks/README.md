@@ -1,6 +1,6 @@
 ## Tutorials in Jupyter notebooks for InSAR time series analysis
 
-This tutorial walks through the various processing steps of InSAR time series analysis, from the data downloading, stack of interferograms generation to time series analysis.
+This tutorial walks through the various processing steps of InSAR time series analysis using ISCE and PySAR software, from the data downloading, stack of interferograms generation to time series analysis.
 
 ### Recommend order of tutorials    
 
