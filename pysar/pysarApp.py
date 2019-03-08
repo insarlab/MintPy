@@ -93,6 +93,9 @@ def create_parser():
                         help='Print/Show the default template file for details parameter setup.')
     parser.add_argument('-v','--version', action='store_true', help='print software version')
 
+    parser.add_argument('--noplot', dest='plot', action='store_false',
+                        help='disable the result ploting at the end.')
+
     step = parser.add_argument_group('steps processing (start/end/dostep)', STEP_HELP)
     step.add_argument('--start', dest='startStep', metavar='STEP', default=STEP_LIST[0],
                       help='Start processing at the named step, default: {}'.format(STEP_LIST[0]))
@@ -173,6 +176,11 @@ def cmd_line_parse(iargs=None):
     print('Run routine processing with {} on steps: {}'.format(os.path.basename(__file__), inps.runSteps))
     if len(inps.runSteps) == 1:
         print('Remaining steps: {}'.format(STEP_LIST[idx0+1:]))
+
+    if inps.doStep:
+        inps.plot = False
+        print('--dostep option enabled, disable the plotting at the end of the processing.')
+
     print('-'*50)
     return inps
 
@@ -458,7 +466,7 @@ class TimeSeriesAnalysis:
 
         # 2) plot network
         cmd = 'plot_network.py {} -t {} --nodisplay'.format(stack_file, self.templateFile)
-        print(cmd)
+        print('\n'+cmd)
         if ut.run_or_skip(out_file=net_fig,
                           in_file=[stack_file, coh_txt, self.templateFile],
                           check_readable=False) == 'run':
@@ -892,9 +900,9 @@ class TimeSeriesAnalysis:
         return status
 
 
-    def plot(self, print_aux=True):
+    def plot_result(self, print_aux=True, plot=True):
         """Plot data files and save to figures in PIC folder"""
-        if not self.template['pysar.plot']:
+        if not self.template['pysar.plot'] or not plot:
             return
 
         def grab_latest_update_date(fname, prefix='# Latest update:'):
@@ -943,7 +951,7 @@ class TimeSeriesAnalysis:
         return
 
 
-    def run(self, steps=STEP_LIST):
+    def run(self, steps=STEP_LIST, plot=True):
         # run the chosen steps
         for sname in steps:
             status = 0
@@ -999,7 +1007,7 @@ class TimeSeriesAnalysis:
 
             if status is not 0:
                 # plot result if error occured
-                self.plot(print_aux=False)
+                self.plot_result(print_aux=False, plot=plot)
 
                 # go back to original directory
                 print('Go back to directory:', self.cwd)
@@ -1010,7 +1018,7 @@ class TimeSeriesAnalysis:
 
         # plot result (show aux visualization message more multiple steps processing)
         print_aux = len(steps) > 1
-        self.plot(print_aux=print_aux)
+        self.plot_result(print_aux=print_aux, plot=plot)
 
         # go back to original directory
         print('Go back to directory:', self.cwd)
@@ -1031,7 +1039,7 @@ def main(iargs=None):
 
     app = TimeSeriesAnalysis(inps.customTemplateFile, inps.workDir)
     app.startup()
-    app.run(steps=inps.runSteps)
+    app.run(steps=inps.runSteps, plot=inps.plot)
 
     # Timing
     m, s = divmod(time.time()-start_time, 60)

@@ -19,7 +19,6 @@ from pysar.objects import (geometry,
                            timeseries, 
                            HDFEOS)
 
-output = ""
 
 ############################################################
 EXAMPLE = """example:
@@ -49,6 +48,8 @@ def create_parser():
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
     parser.add_argument('file', type=str, help='File to check')
+    parser.add_argument('--compact', action='store_true',
+                        help='show compact info by displaying only the top 20 metadata')
     parser.add_argument('--date', dest='disp_date', action='store_true',
                         help='Show date/date12 info of input file')
     parser.add_argument('--num', dest='disp_num', action='store_true',
@@ -64,73 +65,83 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    inps.max_meta_num = 200
+    if inps.compact:
+        inps.max_meta_num = 20
     return inps
 
 
 ############################################################
-def attributes_string(atr, string=str(), sorting=True):
-    ## Print Dictionary of Attributes
+def attributes2string(atr, sorting=True, max_meta_num=200):
+    ## Get Dictionary of Attributes
     digits = max([len(key) for key in list(atr.keys())] + [0])
+    atr_string = ''
+    i = 0
     for key, value in sorted(atr.items(), key=lambda x: x[0]):
-        try:
-            value = value.decode('utf8')
-        except:
-            pass
-        string += '  {k:<{d}}    {v}\n'.format(k=key,
-                                               d=digits,
-                                               v=value)
-    return string
+        i += 1
+        if i > max_meta_num:
+            atr_string += '  ...\n'
+            break
+        else:
+            # format metadata key/value
+            try:
+                value = value.decode('utf8')
+            except:
+                pass
+            atr_string += '  {k:<{d}}    {v}\n'.format(k=key,
+                                                       d=digits,
+                                                       v=value)
+    return atr_string
 
 
-def print_attributes(atr, string=str(), sorting=True):
-    print((attributes_string(atr, string, sorting)))
+def print_attributes(atr, max_meta_num=200):
+    atr_string = attributes2string(atr, max_meta_num=max_meta_num)
+    print(atr_string)
 
 
-############################################################
-def hdf5_structure_string(file):
-    global output, maxDigit
+def print_hdf5_structure(fname, max_meta_num=200):
+    # generate string
+    global h5_string, maxDigit
+    h5_string = ''
 
-    def print_hdf5_structure_obj(name, obj):
-        global output, maxDigit
+    def hdf5_structure2string(name, obj):
+        global h5_string, maxDigit
         if isinstance(obj, h5py.Group):
-            output += 'HDF5 group   "/{n}"\n'.format(n=name)
+            h5_string += 'HDF5 group   "/{n}"\n'.format(n=name)
         elif isinstance(obj, h5py.Dataset):
-            output += ('HDF5 dataset "/{n:<{w}}": shape {s:<20}, '
-                       'dtype <{t}>\n').format(n=name,
-                                               w=maxDigit,
-                                               s=str(obj.shape),
-                                               t=obj.dtype)
+            h5_string += ('HDF5 dataset "/{n:<{w}}": shape {s:<20}, '
+                          'dtype <{t}>\n').format(n=name,
+                                                  w=maxDigit,
+                                                  s=str(obj.shape),
+                                                  t=obj.dtype)
         atr = dict(obj.attrs)
         if len(atr) > 0:
-            output = attributes_string(atr, output)+"\n"
+            h5_string += attributes2string(atr, max_meta_num=max_meta_num)+"\n"
 
-    f = h5py.File(file, 'r')
-    # metadata in root level
+    f = h5py.File(fname, 'r')
+    # grab metadata in root level as it will be missed in hdf5_structure2string()
     atr = dict(f.attrs)
     if len(atr) > 0:
-        output += 'Attributes in / level:\n'
-        output = attributes_string(atr, output)+"\n"
+        h5_string += 'Attributes in / level:\n'
+        h5_string += attributes2string(atr, max_meta_num=max_meta_num)+'\n'
 
-    # max length of dataset name
+    # get maxDigit value 
     maxDigit = max([len(i) for i in f.keys()])
     maxDigit = max(20, maxDigit+1)
     if atr.get('FILE_TYPE', 'timeseries') == 'HDFEOS':
         maxDigit += 35
 
-    f.visititems(print_hdf5_structure_obj)
+    # get structure string
+    f.visititems(hdf5_structure2string)
     f.close()
 
-    local_output = output
-    output = ""
-    return local_output
+    # print string
+    print(h5_string)
+    return h5_string
 
 
-## By andrewcollette at https://github.com/h5py/h5py/issues/406
-def print_hdf5_structure(file):
-    string = hdf5_structure_string(file)
-    print(string)
-
-
+############################################################
 def print_timseries_date_stat(dateList):
     datevector = ptime.date_list2vector(dateList)[1]
     print('Start Date: '+dateList[0])
@@ -235,11 +246,11 @@ def main(iargs=None):
     # Generic Attribute/Structure of all files
     if ext in ['.h5', '.he5']:
         print('\n{} {:*<40}'.format('*'*20, 'HDF5 File Structure '))
-        print_hdf5_structure(inps.file)
+        print_hdf5_structure(inps.file, max_meta_num=inps.max_meta_num)
     else:
         print('\n{} {:*<40}'.format('*'*20, 'Binary File Attributes '))
         atr = readfile.read_attribute(inps.file)
-        print_attributes(atr)
+        print_attributes(atr, max_meta_num=inps.max_meta_num)
 
     return
 
