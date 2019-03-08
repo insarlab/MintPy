@@ -1,14 +1,12 @@
 ## Tutorials in Jupyter notebooks for InSAR time series analysis
 
-This tutorial walks through the various processing steps of InSAR time series analysis, from the data downloading, stack processing and time series analysis.
+This tutorial walks through the various processing steps of InSAR time series analysis, from the data downloading, stack of interferograms generation to time series analysis.
 
-### Recommend order of tutorials
-1. Data download      
-   - SARRA     
+### Recommend order of tutorials    
 
-2. Stack processing     
-   - ISCE / Sentinel TOPS mode
-   - ISCE / StripMap mode
+1. Stack processing     
+   - ISCE Sentinel TOPS
+   - ISCE StripMap
 
-3. Time series analysis
-   - [SBAS with pysarApp](https://nbviewer.jupyter.org/github/yunjunz/PySAR/blob/Notebook/docs/Notebooks/pysarApp.ipynb)
+2. Time series analysis
+   - [PySAR SBAS](https://nbviewer.jupyter.org/github/yunjunz/PySAR/blob/Notebook/docs/Notebooks/pysarApp.ipynb)
