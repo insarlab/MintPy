@@ -88,9 +88,9 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 ## 3) coh - use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
 ## 4) no  - uniform weight
 ## mask options for unwrapPhase of each interferogram before inversion:
-## 1) coherence        - mask out pixels with spatial coherence < maskThreshold [Recommended]
+## 1) coherence        - mask out pixels with spatial coherence < maskThreshold
 ## 2) connectComponent - mask out pixels with False/0 value
-## 3) no               - no masking.
+## 3) no               - no masking [Recommended].
 ## Temporal coherence is calculated and used to generate final mask (Pepe & Lanari, 2006, IEEE-TGRS)
 ## SBAS (Berardino et al., 2002) = minNormVelocity (yes) + weightFunc (no)
 pysar.networkInversion.weightFunc      = auto #[var / fim / coh / no], auto for var
