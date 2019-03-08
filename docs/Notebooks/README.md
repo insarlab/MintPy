@@ -1,7 +1,17 @@
-## Jupyter notebooks for InSAR time series analysis using ISCE and PySAR
+## Tutorials in Jupyter notebooks for InSAR time series analysis
 
-### Check it on [Jupyter Notebook Viewer](https://nbviewer.jupyter.org/github/yunjunz/PySAR/blob/Notebook/docs/Notebooks/pysarApp.ipynb)
+This tutorial walks through the various processing steps of InSAR time series analysis using ISCE and PySAR software, from the data downloading, stack of interferograms generation to time series analysis.
 
-### Contents
-- stackSentinel
-- pysarApp
+### Recommend order of tutorials    
+
+1. Stack processing     
+   - Sentinel-1 TOPS with ISCE
+   - StripMap with ISCE
+
+2. Time series analysis
+   - [Small baseline (SBAS) with pysarApp](https://nbviewer.jupyter.org/github/yunjunz/PySAR/blob/Notebook/docs/Notebooks/pysarApp.ipynb)
+
+3. Visualizations
+   - Interactive time-series
+   - Interactive coherence matrix
+   - Google Earth

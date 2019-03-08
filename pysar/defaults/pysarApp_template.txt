@@ -83,14 +83,14 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 ## 3.2 Invert network of interferograms into time-series using weighted least sqaure (WLS) estimator.
 ## Invert network of interferograms into time-series using weighted least sqaure (WLS) estimator.
 ## weighting options for least square inversion [fast option available but not best]:
-## 1) var - use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS) [recommended]
-## 2) fim - use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS).
-## 3) coh - use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
-## 4) no  - uniform weight
-## mask options for unwrapPhase of each interferogram before inversion:
-## 1) coherence        - mask out pixels with spatial coherence < maskThreshold [Recommended]
+## 1) var - use inverse of covariance as weight (Tough et al., 1995; Guarnieri & Tebaldini, 2008) [recommended]
+## 2) fim - use Fisher Information Matrix as weight (Seymour & Cumming, 1994; Samiei-Esfahany et al., 2016).
+## 3) coh - use coherence as weight (Perissin & Wang, 2012)
+## 4) no  - uniform weight (Berardino et al., 2002)
+## mask options for unwrapPhase of each interferogram before inversion (recommed if weightFunct=no):
+## 1) coherence        - mask out pixels with spatial coherence < maskThreshold
 ## 2) connectComponent - mask out pixels with False/0 value
-## 3) no               - no masking.
+## 3) no               - no masking [recommended].
 ## Temporal coherence is calculated and used to generate final mask (Pepe & Lanari, 2006, IEEE-TGRS)
 ## SBAS (Berardino et al., 2002) = minNormVelocity (yes) + weightFunc (no)
 pysar.networkInversion.weightFunc      = auto #[var / fim / coh / no], auto for var
@@ -176,7 +176,7 @@ pysar.geocode.interpMethod = auto  #[nearest], auto for nearest, interpolation m
 pysar.geocode.fillValue    = auto  #[np.nan, 0, ...], auto for np.nan, fill value for outliers.
 
 ## 9.2 Export to other formats
-pysar.save.kml             = auto   #[yes / no], auto for yes, save geocoded velocity to Google Earth KMZ file
+pysar.save.kmz             = auto   #[yes / no], auto for yes, save geocoded velocity to Google Earth KMZ file
 pysar.save.hdfEos5         = auto   #[yes / no], auto for no, save time-series to HDF-EOS5 format
 pysar.save.hdfEos5.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
 pysar.save.hdfEos5.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename

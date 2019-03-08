@@ -17,23 +17,27 @@ PySAR is an open-source package in Python for InSAR (Interferometric Synthetic A
 ### 3. Running PySAR
 
 PySAR reads a stack of interferograms (unwrapped interferograms, coherence, wrapped interferograms and connecting components from SNAPHU if available) and the geometry files (DEM, lookup table, etc.). You need to give the path to where the files are and PySAR takes care of the rest!   
- 
-    pysarApp.py                         #Run with default template 'pysarApp_template.txt'
-    pysarApp.py <custom_template_file>  #Run with default and custom templates
-    pysarApp.py -h / --help             #Help
-    pysarApp.py -g                      #Generate default template (if it does not exist)
-    pysarApp.py -H                      #Print    default template options
+   
+```cfg
+pysarApp.py                         #run with default template 'pysarApp_template.txt'
+pysarApp.py <custom_template_file>  #run with default and custom templates
+pysarApp.py -h / --help             #help
+pysarApp.py -g                      #generate default template (if it does not exist)
+pysarApp.py -H                      #print    default template options
 
-    # Run with --start/stop/dostep options
-    pysarApp.py GalapagosSenDT128.template --dostep velocity  #Run at step 'velocity' only
-    pysarApp.py GalapagosSenDT128.template --end load_data    #End after step 'load_data'
+# Run with --start/stop/dostep options
+pysarApp.py GalapagosSenDT128.template --dostep velocity  #run at step 'velocity' only
+pysarApp.py GalapagosSenDT128.template --end load_data    #end after step 'load_data'
+```
 
 #### [Example](https://github.com/yunjunz/PySAR/wiki/Example): Fernandina volcano, Galápagos with Sentinel-1 data    
 
-    wget https://zenodo.org/record/2571980/files/FernandinaSenDT128.tar.xz
-    tar -xvJf FernandinaSenDT128.tar.xz
-    cd FernandinaSenDT128/PYSAR
-    pysarApp.py FernandinaSenDT128.txt   
+```
+wget https://zenodo.org/record/2571980/files/FernandinaSenDT128.tar.xz
+tar -xvJf FernandinaSenDT128.tar.xz
+cd FernandinaSenDT128/PYSAR
+pysarApp.py FernandinaSenDT128.txt   
+```
 
 <p align="left">
   <img width="600" src="https://github.com/yunjunz/PySAR/blob/master/docs/resources/images/FernandinaSenDT128_POI.jpg">
@@ -47,15 +51,17 @@ Check **/exmaple/input_files** folder for example template file for different In
 
 #### Some useful scripts for information and visualization:   
 
-    info.py                    #check HDF5 file structure and metadata
-    view.py                    #2D map view
-    tsview.py                  #1D point time-series (interactive)   
-    transect.py                #1D profile (interactive)
-    plot_coherence_matrix.py   #plot coherence matrix for one pixel (interactive)
-    plot_network.py            #plot network configuration of the dataset    
-    save_kmz.py                #generate Google Earth KMZ file in raster image
-    save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
-     
+```cfg
+info.py                    #check HDF5 file structure and metadata
+view.py                    #2D map view
+tsview.py                  #1D point time-series (interactive)   
+transect.py                #1D profile (interactive)
+plot_coherence_matrix.py   #plot coherence matrix for one pixel (interactive)
+plot_network.py            #plot network configuration of the dataset    
+save_kmz.py                #generate Google Earth KMZ file in raster image
+save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
+```
+
 #### Build your own processing recipe   
 
 PySAR is a toolbox with a lot of individual utility scripts, highly modulized in python. Check its documentation or simply run it with -h to see its usage, you could build your own customized processing recipe! Here is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections: [link](https://github.com/yunjunz/PySAR/blob/master/sh/compare_velocity_with_diff_tropcor.sh)

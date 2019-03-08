@@ -55,15 +55,15 @@ through the step immediately preceding the starting step of the current run.
 """.format(STEP_LIST[0:5], STEP_LIST[5:10], STEP_LIST[10:])
 
 EXAMPLE = """example:
-  pysarApp.py                         #Run with default template 'pysarApp_template.txt'
-  pysarApp.py <custom_template_file>  #Run with default and custom templates
-  pysarApp.py -h / --help             #Help
-  pysarApp.py -g                      #Generate default template (if it does not exist)
-  pysarApp.py -H                      #Print    default template options
+  pysarApp.py                         #run with default template 'pysarApp_template.txt'
+  pysarApp.py <custom_template_file>  #run with default and custom templates
+  pysarApp.py -h / --help             #help
+  pysarApp.py -g                      #generate default template (if it does not exist)
+  pysarApp.py -H                      #print    default template options
 
   # Run with --start/stop/dostep options
-  pysarApp.py GalapagosSenDT128.template --dostep velocity  #Run at step 'velocity' only
-  pysarApp.py GalapagosSenDT128.template --end load_data    #End after step 'load_data'
+  pysarApp.py GalapagosSenDT128.template --dostep velocity  #run at step 'velocity' only
+  pysarApp.py GalapagosSenDT128.template --end load_data    #end after step 'load_data'
 """
 
 REFERENCE = """reference:
@@ -78,9 +78,9 @@ def create_parser():
 
     parser.add_argument('customTemplateFile', nargs='?',
                         help='custom template with option settings.\n' +
-                             "Ignored if the default pysarApp_template.txt is input.")
+                             "ignored if the default pysarApp_template.txt is input.")
     parser.add_argument('--dir', dest='workDir',
-                        help='Working directory, default:\n' +
+                        help='specify custom working directory. The default is:\n' +
                              'a) current directory, OR\n' +
                              'b) $SCRATCHDIR/projectName/PYSAR, if:\n' +
                              '    1) autoPath == True in $PYSAR_HOME/pysar/defaults/auto_path.py AND\n' +
@@ -88,21 +88,21 @@ def create_parser():
                              '    3) customTemplateFile is specified (projectName.*)\n')
 
     parser.add_argument('-g', dest='generate_template', action='store_true',
-                        help='Generate default template (if it does not exist).')
+                        help='generate default template (if it does not exist) and exit.')
     parser.add_argument('-H', dest='print_template', action='store_true',
-                        help='Print/Show the default template file for details parameter setup.')
-    parser.add_argument('-v','--version', action='store_true', help='print software version')
+                        help='print the default template file and exit.')
+    parser.add_argument('-v','--version', action='store_true', help='print software version and exit')
 
     parser.add_argument('--noplot', dest='plot', action='store_false',
-                        help='disable the result ploting at the end.')
+                        help='do not plot results at the end of the processing.')
 
     step = parser.add_argument_group('steps processing (start/end/dostep)', STEP_HELP)
     step.add_argument('--start', dest='startStep', metavar='STEP', default=STEP_LIST[0],
-                      help='Start processing at the named step, default: {}'.format(STEP_LIST[0]))
+                      help='start processing at the named step, default: {}'.format(STEP_LIST[0]))
     step.add_argument('--end', dest='endStep', metavar='STEP',  default=STEP_LIST[-1],
-                      help='End processing at the named step, default: {}'.format(STEP_LIST[-1]))
+                      help='end processing at the named step, default: {}'.format(STEP_LIST[-1]))
     step.add_argument('--dostep', dest='doStep', metavar='STEP',
-                      help='Run processing at the named step only')
+                      help='run processing at the named step only')
     return parser
 
 
@@ -263,7 +263,7 @@ class TimeSeriesAnalysis:
                               in_file=cfile,
                               check_readable=False) == 'run':
                 shutil.copy2(cfile, inputs_dir)
-                print('copy {} to INPUTS directory'.format(os.path.basename(cfile)))
+                print('copy {} to INPUTS directory for backup.'.format(os.path.basename(cfile)))
 
             # Read custom template
             print('read custom template file:', cfile)
@@ -304,7 +304,7 @@ class TimeSeriesAnalysis:
 
         # correct some loose setup conflicts
         if self.template['pysar.geocode'] is False:
-            for key in ['pysar.save.hdfEos5', 'pysar.save.kml']:
+            for key in ['pysar.save.hdfEos5', 'pysar.save.kmz']:
                 if self.template[key] is True:
                     self.template['pysar.geocode'] = True
                     print('Turn ON pysar.geocode in order to run {}.'.format(key))
@@ -834,7 +834,7 @@ class TimeSeriesAnalysis:
     def run_save2google_earth(self, step_name):
         """Save velocity file in geo coordinates into Google Earth raster image."""
         status = 0
-        if self.template['pysar.save.kml'] is True:
+        if self.template['pysar.save.kmz'] is True:
             print('creating Google Earth KMZ file for geocoded velocity file: ...')
             # input
             vel_file = 'velocity.h5'
