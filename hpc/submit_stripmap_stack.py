@@ -49,10 +49,9 @@ def cmd_line_parse(iargs=None):
 def run_job_submission4run_files():
     for run_file in sorted(cDict.keys()):
         config = cDict[run_file]
-        cmd = 'split_jobs.py -f {f} -r {r} -w {w} -e {e}'.format(f=run_file,
-                                                                 r=config['memory'],
-                                                                 w=config['walltime'],
-                                                                 e=email)
+        cmd = 'split_jobs.py {f} -r {r} -w {w}'.format(f=run_file,
+                                                       r=config['memory'],
+                                                       w=config['walltime'])
         print(cmd)
         status = subprocess.Popen(cmd, shell=True).wait()
         if status is not 0:
@@ -66,6 +65,9 @@ def main(iargs=None):
     inps = cmd_line_parse()
     start_time = time.time()
 
+    os.chdir(inps.run_file_dir)
+    print('Go to directory', inps.run_file_dir)
+
     if not inps.bsub:
         run_job_submission4run_files()
     else:
@@ -74,10 +76,14 @@ def main(iargs=None):
         run_file = 'run_stripmap_stack'
         with open(run_file, 'w') as f:
             f.write('submit_stripmap_stack.py {}\n'.format(inps.run_file_dir))
+        cmd = 'chmod +x {}'.format(run_file)
+        print(cmd)
+        os.system(cmd)
+
         # submit job
         cmd = 'split_jobs.py {} -r {} -w {}'.format(run_file, inps.memory, inps.walltime)
         if inps.email:
-            cmd += ' -e {}'
+            cmd += ' -e {}'.format(inps.email)
         print(cmd)
         os.system(cmd)
 

@@ -12,6 +12,7 @@ import glob
 import time
 import argparse
 import datetime
+from pysar.objects import sensor
 
 
 #####################################################################################
@@ -42,7 +43,7 @@ def create_parser():
                              'this script will calculate and request N*memory to CCS.')
     parser.add_argument('-e','--email', dest='email', help='email address to send notification when job finished.')
 
-    parser.add_argument('-q','--queue', dest='queue_name', default='general', choices={'general','parallel','bigmem'}
+    parser.add_argument('-q','--queue', dest='queue_name', default='general', choices={'general','parallel','bigmem'},
                         help='job queue to submit. Default: general')
     parser.add_argument('-p','--project', dest='project_name', default='insarlab',
                         help='project name for the job. Default: insarlab')
@@ -84,7 +85,7 @@ def split_run_file(run_file, num_line_per_job):
     num_digit = len(str(num_job))  #length of suffixes
 
     # Usage: split [OPTION]... [INPUT [PREFIX]]
-    prefix = 'z_input_{}.'.format(os.path.basename(inps.run_file))
+    prefix = 'z_input_{}.'.format(os.path.basename(run_file))
     cmd = 'split -a {a} -l {l} -d {i} {p}'.format(a=num_digit, l=num_line_per_job, i=run_file, p=prefix)
     print(cmd)
     os.system(cmd)
@@ -98,6 +99,8 @@ def wait4jobs2finish(run_file, num_job):
     job_name = os.path.basename(run_file)
     file_pattern = 'z_output_{}.*.o'.format(job_name)
 
+    proj_name = sensor.project_name2sensor_name(os.getcwd())[1]
+
     print('-'*50)
     print('sleeping until {} jobs are done for {}'.format(num_job, job_name))
     t_sec = 0
@@ -105,8 +108,11 @@ def wait4jobs2finish(run_file, num_job):
     while num_file < num_job:
         time.sleep(1)           #wait one second
         if t_sec%60 == 0:       #every minute
-            print('# of {} files: <{}> out of <{}> after <{}> minutes'.format(
-                file_pattern, num_file, num_job, t_sec/60))
+            msg = '# of '
+            if proj_name:
+                msg += '{}/'.format(proj_name)
+            msg += '{} files: {} / {} after {} mins'.format(file_pattern, num_file, num_job, int(t_sec/60))
+            print(msg)
         num_file = len(glob.glob(file_pattern))
         t_sec += 1
 
@@ -138,14 +144,15 @@ def move_zfiles2job_folder(run_file):
 
 
 def remove_zfiles(run_file):
-    job_name = os.path.basename(inps.run_file)
+    job_name = os.path.basename(run_file)
     file_pattern1 = 'z_input_{}.*'.format(job_name)
     file_pattern2 = 'z_output_{}.*'.format(job_name)
-    zfiles = glob.glob((file_pattern1, file_pattern2))
-    if len(zfiles) > 0:
-        cmd = 'rm {} {}'.format(file_pattern1, file_pattern2)
-        print(cmd)
-        os.system(cmd)
+    for file_pattern in [file_pattern1, file_pattern2]:
+        zfiles = glob.glob(file_pattern)
+        if len(zfiles) > 0:
+            cmd = 'rm {} {}'.format(file_pattern1, file_pattern2)
+            print(cmd)
+            os.system(cmd)
     return
 
 
@@ -164,7 +171,7 @@ def main(iargs=None):
     remove_zfiles(inps.run_file)
 
     # split run_file according to the num_processor
-    zfiles = split_run_file(run_file, num_line_per_job=inps.num_cmd)
+    zfiles = split_run_file(inps.run_file, num_line_per_job=inps.num_cmd)
     num_file = len(zfiles)
 
     # job setting
@@ -200,7 +207,7 @@ def main(iargs=None):
 
         # write cd work directory
         f.write('\n')
-        f.write('\ncd {}'.format(job_dir))
+        f.write('\ncd {}\n'.format(job_dir))
 
         # write job excutable commands
         with open(zfile, 'r') as fz:
