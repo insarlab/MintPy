@@ -31,7 +31,7 @@ def create_parser():
 
     parser.add_argument('run_file_dir', help='directory of run_files')
 
-    bsub.add_argument_group('bsub option')
+    bsub = parser.add_argument_group('bsub option','')
     bsub.add_argument('--bsub', action='store_true', help='submit this script as a job to generic queue.')
     bsub.add_argument('-r','--memory', type=int, default=1000, help='memory for bsub. Default: 1000')
     bsub.add_argument('-w','--walltime', type=str, default='5:00', help='wall time for bsub. Default: 5:00')
