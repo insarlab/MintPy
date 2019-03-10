@@ -16,6 +16,6 @@ This tutorial walks through the various processing steps of InSAR time series an
    - Interactive coherence matrix
    - Google Earth
 
-### Resources
+### Other resources
 
 + [ISCE2 Notebooks](https://nbviewer.jupyter.org/github/isce-framework/isce2-docs/tree/master/Notebooks/)
