@@ -21,7 +21,7 @@ config = {};  config['walltime'] = '1:00';  config['memory'] = '6000';  cDict['r
 
 #####################################################################################
 EXAMPLE = """example:
-  bsub_stripmap_stack.py ./run_files -e $NOTIFICATION
+  submit_run_files4stripmap_stack.py ./run_files -e $NOTIFICATION
 """
 
 def create_parser():
