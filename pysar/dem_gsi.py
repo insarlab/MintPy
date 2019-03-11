@@ -28,6 +28,11 @@ EXAMPLE = """example:
   dem_gsi.py -b 31.2 32.6 130.2 131.8 --grid-dir ~/insarlab/DEHM10m
 """
 
+REFERENCE = """DEHM: Digital Ellipsoidal Height Model
+yyxx.dehm with yy and xx indicating the coordinates of the upper left corner of the firt pixel.
+where longitude = xx + 100
+      latitude  = (yy + 1) / 1.5
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Prepare DEM from GSI (Japan) DEHM grib files.',
