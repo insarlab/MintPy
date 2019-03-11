@@ -18,6 +18,7 @@ from pysar.objects import sensor
 #####################################################################################
 EXAMPLE = """example:
   split_jobs.py run_1_master -w 1:00 -r 2000 -e $NOTIFICATIONEMAIL
+  split_jobs.py run_stripmap_stack -w 8:00 -r 2000 -l 20 -e $NOTIFICATIONEMAIL
 """
 
 CCS = """Pegasus Job Queues on UM/CCS
@@ -37,7 +38,7 @@ def create_parser():
     parser.add_argument('run_file', help='run file with >1 command line')
     parser.add_argument('-w','--walltime', type=str, default='3:00',
                         help='maximum time per job. Default: 3:00')
-    parser.add_argument('-r','--memory', type=str, default='3700',
+    parser.add_argument('-r','--memory', type=int, default='3700',
                         help='maximum RAM memoery in MB per command line. Default: 3700\n'
                              'if N lines of commands in one job, still put memory for one command line,\n'
                              'this script will calculate and request N*memory to CCS.')
