@@ -228,7 +228,7 @@ def write_roipac_rsc(metadata, out_file, update_mode=False, print_msg=False):
 
         # writing .rsc file
         if print_msg:
-            print('writing', out_file)
+            print('write', out_file)
         maxDigit = max([len(key) for key in metadata.keys()]+[2])
         with open(out_file, 'w') as f:
             for key in sorted(metadata.keys()):
