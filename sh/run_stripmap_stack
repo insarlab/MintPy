@@ -1,0 +1,7 @@
+prepRawALOS.py -i download/ -o SLC -t ''
+chmod +x run_unPackALOS
+./run_unPackALOS
+stackStripMap.py -s SLC/ -d DEM/demLat*.dem.wgs84 -t 1800 -b 1800 -a 14 -r 4 -u snaphu -W interferogram
+submit_run_files4stripmap_stack.py ./run_files
+cp $PYSAR_HOME/sh/run_multilook_geometry
+./run_multilook_geometry
