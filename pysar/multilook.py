@@ -17,8 +17,8 @@ from pysar.utils import readfile, writefile, ptime, utils as ut
 
 ##################################################################################################
 EXAMPLE = """example:
-  multilook.py  velocity.h5  15 15
-  multilook.py  srtm30m.dem  10 10  -o srtm30m_300m.dem
+  multilook.py  velocity.h5  -r 15 -a 15
+  multilook.py  srtm30m.dem  -r 10 -a 10  -o srtm30m_300m.dem
 
   To interpolate input file into larger size file:
   multilook.py  bperp.rdr  -10 -2 -o bperp_full.rdr
@@ -31,9 +31,9 @@ def create_parser():
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', nargs='+', help='File(s) to multilook')
-    parser.add_argument('lks_x', type=int,
+    parser.add_argument('-r','--range','-x', dest='lks_x', type=int,
                         help='number of multilooking in azimuth/y direction')
-    parser.add_argument('lks_y', type=int,
+    parser.add_argument('-a','--azimuth','-y', dest='lks_y', type=int,
                         help='number of multilooking in range  /x direction')
     parser.add_argument('-o', '--outfile',
                         help='Output file name. Disabled when more than 1 input files')
@@ -46,6 +46,10 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     inps.file = ut.get_file_list(inps.file)
+
+    if len(inps.file) > 1 and inps.outfile:
+        inps.outfile = None
+        print('more than one file is input, disable custom output filename.')
     return inps
 
 
@@ -195,7 +199,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     for infile in inps.file:
-        multilook_file(infile, inps.lks_y, inps.lks_x)
+        multilook_file(infile, lks_y=inps.lks_y, lks_x=inps.lks_x, outfile=inps.outfile)
 
     print('Done.')
     return

@@ -141,6 +141,7 @@ def cmd_line_parse(iargs=None):
 
     # invalid input of custom template
     if inps.customTemplateFile:
+        inps.customTemplateFile = os.path.abspath(inps.customTemplateFile)
         if not os.path.isfile(inps.customTemplateFile):
             raise FileNotFoundError(inps.customTemplateFile)
         elif os.path.basename(inps.customTemplateFile) == os.path.basename(template_file):

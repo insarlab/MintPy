@@ -45,7 +45,7 @@ def create_parser():
     parser.add_argument('-d', '--dset', help='dataset to be geocoded, for example:\n' +
                         'height                        for geometryRadar.h5\n' +
                         'unwrapPhase-20100114_20101017 for ifgramStack.h5')
-    parser.add_argument('--geo2radar', '--reverse', dest='radar2geo', action='store_false',
+    parser.add_argument('--geo2radar', '--geo2rdr', dest='radar2geo', action='store_false',
                         help='reverse geocoding, or resample geocoded files into radar coordinates.\n' +
                         'For radar coded lookup table (ISCE, Doris) only.')
 
