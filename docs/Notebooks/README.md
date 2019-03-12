@@ -5,16 +5,16 @@ This tutorial walks through the various processing steps of InSAR time series an
 ### Recommend order of tutorials    
 
 1. Stack processing     
-   - Sentinel-1 TOPS with ISCE
-   - StripMap with ISCE
+   - Sentinel-1 TOPS with ISCE [not complete]
+   - StripMap with ISCE [not complete]
 
 2. Time series analysis
    - [Small baseline (SBAS) with pysarApp](https://nbviewer.jupyter.org/github/yunjunz/PySAR/blob/Notebook/docs/Notebooks/pysarApp.ipynb)
 
 3. Visualizations
-   - Interactive time-series
-   - Interactive coherence matrix
-   - Google Earth
+   - Interactive time-series [not complete]
+   - Interactive coherence matrix [not complete]
+   - Google Earth [not complete]
 
 ### Other resources
 
