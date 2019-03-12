@@ -24,8 +24,8 @@ dehm.data_type = np.float32
 ##################################################################################################
 EXAMPLE = """example:
   cd $KIRISHIMA/KirishimaAlosAT424/DEM
-  dem_gsi.py -b 31.2 32.6 130.2 131.8
-  dem_gsi.py -b 31.2 32.6 130.2 131.8 --grid-dir ~/insarlab/DEHM10m
+  dem_gsi.py -b 31.1 32.8 130.1 131.9
+  dem_gsi.py -b 31.1 32.8 130.1 131.9 --grid-dir ~/insarlab/DEHM10m
 """
 
 REFERENCE = """DEHM: Digital Ellipsoidal Height Model

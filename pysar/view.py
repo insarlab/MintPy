@@ -160,6 +160,9 @@ def cmd_line_parse(iargs=None):
     if not inps.disp_fig:
         plt.switch_backend('Agg')
 
+    if inps.flip_lr or inps.flip_ud:
+        inps.auto_flip = False
+
     return inps
 
 

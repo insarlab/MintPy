@@ -18,7 +18,7 @@ from pysar.objects import sensor
 #####################################################################################
 EXAMPLE = """example:
   split_jobs.py run_1_master -w 1:00 -r 2000 -e $NOTIFICATIONEMAIL
-  split_jobs.py run_stripmap_stack -w 8:00 -r 2000 -l 20 -e $NOTIFICATIONEMAIL
+  split_jobs.py run_stripmap_stack -w 8:00 -r 200 -l 10 -e $NOTIFICATIONEMAIL
 """
 
 CCS = """Pegasus Job Queues on UM/CCS
