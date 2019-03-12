@@ -30,7 +30,7 @@ pysarApp.py GalapagosSenDT128.template --dostep velocity  #run at step 'velocity
 pysarApp.py GalapagosSenDT128.template --end load_data    #end after step 'load_data'
 ```
 
-#### [Example](https://github.com/yunjunz/PySAR/wiki/Example): Fernandina volcano, Galápagos with Sentinel-1 data    
+#### Example on Fernandina volcano, Galápagos with Sentinel-1 data    
 
 ```
 wget https://zenodo.org/record/2571980/files/FernandinaSenDT128.tar.xz
@@ -47,8 +47,6 @@ Inside pysarApp.py, it reads the unwrapped interferograms, references all of the
 
 Check **./PIC** folder for auto-generated figures. More details about this test data are in [here](https://github.com/yunjunz/PySAR/wiki/Example).     
 
-Check **/exmaple/input_files** folder for example template file for different InSAR processors.
-
 #### Some useful scripts for information and visualization:   
 
 ```cfg
@@ -62,17 +60,18 @@ save_kmz.py                #generate Google Earth KMZ file in raster image
 save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
 ```
 
-#### Build your own processing recipe   
+#### Build your own processing recipe: [example](https://github.com/yunjunz/PySAR/blob/master/sh/compare_velocity_with_diff_tropcor.sh)   
 
 PySAR is a toolbox with a lot of individual utility scripts, highly modulized in python. Check its documentation or simply run it with -h to see its usage, you could build your own customized processing recipe! Here is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections: [link](https://github.com/yunjunz/PySAR/blob/master/sh/compare_velocity_with_diff_tropcor.sh)
-
    
 ### 4. Documentation
    
-- Manual: [PDF](https://github.com/yunjunz/PySAR/blob/master/docs/Manual-0.4.0_201803.pdf), [HTML](https://github.com/yunjunz/PySAR/blob/master/docs/Manual-0.4.0_201803.html.zip), [Workshop](https://miami.box.com/v/pysar-workshop-2017-miami)     
-- Wiki: Check our [Github Wiki](https://github.com/yunjunz/PySAR/wiki) to see the example data, paper references, file naming convention and more.
++ [Tutorials on Jupyter Notebooks](https://github.com/yunjunz/PySAR/tree/master/docs/Notebooks)
++ [Example datasets](https://github.com/yunjunz/PySAR/wiki/Example)
++ [Example template files for InSAR processors](https://github.com/yunjunz/PySAR/tree/master/examples/input_files)
++ [Google Earth KMZ file](https://github.com/yunjunz/PySAR/wiki/Google-Earth)
    
-### 5. Google Group
+### 5. User Forum
 
 Join our google group [https://groups.google.com/forum/#!forum/py-sar](https://groups.google.com/forum/#!forum/py-sar) to ask questions, get notice of latest features pushed to you!
 
