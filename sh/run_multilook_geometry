@@ -11,8 +11,8 @@ fi
 
 alks=$1
 rlks=$2
-echo 'number of multilooks in azimuth direction'${alks}
-echo 'number of multilooks in range   direction'${rlks}
+echo 'number of multilooks in azimuth direction: '${alks}
+echo 'number of multilooks in range   direction: '${rlks}
 in_dir='./merged/geom_master'
 out_dir='./geom_master'
 
