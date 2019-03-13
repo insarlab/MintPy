@@ -285,14 +285,15 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
         return None
 
     # Check 2: number of files for all dataset types
+    for key, value in dsNumDict.items():
+        print('number of {:<{width}}: {num}'.format(key, width=maxDigit, num=value))
+
     dsNumList = list(dsNumDict.values())
     if any(i != dsNumList[0] for i in dsNumList):
-        #print('WARNING: Not all types of dataset have the same number of files:')
-        msg = 'Not all types of dataset have the same number of files:'        
-        for key, value in dsNumDict.items():
-            msg += '\nnumber of {:<{width}}: {num}'.format(key, width=maxDigit, num=value)
-        raise Exception(msg)
-    print('number of files per type: {}'.format(dsNumList[0]))
+        msg = 'WARNING: NOT all types of dataset have the same number of files.'
+        msg += ' -> skip interferograms with missing files and continue.'
+        print(msg)
+        #raise Exception(msg)
 
     # Check 3: data dimension for all files
 
