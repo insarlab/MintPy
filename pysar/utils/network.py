@@ -11,21 +11,17 @@ import os
 import sys
 import datetime
 import itertools
-
 import h5py
 import numpy as np
-import matplotlib as mpl
-import matplotlib.dates as mdates
-import matplotlib.pyplot as plt
-import matplotlib.colors as colors
-import matplotlib.lines as mlines
+from scipy import sparse
+from matplotlib import (colors,
+                        dates as mdates,
+                        lines as mlines,
+                        pyplot as plt)
 from matplotlib.tri import Triangulation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import scipy.sparse as sparse
-from scipy.sparse.csgraph import minimum_spanning_tree
-
-from pysar.utils import ptime, readfile
 from pysar.objects import ifgramStack, timeseries, sensor
+from pysar.utils import ptime, readfile
 
 
 ##################################################################
@@ -86,34 +82,6 @@ def write_pairs_list(pairs, dateList, outName):
         fl.write(date12)
     fl.close()
     return 1
-
-
-def read_igram_pairs(igramFile):
-    """Read pairs index from hdf5 file"""
-    # Read Igram file
-    h5file = h5py.File(igramFile, 'r')
-    k = list(h5file.keys())
-    if 'interferograms' in k:
-        k[0] = 'interferograms'
-    elif 'coherence' in k:
-        k[0] = 'coherence'
-    if k[0] not in ['interferograms', 'coherence', 'wrapped']:
-        print('Only interferograms / coherence / wrapped are supported.')
-        sys.exit(1)
-
-    dateList = ptime.ifgram_date_list(igramFile)
-    dateList6 = ptime.yymmdd(dateList)
-
-    pairs = []
-    igramList = list(h5file[k[0]].keys())
-    for igram in igramList:
-        date12 = h5file[k[0]][igram].attrs['DATE12'].split('-')
-        pairs.append([dateList6.index(date12[0]), dateList6.index(date12[1])])
-    h5file.close()
-
-    pairs = pair_sort(pairs)
-
-    return pairs
 
 
 def read_baseline_file(baselineFile, exDateList=[]):
@@ -187,28 +155,28 @@ def date12_list2index(date12_list, date_list=[]):
     return pairs_idx
 
 
-def get_date12_list(File, dropIfgram=False):
+def get_date12_list(fname, dropIfgram=False):
     """Read Date12 info from input file: Pairs.list or multi-group hdf5 file
     Inputs:
-        File - string, path/name of input multi-group hdf5 file or text file
-        check_drop_ifgram - bool, check the "DROP_IFGRAM" attribute or not for multi-group hdf5 file
+        fname       - string, path/name of input multi-group hdf5 file or text file
+        dropIfgram  - bool, check the "DROP_IFGRAM" attribute or not for multi-group hdf5 file
     Output:
         date12_list - list of string in YYMMDD-YYMMDD format
     Example:
-        date12List = get_date12_list('unwrapIfgram.h5')
-        date12List = get_date12_list('unwrapIfgram.h5', check_drop_ifgram=True)
+        date12List = get_date12_list('ifgramStack.h5')
+        date12List = get_date12_list('ifgramStack.h5', dropIfgram=True)
         date12List = get_date12_list('Pairs.list')
     """
     date12_list = []
-    ext = os.path.splitext(File)[1].lower()
+    ext = os.path.splitext(fname)[1].lower()
     if ext == '.h5':
-        k = readfile.read_attribute(File)['FILE_TYPE']
+        k = readfile.read_attribute(fname)['FILE_TYPE']
         if k == 'ifgramStack':
-            date12_list = ifgramStack(File).get_date12_list(dropIfgram=dropIfgram)
+            date12_list = ifgramStack(fname).get_date12_list(dropIfgram=dropIfgram)
         else:
             return None
     else:
-        txtContent = np.loadtxt(File, dtype=bytes).astype(str)
+        txtContent = np.loadtxt(fname, dtype=bytes).astype(str)
         if len(txtContent.shape) == 1:
             txtContent = txtContent.reshape(-1, 1)
         date12_list = [i for i in txtContent[:, 0]]
@@ -216,11 +184,11 @@ def get_date12_list(File, dropIfgram=False):
     return date12_list
 
 
-def igram_perp_baseline_list(File):
+def igram_perp_baseline_list(fname):
     """Get perpendicular baseline list from input multi_group hdf5 file"""
-    print(('read perp baseline info from '+File))
-    k = readfile.read_attribute(File)['FILE_TYPE']
-    h5 = h5py.File(File, 'r')
+    print(('read perp baseline info from '+fname))
+    k = readfile.read_attribute(fname)['FILE_TYPE']
+    h5 = h5py.File(fname, 'r')
     epochList = sorted(h5[k].keys())
     p_baseline_list = []
     for epoch in epochList:
@@ -320,11 +288,14 @@ def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor_name='En
 
     date12_list = ptime.yyyymmdd_date12(date12_list)
     ifgram_num = len(date12_list)
+
     if isinstance(decor_time, (int, float)):
         pixel_num = 1
         decor_time = float(decor_time)
     else:
         pixel_num = decor_time.shape[1]
+    if decor_time == 0.:
+        decor_time = 0.01
     cohs = np.zeros((ifgram_num, pixel_num), np.float32)
     for i in range(ifgram_num):
         if display:
@@ -491,11 +462,13 @@ def threshold_temporal_baseline(date12_list, btemp_max, keep_seasonal=True, btem
     return date12_list_out
 
 
-def coherence_matrix(date12_list, coh_list, diagValue=np.nan):
+def coherence_matrix(date12_list, coh_list, diag_value=np.nan, fill_triangle='both', date_list=None):
     """Return coherence matrix based on input date12 list and its coherence
     Inputs:
         date12_list - list of string in YYMMDD-YYMMDD format
         coh_list    - list of float, average coherence for each interferograms
+        diag_value  - number, value to be filled in the diagonal
+        fill_triangle - str, 'both', 'upper', 'lower'
     Output:
         coh_matrix  - 2D np.array with dimension length = date num
                       np.nan value for interferograms non-existed.
@@ -503,9 +476,11 @@ def coherence_matrix(date12_list, coh_list, diagValue=np.nan):
     """
     # Get date list
     date12_list = ptime.yymmdd_date12(date12_list)
-    m_dates = [date12.split('-')[0] for date12 in date12_list]
-    s_dates = [date12.split('-')[1] for date12 in date12_list]
-    date_list = sorted(ptime.yymmdd(list(set(m_dates + s_dates))))
+    if not date_list:
+        m_dates = [date12.split('-')[0] for date12 in date12_list]
+        s_dates = [date12.split('-')[1] for date12 in date12_list]
+        date_list = sorted(list(set(m_dates + s_dates)))
+    date_list = ptime.yymmdd(date_list)
     date_num = len(date_list)
 
     coh_mat = np.zeros([date_num, date_num])
@@ -515,12 +490,14 @@ def coherence_matrix(date12_list, coh_list, diagValue=np.nan):
         idx1 = date_list.index(date1)
         idx2 = date_list.index(date2)
         coh = coh_list[date12_list.index(date12)]
-        coh_mat[idx1, idx2] = coh  # symmetric
-        coh_mat[idx2, idx1] = coh
+        if fill_triangle in ['upper', 'both']:
+            coh_mat[idx1, idx2] = coh  # symmetric
+        if fill_triangle in ['lower', 'both']:
+            coh_mat[idx2, idx1] = coh
 
-    if diagValue is not np.nan:
+    if diag_value is not np.nan:
         for i in range(date_num):    # diagonal value
-            coh_mat[i, i] = diagValue
+            coh_mat[i, i] = diag_value
     return coh_mat
 
 
@@ -541,7 +518,7 @@ def threshold_coherence_based_mst(date12_list, coh_list):
 
     # MST path based on weight matrix
     wei_mat_csr = sparse.csr_matrix(wei_mat)
-    mst_mat_csr = minimum_spanning_tree(wei_mat_csr)
+    mst_mat_csr = sparse.csgraph.minimum_spanning_tree(wei_mat_csr)
 
     # Get date6_list
     date12_list = ptime.yymmdd_date12(date12_list)
@@ -581,7 +558,7 @@ def pair_merge(pairs1, pairs2):
     return pairs
 
 
-def select_pairs_all(date_list):
+def select_pairs_all(date_list, date12_format='YYMMDD-YYMMDD'):
     """Select All Possible Pairs/Interferograms
     Input : date_list   - list of date in YYMMDD/YYYYMMDD format
     Output: date12_list - list date12 in YYMMDD-YYMMDD format
@@ -593,12 +570,14 @@ def select_pairs_all(date_list):
     date6_list = ptime.yymmdd(date8_list)
     date12_list = list(itertools.combinations(date6_list, 2))
     date12_list = [date12[0]+'-'+date12[1] for date12 in date12_list]
+    if date12_format == 'YYYYMMDD_YYYYMMDD':
+        date12_list = ptime.yyyymmdd_date12(date12_list)
     return date12_list
 
 
-def select_pairs_sequential(date_list, increment_num=2):
+def select_pairs_sequential(date_list, num_connection=2, date12_format='YYMMDD-YYMMDD'):
     """Select Pairs in a Sequential way:
-        For each acquisition, find its increment_num nearest acquisitions in the past time.
+        For each acquisition, find its num_connection nearest acquisitions in the past time.
     Inputs:
         date_list  : list of date in YYMMDD/YYYYMMDD format
     Reference:
@@ -611,7 +590,7 @@ def select_pairs_sequential(date_list, increment_num=2):
     # Get pairs index list
     date12_idx_list = []
     for date_idx in date_idx_list:
-        for i in range(increment_num):
+        for i in range(num_connection):
             if date_idx-i-1 >= 0:
                 date12_idx_list.append([date_idx-i-1, date_idx])
     date12_idx_list = [sorted(idx) for idx in sorted(date12_idx_list)]
@@ -619,10 +598,12 @@ def select_pairs_sequential(date_list, increment_num=2):
     # Convert index into date12
     date12_list = [date6_list[idx[0]]+'-'+date6_list[idx[1]]
                    for idx in date12_idx_list]
+    if date12_format == 'YYYYMMDD_YYYYMMDD':
+        date12_list = ptime.yyyymmdd_date12(date12_list)
     return date12_list
 
 
-def select_pairs_hierarchical(date_list, pbase_list, temp_perp_list):
+def select_pairs_hierarchical(date_list, pbase_list, temp_perp_list, date12_format='YYMMDD-YYMMDD'):
     """Select Pairs in a hierarchical way using list of temporal and perpendicular baseline thresholds
         For each temporal/perpendicular combination, select all possible pairs; and then merge all combination results
         together for the final output (Zhao, 2015).
@@ -656,10 +637,12 @@ def select_pairs_hierarchical(date_list, pbase_list, temp_perp_list):
                                                   pbase_max)
         date12_list += date12_list_tmp
     date12_list = sorted(list(set(date12_list)))
+    if date12_format == 'YYYYMMDD_YYYYMMDD':
+        date12_list = ptime.yyyymmdd_date12(date12_list)
     return date12_list
 
 
-def select_pairs_delaunay(date_list, pbase_list, norm=True):
+def select_pairs_delaunay(date_list, pbase_list, norm=True, date12_format='YYMMDD-YYMMDD'):
     """Select Pairs using Delaunay Triangulation based on temporal/perpendicular baselines
     Inputs:
         date_list  : list of date in YYMMDD/YYYYMMDD format
@@ -691,10 +674,12 @@ def select_pairs_delaunay(date_list, pbase_list, norm=True):
     # Convert index into date12
     date12_list = [date6_list[idx[0]]+'-'+date6_list[idx[1]]
                    for idx in date12_idx_list]
+    if date12_format == 'YYYYMMDD_YYYYMMDD':
+        date12_list = ptime.yyyymmdd_date12(date12_list)
     return date12_list
 
 
-def select_pairs_mst(date_list, pbase_list):
+def select_pairs_mst(date_list, pbase_list, date12_format='YYMMDD-YYMMDD'):
     """Select Pairs using Minimum Spanning Tree technique
         Connection Cost is calculated using the baseline distance in perp and scaled temporal baseline (Pepe and Lanari,
         2006, TGRS) plane.
@@ -735,10 +720,12 @@ def select_pairs_mst(date_list, pbase_list):
         idx = sorted([m_idx_list[i], s_idx_list[i]])
         date12 = date6_list[idx[0]]+'-'+date6_list[idx[1]]
         date12_list.append(date12)
+    if date12_format == 'YYYYMMDD_YYYYMMDD':
+        date12_list = ptime.yyyymmdd_date12(date12_list)
     return date12_list
 
 
-def select_pairs_star(date_list, m_date=None, pbase_list=[]):
+def select_pairs_star(date_list, m_date=None, pbase_list=[], date12_format='YYMMDD-YYMMDD'):
     """Select Star-like network/interferograms/pairs, it's a single master network, similar to PS approach.
     Usage:
         m_date : master date, choose it based on the following cretiria:
@@ -769,7 +756,8 @@ def select_pairs_star(date_list, m_date=None, pbase_list=[]):
                        if s_idx is not m_idx]
     date12_list = [date6_list[idx[0]]+'-'+date6_list[idx[1]]
                    for idx in date12_idx_list]
-
+    if date12_format == 'YYYYMMDD_YYYYMMDD':
+        date12_list = ptime.yyyymmdd_date12(date12_list)
     return date12_list
 
 

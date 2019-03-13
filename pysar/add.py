@@ -14,8 +14,38 @@ from pysar.utils import readfile, writefile
 
 
 ################################################################################
+EXAMPLE = """example:
+  add.py  mask_1.h5 mask_2.h5 mask_3.h5           -o mask_all.h5
+  add.py  081008_100220.unw    100220_110417.unw  -o 081008_110417.unw
+  add.py  timeseries_ECMWF.h5  ECMWF.h5           -o timeseries.h5
+"""
+
+
+def create_parser():
+    """ Command line parser """
+    parser = argparse.ArgumentParser(description='Generate sum of multiple input files.',
+                                     formatter_class=argparse.RawTextHelpFormatter,
+                                     epilog=EXAMPLE)
+
+    parser.add_argument('file', nargs='+', help='files (2 or more) to be added')
+    parser.add_argument('-o', '--output', dest='outfile', help='output file name')
+    return parser
+
+
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
+    if len(inps.file) < 2:
+        parser.print_usage()
+        sys.exit('ERROR: At least 2 input files needed!')
+    return inps
+
+
+################################################################################
 def add_matrix(data1, data2):
     """Sum of 2 input matrix"""
+    data1 = np.array(data1, dtype=np.float32)
+    data2 = np.array(data2, dtype=np.float32)
     data = data1 + data2
     data[np.isnan(data1)] = data2[np.isnan(data1)]
     data[np.isnan(data2)] = data1[np.isnan(data2)]
@@ -49,34 +79,6 @@ def add_file(fnames, out_file=None):
         dsDict[dsName] = data
     writefile.write(dsDict, out_file=out_file, metadata=atr, ref_file=fnames[0])
     return out_file
-
-
-################################################################################
-EXAMPLE = """example:
-  add.py  mask_1.h5 mask_2.h5 mask_3.h5           -o mask_all.h5
-  add.py  081008_100220.unw    100220_110417.unw  -o 081008_110417.unw
-  add.py  timeseries_ECMWF.h5  ECMWF.h5           -o timeseries.h5
-"""
-
-
-def create_parser():
-    """ Command line parser """
-    parser = argparse.ArgumentParser(description='Generate sum of multiple input files.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
-
-    parser.add_argument('file', nargs='+', help='files (2 or more) to be added')
-    parser.add_argument('-o', '--output', dest='outfile', help='output file name')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-    if len(inps.file) < 2:
-        parser.print_usage()
-        sys.exit('ERROR: At least 2 input files needed!')
-    return inps
 
 
 ################################################################################

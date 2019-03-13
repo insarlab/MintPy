@@ -88,7 +88,7 @@ if [ $velocity -eq 1 ]; then
     view='view.py -u cm -m -2 -M 2 -D '$dem' --nodisplay --mask '${msk}' -f '
     $view velocity_ex.h5
     masking.py -f velocity_ex.h5 -m $msk
-    save_kml.py -f velocity_ex_masked.h5 -m -0.02 -M 0.02 
+    save_kmz.py -f velocity_ex_masked.h5 -m -0.02 -M 0.02 
 fi
 
 
@@ -100,7 +100,7 @@ if [ $point_ts -eq 1 ]; then
     #save_unw.py Seeded_ts.h5 20100102 20101120
     #$view 100102_101120.unw
     #masking.py -f 100102_101120.unw -m Mask.h5
-    #save_kml.py -f 100102_101120_masked.unw -m -0.05 -M 0.05 --displacement --cbar-label 'LOS displacement'
+    #save_kmz.py -f 100102_101120_masked.unw -m -0.05 -M 0.05 --displacement --cbar-label 'LOS displacement'
 
     ##--- 2. Point TS
     #masking.py -f Seeded_ts_refDate.h5 -m $msk
@@ -124,7 +124,7 @@ fi
 if [ $key_ifg -eq 1 ]; then
 
     view='view.py --mask '$msk' --displacement -u cm -m -5 -M 5 -D '$dem' --nodisplay'
-    save_kml='save_kml.py -m -0.05 -M 0.05 --displacement'
+    save_kmz='save_kmz.py -m -0.05 -M 0.05 --displacement'
 
     #### Post-eruptive
     d1='110305'
@@ -132,7 +132,7 @@ if [ $key_ifg -eq 1 ]; then
     save_unw.py Seeded_ts.h5 $d1 $d2
     #$view -f 091130_110118.unw
     masking.py -f ${d1}_${d2}.unw -m $msk
-    $save_kml -f ${d1}_${d2}_masked.unw --cbar-label 'LOS displacement'
+    $save_kmz -f ${d1}_${d2}_masked.unw --cbar-label 'LOS displacement'
 
     ts='Seeded_ts_refDate_masked.h5'
     vel='091130_110118_masked.unw'

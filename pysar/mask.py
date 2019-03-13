@@ -16,8 +16,8 @@ from pysar.utils import readfile, writefile, utils as ut
 ############################################################
 EXAMPLE = """example:
   mask.py  velocity.h5     -m Mask.h5
-  mask.py  timeseries.h5   -m temporal_coherence.h5  -t 0.7
-  mask.py  ifgramStack.h5  -m 100102_101120.cor      -t 0.9  -y  200 300  -x 300 400
+  mask.py  timeseries.h5   -m temporalCoherence.h5  -t 0.7
+  mask.py  ifgramStack.h5  -m 100102_101120.cor     -t 0.9  -y  200 300  -x 300 400
 """
 
 
@@ -63,10 +63,10 @@ def mask_matrix(data, mask, fill_value=None):
     """
     # Masked Value
     if fill_value is None:
-        if data.dtype == np.dtype('int16'):
-            fill_value = np.ma.masked
-        else:
+        if data.dtype == np.float32:
             fill_value = np.nan
+        else:
+            raise ValueError('specify fill_value for input data type: {}'.format(data.dtype))
 
     if len(data.shape) == 2:
         data[mask == 0] = fill_value

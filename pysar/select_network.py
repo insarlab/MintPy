@@ -16,10 +16,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pysar.defaults.auto_path import autoPath
 from pysar.objects import sensor, ifgramStack
-from pysar.utils import readfile, ptime, network as pnet, plot as pp, utils as ut
+from pysar.utils import (ptime,
+                         readfile,
+                         network as pnet,
+                         plot as pp,
+                         utils as ut)
 
-sar_sensor_list = ['Ers', 'Env', 'Jers', 'Alos', 'Alos2',
-                   'Tsx', 'Csk', 'Rsat', 'Rsat2', 'Sen', 'Kmps5', 'G3']
+sensorNames = [i.capitalize() for i in sensor.sensorNames]
 
 
 #########################################################################
@@ -32,7 +35,7 @@ REFERENCE = """References:
     of multitemporal differential SAR interferograms, IEEE TGRS, 44(9), 2374-2383.
   Perissin D., Wang T. (2012), Repeat-pass SAR interferometry with partially coherent targets. IEEE TGRS. 271-280
   Zebker, H. A., and J. Villasenor (1992), Decorrelation in interferometric radar echoes, IEEE TGRS, 30(5), 950-959.
-  Zhao, W., (2015), Small deformation detected from InSAR time-series and their applications in geophysics, Doctoral
+  Zhao, W., (2017), Small deformation detected from InSAR time-series and their applications in geophysics, Doctoral
     dissertation, Univ. of Miami, Section 6.3.
 """
 
@@ -48,14 +51,14 @@ TEMPLATE = """Template:
 ## Select network (interferometric combination)
 ## 1) select initial network using method / reference File
 ## selection method includes:
-##     all          - all possible pairs, pair number = N*(N-1)/2 where N is acquisition num 
+##     all/sb       - all possible pairs, pair number = N*(N-1)/2 where N is acquisition num 
 ##                    default, (Berardino et al., 2002, TGRS).
 ##     delaunay     - Delaunay triangulation (Fattahi and Amelung, 2013, TGRS).
 ##                    By default, temporal baseline is normalized using a maxPerpDiff/maxTempDiff
 ##                    ratio (Pepe and Lanari, 2006, TGRS), use 'delaunay-noweight' to disable normalization. 
 ##     hierarchical - Select pairs in a hierarchical way using a list of temp/perp thresholds
 ##                    select.network.tempPerpList
-##                    (Zhao, 2015, PhD Thesis)
+##                    (Zhao, 2017, PhD Thesis)
 ##                    i.e. 16 days, 1600 m
 ##                         32 days, 800  m
 ##                         48 days, 600  m
@@ -92,12 +95,31 @@ def create_parser():
                                      epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
 
     parser.add_argument('template_file', help='template file with options')
-    parser.add_argument('-b', dest='baseline_file',
+    parser.add_argument('-b', dest='baseline_file', default='bl_list.txt',
                         help='baseline list file of all SLCs, e.g.'+pnet.BASELINE_LIST_FILE)
     parser.add_argument('-o', '--outfile',
                         help='Output list file for network, ifgram_list.txt by default.')
-    parser.add_argument('--show-fig', dest='disp_fig',
-                        action='store_true', help='display network ploting result')
+
+    # Figure
+    fig = parser.add_argument_group('Figure settings')
+    fig.add_argument('--figsize', dest='fig_size', type=float, nargs=2,
+                     help='figure size in inches - width and length')
+    fig.add_argument('--ms', '--markersize', dest='markersize',
+                     type=int, default=16, help='marker size in points')
+    fig.add_argument('--fs', '--fontsize', type=int,
+                     default=12, help='font size in points')
+    fig.add_argument('--show-fig', dest='disp_fig', action='store_true',
+                     help='display network ploting result')
+    fig.add_argument('--figext', dest='figext', default='.pdf',
+                     help='file extension to be saved.')
+    fig.add_argument('--dpi', dest='figdpi', type=int, default=150,
+                     help='Figure dpi to be saved.')
+    fig.add_argument('--coh-threshold', dest='coh_thres', type=float, default=0.4,
+                     help='Coherence threshold for colormap jump')
+    fig.add_argument('--notitle', dest='disp_title', action='store_false',
+                     help='Do not display figure title.')
+    fig.add_argument('--number', dest='number', type=str,
+                     help='number mark to be plot at the corner of figure.')
 
     # Method
     method = parser.add_argument_group('Methods to generate the initial network')
@@ -105,10 +127,10 @@ def create_parser():
                         help='network type with info on temp/perp baseline and doppler centroid frequency.')
     method.add_argument('-r', dest='referenceFile', default=None,
                         help='Reference hdf5 / list file with network information. e.g.\n' +
-                             'unwrapIfgram.h5\n' +
+                             'ifgramStack.h5\n' +
                              'ifgram_list.txt with content as below:'+pnet.IFGRAM_LIST_FILE +
                              '\nIt could also be generated using plot_network.py --list option, e.g.\n' +
-                             'plot_network.py unwrapIfgram.h5 --list\n\n')
+                             'info.py ifgramStack.h5 --date --nodrop > date12_list.txt\n\n')
     method.add_argument('--exclude', '--ex', dest='excludeDate', nargs='*', default=[],
                         help='date(s) excluded for network selection, e.g. -ex 060713 070831')
     method.add_argument('--start-date', dest='startDate',
@@ -122,7 +144,7 @@ def create_parser():
                              '--temp-perp-list 16,1600;32,800;48,600;64,200')
     method.add_argument('--no-norm', dest='norm', action='store_false',
                         help='do not normalize temp/perp baseline, for delaunay method')
-    method.add_argument('--sensor', help='Name of sensor, choose from the list below:\n'+str(sar_sensor_list))
+    method.add_argument('--sensor', help='Name of sensor, choose from the list below:\n'+str(sensorNames))
     method.add_argument('--master-date', dest='masterDate',
                         help='Master date in YYMMDD or YYYYMMDD format, for star/ps method')
 
@@ -152,6 +174,9 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    if not os.path.isfile(inps.baseline_file):
+        inps.baseline_file = None
+
     try:
         inps.referenceFile = glob.glob(inps.referenceFile)[0]
     except:
@@ -180,7 +205,8 @@ def read_template2inps(templateFile, inps=None):
 
     # Read template file
     template = readfile.read_template(templateFile)
-    template = ut.check_template_auto_value(template, auto_file='../defaults/selectNetwork.cfg')
+    auto_file = os.path.join(os.path.dirname(__file__), 'defaults/selectNetwork.cfg')
+    template = ut.check_template_auto_value(template, auto_file=auto_file)
     if not template:
         log('Empty template: '+templateFile)
         return None
@@ -237,6 +263,8 @@ def read_template2inps(templateFile, inps=None):
         inps.method = 'hierarchical'
     elif inps.method in ['mst', 'min_spanning_tree', 'minimum_spanning_tree']:
         inps.method = 'mst'
+    elif inps.method in ['all', 'sb']:
+        inps.method = 'all'
 
     # for coherence prediction
     key = 'PLATFORM'
@@ -251,7 +279,7 @@ def read_template2inps(templateFile, inps=None):
     project_name = os.path.splitext(os.path.basename(inps.template_file))[0]
     log('project name: '+project_name)
     if not inps.sensor:
-        inps.sensor = sensor.project_name2sensor(project_name)[0]
+        inps.sensor = sensor.project_name2sensor_name(project_name)[0]
 
     # Output directory/filename
     if not inps.outfile:
@@ -439,10 +467,11 @@ def write_ifgram_list(inps):
 
     # calculate ifgram's predicted coherence
     try:
-        inps.coherence_list = pnet.simulate_coherence(inps.date12_list, inps.baseline_file,
-                                                      sensor=inps.sensor).flatten().tolist()
+        inps.cohList = pnet.simulate_coherence(inps.date12_list,
+                                                      inps.baseline_file,
+                                                      sensor_name=inps.sensor).flatten().tolist()
     except:
-        inps.coherence_list = None
+        inps.cohList = None
 
     # Write txt file
     f = open(inps.outfile, 'w')
@@ -452,8 +481,8 @@ def write_ifgram_list(inps):
         line = '{}   {:6.0f}         {:6.1f}'.format(inps.date12_list[i],
                                                      ifgram_tbase_list[i],
                                                      ifgram_pbase_list[i])
-        if inps.coherence_list:
-            line += '       {:1.4f}'.format(inps.coherence_list[i])
+        if inps.cohList:
+            line += '       {:1.4f}'.format(inps.cohList[i])
         f.write(line+'\n')
     f.close()
     log('write network/pairs info into file: {}'.format(inps.outfile))
@@ -464,34 +493,34 @@ def plot_network_info(inps):
     if not inps.disp_fig:
         plt.switch_backend('Agg')
 
-    out_fig_name = 'Network.pdf'
-    log('plotting network / pairs  in temp/perp baseline domain to file: '+out_fig_name)
-    fig1, ax1 = plt.subplots()
+    out_fig_name = os.path.join(inps.out_dir, 'Network{}'.format(inps.figext))
+    log('plot network / pairs to file: '+os.path.basename(out_fig_name))
+    fig1, ax1 = plt.subplots(figsize=inps.fig_size)
     ax1 = pp.plot_network(ax1,
                           inps.date12_list,
                           inps.date_list,
                           inps.pbase_list,
                           plot_dict=vars(inps),
                           print_msg=False)
-    plt.savefig(inps.out_dir+'/'+out_fig_name, bbox_inches='tight')
+    plt.savefig(out_fig_name, bbox_inches='tight', dpi=inps.figdpi)
 
-    out_fig_name = 'BperpHistory.pdf'
-    log('plotting baseline history in temp/perp baseline domain to file: '+out_fig_name)
-    fig2, ax2 = plt.subplots()
+    out_fig_name = os.path.join(inps.out_dir, 'BperpHistory{}'.format(inps.figext))
+    log('plot baseline history to file: '+os.path.basename(out_fig_name))
+    fig2, ax2 = plt.subplots(figsize=inps.fig_size)
     ax2 = pp.plot_perp_baseline_hist(ax2,
                                      inps.date_list,
                                      inps.pbase_list)
-    plt.savefig(inps.out_dir+'/'+out_fig_name, bbox_inches='tight')
+    plt.savefig(out_fig_name, bbox_inches='tight', dpi=inps.figdpi)
 
-    out_fig_name = 'CoherenceMatrix.pdf'
-    if inps.coherence_list:
-        log('plotting predicted coherence matrix to file: '+out_fig_name)
-        fig3, ax3 = plt.subplots()
+    out_fig_name = os.path.join(inps.out_dir, 'CoherenceMatrix{}'.format(inps.figext))
+    if inps.cohList:
+        log('plot predicted coherence matrix to file: '+os.path.basename(out_fig_name))
+        fig3, ax3 = plt.subplots(figsize=inps.fig_size)
         ax3 = pp.plot_coherence_matrix(ax3,
                                        inps.date12_list,
-                                       inps.coherence_list,
-                                       plot_dict=vars(inps))
-        plt.savefig(inps.out_dir+'/'+out_fig_name, bbox_inches='tight')
+                                       inps.cohList,
+                                       plot_dict=vars(inps))[0]
+        plt.savefig(out_fig_name, bbox_inches='tight', dpi=inps.figdpi)
 
     if inps.disp_fig:
         plt.show()

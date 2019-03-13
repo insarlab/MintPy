@@ -45,7 +45,7 @@ def create_parser():
     parser.add_argument('-d', '--dset', help='dataset to be geocoded, for example:\n' +
                         'height                        for geometryRadar.h5\n' +
                         'unwrapPhase-20100114_20101017 for ifgramStack.h5')
-    parser.add_argument('--geo2radar', '--reverse', dest='radar2geo', action='store_false',
+    parser.add_argument('--geo2radar', '--geo2rdr', dest='radar2geo', action='store_false',
                         help='reverse geocoding, or resample geocoded files into radar coordinates.\n' +
                         'For radar coded lookup table (ISCE, Doris) only.')
 
@@ -68,6 +68,11 @@ def create_parser():
     parser.add_argument('--fill', dest='fillValue', type=float, default=np.nan,
                         help='Value used for points outside of the interpolation domain.\n' +
                              'Default: np.nan')
+    parser.add_argument('-n','--nprocs', dest='nprocs', type=int,
+                        help='number of processors to be used for calculation.\n' + 
+                             'Note: Do not use more processes than available processor cores.')
+    parser.add_argument('-p','--processor', dest='processor', type=str, choices={'pyresample', 'scipy'},
+                        help='processor module used for interpolation.')
 
     parser.add_argument('--update', dest='updateMode', action='store_true',
                         help='skip resampling if output file exists and newer than input file')
@@ -103,7 +108,7 @@ def _check_inps(inps):
 
     inps.lookupFile = ut.get_lookup_file(inps.lookupFile)
     if not inps.lookupFile:
-        sys.exit('ERROR: No lookup table found! Can not geocode without it.')
+        raise FileNotFoundError('No lookup table found! Can not geocode without it.')
 
     if inps.SNWE:
         inps.SNWE = tuple(inps.SNWE)
@@ -111,6 +116,7 @@ def _check_inps(inps):
     inps.laloStep = [inps.latStep, inps.lonStep]
     if None in inps.laloStep:
         inps.laloStep = None
+
     return inps
 
 
@@ -152,17 +158,23 @@ def metadata_radar2geo(atr_in, res_obj, print_msg=True):
     atr = dict(atr_in)
     atr['LENGTH'] = res_obj.length
     atr['WIDTH'] = res_obj.width
-    atr['Y_FIRST'] = res_obj.SNWE[1]
-    atr['X_FIRST'] = res_obj.SNWE[2]
     atr['Y_STEP'] = res_obj.laloStep[0]
     atr['X_STEP'] = res_obj.laloStep[1]
+    if 'Y_FIRST' in atr_in.keys():  #roipac, gamma
+        atr['Y_FIRST'] = res_obj.SNWE[1]
+        atr['X_FIRST'] = res_obj.SNWE[2]
+    else:                           #isce, doris
+        atr['Y_FIRST'] = res_obj.SNWE[1] - res_obj.laloStep[0] / 2.
+        atr['X_FIRST'] = res_obj.SNWE[2] - res_obj.laloStep[1] / 2.
     atr['Y_UNIT'] = 'degrees'
     atr['X_UNIT'] = 'degrees'
 
     # Reference point from y/x to lat/lon
     if 'REF_Y' in atr.keys():
-        ref_lat, ref_lon = ut.radar2glob(np.array(int(atr['REF_Y'])), np.array(int(atr['REF_X'])),
-                                         res_obj.file, atr_in, print_msg=False)[0:2]
+        coord = ut.coordinate(atr_in, lookup_file=res_obj.file)
+        ref_lat, ref_lon = coord.radar2geo(np.array(int(atr['REF_Y'])),
+                                           np.array(int(atr['REF_X'])),
+                                           print_msg=False)[0:2]
         if ~np.isnan(ref_lat) and ~np.isnan(ref_lon):
             ref_y = int(np.rint((ref_lat - float(atr['Y_FIRST'])) / float(atr['Y_STEP'])))
             ref_x = int(np.rint((ref_lon - float(atr['X_FIRST'])) / float(atr['X_STEP'])))
@@ -201,20 +213,6 @@ def metadata_geo2radar(atr_in, res_obj, print_msg=True):
     return atr
 
 
-def resample_data(data, inps, res_obj):
-    """resample 2D/3D data"""
-    if len(data.shape) == 3:
-        data = np.moveaxis(data, 0, -1)
-
-    # resample source data into target data
-    geo_data = res_obj.resample(src_data=data, interp_method=inps.interpMethod, fill_value=inps.fillValue,
-                                nprocs=inps.nprocs, print_msg=False)
-
-    if len(geo_data.shape) == 3:
-        geo_data = np.moveaxis(geo_data, -1, 0)
-    return geo_data
-
-
 def auto_output_filename(infile, inps):
     if len(inps.file) == 1 and inps.outfile:
         return inps.outfile
@@ -230,54 +228,71 @@ def auto_output_filename(infile, inps):
         outfile = '{}{}'.format(prefix, os.path.basename(infile))
 
     if inps.out_dir:
+        if not os.path.isdir(inps.out_dir):
+            os.makedirs(inps.out_dir)
+            print('create directory: {}'.format(inps.out_dir))
         outfile = os.path.join(inps.out_dir, outfile)
     return outfile
 
 
-def run_resample(inps):
-    """resample all input files"""
+def run_geocode(inps):
+    """geocode all input files"""
     start_time = time.time()
 
     # Prepare geometry for geocoding
-    res_obj = resample(lookupFile=inps.lookupFile, dataFile=inps.file[0],
-                       SNWE=inps.SNWE, laloStep=inps.laloStep)
-    res_obj.get_geometry_definition()
+    res_obj = resample(lookupFile=inps.lookupFile,
+                       dataFile=inps.file[0],
+                       SNWE=inps.SNWE,
+                       laloStep=inps.laloStep,
+                       processor=inps.processor)
+    res_obj.open()
 
-    inps.nprocs = multiprocessing.cpu_count()
+    if not inps.nprocs:
+        inps.nprocs = multiprocessing.cpu_count()
 
     # resample input files one by one
     for infile in inps.file:
         print('-' * 50+'\nresampling file: {}'.format(infile))
+        atr = readfile.read_attribute(infile, datasetName=inps.dset)
         outfile = auto_output_filename(infile, inps)
-        if inps.updateMode and not ut.update_file(outfile, [infile, inps.lookupFile]):
+        if inps.updateMode and ut.run_or_skip(outfile, in_file=[infile, inps.lookupFile]) == 'skip':
             print('update mode is ON, skip geocoding.')
-            return outfile
+            continue
 
         # read source data and resample
         dsNames = readfile.get_dataset_list(infile, datasetName=inps.dset)
         maxDigit = max([len(i) for i in dsNames])
         dsResDict = dict()
         for dsName in dsNames:
-            print('resampling {d:<{w}} from {f} using {n} processor cores ...'.format(
-                d=dsName, w=maxDigit, f=os.path.basename(infile), n=inps.nprocs))
-            data = readfile.read(infile, datasetName=dsName, print_msg=False)[0]
-            res_data = resample_data(data, inps, res_obj)
+            print('reading {d:<{w}} from {f} ...'.format(d=dsName,
+                                                         w=maxDigit,
+                                                         f=os.path.basename(infile)))
+            data = readfile.read(infile,
+                                 datasetName=dsName,
+                                 print_msg=False)[0]
+
+            if atr['FILE_TYPE'] == 'timeseries' and len(data.shape) == 2:
+                data = np.reshape(data, (1, data.shape[0], data.shape[1]))
+            res_data = res_obj.run_resample(src_data=data,
+                                            interp_method=inps.interpMethod,
+                                            fill_value=inps.fillValue,
+                                            nprocs=inps.nprocs,
+                                            print_msg=True)
             dsResDict[dsName] = res_data
 
         # update metadata
-        atr = readfile.read_attribute(infile, datasetName=inps.dset)
         if inps.radar2geo:
             atr = metadata_radar2geo(atr, res_obj)
         else:
             atr = metadata_geo2radar(atr, res_obj)
-        if len(dsNames) == 1 and dsName not in ['timeseries']:
-            atr['FILE_TYPE'] = dsNames[0]
-            infile = None
+        #if len(dsNames) == 1 and dsName not in ['timeseries']:
+        #    atr['FILE_TYPE'] = dsNames[0]
+        #    infile = None
 
         writefile.write(dsResDict, out_file=outfile, metadata=atr, ref_file=infile)
 
     m, s = divmod(time.time()-start_time, 60)
-    print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
+    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
     return outfile
 
 
@@ -288,7 +303,7 @@ def main(iargs=None):
         inps = read_template2inps(inps.templateFile, inps)
     inps = _check_inps(inps)
 
-    run_resample(inps)
+    run_geocode(inps)
     return
 
 

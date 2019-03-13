@@ -6,7 +6,7 @@
 # Recommend import:
 #   from pysar.utils import ptime
 
-
+import os
 import sys
 import re
 import time
@@ -17,6 +17,19 @@ import numpy as np
 
 
 ################################################################
+def decimal_year2datetime(x):
+    """read date in 2002.40657084 to datetime format"""
+    x = float(x)
+    year = np.floor(x).astype(int)
+    yday = np.floor((x - year) * 365.25).astype(int) + 1
+    x2 = '{:d}-{:d}'.format(year, yday)
+    try:
+        xt = dt(*time.strptime(x2, "%Y-%j")[0:5])
+    except:
+        raise ValueError('wrong format: ',x)
+    return xt
+
+
 def yyyymmdd2years(dates):
     if isinstance(dates, str):
         d = dt(*time.strptime(dates, "%Y%m%d")[0:5])
@@ -27,8 +40,7 @@ def yyyymmdd2years(dates):
             d = dt(*time.strptime(date, "%Y%m%d")[0:5])
             yy.append(float(d.year)+float(d.timetuple().tm_yday-1)/365.25)
     else:
-        print('Unrecognized date format. Only string and list supported.')
-        sys.exit(1)
+        raise ValueError('Unrecognized date format. Only string and list supported.')
     return yy
 
 
@@ -133,16 +145,43 @@ def ifgram_date_list(ifgramFile, fmt='YYYYMMDD'):
 
 
 #################################################################
-def read_date_list(date_list_file):
+def read_date_txt(date_file):
     """Read Date List from txt file"""
-    fl = open(date_list_file, 'r')
-    dateList = fl.read().splitlines()
-    fl.close()
-
-    dateList = yyyymmdd(dateList)
-    dateList.sort()
-
+    # read text file
+    #dateList = np.loadtxt(date_file, dtype=bytes).astype(str)
+    with open(date_file, 'r') as f:
+        dateList = f.read().splitlines()
+    # format
+    dateList = sorted(yyyymmdd(dateList))
     return dateList
+
+
+def read_date_list(date_list_in, date_list_all=None):
+    """Read Date List
+    Parameters: date_list_in  : list of str / text file
+                date_list_all : list of str in YYYYMMDD format
+    Returns:    date_list_out : list of str in YYYYMMDD format
+    """
+    if not date_list_in:
+        return []
+    elif isinstance(date_list_in, str):
+        date_list_in = [date_list_in]
+
+    # read date_list_in
+    date_list_out = []
+    for d in date_list_in:
+        if os.path.isfile(d):
+            ds = read_date_txt(d)
+        else:
+            ds = [d]
+        date_list_out += ds
+    date_list_out = sorted(yyyymmdd(list(set(date_list_out))))
+
+    # exclude date not in date_list_ref
+    if date_list_all:
+        date_list_out = list(set(date_list_out).intersection(date_list_all))
+
+    return date_list_out
 
 
 ################################################################
@@ -153,8 +192,6 @@ def date_index(dateList):
     return dateIndex
 
 ################################################################
-
-
 def date_list2tbase(dateList):
     """Get temporal Baseline in days with respect to the 1st date
     Input: dateList - list of string, date in YYYYMMDD or YYMMDD format
@@ -191,30 +228,6 @@ def date_list2vector(dateList):
 
 
 ################################################################
-def list_ifgram2date12(ifgram_list):
-    """Convert ifgram list into date12 list
-    Input:
-        ifgram_list  - list of string in *YYMMDD-YYMMDD* or *YYMMDD_YYMMDD* format
-    Output:
-        date12_list  - list of string in YYMMDD-YYMMDD format
-    Example:
-        h5 = h5py.File('unwrapIfgram.h5','r')
-        ifgram_list = sorted(h5['interferograms'].keys())
-        date12_list = ptime.list_ifgram2date12(ifgram_list)
-    """
-    try:
-        date12_list = [str(re.findall('\d{8}[-_]\d{8}', i)[0]).replace('_', '-') for i in ifgram_list]
-    except:
-        date12_list = [str(re.findall('\d{6}[-_]\d{6}', i)[0]).replace('_', '-') for i in ifgram_list]
-
-    date12_list_out = []
-    for date12 in date12_list:
-        m_date, s_date = yymmdd(date12.split('_'))
-        date12_list_out.append(m_date+'-'+s_date)
-
-    return date12_list_out
-
-
 def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
     """Find closest available time of weather product from SAR acquisition time
     Inputs:
@@ -228,8 +241,6 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
     """
     # Get hour/min of SAR acquisition time
     sar_time = float(sar_acquisition_time)
-    #sar_hh = int(sar_time/3600.0)
-    #sar_mm = int((sar_time-3600.0*sar_hh) / 60.0)
 
     # Find closest time in available weather products
     grib_hr_list = [0, 6, 12, 18]
@@ -237,20 +248,16 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
 
     # Adjust time output format
     grib_hr = "%02d" % grib_hr
-    # if grib_source == 'NARR':
-    #    grib_hr = "%02d"%grib_hr
-    # else:
-    #    grib_hr = "%02d:00"%grib_hr
     return grib_hr
 
 
 ###########################Simple progress bar######################
 class progressBar:
     """Creates a text-based progress bar. Call the object with 
-    the simple `print'command to see the progress bar, which looks 
+    the simple print command to see the progress bar, which looks 
     something like this:
-    [=======> 22% ]
-    You may specify the progress bar's width, min and max values on init.
+    [=======> 22%       ]
+    You may specify the progress bar's min and max values on init.
 
     note:
         modified from PyAPS release 1.0 (http://earthdef.caltech.edu/projects/pyaps/wiki/Main)
@@ -266,14 +273,19 @@ class progressBar:
         prog_bar.close()
     """
 
-    def __init__(self, maxValue=100, prefix='', minValue=0, totalWidth=80):
+    def __init__(self, maxValue=100, prefix='', minValue=0, totalWidth=70, print_msg=True):
         self.prog_bar = "[]"  # This holds the progress bar string
         self.min = minValue
         self.max = maxValue
         self.span = maxValue - minValue
-        self.width = totalWidth
         self.suffix = ''
         self.prefix = prefix
+
+        self.print_msg = print_msg
+        ## calculate total width based on console width
+        #rows, columns = os.popen('stty size', 'r').read().split()
+        #self.width = round(int(columns) * 0.7 / 10) * 10
+        self.width = totalWidth
         self.reset()
 
     def reset(self):
@@ -334,11 +346,13 @@ class progressBar:
           line in stdout."""
         if value % every == 0 or value >= self.max:
             self.update_amount(newAmount=value, suffix=suffix)
-            sys.stdout.write('\r' + self.prog_bar)
-            sys.stdout.flush()
+            if self.print_msg:
+                sys.stdout.write('\r' + self.prog_bar)
+                sys.stdout.flush()
 
     def close(self):
         """Prints a blank space at the end to ensure proper printing
         of future statements."""
-        print(' ')
+        if self.print_msg:
+            print(' ')
 ################################End of progress bar class####################################

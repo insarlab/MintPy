@@ -2,10 +2,8 @@
 
 import psycopg2
 import sys
-import os
 import argparse
 import pysar.utils.readfile as readfile
-import json
 import pycurl
 from io import BytesIO
 import urllib.request, urllib.parse, urllib.error
@@ -192,7 +190,7 @@ class InsarDatabaseController(object):
             sql = "DELETE from plot_attributes WHERE area_id = " + dataset_id_str
             self.cursor.execute(sql)
             self.con.commit()
-        except Exception as e:
+        except Exception:
             pass
 
 class InsarDatasetController(InsarDatabaseController):

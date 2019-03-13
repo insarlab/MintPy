@@ -1,7 +1,8 @@
 #! /bin/sh
 ###############################################################
-# Plot pysarApp routine processing results.
+# Plot Results from Routine Workflow with pysarApp.py
 # Author: Zhang Yunjun, 2017-07-23
+# Latest update: 2019-03-01
 ###############################################################
 
 
@@ -20,92 +21,104 @@ geo_mask_file='./GEOCODE/geo_maskTempCoh.h5'
 
 ## Log File
 log_file='plot_pysarApp.log'
-echo "touch log file: "$log_file
 touch $log_file
+echo "\n\n\n\n\n" >> $log_file
+echo "#############################  ./plot_pysarApp.sh  ###########################" >> $log_file
+date >> $log_file
+echo "##############################################################################" >> $log_file
+#use "echo 'yoyoyo' | tee -a log" to output message to both screen and file.
+#use "echo 'yoyoyo' >> log" to output message to file only.
 
 ## Create PIC folder
 if [ ! -d "PIC" ]; then
-    echo 'Create PIC folder'
+    echo 'Create ./PIC folder'
     mkdir PIC
 fi
 
+## common view.py option for all files
+view='view.py --nodisplay --dpi 150 --update '
 
 ## Plot Key files
 opt=' --dem INPUTS/geometryRadar.h5 --mask '$mask_file' -u cm '
-#opt=' --dem INPUTS/geometryRadar.h5 --mask '$mask_file' -u cm -m -2 -M 2'
+#opt=' --dem INPUTS/geometryRadar.h5 --mask '$mask_file' -u cm --vlim -2 2'
 if [ $plot_key_files -eq 1 ]; then
-    view.py --nodisplay velocity.h5           $opt               | tee -a $log_file
-    view.py --nodisplay temporalCoherence.h5  -c gray -m 0 -M 1  | tee -a $log_file
-    view.py --nodisplay maskTempCoh.h5        -c gray -m 0 -M 1  | tee -a $log_file
-    view.py --nodisplay INPUTS/geometryGeo.h5                    | tee -a $log_file
-    view.py --nodisplay INPUTS/geometryRadar.h5                  | tee -a $log_file
+    file=velocity.h5;              test -f $file && $view $file $opt               >> $log_file
+    file=temporalCoherence.h5;     test -f $file && $view $file -c gray --vlim 0 1 >> $log_file
+    file=maskTempCoh.h5;           test -f $file && $view $file -c gray --vlim 0 1 >> $log_file
+    file=INPUTS/geometryRadar.h5;  test -f $file && $view $file                    >> $log_file
+    file=INPUTS/geometryGeo.h5;    test -f $file && $view $file                    >> $log_file
 fi
 
 
 ## Loaded Dataset
 if [ $plot_loaded_data -eq 1 ]; then
-    view.py --nodisplay INPUTS/ifgramStack.h5  unwrapPhase  --zero-mask | tee -a $log_file
-    view.py --nodisplay INPUTS/ifgramStack.h5  coherence    --mask no   | tee -a $log_file
+    file=INPUTS/ifgramStack.h5
+    test -f $file && $view $file unwrapPhase-  --zero-mask --wrap >> $log_file
+    test -f $file && $view $file unwrapPhase-  --zero-mask        >> $log_file
+    test -f $file && $view $file coherence-    --mask no          >> $log_file
 fi
 
 
 ## Auxliary Files from loaded dataset
 if [ $plot_loaded_data_aux -eq 1 ]; then
-    file=avgPhaseVelocity.h5; test -f $file && view.py --nodisplay  $file | tee -a $log_file
-    view.py --nodisplay avgSpatialCoherence.h5 -c gray -m 0 -M 1 | tee -a $log_file
-    view.py --nodisplay mask.h5                -c gray -m 0 -M 1 | tee -a $log_file
+    file=avgPhaseVelocity.h5;   test -f $file && $view $file -m maskSpatialCoh.h5 >> $log_file
+    file=avgSpatialCoh.h5;      test -f $file && $view $file -c gray --vlim 0 1   >> $log_file
+    file=maskSpatialCoh.h5;     test -f $file && $view $file -c gray --vlim 0 1   >> $log_file
+    file=maskConnComp.h5;       test -f $file && $view $file -c gray --vlim 0 1   >> $log_file
 fi
 
 
 ## Time-series files
-view='view.py --nodisplay --mask '$mask_file' --noaxis -u cm '
-#view='view.py --nodisplay --mask '$mask_file' --noaxis -u cm -m -10 -M 10 '
+opt='--mask '$mask_file' --noaxis -u cm '
+#opt='--mask '$mask_file' --noaxis -u cm --vlim -10 10 '
 if [ $plot_timeseries -eq 1 ]; then
-    file=timeseries.h5;                                       test -f $file && $view $file | tee -a $log_file
+    file=timeseries.h5;                             test -f $file && $view $file $opt >> $log_file
 
-    file=timeseries_LODcor_ECMWF.h5;                          test -f $file && $view $file | tee -a $log_file
-    file=timeseries_LODcor_ECMWF_demErr.h5;                   test -f $file && $view $file | tee -a $log_file
-    file=timeseries_LODcor_ECMWF_demErr_refDate.h5;           test -f $file && $view $file | tee -a $log_file
-    file=timeseries_LODcor_ECMWF_demErr_refDate_plane.h5;     test -f $file && $view $file | tee -a $log_file
-    file=timeseries_LODcor_ECMWF_demErr_refDate_quadratic.h5; test -f $file && $view $file | tee -a $log_file
+    #LOD for Envisat
+    file=timeseries_LODcor_ECMWF.h5;                test -f $file && $view $file $opt >> $log_file
+    file=timeseries_LODcor_ECMWF_demErr.h5;         test -f $file && $view $file $opt >> $log_file
+    file=timeseries_LODcor_ECMWF_ramp.h5;           test -f $file && $view $file $opt >> $log_file
+    file=timeseries_LODcor_ECMWF_ramp_demErr.h5;    test -f $file && $view $file $opt >> $log_file
 
-    file=timeseries_ECMWF.h5;                                 test -f $file && $view $file | tee -a $log_file
-    file=timeseries_ECMWF_demErr.h5;                          test -f $file && $view $file | tee -a $log_file
-    file=timeseries_ECMWF_demErr_refDate.h5;                  test -f $file && $view $file | tee -a $log_file
-    file=timeseries_ECMWF_demErr_refDate_plane.h5;            test -f $file && $view $file | tee -a $log_file
-    file=timeseries_ECMWF_demErr_refDate_quadratic.h5;        test -f $file && $view $file | tee -a $log_file
+    #w trop delay corrections
+    for trop in '_ECMWF' '_MERRA' '_NARR' '_tropHgt'
+    do
+        file=timeseries${trop}.h5;                  test -f $file && $view $file $opt >> $log_file
+        file=timeseries${trop}_demErr.h5;           test -f $file && $view $file $opt >> $log_file
+        file=timeseries${trop}_ramp.h5;             test -f $file && $view $file $opt >> $log_file
+        file=timeseries${trop}_ramp_demErr.h5;      test -f $file && $view $file $opt >> $log_file
+    done
 
-    file=timeseries_demErr.h5;                                test -f $file && $view $file | tee -a $log_file
-    file=timeseries_demErr_refDate.h5;                        test -f $file && $view $file | tee -a $log_file
-    file=timeseries_demErr_refDate_plane.h5;                  test -f $file && $view $file | tee -a $log_file
-    file=timeseries_demErr_refDate_quadratic.h5;              test -f $file && $view $file | tee -a $log_file
-
-    file=timeseries_demErr.h5;                                test -f $file && $view $file | tee -a $log_file
-    file=timeseries_demErr_tropHgt.h5;                        test -f $file && $view $file | tee -a $log_file
-    file=timeseries_demErr_tropHgt_refDate.h5;                test -f $file && $view $file | tee -a $log_file
-    file=timeseries_demErr_tropHgt_refDate_plane.h5;          test -f $file && $view $file | tee -a $log_file
-    file=timeseries_demErr_tropHgt_refDate_quadratic.h5;      test -f $file && $view $file | tee -a $log_file
+    #w/o trop delay correction
+    file=timeseries_ramp.h5;                        test -f $file && $view $file $opt >> $log_file
+    file=timeseries_demErr_ramp.h5;                 test -f $file && $view $file $opt >> $log_file
 fi
 
 
 ## Geo coordinates for UNAVCO Time-series InSAR Archive Product
 if [ $plot_geocoded_data -eq 1 ]; then
-    view.py --nodisplay --lalo-label ./GEOCODE/geo_maskTempCoh.h5          -c gray -m 0 -M 1            | tee -a $log_file
-    view.py --nodisplay --lalo-label ./GEOCODE/geo_temporalCoherence.h5    -c gray -m 0 -M 1            | tee -a $log_file
-    view.py --nodisplay --lalo-label ./GEOCODE/geo_velocity.h5              --mask $geo_mask_file -u cm | tee -a $log_file
-    view.py --nodisplay --lalo-label ./GEOCODE/geo_timeseries_*.h5 --noaxis --mask $geo_mask_file -u cm | tee -a $log_file
+    file=./GEOCODE/geo_maskTempCoh.h5;                   test -f $file && $view $file -c gray  >> $log_file
+    file=./GEOCODE/geo_temporalCoherence.h5;             test -f $file && $view $file -c gray  >> $log_file
+    file=./GEOCODE/geo_velocity.h5;                      test -f $file && $view $file velocity >> $log_file
+    file=./GEOCODE/geo_timeseries_ECMWF_demErr_ramp.h5;  test -f $file && $view $file --noaxis >> $log_file
+    file=./GEOCODE/geo_timeseries_ECMWF_demErr.h5;       test -f $file && $view $file --noaxis >> $log_file
+    file=./GEOCODE/geo_timeseries_demErr_ramp.h5;        test -f $file && $view $file --noaxis >> $log_file
+    file=./GEOCODE/geo_timeseries_demErr.h5;             test -f $file && $view $file --noaxis >> $log_file
 fi
 
 
 if [ $plot_the_rest -eq 1 ]; then
-    file=velocityEcmwf.h5;    test -f $file && $view $file | tee -a $log_file
+    for trop in 'Ecmwf' 'Merra' 'Narr'
+    do
+        file=velocity${trop}.h5;    test -f $file && $view $file --mask no >> $log_file
+    done
+    file=numInvIfgram.h5;           test -f $file && $view $file --mask no >> $log_file
 fi
 
 
 ## Move picture files to PIC folder
-echo "Move *.png *.pdf into PIC folder"
+echo "Move *.png/pdf/kmz files into ./PIC folder."
 mv *.png PIC/
 mv *.pdf PIC/
 mv *.kmz PIC/
-mv $log_file PIC/
 

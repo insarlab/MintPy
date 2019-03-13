@@ -15,6 +15,37 @@ from pysar.utils import readfile, writefile, ptime
 
 
 #######################################################################################
+EXAMPLE = """example:
+  image_math.py  velocity.h5            '+'  0.5
+  image_math.py  geo_080212_101120.cor  '-'  0.2
+  image_math.py  timeseries.h5          '*'  1.5
+  image_math.py  velocity.h5            '/'  2.0
+  image_math.py  velocity.h5            '^'  2.0
+"""
+
+
+def create_parser():
+    parser = argparse.ArgumentParser(description='Basic Mathmatic Operation of file',
+                                     formatter_class=argparse.RawTextHelpFormatter,
+                                     epilog=EXAMPLE)
+
+    parser.add_argument('file', help='input file')
+    parser.add_argument('-o', '--output', dest='outfile',
+                        help='output file name.')
+    parser.add_argument('operator', choices=[
+                        '+', '-', '*', '/', '^'], help='mathmatical operator')
+    parser.add_argument('operand', metavar='VALUE', type=float,
+                        help='value to be operated with input file')
+    return parser
+
+
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
+    return inps
+
+
+#######################################################################################
 def data_operation(data, operator, operand):
     """Mathmatic operation of 2D matrix"""
     if operator == '+':
@@ -27,7 +58,7 @@ def data_operation(data, operator, operand):
         data_out = data * (1.0/operand)
     elif operator == '^':
         data_out = data**operand
-    data_out = np.array(data_out, data.dtype)
+    data_out = np.array(data_out, dtype=np.float32)
     return data_out
 
 
@@ -64,37 +95,6 @@ def file_operation(fname, operator, operand, out_file=None):
         dsDict[dsName] = data
     writefile.write(dsDict, out_file=out_file, metadata=atr, ref_file=fname)
     return out_file
-
-
-#######################################################################################
-EXAMPLE = """example:
-  image_math.py  velocity.h5            '+'  0.5
-  image_math.py  geo_080212_101120.cor  '-'  0.2
-  image_math.py  timeseries.h5          '*'  1.5
-  image_math.py  velocity.h5            '/'  2.0
-  image_math.py  velocity.h5            '^'  2.0
-"""
-
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Basic Mathmatic Operation of file',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
-
-    parser.add_argument('file', help='input file')
-    parser.add_argument('-o', '--output', dest='outfile',
-                        help='output file name.')
-    parser.add_argument('operator', choices=[
-                        '+', '-', '*', '/', '^'], help='mathmatical operator')
-    parser.add_argument('operand', metavar='VALUE', type=float,
-                        help='value to be operated with input file')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-    return inps
 
 
 #######################################################################################

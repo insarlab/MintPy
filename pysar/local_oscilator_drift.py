@@ -4,6 +4,10 @@
 # Copyright(c) 2013-2018, Heresh Fattahi                   #
 # Author:  Heresh Fattahi                                  #
 ############################################################
+# Based on the empirical model of Marinkovic and Larsen (2013),
+# the LOD correction for each pixel is given in meters as:
+#     C = 3.87e-7 * x * range_pixel_size_in_meter * time_difference_in_year
+# where x is the pixel count in range direction
 
 
 import os
@@ -34,7 +38,7 @@ def correct_local_oscilator_drift(fname, rg_dist_file=None, out_file=None):
     print('platform: '+platform)
     if not platform.lower() in ['env', 'envisat']:
         print('No need to correct LOD for '+platform)
-        sys.exit(1)
+        return
 
     # output file name
     if not out_file:

@@ -25,7 +25,7 @@ pysar.reference.lalo          = auto   #[31.8,130.8 / auto]
 
 pysar.reference.coherenceFile = auto   #[file name], auto for averageSpatialCoherence.h5
 pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum coherence for auto method
-pysar.reference.maskFile      = auto   #[file name / no], auto for mask.h5
+pysar.reference.maskFile      = auto   #[file name / no], auto for maskConnComp.h5
 """
 
 NOTE = """note: Reference value cannot be nan, thus, all selected reference point must be:
@@ -40,20 +40,25 @@ NOTE = """note: Reference value cannot be nan, thus, all selected reference poin
       default selection methods:
           maxCoherence
           random
+
+  The recommended reference pixel should meets the following criteria:
+  1) not in deforming areas
+  2) not in areas affected by strong atmospheric turbulence, such as ionospheric streaks
+  3) close but outside of deforming area of interest with similar elevation, to minimize
+     the spatial correlation effect of atmosspheric delay, especially for shot-wavelength
+     deformation (Chaussard et al., 2013; Morales-Rivera et al., 2016)
+  4) in high coherent area to minimize the decorrelation effect
 """
 
 EXAMPLE = """example:
-  reference_point.py unwrapIfgram.h5 -t pysarApp_template.txt --lookup geometryRadar.h5
+  reference_point.py  INPUTS/ifgramStack.h5  -t pysarApp_template.txt  -c avgSpatialCoh.h5
 
-  reference_point.py timeseries.h5     -r Seeded_velocity.h5
-  reference_point.py 091120_100407.unw -y 257    -x 151      -m Mask.h5 --write-data
-  reference_point.py geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
-  reference_point.py unwrapIfgram.h5   -l 34.45  -L -116.23  --lookup geomap_4rlks.trans
+  reference_point.py  timeseries.h5     -r Seeded_velocity.h5
+  reference_point.py  091120_100407.unw -y 257    -x 151      -m Mask.h5 --write-data
+  reference_point.py  geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
   
-  reference_point.py unwrapIfgram.h5 -c average_spatial_coherence.h5
-  reference_point.py unwrapIfgram.h5 --method manual
-  reference_point.py unwrapIfgram.h5 --method random
-  reference_point.py timeseries.h5   --method global-average 
+  reference_point.py  INPUTS/ifgramStack.h5 --method manual
+  reference_point.py  INPUTS/ifgramStack.h5 --method random
 """
 
 
@@ -170,16 +175,13 @@ def reference_file(inps):
         return inps.file
 
     # Get stack and mask
-    stack = ut.temporal_average(inps.file, updateMode=True)[0]
+    stack = ut.temporal_average(inps.file, datasetName='unwrapPhase', updateMode=True)[0]
     mask = np.multiply(~np.isnan(stack), stack != 0.)
     if np.nansum(mask) == 0.0:
-        print('\n'+'*'*40)
-        print('ERROR: no pixel found with valid phase value in all datasets.')
-        print('Seeding failed')
-        print('*'*40+'\n')
-        sys.exit(1)
+        raise ValueError('no pixel found with valid phase value in all datasets.')
+
     if inps.ref_y and inps.ref_x and mask[inps.ref_y, inps.ref_x] == 0.:
-        raise ValueError('ERROR: reference y/x have nan value in some dataset. Please re-select.')
+        raise ValueError('reference y/x have nan value in some dataset. Please re-select.')
 
     # Find reference y/x
     if not inps.ref_y or not inps.ref_x:
@@ -228,7 +230,7 @@ def reference_file(inps):
             obj.close()
         else:
             print('writing >>> '+inps.outfile)
-            data = readfile.read(inps.file)
+            data = readfile.read(inps.file)[0]
             data -= data[inps.ref_y, inps.ref_x]
             atr.update(atrNew)
             writefile.write(data, out_file=inps.outfile, metadata=atr)
@@ -241,9 +243,10 @@ def reference_point_attribute(atr, y, x):
     atrNew = dict()
     atrNew['REF_Y'] = str(y)
     atrNew['REF_X'] = str(x)
+    coord = ut.coordinate(atr)
     if 'X_FIRST' in atr.keys():
-        atrNew['REF_LAT'] = str(ut.coord_radar2geo(y, atr, 'y'))
-        atrNew['REF_LON'] = str(ut.coord_radar2geo(x, atr, 'x'))
+        atrNew['REF_LAT'] = str(coord.yx2lalo(y, coord_type='y'))
+        atrNew['REF_LON'] = str(coord.yx2lalo(x, coord_type='x'))
     return atrNew
 
 
@@ -300,6 +303,14 @@ def select_max_coherence_yx(coh_file, mask=None, min_coh=0.85):
     if not mask is None:
         coh[mask == 0] = 0.0
     coh_mask = coh >= min_coh
+    if np.all(coh_mask == 0.):
+        msg = ('No pixel with average spatial coherence > {} '
+               'are found for automatic reference point selection!').format(min_coh)
+        msg += '\nTry the following:'
+        msg += '\n  1) manually specify the reference point using pysar.reference.yx/lalo option.'
+        msg += '\n  2) change pysar.reference.minCoherence to a lower value.'
+        raise RuntimeError(msg)
+
     y, x = random_select_reference_yx(coh_mask, print_msg=False)
     #y, x = np.unravel_index(np.argmax(coh), coh.shape)
     print('y/x: {}'.format((y, x)))
@@ -316,16 +327,6 @@ def random_select_reference_yx(data_mat, print_msg=True):
     if print_msg:
         print('random select pixel\ny/x: {}'.format((y, x)))
     return y, x
-
-
-###############################################################
-def print_warning(next_method):
-    print('-'*50)
-    print('WARNING:')
-    print('Input file is not referenced to the same pixel yet!')
-    print('-'*50)
-    print('Continue with default automatic seeding method: '+next_method+'\n')
-    return
 
 
 ###############################################################
@@ -367,14 +368,11 @@ def read_reference_input(inps):
         inps = read_reference_file2inps(inps.reference_file, inps)
 
     # Convert ref_lat/lon to ref_y/x
+    coord = ut.coordinate(atr, lookup_file=inps.lookup_file)
     if inps.ref_lat and inps.ref_lon:
-        if 'X_FIRST' in atr.keys():
-            inps.ref_y = ut.coord_geo2radar(inps.ref_lat, atr, 'lat')
-            inps.ref_x = ut.coord_geo2radar(inps.ref_lon, atr, 'lon')
-        else:
-            # Convert lat/lon to az/rg for radar coord file using geomap*.trans file
-            inps.ref_y, inps.ref_x = ut.glob2radar(np.array(inps.ref_lat), np.array(inps.ref_lon),
-                                                   inps.lookup_file, atr)[0:2]
+        (inps.ref_y,
+         inps.ref_x) = coord.geo2radar(np.array(inps.ref_lat),
+                                       np.array(inps.ref_lon))[0:2]
         print('input reference point in lat/lon: {}'.format((inps.ref_lat, inps.ref_lon)))
     if inps.ref_y and inps.ref_x:
         print('input reference point in y/x: {}'.format((inps.ref_y, inps.ref_x)))
@@ -384,8 +382,7 @@ def read_reference_input(inps):
             not (0 <= inps.ref_y <= length and 0 <= inps.ref_x <= width)):
         inps.ref_y = None
         inps.ref_x = None
-        print('WARNING: input reference point is OUT of data coverage!')
-        print('Continue with other method to select reference point.')
+        raise ValueError('input reference point is OUT of data coverage!')
 
     # Do not use ref_y/x in masked out area
     if inps.ref_y and inps.ref_x and inps.maskFile:
@@ -394,8 +391,8 @@ def read_reference_input(inps):
         if mask[inps.ref_y, inps.ref_x] == 0:
             inps.ref_y = None
             inps.ref_x = None
-            print('WARNING: input reference point is in masked OUT area!')
-            print('Continue with other method to select reference point.')
+            msg = 'input reference point is in masked OUT area defined by {}!'.format(inps.maskFile)
+            raise ValueError(msg)
 
     # Select method
     if not inps.ref_y or not inps.ref_x:

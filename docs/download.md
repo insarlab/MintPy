@@ -1,14 +1,11 @@
 ### Download PySAR
 
-Download the stable version at [Release Page](https://github.com/yunjunz/PySAR/releases), or use the command below.     
-   
-    cd ~/python
-    wget https://github.com/yunjunz/PySAR/archive/v0.4.0.tar.gz
-    tar -zxvf v0.4.0.tar.gz
-   
-or download the development version using git:   
+For Python 3.5+, download the development version (recommend):   
    
     cd ~/python
     git clone https://github.com/yunjunz/PySAR.git
-
-Note that PySAR version 0.x uses Python 2 while PySAR version 1.x uses Python 3.     
+    
+For Python 2.7, download the python2 branch (maintained for bugs fix only):
+   
+    cd ~/python
+    git clone --branch python2 https://github.com/yunjunz/PySAR.git

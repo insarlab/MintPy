@@ -5,17 +5,28 @@
 ############################################################
 # class used for data loading from InSAR stack to PySAR timeseries
 # Recommend import:
-#     from pysar.objects.insarobj import ifgramDict, ifgramStackDict, geometryDict
+#     from pysar.objects.insarobj import (geometryDict,
+#                                         ifgramStackDict, 
+#                                         ifgramDict)
 
 
 import os
+import time
 import glob
 import warnings
 import h5py
 import numpy as np
-from skimage.transform import resize
+
+try:
+    from skimage.transform import resize
+except ImportError:
+    raise ImportError('Could not import skimage!')
+
+from pysar.objects import (dataTypeDict,
+                           geometryDatasetNames,
+                           ifgramDatasetNames)
 from pysar.utils import readfile, ptime, utils as ut
-from pysar.objects import ifgramDatasetNames, geometryDatasetNames, dataTypeDict
+
 
 BOOL_ZERO = np.bool_(0)
 INT_ZERO = np.int16(0)
@@ -89,6 +100,7 @@ class ifgramStackDict:
         /coherence         3D array of float32 in size of (m, l, w).
         /connectComponent  3D array of int16   in size of (m, l, w).           (optional)
         /wrapPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
+        /iono              3D array of float32 in size of (m, l, w) in radian. (optional)
         /rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
         /azimuthOffset     3D array of float32 in size of (m, l, w).           (optional)
 
@@ -103,12 +115,9 @@ class ifgramStackDict:
         f = h5py.File(self.outputFile, access_mode)
         print('create HDF5 file {} with {} mode'.format(self.outputFile, access_mode))
 
-        #groupName = self.name
-        #group = f.create_group(groupName)
-        #print('create group   /{}'.format(groupName))
-
-        self.pairs = [pair for pair in self.pairsDict.keys()]
+        self.pairs = sorted([pair for pair in self.pairsDict.keys()])
         self.dsNames = list(self.pairsDict[self.pairs[0]].datasetDict.keys())
+        self.dsNames = [i for i in ifgramDatasetNames if i in self.dsNames]
         maxDigit = max([len(i) for i in self.dsNames])
         self.get_size(box)
 
@@ -133,19 +142,16 @@ class ifgramStackDict:
                                   chunks=True,
                                   compression=compression)
 
-            #dMin = 0
-            #dMax = 0
             prog_bar = ptime.progressBar(maxValue=self.numIfgram)
             for i in range(self.numIfgram):
                 ifgramObj = self.pairsDict[self.pairs[i]]
                 data = ifgramObj.read(dsName, box=box)[0]
-                #dMin = min(dMin, np.nanmin(data))
-                #dMax = max(dMax, np.nanmax(data))
                 ds[i, :, :] = data
                 self.bperp[i] = ifgramObj.get_perp_baseline()
                 prog_bar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],
                                                            self.pairs[i][1]))
             prog_bar.close()
+            ds.attrs['MODIFICATION_TIME'] = str(time.time())
 
         ###############################
         # 2D dataset containing master and slave dates of all pairs
@@ -186,11 +192,11 @@ class ifgramStackDict:
         ###############################
         # Attributes
         self.get_metadata()
-        self.metadata = ut.subset_attribute(self.metadata, box)
-        self.metadata['FILE_TYPE'] = self.name
         if extra_metadata:
             self.metadata.update(extra_metadata)
             print('add extra metadata: {}'.format(extra_metadata))
+        self.metadata = ut.subset_attribute(self.metadata, box)
+        self.metadata['FILE_TYPE'] = self.name
         for key, value in self.metadata.items():
             f.attrs[key] = value
 
@@ -211,6 +217,7 @@ class ifgramDict:
                        'coherence'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.cor',
                        'connectComponent':'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.unw.conncomp',
                        'wrapPhase'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.int',
+                       'iono'            :'$PROJECT_DIR/merged/ionosphere/20151220_20160206/iono.bil.unwCor.filt',
                        ...
                       }
         ifgramObj = ifgramDict(dates=('20160524','20160530'), datasetDict=datasetDict)
@@ -235,22 +242,22 @@ class ifgramDict:
         data, metadata = readfile.read(self.file, box=box)
         return data, metadata
 
-    def get_size(self):
-        self.file = self.datasetDict[ifgramDatasetNames[0]]
+    def get_size(self, family='unwrapPhase'):
+        self.file = self.datasetDict[family]
         metadata = readfile.read_attribute(self.file)
         self.length = int(metadata['LENGTH'])
         self.width = int(metadata['WIDTH'])
         return self.length, self.width
 
-    def get_perp_baseline(self):
-        self.file = self.datasetDict[ifgramDatasetNames[0]]
+    def get_perp_baseline(self, family='unwrapPhase'):
+        self.file = self.datasetDict[family]
         metadata = readfile.read_attribute(self.file)
         self.bperp_top = float(metadata['P_BASELINE_TOP_HDR'])
         self.bperp_bottom = float(metadata['P_BASELINE_BOTTOM_HDR'])
         self.bperp = (self.bperp_top + self.bperp_bottom) / 2.0
         return self.bperp
 
-    def get_metadata(self, family=ifgramDatasetNames[0]):
+    def get_metadata(self, family='unwrapPhase'):
         self.file = self.datasetDict[family]
         self.metadata = readfile.read_attribute(self.file)
         self.length = int(self.metadata['LENGTH'])
@@ -397,7 +404,7 @@ class geometryDict:
         #self.metadata['PROCESSOR'] = self.processor
         return self.metadata
 
-    def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, compression=None):
+    def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, compression='gzip', extra_metadata=None):
         '''
         /                        Root level
         Attributes               Dictionary for metadata. 'X/Y_FIRST/STEP' attribute for geocoded.
@@ -406,7 +413,7 @@ class geometryDict:
         /longitude (rangeCoord)  2D array of float32 in size of (l, w   ) in degree.
         /incidenceAngle          2D array of float32 in size of (l, w   ) in degree.
         /slantRangeDistance      2D array of float32 in size of (l, w   ) in meter.
-        /headingAngle            2D array of float32 in size of (l, w   ) in degree. (optional)
+        /azimuthAngle            2D array of float32 in size of (l, w   ) in degree. (optional)
         /shadowMask              2D array of bool    in size of (l, w   ).           (optional)
         /waterMask               2D array of bool    in size of (l, w   ).           (optional)
         /bperp                   3D array of float32 in size of (n, l, w) in meter   (optional)
@@ -521,6 +528,9 @@ class geometryDict:
         ###############################
         # Attributes
         self.get_metadata()
+        if extra_metadata:
+            self.metadata.update(extra_metadata)
+            print('add extra metadata: {}'.format(extra_metadata))
         self.metadata = ut.subset_attribute(self.metadata, box)
         self.metadata['FILE_TYPE'] = self.name
         for key, value in self.metadata.items():

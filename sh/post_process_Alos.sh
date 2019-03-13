@@ -41,7 +41,7 @@ if [ $plot_load_data -eq 1 ]; then
     #$view temporal_coherence.h5
 
     msk='Mask_spatialCoh.h5'
-    #remove_plane.py Seeded_LoadedData.h5 quadratic $msk
+    #remove_ramp.py Seeded_LoadedData.h5 quadratic $msk
 
     view='view4job.py -r 3 -p 12 --nodisplay'
     #$view -m  0 -M 1 -c gray     -f Coherence.h5

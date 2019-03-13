@@ -15,15 +15,15 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 from pysar.objects import timeseries
-from pysar.utils import readfile, ptime, utils as ut
+from pysar.utils import readfile, writefile, ptime, utils as ut
 from pysar.multilook import multilook_data
 from pysar.mask import mask_matrix
 
 
 ############################################################################
 EXAMPLE = """example:
-  tropcor_phase_elevation.py  timeseries_demErr.h5      -d INPUTS/geometryRadar.h5  -m maskTempCoh.h5    
-  tropcor_phase_elevation.py  geo_timeseries_demErr.h5  -d geo_geometryRadar.h5     -m geo_maskTempCoh.h5
+  tropcor_phase_elevation.py  timeseries_demErr.h5      -g INPUTS/geometryRadar.h5  -m maskTempCoh.h5    
+  tropcor_phase_elevation.py  geo_timeseries_demErr.h5  -g geo_geometryRadar.h5     -m geo_maskTempCoh.h5
 """
 
 REFERENCE = """reference:
@@ -76,9 +76,9 @@ def design_matrix(dem, poly_order=1):
     Returns:    A : 2D array in size of (length*width, poly_order+1)
     """
     dem = np.reshape(dem, (-1, 1))
-    A = np.ones((dem.size, 1), np.float32)
+    A = np.ones((dem.size, 1), np.float64)
     for i in range(poly_order):
-        Ai = np.array(dem**(i+1), np.float32)
+        Ai = np.array(dem**(i+1), np.float64)
         A = np.hstack((A, Ai))
     return A
 
@@ -145,7 +145,6 @@ def estimate_phase_elevation_ratio(dem, ts_data, inps):
         plt.savefig(out_file, bbox_inches='tight', transparent=True, dpi=300)
         print('save to {}'.format(out_file))
         #plt.show()
-        #sys.exit(0)
 
     print('----------------------------------------------------------')
     print('Empirical tropospheric delay correction based on phase/elevation ratio (Doin et al., 2009)')
@@ -180,8 +179,8 @@ def estimate_phase_elevation_ratio(dem, ts_data, inps):
     print('----------------------------------------------------------')
     print('estimate phase/elevation ratio')
     A = design_matrix(dem=dem, poly_order=inps.poly_order)
-    A_inv = np.linalg.pinv(A)
-    X = np.array(np.dot(A_inv, ts_data.T), np.float32)
+    X = np.dot(np.linalg.pinv(A), ts_data.T)
+    X = np.array(X, dtype=np.float32)
     X[:, topo_trop_corr < inps.threshold] = 0.
     return X
 
@@ -193,7 +192,7 @@ def estimate_tropospheric_delay(dem, X, metadata):
 
     print('estimate the stratified tropospheric delay')
     B = design_matrix(dem=dem, poly_order=poly_order)
-    trop_data = np.dot(B, X).T
+    trop_data = np.array(np.dot(B, X).T, dtype=np.float32)
 
     ref_index = int(metadata['REF_Y']) * width + int(metadata['REF_X'])
     ref_value = trop_data[:, ref_index].reshape(-1, 1)
@@ -226,10 +225,11 @@ def main(iargs=None):
     ts_data[mask] = 0.
 
     # write time-series file
+    metadata = dict(obj.metadata)
+    metadata['pysar.troposphericDelay.polyOrder'] = str(inps.poly_order)
     if not inps.outfile:
         inps.outfile = '{}_tropHgt.h5'.format(os.path.splitext(inps.timeseries_file)[0])
-    obj_out = timeseries(inps.outfile)
-    obj_out.write2hdf5(ts_data, refFile=inps.timeseries_file)
+    writefile.write(ts_data, out_file=inps.outfile, metadata=metadata, ref_file=inps.timeseries_file)
     return inps.outfile
 
 

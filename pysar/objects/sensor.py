@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2016-2018, Yunjun Zhang                     #
-# Author:  Yunjun Zhang                                    #
+# Copyright(c) 2016-2018, Zhang Yunjun                     #
+# Author:  Zhang Yunjun                                    #
 ############################################################
 # Recommend import:
 #   from pysar.objects import sensor
@@ -9,10 +9,10 @@
 
 import os
 
-sensors = ['ers', 'env', 'sen', 'rsat', 'rsat2', 'ksat5', 'gaofen3',
-           'jers', 'alos', 'alos2', 'nisar',
-           'tsx', 'csk'
-           ]
+sensorNames = ['ers', 'env', 'sen', 'rsat', 'rsat2', 'ksat5', 'gaofen3',
+               'jers', 'alos', 'alos2', 'nisar',
+               'tsx', 'csk'
+              ]
 
 # remove -_ and user lower case before standardize sensor names
 standardedSensorNames = {'ers1': 'ers', 'ers2': 'ers', 'ers12': 'ers',
@@ -124,14 +124,16 @@ def signal2noise_ratio(sensor):
     return SNR
 
 
-def project_name2sensor(project_names):
-    """Get sensor from project_name or path
-    Parameters: project_name_in : str or list of str, name or path of template file containing project name
+def project_name2sensor_name(project_names):
+    """Get sensor name from project_name or path
+    Parameters: project_names : str or list of str, name or path of template file containing project name
     Returns:    sensor : str, SAR sensor name
                 project_name : str, project name
-    Examples:   'Sen', 'AlcedoSenDT128' = project_name2sensor('AlcedoSenDT128')
-                'Env', 'GalapagosEnvA2T061' = project_name2sensor('/Users/yunjunz/insarlab/Galapagos/'+
-                                                                  'GalapagosEnvA2T061/PYSAR/GalapagosEnvA2T061.template')
+    Examples:   ('Sen',
+                 'AlcedoSenDT128') = project_name2sensor_name('AlcedoSenDT128')
+                ('Env',
+                 'GalapagosEnvA2T061') = project_name2sensor_name('/Users/yunjunz/insarlab/GalapagosEnvA2T061/'+
+                                                                  'PYSAR/GalapagosEnvA2T061.template')
     """
     sensor = None
     project_name = None
@@ -142,13 +144,74 @@ def project_name2sensor(project_names):
 
     # get project_name if input is the path of template file
     for p in project_names:
-        if any(s in p.lower() for s in sensors) and project_name is None:
+        if any(s in p.lower() for s in sensorNames) and project_name is None:
             for i in p.split('/'):
-                if any(s in i.lower() for s in sensors):
+                if any(s in i.lower() for s in sensorNames):
                     project_name = os.path.splitext(i)[0]
 
     # project_name --> sensor
     if project_name:
-        sensor = [s for s in sensors if s in project_name.lower()][0].capitalize()
+        sensor = [s.capitalize() for s in sensorNames
+                  if s.lower() in project_name.lower()]
+        if len(sensor) > 1:
+            sensor = [s for s in sensor if s in project_name][0]
+        elif len(sensor) == 1:
+            sensor = sensor[0]
+        else:
+            msg = "No sensor name found in project_name: {}\n".format(project_name)
+            msg += "Available sensor names: {}".format(sensorNames)
+            raise ValueError(msg)
 
     return sensor, project_name
+
+
+
+def get_unavco_mission_name(meta_dict):
+    """Get mission name in UNAVCO InSAR Archive format from attribute mission/PLATFORM
+    Parameters: meta_dict : dict, attributes
+    Returns:    mission   : str, mission name in standard UNAVCO format.
+    """
+    mission_name = None
+
+    if 'mission' in meta_dict.keys():
+        value = meta_dict['mission'].lower()
+    elif 'PLATFORM' in meta_dict.keys():
+        value = meta_dict['PLATFORM'].lower()
+    else:
+        print('No PLATFORM nor mission attribute found, can not identify mission name.')
+        print('return None')
+        return mission_name
+
+    # Convert to UNAVCO Mission name
+    ## ERS, ENV, S1, RS1, RS2, CSK, TSX, JERS, ALOS, ALOS2
+    if value.startswith('ers'):
+        mission_name = 'ERS'
+    elif value.startswith(('env', 'asar')):
+        mission_name = 'ENV'
+    elif value.startswith(('s1', 'sen')):
+        mission_name = 'S1'
+    elif value.startswith(('rs', 'rsat', 'radarsat')):
+        mission_name = 'RS'
+        if value.endswith('1'):
+            mission_name += '1'
+        else:
+            mission_name += '2'
+    elif value.startswith(('csk', 'cos')):
+        mission_name = 'CSK'
+    elif value.startswith(('tsx', 'tdx', 'terra', 'tandem')):
+        mission_name = 'TSX'
+    elif value.startswith('jers'):
+        mission_name = 'JERS'
+    elif value.startswith(('alos', 'palsar')):
+        if value.endswith('2'):
+            mission_name = 'ALOS2'
+        else:
+            mission_name = 'ALOS'
+    else:
+        print('Un-recognized PLATFORM attribute:', value)
+        print('return None')
+    return mission_name
+
+
+
+

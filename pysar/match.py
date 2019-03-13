@@ -12,7 +12,10 @@ import argparse
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-from skimage.transform import rescale
+try:
+    from skimage.transform import rescale
+except ImportError:
+    raise ImportError('Could not import skimage!')
 from pysar.utils import readfile, writefile
 
 

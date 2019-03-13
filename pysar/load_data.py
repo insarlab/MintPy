@@ -14,8 +14,14 @@ import datetime
 import time
 
 from pysar.defaults import auto_path
-from pysar.objects import ifgramDatasetNames, geometryDatasetNames, ifgramStack, geometry, sensor
-from pysar.objects.insarobj import ifgramDict, ifgramStackDict, geometryDict
+from pysar.objects import (geometryDatasetNames,
+                           geometry,
+                           ifgramDatasetNames,
+                           ifgramStack,
+                           sensor)
+from pysar.objects.insarobj import (geometryDict,
+                                    ifgramStackDict,
+                                    ifgramDict)
 from pysar.utils import readfile, ptime, utils as ut
 from pysar import subset
 
@@ -25,13 +31,14 @@ datasetName2templateKey = {'unwrapPhase'     : 'pysar.load.unwFile',
                            'coherence'       : 'pysar.load.corFile',
                            'connectComponent': 'pysar.load.connCompFile',
                            'wrapPhase'       : 'pysar.load.intFile',
+                           'iono'            : 'pysar.load.ionoFile',
                            'height'          : 'pysar.load.demFile',
                            'latitude'        : 'pysar.load.lookupYFile',
                            'longitude'       : 'pysar.load.lookupXFile',
                            'azimuthCoord'    : 'pysar.load.lookupYFile',
                            'rangeCoord'      : 'pysar.load.lookupXFile',
                            'incidenceAngle'  : 'pysar.load.incAngleFile',
-                           'headingAngle'    : 'pysar.load.headAngleFile',
+                           'azimuthAngle'    : 'pysar.load.azAngleFile',
                            'shadowMask'      : 'pysar.load.shadowMaskFile',
                            'bperp'           : 'pysar.load.bperpFile'
                            }
@@ -51,17 +58,22 @@ TEMPLATE = """template:
 ## load_data.py -H to check more details and example inputs.
 pysar.load.processor      = auto  #[isce,roipac,gamma,], auto for isce
 pysar.load.updateMode     = auto  #[yes / no], auto for yes, skip re-loading if HDF5 files are complete
+pysar.load.compression    = auto  #[gzip / lzf / no], auto for no [recommended].
+##---------for ISCE only:
+pysar.load.metaFile       = auto  #[path2metadata_file]
+pysar.load.baselineDir    = auto  #[path2baseline_dir]
 ##---------interferogram datasets:
 pysar.load.unwFile        = auto  #[path2unw_file]
 pysar.load.corFile        = auto  #[path2cor_file]
 pysar.load.connCompFile   = auto  #[path2conn_file]
 pysar.load.intFile        = auto  #[path2int_file]
+pysar.load.ionoFile       = auto  #[path2iono_file]
 ##---------geometry datasets:
 pysar.load.demFile        = auto  #[path2hgt_file]
 pysar.load.lookupYFile    = auto  #[path2lat_file]]
 pysar.load.lookupXFile    = auto  #[path2lon_file]
 pysar.load.incAngleFile   = auto  #[path2los_file]
-pysar.load.headAngleFile  = auto  #[path2los_file]
+pysar.load.azAngleFile    = auto  #[path2los_file]
 pysar.load.shadowMaskFile = auto  #[path2shadow_file]
 pysar.load.bperpFile      = auto  #[path2bperp_file]
 
@@ -81,6 +93,7 @@ NOTE = """NOTE:
 EXAMPLE = """example:
   load_data.py -t GalapagosSenDT128.tempalte
   load_data.py -t pysarApp_template.txt
+  load_data.py -t pysarApp_template.txt GalapagosSenDT128.tempalte --project GalapagosSenDT128
   load_data.py -H #Show example input template for ISCE/ROI_PAC/GAMMA products
 """
 
@@ -92,7 +105,7 @@ def create_parser():
                                      epilog=TEMPLATE+'\n'+NOTE+'\n'+EXAMPLE)
     parser.add_argument('-H', dest='print_example_template', action='store_true',
                         help='Print/Show the example template file for loading.')
-    parser.add_argument('-t', '--template', type=str,
+    parser.add_argument('-t', '--template', type=str, nargs='+',
                         dest='template_file', help='template file with path info.')
 
     parser.add_argument('--project', type=str, dest='PROJECT_NAME',
@@ -117,13 +130,14 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    if inps.print_example_template:
-        sys.exit(DEFAULT_TEMPLATE)
-
-    if not inps.template_file:
+    if inps.template_file:
+        pass
+    elif inps.print_example_template:
+        raise SystemExit(DEFAULT_TEMPLATE)
+    else:
         parser.print_usage()
-        print(('{}: error: the following arguments are required:'
-               ' -t/--template'.format(os.path.basename(__file__))))
+        print(('{}: error: one of the following arguments are required:'
+               ' -t/--template, -H'.format(os.path.basename(__file__))))
         print('{} -H to show the example template file'.format(os.path.basename(__file__)))
         sys.exit(1)
 
@@ -141,8 +155,13 @@ def read_inps2dict(inps):
     inpsDict['PLATFORM'] = None
 
     # Read template file
-    template = readfile.read_template(inps.template_file)
-    template = ut.check_template_auto_value(template)
+    template = {}
+    for fname in inps.template_file:
+        temp = readfile.read_template(fname)
+        temp = ut.check_template_auto_value(temp)
+        template.update(temp)
+    for key, value in template.items():
+        inpsDict[key] = value
     if 'processor' in template.keys():
         template['pysar.load.processor'] = template['processor']
 
@@ -159,25 +178,23 @@ def read_inps2dict(inps):
         inpsDict['compression'] = None
 
     # PROJECT_NAME --> PLATFORM
-    (inpsDict['PLATFORM'],
-     inpsDict['PROJECT_NAME']) = sensor.project_name2sensor([inpsDict['PROJECT_NAME'],
-                                                             inps.template_file])
+    if not inpsDict['PROJECT_NAME']:
+        cfile = [i for i in list(inps.template_file) if os.path.basename(i) != 'pysarApp_template.txt']
+        inpsDict['PROJECT_NAME'] = sensor.project_name2sensor_name(cfile)[1]
+    inpsDict['PLATFORM'] = str(sensor.project_name2sensor_name(str(inpsDict['PROJECT_NAME']))[0])
     if inpsDict['PLATFORM']:
         print('platform : {}'.format(inpsDict['PLATFORM']))
     print('processor: {}'.format(inpsDict['processor']))
 
     # Here to insert code to check default file path for miami user
     if (auto_path.autoPath
-        and 'SCRATCHDIR' in os.environ
-        and inpsDict['PROJECT_NAME'] is not None):
+            and 'SCRATCHDIR' in os.environ
+            and inpsDict['PROJECT_NAME'] is not None):
         print(('check auto path setting for Univ of Miami users'
                ' for processor: {}'.format(inpsDict['processor'])))
-        if inpsDict['processor'] == 'isce':
-            inpsDict = auto_path.get_auto_path4isce(inpsDict['PROJECT_NAME'], inpsDict)
-        elif inpsDict['processor'] == 'roipac':
-            inpsDict = auto_path.get_auto_path4roipac(inpsDict['PROJECT_NAME'], inpsDict)
-        elif inpsDict['processor'] == 'gamma':
-            inpsDict = auto_path.get_auto_path4gamma(inpsDict['PROJECT_NAME'], inpsDict)
+        inpsDict = auto_path.get_auto_path(processor=inpsDict['processor'],
+                                           project_name=inpsDict['PROJECT_NAME'],
+                                           template=inpsDict)
     return inpsDict
 
 
@@ -185,7 +202,7 @@ def read_subset_box(inpsDict):
     # Read subset info from template
     inpsDict['box'] = None
     inpsDict['box4geo_lut'] = None
-    pix_box, geo_box = subset.read_subset_template2box(inpsDict['template_file'])
+    pix_box, geo_box = subset.read_subset_template2box(inpsDict['template_file'][0])
 
     # Grab required info to read input geo_box into pix_box
     try:
@@ -219,13 +236,10 @@ def read_subset_box(inpsDict):
         return inpsDict
 
     # geo_box --> pix_box
+    coord = ut.coordinate(atr, lookup_file=lookupFile)
     if geo_box is not None:
-        if geocoded:
-            pix_box = (0, 0, 0, 0)
-            pix_box[0:3:2] = ut.coord_geo2radar(geo_box[0:3:2], atr, 'lon')
-            pix_box[1:4:2] = ut.coord_geo2radar(geo_box[1:4:2], atr, 'lat')
-        else:
-            pix_box = subset.bbox_geo2radar(geo_box, atr, lookupFile)
+        pix_box = coord.bbox_geo2radar(geo_box)
+        pix_box = coord.check_box_within_data_coverage(pix_box)
         print('input bounding box of interest in lalo: {}'.format(geo_box))
     print('box to read for datasets in y/x: {}'.format(pix_box))
 
@@ -234,8 +248,8 @@ def read_subset_box(inpsDict):
     if lookupFile is not None:
         atrLut = readfile.read_attribute(lookupFile[0])
         if not geocoded and 'Y_FIRST' in atrLut.keys():
-            geo_box = subset.bbox_radar2geo(pix_box, atr, lookupFile)
-            box4geo_lut = subset.bbox_geo2radar(geo_box, atrLut)
+            geo_box = coord.bbox_radar2geo(pix_box)
+            box4geo_lut = ut.coordinate(atrLut).bbox_geo2radar(geo_box)
             print('box to read for geocoded lookup file in y/x: {}'.format(box4geo_lut))
 
     inpsDict['box'] = pix_box
@@ -264,23 +278,24 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
                                                    width=maxDigit,
                                                    path=inpsDict[key]))
 
-    # Check required dataset
-    dsName0 = ifgramDatasetNames[0]
+    # Check 1: required dataset
+    dsName0 = 'unwrapPhase'
     if dsName0 not in dsPathDict.keys():
         print('WARNING: No reqired {} data files found!'.format(dsName0))
         return None
 
-    # Check number of files for all dataset types
+    # Check 2: number of files for all dataset types
+    for key, value in dsNumDict.items():
+        print('number of {:<{width}}: {num}'.format(key, width=maxDigit, num=value))
+
     dsNumList = list(dsNumDict.values())
     if any(i != dsNumList[0] for i in dsNumList):
-        print('WARNING: Not all types of dataset have the same number of files:')
-        for key, value in dsNumDict.items():
-            print('number of {:<{width}}: {num}'.format(key,
-                                                        width=maxDigit,
-                                                        num=value))
-    print('number of files per type: {}'.format(dsNumList[0]))
+        msg = 'WARNING: NOT all types of dataset have the same number of files.'
+        msg += ' -> skip interferograms with missing files and continue.'
+        print(msg)
+        #raise Exception(msg)
 
-    # Check data dimension for all files
+    # Check 3: data dimension for all files
 
     # dsPathDict --> pairsDict --> stackObj
     dsNameList = list(dsPathDict.keys())
@@ -297,7 +312,7 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
         ifgramPathDict = {}
         for i in range(len(dsNameList)):
             dsName = dsNameList[i]
-            dsPath1 = dsPathDict[dsName][i]
+            dsPath1 = dsPathDict[dsName][0]
             if all(d[2:8] in dsPath1 for d in dates):
                 ifgramPathDict[dsName] = dsPath1
             else:
@@ -362,11 +377,10 @@ def read_inps_dict2geometry_dict_object(inpsDict):
     dsName0 = geometryDatasetNames[0]
     if dsName0 not in dsPathDict.keys():
         print('WARNING: No reqired {} data files found!'.format(dsName0))
-        # sys.exit(1)
 
     # metadata
     ifgramRadarMetadata = None
-    ifgramKey = datasetName2templateKey[ifgramDatasetNames[0]]
+    ifgramKey = datasetName2templateKey['unwrapPhase']
     if ifgramKey in inpsDict.keys():
         ifgramFiles = glob.glob(str(inpsDict[ifgramKey]))
         if len(ifgramFiles) > 0:
@@ -405,44 +419,61 @@ def update_object(outFile, inObj, box, updateMode=True):
     """Do not write h5 file if: 1) h5 exists and readable,
                                 2) it contains all date12 from ifgramStackDict,
                                             or all datasets from geometryDict"""
-    updateFile = True
-    if updateMode and not ut.update_file(outFile, check_readable=True):
+    write_flag = True
+    if updateMode and ut.run_or_skip(outFile, check_readable=True) == 'skip':
         if inObj.name == 'ifgramStack':
+            in_size = inObj.get_size(box=box)[1:]
+            in_date12_list = inObj.get_date12_list()
+
             outObj = ifgramStack(outFile)
-            if (outObj.get_size() == inObj.get_size(box=box) 
-                    and sorted(outObj.get_date12_list(dropIfgram=False)) == sorted(inObj.get_date12_list())):
+            out_size = outObj.get_size()[1:]
+            out_date12_list = outObj.get_date12_list(dropIfgram=False)
+
+            if out_size == in_size and set(in_date12_list).issubset(set(out_date12_list)):
                 print(('All date12   exists in file {} with same size as required,'
-                       ' no need to re-load.'.format(outFile)))
-                updateFile = False
+                       ' no need to re-load.'.format(os.path.basename(outFile))))
+                write_flag = False
 
         elif inObj.name == 'geometry':
             outObj = geometry(outFile)
             outObj.open(print_msg=False)
             if (outObj.get_size() == inObj.get_size(box=box)
                     and all(i in outObj.datasetNames for i in inObj.get_dataset_list())):
-                print(('All datasets exists in file{} with same size as required,'
-                       ' no need to re-load.'.format(outFile)))
-                updateFile = False
-    return updateFile
+                print(('All datasets exists in file {} with same size as required,'
+                       ' no need to re-load.'.format(os.path.basename(outFile))))
+                write_flag = False
+    return write_flag
 
 
 def prepare_metadata(inpsDict):
-    prepCmd0 = None
-    if inpsDict['processor'] == 'gamma':
-        prepCmd0 = 'prep_gamma.py'
-    elif inpsDict['processor'] == 'roipac':
-        prepCmd0 = 'prep_roipac.py'
+    processor = inpsDict['processor']
+    script_name = 'prep_{}.py'.format(processor)
+    print('-'*50)
+    print('prepare metadata files for {} products for PySAR'.format(processor))
 
-    if prepCmd0:
-        print('-'*50)
-        print(('prepare metadata files for {} products before loading'
-               ' into PySAR'.format(inpsDict['processor'])))
+    if processor in ['gamma', 'roipac']:
         for key in inpsDict.keys():
             if (key.startswith('pysar.load.') and key.endswith('File')
                     and len(glob.glob(str(inpsDict[key]))) > 0):
-                prepCmd = '{} {}'.format(prepCmd0, inpsDict[key])
-                print(prepCmd)
-                os.system(prepCmd)
+                cmd = '{} {}'.format(script_name, inpsDict[key])
+                print(cmd)
+                os.system(cmd)
+
+    elif processor == 'isce':
+        ifgram_dir = os.path.dirname(os.path.dirname(inpsDict['pysar.load.unwFile']))
+        try:
+            meta_file = sorted(glob.glob(inpsDict['pysar.load.metaFile']))[0]
+            baseline_dir = inpsDict['pysar.load.baselineDir']
+            geom_dir = os.path.dirname(inpsDict['pysar.load.demFile'])
+            cmd = '{s} -i {i} -m {m} -b {b} -g {g}'.format(s=script_name,
+                                                           i=ifgram_dir,
+                                                           m=meta_file,
+                                                           b=baseline_dir,
+                                                           g=geom_dir)
+            print(cmd)
+            os.system(cmd)
+        except:
+            pass
     return
 
 
@@ -454,7 +485,6 @@ def print_write_setting(inpsDict):
     print('compression: {}'.format(comp))
     box = inpsDict['box']
     boxGeo = inpsDict['box4geo_lut']
-
     return updateMode, comp, box, boxGeo
 
 
@@ -464,27 +494,36 @@ def get_extra_metadata(inpsDict):
     for key in ['PROJECT_NAME', 'PLATFORM']:
         if inpsDict[key]:
             extraDict[key] = inpsDict[key]
+    for key in ['SUBSET_XMIN', 'SUBSET_YMIN']:
+        if key in inpsDict.keys():
+            extraDict[key] = inpsDict[key]
     return extraDict
 
 
 #################################################################
 def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-    if not os.path.isdir(inps.outdir):
-        os.makedirs(inps.outdir)
-        print('create directory: {}'.format(inps.outdir))
+    inps = cmd_line_parse(iargs)        
 
+    # read input options
     inpsDict = read_inps2dict(inps)
-    inpsDict = read_subset_box(inpsDict)
     prepare_metadata(inpsDict)
 
+    inpsDict = read_subset_box(inpsDict)
+    extraDict = get_extra_metadata(inpsDict)
+
+    # initiate objects
     stackObj = read_inps_dict2ifgram_stack_dict_object(inpsDict)
     geomRadarObj, geomGeoObj = read_inps_dict2geometry_dict_object(inpsDict)
 
+    # prepare wirte
     updateMode, comp, box, boxGeo = print_write_setting(inpsDict)
+    if any([stackObj, geomRadarObj, geomGeoObj]) and not os.path.isdir(inps.outdir):
+        os.makedirs(inps.outdir)
+        print('create directory: {}'.format(inps.outdir))
+
+    # write
     if stackObj and update_object(inps.outfile[0], stackObj, box, updateMode=updateMode):
         print('-'*50)
-        extraDict = get_extra_metadata(inpsDict)
         stackObj.write2hdf5(outputFile=inps.outfile[0],
                             access_mode='w',
                             box=box,
@@ -496,14 +535,15 @@ def main(iargs=None):
         geomRadarObj.write2hdf5(outputFile=inps.outfile[1],
                                 access_mode='w',
                                 box=box,
-                                compression=comp)
+                                compression='gzip',
+                                extra_metadata=extraDict)
 
     if geomGeoObj and update_object(inps.outfile[2], geomGeoObj, boxGeo, updateMode=updateMode):
         print('-'*50)
         geomGeoObj.write2hdf5(outputFile=inps.outfile[2],
                               access_mode='w',
                               box=boxGeo,
-                              compression=comp)
+                              compression='gzip')
 
     return inps.outfile
 

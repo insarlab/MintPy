@@ -1,13 +1,16 @@
-#!/usr/bin/env python3
-
-# Independent utility scripts:
+## Sub-module dependency graph:
+## Check pysar/__init__.py for more comprehensiave graph
+# Level 0 modules:
+# /solvers
+#     l1
+#     l1regls
+#     lstl1
 # ptime
-# readfile
-# writefile
-# sensor
-#
-# Dependent utility scripts:
-# network, deramp
-# utils
-# plot
+# utils0
+# Level 1 modules:
+# variance  (utils/ptime)
+# readfile  (objects/*)
+# writefile (objects/*, utils/readfile)
+# network   (objects/*, utils/readfile)
+# utils1    (objects/*, utils/writefile)
 #

@@ -13,7 +13,7 @@ import argparse
 import datetime as dt
 import h5py
 import numpy as np
-from pysar.objects import timeseries, geometry, HDFEOS
+from pysar.objects import timeseries, geometry, HDFEOS, sensor
 from pysar.utils import readfile
 from pysar import info
 
@@ -33,8 +33,7 @@ pysar.save.hdfEos5.subset  = auto   #[yes / no], auto for no, put subset range i
 """
 
 EXAMPLE = """example:
-  save_hdfeos5.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5
-                  -g geo_geometryRadar.h5
+  save_hdfeos5.py geo_timeseries_ECMWF_ramp_demErr.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
 """
 
 
@@ -44,16 +43,13 @@ def create_parser():
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
                                      epilog=EXAMPLE)
 
-    parser.add_argument('timeseries_file',
-                        default='timeseries.h5', help='Timeseries file')
-    parser.add_argument('-t', '--template',
-                        dest='template_file', help='Template file')
+    parser.add_argument('timeseries_file', default='timeseries.h5', help='Timeseries file')
+    parser.add_argument('-t', '--template', dest='template_file', help='Template file')
 
-    parser.add_argument('-c', '--coherence', dest='coherence_file',
-                        help='Coherence/correlation file, i.e. spatial_coherence.h5, temporal_coherence.h5')
-    parser.add_argument('-m', '--mask', dest='mask_file', help='Mask file')
-    parser.add_argument('-g', '--geometry',
-                        dest='geom_file', help='geometry file')
+    parser.add_argument('-c', '--coherence', dest='coherence_file', required=True, 
+                        help='Coherence/correlation file, i.e. avgSpatialCoh.h5, temporalCoherence.h5')
+    parser.add_argument('-m', '--mask', dest='mask_file', required=True, help='Mask file')
+    parser.add_argument('-g', '--geometry', dest='geom_file', required=True, help='geometry file')
 
     parser.add_argument('--update', action='store_true',
                         help='Enable update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year')
@@ -69,62 +65,15 @@ def cmd_line_parse(iargs=None):
 
 
 ################################################################
-def get_mission_name(meta_dict):
-    """Get mission name in UNAVCO InSAR Archive format from attribute mission/PLATFORM
-    Input:  meta_dict : dict, attributes
-    Output: mission   : str, mission name in standard UNAVCO format.
-    """
-    mission = None
-
-    if 'mission' in meta_dict.keys():
-        value = meta_dict['mission'].lower()
-    elif 'PLATFORM' in meta_dict.keys():
-        value = meta_dict['PLATFORM'].lower()
-    else:
-        print('No PLATFORM nor mission attribute found, can not identify mission name.')
-        print('return None')
-        return mission
-
-    # Convert to UNAVCO Mission name
-    ## ERS, ENV, S1, RS1, RS2, CSK, TSX, JERS, ALOS, ALOS2
-    if value.startswith('ers'):
-        mission = 'ERS'
-    elif value.startswith(('env', 'asar')):
-        mission = 'ENV'
-    elif value.startswith(('s1', 'sen')):
-        mission = 'S1'
-    elif value.startswith(('rs', 'rsat', 'radarsat')):
-        mission = 'RS'
-        if value.endswith('1'):
-            mission += '1'
-        else:
-            mission += '2'
-    elif value.startswith(('csk', 'cos')):
-        mission = 'CSK'
-    elif value.startswith(('tsx', 'tdx', 'terra', 'tandem')):
-        mission = 'TSX'
-    elif value.startswith('jers'):
-        mission = 'JERS'
-    elif value.startswith(('alos', 'palsar')):
-        if value.endswith('2'):
-            mission = 'ALOS2'
-        else:
-            mission = 'ALOS'
-    else:
-        print('Un-recognized PLATFORM attribute: '+value)
-        print('return None')
-    return mission
-
-
 def metadata_pysar2unavco(pysar_meta_dict_in, dateList):
     # Extract UNAVCO format metadata from PySAR attributes dictionary and dateList
     pysar_meta_dict = {}
     for key in pysar_meta_dict_in.keys():
         pysar_meta_dict[key] = pysar_meta_dict_in[key]
-        if 'unavco.' in key:
-            pysar_meta_dict[key.split('unavco.')[1]] = pysar_meta_dict_in[key]
-        if 'hdfEos5.' in key:
-            pysar_meta_dict[key.split('hdfEos5.')[1]] = pysar_meta_dict_in[key]
+        for prefix in ['unavco.', 'hdfeos5.']:
+            if prefix in key.lower():
+                key2 = key.lower().split(prefix)[1]
+                pysar_meta_dict[key2] = pysar_meta_dict_in[key]
 
     unavco_meta_dict = dict()
     #################################
@@ -134,7 +83,7 @@ def metadata_pysar2unavco(pysar_meta_dict_in, dateList):
     # mission
     # ERS,ENV,S1,RS1,RS2,CSK,TSX,JERS,ALOS,ALOS2
     try:
-        unavco_meta_dict['mission'] = get_mission_name(pysar_meta_dict)
+        unavco_meta_dict['mission'] = sensor.get_unavco_mission_name(pysar_meta_dict)
     except ValueError:
         print('Missing required attribute: mission')
 
@@ -266,7 +215,7 @@ def prep_metadata(ts_file, print_msg=True):
 
 
 def get_output_filename(metadata, update_mode=False, subset_mode=False):
-    """Get output file name of HDF-EOS5 time series file"""
+    """Get output file name of HDF-EOS5 time-series file"""
     SAT = metadata['mission']
     SW = metadata['beam_mode']
     if metadata['beam_swath']:
@@ -438,7 +387,7 @@ def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
 
     # Write Geometry
     # Required: height, incidenceAngle
-    # Optional: rangeCoord, azimuthCoord, headingAngle, slantRangeDistance, waterMask, shadowMask
+    # Optional: rangeCoord, azimuthCoord, azimuthAngle, slantRangeDistance, waterMask, shadowMask
     gName = 'HDFEOS/GRIDS/timeseries/geometry'
     print('create group   /{}'.format(gName))
     group = f.create_group(gName)
@@ -468,7 +417,7 @@ def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
             dset.attrs['Units'] = 'meters'
 
         elif dsName in ['incidenceAngle',
-                        'headingAngle',
+                        'azimuthAngle',
                         'latitude',
                         'longitude']:
             dset.attrs['MissingValue'] = FLOAT_ZERO
