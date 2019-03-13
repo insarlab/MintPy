@@ -19,7 +19,3 @@ chmod +x run_unPackALOS
 stackStripMap.py -s SLC/ -d DEM/gsi*.dem -t 1800 -b 1800 -a 20 -r 4 -u snaphu -W interferogram -m 20080212 --filter_strength 0.5
 submit_run_files4stripmap_stack.py ./run_files -e $NOTIFICATIONEMAIL
 
-# prepare multilooked geometry
-cp $PYSAR_HOME/sh/run_multilook_geometry
-./run_multilook_geometry
-

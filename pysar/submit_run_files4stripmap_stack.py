@@ -3,8 +3,11 @@
 
 import os
 import time
+import glob
+import shutil
 import argparse
 import subprocess
+from pysar.utils import readfile
 
 
 #####################################################################################
@@ -29,24 +32,27 @@ def create_parser():
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
-    parser.add_argument('run_file_dir', help='directory of run_files')
-
-    bsub = parser.add_argument_group('bsub option','')
-    bsub.add_argument('--bsub', action='store_true', help='submit this script as a job to generic queue.')
-    bsub.add_argument('-r','--memory', type=int, default=1000, help='memory for bsub. Default: 1000')
-    bsub.add_argument('-w','--walltime', type=str, default='5:00', help='wall time for bsub. Default: 5:00')
-    bsub.add_argument('-e','--email', dest='email', help='email address to send notification when all jobs finished.')
+    parser.add_argument('--bsub', action='store_true', help='submit this script as a job to generic queue.')
+    parser.add_argument('-r','--memory', type=int, default=2000, help='memory for bsub. Default: 2000')
+    parser.add_argument('-w','--walltime', type=str, default='5:00', help='wall time for bsub. Default: 5:00')
+    parser.add_argument('-e','--email', dest='email', help='email address to send notification when all jobs finished.')
     return parser
 
 
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    if any(not os.path.isdir(i) for i in ['configs', 'run_files']):
+        msg = 'ERROR: NO configs or run_files folder found in the current directory!'
+        raise SystemExit(msg)
     return inps
 
 
 #####################################################################################
-def run_job_submission4run_files():
+def run_job_submission4run_files(run_file_dir='./run_files'):
+    cwd = os.getcwd()
+    os.chdir(run_file_dir)
     for run_file in sorted(cDict.keys()):
         config = cDict[run_file]
         cmd = 'split_jobs.py {f} -r {r} -w {w}'.format(f=run_file,
@@ -56,17 +62,33 @@ def run_job_submission4run_files():
         status = subprocess.Popen(cmd, shell=True).wait()
         if status is not 0:
             raise RuntimeError("Error in step {}".format(run_file))
+    os.chdir(cwd)
     return status
 
+
+def get_multilook_number():
+    config_igram_file = glob.glob(os.path.join(os.getcwd(), 'configs/config_igram_*'))[0]
+    config = readfile.read_template(config_igram_file, delimiter=':')
+    return config['alks'], config['rlks']
+
+
+def multilook_geometry():
+    print('copy run_multilook_geometry file to the current directory')
+    run_file = os.path.expandvars('${PYSAR_HOME}/sh/run_multilook_geometry')
+    shutil.copy2(run_file, os.getcwd())
+
+    alks, rlks = get_multilook_number()
+
+    cmd = './{} {} {}'.format(run_file, alks, rlks)
+    print(cmd)
+    os.system(cmd)
+    return
 
 
 #####################################################################################
 def main(iargs=None):
     inps = cmd_line_parse()
     start_time = time.time()
-
-    os.chdir(inps.run_file_dir)
-    print('Go to directory', inps.run_file_dir)
 
     if not inps.bsub:
         run_job_submission4run_files()
@@ -75,7 +97,7 @@ def main(iargs=None):
         # write run_stripmap_stack
         run_file = 'run_stripmap_stack'
         with open(run_file, 'w') as f:
-            f.write('submit_stripmap_stack.py {}\n'.format(inps.run_file_dir))
+            f.write('submit_stripmap_stack.py\n')
         cmd = 'chmod +x {}'.format(run_file)
         print(cmd)
         os.system(cmd)
@@ -86,6 +108,10 @@ def main(iargs=None):
             cmd += ' -e {}'.format(inps.email)
         print(cmd)
         os.system(cmd)
+
+    # prepare multilooked geometry
+    print('-'*50)
+    multilook_geometry()
 
     # Timing
     m, s = divmod(time.time()-start_time, 60)
