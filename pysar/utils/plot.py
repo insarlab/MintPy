@@ -946,8 +946,8 @@ def auto_flip_direction(metadata, ax=None, print_msg=True):
         else:
             flip_lr = True
             msg += ' -> flip left-right'
-    if print_msg:
-        print(msg)
+        if print_msg:
+            print(msg)
 
     if ax is not None:
         if flip_lr:
