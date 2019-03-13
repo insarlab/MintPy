@@ -322,8 +322,7 @@ def correct_dem_error(inps, A_def):
                           " Reduce it!").format(inps.polyOrder, np.sum(drop_date)))
 
     # Read time-series Data
-    print('reading time-series data ...')
-    ts_data = ts_obj.read().reshape((num_date, -1))
+    ts_data = ts_obj.read(print_msg=True).reshape((num_date, -1))
 
     ##-------------------------------- Loop for L2-norm inversion  --------------------------------##
     print('inverting DEM error ...')

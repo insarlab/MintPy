@@ -939,23 +939,21 @@ def auto_flip_direction(metadata, ax=None, print_msg=True):
 
     # auto flip for file in radar coordinates
     if 'Y_FIRST' not in metadata.keys() and 'ORBIT_DIRECTION' in metadata.keys():
-        if print_msg:
-            print('{} orbit'.format(metadata['ORBIT_DIRECTION']))
+        msg = '{} orbit'.format(metadata['ORBIT_DIRECTION'])
         if metadata['ORBIT_DIRECTION'].lower().startswith('a'):
             flip_ud = True
+            msg += ' -> flip up-down'
         else:
             flip_lr = True
+            msg += ' -> flip left-right'
+        if print_msg:
+            print(msg)
 
     if ax is not None:
         if flip_lr:
             ax.invert_xaxis()
-            if print_msg:
-                print('flip figure left and right')
-
         if flip_ud:
             ax.invert_yaxis()
-            if print_msg:
-                print('flip figure up and down')
         return ax
 
     return flip_lr, flip_ud

@@ -56,10 +56,11 @@ through the step immediately preceding the starting step of the current run.
 
 EXAMPLE = """example:
   pysarApp.py                         #run with default template 'pysarApp_template.txt'
-  pysarApp.py <custom_template_file>  #run with default and custom templates
+  pysarApp.py <custom_template>       #run with default and custom templates
   pysarApp.py -h / --help             #help
-  pysarApp.py -g                      #generate default template (if it does not exist)
   pysarApp.py -H                      #print    default template options
+  pysarApp.py -g                      #generate default template if it does not exist
+  pysarApp.py -g <custom_template>    #generate/update default template based on custom template
 
   # Run with --start/stop/dostep options
   pysarApp.py GalapagosSenDT128.template --dostep velocity  #run at step 'velocity' only
@@ -112,15 +113,6 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     template_file = os.path.join(os.path.dirname(__file__), 'defaults/pysarApp_template.txt')
-    # generate default template
-    if inps.generate_template:
-        dest_file = os.path.join(os.getcwd(), os.path.basename(template_file))
-        if not os.path.isfile(dest_file):
-            print('copy default template file {} to the current directory'.format(template_file))
-            shutil.copy2(template_file, os.getcwd())
-        else:
-            print('default template file exists in current directory: {}, skip.'.format(dest_file))
-        raise SystemExit()
 
     # print default template
     if inps.print_template:
@@ -169,14 +161,21 @@ def cmd_line_parse(iargs=None):
         raise ValueError(msg)
     inps.runSteps = STEP_LIST[idx0:idx1+1]
 
-    # message
-    if len(inps.runSteps) == 1:
+    # empty the step list for -g option
+    if inps.generate_template:
+        inps.runSteps = []
+
+    # message - software version
+    if len(inps.runSteps) <= 1:
         print(version.description)
     else:
         print(version.logo)
-    print('Run routine processing with {} on steps: {}'.format(os.path.basename(__file__), inps.runSteps))
-    if len(inps.runSteps) == 1:
-        print('Remaining steps: {}'.format(STEP_LIST[idx0+1:]))
+
+    # mssage - processing steps
+    if len(inps.runSteps) > 0:
+        print('Run routine processing with {} on steps: {}'.format(os.path.basename(__file__), inps.runSteps))
+        if len(inps.runSteps) == 1:
+            print('Remaining steps: {}'.format(STEP_LIST[idx0+1:]))
 
     if inps.doStep:
         inps.plot = False
@@ -335,7 +334,7 @@ class TimeSeriesAnalysis:
         os.chdir(self.workDir)
 
         # 3) check loading result
-        load_complete, stack_file = ut.check_loaded_dataset(self.workDir, print_msg=True)[0:2]
+        load_complete, stack_file, geom_file = ut.check_loaded_dataset(self.workDir, print_msg=True)[0:3]
         if load_complete:
             status = 0
         else:
@@ -343,11 +342,14 @@ class TimeSeriesAnalysis:
 
         # 4) add custom metadata (optional)
         if self.customTemplateFile:
-            print('updating {} metadata based on custom template file: {}'.format(
-                os.path.basename(stack_file), self.customTemplateFile))
+            print('updating {}, {} metadata based on custom template file: {}'.format(
+                os.path.basename(stack_file),
+                os.path.basename(geom_file),
+                os.path.basename(self.customTemplateFile)))
             # use ut.add_attribute() instead of add_attribute.py because of
             # better control of special metadata, such as SUBSET_X/YMIN
             ut.add_attribute(stack_file, self.customTemplate)
+            ut.add_attribute(geom_file, self.customTemplate)
         return status
 
 
@@ -1040,7 +1042,8 @@ def main(iargs=None):
 
     app = TimeSeriesAnalysis(inps.customTemplateFile, inps.workDir)
     app.startup()
-    app.run(steps=inps.runSteps, plot=inps.plot)
+    if len(inps.runSteps) > 0:
+        app.run(steps=inps.runSteps, plot=inps.plot)
 
     # Timing
     m, s = divmod(time.time()-start_time, 60)

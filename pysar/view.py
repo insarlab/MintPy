@@ -366,7 +366,7 @@ def update_data_with_plot_inps(data, metadata, inps):
 
     # 1.6 Min / Max - Data/Display
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
-    if not inps.vlim:
+    if not inps.vlim: # and data.ndim < 3:
         inps.vlim = [np.nanmin(data), np.nanmax(data)]
     vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
     vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
@@ -394,15 +394,12 @@ def plot_slice(ax, data, metadata, inps=None):
     global vprint
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
-    #----------------------- 0. Initial a inps Namespace if no inps input --------------------#
+    #---------------------------  Initial a inps Namespace if no inps input -----------------------#
     if not inps:
         inps = cmd_line_parse([''])
         inps = update_inps_with_file_metadata(inps, metadata)
 
-    #----------------------- 1. Update plot inps/data with data matrix -----------------------#
-    #data, inps = update_data_with_plot_inps(data, metadata, inps)
-
-    # 1.7 DEM 
+    # read DEM 
     if inps.dem_file:
         dem, dem_metadata, dem_pix_box = pp.read_dem(inps.dem_file,
                                                      pix_box=inps.pix_box,
@@ -411,7 +408,7 @@ def plot_slice(ax, data, metadata, inps=None):
 
     vprint('display data in transparency: '+str(inps.transparency))
 
-    #-------------------- 2.1 Plot in Geo-coordinate using Basemap --------------------------------#
+    #----------------------- Plot in Geo-coordinate using Basemap --------------------------------#
     num_row, num_col = data.shape
     if inps.geo_box and inps.fig_coord == 'geo':
         # Map Setup
@@ -533,7 +530,8 @@ def plot_slice(ax, data, metadata, inps=None):
             return msg
         ax.format_coord = format_coord
 
-    #-------------------- 2.2 Plot in Y/X-coordinate ------------------------------------------------#
+
+    #------------------------ Plot in Y/X-coordinate ------------------------------------------------#
     else:
         inps.fig_coord = 'radar'
         vprint('plotting in Y/X coordinate ...')
@@ -588,7 +586,8 @@ def plot_slice(ax, data, metadata, inps=None):
             return msg
         ax.format_coord = format_coord
 
-    #-------------------- 3 Figure Setting --------------------------------------------------------#
+
+    #---------------------- Figure Setting ----------------------------------------#
     # 3.1 Colorbar
     cbar = None
     if inps.disp_cbar:
@@ -885,8 +884,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
                                  print_msg=False)[0]
         data -= ref_data
 
-    # v/dlim, adjust data if all subplots are the same type
-    #metadata = readfile.read_attribute(inps.file)
+    # v/dlim, adjust data if all subplots are 1) the same type OR 2) velocity or timeseries
     if len(inps.dsetFamilyList) == 1 or inps.key in ['velocity', 'timeseries']:
         data, inps = update_data_with_plot_inps(data, metadata, inps)
         if (not inps.vlim 
