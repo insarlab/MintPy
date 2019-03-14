@@ -20,10 +20,11 @@ PySAR reads a stack of interferograms (unwrapped interferograms, coherence, wrap
    
 ```cfg
 pysarApp.py                         #run with default template 'pysarApp_template.txt'
-pysarApp.py <custom_template_file>  #run with default and custom templates
+pysarApp.py <custom_template>       #run with default and custom templates
 pysarApp.py -h / --help             #help
-pysarApp.py -g                      #generate default template (if it does not exist)
 pysarApp.py -H                      #print    default template options
+pysarApp.py -g                      #generate default template if it does not exist
+pysarApp.py -g <custom_template>    #generate/update default template based on custom template
 
 # Run with --start/stop/dostep options
 pysarApp.py GalapagosSenDT128.template --dostep velocity  #run at step 'velocity' only
