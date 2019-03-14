@@ -50,7 +50,9 @@ def cmd_line_parse(iargs=None):
 
 
 #####################################################################################
-def run_job_submission4run_files():
+def run_job_submission4run_files(run_file_dir='./run_files'):
+    cwd = os.getcwd()
+    os.chdir(run_file_dir)
     for run_file in sorted(cDict.keys()):
         config = cDict[run_file]
         cmd = 'split_jobs.py {f} -r {r} -w {w}'.format(f=run_file,
@@ -60,6 +62,7 @@ def run_job_submission4run_files():
         status = subprocess.Popen(cmd, shell=True).wait()
         if status is not 0:
             raise RuntimeError("Error in step {}".format(run_file))
+    os.chdir(cwd)
     return status
 
 
@@ -87,9 +90,6 @@ def main(iargs=None):
     inps = cmd_line_parse()
     start_time = time.time()
 
-    os.chdir(inps.run_file_dir)
-    print('Go to directory', inps.run_file_dir)
-
     if not inps.bsub:
         run_job_submission4run_files()
     else:
@@ -97,7 +97,7 @@ def main(iargs=None):
         # write run_stripmap_stack
         run_file = 'run_stripmap_stack'
         with open(run_file, 'w') as f:
-            f.write('submit_stripmap_stack.py {}\n'.format(inps.run_file_dir))
+            f.write('submit_stripmap_stack.py\n')
         cmd = 'chmod +x {}'.format(run_file)
         print(cmd)
         os.system(cmd)
