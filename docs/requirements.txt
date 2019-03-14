@@ -5,7 +5,7 @@ h5py
 joblib
 lxml
 matplotlib
-netcdf
+netcdf4
 numpy
 openmp
 pyaps
