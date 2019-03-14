@@ -660,11 +660,11 @@ class TimeSeriesAnalysis:
 
             # Phase/Elevation Ratio (Doin et al., 2009)
             if method == 'height_correlation':
-                cmd = 'tropcor_phase_elevation.py {f} -g {g} -p {p} -m {m} -o {o}'.format(f=in_file,
-                                                                                          g=geom_file,
-                                                                                          p=poly_order,
-                                                                                          m=mask_file,
-                                                                                          o=out_file)
+                cmd = 'tropo_phase_elevation.py {f} -g {g} -p {p} -m {m} -o {o}'.format(f=in_file,
+                                                                                        g=geom_file,
+                                                                                        p=poly_order,
+                                                                                        m=mask_file,
+                                                                                        o=out_file)
                 print('tropospheric delay correction with height-correlation approach')
                 print(cmd)
                 if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
@@ -672,10 +672,10 @@ class TimeSeriesAnalysis:
 
             # Weather Re-analysis Data (Jolivet et al., 2011;2014)
             elif method == 'pyaps':
-                cmd = 'tropcor_pyaps.py -f {f} --model {m} -g {g} -w {w}'.format(f=in_file,
-                                                                                 m=tropo_model,
-                                                                                 g=geom_file,
-                                                                                 w=weather_dir)
+                cmd = 'tropo_pyaps.py -f {f} --model {m} -g {g} -w {w}'.format(f=in_file,
+                                                                               m=tropo_model,
+                                                                               g=geom_file,
+                                                                               w=weather_dir)
                 print('Atmospheric correction using Weather Re-analysis dataset (PyAPS, Jolivet et al., 2011)')
                 print('Weather Re-analysis dataset:', tropo_model)
                 print(cmd)

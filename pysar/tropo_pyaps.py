@@ -29,14 +29,14 @@ standardWeatherModelNames = {'ERAI': 'ECMWF', 'ERAINT': 'ECMWF', 'ERAINTERIM': '
 ###############################################################
 EXAMPLE = """example:
   # download reanalysys dataset, calculate tropospheric delays and correct time-series file.
-  tropcor_pyaps.py -f timeseries.h5 -m ECMWF -g INPUTS/geometryRadar.h5 -w ~/WEATHER
+  tropo_pyaps.py -f timeseries.h5 -m ECMWF -g INPUTS/geometryRadar.h5 -w ~/WEATHER
 
   # download reanalysys dataset, calculate tropospheric delays
-  tropcor_pyaps.py -d date_list.txt     --hour 12 -m ECMWF -g INPUTS/geometryRadar.h5 --ref-yx 30 40 -w ~/WEATHER
-  tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m MERRA -g INPUTS/geometryRadar.h5 --ref-yx 30 40 -w ~/WEATHER
+  tropo_pyaps.py -d date_list.txt     --hour 12 -m ECMWF -g INPUTS/geometryRadar.h5 --ref-yx 30 40 -w ~/WEATHER
+  tropo_pyaps.py -d 20151002 20151003 --hour 12 -m MERRA -g INPUTS/geometryRadar.h5 --ref-yx 30 40 -w ~/WEATHER
 
   # download reanalysys dataset
-  tropcor_pyaps.py -d date_list.txt     --hour 12 -m ECMWF -w ~/WEATHER
+  tropo_pyaps.py -d date_list.txt     --hour 12 -m ECMWF -w ~/WEATHER
 """
 
 REFERENCE = """reference:
