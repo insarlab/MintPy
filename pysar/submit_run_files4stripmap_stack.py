@@ -94,7 +94,7 @@ def multilook_geometry():
 
     alks, rlks = get_multilook_number()
 
-    cmd = './{} {} {}'.format(run_file, alks, rlks)
+    cmd = './{} {} {}'.format(os.path.basename(run_file), alks, rlks)
     print(cmd)
     os.system(cmd)
     return
@@ -125,8 +125,9 @@ def main(iargs=None):
         os.system(cmd)
 
     # prepare multilooked geometry
-    print('-'*50)
-    multilook_geometry()
+    if os.path.isdir('./merged/geom_master'):
+        print('-'*50)
+        multilook_geometry()
 
     # Timing
     m, s = divmod(time.time()-start_time, 60)
