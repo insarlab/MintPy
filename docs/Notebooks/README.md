@@ -4,10 +4,10 @@ This tutorial walks through the various processing steps of InSAR time series an
 
 ### Contents    
 
-1. Small baseline time series analysis (SBAS) with [PySAR/pysarApp](https://nbviewer.jupyter.org/github/yunjunz/PySAR/blob/Notebook/docs/Notebooks/pysarApp.ipynb)
+1. Small baseline time series analysis (SBAS) with [pysarApp](https://nbviewer.jupyter.org/github/yunjunz/PySAR/blob/Notebook/docs/Notebooks/pysarApp.ipynb)
 
 2. Visualizations
-   - Interactive time-series [not complete]
+   - Interactive time-series with [tsview](https://nbviewer.jupyter.org/github/yunjunz/PySAR/blob/Notebook/docs/Notebooks/tsview.ipynb)
    - Interactive coherence matrix [not complete]
    - Google Earth [not complete]
    
