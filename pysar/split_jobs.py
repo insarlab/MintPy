@@ -108,12 +108,19 @@ def wait4jobs2finish(run_file, num_job):
     num_file = len(glob.glob(file_pattern))
     while num_file < num_job:
         time.sleep(1)           #wait one second
-        if t_sec%60 == 0:       #every minute
-            msg = '# of '
-            if proj_name:
-                msg += '{}/'.format(proj_name)
-            msg += '{} files: {} / {} after {} mins'.format(file_pattern, num_file, num_job, int(t_sec/60))
-            print(msg)
+
+        msg = '# of '
+        if proj_name:
+            msg += '{}/'.format(proj_name)
+        msg += '{} files: {} / {} after {} mins'.format(file_pattern, num_file, num_job, int(t_sec/60))
+
+        if t_sec <= 600:
+            if t_sec % 60 == 0:
+                print(msg)
+        else:
+            if t_sec % 300 == 0:
+                print(msg)
+
         num_file = len(glob.glob(file_pattern))
         t_sec += 1
 

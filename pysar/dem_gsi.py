@@ -45,8 +45,8 @@ def create_parser():
                              '(-180,180) for longitudes.')
     parser.add_argument('-o','--output', dest='outfile', default='gsi10m.dem',
                         help='output file name. Default: gsi10m.dem')
-    parser.add_argument('-g','--grid-dir', dest='grid_dir', default='~/insarlab/GSI_DEM/DEHM10m',
-                        help='Directory of DEHM grib files. Default=~/insarlab/GSI_DEM/DEHM10m')
+    parser.add_argument('-g','--grid-dir', dest='grid_dir', default='/famelung/data/gsi10m',
+                        help='Directory of DEHM grib files. Default=/famelung/data/gsi10m')
     return parser
 
 
