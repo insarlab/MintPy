@@ -25,7 +25,9 @@ num_run_file = len(cDict.keys())
 
 #####################################################################################
 EXAMPLE = """example:
-  submit_run_files4stripmap_stack.py ./run_files -e $NOTIFICATION
+  cd $SCRATCHDIR/KirishimaAlosAT424F620_630
+  submit_run_files4stripmap_stack.py
+  submit_run_files4stripmap_stack.py --start 2 --end 7
 """
 
 def create_parser():
@@ -35,7 +37,7 @@ def create_parser():
 
     parser.add_argument('--start', dest='startNum', type=int, default=1,
                         help='Start submitting at named run number. Default: 1')
-    parser.add_argument('--end', dest='startNum', type=int, default=num_run_file,
+    parser.add_argument('--end', dest='endNum', type=int, default=num_run_file,
                         help='End submitting at named run number. Default: {}'.format(num_run_file))
 
     parser.add_argument('--bsub', action='store_true', help='submit this script as a job to generic queue.')
