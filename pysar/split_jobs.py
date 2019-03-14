@@ -102,8 +102,6 @@ def wait4jobs2finish(run_file, num_job):
 
     proj_name = sensor.project_name2sensor_name(os.getcwd())[1]
 
-    def print_used_time(t_sec):
-
     print('-'*50)
     print('sleeping until {} jobs are done for {}'.format(num_job, job_name))
     t_sec = 0
