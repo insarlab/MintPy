@@ -12,15 +12,16 @@ from pysar.utils import readfile
 
 #####################################################################################
 cDict = {}
-config = {};  config['walltime'] = '1:00';  config['memory'] = '2000';  cDict['run_1_master']               = config
-config = {};  config['walltime'] = '0:30';  config['memory'] = '2000';  cDict['run_2_focus_split']          = config
-config = {};  config['walltime'] = '1:00';  config['memory'] = '5500';  cDict['run_3_geo2rdr_coarseResamp'] = config
-config = {};  config['walltime'] = '1:00';  config['memory'] = '2000';  cDict['run_4_refineSlaveTiming']    = config
-config = {};  config['walltime'] = '0:30';  config['memory'] = '2000';  cDict['run_5_invertMisreg']         = config
-config = {};  config['walltime'] = '0:30';  config['memory'] = '2000';  cDict['run_6_fineResamp']           = config
-config = {};  config['walltime'] = '0:30';  config['memory'] = '2000';  cDict['run_7_grid_baseline']        = config
-config = {};  config['walltime'] = '1:00';  config['memory'] = '6000';  cDict['run_8_igram']                = config
+config = {};  config['walltime'] = '2:00';  config['memory'] = '2000';  cDict['run_1_master']               = config
+config = {};  config['walltime'] = '1:00';  config['memory'] = '2000';  cDict['run_2_focus_split']          = config
+config = {};  config['walltime'] = '2:00';  config['memory'] = '7000';  cDict['run_3_geo2rdr_coarseResamp'] = config
+config = {};  config['walltime'] = '2:00';  config['memory'] = '2000';  cDict['run_4_refineSlaveTiming']    = config
+config = {};  config['walltime'] = '1:00';  config['memory'] = '2000';  cDict['run_5_invertMisreg']         = config
+config = {};  config['walltime'] = '1:00';  config['memory'] = '2000';  cDict['run_6_fineResamp']           = config
+config = {};  config['walltime'] = '1:00';  config['memory'] = '1000';  cDict['run_7_grid_baseline']        = config
+config = {};  config['walltime'] = '2:00';  config['memory'] = '7000';  cDict['run_8_igram']                = config
 
+num_run_file = len(cDict.keys())
 
 #####################################################################################
 EXAMPLE = """example:
@@ -31,6 +32,11 @@ def create_parser():
     parser = argparse.ArgumentParser(description='Submit the run files to jobs for ISCE/stripmapStack',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
+
+    parser.add_argument('--start', dest='startNum', type=int, default=1,
+                        help='Start submitting at named run number. Default: 1')
+    parser.add_argument('--end', dest='startNum', type=int, default=num_run_file,
+                        help='End submitting at named run number. Default: {}'.format(num_run_file))
 
     parser.add_argument('--bsub', action='store_true', help='submit this script as a job to generic queue.')
     parser.add_argument('-r','--memory', type=int, default=2000, help='memory for bsub. Default: 2000')
@@ -50,11 +56,18 @@ def cmd_line_parse(iargs=None):
 
 
 #####################################################################################
-def run_job_submission4run_files(run_file_dir='./run_files'):
+def run_job_submission4run_files(start_num=1, end_num=num_run_file, run_file_dir='./run_files'):
+
+    c_dict = dict()
+    for key, value in cDict.items():
+        num = int(key.split('_')[1])
+        if start_num <= num <= end_num:
+            c_dict[key] = value
+
     cwd = os.getcwd()
     os.chdir(run_file_dir)
-    for run_file in sorted(cDict.keys()):
-        config = cDict[run_file]
+    for run_file in sorted(c_dict.keys()):
+        config = c_dict[run_file]
         cmd = 'split_jobs.py {f} -r {r} -w {w}'.format(f=run_file,
                                                        r=config['memory'],
                                                        w=config['walltime'])
@@ -91,7 +104,7 @@ def main(iargs=None):
     start_time = time.time()
 
     if not inps.bsub:
-        run_job_submission4run_files()
+        run_job_submission4run_files(inps.startNum, inps.endNum)
     else:
         print('bsub option is ON')
         # write run_stripmap_stack
