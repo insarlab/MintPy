@@ -32,24 +32,30 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                 dsDict['velocity'] = np.ones((200,300), dtype=np.float32)
                 write(datasetDict=dsDict, out_file='velocity.h5', metadata=atr)
     """
-    ext = os.path.splitext(out_file)[1].lower()
-    if ref_file and metadata is None:
-        metadata = readfile.read_attribute(ref_file)
+    # copy metadata to meta
+    if metadata:
+        meta = {key: value for key, value in metadata.items()}
+    elif ref_file:
+        meta = readfile.read_attribute(ref_file)
+    else:
+        raise ValueError('No metadata or reference file input.')
 
+    # convert ndarray input into dict type
     if type(datasetDict) is np.ndarray:
         data = np.array(datasetDict, datasetDict.dtype)
         datasetDict = dict()
-        datasetDict[metadata['FILE_TYPE']] = data
+        datasetDict[meta['FILE_TYPE']] = data
 
+    ext = os.path.splitext(out_file)[1].lower()
     # HDF5 File
     if ext in ['.h5', '.he5']:
-        k = metadata['FILE_TYPE']
+        k = meta['FILE_TYPE']
         if k == 'timeseries':
             if ref_file is None:
                 raise Exception('Can not write {} file without reference file!'.format(k))
             obj = timeseries(out_file)
             obj.write2hdf5(datasetDict[k],
-                           metadata=metadata,
+                           metadata=meta,
                            refFile=ref_file,
                            compression=compression)
 
@@ -99,7 +105,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                                              compression=compression)
 
                 # 3. metadata
-                for key, value in metadata.items():
+                for key, value in meta.items():
                     f.attrs[key] = str(value)
                 print('finished writing to {}'.format(out_file))
 
@@ -114,10 +120,10 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
         print('writing {}'.format(out_file))
         if ext in ['.unw', '.cor', '.hgt']:
             write_float32(data_list[0], out_file)
-            metadata['DATA_TYPE'] = 'float32'
+            meta['DATA_TYPE'] = 'float32'
         elif ext == '.dem':
             write_real_int16(data_list[0], out_file)
-            metadata['DATA_TYPE'] = 'int16'
+            meta['DATA_TYPE'] = 'int16'
         elif ext in ['.trans']:
             write_float32(data_list[0], data_list[1], out_file)
         elif ext in ['.utm_to_rdc', '.UTM_TO_RDC']:
@@ -131,18 +137,18 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             write_complex_int16(data_list[0], out_file)
         elif ext == '.int':
             write_complex64(data_list[0], out_file)
-        elif metadata['DATA_TYPE'].lower() in ['float32', 'float']:
+        elif meta['DATA_TYPE'].lower() in ['float32', 'float']:
             write_real_float32(data_list[0], out_file)
-        elif metadata['DATA_TYPE'].lower() in ['int16', 'short']:
+        elif meta['DATA_TYPE'].lower() in ['int16', 'short']:
             write_real_int16(data_list[0], out_file)
-        elif metadata['DATA_TYPE'].lower() in ['byte','bool']:
+        elif meta['DATA_TYPE'].lower() in ['byte','bool']:
             write_byte(data_list[0], out_file)
         else:
             print('Un-supported file type: '+ext)
             return 0
 
-        # Write .rsc File
-        write_roipac_rsc(metadata, out_file+'.rsc', print_msg=True)
+        # write metadata file
+        write_roipac_rsc(meta, out_file+'.rsc', print_msg=True)
     return out_file
 
 

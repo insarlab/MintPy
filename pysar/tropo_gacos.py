@@ -109,10 +109,10 @@ def get_delay(delay_file,atr,lookup_file,cinc):
 
 ###############################################################
 EXAMPLE='''example:
-  tropcor_gacos.py timeseries.h5 -l geomap_*rlks.trans -i incidenceAngle.h5
+  tropo_gacos.py timeseries.h5 -l geomap_*rlks.trans -i incidenceAngle.h5
 '''
 TEMPLATE='''
-pysar.troposphericDelay.method        = GACOS   #[pyaps, height-correlation,GACOS] 
+pysar.troposphericDelay.method        = GACOS   #[pyaps, height_correlation,GACOS] 
 '''
 
 def cmdLineParse():

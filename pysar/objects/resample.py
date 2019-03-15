@@ -14,9 +14,9 @@ except ImportError:
 
 import sys
 import numpy as np
+import multiprocessing
 from scipy import ndimage
 from scipy.interpolate import RegularGridInterpolator as RGI
-import multiprocessing
 from pysar.utils import readfile, ptime, utils0 as ut
 
 

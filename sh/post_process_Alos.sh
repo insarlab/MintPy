@@ -224,7 +224,7 @@ fi
 ts='timeseries_ECMWF_demCor_ref'${ref_date}'_quadratic.h5'
 ##------------ Time Series Correction View -----------------##
 ## MERRA
-#tropcor_pyaps.py -f timeseries.h5 -d radar_4rlks.hgt -s MERRA -h 12:00 -i incidence_angle.h5
+#tropo_pyaps.py -f timeseries.h5 -d radar_4rlks.hgt -s MERRA -h 12:00 -i incidence_angle.h5
 if [ $timeseries_view -eq 1 ]; then
     view='view4job.py -r 3 -p 10 -u cm -m -25 -M 25 --mask '$msk' --noaxis --nodisplay -f'
     #$view timeseries.h5
