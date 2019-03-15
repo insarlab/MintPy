@@ -30,7 +30,7 @@ def create_parser():
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', help='File to be masked')
-    parser.add_argument('-m', '--mask', dest='mask_file',
+    parser.add_argument('-m', '--mask', dest='mask_file', required=True,
                         help='mask for pixels used in ramp estimation')
     parser.add_argument('-o', '--outfile', help='Output file name.')
 
