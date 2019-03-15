@@ -7,6 +7,7 @@
 import os
 import sys
 import subprocess
+import numpy as np
 
 
 test_dir = os.path.expanduser('~/insarlab/test')
@@ -50,7 +51,6 @@ for i in idx:
         print('removing existing project directory')
         print(cmd)
         os.system(cmd)
-    print('uncompressing tar file ...')
     cmd = 'tar -xJf {}'.format(tar_file)
     print(cmd)
     os.system(cmd)

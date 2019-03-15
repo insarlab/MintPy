@@ -20,6 +20,7 @@ EXAMPLE = """example:
   mask.py  ifgramStack.h5  -m 100102_101120.cor     -t 0.9  -y  200 300  -x 300 400
 
   mask.py  filt_20060924_20090214.int -m waterMask.h5 -o filt_20060924_20090214_msk.int
+  mask.py  filt_20060924_20090214.cor -m waterMask.h5 -o filt_20060924_20090214_msk.cor
 """
 
 
@@ -173,6 +174,11 @@ def mask_isce_file(in_file, mask_file, out_file=None, inps=None):
     elif ext == '.int':
         data = np.fromfile(in_file, dtype=data_type, count=length*width).reshape(-1, width)
         data[mask == 0] = np.abs(data[mask == 0])  #set the angle of complex data to zero
+    elif ext == '.cor':
+        data = readfile.read_binary(in_file, data_type=data_type, num_band=num_band, band_interleave=interleave, band=1)[0]
+        data[mask == 0] = 0
+    else:
+        raise ValueError('unsupported ISCE file: {}'.format(in_file))
 
     data.tofile(out_file)
     print('write {}'.format(out_file))
