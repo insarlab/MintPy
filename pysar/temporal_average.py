@@ -103,7 +103,7 @@ def main(iargs=None):
     inps.outfile = ut.temporal_average(inps.file, datasetName=inps.datasetName, outFile=inps.outfile)
 
     m, s = divmod(time.time()-start_time, 60)
-    print('\ntime used: {:02.0f} mins {:02.1f} secs'.format(m, s))
+    print('time used: {:02.0f} mins {:02.1f} secs\n'.format(m, s))
     return inps.outfile
 
 

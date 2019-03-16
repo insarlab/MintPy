@@ -258,11 +258,13 @@ def temporal_average(File, datasetName='coherence', updateMode=False, outFile=No
     For ifgramStakc/unwrapPhase, return average phase velocity
 
     Parameters: File : string, file to be averaged in time
-                outFile : string, output file name
                 datasetName : string, dataset to be read from input file, for multiple
                     datasets file - ifgramStack - only
                     e.g.: coherence, unwrapPhase
-                ignoreNan: bool, ignore NaNs for calculate or not.
+                updateMode : bool
+                outFile : string, output filename
+                    None for auto output filename
+                    False for do not save as output file
     Returns:    dataMean : 2D array
                 outFile : string, output file name
     Examples:   avgPhaseVel = ut.temporal_average('ifgramStack.h5', datasetName='unwrapPhase')[0]
@@ -277,7 +279,7 @@ def temporal_average(File, datasetName='coherence', updateMode=False, outFile=No
         return data, File
 
     # Default output filename
-    if not outFile:
+    if outFile is None:
         ext = os.path.splitext(File)[1]
         if not outFile:
             if k == 'ifgramStack':

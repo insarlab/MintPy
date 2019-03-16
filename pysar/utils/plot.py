@@ -761,10 +761,10 @@ def add_point_argument(parser):
                      help='Point in (Lat, Lon)')
     pts.add_argument('--pts-file', dest='pts_file', type=str,
                      help='Point(s) defined in text file in lat/lon column')
-    pts.add_argument('--pts-marker', dest='pts_marker', type=str, default='ko',
-                     help='Marker of points of interest.')
+    pts.add_argument('--pts-marker', dest='pts_marker', type=str, default='k^',
+                     help='Marker of points of interest. Default: black triangle.')
     pts.add_argument('--pts-ms', dest='pts_marker_size', type=float, default=6.,
-                     help='Marker size for points of interest')
+                     help='Marker size for points of interest. Default: 6.')
     return parser
 
 

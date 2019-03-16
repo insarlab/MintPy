@@ -846,7 +846,7 @@ class TimeSeriesAnalysis:
                 vel_file = os.path.join(self.workDir, 'GEOCODE/geo_velocity.h5')
 
             # output
-            kmz_file = '{}.kmz'.format(os.path.splitext(os.path.basename(vel_file))[0])
+            kmz_file = '{}.kmz'.format(os.path.splitext(vel_file)[0])
             cmd = 'save_kmz.py {} -o {}'.format(vel_file, kmz_file)
             print(cmd)
 
@@ -1047,7 +1047,7 @@ def main(iargs=None):
 
     # Timing
     m, s = divmod(time.time()-start_time, 60)
-    print('\nTotal time: {:02.0f} mins {:02.1f} secs'.format(m, s))
+    print('Total time: {:02.0f} mins {:02.1f} secs'.format(m, s))
     return
 
 

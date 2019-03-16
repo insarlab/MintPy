@@ -8,6 +8,7 @@
 
 import os
 import sys
+import time
 import argparse
 import h5py
 import numpy as np
@@ -206,6 +207,7 @@ def create_threshold_mask(inps):
 
 ################################################################################################
 def main(iargs=None):
+    start_time = time.time()
     inps = cmd_line_parse(iargs)
     atr = readfile.read_attribute(inps.file)
     k = atr['FILE_TYPE']
@@ -245,6 +247,9 @@ def main(iargs=None):
 
     ##### Mask: Threshold
     inps.outfile = create_threshold_mask(inps)
+
+    m, s = divmod(time.time()-start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs\n'.format(m, s))
     return inps.outfile
 
 

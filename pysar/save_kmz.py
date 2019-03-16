@@ -126,7 +126,7 @@ def generate_cbar_element(cbar_png_file, inps):
                                   cmap=inps.colormap)
 
     cbar_overlay = KML.ScreenOverlay(
-        KML.name('Colorbar'),
+        KML.name('colorbar'),
         KML.Icon(
             KML.href("{}".format(cbar_png_file)),
             KML.viewBoundScale(0.75)
@@ -225,14 +225,15 @@ def write_kmz_file(data, metadata, out_file, inps=None):
         doc = KML.kml(KML.Folder(KML.name('PySAR product')))
 
     # Add data png file
-    slc = KML.GroundOverlay(KML.name(data_png_file),
+    img_name = os.path.splitext(os.path.basename(data_png_file))[0]
+    img = KML.GroundOverlay(KML.name(img_name),
                             KML.Icon(KML.href(data_png_file)),
                             KML.altitudeMode('clampToGround'),
                             KML.LatLonBox(KML.north(str(north)),
                                           KML.east(str(east)),
                                           KML.south(str(south)),
                                           KML.west(str(west))))
-    doc.Folder.append(slc)
+    doc.Folder.append(img)
 
     # Add colorbar png file
     cbar_png_file = '{}_cbar.png'.format(out_name_base)
@@ -290,6 +291,7 @@ def main(iargs=None):
                                           inps_dict=vars(inps))
     if not inps.outfile:
         inps.outfile = '{}.kmz'.format(inps.fig_title)
+    inps.outfile = os.path.relpath(inps.outfile)
 
     # 2. Generate Google Earth KMZ
     kmz_file = write_kmz_file(data,

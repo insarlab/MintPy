@@ -494,7 +494,7 @@ def plot_slice(ax, data, metadata, inps=None):
         if inps.pts_lalo is not None:
             ax.plot(inps.pts_lalo[:, 1], inps.pts_lalo[:, 0],
                     inps.pts_marker, ms=inps.pts_marker_size,
-                    markeredgecolor='k', markerfacecolor='none')
+                    mec='k', mew=1.)
             vprint('plot points of interest')
 
         # Show UNR GPS stations
@@ -565,7 +565,7 @@ def plot_slice(ax, data, metadata, inps=None):
         if inps.pts_yx is not None:
             ax.plot(inps.pts_yx[:, 1], inps.pts_yx[:, 0],
                     inps.pts_marker, ms=inps.ref_marker_size,
-                    markeredgecolor='black')
+                    mec='black', mew=1.)
             vprint('plot points of interest')
 
         ax.set_xlim(extent[0:2])
@@ -1223,9 +1223,8 @@ class viewer():
         from pysar.view import viewer
         cmd = 'view.py timeseries.h5'
         obj = viewer(cmd)
-        inps = obj.open()
-        obj.plot(inps)
-        plt.show()
+        obj.configure()
+        obj.plot()
     """
     def __init__(self, cmd=None, iargs=None):
         if cmd:
@@ -1235,101 +1234,104 @@ class viewer():
         return
 
 
-    def open(self):
+    def configure(self):
         inps = cmd_line_parse(self.iargs)
         inps, self.atr = check_input_file_info(inps)
         inps = update_inps_with_file_metadata(inps, self.atr)
 
+        # copy inps to self object
+        for key, value in inps.__dict__.items():
+            setattr(self, key, value)
+
         # read mask
-        inps.msk, inps.mask_file = pp.read_mask(inps.file,
-                                                mask_file=inps.mask_file,
-                                                datasetName=inps.dset[0],
-                                                box=inps.pix_box,
-                                                print_msg=inps.print_msg)
-        return inps
+        self.msk, self.mask_file = pp.read_mask(self.file,
+                                                mask_file=self.mask_file,
+                                                datasetName=self.dset[0],
+                                                box=self.pix_box,
+                                                print_msg=self.print_msg)
+        return
 
 
-    def plot(self, inps):
+    def plot(self):
         # One Subplot
-        if inps.dsetNum == 1:
+        if self.dsetNum == 1:
             vprint('reading data ...')
             # read data
-            data, self.atr = readfile.read(inps.file,
-                                           datasetName=inps.dset[0],
-                                           box=inps.pix_box,
+            data, self.atr = readfile.read(self.file,
+                                           datasetName=self.dset[0],
+                                           box=self.pix_box,
                                            print_msg=False)
             # reference in time
-            if inps.ref_date:
-                data -= readfile.read(inps.file,
-                                      datasetName=inps.ref_date,
-                                      box=inps.pix_box,
+            if self.ref_date:
+                data -= readfile.read(self.file,
+                                      datasetName=self.ref_date,
+                                      box=self.pix_box,
                                       print_msg=False)[0]
             # reference in space for unwrapPhase
-            if (inps.key in ['ifgramStack']
-                    and inps.dset[0].split('-')[0] == 'unwrapPhase'
+            if (self.key in ['ifgramStack']
+                    and self.dset[0].split('-')[0] == 'unwrapPhase'
                     and 'REF_Y' in self.atr.keys()):
                 ref_y, ref_x = int(self.atr['REF_Y']), int(self.atr['REF_X'])
-                ref_data = readfile.read(inps.file,
-                                         datasetName=inps.dset[0],
+                ref_data = readfile.read(self.file,
+                                         datasetName=self.dset[0],
                                          box=(ref_x, ref_y, ref_x+1, ref_y+1),
                                          print_msg=False)[0]
                 data[data != 0.] -= ref_data
             # masking
-            if inps.zero_mask:
+            if self.zero_mask:
                 vprint('masking pixels with zero value')
                 data = np.ma.masked_where(data == 0., data)
-            if inps.msk is not None:
+            if self.msk is not None:
                 vprint('masking data')
-                data = np.ma.masked_where(inps.msk == 0., data)
+                data = np.ma.masked_where(self.msk == 0., data)
             # update data
-            data, inps = update_data_with_plot_inps(data, self.atr, inps)
+            data, self = update_data_with_plot_inps(data, self.atr, self)
 
             # prepare figure
-            fig, ax = plt.subplots(figsize=inps.fig_size, num='Figure')
-            if not inps.disp_whitespace:
+            fig, ax = plt.subplots(figsize=self.fig_size, num='Figure')
+            if not self.disp_whitespace:
                 fig.subplots_adjust(left=0,right=1,bottom=0,top=1)
 
             # plot
-            ax, inps, im, cbar = plot_slice(ax, data, self.atr, inps)
+            ax, self, im, cbar = plot_slice(ax, data, self.atr, self)
 
             # Save figure
-            if inps.save_fig:
-                vprint('save figure to {} with dpi={}'.format(inps.outfile[0], inps.fig_dpi))
-                if not inps.disp_whitespace:
-                    plt.savefig(inps.outfile[0], transparent=True, dpi=inps.fig_dpi, pad_inches=0.0)
+            if self.save_fig:
+                vprint('save figure to {} with dpi={}'.format(self.outfile[0], self.fig_dpi))
+                if not self.disp_whitespace:
+                    plt.savefig(self.outfile[0], transparent=True, dpi=self.fig_dpi, pad_inches=0.0)
                 else:
-                    plt.savefig(inps.outfile[0], transparent=True, dpi=inps.fig_dpi, bbox_inches='tight')
-            return ax, inps, im, cbar
+                    plt.savefig(self.outfile[0], transparent=True, dpi=self.fig_dpi, bbox_inches='tight')
 
         # Multiple Subplots
         else:
             # prepare
-            inps = prepare4multi_subplots(inps, metadata=self.atr)
+            self = prepare4multi_subplots(self, metadata=self.atr)
 
             # plot
-            inps.dlim_all = [0., 0.]
-            for j in range(1, inps.fig_num + 1):
-                plot_figure(j, inps, metadata=self.atr)
+            self.dlim_all = [0., 0.]
+            for j in range(1, self.fig_num + 1):
+                plot_figure(j, self, metadata=self.atr)
 
             # stat
-            if inps.fig_num > 1:
+            if self.fig_num > 1:
                 vprint('----------------------------------------')
-                vprint('all data range: {} {}'.format(inps.dlim_all, inps.disp_unit))
-                if inps.vlim:
-                    vprint('display  range: {} {}'.format(inps.vlim, inps.disp_unit))
+                vprint('all data range: {} {}'.format(self.dlim_all, self.disp_unit))
+                if self.vlim:
+                    vprint('display  range: {} {}'.format(self.vlim, self.disp_unit))
+
+        # Display Figure
+        if self.disp_fig:
+            vprint('showing ...')
+            plt.show()
         return
 
 
 #########################################  Main Function  ########################################
 def main(iargs=None):
     obj = viewer(cmd=iargs)
-    inps = obj.open()
-    obj.plot(inps)
-
-    # Display Figure
-    if inps.disp_fig:
-        vprint('showing ...')
-        plt.show()
+    obj.configure()
+    obj.plot()
     return
 
 

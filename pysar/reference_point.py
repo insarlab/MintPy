@@ -175,7 +175,7 @@ def reference_file(inps):
         return inps.file
 
     # Get stack and mask
-    stack = ut.temporal_average(inps.file, datasetName='unwrapPhase', updateMode=True)[0]
+    stack = ut.temporal_average(inps.file, datasetName='unwrapPhase', updateMode=True, outFile=False)[0]
     mask = np.multiply(~np.isnan(stack), stack != 0.)
     if np.nansum(mask) == 0.0:
         raise ValueError('no pixel found with valid phase value in all datasets.')

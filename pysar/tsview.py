@@ -488,11 +488,10 @@ class timeseriesViewer():
     Example:
         cmd = 'tsview.py timeseries_ECMWF_ramp_demErr.h5'
         obj = timeseriesViewer(cmd)
-        inps = obj.open()
-        obj.init_plot(inps)
-        plt.show()
+        obj.configure()
+        obj.plot()
     """
-    
+
     def __init__(self, cmd=None, iargs=None):
         if cmd:
             iargs = cmd.split()[1:]
@@ -517,87 +516,90 @@ class timeseriesViewer():
         return
 
 
-    def open(self):
+    def configure(self):
         inps = cmd_line_parse(self.iargs)
-        self.inps, self.atr = read_init_info(inps)
-        self.figsize_pts = inps.fig_size
-        return inps
+        inps, self.atr = read_init_info(inps)
+        # copy inps to self object
+        for key, value in inps.__dict__.items():
+            setattr(self, key, value)
+        # input figsize for the point time-series plot
+        self.figsize_pts = self.fig_size
+        self.pts_marker = 'r^'
+        return
 
 
-    def init_plot(self, inps):
+    def plot(self):
         # read 3D time-series
-        self.ts_data, self.mask, inps = read_timeseries_data(inps)
+        self.ts_data, self.mask = read_timeseries_data(self)[0:2]
 
         # Figure 1 - Cumulative Displacement Map
         self.fig_img = plt.figure(self.figname_img, figsize=self.figsize_img)
 
-        # Axes 1 - Displacement Map
+        # Figure 1 - Axes 1 - Displacement Map
         self.ax_img = self.fig_img.add_axes([0.125, 0.25, 0.75, 0.65])
-        img_data = np.array(self.ts_data[0][inps.init_idx, :, :])
+        img_data = np.array(self.ts_data[0][self.init_idx, :, :])
         img_data[self.mask == 0] = np.nan
-        self.plot_init_image(img_data, inps)
+        self.plot_init_image(img_data)
 
-        # Axes 2 - Time Slider
+        # Figure 1 - Axes 2 - Time Slider
         self.ax_tslider = self.fig_img.add_axes([0.2, 0.1, 0.6, 0.07])
-        self.plot_init_time_slider(init_idx=inps.init_idx, ref_idx=inps.ref_idx)
+        self.plot_init_time_slider(init_idx=self.init_idx, ref_idx=self.ref_idx)
         self.tslider.on_changed(self.update_time_slider)
-
 
         # Figure 2 - Time Series Displacement - Point
         self.fig_pts, self.ax_pts = plt.subplots(num=self.figname_pts, figsize=self.figsize_pts)
-        if inps.yx:
-            d_ts = self.plot_point_timeseries(inps.yx, inps)
+        if self.yx:
+            d_ts = self.plot_point_timeseries(self.yx)
 
         # Output
-        if inps.save_fig:
-            save_ts_plot(inps.yx, self.fig_img, self.fig_pts, d_ts, inps)
+        if self.save_fig:
+            save_ts_plot(self.yx, self.fig_img, self.fig_pts, d_ts, self)
 
         # Final linking of the canvas to the plots.
         self.cid = self.fig_img.canvas.mpl_connect('button_press_event', self.update_plot_timeseries)
-        if inps.disp_fig:
+        if self.disp_fig:
             vprint('showing ...')
             plt.show()
         return
 
 
-    def plot_init_image(self, img_data, inps):
+    def plot_init_image(self, img_data):
         # prepare data
-        if inps.wrap:
-            if inps.disp_unit_img == 'radian':
-                img_data *= inps.range2phase
-            img_data = ut.wrap(img_data, wrap_range=inps.wrap_range)
+        if self.wrap:
+            if self.disp_unit_img == 'radian':
+                img_data *= self.range2phase
+            img_data = ut.wrap(img_data, wrap_range=self.wrap_range)
 
         # Title and Axis Label
-        disp_date = inps.dates[inps.init_idx].strftime('%Y-%m-%d')
-        inps.fig_title = 'N = {}, Time = {}'.format(inps.init_idx, disp_date)
+        disp_date = self.dates[self.init_idx].strftime('%Y-%m-%d')
+        self.fig_title = 'N = {}, Time = {}'.format(self.init_idx, disp_date)
 
         # Initial Pixel
-        if inps.yx and inps.yx != inps.ref_yx:
-            inps.pts_yx = np.array(inps.yx).reshape(-1, 2)
-            if inps.lalo:
-                inps.pts_lalo = np.array(inps.lalo).reshape(-1, 2)
+        if self.yx and self.yx != self.ref_yx:
+            self.pts_yx = np.array(self.yx).reshape(-1, 2)
+            if self.lalo:
+                self.pts_lalo = np.array(self.lalo).reshape(-1, 2)
             else:
-                inps.pts_lalo = None
-            inps.pts_marker = 'ro'
+                self.pts_lalo = None
 
         # call view.py to plot
-        self.img, self.cbar_img = view.plot_slice(self.ax_img, img_data, self.atr, inps)[2:4]
+        self.img, self.cbar_img = view.plot_slice(self.ax_img, img_data, self.atr, self)[2:4]
         return self.img, self.cbar_img
 
 
     def plot_init_time_slider(self, init_idx=-1, ref_idx=0):
-        val_step = np.min(np.diff(self.inps.yearList))
-        val_min = self.inps.yearList[0]
-        val_max = self.inps.yearList[-1]
+        val_step = np.min(np.diff(self.yearList))
+        val_min = self.yearList[0]
+        val_max = self.yearList[-1]
 
         self.tslider = Slider(self.ax_tslider, label='Years',
-                              valinit=self.inps.yearList[init_idx],
+                              valinit=self.yearList[init_idx],
                               valmin=val_min,
                               valmax=val_max,
                               valstep=val_step)
 
         bar_width = val_step / 4.
-        datex = np.array(self.inps.yearList) - bar_width / 2.
+        datex = np.array(self.yearList) - bar_width / 2.
         self.tslider.ax.bar(datex, np.ones(len(datex)), bar_width, facecolor='black', ecolor=None)
         self.tslider.ax.bar(datex[ref_idx], 1., bar_width*3, facecolor='crimson', ecolor=None)
 
@@ -615,33 +617,27 @@ class timeseriesViewer():
 
     def update_time_slider(self, val):
         """Update Displacement Map using Slider"""
-        idx = np.argmin(np.abs(np.array(self.inps.yearList) - self.tslider.val))
+        idx = np.argmin(np.abs(np.array(self.yearList) - self.tslider.val))
         # update title
-        disp_date = self.inps.dates[idx].strftime('%Y-%m-%d')
-        self.ax_img.set_title('N = {n}, Time = {t}'.format(n=idx, t=disp_date), fontsize=self.inps.font_size)
+        disp_date = self.dates[idx].strftime('%Y-%m-%d')
+        self.ax_img.set_title('N = {n}, Time = {t}'.format(n=idx, t=disp_date), fontsize=self.font_size)
         # read data
         data_img = np.array(self.ts_data[0][idx, :, :])
         data_img[self.mask == 0] = np.nan
-        if self.inps.wrap:
-            if self.inps.disp_unit_img == 'radian':
-                data_img *= self.inps.range2phase
-            data_img = ut.wrap(data_img, wrap_range=self.inps.wrap_range)
+        if self.wrap:
+            if self.disp_unit_img == 'radian':
+                data_img *= self.range2phase
+            data_img = ut.wrap(data_img, wrap_range=self.wrap_range)
         # update data
         self.img.set_data(data_img)
         self.fig_img.canvas.draw()
         return
 
 
-    def plot_point_timeseries(self, yx, inps):
+    def plot_point_timeseries(self, yx):
         """Plot point displacement time-series at pixel [y, x]
         Parameters: yx : list of 2 int
-                    fig : Figure object
-                    ax : Axes object
-                    ts_data : list of 3D np.array in size of (num_date, length, width)
-                    mask : 2D np.array in size of (length, width) in bool format
-                    inps : namespace objects of input arguments
-        Returns:    ax : Axes object
-                    d_ts : 2D np.array in size of (num_date, num_file)
+        Returns:    d_ts : 2D np.array in size of (num_date, num_file)
         """
         self.ax_pts.cla()
 
@@ -653,39 +649,39 @@ class timeseriesViewer():
         elif num_file >= 5: ms_step = 1
     
         d_ts = []
-        y = yx[0]-inps.pix_box[1]
-        x = yx[1]-inps.pix_box[0]
+        y = yx[0] - self.pix_box[1]
+        x = yx[1] - self.pix_box[0]
         for i in range(num_file-1, -1, -1):
             # get displacement data
             d_tsi = self.ts_data[i][:, y, x]
-            if inps.zero_first:
-                d_tsi -= d_tsi[inps.zero_idx]
+            if self.zero_first:
+                d_tsi -= d_tsi[self.zero_idx]
             d_ts.append(d_tsi)
     
             # get plot parameter - namespace ppar
             ppar = argparse.Namespace()
-            ppar.label = inps.file_label[i]
-            ppar.ms = inps.marker_size - ms_step * (num_file - 1 - i)
+            ppar.label = self.file_label[i]
+            ppar.ms = self.marker_size - ms_step * (num_file - 1 - i)
             ppar.mfc = pp.mplColors[num_file - 1 - i]
             if self.mask[y, x] == 0:
                 ppar.mfc = 'gray'
-            if inps.offset:
-                d_tsi += inps.offset * (num_file - 1 - i)
+            if self.offset:
+                d_tsi += self.offset * (num_file - 1 - i)
     
             # plot
-            if inps.error_file:
-                self.ax_pts = plot_ts_errorbar(self.ax_pts, d_tsi, inps, ppar)
+            if self.error_file:
+                self.ax_pts = plot_ts_errorbar(self.ax_pts, d_tsi, self, ppar)
             else:
-                self.ax_pts = plot_ts_scatter(self.ax_pts, d_tsi, inps, ppar)
+                self.ax_pts = plot_ts_scatter(self.ax_pts, d_tsi, self, ppar)
     
         # format
-        self.ax_pts = _adjust_ts_axis(self.ax_pts, inps)
-        title_ts = _get_ts_title(yx[0], yx[1], inps.coord)
+        self.ax_pts = _adjust_ts_axis(self.ax_pts, self)
+        title_ts = _get_ts_title(yx[0], yx[1], self.coord)
         if self.mask[y, x] == 0:
             title_ts += ' (masked out)'
-        if inps.disp_title:
-            self.ax_pts.set_title(title_ts, fontsize=inps.font_size)
-        if inps.tick_right:
+        if self.disp_title:
+            self.ax_pts.set_title(title_ts, fontsize=self.font_size)
+        if self.tick_right:
             self.ax_pts.yaxis.tick_right()
             self.ax_pts.yaxis.set_label_position("right")
 
@@ -700,10 +696,10 @@ class timeseriesViewer():
         vprint(title_ts)
         float_formatter = lambda x: [float('{:.2f}'.format(i)) for i in x]
         vprint(float_formatter(d_ts[0]))
-        vprint('displacement range: [{:.2f}, {:.2f}] {}'.format(np.nanmin(d_ts[0]), np.nanmax(d_ts[0]), inps.disp_unit))
+        vprint('displacement range: [{:.2f}, {:.2f}] {}'.format(np.nanmin(d_ts[0]), np.nanmax(d_ts[0]), self.disp_unit))
 
         # Slope estimation
-        estimate_slope(d_ts[0], self.inps.yearList, ex_flag=inps.ex_flag, disp_unit=inps.disp_unit)
+        estimate_slope(d_ts[0], self.yearList, ex_flag=self.ex_flag, disp_unit=self.disp_unit)
         return d_ts
 
 
@@ -711,21 +707,21 @@ class timeseriesViewer():
         """Event function to get y/x from button press"""
         if event.inaxes == self.ax_img:
             # get row/col number
-            if self.inps.fig_coord == 'geo':
-                y, x = self.inps.coord.geo2radar(event.ydata, event.xdata, print_msg=False)[0:2]
+            if self.fig_coord == 'geo':
+                y, x = self.coord.geo2radar(event.ydata, event.xdata, print_msg=False)[0:2]
             else:
                 y, x = int(event.ydata+0.5), int(event.xdata+0.5)
 
             # plot time-series displacement
-            self.plot_point_timeseries((y, x), self.inps)
+            self.plot_point_timeseries((y, x))
         return
 
 
 ###########################################################################################
 def main(iargs=None):
     obj = timeseriesViewer(cmd=iargs)
-    inps = obj.open()
-    obj.init_plot(inps)
+    obj.configure()
+    obj.plot()
 
     #obj.fig_img.canvas.mpl_disconnect(obj.cid)
     return
