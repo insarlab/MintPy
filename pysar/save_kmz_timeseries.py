@@ -17,10 +17,11 @@ except ImportError:
 from lxml import etree
 import numpy as np
 import matplotlib as mpl
+from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
 
-from pysar.objects import timeseries
-from pysar.utils import readfile, plot
+from pysar.objects import timeseries, deramp
+from pysar.utils import readfile, plot, utils as ut
 
 
 ############################################################
@@ -43,6 +44,7 @@ def create_parser():
                       help='Velocity file')
     args.add_argument('--tcoh', dest='tcoh_file', metavar='temporal_coh_file', default='geo_temporalCoherence.h5',
                       help='temporal coherence file')
+    args.add_argument('--mask', dest='mask_file', metavar='mask_file', default='geo_maskTempCoh.h5', help='Mask file')
 
     opts = parser.add_argument_group('Display options', 'configurations for the display')
     opts.add_argument('--step', type=int, metavar='NUM', default=3, help='output pixel step number, default: 3')
@@ -118,6 +120,60 @@ def split_into_sub_boxes(ds_shape, win_size=300, print_msg=True):
             box_list.append(box)
     return box_list
 
+def get_boxes4deforming_area(vel_file, mask_file, win_size=30, min_percentage=0.2, ramp_type='quadratic', display=False):
+    """Get list of boxes to cover the deforming areas.
+    A pixel is identified as deforming if its velocity exceeds the MAD of the whole image.
+    Parameters: vel_file : str, path of velocity file
+                mask_file : str, path of mask file
+                win_size  : int, length and width of the output box
+                min_percentage : float between 0 and 1, minimum percentage of deforming points in the box
+                ramp_type : str, type of phase ramps to be removed while evaluating the deformation
+                display   : bool, plot the identification result or not
+    Returns:    box_list  : list of t-tuple of int, each indicating (col0, row0, col1, row1)
+    """
+    print('-'*30)
+    print('get boxes on deforming areas')
+    mask = readfile.read(mask_file)[0]
+    vel, atr = readfile.read(vel_file)
+    print('removing a {} phase ramp from input velocity before the evaluation'.format(ramp_type))
+    vel = deramp(vel, mask, ramp_type=ramp_type, metadata=atr)[0]               #remove ramp before the evaluation
+
+    # get deforming pixels
+    mad = ut.median_abs_deviation_threshold(vel[mask], center=0., cutoff=3)     #deformation threshold
+    print('velocity threshold / median abs dev: {:.3f} cm/yr'.format(mad))
+    vel[mask == 0] = 0
+    mask_aoi = (vel >= mad) + (vel <= -1. * mad)
+    print('number of points: {}'.format(np.sum(mask_aoi)))
+
+    # get deforming boxes
+    box_list = []
+    min_num = min_percentage * (win_size ** 2)
+    length, width = vel.shape
+    num_row = np.ceil(length / win_size).astype(int)
+    num_col = np.ceil(width / win_size).astype(int)
+    for i in range(num_row):
+        r0 = i * win_size
+        r1 = min([length, r0 + win_size])
+        for j in range(num_col):
+            c0 = j * win_size
+            c1 = min([width, c0 + win_size])
+            box = (c0, r0, c1, r1)
+            if np.sum(mask_aoi[r0:r1, c0:c1]) >= min_num:
+                box_list.append(box)
+    print('number of boxes : {}'.format(len(box_list)))
+
+    if display:
+        fig, axs = plt.subplots(nrows=1, ncols=2, figsize=[12, 8], sharey=True)
+        vel[mask == 0] = np.nan
+        axs[0].imshow(vel, cmap='jet')
+        axs[1].imshow(mask_aoi, cmap='gray')
+        for box in box_list:
+            for ax in axs:
+                rect = Rectangle((box[0],box[1]), (box[2]-box[0]), (box[3]-box[1]), linewidth=2, edgecolor='r', fill=False)
+                ax.add_patch(rect)
+        plt.show()
+    return box_list
+
 
 def plot_colorbar(out_file, vmin, vmax, cmap='jet', figsize=(0.18, 3.6)):
     fig, cax = plt.subplots(figsize=figsize)
@@ -152,16 +208,25 @@ def generate_description_string(coords, yx, v, vstd, disp, tcoh=None, font_size=
         des_str += "Temporal coherence: {:.2f} <br /> \n".format(tcoh)
     des_str += "</font>"
     des_str += " <br />  <br /> "
+    des_str += "* Double click to reset plot <br /> <br />\n"
     des_str += "\n\n"
     return des_str
 
-def generate_js_datastring(dates, dygraph_file, num_date, ts, ts_max, ts_min):
-    # Javascript to embed inside the description
-    js_data_string = "<script type='text/javascript' src='../../../" + dygraph_file + "'></script>\n" \
-                      "<div id='graphdiv'> </div>\n" \
-                      "<script type='text/javascript'>\n" \
-                      "g = new Dygraph( document.getElementById('graphdiv'),\n" \
-                      "\"Date, displacement\\n\" + \n"
+def generate_js_datastring(dates, dygraph_file, num_date, ts):
+
+    js_data_string = "<script type='text/javascript' src='../../../" + dygraph_file + "'></script>"
+    js_data_string += """
+        <div id='graphdiv'> </div>
+        <style>
+            .dygraph-legend{
+                left: 435px !important;
+                width: 265px !important;
+            }
+        </style>
+        <script type='text/javascript'>
+            g = new Dygraph( document.getElementById('graphdiv'),
+            "Date, displacement\\n" +
+    """
 
     # append the date/displacement data
     for k in range(num_date):
@@ -170,56 +235,64 @@ def generate_js_datastring(dates, dygraph_file, num_date, ts, ts_max, ts_min):
         date_displacement_string = "\"{}, {}\\n\" + \n".format(date, dis)
         js_data_string += date_displacement_string
 
-    js_data_string += "\"\",\n" \
-                      "{" \
-                        "width: 700,\n" \
-                        "height: 300,\n" \
-                        "axes: {\n" \
-                            "x: {\n" \
-                                "axisLabelFormatter: function (d, gran) {\n" \
-                                    "var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']\n" \
-                                    "var date = new Date(d)\n" \
-                                    "var dateString = months[date.getMonth()] + ' ' + date.getFullYear()\n" \
-                                    "return dateString;\n" \
-                                "},\n" \
-                                "valueFormatter: function (d) {\n" \
-                                    "var date = new Date(d)\n" \
-                                    "var dateString = 'Date: ' + ('0' + date.getDate()).slice(-2) + '/' + ('0' + (date.getMonth() + 1)).slice(-2) + '/' + date.getFullYear()\n" \
-                                    "return dateString;\n" \
-                                "},\n" \
-                                "pixelsPerLabel: 90\n" \
-                            "},\n" \
-                            "y: {\n" \
-                                "valueFormatter: function(v) {\n" \
-                                    "return (' ' + v.toFixed(2)).slice(-5)\n" \
-                                "}\n" \
-                            "}\n" \
-                        "},\n" \
-                        "valueRange: [" + str(ts_min) + "," + str(ts_max) + "],\n" \
-                        "ylabel: 'LOS displacement [cm]',\n" \
-                        "yLabelWidth: 18,\n" \
-                        "drawPoints: true,\n" \
-                        "strokeWidth: 0,\n" \
-                        "pointSize: 3,\n" \
-                        "highlightCircleSize: 6,\n" \
-                        "axisLabelFontSize: 12,\n" \
-                        "xRangePad: 30,\n" \
-                        "yRangePad: 30,\n" \
-                        "hideOverlayOnMouseOut: false,\n" \
-                        "panEdgeFraction: 0.0\n" \
-                      "});\n" \
-                      "</script>"
+    js_data_string += """
+    
+    "",
+       {
+         width: 700,
+         height: 300,
+         axes: {
+             x: {
+                 axisLabelFormatter: function (d, gran) {
+                     var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                     var date = new Date(d)
+                     var dateString = months[date.getMonth()] + ' ' + date.getFullYear()
+                     return dateString;
+                 },
+                 valueFormatter: function (d) {
+                     var date = new Date(d)
+                     var dateString = 'Date: ' + ('0' + date.getDate()).slice(-2) + '/' + ('0' + (date.getMonth() + 1)).slice(-2) + '/' + date.getFullYear()
+                     return dateString;
+                 },
+                 pixelsPerLabel: 90
+             },
+             y: {
+                 valueFormatter: function(v) {
+                    if(v >= 0){
+                        return (' 000' + v.toFixed(2)).slice(-8)
+                    }else{
+                        return '-'+(' 000' + Math.abs(v).toFixed(2)).slice(-7)
+                    }
+                     
+                 }
+             }
+         },
+         ylabel: 'LOS displacement [cm]',
+         yLabelWidth: 18,
+         drawPoints: true,
+         strokeWidth: 0,
+         pointSize: 3,
+         highlightCircleSize: 6,
+         axisLabelFontSize: 12,
+         xRangePad: 30,
+         yRangePad: 30,
+         hideOverlayOnMouseOut: false,
+         panEdgeFraction: 0.0
+       });
+       </script>
+    
+    """
+
     return js_data_string
 
 
-def create_kml_document(inps, step, dot_file, dygraph_file):
+def create_kml_document(inps, box_list, ts_obj, step):
+
+    dot_file = "shaded_dot.png"
+    dygraph_file = "dygraph-combined.js"
 
     ## 1. read data file into timeseries object
-    ts_obj = timeseries(inps.ts_file)
-    ts_obj.open()
-    length, width = ts_obj.length, ts_obj.width
 
-    box_list = split_into_sub_boxes((length, width))  # Create list of unique regions
     kml_region_documents = []
 
     for i in range(len(box_list)):
@@ -252,9 +325,6 @@ def create_kml_document(inps, step, dot_file, dygraph_file):
         temp_coh = readfile.read(inps.tcoh_file, box=box)[0]
         mask = ~np.isnan(vel)
 
-        # 1.4 Get timeseries min and max values
-        ts_min = np.nanmin(ts_data)
-        ts_max = np.nanmax(ts_data)
 
         ## 2. Create KML Document
         print('create KML file.')
@@ -296,7 +366,7 @@ def create_kml_document(inps, step, dot_file, dygraph_file):
                     # 2.3.2 Create KML point element
                     point = KML.Point(KML.coordinates("{},{}".format(lon, lat)))
 
-                    js_data_string = generate_js_datastring(dates, dygraph_file, num_date, ts, ts_max, ts_min)
+                    js_data_string = generate_js_datastring(dates, dygraph_file, num_date, ts)
 
                     # 2.3.3 Create KML description element
                     stats_info = generate_description_string((lat, lon), (row, col), v, vstd, ts[-1], tcoh=tcoh)
@@ -314,11 +384,15 @@ def create_kml_document(inps, step, dot_file, dygraph_file):
         # 2.5 Append KML document to list of regionalized documents
         kml_region_documents.append(kml_document)
 
-    return kml_region_documents
+    return kml_region_documents, dot_file, dygraph_file
 
-def create_regionalized_networklinks_file(regions, ts_obj, kml_data_files_directory, links_directory, output_file):
+def create_regionalized_networklinks_file(regions, ts_obj, box_list, lod, step, output_file):
 
     ## 1. Create directory to store regioalized KML data files
+    kml_data_files_directory = "kml_data_files"
+    links_directory = "{0}by{0}_links".format(step)
+    mkdir_kml_data_file_command = "mkdir {}".format(kml_data_files_directory)
+    os.system(mkdir_kml_data_file_command)
     cmdDirectory = "cd {}; mkdir {}/".format(kml_data_files_directory, links_directory)
     print("Creating KML links directory")
     os.system(cmdDirectory)
@@ -328,15 +402,10 @@ def create_regionalized_networklinks_file(regions, ts_obj, kml_data_files_direct
     kml_document = KML.Document()
 
     ## 3. Define min and max levels of detail for large vs small data
-    if "large" in links_directory:
-        min_lod = 1500
-        max_lod = -1
-    else:
-        min_lod = 0
-        max_lod = 1500
+    min_lod = lod[0]
+    max_lod = lod[1]
 
     ## 4. Define list of regionalized boxes and list of number of regions
-    box_list = split_into_sub_boxes((ts_obj.length, ts_obj.width))
     region_nums = list(range(0, len(regions)))
 
     ## 5. Generate a new network link element for each region
@@ -392,13 +461,9 @@ def create_regionalized_networklinks_file(regions, ts_obj, kml_data_files_direct
     with open(output_file, 'w') as f:
         f.write(etree.tostring(kml, pretty_print=True).decode('utf-8'))
 
-    cmdMove = "mv {sm} {dir}/{sm};".format(sm=output_file, dir=kml_data_files_directory)
-    print("Moving KML Data Files to directory")
-    os.system(cmdMove)
+    return "{}/{}".format(kml_data_files_directory, output_file), kml_data_files_directory
 
-    return output_file
-
-def generate_network_link(name, kml_data_files_directory, kml_file_sm, ts_obj):
+def create_network_link_element(name, kml_file, ts_obj):
 
     lats, lons = flatten_lalos(None, ts_obj)
 
@@ -418,13 +483,15 @@ def generate_network_link(name, kml_data_files_directory, kml_file_sm, ts_obj):
             )
         ),
         KML.Link(
-            KML.href("{}/{}".format(kml_data_files_directory, kml_file_sm)),
+            KML.href(kml_file),
             KML.viewRefreshMode('onRegion')
         )
     )
     return network_link
 
-def create_reference_point_element(inps, lats, lons, star_file, ts_obj):
+def create_reference_point_element(inps, lats, lons, ts_obj):
+
+    star_file = "star.png"
 
     colormap = mpl.cm.get_cmap(inps.colormap)  # set colormap
     norm = mpl.colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])
@@ -448,9 +515,13 @@ def create_reference_point_element(inps, lats, lons, star_file, ts_obj):
         )
     )
 
-    return reference_point
+    return reference_point, star_file
 
-def generate_cbar_element(cbar_png_file, inps):
+def generate_cbar_element(inps):
+
+    out_name_base = plot.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
+    cbar_png_file = '{}_cbar.png'.format(out_name_base)
+
     cbar_png_file = plot_colorbar(out_file=cbar_png_file, vmin=inps.vlim[0], vmax=inps.vlim[1], cmap=inps.colormap)
     cbar_overlay = KML.ScreenOverlay(
         KML.name('Colorbar'),
@@ -469,6 +540,27 @@ def generate_cbar_element(cbar_png_file, inps):
     return cbar_overlay, cbar_png_file
 
 
+def generate_network_link(inps, ts_obj, box_list, step, lod, output_file=None):
+
+    out_name_base = plot.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
+
+    if output_file is None:
+        output_file = "{0}_{1}by{1}.kml".format(out_name_base, step)
+
+    nwklink_name = "{0} by {0}".format(step)
+
+    regions, dot_file, dygraph_file = create_kml_document(inps, box_list, ts_obj, step)
+    kml_file, kml_data_files_directory = create_regionalized_networklinks_file(regions, ts_obj, box_list, lod, step, output_file)
+
+    network_link = create_network_link_element(nwklink_name, kml_file, ts_obj)
+
+    cmdMove = "mv {0} {1}/{0}".format(output_file, kml_data_files_directory)
+    print("Moving KML Data Files to directory")
+    os.system(cmdMove)
+
+    return network_link, dot_file, dygraph_file, kml_data_files_directory
+
+
 def main(iargs=None):
 
     ## 1. Read command line variables
@@ -476,24 +568,13 @@ def main(iargs=None):
 
     ## 2. Define file names
     out_name_base = plot.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
-    kml_data_files_directory = "kml_data_files"
     kml_file_master = '{}_master.kml'.format(out_name_base)
-    kml_file_sm = '{}_sm.kml'.format(out_name_base)
-    kml_file_lg = '{}_lg.kml'.format(out_name_base)
     kmz_file = '{}.kmz'.format(out_name_base)
-    cbar_png_file = '{}_cbar.png'.format(out_name_base)
-    dygraph_file = "dygraph-combined.js"
-    dot_file = "shaded_dot.png"
-    star_file = "star.png"
-
-    # 3. Create subdirectory to store data KML files
-    cmdDirectory = "mkdir {}/".format(kml_data_files_directory)
-    print("Creating KML Data File directory")
-    os.system(cmdDirectory)
 
     ## 4. read data
     ts_obj = timeseries(inps.ts_file)
     ts_obj.open()
+    length, width = ts_obj.length, ts_obj.width
     lats, lons = get_lat_lon(ts_obj.metadata)
 
     vel = readfile.read(inps.vel_file, datasetName='velocity')[0] * 100.
@@ -503,20 +584,22 @@ def main(iargs=None):
 
     ## 5. Generate large and small KML files for different view heights
     small_dset_step = 20  # Increase this for coarser resolution in small dset
-    large_dset_step = 3  # Decrease this for finer resolution in large dset
-    kml_documents_sm = create_kml_document(inps, small_dset_step, dot_file, dygraph_file)
-    kml_documents_lg = create_kml_document(inps, large_dset_step, dot_file, dygraph_file)
+    large_dset_step = 3   # Decrease this for finer resolution in large dset
+    full_dset_step = 1    # Full resolution for deforming regions
+
+    box_list = split_into_sub_boxes((length, width))  # Create list of unique regions
+    deforming_box_list = get_boxes4deforming_area(inps.vel_file, inps.mask_file)
 
     ## 6. Create master KML file with network links to data KML files
     kml_master = KML.kml()
     kml_master_document = KML.Document()
 
     # 6.1 Create Overlay element for colorbar
-    cbar_overlay, cbar_png_file = generate_cbar_element(cbar_png_file, inps)
+    cbar_overlay, cbar_png_file = generate_cbar_element(inps)
     kml_master_document.append(cbar_overlay)
 
     # 6.2 Generate the placemark for the Reference Pixel
-    reference_point = create_reference_point_element(inps, lats, lons, star_file, ts_obj)
+    reference_point, star_file = create_reference_point_element(inps, lats, lons, ts_obj)
     print('add reference point.')
     reference_folder = KML.Folder(KML.name("ReferencePoint"))
     reference_folder.append(reference_point)
@@ -525,17 +608,14 @@ def main(iargs=None):
     # 6.3 Create data folder to contain actual data elements
     data_folder = KML.Folder(KML.name("Data"))
 
-    # 6.3.1 Generate regionalized network links files for small and large data
-    create_regionalized_networklinks_file(kml_documents_sm, ts_obj, kml_data_files_directory, "small_links_dir", kml_file_sm)
-    create_regionalized_networklinks_file(kml_documents_lg, ts_obj, kml_data_files_directory, "large_links_dir", kml_file_lg)
-
-    # 6.3.2 Create network links for small and large file
-    network_link_sm = generate_network_link("20 by 20", kml_data_files_directory, kml_file_sm, ts_obj)
-    network_link_lg = generate_network_link("3 by 3", kml_data_files_directory, kml_file_lg, ts_obj)
+    network_link_1, dot_file, _, _ = generate_network_link(inps, ts_obj, box_list, small_dset_step, (0, 1500))
+    network_link_2, _, dygraph_file, _ = generate_network_link(inps, ts_obj, box_list, large_dset_step, (1500, 4000))
+    network_link_3, _, _, kml_data_files_directory = generate_network_link(inps, ts_obj, deforming_box_list, full_dset_step, (4000, -1))
 
     # 6.3.3 Append network links to data folder
-    data_folder.append(network_link_sm)
-    data_folder.append(network_link_lg)
+    data_folder.append(network_link_1)
+    data_folder.append(network_link_2)
+    data_folder.append(network_link_3)
 
     kml_master_document.append(data_folder)
 
@@ -567,11 +647,6 @@ def main(iargs=None):
     cmdDygraph = "cp {} {}".format(dygraph_path, dygraph_file)
     print("copying {} for interactive plotting.".format(dygraph_file))
     os.system(cmdDygraph)
-
-    # 8.4 move data KML files into new directory
-    cmdMove = "mv {sm} {dir}/{sm}; mv {lg} {dir}/{lg};".format(sm=kml_file_sm, dir=kml_data_files_directory, lg=kml_file_lg)
-    print("Moving KML Data Files to directory")
-    os.system(cmdMove)
 
     ## 9. Generate KMZ file
     cmdKMZ = 'zip -r {} {} {} {} {} {} {}'.format(kmz_file, kml_data_files_directory, kml_file_master, cbar_png_file, dygraph_file, dot_file, star_file)
