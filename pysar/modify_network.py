@@ -449,8 +449,8 @@ def main(iargs=None):
         inps = read_template2inps(inps.template_file, inps)
 
     elif all(not i for i in [inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax, inps.connNumMax,
-                           inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased,
-                           inps.startDate, inps.endDate, inps.reset, inps.manual]):
+                             inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased,
+                             inps.startDate, inps.endDate, inps.reset, inps.manual]):
         msg = 'No input option found to remove interferogram, exit.\n'
         msg += 'To manually modify network, please use --manual option '
         raise Exception(msg)

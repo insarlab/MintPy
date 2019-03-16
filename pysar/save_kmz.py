@@ -25,13 +25,13 @@ from pysar.utils import readfile, ptime, utils as ut, plot as pp
 
 ############################################################
 EXAMPLE = """example:
-  save_kmz.py geo_velocity_masked.h5 
-  save_kmz.py geo_timeseries_masked.h5  20101120
-  save_kmz.py geo_ifgramStack.h5        20101120_20110220
+  save_kmz.py GEOCODE/geo_velocity.h5 
+  save_kmz.py GEOCODE/geo_velocity.h5 -u cm -v -2 2
+  save_kmz.py GEOCODE/geo_velocity.h5 -u cm --wrap --wrap-range -3 7
 
-  save_kmz.py geo_velocity_masked.h5 -u cm -v -2 2
-  save_kmz.py geo_velocity_masked.h5 -u cm --wrap --wrap-range -3 7
-  save_kmz.py demGeo.h5 --cbar-label Elevation
+  save_kmz.py GEOCODE/geo_timeseries_ECMWF_ramp_demErr.h5 20101120
+  save_kmz.py GEOCODE/geo_ifgramStack.h5 20101120_20110220
+  save_kmz.py GEOCODE/geo_geometryRadar.h5 --cbar-label Elevation
 """
 
 
@@ -43,6 +43,8 @@ def create_parser():
     parser.add_argument('file', help='file to be converted, in geo coordinate.')
     parser.add_argument('dset', nargs='?',
                         help='date of timeseries, or date12 of interferograms to be converted')
+    parser.add_argument('-m','--mask', dest='mask_file', metavar='FILE',
+                        help='mask file for display')
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file base name. Extension is fixed with .kmz')
 
@@ -124,7 +126,7 @@ def generate_cbar_element(cbar_png_file, inps):
                                   cmap=inps.colormap)
 
     cbar_overlay = KML.ScreenOverlay(
-        KML.name('Colorbar'),
+        KML.name('colorbar'),
         KML.Icon(
             KML.href("{}".format(cbar_png_file)),
             KML.viewBoundScale(0.75)
@@ -156,11 +158,11 @@ def write_kmz_file(data, metadata, out_file, inps=None):
         kmz_file - string, output KMZ filename
     Example:
         from pysar.utils import readfile, plot as pp
-        from pysar import save_kml
+        from pysar import save_kmz
         fname = 'geo_velocity_masked.h5'
         data, atr = readfile.read(fname)
         out_file = pp.auto_figure_title(fname, None)+'.kmz'
-        save_kml.write_kmz_file(data, atr, out_file)
+        save_kmz.write_kmz_file(data, atr, out_file)
     """
     if not inps:
         inps = cmd_line_parse()
@@ -223,14 +225,15 @@ def write_kmz_file(data, metadata, out_file, inps=None):
         doc = KML.kml(KML.Folder(KML.name('PySAR product')))
 
     # Add data png file
-    slc = KML.GroundOverlay(KML.name(data_png_file),
+    img_name = os.path.splitext(os.path.basename(data_png_file))[0]
+    img = KML.GroundOverlay(KML.name(img_name),
                             KML.Icon(KML.href(data_png_file)),
                             KML.altitudeMode('clampToGround'),
                             KML.LatLonBox(KML.north(str(north)),
                                           KML.east(str(east)),
                                           KML.south(str(south)),
                                           KML.west(str(west))))
-    doc.Folder.append(slc)
+    doc.Folder.append(img)
 
     # Add colorbar png file
     cbar_png_file = '{}_cbar.png'.format(out_name_base)
@@ -265,6 +268,11 @@ def main(iargs=None):
     # Read data
     data, atr = readfile.read(inps.file, datasetName=inps.dset)
 
+    # mask
+    mask = pp.read_mask(inps.file, mask_file=inps.mask_file, datasetName=inps.dset, print_msg=True)[0]
+    if mask is not None:
+        data = np.ma.masked_where(mask == 0., data)
+
     # Data Operation - Display Unit & Rewrapping
     (data,
      inps.disp_unit,
@@ -283,6 +291,7 @@ def main(iargs=None):
                                           inps_dict=vars(inps))
     if not inps.outfile:
         inps.outfile = '{}.kmz'.format(inps.fig_title)
+    inps.outfile = os.path.relpath(inps.outfile)
 
     # 2. Generate Google Earth KMZ
     kmz_file = write_kmz_file(data,

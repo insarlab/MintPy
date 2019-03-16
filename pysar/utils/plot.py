@@ -761,10 +761,10 @@ def add_point_argument(parser):
                      help='Point in (Lat, Lon)')
     pts.add_argument('--pts-file', dest='pts_file', type=str,
                      help='Point(s) defined in text file in lat/lon column')
-    pts.add_argument('--pts-marker', dest='pts_marker', type=str, default='ko',
-                     help='Marker of points of interest.')
+    pts.add_argument('--pts-marker', dest='pts_marker', type=str, default='k^',
+                     help='Marker of points of interest. Default: black triangle.')
     pts.add_argument('--pts-ms', dest='pts_marker_size', type=float, default=6.,
-                     help='Marker size for points of interest')
+                     help='Marker size for points of interest. Default: 6.')
     return parser
 
 
@@ -939,23 +939,21 @@ def auto_flip_direction(metadata, ax=None, print_msg=True):
 
     # auto flip for file in radar coordinates
     if 'Y_FIRST' not in metadata.keys() and 'ORBIT_DIRECTION' in metadata.keys():
-        if print_msg:
-            print('{} orbit'.format(metadata['ORBIT_DIRECTION']))
+        msg = '{} orbit'.format(metadata['ORBIT_DIRECTION'])
         if metadata['ORBIT_DIRECTION'].lower().startswith('a'):
             flip_ud = True
+            msg += ' -> flip up-down'
         else:
             flip_lr = True
+            msg += ' -> flip left-right'
+        if print_msg:
+            print(msg)
 
     if ax is not None:
         if flip_lr:
             ax.invert_xaxis()
-            if print_msg:
-                print('flip figure left and right')
-
         if flip_ud:
             ax.invert_yaxis()
-            if print_msg:
-                print('flip figure up and down')
         return ax
 
     return flip_lr, flip_ud
@@ -1578,10 +1576,12 @@ def prepare_dem_background(dem, inps=None, print_msg=True):
     if inps.disp_dem_shade:
         from matplotlib.colors import LightSource
         ls = LightSource(azdeg=inps.shade_azdeg, altdeg=inps.shade_altdeg)
-        dem_shade = ls.shade(dem, vert_exag=inps.shade_exag,
-                             cmap=ColormapExt('gray').colormap,
-                             vmin=inps.shade_min,
-                             vmax=inps.shade_max)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            dem_shade = ls.shade(dem, vert_exag=inps.shade_exag,
+                                 cmap=ColormapExt('gray').colormap,
+                                 vmin=inps.shade_min,
+                                 vmax=inps.shade_max)
         dem_shade[np.isnan(dem_shade[:, :, 0])] = np.nan
         if print_msg:
             print('show shaded relief DEM')

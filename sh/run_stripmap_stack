@@ -1,0 +1,21 @@
+#! /bin/sh
+
+if [ -d "Igrams" ]; then
+    echo "clean obsolete files/folders before reruning"
+    rm -r baselines/ configs/ coregSLC/ geom_master/ Igrams/ merged/ offsets/ refineSlaveTiming/ run_files/ SLC/
+    rm run_unPackALOS
+    cd download
+    rm -r 20*
+    mv ARCHIVED_FILES/* .
+    cd ..
+fi
+
+# prepare SAR data
+prepRawALOS.py -i download/ -o SLC -t ''
+chmod +x run_unPackALOS
+./run_unPackALOS
+
+# stack processing
+stackStripMap.py -s SLC/ -d DEM/gsi*.dem -t 1800 -b 1800 -a 20 -r 4 -u snaphu -W interferogram -m 20080212 --filter_strength 0.5
+submit_run_files4stripmap_stack.py ./run_files -e $NOTIFICATIONEMAIL
+

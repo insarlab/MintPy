@@ -273,13 +273,15 @@ class progressBar:
         prog_bar.close()
     """
 
-    def __init__(self, maxValue=100, prefix='', minValue=0, totalWidth=70):
+    def __init__(self, maxValue=100, prefix='', minValue=0, totalWidth=70, print_msg=True):
         self.prog_bar = "[]"  # This holds the progress bar string
         self.min = minValue
         self.max = maxValue
         self.span = maxValue - minValue
         self.suffix = ''
         self.prefix = prefix
+
+        self.print_msg = print_msg
         ## calculate total width based on console width
         #rows, columns = os.popen('stty size', 'r').read().split()
         #self.width = round(int(columns) * 0.7 / 10) * 10
@@ -344,11 +346,13 @@ class progressBar:
           line in stdout."""
         if value % every == 0 or value >= self.max:
             self.update_amount(newAmount=value, suffix=suffix)
-            sys.stdout.write('\r' + self.prog_bar)
-            sys.stdout.flush()
+            if self.print_msg:
+                sys.stdout.write('\r' + self.prog_bar)
+                sys.stdout.flush()
 
     def close(self):
         """Prints a blank space at the end to ensure proper printing
         of future statements."""
-        print(' ')
+        if self.print_msg:
+            print(' ')
 ################################End of progress bar class####################################

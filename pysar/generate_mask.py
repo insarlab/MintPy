@@ -8,6 +8,7 @@
 
 import os
 import sys
+import time
 import argparse
 import h5py
 import numpy as np
@@ -97,20 +98,20 @@ def run_or_skip(inps):
     # check output file vs input dataset
     if not os.path.isfile(inps.outfile):
         flag = 'run'
-        print('  1) output file {} not exist --> run.'.format(inps.outfile))
+        print('1) output file {} NOT exist.'.format(inps.outfile))
     else:
-        print('  1) output file {} already exists.'.format(inps.outfile))
+        print('1) output file {} already exists.'.format(inps.outfile))
         with h5py.File(inps.file, 'r') as f:
             ti = float(f[inps.dset].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.file)))
         to = os.path.getmtime(inps.outfile)
         if ti > to:
             flag = 'run'
-            print('  2) output file is NOT newer than input dataset: {} --> run.'.format(inps.dset))
+            print('2) output file is NOT newer than input dataset: {}.'.format(inps.dset))
         else:
-            print('  2) output file is newer than input dataset: {}.'.format(inps.dset))
+            print('2) output file is newer than input dataset: {}.'.format(inps.dset))
 
     # result
-    print('check result:', flag)
+    print('run or skip: {}.'.format(flag))
     return flag
 
 
@@ -206,6 +207,7 @@ def create_threshold_mask(inps):
 
 ################################################################################################
 def main(iargs=None):
+    start_time = time.time()
     inps = cmd_line_parse(iargs)
     atr = readfile.read_attribute(inps.file)
     k = atr['FILE_TYPE']
@@ -245,6 +247,9 @@ def main(iargs=None):
 
     ##### Mask: Threshold
     inps.outfile = create_threshold_mask(inps)
+
+    m, s = divmod(time.time()-start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs\n'.format(m, s))
     return inps.outfile
 
 

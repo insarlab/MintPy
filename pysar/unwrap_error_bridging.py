@@ -124,16 +124,16 @@ def run_or_skip(inps):
     with h5py.File(inps.ifgram_file, 'r') as f:
         if inps.datasetNameOut not in f.keys():
             flag = 'run'
-            print('  1) output dataset: {} not found --> run.'.format(inps.datasetNameOut))
+            print('1) output dataset: {} NOT found.'.format(inps.datasetNameOut))
         else:
-            print('  1) output dataset: {} exists'.format(inps.datasetNameOut))
+            print('1) output dataset: {} exists'.format(inps.datasetNameOut))
             ti = float(f[inps.datasetNameIn].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
             to = float(f[inps.datasetNameOut].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
             if ti > to:
                 flag = 'run'
-                print('  2) output dataset is NOT newer than input dataset: {} --> run.'.format(inps.datasetNameIn))
+                print('2) output dataset is NOT newer than input dataset: {}.'.format(inps.datasetNameIn))
             else:
-                print('  2) output dataset is newer than input dataset: {}'.format(inps.datasetNameIn))
+                print('2) output dataset is newer than input dataset: {}'.format(inps.datasetNameIn))
 
     # check configuration
     if flag == 'skip':
@@ -152,14 +152,14 @@ def run_or_skip(inps):
                         if str(inps_dict[key]) != atr.get(key_prefix+key, 'no')]
         if len(changed_keys) > 0:
             flag = 'run'
-            print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
+            print('3) NOT all key configration parameters are the same: {}.'.format(configKeys))
             for key in changed_keys:
                 print('\t{}\t: {} --> {}'.format(key, atr.get(key_prefix+key, 'no'), str(inps_dict[key])))
         else:
-            print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
+            print('3) all key configuration parameters are the same: {}.'.format(configKeys))
 
     # result
-    print('check result:', flag)
+    print('run or skip: {}.'.format(flag))
     return flag
 
 

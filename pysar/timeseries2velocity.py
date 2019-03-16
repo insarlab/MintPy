@@ -113,28 +113,28 @@ def run_or_skip(inps):
     # check output file
     if not os.path.isfile(inps.outfile):
         flag = 'run'
-        print('  1) output file {} not found, --> run'.format(inps.outfile))
+        print('1) output file {} NOT found.'.format(inps.outfile))
     else:
-        print('  1) output file {} already exists.'.format(inps.outfile))
+        print('1) output file {} already exists.'.format(inps.outfile))
         ti = os.path.getmtime(inps.timeseries_file)
         to = os.path.getmtime(inps.outfile)
         if ti > to:
             flag = 'run'
-            print('  2) output file is NOT newer than input file: {} --> run.'.format(inps.timeseries_file))
+            print('2) output file is NOT newer than input file: {}.'.format(inps.timeseries_file))
         else:
-            print('  2) output file is newer than input file: {}.'.format(inps.timeseries_file))
+            print('2) output file is newer than input file: {}.'.format(inps.timeseries_file))
 
     # check configuration
     if flag == 'skip':
         atr = readfile.read_attribute(inps.outfile)
         if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in configKeys):
             flag = 'run'
-            print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
+            print('3) NOT all key configration parameters are the same: {}.'.format(configKeys))
         else:
-            print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
+            print('3) all key configuration parameters are the same: {}.'.format(configKeys))
 
     # result
-    print('check result:', flag)
+    print('run or skip: {}.'.format(flag))
     return flag
 
 
@@ -218,23 +218,6 @@ def read_date_info(inps):
     return inps
 
 
-def design_matrix(date_list):
-    """design matrix/function model of linear velocity estimation
-    Parameters: date_list : list of string in YYYYMMDD format
-    Returns:    A : 2D array of int in size of (numDate, 2)
-    """
-    # convert list of YYYYMMDD into array of diff year in float
-    dt_list = [dt.strptime(i, '%Y%m%d') for i in date_list]
-    yr_list = [i.year + (i.timetuple().tm_yday - 1) / 365.25 for i in dt_list]
-    yr_diff = np.array(yr_list)
-    yr_diff -= yr_diff[0]
-
-    #for precision, use float32 in 0.1 yr, or float64 in 2015.1 yr format
-    A = np.ones([len(date_list), 2], dtype=np.float32)
-    A[:, 0] = yr_diff
-    return A
-
-
 def estimate_linear_velocity(inps):
     # read time-series data
     print('reading data from file {} ...'.format(inps.timeseries_file))
@@ -247,7 +230,7 @@ def estimate_linear_velocity(inps):
     # The following is equivalent
     # X = scipy.linalg.lstsq(A, ts_data, cond=1e-15)[0]
     # It is not used because it can not handle NaN value in ts_data
-    A = design_matrix(inps.dateList)
+    A = timeseries.get_design_matrix4average_velocity(inps.dateList)
     X = np.dot(np.linalg.pinv(A), ts_data)
     vel = np.array(X[0, :].reshape(length, width), dtype=dataType)
 

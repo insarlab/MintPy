@@ -33,7 +33,7 @@ pysar.save.hdfEos5.subset  = auto   #[yes / no], auto for no, put subset range i
 """
 
 EXAMPLE = """example:
-  save_hdfeos5.py geo_timeseries_ECMWF_demErr_ramp.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
+  save_hdfeos5.py geo_timeseries_ECMWF_ramp_demErr.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
 """
 
 
@@ -239,7 +239,7 @@ def get_output_filename(metadata, update_mode=False, subset_mode=False):
     DATE1 = dt.datetime.strptime(metadata['first_date'], '%Y-%m-%d').strftime('%Y%m%d')
     DATE2 = dt.datetime.strptime(metadata['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
     if update_mode:
-        print('Update mode is enabled, put endDate as XXXXXXXX.')
+        print('Update mode is ON, put endDate as XXXXXXXX.')
         DATE2 = 'XXXXXXXX'
 
     outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'_'+DATE2+'.he5'

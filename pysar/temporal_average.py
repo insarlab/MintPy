@@ -17,11 +17,12 @@ from pysar.utils import utils as ut, readfile
 
 #################################  Usage  ####################################
 EXAMPLE = """example:
-  temporal_average.py ifgramStack.h5 -d coherence -o avgSpatialCoh.h5 --update
+  temporal_average.py ./INPUTS/ifgramStack.h5 -d unwrapPhase -o avgPhaseVelocity.h5
+  temporal_average.py ./INPUTS/ifgramStack.h5 -d coherence   -o avgSpatialCoh.h5
 """
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Calculate temporal average/mean of multi-temporal datasets',
+    parser = argparse.ArgumentParser(description='Calculate temporal average (stacking) of multi-temporal datasets',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
@@ -72,20 +73,20 @@ def run_or_skip(inps):
     # check output file vs input dataset
     if not os.path.isfile(inps.outfile):
         flag = 'run'
-        print('  1) output file {} not exist --> run.'.format(inps.outfile))
+        print('1) output file {} NOT exist.'.format(inps.outfile))
     else:
-        print('  1) output file {} already exists.'.format(inps.outfile))
+        print('1) output file {} already exists.'.format(inps.outfile))
         with h5py.File(inps.file, 'r') as f:
             ti = float(f[inps.datasetName].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.file)))
         to = os.path.getmtime(inps.outfile)
         if ti > to:
             flag = 'run'
-            print('  2) output file is NOT newer than input dataset: {} --> run.'.format(inps.datasetName))
+            print('2) output file is NOT newer than input dataset: {}.'.format(inps.datasetName))
         else:
-            print('  2) output file is newer than input dataset: {}.'.format(inps.datasetName))
+            print('2) output file is newer than input dataset: {}.'.format(inps.datasetName))
 
     # result
-    print('check result:', flag)
+    print('run or skip: {}.'.format(flag))
     return flag
 
 
@@ -102,7 +103,7 @@ def main(iargs=None):
     inps.outfile = ut.temporal_average(inps.file, datasetName=inps.datasetName, outFile=inps.outfile)
 
     m, s = divmod(time.time()-start_time, 60)
-    print('\ntime used: {:02.0f} mins {:02.1f} secs'.format(m, s))
+    print('time used: {:02.0f} mins {:02.1f} secs\n'.format(m, s))
     return inps.outfile
 
 

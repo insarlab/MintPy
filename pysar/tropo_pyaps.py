@@ -29,14 +29,14 @@ standardWeatherModelNames = {'ERAI': 'ECMWF', 'ERAINT': 'ECMWF', 'ERAINTERIM': '
 ###############################################################
 EXAMPLE = """example:
   # download reanalysys dataset, calculate tropospheric delays and correct time-series file.
-  tropcor_pyaps.py -f timeseries.h5 -m ECMWF -g INPUTS/geometryRadar.h5 -w ~/WEATHER
+  tropo_pyaps.py -f timeseries.h5 -m ECMWF -g INPUTS/geometryRadar.h5 -w ~/WEATHER
 
   # download reanalysys dataset, calculate tropospheric delays
-  tropcor_pyaps.py -d date_list.txt     --hour 12 -m ECMWF -g INPUTS/geometryRadar.h5 --ref-yx 30 40 -w ~/WEATHER
-  tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m MERRA -g INPUTS/geometryRadar.h5 --ref-yx 30 40 -w ~/WEATHER
+  tropo_pyaps.py -d date_list.txt     --hour 12 -m ECMWF -g INPUTS/geometryRadar.h5 --ref-yx 30 40 -w ~/WEATHER
+  tropo_pyaps.py -d 20151002 20151003 --hour 12 -m MERRA -g INPUTS/geometryRadar.h5 --ref-yx 30 40 -w ~/WEATHER
 
   # download reanalysys dataset
-  tropcor_pyaps.py -d date_list.txt     --hour 12 -m ECMWF -w ~/WEATHER
+  tropo_pyaps.py -d date_list.txt     --hour 12 -m ECMWF -w ~/WEATHER
 """
 
 REFERENCE = """reference:
@@ -137,7 +137,7 @@ def cmd_line_parse(iargs=None):
 def check_inputs(inps):
     parser = create_parser()
     # Get Grib Source
-    inps.trop_model = ut.standardize_trop_model(inps.trop_model, standardWeatherModelNames)
+    inps.trop_model = standardize_trop_model(inps.trop_model, standardWeatherModelNames)
     print('weather model: '+inps.trop_model)
 
     # output directories/files
@@ -248,6 +248,13 @@ def check_inputs(inps):
 
 
 ###############################################################
+def standardize_trop_model(tropModel, standardWeatherModelNames):
+    tropModel = tropModel.replace('-', '').upper()
+    if tropModel in standardWeatherModelNames.keys():
+        tropModel = standardWeatherModelNames[tropModel]
+    return tropModel
+
+
 def date_list2grib_file(date_list, hour, trop_model, grib_dir):
     grib_file_list = []
     for d in date_list:
@@ -402,6 +409,7 @@ def get_delay_timeseries(inps, atr):
         trop_data = np.zeros((num_date, length, width), np.float32)
 
         print('calcualting delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
+        print('number of grib files used: {}'.format(num_date))
         prog_bar = ptime.progressBar(maxValue=num_date)
         for i in range(num_date):
             grib_file = inps.grib_file_list[i]

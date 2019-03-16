@@ -175,7 +175,7 @@ def reference_file(inps):
         return inps.file
 
     # Get stack and mask
-    stack = ut.temporal_average(inps.file, datasetName='unwrapPhase', updateMode=True)[0]
+    stack = ut.temporal_average(inps.file, datasetName='unwrapPhase', updateMode=True, outFile=False)[0]
     mask = np.multiply(~np.isnan(stack), stack != 0.)
     if np.nansum(mask) == 0.0:
         raise ValueError('no pixel found with valid phase value in all datasets.')
@@ -230,7 +230,7 @@ def reference_file(inps):
             obj.close()
         else:
             print('writing >>> '+inps.outfile)
-            data = readfile.read(inps.file)
+            data = readfile.read(inps.file)[0]
             data -= data[inps.ref_y, inps.ref_x]
             atr.update(atrNew)
             writefile.write(data, out_file=inps.outfile, metadata=atr)

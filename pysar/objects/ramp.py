@@ -9,6 +9,15 @@
 
 import numpy as np
 
+RAMP_LIST = [
+    'linear', 
+    'linear_range',
+    'linear_azimuth',
+    'quadratic',
+    'quadratic_range',
+    'quadratic_azimuth',
+]
+
 
 def deramp(data, mask_in, ramp_type='linear', metadata=None):
     '''Remove ramp from input data matrix based on pixel marked by mask

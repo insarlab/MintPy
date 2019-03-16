@@ -63,9 +63,9 @@ pysar.load.corFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/*filt*rlks.cor
 pysar.load.connCompFile   = None
 pysar.load.intFile        = None
 
-pysar.load.demFile        = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*rlks.rdc.dem
-pysar.load.lookupYFile    = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*rlks.UTM_TO_RDC
-pysar.load.lookupXFile    = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*rlks.UTM_TO_RDC
+pysar.load.demFile        = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*.hgt_sim
+pysar.load.lookupYFile    = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*.UTM_TO_RDC
+pysar.load.lookupXFile    = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*.UTM_TO_RDC
 pysar.load.incAngleFile   = None
 pysar.load.azAngleFile    = None
 pysar.load.shadowMaskFile = None
