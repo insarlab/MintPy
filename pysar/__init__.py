@@ -1,7 +1,7 @@
 from __future__ import print_function
 import sys
 import os
-
+import importlib
 
 pysar_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(1, pysar_path)
@@ -18,6 +18,31 @@ try:
 except KeyError:
     print('Using default PySAR Path: %s' % (pysar_path))
     os.environ['PYSAR_HOME'] = pysar_path
+
+# The modules exposed by importing `pysar`
+__all__ = ['dem_error',
+           'diff',
+           'generate_mask',
+           'ifgram_inversion',
+           'geocode'
+           'load_data',
+           'local_oscilator_drift',
+           'modify_network',
+           'plot_network',
+           'reference_date',
+           'reference_point',
+           'remove_ramp',
+           'save_hdfeos5',
+           'save_kmz',
+           'temporal_average',
+           'timeseries2velocity',
+           'timeseries_rms',
+           'tropo_phase_elevation',
+           'unwrap_error_bridging',
+           'unwrap_error_phase_closure']
+
+for module in __all__:
+    importlib.import_module(__name__ + '.' + module)
 
 
 ## Modules dependency graph
