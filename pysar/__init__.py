@@ -24,6 +24,7 @@ __all__ = ['dem_error',
            'diff',
            'generate_mask',
            'ifgram_inversion',
+           'geocode'
            'load_data',
            'local_oscilator_drift',
            'modify_network',
