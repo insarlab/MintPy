@@ -244,7 +244,7 @@ def extract_geometry_metadata(geom_dir, metadata=dict()):
             metadata['LON_REF4'] = str(data[r1, -1])
 
         if 'los' in os.path.basename(geom_file):
-            data = readfile.read(geom_file, datasetName='inc')[0]
+            data = readfile.read(geom_file, datasetName='az')[0]
             data[data == 0.] = np.nan
             az_angle = np.nanmean(data)
             # convert isce azimuth angle to roipac orbit heading angle
