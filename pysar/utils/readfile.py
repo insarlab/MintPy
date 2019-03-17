@@ -668,7 +668,7 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
         elif metafile0.endswith('.xml'):
             atr.update(read_isce_xml(metafile0))
             if 'FILE_TYPE' not in atr.keys():
-                atr['FILE_TYPE'] = atr.get('image_type', fext)
+                atr['FILE_TYPE'] = fext  #atr.get('image_type', fext)
 
         elif metafile0.endswith('.par'):
             atr.update(read_gamma_par(metafile0))
