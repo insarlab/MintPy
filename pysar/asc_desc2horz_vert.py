@@ -114,7 +114,7 @@ def main(iargs=None):
         V = readfile.read(fname, box=(x0, y0, x1, y1))[0]
         u_los[i, :] = V.flatten(0)
 
-        heading_angle = float(atr['HEADING_DEG'])
+        heading_angle = float(atr['HEADING'])
         if heading_angle < 0.:
             heading_angle += 360.
         print('heading angle: '+str(heading_angle))
