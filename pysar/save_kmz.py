@@ -252,6 +252,7 @@ def write_kmz_file(data, metadata, out_file, inps=None):
     cmdKMZ = 'zip {} {} {} {}'.format(kmz_file, kml_file, data_png_file, cbar_png_file)
     print('writing {}\n{}'.format(kmz_file, cmdKMZ))
     os.system(cmdKMZ)
+    print('finished wirting to {}'.format(kmz_file))
 
     cmdClean = 'rm {} {} {}'.format(kml_file, data_png_file, cbar_png_file)
     print(cmdClean)
@@ -298,8 +299,6 @@ def main(iargs=None):
                               metadata=atr,
                               out_file=inps.outfile,
                               inps=inps)
-
-    print('Done.')
     return
 
 

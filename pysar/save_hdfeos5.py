@@ -440,7 +440,6 @@ def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
         f.attrs[key] = value
     f.close()
     print('finished writing to {}'.format(out_file))
-
     return out_file
 
 

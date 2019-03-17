@@ -67,8 +67,6 @@ def main(iargs=None):
                       mask_file=inps.mask_file,
                       out_file=inps.outfile,
                       datasetName=inps.dset)
-
-    print('Done.')
     return
 
 

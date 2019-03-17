@@ -466,7 +466,7 @@ def main(iargs=None):
     inps = correct_dem_error(inps, A_def)
 
     m, s = divmod(time.time()-start_time, 60)
-    print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
+    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
     return inps.outfile
 
 

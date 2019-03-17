@@ -674,6 +674,6 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
         writefile.write(data, out_file=out_file, ref_file=fname)
 
     m, s = divmod(time.time()-start_time, 60)
-    print('\ntime used: {:02.0f} mins {:02.1f} secs'.format(m, s))
+    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
     return out_file
 

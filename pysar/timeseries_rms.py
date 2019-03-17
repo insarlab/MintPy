@@ -70,7 +70,7 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
-def read_template2inps(templateFile, inps=None):
+def read_template2inps(templateFile, inps):
     """Update inps with pysar.residualRms.* option from templateFile"""
     if not inps:
         inps = cmd_line_parse()
@@ -224,7 +224,7 @@ def main(iargs=None):
 
     inps = cmd_line_parse(iargs)
     if inps.template_file:
-        inps = read_template2inps(inps.template_file)
+        inps = read_template2inps(inps.template_file, inps)
 
     # calculate timeseries of residual Root Mean Square
     (inps.rms_list,

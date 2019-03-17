@@ -1145,7 +1145,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         write2hdf5_file(ifgram_file, metadata, ts, temp_coh, ts_std, num_inv_ifg, suffix='', inps=inps)
 
     m, s = divmod(time.time()-start_time, 60)
-    print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
+    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
     return
 
 

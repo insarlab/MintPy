@@ -141,7 +141,7 @@ def ref_date_file(ts_file, ref_date, outfile=None):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
     if inps.template_file:
-        inps = read_template2inps(inps.template_file)
+        inps = read_template2inps(inps.template_file, inps)
 
     inps.refDate = read_ref_date(inps)
 

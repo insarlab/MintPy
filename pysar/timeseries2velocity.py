@@ -269,7 +269,6 @@ def main(iargs=None):
         return inps.outfile
 
     inps.outfile = estimate_linear_velocity(inps)
-    print('Done.')
     return inps.outfile
 
 

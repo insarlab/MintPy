@@ -20,26 +20,29 @@ except KeyError:
     os.environ['PYSAR_HOME'] = pysar_path
 
 # The modules exposed by importing `pysar`
-__all__ = ['dem_error',
-           'diff',
-           'generate_mask',
-           'ifgram_inversion',
-           'geocode',
-           'load_data',
-           'local_oscilator_drift',
-           'modify_network',
-           'plot_network',
-           'reference_date',
-           'reference_point',
-           'remove_ramp',
-           'save_hdfeos5',
-           'save_kmz',
-           'temporal_average',
-           'timeseries2velocity',
-           'timeseries_rms',
-           'tropo_phase_elevation',
-           'unwrap_error_bridging',
-           'unwrap_error_phase_closure']
+__all__ = [
+    'dem_error',
+    'diff',
+    'generate_mask',
+    'geocode',
+    'ifgram_inversion',
+    'load_data',
+    'local_oscilator_drift',
+    'modify_network',
+    'plot_network',
+    'reference_date',
+    'reference_point',
+    'remove_ramp',
+    'save_hdfeos5',
+    'save_kmz',
+    'temporal_average',
+    'timeseries2velocity',
+    'timeseries_rms',
+    'tropo_phase_elevation',
+    'unwrap_error_bridging',
+    'unwrap_error_phase_closure',
+    'version',
+]
 
 for module in __all__:
     importlib.import_module(__name__ + '.' + module)
