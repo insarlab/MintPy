@@ -31,13 +31,13 @@ pysarApp.py GalapagosSenDT128.template --dostep velocity  #run at step 'velocity
 pysarApp.py GalapagosSenDT128.template --end load_data    #end after step 'load_data'
 ```
 
-#### Example on Fernandina volcano, Galápagos with Sentinel-1 data    
+#### [Example](https://github.com/yunjunz/PySAR/wiki/Example) on Fernandina volcano, Galápagos with Sentinel-1 data    
 
 ```
-wget https://zenodo.org/record/2571980/files/FernandinaSenDT128.tar.xz
+wget https://zenodo.org/record/2596744/files/FernandinaSenDT128.tar.xz
 tar -xvJf FernandinaSenDT128.tar.xz
 cd FernandinaSenDT128/PYSAR
-pysarApp.py FernandinaSenDT128.txt   
+pysarApp.py FernandinaSenDT128.txt
 ```
 
 <p align="left">

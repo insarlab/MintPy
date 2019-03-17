@@ -173,13 +173,12 @@ def cmd_line_parse(iargs=None):
 
     # mssage - processing steps
     if len(inps.runSteps) > 0:
+        print('--{}--'.format(dt.now()))
         print('Run routine processing with {} on steps: {}'.format(os.path.basename(__file__), inps.runSteps))
-        print('Time: {}'.format(dt.now()))
-
-    if inps.doStep:
-        print('Remaining steps: {}'.format(STEP_LIST[idx0+1:]))
-        print('--dostep option enabled, disable the plotting at the end of the processing.')
-        inps.plot = False
+        if inps.doStep:
+            print('Remaining steps: {}'.format(STEP_LIST[idx0+1:]))
+            print('--dostep option enabled, disable the plotting at the end of the processing.')
+            inps.plot = False
 
     print('-'*50)
     return inps
