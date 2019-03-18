@@ -164,7 +164,7 @@ def mask_isce_file(in_file, mask_file, out_file=None, inps=None):
         data_type = dataTypeDict[data_type]
 
     print('read {}'.format(in_file))
-    print('setting the phase value of the masked out pixels to zero')
+    print('setting the (phase) value on the masked out pixels to zero')
     ext = os.path.splitext(in_file)[1]
     if ext == '.unw':
         amp = readfile.read_binary(in_file, data_type=data_type, num_band=num_band, band_interleave=interleave, band=1)[0]

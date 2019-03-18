@@ -20,7 +20,9 @@ config = {};  config['walltime'] = '1:00';  config['memory'] = '2000';  cDict['r
 config = {};  config['walltime'] = '1:00';  config['memory'] = '2000';  cDict['run_6_fineResamp']           = config
 config = {};  config['walltime'] = '1:00';  config['memory'] = '1000';  cDict['run_7_grid_baseline']        = config
 config = {};  config['walltime'] = '2:00';  config['memory'] = '7000';  cDict['run_8_igram']                = config
-
+config = {};  config['walltime'] = '0:30';  config['memory'] = '2000';  cDict['run_9_maskIgram']            = config
+config = {};  config['walltime'] = '1:00';  config['memory'] = '5000';  cDict['run_10_unwrap']              = config
+config = {};  config['walltime'] = '0:30';  config['memory'] = '2000';  cDict['run_11_maskUnwrap']          = config
 num_run_file = len(cDict.keys())
 
 #####################################################################################
@@ -68,7 +70,7 @@ def run_job_submission4run_files(start_num=1, end_num=num_run_file, run_file_dir
 
     cwd = os.getcwd()
     os.chdir(run_file_dir)
-    for run_file in sorted(c_dict.keys()):
+    for run_file in c_dict.keys():
         config = c_dict[run_file]
         cmd = 'split_jobs.py {f} -r {r} -w {w}'.format(f=run_file,
                                                        r=config['memory'],
@@ -79,25 +81,6 @@ def run_job_submission4run_files(start_num=1, end_num=num_run_file, run_file_dir
             raise RuntimeError("Error in step {}".format(run_file))
     os.chdir(cwd)
     return status
-
-
-def get_multilook_number():
-    config_igram_file = glob.glob(os.path.join(os.getcwd(), 'configs/config_igram_*'))[0]
-    config = readfile.read_template(config_igram_file, delimiter=':')
-    return config['alks'], config['rlks']
-
-
-def multilook_geometry():
-    print('copy run_multilook_geometry file to the current directory')
-    run_file = os.path.expandvars('${PYSAR_HOME}/sh/run_multilook_geometry')
-    shutil.copy2(run_file, os.getcwd())
-
-    alks, rlks = get_multilook_number()
-
-    cmd = './{} {} {}'.format(os.path.basename(run_file), alks, rlks)
-    print(cmd)
-    os.system(cmd)
-    return
 
 
 #####################################################################################
@@ -123,11 +106,6 @@ def main(iargs=None):
             cmd += ' -e {}'.format(inps.email)
         print(cmd)
         os.system(cmd)
-
-    # prepare multilooked geometry
-    if os.path.isdir('./merged/geom_master'):
-        print('-'*50)
-        multilook_geometry()
 
     # Timing
     m, s = divmod(time.time()-start_time, 60)
