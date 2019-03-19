@@ -845,7 +845,7 @@ def add_inner_title(ax, title, loc, prop=None, **kwargs):
     return at
 
 
-def auto_figure_size(shape, disp_cbar=False):
+def auto_figure_size(shape, disp_cbar=False, ratio=1.0):
     """Get auto figure size based on input data shape"""
     length, width = shape
     plot_shape = [width*1.25, length]
@@ -854,7 +854,7 @@ def auto_figure_size(shape, disp_cbar=False):
     fig_scale = min(min_figsize_single/min(plot_shape),
                     max_figsize_single/max(plot_shape),
                     max_figsize_height/plot_shape[1])
-    fig_size = [i*fig_scale for i in plot_shape]
+    fig_size = [i*fig_scale*ratio for i in plot_shape]
     return fig_size
 
 
@@ -1869,7 +1869,7 @@ def set_shared_xlabel(axes_list, label, labelpad=0.01, font_size=12, position='t
 
 
 ##################### Data Scale based on Unit and Wrap Range ##################
-def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False, wrap_range=[-1.*np.pi, np.pi]):
+def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False, wrap_range=[-1.*np.pi, np.pi], print_msg=True):
     """Get auto disp_unit for input dataset
     Example:
         if not inps.disp_unit:
@@ -1892,7 +1892,8 @@ def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False, wrap_range=[-
             print('WARNING: re-wrap is disabled for disp_unit = {}'.format(disp_unit))
         elif disp_unit.split('/')[0] != 'radian' and (wrap_range[1] - wrap_range[0]) == 2.*np.pi:
             disp_unit = 'radian'
-            print('change disp_unit = radian due to rewrapping')
+            if print_msg:
+                print('change disp_unit = radian due to rewrapping')
 
     return disp_unit, wrap
 
@@ -2007,7 +2008,8 @@ def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False, 
         disp_unit, wrap = check_disp_unit_and_wrap(metadata,
                                                    disp_unit=None,
                                                    wrap=wrap,
-                                                   wrap_range=wrap_range)
+                                                   wrap_range=wrap_range, 
+                                                   print_msg=print_msg)
 
     # Data Operation - Scale to display unit
     disp_scale = 1.0

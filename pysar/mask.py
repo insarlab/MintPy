@@ -52,11 +52,6 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-
-    # default output filename
-    if not inps.outfile:
-        fbase, fext = os.path.splitext(inps.file)
-        inps.outfile = '{}_msk{}'.format(fbase, fext)
     return inps
 
 
@@ -133,18 +128,23 @@ def mask_file(fname, mask_file, out_file, inps=None):
             data = readfile.read(fname, datasetName=dsName, print_msg=False)[0]
             data = mask_matrix(data, mask, fill_value=inps.fill_value)
         dsDict[dsName] = data
+
+    # default output filename
+    if not out_file:
+        fbase, fext = os.path.splitext(fname)
+        out_file = '{}_msk{}'.format(fbase, fext)
+
     writefile.write(dsDict, out_file=out_file, ref_file=fname)
     return out_file
 
 
-def mask_isce_file(in_file, mask_file, out_file=None, inps=None):
-    if not inps:
-        inps = cmd_line_parse()
+def mask_isce_file(in_file, mask_file, out_file=None):
+    if not in_file:
+        return    
 
     # read mask_file
     print('read mask from {}'.format(mask_file))
     mask = readfile.read(mask_file)[0]
-    mask = update_mask_with_inps(mask, inps)
 
     # mask isce file
     atr = readfile.read_attribute(in_file)
@@ -165,7 +165,7 @@ def mask_isce_file(in_file, mask_file, out_file=None, inps=None):
 
     print('read {}'.format(in_file))
     print('setting the (phase) value on the masked out pixels to zero')
-    ext = os.path.splitext(in_file)[1]
+    fbase, ext = os.path.splitext(in_file)
     if ext == '.unw':
         amp = readfile.read_binary(in_file, data_type=data_type, num_band=num_band, band_interleave=interleave, band=1)[0]
         pha = readfile.read_binary(in_file, data_type=data_type, num_band=num_band, band_interleave=interleave, band=2)[0]
@@ -174,14 +174,23 @@ def mask_isce_file(in_file, mask_file, out_file=None, inps=None):
     elif ext == '.int':
         data = np.fromfile(in_file, dtype=data_type, count=length*width).reshape(-1, width)
         data[mask == 0] = np.abs(data[mask == 0])  #set the angle of complex data to zero
-    elif ext == '.cor':
-        data = readfile.read_binary(in_file, data_type=data_type, num_band=num_band, band_interleave=interleave, band=1)[0]
+    elif ext in ['.cor','.conncomp']:
+        data = readfile.read(in_file)[0] #, data_type=data_type, num_band=num_band, band_interleave=interleave, band=1)[0]
         data[mask == 0] = 0
     else:
         raise ValueError('unsupported ISCE file: {}'.format(in_file))
 
+    # output filename
+    if not out_file:
+        if ext in ['.int', '.cor', '.unw']:
+            out_file = '{}_msk{}'.format(fbase, ext)
+        elif in_file.endswith('.unw.conncomp'):
+            out_file = '{}_msk.unw.conncomp'.format(in_file.split('.unw.conncomp')[0])
+        else:
+            raise ValueError('unrecognized input file type: {}'.format(in_file))
+
     data.tofile(out_file)
-    print('write {}'.format(out_file))
+    print('finished writing to file {}'.format(out_file))
 
     # prepare ISCE metadata file by
     # 1. copy and rename metadata files
@@ -211,7 +220,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     if os.path.isfile(inps.file+'.xml'):
-        mask_isce_file(inps.file, inps.mask_file, inps.outfile, inps)
+        mask_isce_file(inps.file, inps.mask_file, inps.outfile)
     else:
         mask_file(inps.file, inps.mask_file, inps.outfile, inps)
 

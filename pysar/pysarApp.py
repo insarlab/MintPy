@@ -440,18 +440,20 @@ class TimeSeriesAnalysis:
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
         mask_file = 'maskConnComp.h5'
 
+        from pysar import unwrap_error_bridging, unwrap_error_phase_closure
+
         scp_args_bridge = '{} -t {} --update'.format(stack_file, self.templateFile)
         scp_args_closure = '{} {} -t {} --update'.format(stack_file, mask_file, self.templateFile)
 
         if method == 'bridging':
-            pysar.unwrap_error_bridging.main(scp_args_bridge.split())
+            unwrap_error_bridging.main(scp_args_bridge.split())
         elif method == 'phase_closure':
-            pysar.unwrap_error_phase_closure.main(scp_args_closure.split())
+            unwrap_error_phase_closure.main(scp_args_closure.split())
         elif method == 'bridging+phase_closure':
             scp_args_bridge += ' -i unwrapPhase -o unwrapPhase_bridging'
-            pysar.unwrap_error_bridging.main(scp_args_bridge.split())
+            unwrap_error_bridging.main(scp_args_bridge.split())
             scp_args_closure += ' -i unwrapPhase_bridging -o unwrapPhase_bridging_phaseClosure'
-            pysar.unwrap_error_phase_closure.main(scp_args_closure.split())
+            unwrap_error_phase_closure.main(scp_args_closure.split())
         else:
             raise ValueError('un-recognized method: {}'.format(method))
 
