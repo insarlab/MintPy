@@ -39,23 +39,34 @@ def create_parser():
     parser.add_argument('-c','--cmap', dest='colormap', default='truncate_RdBu',
                         help='Colormap for coherence matrix. Default: truncate_RdBu')
 
-    parser.add_argument('--map-file', dest='map_file', default='velocity.h5',
+    parser.add_argument('--img-file', dest='img_file', default='velocity.h5',
                         help='dataset to show in map to facilitate point selection')
-    parser.add_argument('--map-plot-cmd', dest='map_plot_cmd', default='view.py {} --wrap',
+    parser.add_argument('--view-cmd', dest='view_cmd', default='view.py {} --wrap --noverbose ',
                         help='view.py command to plot the input map file')
 
     parser.add_argument('--save', dest='save_fig',
                         action='store_true', help='save the figure')
     parser.add_argument('--nodisplay', dest='disp_fig',
                         action='store_false', help='save and do not display the figure')
+    parser.add_argument('--noverbose', dest='print_msg', action='store_false',
+                        help='Disable the verbose message printing.')
     return parser
 
 
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    if not os.path.isfile(inps.img_file):
+        raise SystemExit('ERROR: input image file not found: {}'.format(inps.img_file))
+
+    # verbose print using --noverbose option
+    global vprint
+    vprint = print if inps.print_msg else lambda *args, **kwargs: None
+
     if not inps.disp_fig:
         inps.save_fig = True
+        plt.switch_backend('Agg')
     return inps
 
 
@@ -65,15 +76,15 @@ def read_network_info(inps):
         raise ValueError('input file {} is not ifgramStack: {}'.format(inps.ifgram_file, k))
 
     obj = ifgramStack(inps.ifgram_file)
-    obj.open()
+    obj.open(print_msg=inps.print_msg)
     inps.date12_list    = obj.get_date12_list(dropIfgram=False)
     date12_kept = obj.get_date12_list(dropIfgram=True)
     inps.ex_date12_list = sorted(list(set(inps.date12_list) - set(date12_kept)))
     inps.date_list = obj.get_date_list(dropIfgram=False)
-    print('number of all     interferograms: {}'.format(len(inps.date12_list)))
-    print('number of dropped interferograms: {}'.format(len(inps.ex_date12_list)))
-    print('number of kept    interferograms: {}'.format(len(inps.date12_list) - len(inps.ex_date12_list)))
-    print('number of acquisitions: {}'.format(len(inps.date_list)))
+    vprint('number of all     interferograms: {}'.format(len(inps.date12_list)))
+    vprint('number of dropped interferograms: {}'.format(len(inps.ex_date12_list)))
+    vprint('number of kept    interferograms: {}'.format(len(inps.date12_list) - len(inps.ex_date12_list)))
+    vprint('number of acquisitions: {}'.format(len(inps.date_list)))
 
     if inps.lalo:
         if not inps.lookup_file:            
@@ -84,77 +95,111 @@ def read_network_info(inps):
 
     if not inps.yx:
         inps.yx = (obj.refY, obj.refX)
-        print('plot initial coherence matrix at reference pixel: {}'.format(inps.yx))
+        vprint('plot initial coherence matrix at reference pixel: {}'.format(inps.yx))
     return inps
 
 
-def plot_coherence_matrix4one_pixel(yx, fig, ax, inps):
-    # read coherence
-    box = (yx[1], yx[0], yx[1]+1, yx[0]+1)
-    coh = readfile.read(inps.ifgram_file, datasetName='coherence', box=box)[0]
-    # prep metadata
-    plotDict = {}
-    plotDict['fig_title'] = 'Y = {}, X = {}'.format(yx[0], yx[1])
-    plotDict['colormap'] = inps.colormap
-    # plot
-    ax, coh_mat = pp.plot_coherence_matrix(ax,
-                                           date12List=inps.date12_list,
-                                           cohList=coh.tolist(),
-                                           date12List_drop=inps.ex_date12_list,
-                                           plot_dict=plotDict)[0:2]
-    fig.canvas.draw()
+class networkViewer():
+    """class for plot_coherence_matrix (and plot_network)
+    
+    """
+    def __init__(self, cmd=None, iargs=None):
+        if cmd:
+            iargs = cmd.split()[1:]
+        self.cmd = cmd
+        self.iargs = iargs
 
-    # status bar
-    def format_coord(x, y):
-        row = int(y+0.5)
-        col = int(x+0.5)
-        m_date, s_date = sorted([inps.date_list[row], inps.date_list[col]])
-        return 'x={}, y={}, v={:.2f}'.format(m_date, s_date, coh_mat[row, col])
-    ax.format_coord = format_coord
-    # info
-    print('-'*30)
-    print('pixel: yx = {}'.format(yx))
-    print('min/max coherence: {:.2f} / {:.2f}'.format(np.min(coh), np.max(coh)))
-    return ax
+        # figure variables
+        self.figname_img = None
+        self.figsize_img = None
+        self.fig_img = None
+        self.ax_img = None
+
+        self.figname_mat = 'Coherence matrix'
+        self.figsize_mat = None
+        self.fig_mat = None
+        self.ax_mat = None
+        return
+
+    def configure(self):
+        inps = cmd_line_parse(self.iargs)
+        # read network info
+        inps = read_network_info(inps)
+        # copy inps to self object
+        for key, value in inps.__dict__.items():
+            setattr(self, key, value)
+
+        # figure variables
+        self.figname_img = self.img_file
+        return
+
+    def plot(self):
+        # Figure 1 - Image
+        self.fig_img, self.ax_img = plt.subplots(num=self.figname_img, figsize=self.figsize_img)
+        view_cmd = self.view_cmd.format(self.img_file)
+        d_img, atr, inps_img = view.prep_slice(view_cmd)
+        if self.yx:
+            inps_img.pts_yx = np.array(self.yx).reshape(-1, 2)
+            inps_img.pts_marker = 'r^'
+        inps_img.print_msg = self.print_msg
+        self.ax_img = view.plot_slice(self.ax_img, d_img, atr, inps_img)[0]
+
+        # Figure 2 - coherence matrix
+        self.fig_mat, self.ax_mat = plt.subplots(num=self.figname_mat, figsize=self.figsize_mat)
+        if self.yx:
+            self.plot_coherence_matrix4pixel(self.yx)
+
+        # Final linking of the canvas to the plots.
+        self.cid = self.fig_img.canvas.mpl_connect('button_press_event', self.update_coherence_matrix)
+        if self.disp_fig:
+            plt.show()
+        return
+
+    def plot_coherence_matrix4pixel(self, yx):
+        """Plot coherence matrix for one pixel
+        Parameters: yx : list of 2 int
+        """
+        # read coherence
+        box = (yx[1], yx[0], yx[1]+1, yx[0]+1)
+        coh = readfile.read(self.ifgram_file, datasetName='coherence', box=box)[0]
+        # prep metadata
+        plotDict = {}
+        plotDict['fig_title'] = 'Y = {}, X = {}'.format(yx[0], yx[1])
+        plotDict['colormap'] = self.colormap
+        # plot
+        coh_mat = pp.plot_coherence_matrix(self.ax_mat,
+                                           date12List=self.date12_list,
+                                           cohList=coh.tolist(),
+                                           date12List_drop=self.ex_date12_list,
+                                           plot_dict=plotDict)[1]
+        self.fig_mat.canvas.draw()
+
+        # status bar
+        def format_coord(x, y):
+            row, col = int(y+0.5), int(x+0.5)
+            date12 = sorted([self.date_list[row], self.date_list[col]])
+            date12 = ['{}-{}-{}'.format(i[0:4], i[4:6], i[6:8]) for i in date12]
+            return 'x={}, y={}, v={:.3f}'.format(date12[0], date12[1], coh_mat[row, col])
+        self.ax_mat.format_coord = format_coord
+        # info
+        vprint('-'*30)
+        vprint('pixel: yx = {}'.format(yx))
+        vprint('min/max coherence: {:.2f} / {:.2f}'.format(np.min(coh), np.max(coh)))
+        return
+
+    def update_coherence_matrix(self, event):
+        if event.inaxes == self.ax_img:
+            yx = [int(event.ydata+0.5), int(event.xdata+0.5)]
+            self.plot_coherence_matrix4pixel(yx)
+        return
 
 
 ##########################  Main Function  ##############################
-global ax2
 def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-    if not inps.disp_fig:
-        plt.switch_backend('Agg')
-
-    # read network info
-    inps = read_network_info(inps)
-
-    # Figure 1 - map
-    fig1, ax1 = plt.subplots(num=inps.map_file)
-    cmd = inps.map_plot_cmd.format(inps.map_file)
-    data1, atr, inps1 = view.prep_slice(cmd)
-    if inps.yx:
-        inps1.pts_yx = np.array(inps.yx).reshape(-1, 2)
-        inps1.pts_marker = 'ro'
-    ax1 = view.plot_slice(ax1, data1, atr, inps1)[0]
-
-    # Figure 2 - coherence matrix
-    fig2, ax2 = plt.subplots(num='Coherence Matrix')
-    if inps.yx:
-        plot_coherence_matrix4one_pixel(inps.yx, fig2, ax2, inps)
-
-    def plot_event(event):
-        if event.inaxes == ax1:
-            yx = (int(event.ydata+0.5), int(event.xdata+0.5))
-            plot_coherence_matrix4one_pixel(yx, fig2, ax2, inps)
-
-    if inps.save_fig:
-        plt.savefig('coh_mat_{}'.format())
-
-    # Final linking of the canvas to the plots.
-    cid = fig1.canvas.mpl_connect('button_press_event', plot_event)
-    if inps.disp_fig:
-        plt.show()
-    fig1.canvas.mpl_disconnect(cid)
+    obj = networkViewer(cmd=iargs)
+    obj.configure()
+    obj.plot()
+    obj.fig_img.canvas.mpl_disconnect(obj.cid)
     return
 
 

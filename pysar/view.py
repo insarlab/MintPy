@@ -295,7 +295,8 @@ def update_inps_with_file_metadata(inps, metadata):
     inps.disp_unit, inps.wrap = pp.check_disp_unit_and_wrap(metadata,
                                                             disp_unit=inps.disp_unit,
                                                             wrap=inps.wrap,
-                                                            wrap_range=inps.wrap_range)
+                                                            wrap_range=inps.wrap_range,
+                                                            print_msg=inps.print_msg)
 
     # Min / Max - Display
     if not inps.vlim:

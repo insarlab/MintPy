@@ -18,7 +18,7 @@ from pysar.utils import ptime, readfile, writefile, utils as ut
 
 EXAMPLE = """example:
   prep_isce.py -i ./merged/interferograms -m ./master/IW1.xml -b ./baselines -g ./merged/geom_master  #for topsStack
-  prep_isce.py -i ./interferograms -m ./masterShelve/data.dat -b ./baselines -g ./geom_master         #for stripmapStack
+  prep_isce.py -i ./Igrams -m ./masterShelve/data.dat -b ./baselines -g ./geom_master                 #for stripmapStack
   prep_isce.py -m 20120507_slc_crop.xml -g ./geometry                                                 #for stripmapApp
 """
 
