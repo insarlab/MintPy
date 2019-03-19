@@ -845,7 +845,7 @@ def add_inner_title(ax, title, loc, prop=None, **kwargs):
     return at
 
 
-def auto_figure_size(shape, disp_cbar=False):
+def auto_figure_size(shape, disp_cbar=False, ratio=1.0):
     """Get auto figure size based on input data shape"""
     length, width = shape
     plot_shape = [width*1.25, length]
@@ -854,7 +854,7 @@ def auto_figure_size(shape, disp_cbar=False):
     fig_scale = min(min_figsize_single/min(plot_shape),
                     max_figsize_single/max(plot_shape),
                     max_figsize_height/plot_shape[1])
-    fig_size = [i*fig_scale for i in plot_shape]
+    fig_size = [i*fig_scale*ratio for i in plot_shape]
     return fig_size
 
 

@@ -38,6 +38,8 @@ def create_parser():
                         help='Lookup file to convert lat/lon into y/x')
     parser.add_argument('-c','--cmap', dest='colormap', default='truncate_RdBu',
                         help='Colormap for coherence matrix. Default: truncate_RdBu')
+    parser.add_argument('--figsize','--fs', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
+                        help='figure size in inches. Default: [8, 4]')
 
     parser.add_argument('--img-file', dest='img_file', default='velocity.h5',
                         help='dataset to show in map to facilitate point selection')
@@ -101,7 +103,11 @@ def read_network_info(inps):
 
 class networkViewer():
     """class for plot_coherence_matrix (and plot_network)
-    
+    Example:
+        cmd = 'plot_coherence_matrix.py ./INPUTS/ifgramStack.h5 --noverbose --figsize 9 3 --yx 216 310'
+        obj = networkViewer(cmd)
+        obj.configure()
+        obj.plot()
     """
     def __init__(self, cmd=None, iargs=None):
         if cmd:
@@ -110,14 +116,10 @@ class networkViewer():
         self.iargs = iargs
 
         # figure variables
-        self.figname_img = None
-        self.figsize_img = None
-        self.fig_img = None
+        self.figname = 'Coherence matrix'
+        self.figsize = None
+        self.fig = None
         self.ax_img = None
-
-        self.figname_mat = 'Coherence matrix'
-        self.figsize_mat = None
-        self.fig_mat = None
         self.ax_mat = None
         return
 
@@ -129,13 +131,19 @@ class networkViewer():
         for key, value in inps.__dict__.items():
             setattr(self, key, value)
 
-        # figure variables
-        self.figname_img = self.img_file
+        # auto figure size
+        if not self.fig_size:
+            ds_shape = readfile.read(self.img_file)[0].shape
+            fig_size = pp.auto_figure_size(ds_shape, disp_cbar=True, ratio=0.7)
+            self.fig_size = [fig_size[0]+fig_size[1], fig_size[1]]
+            vprint('create figure in size of {} inches'.format(self.fig_size))
         return
 
     def plot(self):
-        # Figure 1 - Image
-        self.fig_img, self.ax_img = plt.subplots(num=self.figname_img, figsize=self.figsize_img)
+        # Figure 1
+        self.fig = plt.figure(self.figname, figsize=self.fig_size)
+        # Axes 1 - Image
+        self.ax_img = self.fig.add_axes([0.05, 0.1, 0.4, 0.8])
         view_cmd = self.view_cmd.format(self.img_file)
         d_img, atr, inps_img = view.prep_slice(view_cmd)
         if self.yx:
@@ -144,13 +152,13 @@ class networkViewer():
         inps_img.print_msg = self.print_msg
         self.ax_img = view.plot_slice(self.ax_img, d_img, atr, inps_img)[0]
 
-        # Figure 2 - coherence matrix
-        self.fig_mat, self.ax_mat = plt.subplots(num=self.figname_mat, figsize=self.figsize_mat)
+        # Axes 2 - coherence matrix
+        self.ax_mat = self.fig.add_axes([0.55, 0.125, 0.40, 0.75])
         if self.yx:
             self.plot_coherence_matrix4pixel(self.yx)
 
-        # Final linking of the canvas to the plots.
-        self.cid = self.fig_img.canvas.mpl_connect('button_press_event', self.update_coherence_matrix)
+        # Link the canvas to the plots.
+        self.cid = self.fig.canvas.mpl_connect('button_press_event', self.update_coherence_matrix)
         if self.disp_fig:
             plt.show()
         return
@@ -172,7 +180,7 @@ class networkViewer():
                                            cohList=coh.tolist(),
                                            date12List_drop=self.ex_date12_list,
                                            plot_dict=plotDict)[1]
-        self.fig_mat.canvas.draw()
+        self.fig.canvas.draw()
 
         # status bar
         def format_coord(x, y):
@@ -199,7 +207,7 @@ def main(iargs=None):
     obj = networkViewer(cmd=iargs)
     obj.configure()
     obj.plot()
-    obj.fig_img.canvas.mpl_disconnect(obj.cid)
+    obj.fig.canvas.mpl_disconnect(obj.cid)
     return
 
 
