@@ -173,7 +173,7 @@ def cmd_line_parse(iargs=None):
 
     # mssage - processing steps
     if len(inps.runSteps) > 0:
-        print('--{}--'.format(dt.now()))
+        print('--RUN-at-{}--'.format(dt.now()))
         print('Run routine processing with {} on steps: {}'.format(os.path.basename(__file__), inps.runSteps))
         if inps.doStep:
             print('Remaining steps: {}'.format(STEP_LIST[idx0+1:]))

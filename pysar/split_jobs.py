@@ -196,26 +196,26 @@ def main(iargs=None):
         job_num = zfile.split('.')[-1]
         job_file = zfile+'.sh'
         f = open(job_file,'w')
-        f.write('#! /bin/bash')
-        f.write('\n#BSUB -J {}.{}'.format(job_name, job_num))
-        f.write('\n#BSUB -P {}'.format(inps.project_name))
-        f.write('\n#BSUB -o z_output_{}.{}.%J.o'.format(job_name, job_num))
-        f.write('\n#BSUB -e z_output_{}.{}.%J.e'.format(job_name, job_num))
-        f.write('\n#BSUB -W {}'.format(inps.walltime))
-        f.write('\n#BSUB -q {}'.format(inps.queue_name))
-        f.write('\n#BSUB -n {}'.format(inps.num_processor))
-        f.write('\n#BSUB -R "rusage[mem={}]"'.format(inps.memory))
+        f.write('#! /bin/tcsh\n')
+        f.write('#BSUB -J {}.{}\n'.format(job_name, job_num))
+        f.write('#BSUB -P {}\n'.format(inps.project_name))
+        f.write('#BSUB -o z_output_{}.{}.%J.o\n'.format(job_name, job_num))
+        f.write('#BSUB -e z_output_{}.{}.%J.e\n'.format(job_name, job_num))
+        f.write('#BSUB -W {}\n'.format(inps.walltime))
+        f.write('#BSUB -q {}\n'.format(inps.queue_name))
+        f.write('#BSUB -n {}\n'.format(inps.num_processor))
+        f.write('#BSUB -R "rusage[mem={}]"\n'.format(inps.memory))
 
         if inps.queue_name == 'parallel':
-            f.write('\n#BSUB -R "span[ptile=16]"')
+            f.write('#BSUB -R "span[ptile=16]"\n')
 
         if inps.email:
-            f.write('\n#BSUB -u {}'.format(inps.email))
-            f.write('\n#BSUB -N')
+            f.write('#BSUB -u {}\n'.format(inps.email))
+            f.write('#BSUB -N\n')
 
         # write cd work directory
         f.write('\n')
-        f.write('\ncd {}\n'.format(job_dir))
+        f.write('cd {}\n'.format(job_dir))
 
         # write job excutable commands
         with open(zfile, 'r') as fz:
