@@ -1,5 +1,5 @@
 release_version = '1.0.0-dev'
-release_date = '2019-03-16'
+release_date = '2019-03-20'
 
 # generate_from: http://patorjk.com/software/taag/
 logo = """

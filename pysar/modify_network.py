@@ -464,10 +464,10 @@ def main(iargs=None):
 
     if inps.date12_to_drop is not None:
         ifgramStack(inps.file).update_drop_ifgram(date12List_to_drop=inps.date12_to_drop)
-        print('--------------------------------------------------')
-        ut.nonzero_mask(inps.file)
-        print('--------------------------------------------------')
-        ut.temporal_average(inps.file, datasetName='coherence', updateMode=True)
+        #print('--------------------------------------------------')
+        #ut.nonzero_mask(inps.file)
+        #print('--------------------------------------------------')
+        #ut.temporal_average(inps.file, datasetName='coherence', updateMode=True)
         # Touch spatial average txt file of coherence if it's existed
         ut.touch(os.path.splitext(os.path.basename(inps.file))[0]+'_coherence_spatialAvg.txt')
 
