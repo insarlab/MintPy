@@ -116,11 +116,16 @@ pysar.networkInversion.minNumPixel     = auto #[int > 0], auto for 100, min numb
 ## correct tropospheric delay using the following methods:
 ## a. pyaps - use Global Atmospheric Models (GAMs) data (Jolivet et al., 2011, GRL, need to install PyAPS)
 ## b. height_correlation - correct stratified tropospheric delay (Doin et al., 2009, J Applied Geop)
-## For pyaps method with the most recent SAR data, there will be GAM data missing due to latency
-## then the correction will be applied to dates with GAM data available and skipped for the others.
+## Notes for pyaps: 
+## 1) GAM data latency: with the most recent SAR data, there will be GAM data missing, the correction
+## will be applied to dates with GAM data available and skipped for the others.
+## 2) ${WEATHER_DIR}: if you define an environmental variable named WEATHER_DIR to contain the path to a 
+## directory, then PySAR applications will download the GAM files into the indicated directory. Also PySAR
+## application will look for the GAM files in the directory before downloading a new one to prevent downloading
+## multiple copies if you work with different dataset that cover the same date/time.
 pysar.troposphericDelay.method       = auto  #[pyaps / height_correlation / no], auto for pyaps
 pysar.troposphericDelay.weatherModel = auto  #[ERA / MERRA / NARR], auto for ECMWF, for pyaps method
-pysar.troposphericDelay.weatherDir   = auto  #[path2directory], auto for "./../WEATHER"
+pysar.troposphericDelay.weatherDir   = auto  #[path2directory], auto for ${WEATHER_DIR} or "./"
 pysar.troposphericDelay.polyOrder    = auto  #[1 / 2 / 3], auto for 1, for height_correlation method
 pysar.troposphericDelay.looks        = auto  #[1-inf], auto for 8, for height_correlation, number of looks
                                              #applied to interferogram while estimating the empirical ratio.

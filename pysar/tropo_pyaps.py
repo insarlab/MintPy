@@ -29,14 +29,14 @@ standardWeatherModelNames = {'ERAI': 'ECMWF', 'ERAINT': 'ECMWF', 'ERAINTERIM': '
 ###############################################################
 EXAMPLE = """example:
   # download reanalysys dataset, calculate tropospheric delays and correct time-series file.
-  tropo_pyaps.py -f timeseries.h5 -m ECMWF -g INPUTS/geometryRadar.h5 -w ~/WEATHER
+  tropo_pyaps.py -f timeseries.h5 -m ECMWF -g INPUTS/geometryRadar.h5 -w ${WEATHER_DIR}
 
   # download reanalysys dataset, calculate tropospheric delays
-  tropo_pyaps.py -d date_list.txt     --hour 12 -m ECMWF -g INPUTS/geometryRadar.h5 --ref-yx 30 40 -w ~/WEATHER
-  tropo_pyaps.py -d 20151002 20151003 --hour 12 -m MERRA -g INPUTS/geometryRadar.h5 --ref-yx 30 40 -w ~/WEATHER
+  tropo_pyaps.py -d date_list.txt     --hour 12 -m ECMWF -g INPUTS/geometryRadar.h5 --ref-yx 30 40
+  tropo_pyaps.py -d 20151002 20151003 --hour 12 -m MERRA -g INPUTS/geometryRadar.h5 --ref-yx 30 40
 
   # download reanalysys dataset
-  tropo_pyaps.py -d date_list.txt     --hour 12 -m ECMWF -w ~/WEATHER
+  tropo_pyaps.py -d date_list.txt     --hour 12 -m ECMWF
 """
 
 REFERENCE = """reference:
@@ -66,7 +66,7 @@ MERRA(2) (by NASA Goddard)    Global      00/06/12/18 UTC      0.5*0.625 (~50 km
 To download MERRA2, you need an Earthdata account, and pre-authorize the "NASA GESDISC DATA ARCHIVE" application, following https://disc.gsfc.nasa.gov/earthdata-login.
 """
 
-WEATHER_DIR = """--weather-dir ~/WEATHER
+WEATHER_DIR_DEMO = """--weather-dir ~/WEATHER
 WEATHER/
     /ECMWF
         ERA-Int_20030329_06.grb
@@ -90,9 +90,9 @@ def create_parser():
                         help='Read the first column of text file as list of date to download data\n' +
                              'in YYYYMMDD or YYMMDD format')
     parser.add_argument('--hour', help='time of data in HH, e.g. 12, 06')
-    parser.add_argument('-w', '--dir', '--weather-dir', dest='weather_dir',
-                        help='parent directory of downloaded weather data file. Default: ./\n' +
-                             'e.g.: '+WEATHER_DIR)
+    parser.add_argument('-w', '--dir', '--weather-dir', dest='weather_dir', default='${WEATHER_DIR}',
+                        help='parent directory of downloaded weather data file. Default: ${WEATHER_DIR}\n' +
+                             'e.g.: '+WEATHER_DIR_DEMO)
 
     # For delay calculation
     parser.add_argument('-g','--geomtry', dest='geom_file', type=str,
@@ -130,15 +130,26 @@ def cmd_line_parse(iargs=None):
         msg += '\n\n'+EXAMPLE
         raise ValueError(msg)
 
+
+    ## default values
+    # Get Grib Source
+    inps.trop_model = standardize_trop_model(inps.trop_model, standardWeatherModelNames)
+    print('weather model: '+inps.trop_model)
+
+    # weather_dir
+    inps.weather_dir = os.path.expanduser(inps.weather_dir)
+    inps.weather_dir = os.path.expandvars(inps.weather_dir)
+    # Fallback value if WEATHER_DIR is not defined as environmental variable
+    if inps.weather_dir == '${WEATHER_DIR}':
+        inps.weather_dir = './'
+    print('weather data directory: '+inps.weather_dir)
+
     return inps
 
 
 ###############################################################
 def check_inputs(inps):
     parser = create_parser()
-    # Get Grib Source
-    inps.trop_model = standardize_trop_model(inps.trop_model, standardWeatherModelNames)
-    print('weather model: '+inps.trop_model)
 
     # output directories/files
     atr = dict()
@@ -158,13 +169,6 @@ def check_inputs(inps):
     # trop_file
     inps.trop_file = os.path.join(pysar_dir, 'INPUTS/{}.h5'.format(inps.trop_model))
     print('output tropospheric delay file: {}'.format(inps.trop_file))
-
-    # weather_dir
-    if not inps.weather_dir:
-        inps.weather_dir = pysar_dir
-    inps.weather_dir = os.path.expanduser(inps.weather_dir)
-    inps.weather_dir = os.path.expandvars(inps.weather_dir)
-    print('weather data directory: '+inps.weather_dir)
 
     # hour
     if not inps.hour:
