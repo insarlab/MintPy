@@ -399,7 +399,14 @@ def get_delay_timeseries(inps, atr):
                 atr  : dict, metadata to be saved in trop_file
     Returns:    trop_file : str, file name of ECMWF.h5
     """
-    if ut.run_or_skip(out_file=inps.trop_file, in_file=inps.grib_file_list, print_msg=False) == 'run':
+    def get_dataset_size(fname):
+        atr = readfile.read_attribute(fname)
+        return (atr['LENGTH'], atr['WIDTH'])
+
+    if (ut.run_or_skip(out_file=inps.trop_file, in_file=inps.grib_file_list, print_msg=False) == 'skip' 
+            and get_dataset_size(inps.trop_file) == get_dataset_size(inps.geom_file)):
+        print('{} file exists and is newer than all GRIB files, skip updating.'.format(inps.trop_file))
+    else:
         if any(i is None for i in [inps.geom_file, inps.ref_yx]):
             print('No DEM / incidenceAngle / ref_yx found, skip calculating tropospheric delays.')
             if not os.path.isfile(inps.trop_file):
@@ -438,8 +445,6 @@ def get_delay_timeseries(inps, atr):
                           dates=date_list,
                           metadata=atr,
                           refFile=inps.timeseries_file)
-    else:
-        print('{} file exists and is newer than all GRIB files, skip updating.'.format(inps.trop_file))
 
     # Delete temporary DEM file in ROI_PAC format
     if inps.geom_file:

@@ -666,6 +666,10 @@ class TimeSeriesAnalysis:
             weather_dir = self.template['pysar.troposphericDelay.weatherDir']
             method      = self.template['pysar.troposphericDelay.method']
 
+            def get_dataset_size(fname):
+                atr = readfile.read_attribute(fname)
+                return (atr['LENGTH'], atr['WIDTH'])
+
             # Phase/Elevation Ratio (Doin et al., 2009)
             if method == 'height_correlation':
                 scp_args = '{f} -g {g} -p {p} -m {m} -o {o}'.format(f=in_file,
@@ -687,9 +691,9 @@ class TimeSeriesAnalysis:
                 print('Atmospheric correction using Weather Re-analysis dataset (PyAPS, Jolivet et al., 2011)')
                 print('Weather Re-analysis dataset:', tropo_model)
                 print('tropo_pyaps.py ', scp_args)
-                if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
-                    tropo_file = './INPUTS/{}.h5'.format(tropo_model)
-                    if os.path.isfile(tropo_file):
+                tropo_file = './INPUTS/{}.h5'.format(tropo_model)
+                if ut.run_or_skip(out_file=out_file, in_file=[in_file, tropo_file]) == 'run':
+                    if os.path.isfile(tropo_file) and get_dataset_size(tropo_file) == get_dataset_size(in_file):
                         scp_args = '{f} {t} -o {o} --force'.format(f=in_file, t=tropo_file, o=out_file)
                         print('--------------------------------------------')
                         print('Use existed tropospheric delay file: {}'.format(tropo_file))
