@@ -35,7 +35,7 @@ TEMPLATE = """
 pysar.network.coherenceBased  = auto  #[yes / no], auto for yes, exclude interferograms with coherence < minCoherence
 pysar.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
 pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
-pysar.network.maskFile        = auto  #[file name, no], auto for maskConnComp.h5, no for all pixels
+pysar.network.maskFile        = auto  #[file name, no], auto for waterMask.h5 or no for all pixels
 pysar.network.aoiYX           = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
 pysar.network.aoiLALO         = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 
@@ -92,9 +92,9 @@ def create_parser():
                           help='Enable coherence-based network modification')
     cohBased.add_argument('--no-mst', dest='keepMinSpanTree', action='store_false',
                           help='Do not keep interferograms in Min Span Tree network based on inversed mean coherene')
-    cohBased.add_argument('--mask', dest='maskFile',
+    cohBased.add_argument('--mask', dest='maskFile', default='waterMask.h5',
                           help='Mask file used to calculate the spatial coherence\n'
-                               'Will use the whole area if not assigned')
+                               'Default: waterMask.h5 or None')
     cohBased.add_argument('--aoi-yx', dest='aoiYX', type=str,
                           help='AOI in y0:y1,x0:x1 for coherence calculation')
     cohBased.add_argument('--aoi-lalo', dest='aoiLALO', type=str,
@@ -126,6 +126,19 @@ def cmd_line_parse(iargs=None):
         inps.excludeIfgIndex = read_input_index_list(inps.excludeIfgIndex, stackFile=inps.file)
     else:
         inps.excludeIfgIndex = []
+
+    # required input arguments
+    if inps.template_file:
+        inps = read_template2inps(inps.template_file, inps)
+    elif all(not i for i in [inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax, inps.connNumMax,
+                             inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased,
+                             inps.startDate, inps.endDate, inps.reset, inps.manual]):
+        msg = 'No input option found to remove interferogram, exit.\n'
+        msg += 'To manually modify network, please use --manual option '
+        raise Exception(msg)
+
+    if not os.path.isfile(inps.maskFile):
+        inps.maskFile = None
     return inps
 
 
@@ -432,6 +445,12 @@ def get_date12_to_drop(inps):
     print('number of interferograms to remove: {}'.format(len(date12_to_drop)))
     print('number of interferograms to keep  : {}'.format(len(date12_to_keep)))
 
+    date_to_keep = [d for date12 in date12_to_keep for d in date12.split('_')]
+    date_to_keep = sorted(list(set(date_to_keep)))
+    date_to_drop = sorted(list(set(dateList) - set(date_to_keep)))
+    if len(date_to_drop) > 0:
+        print('number of acquisitions to remove: {}\n{}'.format(len(date_to_drop), date_to_drop))
+
     date12ListKept = obj.get_date12_list(dropIfgram=True)
     date12ListDropped = sorted(list(set(date12ListAll) - set(date12ListKept)))
     if date12_to_drop == date12ListDropped:
@@ -445,15 +464,6 @@ def get_date12_to_drop(inps):
 #########################  Main Function  ##############################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    if inps.template_file:
-        inps = read_template2inps(inps.template_file, inps)
-
-    elif all(not i for i in [inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax, inps.connNumMax,
-                             inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased,
-                             inps.startDate, inps.endDate, inps.reset, inps.manual]):
-        msg = 'No input option found to remove interferogram, exit.\n'
-        msg += 'To manually modify network, please use --manual option '
-        raise Exception(msg)
 
     if inps.reset:
         print('--------------------------------------------------')

@@ -41,7 +41,7 @@ pysar.subset.lalo   = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
 pysar.network.coherenceBased  = auto  #[yes / no], auto for no, exclude interferograms with coherence < minCoherence
 pysar.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
 pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
-pysar.network.maskFile        = auto  #[file name, no], auto for no (use all pixels)
+pysar.network.maskFile        = auto  #[file name, no], auto for waterMask.h5 or no (use all pixels)
 pysar.network.aoiYX           = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
 pysar.network.aoiLALO         = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 ## 2.2 Network modification based on temporal/perpendicular baselines, date etc.

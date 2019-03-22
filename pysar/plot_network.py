@@ -44,7 +44,7 @@ EXAMPLE = """example:
 """
 
 TEMPLATE = """
-pysar.network.maskFile  = auto  #[file name, no], auto for maskConnComp.h5, no for all pixels
+pysar.network.maskFile  = auto  #[file name, no], auto for waterMask.h5 or no for all pixels
 pysar.network.aoiYX     = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
 pysar.network.aoiLALO   = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 """
@@ -75,8 +75,8 @@ def create_parser():
                      default=1.0, help='maximum coherence to display')
     coh.add_argument('-c', '--colormap', dest='colormap', default='RdBu',
                      help='colormap for display, i.e. Blues, RdBu, jet, ...')
-    coh.add_argument('--mask', dest='maskFile', default='maskConnComp.h5',
-                     help='mask file used to calculate the coherence')
+    coh.add_argument('--mask', dest='maskFile', default='waterMask.h5',
+                     help='mask file used to calculate the coherence. Default: waterMask.h5 or None.')
     coh.add_argument('--threshold', dest='coh_thres', type=float,
                      help='coherence value of where to cut the colormap for display')
 
@@ -122,8 +122,15 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
     if not inps.disp_fig:
         inps.save_fig = True
+
+    if inps.template_file:
+        inps = read_template2inps(inps.template_file, inps)
+
+    if not os.path.isfile(inps.maskFile):
+        inps.maskFile = None
     return inps
 
 
@@ -197,6 +204,8 @@ def read_network_info(inps):
         inps.dateList_keep = sorted(list(set(mDates + sDates)))
         inps.dateList_drop = sorted(list(set(inps.dateList) - set(inps.dateList_keep)))
         print('number of acquisitions marked as drop: {}'.format(len(inps.dateList_drop)))
+        if len(inps.dateList_drop) > 0:
+            print(inps.dateList_drop)
 
     # Optional: Read Coherence List
     inps.cohList = None
@@ -220,9 +229,6 @@ def read_network_info(inps):
 ##########################  Main Function  ##############################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    if inps.template_file:
-        inps = read_template2inps(inps.template_file, inps)
-
     inps = read_network_info(inps)
 
     # Plot
