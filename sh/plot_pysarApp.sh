@@ -2,7 +2,7 @@
 ###############################################################
 # Plot Results from Routine Workflow with pysarApp.py
 # Author: Zhang Yunjun, 2017-07-23
-# Latest update: 2019-03-20
+# Latest update: 2019-03-23
 ###############################################################
 
 
@@ -74,6 +74,7 @@ if [ $plot_timeseries -eq 1 ]; then
     file=timeseries.h5;                             test -f $file && $view $file $opt >> $log_file
 
     #LOD for Envisat
+    file=timeseries_LODcor.h5;                      test -f $file && $view $file $opt >> $log_file
     file=timeseries_LODcor_ECMWF.h5;                test -f $file && $view $file $opt >> $log_file
     file=timeseries_LODcor_ECMWF_demErr.h5;         test -f $file && $view $file $opt >> $log_file
     file=timeseries_LODcor_ECMWF_ramp.h5;           test -f $file && $view $file $opt >> $log_file

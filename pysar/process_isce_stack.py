@@ -18,7 +18,7 @@ EXAMPLE = """example:
   cd $SCRATCHDIR/KirishimaAlosAT424F620_630
   process_isce_stack.py -t KirishimaAlosAT424F620_630.txt --bsub -e $NOTIFICATIONEMAIL
   process_isce_stack.py -t KirishimaAlosAT424F620_630.txt --start 2 --end 7
-  process_isce_stacl.py --reset
+  process_isce_stack.py --reset
 """
 
 TEMPLATE = """template:
