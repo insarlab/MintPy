@@ -2043,12 +2043,12 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
             and 'masked' not in fname):
         mask_file = 'maskTempCoh.h5'
         if 'PhaseVelocity' in fname:
-            mask_file = 'maskSpatialCoh.h5'            
+            mask_file = None #'maskSpatialCoh.h5'
         # check coordinate
         if os.path.basename(fname).startswith('geo_'):
             mask_file = 'geo_{}'.format(mask_file)
         # absolute path and file existence
-        mask_file = os.path.join(os.path.dirname(fname), mask_file)
+        mask_file = os.path.join(os.path.dirname(fname), str(mask_file))
         if not os.path.isfile(mask_file):
             mask_file = None
 

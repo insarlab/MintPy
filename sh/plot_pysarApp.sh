@@ -2,7 +2,7 @@
 ###############################################################
 # Plot Results from Routine Workflow with pysarApp.py
 # Author: Zhang Yunjun, 2017-07-23
-# Latest update: 2019-03-01
+# Latest update: 2019-03-23
 ###############################################################
 
 
@@ -61,9 +61,8 @@ fi
 
 ## Auxliary Files from loaded dataset
 if [ $plot_loaded_data_aux -eq 1 ]; then
-    file=avgPhaseVelocity.h5;   test -f $file && $view $file -m maskSpatialCoh.h5 >> $log_file
+    file=avgPhaseVelocity.h5;   test -f $file && $view $file                      >> $log_file
     file=avgSpatialCoh.h5;      test -f $file && $view $file -c gray --vlim 0 1   >> $log_file
-    file=maskSpatialCoh.h5;     test -f $file && $view $file -c gray --vlim 0 1   >> $log_file
     file=maskConnComp.h5;       test -f $file && $view $file -c gray --vlim 0 1   >> $log_file
 fi
 
@@ -75,6 +74,7 @@ if [ $plot_timeseries -eq 1 ]; then
     file=timeseries.h5;                             test -f $file && $view $file $opt >> $log_file
 
     #LOD for Envisat
+    file=timeseries_LODcor.h5;                      test -f $file && $view $file $opt >> $log_file
     file=timeseries_LODcor_ECMWF.h5;                test -f $file && $view $file $opt >> $log_file
     file=timeseries_LODcor_ECMWF_demErr.h5;         test -f $file && $view $file $opt >> $log_file
     file=timeseries_LODcor_ECMWF_ramp.h5;           test -f $file && $view $file $opt >> $log_file

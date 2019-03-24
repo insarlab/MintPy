@@ -598,8 +598,10 @@ def check_template_auto_value(templateDict, auto_file='../defaults/pysarApp.cfg'
 
     # Change yes --> True and no --> False
     specialValues = {'yes': True,
+                     'True': True,
                      'no': False,
-                     'none': None
+                     'False': False,
+                     'none': None,
                      }
     for key, value in templateDict.items():
         if value in specialValues.keys():

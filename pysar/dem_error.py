@@ -145,7 +145,7 @@ def read_template2inps(template_file, inps=None):
         inps = cmd_line_parse()
     inpsDict = vars(inps)
     print('read options from template file: '+os.path.basename(template_file))
-    template = readfile.read_template(inps.template_file)
+    template = readfile.read_template(template_file)
     template = ut.check_template_auto_value(template)
 
     # Read template option

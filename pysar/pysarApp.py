@@ -12,12 +12,14 @@ import os
 import re
 import glob
 import time
-from datetime import datetime as dt
+import datetime
 import shutil
 import argparse
 import subprocess
 import numpy as np
+
 import pysar
+import pysar.workflow  #dynamic import for modules used by pysarApp workflow
 from pysar.objects import sensor, RAMP_LIST
 from pysar.utils import readfile, utils as ut
 from pysar.defaults.auto_path import autoPath
@@ -26,10 +28,10 @@ from pysar.defaults.auto_path import autoPath
 ##########################################################################
 STEP_LIST = [
     'load_data',
-    'reference_point',
-    'stack_interferograms',
-    'correct_unwrap_error',
     'modify_network',
+    'reference_point',
+    'correct_unwrap_error',
+    'stack_interferograms',
     'invert_network',
     'correct_LOD',
     'correct_troposphere',
@@ -173,7 +175,7 @@ def cmd_line_parse(iargs=None):
 
     # mssage - processing steps
     if len(inps.runSteps) > 0:
-        print('--{}--'.format(dt.now()))
+        print('--RUN-at-{}--'.format(datetime.datetime.now()))
         print('Run routine processing with {} on steps: {}'.format(os.path.basename(__file__), inps.runSteps))
         if inps.doStep:
             print('Remaining steps: {}'.format(STEP_LIST[idx0+1:]))
@@ -382,82 +384,6 @@ class TimeSeriesAnalysis:
         return
 
 
-    def run_reference_point(self, step_name):
-        """Select reference point.
-        It 1) generate mask file from common conn comp
-           2) generate average spatial coherence and its mask
-           3) add REF_X/Y and/or REF_LAT/LON attribute to stack file
-        """
-        # check the existence of ifgramStack.h5
-        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
-        water_mask_file = 'waterMask.h5'
-        cc_mask_file = 'maskConnComp.h5'
-        coh_mask_file = 'maskSpatialCoh.h5'
-        coh_file = 'avgSpatialCoh.h5'
-
-        # 1) generate mask file from the common connected components
-        scp_args = '{} --nonzero -o {} --update'.format(stack_file, cc_mask_file)
-        print('generate_mask.py', scp_args)
-        pysar.generate_mask.main(scp_args.split())
-
-        # 2.1) generate average spatial coherence
-        scp_args = '{} --dataset coherence -o {} --update'.format(stack_file, coh_file)
-        print('temporal_average.py', scp_args)
-        pysar.temporal_average.main(scp_args.split())
-
-        # 2.2) generate mask based on average spatial coherence
-        if ut.run_or_skip(out_file=coh_mask_file, in_file=coh_file) == 'run':
-            scp_args = '{} -m 0.7 -o {}'.format(coh_file, coh_mask_file)
-            if os.path.isfile(water_mask_file):
-                scp_args += ' --base {}'.format(water_mask_file)
-            print('generate_mask.py', scp_args)
-            pysar.generate_mask.main(scp_args.split())
-
-        # 3) select reference point
-        scp_args = '{} -t {} -c {}'.format(stack_file, self.templateFile, coh_file)
-        print('reference_point.py', scp_args)
-        pysar.reference_point.main(scp_args.split())
-
-
-    def run_ifgram_stacking(self, step_name):
-        """Traditional interferograms stacking."""
-        # check the existence of ifgramStack.h5
-        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
-        pha_vel_file = 'avgPhaseVelocity.h5'
-        scp_args = '{} --dataset unwrapPhase -o {} --update'.format(stack_file, pha_vel_file)
-        print('temporal_average.py', scp_args)
-        pysar.temporal_average.main(scp_args.split())
-
-
-    def run_unwrap_error_correction(self, step_name):
-        """Correct phase-unwrapping errors"""
-        method = self.template['pysar.unwrapError.method']
-        if not method:
-            print('phase-unwrapping error correction is OFF.')
-            return
-
-        # check the existence of ifgramStack.h5
-        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
-        mask_file = 'maskConnComp.h5'
-
-        from pysar import unwrap_error_bridging, unwrap_error_phase_closure
-
-        scp_args_bridge = '{} -t {} --update'.format(stack_file, self.templateFile)
-        scp_args_closure = '{} {} -t {} --update'.format(stack_file, mask_file, self.templateFile)
-
-        if method == 'bridging':
-            unwrap_error_bridging.main(scp_args_bridge.split())
-        elif method == 'phase_closure':
-            unwrap_error_phase_closure.main(scp_args_closure.split())
-        elif method == 'bridging+phase_closure':
-            scp_args_bridge += ' -i unwrapPhase -o unwrapPhase_bridging'
-            unwrap_error_bridging.main(scp_args_bridge.split())
-            scp_args_closure += ' -i unwrapPhase_bridging -o unwrapPhase_bridging_phaseClosure'
-            unwrap_error_phase_closure.main(scp_args_closure.split())
-        else:
-            raise ValueError('un-recognized method: {}'.format(method))
-
-
     def run_network_modification(self, step_name):
         """Modify network of interferograms before the network inversion."""
         # check the existence of ifgramStack.h5
@@ -481,6 +407,84 @@ class TimeSeriesAnalysis:
                           check_readable=False) == 'run':
             pysar.plot_network.main(scp_args.split())
 
+        # 3) aux files: maskConnComp and avgSpatialCoh
+        self.generate_ifgram_aux_file()
+        return
+
+
+    def generate_ifgram_aux_file(self):
+        """Generate auxiliary files from ifgramStack file, including:
+        
+        """
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        cc_mask_file = 'maskConnComp.h5'
+        coh_file = 'avgSpatialCoh.h5'
+
+        # 1) generate mask file from the common connected components
+        scp_args = '{} --nonzero -o {} --update'.format(stack_file, cc_mask_file)
+        print('\ngenerate_mask.py', scp_args)
+        pysar.generate_mask.main(scp_args.split())
+
+        # 2) generate average spatial coherence
+        scp_args = '{} --dataset coherence -o {} --update'.format(stack_file, coh_file)
+        print('\ntemporal_average.py', scp_args)
+        pysar.temporal_average.main(scp_args.split())
+        return
+
+
+    def run_reference_point(self, step_name):
+        """Select reference point.
+        It 1) generate mask file from common conn comp
+           2) generate average spatial coherence and its mask
+           3) add REF_X/Y and/or REF_LAT/LON attribute to stack file
+        """
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        coh_file = 'avgSpatialCoh.h5'
+        scp_args = '{} -t {} -c {}'.format(stack_file, self.templateFile, coh_file)
+        print('reference_point.py', scp_args)
+        pysar.reference_point.main(scp_args.split())
+        return
+
+
+    def run_unwrap_error_correction(self, step_name):
+        """Correct phase-unwrapping errors"""
+        method = self.template['pysar.unwrapError.method']
+        if not method:
+            print('phase-unwrapping error correction is OFF.')
+            return
+
+        # check required input files
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        mask_file = 'maskConnComp.h5'
+
+        scp_args_bridge = '{} -t {} --update'.format(stack_file, self.templateFile)
+        scp_args_closure = '{} {} -t {} --update'.format(stack_file, mask_file, self.templateFile)
+
+        from pysar import unwrap_error_bridging, unwrap_error_phase_closure
+        if method == 'bridging':
+            unwrap_error_bridging.main(scp_args_bridge.split())
+        elif method == 'phase_closure':
+            unwrap_error_phase_closure.main(scp_args_closure.split())
+        elif method == 'bridging+phase_closure':
+            scp_args_bridge += ' -i unwrapPhase -o unwrapPhase_bridging'
+            unwrap_error_bridging.main(scp_args_bridge.split())
+            scp_args_closure += ' -i unwrapPhase_bridging -o unwrapPhase_bridging_phaseClosure'
+            unwrap_error_phase_closure.main(scp_args_closure.split())
+        else:
+            raise ValueError('un-recognized method: {}'.format(method))
+        return
+
+
+    def run_ifgram_stacking(self, step_name):
+        """Traditional interferograms stacking."""
+        # check the existence of ifgramStack.h5
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        pha_vel_file = 'avgPhaseVelocity.h5'
+        scp_args = '{} --dataset unwrapPhase -o {} --update'.format(stack_file, pha_vel_file)
+        print('temporal_average.py', scp_args)
+        pysar.temporal_average.main(scp_args.split())
+        return
+
 
     def run_network_inversion(self, step_name):
         """Invert network of interferograms for raw phase time-series.
@@ -497,6 +501,7 @@ class TimeSeriesAnalysis:
 
         # 2) get reliable pixel mask: maskTempCoh.h5
         self.generate_temporal_coherence_mask()
+        return
 
 
     def generate_temporal_coherence_mask(self):
@@ -643,6 +648,8 @@ class TimeSeriesAnalysis:
             atr = readfile.read_attribute(in_file)
             sat = atr.get('PLATFORM', None)
             print('No local oscillator drift correction is needed for {}.'.format(sat))
+        return
+
 
 
     def run_tropospheric_delay_correction(self, step_name):
@@ -658,6 +665,10 @@ class TimeSeriesAnalysis:
             tropo_model = self.template['pysar.troposphericDelay.weatherModel']
             weather_dir = self.template['pysar.troposphericDelay.weatherDir']
             method      = self.template['pysar.troposphericDelay.method']
+
+            def get_dataset_size(fname):
+                atr = readfile.read_attribute(fname)
+                return (atr['LENGTH'], atr['WIDTH'])
 
             # Phase/Elevation Ratio (Doin et al., 2009)
             if method == 'height_correlation':
@@ -680,9 +691,9 @@ class TimeSeriesAnalysis:
                 print('Atmospheric correction using Weather Re-analysis dataset (PyAPS, Jolivet et al., 2011)')
                 print('Weather Re-analysis dataset:', tropo_model)
                 print('tropo_pyaps.py ', scp_args)
-                if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
-                    tropo_file = './INPUTS/{}.h5'.format(tropo_model)
-                    if os.path.isfile(tropo_file):
+                tropo_file = './INPUTS/{}.h5'.format(tropo_model)
+                if ut.run_or_skip(out_file=out_file, in_file=[in_file, tropo_file]) == 'run':
+                    if os.path.isfile(tropo_file) and get_dataset_size(tropo_file) == get_dataset_size(in_file):
                         scp_args = '{f} {t} -o {o} --force'.format(f=in_file, t=tropo_file, o=out_file)
                         print('--------------------------------------------')
                         print('Use existed tropospheric delay file: {}'.format(tropo_file))
@@ -693,6 +704,7 @@ class TimeSeriesAnalysis:
                         tropo_pyaps.main(scp_args.split())
         else:
             print('No tropospheric delay correction.')
+        return
 
 
     def run_phase_deramping(self, step_name):
@@ -711,6 +723,7 @@ class TimeSeriesAnalysis:
                 pysar.remove_ramp.main(scp_args.split())
         else:
             print('No phase ramp removal.')
+        return
 
 
     def run_topographic_residual_correction(self, step_name):
@@ -730,6 +743,7 @@ class TimeSeriesAnalysis:
             pysar.dem_error.main(scp_args.split())
         else:
             print('No topographic residual correction.')
+        return
 
 
     def run_residual_phase_rms(self, step_name):
@@ -741,6 +755,7 @@ class TimeSeriesAnalysis:
             pysar.timeseries_rms.main(scp_args.split())
         else:
             print('No residual phase file found! Skip residual RMS analysis.')
+        return
 
 
     def run_reference_date(self, step_name):
@@ -754,6 +769,7 @@ class TimeSeriesAnalysis:
             pysar.reference_date.main(scp_args.split())
         else:
             print('No reference date change.')
+        return
 
 
     def run_timeseries2velocity(self, step_name):
@@ -777,6 +793,7 @@ class TimeSeriesAnalysis:
                                                           o=tropo_vel_file)
             print('timeseries2velocity.py', scp_args)
             pysar.timeseries2velocity.main(scp_args.split())
+        return
 
 
     def run_geocode(self, step_name):
@@ -839,6 +856,7 @@ class TimeSeriesAnalysis:
                 pysar.save_kmz.main(scp_args.split())
         else:
             print('save velocity to Google Earth format is OFF.')
+        return
 
 
     def run_save2hdfeos5(self, step_name):
@@ -878,6 +896,7 @@ class TimeSeriesAnalysis:
                 pysar.save_hdfeos5.main(scp_args.split())
         else:
             print('save time-series to HDF-EOS5 format is OFF.')
+        return
 
 
     def plot_result(self, print_aux=True, plot=True):
@@ -890,9 +909,9 @@ class TimeSeriesAnalysis:
                 lines = open(fname, 'r').readlines()
                 line = [i for i in lines if prefix in i][0]
                 t = re.findall('\d{4}-\d{2}-\d{2}', line)[0]
-                t = dt.strptime(t, '%Y-%m-%d')
+                t = datetime.datetime.strptime(t, '%Y-%m-%d')
             except:
-                t = dt.strptime('2010-01-01', '%Y-%m-%d') #a arbitrary old date
+                t = datetime.datetime.strptime('2010-01-01', '%Y-%m-%d') #a arbitrary old date
             return t
 
         print('\n******************** plot & save to PIC ********************')
@@ -939,17 +958,17 @@ class TimeSeriesAnalysis:
             if sname == 'load_data':
                 self.run_load_data(sname)
 
+            elif sname == 'modify_network':
+                self.run_network_modification(sname)
+
             elif sname == 'reference_point':
                 self.run_reference_point(sname)
-
-            elif sname == 'stack_interferograms':
-                self.run_ifgram_stacking(sname)
 
             elif sname == 'correct_unwrap_error':
                 self.run_unwrap_error_correction(sname)
 
-            elif sname == 'modify_network':
-                self.run_network_modification(sname)
+            elif sname == 'stack_interferograms':
+                self.run_ifgram_stacking(sname)
 
             elif sname == 'invert_network':
                 self.run_network_inversion(sname)
