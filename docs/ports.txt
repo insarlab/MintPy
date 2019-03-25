@@ -27,10 +27,10 @@ tiff
 openmotif
 subversion
 python27
-python35
+python36
 fftw +gcc5
 fftw-single +gcc5
-fftw-3 +gcc5 
+fftw-3 +gcc5
 fftw-3-long +gcc5
 fftw-3-single +gcc5
 aria2
@@ -69,11 +69,12 @@ samba3
 swig
 swig-python
 gdal +expat +geos +hdf4 +hdf5 +netcdf +openjpeg +postgresql95 +sqlite3 +grib
+py36-cython
+py36-mpi4py +gcc5 +openmpi
 py36-numpy +gcc5 +openblas
 py36-scipy +gcc5 +openblas
 py36-matplotlib +cairo +tkinter
 py36-matplotlib-basemap
-py36-statsmodels
 py36-pandas
 py36-sympy
 py36-yaml
@@ -83,18 +84,18 @@ py36-cartopy
 py36-shapely
 py36-fiona
 py36-networkx
+py36-scikit-image
 py36-ipython +notebook +parallel
-py36-mpi4py +gcc5 +openmpi
+py36-dask
+py36-zmq
+py36-bokeh
+py36-dynd
+py36-sphinx
+py36-pip
 gmt5
 kealib
 pandoc
 zmq
-py36-zmq
-py36-bokeh
-py36-dynd
-py36-dask
-py36-sphinx
-py36-pip
 postgis2 +gui +postgresql95 +raster +sfcgal +topology
 wdiff
 cwdiff
@@ -112,3 +113,4 @@ c2html
 sowing
 petsc +atlas +gcc5 +hypre +openmpi +parmetis +suitesparse +sundials +superlu +superlu_dist
 py36-petsc4py +gcc5 +openmpi
+py36-cvxopt +accelerate +dsdp +fftw +glpk +gsl

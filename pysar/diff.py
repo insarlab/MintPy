@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013-2018, Zhang Yunjun, Heresh Fattahi     #
+# Copyright(c) 2013-2019, Zhang Yunjun, Heresh Fattahi     #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
 
@@ -10,7 +10,7 @@ import sys
 import time
 import argparse
 import numpy as np
-from pysar.objects import timeseries, giantTimeseries
+from pysar.objects import timeseries, giantTimeseries, ifgramStack, ifgramDatasetNames
 from pysar.utils import readfile, writefile
 
 
@@ -20,6 +20,7 @@ EXAMPLE = """example:
   diff.py  timeseries.h5  ECMWF.h5  -o timeseries_ECMWF.h5
   diff.py  timeseries.h5  ECMWF.h5  -o timeseries_ECMWF.h5  --force
   diff.py  timeseries_ECMWF_demErr_ramp.h5  ../GIANT/Stack/LS-PARAMS.h5 -o pysar_giant.h5
+  diff.py  reconUnwrapIfgram.h5  ./INPUTS/ifgramStack.h5  -o diffUnwrapIfgram.h5
 
   # multiple files
   diff.py  waterMask.h5  maskSantiago.h5  maskFernandina.h5  -o maskIsabela.h5
@@ -84,7 +85,7 @@ def diff_file(file1, file2, outFile=None, force=False):
         if k2 not in ['timeseries', 'giantTimeseries']:
             raise Exception('Input multiple dataset files are not the same file type!')
         if len(file2) > 1:
-            raise Exception(('Only 2 files substraction is supported for time series file,'
+            raise Exception(('Only 2 files substraction is supported for time-series file,'
                              ' {} input.'.format(len(file2)+1)))
 
         obj1 = timeseries(file1)
@@ -124,7 +125,45 @@ def diff_file(file1, file2, outFile=None, force=False):
         mask = data == 0.
         data[dateShared] -= data2
         data[mask] = 0.               # Do not change zero phase value
+        del data2
         writefile.write(data, out_file=outFile, ref_file=file1)
+
+    elif all(i == 'ifgramStack' for i in [k1, k2]):
+        obj1 = ifgramStack(file1)
+        obj1.open()
+        obj2 = ifgramStack(file2[0])
+        obj2.open()
+        dsNames = list(set(obj1.datasetNames) & set(obj2.datasetNames))
+        if len(dsNames) == 0:
+            raise ValueError('no common dataset between two files!')
+        dsName = [i for i in ifgramDatasetNames if i in dsNames][0]
+
+        # read data
+        print('reading {} from file {} ...'.format(dsName, file1))
+        data1 = readfile.read(file1, datasetName=dsName)[0]
+        print('reading {} from file {} ...'.format(dsName, file2[0]))
+        data2 = readfile.read(file2[0], datasetName=dsName)[0]
+
+        # consider reference pixel
+        if 'unwrapphase' in dsName.lower():
+            print('referencing to pixel ({},{}) ...'.format(obj1.refY, obj1.refX))
+            ref1 = data1[:, obj1.refY, obj1.refX]
+            ref2 = data2[:, obj2.refY, obj2.refX]
+            for i in range(data1.shape[0]):
+                data1[i,:][data1[i, :] != 0.] -= ref1[i]
+                data2[i,:][data2[i, :] != 0.] -= ref2[i]
+
+        # operation and ignore zero values
+        data1[data1 == 0] = np.nan
+        data2[data2 == 0] = np.nan
+        data = data1 - data2
+        del data1, data2
+        data[np.isnan(data)] = 0.
+
+        # write to file
+        dsDict = {}
+        dsDict[dsName] = data
+        writefile.write(dsDict, out_file=outFile, ref_file=file1)
 
     # Sing dataset file
     else:

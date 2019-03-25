@@ -1,7 +1,14 @@
+examples/dev/*
 *.DS_Store
 *.pyc
-*checkpoint.ipynb
-examples/*
+.ipynb_checkpoints/*
+*/.ipynb_checkpoints/*
+*/*/.ipynb_checkpoints/*
+*/*/*/.ipynb_checkpoints/*
+.idea/*
+*/.idea/*
+_includes/test 2.html
+_includes/test.html
 docs/workshop2017Miami.pptx
 docs/resources/logo_red.png
 docs/resources/Github_mark.png
@@ -11,13 +18,10 @@ docs/Manual/Manual_frontpage.ai
 docs/logo_GithubPage.pdf
 docs/logo_GithubPage.ai
 docs/logo.ai
-figure
-modis
-.idea
-
 docs/logo2.ai
 docs/Yunjun_logo.ai
-pysar/tsview_dev_yunjun.py
 docs/resources/visit_location.png
-_includes/test 2.html
-_includes/test.html
+modis
+isce/*
+docs/Notebooks/docs/images/GalapagosSenDT128_GE.png
+isce.log

@@ -25,7 +25,7 @@ pysar.reference.lalo          = auto   #[31.8,130.8 / auto]
 
 pysar.reference.coherenceFile = auto   #[file name], auto for averageSpatialCoherence.h5
 pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum coherence for auto method
-pysar.reference.maskFile      = auto   #[file name / no], auto for mask.h5
+pysar.reference.maskFile      = auto   #[file name / no], auto for maskConnComp.h5
 """
 
 NOTE = """note: Reference value cannot be nan, thus, all selected reference point must be:
@@ -51,7 +51,7 @@ NOTE = """note: Reference value cannot be nan, thus, all selected reference poin
 """
 
 EXAMPLE = """example:
-  reference_point.py  INPUTS/ifgramStack.h5  -t pysarApp_template.txt  -c avgSpatialCoherence.h5
+  reference_point.py  INPUTS/ifgramStack.h5  -t pysarApp_template.txt  -c avgSpatialCoh.h5
 
   reference_point.py  timeseries.h5     -r Seeded_velocity.h5
   reference_point.py  091120_100407.unw -y 257    -x 151      -m Mask.h5 --write-data
@@ -175,7 +175,7 @@ def reference_file(inps):
         return inps.file
 
     # Get stack and mask
-    stack = ut.temporal_average(inps.file, datasetName='unwrapPhase', updateMode=True)[0]
+    stack = ut.temporal_average(inps.file, datasetName='unwrapPhase', updateMode=True, outFile=False)[0]
     mask = np.multiply(~np.isnan(stack), stack != 0.)
     if np.nansum(mask) == 0.0:
         raise ValueError('no pixel found with valid phase value in all datasets.')
@@ -230,7 +230,7 @@ def reference_file(inps):
             obj.close()
         else:
             print('writing >>> '+inps.outfile)
-            data = readfile.read(inps.file)
+            data = readfile.read(inps.file)[0]
             data -= data[inps.ref_y, inps.ref_x]
             atr.update(atrNew)
             writefile.write(data, out_file=inps.outfile, metadata=atr)
@@ -304,7 +304,12 @@ def select_max_coherence_yx(coh_file, mask=None, min_coh=0.85):
         coh[mask == 0] = 0.0
     coh_mask = coh >= min_coh
     if np.all(coh_mask == 0.):
-        raise RuntimeError('No pixel with average coherence > {} found!'.format(min_coh))
+        msg = ('No pixel with average spatial coherence > {} '
+               'are found for automatic reference point selection!').format(min_coh)
+        msg += '\nTry the following:'
+        msg += '\n  1) manually specify the reference point using pysar.reference.yx/lalo option.'
+        msg += '\n  2) change pysar.reference.minCoherence to a lower value.'
+        raise RuntimeError(msg)
 
     y, x = random_select_reference_yx(coh_mask, print_msg=False)
     #y, x = np.unravel_index(np.argmax(coh), coh.shape)
@@ -322,16 +327,6 @@ def random_select_reference_yx(data_mat, print_msg=True):
     if print_msg:
         print('random select pixel\ny/x: {}'.format((y, x)))
     return y, x
-
-
-###############################################################
-def print_warning(next_method):
-    print('-'*50)
-    print('WARNING:')
-    print('Input file is not referenced to the same pixel yet!')
-    print('-'*50)
-    print('Continue with default automatic seeding method: '+next_method+'\n')
-    return
 
 
 ###############################################################
@@ -387,8 +382,7 @@ def read_reference_input(inps):
             not (0 <= inps.ref_y <= length and 0 <= inps.ref_x <= width)):
         inps.ref_y = None
         inps.ref_x = None
-        print('WARNING: input reference point is OUT of data coverage!')
-        print('Continue with other method to select reference point.')
+        raise ValueError('input reference point is OUT of data coverage!')
 
     # Do not use ref_y/x in masked out area
     if inps.ref_y and inps.ref_x and inps.maskFile:
@@ -397,8 +391,8 @@ def read_reference_input(inps):
         if mask[inps.ref_y, inps.ref_x] == 0:
             inps.ref_y = None
             inps.ref_x = None
-            print('WARNING: input reference point is in masked OUT area!')
-            print('Continue with other method to select reference point.')
+            msg = 'input reference point is in masked OUT area defined by {}!'.format(inps.maskFile)
+            raise ValueError(msg)
 
     # Select method
     if not inps.ref_y or not inps.ref_x:

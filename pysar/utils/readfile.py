@@ -39,33 +39,32 @@ standardMetadataKeys = {
     'bands': 'number_bands',
     'interleave': 'scheme',
 
+    'altitude': 'HEIGHT',
     'azimuth_looks': 'ALOOKS',
     'azimuthPixelSize': 'AZIMUTH_PIXEL_SIZE',
     'azimuth_pixel_spacing': 'AZIMUTH_PIXEL_SIZE', 'az_pixel_spacing': 'AZIMUTH_PIXEL_SIZE',
     'center_time': 'CENTER_LINE_UTC',
+    'corner_lon': 'X_FIRST', 'post_lon': 'X_STEP',
+    'corner_lat': 'Y_FIRST', 'post_lat': 'Y_STEP',
     'dataType': 'DATA_TYPE', 'data_type': 'DATA_TYPE',
     'drop_ifgram': 'DROP_IFGRAM',
     'earthRadius': 'EARTH_RADIUS', 'earth_radius_below_sensor': 'EARTH_RADIUS',
-    'altitude': 'HEIGHT',
+    'HEADING_DEG': 'HEADING',
     'length': 'LENGTH', 'FILE_LENGTH': 'LENGTH', 'lines': 'LENGTH',
     'passDirection':'ORBIT_DIRECTION',
     'polarization':'POLARIZATION',
-    'spacecraftName':'PLATFORM',
     'prf': 'PRF',
     'rangePixelSize': 'RANGE_PIXEL_SIZE',
     'range_pixel_spacing': 'RANGE_PIXEL_SIZE', 'rg_pixel_spacing': 'RANGE_PIXEL_SIZE',
+    'range_looks': 'RLOOKS',
     'ref_date': 'REF_DATE',
     'ref_x': 'REF_X', 'ref_y': 'REF_Y', 'ref_lat': 'REF_LAT', 'ref_lon': 'REF_LON',
-    'range_looks': 'RLOOKS',
+    'spacecraftName':'PLATFORM',
     'startingRange': 'STARTING_RANGE', 'near_range_slc': 'STARTING_RANGE',
     'subset_x0': 'SUBSET_XMIN', 'subset_x1': 'SUBSET_XMAX',
     'subset_y0': 'SUBSET_YMIN', 'subset_y1': 'SUBSET_YMAX',
     'wavelength': 'WAVELENGTH', 'Wavelength': 'WAVELENGTH', 'radarWavelength': 'WAVELENGTH',
     'width': 'WIDTH', 'Width': 'WIDTH', 'samples': 'WIDTH',
-    'corner_lon': 'X_FIRST',
-    'post_lon': 'X_STEP',
-    'corner_lat': 'Y_FIRST',
-    'post_lat': 'Y_STEP',
 }
 
 
@@ -94,6 +93,12 @@ ENVI2NUMPY_DATATYPE = {
     '13': 'uint32',
     '14': 'int64',
     '15': 'uint64',
+}
+
+ENVI_BAND_INTERLEAVE = {
+    'BAND': 'BSQ',
+    'LINE': 'BIL',
+    'PIXEL': 'BIP',
 }
 
 
@@ -518,7 +523,7 @@ def get_dataset_list(fname, datasetName=None):
 
 
 #########################################################################
-def read_attribute(fname, datasetName=None, standardize=True, meta_ext=None):
+def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None):
     """Read attributes of input file into a dictionary
     Parameters: fname : str, path/name of data file
                 datasetName : str, name of dataset of interest, for file with multiple datasets
@@ -626,43 +631,21 @@ def read_attribute(fname, datasetName=None, standardize=True, meta_ext=None):
             atr['PROCESSOR'] = 'pysar'
 
     else:
-        # get existing metadata files
+        # get existing metadata file extensions
         metafile_exts = ['.rsc', '.xml', '.aux.xml', '.par', '.hdr']
-        if meta_ext:
-            metafile_exts = [i for i in metafile_exts if i.endswith(meta_ext)]
-        metafile_exts = [i for i in metafile_exts if os.path.isfile(fname+i)]
+        if metafile_ext:
+            metafile_exts = [i for i in metafile_exts if i.endswith(metafile_ext)]
+        metafile_exts = [i for i in metafile_exts if os.path.isfile(fname+i)]     
         if len(metafile_exts) == 0:
             raise FileNotFoundError('No metadata file found for data file: {}'.format(fname))
 
-        # Read metadata file and FILE_TYPE
-        while fext in ['.geo', '.rdr']:
-            fbase, fext = os.path.splitext(fbase)
-        if not fext:
-            fext = fbase
-        metafile0 = fname + metafile_exts[0]
-        if metafile0.endswith('.rsc'):
-            atr = read_roipac_rsc(metafile0)
-            if 'FILE_TYPE' not in atr.keys():
-                atr['FILE_TYPE'] = fext
-
-        elif metafile0.endswith('.xml'):
-            atr = read_isce_xml(metafile0)
-            if 'FILE_TYPE' not in atr.keys():
-                atr['FILE_TYPE'] = atr.get('image_type', fext)
-
-        elif metafile0.endswith('.par'):
-            atr = read_gamma_par(metafile0)
-            atr['FILE_TYPE'] = fext
-
-        elif metafile0.endswith('.hdr'):
-            atr = read_template(metafile0)
-            atr['DATA_TYPE'] = ENVI2NUMPY_DATATYPE[xmlDict.get('data type', '4')]
-            atr['FILE_TYPE'] = atr['file type']
-
+        atr = {}
         # PROCESSOR
         if any(i.endswith(('.xml', '.hdr')) for i in metafile_exts):
             atr['PROCESSOR'] = 'isce'
-            #atr.update(read_isce_xml(fname+'.xml'))
+            xml_exts = [i for i in metafile_exts if i.endswith('.xml')]
+            if len(xml_exts) > 0:
+                atr.update(read_isce_xml(fname+xml_exts[0]))
         elif any(i.endswith('.par') for i in metafile_exts):
             atr['PROCESSOR'] = 'gamma'
         elif any(i.endswith('.rsc') for i in metafile_exts):
@@ -670,6 +653,30 @@ def read_attribute(fname, datasetName=None, standardize=True, meta_ext=None):
                 atr['PROCESSOR'] = 'roipac'
         if 'PROCESSOR' not in atr.keys():
             atr['PROCESSOR'] = 'pysar'
+
+        # Read metadata file and FILE_TYPE
+        metafile0 = fname + metafile_exts[0]
+        while fext in ['.geo', '.rdr']:
+            fbase, fext = os.path.splitext(fbase)
+        if not fext:
+            fext = fbase
+        if metafile0.endswith('.rsc'):
+            atr.update(read_roipac_rsc(metafile0))
+            if 'FILE_TYPE' not in atr.keys():
+                atr['FILE_TYPE'] = fext
+
+        elif metafile0.endswith('.xml'):
+            atr.update(read_isce_xml(metafile0))
+            if 'FILE_TYPE' not in atr.keys():
+                atr['FILE_TYPE'] = fext  #atr.get('image_type', fext)
+
+        elif metafile0.endswith('.par'):
+            atr.update(read_gamma_par(metafile0))
+            atr['FILE_TYPE'] = fext
+
+        elif metafile0.endswith('.hdr'):
+            atr.update(read_envi_hdr(metafile0))
+            atr['FILE_TYPE'] = atr['file type']
 
     # UNIT
     k = atr['FILE_TYPE'].replace('.', '')
@@ -851,7 +858,7 @@ def read_gamma_par(fname, delimiter=':', skiprows=3, standardize=True):
 
 
 def read_isce_xml(fname, standardize=True):
-    """Read ISCE .xml file input a python dictionary structure."""
+    """Read ISCE .xml file into a python dict structure."""
     root = ET.parse(fname).getroot()
     xmlDict = {}
 
@@ -867,11 +874,11 @@ def read_isce_xml(fname, standardize=True):
         for coord_name, prefix in zip(['coordinate1', 'coordinate2'], ['X', 'Y']):
             child = root.find("./component[@name='{}']".format(coord_name))
             if ET.iselement(child):
-                v_step  = child.find("./property[@name='delta']").find('value').text
-                v_first = child.find("./property[@name='startingvalue']").find('value').text
-                if abs(float(v_step)) < 1.:
+                v_step  = float(child.find("./property[@name='delta']").find('value').text)
+                v_first = float(child.find("./property[@name='startingvalue']").find('value').text)
+                if abs(v_step) < 1. and abs(v_step) > 1e-7:
                     xmlDict['{}_STEP'.format(prefix)] = v_step
-                    xmlDict['{}_FIRST'.format(prefix)] = v_first
+                    xmlDict['{}_FIRST'.format(prefix)] = v_first - v_step / 2.
 
     # PAMDataset, e.g. hgt.rdr.aux.xml
     elif root.tag == 'PAMDataset':
@@ -885,6 +892,24 @@ def read_isce_xml(fname, standardize=True):
     if standardize:
         xmlDict = standardize_metadata(xmlDict)
     return xmlDict
+
+
+def read_envi_hdr(fname, standardize=True):
+    """Read ENVI .hdr file into a python dict strcture"""
+    atr = read_template(fname)
+    atr['DATA_TYPE'] = ENVI2NUMPY_DATATYPE[atr.get('data type', '4')]
+    if 'map info' in atr.keys():
+        map_info = [i.strip() for i in atr['map info'].split(',')]
+        x_step = abs(float(map_info[5]))
+        y_step = abs(float(map_info[6])) * -1.
+        if abs(x_step) < 1. and abs(x_step) > 1e-7:
+            atr['X_FIRST'] = str(float(map_info[3]) - x_step / 2.)
+            atr['Y_FIRST'] = str(float(map_info[4]) - y_step / 2.)
+            atr['X_STEP'] = str(x_step)
+            atr['Y_STEP'] = str(y_step)
+    if standardize:
+        atr = standardize_metadata(atr)
+    return atr
 
 
 def attribute_gamma2roipac(par_dict_in):
@@ -949,34 +974,6 @@ def attribute_gamma2roipac(par_dict_in):
             par_dict['ANTENNA_SIDE'] = '1'
 
     return par_dict
-
-
-def standardize_metadata_isce(metadata_in, dates=[], baselineDict={}):
-    """Grab metadata value in roipac and unavco-insar-archive key names"""
-    # convert metadata key names based on isce2roipacMetadataKeys
-    metadata = standardize_metadata(metadata_in)
-
-    metadata['beam_mode'] = 'IW'
-    metadata['PROCESSOR'] = 'isce'
-    metadata['ANTENNA_SIDE'] = '-1'
-
-    # get pixel_size for multilooked data
-    if all(i in metadata.keys() for i in ['rangePixelSize', 'RLOOKS']):
-        metadata['RANGE_PIXEL_SIZE'] = str(float(metadata['rangePixelSize']) * int(metadata['RLOOKS']))
-    if all(i in metadata.keys() for i in ['azimuthPixelSize', 'ALOOKS']):
-        metadata['AZIMUTH_PIXEL_SIZE'] = str(float(metadata['azimuthPixelSize']) * int(metadata['ALOOKS']))
-
-    if dates:
-        metadata['DATE12'] = '{}-{}'.format(dates[0][2:], dates[1][2:])
-        if baselineDict:
-            bperp = baselineDict['bperp'][dates[1]] - baselineDict['bperp'][dates[0]]
-            bpar  = baselineDict['bpar'][dates[1]]  - baselineDict['bpar'][dates[0]]
-            metadata['P_BASELINE_TOP_HDR']    = str(bperp)
-            metadata['P_BASELINE_BOTTOM_HDR'] = str(bperp)
-            metadata['H_BASELINE_TOP_HDR']    = str(bpar)
-            metadata['H_BASELINE_BOTTOM_HDR'] = str(bpar)
-
-    return metadata
 
 
 #########################################################################

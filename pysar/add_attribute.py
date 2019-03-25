@@ -20,11 +20,9 @@ usage: add_attribute.py file metadata_file
 Add/Update attributes to file.
 
 Example:
-  add_attribute.py timeseries.h5 unavco_attribute.txt
-  add_attribute.py timeseries.h5 track=422 frame=650
-
-  Use None value to delete attribute:
-  add_attribute.py unwrapIfgram.h5  ref_y=None  ref_x=None
+  add_attribute.py timeseries.h5  unavco_attribute.txt
+  add_attribute.py timeseries.h5  track=422   frame=650
+  add_attribute.py ifgramStack.h5 ref_y=None  ref_x=None  #Use None value to delete attribute
 """
 
 

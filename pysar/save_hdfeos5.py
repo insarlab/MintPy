@@ -33,7 +33,7 @@ pysar.save.hdfEos5.subset  = auto   #[yes / no], auto for no, put subset range i
 """
 
 EXAMPLE = """example:
-  save_hdfeos5.py geo_timeseries_ECMWF_demErr_ramp.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
+  save_hdfeos5.py geo_timeseries_ECMWF_ramp_demErr.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
 """
 
 
@@ -47,7 +47,7 @@ def create_parser():
     parser.add_argument('-t', '--template', dest='template_file', help='Template file')
 
     parser.add_argument('-c', '--coherence', dest='coherence_file', required=True, 
-                        help='Coherence/correlation file, i.e. spatial_coherence.h5, temporal_coherence.h5')
+                        help='Coherence/correlation file, i.e. avgSpatialCoh.h5, temporalCoherence.h5')
     parser.add_argument('-m', '--mask', dest='mask_file', required=True, help='Mask file')
     parser.add_argument('-g', '--geometry', dest='geom_file', required=True, help='geometry file')
 
@@ -215,7 +215,7 @@ def prep_metadata(ts_file, print_msg=True):
 
 
 def get_output_filename(metadata, update_mode=False, subset_mode=False):
-    """Get output file name of HDF-EOS5 time series file"""
+    """Get output file name of HDF-EOS5 time-series file"""
     SAT = metadata['mission']
     SW = metadata['beam_mode']
     if metadata['beam_swath']:
@@ -239,7 +239,7 @@ def get_output_filename(metadata, update_mode=False, subset_mode=False):
     DATE1 = dt.datetime.strptime(metadata['first_date'], '%Y-%m-%d').strftime('%Y%m%d')
     DATE2 = dt.datetime.strptime(metadata['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
     if update_mode:
-        print('Update mode is enabled, put endDate as XXXXXXXX.')
+        print('Update mode is ON, put endDate as XXXXXXXX.')
         DATE2 = 'XXXXXXXX'
 
     outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'_'+DATE2+'.he5'
@@ -440,7 +440,6 @@ def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
         f.attrs[key] = value
     f.close()
     print('finished writing to {}'.format(out_file))
-
     return out_file
 
 

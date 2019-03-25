@@ -11,23 +11,24 @@ import os
 import time
 from datetime import datetime as dt
 import numpy as np
+import random
 import scipy.stats as stats
 import matplotlib.pyplot as plt
+from pysar.objects import timeseries
+from pysar.utils import ptime, network as pnet, utils as ut
 from pysar.simulation.forward_model import mogi
 from pysar.simulation.plot import *
-from pysar.utils import ptime, network as pnet, utils as ut
-from pysar import (ifgram_inversion as ifginv,
-                   timeseries2velocity as ts2vel)
+from pysar import ifgram_inversion as ifginv
 
 
 def velocity2timeseries(date_list, vel=0.03, display=False):
-    '''Simulate displacement time series from linear velocity
+    '''Simulate displacement time-series from linear velocity
     Inputs:
         date_list - list of string in YYYYMMDD or YYMMDD format
         vel        - float, velocity in meter per year
         display    - bool, display simulation or not
     Output:
-        ts         - 2D np.array in size of (date_num,1), displacement time series in m
+        ts         - 2D np.array in size of (date_num,1), displacement time-series in m
     Example:
         date_list = pnet.read_baseline_file('bl_list.txt')[0]
         ts0 = simulate_timeseries(date_list, vel=0.03, display=True)
@@ -44,7 +45,7 @@ def velocity2timeseries(date_list, vel=0.03, display=False):
         plt.scatter(dates, ts*100.0, s=marker_size**2)
         plt.xlabel('Time (years)')
         plt.ylabel('LOS Displacement (cm)')
-        plt.title('Displacement time series with velocity = '+str(vel)+' m/yr')
+        plt.title('Displacement time-series with velocity = '+str(vel)+' m/yr')
         plt.show()
     return ts
 
@@ -60,9 +61,10 @@ def sim_variable_timeseries(tbase, scale=3., display=False):
     ts_sim[idx3:] = 0.
     ts_sim += tbase * -0.005 / 365.25
     ts_sim *= 3.
+    ts_sim -= ts_sim[0]
 
     if display:
-        fig, ax = plt.subplots(figsize=[12, 3])
+        fig, ax = plt.subplots(figsize=[6, 3])
         ax.plot(tbase, ts_sim * 100., '--')
         ax.set_xlabel('Time (days)', fontsize=font_size)
         ax.set_ylabel('Displacement (cm)', fontsize=font_size)
@@ -107,7 +109,7 @@ def sample_decorrelation_phase(L, coherence, size=1, display=False, scale=1.0, f
     '''
     phiNum = 100
     phiMax = np.pi * float(scale)
-    pdf = ifginv.phase_pdf_ds(int(L), coherence, phi_num=phiNum)[0].flatten()
+    pdf = ifginv.phase_pdf_ds(int(L), coherence, phi_num=phiNum)[0].flatten()   #for PS: ifginv.phase_variance_ps()
     phi = np.linspace(-phiMax, phiMax, phiNum+1, endpoint=True)
     phi_dist = stats.rv_histogram((pdf, phi))
     #sample = np.nan
@@ -207,7 +209,7 @@ def estimate_coherence(ifgram, L=20, win_size=25):
 
 def timeseries2velocity(date_list, defo_list):
     # date_list --> design_matrix
-    A = ts2vel.design_matrix(date_list)
+    A = timeseries.get_design_matrix4average_velocity(date_list)
     A_inv = np.linalg.pinv(A)
 
     # least square inversion
@@ -247,8 +249,20 @@ def check_board(water_mask, grid_step=100, scale=1., display=True):
     return mask
 
 
-def mogi_deformation(water_mask, source_geom, resolution=60., scale=1., display=True):
-    length, width = water_mask.shape
+def mogi_deformation(shape, source_geom, resolution=60., scale=1., display=True):
+    """Simulate 2D deformation caused by the overpress of a Mogi source underneath
+    
+    Parameters: shape: 2-tuple of int in (length, width) or 2D np.ndarray in size of (length, width) in np.bool_
+                source_geom : 4-tuple of float, Mogi source geometry: East, North, Depth, Volomn change in SI unit.
+    
+    """
+    if isinstance(shape, np.ndarray):
+        mask = np.multiply(np.array(shape != 0), ~np.isnan(shape))
+        shape = mask.shape
+    else:
+        mask = np.ones(shape, np.bool_)
+
+    length, width = shape
     yy, xx = np.mgrid[0:length:length*1j, 0:width:width*1j]
     yy *= resolution
     xx *= resolution
@@ -260,17 +274,18 @@ def mogi_deformation(water_mask, source_geom, resolution=60., scale=1., display=
     dis_u = dis_map[2, :].reshape(length, width)
     dis_los = ut.enu2los(dis_e, dis_n, dis_u)
 
-    dis_los[water_mask == 0.] = np.nan
+    dis_los[mask == 0.] = np.nan
     dis_los *= scale
 
-    display = True
     if display:
         fig, ax = plt.subplots(1, 4, figsize=[10, 3])
         dmin = np.nanmin(dis_los)
         dmax = np.nanmax(dis_los)
-        for i in range(3):
+        for i, fig_title in enumerate(['east','north','vertical']):
             ax[i].imshow(dis_map[i, :].reshape(length, width), vmin=dmin, vmax=dmax)
+            ax[i].set_title(fig_title)
         im = ax[3].imshow(dis_los, vmin=dmin, vmax=dmax)
+        ax[3].set_title('los - SenD')
         fig.subplots_adjust(right=0.90)
         cax = fig.add_axes([0.92, 0.25, 0.01, 0.5])
         cbar = fig.colorbar(im, cax=cax)
@@ -280,4 +295,22 @@ def mogi_deformation(water_mask, source_geom, resolution=60., scale=1., display=
     return dis_los
 
 
+def add_unw_err2ifgram(ifgram, percentage=0.1, Nmax=2, print_msg=True):
+    """Add unwrapping error to interferometric phase
+    Parameters: ifgram     : 1D / 2D np.array in size of (num_ifgram, num_pixel) in float32
+                percentage : float in [0, 1], percentage of interferograms with unwrapping errors
+                Nmax       : int, maximum integer numbers of cycles of the added unwrapping errors
+    Returns:    ifgram_err : 1D / 2D np.array in size of (num_ifgram, num_pixel) in float32
+                idx_ifg_err : list of index, indicating interferograms with unwrapping errors
+    """
+    Nlist = np.hstack((np.arange(Nmax)+1, -1*np.arange(Nmax)-1))
+    num_ifg_err = int(len(ifgram) * percentage)
+    idx_ifg_err = random.sample(list(range(len(ifgram))), num_ifg_err)
+    if print_msg:
+        print('ifgram with unwrap error: {}'.format(percentage))
+        print('unwrap error jump in 2*pi*(-{n}, {n}): '.format(n=Nmax))
+        print('number of ifgrams with unwrap error: {}'.format(num_ifg_err))
+    ifgram_err = np.array(ifgram, dtype=np.float32)
+    ifgram_err[idx_ifg_err] += 2.*np.pi*np.random.choice(Nlist, size=num_ifg_err)
+    return ifgram_err, idx_ifg_err
 

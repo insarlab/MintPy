@@ -82,7 +82,7 @@ def read_ref_date(inps):
 
     elif os.path.isfile(inps.refDate):
         print('read reference date from file: ' + inps.refDate)
-        inps.refDate = ptime.read_date_list(inps.refDate)[0]
+        inps.refDate = ptime.read_date_txt(inps.refDate)[0]
     inps.refDate = ptime.yyyymmdd(inps.refDate)
     print('input reference date: {}'.format(inps.refDate))
 
@@ -141,7 +141,7 @@ def ref_date_file(ts_file, ref_date, outfile=None):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
     if inps.template_file:
-        inps = read_template2inps(inps.template_file)
+        inps = read_template2inps(inps.template_file, inps)
 
     inps.refDate = read_ref_date(inps)
 

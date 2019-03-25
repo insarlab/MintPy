@@ -62,13 +62,11 @@ def main(iargs=None):
 
     for fname in inps.file:
         print('------------------------------------------')
-        ut.deramp_file(fname,
-                       ramp_type=inps.surface_type,
-                       mask_file=inps.mask_file,
-                       out_file=inps.outfile,
-                       datasetName=inps.dset)
-
-    print('Done.')
+        ut.run_deramp(fname,
+                      ramp_type=inps.surface_type,
+                      mask_file=inps.mask_file,
+                      out_file=inps.outfile,
+                      datasetName=inps.dset)
     return
 
 

@@ -28,6 +28,7 @@ pysar.load.baselineDir    = ${PROJECT_DIR}/baselines
 pysar.load.unwFile        = ${PROJECT_DIR}/merged/interferograms/*/filt*.unw
 pysar.load.corFile        = ${PROJECT_DIR}/merged/interferograms/*/filt*.cor
 pysar.load.connCompFile   = ${PROJECT_DIR}/merged/interferograms/*/filt*.unw.conncomp
+pysar.load.ionoFile       = None
 pysar.load.intFile        = None
 
 pysar.load.demFile        = ${PROJECT_DIR}/merged/geom_master/hgt.rdr
@@ -36,7 +37,7 @@ pysar.load.lookupXFile    = ${PROJECT_DIR}/merged/geom_master/lon.rdr
 pysar.load.incAngleFile   = ${PROJECT_DIR}/merged/geom_master/los.rdr
 pysar.load.azAngleFile    = ${PROJECT_DIR}/merged/geom_master/los.rdr
 pysar.load.shadowMaskFile = ${PROJECT_DIR}/merged/geom_master/shadowMask.rdr
-pysar.load.bperpFile      = ${PROJECT_DIR}/merged/baseline_grid/*/bperp.rdr
+pysar.load.bperpFile      = None
 '''
 
 roipacAutoPath = '''##----------Default file path of ROI_PAC products
@@ -44,7 +45,7 @@ pysar.load.processor      = roipac
 pysar.load.unwFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/filt*.unw
 pysar.load.corFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/filt*.cor
 pysar.load.connCompFile   = ${PROJECT_DIR}/PROCESS/DONE/IFG*/filt*snap_connect.byt
-pysar.load.intFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/filt*rlks.int
+pysar.load.intFile        = None
 
 pysar.load.demFile        = ${PROJECT_DIR}/PROCESS/DONE/*${m_date12}*/radar_*rlks.hgt
 pysar.load.lookupYFile    = ${PROJECT_DIR}/PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
@@ -60,11 +61,11 @@ pysar.load.processor      = gamma
 pysar.load.unwFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/diff*rlks.unw
 pysar.load.corFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/*filt*rlks.cor
 pysar.load.connCompFile   = None
-pysar.load.intFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/diff*rlks.int
+pysar.load.intFile        = None
 
-pysar.load.demFile        = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*rlks.rdc.dem
-pysar.load.lookupYFile    = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*rlks.UTM_TO_RDC
-pysar.load.lookupXFile    = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*rlks.UTM_TO_RDC
+pysar.load.demFile        = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*.hgt_sim
+pysar.load.lookupYFile    = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*.UTM_TO_RDC
+pysar.load.lookupXFile    = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*.UTM_TO_RDC
 pysar.load.incAngleFile   = None
 pysar.load.azAngleFile    = None
 pysar.load.shadowMaskFile = None
@@ -121,11 +122,11 @@ def get_auto_path(processor, project_name, template=dict()):
     if processor in ['roipac', 'gamma']:
         m_date12 = get_master_date12(project_dir, processor=processor)
         if m_date12 and processor == 'roipac':
-            # nlooks in case both radar_2rlks.hgt and radar_8rlks.hgt exist.
+            # determine nlooks in case both radar_2rlks.hgt and radar_8rlks.hgt exist.
             lookup_file = os.path.join(project_dir, 'PROCESS/GEO/geo_{}/geomap*.trans'.format(m_date12))
-            lookup_file = glob.glob(lookup_file)[0]
-            lks = re.findall('_\d+rlks', lookup_file)[0]
-            auto_path_dict[prefix+'demFile'] = 'radar{}.hgt'.format(nlooks)
+            lks = re.findall('_\d+rlks', glob.glob(lookup_file)[0])[0]
+            dem_file = os.path.join('${PROJECT_DIR}/PROCESS/DONE/*${m_date12}*', 'radar{}.hgt'.format(lks))
+            auto_path_dict[prefix+'demFile'] = dem_file
 
     var_dict = {}
     var_dict['${PROJECT_DIR}'] = project_dir
@@ -136,7 +137,8 @@ def get_auto_path(processor, project_name, template=dict()):
     for key, value in auto_path_dict.items():
         if value:
             for var1, var2 in var_dict.items():
-                auto_path_dict[key] = value.replace(var1, var2)
+                value = value.replace(var1, var2)    
+            auto_path_dict[key] = value
 
     # update template option with auto value
     for key, value in auto_path_dict.items():

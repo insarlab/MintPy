@@ -1,0 +1,22 @@
+# vim: set filetype=cfg:
+##-------------------------------- PYSAR -------------------------------##
+########## 1. Load Data (--load to exit after this step)
+## load_data.py -H to check more details and example inputs.
+pysar.load.processor        = gamma
+##---------interferogram datasets:
+pysar.load.unwFile          = ../GAMMA/interferograms/*/diff*rlks.unw
+pysar.load.corFile          = ../GAMMA/interferograms/*/*filt*rlks.cor
+pysar.load.connCompFile     = None
+##---------geometry datasets:
+pysar.load.demFile          = ../GAMMA/geom_master/sim*rlks.rdc.dem
+pysar.load.lookupYFile      = ../GAMMA/geom_master/sim*rlks.UTM_TO_RDC
+pysar.load.lookupXFile      = ../GAMMA/geom_master/sim*rlks.UTM_TO_RDC
+pysar.load.incAngleFile     = None
+pysar.load.azAngleFile      = None
+pysar.load.shadowMaskFile   = None
+
+pysar.subset.yx		= 200:2000,200:1562
+pysar.reference.lalo    = -0.31,-91.22
+pysar.troposphericDelay.weatherDir      = ~/insarlab/WEATHER
+pysar.deramp            = linear
+

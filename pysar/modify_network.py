@@ -35,7 +35,7 @@ TEMPLATE = """
 pysar.network.coherenceBased  = auto  #[yes / no], auto for yes, exclude interferograms with coherence < minCoherence
 pysar.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
 pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
-pysar.network.maskFile        = auto  #[file name, no], auto for mask.h5, no for all pixels
+pysar.network.maskFile        = auto  #[file name, no], auto for waterMask.h5 or no for all pixels
 pysar.network.aoiYX           = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
 pysar.network.aoiLALO         = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 
@@ -43,7 +43,7 @@ pysar.network.aoiLALO         = auto  #[lat0:lat1,lon0:lon1 / no], auto for no -
 pysar.network.tempBaseMax     = auto  #[1-inf, no], auto for no, maximum temporal baseline in days
 pysar.network.perpBaseMax     = auto  #[1-inf, no], auto for no, maximum perpendicular spatial baseline in meter
 pysar.network.connNumMax      = auto  #[1-inf, no], auto for no, maximum number of neighbors for each acquisition
-pysar.network.referenceFile   = auto  #[date12_list.txt / Modified_unwrapIfgram.h5 / no], auto for no
+pysar.network.referenceFile   = auto  #[date12_list.txt / ifgramStack.h5 / no], auto for no
 pysar.network.excludeDate     = auto  #[20080520,20090817 / no], auto for no
 pysar.network.excludeIfgIndex = auto  #[1:5,25 / no], auto for no, list of ifg index (start from 0)
 pysar.network.startDate       = auto  #[20090101 / no], auto for no
@@ -64,7 +64,7 @@ def create_parser():
                         help='plot and save the result to image files.')
     parser.add_argument('--noaux', dest='update_aux', action='store_false',
                         help='Do not update auxilary files, e.g.\n' +
-                             'mask.h5 from unwrapIfgram.h5 or averageSpatialCoherence.h5 from coherence.h5')
+                             'maskConnComp.h5 or avgSpatialCoh.h5 from ifgramStack.h5')
 
     # 1
     parser.add_argument('--max-tbase', dest='tempBaseMax',
@@ -75,7 +75,7 @@ def create_parser():
                         help='max number of connections/neighbors per acquisition')
     parser.add_argument('-r', '--reference', dest='referenceFile',
                         help='Reference hdf5 / list file with network information.\n'
-                             'i.e. Modified_unwrapIfgram.h5, Pairs.list')
+                             'i.e. ifgramStack.h5, date12_list.txt')
     parser.add_argument('--exclude-ifg-index', dest='excludeIfgIndex', nargs='*',
                         help='index of interferograms to remove/drop.\n1 as the first')
     parser.add_argument('--exclude-date', dest='excludeDate', nargs='*',
@@ -92,9 +92,9 @@ def create_parser():
                           help='Enable coherence-based network modification')
     cohBased.add_argument('--no-mst', dest='keepMinSpanTree', action='store_false',
                           help='Do not keep interferograms in Min Span Tree network based on inversed mean coherene')
-    cohBased.add_argument('--mask', dest='maskFile',
+    cohBased.add_argument('--mask', dest='maskFile', default='waterMask.h5',
                           help='Mask file used to calculate the spatial coherence\n'
-                               'Will use the whole area if not assigned')
+                               'Default: waterMask.h5 or None')
     cohBased.add_argument('--aoi-yx', dest='aoiYX', type=str,
                           help='AOI in y0:y1,x0:x1 for coherence calculation')
     cohBased.add_argument('--aoi-lalo', dest='aoiLALO', type=str,
@@ -126,6 +126,19 @@ def cmd_line_parse(iargs=None):
         inps.excludeIfgIndex = read_input_index_list(inps.excludeIfgIndex, stackFile=inps.file)
     else:
         inps.excludeIfgIndex = []
+
+    # required input arguments
+    if inps.template_file:
+        inps = read_template2inps(inps.template_file, inps)
+    elif all(not i for i in [inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax, inps.connNumMax,
+                             inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased,
+                             inps.startDate, inps.endDate, inps.reset, inps.manual]):
+        msg = 'No input option found to remove interferogram, exit.\n'
+        msg += 'To manually modify network, please use --manual option '
+        raise Exception(msg)
+
+    if not os.path.isfile(inps.maskFile):
+        inps.maskFile = None
     return inps
 
 
@@ -145,7 +158,7 @@ def read_input_index_list(idxList, stackFile=None):
     if stackFile:
         obj = ifgramStack(stackFile)
         obj.open(print_msg=False)
-        idxListOut = [i for i in idxListOut if i < obj.numIfgramOrig]
+        idxListOut = [i for i in idxListOut if i < obj.numIfgram]
         obj.close(print_msg=False)
     return idxListOut
 
@@ -344,7 +357,10 @@ def get_date12_to_drop(inps):
 
         tempList = sorted(list(set(date12ListAll) - set(coh_date12_list + mst_date12_list)))
         date12_to_drop += tempList
-        print(msg+'({})\n{}'.format(len(tempList), tempList))
+        msg += '({})'.format(len(tempList))
+        if len(tempList) <= 200:
+            msg += '\n{}'.format(tempList)
+        print(msg)
 
     # temp baseline threshold
     if inps.tempBaseMax:
@@ -371,16 +387,21 @@ def get_date12_to_drop(inps):
         tempList = [i for i in date12ListAll if i not in seq_date12_list]
         date12_to_drop += tempList
         print('--------------------------------------------------')
-        print('Drop ifgrams with temporal baseline beyond {} neighbors: ({})\n{}'.format(
-            inps.connNumMax, len(tempList), tempList))
+        msg = 'Drop ifgrams with temporal baseline beyond {} neighbors: ({})'.format(
+            inps.connNumMax, len(tempList))
+        if len(tempList) <= 200:
+            msg += '\n{}'.format(tempList)
+        print(msg)
 
     # excludeIfgIndex
     if inps.excludeIfgIndex:
         tempList = [date12ListAll[i] for i in inps.excludeIfgIndex]
         date12_to_drop += tempList
         print('--------------------------------------------------')
-        print('Drop ifgrams with the following index number: {}\n{}'.format(
-            len(tempList), zip(inps.excludeIfgIndex, tempList)))
+        print('Drop ifgrams with the following index number: {}'.format(len(tempList)))
+        for i in range(len(tempList)):
+            print('{} : {}'.format(i, tempList[i]))
+            #len(tempList), zip(inps.excludeIfgIndex, tempList)))
 
     # excludeDate
     if inps.excludeDate:
@@ -424,6 +445,12 @@ def get_date12_to_drop(inps):
     print('number of interferograms to remove: {}'.format(len(date12_to_drop)))
     print('number of interferograms to keep  : {}'.format(len(date12_to_keep)))
 
+    date_to_keep = [d for date12 in date12_to_keep for d in date12.split('_')]
+    date_to_keep = sorted(list(set(date_to_keep)))
+    date_to_drop = sorted(list(set(dateList) - set(date_to_keep)))
+    if len(date_to_drop) > 0:
+        print('number of acquisitions to remove: {}\n{}'.format(len(date_to_drop), date_to_drop))
+
     date12ListKept = obj.get_date12_list(dropIfgram=True)
     date12ListDropped = sorted(list(set(date12ListAll) - set(date12ListKept)))
     if date12_to_drop == date12ListDropped:
@@ -437,15 +464,6 @@ def get_date12_to_drop(inps):
 #########################  Main Function  ##############################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    if inps.template_file:
-        inps = read_template2inps(inps.template_file, inps)
-
-    elif all(not i for i in [inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax, inps.connNumMax,
-                           inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased,
-                           inps.startDate, inps.endDate, inps.reset, inps.manual]):
-        msg = 'No input option found to remove interferogram, exit.\n'
-        msg += 'To manually modify network, please use --manual option '
-        raise Exception(msg)
 
     if inps.reset:
         print('--------------------------------------------------')
@@ -456,10 +474,10 @@ def main(iargs=None):
 
     if inps.date12_to_drop is not None:
         ifgramStack(inps.file).update_drop_ifgram(date12List_to_drop=inps.date12_to_drop)
-        print('--------------------------------------------------')
-        ut.nonzero_mask(inps.file)
-        print('--------------------------------------------------')
-        ut.temporal_average(inps.file, datasetName='coherence', updateMode=True)
+        #print('--------------------------------------------------')
+        #ut.nonzero_mask(inps.file)
+        #print('--------------------------------------------------')
+        #ut.temporal_average(inps.file, datasetName='coherence', updateMode=True)
         # Touch spatial average txt file of coherence if it's existed
         ut.touch(os.path.splitext(os.path.basename(inps.file))[0]+'_coherence_spatialAvg.txt')
 

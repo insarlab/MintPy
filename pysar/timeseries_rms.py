@@ -40,7 +40,7 @@ Rousseeuw, P. J., and M. Hubert (2011), Robust statistics for outlier detection,
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Calculate Root Mean Square (RMS) of deramped time series.',
+    parser = argparse.ArgumentParser(description='Calculate Root Mean Square (RMS) of deramped residual phase time-series.',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
@@ -70,7 +70,7 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
-def read_template2inps(templateFile, inps=None):
+def read_template2inps(templateFile, inps):
     """Update inps with pysar.residualRms.* option from templateFile"""
     if not inps:
         inps = cmd_line_parse()
@@ -141,8 +141,10 @@ def analyze_rms(date_list, rms_list, inps):
     return inps
 
 
-def plot_rms_bar(ax, date_list, rms, cutoff=3.,
-                 font_size=12, tick_year_num=1, legend_loc='best'):
+def plot_rms_bar(ax, date_list, rms, cutoff=3., font_size=12, 
+                 tick_year_num=1, legend_loc='best',
+                 disp_legend=True, disp_side_plot=True, disp_thres_text=True,
+                 ylabel=r'Residual Phase $\hat \phi_{resid}$ RMS [mm]'):
     """ Bar plot Phase Residual RMS
     Parameters: ax : Axes object
                 date_list : list of string in YYYYMMDD format
@@ -165,51 +167,54 @@ def plot_rms_bar(ax, date_list, rms, cutoff=3.,
 
     # Plot reference date
     ref_idx = np.argmin(rms)
-    ax.bar(datex[ref_idx], rms[ref_idx], bar_width.days, color=pp.mplColors[1], label='Reference Date')
+    ax.bar(datex[ref_idx], rms[ref_idx], bar_width.days, color=pp.mplColors[1], label='Reference date')
 
     # Plot exclude dates
     rms_threshold = ut.median_abs_deviation_threshold(rms, center=0., cutoff=cutoff)
     ex_idx = rms > rms_threshold
     if not np.all(ex_idx==False):
-        ax.bar(datex[ex_idx], rms[ex_idx], bar_width.days, color='darkgray', label='Exclude Date')
+        ax.bar(datex[ex_idx], rms[ex_idx], bar_width.days, color='darkgray', label='Exclude date')
 
     # Plot rms_threshold line
     (ax, xmin, xmax) = pp.auto_adjust_xaxis_date(ax, datevector, font_size, every_year=tick_year_num)
-    ax.plot(np.array([xmin, xmax]), np.array([rms_threshold, rms_threshold]), '--k', label='RMS Threshold')
+    ax.plot(np.array([xmin, xmax]), np.array([rms_threshold, rms_threshold]), '--k', label='RMS threshold')
 
     # axis format
     ax = pp.auto_adjust_yaxis(ax, np.append(rms, rms_threshold), font_size, ymin=0.0)
     ax.set_xlabel('Time [years]', fontsize=font_size)
-    ax.set_ylabel(r'RMS of Phase Residual $\hat \phi_\epsilon$ [mm]', fontsize=font_size)
-    #ax.yaxis.set_ticks_position('both')
+    ax.set_ylabel(ylabel, fontsize=font_size)
     ax.tick_params(which='both', direction='in', labelsize=font_size,
                    bottom=True, top=True, left=True, right=True)
 
     # 2nd axes for circles
-    divider = make_axes_locatable(ax)
-    ax2 = divider.append_axes("right", "10%", pad="2%")
-    ax2.plot(np.ones(rms.shape, np.float32) * 0.5, rms, 'o', mfc='none', color=pp.mplColors[0])
-    ax2.plot(np.ones(rms.shape, np.float32)[ref_idx] * 0.5, rms[ref_idx], 'o', mfc='none', color=pp.mplColors[1])
-    if not np.all(ex_idx==False):
-        ax2.plot(np.ones(rms.shape, np.float32)[ex_idx] * 0.5, rms[ex_idx], 'o', mfc='none', color='darkgray')
-    ax2.plot(np.array([0, 1]), np.array([rms_threshold, rms_threshold]), '--k')
+    if disp_side_plot:
+        divider = make_axes_locatable(ax)
+        ax2 = divider.append_axes("right", "10%", pad="2%")
+        ax2.plot(np.ones(rms.shape, np.float32) * 0.5, rms, 'o', mfc='none', color=pp.mplColors[0])
+        ax2.plot(np.ones(rms.shape, np.float32)[ref_idx] * 0.5, rms[ref_idx], 'o', mfc='none', color=pp.mplColors[1])
+        if not np.all(ex_idx==False):
+            ax2.plot(np.ones(rms.shape, np.float32)[ex_idx] * 0.5, rms[ex_idx], 'o', mfc='none', color='darkgray')
+        ax2.plot(np.array([0, 1]), np.array([rms_threshold, rms_threshold]), '--k')
 
-    ax2.set_ylim(ax.get_ylim())
-    ax2.set_xlim([0, 1])
-    ax2.tick_params(which='both', direction='in', labelsize=font_size,
-                    bottom=True, top=True, left=True, right=True)
-    ax2.get_xaxis().set_ticks([])
-    ax2.get_yaxis().set_ticklabels([])
+        ax2.set_ylim(ax.get_ylim())
+        ax2.set_xlim([0, 1])
+        ax2.tick_params(which='both', direction='in', labelsize=font_size,
+                        bottom=True, top=True, left=True, right=True)
+        ax2.get_xaxis().set_ticks([])
+        ax2.get_yaxis().set_ticklabels([])
 
-    ax.legend(loc=legend_loc, fontsize=font_size)
+    if disp_legend:
+        ax.legend(loc=legend_loc, frameon=False, fontsize=font_size)
+
     # rms_threshold text
-    ymin, ymax = ax.get_ylim()
-    yoff = (ymax - ymin) * 0.1
-    if (rms_threshold - ymin) > 0.5 * (ymax - ymin):
-        yoff *= -1.
-    ax.annotate('Median Abs Dev * {}'.format(cutoff),
-                xy=(xmin + (xmax-xmin)*0.05, rms_threshold + yoff ),
-                color='k', xycoords='data', fontsize=font_size)
+    if disp_thres_text:
+        ymin, ymax = ax.get_ylim()
+        yoff = (ymax - ymin) * 0.1
+        if (rms_threshold - ymin) > 0.5 * (ymax - ymin):
+            yoff *= -1.
+        ax.annotate('Median Abs Dev * {}'.format(cutoff),
+                    xy=(xmin + (xmax-xmin)*0.05, rms_threshold + yoff ),
+                    color='k', xycoords='data', fontsize=font_size)
     return ax
 
 
@@ -219,7 +224,7 @@ def main(iargs=None):
 
     inps = cmd_line_parse(iargs)
     if inps.template_file:
-        inps = read_template2inps(inps.template_file)
+        inps = read_template2inps(inps.template_file, inps)
 
     # calculate timeseries of residual Root Mean Square
     (inps.rms_list,

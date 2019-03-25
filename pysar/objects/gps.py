@@ -13,8 +13,8 @@ from datetime import datetime as dt
 import numpy as np
 from pyproj import Geod
 from urllib.request import urlretrieve
+from pysar.objects import timeseries
 from pysar.utils import ptime, readfile, utils as ut
-from pysar import timeseries2velocity as ts2vel
 
 
 unr_site_list_file = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
@@ -158,6 +158,7 @@ class GPS:
         data = np.loadtxt(self.file, dtype=bytes, skiprows=1).astype(str)
         self.dates = np.array([dt(*time.strptime(i, "%y%b%d")[0:5])
                                for i in data[:, 1]])
+        #self.dates = np.array([ptime.decimal_year2datetime(i) for i in data[:, 2]])
         (self.dis_e,
          self.dis_n,
          self.dis_u,
@@ -249,7 +250,7 @@ class GPS:
         elif isinstance(insar_obj, dict):
             # use mean inc/head_angle from metadata
             inc_angle = ut.incidence_angle(insar_obj, dimension=0, print_msg=print_msg)
-            head_angle = float(insar_obj['HEADING_DEG'])
+            head_angle = float(insar_obj['HEADING'])
             # for old reading of los.rdr band2 data into headingAngle directly
             if (head_angle + 180.) > 45.:
                 head_angle = ut.azimuth2heading_angle(head_angle)
@@ -308,7 +309,7 @@ class GPS:
                                                     ref_site=ref_site,
                                                     gps_comp=gps_comp)[0:2]
         date_list = [dt.strftime(i, '%Y%m%d') for i in dates]
-        A = ts2vel.design_matrix(date_list)
+        A = timeseries.get_design_matrix4average_velocity(date_list)
         self.velocity = np.dot(np.linalg.pinv(A), dis)[0]
         return self.velocity
 

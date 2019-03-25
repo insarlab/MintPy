@@ -1,119 +1,79 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013-2018, Heresh Fattahi                   #
-# Author:  Heresh Fattahi                                  #
+# Copyright(c) 2013-2018, Zhang Yunjun, Heresh Fattahi     #
+# Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
 
 
 import sys
 import time
-import datetime
+import argparse
 import h5py
 import numpy as np
-from pysar.utils import readfile, ptime, utils as ut
+from pysar.objects import timeseries, ifgramStack
+from pysar.utils import readfile, writefile
 
 
 #####################################################################################
-USAGE = """
-usage: ifgram_reconstruction.py  ifgram_file  timeseries_file  [output_name]
-
-Reconstruct interferograms from time-series
-
-arguments:
-  ifgram_file     : original interferograms file
-  timeseries_file : timeseries file, phase corrected timeseries file prefereably
-  output_name     : file name of reconstructed interferograms file
-                    default: add prefix 'reconstructed_' to input ifgram_file
-
-example:
-  ifgram_reconstruction.py  unwrapIfgram.h5  timeseries_ECMWF_demCor.h5
-  ifgram_reconstruction.py  unwrapIfgram.h5  timeseries_ECMWF_demCor.h5  reconstructed_unwrapIfgram.h5
+EXAMPLE = """example:
+  ifgram_reconstruction.py  timeseries.h5  INPUTS/ifgramStack.h5  
+  ifgram_reconstruction.py  timeseries_ECWMF_ramp_demErr.h5  INPUTS/ifgramStack.h5  -d reconCorUnwrapPhase
 """
 
+def create_parser():
+    parser = argparse.ArgumentParser(description='Reconstruct network of interferograms from time-series',
+                                     formatter_class=argparse.RawTextHelpFormatter,
+                                     epilog=EXAMPLE)
 
-def usage():
-    print(USAGE)
+    parser.add_argument('timeseries_file', type=str, help='time-series file.')
+    parser.add_argument('-r', dest='ifgram_file', type=str, default='./INPUTS/ifgramStack.h5',
+                        help='reference interferograms stack file')
+    parser.add_argument('-o','--output', dest='out_file', default='reconUnwrapIfgram.h5',
+                        help='output filename for the reconstructed interferograms.')
+    return parser
+
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
+    return inps
+
+
+#####################################################################################
+def timeseries2ifgram(ts_file, ifgram_file, out_file='reconUnwrapIfgram.h5'):
+    # read time-series
+    atr = readfile.read_attribute(ts_file)
+    range2phase = -4.*np.pi / float(atr['WAVELENGTH'])
+    print('reading timeseries data from file {} ...'.format(ts_file))
+    ts_data = readfile.read(ts_file)[0] * range2phase
+    num_date, length, width = ts_data.shape
+    ts_data = ts_data.reshape(num_date, -1)
+
+    # reconstruct unwrapPhase
+    print('reconstructing the interferograms from timeseries')
+    stack_obj = ifgramStack(ifgram_file)
+    stack_obj.open(print_msg=False)
+    A1 = stack_obj.get_design_matrix4timeseries(stack_obj.get_date12_list(dropIfgram=False))[0]
+    num_ifgram = A1.shape[0]
+    A0 = -1.*np.ones((num_ifgram, 1))
+    A = np.hstack((A0, A1))
+    ifgram_est = np.dot(A, ts_data).reshape(num_ifgram, length, width)
+    ifgram_est = np.array(ifgram_est, dtype=ts_data.dtype)
+    del ts_data
+
+    # write to ifgram file
+    dsDict = {}
+    dsDict['unwrapPhase'] = ifgram_est
+    writefile.write(dsDict, out_file=out_file, ref_file=ifgram_file)
+    return ifgram_file
+
+
+def main(iargs=None):
+    inps = cmd_line_parse(iargs)
+    timeseries2ifgram(inps.timeseries_file, inps.ifgram_file, inps.out_file)
     return
 
 
 #####################################################################################
-def main(argv):
-
-    # Inputs
-    try:
-        ifgram_file = argv[0]
-        timeseries_file = argv[1]
-    except:
-        usage()
-        sys.exit(1)
-
-    try:
-        outfile = argv[2]
-    except:
-        outfile = 'recon_'+ifgram_file
-
-    atr = readfile.read_attribute(timeseries_file)
-    length = int(atr['LENGTH'])
-    width = int(atr['WIDTH'])
-
-    # Read time-series file
-    print('loading timeseries ...')
-    h5ts = h5py.File(timeseries_file, 'r')
-    date_list = sorted(h5ts['timeseries'].keys())
-    date_num = len(date_list)
-    timeseries = np.zeros((date_num, length*width))
-
-    print('number of acquisitions: '+str(date_num))
-    prog_bar = ptime.progressBar(maxValue=date_num)
-    for i in range(date_num):
-        date = date_list[i]
-        d = h5ts['timeseries'].get(date)[:]
-        timeseries[i, :] = d.flatten(0)
-        prog_bar.update(i+1, suffix=date)
-    prog_bar.close()
-    h5ts.close()
-    del d
-
-    range2phase = -4*np.pi/float(atr['WAVELENGTH'])
-    timeseries = range2phase*timeseries
-
-    # Estimate interferograms from timeseries
-    print('estimating interferograms from timeseries using design matrix from input interferograms')
-    A, B = ut.design_matrix(ifgram_file)
-    p = -1*np.ones([A.shape[0], 1])
-    Ap = np.hstack((p, A))
-    estData = np.dot(Ap, timeseries)
-    del timeseries
-
-    # Write interferograms file
-    print('writing >>> '+outfile)
-    h5 = h5py.File(ifgram_file, 'r')
-    ifgram_list = sorted(h5['interferograms'].keys())
-    ifgram_num = len(ifgram_list)
-    date12_list = ptime.list_ifgram2date12(ifgram_list)
-
-    h5out = h5py.File(outfile, 'w')
-    group = h5out.create_group('interferograms')
-
-    print('number of interferograms: '+str(ifgram_num))
-    prog_bar = ptime.progressBar(maxValue=ifgram_num)
-    for i in range(ifgram_num):
-        ifgram = ifgram_list[i]
-        data = np.reshape(estData[i, :], (length, width))
-
-        gg = group.create_group(ifgram)
-        dset = gg.create_dataset(ifgram, data=data)
-        for key, value in h5['interferograms'][ifgram].attrs.items():
-            gg.attrs[key] = value
-        prog_bar.update(i+1, suffix=date12_list[i])
-    prog_bar.close()
-    h5.close()
-    h5out.close()
-    print('Done.')
-    return outfile
-
-
-#####################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()

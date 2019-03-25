@@ -27,8 +27,8 @@ EXAMPLE = """example:
 
 DESCRIPTION = """
   For each interferogram, including unwrapped/wrapped interferograms and coherence, 3 metadata files are required:
-  1) master .par file, e.g. 130118.amp.par
-  2) slave  .par file, e.g. 130129.amp.par
+  1) master .par file, e.g. 130118_4rlks.amp.par
+  2) slave  .par file, e.g. 130129_4rlks.amp.par
   3) interferogram .off file, e.g. 130118-130129_4rlks.off
 
   Other metadata files are recommended and can be generated from the above 3 if not existed, more specifically:
@@ -37,34 +37,57 @@ DESCRIPTION = """
   5) corner files, e.g. 130118_4rlks.amp.corner_full and 130118_4rlks.amp.corner
       It can be generated from file 1 with Gamma command SLC_corners)
 
-  This script will read all these files (generate them if not existed), merge them into one, convert their name from
+  This script will read all these files (generate 4 and 5 if not existed), merge them into one, convert their name from
   Gamma style to ROI_PAC style, and write to an metadata file, same name as input binary data file with suffix .rsc,
   e.g. diff_filt_HDR_130118-130129_4rlks.unw.rsc
 
 
-  For DEM file in radar/geo coordinates (.utm.dem/.hgt_sim) and lookup table file for geocoding (.UTM_TO_RDC), 2 metadata
-  files are required:
-  1) .par file, contains geo coordinates info, for DEM in geo coordinates and lookup table, e.g. sim_150911-150922.utm.dem.par
-  2) .diff_par file, contains radar coordinates info, for DEM in radar coordinates, e.g. sim_150911-150922.diff_par
+  For DEM file in radar/geo coordinates (.hgt_sim or .rdc.dem / .utm.dem) and 
+      lookup table file for geocoding (.UTM_TO_RDC), 2 metadata files are required:
+  1) .par      file, for DEM in geo   coordinates and lookup table, e.g.: sim_150911_4rlks.utm.dem.par
+  2) .diff_par file, for DEM in radar coordinates, e.g. sim_150911_4rlks.diff_par
 
 
-  Here is an example of how your Gamma files should look like, after all interferograms/SLCs are coregistered:
-  For each interferogram, 5 files are needed:
-      diff_130118-130129_4rlks.unw
-      filt_130118-130129_4rlks.cor
-      130118-130129_4rlks.off
-      130118_4rlks.amp.par
-      130129_4rlks.amp.par
-  For each dataset, only one sim* folder with 5 files are needed, 
-      sim_130118-130129.hgt_sim
-      sim_130118-130129.diff_par
-      sim_130118-130129.utm.dem
-      sim_130118-130129.utm.dem.par
-      sim_130118-130129.UTM_TO_RDC
+  Here is an example of how your Gamma files should look like:
+  Before loading to PySAR:
+      For each interferogram, 5 files are needed:
+          130118-130129_4rlks.off
+          130118_4rlks.amp.par
+          130129_4rlks.amp.par
+          filt_130118-130129_4rlks.cor
+          diff_130118-130129_4rlks.unw
+      For each dataset, only one sim* folder with 5 files are needed, 
+          sim_150911_4rlks.UTM_TO_RDC
+          sim_150911_4rlks.diff_par
+          sim_150911_4rlks.hgt_sim or sim_150911.rdc.dem
+          sim_150911_4rlks.utm.dem
+          sim_150911_4rlks.utm.dem.par
+  After running prep_gamma.py:
+      For each interferogram:
+          130118-130129_4rlks.base_perp
+          130118-130129_4rlks.baseline
+          130118-130129_4rlks.off
+          130118_4rlks.ramp.corner
+          130118_4rlks.ramp.corner_full
+          130118_4rlks.ramp.par
+          130129_4rlks.ramp.par
+          filt_130118-130129_4rlks.cor
+          filt_130118-130129_4rlks.cor.rsc
+          diff_130118-130129_4rlks.unw
+          diff_130118-130129_4rlks.unw.rsc
+      For the geometry files in each dataset:
+          sim_150911_4rlks.UTM_TO_RDC
+          sim_150911_4rlks.UTM_TO_RDC.rsc
+          sim_150911_4rlks.diff_par
+          sim_150911_4rlks.rdc.dem      or sim_150911_4rlks.hgt_sim
+          sim_150911_4rlks.rdc.dem.rsc  or sim_150911_4rlks.hgt_sim.rsc
+          sim_150911_4rlks.utm.dem
+          sim_150911_4rlks.utm.dem.par
+          sim_150911_4rlks.utm.dem.rsc
 
   Notes: both - and _ are supported; 
          both YYMMDD and YYYYMMDD naming are also supported;
-         if no multilooking applied, do not "_4rlks" in your file names.
+         if no multilooking applied, do not add "_4rlks" in your file names.
 """
 
 

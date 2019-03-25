@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2016-2018, Yunjun Zhang                     #
-# Author:  Yunjun Zhang                                    #
+# Copyright(c) 2016-2018, Zhang Yunjun                     #
+# Author:  Zhang Yunjun                                    #
 ############################################################
 # Recommend import:
 #   from pysar.objects import sensor
@@ -126,7 +126,7 @@ def signal2noise_ratio(sensor):
 
 def project_name2sensor_name(project_names):
     """Get sensor name from project_name or path
-    Parameters: project_name_in : str or list of str, name or path of template file containing project name
+    Parameters: project_names : str or list of str, name or path of template file containing project name
     Returns:    sensor : str, SAR sensor name
                 project_name : str, project name
     Examples:   ('Sen',

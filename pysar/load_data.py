@@ -31,6 +31,7 @@ datasetName2templateKey = {'unwrapPhase'     : 'pysar.load.unwFile',
                            'coherence'       : 'pysar.load.corFile',
                            'connectComponent': 'pysar.load.connCompFile',
                            'wrapPhase'       : 'pysar.load.intFile',
+                           'iono'            : 'pysar.load.ionoFile',
                            'height'          : 'pysar.load.demFile',
                            'latitude'        : 'pysar.load.lookupYFile',
                            'longitude'       : 'pysar.load.lookupXFile',
@@ -66,6 +67,7 @@ pysar.load.unwFile        = auto  #[path2unw_file]
 pysar.load.corFile        = auto  #[path2cor_file]
 pysar.load.connCompFile   = auto  #[path2conn_file]
 pysar.load.intFile        = auto  #[path2int_file]
+pysar.load.ionoFile       = auto  #[path2iono_file]
 ##---------geometry datasets:
 pysar.load.demFile        = auto  #[path2hgt_file]
 pysar.load.lookupYFile    = auto  #[path2lat_file]]
@@ -91,6 +93,7 @@ NOTE = """NOTE:
 EXAMPLE = """example:
   load_data.py -t GalapagosSenDT128.tempalte
   load_data.py -t pysarApp_template.txt
+  load_data.py -t pysarApp_template.txt GalapagosSenDT128.tempalte --project GalapagosSenDT128
   load_data.py -H #Show example input template for ISCE/ROI_PAC/GAMMA products
 """
 
@@ -175,9 +178,10 @@ def read_inps2dict(inps):
         inpsDict['compression'] = None
 
     # PROJECT_NAME --> PLATFORM
-    (inpsDict['PLATFORM'],
-     inpsDict['PROJECT_NAME']) = sensor.project_name2sensor_name([inpsDict['PROJECT_NAME']]+
-                                                                  inps.template_file)
+    if not inpsDict['PROJECT_NAME']:
+        cfile = [i for i in list(inps.template_file) if os.path.basename(i) != 'pysarApp_template.txt']
+        inpsDict['PROJECT_NAME'] = sensor.project_name2sensor_name(cfile)[1]
+    inpsDict['PLATFORM'] = str(sensor.project_name2sensor_name(str(inpsDict['PROJECT_NAME']))[0])
     if inpsDict['PLATFORM']:
         print('platform : {}'.format(inpsDict['PLATFORM']))
     print('processor: {}'.format(inpsDict['processor']))
@@ -274,23 +278,24 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
                                                    width=maxDigit,
                                                    path=inpsDict[key]))
 
-    # Check required dataset
+    # Check 1: required dataset
     dsName0 = 'unwrapPhase'
     if dsName0 not in dsPathDict.keys():
         print('WARNING: No reqired {} data files found!'.format(dsName0))
         return None
 
-    # Check number of files for all dataset types
+    # Check 2: number of files for all dataset types
+    for key, value in dsNumDict.items():
+        print('number of {:<{width}}: {num}'.format(key, width=maxDigit, num=value))
+
     dsNumList = list(dsNumDict.values())
     if any(i != dsNumList[0] for i in dsNumList):
-        print('WARNING: Not all types of dataset have the same number of files:')
-        for key, value in dsNumDict.items():
-            print('number of {:<{width}}: {num}'.format(key,
-                                                        width=maxDigit,
-                                                        num=value))
-    print('number of files per type: {}'.format(dsNumList[0]))
+        msg = 'WARNING: NOT all types of dataset have the same number of files.'
+        msg += ' -> skip interferograms with missing files and continue.'
+        print(msg)
+        #raise Exception(msg)
 
-    # Check data dimension for all files
+    # Check 3: data dimension for all files
 
     # dsPathDict --> pairsDict --> stackObj
     dsNameList = list(dsPathDict.keys())
@@ -426,7 +431,7 @@ def update_object(outFile, inObj, box, updateMode=True):
 
             if out_size == in_size and set(in_date12_list).issubset(set(out_date12_list)):
                 print(('All date12   exists in file {} with same size as required,'
-                       ' no need to re-load.'.format(outFile)))
+                       ' no need to re-load.'.format(os.path.basename(outFile))))
                 write_flag = False
 
         elif inObj.name == 'geometry':
@@ -435,7 +440,7 @@ def update_object(outFile, inObj, box, updateMode=True):
             if (outObj.get_size() == inObj.get_size(box=box)
                     and all(i in outObj.datasetNames for i in inObj.get_dataset_list())):
                 print(('All datasets exists in file {} with same size as required,'
-                       ' no need to re-load.'.format(outFile)))
+                       ' no need to re-load.'.format(os.path.basename(outFile))))
                 write_flag = False
     return write_flag
 
@@ -460,7 +465,7 @@ def prepare_metadata(inpsDict):
             meta_file = sorted(glob.glob(inpsDict['pysar.load.metaFile']))[0]
             baseline_dir = inpsDict['pysar.load.baselineDir']
             geom_dir = os.path.dirname(inpsDict['pysar.load.demFile'])
-            cmd = '{s} -i {i} -x {m} -b {b} -g {g}'.format(s=script_name,
+            cmd = '{s} -i {i} -m {m} -b {b} -g {g}'.format(s=script_name,
                                                            i=ifgram_dir,
                                                            m=meta_file,
                                                            b=baseline_dir,
@@ -480,7 +485,6 @@ def print_write_setting(inpsDict):
     print('compression: {}'.format(comp))
     box = inpsDict['box']
     boxGeo = inpsDict['box4geo_lut']
-
     return updateMode, comp, box, boxGeo
 
 
@@ -498,20 +502,26 @@ def get_extra_metadata(inpsDict):
 
 #################################################################
 def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-    if not os.path.isdir(inps.outdir):
-        os.makedirs(inps.outdir)
-        print('create directory: {}'.format(inps.outdir))
+    inps = cmd_line_parse(iargs)        
 
+    # read input options
     inpsDict = read_inps2dict(inps)
-    inpsDict = read_subset_box(inpsDict)
     prepare_metadata(inpsDict)
+
+    inpsDict = read_subset_box(inpsDict)
     extraDict = get_extra_metadata(inpsDict)
 
+    # initiate objects
     stackObj = read_inps_dict2ifgram_stack_dict_object(inpsDict)
     geomRadarObj, geomGeoObj = read_inps_dict2geometry_dict_object(inpsDict)
 
+    # prepare wirte
     updateMode, comp, box, boxGeo = print_write_setting(inpsDict)
+    if any([stackObj, geomRadarObj, geomGeoObj]) and not os.path.isdir(inps.outdir):
+        os.makedirs(inps.outdir)
+        print('create directory: {}'.format(inps.outdir))
+
+    # write
     if stackObj and update_object(inps.outfile[0], stackObj, box, updateMode=updateMode):
         print('-'*50)
         stackObj.write2hdf5(outputFile=inps.outfile[0],

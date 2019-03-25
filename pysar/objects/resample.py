@@ -14,10 +14,10 @@ except ImportError:
 
 import sys
 import numpy as np
+import multiprocessing
 from scipy import ndimage
 from scipy.interpolate import RegularGridInterpolator as RGI
-import multiprocessing
-from pysar.utils import readfile, ptime, utils as ut
+from pysar.utils import readfile, ptime, utils0 as ut
 
 
 class resample:
@@ -381,12 +381,10 @@ class resample:
 
         if interp_method.startswith('near'):
             if print_msg:
-                print(('nearest resampling with kd_tree ({} segments) '
-                       'using {} processor cores ...').format(num_segment, nprocs))
+                print('nearest resampling with kd_tree ({} segments) ...'.format(num_segment))
             dest_data = pr.kd_tree.resample_nearest(self.src_def,
                                                     src_data,
                                                     self.dest_def,
-                                                    nprocs=nprocs,
                                                     fill_value=fill_value,
                                                     radius_of_influence=radius,
                                                     segments=num_segment,

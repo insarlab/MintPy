@@ -45,7 +45,7 @@ def create_parser():
     parser.add_argument('-d', '--dset', help='dataset to be geocoded, for example:\n' +
                         'height                        for geometryRadar.h5\n' +
                         'unwrapPhase-20100114_20101017 for ifgramStack.h5')
-    parser.add_argument('--geo2radar', '--reverse', dest='radar2geo', action='store_false',
+    parser.add_argument('--geo2radar', '--geo2rdr', dest='radar2geo', action='store_false',
                         help='reverse geocoding, or resample geocoded files into radar coordinates.\n' +
                         'For radar coded lookup table (ISCE, Doris) only.')
 
@@ -158,10 +158,14 @@ def metadata_radar2geo(atr_in, res_obj, print_msg=True):
     atr = dict(atr_in)
     atr['LENGTH'] = res_obj.length
     atr['WIDTH'] = res_obj.width
-    atr['Y_FIRST'] = res_obj.SNWE[1]
-    atr['X_FIRST'] = res_obj.SNWE[2]
     atr['Y_STEP'] = res_obj.laloStep[0]
     atr['X_STEP'] = res_obj.laloStep[1]
+    if 'Y_FIRST' in atr_in.keys():  #roipac, gamma
+        atr['Y_FIRST'] = res_obj.SNWE[1]
+        atr['X_FIRST'] = res_obj.SNWE[2]
+    else:                           #isce, doris
+        atr['Y_FIRST'] = res_obj.SNWE[1] - res_obj.laloStep[0] / 2.
+        atr['X_FIRST'] = res_obj.SNWE[2] - res_obj.laloStep[1] / 2.
     atr['Y_UNIT'] = 'degrees'
     atr['X_UNIT'] = 'degrees'
 
@@ -224,6 +228,9 @@ def auto_output_filename(infile, inps):
         outfile = '{}{}'.format(prefix, os.path.basename(infile))
 
     if inps.out_dir:
+        if not os.path.isdir(inps.out_dir):
+            os.makedirs(inps.out_dir)
+            print('create directory: {}'.format(inps.out_dir))
         outfile = os.path.join(inps.out_dir, outfile)
     return outfile
 
@@ -285,7 +292,7 @@ def run_geocode(inps):
         writefile.write(dsResDict, out_file=outfile, metadata=atr, ref_file=infile)
 
     m, s = divmod(time.time()-start_time, 60)
-    print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
+    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
     return outfile
 
 

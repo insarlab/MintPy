@@ -1,0 +1,34 @@
+# vim: set filetype=cfg:
+##########  PySAR
+pysar.load.processor      = gamma
+pysar.load.unwFile        = ./../GAMMA/interferograms/*/diff_*rlks.unw
+pysar.load.corFile        = ./../GAMMA/interferograms/*/filt_*rlks.cor
+pysar.load.connCompFile   = None
+pysar.load.intFile        = None
+
+pysar.load.demFile        = ./../GAMMA/geom_master/sim_*.rdc.dem
+pysar.load.lookupYFile    = ./../GAMMA/geom_master/sim_*.UTM_TO_RDC
+pysar.load.lookupXFile    = ./../GAMMA/geom_master/sim_*.UTM_TO_RDC
+pysar.load.incAngleFile   = None
+pysar.load.azAngleFile    = None
+pysar.load.shadowMaskFile = None
+pysar.load.bperpFile      = None
+
+#pysar.subset.yx        = 70:470, 180:680
+#pysar.reference.yx     = 350,50
+pysar.subset.lalo       = 41.02:41.32, -115.10:-114.65
+pysar.reference.lalo    = 41.03, -114.70
+pysar.network.coherenceBased     = yes       #[yes / no], auto for yes, exclude interferograms with coherence < minCoherence
+pysar.network.keepMinSpanTree    = no
+pysar.network.excludeDate        = 20071231, 20080204, 20080310
+pysar.topographicResidual.stepFuncDate = 20080221
+
+##########  HDF-EOS5 Attributes
+mission             = Env                 # ERS,ENV,S1,RS1,RS2,CSK,TSX,JERS,ALOS,ALOS2
+relative_orbit      = 399
+first_frame         = 2781
+last_frame          = 2781
+beam_mode           = IS                   # S2,FB08,IW
+processing_software = GAMMA
+
+

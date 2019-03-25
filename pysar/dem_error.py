@@ -69,7 +69,7 @@ def create_parser():
                              'slant range distance\n' +
                              'and/or 3D perpendicular baseline')
     parser.add_argument('-o', '--outfile',
-                        help='Output file name for corrected time series')
+                        help='Output file name for corrected time-series')
 
     parser.add_argument('--ex', '--exclude', dest='excludeDate', nargs='*', default=[],
                         help='Exclude date(s) for DEM error estimation.\n' +
@@ -108,9 +108,9 @@ def run_or_skip(inps):
     # check output file
     if not os.path.isfile(inps.outfile):
         flag = 'run'
-        print('  1) output file {} not found, --> run'.format(inps.outfile))
+        print('1) output file {} NOT found.'.format(inps.outfile))
     else:
-        print('  1) output file {} already exists.'.format(inps.outfile))
+        print('1) output file {} already exists.'.format(inps.outfile))
         infiles = [inps.timeseries_file]
         if inps.geom_file:
             infiles.append(inps.geom_file)
@@ -118,9 +118,9 @@ def run_or_skip(inps):
         to = os.path.getmtime(inps.outfile)
         if ti > to:
             flag = 'run'
-            print('  2) output file is NOT newer than input file: {} --> run.'.format(infiles))
+            print('2) output file is NOT newer than input file: {}.'.format(infiles))
         else:
-            print('  2) output file is newer than input file: {}.'.format(infiles))
+            print('2) output file is newer than input file: {}.'.format(infiles))
 
     # check configuration
     if flag == 'skip':
@@ -129,12 +129,12 @@ def run_or_skip(inps):
         atr = readfile.read_attribute(inps.outfile)
         if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in configKeys):
             flag = 'run'
-            print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
+            print('3) NOT all key configration parameters are the same:{}'.format(configKeys))
         else:
-            print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
- 
+            print('3) all key configuration parameters are the same:{}'.format(configKeys))
+
     # result
-    print('check result:', flag)
+    print('run or skip: {}.'.format(flag))
     return flag
 
 
@@ -145,7 +145,7 @@ def read_template2inps(template_file, inps=None):
         inps = cmd_line_parse()
     inpsDict = vars(inps)
     print('read options from template file: '+os.path.basename(template_file))
-    template = readfile.read_template(inps.template_file)
+    template = readfile.read_template(template_file)
     template = ut.check_template_auto_value(template)
 
     # Read template option
@@ -170,22 +170,10 @@ def read_exclude_date(ex_date_list, date_list_all, print_msg=True):
     Returns:    drop_date     : 1D array of bool in size of (num_date,)
     """
     # Read exclude date input
-    if ex_date_list:
-        tempList = []
-        for d in ex_date_list:
-            if d.isdigit():
-                if len(d) in [6, 8]:
-                    tempList.append(d)
-                else:
-                    warnings.warn('input date is not in YYMMDD or YYYYMMDD format.')
-            elif os.path.isfile(d):
-                tempList += ptime.read_date_list(d)
-        ex_date_list = sorted(ptime.yyyymmdd(tempList))
-        if print_msg and len(ex_date_list) > 0:
-            print(('exclude the following dates for DEM error estimation:'
-                   ' ({})\n{}').format(len(ex_date_list), ex_date_list))
-    else:
-        ex_date_list = []
+    ex_date_list = ptime.read_date_list(ex_date_list)
+    if ex_date_list and print_msg:
+        print(('exclude the following dates for DEM error estimation:'
+               ' ({})\n{}').format(len(ex_date_list), ex_date_list))
 
     # convert to mark array
     drop_date = np.array([i not in ex_date_list for i in date_list_all],
@@ -261,7 +249,7 @@ def read_geometry(inps):
 
 def estimate_dem_error(ts0, A0, tbase, drop_date=None, phaseVelocity=False, num_step=0):
     """Estimate DEM error with least square optimization.
-    Parameters: ts0 : 2D np.array in size of (numDate, numPixel), original time series displacement
+    Parameters: ts0 : 2D np.array in size of (numDate, numPixel), original displacement time-series
                 A0  : 2D np.array in size of (numDate, model_num), design matrix in [A_geom, A_def]
                 tbase : 2D np.array in size of (numDate, 1), temporal baseline
                 drop_date : 1D np.array in bool data type, mark the date used in the estimation
@@ -334,39 +322,43 @@ def correct_dem_error(inps, A_def):
                           " Reduce it!").format(inps.polyOrder, np.sum(drop_date)))
 
     # Read time-series Data
-    print('reading time-series data ...')
-    ts_data = ts_obj.read().reshape((num_date, -1))
+    ts_data = ts_obj.read(print_msg=True).reshape((num_date, -1))
 
     ##-------------------------------- Loop for L2-norm inversion  --------------------------------##
     print('inverting DEM error ...')
+    delta_z = np.zeros(num_pixel, dtype=np.float32)
+    ts_cor = np.zeros((num_date, num_pixel), dtype=np.float32)
+    ts_res = np.zeros((num_date, num_pixel), dtype=np.float32)
+    if num_step > 0:
+        step_model = np.zeros((num_step, num_pixel), dtype=np.float32)
+
+    print('skip pixels with zero/NaN value in all acquisitions')
+    ts_mean = np.nanmean(ts_data, axis=0)
+    mask = np.multiply(~np.isnan(ts_mean), ts_mean != 0.)
+    del ts_mean
+
     if inps.rangeDist.size == 1:
         A_geom = inps.pbase / (inps.rangeDist * inps.sinIncAngle)
         A = np.hstack((A_geom, A_def))
-        (delta_z,
-         ts_cor,
-         ts_res,
-         step_model) = estimate_dem_error(ts_data,
-                                          A,
-                                          tbase=tbase,
-                                          drop_date=drop_date,
-                                          phaseVelocity=inps.phaseVelocity,
-                                          num_step=num_step)
 
-    else:
-        ts_cor = np.zeros((num_date, num_pixel), dtype=np.float32)
-        ts_res = np.zeros((num_date, num_pixel), dtype=np.float32)
-        delta_z = np.zeros(num_pixel, dtype=np.float32)
-        #constC = np.zeros(num_pixel, dtype=np.float32)
+        ts_data = ts_data[:, mask]
+        (delta_z_i,
+         ts_cor_i,
+         ts_res_i,
+         step_model_i) = estimate_dem_error(ts_data, A,
+                                            tbase=tbase,
+                                            drop_date=drop_date,
+                                            phaseVelocity=inps.phaseVelocity,
+                                            num_step=num_step)
+        delta_z[mask] = delta_z_i
+        ts_cor[:, mask] = ts_cor_i
+        ts_res[:, mask] = ts_res_i
         if num_step > 0:
-            step_model = np.zeros((num_step, num_pixel), dtype=np.float32)
-
+            step_model[:, mask] = step_model_i
+    else:
         # mask
         print('skip pixels with zero/nan value in geometry: incidence angle or range distance')
-        mask = np.multiply(inps.sinIncAngle != 0., inps.rangeDist != 0.)
-        print('skip pixels with zero value in all acquisitions')
-        ts_mean = np.nanmean(ts_data, axis=0)
-        mask *= ts_mean != 0.
-        del ts_mean
+        mask *= np.multiply(inps.sinIncAngle != 0., inps.rangeDist != 0.)
 
         num_pixel2inv = np.sum(mask)
         idx_pixel2inv = np.where(mask)[0]
@@ -399,8 +391,7 @@ def correct_dem_error(inps, A_def):
             (delta_z_i,
              ts_cor_i,
              ts_res_i,
-             step_model_i) = estimate_dem_error(ts_data[:, i],
-                                                A,
+             step_model_i) = estimate_dem_error(ts_data[:, i], A,
                                                 tbase=tbase,
                                                 drop_date=drop_date,
                                                 phaseVelocity=inps.phaseVelocity,
@@ -475,7 +466,7 @@ def main(iargs=None):
     inps = correct_dem_error(inps, A_def)
 
     m, s = divmod(time.time()-start_time, 60)
-    print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
+    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
     return inps.outfile
 
 

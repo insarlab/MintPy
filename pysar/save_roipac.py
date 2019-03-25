@@ -21,7 +21,8 @@ EXAMPLE = """example:
   save_roipac.py  INPUTS/ifgramStack.h5  unwrapPhase-20091225_20100723
   save_roipac.py  INPUTS/ifgramStack.h5  unwrapPhase-20091225_20100723  --ref-yx 640 810
   save_roipac.py  INPUTS/ifgramStack.h5    coherence-20091225_20100723
-  save_roipac.py  temporal_coherence.h5
+  save_roipac.py  temporalCoherence.h5
+  save_roipac.py  GEOCODE/geo_geometryRadar.h5  height  -o height.dem
 """
 
 
@@ -88,8 +89,11 @@ def read_data(inps):
             atr['DATE'] = inps.ref_date[2:8]
             atr['DATE12'] = '{}-{}'.format(inps.ref_date[2:8], inps.dset[2:8])
         else:
-            atr['DATE'] = atr['REF_DATE']
-            atr['DATE12'] = '{}-{}'.format(atr['REF_DATE'][2:8], inps.dset[2:8])
+            try:
+                atr['DATE'] = atr['REF_DATE']
+                atr['DATE12'] = '{}-{}'.format(atr['REF_DATE'][2:8], inps.dset[2:8])
+            except:
+                pass
 
         print('converting range to phase')
         data *= range2phase
@@ -99,6 +103,8 @@ def read_data(inps):
         atr['UNIT'] = 'radian'
         if not inps.outfile:
             inps.outfile = '{}{}'.format(atr['DATE12'], atr['FILE_TYPE'])
+            if inps.file.startswith('geo_'):
+                inps.outfile = 'geo_'+inps.outfile
 
     elif k == 'ifgramStack':
         dsetFamily, atr['DATE12'] = inps.dset.split('-')
@@ -122,17 +128,22 @@ def read_data(inps):
 
         if not inps.outfile:
             inps.outfile = '{}{}'.format(atr['DATE12'], atr['FILE_TYPE'])
+            if inps.file.startswith('geo_'):
+                inps.outfile = 'geo_'+inps.outfile
 
     else:
         if 'coherence' in k.lower():
             atr['FILE_TYPE'] = '.cor'
         elif k in ['mask']:
             atr['FILE_TYPE'] = '.msk'
+            atr['DATA_TYPE'] = 'byte'
         elif k in ['geometry'] and inps.dset == 'height':
             if 'Y_FIRST' in atr.keys():
                 atr['FILE_TYPE'] = '.dem'
+                atr['DATA_TYPE'] = 'int16'
             else:
                 atr['FILE_TYPE'] = '.hgt'
+            atr['UNIT'] = 'm'
         else:
             atr['FILE_TYPE'] = '.unw'
 
@@ -141,7 +152,22 @@ def read_data(inps):
 
     if not atr['PROCESSOR'] or atr['PROCESSOR'] == 'pysar':
         atr['PROCESSOR'] = 'roipac'
+    #atr['PROCESSOR'] = 'roipac'
     return data, atr, inps.outfile
+
+
+def clean_metadata4roipac(atr_in):
+    atr = {}
+    for key, value in atr_in.items():
+        atr[key] = str(value)
+
+    key_list = ['width', 'Width', 'samples', 'length', 'lines']
+    for key in key_list:
+        if key in atr.keys():
+            atr.pop(key)
+
+    atr['FILE_LENGTH'] = atr['LENGTH']
+    return atr
 
 
 ##############################################################################
@@ -149,6 +175,8 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     data, atr, out_file = read_data(inps)
+
+    atr = clean_metadata4roipac(atr)
 
     print('writing >>> {}'.format(out_file))
     writefile.write(data, out_file=out_file, metadata=atr)

@@ -20,6 +20,7 @@ from scipy.special import gamma
 from pysar.objects import ifgramStack, timeseries
 from pysar.utils import readfile, writefile, ptime, utils as ut
 
+
 # key configuration parameter name
 key_prefix = 'pysar.networkInversion.'
 configKeys = ['unwDatasetName',
@@ -41,7 +42,7 @@ EXAMPLE = """example:
 """
 
 TEMPLATE = """
-## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
+## Invert network of interferograms into time-series using weighted least sqaure (WLS) estimator.
 ## weighting options for least square inversion:
 ## 1) var - use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS) [recommended]
 ## 2) fim - use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS)
@@ -147,7 +148,6 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-    inps.parallel = False
 
     # check input file type
     atr = readfile.read_attribute(inps.ifgramStackFile)
@@ -185,29 +185,29 @@ def run_or_skip(inps):
     # check output files vs input dataset
     if not all(os.path.isfile(i) for i in inps.outfile):
         flag = 'run'
-        print('  1) NOT ALL output files found: {}, --> run.'.format(inps.outfile))
+        print('1) NOT ALL output files found: {}.'.format(inps.outfile))
     else:
-        print('  1) output files already exist: {}'.format(inps.outfile))
+        print('1) output files already exist: {}.'.format(inps.outfile))
         with h5py.File(inps.ifgramStackFile, 'r') as f:
             ti = float(f[inps.unwDatasetName].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgramStackFile)))
         to = min(os.path.getmtime(i) for i in inps.outfile)
         if ti > to:
             flag = 'run'
-            print('  2) output files are NOT newer than input dataset: {} --> run.'.format(inps.unwDatasetName))
+            print('2) output files are NOT newer than input dataset: {}.'.format(inps.unwDatasetName))
         else:
-            print('  2) output dataset is newer than input dataset: {}'.format(inps.unwDatasetName))
+            print('2) output dataset is newer than input dataset: {}.'.format(inps.unwDatasetName))
 
     # check configuration
     if flag == 'skip':
         atr = readfile.read_attribute(inps.timeseriesFile)
         if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in configKeys):
             flag = 'run'
-            print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
+            print('3) NOT all key configration parameters are the same: {}'.format(configKeys))
         else:
-            print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
+            print('3) all key configuration parameters are the same: {}.'.format(configKeys))
 
     # result
-    print('check result:', flag)
+    print('run or skip: {}.'.format(flag))
     return flag
 
 
@@ -296,7 +296,7 @@ def phase_variance_ps(L, coherence=None, epsilon=1e-3):
 
 def coherence2phase_variance_ds(coherence, L=32, epsilon=1e-3, print_msg=False):
     """Convert coherence to phase variance based on DS phase PDF (Tough et al., 1995)"""
-    lineStr = '    number of multilooks L={}'.format(L)
+    lineStr = '    number of looks L={}'.format(L)
     if L > 80:
         L = 80
         lineStr += ', use L=80 to avoid dividing by 0 in calculation with Negligible effect'
@@ -372,7 +372,7 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
                 rcond - cut-off ratio of small singular values of A or B, to maintain robustness.
                     It's recommend to >= 1e-5 by experience, to generate reasonable result.
                 min_redundancy - min redundancy defined as min num_ifgram for every SAR acquisition
-    Returns:    ts - 2D np.array in size of (num_date, num_pixel), phase time series
+    Returns:    ts - 2D np.array in size of (num_date, num_pixel), phase time-series
                 temp_coh - 1D np.array in size of (num_pixel), temporal coherence
                 num_inv_ifg - 1D np.array in size of (num_pixel), number of ifgrams
                     used during the inversion
@@ -557,9 +557,39 @@ def split_into_boxes(dataset_shape, chunk_size=100e6, print_msg=True):
     return box_list
 
 
+def subsplit_boxes_by_num_workers(box, num_workers, dimension='y'):
+    """ David: This is a bit hacky, but after creating the patches,
+    I wanted to further divide the box size into `num_subboxes` different subboxes.
+    Note that `split_into_boxes` only splits based on chunk_size (memory-based).
+
+    :param box: [x0, y0, x1, y1]: list[int] of size 4,
+    """
+
+    # Flip x and y coordinates if splitting along 'x' dimension
+    x0, y0, x1, y1 = box
+    subboxes = []
+
+    if dimension == 'y':
+        y_diff = y1 - y0
+        for i in range(num_workers):
+            start = (i * y_diff) // num_workers
+            end = ((i + 1) * y_diff) // num_workers if i + 1 != num_workers else y_diff
+            subboxes.append([x0, start, x1, end])
+    elif dimension == 'x':
+        x_diff = x1 - x0
+        for i in range(num_workers):
+            start = (i * x_diff) // num_workers
+            end = ((i + 1) * x_diff) // num_workers if i + 1 != num_workers else x_diff
+            subboxes.append([start, y0, end, y1])
+    else:
+        raise Exception("Unknown value for dimension parameter:", dimension)
+
+    return subboxes
+
 def check_design_matrix(ifgram_file, weight_func='var'):
     """Check Rank of Design matrix for weighted inversion"""
-    A = ifgramStack(ifgram_file).get_design_matrix4timeseries_estimation(dropIfgram=True)[0]
+    date12_list = ifgramStack(ifgram_file).get_date12_list(dropIfgram=True)
+    A = ifgramStack.get_design_matrix4timeseries(date12_list)[0]
     if weight_func == 'no':
         if np.linalg.matrix_rank(A) < A.shape[1]:
             print('WARNING: singular design matrix! Inversion result can be biased!')
@@ -737,7 +767,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
 
     # Design matrix
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
-    A, B = stack_obj.get_design_matrix4timeseries_estimation(date12_list=date12_list)[0:2]
+    A, B = stack_obj.get_design_matrix4timeseries(date12_list=date12_list)[0:2]
     num_ifgram = len(date12_list)
 
     # prep for decor std time-series
@@ -745,7 +775,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
         ref_date = str(np.loadtxt('reference_date.txt', dtype=bytes).astype(str))
     except:
         ref_date = date_list[0]
-    Astd = stack_obj.get_design_matrix4timeseries_estimation(refDate=ref_date, dropIfgram=True)[0]
+    Astd = stack_obj.get_design_matrix4timeseries(date12_list=date12_list, refDate=ref_date)[0]
     #ref_idx = date_list.index(ref_date)
     #time_idx = [i for i in range(num_date)]
     #time_idx.remove(ref_idx)
@@ -856,7 +886,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
         weight = np.sqrt(weight)
 
         # Weighted Inversion pixel by pixel
-        print('inverting network of interferograms into time series ...')
+        print('inverting network of interferograms into time-series ...')
         prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
         for i in range(num_pixel2inv):
             idx = idx_pixel2inv[i]
@@ -910,7 +940,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
 
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
-    A = stack_obj.get_design_matrix4timeseries_estimation(dropIfgram=True)[0]
+    A = stack_obj.get_design_matrix4timeseries(stack_obj.get_date12_list(dropIfgram=True))[0]
     num_ifgram, num_date = A.shape[0], A.shape[1]+1
     length, width = stack_obj.length, stack_obj.width
     inps.numIfgram = num_ifgram
@@ -937,7 +967,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         msg += 'mask: no\n'
 
     if np.linalg.matrix_rank(A) < A.shape[1]:
-        msg += '***WARNING: the network if NOT fully connected.\n'
+        msg += '***WARNING: the network is NOT fully connected.\n'
         msg += '\tInversion result can be biased!\n'
         msg += '\tContinue to use SVD to resolve the offset between different subsets.\n'
     msg += '-------------------------------------------------------------------------------'
@@ -987,29 +1017,120 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         num_inv_ifg = np.zeros((length, width), np.int16)
 
         # Loop
-        for i in range(num_box):
-            box = box_list[i]
-            if num_box > 1:
-                print('\n------- Processing Patch {} out of {} --------------'.format(i+1, num_box))
-            (tsi,
-             temp_cohi,
-             ts_stdi,
-             ifg_numi) = ifgram_inversion_patch(ifgram_file,
-                                                box=box,
-                                                ref_phase=ref_phase,
-                                                unwDatasetName=inps.unwDatasetName,
-                                                weight_func=inps.weightFunc,
-                                                min_norm_velocity=inps.minNormVelocity,
-                                                mask_dataset_name=inps.maskDataset,
-                                                mask_threshold=inps.maskThreshold,
-                                                min_redundancy=inps.minRedundancy,
-                                                water_mask_file=inps.waterMaskFile,
-                                                skip_zero_phase=inps.skip_zero_phase)
+        if inps.parallel:
+            from dask.distributed import Client, as_completed
+            # David: dask_jobqueue is needed for HPC.
+            # PBSCluster (similar to LSFCluster) should also work out of the box
+            from dask_jobqueue import LSFCluster
 
-            ts[:, box[1]:box[3], box[0]:box[2]] = tsi
-            ts_std[:, box[1]:box[3], box[0]:box[2]] = ts_stdi
-            temp_coh[box[1]:box[3], box[0]:box[2]] = temp_cohi
-            num_inv_ifg[box[1]:box[3], box[0]:box[2]] = ifg_numi
+            # Initialize Dask Workers.
+            # TODO: Should these params be moved into a config file?
+            # We could use our own config setup or Dask's config setup
+            NUM_WORKERS = 40
+            cluster = LSFCluster(project='insarlab',
+                                 name='pysar_worker_bee2',
+                                 queue='general',
+                                 # David: The first parameter is required by Pegasus. This actually changes memory usage.
+                                 job_extra=['-R "rusage[mem=6400]"',
+                                            # David: This second line will allow you to read your worker's output
+                                            "-o WORKER-%J.out"],
+                                 # David: This allows workers to write overflow memory to file. Unsure if necessary
+                                 local_directory='/scratch/projects/insarlab/dwg11/',
+                                 # David: Somehow, cores=2 is essential. When cores=1 it was super slow and
+                                 # when cores=3 it took forever for workers to go from PENDING to RUNNING
+                                 cores=2,
+                                 walltime='00:30',
+                                 # David: This line is required by dask_jobqueue
+                                 # but ignored by Pegasus as far as I can tell
+                                 memory='2GB',
+                                 # David: This line prevents the cluster from defaulting to the system Python.
+                                 # You need to point it to your dask environment's Python
+                                 python='/nethome/dwg11/anaconda2/envs/pysar_parallel/bin/python')
+            # David:  This line submits NUM_WORKERS number of jobs to Pegasus to start a bunch of workers
+            cluster.scale(NUM_WORKERS)
+            print("JOB FILE:", cluster.job_script())
+
+            # David: This line needs to be in an `if __name__ == "__main__":` block I believe. It should not
+            # be floating around or in code that workers might execute (note that if it is in no function,
+            # workers will execute it when loading the module)
+            #
+            client = Client(cluster)
+
+            all_boxes = []
+            for i in range(num_box):
+                # David: All "patches" are processed at once
+                # David: You can change the factor of `num_subboxes` to have smaller jobs per worker.
+                # This could be helpful with large jobs
+                all_boxes += subsplit_boxes_by_num_workers(box_list[i], num_workers=1 * NUM_WORKERS, dimension='x')
+
+            futures = []
+            start_time_subboxes = time.time()
+            for i, subbox in enumerate(all_boxes):
+                print(i, subbox)
+
+                data = (ifgram_file,
+                        subbox,
+                        ref_phase,
+                        inps.unwDatasetName,
+                        inps.weightFunc,
+                        inps.minNormVelocity,
+                        inps.maskDataset,
+                        inps.maskThreshold,
+                        inps.minRedundancy,
+                        inps.waterMaskFile,
+                        inps.skip_zero_phase)
+
+
+                # David: I haven't played with fussing with `retries`, however sometimes a future fails
+                # on a worker for an unknown reason. retrying will save the whole process from failing.
+                # David: TODO:  I don't know what to do if a future fails > 3 times. I don't think an error is
+                # thrown in that case, therefore I don't know how to recognize when this happens.
+                future = client.submit(parallel_ifgram_inversion_patch, data, retries=3)
+                futures.append(future)
+
+            # David: Some workers are slower than others. When #(futures to complete) < #workers, we should
+            # investigate whether `Client.replicate(future)` will speed up work on the final futures.
+            # It's a slight speedup, but depending how computationally complex each future is, this could be a
+            # decent speedup
+            i_future = 0
+            for future, result in as_completed(futures, with_results=True):
+                i_future += 1
+                print("FUTURE #" + str(i_future), "complete in", time.time() - start_time_subboxes,
+                      "seconds. Box:", subbox, "Time:", time.time())
+                tsi, temp_cohi, ts_stdi, ifg_numi, subbox = result
+
+                ts[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi
+                ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
+                temp_coh[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_cohi
+                num_inv_ifg[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_numi
+
+            # Shut down Dask workers gracefully
+            client.close()
+            cluster.close()
+        else:
+            for i in range(num_box):
+                box = box_list[i]
+                if num_box > 1:
+                    print('\n------- Processing Patch {} out of {} --------------'.format(i+1, num_box))
+                (tsi,
+                 temp_cohi,
+                 ts_stdi,
+                 ifg_numi) = ifgram_inversion_patch(ifgram_file,
+                                                    box=box,
+                                                    ref_phase=ref_phase,
+                                                    unwDatasetName=inps.unwDatasetName,
+                                                    weight_func=inps.weightFunc,
+                                                    min_norm_velocity=inps.minNormVelocity,
+                                                    mask_dataset_name=inps.maskDataset,
+                                                    mask_threshold=inps.maskThreshold,
+                                                    min_redundancy=inps.minRedundancy,
+                                                    water_mask_file=inps.waterMaskFile,
+                                                    skip_zero_phase=inps.skip_zero_phase)
+
+                ts[:, box[1]:box[3], box[0]:box[2]] = tsi
+                ts_std[:, box[1]:box[3], box[0]:box[2]] = ts_stdi
+                temp_coh[box[1]:box[3], box[0]:box[2]] = temp_cohi
+                num_inv_ifg[box[1]:box[3], box[0]:box[2]] = ifg_numi
 
         # reference pixel
         ref_y = int(stack_obj.metadata['REF_Y'])
@@ -1024,8 +1145,38 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         write2hdf5_file(ifgram_file, metadata, ts, temp_coh, ts_std, num_inv_ifg, suffix='', inps=inps)
 
     m, s = divmod(time.time()-start_time, 60)
-    print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
+    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
     return
+
+
+def parallel_ifgram_inversion_patch(data):
+    """
+    David: This is the starting point for futures. Futures start executing code here.
+    :param data:
+    :return: The box
+    """
+    (ifgram_file, box, ref_phase, unwDatasetName,
+     weight_func, min_norm_velocity,
+     mask_dataset_name, mask_threshold,
+     min_redundancy, water_mask_file, skip_zero_phase) = data
+
+    print("BOX DIMS:", box)
+
+    # David: This is the main call. This code was copied from the old
+    # `ifgram_inversion` function
+    (tsi, temp_cohi, ts_stdi, ifg_numi) = ifgram_inversion_patch(ifgram_file,
+                                           box= box,
+                                           ref_phase= ref_phase,
+                                           unwDatasetName=unwDatasetName,
+                                           weight_func=weight_func,
+                                           min_norm_velocity=min_norm_velocity,
+                                           mask_dataset_name=mask_dataset_name,
+                                           mask_threshold=mask_threshold,
+                                           min_redundancy=min_redundancy,
+                                           water_mask_file=water_mask_file,
+                                           skip_zero_phase=skip_zero_phase)
+
+    return tsi, temp_cohi, ts_stdi, ifg_numi, box
 
 
 ################################################################################################

@@ -32,24 +32,30 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                 dsDict['velocity'] = np.ones((200,300), dtype=np.float32)
                 write(datasetDict=dsDict, out_file='velocity.h5', metadata=atr)
     """
-    ext = os.path.splitext(out_file)[1].lower()
-    if ref_file and metadata is None:
-        metadata = readfile.read_attribute(ref_file)
+    # copy metadata to meta
+    if metadata:
+        meta = {key: value for key, value in metadata.items()}
+    elif ref_file:
+        meta = readfile.read_attribute(ref_file)
+    else:
+        raise ValueError('No metadata or reference file input.')
 
+    # convert ndarray input into dict type
     if type(datasetDict) is np.ndarray:
         data = np.array(datasetDict, datasetDict.dtype)
         datasetDict = dict()
-        datasetDict[metadata['FILE_TYPE']] = data
+        datasetDict[meta['FILE_TYPE']] = data
 
+    ext = os.path.splitext(out_file)[1].lower()
     # HDF5 File
     if ext in ['.h5', '.he5']:
-        k = metadata['FILE_TYPE']
+        k = meta['FILE_TYPE']
         if k == 'timeseries':
             if ref_file is None:
                 raise Exception('Can not write {} file without reference file!'.format(k))
             obj = timeseries(out_file)
             obj.write2hdf5(datasetDict[k],
-                           metadata=metadata,
+                           metadata=meta,
                            refFile=ref_file,
                            compression=compression)
 
@@ -64,11 +70,11 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                 maxDigit = max([len(i) for i in list(datasetDict.keys())])
                 for dsName in datasetDict.keys():
                     data = datasetDict[dsName]
-                    print(('create dataset /{d:<{w}} of {t:<10} in size of {s} '
+                    print(('create dataset /{d:<{w}} of {t:<10} in size of {s:<20} '
                            'with compression={c}').format(d=dsName,
                                                           w=maxDigit,
                                                           t=str(data.dtype),
-                                                          s=data.shape,
+                                                          s=str(data.shape),
                                                           c=compression))
                     ds = f.create_dataset(dsName,
                                           data=data,
@@ -87,11 +93,11 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                         maxDigit = max([len(i) for i in dsNames]+[maxDigit])
                         for dsName in dsNames:
                             ds = fr[dsName]
-                            print(('create dataset /{d:<{w}} of {t:<10} in size of {s} '
+                            print(('create dataset /{d:<{w}} of {t:<10} in size of {s:<10} '
                                    'with compression={c}').format(d=dsName,
                                                                   w=maxDigit,
                                                                   t=str(ds.dtype),
-                                                                  s=ds.shape,
+                                                                  s=str(ds.shape),
                                                                   c=compression))
                             f.create_dataset(dsName,
                                              data=ds[:],
@@ -99,7 +105,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                                              compression=compression)
 
                 # 3. metadata
-                for key, value in metadata.items():
+                for key, value in meta.items():
                     f.attrs[key] = str(value)
                 print('finished writing to {}'.format(out_file))
 
@@ -111,10 +117,13 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             data_list.append(datasetDict[key])
 
         # Write Data File
+        print('writing {}'.format(out_file))
         if ext in ['.unw', '.cor', '.hgt']:
             write_float32(data_list[0], out_file)
+            meta['DATA_TYPE'] = 'float32'
         elif ext == '.dem':
             write_real_int16(data_list[0], out_file)
+            meta['DATA_TYPE'] = 'int16'
         elif ext in ['.trans']:
             write_float32(data_list[0], data_list[1], out_file)
         elif ext in ['.utm_to_rdc', '.UTM_TO_RDC']:
@@ -128,16 +137,18 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             write_complex_int16(data_list[0], out_file)
         elif ext == '.int':
             write_complex64(data_list[0], out_file)
-        elif metadata['DATA_TYPE'].lower() in ['float32', 'float']:
+        elif meta['DATA_TYPE'].lower() in ['float32', 'float']:
             write_real_float32(data_list[0], out_file)
-        elif metadata['DATA_TYPE'].lower() in ['int16', 'short']:
+        elif meta['DATA_TYPE'].lower() in ['int16', 'short']:
             write_real_int16(data_list[0], out_file)
+        elif meta['DATA_TYPE'].lower() in ['byte','bool']:
+            write_byte(data_list[0], out_file)
         else:
             print('Un-supported file type: '+ext)
             return 0
 
-        # Write .rsc File
-        write_roipac_rsc(metadata, out_file+'.rsc')
+        # write metadata file
+        write_roipac_rsc(meta, out_file+'.rsc', print_msg=True)
     return out_file
 
 
@@ -188,33 +199,48 @@ def remove_hdf5_dataset(fname, datasetNames, print_msg=True):
     return fname
 
 
-def write_roipac_rsc(metadata, out_file):
+def write_roipac_rsc(metadata, out_file, update_mode=False, print_msg=False):
     """Write attribute dict into ROI_PAC .rsc file
     Inputs:
-        metadata     - dict, attributes dictionary
-        out_file - rsc file name, to which attribute is writen
-        sorting - bool, sort attributes in alphabetic order while writing
+        metadata : dict, attributes dictionary
+        out_file : rsc file name, to which attribute is writen
+        update_mode : bool, skip writing if 
+                      1) output file existed AND
+                      2) no new metadata key/value
+        print_msg   : bool, print message
     Output:
         out_file
     """
-    # Convert PYSAR attributes to ROI_PAC attributes
-    if 'LENGTH' in metadata.keys():
-        metadata['FILE_LENGTH'] = metadata['LENGTH']
+    run = True
+    if update_mode:
+        rsc_dict = dict()
+        if os.path.isfile(out_file):
+            rsc_dict = readfile.read_roipac_rsc(out_file)
+        # update .rsc file only if there are new metadata key/value
+        if set(metadata.items()).issubset(set(rsc_dict.items())):
+            run = False
 
-    # Convert 3.333e-4 to 0.0003333
-    if 'X_STEP' in metadata.keys():
-        metadata['X_STEP'] = str(float(metadata['X_STEP']))
-        metadata['Y_STEP'] = str(float(metadata['Y_STEP']))
-        metadata['X_FIRST'] = str(float(metadata['X_FIRST']))
-        metadata['Y_FIRST'] = str(float(metadata['Y_FIRST']))
+    if run:
+        # Convert PYSAR attributes to ROI_PAC attributes
+        if 'LENGTH' in metadata.keys():
+            metadata['FILE_LENGTH'] = metadata['LENGTH']
 
-    # writing .rsc file
-    maxDigit = max([len(key) for key in metadata.keys()]+[2])
-    with open(out_file, 'w') as f:
-        for key in sorted(metadata.keys()):
-            f.write('{k:<{d}}    {v}\n'.format(k=str(key),
-                                               d=maxDigit,
-                                               v=str(metadata[key])))
+        # Convert 3.333e-4 to 0.0003333
+        if 'X_STEP' in metadata.keys():
+            metadata['X_STEP'] = str(float(metadata['X_STEP']))
+            metadata['Y_STEP'] = str(float(metadata['Y_STEP']))
+            metadata['X_FIRST'] = str(float(metadata['X_FIRST']))
+            metadata['Y_FIRST'] = str(float(metadata['Y_FIRST']))
+
+        # writing .rsc file
+        if print_msg:
+            print('write', out_file)
+        maxDigit = max([len(key) for key in metadata.keys()]+[2])
+        with open(out_file, 'w') as f:
+            for key in sorted(metadata.keys()):
+                f.write('{k:<{d}}    {v}\n'.format(k=str(key),
+                                                   d=maxDigit,
+                                                   v=str(metadata[key])))
     return out_file
 
 
@@ -289,3 +315,10 @@ def write_complex_int16(data, out_file):
     F[id2] = np.reshape(np.array(data.imag, np.int16), (num_pixel, 1))
     F.tofile(out_file)
     return out_file
+
+
+def write_byte(data, out_file):
+    data = np.array(data, dtype=np.bool_)
+    data.tofile(out_file)
+    return out_file
+

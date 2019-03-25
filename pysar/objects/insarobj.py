@@ -16,14 +16,16 @@ import glob
 import warnings
 import h5py
 import numpy as np
+
 try:
     from skimage.transform import resize
 except ImportError:
     raise ImportError('Could not import skimage!')
-from pysar.utils import readfile, ptime, utils as ut
+
 from pysar.objects import (dataTypeDict,
                            geometryDatasetNames,
                            ifgramDatasetNames)
+from pysar.utils import readfile, ptime, utils as ut
 
 
 BOOL_ZERO = np.bool_(0)
@@ -98,6 +100,7 @@ class ifgramStackDict:
         /coherence         3D array of float32 in size of (m, l, w).
         /connectComponent  3D array of int16   in size of (m, l, w).           (optional)
         /wrapPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
+        /iono              3D array of float32 in size of (m, l, w) in radian. (optional)
         /rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
         /azimuthOffset     3D array of float32 in size of (m, l, w).           (optional)
 
@@ -136,7 +139,7 @@ class ifgramStackDict:
                                   shape=dsShape,
                                   maxshape=(None, dsShape[1], dsShape[2]),
                                   dtype=dsDataType,
-                                  chunks=(5, 100, 300),  #True
+                                  chunks=True,
                                   compression=compression)
 
             prog_bar = ptime.progressBar(maxValue=self.numIfgram)
@@ -214,6 +217,7 @@ class ifgramDict:
                        'coherence'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.cor',
                        'connectComponent':'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.unw.conncomp',
                        'wrapPhase'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.int',
+                       'iono'            :'$PROJECT_DIR/merged/ionosphere/20151220_20160206/iono.bil.unwCor.filt',
                        ...
                       }
         ifgramObj = ifgramDict(dates=('20160524','20160530'), datasetDict=datasetDict)
@@ -491,7 +495,7 @@ class geometryDict:
                 data = np.array(self.read(family=dsName, box=box)[0], dtype=dsDataType)
                 ds = f.create_dataset(dsName,
                                       data=data,
-                                      chunks=(100, 300),
+                                      chunks=True,
                                       compression=compression)
 
         ###############################
@@ -518,7 +522,7 @@ class geometryDict:
                 ds = f.create_dataset(dsName,
                                       data=data,
                                       dtype=dataType,
-                                      chunks=(100, 300),
+                                      chunks=True,
                                       compression=compression)
 
         ###############################

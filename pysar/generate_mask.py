@@ -8,6 +8,7 @@
 
 import os
 import sys
+import time
 import argparse
 import h5py
 import numpy as np
@@ -21,7 +22,7 @@ from pysar.utils import (readfile,
 EXAMPLE = """example:
   generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5
   generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5 --shadow INPUTS/geometryRadar.h5
-  generate_mask.py  avgSpatialCoherence.h5 -m 0.7 --base waterMask.h5 -o maskSpatialCoh.h5
+  generate_mask.py  avgSpatialCoh.h5     -m 0.7 --base waterMask.h5 -o maskSpatialCoh.h5
 
   # exlcude area by min/max value and/or subset in row/col direction
   generate_mask.py  081018_090118.unw -m 3 -M 8 -y 100 700 -x 200 800 -o mask_1.h5
@@ -34,8 +35,8 @@ EXAMPLE = """example:
   generate_mask.py  geometryRadar.dem height -m 0.5 -o waterMask.h5
   generate_mask.py  ifgramStack.h5 unwrapPhase-20101120_20110220 -m 4
 
-  # common mask file of pixels without zero unwrapped phase
-  generate_mask.py  ifgramStack.h5  --nonzero  -o mask.h5  --update
+  # common mask file of pixels in all connected components / with non-zero unwrapped phase
+  generate_mask.py  ifgramStack.h5  --nonzero  -o maskConnComp.h5  --update
 
   # interative polygon selection of region of interest
   # useful for custom mask generation in unwrap error correction with bridging
@@ -77,7 +78,7 @@ def create_parser():
 
     parser.add_argument('--nonzero', dest='nonzero', action='store_true',
                         help='Select all non-zero pixels.\n' +
-                             'i.e. mask.h5 from unwrapIfgram.h5')
+                             'i.e. maskConnComp.h5 from ifgramStack.h5')
     parser.add_argument('--update', dest='update_mode', action='store_true',
                         help='Enable update checking for --nonzero option.')
     return parser
@@ -97,20 +98,20 @@ def run_or_skip(inps):
     # check output file vs input dataset
     if not os.path.isfile(inps.outfile):
         flag = 'run'
-        print('  1) output file {} not exist --> run.'.format(inps.outfile))
+        print('1) output file {} NOT exist.'.format(inps.outfile))
     else:
-        print('  1) output file {} already exists.'.format(inps.outfile))
+        print('1) output file {} already exists.'.format(inps.outfile))
         with h5py.File(inps.file, 'r') as f:
             ti = float(f[inps.dset].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.file)))
         to = os.path.getmtime(inps.outfile)
         if ti > to:
             flag = 'run'
-            print('  2) output file is NOT newer than input dataset: {} --> run.'.format(inps.dset))
+            print('2) output file is NOT newer than input dataset: {}.'.format(inps.dset))
         else:
-            print('  2) output file is newer than input dataset: {}.'.format(inps.dset))
+            print('2) output file is newer than input dataset: {}.'.format(inps.dset))
 
     # result
-    print('check result:', flag)
+    print('run or skip: {}.'.format(flag))
     return flag
 
 
@@ -206,6 +207,7 @@ def create_threshold_mask(inps):
 
 ################################################################################################
 def main(iargs=None):
+    start_time = time.time()
     inps = cmd_line_parse(iargs)
     atr = readfile.read_attribute(inps.file)
     k = atr['FILE_TYPE']
@@ -230,7 +232,7 @@ def main(iargs=None):
 
     ##### Mask: Non-zero
     if inps.nonzero and k == 'ifgramStack':
-        # get name of default dataset
+        # get dataset name
         if not inps.dset:
             with h5py.File(inps.file, 'r') as f:
                 inps.dset = [i for i in ['connectComponent', 'unwrapPhase'] if i in f.keys()][0]
@@ -245,6 +247,9 @@ def main(iargs=None):
 
     ##### Mask: Threshold
     inps.outfile = create_threshold_mask(inps)
+
+    m, s = divmod(time.time()-start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
     return inps.outfile
 
 
