@@ -777,7 +777,7 @@ def update_timeseries(y, x, plot_number, data_only=False):
     if inps.disp_title:
         axis.set_title(title_ts)
 
-    axis = pp.auto_adjust_xaxis_date(axis, tims, fontSize=inps.font_size)[0]
+    axis = pp.auto_adjust_xaxis_date(axis, tims, fontsize=inps.font_size)[0]
     axis.set_xlabel('Time', fontsize=inps.font_size)
     axis.set_ylabel('Displacement [%s]' % inps.disp_unit, fontsize=inps.font_size)
 

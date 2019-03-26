@@ -9,7 +9,6 @@
 import os
 import sys
 import argparse
-import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 from pysar.objects import ifgramStack
@@ -117,7 +116,7 @@ class networkViewer():
 
         # figure variables
         self.figname = 'Coherence matrix'
-        self.figsize = None
+        self.fig_size = None
         self.fig = None
         self.ax_img = None
         self.ax_mat = None

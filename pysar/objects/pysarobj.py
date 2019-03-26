@@ -10,7 +10,6 @@
 
 import os
 import sys
-import glob
 import time
 from datetime import datetime as dt
 import h5py
@@ -290,15 +289,15 @@ class timeseries:
                'with compression={c}').format(t=str(data.dtype),
                                               s=data.shape,
                                               c=compression))
-        dset = f.create_dataset('timeseries', data=data, chunks=True, compression=compression)
+        f.create_dataset('timeseries', data=data, chunks=True, compression=compression)
 
         # 1D dataset - date / bperp
         print('create dataset /dates      of {:<10} in size of {}'.format(str(dates.dtype), dates.shape))
-        dset = f.create_dataset('date', data=dates)
+        f.create_dataset('date', data=dates)
 
         if bperp.shape != ():
             print('create dataset /bperp      of {:<10} in size of {}'.format(str(bperp.dtype), bperp.shape))
-            dset = f.create_dataset('bperp', data=bperp)
+            f.create_dataset('bperp', data=bperp)
 
         # Attributes
         for key, value in metadata.items():

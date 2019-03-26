@@ -13,7 +13,6 @@ import argparse
 import datetime
 import inspect
 import matplotlib.pyplot as plt
-import numpy as np
 from pysar.defaults.auto_path import autoPath
 from pysar.objects import sensor, ifgramStack
 from pysar.utils import (ptime,

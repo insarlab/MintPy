@@ -11,10 +11,7 @@ import sys
 import argparse
 import h5py
 import numpy as np
-import scipy as sc
-import matplotlib.pyplot as plt
 from scipy.interpolate import griddata, RegularGridInterpolator as RGI
-import pyaps as pa
 from pysar.utils import ptime, readfile, writefile, utils as ut
 
 
@@ -93,8 +90,8 @@ def get_delay(delay_file,atr,lookup_file,cinc):
             yy, xx = np.mgrid[0:len_rdr:len_rdr*1j, 0:wid_rdr:wid_rdr*1j]
             yx_rdr = np.hstack((yy.reshape(-1,1), xx.reshape(-1,1)))
             atr_lut = readfile.read_attribute(lookup_file)
-            rg = readfile.read(lookup_file, epoch='range')[0]
-            az = readfile.read(lookup_file, epoch='azimuth')[0]
+            rg = readfile.read(lookup_file, datasetName='range')[0]
+            az = readfile.read(lookup_file, datasetName='azimuth')[0]
             idx = (az>0.0)*(az<=len_rdr)*(rg>0.0)*(rg<=wid_rdr)
             pts_new2 = np.hstack((az[idx].reshape(-1,1), rg[idx].reshape(-1,1)))
             delay_geo=delay_geo[idx]

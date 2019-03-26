@@ -10,7 +10,7 @@ import os
 import glob
 import argparse
 import numpy as np
-from pysar.utils import readfile, writefile
+from pysar.utils import writefile
 
 
 # DEHM basic info

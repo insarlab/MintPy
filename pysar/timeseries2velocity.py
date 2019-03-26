@@ -8,7 +8,6 @@
 
 import os
 import argparse
-from datetime import datetime as dt
 import numpy as np
 from pysar.objects import timeseries, giantTimeseries, HDFEOS
 from pysar.utils import readfile, writefile, ptime, utils as ut

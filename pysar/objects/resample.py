@@ -12,7 +12,6 @@ try:
 except ImportError:
     raise ImportError('Can not import pyresample!')
 
-import sys
 import numpy as np
 import multiprocessing
 from scipy import ndimage

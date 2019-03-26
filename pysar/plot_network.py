@@ -7,14 +7,11 @@
 
 
 import os
-import sys
 import argparse
-import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 from pysar.objects import ifgramStack, timeseries
-from pysar.utils import (ptime,
-                         readfile,
+from pysar.utils import (readfile,
                          utils as ut,
                          network as pnet,
                          plot as pp)

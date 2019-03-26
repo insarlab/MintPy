@@ -7,10 +7,7 @@
 # Yunjun, Jun 2017: rewrite using pysar module
 
 
-import os
-import sys
 import argparse
-import h5py
 import numpy as np
 from pysar.utils import readfile, writefile, utils as ut
 

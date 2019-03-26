@@ -7,7 +7,6 @@
 
 
 import os
-import sys
 import argparse
 import numpy as np
 import scipy.stats as stats
@@ -446,8 +445,7 @@ def save_ts_plot(yx, fig_img, fig_pts, d_ts, inps):
     # get aux info
     vel, std = estimate_slope(d_ts[0], inps.yearList,
                               ex_flag=inps.ex_flag,
-                              disp_unit=inps.disp_unit,
-                              print_msg=False)
+                              disp_unit=inps.disp_unit)
 
     # TXT - point time-series
     outName = '{}_ts.txt'.format(inps.outfile_base)

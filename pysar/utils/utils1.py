@@ -47,7 +47,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 msg += '\nRe-run dem_error.py to generate it.'
                 raise Exception(msg)
             else:
-                print('removing a {} ramp from file: '.format(ramp_type, timeseries_resid_file))
+                print('removing a {} ramp from file: {}'.format(ramp_type, timeseries_resid_file))
                 deramped_file = run_deramp(timeseries_resid_file,
                                            ramp_type=ramp_type,
                                            mask_file=mask_file,
@@ -384,7 +384,7 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
         atr = readfile.read_attribute(fname)
         for dsName in ['rangeCoord', 'longitude']:
             try:
-                dset = readfile.read(fname, datasetName=dsName, print_msg=False)[0]
+                readfile.read(fname, datasetName=dsName, print_msg=False)[0]
                 outFile = fname
                 break
             except:
@@ -441,7 +441,6 @@ def add_attribute(File, atr_new=dict(), print_msg=False):
     Returns:    File - string, path/name of updated file
     """
     atr = readfile.read_attribute(File)
-    k = atr['FILE_TYPE']
 
     # Compare new attributes with exsiting ones
     update = update_attribute_or_not(atr_new, atr)
@@ -520,7 +519,7 @@ def is_file_exist(file_list, abspath=True):
     """
     try:
         file = get_file_list(file_list, abspath=abspath)[0]
-        atr = readfile.read_attribute(file)
+        readfile.read_attribute(file)
     except:
         file = None
     return file

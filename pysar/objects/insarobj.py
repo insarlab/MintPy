@@ -12,7 +12,6 @@
 
 import os
 import time
-import glob
 import warnings
 import h5py
 import numpy as np
@@ -163,7 +162,7 @@ class ifgramStackDict:
                                                                           t=str(dsDataType),
                                                                           s=dsShape))
         data = np.array(self.pairs, dtype=dsDataType)
-        ds = f.create_dataset(dsName, data=data)
+        f.create_dataset(dsName, data=data)
 
         ###############################
         # 1D dataset containing perpendicular baseline of all pairs
@@ -175,7 +174,7 @@ class ifgramStackDict:
                                                                           t=str(dsDataType),
                                                                           s=dsShape))
         data = np.array(self.bperp, dtype=dsDataType)
-        ds = f.create_dataset(dsName, data=data)
+        f.create_dataset(dsName, data=data)
 
         ###############################
         # 1D dataset containing bool value of dropping the interferograms or not
@@ -187,7 +186,7 @@ class ifgramStackDict:
                                                                           t=str(dsDataType),
                                                                           s=dsShape))
         data = np.ones(dsShape, dtype=dsDataType)
-        dsDate = f.create_dataset(dsName, data=data)
+        f.create_dataset(dsName, data=data)
 
         ###############################
         # Attributes

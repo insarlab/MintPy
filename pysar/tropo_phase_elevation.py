@@ -7,15 +7,10 @@
 
 
 import os
-import sys
-import time
-import datetime
 import argparse
-import h5py
 import numpy as np
-import matplotlib.pyplot as plt
 from pysar.objects import timeseries
-from pysar.utils import readfile, writefile, ptime, utils as ut
+from pysar.utils import readfile, writefile
 from pysar.multilook import multilook_data
 from pysar.mask import mask_matrix
 

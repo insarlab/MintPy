@@ -1,8 +1,8 @@
 # The 1-norm approximation example of section 8.7 (Exploiting structure).  
 
 from cvxopt import blas, lapack, solvers
-from cvxopt import matrix, spdiag, mul, div, sparse
-from cvxopt import spmatrix, sqrt, base
+from cvxopt import matrix, spdiag, mul, div
+from cvxopt import sqrt, base
 
 try:
     import mosek

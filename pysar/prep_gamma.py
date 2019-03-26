@@ -7,7 +7,6 @@
 
 
 import os
-import sys
 import re
 import argparse
 import numpy as np
@@ -397,13 +396,13 @@ def prepare_metadata(inps):
     # Single dataset files
     elif inps.file[0].endswith('.utm.dem'):
         for File in inps.file:
-            atr_file = extract_metadata4dem_geo(File)
+            extract_metadata4dem_geo(File)
     elif inps.file[0].endswith(('.rdc.dem', '.hgt_sim')):
         for File in inps.file:
-            atr_file = extract_metadata4dem_radar(File)
+            extract_metadata4dem_radar(File)
     elif ext in ['.UTM_TO_RDC']:
         for File in inps.file:
-            atr_file = extract_metadata4lookup_table(File)
+            extract_metadata4lookup_table(File)
     return
 
 

@@ -6,7 +6,6 @@
 ############################################################
 
 import os
-import sys
 import argparse
 
 try:
@@ -20,7 +19,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 from pysar.objects import timeseriesKeyNames
-from pysar.utils import readfile, ptime, utils as ut, plot as pp
+from pysar.utils import readfile, utils as ut, plot as pp
 
 
 ############################################################
@@ -295,10 +294,10 @@ def main(iargs=None):
     inps.outfile = os.path.relpath(inps.outfile)
 
     # 2. Generate Google Earth KMZ
-    kmz_file = write_kmz_file(data,
-                              metadata=atr,
-                              out_file=inps.outfile,
-                              inps=inps)
+    write_kmz_file(data,
+                   metadata=atr,
+                   out_file=inps.outfile,
+                   inps=inps)
     return
 
 

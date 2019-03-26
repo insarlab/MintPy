@@ -8,11 +8,10 @@
 
 import os
 import sys
-import re
 import argparse
 import warnings
 import numpy as np
-from pysar.utils import readfile, writefile, ptime, utils as ut
+from pysar.utils import readfile, writefile, utils as ut
 
 
 ##################################################################################################

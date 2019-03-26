@@ -12,7 +12,7 @@ import argparse
 import h5py
 import numpy as np
 import random
-from pysar.objects import ifgramStack, timeseries
+from pysar.objects import timeseries
 from pysar.utils import readfile, writefile, ptime, utils as ut
 
 
@@ -207,7 +207,6 @@ def reference_file(inps):
         if not inps.outfile:
             inps.outfile = '{}_seeded{}'.format(os.path.splitext(inps.file)[0],
                                                 os.path.splitext(inps.file)[1])
-        ext = os.path.splitext(inps.file)[1]
         k = atr['FILE_TYPE']
 
         # For ifgramStack file, update data value directly, do not write to new file

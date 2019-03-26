@@ -11,7 +11,6 @@ import os
 import time
 import itertools
 import numpy as np
-from matplotlib import pyplot as plt
 from scipy.sparse import csgraph as csg
 from scipy.spatial import cKDTree
 try:

@@ -10,8 +10,6 @@ import os
 import sys
 import glob
 import argparse
-import datetime
-import time
 
 from pysar.defaults import auto_path
 from pysar.objects import (geometryDatasetNames,

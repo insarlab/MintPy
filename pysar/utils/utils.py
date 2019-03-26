@@ -8,19 +8,8 @@
 
 
 import os
-import sys
-import glob
-import time
-from datetime import datetime as dt
-import shutil
 import errno
-import subprocess
-from argparse import Namespace
-import h5py
 import numpy as np
-from scipy import ndimage, linalg
-import matplotlib.pyplot as plt
-import multiprocessing
 
 from pysar.objects import (
     geometryDatasetNames,

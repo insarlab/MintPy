@@ -17,7 +17,6 @@ plot_the_rest=1
 
 # Default file name
 mask_file='maskTempCoh.h5'
-geo_mask_file='./GEOCODE/geo_maskTempCoh.h5'
 
 ## Log File
 log_file='plot_pysarApp.log'

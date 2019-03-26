@@ -6,10 +6,8 @@
 ############################################################
 
 
-import sys
 import argparse
 import matplotlib.pyplot as plt
-from pysar.objects import ifgramDatasetNames
 from pysar.utils import readfile, ptime, utils as ut, plot as pp
 
 

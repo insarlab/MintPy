@@ -8,7 +8,6 @@ import math
 import time
 import os
 import sys
-import psycopg2
 import geocoder
 from pysar.add_attribute_insarmaps import InsarDatabaseController
 from pysar.objects import HDFEOS

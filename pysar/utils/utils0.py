@@ -9,7 +9,6 @@
 
 
 import os
-import glob
 import numpy as np
 import matplotlib.pyplot as plt
 import multiprocessing
@@ -261,9 +260,9 @@ def circle_index(atr, circle_par):
     width = int(atr['WIDTH'])
     length = int(atr['LENGTH'])
 
-    if type(circle_par) == tuple:
+    if isinstance(circle_par, tuple):
         cir_par = circle_par
-    elif type(circle_par) == list:
+    elif isinstance(circle_par, list):
         cir_par = circle_par
     else:
         cir_par = circle_par.replace(',', ' ').split()

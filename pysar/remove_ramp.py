@@ -6,7 +6,6 @@
 ############################################################
 
 
-import os
 import argparse
 from pysar.utils import utils as ut
 

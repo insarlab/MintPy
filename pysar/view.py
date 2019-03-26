@@ -22,8 +22,7 @@ from pysar.objects import (geometryDatasetNames,
                            ifgramDatasetNames,
                            ifgramStack,
                            timeseriesKeyNames,
-                           timeseries,
-                           HDFEOS)
+                           timeseries)
 from pysar.objects.gps import GPS
 from pysar.utils import (ptime,
                          readfile,

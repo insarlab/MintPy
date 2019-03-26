@@ -7,9 +7,6 @@
 # Recommend usage:
 #   import pysar.simulation as psim
 
-import os
-import time
-from datetime import datetime as dt
 import numpy as np
 import random
 import scipy.stats as stats

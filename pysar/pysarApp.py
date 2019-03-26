@@ -10,7 +10,6 @@
 
 import os
 import re
-import glob
 import time
 import datetime
 import shutil
@@ -241,7 +240,7 @@ class TimeSeriesAnalysis:
                 print('obsolete default template detected, update to the latest version.')
                 shutil.copy2(lfile, self.workDir)
                 #keep the existing option value from obsolete template file
-                template_file = ut.update_template_file(cfile, cdict)
+                ut.update_template_file(cfile, cdict)
         self.templateFile = cfile
 
         # 3.2 read (custom) template files into dicts
