@@ -33,21 +33,23 @@ To use the package, you need to setup the environment. Depending on your shell, 
    
 For csh/tcsh user, add to your **_~/.cshrc_** file for example:   
 
-    ############################  Python  ###############################
-    if ( ! $?PYTHONPATH ) then
-        setenv PYTHONPATH ""
-    endif
-    
-    ##--------- conda ------------------## 
-    setenv PYTHON3DIR    ~/python/miniconda3
-    setenv PATH          ${PATH}:${PYTHON3DIR}/bin
-    setenv PROJ_LIB      ${PYTHON3DIR}/share/proj   #Temporary fix for basemap import error
-    
-    ##--------- PySAR ------------------## 
-    setenv PYSAR_HOME    ~/python/PySAR             #for released version, "~/python/PySAR-0.4.0"
-    setenv PYTHONPATH    ${PYTHONPATH}:${PYSAR_HOME}
-    setenv PATH          ${PATH}:${PYSAR_HOME}/pysar:${PYSAR_HOME}/sh
-   
+```tcsh
+############################  Python  ###############################
+if ( ! $?PYTHONPATH ) then
+    setenv PYTHONPATH ""
+endif
+
+##--------- conda ------------------## 
+setenv PYTHON3DIR    ~/python/miniconda3
+setenv PATH          ${PATH}:${PYTHON3DIR}/bin
+setenv PROJ_LIB      ${PYTHON3DIR}/share/proj   #Temporary fix for basemap import error
+
+##--------- PySAR ------------------## 
+setenv PYSAR_HOME    ~/python/PySAR             #for released version, "~/python/PySAR-0.4.0"
+setenv PYTHONPATH    ${PYTHONPATH}:${PYSAR_HOME}
+setenv PATH          ${PATH}:${PYSAR_HOME}/pysar:${PYSAR_HOME}/sh
+```
+
 For bash user, add to your **_~/.bash_profile_** file for example:   
 
 ```bash
@@ -88,7 +90,7 @@ $PYTHON3DIR/bin/python3 setup.py build
 $PYTHON3DIR/bin/python3 setup.py install    
 ```
    
-For macports user, install modules in the [ports.txt](https://github.com/yunjunz/PySAR/blob/master/docs/ports.txt) file as below in _bash_:       
+For macports user, install modules in the [ports.txt](https://github.com/insarlab/PySAR/blob/master/docs/ports.txt) file as below in _bash_:       
 
 ```bash
 sudo port install $(cat $PYSAR_HOME/docs/ports.txt)
