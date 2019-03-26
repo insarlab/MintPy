@@ -84,6 +84,3 @@ Join our google group [https://groups.google.com/forum/#!forum/py-sar](https://g
 * David Grossman
 * Yunmeng Cao
 * [_other community members_](https://github.com/insarlab/PySAR/graphs/contributors)
-   
-### License
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fyunjunz%2FPySAR.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fyunjunz%2FPySAR?ref=badge_large)
