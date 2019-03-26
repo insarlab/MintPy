@@ -8,13 +8,12 @@
 
 
 import sys
-import time
 import numpy as np
 from scipy import stats
 from scipy.interpolate import griddata
 
-from pysar.objects import timeseries, ifgramStack, giantTimeseries
-from pysar.utils import readfile, ptime, plot as pp, writefile, utils as ut, network as pnet
+from pysar.objects import timeseries, giantTimeseries
+from pysar.utils import readfile, plot as pp, utils as ut
 from pysar.objects.gps import GPS
 from pysar.simulation.plot import *
 
