@@ -1144,6 +1144,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     if not 'disp_title'  in plot_dict.keys():  plot_dict['disp_title'] = True
     if not 'coh_thres'   in plot_dict.keys():  plot_dict['coh_thres']  = None
     if not 'disp_drop'   in plot_dict.keys():  plot_dict['disp_drop']  = True
+    if not 'disp_legend' in plot_dict.keys():  plot_dict['disp_legend'] = True
     if not 'every_year'  in plot_dict.keys():  plot_dict['every_year'] = 1
     if not 'split_cmap'  in plot_dict.keys():  plot_dict['split_cmap'] = True
 
@@ -1309,7 +1310,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
                     xycoords='axes fraction', fontsize=plot_dict['fontsize'])
 
     # Legend
-    if plot_dict['disp_drop']:
+    if plot_dict['disp_drop'] and plot_dict['disp_legend']:
         solid_line = mlines.Line2D([], [], color='k', ls='solid',  label='Ifg used')
         dash_line  = mlines.Line2D([], [], color='k', ls='dashed', label='Ifg dropped')
         ax.legend(handles=[solid_line, dash_line])
