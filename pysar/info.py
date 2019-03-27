@@ -8,12 +8,10 @@
 
 import os
 import argparse
-import time
 import h5py
 from numpy import std
 from pysar.utils import readfile, ptime
-from pysar.objects import (geometry, 
-                           giantIfgramStack, 
+from pysar.objects import (giantIfgramStack, 
                            giantTimeseries, 
                            ifgramStack, 
                            timeseries, 

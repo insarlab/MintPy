@@ -7,7 +7,6 @@
 
 
 import os
-import sys
 import argparse
 import h5py
 import numpy as np

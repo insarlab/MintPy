@@ -1,7 +1,6 @@
 # Author: Heresh Fattahi, Zhang Yunjun
 
 import os
-import sys
 from pysar.utils import readfile
 
 

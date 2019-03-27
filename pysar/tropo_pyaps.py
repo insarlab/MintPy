@@ -7,7 +7,6 @@
 
 
 import os
-import sys
 import re
 import subprocess
 try:
@@ -16,9 +15,8 @@ except ImportError:
     raise ImportError('Cannot import pyaps!')
 
 import argparse
-import h5py
 import numpy as np
-from pysar.objects import timeseries, geometry
+from pysar.objects import timeseries
 from pysar.utils import readfile, writefile, ptime, utils as ut
 
 standardWeatherModelNames = {'ERAI': 'ECMWF', 'ERAINT': 'ECMWF', 'ERAINTERIM': 'ECMWF',

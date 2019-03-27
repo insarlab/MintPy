@@ -23,7 +23,7 @@ except ImportError:
 
 from pysar.objects import ifgramStack
 from pysar.objects.conncomp import connectComponent
-from pysar.utils import ptime, readfile, writefile, utils as ut, plot as pp
+from pysar.utils import ptime, readfile, utils as ut, plot as pp
 from pysar.utils.solvers import l1regls
 
 

@@ -15,7 +15,7 @@ import sys
 import argparse
 import numpy as np
 from pysar.objects import timeseries
-from pysar.utils import readfile, writefile, ptime, utils as ut
+from pysar.utils import readfile, writefile, ptime
 
 
 #########################################################################################

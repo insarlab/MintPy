@@ -9,18 +9,16 @@
 
 import os
 import sys
-import datetime
 import itertools
 import h5py
 import numpy as np
 from scipy import sparse
 from matplotlib import (colors,
                         dates as mdates,
-                        lines as mlines,
                         pyplot as plt)
 from matplotlib.tri import Triangulation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from pysar.objects import ifgramStack, timeseries, sensor
+from pysar.objects import ifgramStack, sensor
 from pysar.utils import ptime, readfile
 
 

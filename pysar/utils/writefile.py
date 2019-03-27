@@ -8,10 +8,8 @@
 
 
 import os
-import sys
 import h5py
 import numpy as np
-#from PIL import Image
 from pysar.objects import timeseries
 from pysar.utils import readfile
 
@@ -41,7 +39,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
         raise ValueError('No metadata or reference file input.')
 
     # convert ndarray input into dict type
-    if type(datasetDict) is np.ndarray:
+    if isinstance(datasetDict, np.ndarray):
         data = np.array(datasetDict, datasetDict.dtype)
         datasetDict = dict()
         datasetDict[meta['FILE_TYPE']] = data

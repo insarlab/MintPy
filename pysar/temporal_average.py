@@ -7,11 +7,9 @@
 
 
 import os
-import sys
 import time
 import argparse
 import h5py
-from pysar.objects import ifgramDatasetNames
 from pysar.utils import utils as ut, readfile
 
 

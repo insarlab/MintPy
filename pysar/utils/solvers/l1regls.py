@@ -147,7 +147,7 @@ def l1regls(A, y, alpha=1.0, show_progress=1):
             #         - (D2-D1)*(D1+D2)^-1 * x[:n]         
             x[n:] = div( x[n:] - mul(d1, z[:n]) - mul(d2, z[n:]), d1+d2 )\
                 - mul( d3, x[:n] )
-                
+
             # zl[:n] = D1^1/2 * (  x[:n] - x[n:] - bzl[:n] )
             # zl[n:] = D2^1/2 * ( -x[:n] - x[n:] - bzl[n:] ).
             z[:n] = mul( W['di'][:n],  x[:n] - x[n:] - z[:n] ) 

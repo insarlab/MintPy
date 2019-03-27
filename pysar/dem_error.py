@@ -7,9 +7,7 @@
 
 
 import os
-import sys
 import time
-import warnings
 import argparse
 import numpy as np
 from scipy import linalg

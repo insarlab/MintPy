@@ -7,20 +7,13 @@
 #   from pysar.objects.insar_vs_gps import insar_vs_gps
 
 
-import os
 import sys
-import time
-import datetime
 import numpy as np
-from dateutil.relativedelta import relativedelta
-
-from matplotlib import pyplot as plt, ticker
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import stats
 from scipy.interpolate import griddata
 
-from pysar.objects import timeseries, ifgramStack, sensor, giantTimeseries
-from pysar.utils import readfile, ptime, plot as pp, writefile, utils as ut, network as pnet
+from pysar.objects import timeseries, giantTimeseries
+from pysar.utils import readfile, plot as pp, utils as ut
 from pysar.objects.gps import GPS
 from pysar.simulation.plot import *
 

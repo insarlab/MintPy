@@ -7,10 +7,8 @@
 #   from pysar.utils import readfile
 
 
-from datetime import datetime as dt
 import os
 import re
-import sys
 import warnings
 import xml.etree.ElementTree as ET
 
@@ -26,7 +24,6 @@ from pysar.objects import (datasetUnitDict,
                            ifgramDatasetNames,
                            ifgramStack,
                            timeseriesDatasetNames,
-                           timeseriesKeyNames,
                            timeseries,
                            HDFEOS)
 

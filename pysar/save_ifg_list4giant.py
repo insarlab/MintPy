@@ -7,7 +7,6 @@
 
 
 import os
-import re
 import argparse
 from pysar.objects import ifgramStack
 from pysar.utils import readfile, ptime, utils as ut

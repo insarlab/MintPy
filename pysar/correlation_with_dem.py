@@ -6,9 +6,7 @@
 ############################################################
 
 
-import os
 import sys
-import h5py
 import numpy as np
 import pysar.utils.readfile as readfile
 
@@ -43,7 +41,7 @@ def main(argv):
     except:
         demFile = 'INPUTS/geometryRadar.h5'
 
-    dem, demRsc = readfile.read(demFile, datasetName='height')
+    dem = readfile.read(demFile, datasetName='height')[0]
     data, atr = readfile.read(File)
     print('input file is '+atr['FILE_TYPE'])
 

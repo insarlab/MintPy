@@ -8,7 +8,6 @@
 #     from pysar.objects import giantTimeseries, giantIfgramStack
 
 import os
-import glob
 import time
 from datetime import datetime as dt
 import h5py

@@ -7,13 +7,12 @@
 
 
 import os
-import sys
 import re
 import argparse
 import datetime as dt
 import h5py
 import numpy as np
-from pysar.objects import timeseries, geometry, HDFEOS, sensor
+from pysar.objects import timeseries, geometry, sensor
 from pysar.utils import readfile
 from pysar import info
 
@@ -234,8 +233,6 @@ def get_output_filename(metadata, update_mode=False, subset_mode=False):
         if frame2 != frame1:
             FRAME += "_%04d" % (frame2)
 
-    TBASE = "%04d" % (0)
-    BPERP = "%05d" % (0)
     DATE1 = dt.datetime.strptime(metadata['first_date'], '%Y-%m-%d').strftime('%Y%m%d')
     DATE2 = dt.datetime.strptime(metadata['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
     if update_mode:

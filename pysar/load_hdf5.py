@@ -9,7 +9,7 @@
 import os
 import argparse
 import numpy as np
-from pysar.utils import readfile, writefile, utils as ut
+from pysar.utils import readfile, writefile
 
 
 ############################################################

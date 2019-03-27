@@ -9,7 +9,6 @@
 
 
 import os
-import sys
 import re
 import time
 import argparse
@@ -768,7 +767,6 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
     # Design matrix
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
     A, B = stack_obj.get_design_matrix4timeseries(date12_list=date12_list)[0:2]
-    num_ifgram = len(date12_list)
 
     # prep for decor std time-series
     try:

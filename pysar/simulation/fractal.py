@@ -63,7 +63,8 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(95., 
     yy *= resolution / 1000.
     k = np.sqrt(np.square(xx) + np.square(yy))
 
-    """beta+1 is used as beta, since, the power exponent
+    """
+    beta+1 is used as beta, since, the power exponent
     is defined for a 1D slice of the 2D spectrum:
     austin94: "Adler, 1981, shows that the surface profile 
       created by the intersection of a plane and a
@@ -73,7 +74,8 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(95., 
     """
     beta += 1.
 
-    """The power beta/2 is used because the power spectral
+    """
+    The power beta/2 is used because the power spectral
     density is proportional to the amplitude squared 
     Here we work with the amplitude, instead of the power
     so we should take sqrt( k.^beta) = k.^(beta/2)  RH

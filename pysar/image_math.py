@@ -7,11 +7,9 @@
 
 
 import os
-import sys
 import argparse
-import h5py
 import numpy as np
-from pysar.utils import readfile, writefile, ptime
+from pysar.utils import readfile, writefile
 
 
 #######################################################################################
