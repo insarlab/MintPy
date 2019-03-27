@@ -1,26 +1,26 @@
-# Contributing Guidelines #  
+# Contributing Guidelines #
 
 This document is inspired by similar instructions from ISCE, gdal and jupyterhub. If you're reading this section, you're probably interested in contributing to PySAR. Welcome and thanks for your interest in contributing! 
 
 These are several ways to contribute to the PySAR project:
 
-  * Submitting bug reports and feature requests
-  * Writing tutorials or jupyter-notebooks
-  * Fixing typos, code and improving documentation
-  * Writing code for everyone to use
+* Submitting bug reports and feature requests
+* Writing tutorials or jupyter-notebooks
+* Fixing typos, code and improving documentation
+* Writing code for everyone to use
 
 If you get stuck at any point you can create an [issue on GitHub](https://github.com/insarlab/PySAR/issues) or contact us on the [user forum](https://groups.google.com/forum/?nomobile=true#!forum/py-sar).
 
 For more information on contributing to open source projects, [GitHub's own guide](https://guides.github.com/activities/contributing-to-open-source/)
 is a great starting point if you are new to version control.
 
-## Writing documentations ##  
+## Writing documentations ##
 
 Documentation is written in Markdown on [GitHub Wiki](https://github.com/insarlab/PySAR/wiki). Any GitHub user can create and edit pages to use for documentation, examples, support, or anything you wish.
 
 ## Git workflows ##
 
-### Setting up a development environment ##
+### Setting up a development environment ###
 
 Fork insarlab/PySAR from GitHub UI, and then
 
@@ -76,14 +76,17 @@ git commit -a -m "Put here the synthetic commit message"
 git push my_user_name my_new_feature_branch
 ```
 
-From GitHub UI, issue a pull request
+### Issue a pull request from GitHub UI ###
 
 If the pull request discussion results in changes,
 commit locally and push. To get a reasonable history, you may need to
+
 ```
 git rebase -i master
 ```
+
 , in which case you will have to force-push your branch with 
+
 ```
 git push -f my_user_name my_new_feature_branch
 ```
@@ -91,10 +94,13 @@ git push -f my_user_name my_new_feature_branch
 ## Testing ##
 
 It's a good idea to test any changes or bugs you have fixed. We realize that we don't have a complete testing system in place yet, except for an overall testing script `test_pysarApp.py`, run
-```bash
+
+```
 ${PYSAR_HOME}/test/test_pysarApp.py
 ```
+
 to see the testing result, it takes about 10 mins to finish.
+
 
 ## Things you should NOT do ##
 
