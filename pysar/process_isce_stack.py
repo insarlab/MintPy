@@ -23,11 +23,12 @@ TEMPLATE = """template:
 isce.processor          = stripmapStack  #[stripmapStack, topsStack]
 isce.ALOS.fbd2fbs       = yes
 isce.demSNWE            = 31.1, 32.8, 130.1, 131.9  #[S, N, W, E] in degree
-isce.demFile            = ${KIRISHIMA_DIR}/KirishimaAlosAT424F620_630/DEM/gsi10m.dem
+isce.demFile            = ${SCRATCHDIR}/KirishimaAlosAT424F620_630/DEM/gsi10m.dem
 isce.azimuthLooks       = 20
 isce.rangeLooks         = 8
 isce.maxTempBaseline    = 1800
 isce.maxPerpBaseline    = 1800
+isce.masterDate         = 20080212
 isce.unwrapMethod       = snaphu
 isce.filtStrength       = 0.5
 isce.applyWaterMask     = yes
@@ -113,13 +114,14 @@ def prepare_ALOS(iDict):
 
 def prepare_stack(iDict):
     cmd = ('stackStripMap.py -W interferogram -s ./SLC -d {d} -u {u} -f {f} '
-           ' -t {t} -b {b} -a {a} -r {r}').format(d=iDict['demFile'],
-                                                  u=iDict['unwrapMethod'],
-                                                  f=iDict['filtStrength'],
-                                                  t=iDict['maxTempBaseline'],
-                                                  b=iDict['maxPerpBaseline'],
-                                                  a=iDict['azimuthLooks'],
-                                                  r=iDict['rangeLooks'])
+           ' -t {t} -b {b} -a {a} -r {r} -m {m}').format(d=iDict['demFile'],
+                                                         u=iDict['unwrapMethod'],
+                                                         f=iDict['filtStrength'],
+                                                         t=iDict['maxTempBaseline'],
+                                                         b=iDict['maxPerpBaseline'],
+                                                         a=iDict['azimuthLooks'],
+                                                         r=iDict['rangeLooks'],
+                                                         m=iDict['masterDate'])
     if iDict['applyWaterMask']:
         cmd += ' --applyWaterMask'
     print(cmd)
@@ -218,7 +220,7 @@ def main(iargs=None):
 
     job_file = write_job_file(iDict)
     if iDict['bsub']:
-        cmd = 'bsub -P insarlab < {}'.format(job_file)
+        cmd = 'bsub < {}'.format(job_file)
         print(cmd)
         os.system(cmd)
         return

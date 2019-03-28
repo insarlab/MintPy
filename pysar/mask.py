@@ -172,7 +172,8 @@ def mask_isce_file(in_file, mask_file, out_file=None):
         data = np.hstack((amp, pha)).flatten()
     elif ext == '.int':
         data = np.fromfile(in_file, dtype=data_type, count=length*width).reshape(-1, width)
-        data[mask == 0] = np.abs(data[mask == 0])  #set the angle of complex data to zero
+        #data[mask == 0] = np.abs(data[mask == 0])  #set the angle of complex data to zero
+        data[mask == 0] = 0
     elif ext in ['.cor','.conncomp']:
         data = readfile.read(in_file)[0] #, data_type=data_type, num_band=num_band, band_interleave=interleave, band=1)[0]
         data[mask == 0] = 0
