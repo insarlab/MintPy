@@ -14,8 +14,7 @@ pysar.load.azAngleFile    = None
 pysar.load.shadowMaskFile = None
 pysar.load.bperpFile      = None
 
-#pysar.subset.yx        = 70:470, 180:680
-#pysar.reference.yx     = 350,50
+
 pysar.subset.lalo       = 41.02:41.32, -115.10:-114.65
 pysar.reference.lalo    = 41.03, -114.70
 pysar.network.coherenceBased     = yes       #[yes / no], auto for yes, exclude interferograms with coherence < minCoherence

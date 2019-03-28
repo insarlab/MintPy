@@ -20,7 +20,6 @@ pysar.load.bperpFile      = None                                         #[path2
 
 ##————————————————————————————— PROCESSING Options ——-----————————————————————##
 pysar.reference.lalo               = 33.0655, 131.2076
-pysar.troposphericDelay.weatherDir = ~/insarlab/WEATHER
 pysar.deramp                       = linear
 
 

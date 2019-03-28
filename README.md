@@ -34,7 +34,7 @@ pysarApp.py GalapagosSenDT128.template --end load_data    #end after step 'load_
 wget https://zenodo.org/record/2596744/files/FernandinaSenDT128.tar.xz
 tar -xvJf FernandinaSenDT128.tar.xz
 cd FernandinaSenDT128/PYSAR
-pysarApp.py FernandinaSenDT128.txt
+pysarApp.py ${PYSAR_HOME}/examples/input_files/FernandinaSenDT128.txt
 ```
 
 <p align="left">

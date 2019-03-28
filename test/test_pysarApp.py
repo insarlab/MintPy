@@ -11,9 +11,10 @@ import numpy as np
 
 
 test_dir = os.path.expanduser('~/insarlab/test')
-proj_names = ['KujuAlosAT422F650', 'FernandinaSenDT128']
+proj_names = ['KujuAlosAT422F650', 'WellsEnvD2T399', 'FernandinaSenDT128']
 urls = ['https://zenodo.org/record/2557863/files/KujuAlosAT422F650.tar.xz',
-        'https://zenodo.org/record/2571980/files/FernandinaSenDT128.tar.xz']
+        'https://zenodo.org/record/2613771/files/WellsEnvD2T399.tar.xz',
+        'https://zenodo.org/record/2596744/files/FernandinaSenDT128.tar.xz']
 num_proj = len(proj_names)
 
 # check input argument
@@ -59,7 +60,8 @@ for i in idx:
     os.chdir(work_dir)
     print('Go to work directory:', work_dir)
 
-    cmd = 'pysarApp.py {}.txt'.format(proj_name)
+    cmd = 'pysarApp.py $PYSAR_HOME/examples/input_files/{}.txt'.format(proj_name)
+    cmd = os.path.expandvars(cmd)
     status = subprocess.Popen(cmd, shell=True).wait()
     if status is not 0:
         raise RuntimeError('Test failed for example dataset {}'.format(proj_name))
