@@ -34,7 +34,6 @@ pysar.load.shadowMaskFile   = ../ISCE/merged/geom_master/shadowMask.rdr
 
 pysar.reference.lalo    = -0.30,-91.43
 pysar.networkInversion.waterMaskFile    = waterMask.h5
-pysar.troposphericDelay.weatherDir      = ~/insarlab/WEATHER
 pysar.topographicResidual.stepFuncDate  = 20170910,20180613  #eruption dates
 pysar.deramp            = linear
 
