@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013-2018, Zhang Yunjun, Heresh Fattahi     #
+# Copyright(c) 2013-2019, Zhang Yunjun, Heresh Fattahi     #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
 
@@ -18,6 +18,7 @@ TEMPLATE = """template
 pysar.subset.yx       = auto    #[1800:2000,700:800 / no], auto for no
 pysar.subset.lalo     = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
 """
+
 EXAMPLE = """example:
   subset.py INPUTS/ifgramStack.h5 -y 400  1500 -x 200   600
   subset.py geo_velocity.h5       -l 30.5 30.8 -L 130.3 130.9
@@ -376,27 +377,6 @@ def subset_file(fname, subset_dict_input, out_file=None):
     return out_file
 
 
-def subset_file_list(fileList, inps):
-    """Subset file list"""
-    # check outfile and parallel option
-    if inps.parallel:
-        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(fileList))
-
-    # Subset files
-    if len(fileList) == 1:
-        subset_file(fileList[0], vars(inps), inps.outfile)
-
-    elif inps.parallel:
-        #num_cores = min(multiprocessing.cpu_count(), len(fileList))
-        # print 'parallel processing using %d cores ...'%(num_cores)
-        Parallel(n_jobs=num_cores)(delayed(subset_file)(file, vars(inps)) for file in fileList)
-    else:
-        for fname in fileList:
-            print('----------------------------------------------------')
-            subset_file(fname, vars(inps))
-    return
-
-
 def read_aux_subset2inps(inps):
     # Convert All Inputs into subset_y/x/lat/lon
     # Input Priority: subset_y/x/lat/lon > reference > template > tight
@@ -454,9 +434,10 @@ def main(iargs=None):
 
     inps = read_aux_subset2inps(inps)
 
-    subset_file_list(inps.file, inps)
+    for fname in inps.file:
+        print('-'*30)
+        subset_file(fname, vars(inps))
 
-    print('Done.')
     return
 
 
