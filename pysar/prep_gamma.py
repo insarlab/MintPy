@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2017-2018, Zhang Yunjun, Yunmeng Cao        #
+# Copyright(c) 2017-2019, Zhang Yunjun, Yunmeng Cao        #
 # Author:  Zhang Yunjun, Yunmeng Cao                       #
 ############################################################
 
@@ -15,13 +15,13 @@ from pysar.utils import readfile, writefile, ptime, utils as ut
 
 ##################################################################################################
 EXAMPLE = """example:
-  prep_gamma.py  diff_filt_HDR_130118-130129_4rlks.unw
-  prep_gamma.py  IFGRAM*/diff_*rlks.unw
-  prep_gamma.py  IFGRAM*/filt_*rlks.cor
-  prep_gamma.py  IFGRAM*/diff_*rlks.int
-  prep_gamma.py  sim_150911-150922.hgt_sim
-  prep_gamma.py  sim_150911-150922.utm.dem
-  prep_gamma.py  sim_150911-150922.UTM_TO_RDC
+  prep_gamma.py  diff_filt_HDR_20130118_20130129_4rlks.unw
+  prep_gamma.py  interferograms/*/diff_*rlks.unw
+  prep_gamma.py  interferograms/*/filt_*rlks.cor
+  prep_gamma.py  interferograms/*/diff_*rlks.int
+  prep_gamma.py  sim_20150911_20150922.hgt_sim
+  prep_gamma.py  sim_20150911_20150922.utm.dem
+  prep_gamma.py  sim_20150911_20150922.UTM_TO_RDC
 """
 
 DESCRIPTION = """
@@ -105,6 +105,17 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    inps.file = ut.get_file_list(inps.file, abspath=True)
+
+    # check input file extension
+    ext_list = ['.unw', '.cor', '.int', '.dem', '.hgt_sim', '.UTM_TO_RDC']
+    ext = os.path.splitext(inps.file[0])[1]
+    if ext not in ext_list:
+        msg = 'unsupported input file extension: {}'.format(ext)
+        msg += '\nsupported file extensions: {}'.format(ext_list)
+        raise ValueError() 
+
     return inps
 
 
@@ -371,45 +382,29 @@ def extract_metadata4dem_radar(fname):
     return rsc_file
 
 
-def prepare_metadata(inps):
-    inps.file = ut.get_file_list(inps.file, abspath=True)
+def prepare_metadata(fnames):
+    ext = os.path.splitext(fnames[0])[1]
+    for fname in fnames:
+        # interferograms
+        if ext in ['.unw', '.cor', '.int']:
+            extract_metadata4interferogram(fname)
 
-    # check outfile and parallel option
-    if inps.parallel:
-        (num_cores,
-         inps.parallel,
-         Parallel,
-         delayed) = ut.check_parallel(len(inps.file), print_msg=False)
+        # geometry
+        elif fnames[0].endswith('.utm.dem'):
+            extract_metadata4dem_geo(fname)
 
-    # multiple datasets files
-    ext = os.path.splitext(inps.file[0])[1]
-    if ext in ['.unw', '.cor', '.int']:
-        if len(inps.file) == 1:
-            extract_metadata4interferogram(inps.file[0])
-        elif inps.parallel:
-            Parallel(n_jobs=num_cores)(delayed(extract_metadata4interferogram)(file)
-                                       for file in inps.file)
-        else:
-            for File in inps.file:
-                extract_metadata4interferogram(File)
+        elif fnames[0].endswith(('.rdc.dem', '.hgt_sim')):
+            extract_metadata4dem_radar(fname)
 
-    # Single dataset files
-    elif inps.file[0].endswith('.utm.dem'):
-        for File in inps.file:
-            extract_metadata4dem_geo(File)
-    elif inps.file[0].endswith(('.rdc.dem', '.hgt_sim')):
-        for File in inps.file:
-            extract_metadata4dem_radar(File)
-    elif ext in ['.UTM_TO_RDC']:
-        for File in inps.file:
-            extract_metadata4lookup_table(File)
+        elif ext in ['.UTM_TO_RDC']:
+            extract_metadata4lookup_table(fname)
     return
 
 
 ##################################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    prepare_metadata(inps)
+    prepare_metadata(inps.file)
     return
 
 

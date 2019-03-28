@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2017-2018, Zhang Yunjun                     #
+# Copyright(c) 2017-2019, Zhang Yunjun                     #
 # Author:  Zhang Yunjun                                    #
 ############################################################
 
 
 import os
-import re
 import argparse
 from pysar.utils import readfile, writefile, utils as ut
 
@@ -15,10 +14,10 @@ from pysar.utils import readfile, writefile, utils as ut
 ##################################################################################################
 EXAMPLE = """example:
   prep_roipac.py  filt_100901-110117-sim_HDR_4rlks_c10.unw
-  prep_roipac.py  IFGRAM*/filt_*.unw
-  prep_roipac.py  IFGRAM*/filt_*rlks.cor
-  prep_roipac.py  IFGRAM*/filt_*rlks.int
-  prep_roipac.py  IFGRAM*/filt_*_snap_connect.byt
+  prep_roipac.py  ./interferograms/*/filt_*.unw
+  prep_roipac.py  ./interferograms/*/filt_*rlks.cor
+  prep_roipac.py  ./interferograms/*/filt_*rlks.int
+  prep_roipac.py  ./interferograms/*/filt_*_snap_connect.byt
 """
 
 DESCRIPTION = """
@@ -47,6 +46,17 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    inps.file = ut.get_file_list(inps.file, abspath=True)
+
+    # Check input file type
+    ext_list = ['.unw', '.cor', '.int', '.byt', '.hgt', '.dem', '.trans']
+    ext = os.path.splitext(inps.file[0])[1]
+    if ext not in ext_list:
+        msg = 'unsupported input file extension: {}'.format(ext)
+        msg += '\nsupported file extensions: {}'.format(ext_list)
+        raise ValueError(msg)
+
     return inps
 
 
@@ -74,7 +84,7 @@ def extract_metadata(fname):
         os.system(copyCmd)
     basic_dict = readfile.read_roipac_rsc(basic_rsc_file)
 
-    # return if baseline attributes are already there.
+    # return if baseline attributes are already existed.
     if 'P_BASELINE_TOP_HDR' in basic_dict.keys():
         return basic_rsc_file
 
@@ -105,34 +115,15 @@ def extract_metadata(fname):
     return basic_rsc_file
 
 
-def prepare_metadata(inps):
-    inps.file = ut.get_file_list(inps.file, abspath=True)
-
-    # Check input file type
-    ext = os.path.splitext(inps.file[0])[1]
-    if ext not in ['.unw', '.cor', '.int', '.byt']:
-        return
-
-    # check outfile and parallel option
-    if inps.parallel:
-        (num_cores,
-         inps.parallel,
-         Parallel,
-         delayed) = ut.check_parallel(len(inps.file), print_msg=False)
-    if len(inps.file) == 1:
-        extract_metadata(inps.file[0])
-    elif inps.parallel:
-        Parallel(n_jobs=num_cores)(delayed(extract_metadata)(fname) for fname in inps.file)
-    else:
-        for fname in inps.file:
-            extract_metadata(fname)
-    return
-
-
 ##################################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    prepare_metadata(inps)
+
+    ext = os.path.splitext(inps.file[0])[1]
+    if ext in ['.unw', '.cor', '.int', '.byt']:
+        for fname in inps.file:
+            extract_metadata(fname)
+
     return
 
 
