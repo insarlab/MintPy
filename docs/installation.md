@@ -100,8 +100,19 @@ python3 setup.py build
 python3 setup.py install   
 ```
 
-Note that pykml through conda supports python2 only, we provide a python2/3 compatible version [here](https://github.com/yunjunz/pykml.git) and installed throught the command line above by default.
+#### Notes on pyKML
+
+The pykml installed through conda/pip supports python2 only, the python2/3 compatible version is available [here](https://github.com/yunjunz/pykml.git) and installed throught the command line above by default.
   
-We use [PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) for tropospheric delay correction calculated from weather re-analysis datadset such as ERA-Interim, MERRA and NARR. Check [caltech's website](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) for the code download and account setup.
+#### Notes on [PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main)
+
++ We use PyAPS for tropospheric delay correction calculated from Global Atmospheric Models (GAMs) such as ERA-Interim, MERRA and NARR. Check [Caltech Earthdef](http://earthdef.caltech.edu) for the code download and account setup information for various GAM datasets.    
+
++ PyAPS supports python2 only, thus you will need to install a python2 environment to be able to use it. py3-PySAR is compatible with py2-PyAPS. 
+
++ If you defined an environment variable named `WEATHER_DIR` to contain the path to a 
+directory, PySAR applications will download the GAM files into the indicated directory. Also PySAR
+application will look for the GAM files in the directory before downloading a new one to prevent downloading
+multiple copies if you work with different dataset that cover the same date/time.
 
 [Here](https://github.com/yunjunz/macOS_Setup/blob/master/vim.md) is some useful setup of Vim editor for general use and Python.
