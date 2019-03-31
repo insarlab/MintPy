@@ -74,6 +74,10 @@ class resample:
             if len(src_data.shape) == 3:
                 src_data = np.moveaxis(src_data, 0, -1)
 
+            if src_data.dtype == np.bool_:
+                fill_value = False
+                print('restrict fill value to False for bool type source data')
+
             # resample source data into target data
             geo_data = self.run_pyresample(src_data=src_data,
                                            interp_method=interp_method,

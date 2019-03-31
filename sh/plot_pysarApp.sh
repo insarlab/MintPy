@@ -119,5 +119,5 @@ fi
 echo "Move *.png/pdf/kmz files into ./PIC folder."
 mv *.png PIC/
 mv *.pdf PIC/
-mv *.kmz PIC/
+mv *.kmz ./GEOCODE/*.kmz PIC/
 
