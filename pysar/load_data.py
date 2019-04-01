@@ -10,7 +10,7 @@ import os
 import sys
 import glob
 import argparse
-
+import warnings
 from pysar.defaults import auto_path
 from pysar.objects import (geometryDatasetNames,
                            geometry,
@@ -38,6 +38,7 @@ datasetName2templateKey = {'unwrapPhase'     : 'pysar.load.unwFile',
                            'incidenceAngle'  : 'pysar.load.incAngleFile',
                            'azimuthAngle'    : 'pysar.load.azAngleFile',
                            'shadowMask'      : 'pysar.load.shadowMaskFile',
+                           'waterMask'       : 'pysar.load.waterMaskFile',
                            'bperp'           : 'pysar.load.bperpFile'
                            }
 
@@ -73,6 +74,7 @@ pysar.load.lookupXFile    = auto  #[path2lon_file]
 pysar.load.incAngleFile   = auto  #[path2los_file]
 pysar.load.azAngleFile    = auto  #[path2los_file]
 pysar.load.shadowMaskFile = auto  #[path2shadow_file]
+pysar.load.waterMaskFile  = auto  #[path2water_mask_file]
 pysar.load.bperpFile      = auto  #[path2bperp_file]
 
 ## 1.1 Subset (optional)
@@ -459,8 +461,11 @@ def prepare_metadata(inpsDict):
 
     elif processor == 'isce':
         ifgram_dir = os.path.dirname(os.path.dirname(inpsDict['pysar.load.unwFile']))
+        meta_files = sorted(glob.glob(inpsDict['pysar.load.metaFile']))
+        if len(meta_files) < 1:
+            warnings.warn('No input metadata file found: {}'.format(inpsDict['pysar.load.metaFile']))
         try:
-            meta_file = sorted(glob.glob(inpsDict['pysar.load.metaFile']))[0]
+            meta_file = meta_files[0]
             baseline_dir = inpsDict['pysar.load.baselineDir']
             geom_dir = os.path.dirname(inpsDict['pysar.load.demFile'])
             cmd = '{s} -i {i} -m {m} -b {b} -g {g}'.format(s=script_name,

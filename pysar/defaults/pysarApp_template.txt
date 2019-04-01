@@ -26,6 +26,7 @@ pysar.load.lookupXFile    = auto  #[path2lon_file]
 pysar.load.incAngleFile   = auto  #[path2los_file]
 pysar.load.azAngleFile    = auto  #[path2los_file]
 pysar.load.shadowMaskFile = auto  #[path2shadow_file]
+pysar.load.waterMaskFile  = auto  #[path2water_mask_file]
 pysar.load.bperpFile      = auto  #[path2bperp_file]
 ##---------subset (optional):
 ## if both yx and lalo are specified, use lalo option unless a) no lookup file AND b) dataset is in radar coord
@@ -99,7 +100,7 @@ pysar.networkInversion.weightFunc      = auto #[var / fim / coh / no], auto for 
 pysar.networkInversion.maskDataset     = auto #[coherence / connectComponent / no], auto for no
 pysar.networkInversion.maskThreshold   = auto #[0-1], auto for 0.4
 pysar.networkInversion.minRedundancy   = auto #[1-inf], auto for 1.0, min num_ifgram for every SAR acquisition
-pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for no
+pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for waterMask.h5 or no
 pysar.networkInversion.minNormVelocity = auto #[yes / no], auto for yes, min-norm deformation velocity or phase
 pysar.networkInversion.residualNorm    = auto #[L2 ], auto for L2, norm minimization solution
 pysar.networkInversion.minTempCoh      = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
