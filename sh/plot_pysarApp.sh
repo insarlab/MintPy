@@ -2,7 +2,7 @@
 ###############################################################
 # Plot Results from Routine Workflow with pysarApp.py
 # Author: Zhang Yunjun, 2017-07-23
-# Latest update: 2019-03-23
+# Latest update: 2019-04-01
 ###############################################################
 
 
@@ -17,6 +17,11 @@ plot_the_rest=1
 
 # Default file name
 mask_file='maskTempCoh.h5'
+dem_file='./INPUTS/geometryRadar.h5'
+if [ ! -f $dem_file ]; then
+    dem_file='./INPUTS/geometryGeo.h5'
+fi
+
 
 ## Log File
 log_file='plot_pysarApp.log'
@@ -38,8 +43,8 @@ fi
 view='view.py --nodisplay --dpi 150 --update '
 
 ## Plot Key files
-opt=' --dem INPUTS/geometryRadar.h5 --mask '$mask_file' -u cm '
-#opt=' --dem INPUTS/geometryRadar.h5 --mask '$mask_file' -u cm --vlim -2 2'
+opt=' --dem '$dem_file' --mask '$mask_file' -u cm '
+#opt=' --dem '$dem_file' --mask '$mask_file' -u cm --vlim -2 2'
 if [ $plot_key_files -eq 1 ]; then
     file=velocity.h5;              test -f $file && $view $file $opt               >> $log_file
     file=temporalCoherence.h5;     test -f $file && $view $file -c gray --vlim 0 1 >> $log_file

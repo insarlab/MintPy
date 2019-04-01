@@ -89,6 +89,12 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    inps.file = ut.get_file_list(inps.file)
+    #print('number of input files: ({})\n{}'.format(len(inps.file), inps.file))
+    if len(inps.file) > 1:
+        inps.outfile = None
+
     return inps
 
 
@@ -429,14 +435,12 @@ def read_aux_subset2inps(inps):
 ###########################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    inps.file = ut.get_file_list(inps.file)
-    print('number of input files: ({})\n{}'.format(len(inps.file), inps.file))
 
     inps = read_aux_subset2inps(inps)
 
     for fname in inps.file:
         print('-'*30)
-        subset_file(fname, vars(inps))
+        subset_file(fname, vars(inps), out_file=inps.outfile)
 
     return
 
