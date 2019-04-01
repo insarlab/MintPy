@@ -1,5 +1,6 @@
 ## PySAR      
     
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/cb6f244c008d46c2b9eebe875ede969f)](https://app.codacy.com/app/insarlab/PySAR?utm_source=github.com&utm_medium=referral&utm_content=insarlab/PySAR&utm_campaign=Badge_Grade_Dashboard)
 [![Language](https://img.shields.io/badge/python-3.5%2B-blue.svg)](https://www.python.org/)
 [![Latest version](https://img.shields.io/badge/latest%20version-v1.0.0--dev-green.svg)](https://github.com/insarlab/PySAR/blob/master/docs/download.md)
 [![License](https://img.shields.io/badge/license-GPL-yellow.svg)](https://github.com/insarlab/PySAR/blob/master/LICENSE)
