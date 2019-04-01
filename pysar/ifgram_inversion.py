@@ -57,7 +57,7 @@ pysar.networkInversion.weightFunc      = auto #[var / fim / coh / no], auto for 
 pysar.networkInversion.maskDataset     = auto #[coherence / connectComponent / no], auto for no
 pysar.networkInversion.maskThreshold   = auto #[0-1], auto for 0.4
 pysar.networkInversion.minRedundancy   = auto #[1-inf], auto for 1.0, min num_ifgram for every SAR acquisition
-pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for no
+pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for waterMask.h5 or no
 pysar.networkInversion.minNormVelocity = auto #[yes / no], auto for yes, min-norm deformation velocity or phase
 pysar.networkInversion.residualNorm    = auto #[L2 ], auto for L2, norm minimization solution
 pysar.networkInversion.minTempCoh      = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
@@ -152,6 +152,14 @@ def cmd_line_parse(iargs=None):
     atr = readfile.read_attribute(inps.ifgramStackFile)
     if atr['FILE_TYPE'] != 'ifgramStack':
         raise ValueError('input is {} file, only support ifgramStack file.'.format(k))
+
+    if inps.templateFile:
+        inps = read_template2inps(inps.templateFile, inps)
+    inps.timeseriesFile, inps.tempCohFile = inps.outfile
+
+    if not os.path.isfile(inps.waterMaskFile):
+        inps.waterMaskFile = None
+
     return inps
 
 
@@ -198,10 +206,15 @@ def run_or_skip(inps):
 
     # check configuration
     if flag == 'skip':
-        atr = readfile.read_attribute(inps.timeseriesFile)
-        if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in configKeys):
+        meta_keys = ['REF_Y', 'REF_X']
+        atr_ifg = readfile.read_attribute(inps.ifgramStackFile)
+        atr_ts = readfile.read_attribute(inps.timeseriesFile)
+        if any(str(vars(inps)[key]) != atr_ts.get(key_prefix+key, 'None') for key in configKeys):
             flag = 'run'
             print('3) NOT all key configration parameters are the same: {}'.format(configKeys))
+        elif any(atr_ts[key] != atr_ifg[key] for key in meta_keys):
+            flag = 'run'
+            print('3) NOT all the metadata are the same: {}'.format(meta_keys))
         else:
             print('3) all key configuration parameters are the same: {}.'.format(configKeys))
 
@@ -1180,9 +1193,6 @@ def parallel_ifgram_inversion_patch(data):
 ################################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    if inps.templateFile:
-        inps = read_template2inps(inps.templateFile, inps)
-    inps.timeseriesFile, inps.tempCohFile = inps.outfile
 
     # --fast option
     if inps.fast:

@@ -13,7 +13,7 @@ import time
 import glob
 import h5py
 import numpy as np
-from pysar.objects import deramp, ifgramStack, timeseries
+from pysar.objects import deramp, ifgramStack, timeseries, geometryDatasetNames
 from pysar.utils import ptime, readfile, writefile
 from pysar.utils.utils0 import *
 
@@ -399,6 +399,29 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
     if abspath:
         outFile = os.path.abspath(outFile)
     return outFile
+
+
+def get_geometry_file(dset, geocoded=False, abspath=True, print_msg=True):
+    """Find geometry file containing input specific dataset"""
+    if dset not in geometryDatasetNames:
+        raise ValueError('unrecognized geometry dataset name: {}'.format(dset))
+
+    if geocoded:
+        geom_file = './INPUTS/geometryGeo.h5'
+    else:
+        geom_file = './INPUTS/geometryRadar.h5'
+
+    if not os.path.isfile(geom_file):
+        print('geometry file {} does not exist.'.format(geom_file))
+        return None
+
+    if dset not in readfile.get_dataset_list(geom_file):
+        print('dataset {} not found in file {}'.format(dset, geom_file))
+        return None
+
+    if abspath:
+        geom_file = os.path.abspath(geom_file)
+    return geom_file
 
 
 def update_template_file(template_file, extra_dict):

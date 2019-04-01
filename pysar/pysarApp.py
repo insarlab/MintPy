@@ -20,7 +20,7 @@ import numpy as np
 import pysar
 import pysar.workflow  #dynamic import for modules used by pysarApp workflow
 from pysar.objects import sensor, RAMP_LIST
-from pysar.utils import readfile, utils as ut
+from pysar.utils import readfile, writefile, utils as ut
 from pysar.defaults.auto_path import autoPath
 
 
@@ -336,6 +336,15 @@ class TimeSeriesAnalysis:
 
         # 3) check loading result
         load_complete, stack_file, geom_file = ut.check_loaded_dataset(self.workDir, print_msg=True)[0:3]
+
+        # 3.1) output waterMask.h5
+        water_mask_file = 'waterMask.h5'
+        if 'waterMask' in readfile.get_dataset_list(geom_file):
+            print('generate {} from {} for conveniency'.format(water_mask_file, geom_file))
+            if ut.run_or_skip(out_file=water_mask_file, in_file=geom_file) == 'run':
+                water_mask, atr = readfile.read(geom_file, datasetName='waterMask')
+                atr['FILE_TYPE'] = 'waterMask'
+                writefile.write(water_mask, out_file=water_mask_file, metadata=atr)
 
         # 4) add custom metadata (optional)
         if self.customTemplateFile:
@@ -716,10 +725,9 @@ class TimeSeriesAnalysis:
         out_file = fnames['output']
         if in_file != out_file:
             print('Remove for each acquisition a phase ramp: {}'.format(method))
-            scp_args = '{f} -s {s} -m {m} -o {o}'.format(f=in_file, s=method, m=mask_file, o=out_file)
+            scp_args = '{f} -s {s} -m {m} -o {o} --update '.format(f=in_file, s=method, m=mask_file, o=out_file)
             print('remove_ramp.py', scp_args)
-            if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
-                pysar.remove_ramp.main(scp_args.split())
+            pysar.remove_ramp.main(scp_args.split())
         else:
             print('No phase ramp removal.')
         return
