@@ -151,6 +151,10 @@ class networkViewer():
         inps_img.print_msg = self.print_msg
         self.ax_img = view.plot_slice(self.ax_img, d_img, atr, inps_img)[0]
 
+        # coordinate info
+        self.coord = ut.coordinate(atr)
+        self.fig_coord = inps_img.fig_coord
+
         # Axes 2 - coherence matrix
         self.ax_mat = self.fig.add_axes([0.55, 0.125, 0.40, 0.75])
         if self.yx:
@@ -173,6 +177,7 @@ class networkViewer():
         plotDict = {}
         plotDict['fig_title'] = 'Y = {}, X = {}'.format(yx[0], yx[1])
         plotDict['colormap'] = self.colormap
+        plotDict['disp_legend'] = False
         # plot
         coh_mat = pp.plot_coherence_matrix(self.ax_mat,
                                            date12List=self.date12_list,
@@ -196,7 +201,12 @@ class networkViewer():
 
     def update_coherence_matrix(self, event):
         if event.inaxes == self.ax_img:
-            yx = [int(event.ydata+0.5), int(event.xdata+0.5)]
+            if self.fig_coord == 'geo':
+                yx = [self.coord.lalo2yx(event.ydata, coord_type='lat'),
+                      self.coord.lalo2yx(event.xdata, coord_type='lon')]
+            else:
+                yx = [int(event.ydata+0.5),
+                      int(event.xdata+0.5)]
             self.plot_coherence_matrix4pixel(yx)
         return
 
