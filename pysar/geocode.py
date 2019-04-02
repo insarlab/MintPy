@@ -253,6 +253,7 @@ def run_geocode(inps):
     # resample input files one by one
     for infile in inps.file:
         print('-' * 50+'\nresampling file: {}'.format(infile))
+        ext = os.path.splitext(infile)[1]
         atr = readfile.read_attribute(infile, datasetName=inps.dset)
         outfile = auto_output_filename(infile, inps)
         if inps.updateMode and ut.run_or_skip(outfile, in_file=[infile, inps.lookupFile]) == 'skip':
@@ -267,9 +268,10 @@ def run_geocode(inps):
             print('reading {d:<{w}} from {f} ...'.format(d=dsName,
                                                          w=maxDigit,
                                                          f=os.path.basename(infile)))
-            data = readfile.read(infile,
-                                 datasetName=dsName,
-                                 print_msg=False)[0]
+            if ext in ['.h5','.he5']:
+                data = readfile.read(infile, datasetName=dsName, print_msg=False)[0]
+            else:
+                data, atr = readfile.read(infile, datasetName=dsName, print_msg=False)
 
             if atr['FILE_TYPE'] == 'timeseries' and len(data.shape) == 2:
                 data = np.reshape(data, (1, data.shape[0], data.shape[1]))

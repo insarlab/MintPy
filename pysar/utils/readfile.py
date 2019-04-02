@@ -199,7 +199,7 @@ def read(fname, box=None, datasetName=None, print_msg=True):
     if fext in ['.h5', '.he5']:
         data = read_hdf5_file(fname, datasetName=datasetName, box=box)
     else:
-        data = read_binary_file(fname, datasetName=datasetName, box=box)[0]
+        data, atr = read_binary_file(fname, datasetName=datasetName, box=box)
     return data, atr
 
 
@@ -375,8 +375,8 @@ def read_binary_file(fname, datasetName=None, box=None):
             num_band = 2
             if datasetName and datasetName.startswith(('az', 'azimuth')):
                 band = 2
-        else:
-            raise Exception('unrecognized ROI_PAC file: {}'.format(fname))
+        #else:
+        #    raise Exception('unrecognized ROI_PAC file: {}'.format(fname))
 
     # Gamma
     elif processor == 'gamma':
@@ -410,13 +410,15 @@ def read_binary_file(fname, datasetName=None, box=None):
         elif fext in ['.mli']:
             byte_order = 'little-endian'
 
-        else:
-            raise Exception('unecognized GAMMA file: {}'.format(fname))
+        #else:
+        #    raise Exception('unecognized GAMMA file: {}'.format(fname))
 
     # reading
     data, atr = read_binary(fname, box=box, data_type=data_type, byte_order=byte_order,
                             num_band=num_band, band_interleave=band_interleave,
                             band=band, cpx_band=cpx_band)
+    if 'DATA_TYPE' not in atr:
+        atr['DATA_TYPE'] = data_type
     return data, atr
 
 
