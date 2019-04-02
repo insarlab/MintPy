@@ -115,4 +115,6 @@ directory, PySAR applications will download the GAM files into the indicated dir
 application will look for the GAM files in the directory before downloading a new one to prevent downloading
 multiple copies if you work with different dataset that cover the same date/time.
 
++ For macports, install [pyhdf](https://github.com/fhs/pyhdf) from source archive following the instruction [here](https://github.com/fhs/pyhdf/blob/master/doc/install.rst#installing-from-the-source-archive)
+
 [Here](https://github.com/yunjunz/macOS_Setup/blob/master/vim.md) is some useful setup of Vim editor for general use and Python.
