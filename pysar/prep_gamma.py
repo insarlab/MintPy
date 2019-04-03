@@ -233,25 +233,30 @@ def extract_metadata4interferogram(fname):
         date12 = str(re.findall('\d{6}[-_]\d{6}', file_basename)[0])
     m_date, s_date = date12.replace('-', '_').split('_')
     atr['DATE12'] = ptime.yymmdd(m_date)+'-'+ptime.yymmdd(s_date)
-    lks = os.path.splitext(file_basename.split(date12)[1])[0]
+    lks = os.path.splitext(file_basename)[0].split(date12)[1]
+    #lks = os.path.splitext(file_basename.split(date12)[1])[0]
 
     # Read .off and .par file
-    off_file = file_dir+'/*'+date12+lks+'.off'
-    m_par_file = [file_dir+'/*'+m_date+lks+i for i in ['.amp.par', '.ramp.par']]
-    s_par_file = [file_dir+'/*'+s_date+lks+i for i in ['.amp.par', '.ramp.par']]
+    off_files = file_dir+'/*'+date12+lks+'.off'
+    par_exts = ['.amp.par', '.ramp.par', '.mli.par']
+    m_par_files = [file_dir+'/*'+m_date+lks+i for i in par_exts]
+    s_par_files = [file_dir+'/*'+s_date+lks+i for i in par_exts]
 
     try:
-        off_file = ut.get_file_list(off_file)[0]
+        off_file = ut.get_file_list(off_files)[0]
     except:
-        print('\nERROR: Can not find .off file, it supposed to be like: '+off_file)
+        off_file = None
+        print('\nERROR: Can not find .off file, it supposed to be like: '+off_files)
     try:
-        m_par_file = ut.get_file_list(m_par_file)[0]
+        m_par_file = ut.get_file_list(m_par_files)[0]
     except:
-        print('\nERROR: Can not find master date .par file, it supposed to be like: '+m_par_file)
+        m_par_file = None
+        print('\nERROR: Can not find master date .par file, it supposed to be like: '+m_par_files)
     try:
-        s_par_file = ut.get_file_list(s_par_file)[0]
+        s_par_file = ut.get_file_list(s_par_files)[0]
     except:
-        print('\nERROR: Can not find slave date .par file, it supposed to be like: '+s_par_file)
+        s_par_file = None
+        print('\nERROR: Can not find slave date .par file, it supposed to be like: '+s_par_files)
 
     par_dict = readfile.read_gamma_par(m_par_file)
     off_dict = readfile.read_gamma_par(off_file)
