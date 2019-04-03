@@ -688,7 +688,7 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
                 dsOut[i, :, :] = data
                 prog_bar.update(i+1, suffix='{}/{}'.format(i+1, obj.numIfgram))
             prog_bar.close()
-            print('finished writing to file: '.format(fname))
+            print('finished writing to file: {}'.format(fname))
 
     # Single Dataset File
     else:

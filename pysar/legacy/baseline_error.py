@@ -90,14 +90,15 @@ def main(argv):
         print('Can not open mask file: '+maskFile)
         sys.exit(1)
 
+    sy, sx = np.shape(Mask)
+    npixel = sx*sy
+
     ##################################
     Mask = Mask.flatten(1)
     ndx = Mask != 0
     ##################################
     nt = float(h5file['timeseries'].attrs['LOOK_REF1'])
     ft = float(h5file['timeseries'].attrs['LOOK_REF2'])
-    sy, sx = np.shape(dset1)
-    npixel = sx*sy
     lookangle = np.tile(np.linspace(nt, ft, sx), [sy, 1])
     lookangle = lookangle.flatten(1)*np.pi/180.0
     Fh = -np.sin(lookangle)
