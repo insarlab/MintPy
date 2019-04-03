@@ -1,65 +1,34 @@
-### Install PySAR
+## Install PySAR
 
-Tested on macOS and Linux, not sure about Windows. For non-Mac suer, skip section 0 and start from section 1 directly.
+Tested on macOS and Linux, not sure about Windows.
 
-#### 0. For Mac users     
+### Notes for Mac users
 
 Install Xcode with command line tools, if you have not already done so.
 
 1. Install Xcode from App store
+
 2. Install command line tools from within XCode and agree to the terms of license.
 
-```   
+```
 xcode-select --install -s /Applications/Xcode.app/Contents/Developer/ 
 sudo xcodebuild -license 
-```   
+```
 
 3. Install [XQuartz](https://www.xquartz.org), then restart the terminal.
 
-4. Install [macports](https://www.macports.org/install.php) if you want to use Macports to install Python environment (if you use Anaconda instead of Macports, skip now to the next section "Setup Paths"); then update the port tree with the following command. If your network prevent the use of rsync or svn via http of port tree, try [Portfile Sync via a Snapshot Tarball](https://trac.macports.org/wiki/howto/PortTreeTarball).    
+### 1. Setup Paths    
 
-```
-sudo port selfupdate
-```
-   
-5. Restart terminal
-     
-     
-#### 1. Setup Paths    
+To use the package, you need to setup the environment:
 
-To use the package, you need to setup the environment. Depending on your shell, you may use commands below to setup PySAR, by adding the following to your source file. They are for:   
 1. To make pysar importable in python, by adding the path to PySAR directory to your _$PYTHONPATH_    
 2. To make utility scripts available in command line, by adding _${PYSAR_HOME}/pysar_ and _${PYSAR_HOME}/sh_ to your _$path_.   
-   
-For csh/tcsh user, add to your **_~/.cshrc_** file for example:   
 
-```tcsh
-############################  Python  ###############################
-if ( ! $?PYTHONPATH ) then
-    setenv PYTHONPATH ""
-endif
-
-##--------- conda ------------------## 
-setenv PYTHON3DIR    ~/python/miniconda3
-setenv PATH          ${PATH}:${PYTHON3DIR}/bin
-setenv PROJ_LIB      ${PYTHON3DIR}/share/proj   #Temporary fix for basemap import error
-
-##--------- PySAR ------------------## 
-setenv PYSAR_HOME    ~/python/PySAR             #for released version, "~/python/PySAR-0.4.0"
-setenv PYTHONPATH    ${PYTHONPATH}:${PYSAR_HOME}
-setenv PATH          ${PATH}:${PYSAR_HOME}/pysar:${PYSAR_HOME}/sh
-```
-
-For bash user, add to your **_~/.bash_profile_** file for example:   
+Add to your **_~/.bash_profile_** file for bash user:
 
 ```bash
 ############################  Python  ###############################
 if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
-
-##--------- conda ------------------## 
-export PYTHON3DIR=~/python/miniconda3
-export PATH=${PATH}:${PYTHON3DIR}/bin
-export PROJ_LIB=${PYTHON3DIR}/share/proj   #Temporary fix for basemap import error
 
 ##--------- PySAR ------------------## 
 export PYSAR_HOME=~/python/PySAR
@@ -67,14 +36,23 @@ export PYTHONPATH=${PYTHONPATH}:${PYSAR_HOME}
 export PATH=${PATH}:${PYSAR_HOME}/pysar:${PYSAR_HOME}/sh   
 ```
 
-Source the file for the first time. It will be sourced automatically next time when you login. An example of .cshrc is [here](https://github.com/yunjunz/macOS_Setup/blob/master/cshrc.md).
-   
-   
-#### 2. Install Python dependecies
+Source the file for the first time. It will be sourced automatically next time when you login. [Here](https://github.com/yunjunz/macOS_Setup/blob/master/cshrc.md) is an example _.cshrc_ file for csh/tcsh user.
+
+
+### 2. Install Python dependecies
 PySAR is written in Python3 (3.5+) and it relies on several Python modules, check the [requirements.txt](./requirements.txt) file for details. We recommend using [conda](https://conda.io/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
 
+#### Installing via conda
 
-For conda user, run the following in your terminal in _bash/tcsh_:   
+Add to your **_~/.bash_profile_** file:
+
+```bash
+export PYTHON3DIR=~/python/miniconda3
+export PATH=${PATH}:${PYTHON3DIR}/bin
+export PROJ_LIB=${PYTHON3DIR}/share/proj   #Temporary fix for basemap import error
+```
+
+Run the following in your terminal:
 
 ```
 cd ~/python
@@ -86,24 +64,49 @@ $PYTHON3DIR/bin/conda config --add channels conda-forge
 $PYTHON3DIR/bin/conda install --yes --file $PYSAR_HOME/docs/conda.txt
 
 git clone https://github.com/yunjunz/pykml.git; cd pykml
-$PYTHON3DIR/bin/python3 setup.py build     
-$PYTHON3DIR/bin/python3 setup.py install    
+$PYTHON3DIR/bin/python3 setup.py build
+$PYTHON3DIR/bin/python3 setup.py install
 ```
-   
-For macports user, install modules in the [ports.txt](https://github.com/insarlab/PySAR/blob/master/docs/ports.txt) file as below in _bash_:       
+
+#### Installing via MacPorts
+
+Install [macports](https://www.macports.org/install.php) if you have not done so. Add the following at the bottom of your **_~/.bash_profile_** file:
+
+```bash
+# MacPorts Installer addition on 2017-09-02_at_01:27:12: adding an appropriate PATH variable for use with MacPorts.
+export PATH=/opt/local/bin:/opt/local/sbin:${PATH}
+export MANPATH=/opt/local/share/man:${MANPATH}
+# Finished adapting your PATH environment variable for use with MacPorts.
+
+#For py36-pyhdf in macports
+export INCLUDE_DIRS=/opt/local/include
+export LIBRARY_DIRS=/opt/local/lib
+```
+
+Update the port tree with the following command. If your network prevent the use of rsync or svn via http of port tree, try [Portfile Sync via a Snapshot Tarball](https://trac.macports.org/wiki/howto/PortTreeTarball).
+
+```
+sudo port selfupdate
+```
+
+Run the following in your terminal in _bash_:
 
 ```bash
 sudo port install $(cat $PYSAR_HOME/docs/ports.txt)
 
+git clone https://github.com/fhs/pyhdf.git; cd pyhdf
+python3 setup.py build
+python3 setup.py install
+
 git clone https://github.com/yunjunz/pykml.git; cd pykml
-python3 setup.py build     
-python3 setup.py install   
+python3 setup.py build
+python3 setup.py install
 ```
 
 #### Notes on pyKML
 
 The pykml installed through conda/pip supports python2 only, the python2/3 compatible version is available [here](https://github.com/yunjunz/pykml.git) and installed throught the command line above by default.
-  
+
 #### Notes on [PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main)
 
 + We use PyAPS for tropospheric delay correction calculated from Global Atmospheric Models (GAMs) such as ERA-Interim, MERRA and NARR. Check [Caltech Earthdef](http://earthdef.caltech.edu) for the code download and account setup information for various GAM datasets.    
@@ -115,6 +118,6 @@ directory, PySAR applications will download the GAM files into the indicated dir
 application will look for the GAM files in the directory before downloading a new one to prevent downloading
 multiple copies if you work with different dataset that cover the same date/time.
 
-+ For macports, install [pyhdf](https://github.com/fhs/pyhdf) from source archive following the instruction [here](https://github.com/fhs/pyhdf/blob/master/doc/install.rst#installing-from-the-source-archive)
+#### Notes on vim
 
 [Here](https://github.com/yunjunz/macOS_Setup/blob/master/vim.md) is some useful setup of Vim editor for general use and Python.
