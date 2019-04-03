@@ -81,6 +81,12 @@ def manual_offset_estimate(matrix1, matrix2):
     By manually selecting a line from each of them, and estimate the difference.
     It usually used when 2 input data matrix have no area in common.
     """
+    def onclick(event):
+        if event.button == 1:
+            print('click')
+            xc.append(int(event.xdata))
+            yc.append(int(event.ydata))
+
     # Select line from data matrix 1
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -89,12 +95,6 @@ def manual_offset_estimate(matrix1, matrix2):
     yc = []
     print('please click on start and end point of the desired profile/line')
     print('afterward close the figure to continue the process')
-
-    def onclick(event):
-        if event.button == 1:
-            print('click')
-            xc.append(int(event.xdata))
-            yc.append(int(event.ydata))
     cid = fig.canvas.mpl_connect('button_press_event', onclick)
     plt.show()
     x0 = xc[0]
@@ -110,12 +110,6 @@ def manual_offset_estimate(matrix1, matrix2):
     yc = []
     print('please click on start and end point of the desired profile')
     print('afterward close the figure to continue the process')
-
-    def onclick(event):
-        if event.button == 1:
-            print('click')
-            xc.append(int(event.xdata))
-            yc.append(int(event.ydata))
     cid = fig.canvas.mpl_connect('button_press_event', onclick)
     plt.show()
     x00 = xc[0]
@@ -125,8 +119,8 @@ def manual_offset_estimate(matrix1, matrix2):
 
     # Calculate the Offset - Difference
     # offset=V2[y00:y11,x00:x11]-V2[y0:y1,x0:x1]
-    offset = np.nansum(V2[y00:y11, x00:x11]) / np.sum(np.isfinite(V2[y00:y11, x00:x11]))\
-        - np.nansum(V1[y0:y1, x0:x1]) / np.sum(np.isfinite(V1[y0:y1, x0:x1]))
+    offset = np.nansum(V2[y00:y11, x00:x11]) / np.sum(np.isfinite(V2[y00:y11, x00:x11]))
+             - np.nansum(V1[y0:y1, x0:x1]) / np.sum(np.isfinite(V1[y0:y1, x0:x1]))
 
     return offset
 

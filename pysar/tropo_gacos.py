@@ -68,8 +68,8 @@ def get_delay(delay_file,atr,lookup_file,cinc):
             lons=np.tile(lons,ny);lats=np.repeat(lats,nx);
             pts_old=np.hstack((lats.reshape(-1,1), lons.reshape(-1,1)));
             atr_lut = readfile.read_attribute(lookup_file)
-            lon_lut = readfile.read(lookup_file, epoch='longitude')[0]
-            lat_lut = readfile.read(lookup_file, epoch='latitude')[0]
+            lon_lut = readfile.read(lookup_file, datasetName='longitude')[0]
+            lat_lut = readfile.read(lookup_file, datasetName='latitude')[0]
             pts_new=np.hstack((lat_lut.reshape(-1,1), lon_lut.reshape(-1,1)));
             delay_rdr=griddata(pts_old, data.flatten(), pts_new, method='linear')
             delay_rdr=delay_rdr.reshape(len_rdr,wid_rdr)
@@ -155,7 +155,7 @@ def main(argv):
 
     #****reading incidence angle file***/
     if os.path.isfile(inps.inc_angle):
-        inps.inc_angle=readfile.read(inps.inc_angle, epoch='incidenceAngle')[0]
+        inps.inc_angle=readfile.read(inps.inc_angle, datasetName='incidenceAngle')[0]
         inps.inc_angle=np.nan_to_num(inps.inc_angle)
     else:
         inps.inps.inc_angle = float(inps.inc_angle)
