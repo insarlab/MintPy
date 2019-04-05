@@ -793,7 +793,7 @@ class TimeSeriesAnalysis:
         tropo_model = self.template['pysar.troposphericDelay.weatherModel']
         tropo_file = './INPUTS/{}.h5'.format(tropo_model)
         if os.path.isfile(tropo_file):
-            suffix = os.path.splitext(os.path.basename(tropo_file))[0].title()
+            suffix = os.path.splitext(os.path.basename(tropo_file))[0]  #.title()
             tropo_vel_file = '{}{}.h5'.format(os.path.splitext(vel_file)[0], suffix)
             scp_args= '{f} -t {t} -o {o} --update'.format(f=tropo_file,
                                                           t=self.templateFile,
@@ -856,7 +856,9 @@ class TimeSeriesAnalysis:
 
             # update mode
             try:
-                kmz_file = [i for i in [kmz_file, 'PIC/{}'.format(kmz_file)] if os.path.isfile(i)][0]
+                fbase = os.path.basename(kmz_file)
+                kmz_file = [i for i in [fbase, './GEOCODE/{}'.format(fbase), './PIC/{}'.format(fbase)] 
+                            if os.path.isfile(i)][0]
             except:
                 kmz_file = None
             if ut.run_or_skip(out_file=kmz_file, in_file=vel_file, check_readable=False) == 'run':
