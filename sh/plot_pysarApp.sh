@@ -112,7 +112,7 @@ fi
 
 
 if [ $plot_the_rest -eq 1 ]; then
-    for trop in 'Ecmwf' 'Merra' 'Narr'
+    for trop in 'ECMWF' 'MERRA' 'NARR'
     do
         file=velocity${trop}.h5;    test -f $file && $view $file --mask no >> $log_file
     done
@@ -122,7 +122,5 @@ fi
 
 ## Move picture files to PIC folder
 echo "Move *.png/pdf/kmz files into ./PIC folder."
-mv *.png PIC/
-mv *.pdf PIC/
-mv *.kmz ./GEOCODE/*.kmz PIC/
+mv *.png *.pdf *.kmz ./GEOCODE/*.kmz PIC/
 
