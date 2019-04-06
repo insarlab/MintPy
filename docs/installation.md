@@ -56,9 +56,9 @@ Run the following in your terminal:
 
 ```
 cd ~/python
-wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
-chmod +x Miniconda3-latest-MacOSX-x86_64.sh
-./Miniconda3-latest-MacOSX-x86_64.sh -b -p $PYTHON3DIR
+wget https://repo.continuum.io/miniconda/Miniconda3-4.5.4-MacOSX-x86_64.sh
+chmod +x Miniconda3-4.5.4-MacOSX-x86_64.sh
+./Miniconda3-4.5.4-MacOSX-x86_64.sh -b -p $PYTHON3DIR
 
 $PYTHON3DIR/bin/conda config --add channels conda-forge
 $PYTHON3DIR/bin/conda install --yes --file $PYSAR_HOME/docs/conda.txt
