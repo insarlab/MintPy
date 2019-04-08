@@ -1,5 +1,6 @@
 basemap
 cvxopt
+dask>=1.0,<2.0
 ecCodes
 h5py
 lxml

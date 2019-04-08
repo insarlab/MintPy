@@ -1,5 +1,7 @@
 basemap
+bokeh
 cvxopt
+dask[complete]>=1.0,<2.0
 ecCodes
 h5py
 lxml
