@@ -161,9 +161,16 @@ def clean_metadata4roipac(atr_in):
     for key, value in atr_in.items():
         atr[key] = str(value)
 
+    # drop the following keys
     key_list = ['width', 'Width', 'samples', 'length', 'lines']
     for key in key_list:
         if key in atr.keys():
+            atr.pop(key)
+
+    # drop all keys that are not all UPPER_CASE
+    key_list = list(atr.keys())
+    for key in key_list:
+        if not key.isupper():
             atr.pop(key)
 
     atr['FILE_LENGTH'] = atr['LENGTH']
@@ -178,7 +185,7 @@ def main(iargs=None):
 
     atr = clean_metadata4roipac(atr)
 
-    print('writing >>> {}'.format(out_file))
+    #print('writing >>> {}'.format(out_file))
     writefile.write(data, out_file=out_file, metadata=atr)
     return inps.outfile
 

@@ -115,7 +115,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             data_list.append(datasetDict[key])
 
         # Write Data File
-        print('writing {}'.format(out_file))
+        print('write {}'.format(out_file))
         if ext in ['.unw', '.cor', '.hgt']:
             write_float32(data_list[0], out_file)
             meta['DATA_TYPE'] = 'float32'

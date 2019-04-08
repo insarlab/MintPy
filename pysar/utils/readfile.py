@@ -313,8 +313,8 @@ def read_binary_file(fname, datasetName=None, box=None):
         data_type = atr['DATA_TYPE'].lower()
         if data_type in dataTypeDict.keys():
             data_type = dataTypeDict[data_type]
-        num_band = int(atr['number_bands'])
-        band_interleave = atr['scheme'].upper()
+        num_band = int(atr.get('number_bands', '1'))
+        band_interleave = atr.get('scheme', 'BIL').upper()
         byte_order = 'l'
 
         # data structure - file specific based on FILE_TYPE - k
