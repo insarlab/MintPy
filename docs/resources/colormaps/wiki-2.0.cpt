@@ -1,0 +1,49 @@
+# wiki-2.0.cpt
+#
+# extracted from Maps_template-fr.svg by Eric Gaba (Wikimedia 
+# Commons user: Sting) and others, released under the following 
+# licence:
+#
+# Permission is granted to copy, distribute and/or modify this document 
+# under the terms of the GNU Free Documentation License, Version 1.2 or 
+# any later version published by the Free Software Foundation; with no 
+# Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts. A 
+# copy of the license is included in the section entitled "GNU Free 
+# Documentation License".
+#
+# Translated by J.J. Green 2009, translation under same licence
+#
+# $Id: wiki-2.0.cpt.body,v 1.1 2009/05/04 15:32:51 jjg Exp $
+# COLOR_MODEL = RGB
+-10 113 171 216 -9  113 171 216
+-9  121 178 222 -8  121 178 222
+-8  132 185 227 -7  132 185 227
+-7  141 193 234 -6  141 193 234
+-6  150 201 240 -5  150 201 240
+-5  161 210 247 -4  161 210 247
+-4  172 219 251 -3  172 219 251
+-3  185 227 255 -2  185 227 255
+-2  198 236 255 -1  198 236 255
+-1  216 242 254 0   216 242 254
+0   172 208 165 1   172 208 165
+1   148 191 139 2   148 191 139
+2   168 198 143 3   168 198 143
+3   189 204 150 4   189 204 150
+4   209 215 171 5   209 215 171
+5   225 228 181 6   225 228 181
+6   239 235 192 7   239 235 192
+7   232 225 182 8   232 225 182
+8   222 214 163 9   222 214 163
+9   211 202 157 10  211 202 157
+10  202 185 130 11  202 185 130
+11  195 167 107 12  195 167 107
+12  185 152  90 13  185 152  90
+13  170 135  83 14  170 135  83
+14  172 154 124 15  172 154 124
+15  186 174 154 16  186 174 154
+16  202 195 184 17  202 195 184
+17  224 222 216 18  224 222 216
+18  245 244 242 19  245 244 242
+B   0   0   0
+F 255 255 255
+N 255   0   0

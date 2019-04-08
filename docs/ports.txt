@@ -1,0 +1,116 @@
+gcc5
+cmake
+gmake
+bison
+gawk
+autoconf
+autoconf-archive
+gconf
+coreutils
+automake
+pkgconfig
+dpkg
+ctags
+tree
+unzip
+unrar
+szip
+p7zip
+gzip
+gnutar
+cabextract
+gawk
+gsed
+wget +ssl
+freetype
+tiff
+openmotif
+subversion
+python27
+python36
+fftw +gcc5
+fftw-single +gcc5
+fftw-3 +gcc5
+fftw-3-long +gcc5
+fftw-3-single +gcc5
+aria2
+openldap
+openmpi-default +gcc5
+openmpi-gcc5 +fortran
+xorg-libXt +flat_namespace
+texlive +doc +full
+lapack +gfortran
+eigen3 +blas +gcc5
+gsl +gcc5
+cgal
+sfcgal
+bzr 
+git 
+rsync
+hdf4 
+hdf5 
+hdfeos 
+hdfeos5
+h5utils
+netcdf
+netcdf-cxx
+netcdf-fortran
+ecCodes +gcc5
+postgresql95
+postgresql95-server
+proj
+cairo
+scons
+pandoc
+opencv +python27
+gimp2
+ImageMagick
+samba3
+swig
+swig-python
+gdal +expat +geos +hdf4 +hdf5 +netcdf +openjpeg +postgresql95 +sqlite3 +grib
+py36-cython
+py36-mpi4py +gcc5 +openmpi
+py36-numpy +gcc5 +openblas
+py36-scipy +gcc5 +openblas
+py36-matplotlib +cairo +tkinter
+py36-matplotlib-basemap
+py36-pandas
+py36-sympy
+py36-yaml
+py36-simplejson
+py36-h5py
+py36-cartopy
+py36-shapely
+py36-fiona
+py36-networkx
+py36-scikit-image
+py36-ipython +notebook +parallel
+py36-dask
+py36-zmq
+py36-bokeh
+py36-dynd
+py36-sphinx
+py36-pip
+gmt5
+kealib
+pandoc
+zmq
+postgis2 +gui +postgresql95 +raster +sfcgal +topology
+wdiff
+cwdiff
+ndiff
+atlas +gcc5
+metis +gcc5
+parmetis +gcc5 +openmpi
+vecLibFort
+suitesparse +gcc5 +metis +atlas
+sundials +gcc5 +openmpi +atlas
+superlu
+superlu_dist +gcc5 +openmpi
+hypre +gcc5 +openmpi
+c2html
+sowing
+petsc +atlas +gcc5 +hypre +openmpi +parmetis +suitesparse +sundials +superlu +superlu_dist
+py36-petsc4py +gcc5 +openmpi
+py36-cvxopt +accelerate +dsdp +fftw +glpk +gsl

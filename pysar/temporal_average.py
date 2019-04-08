@@ -1,50 +1,110 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
-# Copyright(c) 2016, Zhang Yunjun                          #
+# Program is part of PySAR                                 #
+# Copyright(c) 2016-2018, Zhang Yunjun                     #
 # Author:  Zhang Yunjun                                    #
 ############################################################
-# Modified from load_data.py written by Heresh Fattahi.
-#
+
 
 import os
-import sys
-
-import pysar._pysar_utilities as ut
+import time
+import argparse
+import h5py
+from pysar.utils import utils as ut, readfile
 
 
 #################################  Usage  ####################################
-def usage():
-    print '''usage:  temporal_average.py  file  [output_file]
+EXAMPLE = """example:
+  temporal_average.py ./INPUTS/ifgramStack.h5 -d unwrapPhase -o avgPhaseVelocity.h5
+  temporal_average.py ./INPUTS/ifgramStack.h5 -d coherence   -o avgSpatialCoh.h5
+"""
 
-Calculate temporal average/mean of multi-temporal datasets.
+def create_parser():
+    parser = argparse.ArgumentParser(description='Calculate temporal average (stacking) of multi-temporal datasets',
+                                     formatter_class=argparse.RawTextHelpFormatter,
+                                     epilog=EXAMPLE)
 
-arguments:
-  file        : string, file with multiple datasets/groups, e.g. timeseries.h5, coherence.h5, unwrapIfgram.h5
-  output_file : string, path/name of output temporal average file
+    parser.add_argument('file', type=str, help='input file with multi-temporal datasets')
+    parser.add_argument('-d', '--ds', '--dataset', dest='datasetName', default='coherence',
+                        help='dataset name to be averaged, for file with multiple dataset family,\n'+
+                        'e.g. ifgramStack.h5\n' +
+                        'default: coherence')
+    parser.add_argument('-o', '--outfile', help='output file name')
+    parser.add_argument('--update', dest='update_mode', action='store_true',
+                        help='Enable update checking for --nonzero option.')
+    return parser
 
-example:
-  temporal_average.py  coherence.h5  averageSpatialCoherence.h5
-    '''
-    return
+
+def cmd_line_parse(iargs=None):
+    """Command line parser."""
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
+    return inps
+
+
+def check_output_filename(inps):
+    ext = os.path.splitext(inps.file)[1]
+    atr = readfile.read_attribute(inps.file)
+    k = atr['FILE_TYPE']
+    if not inps.outfile:
+        if k == 'ifgramStack':
+            if inps.datasetName == 'coherence':
+                inps.outfile = 'avgSpatialCoh.h5'
+            elif 'unwrapPhase' in inps.datasetName:
+                inps.outfile = 'avgPhaseVelocity.h5'
+            else:
+                inps.outfile = 'avg{}.h5'.format(inps.datasetName)
+        elif k == 'timeseries':
+            processMark = os.path.basename(inps.file).split('timeseries')[1].split(ext)[0]
+            inps.outfile = 'avgDisplacement{}.h5'.format(processMark)
+        else:
+            inps.outfile = 'avg{}.h5'.format(inps.file)
+    print('output file: {}'.format(inps.outfile))
+    return inps.outfile
+
+
+def run_or_skip(inps):
+    print('-'*50)
+    print('update mode: ON')
+    flag = 'skip'
+
+    # check output file vs input dataset
+    if not os.path.isfile(inps.outfile):
+        flag = 'run'
+        print('1) output file {} NOT exist.'.format(inps.outfile))
+    else:
+        print('1) output file {} already exists.'.format(inps.outfile))
+        with h5py.File(inps.file, 'r') as f:
+            ti = float(f[inps.datasetName].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.file)))
+        to = os.path.getmtime(inps.outfile)
+        if ti > to:
+            flag = 'run'
+            print('2) output file is NOT newer than input dataset: {}.'.format(inps.datasetName))
+        else:
+            print('2) output file is newer than input dataset: {}.'.format(inps.datasetName))
+
+    # result
+    print('run or skip: {}.'.format(flag))
+    return flag
 
 
 #############################  Main Function  ################################
-def main(argv):
+def main(iargs=None):
+    start_time = time.time()
+    inps = cmd_line_parse(iargs)
 
-    try:
-        File = argv[0]
-    except:
-        usage(); sys.exit(1)
+    inps.outfile = check_output_filename(inps)
 
-    try:    outName = argv[1]
-    except: outName = os.path.splitext(File)[0]+'_tempAverage.h5'
+    if inps.update_mode and run_or_skip(inps) == 'skip':
+        return inps.outfile
 
-    outName = ut.temporal_average(File, outName)
-    print 'Done.'
-    return outName
+    inps.outfile = ut.temporal_average(inps.file, datasetName=inps.datasetName, outFile=inps.outfile)
+
+    m, s = divmod(time.time()-start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs\n'.format(m, s))
+    return inps.outfile
 
 
 ##############################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()

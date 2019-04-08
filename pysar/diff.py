@@ -1,187 +1,194 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python
 ############################################################
-# Program is part of PySAR v1.2                            #
-# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
-# Author:  Heresh Fattahi, Zhang Yunjun                    #
+# Program is part of PySAR                                 #
+# Copyright(c) 2013-2019, Zhang Yunjun, Heresh Fattahi     #
+# Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
-#
-# Yunjun, Mar 2016: add diff_data()
-# Yunjun, Apr 2017: add diff_file()
-# Yunjun, test comment
 
 import os
-import sys
+import time
 import argparse
-
 import numpy as np
-import h5py
-
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._datetime as ptime
+from pysar.objects import timeseries, giantTimeseries, ifgramStack, ifgramDatasetNames
+from pysar.utils import readfile, writefile
 
 
 #####################################################################################
-def diff_data(data1,data2):
-    '''data1 - data2'''
-    data = data1 - data2
-    #data[np.isnan(data2)] = data1[np.isnan(data2)];
-    return data
+EXAMPLE = """example:
+  diff.py  velocity.h5    velocity_demErr.h5
+  diff.py  timeseries.h5  ECMWF.h5  -o timeseries_ECMWF.h5
+  diff.py  timeseries.h5  ECMWF.h5  -o timeseries_ECMWF.h5  --force
+  diff.py  timeseries_ECMWF_demErr_ramp.h5  ../GIANT/Stack/LS-PARAMS.h5 -o pysar_giant.h5
+  diff.py  reconUnwrapIfgram.h5  ./INPUTS/ifgramStack.h5  -o diffUnwrapIfgram.h5
+
+  # multiple files
+  diff.py  waterMask.h5  maskSantiago.h5  maskFernandina.h5  -o maskIsabela.h5
+"""
 
 
-def diff_file(file1, file2, outName=None, force=False):
-    '''Subtraction/difference of two input files'''
-    if not outName:
-        outName = os.path.splitext(file1)[0]+'_diff_'+os.path.splitext(os.path.basename(file2))[0]+\
-                  os.path.splitext(file1)[1]
-    
-    print file1+' - '+file2
-    # Read basic info
-    atr  = readfile.read_attribute(file1)
-    print 'Input first file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']
-    k = atr['FILE_TYPE']
-
-    # Multi-dataset/group file
-    if k in ['timeseries','interferograms','coherence','wrapped']:
-        # Check input files type for multi_dataset/group files
-        atr2 = readfile.read_attribute(file2)
-        k2 = atr2['FILE_TYPE']
-
-        h5_1  = h5py.File(file1)
-        h5_2  = h5py.File(file2)
-        epochList = sorted(h5_1[k].keys())
-        epochList2 = sorted(h5_2[k2].keys())
-        if not all(i in epochList2 for i in epochList):
-            print 'ERROR: '+file2+' does not contain all group of '+file1
-            if force and k in ['timeseries']:
-                print 'Continue and enforce the differencing for their shared dates only!'
-            else:
-                sys.exit(1)
-
-        h5out = h5py.File(outName,'w')
-        group = h5out.create_group(k)
-        print 'writing >>> '+outName
-
-        epoch_num = len(epochList)
-        prog_bar = ptime.progress_bar(maxValue=epoch_num)
-
-    if k in ['timeseries']:
-        print 'number of acquisitions: '+str(len(epochList))
-        # check reference date
-        if atr['ref_date'] == atr2['ref_date']:
-            ref_date = None
-        else:
-            ref_date = atr['ref_date']
-            data2_ref = h5_2[k2].get(ref_date)[:]
-            print 'consider different reference date'
-        # check reference pixel
-        ref_y = int(atr['ref_y'])
-        ref_x = int(atr['ref_x'])
-        if ref_y == int(atr2['ref_y']) and ref_x == int(atr2['ref_x']):
-            ref_y = None
-            ref_x = None
-        else:
-            print 'consider different reference pixel'
-
-        # calculate difference in loop
-        for i in range(epoch_num):
-            date = epochList[i]
-            data1 = h5_1[k].get(date)[:]
-            if date in epochList2:
-                data2 = h5_2[k2].get(date)[:]
-                if ref_date:
-                    data2 -= data2_ref
-                if ref_x and ref_y:
-                    data2 -= data2[ref_y, ref_x]
-                data = diff_data(data1, data2)
-            elif force:
-                data = data1
-            else:
-                sys.exit('dataset %s is not found in file %' % (date, file2))
-
-            dset = group.create_dataset(date, data=data, compression='gzip')
-            prog_bar.update(i+1, suffix=date)
-        for key,value in atr.iteritems():
-            group.attrs[key] = value
-
-        prog_bar.close()
-        h5out.close()
-        h5_1.close()
-        h5_2.close()
-
-    elif k in ['interferograms','coherence','wrapped']:
-        print 'number of interferograms: '+str(len(epochList))
-        date12_list = ptime.list_ifgram2date12(epochList)
-        for i in range(epoch_num):
-            epoch1 = epochList[i]
-            epoch2 = epochList2[i]
-            data1 = h5_1[k][epoch1].get(epoch1)[:]
-            data2 = h5_2[k2][epoch2].get(epoch2)[:]
-            data = diff_data(data1, data2)  
-            gg = group.create_group(epoch1)
-            dset = gg.create_dataset(epoch1, data=data, compression='gzip')
-            for key, value in h5_1[k][epoch1].attrs.iteritems():
-                gg.attrs[key] = value
-            prog_bar.update(i+1, suffix=date12_list[i])
-
-        prog_bar.close()
-        h5out.close()
-        h5_1.close()
-        h5_2.close()
-  
-    # Sing dataset file
-    else:
-        data1, atr1 = readfile.read(file1)
-        data2, atr2 = readfile.read(file2)
-        data = diff_data(data1, data2)
-        print 'writing >>> '+outName
-        writefile.write(data, atr1, outName)
-
-    return outName
-
-
-#####################################################################################
-def usage():
-    print '''usage:  diff.py  file1  file2  [ outfile ] [--force]
-
-Generates the difference of two input files.
-
-positional arguments:
-  file1/2               file 1 and 2 used for differencing
-
-optional argument:
-  outfile               
-
-example:
-    '''
-    return
-EXAMPLE='''example:
-  diff.py  velocity.h5      velocity_demCor.h5
-  diff.py  timeseries.h5    ECMWF.h5  -o timeseries_ECMWF.h5  --force
-  diff.py  unwrapIfgram.h5  reconstruct_unwrapIfgram.h5
-'''
-
-def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Generates the difference of two input files.',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+def create_parser():
+    parser = argparse.ArgumentParser(description='Generates the difference of two input files.',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
     parser.add_argument('file1', help='file to be substracted.')
-    parser.add_argument('file2', help='file used to substract')
-    parser.add_argument('-o','--output', dest='outfile', help='output file name, default is file1_diff_file2.h5')
-    parser.add_argument('--force', action='store_true',\
+    parser.add_argument('file2', nargs='+', help='file used to substract')
+    parser.add_argument('-o', '--output', dest='outfile',
+                        help='output file name, default is file1_diff_file2.h5')
+    parser.add_argument('--force', action='store_true',
                         help='Enforce the differencing for the shared dates only for time-series files')
-    inps = parser.parse_args()
+    return parser
+
+
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
+
 #####################################################################################
-def main(argv):
-    inps = cmdLineParse()
+def _check_reference(atr1, atr2):
+    if atr1['REF_DATE'] == atr2['REF_DATE']:
+        ref_date = None
+    else:
+        ref_date = atr1['REF_DATE']
+        print('consider different reference date')
+
+    ref_y = int(atr1['REF_Y'])
+    ref_x = int(atr1['REF_X'])
+    if ref_y == int(atr2['REF_Y']) and ref_x == int(atr2['REF_X']):
+        ref_y = None
+        ref_x = None
+    else:
+        print('consider different reference pixel')
+    return ref_date, ref_y, ref_x
+
+
+def diff_file(file1, file2, outFile=None, force=False):
+    """Subtraction/difference of two input files"""
+    if not outFile:
+        fbase, fext = os.path.splitext(file1)
+        if len(file2) > 1:
+            raise ValueError('Output file name is needed for more than 2 files input.')
+        outFile = '{}_diff_{}{}'.format(fbase, os.path.splitext(os.path.basename(file2[0]))[0], fext)
+    print('{} - {} --> {}'.format(file1, file2, outFile))
+
+    # Read basic info
+    atr1 = readfile.read_attribute(file1)
+    k1 = atr1['FILE_TYPE']
+    atr2 = readfile.read_attribute(file2[0])
+    k2 = atr2['FILE_TYPE']
+    print('input files are: {} and {}'.format(k1, k2))
+
+    if k1 == 'timeseries':
+        if k2 not in ['timeseries', 'giantTimeseries']:
+            raise Exception('Input multiple dataset files are not the same file type!')
+        if len(file2) > 1:
+            raise Exception(('Only 2 files substraction is supported for time-series file,'
+                             ' {} input.'.format(len(file2)+1)))
+
+        obj1 = timeseries(file1)
+        obj1.open()
+        if k2 == 'timeseries':
+            obj2 = timeseries(file2[0])
+            unit_fac = 1.
+        elif k2 == 'giantTimeseries':
+            obj2 = giantTimeseries(file2[0])
+            unit_fac = 0.001
+        obj2.open()
+        ref_date, ref_y, ref_x = _check_reference(obj1.metadata, obj2.metadata)
+
+        # check dates shared by two timeseries files
+        dateListShared = [i for i in obj1.dateList if i in obj2.dateList]
+        dateShared = np.ones((obj1.numDate), dtype=np.bool_)
+        if dateListShared != obj1.dateList:
+            print('WARNING: {} does not contain all dates in {}'.format(file2, file1))
+            if force:
+                dateExcluded = list(set(obj1.dateList) - set(dateListShared))
+                print('Continue and enforce the differencing for their shared dates only.')
+                print('\twith following dates are ignored for differencing:\n{}'.format(dateExcluded))
+                dateShared[np.array([obj1.dateList.index(i) for i in dateExcluded])] = 0
+            else:
+                raise Exception('To enforce the differencing anyway, use --force option.')
+
+        # consider different reference_date/pixel
+        data2 = readfile.read(file2[0], datasetName=dateListShared)[0] * unit_fac
+        if ref_date:
+            data2 -= np.tile(data2[obj2.dateList.index(ref_date), :, :],
+                             (data2.shape[0], 1, 1))
+        if ref_y and ref_x:
+            data2 -= np.tile(data2[:, ref_y, ref_x].reshape(-1, 1, 1),
+                             (1, data2.shape[1], data2.shape[2]))
+
+        data = obj1.read()
+        mask = data == 0.
+        data[dateShared] -= data2
+        data[mask] = 0.               # Do not change zero phase value
+        del data2
+        writefile.write(data, out_file=outFile, ref_file=file1)
+
+    elif all(i == 'ifgramStack' for i in [k1, k2]):
+        obj1 = ifgramStack(file1)
+        obj1.open()
+        obj2 = ifgramStack(file2[0])
+        obj2.open()
+        dsNames = list(set(obj1.datasetNames) & set(obj2.datasetNames))
+        if len(dsNames) == 0:
+            raise ValueError('no common dataset between two files!')
+        dsName = [i for i in ifgramDatasetNames if i in dsNames][0]
+
+        # read data
+        print('reading {} from file {} ...'.format(dsName, file1))
+        data1 = readfile.read(file1, datasetName=dsName)[0]
+        print('reading {} from file {} ...'.format(dsName, file2[0]))
+        data2 = readfile.read(file2[0], datasetName=dsName)[0]
+
+        # consider reference pixel
+        if 'unwrapphase' in dsName.lower():
+            print('referencing to pixel ({},{}) ...'.format(obj1.refY, obj1.refX))
+            ref1 = data1[:, obj1.refY, obj1.refX]
+            ref2 = data2[:, obj2.refY, obj2.refX]
+            for i in range(data1.shape[0]):
+                data1[i,:][data1[i, :] != 0.] -= ref1[i]
+                data2[i,:][data2[i, :] != 0.] -= ref2[i]
+
+        # operation and ignore zero values
+        data1[data1 == 0] = np.nan
+        data2[data2 == 0] = np.nan
+        data = data1 - data2
+        del data1, data2
+        data[np.isnan(data)] = 0.
+
+        # write to file
+        dsDict = {}
+        dsDict[dsName] = data
+        writefile.write(dsDict, out_file=outFile, ref_file=file1)
+
+    # Sing dataset file
+    else:
+        data1 = readfile.read(file1)[0]
+        data = np.array(data1, data1.dtype)
+        for fname in file2:
+            data2 = readfile.read(fname)[0]
+            data = np.array(data, dtype=np.float32) - np.array(data2, dtype=np.float32)
+            data = np.array(data, data1.dtype)
+        print('writing >>> '+outFile)
+        writefile.write(data, out_file=outFile, metadata=atr1)
+
+    return outFile
+
+
+def main(iargs=None):
+    inps = cmd_line_parse(iargs)
+    start_time = time.time()
+
     inps.outfile = diff_file(inps.file1, inps.file2, inps.outfile, force=inps.force)
+
+    m, s = divmod(time.time()-start_time, 60)
+    #print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))
     return inps.outfile
 
 
 #####################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])  
-
+    main()

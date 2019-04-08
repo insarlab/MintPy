@@ -1,8 +1,8 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
-# Copyright(c) 2017, Zhang Yunjun                          #
-# Author:  Zhang Yunjun                                    #
+# Program is part of PySAR                                 #
+# Copyright(c) 2017-2018, Zhang Yunjun                     #
+# Author:  Zhang Yunjun, 2017                              #
 ############################################################
 
 
@@ -11,590 +11,304 @@ import sys
 import time
 import argparse
 import warnings
-
-import h5py
+import multiprocessing
 import numpy as np
-from scipy.interpolate import RegularGridInterpolator as RGI
-import scipy.spatial.qhull as qhull
-
-
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
-
-
-def geocode_output_filename(fname):
-    if 'geometryRadar' in fname:
-        fname_out = os.path.basename(fname).replace('geometryRadar','geometryGeo')
-    else:
-        fname_out = 'geo_'+os.path.basename(fname)
-    fname_out = os.getcwd()+'/'+fname_out
-    return fname_out
-
-
-############################ Geocoded with lut in geo coord #########################
-def update_attribute_geo_lut(atr_rdr, atr_lut, print_msg=True):
-    '''Get attributes in geo coord from atr_rdr dict and atr_lut dict
-    Inputs:
-        atr_rdr : dict, attributes of file in radar coord
-        atr_lut : dict, attributes of mapping transformation file
-        print_msg : bool, print out message or not
-    Output:
-        atr : dict, attributes of output file in geo coord.
-    '''
-
-    # copy atr_rdr
-    atr = dict()
-    for key, value in atr_rdr.iteritems():
-        atr[key] = str(value)
-
-    atr['FILE_LENGTH'] = atr_lut['FILE_LENGTH']
-    atr['WIDTH']   = atr_lut['WIDTH']
-    atr['Y_FIRST'] = atr_lut['Y_FIRST']
-    atr['X_FIRST'] = atr_lut['X_FIRST']
-    atr['Y_STEP']  = atr_lut['Y_STEP']
-    atr['X_STEP']  = atr_lut['X_STEP']
-    try:    atr['Y_UNIT'] = atr_lut['Y_UNIT']
-    except: atr['Y_UNIT'] = 'degrees'
-    try:    atr['X_UNIT'] = atr_lut['X_UNIT']
-    except: atr['X_UNIT'] = 'degrees'
-
-    # Reference point from y/x to lat/lon
-    if 'ref_y' in atr_rdr.keys() and 'ref_x' in atr_rdr.keys():
-        ref_x_rdr = np.array(int(atr_rdr['ref_x']))
-        ref_y_rdr = np.array(int(atr_rdr['ref_y']))
-        trans_file = atr_lut['FILE_PATH']
-        ref_lat, ref_lon = ut.radar2glob(ref_y_rdr, ref_x_rdr, trans_file, atr_rdr, print_msg=False)[0:2]
-        if ~np.isnan(ref_lat) and ~np.isnan(ref_lon):
-            ref_y = np.rint((ref_lat - float(atr['Y_FIRST'])) / float(atr['Y_STEP']))
-            ref_x = np.rint((ref_lon - float(atr['X_FIRST'])) / float(atr['X_STEP']))
-            atr['ref_lat'] = str(ref_lat)
-            atr['ref_lon'] = str(ref_lon)
-            atr['ref_y'] = str(int(ref_y))
-            atr['ref_x'] = str(int(ref_x))
-            if print_msg:
-                print 'update ref_lat/lon/y/x'
-        else:
-            warnings.warn("original reference pixel is out of .trans file's coverage. Continue.")
-            try: atr.pop('ref_y')
-            except: pass
-            try: atr.pop('ref_x')
-            except: pass
-            try: atr.pop('ref_lat')
-            except: pass
-            try: atr.pop('ref_lon')
-            except: pass
-    return atr
-
-
-def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
-    '''Geocode file using ROI_PAC/Gamma lookup table file.
-    Related module: scipy.interpolate.RegularGridInterpolator
-
-    Inputs:
-        fname      : string, file to be geocoded
-        lookup_file   : string, optional, lookup table file genereated by ROIPAC or Gamma
-                     i.e. geomap_4rlks.trans           from ROI_PAC
-                          sim_150911-150922.UTM_TO_RDC from Gamma
-        interp_method     : string, optional, interpolation/resampling method, supporting nearest, linear
-        fill_value : value used for points outside of the interpolation domain.
-        fname_out  : string, optional, output geocoded filename
-    Output:
-        fname_out  : string, optional, output geocoded filename
-    '''
-
-    start = time.time()
-    ## Default Inputs and outputs
-    if not fname_out:
-        fname_out = geocode_output_filename(fname)
-
-    ##### Interpolate value on irregular radar coordinates (from lookup table file value)
-    ##### with known value on regular radar coordinates (from radar file attribute)
-    ## Grid/regular coordinates from row/column number in radar file
-    print '------------------------------------------------------'
-    print 'geocoding file: '+fname
-    atr_rdr = readfile.read_attribute(fname)
-    len_rdr = int(atr_rdr['FILE_LENGTH'])
-    wid_rdr = int(atr_rdr['WIDTH'])
-    pts_old = (np.arange(len_rdr), np.arange(wid_rdr))
-
-    ## Irregular coordinates from data value in lookup table
-    print 'reading lookup table file: '+lookup_file
-    atr_lut = readfile.read_attribute(lookup_file)
-    rg = readfile.read(lookup_file, epoch='range')[0]
-    az = readfile.read(lookup_file, epoch='azimuth')[0]
-    len_geo = int(atr_lut['FILE_LENGTH'])
-    wid_geo = int(atr_lut['WIDTH'])
-
-    # adjustment if input radar file has been subseted.
-    if 'subset_x0' in atr_rdr.keys():
-        x0 = float(atr_rdr['subset_x0'])
-        y0 = float(atr_rdr['subset_y0'])
-        rg -= x0
-        az -= y0
-        print '\tinput radar coord file has been subsetted, adjust lookup table value'
-
-    # extract pixels only available in radar file (get ride of invalid corners)
-    idx = (az>0.0)*(az<=len_rdr)*(rg>0.0)*(rg<=wid_rdr)
-    pts_new = np.hstack((az[idx].reshape(-1,1), rg[idx].reshape(-1,1)))
-    del az, rg
-
-    print 'geocoding using scipy.interpolate.RegularGridInterpolator ...'
-    data_geo = np.empty((len_geo, wid_geo))
-    data_geo.fill(inps.fill_value)
-    k = atr_rdr['FILE_TYPE']
-    ##### Multiple Dataset File
-    if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
-        h5 = h5py.File(fname,'r')
-        epoch_list = sorted(h5[k].keys())
-        epoch_num = len(epoch_list)
-        prog_bar = ptime.progress_bar(maxValue=epoch_num)
-
-        h5out = h5py.File(fname_out,'w')
-        group = h5out.create_group(k)
-        print 'writing >>> '+fname_out
-
-        if k in multi_dataset_hdf5_file:
-            print 'number of datasets: '+str(epoch_num)
-            for i in range(epoch_num):
-                date = epoch_list[i]
-                data = h5[k].get(date)[:]
-
-                RGI_func = RGI(pts_old, data, method=inps.interp_method,\
-                               bounds_error=False, fill_value=inps.fill_value)
-                data_geo[idx] = RGI_func(pts_new)
-
-                dset = group.create_dataset(date, data=data_geo, compression='gzip')
-                prog_bar.update(i+1, suffix=date)
-            prog_bar.close()
-
-            print 'update attributes'
-            atr = update_attribute_geo_lut(atr_rdr, atr_lut)
-            for key,value in atr.iteritems():
-                group.attrs[key] = value
-
-        elif k in multi_group_hdf5_file:
-            print 'number of interferograms: '+str(epoch_num)
-            try:    date12_list = ptime.list_ifgram2date12(epoch_list)
-            except: date12_list = epoch_list
-            for i in range(epoch_num):
-                ifgram = epoch_list[i]
-                data = h5[k][ifgram].get(ifgram)[:]
-
-                RGI_func = RGI(pts_old, data, method=inps.interp_method,\
-                               bounds_error=False, fill_value=inps.fill_value)
-                data_geo[idx] = RGI_func(pts_new)
-
-                gg = group.create_group(ifgram)
-                dset = gg.create_dataset(ifgram, data=data_geo, compression='gzip')
-
-                atr = update_attribute_geo_lut(h5[k][ifgram].attrs, atr_lut, print_msg=False)
-                for key, value in atr.iteritems():
-                    gg.attrs[key] = value
-                prog_bar.update(i+1, suffix=date12_list[i])
-        h5.close()
-        h5out.close()
-
-    ##### Single Dataset File
-    else:
-        print 'reading '+fname
-        data = readfile.read(fname)[0]
-        RGI_func = RGI(pts_old, data, method=inps.interp_method,\
-                       bounds_error=False, fill_value=inps.fill_value)
-        data_geo[idx] = RGI_func(pts_new)
-
-        print 'update attributes'
-        atr = update_attribute_geo_lut(atr_rdr, atr_lut)
-
-        print 'writing >>> '+fname_out
-        writefile.write(data_geo, atr, fname_out)
-
-    del data_geo
-    print 'finished writing file: %s' % (fname_out)
-    s = time.time()-start;  m, s = divmod(s, 60);  h, m = divmod(m, 60)
-    print 'Time used: %02d hours %02d mins %02d secs' % (h, m, s)
-    return fname_out
-
-
-############################ Geocoded with lut in radar coord #######################
-## Reference: https://stackoverflow.com/questions/20915502/speedup-scipy-griddata-for-
-## multiple-interpolations-between-two-irregular-grids
-def interp_weights(xy, uv,d=2):
-    '''calculate triangulation and coordinates transformation using qhull.Delaunay
-    1) Triangulate the irregular grid coordinates xy;
-    2) For each point in the new grid uv, search which simplex does it lay
-    3) Calculate barycentric coordinates with respect to the vertices of enclosing simplex
-    '''
-    tri = qhull.Delaunay(xy)
-    simplex = tri.find_simplex(uv)
-    vertices = np.take(tri.simplices, simplex, axis=0)
-    temp = np.take(tri.transform, simplex, axis=0)
-    delta = uv - temp[:, d]
-    bary = np.einsum('njk,nk->nj', temp[:, :d, :], delta)
-    return vertices, np.hstack((bary, 1 - bary.sum(axis=1, keepdims=True)))
-
-
-def interpolate(values, vtx, wts, fill_value=np.nan):
-    '''Interpolate values on new points'''
-    ret = np.einsum('nj,nj->n', np.take(values, vtx), wts)
-    ret[np.any(wts < 0, axis=1)] = fill_value
-    return ret
-
-
-def update_attribute_radar_lut(atr_rdr, inps, lat=None, lon=None, print_msg=True):
-    '''Get attributes in geo coord from atr_rdr dict and geo_data matrix
-    Inputs:
-        atr_rdr - dict, attribute of file in radar coord
-        inps    - Namespace, including items of the following:
-                  lat0/lon0
-                  lat_step/lon_step
-                  lat_num/lon_num
-        lat/lon - 2D np.array of lat/lon value
-    Output:
-        atr - dict, attributes of output file in geo coord.
-    '''
-    # copy atr_rdr
-    atr = dict()
-    for key, value in atr_rdr.iteritems():
-        atr[key] = str(value)
-
-    atr['FILE_LENGTH'] = str(inps.lat_num)
-    atr['WIDTH'] = str(inps.lon_num)
-    atr['Y_FIRST'] = str(inps.lat0)
-    atr['X_FIRST'] = str(inps.lon0)
-    atr['Y_STEP'] = str(inps.lat_step)
-    atr['X_STEP'] = str(inps.lon_step)
-    atr['Y_UNIT'] = 'degrees'
-    atr['X_UNIT'] = 'degrees'
-
-    ##Reference pixel
-    if ('ref_y' in atr_rdr.keys() and lat is not None and\
-        'ref_x' in atr_rdr.keys() and lon is not None):
-        length_rdr = int(atr_rdr['FILE_LENGTH'])
-        width_rdr = int(atr_rdr['WIDTH'])
-        ref_y_rdr = int(atr_rdr['ref_y'])
-        ref_x_rdr = int(atr_rdr['ref_x'])
-        ref_lat = lat[ref_y_rdr, ref_x_rdr]
-        ref_lon = lon[ref_y_rdr, ref_x_rdr]
-
-        ref_y = int(np.rint((ref_lat - inps.lat0) / inps.lat_step))
-        ref_x = int(np.rint((ref_lon - inps.lon0) / inps.lon_step))
-        if 0 <= ref_y <= inps.lat_num and 0 <= ref_x <= inps.lon_num:
-            ref_lat = inps.lat0 + ref_y * inps.lat_step
-            ref_lon = inps.lon0 + ref_x * inps.lon_step
-            atr['ref_lat'] = str(ref_lat)
-            atr['ref_lon'] = str(ref_lon)
-            atr['ref_y'] = str(ref_y)
-            atr['ref_x'] = str(ref_x)
-            if print_msg:
-                print 'update ref_lat/lon/y/x'
-        else:
-            warnings.warn("original reference pixel is out of lookup file's coverage. Continue.")
-            try: atr.pop('ref_y')
-            except: pass
-            try: atr.pop('ref_x')
-            except: pass
-            try: atr.pop('ref_lat')
-            except: pass
-            try: atr.pop('ref_lon')
-            except: pass
-    return atr
-
-
-def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
-    '''Geocode file using lookup table file in radar coordinates (isce).
-    Two solutions:
-    1) scipy.interpolate.griddata, with a speed up solution from Jaime and Jeff (Stack Overflow)
-        https://stackoverflow.com/questions/20915502/speedup-scipy-griddata-for-multiple-interpo
-        lations-between-two-irregular-grids
-    2) matplotlib.tri, interpolation from triangular grid to quad grid, which is much slower than 1).
-
-    Inputs:
-        fname       : string, file to be geocoded
-        lookup_file : string, lookup table file, geometryRadar.h5
-        fname_out   : string, optional, output geocoded filename
-        inps        : namespace, object with the following items:
-                      interp_method : string, interpolation/resampling method, supporting linear
-                      fill_value    : value used for points outside of the interpolation domain
-    Output:
-        fname_out  : string, optional, output geocoded filename
-    '''
-    start = time.time()
-    ## Default Inputs and outputs
-    if not inps:
-        inps = cmdLineParse()
-
-    if inps.interp_method != 'linear':
-        print 'ERROR: Supported interpolation method: linear'
-        print 'Input method is '+inps.interp_method
-        sys.exit(-1)
-
-    if not fname_out:
-        fname_out = geocode_output_filename(fname)
-
-    ## Read lookup table file
-    atr_rdr = readfile.read_attribute(fname)
-    length = int(atr_rdr['FILE_LENGTH'])
-    width = int(atr_rdr['WIDTH'])
-    print 'reading lookup table file '+lookup_file
-    lat = readfile.read(lookup_file, epoch='latitude')[0]
-    lon = readfile.read(lookup_file, epoch='longitude')[0]
-
-    #####Prepare output pixel grid: lat/lon range and step
-    if os.path.isfile(inps.lalo_step):
-        print 'use file %s as reference for output grid lat/lon range and step' % (inps.lalo_step)
-        atr_ref = readfile.read_attribute(inps.lalo_step)
-        inps.lat_step = float(atr_ref['Y_STEP'])
-        inps.lon_step = float(atr_ref['X_STEP'])
-        inps.lat_num = int(atr_ref['FILE_LENGTH'])
-        inps.lon_num = int(atr_ref['WIDTH'])
-        inps.lat0 = float(atr_ref['Y_FIRST'])
-        inps.lon0 = float(atr_ref['X_FIRST'])
-        inps.lat1 = inps.lat0 + inps.lat_step*inps.lat_num
-        inps.lon1 = inps.lon0 + inps.lon_step*inps.lon_num
-    else:
-        try:
-            inps.lat_step = -1*abs(float(inps.lalo_step))
-            inps.lon_step = abs(float(inps.lalo_step))
-            inps.lat0 = np.nanmax(lat)
-            inps.lat1 = np.nanmin(lat)
-            inps.lon0 = np.nanmin(lon)
-            inps.lon1 = np.nanmax(lon)
-            inps.lat_num = int((inps.lat1-inps.lat0)/inps.lat_step)
-            inps.lon_num = int((inps.lon1-inps.lon0)/inps.lon_step)
-            inps.lat_step = (inps.lat1 - inps.lat0)/inps.lat_num
-            inps.lon_step = (inps.lon1 - inps.lon0)/inps.lon_num
-        except ValueError:
-            print 'Input lat/lon step is neither a float number nor a file in geo-coord, please try again.'
-
-    print 'output lat range: %f - %f' % (inps.lat0, inps.lat1)
-    print 'output lon range: %f - %f' % (inps.lon0, inps.lon1)
-    print 'output lat_step : %f' % (inps.lat_step)
-    print 'output lon_step : %f' % (inps.lon_step)
-    print 'input  file size in   y/x  : %d/%d' % (length, width)
-    print 'output file size in lat/lon: %d/%d' % (inps.lat_num, inps.lon_num)
-
-    grid_lat, grid_lon = np.mgrid[inps.lat0:inps.lat1:inps.lat_num*1j,\
-                                  inps.lon0:inps.lon1:inps.lon_num*1j]
-
-
-    ##### Interpolate value on regular geo coordinates (from lookup table file attributes, 2D ndarray)
-    ##### with known value on irregular geo coordinates (from lookup table file value, tuple of ndarray of float)
-
-    ##Solution 1 - qhull
-    print 'calculate triangulation and coordinates transformation using scipy.spatial.qhull.Delaunay ...'
-    pts_old = np.hstack((lat.reshape(-1,1), lon.reshape(-1,1)))
-    pts_new = np.hstack((grid_lat.reshape(-1,1), grid_lon.reshape(-1,1)))
-    vtx, wts = interp_weights(pts_old, pts_new)
-    del pts_old, pts_new, grid_lat, grid_lon
-
-    ##Solution 2 - matplotlib.tri
-    #triang = mtri.Triangulation(lat.flatten(),lon.flatten())
-
-    data_geo = np.empty((inps.lat_num, inps.lon_num)).flatten()
-    data_geo.fill(inps.fill_value)
-    k = atr_rdr['FILE_TYPE']
-    ##### Multiple Dataset File
-    if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
-        h5 = h5py.File(fname,'r')
-        epoch_list = sorted(h5[k].keys())
-        epoch_num = len(epoch_list)
-        prog_bar = ptime.progress_bar(maxValue=epoch_num)
-
-        h5out = h5py.File(fname_out,'w')
-        group = h5out.create_group(k)
-        print 'writing >>> '+fname_out
-
-        if k in multi_dataset_hdf5_file:
-            print 'number of acquisitions: '+str(epoch_num)
-            for i in range(epoch_num):
-                date = epoch_list[i]
-                data = h5[k].get(date)[:]
-
-                data_geo = interpolate(data.flatten(), vtx, wts).reshape(inps.lat_num, inps.lon_num)
-
-                dset = group.create_dataset(date, data=data_geo, compression='gzip')
-                prog_bar.update(i+1, suffix=date)
-            prog_bar.close()
-
-            print 'update attributes'
-            atr = update_attribute_radar_lut(atr_rdr, inps, lat, lon)
-            for key,value in atr.iteritems():
-                group.attrs[key] = value
-
-        elif k in multi_group_hdf5_file:
-            print 'number of interferograms: '+str(epoch_num)
-            try:    date12_list = ptime.list_ifgram2date12(epoch_list)
-            except: date12_list = epoch_list
-            for i in range(epoch_num):
-                ifgram = epoch_list[i]
-                data = h5[k][ifgram].get(ifgram)[:]
-
-                data_geo = interpolate(data.flatten(), vtx, wts).reshape(inps.lat_num, inps.lon_num)
-
-                gg = group.create_group(ifgram)
-                dset = gg.create_dataset(ifgram, data=data_geo, compression='gzip')
-
-                atr = update_attribute_radar_lut(h5[k][ifgram].attrs, inps, lat, lon, print_msg=False)
-                for key, value in atr.iteritems():
-                    gg.attrs[key] = value
-                prog_bar.update(i+1, suffix=date12_list[i])
-            prog_bar.close()
-        h5.close()
-        h5out.close()
-
-    ##### Single Dataset File
-    else:
-        print 'reading '+fname
-        data = readfile.read(fname)[0]
-
-        ##Solution 1 - qhull
-        data_geo = interpolate(data.flatten(), vtx, wts).reshape(inps.lat_num, inps.lon_num)
-
-        ###Solution 2 - matplotlib.tri
-        #interp_lin = mtri.LinearTriInterpolator(triang, data.flatten())
-        #data_geo = interp_lin(grid_lat.flatten(), grid_lon.flatten())
-        #interp_cubic = mtri.CubicTriInterpolator(triang, data, kind='geom')
-        #data_geo = interp_cubic(grid_lat, grid_lon)
-
-        print 'update attributes'
-        atr = update_attribute_radar_lut(atr_rdr, inps, lat, lon)
-
-        print 'writing >>> '+fname_out
-        writefile.write(data_geo, atr, fname_out)
-
-    del data_geo, vtx, wts
-    print 'finished writing file: %s' % (fname_out)
-    s = time.time()-start;  m, s = divmod(s, 60);  h, m = divmod(m, 60)
-    print 'Time used: %02d hours %02d mins %02d secs' % (h, m, s)
-    return fname_out
-
-
-def geocode_file(fname, lookup_file, fname_out, inps):
-    '''Geocode input file with lookup table file'''
-    atr = readfile.read_attribute(lookup_file)
-    if 'Y_FIRST' in atr.keys():
-        if not inps.interp_method:
-            inps.interp_method = 'nearest'
-        print 'lookup table in geo coordinates: '+lookup_file
-        print 'interpolation method: '+inps.interp_method
-        fname_out = geocode_file_geo_lut(fname, lookup_file, fname_out, inps)
-    else:
-        if not inps.interp_method:
-            inps.interp_method = 'linear'
-        print 'lookup table in radar coordinates: '+lookup_file
-        print 'interpolation method: '+inps.interp_method
-        fname_out = geocode_file_radar_lut(fname, lookup_file, fname_out, inps)
-    return fname_out
+from pysar.objects.resample import resample
+from pysar.utils import readfile, writefile, utils as ut
+
+
+######################################################################################
+TEMPLATE = """template:
+pysar.geocode              = auto  #[yes / no], auto for yes
+pysar.geocode.SNWE         = auto  #[-1.2,0.5,-92,-91 / no ], auto for no, output coverage in S N W E in degree 
+pysar.geocode.latStep      = auto  #[0.0-90.0 / None], auto for None, output resolution in degree
+pysar.geocode.lonStep      = auto  #[0.0-180.0 / None], auto for None - calculate from lookup file
+pysar.geocode.interpMethod = auto  #[nearest], auto for nearest, interpolation method
+pysar.geocode.fillValue    = auto  #[np.nan, 0, ...], auto for np.nan, fill value for outliers.
+"""
+
+EXAMPLE = """example:
+  geocode.py velocity.h5
+  geocode.py velocity.h5 -b -0.5 -0.25 -91.3 -91.1
+  geocode.py velocity.h5 timeseries.h5 -t pysarApp_template.txt -o ./GEOCODE --update
+
+  geocode.py geo_velocity.h5 --geo2radar
+"""
+
+
+def create_parser():
+    parser = argparse.ArgumentParser(description='Resample radar coded files into geo coordinates, or reverse',
+                                     formatter_class=argparse.RawTextHelpFormatter,
+                                     epilog=TEMPLATE + '\n' + EXAMPLE)
+
+    parser.add_argument('file', nargs='+', help='File(s) to be geocoded')
+    parser.add_argument('-d', '--dset', help='dataset to be geocoded, for example:\n' +
+                        'height                        for geometryRadar.h5\n' +
+                        'unwrapPhase-20100114_20101017 for ifgramStack.h5')
+    parser.add_argument('--geo2radar', '--geo2rdr', dest='radar2geo', action='store_false',
+                        help='reverse geocoding, or resample geocoded files into radar coordinates.\n' +
+                        'For radar coded lookup table (ISCE, Doris) only.')
+
+    parser.add_argument('-l', '--lookup', dest='lookupFile',
+                        help='Lookup table file generated by InSAR processors.')
+    parser.add_argument('-t', '--template', dest='templateFile',
+                        help="Template file with geocoding options.")
+
+    parser.add_argument('-b', '--bbox', dest='SNWE', type=float, nargs=4, metavar=('S', 'N', 'W', 'E'),
+                        help='Bounding box of area to be geocoded.\n' +
+                        'Include the uppler left corner of the first pixel' +
+                        '    and the lower right corner of the last pixel')
+    parser.add_argument('-y', '--lat-step', dest='latStep', type=float,
+                        help='output pixel size in degree in latitude.')
+    parser.add_argument('-x', '--lon-step', dest='lonStep', type=float,
+                        help='output pixel size in degree in longitude.')
+
+    parser.add_argument('-i', '--interpolate', dest='interpMethod', choices={'nearest', 'bilinear'},
+                        help='interpolation/resampling method. Default: nearest', default='nearest')
+    parser.add_argument('--fill', dest='fillValue', type=float, default=np.nan,
+                        help='Value used for points outside of the interpolation domain.\n' +
+                             'Default: np.nan')
+    parser.add_argument('-n','--nprocs', dest='nprocs', type=int,
+                        help='number of processors to be used for calculation.\n' + 
+                             'Note: Do not use more processes than available processor cores.')
+    parser.add_argument('-p','--processor', dest='processor', type=str, choices={'pyresample', 'scipy'},
+                        help='processor module used for interpolation.')
+
+    parser.add_argument('--update', dest='updateMode', action='store_true',
+                        help='skip resampling if output file exists and newer than input file')
+    parser.add_argument('-o', '--output', dest='outfile',
+                        help="output file name. Default: add prefix 'geo_'")
+    parser.add_argument('--outdir', '--output-dir', dest='out_dir', help='output directory.')
+
+    return parser
+
+
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
+    return inps
+
+
+def _check_inps(inps):
+    inps.file = ut.get_file_list(inps.file)
+    if not inps.file:
+        raise Exception('ERROR: no input file found!')
+    elif len(inps.file) > 1:
+        inps.outfile = None
+
+    atr = readfile.read_attribute(inps.file[0])
+    if 'Y_FIRST' in atr.keys() and inps.radar2geo:
+        print('input file is already geocoded')
+        print('to resample geocoded files into radar coordinates, use --geo2radar option')
+        print('exit without doing anything.')
+        sys.exit(0)
+    elif 'Y_FIRST' not in atr.keys() and not inps.radar2geo:
+        print('input file is already in radar coordinates, exit without doing anything')
+        sys.exit(0)
+
+    inps.lookupFile = ut.get_lookup_file(inps.lookupFile)
+    if not inps.lookupFile:
+        raise FileNotFoundError('No lookup table found! Can not geocode without it.')
+
+    if inps.SNWE:
+        inps.SNWE = tuple(inps.SNWE)
+
+    inps.laloStep = [inps.latStep, inps.lonStep]
+    if None in inps.laloStep:
+        inps.laloStep = None
+
+    return inps
 
 
 def read_template2inps(template_file, inps):
-    '''Read input template options into Namespace inps'''
-    print 'read input option from template file: '+template_file
+    """Read input template options into Namespace inps"""
+    print('read input option from template file: ' + template_file)
     if not inps:
-        inps = cmdLineParse()
-
+        inps = cmd_line_parse()
+    inps_dict = vars(inps)
     template = readfile.read_template(template_file)
-    key_list = template.keys()
+    template = ut.check_template_auto_value(template)
 
-    # Coherence-based network modification
     prefix = 'pysar.geocode.'
+    key_list = [i for i in list(inps_dict.keys()) if prefix + i in template.keys()]
+    for key in key_list:
+        value = template[prefix + key]
+        if value:
+            if key == 'SNWE':
+                inps_dict[key] = tuple([float(i) for i in value.split(',')])
+            elif key in ['latStep', 'lonStep']:
+                inps_dict[key] = float(value)
+            elif key in ['interpMethod']:
+                inps_dict[key] = value
+            elif key == 'fillValue':
+                if 'nan' in value.lower():
+                    inps_dict[key] = np.nan
+                else:
+                    inps_dict[key] = float(value)
 
-    key = prefix+'resolution'
-    if key in key_list:
-        value = template[key]
-        if value not in ['auto']:
-            inps.lalo_step = value
-
+    inps.laloStep = [inps.latStep, inps.lonStep]
+    if None in inps.laloStep:
+        inps.laloStep = None
     return inps
 
 
-######################################################################################
-TEMPLATE='''template:
-## For data processed by ROI_PAC/Gamma, output resolution for geocoded file is the same as their lookup table file.
-## For data processed by ISCE/Doris, output resolution is assign by user with resolution option:
-## 1) float number - resolution in degree, 0.001 by default, around 100 m on equator
-## 2) file name    - use the resolution from a file in geo coordinates, e.g. demGeo.h5
-pysar.geocode            = auto  #[yes / no], auto for yes
-pysar.geocode.resolution = auto  #[0.0-inf / filename], auto for 0.001 (~100 m), output resolution for ISCE processor
-'''
+############################################################################################
+def metadata_radar2geo(atr_in, res_obj, print_msg=True):
+    """update metadata for radar to geo coordinates"""
+    atr = dict(atr_in)
+    atr['LENGTH'] = res_obj.length
+    atr['WIDTH'] = res_obj.width
+    atr['Y_STEP'] = res_obj.laloStep[0]
+    atr['X_STEP'] = res_obj.laloStep[1]
+    if 'Y_FIRST' in atr_in.keys():  #roipac, gamma
+        atr['Y_FIRST'] = res_obj.SNWE[1]
+        atr['X_FIRST'] = res_obj.SNWE[2]
+    else:                           #isce, doris
+        atr['Y_FIRST'] = res_obj.SNWE[1] - res_obj.laloStep[0] / 2.
+        atr['X_FIRST'] = res_obj.SNWE[2] - res_obj.laloStep[1] / 2.
+    atr['Y_UNIT'] = 'degrees'
+    atr['X_UNIT'] = 'degrees'
 
-EXAMPLE='''example:
-  geocode.py  velocity.h5
-  geocode.py  velocity.h5 temporalCoherence.h5 timeseries_ECMWF_demErr_refDate.h5
-  geocode.py  velocity.h5 temporalCoherence.h5 timeseries_ECMWF_demErr_refDate.h5 -t pysarApp_template.txt
-
-  geocode.py  101120-110220.unw   -l geomap_4rlks.trans
-  geocode.py  velocity.h5         -l sim_150911-150922.UTM_TO_RDC
-  geocode.py  coherence.h5        -l geometryRadar.h5   --lalo-step 0.0003333
-  geocode.py  unwrapIfgram.h5     -l geometryRadar.h5   --lalo-step demGeo_tight.h5
-'''
-
-def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Geocode using lookup table',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
-                                     epilog=TEMPLATE+'\n'+EXAMPLE)
-
-    parser.add_argument('file', nargs='+', help='File(s) to be geocoded')
-    parser.add_argument('-l','--lookup', dest='lookup_file', help='Lookup table file generated by InSAR processors.')
-    parser.add_argument('--template','-t', dest='template_file', help='Template file with geocoding options.')
-    parser.add_argument('-i','--interpolate', dest='interp_method',\
-                        choices={'nearest','linear'},\
-                        help='interpolation/resampling method. Default:\n'+\
-                             'nearest - lookup table in geo   coord (roipac, gamma)\n'+\
-                             'linear  - lookup table in radar coord (isce)')
-    parser.add_argument('--fill', dest='fill_value', type=float, default=np.nan,\
-                        help='Value used for points outside of the interpolation domain.\n'+\
-                             'Default: np.nan')
-    parser.add_argument('--no-parallel',dest='parallel',action='store_false',default=True,\
-                        help='Disable parallel processing. Diabled auto for 1 input file.')
-    parser.add_argument('-o','--output', dest='outfile', help="output file name. Default: add prefix 'geo_'")
-    parser.add_argument('--lalo-step', dest='lalo_step', type=str, default='0.001',\
-                        help='output pixel size in degree, for lookup table in radar coord (isce)\n'+\
-                             'Support 2 types of input:\n'+\
-                             '1) float number - as the output pixel size in degree. Default: 0.001 (~100m)\n'+\
-                             '2) DEM file in geo coord - as reference for a) geo coverage and b) pixel size')
-
-    inps = parser.parse_args()
-    return inps
+    # Reference point from y/x to lat/lon
+    if 'REF_Y' in atr.keys():
+        coord = ut.coordinate(atr_in, lookup_file=res_obj.file)
+        ref_lat, ref_lon = coord.radar2geo(np.array(int(atr['REF_Y'])),
+                                           np.array(int(atr['REF_X'])),
+                                           print_msg=False)[0:2]
+        if ~np.isnan(ref_lat) and ~np.isnan(ref_lon):
+            ref_y = int(np.rint((ref_lat - float(atr['Y_FIRST'])) / float(atr['Y_STEP'])))
+            ref_x = int(np.rint((ref_lon - float(atr['X_FIRST'])) / float(atr['X_STEP'])))
+            atr['REF_LAT'] = str(ref_lat)
+            atr['REF_LON'] = str(ref_lon)
+            atr['REF_Y'] = str(ref_y)
+            atr['REF_X'] = str(ref_x)
+            if print_msg:
+                print('update REF_LAT/LON/Y/X')
+        else:
+            warnings.warn("original reference pixel is out of .trans file's coverage. Continue.")
+            try:
+                atr.pop('REF_Y')
+                atr.pop('REF_X')
+            except:
+                pass
+            try:
+                atr.pop('REF_LAT')
+                atr.pop('REF_LON')
+            except:
+                pass
+    return atr
 
 
-######################################################################################
-def main(argv):
-    inps = cmdLineParse()
-    if inps.template_file:
-        inps = read_template2inps(inps.template_file, inps)
+def metadata_geo2radar(atr_in, res_obj, print_msg=True):
+    """update metadata for geo to radar coordinates"""
+    atr = dict(atr_in)
+    atr['LENGTH'] = res_obj.length
+    atr['WIDTH'] = res_obj.width
+    for i in ['Y_FIRST', 'X_FIRST', 'Y_STEP', 'X_STEP', 'Y_UNIT', 'X_UNIT',
+              'REF_Y', 'REF_X', 'REF_LAT', 'REF_LON']:
+        try:
+            atr.pop(i)
+        except:
+            pass
+    return atr
 
-    inps.file = ut.get_file_list(inps.file)
-    print 'number of files to geocode: '+str(len(inps.file))
-    print inps.file
-    if len(inps.file) > 1:
-        inps.outfile = None
-    print 'fill_value: '+str(inps.fill_value)
 
-    ##Check Lookup table
-    inps.lookup_file = ut.get_lookup_file(inps.lookup_file)
-    if not inps.lookup_file:
-        sys.exit('No lookup table found! Can not geocode without it.')
+def auto_output_filename(infile, inps):
+    if len(inps.file) == 1 and inps.outfile:
+        return inps.outfile
 
-    # check outfile and parallel option
-    if inps.parallel:
-        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file))
-
-    #####
-    if inps.parallel:
-        Parallel(n_jobs=num_cores)(delayed(geocode_file)\
-                                   (fname, inps.lookup_file, inps.outfile, inps) for fname in inps.file)
+    if inps.radar2geo:
+        prefix = 'geo_'
     else:
-        for fname in inps.file:
-            geocode_file(fname, inps.lookup_file, inps.outfile, inps)
+        prefix = 'rdr_'
 
-    print 'Done.'
+    if inps.dset:
+        outfile = '{}{}.h5'.format(prefix, inps.dset)
+    else:
+        outfile = '{}{}'.format(prefix, os.path.basename(infile))
+
+    if inps.out_dir:
+        if not os.path.isdir(inps.out_dir):
+            os.makedirs(inps.out_dir)
+            print('create directory: {}'.format(inps.out_dir))
+        outfile = os.path.join(inps.out_dir, outfile)
+    return outfile
+
+
+def run_geocode(inps):
+    """geocode all input files"""
+    start_time = time.time()
+
+    # Prepare geometry for geocoding
+    res_obj = resample(lookupFile=inps.lookupFile,
+                       dataFile=inps.file[0],
+                       SNWE=inps.SNWE,
+                       laloStep=inps.laloStep,
+                       processor=inps.processor)
+    res_obj.open()
+
+    if not inps.nprocs:
+        inps.nprocs = multiprocessing.cpu_count()
+
+    # resample input files one by one
+    for infile in inps.file:
+        print('-' * 50+'\nresampling file: {}'.format(infile))
+        ext = os.path.splitext(infile)[1]
+        atr = readfile.read_attribute(infile, datasetName=inps.dset)
+        outfile = auto_output_filename(infile, inps)
+        if inps.updateMode and ut.run_or_skip(outfile, in_file=[infile, inps.lookupFile]) == 'skip':
+            print('update mode is ON, skip geocoding.')
+            continue
+
+        # read source data and resample
+        dsNames = readfile.get_dataset_list(infile, datasetName=inps.dset)
+        maxDigit = max([len(i) for i in dsNames])
+        dsResDict = dict()
+        for dsName in dsNames:
+            print('reading {d:<{w}} from {f} ...'.format(d=dsName,
+                                                         w=maxDigit,
+                                                         f=os.path.basename(infile)))
+            if ext in ['.h5','.he5']:
+                data = readfile.read(infile, datasetName=dsName, print_msg=False)[0]
+            else:
+                data, atr = readfile.read(infile, datasetName=dsName, print_msg=False)
+
+            if atr['FILE_TYPE'] == 'timeseries' and len(data.shape) == 2:
+                data = np.reshape(data, (1, data.shape[0], data.shape[1]))
+            res_data = res_obj.run_resample(src_data=data,
+                                            interp_method=inps.interpMethod,
+                                            fill_value=inps.fillValue,
+                                            nprocs=inps.nprocs,
+                                            print_msg=True)
+            dsResDict[dsName] = res_data
+
+        # update metadata
+        if inps.radar2geo:
+            atr = metadata_radar2geo(atr, res_obj)
+        else:
+            atr = metadata_geo2radar(atr, res_obj)
+        #if len(dsNames) == 1 and dsName not in ['timeseries']:
+        #    atr['FILE_TYPE'] = dsNames[0]
+        #    infile = None
+
+        writefile.write(dsResDict, out_file=outfile, metadata=atr, ref_file=infile)
+
+    m, s = divmod(time.time()-start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
+    return outfile
+
+
+######################################################################################
+def main(iargs=None):
+    inps = cmd_line_parse(iargs)
+    if inps.templateFile:
+        inps = read_template2inps(inps.templateFile, inps)
+    inps = _check_inps(inps)
+
+    run_geocode(inps)
     return
 
 
 ######################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()

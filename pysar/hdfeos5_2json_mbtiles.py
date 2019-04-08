@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 
 import json
 import h5py
@@ -8,13 +8,12 @@ import math
 import time
 import os
 import sys
-import psycopg2
 import geocoder
-import getopt
 from pysar.add_attribute_insarmaps import InsarDatabaseController
+from pysar.objects import HDFEOS
 from pysar.mask import mask_matrix
 import argparse
-import cPickle
+import pickle
 
 # ex: python Converter_unavco.py Alos_SM_73_2980_2990_20070107_20110420.h5
 
@@ -29,6 +28,8 @@ def get_date(date_string):
     month = int(date_string[4:6])
     day = int(date_string[6:8])
     return date(year, month, day)
+
+
 # ---------------------------------------------------------------------------------------
 # takes a date and calculates the number of days elapsed in the year of that date
 # returns year + (days_elapsed / 365), a decimal representation of the date necessary
@@ -46,31 +47,33 @@ needed_attributes = {
     "prf", "first_date", "mission", "WIDTH", "X_STEP", "processing_software",
     "wavelength", "processing_type", "beam_swath", "Y_FIRST", "look_direction",
     "flight_direction", "last_frame", "post_processing_method", "min_baseline_perp"
-    "unwrap_method", "relative_orbit", "beam_mode", "FILE_LENGTH", "max_baseline_perp",
+    "unwrap_method", "relative_orbit", "beam_mode", "LENGTH", "max_baseline_perp",
     "X_FIRST", "atmos_correct_method", "last_date", "first_frame", "frame", "Y_STEP", "history",
     "scene_footprint", "data_footprint", "downloadUnavcoUrl", "referencePdfUrl", "areaName", "referenceText",
-    "ref_lat", "ref_lon"
+    "REF_LAT", "REF_LON", "CENTER_LINE_UTC"
 }
 
 def serialize_dictionary(dictionary, fileName):
-    with open(fileName, "w") as file:
-        cPickle.dump(dictionary, file)
+    with open(fileName, "wb") as file:
+        pickle.dump(dictionary, file, protocol=pickle.HIGHEST_PROTOCOL)
+    return
+
+
 # ---------------------------------------------------------------------------------------
 # convert h5 file to json and upload it. folder_name == unavco_name
 def convert_data(attributes, decimal_dates, timeseries_datasets, dates, json_path, folder_name):
 
-    region_file = None
     project_name = attributes["PROJECT_NAME"]
     region = region_name_from_project_name(project_name)
-# get the attributes for calculating latitude and longitude
+    # get the attributes for calculating latitude and longitude
     x_step = float(attributes["X_STEP"])
     y_step = float(attributes["Y_STEP"])
     x_first = float(attributes["X_FIRST"])
     y_first = float(attributes["Y_FIRST"])
     num_columns = int(attributes["WIDTH"])
-    num_rows = int(attributes["FILE_LENGTH"])
-    print "columns: %d" % num_columns
-    print "rows: %d" % num_rows
+    num_rows = int(attributes["LENGTH"])
+    print("columns: %d" % num_columns)
+    print("rows: %d" % num_rows)
     # create a siu_man array to store json point objects
     siu_man = []
     displacement_values = []
@@ -137,7 +140,7 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dates, json_pat
     try:
         g = geocoder.google([mid_lat,mid_long], method='reverse', timeout=60.0)
         country = str(g.country_long)
-    except Exception, e:
+    except Exception:
         sys.stderr.write("timeout reverse geocoding country name")
 
     area = folder_name
@@ -156,10 +159,11 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dates, json_pat
     # and all attributes will be put in extra_attributes table
     attribute_keys = '{'
     attribute_values = '{'
+    max_digit = max([len(key) for key in list(needed_attributes)] + [0])
     for k in attributes:
         v = attributes[k]
         if k in needed_attributes:
-            print str(k) + ": " + str(v)
+            print('{k:<{w}}     {v}'.format(k=k, w=max_digit, v=v))
             attribute_keys += (str(k) + ",")
             attribute_values += (str(v) + ',')
     attribute_keys = attribute_keys[:len(attribute_keys)-1] + '}'
@@ -181,6 +185,9 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dates, json_pat
     insarmapsMetadata["needed_attributes"] = needed_attributes
     metadataFilePath = json_path + "/metadata.pickle" 
     serialize_dictionary(insarmapsMetadata, metadataFilePath)
+    return
+
+
 # ---------------------------------------------------------------------------------------
 # create a json file out of siu man array
 # then put json file into directory named after the h5 file
@@ -198,11 +205,12 @@ def make_json_file(chunk_num, points, dates, json_path, folder_name):
     json_file.write("%s" % string_json)
     json_file.close()
 
-    print "converted chunk " + str(chunk_num)
+    print("converted chunk " + str(chunk_num))
+    return chunk
+
 
 # ---------------------------------------------------------------------------------------
 def build_parser():
-    dbHost = "insarmaps.rsmas.miami.edu"
     parser = argparse.ArgumentParser(description='Convert a Unavco format H5 file for ingestion into insarmaps.')
     required = parser.add_argument_group("required arguments")
     required.add_argument("file", help="unavco file to ingest")
@@ -222,45 +230,62 @@ def main():
 
     path_name_and_extension = os.path.basename(file_name).split(".")
     path_name = path_name_and_extension[0]
-    extension = path_name_and_extension[1]
-# ---------------------------------------------------------------------------------------
-# start clock to track how long conversion process takes
+    # ---------------------------------------------------------------------------------------
+    # start clock to track how long conversion process takes
     start_time = time.clock()
 
-# use h5py to open specified group(s) in the h5 file 
-# then read datasets from h5 file into memory for faster reading of data
-    file = h5py.File(file_name,  "r")
-    timeseries_group = file["HDFEOS"]["GRIDS"]["timeseries"]
-    displacement_3d_matrix = timeseries_group["observation"]["displacement"]
+    # use h5py to open specified group(s) in the h5 file 
+    # then read datasets from h5 file into memory for faster reading of data
+    he_obj = HDFEOS(file_name)
+    he_obj.open(print_msg=False)
+    displacement_3d_matrix = he_obj.read(datasetName='displacement')
+    mask = he_obj.read(datasetName='mask')
+    if should_mask:
+        print("Masking displacement")
+        displacement_3d_matrix = mask_matrix(displacement_3d_matrix, mask)
+    del mask
 
-# get attributes (stored at root) of UNAVCO timeseries file
-    attributes = dict(file.attrs)
+    dates = he_obj.dateList
+    attributes = dict(he_obj.metadata)
 
-# in timeseries displacement_3d_matrix, there are datasets
-# need to get datasets with dates - strings that can be converted to integers
-    dates = displacement_3d_matrix.attrs["DATE_TIMESERIES"].split(" ")
+    #file = h5py.File(file_name,  "r")
+    #timeseries_group = file["HDFEOS"]["GRIDS"]["timeseries"]
+    #displacement_3d_matrix = timeseries_group["observation"]["displacement"]
 
-# array that stores dates from dates that have been converted to decimal
+    # get attributes (stored at root) of UNAVCO timeseries file
+    #attributes = dict(file.attrs)
+
+    # in timeseries displacement_3d_matrix, there are datasets
+    # need to get datasets with dates - strings that can be converted to integers
+    #dates = displacement_3d_matrix.attrs["DATE_TIMESERIES"].split(" ")
+
+    # array that stores dates from dates that have been converted to decimal
     decimal_dates = []
 
-# read datasets in the group into a dictionary of 2d arrays and intialize decimal dates
+    # read datasets in the group into a dictionary of 2d arrays and intialize decimal dates
     timeseries_datasets = {}
-    i = 0
-    for displacement_2d_matrix in displacement_3d_matrix:
-        dataset = displacement_2d_matrix[:]
-        if should_mask:
-            print "Masking " + dates[i]
-            mask = timeseries_group["quality"]["mask"][:]
-            dataset = mask_matrix(dataset, mask)
-
-        timeseries_datasets[dates[i]] = dataset
+    num_date = len(dates)
+    for i in range(num_date):
+        timeseries_datasets[dates[i]] = np.squeeze(displacement_3d_matrix[i, :, :])
         d = get_date(dates[i])
         decimal = get_decimal_date(d)
         decimal_dates.append(decimal)
-        i += 1
+    del displacement_3d_matrix
 
-# close h5 file
-    file.close()
+    #for displacement_2d_matrix in displacement_3d_matrix:
+    #    dataset = displacement_2d_matrix[:]
+    #    if should_mask:
+    #        print("Masking " + dates[i])
+    #        mask = timeseries_group["quality"]["mask"][:]
+    #        dataset = mask_matrix(dataset, mask)
+    #    timeseries_datasets[dates[i]] = dataset
+    #    d = get_date(dates[i])
+    #    decimal = get_decimal_date(d)
+    #    decimal_dates.append(decimal)
+    #    i += 1
+
+    # close h5 file
+    #file.close()
 
     path_list = path_name.split("/")
     folder_name = path_name.split("/")[len(path_list)-1]
@@ -268,20 +293,21 @@ def main():
     try: # create path for output
         os.mkdir(output_folder)
     except:
-        print output_folder + " already exists"
+        print(output_folder + " already exists")
 
-# read and convert the datasets, then write them into json files and insert into database
+    # read and convert the datasets, then write them into json files and insert into database
     convert_data(attributes, decimal_dates, timeseries_datasets, dates, output_folder, folder_name)
 
-# run tippecanoe command to get mbtiles file
+    # run tippecanoe command to get mbtiles file
     os.chdir(os.path.abspath(output_folder))
     os.system("tippecanoe *.json -l chunk_1 -x d -pf -pk -Bg -d9 -D12 -g12 -r0 -o " + folder_name + ".mbtiles")
 
-# ---------------------------------------------------------------------------------------
-# check how long it took to read h5 file data and create json files
+    # ---------------------------------------------------------------------------------------
+    # check how long it took to read h5 file data and create json files
     end_time =  time.clock()
-    print ("time elapsed: " + str(end_time - start_time))
-# ---------------------------------------------------------------------------------------
+    print(("time elapsed: " + str(end_time - start_time)))
+    return
 
+# ---------------------------------------------------------------------------------------
 if __name__ == '__main__':
     main()
