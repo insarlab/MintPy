@@ -6,6 +6,7 @@ examples/dev/*
 */*/.ipynb_checkpoints/*
 */*/*/.ipynb_checkpoints/*
 .idea/*
+pysar/dev/*
 */.idea/*
 _includes/test 2.html
 _includes/test.html
