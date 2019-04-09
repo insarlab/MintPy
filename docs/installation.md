@@ -38,6 +38,15 @@ export PATH=${PATH}:${PYSAR_HOME}/pysar:${PYSAR_HOME}/sh
 
 Source the file for the first time. It will be sourced automatically next time when you login. [Here](https://github.com/yunjunz/macOS_Setup/blob/master/cshrc.md) is an example _.cshrc_ file for csh/tcsh user.
 
+To run PySAR in parallel on a High Performance Compute cluster, set up [Dask](www.dask.org) by executing the following commands:
+
+ ```
+ mkdir ~/.config
+ mkdir ~/.config/dask
+ cp $PYSAR_HOME/pysar/defaults/dask_pysar.yaml ~/.config/dask/dask_pysar.yaml
+ ```
+
+It is okay if you get a `File Exists` message when running the commands above.
 
 ### 2. Install Python dependecies
 PySAR is written in Python3 (3.5+) and it relies on several Python modules, check the [requirements.txt](../requirements.txt) file for details. We recommend using [conda](https://conda.io/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
