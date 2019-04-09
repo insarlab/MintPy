@@ -1149,7 +1149,6 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
             client.close()
 
 
-
         # reference pixel
         ref_y = int(stack_obj.metadata['REF_Y'])
         ref_x = int(stack_obj.metadata['REF_X'])
