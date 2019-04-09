@@ -14,9 +14,9 @@ import sys
 import time
 import argparse
 import h5py
+import math
 import numpy as np
 from scipy import linalg   # more effieint than numpy.linalg
-from scipy.special import gamma
 from pysar.objects import ifgramStack, timeseries
 from pysar.utils import readfile, writefile, ptime, utils as ut
 
@@ -273,6 +273,25 @@ def phase_pdf_ds(L, coherence=None, phi_num=1000, epsilon=1e-3):
     pdf = B*C + sumD
     pdf = np.multiply(A, pdf)
     return pdf, coherence.flatten()
+
+
+def gamma(x):
+    """
+    Gamma function equivalent to scipy.special.gamma(x)
+
+    :param x: float
+    :return: float
+    """
+    # This function replaces scipy.special.gamma(x).
+    # It is needed due to a bug where Dask workers throw an exception in which they cannot
+    # find `scipy.special.gamma(x)` even when it is imported.
+    
+    # When the output of the gamma function is undefined, scipy.special.gamma(x) returns float('inf')
+    # whereas math.gamma(x) throws an exception.
+    try:
+        return math.gamma(x)
+    except ValueError:
+        return float('inf')
 
 
 def phase_variance_ds(L,  coherence=None, epsilon=1e-3):
@@ -1067,8 +1086,8 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
             NUM_WORKERS = 40
             python_executable_location = sys.executable
 
-            # Look at the dask.yaml file for Changing the Dask configuration defaults
-            cluster = LSFCluster(configuration='ifgram_inversion',
+            # Look at the ~/.config/dask/dask_pysar.yaml file for Changing the Dask configuration defaults
+            cluster = LSFCluster(config_name='ifgram_inversion',
                                  python=python_executable_location)
 
             # This line submits NUM_WORKERS number of jobs to Pegasus to start a bunch of workers
@@ -1126,8 +1145,8 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                 num_inv_ifg[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_numi
 
             # Shut down Dask workers gracefully
-            client.close()
             cluster.close()
+            client.close()
 
 
 
