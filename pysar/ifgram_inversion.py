@@ -157,7 +157,7 @@ def cmd_line_parse(iargs=None):
         inps = read_template2inps(inps.templateFile, inps)
     inps.timeseriesFile, inps.tempCohFile = inps.outfile
 
-    if not os.path.isfile(inps.waterMaskFile):
+    if inps.waterMaskFile and not os.path.isfile(inps.waterMaskFile):
         inps.waterMaskFile = None
 
     return inps
