@@ -45,6 +45,8 @@ EXAMPLE = """example:
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -w var
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -w fim
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -w coh
+  ifgram_inversion.py  INPUTS/ifgramStack.h5 -w var --parallel
+  ifgram_inversion.py  INPUTS/ifgramStack.h5 -w var --parallel --parallel_number_of_workers 25
 """
 
 TEMPLATE = """
@@ -127,7 +129,9 @@ def create_parser():
                         help='max number of data (= ifgram_num * num_row * num_col) to read per loop\n' +
                         'default: 0.2 G; adjust it according to your computer memory.')
     parser.add_argument('--parallel', dest='parallel', action='store_true',
-                        help='Enable parallel processing for the pixelwise weighted inversion. [not working yet]')
+                        help='Enable parallel processing for the pixelwise weighted inversion.')
+    parser.add_argument('--parallel_number_of_workers', dest='parallel_number_of_workers', type=int,
+                        default=0, help='Specify the number of workers the Dask cluster should use')
     parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',
                         help='Skip checking reference pixel value, for simulation testing.')
     parser.add_argument('-o', '--output', dest='outfile', nargs=2,
@@ -285,7 +289,7 @@ def gamma(x):
     # This function replaces scipy.special.gamma(x).
     # It is needed due to a bug where Dask workers throw an exception in which they cannot
     # find `scipy.special.gamma(x)` even when it is imported.
-    
+
     # When the output of the gamma function is undefined, scipy.special.gamma(x) returns float('inf')
     # whereas math.gamma(x) throws an exception.
     try:
@@ -611,15 +615,16 @@ def subsplit_boxes_by_num_workers(box, number_of_splits, dimension='y'):
 
     if dimension == 'y':
         y_diff = y1 - y0
+        # `start` and `end` are the new bounds of the subdivided box
         for i in range(number_of_splits):
             start = (i * y_diff) // number_of_splits
-            end = ((i + 1) * y_diff) // number_of_splits if i + 1 != number_of_splits else y_diff
+            end = ((i + 1) * y_diff) // number_of_splits
             subboxes.append([x0, start, x1, end])
     elif dimension == 'x':
         x_diff = x1 - x0
         for i in range(number_of_splits):
             start = (i * x_diff) // number_of_splits
-            end = ((i + 1) * x_diff) // number_of_splits if i + 1 != number_of_splits else x_diff
+            end = ((i + 1) * x_diff) // number_of_splits 
             subboxes.append([start, y0, end, y1])
     else:
         raise Exception("Unknown value for dimension parameter:", dimension)
@@ -1083,14 +1088,19 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
 
         # Parallel loop
         else:
-            NUM_WORKERS = 40
             python_executable_location = sys.executable
 
             # Look at the ~/.config/dask/dask_pysar.yaml file for Changing the Dask configuration defaults
             cluster = LSFCluster(config_name='ifgram_inversion',
                                  python=python_executable_location)
 
-            # This line submits NUM_WORKERS number of jobs to Pegasus to start a bunch of workers
+            # This line submits NUM_WORKERS jobs to Pegasus to start a bunch of workers
+            # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
+            # at once (other user's jobs gained higher priority in the general at that point)
+            if inps.parallel_number_of_workers == 0:
+                NUM_WORKERS = 40
+            else:
+                NUM_WORKERS = inps.parallel_number_of_workers
             cluster.scale(NUM_WORKERS)
             print("JOB FILE:", cluster.job_script())
 
