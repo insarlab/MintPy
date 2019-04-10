@@ -46,7 +46,7 @@ EXAMPLE = """example:
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -w fim
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -w coh
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -w var --parallel
-  ifgram_inversion.py  INPUTS/ifgramStack.h5 -w var --parallel --num_workers 25
+  ifgram_inversion.py  INPUTS/ifgramStack.h5 -w var --parallel --workers-num 25
 """
 
 TEMPLATE = """
