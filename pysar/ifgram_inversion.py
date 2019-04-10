@@ -46,7 +46,7 @@ EXAMPLE = """example:
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -w fim
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -w coh
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -w var --parallel
-  ifgram_inversion.py  INPUTS/ifgramStack.h5 -w var --parallel --parallel_number_of_workers 25
+  ifgram_inversion.py  INPUTS/ifgramStack.h5 -w var --parallel --num_workers 25
 """
 
 TEMPLATE = """
@@ -130,8 +130,8 @@ def create_parser():
                         'default: 0.2 G; adjust it according to your computer memory.')
     parser.add_argument('--parallel', dest='parallel', action='store_true',
                         help='Enable parallel processing for the pixelwise weighted inversion.')
-    parser.add_argument('--parallel_number_of_workers', dest='parallel_number_of_workers', type=int,
-                        default=0, help='Specify the number of workers the Dask cluster should use')
+    parser.add_argument('--parallel-num','--workers-num', dest='num_workers', type=int,
+                        default=40, help='Specify the number of workers the Dask cluster should use. Default: 40')
     parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',
                         help='Skip checking reference pixel value, for simulation testing.')
     parser.add_argument('-o', '--output', dest='outfile', nargs=2,
@@ -1097,10 +1097,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
             # This line submits NUM_WORKERS jobs to Pegasus to start a bunch of workers
             # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
             # at once (other user's jobs gained higher priority in the general at that point)
-            if inps.parallel_number_of_workers == 0:
-                NUM_WORKERS = 40
-            else:
-                NUM_WORKERS = inps.parallel_number_of_workers
+            NUM_WORKERS = inps.num_workers
             cluster.scale(NUM_WORKERS)
             print("JOB FILE:", cluster.job_script())
 
