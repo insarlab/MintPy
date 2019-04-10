@@ -46,7 +46,7 @@ EXAMPLE = """example:
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -w fim
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -w coh
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -w var --parallel
-  ifgram_inversion.py  INPUTS/ifgramStack.h5 -w var --parallel --workers-num 25
+  ifgram_inversion.py  INPUTS/ifgramStack.h5 -w var --parallel --parallel-workers-num 25
 """
 
 TEMPLATE = """
@@ -128,10 +128,13 @@ def create_parser():
     parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=100e6,
                         help='max number of data (= ifgram_num * num_row * num_col) to read per loop\n' +
                         'default: 0.2 G; adjust it according to your computer memory.')
-    parser.add_argument('--parallel', dest='parallel', action='store_true',
-                        help='Enable parallel processing for the pixelwise weighted inversion.')
-    parser.add_argument('--parallel-num','--workers-num', dest='num_workers', type=int,
-                        default=40, help='Specify the number of workers the Dask cluster should use. Default: 40')
+
+    par = parser.add_argument_group('parallel', 'parallel processing configuration')
+    par.add_argument('--parallel', dest='parallel', action='store_true',
+                     help='Enable parallel processing for the pixelwise weighted inversion.')
+    par.add_argument('--parallel-workers-num','--par-workers-num','--parallel-num', dest='num_workers', type=int,
+                     default=40, help='Specify the number of workers the Dask cluster should use. Default: 40')
+
     parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',
                         help='Skip checking reference pixel value, for simulation testing.')
     parser.add_argument('-o', '--output', dest='outfile', nargs=2,
