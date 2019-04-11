@@ -118,7 +118,7 @@ def check_loaded_dataset(work_dir='./', print_msg=True):
 
 
 ##################################### Utilities Functions ##########################################
-def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_lon=None):
+def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_lon=None, win_size=1):
     """ Read time-series of one pixel with input lat/lon
     Parameters: lat/lon     : float, latitude/longitude
                 ts_file     : string, filename of time-series HDF5 file
@@ -127,32 +127,25 @@ def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_
     Returns:    dates : 1D np.array of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
                 dis   : 1D np.array of float in meter
     """
-    # read date
-    obj = timeseries(ts_file)
-    obj.open(print_msg=False)
-    dates = ptime.date_list2vector(obj.dateList)[0]
-    dates = np.array(dates)
-
-    # read displacement
-    coord = coordinate(obj.metadata, lookup_file=lookup_file)
+    atr = readfile.read_attribute(ts_file)
+    coord = coordinate(atr, lookup_file=lookup_file)
     y, x = coord.geo2radar(lat, lon)[0:2]
-    box = (x, y, x+1, y+1)
-    dis = readfile.read(ts_file, box=box)[0]
-    # reference pixel
+
+    ref_y, ref_x = None, None
     if ref_lat is not None:
         ref_y, ref_x = coord.geo2radar(ref_lat, ref_lon)[0:2]
-        ref_box = (ref_x, ref_y, ref_x+1, ref_y+1)
-        dis -= readfile.read(ts_file, box=ref_box)[0]
-    #start at zero
-    dis -= dis[0]
+
+    dates, dis = read_timeseries_yx(y, x, ts_file,
+                                    ref_y=ref_y,
+                                    ref_x=ref_x,
+                                    win_size=win_size)
     return dates, dis
 
 
-def read_timeseries_yx(y, x, ts_file, lookup_file=None, ref_y=None, ref_x=None):
+def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None, win_size=1):
     """ Read time-series of one pixel with input y/x
     Parameters: y/x         : int, row/column number of interest
                 ts_file     : string, filename of time-series HDF5 file
-                lookup_file : string, filename of lookup table file
                 ref_y/x     : int, row/column number of reference pixel
     Returns:    dates : 1D np.array of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
                 dis   : 1D np.array of float in meter
@@ -166,10 +159,17 @@ def read_timeseries_yx(y, x, ts_file, lookup_file=None, ref_y=None, ref_x=None):
     # read displacement
     box = (x, y, x+1, y+1)
     dis = readfile.read(ts_file, box=box)[0]
+    if win_size != 1:
+        buf = int(win_size / 2)
+        box_win = (x-buf, y-buf, x+buf+1, y+buf+1)
+        dis_win = readfile.read(ts_file, box=box_win)[0]
+        dis = np.nanmean(dis_win.reshape((obj.numDate, -1)), axis=1)
+
     # reference pixel
     if ref_y is not None:
         ref_box = (ref_x, ref_y, ref_x+1, ref_y+1)
         dis -= readfile.read(ts_file, box=ref_box)[0]
+
     #start at zero
     dis -= dis[0]
     return dates, dis
