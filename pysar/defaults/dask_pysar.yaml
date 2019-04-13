@@ -24,7 +24,7 @@ jobqueue:
     mem: null
     # The first parameter is required by Pegasus. This parameter sets the 
     # memory per node. The second parameter writes worker output to file.
-    job-extra: ['-R "rusage[mem=6400]"',
+    job-extra: ['-R "rusage[mem=2500]"',
                 "-o WORKER-%J.out"]
     log-directory: null
     
