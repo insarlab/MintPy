@@ -1650,7 +1650,7 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
         if isinstance(ax, BasemapExt) and geo_box is not None:
             yy, xx = np.mgrid[geo_box[1]:geo_box[3]:dem_contour.shape[0]*1j,
                               geo_box[0]:geo_box[2]:dem_contour.shape[1]*1j]
-            ax.contour(xx, yy, dem_contour, dem_contour_seq, origin='upper',
+            ax.contour(xx, yy, dem_contour, dem_contour_seq, origin='upper', linewidths=0.5,
                        colors='black', alpha=0.5, latlon='FALSE', zorder=1)
         # radar coordinates
         elif isinstance(ax, plt.Axes):

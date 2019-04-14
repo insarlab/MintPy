@@ -315,7 +315,12 @@ def read_timeseries_data(inps):
     mask[np.isnan(ts_stack)] = False
     del ts_stack
 
-    mask[inps.ref_yx[0], inps.ref_yx[1]] = True  #do not mask the reference point
+    #do not mask the reference point
+    try:
+        mask[inps.ref_yx[0]-inps.pix_box[1],
+             inps.ref_yx[1]-inps.pix_box[0]] = True
+    except:
+        pass
 
     #vprint('masking data')
     #ts_mask = np.tile(mask, (inps.num_date, 1, 1))
