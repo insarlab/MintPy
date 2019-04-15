@@ -17,6 +17,13 @@ import h5py
 import math
 import numpy as np
 from scipy import linalg   # more effieint than numpy.linalg
+
+# Imports for parallel execution
+from dask.distributed import Client, as_completed
+# dask_jobqueue is needed for HPC.
+# PBSCluster (similar to LSFCluster) should also work out of the box
+from dask_jobqueue import LSFCluster
+
 from pysar.objects import ifgramStack, timeseries
 from pysar.utils import readfile, writefile, ptime, utils as ut
 
@@ -167,18 +174,6 @@ def cmd_line_parse(iargs=None):
 
     if inps.waterMaskFile and not os.path.isfile(inps.waterMaskFile):
         inps.waterMaskFile = None
-
-    if inps.parallel:
-        # Imports for parallel execution
-        try:
-            from dask.distributed import Client, as_completed
-            from dask_jobqueue import LSFCluster
-            # dask_jobqueue is needed for HPC.
-            # PBSCluster (similar to LSFCluster) should also work out of the box
-        except ImportError:
-            msg = "Can not import dask.distributed or dask_jobqueue! "
-            msg += "Both are required for --parallel option."
-            raise ImportError(msg)
 
     return inps
 
