@@ -44,7 +44,7 @@ def create_parser():
     parser.add_argument('--end', dest='endNum', type=int, help='End submitting at named run number.')
     parser.add_argument('--reset', action='store_true', help='clean the directory before re-run.')
 
-    parser.add_argument('--bsub', action='store_true', help='submit this script as a job to generic queue.')
+    parser.add_argument('--submit','--bsub', dest='bsub', action='store_true', help='submit this script as a job to generic queue.')
     parser.add_argument('-r','--memory', type=int, default=2000, help='memory for bsub. Default: 2000')
     parser.add_argument('-w','--walltime', type=str, default='8:00', help='wall time for bsub. Default: 8:00')
     parser.add_argument('-e','--email', dest='email', help='email address to send notification when all jobs finished.')
