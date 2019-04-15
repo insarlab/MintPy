@@ -208,6 +208,24 @@ def write_job_file(iDict):
     return job_file
 
 
+def copy_masterShelve(iDict):
+    proj_dir = os.path.abspath(os.getcwd())
+    shelve_dir_dst = os.path.join(proj_dir, 'masterShelve')
+    if os.path.isdir(shelve_dir_dst):
+        print('masterShelve folder already exists: {}'.format(shelve_dir_dst))
+        return
+
+    try:
+        ifgram_dir = os.path.join(proj_dir, 'Igrams/{}_*'.format(iDict['masterDate']))
+        ifgram_dir = glob.glob(ifgram_dir)[0]
+    except:
+        print('WARNING: interferogram with master date: {} is not found.'.format(iDict['masterDate']))
+    shelve_dir_src = os.path.join(ifgram_dir, 'masterShelve')
+    shutil.copytree(shelve_dir_src, shelve_dir_dst)
+    print('copy masterShelve folder from {} to {}'.format(shelve_dir_src, shelve_dir_dst))
+    return
+
+
 #####################################################################################
 def main(iargs=None):
     inps = cmd_line_parse()
@@ -230,6 +248,8 @@ def main(iargs=None):
         prepare_stack(iDict)
 
     run_stack(iDict)
+
+    copy_masterShelve(iDict)
 
     return
 
