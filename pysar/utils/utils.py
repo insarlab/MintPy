@@ -130,6 +130,7 @@ def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_
     atr = readfile.read_attribute(ts_file)
     coord = coordinate(atr, lookup_file=lookup_file)
     y, x = coord.geo2radar(lat, lon)[0:2]
+    print('input lat / lon: {} / {}'.format(lat, lon))
 
     ref_y, ref_x = None, None
     if ref_lat is not None:
@@ -157,6 +158,7 @@ def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None, win_size=1):
     dates = np.array(dates)
 
     # read displacement
+    print('input y / x: {} / {}'.format(y, x))
     box = (x, y, x+1, y+1)
     dis = readfile.read(ts_file, box=box)[0]
     if win_size != 1:

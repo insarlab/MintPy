@@ -17,14 +17,15 @@ import h5py
 import math
 import numpy as np
 from scipy import linalg   # more effieint than numpy.linalg
-from pysar.objects import ifgramStack, timeseries
-from pysar.utils import readfile, writefile, ptime, utils as ut
 
 # Imports for parallel execution
 from dask.distributed import Client, as_completed
 # dask_jobqueue is needed for HPC.
 # PBSCluster (similar to LSFCluster) should also work out of the box
 from dask_jobqueue import LSFCluster
+
+from pysar.objects import ifgramStack, timeseries
+from pysar.utils import readfile, writefile, ptime, utils as ut
 
 
 # key configuration parameter name
@@ -129,7 +130,7 @@ def create_parser():
                         help='max number of data (= ifgram_num * num_row * num_col) to read per loop\n' +
                         'default: 0.2 G; adjust it according to your computer memory.')
 
-    par = parser.add_argument_group('parallel', 'parallel processing configuration')
+    par = parser.add_argument_group('parallel', 'parallel processing configuration for Dask')
     par.add_argument('--parallel', dest='parallel', action='store_true',
                      help='Enable parallel processing for the pixelwise weighted inversion.')
     par.add_argument('--parallel-workers-num','--par-workers-num','--parallel-num', dest='num_workers', type=int,

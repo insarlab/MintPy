@@ -86,7 +86,7 @@ class BasemapExt(Basemap):
 
         # plot scale bar label
         unit = 'm'
-        if distance > 1000.0:
+        if distance >= 1000.0:
             unit = 'km'
             distance *= 0.001
         label = '{:.0f} {}'.format(distance, unit)
@@ -601,12 +601,12 @@ def add_dem_argument(parser):
     dem.add_argument('--shade-alt', dest='shade_altdeg', type=float, default=45., metavar='DEG',
                      help='The altitude (0-90, degrees up from horizontal) of the light source.\n'
                           'Default is 45.')
-    dem.add_argument('--shade-min', dest='shade_min', type=float, default=-7000., metavar='MIN',
+    dem.add_argument('--shade-min', dest='shade_min', type=float, default=-4000., metavar='MIN',
                      help='The min height in m of colormap of shaded relief topography\n'
-                          'Default: -7000 m')
+                          'Default: -4000 m')
     dem.add_argument('--shade-max', dest='shade_max', type=float, default=999., metavar='MAX',
                      help='The max height of colormap of shaded relief topography\n'
-                          'Default: max(DEM) + 1000 m')
+                          'Default: max(DEM) + 2000 m')
     dem.add_argument('--shade-exag', dest='shade_exag', type=float, default=0.5,
                      help='Vertical exaggeration ratio, default: 0.5')
     return parser
@@ -1571,7 +1571,7 @@ def prepare_dem_background(dem, inps=None, print_msg=True):
     if inps is None:
         inps = cmd_line_parse()
     if inps.shade_max == 999.:
-        inps.shade_max += np.nanmax(dem)
+        inps.shade_max = np.nanmax(dem) + 2000
 
     # prepare shade relief
     if inps.disp_dem_shade:
