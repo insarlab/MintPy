@@ -10,6 +10,3 @@ transparency = 0.8
 fig_ext = '.jpg'
 fig_dpi = 600
 
-
-
-
