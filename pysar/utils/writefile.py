@@ -243,7 +243,7 @@ def write_roipac_rsc(metadata, out_file, update_mode=False, print_msg=False):
 
 
 def write_float32(*args):
-    """Write ROI_PAC rmg format with float32 precision
+    """Write ROI_PAC rmg format with float32 precision (BIL)
     Format of the binary file is same as roi_pac unw, cor, or hgt data.
           should rename to write_rmg_float32()
 

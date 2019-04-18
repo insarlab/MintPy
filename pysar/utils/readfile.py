@@ -655,7 +655,7 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
 
         # Read metadata file and FILE_TYPE
         metafile0 = fname + metafile_exts[0]
-        while fext in ['.geo', '.rdr']:
+        while fext in ['.geo', '.rdr', '.full']:
             fbase, fext = os.path.splitext(fbase)
         if not fext:
             fext = fbase
@@ -1022,36 +1022,34 @@ def read_binary(fname, box=None, data_type='float32', byte_order='l',
         data_type = '>{}{}'.format(letter, digit)
 
     # read data
-    if num_band > 1:
-        band_interleave = band_interleave.upper()
-        if band_interleave == 'BIL':
-            data = np.fromfile(fname,
-                               dtype=data_type,
-                               count=box[3]*width*num_band).reshape(-1, width*num_band)
-            data = data[box[1]:box[3], 
-                        width*(band-1)+box[0]:width*(band-1)+box[2]]
-
-        elif band_interleave == 'BIP':
-            data = np.fromfile(fname, 
-                               dtype=data_type,
-                               count=box[3]*width*num_band).reshape(-1, width*num_band)
-            data = data[box[1]:box[3],
-                        np.arange(box[0], box[2])*num_band+band-1]
-
-        elif band_interleave == 'BSQ':
-            data = np.fromfile(fname, 
-                               dtype=data_type,
-                               count=(box[3]+length*(band-1))*width).reshape(-1, width)
-            data = data[length*(band-1)+box[1]:length*(band-1)+box[3],
-                        box[0]:box[2]]
-        else:
-            raise ValueError('unrecognized band interleaving:', band_interleave)
-    else:
+    #data = np.fromfile(fname,
+    #                   dtype=data_type,
+    #                   count=box[3]*width).reshape(-1, width)
+    #data = data[box[1]:box[3],
+    #            box[0]:box[2]]
+    band_interleave = band_interleave.upper()
+    if band_interleave == 'BIL':
         data = np.fromfile(fname,
                            dtype=data_type,
-                           count=box[3]*width).reshape(-1, width)
+                           count=box[3]*width*num_band).reshape(-1, width*num_band)
+        data = data[box[1]:box[3], 
+                    width*(band-1)+box[0]:width*(band-1)+box[2]]
+
+    elif band_interleave == 'BIP':
+        data = np.fromfile(fname, 
+                           dtype=data_type,
+                           count=box[3]*width*num_band).reshape(-1, width*num_band)
         data = data[box[1]:box[3],
+                    np.arange(box[0], box[2])*num_band+band-1]
+
+    elif band_interleave == 'BSQ':
+        data = np.fromfile(fname, 
+                           dtype=data_type,
+                           count=(box[3]+length*(band-1))*width).reshape(-1, width)
+        data = data[length*(band-1)+box[1]:length*(band-1)+box[3],
                     box[0]:box[2]]
+    else:
+        raise ValueError('unrecognized band interleaving:', band_interleave)
 
     # adjust output band for complex data
     if data_type.replace('>', '').startswith('c'):
