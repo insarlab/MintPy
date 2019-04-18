@@ -75,20 +75,20 @@ pysar.networkInversion.minNumPixel     = auto #[int > 0], auto for 100, min numb
 """
 
 REFERENCE = """references:
-Berardino, P., Fornaro, G., Lanari, R., & Sansosti, E. (2002). A new algorithm for surface
+Berardino, P., Fornaro, G., Lanari, R., & Sansosti, E. (2002). A new algorithm for surface 
     deformation monitoring based on small baseline differential SAR interferograms. IEEE TGRS,
     40(11), 2375-2383. doi:10.1109/TGRS.2002.803792
-Guarnieri, A. M., and S. Tebaldini (2008), On the exploitation of target statistics for SAR
+Guarnieri, A. M., and S. Tebaldini (2008), On the exploitation of target statistics for SAR 
     interferometry applications, Geoscience and Remote Sensing, IEEE Transactions on, 46(11), 3436-3443.
 Just, D., & Bamler, R. (1994). Phase statistics of interferograms with applications to synthetic
-    aperture radar. Applied optics, 33(20), 4361-4368.
+    aperture radar. Applied optics, 33(20), 4361-4368. 
 Pepe, A., and R. Lanari (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
     of multitemporal differential SAR interferograms, IEEE-TGRS, 44(9), 2374-2383.
 Perissin, D., and T. Wang (2012), Repeat-pass SAR interferometry with partially coherent targets, IEEE TGRS,
     50(1), 271-280, doi:10.1109/tgrs.2011.2160644.
 Samiei-Esfahany, S., J. E. Martins, F. v. Leijen, and R. F. Hanssen (2016), Phase Estimation for Distributed
     Scatterers in InSAR Stacks Using Integer Least Squares Estimation, IEEE TGRS, 54(10), 5671-5687.
-Seymour, M. S., and I. G. Cumming (1994), Maximum likelihood estimation for SAR interferometry, 1994.
+Seymour, M. S., and I. G. Cumming (1994), Maximum likelihood estimation for SAR interferometry, 1994. 
     IGARSS '94., 8-12 Aug 1994.
 """
 
@@ -111,7 +111,7 @@ def create_parser():
                         help='dataset used to mask unwrapPhase, e.g. coherence, connectComponent')
     parser.add_argument('--mask-threshold', dest='maskThreshold', metavar='NUM', type=float, default=0.4,
                         help='threshold to generate mask when mask is coherence')
-    parser.add_argument('--min-redundancy', dest='minRedundancy', metavar='NUM', type=float, default=1.0,
+    parser.add_argument('--min-redundancy', dest='minRedundancy', metavar='NUM', type=float, default=1.0, 
                         help='minimum redundancy of interferograms for every SAR acquisition.')
 
     parser.add_argument('--weight-function', '-w', dest='weightFunc', default='no', choices={'var', 'fim', 'coh', 'no'},
@@ -388,7 +388,7 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
 
     opt 4 supports weight.
     scipy.linalg provides more advanced and slighted faster performance than numpy.linalg.
-    This function relies on the LAPACK routine gelsd. It computes the minimum-norm
+    This function relies on the LAPACK routine gelsd. It computes the minimum-norm 
     solution to a linear least squares problem using the singular value decomposition
     of A and a divide and conquer method.
 
@@ -628,7 +628,7 @@ def subsplit_boxes_by_num_workers(box, number_of_splits, dimension='y'):
         x_diff = x1 - x0
         for i in range(number_of_splits):
             start = (i * x_diff) // number_of_splits
-            end = ((i + 1) * x_diff) // number_of_splits
+            end = ((i + 1) * x_diff) // number_of_splits 
             subboxes.append([start, y0, end, y1])
     else:
         raise Exception("Unknown value for dimension parameter:", dimension)
@@ -773,7 +773,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
     Parameters: ifgram_file       : str, interferograms stack HDF5 file, e.g. ./INPUTS/ifgramStack.h5
                 box               : tuple of 4 int, indicating (x0, y0, x1, y1) pixel coordinate of area of interest
                                     or None, to process the whole file and write output file
-                ref_phase         : 1D array in size of (num_ifgram)
+                ref_phase         : 1D array in size of (num_ifgram) 
                                     or None
                 weight_func       : str, weight function, choose in ['no', 'fim', 'var', 'coh']
                 mask_dataset_name : str, dataset name in ifgram_file used to mask unwrapPhase pixelwisely
@@ -896,7 +896,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
         if np.sum(mask_all_net) > 0:
             print(('inverting pixels with valid phase in all  ifgrams'
                    ' ({:.0f} pixels) ...').format(np.sum(mask_all_net)))
-            tsi, tcohi, num_ifgi = estimate_timeseries(A, B, tbase_diff,
+            tsi, tcohi, num_ifgi = estimate_timeseries(A, B, tbase_diff, 
                                                        ifgram=pha_data[:, mask_all_net],
                                                        weight_sqrt=None,
                                                        min_norm_velocity=min_norm_velocity,
