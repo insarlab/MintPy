@@ -105,6 +105,8 @@ pysar.networkInversion.minNormVelocity = auto #[yes / no], auto for yes, min-nor
 pysar.networkInversion.residualNorm    = auto #[L2 ], auto for L2, norm minimization solution
 pysar.networkInversion.minTempCoh      = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
 pysar.networkInversion.minNumPixel     = auto #[int > 0], auto for 100, min number of pixels in mask above
+pysar.networkInversion.parallel        = auto #[yes / no], auto for no, parallel processing using dask
+pysar.networkInversion.numWorker       = auto #[int > 0], auto for 40, number of works for dask cluster to use
 
 
 ########## Local Oscillator Drift (LOD) Correction (for Envisat only)
