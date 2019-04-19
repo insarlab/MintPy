@@ -872,7 +872,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
                               box=inps.pix_box,
                               print_msg=False)[0]
             data[i - i_start, :, :] = d
-            prog_bar.update(i - i_start + 1, suffix=inps.dset[i])
+            prog_bar.update(i - i_start + 1, suffix=inps.dset[i].split('/')[-1])
         prog_bar.close()
 
     # ref_date for timeseries
@@ -1037,7 +1037,7 @@ def plot_figure(j, inps, metadata):
         im = plot_subplot4figure(i, inps, ax=ax,
                                  data=data[idx, :, :],
                                  metadata=metadata)
-        prog_bar.update(idx+1, suffix=inps.dset[i])
+        prog_bar.update(idx+1, suffix=inps.dset[i].split('/')[-1])
     prog_bar.close()
     del data
 
