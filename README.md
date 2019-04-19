@@ -5,16 +5,14 @@
 [![License](https://img.shields.io/badge/license-GPL-yellow.svg)](https://github.com/insarlab/PySAR/blob/master/LICENSE)
 [![Forum](https://img.shields.io/badge/forum-Google%20Group-orange.svg)](https://groups.google.com/forum/#!forum/py-sar)
           
-PySAR is an open-source package in Python for InSAR (Interferometric Synthetic Aperture Radar) time series analysis. It reads the stack of interferograms (coregistered and unwrapped) in ISCE, Gamma or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground displacement. It includes a routine time series analysis (pysarApp.py) and some independent toolbox.      
-   
-### 1. [Download](https://github.com/insarlab/PySAR/blob/master/docs/download.md)    
-   
-### 2. [Installation](https://github.com/insarlab/PySAR/blob/master/docs/installation.md)   
-   
-### 3. Running PySAR
+PySAR is an open-source package in Python for InSAR (Interferometric Synthetic Aperture Radar) time series analysis. It reads the stack of interferograms (coregistered and unwrapped) in [ISCE](https://github.com/isce-framework/isce2), Gamma or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground displacement. It includes a routine time series analysis (`pysarApp.py`) and some independent toolbox.      
 
-PySAR reads a stack of interferograms (unwrapped interferograms, coherence, wrapped interferograms and connecting components from SNAPHU if available) and the geometry files (DEM, lookup table, etc.). You need to give the path to where the files are and PySAR takes care of the rest!   
+### 1. [Installation](./docs/installation.md)
    
+### 2. Running PySAR
+
+PySAR reads a stack of interferograms (unwrapped interferograms, coherence, wrapped interferograms and connecting components from SNAPHU if available) and the geometry files (DEM, lookup table, etc.). You need to give the path to where the files are and PySAR takes care of the rest!
+
 ```cfg
 pysarApp.py                         #run with default template 'pysarApp_template.txt'
 pysarApp.py <custom_template>       #run with default and custom templates
@@ -45,7 +43,7 @@ Inside pysarApp.py, it reads the unwrapped interferograms, references all of the
 
 Check **./PIC** folder for auto-generated figures. More details about this test data are in [here](https://github.com/insarlab/PySAR/wiki/Example).     
 
-#### Some useful scripts for information and visualization:   
+#### 2.1 Some useful scripts for information and visualization:   
 
 ```cfg
 info.py                    #check HDF5 file structure and metadata
@@ -58,18 +56,18 @@ save_kmz.py                #generate Google Earth KMZ file in raster image
 save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
 ```
 
-#### Build your own processing recipe: [example](https://github.com/insarlab/PySAR/blob/master/sh/compare_velocity_with_diff_tropcor.sh)   
+#### 2.2 Build your own processing recipe: [example](./sh/compare_velocity_with_diff_tropcor.sh)   
 
-PySAR is a toolbox with a lot of individual utility scripts, highly modulized in python. Check its documentation or simply run it with -h to see its usage, you could build your own customized processing recipe! Here is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections: [link](https://github.com/insarlab/PySAR/blob/master/sh/compare_velocity_with_diff_tropcor.sh)
+PySAR is a toolbox with a lot of individual utility scripts, highly modulized in python. Check its documentation or simply run it with -h to see its usage, you could build your own customized processing recipe! Here is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections: [link](./sh/compare_velocity_with_diff_tropcor.sh)
    
-### 4. Documentation
+### 3. Documentation
    
 + [Tutorials on Jupyter Notebooks](https://github.com/insarlab/PySAR/tree/master/docs/Notebooks)
 + [Example datasets](https://github.com/insarlab/PySAR/wiki/Example)
 + [Example template files for InSAR processors](https://github.com/insarlab/PySAR/tree/master/examples/input_files)
 + [Google Earth KMZ file](https://github.com/insarlab/PySAR/wiki/Google-Earth)
    
-### 5. User Forum
+### 4. User Forum
 
 Join our google group [https://groups.google.com/forum/#!forum/py-sar](https://groups.google.com/forum/#!forum/py-sar) to ask questions, get notice of latest features pushed to you!
 
