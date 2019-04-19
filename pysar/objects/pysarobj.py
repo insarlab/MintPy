@@ -520,7 +520,7 @@ class geometry:
             familyName = datasetName[0].split('-')[0]
             ds = f[familyName]
             if print_msg:
-                print('reading {} data from file: {} ...'.format(familyName, self.file))
+                print('reading {:<15} data from file: {} ...'.format(familyName, self.file))
 
             if len(ds.shape) == 1:
                 data = ds[:]
