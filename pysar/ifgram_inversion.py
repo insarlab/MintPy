@@ -110,7 +110,7 @@ def create_parser():
                         help='dataset used to mask unwrapPhase, e.g. coherence, connectComponent')
     parser.add_argument('--mask-threshold', dest='maskThreshold', metavar='NUM', type=float, default=0.4,
                         help='threshold to generate mask when mask is coherence')
-    parser.add_argument('--min-redundancy', dest='minRedundancy', metavar='NUM', type=int, default=1,
+    parser.add_argument('--min-redundancy', dest='minRedundancy', metavar='NUM', type=float, default=1.0,
                         help='minimum redundancy of interferograms for every SAR acquisition.')
 
     parser.add_argument('--weight-function', '-w', dest='weightFunc', default='no', choices={'var', 'fim', 'coh', 'no'},
@@ -163,26 +163,35 @@ def cmd_line_parse(iargs=None):
 
     # check input file type
     atr = readfile.read_attribute(inps.ifgramStackFile)
-    if atr['FILE_TYPE'] != 'ifgramStack':
-        raise ValueError('input is {} file, only support ifgramStack file.'.format(k))
+    assert atr['FILE_TYPE'] == 'ifgramStack', 'input is {} file, only support ifgramStack file.'.format(k)
 
     if inps.templateFile:
         inps = read_template2inps(inps.templateFile, inps)
+
     inps.timeseriesFile, inps.tempCohFile = inps.outfile
 
     if inps.waterMaskFile and not os.path.isfile(inps.waterMaskFile):
         inps.waterMaskFile = None
 
-    if inps.parallel:
-        # Imports for parallel execution
-        try:
-            from dask.distributed import Client, as_completed
-            # dask_jobqueue is needed for HPC.
-            # PBSCluster (similar to LSFCluster) should also work out of the box
-            from dask_jobqueue import LSFCluster
-        except ImportError:
-            raise ImportError('Cannot import dask.distributed or dask_jobqueue!')
+    # --fast option
+    if inps.fast:
+        print("Enable fast network inversion.")
+        if inps.weightFunc != 'no':
+            inps.weightFunc = 'no'
+            print("\tforcing weightFunc = 'no'")
+        if inps.maskDataset is not None:
+            inps.maskDataset = None
+            print("\tforcing maskDataset = None")
 
+    # --dset option
+    if not inps.unwDatasetName:
+        stack_obj = ifgramStack(inps.ifgramStackFile)
+        stack_obj.open(print_msg=False)
+        inps.unwDatasetName = [i for i in ['unwrapPhase_bridging_phaseClosure',
+                                           'unwrapPhase_bridging',
+                                           'unwrapPhase_phaseClosure',
+                                           'unwrapPhase']
+                               if i in stack_obj.datasetNames][0]
     return inps
 
 
@@ -200,9 +209,9 @@ def read_template2inps(template_file, inps):
         if key in ['maskDataset', 'minNormVelocity', 'parallel']:
             iDict[key] = value
         elif value:
-            if key in ['minRedundancy', 'numWorker']:
+            if key in ['numWorker']:
                 iDict[key] = int(value)
-            if key in ['maskThreshold']:
+            if key in ['maskThreshold', 'minRedundancy']:
                 iDict[key] = float(value)
             elif key in ['weightFunc', 'residualNorm', 'waterMaskFile']:
                 iDict[key] = value
@@ -234,6 +243,8 @@ def run_or_skip(inps):
         meta_keys = ['REF_Y', 'REF_X']
         atr_ifg = readfile.read_attribute(inps.ifgramStackFile)
         atr_ts = readfile.read_attribute(inps.timeseriesFile)
+        inps.numIfgram = len(ifgramStack(inps.ifgramStackFile).get_date12_list(dropIfgram=True))
+
         if any(str(vars(inps)[key]) != atr_ts.get(key_prefix+key, 'None') for key in configKeys):
             flag = 'run'
             print('3) NOT all key configration parameters are the same: {}'.format(configKeys))
@@ -1093,16 +1104,25 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
 
         # Parallel loop
         else:
+            try:
+                from dask.distributed import Client, as_completed
+                # dask_jobqueue is needed for HPC.
+                # PBSCluster (similar to LSFCluster) should also work out of the box
+                from dask_jobqueue import LSFCluster
+            except ImportError:
+                raise ImportError('Cannot import dask.distributed or dask_jobqueue!')
+
             python_executable_location = sys.executable
 
             # Look at the ~/.config/dask/dask_pysar.yaml file for Changing the Dask configuration defaults
             cluster = LSFCluster(config_name='ifgram_inversion',
                                  python=python_executable_location)
 
-            # This line submits inps.numWorker jobs to Pegasus to start a bunch of workers
+            # This line submits NUM_WORKERS jobs to Pegasus to start a bunch of workers
             # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
             # at once (other user's jobs gained higher priority in the general at that point)
-            cluster.scale(inps.numWorker)
+            NUM_WORKERS = inps.numWorker
+            cluster.scale(NUM_WORKERS)
             print("JOB FILE:", cluster.job_script())
 
             # This line needs to be in a function or in a `if __name__ == "__main__":` block. If it is in no function
@@ -1113,7 +1133,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
             for box in box_list:
                 # `box_list` is split into smaller boxes and then each box is processed in parallel
                 # With larger jobs, increasing the `num_split` factor may improve runtime
-                all_boxes += subsplit_boxes4_workers(box, num_split=1 * inps.numWorker, dimension='x')
+                all_boxes += subsplit_boxes4_workers(box, num_split=1 * NUM_WORKERS, dimension='x')
 
             futures = []
             start_time_subboxes = time.time()
@@ -1158,7 +1178,6 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
             cluster.close()
             client.close()
 
-
         # reference pixel
         ref_y = int(stack_obj.metadata['REF_Y'])
         ref_x = int(stack_obj.metadata['REF_X'])
@@ -1190,16 +1209,19 @@ def parallel_ifgram_inversion_patch(data):
     print("BOX DIMS:", box)
 
     # This line is where all of the processing happens.
-    (tsi, temp_cohi, ts_stdi, ifg_numi) = ifgram_inversion_patch(ifgram_file,
-                                                                 box= box,
-                                                                 ref_phase= ref_phase,
-                                                                 unwDatasetName=unwDatasetName,
-                                                                 weight_func=weight_func,
-                                                                 min_norm_velocity=min_norm_velocity,
-                                                                 mask_dataset_name=mask_dataset_name,
-                                                                 mask_threshold=mask_threshold,
-                                                                 min_redundancy=min_redundancy,
-                                                                 water_mask_file=water_mask_file)
+    (tsi,
+     temp_cohi,
+     ts_stdi,
+     ifg_numi) = ifgram_inversion_patch(ifgram_file,
+                                        box= box,
+                                        ref_phase= ref_phase,
+                                        unwDatasetName=unwDatasetName,
+                                        weight_func=weight_func,
+                                        min_norm_velocity=min_norm_velocity,
+                                        mask_dataset_name=mask_dataset_name,
+                                        mask_threshold=mask_threshold,
+                                        min_redundancy=min_redundancy,
+                                        water_mask_file=water_mask_file)
 
     return tsi, temp_cohi, ts_stdi, ifg_numi, box
 
@@ -1208,28 +1230,7 @@ def parallel_ifgram_inversion_patch(data):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    # --fast option
-    if inps.fast:
-        print("Enable fast network inversion.")
-        if inps.weightFunc != 'no':
-            inps.weightFunc = 'no'
-            print("\tforcing weightFunc = 'no'")
-        if inps.maskDataset is not None:
-            inps.maskDataset = None
-            print("\tforcing maskDataset = None")
-
-    # --dset option
-    if not inps.unwDatasetName:
-        stack_obj = ifgramStack(inps.ifgramStackFile)
-        stack_obj.open(print_msg=False)
-        inps.unwDatasetName = [i for i in ['unwrapPhase_bridging_phaseClosure',
-                                           'unwrapPhase_bridging',
-                                           'unwrapPhase_phaseClosure',
-                                           'unwrapPhase']
-                               if i in stack_obj.datasetNames][0]
-
     # --update option
-    inps.numIfgram = len(ifgramStack(inps.ifgramStackFile).get_date12_list(dropIfgram=True))
     if inps.update_mode and run_or_skip(inps) == 'skip':
         return inps.outfile
 
