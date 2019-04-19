@@ -1128,6 +1128,12 @@ class HDFEOS:
         self.refIndex = dateList.index(self.metadata['REF_DATE'])
         return self.metadata
 
+    def get_date_list(self):
+        with h5py.File(self.file, 'r') as f:
+            g = f['HDFEOS/GRIDS/timeseries/observation']
+            self.dateList = [i.decode('utf8') for i in g['date'][:]]
+        return self.dateList
+
     def read(self, datasetName=None, box=None, print_msg=True):
         """Read dataset from HDF-EOS5 file
         Parameters: self : HDFEOS object
