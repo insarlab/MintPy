@@ -2,7 +2,7 @@ jobqueue:
   lsf:
     queue: general
     project: insarlab
-    name: pysar_worker_bee
+    name: pysar_bee
 
     # Dask worker options
     cores: 2                    # Total number of cores per job
@@ -25,14 +25,14 @@ jobqueue:
     # The first parameter is required by Pegasus. This parameter sets the 
     # memory per node. The second parameter writes worker output to file.
     job-extra: ['-R "rusage[mem=2500]"',
-                "-o WORKER-%J.out"]
+                "-o worker_pysar.%J.o"]
     log-directory: null
     
 ######################################################## 
   ifgram_inversion:
     queue: general
     project: insarlab
-    name: ifgram_inversion_worker_bee 
+    name: ifginv_bee 
 
     # Dask worker options
     cores: 2                    # Total number of cores per job
@@ -55,7 +55,7 @@ jobqueue:
     # The first parameter is required by Pegasus. This parameter sets the 
     # memory per node. The second parameter writes worker output to file.
     job-extra: ['-R "rusage[mem=6400]"',
-                "-o IFGRAM_WORKER_%J.out"]
+                "-o worker_ifginv.%J.o"]
     log-directory: null
     
 ######################################################## 
