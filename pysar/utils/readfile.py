@@ -1,6 +1,6 @@
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013-2018, Zhang Yunjun, Heresh Fattahi     #
+# Copyright(c) 2013-2019, Zhang Yunjun, Heresh Fattahi     #
 # Author:  Zhang Yunjun, Heresh Fattahi, 2013              #
 ############################################################
 # Recommend import:
@@ -16,16 +16,19 @@ import h5py
 import json
 import numpy as np
 
-from pysar.objects import (datasetUnitDict,
-                           geometry,
-                           geometryDatasetNames,
-                           giantIfgramStack,
-                           giantTimeseries,
-                           ifgramDatasetNames,
-                           ifgramStack,
-                           timeseriesDatasetNames,
-                           timeseries,
-                           HDFEOS)
+from pysar.objects import (
+    datasetUnitDict,
+    geometry,
+    geometryDatasetNames,
+    giantIfgramStack,
+    giantTimeseries,
+    ifgramDatasetNames,
+    ifgramStack,
+    timeseriesDatasetNames,
+    timeseries,
+    HDFEOS
+)
+
 
 standardMetadataKeys = {
     # ordered in alphabet by value names
@@ -97,17 +100,6 @@ ENVI_BAND_INTERLEAVE = {
     'LINE': 'BIL',
     'PIXEL': 'BIP',
 }
-
-
-###########################################################################
-# obsolete variables
-multi_group_hdf5_file = ['interferograms',
-                         'coherence',
-                         'wrapped',
-                         'snaphu_connect_component']
-multi_dataset_hdf5_file = ['timeseries', 'geometry']
-single_dataset_hdf5_file = ['dem', 'mask', 'temporal_coherence', 'velocity']
-
 
 ###########################################################################
 ## Slice-based data identification for data reading:
@@ -548,6 +540,7 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
         d1_list = [i for i in f.keys() if isinstance(f[i], h5py.Dataset) and f[i].ndim >= 2]
 
         # FILE_TYPE - k
+        py2_pysar_stack_files = ['interferograms', 'coherence', 'wrapped'] #obsolete pysar format
         if any(i in d1_list for i in ['unwrapPhase']):
             k = 'ifgramStack'
         elif any(i in d1_list for i in ['height', 'latitude', 'azimuthCoord']):
@@ -560,8 +553,8 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             k = 'giantTimeseries'
         elif any(i in d1_list for i in ['igram', 'figram']):
             k = 'giantIfgramStack'
-        elif any(i in g1_list for i in multi_group_hdf5_file):      # old pysar format
-            k = list(set(g1_list) & set(multi_group_hdf5_file))[0]
+        elif any(i in g1_list for i in py2_pysar_stack_files):
+            k = list(set(g1_list) & set(py2_pysar_stack_files))[0]
         elif len(d1_list) > 0:
             k = d1_list[0]
         elif len(g1_list) > 0:
