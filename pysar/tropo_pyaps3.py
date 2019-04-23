@@ -26,6 +26,8 @@ weatherModelHours = {
     'MERRA'  : [0, 6, 12, 18],
 }
 
+verbose = False
+
 
 ###############################################################
 EXAMPLE = """example:
@@ -357,7 +359,7 @@ def check_exist_grib_file(gfile_list, print_msg=True):
     return gfile_exist
 
 
-def dload_grib_pyaps(grib_file_list, trop_model='ERA5', snwe=None):
+def dload_grib_files(grib_file_list, trop_model='ERA5', snwe=None):
     """Download weather re-analysis grib files using PyAPS
     Parameters: grib_file_list : list of string of grib files
     Returns:    grib_file_list : list of string
@@ -384,7 +386,7 @@ def dload_grib_pyaps(grib_file_list, trop_model='ERA5', snwe=None):
             try:
                 if trop_model in ['ERA5', 'ERAINT']:
                     pa.ECMWFdload(date_list2dload, hour, grib_dir,
-                                  model=trop_model.lower(),
+                                  model=trop_model,
                                   snwe=snwe,
                                   flist=grib_file2dload)
 
@@ -414,7 +416,6 @@ def get_delay(grib_file, inps):
         phs - 2D np.array, absolute tropospheric phase delay relative to ref_y/x
     """
     # initiate pyaps object
-    #import pdb; pdb.set_trace()
     aps_obj = pa.PyAPS(grib_file,
                        grib=inps.trop_model,
                        Del=inps.delay_type,
@@ -422,7 +423,7 @@ def get_delay(grib_file, inps):
                        inc=inps.inc,
                        lat=inps.lat,
                        lon=inps.lon,
-                       verb=False)
+                       verb=verbose)
 
     # estimate delay
     phs = np.zeros((aps_obj.ny, aps_obj.nx), dtype=np.float32)
@@ -508,12 +509,15 @@ def get_delay_timeseries(inps, atr):
 
     print('calcualting delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
     print('number of grib files used: {}'.format(num_date))
-    prog_bar = ptime.progressBar(maxValue=num_date)
+    if verbose:
+        prog_bar = ptime.progressBar(maxValue=num_date)
     for i in range(num_date):
         grib_file = inps.grib_file_list[i]
         trop_data[i] = get_delay(grib_file, inps)
-        prog_bar.update(i+1, suffix=os.path.basename(grib_file))
-    prog_bar.close()
+        if verbose:
+            prog_bar.update(i+1, suffix=os.path.basename(grib_file))
+    if verbose:
+        prog_bar.close()
 
     # Convert relative phase delay on reference date
     inps.ref_date = atr.get('REF_DATE', date_list[0])
@@ -551,7 +555,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
     inps, atr = check_inputs(inps)
 
-    inps.grib_file_list = dload_grib_pyaps(inps.grib_file_list,
+    inps.grib_file_list = dload_grib_files(inps.grib_file_list,
                                            inps.trop_model,
                                            snwe=inps.snwe)
 
