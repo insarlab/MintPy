@@ -62,9 +62,9 @@ PySAR is a toolbox with a lot of individual utility scripts, highly modulized in
    
 ### 3. Documentation
    
-+ [Tutorials on Jupyter Notebooks](https://github.com/insarlab/PySAR/tree/master/docs/Notebooks)
++ [Tutorials on Jupyter Notebooks](./docs/tutorials)
 + [Example datasets](https://github.com/insarlab/PySAR/wiki/Example)
-+ [Example template files for InSAR processors](https://github.com/insarlab/PySAR/tree/master/examples/input_files)
++ [Example template files for InSAR processors](./docs/examples/input_files)
 + [Google Earth KMZ file](https://github.com/insarlab/PySAR/wiki/Google-Earth)
    
 ### 4. User Forum
