@@ -132,6 +132,8 @@ pysar.troposphericDelay.weatherDir   = auto  #[path2directory], auto for WEATHER
 pysar.troposphericDelay.polyOrder    = auto  #[1 / 2 / 3], auto for 1, for height_correlation method
 pysar.troposphericDelay.looks        = auto  #[1-inf], auto for 8, for height_correlation, number of looks
                                              #applied to interferogram while estimating the empirical ratio.
+pysar.troposphericDelay.empiricalThreshold = auto #[0-1], auto for 0, threshold for height-correlation
+
 
 
 ########## 7. Phase Deramping (optional)

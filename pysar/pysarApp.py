@@ -680,11 +680,15 @@ class TimeSeriesAnalysis:
 
             # Phase/Elevation Ratio (Doin et al., 2009)
             if method == 'height_correlation':
-                scp_args = '{f} -g {g} -p {p} -m {m} -o {o}'.format(f=in_file,
-                                                                    g=geom_file,
-                                                                    p=poly_order,
-                                                                    m=mask_file,
-                                                                    o=out_file)
+                tropo_look = self.template['pysar.troposphericDelay.looks']
+                tropo_emp_thr = self.template['pysar.troposphericDelay.empiricalThreshold']
+                scp_args = '{f} -g {g} -p {p} -m {m} -o {o} -l {l} -t {t}'.format(f=in_file,
+                                                                                  g=geom_file,
+                                                                                  p=poly_order,
+                                                                                  m=mask_file,
+                                                                                  o=out_file,
+                                                                                  l=tropo_look,
+                                                                                  t=tropo_emp_thr)
                 print('tropospheric delay correction with height-correlation approach')
                 print('tropo_phase_elevation.py', scp_args)
                 if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
