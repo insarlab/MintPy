@@ -148,12 +148,14 @@ multiple copies if you work with different dataset that cover the same date/time
 
 #### Notes on parallel processing
 
-We use [Dask](www.dask.org) for parallel processing on High Performance Compute cluster, it can be setup as below:
+We use [Dask](www.dask.org) for parallel processing on High Performance Compute (HPC) cluster, it can be setup as below:
 
 ```
 mkdir -p ~/.config/dask
 cp $PYSAR_HOME/pysar/defaults/dask_pysar.yaml ~/.config/dask/dask_pysar.yaml
 ```
+
+Edit `~/.config/dask/dask_pysar.yaml` file according to your HPC settings. Currently, only `LSFCluster` job scheduler is tested, `PBSCluster` should work out of the box after minor adjustment in [ifgram_inversion.py](https://github.com/insarlab/PySAR/blob/master/pysar/ifgram_inversion.py).
 
 #### Notes on pyKML
 
