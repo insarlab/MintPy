@@ -13,6 +13,10 @@ import numpy as np
 from pysar.utils import readfile, writefile, ptime, utils as ut
 
 
+# list of par file extension for SAR images
+PAR_EXT_LIST = ['.amp.par', '.ramp.par', '.mli.par']
+
+
 ##################################################################################################
 EXAMPLE = """example:
   prep_gamma.py  diff_filt_HDR_20130118_20130129_4rlks.unw
@@ -107,15 +111,14 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     inps.file = ut.get_file_list(inps.file, abspath=True)
+    inps.file_ext = os.path.splitext(inps.file[0])[1]
 
     # check input file extension
     ext_list = ['.unw', '.cor', '.int', '.dem', '.hgt_sim', '.UTM_TO_RDC']
-    ext = os.path.splitext(inps.file[0])[1]
-    if ext not in ext_list:
-        msg = 'unsupported input file extension: {}'.format(ext)
+    if inps.file_ext not in ext_list:
+        msg = 'unsupported input file extension: {}'.format(inps.file_ext)
         msg += '\nsupported file extensions: {}'.format(ext_list)
         raise ValueError() 
-
     return inps
 
 
@@ -166,7 +169,6 @@ def get_perp_baseline(m_par_file, s_par_file, off_file, atr_dict={}):
 
     atr_dict['P_BASELINE_TOP_HDR'] = str(bperp_list[0])
     atr_dict['P_BASELINE_BOTTOM_HDR'] = str(bperp_list[-1])
-
     return atr_dict
 
 
@@ -177,7 +179,7 @@ def get_lalo_ref(m_par_file, atr_dict={}):
 
     Parameters: m_par_file : str, path, master date parameter file, i.e. 130118_4rlks.amp.par
                 atr_dict   : dict, optional, attributes dictionary
-    Returns:  lalo_ref
+    Returns:    lalo_ref
     """
     m_par_file = os.path.abspath(m_par_file)
     m_corner_file = os.path.splitext(m_par_file)[0]+'.corner'
@@ -185,11 +187,14 @@ def get_lalo_ref(m_par_file, atr_dict={}):
 
     # Call Gamma command to calculate LAT/LON_REF
     if not os.path.isfile(m_corner_file):
+        # generate *.corner_full file
         if not os.path.isfile(m_corner_full_file):
             cornerCmd = 'SLC_corners {} > {}'.format(m_par_file,
                                                      m_corner_full_file)
             print(cornerCmd)
             os.system(cornerCmd)
+
+        # convert *.corner_full to *.corner
         extractCmd = "awk 'NR==3,NR==6 {print $3,$6} ' "
         extractCmd += "{} > {}".format(m_corner_full_file, m_corner_file)
         print(extractCmd)
@@ -205,7 +210,6 @@ def get_lalo_ref(m_par_file, atr_dict={}):
     atr_dict['LON_REF2'] = lalo_ref[1, 1]
     atr_dict['LON_REF3'] = lalo_ref[2, 1]
     atr_dict['LON_REF4'] = lalo_ref[3, 1]
-
     return atr_dict
 
 
@@ -238,9 +242,8 @@ def extract_metadata4interferogram(fname):
 
     # Read .off and .par file
     off_files = file_dir+'/*'+date12+lks+'.off'
-    par_exts = ['.amp.par', '.ramp.par', '.mli.par']
-    m_par_files = [file_dir+'/*'+m_date+lks+i for i in par_exts]
-    s_par_files = [file_dir+'/*'+s_date+lks+i for i in par_exts]
+    m_par_files = [file_dir+'/*'+m_date+lks+i for i in PAR_EXT_LIST]
+    s_par_files = [file_dir+'/*'+s_date+lks+i for i in PAR_EXT_LIST]
 
     try:
         off_file = ut.get_file_list(off_files)[0]
@@ -281,97 +284,56 @@ def extract_metadata4interferogram(fname):
                                                os.path.basename(off_file),
                                                os.path.basename(rsc_file)))
         writefile.write_roipac_rsc(atr_out, out_file=rsc_file)
-
     return rsc_file
 
 
-def extract_metadata4lookup_table(fname):
-    """Read/extract attribute for .UTM_TO_RDC file from Gamma to ROI_PAC
-    For example, it read input file, sim_150911-150922.UTM_TO_RDC, 
-    find its associated par file, sim_150911-150922.utm.dem.par, read it, and
-    convert to ROI_PAC style and write it to an rsc file, sim_150911-150922.UTM_TO_RDC.rsc"""
-
-    # Check existed .rsc file
-    rsc_file_list = ut.get_file_list(fname+'.rsc')
-    if rsc_file_list:
-        rsc_file = rsc_file_list[0]
-        return rsc_file
-
-    atr = {}
-    atr['PROCESSOR'] = 'gamma'
-    atr['FILE_TYPE'] = os.path.splitext(fname)[1]
-    atr['Y_UNIT'] = 'degrees'
-    atr['X_UNIT'] = 'degrees'
-
-    par_file = os.path.splitext(fname)[0]+'.utm.dem.par'
-
-    par_dict = readfile.read_gamma_par(par_file)
-    atr.update(par_dict)
-
-    # Write to .rsc file
-    rsc_file = fname+'.rsc'
-    try:
-        atr_orig = readfile.read_roipac_rsc(rsc_file)
-    except:
-        atr_orig = dict()
-    if not set(atr.items()).issubset(set(atr_orig.items())):
-        atr_out = {**atr_orig, **atr}
-        print('writing >>> '+os.path.basename(rsc_file))
-        writefile.write_roipac_rsc(atr_out, out_file=rsc_file)
-    return rsc_file
-
-
-def extract_metadata4dem_geo(fname):
-    """Read/extract attribute for .dem file from Gamma to ROI_PAC
-    For example, it read input file, sim_150911-150922.utm.dem, 
-    find its associated par file, sim_150911-150922.utm.dem.par, read it, and
-    convert to ROI_PAC style and write it to an rsc file, sim_150911-150922.utm.dem.rsc
-    """
-    atr = {}
-    atr['PROCESSOR'] = 'gamma'
-    atr['FILE_TYPE'] = os.path.splitext(fname)[1]
-    atr['Y_UNIT'] = 'degrees'
-    atr['X_UNIT'] = 'degrees'
-
-    par_file = fname+'.par'
-    par_dict = readfile.read_gamma_par(par_file)
-    atr.update(par_dict)
-
-    # Write to .rsc file
-    rsc_file = fname+'.rsc'
-    try:
-        atr_orig = readfile.read_roipac_rsc(rsc_file)
-    except:
-        atr_orig = dict()
-    if not set(atr.items()).issubset(set(atr_orig.items())):
-        atr_out = {**atr_orig, **atr}
-        print('writing >>> '+os.path.basename(rsc_file))
-        writefile.write_roipac_rsc(atr_out, out_file=rsc_file)
-    return rsc_file
-
-
-def extract_metadata4dem_radar(fname):
+def extract_metadata4geometry_radar(fname):
     """Read/extract attribute for .hgt_sim file from Gamma to ROI_PAC
     Input:
-        sim_150911-150922.hgt_sim
-        sim_150911-150922.rdc.dem
+        sim_20070813_20080310.hgt_sim
+        sim_20070813_20080310.rdc.dem
     Search for:
-        sim_150911-150922.diff_par
+        sim_20070813_20080310.diff_par
     Output:
-        sim_150911-150922.hgt_sim.rsc
-        sim_150911-150922.rdc.dem.rsc
+        sim_20070813_20080310.hgt_sim.rsc
+        sim_20070813_20080310.rdc.dem.rsc
     """
-    atr = {}
-    atr['PROCESSOR'] = 'gamma'
-    atr['FILE_TYPE'] = os.path.splitext(fname)[1]
-
-    # Get basename of file
+    # Get/read GAMMA par file
+    # for loop to get rid of multiple dot in filename
     fname_base = os.path.splitext(fname)[0]
     for i in range(5):
         fname_base = os.path.splitext(fname_base)[0]
-
     par_file = fname_base+'.diff_par'
     par_dict = readfile.read_gamma_par(par_file)
+
+    # Get/read LAT/LON_REF1/2/3/4
+    msg = 'grab LAT/LON_REF1/2/3/4 from par file: '
+    # get date of one acquisition
+    try:
+        m_date = str(re.findall('\d{8}', fname_base)[0])
+    except:
+        m_date = str(re.findall('\d{6}', fname_base)[0])
+
+    # search existing par file
+    geom_dir = os.path.dirname(fname)              #PROJECT_DIR/geom_master
+    ifg_dir = os.path.join(geom_dir, '../*/{}_*'.format(m_date))  #PROJECT_DIR/interferograms/{m_date}_20141225
+    m_par_files = [os.path.join(geom_dir, '*{}*{}'.format(m_date, ext)) for ext in PAR_EXT_LIST]
+    m_par_files += [os.path.join(ifg_dir, '*{}*{}'.format(m_date, ext)) for ext in PAR_EXT_LIST]
+    m_par_files = ut.get_file_list(m_par_files)
+
+    # read par file
+    if len(m_par_files) > 0:
+        m_par_file = m_par_files[0]
+        msg += m_par_file
+        par_dict = get_lalo_ref(m_par_file, par_dict)
+    else:
+        msg += ' no par file found with date: {}'.format(m_date)
+    print(msg)
+
+    # initiate ROIPAC dict
+    atr = {}
+    atr['PROCESSOR'] = 'gamma'
+    atr['FILE_TYPE'] = os.path.splitext(fname)[1]
     atr.update(par_dict)
 
     # Write to .rsc file
@@ -387,29 +349,63 @@ def extract_metadata4dem_radar(fname):
     return rsc_file
 
 
-def prepare_metadata(fnames):
-    ext = os.path.splitext(fnames[0])[1]
-    for fname in fnames:
-        # interferograms
-        if ext in ['.unw', '.cor', '.int']:
-            extract_metadata4interferogram(fname)
+def extract_metadata4geometry_geo(fname):
+    """Read/extract attribute for *.dem / *.UTM_TO_RDC file from Gamma to ROI_PAC
+    Inputs:
+        sim_20070813_20080310.utm.dem
+        sim_20070813_20080310.UTM_TO_RDC
+    Search for:
+        sim_20070813_20080310.utm.dem.par
+    Outputs:
+        sim_20070813_20080310.utm.dem.rsc
+        sim_20070813_20080310.UTM_TO_RDC.rsc
+    """
+    # Get/read GAMMA par file
+    ext = os.path.splitext(fname)[1]
+    if ext in ['.UTM_TO_RDC']:
+        par_file = os.path.splitext(fname)[0]+'.utm.dem.par'
+    elif fnames[0].endswith('.utm.dem'):
+        par_file = fname+'.par'
+    par_dict = readfile.read_gamma_par(par_file)
 
-        # geometry
-        elif fnames[0].endswith('.utm.dem'):
-            extract_metadata4dem_geo(fname)
+    # initiate ROIPAC dict
+    atr = {}
+    atr['PROCESSOR'] = 'gamma'
+    atr['FILE_TYPE'] = ext
+    atr['Y_UNIT'] = 'degrees'
+    atr['X_UNIT'] = 'degrees'
+    atr.update(par_dict)
 
-        elif fnames[0].endswith(('.rdc.dem', '.hgt_sim')):
-            extract_metadata4dem_radar(fname)
-
-        elif ext in ['.UTM_TO_RDC']:
-            extract_metadata4lookup_table(fname)
-    return
+    # Write to .rsc file
+    rsc_file = fname+'.rsc'
+    try:
+        atr_orig = readfile.read_roipac_rsc(rsc_file)
+    except:
+        atr_orig = dict()
+    if not set(atr.items()).issubset(set(atr_orig.items())):
+        atr_out = {**atr_orig, **atr}
+        print('writing >>> '+os.path.basename(rsc_file))
+        writefile.write_roipac_rsc(atr_out, out_file=rsc_file)
+    return rsc_file
 
 
 ##################################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    prepare_metadata(inps.file)
+
+    # loop for each file
+    for fname in inps.file:
+        # interferograms
+        if inps.file_ext in ['.unw', '.cor', '.int']:
+            extract_metadata4interferogram(fname)
+
+        # geometry - geo
+        elif inps.file_ext in ['.UTM_TO_RDC'] or fname.endswith('.utm.dem'):
+            extract_metadata4geometry_geo(fname)
+
+        # geometry - radar
+        elif fname.endswith(('.rdc.dem', '.hgt_sim')):
+            extract_metadata4geometry_radar(fname)
     return
 
 
