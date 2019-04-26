@@ -152,7 +152,7 @@ def estimate_phase_elevation_ratio(dem, ts_data, inps):
         ts_data = multilook_data(ts_data, inps.num_multilook, inps.num_multilook)
 
     if inps.threshold > 0.:
-        print('correction_threshold: {}'.format(inps.threshold))
+        print('correlation threshold: {}'.format(inps.threshold))
 
     mask_nan = ~np.isnan(dem)
     dem = dem[mask_nan]

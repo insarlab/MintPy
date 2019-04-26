@@ -126,13 +126,14 @@ pysar.networkInversion.numWorker       = auto #[int > 0], auto for 40, number of
 ## directory, then PySAR applications will download the GAM files into the indicated directory. Also PySAR
 ## application will look for the GAM files in the directory before downloading a new one to prevent downloading
 ## multiple copies if you work with different dataset that cover the same date/time.
-pysar.troposphericDelay.method       = auto  #[pyaps / height_correlation / no], auto for pyaps
-pysar.troposphericDelay.weatherModel = auto  #[ERA / MERRA / NARR], auto for ECMWF, for pyaps method
-pysar.troposphericDelay.weatherDir   = auto  #[path2directory], auto for WEATHER_DIR or "./"
-pysar.troposphericDelay.polyOrder    = auto  #[1 / 2 / 3], auto for 1, for height_correlation method
-pysar.troposphericDelay.looks        = auto  #[1-inf], auto for 8, for height_correlation, number of looks
-                                             #applied to interferogram while estimating the empirical ratio.
-pysar.troposphericDelay.empiricalThreshold = auto #[0-1], auto for 0, threshold for height-correlation
+pysar.troposphericDelay.method         = auto  #[pyaps / height_correlation / no], auto for pyaps
+pysar.troposphericDelay.weatherModel   = auto  #[ERA / MERRA / NARR], auto for ECMWF, for pyaps method
+pysar.troposphericDelay.weatherDir     = auto  #[path2directory], auto for WEATHER_DIR or "./"
+pysar.troposphericDelay.polyOrder      = auto  #[1 / 2 / 3], auto for 1, for height_correlation method
+pysar.troposphericDelay.looks          = auto  #[1-inf], auto for 8, for height_correlation, number of looks
+                                            #applied to interferogram while estimating the empirical ratio.
+pysar.troposphericDelay.minCorrelation = auto  #[0-1], auto for 0, correlation threshold to apply empirical tropospheric
+                                               #correction, if not set, all dates will be corrected.
 
 
 
