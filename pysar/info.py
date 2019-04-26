@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013-2018, Zhang Yunjun, Heresh Fattahi     #
+# Copyright(c) 2013-2019, Zhang Yunjun, Heresh Fattahi     #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
 
@@ -25,11 +25,15 @@ EXAMPLE = """example:
   info.py ifgramStack.h5
 
   # Time / Date Info
-  info.py ifgramStack.h5 --date                             # print master/slave date pairs info of interferograms.
-  info.py ifgramStack.h5 --date --nodrop > date12_list.txt  # save master/slave date pairs info of interferograms.
-  info.py timeseries.h5  --date --num                       # print date list of timeseries with its number
-  info.py LS-PARAMS.h5   --date > date_list.txt             # print date list of timeseries and save it to txt file.
+  info.py ifgramStack.h5 --date                 #print date1_date2 info for all  interferograms
+  info.py ifgramStack.h5 --date --show kept     #print date1_date2 info for kept interferograms
+  info.py ifgramStack.h5 --date --show dropped  #print date1_date2 info for dropped/excluded interferograms
+  info.py timeseries.h5  --date --num           # print date list of timeseries with its number
+  info.py LS-PARAMS.h5   --date > date_list.txt # print date list of timeseries and save it to txt file.
   info.py S1_IW12_128_0593_0597_20141213_20180619.h5 --date
+
+  # save date1_date2 info of interferograms to a text file
+  info.py ifgramStack.h5 --date --show kept > date12_list.txt  
 
   # Slice / Dataset Info
   info.py timeseries.h5                              --slice
@@ -48,14 +52,17 @@ def create_parser():
     parser.add_argument('file', type=str, help='File to check')
     parser.add_argument('--compact', action='store_true',
                         help='show compact info by displaying only the top 20 metadata')
-    parser.add_argument('--date', dest='disp_date', action='store_true',
-                        help='Show date/date12 info of input file')
-    parser.add_argument('--num', dest='disp_num', action='store_true',
-                        help='Show date/date12 number')
-    parser.add_argument('--nodrop', dest='drop_ifgram', action='store_true',
-                        help='Do not display dropped interferograms info.')
-    parser.add_argument('--slice', dest='disp_slice', action='store_true',
-                        help='Print slice list of the file')
+
+    par_list = parser.add_argument_group('List','list date/slice info')
+    par_list.add_argument('--date', dest='disp_date', action='store_true',
+                          help='Show date/date12 info of input file')
+    par_list.add_argument('--slice', dest='disp_slice', action='store_true',
+                          help='Show slice list of the file')
+    par_list.add_argument('--num', dest='disp_num', action='store_true',
+                          help='Show date/date12/slice number')
+    par_list.add_argument('--show','--show-ifgram', dest='disp_ifgram',
+                          choices={'all','kept','dropped'}, default='all',
+                          help='Show all / kept / dropped interferograms only. Default: all.')
     return parser
 
 
@@ -63,6 +70,9 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    if not os.path.isfile(inps.file):
+        raise FileExistsError(inps.file)
 
     inps.max_meta_num = 200
     if inps.compact:
@@ -155,36 +165,52 @@ def print_timseries_date_stat(dateList):
     return
 
 
-def print_date_list(fname, disp_num=False, drop_ifgram=False, print_msg=False):
+def print_date_list(fname, disp_ifgram='all', disp_num=False, print_msg=False):
     """Print time/date info of file"""
-    atr = readfile.read_attribute(fname)
-    k = atr['FILE_TYPE']
+    k = readfile.read_attribute(fname)['FILE_TYPE']
     dateList = None
     if k in ['timeseries']:
         dateList = timeseries(fname).get_date_list()
+
     elif k == 'HDFEOS':
-        obj = HDFEOS(fname)
-        obj.open(print_msg=False)
-        dateList = obj.dateList
+        dateList = HDFEOS(fname).get_date_list()
+
     elif k == 'giantTimeseries':
-        obj = giantTimeseries(fname)
-        obj.open(print_msg=False)
-        dateList = obj.dateList
-    elif k in ['ifgramStack']:
-        dateList = ifgramStack(fname).get_date12_list(dropIfgram=drop_ifgram)
+        dateList = giantTimeseries(fname).get_date_list()
+
+
     elif k in ['giantIfgramStack']:
-        obj = giantIfgramStack(fname)
+        dateList = giantIfgramStack(fname).get_date12_list()
+
+    elif k in ['ifgramStack']:
+        obj = ifgramStack(fname)
         obj.open(print_msg=False)
-        dateList = obj.date12List
+        dateListAll = obj.get_date12_list(dropIfgram=False)
+        dateListKept = obj.get_date12_list(dropIfgram=True)
+
+        # show dropped ifgram or not
+        if disp_ifgram == 'all':
+            dateList = list(dateListAll)
+        elif disp_ifgram == 'kept':
+            dateList = list(dateListKept)
+        else:
+            dateList = sorted(list(set(dateListAll) - set(dateListKept)))
+
     else:
         print('--date option can not be applied to {} file, ignore it.'.format(k))
 
+    # print list info
     if print_msg and dateList is not None:
-        for i in range(len(dateList)):
+        for d in dateList:
             if disp_num:
-                print('{}\t{}'.format(dateList[i], i))
+                if k in ['ifgramStack']:
+                    num = dateListAll.index(d)
+                else:
+                    num = dateList.index(d)
+                msg = '{}\t{}'.format(d, num)
             else:
-                print(dateList[i])
+                msg = d
+            print(msg)
     return dateList
 
 
@@ -223,19 +249,23 @@ def print_pysar_info(fname):
 ############################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    if not os.path.isfile(inps.file):
-        print('ERROR: input file does not exists: {}'.format(inps.file))
-        return
     ext = os.path.splitext(inps.file)[1].lower()
 
     # --date option
     if inps.disp_date:
-        print_date_list(inps.file, disp_num=inps.disp_num, drop_ifgram=inps.drop_ifgram, print_msg=True)
+        print_date_list(inps.file,
+                        disp_ifgram=inps.disp_ifgram,
+                        disp_num=inps.disp_num,
+                        print_msg=True)
         return
 
     # --slice option
     if inps.disp_slice:
-        print_slice_list(inps.file, disp_num=inps.disp_num, print_msg=True)
+        if inps.disp_ifgram != 'all':
+            raise ValueError('--show-ifgram option is not applicable to --slice.')
+        print_slice_list(inps.file,
+                         disp_num=inps.disp_num,
+                         print_msg=True)
         return
 
     # Basic info from PySAR reader
