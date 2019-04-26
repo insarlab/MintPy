@@ -1,14 +1,14 @@
-## Install PySAR
+## Install PySAR ##
 
 Tested on macOS and Linux, not sure about Windows.
 
-### Notes for Mac users
+### Notes for Mac users ###
 
 Install Xcode with command line tools, if you have not already done so.
 
-1. Install Xcode from App store
+1. Install `Xcode` from App store
 
-2. Install command line tools from within XCode and agree to the terms of license.
+2. Install `command line tools` from within XCode and agree to the terms of license.
 
 ```
 xcode-select --install -s /Applications/Xcode.app/Contents/Developer/ 
@@ -17,7 +17,7 @@ sudo xcodebuild -license
 
 3. Install [XQuartz](https://www.xquartz.org), then restart the terminal.
 
-### 1. Setup Paths    
+### 1. Setup Paths ###
 
 To use the package, you need to setup the environment:
 
@@ -42,10 +42,11 @@ export PYTHONPATH=${PYAPS_HOME}:${PYTHONPATH}
 
 Source the file for the first time. It will be sourced automatically next time when you login. [Here](https://github.com/yunjunz/macOS_Setup/blob/master/cshrc.md) is an example _.cshrc_ file for _csh/tcsh_ user.
 
-### 2. Install Python dependecies
+### 2. Install Python dependecies ###
+
 PySAR is written in Python3 (3.5+) and relies on several Python modules, check the [requirements.txt](../requirements.txt) file for details. We recommend using [conda](https://conda.io/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
 
-#### Installing via conda
+#### Installing via conda ####
 
 Add to your **_~/.bash_profile_** file:
 
@@ -82,7 +83,7 @@ $PYTHON3DIR/bin/python3 setup.py build
 $PYTHON3DIR/bin/python3 setup.py install
 ```
 
-#### Installing via MacPorts
+#### Installing via MacPorts ####
 
 Install [macports](https://www.macports.org/install.php) if you have not done so. Add the following at the bottom of your **_~/.bash_profile_** file:
 
@@ -135,7 +136,7 @@ python3 setup.py build
 python3 setup.py install
 ```
 
-#### Notes on [PyAPS](https://github.com/AngeliqueBenoit/pyaps3)
+### Notes on [PyAPS](https://github.com/AngeliqueBenoit/pyaps3) ###
 
 + We use PyAPS for tropospheric delay correction calculated from Global Atmospheric Models (GAMs) such as ERA-5, ERA-Interim, HRES-ECMWF, MERRA and NARR. 
 
@@ -146,7 +147,7 @@ directory, PySAR applications will download the GAM files into the indicated dir
 application will look for the GAM files in the directory before downloading a new one to prevent downloading
 multiple copies if you work with different dataset that cover the same date/time.
 
-#### Notes on parallel processing
+### Notes on parallel processing ###
 
 We use [Dask](www.dask.org) for parallel processing on High Performance Compute (HPC) cluster, it can be setup as below:
 
@@ -155,12 +156,12 @@ mkdir -p ~/.config/dask
 cp $PYSAR_HOME/pysar/defaults/dask_pysar.yaml ~/.config/dask/dask_pysar.yaml
 ```
 
-Edit `~/.config/dask/dask_pysar.yaml` file according to your HPC settings. Currently, only `LSFCluster` job scheduler is tested, `PBSCluster` should also work after minor adjustment in [ifgram_inversion.py](https://github.com/insarlab/PySAR/blob/master/pysar/ifgram_inversion.py).
+Edit `~/.config/dask/dask_pysar.yaml` file according to your HPC settings. Currently, only `LSFCluster` job scheduler is tested, `PBSCluster` should also work after minor adjustment in `ifgram_inversion.py`.
 
-#### Notes on pyKML
+### Notes on pyKML ###
 
 The pykml installed through conda/pip supports python2 only, the python2/3 compatible version is available [here](https://github.com/yunjunz/pykml.git) and installed throught the commands above by default.
 
-#### Notes on vim
+### Notes on vim ###
 
 [Here](https://github.com/yunjunz/macOS_Setup/blob/master/vim.md) is some useful setup of Vim editor for general use and Python.
