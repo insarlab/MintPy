@@ -1134,21 +1134,21 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     if not 'markersize'  in plot_dict.keys():  plot_dict['markersize']  = 16
 
     # For colorful display of coherence
-    if not 'cohList'     in plot_dict.keys():  plot_dict['cohList']    = None
-    if not 'ylabel'      in plot_dict.keys():  plot_dict['ylabel']     = 'Perp Baseline [m]'
-    if not 'cbar_label'  in plot_dict.keys():  plot_dict['cbar_label'] = 'Average Spatial Coherence'
+    if not 'cohList'     in plot_dict.keys():  plot_dict['cohList']     = None
+    if not 'ylabel'      in plot_dict.keys():  plot_dict['ylabel']      = 'Perp Baseline [m]'
+    if not 'cbar_label'  in plot_dict.keys():  plot_dict['cbar_label']  = 'Average Spatial Coherence'
     if not 'disp_cbar'   in plot_dict.keys():  plot_dict['disp_cbar']   = True
-    if not 'disp_min'    in plot_dict.keys():  plot_dict['disp_min']   = 0.2
-    if not 'disp_max'    in plot_dict.keys():  plot_dict['disp_max']   = 1.0
-    if not 'colormap'    in plot_dict.keys():  plot_dict['colormap']   = 'RdBu'
-    if not 'disp_title'  in plot_dict.keys():  plot_dict['disp_title'] = True
-    if not 'coh_thres'   in plot_dict.keys():  plot_dict['coh_thres']  = None
-    if not 'disp_drop'   in plot_dict.keys():  plot_dict['disp_drop']  = True
+    if not 'disp_min'    in plot_dict.keys():  plot_dict['disp_min']    = 0.2
+    if not 'disp_max'    in plot_dict.keys():  plot_dict['disp_max']    = 1.0
+    if not 'colormap'    in plot_dict.keys():  plot_dict['colormap']    = 'RdBu'
+    if not 'disp_title'  in plot_dict.keys():  plot_dict['disp_title']  = True
+    if not 'coh_thres'   in plot_dict.keys():  plot_dict['coh_thres']   = None
+    if not 'disp_drop'   in plot_dict.keys():  plot_dict['disp_drop']   = True
     if not 'disp_legend' in plot_dict.keys():  plot_dict['disp_legend'] = True
-    if not 'every_year'  in plot_dict.keys():  plot_dict['every_year'] = 1
-    if not 'split_cmap'  in plot_dict.keys():  plot_dict['split_cmap'] = True
+    if not 'every_year'  in plot_dict.keys():  plot_dict['every_year']  = 1
+    if not 'split_cmap'  in plot_dict.keys():  plot_dict['split_cmap']  = True
 
-    if not 'number'      in plot_dict.keys():  plot_dict['number']     = None
+    if not 'number'      in plot_dict.keys():  plot_dict['number']      = None
 
     cohList = plot_dict['cohList']
     disp_min = plot_dict['disp_min']
