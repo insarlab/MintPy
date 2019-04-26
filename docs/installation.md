@@ -43,7 +43,7 @@ export PYTHONPATH=${PYAPS_HOME}:${PYTHONPATH}
 Source the file for the first time. It will be sourced automatically next time when you login. [Here](https://github.com/yunjunz/macOS_Setup/blob/master/cshrc.md) is an example _.cshrc_ file for _csh/tcsh_ user.
 
 ### 2. Install Python dependecies
-PySAR is written in Python3 (3.5+) and it relies on several Python modules, check the [requirements.txt](../requirements.txt) file for details. We recommend using [conda](https://conda.io/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
+PySAR is written in Python3 (3.5+) and relies on several Python modules, check the [requirements.txt](../requirements.txt) file for details. We recommend using [conda](https://conda.io/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
 
 #### Installing via conda
 
@@ -155,11 +155,11 @@ mkdir -p ~/.config/dask
 cp $PYSAR_HOME/pysar/defaults/dask_pysar.yaml ~/.config/dask/dask_pysar.yaml
 ```
 
-Edit `~/.config/dask/dask_pysar.yaml` file according to your HPC settings. Currently, only `LSFCluster` job scheduler is tested, `PBSCluster` should work out of the box after minor adjustment in [ifgram_inversion.py](https://github.com/insarlab/PySAR/blob/master/pysar/ifgram_inversion.py).
+Edit `~/.config/dask/dask_pysar.yaml` file according to your HPC settings. Currently, only `LSFCluster` job scheduler is tested, `PBSCluster` should also work after minor adjustment in [ifgram_inversion.py](https://github.com/insarlab/PySAR/blob/master/pysar/ifgram_inversion.py).
 
 #### Notes on pyKML
 
-The pykml installed through conda/pip supports python2 only, the python2/3 compatible version is available [here](https://github.com/yunjunz/pykml.git) and installed throught the command line above by default.
+The pykml installed through conda/pip supports python2 only, the python2/3 compatible version is available [here](https://github.com/yunjunz/pykml.git) and installed throught the commands above by default.
 
 #### Notes on vim
 
