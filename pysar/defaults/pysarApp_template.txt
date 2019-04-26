@@ -119,6 +119,7 @@ pysar.networkInversion.numWorker       = auto #[int > 0], auto for 40, number of
 ## correct tropospheric delay using the following methods:
 ## a. pyaps - use Global Atmospheric Models (GAMs) data (Jolivet et al., 2011, GRL, need to install PyAPS)
 ## b. height_correlation - correct stratified tropospheric delay (Doin et al., 2009, J Applied Geop)
+## -----------------
 ## Notes for pyaps: 
 ## a. GAM data latency: with the most recent SAR data, there will be GAM data missing, the correction
 ## will be applied to dates with GAM data available and skipped for the others.
@@ -126,15 +127,16 @@ pysar.networkInversion.numWorker       = auto #[int > 0], auto for 40, number of
 ## directory, then PySAR applications will download the GAM files into the indicated directory. Also PySAR
 ## application will look for the GAM files in the directory before downloading a new one to prevent downloading
 ## multiple copies if you work with different dataset that cover the same date/time.
+## -----------------
+## Notes for height_correlation:
+## Multilooking is applied to interferograms for estimating the empirical phase/elevation ratio only.
+## Correction is applied to original interferograms if the correction is larger than minCorrelation.
 pysar.troposphericDelay.method         = auto  #[pyaps / height_correlation / no], auto for pyaps
 pysar.troposphericDelay.weatherModel   = auto  #[ERA / MERRA / NARR], auto for ECMWF, for pyaps method
 pysar.troposphericDelay.weatherDir     = auto  #[path2directory], auto for WEATHER_DIR or "./"
 pysar.troposphericDelay.polyOrder      = auto  #[1 / 2 / 3], auto for 1, for height_correlation method
 pysar.troposphericDelay.looks          = auto  #[1-inf], auto for 8, for height_correlation, number of looks
-                                            #applied to interferogram while estimating the empirical ratio.
-pysar.troposphericDelay.minCorrelation = auto  #[0-1], auto for 0, correlation threshold to apply empirical tropospheric
-                                               #correction, if not set, all dates will be corrected.
-
+pysar.troposphericDelay.minCorrelation = auto  #[0.0-1.0], auto for 0, for height_correlation
 
 
 ########## 7. Phase Deramping (optional)
