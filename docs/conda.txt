@@ -13,7 +13,6 @@ openmp
 pygrib
 pyhdf
 pykdtree
-pykml
 pyproj
 pyresample
 scikit-image
