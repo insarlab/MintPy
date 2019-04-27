@@ -65,7 +65,7 @@ cd ~/python
 git clone https://github.com/insarlab/PySAR.git
 
 # download PyAPS
-mdkir PyAPS; cd PyAPS
+mdkir -p PyAPS; cd PyAPS
 git clone https://github.com/yunjunz/pyaps3.git
 
 # install miniconda
@@ -78,9 +78,7 @@ $PYTHON3DIR/bin/conda config --add channels conda-forge
 $PYTHON3DIR/bin/conda install --yes --file $PYSAR_HOME/docs/conda.txt
 
 # install pykml
-git clone https://github.com/yunjunz/pykml.git; cd pykml
-$PYTHON3DIR/bin/python3 setup.py build
-$PYTHON3DIR/bin/python3 setup.py install
+$PYTHON3DIR/bin/pip install git+https://github.com/yunjunz/pykml.git
 ```
 
 #### Installing via MacPorts ####
@@ -113,7 +111,7 @@ cd ~/python
 git clone https://github.com/insarlab/PySAR.git
 
 # download PyAPS
-mdkir PyAPS; cd PyAPS
+mdkir -p PyAPS; cd PyAPS
 git clone https://github.com/yunjunz/pyaps3.git
 
 # install dependencies with macports

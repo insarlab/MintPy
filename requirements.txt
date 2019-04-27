@@ -9,12 +9,11 @@ lxml
 matplotlib
 netcdf4
 numpy
-openmp
 pyaps3
 pygrib
 pyhdf
 pykdtree
-pykml
+pykml -e git+https://github.com/yunjunz/pykml.git#egg=pykml
 pyproj
 pyresample
 scikit-image
