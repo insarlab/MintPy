@@ -21,7 +21,7 @@ pysar.load.intFile        = auto  #[path2int_file]
 pysar.load.ionoFile       = auto  #[path2iono_file]
 ##---------geometry datasets:
 pysar.load.demFile        = auto  #[path2hgt_file]
-pysar.load.lookupYFile    = auto  #[path2lat_file]]
+pysar.load.lookupYFile    = auto  #[path2lat_file]
 pysar.load.lookupXFile    = auto  #[path2lon_file]
 pysar.load.incAngleFile   = auto  #[path2los_file]
 pysar.load.azAngleFile    = auto  #[path2los_file]
@@ -42,7 +42,7 @@ pysar.subset.lalo   = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
 pysar.network.coherenceBased  = auto  #[yes / no], auto for no, exclude interferograms with coherence < minCoherence
 pysar.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
 pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
-pysar.network.maskFile        = auto  #[file name, no], auto for waterMask.h5 or no (use all pixels)
+pysar.network.maskFile        = auto  #[file name, no], auto for waterMask.h5 or no [if no waterMask.h5 found]
 pysar.network.aoiYX           = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
 pysar.network.aoiLALO         = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 ## 2) Network modification based on temporal/perpendicular baselines, date etc.
@@ -74,7 +74,7 @@ pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum cohere
 ## c. bridging+phase_closure  - recommended
 pysar.unwrapError.method          = auto  #[bridging / phase_closure / bridging+phase_closure / no], auto for no
 pysar.unwrapError.ramp            = auto  #[linear / quadratic], auto for no; recommend linear for L-band data
-pysar.unwrapError.waterMaskFile   = auto  #[waterMask.h5 / no], auto for no
+pysar.unwrapError.waterMaskFile   = auto  #[waterMask.h5 / no], auto for waterMask.h5 or no [if no waterMask.h5 found]
 pysar.unwrapError.bridgePtsRadius = auto  #[1-inf], auto for 150, radius in pixel of circular area around bridge ends
 
 
@@ -100,7 +100,7 @@ pysar.networkInversion.weightFunc      = auto #[var / fim / coh / no], auto for 
 pysar.networkInversion.maskDataset     = auto #[coherence / connectComponent / no], auto for no
 pysar.networkInversion.maskThreshold   = auto #[0-1], auto for 0.4
 pysar.networkInversion.minRedundancy   = auto #[1-inf], auto for 1.0, min num_ifgram for every SAR acquisition
-pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for waterMask.h5 or no
+pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for waterMask.h5 or no [if no waterMask.h5 found]
 pysar.networkInversion.minNormVelocity = auto #[yes / no], auto for yes, min-norm deformation velocity or phase
 pysar.networkInversion.residualNorm    = auto #[L2 ], auto for L2, norm minimization solution
 pysar.networkInversion.minTempCoh      = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
