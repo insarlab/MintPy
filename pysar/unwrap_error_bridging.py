@@ -82,6 +82,9 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    if inps.template_file:
+        inps = read_template2inps(inps.template_file, inps)
+
     # check input file type
     k = readfile.read_attribute(inps.ifgram_file)['FILE_TYPE']
     if k not in ['ifgramStack', '.unw']:
@@ -90,6 +93,11 @@ def cmd_line_parse(iargs=None):
     # default output dataset name
     if not inps.datasetNameOut:
         inps.datasetNameOut = '{}_bridging'.format(inps.datasetNameIn)
+
+    # discard water mask file is not found
+    if inps.waterMaskFile and not os.path.isfile(inps.waterMaskFile):
+        inps.waterMaskFile = None
+
     return inps
 
 
@@ -271,8 +279,6 @@ def run_unwrap_error_bridge(ifgram_file, water_mask_file, ramp_type=None, radius
 def main(iargs=None):
     # check inputs
     inps = cmd_line_parse(iargs)
-    if inps.template_file:
-        inps = read_template2inps(inps.template_file, inps)
 
     # update mode
     if inps.update_mode and run_or_skip(inps) == 'skip':

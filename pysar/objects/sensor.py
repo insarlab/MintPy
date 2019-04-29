@@ -132,7 +132,7 @@ def project_name2sensor_name(project_names):
     Examples:   ('Sen',
                  'AlcedoSenDT128') = project_name2sensor_name('AlcedoSenDT128')
                 ('Env',
-                 'GalapagosEnvA2T061') = project_name2sensor_name('/Users/yunjunz/insarlab/GalapagosEnvA2T061/'+
+                 'GalapagosEnvA2T061') = project_name2sensor_name('~/insarlab/GalapagosEnvA2T061/'+
                                                                   'PYSAR/GalapagosEnvA2T061.template')
     """
     sensor = None

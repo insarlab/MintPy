@@ -31,11 +31,12 @@ pysar.load.lookupXFile      = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_
 pysar.load.incAngleFile     = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/los.rdr
 pysar.load.azAngleFile      = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/los.rdr
 pysar.load.shadowMaskFile   = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/shadowMask.rdr
+pysar.load.waterMaskFile    = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/waterMask.rdr
 pysar.load.bperpFile        = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/baseline_grid/*/bperp.rdr
 
 pysar.subset.yx                         = 400:2400,0:1700
 pysar.reference.lalo                    = -0.31,-91.22
+pysar.network.endDate                   = 20180626
 pysar.unwrapError.method                = bridging+phase_closure   #[bridging / phase_closure / no], auto for no
-pysar.unwrapError.waterMaskFile         = waterMask.h5
-pysar.topographicResidual.stepFuncDate  = 20150524,20150616,20170319,20170321,20170910,20180613  #Wolf,Wolf,CerroAzul,CerroAzul,Fernandina,Fernandina
+pysar.topographicResidual.stepFuncDate  = 20150524,20150616,20170321,20170910,20180613  #Wolf,Wolf,CerroAzul,Fernandina,Fernandina
 pysar.deramp                            = linear

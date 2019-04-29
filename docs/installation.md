@@ -134,7 +134,7 @@ python3 setup.py build
 python3 setup.py install
 ```
 
-### Notes on [PyAPS](https://github.com/AngeliqueBenoit/pyaps3) ###
+### Notes on [PyAPS](https://github.com/yunjunz/pyaps3) ###
 
 + We use PyAPS for tropospheric delay correction calculated from Global Atmospheric Models (GAMs) such as ERA-5, ERA-Interim, HRES-ECMWF, MERRA and NARR. 
 

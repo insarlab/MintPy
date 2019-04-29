@@ -164,7 +164,7 @@ def remove_hdf5_dataset(fname, datasetNames, print_msg=True):
     if print_msg:
         print('delete {} from file {}'.format(datasetNames, fname))
     # 1. rename the file to a temporary file
-    temp_file = 'tmp_{}'.format(fname)
+    temp_file = os.path.join(os.path.dirname(fname), 'tmp_{}'.format(os.path.basename(fname)))
     cmd = 'mv {} {}'.format(fname, temp_file)
     print(cmd)
     os.system(cmd)

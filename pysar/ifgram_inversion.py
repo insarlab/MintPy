@@ -3,7 +3,7 @@
 # Program is part of PySAR                                 #
 # Copyright(c) 2013-2019, Zhang Yunjun, Heresh Fattahi     #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
-# Parallel support add by David Grossman, April 2019       #
+# Parallel support added by David Grossman, April 2019     #
 ############################################################
 # Recommend import:
 #     from pysar import ifgram_inversion as ifginv
