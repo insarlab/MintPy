@@ -9,13 +9,23 @@
 import os
 import sys
 import time
-from datetime import datetime as dt
+from datetime import datetime as dt, timedelta
 
 import h5py
 import numpy as np
 
 
 ################################################################
+def datenum2datetime(datenum):
+    """Convert Matlab datenum into Python datetime.
+    Parameters: datenum : Date in datenum format, i.e. 731763.5
+    Returns:    datetime: Date in datetime.datetime format, datetime.datetime(2003, 7, 1, 12, 0)
+    """
+    return dt.fromordinal(int(datenum)) \
+           + timedelta(days=datenum % 1) \
+           - timedelta(days=366)
+
+
 def decimal_year2datetime(x):
     """read date in 2002.40657084 to datetime format"""
     x = float(x)

@@ -1,6 +1,8 @@
 basemap
+cdsapi
 cvxopt
 dask>=1.0,<2.0
+dask-jobqueue>=0.3,<1.0
 ecCodes
 h5py
 lxml
@@ -11,7 +13,6 @@ openmp
 pygrib
 pyhdf
 pykdtree
-pykml
 pyproj
 pyresample
 scikit-image

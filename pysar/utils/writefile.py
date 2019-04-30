@@ -115,7 +115,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             data_list.append(datasetDict[key])
 
         # Write Data File
-        print('writing {}'.format(out_file))
+        print('write {}'.format(out_file))
         if ext in ['.unw', '.cor', '.hgt']:
             write_float32(data_list[0], out_file)
             meta['DATA_TYPE'] = 'float32'
@@ -164,7 +164,7 @@ def remove_hdf5_dataset(fname, datasetNames, print_msg=True):
     if print_msg:
         print('delete {} from file {}'.format(datasetNames, fname))
     # 1. rename the file to a temporary file
-    temp_file = 'tmp_{}'.format(fname)
+    temp_file = os.path.join(os.path.dirname(fname), 'tmp_{}'.format(os.path.basename(fname)))
     cmd = 'mv {} {}'.format(fname, temp_file)
     print(cmd)
     os.system(cmd)
@@ -243,7 +243,7 @@ def write_roipac_rsc(metadata, out_file, update_mode=False, print_msg=False):
 
 
 def write_float32(*args):
-    """Write ROI_PAC rmg format with float32 precision
+    """Write ROI_PAC rmg format with float32 precision (BIL)
     Format of the binary file is same as roi_pac unw, cor, or hgt data.
           should rename to write_rmg_float32()
 

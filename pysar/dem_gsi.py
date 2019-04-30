@@ -43,8 +43,8 @@ def create_parser():
                         help='Spatial region in the format south north west east.\n'
                              'The values should be from (-90,90) for latitudes and '
                              '(-180,180) for longitudes.')
-    parser.add_argument('-o','--output', dest='outfile', default='gsi10m.dem',
-                        help='output file name. Default: gsi10m.dem')
+    parser.add_argument('-o','--output', dest='outfile', default='gsi10m.dem.wgs84',
+                        help='output file name. Default: gsi10m.dem.wgs84')
     parser.add_argument('-g','--grid-dir', dest='grid_dir', default='/famelung/data/gsi10m',
                         help='Directory of DEHM grib files. Default=/famelung/data/gsi10m')
     return parser
@@ -184,6 +184,34 @@ def write_vrt_file(meta, out_file):
     return out_file
 
 
+def add_reference_datum(xml_file):
+    import xml.etree.ElementTree as ET
+    from xml.dom import minidom
+    print('add <reference> info to xml file: {}'.format(os.path.basename(xml_file)))
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
+
+    # get property element for reference
+    ref = ET.Element("property")
+    ref.attrib = {'name': 'reference'}
+    
+    elm1 = ET.Element("value")
+    elm1.text = "WGS84"
+    ref.append(elm1)
+    
+    elm1 = ET.Element("doc")
+    elm1.text = "Geodetic datum"
+    ref.append(elm1)
+    
+    ref = ET.fromstring(minidom.parseString(ET.tostring(ref)).toprettyxml(indent="    "))
+
+    # write back to xml file
+    root.append(ref)
+    tree.write(xml_file)
+    return xml_file
+
+
+
 ##################################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
@@ -202,6 +230,9 @@ def main(iargs=None):
         cmd += ' -i {}.vrt'.format(inps.outfile)
         print(cmd)
         os.system(cmd)
+
+        # DEHM from GSI is already in ellipsoid, add the information
+        add_reference_datum('{}.xml'.format(inps.outfile))
 
     return
 

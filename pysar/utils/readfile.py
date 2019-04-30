@@ -1,6 +1,6 @@
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013-2018, Zhang Yunjun, Heresh Fattahi     #
+# Copyright(c) 2013-2019, Zhang Yunjun, Heresh Fattahi     #
 # Author:  Zhang Yunjun, Heresh Fattahi, 2013              #
 ############################################################
 # Recommend import:
@@ -16,16 +16,19 @@ import h5py
 import json
 import numpy as np
 
-from pysar.objects import (datasetUnitDict,
-                           geometry,
-                           geometryDatasetNames,
-                           giantIfgramStack,
-                           giantTimeseries,
-                           ifgramDatasetNames,
-                           ifgramStack,
-                           timeseriesDatasetNames,
-                           timeseries,
-                           HDFEOS)
+from pysar.objects import (
+    datasetUnitDict,
+    geometry,
+    geometryDatasetNames,
+    giantIfgramStack,
+    giantTimeseries,
+    ifgramDatasetNames,
+    ifgramStack,
+    timeseriesDatasetNames,
+    timeseries,
+    HDFEOS
+)
+
 
 standardMetadataKeys = {
     # ordered in alphabet by value names
@@ -97,17 +100,6 @@ ENVI_BAND_INTERLEAVE = {
     'LINE': 'BIL',
     'PIXEL': 'BIP',
 }
-
-
-###########################################################################
-# obsolete variables
-multi_group_hdf5_file = ['interferograms',
-                         'coherence',
-                         'wrapped',
-                         'snaphu_connect_component']
-multi_dataset_hdf5_file = ['timeseries', 'geometry']
-single_dataset_hdf5_file = ['dem', 'mask', 'temporal_coherence', 'velocity']
-
 
 ###########################################################################
 ## Slice-based data identification for data reading:
@@ -313,8 +305,8 @@ def read_binary_file(fname, datasetName=None, box=None):
         data_type = atr['DATA_TYPE'].lower()
         if data_type in dataTypeDict.keys():
             data_type = dataTypeDict[data_type]
-        num_band = int(atr['number_bands'])
-        band_interleave = atr['scheme'].upper()
+        num_band = int(atr.get('number_bands', '1'))
+        band_interleave = atr.get('scheme', 'BIL').upper()
         byte_order = 'l'
 
         # data structure - file specific based on FILE_TYPE - k
@@ -548,6 +540,7 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
         d1_list = [i for i in f.keys() if isinstance(f[i], h5py.Dataset) and f[i].ndim >= 2]
 
         # FILE_TYPE - k
+        py2_pysar_stack_files = ['interferograms', 'coherence', 'wrapped'] #obsolete pysar format
         if any(i in d1_list for i in ['unwrapPhase']):
             k = 'ifgramStack'
         elif any(i in d1_list for i in ['height', 'latitude', 'azimuthCoord']):
@@ -560,8 +553,8 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             k = 'giantTimeseries'
         elif any(i in d1_list for i in ['igram', 'figram']):
             k = 'giantIfgramStack'
-        elif any(i in g1_list for i in multi_group_hdf5_file):      # old pysar format
-            k = list(set(g1_list) & set(multi_group_hdf5_file))[0]
+        elif any(i in g1_list for i in py2_pysar_stack_files):
+            k = list(set(g1_list) & set(py2_pysar_stack_files))[0]
         elif len(d1_list) > 0:
             k = d1_list[0]
         elif len(g1_list) > 0:
@@ -655,7 +648,7 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
 
         # Read metadata file and FILE_TYPE
         metafile0 = fname + metafile_exts[0]
-        while fext in ['.geo', '.rdr']:
+        while fext in ['.geo', '.rdr', '.full']:
             fbase, fext = os.path.splitext(fbase)
         if not fext:
             fext = fbase
@@ -1022,36 +1015,34 @@ def read_binary(fname, box=None, data_type='float32', byte_order='l',
         data_type = '>{}{}'.format(letter, digit)
 
     # read data
-    if num_band > 1:
-        band_interleave = band_interleave.upper()
-        if band_interleave == 'BIL':
-            data = np.fromfile(fname,
-                               dtype=data_type,
-                               count=box[3]*width*num_band).reshape(-1, width*num_band)
-            data = data[box[1]:box[3], 
-                        width*(band-1)+box[0]:width*(band-1)+box[2]]
-
-        elif band_interleave == 'BIP':
-            data = np.fromfile(fname, 
-                               dtype=data_type,
-                               count=box[3]*width*num_band).reshape(-1, width*num_band)
-            data = data[box[1]:box[3],
-                        np.arange(box[0], box[2])*num_band+band-1]
-
-        elif band_interleave == 'BSQ':
-            data = np.fromfile(fname, 
-                               dtype=data_type,
-                               count=(box[3]+length*(band-1))*width).reshape(-1, width)
-            data = data[length*(band-1)+box[1]:length*(band-1)+box[3],
-                        box[0]:box[2]]
-        else:
-            raise ValueError('unrecognized band interleaving:', band_interleave)
-    else:
+    #data = np.fromfile(fname,
+    #                   dtype=data_type,
+    #                   count=box[3]*width).reshape(-1, width)
+    #data = data[box[1]:box[3],
+    #            box[0]:box[2]]
+    band_interleave = band_interleave.upper()
+    if band_interleave == 'BIL':
         data = np.fromfile(fname,
                            dtype=data_type,
-                           count=box[3]*width).reshape(-1, width)
+                           count=box[3]*width*num_band).reshape(-1, width*num_band)
+        data = data[box[1]:box[3], 
+                    width*(band-1)+box[0]:width*(band-1)+box[2]]
+
+    elif band_interleave == 'BIP':
+        data = np.fromfile(fname, 
+                           dtype=data_type,
+                           count=box[3]*width*num_band).reshape(-1, width*num_band)
         data = data[box[1]:box[3],
+                    np.arange(box[0], box[2])*num_band+band-1]
+
+    elif band_interleave == 'BSQ':
+        data = np.fromfile(fname, 
+                           dtype=data_type,
+                           count=(box[3]+length*(band-1))*width).reshape(-1, width)
+        data = data[length*(band-1)+box[1]:length*(band-1)+box[3],
                     box[0]:box[2]]
+    else:
+        raise ValueError('unrecognized band interleaving:', band_interleave)
 
     # adjust output band for complex data
     if data_type.replace('>', '').startswith('c'):

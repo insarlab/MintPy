@@ -25,6 +25,7 @@ from pysar.objects import ifgramStack
 from pysar.objects.conncomp import connectComponent
 from pysar.utils import ptime, readfile, utils as ut, plot as pp
 from pysar.utils.solvers import l1regls
+from pysar import ifgram_inversion as ifginv
 
 
 key_prefix = 'pysar.unwrapError.'
@@ -81,13 +82,25 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    if inps.template_file:
+        inps = read_template2inps(inps.template_file, inps)
+
     # check 1 input file type
     k = readfile.read_attribute(inps.ifgram_file)['FILE_TYPE']
     if k not in ['ifgramStack']:
         raise ValueError('input file is not ifgramStack: {}'.format(k))
+
     # check 2 cc_mask_file
     if not os.path.isfile(inps.cc_mask_file):
         raise FileNotFoundError(inps.cc_mask_file)
+
+    if not inps.datasetNameOut:
+        inps.datasetNameOut = '{}_phaseClosure'.format(inps.datasetNameIn)
+
+    # discard water mask file is not found
+    if inps.waterMaskFile and not os.path.isfile(inps.waterMaskFile):
+        inps.waterMaskFile = None
+
     return inps
 
 
@@ -233,9 +246,12 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
             for j in range(num_sample):
                 # read unwrap phase
                 y, x = common_reg.sample_coords[j, :]
-                box = (x, y, x+1, y+1)
-                unw = readfile.read(ifgram_file, datasetName=dsNameIn, box=box)[0].reshape(num_ifgram, -1)
-                unw -= ref_phase
+                unw = ifginv.read_unwrap_phase(stack_obj,
+                                               box=(x, y, x+1, y+1),
+                                               ref_phase=ref_phase,
+                                               unwDatasetName=dsNameIn,
+                                               dropIfgram=True,
+                                               print_msg=False).reshape(num_ifgram, -1)
 
                 # calculate closure_int
                 closure_pha = np.dot(C, unw)
@@ -305,35 +321,34 @@ def run_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_file=
     # correct unwrap error ifgram by ifgram
     prog_bar = ptime.progressBar(maxValue=num_ifgram)
     for i in range(num_ifgram):
-        # skip excluded interferograms
-        if not stack_obj.dropIfgram[i]:
-            next
-
         date12 = date12_list[i]
-        idx_common = common_regions[0].date12_list.index(date12)
+
         # read unwrap phase to be updated
         unw_cor = np.squeeze(f[dsNameIn][i, :, :]).astype(np.float32)
         unw_cor -= unw_cor[ref_y, ref_x]
 
-        # get local region info from connectComponent
-        cc = np.squeeze(f[ccName][i, :, :])
-        if water_mask is not None:
-            cc[water_mask == 0] = 0
-        cc_obj = connectComponent(conncomp=cc, metadata=stack_obj.metadata)
-        cc_obj.label()
-        local_regions = measure.regionprops(cc_obj.labelImg)
+        # update kept interferograms only
+        if stack_obj.dropIfgram[i]:
+            # get local region info from connectComponent
+            cc = np.squeeze(f[ccName][i, :, :])
+            if water_mask is not None:
+                cc[water_mask == 0] = 0
+            cc_obj = connectComponent(conncomp=cc, metadata=stack_obj.metadata)
+            cc_obj.label()
+            local_regions = measure.regionprops(cc_obj.labelImg)
 
-        # matching regions and correct unwrap error
-        for local_reg in local_regions:
-            local_mask = cc_obj.labelImg == local_reg.label
-            U = 0
-            for common_reg in common_regions:
-                y = common_reg.sample_coords[:,0]
-                x = common_reg.sample_coords[:,1]
-                if all(local_mask[y, x]):
-                    U = common_reg.int_ambiguity[idx_common]
-                    break
-            unw_cor[local_mask] += 2. * np.pi * U
+            # matching regions and correct unwrap error
+            idx_common = common_regions[0].date12_list.index(date12)
+            for local_reg in local_regions:
+                local_mask = cc_obj.labelImg == local_reg.label
+                U = 0
+                for common_reg in common_regions:
+                    y = common_reg.sample_coords[:,0]
+                    x = common_reg.sample_coords[:,1]
+                    if all(local_mask[y, x]):
+                        U = common_reg.int_ambiguity[idx_common]
+                        break
+                unw_cor[local_mask] += 2. * np.pi * U
 
         # write to hdf5 file
         ds[i, :, :] = unw_cor
@@ -348,10 +363,6 @@ def run_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_file=
 ####################################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    if inps.template_file:
-        inps = read_template2inps(inps.template_file, inps)
-    if not inps.datasetNameOut:
-        inps.datasetNameOut = '{}_phaseClosure'.format(inps.datasetNameIn)
 
     # update mode
     if inps.update_mode and run_or_skip(inps) == 'skip':

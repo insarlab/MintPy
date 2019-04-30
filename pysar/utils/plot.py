@@ -86,7 +86,7 @@ class BasemapExt(Basemap):
 
         # plot scale bar label
         unit = 'm'
-        if distance > 1000.0:
+        if distance >= 1000.0:
             unit = 'km'
             distance *= 0.001
         label = '{:.0f} {}'.format(distance, unit)
@@ -510,7 +510,7 @@ def get_poly_mask(data, print_msg=True):
     Returns:    mask : 2D np.arrat in size of (length, width) in np.bool_ format
     """
     fig, ax = plt.subplots()
-    im = ax.imshow(data)
+    im = ax.imshow(data) #, vmin=-3, vmax=3, cmap='jet')
 
     selector = SelectFromCollection(ax, im)
     plt.show()
@@ -601,12 +601,12 @@ def add_dem_argument(parser):
     dem.add_argument('--shade-alt', dest='shade_altdeg', type=float, default=45., metavar='DEG',
                      help='The altitude (0-90, degrees up from horizontal) of the light source.\n'
                           'Default is 45.')
-    dem.add_argument('--shade-min', dest='shade_min', type=float, default=-7000., metavar='MIN',
+    dem.add_argument('--shade-min', dest='shade_min', type=float, default=-4000., metavar='MIN',
                      help='The min height in m of colormap of shaded relief topography\n'
-                          'Default: -7000 m')
+                          'Default: -4000 m')
     dem.add_argument('--shade-max', dest='shade_max', type=float, default=999., metavar='MAX',
                      help='The max height of colormap of shaded relief topography\n'
-                          'Default: max(DEM) + 1000 m')
+                          'Default: max(DEM) + 2000 m')
     dem.add_argument('--shade-exag', dest='shade_exag', type=float, default=0.5,
                      help='Vertical exaggeration ratio, default: 0.5')
     return parser
@@ -1134,21 +1134,21 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     if not 'markersize'  in plot_dict.keys():  plot_dict['markersize']  = 16
 
     # For colorful display of coherence
-    if not 'cohList'     in plot_dict.keys():  plot_dict['cohList']    = None
-    if not 'ylabel'      in plot_dict.keys():  plot_dict['ylabel']     = 'Perp Baseline [m]'
-    if not 'cbar_label'  in plot_dict.keys():  plot_dict['cbar_label'] = 'Average Spatial Coherence'
+    if not 'cohList'     in plot_dict.keys():  plot_dict['cohList']     = None
+    if not 'ylabel'      in plot_dict.keys():  plot_dict['ylabel']      = 'Perp Baseline [m]'
+    if not 'cbar_label'  in plot_dict.keys():  plot_dict['cbar_label']  = 'Average Spatial Coherence'
     if not 'disp_cbar'   in plot_dict.keys():  plot_dict['disp_cbar']   = True
-    if not 'disp_min'    in plot_dict.keys():  plot_dict['disp_min']   = 0.2
-    if not 'disp_max'    in plot_dict.keys():  plot_dict['disp_max']   = 1.0
-    if not 'colormap'    in plot_dict.keys():  plot_dict['colormap']   = 'RdBu'
-    if not 'disp_title'  in plot_dict.keys():  plot_dict['disp_title'] = True
-    if not 'coh_thres'   in plot_dict.keys():  plot_dict['coh_thres']  = None
-    if not 'disp_drop'   in plot_dict.keys():  plot_dict['disp_drop']  = True
+    if not 'disp_min'    in plot_dict.keys():  plot_dict['disp_min']    = 0.2
+    if not 'disp_max'    in plot_dict.keys():  plot_dict['disp_max']    = 1.0
+    if not 'colormap'    in plot_dict.keys():  plot_dict['colormap']    = 'RdBu'
+    if not 'disp_title'  in plot_dict.keys():  plot_dict['disp_title']  = True
+    if not 'coh_thres'   in plot_dict.keys():  plot_dict['coh_thres']   = None
+    if not 'disp_drop'   in plot_dict.keys():  plot_dict['disp_drop']   = True
     if not 'disp_legend' in plot_dict.keys():  plot_dict['disp_legend'] = True
-    if not 'every_year'  in plot_dict.keys():  plot_dict['every_year'] = 1
-    if not 'split_cmap'  in plot_dict.keys():  plot_dict['split_cmap'] = True
+    if not 'every_year'  in plot_dict.keys():  plot_dict['every_year']  = 1
+    if not 'split_cmap'  in plot_dict.keys():  plot_dict['split_cmap']  = True
 
-    if not 'number'      in plot_dict.keys():  plot_dict['number']     = None
+    if not 'number'      in plot_dict.keys():  plot_dict['number']      = None
 
     cohList = plot_dict['cohList']
     disp_min = plot_dict['disp_min']
@@ -1571,7 +1571,7 @@ def prepare_dem_background(dem, inps=None, print_msg=True):
     if inps is None:
         inps = cmd_line_parse()
     if inps.shade_max == 999.:
-        inps.shade_max += np.nanmax(dem)
+        inps.shade_max = np.nanmax(dem) + 2000
 
     # prepare shade relief
     if inps.disp_dem_shade:
@@ -1650,7 +1650,7 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
         if isinstance(ax, BasemapExt) and geo_box is not None:
             yy, xx = np.mgrid[geo_box[1]:geo_box[3]:dem_contour.shape[0]*1j,
                               geo_box[0]:geo_box[2]:dem_contour.shape[1]*1j]
-            ax.contour(xx, yy, dem_contour, dem_contour_seq, origin='upper',
+            ax.contour(xx, yy, dem_contour, dem_contour_seq, origin='upper', linewidths=0.5,
                        colors='black', alpha=0.5, latlon='FALSE', zorder=1)
         # radar coordinates
         elif isinstance(ax, plt.Axes):

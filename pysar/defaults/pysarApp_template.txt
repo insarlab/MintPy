@@ -21,7 +21,7 @@ pysar.load.intFile        = auto  #[path2int_file]
 pysar.load.ionoFile       = auto  #[path2iono_file]
 ##---------geometry datasets:
 pysar.load.demFile        = auto  #[path2hgt_file]
-pysar.load.lookupYFile    = auto  #[path2lat_file]]
+pysar.load.lookupYFile    = auto  #[path2lat_file]
 pysar.load.lookupXFile    = auto  #[path2lon_file]
 pysar.load.incAngleFile   = auto  #[path2los_file]
 pysar.load.azAngleFile    = auto  #[path2los_file]
@@ -42,7 +42,7 @@ pysar.subset.lalo   = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
 pysar.network.coherenceBased  = auto  #[yes / no], auto for no, exclude interferograms with coherence < minCoherence
 pysar.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
 pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
-pysar.network.maskFile        = auto  #[file name, no], auto for waterMask.h5 or no (use all pixels)
+pysar.network.maskFile        = auto  #[file name, no], auto for waterMask.h5 or no [if no waterMask.h5 found]
 pysar.network.aoiYX           = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
 pysar.network.aoiLALO         = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 ## 2) Network modification based on temporal/perpendicular baselines, date etc.
@@ -74,7 +74,7 @@ pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum cohere
 ## c. bridging+phase_closure  - recommended
 pysar.unwrapError.method          = auto  #[bridging / phase_closure / bridging+phase_closure / no], auto for no
 pysar.unwrapError.ramp            = auto  #[linear / quadratic], auto for no; recommend linear for L-band data
-pysar.unwrapError.waterMaskFile   = auto  #[waterMask.h5 / no], auto for no
+pysar.unwrapError.waterMaskFile   = auto  #[waterMask.h5 / no], auto for waterMask.h5 or no [if no waterMask.h5 found]
 pysar.unwrapError.bridgePtsRadius = auto  #[1-inf], auto for 150, radius in pixel of circular area around bridge ends
 
 
@@ -100,11 +100,13 @@ pysar.networkInversion.weightFunc      = auto #[var / fim / coh / no], auto for 
 pysar.networkInversion.maskDataset     = auto #[coherence / connectComponent / no], auto for no
 pysar.networkInversion.maskThreshold   = auto #[0-1], auto for 0.4
 pysar.networkInversion.minRedundancy   = auto #[1-inf], auto for 1.0, min num_ifgram for every SAR acquisition
-pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for waterMask.h5 or no
+pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for waterMask.h5 or no [if no waterMask.h5 found]
 pysar.networkInversion.minNormVelocity = auto #[yes / no], auto for yes, min-norm deformation velocity or phase
 pysar.networkInversion.residualNorm    = auto #[L2 ], auto for L2, norm minimization solution
 pysar.networkInversion.minTempCoh      = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
 pysar.networkInversion.minNumPixel     = auto #[int > 0], auto for 100, min number of pixels in mask above
+pysar.networkInversion.parallel        = auto #[yes / no], auto for no, parallel processing using dask
+pysar.networkInversion.numWorker       = auto #[int > 0], auto for 40, number of works for dask cluster to use
 
 
 ########## Local Oscillator Drift (LOD) Correction (for Envisat only)
@@ -117,6 +119,7 @@ pysar.networkInversion.minNumPixel     = auto #[int > 0], auto for 100, min numb
 ## correct tropospheric delay using the following methods:
 ## a. pyaps - use Global Atmospheric Models (GAMs) data (Jolivet et al., 2011, GRL, need to install PyAPS)
 ## b. height_correlation - correct stratified tropospheric delay (Doin et al., 2009, J Applied Geop)
+## -----------------
 ## Notes for pyaps: 
 ## a. GAM data latency: with the most recent SAR data, there will be GAM data missing, the correction
 ## will be applied to dates with GAM data available and skipped for the others.
@@ -124,12 +127,16 @@ pysar.networkInversion.minNumPixel     = auto #[int > 0], auto for 100, min numb
 ## directory, then PySAR applications will download the GAM files into the indicated directory. Also PySAR
 ## application will look for the GAM files in the directory before downloading a new one to prevent downloading
 ## multiple copies if you work with different dataset that cover the same date/time.
-pysar.troposphericDelay.method       = auto  #[pyaps / height_correlation / no], auto for pyaps
-pysar.troposphericDelay.weatherModel = auto  #[ERA / MERRA / NARR], auto for ECMWF, for pyaps method
-pysar.troposphericDelay.weatherDir   = auto  #[path2directory], auto for WEATHER_DIR or "./"
-pysar.troposphericDelay.polyOrder    = auto  #[1 / 2 / 3], auto for 1, for height_correlation method
-pysar.troposphericDelay.looks        = auto  #[1-inf], auto for 8, for height_correlation, number of looks
-                                             #applied to interferogram while estimating the empirical ratio.
+## -----------------
+## Notes for height_correlation:
+## Multilooking is applied to interferograms for estimating the empirical phase/elevation ratio only.
+## Correction is applied to original interferograms if the correction is larger than minCorrelation.
+pysar.troposphericDelay.method         = auto  #[pyaps / height_correlation / no], auto for pyaps
+pysar.troposphericDelay.weatherModel   = auto  #[ERA / MERRA / NARR], auto for ECMWF, for pyaps method
+pysar.troposphericDelay.weatherDir     = auto  #[path2directory], auto for WEATHER_DIR or "./"
+pysar.troposphericDelay.polyOrder      = auto  #[1 / 2 / 3], auto for 1, for height_correlation method
+pysar.troposphericDelay.looks          = auto  #[1-inf], auto for 8, for height_correlation, number of looks
+pysar.troposphericDelay.minCorrelation = auto  #[0.0-1.0], auto for 0, for height_correlation
 
 
 ########## 7. Phase Deramping (optional)

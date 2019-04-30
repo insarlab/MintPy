@@ -93,8 +93,15 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    if inps.template_file:
+        inps = read_template2inps(inps.template_file, inps)
+
     if inps.polyOrder < 1:
         raise argparse.ArgumentTypeError("Minimum polynomial order is 1")
+
+    if not inps.outfile:
+        inps.outfile = '{}_demErr.h5'.format(os.path.splitext(inps.timeseries_file)[0])
     return inps
 
 
@@ -228,7 +235,8 @@ def read_geometry(inps):
         inps.rangeDist = geom_obj.read(datasetName='slantRangeDistance', print_msg=False).flatten()
         if 'bperp' in geom_obj.datasetNames:
             print('read 3D bperp from {} file: {} ...'.format(geom_obj.name, os.path.basename(geom_obj.file)))
-            inps.pbase = geom_obj.read(datasetName='bperp', print_msg=False).reshape((geom_obj.numDate, -1))
+            dset_list = ['bperp-{}'.format(d) for d in ts_obj.dateList]
+            inps.pbase = geom_obj.read(datasetName=dset_list, print_msg=False).reshape((ts_obj.numDate, -1))
             inps.pbase -= np.tile(inps.pbase[ts_obj.refIndex, :].reshape(1, -1), (ts_obj.numDate, 1))
         else:
             print('read mean bperp from {} file'.format(ts_obj.name))
@@ -447,10 +455,6 @@ def correct_dem_error(inps, A_def):
 ############################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    if inps.template_file:
-        inps = read_template2inps(inps.template_file, inps)
-    if not inps.outfile:
-        inps.outfile = '{}_demErr.h5'.format(os.path.splitext(inps.timeseries_file)[0])
 
     # --update option
     if inps.update_mode and run_or_skip(inps) == 'skip':

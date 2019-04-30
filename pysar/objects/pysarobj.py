@@ -520,7 +520,7 @@ class geometry:
             familyName = datasetName[0].split('-')[0]
             ds = f[familyName]
             if print_msg:
-                print('reading {} data from file: {} ...'.format(familyName, self.file))
+                print('reading {:<15} data from file: {} ...'.format(familyName, self.file))
 
             if len(ds.shape) == 1:
                 data = ds[:]
@@ -548,7 +548,7 @@ FILE_STRUCTURE_IFGRMA_STACK = """
 Attributes         Dictionary for metadata
 /date              2D array of string  in size of (m, 2   ) in YYYYMMDD format for master and slave date
 /bperp             1D array of float32 in size of (m,     ) in meter.
-/dropIfgram        1D array of bool    in size of (m,     ) with 0 for drop and 1 for keep
+/dropIfgram        1D array of bool    in size of (m,     ) with 0/False for drop and 1/True for keep
 /unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
 /coherence         3D array of float32 in size of (m, l, w).
 /connectComponent  3D array of int16   in size of (m, l, w).           (optional)
@@ -1127,6 +1127,12 @@ class HDFEOS:
             self.metadata['REF_DATE'] = dateList[0]
         self.refIndex = dateList.index(self.metadata['REF_DATE'])
         return self.metadata
+
+    def get_date_list(self):
+        with h5py.File(self.file, 'r') as f:
+            g = f['HDFEOS/GRIDS/timeseries/observation']
+            self.dateList = [i.decode('utf8') for i in g['date'][:]]
+        return self.dateList
 
     def read(self, datasetName=None, box=None, print_msg=True):
         """Read dataset from HDF-EOS5 file

@@ -129,7 +129,7 @@ def create_parser():
                              'ifgramStack.h5\n' +
                              'ifgram_list.txt with content as below:'+pnet.IFGRAM_LIST_FILE +
                              '\nIt could also be generated using plot_network.py --list option, e.g.\n' +
-                             'info.py ifgramStack.h5 --date --nodrop > date12_list.txt\n\n')
+                             'info.py ifgramStack.h5 --date --show kept > date12_list.txt\n\n')
     method.add_argument('--exclude', '--ex', dest='excludeDate', nargs='*', default=[],
                         help='date(s) excluded for network selection, e.g. -ex 060713 070831')
     method.add_argument('--start-date', dest='startDate',

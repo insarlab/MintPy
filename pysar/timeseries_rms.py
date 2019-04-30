@@ -154,25 +154,25 @@ def plot_rms_bar(ax, date_list, rms, cutoff=3., font_size=12,
     Returns:    ax : Axes object
     """
     dates, datevector = ptime.date_list2vector(date_list)
+    dates = np.array(dates)
     try:
         bar_width = min(ut.most_common(np.diff(dates).tolist(), k=2))*3/4
     except:
         bar_width = np.min(np.diff(dates).tolist())*3/4
-    datex = np.array(dates) - bar_width / 2
     rms = np.array(rms)
 
     # Plot all dates
-    ax.bar(datex, rms, bar_width.days, color=pp.mplColors[0])
+    ax.bar(dates, rms, bar_width.days, color=pp.mplColors[0])
 
     # Plot reference date
     ref_idx = np.argmin(rms)
-    ax.bar(datex[ref_idx], rms[ref_idx], bar_width.days, color=pp.mplColors[1], label='Reference date')
+    ax.bar(dates[ref_idx], rms[ref_idx], bar_width.days, color=pp.mplColors[1], label='Reference date')
 
     # Plot exclude dates
     rms_threshold = ut.median_abs_deviation_threshold(rms, center=0., cutoff=cutoff)
     ex_idx = rms > rms_threshold
     if not np.all(ex_idx==False):
-        ax.bar(datex[ex_idx], rms[ex_idx], bar_width.days, color='darkgray', label='Exclude date')
+        ax.bar(dates[ex_idx], rms[ex_idx], bar_width.days, color='darkgray', label='Exclude date')
 
     # Plot rms_threshold line
     (ax, xmin, xmax) = pp.auto_adjust_xaxis_date(ax, datevector, font_size, every_year=tick_year_num)
