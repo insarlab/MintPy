@@ -154,6 +154,7 @@ def plot_rms_bar(ax, date_list, rms, cutoff=3., font_size=12,
     Returns:    ax : Axes object
     """
     dates, datevector = ptime.date_list2vector(date_list)
+    dates = np.array(dates)
     try:
         bar_width = min(ut.most_common(np.diff(dates).tolist(), k=2))*3/4
     except:
