@@ -222,7 +222,10 @@ def read_data(inps):
                 inps.outfile = 'geo_'+inps.outfile
 
     else:
-        # temporal coherence
+        # read data
+        data = readfile.read(inps.file, datasetName=inps.dset)[0]
+
+        # metadata
         if 'coherence' in k.lower():
             atr['FILE_TYPE'] = '.cor'
 
@@ -240,6 +243,7 @@ def read_data(inps):
         else:
             atr['FILE_TYPE'] = '.unw'
 
+        # output filename
         if not inps.outfile:
             inps.outfile = '{}{}'.format(os.path.splitext(inps.file)[0], atr['FILE_TYPE'])
 
