@@ -36,8 +36,8 @@ def create_parser():
                              'e.g.: filt_fine.unw filt_fine.cor')
     parser.add_argument('-m', '--meta-file', dest='metaFile', type=str, default=None,
                         help='Metadata file to extract common metada for the stack:\n'
-                             'e.g.: master/IW3.xml\n'
-                             '      masterShelve/data.dat')
+                             'e.g.: for ISCE/topsStack: master/IW3.xml;\n'
+                             '      for ISCE/stripmapStack: masterShelve/data.dat')
     parser.add_argument('-b', '--baseline-dir', dest='baselineDir', type=str, default=None,
                         help=' directory with baselines ')
     parser.add_argument('-g', '--geometry-dir', dest='geometryDir', type=str, default=None,
