@@ -702,7 +702,6 @@ class TimeSeriesAnalysis:
                                                                      w=weather_dir)
                 print('Atmospheric correction using Weather Re-analysis dataset (PyAPS, Jolivet et al., 2011)')
                 print('Weather Re-analysis dataset:', tropo_model)
-                print('tropo_pyaps.py', scp_args)
                 tropo_file = './INPUTS/{}.h5'.format(tropo_model)
                 if ut.run_or_skip(out_file=out_file, in_file=[in_file, tropo_file]) == 'run':
                     if os.path.isfile(tropo_file) and get_dataset_size(tropo_file) == get_dataset_size(in_file):
@@ -712,8 +711,17 @@ class TimeSeriesAnalysis:
                         print('diff.py', scp_args)
                         pysar.diff.main(scp_args.split())
                     else:
-                        from pysar import tropo_pyaps
-                        tropo_pyaps.main(scp_args.split())
+                        # opt 1 - using tropo_pyaps as python module and call its main function
+                        # prefered, disabled for now to make it compatible with python2-pyaps
+                        #print('tropo_pyaps.py', scp_args)
+                        #from pysar import tropo_pyaps
+                        #tropo_pyaps.main(scp_args.split())
+                        # opt 2 - using tropo_pyaps as executable script
+                        # will be deprecated after python3-pyaps is fully funcational
+                        cmd = 'tropo_pyaps.py '+scp_args
+                        print(cmd)
+                        status = subprocess.Popen(cmd, shell=True).wait()
+
         else:
             print('No tropospheric delay correction.')
         return
