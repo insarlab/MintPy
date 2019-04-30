@@ -702,7 +702,7 @@ class TimeSeriesAnalysis:
                                                                      w=weather_dir)
                 print('Atmospheric correction using Weather Re-analysis dataset (PyAPS, Jolivet et al., 2011)')
                 print('Weather Re-analysis dataset:', tropo_model)
-                print('tropo_pyaps.py ', scp_args)
+                print('tropo_pyaps.py', scp_args)
                 tropo_file = './INPUTS/{}.h5'.format(tropo_model)
                 if ut.run_or_skip(out_file=out_file, in_file=[in_file, tropo_file]) == 'run':
                     if os.path.isfile(tropo_file) and get_dataset_size(tropo_file) == get_dataset_size(in_file):
