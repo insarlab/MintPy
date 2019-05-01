@@ -30,8 +30,10 @@ pysar.geocode.fillValue    = auto  #[np.nan, 0, ...], auto for np.nan, fill valu
 EXAMPLE = """example:
   geocode.py velocity.h5
   geocode.py velocity.h5 -b -0.5 -0.25 -91.3 -91.1
-  geocode.py velocity.h5 timeseries.h5 -t pysarApp_template.txt -o ./GEOCODE --update
+  geocode.py velocity.h5 timeseries.h5 -t pysarApp_template.txt --outdir ./GEOCODE --update
 
+  # radar-code file in geo coordinates
+  geocode.py swbdLat_S02_N01_Lon_W092_W090.wbd -l geometryRadar.h5 -o waterMask.rdr --geo2radar
   geocode.py geo_velocity.h5 --geo2radar
 """
 
