@@ -543,7 +543,7 @@ class geometry:
 
 
 ################################# ifgramStack class begin ##############################
-FILE_STRUCTURE_IFGRMA_STACK = """
+FILE_STRUCTURE_IFGRAM_STACK = """
 /                  Root level group name
 Attributes         Dictionary for metadata
 /date              2D array of string  in size of (m, 2   ) in YYYYMMDD format for master and slave date
@@ -563,7 +563,7 @@ class ifgramStack:
     def __init__(self, file=None):
         self.file = file
         self.name = 'ifgramStack'
-        self.file_structure = FILE_STRUCTURE_IFGRMA_STACK
+        self.file_structure = FILE_STRUCTURE_IFGRAM_STACK
 
     def close(self, print_msg=True):
         try:
