@@ -60,7 +60,7 @@ class resample:
         elif self.processor == 'scipy' and 'Y_FIRST' in self.lut_metadata.keys():
             self.prepare_regular_grid_interpolator()
 
-    def run_resample(self, src_data, interp_method='nearest', fill_value=np.nan, nprocs=None, print_msg=True):
+    def run_resample(self, src_data, interp_method='nearest', fill_value=np.nan, nprocs=1, print_msg=True):
         """Run interpolation operation for input 2D/3D data
         Parameters: src_data      : 2D/3D np.array, source data to be geocoded
                     interp_method : string, nearest | linear
@@ -355,7 +355,7 @@ class resample:
         num_segment = int(self.dest_def.size / unit_size + 0.5)
         return num_segment
 
-    def run_pyresample(self, src_data, interp_method='nearest', fill_value=np.nan, nprocs=None,
+    def run_pyresample(self, src_data, interp_method='nearest', fill_value=np.nan, nprocs=1,
                        radius=None, print_msg=True):
         """
         Resample input src_data into dest_data
@@ -377,17 +377,17 @@ class resample:
             else:
                 radius = self.get_radius_of_influence()
 
-        if not nprocs:
-            nprocs = multiprocessing.cpu_count()
-
         num_segment = self.get_segment_number()
 
         if interp_method.startswith('near'):
             if print_msg:
-                print('nearest resampling with kd_tree ({} segments) ...'.format(num_segment))
+                msg = 'nearest resampling with kd_tree '
+                msg += 'using {} processor cores in {} segments ...'.format(nprocs, num_segment)
+                print(msg)
             dest_data = pr.kd_tree.resample_nearest(self.src_def,
                                                     src_data,
                                                     self.dest_def,
+                                                    nprocs=nprocs,
                                                     fill_value=fill_value,
                                                     radius_of_influence=radius,
                                                     segments=num_segment,

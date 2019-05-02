@@ -70,8 +70,8 @@ def create_parser():
     parser.add_argument('--fill', dest='fillValue', type=float, default=np.nan,
                         help='Value used for points outside of the interpolation domain.\n' +
                              'Default: np.nan')
-    parser.add_argument('-n','--nprocs', dest='nprocs', type=int,
-                        help='number of processors to be used for calculation.\n' + 
+    parser.add_argument('-n','--nprocs', dest='nprocs', type=int, default=1,
+                        help='number of processors to be used for calculation. Default: 1\n' + 
                              'Note: Do not use more processes than available processor cores.')
     parser.add_argument('-p','--processor', dest='processor', type=str, choices={'pyresample', 'scipy'},
                         help='processor module used for interpolation.')
@@ -88,6 +88,12 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    if inps.templateFile:
+        inps = read_template2inps(inps.templateFile, inps)
+
+    inps = _check_inps(inps)
+
     return inps
 
 
@@ -119,6 +125,7 @@ def _check_inps(inps):
     if None in inps.laloStep:
         inps.laloStep = None
 
+    inps.nprocs = check_num_processor(inps.nprocs)
     return inps
 
 
@@ -155,6 +162,26 @@ def read_template2inps(template_file, inps):
 
 
 ############################################################################################
+def check_num_processor(nprocs):
+    """Check number of processors
+    Note by Yunjun, 2019-05-02:
+    1. conda install pyresample will install pykdtree and openmp, but it seems not working
+        geocode.py is getting slower with more processors
+    2. macports seems to have minor speedup when more processors
+    Thus, default number of processors is set to 1; although the capability of using multiple
+    processors is written here.
+    """
+    if not nprocs:
+        #OMP_NUM_THREADS is defined in environment variable for OpenMP
+        if 'OMP_NUM_THREADS' in os.environ:
+            nprocs = int(os.getenv('OMP_NUM_THREADS'))
+        else:
+            nprocs = int(multiprocessing.cpu_count() / 2)
+    nprocs = min(multiprocessing.cpu_count(), nprocs)
+    print('number of processor to be used: {}'.format(nprocs))
+    return nprocs
+
+
 def metadata_radar2geo(atr_in, res_obj, print_msg=True):
     """update metadata for radar to geo coordinates"""
     atr = dict(atr_in)
@@ -249,9 +276,6 @@ def run_geocode(inps):
                        processor=inps.processor)
     res_obj.open()
 
-    if not inps.nprocs:
-        inps.nprocs = multiprocessing.cpu_count()
-
     # resample input files one by one
     for infile in inps.file:
         print('-' * 50+'\nresampling file: {}'.format(infile))
@@ -275,8 +299,11 @@ def run_geocode(inps):
             else:
                 data, atr = readfile.read(infile, datasetName=dsName, print_msg=False)
 
+            # keep timeseries data as 3D matrix when there is only one acquisition
+            # because readfile.read() will squeeze it to 2D
             if atr['FILE_TYPE'] == 'timeseries' and len(data.shape) == 2:
                 data = np.reshape(data, (1, data.shape[0], data.shape[1]))
+
             res_data = res_obj.run_resample(src_data=data,
                                             interp_method=inps.interpMethod,
                                             fill_value=inps.fillValue,
@@ -303,9 +330,6 @@ def run_geocode(inps):
 ######################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    if inps.templateFile:
-        inps = read_template2inps(inps.templateFile, inps)
-    inps = _check_inps(inps)
 
     run_geocode(inps)
     return
