@@ -53,9 +53,9 @@ def create_parser():
 
     parser.add_argument('timeseries_file',
                         help='Time series file for velocity inversion.')
-    parser.add_argument('--start-date', dest='startDate',
+    parser.add_argument('--start-date','-s', dest='startDate',
                         help='start date for velocity estimation')
-    parser.add_argument('--end-date', dest='endDate',
+    parser.add_argument('--end-date','-e', dest='endDate',
                         help='end date for velocity estimation')
     parser.add_argument('--exclude', '--ex', dest='excludeDate', nargs='+', default=[],
                         help='date(s) not included in velocity estimation, could be list of string or text file, i.e.:\n' +
