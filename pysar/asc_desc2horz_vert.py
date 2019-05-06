@@ -38,6 +38,10 @@ REFERENCE = """reference:
 """
 
 EXAMPLE = """example:
+  #geocode asc/desc data into the same spatial resolution and coverage
+  geocode.py AlosAT424/velocity -x 0.00027778 -y -0.00027778 --bbox 32.0 32.5 130.1 130.5 -o vel_AlosAT424.h5
+  geocode.py AlosDT73/velocity  -x 0.00027778 -y -0.00027778 --bbox 32.0 32.5 130.1 130.5 -o vel_AlosDT73.h5
+
   asc_desc2horz_vert.py  vel_AlosAT424_masked.h5  vel_AlosDT73_masked.h5
   asc_desc2horz_vert.py  vel_EnvAT134_masked.h5   vel_EnvAT256_masked.h5  16
 """
