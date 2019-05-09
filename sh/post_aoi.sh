@@ -1,5 +1,5 @@
 #! /bin/sh
-# This is an example for creating your own processing recipe using PySAR
+# This is an example for creating your own processing recipe using MintPy
 # Created by Zhang Yunjun, 2016
 
 ##### Initial Setting #####

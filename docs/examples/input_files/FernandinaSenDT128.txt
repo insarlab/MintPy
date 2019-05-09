@@ -12,28 +12,27 @@
 #subset.y0:y1,x0:x1 = 1150:1600,1070:1670
 
 
-
-##-------------------------------- PYSAR -------------------------------##
+##-------------------------------- MintPy -----------------------------##
 ########## 1. Load Data (--load to exit after this step)
 ## load_data.py -H to check more details and example inputs.
-pysar.load.processor        = isce
+mintpy.load.processor        = isce
 ##---------for ISCE only:
-pysar.load.metaFile         = ../ISCE/master/IW*.xml
-pysar.load.baselineDir      = ../ISCE/baselines
+mintpy.load.metaFile         = ../master/IW*.xml
+mintpy.load.baselineDir      = ../baselines
 ##---------interferogram datasets:
-pysar.load.unwFile          = ../ISCE/merged/interferograms/*/filt_*.unw
-pysar.load.corFile          = ../ISCE/merged/interferograms/*/filt_*.cor
-pysar.load.connCompFile     = ../ISCE/merged/interferograms/*/filt_*.unw.conncomp
+mintpy.load.unwFile          = ../merged/interferograms/*/filt_*.unw
+mintpy.load.corFile          = ../merged/interferograms/*/filt_*.cor
+mintpy.load.connCompFile     = ../merged/interferograms/*/filt_*.unw.conncomp
 ##---------geometry datasets:
-pysar.load.demFile          = ../ISCE/merged/geom_master/hgt.rdr
-pysar.load.lookupYFile      = ../ISCE/merged/geom_master/lat.rdr
-pysar.load.lookupXFile      = ../ISCE/merged/geom_master/lon.rdr
-pysar.load.incAngleFile     = ../ISCE/merged/geom_master/los.rdr
-pysar.load.azAngleFile      = ../ISCE/merged/geom_master/los.rdr
-pysar.load.shadowMaskFile   = ../ISCE/merged/geom_master/shadowMask.rdr
+mintpy.load.demFile          = ../merged/geom_master/hgt.rdr
+mintpy.load.lookupYFile      = ../merged/geom_master/lat.rdr
+mintpy.load.lookupXFile      = ../merged/geom_master/lon.rdr
+mintpy.load.incAngleFile     = ../merged/geom_master/los.rdr
+mintpy.load.azAngleFile      = ../merged/geom_master/los.rdr
+mintpy.load.shadowMaskFile   = ../merged/geom_master/shadowMask.rdr
+mintpy.load.waterMaskFile    = None
 
-pysar.reference.lalo    = -0.30,-91.43
-pysar.networkInversion.waterMaskFile    = waterMask.h5
-pysar.topographicResidual.stepFuncDate  = 20170910,20180613  #eruption dates
-pysar.deramp            = linear
+mintpy.reference.lalo        = -0.30,-91.43
+mintpy.topographicResidual.stepFuncDate  = 20170910,20180613  #eruption dates
+mintpy.deramp                = linear
 

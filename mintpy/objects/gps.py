@@ -1,0 +1,315 @@
+############################################################
+# Program is part of MintPy                                #
+# Copyright(c) 2018-2019, Zhang Yunjun                     #
+# Author:  Zhang Yunjun, Jul 2018                          #
+############################################################
+# Utility scripts for GPS handling
+# Recommend import:
+#     from mintpy.objects.gps import GPS
+
+import os
+import time
+from datetime import datetime as dt
+import numpy as np
+from pyproj import Geod
+from urllib.request import urlretrieve
+from mintpy.objects import timeseries
+from mintpy.utils import ptime, readfile, utils as ut
+
+
+unr_site_list_file = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
+
+
+def dload_site_list(print_msg=True):
+    """download DataHoldings.txt"""
+    url = unr_site_list_file
+    out_file = os.path.basename(url)
+    if print_msg:
+        print('downloading site list from UNR Geod Lab: {}'.format(url))
+    urlretrieve(url, out_file)
+    return out_file
+
+
+def search_gps(SNWE, start_date=None, end_date=None, site_list_file=None, print_msg=True):
+    """Search available GPS sites within the geo bounding box from UNR website
+    Parameters: SNWE : tuple of 4 float, indicating (South, North, West, East) in degrees
+                start_date : string in YYYYMMDD format
+                end_date   : string in YYYYMMDD format
+                site_list_file : string.
+    Returns:    site_names : 1D np.array of string for GPS station names
+                site_lats  : 1D np.array for lat
+                site_lons  : 1D np.array for lon
+    """
+    # download site list file if it's not found in current directory
+    if site_list_file is None:
+        site_list_file = os.path.basename(unr_site_list_file)
+        if not os.path.isfile(site_list_file):
+            dload_site_list(print_msg=print_msg)
+
+    txt_data = np.loadtxt(site_list_file,
+                          dtype=bytes,
+                          skiprows=1,
+                          usecols=(0,1,2,3,4,5,6,7,8,9)).astype(str)
+    site_names = txt_data[:, 0]
+    site_lats, site_lons = txt_data[:, 1:3].astype(np.float32).T
+    site_lons  -= np.round(site_lons / (360.)) * 360.
+    t_start = np.array([dt(*time.strptime(i, "%Y-%m-%d")[0:5]) for i in txt_data[:, 7].astype(str)])
+    t_end = np.array([dt(*time.strptime(i, "%Y-%m-%d")[0:5]) for i in txt_data[:, 8].astype(str)])
+
+    # limit on space
+    idx = ((site_lats >= SNWE[0]) * (site_lats <= SNWE[1]) * 
+           (site_lons >= SNWE[2]) * (site_lons <= SNWE[3]))
+
+    # limit on time
+    if start_date:
+        t0 = ptime.date_list2vector([start_date])[0][0]
+        idx *= t_end >= t0
+    if end_date:
+        t1 = ptime.date_list2vector([end_date])[0][0]
+        idx *= t_start <= t1
+
+    return site_names[idx], site_lats[idx], site_lons[idx]
+
+
+class GPS:
+    """GPS class for GPS time-series of daily solution
+
+    Example:
+      import matplotlib.pyplot as plt
+      from mintpy.objects.gps import GPS
+      from mintpy.utils import utils as ut
+      gps_obj = GPS(site='GV05', data_dir='~/insarlab/GPS')
+      gps_obj.open()
+      dis_los = ut.enu2los(gps_obj.dis_e,
+                           gps_obj.dis_n,
+                           gps_obj.dis_u)
+      dates = gps_obj.dates
+      plt.figure()
+      plt.scatter(dates, dis_los)
+      plt.show()
+    """
+
+    def __init__(self, site, data_dir='./GPS', data_format='env3'):
+        self.site = site
+        self.data_dir = data_dir
+        self.data_format = data_format
+        self.source = 'Nevada Geodetic Lab'
+        self.file = os.path.join(data_dir, '{}.IGS08.t{}'.format(site, data_format))
+        self.img_file = os.path.join(data_dir, 'pic/{}.png'.format(site))
+        self.site_list_file = os.path.join(data_dir, 'DataHoldings.txt')
+        if not os.path.isdir(data_dir):
+            os.makedirs(data_dir)
+
+    def open(self, print_msg=True):
+        if not os.path.isfile(self.file):
+            self.dload_site()
+        self.get_stat_lat_lon(print_msg=print_msg)
+        self.read_displacement(print_msg=print_msg)
+
+    def dload_site(self, print_msg=True):
+        # download time-series data from Nevada Geodetic Lab
+        url = 'http://geodesy.unr.edu/gps_timeseries'
+        if self.data_format == 'env3':
+            url = os.path.join(url, 'tenv3')
+        elif self.data_format == 'xyz2':
+            url = os.path.join(url, 'txyz')
+        url = os.path.join(url, 'IGS08/{}'.format(os.path.basename(self.file)))
+
+        if print_msg:
+            print('downloading {} from {}'.format(self.site, url))
+        urlretrieve(url, self.file)
+
+        # download PNG file
+        if not os.path.isdir(os.path.dirname(self.img_file)):
+            os.makedirs(os.path.dirname(self.img_file))
+        url = 'http://geodesy.unr.edu/tsplots/IGS08/TimeSeries/{}.png'.format(self.site)
+        if print_msg:
+            print('downloading {}.png from {}'.format(self.site, url))
+        urlretrieve(url, self.img_file)
+
+        return self.file
+
+    def get_stat_lat_lon(self, print_msg=True):
+        """Get station lat/lon"""
+        if print_msg:
+            print('calculating station lat/lon')
+        if not os.path.isfile(self.file):
+            self.dload_site(print_msg=print_msg)
+        data = np.loadtxt(self.file, dtype=bytes, skiprows=1).astype(str)
+        ref_lon, ref_lat = float(data[0, 6]), 0.
+        e0, e_off, n0, n_off = data[0, 7:11].astype(np.float)
+        e0 += e_off
+        n0 += n_off
+
+        az = np.arctan2(e0, n0) / np.pi * 180.
+        dist = np.sqrt(e0**2 + n0**2)
+        g = Geod(ellps='WGS84')
+        self.site_lon, self.site_lat = g.fwd(ref_lon, ref_lat, az, dist)[0:2]
+        return self.site_lat, self.site_lon
+
+    def read_displacement(self, start_date=None, end_date=None, print_msg=True, display=False):
+        # download file if it's not exists.
+        if not os.path.isfile(self.file):
+            self.dload_site(print_msg=print_msg)
+
+        # read dates, dis_e, dis_n, dis_u
+        if print_msg:
+            print('reading time and displacement in east/north/vertical direction')
+        data = np.loadtxt(self.file, dtype=bytes, skiprows=1).astype(str)
+        self.dates = np.array([dt(*time.strptime(i, "%y%b%d")[0:5])
+                               for i in data[:, 1]])
+        #self.dates = np.array([ptime.decimal_year2datetime(i) for i in data[:, 2]])
+        (self.dis_e,
+         self.dis_n,
+         self.dis_u,
+         self.std_e,
+         self.std_n,
+         self.std_u) = data[:, (8,10,12,14,15,16)].astype(np.float32).T
+
+        # cut out the specified time range
+        t_flag = np.ones(len(self.dates), np.bool_)
+        if start_date:
+            t0 = ptime.date_list2vector([start_date])[0][0]
+            t_flag[self.dates < t0] = 0
+        if end_date:
+            t1 = ptime.date_list2vector([end_date])[0][0]
+            t_flag[self.dates > t1] = 0
+        self.dates = self.dates[t_flag]
+        self.dis_e = self.dis_e[t_flag]
+        self.dis_n = self.dis_n[t_flag]
+        self.dis_u = self.dis_u[t_flag]
+        self.std_e = self.std_e[t_flag]
+        self.std_n = self.std_n[t_flag]
+        self.std_u = self.std_u[t_flag]
+
+        if display:
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots(nrows=3, ncols=1, sharex=True)
+            ax[0].scatter(self.dates, self.dis_e, s=2**2, label='East')
+            ax[1].scatter(self.dates, self.dis_n, s=2**2, label='North')
+            ax[2].scatter(self.dates, self.dis_u, s=2**2, label='Up')
+            plt.show()
+
+        return (self.dates,
+                self.dis_e, self.dis_n, self.dis_u,
+                self.std_e, self.std_n, self.std_u)
+
+
+    #####################################  Utility Functions ###################################
+    def displacement_enu2los(self, inc_angle:float, head_angle:float, gps_comp='enu2los'):
+        """Convert displacement in ENU to LOS direction
+        Parameters: inc_angle  : float, local incidence angle in degree
+                    head_angle : float, satellite orbit heading direction in degree
+                        from the north, defined as positive in clock-wise direction
+                    gps_comp   : string, GPS components used to convert to LOS direction
+        Returns:    dis_los : 1D np.array for displacement in LOS direction
+                    std_los : 1D np.array for displacement standard deviation in LOS direction
+        """
+        # get LOS unit vector
+        inc_angle *= np.pi/180.
+        head_angle *= np.pi/180.
+        unit_vec = [np.sin(inc_angle) * np.cos(head_angle) * -1,
+                    np.sin(inc_angle) * np.sin(head_angle),
+                    np.cos(inc_angle)]
+
+        gps_comp = gps_comp.lower()
+        if gps_comp in ['enu2los']:
+            pass
+        elif gps_comp in ['en2los', 'hz2los']:
+            unit_vec[2] = 0.
+        elif gps_comp in ['u2los', 'up2los']:
+            unit_vec[0] = 0.
+            unit_vec[1] = 0.
+        else:
+            raise ValueError('Un-known input gps components:'+str(gps_comp))
+
+        # convert ENU to LOS direction
+        self.dis_los = (self.dis_e * unit_vec[0]
+                        + self.dis_n * unit_vec[1]
+                        + self.dis_u * unit_vec[2])
+
+        # assuming ENU component are independent with each other
+        self.std_los = ((self.std_e * unit_vec[0])**2
+                         + (self.std_n * unit_vec[1])**2
+                         + (self.std_u * unit_vec[2])**2)**0.5
+        return self.dis_los, self.std_los
+
+    def get_los_geometry(self, insar_obj, print_msg=False):
+        lat, lon = self.get_stat_lat_lon(print_msg=print_msg)
+
+        # get LOS geometry
+        if isinstance(insar_obj, str):
+            # geometry file
+            atr = readfile.read_attribute(insar_obj)
+            coord = ut.coordinate(atr, lookup_file=insar_obj)
+            y, x = coord.geo2radar(lat, lon, print_msg=print_msg)[0:2]
+            box = (x, y, x+1, y+1)
+            inc_angle = readfile.read(insar_obj, datasetName='incidenceAngle', box=box, print_msg=print_msg)[0][0,0]
+            az_angle  = readfile.read(insar_obj, datasetName='azimuthAngle', box=box, print_msg=print_msg)[0][0,0]
+            head_angle = ut.azimuth2heading_angle(az_angle)
+        elif isinstance(insar_obj, dict):
+            # use mean inc/head_angle from metadata
+            inc_angle = ut.incidence_angle(insar_obj, dimension=0, print_msg=print_msg)
+            head_angle = float(insar_obj['HEADING'])
+            # for old reading of los.rdr band2 data into headingAngle directly
+            if (head_angle + 180.) > 45.:
+                head_angle = ut.azimuth2heading_angle(head_angle)
+        else:
+            raise ValueError('input insar_obj is neight str nor dict: {}'.format(insar_obj))
+        return inc_angle, head_angle
+
+
+    def read_gps_los_displacement(self, insar_obj, start_date=None, end_date=None,
+                                  ref_site=None, gps_comp:str='enu2los', print_msg=False):
+        """Read GPS displacement in LOS direction
+        Parameters: insar_obj : dict / str, metadata of InSAR file, or geometry file path
+                    start_date : string in YYYYMMDD format
+                    end_date   : string in YYYYMMDD format
+                    ref_site   : string, reference GPS site
+                    gps_comp   : string, GPS components used to convert to LOS direction
+        Returns:    dates : 1D np.array of datetime.datetime object
+                    dis   : 1D np.array of displacement in meters
+                    std   : 1D np.array of displacement uncertainty in meters
+                    site_lalo : tuple of 2 float, lat/lon of GPS site
+                    ref_site_lalo : tuple of 2 float, lat/lon of reference GPS site
+        """
+        # read GPS object
+        inc_angle, head_angle = self.get_los_geometry(insar_obj)
+        dates = self.read_displacement(start_date, end_date, print_msg=print_msg)[0]
+        dis, std = self.displacement_enu2los(inc_angle, head_angle, gps_comp=gps_comp)
+        site_lalo = self.get_stat_lat_lon(print_msg=print_msg)
+
+        # get LOS displacement relative to another GPS site
+        if ref_site:
+            ref_obj = GPS(site=ref_site, data_dir=self.data_dir)
+            ref_obj.read_displacement(start_date, end_date, print_msg=print_msg)
+            inc_angle, head_angle = ref_obj.get_los_geometry(insar_obj)
+            ref_obj.displacement_enu2los(inc_angle, head_angle, gps_comp=gps_comp)
+            ref_site_lalo = ref_obj.get_stat_lat_lon(print_msg=print_msg)
+
+            # get relative LOS displacement on common dates
+            dates = np.array(sorted(list(set(self.dates) & set(ref_obj.dates))))
+            dis = np.zeros(dates.shape, np.float32)
+            std = np.zeros(dates.shape, np.float32)
+            for i in range(len(dates)):
+                idx1 = np.where(self.dates == dates[i])[0][0]
+                idx2 = np.where(ref_obj.dates == dates[i])[0][0]
+                dis[i] = self.dis_los[idx1] - ref_obj.dis_los[idx2]
+                std[i] = (self.std_los[idx1]**2 + ref_obj.std_los[idx2]**2)**0.5
+        else:
+            ref_site_lalo = None
+
+        return dates, dis, std, site_lalo, ref_site_lalo
+
+
+    def get_gps_los_velocity(self, insar_obj, start_date=None, end_date=None, ref_site=None, gps_comp='enu2los'):
+        dates, dis = self.read_gps_los_displacement(insar_obj,
+                                                    start_date=start_date,
+                                                    end_date=end_date,
+                                                    ref_site=ref_site,
+                                                    gps_comp=gps_comp)[0:2]
+        date_list = [dt.strftime(i, '%Y%m%d') for i in dates]
+        A = timeseries.get_design_matrix4average_velocity(date_list)
+        self.velocity = np.dot(np.linalg.pinv(A), dis)[0]
+        return self.velocity
+

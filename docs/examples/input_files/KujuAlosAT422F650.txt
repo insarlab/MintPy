@@ -2,26 +2,24 @@
 ########## 1. Load Data (--load to exit after this step)
 ## auto - automatic path pattern for Univ of Miami file structure
 ## load_data.py -H to check more details and example inputs.
-pysar.load.processor      = roipac  #[isce,roipac,gamma,], auto for isce
+mintpy.load.processor      = roipac  #[isce,roipac,gamma,], auto for isce
 ##---------interferogram datasets:
-pysar.load.unwFile        = ./../ROIPAC/interferograms/*/filt_*.unw      #[path2unw_file]
-pysar.load.corFile        = ./../ROIPAC/interferograms/*/filt_*.cor      #[path2cor_file]
-pysar.load.connCompFile   = None                                         #[path2conn_file]
-pysar.load.intFile        = None                                         #[path2int_file]
+mintpy.load.unwFile        = ./../interferograms/*/filt_*.unw      #[path2unw_file]
+mintpy.load.corFile        = ./../interferograms/*/filt_*.cor      #[path2cor_file]
+mintpy.load.connCompFile   = None                                  #[path2conn_file]
+mintpy.load.intFile        = None                                  #[path2int_file]
 ##---------geometry datasets:
-pysar.load.demFile        = ./../ROIPAC/geom_master/radar*.hgt           #[path2hgt_file]
-pysar.load.lookupYFile    = ./../ROIPAC/geom_master/geomap*.trans        #[path2lookup_lat/y_file]
-pysar.load.lookupXFile    = ./../ROIPAC/geom_master/geomap*.trans        #[path2lookup_lon/x_file]
-pysar.load.incAngleFile   = None                                         #[path2los_file]
-pysar.load.azAngleFile    = None                                         #[path2los_file]
-pysar.load.shadowMaskFile = None                                         #[path2shadow_file]
-pysar.load.bperpFile      = None                                         #[path2bperp_file]
-
+mintpy.load.demFile        = ./../geom_master/radar*.hgt           #[path2hgt_file]
+mintpy.load.lookupYFile    = ./../geom_master/geomap*.trans        #[path2lookup_lat/y_file]
+mintpy.load.lookupXFile    = ./../geom_master/geomap*.trans        #[path2lookup_lon/x_file]
+mintpy.load.incAngleFile   = None                                  #[path2los_file]
+mintpy.load.azAngleFile    = None                                  #[path2los_file]
+mintpy.load.shadowMaskFile = None                                  #[path2shadow_file]
+mintpy.load.waterMaskFile  = None                                  #[path2water_mask_file]
 
 ##————————————————————————————— PROCESSING Options ——-----————————————————————##
-pysar.reference.lalo               = 33.0655, 131.2076
-pysar.deramp                       = linear
-
+mintpy.reference.lalo      = 33.0655, 131.2076
+mintpy.deramp              = linear
 
 ##————————————————————————————— HDF-EOS5 Attributes -—————————————————————————##
 beam_mode           = SM

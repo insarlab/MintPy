@@ -1,6 +1,6 @@
 #! /bin/sh
 
-##### Customized Processing After 1st pysarApp
+##### Customized Processing After 1st smallbaselineApp
 project='KyushuT424F610_640AlosA'
 #####
 trans='geomap_4rlks.trans'
@@ -9,7 +9,7 @@ tmpl=$TE/$project.template
 
 #cd $SC/$project/TSSAR
 
-pysarApp=0
+smallbaselineApp=0
 plot_load_data=0
 modify_network=0
 unwrap_error=0
@@ -23,9 +23,9 @@ geo=1
 geo2=1
 
 
-##------------ PySAR routine processing --------------------##
-if [ $pysarApp -eq 1 ]; then
-    pysarApp.py $tmpl
+##------------ MintPy routine processing --------------------##
+if [ $smallbaselineApp -eq 1 ]; then
+    smallbaselineApp.py $tmpl
 fi
 
 
@@ -54,7 +54,7 @@ fi
 
 
 ## Based on plotted Coherence and LoadedData image, select low coherent ifgs and put them in template file.
-##------------ Modify Network and Re-run pysarApp ----------##
+##------------ Modify Network and Re-run smallbaselineApp ----------##
 if [ $modify_network -eq 1  ]; then
     modify_network.py -f LoadedData.h5 -C Coherence.h5 -T $tmpl
     mean_spatial_coherence.py Modified_Coherence.h5 Modified_average_spatial_coherence.h5
@@ -150,7 +150,7 @@ if [ $unwrap_error -eq 1 ]; then
     line_yx='5430,955,5429,865;5293,834,5178,832;5403,780,5714,612'
     #view.py --point=${point_yx} --line=${line_yx} --nodisplay -f $msk -o bonding_points.png
 
-    #pysarApp.py $tmpl
+    #smallbaselineApp.py $tmpl
 
 fi
 

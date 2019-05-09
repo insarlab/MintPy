@@ -1,33 +1,33 @@
 # Contributing Guidelines #
 
-This document is inspired by similar instructions from ISCE, gdal and jupyterhub. If you're reading this section, you're probably interested in contributing to PySAR. Welcome and thanks for your interest in contributing! 
+This document is inspired by similar instructions from ISCE, gdal and jupyterhub. If you're reading this section, you're probably interested in contributing to MintPy. Welcome and thanks for your interest in contributing! 
 
-These are several ways to contribute to the PySAR project:
+These are several ways to contribute to the MintPy project:
 
 * Submitting bug reports and feature requests
 * Writing tutorials or jupyter-notebooks
 * Fixing typos, code and improving documentation
 * Writing code for everyone to use
 
-If you get stuck at any point you can create an [issue on GitHub](https://github.com/insarlab/PySAR/issues) or contact us on the [user forum](https://groups.google.com/forum/?nomobile=true#!forum/py-sar).
+If you get stuck at any point you can create an [issue on GitHub](https://github.com/insarlab/MintPy/issues) or contact us on the [user forum](https://groups.google.com/forum/?nomobile=true#!forum/py-sar).
 
 For more information on contributing to open source projects, [GitHub's own guide](https://guides.github.com/activities/contributing-to-open-source/)
 is a great starting point if you are new to version control.
 
 ## Writing documentations ##
 
-Documentation is written in Markdown on [GitHub Wiki](https://github.com/insarlab/PySAR/wiki). Any GitHub user can create and edit pages to use for documentation, examples, support, or anything you wish.
+Documentation is written in Markdown on [GitHub Wiki](https://github.com/insarlab/MintPy/wiki). Any GitHub user can create and edit pages to use for documentation, examples, support, or anything you wish.
 
 ## Git workflows ##
 
 ### Setting up a development environment ###
 
-Fork insarlab/PySAR from GitHub UI, and then
+Fork insarlab/MintPy from GitHub UI, and then
 
 ```
-git clone https://github.com/insarlab/PySAR.git
-cd PySAR
-git remote add my_user_name https://github.com/my_user_name/PySAR.git
+git clone https://github.com/insarlab/MintPy.git
+cd MintPy
+git remote add my_user_name https://github.com/my_user_name/MintPy.git
 ```
 
 ### Updating your local master against upstream master ###
@@ -93,10 +93,10 @@ git push -f my_user_name my_new_feature_branch
 
 ## Testing ##
 
-It's a good idea to test any changes or bugs you have fixed. We realize that we don't have a complete testing system in place yet, except for an overall testing script `test_pysarApp.py`, run
+It's a good idea to test any changes or bugs you have fixed. We realize that we don't have a complete testing system in place yet, except for an overall testing script `test_smallbaselineApp.py`, run
 
 ```
-${PYSAR_HOME}/test/test_pysarApp.py
+${MINTPY_HOME}/test/test_smallbaselineApp.py
 ```
 
 to see the testing result, it takes about 10 mins to finish.
@@ -104,4 +104,4 @@ to see the testing result, it takes about 10 mins to finish.
 
 ## Things you should NOT do ##
 
-(For anyone with push rights to github.com/insarlab/PySAR) Never modify a commit or the history of anything that has been committed to the `master` branch.
+(For anyone with push rights to github.com/insarlab/MintPy) Never modify a commit or the history of anything that has been committed to the `master` branch.
