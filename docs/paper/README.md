@@ -1,8 +1,9 @@
-### Figures in Jupyter Notebook for:
+### Figures in Jupyter Notebook for: ###
 
 + Yunjun, Z., H. Fattahi, F. Amelung, 2019, InSAR time series analysis: error correction and noise reduction (under review).
 
-### Content ([nbviewer](https://nbviewer.jupyter.org/github/insarlab/PySAR/docs/paper/))  
+### Content ([nbviewer](https://nbviewer.jupyter.org/github/insarlab/PySAR/tree/master/docs/paper/)) ###
+
 + Fig. 1 - Performance of four weight functions.
 + Fig. 2 - Phase-unwrapping error correction with bridging.
 + Fig. 3 - Characteristics of phase-unwrapping error in the closure phase.
