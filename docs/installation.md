@@ -1,4 +1,4 @@
-## Install PySAR ##
+## Install MintPy ##
 
 Tested on macOS and Linux, not sure about Windows.
 
@@ -21,8 +21,8 @@ sudo xcodebuild -license
 
 To use the package, you need to setup the environment:
 
-1. To make pysar importable in python, by adding the path to PySAR directory to your _$PYTHONPATH_    
-2. To make utility scripts available in command line, by adding _${PYSAR_HOME}/pysar_ and _${PYSAR_HOME}/sh_ to your _$path_.   
+1. To make mintpy importable in python, by adding the path to MintPy directory to your _$PYTHONPATH_    
+2. To make utility scripts available in command line, by adding _${MINTPY_HOME}/mintpy_ and _${MINTPY_HOME}/sh_ to your _$path_.   
 
 Add to your **_~/.bash_profile_** file for _bash_ user:
 
@@ -30,10 +30,10 @@ Add to your **_~/.bash_profile_** file for _bash_ user:
 ############################  Python  ###############################
 if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
 
-##--------- PySAR ------------------##
-export PYSAR_HOME=~/python/PySAR
-export PYTHONPATH=${PYTHONPATH}:${PYSAR_HOME}
-export PATH=${PATH}:${PYSAR_HOME}/pysar:${PYSAR_HOME}/sh
+##--------- MintPy ------------------##
+export MINTPY_HOME=~/python/MintPy
+export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}
+export PATH=${PATH}:${MINTPY_HOME}/mintpy:${MINTPY_HOME}/sh
 
 ##--------- PyAPS ------------------## 
 export PYAPS_HOME=~/python/PyAPS
@@ -44,7 +44,7 @@ Source the file for the first time. It will be sourced automatically next time w
 
 ### 2. Install Python dependecies ###
 
-PySAR is written in Python3 (3.5+) and relies on several Python modules, check the [requirements.txt](../requirements.txt) file for details. We recommend using [conda](https://conda.io/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
+MintPy is written in Python3 (3.5+) and relies on several Python modules, check the [requirements.txt](../requirements.txt) file for details. We recommend using [conda](https://conda.io/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
 
 #### Installing via conda ####
 
@@ -61,8 +61,8 @@ Run the following in your terminal:
 ```
 cd ~/python
 
-# download PySAR
-git clone https://github.com/insarlab/PySAR.git
+# download MintPy
+git clone https://github.com/insarlab/MintPy.git
 
 # download PyAPS
 mdkir -p PyAPS; cd PyAPS
@@ -75,7 +75,7 @@ chmod +x Miniconda3-4.5.4-MacOSX-x86_64.sh
 
 # install dependencies with conda
 $PYTHON3DIR/bin/conda config --add channels conda-forge
-$PYTHON3DIR/bin/conda install --yes --file $PYSAR_HOME/docs/conda.txt
+$PYTHON3DIR/bin/conda install --yes --file $MINTPY_HOME/docs/conda.txt
 
 # install pykml
 $PYTHON3DIR/bin/pip install git+https://github.com/yunjunz/pykml.git
@@ -107,15 +107,15 @@ Run the following in your terminal in _bash_:
 ```bash
 cd ~/python
 
-# download PySAR
-git clone https://github.com/insarlab/PySAR.git
+# download MintPy
+git clone https://github.com/insarlab/MintPy.git
 
 # download PyAPS
 mdkir -p PyAPS; cd PyAPS
 git clone https://github.com/yunjunz/pyaps3.git
 
 # install dependencies with macports
-sudo port install $(cat $PYSAR_HOME/docs/ports.txt)
+sudo port install $(cat $MINTPY_HOME/docs/ports.txt)
 
 # install pykml
 git clone https://github.com/yunjunz/pykml.git; cd pykml
@@ -141,7 +141,7 @@ python3 setup.py install
 + Check [Caltech Earthdef](http://earthdef.caltech.edu) for accounts setup information for various GAM datasets.
 
 + If you defined an environment variable named `WEATHER_DIR` to contain the path to a 
-directory, PySAR applications will download the GAM files into the indicated directory. Also PySAR
+directory, MintPy applications will download the GAM files into the indicated directory. Also MintPy
 application will look for the GAM files in the directory before downloading a new one to prevent downloading
 multiple copies if you work with different dataset that cover the same date/time.
 
@@ -151,10 +151,10 @@ We use [Dask](www.dask.org) for parallel processing on High Performance Compute 
 
 ```
 mkdir -p ~/.config/dask
-cp $PYSAR_HOME/pysar/defaults/dask_pysar.yaml ~/.config/dask/dask_pysar.yaml
+cp $MINTPY_HOME/mintpy/defaults/dask_mintpy.yaml ~/.config/dask/dask_mintpy.yaml
 ```
 
-Edit `~/.config/dask/dask_pysar.yaml` file according to your HPC settings. Currently, only `LSFCluster` job scheduler is tested, `PBSCluster` should also work after minor adjustment in `ifgram_inversion.py`.
+Edit `~/.config/dask/dask_mintpy.yaml` file according to your HPC settings. Currently, only `LSFCluster` job scheduler is tested, `PBSCluster` should also work after minor adjustment in `ifgram_inversion.py`.
 
 ### Notes on pyKML ###
 

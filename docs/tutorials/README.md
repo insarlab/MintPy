@@ -1,15 +1,15 @@
 ## Tutorials in Jupyter Notebook for InSAR time series analysis ##
 
-This tutorial walks through the various processing steps of InSAR time series analysis using PySAR software.
+This tutorial walks through the various processing steps of InSAR time series analysis using MintPy.
 
 ### Contents ###
 
-1. Small baseline time series analysis (SBAS) with [pysarApp](https://nbviewer.jupyter.org/github/insarlab/PySAR/blob/master/docs/tutorials/pysarApp.ipynb)
+1. Small baseline time series analysis with [smallbaselineApp](https://nbviewer.jupyter.org/github/insarlab/MintPy/blob/master/docs/tutorials/smallbaselineApp.ipynb)
 
 2. Visualizations
-   - Interactive time-series with [tsview](https://nbviewer.jupyter.org/github/insarlab/PySAR/blob/master/docs/tutorials/tsview.ipynb)
-   - Interactive coherence matrix with [plot_coherence_matrix](https://nbviewer.jupyter.org/github/insarlab/PySAR/blob/master/docs/tutorials/plot_coherence_matrix.ipynb)
-   - Google Earth [wiki](https://github.com/insarlab/PySAR/wiki/Google-Earth)
+   - Interactive time-series with [tsview](https://nbviewer.jupyter.org/github/insarlab/MintPy/blob/master/docs/tutorials/tsview.ipynb)
+   - Interactive coherence matrix with [plot_coherence_matrix](https://nbviewer.jupyter.org/github/insarlab/MintPy/blob/master/docs/tutorials/plot_coherence_matrix.ipynb)
+   - Google Earth [wiki](https://github.com/insarlab/MintPy/wiki/Google-Earth)
 
 ### Links ###
 

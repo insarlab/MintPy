@@ -15,28 +15,28 @@ sentinelStack.coregistration    = auto  # comment
 
 
 
-##-------------------------------- PYSAR -------------------------------##
-pysar.load.processor        = isce
+##-------------------------------- MintPy -----------------------------##
+mintpy.load.processor        = isce
 ##---------for ISCE only:
-pysar.load.metaFile         = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/master/IW*.xml
-pysar.load.baselineDir      = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/baselines
+mintpy.load.metaFile         = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/master/IW*.xml
+mintpy.load.baselineDir      = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/baselines
 ##---------interferogram datasets:
-pysar.load.unwFile          = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/interferograms/*/filt_*.unw
-pysar.load.corFile          = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/interferograms/*/filt_*.cor
-pysar.load.connCompFile     = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/interferograms/*/filt_*.unw.conncomp
+mintpy.load.unwFile          = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/interferograms/*/filt_*.unw
+mintpy.load.corFile          = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/interferograms/*/filt_*.cor
+mintpy.load.connCompFile     = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/interferograms/*/filt_*.unw.conncomp
 ##---------geometry datasets:
-pysar.load.demFile          = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/hgt.rdr
-pysar.load.lookupYFile      = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/lat.rdr
-pysar.load.lookupXFile      = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/lon.rdr
-pysar.load.incAngleFile     = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/los.rdr
-pysar.load.azAngleFile      = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/los.rdr
-pysar.load.shadowMaskFile   = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/shadowMask.rdr
-pysar.load.waterMaskFile    = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/waterMask.rdr
-pysar.load.bperpFile        = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/baseline_grid/*/bperp.rdr
+mintpy.load.demFile          = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/hgt.rdr
+mintpy.load.lookupYFile      = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/lat.rdr
+mintpy.load.lookupXFile      = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/lon.rdr
+mintpy.load.incAngleFile     = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/los.rdr
+mintpy.load.azAngleFile      = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/los.rdr
+mintpy.load.shadowMaskFile   = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/shadowMask.rdr
+mintpy.load.waterMaskFile    = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/waterMask.rdr
+mintpy.load.bperpFile        = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/baseline_grid/*/bperp.rdr
 
-pysar.subset.yx                         = 400:2400,0:1700
-pysar.reference.lalo                    = -0.31,-91.22
-pysar.network.endDate                   = 20180626
-pysar.unwrapError.method                = bridging+phase_closure   #[bridging / phase_closure / no], auto for no
-pysar.topographicResidual.stepFuncDate  = 20150524,20150616,20170321,20170910,20180613  #Wolf,Wolf,CerroAzul,Fernandina,Fernandina
-pysar.deramp                            = linear
+mintpy.subset.yx                         = 400:2400,0:1700
+mintpy.reference.lalo                    = -0.31,-91.22
+mintpy.network.endDate                   = 20180626
+mintpy.unwrapError.method                = bridging+phase_closure   #[bridging / phase_closure / no], auto for no
+mintpy.topographicResidual.stepFuncDate  = 20150524,20150616,20170321,20170910,20180613  #Wolf,Wolf,CerroAzul,Fernandina,Fernandina
+mintpy.deramp                            = linear

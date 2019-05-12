@@ -50,29 +50,29 @@ cleanopt           = 1
 
 
 
-################ Time Series - PySAR #######################
-pysar.load.processor      = roipac  #[isce,roipac,gamma,], auto for isce
-pysar.load.updateMode     = auto  #[yes / no], auto for yes, skip re-loading if HDF5 files are complete
-pysar.load.compression    = auto  #[gzip / lzf / no], auto for no [recommended].
+################ Time Series - MintPy ######################
+mintpy.load.processor      = roipac  #[isce,roipac,gamma,], auto for isce
+mintpy.load.updateMode     = auto  #[yes / no], auto for yes, skip re-loading if HDF5 files are complete
+mintpy.load.compression    = auto  #[gzip / lzf / no], auto for no [recommended].
 ##---------interferogram datasets:
-pysar.load.unwFile        = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/interferograms/*/filt*.unw
-pysar.load.corFile        = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/interferograms/*/filt*.cor
-pysar.load.connCompFile   = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/interferograms/*/filt*snap_connect.byt
-pysar.load.intFile        = None #$GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/interferograms/*/filt*rlks.int
+mintpy.load.unwFile        = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/interferograms/*/filt*.unw
+mintpy.load.corFile        = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/interferograms/*/filt*.cor
+mintpy.load.connCompFile   = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/interferograms/*/filt*snap_connect.byt
+mintpy.load.intFile        = None #$GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/interferograms/*/filt*rlks.int
 ##---------geometry datasets:
-pysar.load.demFile        = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/geom_master/radar_*rlks.hgt
-pysar.load.lookupYFile    = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/geom_master/geomap_*rlks.trans
-pysar.load.lookupXFile    = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/geom_master/geomap_*rlks.trans
+mintpy.load.demFile        = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/geom_master/radar_*rlks.hgt
+mintpy.load.lookupYFile    = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/geom_master/geomap_*rlks.trans
+mintpy.load.lookupXFile    = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/geom_master/geomap_*rlks.trans
 ##---------extra metadata to be loaded (to adjust for the bias in ROIPAC lookup table)
 SUBSET_XMIN = 1
 SUBSET_YMIN = 15
 
-pysar.subset.yx                         = 800:3700,0:1400
-pysar.reference.lalo                    = -0.71, -91.31     #-0.31, -91.22
-pysar.unwrapError.method                = bridging
-pysar.unwrapError.waterMaskFile         = waterMask.h5
-pysar.unwrapError.ramp                  = linear
-pysar.network.coherenceBased            = yes
-pysar.network.aoiLALO                   = -0.84:-0.81,-91.16:-91.12
-pysar.topographicResidual.stepFuncDate  = 20080529, 20090420, 20100519    #Cerro Azul, Fernandina, Alcedo,
-pysar.deramp                            = linear
+mintpy.subset.yx                         = 800:3700,0:1400
+mintpy.reference.lalo                    = -0.71, -91.31     #-0.31, -91.22
+mintpy.unwrapError.method                = bridging
+mintpy.unwrapError.waterMaskFile         = waterMask.h5
+mintpy.unwrapError.ramp                  = linear
+mintpy.network.coherenceBased            = yes
+mintpy.network.aoiLALO                   = -0.84:-0.81,-91.16:-91.12
+mintpy.topographicResidual.stepFuncDate  = 20080529, 20090420, 20100519    #Cerro Azul, Fernandina, Alcedo,
+mintpy.deramp                            = linear

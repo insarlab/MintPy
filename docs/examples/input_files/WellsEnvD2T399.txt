@@ -1,28 +1,27 @@
 # vim: set filetype=cfg:
-##########  PySAR
-pysar.load.processor      = gamma
-pysar.load.unwFile        = ./../GAMMA/interferograms/*/diff_*rlks.unw
-pysar.load.corFile        = ./../GAMMA/interferograms/*/filt_*rlks.cor
-pysar.load.connCompFile   = None
-pysar.load.intFile        = None
+##------------------------  MintPy ----------------------------------##
+mintpy.load.processor      = gamma
+mintpy.load.unwFile        = ./../interferograms/*/diff_*rlks.unw
+mintpy.load.corFile        = ./../interferograms/*/filt_*rlks.cor
+mintpy.load.connCompFile   = None
+mintpy.load.intFile        = None
 
-pysar.load.demFile        = ./../GAMMA/geom_master/sim_*.rdc.dem
-pysar.load.lookupYFile    = ./../GAMMA/geom_master/sim_*.UTM_TO_RDC
-pysar.load.lookupXFile    = ./../GAMMA/geom_master/sim_*.UTM_TO_RDC
-pysar.load.incAngleFile   = None
-pysar.load.azAngleFile    = None
-pysar.load.shadowMaskFile = None
-pysar.load.bperpFile      = None
+mintpy.load.demFile        = ./../geom_master/sim_*.rdc.dem
+mintpy.load.lookupYFile    = ./../geom_master/sim_*.UTM_TO_RDC
+mintpy.load.lookupXFile    = ./../geom_master/sim_*.UTM_TO_RDC
+mintpy.load.incAngleFile   = None
+mintpy.load.azAngleFile    = None
+mintpy.load.shadowMaskFile = None
+mintpy.load.waterMaskFile  = None
 
+mintpy.subset.lalo         = 41.02:41.32, -115.10:-114.65
+mintpy.reference.lalo      = 41.03, -114.70
+mintpy.network.coherenceBased     = yes       #[yes / no], auto for yes, exclude interferograms with coherence < minCoherence
+mintpy.network.keepMinSpanTree    = no
+mintpy.network.excludeDate        = 20071231, 20080204, 20080310
+mintpy.topographicResidual.stepFuncDate = 20080221
 
-pysar.subset.lalo       = 41.02:41.32, -115.10:-114.65
-pysar.reference.lalo    = 41.03, -114.70
-pysar.network.coherenceBased     = yes       #[yes / no], auto for yes, exclude interferograms with coherence < minCoherence
-pysar.network.keepMinSpanTree    = no
-pysar.network.excludeDate        = 20071231, 20080204, 20080310
-pysar.topographicResidual.stepFuncDate = 20080221
-
-##########  HDF-EOS5 Attributes
+##------------------------  HDF-EOS5 --------------------------------##
 mission             = Env                 # ERS,ENV,S1,RS1,RS2,CSK,TSX,JERS,ALOS,ALOS2
 relative_orbit      = 399
 first_frame         = 2781
