@@ -3,13 +3,11 @@
 *ipynb_checkpoints*
 *.idea/*
 docs/examples/dev/*
-docs/workshop2017Miami.pptx
-docs/resources/insarlab_logo.png
-docs/resources/pysar_preview*
+docs/resources/insarlab_logo*
+docs/resources/mintpy_preview*
 docs/resources/*.ai
-docs/logo_GithubPage.pdf
 docs/resources/visit_location.png
 isce*
-pysar/dev/*
-pysar/modis*
+mintpy/dev/*
+mintpy/modis*
 

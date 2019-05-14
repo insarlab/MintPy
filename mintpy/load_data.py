@@ -453,9 +453,8 @@ def prepare_metadata(inpsDict):
     print('prepare metadata files for {} products'.format(processor))
 
     if processor in ['gamma', 'roipac']:
-        for key in inpsDict.keys():
-            if (key.startswith('mintpy.load.') and key.endswith('File')
-                    and len(glob.glob(str(inpsDict[key]))) > 0):
+        for key in [i for i in inpsDict.keys() if (i.startswith('mintpy.load.') and i.endswith('File'))]:
+            if len(glob.glob(str(inpsDict[key]))) > 0:
                 cmd = '{} {}'.format(script_name, inpsDict[key])
                 print(cmd)
                 os.system(cmd)
