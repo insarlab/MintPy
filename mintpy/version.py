@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # grab version / date of the latest commit
 import os
 import subprocess
@@ -12,12 +13,16 @@ def get_release_info(version='v1.1.0-dev', date='2019-04-26'):
 
     # grab git info into string
     try:
-        version_str = subprocess.check_output(["git", "describe", "--tags"])
-        version, num_commit = version_str.decode('utf-8').split('-')[:2]
-        version += '-{}'.format(num_commit)
+        version = subprocess.check_output(["git", "describe", "--tags"])
+        version = version.decode('utf-8').strip()
 
-        date_str = subprocess.check_output(["git", "log", "-1", "--date=short", "--format=%cd"])
-        date = date_str.decode('utf-8').strip()
+        #if there are new commits after the latest release
+        if '-' in version:
+            version, num_commit = version.split('-')[:2]
+            version += '-{}'.format(num_commit)
+
+        date = subprocess.check_output(["git", "log", "-1", "--date=short", "--format=%cd"])
+        date = date.decode('utf-8').strip()
     except:
         pass
 
@@ -25,7 +30,6 @@ def get_release_info(version='v1.1.0-dev', date='2019-04-26'):
     os.chdir(dir_orig)
     return version, date
 ###########################################################################
-
 
 release_version, release_date = get_release_info()
 
