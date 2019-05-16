@@ -18,34 +18,28 @@ is a great starting point if you are new to version control.
 
 Documentation is written in Markdown on [GitHub Wiki](https://github.com/insarlab/MintPy/wiki). Any GitHub user can create and edit pages to use for documentation, examples, support, or anything you wish.
 
-## Git workflows ##
+## Writing code ##
 
-### Setting up a development environment ###
+### 0. Setting up a development environment ###
 
 Fork insarlab/MintPy from GitHub UI, and then
 
 ```
-git clone https://github.com/insarlab/MintPy.git
+git clone https://github.com/my_user_name/MintPy.git
 cd MintPy
-git remote add my_user_name https://github.com/my_user_name/MintPy.git
+git remote add upstream https://github.com/insarlab/MintPy.git
 ```
 
-### Updating your local master against upstream master ###
-
-```
-git checkout master
-git fetch origin
-# Be careful: this will loose all local changes you might have done now
-git reset --hard origin/master
-```
-
-### Working with a feature branch ###
+### 1. Working with a feature branch ###
 
 [Here](https://thoughtbot.com/blog/git-interactive-rebase-squash-amend-rewriting-history) is a great tutorial if you are new to rewriting history with git.
 
 ```
+# update to the latest upstream master
 git checkout master
-(potentially update your local master against upstream, as described above)
+git fetch upstream
+git rebase upstream/master
+git push -f
 git checkout -b my_new_feature_branch
 
 # do work. For example:
@@ -54,42 +48,23 @@ git add my_modifid_message
 git rm old_file
 git commit -a 
 
-# you may need to resynchronize against master if you need some bugfix
-# or new capability that has been added to master since you created your
-# branch
-git fetch origin
-git rebase origin/master
+# At end of your work, make sure history is reasonable by:
+# folding non significant commits into a consistent set
+# use 'fixup' for example to merge several commits together
+# use 'reword' to modify commit messages
+# to re-write the last 5 commits for example:
+git rebase -i HEAD~5
 
-# At end of your work, make sure history is reasonable by folding non
-# significant commits into a consistent set
-git rebase -i master (use 'fixup' for example to merge several commits together,
-and 'reword' to modify commit messages)
+# push your local changes to your fork on GitHub
+git push
 
-# or alternatively, in case there is a big number of commits and marking
-# all them as 'fixup' is tedious
-git fetch origin
-git rebase origin/master
-git reset --soft origin/master
-git commit -a -m "Put here the synthetic commit message"
-
-# push your branch
-git push my_user_name my_new_feature_branch
+# you may need to force-push your branch with
+git push -f
 ```
 
-### Issue a pull request from GitHub UI ###
+### 2. Issue a pull request from GitHub UI ###
 
-If the pull request discussion results in changes,
-commit locally and push. To get a reasonable history, you may need to
-
-```
-git rebase -i master
-```
-
-, in which case you will have to force-push your branch with 
-
-```
-git push -f my_user_name my_new_feature_branch
-```
+If the pull request discussion results in changes, commit new changes to `my_user_name/my_new_feature_branch`, they will show up in the pull request in `insarlab` automatically.
 
 ## Testing ##
 
