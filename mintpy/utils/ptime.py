@@ -26,17 +26,33 @@ def datenum2datetime(datenum):
            - timedelta(days=366)
 
 
-def decimal_year2datetime(x):
-    """read date in 2002.40657084 to datetime format"""
-    x = float(x)
-    year = np.floor(x).astype(int)
-    yday = np.floor((x - year) * 365.25).astype(int) + 1
-    x2 = '{:d}-{:d}'.format(year, yday)
-    try:
-        xt = dt(*time.strptime(x2, "%Y-%j")[0:5])
-    except:
-        raise ValueError('wrong format: ',x)
-    return xt
+def decimal_year2datetime(years):
+    """read date in 2002.40657084 to datetime format
+    Parameters: years    : (list of) float or str for years
+    Returns:    years_dt : (list of) datetime.datetime objects
+    """
+    def decimal_year2datetime1(x):
+        x = float(x)
+        year = np.floor(x).astype(int)
+        yday = np.floor((x - year) * 365.25).astype(int) + 1
+        x2 = '{:d}-{:d}'.format(year, yday)
+        try:
+            xt = dt(*time.strptime(x2, "%Y-%j")[0:5])
+        except:
+            raise ValueError('wrong format: ',x)
+        return xt
+
+    if isinstance(years, (float, str)):
+        years_dt = decimal_year2datetime1(years)
+
+    elif isinstance(years, list):
+        years_dt = []
+        for year in years:
+            years_dt.append(decimal_year2datetime1(year))
+
+    else:
+        raise ValueError('unrecognized input format: {}. Only float/str/list are supported.'.format(type(years)))
+    return years_dt
 
 
 def yyyymmdd2years(dates):

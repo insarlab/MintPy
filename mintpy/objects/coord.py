@@ -421,6 +421,8 @@ class coordinate:
         """
         self.open()
         length, width = int(self.src_metadata['LENGTH']), int(self.src_metadata['WIDTH'])
+        if pixel_box is None:
+            pixel_box = (0, 0, width, length)
         sub_x = [pixel_box[0], pixel_box[2]]
         sub_y = [pixel_box[1], pixel_box[3]]
 
