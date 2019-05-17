@@ -6,6 +6,7 @@ import os
 import argparse
 import subprocess
 import configparser
+import shutil
 from mintpy.objects import sensor
 from mintpy.utils import readfile, utils as ut
 
@@ -76,6 +77,8 @@ def read_inps2dict(inps):
     key_list = [i.split(key_prefix)[1] for i in template.keys() if i.startswith(key_prefix)]
     for key in key_list:
         iDict[key] = template[key_prefix+key]
+
+    iDict['sensor'], iDict['projectName'] = sensor.project_name2sensor_name(iDict['templateFile'])
     return iDict
 
 
@@ -84,7 +87,7 @@ def reset_process_directory():
     cmd_str="""------ Copy and paste the following the command to reset the process direction ----
 rm -r baselines/ configs/ coregSLC/ geom_master/ Igrams/ merged/ offsets/ refineSlaveTiming/ run_* SLC/
 cd download
-rm -rf 20* ALP*
+rm -rf 20* AL*
 mv ARCHIVED_FILES/* .
 cd ..
     """
@@ -98,18 +101,16 @@ def prepare_ALOS(iDict):
     if iDict['ALOS.fbd2fbs']:
         cmd += ' --dual2single '
     print(cmd)
-    status = subprocess.Popen(cmd, shell=True).wait()
-    if status is not 0:
-        raise RuntimeError('Error while runing prepRawALOS.py.')
+    os.system(cmd)
+    return 'run_unPackALOS'
 
-    # submit job for run_unPack*
-    run_file = 'run_unPackALOS'
-    cmd = 'split_jobs.py run_unPackALOS -r 2000 -w 0:30'
+
+def prepare_ALOS2(iDict):
+    # uncompress tar/zip files
+    cmd = 'prepRawALOS2.py -i ./download -o ./SLC -t "" '
     print(cmd)
-    status = subprocess.Popen(cmd, shell=True).wait()
-    if status is not 0:
-        raise RuntimeError('Error while runing run_unPackALOS.')
-    return status
+    os.system(cmd)
+    return 'run_unPackALOS2'
 
 
 def prepare_stack(iDict):
@@ -124,6 +125,11 @@ def prepare_stack(iDict):
                                                          m=iDict['masterDate'])
     if iDict['applyWaterMask']:
         cmd += ' --applyWaterMask'
+
+    #for SLC data: ALOS2
+    if iDict['sensor'] == 'Alos2':
+        cmd += ' --nofocus'
+
     print(cmd)
     status = subprocess.Popen(cmd, shell=True).wait()
     if status is not 0:
@@ -132,15 +138,28 @@ def prepare_stack(iDict):
 
 
 def run_stack(iDict, run_file_dir='./run_files'):
-    # read job config file
-    config_dir = os.path.expandvars('${MINTPY_HOME}/mintpy/defaults')
-    config_file = os.path.join(config_dir, 'job4{}.cfg'.format(iDict['processor']))
-    if not os.path.isfile(config_file):
-        raise ValueError('job config file NOT found, it should be: {}'.format(config_file))
+    # check run_files and configs directory
+    if any(not os.path.isdir(i) for i in ['configs', 'run_files']):
+        msg = 'NO configs or run_files folder found in the current directory!'
+        raise NotADirectoryError(msg)
 
+    # go to run_files directory
+    dir_orig = os.getcwd()
+    run_file_dir = os.path.join(dir_orig, 'run_files')
+    os.chdir(run_file_dir)
+
+    # copy job config file
+    config_file = 'job4{}.cfg'.format(iDict['processor'])
+    if not os.path.isfile():
+        config_dir = os.path.expandvars('${MINTPY_HOME}/mintpy/defaults')
+        shutil.copy2(os.path.join(config_dir, config_file), run_file_dir)
+        print('copy job config file {} to run_files folder'.format(config_file))
+
+    # read job config file
     config = configparser.ConfigParser(delimiters='=')
     config.read(config_file)
 
+    # check start/end step number
     num_step = len(config.sections())
     print('number of steps: {}'.format(num_step))
     if not iDict['startNum']:
@@ -148,15 +167,7 @@ def run_stack(iDict, run_file_dir='./run_files'):
     if not iDict['endNum']:
         iDict['endNum'] = num_step
 
-    # check ./run_files directory
-    if any(not os.path.isdir(i) for i in ['configs', 'run_files']):
-        msg = 'ERROR: NO configs or run_files folder found in the current directory!'
-        raise SystemExit(msg)
-
-    run_file_dir = os.path.join(os.getcwd(), 'run_files')
-    cwd = os.getcwd()
-    os.chdir(run_file_dir)
-
+    # submit job step by step
     for step_num in range(iDict['startNum'], iDict['endNum']+1):
         step_prefix = 'run_{:d}_'.format(step_num)
         step_name = [i for i in config.sections() if i.startswith(step_prefix)][0]
@@ -168,11 +179,14 @@ def run_stack(iDict, run_file_dir='./run_files'):
         status = subprocess.Popen(cmd, shell=True).wait()
         if status is not 0:
             raise RuntimeError("Error in step {}".format(step_name))
-    os.chdir(cwd)
+
+    # go back to original directory
+    os.chdir(dir_orig)
     return status
 
 
 def write_job_file(iDict):
+    """Write job file to submit process_isce_stack.py as a job"""
     # command line
     cmd = 'process_isce_stack.py -t {}'.format(iDict['templateFile'])
     if iDict['startNum']:
@@ -244,9 +258,23 @@ def main(iargs=None):
         return
 
     if not inps.startNum:
-        prepare_ALOS(iDict)
+        # prepare RAW/SLC data
+        if iDict['sensor'] == 'Alos':
+            run_file = prepare_ALOS(iDict)
+        elif iDict['sensor'] == 'Alos2':
+            run_file = prepare_ALOS2(iDict)
+        else:
+            raise ValueError('unsupported sensor: {}'.format(iDict['sensor']))
+
+        # submit run file as jobs
+        cmd = 'split_jobs.py {} -r 2000 -w 0:30'.format(run_file)
+        print(cmd)
+        os.system(cmd)
+
+        # prepare stack
         prepare_stack(iDict)
 
+    # submit stack as jobs
     run_stack(iDict)
 
     copy_masterShelve(iDict)
