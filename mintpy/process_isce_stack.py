@@ -85,7 +85,7 @@ def read_inps2dict(inps):
 #####################################################################################
 def reset_process_directory():
     cmd_str="""------ Copy and paste the following the command to reset the process direction ----
-rm -r baselines/ configs/ coregSLC/ geom_master/ Igrams/ merged/ offsets/ refineSlaveTiming/ run_* SLC/
+rm -r baselines/ configs/ coregSLC/ geom_master/ Igrams/ merged/ offsets/ refineSlaveTiming/ run_* SLC/ masterShelve/
 cd download
 rm -rf 20* AL*
 mv ARCHIVED_FILES/* .
@@ -150,7 +150,7 @@ def run_stack(iDict, run_file_dir='run_files'):
 
     # copy job config file
     config_file = 'job4{}.cfg'.format(iDict['processor'])
-    if not os.path.isfile():
+    if not os.path.isfile(config_file):
         config_dir = os.path.expandvars('${MINTPY_HOME}/mintpy/defaults')
         shutil.copy2(os.path.join(config_dir, config_file), run_file_dir)
         print('copy job config file {} to run_files folder'.format(config_file))
