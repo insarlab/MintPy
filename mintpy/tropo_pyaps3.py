@@ -250,9 +250,9 @@ def date_list2grib_file(date_list, hour, model, grib_dir, snwe=None):
     for d in date_list:
         if model == 'ERA5':
             if area:
-                grib_file = 'ERA-5{}_{}_{}.grb'.format(area, d, hour)
+                grib_file = 'ERA5{}_{}_{}.grb'.format(area, d, hour)
             else:
-                grib_file = 'ERA-5_{}_{}.grb'.format(d, hour)
+                grib_file = 'ERA5_{}_{}.grb'.format(d, hour)
 
         elif model == 'ERAINT': grib_file = 'ERA-Int_{}_{}.grb'.format(d, hour)
         elif model == 'MERRA' : grib_file = 'merra-{}-{}.nc4'.format(d, hour)
@@ -263,21 +263,21 @@ def date_list2grib_file(date_list, hour, model, grib_dir, snwe=None):
     return grib_files
 
 
-def ceil_to_5(x):
-    """Return the closest number in multiple of 5 in the larger direction"""
+def ceil2multiple(x, step=10):
+    """Return the closest number in multiple of step in the larger direction"""
     assert isinstance(x, (int, np.int16, np.int32, np.int64)), 'input number is not int: {}'.format(type(x))
-    if x % 5 == 0:
+    if x % step == 0:
         return x
-    return x + (5 - x % 5)
+    return x + (step - x % step)
 
 
-def floor_to_5(x):
-    """Return the closest number in multiple of 5 in the lesser direction"""
+def floor2multiple(x, step=10):
+    """Return the closest number in multiple of step in the lesser direction"""
     assert isinstance(x, (int, np.int16, np.int32, np.int64)), 'input number is not int: {}'.format(type(x))
-    return x - x % 5
+    return x - x % step
 
 
-def get_snwe(meta, min_buffer=2, multi_5=True):
+def get_snwe(meta, min_buffer=2, step=10):
     # get bounding box
     lat0, lat1, lon0, lon1 = get_bounding_box(meta)
 
@@ -288,11 +288,11 @@ def get_snwe(meta, min_buffer=2, multi_5=True):
     E = np.ceil( max(lon0, lon1) + min_buffer).astype(int)
 
     # SNWE in multiple of 5
-    if multi_5:
-        S = floor_to_5(S)
-        W = floor_to_5(W)
-        N = ceil_to_5(N)
-        E = ceil_to_5(E)
+    if step > 1:
+        S = floor2multiple(S, step=step)
+        W = floor2multiple(W, step=step)
+        N = ceil2multiple(N, step=step)
+        E = ceil2multiple(E, step=step)
     return (S, N, W, E)
 
 

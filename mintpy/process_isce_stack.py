@@ -85,7 +85,7 @@ def read_inps2dict(inps):
 #####################################################################################
 def reset_process_directory():
     cmd_str="""------ Copy and paste the following the command to reset the process direction ----
-rm -r baselines/ configs/ coregSLC/ geom_master/ Igrams/ merged/ offsets/ refineSlaveTiming/ run_* SLC/
+rm -r baselines/ configs/ coregSLC/ geom_master/ Igrams/ merged/ offsets/ refineSlaveTiming/ run_* SLC/ masterShelve/
 cd download
 rm -rf 20* AL*
 mv ARCHIVED_FILES/* .
