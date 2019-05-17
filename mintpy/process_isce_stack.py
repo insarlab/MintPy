@@ -137,7 +137,7 @@ def prepare_stack(iDict):
     return status
 
 
-def run_stack(iDict, run_file_dir='./run_files'):
+def run_stack(iDict, run_file_dir='run_files'):
     # check run_files and configs directory
     if any(not os.path.isdir(i) for i in ['configs', 'run_files']):
         msg = 'NO configs or run_files folder found in the current directory!'
@@ -145,7 +145,7 @@ def run_stack(iDict, run_file_dir='./run_files'):
 
     # go to run_files directory
     dir_orig = os.getcwd()
-    run_file_dir = os.path.join(dir_orig, 'run_files')
+    run_file_dir = os.path.join(dir_orig, run_file_dir)
     os.chdir(run_file_dir)
 
     # copy job config file
@@ -222,21 +222,30 @@ def write_job_file(iDict):
     return job_file
 
 
-def copy_masterShelve(iDict):
+def copy_masterShelve(iDict, out_dir='masterShelve'):
+    """Copy shelve files into root directory"""
     proj_dir = os.path.abspath(os.getcwd())
-    shelve_dir_dst = os.path.join(proj_dir, 'masterShelve')
-    if os.path.isdir(shelve_dir_dst):
-        print('masterShelve folder already exists: {}'.format(shelve_dir_dst))
-        return
 
-    try:
-        ifgram_dir = os.path.join(proj_dir, 'Igrams/{}_*'.format(iDict['masterDate']))
-        ifgram_dir = glob.glob(ifgram_dir)[0]
-    except:
-        print('WARNING: interferogram with master date: {} is not found.'.format(iDict['masterDate']))
-    shelve_dir_src = os.path.join(ifgram_dir, 'masterShelve')
-    shutil.copytree(shelve_dir_src, shelve_dir_dst)
-    print('copy masterShelve folder from {} to {}'.format(shelve_dir_src, shelve_dir_dst))
+    # check folders
+    shelve_dir = os.path.join(proj_dir, out_dir)
+    if os.path.isdir(shelve_dir) :
+        print('masterShelve folder already exists: {}'.format(shelve_dir))
+        return
+    else:
+        print('create directory: {}'.format(shelve_dir))
+        os.makedirs(shelve_dir)
+
+    # check files
+    shelve_files = ['data.bak','data.dat','data.dir']
+    if all(os.path.isfile(os.path.join(shelve_dir, i)) for i in shelve_files):
+        print('all shelve files already exists')
+        return
+    else:
+        slc_dir = os.path.join(proj_dir, 'SLC/{}'.format(iDict['masterDate']))
+        for shelve_file in shelve_files:
+            shelve_file = os.path.join(slc_dir, shelve_file)
+            shutil.copy2(shelve_file, shelve_dir)
+            print('copy {} to {}'.format(shelve_file, shelve_dir))
     return
 
 
