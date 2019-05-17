@@ -150,7 +150,7 @@ def run_stack(iDict, run_file_dir='run_files'):
 
     # copy job config file
     config_file = 'job4{}.cfg'.format(iDict['processor'])
-    if not os.path.isfile():
+    if not os.path.isfile(config_file):
         config_dir = os.path.expandvars('${MINTPY_HOME}/mintpy/defaults')
         shutil.copy2(os.path.join(config_dir, config_file), run_file_dir)
         print('copy job config file {} to run_files folder'.format(config_file))
