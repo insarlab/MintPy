@@ -30,9 +30,6 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                 dsDict['velocity'] = np.ones((200,300), dtype=np.float32)
                 write(datasetDict=dsDict, out_file='velocity.h5', metadata=atr)
     """
-    if compression is None and ref_file:
-        compression = readfile.get_hdf5_compression(ref_file)
-
     # copy metadata to meta
     if metadata:
         meta = {key: value for key, value in metadata.items()}
@@ -50,6 +47,9 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
     ext = os.path.splitext(out_file)[1].lower()
     # HDF5 File
     if ext in ['.h5', '.he5']:
+        if compression is None and ref_file:
+            compression = readfile.get_hdf5_compression(ref_file)
+
         k = meta['FILE_TYPE']
         if k == 'timeseries':
             if ref_file is None:

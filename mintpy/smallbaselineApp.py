@@ -711,16 +711,21 @@ class TimeSeriesAnalysis:
                         print('diff.py', scp_args)
                         mintpy.diff.main(scp_args.split())
                     else:
-                        # opt 1 - using tropo_pyaps as python module and call its main function
-                        # prefered, disabled for now to make it compatible with python2-pyaps
-                        #print('tropo_pyaps.py', scp_args)
-                        #from mintpy import tropo_pyaps
-                        #tropo_pyaps.main(scp_args.split())
-                        # opt 2 - using tropo_pyaps as executable script
-                        # will be deprecated after python3-pyaps is fully funcational
-                        cmd = 'tropo_pyaps.py '+scp_args
-                        print(cmd)
-                        status = subprocess.Popen(cmd, shell=True).wait()
+                        if tropo_model in ['ERA5']:
+                            from mintpy import tropo_pyaps3
+                            print('tropo_pyaps3.py', scp_args)
+                            tropo_pyaps3.main(scp_args.split())
+                        else:
+                            # opt 1 - using tropo_pyaps as python module and call its main function
+                            # prefered, disabled for now to make it compatible with python2-pyaps
+                            #print('tropo_pyaps.py', scp_args)
+                            #from mintpy import tropo_pyaps
+                            #tropo_pyaps.main(scp_args.split())
+                            # opt 2 - using tropo_pyaps as executable script
+                            # will be deprecated after python3-pyaps is fully funcational
+                            cmd = 'tropo_pyaps.py '+scp_args
+                            print(cmd)
+                            status = subprocess.Popen(cmd, shell=True).wait()
 
         else:
             print('No tropospheric delay correction.')
