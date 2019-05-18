@@ -57,10 +57,11 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     if not inps.reset and not inps.templateFile:
-        raise ValueError('ERROR: the following arguments are required: -t/--template')
+        raise SystemExit('ERROR: at least one of the following arguments are required: -t/--template, --reset')
 
     if inps.templateFile:
         inps.templateFile = os.path.abspath(inps.templateFile)
+
     #if any(not os.path.isdir(i) for i in ['configs', 'run_files']):
     #    msg = 'ERROR: NO configs or run_files folder found in the current directory!'
     #    raise SystemExit(msg)
@@ -149,11 +150,12 @@ def run_stack(iDict, run_file_dir='run_files'):
     os.chdir(run_file_dir)
 
     # copy job config file
-    config_file = 'job4{}.cfg'.format(iDict['processor'])
+    config_file = os.path.join(dir_orig, 'job4{}.cfg'.format(iDict['processor']))
     if not os.path.isfile(config_file):
         config_dir = os.path.expandvars('${MINTPY_HOME}/mintpy/defaults')
-        shutil.copy2(os.path.join(config_dir, config_file), run_file_dir)
-        print('copy job config file {} to run_files folder'.format(config_file))
+        config_file_src = os.path.join(config_dir, os.path.basename(config_file))
+        shutil.copy2(config_file_src, dir_orig)
+        print('copy job config file {} to the working directory: {}'.format(os.path.basename(config_file), dir_orig))
 
     # read job config file
     config = configparser.ConfigParser(delimiters='=')
