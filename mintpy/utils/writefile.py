@@ -30,6 +30,9 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                 dsDict['velocity'] = np.ones((200,300), dtype=np.float32)
                 write(datasetDict=dsDict, out_file='velocity.h5', metadata=atr)
     """
+    if compression is None and ref_file:
+        compression = readfile.get_hdf5_compression(ref_file)
+
     # copy metadata to meta
     if metadata:
         meta = {key: value for key, value in metadata.items()}

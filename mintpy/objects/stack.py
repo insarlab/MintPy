@@ -275,6 +275,10 @@ class timeseries:
                 dates = refobj.dateList
             if bperp is None:
                 bperp = refobj.pbase
+            # get ref file compression type if input compression is None
+            if compression is None:
+                with h5py.File(refFile, 'r') as rf:
+                    compression = rf[timeseriesDatasetNames[0]].compression
             refobj.close(print_msg=False)
         data = np.array(data, dtype=np.float32)
         dates = np.array(dates, dtype=np.string_)
