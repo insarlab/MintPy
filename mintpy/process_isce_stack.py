@@ -36,7 +36,7 @@ isce.applyWaterMask     = yes
 """
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='HPC Wrapper for InSAR stack processor.',
+    parser = argparse.ArgumentParser(description='HPC Wrapper for ISCE stack processor.',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=TEMPLATE+'\n'+EXAMPLE)
 
@@ -116,19 +116,20 @@ def prepare_ALOS2(iDict):
 
 def prepare_stack(iDict):
     cmd = ('stackStripMap.py -W interferogram -s ./SLC -d {d} -u {u} -f {f} '
-           ' -t {t} -b {b} -a {a} -r {r} -m {m}').format(d=iDict['demFile'],
-                                                         u=iDict['unwrapMethod'],
-                                                         f=iDict['filtStrength'],
-                                                         t=iDict['maxTempBaseline'],
-                                                         b=iDict['maxPerpBaseline'],
-                                                         a=iDict['azimuthLooks'],
-                                                         r=iDict['rangeLooks'],
-                                                         m=iDict['masterDate'])
+           ' -t {t} -b {b} -a {a} -r {r}').format(d=iDict['demFile'],
+                                                  u=iDict['unwrapMethod'],
+                                                  f=iDict['filtStrength'],
+                                                  t=iDict['maxTempBaseline'],
+                                                  b=iDict['maxPerpBaseline'],
+                                                  a=iDict['azimuthLooks'],
+                                                  r=iDict['rangeLooks'])
+    if 'masterDate' in iDict.keys():
+        cmd += ' -m {}'.format(iDict['masterDate'])
     if iDict['applyWaterMask']:
         cmd += ' --applyWaterMask'
 
     #for SLC data: ALOS2
-    if iDict['sensor'] == 'Alos2':
+    if iDict['sensor'] in ['Alos2']:
         cmd += ' --nofocus'
 
     print(cmd)
