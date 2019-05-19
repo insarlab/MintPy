@@ -2,7 +2,7 @@
 ###############################################################
 # Plot Results from Routine Workflow with smallbaselineApp.py
 # Author: Zhang Yunjun, 2017-07-23
-# Latest update: 2019-04-01
+# Latest update: 2019-05-18
 ###############################################################
 
 
@@ -22,6 +22,13 @@ if [ ! -f $dem_file ]; then
     dem_file='./inputs/geometryGeo.h5'
 fi
 
+# list of GAM models
+tropo_models=(
+    'ECMWF'
+    'MERRA'
+    'NARR'
+    'ERA5'
+)
 
 ## Log File
 log_file='plot_smallbaselineApp.log'
@@ -85,12 +92,11 @@ if [ $plot_timeseries -eq 1 ]; then
     file=timeseries_LODcor_ECMWF_ramp_demErr.h5;    test -f $file && $view $file $opt >> $log_file
 
     #w trop delay corrections
-    for trop in '_ECMWF' '_MERRA' '_NARR' '_tropHgt'
-    do
-        file=timeseries${trop}.h5;                  test -f $file && $view $file $opt >> $log_file
-        file=timeseries${trop}_demErr.h5;           test -f $file && $view $file $opt >> $log_file
-        file=timeseries${trop}_ramp.h5;             test -f $file && $view $file $opt >> $log_file
-        file=timeseries${trop}_ramp_demErr.h5;      test -f $file && $view $file $opt >> $log_file
+    for trop in "${tropo_models[@]}" "tropHgt"; do
+        file=timeseries_${trop}.h5;                  test -f $file && $view $file $opt >> $log_file
+        file=timeseries_${trop}_demErr.h5;           test -f $file && $view $file $opt >> $log_file
+        file=timeseries_${trop}_ramp.h5;             test -f $file && $view $file $opt >> $log_file
+        file=timeseries_${trop}_ramp_demErr.h5;      test -f $file && $view $file $opt >> $log_file
     done
 
     #w/o trop delay correction
@@ -112,8 +118,7 @@ fi
 
 
 if [ $plot_the_rest -eq 1 ]; then
-    for trop in 'ECMWF' 'MERRA' 'NARR'
-    do
+    for trop in "${tropo_models[@]}"; do
         file=velocity${trop}.h5;    test -f $file && $view $file --mask no >> $log_file
     done
     file=numInvIfgram.h5;           test -f $file && $view $file --mask no >> $log_file
