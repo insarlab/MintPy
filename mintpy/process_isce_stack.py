@@ -108,7 +108,7 @@ def prepare_ALOS(iDict):
 
 def prepare_ALOS2(iDict):
     # uncompress tar/zip files
-    cmd = 'prepRawALOS2.py -i ./download -o ./SLC -t "" '
+    cmd = 'prepSlcALOS2.py -i ./download -o ./SLC -t "" '
     print(cmd)
     os.system(cmd)
     return 'run_unPackALOS2'
