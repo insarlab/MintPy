@@ -10,7 +10,7 @@
 import os
 
 sensorNames = ['ers', 'env', 'sen', 'rsat', 'rsat2', 'ksat5', 'gaofen3',
-               'jers', 'alos', 'alos2', 'nisar',
+               'jers', 'alos2', 'alos', 'nisar',
                'tsx', 'csk'
               ]
 

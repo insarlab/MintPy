@@ -6,6 +6,7 @@ import os
 import argparse
 import subprocess
 import configparser
+import shutil
 from mintpy.objects import sensor
 from mintpy.utils import readfile, utils as ut
 
@@ -35,7 +36,7 @@ isce.applyWaterMask     = yes
 """
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='HPC Wrapper for InSAR stack processor.',
+    parser = argparse.ArgumentParser(description='HPC Wrapper for ISCE stack processor.',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=TEMPLATE+'\n'+EXAMPLE)
 
@@ -56,10 +57,11 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     if not inps.reset and not inps.templateFile:
-        raise ValueError('ERROR: the following arguments are required: -t/--template')
+        raise SystemExit('ERROR: at least one of the following arguments are required: -t/--template, --reset')
 
     if inps.templateFile:
         inps.templateFile = os.path.abspath(inps.templateFile)
+
     #if any(not os.path.isdir(i) for i in ['configs', 'run_files']):
     #    msg = 'ERROR: NO configs or run_files folder found in the current directory!'
     #    raise SystemExit(msg)
@@ -76,15 +78,17 @@ def read_inps2dict(inps):
     key_list = [i.split(key_prefix)[1] for i in template.keys() if i.startswith(key_prefix)]
     for key in key_list:
         iDict[key] = template[key_prefix+key]
+
+    iDict['sensor'], iDict['projectName'] = sensor.project_name2sensor_name(iDict['templateFile'])
     return iDict
 
 
 #####################################################################################
 def reset_process_directory():
     cmd_str="""------ Copy and paste the following the command to reset the process direction ----
-rm -r baselines/ configs/ coregSLC/ geom_master/ Igrams/ merged/ offsets/ refineSlaveTiming/ run_* SLC/
+rm -r baselines/ configs/ coregSLC/ geom_master/ Igrams/ merged/ offsets/ refineSlaveTiming/ run_* SLC/ masterShelve/
 cd download
-rm -rf 20* ALP*
+rm -rf 20* AL*
 mv ARCHIVED_FILES/* .
 cd ..
     """
@@ -98,32 +102,36 @@ def prepare_ALOS(iDict):
     if iDict['ALOS.fbd2fbs']:
         cmd += ' --dual2single '
     print(cmd)
-    status = subprocess.Popen(cmd, shell=True).wait()
-    if status is not 0:
-        raise RuntimeError('Error while runing prepRawALOS.py.')
+    os.system(cmd)
+    return 'run_unPackALOS'
 
-    # submit job for run_unPack*
-    run_file = 'run_unPackALOS'
-    cmd = 'split_jobs.py run_unPackALOS -r 2000 -w 0:30'
+
+def prepare_ALOS2(iDict):
+    # uncompress tar/zip files
+    cmd = 'prepRawALOS2.py -i ./download -o ./SLC -t "" '
     print(cmd)
-    status = subprocess.Popen(cmd, shell=True).wait()
-    if status is not 0:
-        raise RuntimeError('Error while runing run_unPackALOS.')
-    return status
+    os.system(cmd)
+    return 'run_unPackALOS2'
 
 
 def prepare_stack(iDict):
     cmd = ('stackStripMap.py -W interferogram -s ./SLC -d {d} -u {u} -f {f} '
-           ' -t {t} -b {b} -a {a} -r {r} -m {m}').format(d=iDict['demFile'],
-                                                         u=iDict['unwrapMethod'],
-                                                         f=iDict['filtStrength'],
-                                                         t=iDict['maxTempBaseline'],
-                                                         b=iDict['maxPerpBaseline'],
-                                                         a=iDict['azimuthLooks'],
-                                                         r=iDict['rangeLooks'],
-                                                         m=iDict['masterDate'])
+           ' -t {t} -b {b} -a {a} -r {r}').format(d=iDict['demFile'],
+                                                  u=iDict['unwrapMethod'],
+                                                  f=iDict['filtStrength'],
+                                                  t=iDict['maxTempBaseline'],
+                                                  b=iDict['maxPerpBaseline'],
+                                                  a=iDict['azimuthLooks'],
+                                                  r=iDict['rangeLooks'])
+    if 'masterDate' in iDict.keys():
+        cmd += ' -m {}'.format(iDict['masterDate'])
     if iDict['applyWaterMask']:
         cmd += ' --applyWaterMask'
+
+    #for SLC data: ALOS2
+    if iDict['sensor'] in ['Alos2']:
+        cmd += ' --nofocus'
+
     print(cmd)
     status = subprocess.Popen(cmd, shell=True).wait()
     if status is not 0:
@@ -131,16 +139,30 @@ def prepare_stack(iDict):
     return status
 
 
-def run_stack(iDict, run_file_dir='./run_files'):
-    # read job config file
-    config_dir = os.path.expandvars('${MINTPY_HOME}/mintpy/defaults')
-    config_file = os.path.join(config_dir, 'job4{}.cfg'.format(iDict['processor']))
-    if not os.path.isfile(config_file):
-        raise ValueError('job config file NOT found, it should be: {}'.format(config_file))
+def run_stack(iDict, run_file_dir='run_files'):
+    # check run_files and configs directory
+    if any(not os.path.isdir(i) for i in ['configs', 'run_files']):
+        msg = 'NO configs or run_files folder found in the current directory!'
+        raise NotADirectoryError(msg)
 
+    # go to run_files directory
+    dir_orig = os.getcwd()
+    run_file_dir = os.path.join(dir_orig, run_file_dir)
+    os.chdir(run_file_dir)
+
+    # copy job config file
+    config_file = os.path.join(dir_orig, 'job4{}.cfg'.format(iDict['processor']))
+    if not os.path.isfile(config_file):
+        config_dir = os.path.expandvars('${MINTPY_HOME}/mintpy/defaults')
+        config_file_src = os.path.join(config_dir, os.path.basename(config_file))
+        shutil.copy2(config_file_src, dir_orig)
+        print('copy job config file {} to the working directory: {}'.format(os.path.basename(config_file), dir_orig))
+
+    # read job config file
     config = configparser.ConfigParser(delimiters='=')
     config.read(config_file)
 
+    # check start/end step number
     num_step = len(config.sections())
     print('number of steps: {}'.format(num_step))
     if not iDict['startNum']:
@@ -148,15 +170,7 @@ def run_stack(iDict, run_file_dir='./run_files'):
     if not iDict['endNum']:
         iDict['endNum'] = num_step
 
-    # check ./run_files directory
-    if any(not os.path.isdir(i) for i in ['configs', 'run_files']):
-        msg = 'ERROR: NO configs or run_files folder found in the current directory!'
-        raise SystemExit(msg)
-
-    run_file_dir = os.path.join(os.getcwd(), 'run_files')
-    cwd = os.getcwd()
-    os.chdir(run_file_dir)
-
+    # submit job step by step
     for step_num in range(iDict['startNum'], iDict['endNum']+1):
         step_prefix = 'run_{:d}_'.format(step_num)
         step_name = [i for i in config.sections() if i.startswith(step_prefix)][0]
@@ -168,11 +182,14 @@ def run_stack(iDict, run_file_dir='./run_files'):
         status = subprocess.Popen(cmd, shell=True).wait()
         if status is not 0:
             raise RuntimeError("Error in step {}".format(step_name))
-    os.chdir(cwd)
+
+    # go back to original directory
+    os.chdir(dir_orig)
     return status
 
 
 def write_job_file(iDict):
+    """Write job file to submit process_isce_stack.py as a job"""
     # command line
     cmd = 'process_isce_stack.py -t {}'.format(iDict['templateFile'])
     if iDict['startNum']:
@@ -208,21 +225,30 @@ def write_job_file(iDict):
     return job_file
 
 
-def copy_masterShelve(iDict):
+def copy_masterShelve(iDict, out_dir='masterShelve'):
+    """Copy shelve files into root directory"""
     proj_dir = os.path.abspath(os.getcwd())
-    shelve_dir_dst = os.path.join(proj_dir, 'masterShelve')
-    if os.path.isdir(shelve_dir_dst):
-        print('masterShelve folder already exists: {}'.format(shelve_dir_dst))
-        return
 
-    try:
-        ifgram_dir = os.path.join(proj_dir, 'Igrams/{}_*'.format(iDict['masterDate']))
-        ifgram_dir = glob.glob(ifgram_dir)[0]
-    except:
-        print('WARNING: interferogram with master date: {} is not found.'.format(iDict['masterDate']))
-    shelve_dir_src = os.path.join(ifgram_dir, 'masterShelve')
-    shutil.copytree(shelve_dir_src, shelve_dir_dst)
-    print('copy masterShelve folder from {} to {}'.format(shelve_dir_src, shelve_dir_dst))
+    # check folders
+    shelve_dir = os.path.join(proj_dir, out_dir)
+    if os.path.isdir(shelve_dir) :
+        print('masterShelve folder already exists: {}'.format(shelve_dir))
+        return
+    else:
+        print('create directory: {}'.format(shelve_dir))
+        os.makedirs(shelve_dir)
+
+    # check files
+    shelve_files = ['data.bak','data.dat','data.dir']
+    if all(os.path.isfile(os.path.join(shelve_dir, i)) for i in shelve_files):
+        print('all shelve files already exists')
+        return
+    else:
+        slc_dir = os.path.join(proj_dir, 'SLC/{}'.format(iDict['masterDate']))
+        for shelve_file in shelve_files:
+            shelve_file = os.path.join(slc_dir, shelve_file)
+            shutil.copy2(shelve_file, shelve_dir)
+            print('copy {} to {}'.format(shelve_file, shelve_dir))
     return
 
 
@@ -244,9 +270,23 @@ def main(iargs=None):
         return
 
     if not inps.startNum:
-        prepare_ALOS(iDict)
+        # prepare RAW/SLC data
+        if iDict['sensor'] == 'Alos':
+            run_file = prepare_ALOS(iDict)
+        elif iDict['sensor'] == 'Alos2':
+            run_file = prepare_ALOS2(iDict)
+        else:
+            raise ValueError('unsupported sensor: {}'.format(iDict['sensor']))
+
+        # submit run file as jobs
+        cmd = 'split_jobs.py {} -r 2000 -w 0:30'.format(run_file)
+        print(cmd)
+        os.system(cmd)
+
+        # prepare stack
         prepare_stack(iDict)
 
+    # submit stack as jobs
     run_stack(iDict)
 
     copy_masterShelve(iDict)

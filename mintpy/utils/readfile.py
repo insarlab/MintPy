@@ -513,6 +513,15 @@ def get_dataset_list(fname, datasetName=None):
     return ds_list
 
 
+def get_hdf5_compression(fname):
+    """Get the compression type of input HDF5 file"""
+    compression = None
+    ds_name = get_dataset_list(fname)[0]
+    with h5py.File(fname, 'r') as f:
+        compression = f[ds_name].compression
+    return compression
+
+
 #########################################################################
 def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None):
     """Read attributes of input file into a dictionary
