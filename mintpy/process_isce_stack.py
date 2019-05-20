@@ -269,6 +269,10 @@ def main(iargs=None):
         os.system(cmd)
         return
 
+    # copy template file
+    print('copy template file to the current directory')
+    shutil.copy2(iDict['templateFile'], os.getcwd())
+
     if not inps.startNum:
         # prepare RAW/SLC data
         if iDict['sensor'] == 'Alos':
