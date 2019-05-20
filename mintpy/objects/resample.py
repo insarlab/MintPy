@@ -37,6 +37,7 @@ class resample:
         self.SNWE = SNWE
         self.laloStep = laloStep
         self.processor = processor
+        self.valid_index = None
 
     def open(self):
         """Prepare aux data before interpolation operation"""
@@ -52,9 +53,9 @@ class resample:
         # get src_def and dest_def, update SNWE and laloStep
         if self.processor == 'pyresample':
             if 'Y_FIRST' not in self.lut_metadata.keys():
-                self.get_geometry_definition4radar_lookup_table()
+                self.prepare_geometry_definition_radar()
             else:
-                self.get_geometry_definition4geo_lookup_table()
+                self.prepare_geometry_definition_geo()
             self.length, self.width = self.dest_def.lats.shape
 
         elif self.processor == 'scipy' and 'Y_FIRST' in self.lut_metadata.keys():
@@ -160,7 +161,7 @@ class resample:
         return geo_data
 
 
-    def get_geometry_definition4radar_lookup_table(self):
+    def prepare_geometry_definition_radar(self):
         """Get src_def and dest_def for lookup table from ISCE, DORIS"""
 
         def mark_lalo_anomoly(lat, lon):
@@ -231,6 +232,24 @@ class resample:
             dest_lat, dest_lon = np.mgrid[self.SNWE[1]:self.SNWE[0]:lat_num*1j,
                                           self.SNWE[2]:self.SNWE[3]:lon_num*1j]
 
+            # reduction of swath data
+            # https://pyresample.readthedocs.io/en/latest/data_reduce.html
+            src_size_deg = (SNWE[1] - SNWE[0]) * (SNWE[3] - SNWE[2])
+            dest_size_deg = (self.SNWE[1] - self.SNWE[0]) * (self.SNWE[3] - self.SNWE[2])
+            if dest_size_deg < src_size_deg * 0.5:
+                self.valid_index = pr.data_reduce.get_valid_index_from_lonlat_grid(dest_lon,
+                                                                                   dest_lat,
+                                                                                   src_lon,
+                                                                                   src_lat,
+                                                                                   radius_of_influence=3000)
+                src_lon = src_lon[self.valid_index]
+                src_lat = src_lat[self.valid_index]
+
+                # bounding box [can be used to read src data; not used afterwards yet]
+                idx_row, idx_col = np.where(self.valid_index)
+                self.valid_box = (np.min(idx_col), np.min(idx_row),
+                                  np.max(idx_col), np.max(idx_row))
+
             self.src_def = pr.geometry.SwathDefinition(lons=src_lon, lats=src_lat)
             self.dest_def = pr.geometry.GridDefinition(lons=dest_lon, lats=dest_lat)
 
@@ -257,7 +276,9 @@ class resample:
             self.src_def = pr.geometry.GridDefinition(lons=src_lon, lats=src_lat)
             self.dest_def = pr.geometry.SwathDefinition(lons=dest_lon, lats=dest_lat)
 
-    def get_geometry_definition4geo_lookup_table(self):
+
+    ## Currently NOT used by default, as GAMMA/ROI_PAC geocoding is using RGI from scipy
+    def prepare_geometry_definition_geo(self):
         """Get src_def and dest_def for lookup table from Gamma and ROI_PAC."""
         def project_yx2lalo(yy, xx, SNWE, laloScale):
             """scale/project coordinates in pixel number into lat/lon
@@ -341,6 +362,7 @@ class resample:
             # src_y/x
             raise NotImplementedError('Not implemented yet for GAMMA and ROIPAC products')
 
+
     def get_radius_of_influence(self, ratio=3):
         """Get radius of influence based on the lookup table resolution in lat/lon direction"""
         earth_radius = 6371.0e3
@@ -351,9 +373,11 @@ class resample:
         radius = np.max(np.abs([lat_step, lon_step])) * ratio
         return radius
 
+
     def get_segment_number(self, unit_size=1e6):
         num_segment = int(self.dest_def.size / unit_size + 0.5)
         return num_segment
+
 
     def run_pyresample(self, src_data, interp_method='nearest', fill_value=np.nan, nprocs=1,
                        radius=None, print_msg=True):
@@ -377,6 +401,11 @@ class resample:
             else:
                 radius = self.get_radius_of_influence()
 
+        # reduction of swath data
+        if self.valid_index is not None:
+            src_data = src_data[self.valid_index]
+
+        # get number of segments
         num_segment = self.get_segment_number()
 
         if interp_method.startswith('near'):
