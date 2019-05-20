@@ -271,7 +271,11 @@ def main(iargs=None):
 
     # copy template file
     print('copy template file to the current directory')
-    shutil.copy2(iDict['templateFile'], os.getcwd())
+    try:
+        shutil.copy2(iDict['templateFile'], os.getcwd())
+    except shutil.SameFileError:
+        # code when Exception occur
+        pass
 
     if not inps.startNum:
         # prepare RAW/SLC data
