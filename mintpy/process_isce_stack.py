@@ -108,7 +108,7 @@ def prepare_ALOS(iDict):
 
 def prepare_ALOS2(iDict):
     # uncompress tar/zip files
-    cmd = 'prepRawALOS2.py -i ./download -o ./SLC -t "" '
+    cmd = 'prepSlcALOS2.py -i ./download -o ./SLC -t "" '
     print(cmd)
     os.system(cmd)
     return 'run_unPackALOS2'
@@ -268,6 +268,14 @@ def main(iargs=None):
         print(cmd)
         os.system(cmd)
         return
+
+    # copy template file
+    print('copy template file to the current directory')
+    try:
+        shutil.copy2(iDict['templateFile'], os.getcwd())
+    except shutil.SameFileError:
+        # code when Exception occur
+        pass
 
     if not inps.startNum:
         # prepare RAW/SLC data

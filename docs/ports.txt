@@ -54,7 +54,6 @@ hdfeos5
 h5utils
 netcdf
 netcdf-cxx
-netcdf-fortran
 ecCodes +gcc5
 postgresql95
 postgresql95-server
@@ -62,7 +61,7 @@ proj
 cairo
 scons
 pandoc
-opencv +python27
+opencv +gdal +python36
 gimp2
 ImageMagick
 samba3

@@ -115,6 +115,7 @@ mdkir -p PyAPS; cd PyAPS
 git clone https://github.com/yunjunz/pyaps3.git
 
 # install dependencies with macports
+# use "port -N install" to use the safe default for prompt questions
 sudo port install $(cat $MINTPY_HOME/docs/ports.txt)
 
 # install pykml
