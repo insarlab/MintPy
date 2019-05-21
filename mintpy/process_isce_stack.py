@@ -244,7 +244,9 @@ def copy_masterShelve(iDict, out_dir='masterShelve'):
         print('all shelve files already exists')
         return
     else:
-        slc_dir = os.path.join(proj_dir, 'SLC/{}'.format(iDict['masterDate']))
+        date_list = sorted([os.path.basename(i) for i in glob.glob('SLC/*')])
+        m_date = iDict.get('masterDate', date_list[0])
+        slc_dir = os.path.join(proj_dir, 'SLC/{}'.format(m_date))
         for shelve_file in shelve_files:
             shelve_file = os.path.join(slc_dir, shelve_file)
             shutil.copy2(shelve_file, shelve_dir)
