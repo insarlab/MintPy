@@ -369,7 +369,6 @@ def extract_metadata4geometry_geo(fname):
         par_file = os.path.splitext(fname)[0]+'.utm.dem.par'
     elif fnames[0].endswith('.utm.dem'):
         par_file = fname+'.par'
-    print(par_file)
     par_dict = readfile.read_gamma_par(par_file)
 
     # initiate ROIPAC dict
