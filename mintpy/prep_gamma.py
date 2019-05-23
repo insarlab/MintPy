@@ -246,11 +246,6 @@ def extract_metadata4interferogram(fname):
     s_par_files = [file_dir+'/*'+s_date+lks+i for i in PAR_EXT_LIST]
 
     try:
-        off_file = ut.get_file_list(off_files)[0]
-    except:
-        off_file = None
-        print('\nERROR: Can not find .off file, it supposed to be like: '+off_files)
-    try:
         m_par_file = ut.get_file_list(m_par_files)[0]
     except:
         m_par_file = None
@@ -260,6 +255,14 @@ def extract_metadata4interferogram(fname):
     except:
         s_par_file = None
         print('\nERROR: Can not find slave date .par file, it supposed to be like: '+s_par_files)
+
+    try:
+        off_file = ut.get_file_list(off_files)[0]
+    except:
+        off_file = file_dir+'/'+date12+lks+'.off'
+        offCmd = 'create_offset {} {} {} 1 1 1 0'.format(m_par_file, s_par_file, off_file)
+        print(offCmd)
+        os.system(offCmd)
 
     par_dict = readfile.read_gamma_par(m_par_file)
     off_dict = readfile.read_gamma_par(off_file)
