@@ -148,6 +148,37 @@ def run_or_skip(inps):
 
 
 ##########################################################################################
+def get_number_of_nonzero_closure_phase(ifgram_file, dsName='unwrapPhase', step=100):
+    # read ifgramStack file
+    stack_obj = ifgramStack(ifgram_file)
+    stack_obj.open()
+    length, width = stack_obj.length, stack_obj.width
+    date12_list = stack_obj.get_date12_list(dropIfgram=True)
+    num_ifgram = len(date12_list)
+    C = stack_obj.get_design_matrix4triplet(date12_list)
+    ref_phase = stack_obj.get_reference_phase(unwDatasetName=dsName, dropIfgram=True).reshape(num_ifgram, -1)
+
+    # calculate number of nonzero closure phase
+    closure_int = np.zeros((length, width), np.int16)
+    num_loop = int(np.ceil(length / step))
+    prog_bar = ptime.progressBar(maxValue=num_loop)
+    for i in range(num_loop):
+        r0 = i * step
+        r1 = min((r0+step), stack_obj.length)
+        box = (0, r0, stack_obj.width, r1)
+        unw = ifginv.read_unwrap_phase(stack_obj, box=box,
+                                       ref_phase=ref_phase,
+                                       unwDatasetName=dsName,
+                                       dropIfgram=True,
+                                       print_msg=False).reshape(num_ifgram, -1)
+        closure_pha = np.dot(C, unw)
+        cint = np.round((closure_pha - ut.wrap(closure_pha)) / (2.*np.pi))
+        closure_int[r0:r1, :] = np.sum(cint != 0, axis=0).reshape(-1, width)
+        prog_bar.update(i+1, every=1)
+    prog_bar.close()
+    return closure_int
+
+
 def write_hdf5_file_patch(ifgram_file, data, box=None, dsName='unwrapPhase_phaseClosure'):
     """Write a patch of 3D dataset into an existing h5 file.
     Parameters: ifgram_file : string, name/path of output hdf5 file

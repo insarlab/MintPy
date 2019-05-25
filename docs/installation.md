@@ -1,4 +1,4 @@
-## Install MintPy ##
+## Install MintPy
 
 Tested on macOS and Linux, not sure about Windows.
 
