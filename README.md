@@ -1,4 +1,4 @@
-## MintPy ##
+## MintPy
 
 [![Language](https://img.shields.io/badge/python-3.5%2B-blue.svg)](https://www.python.org/)
 [![Latest version](https://img.shields.io/badge/latest%20version-v1.1.2-green.svg)](https://github.com/insarlab/MintPy/releases)
@@ -64,10 +64,11 @@ MintPy is a toolbox with a lot of individual utility scripts, highly modulized i
 
 ### 3. Documentation ###
 
-+ [Tutorials on Jupyter Notebooks](./docs/tutorials)
++ [Tutorials in Jupyter Notebooks](./docs/tutorials)
 + [Example datasets](https://github.com/insarlab/MintPy/wiki/Example)
 + [Example template files for InSAR processors](./docs/examples/input_files)
 + [Google Earth KMZ file](https://github.com/insarlab/MintPy/wiki/Google-Earth)
++ [Paper figures in Jupyter Notebook](./docs/paper)
 
 ### 4. User Forum ###
 

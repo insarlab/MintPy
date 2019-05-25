@@ -1,4 +1,4 @@
-## Tutorials in Jupyter Notebook for InSAR time series analysis ##
+## Tutorials in Jupyter Notebook for InSAR time series analysis
 
 This tutorial walks through the various processing steps of InSAR time series analysis using MintPy.
 
