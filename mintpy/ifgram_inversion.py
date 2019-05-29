@@ -71,6 +71,7 @@ mintpy.networkInversion.minTempCoh      = auto #[0.0-1.0], auto for 0.7, min tem
 mintpy.networkInversion.minNumPixel     = auto #[int > 0], auto for 100, min number of pixels in mask above
 mintpy.networkInversion.parallel        = auto #[yes / no], auto for no, parallel processing using dask
 mintpy.networkInversion.numWorker       = auto #[int > 0], auto for 40, number of works for dask cluster to use
+mintpy.networkInversion.walltime        = auto #[HH:MM] auto for 0:40, walltime of each mintpy_bee worker
 """
 
 REFERENCE = """references:
@@ -153,6 +154,8 @@ def create_parser():
                      help='Enable parallel processing for the pixelwise weighted inversion.')
     par.add_argument('--parallel-workers-num','--par-workers-num','--parallel-num', dest='numWorker', type=int,
                      default=40, help='Specify the number of workers the Dask cluster should use. Default: 40')
+    par.add_argument('--parallel-walltime','--par-walltime','--parallel-walltime', dest='walltime', type=str,
+                     default='00:40', help='Specify the walltime for each dask worker. Default: 00:40')
 
     return parser
 
@@ -211,6 +214,8 @@ def read_template2inps(template_file, inps):
         elif value:
             if key in ['numWorker']:
                 iDict[key] = int(value)
+            if key in ['walltime']:
+                iDict[key] = str(value)
             if key in ['maskThreshold', 'minRedundancy']:
                 iDict[key] = float(value)
             elif key in ['weightFunc', 'residualNorm', 'waterMaskFile']:
@@ -1115,15 +1120,20 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
             python_executable_location = sys.executable
 
             # Look at the ~/.config/dask/dask_mintpy.yaml file for Changing the Dask configuration defaults
-            cluster = LSFCluster(config_name='ifgram_inversion',
-                                 python=python_executable_location)
+            #cluster = LSFCluster(config_name='default', walltime=inps.walltime, python=python_executable_location)
+            cluster = LSFCluster(walltime=inps.walltime, python=python_executable_location)
+            #cluster = LSFCluster(config_name='ifgram_inversion',
+            #                     python=python_executable_location)
 
             # This line submits NUM_WORKERS jobs to Pegasus to start a bunch of workers
             # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
             # at once (other user's jobs gained higher priority in the general at that point)
             NUM_WORKERS = inps.numWorker
+            # FA: the following command starts the jobs
             cluster.scale(NUM_WORKERS)
-            print("JOB FILE:", cluster.job_script())
+            print("JOB COMMAND CALLED FROM PYTHON:", cluster.job_script())
+            with open('dask_command_run_from_python.txt', 'w') as f:
+                  f.write(cluster.job_script() + '\n')
 
             # This line needs to be in a function or in a `if __name__ == "__main__":` block. If it is in no function
             # or "main" block, each worker will try to create its own client (which is bad) when loading the module
@@ -1177,6 +1187,8 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
             # Shut down Dask workers gracefully
             cluster.close()
             client.close()
+
+        ut.move_dask_stdout_stderr_files()
 
         # reference pixel
         ref_y = int(stack_obj.metadata['REF_Y'])
