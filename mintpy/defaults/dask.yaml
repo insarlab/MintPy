@@ -27,8 +27,8 @@ jobqueue:
     # The first parameter is required by Pegasus. This parameter sets the
     # memory per node. The second parameter writes worker output to file.
     job-extra: ['-R "rusage[mem=2500]"',
-                '-o WORKER-mintpy.%J.o',
-                '-e WORKER-mintpy.%J.e']
+                '-o worker_mintpy.%J.o',
+                '-e worker_mintpy.%J.e']
     log-directory: null
 
 
