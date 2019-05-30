@@ -8,6 +8,7 @@
 
 
 import os
+import shutil
 import errno
 import numpy as np
 
@@ -143,6 +144,7 @@ def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_
     return dates, dis
 
 
+#################################################################################
 def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None, win_size=1):
     """ Read time-series of one pixel with input y/x
     Parameters: y/x         : int, row/column number of interest
@@ -175,3 +177,26 @@ def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None, win_size=1):
     #start at zero
     dis -= dis[0]
     return dates, dis
+
+#################################################################################
+def move_dask_stdout_stderr_files():
+    """ move  *o and *e files produced by dask into stdout and sderr directory """
+
+    stdout_files  = glob.glob('*.o')
+    stderr_files  = glob.glob('*.e')
+    job_files = glob.glob('dask_command_run_from_python.txt*')
+
+    stdout_folder = 'stdout_ifgram_inversion_dask'
+    stderr_folder = 'stderr_ifgram_inversion_dask'
+    for std_dir in [stdout_folder, stderr_folder]:
+        if os.path.isdir(std_dir):
+            shutil.rmtree(std_dir)
+        os.mkdir(std_dir)
+
+    for item in stdout_files + job_files:
+        shutil.move(item, stdout_folder)
+    for item in stderr_files:
+        shutil.move(item, stderr_folder)
+
+    return
+
