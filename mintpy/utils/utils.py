@@ -186,26 +186,17 @@ def move_dask_stdout_stderr_files():
     stderr_files  = glob.glob('*.e')
     job_files = glob.glob('dask_command_run_from_python.txt*')
 
-    dir_name = os.path.dirname(stdout_files[0])
     stdout_folder = 'stdout_ifgram_inversion_dask'
     stderr_folder = 'stderr_ifgram_inversion_dask'
-    if not os.path.isdir(stdout_folder):
-        os.mkdir(stdout_folder)
-    else:
-        shutil.rmtree(stdout_folder)
-        os.mkdir(stdout_folder)
-    if not os.path.isdir(stderr_folder):
-        os.mkdir(stderr_folder)
-    else:
-        shutil.rmtree(stderr_folder)
-        os.mkdir(stderr_folder)
+    for std_dir in [stdout_folder, stderr_folder]:
+        if os.path.isdir(std_dir):
+            shutil.rmtree(std_dir)
+        os.mkdir(std_dir)
 
-    for item in stdout_files:
-        shutil.move(item, stdout_folder)
-    for item in job_files:
+    for item in stdout_files + job_files:
         shutil.move(item, stdout_folder)
     for item in stderr_files:
         shutil.move(item, stderr_folder)
 
-    return None
+    return
 
