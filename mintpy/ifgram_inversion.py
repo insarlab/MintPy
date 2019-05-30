@@ -214,9 +214,9 @@ def read_template2inps(template_file, inps):
         elif value:
             if key in ['numWorker']:
                 iDict[key] = int(value)
-            if key in ['walltime']:
+            elif key in ['walltime']:
                 iDict[key] = str(value)
-            if key in ['maskThreshold', 'minRedundancy']:
+            elif key in ['maskThreshold', 'minRedundancy']:
                 iDict[key] = float(value)
             elif key in ['weightFunc', 'residualNorm', 'waterMaskFile']:
                 iDict[key] = value
