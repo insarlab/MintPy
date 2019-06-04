@@ -80,25 +80,30 @@ def check_loaded_dataset(work_dir='./', print_msg=True):
     # could be different than geometry file in case of roipac and gamma
     flist = [os.path.join(work_dir, 'inputs/geometry*.h5')]
     lookup_file = get_lookup_file(flist, abspath=True, print_msg=print_msg)
-    if lookup_file is not None:
-        obj = geometry(lookup_file)
-        obj.open(print_msg=False)
+    print("lookup_file: ", lookup_file)
+    if 'X_FIRST' not in atr.keys():
+        if lookup_file is not None:
+            obj = geometry(lookup_file)
+            obj.open(print_msg=False)
 
-        if atr['PROCESSOR'] in ['isce', 'doris']:
-            dnames = [geometryDatasetNames[1],
-                      geometryDatasetNames[2]]
-        elif atr['PROCESSOR'] in ['gamma', 'roipac']:
-            dnames = [geometryDatasetNames[3],
+            if atr['PROCESSOR'] in ['isce', 'doris']:
+                dnames = [geometryDatasetNames[1],
+                         geometryDatasetNames[2]]
+            elif atr['PROCESSOR'] in ['gamma', 'roipac']:
+                dnames = [geometryDatasetNames[3],
                       geometryDatasetNames[4]]
-        else:
-            raise AttributeError('InSAR processor: {}'.format(atr['PROCESSOR']))
+            else:
+                raise AttributeError('InSAR processor: {}'.format(atr['PROCESSOR']))
 
-        for dname in dnames:
-            if dname not in obj.datasetNames:
-                load_complete = False
-                raise Exception('required dataset "{}" is missing in file {}'.format(dname, lookup_file))
+            for dname in dnames:
+                if dname not in obj.datasetNames:
+                    load_complete = False
+                    raise Exception('required dataset "{}" is missing in file {}'.format(dname, lookup_file))
+        else:
+            print("no lookup file")
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), './inputs/geometry*.h5')
     else:
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), './inputs/geometry*.h5')
+        print("Input data seems to be geocoded. Lookup file not needed.")
 
     # print message
     if print_msg:
