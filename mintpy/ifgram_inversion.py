@@ -1188,7 +1188,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
             cluster.close()
             client.close()
 
-        ut.move_dask_stdout_stderr_files()
+            ut.move_dask_stdout_stderr_files()
 
         # reference pixel
         ref_y = int(stack_obj.metadata['REF_Y'])
