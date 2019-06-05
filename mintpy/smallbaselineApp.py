@@ -851,6 +851,8 @@ class TimeSeriesAnalysis:
                 print('generate_mask.py', scp_args)
                 if ut.run_or_skip(out_file=mask_file, in_file=tcoh_file) == 'run':
                     mintpy.generate_mask.main(scp_args.split())
+            else:
+                print('dataset is geocoded, skip geocoding and continue.')
         else:
             print('geocoding is OFF')
         return

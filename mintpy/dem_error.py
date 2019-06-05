@@ -225,14 +225,19 @@ def design_matrix4deformation(inps):
 def read_geometry(inps):
     ts_obj = timeseries(inps.timeseries_file)
     ts_obj.open(print_msg=False)
+
     # 2D / 3D geometry
     if inps.geom_file:
         geom_obj = geometry(inps.geom_file)
         geom_obj.open()
-        print(('read 2D incidenceAngle,slantRangeDistance from {} file:'
-               ' {}').format(geom_obj.name, os.path.basename(geom_obj.file)))
-        inps.incAngle = geom_obj.read(datasetName='incidenceAngle', print_msg=False).flatten()
-        inps.rangeDist = geom_obj.read(datasetName='slantRangeDistance', print_msg=False).flatten()
+        if 'incidenceAngle' not in geom_obj.datasetNames:
+            inps.incAngle = ut.incidence_angle(ts_obj.metadata, dimension=0)
+            inps.rangeDist = ut.range_distance(ts_obj.metadata, dimension=0)
+        else:
+            print(('read 2D incidenceAngle,slantRangeDistance from {} file:'
+                   ' {}').format(geom_obj.name, os.path.basename(geom_obj.file)))
+            inps.incAngle = geom_obj.read(datasetName='incidenceAngle', print_msg=False).flatten()
+            inps.rangeDist = geom_obj.read(datasetName='slantRangeDistance', print_msg=False).flatten()
         if 'bperp' in geom_obj.datasetNames:
             print('read 3D bperp from {} file: {} ...'.format(geom_obj.name, os.path.basename(geom_obj.file)))
             dset_list = ['bperp-{}'.format(d) for d in ts_obj.dateList]

@@ -25,7 +25,7 @@ from mintpy.utils.utils1 import *
 from mintpy.objects.coord import coordinate
 
 
-#################################################################################    
+#################################################################################
 def check_loaded_dataset(work_dir='./', print_msg=True):
     """Check the result of loading data for the following two rules:
         1. file existance
@@ -35,7 +35,7 @@ def check_loaded_dataset(work_dir='./', print_msg=True):
                 print_msg : bool, print out message
     Returns:    True, if all required files and dataset exist; otherwise, ERROR
                     If True, PROCESS, SLC folder could be removed.
-                stack_file  : 
+                stack_file  :
                 geom_file   :
                 lookup_file :
     Example:    work_dir = os.path.expandvars('$SCRATCHDIR/SinabungT495F50AlosA/mintpy')
@@ -202,4 +202,3 @@ def move_dask_stdout_stderr_files():
         shutil.move(item, stderr_folder)
 
     return
-
