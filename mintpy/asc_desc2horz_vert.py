@@ -12,25 +12,6 @@ from mintpy.utils import readfile, writefile, utils as ut
 
 
 ################################################################################
-def get_overlap_lalo(atr1, atr2):
-    """Find overlap area in lat/lon of two geocoded files
-    Inputs:
-        atr1/2 - dict, attribute dictionary of two input files in geo coord
-    Outputs:
-        W/E/S/N - float, West/East/South/North in deg 
-    """
-    W1, E1, S1, N1 = ut.four_corners(atr1)
-    W2, E2, S2, N2 = ut.four_corners(atr2)
-
-    west = max(W1, W2)
-    east = min(E1, E2)
-    north = min(N1, N2)
-    south = max(S1, S2)
-
-    return west, east, south, north
-
-
-################################################################################
 REFERENCE = """reference:
   Wright, T. J., B. E. Parsons, and Z. Lu (2004), Toward mapping 
   surface deformation in three dimensions using InSAR, GRL, 31(1),
@@ -43,6 +24,8 @@ EXAMPLE = """example:
 
   asc_desc2horz_vert.py  vel_AlosAT424_masked.h5  vel_AlosDT73_masked.h5
   asc_desc2horz_vert.py  vel_EnvAT134_masked.h5   vel_EnvAT256_masked.h5  16
+
+  asc_desc2horz_vert.py  AlosAT424/mintpy/geo/geo_velocity.py  AlosDT73/mintpy/geo/geo_velocity.py
 """
 
 
@@ -71,10 +54,31 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # check input azimuth angle
     if inps.azimuth < 0.:
         inps.azimuth += 360.
     inps.azimuth *= np.pi/180.
     return inps
+
+
+################################################################################
+def get_overlap_lalo(atr1, atr2):
+    """Find overlap area in lat/lon of two geocoded files
+    Inputs:
+        atr1/2 - dict, attribute dictionary of two input files in geo coord
+    Outputs:
+        W/E/S/N - float, West/East/South/North in deg 
+    """
+    W1, E1, S1, N1 = ut.four_corners(atr1)
+    W2, E2, S2, N2 = ut.four_corners(atr2)
+
+    west = max(W1, W2)
+    east = min(E1, E2)
+    north = min(N1, N2)
+    south = max(S1, S2)
+
+    return west, east, south, north
 
 
 ################################################################################
@@ -85,8 +89,17 @@ def main(iargs=None):
     # Basic info
     atr1 = readfile.read_attribute(inps.file[0])
     atr2 = readfile.read_attribute(inps.file[1])
+
+    # check coordinates
     if any('X_FIRST' not in i for i in [atr1, atr2]):
-        raise Exception('ERROR: Not all input files are geocoded.')
+        raise Exception('Not all input files are geocoded.')
+    # check spatial resolution
+    if any(atr1[i] != atr2[i] for i in ['X_STEP','Y_STEP']):
+        msg = 'file1: {}\n'.format(inps.file[0])
+        msg += 'Y_STEP: {} m, X_STEP: {} m\n'.format(atr1['Y_STEP'], atr1['X_STEP'])
+        msg += 'file2: {}\n'.format(inps.file[1])
+        msg += 'Y_STEP: {} m, X_STEP: {} m'.format(atr2['Y_STEP'], atr2['X_STEP'])
+        raise ValueError('input files do not have the same spatial resolution\n{}'.format(msg))
 
     k1 = atr1['FILE_TYPE']
     print('Input 1st file is '+k1)
