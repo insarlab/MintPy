@@ -16,7 +16,7 @@ except ImportError:
 
 import argparse
 import numpy as np
-from mintpy.objects import timeseries
+from mintpy.objects import timeseries, geometry
 from mintpy.utils import readfile, writefile, ptime, utils as ut
 
 standardWeatherModelNames = {'ERAI': 'ECMWF', 'ERAINT': 'ECMWF', 'ERAINTERIM': 'ECMWF',
@@ -217,34 +217,41 @@ def check_inputs(inps):
 
     # Prepare DEM, inc_angle, lat/lon file for PyAPS to read
     if inps.geom_file:
-        geom_atr = readfile.read_attribute(inps.geom_file)
+        geom_obj = geometry(inps.geom_file)
+        geom_obj.open()
+
         print('converting DEM/incAngle for PyAPS to read')
         # DEM
-        data = readfile.read(inps.geom_file, datasetName='height', print_msg=False)[0]
+        dem = readfile.read(inps.geom_file, datasetName='height', print_msg=False)[0]
         inps.dem_file = 'pyapsDem.hgt'
-        writefile.write(data, inps.dem_file, metadata=geom_atr)
+        writefile.write(dem, inps.dem_file, metadata=atr)
 
         # inc_angle
-        inps.inc_angle = readfile.read(inps.geom_file, datasetName='incidenceAngle', print_msg=False)[0]
+        if 'incidenceAngle' in geom_obj.datasetNames:
+            inps.inc_angle = readfile.read(inps.geom_file, datasetName='incidenceAngle', print_msg=False)[0]
+        else:
+            atr = readfile.read_attribute(inps.timeseries_file)
+            inps.inc_angle = ut.incidence_angle(atr, dem=dem, dimension=0)
+            inps.inc_angle = np.ones(dem.shape, dtype=np.float32) * inps.inc_angle
         inps.inc_angle_file = 'pyapsIncAngle.flt'
-        writefile.write(inps.inc_angle, inps.inc_angle_file, metadata=geom_atr)
+        writefile.write(inps.inc_angle, inps.inc_angle_file, metadata=atr)
 
         # latitude
-        try:
+        if 'latitude' in geom_obj.datasetNames:
             data = readfile.read(inps.geom_file, datasetName='latitude', print_msg=False)[0]
             print('converting lat for PyAPS to read')
             inps.lat_file = 'pyapsLat.flt'
-            writefile.write(data, inps.lat_file, metadata=geom_atr)
-        except:
+            writefile.write(data, inps.lat_file, metadata=atr)
+        else:
             inps.lat_file = None
 
         # longitude
-        try:
+        if 'longitude' in geom_obj.datasetNames:
             data = readfile.read(inps.geom_file, datasetName='longitude', print_msg=False)[0]
             print('converting lon for PyAPS to read')
             inps.lon_file = 'pyapsLon.flt'
-            writefile.write(data, inps.lon_file, metadata=geom_atr)
-        except:
+            writefile.write(data, inps.lon_file, metadata=atr)
+        else:
             inps.lon_file = None
     return inps, atr
 
