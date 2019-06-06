@@ -54,10 +54,6 @@ def extract_metadata(stack):
 
     ds = gdal.Open(stack, gdal.GA_ReadOnly)
     
-    length = ds.RasterYSize
-    wodth = ds.RasterXSize
-    
-
     meta = {}
     meta["PROCESSOR"] = "isce" 
     meta["FILE_LENGTH"] = ds.RasterYSize
@@ -99,12 +95,14 @@ def layout_hdf5(filename, dsNameDict, metadata):
 
     for key in dsNameDict.keys():
         print("creating dataset for {0}".format(key))
-        ds = h5.create_dataset(key, shape=dsNameDict[key][1], dtype=dsNameDict[key][0])
+        h5.create_dataset(key, shape=dsNameDict[key][1], dtype=dsNameDict[key][0])
 
     for key in metadata.keys():
         h5.attrs[key] = metadata[key]
 
     h5.close()
+
+    return 
 
 
 def add_unwrapped_phase(h5File, unwStack, cohStack, connCompStack, bPerpDir):
