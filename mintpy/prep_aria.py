@@ -60,23 +60,22 @@ def extract_metadata(stack):
 
     meta = {}
     meta["PROCESSOR"] = "isce" 
-    meta["EARTH_RADIUS"] = 6337286.638938101
     meta["FILE_LENGTH"] = ds.RasterYSize
-    meta["HEIGHT"] = 850000
     meta["LENGTH"] = ds.RasterYSize
     meta["ORBIT_DIRECTION"] = "DESCENDING"
     meta["PLATFORM"] = "Sen"
-    meta["STARTING_RANGE"] = 800026.44
+    meta["STARTING_RANGE"] = float(ds.GetRasterBand(1).GetMetadata("unwrappedPhase")['startRange'][1:-1])
     meta["WAVELENGTH"] = float(ds.GetRasterBand(1).GetMetadata("unwrappedPhase")['Wavelength (m)']) 
     meta["WIDTH"] = ds.RasterXSize
     meta["NUMBER_OF_PAIRS"] = ds.RasterCount
 
-    # the stack vrt doesn't have the GeoTransform setup. 
-    # A temporary hack to acess the GeoTransform info
-    fileList = ds.GetFileList()
-    ds_temp = gdal.Open(fileList[1], gdal.GA_ReadOnly)
-    geoTrans = ds_temp.GetGeoTransform()
+    # ARIA standard products currently don't number of range and 
+    # azimuth looks. They are however fixed to the following values
+    meta['ALOOKS'] = 7
+    meta['RLOOKS'] = 19
 
+    # geo transformation 
+    geoTrans = ds.GetGeoTransform()
     meta["X_FIRST"] =   geoTrans[0]
     meta["Y_FIRST"] =   geoTrans[3]
     meta["X_STEP"]  =   geoTrans[1]
@@ -84,7 +83,12 @@ def extract_metadata(stack):
     meta["X_UNIT"]  =   "degrees"
     meta["Y_UNIT"]  =   "degrees"
 
-    ds_temp = None
+    # following values probably won't be used anywhere for the geocoded data
+    # earth radius
+    meta["EARTH_RADIUS"] = 6337286.638938101
+    # nominal altitude of Sentinel1 orbit
+    meta["HEIGHT"] = 693000.0
+
     ds = None
 
     return meta
