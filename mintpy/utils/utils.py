@@ -80,7 +80,6 @@ def check_loaded_dataset(work_dir='./', print_msg=True):
     # could be different than geometry file in case of roipac and gamma
     flist = [os.path.join(work_dir, 'inputs/geometry*.h5')]
     lookup_file = get_lookup_file(flist, abspath=True, print_msg=print_msg)
-    print("lookup_file: ", lookup_file)
     if 'X_FIRST' not in atr.keys():
         if lookup_file is not None:
             obj = geometry(lookup_file)
@@ -100,7 +99,6 @@ def check_loaded_dataset(work_dir='./', print_msg=True):
                     load_complete = False
                     raise Exception('required dataset "{}" is missing in file {}'.format(dname, lookup_file))
         else:
-            print("no lookup file")
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), './inputs/geometry*.h5')
     else:
         print("Input data seems to be geocoded. Lookup file not needed.")
