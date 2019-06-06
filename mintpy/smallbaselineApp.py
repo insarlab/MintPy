@@ -69,7 +69,7 @@ EXAMPLE = """example:
 """
 
 REFERENCE = """reference:
-  Yunjun, Z., H. Fattahi, F. Amelung (2019), InSAR time series analysis: error
+  Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: unwrapping error
   correction and noise reduction (under review).
 """
 
@@ -759,10 +759,9 @@ class TimeSeriesAnalysis:
         in_file = fnames['input']
         out_file = fnames['output']
         if in_file != out_file:
-            scp_args = '{f} -g {g} -t {t} -o {o} --update '.format(f=in_file,
-                                                                   g=geom_file,
-                                                                   t=self.templateFile,
-                                                                   o=out_file)
+            scp_args = '{f} -t {t} -o {o} --update'.format(f=in_file, t=self.templateFile, o=out_file)
+            if self.template['mintpy.topographicResidual.pixelwiseGeometry']:
+                scp_args += ' -g {}'.format(geom_file)
             print('dem_error.py', scp_args)
             mintpy.dem_error.main(scp_args.split())
         else:
