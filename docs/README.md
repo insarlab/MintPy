@@ -2,14 +2,14 @@
 
 [![Language](https://img.shields.io/badge/python-3.5%2B-blue.svg)](https://www.python.org/)
 [![Latest version](https://img.shields.io/badge/latest%20version-v1.1.2-green.svg)](https://github.com/insarlab/MintPy/releases)
-[![License](https://img.shields.io/badge/license-GPL-yellow.svg)](https://github.com/insarlab/MintPy/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/license-GPL-yellow.svg)](./../LICENSE)
 [![Forum](https://img.shields.io/badge/forum-Google%20Group-orange.svg)](https://groups.google.com/forum/#!forum/mintpy)
 
 The Miami INsar Time-series software in PYthon (MintPy) is an open-source package for Interferometric Synthetic Aperture Radar time series analysis. It reads the stack of interferograms (coregistered and unwrapped) in [ISCE](https://github.com/isce-framework/isce2), Gamma or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground displacement. It includes a routine time series analysis (`smallbaselineApp.py`) and some independent toolbox.
 
 This package was called PySAR before version 1.1.1. For version 1.1.2 and onward, we use MintPy instead.
 
-### 1. [Installation](./docs/installation.md) ###
+### 1. [Installation](./installation.md) ###
 
 ### 2. Running MintPy ###
 
@@ -38,7 +38,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/examples/input_files/FernandinaSenDT128.
 ```
 
 <p align="left">
-  <img width="600" src="https://github.com/insarlab/MintPy/blob/master/docs/resources/images/FernandinaSenDT128_POI.jpg">
+  <img width="600" src="./resources/images/FernandinaSenDT128_POI.jpg">
 </p>    
 
 Inside smallbaselineApp.py, it reads the unwrapped interferograms, references all of them to the same coherent pixel (reference point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the network of interferograms into time-series, calculates a parameter called "temporal coherence" which can be used to evaluate the quality of inversion, corrects local oscillator drift (for Envisat only), corrects stratified tropospheric delay (using pyaps or phase-elevation-ratio approach), removes phase ramps (if it has been asked for), corrects DEM error,... and finally estimates the velocity.
@@ -58,17 +58,17 @@ save_kmz.py                #generate Google Earth KMZ file in raster image
 save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
 ```
 
-#### 2.2 Build your own processing recipe: [example](./sh/compare_velocity_with_diff_tropcor.sh) ####
+#### 2.2 Build your own processing recipe: [example](./../sh/compare_velocity_with_diff_tropcor.sh) ####
 
-MintPy is a toolbox with a lot of individual utility scripts, highly modulized in python. Check its documentation or simply run it with -h to see its usage, you could build your own customized processing recipe! Here is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections: [link](./sh/compare_velocity_with_diff_tropcor.sh)
+MintPy is a toolbox with a lot of individual utility scripts, highly modulized in python. Check its documentation or simply run it with -h to see its usage, you could build your own customized processing recipe! Here is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections: [link](./../sh/compare_velocity_with_diff_tropcor.sh)
 
 ### 3. Documentation ###
 
-+ [Tutorials in Jupyter Notebooks](./docs/tutorials)
++ [Tutorials in Jupyter Notebooks](./tutorials)
 + [Example datasets](https://github.com/insarlab/MintPy/wiki/Example)
-+ [Example template files for InSAR processors](./docs/examples/input_files)
++ [Example template files for InSAR processors](./examples/input_files)
 + [Google Earth KMZ file](https://github.com/insarlab/MintPy/wiki/Google-Earth)
-+ [Paper figures in Jupyter Notebook](./docs/paper)
++ [Paper figures in Jupyter Notebook](./paper)
 
 ### 4. User Forum ###
 
