@@ -59,8 +59,9 @@ def create_parser():
                                      epilog=REFERENCE+'\n'+EXAMPLE)
 
     parser.add_argument('ifgram_file', type=str, help='interferograms file to be corrected')
-    parser.add_argument('-r','--radius', dest='bridgePtsRadius', type=int, default=150,
-                        help='radius of the end point of bridge to search area to get median representative value')
+    parser.add_argument('-r','--radius', dest='bridgePtsRadius', type=int, default=50,
+                        help='radius of the end point of bridge to search area to get median representative value\n'+
+                             'default: 50.')
     parser.add_argument('--ramp', dest='ramp', choices=['linear', 'quadratic'],
                           help='type of phase ramp to be removed before correction.')
     parser.add_argument('--water-mask','--wm', dest='waterMaskFile', type=str, help='path of water mask file.')
@@ -237,7 +238,7 @@ def run_unwrap_error_bridge(ifgram_file, water_mask_file, ramp_type=None, radius
             cc_obj = connectComponent(conncomp=cc, metadata=atr)
             cc_obj.label()
             cc_obj.find_mst_bridge()
-            unw_cor = cc_obj.unwrap_conn_comp(unw, ramp_type=ramp_type)
+            unw_cor = cc_obj.unwrap_conn_comp(unw, radius=radius, ramp_type=ramp_type)
 
             # write to hdf5 file
             ds[i, :, :] = unw_cor
