@@ -67,16 +67,25 @@ def add_file(fnames, out_file=None):
             out_file += '_plus_' + os.path.splitext(os.path.basename(fnames[i]))[0]
         out_file += ext
 
-    atr = readfile.read_attribute(fnames[0])
-    dsNames = readfile.get_dataset_list(fnames[0])
     dsDict = {}
+    dsNames = readfile.get_dataset_list(fnames[0])
     for dsName in dsNames:
+        # ignore dsName if input file has single dataset
+        if len(dsNames) == 1:
+            dsName2read = None
+        else:
+            dsName2read = dsName
+
         print('adding {} ...'.format(dsName))
-        data = readfile.read(fnames[0], datasetName=dsName)[0]
+        data = readfile.read(fnames[0], datasetName=dsName2read)[0]
         for i in range(1, len(fnames)):
-            d = readfile.read(fnames[i], datasetName=dsName)[0]
+            d = readfile.read(fnames[i], datasetName=dsName2read)[0]
             data = add_matrix(data, d)
         dsDict[dsName] = data
+
+    # output
+    atr = readfile.read_attribute(fnames[0])
+    print('use metadata from the 1st file: {}'.format(fnames[0]))
     writefile.write(dsDict, out_file=out_file, metadata=atr, ref_file=fnames[0])
     return out_file
 
