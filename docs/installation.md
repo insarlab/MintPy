@@ -8,11 +8,11 @@ Install Xcode with command line tools, if you have not already done so.
 
 1. Install `Xcode` from App store
 
-2. Install `command line tools` from within XCode and agree to the terms of license.
+2. Install `command line tools` within XCode and agree to the terms of license.
 
 ```
-xcode-select --install -s /Applications/Xcode.app/Contents/Developer/ 
-sudo xcodebuild -license 
+xcode-select --install -s /Applications/Xcode.app/Contents/Developer/
+sudo xcodebuild -license
 ```
 
 3. Install [XQuartz](https://www.xquartz.org), then restart the terminal.
@@ -22,7 +22,7 @@ sudo xcodebuild -license
 To use the package, you need to setup the environment:
 
 1. To make mintpy importable in python, by adding the path to MintPy directory to your _$PYTHONPATH_    
-2. To make utility scripts available in command line, by adding _${MINTPY_HOME}/mintpy_ and _${MINTPY_HOME}/sh_ to your _$path_.   
+2. To make utility scripts available in command line, by adding _${MINTPY_HOME}/mintpy_ and _${MINTPY_HOME}/sh_ to your _$path_.
 
 Add to your **_~/.bash_profile_** file for _bash_ user:
 
@@ -35,7 +35,7 @@ export MINTPY_HOME=~/python/MintPy
 export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}
 export PATH=${PATH}:${MINTPY_HOME}/mintpy:${MINTPY_HOME}/sh
 
-##--------- PyAPS ------------------## 
+##--------- PyAPS ------------------##
 export PYAPS_HOME=~/python/PyAPS
 export PYTHONPATH=${PYAPS_HOME}:${PYTHONPATH}
 ```
@@ -137,11 +137,11 @@ python3 setup.py install
 
 ### Notes on [PyAPS](https://github.com/yunjunz/pyaps3) ###
 
-+ We use PyAPS for tropospheric delay correction calculated from Global Atmospheric Models (GAMs) such as ERA-5, ERA-Interim, HRES-ECMWF, MERRA and NARR. 
++ We use PyAPS for tropospheric delay correction calculated from Global Atmospheric Models (GAMs) such as ERA-5, ERA-Interim, HRES-ECMWF, MERRA and NARR.
 
 + Check [Caltech Earthdef](http://earthdef.caltech.edu) for accounts setup information for various GAM datasets.
 
-+ If you defined an environment variable named `WEATHER_DIR` to contain the path to a 
++ If you defined an environment variable named `WEATHER_DIR` to contain the path to a
 directory, MintPy applications will download the GAM files into the indicated directory. Also MintPy
 application will look for the GAM files in the directory before downloading a new one to prevent downloading
 multiple copies if you work with different dataset that cover the same date/time.
