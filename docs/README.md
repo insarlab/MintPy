@@ -64,7 +64,7 @@ MintPy is a toolbox with a lot of individual utility scripts, highly modulized i
 
 ### 3. Documentation ###
 
-+ [Tutorials in Jupyter Notebooks](./tutorials)
++ [Tutorials in Jupyter Notebook](./tutorials)
 + [Example datasets](https://github.com/insarlab/MintPy/wiki/Example)
 + [Example template files for InSAR processors](./examples/input_files)
 + [Google Earth KMZ file](https://github.com/insarlab/MintPy/wiki/Google-Earth)
