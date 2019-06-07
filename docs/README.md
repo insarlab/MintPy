@@ -58,9 +58,9 @@ save_kmz.py                #generate Google Earth KMZ file in raster image
 save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
 ```
 
-#### 2.2 Build your own processing recipe: [example](./../sh/compare_velocity_with_diff_tropo.sh) ####
+#### 2.2 Build your own processing recipe: [example](https://github.com/insarlab/MintPy/blob/master/sh/compare_velocity_with_diff_tropo.sh) ####
 
-MintPy is a toolbox with a lot of individual utility scripts, highly modulized in python. Check its documentation or simply run it with -h to see its usage, you could build your own customized processing recipe! Here is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections: [link](./../sh/compare_velocity_with_diff_tropo.sh)
+MintPy is a toolbox with a lot of individual utility scripts, highly modulized in python. Check its documentation or simply run it with -h to see its usage, you could build your own customized processing recipe! Here is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections: [link](https://github.com/insarlab/MintPy/blob/master/sh/compare_velocity_with_diff_tropo.sh)
 
 ### 3. Documentation ###
 
