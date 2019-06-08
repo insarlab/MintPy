@@ -6,23 +6,23 @@ Tested on macOS and Linux, not sure about Windows.
 
 Install Xcode with command line tools, if you have not already done so.
 
-1. Install `Xcode` from App store
++ Install `Xcode` from App store
 
-2. Install `command line tools` within XCode and agree to the terms of license.
++ Install `command line tools` within XCode and agree to the terms of license.
 
 ```
 xcode-select --install -s /Applications/Xcode.app/Contents/Developer/
 sudo xcodebuild -license
 ```
 
-3. Install [XQuartz](https://www.xquartz.org), then restart the terminal.
++ Install [XQuartz](https://www.xquartz.org), then restart the terminal.
 
 ### 1. Setup Paths ###
 
 To use the package, you need to setup the environment:
 
-1. To make mintpy importable in python, by adding the path to MintPy directory to your _$PYTHONPATH_    
-2. To make utility scripts available in command line, by adding _${MINTPY_HOME}/mintpy_ and _${MINTPY_HOME}/sh_ to your _$path_.
++ To make mintpy importable in python, by adding the path to MintPy directory to your _$PYTHONPATH_    
++ To make utility scripts available in command line, by adding _${MINTPY_HOME}/mintpy_ and _${MINTPY_HOME}/sh_ to your _$path_.
 
 Add to your **_~/.bash_profile_** file for _bash_ user:
 
@@ -44,7 +44,7 @@ Source the file for the first time. It will be sourced automatically next time w
 
 ### 2. Install Python dependecies ###
 
-MintPy is written in Python3 (3.5+) and relies on several Python modules, check the [requirements.txt](https://github.com/insarlab/MintPy/blob/master/requirements.txt) file for details. We recommend using [conda](https://conda.io/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
+MintPy is written in Python3 (3.5+) and relies on several Python modules, check the [requirements.txt](https://github.com/insarlab/MintPy/blob/master/docs/requirements.txt) file for details. We recommend using [conda](https://conda.io/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
 
 #### Installing via conda ####
 
@@ -148,7 +148,7 @@ multiple copies if you work with different dataset that cover the same date/time
 
 ### Notes on parallel processing ###
 
-We use [Dask](www.dask.org) for parallel processing on High Performance Compute (HPC) cluster, it can be setup as below:
+We use [Dask](https://www.dask.org) for parallel processing on High Performance Compute (HPC) cluster, it can be setup as below:
 
 ```
 mkdir -p ~/.config/dask

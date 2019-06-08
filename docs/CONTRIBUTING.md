@@ -1,4 +1,4 @@
-# Contributing Guidelines #
+# Contributing Guidelines
 
 This document is inspired by similar instructions from ISCE, gdal and jupyterhub. If you're reading this section, you're probably interested in contributing to MintPy. Welcome and thanks for your interest in contributing! 
 
