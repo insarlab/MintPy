@@ -1,3 +1,4 @@
+python>=3.6
 basemap
 cdsapi
 cvxopt
@@ -17,3 +18,5 @@ pyproj
 pyresample
 scikit-image
 scipy
+gdal>=3.0
+libgdal
