@@ -1,6 +1,7 @@
 ## MintPy
 
 [![Language](https://img.shields.io/badge/python-3.5%2B-blue.svg)](https://www.python.org/)
+[![Docs Status](https://readthedocs.org/projects/mintpy/badge/?version=latest)](https://mintpy.readthedocs.io/?badge=latest)
 [![Latest version](https://img.shields.io/badge/latest%20version-v1.1.2-green.svg)](https://github.com/insarlab/MintPy/releases)
 [![License](https://img.shields.io/badge/license-GPL-yellow.svg)](https://github.com/insarlab/MintPy/blob/master/LICENSE)
 [![Forum](https://img.shields.io/badge/forum-Google%20Group-orange.svg)](https://groups.google.com/forum/#!forum/mintpy)
@@ -15,7 +16,7 @@ This package was called PySAR before version 1.1.1. For version 1.1.2 and onward
 
 MintPy reads a stack of interferograms (unwrapped interferograms, coherence, wrapped interferograms and connecting components from SNAPHU if available) and the geometry files (DEM, lookup table, etc.). You need to give the path to where the files are and MintPy takes care of the rest!
 
-```cfg
+```bash
 smallbaselineApp.py                         #run with default template 'smallbaselineApp.cfg'
 smallbaselineApp.py <custom_template>       #run with default and custom templates
 smallbaselineApp.py -h / --help             #help
@@ -28,7 +29,7 @@ smallbaselineApp.py GalapagosSenDT128.template --dostep velocity  #run at step '
 smallbaselineApp.py GalapagosSenDT128.template --end load_data    #end after step 'load_data'
 ```
 
-#### [Example](https://github.com/insarlab/MintPy/wiki/Example) on Fernandina volcano, Galápagos with Sentinel-1 data ####
+#### [Example](./example_dataset.md) on Fernandina volcano, Galápagos with Sentinel-1 data ####
 
 ```
 wget https://zenodo.org/record/2748487/files/FernandinaSenDT128.tar.xz
@@ -38,16 +39,18 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/examples/input_files/FernandinaSenDT128.
 ```
 
 <p align="left">
-  <img width="600" src="./resources/images/FernandinaSenDT128_POI.jpg">
-</p>    
+  <img width="600" src="https://yunjunzhang.files.wordpress.com/2019/06/fernandinasendt128_poi.jpg">
+</p>
 
 Inside smallbaselineApp.py, it reads the unwrapped interferograms, references all of them to the same coherent pixel (reference point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the network of interferograms into time-series, calculates a parameter called "temporal coherence" which can be used to evaluate the quality of inversion, corrects local oscillator drift (for Envisat only), corrects stratified tropospheric delay (using pyaps or phase-elevation-ratio approach), removes phase ramps (if it has been asked for), corrects DEM error,... and finally estimates the velocity.
 
-Check **./pic** folder for auto-generated figures. More details about this test data are in [here](https://github.com/insarlab/MintPy/wiki/Example).
+Check **./pic** folder for auto-generated figures. More details about this test data are in [here](./example_dataset.md).
 
-#### 2.1 Some useful scripts for information and visualization: ####
+#### 2.1 Data visualization ####
 
-```cfg
+Below are some useful scripts for data information and visulization.
+
+```bash
 info.py                    #check HDF5 file structure and metadata
 view.py                    #2D map view
 tsview.py                  #1D point time-series (interactive)   
@@ -58,17 +61,17 @@ save_kmz.py                #generate Google Earth KMZ file in raster image
 save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
 ```
 
-#### 2.2 Build your own processing recipe: [example](https://github.com/insarlab/MintPy/blob/master/sh/compare_velocity_with_diff_tropo.sh) ####
+#### 2.2 Customized processing recipe: [example](https://github.com/insarlab/MintPy/blob/master/sh/compare_velocity_with_diff_tropo.sh) ####
 
 MintPy is a toolbox with a lot of individual utility scripts, highly modulized in python. Check its documentation or simply run it with -h to see its usage, you could build your own customized processing recipe! Here is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections: [link](https://github.com/insarlab/MintPy/blob/master/sh/compare_velocity_with_diff_tropo.sh)
 
-### 3. Documentation ###
+### 3. [Documentation](https://mintpy.readthedocs.io/) ###
 
-+ [Tutorials in Jupyter Notebook](./tutorials)
-+ [Example datasets](https://github.com/insarlab/MintPy/wiki/Example)
-+ [Example template files for InSAR processors](./examples/input_files)
-+ [Google Earth KMZ file](https://github.com/insarlab/MintPy/wiki/Google-Earth)
-+ [Paper figures in Jupyter Notebook](./paper)
++ [Tutorials in Jupyter Notebook](./tutorials/README.md)
++ [Example datasets](./example_dataset.md)
++ [Example template files for InSAR processors](./examples/input_files/README.md)
++ [Google Earth KMZ file](./google_earth.md)
++ [Paper figures in Jupyter Notebook](./paper/README.md)
 
 ### 4. User Forum ###
 
