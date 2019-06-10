@@ -116,9 +116,10 @@ def main(iargs=None):
                     fresh_start=inps.fresh_start)
         print('Pass testing smallbaselineApp workflow on exmaple dataset {}/{}: {}'.format(i+1, num_dset, dset_name))
 
-    print('-'*50)
-    print('Pass ALL testings without runing errors.')
-    print('-'*50)
+    if num_dset == len(pNames):
+        print('-'*50)
+        print('Pass ALL testings without runing errors.')
+        print('-'*50)
     return
 
 
