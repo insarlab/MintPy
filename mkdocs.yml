@@ -2,7 +2,7 @@ site_name: MintPy
 site_url: https://github.com/insarlab/MintPy
 site_description: Miami InSAR Time-series software in Python
 site_author: Zhang Yunjun, Heresh Fattahi
-repo_url: https://github.com/insarlab/MintPy.git
+repo_url: https://github.com/insarlab/MintPy/
 google_analytics: ['UA-104225904-1', 'mkdocs.org']
 
 theme:

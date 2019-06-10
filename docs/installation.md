@@ -53,7 +53,7 @@ Add to your **_~/.bash_profile_** file:
 ```bash
 export PYTHON3DIR=~/python/miniconda3
 export PATH=${PATH}:${PYTHON3DIR}/bin
-export PROJ_LIB=${PYTHON3DIR}/share/proj   #Temporary fix for basemap import error
+export PROJ_LIB=`python3 -c "import pyproj; print(pyproj.pyproj_datadir)"`   #Temporary fix for basemap import error
 ```
 
 Run the following in your terminal:
