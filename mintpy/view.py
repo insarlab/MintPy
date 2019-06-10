@@ -15,19 +15,21 @@ from datetime import datetime as dt
 import numpy as np
 #import matplotlib; matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
+import matplotlib.cbook
+import warnings
+warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from mintpy.objects import (geometryDatasetNames,
-                            geometry,
-                            ifgramDatasetNames,
-                            ifgramStack,
-                            timeseriesKeyNames,
-                            timeseries)
+from mintpy.objects import (
+    geometryDatasetNames,
+    geometry,
+    ifgramDatasetNames,
+    ifgramStack,
+    timeseriesKeyNames,
+    timeseries,
+)
 from mintpy.objects.gps import GPS
-from mintpy.utils import (ptime,
-                          readfile,
-                          utils as ut,
-                          plot as pp)
+from mintpy.utils import ptime, readfile, utils as ut, plot as pp
 from mintpy.multilook import multilook_data
 from mintpy import subset, version
 
