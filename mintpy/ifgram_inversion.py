@@ -842,11 +842,11 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
     A, B = stack_obj.get_design_matrix4timeseries(date12_list=date12_list)[0:2]
 
     # prep for decor std time-series
-    try:
-        ref_date = str(np.loadtxt('reference_date.txt', dtype=bytes).astype(str))
-    except:
-        ref_date = date_list[0]
-    Astd = stack_obj.get_design_matrix4timeseries(date12_list=date12_list, refDate=ref_date)[0]
+    #if os.path.isfile('reference_date.txt'):
+    #    ref_date = str(np.loadtxt('reference_date.txt', dtype=bytes).astype(str))
+    #else:
+    #    ref_date = date_list[0]
+    #Astd = stack_obj.get_design_matrix4timeseries(date12_list=date12_list, refDate=ref_date)[0]
     #ref_idx = date_list.index(ref_date)
     #time_idx = [i for i in range(num_date)]
     #time_idx.remove(ref_idx)
