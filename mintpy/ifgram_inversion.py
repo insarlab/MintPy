@@ -14,6 +14,7 @@ import re
 import sys
 import time
 import argparse
+import warnings
 import h5py
 import math
 import numpy as np
@@ -891,7 +892,10 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
 
     # 2 - Mask for Zero Phase in ALL ifgrams
     print('skip pixels with zero/nan value in all interferograms')
-    phase_stack = np.nanmean(pha_data, axis=0)
+    with warnings.catch_warnings():
+        # ignore warning message for all-NaN slices
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        phase_stack = np.nanmean(pha_data, axis=0)
     mask *= np.multiply(~np.isnan(phase_stack), phase_stack != 0.)
     del phase_stack
 
