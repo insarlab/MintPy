@@ -195,11 +195,13 @@ def read_date_list(date_list_in, date_list_all=None):
     # read date_list_in
     date_list_out = []
     for d in date_list_in:
-        if os.path.isfile(d):
-            ds = read_date_txt(d)
+        if d.endswith(('.txt','.cfg','.dat')):
+            if os.path.isfile(d):
+                ds = read_date_txt(d)
+                date_list_out += ds
         else:
             ds = [d]
-        date_list_out += ds
+            date_list_out += ds
     date_list_out = sorted(yyyymmdd(list(set(date_list_out))))
 
     # exclude date not in date_list_ref
