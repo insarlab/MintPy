@@ -576,8 +576,8 @@ def plot_slice(ax, data, metadata, inps=None):
         # Status bar
         def format_coord(x, y):
             msg = 'x={:.1f}, y={:.1f}'.format(x, y)
-            col = int(x+0.5) - inps.pix_box[0]
-            row = int(y+0.5) - inps.pix_box[1]
+            col = np.floor(x - inps.pix_box[0])
+            row = np.floor(y - inps.pix_box[1])
             if 0 <= col < num_col and 0 <= row < num_row:
                 v = data[row, col]
                 msg += ', v={:.4f}'.format(v)

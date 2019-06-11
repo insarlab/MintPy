@@ -19,6 +19,12 @@ class coordinate:
     """
     Coordinates conversion based lookup file in pixel-level accuracy
 
+    Convention:
+        radar coordinates or row and column numbers represent the whole pixel, starting from 0 as a python convention
+        geo coordinates represent an infinite precise point without size:
+            (list) of points indicate the lat/lon of the pixel center.
+            (bounding) box of points indicate the lat/lon of the pixel UL corner.
+
     Example:
         atr = readfile.read('velocity.h5')
         coord = ut.coordinate(atr, lookup_file='inputs/geometryRadar.h5')
@@ -63,8 +69,7 @@ class coordinate:
                 self.lut_metadata = readfile.read_attribute(self.lookup_file[0])
 
     def lalo2yx(self, coord_in, coord_type):
-        """convert geo coordinates into radar coordinates (round to nearest integer)
-            for Geocoded file only
+        """convert geo coordinates into radar coordinates for Geocoded file only
         Parameters: geoCoord  : coordinate (list / tuple) in latitude/longitude in float
                     metadata : dictionary of file attributes
                     coord_type : coordinate type: latitude, longitude
@@ -87,9 +92,9 @@ class coordinate:
         coord_out = []
         for i in range(len(coord_in)):
             if coord_type.startswith('lat'):
-                coord = int(np.rint((coord_in[i] - self.lat0) / self.lat_step))
+                coord = int(np.floor((coord_in[i] - self.lat0) / self.lat_step + 0.01)) #plus 0.01 to be more robust in practice
             elif coord_type.startswith('lon'):
-                coord = int(np.rint((coord_in[i] - self.lon0) / self.lon_step))
+                coord = int(np.floor((coord_in[i] - self.lon0) / self.lon_step + 0.01))
             else:
                 raise ValueError('Unrecognized coordinate type: '+coord_type)
             coord_out.append(coord)
@@ -103,7 +108,7 @@ class coordinate:
 
 
     def yx2lalo(self, coord_in, coord_type):
-        """convert radar coordinates into geo coordinates (pixel UL corner)
+        """convert radar coordinates into geo coordinates (pixel center)
             for Geocoded file only
         Parameters: coord_in : coordinate (list) in row/col in int
                     metadata : dictionary of file attributes
@@ -126,9 +131,9 @@ class coordinate:
         coord_out = []
         for i in range(len(coord_in)):
             if coord_type.startswith(('row', 'y', 'az', 'azimuth')):
-                coord = coord_in[i] * self.lat_step + self.lat0
+                coord = (coord_in[i] + 0.5) * self.lat_step + self.lat0
             elif coord_type.startswith(('col', 'x', 'rg', 'range')):
-                coord = coord_in[i] * self.lon_step + self.lon0
+                coord = (coord_in[i] + 0.5) * self.lon_step + self.lon0
             else:
                 raise ValueError('Unrecognized coordinate type: '+coord_type)
             coord_out.append(coord)
@@ -288,8 +293,8 @@ class coordinate:
                                                             x_factor*rg_step_deg,
                                                             geo_coord=True,
                                                             debug_mode=debug_mode)
-            az = np.rint(az).astype(int)
-            rg = np.rint(rg).astype(int)
+            az = np.floor(az).astype(int)
+            rg = np.floor(rg).astype(int)
 
         rg_resid = x_factor
         az_resid = y_factor
@@ -297,7 +302,7 @@ class coordinate:
 
 
     def radar2geo(self, az, rg, print_msg=True, debug_mode=False):
-        """Convert radar coordinates into geo coordinates
+        """Convert radar coordinates into geo coordinates (pixel center)
         Parameters: rg/az : np.array, int, range/azimuth pixel number
         Returns:    lon/lat : np.array, float, longitude/latitude of input point (rg,az);
                         nan if not found.
@@ -348,8 +353,8 @@ class coordinate:
                      lut_col[i]) = self._get_lookup_row_col(az[i], rg[i],
                                                             y_factor, x_factor,
                                                             debug_mode=debug_mode)
-            lat = lut_row * lut.lat_step_deg + lut.lat0
-            lon = lut_col * lut.lon_step_deg + lut.lon0
+            lat = (lut_row + 0.5) * lut.lat_step_deg + lut.lat0
+            lon = (lut_col + 0.5) * lut.lon_step_deg + lut.lon0
             lat_resid = abs(y_factor * lut.lat_step_deg)
             lon_resid = abs(x_factor * lut.lon_step_deg)
 
@@ -362,13 +367,16 @@ class coordinate:
         return lat, lon, lat_resid, lon_resid
 
     def box_pixel2geo(self, pixel_box):
-        """Convert pixel_box to geo_box
+        """Convert pixel_box to geo_box in UL corner
         Parameters: pixel_box : list/tuple of 4 int   in (x0, y0, x1, y1)
         Returns:    geo_box   : tuple      of 4 float in (W, N, E, S)
         """
         try:
             lat = self.yx2lalo([pixel_box[1], pixel_box[3]], coord_type='y')
             lon = self.yx2lalo([pixel_box[0], pixel_box[2]], coord_type='x')
+            # shift lat from pixel center to the UL corner
+            lat = [i - self.lat_step / 2.0 for i in lat]
+            lon = [i - self.lon_step / 2.0 for i in lon]
             geo_box = (lon[0], lat[0], lon[1], lat[1])
         except:
             geo_box = None
