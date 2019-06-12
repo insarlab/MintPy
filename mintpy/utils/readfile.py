@@ -405,10 +405,30 @@ def read_binary_file(fname, datasetName=None, box=None):
         #else:
         #    raise Exception('unecognized GAMMA file: {}'.format(fname))
 
+    # SNAP
+    # BEAM-DIMAP data format: https://www.brockmann-consult.de/beam/doc/help/general/BeamDimapFormat.html
+    elif processor == 'snap':
+        # data structure - auto
+        band_interleave = 'BSQ'
+        num_band = 1
+        band = 1
+        data_type = atr['DATA_TYPE']
+        cpx_band = 'phase'
+
+        # byte order
+        byte_order = 'big-endian'
+        if 'byte order' in atr.keys() and atr['byte order'] == '0':
+            byte_order = 'little-endian'
+
     # reading
-    data, atr = read_binary(fname, box=box, data_type=data_type, byte_order=byte_order,
-                            num_band=num_band, band_interleave=band_interleave,
-                            band=band, cpx_band=cpx_band)
+    data = read_binary(fname, (length, width),
+                       box=box,
+                       data_type=data_type,
+                       byte_order=byte_order,
+                       num_band=num_band,
+                       band_interleave=band_interleave,
+                       band=band,
+                       cpx_band=cpx_band)
     if 'DATA_TYPE' not in atr:
         atr['DATA_TYPE'] = data_type
     return data, atr
@@ -632,21 +652,29 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             atr['PROCESSOR'] = 'mintpy'
 
     else:
+        # get metadata file basename
+        metafile_base = fname
+        # for SNAP BEAM-DIMAP format
+        if fname.endswith('.img') and os.path.isfile(os.path.splitext(fname)[0]+'.hdr'):
+            metafile_base = os.path.splitext(fname)[0]
+
         # get existing metadata file extensions
         metafile_exts = ['.rsc', '.xml', '.aux.xml', '.par', '.hdr']
         if metafile_ext:
             metafile_exts = [i for i in metafile_exts if i.endswith(metafile_ext)]
-        metafile_exts = [i for i in metafile_exts if os.path.isfile(fname+i)]     
+        metafile_exts = [i for i in metafile_exts if os.path.isfile(metafile_base+i)]
         if len(metafile_exts) == 0:
             raise FileNotFoundError('No metadata file found for data file: {}'.format(fname))
 
         atr = {}
         # PROCESSOR
-        if any(i.endswith(('.xml', '.hdr')) for i in metafile_exts):
+        if any(i.endswith('.hdr') for i in metafile_exts) and fname.endswith('.img'):
+            atr['PROCESSOR'] = 'snap'
+        elif any(i.endswith('.xml') for i in metafile_exts):
             atr['PROCESSOR'] = 'isce'
             xml_exts = [i for i in metafile_exts if i.endswith('.xml')]
             if len(xml_exts) > 0:
-                atr.update(read_isce_xml(fname+xml_exts[0]))
+                atr.update(read_isce_xml(metafile_base+xml_exts[0]))
         elif any(i.endswith('.par') for i in metafile_exts):
             atr['PROCESSOR'] = 'gamma'
         elif any(i.endswith('.rsc') for i in metafile_exts):
@@ -656,11 +684,12 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             atr['PROCESSOR'] = 'mintpy'
 
         # Read metadata file and FILE_TYPE
-        metafile0 = fname + metafile_exts[0]
+        metafile0 = metafile_base + metafile_exts[0]
         while fext in ['.geo', '.rdr', '.full']:
             fbase, fext = os.path.splitext(fbase)
         if not fext:
             fext = fbase
+
         if metafile0.endswith('.rsc'):
             atr.update(read_roipac_rsc(metafile0))
             if 'FILE_TYPE' not in atr.keys():
@@ -677,7 +706,17 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
 
         elif metafile0.endswith('.hdr'):
             atr.update(read_envi_hdr(metafile0))
-            atr['FILE_TYPE'] = atr['file type']
+            fbase = os.path.basename(fname).lower()
+            if fbase.startswith('unw'):
+                atr['FILE_TYPE'] = '.unw'
+            elif fbase.startswith(('coh','cor')):
+                atr['FILE_TYPE'] = '.cor'
+            elif fbase.startswith('phase_ifg'):
+                atr['FILE_TYPE'] = '.int'
+            elif 'dem' in fbase:
+                atr['FILE_TYPE'] = 'dem'
+            else:
+                atr['FILE_TYPE'] = atr['file type']
 
     # UNIT
     k = atr['FILE_TYPE'].replace('.', '')
@@ -897,7 +936,7 @@ def read_isce_xml(fname, standardize=True):
 
 def read_envi_hdr(fname, standardize=True):
     """Read ENVI .hdr file into a python dict strcture"""
-    atr = read_template(fname)
+    atr = read_template(fname, delimiter='=')
     atr['DATA_TYPE'] = ENVI2NUMPY_DATATYPE[atr.get('data type', '4')]
     if 'map info' in atr.keys():
         map_info = [i.strip() for i in atr['map info'].split(',')]
@@ -978,10 +1017,11 @@ def attribute_gamma2roipac(par_dict_in):
 
 
 #########################################################################
-def read_binary(fname, box=None, data_type='float32', byte_order='l',
+def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
                 num_band=1, band_interleave='BIL', band=1, cpx_band='phase'):
     """Read binary file using np.fromfile
     Parameters: fname : str, path/name of data file to read
+                shape : tuple of 2 int in (length, width)
                 box   : tuple of 4 int in (x0, y0, x1, y1)
                 data_type : str, data type of stored array, e.g.:
                     bool_
@@ -1001,17 +1041,16 @@ def read_binary(fname, box=None, data_type='float32', byte_order='l',
                     phase,
                     mag, magnitude
     Returns:    data : 2D np.array
-                atr : dict, metadata
     Examples:   # ISCE files
-                data, atr = read_binary('filt_fine.unw', num_band=2, band=2)
-                data, atr = read_binary('filt_fine.cor')
-                data, atr = read_binary('filt_fine.int', data_type='complex64', cpx_band='phase')
-                data, atr = read_binary('burst_01.slc',  data_type='complex64', cpx_band='mag')
-                data, atr = read_binary('los.rdr', num_band=2, band=1)
-                # ROIPAC files                
+                atr = read_attribute(fname)
+                shape = (int(atr['LENGTH']), int(atr['WIDTH']))
+                data = read_binary('filt_fine.unw', shape, num_band=2, band=2)
+                data = read_binary('filt_fine.cor', shape)
+                data = read_binary('filt_fine.int', shape, data_type='complex64', cpx_band='phase')
+                data = read_binary('burst_01.slc', shape, data_type='complex64', cpx_band='mag')
+                data = read_binary('los.rdr', shape, num_band=2, band=1)
     """
-    atr = read_attribute(fname)
-    length, width = int(float(atr['LENGTH'])), int(float(atr['WIDTH']))
+    length, width = shape
     if not box:
         box = (0, 0, width, length)
 
@@ -1066,7 +1105,7 @@ def read_binary(fname, box=None, data_type='float32', byte_order='l',
         else:
             raise ValueError('unrecognized complex band:', cpx_band)
 
-    return data, atr
+    return data
 
 
 ############################ Obsolete Functions ###############################

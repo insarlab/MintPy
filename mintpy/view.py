@@ -521,13 +521,13 @@ def plot_slice(ax, data, metadata, inps=None):
                 if np.isnan(v) or np.ma.is_masked(v):
                     msg += ', v=[]'
                 else:
-                    msg += ', v={:.4f}'.format(v)
+                    msg += ', v={:.3f}'.format(v)
                 if inps.dem_file:
                     dem_col = coord_dem.lalo2yx(x, coord_type='lon') - dem_pix_box[0]
                     dem_row = coord_dem.lalo2yx(y, coord_type='lat') - dem_pix_box[1]
                     h = dem[dem_row, dem_col]
-                    msg += ', h={:.1f}'.format(h)
-                msg += ', x={:.1f}, y={:.1f}'.format(col+inps.pix_box[0],
+                    msg += ', h={:.0f}'.format(h)
+                msg += ', x={:.0f}, y={:.0f}'.format(col+inps.pix_box[0],
                                                      row+inps.pix_box[1])
             return msg
         ax.format_coord = format_coord
@@ -576,14 +576,14 @@ def plot_slice(ax, data, metadata, inps=None):
         # Status bar
         def format_coord(x, y):
             msg = 'x={:.1f}, y={:.1f}'.format(x, y)
-            col = int(x+0.5) - inps.pix_box[0]
-            row = int(y+0.5) - inps.pix_box[1]
+            col = np.floor(x - inps.pix_box[0])
+            row = np.floor(y - inps.pix_box[1])
             if 0 <= col < num_col and 0 <= row < num_row:
                 v = data[row, col]
-                msg += ', v={:.4f}'.format(v)
+                msg += ', v={:.3f}'.format(v)
                 if inps.dem_file:
                     h = dem[row, col]
-                    msg += ', h={:.1f} m'.format(h)
+                    msg += ', h={:.0f} m'.format(h)
             #msg += ', v ='
             return msg
         ax.format_coord = format_coord

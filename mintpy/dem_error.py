@@ -109,6 +109,10 @@ def cmd_line_parse(iargs=None):
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 
+    # ignore non-existed exclude_date.txt
+    if inps.excludeDate == 'exclude_date.txt' and not os.path.isfile(inps.excludeDate):
+        inps.excludeDate = []
+
     if inps.polyOrder < 1:
         raise argparse.ArgumentTypeError("Minimum polynomial order is 1")
 
@@ -355,10 +359,10 @@ def correct_dem_error(inps, A_def):
     if num_step > 0:
         step_model = np.zeros((num_step, num_pixel), dtype=np.float32)
 
-    print('skip pixels with zero/NaN value in all acquisitions')
-    ts_mean = np.nanmean(ts_data, axis=0)
-    mask = np.multiply(~np.isnan(ts_mean), ts_mean != 0.)
-    del ts_mean
+    print('skip pixels with ZERO in ALL acquisitions')
+    mask = np.nanmean(ts_data, axis=0) != 0.
+    print('skip pixels with NaN  in ANY acquisitions')
+    mask *= np.sum(np.isnan(ts_data), axis=0) == 0
 
     if inps.rangeDist.size == 1:
         A_geom = inps.pbase / (inps.rangeDist * inps.sinIncAngle)
