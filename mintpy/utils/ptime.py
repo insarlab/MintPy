@@ -206,7 +206,7 @@ def read_date_list(date_list_in, date_list_all=None):
 
     # exclude date not in date_list_ref
     if date_list_all:
-        date_list_out = list(set(date_list_out).intersection(date_list_all))
+        date_list_out = sorted(list(set(date_list_out).intersection(date_list_all)))
 
     return date_list_out
 

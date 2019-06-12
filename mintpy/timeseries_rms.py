@@ -55,7 +55,7 @@ def create_parser():
                         help='M-score used for outlier detection based on standardised residuals\n'+
                              'Recommend range: [3, 4], default is 3.')
     parser.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'),
-                        type=float, nargs=2, default=[4., 3.],
+                        type=float, nargs=2, default=[5., 3.],
                         help='figure size in inches - width and length')
     parser.add_argument('--tick-year-num', dest='tick_year_num',
                         type=int, default=1, help='Year number per major tick')
@@ -142,7 +142,7 @@ def analyze_rms(date_list, rms_list, inps):
 
 def plot_rms_bar(ax, date_list, rms, cutoff=3., font_size=12, 
                  tick_year_num=1, legend_loc='best',
-                 disp_legend=True, disp_side_plot=True, disp_thres_text=True,
+                 disp_legend=True, disp_side_plot=True, disp_thres_text=False,
                  ylabel=r'Residual Phase $\hat \phi_{resid}$ RMS [mm]'):
     """ Bar plot Phase Residual RMS
     Parameters: ax : Axes object
@@ -176,7 +176,8 @@ def plot_rms_bar(ax, date_list, rms, cutoff=3., font_size=12,
 
     # Plot rms_threshold line
     (ax, xmin, xmax) = pp.auto_adjust_xaxis_date(ax, datevector, font_size, every_year=tick_year_num)
-    ax.plot(np.array([xmin, xmax]), np.array([rms_threshold, rms_threshold]), '--k', label='RMS threshold')
+    ax.plot(np.array([xmin, xmax]), np.array([rms_threshold, rms_threshold]), '--k',
+            label='Median Abs Dev * {}'.format(cutoff))
 
     # axis format
     ax = pp.auto_adjust_yaxis(ax, np.append(rms, rms_threshold), font_size, ymin=0.0)

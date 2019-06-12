@@ -43,7 +43,8 @@ def create_parser():
     parser.add_argument('--img-file', dest='img_file', default='velocity.h5',
                         help='dataset to show in map to facilitate point selection')
     parser.add_argument('--view-cmd', dest='view_cmd', default='view.py {} --wrap --noverbose ',
-                        help='view.py command to plot the input map file')
+                        help='view.py command to plot the input map file\n'+
+                             'Default: view.py img_file --wrap --noverbose')
 
     parser.add_argument('--save', dest='save_fig',
                         action='store_true', help='save the figure')

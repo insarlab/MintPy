@@ -103,7 +103,7 @@ ENVI_BAND_INTERLEAVE = {
 
 ###########################################################################
 ## Slice-based data identification for data reading:
-## 
+##
 ## slice   : np.ndarray in 2D,  with/without '-' in their names
 ##           each slice is unique within a file
 ## dataset : np.ndarray in 2D or 3D, without '-' in their names
@@ -259,7 +259,7 @@ def read_hdf5_file(fname, datasetName=None, box=None):
             if not inputDateList or inputDateList == ['']:
                 slice_flag[:] = True
             else:
-                date_list = [i.split('-')[1] for i in 
+                date_list = [i.split('-')[1] for i in
                              [j for j in slice_list if j.startswith(dsFamily)]]
                 for d in inputDateList:
                     slice_flag[date_list.index(d)] = True
@@ -867,7 +867,7 @@ def read_roipac_rsc(fname, delimiter=' ', standardize=True):
 
 def read_gamma_par(fname, delimiter=':', skiprows=3, standardize=True):
     """Read GAMMA .par/.off file into a python dictionary structure.
-    Parameters: fname : str. 
+    Parameters: fname : str.
                     File path of .par, .off file.
                 delimiter : str, optional
                     String used to separate values.
@@ -1073,18 +1073,18 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
         data = np.fromfile(fname,
                            dtype=data_type,
                            count=box[3]*width*num_band).reshape(-1, width*num_band)
-        data = data[box[1]:box[3], 
+        data = data[box[1]:box[3],
                     width*(band-1)+box[0]:width*(band-1)+box[2]]
 
     elif band_interleave == 'BIP':
-        data = np.fromfile(fname, 
+        data = np.fromfile(fname,
                            dtype=data_type,
                            count=box[3]*width*num_band).reshape(-1, width*num_band)
         data = data[box[1]:box[3],
                     np.arange(box[0], box[2])*num_band+band-1]
 
     elif band_interleave == 'BSQ':
-        data = np.fromfile(fname, 
+        data = np.fromfile(fname,
                            dtype=data_type,
                            count=(box[3]+length*(band-1))*width).reshape(-1, width)
         data = data[length*(band-1)+box[1]:length*(band-1)+box[3],
@@ -1118,7 +1118,7 @@ def read_float32(fname, box=None, byte_order='l'):
     RMG format (named after JPL radar pionner Richard M. Goldstein): made
     up of real*4 numbers in two arrays side-by-side. The two arrays often
     show the magnitude of the radar image and the phase, although not always
-    (sometimes the phase is the correlation). The length and width of each 
+    (sometimes the phase is the correlation). The length and width of each
     array are given as lines in the metadata (.rsc) file. Thus the total
     width width of the binary file is (2*width) and length is (length), data
     are stored as:
@@ -1198,7 +1198,7 @@ def read_complex_float32(fname, box=None, byte_order='l', band='phase'):
                 band : str
                     output format, default = phase
                     phase, amplitude, real, imag, complex
-    Returns: data : 2D np.array in complex float32 
+    Returns: data : 2D np.array in complex float32
     Example:
         amp, phase, atr = read_complex_float32('geo_070603-070721_0048_00018.int')
         data, atr       = read_complex_float32('150707.slc', 1)
@@ -1240,7 +1240,7 @@ def read_real_float32(fname, box=None, byte_order='l'):
     """Read real float 32 data matrix, i.e. GAMMA .mli file
     Parameters: fname     : str, path, filename to be read
                 byte_order : str, optional, order of reading byte in the file
-    Returns: data : 2D np.array, data matrix 
+    Returns: data : 2D np.array, data matrix
              atr  : dict, attribute dictionary
     Usage: data, atr = read_real_float32('20070603.mli')
            data, atr = read_real_float32('diff_filt_130118-130129_4rlks.unw')
@@ -1333,7 +1333,7 @@ def read_real_int16(fname, box=None, byte_order='l'):
 
 def read_bool(fname, box=None):
     """Read binary file with flags, 1-byte values with flags set in bits
-    For ROI_PAC .flg, *_snap_connect.byt file.    
+    For ROI_PAC .flg, *_snap_connect.byt file.
     """
     # Read attribute
     if fname.endswith('_snap_connect.byt'):
