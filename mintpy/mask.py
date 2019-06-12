@@ -166,8 +166,10 @@ def mask_isce_file(in_file, mask_file, out_file=None):
     print('setting the (phase) value on the masked out pixels to zero')
     fbase, ext = os.path.splitext(in_file)
     if ext == '.unw':
-        amp = readfile.read_binary(in_file, data_type=data_type, num_band=num_band, band_interleave=interleave, band=1)[0]
-        pha = readfile.read_binary(in_file, data_type=data_type, num_band=num_band, band_interleave=interleave, band=2)[0]
+        amp = readfile.read_binary(in_file, (length, width), data_type=data_type,
+                                   num_band=num_band, band_interleave=interleave, band=1)
+        pha = readfile.read_binary(in_file, (length, width), data_type=data_type,
+                                   num_band=num_band, band_interleave=interleave, band=2)
         pha[mask == 0] = 0
         data = np.hstack((amp, pha)).flatten()
     elif ext == '.int':
