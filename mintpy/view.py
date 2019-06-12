@@ -512,8 +512,9 @@ def plot_slice(ax, data, metadata, inps=None):
         # Status bar
         if inps.dem_file:
             coord_dem = ut.coordinate(dem_metadata)
+            dem_len, dem_wid = dem.shape
         def format_coord(x, y):
-            msg = 'lon={:.4f}, lat={:.4f}'.format(x, y)
+            msg = 'E{:.4f}, N{:.4f}'.format(x, y)
             col = coord.lalo2yx(x, coord_type='lon') - inps.pix_box[0]
             row = coord.lalo2yx(y, coord_type='lat') - inps.pix_box[1]
             if 0 <= col < num_col and 0 <= row < num_row:
@@ -525,8 +526,9 @@ def plot_slice(ax, data, metadata, inps=None):
                 if inps.dem_file:
                     dem_col = coord_dem.lalo2yx(x, coord_type='lon') - dem_pix_box[0]
                     dem_row = coord_dem.lalo2yx(y, coord_type='lat') - dem_pix_box[1]
-                    h = dem[dem_row, dem_col]
-                    msg += ', h={:.0f}'.format(h)
+                    if 0 <= dem_col < dem_wid and 0 <= dem_row < dem_len:
+                        h = dem[dem_row, dem_col]
+                        msg += ', h={:.0f}'.format(h)
                 msg += ', x={:.0f}, y={:.0f}'.format(col+inps.pix_box[0],
                                                      row+inps.pix_box[1])
             return msg
@@ -574,10 +576,11 @@ def plot_slice(ax, data, metadata, inps=None):
         ax.set_ylim(extent[2:4])
 
         # Status bar
+        # extent is (-0.5, -0.5, width-0.5, length-0.5)
         def format_coord(x, y):
             msg = 'x={:.1f}, y={:.1f}'.format(x, y)
-            col = np.floor(x - inps.pix_box[0])
-            row = np.floor(y - inps.pix_box[1])
+            col = int(np.rint(x - inps.pix_box[0]))
+            row = int(np.rint(y - inps.pix_box[1]))
             if 0 <= col < num_col and 0 <= row < num_row:
                 v = data[row, col]
                 msg += ', v={:.3f}'.format(v)
@@ -1114,8 +1117,11 @@ def prepare4multi_subplots(inps, metadata):
             vprint('consider reference pixel in y/x: {}'.format(inps.file_ref_yx))
 
     if inps.dsetNum > 10:
-        inps.disp_ref_pixel = False
-        vprint('turn off reference pixel plot for more than 10 datasets to display')
+        inps.ref_marker_size /= 10.
+    elif inps.dsetNum > 100:
+        inps.ref_marker_size /= 20.
+        #inps.disp_ref_pixel = False
+        #vprint('turn off reference pixel plot for more than 10 datasets to display')
 
     # Check dropped interferograms
     inps.dropDatasetList = []

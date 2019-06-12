@@ -257,6 +257,13 @@ def read_init_info(inps):
 
 
 def read_exclude_date(input_ex_date, dateListAll):
+    """
+    Parameters: input_ex_date : list of string in YYYYMMDD or filenames for excluded dates
+                dateListAll   : list of string in YYYYMMDD for all dates
+    Returns:    ex_date_list  : list of string in YYYYMMDD for excluded dates
+                ex_dates      : list of datetime.datetime objects for excluded dates
+                ex_flag       : 1D np.ndarray in size of (num_date), 1/True for kept, 0/False for excluded
+    """
     # default value
     ex_date_list = []
     ex_dates = []
@@ -359,8 +366,10 @@ def read_timeseries_data(inps):
 
 
 def plot_ts_errorbar(ax, dis_ts, inps, ppar):
+    # make a local copy
     dates = np.array(inps.dates)
     d_ts = dis_ts[:]
+
     if inps.ex_date_list:
         # Update displacement time-series
         d_ts = dis_ts[inps.ex_flag == 1]
@@ -385,8 +394,10 @@ def plot_ts_errorbar(ax, dis_ts, inps, ppar):
 
 
 def plot_ts_scatter(ax, dis_ts, inps, ppar):
+    # make a local copy
     dates = np.array(inps.dates)
     d_ts = dis_ts[:]
+
     if inps.ex_date_list:
         # Update displacement time-series
         d_ts = dis_ts[inps.ex_flag == 1]

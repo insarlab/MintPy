@@ -698,6 +698,7 @@ def read_unwrap_phase(stack_obj, box, ref_phase, unwDatasetName='unwrapPhase', d
                               box=box,
                               dropIfgram=dropIfgram,
                               print_msg=False).reshape(num_ifgram, -1)
+    pha_data[np.isnan(pha_data)] = 0.
 
     # read ref_phase
     if ref_phase is not None:
@@ -732,6 +733,7 @@ def mask_unwrap_phase(pha_data, stack_obj, box, mask_ds_name=None, mask_threshol
                                   box=box,
                                   dropIfgram=dropIfgram,
                                   print_msg=False).reshape(num_ifgram, -1)
+        msk_data[np.isnan(msk_data)] = 0
         if mask_ds_name == 'coherence':
             msk_data = msk_data >= mask_threshold
             if print_msg:
@@ -752,6 +754,7 @@ def read_coherence(stack_obj, box, dropIfgram=True, print_msg=True):
                               box=box,
                               dropIfgram=dropIfgram,
                               print_msg=False).reshape(num_ifgram, -1)
+    coh_data[np.isnan(coh_data)] = 0.
     return coh_data
 
 
