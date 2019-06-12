@@ -406,6 +406,7 @@ def read_binary_file(fname, datasetName=None, box=None):
         #    raise Exception('unecognized GAMMA file: {}'.format(fname))
 
     # SNAP
+    # BEAM-DIMAP data format: https://www.brockmann-consult.de/beam/doc/help/general/BeamDimapFormat.html
     elif processor == 'snap':
         # data structure - auto
         band_interleave = 'BSQ'
