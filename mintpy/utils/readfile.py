@@ -103,7 +103,7 @@ ENVI_BAND_INTERLEAVE = {
 
 ###########################################################################
 ## Slice-based data identification for data reading:
-## 
+##
 ## slice   : np.ndarray in 2D,  with/without '-' in their names
 ##           each slice is unique within a file
 ## dataset : np.ndarray in 2D or 3D, without '-' in their names
@@ -259,7 +259,7 @@ def read_hdf5_file(fname, datasetName=None, box=None):
             if not inputDateList or inputDateList == ['']:
                 slice_flag[:] = True
             else:
-                date_list = [i.split('-')[1] for i in 
+                date_list = [i.split('-')[1] for i in
                              [j for j in slice_list if j.startswith(dsFamily)]]
                 for d in inputDateList:
                     slice_flag[date_list.index(d)] = True
@@ -405,10 +405,30 @@ def read_binary_file(fname, datasetName=None, box=None):
         #else:
         #    raise Exception('unecognized GAMMA file: {}'.format(fname))
 
+    # SNAP
+    # BEAM-DIMAP data format: https://www.brockmann-consult.de/beam/doc/help/general/BeamDimapFormat.html
+    elif processor == 'snap':
+        # data structure - auto
+        band_interleave = 'BSQ'
+        num_band = 1
+        band = 1
+        data_type = atr['DATA_TYPE']
+        cpx_band = 'phase'
+
+        # byte order
+        byte_order = 'big-endian'
+        if 'byte order' in atr.keys() and atr['byte order'] == '0':
+            byte_order = 'little-endian'
+
     # reading
-    data, atr = read_binary(fname, box=box, data_type=data_type, byte_order=byte_order,
-                            num_band=num_band, band_interleave=band_interleave,
-                            band=band, cpx_band=cpx_band)
+    data = read_binary(fname, (length, width),
+                       box=box,
+                       data_type=data_type,
+                       byte_order=byte_order,
+                       num_band=num_band,
+                       band_interleave=band_interleave,
+                       band=band,
+                       cpx_band=cpx_band)
     if 'DATA_TYPE' not in atr:
         atr['DATA_TYPE'] = data_type
     return data, atr
@@ -632,21 +652,29 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             atr['PROCESSOR'] = 'mintpy'
 
     else:
+        # get metadata file basename
+        metafile_base = fname
+        # for SNAP BEAM-DIMAP format
+        if fname.endswith('.img') and os.path.isfile(os.path.splitext(fname)[0]+'.hdr'):
+            metafile_base = os.path.splitext(fname)[0]
+
         # get existing metadata file extensions
         metafile_exts = ['.rsc', '.xml', '.aux.xml', '.par', '.hdr']
         if metafile_ext:
             metafile_exts = [i for i in metafile_exts if i.endswith(metafile_ext)]
-        metafile_exts = [i for i in metafile_exts if os.path.isfile(fname+i)]     
+        metafile_exts = [i for i in metafile_exts if os.path.isfile(metafile_base+i)]
         if len(metafile_exts) == 0:
             raise FileNotFoundError('No metadata file found for data file: {}'.format(fname))
 
         atr = {}
         # PROCESSOR
-        if any(i.endswith(('.xml', '.hdr')) for i in metafile_exts):
+        if any(i.endswith('.hdr') for i in metafile_exts) and fname.endswith('.img'):
+            atr['PROCESSOR'] = 'snap'
+        elif any(i.endswith('.xml') for i in metafile_exts):
             atr['PROCESSOR'] = 'isce'
             xml_exts = [i for i in metafile_exts if i.endswith('.xml')]
             if len(xml_exts) > 0:
-                atr.update(read_isce_xml(fname+xml_exts[0]))
+                atr.update(read_isce_xml(metafile_base+xml_exts[0]))
         elif any(i.endswith('.par') for i in metafile_exts):
             atr['PROCESSOR'] = 'gamma'
         elif any(i.endswith('.rsc') for i in metafile_exts):
@@ -656,11 +684,12 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             atr['PROCESSOR'] = 'mintpy'
 
         # Read metadata file and FILE_TYPE
-        metafile0 = fname + metafile_exts[0]
+        metafile0 = metafile_base + metafile_exts[0]
         while fext in ['.geo', '.rdr', '.full']:
             fbase, fext = os.path.splitext(fbase)
         if not fext:
             fext = fbase
+
         if metafile0.endswith('.rsc'):
             atr.update(read_roipac_rsc(metafile0))
             if 'FILE_TYPE' not in atr.keys():
@@ -677,7 +706,17 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
 
         elif metafile0.endswith('.hdr'):
             atr.update(read_envi_hdr(metafile0))
-            atr['FILE_TYPE'] = atr['file type']
+            fbase = os.path.basename(fname).lower()
+            if fbase.startswith('unw'):
+                atr['FILE_TYPE'] = '.unw'
+            elif fbase.startswith(('coh','cor')):
+                atr['FILE_TYPE'] = '.cor'
+            elif fbase.startswith('phase_ifg'):
+                atr['FILE_TYPE'] = '.int'
+            elif 'dem' in fbase:
+                atr['FILE_TYPE'] = 'dem'
+            else:
+                atr['FILE_TYPE'] = atr['file type']
 
     # UNIT
     k = atr['FILE_TYPE'].replace('.', '')
@@ -828,7 +867,7 @@ def read_roipac_rsc(fname, delimiter=' ', standardize=True):
 
 def read_gamma_par(fname, delimiter=':', skiprows=3, standardize=True):
     """Read GAMMA .par/.off file into a python dictionary structure.
-    Parameters: fname : str. 
+    Parameters: fname : str.
                     File path of .par, .off file.
                 delimiter : str, optional
                     String used to separate values.
@@ -897,7 +936,7 @@ def read_isce_xml(fname, standardize=True):
 
 def read_envi_hdr(fname, standardize=True):
     """Read ENVI .hdr file into a python dict strcture"""
-    atr = read_template(fname)
+    atr = read_template(fname, delimiter='=')
     atr['DATA_TYPE'] = ENVI2NUMPY_DATATYPE[atr.get('data type', '4')]
     if 'map info' in atr.keys():
         map_info = [i.strip() for i in atr['map info'].split(',')]
@@ -978,10 +1017,11 @@ def attribute_gamma2roipac(par_dict_in):
 
 
 #########################################################################
-def read_binary(fname, box=None, data_type='float32', byte_order='l',
+def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
                 num_band=1, band_interleave='BIL', band=1, cpx_band='phase'):
     """Read binary file using np.fromfile
     Parameters: fname : str, path/name of data file to read
+                shape : tuple of 2 int in (length, width)
                 box   : tuple of 4 int in (x0, y0, x1, y1)
                 data_type : str, data type of stored array, e.g.:
                     bool_
@@ -1001,17 +1041,16 @@ def read_binary(fname, box=None, data_type='float32', byte_order='l',
                     phase,
                     mag, magnitude
     Returns:    data : 2D np.array
-                atr : dict, metadata
     Examples:   # ISCE files
-                data, atr = read_binary('filt_fine.unw', num_band=2, band=2)
-                data, atr = read_binary('filt_fine.cor')
-                data, atr = read_binary('filt_fine.int', data_type='complex64', cpx_band='phase')
-                data, atr = read_binary('burst_01.slc',  data_type='complex64', cpx_band='mag')
-                data, atr = read_binary('los.rdr', num_band=2, band=1)
-                # ROIPAC files                
+                atr = read_attribute(fname)
+                shape = (int(atr['LENGTH']), int(atr['WIDTH']))
+                data = read_binary('filt_fine.unw', shape, num_band=2, band=2)
+                data = read_binary('filt_fine.cor', shape)
+                data = read_binary('filt_fine.int', shape, data_type='complex64', cpx_band='phase')
+                data = read_binary('burst_01.slc', shape, data_type='complex64', cpx_band='mag')
+                data = read_binary('los.rdr', shape, num_band=2, band=1)
     """
-    atr = read_attribute(fname)
-    length, width = int(float(atr['LENGTH'])), int(float(atr['WIDTH']))
+    length, width = shape
     if not box:
         box = (0, 0, width, length)
 
@@ -1034,18 +1073,18 @@ def read_binary(fname, box=None, data_type='float32', byte_order='l',
         data = np.fromfile(fname,
                            dtype=data_type,
                            count=box[3]*width*num_band).reshape(-1, width*num_band)
-        data = data[box[1]:box[3], 
+        data = data[box[1]:box[3],
                     width*(band-1)+box[0]:width*(band-1)+box[2]]
 
     elif band_interleave == 'BIP':
-        data = np.fromfile(fname, 
+        data = np.fromfile(fname,
                            dtype=data_type,
                            count=box[3]*width*num_band).reshape(-1, width*num_band)
         data = data[box[1]:box[3],
                     np.arange(box[0], box[2])*num_band+band-1]
 
     elif band_interleave == 'BSQ':
-        data = np.fromfile(fname, 
+        data = np.fromfile(fname,
                            dtype=data_type,
                            count=(box[3]+length*(band-1))*width).reshape(-1, width)
         data = data[length*(band-1)+box[1]:length*(band-1)+box[3],
@@ -1066,7 +1105,7 @@ def read_binary(fname, box=None, data_type='float32', byte_order='l',
         else:
             raise ValueError('unrecognized complex band:', cpx_band)
 
-    return data, atr
+    return data
 
 
 ############################ Obsolete Functions ###############################
@@ -1079,7 +1118,7 @@ def read_float32(fname, box=None, byte_order='l'):
     RMG format (named after JPL radar pionner Richard M. Goldstein): made
     up of real*4 numbers in two arrays side-by-side. The two arrays often
     show the magnitude of the radar image and the phase, although not always
-    (sometimes the phase is the correlation). The length and width of each 
+    (sometimes the phase is the correlation). The length and width of each
     array are given as lines in the metadata (.rsc) file. Thus the total
     width width of the binary file is (2*width) and length is (length), data
     are stored as:
@@ -1159,7 +1198,7 @@ def read_complex_float32(fname, box=None, byte_order='l', band='phase'):
                 band : str
                     output format, default = phase
                     phase, amplitude, real, imag, complex
-    Returns: data : 2D np.array in complex float32 
+    Returns: data : 2D np.array in complex float32
     Example:
         amp, phase, atr = read_complex_float32('geo_070603-070721_0048_00018.int')
         data, atr       = read_complex_float32('150707.slc', 1)
@@ -1201,7 +1240,7 @@ def read_real_float32(fname, box=None, byte_order='l'):
     """Read real float 32 data matrix, i.e. GAMMA .mli file
     Parameters: fname     : str, path, filename to be read
                 byte_order : str, optional, order of reading byte in the file
-    Returns: data : 2D np.array, data matrix 
+    Returns: data : 2D np.array, data matrix
              atr  : dict, attribute dictionary
     Usage: data, atr = read_real_float32('20070603.mli')
            data, atr = read_real_float32('diff_filt_130118-130129_4rlks.unw')
@@ -1294,7 +1333,7 @@ def read_real_int16(fname, box=None, byte_order='l'):
 
 def read_bool(fname, box=None):
     """Read binary file with flags, 1-byte values with flags set in bits
-    For ROI_PAC .flg, *_snap_connect.byt file.    
+    For ROI_PAC .flg, *_snap_connect.byt file.
     """
     # Read attribute
     if fname.endswith('_snap_connect.byt'):

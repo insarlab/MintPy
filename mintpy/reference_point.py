@@ -397,8 +397,11 @@ def read_reference_input(inps):
     if not inps.ref_y or not inps.ref_x:
         print('no input reference y/x.')
         if not inps.method:
-            # Use existing REF_Y/X if no ref_y/x input and no method input
-            if not inps.force and 'REF_X' in atr.keys():
+            # Use existing REF_Y/X if 1) no ref_y/x input and 2) no method input and 3) ref_yx is in coverage
+            if (not inps.force 
+                    and 'REF_X' in atr.keys()
+                    and 0 <= float(atr['REF_Y']) <= length 
+                    and 0 <= float(atr['REF_X']) <= width):
                 print('REF_Y/X exists in input file, skip updating.')
                 print('REF_Y: '+atr['REF_Y'])
                 print('REF_X: '+atr['REF_X'])

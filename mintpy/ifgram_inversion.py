@@ -14,6 +14,7 @@ import re
 import sys
 import time
 import argparse
+import warnings
 import h5py
 import math
 import numpy as np
@@ -697,6 +698,7 @@ def read_unwrap_phase(stack_obj, box, ref_phase, unwDatasetName='unwrapPhase', d
                               box=box,
                               dropIfgram=dropIfgram,
                               print_msg=False).reshape(num_ifgram, -1)
+    pha_data[np.isnan(pha_data)] = 0.
 
     # read ref_phase
     if ref_phase is not None:
@@ -731,6 +733,7 @@ def mask_unwrap_phase(pha_data, stack_obj, box, mask_ds_name=None, mask_threshol
                                   box=box,
                                   dropIfgram=dropIfgram,
                                   print_msg=False).reshape(num_ifgram, -1)
+        msk_data[np.isnan(msk_data)] = 0
         if mask_ds_name == 'coherence':
             msk_data = msk_data >= mask_threshold
             if print_msg:
@@ -751,6 +754,7 @@ def read_coherence(stack_obj, box, dropIfgram=True, print_msg=True):
                               box=box,
                               dropIfgram=dropIfgram,
                               print_msg=False).reshape(num_ifgram, -1)
+    coh_data[np.isnan(coh_data)] = 0.
     return coh_data
 
 
@@ -842,11 +846,11 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
     A, B = stack_obj.get_design_matrix4timeseries(date12_list=date12_list)[0:2]
 
     # prep for decor std time-series
-    try:
-        ref_date = str(np.loadtxt('reference_date.txt', dtype=bytes).astype(str))
-    except:
-        ref_date = date_list[0]
-    Astd = stack_obj.get_design_matrix4timeseries(date12_list=date12_list, refDate=ref_date)[0]
+    #if os.path.isfile('reference_date.txt'):
+    #    ref_date = str(np.loadtxt('reference_date.txt', dtype=bytes).astype(str))
+    #else:
+    #    ref_date = date_list[0]
+    #Astd = stack_obj.get_design_matrix4timeseries(date12_list=date12_list, refDate=ref_date)[0]
     #ref_idx = date_list.index(ref_date)
     #time_idx = [i for i in range(num_date)]
     #time_idx.remove(ref_idx)
@@ -891,7 +895,10 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
 
     # 2 - Mask for Zero Phase in ALL ifgrams
     print('skip pixels with zero/nan value in all interferograms')
-    phase_stack = np.nanmean(pha_data, axis=0)
+    with warnings.catch_warnings():
+        # ignore warning message for all-NaN slices
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        phase_stack = np.nanmean(pha_data, axis=0)
     mask *= np.multiply(~np.isnan(phase_stack), phase_stack != 0.)
     del phase_stack
 
@@ -1188,7 +1195,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
             cluster.close()
             client.close()
 
-        ut.move_dask_stdout_stderr_files()
+            ut.move_dask_stdout_stderr_files()
 
         # reference pixel
         ref_y = int(stack_obj.metadata['REF_Y'])

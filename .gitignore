@@ -2,6 +2,7 @@
 *.pyc
 *ipynb_checkpoints*
 *.idea/*
+docs/api_docs/
 docs/examples/dev/*
 docs/resources/insarlab_logo*
 docs/resources/mintpy_preview*
@@ -10,4 +11,4 @@ docs/resources/visit_location.png
 isce*
 mintpy/dev/*
 mintpy/modis*
-
+site/

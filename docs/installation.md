@@ -6,23 +6,23 @@ Tested on macOS and Linux, not sure about Windows.
 
 Install Xcode with command line tools, if you have not already done so.
 
-1. Install `Xcode` from App store
++ Install `Xcode` from App store
 
-2. Install `command line tools` from within XCode and agree to the terms of license.
++ Install `command line tools` within XCode and agree to the terms of license.
 
 ```
-xcode-select --install -s /Applications/Xcode.app/Contents/Developer/ 
-sudo xcodebuild -license 
+xcode-select --install -s /Applications/Xcode.app/Contents/Developer/
+sudo xcodebuild -license
 ```
 
-3. Install [XQuartz](https://www.xquartz.org), then restart the terminal.
++ Install [XQuartz](https://www.xquartz.org), then restart the terminal.
 
 ### 1. Setup Paths ###
 
 To use the package, you need to setup the environment:
 
-1. To make mintpy importable in python, by adding the path to MintPy directory to your _$PYTHONPATH_    
-2. To make utility scripts available in command line, by adding _${MINTPY_HOME}/mintpy_ and _${MINTPY_HOME}/sh_ to your _$path_.   
++ To make mintpy importable in python, by adding the path to MintPy directory to your _$PYTHONPATH_    
++ To make utility scripts available in command line, by adding _${MINTPY_HOME}/mintpy_ and _${MINTPY_HOME}/sh_ to your _$path_.
 
 Add to your **_~/.bash_profile_** file for _bash_ user:
 
@@ -35,7 +35,7 @@ export MINTPY_HOME=~/python/MintPy
 export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}
 export PATH=${PATH}:${MINTPY_HOME}/mintpy:${MINTPY_HOME}/sh
 
-##--------- PyAPS ------------------## 
+##--------- PyAPS ------------------##
 export PYAPS_HOME=~/python/PyAPS
 export PYTHONPATH=${PYAPS_HOME}:${PYTHONPATH}
 ```
@@ -44,7 +44,7 @@ Source the file for the first time. It will be sourced automatically next time w
 
 ### 2. Install Python dependecies ###
 
-MintPy is written in Python3 (3.5+) and relies on several Python modules, check the [requirements.txt](../requirements.txt) file for details. We recommend using [conda](https://conda.io/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
+MintPy is written in Python3 and relies on several Python modules, check the [requirements.txt](https://github.com/insarlab/MintPy/blob/master/docs/requirements.txt) file for details. We recommend using [conda](https://conda.io/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
 
 #### Installing via conda ####
 
@@ -53,7 +53,7 @@ Add to your **_~/.bash_profile_** file:
 ```bash
 export PYTHON3DIR=~/python/miniconda3
 export PATH=${PATH}:${PYTHON3DIR}/bin
-export PROJ_LIB=${PYTHON3DIR}/share/proj   #Temporary fix for basemap import error
+export PROJ_LIB=`python3 -c "import pyproj; print(pyproj.pyproj_datadir)"`   #Temporary fix for basemap import error
 ```
 
 Run the following in your terminal:
@@ -137,18 +137,18 @@ python3 setup.py install
 
 ### Notes on [PyAPS](https://github.com/yunjunz/pyaps3) ###
 
-+ We use PyAPS for tropospheric delay correction calculated from Global Atmospheric Models (GAMs) such as ERA-5, ERA-Interim, HRES-ECMWF, MERRA and NARR. 
++ We use PyAPS for tropospheric delay correction calculated from Global Atmospheric Models (GAMs) such as ERA-5, ERA-Interim, HRES-ECMWF, MERRA and NARR.
 
 + Check [Caltech Earthdef](http://earthdef.caltech.edu) for accounts setup information for various GAM datasets.
 
-+ If you defined an environment variable named `WEATHER_DIR` to contain the path to a 
++ If you defined an environment variable named `WEATHER_DIR` to contain the path to a
 directory, MintPy applications will download the GAM files into the indicated directory. Also MintPy
 application will look for the GAM files in the directory before downloading a new one to prevent downloading
 multiple copies if you work with different dataset that cover the same date/time.
 
 ### Notes on parallel processing ###
 
-We use [Dask](www.dask.org) for parallel processing on High Performance Compute (HPC) cluster, it can be setup as below:
+We use [Dask](https://www.dask.org) for parallel processing on High Performance Compute (HPC) cluster, it can be setup as below:
 
 ```
 mkdir -p ~/.config/dask

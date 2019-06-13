@@ -247,6 +247,11 @@ def read_data(inps):
         if not inps.outfile:
             inps.outfile = '{}{}'.format(os.path.splitext(inps.file)[0], atr['FILE_TYPE'])
 
+    # get rid of starting . if output as hdf5 file
+    if inps.outfile.endswith('.h5'):
+        if atr['FILE_TYPE'].startswith('.'):
+            atr['FILE_TYPE'] = atr['FILE_TYPE'][1:]
+
     atr['PROCESSOR'] = 'roipac'
     return data, atr, inps.outfile
 

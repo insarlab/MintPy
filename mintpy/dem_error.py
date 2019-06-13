@@ -18,34 +18,46 @@ from mintpy.objects import timeseries, geometry
 
 # key configuration parameter name
 key_prefix = 'mintpy.topographicResidual.'
-configKeys = ['polyOrder',
-              'phaseVelocity',
-              'stepFuncDate',
-              'excludeDate']
+configKeys = [
+    'polyOrder',
+    'phaseVelocity',
+    'stepFuncDate',
+    'excludeDate',
+]
 
 
 ############################################################################
 TEMPLATE = """
 ## reference: Fattahi and Amelung, 2013, IEEE-TGRS
-## Specify stepFuncDate option if you know there are sudden displacement jump in your area,
-## i.e. volcanic eruption, or earthquake, and check timeseriesStepModel.h5 afterward for their estimation.
-mintpy.topographicResidual               = auto  #[yes / no], auto for yes
-mintpy.topographicResidual.polyOrder     = auto  #[1-inf], auto for 2, poly order of temporal deformation model
-mintpy.topographicResidual.phaseVelocity = auto  #[yes / no], auto for no - phase, use phase velocity for error estimation
-mintpy.topographicResidual.stepFuncDate  = auto  #[20080529,20100611 / no], auto for no, date of step jump
-mintpy.topographicResidual.excludeDate   = auto  #[20070321 / txtFile / no], auto for exclude_date.txt,
-                                                # date exlcuded for error estimation
+## Notes on options:
+## stepFuncDate      - Specify stepFuncDate option if you know there are sudden displacement jump in your area,
+##    i.e. volcanic eruption, or earthquake, and check timeseriesStepModel.h5 afterward for their estimation.
+## excludeDate       - Dates excluded for error estimation only
+## pixelwiseGeometry - Use pixel-wise geometry info, such as incidence angle and slant range distance for error estimation
+##    yes - use pixel-wise geometry when they are available [slow; used by default]
+##    no  - use mean geometry [fast]
+mintpy.topographicResidual                    = auto  #[yes / no], auto for yes
+mintpy.topographicResidual.polyOrder          = auto  #[1-inf], auto for 2, poly order of temporal deformation model
+mintpy.topographicResidual.phaseVelocity      = auto  #[yes / no], auto for no - phase, use phase velocity for error estimation
+mintpy.topographicResidual.stepFuncDate       = auto  #[20080529,20100611 / no], auto for no, date of step jump
+mintpy.topographicResidual.excludeDate        = auto  #[20070321 / txtFile / no], auto for exclude_date.txt
+mintpy.topographicResidual.pixelwiseGeometry  = auto  #[yes / no], auto for yes, use pixel-wise geometry info
 """
 
 EXAMPLE = """example:
-  # correct DEM error with pixel-wise geometry parameters
-  dem_error.py  timeseries_ECMWF.h5 -g inputs/geometryRadar.h5 -t smallbaselineApp.cfg
+  # correct DEM error with pixel-wise geometry parameters [slow]
+  dem_error.py  timeseries_ECMWF_ramp.h5 -g inputs/geometryRadar.h5 -t smallbaselineApp.cfg
 
-  # correct DEM error with mean geometry parameters
-  dem_error.py  timeseries_ECMWF_ramp.h5
+  # correct DEM error with mean geometry parameters [fast]
+  dem_error.py  timeseries_ECMWF_ramp.h5 -t smallbaselineApp.cfg
 
   # get time-series of estimated deformation model
   diff.py timeseries_ECMWF_ramp_demErr.h5 timeseriesResidual.h5 -o timeseriesDefModel.h5
+
+  # get updated/corrected DEM
+  save_roipac.py inputs/geometryGeo.h5 -o dem.h5   #for dataset in geo coordinates
+  mask.py demErr.h5 -m maskTempCoh.h5 -o demErr_msk.h5
+  add.py demErr_msk.h5 dem.h5 -o demNew.h5
 """
 
 REFERENCE = """reference:
@@ -96,6 +108,10 @@ def cmd_line_parse(iargs=None):
 
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
+
+    # ignore non-existed exclude_date.txt
+    if inps.excludeDate == 'exclude_date.txt' and not os.path.isfile(inps.excludeDate):
+        inps.excludeDate = []
 
     if inps.polyOrder < 1:
         raise argparse.ArgumentTypeError("Minimum polynomial order is 1")
@@ -225,14 +241,19 @@ def design_matrix4deformation(inps):
 def read_geometry(inps):
     ts_obj = timeseries(inps.timeseries_file)
     ts_obj.open(print_msg=False)
+
     # 2D / 3D geometry
     if inps.geom_file:
         geom_obj = geometry(inps.geom_file)
         geom_obj.open()
-        print(('read 2D incidenceAngle,slantRangeDistance from {} file:'
-               ' {}').format(geom_obj.name, os.path.basename(geom_obj.file)))
-        inps.incAngle = geom_obj.read(datasetName='incidenceAngle', print_msg=False).flatten()
-        inps.rangeDist = geom_obj.read(datasetName='slantRangeDistance', print_msg=False).flatten()
+        if 'incidenceAngle' not in geom_obj.datasetNames:
+            inps.incAngle = ut.incidence_angle(ts_obj.metadata, dimension=0)
+            inps.rangeDist = ut.range_distance(ts_obj.metadata, dimension=0)
+        else:
+            print(('read 2D incidenceAngle,slantRangeDistance from {} file:'
+                   ' {}').format(geom_obj.name, os.path.basename(geom_obj.file)))
+            inps.incAngle = geom_obj.read(datasetName='incidenceAngle', print_msg=False).flatten()
+            inps.rangeDist = geom_obj.read(datasetName='slantRangeDistance', print_msg=False).flatten()
         if 'bperp' in geom_obj.datasetNames:
             print('read 3D bperp from {} file: {} ...'.format(geom_obj.name, os.path.basename(geom_obj.file)))
             dset_list = ['bperp-{}'.format(d) for d in ts_obj.dateList]
@@ -338,10 +359,10 @@ def correct_dem_error(inps, A_def):
     if num_step > 0:
         step_model = np.zeros((num_step, num_pixel), dtype=np.float32)
 
-    print('skip pixels with zero/NaN value in all acquisitions')
-    ts_mean = np.nanmean(ts_data, axis=0)
-    mask = np.multiply(~np.isnan(ts_mean), ts_mean != 0.)
-    del ts_mean
+    print('skip pixels with ZERO in ALL acquisitions')
+    mask = np.nanmean(ts_data, axis=0) != 0.
+    print('skip pixels with NaN  in ANY acquisitions')
+    mask *= np.sum(np.isnan(ts_data), axis=0) == 0
 
     if inps.rangeDist.size == 1:
         A_geom = inps.pbase / (inps.rangeDist * inps.sinIncAngle)

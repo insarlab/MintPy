@@ -1,4 +1,4 @@
-# Contributing Guidelines #
+# Contributing Guidelines
 
 This document is inspired by similar instructions from ISCE, gdal and jupyterhub. If you're reading this section, you're probably interested in contributing to MintPy. Welcome and thanks for your interest in contributing! 
 
@@ -74,7 +74,7 @@ It's a good idea to test any changes or bugs you have fixed. We realize that we 
 ${MINTPY_HOME}/test/test_smallbaselineApp.py
 ```
 
-to see the testing result, it takes about 10 mins to finish.
+to see the testing result, it takes about 26 mins to finish.
 
 
 ## Things you should NOT do ##
