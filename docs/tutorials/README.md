@@ -9,7 +9,7 @@ This tutorial walks through the various processing steps of InSAR time series an
 2. Visualizations
    - Interactive time-series with [tsview](https://nbviewer.jupyter.org/github/insarlab/MintPy/blob/master/docs/tutorials/tsview.ipynb)
    - Interactive coherence matrix with [plot_coherence_matrix](https://nbviewer.jupyter.org/github/insarlab/MintPy/blob/master/docs/tutorials/plot_coherence_matrix.ipynb)
-   - Google Earth [wiki](https://github.com/insarlab/MintPy/wiki/Google-Earth)
+   - Google Earth [doc](https://mintpy.readthedocs.io/en/latest/google_earth/)
 
 ### Links ###
 
