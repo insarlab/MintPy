@@ -8,7 +8,7 @@ from mintpy.utils import ptime
 
 EXAMPLE = """ example:
 
-prep_aria.py -w mintpy_SanFran -s stack/stack/ -i stack/incidenceAngle/20150605_20150512.vrt -b stack/bPerpendicular/ 
+prep_aria.py -w mintpy_SanFran -s stack/stack/ -i stack/incidenceAngle/20150605_20150512.vrt
 
 """
 
@@ -30,15 +30,11 @@ def create_parser():
     parser.add_argument('-c', '--coherence-stack-name', dest='cohStack', type=str,
                         default="cohStack.vrt",
                         help='Name of the stack VRT file of coherence data.\n'+
-                              'default: cohStack.vrt') 
+                              'default: cohStack.vrt')
     parser.add_argument('-l', '--conn-comp-name', dest='connCompStack', type=str,
                         default="connCompStack.vrt",
                         help='Name of the stack VRT file of connected component data.\n' +
                               'default: connCompStack.vrt')
-    parser.add_argument('-b', '--bperp-dir', dest='bperpDir', type=str,
-                        required=True,
-                        help='Name of the directory where perpendicular baselines are stored.\n'+
-                              'default: bPerpendicular')
     parser.add_argument('-i', '--incidence-angle', dest='incidenceAngle', type=str,
                         required=True,
                         help='Name of the incidence angle file')
@@ -53,24 +49,24 @@ def cmd_line_parse(iargs = None):
 def extract_metadata(stack):
 
     ds = gdal.Open(stack, gdal.GA_ReadOnly)
-    
+
     meta = {}
-    meta["PROCESSOR"] = "isce" 
+    meta["PROCESSOR"] = "isce"
     meta["FILE_LENGTH"] = ds.RasterYSize
     meta["LENGTH"] = ds.RasterYSize
     meta["ORBIT_DIRECTION"] = "DESCENDING"
     meta["PLATFORM"] = "Sen"
     meta["STARTING_RANGE"] = float(ds.GetRasterBand(1).GetMetadata("unwrappedPhase")['startRange'][1:-1])
-    meta["WAVELENGTH"] = float(ds.GetRasterBand(1).GetMetadata("unwrappedPhase")['Wavelength (m)']) 
+    meta["WAVELENGTH"] = float(ds.GetRasterBand(1).GetMetadata("unwrappedPhase")['Wavelength (m)'])
     meta["WIDTH"] = ds.RasterXSize
     meta["NUMBER_OF_PAIRS"] = ds.RasterCount
 
-    # ARIA standard products currently don't number of range and 
+    # ARIA standard products currently don't number of range and
     # azimuth looks. They are however fixed to the following values
     meta['ALOOKS'] = 7
     meta['RLOOKS'] = 19
 
-    # geo transformation 
+    # geo transformation
     geoTrans = ds.GetGeoTransform()
     meta["X_FIRST"] =   geoTrans[0]
     meta["Y_FIRST"] =   geoTrans[3]
@@ -102,11 +98,11 @@ def layout_hdf5(filename, dsNameDict, metadata):
 
     h5.close()
 
-    return 
+    return
 
 
-def add_unwrapped_phase(h5File, unwStack, cohStack, connCompStack, bPerpDir):
-    
+def add_unwrapped_phase(h5File, unwStack, cohStack, connCompStack):
+
     dsUnw = gdal.Open(unwStack, gdal.GA_ReadOnly)
     dsCoh = gdal.Open(cohStack, gdal.GA_ReadOnly)
     dsComp = gdal.Open(connCompStack, gdal.GA_ReadOnly)
@@ -114,39 +110,39 @@ def add_unwrapped_phase(h5File, unwStack, cohStack, connCompStack, bPerpDir):
     nPairs = dsUnw.RasterCount
 
     h5 = h5py.File(h5File, "a")
-    
+
     prog_bar = ptime.progressBar(maxValue=nPairs)
     for ii in range(nPairs):
         bnd = dsUnw.GetRasterBand(ii+1)
         h5["unwrapPhase"][ii,:,:] = -1.0*bnd.ReadAsArray()
 
-        d12 = bnd.GetMetadata("unwrappedPhase")["Dates"]       
+        d12 = bnd.GetMetadata("unwrappedPhase")["Dates"]
         h5["date"][ii,0] = d12.split("_")[1].encode("utf-8")
         h5["date"][ii,1] = d12.split("_")[0].encode("utf-8")
 
         bnd = dsCoh.GetRasterBand(ii+1)
         h5["coherence"][ii,:,:] = bnd.ReadAsArray()
-        
+
         bnd = dsComp.GetRasterBand(ii+1)
         h5["connectComponent"][ii,:,:] = bnd.ReadAsArray()
-   
-        baselineName = os.path.join(bPerpDir, d12 + ".vrt")
-        bperp = extractBaseline(baselineName)
+
+
+        bperp = float(dsUnw.GetRasterBand(ii+1).GetMetadata("unwrappedPhase")["perpendicularBaseline"])
         h5["bperp"][ii] = -1.0*bperp
 
         h5["dropIfgram"][ii] = True
         prog_bar.update(ii+1, suffix='{}_{}'.format(d12.split("_")[1], d12.split("_")[0]))
 
     prog_bar.close()
-    h5.close()        
+    h5.close()
     dsUnw = None
     dsCoh = None
     dsComp = None
 
     return
-    
+
 def add_geometry(h5File, incAngleFile):
-    
+
     h5 = h5py.File(h5File, 'a')
 
     startRange = h5.attrs['STARTING_RANGE']
@@ -157,25 +153,14 @@ def add_geometry(h5File, incAngleFile):
     data[data!=0] = startRange
     h5['slantRangeDistance'][:,:] = data
 
-
-def extractBaseline(baselineName):
-    ds = gdal.Open(baselineName)
-    # return [min, max, mean, std]
-    stat  = ds.GetRasterBand(1).GetStatistics(True, True)
-    bperp = stat[2]
-    ds = None
-    
-    return bperp
-
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    inps.stackDir = os.path.abspath(inps.stackDir)  
+    inps.stackDir = os.path.abspath(inps.stackDir)
     cohStack = os.path.join(inps.stackDir, inps.cohStack)
     unwStack = os.path.join(inps.stackDir, inps.unwStack)
-    connCompStack = os.path.join(inps.stackDir, inps.connCompStack) 
-    bPerpDir = inps.bperpDir
-    
+    connCompStack = os.path.join(inps.stackDir, inps.connCompStack)
+
     metadata = extract_metadata(unwStack)
 
     length = metadata["LENGTH"]
@@ -201,7 +186,7 @@ def main(iargs=None):
 
     layout_hdf5(h5Filename, dsNameDict, metadata)
 
-    add_unwrapped_phase(h5Filename, unwStack, cohStack, connCompStack, bPerpDir)
+    add_unwrapped_phase(h5Filename, unwStack, cohStack, connCompStack)
 
     # setting up geometry:
     dsNameDict = {"azimuthAngle": (np.float32, (length, width)),
@@ -216,4 +201,3 @@ def main(iargs=None):
 
 if __name__=="__main__":
     main()
-
