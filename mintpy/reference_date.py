@@ -18,14 +18,10 @@ from mintpy.utils import readfile, writefile, ptime, utils as ut
 
 ##################################################################
 TEMPLATE = """
-## 4.1 Phase Residual Root Mean Square
-## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual from DEM error inversion
-## To get rid of long wavelength component in space, a ramp is removed for each epoch.
-## Recommendation: quadratic for whole image, linear for local/small area
-mintpy.residualRms.maskFile        = auto  #[filename / no], auto for maskTempCoh.h5, mask for ramp estimation
-mintpy.residualRms.ramp            = auto  #[quadratic / linear / no], auto for quadratic
-mintpy.residualRms.threshold       = auto  #[0.0-inf], auto for 0.02, minimum RMS in meter for exclude date(s)
-mintpy.reference.date = auto   #[reference_date.txt / 20090214 / no], auto for reference_date.txt
+## 2) Select Reference Date
+## reference all time-series to one date in time
+## no     - do not change the default reference date (1st date)
+mintpy.reference.date  = auto   #[reference_date.txt / 20090214 / no], auto for reference_date.txt
 """
 
 EXAMPLE = """example:

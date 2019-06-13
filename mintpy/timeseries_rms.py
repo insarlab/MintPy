@@ -20,9 +20,9 @@ TEMPLATE = """
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
 ## Set optimal reference date to date with min RMS
 ## Set exclude dates (outliers) to dates with RMS > cutoff * median RMS (Median Absolute Deviation)
-mintpy.residualRms.maskFile = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
-mintpy.residualRms.ramp     = auto  #[quadratic / ramp / no], auto for quadratic
-mintpy.residualRms.cutoff   = auto  #[0.0-inf], auto for 3
+mintpy.residualRMS.maskFile = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
+mintpy.residualRMS.deramp   = auto  #[quadratic / ramp / no], auto for quadratic
+mintpy.residualRMS.cutoff   = auto  #[0.0-inf], auto for 3
 """
 
 EXAMPLE = """example:
@@ -46,11 +46,11 @@ def create_parser():
     parser.add_argument('timeseries_file', help='Timeseries file')
     parser.add_argument('-t', '--template', dest='template_file',
                         help='template file with options below:\n'+TEMPLATE+'\n')
-    parser.add_argument('-m', '--mask', dest='mask_file', default='maskTempCoh.h5',
+    parser.add_argument('-m', '--mask', dest='maskFile', default='maskTempCoh.h5',
                         help='mask file for estimation')
-    parser.add_argument('-s', dest='ramp_type', default='quadratic',
+    parser.add_argument('-r','--ramp','--deramp', dest='deramp', default='quadratic',
                         help='ramp type to be remove for RMS calculation.\n' +
-                             'default - quadratic; no - do not remove ramp')
+                             'Default - quadratic; no - do not remove ramp')
     parser.add_argument('--cutoff', dest='cutoff', default='3', type=float,
                         help='M-score used for outlier detection based on standardised residuals\n'+
                              'Recommend range: [3, 4], default is 3.')
@@ -70,7 +70,7 @@ def cmd_line_parse(iargs=None):
 
 
 def read_template2inps(templateFile, inps):
-    """Update inps with mintpy.residualRms.* option from templateFile"""
+    """Update inps with mintpy.residualRMS.* option from templateFile"""
     if not inps:
         inps = cmd_line_parse()
     inpsDict = vars(inps)
@@ -78,12 +78,12 @@ def read_template2inps(templateFile, inps):
     template = readfile.read_template(templateFile)
     template = ut.check_template_auto_value(template)
 
-    prefix = 'mintpy.residualRms.'
+    prefix = 'mintpy.residualRMS.'
     keyList = [i for i in list(inpsDict.keys()) if prefix+i in template.keys()]
     for key in keyList:
         value = template[prefix+key]
         if value:
-            if key in ['maskFile', 'ramp']:
+            if key in ['maskFile', 'deramp']:
                 inpsDict[key] = value
             elif key in ['cutoff']:
                 inpsDict[key] = float(value)
@@ -97,7 +97,7 @@ def analyze_rms(date_list, rms_list, inps):
                                                            rms_list[ref_idx]))
     ref_date_file = 'reference_date.txt'
     if ut.run_or_skip(out_file=ref_date_file,
-                      in_file=[inps.timeseries_file, inps.mask_file, inps.template_file],
+                      in_file=[inps.timeseries_file, inps.maskFile, inps.template_file],
                       check_readable=False) == 'run':
         with open(ref_date_file, 'w') as f:
             f.write(date_list[ref_idx]+'\n')
@@ -230,8 +230,8 @@ def main(iargs=None):
     (inps.rms_list,
      inps.date_list,
      inps.rms_file) = ut.get_residual_rms(inps.timeseries_file,
-                                          inps.mask_file,
-                                          inps.ramp_type)
+                                          mask_file=inps.maskFile,
+                                          ramp_type=inps.deramp)
 
     analyze_rms(inps.date_list, inps.rms_list, inps)
     return
