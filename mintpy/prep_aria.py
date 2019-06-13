@@ -118,7 +118,7 @@ def add_unwrapped_phase(h5File, unwStack, cohStack, connCompStack, bPerpDir):
     prog_bar = ptime.progressBar(maxValue=nPairs)
     for ii in range(nPairs):
         bnd = dsUnw.GetRasterBand(ii+1)
-        h5["unwrapPhase"][ii,:,:] = bnd.ReadAsArray()
+        h5["unwrapPhase"][ii,:,:] = -1.0*bnd.ReadAsArray()
 
         d12 = bnd.GetMetadata("unwrappedPhase")["Dates"]       
         h5["date"][ii,0] = d12.split("_")[1].encode("utf-8")
