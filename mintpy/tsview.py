@@ -27,6 +27,8 @@ EXAMPLE = """example:
   tsview.py geo_timeseries.h5  --lalo 33.250 131.665  --nodisplay
   tsview.py timeseries_ECMWF_ramp_demErr.h5  --sub-x 900 1400 --sub-y 0 500
 
+  # press left / right key to slide images
+
   # multiple time-series files
   tsview.py timeseries_ECMWF_ramp_demErr.h5 timeseries_ECMWF_ramp.h5 timeseries_ECMWF.h5 timeseries.h5 --off 5
   tsview.py timeseries_ECMWF_ramp_demErr.h5 ../GIANT/Stack/LS-PARAMS.h5 --off 5 --label mintpy giant
@@ -42,7 +44,8 @@ def create_parser():
                              'i.e.: timeseries_ECMWF_ramp_demErr.h5 (MintPy)\n'
                              '      LS-PARAMS.h5 (GIAnT)\n'
                              '      S1_IW12_128_0593_0597_20141213_20180619.he5 (HDF-EOS5)')
-    parser.add_argument('--label', dest='file_label', nargs='*', help='labels to display for multiple input files')
+    parser.add_argument('--label', dest='file_label', nargs='*',
+                        help='labels to display for multiple input files')
     parser.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN', 'YMAX'), type=float,
                         help='Y limits for point plotting.')
     parser.add_argument('--tick-right', dest='tick_right', action='store_true',
@@ -62,14 +65,17 @@ def create_parser():
     pixel.add_argument('--ew', '--edgewidth', dest='edge_width', type=float, default=1.0,
                        help='Edge width. Default: 1.0')
 
-    parser.add_argument('-n', dest='init_idx', metavar='NUM', type=int,
+    parser.add_argument('-n', dest='idx', metavar='NUM', type=int,
                         help='Epoch/slice number to display.')
     parser.add_argument('--error', dest='error_file',
                         help='txt file with error for each date.')
 
-    parser.add_argument('--start-date', dest='start_date', type=str, help='start date of displacement to display')
-    parser.add_argument('--end-date', dest='end_date', type=str, help='end date of displacement to display')
-    parser.add_argument('--exclude', '--ex', dest='ex_date_list', nargs='*', default=['exclude_date.txt'],
+    parser.add_argument('--start-date', dest='start_date', type=str,
+                        help='start date of displacement to display')
+    parser.add_argument('--end-date', dest='end_date', type=str,
+                        help='end date of displacement to display')
+    parser.add_argument('--exclude', '--ex', dest='ex_date_list',
+                        nargs='*', default=['exclude_date.txt'],
                         help='Exclude date shown as gray.')
     parser.add_argument('--zf', '--zero-first', dest='zero_first', action='store_true',
                         help='Set displacement at first acquisition to zero.')
@@ -157,6 +163,7 @@ def read_init_info(inps):
 
     # date info
     inps.date_list = obj.dateList
+    inps.num_date = len(inps.date_list)
     if inps.start_date:
         inps.date_list = [i for i in inps.date_list if int(i) >= int(inps.start_date)]
     if inps.end_date:
@@ -174,11 +181,11 @@ def read_init_info(inps):
         inps.ref_idx = 0
     if inps.ref_date:
         inps.ref_idx = inps.date_list.index(inps.ref_date)
-    if not inps.init_idx:
+    if not inps.idx:
         if inps.ref_idx < inps.num_date / 2.:
-            inps.init_idx = -3
+            inps.idx = inps.num_date - 3
         else:
-            inps.init_idx = 3
+            inps.idx = 3
 
     # Display Unit
     (inps.disp_unit,
@@ -270,7 +277,8 @@ def read_exclude_date(input_ex_date, dateListAll):
                 dateListAll   : list of string in YYYYMMDD for all dates
     Returns:    ex_date_list  : list of string in YYYYMMDD for excluded dates
                 ex_dates      : list of datetime.datetime objects for excluded dates
-                ex_flag       : 1D np.ndarray in size of (num_date), 1/True for kept, 0/False for excluded
+                ex_flag       : 1D np.ndarray in size of (num_date),
+                                1/True for kept, 0/False for excluded
     """
     # default value
     ex_date_list = []
@@ -498,7 +506,7 @@ def save_ts_plot(yx, fig_img, fig_pts, d_ts, inps):
     vprint('save time-series plot to '+outName)
 
     # Figure - map
-    outName = '{}_{}.png'.format(inps.outfile_base, inps.date_list[inps.init_idx])
+    outName = '{}_{}.png'.format(inps.outfile_base, inps.date_list[inps.idx])
     fig_img.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
     vprint('save map plot to '+outName)
     return
@@ -559,13 +567,13 @@ class timeseriesViewer():
 
         # Figure 1 - Axes 1 - Displacement Map
         self.ax_img = self.fig_img.add_axes([0.125, 0.25, 0.75, 0.65])
-        img_data = np.array(self.ts_data[0][self.init_idx, :, :])
+        img_data = np.array(self.ts_data[0][self.idx, :, :])  ####################
         img_data[self.mask == 0] = np.nan
         self.plot_init_image(img_data)
 
         # Figure 1 - Axes 2 - Time Slider
         self.ax_tslider = self.fig_img.add_axes([0.2, 0.1, 0.6, 0.07])
-        self.plot_init_time_slider(init_idx=self.init_idx, ref_idx=self.ref_idx)
+        self.plot_init_time_slider(init_idx=self.idx, ref_idx=self.ref_idx)
         self.tslider.on_changed(self.update_time_slider)
 
         # Figure 2 - Time Series Displacement - Point
@@ -578,7 +586,8 @@ class timeseriesViewer():
             save_ts_plot(self.yx, self.fig_img, self.fig_pts, d_ts, self)
 
         # Final linking of the canvas to the plots.
-        self.cid = self.fig_img.canvas.mpl_connect('button_press_event', self.update_plot_timeseries)
+        self.fig_img.canvas.mpl_connect('button_press_event', self.update_plot_timeseries)
+        self.fig_img.canvas.mpl_connect('key_press_event', self.on_key_event)
         if self.disp_fig:
             vprint('showing ...')
             plt.show()
@@ -593,8 +602,8 @@ class timeseriesViewer():
             img_data = ut.wrap(img_data, wrap_range=self.wrap_range)
 
         # Title and Axis Label
-        disp_date = self.dates[self.init_idx].strftime('%Y-%m-%d')
-        self.fig_title = 'N = {}, Time = {}'.format(self.init_idx, disp_date)
+        disp_date = self.dates[self.idx].strftime('%Y-%m-%d')
+        self.fig_title = 'N = {}, Time = {}'.format(self.idx, disp_date)
 
         # Initial Pixel
         if self.yx and self.yx != self.ref_yx:
@@ -642,7 +651,8 @@ class timeseriesViewer():
         idx = np.argmin(np.abs(np.array(self.yearList) - self.tslider.val))
         # update title
         disp_date = self.dates[idx].strftime('%Y-%m-%d')
-        self.ax_img.set_title('N = {n}, Time = {t}'.format(n=idx, t=disp_date), fontsize=self.font_size)
+        self.ax_img.set_title('N = {n}, Time = {t}'.format(n=idx, t=disp_date),
+                              fontsize=self.font_size)
         # read data
         data_img = np.array(self.ts_data[0][idx, :, :])
         data_img[self.mask == 0] = np.nan
@@ -652,9 +662,9 @@ class timeseriesViewer():
             data_img = ut.wrap(data_img, wrap_range=self.wrap_range)
         # update data
         self.img.set_data(data_img)
+        self.idx = idx
         self.fig_img.canvas.draw()
         return
-
 
     def plot_point_timeseries(self, yx):
         """Plot point displacement time-series at pixel [y, x]
@@ -718,7 +728,9 @@ class timeseriesViewer():
         vprint(title_ts)
         float_formatter = lambda x: [float('{:.2f}'.format(i)) for i in x]
         vprint(float_formatter(d_ts[0]))
-        vprint('displacement range: [{:.2f}, {:.2f}] {}'.format(np.nanmin(d_ts[0]), np.nanmax(d_ts[0]), self.disp_unit))
+        vprint('displacement range: [{:.2f}, {:.2f}] {}'.format(np.nanmin(d_ts[0]),
+                                                                np.nanmax(d_ts[0]),
+                                                                self.disp_unit))
 
         # Slope estimation
         estimate_slope(d_ts[0], self.yearList, ex_flag=self.ex_flag, disp_unit=self.disp_unit)
@@ -736,6 +748,34 @@ class timeseriesViewer():
 
             # plot time-series displacement
             self.plot_point_timeseries((y, x))
+        return
+
+
+    def on_key_event(self, event):
+        """Slide images with left/right key on keyboard"""
+        if event.inaxes and event.inaxes.figure == self.fig_img:
+            idx = None
+            if event.key == 'left':
+                idx = max(self.idx - 1, 0)
+            elif event.key == 'right':
+                idx = min(self.idx + 1, self.num_date - 1)
+
+            if idx is not None and idx != self.idx:
+                # update title
+                disp_date = self.dates[idx].strftime('%Y-%m-%d')
+                self.ax_img.set_title('N = {n}, Time = {t}'.format(n=idx, t=disp_date),
+                                      fontsize=self.font_size)
+                # read data
+                data_img = np.array(self.ts_data[0][idx, :, :])
+                data_img[self.mask == 0] = np.nan
+                if self.wrap:
+                    if self.disp_unit_img == 'radian':
+                        data_img *= self.range2phase
+                    data_img = ut.wrap(data_img, wrap_range=self.wrap_range)
+                # update data
+                self.img.set_data(data_img)
+                self.idx = idx
+                self.fig_img.canvas.draw()
         return
 
 
