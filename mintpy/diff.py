@@ -114,7 +114,7 @@ def diff_file(file1, file2, outFile=None, force=False):
         # consider different reference_date/pixel
         data2 = readfile.read(file2[0], datasetName=dateListShared)[0] * unit_fac
         if ref_date:
-            data2 -= np.tile(data2[obj2.dateList.index(ref_date), :, :],
+            data2 -= np.tile(data2[dateListShared.index(ref_date), :, :],
                              (data2.shape[0], 1, 1))
         if ref_y and ref_x:
             data2 -= np.tile(data2[:, ref_y, ref_x].reshape(-1, 1, 1),
