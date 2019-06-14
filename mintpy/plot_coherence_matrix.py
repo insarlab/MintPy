@@ -18,9 +18,18 @@ from mintpy import view
 
 ###########################  Sub Function  #############################
 EXAMPLE = """example:
-  plot_coherence_matrix.py  inputs/ifgramStack.h5  --yx 277 1069
-  plot_coherence_matrix.py  inputs/ifgramStack.h5  --yx 277 1069  --map-file velocity.h5 --map-plot-cmd 'view.py {} --wrap --wrap-range -3 3 --sub-x 900 1400 --sub-y 0 500'
-  plot_coherence_matrix.py  inputs/ifgramStack.h5  --lalo -0.8493 -91.1510 -c RdBu
+  plot_coherence_matrix.py inputs/ifgramStack.h5
+  plot_coherence_matrix.py inputs/ifgramStack.h5 --yx 277 1069
+  plot_coherence_matrix.py inputs/ifgramStack.h5 --lalo -0.8493 -91.1510 -c RdBu
+
+  # left: map view
+  plot_coherence_matrix.py inputs/ifgramStack.h5 --view-cmd "view.py {} --dem inputs/gsi10m.dem.wgs84"
+  plot_coherence_matrix.py inputs/ifgramStack.h5 --view-cmd 'view.py {} --wrap --wrap-range -3 3"
+  plot_coherence_matrix.py inputs/ifgramStack.h5 --view-cmd 'view.py {} --sub-x 900 1400 --sub-y 0 500'
+
+  # right: matrix view
+  # show color jump same as the coherence threshold in network inversion with pixel-wised masking
+  plot_coherence_matrix.py inputs/ifgramStack.h5 --cmap-vlist 0 0.4 1
 """
 
 def create_parser():
@@ -35,8 +44,10 @@ def create_parser():
                         help='Point of interest in lat/lon')
     parser.add_argument('--lookup','--lut', dest='lookup_file',
                         help='Lookup file to convert lat/lon into y/x')
-    parser.add_argument('-c','--cmap', dest='colormap', default='truncate_RdBu',
-                        help='Colormap for coherence matrix. Default: truncate_RdBu')
+    parser.add_argument('-c','--cmap', dest='cmap_name', default='truncate_RdBu',
+                        help='Colormap for coherence matrix.\nDefault: truncate_RdBu')
+    parser.add_argument('--cmap-vlist', dest='cmap_vlist', type=float, nargs=3, default=[0.0, 0.7, 1.0],
+                        help='start/jump/end fraction for truncated colormap. Default: 0.0 0.7 1.0')
     parser.add_argument('--figsize','--fs', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
                         help='figure size in inches. Default: [8, 4]')
 
@@ -45,6 +56,12 @@ def create_parser():
     parser.add_argument('--view-cmd', dest='view_cmd', default='view.py {} --wrap --noverbose ',
                         help='view.py command to plot the input map file\n'+
                              'Default: view.py img_file --wrap --noverbose')
+
+    # aux files
+    parser.add_argument('--tcoh', dest='tcoh_file', default='temporalCoherence.h5',
+                        help='temporal coherence file.')
+    parser.add_argument('-t','--template', dest='template_file', default='smallbaselineApp.cfg',
+                        help='temporal file.')
 
     parser.add_argument('--save', dest='save_fig',
                         action='store_true', help='save the figure')
@@ -61,6 +78,12 @@ def cmd_line_parse(iargs=None):
 
     if not os.path.isfile(inps.img_file):
         raise SystemExit('ERROR: input image file not found: {}'.format(inps.img_file))
+
+    if not os.path.isfile(inps.tcoh_file):
+        inps.tcoh_file = None
+
+    if not os.path.isfile(inps.template_file):
+        inps.tcoh_file = None
 
     # verbose print using --noverbose option
     global vprint
@@ -137,6 +160,20 @@ class networkViewer():
             fig_size = pp.auto_figure_size(ds_shape, disp_cbar=True, ratio=0.7)
             self.fig_size = [fig_size[0]+fig_size[1], fig_size[1]]
             vprint('create figure in size of {} inches'.format(self.fig_size))
+
+        # read aux data
+        # 1. temporal coherence value
+        self.tcoh = None
+        if self.tcoh_file:
+            self.tcoh = readfile.read(self.tcoh_file)[0]
+        # 2. minimum used coherence from template file
+        self.min_coh_used = 0.0
+        if self.template_file:
+            template = readfile.read_template(self.template_file)
+            template = ut.check_template_auto_value(template)
+            if template['mintpy.networkInversion.maskDataset'] == 'coherence':
+                self.min_coh_used = float(template['mintpy.networkInversion.maskThreshold'])
+                vprint('Pixel-wised masking is applied in invert_network step')
         return
 
     def plot(self):
@@ -158,6 +195,7 @@ class networkViewer():
 
         # Axes 2 - coherence matrix
         self.ax_mat = self.fig.add_axes([0.55, 0.125, 0.40, 0.75])
+        self.colormap = pp.ColormapExt(self.cmap_name, vlist=self.cmap_vlist).colormap
         if self.yx:
             self.plot_coherence_matrix4pixel(self.yx)
 
@@ -171,20 +209,37 @@ class networkViewer():
         """Plot coherence matrix for one pixel
         Parameters: yx : list of 2 int
         """
+        self.ax_mat.cla()
+
         # read coherence
         box = (yx[1], yx[0], yx[1]+1, yx[0]+1)
         coh = readfile.read(self.ifgram_file, datasetName='coherence', box=box)[0]
+
+        # ex_date for pixel-wise masking during network inversion
+        ex_date12_list = self.ex_date12_list[:]   #local copy
+        if self.min_coh_used > 0.:
+            ex_date12_list += np.array(self.date12_list)[coh < self.min_coh_used].tolist()
+            ex_date12_list = sorted(list(set(ex_date12_list)))
+
         # prep metadata
         plotDict = {}
         plotDict['fig_title'] = 'Y = {}, X = {}'.format(yx[0], yx[1])
+        # display temporal coherence value of the pixel
+        if self.tcoh_file:
+            tcoh = self.tcoh[yx[0], yx[1]]
+            plotDict['fig_title'] += ', tcoh = {:.2f}'.format(tcoh)
         plotDict['colormap'] = self.colormap
         plotDict['disp_legend'] = False
         # plot
         coh_mat = pp.plot_coherence_matrix(self.ax_mat,
                                            date12List=self.date12_list,
                                            cohList=coh.tolist(),
-                                           date12List_drop=self.ex_date12_list,
+                                           date12List_drop=ex_date12_list,
                                            plot_dict=plotDict)[1]
+
+        self.ax_mat.annotate('ifgrams\navailable', xy=(0.05, 0.05), xycoords='axes fraction', fontsize=12)
+        self.ax_mat.annotate('ifgrams\nused', ha='right', xy=(0.95, 0.85), xycoords='axes fraction', fontsize=12)
+
         self.fig.canvas.draw()
 
         # status bar

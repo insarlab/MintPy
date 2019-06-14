@@ -198,8 +198,7 @@ class ColormapExt(mpl.cm.ScalarMappable):
         cmap_list : list of string for supported colormap names
         colormap  : colormap object to be used for plotting
         cmap_lut  : int, number of increment in the lookup table
-        cmap_name : string, number of colormap
-                    default colormap name for matplotlib 2.0 - viridis
+        cmap_name : string, colormap name. Default: viridis
     """
 
     def __init__(self, cmap_name, cmap_lut=256, vlist=[0.0, 0.7, 1.0]):
@@ -233,12 +232,15 @@ class ColormapExt(mpl.cm.ScalarMappable):
                                                          cmap_lut=self.cmap_lut)
             # truncated colormap
             elif self.cmap_name.startswith('truncate_'):
+                self.cmap_lut = 2560 #higher color resolution to distinguish colors near the jump value
                 v0, v_jump, v1 = self.vlist
-                n1 = np.ceil(200.0 * (v_jump - v0) / (v1 - v0)).astype('int')
+                n1 = np.rint(self.cmap_lut * (v_jump - v0) / (v1 - v0)).astype('int')
                 cmap = self.get_single_colormap(self.cmap_name.replace('truncate_', ''))
                 colors1 = cmap(np.linspace(0.0, 0.3, n1))
-                colors2 = cmap(np.linspace(0.6, 1.0, 200 - n1))
-                self.colormap = LinearSegmentedColormap.from_list(self.cmap_name, np.vstack((colors1, colors2)))
+                colors2 = cmap(np.linspace(0.6, 1.0, self.cmap_lut - n1))
+                self.colormap = LinearSegmentedColormap.from_list(name=self.cmap_name,
+                                                                  colors=np.vstack((colors1, colors2)),
+                                                                  N=self.cmap_lut)
             else:
                 msg = 'un-recognized input colormap name: {}\n'.format(self.cmap_name)
                 msg += 'supported colormap:\n{}'.format(self.cmap_list)
@@ -1464,7 +1466,14 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
     if not 'disp_cbar'   in plot_dict.keys():   plot_dict['disp_cbar']   = True
     if not 'legend_loc'  in plot_dict.keys():   plot_dict['legend_loc']  = 'best'
     if not 'disp_legend' in plot_dict.keys():   plot_dict['disp_legend'] = True
-    cmap = ColormapExt(plot_dict['colormap']).colormap
+
+    # support input colormap: string for colormap name, or colormap object directly
+    if isinstance(plot_dict['colormap'], str):
+        cmap = ColormapExt(plot_dict['colormap']).colormap
+    elif isinstance(plot_dict['colormap'], LinearSegmentedColormap):
+        cmap = plot_dict['colormap']
+    else:
+        raise ValueError('unrecognized colormap input: {}'.format(plot_dict['colormap']))
 
     date12List = ptime.yyyymmdd_date12(date12List)
     coh_mat = pnet.coherence_matrix(date12List, cohList)

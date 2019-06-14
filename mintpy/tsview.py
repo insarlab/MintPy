@@ -237,6 +237,14 @@ def read_init_info(inps):
     if inps.auto_flip:
         inps.flip_lr, inps.flip_ud = pp.auto_flip_direction(atr, print_msg=inps.print_msg)
 
+    # Transparency - Alpha
+    if not inps.transparency:
+        # Auto adjust transparency value when showing shaded relief DEM
+        if inps.dem_file and inps.disp_dem_shade:
+            inps.transparency = 0.7
+        else:
+            inps.transparency = 1.0
+
     # display unit ans wrap
     # if wrap_step == 2*np.pi (default value), set disp_unit_img = radian;
     # otherwise set disp_unit_img = disp_unit
