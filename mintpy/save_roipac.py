@@ -78,7 +78,9 @@ def cmd_line_parse(iargs=None):
 def read_data(inps):
     # metadata
     atr = readfile.read_attribute(inps.file)
-    range2phase = -4 * np.pi / float(atr['WAVELENGTH'])
+
+    if 'WAVELENGTH' in atr.keys():
+        range2phase = -4 * np.pi / float(atr['WAVELENGTH'])
 
     # change reference pixel
     if inps.ref_yx:
@@ -225,26 +227,24 @@ def read_data(inps):
         # read data
         data = readfile.read(inps.file, datasetName=inps.dset)[0]
 
-        # metadata
-        if 'coherence' in k.lower():
-            atr['FILE_TYPE'] = '.cor'
-
-        elif k in ['mask']:
-            atr['FILE_TYPE'] = '.msk'
-            atr['DATA_TYPE'] = 'byte'
-
-        elif k in ['geometry'] and inps.dset == 'height':
-            if 'Y_FIRST' in atr.keys():
-                atr['FILE_TYPE'] = '.dem'
-                atr['DATA_TYPE'] = 'int16'
-            else:
-                atr['FILE_TYPE'] = '.hgt'
-            atr['UNIT'] = 'm'
+        if inps.outfile:
+            fext = os.path.splitext(inps.outfile)[1]
+            atr['FILE_TYPE'] = fext
         else:
-            atr['FILE_TYPE'] = '.unw'
+            # metadata
+            if 'coherence' in k.lower():
+                atr['FILE_TYPE'] = '.cor'
+            elif k in ['mask']:
+                atr['FILE_TYPE'] = '.msk'    
+            elif k in ['geometry'] and inps.dset == 'height':
+                if 'Y_FIRST' in atr.keys():
+                    atr['FILE_TYPE'] = '.dem'
+                else:
+                    atr['FILE_TYPE'] = '.hgt'
+                atr['UNIT'] = 'm'
+            else:
+                atr['FILE_TYPE'] = '.unw'
 
-        # output filename
-        if not inps.outfile:
             inps.outfile = '{}{}'.format(os.path.splitext(inps.file)[0], atr['FILE_TYPE'])
 
     # get rid of starting . if output as hdf5 file
@@ -262,7 +262,9 @@ def clean_metadata4roipac(atr_in):
         atr[key] = str(value)
 
     # drop the following keys
-    key_list = ['width', 'Width', 'samples', 'length', 'lines']
+    key_list = ['width', 'Width', 'samples', 'length', 'lines',
+                'SUBSET_XMIN','SUBSET_XMAX','SUBSET_YMIN','SUBSET_YMAX',
+               ]
     for key in key_list:
         if key in atr.keys():
             atr.pop(key)

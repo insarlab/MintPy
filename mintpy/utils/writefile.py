@@ -119,6 +119,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
 
         # Write Data File
         print('write {}'.format(out_file))
+        # determined by ext
         if ext in ['.unw', '.cor', '.hgt']:
             write_float32(data_list[0], out_file)
             meta['DATA_TYPE'] = 'float32'
@@ -127,6 +128,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             meta['DATA_TYPE'] = 'int16'
         elif ext in ['.trans']:
             write_float32(data_list[0], data_list[1], out_file)
+            meta['DATA_TYPE'] = 'float32'
         elif ext in ['.utm_to_rdc', '.UTM_TO_RDC']:
             data = np.zeros(rg.shape, dtype=np.complex64)
             data.real = datasetDict['rangeCoord']
@@ -138,6 +140,11 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             write_complex_int16(data_list[0], out_file)
         elif ext == '.int':
             write_complex64(data_list[0], out_file)
+        elif ext == '.msk':
+            write_byte(data_list[0], out_file)
+            meta['DATA_TYPE'] = 'byte'
+
+        # determined by DATA_TYPE
         elif meta['DATA_TYPE'].lower() in ['float32', 'float']:
             write_real_float32(data_list[0], out_file)
         elif meta['DATA_TYPE'].lower() in ['int16', 'short']:
@@ -267,6 +274,7 @@ def write_float32(*args):
         return
 
     data = np.hstack((amp, pha)).flatten()
+    data = np.array(data, dtype=np.float32)
     data.tofile(out_file)
     return out_file
 
