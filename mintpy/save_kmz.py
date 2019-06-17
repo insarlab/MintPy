@@ -104,11 +104,11 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
-def plot_colorbar(out_file, vmin, vmax, cmap='jet', figsize=(0.18, 3.6)):
+def plot_colorbar(out_file, vmin, vmax, unit='cm/year', cmap='jet', figsize=(0.18, 3.6)):
     fig, cax = plt.subplots(figsize=figsize)
     norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)  # normalize velocity colors between 0.0 and 1.0
     cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, orientation='vertical')
-    cbar.set_label('{} [{}]'.format("Mean LOS velocity", "cm/year"), fontsize=12)
+    cbar.set_label('{} [{}]'.format("Mean LOS velocity", unit), fontsize=12)
     cbar.locator = mpl.ticker.MaxNLocator(nbins=7)
     cbar.update_ticks()
     cbar.ax.tick_params(which='both', labelsize=12)
@@ -122,6 +122,7 @@ def generate_cbar_element(cbar_png_file, inps):
     cbar_png_file = plot_colorbar(out_file=cbar_png_file,
                                   vmin=inps.vlim[0],
                                   vmax=inps.vlim[1],
+                                  unit=inps.disp_unit,
                                   cmap=inps.colormap)
 
     cbar_overlay = KML.ScreenOverlay(
