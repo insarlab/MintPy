@@ -187,6 +187,35 @@ def touch(fname_list, times=None):
 
 
 #################################### Geometry ##########################################
+def get_lat_lon(meta, box=None):
+    """extract lat/lon info of all grids into 2D matrix
+    Parameters: meta : dict, including X/Y_FIRST/STEP and LENGTH/WIDTH info
+                box  : 4-tuple of int for (x0, y0, x1, y1)
+    Returns:    lats : 2D np.array for latitude  in size of (length, width)
+                lons : 2D np.array for longitude in size of (length, width)
+    """
+    length, width = int(meta['LENGTH']), int(meta['WIDTH'])
+    if box is None:
+        box = (0, 0, width, length)
+
+    # generate 2D matrix for lat/lon
+    lat_num = box[3] - box[1]
+    lon_num = box[2] - box[0]
+    lat_step = float(meta['Y_STEP'])
+    lon_step = float(meta['X_STEP'])
+
+    lat0 = float(meta['Y_FIRST']) + lat_step * box[1]
+    lon0 = float(meta['X_FIRST']) + lon_step * box[0]
+    lat1 = lat0 + lat_step * lat_num
+    lon1 = lon0 + lon_step * lon_num
+    lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
+                          lon0:lon1:lon_num*1j]
+
+    lats = np.array(lats, dtype=np.float32)
+    lons = np.array(lons, dtype=np.float32)
+    return lats, lons
+
+
 def azimuth2heading_angle(az_angle):
     """Convert azimuth angle from ISCE los.rdr band2 into satellite orbit heading angle
     ISCE los.band2 is azimuth angle of LOS vector from ground target to the satellite 

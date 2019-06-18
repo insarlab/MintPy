@@ -14,23 +14,6 @@ import matplotlib.pyplot as plt
 from mintpy.utils import ptime
 
 
-def get_lat_lon(atr):
-    '''Get lat/lon of all pixels'''
-    length = int(atr['LENGTH'])
-    width = int(atr['WIDTH'])
-    lat0 = float(atr['Y_FIRST'])
-    lon0 = float(atr['X_FIRST'])
-    lat_step = float(atr['Y_STEP'])
-    lon_step = float(atr['X_STEP'])
-    lat1 = lat0 + lat_step*length
-    lon1 = lon0 + lon_step*width
-
-    lat, lon = np.mgrid[lat0:lat1:length*1j, lon0:lon1:width*1j]
-    lat = lat.flatten()
-    lon = lon.flatten()
-    return lat, lon
-
-
 def sample_data(lat, lon, mask=None, num_sample=500):
     ''''''
     # Flatten input data
