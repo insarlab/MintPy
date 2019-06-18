@@ -65,7 +65,7 @@ cd ~/python
 git clone https://github.com/insarlab/MintPy.git
 
 # download PyAPS
-mdkir -p PyAPS; cd PyAPS
+mkdir -p PyAPS; cd PyAPS
 git clone https://github.com/yunjunz/pyaps3.git
 
 # install miniconda
@@ -111,7 +111,7 @@ cd ~/python
 git clone https://github.com/insarlab/MintPy.git
 
 # download PyAPS
-mdkir -p PyAPS; cd PyAPS
+mkdir -p PyAPS; cd PyAPS
 git clone https://github.com/yunjunz/pyaps3.git
 
 # install dependencies with macports
