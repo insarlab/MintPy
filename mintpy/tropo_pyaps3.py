@@ -459,14 +459,6 @@ def get_bounding_box(meta):
     return lat0, lat1, lon0, lon1
 
 
-def get_lat_lon(meta):
-    """Get 2D array of lat and lon from metadata"""
-    length, width = int(meta['LENGTH']), int(meta['WIDTH'])
-    lat0, lat1, lon0, lon1 = get_bounding_box(meta)
-    lat, lon = np.mgrid[lat0:lat1:length*1j, lon0:lon1:width*1j]
-    return lat, lon
-
-
 def get_delay_timeseries(inps, atr):
     """Calculate delay time-series and write it to HDF5 file.
     Parameters: inps : namespace, all input parameters
@@ -499,7 +491,7 @@ def get_delay_timeseries(inps, atr):
         inps.lat = geom_obj.read(datasetName='latitude')
         inps.lon = geom_obj.read(datasetName='longitude')
     else:
-        inps.lat, inps.lon = get_lat_lon(geom_obj.metadata)
+        inps.lat, inps.lon = ut.get_lat_lon(geom_obj.metadata)
 
     # calculate phase delay
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])

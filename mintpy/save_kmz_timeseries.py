@@ -43,22 +43,22 @@ def create_parser():
     args = parser.add_argument_group('Input files', 'File/Dataset to display')
 
     args.add_argument('ts_file', metavar='timeseries_file', help='Timeseries file to generate KML for')
-    args.add_argument('--vel', dest='vel_file', metavar='velocity_file',
+    args.add_argument('--vel', dest='vel_file', metavar='FILE',
                       help='Velocity file, used for the color of dot')
-    args.add_argument('--tcoh', dest='tcoh_file', metavar='temporal_coh_file',
+    args.add_argument('--tcoh', dest='tcoh_file', metavar='FILE',
                       help='temporal coherence file, used for stat info')
-    args.add_argument('--mask', dest='mask_file', metavar='mask_file',
+    args.add_argument('--mask', dest='mask_file', metavar='FILE',
                       help='Mask file')
 
     opts = parser.add_argument_group('Display options', 'configurations for the display')
     opts.add_argument('--steps', type=int, nargs=3, default=[20, 5, 2],
                       help='list of steps for output pixel. Default: 20 5 2')
-    opts.add_argument('--lods', '--level-of-details', dest='lods', type=int, nargs=3, default=[1500, 4000, -1],
+    opts.add_argument('--level-of-details','--lods', dest='lods', type=int, nargs=3, default=[1500, 4000, -1],
                       help='list of level of details to determine the visible range while browering\n'+
                            'Ref: https://developers.google.com/kml/documentation/kml_21tutorial')
-    opts.add_argument('-v','--vlim', dest='vlim', nargs=2, metavar=('VMIN', 'VMAX'), type=float,
+    opts.add_argument('--vlim','-v', dest='vlim', nargs=2, metavar=('VMIN', 'VMAX'), type=float,
                       help='Display limits for matrix plotting.')
-    opts.add_argument('-c', '--colormap', dest='colormap', default='jet',
+    opts.add_argument('--colormap','-c', dest='colormap', default='jet',
                       help='colormap used for display, i.e. jet, RdBu, hsv, jet_r, temperature, viridis,  etc.\n'
                            'colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html\n'
                            'colormaps in GMT - http://soliton.vm.bytemark.co.uk/pub/cpt-city/')
@@ -96,33 +96,9 @@ def get_aux_filename(inps):
     return inps
 
 
-def get_lat_lon(meta, box=None):
-    """extract lat/lon info of all grids into 2D matrix
-    Parameters: meta : dict, including X/Y_FIRST/STEP and LENGTH/WIDTH info
-                box  : 4-tuple of int for (x0, y0, x1, y1)
-    Returns:    lats : 2D np.array for latitude  in size of (length, width)
-                lons : 2D np.array for longitude in size of (length, width)
-    """
-    length, width = int(meta['LENGTH']), int(meta['WIDTH'])
-    if box is None:
-        box = (0, 0, width, length)
-
-    # generate 2D matrix for lat/lon
-    lat_num = box[3] - box[1]
-    lon_num = box[2] - box[0]
-    lat_step = float(meta['Y_STEP'])
-    lon_step = float(meta['X_STEP'])
-    lat0 = float(meta['Y_FIRST']) + lat_step * box[1]
-    lon0 = float(meta['X_FIRST']) + lon_step * box[0]
-    lat1 = lat0 + lat_step * (lat_num - 1)
-    lon1 = lon0 + lon_step * (lon_num - 1)
-    lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
-                          lon0:lon1:lon_num*1j]
-    return lats, lons
-
 def flatten_lat_lon(box, ts_obj, coords=None):
     if coords is None:
-        lats, lons = get_lat_lon(ts_obj.metadata, box=box)
+        lats, lons = ut.get_lat_lon(ts_obj.metadata, box=box)
 
     lats = sorted(lats.flatten())
     lons = sorted(lons.flatten())
@@ -351,7 +327,7 @@ def create_kml_document(inps, box_list, ts_obj, step):
         num_date = len(dates)
 
         # 1.2 Parse Spatial coordinates
-        lats, lons = get_lat_lon(ts_obj.metadata, box=box)
+        lats, lons = ut.get_lat_lon(ts_obj.metadata, box=box)
         rows, cols = np.mgrid[box[1]:box[3] - 1:length * 1j, box[0]:box[2] - 1:width * 1j]
 
         # 1.3 Read Velocity / time-series / temporal coherence data
@@ -595,7 +571,7 @@ def main(iargs=None):
     ts_obj.open()
     length, width = ts_obj.length, ts_obj.width
     inps.metadata = ts_obj.metadata
-    lats, lons = get_lat_lon(ts_obj.metadata)
+    lats, lons = ut.get_lat_lon(ts_obj.metadata)
     print('input data shape in row/col: {}/{}'.format(length, width))
 
     vel = readfile.read(inps.vel_file, datasetName='velocity')[0] * 100.
