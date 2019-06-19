@@ -222,7 +222,7 @@ def utm_dim_to_rsc(fname):
     # Add values to dict
     atr = {}
     atr['PROCESSOR'] = 'snap'
-    atr['FILE_TYPE'] = os.path.basename(fname).split('_')[-2] #first string after dates seperated by _
+    atr['FILE_TYPE'] = os.path.basename(fname).split('_')[-2] # yyyymmdd_yyyymmdd_type_tc.dim
     atr["WAVELENGTH"] = rf
     atr["P_BASELINE_TOP_HDR"], atr["P_BASELINE_BOTTOM_HDR"] = bp[1], bp[1]
     atr["DATE12"] = str(master) + "-" + str(slave)
