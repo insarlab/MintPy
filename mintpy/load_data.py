@@ -55,7 +55,7 @@ TEMPLATE = """template:
 ########## 1. Load Data (--load to exit after this step)
 ## auto - automatic path pattern for Univ of Miami file structure
 ## load_data.py -H to check more details and example inputs.
-mintpy.load.processor      = auto  #[isce,roipac,gamma,], auto for isce
+mintpy.load.processor      = auto  #[isce,roipac,gamma,snap], auto for isce
 mintpy.load.updateMode     = auto  #[yes / no], auto for yes, skip re-loading if HDF5 files are complete
 mintpy.load.compression    = auto  #[gzip / lzf / no], auto for no [recommended].
 ##---------for ISCE only:
@@ -111,7 +111,7 @@ def create_parser():
     parser.add_argument('--project', type=str, dest='PROJECT_NAME',
                         help='project name of dataset for INSARMAPS Web Viewer')
     parser.add_argument('--processor', type=str, dest='processor',
-                        choices={'isce', 'roipac', 'gamma', 'doris', 'gmtsar'},
+                        choices={'isce', 'roipac', 'gamma', 'doris', 'gmtsar', 'snap'},
                         help='InSAR processor/software of the file', default='isce')
     parser.add_argument('--enforce', '-f', dest='updateMode', action='store_false',
                         help='Disable the update mode, or skip checking dataset already loaded.')
@@ -452,7 +452,7 @@ def prepare_metadata(inpsDict):
     print('-'*50)
     print('prepare metadata files for {} products'.format(processor))
 
-    if processor in ['gamma', 'roipac']:
+    if processor in ['gamma', 'roipac', 'snap']:
         for key in [i for i in inpsDict.keys() if (i.startswith('mintpy.load.') and i.endswith('File'))]:
             if len(glob.glob(str(inpsDict[key]))) > 0:
                 cmd = '{} {}'.format(script_name, inpsDict[key])
