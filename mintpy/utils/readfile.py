@@ -295,7 +295,7 @@ def read_binary_file(fname, datasetName=None, box=None):
     if processor in ['isce']:
         # default short name for data type from ISCE
         dataTypeDict = {
-            'byte': 'bool_',
+            'byte': 'int8',
             'float': 'float32',
             'double': 'float64',
             'cfloat': 'complex64',
