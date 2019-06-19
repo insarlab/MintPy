@@ -52,36 +52,42 @@ DEFAULT_TEMPLATE = """template:
            auto_path.gammaAutoPath)
 
 TEMPLATE = """template:
-########## 1. Load Data (--load to exit after this step)
+########## 1. Load Data
 ## auto - automatic path pattern for Univ of Miami file structure
 ## load_data.py -H to check more details and example inputs.
-mintpy.load.processor      = auto  #[isce,roipac,gamma,], auto for isce
+## compression to save disk usage for ifgramStack.h5 file:
+## no   - save   0% disk usage, fast [default]
+## lzf  - save ~57% disk usage, relative slow
+## gzip - save ~62% disk usage, very slow [not recommend]
+mintpy.load.processor      = auto  #[isce,roipac,gamma,snap], auto for isce
 mintpy.load.updateMode     = auto  #[yes / no], auto for yes, skip re-loading if HDF5 files are complete
-mintpy.load.compression    = auto  #[gzip / lzf / no], auto for no [recommended].
-##---------for ISCE only:
+mintpy.load.compression    = auto  #[gzip / lzf / no], auto for no.
+##---------metadata (for ISCE and SNAP):
+## ./master/IW1.xml        for ISCE/topsStack
+## ./masterShelve/data.dat for ISCE/stripmapStack
+## date1_date2_unw_tc.dim  for SNAP
 mintpy.load.metaFile       = auto  #[path2metadata_file]
-mintpy.load.baselineDir    = auto  #[path2baseline_dir]
+##---------baseline directory (for ISCE):
+mintpy.load.baselineDir    = auto  #[path2baseline_dir], i.e.: ./baselines
 ##---------interferogram datasets:
 mintpy.load.unwFile        = auto  #[path2unw_file]
 mintpy.load.corFile        = auto  #[path2cor_file]
-mintpy.load.connCompFile   = auto  #[path2conn_file]
-mintpy.load.intFile        = auto  #[path2int_file]
-mintpy.load.ionoFile       = auto  #[path2iono_file]
+mintpy.load.connCompFile   = auto  #[path2conn_file], optional
+mintpy.load.intFile        = auto  #[path2int_file], optional
+mintpy.load.ionoFile       = auto  #[path2iono_file], optional
 ##---------geometry datasets:
 mintpy.load.demFile        = auto  #[path2hgt_file]
-mintpy.load.lookupYFile    = auto  #[path2lat_file]]
-mintpy.load.lookupXFile    = auto  #[path2lon_file]
-mintpy.load.incAngleFile   = auto  #[path2los_file]
-mintpy.load.azAngleFile    = auto  #[path2los_file]
-mintpy.load.shadowMaskFile = auto  #[path2shadow_file]
-mintpy.load.waterMaskFile  = auto  #[path2water_mask_file]
-mintpy.load.bperpFile      = auto  #[path2bperp_file]
-
-## 1.1 Subset (optional)
+mintpy.load.lookupYFile    = auto  #[path2lat_file], not required for geocoded data
+mintpy.load.lookupXFile    = auto  #[path2lon_file], not required for geocoded data
+mintpy.load.incAngleFile   = auto  #[path2los_file], optional
+mintpy.load.azAngleFile    = auto  #[path2los_file], optional
+mintpy.load.shadowMaskFile = auto  #[path2shadow_file], optional
+mintpy.load.waterMaskFile  = auto  #[path2water_mask_file], optional
+mintpy.load.bperpFile      = auto  #[path2bperp_file], optional
+##---------subset (optional):
 ## if both yx and lalo are specified, use lalo option unless a) no lookup file AND b) dataset is in radar coord
-mintpy.subset.lalo     = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
-mintpy.subset.yx       = auto    #[1800:2000,700:800 / no], auto for no
-mintpy.subset.tightBox = auto    #[yes / no], auto for yes, tight bounding box for files in geo coord
+mintpy.subset.yx     = auto    #[1800:2000,700:800 / no], auto for no
+mintpy.subset.lalo   = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
 """
 
 NOTE = """NOTE:
@@ -111,7 +117,7 @@ def create_parser():
     parser.add_argument('--project', type=str, dest='PROJECT_NAME',
                         help='project name of dataset for INSARMAPS Web Viewer')
     parser.add_argument('--processor', type=str, dest='processor',
-                        choices={'isce', 'roipac', 'gamma', 'doris', 'gmtsar'},
+                        choices={'isce', 'roipac', 'gamma', 'doris', 'gmtsar', 'snap'},
                         help='InSAR processor/software of the file', default='isce')
     parser.add_argument('--enforce', '-f', dest='updateMode', action='store_false',
                         help='Disable the update mode, or skip checking dataset already loaded.')
@@ -343,6 +349,9 @@ def read_inps_dict2geometry_dict_object(inpsDict):
     elif inpsDict['processor'] in ['roipac', 'gamma']:
         datasetName2templateKey.pop('latitude')
         datasetName2templateKey.pop('longitude')
+    elif inpsDict['processor'] in ['snap']:
+        #check again when there is a SNAP product in radar coordiantes
+        pass
     else:
         print('Un-recognized InSAR processor: {}'.format(inpsDict['processor']))
 
@@ -452,7 +461,7 @@ def prepare_metadata(inpsDict):
     print('-'*50)
     print('prepare metadata files for {} products'.format(processor))
 
-    if processor in ['gamma', 'roipac']:
+    if processor in ['gamma', 'roipac', 'snap']:
         for key in [i for i in inpsDict.keys() if (i.startswith('mintpy.load.') and i.endswith('File'))]:
             if len(glob.glob(str(inpsDict[key]))) > 0:
                 cmd = '{} {}'.format(script_name, inpsDict[key])
