@@ -26,6 +26,8 @@ DESCRIPTION = """
   prep_snap is run seperately for unw/ifg/cor files so neeeds seperate .dim/.data products
   with only the relevant band in each product. Use Band Subset > save BEAM-DIMAP file.
 
+  The file name should be yyyymmdd_yyyymmdd_type_tc.dim where type can be filt/unw/coh.
+
   The DEM should be prepared by adding an elevation file to a coregestered product - 
   then extract the elevation band only. Use Band Subset > save BEAM-DIMAP file
 
@@ -220,7 +222,7 @@ def utm_dim_to_rsc(fname):
     # Add values to dict
     atr = {}
     atr['PROCESSOR'] = 'snap'
-    atr['FILE_TYPE'] = ""
+    atr['FILE_TYPE'] = os.path.basename(fname).split('_')[2] #first string after dates seperated by _
     atr["WAVELENGTH"] = rf
     atr["P_BASELINE_TOP_HDR"], atr["P_BASELINE_BOTTOM_HDR"] = bp[1], bp[1]
     atr["DATE12"] = str(master) + "-" + str(slave)
