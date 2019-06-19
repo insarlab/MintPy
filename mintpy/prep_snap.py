@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2017-2019, Zhang Yunjun                     #
-# Original Author (prep_roipac):  Zhang Yunjun             #
-# Modified by Andre Theron (andretheronsa@gmail.com)       #
+# Copyright(c) 2019, Andre Theron, Zhang Yunjun            #
+# Author: Andre Theron (andretheronsa@gmail.com), Jun 2019 #
 ############################################################
 
 import os
 import argparse
-from mintpy.utils import readfile, writefile, utils as ut
 import datetime
 import math
+from mintpy.utils import readfile, writefile, utils as ut
+
 
 EXAMPLE = """example:
   prep_snap.py  ./201090101_20190112/201090101_20190112_filt_tc.dim
@@ -57,8 +57,7 @@ DESCRIPTION = """
 """
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Prepare attributes file for SNAP products.\n' +
-                                     DESCRIPTION,
+    parser = argparse.ArgumentParser(description='Prepare attributes file for SNAP products.\n'+DESCRIPTION,
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
@@ -81,6 +80,48 @@ def cmd_line_parse(iargs=None):
         raise ValueError(msg)
     # Check that input dim is interferogram
     return inps
+
+def get_ellpsoid_local_radius(xyz):
+    """Calculate satellite height and ellpsoid local radius from orbital state vector
+    Parameters: xyz : tuple of 3 float, orbital state vector
+    Reference: isce2.isceobj.Planet
+    """
+
+    # Code simplified from from ISCE2.isceobj.Planet.xyz_to_llh())
+    a = 6378137.000 # Semimajor of WGS84 - from ISCE2.isceobj.Planet.AstronomicalHandbook
+    e2 = 0.0066943799901 # Eccentricity squared of WGS84 from ISCE2.isceobj.Planet.AstronomicalHandbook
+    a2 = a**2
+    e4 = e2**2
+    r_llh = [0]*3
+    d_llh = [[0]*3 for i in range(len(xyz))]
+    xy2 = xyz[0]**2+xyz[1]**2
+    p = (xy2)/a2
+    q = (1.-e2)*xyz[2]**2/a2
+    r = (p+q-e4)/6.
+    s = e4*p*q/(4.*r**3)
+    t = (1.+s+math.sqrt(s*(2.+s)))**(1./3.)
+    u = r*(1.+t+1./t)
+    v = math.sqrt(u**2+e4*q)
+    w = e2*(u+v-q)/(2.*v)
+    k = math.sqrt(u+v+w**2)-w
+    D = k*math.sqrt(xy2)/(k+e2)
+    r_llh[0] = math.atan2(xyz[2],D)
+    r_llh[1] = math.atan2(xyz[1],xyz[0])
+    r_llh[2] = (k+e2-1.)*math.sqrt(D**2+xyz[2]**2)/k
+    d_llh[0] = math.degrees(r_llh[0])
+    d_llh[1] = math.degrees(r_llh[1])
+    d_llh[2] = r_llh[2]
+    height = r_llh[2]
+
+    # Calculate local radius
+    # code from ISCE2.isceobj.Ellipsoid.localRadius()
+    b = a * (1.0-e2)**0.5
+    latg = math.atan(math.tan(math.radians(d_llh[0]))*a**2/b**2)
+    arg = math.cos(latg)**2/a**2 + math.sin(latg)**2/b**2
+    earth_radius = 1.0/math.sqrt(arg)
+
+    return height, earth_radius
+
 
 # Parse .dim file
 def utm_dim_to_rsc(fname):
@@ -180,40 +221,8 @@ def utm_dim_to_rsc(fname):
     slave_dt = datetime.datetime.strptime(dates[1], "%d%b%Y")
     slave = slave_dt.strftime("%Y%m%d")[2:8]
 
-    # Calculate HEIGHT from orbital state vectors for earth
-    # Code stolen and simplified from from ISCE2.isceobj.Planet.xyz_to_llh())
-    a = 6378137.000 # Semimajor of WGS84 - from ISCE2.isceobj.Planet.AstronomicalHandbook
-    e2 = 0.0066943799901 # Eccentricity squared of WGS84 from ISCE2.isceobj.Planet.AstronomicalHandbook
-    a2 = a**2
-    e4 = e2**2
     xyz = (float(x[0]), float(y[0]), float(z[0])) # Using first state vector for simplicity
-    r_llh = [0]*3
-    d_llh = [[0]*3 for i in range(len(xyz))]
-    xy2 = xyz[0]**2+xyz[1]**2
-    p = (xy2)/a2
-    q = (1.-e2)*xyz[2]**2/a2
-    r = (p+q-e4)/6.
-    s = e4*p*q/(4.*r**3)
-    t = (1.+s+math.sqrt(s*(2.+s)))**(1./3.)
-    u = r*(1.+t+1./t)
-    v = math.sqrt(u**2+e4*q)
-    w = e2*(u+v-q)/(2.*v)
-    k = math.sqrt(u+v+w**2)-w
-    D = k*math.sqrt(xy2)/(k+e2)
-    r_llh[0] = math.atan2(xyz[2],D)
-    r_llh[1] = math.atan2(xyz[1],xyz[0])
-    r_llh[2] = (k+e2-1.)*math.sqrt(D**2+xyz[2]**2)/k
-    d_llh[0] = math.degrees(r_llh[0])
-    d_llh[1] = math.degrees(r_llh[1])
-    d_llh[2] = r_llh[2]
-    height = r_llh[2]
-
-    # Calculate local radius
-    # Code stolen from ISCE2.isceobj.Ellipsoid.localRadius()
-    b = a * (1.0-e2)**0.5
-    latg = math.atan(math.tan(math.radians(d_llh[0]))*a**2/b**2)
-    arg = math.cos(latg)**2/a**2 + math.sin(latg)**2/b**2
-    earth_radius = 1.0/math.sqrt(arg)
+    height, earth_radius = get_ellpsoid_local_radius(xyz)
 
     # Calculate range/azimuth pixel sizes
     range_pixel_size = float(rg_pixel[0]) * math.sin(float(inc_angle_mid))
