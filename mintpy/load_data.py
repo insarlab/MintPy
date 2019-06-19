@@ -340,7 +340,7 @@ def read_inps_dict2geometry_dict_object(inpsDict):
     if inpsDict['processor'] in ['isce', 'doris']:
         datasetName2templateKey.pop('azimuthCoord')
         datasetName2templateKey.pop('rangeCoord')
-    elif inpsDict['processor'] in ['roipac', 'gamma']:
+    elif inpsDict['processor'] in ['roipac', 'gamma', 'snap']:
         datasetName2templateKey.pop('latitude')
         datasetName2templateKey.pop('longitude')
     else:
