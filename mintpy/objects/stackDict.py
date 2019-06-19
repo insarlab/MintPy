@@ -97,7 +97,7 @@ class ifgramStackDict:
         /dropIfgram        1D array of bool    in size of (m,     ).
         /unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
         /coherence         3D array of float32 in size of (m, l, w).
-        /connectComponent  3D array of int16   in size of (m, l, w).           (optional)
+        /connectComponent  3D array of bool    in size of (m, l, w).           (optional)
         /wrapPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
         /iono              3D array of float32 in size of (m, l, w) in radian. (optional)
         /rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
