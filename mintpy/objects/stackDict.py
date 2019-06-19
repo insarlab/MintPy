@@ -97,7 +97,7 @@ class ifgramStackDict:
         /dropIfgram        1D array of bool    in size of (m,     ).
         /unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
         /coherence         3D array of float32 in size of (m, l, w).
-        /connectComponent  3D array of bool    in size of (m, l, w).           (optional)
+        /connectComponent  3D array of int8    in size of (m, l, w).           (optional)
         /wrapPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
         /iono              3D array of float32 in size of (m, l, w) in radian. (optional)
         /rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
@@ -127,7 +127,7 @@ class ifgramStackDict:
             dsShape = (self.numIfgram, self.length, self.width)
             dsDataType = dataType
             if dsName in ['connectComponent']:
-                dsDataType = np.bool_
+                dsDataType = np.byte
             print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
                    ' with compression = {c}').format(d=dsName,
                                                      w=maxDigit,

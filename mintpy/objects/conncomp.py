@@ -27,7 +27,7 @@ class connectComponent:
         unw_file = 'filt_fine.unw'
         # prepare connectComponent object
         atr = readfile.read_attribute(unw_file)
-        conncomp = readfile.read_attribute(unw_file+'.conncomp')[0]
+        conncomp = readfile.read(unw_file+'.conncomp')[0]
         cc = connectComponent(conncomp=conncomp, metadata=atr)
         cc.label()
         cc.find_mst_bridge()
