@@ -6,10 +6,8 @@ import argparse
 import numpy as np
 from mintpy.utils import ptime
 
-EXAMPLE = """ example:
-
-prep_aria.py -w mintpy_SanFran -s stack/stack/ -i stack/incidenceAngle/20150605_20150512.vrt
-
+EXAMPLE = """example:
+  prep_aria.py -w mintpy_SanFran -s stack/stack/ -i stack/incidenceAngle/20150605_20150512.vrt
 """
 
 def create_parser():
@@ -124,8 +122,9 @@ def add_unwrapped_phase(h5File, unwStack, cohStack, connCompStack):
         h5["coherence"][ii,:,:] = bnd.ReadAsArray()
 
         bnd = dsComp.GetRasterBand(ii+1)
-        h5["connectComponent"][ii,:,:] = bnd.ReadAsArray()
-
+        raster = bnd.ReadAsArray()
+        raster[raster<0]=0   # assign pixel with no-data [-1] to zero
+        h5["connectComponent"][ii,:,:] = raster
 
         bperp = float(dsUnw.GetRasterBand(ii+1).GetMetadata("unwrappedPhase")["perpendicularBaseline"])
         h5["bperp"][ii] = -1.0*bperp
