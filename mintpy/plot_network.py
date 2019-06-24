@@ -7,6 +7,7 @@
 
 
 import os
+import sys
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
@@ -33,8 +34,8 @@ DATE12_LIST = """
 EXAMPLE = """example:
   plot_network.py inputs/ifgramStack.h5
   plot_network.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg --nodisplay   #Plot/save figure to files without display
-  plot_network.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg ----show-kept #Do not plot dropped ifgrams
-  plot_network.py inputs/ifgramStack.h5 --save     #save ifgrams info to date12_list.txt file
+  plot_network.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg --show-kept   #Do not plot dropped ifgrams
+  plot_network.py inputs/ifgramStack.h5 --save                                #save ifgrams info to date12_list.txt file
 
   ##Plot network after select_network.py (without ifgramStack.h5 file)
   plot_network.py ifgram_list.txt  -b bl_list.txt
@@ -65,16 +66,12 @@ def create_parser():
     coh = parser.add_argument_group('Display Coherence', 'Show coherence of each interferogram pair with color')
     coh.add_argument('-t', '--template', dest='template_file',
                      help='template file with options below:\n'+TEMPLATE)
-    coh.add_argument('-m', dest='disp_min', type=float,
-                     default=0.2, help='minimum coherence to display')
-    coh.add_argument('-M', dest='disp_max', type=float,
-                     default=1.0, help='maximum coherence to display')
-    coh.add_argument('-c', '--colormap', dest='colormap', default='RdBu',
-                     help='colormap for display, i.e. Blues, RdBu, jet, ...')
+    coh.add_argument('-c', '--colormap', dest='cmap_name', default='truncate_RdBu',
+                     help='colormap name for the network display. Default: truncate_RdBu')
+    coh.add_argument('--cmap-vlist', dest='cmap_vlist', type=float, nargs=3, default=[0.2, 0.4, 1.0],
+                     help='start/jump/end coherence for truncated colormap. Default: 0.2 0.4 1.0')
     coh.add_argument('--mask', dest='maskFile', default='waterMask.h5',
                      help='mask file used to calculate the coherence. Default: waterMask.h5 or None.')
-    coh.add_argument('--threshold', dest='coh_thres', type=float,
-                     help='coherence value of where to cut the colormap for display')
 
     # Figure  Setting
     fig = parser.add_argument_group('Figure', 'Figure settings for display')
@@ -93,11 +90,6 @@ def create_parser():
                      help='DPI - dot per inch - for display/write')
     fig.add_argument('--figsize', dest='fig_size', type=float, nargs=2,
                      help='figure size in inches - width and length')
-    fig.add_argument('--figext', dest='fig_ext',
-                     default='.pdf', choices=['.emf', '.eps', '.pdf', '.png',
-                                              '.ps', '.raw', '.rgba', '.svg',
-                                              '.svgz', '.jpg'],
-                     help='File extension for figure output file\n\n')
     fig.add_argument('--notitle', dest='disp_title', action='store_false',
                      help='Do not display figure title.')
     fig.add_argument('--number', dest='number', type=str,
@@ -121,11 +113,30 @@ def cmd_line_parse(iargs=None):
     if not inps.disp_fig:
         inps.save_fig = True
 
+    if not inps.disp_fig:
+        plt.switch_backend('Agg')
+
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
+    else:
+        inps.template = {}
 
     if not os.path.isfile(inps.maskFile):
         inps.maskFile = None
+
+    inps = read_network_info(inps)
+
+    # colormap
+    if inps.cohList is not None and '--cmap-vlist' not in sys.argv:
+        key = 'mintpy.network.minCoherence'
+        if key in inps.template.keys():
+            inps.cmap_vlist[1] = float(inps.template[key])
+        else:
+            idx_drop = [inps.date12List.index(i) for i in inps.date12List_drop]
+            coh_drop = [inps.cohList[i] for i in idx_drop]
+            inps.cmap_vlist[1] = max(coh_drop)
+            print('max coherence of excluded interferograms: {}'.format(max(coh_drop)))
+    inps.colormap = pp.ColormapExt(inps.cmap_name, vlist=inps.cmap_vlist).colormap
     return inps
 
 
@@ -135,20 +146,15 @@ def read_template2inps(template_file, inps=None):
         inps = cmd_line_parse()
     inpsDict = vars(inps)
     print('read options from template file: '+os.path.basename(template_file))
-    template = readfile.read_template(inps.template_file)
-    template = ut.check_template_auto_value(template)
+    inps.template = readfile.read_template(inps.template_file)
+    inps.template = ut.check_template_auto_value(inps.template)
 
     # Coherence-based network modification
     prefix = 'mintpy.network.'
     key = prefix+'maskFile'
-    if key in template.keys():
-        if template[key]:
-            inps.maskFile = template[key]
-
-    key = prefix+'minCoherence'
-    if key in template.keys():
-        if template[key]:
-            inps.coh_thres = float(template[key])
+    if key in inps.template.keys():
+        if inps.template[key]:
+            inps.maskFile = inps.template[key]
     return inps
 
 
@@ -205,8 +211,11 @@ def read_network_info(inps):
     # Optional: Read Coherence List
     inps.cohList = None
     if ext in ['.h5', '.he5'] and k == 'ifgramStack':
-        inps.cohList, cohDate12List = ut.spatial_average(inps.file, datasetName='coherence', maskFile=inps.maskFile,
-                                                         saveList=True, checkAoi=False)
+        inps.cohList, cohDate12List = ut.spatial_average(inps.file,
+                                                         datasetName='coherence',
+                                                         maskFile=inps.maskFile,
+                                                         saveList=True,
+                                                         checkAoi=False)
         if all(np.isnan(inps.cohList)):
             inps.cohList = None
             print('WARNING: all coherence value are nan! Do not use this and continue.')
@@ -224,13 +233,10 @@ def read_network_info(inps):
 ##########################  Main Function  ##############################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    inps = read_network_info(inps)
 
     # Plot
-    if not inps.disp_fig:
-        plt.switch_backend('Agg')
     inps.cbar_label = 'Average Spatial Coherence'
-    figNames = [i+inps.fig_ext for i in ['BperpHistory', 'CoherenceMatrix', 'CoherenceHistory', 'Network']]
+    figNames = [i+'.pdf' for i in ['BperpHistory', 'CoherenceMatrix', 'CoherenceHistory', 'Network']]
 
     # Fig 1 - Baseline History
     fig, ax = plt.subplots(figsize=inps.fig_size)

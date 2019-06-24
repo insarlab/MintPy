@@ -1120,9 +1120,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
                       markersize
 
                       cohList : list of float, coherence value of each interferogram, len = number of ifgrams
-                      disp_min/max :  float, min/max range of the color display based on cohList
                       colormap : string, colormap name
-                      coh_thres : float, coherence of where to cut the colormap for display
                       disp_title : bool, show figure title or not, default: True
                       disp_drop: bool, show dropped interferograms or not, default: True
     Output
@@ -1140,22 +1138,23 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     if not 'ylabel'      in plot_dict.keys():  plot_dict['ylabel']      = 'Perp Baseline [m]'
     if not 'cbar_label'  in plot_dict.keys():  plot_dict['cbar_label']  = 'Average Spatial Coherence'
     if not 'disp_cbar'   in plot_dict.keys():  plot_dict['disp_cbar']   = True
-    if not 'disp_min'    in plot_dict.keys():  plot_dict['disp_min']    = 0.2
-    if not 'disp_max'    in plot_dict.keys():  plot_dict['disp_max']    = 1.0
     if not 'colormap'    in plot_dict.keys():  plot_dict['colormap']    = 'RdBu'
+    if not 'cmap_vlist'  in plot_dict.keys():  plot_dict['cmap_vlist']  = [0.0, 0.4, 1.0]
     if not 'disp_title'  in plot_dict.keys():  plot_dict['disp_title']  = True
-    if not 'coh_thres'   in plot_dict.keys():  plot_dict['coh_thres']   = None
     if not 'disp_drop'   in plot_dict.keys():  plot_dict['disp_drop']   = True
     if not 'disp_legend' in plot_dict.keys():  plot_dict['disp_legend'] = True
     if not 'every_year'  in plot_dict.keys():  plot_dict['every_year']  = 1
-    if not 'split_cmap'  in plot_dict.keys():  plot_dict['split_cmap']  = True
-
     if not 'number'      in plot_dict.keys():  plot_dict['number']      = None
 
+    # support input colormap: string for colormap name, or colormap object directly
+    if isinstance(plot_dict['colormap'], str):
+        cmap = ColormapExt(plot_dict['colormap']).colormap
+    elif isinstance(plot_dict['colormap'], LinearSegmentedColormap):
+        cmap = plot_dict['colormap']
+    else:
+        raise ValueError('unrecognized colormap input: {}'.format(plot_dict['colormap']))
+
     cohList = plot_dict['cohList']
-    disp_min = plot_dict['disp_min']
-    disp_max = plot_dict['disp_max']
-    coh_thres = plot_dict['coh_thres']
     transparency = 0.7
 
     # Date Convert
@@ -1194,48 +1193,15 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     idx_date_drop = [dateList.index(i) for i in dateList_drop]
 
     # Ploting
-    # ax=fig.add_subplot(111)
-    # Colorbar when conherence is colored
     if cohList is not None:
         data_min = min(cohList)
         data_max = max(cohList)
-        # Normalize
-        normalization = False
-        if normalization:
-            cohList = [(coh-data_min) / (data_min-data_min) for coh in cohList]
-            disp_min = data_min
-            disp_max = data_max
-
+        disp_min = plot_dict['cmap_vlist'][0]
+        disp_max = plot_dict['cmap_vlist'][-1]
         if print_msg:
             print('showing coherence')
-            print(('colormap:', plot_dict['colormap']))
-            print(('display range:', str([disp_min, disp_max])))
-            print(('data    range:', str([data_min, data_max])))
-
-        if plot_dict['split_cmap']:
-            # Use lower/upper part of colormap to emphasis dropped interferograms
-            if not coh_thres:
-                # Find proper cut percentage so that all keep pairs are blue and drop pairs are red
-                cohList_keep = [cohList[i] for i in idx_date12_keep]
-                cohList_drop = [cohList[i] for i in idx_date12_drop]
-                if cohList_drop:
-                    coh_thres = max(cohList_drop)
-                else:
-                    coh_thres = min(cohList_keep)
-            if coh_thres < disp_min:
-                disp_min = 0.0
-                if print_msg:
-                    print('data range exceed orginal display range, set new display range to: [0.0, %f]' % (disp_max))
-            c1_num = np.ceil(200.0 * (coh_thres - disp_min) / (disp_max - disp_min)).astype('int')
-            coh_thres = c1_num / 200.0 * (disp_max-disp_min) + disp_min
-            cmap = ColormapExt(plot_dict['colormap']).colormap
-            colors1 = cmap(np.linspace(0.0, 0.3, c1_num))
-            colors2 = cmap(np.linspace(0.6, 1.0, 200 - c1_num))
-            cmap = LinearSegmentedColormap.from_list('truncate_RdBu', np.vstack((colors1, colors2)))
-            if print_msg:
-                print(('color jump at', str(coh_thres)))
-        else:
-            cmap = ColormapExt(plot_dict['colormap']).colormap
+            print('data range: {}'.format([data_min, data_max]))
+            print('display range: {}'.format(plot_dict['cmap_vlist']))
 
         if plot_dict['disp_cbar']:
             divider = make_axes_locatable(ax)
@@ -1253,13 +1219,11 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     if idx_date_keep:
         x_list = [dates[i] for i in idx_date_keep]
         y_list = [pbaseList[i] for i in idx_date_keep]
-        ax.plot(x_list, y_list, 'ko', alpha=0.7,
-                ms=plot_dict['markersize'], mfc=plot_dict['markercolor'])
+        ax.plot(x_list, y_list, 'ko', alpha=0.7, ms=plot_dict['markersize'], mfc=plot_dict['markercolor'])
     if idx_date_drop:
         x_list = [dates[i] for i in idx_date_drop]
         y_list = [pbaseList[i] for i in idx_date_drop]
-        ax.plot(x_list, y_list, 'ko', alpha=0.7,
-                ms=plot_dict['markersize'], mfc='gray')
+        ax.plot(x_list, y_list, 'ko', alpha=0.7, ms=plot_dict['markersize'], mfc='gray')
 
     ## Line - Pair/Interferogram
     # interferograms dropped
@@ -1272,12 +1236,10 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
             y = np.array([pbaseList[idx1], pbaseList[idx2]])
             if cohList is not None:
                 coh = cohList[date12List.index(date12)]
-                coh_idx = (coh - disp_min) / (disp_max - disp_min)
-                ax.plot(x, y, '--', lw=plot_dict['linewidth'],
-                        alpha=transparency, c=cmap(coh_idx))
+                coh_norm = (coh - disp_min) / (disp_max - disp_min)
+                ax.plot(x, y, '--', lw=plot_dict['linewidth'], alpha=transparency, c=cmap(coh_norm))
             else:
-                ax.plot(x, y, '--', lw=plot_dict['linewidth'],
-                        alpha=transparency, c='k')
+                ax.plot(x, y, '--', lw=plot_dict['linewidth'], alpha=transparency, c='k')
 
     # interferograms kept
     for date12 in date12List_keep:
@@ -1288,12 +1250,10 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
         y = np.array([pbaseList[idx1], pbaseList[idx2]])
         if cohList is not None:
             coh = cohList[date12List.index(date12)]
-            coh_idx = (coh - disp_min) / (disp_max - disp_min)
-            ax.plot(x, y, '-', lw=plot_dict['linewidth'],
-                    alpha=transparency, c=cmap(coh_idx))
+            coh_norm = (coh - disp_min) / (disp_max - disp_min)
+            ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c=cmap(coh_norm))
         else:
-            ax.plot(x, y, '-', lw=plot_dict['linewidth'],
-                    alpha=transparency, c='k')
+            ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c='k')
 
     if plot_dict['disp_title']:
         ax.set_title('Interferogram Network', fontsize=plot_dict['fontsize'])
@@ -1414,16 +1374,6 @@ def plot_rotate_diag_coherence_matrix(ax, coh_list, date12_list, date12_list_dro
     im = ax.imshow(diag_mat, cmap='gray_r', vmin=0.0, vmax=1.0)
     im.set_transform(transforms.Affine2D().rotate_deg(rotate_deg) + ax.transData)
 
-    #plot coherence matrix
-    #if cmap == 'RdBu_cut':
-    #    cnum0 = np.ceil(256 * coh_jump).astype('int')
-    #    cmap = ColormapExt('RdBu').colormap
-    #    colors1 = cmap(np.linspace(0.0, 0.4, cnum0))
-    #    colors2 = cmap(np.linspace(0.6, 1.0, 256 - cnum0))
-    #    cmap = LinearSegmentedColormap.from_list('truncate_RdBu', np.vstack((colors1, colors2)))
-    #else:
-    #    cmap = ColormapExt(cmap).colormap
-
     im = ax.imshow(coh_mat, vmin=disp_min, vmax=1, cmap=ColormapExt(cmap).colormap)
     im.set_transform(transforms.Affine2D().rotate_deg(rotate_deg) + ax.transData)
 
@@ -1493,8 +1443,8 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
     diag_mat[diag_mat == 0.] = np.nan
     im = ax.imshow(diag_mat, cmap='gray_r', vmin=0.0, vmax=1.0, interpolation='nearest')
     im = ax.imshow(coh_mat, cmap=cmap,
-                   vmin=plot_dict['ylim'][0],
-                   vmax=plot_dict['ylim'][1],
+                   vmin=plot_dict['cmap_vlist'][0],
+                   vmax=plot_dict['cmap_vlist'][-1],
                    interpolation='nearest')
 
     date_num = coh_mat.shape[0]

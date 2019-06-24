@@ -50,9 +50,9 @@ def create_parser():
 def cmd_line_parse(iargs = None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-    if not inps.ifgramDir and not inps.geometryDir:
+    if all(not i for i in [inps.ifgramDir, inps.geometryDir, inps.metaFile]):
         parser.print_usage()
-        raise SystemExit('error: at least one of the following arguments are required: -i, -g')
+        raise SystemExit('error: at least one of the following arguments are required: -i, -g, -m')
     return inps
 
 
