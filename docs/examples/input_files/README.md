@@ -4,6 +4,9 @@
 + [FernandinaSenDT128.txt](FernandinaSenDT128.txt)
 + [GalapagosSenDT128.template](GalapagosSenDT128.template)
 
+#### ISCE/stripmapStack ####
++ [KirishimaAlos2DT23F2970.template](KirishimaAlos2DT23F2970.template)
+
 #### GAMMA ####
 + [GalapagosEnvA2T061.txt](GalapagosEnvA2T061.txt)
 + [WellsEnvD2T399.txt](WellsEnvD2T399.txt)
