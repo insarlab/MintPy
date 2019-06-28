@@ -18,14 +18,20 @@ REFERENCE = """reference:
 """
 
 EXAMPLE = """example:
-  #geocode asc/desc data into the same spatial resolution and coverage
-  geocode.py AlosAT424/velocity -x 0.00027778 -y -0.00027778 --bbox 32.0 32.5 130.1 130.5 -o vel_AlosAT424.h5
-  geocode.py AlosDT73/velocity  -x 0.00027778 -y -0.00027778 --bbox 32.0 32.5 130.1 130.5 -o vel_AlosDT73.h5
+  #For asc / desc data with different spatial resolution and coverage
+  cd AlosAT424/mintpy
+  mask.py velocity.h5 -m maskTempCoh.h5
+  geocode.py velocity_msk.h5 -l inputs/geometryRadar.h5 -x 0.00027778 -y -0.00027778 --bbox 32.0 32.5 130.1 130.5
 
-  asc_desc2horz_vert.py  vel_AlosAT424_masked.h5  vel_AlosDT73_masked.h5
-  asc_desc2horz_vert.py  vel_EnvAT134_masked.h5   vel_EnvAT256_masked.h5  16
+  cd AlosDT73/mintpy
+  mask.py velocity.h5 -m maskTempCoh.h5
+  geocode.py velocity_msk.h5 -l inputs/geometryRadar.h5 -x 0.00027778 -y -0.00027778 --bbox 32.0 32.5 130.1 130.5
 
-  asc_desc2horz_vert.py  AlosAT424/mintpy/geo/geo_velocity.py  AlosDT73/mintpy/geo/geo_velocity.py
+  asc_desc2horz_vert.py  AlosAT424/mintpy/geo_velocity_msk.py  AlosDT73/mintpy/geo_velocity_msk.py
+
+  asc_desc2horz_vert.py  vel_AlosAT424_msk.h5  vel_AlosDT73_msk.h5
+  asc_desc2horz_vert.py  vel_EnvAT134_msk.h5   vel_EnvAT256_msk.h5  16
+
 """
 
 
