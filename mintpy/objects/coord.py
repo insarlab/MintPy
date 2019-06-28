@@ -422,7 +422,7 @@ class coordinate:
                    np.max(x) + buf, np.max(y) + buf)
         return pix_box
 
-    def check_box_within_data_coverage(self, pixel_box):
+    def check_box_within_data_coverage(self, pixel_box, print_msg=True):
         """Check the subset box's conflict with data coverage
         Parameters:  pixel_box : 4-tuple of int, indicating y/x coordinates of subset
         Returns:     out_box   : 4-tuple of int
@@ -446,18 +446,22 @@ class coordinate:
         # Check Y/Azimuth/Latitude subset range
         if sub_y[0] < 0:
             sub_y[0] = 0
-            print('WARNING: input y < min (0)! Set it to min.')
+            if print_msg:
+                print('WARNING: input y < min (0)! Set it to min.')
         if sub_y[1] > length:
             sub_y[1] = length
-            print('WARNING: input y > max ({})! Set it to max.'.format(length))
+            if print_msg:
+                print('WARNING: input y > max ({})! Set it to max.'.format(length))
 
         # Check X/Range/Longitude subset range
         if sub_x[0] < 0:
             sub_x[0] = 0
-            print('WARNING: input x < min (0)! Set it to min.')
+            if print_msg:
+                print('WARNING: input x < min (0)! Set it to min.')
         if sub_x[1] > width:
             sub_x[1] = width
-            print('WARNING: input x > max ({})! Set it to max.'.format(width))
+            if print_msg:
+                print('WARNING: input x > max ({})! Set it to max.'.format(width))
 
         out_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
         return out_box

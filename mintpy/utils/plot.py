@@ -1483,27 +1483,39 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
     if print_msg:
         print('reading DEM: {} ...'.format(os.path.basename(dem_file)))
 
-    # get dem_pix_box
     dem_metadata = readfile.read_attribute(dem_file)
-    if pix_box is None:
-        pix_box = (0, 0, int(dem_metadata['WIDTH']), int(dem_metadata['LENGTH']))
-    if geo_box:
-        # Support DEM with different Resolution and Coverage
-        coord = ut.coordinate(dem_metadata)
-        dem_pix_box = coord.box_geo2pixel(geo_box)
-        dem_pix_box = coord.check_box_within_data_coverage(dem_pix_box)
-    else:
-        dem_pix_box = pix_box
-
     # read dem data
     if dem_metadata['FILE_TYPE'] == 'geometry':
         dsName = 'height'
     else:
         dsName = None
+
+    # get dem_pix_box
+    coord = ut.coordinate(dem_metadata)
+    if pix_box is None:
+        pix_box = (0, 0, int(dem_metadata['WIDTH']), int(dem_metadata['LENGTH']))
+
+    # Support DEM with different Resolution and Coverage
+    if geo_box:
+        dem_pix_box = coord.box_geo2pixel(geo_box)
+    else:
+        dem_pix_box = pix_box
+    box2read = coord.check_box_within_data_coverage(dem_pix_box, print_msg=False)
+
     dem, dem_metadata = readfile.read(dem_file,
                                       datasetName=dsName,
-                                      box=dem_pix_box,
+                                      box=box2read,
                                       print_msg=print_msg)
+
+    # if input DEM does not cover the entire AOI, fill with NaN
+    if box2read != dem_pix_box:
+        if print_msg:
+            print('align DEM to the input data file')
+        dem_tmp = np.zeros((dem_pix_box[3] - dem_pix_box[1],
+                            dem_pix_box[2] - dem_pix_box[0]), dtype=dem.dtype) * np.nan
+        dem_tmp[box2read[1]-dem_pix_box[1]:box2read[3]-dem_pix_box[1],
+                box2read[0]-dem_pix_box[0]:box2read[2]-dem_pix_box[0]] = dem
+        dem = np.array(dem_tmp)
     return dem, dem_metadata, dem_pix_box
 
 

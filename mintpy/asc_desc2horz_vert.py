@@ -30,8 +30,7 @@ EXAMPLE = """example:
   asc_desc2horz_vert.py  AlosAT424/mintpy/geo_velocity_msk.py  AlosDT73/mintpy/geo_velocity_msk.py
 
   asc_desc2horz_vert.py  vel_AlosAT424_msk.h5  vel_AlosDT73_msk.h5
-  asc_desc2horz_vert.py  vel_EnvAT134_msk.h5   vel_EnvAT256_msk.h5  16
-
+  asc_desc2horz_vert.py  vel_EnvAT134_msk.h5   vel_EnvAT256_msk.h5  --azimuth 16
 """
 
 
