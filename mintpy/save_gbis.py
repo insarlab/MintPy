@@ -121,15 +121,15 @@ def plot_data(inps):
     fig, axs = plt.subplots(nrows=2, ncols=3, figsize=[14, 7])
     axs = axs.flatten()
 
-    im = axs[0].imshow(ut.wrap(inps.phase), vmin=-np.pi, vmax=np.pi);
+    im = axs[0].imshow(ut.wrap(inps.phase), vmin=-np.pi, vmax=np.pi, cmap='jet');
     axs[0].set_title('Phase (wrapped for display)');
     cbar = fig.colorbar(im, ax=axs[0]);
     cbar.set_label('radian')
 
     for ax, data, title in zip(axs[1:5],
                                [inps.lat, inps.lon, inps.inc_angle, inps.head_angle],
-                               ['Lat', 'Lon', 'Inc angle', 'Head angle']):
-        im = ax.imshow(data)
+                               ['Latitude', 'Longitude', 'Incidence Angle', 'Head Angle']):
+        im = ax.imshow(data, cmap='jet')
         ax.set_title(title)
         cbar = fig.colorbar(im, ax=ax)
         cbar.set_label('degree')
