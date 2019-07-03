@@ -119,8 +119,7 @@ def manual_offset_estimate(matrix1, matrix2):
 
     # Calculate the Offset - Difference
     # offset=V2[y00:y11,x00:x11]-V2[y0:y1,x0:x1]
-    offset = np.nansum(V2[y00:y11, x00:x11]) / np.sum(np.isfinite(V2[y00:y11, x00:x11]))
-             - np.nansum(V1[y0:y1, x0:x1]) / np.sum(np.isfinite(V1[y0:y1, x0:x1]))
+    offset = np.nansum(V2[y00:y11, x00:x11]) / np.sum(np.isfinite(V2[y00:y11, x00:x11])) - np.nansum(V1[y0:y1, x0:x1]) / np.sum(np.isfinite(V1[y0:y1, x0:x1]))
 
     return offset
 
