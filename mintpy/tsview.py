@@ -590,6 +590,12 @@ class timeseriesViewer():
         self.fig_img.canvas.mpl_connect('key_press_event', self.on_key_event)
         if self.disp_fig:
             vprint('showing ...')
+            msg = '\n------------------------------------------------------------------------'
+            msg += '\nTo scroll through the image sequence:'
+            msg += '\n1) Move the slider, OR'
+            msg += '\n2) Press left or right arrow key (if not responding, click the image and try again).'
+            msg += '\n------------------------------------------------------------------------'
+            vprint(msg)
             plt.show()
         return
 
@@ -689,7 +695,7 @@ class timeseriesViewer():
             if self.zero_first:
                 d_tsi -= d_tsi[self.zero_idx]
             d_ts.append(d_tsi)
-    
+
             # get plot parameter - namespace ppar
             ppar = argparse.Namespace()
             ppar.label = self.file_label[i]
@@ -765,6 +771,7 @@ class timeseriesViewer():
                 disp_date = self.dates[idx].strftime('%Y-%m-%d')
                 self.ax_img.set_title('N = {n}, Time = {t}'.format(n=idx, t=disp_date),
                                       fontsize=self.font_size)
+
                 # read data
                 data_img = np.array(self.ts_data[0][idx, :, :])
                 data_img[self.mask == 0] = np.nan
@@ -772,8 +779,10 @@ class timeseriesViewer():
                     if self.disp_unit_img == 'radian':
                         data_img *= self.range2phase
                     data_img = ut.wrap(data_img, wrap_range=self.wrap_range)
-                # update data
-                self.img.set_data(data_img)
+
+                # update
+                self.img.set_data(data_img)              # update image
+                self.tslider.set_val(self.yearList[idx]) # update slider
                 self.idx = idx
                 self.fig_img.canvas.draw()
         return
