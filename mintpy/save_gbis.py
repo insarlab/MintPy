@@ -50,7 +50,7 @@ def read_data(inps):
     # metadata
     inps.metadata = readfile.read_attribute(inps.file)
     k = inps.metadata['FILE_TYPE']
-    range2phase =  -4. * np.pi / float(inps.metadata['WAVELENGTH'])
+    inps.range2phase =  -4. * np.pi / float(inps.metadata['WAVELENGTH'])
     ext = os.path.splitext(inps.file)[1]
 
     # mask
@@ -67,10 +67,9 @@ def read_data(inps):
             # velocity to displacement
             date1, date2 = inps.metadata['DATE12'].split('_')
             dt1, dt2 = ptime.date_list2vector([date1, date2])[0]
-            tdiff = (dt2 - dt1).days / 365.25
-            inps.phase *= tdiff
+            inps.phase *= (dt2 - dt1).days / 365.25
             # displacement to phase
-            inps.phase *= range2phase
+            inps.phase *= inps.range2phase
 
         # update mask to exclude pixel with NaN value
         inps.mask *= ~np.isnan(inps.phase)
@@ -121,11 +120,20 @@ def plot_data(inps):
     fig, axs = plt.subplots(nrows=2, ncols=3, figsize=[14, 7])
     axs = axs.flatten()
 
-    im = axs[0].imshow(ut.wrap(inps.phase), vmin=-np.pi, vmax=np.pi, cmap='jet');
-    axs[0].set_title('Phase (wrapped for display)');
+    # plot deformation
+    defo = inps.phase / inps.range2phase * 100. #convert to deformation in cm
+    dmin, dmax = np.nanmin(defo), np.nanmax(defo)
+    dlim = max(abs(dmin), abs(dmax))
+    im = axs[0].imshow(defo, vmin=-dlim, vmax=dlim, cmap='jet');
+    # reference point
+    axs[0].plot(int(inps.metadata['REF_X']),
+                int(inps.metadata['REF_Y']), 'ks', ms=6)
+    axs[0].set_title('Phase [{:.1f}, {:.1f}] um'.format(dmin, dmax));
+    # colorbar
     cbar = fig.colorbar(im, ax=axs[0]);
-    cbar.set_label('radian')
+    cbar.set_label('cm')
 
+    # plot geometry
     for ax, data, title in zip(axs[1:5],
                                [inps.lat, inps.lon, inps.inc_angle, inps.head_angle],
                                ['Latitude', 'Longitude', 'Incidence Angle', 'Head Angle']):
