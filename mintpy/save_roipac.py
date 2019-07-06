@@ -129,7 +129,7 @@ def read_data(inps):
 
         # output filename
         if not inps.outfile:
-            inps.outfile = '{}{}'.format(os.path.splitext(inps.file)[0], atr['FILE_TYPE'])
+            inps.outfile = os.path.join(os.path.dirname(inps.file), '{}.unw'.format(atr['DATE12']))
 
     elif k == 'timeseries':
         # date1 and date2
