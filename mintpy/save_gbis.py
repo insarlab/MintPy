@@ -34,12 +34,15 @@ def create_parser():
     parser.add_argument('-o', '--output', dest='outfile', help='output file name.')
     parser.add_argument('--ref-lalo', dest='ref_lalo', type=float, nargs=2,
                         help='custom reference pixel in lat/lon')
+    parser.add_argument('--nodisplay', dest='disp_fig', action='store_false',
+                        help='do not display the figure')
     return parser
 
 
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+    inps.file = os.path.abspath(inps.file)
     return inps
 
 
@@ -50,7 +53,7 @@ def read_data(inps):
     # metadata
     inps.metadata = readfile.read_attribute(inps.file)
     k = inps.metadata['FILE_TYPE']
-    range2phase =  -4. * np.pi / float(inps.metadata['WAVELENGTH'])
+    inps.range2phase =  -4. * np.pi / float(inps.metadata['WAVELENGTH'])
     ext = os.path.splitext(inps.file)[1]
 
     # mask
@@ -67,10 +70,9 @@ def read_data(inps):
             # velocity to displacement
             date1, date2 = inps.metadata['DATE12'].split('_')
             dt1, dt2 = ptime.date_list2vector([date1, date2])[0]
-            tdiff = (dt2 - dt1).days / 365.25
-            inps.phase *= tdiff
+            inps.phase *= (dt2 - dt1).days / 365.25
             # displacement to phase
-            inps.phase *= range2phase
+            inps.phase *= inps.range2phase
 
         # update mask to exclude pixel with NaN value
         inps.mask *= ~np.isnan(inps.phase)
@@ -104,15 +106,12 @@ def read_data(inps):
 
     # output filename
     if not inps.outfile:
-        SAT = inps.metadata['PLATFORM'].lower().capitalize()
-        if SAT.lower() not in sensor.sensorNames:
-            raise ValueError('un-recognized sensor name: {}'.format(SAT))
-        if inps.metadata['ORBIT_DIRECTION'].lower().startswith('asc'):
-            ORBIT = 'A'
-        else:
-            ORBIT = 'D'
-        TRACK = inps.metadata['trackNumber']
-        inps.outfile = '{}{}T{}_{}.mat'.format(SAT, ORBIT, TRACK, inps.metadata['DATE12'])
+        out_dir = os.path.dirname(inps.file)
+        proj_name = sensor.project_name2sensor_name(out_dir)[1]
+        if not proj_name:
+            raise ValueError('No custom/auto output filename found.')
+        inps.outfile = '{}_{}.mat'.format(proj_name, inps.metadata['DATE12'])
+        inps.outfile = os.path.join(out_dir, inps.outfile)
     inps.outfile = os.path.abspath(inps.outfile)
     return
 
@@ -121,11 +120,20 @@ def plot_data(inps):
     fig, axs = plt.subplots(nrows=2, ncols=3, figsize=[14, 7])
     axs = axs.flatten()
 
-    im = axs[0].imshow(ut.wrap(inps.phase), vmin=-np.pi, vmax=np.pi, cmap='jet');
-    axs[0].set_title('Phase (wrapped for display)');
+    # plot deformation
+    defo = inps.phase / inps.range2phase * 100. #convert to deformation in cm
+    dmin, dmax = np.nanmin(defo), np.nanmax(defo)
+    dlim = max(abs(dmin), abs(dmax))
+    im = axs[0].imshow(defo, vmin=-dlim, vmax=dlim, cmap='jet');
+    # reference point
+    axs[0].plot(int(inps.metadata['REF_X']),
+                int(inps.metadata['REF_Y']), 'ks', ms=6)
+    axs[0].set_title('Phase [{:.1f}, {:.1f}] um'.format(dmin, dmax));
+    # colorbar
     cbar = fig.colorbar(im, ax=axs[0]);
-    cbar.set_label('radian')
+    cbar.set_label('cm')
 
+    # plot geometry
     for ax, data, title in zip(axs[1:5],
                                [inps.lat, inps.lon, inps.inc_angle, inps.head_angle],
                                ['Latitude', 'Longitude', 'Incidence Angle', 'Head Angle']):
@@ -144,8 +152,7 @@ def plot_data(inps):
 
 
 def save2mat(inps):
-
-    # 4. write mat file
+    """write mat file"""
     mdict = {}
     mdict['Lon'] = inps.lon[inps.mask].reshape(-1,1)
     mdict['Lat'] = inps.lat[inps.mask].reshape(-1,1)
@@ -168,7 +175,9 @@ def main(iargs=None):
 
     save2mat(inps)
 
-    plt.show()
+    if inps.disp_fig:
+        print('showing...')
+        plt.show()
     return inps.outfile
 
 

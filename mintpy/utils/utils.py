@@ -122,7 +122,8 @@ def check_loaded_dataset(work_dir='./', print_msg=True):
 
 
 #################################################################################
-def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_lon=None, win_size=1):
+def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_lon=None,
+                         win_size=1, unit='m', print_msg=True):
     """ Read time-series of one pixel with input lat/lon
     Parameters: lat/lon     : float, latitude/longitude
                 ts_file     : string, filename of time-series HDF5 file
@@ -134,21 +135,27 @@ def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_
     atr = readfile.read_attribute(ts_file)
     coord = coordinate(atr, lookup_file=lookup_file)
     y, x = coord.geo2radar(lat, lon)[0:2]
-    print('input lat / lon: {} / {}'.format(lat, lon))
+    if print_msg:
+        print('input lat / lon: {} / {}'.format(lat, lon))
 
+    # reference pixel
     ref_y, ref_x = None, None
     if ref_lat is not None:
         ref_y, ref_x = coord.geo2radar(ref_lat, ref_lon)[0:2]
 
+    # call read_timeseries_yx()
     dates, dis = read_timeseries_yx(y, x, ts_file,
                                     ref_y=ref_y,
                                     ref_x=ref_x,
-                                    win_size=win_size)
+                                    win_size=win_size,
+                                    unit=unit,
+                                    print_msg=False)
     return dates, dis
 
 
 #################################################################################
-def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None, win_size=1):
+def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None,
+                       win_size=1, unit='m', print_msg=True):
     """ Read time-series of one pixel with input y/x
     Parameters: y/x         : int, row/column number of interest
                 ts_file     : string, filename of time-series HDF5 file
@@ -163,7 +170,8 @@ def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None, win_size=1):
     dates = np.array(dates)
 
     # read displacement
-    print('input y / x: {} / {}'.format(y, x))
+    if print_msg:
+        print('input y / x: {} / {}'.format(y, x))
     box = (x, y, x+1, y+1)
     dis = readfile.read(ts_file, box=box)[0]
     if win_size != 1:
@@ -179,6 +187,17 @@ def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None, win_size=1):
 
     #start at zero
     dis -= dis[0]
+
+    # custom output unit
+    if unit == 'm':
+        pass
+    elif unit == 'cm':
+        dis *= 100.
+    elif unit == 'mm':
+        dis *= 1000.
+    else:
+        raise ValueError('un-supported output unit: {}'.format(unit))
+
     return dates, dis
 
 #################################################################################

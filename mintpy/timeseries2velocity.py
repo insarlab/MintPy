@@ -171,7 +171,7 @@ def read_exclude_date(inps, dateListAll):
             if yy_list_all[i] > yy_max and date not in exDateList:
                 print('  remove date: '+date)
                 exDateList.append(date)
-    exDateList = list(set(exDateList))
+    exDateList = sorted(list(set(exDateList)))
     return exDateList
 
 

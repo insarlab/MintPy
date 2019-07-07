@@ -172,13 +172,17 @@ def ifgram_date_list(ifgramFile, fmt='YYYYMMDD'):
 #################################################################
 def read_date_txt(date_file):
     """Read Date List from txt file"""
-    # read text file
-    #dateList = np.loadtxt(date_file, dtype=bytes).astype(str)
-    with open(date_file, 'r') as f:
-        dateList = f.read().splitlines()
-    # format
-    dateList = sorted(yyyymmdd(dateList))
-    return dateList
+    #date_list = np.loadtxt(date_file, dtype=bytes).astype(str)
+    date_list = []
+
+    if os.path.isfile(date_file):
+        # read text file
+        with open(date_file, 'r') as f:
+            date_list = f.read().splitlines()
+
+        # format
+        date_list = sorted(yyyymmdd(date_list))
+    return date_list
 
 
 def read_date_list(date_list_in, date_list_all=None):

@@ -184,8 +184,12 @@ class networkViewer():
         view_cmd = self.view_cmd.format(self.img_file)
         d_img, atr, inps_img = view.prep_slice(view_cmd)
         if self.yx:
-            inps_img.pts_yx = np.array(self.yx).reshape(-1, 2)
             inps_img.pts_marker = 'r^'
+            inps_img.pts_yx = np.array(self.yx).reshape(-1, 2)
+            # point yx --> lalo for geocoded product
+            if 'Y_FIRST' in atr.keys():
+                coord = ut.coordinate(atr)
+                inps_img.pts_lalo = np.array(coord.radar2geo(self.yx[0], self.yx[1])[0:2]).reshape(-1,2)
         inps_img.print_msg = self.print_msg
         self.ax_img = view.plot_slice(self.ax_img, d_img, atr, inps_img)[0]
 
@@ -229,6 +233,7 @@ class networkViewer():
             tcoh = self.tcoh[yx[0], yx[1]]
             plotDict['fig_title'] += ', tcoh = {:.2f}'.format(tcoh)
         plotDict['colormap'] = self.colormap
+        plotDict['cmap_vlist'] = self.cmap_vlist
         plotDict['disp_legend'] = False
         # plot
         coh_mat = pp.plot_coherence_matrix(self.ax_mat,
@@ -249,10 +254,13 @@ class networkViewer():
             date12 = ['{}-{}-{}'.format(i[0:4], i[4:6], i[6:8]) for i in date12]
             return 'x={}, y={}, v={:.3f}'.format(date12[0], date12[1], coh_mat[row, col])
         self.ax_mat.format_coord = format_coord
+
         # info
-        vprint('-'*30)
-        vprint('pixel: yx = {}'.format(yx))
-        vprint('min/max coherence: {:.2f} / {:.2f}'.format(np.min(coh), np.max(coh)))
+        msg = 'pixel in yx = {}, '.format(tuple(yx))
+        msg += 'min/max spatial coherence: {:.2f} / {:.2f}, '.format(np.min(coh), np.max(coh))
+        if self.tcoh_file:
+            msg += 'temporal coherence: {:.2f}'.format(tcoh)
+        vprint(msg)
         return
 
     def update_coherence_matrix(self, event):

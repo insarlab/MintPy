@@ -32,6 +32,8 @@ from mintpy.utils import (ptime,
                           utils as ut)
 
 
+# default color names in matplotlib
+# ref: https://matplotlib.org/users/dflt_style_changes.html
 mplColors = ['#1f77b4',
              '#ff7f0e',
              '#2ca02c',

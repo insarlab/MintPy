@@ -10,14 +10,14 @@ import os
 import argparse
 import numpy as np
 from mintpy.objects import timeseries, HDFEOS
-from mintpy.utils import readfile, writefile, ptime
+from mintpy.utils import readfile, writefile, ptime, utils as ut
 from mintpy import view
 
 
 ##############################################################################
 EXAMPLE = """example:
   #----- unwrapped phase
-  #for velocity: output an interferogram with one year temporal baseline in input rate
+  #for velocity: output an interferogram with temporal baseline in DATE12 metadata
   save_roipac.py  velocity.h5
 
   #for time-series: specify (date1_)date2
@@ -53,7 +53,9 @@ def create_parser():
     parser.add_argument('file', help='HDF5 file to be converted.')
     parser.add_argument('dset', nargs='?', help='date/date12 of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-o', '--output', dest='outfile', help='output file name.')
+    parser.add_argument('-m','--mask', dest='mask_file', help='mask file')
     parser.add_argument('--ref-yx', dest='ref_yx', type=int, nargs=2, help='custom reference pixel in y/x')
+    parser.add_argument('--ref-lalo', dest='ref_lalo', type=float, nargs=2, help='custom reference pixel in lat/lon')
     return parser
 
 
@@ -83,9 +85,22 @@ def read_data(inps):
         range2phase = -4 * np.pi / float(atr['WAVELENGTH'])
 
     # change reference pixel
+    if inps.ref_lalo:
+        if 'Y_FIRST' in atr.keys():
+            coord = ut.coordinate(atr)
+            ref_y, ref_x = coord.geo2radar(inps.ref_lalo[0], inps.ref_lalo[1])[0:2]
+            inps.ref_yx = [ref_y, ref_x]
+        else:
+            raise ValueError("input file is not geocoded --> reference point in lat/lon is NOT support")
+
     if inps.ref_yx:
         atr['REF_Y'] = inps.ref_yx[0]
         atr['REF_X'] = inps.ref_yx[1]
+        if 'Y_FIRST' in atr.keys():
+            coord = ut.coordinate(atr)
+            ref_lat, ref_lon = coord.radar2geo(inps.ref_yx[0], inps.ref_yx[1])[0:2]
+            atr['REF_LAT'] = ref_lat
+            atr['REF_LON'] = ref_lon
         print('change reference point to y/x: {}'.format(inps.ref_yx))
 
     # various file types
@@ -93,8 +108,18 @@ def read_data(inps):
     k = atr['FILE_TYPE']
     if k == 'velocity':
         # read/prepare data
-        data = readfile.read(inps.file)[0] * range2phase
-        print("converting velocity to an interferogram with one year temporal baseline")
+        data = readfile.read(inps.file)[0]
+
+        # velocity to displacement
+        print('convert velocity to displacement for {}'.format(atr['DATE12']))
+        date1, date2 = atr['DATE12'].split('_')
+        dt1, dt2 = ptime.date_list2vector([date1, date2])[0]
+        data *= (dt2 - dt1).days / 365.25
+
+        # displacement to phase
+        print('convert displacement to phase in radian')
+        data *= range2phase
+
         if inps.ref_yx:
             data -= data[inps.ref_yx[0], inps.ref_yx[1]]
 
@@ -104,7 +129,7 @@ def read_data(inps):
 
         # output filename
         if not inps.outfile:
-            inps.outfile = '{}{}'.format(os.path.splitext(inps.file)[0], atr['FILE_TYPE'])
+            inps.outfile = os.path.join(os.path.dirname(inps.file), '{}.unw'.format(atr['DATE12']))
 
     elif k == 'timeseries':
         # date1 and date2
@@ -246,6 +271,13 @@ def read_data(inps):
                 atr['FILE_TYPE'] = '.unw'
 
             inps.outfile = '{}{}'.format(os.path.splitext(inps.file)[0], atr['FILE_TYPE'])
+
+    # mask
+    if inps.mask_file:
+        print('mask data based on input file: {}'.format(inps.mask_file))
+        mask = readfile.read(inps.mask_file)[0]
+        mask *= ~np.isnan(data)
+        data[mask==0] = np.nan
 
     # get rid of starting . if output as hdf5 file
     if inps.outfile.endswith('.h5'):
