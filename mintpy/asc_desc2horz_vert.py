@@ -51,7 +51,7 @@ def create_parser():
                              'b. Near north direction can not be well resolved due to the lack of\n' +
                              '   diversity in viewing geometry. Check exact dilution of precision for \n' +
                              '   each component in Wright et al., 2004, GRL')
-    parser.add_argument('-o', '--output', dest='outfile', nargs=2, default=['up.h5', 'hz.h5'],
+    parser.add_argument('-o', '--output', dest='outfile', nargs=2, metavar=('HZ_FILE','UP_FILE'), default=['hz.h5', 'up.h5'],
                         help='output file name for vertical and horizontal components')
     return parser
 
@@ -172,16 +172,16 @@ def main(iargs=None):
     atr['Y_STEP'] = str(lat_step)
 
     print('---------------------')
-    outname = inps.outfile[0]
-    print('writing   vertical component to file: '+outname)
-    writefile.write(u_v, out_file=outname, metadata=atr)
+    horz_file = inps.outfile[0]
+    print('writing horizontal component to file: '+horz_file)
+    writefile.write(u_h, out_file=horz_file, metadata=atr)
 
-    outname = inps.outfile[1]
-    print('writing horizontal component to file: '+outname)
-    writefile.write(u_h, out_file=outname, metadata=atr)
+    vert_file = inps.outfile[1]
+    print('writing   vertical component to file: '+vert_file)
+    writefile.write(u_v, out_file=vert_file, metadata=atr)
 
     print('Done.')
-    return
+    return inps.outfile
 
 
 ################################################################################
