@@ -908,6 +908,8 @@ class ifgramStack:
                         triangle_idx.append([date12_list.index(ifgram1),
                                              date12_list.index(ifgram2),
                                              date12_list.index(ifgram3)])
+        if len(triangle_idx) == 0:
+            raise ValueError("No triangles found!")
 
         triangle_idx = np.array(triangle_idx, np.int16)
         triangle_idx = np.unique(triangle_idx, axis=0)
