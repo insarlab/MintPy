@@ -967,15 +967,6 @@ class ifgramStack:
 
     def get_perp_baseline_timeseries(self, dropIfgram=True):
         """Get spatial perpendicular baseline in timeseries from ifgramStack, ignoring dropped ifgrams"""
-        # Get tbase_diff
-        date12List = self.get_date12_list(dropIfgram=dropIfgram)
-        mDates = [i.split('_')[0] for i in date12List]
-        sDates = [i.split('_')[1] for i in date12List]
-        dateList = sorted(list(set(mDates + sDates)))
-        dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
-        tbase = np.array([(i - dates[0]).days for i in dates], np.float32) / 365.25
-        tbase_diff = np.diff(tbase).flatten()
-
         # read pbase of interferograms
         with h5py.File(self.file, 'r') as f:
             pbaseIfgram = f['bperp'][:]
@@ -983,10 +974,10 @@ class ifgramStack:
                 pbaseIfgram = pbaseIfgram[f['dropIfgram'][:]]
 
         # estimate pbase of time-series
-        B = self.get_design_matrix4timeseries(date12List)[1]
-        pbaseRate = np.dot(np.linalg.pinv(B), pbaseIfgram)
-        pbaseTimeseries = np.concatenate((np.array([0.], dtype=np.float32),
-                                          np.cumsum([pbaseRate * tbase_diff])))
+        date12List = self.get_date12_list(dropIfgram=dropIfgram)
+        A = self.get_design_matrix4timeseries(date12List)[0]
+        pbaseTimeseries = np.zeros(A.shape[1]+1, dtype=np.float32)
+        pbaseTimeseries[1:] = np.linalg.lstsq(A, pbaseIfgram, rcond=None)[0]
         return pbaseTimeseries
 
     def update_drop_ifgram(self, date12List_to_drop):
