@@ -1510,7 +1510,7 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
                                       print_msg=print_msg)
 
     # if input DEM does not cover the entire AOI, fill with NaN
-    if box2read != dem_pix_box:
+    if pix_box is not None and box2read != dem_pix_box:
         if print_msg:
             print('align DEM to the input data file')
         dem_tmp = np.zeros((dem_pix_box[3] - dem_pix_box[1],
