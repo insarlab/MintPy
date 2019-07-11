@@ -31,11 +31,14 @@ def create_parser():
                         help='date/date12 of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-g','--geometry', dest='geom_file', required=True, help='geometry file')
     parser.add_argument('-m', '--mask', dest='mask_file', help='mask file.')
-    parser.add_argument('-o', '--output', dest='outfile', help='output file name.')
+
     parser.add_argument('--ref-lalo', dest='ref_lalo', type=float, nargs=2,
                         help='custom reference pixel in lat/lon')
     parser.add_argument('--nodisplay', dest='disp_fig', action='store_false',
                         help='do not display the figure')
+    parser.add_argument('-o', '--output', dest='outfile', help='output file name.')
+    parser.add_argument('--out-dir', dest='outdir',
+                        help='custom output directory, ONLY IF --output is not specified.')
     return parser
 
 
@@ -106,12 +109,14 @@ def read_data(inps):
 
     # output filename
     if not inps.outfile:
-        out_dir = os.path.dirname(inps.file)
-        proj_name = sensor.project_name2sensor_name(out_dir)[1]
+        proj_name = sensor.project_name2sensor_name(inps.file)[1]
         if not proj_name:
             raise ValueError('No custom/auto output filename found.')
         inps.outfile = '{}_{}.mat'.format(proj_name, inps.metadata['DATE12'])
-        inps.outfile = os.path.join(out_dir, inps.outfile)
+
+        if not inps.outdir:
+            inps.outdir = os.path.dirname(inps.file)
+        inps.outfile = os.path.join(inps.outdir, inps.outfile)
     inps.outfile = os.path.abspath(inps.outfile)
     return
 
@@ -154,12 +159,16 @@ def plot_data(inps):
 def save2mat(inps):
     """write mat file"""
     mdict = {}
-    mdict['Lon'] = inps.lon[inps.mask].reshape(-1,1)
-    mdict['Lat'] = inps.lat[inps.mask].reshape(-1,1)
-    mdict['Phase'] = inps.phase[inps.mask].reshape(-1,1)
-    mdict['Inc'] = inps.inc_angle[inps.mask].reshape(-1,1)
+    # required by GBIS
     mdict['Heading'] = inps.head_angle[inps.mask].reshape(-1,1)
-    mdict['metadata'] = inps.metadata
+    mdict['Inc'] = inps.inc_angle[inps.mask].reshape(-1,1)
+    mdict['Lat'] = inps.lat[inps.mask].reshape(-1,1)
+    mdict['Lon'] = inps.lon[inps.mask].reshape(-1,1)
+    mdict['Phase'] = inps.phase[inps.mask].reshape(-1,1)
+    # optional
+    mdict['Mask'] = inps.mask
+    mdict['Metadata'] = inps.metadata
+    # save to mat file
     sio.savemat(inps.outfile, mdict, long_field_names=True)
     print('save to file: {}.mat'.format(os.path.abspath(inps.outfile)))
     return
