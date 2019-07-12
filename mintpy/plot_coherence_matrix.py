@@ -278,7 +278,7 @@ class coherenceMatrixViewer():
 
 ##########################  Main Function  ##############################
 def main(iargs=None):
-    obj = coherenceMatrixViewer(cmd=iargs)
+    obj = coherenceMatrixViewer(iargs=iargs)
     obj.configure()
     obj.plot()
     obj.fig.canvas.mpl_disconnect(obj.cid)

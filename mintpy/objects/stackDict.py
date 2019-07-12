@@ -560,7 +560,7 @@ def read_isce_bperp_file(fname, out_shape, box=None):
         data_c = (data_c - data_min) / (data_max - data_min)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=UserWarning)
-        data = resize(data_c, out_shape, order=1, mode='edge')
+        data = resize(data_c, out_shape, order=1, mode='edge', preserve_range=True)
     if data_max != data_min:
         data = data * (data_max - data_min) + data_min
 

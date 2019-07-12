@@ -301,7 +301,7 @@ class transectionViewer():
 
 ############################ Main ###################################
 def main(iargs=None):
-    obj = transectionViewer(cmd=iargs)
+    obj = transectionViewer(iargs=iargs)
     obj.configure()
     obj.plot()
     obj.fig.canvas.mpl_disconnect(obj.cid)
