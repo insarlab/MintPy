@@ -27,9 +27,10 @@ class coordinate:
 
     Example:
         atr = readfile.read('velocity.h5')
-        coord = ut.coordinate(atr, lookup_file='inputs/geometryRadar.h5')
-        y, x = coord.geo2radar(lat, lon)
-        lat, lon = coord.radar2geo(y, x)
+        coord = ut.coordinate(atr, lookup_file='inputs/geometryRadar.h5')  # for radar coord file
+        coord = ut.coordinate(atr)                                         # for geo   coord file
+        y, x = coord.geo2radar(lat, lon)[0:2]
+        lat, lon = coord.radar2geo(y, x)[0:2]
     """
 
     def __init__(self, metadata, lookup_file=None):

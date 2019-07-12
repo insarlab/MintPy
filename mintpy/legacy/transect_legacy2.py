@@ -19,8 +19,10 @@ from mintpy.utils import readfile, utils as ut, plot as pp
 EXAMPLE = """example:
   transect.py velocity.h5 -s 5290 5579 -e 12177 482
   transect.py velocity.h5 --start-lalo 30.125 129.988 --end-lalo 30.250 130.116
-  transect.py velocity.h5 --line-file  transect_lonlat.xy -d gsi10m.dem
-  transect.py AlosA*/velocity.h5 AlosD*/velocity.h5 --line-file  transect_lonlat.xy -d gsi10m.dem
+  transect.py velocity.h5 --line-file  transect_lonlat.xy --dem gsi10m.dem
+
+  # profile from multiple files
+  transect.py AlosA*/velocity.h5 AlosD*/velocity.h5 --line-file  transect_lonlat.xy --dem gsi10m.dem
 """
 
 
@@ -31,6 +33,7 @@ def create_parser():
 
     parser.add_argument('file', nargs='+',
                         help='input file to show transection')
+    parser.add_argument('--dset', dest='dset', help='Dataset name to read')
     parser.add_argument('-m', '--min', dest='disp_min',
                         type=float, help='minimum value for data display')
     parser.add_argument('-M', '--max', dest='disp_max',
@@ -61,7 +64,7 @@ def create_parser():
 
     # DEM
     dem = parser.add_argument_group('DEM', 'display topography in the bottom')
-    dem.add_argument('-d', '--dem', help='DEM file')
+    dem.add_argument('--dem', help='DEM file')
     dem.add_argument('--dem-min', dest='dem_disp_min', type=float,
                      help='min display value for DEM display, in km')
     dem.add_argument('--dem-max', dest='dem_disp_max', type=float,
@@ -124,33 +127,45 @@ def read_lonlat_file(lonlat_file):
 
 
 #####################################################################
-def manual_select_start_end_point(File):
+def manual_select_start_end_point(File, dset=None):
     """Manual Select Start/End Point in display figure."""
     print('reading '+File+' ...')
-    data, atr = readfile.read(File)
+    data, atr = readfile.read(File, datasetName=dset)
     print('displaying '+File+' ...')
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.imshow(data)
 
-    xc = []
-    yc = []
-    print('please click on start and end point of the desired profile')
-    print('then close the figure to continue')
+    lines = []
+    def draw_line():
+        xy = plt.ginput(2)
+        x = [p[0] for p in xy]
+        y = [p[1] for p in xy]
+        line = plt.plot(x,y)
+        ax.figure.canvas.draw()
+        return line
 
-    def onclick(event):
-        if event.button == 1:
-            xcc, ycc = int(event.xdata), int(event.ydata)
-            xc.append(xcc)
-            yc.append(ycc)
-            print('x = '+str(xcc)+'\ny = '+str(ycc))
-            ax.plot(xcc, ycc, 'ro')
-    cid = fig.canvas.mpl_connect('button_release_event', onclick)
+    line = draw_line()
+    import pdb; pdb.set_trace()
+    #xc = []
+    #yc = []
+    #print('1) Click on start and end point of the desired profile')
+    #print('2) Close the figure to continue the profile plotting')
+#
+    #def onclick(event):
+    #    if event.button == 1:
+    #        xcc, ycc = int(event.xdata), int(event.ydata)
+    #        xc.append(xcc)
+    #        yc.append(ycc)
+    #        print('({}, {})'.format(xcc, ycc))
+    #        ax.plot(xcc, ycc, 'ro')
+    #cid = fig.canvas.mpl_connect('button_release_event', onclick)
     plt.show()
 
-    start_yx = [yc[0], xc[0]]
-    end_yx = [yc[1], xc[1]]
-    return start_yx, end_yx
+    #start_yx = [yc[0], xc[0]]
+    #end_yx = [yc[1], xc[1]]
+    #return start_yx, end_yx
+    return [0,0], [10,10]
 
 
 #####################################################################
@@ -159,22 +174,21 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
     Ref link: http://stackoverflow.com/questions/7878398/how-to-e
               xtract-an-arbitrary-line-of-values-from-a-numpy-array
 
-    Inputs:
-        z        - (np.array)   2D data matrix
-        atr      - (dictionary) 2D data matrix attribute dictionary
-        start_yx - (list) y,x coordinate of start point
-        end_yx   - (list) y,x coordinate of end   point
-        interpolation - sampling/interpolation method, including:
-                'nearest'  - nearest neighbour, by default
-                'cubic'    - cubic interpolation
-                'bilinear' - bilinear interpolation
+    Parameters: z : (np.array)   2D data matrix
+                atr : (dict) 2D data matrix attribute dictionary
+                start_yx : (list) y,x coordinate of start point
+                end_yx : (list) y,x coordinate of end   point
+                interpolation : str, sampling/interpolation method, including:
+                    'nearest'  - nearest neighbour, by default
+                    'cubic'    - cubic interpolation
+                    'bilinear' - bilinear interpolation
 
-    Output:
-        transect - N*2 matrix containing distance - 1st col - and its corresponding 
-                   values - 2nd col - along the line, N is the number of points.
+    Returns:    transect: N*2 matrix containing distance and value
+                    N is the number of points.
+                    1st col - distance in m
+                    2nd col - value
 
-    Example:
-        transect = transect_yx(dem,demRsc,[10,15],[100,115])
+    Example: transect = transect_yx(dem,demRsc,[10,15],[100,115])
     """
 
     # Extract the line
@@ -242,7 +256,7 @@ def transect_list(fileList, inps):
     atrList = []
     for File in fileList:
         print('reading '+File)
-        data, atr = readfile.read(File)
+        data, atr = readfile.read(File, datasetName=inps.dset)
         if inps.start_lalo and inps.end_lalo:
             transect = transect_lalo(data, atr,
                                      inps.start_lalo, inps.end_lalo,
@@ -265,7 +279,7 @@ def get_start_end_points(inps):
     if (not inps.start_yx or not inps.end_yx) and (not inps.start_lalo or not inps.end_lalo):
         print('No input yx/lalo found.')
         print('Continue with manually select start and end point.')
-        inps.start_yx, inps.end_yx = manual_select_start_end_point(inps.file[0])
+        inps.start_yx, inps.end_yx = manual_select_start_end_point(inps.file[0], dset=inps.dset)
 
     # Message
     if inps.start_lalo and inps.end_lalo:
@@ -279,7 +293,7 @@ def get_start_end_points(inps):
 
 def plot_transect_location(ax, inps):
     print('plot profile line in the 1st input file')
-    data0, atr0 = readfile.read(inps.file[0])
+    data0, atr0 = readfile.read(inps.file[0], datasetName=inps.dset)
     ax.imshow(data0)
 
     coord = ut.coordinate(atr0)

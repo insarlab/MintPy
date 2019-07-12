@@ -124,11 +124,12 @@ def read_network_info(inps):
     return inps
 
 
-class networkViewer():
-    """class for plot_coherence_matrix (and plot_network)
+class coherenceMatrixViewer():
+    """class for plot_coherence_matrix
     Example:
+        from mintpy.plot_coherence_matrix import coherenceMatrixViewer
         cmd = 'plot_coherence_matrix.py ./inputs/ifgramStack.h5 --noverbose --figsize 9 3 --yx 216 310'
-        obj = networkViewer(cmd)
+        obj = coherenceMatrixViewer(cmd)
         obj.configure()
         obj.plot()
     """
@@ -277,7 +278,7 @@ class networkViewer():
 
 ##########################  Main Function  ##############################
 def main(iargs=None):
-    obj = networkViewer(cmd=iargs)
+    obj = coherenceMatrixViewer(cmd=iargs)
     obj.configure()
     obj.plot()
     obj.fig.canvas.mpl_disconnect(obj.cid)
