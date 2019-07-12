@@ -54,9 +54,9 @@ Below are some useful scripts for data information and visulization.
 info.py                    #check HDF5 file structure and metadata
 view.py                    #2D map view
 tsview.py                  #1D point time-series (interactive)   
-transect.py                #1D profile (interactive)
 plot_coherence_matrix.py   #plot coherence matrix for one pixel (interactive)
 plot_network.py            #plot network configuration of the dataset    
+plot_transection.py        #1D profile (interactive)
 save_kmz.py                #generate Google Earth KMZ file in raster image
 save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
 ```

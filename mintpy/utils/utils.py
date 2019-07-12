@@ -11,6 +11,7 @@ import os
 import shutil
 import errno
 import numpy as np
+from scipy.ndimage import map_coordinates
 
 from mintpy.objects import (
     geometryDatasetNames,
@@ -199,6 +200,90 @@ def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None,
         raise ValueError('un-supported output unit: {}'.format(unit))
 
     return dates, dis
+
+
+#####################################################################
+def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
+    """Extract 2D matrix (z) value along the line [x0,y0;x1,y1]
+    Ref link: http://stackoverflow.com/questions/7878398/how-to-e
+              xtract-an-arbitrary-line-of-values-from-a-numpy-array
+
+    Parameters: z : (np.array) 2D data matrix
+                atr : (dict) attribute
+                start_yx : (list) y,x coordinate of start point
+                end_yx : (list) y,x coordinate of end   point
+                interpolation : str, sampling/interpolation method, including:
+                    'nearest'  - nearest neighbour, by default
+                    'cubic'    - cubic interpolation
+                    'bilinear' - bilinear interpolation
+
+    Returns:    transect: (dict) containing 1D matrix:
+                    'X' - 1D np.array for X/column coordinates in float32
+                    'Y' - 1D np.array for Y/row.   coordinates in float32
+                    'value' - 1D np.array for z value in float32
+                    'distance' - 1D np.array for distance in float32
+
+    Example: transect = transect_yx(dem, demRsc, [10,15], [100,115])
+    """
+    [y0, x0] = start_yx
+    [y1, x1] = end_yx
+
+    # check
+    length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+    if not all(0<= i < width and 0<= j < length for i,j in zip([x0,x1], [y0,y1])):
+        msg = 'input start/end point is out of data coverage'
+        msg += '\nstart_yx: {}'.format(start_yx)
+        msg += '\nend_yx:{}'.format(end_yx)
+        msg += '\ndata size: ({}, {})'.format(length, width)
+        raise ValueError(msg)
+
+    # Determine points coordinates along the line
+    num_pts = int(np.hypot(x1-x0, y1-y0))
+    ys = np.linspace(y0, y1, num_pts, dtype=np.float32)
+    xs = np.linspace(x0, x1, num_pts, dtype=np.float32)
+
+    # Extract z value along the line
+    if interpolation.lower() == 'nearest':
+        z_line = z[np.rint(ys).astype(np.int), np.rint(xs).astype(np.int)]
+    elif interpolation.lower() == 'cubic':
+        z_line = map_coordinates(z, np.vstack((ys, xs)), order=3)
+    elif interpolation.lower() == 'bilinear':
+        z_line = map_coordinates(z, np.vstack((ys, xs)), order=2)
+    else:
+        print('Un-recognized interpolation method: '+interpolation)
+        print('Continue with nearest ...')
+        z_line = z[np.rint(ys).astype(np.int), np.rint(xs).astype(np.int)]  # nearest neighbour
+
+    # Calculate Distance along the line
+    earth_radius = 6.3781e6    # in meter
+    if 'Y_FIRST' in atr.keys():
+        [lat0, lat1] = coordinate(atr).yx2lalo([y0, y1], coord_type='y')
+        lat_c = (lat0 + lat1) / 2.
+        x_step = float(atr['X_STEP']) * np.pi/180.0 * earth_radius * np.cos(lat_c * np.pi/180)
+        y_step = float(atr['Y_STEP']) * np.pi/180.0 * earth_radius
+    else:
+        x_step = range_ground_resolution(atr)
+        y_step = azimuth_ground_resolution(atr)
+    dist_line = np.hypot((xs - x0) * x_step,
+                         (ys - y0) * y_step)
+
+    # prepare output
+    transect = {}
+    transect['Y'] = ys
+    transect['X'] = xs
+    transect['value'] = z_line
+    transect['distance'] = dist_line
+    return transect
+
+
+def transect_lalo(z, atr, start_lalo, end_lalo, interpolation='nearest'):
+    """Extract 2D matrix (z) value along the line [start_lalo, end_lalo]"""
+    coord = coordinate(atr)
+    [y0, y1] = coord.lalo2yx([start_lalo[0], end_lalo[0]], coord_type='lat')
+    [x0, x1] = coord.lalo2yx([start_lalo[1], end_lalo[1]], coord_type='lon')
+    transect = transect_yx(z, atr, [y0, x0], [y1, x1], interpolation)
+    return transect
+
 
 #################################################################################
 def move_dask_stdout_stderr_files():
