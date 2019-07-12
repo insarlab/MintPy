@@ -5,9 +5,11 @@ import h5py
 import argparse
 import numpy as np
 from mintpy.utils import ptime
+from skimage.transform import resize
+
 
 EXAMPLE = """example:
-  prep_aria.py -w mintpy_SanFran -s stack/stack/ -i stack/incidenceAngle/20150605_20150512.vrt
+  prep_aria.py -w mintpy_SanFran -s stack/ -i incidenceAngle/20150605_20150512.vrt -d SRTM_3arcsec.dem
 """
 
 def create_parser():
@@ -36,6 +38,10 @@ def create_parser():
     parser.add_argument('-i', '--incidence-angle', dest='incidenceAngle', type=str,
                         required=True,
                         help='Name of the incidence angle file')
+    parser.add_argument('-d', '--dem', dest='dem', type=str,
+                        required=True,
+                        help='Name of the DEM file')
+
     return parser
 
 def cmd_line_parse(iargs = None):
@@ -140,7 +146,7 @@ def add_unwrapped_phase(h5File, unwStack, cohStack, connCompStack):
 
     return
 
-def add_geometry(h5File, incAngleFile):
+def add_geometry(h5File, incAngleFile,demFile):
 
     h5 = h5py.File(h5File, 'a')
 
@@ -151,6 +157,12 @@ def add_geometry(h5File, incAngleFile):
     h5['incidenceAngle'][:,:] = data
     data[data!=0] = startRange
     h5['slantRangeDistance'][:,:] = data
+
+    ds = gdal.Open(demFile, gdal.GA_ReadOnly)
+    data = ds.ReadAsArray()
+    outShape = (int(h5.attrs['LENGTH']),int(h5.attrs['WIDTH']))
+    demData = resize(data,outShape,order=1, mode='constant', anti_aliasing=True,preserve_range=True)
+    h5['height'][:,:] = demData
 
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
@@ -196,7 +208,7 @@ def main(iargs=None):
 
     h5Filename = os.path.join(inputDir, "geometryGeo.h5")
     layout_hdf5(h5Filename, dsNameDict, metadata)
-    add_geometry(h5Filename, inps.incidenceAngle)
+    add_geometry(h5Filename, inps.incidenceAngle, inps.dem)
 
 if __name__=="__main__":
     main()
