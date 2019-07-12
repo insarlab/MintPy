@@ -1339,7 +1339,7 @@ class viewer():
 
 #########################################  Main Function  ########################################
 def main(iargs=None):
-    obj = viewer(cmd=iargs)
+    obj = viewer(iargs=iargs)
     obj.configure()
     obj.plot()
     return

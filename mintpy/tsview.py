@@ -790,7 +790,7 @@ class timeseriesViewer():
 
 ###########################################################################################
 def main(iargs=None):
-    obj = timeseriesViewer(cmd=iargs)
+    obj = timeseriesViewer(iargs=iargs)
     obj.configure()
     obj.plot()
 
