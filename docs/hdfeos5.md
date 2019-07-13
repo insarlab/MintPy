@@ -46,10 +46,12 @@ E.g. S1_IW12_128_0593_0597_20141213_20170928.he5
   | &lt;DATE2>  | End date           | YYYYMMDD; "XXXXXXXX" if update mode is ON. |
   | &lt;SUB>    | Subset range       | N{:05d}_S{:05d}_W{:05d}_E{:05d} in degrees; number with precision of 3 digits after decimal * 1000; e.g. S00500_N01300_W001200_E005800; shown only if data is cropped. |
 
-### Online InSAR Viewer ([http://insarmaps.miami.edu](http://insarmaps.miami.edu)) ###
+### Web Viewer ###
 
 HDF-EOS5 file format is used as the input of the University of Miami's web viewer for InSAR time-series products. Below is a screenshot of the web viewer for the dataset on Kuju volcano from ALOS-1 acending track 422.
-   
+
+<p align="center"><b>http://insarmaps.miami.edu</b><br></p>
+
 [![InSAR Web Viewer](https://yunjunzhang.files.wordpress.com/2019/06/web_viewer_kujualosat422.png)](http://insarmaps.miami.edu/)
 
 

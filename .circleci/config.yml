@@ -1,0 +1,42 @@
+version: 2.1
+jobs:
+  test:
+    docker:
+      - image: hysds/pge-base:latest
+    steps:
+      - checkout
+      - run:
+          name: Test
+          command: |
+            source $HOME/verdi/bin/activate
+            sudo yum -y update
+            #sudo yum -y install gcc
+            #pip install -U pytest jsonschema
+            mkdir test-reports
+            #pytest --junitxml=test-reports/junit.xml
+
+      - store_test_results:
+          path: test-reports
+
+      - store_artifacts:
+          path: test-reports    
+
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test
+  weekly:
+    triggers:
+      - schedule:
+          cron: "0 7 * * 0"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - test:
+          filters:
+            branches:
+              only: master
