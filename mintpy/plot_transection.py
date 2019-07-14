@@ -7,6 +7,7 @@
 
 
 import os
+import sys
 import argparse
 import numpy as np
 from matplotlib import pyplot as plt, ticker
@@ -40,14 +41,9 @@ def create_parser():
     parser.add_argument('file', nargs='+',
                         help='input file to show transection')
     parser.add_argument('--dset', dest='dset', help='Dataset name to read')
-
-    parser.add_argument('--offset','--off', dest='offset', type=float, default=0.05,
-                        help='offset between transections from different files. Default: 0.05')
-
     parser.add_argument('--noverbose', dest='print_msg', action='store_false',
                         help='Disable the verbose message printing.')
 
-    # Start / End Point
     lines = parser.add_argument_group('Start and End Point of Profile')
     lines.add_argument('--start-yx','--yx0', dest='start_yx', metavar=('Y0', 'X0'), type=int, nargs=2,
                        help='start point of the profile in pixel number [y, x]')
@@ -60,15 +56,13 @@ def create_parser():
     lines.add_argument('--line-file', dest='lola_file',
                        help='file with start and end point info in lon lat, same as GMT format.\n'+GMT_FILE)
 
-    parser.add_argument('--interpolation', default='nearest', choices=['nearest', 'bilinear', 'cubic'],
+    lines.add_argument('--interpolation', default='nearest', choices=['nearest', 'bilinear', 'cubic'],
                         help='interpolation method while extacting profile along the line. Default: nearest.')
 
-    lines.add_argument('--ms', '--markersize', dest='marker_size', type=float, default=2.0,
-                       help='Point marker size. Default: 2.0')
-
-    parser.add_argument('--view-cmd', dest='view_cmd', default='view.py {} --noverbose ',
-                        help='view.py command to plot the input map file\n'+
-                             'Default: view.py file --noverbose')
+    parser.add_argument('--offset','--off', dest='offset', type=float, default=0.05,
+                        help='offset between transections from different files. Default: 0.05')
+    parser.add_argument('--ms', '--markersize', dest='marker_size', type=float, default=2.0,
+                        help='Point marker size. Default: 2.0')
 
     parser = pp.add_figure_argument(parser)
     parser = pp.add_save_argument(parser)
@@ -76,8 +70,7 @@ def create_parser():
 
 
 def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
+    inps = create_parser().parse_args(args=iargs)
 
     if inps.outfile or not inps.disp_fig:
         inps.save_fig = True
@@ -86,6 +79,9 @@ def cmd_line_parse(iargs=None):
     inps.file = ut.get_file_list(inps.file)
     inps.atr = readfile.read_attribute(inps.file[0])
     inps.coord = ut.coordinate(inps.atr)
+
+    if not inps.dset:
+        inps.dset = readfile.get_slice_list(inps.file[0])[0]
 
     # lola_file --> start/end_lalo
     if inps.lola_file:
@@ -126,6 +122,28 @@ def read_lonlat_file(lonlat_file):
     return start_lalo, end_lalo
 
 
+def get_view_cmd(iargs):
+    """Assemble view.py command line from input arguments"""
+    # define ALL parsing options from create_parser() that are common to view.py
+    parser = argparse.ArgumentParser(description='view.py parser')
+    parser.add_argument('--noverbose', dest='print_msg', action='store_false',
+                        help='Disable the verbose message printing.')
+    parser = pp.add_figure_argument(parser)
+    parser = pp.add_save_argument(parser)
+
+    # get args that are applicable to view.py
+    unique_args = parser.parse_known_args(iargs)[1]
+    view_args = [i for i in iargs if i not in unique_args]
+
+    # assemble view.py command line
+    inps = cmd_line_parse(iargs)
+    view_cmd = 'view.py {} '.format(inps.file[0])
+    if inps.dset:
+        view_cmd += ' {} '.format(inps.dset)
+    view_cmd += ' '.join(view_args)
+    return view_cmd
+
+
 #####################################################################
 class transectionViewer():
     """class for plot_transection
@@ -160,23 +178,25 @@ class transectionViewer():
         for key, value in inps.__dict__.items():
             setattr(self, key, value)
 
-        # merge inps from view.py into self object
-        self.data_img, atr, inps_img = view.prep_slice(self.view_cmd.format(self.file[0]))
-        for key, value in inps_img.__dict__.items():
+        # copy inps from view.py to self object
+        view_cmd = get_view_cmd(self.iargs)
+        self.data_img, atr, inps_view = view.prep_slice(view_cmd)
+        for key, value in inps_view.__dict__.items():
             setattr(self, key, value)
+
         self.offset *= self.disp_scale
 
-        # keep the following parameter to not affected by merging with view.py
+        # do not update the following setting from view.py
         self.file = inps.file
         self.dset = inps.dset
+        self.fig_size = inps.fig_size
         self.num_file = len(inps.file)
 
         # auto figure size
-        self.fig_size = inps.fig_size
         if not self.fig_size:
             length, width = int(self.atr['LENGTH']), int(self.atr['WIDTH'])
             fig_size = pp.auto_figure_size((length, width), disp_cbar=True)
-            self.fig_size = [fig_size[0]+fig_size[1], fig_size[1]]
+            self.fig_size = [fig_size[0] + fig_size[1], fig_size[1]]
         return
 
     def plot(self):
@@ -204,14 +224,16 @@ class transectionViewer():
             self.draw_line(self.start_yx, self.end_yx)
             self.draw_transection(self.start_yx, self.end_yx)
 
-            # save
-            if self.save_fig:
-                outfile = '{}.pdf'.format(self.outfile_base)
-                self.fig.savefig(outfile, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-                vprint('saved transect to', outfile)
-        self.fig.subplots_adjust(left=0.05)
+        self.fig.subplots_adjust(left=0.05, wspace=0.25)
+
+        # save
+        if self.save_fig:
+            outfile = '{}.pdf'.format(self.outfile_base)
+            self.fig.savefig(outfile, bbox_inches='tight', transparent=True, dpi=self.fig_dpi)
+            vprint('saved transect to', outfile)
 
         self.cid = self.fig.canvas.mpl_connect('button_release_event', self.select_point)
+
         if self.disp_fig:
             vprint('showing ...')
             plt.show()
@@ -310,4 +332,4 @@ def main(iargs=None):
 
 #####################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
