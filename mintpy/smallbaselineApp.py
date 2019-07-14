@@ -201,6 +201,7 @@ class TimeSeriesAnalysis:
         It 1) grab project name if given
            2) grab and go to work directory
            3) get and read template(s) options
+           4) get plot shell script to work directory
         """
 
         #1. Get projectName
@@ -245,6 +246,33 @@ class TimeSeriesAnalysis:
 
         # 3.2 read (custom) template files into dicts
         self._read_template()
+
+        # 4. Copy the plot shell file
+        sh_file = os.path.join(os.path.dirname(__file__), '../sh/plot_smallbaselineApp.sh')
+
+        def grab_latest_update_date(fname, prefix='# Latest update:'):
+            try:
+                lines = open(fname, 'r').readlines()
+                line = [i for i in lines if prefix in i][0]
+                t = re.findall('\d{4}-\d{2}-\d{2}', line)[0]
+                t = datetime.datetime.strptime(t, '%Y-%m-%d')
+            except:
+                t = datetime.datetime.strptime('2010-01-01', '%Y-%m-%d') #a arbitrary old date
+            return t
+
+        # 1) copy to work directory (if not existed yet).
+        if not os.path.isfile(os.path.basename(sh_file)):
+            print('copy {} to work directory: {}'.format(sh_file, self.workDir))
+            shutil.copy2(sh_file, self.workDir)
+
+        # 2) copy to work directory (if obsolete file detected) and rename the existing one
+        elif grab_latest_update_date(os.path.basename(sh_file)) < grab_latest_update_date(sh_file):
+            os.system('mv {f} {f}_obsolete'.format(f=os.path.basename(sh_file)))
+            print('obsolete shell file detected, renamed it to: {}_obsolete'.format(os.path.basename(sh_file)))
+            print('copy {} to work directory: {}'.format(sh_file, self.workDir))
+            shutil.copy2(sh_file, self.workDir)
+
+        self.plot_sh_cmd = './'+os.path.basename(sh_file)
         return
 
 
@@ -928,38 +956,10 @@ class TimeSeriesAnalysis:
 
     def plot_result(self, print_aux=True, plot=True):
         """Plot data files and save to figures in pic folder"""
-        if not self.template['mintpy.plot'] or not plot:
-            return
-
-        def grab_latest_update_date(fname, prefix='# Latest update:'):
-            try:
-                lines = open(fname, 'r').readlines()
-                line = [i for i in lines if prefix in i][0]
-                t = re.findall('\d{4}-\d{2}-\d{2}', line)[0]
-                t = datetime.datetime.strptime(t, '%Y-%m-%d')
-            except:
-                t = datetime.datetime.strptime('2010-01-01', '%Y-%m-%d') #a arbitrary old date
-            return t
-
         print('\n******************** plot & save to pic ********************')
-        sh_file = os.path.join(os.path.dirname(__file__), '../sh/plot_smallbaselineApp.sh')
-
-        # 1) copy to work directory (if not existed yet).
-        if not os.path.isfile(os.path.basename(sh_file)):
-            print('copy {} to work directory: {}'.format(sh_file, self.workDir))
-            shutil.copy2(sh_file, self.workDir)
-
-        # 2) copy to work directory (if obsolete file detected) and rename the existing one
-        elif grab_latest_update_date(os.path.basename(sh_file)) < grab_latest_update_date(sh_file):
-            os.system('mv {f} {f}_obsolete'.format(f=os.path.basename(sh_file)))
-            print('obsolete shell file detected, renamed it to: {}_obsolete'.format(os.path.basename(sh_file)))
-            print('copy {} to work directory: {}'.format(sh_file, self.workDir))
-            shutil.copy2(sh_file, self.workDir)
-
-        # cmd
-        cmd = './'+os.path.basename(sh_file)
-        print(cmd)
-        subprocess.Popen(cmd, shell=True).wait()
+        if self.template['mintpy.plot'] and plot:
+            print(self.plot_sh_cmd)
+            subprocess.Popen(self.plot_sh_cmd, shell=True).wait()
 
         # message for more visualization scripts
         msg = """Explore more info & visualization options with the following scripts:
