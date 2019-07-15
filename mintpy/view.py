@@ -891,7 +891,9 @@ def read_data4figure(i_start, i_end, inps, metadata):
         data -= ref_data
 
     # v/dlim, adjust data if all subplots are 1) the same type OR 2) velocity or timeseries
-    if len(inps.dsetFamilyList) == 1 or inps.key in ['velocity', 'timeseries']:
+    if (len(inps.dsetFamilyList) == 1 
+            or inps.key in ['velocity', 'timeseries', 'inversion'] 
+            or inps.dsetFamilyList == ['data','model','residual']): #geodetic inversion result
         data, inps = update_data_with_plot_inps(data, metadata, inps)
         if (not inps.vlim 
                 and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)
@@ -1091,7 +1093,7 @@ def prepare4multi_subplots(inps, metadata):
     3) read dropIfgram info
     4) read and prepare DEM for background
     """
-    inps.dsetFamilyList = list(set(i.split('-')[0] for i in inps.dset))
+    inps.dsetFamilyList = sorted(list(set(i.split('-')[0] for i in inps.dset)))
 
     # Update multilook parameters with new num and col number
     if inps.multilook and inps.multilook_num == 1:
