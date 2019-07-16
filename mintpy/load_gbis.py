@@ -96,7 +96,7 @@ def gbis_mat2hdf5(mat_file, display=True):
             for ax, d in zip(axs[i, :], [data, model, residual]):
                 im = ax.imshow(d, vmin=-dlim, vmax=dlim, cmap='jet')
                 fig.colorbar(im, ax=ax)
-            axs[i,0].set_ylabel('\n'.join(insarPlot.name.split('_')))
+            axs[i,0].set_ylabel('\n'.join(insarPlot.name.split('_', 1)))
 
     if display:
         print('showing ...')
