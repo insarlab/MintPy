@@ -17,7 +17,7 @@ sensorNames = ['ers', 'env', 'sen', 'rsat', 'rsat2', 'ksat5', 'gaofen3',
 # remove -_ and user lower case before standardize sensor names
 standardedSensorNames = {'ers1': 'ers', 'ers2': 'ers', 'ers12': 'ers',
                          'envisat': 'env', 'asar': 'env',
-                         'sentinel1': 'sen', 's1': 'sen', 's1a': 'sen', 's1b': 'sen', 's1ab': 'sen',
+                         'sentinel1': 'sen',  'sentinel1a': 'sen', 'sentinel1b': 'sen', 's1': 'sen', 's1a': 'sen', 's1b': 'sen',
                          'radarsat': 'rsat', 'radarsat1': 'rsat', 'rsat1': 'rsat',
                          'radarsat2': 'rsat2',
                          'kompsat5': 'ksat5', 'kompsat': 'ksat5', 'kmps5': 'ksat5',

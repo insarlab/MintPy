@@ -2,21 +2,20 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright(c) 2019, Andre Theron, Zhang Yunjun            #
-# Author: Andre Theron (andretheronsa@gmail.com), Jun 2019 #
+# Author: Andre Theron, Zhang Yunjun, Jun 2019             #
+# Email: andretheronsa@gmail.com                           #
 ############################################################
+
 
 import os
 import argparse
 import datetime
 import math
+from mintpy.objects.sensor import standardedSensorNames
 from mintpy.utils import readfile, writefile, utils as ut
 
 
-EXAMPLE = """example:
-  prep_snap.py  ./201090101_20190112/201090101_20190112_filt_tc.dim
-  prep_snap.py  ./*/*filt_tc*.dim
-"""
-
+##################################################################################################
 DESCRIPTION = """
   For each interferogram, coherence or unwrapped .dim product this script will prepare.rsc 
   metadata files for for mintpy based on .dim metadata file.
@@ -56,14 +55,17 @@ DESCRIPTION = """
     - Terrain correct (all products)
 """
 
+EXAMPLE = """example:
+  prep_snap.py  ../interferograms/*/*/Unw_*.img
+  prep_snap.py  ../dem_tc.data/dem*.img
+"""
+
 def create_parser():
     parser = argparse.ArgumentParser(description='Prepare attributes file for SNAP products.\n'+DESCRIPTION,
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
-    parser.add_argument('file', nargs='+', help='SNAP dim file(s)')
-    parser.add_argument('--no-parallel', dest='parallel', action='store_false', default=True,
-                        help='Disable parallel processing. Diabled auto for 1 input file.')
+    parser.add_argument('file', nargs='+', help='SNAP data file(s) in *.img format.')
     return parser
 
 
@@ -71,16 +73,10 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     inps.file = ut.get_file_list(inps.file, abspath=True)
-    # Check input file type
-    ext_list = ['.dim']
-    ext = os.path.splitext(inps.file[0])[1]
-    if ext not in ext_list:
-        msg = 'unsupported input file extension: {}'.format(ext)
-        msg += '\nsupported file extensions: {}'.format(ext_list)
-        raise ValueError(msg)
-    # Check that input dim is interferogram
     return inps
 
+
+##################################################################################################
 def get_ellpsoid_local_radius(xyz):
     """Calculate satellite height and ellpsoid local radius from orbital state vector
     Parameters: xyz : tuple of 3 float, orbital state vector
@@ -238,8 +234,6 @@ def utm_dim_to_rsc(fname):
     atr["WIDTH"] = width
     atr["LENGTH"], atr["FILE_LENGTH"]  = lenght, lenght
     atr["DATA_TYPE"] = data_type
-    atr["X_STEP"], atr["Y_STEP"] = transform[0], transform[3]
-    atr["X_FIRST"], atr["Y_FIRST"] = transform[4], transform[5]
     atr["ANTENNA_SIDE"] = antenna_side
     atr["CENTER_LINE_UTC"] = center_time_s
     atr["LAT_REF1"], atr["LONG_REF1"] = first_near_lat, first_near_long
@@ -250,36 +244,55 @@ def utm_dim_to_rsc(fname):
     atr["ALOOKS"], atr["RLOOKS"] = int(float(azimuth_looks[0])), int(float(range_looks[0]))
     atr["PRF"] = prf
     atr["STARTING_RANGE"] = starting_range
-    atr["PLATFORM"] = platform
+    atr["PLATFORM"] = standardedSensorNames[platform.replace('-','').lower()]
     atr["HEADING"] = heading
     atr["EARTH_RADIUS"] =  earth_radius
     atr["HEIGHT"] = height
     atr["RANGE_PIXEL_SIZE"] = range_pixel_size
     atr["AZIMUTH_PIXEL_SIZE"] = azimuth_pixel_size
 
+    # Convert 3.333e-4 to 0.0003333
+    transform = [str(float(i)) for i in transform]
+    atr["X_STEP"], atr["Y_STEP"] = transform[0], transform[3]
+    atr["X_FIRST"], atr["Y_FIRST"] = transform[4], transform[5]
+
+    # convert all key value in string format to ensure the --update checking in write_rsc()
+    for key, value in atr.items():
+        atr[key] = str(value)
     return atr
 
-# Write to rsc file
-def write_rsc(fname, atr):
-    basic_rsc_file = fname+'.rsc'
+
+def write_rsc(atr, out_file):
+    """Write to rsc file"""
+    # grab atr from existing rsc file
     try:
-        atr_orig = readfile.read_roipac_rsc(basic_rsc_file)
+        atr_orig = readfile.read_roipac_rsc(out_file)
     except:
         atr_orig = dict()
+
+    # (over)write to rsc file if input atr has more items
     if not set(atr.items()).issubset(set(atr_orig.items())):
         atr_out = {**atr_orig, **atr}
-        print('Extracting metadata from {} into {} '.format(os.path.basename(fname),
-                                           os.path.basename(basic_rsc_file)))
-        writefile.write_roipac_rsc(atr_out, out_file=basic_rsc_file)
-    return basic_rsc_file
+        print('write metadata to {} '.format(os.path.basename(out_file)))
+        writefile.write_roipac_rsc(atr_out, out_file=out_file)
+    return out_file
+
 
 ##################################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    for fname in inps.file:
-        print("Running prep_snap for file: {}".format(fname))
-        atr = utm_dim_to_rsc(fname)
-        write_rsc(fname, atr)
+    for img_file in inps.file:
+        # *.dim metadata file for the input *.img data file
+        dim_file = os.path.dirname(img_file)[:-4]+'dim'
+
+        # get metadata dict from *.dim file
+        atr = utm_dim_to_rsc(dim_file)
+
+        # write metadata dict to *.rsc file
+        rsc_file = os.path.splitext(img_file)[0]+'.rsc'
+        rsc_file = write_rsc(atr, out_file=rsc_file)
+    return
+
 
 ##################################################################################################
 if __name__ == "__main__":
