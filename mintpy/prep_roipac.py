@@ -123,7 +123,6 @@ def main(iargs=None):
     if ext in ['.unw', '.cor', '.int', '.byt']:
         for fname in inps.file:
             extract_metadata(fname)
-
     return
 
 

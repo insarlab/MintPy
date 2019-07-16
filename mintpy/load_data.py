@@ -190,7 +190,7 @@ def read_inps2dict(inps):
         inpsDict['PROJECT_NAME'] = sensor.project_name2sensor_name(cfile)[1]
     inpsDict['PLATFORM'] = str(sensor.project_name2sensor_name(str(inpsDict['PROJECT_NAME']))[0])
     if inpsDict['PLATFORM']:
-        print('platform : {}'.format(inpsDict['PLATFORM']))
+        print('SAR platform/sensor : {}'.format(inpsDict['PLATFORM']))
     print('processor: {}'.format(inpsDict['processor']))
 
     # Here to insert code to check default file path for miami user
