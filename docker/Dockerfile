@@ -16,9 +16,13 @@ RUN apt-get update && \
     python3 \
     python3-pip \
     wget \ 
-    vim && \
-    apt-get clean \
+    vim \
+    zip \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Change default shell from dash to bash
+RUN ln -sf bash /bin/sh
 
 # Prepare build time environment for conda and mintpy
 ARG MINTPY_HOME=/home/python/MintPy
