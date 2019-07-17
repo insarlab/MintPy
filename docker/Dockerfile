@@ -11,7 +11,7 @@ LABEL \
 
 # Install useful programs
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+    apt-get install -y \
     git \
     python3 \
     python3-pip \
@@ -58,17 +58,17 @@ RUN ${PYTHON3DIR}/bin/conda config --add channels conda-forge && \
 # Install pykml
 RUN ${PYTHON3DIR}/bin/pip install git+https://github.com/yunjunz/pykml.git
 
+# Install DASK - not tested yet
+#RUN mkdir -p /home/.config/dask && \
+#    cp ${MINTPY_HOME}/mintpy/defaults/dask_mintpy.yaml /home/.config/dask/dask_mintpy.yaml
+
 # Set working directory ENV - map a host data volume to this using "docker build . -t mintpy && docker run mintpy -v /host/path/to/data:/home/work/"
 RUN mkdir -p ${WORK_DIR}
 ENV WORK_DIR=${WORK_DIR}
 WORKDIR ${WORK_DIR}
 
-# Install DASK - not tested yet
-#RUN mkdir -p /home/.config/dask && \
-#    cp ${MINTPY_HOME}/mintpy/defaults/dask_mintpy.yaml /home/.config/dask/dask_mintpy.yaml
-
 # Copy custom app scripts to app folder - not required
-#COPY ["./", "/home/app/"]
+COPY ["./", "/home/app/"]
 
 # Run entrypoint script - not required
-#CMD ["python3", "/home/app/app.py"]
+CMD ["python3", "/home/app/app.py"]
