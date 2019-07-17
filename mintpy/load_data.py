@@ -239,8 +239,17 @@ def read_subset_box(inpsDict):
                ' if 1) no lookup file AND'
                '    2) radar/unkonwn coded dataset'))
         print('\tignore it and continue.')
+
     if not geo_box and not pix_box:
-        return inpsDict
+        # adjust for the size inconsistency problem in SNAP geocoded products
+        # ONLY IF there is no input subset
+        # Use the min bbox if files size are different
+        if inpsDict['processor'] == 'snap':
+            fnames = ut.get_file_list(inpsDict['mintpy.load.unwFile'])
+            pix_box = check_files_size(fnames)
+
+        if not pix_box:
+            return inpsDict
 
     # geo_box --> pix_box
     coord = ut.coordinate(atr, lookup_file=lookupFile)
@@ -262,6 +271,44 @@ def read_subset_box(inpsDict):
     inpsDict['box'] = pix_box
     inpsDict['box4geo_lut'] = box4geo_lut
     return inpsDict
+
+
+def check_files_size(fnames):
+    """Check the size (row / column number) of a list of files
+    For SNAP geocoded products has one line missing in some interferograms, Andre, 2019-07-16
+    Parameters: fnames  : list of path for interferogram files 
+    Returns:    pix_box : None if all files are in same size
+                          (0, 0, min_width, min_length) if not.
+    """
+    atr_list = [readfile.read_attribute(fname) for fname in fnames]
+    length_list = [int(atr['LENGTH']) for atr in atr_list]
+    width_list = [int(atr['WIDTH']) for atr in atr_list]
+    if any(len(set(i)) for i in [length_list, width_list]):
+        min_length = min(length_list)
+        min_width = min(width_list)
+        pix_box = (0, 0, min_width, min_length)
+
+        # print out warning message
+        msg = '\n'+'*'*80
+        msg += '\nWARNING: NOT all input unwrapped interferograms have the same row/column number!'
+        msg += '\nMinimum size is: ({}, {})'.format(min_length, min_width)
+        msg += '\n'+'-'*30
+        msg += '\nThe following dates has different size:'
+
+        for i in range(len(fnames)):
+            if length_list[i] != min_length or width_list[i] != min_width:
+                msg += '\n\t{}\t({}, {})'.format(atr_list[i]['DATE12'], length_list[i], width_list[i])
+
+        msg += '\n'+'-'*30
+        msg += '\nAssuming the interferograms above have:'
+        msg += '\n\textra line(s) at the bottom OR'
+        msg += '\n\textra column(s) at the right'
+        msg += '\nContinue to load data using subset of the minimum size.'
+        msg += '\n'+'*'*80+'\n'
+        print(msg)
+    else:
+        pix_box = None
+    return pix_box
 
 
 def read_inps_dict2ifgram_stack_dict_object(inpsDict):
