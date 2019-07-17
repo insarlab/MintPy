@@ -411,130 +411,178 @@ def plot_slice(ax, data, metadata, inps=None):
 
     vprint('display data in transparency: '+str(inps.transparency))
 
-    #----------------------- Plot in Geo-coordinate using Basemap --------------------------------#
+    #----------------------- Plot in Geo-coordinate --------------------------------------------#
     num_row, num_col = data.shape
     if inps.geo_box and inps.fig_coord == 'geo':
-        # Map Setup
-        vprint('plot in Lat/Lon coordinate')
-        vprint('map projection: '+inps.map_projection)
-        vprint('boundary database resolution: '+inps.resolution)
-        if inps.map_projection in ['cyl', 'merc', 'mill', 'cea', 'gall']:
-            m = pp.BasemapExt(llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],
-                              urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],
-                              projection=inps.map_projection,
-                              resolution=inps.resolution, area_thresh=1.,
-                              suppress_ticks=False, ax=ax)
-        elif inps.map_projection in ['ortho']:
-            m = pp.BasemapExt(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,
-                              lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,
-                              projection=inps.map_projection,
-                              resolution=inps.resolution, area_thresh=1.,
-                              suppress_ticks=False, ax=ax)
-        else:
-            m = pp.BasemapExt(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,
-                              lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,
-                              llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],
-                              urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],
-                              projection=inps.map_projection,
-                              resolution=inps.resolution, area_thresh=1.,
-                              suppress_ticks=False, ax=ax)
 
-        # Draw coastline
-        if inps.coastline:
-            vprint('draw coast line')
-            m.drawcoastlines()
+        if metadata['Y_UNIT'].lower().startswith('deg'):
+            # geo-coordinates in degrees using Basemap
+            # Map Setup
+            vprint('plot in Lat/Lon coordinate')
+            vprint('map projection: '+inps.map_projection)
+            vprint('boundary database resolution: '+inps.resolution)
+            if inps.map_projection in ['cyl', 'merc', 'mill', 'cea', 'gall']:
+                m = pp.BasemapExt(llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],
+                                  urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],
+                                  projection=inps.map_projection,
+                                  resolution=inps.resolution, area_thresh=1.,
+                                  suppress_ticks=False, ax=ax)
+            elif inps.map_projection in ['ortho']:
+                m = pp.BasemapExt(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,
+                                  lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,
+                                  projection=inps.map_projection,
+                                  resolution=inps.resolution, area_thresh=1.,
+                                  suppress_ticks=False, ax=ax)
+            else:
+                m = pp.BasemapExt(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,
+                                  lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,
+                                  llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],
+                                  urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],
+                                  projection=inps.map_projection,
+                                  resolution=inps.resolution, area_thresh=1.,
+                                  suppress_ticks=False, ax=ax)
 
-        # Plot DEM
-        if inps.dem_file:
-            vprint('plotting DEM background ...')
-            m = pp.plot_dem_background(ax=m, geo_box=inps.geo_box,
-                                       dem=dem, inps=inps,
-                                       print_msg=inps.print_msg)
+            # Draw coastline
+            if inps.coastline:
+                vprint('draw coast line')
+                m.drawcoastlines()
 
-        # Plot Data
-        coord = ut.coordinate(metadata)
-        vprint('plotting Data ...')
-        if inps.disp_gps and inps.gps_component and inps.ref_gps_site:
-            ref_site_lalo = GPS(site=inps.ref_gps_site).get_stat_lat_lon(print_msg=False)
-            y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
-            y -= inps.pix_box[1]
-            x -= inps.pix_box[0]
-            data -= data[y, x]
-            vprint('referencing to GPS station: {} at {}'.format(inps.ref_gps_site, ref_site_lalo))
-        im = m.imshow(data, cmap=inps.colormap, origin='upper',
-                      vmin=inps.vlim[0], vmax=inps.vlim[1],
-                      alpha=inps.transparency, interpolation='nearest',
-                      animated=inps.animation, zorder=1)
+            # Plot DEM
+            if inps.dem_file:
+                vprint('plotting DEM background ...')
+                m = pp.plot_dem_background(ax=m, geo_box=inps.geo_box,
+                                           dem=dem, inps=inps,
+                                           print_msg=inps.print_msg)
 
-        # Scale Bar
-        if inps.disp_scalebar:
-            vprint('plot scale bar')
-            m.draw_scale_bar(loc=inps.scalebar, ax=ax,
-                             labelpad=inps.scalebar_pad,
-                             font_size=inps.font_size,
-                             color=inps.font_color)
+            # Plot Data
+            coord = ut.coordinate(metadata)
+            vprint('plotting Data ...')
+            if inps.disp_gps and inps.gps_component and inps.ref_gps_site:
+                ref_site_lalo = GPS(site=inps.ref_gps_site).get_stat_lat_lon(print_msg=False)
+                y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
+                y -= inps.pix_box[1]
+                x -= inps.pix_box[0]
+                data -= data[y, x]
+                vprint('referencing to GPS station: {} at {}'.format(inps.ref_gps_site, ref_site_lalo))
+            im = m.imshow(data, cmap=inps.colormap, origin='upper',
+                          vmin=inps.vlim[0], vmax=inps.vlim[1],
+                          alpha=inps.transparency, interpolation='nearest',
+                          animated=inps.animation, zorder=1)
 
-        # Lat Lon labels
-        if inps.lalo_label:
-            vprint('plot lat/lon labels')
-            m.draw_lalo_label(inps.geo_box, ax=ax,
-                              lalo_step=inps.lalo_step,
-                              lalo_loc=inps.lalo_loc,
-                              lalo_max_num=inps.lalo_max_num,
-                              font_size=inps.font_size,
-                              color=inps.font_color,
-                              print_msg=inps.print_msg)
-        else:
-            ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
+            # Scale Bar
+            if inps.disp_scalebar:
+                vprint('plot scale bar')
+                m.draw_scale_bar(loc=inps.scalebar, ax=ax,
+                                 labelpad=inps.scalebar_pad,
+                                 font_size=inps.font_size,
+                                 color=inps.font_color)
 
-        # Plot Reference Point
-        if inps.disp_ref_pixel and inps.ref_lalo:
-            ax.plot(inps.ref_lalo[1], inps.ref_lalo[0],
-                    inps.ref_marker, ms=inps.ref_marker_size)
-            vprint('plot reference point')
+            # Lat Lon labels
+            if inps.lalo_label:
+                vprint('plot lat/lon labels')
+                m.draw_lalo_label(inps.geo_box, ax=ax,
+                                  lalo_step=inps.lalo_step,
+                                  lalo_loc=inps.lalo_loc,
+                                  lalo_max_num=inps.lalo_max_num,
+                                  font_size=inps.font_size,
+                                  color=inps.font_color,
+                                  print_msg=inps.print_msg)
+            else:
+                ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
 
-        # Plot points of interest
-        if inps.pts_lalo is not None:
-            ax.plot(inps.pts_lalo[:, 1], inps.pts_lalo[:, 0],
-                    inps.pts_marker, ms=inps.pts_marker_size,
-                    mec='k', mew=1.)
-            vprint('plot points of interest')
+            # Plot Reference Point
+            if inps.disp_ref_pixel and inps.ref_lalo:
+                ax.plot(inps.ref_lalo[1], inps.ref_lalo[0],
+                        inps.ref_marker, ms=inps.ref_marker_size)
+                vprint('plot reference point')
+    
+            # Plot points of interest
+            if inps.pts_lalo is not None:
+                ax.plot(inps.pts_lalo[:, 1], inps.pts_lalo[:, 0],
+                        inps.pts_marker, ms=inps.pts_marker_size,
+                        mec='k', mew=1.)
+                vprint('plot points of interest')
+    
+            # Show UNR GPS stations
+            if inps.disp_gps:
+                SNWE = (inps.geo_box[3], inps.geo_box[1],
+                        inps.geo_box[0], inps.geo_box[2])
+                ax = pp.plot_gps(ax, SNWE, inps, metadata, print_msg=inps.print_msg)
+                vprint('displaying GPS stations')
+    
+            # save basemapExt object
+            inps.map = m
 
-        # Show UNR GPS stations
-        if inps.disp_gps:
-            SNWE = (inps.geo_box[3], inps.geo_box[1],
-                    inps.geo_box[0], inps.geo_box[2])
-            ax = pp.plot_gps(ax, SNWE, inps, metadata, print_msg=inps.print_msg)
-            vprint('displaying GPS stations')
+            # Status bar
+            if inps.dem_file:
+                coord_dem = ut.coordinate(dem_metadata)
+                dem_len, dem_wid = dem.shape
+            def format_coord(x, y):
+                msg = 'E{:.4f}, N{:.4f}'.format(x, y)
+                col = coord.lalo2yx(x, coord_type='lon') - inps.pix_box[0]
+                row = coord.lalo2yx(y, coord_type='lat') - inps.pix_box[1]
+                if 0 <= col < num_col and 0 <= row < num_row:
+                    v = data[row, col]
+                    if np.isnan(v) or np.ma.is_masked(v):
+                        msg += ', v=[]'
+                    else:
+                        msg += ', v={:.3f}'.format(v)
+                    if inps.dem_file:
+                        dem_col = coord_dem.lalo2yx(x, coord_type='lon') - dem_pix_box[0]
+                        dem_row = coord_dem.lalo2yx(y, coord_type='lat') - dem_pix_box[1]
+                        if 0 <= dem_col < dem_wid and 0 <= dem_row < dem_len:
+                            h = dem[dem_row, dem_col]
+                            msg += ', h={:.0f}'.format(h)
+                    msg += ', x={:.0f}, y={:.0f}'.format(col+inps.pix_box[0],
+                                                         row+inps.pix_box[1])
+                return msg
+            ax.format_coord = format_coord
 
-        # save basemapExt object
-        inps.map = m
+        elif metadata['Y_UNIT'] == 'm':
+            # geo-coordinates in meters
+            vprint('plot in geo-coordinates in meters')
 
-        # Status bar
-        if inps.dem_file:
-            coord_dem = ut.coordinate(dem_metadata)
-            dem_len, dem_wid = dem.shape
-        def format_coord(x, y):
-            msg = 'E{:.4f}, N{:.4f}'.format(x, y)
-            col = coord.lalo2yx(x, coord_type='lon') - inps.pix_box[0]
-            row = coord.lalo2yx(y, coord_type='lat') - inps.pix_box[1]
-            if 0 <= col < num_col and 0 <= row < num_row:
-                v = data[row, col]
-                if np.isnan(v) or np.ma.is_masked(v):
-                    msg += ', v=[]'
-                else:
+            # Plot Data
+            vprint('plotting Data ...')
+            extent = (inps.geo_box[0], inps.geo_box[2],
+                      inps.geo_box[3], inps.geo_box[1])
+            im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
+                           extent=extent, alpha=inps.transparency, interpolation='nearest', zorder=1)
+            ax.tick_params(axis='both', rotation=30, labelsize=inps.font_size)
+
+            # Plot Seed Point
+            if inps.disp_ref_pixel:
+                ref_y, ref_x = None, None
+                if inps.ref_yx:
+                    ref_y, ref_x = inps.ref_yx[0], inps.ref_yx[1]
+                elif 'REF_Y' in metadata.keys():
+                    ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
+                    ref_y = float(metadata['Y_FIRST']) + float(metadata['Y_STEP']) * ref_y
+                    ref_x = float(metadata['X_FIRST']) + float(metadata['X_STEP']) * ref_x
+
+                if ref_y and ref_x:
+                    ax.plot(ref_x, ref_y, inps.ref_marker, ms=inps.ref_marker_size)
+                    vprint('plot reference point')
+
+            ax.set_xlim(extent[0:2])
+            ax.set_ylim(extent[2:4])
+
+            # Status bar
+            def format_coord(x, y):
+                msg = 'x={:.1f}, y={:.1f}'.format(x, y)
+                col = int(np.rint((x - inps.geo_box[0]) / float(metadata['X_STEP'])))
+                row = int(np.rint((y - inps.geo_box[1]) / float(metadata['Y_STEP'])))
+                if 0 <= col < num_col and 0 <= row < num_row:
+                    v = data[row, col]
                     msg += ', v={:.3f}'.format(v)
-                if inps.dem_file:
-                    dem_col = coord_dem.lalo2yx(x, coord_type='lon') - dem_pix_box[0]
-                    dem_row = coord_dem.lalo2yx(y, coord_type='lat') - dem_pix_box[1]
-                    if 0 <= dem_col < dem_wid and 0 <= dem_row < dem_len:
-                        h = dem[dem_row, dem_col]
-                        msg += ', h={:.0f}'.format(h)
-                msg += ', x={:.0f}, y={:.0f}'.format(col+inps.pix_box[0],
-                                                     row+inps.pix_box[1])
-            return msg
-        ax.format_coord = format_coord
+                    if inps.dem_file:
+                        h = dem[row, col]
+                        msg += ', h={:.0f} m'.format(h)
+                return msg
+            ax.format_coord = format_coord
 
+        else:
+            raise ValueError('un-recognized coordinate unit: {}'.format(metadata['Y_UNIT']))
 
     #------------------------ Plot in Y/X-coordinate ------------------------------------------------#
     else:

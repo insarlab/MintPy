@@ -375,8 +375,23 @@ def extract_metadata4geometry_geo(fname):
     atr = {}
     atr['PROCESSOR'] = 'gamma'
     atr['FILE_TYPE'] = ext
-    atr['Y_UNIT'] = 'degrees'
-    atr['X_UNIT'] = 'degrees'
+
+    if 'post_lat' in par_dict.keys():
+        # coordinates in degree
+        atr['Y_UNIT'] = 'degrees'
+        atr['X_UNIT'] = 'degrees'
+    elif 'post_north' in par_dict.keys():
+        # coordinates in meter
+        atr['Y_UNIT'] = 'm'
+        atr['X_UNIT'] = 'm'
+        atr['X_FIRST'] = float(par_dict['corner_east']) - int(par_dict['width']) * float(par_dict['post_east'])
+    else:
+        msg = 'un-recognized coordinates type:'
+        for key, value in par_dict.items():
+            if key.startswith(('corner','post')):
+                msg += '\n\t{}: {}'.format(key, value)
+        raise ValueError(msg)
+
     atr.update(par_dict)
 
     # Write to .rsc file

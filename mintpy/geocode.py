@@ -195,8 +195,8 @@ def metadata_radar2geo(atr_in, res_obj, print_msg=True):
     else:                           #isce, doris
         atr['Y_FIRST'] = res_obj.SNWE[1] - res_obj.laloStep[0] / 2.
         atr['X_FIRST'] = res_obj.SNWE[2] - res_obj.laloStep[1] / 2.
-    atr['Y_UNIT'] = 'degrees'
-    atr['X_UNIT'] = 'degrees'
+    atr['Y_UNIT'] = res_obj.lut_metadata.get('Y_UNIT', 'degrees')
+    atr['X_UNIT'] = res_obj.lut_metadata.get('X_UNIT', 'degrees')
 
     # Reference point from y/x to lat/lon
     if 'REF_Y' in atr.keys():

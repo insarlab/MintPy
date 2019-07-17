@@ -44,8 +44,14 @@ standardMetadataKeys = {
     'azimuthPixelSize': 'AZIMUTH_PIXEL_SIZE',
     'azimuth_pixel_spacing': 'AZIMUTH_PIXEL_SIZE', 'az_pixel_spacing': 'AZIMUTH_PIXEL_SIZE',
     'center_time': 'CENTER_LINE_UTC',
+
+    # Gamma geo coordinates - degrees
     'corner_lon': 'X_FIRST', 'post_lon': 'X_STEP',
     'corner_lat': 'Y_FIRST', 'post_lat': 'Y_STEP',
+    # Gamma geo coordinates - meters
+    'post_east': 'X_STEP',
+    'post_north': 'Y_STEP', 'corner_north': 'Y_FIRST',
+
     'dataType': 'DATA_TYPE', 'data_type': 'DATA_TYPE',
     'drop_ifgram': 'DROP_IFGRAM',
     'earthRadius': 'EARTH_RADIUS', 'earth_radius_below_sensor': 'EARTH_RADIUS',
