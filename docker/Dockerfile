@@ -45,9 +45,7 @@ WORKDIR /home/python
 RUN git clone https://github.com/insarlab/MintPy.git
 
 # Pull and config PyAPS
-RUN mkdir -p PyAPS && \
-    cd PyAPS && \
-    git clone https://github.com/yunjunz/pyaps3.git
+RUN git clone https://github.com/yunjunz/pyaps3.git PyAPS
 
 # Install miniconda
 RUN wget https://repo.continuum.io/miniconda/Miniconda3-4.5.4-Linux-x86_64.sh && \
