@@ -59,7 +59,7 @@ TEMPLATE = """template:
 ## no   - save   0% disk usage, fast [default]
 ## lzf  - save ~57% disk usage, relative slow
 ## gzip - save ~62% disk usage, very slow [not recommend]
-mintpy.load.processor      = auto  #[isce,roipac,gamma,snap], auto for isce
+mintpy.load.processor      = auto  #[isce,snap,gamma,roipac], auto for isce
 mintpy.load.updateMode     = auto  #[yes / no], auto for yes, skip re-loading if HDF5 files are complete
 mintpy.load.compression    = auto  #[gzip / lzf / no], auto for no.
 ##---------metadata (for ISCE and SNAP):
@@ -117,7 +117,7 @@ def create_parser():
     parser.add_argument('--project', type=str, dest='PROJECT_NAME',
                         help='project name of dataset for INSARMAPS Web Viewer')
     parser.add_argument('--processor', type=str, dest='processor',
-                        choices={'isce', 'roipac', 'gamma', 'doris', 'gmtsar', 'snap'},
+                        choices={'isce', 'snap', 'gamma', 'roipac', 'doris', 'gmtsar'},
                         help='InSAR processor/software of the file', default='isce')
     parser.add_argument('--enforce', '-f', dest='updateMode', action='store_false',
                         help='Disable the update mode, or skip checking dataset already loaded.')
