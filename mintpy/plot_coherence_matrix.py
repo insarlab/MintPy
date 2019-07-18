@@ -44,8 +44,8 @@ def create_parser():
                         help='Point of interest in lat/lon')
     parser.add_argument('--lookup','--lut', dest='lookup_file',
                         help='Lookup file to convert lat/lon into y/x')
-    parser.add_argument('-c','--cmap', dest='cmap_name', default='truncate_RdBu',
-                        help='Colormap for coherence matrix.\nDefault: truncate_RdBu')
+    parser.add_argument('-c','--cmap', dest='cmap_name', default='RdBu_truncate',
+                        help='Colormap for coherence matrix.\nDefault: RdBu_truncate')
     parser.add_argument('--cmap-vlist', dest='cmap_vlist', type=float, nargs=3, default=[0.0, 0.7, 1.0],
                         help='start/jump/end fraction for truncated colormap. Default: 0.0 0.7 1.0')
     parser.add_argument('--figsize','--fs', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,

@@ -22,15 +22,17 @@ except KeyError:
 
 ## Modules dependency graph
 #/mintpy
+#-----------------------------------------------
 #    # Level 0
 #    /simulation
 #        forward_model
 #        fractal
 #    /objects
+#        colors
 #        giant
-#        stack
 #        ramp
 #        sensor
+#        stack
 #    /utils
 #        /solvers
 #            l1
@@ -39,6 +41,7 @@ except KeyError:
 #        ptime
 #        utils0
 #
+#-----------------------------------------------
 #    # Level 1 (depend on level 0)
 #    /simulation
 #        variance  (utils/ptime)
@@ -51,6 +54,7 @@ except KeyError:
 #        network   (objects/*, utils/readfile)
 #        utils1    (objects/*, utils/writefile)
 #
+#-----------------------------------------------
 #    # Level 2 (depends on level 0 + 1)
 #    /objects
 #        resample     (utils/readfile)
@@ -61,6 +65,7 @@ except KeyError:
 #        plot         (objects/*, utils/utils)
 #        stackDict    (objects/*, utils/utils)
 #
+#-----------------------------------------------
 #    # Level 3 (depends on level 0 + 1 + 2)
 #    /objects
 #        insar_vs_gps (objects/*, utils/{gps, plot}, simulation/*)
