@@ -21,7 +21,7 @@ RUN apt-get update && \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Change default shell from dash to bash
+# Change default shell from dash to bash permanently
 RUN ln -sf bash /bin/sh
 
 # Prepare build time environment for conda and mintpy
