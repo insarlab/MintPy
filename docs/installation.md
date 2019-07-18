@@ -65,8 +65,7 @@ cd ~/python
 git clone https://github.com/insarlab/MintPy.git
 
 # download PyAPS
-mkdir -p PyAPS; cd PyAPS
-git clone https://github.com/yunjunz/pyaps3.git
+git clone https://github.com/yunjunz/pyaps3.git PyAPS
 
 # install miniconda
 wget https://repo.continuum.io/miniconda/Miniconda3-4.5.4-MacOSX-x86_64.sh
@@ -111,8 +110,7 @@ cd ~/python
 git clone https://github.com/insarlab/MintPy.git
 
 # download PyAPS
-mkdir -p PyAPS; cd PyAPS
-git clone https://github.com/yunjunz/pyaps3.git
+git clone https://github.com/yunjunz/pyaps3.git PyAPS
 
 # install dependencies with macports
 # use "port -N install" to use the safe default for prompt questions
