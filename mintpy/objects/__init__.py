@@ -10,6 +10,7 @@ from .ramp import *
 # stack
 # ramp
 # sensor
+# colors
 # Level 1 modules:
 # conncomp (objects/ramp)
 #

@@ -60,8 +60,8 @@ def create_parser():
     coh = parser.add_argument_group('Display Coherence', 'Show coherence of each interferogram pair with color')
     coh.add_argument('-t', '--template', dest='template_file',
                      help='template file with options below:\n'+TEMPLATE)
-    coh.add_argument('-c', '--colormap', dest='cmap_name', default='truncate_RdBu',
-                     help='colormap name for the network display. Default: truncate_RdBu')
+    coh.add_argument('-c', '--colormap', dest='cmap_name', default='RdBu_truncate',
+                     help='colormap name for the network display. Default: RdBu_truncate')
     coh.add_argument('--cmap-vlist', dest='cmap_vlist', type=float, nargs=3, default=[0.2, 0.4, 1.0],
                      help='start/jump/end coherence for truncated colormap. Default: 0.2 0.4 1.0')
     coh.add_argument('--mask', dest='maskFile', default='waterMask.h5',
