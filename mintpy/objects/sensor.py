@@ -54,7 +54,7 @@ def azimuth_bandwidth(sensor):
 
     elif  sensor == 'Jers' :  bandwidth =   900.0   # FA 11/2015 just copied, need to research
     elif  sensor == 'Alos' :  bandwidth =  1720.0
-    elif  sensor == 'Alos2':  bandwidth =  1720.0
+    elif  sensor == 'Alos2':  bandwidth =  1720.0   # SH 07/2019 just copied from ALOS-1, need to check
 
     elif  sensor == 'Tsx'  :  bandwidth = 15000.0
     elif  sensor == 'Csk'  :  bandwidth = 15000.0   # FA 9/2015  shoud be checked
@@ -71,7 +71,7 @@ def range_bandwidth(sensor):
 
     elif  sensor == 'Jers':  bandwidth = 15e6      # Jers only has HH pol
     elif  sensor == 'Alos':  bandwidth = 14e6      # for FBD, 28MHz for FBS
-    elif  sensor == 'Alos2':  bandwidth = 14e6      
+    elif  sensor == 'Alos2':  bandwidth = 84e6     # Stripmap Ultra-fine mode
 
     elif  sensor == 'Tsx' :  bandwidth = 150e6
     return bandwidth
@@ -86,7 +86,7 @@ def wavelength(sensor):
 
     elif  sensor == 'Jers' :  center_frequency = 1.275e9
     elif  sensor == 'Alos' :  center_frequency = 1.270e9
-    elif  sensor == 'Alos2':  center_frequency = 1.270e9
+    elif  sensor == 'Alos2':  center_frequency = 1.2575e9  #Stripmap Ultra-fine mode
 
     elif  sensor == 'Tsx'  :  center_frequency = 9.65e9
     elif  sensor == 'Csk'  :  center_frequency = 9.60e9
@@ -105,7 +105,7 @@ def incidence_angle(sensor, inc_angle=None):
 
         elif sensor == 'Jers':  inc_angle = 35.21
         elif sensor == 'Alos':  inc_angle = 34.3     # degree, for ALOS PALSAR Fine mode
-        elif sensor == 'Alos2':  inc_angle = 34.3     
+        elif sensor == 'Alos2':  inc_angle = 36.2    # Stripmap Ultra-fine mode     
 
         elif sensor == 'Tsx' :  inc_angle = 39.23    # Yunjun 5/2016, for TaizhouTsx, not sure it's for all cases.
     return inc_angle
