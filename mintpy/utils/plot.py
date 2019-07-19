@@ -26,7 +26,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import Basemap, pyproj
 
 from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
-from mintpy.objects.colors import mplColors, ColormapExt
+from mintpy.objects.colors import *
 from mintpy.utils import (ptime,
                           readfile,
                           network as pnet,

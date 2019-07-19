@@ -16,7 +16,7 @@ For macOS users, if GMT is installed using [MacPorts](https://www.macports.org),
   <img width="600" src="https://www-k12.atmos.washington.edu/~ovens/gmt/doc/html/GMT_Docs/img277.png">
 </p>
 
-### Colormaps from [cpt-city](http://soliton.vm.bytemark.co.uk/pub/cpt-city/views/totp-cpt.html)  ###
+### Colormaps from [cpt-city](http://soliton.vm.bytemark.co.uk/pub/cpt-city/views/totp-cpt.html) ###
 
 The following colormaps is included by default:
 

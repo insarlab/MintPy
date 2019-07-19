@@ -120,7 +120,7 @@ def extract_tops_metadata(xml_file):
     # 2. calculate ASF frame number for Sentinel-1
     metadata['firstFrameNumber'] = int(0.2 * (burst.burstStartUTC - obj.ascendingNodeTime).total_seconds())
     metadata['lastFrameNumber'] = int(0.2 * (burstEnd.burstStopUTC - obj.ascendingNodeTime).total_seconds())
-    return metadata
+    return metadata, burst
 
 
 def extract_stripmap_metadata(meta_file):
@@ -140,6 +140,9 @@ def extract_stripmap_metadata(meta_file):
 
     elif meta_file.endswith(".xml"):   #XML file from stripmapApp
         frame = load_product(meta_file)
+
+    else:
+        raise ValueError('un-recognized isce/stripmap metadata file: {}'.format(meta_file))
 
     metadata = {}
     metadata['prf'] = frame.PRF
@@ -174,7 +177,7 @@ def extract_stripmap_metadata(meta_file):
 
     # for StripMap
     metadata['beam_mode'] = 'SM'
-    return metadata
+    return metadata, frame
 
 
 def extract_multilook_number(geom_dir, metadata=dict()):
@@ -272,12 +275,12 @@ def extract_isce_metadata(meta_file, geom_dir=None, rsc_file=None, update_mode=T
     fbase = os.path.basename(meta_file)
     if fbase.startswith("IW"):
         print('extract metadata from ISCE/topsStack xml file:', meta_file)
-        metadata = extract_tops_metadata(meta_file)
+        metadata = extract_tops_metadata(meta_file)[0]
     elif fbase.startswith("data"):
         print('extract metadata from ISCE/stripmapStack shelve file:', meta_file)
-        metadata = extract_stripmap_metadata(meta_file)
+        metadata = extract_stripmap_metadata(meta_file)[0]
     elif fbase.endswith(".xml"):
-        metadata = extract_stripmap_metadata(meta_file)
+        metadata = extract_stripmap_metadata(meta_file)[0]
     else:
         raise ValueError("unrecognized ISCE metadata file: {}".format(meta_file))
 

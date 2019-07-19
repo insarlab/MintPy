@@ -221,8 +221,6 @@ class ColormapExt(ScalarMappable):
         """Load GMT .cpt colormap file.
         Modified from Scipy Cookbook originally written by James Boyle.
         Link: http://scipy-cookbook.readthedocs.io/items/Matplotlib_Loading_a_colormap_dynamically.html
-    
-        Download .cpt file from http://soliton.vm.bytemark.co.uk/pub/cpt-city/
 
         Parameters: cmap_name : string, colormap name, e.g. temperature
         Returns:    colormap : matplotlib.colors.LinearSegmentedColormap object
