@@ -41,6 +41,7 @@ def gbis_mat2hdf5(mat_file, display=True):
     out_dir = os.path.dirname(mat_file)
     out_files = []
 
+    print('read mat file: {}'.format(mat_file))
     mat = sio.loadmat(mat_file, struct_as_record=False, squeeze_me=True)
     num_file = len(mat['insar'])
     print('number of output HDF5 file: {}'.format(num_file))
@@ -53,28 +54,16 @@ def gbis_mat2hdf5(mat_file, display=True):
     for i in range(num_file):
         data_file = mat['insar'][i].dataPath
         print('-'*30)
-        print('read mask and metadata from file: {}'.format(data_file))
+        print('read mask from file: {}'.format(data_file))
 
         # read mask
         mask = sio.loadmat(data_file, struct_as_record=False, squeeze_me=True)['Mask']
         length, width = mask.shape
 
-        # prepare metadata
-        meta = vars(sio.loadmat(data_file, struct_as_record=False, squeeze_me=True)['Metadata'])
-        temp = meta.pop('_fieldnames') # remote _fieldnames added by Matlab
-        meta['UNIT'] = 'm'
-        meta['FILE_TYPE'] = 'displacement'
-        meta['PROCESSOR'] = 'isce'
-
         # convert to 2D matrix
         insarPlot = mat['insarPlot'][i]
         out_file = os.path.join(out_dir, '{}.h5'.format(insarPlot.name))
         out_files.append(out_file)
-
-        #x = np.zeros((length, width), dtype=np.float32) * np.nan
-        #y = np.zeros((length, width), dtype=np.float32) * np.nan
-        #x[mask!=0] = insarPlot.xy[:,1]
-        #y[mask!=0] = insarPlot.xy[:,2]
 
         data = np.zeros((length, width), dtype=np.float32) * np.nan
         model = np.zeros((length, width), dtype=np.float32) * np.nan
@@ -82,7 +71,15 @@ def gbis_mat2hdf5(mat_file, display=True):
         data[mask!=0] = insarPlot.data
         model[mask!=0] = insarPlot.model
         residual[mask!=0] = insarPlot.residual
-    
+
+        # prepare metadata
+        meta = vars(sio.loadmat(data_file, struct_as_record=False, squeeze_me=True)['Metadata'])
+        temp = meta.pop('_fieldnames') # remote _fieldnames added by Matlab
+        meta['UNIT'] = 'm'
+        meta['FILE_TYPE'] = 'displacement'
+        meta['PROCESSOR'] = 'isce'
+        meta['MODEL_MIN_HEIGHT'] = insarPlot.minHeight
+
         # write to HDF5 file
         dsDict = {}
         dsDict['data'] = data

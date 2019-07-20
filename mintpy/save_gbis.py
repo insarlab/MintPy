@@ -102,10 +102,12 @@ def read_data(inps):
     inps.lat, inps.lon = ut.get_lat_lon(inps.metadata)
     inps.inc_angle = readfile.read(inps.geom_file, datasetName='incidenceAngle')[0]
     inps.head_angle = np.ones(inps.inc_angle.shape, dtype=np.float32) * float(inps.metadata['HEADING'])
+    inps.height = readfile.read(inps.geom_file, datasetName='height')[0]
     inps.lat[inps.mask==0] = np.nan
     inps.lon[inps.mask==0] = np.nan
     inps.inc_angle[inps.mask==0] = np.nan
     inps.head_angle[inps.mask==0] = np.nan
+    inps.height[inps.mask==0] = np.nan
 
     # output filename
     if not inps.outfile:
@@ -139,15 +141,16 @@ def plot_data(inps):
     cbar.set_label('cm')
 
     # plot geometry
-    for ax, data, title in zip(axs[1:5],
-                               [inps.lat, inps.lon, inps.inc_angle, inps.head_angle],
-                               ['Latitude', 'Longitude', 'Incidence Angle', 'Head Angle']):
+    for ax, data, title in zip(axs[1:],
+                               [inps.lat, inps.lon, inps.inc_angle, inps.head_angle, inps.height],
+                               ['Latitude', 'Longitude', 'Incidence Angle', 'Head Angle', 'Height']):
         im = ax.imshow(data, cmap='jet')
         ax.set_title(title)
         cbar = fig.colorbar(im, ax=ax)
-        cbar.set_label('degree')
-
-    axs[5].axis('off')
+        if title == 'Height':
+            cbar.set_label('m')
+        else:
+            cbar.set_label('degree')
 
     # save figure to file
     out_fig = '{}.png'.format(os.path.splitext(inps.outfile)[0])
@@ -166,6 +169,7 @@ def save2mat(inps):
     mdict['Lon'] = inps.lon[inps.mask].reshape(-1,1)
     mdict['Phase'] = inps.phase[inps.mask].reshape(-1,1)
     # optional
+    mdict['Height'] = inps.height[inps.mask].reshape(-1,1)
     mdict['Mask'] = inps.mask
     mdict['Metadata'] = inps.metadata
     # save to mat file
