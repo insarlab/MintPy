@@ -13,8 +13,8 @@ import scipy.stats as stats
 import matplotlib.pyplot as plt
 from mintpy.objects import timeseries
 from mintpy.utils import ptime, network as pnet, utils as ut
+from mintpy.defaults.plot import *
 from mintpy.simulation.forward_model import mogi
-from mintpy.simulation.plot import *
 from mintpy import ifgram_inversion as ifginv
 
 

@@ -9,4 +9,3 @@ transparency = 0.8
 #Google Doc support .jpg, .png and .gif only
 fig_ext = '.jpg'
 fig_dpi = 600
-
