@@ -13,9 +13,9 @@ import numpy as np
 
 # example datasets
 pDict = {
-    'KujuAlosAT422F650' : 'https://zenodo.org/record/2557863/files/KujuAlosAT422F650.tar.xz',
-    'WellsEnvD2T399'    : 'https://zenodo.org/record/2613771/files/WellsEnvD2T399.tar.xz',
-    'FernandinaSenDT128': 'https://zenodo.org/record/2596744/files/FernandinaSenDT128.tar.xz',
+    'KujuAlosAT422F650' : 'https://zenodo.org/record/2748170/files/KujuAlosAT422F650.tar.xz',
+    'WellsEnvD2T399'    : 'https://zenodo.org/record/2748560/files/WellsEnvD2T399.tar.xz',
+    'FernandinaSenDT128': 'https://zenodo.org/record/2748487/files/FernandinaSenDT128.tar.xz',
 }
 pNames = list(pDict.keys())
 
