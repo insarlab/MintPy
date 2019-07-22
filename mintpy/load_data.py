@@ -196,7 +196,8 @@ def read_inps2dict(inps):
     # Here to insert code to check default file path for miami user
     if (auto_path.autoPath
             and 'SCRATCHDIR' in os.environ
-            and inpsDict['PROJECT_NAME'] is not None):
+            and inpsDict['PROJECT_NAME'] is not None
+            and inpsDict['mintpy.load.unwFile']) == 'auto':
         print(('check auto path setting for Univ of Miami users'
                ' for processor: {}'.format(inpsDict['processor'])))
         inpsDict = auto_path.get_auto_path(processor=inpsDict['processor'],
