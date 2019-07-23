@@ -87,11 +87,9 @@ def check_loaded_dataset(work_dir='./', print_msg=True):
             obj.open(print_msg=False)
 
             if atr['PROCESSOR'] in ['isce', 'doris']:
-                dnames = [geometryDatasetNames[1],
-                         geometryDatasetNames[2]]
+                dnames = geometryDatasetNames[1:3]
             elif atr['PROCESSOR'] in ['gamma', 'roipac']:
-                dnames = [geometryDatasetNames[3],
-                      geometryDatasetNames[4]]
+                dnames = geometryDatasetNames[3:5]
             else:
                 raise AttributeError('InSAR processor: {}'.format(atr['PROCESSOR']))
 

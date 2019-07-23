@@ -1386,15 +1386,10 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     unit_fac = scale_data2disp_unit(metadata=atr, disp_unit=inps.disp_unit)[2]
 
     if not inps.gps_start_date:
-        try:
-            inps.gps_start_date = metadata['START_DATE']
-        except:
-            inps.gps_start_date = None
+        inps.gps_start_date = metadata.get('START_DATE', None)
+
     if not inps.gps_end_date:
-        try:
-            inps.gps_end_date = metadata['END_DATE']
-        except:
-            inps.gps_end_date = None
+        inps.gps_end_date = metadata.get('END_DATE', None)
 
     site_names, site_lats, site_lons = search_gps(SNWE, inps.gps_start_date, inps.gps_end_date)
     num_site = len(site_names)
@@ -1417,17 +1412,27 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             print('start date: {}'.format(inps.gps_start_date))
             print('end   date: {}'.format(inps.gps_end_date))
             prog_bar = ptime.progressBar(maxValue=num_site)
+
+        # get insar_obj (meta / geom_file)
+        geom_file = ut.get_geometry_file(dset='incidenceAngle',
+                                         work_dir=os.path.dirname(inps.file),
+                                         coord='geo')
+        if geom_file:
+            geom_obj = geom_file
+        else:
+            geom_obj = metadata
+        
         for i in range(num_site):
             obj = GPS(site_names[i])
             # calculate gps data value
             if k == 'velocity':
-                gps_data = obj.get_gps_los_velocity(metadata,
+                gps_data = obj.get_gps_los_velocity(geom_obj,
                                                     start_date=inps.gps_start_date,
                                                     end_date=inps.gps_end_date,
                                                     ref_site=inps.ref_gps_site,
                                                     gps_comp=inps.gps_component) * unit_fac
             elif k == 'timeseries':
-                dis = obj.read_gps_los_displacement(metadata,
+                dis = obj.read_gps_los_displacement(geom_obj,
                                                     start_date=inps.gps_start_date,
                                                     end_date=inps.gps_end_date,
                                                     ref_site=inps.ref_gps_site,
