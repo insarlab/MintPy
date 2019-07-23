@@ -436,7 +436,7 @@ def add_gps_argument(parser):
                      help='Show UNR GPS location within the coverage.')
     gps.add_argument('--gps-label', dest='disp_gps_label', action='store_true',
                      help='Show GPS site name')
-    gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los', 'up'},
+    gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los'},
                      help='Plot GPS in color indicating deformation velocity direction')
     gps.add_argument('--ref-gps', dest='ref_gps_site', type=str, help='Reference GPS site')
     gps.add_argument('--gps-start-date', dest='gps_start_date', type=str, metavar='YYYYMMDD',
