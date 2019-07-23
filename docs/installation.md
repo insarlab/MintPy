@@ -118,19 +118,22 @@ sudo port install $(cat $MINTPY_HOME/docs/ports.txt)
 
 # install pykml
 git clone https://github.com/yunjunz/pykml.git; cd pykml
-python3 setup.py build
-python3 setup.py install
+sudo python3 setup.py install
+
+# install pyresample and pykdtree for geocoding
+git clone https://github.com/storpipfugl/pykdtree.git; cd pykdtree
+sudo python3 setup.py install
+git clone https://github.com/pytroll/pyresample.git; cd pyresample
+sudo python3 setup.py install
 
 # intall CDS API for PyAPS with ERA-5
 wget https://github.com/ecmwf/cdsapi/archive/v0.1.4.tar.gz -O cdsapi-0.1.4.tar.gz
 tar -xvf cdsapi-0.1.4.tar.gz; cd cdsapi-0.1.4
-python3 setup.py build
-python3 setup.py install
+sudo python3 setup.py install
 
 # install PyHDF for PyAPS with MERRA
 git clone https://github.com/fhs/pyhdf.git; cd pyhdf
-python3 setup.py build
-python3 setup.py install
+sudo python3 setup.py install
 ```
 
 ### Notes on [PyAPS](https://github.com/yunjunz/pyaps3) ###
