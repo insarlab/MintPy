@@ -349,13 +349,15 @@ def get_file_list(file_list, abspath=False, coord=None):
     if coord is not None:
         for fname in list(file_list_out):
             atr = readfile.read_attribute(fname)
-            if coord in ['geo'] and 'Y_FIRST' not in atr.keys():
-                file_list_out.remove(fname)
-            elif coord in ['radar', 'rdr', 'rdc'] and 'Y_FIRST' in atr.keys():
-                file_list_out.remove(fname)
+            if coord in ['geo']:
+                if 'Y_FIRST' not in atr.keys():
+                    file_list_out.remove(fname)
+            elif coord in ['radar', 'rdr', 'rdc']:
+                if 'Y_FIRST' in atr.keys():
+                    file_list_out.remove(fname)
             else:
-                raise ValueError('Input coord type: '+str(coord) +
-                                 '\n. Only support geo, radar, rdr, rdc inputs.')
+                msg = 'un-recognized input coord type: {}'.format(coord)
+                raise ValueError(msg)
     return file_list_out
 
 
@@ -401,24 +403,32 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
     return outFile
 
 
-def get_geometry_file(dset, geocoded=False, abspath=True, print_msg=True):
+def get_geometry_file(dset, work_dir=None, coord='geo', abspath=True, print_msg=True):
     """Find geometry file containing input specific dataset"""
     if dset not in geometryDatasetNames:
         raise ValueError('unrecognized geometry dataset name: {}'.format(dset))
 
-    if geocoded:
-        geom_file = './inputs/geometryGeo.h5'
-    else:
-        geom_file = './inputs/geometryRadar.h5'
+    if not work_dir:
+        work_dir = os.getcwd()
 
-    if not os.path.isfile(geom_file):
-        print('geometry file {} does not exist.'.format(geom_file))
+    # search *geometry*.h5 files
+    fname_list = [os.path.join(work_dir, i) for i in ['*/*geometry*.h5', '../*/geometry*.h5']]
+    fname_list = get_file_list(fname_list, coord=coord)
+    if len(fname_list) == 0:
+        if print_msg:
+            print('No geometry file found.')
         return None
 
-    if dset not in readfile.get_dataset_list(geom_file):
-        print('dataset {} not found in file {}'.format(dset, geom_file))
+    # check dset in the existing h5 files
+    for fname in list(fname_list):   #use list() as temp copy to handle varing list during the loop
+        if dset not in readfile.get_dataset_list(fname):
+            fname_list.remove(fname)
+    if len(fname_list) == 0:
+        if print_msg:
+            print('No geometry file with dataset {} found'.format(dset))
         return None
 
+    geom_file = fname_list[0]
     if abspath:
         geom_file = os.path.abspath(geom_file)
     return geom_file

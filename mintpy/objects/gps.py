@@ -234,35 +234,35 @@ class GPS:
                          + (self.std_u * unit_vec[2])**2)**0.5
         return self.dis_los, self.std_los
 
-    def get_los_geometry(self, insar_obj, print_msg=False):
+    def get_los_geometry(self, geom_obj, print_msg=False):
         lat, lon = self.get_stat_lat_lon(print_msg=print_msg)
 
         # get LOS geometry
-        if isinstance(insar_obj, str):
+        if isinstance(geom_obj, str):
             # geometry file
-            atr = readfile.read_attribute(insar_obj)
-            coord = ut.coordinate(atr, lookup_file=insar_obj)
+            atr = readfile.read_attribute(geom_obj)
+            coord = ut.coordinate(atr, lookup_file=geom_obj)
             y, x = coord.geo2radar(lat, lon, print_msg=print_msg)[0:2]
             box = (x, y, x+1, y+1)
-            inc_angle = readfile.read(insar_obj, datasetName='incidenceAngle', box=box, print_msg=print_msg)[0][0,0]
-            az_angle  = readfile.read(insar_obj, datasetName='azimuthAngle', box=box, print_msg=print_msg)[0][0,0]
+            inc_angle = readfile.read(geom_obj, datasetName='incidenceAngle', box=box, print_msg=print_msg)[0][0,0]
+            az_angle  = readfile.read(geom_obj, datasetName='azimuthAngle', box=box, print_msg=print_msg)[0][0,0]
             head_angle = ut.azimuth2heading_angle(az_angle)
-        elif isinstance(insar_obj, dict):
+        elif isinstance(geom_obj, dict):
             # use mean inc/head_angle from metadata
-            inc_angle = ut.incidence_angle(insar_obj, dimension=0, print_msg=print_msg)
-            head_angle = float(insar_obj['HEADING'])
+            inc_angle = ut.incidence_angle(geom_obj, dimension=0, print_msg=print_msg)
+            head_angle = float(geom_obj['HEADING'])
             # for old reading of los.rdr band2 data into headingAngle directly
             if (head_angle + 180.) > 45.:
                 head_angle = ut.azimuth2heading_angle(head_angle)
         else:
-            raise ValueError('input insar_obj is neight str nor dict: {}'.format(insar_obj))
+            raise ValueError('input geom_obj is neight str nor dict: {}'.format(geom_obj))
         return inc_angle, head_angle
 
 
-    def read_gps_los_displacement(self, insar_obj, start_date=None, end_date=None,
+    def read_gps_los_displacement(self, geom_obj, start_date=None, end_date=None,
                                   ref_site=None, gps_comp:str='enu2los', print_msg=False):
         """Read GPS displacement in LOS direction
-        Parameters: insar_obj : dict / str, metadata of InSAR file, or geometry file path
+        Parameters: geom_obj : dict / str, metadata of InSAR file, or geometry file path
                     start_date : string in YYYYMMDD format
                     end_date   : string in YYYYMMDD format
                     ref_site   : string, reference GPS site
@@ -274,7 +274,7 @@ class GPS:
                     ref_site_lalo : tuple of 2 float, lat/lon of reference GPS site
         """
         # read GPS object
-        inc_angle, head_angle = self.get_los_geometry(insar_obj)
+        inc_angle, head_angle = self.get_los_geometry(geom_obj)
         dates = self.read_displacement(start_date, end_date, print_msg=print_msg)[0]
         dis, std = self.displacement_enu2los(inc_angle, head_angle, gps_comp=gps_comp)
         site_lalo = self.get_stat_lat_lon(print_msg=print_msg)
@@ -283,7 +283,7 @@ class GPS:
         if ref_site:
             ref_obj = GPS(site=ref_site, data_dir=self.data_dir)
             ref_obj.read_displacement(start_date, end_date, print_msg=print_msg)
-            inc_angle, head_angle = ref_obj.get_los_geometry(insar_obj)
+            inc_angle, head_angle = ref_obj.get_los_geometry(geom_obj)
             ref_obj.displacement_enu2los(inc_angle, head_angle, gps_comp=gps_comp)
             ref_site_lalo = ref_obj.get_stat_lat_lon(print_msg=print_msg)
 
@@ -302,8 +302,8 @@ class GPS:
         return dates, dis, std, site_lalo, ref_site_lalo
 
 
-    def get_gps_los_velocity(self, insar_obj, start_date=None, end_date=None, ref_site=None, gps_comp='enu2los'):
-        dates, dis = self.read_gps_los_displacement(insar_obj,
+    def get_gps_los_velocity(self, geom_obj, start_date=None, end_date=None, ref_site=None, gps_comp='enu2los'):
+        dates, dis = self.read_gps_los_displacement(geom_obj,
                                                     start_date=start_date,
                                                     end_date=end_date,
                                                     ref_site=ref_site,
