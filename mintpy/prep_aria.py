@@ -160,7 +160,8 @@ def add_geometry(h5File, incAngleFile,demFile):
 
     ds = gdal.Open(demFile, gdal.GA_ReadOnly)
     data = ds.ReadAsArray()
-    noData = data.GetRasterBand(1).SetNoDataValue('Nan')
+    noData = ds.GetRasterBand(1).GetNoDataValue()
+    data[data==noData]=0
     outShape = (int(h5.attrs['LENGTH']),int(h5.attrs['WIDTH']))
     demData = resize(data,outShape,order=1, mode='constant', anti_aliasing=True, preserve_range=True)
     h5['height'][:,:] = demData
