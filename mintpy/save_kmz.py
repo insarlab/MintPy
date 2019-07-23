@@ -5,6 +5,7 @@
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
 
+
 import os
 import argparse
 
@@ -17,7 +18,6 @@ from lxml import etree
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-
 from mintpy.objects import timeseriesKeyNames
 from mintpy.utils import readfile, utils as ut, plot as pp
 
@@ -106,8 +106,8 @@ def cmd_line_parse(iargs=None):
 
 def plot_colorbar(out_file, vmin, vmax, unit='cm/year', cmap='jet', figsize=(0.18, 3.6)):
     fig, cax = plt.subplots(figsize=figsize)
-    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)  # normalize velocity colors between 0.0 and 1.0
-    cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, orientation='vertical')
+    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+    cbar = mpl.colorbar.ColorbarBase(cax, cmap=plt.get_cmap(cmap), norm=norm, orientation='vertical')
     cbar.set_label('{} [{}]'.format("Mean LOS velocity", unit), fontsize=12)
     cbar.locator = mpl.ticker.MaxNLocator(nbins=7)
     cbar.update_ticks()
@@ -118,17 +118,14 @@ def plot_colorbar(out_file, vmin, vmax, unit='cm/year', cmap='jet', figsize=(0.1
     fig.savefig(out_file, bbox_inches='tight', facecolor=fig.get_facecolor(), dpi=300)
     return out_file
 
-def generate_cbar_element(cbar_png_file, inps):
-    cbar_png_file = plot_colorbar(out_file=cbar_png_file,
-                                  vmin=inps.vlim[0],
-                                  vmax=inps.vlim[1],
-                                  unit=inps.disp_unit,
-                                  cmap=inps.colormap)
+
+def generate_cbar_element(cbar_file, vmin, vmax, unit='cm/year', cmap='jet'):
+    cbar_file = plot_colorbar(out_file=cbar_file, vmin=vmin, vmax=vmax, unit=unit, cmap=cmap)
 
     cbar_overlay = KML.ScreenOverlay(
         KML.name('colorbar'),
         KML.Icon(
-            KML.href("{}".format(cbar_png_file)),
+            KML.href("{}".format(os.path.basename(cbar_file))),
             KML.viewBoundScale(0.75)
         ),
         KML.overlayXY(x="0", y="0", xunits="fraction", yunits="fraction"),
@@ -139,7 +136,7 @@ def generate_cbar_element(cbar_png_file, inps):
         KML.open(0)
     )
     print('add colorbar.')
-    return cbar_overlay, cbar_png_file
+    return cbar_overlay
 
 
 ############################################################
@@ -236,8 +233,12 @@ def write_kmz_file(data, metadata, out_file, inps=None):
     doc.Folder.append(img)
 
     # Add colorbar png file
-    cbar_png_file = '{}_cbar.png'.format(out_name_base)
-    cbar_overlay = generate_cbar_element(cbar_png_file, inps)[0]
+    cbar_file = '{}_cbar.png'.format(out_name_base)
+    cbar_overlay = generate_cbar_element(cbar_file,
+                                         vmin=inps.vlim[0],
+                                         vmax=inps.vlim[1],
+                                         unit=inps.disp_unit,
+                                         cmap=inps.colormap)
     doc.Folder.append(cbar_overlay)
     kmlstr = etree.tostring(doc, pretty_print=True).decode('utf8')
 
@@ -249,12 +250,12 @@ def write_kmz_file(data, metadata, out_file, inps=None):
 
     # 2.4 Generate KMZ file
     kmz_file = '{}.kmz'.format(out_name_base)
-    cmdKMZ = 'zip {} {} {} {}'.format(kmz_file, kml_file, data_png_file, cbar_png_file)
+    cmdKMZ = 'zip {} {} {} {}'.format(kmz_file, kml_file, data_png_file, cbar_file)
     print('writing {}\n{}'.format(kmz_file, cmdKMZ))
     os.system(cmdKMZ)
     print('finished wirting to {}'.format(kmz_file))
 
-    cmdClean = 'rm {} {} {}'.format(kml_file, data_png_file, cbar_png_file)
+    cmdClean = 'rm {} {} {}'.format(kml_file, data_png_file, cbar_file)
     print(cmdClean)
     os.system(cmdClean)
 

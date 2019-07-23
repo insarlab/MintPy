@@ -75,7 +75,7 @@ class ColormapExt(ScalarMappable):
         """ Initiate an ColormapExt object
         Parameters: cmap_name : string, colormap name. Default: viridis
                     cmap_lut : int, number of increment in the color lookup table
-                    vlist : list of 3 float numbers, for truncate_* colormap only
+                    vlist : list of 3 float numbers, for truncated colormap only
                     cpt_dir : extra directory of cpt files to be recognized
                         Priority: 1. (user_input)
                                   2. mintpy/docs/res*/colormaps(cpt-city + sci colormap)
