@@ -73,7 +73,6 @@ py36-mpi4py +gcc7 +openmpi
 py36-numpy +gcc7 +openblas
 py36-scipy +gcc7 +openblas
 py36-matplotlib +cairo +tkinter +webagg
-py36-matplotlib-basemap
 py36-pandas
 py36-sympy
 py36-yaml
