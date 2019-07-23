@@ -60,7 +60,7 @@ def extract_metadata(stack):
     meta["LENGTH"] = ds.RasterYSize
     meta["ORBIT_DIRECTION"] = "DESCENDING"
     meta["PLATFORM"] = "Sen"
-    meta["STARTING_RANGE"] = float(ds.GetRasterBand(1).GetMetadata("unwrappedPhase")['startRange'][1:-1])
+    meta["STARTING_RANGE"] = float(ds.GetRasterBand(1).GetMetadata("unwrappedPhase")['startRange'])
     meta["WAVELENGTH"] = float(ds.GetRasterBand(1).GetMetadata("unwrappedPhase")['Wavelength (m)'])
     meta["WIDTH"] = ds.RasterXSize
     meta["NUMBER_OF_PAIRS"] = ds.RasterCount
