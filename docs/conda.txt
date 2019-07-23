@@ -1,5 +1,4 @@
 python>=3.6
-basemap
 cdsapi
 cvxopt
 dask>=1.0,<2.0

@@ -53,19 +53,14 @@ Add to your **_~/.bash_profile_** file:
 ```bash
 export PYTHON3DIR=~/python/miniconda3
 export PATH=${PATH}:${PYTHON3DIR}/bin
-export PROJ_LIB=`python3 -c "import pyproj; print(pyproj.pyproj_datadir)"`   #Temporary fix for basemap import error
 ```
 
 Run the following in your terminal:
 
 ```
-cd ~/python
-
-# download MintPy
-git clone https://github.com/insarlab/MintPy.git
-
-# download PyAPS
-git clone https://github.com/yunjunz/pyaps3.git PyAPS
+# download MintPy and PyAPS
+git clone https://github.com/insarlab/MintPy.git $MINTPY_HOME
+git clone https://github.com/yunjunz/pyaps3.git $PYAPS_HOME/pyaps3
 
 # install miniconda
 wget https://repo.continuum.io/miniconda/Miniconda3-4.5.4-MacOSX-x86_64.sh
@@ -76,8 +71,10 @@ chmod +x Miniconda3-4.5.4-MacOSX-x86_64.sh
 $PYTHON3DIR/bin/conda config --add channels conda-forge
 $PYTHON3DIR/bin/conda install --yes --file $MINTPY_HOME/docs/conda.txt
 
-# install pykml
-$PYTHON3DIR/bin/pip install git+https://github.com/yunjunz/pykml.git
+# install dependencies not compatiable from conda: basemap, pykml
+# run "conda uninstall basemap" if basemap was installed with conda
+$PYTHON3DIR/bin/pip install git+https://github.com/matplotlib/basemap.git#egg=mpl_toolkits
+$PYTHON3DIR/bin/pip install git+https://github.com/tylere/pykml.git
 ```
 
 #### Installing via MacPorts ####
@@ -104,36 +101,24 @@ sudo port selfupdate
 Run the following in your terminal in _bash_:
 
 ```bash
-cd ~/python
-
-# download MintPy
-git clone https://github.com/insarlab/MintPy.git
-
-# download PyAPS
-git clone https://github.com/yunjunz/pyaps3.git PyAPS
+# download MintPy and PyAPS
+git clone https://github.com/insarlab/MintPy.git $MINTPY_HOME
+git clone https://github.com/yunjunz/pyaps3.git $PYAPS_HOME/pyaps3
 
 # install dependencies with macports
 # use "port -N install" to use the safe default for prompt questions
 sudo port install $(cat $MINTPY_HOME/docs/ports.txt)
 
-# install pykml
-git clone https://github.com/yunjunz/pykml.git; cd pykml
-sudo python3 setup.py install
+# install dependencies not available on macports: pykml, pykdtree, pyresample, cdsapi, pyhdf
+sudo /opt/local/bin/pip install git+https://github.com/tylere/pykml.git
+sudo /opt/local/bin/pip install git+https://github.com/storpipfugl/pykdtree.git
+sudo /opt/local/bin/pip install git+https://github.com/pytroll/pyresample.git
+sudo /opt/local/bin/pip install git+https://github.com/ecmwf/cdsapi.git
+sudo /opt/local/bin/pip install git+https://github.com/fhs/pyhdf.git
 
-# install pyresample and pykdtree for geocoding
-git clone https://github.com/storpipfugl/pykdtree.git; cd pykdtree
-sudo python3 setup.py install
-git clone https://github.com/pytroll/pyresample.git; cd pyresample
-sudo python3 setup.py install
-
-# intall CDS API for PyAPS with ERA-5
-wget https://github.com/ecmwf/cdsapi/archive/v0.1.4.tar.gz -O cdsapi-0.1.4.tar.gz
-tar -xvf cdsapi-0.1.4.tar.gz; cd cdsapi-0.1.4
-sudo python3 setup.py install
-
-# install PyHDF for PyAPS with MERRA
-git clone https://github.com/fhs/pyhdf.git; cd pyhdf
-sudo python3 setup.py install
+# install the basemap-dev version [remove after basemap-v1.2 release]
+# run "sudo port uninstall py36-matplotlib-basemap" if basemap was installed with port
+sudo /opt/local/bin/pip install git+https://github.com/matplotlib/basemap.git#egg=mpl_toolkits
 ```
 
 ### Notes on [PyAPS](https://github.com/yunjunz/pyaps3) ###
@@ -157,10 +142,6 @@ cp $MINTPY_HOME/mintpy/defaults/dask_mintpy.yaml ~/.config/dask/dask_mintpy.yaml
 ```
 
 Edit `~/.config/dask/dask_mintpy.yaml` file according to your HPC settings. Currently, only `LSFCluster` job scheduler is tested, `PBSCluster` should also work after minor adjustment in `ifgram_inversion.py`.
-
-### Notes on pyKML ###
-
-The pykml installed through conda/pip supports python2 only, the python2/3 compatible version is available [here](https://github.com/yunjunz/pykml.git) and installed throught the commands above by default.
 
 ### Notes on vim ###
 
