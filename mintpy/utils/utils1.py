@@ -414,19 +414,18 @@ def get_geometry_file(dset, work_dir=None, coord='geo', abspath=True, print_msg=
     # search *geometry*.h5 files
     fname_list = [os.path.join(work_dir, i) for i in ['*/*geometry*.h5', '../*/geometry*.h5']]
     fname_list = get_file_list(fname_list, coord=coord)
-
     if len(fname_list) == 0:
         if print_msg:
             print('No geometry file found.')
         return None
 
+    # check dset in the existing h5 files
     for fname in list(fname_list):   #use list() as temp copy to handle varing list during the loop
         if dset not in readfile.get_dataset_list(fname):
             fname_list.remove(fname)
-
     if len(fname_list) == 0:
         if print_msg:
-            print('No geometry file with dataset {} found'.format(dset, geom_file))
+            print('No geometry file with dataset {} found'.format(dset))
         return None
 
     geom_file = fname_list[0]
