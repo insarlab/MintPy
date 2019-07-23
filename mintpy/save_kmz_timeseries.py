@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from mintpy.objects import timeseries, deramp
 from mintpy.utils import readfile, plot, utils as ut
+from mintpy.save_kmz import generate_cbar_element
 
 
 ############################################################
@@ -189,44 +190,6 @@ def get_boxes4deforming_area(vel_file, mask_file, step=2, num_pixel=30**2, min_p
                 ax.add_patch(rect)
         plt.show()
     return box_list
-
-
-def plot_colorbar(out_file, vmin, vmax, cmap='jet', figsize=(0.18, 3.6)):
-    fig, cax = plt.subplots(figsize=figsize)
-    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)  # normalize velocity colors between 0.0 and 1.0
-    cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, orientation='vertical')
-    cbar.set_label('{} [{}]'.format("Mean LOS velocity", "cm/year"), fontsize=12)
-    cbar.locator = mpl.ticker.MaxNLocator(nbins=7)
-    cbar.update_ticks()
-    cbar.ax.tick_params(which='both', labelsize=12)
-    fig.patch.set_facecolor('white')
-    fig.patch.set_alpha(0.7)
-    print('writing', out_file)
-    fig.savefig(out_file, bbox_inches='tight', facecolor=fig.get_facecolor(), dpi=300)
-    return out_file
-
-
-def generate_cbar_element(inps):
-    plot_colorbar(out_file=inps.cbar_file,
-                  vmin=inps.vlim[0],
-                  vmax=inps.vlim[1],
-                  cmap=inps.colormap)
-
-    cbar_overlay = KML.ScreenOverlay(
-        KML.name('Colorbar'),
-        KML.Icon(
-            KML.href("{}".format(os.path.basename(inps.cbar_file))),
-            KML.viewBoundScale(0.75)
-        ),
-        KML.overlayXY(x="0", y="0", xunits="fraction", yunits="fraction"),
-        KML.screenXY(x="0", y="0", xunits="fraction", yunits="fraction"),
-        KML.size(x="0", y="250", xunits="pixel", yunits="pixel"),
-        KML.rotation(0),
-        KML.visibility(1),
-        KML.open(0)
-    )
-    print('add colorbar.')
-    return cbar_overlay
 
 
 def create_reference_point_element(inps, lats, lons, ts_obj):
@@ -597,7 +560,10 @@ def main(iargs=None):
     kml_master_doc = KML.Document()
 
     # 1 Create Overlay element for colorbar
-    cbar_overlay = generate_cbar_element(inps)
+    cbar_overlay = generate_cbar_element(cbar_file=inps.cbar_file,
+                                         vmin=inps.vlim[0],
+                                         vmax=inps.vlim[1],
+                                         cmap=inps.colormap)
     kml_master_doc.append(cbar_overlay)
 
     # 2 Generate the placemark for the Reference Pixel
