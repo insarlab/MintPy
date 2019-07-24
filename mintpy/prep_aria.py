@@ -151,8 +151,8 @@ def write_ifgram_stack(h5File, unwStack, cohStack, connCompStack):
 
     print('-'*50)
     print('opening {}, {}, {} with gdal ...'.format(os.path.basename(unwStack),
-                                                    os.path.basename(unwStack),
-                                                    os.path.basename(unwStack)))
+                                                    os.path.basename(cohStack),
+                                                    os.path.basename(connCompStack)))
     dsUnw = gdal.Open(unwStack, gdal.GA_ReadOnly)
     dsCoh = gdal.Open(cohStack, gdal.GA_ReadOnly)
     dsComp = gdal.Open(connCompStack, gdal.GA_ReadOnly)
