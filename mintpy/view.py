@@ -414,8 +414,9 @@ def plot_slice(ax, data, metadata, inps=None):
     #----------------------- Plot in Geo-coordinate --------------------------------------------#
     num_row, num_col = data.shape
     if inps.geo_box and inps.fig_coord == 'geo':
+        coord_unit = metadata.get('Y_UNIT', 'degrees').lower()
 
-        if metadata['Y_UNIT'].lower().startswith('deg'):
+        if coord_unit.startswith('deg'):
             # geo-coordinates in degrees using Basemap
             # Map Setup
             vprint('plot in Lat/Lon coordinate')
@@ -538,7 +539,7 @@ def plot_slice(ax, data, metadata, inps=None):
                 return msg
             ax.format_coord = format_coord
 
-        elif metadata['Y_UNIT'] == 'm':
+        elif coord_unit == 'm':
             # geo-coordinates in meters
             vprint('plot in geo-coordinates in meters')
 
@@ -582,7 +583,7 @@ def plot_slice(ax, data, metadata, inps=None):
             ax.format_coord = format_coord
 
         else:
-            raise ValueError('un-recognized coordinate unit: {}'.format(metadata['Y_UNIT']))
+            raise ValueError('un-recognized coordinate unit: {}'.format(coord_unit))
 
     #------------------------ Plot in Y/X-coordinate ------------------------------------------------#
     else:

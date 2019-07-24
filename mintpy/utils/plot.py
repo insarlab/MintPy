@@ -1094,6 +1094,14 @@ def plot_perp_baseline_hist(ax, dateList, pbaseList, plot_dict={}, dateList_drop
 def plot_rotate_diag_coherence_matrix(ax, coh_list, date12_list, date12_list_drop=[],
                                       rotate_deg=-45., cmap='RdBu', disp_half=False, disp_min=0.2):
     """Plot Rotated Coherence Matrix, suitable for Sentinel-1 data with sequential network"""
+    # support input colormap: string for colormap name, or colormap object directly
+    if isinstance(cmap, str):
+        cmap = ColormapExt(cmap).colormap
+    elif isinstance(cmap, LinearSegmentedColormap):
+        pass
+    else:
+        raise ValueError('unrecognized colormap input: {}'.format(plot_dict['colormap']))
+
     #calculate coherence matrix
     coh_mat = pnet.coherence_matrix(date12_list, coh_list)
     #for date12_list_drop, set value to nan in upper triangle
@@ -1116,7 +1124,7 @@ def plot_rotate_diag_coherence_matrix(ax, coh_list, date12_list, date12_list_dro
     im = ax.imshow(diag_mat, cmap='gray_r', vmin=0.0, vmax=1.0)
     im.set_transform(transforms.Affine2D().rotate_deg(rotate_deg) + ax.transData)
 
-    im = ax.imshow(coh_mat, vmin=disp_min, vmax=1, cmap=ColormapExt(cmap).colormap)
+    im = ax.imshow(coh_mat, vmin=disp_min, vmax=1, cmap=cmap)
     im.set_transform(transforms.Affine2D().rotate_deg(rotate_deg) + ax.transData)
 
     #axis format

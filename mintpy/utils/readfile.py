@@ -558,6 +558,10 @@ def get_dataset_list(fname, datasetName=None):
 
 def get_hdf5_compression(fname):
     """Get the compression type of input HDF5 file"""
+    ext = os.path.splitext(fname)[1].lower()
+    if ext not in ['.h5','.he5']:
+        return None
+
     compression = None
     ds_name = get_dataset_list(fname)[0]
     with h5py.File(fname, 'r') as f:

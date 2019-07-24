@@ -71,7 +71,7 @@ roipac = """
                 sim_070115-070302_16rlks.hgt
                 sim_070115-070302_16rlks.hgt.rsc
             ...
-    /PYSAR
+    /mintpy
 """
 
 isce_topsStack = """
@@ -81,8 +81,6 @@ isce_topsStack = """
         demLat_S02_N01_Lon_W092_W090.dem.wgs84
         demLat_S02_N01_Lon_W092_W090.dem.wgs84.vrt
         demLat_S02_N01_Lon_W092_W090.dem.wgs84.xml
-    /PYSAR
-        ...
     /SLC
         S1A_IW_SLC__1SDV_*.zip
         ...
@@ -137,6 +135,8 @@ isce_topsStack = """
                 ...
             ...
         ...
+    /mintpy
+        ...
     /run_files
         run_1
         run_1_1.job
@@ -152,8 +152,6 @@ isce_stripmapStack = """
         demLat_S02_N01_Lon_W092_W090.dem.wgs84
         demLat_S02_N01_Lon_W092_W090.dem.wgs84.vrt
         demLat_S02_N01_Lon_W092_W090.dem.wgs84.xml
-    /PYSAR
-        ...
     /baselines
         20070107_20071125.txt
         20070107_20080110.txt
@@ -207,6 +205,8 @@ isce_stripmapStack = """
         data.bak
         data.dat
         data.dir
+    /mintpy
+        ...
     /run_files
         run_1
         run_1_1.job
