@@ -10,8 +10,6 @@ import os
 import sys
 import time
 from datetime import datetime as dt, timedelta
-
-import h5py
 import numpy as np
 
 
@@ -126,47 +124,6 @@ def yymmdd_date12(date12_list):
     s_dates = yymmdd([i.replace('-', '_').split('_')[1] for i in date12_list])
     date12_list = ['{}-{}'.format(m, s) for m, s in zip(m_dates, s_dates)]
     return date12_list
-
-
-#################################################################
-def ifgram_date_list(ifgramFile, fmt='YYYYMMDD'):
-    """Read Date List from Interferogram file
-        for timeseries file, use h5file['timeseries'].keys() directly
-    Inputs:
-        ifgramFile - string, name/path of interferograms file
-        fmt        - string, output date format, choices=['YYYYMMDD','YYMMDD']
-    Output:
-        date_list  - list of string, date included in ifgramFile in YYYYMMDD or YYMMDD format
-    """
-    if not ifgramFile:
-        return []
-
-    h5 = h5py.File(ifgramFile, 'r')
-    k = list(h5.keys())
-    if 'interferograms' in k: k = 'interferograms'
-    elif 'coherence' in k: k = 'coherence'
-    elif 'wrapped' in k: k = 'wrapped'
-    else: k = k[0]
-    if k not in  ['interferograms','coherence','wrapped']:
-        raise ValueError('Only interferograms / coherence / wrapped are supported. Input is '+str(k))
-
-    # Get date_list in YYMMDD format
-    date_list = []
-    ifgram_list = sorted(h5[k].keys())
-    for ifgram in ifgram_list:
-        date12 = h5[k][ifgram].attrs['DATE12']
-        try:
-            date12 = date12.decode('utf-8')
-        except:
-            pass
-        date_list.append(date12.split('_')[0])
-        date_list.append(date12.split('_')[1])
-    h5.close()
-    date_list = sorted(list(set(date_list)))
-
-    if fmt == 'YYYYMMDD':
-        date_list = yyyymmdd(date_list)
-    return date_list
 
 
 #################################################################
