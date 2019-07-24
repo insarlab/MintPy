@@ -42,7 +42,7 @@ export PYTHONPATH=${PYAPS_HOME}:${PYTHONPATH}
 
 Source the file for the first time. It will be sourced automatically next time when you login. [Here](https://github.com/yunjunz/macOS_Setup/blob/master/.tcshrc) is an example _.tcshrc_ file for _tcsh_ user.
 
-### 2. Install Python dependecies ###
+### 2. Install Python dependencies ###
 
 MintPy is written in Python3 and relies on several Python modules, check the [requirements.txt](https://github.com/insarlab/MintPy/blob/master/docs/requirements.txt) file for details. We recommend using [conda](https://conda.io/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
 
