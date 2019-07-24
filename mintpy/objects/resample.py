@@ -401,6 +401,12 @@ class resample:
             else:
                 radius = self.get_radius_of_influence()
 
+        if np.isnan(fill_value) and src_data.dtype not in [np.float32, np.float64, np.float128,
+                                                           np.complex64, np.complex128]:
+            fill_value = 0
+            if print_msg:
+                print('input source data is not float, change fill_value from NaN to 0.')
+
         # reduction of swath data
         if self.valid_index is not None:
             src_data = src_data[self.valid_index]

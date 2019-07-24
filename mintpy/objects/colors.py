@@ -129,7 +129,6 @@ class ColormapExt(ScalarMappable):
         """Check 1) input colormap name is supported or not
                  2) derivative settings, from the suffix
         """
-        #import pdb; pdb.set_trace()
         if self.cmap_name in self.cmap_name_list:
             return
         else:

@@ -19,4 +19,4 @@
 + Fig. 13 - Phase corrections in the time-series domain.
 + Fig. 14 - Impact of network redundancy.
 + Fig. 15 - Advantage and limitation of temporal coherence as reliability measure.
-+ Fig. 16 - Comparing PySAR with GIAnT.
++ Fig. 16 - Comparing MintPy with GIAnT.

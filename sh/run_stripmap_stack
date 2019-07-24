@@ -20,7 +20,7 @@ chmod 755 run_unPackALOS
 stackStripMap.py -s SLC/ -d DEM/gsi*.dem -t 1800 -b 1800 -a 20 -r 8 -u snaphu -W interferogram -m 20080212 -f 0.5 --applyWaterMask
 submit_run_files4stripmap_stack.py
 
-# pysar
-cd PYSAR
-pysarApp.py ../KirishimaAlosAT424F620_630.txt
+# mintpy
+cd mintpy
+smallbaselineApp.py ../KirishimaAlosAT424F620_630.txt
 

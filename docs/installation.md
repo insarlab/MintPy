@@ -40,7 +40,7 @@ export PYAPS_HOME=~/python/PyAPS
 export PYTHONPATH=${PYAPS_HOME}:${PYTHONPATH}
 ```
 
-Source the file for the first time. It will be sourced automatically next time when you login. [Here](https://github.com/yunjunz/macOS_Setup/blob/master/cshrc.md) is an example _.cshrc_ file for _csh/tcsh_ user.
+Source the file for the first time. It will be sourced automatically next time when you login. [Here](https://github.com/yunjunz/macOS_Setup/blob/master/.tcshrc) is an example _.tcshrc_ file for _tcsh_ user.
 
 ### 2. Install Python dependecies ###
 

@@ -146,7 +146,6 @@ def manual_select_start_end_point(File, dset=None):
         return line
 
     line = draw_line()
-    import pdb; pdb.set_trace()
     #xc = []
     #yc = []
     #print('1) Click on start and end point of the desired profile')

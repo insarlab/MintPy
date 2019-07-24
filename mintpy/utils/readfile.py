@@ -107,6 +107,12 @@ ENVI_BAND_INTERLEAVE = {
     'PIXEL': 'BIP',
 }
 
+ENVI_BYTE_ORDER = {
+    '0': 'little-endian',
+    '1': 'big-endian',
+}
+
+
 ###########################################################################
 ## Slice-based data identification for data reading:
 ##
@@ -313,7 +319,7 @@ def read_binary_file(fname, datasetName=None, box=None):
             data_type = dataTypeDict[data_type]
         num_band = int(atr.get('number_bands', '1'))
         band_interleave = atr.get('scheme', 'BIL').upper()
-        byte_order = 'l'
+        byte_order = 'little-endian'
 
         # data structure - file specific based on FILE_TYPE - k
         band = 1
@@ -344,7 +350,7 @@ def read_binary_file(fname, datasetName=None, box=None):
     elif processor in ['roipac']:
         # data structure - auto
         band_interleave = 'BIL'
-        byte_order = 'l'
+        byte_order = 'little-endian'
 
         # data structure - file specific based on file extension
         data_type = 'float32'
@@ -412,7 +418,8 @@ def read_binary_file(fname, datasetName=None, box=None):
         #    raise Exception('unecognized GAMMA file: {}'.format(fname))
 
     # SNAP
-    # BEAM-DIMAP data format: https://www.brockmann-consult.de/beam/doc/help/general/BeamDimapFormat.html
+    # BEAM-DIMAP data format
+    # https://www.brockmann-consult.de/beam/doc/help/general/BeamDimapFormat.html
     elif processor == 'snap':
         # data structure - auto
         band_interleave = 'BSQ'
@@ -426,6 +433,15 @@ def read_binary_file(fname, datasetName=None, box=None):
         if 'byte order' in atr.keys() and atr['byte order'] == '0':
             byte_order = 'little-endian'
 
+    else:
+        print('Unknown InSAR processor.')
+        data_type = atr.get('DATA_TYPE', 'float32')
+        byte_order = atr.get('BYTE_ORDER', 'little-endian')
+        num_band = int(atr.get('number_bands', '1'))
+        band_interleave = atr.get('scheme', 'BIL').upper()
+        band = 1
+        cpx_band = 'phase'
+
     # reading
     data = read_binary(fname, (length, width),
                        box=box,
@@ -435,6 +451,7 @@ def read_binary_file(fname, datasetName=None, box=None):
                        band_interleave=band_interleave,
                        band=band,
                        cpx_band=cpx_band)
+
     if 'DATA_TYPE' not in atr:
         atr['DATA_TYPE'] = data_type
     return data, atr
@@ -541,6 +558,10 @@ def get_dataset_list(fname, datasetName=None):
 
 def get_hdf5_compression(fname):
     """Get the compression type of input HDF5 file"""
+    ext = os.path.splitext(fname)[1].lower()
+    if ext not in ['.h5','.he5']:
+        return None
+
     compression = None
     ds_name = get_dataset_list(fname)[0]
     with h5py.File(fname, 'r') as f:
@@ -944,15 +965,20 @@ def read_envi_hdr(fname, standardize=True):
     """Read ENVI .hdr file into a python dict strcture"""
     atr = read_template(fname, delimiter='=')
     atr['DATA_TYPE'] = ENVI2NUMPY_DATATYPE[atr.get('data type', '4')]
+    atr['BYTE_ORDER'] = ENVI_BYTE_ORDER[atr.get('byte order', '1')]
+
     if 'map info' in atr.keys():
         map_info = [i.strip() for i in atr['map info'].split(',')]
         x_step = abs(float(map_info[5]))
         y_step = abs(float(map_info[6])) * -1.
+        unit = map_info[-1].replace('}','').split('=')[1].lower()
         if abs(x_step) < 1. and abs(x_step) > 1e-7:
             atr['X_FIRST'] = str(float(map_info[3]) - x_step / 2.)
             atr['Y_FIRST'] = str(float(map_info[4]) - y_step / 2.)
             atr['X_STEP'] = str(x_step)
             atr['Y_STEP'] = str(y_step)
+            atr['X_UNIT'] = unit
+            atr['Y_UNIT'] = unit
     if standardize:
         atr = standardize_metadata(atr)
     return atr
