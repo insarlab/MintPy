@@ -239,6 +239,10 @@ def read_data(inps):
         elif dname == 'wrapPhase':
             atr['FILE_TYPE'] = '.int'
             atr['UNIT'] = 'radian'
+        elif dname == 'connectComponent':
+            atr['FILE_TYPE'] = '.conncomp'
+            atr['UNIT'] = '1'
+            atr['DATA_TYPE'] = 'byte'
         else:
             raise ValueError('unrecognized dataset type: {}'.format(inps.dset))
 

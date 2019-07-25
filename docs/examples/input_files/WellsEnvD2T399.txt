@@ -19,6 +19,7 @@ mintpy.reference.lalo      = 41.03, -114.70
 mintpy.network.coherenceBased     = yes       #[yes / no], auto for yes, exclude interferograms with coherence < minCoherence
 mintpy.network.keepMinSpanTree    = no
 mintpy.network.excludeDate        = 20071231, 20080204, 20080310
+mintpy.troposphericDelay.weatherModel   = ECMWF
 mintpy.topographicResidual.stepFuncDate = 20080221
 
 ##------------------------  HDF-EOS5 --------------------------------##

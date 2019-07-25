@@ -53,6 +53,7 @@ class connectComponent:
             self.refX = None
         self.length, self.width = self.conncomp.shape
 
+
     def label(self, min_area=2.5e3, erosion_size=5, print_msg=False):
         """ Label the connected components
         Returns: self.labelImg   - 2D np.ndarray in int64 to mask areas to be corrected
@@ -75,6 +76,7 @@ class connectComponent:
             idx = np.argmax([region.area for region in regions])
             self.labelRef = regions[idx].label
         return
+
 
     @staticmethod
     def get_large_label(mask, min_area=2.5e3, erosion_size=5, get_boundary=False, print_msg=False):
@@ -117,7 +119,49 @@ class connectComponent:
         else:
             return label_img, num_label
 
+
     def get_all_bridge(self):
+        """ Search all possible connections among labeled regions
+        Returns:    connDict : dict of connection, i.e.:
+                        {'1_2': {'1': array([1232,  345]),
+                                 '2': array([868, 239]),
+                                 'distance': 379.1200337623956},
+                         '1_3': {'1': array([1232,  345]),
+                                 '3': array([1089,  191]),
+                                 'distance': 210.1547049199708},
+                         '1_4': {'1': array([1204, 1143]),
+                                 '4': array([1217, 1157]),
+                                 'distance': 19.1049731745428},
+                         '1_5': {'1': array([1263,  557]),
+                                 '5': array([1270,  565]),
+                                 'distance': 10.63014581273465},
+                         '2_3': {'2': array([868, 239]),
+                                 '3': array([891, 249]),
+                                 'distance': 25.079872407968907},
+                         '2_4': {'2': array([868, 239]),
+                                 '4': array([1273, 1103]),
+                                 'distance': 954.2122405419037},
+                         '2_5': {'2': array([868, 239]),
+                                 '5': array([1269,  566]),
+                                 'distance': 517.4263232577175},
+                         '3_4': {'3': array([996, 275]),
+                                 '4': array([1319, 1085]),
+                                 'distance': 872.0258023705492},
+                         '3_5': {'3': array([1015,  264]),
+                                 '5': array([1289,  545]),
+                                 'distance': 392.4754769409167},
+                         '4_5': {'4': array([1319, 1085]),
+                                 '5': array([1305,  670]),
+                                 'distance': 415.2360774306587}
+                        }
+                    distMat : 2D np.array in size of (nLabel, nLabel), i.e.:
+                        array([[  0.      , 379.12003 , 210.15471 ,  19.104973,  10.630146],
+                               [379.12003 ,   0.      ,  25.079872, 954.2122  , 517.42633 ],
+                               [210.15471 ,  25.079872,   0.      , 872.0258  , 392.47546 ],
+                               [ 19.104973, 954.2122  , 872.0258  ,   0.      , 415.23608 ],
+                               [ 10.630146, 517.42633 , 392.47546 , 415.23608 ,   0.      ]],
+                              dtype=float32)
+        """
         regions = measure.regionprops(self.labelBound)
 
         trees = []
@@ -139,11 +183,19 @@ class connectComponent:
             conn[n0] = yxi
             conn[n1] = yxj
             conn['distance'] = dist_min
-            self.connDict['{}{}'.format(n0, n1)] = conn
+            self.connDict['{}_{}'.format(n0, n1)] = conn
             self.distMat[i,j] = self.distMat[j,i] = dist_min
-        return
+        return self.connDict, self.distMat
+
 
     def find_mst_bridge(self):
+        """Search for bridges to connect all labeled areas using the minimum spanning tree algorithm
+        Returns:    bridges : list of dict, i.e.:
+                        [{'label0': 1, 'label1': 3, 'x0': 345, 'x1': 191, 'y0': 1232, 'y1': 1089},
+                         {'label0': 1, 'label1': 4, 'x0': 1143, 'x1': 1157, 'y0': 1204, 'y1': 1217},
+                         {'label0': 1, 'label1': 5, 'x0': 557, 'x1': 565, 'y0': 1263, 'y1': 1270},
+                         {'label0': 3, 'label1': 2, 'x0': 249, 'x1': 239, 'y0': 891, 'y1': 868}]
+        """
         if not hasattr(self, 'distMat'):
             self.get_all_bridge()
 
@@ -158,7 +210,7 @@ class connectComponent:
             n1 = succs[i] + 1
             # read conn
             nn = sorted([str(n0), str(n1)])
-            conn = self.connDict['{}{}'.format(nn[0], nn[1])]
+            conn = self.connDict['{}_{}'.format(nn[0], nn[1])]
             y0, x0 = conn[str(n0)]
             y1, x1 = conn[str(n1)]
             # save bdg
@@ -171,7 +223,8 @@ class connectComponent:
             bridge['label1'] = n1
             self.bridges.append(bridge)
         self.num_bridge = len(self.bridges)
-        return
+        return self.bridges
+
 
     def get_bridge_endpoint_aoi_mask(self, bridge, radius=50):
         # get AOI mask
@@ -186,6 +239,7 @@ class connectComponent:
         aoi_mask0[y00:y01, x00:x01] = True
         aoi_mask1[y10:y11, x10:x11] = True
         return aoi_mask0, aoi_mask1
+
 
     def unwrap_conn_comp(self, unw, radius=50, ramp_type=None, print_msg=False):
         start_time = time.time()
@@ -221,7 +275,7 @@ class connectComponent:
             unw[label_mask1] += 2.* np.pi * num_jump
 
             if print_msg:
-                print(('phase diff {}-{}: {:04.1f} rad --> '
+                print(('phase diff {}_{}: {:04.1f} rad --> '
                        'num of jump: {}').format(bridge['label1'],
                                                  bridge['label0'],
                                                  diff_value,
@@ -233,6 +287,7 @@ class connectComponent:
         if print_msg:
             print('time used: {:.2f} secs.'.format(time.time()-start_time))
         return unw
+
 
     def plot_bridge(self, ax, cmap='jet', radius=50):
         # label background
