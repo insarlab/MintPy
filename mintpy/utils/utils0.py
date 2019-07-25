@@ -199,22 +199,40 @@ def get_lat_lon(meta, box=None):
         box = (0, 0, width, length)
 
     # generate 2D matrix for lat/lon
-    lat_num = box[3] - box[1]
-    lon_num = box[2] - box[0]
-    lat_step = float(meta['Y_STEP'])
-    lon_step = float(meta['X_STEP'])
+    if 'Y_FIRST' in meta.keys():
+        lat_num = box[3] - box[1]
+        lon_num = box[2] - box[0]
+        lat_step = float(meta['Y_STEP'])
+        lon_step = float(meta['X_STEP'])
 
-    lat0 = float(meta['Y_FIRST']) + lat_step * box[1]
-    lon0 = float(meta['X_FIRST']) + lon_step * box[0]
-    lat1 = lat0 + lat_step * lat_num
-    lon1 = lon0 + lon_step * lon_num
-    lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
+        lat0 = float(meta['Y_FIRST']) + lat_step * box[1]
+        lon0 = float(meta['X_FIRST']) + lon_step * box[0]
+        lat1 = lat0 + lat_step * lat_num
+        lon1 = lon0 + lon_step * lon_num
+        lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
                           lon0:lon1:lon_num*1j]
+    else:
+        lats, lons = get_lat_lon_rdc(meta)
 
     lats = np.array(lats, dtype=np.float32)
     lons = np.array(lons, dtype=np.float32)
+    
     return lats, lons
 
+def get_lat_lon_rdc(meta):
+    """Get 2D array of lat and lon from metadata"""
+    length, width = int(meta['LENGTH']), int(meta['WIDTH'])
+    lats = [float(meta['LAT_REF{}'.format(i)]) for i in [1,2,3,4]]
+    lons = [float(meta['LON_REF{}'.format(i)]) for i in [1,2,3,4]]
+
+    lat = np.zeros((length,width),dtype = np.float32)
+    lon = np.zeros((length,width),dtype = np.float32)
+
+    for i in range(length):
+        for j in range(width):
+            lat[i,j] = lats[0] + j*(lats[1] - lats[0])/width + i*(lats[2] - lats[0])/length
+            lon[i,j] = lons[0] + j*(lons[1] - lons[0])/width + i*(lons[2] - lons[0])/length
+    return lat, lon
 
 def azimuth2heading_angle(az_angle):
     """Convert azimuth angle from ISCE los.rdr band2 into satellite orbit heading angle
