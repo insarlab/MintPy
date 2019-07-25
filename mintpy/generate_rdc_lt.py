@@ -7,13 +7,11 @@
 
 import os
 import sys
-import glob
-import time
 import argparse
 
 import h5py
 import numpy as np
-from mintpy.utils import readfile, writefile, ptime, utils as ut
+from mintpy.utils import readfile, writefile, ptime
 #########################################################################
 
 INTRODUCTION = '''
@@ -39,7 +37,7 @@ def write_h5(datasetDict, out_file, metadata=None, ref_file=None, compression=No
     with h5py.File(out_file, 'w') as f:
         for dsName in datasetDict.keys():
             data = datasetDict[dsName]
-            ds = f.create_dataset(dsName,data=data,compression=compression)
+            f.create_dataset(dsName,data=data,compression=compression)
 
         for key, value in metadata.items():
             f.attrs[key] = str(value)
