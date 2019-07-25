@@ -372,7 +372,7 @@ def coherence2phase_variance_ds(coherence, L=32, epsilon=1e-3, print_msg=False):
     lineStr = '    number of looks L={}'.format(L)
     if L > 80:
         L = 80
-        lineStr += ', use L=80 to avoid dividing by 0 in calculation with Negligible effect'
+        lineStr += ', use L=80 to avoid dividing by 0 in calculation with negligible effect'
     if print_msg:
         print(lineStr)
 

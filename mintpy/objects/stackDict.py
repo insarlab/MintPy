@@ -94,7 +94,7 @@ class ifgramStackDict:
         Attributes         Dictionary for metadata
         /date              2D array of string  in size of (m, 2   ) in YYYYMMDD format for master and slave date
         /bperp             1D array of float32 in size of (m,     ) in meter.
-        /dropIfgram        1D array of bool    in size of (m,     ).
+        /dropIfgram        1D array of bool    in size of (m,     ) True by default for keeping interferogram.
         /unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
         /coherence         3D array of float32 in size of (m, l, w).
         /connectComponent  3D array of int8    in size of (m, l, w).           (optional)
