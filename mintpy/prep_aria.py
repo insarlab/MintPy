@@ -10,13 +10,13 @@ except ImportError:
     raise ImportError('gdal>=3.0 is required.')
 import h5py
 import numpy as np
-#from skimage.transform import resize
 from mintpy.utils import ptime
 
 
 ####################################################################################
 EXAMPLE = """example:
-  prep_aria.py -w mintpy -s stack/ -i incidenceAngle/20150605_20150512.vrt -d SRTM_3arcsec.dem
+  prep_aria.py -w mintpy -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt 
+  prep_aria.py -w mintpy -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt -a azimuthAngle/20150605_20150512.vrt
 """
 
 def create_parser():
@@ -26,25 +26,31 @@ def create_parser():
                                      epilog=EXAMPLE)
     parser.add_argument('-w','--work-dir', dest='workDir', type=str, default="./",
                         help='The working directory for MintPy.')
-    parser.add_argument('-s','--stack-dir', dest='stackDir', type=str, required=True,
-                        help='The directory which contains stack VRT files.')
-    parser.add_argument('-u','--unwrap-stack-name', dest='unwStack', type=str,
-                        default="unwrapStack.vrt",
-                        help='Name of the stack VRT file of unwrapped data.\n'+
-                             'default: unwrapStack.vrt')
-    parser.add_argument('-c','--coherence-stack-name', dest='cohStack', type=str,
-                        default="cohStack.vrt",
-                        help='Name of the stack VRT file of coherence data.\n'+
-                             'default: cohStack.vrt')
-    parser.add_argument('-l','--conn-comp-name', dest='connCompStack', type=str,
-                        default="connCompStack.vrt",
-                        help='Name of the stack VRT file of connected component data.\n' +
-                             'default: connCompStack.vrt')
-    parser.add_argument('-i','--incidence-angle', dest='incAngle', type=str, required=True,
-                        help='Name of the incidence angle file')
-    parser.add_argument('-d','--dem', dest='dem', type=str, required=True,
-                        help='Name of the DEM file')
 
+    stack = parser.add_argument_group('Interferogram stack')
+    stack.add_argument('-s','--stack-dir', dest='stackDir', type=str, required=True,
+                       help='The directory which contains stack VRT files.')
+
+    stack.add_argument('-u','--unwrap-stack-name', dest='unwStack', type=str,
+                       default="unwrapStack.vrt",
+                       help='Name of the stack VRT file of unwrapped data.\n'+
+                            'default: unwrapStack.vrt')
+    stack.add_argument('-c','--coherence-stack-name', dest='cohStack', type=str,
+                       default="cohStack.vrt",
+                       help='Name of the stack VRT file of coherence data.\n'+
+                            'default: cohStack.vrt')
+    stack.add_argument('-l','--conn-comp-name', dest='connCompStack', type=str,
+                       default="connCompStack.vrt",
+                       help='Name of the stack VRT file of connected component data.\n' +
+                            'default: connCompStack.vrt')
+
+    geom = parser.add_argument_group('Geometry')
+    geom.add_argument('-d','--dem', dest='dem', type=str, required=True,
+                      help='Name of the DEM file')
+    geom.add_argument('-i','--incidence-angle', dest='incAngle', type=str, required=True,
+                      help='Name of the incidence angle file')
+    geom.add_argument('-a','--az-angle','--azimuth-angle', dest='azAngle', type=str,
+                      help='Name of the azimuth angle file')
     return parser
 
 
@@ -72,16 +78,25 @@ def extract_metadata(stack):
     meta["PROCESSOR"] = "isce"
     meta["FILE_LENGTH"] = ds.RasterYSize
     meta["LENGTH"] = ds.RasterYSize
-    meta["ORBIT_DIRECTION"] = "DESCENDING"    #check with ARIA-tools team
+    meta["ORBIT_DIRECTION"] = meta["orbitDirection"].upper()
     meta["PLATFORM"] = "Sen"
     meta["WAVELENGTH"] = float(meta["Wavelength (m)"])
     meta["WIDTH"] = ds.RasterXSize
     meta["NUMBER_OF_PAIRS"] = ds.RasterCount
 
-    az_angle = float(meta["azimuthAngle"])
-    head_angle = -1 * (270 + az_angle)
-    head_angle -= np.round(head_angle / 360.) * 360.
-    meta['HEADING'] = head_angle
+    # Note from YZ, 2019-07-25
+    # convert isce azimuth angle to roipac orbit heading angle
+    # This value is not consistent with band2 of los.rdr from ISCE/topsStack
+    # need to check with ARIA-tools team. 
+    # use hardwired value for now
+    #az_angle = float(meta["azimuthAngle"])
+    #head_angle = -1 * (270 + az_angle)
+    #head_angle -= np.round(head_angle / 360.) * 360.
+    #meta['HEADING'] = head_angle
+    if meta["ORBIT_DIRECTION"].startswith("D"):
+        meta["HEADING"] = -168
+    else:
+        meta["HEADING"] = -12
 
     # ARIA standard products currently don't have number of range and
     # azimuth looks. They are however fixed to the following values
@@ -206,24 +221,28 @@ def write_ifgram_stack(h5File, unwStack, cohStack, connCompStack):
     return
 
 
-def write_geometry(h5File, incAngleFile, demFile=None):
+def write_geometry(h5File, demFile, incAngleFile, azAngleFile=None):
     print('-'*50)
     print('writing data to HDF5 file {} with a mode ...'.format(h5File))
     h5 = h5py.File(h5File, 'a')
+
+    ds = gdal.Open(demFile, gdal.GA_ReadOnly)
+    data = np.array(ds.ReadAsArray(), dtype=np.float32)
+    data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
+    h5['height'][:,:] = data
+
+    h5['slantRangeDistance'][:,:] = float(h5.attrs['STARTING_RANGE'])
 
     ds = gdal.Open(incAngleFile, gdal.GA_ReadOnly)
     data = ds.ReadAsArray()
     data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
     h5['incidenceAngle'][:,:] = data
 
-    h5['slantRangeDistance'][:,:] = float(h5.attrs['STARTING_RANGE'])
-
-    ds = gdal.Open(demFile, gdal.GA_ReadOnly)
-    data = np.array(ds.ReadAsArray(), dtype=np.float32)
-    data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
-    #outShape = (int(h5.attrs['LENGTH']),int(h5.attrs['WIDTH']))
-    #data = resize(data, outShape, order=1, mode='constant', anti_aliasing=True, preserve_range=True)
-    h5['height'][:,:] = data
+    if azAngleFile is not None:
+        ds = gdal.Open(azAngleFile, gdal.GA_ReadOnly)
+        data = ds.ReadAsArray()
+        data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
+        h5['azimuthAngle'][:,:] = data
 
     h5.close()
     print('finished writing to HD5 file: {}'.format(h5File))
@@ -258,26 +277,30 @@ def main(iargs=None):
     numPairs = metadata["NUMBER_OF_PAIRS"]
 
     # write geometryGeo
-    #dsNameDict = {"azimuthAngle": (np.float32, (length, width)),
-    #              "height": (np.float32, (length, width)),
-    #              "incidenceAngle": (np.float32, (length, width)),
-    #              "shadowMask": (np.bool, (length, width)),
-    #              "slantRangeDistance": (np.float32, (length, width))}
-    dsNameDict = {"height": (np.float32, (length, width)),
-                  "incidenceAngle": (np.float32, (length, width)),
-                  "slantRangeDistance": (np.float32, (length, width))}
+    dsNameDict = {
+        "azimuthAngle": (np.float32, (length, width)),
+        "height": (np.float32, (length, width)),
+        "incidenceAngle": (np.float32, (length, width)),
+        "shadowMask": (np.bool, (length, width)),
+        "slantRangeDistance": (np.float32, (length, width)),
+    }
 
     geom_file = os.path.join(inputDir, "geometryGeo.h5")
     layout_hdf5(geom_file, dsNameDict, metadata)
-    write_geometry(geom_file, incAngleFile=inps.incAngle, demFile=inps.dem)
+    write_geometry(geom_file,
+                   demFile=inps.dem,
+                   incAngleFile=inps.incAngle,
+                   azAngleFile=inps.azAngle)
 
     # write ifgramStack
-    dsNameDict = {"bperp": (np.float32, (numPairs,)),
-                  "coherence": (np.float32, (numPairs, length, width)),
-                  "connectComponent": (np.byte, (numPairs, length, width)),
-                  "date": (np.dtype('S8'), (numPairs, 2)),
-                  "dropIfgram": (np.bool, (numPairs,)),
-                  "unwrapPhase": (np.float32, (numPairs, length, width))}
+    dsNameDict = {
+        "bperp": (np.float32, (numPairs,)),
+        "coherence": (np.float32, (numPairs, length, width)),
+        "connectComponent": (np.byte, (numPairs, length, width)),
+        "date": (np.dtype('S8'), (numPairs, 2)),
+        "dropIfgram": (np.bool, (numPairs,)),
+        "unwrapPhase": (np.float32, (numPairs, length, width)),
+    }
 
     ifgram_file = os.path.join(inputDir, "ifgramStack.h5")
     layout_hdf5(ifgram_file, dsNameDict, metadata)
