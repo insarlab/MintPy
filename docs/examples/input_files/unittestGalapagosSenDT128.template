@@ -1,0 +1,33 @@
+######################################################
+cleanopt                          = 0   # [ 0 / 1 / 2 / 3 / 4]   0,1: none 2: keep merged,geom_master,SLC 3: keep MINTPY 4: everything
+processor                         = isce
+ssaraopt.platform                 = SENTINEL-1A,SENTINEL-1B
+ssaraopt.relativeOrbit            = 128
+ssaraopt.frame                    = 590-593
+ssaraopt.startDate                = 20160601
+ssaraopt.endDate                  = 20160831
+demMethod                         = boundingBox
+hazard_products_flag              = True
+insarmaps_flag                     = False
+
+######################################################
+
+topsStack.boundingBox             = -0.7 -0.6 -91.7 -90.9    # -1 0.15 -91.6 -90.9
+topsStack.subswath                = 1    # '1 2'
+topsStack.numConnections          = 5    # comment
+topsStack.azimuthLooks            = 5    # comment
+topsStack.rangeLooks              = 15   # comment
+topsStack.filtStrength            = 0.2  # comment
+topsStack.unwMethod               = snaphu  # comment
+topsStack.coregistration          = auto  # [NESD geometry], auto for NESD
+topsStack.slcDir                  = $TESTDATA_ISCE/unittestGalapagosSenDT128/SLC
+
+mintpy.reference.lalo              = -0.7,-91.3     # N of SN
+mintpy.networkInversion.parallel   = yes #[yes / no], auto for no, parallel processing using dask
+mintpy.networkInversion.walltime   = 00:05 #[yes / no], auto for no, parallel processing using dask
+mintpy.troposphericDelay.method    = no    # pyaps  #[pyaps / height_correlation / base_trop_cor / no], auto for pyaps
+mintpy.save.hdfEos5                = yes   #[yes / update / no], auto for no, save timeseries to UNAVCO InSAR Archive format
+mintpy.save.hdfEos5.update         = yes   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
+mintpy.save.kml                    = yes  #[yes / no], auto for yes, save geocoded velocity to Google Earth KMZ file
+
+######################################################
