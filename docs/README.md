@@ -89,4 +89,4 @@ Join our google group [https://groups.google.com/forum/#!forum/mintpy](https://g
 * David Grossman
 * Yunmeng Cao
 * Andre Theron
-* [_other community members_](https://github.com/insarlab/MintPy/graphs/contributors)
+* [Other community members.](https://github.com/insarlab/MintPy/graphs/contributors) [[Contribute](./CONTRIBUTING.md)]
