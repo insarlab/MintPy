@@ -303,27 +303,27 @@ def read_binary_file(fname, datasetName=None, box=None):
     if not box:
         box = (0, 0, width, length)
 
+    # default data structure
+    data_type = atr.get('DATA_TYPE', 'float32').lower()
+    byte_order = atr.get('BYTE_ORDER', 'little-endian').lower()
+    num_band = int(atr.get('number_bands', '1'))
+    band_interleave = atr.get('scheme', 'BIL').upper()
+
+    # default data to read
+    band = 1
+    cpx_band = 'phase'
+
     # ISCE
     if processor in ['isce']:
-        # default short name for data type from ISCE
+        # convert default short name for data type from ISCE
         dataTypeDict = {
             'byte': 'int8',
             'float': 'float32',
             'double': 'float64',
             'cfloat': 'complex64',
         }
-
-        # data structure - auto
-        data_type = atr['DATA_TYPE'].lower()
         if data_type in dataTypeDict.keys():
             data_type = dataTypeDict[data_type]
-        num_band = int(atr.get('number_bands', '1'))
-        band_interleave = atr.get('scheme', 'BIL').upper()
-        byte_order = 'little-endian'
-
-        # data structure - file specific based on FILE_TYPE - k
-        band = 1
-        cpx_band = 'phase'
 
         k = atr['FILE_TYPE'].lower().replace('.', '')
         if k in ['unw']:
@@ -354,9 +354,7 @@ def read_binary_file(fname, datasetName=None, box=None):
 
         # data structure - file specific based on file extension
         data_type = 'float32'
-        num_band = 1
-        band = 1
-        cpx_band = 'phase'
+        num_band = 1        
 
         if fext in ['.unw', '.cor', '.hgt', '.msk']:
             num_band = 2
@@ -379,21 +377,14 @@ def read_binary_file(fname, datasetName=None, box=None):
             num_band = 2
             if datasetName and datasetName.startswith(('az', 'azimuth')):
                 band = 2
-        #else:
-        #    raise Exception('unrecognized ROI_PAC file: {}'.format(fname))
 
     # Gamma
     elif processor == 'gamma':
         # data structure - auto
         band_interleave = 'BIL'
-        byte_order = 'big-endian'
+        byte_order = atr.get('BYTE_ORDER', 'big-endian')
 
-        # data structure - file specific based on file extension
         data_type = 'float32'
-        num_band = 1
-        band = 1
-        cpx_band = 'phase'
-
         if fext in ['.unw', '.cor', '.hgt_sim', '.dem', '.amp', '.ramp']:
             pass
 
@@ -414,33 +405,20 @@ def read_binary_file(fname, datasetName=None, box=None):
         elif fext in ['.mli']:
             byte_order = 'little-endian'
 
-        #else:
-        #    raise Exception('unecognized GAMMA file: {}'.format(fname))
-
     # SNAP
     # BEAM-DIMAP data format
     # https://www.brockmann-consult.de/beam/doc/help/general/BeamDimapFormat.html
     elif processor == 'snap':
         # data structure - auto
-        band_interleave = 'BSQ'
-        num_band = 1
-        band = 1
-        data_type = atr['DATA_TYPE']
-        cpx_band = 'phase'
+        band_interleave = atr.get('scheme', 'BSQ').upper()
 
         # byte order
-        byte_order = 'big-endian'
+        byte_order = atr.get('BYTE_ORDER', 'big-endian')
         if 'byte order' in atr.keys() and atr['byte order'] == '0':
             byte_order = 'little-endian'
 
     else:
         print('Unknown InSAR processor.')
-        data_type = atr.get('DATA_TYPE', 'float32')
-        byte_order = atr.get('BYTE_ORDER', 'little-endian')
-        num_band = int(atr.get('number_bands', '1'))
-        band_interleave = atr.get('scheme', 'BIL').upper()
-        band = 1
-        cpx_band = 'phase'
 
     # reading
     data = read_binary(fname, (length, width),
@@ -958,6 +936,7 @@ def read_isce_xml(fname, standardize=True):
 
     if standardize:
         xmlDict = standardize_metadata(xmlDict)
+
     return xmlDict
 
 
