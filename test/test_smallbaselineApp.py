@@ -5,20 +5,18 @@
 
 
 import os
-import sys
+import time
 import argparse
 import subprocess
-import numpy as np
-from mintpy import smallbaselineApp
 
 
 URL_LIST = [
-    'https://zenodo.org/record/2748170/files/KujuAlosAT422F650.tar.xz',
-    'https://zenodo.org/record/2748560/files/WellsEnvD2T399.tar.xz',
     'https://zenodo.org/record/2748487/files/FernandinaSenDT128.tar.xz',
+    'https://zenodo.org/record/2748560/files/WellsEnvD2T399.tar.xz',
+    'https://zenodo.org/record/2748170/files/KujuAlosAT422F650.tar.xz',
 ]
 
-PROJ_NAME_LIST = [os.path.basename(url).split('.')[0] for url in URL_LIST]
+PROJ_NAME_LIST = [os.path.basename(url).split('.tar.xz')[0] for url in URL_LIST]
 TEMPLATE_FILE_LIST = [os.path.join(os.path.dirname(__file__), '{}.txt'.format(proj_name))
                       for proj_name in PROJ_NAME_LIST]
 
@@ -58,11 +56,11 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     inps.test_dir = os.path.expanduser(inps.test_dir)
+    inps.test_dir = os.path.expandvars(inps.test_dir)
 
     if inps.dset_name.lower() == 'all':
         inps.dset_name = PROJ_NAME_LIST
-
-    if isinstance(inps.dset_name, str):
+    elif isinstance(inps.dset_name, str):
         inps.dset_name = [inps.dset_name]
     return inps
 
@@ -115,12 +113,16 @@ def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False):
         print('remove existing tropospheric delay file: ./inputs/ECMWF.h5')
 
     # runing smallbaselineApp
-    smallbaselineApp.main([template_file])
+    cmd = 'smallbaselineApp.py {}'.format(template_file)
+    status = subprocess.Popen(cmd, shell=True).wait()
+    if status is not 0:
+        raise RuntimeError('Test failed for example dataset {}'.format(dset_name))
     return
 
 
 #####################################################################################
 def main(iargs=None):
+    start_time = time.time()
     inps = cmd_line_parse(iargs)
 
     num_dset = len(inps.dset_name)
@@ -135,9 +137,13 @@ def main(iargs=None):
         print('PASS testing smallbaselineApp workflow on exmaple dataset {}/{}: {}'.format(i+1, num_dset, dset_name))
 
     if num_dset == len(PROJ_NAME_LIST):
-        print('-'*50)
-        print('PASS ALL testings without running errors.')
-        print('-'*50)
+        m, s = divmod(time.time()-start_time, 60)
+        msg = '-'*50
+        msg += '\nPASS ALL testings without running errors.'
+        msg += '\n'+'-'*50
+        msg += '\nTotal time used: {:02.0f} mins {:02.1f} secs\n'.format(m, s)
+        print(msg)
+
     return
 
 
