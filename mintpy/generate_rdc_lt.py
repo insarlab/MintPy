@@ -31,28 +31,16 @@ EXAMPLE = '''
 ##############################################################################
 '''
 def write_h5(datasetDict, out_file, metadata=None, ref_file=None, compression=None):
-    #output = 'variogramStack.h5'
-    'lags                  1 x N '
-    'semivariance          M x N '
-    'sills                 M x 1 '
-    'ranges                M x 1 '
-    'nuggets               M x 1 '
     
     if os.path.isfile(out_file):
         print('delete exsited file: {}'.format(out_file))
         os.remove(out_file)
 
-    print('create HDF5 file: {} with w mode'.format(out_file))
-    dt = h5py.special_dtype(vlen=np.dtype('float64'))
-
-    
     with h5py.File(out_file, 'w') as f:
         for dsName in datasetDict.keys():
             data = datasetDict[dsName]
-            ds = f.create_dataset(dsName,
-                              data=data,
-                              compression=compression)
-        
+            ds = f.create_dataset(dsName,data=data,compression=compression)
+
         for key, value in metadata.items():
             f.attrs[key] = str(value)
             #print(key + ': ' +  value)
@@ -80,7 +68,7 @@ def get_idx_cpx(RangeCoord,AzimuthCoord,WIDTH,LENGTH,n_lines):
     gy = AzimuthCoord.flatten()
     gy[gy==0] = 10000
     gy[gy<0] = 10000
-    geo_cpx = gx + gy*1j
+   # geo_cpx = gx + gy*1j
     
     sort_gy_idx = np.argsort(gy)
     sort_gy_array = gy[sort_gy_idx]
@@ -210,7 +198,7 @@ def main(argv):
     rangeCoord = rangeCoord.astype(np.float64)
     azimuthCoord = azimuthCoord.astype(np.float64)
     #CPX_lt =complex(rangeCoord + '+' + azimuthCoord+'j')
-    CPX_lt = rangeCoord  + 1j *azimuthCoord
+    #CPX_lt = rangeCoord  + 1j *azimuthCoord
     
     meta_geo = readfile.read_attribute(geom)
     post_Lat = meta_geo['Y_STEP']
