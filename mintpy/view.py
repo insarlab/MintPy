@@ -871,10 +871,12 @@ def update_figure_setting(inps):
 
         # Output File Name
         if inps.outfile:
+            inps.outdir = os.path.dirname(inps.outfile[0])
             inps.outfile_base, inps.fig_ext = os.path.splitext(os.path.basename(inps.outfile[0]))
             inps.fig_ext = inps.fig_ext.lower()
         else:
-            inps.outfile_base = os.path.splitext(inps.file)[0]
+            inps.outdir = os.path.dirname(inps.file)
+            inps.outfile_base = os.path.splitext(os.path.basename(inps.file))[0]
             # suffix
             if (inps.pix_box[2]-inps.pix_box[0])*(inps.pix_box[3]-inps.pix_box[1]) < width*length:
                 inps.outfile_base += '_sub'
@@ -892,6 +894,7 @@ def update_figure_setting(inps):
         else:
             inps.outfile = ['{}_{}{}'.format(inps.outfile_base, str(j), inps.fig_ext) 
                             for j in range(1, inps.fig_num+1)]
+        inps.outfile = [os.path.join(inps.outdir, outfile) for outfile in inps.outfile]
     return inps
 
 
@@ -1127,7 +1130,7 @@ def plot_figure(j, inps, metadata):
 
     # Save Figure
     if inps.save_fig:
-        vprint('save figure to {} with dpi={}'.format(inps.outfile[j-1], inps.fig_dpi))
+        vprint('save figure to {} with dpi={}'.format(os.path.abspath(inps.outfile[j-1]), inps.fig_dpi))
         fig.savefig(inps.outfile[j-1], bbox_inches='tight',
                     transparent=True, dpi=inps.fig_dpi)
         if not inps.disp_fig:
@@ -1358,7 +1361,7 @@ class viewer():
 
             # Save figure
             if self.save_fig:
-                vprint('save figure to {} with dpi={}'.format(self.outfile[0], self.fig_dpi))
+                vprint('save figure to {} with dpi={}'.format(os.path.abspath(self.outfile[0]), self.fig_dpi))
                 if not self.disp_whitespace:
                     plt.savefig(self.outfile[0], transparent=True, dpi=self.fig_dpi, pad_inches=0.0)
                 else:
