@@ -201,15 +201,14 @@ def get_lat_lon(meta, box=None):
     length, width = int(meta['LENGTH']), int(meta['WIDTH'])
     if box is None:
         box = (0, 0, width, length)
+    lat_num = box[3] - box[1]
+    lon_num = box[2] - box[0]
 
     # generate 2D matrix for lat/lon
     if 'Y_FIRST' in meta.keys():
         # geo-coordinates
-        lat_num = box[3] - box[1]
-        lon_num = box[2] - box[0]
         lat_step = float(meta['Y_STEP'])
         lon_step = float(meta['X_STEP'])
-
         lat0 = float(meta['Y_FIRST']) + lat_step * box[1]
         lon0 = float(meta['X_FIRST']) + lon_step * box[0]
         lat1 = lat0 + lat_step * lat_num
