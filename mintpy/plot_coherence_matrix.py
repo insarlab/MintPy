@@ -51,8 +51,8 @@ def create_parser():
     parser.add_argument('--figsize','--fs', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
                         help='figure size in inches. Default: [8, 4]')
 
-    parser.add_argument('--img-file', dest='img_file', default='velocity.h5',
-                        help='dataset to show in map to facilitate point selection')
+    parser.add_argument('--img-file', dest='img_file',
+                        help='dataset to show in map to facilitate point selection. Default: velocity.h5')
     parser.add_argument('--view-cmd', dest='view_cmd', default='view.py {} --wrap --noverbose ',
                         help='view.py command to plot the input map file\n'+
                              'Default: view.py img_file --wrap --noverbose')
@@ -60,7 +60,7 @@ def create_parser():
     # aux files
     parser.add_argument('--tcoh', dest='tcoh_file', default='temporalCoherence.h5',
                         help='temporal coherence file.')
-    parser.add_argument('-t','--template', dest='template_file', default='smallbaselineApp.cfg',
+    parser.add_argument('-t','--template', dest='template_file',
                         help='temporal file.')
 
     parser.add_argument('--save', dest='save_fig',
@@ -75,6 +75,13 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # default aux file:
+    mintpy_dir = os.path.dirname(os.path.dirname(inps.ifgram_file))
+    if not inps.img_file:
+        inps.img_file = os.path.join(mintpy_dir, 'velocity.h5')
+    if not inps.template_file:
+        inps.template_file = os.path.join(mintpy_dir, 'smallbaselineApp.cfg')
 
     if not os.path.isfile(inps.img_file):
         raise SystemExit('ERROR: input image file not found: {}'.format(inps.img_file))
@@ -236,6 +243,7 @@ class coherenceMatrixViewer():
         plotDict['colormap'] = self.colormap
         plotDict['cmap_vlist'] = self.cmap_vlist
         plotDict['disp_legend'] = False
+
         # plot
         coh_mat = pp.plot_coherence_matrix(self.ax_mat,
                                            date12List=self.date12_list,
@@ -245,8 +253,6 @@ class coherenceMatrixViewer():
 
         self.ax_mat.annotate('ifgrams\navailable', xy=(0.05, 0.05), xycoords='axes fraction', fontsize=12)
         self.ax_mat.annotate('ifgrams\nused', ha='right', xy=(0.95, 0.85), xycoords='axes fraction', fontsize=12)
-
-        self.fig.canvas.draw()
 
         # status bar
         def format_coord(x, y):
@@ -262,6 +268,8 @@ class coherenceMatrixViewer():
         if self.tcoh_file:
             msg += 'temporal coherence: {:.2f}'.format(tcoh)
         vprint(msg)
+
+        self.fig.canvas.draw()
         return
 
     def update_coherence_matrix(self, event):
@@ -287,4 +295,4 @@ def main(iargs=None):
 
 ############################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
