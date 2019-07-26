@@ -12,22 +12,31 @@ import argparse
 import h5py
 import numpy as np
 from mintpy.utils import readfile, ptime
+
+
+EXAMPLE = '''example:
+  lookup_geo2radar.py geometryGeo.h5 
+  lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5 
+  lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5 -n 2
+'''
+
+def cmdLineParse():
+    parser = argparse.ArgumentParser(description='Convert geo-coded lookup table (GAMMA, ROI_PAC) into radar-coded (ISCE)',
+                                     formatter_class=argparse.RawTextHelpFormatter,
+                                     epilog=EXAMPLE)
+
+    parser.add_argument('geometryGeo',help='geometryGeo file which includes geo-coordinates based lookup-table')
+    parser.add_argument('-w','--write', dest='write', metavar='FILE', default = 'geometryRadar.h5',
+                      help='update geometryRadar.h5 file by adding the radar-coordinates based lookup-table.')
+    parser.add_argument('-n','--numb', dest='search_line_numb', type=int, metavar='NUM',default = 2,
+                      help='the lines used as the length of the search pool.')
+    
+    inps = parser.parse_args()
+
+    return inps
+
+
 #########################################################################
-
-INTRODUCTION = '''
-#############################################################################
-   
-   Convert the Geo-coordinates based lookup-table (GAMMA, ROI_PAC) into the Radar-coordinates based lookup-table (ISCE).
-'''
-
-EXAMPLE = '''
-    Usage:
-            generate_rdc_lt.py geometryGeo.h5 
-            generate_rdc_lt.py geometryGeo.h5 -w geometryRadar.h5 
-            generate_rdc_lt.py geometryGeo.h5 -w geometryRadar.h5 -n 2
-
-##############################################################################
-'''
 def write_h5(datasetDict, out_file, metadata=None, ref_file=None, compression=None):
     
     if os.path.isfile(out_file):
@@ -168,21 +177,6 @@ def get_idx(long_array,short_array,n=2):
         prog_bar.close() 
         return short_idx
 
-def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Generate Radar-coordinates based lookup-table.',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
-                                     epilog=INTRODUCTION+'\n'+EXAMPLE)
-
-    parser.add_argument('geometryGeo',help='geometryGeo file which includes geo-coordinates based lookup-table')
-    parser.add_argument('-w','--write', dest='write', metavar='FILE', default = 'geometryRadar.h5',
-                      help='update geometryRadar.h5 file by adding the radar-coordinates based lookup-table.')
-    parser.add_argument('-n','--numb', dest='search_line_numb', type=int, metavar='NUM',default = 2,
-                      help='the lines used as the length of the search pool.')
-    
-    inps = parser.parse_args()
-
-    return inps
-
 ################################################################################    
     
     
@@ -257,7 +251,9 @@ def main(argv):
     
     print('done.')
     
-    sys.exit(1)
+    return
+
+
 ##############################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
