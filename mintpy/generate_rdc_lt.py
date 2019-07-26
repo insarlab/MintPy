@@ -18,6 +18,9 @@ INTRODUCTION = '''
 #############################################################################
    
    Convert the Geo-coordinates based lookup-table (GAMMA, ROI_PAC) into the Radar-coordinates based lookup-table (ISCE).
+   
+   Theoretical precision of the converted lats/lons under radar-coord is the same the unit-step degrees of the orginal 
+   geo-coord lookup-table. 
 '''
 
 EXAMPLE = '''
