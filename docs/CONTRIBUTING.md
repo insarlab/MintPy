@@ -66,15 +66,15 @@ git push -f
 
 If the pull request discussion results in changes, commit new changes to `my_user_name/my_new_feature_branch`, they will show up in the pull request in `insarlab` automatically.
 
-## Testing ##
+## Test, before push back to `insarlab/master` ##
 
-It's a good idea to test any changes or bugs you have fixed. We realize that we don't have a complete testing system in place yet, except for an overall testing script `test_smallbaselineApp.py`, run
+It's a good idea to test any changes or bugs you have fixed, in the feature branch before pushing back to `insarlab/master` branch. We realize that we don't have a complete testing system in place yet, except for an overall testing script `test_smallbaselineApp.py`, run
 
 ```
 ${MINTPY_HOME}/test/test_smallbaselineApp.py
 ```
 
-to see the testing result, it takes about 26 mins to finish.
+to see the testing result, it takes about 10 mins to finish.
 
 
 ## Things you should NOT do ##

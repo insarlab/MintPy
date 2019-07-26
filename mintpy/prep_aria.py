@@ -144,22 +144,72 @@ def extract_metadata(stack):
     return meta
 
 
-def layout_hdf5(filename, dsNameDict, metadata):
+def layout_hdf5(fname, dsNameDict, metadata):
     print('-'*50)
-    print('create HDF5 file {} with w mode'.format(filename))
-    h5 = h5py.File(filename, "w")
+    print('create HDF5 file {} with w mode'.format(fname))
+    h5 = h5py.File(fname, "w")
 
+    # initiate dataset
     for key in dsNameDict.keys():
-        print("creat dataset: {}".format(key))
-        h5.create_dataset(key, shape=dsNameDict[key][1], dtype=dsNameDict[key][0])
+        # turn ON compression
+        if key in ['connectComponent']:
+            compression = 'lzf'
+        else:
+            compression = None
 
+        # changable dataset shape
+        if len(dsNameDict[key][1]) == 3:
+            maxShape = (None, dsNameDict[key][1][1], dsNameDict[key][1][2])
+        else:
+            maxShape = dsNameDict[key][1]
+
+        print("creat dataset: {}".format(key))
+        h5.create_dataset(key,
+                          shape=dsNameDict[key][1],
+                          maxshape=maxShape,
+                          dtype=dsNameDict[key][0],
+                          chunks=True,
+                          compression=compression)
+
+    # write attributes
     for key in metadata.keys():
         h5.attrs[key] = metadata[key]
 
     h5.close()
-    print('close HDF5 file {}'.format(filename))
-
+    print('close HDF5 file {}'.format(fname))
     return
+
+
+def write_geometry(h5File, demFile, incAngleFile, azAngleFile=None):
+    print('-'*50)
+    print('writing data to HDF5 file {} with a mode ...'.format(h5File))
+    h5 = h5py.File(h5File, 'a')
+
+    # height
+    ds = gdal.Open(demFile, gdal.GA_ReadOnly)
+    data = np.array(ds.ReadAsArray(), dtype=np.float32)
+    data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
+    h5['height'][:,:] = data
+
+    # slantRangeDistance
+    h5['slantRangeDistance'][:,:] = float(h5.attrs['STARTING_RANGE'])
+
+    # incidenceAngle
+    ds = gdal.Open(incAngleFile, gdal.GA_ReadOnly)
+    data = ds.ReadAsArray()
+    data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
+    h5['incidenceAngle'][:,:] = data
+
+    # azimuthAngle
+    if azAngleFile is not None:
+        ds = gdal.Open(azAngleFile, gdal.GA_ReadOnly)
+        data = ds.ReadAsArray()
+        data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
+        h5['azimuthAngle'][:,:] = data
+
+    h5.close()
+    print('finished writing to HD5 file: {}'.format(h5File))
+    return h5File
 
 
 def write_ifgram_stack(h5File, unwStack, cohStack, connCompStack):
@@ -211,41 +261,18 @@ def write_ifgram_stack(h5File, unwStack, cohStack, connCompStack):
 
         h5["dropIfgram"][ii] = True
         prog_bar.update(ii+1, suffix='{}'.format(d12))
-
     prog_bar.close()
+
+    # add MODIFICATION_TIME metadata to each 3D dataset
+    h5["unwrapPhase"].attrs['MODIFICATION_TIME'] = str(time.time())
+    h5["coherence"].attrs['MODIFICATION_TIME'] = str(time.time())
+    h5["connectComponent"].attrs['MODIFICATION_TIME'] = str(time.time())
+
     h5.close()
     print('finished writing to HD5 file: {}'.format(h5File))
     dsUnw = None
     dsCoh = None
     dsComp = None
-    return
-
-
-def write_geometry(h5File, demFile, incAngleFile, azAngleFile=None):
-    print('-'*50)
-    print('writing data to HDF5 file {} with a mode ...'.format(h5File))
-    h5 = h5py.File(h5File, 'a')
-
-    ds = gdal.Open(demFile, gdal.GA_ReadOnly)
-    data = np.array(ds.ReadAsArray(), dtype=np.float32)
-    data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
-    h5['height'][:,:] = data
-
-    h5['slantRangeDistance'][:,:] = float(h5.attrs['STARTING_RANGE'])
-
-    ds = gdal.Open(incAngleFile, gdal.GA_ReadOnly)
-    data = ds.ReadAsArray()
-    data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
-    h5['incidenceAngle'][:,:] = data
-
-    if azAngleFile is not None:
-        ds = gdal.Open(azAngleFile, gdal.GA_ReadOnly)
-        data = ds.ReadAsArray()
-        data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
-        h5['azimuthAngle'][:,:] = data
-
-    h5.close()
-    print('finished writing to HD5 file: {}'.format(h5File))
     return h5File
 
 
@@ -286,6 +313,7 @@ def main(iargs=None):
     }
 
     geom_file = os.path.join(inputDir, "geometryGeo.h5")
+    metadata['FILE_TYPE'] = 'geometry'
     layout_hdf5(geom_file, dsNameDict, metadata)
     write_geometry(geom_file,
                    demFile=inps.dem,
@@ -296,13 +324,14 @@ def main(iargs=None):
     dsNameDict = {
         "bperp": (np.float32, (numPairs,)),
         "coherence": (np.float32, (numPairs, length, width)),
-        "connectComponent": (np.byte, (numPairs, length, width)),
+        "connectComponent": (np.int16, (numPairs, length, width)),
         "date": (np.dtype('S8'), (numPairs, 2)),
         "dropIfgram": (np.bool, (numPairs,)),
         "unwrapPhase": (np.float32, (numPairs, length, width)),
     }
 
     ifgram_file = os.path.join(inputDir, "ifgramStack.h5")
+    metadata['FILE_TYPE'] = 'ifgramStack'
     layout_hdf5(ifgram_file, dsNameDict, metadata)
     write_ifgram_stack(ifgram_file, unwStack, cohStack, connCompStack)
     return ifgram_file, geom_file

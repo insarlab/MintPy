@@ -97,7 +97,7 @@ class ifgramStackDict:
         /dropIfgram        1D array of bool    in size of (m,     ) True by default for keeping interferogram.
         /unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
         /coherence         3D array of float32 in size of (m, l, w).
-        /connectComponent  3D array of int8    in size of (m, l, w).           (optional)
+        /connectComponent  3D array of int16   in size of (m, l, w).           (optional)
         /wrapPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
         /iono              3D array of float32 in size of (m, l, w) in radian. (optional)
         /rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
@@ -126,20 +126,23 @@ class ifgramStackDict:
         for dsName in self.dsNames:
             dsShape = (self.numIfgram, self.length, self.width)
             dsDataType = dataType
+            dsCompression = compression
             if dsName in ['connectComponent']:
-                dsDataType = np.byte
+                dsDataType = np.int16
+                dsCompression = 'lzf'
+
             print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
                    ' with compression = {c}').format(d=dsName,
                                                      w=maxDigit,
                                                      t=str(dsDataType),
                                                      s=dsShape,
-                                                     c=str(compression)))
+                                                     c=dsCompression))
             ds = f.create_dataset(dsName,
                                   shape=dsShape,
                                   maxshape=(None, dsShape[1], dsShape[2]),
                                   dtype=dsDataType,
                                   chunks=True,
-                                  compression=compression)
+                                  compression=dsCompression)
 
             prog_bar = ptime.progressBar(maxValue=self.numIfgram)
             for i in range(self.numIfgram):

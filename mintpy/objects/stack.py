@@ -555,7 +555,7 @@ Attributes         Dictionary for metadata
 /dropIfgram        1D array of bool    in size of (m,     ) with 0/False for drop and 1/True for keep
 /unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
 /coherence         3D array of float32 in size of (m, l, w).
-/connectComponent  3D array of int8    in size of (m, l, w).           (optional)
+/connectComponent  3D array of int16   in size of (m, l, w).           (optional)
 /wrapPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
 /rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
 /azimuthOffset     3D array of float32 in size of (m, l, w).           (optional)

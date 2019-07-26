@@ -729,7 +729,7 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
 
 
 def check_colormap_input(metadata, cmap_name=None, datasetName=None, cmap_lut=256, print_msg=True):
-    gray_dataset_key_words = ['coherence', 'temporal_coherence', 'connectComponent',
+    gray_dataset_key_words = ['coherence', 'temporal_coherence',
                               '.cor', '.mli', '.slc', '.amp', '.ramp']
     if not cmap_name:
         if any(i in gray_dataset_key_words for i in [metadata['FILE_TYPE'],

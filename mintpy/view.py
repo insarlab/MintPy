@@ -303,7 +303,7 @@ def update_inps_with_file_metadata(inps, metadata):
     # Min / Max - Display
     if not inps.vlim:
         if (any(i in inps.key.lower() for i in ['coherence', '.cor'])
-                or (inps.key == 'ifgramStack' and inps.dset[0].split('-')[0] in ['coherence', 'connectComponent'])
+                or (inps.key == 'ifgramStack' and inps.dset[0].split('-')[0] in ['coherence'])
                 or inps.dset[0] == 'cmask'):
             inps.vlim = [0.0, 1.0]
         elif inps.key in ['.int'] or inps.wrap:
