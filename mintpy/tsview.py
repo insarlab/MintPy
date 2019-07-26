@@ -175,12 +175,16 @@ def read_init_info(inps):
      inps.ex_flag) = read_exclude_date(inps.ex_date_list, inps.date_list)
 
     # initial display index
-    if atr['REF_DATE'] in inps.date_list:
-        inps.ref_idx = inps.date_list.index(atr['REF_DATE'])
-    else:
-        inps.ref_idx = 0
+    #if atr['REF_DATE'] in inps.date_list:
+    #    inps.ref_idx = inps.date_list.index(atr['REF_DATE'])
+    #else:
+    #    inps.ref_idx = 0
+
     if inps.ref_date:
         inps.ref_idx = inps.date_list.index(inps.ref_date)
+    else:
+        inps.ref_idx = 3
+
     if not inps.idx:
         if inps.ref_idx < inps.num_date / 2.:
             inps.idx = inps.num_date - 3
