@@ -17,6 +17,14 @@ sudo xcodebuild -license
 
 + Install [XQuartz](https://www.xquartz.org), then restart the terminal.
 
+### Notes for Docker users ###
+
+Docker allows one to run MintPy in a dedicated container (essentially an efficient virtual machine) and to be independent of platform OS. After installing [docker](https://docs.docker.com/install/), run the following to pull the [MintPy container from DockerHub](https://hub.docker.com/r/andretheronsa/mintpy) (contributed by Andre Theron) to your local machine. Check more details at [here](../docker/README.md).
+
+```
+docker pull andretheronsa/mintpy:latest
+```
+
 ### 1. Setup Paths ###
 
 To use the package, you need to setup the environment:
