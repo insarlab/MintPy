@@ -19,8 +19,13 @@ from mintpy.utils import ptime
 
 ####################################################################################
 EXAMPLE = """example:
+  # run ARIA-tools to download and extract inteferograms stack for time-series analysis
+  # reference: https://github.com/aria-tools/ARIA-tools
+  ariaDownload.py -b '37.25 38.1 -122.6 -121.75' --track 42
+  ariaTSsetup.py -f 'products/*.nc' -b '37.25 38.1 -122.6 -121.75' --mask Download
+
   prep_aria.py -w mintpy -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt 
-  prep_aria.py -w mintpy -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt -a azimuthAngle/20150605_20150512.vrt
+  prep_aria.py -w mintpy -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt -a azimuthAngle/20150605_20150512.vrt --water-mask mask/watermask.msk
 """
 
 def create_parser():
@@ -55,6 +60,8 @@ def create_parser():
                       help='Name of the incidence angle file')
     geom.add_argument('-a','--az-angle','--azimuth-angle', dest='azAngle', type=str,
                       help='Name of the azimuth angle file')
+    geom.add_argument('--water-mask', dest='waterMask', type=str,
+                      help='Name of the water mask file')
     return parser
 
 
@@ -184,7 +191,7 @@ def layout_hdf5(fname, dsNameDict, metadata):
     return
 
 
-def write_geometry(h5File, demFile, incAngleFile, azAngleFile=None):
+def write_geometry(h5File, demFile, incAngleFile, azAngleFile=None, waterMaskFile=None):
     print('-'*50)
     print('writing data to HDF5 file {} with a mode ...'.format(h5File))
     h5 = h5py.File(h5File, 'a')
@@ -210,6 +217,13 @@ def write_geometry(h5File, demFile, incAngleFile, azAngleFile=None):
         data = ds.ReadAsArray()
         data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
         h5['azimuthAngle'][:,:] = data
+
+    # waterMask
+    if waterMaskFile is not None:
+        ds = gdal.Open(waterMaskFile, gdal.GA_ReadOnly)
+        data = ds.ReadAsArray()
+        data[data == ds.GetRasterBand(1).GetNoDataValue()] = False
+        h5['waterMask'][:,:] = data
 
     h5.close()
     print('finished writing to HD5 file: {}'.format(h5File))
@@ -312,8 +326,9 @@ def main(iargs=None):
         "azimuthAngle": (np.float32, (length, width)),
         "height": (np.float32, (length, width)),
         "incidenceAngle": (np.float32, (length, width)),
-        "shadowMask": (np.bool, (length, width)),
+        "shadowMask": (np.bool_, (length, width)),
         "slantRangeDistance": (np.float32, (length, width)),
+        "waterMask": (np.bool_, (length, width)),
     }
 
     geom_file = os.path.join(inputDir, "geometryGeo.h5")
@@ -322,7 +337,8 @@ def main(iargs=None):
     write_geometry(geom_file,
                    demFile=inps.dem,
                    incAngleFile=inps.incAngle,
-                   azAngleFile=inps.azAngle)
+                   azAngleFile=inps.azAngle,
+                   waterMaskFile=inps.waterMask)
 
     # write ifgramStack
     dsNameDict = {
@@ -330,7 +346,7 @@ def main(iargs=None):
         "coherence": (np.float32, (numPairs, length, width)),
         "connectComponent": (np.int16, (numPairs, length, width)),
         "date": (np.dtype('S8'), (numPairs, 2)),
-        "dropIfgram": (np.bool, (numPairs,)),
+        "dropIfgram": (np.bool_, (numPairs,)),
         "unwrapPhase": (np.float32, (numPairs, length, width)),
     }
 
