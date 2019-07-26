@@ -221,9 +221,14 @@ def write_geometry(h5File, demFile, incAngleFile, azAngleFile=None, waterMaskFil
     # waterMask
     if waterMaskFile is not None:
         ds = gdal.Open(waterMaskFile, gdal.GA_ReadOnly)
+        water_mask = ds.ReadAsArray()
+        water_mask[water_mask == ds.GetRasterBand(1).GetNoDataValue()] = False
+
+        # assign False to invalid pixels based on incAngle data
+        ds = gdal.Open(incAngleFile, gdal.GA_ReadOnly)
         data = ds.ReadAsArray()
-        data[data == ds.GetRasterBand(1).GetNoDataValue()] = False
-        h5['waterMask'][:,:] = data
+        water_mask[data == ds.GetRasterBand(1).GetNoDataValue()] = False
+        h5['waterMask'][:,:] = water_mask
 
     h5.close()
     print('finished writing to HD5 file: {}'.format(h5File))
