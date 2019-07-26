@@ -136,13 +136,13 @@ class ifgramStackDict:
                                                      w=maxDigit,
                                                      t=str(dsDataType),
                                                      s=dsShape,
-                                                     c=str(compression)))
+                                                     c=dsCompression))
             ds = f.create_dataset(dsName,
                                   shape=dsShape,
                                   maxshape=(None, dsShape[1], dsShape[2]),
                                   dtype=dsDataType,
                                   chunks=True,
-                                  compression=compression)
+                                  compression=dsCompression)
 
             prog_bar = ptime.progressBar(maxValue=self.numIfgram)
             for i in range(self.numIfgram):
