@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-
+############################################################
+# Program is part of MintPy                                #
+# Copyright(c) 2019, Heresh Fattahi, Zhang Yunjun          #
+# Author: Heresh Fattahi, Zhang Yunjun, Jul 2019           #
+############################################################
 
 import os
 import time

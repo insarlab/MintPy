@@ -265,12 +265,16 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
     dist_line = np.hypot((xs - x0) * x_step,
                          (ys - y0) * y_step)
 
+    # remove points in masked out areas
+    mask = ~np.isnan(z_line)
+    mask *= z_line != 0.0
+
     # prepare output
     transect = {}
-    transect['Y'] = ys
-    transect['X'] = xs
-    transect['value'] = z_line
-    transect['distance'] = dist_line
+    transect['Y'] = ys[mask]
+    transect['X'] = xs[mask]
+    transect['value'] = z_line[mask]
+    transect['distance'] = dist_line[mask]
     return transect
 
 

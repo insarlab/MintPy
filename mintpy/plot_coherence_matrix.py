@@ -184,7 +184,7 @@ class coherenceMatrixViewer():
         self.ax_img = self.fig.add_axes([0.05, 0.1, 0.4, 0.8])
         view_cmd = self.view_cmd.format(self.img_file)
         d_img, atr, inps_img = view.prep_slice(view_cmd)
-        if self.yx:
+        if all(i is not None for i in self.yx):
             inps_img.pts_marker = 'r^'
             inps_img.pts_yx = np.array(self.yx).reshape(-1, 2)
             # point yx --> lalo for geocoded product
@@ -201,7 +201,7 @@ class coherenceMatrixViewer():
         # Axes 2 - coherence matrix
         self.ax_mat = self.fig.add_axes([0.55, 0.125, 0.40, 0.75])
         self.colormap = pp.ColormapExt(self.cmap_name, vlist=self.cmap_vlist).colormap
-        if self.yx:
+        if all(i is not None for i in self.yx):
             self.plot_coherence_matrix4pixel(self.yx)
 
         # Link the canvas to the plots.
