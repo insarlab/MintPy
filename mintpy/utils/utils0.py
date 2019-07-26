@@ -213,23 +213,32 @@ def get_lat_lon(meta, box=None):
         lon0 = float(meta['X_FIRST']) + lon_step * box[0]
         lat1 = lat0 + lat_step * lat_num
         lon1 = lon0 + lon_step * lon_num
+        lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
+                          lon0:lon1:lon_num*1j]
     else:
         # radar-coordinates
-        lats = [float(meta['LAT_REF{}'.format(i)]) for i in [1,2,3,4]]
-        lons = [float(meta['LON_REF{}'.format(i)]) for i in [1,2,3,4]]
-        lat0 = np.mean(lats[0:2])
-        lat1 = np.mean(lats[2:4])
-        lon0 = np.mean(lons[0:3:2])
-        lon1 = np.mean(lons[1:4:2])
+        lats,lons = get_lat_lon_rdc(meta)
 
     # bbox --> 2D mesh-grid
-    lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
-                          lon0:lon1:lon_num*1j]
 
     lats = np.array(lats, dtype=np.float32)
     lons = np.array(lons, dtype=np.float32)
     return lats, lons
 
+def get_lat_lon_rdc(meta):
+    """Get 2D array of lat and lon from metadata"""
+    length, width = int(meta['LENGTH']), int(meta['WIDTH'])
+    lats = [float(meta['LAT_REF{}'.format(i)]) for i in [1,2,3,4]]
+    lons = [float(meta['LON_REF{}'.format(i)]) for i in [1,2,3,4]]
+    
+    lat = np.zeros((length,width),dtype = np.float32)
+    lon = np.zeros((length,width),dtype = np.float32)
+    
+    for i in range(length):
+        for j in range(width):
+            lat[i,j] = lats[0] + j*(lats[1] - lats[0])/width + i*(lats[2] - lats[0])/length
+            lon[i,j] = lons[0] + j*(lons[1] - lons[0])/width + i*(lons[2] - lons[0])/length
+    return lat, lon
 
 def azimuth2heading_angle(az_angle):
     """Convert azimuth angle from ISCE los.rdr band2 into satellite orbit heading angle
