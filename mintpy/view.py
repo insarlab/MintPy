@@ -58,8 +58,8 @@ EXAMPLE = """example:
 
   # InSAR v.s. GPS
   # for one subplot only
-  view.py geo_velocity_masked.h5 velocity --show-gps   #show locations of available GPS
-  view.py geo_velocity_masked.h5 velocity --show-gps --gps-comp enu2los --ref-gps GV01
+  view.py geo_velocity_msk.h5 velocity --show-gps   #show locations of available GPS
+  view.py geo_velocity_msk.h5 velocity --show-gps --gps-comp enu2los --ref-gps GV01
   view.py geo_timeseries_ECMWF_demErr_ramp.h5 20180619 --ref-date 20141213 --show-gps --gps-comp enu2los --ref-gps GV01
 
   # Custom colormap

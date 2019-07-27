@@ -245,9 +245,22 @@ def write_ifgram_stack(h5File, unwStack, cohStack, connCompStack):
     dsCoh = gdal.Open(cohStack, gdal.GA_ReadOnly)
     dsComp = gdal.Open(connCompStack, gdal.GA_ReadOnly)
 
-    nPairs = dsUnw.RasterCount
+    # extract NoDataValue (from the 2nd */date2_date1.vrt file for example)
+    ds = gdal.Open(dsUnw.GetFileList()[2], gdal.GA_ReadOnly)
+    noDataValueUnw = ds.GetRasterBand(1).GetNoDataValue()
+    print('grab NoDataValue for unwrapPhase:      {:<5} and convert to 0.'.format(noDataValueUnw))
+
+    ds = gdal.Open(dsCoh.GetFileList()[2], gdal.GA_ReadOnly)
+    noDataValueCoh = ds.GetRasterBand(1).GetNoDataValue()
+    print('grab NoDataValue for coherence:        {:<5} and convert to 0.'.format(noDataValueCoh))
+
+    ds = gdal.Open(dsComp.GetFileList()[2], gdal.GA_ReadOnly)
+    noDataValueComp = ds.GetRasterBand(1).GetNoDataValue()
+    print('grab NoDataValue for connectComponent: {:<5} and convert to 0.'.format(noDataValueComp))
+    ds = None
 
     # sort the order of interferograms based on date1_date2 with date1 < date2
+    nPairs = dsUnw.RasterCount
     d12BandDict = {}
     for ii in range(nPairs):
         bnd = dsUnw.GetRasterBand(ii+1)
@@ -267,22 +280,26 @@ def write_ifgram_stack(h5File, unwStack, cohStack, connCompStack):
 
         h5["date"][ii,0] = d12.split("_")[0].encode("utf-8")
         h5["date"][ii,1] = d12.split("_")[1].encode("utf-8")
+        h5["dropIfgram"][ii] = True
 
         bnd = dsUnw.GetRasterBand(bndIdx)
-        h5["unwrapPhase"][ii,:,:] = -1.0*bnd.ReadAsArray()
+        data = bnd.ReadAsArray()
+        data[data == noDataValueUnw] = 0      #assign pixel with no-data to 0
+        h5["unwrapPhase"][ii,:,:] = -1.0*data #date2_date1 -> date1_date2
 
         bperp = float(bnd.GetMetadata("unwrappedPhase")["perpendicularBaseline"])
-        h5["bperp"][ii] = -1.0*bperp
+        h5["bperp"][ii] = -1.0*bperp          #date2_date1 -> date1_date2
 
         bnd = dsCoh.GetRasterBand(bndIdx)
-        h5["coherence"][ii,:,:] = bnd.ReadAsArray()
+        data = bnd.ReadAsArray()
+        data[data == noDataValueCoh] = 0      #assign pixel with no-data to 0
+        h5["coherence"][ii,:,:] = data
 
         bnd = dsComp.GetRasterBand(bndIdx)
-        raster = bnd.ReadAsArray()
-        raster[raster<0]=0   # assign pixel with no-data [-1] to zero
-        h5["connectComponent"][ii,:,:] = raster
+        data = bnd.ReadAsArray()
+        data[data == noDataValueComp] = 0     #assign pixel with no-data to 0
+        h5["connectComponent"][ii,:,:] = data
 
-        h5["dropIfgram"][ii] = True
         prog_bar.update(ii+1, suffix='{}'.format(d12))
     prog_bar.close()
 
