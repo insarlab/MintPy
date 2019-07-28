@@ -27,26 +27,26 @@ EXAMPLE = """example:
 """
 
 TEMPLATE = """
-## Coherence-based network modification = MST + Threshold, by default
-## 1) calculate a average coherence value for each interferogram using spatial coherence and input mask (with AOI)
-## 2) find a minimum spanning tree (MST) network with inverse of average coherence as weight (keepMinSpanTree)
-## 3) for all interferograms except for MST's, exclude those with average coherence < minCoherence.
-mintpy.network.coherenceBased  = auto  #[yes / no], auto for yes, exclude interferograms with coherence < minCoherence
+## 1) Coherence-based network modification = Threshold + MST, by default
+## It calculates a average coherence value for each interferogram using spatial coherence and input mask (with AOI)
+## Then it finds a minimum spanning tree (MST) network with inverse of average coherence as weight (keepMinSpanTree)
+## For all interferograms except for MST's, exclude those with average coherence < minCoherence.
+mintpy.network.coherenceBased  = auto  #[yes / no], auto for no, exclude interferograms with coherence < minCoherence
 mintpy.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
 mintpy.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
-mintpy.network.maskFile        = auto  #[file name, no], auto for waterMask.h5 or no for all pixels
+mintpy.network.maskFile        = auto  #[file name, no], auto for waterMask.h5 or no [if no waterMask.h5 found]
 mintpy.network.aoiYX           = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
 mintpy.network.aoiLALO         = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 
-## Network modification based on temporal/perpendicular baselines, date etc.
+## 2) Network modification based on temporal/perpendicular baselines, date etc.
 mintpy.network.tempBaseMax     = auto  #[1-inf, no], auto for no, maximum temporal baseline in days
 mintpy.network.perpBaseMax     = auto  #[1-inf, no], auto for no, maximum perpendicular spatial baseline in meter
 mintpy.network.connNumMax      = auto  #[1-inf, no], auto for no, maximum number of neighbors for each acquisition
-mintpy.network.referenceFile   = auto  #[date12_list.txt / ifgramStack.h5 / no], auto for no
-mintpy.network.excludeDate     = auto  #[20080520,20090817 / no], auto for no
-mintpy.network.excludeIfgIndex = auto  #[1:5,25 / no], auto for no, list of ifg index (start from 0)
 mintpy.network.startDate       = auto  #[20090101 / no], auto for no
 mintpy.network.endDate         = auto  #[20110101 / no], auto for no
+mintpy.network.excludeDate     = auto  #[20080520,20090817 / no], auto for no
+mintpy.network.excludeIfgIndex = auto  #[1:5,25 / no], auto for no, list of ifg index (start from 0)
+mintpy.network.referenceFile   = auto  #[date12_list.txt / ifgramStack.h5 / no], auto for no
 """
 
 

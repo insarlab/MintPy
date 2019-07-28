@@ -5,7 +5,7 @@ import subprocess
 
 
 ###########################################################################
-def get_release_info(version='v1.1.0-dev', date='2019-04-26'):
+def get_release_info(version='v1.2.0-dev', date='2019-07-28'):
     """Grab version and date of the latest commit from a git repository"""
     # go to the repository directory
     dir_orig = os.getcwd()
