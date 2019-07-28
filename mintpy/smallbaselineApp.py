@@ -123,7 +123,9 @@ def cmd_line_parse(iargs=None):
     if inps.version:
         raise SystemExit(mintpy.version.description)
 
-    if not inps.customTemplateFile and not os.path.isfile(os.path.basename(template_file)):
+    if (not inps.customTemplateFile 
+            and not os.path.isfile(os.path.basename(template_file))
+            and not inps.generate_template):
         parser.print_usage()
         print(EXAMPLE)
         msg = "ERROR: no template file found! It requires:"
