@@ -174,7 +174,7 @@ def layout_hdf5(fname, dsNameDict, metadata):
         else:
             maxShape = dsNameDict[key][1]
 
-        print("creat dataset: {}".format(key))
+        print("create dataset: {}".format(key))
         h5.create_dataset(key,
                           shape=dsNameDict[key][1],
                           maxshape=maxShape,
