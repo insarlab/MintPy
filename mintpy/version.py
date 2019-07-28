@@ -5,7 +5,7 @@ import subprocess
 
 
 ###########################################################################
-def get_release_info(version='v1.2.0-dev', date='2019-07-28'):
+def get_release_info(version='v1.2.0', date='2019-07-28'):
     """Grab version and date of the latest commit from a git repository"""
     # go to the repository directory
     dir_orig = os.getcwd()
@@ -13,7 +13,8 @@ def get_release_info(version='v1.2.0-dev', date='2019-07-28'):
 
     # grab git info into string
     try:
-        version = subprocess.check_output(["git", "describe", "--tags"])
+        cmd = "git describe --tags"
+        version = subprocess.check_output(cmd.split(), stderr=subprocess.DEVNULL)
         version = version.decode('utf-8').strip()
 
         #if there are new commits after the latest release
@@ -21,7 +22,8 @@ def get_release_info(version='v1.2.0-dev', date='2019-07-28'):
             version, num_commit = version.split('-')[:2]
             version += '-{}'.format(num_commit)
 
-        date = subprocess.check_output(["git", "log", "-1", "--date=short", "--format=%cd"])
+        cmd = "git log -1 --date=short --format=%cd"
+        date = subprocess.check_output(cmd.split(), stderr=subprocess.DEVNULL)
         date = date.decode('utf-8').strip()
     except:
         pass
