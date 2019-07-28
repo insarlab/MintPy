@@ -5,22 +5,24 @@
 # Author: Heresh Fattahi, Zhang Yunjun, Jul 2019           #
 ############################################################
 
+
 import os
 import time
 import argparse
-try:
-    import gdal
-except ImportError:
-    raise ImportError('gdal>=3.0 is required.')
 import h5py
 import numpy as np
 from mintpy.utils import ptime
+try:
+    import gdal
+except ImportError:
+    raise ImportError('Can not import gdal [version>=3.0]!')
 
 
 ####################################################################################
 EXAMPLE = """example:
-  # run ARIA-tools to download and extract inteferograms stack for time-series analysis
+  # run ARIA-tools to download and extract inteferograms stack for time-series analysis.
   # reference: https://github.com/aria-tools/ARIA-tools
+  conda activate ARIA-tools
   ariaDownload.py -b '37.25 38.1 -122.6 -121.75' --track 42
   ariaTSsetup.py -f 'products/*.nc' -b '37.25 38.1 -122.6 -121.75' --mask Download
 
@@ -68,7 +70,16 @@ def create_parser():
 def cmd_line_parse(iargs = None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # check input dir and files
     inps.stackDir = os.path.abspath(inps.stackDir)
+    inps.cohStack = os.path.join(inps.stackDir, inps.cohStack)
+    inps.unwStack = os.path.join(inps.stackDir, inps.unwStack)
+    inps.connCompStack = os.path.join(inps.stackDir, inps.connCompStack)
+    for vrtFile in [inps.cohStack, inps.unwStack, inps.connCompStack]:
+        if not os.path.isfile(vrtFile):
+            raise FileNotFoundError(vrtFile)
+
     return inps
 
 
@@ -320,12 +331,11 @@ def write_ifgram_stack(h5File, unwStack, cohStack, connCompStack):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    cohStack = os.path.join(inps.stackDir, inps.cohStack)
-    unwStack = os.path.join(inps.stackDir, inps.unwStack)
-    connCompStack = os.path.join(inps.stackDir, inps.connCompStack)
-    for vrtFile in [cohStack, unwStack, connCompStack]:
-        if not os.path.isfile(vrtFile):
-            raise FileNotFoundError(vrtFile)
+    # prepare metadata
+    metadata = extract_metadata(inps.unwStack)
+    length = metadata["LENGTH"]
+    width = metadata["WIDTH"]
+    numPairs = metadata["NUMBER_OF_PAIRS"]
 
     # prepare mintpy working directory
     inps.workDir = os.path.abspath(inps.workDir)
@@ -335,13 +345,6 @@ def main(iargs=None):
     inputDir = os.path.join(inps.workDir , "inputs")
     if not os.path.exists(inputDir):
         os.makedirs(inputDir)
-
-    # prepare metadata
-    metadata = extract_metadata(unwStack)
-
-    length = metadata["LENGTH"]
-    width = metadata["WIDTH"]
-    numPairs = metadata["NUMBER_OF_PAIRS"]
 
     # write geometryGeo
     dsNameDict = {
@@ -375,7 +378,10 @@ def main(iargs=None):
     ifgram_file = os.path.join(inputDir, "ifgramStack.h5")
     metadata['FILE_TYPE'] = 'ifgramStack'
     layout_hdf5(ifgram_file, dsNameDict, metadata)
-    write_ifgram_stack(ifgram_file, unwStack, cohStack, connCompStack)
+    write_ifgram_stack(ifgram_file,
+                       inps.unwStack,
+                       inps.cohStack,
+                       inps.connCompStack)
     return ifgram_file, geom_file
 
 

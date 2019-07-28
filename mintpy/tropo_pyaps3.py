@@ -53,11 +53,24 @@ REFERENCE = """reference:
 """
 
 TEMPLATE = """
-## 7. Tropospheric Delay Correction (optional and recommended)
-## For pyaps method, correction is applied to dates with data available, and skipped for dates (usually recent) without it.
-mintpy.troposphericDelay.method       = auto  #[pyaps / height_correlation / base_trop_cor / no], auto for pyaps
-mintpy.troposphericDelay.weatherModel = auto  #[ERA5 / ERAINT / MERRA / NARR], auto for ERA5, for pyaps method
-mintpy.troposphericDelay.weatherDir   = auto  #[path2directory], auto for "./../WEATHER"
+## correct tropospheric delay using the following methods:
+## a. height_correlation - correct stratified tropospheric delay (Doin et al., 2009, J Applied Geop)
+## b. pyaps - use Global Atmospheric Models (GAMs) data (Jolivet et al., 2011; 2014)
+##      ERA5  - ERA-5 from ECMWF [default; need to install pyaps3 on GitHub]
+##      ECMWF - ERA-Interim from ECMWF [need to install pyaps on Caltech/EarthDef]
+##      MERRA - MERRA-2 from NASA Goddard [need to install pyaps on Caltech/EarthDef]
+##      NARR  - NARR from NOAA [recommended for areas in North America; need to install pyaps on Caltech/EarthDef]
+mintpy.troposphericDelay.method = auto  #[pyaps / height_correlation / no], auto for pyaps
+
+## Notes for pyaps: 
+## a. GAM data latency: with the most recent SAR data, there will be GAM data missing, the correction
+## will be applied to dates with GAM data available and skipped for the others.
+## b. WEATHER_DIR: if you define an environmental variable named WEATHER_DIR to contain the path to a 
+## directory, then MintPy applications will download the GAM files into the indicated directory. Also MintPy
+## application will look for the GAM files in the directory before downloading a new one to prevent downloading
+## multiple copies if you work with different dataset that cover the same date/time.
+mintpy.troposphericDelay.weatherModel = auto  #[ERA5 / ECMWF / MERRA / NARR], auto for ERA5, for pyaps method
+mintpy.troposphericDelay.weatherDir   = auto  #[path2directory], auto for WEATHER_DIR or "./"
 """
 
 DATA_INFO = """

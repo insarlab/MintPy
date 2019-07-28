@@ -36,12 +36,12 @@ TEMPLATE = """
 ## pixelwiseGeometry - Use pixel-wise geometry info, such as incidence angle and slant range distance for error estimation
 ##    yes - use pixel-wise geometry when they are available [slow; used by default]
 ##    no  - use mean geometry [fast]
-mintpy.topographicResidual                    = auto  #[yes / no], auto for yes
-mintpy.topographicResidual.polyOrder          = auto  #[1-inf], auto for 2, poly order of temporal deformation model
-mintpy.topographicResidual.phaseVelocity      = auto  #[yes / no], auto for no - phase, use phase velocity for error estimation
-mintpy.topographicResidual.stepFuncDate       = auto  #[20080529,20100611 / no], auto for no, date of step jump
-mintpy.topographicResidual.excludeDate        = auto  #[20070321 / txtFile / no], auto for exclude_date.txt
-mintpy.topographicResidual.pixelwiseGeometry  = auto  #[yes / no], auto for yes, use pixel-wise geometry info
+mintpy.topographicResidual                   = auto  #[yes / no], auto for yes
+mintpy.topographicResidual.polyOrder         = auto  #[1-inf], auto for 2, poly order of temporal deformation model
+mintpy.topographicResidual.phaseVelocity     = auto  #[yes / no], auto for no - phase, use phase velocity for error estimation
+mintpy.topographicResidual.stepFuncDate      = auto  #[20080529,20100611 / no], auto for no, date of step jump
+mintpy.topographicResidual.excludeDate       = auto  #[20070321 / txtFile / no], auto for exclude_date.txt
+mintpy.topographicResidual.pixelwiseGeometry = auto  #[yes / no], auto for yes, use pixel-wise geometry info
 """
 
 EXAMPLE = """example:

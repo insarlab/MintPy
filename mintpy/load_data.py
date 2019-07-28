@@ -62,12 +62,8 @@ TEMPLATE = """template:
 mintpy.load.processor      = auto  #[isce,snap,gamma,roipac], auto for isce
 mintpy.load.updateMode     = auto  #[yes / no], auto for yes, skip re-loading if HDF5 files are complete
 mintpy.load.compression    = auto  #[gzip / lzf / no], auto for no.
-##---------metadata (for ISCE and SNAP):
-## ./master/IW1.xml        for ISCE/topsStack
-## ./masterShelve/data.dat for ISCE/stripmapStack
-## date1_date2_unw_tc.dim  for SNAP
-mintpy.load.metaFile       = auto  #[path2metadata_file]
-##---------baseline directory (for ISCE):
+##---------for ISCE only:
+mintpy.load.metaFile       = auto  #[path2metadata_file], i.e.: ./master/IW1.xml, ./masterShelve/data.dat
 mintpy.load.baselineDir    = auto  #[path2baseline_dir], i.e.: ./baselines
 ##---------interferogram datasets:
 mintpy.load.unwFile        = auto  #[path2unw_file]
@@ -86,8 +82,8 @@ mintpy.load.waterMaskFile  = auto  #[path2water_mask_file], optional
 mintpy.load.bperpFile      = auto  #[path2bperp_file], optional
 ##---------subset (optional):
 ## if both yx and lalo are specified, use lalo option unless a) no lookup file AND b) dataset is in radar coord
-mintpy.subset.yx     = auto    #[1800:2000,700:800 / no], auto for no
-mintpy.subset.lalo   = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
+mintpy.subset.yx   = auto    #[1800:2000,700:800 / no], auto for no
+mintpy.subset.lalo = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
 """
 
 NOTE = """NOTE:

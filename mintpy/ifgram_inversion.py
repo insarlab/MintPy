@@ -50,29 +50,32 @@ EXAMPLE = """example:
 
 TEMPLATE = """
 ## Invert network of interferograms into time-series using weighted least sqaure (WLS) estimator.
-## weighting options for least square inversion:
-## 1) var - use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS) [recommended]
-## 2) fim - use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS)
-## 3) coh - use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
-## 4) no  - uniform weight
-## mask options for unwrapPhase of each interferogram before inversion:
-## 1) coherence        - mask out pixels with spatial coherence < maskThreshold [recommended]
-## 2) connectComponent - mask out pixels with False/0 value
-## 3) no               - no masking. [Recommended]
-## Temporal coherence is calculated and used to generate final mask (Pepe & Lanari, 2006, IEEE-TGRS)
+## weighting options for least square inversion [fast option available but not best]:
+## a. var - use inverse of covariance as weight (Tough et al., 1995; Guarnieri & Tebaldini, 2008) [recommended]
+## b. fim - use Fisher Information Matrix as weight (Seymour & Cumming, 1994; Samiei-Esfahany et al., 2016).
+## c. coh - use coherence as weight (Perissin & Wang, 2012)
+## d. no  - uniform weight (Berardino et al., 2002)
+## mask options for unwrapPhase of each interferogram before inversion (recommed if weightFunct=no):
+## a. coherence        - mask out pixels with spatial coherence < maskThreshold
+## b. connectComponent - mask out pixels with False/0 value
+## c. no               - no masking [recommended].
 ## SBAS (Berardino et al., 2002) = minNormVelocity (yes) + weightFunc (no)
 mintpy.networkInversion.weightFunc      = auto #[var / fim / coh / no], auto for var
 mintpy.networkInversion.maskDataset     = auto #[coherence / connectComponent / no], auto for no
 mintpy.networkInversion.maskThreshold   = auto #[0-1], auto for 0.4
 mintpy.networkInversion.minRedundancy   = auto #[1-inf], auto for 1.0, min num_ifgram for every SAR acquisition
-mintpy.networkInversion.waterMaskFile   = auto #[filename / no], auto for waterMask.h5 or no
+mintpy.networkInversion.waterMaskFile   = auto #[filename / no], auto for waterMask.h5 or no [if no waterMask.h5 found]
 mintpy.networkInversion.minNormVelocity = auto #[yes / no], auto for yes, min-norm deformation velocity or phase
 mintpy.networkInversion.residualNorm    = auto #[L2 ], auto for L2, norm minimization solution
-mintpy.networkInversion.minTempCoh      = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
-mintpy.networkInversion.minNumPixel     = auto #[int > 0], auto for 100, min number of pixels in mask above
-mintpy.networkInversion.parallel        = auto #[yes / no], auto for no, parallel processing using dask
-mintpy.networkInversion.numWorker       = auto #[int > 0], auto for 40, number of works for dask cluster to use
-mintpy.networkInversion.walltime        = auto #[HH:MM] auto for 0:40, walltime of each mintpy_bee worker
+
+## Parallel processing with Dask for HPC
+mintpy.networkInversion.parallel  = auto #[yes / no], auto for no, parallel processing using dask
+mintpy.networkInversion.numWorker = auto #[int > 0], auto for 40, number of works for dask cluster to use
+mintpy.networkInversion.walltime  = auto #[HH:MM], auto for 00:40, walltime for dask workers
+
+## Temporal coherence is calculated and used to generate final mask (Pepe & Lanari, 2006, IEEE-TGRS)
+mintpy.networkInversion.minTempCoh  = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
+mintpy.networkInversion.minNumPixel = auto #[int > 0], auto for 100, min number of pixels in mask above
 """
 
 REFERENCE = """references:
