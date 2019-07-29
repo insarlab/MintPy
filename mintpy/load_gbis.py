@@ -11,6 +11,7 @@ import argparse
 import numpy as np
 import scipy.io as sio
 import matplotlib.pyplot as plt
+import pyproj
 from mintpy.utils import writefile
 
 
@@ -46,6 +47,26 @@ def gbis_mat2hdf5(mat_file, display=True):
     num_file = len(mat['insar'])
     print('number of output HDF5 file: {}'.format(num_file))
 
+    # grab optimal model parameter
+    parValue = mat['invResults'].optimalmodel
+    parName = mat['invResults'].model.parName
+    mDict = {}
+    for i in range(len(parValue)):
+        key = parName[i].replace(' ', '_')
+        mDict[key] = parValue[i]
+
+    # convert model x/y to lat/lon
+    ref_lon, ref_lat = mat['geo'].referencePoint
+    geod = pyproj.Geod(ellps='WGS84')
+    mX, mY = parValue[0:2]
+    mLon, mLat = geod.fwd(ref_lon, ref_lat,
+                          az=np.arctan(mX/mY) * 180 / np.pi,
+                          dist=(mX**2 + mY**2)**0.5,
+                          radians=False)[0:2]
+    modelName = parName[0].split()[0]
+    mDict['{}_latitude'.format(modelName)] = mLat
+    mDict['{}_longitude'.format(modelName)] = mLon
+
     if display:
         fig_size = [12, 3*num_file]
         fig, axs = plt.subplots(nrows=num_file, ncols=3, figsize=fig_size)
@@ -78,7 +99,10 @@ def gbis_mat2hdf5(mat_file, display=True):
         meta['UNIT'] = 'm'
         meta['FILE_TYPE'] = 'displacement'
         meta['PROCESSOR'] = 'isce'
-        meta['MODEL_MIN_HEIGHT'] = insarPlot.minHeight
+        if 'minHeight' in vars(insarPlot).keys():
+            meta['MODEL_MIN_HEIGHT'] = insarPlot.minHeight
+        for key, value in mDict.items():
+            meta[key] = value
 
         # write to HDF5 file
         dsDict = {}
