@@ -31,7 +31,7 @@ def create_parser():
                         help='The directory which contains all pairs\n'+
                              'e.g.: $PROJECT_DIR/merged/interferograms')
     parser.add_argument('-f', '--file-pattern', nargs = '+', dest='ifgramFiles', type=str,
-                        default=['filt_*.unw','filt_*.cor'],
+                        default=['filt_*.unw'],
                         help='A list of files that will be used in mintpy\n'
                              'e.g.: filt_fine.unw filt_fine.cor')
     parser.add_argument('-m', '--meta-file', dest='metaFile', type=str, default=None,

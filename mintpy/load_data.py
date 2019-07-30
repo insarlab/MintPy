@@ -514,6 +514,7 @@ def prepare_metadata(inpsDict):
 
     elif processor == 'isce':
         ifgram_dir = os.path.dirname(os.path.dirname(inpsDict['mintpy.load.unwFile']))
+        ifgram_file = os.path.basename(inpsDict['mintpy.load.unwFile'])
         meta_files = sorted(glob.glob(inpsDict['mintpy.load.metaFile']))
         if len(meta_files) < 1:
             warnings.warn('No input metadata file found: {}'.format(inpsDict['mintpy.load.metaFile']))
@@ -521,11 +522,12 @@ def prepare_metadata(inpsDict):
             meta_file = meta_files[0]
             baseline_dir = inpsDict['mintpy.load.baselineDir']
             geom_dir = os.path.dirname(inpsDict['mintpy.load.demFile'])
-            cmd = '{s} -i {i} -m {m} -b {b} -g {g}'.format(s=script_name,
-                                                           i=ifgram_dir,
-                                                           m=meta_file,
-                                                           b=baseline_dir,
-                                                           g=geom_dir)
+            cmd = '{s} -i {i} -f {f} -m {m} -b {b} -g {g}'.format(s=script_name,
+                                                                  i=ifgram_dir,
+                                                                  f=ifgram_file,
+                                                                  m=meta_file,
+                                                                  b=baseline_dir,
+                                                                  g=geom_dir)
             print(cmd)
             os.system(cmd)
         except:
