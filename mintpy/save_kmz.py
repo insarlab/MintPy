@@ -216,10 +216,8 @@ def write_kmz_file(data, metadata, out_file, inps=None):
 
     # 2.3 Generate KML file
     print('generating kml file ...')
-    try:
-        doc = KML.kml(KML.Folder(KML.name(metadata['PROJECT_NAME'])))
-    except:
-        doc = KML.kml(KML.Folder(KML.name('MintPy product')))
+    proj_name = metadata.get('PROJECT_NAME', 'InSAR_MintPy')
+    doc = KML.kml(KML.Folder(KML.name(proj_name)))
 
     # Add data png file
     img_name = os.path.splitext(os.path.basename(data_png_file))[0]
