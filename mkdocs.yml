@@ -1,0 +1,41 @@
+site_name: MintPy
+site_url: https://github.com/insarlab/MintPy
+site_description: Miami InSAR Time-series software in Python
+site_author: Zhang Yunjun, Heresh Fattahi
+repo_url: https://github.com/insarlab/MintPy/
+google_analytics: ['UA-104225904-1', 'mkdocs.org']
+
+theme:
+    name: readthedocs
+    highlightjs: true
+    hljs_languages:
+        - yaml
+        - rust
+
+markdown_extensions:
+    - smarty
+    - toc:
+        permalink: "#"
+        baselevel: 2
+        separator: "_"
+    - sane_lists
+
+nav:
+    - Home: README.md
+    - User Guide:
+        - Installation: installation.md
+        - Example datasets: example_dataset.md
+        - Example template files: examples/input_files/README.md
+        - Tutorials in Jupyter Notebook: tutorials/README.md
+        - Paper figures in Jupyter Notebook: paper/README.md
+    - Output:
+        - Google Earth KMZ: google_earth.md
+        - HDF-EOS5: hdfeos5.md
+    - API Documentation:
+        - Documents generation: api/doc_generation.md
+        - Attributes: api/attributes.md
+        - Coordinates: api/coord.md
+    - About:
+        - Contributing: CONTRIBUTING.md
+        - References: references.md
+

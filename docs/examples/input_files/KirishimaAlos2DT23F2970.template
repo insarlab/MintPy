@@ -1,0 +1,48 @@
+# vim: set filetype=cfg:
+##------------------------------- ISCE/stripmapStack OPTIONS ------------------##
+isce.processor          = stripmapStack  #[stripmapStack, topsStack]
+isce.demSNWE            = 31, 33, 130, 132  #[S, N, W, E] in degree
+isce.demFile            = ${SCRATCHDIR}/KirishimaAlos2DT23F2970/DEM/gsi10m.dem.wgs84
+isce.azimuthLooks       = 10
+isce.rangeLooks         = 8
+isce.maxTempBaseline    = 400
+isce.maxPerpBaseline    = 200
+isce.unwrapMethod       = snaphu
+isce.filtStrength       = 0.5
+isce.applyWaterMask     = yes
+
+
+##------------------------------- mintpy OPTIONS -------------------------------##
+## load_data.py -H to check more details and example inputs.
+mintpy.load.processor        = isce
+##---------for ISCE only:
+mintpy.load.metaFile         = ${SCRATCHDIR}/KirishimaAlos2DT23F2970/masterShelve/data.dat
+mintpy.load.baselineDir      = ${SCRATCHDIR}/KirishimaAlos2DT23F2970/baselines
+##---------interferogram datasets:
+mintpy.load.unwFile          = ${SCRATCHDIR}/KirishimaAlos2DT23F2970/Igrams/*/filt_*.unw
+mintpy.load.corFile          = ${SCRATCHDIR}/KirishimaAlos2DT23F2970/Igrams/*/filt_*.cor
+mintpy.load.connCompFile     = ${SCRATCHDIR}/KirishimaAlos2DT23F2970/Igrams/*/filt_*.unw.conncomp
+##---------geometry datasets:
+mintpy.load.demFile          = ${SCRATCHDIR}/KirishimaAlos2DT23F2970/geom_master/hgt.rdr
+mintpy.load.lookupYFile      = ${SCRATCHDIR}/KirishimaAlos2DT23F2970/geom_master/lat.rdr
+mintpy.load.lookupXFile      = ${SCRATCHDIR}/KirishimaAlos2DT23F2970/geom_master/lon.rdr
+mintpy.load.incAngleFile     = ${SCRATCHDIR}/KirishimaAlos2DT23F2970/geom_master/los.rdr
+mintpy.load.azAngleFile      = ${SCRATCHDIR}/KirishimaAlos2DT23F2970/geom_master/los.rdr
+mintpy.load.shadowMaskFile   = ${SCRATCHDIR}/KirishimaAlos2DT23F2970/geom_master/shadowMask.rdr
+mintpy.load.waterMaskFile    = ${SCRATCHDIR}/KirishimaAlos2DT23F2970/geom_master/waterMask.rdr
+mintpy.load.bperpFile        = None
+
+#mintpy.reference.lalo    	= 31.73, 131.07
+mintpy.network.coherenceBased   = yes
+mintpy.network.keepMinSpanTree  = no
+mintpy.network.minCoherence     = 0.6
+mintpy.troposphericDelay.weatherModel = ERA5
+mintpy.deramp	                = linear
+
+
+##------------------------------- HDF-EOS 5 metadata ———————————————————————————##
+ORBIT_DIRECTION = DESCENDING
+trackNumber     = 23
+first_frame     = 2970
+last_frame      = 2970
+

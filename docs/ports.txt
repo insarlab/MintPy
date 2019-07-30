@@ -1,4 +1,4 @@
-gcc5
+gcc7
 cmake
 gmake
 bison
@@ -28,20 +28,20 @@ openmotif
 subversion
 python27
 python36
-fftw +gcc5
-fftw-single +gcc5
-fftw-3 +gcc5
-fftw-3-long +gcc5
-fftw-3-single +gcc5
+fftw +gcc7
+fftw-single +gcc7
+fftw-3 +gcc7
+fftw-3-long +gcc7
+fftw-3-single +gcc7
 aria2
 openldap
-openmpi-default +gcc5
-openmpi-gcc5 +fortran
+openmpi-default +gcc7
+openmpi-gcc7 +fortran
 xorg-libXt +flat_namespace
 texlive +doc +full
 lapack +gfortran
-eigen3 +blas +gcc5
-gsl +gcc5
+eigen3 +blas +gcc7
+gsl +gcc7
 cgal
 sfcgal
 bzr 
@@ -54,15 +54,14 @@ hdfeos5
 h5utils
 netcdf
 netcdf-cxx
-netcdf-fortran
-ecCodes +gcc5
+ecCodes +gcc7
 postgresql95
 postgresql95-server
 proj
 cairo
 scons
 pandoc
-opencv +python27
+opencv +gdal +python36
 gimp2
 ImageMagick
 samba3
@@ -70,11 +69,10 @@ swig
 swig-python
 gdal +expat +geos +hdf4 +hdf5 +netcdf +openjpeg +postgresql95 +sqlite3 +grib
 py36-cython
-py36-mpi4py +gcc5 +openmpi
-py36-numpy +gcc5 +openblas
-py36-scipy +gcc5 +openblas
-py36-matplotlib +cairo +tkinter
-py36-matplotlib-basemap
+py36-mpi4py +gcc7 +openmpi
+py36-numpy +gcc7 +openblas
+py36-scipy +gcc7 +openblas
+py36-matplotlib +cairo +tkinter +webagg
 py36-pandas
 py36-sympy
 py36-yaml
@@ -100,17 +98,14 @@ postgis2 +gui +postgresql95 +raster +sfcgal +topology
 wdiff
 cwdiff
 ndiff
-atlas +gcc5
-metis +gcc5
-parmetis +gcc5 +openmpi
+atlas +gcc7
+metis +gcc7
+parmetis +gcc7 +openmpi
 vecLibFort
-suitesparse +gcc5 +metis +atlas
-sundials +gcc5 +openmpi +atlas
+suitesparse +gcc7 +metis +atlas
 superlu
-superlu_dist +gcc5 +openmpi
-hypre +gcc5 +openmpi
+superlu_dist +gcc7 +openmpi
+hypre +gcc7 +openmpi
 c2html
 sowing
-petsc +atlas +gcc5 +hypre +openmpi +parmetis +suitesparse +sundials +superlu +superlu_dist
-py36-petsc4py +gcc5 +openmpi
 py36-cvxopt +accelerate +dsdp +fftw +glpk +gsl

@@ -1,0 +1,18 @@
+# vim: set filetype=cfg:
+##-------------------------------- MintPy ------------------------------##
+########## 1. Load Data (--load to exit after this step)
+## load_data.py -H to check more details and example inputs.
+mintpy.load.processor        = gamma
+##---------interferogram datasets:
+mintpy.load.unwFile          = ../GAMMA/interferograms/*/diff*rlks.unw
+mintpy.load.corFile          = ../GAMMA/interferograms/*/*filt*rlks.cor
+mintpy.load.connCompFile     = None
+##---------geometry datasets:
+mintpy.load.demFile          = ../GAMMA/geom_master/sim*rlks.rdc.dem
+mintpy.load.lookupYFile      = ../GAMMA/geom_master/sim*rlks.UTM_TO_RDC
+mintpy.load.lookupXFile      = ../GAMMA/geom_master/sim*rlks.UTM_TO_RDC
+
+mintpy.subset.yx         = 200:2000,200:1562
+mintpy.reference.lalo    = -0.31,-91.22
+mintpy.deramp            = linear
+

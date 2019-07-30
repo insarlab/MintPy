@@ -1,0 +1,78 @@
+# vim: set filetype=cfg:
+################### Job Submission Setting #################
+walltimeSLC         = 5:00
+walltimeCoregist    = 3:00
+walltimeProcessFilt = 15:00
+walltimeProcessDone = 8:00
+memorySLC           = 12000
+memoryCoregist      = 15000               # change this for more frames
+memoryProcessFilt   = 12000
+memoryProcessDone   = 8000
+
+########### Data Download and Focusing #####################
+track               = 133
+startFrame          = 7160
+endFrame            = 7180
+startDate           = 070115
+endDate             = 110313
+masterDate          = 100610
+raw2slc_OrbitType   = HDR
+ssaraopt            =  --platform=Alos -r 133 -f 7160,7170,7180 --beamMode FBS,FBD -s 2007-01-01
+
+########### Select Pairs / Network #########################
+select.network.method              = all
+select.network.perpBaseMax         = 1800
+select.network.lengthDayMax        = 1800
+select.network.lengthDayMin        = 0
+select.network.seasonal            = yes
+select.network.dopOverlapThresh    = 15
+
+
+############### 2 Pass InSAR - ROI_PAC #####################
+DEM                = $SC/GalapagosT133F7160_7180AlosA/DEM/srtm1.dem
+DEMg               = $SC/GalapagosT133F7160_7180AlosA/DEM/srtm1_60m.dem
+flattening         = orbit
+OrbitType          = HDR
+Rlooks_sim         = 2
+Rlooks_int         = 8
+Rlooks_unw         = 8
+unw_method         = snaphu
+snap_conncomthresh = 60
+Filt_method        = psfilt_adapt_filt
+FilterStrength     = 0.5/4
+UnwrappedThreshold = 0.10
+maskingwith0height = TRUE
+ampmagFineopt      = 120/120/256/64
+meter_per_cycle    = 6.283
+pixel_ratio        = 2
+cleanopt           = 1
+
+
+
+
+################ Time Series - MintPy ######################
+mintpy.load.processor      = roipac  #[isce,roipac,gamma,], auto for isce
+mintpy.load.updateMode     = auto  #[yes / no], auto for yes, skip re-loading if HDF5 files are complete
+mintpy.load.compression    = auto  #[gzip / lzf / no], auto for no [recommended].
+##---------interferogram datasets:
+mintpy.load.unwFile        = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/interferograms/*/filt*.unw
+mintpy.load.corFile        = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/interferograms/*/filt*.cor
+mintpy.load.connCompFile   = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/interferograms/*/filt*snap_connect.byt
+mintpy.load.intFile        = None #$GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/interferograms/*/filt*rlks.int
+##---------geometry datasets:
+mintpy.load.demFile        = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/geom_master/radar_*rlks.hgt
+mintpy.load.lookupYFile    = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/geom_master/geomap_*rlks.trans
+mintpy.load.lookupXFile    = $GALAPAGOS_DIR/GalapagosAlosAT133/ROIPAC/geom_master/geomap_*rlks.trans
+##---------extra metadata to be loaded (to adjust for the bias in ROIPAC lookup table)
+SUBSET_XMIN = 1
+SUBSET_YMIN = 15
+
+mintpy.subset.yx                         = 800:3700,0:1400
+mintpy.reference.lalo                    = -0.71, -91.31     #-0.31, -91.22
+mintpy.unwrapError.method                = bridging
+mintpy.unwrapError.waterMaskFile         = waterMask.h5
+mintpy.unwrapError.ramp                  = linear
+mintpy.network.coherenceBased            = yes
+mintpy.network.aoiLALO                   = -0.84:-0.81,-91.16:-91.12
+mintpy.topographicResidual.stepFuncDate  = 20080529, 20090420, 20100519    #Cerro Azul, Fernandina, Alcedo,
+mintpy.deramp                            = linear

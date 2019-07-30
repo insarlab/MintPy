@@ -1,0 +1,32 @@
+# vim: set filetype=cfg:
+##------------------------  MintPy ----------------------------------##
+mintpy.load.processor      = gamma
+mintpy.load.unwFile        = ./../interferograms/*/diff_*rlks.unw
+mintpy.load.corFile        = ./../interferograms/*/filt_*rlks.cor
+mintpy.load.connCompFile   = None
+mintpy.load.intFile        = None
+
+mintpy.load.demFile        = ./../geom_master/sim_*.rdc.dem
+mintpy.load.lookupYFile    = ./../geom_master/sim_*.UTM_TO_RDC
+mintpy.load.lookupXFile    = ./../geom_master/sim_*.UTM_TO_RDC
+mintpy.load.incAngleFile   = None
+mintpy.load.azAngleFile    = None
+mintpy.load.shadowMaskFile = None
+mintpy.load.waterMaskFile  = None
+
+mintpy.subset.lalo         = 41.02:41.32, -115.10:-114.65
+mintpy.reference.lalo      = 41.03, -114.70
+mintpy.network.coherenceBased     = yes       #[yes / no], auto for yes, exclude interferograms with coherence < minCoherence
+mintpy.network.keepMinSpanTree    = no
+mintpy.network.excludeDate        = 20071231, 20080204, 20080310
+mintpy.topographicResidual.stepFuncDate = 20080221
+
+##------------------------  HDF-EOS5 --------------------------------##
+mission             = Env                 # ERS,ENV,S1,RS1,RS2,CSK,TSX,JERS,ALOS,ALOS2
+relative_orbit      = 399
+first_frame         = 2781
+last_frame          = 2781
+beam_mode           = IS                   # S2,FB08,IW
+processing_software = GAMMA
+
+

@@ -1,0 +1,42 @@
+# vim: set filetype=cfg:
+##----------------------------- SentinelStack/ISCE ---------------------##
+cleanopt                        = 1    # [ 0 / 1 / 2 / 3 4]   0: no cleaning, 1: largest files, 2: merged/etc, PROCESS dirs, 3: SLC,RAW, 4: everything
+ssaraopt                        = --platform=SENTINEL-1A,SENTINEL-1B -r 128 -f 587,588,589,590,591,592,593  -e 2018-07-01
+processor                       = isce
+sentinelStack.demDir            = /nethome/famelung/Sentinel/GalapagosT128SenVVD/DEM
+sentinelStack.boundingBox       = '-1 0.15 -91.6 -90.9'
+sentinelStack.subswath          = 1 2  # comment 
+sentinelStack.numConnections    = 5   # comment
+sentinelStack.azimuthLooks      = 5   # comment
+sentinelStack.rangeLooks        = 15  # comment
+sentinelStack.filtStrength      = 0.2  # comment
+sentinelStack.unwMethod         = snaphu  # comment
+sentinelStack.coregistration    = auto  # comment
+
+
+
+##-------------------------------- MintPy -----------------------------##
+mintpy.load.processor        = isce
+##---------for ISCE only:
+mintpy.load.metaFile         = $GALAPAGOS_DIR/GalapagosSenDT128/master/IW*.xml
+mintpy.load.baselineDir      = $GALAPAGOS_DIR/GalapagosSenDT128/baselines
+##---------interferogram datasets:
+mintpy.load.unwFile          = $GALAPAGOS_DIR/GalapagosSenDT128/merged/interferograms/*/filt_*.unw
+mintpy.load.corFile          = $GALAPAGOS_DIR/GalapagosSenDT128/merged/interferograms/*/filt_*.cor
+mintpy.load.connCompFile     = $GALAPAGOS_DIR/GalapagosSenDT128/merged/interferograms/*/filt_*.unw.conncomp
+##---------geometry datasets:
+mintpy.load.demFile          = $GALAPAGOS_DIR/GalapagosSenDT128/merged/geom_master/hgt.rdr
+mintpy.load.lookupYFile      = $GALAPAGOS_DIR/GalapagosSenDT128/merged/geom_master/lat.rdr
+mintpy.load.lookupXFile      = $GALAPAGOS_DIR/GalapagosSenDT128/merged/geom_master/lon.rdr
+mintpy.load.incAngleFile     = $GALAPAGOS_DIR/GalapagosSenDT128/merged/geom_master/los.rdr
+mintpy.load.azAngleFile      = $GALAPAGOS_DIR/GalapagosSenDT128/merged/geom_master/los.rdr
+mintpy.load.shadowMaskFile   = $GALAPAGOS_DIR/GalapagosSenDT128/merged/geom_master/shadowMask.rdr
+mintpy.load.waterMaskFile    = $GALAPAGOS_DIR/GalapagosSenDT128/merged/geom_master/waterMask.rdr
+mintpy.load.bperpFile        = $GALAPAGOS_DIR/GalapagosSenDT128/merged/baseline_grid/*/bperp.rdr
+
+mintpy.subset.yx                         = 400:2400,0:1700
+mintpy.reference.lalo                    = -0.31,-91.22
+mintpy.network.endDate                   = 20180626
+mintpy.unwrapError.method                = bridging+phase_closure   #[bridging / phase_closure / no], auto for no
+mintpy.topographicResidual.stepFuncDate  = 20150524,20150616,20170321,20170910,20180613  #Wolf,Wolf,CerroAzul,Fernandina,Fernandina
+mintpy.deramp                            = linear
