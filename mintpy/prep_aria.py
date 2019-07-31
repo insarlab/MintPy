@@ -348,13 +348,14 @@ def main(iargs=None):
 
     # write geometryGeo
     dsNameDict = {
-        "azimuthAngle": (np.float32, (length, width)),
         "height": (np.float32, (length, width)),
         "incidenceAngle": (np.float32, (length, width)),
-        "shadowMask": (np.bool_, (length, width)),
         "slantRangeDistance": (np.float32, (length, width)),
-        "waterMask": (np.bool_, (length, width)),
     }
+    if inps.azAngle is not None:
+        dsNameDict["azimuthAngle"] = (np.float32, (length, width))
+    if inps.waterMask is not None:
+        dsNameDict["waterMask"] = (np.bool_, (length, width))
 
     geom_file = os.path.join(inputDir, "geometryGeo.h5")
     metadata['FILE_TYPE'] = 'geometry'
