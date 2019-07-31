@@ -490,8 +490,10 @@ def get_delay_timeseries(inps, atr):
     if 'latitude' in geom_obj.datasetNames:
         inps.lat = geom_obj.read(datasetName='latitude')
         inps.lon = geom_obj.read(datasetName='longitude')
-    else:
+    elif 'Y_FIRST' in geom_obj.metadata:
         inps.lat, inps.lon = ut.get_lat_lon(geom_obj.metadata)
+    else: 
+        inps.lat, inps.lon = ut.get_lat_lon_rdc(geom_obj.metadata)
 
     # calculate phase delay
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
