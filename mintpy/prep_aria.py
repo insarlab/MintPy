@@ -27,7 +27,7 @@ EXAMPLE = """example:
   ariaTSsetup.py -f 'products/*.nc' -b '37.25 38.1 -122.6 -121.75' --mask Download
 
   prep_aria.py -w mintpy -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt 
-  prep_aria.py -w mintpy -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt -a azimuthAngle/20150605_20150512.vrt --water-mask mask/watermask.msk
+  prep_aria.py -w mintpy -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt --water-mask mask/watermask.msk
 """
 
 def create_parser():
@@ -61,7 +61,7 @@ def create_parser():
     geom.add_argument('-i','--incidence-angle', dest='incAngle', type=str, required=True,
                       help='Name of the incidence angle file')
     geom.add_argument('-a','--az-angle','--azimuth-angle', dest='azAngle', type=str,
-                      help='Name of the azimuth angle file')
+                      help='Name of the azimuth angle file. [not recommend for now]')
     geom.add_argument('--water-mask', dest='waterMask', type=str,
                       help='Name of the water mask file')
     return parser
