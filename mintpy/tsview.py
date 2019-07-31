@@ -88,7 +88,7 @@ def create_parser():
     parser = pp.add_data_disp_argument(parser)
     parser = pp.add_dem_argument(parser)
     parser = pp.add_figure_argument(parser)
-    parser = pp.add_gps_argument(parser)
+    #parser = pp.add_gps_argument(parser)
     parser = pp.add_mask_argument(parser)
     parser = pp.add_map_argument(parser)
     parser = pp.add_point_argument(parser)
