@@ -76,6 +76,8 @@ class ifgramStackDict:
     def get_metadata(self):
         ifgramObj = [v for v in self.pairsDict.values()][0]
         self.metadata = ifgramObj.get_metadata()
+        if 'UNIT' in self.metadata.keys():
+            self.metadata.pop('UNIT')
         return self.metadata
 
     def get_dataset_data_type(self, dsName):
@@ -387,6 +389,8 @@ class geometryDict:
         self.metadata = readfile.read_attribute(self.file)
         self.length = int(self.metadata['LENGTH'])
         self.width = int(self.metadata['WIDTH'])
+        if 'UNIT' in self.metadata.keys():
+            self.metadata.pop('UNIT')
 
         # if self.processor is None:
         #    ext = self.file.split('.')[-1]
