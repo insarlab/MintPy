@@ -403,9 +403,11 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
     return outFile
 
 
-def get_geometry_file(dset, work_dir=None, coord='geo', abspath=True, print_msg=True):
+def get_geometry_file(dset_list, work_dir=None, coord='geo', abspath=True, print_msg=True):
     """Find geometry file containing input specific dataset"""
-    if dset not in geometryDatasetNames:
+    if isinstance(dset_list, str):
+        dset_list = [dset_list]
+    if any(dset not in geometryDatasetNames for dset in dset_list):
         raise ValueError('unrecognized geometry dataset name: {}'.format(dset))
 
     if not work_dir:
@@ -421,11 +423,11 @@ def get_geometry_file(dset, work_dir=None, coord='geo', abspath=True, print_msg=
 
     # check dset in the existing h5 files
     for fname in list(fname_list):   #use list() as temp copy to handle varing list during the loop
-        if dset not in readfile.get_dataset_list(fname):
+        if any(dset not in readfile.get_dataset_list(fname) for dset in dset_list):
             fname_list.remove(fname)
     if len(fname_list) == 0:
         if print_msg:
-            print('No geometry file with dataset {} found'.format(dset))
+            print('No geometry file with dataset {} found'.format(dset_list))
         return None
 
     geom_file = fname_list[0]
