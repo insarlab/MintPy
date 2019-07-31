@@ -205,24 +205,18 @@ def get_lat_lon(meta, box=None):
     lon_num = box[2] - box[0]
 
     # generate 2D matrix for lat/lon
-    if 'Y_FIRST' in meta.keys():
-        # geo-coordinates
-        lat_step = float(meta['Y_STEP'])
-        lon_step = float(meta['X_STEP'])
-        lat0 = float(meta['Y_FIRST']) + lat_step * box[1]
-        lon0 = float(meta['X_FIRST']) + lon_step * box[0]
-        lat1 = lat0 + lat_step * lat_num
-        lon1 = lon0 + lon_step * lon_num
-        lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
+    lat_step = float(meta['Y_STEP'])
+    lon_step = float(meta['X_STEP'])
+    lat0 = float(meta['Y_FIRST']) + lat_step * box[1]
+    lon0 = float(meta['X_FIRST']) + lon_step * box[0]
+    lat1 = lat0 + lat_step * lat_num
+    lon1 = lon0 + lon_step * lon_num
+    lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
                           lon0:lon1:lon_num*1j]
-    else:
-        # radar-coordinates
-        lats,lons = get_lat_lon_rdc(meta)
-
-    # bbox --> 2D mesh-grid
 
     lats = np.array(lats, dtype=np.float32)
     lons = np.array(lons, dtype=np.float32)
+    
     return lats, lons
 
 def get_lat_lon_rdc(meta):
