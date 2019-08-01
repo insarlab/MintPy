@@ -27,7 +27,7 @@ EXAMPLE = """example:
   ariaTSsetup.py -f 'products/*.nc' -b '37.25 38.1 -122.6 -121.75' --mask Download
 
   prep_aria.py -w mintpy -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt 
-  prep_aria.py -w mintpy -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt --water-mask mask/watermask.msk
+  prep_aria.py -w mintpy -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt -a azimuthAngle/20150605_20150512.vrt --water-mask mask/watermask.msk
 """
 
 def create_parser():
@@ -61,7 +61,7 @@ def create_parser():
     geom.add_argument('-i','--incidence-angle', dest='incAngle', type=str, required=True,
                       help='Name of the incidence angle file')
     geom.add_argument('-a','--az-angle','--azimuth-angle', dest='azAngle', type=str,
-                      help='Name of the azimuth angle file. [not recommend for now]')
+                      help='Name of the azimuth angle file.')
     geom.add_argument('--water-mask', dest='waterMask', type=str,
                       help='Name of the water mask file')
     return parser
@@ -202,10 +202,10 @@ def layout_hdf5(fname, dsNameDict, metadata):
     return
 
 
-def write_geometry(h5File, demFile, incAngleFile, azAngleFile=None, waterMaskFile=None):
+def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFile=None):
     print('-'*50)
-    print('writing data to HDF5 file {} with a mode ...'.format(h5File))
-    h5 = h5py.File(h5File, 'a')
+    print('writing data to HDF5 file {} with a mode ...'.format(outfile))
+    h5 = h5py.File(outfile, 'a')
 
     # height
     ds = gdal.Open(demFile, gdal.GA_ReadOnly)
@@ -227,6 +227,11 @@ def write_geometry(h5File, demFile, incAngleFile, azAngleFile=None, waterMaskFil
         ds = gdal.Open(azAngleFile, gdal.GA_ReadOnly)
         data = ds.ReadAsArray()
         data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
+        # azimuth angle of the line-of-sight vector:
+        # ARIA: vector from target to sensor measured from the east  in counterclockwise direction
+        # ISCE: vector from sensor to target measured from the north in counterclockwise direction
+        # convert ARIA format to ISCE format, which is used in mintpy
+        data -= 90
         h5['azimuthAngle'][:,:] = data
 
     # waterMask
@@ -242,11 +247,11 @@ def write_geometry(h5File, demFile, incAngleFile, azAngleFile=None, waterMaskFil
         h5['waterMask'][:,:] = water_mask
 
     h5.close()
-    print('finished writing to HD5 file: {}'.format(h5File))
-    return h5File
+    print('finished writing to HD5 file: {}'.format(outfile))
+    return outfile
 
 
-def write_ifgram_stack(h5File, unwStack, cohStack, connCompStack):
+def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack):
 
     print('-'*50)
     print('opening {}, {}, {} with gdal ...'.format(os.path.basename(unwStack),
@@ -281,8 +286,8 @@ def write_ifgram_stack(h5File, unwStack, cohStack, connCompStack):
         d12BandDict[d12] = ii+1
     d12List = sorted(d12BandDict.keys())
 
-    print('writing data to HDF5 file {} with a mode ...'.format(h5File))
-    h5 = h5py.File(h5File, "a")
+    print('writing data to HDF5 file {} with a mode ...'.format(outfile))
+    h5 = h5py.File(outfile, "a")
 
     prog_bar = ptime.progressBar(maxValue=nPairs)
     for ii in range(nPairs):
@@ -320,11 +325,11 @@ def write_ifgram_stack(h5File, unwStack, cohStack, connCompStack):
     h5["connectComponent"].attrs['MODIFICATION_TIME'] = str(time.time())
 
     h5.close()
-    print('finished writing to HD5 file: {}'.format(h5File))
+    print('finished writing to HD5 file: {}'.format(outfile))
     dsUnw = None
     dsCoh = None
     dsComp = None
-    return h5File
+    return outfile
 
 
 ####################################################################################
@@ -337,16 +342,13 @@ def main(iargs=None):
     width = metadata["WIDTH"]
     numPairs = metadata["NUMBER_OF_PAIRS"]
 
-    # prepare mintpy working directory
-    inps.workDir = os.path.abspath(inps.workDir)
-    if not os.path.exists(inps.workDir):
-        os.makedirs(inps.workDir)
-
-    inputDir = os.path.join(inps.workDir , "inputs")
+    # prepare output directory
+    inputDir = os.path.join(os.path.abspath(inps.workDir), "inputs")
     if not os.path.exists(inputDir):
         os.makedirs(inputDir)
 
-    # write geometryGeo
+    # 1. geometryGeo
+    # define dataset structure
     dsNameDict = {
         "height": (np.float32, (length, width)),
         "incidenceAngle": (np.float32, (length, width)),
@@ -357,6 +359,7 @@ def main(iargs=None):
     if inps.waterMask is not None:
         dsNameDict["waterMask"] = (np.bool_, (length, width))
 
+    # write data to disk
     geom_file = os.path.join(inputDir, "geometryGeo.h5")
     metadata['FILE_TYPE'] = 'geometry'
     layout_hdf5(geom_file, dsNameDict, metadata)
@@ -366,7 +369,8 @@ def main(iargs=None):
                    azAngleFile=inps.azAngle,
                    waterMaskFile=inps.waterMask)
 
-    # write ifgramStack
+    # 2. ifgramStack
+    # define dataset structure
     dsNameDict = {
         "bperp": (np.float32, (numPairs,)),
         "coherence": (np.float32, (numPairs, length, width)),
@@ -376,6 +380,7 @@ def main(iargs=None):
         "unwrapPhase": (np.float32, (numPairs, length, width)),
     }
 
+    # write data to disk
     ifgram_file = os.path.join(inputDir, "ifgramStack.h5")
     metadata['FILE_TYPE'] = 'ifgramStack'
     layout_hdf5(ifgram_file, dsNameDict, metadata)
