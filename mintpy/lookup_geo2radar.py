@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2019    Yunmeng Cao                         #
-# Author:  Yunmeng Cao                                     #
+# Copyright(c) 2019, Yunmeng Cao                           #
+# Author: Yunmeng Cao, Jul 2019                            #
 ############################################################
 
 import os
@@ -13,29 +13,22 @@ import h5py
 import numpy as np
 from mintpy.utils import readfile, ptime
 
-INTRODUCTION = '''
-#############################################################################
-   
-   Convert the Geo-coordinates based lookup-table (GAMMA, ROI_PAC) into the Radar-coordinates based lookup-table (ISCE):
+
+INTRODUCTION = '''Convert lookup-table in geo-coordinates (GAMMA, ROI_PAC) into the one in radar-coordinates (ISCE)
    by searching the closest cpx-value: Range + j*Azimuth in the lookup table.
-     
-   Theoretical precision of the converted lats/lons under radar-coord is the same the unit-step degrees of the orginal 
-   geo-coord lookup-table. 
+   Note: the precision of converted lookup table can be up to 0.15 degrees.
 '''
 
-EXAMPLE = '''
-
+EXAMPLE = '''examples:
     lookup_geo2radar.py geometryGeo.h5 
     lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5 
     lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5 -n 2
-    
-#############################################################################
 '''
 
-def cmdLineParse():
+def cmd_line_parse():
     parser = argparse.ArgumentParser(description='Convert geo-coded lookup table (GAMMA, ROI_PAC) into radar-coded (ISCE)',
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+                                     epilog=INTRODUCTION+'\n'+EXAMPLE)
 
     parser.add_argument('geometryGeo',help='geometryGeo file which includes geo-coordinates based lookup-table')
     parser.add_argument('-w','--write', dest='write', metavar='FILE', default = 'geometryRadar.h5',
@@ -46,6 +39,7 @@ def cmdLineParse():
     inps = parser.parse_args()
 
     return inps
+
 
 def write_h5(datasetDict, out_file, metadata=None, ref_file=None, compression=None):
     
@@ -192,7 +186,7 @@ def get_idx(long_array,short_array,n=2):
     
 def main(argv):
     
-    inps = cmdLineParse() 
+    inps = cmd_line_parse() 
     geom = inps.geometryGeo
     rangeCoord = readfile.read(geom,datasetName = 'rangeCoord')[0]
     azimuthCoord = readfile.read(geom,datasetName = 'azimuthCoord')[0]
