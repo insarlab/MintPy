@@ -378,6 +378,9 @@ class resample:
 
             dest_y = dest_y_lt[yy,xx] # rows in radar coord
             dest_x = dest_x_lt[yy,xx] # column in radar coord
+            
+            dest_y = dest_y.reshape(row,col)
+            dest_x = dest_x.reshape(row,col)
             # please Yunjun to finish the left part to update self
 
             # src_y/x
