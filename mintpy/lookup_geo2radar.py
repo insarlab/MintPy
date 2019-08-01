@@ -16,7 +16,9 @@ from mintpy.utils import readfile, ptime
 
 INTRODUCTION = '''Convert lookup-table in geo-coordinates (GAMMA, ROI_PAC) into the one in radar-coordinates (ISCE)
    by searching the closest cpx-value: Range + j*Azimuth in the lookup table.
-   Note: the precision of converted lookup table can be up to 0.15 degrees.
+
+The theoretical precision of the converted lats/lons under radar-coord is equal to:
+   the spatial resolution in degrees of the original geo-coord lookup table.
 '''
 
 EXAMPLE = '''examples:
