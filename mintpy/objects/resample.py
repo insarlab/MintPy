@@ -359,8 +359,30 @@ class resample:
 
         # geo2radar
         else:
+            # provide dest_lat/dest_lon to get dest_x, dest_y
+            dest_y_lt = readfile.read(self.file, datasetName='azimuthCoord', box=dest_box)[0]
+            dest_x_lt = readfile.read(self.file, datasetName='rangeCoord', box=dest_box)[0]
+
+            # please check this is right, I am not sure what self is. Just copy the above code
+            lat0 = float(self.lut_metadata['Y_FIRST'])
+            lon0 = float(self.lut_metadata['X_FIRST'])
+            lat_step = float(self.lut_metadata['Y_STEP'])
+            lon_step = float(self.lut_metadata['X_STEP'])
+
+            yy = int((dest_lat - lat0)/lat_step)
+            xx = int((dest_lon - lon0)/lon_step)
+
+            row, col = yy.shape
+            yy = yy.flatten()
+            xx = xx.flatten()
+
+            dest_y = dest_y_lt[yy,xx] # rows in radar coord
+            dest_x = dest_x_lt[yy,xx] # column in radar coord
+            # please Yunjun to finish the left part to update self
+
             # src_y/x
-            raise NotImplementedError('Not implemented yet for GAMMA and ROIPAC products')
+            #raise NotImplementedError('Not implemented yet for GAMMA and ROIPAC products')
+        return
 
 
     def get_radius_of_influence(self, ratio=3):
