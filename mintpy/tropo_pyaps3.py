@@ -493,7 +493,7 @@ def get_delay_timeseries(inps, atr):
         inps.lat = geom_obj.read(datasetName='latitude')
         inps.lon = geom_obj.read(datasetName='longitude')
     elif 'Y_FIRST' in geom_obj.metadata:
-        # for geo-coded dataset
+        # for geo-coded dataset (gamma, roipac)
         inps.lat, inps.lon = ut.get_lat_lon(geom_obj.metadata)
     else: 
         # for radar-coded dataset (gamma, roipac)
