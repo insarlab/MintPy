@@ -189,11 +189,8 @@ def touch(fname_list, times=None):
 #################################### Geometry ##########################################
 def get_lat_lon(meta, box=None):
     """extract lat/lon info of all grids into 2D matrix.
-    Accurate for meta dict in geo-coordinates.
-    Rough for meta dict radar-coordinates.
-    Parameters: meta : dict, including LENGTH / WIDTH, and
-                    1) X/Y_FIRST/STEP, or
-                    2) LAT/LON_REF1/2/3/4
+    For meta dict in geo-coordinates only.
+    Parameters: meta : dict, including LENGTH, WIDTH and Y/X_FIRST/STEP
                 box  : 4-tuple of int for (x0, y0, x1, y1)
     Returns:    lats : 2D np.array for latitude  in size of (length, width)
                 lons : 2D np.array for longitude in size of (length, width)
@@ -216,11 +213,19 @@ def get_lat_lon(meta, box=None):
 
     lats = np.array(lats, dtype=np.float32)
     lons = np.array(lons, dtype=np.float32)
-    
     return lats, lons
 
+
 def get_lat_lon_rdc(meta):
-    """Get 2D array of lat and lon from metadata"""
+    """Get 2D array of lat and lon.
+    For metadata dict in radar-coord
+    Parameters: meta : dict, including LENGTH, WIDTH and LAT/LON_REF1/2/3/4
+    Returns:    lats : 2D np.array for latitude  in size of (length, width)
+                lons : 2D np.array for longitude in size of (length, width)
+    """
+    if 'Y_FIRST' in meta.keys():
+        raise Exception('Input file is in geo-coordinates, use more accurate get_lat_lon() instead.')
+
     length, width = int(meta['LENGTH']), int(meta['WIDTH'])
     lats = [float(meta['LAT_REF{}'.format(i)]) for i in [1,2,3,4]]
     lons = [float(meta['LON_REF{}'.format(i)]) for i in [1,2,3,4]]
@@ -233,6 +238,7 @@ def get_lat_lon_rdc(meta):
             lat[i,j] = lats[0] + j*(lats[1] - lats[0])/width + i*(lats[2] - lats[0])/length
             lon[i,j] = lons[0] + j*(lons[1] - lons[0])/width + i*(lons[2] - lons[0])/length
     return lat, lon
+
 
 def azimuth2heading_angle(az_angle):
     """Convert azimuth angle from ISCE los.rdr band2 into satellite orbit heading angle
