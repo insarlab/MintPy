@@ -464,7 +464,8 @@ def plot_slice(ax, data, metadata, inps=None):
                 y -= inps.pix_box[1]
                 x -= inps.pix_box[0]
                 data -= data[y, x]
-                vprint('referencing to GPS station: {} at {}'.format(inps.ref_gps_site, ref_site_lalo))
+                vprint(('referencing InSAR data to the pixel nearest to '
+                        'GPS station: {} at {}').format(inps.ref_gps_site, ref_site_lalo))
             im = m.imshow(data, cmap=inps.colormap, origin='upper',
                           vmin=inps.vlim[0], vmax=inps.vlim[1],
                           alpha=inps.transparency, interpolation='nearest',
