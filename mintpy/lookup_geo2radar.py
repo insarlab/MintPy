@@ -293,7 +293,7 @@ def main(argv):
     future = np.zeros((len(data_parallel),))
     future = list(future)
     future = parallel_process(data_parallel, function, n_jobs= proNumb, use_kwargs=False, front_num=1)
-    
+
     for i in range(row_sample):
         for j in range(col_sample):
             k0 = i*col_sample + j
@@ -309,8 +309,8 @@ def main(argv):
         
                 grid_lat[y0:y1+1,x0:x1+1] = lat0
                 grid_lon[y0:y1+1,x0:x1+1] = lon0
-            except Exception:
-                pass
+            except Exception as e:
+                del e
             
     #grid_lat = griddata(points, zz1, (grid_x, grid_y), method='nearest')
     #grid_lon = griddata(points, zz2, (grid_x, grid_y), method='nearest')
