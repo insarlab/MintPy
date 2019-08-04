@@ -11,37 +11,27 @@ import argparse
 
 import h5py
 import numpy as np
-from mintpy.utils import readfile, ptime
+from mintpy.utils import readfile #, ptime
+
+from scipy.interpolate import griddata
+#from scipy.interpolate import RegularGridInterpolator as RGI
+
+from tqdm import tqdm
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 
-INTRODUCTION = '''Convert lookup-table in geo-coordinates (GAMMA, ROI_PAC) into the one in radar-coordinates (ISCE)
-   by searching the closest cpx-value: Range + j*Azimuth in the lookup table.
+INTRODUCTION = '''
 
-The theoretical precision of the converted lats/lons under radar-coord is equal to:
-   the spatial resolution in degrees of the original geo-coord lookup table.
+Convert lookup-table in geo-coordinates (GAMMA, ROI_PAC) into the one in radar-coordinates (ISCE) using scipy.interpolate.griddata
+
 '''
 
 EXAMPLE = '''examples:
+
     lookup_geo2radar.py geometryGeo.h5 
     lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5 
-    lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5 -n 2
+    lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5 --parallel 4
 '''
-
-def cmd_line_parse():
-    parser = argparse.ArgumentParser(description='Convert geo-coded lookup table (GAMMA, ROI_PAC) into radar-coded (ISCE)',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=INTRODUCTION+'\n'+EXAMPLE)
-
-    parser.add_argument('geometryGeo',help='geometryGeo file which includes geo-coordinates based lookup-table')
-    parser.add_argument('-w','--write', dest='write', metavar='FILE', default = 'geometryRadar.h5',
-                      help='update geometryRadar.h5 file by adding the radar-coordinates based lookup-table.')
-    parser.add_argument('-n','--numb', dest='search_line_numb', type=int, metavar='NUM',default = 2,
-                      help='the lines used as the length of the search pool.')
-    
-    inps = parser.parse_args()
-
-    return inps
-
 
 def write_h5(datasetDict, out_file, metadata=None, ref_file=None, compression=None):
     
@@ -61,76 +51,6 @@ def write_h5(datasetDict, out_file, metadata=None, ref_file=None, compression=No
         
     return out_file  
 
-def get_idx_cpx(RangeCoord,AzimuthCoord,WIDTH,LENGTH,n_lines):
-    
-    NN = n_lines # search n lines one time
-    x = np.arange(0,WIDTH)+1
-    y = np.arange(0,LENGTH)+1
-    xv, yv = np.meshgrid(x, y)
-    yv = yv.flatten()
-    xv = xv.flatten()
-    radar_cpx = xv + yv*1j
-    #print(len(radar_cpx))
-
-    
-    Ns = len(xv)
-    short_idx = np.zeros((Ns,),dtype=int)
-    
-    
-    gx = RangeCoord.flatten()
-    gy = AzimuthCoord.flatten()
-    gy[gy==0] = 10000
-    gy[gy<0] = 10000
-   # geo_cpx = gx + gy*1j
-    
-    sort_gy_idx = np.argsort(gy)
-    sort_gy_array = gy[sort_gy_idx]
-    sort_gx_array = gx[sort_gy_idx]
-    sort_geo_cpx = sort_gx_array + sort_gy_array*1j
-    #print(sort_gy_array[100:200])
-    k = round(LENGTH/NN)+1
-    
-    prog_bar = ptime.progressBar(maxValue=k)
-    for i in range(k):
-        i = i +1
-        a0 = NN*(i-1)
-        if NN*i < LENGTH:
-            b0 = NN*i
-        else:
-            b0 = LENGTH
-        
-        if not a0 > b0:
-            idx0 = a0*WIDTH
-            idx1 = b0*WIDTH
-            radar_cpx0 = radar_cpx[idx0:idx1]
-            #print(a0-0.5)
-            #print(b0+0.5)
-            #idx_geo0 = np.where((a0-0.5)<sort_gy_array & sort_gy_array < (b0+0.5)
-            idx_geo = np.where(((a0-0.5)<sort_gy_array)*(sort_gy_array < (b0+0.5)))
-            sort_geo_cpx0 = sort_geo_cpx[idx_geo]
-            
-            #print(len(sort_geo_cpx0))
-            Ns0 = len(radar_cpx0)
-            #print(Ns0)
-            short_idx0 = np.zeros((Ns0,))
-            sort_idx0 = sort_gy_idx[idx_geo]
-            
-            
-            for j in range(Ns0):
-                id0 = find_nearest_cpx(sort_geo_cpx0, radar_cpx0[j])
-                short_idx0[j] = sort_idx0[id0]
-            #print(short_idx0)
-            short_idx[idx0:idx1] = short_idx0
-        prog_bar.update(i+1, every=round(k/100), suffix='{}/{} lines'.format((i+1)*NN, LENGTH))
-    prog_bar.close()
-    
-    return short_idx
-
-def find_nearest_cpx(cpx_long, cpx0):
-    cpx_long = np.asarray(cpx_long)
-    idx =  (np.abs(cpx_long - cpx0)).argmin()
-    return idx 
-
 
 def get_dataNames(FILE):
     with h5py.File(FILE, 'r') as f:
@@ -140,49 +60,112 @@ def get_dataNames(FILE):
     return dataNames
 
 
-def find_nearest(array, value):
-    array = np.asarray(array,dtype=np.float64)
-    idx = (np.abs(array - value)).argmin()
-    return idx
+def parallel_process(array, function, n_jobs=16, use_kwargs=False, front_num=1):
+    """
+        A parallel version of the map function with a progress bar. 
 
-def get_idx(long_array,short_array,n=2):
-        sort_idx = np.argsort(long_array)
-        long_array_sort = long_array[sort_idx]
-        #print(long_array_sort[0:100])
-        
-        Ns = len(short_array)
-        k = round(Ns/n)+1
-        short_idx = np.zeros((Ns,),dtype=int)
-        
-        prog_bar = ptime.progressBar(maxValue=n)
-        for i in range(n):
-            i=i+1
-            a0 = k*(i-1)
-            if k*(i+1) < Ns:
-                b0 = k*(i+1)
-            else:
-                b0 = Ns
-            
-            if not a0 > b0:
-                idx0 = np.arange(a0,b0)
-                #print(idx0)
-                short_array0 = short_array[idx0]
-                Ns0 = len(short_array0)
-            
-                idx_value = find_nearest(long_array_sort, short_array0[0])
-                long_array0 = long_array_sort[idx_value:(idx_value+2*k)]
-                short_idx0 = np.zeros((Ns0,))
-                sort_idx0 = sort_idx[idx_value:(idx_value+2*k)]
-            
-                for j in range(Ns0):
-                    id0 = find_nearest(long_array0, short_array0[j])
-                    short_idx0[j] = sort_idx0[id0]
-            
-                short_idx[idx0] = short_idx0
-            prog_bar.update(i+1, every=round(n/100), suffix='{}/{} pixels'.format(i+1, n))
-        prog_bar.close() 
-        return short_idx
+        Args:
+            array (array-like): An array to iterate over.
+            function (function): A python function to apply to the elements of array
+            n_jobs (int, default=16): The number of cores to use
+            use_kwargs (boolean, default=False): Whether to consider the elements of array as dictionaries of 
+                keyword arguments to function 
+            front_num (int, default=3): The number of iterations to run serially before kicking off the parallel job. 
+                Useful for catching bugs
+        Returns:
+            [function(array[0]), function(array[1]), ...]
+    """
+    #We run the first few iterations serially to catch bugs
+    if front_num > 0:
+        front = [function(**a) if use_kwargs else function(a) for a in array[:front_num]]
+    #If we set n_jobs to 1, just run a list comprehension. This is useful for benchmarking and debugging.
+    if n_jobs==1:
+        return front + [function(**a) if use_kwargs else function(a) for a in tqdm(array[front_num:])]
+    #Assemble the workers
+    with ProcessPoolExecutor(max_workers=n_jobs) as pool:
+        #Pass the elements of array into function
+        if use_kwargs:
+            futures = [pool.submit(function, **a) for a in array[front_num:]]
+        else:
+            futures = [pool.submit(function, a) for a in array[front_num:]]
+        kwargs = {
+            'total': len(futures),
+            'unit': 'it',
+            'unit_scale': True,
+            'leave': True
+        }
+        #Print out the progress as tasks complete
+        for f in tqdm(as_completed(futures), **kwargs):
+            del f
+            #pass
+    out = []
+    #Get the results from the futures. 
+    for i, future in tqdm(enumerate(futures)):
+        del i
+        try:
+            out.append(future.result())
+        except Exception as e:
+            out.append(e)
+    return front + out
 
+def split_range(N, M):
+    #list0 = np.arange(0,N)
+    dx = round(N/M)
+    list00 = []
+    for i in range(M):
+        a0 = i*dx
+        b0 = (i+1)*dx
+        
+        if b0 > N: 
+            b0 = N
+            
+        l0 = np.arange(a0,b0)
+        list00.append(l0)
+        
+    return list00
+    
+
+def split_box(data,row_sample,col_sample):
+    data_split= []
+    row,col = data.shape
+    list_row = split_range(row, row_sample)
+    list_col = split_range(col, col_sample)
+    
+    for i in range(row_sample):
+        for j in range(col_sample):
+            y0 = min(list_row[i])
+            y1 = max(list_row[i])
+            
+            x0 = min(list_col[j])
+            x1 = max(list_col[j])
+            
+            data0 = data[y0:y1+1,x0:x1+1]
+            data_split.append(data0)
+            
+    return data_split
+            
+def function(data0):
+        points, zz1, zz2, grid_x0, grid_y0 = data0
+        grid_lat0 = griddata(points, zz1, (grid_x0, grid_y0), method='nearest')
+        grid_lon0 = griddata(points, zz2, (grid_x0, grid_y0), method='nearest')
+        
+        return grid_lat0, grid_lon0
+
+    
+def cmd_line_parse():
+    parser = argparse.ArgumentParser(description='Convert geo-coord lookup table (GAMMA, ROI_PAC) into radar-coord (ISCE)',
+                                     formatter_class=argparse.RawTextHelpFormatter,
+                                     epilog=INTRODUCTION+'\n'+EXAMPLE)
+
+    parser.add_argument('geometryGeo',help='geometryGeo file which includes geo-coordinates based lookup-table')
+    parser.add_argument('-w','--write', dest='write', metavar='FILE', default = 'geometryRadar.h5',
+                      help='update geometryRadar.h5 file by adding the radar-coordinates based lookup-table.')
+    parser.add_argument('--parallel', dest='parallelNumb', type=int, metavar='NUM',default = 1,
+                      help='Enable parallel processing and specify the the used processor number.[default: 1]')
+    
+    inps = parser.parse_args()
+
+    return inps
 ################################################################################    
     
     
@@ -192,7 +175,6 @@ def main(argv):
     geom = inps.geometryGeo
     rangeCoord = readfile.read(geom,datasetName = 'rangeCoord')[0]
     azimuthCoord = readfile.read(geom,datasetName = 'azimuthCoord')[0]
-    Search_Linear_Number = inps.search_line_numb
     rangeCoord = rangeCoord.astype(np.float64)
     azimuthCoord = azimuthCoord.astype(np.float64)
     #CPX_lt =complex(rangeCoord + '+' + azimuthCoord+'j')
@@ -222,24 +204,117 @@ def main(argv):
     LAT = float(Corner_LAT) + yv*float(post_Lat)
     LON = float(Corner_LON) + xv*float(post_Lon)
     LAT = LAT.flatten()
-    LON = LON.flatten()
-    #print(len(LAT))   
+    LON = LON.flatten() 
         
     WIDTH  = int(meta['WIDTH'])
     LENGTH  = int(meta['LENGTH'])
+    
+    
+    xx0 = rangeCoord.flatten()
+    yy0 = azimuthCoord.flatten()
+    
+    zz01 = LAT.flatten()
+    zz02 = LON.flatten()
+    
+    xx = xx0[xx0!=0]
+    yy = yy0[xx0!=0]
+    zz1 = zz01[xx0!=0] #lat 
+    zz2 = zz02[xx0!=0] # lon
+    
+    #points = (xx,yy)
+    #points = np.zeros((len(xx),2))
+    #points[:,0] = xx
+    #points[:,1] = yy
+    
+    x = np.arange(0,WIDTH)
+    y = np.arange(0,LENGTH)
+    grid_x, grid_y = np.meshgrid(x, y)
+    
+    row_sample = 10
+    col_sample = 10
+    
+    list_row = split_range(LENGTH, row_sample)
+    list_col = split_range(WIDTH, col_sample)
+    
+    split_grid_y= split_box(grid_y,row_sample,col_sample)
+    split_grid_x = split_box(grid_x,row_sample,col_sample)
+    
+    data_parallel = []
+    for i in range(len(split_grid_y)):
+        #print(str(i))
+        ax = split_grid_x[i]
+        ay = split_grid_y[i]
         
-    Radar = np.arange(0,WIDTH*LENGTH) +1
-    Radar = Radar.reshape(LENGTH,WIDTH)
-    Radar = Radar.flatten()
+        # extend the search area by 5 pixels
+        max_ax = max(ax.flatten()) + 5 
+        min_ax = min(ax.flatten()) - 5
+        
+        max_ay = max(ay.flatten()) + 5
+        min_ay = min(ay.flatten()) - 5
+        
+        f0 = np.where((min_ax < xx) & (xx < max_ax) & (min_ay < yy) & (yy < max_ay))
+        xx0 = xx[f0]
+        yy0 = yy[f0]
+        zz10 = zz1[f0]
+        zz20 = zz2[f0]
+        
+        points0 = np.zeros((len(xx0),2))
+        points0[:,0] = xx0
+        points0[:,1] = yy0
+        
+        #print(split_grid_x[i].shape)
+        
+        data0 = (points0, zz10, zz20, split_grid_x[i],split_grid_y[i])
+        data_parallel.append(data0)
     
-    #IDX = get_idx(Rdc_IDX,Radar,n=4000)
-    IDX = get_idx_cpx(rangeCoord,azimuthCoord,WIDTH,LENGTH,Search_Linear_Number) #every two lines update the search pool.
+    #grid_lat_all = []
+    #grid_lon_all = []
     
-    lat_sar = LAT[IDX]
-    lon_sar = LON[IDX]
+    #print(grid_x.shape)
+    #prog_bar = ptime.progressBar(maxValue=100)
+    #for i in range(len(split_grid_y)):
+    #    #grid_x0 = split_grid_x[i]
+    #    #grid_y0 = split_grid_y[i]
+    #    #print(grid_x0.shape)
+    #    points0, zz10,zz20,grid_x0, grid_y0 = data_parallel[i]
+        
+    #    grid_lat0 = griddata(points0, zz10, (grid_x0, grid_y0), method='linear')
+    #    grid_lat_all.append(grid_lat0)
+        
+    #    grid_lon0 = griddata(points0, zz20, (grid_x0, grid_y0), method='linear')
+    #    grid_lon_all.append(grid_lon0)
+    #    prog_bar.update(i+1, every=1, suffix='{}/{} boxes'.format(i+1, 100))
+    #prog_bar.close() 
     
-    lat_sar = lat_sar.reshape(LENGTH,WIDTH)
-    lon_sar = lon_sar.reshape(LENGTH,WIDTH)
+    grid_lat = np.zeros((LENGTH,WIDTH),dtype = np.float32)
+    grid_lon = np.zeros((LENGTH,WIDTH),dtype = np.float32)
+    
+    proNumb = inps.parallelNumb
+    future = np.zeros((len(data_parallel),))
+    future = list(future)
+    future = parallel_process(data_parallel, function, n_jobs= proNumb, use_kwargs=False, front_num=1)
+
+    for i in range(row_sample):
+        for j in range(col_sample):
+            k0 = i*col_sample + j
+            kk = future[k0]
+            y0 = min(list_row[i])
+            y1 = max(list_row[i])  
+            x0 = min(list_col[j])
+            x1 = max(list_col[j])
+            #print(kk)
+            try:
+                lat0 = kk[0]
+                lon0 = kk[1]
+        
+                grid_lat[y0:y1+1,x0:x1+1] = lat0
+                grid_lon[y0:y1+1,x0:x1+1] = lon0
+            except Exception as e:
+                del e
+            
+    #grid_lat = griddata(points, zz1, (grid_x, grid_y), method='nearest')
+    #grid_lon = griddata(points, zz2, (grid_x, grid_y), method='nearest')
+
     
     dataNames = get_dataNames(inps.write)
     datasetDict = dict()
@@ -249,10 +324,12 @@ def main(argv):
         datasetDict[k0] = readfile.read(inps.write,datasetName = k0)[0]
      
     DEM  = readfile.read(inps.write,datasetName = 'height')[0]
-    lat_sar[DEM==0] = 0
-    lon_sar[DEM==0] = 0
-    datasetDict['latitude'] = lat_sar.astype(np.float32)
-    datasetDict['longitude'] = lon_sar.astype(np.float32)
+    grid_lat[DEM==0] = 0
+    grid_lon[DEM==0] = 0
+    grid_lat[grid_lat==0] = 'nan'
+    grid_lon[grid_lon==0] = 'nan'
+    datasetDict['latitude'] = grid_lat
+    datasetDict['longitude'] = grid_lon
     write_h5(datasetDict, inps.write, metadata=meta, ref_file=None, compression=None)
     
     print('done.')
