@@ -96,10 +96,12 @@ def parallel_process(array, function, n_jobs=16, use_kwargs=False, front_num=1):
         }
         #Print out the progress as tasks complete
         for f in tqdm(as_completed(futures), **kwargs):
+            del f
             pass
     out = []
     #Get the results from the futures. 
     for i, future in tqdm(enumerate(futures)):
+        del i
         try:
             out.append(future.result())
         except Exception as e:
@@ -107,7 +109,7 @@ def parallel_process(array, function, n_jobs=16, use_kwargs=False, front_num=1):
     return front + out
 
 def split_range(N, M):
-    list0 = np.arange(0,N)
+    #list0 = np.arange(0,N)
     dx = round(N/M)
     list00 = []
     for i in range(M):
@@ -137,15 +139,15 @@ def split_box(data,row_sample,col_sample):
             x0 = min(list_col[j])
             x1 = max(list_col[j])
             
-            data0 = data[y0:y1,x0:x1]
+            data0 = data[y0:y1+1,x0:x1+1]
             data_split.append(data0)
             
     return data_split
             
 def function(data0):
-        points, zz1, zz2, grid_x,grid_y = data0
-        grid_lat0 = griddata(points, zz1, (grid_x, grid_y), method='linear')
-        grid_lon0 = griddata(points, zz2, (grid_x, grid_y), method='linear')
+        points, zz1, zz2, grid_x0, grid_y0 = data0
+        grid_lat0 = griddata(points, zz1, (grid_x0, grid_y0), method='nearest')
+        grid_lon0 = griddata(points, zz2, (grid_x0, grid_y0), method='nearest')
         
         return grid_lat0, grid_lon0
 
@@ -173,7 +175,6 @@ def main(argv):
     geom = inps.geometryGeo
     rangeCoord = readfile.read(geom,datasetName = 'rangeCoord')[0]
     azimuthCoord = readfile.read(geom,datasetName = 'azimuthCoord')[0]
-    Search_Linear_Number = inps.search_line_numb
     rangeCoord = rangeCoord.astype(np.float64)
     azimuthCoord = azimuthCoord.astype(np.float64)
     #CPX_lt =complex(rangeCoord + '+' + azimuthCoord+'j')
@@ -229,10 +230,8 @@ def main(argv):
     y = np.arange(0,LENGTH)
     grid_x, grid_y = np.meshgrid(x, y)
     
-    #grid_x, grid_y= np.mgrid[0:1:WIDTH*1j, 0:1:LENGTH*1j]
-    row_sample = 30
-    col_sample = 30
-    
+    row_sample = 10
+    col_sample = 10
     
     list_row = split_range(LENGTH, row_sample)
     list_col = split_range(WIDTH, col_sample)
@@ -263,11 +262,13 @@ def main(argv):
         points0[:,0] = xx0
         points0[:,1] = yy0
         
+        #print(split_grid_x[i].shape)
+        
         data0 = (points0, zz10, zz20, split_grid_x[i],split_grid_y[i])
         data_parallel.append(data0)
     
-    grid_lat_all = []
-    grid_lon_all = []
+    #grid_lat_all = []
+    #grid_lon_all = []
     
     #print(grid_x.shape)
     #prog_bar = ptime.progressBar(maxValue=100)
@@ -285,27 +286,34 @@ def main(argv):
     #    prog_bar.update(i+1, every=1, suffix='{}/{} boxes'.format(i+1, 100))
     #prog_bar.close() 
     
+    grid_lat = np.zeros((LENGTH,WIDTH),dtype = np.float32)
+    grid_lon = np.zeros((LENGTH,WIDTH),dtype = np.float32)
+    
     proNumb = inps.parallelNumb
     future = parallel_process(data_parallel, function, n_jobs= proNumb, use_kwargs=False, front_num=1)
+
     
     for i in range(row_sample):
         for j in range(col_sample):
-            k0 = i*col_sample + col_sample
-            lat0, lon0 = future[i]
-            #lat0 = grid_lat_all[k0]
-            #lon0 = grid_lon_all[k0]
-            
-            y0 = min(list_row[i])
-            y1 = max(list_row[i])
-            
-            x0 = min(list_col[j])
-            x1 = max(list_col[j])
-        
-            grid_lat[y0:y1,x0:x1] = lat0
-            grid_lon[y0:y1,x0:x1] = lon0
+            k0 = i*col_sample + j
+            kk = future[k0]
+            #print(kk)
+            try:
+                lat0 = kk[0]
+                lon0 = kk[1]
 
-    #grid_lat = griddata(points, zz1, (grid_x, grid_y), method='linear')
-    #grid_lon = griddata(points, zz2, (grid_x, grid_y), method='linear')
+                y0 = min(list_row[i])
+                y1 = max(list_row[i])
+            
+                x0 = min(list_col[j])
+                x1 = max(list_col[j])
+        
+                grid_lat[y0:y1+1,x0:x1+1] = lat0
+                grid_lon[y0:y1+1,x0:x1+1] = lon0
+            except:
+                pass
+    #grid_lat = griddata(points, zz1, (grid_x, grid_y), method='nearest')
+    #grid_lon = griddata(points, zz2, (grid_x, grid_y), method='nearest')
 
     
     dataNames = get_dataNames(inps.write)
@@ -318,6 +326,8 @@ def main(argv):
     DEM  = readfile.read(inps.write,datasetName = 'height')[0]
     grid_lat[DEM==0] = 0
     grid_lon[DEM==0] = 0
+    grid_lat[grid_lat==0] = 'nan'
+    grid_lon[grid_lon==0] = 'nan'
     datasetDict['latitude'] = grid_lat
     datasetDict['longitude'] = grid_lon
     write_h5(datasetDict, inps.write, metadata=meta, ref_file=None, compression=None)
