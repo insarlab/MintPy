@@ -384,7 +384,7 @@ def correct_dem_error(inps, A_def):
             step_model[:, mask] = step_model_i
     else:
         # mask
-        print('skip pixels with zero/nan value in geometry: incidence angle or range distance')
+        print('skip pixels with zero/nan value in geometry: incidenceAngle or slantRangeDistance')
         mask *= np.multiply(inps.sinIncAngle != 0., inps.rangeDist != 0.)
 
         num_pixel2inv = np.sum(mask)
