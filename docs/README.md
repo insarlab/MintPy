@@ -6,6 +6,7 @@
 [![Latest version](https://img.shields.io/badge/latest%20version-v1.2.0-yellowgreen.svg)](https://github.com/insarlab/MintPy/releases)
 [![License](https://img.shields.io/badge/license-GPLv3-yellow.svg)](https://github.com/insarlab/MintPy/blob/master/LICENSE)
 [![Forum](https://img.shields.io/badge/forum-Google%20Group-orange.svg)](https://groups.google.com/forum/#!forum/mintpy)
+[![Citation](https://img.shields.io/badge/DOI-10.31223%2Fosf.io%2F9sz6m-blue)](https://eartharxiv.org/9sz6m/)
 
 The Miami INsar Time-series software in PYthon (MintPy) is an open-source package for Interferometric Synthetic Aperture Radar time series analysis. It reads the stack of interferograms (coregistered and unwrapped) in [ISCE](https://github.com/isce-framework/isce2), GAMMA, [ARIA](https://github.com/aria-tools/ARIA-tools), [SNAP](http://step.esa.int/) or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground surface displacement. It includes a routine time series analysis (`smallbaselineApp.py`) and some independent toolbox.
 
@@ -70,6 +71,7 @@ MintPy is a toolbox with a lot of individual utility scripts, highly modulized i
 
 + [Tutorials in Jupyter Notebook](./tutorials/README.md)
 + [Example datasets](./example_dataset.md)
++ [Example data directory](./dir_structure.md)
 + [Example template files for InSAR processors](./examples/input_files/README.md)
 + [Google Earth KMZ file](./google_earth.md)
 + [Paper figures in Jupyter Notebook](./paper/README.md)
