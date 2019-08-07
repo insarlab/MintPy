@@ -20,14 +20,21 @@ except ImportError:
 
 ####################################################################################
 EXAMPLE = """example:
-  # run ARIA-tools to download and extract inteferograms stack for time-series analysis.
+  # 1. run ARIA-tools to download and extract inteferograms stack for time-series analysis.
   # reference: https://github.com/aria-tools/ARIA-tools
   conda activate ARIA-tools
   ariaDownload.py -b '37.25 38.1 -122.6 -121.75' --track 42
   ariaTSsetup.py -f 'products/*.nc' -b '37.25 38.1 -122.6 -121.75' --mask Download
 
+  # 2. run prep_aria.py to load into HDF5 files
   prep_aria.py -w mintpy -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt 
   prep_aria.py -w mintpy -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt -a azimuthAngle/20150605_20150512.vrt --water-mask mask/watermask.msk
+
+  # 3. run smallbaselineApp.py for time series analysis
+  conda deactivate
+  conda activate mintpy
+  smallbaselineApp.py -g #generate smallbaselineApp.cfg file (modify default auto value)
+  smallbaselineApp.py    #run routine analysis, or smallbaselineApp.py --start modify_network
 """
 
 def create_parser():
