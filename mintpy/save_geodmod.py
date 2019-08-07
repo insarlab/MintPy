@@ -2,7 +2,7 @@
 ############################################################
 # Program is used for extract accumulated displacement of period
 # Author: Lv Xiaoran                                       #
-# Created: Aug 2019                                        #
+# Created: August 2019                                        #
 ############################################################
 
 import os
