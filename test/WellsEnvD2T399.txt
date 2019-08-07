@@ -23,6 +23,7 @@ mintpy.networkInversion.weightFunc              = no
 mintpy.troposphericDelay.weatherModel           = ECMWF
 mintpy.topographicResidual.stepFuncDate         = 20080221
 mintpy.topographicResidual.pixelwiseGeometry    = no
+mintpy.save.hdfEos5         = yes
 
 ##------------------------  HDF-EOS5 --------------------------------##
 mission             = Env                 # ERS,ENV,S1,RS1,RS2,CSK,TSX,JERS,ALOS,ALOS2
