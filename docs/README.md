@@ -3,7 +3,7 @@
 [![Language](https://img.shields.io/badge/python-3.5%2B-blue.svg)](https://www.python.org/)
 [![Docs Status](https://readthedocs.org/projects/mintpy/badge/?version=latest)](https://mintpy.readthedocs.io/?badge=latest)
 [![CircleCI](https://img.shields.io/circleci/build/github/insarlab/MintPy.svg?color=green&logo=circleci)](https://circleci.com/gh/insarlab/MintPy)
-[![Latest version](https://img.shields.io/badge/latest%20version-v1.2.0-yellowgreen.svg)](https://github.com/insarlab/MintPy/releases)
+[![Latest version](https://img.shields.io/badge/latest%20version-v1.2-yellowgreen.svg)](https://github.com/insarlab/MintPy/releases)
 [![License](https://img.shields.io/badge/license-GPLv3-yellow.svg)](https://github.com/insarlab/MintPy/blob/master/LICENSE)
 [![Forum](https://img.shields.io/badge/forum-Google%20Group-orange.svg)](https://groups.google.com/forum/#!forum/mintpy)
 [![Citation](https://img.shields.io/badge/DOI-10.31223%2Fosf.io%2F9sz6m-blue)](https://eartharxiv.org/9sz6m/)
@@ -82,7 +82,7 @@ Join our google group [https://groups.google.com/forum/#!forum/mintpy](https://g
 
 ### 5. Citing this work ###
 
-+ Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: unwrapping error correction and noise reduction (under review), preprint doi:[10.31223/osf.io/9sz6m](https://eartharxiv.org/9sz6m/)
+Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: unwrapping error correction and noise reduction (under review), preprint doi:[10.31223/osf.io/9sz6m](https://eartharxiv.org/9sz6m/)
 
 In addition to the above, we recommend that you cite the original publications that describe the algorithms used in your specific analysis.
 
