@@ -80,6 +80,12 @@ MintPy is a toolbox with a lot of individual utility scripts, highly modulized i
 
 Join our google group [https://groups.google.com/forum/#!forum/mintpy](https://groups.google.com/forum/#!forum/mintpy) to ask questions, get notice of latest features pushed to you!
 
+### 5. Citing this work ###
+
++ Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: unwrapping error correction and noise reduction (under review), preprint doi:[10.31223/osf.io/9sz6m](https://eartharxiv.org/9sz6m/)
+
+In addition to the above, we recommend that you cite the original publications that describe the algorithms used in your specific analysis.
+
 ### Contributors ###
 
 * Zhang Yunjun

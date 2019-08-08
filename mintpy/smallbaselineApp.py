@@ -70,7 +70,7 @@ EXAMPLE = """example:
 
 REFERENCE = """reference:
   Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: unwrapping error
-  correction and noise reduction (under review).
+  correction and noise reduction (under review), preprint doi:10.31223/osf.io/9sz6m.
 """
 
 def create_parser():
