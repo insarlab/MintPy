@@ -7,6 +7,7 @@
 
 
 import os
+import sys
 import argparse
 import numpy as np
 import scipy.stats as stats
@@ -88,7 +89,7 @@ def create_parser():
     parser = pp.add_data_disp_argument(parser)
     parser = pp.add_dem_argument(parser)
     parser = pp.add_figure_argument(parser)
-    #parser = pp.add_gps_argument(parser)
+    parser = pp.add_gps_argument(parser)
     parser = pp.add_mask_argument(parser)
     parser = pp.add_map_argument(parser)
     parser = pp.add_point_argument(parser)
@@ -102,6 +103,10 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    if '--gps-comp' in iargs:
+        msg = '--gps-comp is not supported for {}'.format(os.path.basename(__file__))
+        raise NotImplementedError(msg)
 
     if inps.file_label:
         if len(inps.file_label) != len(inps.timeseries_file):
@@ -797,11 +802,10 @@ def main(iargs=None):
     obj = timeseriesViewer(iargs=iargs)
     obj.configure()
     obj.plot()
-
     #obj.fig_img.canvas.mpl_disconnect(obj.cid)
     return
 
 
 #########################################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

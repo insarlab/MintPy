@@ -11,14 +11,17 @@
 import os
 import sys
 import argparse
-from datetime import datetime as dt
+import datetime as dt
 import numpy as np
 #import matplotlib; matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
-import matplotlib.cbook
-import warnings
-warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+# suppress UserWarning from matplotlib
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
+#import matplotlib.cbook
+#warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
 
 from mintpy.objects import (
     geometryDatasetNames,
@@ -1031,7 +1034,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
         subplot_title = None
         if inps.key in timeseriesKeyNames or inps.dset[0].startswith('bperp'):
             try:
-                subplot_title = dt.strptime(inps.dset[i].split('-')[1], '%Y%m%d').isoformat()[0:10]
+                subplot_title = dt.datetime.strptime(inps.dset[i].split('-')[1], '%Y%m%d').isoformat()[0:10]
             except:
                 subplot_title = str(inps.dset[i])
         elif inps.key in ['ifgramStack', 'interferograms', 'coherence', 'wrapped']:
@@ -1402,4 +1405,4 @@ def main(iargs=None):
 
 ##################################################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
