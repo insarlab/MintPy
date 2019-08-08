@@ -221,13 +221,17 @@ def write_kmz_file(data, metadata, out_file, inps=None):
 
     # Add data png file
     img_name = os.path.splitext(os.path.basename(data_png_file))[0]
-    img = KML.GroundOverlay(KML.name(img_name),
-                            KML.Icon(KML.href(data_png_file)),
-                            KML.altitudeMode('clampToGround'),
-                            KML.LatLonBox(KML.north(str(north)),
-                                          KML.east(str(east)),
-                                          KML.south(str(south)),
-                                          KML.west(str(west))))
+    img = KML.GroundOverlay(
+        KML.name(img_name),
+        KML.Icon(
+            KML.href(os.path.basename(data_png_file))
+        ),
+        KML.altitudeMode('clampToGround'),
+        KML.LatLonBox(KML.north(str(north)),
+                      KML.east(str(east)),
+                      KML.south(str(south)),
+                      KML.west(str(west)))
+    )
     doc.Folder.append(img)
 
     # Add colorbar png file
@@ -246,16 +250,26 @@ def write_kmz_file(data, metadata, out_file, inps=None):
     with open(kml_file, 'w') as f:
         f.write(kmlstr)
 
-    # 2.4 Generate KMZ file
+    # 2.4 Generate KMZ file, by
+    # 1) go to the directory of kmz file
+    # 2) zip all data files
+    # 3) go back to the working directory
     kmz_file = '{}.kmz'.format(out_name_base)
-    cmdKMZ = 'zip {} {} {} {}'.format(kmz_file, kml_file, data_png_file, cbar_file)
-    print('writing {}\n{}'.format(kmz_file, cmdKMZ))
-    os.system(cmdKMZ)
+    cmd = 'cd {d1}; zip {fz} {fl} {fd} {fc}; cd {d2}'.format(
+        d1=os.path.dirname(kmz_file),
+        fz=os.path.basename(kmz_file),
+        fl=os.path.basename(kml_file),
+        fd=os.path.basename(data_png_file),
+        fc=os.path.basename(cbar_file),
+        d2=os.getcwd()
+    )
+    print(cmd)
+    os.system(cmd)
     print('finished wirting to {}'.format(kmz_file))
 
-    cmdClean = 'rm {} {} {}'.format(kml_file, data_png_file, cbar_file)
-    print(cmdClean)
-    os.system(cmdClean)
+    cmd = 'rm {} {} {}'.format(kml_file, data_png_file, cbar_file)
+    print(cmd)
+    os.system(cmd)
 
     return kmz_file
 
@@ -298,7 +312,7 @@ def main(iargs=None):
                    metadata=atr,
                    out_file=inps.outfile,
                    inps=inps)
-    return
+    return inps.outfile
 
 
 #######################################################
