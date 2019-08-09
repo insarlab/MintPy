@@ -38,7 +38,7 @@ EXAMPLE = """example:
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Convert MintPy timeseries product into HDF-EOS5 format\n' +
-                                     'https://earthdata.nasa.gov/user-resources/standards-and-references/hdf-eos5',
+                                     'https://earthdata.nasa.gov/esdis/eso/standards-and-references/hdf-eos5',
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
                                      epilog=EXAMPLE)
 

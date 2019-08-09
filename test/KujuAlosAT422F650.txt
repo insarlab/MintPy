@@ -23,6 +23,7 @@ mintpy.networkInversion.weightFunc              = no
 mintpy.troposphericDelay.weatherModel           = ECMWF
 mintpy.topographicResidual.pixelwiseGeometry    = no
 mintpy.deramp                                   = linear
+mintpy.save.hdfEos5                             = yes
 
 ##————————————————————————————— HDF-EOS5 Attributes -—————————————————————————##
 beam_mode           = SM

@@ -359,6 +359,7 @@ def correct_dem_error(inps, A_def):
     if num_step > 0:
         step_model = np.zeros((num_step, num_pixel), dtype=np.float32)
 
+    # initiate mask based on time-series
     print('skip pixels with ZERO in ALL acquisitions')
     mask = np.nanmean(ts_data, axis=0) != 0.
     print('skip pixels with NaN  in ANY acquisitions')
@@ -383,9 +384,11 @@ def correct_dem_error(inps, A_def):
         if num_step > 0:
             step_model[:, mask] = step_model_i
     else:
-        # mask
-        print('skip pixels with zero/nan value in geometry: incidence angle or range distance')
-        mask *= np.multiply(inps.sinIncAngle != 0., inps.rangeDist != 0.)
+        # update mask based on geometry
+        print('skip pixels with ZERO / NaN value in incidenceAngle / slantRangeDistance')
+        for geom_data in [inps.sinIncAngle, inps.rangeDist]:
+            mask *= geom_data != 0.
+            mask *= ~np.isnan(geom_data)
 
         num_pixel2inv = np.sum(mask)
         idx_pixel2inv = np.where(mask)[0]

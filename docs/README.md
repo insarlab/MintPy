@@ -3,9 +3,10 @@
 [![Language](https://img.shields.io/badge/python-3.5%2B-blue.svg)](https://www.python.org/)
 [![Docs Status](https://readthedocs.org/projects/mintpy/badge/?version=latest)](https://mintpy.readthedocs.io/?badge=latest)
 [![CircleCI](https://img.shields.io/circleci/build/github/insarlab/MintPy.svg?color=green&logo=circleci)](https://circleci.com/gh/insarlab/MintPy)
-[![Latest version](https://img.shields.io/badge/latest%20version-v1.2.0-yellowgreen.svg)](https://github.com/insarlab/MintPy/releases)
+[![Latest version](https://img.shields.io/badge/latest%20version-v1.2-yellowgreen.svg)](https://github.com/insarlab/MintPy/releases)
 [![License](https://img.shields.io/badge/license-GPLv3-yellow.svg)](https://github.com/insarlab/MintPy/blob/master/LICENSE)
 [![Forum](https://img.shields.io/badge/forum-Google%20Group-orange.svg)](https://groups.google.com/forum/#!forum/mintpy)
+[![Citation](https://img.shields.io/badge/DOI-10.31223%2Fosf.io%2F9sz6m-blue)](https://eartharxiv.org/9sz6m/)
 
 The Miami INsar Time-series software in PYthon (MintPy) is an open-source package for Interferometric Synthetic Aperture Radar time series analysis. It reads the stack of interferograms (coregistered and unwrapped) in [ISCE](https://github.com/isce-framework/isce2), GAMMA, [ARIA](https://github.com/aria-tools/ARIA-tools), [SNAP](http://step.esa.int/) or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground surface displacement. It includes a routine time series analysis (`smallbaselineApp.py`) and some independent toolbox.
 
@@ -57,7 +58,7 @@ view.py                    #2D map view
 tsview.py                  #1D point time-series (interactive)   
 plot_coherence_matrix.py   #plot coherence matrix for one pixel (interactive)
 plot_network.py            #plot network configuration of the dataset    
-plot_transection.py        #1D profile (interactive)
+plot_transection.py        #plot 1D profile along a line of a 2D matrix (interactive)
 save_kmz.py                #generate Google Earth KMZ file in raster image
 save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
 ```
@@ -70,6 +71,7 @@ MintPy is a toolbox with a lot of individual utility scripts, highly modulized i
 
 + [Tutorials in Jupyter Notebook](./tutorials/README.md)
 + [Example datasets](./example_dataset.md)
++ [Example data directory](./dir_structure.md)
 + [Example template files for InSAR processors](./examples/input_files/README.md)
 + [Google Earth KMZ file](./google_earth.md)
 + [Paper figures in Jupyter Notebook](./paper/README.md)
@@ -77,6 +79,12 @@ MintPy is a toolbox with a lot of individual utility scripts, highly modulized i
 ### 4. User Forum ###
 
 Join our google group [https://groups.google.com/forum/#!forum/mintpy](https://groups.google.com/forum/#!forum/mintpy) to ask questions, get notice of latest features pushed to you!
+
+### 5. Citing this work ###
+
+Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: unwrapping error correction and noise reduction (under review), preprint doi:[10.31223/osf.io/9sz6m](https://eartharxiv.org/9sz6m/)
+
+In addition to the above, we recommend that you cite the original publications that describe the algorithms used in your specific analysis.
 
 ### Contributors ###
 

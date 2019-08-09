@@ -1,0 +1,34 @@
+# create environment : conda env create -f conda_env.yml
+# update dependencies: conda env update -f conda_env.yml
+# remove environment : conda env remove -n mintpy
+# enter  environment : conda activate mintpy
+# exit   environment : conda deactivate
+name: mintpy
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.6
+  - cdsapi
+  - cvxopt
+  - dask>=1.0,<2.0
+  - dask-jobqueue>=0.3,<1.0
+  - ecCodes
+  - h5py
+  - lxml
+  - matplotlib
+  - netcdf4
+  - numpy
+  - openmp
+  - pip
+  - pygrib
+  - pyhdf
+  - pykdtree
+  - pyproj
+  - pyresample
+  - scikit-image
+  - scipy
+  - pip:
+    - git+https://github.com/matplotlib/basemap.git#egg=mpl_toolkits
+    - git+https://github.com/tylere/pykml.git
+

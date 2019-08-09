@@ -1422,13 +1422,15 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             prog_bar = ptime.progressBar(maxValue=num_site)
 
         # get insar_obj (meta / geom_file)
-        geom_file = ut.get_geometry_file(dset='incidenceAngle',
+        geom_file = ut.get_geometry_file(['incidenceAngle','azimuthAngle'],
                                          work_dir=os.path.dirname(inps.file),
                                          coord='geo')
         if geom_file:
             geom_obj = geom_file
+            print('use incidenceAngle/azimuthAngle from file: {}'.format(os.path.basename(geom_file)))
         else:
             geom_obj = metadata
+            print('use incidenceAngle/azimuthAngle calculated from metadata')
         
         for i in range(num_site):
             obj = GPS(site_names[i])

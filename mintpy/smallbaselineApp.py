@@ -70,7 +70,7 @@ EXAMPLE = """example:
 
 REFERENCE = """reference:
   Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: unwrapping error
-  correction and noise reduction (under review).
+  correction and noise reduction (under review), preprint doi:10.31223/osf.io/9sz6m.
 """
 
 def create_parser():
@@ -367,15 +367,6 @@ class TimeSeriesAnalysis:
         # 3) check loading result
         load_complete, stack_file, geom_file = ut.check_loaded_dataset(self.workDir, print_msg=True)[0:3]
 
-        # 3.1) output waterMask.h5
-        water_mask_file = 'waterMask.h5'
-        if 'waterMask' in readfile.get_dataset_list(geom_file):
-            print('generate {} from {} for conveniency'.format(water_mask_file, geom_file))
-            if ut.run_or_skip(out_file=water_mask_file, in_file=geom_file) == 'run':
-                water_mask, atr = readfile.read(geom_file, datasetName='waterMask')
-                atr['FILE_TYPE'] = 'waterMask'
-                writefile.write(water_mask, out_file=water_mask_file, metadata=atr)
-
         # 4) add custom metadata (optional)
         if self.customTemplateFile:
             print('updating {}, {} metadata based on custom template file: {}'.format(
@@ -425,19 +416,28 @@ class TimeSeriesAnalysis:
     def run_network_modification(self, step_name):
         """Modify network of interferograms before the network inversion."""
         # check the existence of ifgramStack.h5
-        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        stack_file, geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1:3]
         coh_txt = '{}_coherence_spatialAvg.txt'.format(os.path.splitext(os.path.basename(stack_file))[0])
         try:
             net_fig = [i for i in ['Network.pdf', 'pic/Network.pdf'] if os.path.isfile(i)][0]
         except:
             net_fig = None
 
-        # 1) modify network
+        # 1) output waterMask.h5 to simplify the detection/use of waterMask
+        water_mask_file = 'waterMask.h5'
+        if 'waterMask' in readfile.get_dataset_list(geom_file):
+            print('generate {} from {} for conveniency'.format(water_mask_file, geom_file))
+            if ut.run_or_skip(out_file=water_mask_file, in_file=geom_file) == 'run':
+                water_mask, atr = readfile.read(geom_file, datasetName='waterMask')
+                atr['FILE_TYPE'] = 'waterMask'
+                writefile.write(water_mask, out_file=water_mask_file, metadata=atr)
+
+        # 2) modify network
         scp_args = '{} -t {}'.format(stack_file, self.templateFile)
         print('modify_network.py', scp_args)
         mintpy.modify_network.main(scp_args.split())
 
-        # 2) plot network
+        # 3) plot network
         scp_args = '{} -t {} --nodisplay'.format(stack_file, self.templateFile)
         print('\nplot_network.py', scp_args)
         if ut.run_or_skip(out_file=net_fig,
@@ -445,21 +445,19 @@ class TimeSeriesAnalysis:
                           check_readable=False) == 'run':
             mintpy.plot_network.main(scp_args.split())
 
-        # 3) aux files: maskConnComp and avgSpatialCoh
+        # 4) aux files: maskConnComp and avgSpatialCoh
         self.generate_ifgram_aux_file()
         return
 
 
     def generate_ifgram_aux_file(self):
-        """Generate auxiliary files from ifgramStack file, including:
-        
-        """
+        """Generate auxiliary files from ifgramStack file"""
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
-        cc_mask_file = 'maskConnComp.h5'
+        mask_file = 'maskConnComp.h5'
         coh_file = 'avgSpatialCoh.h5'
 
         # 1) generate mask file from the common connected components
-        scp_args = '{} --nonzero -o {} --update'.format(stack_file, cc_mask_file)
+        scp_args = '{} --nonzero -o {} --update'.format(stack_file, mask_file)
         print('\ngenerate_mask.py', scp_args)
         mintpy.generate_mask.main(scp_args.split())
 
@@ -478,6 +476,7 @@ class TimeSeriesAnalysis:
         """
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
         coh_file = 'avgSpatialCoh.h5'
+
         scp_args = '{} -t {} -c {}'.format(stack_file, self.templateFile, coh_file)
         print('reference_point.py', scp_args)
         mintpy.reference_point.main(scp_args.split())
@@ -971,6 +970,7 @@ class TimeSeriesAnalysis:
         transect.py                #1D profile (interactive)
         plot_coherence_matrix.py   #plot coherence matrix for one pixel (interactive)
         plot_network.py            #plot network configuration of the dataset    
+        plot_transection.py        #plot 1D profile along a line of a 2D matrix (interactive)
         save_kmz.py                #generate Google Earth KMZ file in raster image
         save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
         """
