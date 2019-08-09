@@ -6,19 +6,12 @@
 ############################################################
 
 import os
-import re
-import time
-import datetime
-import shutil
 import argparse
-import subprocess
-import numpy as np
 
 import mintpy
 import mintpy.workflow  #dynamic import for modules used by pysarApp workflow
-from mintpy.objects import sensor, RAMP_LIST
-from mintpy.utils import readfile, writefile, utils as ut
-from mintpy.defaults.auto_path import autoPath
+from mintpy.objects import sensor
+from mintpy.utils import readfile, writefile
 
 ######################################################################################
 EXAMPLE = """example:
@@ -61,7 +54,8 @@ def cmd_line_parse(iargs=None):
 def format_args(arr, dst=""):
     """ parse list array(list item or values) to string """
     for k in arr:
-        if type(k) == list:
+        if isinstance(k,list):
+        #if type(k) == list:
             dst = dst + " " + format_args(k)
         else:
             dst = dst + " " + str(k)
