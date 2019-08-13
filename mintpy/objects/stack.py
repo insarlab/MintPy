@@ -292,8 +292,8 @@ class timeseries:
                 zSize , ySize, xSize = data.shape
                 block = [0, zSize, 0, ySize, 0, xSize]
         
+        print("writing dataset /{:<25} block: {}".format(dsname, block))
         if len(block) == 6:
-            print("writing block : ", block)
             self.f[dsname][block[0]:block[1], block[2]:block[3], block[4]:block[5]] = data
 
         elif len(block) == 4:
