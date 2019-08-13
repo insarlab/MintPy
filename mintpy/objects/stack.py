@@ -297,11 +297,9 @@ class timeseries:
             self.f[dsname][block[0]:block[1], block[2]:block[3], block[4]:block[5]] = data
 
         elif len(block) == 4:
-            print("writing block : ", block)
             self.f[dsname][block[0]:block[1], block[2]:block[3]] = data
 
         elif len(block) == 2:
-            print("writing block : ", block)
             self.f[dsname][block[0]:block[1]] = data
 
         return None
