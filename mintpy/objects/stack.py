@@ -279,7 +279,7 @@ class timeseries:
 
     def write2hdf5_block(self, data, dsname, block=None):
         if block is None:
-            if type(data)==list:
+            if isinstance(data, list):
                 shape=(len(data),)
             else:
                 shape = data.shape
