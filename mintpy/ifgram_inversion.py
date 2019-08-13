@@ -568,8 +568,8 @@ def write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg=None,
     writefile.write(num_inv_ifg, out_file=out_file, metadata=metadata)
     return
 
-def write2hdf5_auxFiles(ifgram_file, metadata, temp_coh, num_inv_ifg=None,
-                    suffix='', inps=None):
+
+def write2hdf5_auxFiles(metadata, temp_coh, num_inv_ifg=None, suffix='', inps=None):
 
     # File 2 - temporalCoherence.h5
     out_file = '{}{}.h5'.format(suffix, os.path.splitext(inps.outfile[1])[0])
@@ -586,6 +586,7 @@ def write2hdf5_auxFiles(ifgram_file, metadata, temp_coh, num_inv_ifg=None,
     writefile.write(num_inv_ifg, out_file=out_file, metadata=metadata)
 
     return None
+
 
 def split_ifgram_file(ifgram_file, chunk_size=100e6):
     """Split ifgramStack file into several smaller files."""
@@ -1096,8 +1097,6 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
 
     # Loop
     if not inps.parallel:
-        print('-'*50)
-        print('converting phase to range')
         ts_file = '{}.h5'.format(os.path.splitext(inps.outfile[0])[0])
         phase2range = -1*float(stack_obj.metadata['WAVELENGTH'])/(4.*np.pi)
 
@@ -1138,6 +1137,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
             # block = [zStart, zEnd, yStart, yEnd, xStart, xEnd]
             block = [0, num_date, box[1], box[3], box[0], box[2]]
             # convert phase 2 range change
+            print('converting phase to range')
             tsi *= phase2range
             temp_coh[box[1]:box[3], box[0]:box[2]] = temp_cohi
             num_inv_ifg[box[1]:box[3], box[0]:box[2]] = ifg_numi
@@ -1244,7 +1244,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         # for dask still use the old function to write. This needs also migrate to block-by-block writing
         write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg, suffix='', inps=inps)
     else:
-        write2hdf5_auxFiles(ifgram_file, metadata, temp_coh, num_inv_ifg, suffix='', inps=inps)
+        write2hdf5_auxFiles(metadata, temp_coh, num_inv_ifg, suffix='', inps=inps)
 
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
