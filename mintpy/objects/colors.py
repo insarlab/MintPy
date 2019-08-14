@@ -120,7 +120,7 @@ class ColormapExt(ScalarMappable):
             2) matlotlib
         """
         self.cpt_cmap_name_list = self.get_cpt_colormap(cmap_name=None)
-        self.plt_cmap_name_list = sorted(m for m in plt.cm.datad if not m.endswith('_r'))
+        self.plt_cmap_name_list = sorted(m for m in plt.colormaps() if not m.endswith('_r'))
         self.cmap_name_list = self.cpt_cmap_name_list + self.plt_cmap_name_list + ['dismph']
         return self.cmap_name_list
 

@@ -24,6 +24,10 @@ EXAMPLE = """example:
   info.py velocity.h5
   info.py ifgramStack.h5
 
+  # Display dataset
+  info.py timeseries.py --dset date
+  info.py timeseries.py --dset bperp
+
   # Time / Date Info
   info.py ifgramStack.h5 --date                 #print date1_date2 info for all  interferograms
   info.py ifgramStack.h5 --date --show kept     #print date1_date2 info for kept interferograms
@@ -52,6 +56,8 @@ def create_parser():
     parser.add_argument('file', type=str, help='File to check')
     parser.add_argument('--compact', action='store_true',
                         help='show compact info by displaying only the top 20 metadata')
+
+    parser.add_argument('--dset', type=str, help='Show dataset')
 
     par_list = parser.add_argument_group('List','list date/slice info')
     par_list.add_argument('--date', dest='disp_date', action='store_true',
@@ -246,6 +252,31 @@ def print_aux_info(fname):
     return
 
 
+
+def print_dataset(fname, dsName):
+    # get available dataset list
+    global dsNames
+    def get_hdf5_dataset(name, obj):
+        global dsNames
+        if isinstance(obj, h5py.Dataset):
+            dsNames.append(name)
+    dsNames = []
+    with h5py.File(fname, 'r') as f:
+        f.visititems(get_hdf5_dataset)
+
+    # check input dataset
+    if dsName not in dsNames:
+        msg = 'input dataset {} not found!'.format(dsName)
+        msg += '\navailable datasets: {}'.format(dsNames)
+        raise ValueError(msg)
+
+    # print dataset values
+    with h5py.File(fname, 'r') as f:
+        data = f[dsName][:]
+        print(data)
+    return
+
+
 ############################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
@@ -266,6 +297,11 @@ def main(iargs=None):
         print_slice_list(inps.file,
                          disp_num=inps.disp_num,
                          print_msg=True)
+        return
+
+    # --dset option
+    if inps.dset:
+        print_dataset(inps.file, dsName=inps.dset)
         return
 
     # Basic info
