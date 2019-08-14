@@ -140,10 +140,6 @@ class timeseries:
         self.name = 'timeseries'
         self.file_structure = FILE_STRUCTURE_TIMESERIES
 
-    def openH5(self, mode='a'):
-        print('opening {} in {} mode'.format(self.file, mode))
-        self.f = h5py.File(self.file, mode)
-
     def close(self, print_msg=True):
         try:
             self.f.close()
@@ -151,8 +147,12 @@ class timeseries:
                 print('close timeseries file: {}'.format(os.path.basename(self.file)))
         except:
             pass
-    
-    
+        return None
+
+    def open_hdf5(self, mode='a'):
+        print('open {} in {} mode'.format(self.file, mode))
+        self.f = h5py.File(self.file, mode)
+        return self.f
 
     def open(self, print_msg=True):
         if print_msg:
@@ -174,6 +174,7 @@ class timeseries:
         # list of float for year, 2014.95
         self.yearList = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in self.times]
         self.sliceList = ['{}-{}'.format(self.name, i) for i in self.dateList]
+        return None
 
     def get_metadata(self):
         with h5py.File(self.file, 'r') as f:
@@ -252,7 +253,7 @@ class timeseries:
     def layout_hdf5(self, dsNameDict, metadata, compression=None):
         print('-'*50)
         print('create HDF5 file {} with w mode'.format(self.file))
-        h5 = h5py.File(self.file, "w") 
+        f = h5py.File(self.file, "w") 
 
         for key in dsNameDict.keys():
             print("create dataset: {d:<25} of {t:<25} in size of {s}".format(
@@ -260,25 +261,35 @@ class timeseries:
                 t=str(dsNameDict[key][0]),
                 s=dsNameDict[key][1]))
 
-            h5.create_dataset(key,
-                          shape=dsNameDict[key][1],
-                          dtype=dsNameDict[key][0],
-                          chunks=True,
-                          compression=compression)
+            f.create_dataset(key,
+                             shape=dsNameDict[key][1],
+                             dtype=dsNameDict[key][0],
+                             chunks=True,
+                             compression=compression)
 
         # write attributes
         metadata = dict(metadata)
         metadata['FILE_TYPE'] = self.name
         for key in metadata.keys():
-            h5.attrs[key] = metadata[key]
+            f.attrs[key] = metadata[key]
 
         print('close HDF5 file {}'.format(self.file))
-        h5.close()
+        f.close()
+        return self.file
 
-        return None
-
-    def write2hdf5_block(self, data, dsname, block=None):
+    def write2hdf5_block(self, data, datasetName, block=None, mode='a'):
+        """Write data to existing HDF5 dataset in disk block by block.
+        Parameters: data : np.ndarray 1/2/3D matrix
+                    datasetName : str, dataset name
+                    block : list of 2/4/6 int, for
+                        [zStart, zEnd,
+                         yStart, yEnd,
+                         xStart, xEnd]
+                    mode : str, open mode
+        Returns: self.file
+        """
         if block is None:
+            # data shape
             if isinstance(data, list):
                 shape=(len(data),)
             else:
@@ -287,22 +298,32 @@ class timeseries:
             if len(shape) ==1:
                 block = [0, shape[0]]
             elif len(shape) == 2:
-                block = [0, shape[0], 0, shape[1]]
+                block = [0, shape[0],
+                         0, shape[1]]
             elif len(shape) == 3:
-                zSize , ySize, xSize = data.shape
-                block = [0, zSize, 0, ySize, 0, xSize]
+                block = [0, shape[0],
+                         0, shape[1],
+                         0, shape[2]]
         
-        print("writing dataset /{:<25} block: {}".format(dsname, block))
+        print('open {} in {} mode'.format(self.file, mode))
+        f = h5py.File(self.file, mode)
+
+        print("writing dataset /{:<25} block: {}".format(datasetName, block))
         if len(block) == 6:
-            self.f[dsname][block[0]:block[1], block[2]:block[3], block[4]:block[5]] = data
+            f[datasetName][block[0]:block[1],
+                           block[2]:block[3],
+                           block[4]:block[5]] = data
 
         elif len(block) == 4:
-            self.f[dsname][block[0]:block[1], block[2]:block[3]] = data
+            f[datasetName][block[0]:block[1],
+                           block[2]:block[3]] = data
 
         elif len(block) == 2:
-            self.f[dsname][block[0]:block[1]] = data
+            f[datasetName][block[0]:block[1]] = data
 
-        return None
+        f.close()
+        print('close HDF5 file {}'.format(self.file))
+        return self.file
 
     def write2hdf5(self, data, outFile=None, dates=None, bperp=None, metadata=None, refFile=None, compression=None):
         """
