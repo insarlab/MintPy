@@ -1097,15 +1097,13 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
 
     # Loop
     if not inps.parallel:
-        ts_file = '{}.h5'.format(os.path.splitext(inps.outfile[0])[0])
-        phase2range = -1*float(stack_obj.metadata['WAVELENGTH'])/(4.*np.pi)
-
         # instantiate a timeseries object
+        ts_file = '{}.h5'.format(os.path.splitext(inps.outfile[0])[0])
         ts_obj = timeseries(ts_file)
 
         # A dictionary of the datasets which we like to have in the timeseries
         dsNameDict = {
-                "date": ((np.dtype('S8'), (num_date,))) ,   
+                "date": ((np.dtype('S8'), (num_date,))),   
                 "bperp": (np.float32, (num_date,)),
                 "timeseries": (np.float32, (num_date, length, width)),
             }
@@ -1113,13 +1111,14 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         # layout the HDF5 file for the datasets and the metadata
         ts_obj.layout_hdf5(dsNameDict, metadata)
 
-        # open the created HDF5 and leave it open for block by block writing
-        ts_obj.openH5()
-
+        # invert & write block by block
+        phase2range = -1*float(metadata['WAVELENGTH']) / (4.*np.pi)
         for i in range(num_box):
             box = box_list[i]
             if num_box > 1:
                 print('\n------- Processing Patch {} out of {} --------------'.format(i+1, num_box))
+
+            # invert the network
             (tsi,
              temp_cohi,
              ifg_numi) = ifgram_inversion_patch(ifgram_file,
@@ -1133,22 +1132,21 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                                                 min_redundancy=inps.minRedundancy,
                                                 water_mask_file=inps.waterMaskFile)
 
-            # create a list which indicates the 3D block indices
-            # block = [zStart, zEnd, yStart, yEnd, xStart, xEnd]
-            block = [0, num_date, box[1], box[3], box[0], box[2]]
-            # convert phase 2 range change
+            # write the block of timeseries to disk
             print('converting phase to range')
             tsi *= phase2range
+            block = [0, num_date, box[1], box[3], box[0], box[2]]
+            ts_obj.write2hdf5_block(tsi, datasetName='timeseries', block=block)
+
+            # save the block of aux datasets
             temp_coh[box[1]:box[3], box[0]:box[2]] = temp_cohi
             num_inv_ifg[box[1]:box[3], box[0]:box[2]] = ifg_numi
-            # write this block of timeseries to disk
-            ts_obj.write2hdf5_block(tsi, 'timeseries', block)
 
+        # write date and bperp to disk
+        print('-'*50)
         date_list_utf8 = [dt.encode('utf-8') for dt in date_list]
-        ts_obj.write2hdf5_block(date_list_utf8, 'date')
-        ts_obj.write2hdf5_block(pbase, 'bperp')
-
-        ts_obj.close()
+        ts_obj.write2hdf5_block(date_list_utf8, datasetName='date')
+        ts_obj.write2hdf5_block(pbase, datasetName='bperp')
 
     # Parallel loop
     else:
@@ -1160,7 +1158,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         except ImportError:
             raise ImportError('Cannot import dask.distributed or dask_jobqueue!')
 
-        ts     = np.zeros((num_date, length, width), np.float32)
+        ts = np.zeros((num_date, length, width), np.float32)
         python_executable_location = sys.executable
 
         # Look at the ~/.config/dask/dask_mintpy.yaml file for Changing the Dask configuration defaults
