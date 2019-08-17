@@ -9,7 +9,7 @@
 
 import argparse
 import numpy as np
-import scipy.io.netcdf as netcdf
+from scipy.io import netcdf
 from mintpy.utils import readfile, plot as pp
 
 

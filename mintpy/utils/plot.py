@@ -728,6 +728,29 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
     return row_num, col_num
 
 
+def auto_shared_lalo_location(axs, loc=(1,0,0,1), flatten=False):
+    """Return the auto lat/lon label location of subplots
+    Parameters: axs : 2D np.ndarray of matplotlib.axes._subplots.AxesSubplot object
+                loc : tuple of 4 bool, for (left, right, top, bottom)
+                flatten : bool, return variable in 2D np.ndarray or in list of flattened array
+    Returns:    locs : 2D np.ndarray of tuple of 4 bool.
+    """
+    nrows, ncols = axs.shape
+    locs = np.zeros([nrows, ncols, 4], dtype=int)
+    locs[ :, 0,0] = loc[0]
+    locs[ :,-1,1] = loc[1]
+    locs[ 0, :,2] = loc[2]
+    locs[-1, :,3] = loc[3]
+
+    if flatten:
+        loc_list = list(locs.tolist())
+        locs = []
+        for i in range(nrows):
+            for j in range(ncols):
+                locs.append(loc_list[i][j])
+    return locs
+
+
 def check_colormap_input(metadata, cmap_name=None, datasetName=None, cmap_lut=256, print_msg=True):
     gray_dataset_key_words = ['coherence', 'temporal_coherence',
                               '.cor', '.mli', '.slc', '.amp', '.ramp']

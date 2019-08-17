@@ -17,6 +17,7 @@ from mintpy.utils import writefile
 
 EXAMPLE = """example:
   load_gbis.py invert_1_2_C.mat
+  load_gbis.py invert_1_2_C.mat --nodisplay
 """
 
 def create_parser():
@@ -64,8 +65,9 @@ def gbis_mat2hdf5(mat_file, display=True):
                           dist=(mX**2 + mY**2)**0.5,
                           radians=False)[0:2]
     modelName = parName[0].split()[0]
-    mDict['{}_latitude'.format(modelName)] = mLat
-    mDict['{}_longitude'.format(modelName)] = mLon
+    mDict['{}_LAT'.format(modelName)] = mLat
+    mDict['{}_LON'.format(modelName)] = mLon
+    mDict['DEFORMATION_MODEL'] = modelName
 
     if display:
         fig_size = [12, 3*num_file]
@@ -98,7 +100,7 @@ def gbis_mat2hdf5(mat_file, display=True):
         temp = meta.pop('_fieldnames') # remote _fieldnames added by Matlab
         meta['UNIT'] = 'm'
         meta['FILE_TYPE'] = 'displacement'
-        meta['PROCESSOR'] = 'isce'
+        meta['PROCESSOR'] = 'GBIS'
         if 'minHeight' in vars(insarPlot).keys():
             meta['MODEL_MIN_HEIGHT'] = insarPlot.minHeight
         for key, value in mDict.items():
