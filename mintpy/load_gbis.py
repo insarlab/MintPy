@@ -51,6 +51,8 @@ def gbis_mat2hdf5(mat_file, display=True):
     # grab optimal model parameter
     parValue = mat['invResults'].optimalmodel
     parName = mat['invResults'].model.parName
+    modelName = parName[0].split()[0]
+
     mDict = {}
     for i in range(len(parValue)):
         key = parName[i].replace(' ', '_')
@@ -58,13 +60,15 @@ def gbis_mat2hdf5(mat_file, display=True):
 
     # convert model x/y to lat/lon
     ref_lon, ref_lat = mat['geo'].referencePoint
+    mDict['{}_REF_LAT'.format(modelName)] = ref_lat
+    mDict['{}_REF_LON'.format(modelName)] = ref_lon
+
     geod = pyproj.Geod(ellps='WGS84')
     mX, mY = parValue[0:2]
     mLon, mLat = geod.fwd(ref_lon, ref_lat,
                           az=np.arctan(mX/mY) * 180 / np.pi,
                           dist=(mX**2 + mY**2)**0.5,
                           radians=False)[0:2]
-    modelName = parName[0].split()[0]
     mDict['{}_LAT'.format(modelName)] = mLat
     mDict['{}_LON'.format(modelName)] = mLon
     mDict['DEFORMATION_MODEL'] = modelName
