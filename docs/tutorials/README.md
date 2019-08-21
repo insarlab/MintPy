@@ -6,7 +6,7 @@ This tutorial walks through the various processing steps of InSAR time series an
 
 1. Small baseline time series analysis with `smallbaselineApp`
 
-   - ISCE/topsStack + MintPy (Sentinel-1 on Fernandina, Galapagos): [nbviewer](https://nbviewer.jupyter.org/github/insarlab/MintPy/blob/master/docs/tutorials/smallbaselineApp.ipynb)
+   - ISCE/topsStack + MintPy (Sentinel-1 on Fernandina volcano, Galápagos): [nbviewer](https://nbviewer.jupyter.org/github/insarlab/MintPy/blob/master/docs/tutorials/smallbaselineApp.ipynb)
    - ARIA + MintPy (Sentinel-1 on San Francisco): [nbviewer](https://nbviewer.jupyter.org/github/insarlab/MintPy/blob/master/docs/tutorials/smallbaselineApp_aria.ipynb)
 
 2. Visualizations   
@@ -19,5 +19,6 @@ This tutorial walks through the various processing steps of InSAR time series an
 ### Links ###
 
 + Single interferogram processing with ISCE2
+
    - Sentinel-1 TOPS mode SAR data with [topsApp](https://nbviewer.jupyter.org/github/isce-framework/isce2-docs/blob/master/Notebooks/TOPS/Tops.ipynb)
    - StripMap mode SAR data with [stripmapApp](https://nbviewer.jupyter.org/github/isce-framework/isce2-docs/blob/master/Notebooks/Stripmap/stripmapApp.ipynb)

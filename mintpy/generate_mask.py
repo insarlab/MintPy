@@ -8,19 +8,17 @@
 
 import os
 import time
+import warnings
 import argparse
 import h5py
 import numpy as np
-from mintpy.utils import (readfile,
-                          writefile,
-                          utils as ut,
-                          plot as pp)
+from mintpy.utils import readfile, writefile, utils as ut, plot as pp
 
 
 ################################################################################################
 EXAMPLE = """example:
   generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5
-  generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5 --shadow inputs/geometryRadar.h5
+  generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5 --base inputs/geometryRadar.h5 --base-dset shadow --base-value 1
   generate_mask.py  avgSpatialCoh.h5     -m 0.7 --base waterMask.h5 -o maskSpatialCoh.h5
 
   # exlcude area by min/max value and/or subset in row/col direction
@@ -58,26 +56,35 @@ def create_parser():
                         help='minimum value for selected pixels')
     parser.add_argument('-M', '--max', dest='vmax', type=float,
                         help='maximum value for selected pixels')
-    parser.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar=('XMIN', 'XMAX'),
-                        help='selection range in x/cross-track/range direction')
-    parser.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar=('YMIN', 'YMAX'),
-                        help='selection range in y/along-track/azimuth direction')
-    parser.add_argument('--ex-circle', dest='ex_circle', nargs=3, type=int, metavar=('X', 'Y', 'RADIUS'),
-                        help='exclude area defined by an circle (x, y, radius) in pixel number')
-    parser.add_argument('--in-circle', dest='in_circle', nargs=3, type=int, metavar=('X', 'Y', 'RADIUS'),
-                        help='include area defined by an circle (x, y, radius) in pixel number')
 
-    parser.add_argument('--base', dest='base_mask_file', type=str,
-                        help='Base mask file. output_mask *= base_mask')
-    parser.add_argument('--shadow', dest='shadow_mask_file', type=str,
-                        help='file with shadow mask to be excluded in the output mask')
+    aoi = parser.add_argument_group('AOI', 'define secondary area of interest')
+    # AOI defined by parameters in command line
+    aoi.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar=('XMIN', 'XMAX'),
+                     help='selection range in x/cross-track/range direction')
+    aoi.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar=('YMIN', 'YMAX'),
+                     help='selection range in y/along-track/azimuth direction')
+    aoi.add_argument('--ex-circle', dest='ex_circle', nargs=3, type=int, metavar=('X', 'Y', 'RADIUS'),
+                     help='exclude area defined by an circle (x, y, radius) in pixel number')
+    aoi.add_argument('--in-circle', dest='in_circle', nargs=3, type=int, metavar=('X', 'Y', 'RADIUS'),
+                     help='include area defined by an circle (x, y, radius) in pixel number')
+    # AOI defined by file
+    aoi.add_argument('--base', dest='base_file', type=str,
+                     help='exclude pixels == base_value\n'
+                          'output_mask[base_data == base_value] = 0')
+    aoi.add_argument('--base-dset','--base-dataset', dest='base_dataset', type=str,
+                     help='dataset in base_file to be used, for file with multiple datasets.\n'
+                          'i.e.: --base inputs/geometryRadar.h5 --base-dset shadow --base-value 1')
+    aoi.add_argument('--base-value', dest='base_value', type=float, default=0,
+                     help='value of pixels in base_file to be excluded.\nDefault: 0')
+    # AOI manual selected
+    aoi.add_argument('--roipoly', action='store_true',
+                     help='Interactive polygonal region of interest (ROI) selection.')
 
-    parser.add_argument('--roipoly', action='store_true',
-                        help='Interactive polygonal region of interest (ROI) selection.')
-
+    # special type of mask
     parser.add_argument('--nonzero', dest='nonzero', action='store_true',
                         help='Select all non-zero pixels.\n' +
                              'i.e. maskConnComp.h5 from ifgramStack.h5')
+
     parser.add_argument('--update', dest='update_mode', action='store_true',
                         help='Enable update checking for --nonzero option.')
     return parser
@@ -86,6 +93,18 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # check the optional --base and --base-dset options
+    if inps.base_file and inps.base_dataset:
+        base_dataset_list = readfile.get_dataset_list(inps.base_file)
+        if inps.base_dataset not in base_dataset_list:
+            msg = 'dataset {} NOT found in input base file {}'.format(inps.base_dataset, inps.base_file)
+            msg += '\navailable datasets:\n{}'.format(base_dataset_list)
+            warnings.warn(msg)
+            print('ignore --base --base-dset option and continue')
+            inps.base_file = None
+            inps.base_dataset = None
+
     return inps
 
 
@@ -182,21 +201,21 @@ def create_threshold_mask(inps):
             mask *= poly_mask
 
     # base mask
-    if inps.base_mask_file:
-        base_mask = readfile.read(inps.base_mask_file)[0]
-        if len(base_mask.shape) == 3:
-            base_mask = np.sum(base_mask, axis=0)
-        mask[base_mask == 0.] = 0
-        print('exclude pixels in base file {} with value == 0'.format(inps.base_mask_file))
+    if inps.base_file:
+        # read base mask file
+        base_data = readfile.read(inps.base_file, datasetName=inps.base_dataset)[0]
+        if len(base_data.shape) == 3:
+            base_data = np.sum(base_data, axis=0)
 
-    # shadow mask
-    if inps.shadow_mask_file:
-        try:
-            shadow_mask = readfile.read(inps.shadow_mask_file, datasetName='shadowMask')[0]
-            mask[shadow_mask == 1] = 0
-            print('exclude pixels in shadow file {} with value == 1'.format(inps.shadow_mask_file))
-        except:
-            pass
+        # apply base mask
+        mask[base_data == float(inps.base_value)] = 0
+
+        # message
+        msg = 'exclude pixels in base file {} '.format(os.path.basename(inps.base_file))
+        if inps.base_dataset:
+            msg += 'dataset {} '.format(inps.base_dataset)
+        msg += 'with value == {}'.format(inps.base_value)
+        print(msg)
 
     # Write mask file
     atr['FILE_TYPE'] = 'mask'
@@ -214,14 +233,13 @@ def main(iargs=None):
 
     # default output filename
     if not inps.outfile:
-        if 'temporalCoherence' in inps.file:
+        if inps.roipoly:
+            inps.outfile = 'maskPoly.h5'
+        elif 'temporalCoherence' in inps.file:
             suffix = inps.file.split('temporalCoherence')[1]
             inps.outfile = 'maskTempCoh'+suffix
         else:
-            if inps.roipoly:
-                inps.outfile = 'maskPoly.h5'
-            else:
-                inps.outfile = 'mask.h5'
+            inps.outfile = 'mask.h5'
         if inps.file.startswith('geo_'):
             inps.outfile = 'geo_'+inps.outfile
 
