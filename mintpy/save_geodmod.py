@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is used for extract accumulated displacement of period
-# Author: Lv Xiaoran                                       #
-# Created: August 2019                                     #
+# Program is part of MintPy                                #
+# Author: Lv Xiaoran, August 2019                          #
 ############################################################
 
-import os
-import argparse
 
-import mintpy
-import mintpy.workflow  #dynamic import for modules used by pysarApp workflow
-from mintpy.objects import sensor
+import os
+import sys
+import argparse
 from mintpy.utils import readfile, writefile
-from mintpy.objects import timeseries
+from mintpy import geocode, save_roipac
+
 
 ######################################################################################
 EXAMPLE = """example:
@@ -20,7 +18,6 @@ EXAMPLE = """example:
   save_geodmod.py $SCRATCHDIR/DarbandikhanSenAT72/PYSAR/INPUTS/ifgramStack.h5 20180603_20180615 -b 34.2 35.2 45.0 46.3 -y 0.001 -x 0.001 -t cor -o geo_20180603_20180615.cor -outdir $SCRATCHDIR/preGeodmod/
   save_geodmod.py $SCRATCHDIR/DarbandikhanSenAT72/PYSAR/temporalCoherence.h5 20171117_20180603 -b 34.2 35.2 45.0 46.3 -y 0.001 -x 0.001 -t cor -o geo_20171117_20180603.cor -outdir $SCRATCHDIR/preGeodmod/
   save_geodmod.py $SCRATCHDIR/DarbandikhanSenAT72/PYSAR/INPUTS/geometryRadar.h5 20171117_20180603 -b 34.2 35.2 45.0 46.3 -y 0.001 -x 0.001 -t dem -o srtm.dem -outdir $SCRATCHDIR/preGeodmod/
-
 """
 
 def create_parser():
@@ -73,7 +70,8 @@ def cmd_line_parse(iargs=None):
     #        inps.EndDate=atr['END_DATE']
 
     return inps
-    
+
+
 def format_args(arr, dst=""):
     """ parse list array(list item or values) to string """
     for k in arr:
@@ -83,12 +81,14 @@ def format_args(arr, dst=""):
         else:
             dst = dst + " " + str(k)
     return dst.strip()
-   
+
+
 def get_path_com(path):
     """ return directory(filepath), filename(shotname), extension """
     (filepath, tempfilename) = os.path.split(os.path.abspath(path))
     (filename, extension) = os.path.splitext(tempfilename)
     return filepath, filename, extension
+
 
 def write_rsc_file(inps,in_file,out_file):
     """ write rsc file for Geodmod just estract several properities from rsc file"""
@@ -119,6 +119,7 @@ def write_rsc_file(inps,in_file,out_file):
     writefile.write_roipac_rsc(rsc, out_file, print_msg=True)
     return out_file 
 
+
 def processdata(inps):
     #use geocode.py and save_roipac.py to process data"
     atr_asc = inps.file[0]
@@ -143,9 +144,14 @@ def processdata(inps):
     asc_args = [atr_asc, '-b',inps.SNWE, '-y',inps.latStep, '-x',inps.lonStep, '--outdir',"".join(inps.outdir)]
     print("geocode.py", asc_args)
     args_str = format_args(asc_args)
+<<<<<<< HEAD
     mintpy.geocode.main(args_str.split())
         
     #save dataset of unw cor and dem
+=======
+    geocode.main(args_str.split())
+
+>>>>>>> b880de65eb8080e9f06563000b71997984d022db
     os.chdir("".join(inps.outdir))
     filename, extension = get_path_com(atr_asc)[1:3]
     asct_args = ['geo_'+filename+extension, inps.StartDate,'_',inps.EndDate]
@@ -161,12 +167,14 @@ def processdata(inps):
     asct_args = ['geo_geometryRadar.h5', 'height', '-o', 'srtm.dem']
     print("save_roipac.py", asct_args)
     asct_str = format_args(asct_args)
-    mintpy.save_roipac.main(asct_str.split())
+    save_roipac.main(asct_str.split())
+
 
 ######################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
     
+<<<<<<< HEAD
     #  geocode timeseries**.h5 file and get the deformation field of two time periods
     #  and geocode ifgramStack.h5 file and get the coherence of two time periods
     #  and geocode geometryRadar.h5 file and get the dem    
@@ -178,7 +186,30 @@ def main(iargs=None):
     os.remove(outfile)
     print('rename *.rsc1 to *.rsc')
     os.rename(format_args(['srtm.dem' +'.rsc1']),outfile)
+=======
+    if inps.Type=='unw':
+        #  geocode timeseries**.h5 file and get the deformation field of two time periods
+        processdata(inps)
+
+    elif inps.Type=='cor':
+        #  geocode ifgramStack.h5 file and get the coherence of two time periods
+        processdata(inps)
+    else:
+        #  geocode geometryRadar.h5 file and get the dem
+        
+        processdata(inps)
+        outfile = format_args([format_args(inps.outfile) + '.rsc'])
+        #rscdir = os.path.dirname(os.path.abspath(outfile))
+        #print(rscdir)        
+        #os.chdir(rscdir)
+        write_rsc_file(inps,outfile,format_args([format_args(inps.outfile) +'.rsc1']))
+        os.remove(outfile)
+        print('rename *.rsc1 to *.rsc')
+        os.rename(format_args([format_args(inps.outfile) +'.rsc1']),outfile)
+    return
+
+>>>>>>> b880de65eb8080e9f06563000b71997984d022db
 
 ######################################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
