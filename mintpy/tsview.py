@@ -42,7 +42,7 @@ def create_parser():
                                      epilog=EXAMPLE)
     parser.add_argument('timeseries_file', nargs='+',
                         help='time-series file to display\n'
-                             'i.e.: timeseries_ECMWF_ramp_demErr.h5 (MintPy)\n'
+                             'i.e.: timeseries_ERA5_ramp_demErr.h5 (MintPy)\n'
                              '      LS-PARAMS.h5 (GIAnT)\n'
                              '      S1_IW12_128_0593_0597_20141213_20180619.he5 (HDF-EOS5)')
     parser.add_argument('--label', dest='file_label', nargs='*',
@@ -536,6 +536,10 @@ class timeseriesViewer():
             iargs = cmd.split()[1:]
         self.cmd = cmd
         self.iargs = iargs
+        # print command line
+        cmd = '{} '.format(os.path.basename(__file__))
+        cmd += ' '.join(iargs)
+        print(cmd)
 
         # figure variables
         self.figname_img = 'Cumulative Displacement Map'

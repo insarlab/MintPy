@@ -15,7 +15,11 @@ from mintpy.utils import readfile, writefile, ptime, utils as ut
 dataType = np.float32
 # key configuration parameter name
 key_prefix = 'mintpy.velocity.'
-configKeys = ['excludeDate']
+configKeys = [
+    'startDate',
+    'endDate',
+    'excludeDate',
+]
 
 
 ############################################################################
@@ -194,6 +198,8 @@ def read_date_info(inps):
     # Date used for estimation inps.dateList
     inps.dateList = [i for i in tsobj.dateList if i not in inps.excludeDate]
     inps.numDate = len(inps.dateList)
+    inps.startDate = inps.dateList[0]
+    inps.endDate = inps.dateList[-1]
     print('-'*50)
     print('dates from input file: {}\n{}'.format(tsobj.numDate, tsobj.dateList))
     print('-'*50)
