@@ -1,12 +1,12 @@
 # Contributing Guidelines
 
-This document is inspired by similar instructions from ISCE, gdal and jupyterhub. If you're reading this section, you're probably interested in contributing to MintPy. Welcome and thanks for your interest in contributing! 
+This document is inspired by similar instructions from GMT, ISCE, gdal and jupyterhub. If you're reading this section, you're probably interested in contributing to MintPy. Welcome and thanks for your interest in contributing! 
 
 These are several ways to contribute to the MintPy project:
 
-* Submitting bug reports and feature requests
-* Writing tutorials or jupyter-notebooks
-* Fixing typos, code and improving documentation
+* Submitting bug reports, feature requests on [GitHub issue](https://github.com/insarlab/MintPy/issues)
+* Writing/improving documentation, tutorials and jupyter-notebooks
+* Fixing typos, bugs in code
 * Writing code for everyone to use
 
 If you get stuck at any point you can create an [issue on GitHub](https://github.com/insarlab/MintPy/issues) or contact us on the [user forum](https://groups.google.com/forum/#!forum/mintpy).
@@ -16,9 +16,36 @@ is a great starting point if you are new to version control.
 
 ## Writing documentations ##
 
-Documentation is written in Markdown on [GitHub Wiki](https://github.com/insarlab/MintPy/wiki). Any GitHub user can create and edit pages to use for documentation, examples, support, or anything you wish.
+Documentation is written in Markdown. ANY GitHub user can edit pages and/or create new pages on [GitHub Wiki](https://github.com/insarlab/MintPy/wiki) directly for documentation, examples, support, or anything you wish. Eventually, mature documents on the wiki will be moved to the `insarlab/MintPy/docs` through standard code review process to be shown in the [readthedocs](https://mintpy.readthedocs.io/en/latest/).
 
 ## Writing code ##
+
+We follow the [git pull request workflow](https://www.asmeurer.com/git-workflow/) to make changes to our codebase. Every change made goes through a pull request, even our own, so that our [continuous integration](https://en.wikipedia.org/wiki/Continuous_integration) services have a change to check that the code is up to standards. This way, the master branch is always stable.
+
+### General guidelines for pull requests (PRs) ###
+
++ **Open an issue first** describing what you want to do, except for bugs fix. If there is already an issue that matches your PR, leave a comment there instead to let us know what you plan to do.
++ Each pull request should consist of a **small** and logical collection of changes.
++ Larger changes should be broken down into smaller components and integrated separately.
++ Bug fixes should be submitted in separate PRs.
++ Describe what your PR changes and why this is a good thing. Be as specific as you can. The PR description is how we keep track of the changes made to the project over time.
++ Do not commit changes to files that are irrelevant to your feature or bugfix (eg: `.gitignore`, IDE project files, etc).
++ Write descriptive commit messages. Chris Beams has written a [guide](https://chris.beams.io/posts/git-commit/) on how to write good commit messages.
++ Be willing to accept criticism and work on improving your code; we don't want to break other users' code, so care must be taken not to introduce bugs.
++ Be aware that the pull request review process is not immediate, and is generally proportional to the size of the pull request.
+
+### Code Review ###
+
+After you've submitted a pull request, you should expect to hear at least a comment within a couple of days. We may suggest some changes or improvements or alternatives.
+
+Some things that will increase the chance that your pull request is accepted quickly:
+
++ Write a good and detailed description of what the PR does.
++ Readable code is better than clever code (even with comments).
++ Write documentation for your code and leave comments explaining the _reason_ behind non-obvious things.
++ Include an example of new features in the gallery or tutorials, if possible.
+
+Pull requests will automatically have tests run by Circle CI and Codacy. Github will show the status of these checks on the pull request. Try to get them all passing (green). If you have any trouble, leave a comment in the PR or contact us on the [user forum](https://groups.google.com/forum/#!forum/mintpy).
 
 ### 0. Setting up a development environment ###
 
@@ -66,9 +93,9 @@ git push -f
 
 If the pull request discussion results in changes, commit new changes to `my_user_name/my_new_feature_branch`, they will show up in the pull request in `insarlab` automatically.
 
-## Test, before push back to `insarlab/master` ##
+## Testing ##
 
-It's a good idea to test any changes or bugs you have fixed, in the feature branch before pushing back to `insarlab/master` branch. We realize that we don't have a complete testing system in place yet, except for an overall testing script `test_smallbaselineApp.py`, run
+It's a good idea to test any changes or bugs you have fixed, in the feature branch before issuing the pull request. We realize that we don't have a complete testing system in place yet (maybe you can contribute this!), except for an overall testing script `test_smallbaselineApp.py`, run
 
 ```
 ${MINTPY_HOME}/test/test_smallbaselineApp.py
