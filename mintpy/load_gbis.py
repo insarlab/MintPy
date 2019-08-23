@@ -38,13 +38,18 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
-def gbis_mat2hdf5(mat_file, display=True):
+def gbis_mat2hdf5(inv_mat_file, display=True):
     """Convert InSAR related GBIS inversion result .mat file into HDF5 file."""
-    out_dir = os.path.dirname(mat_file)
+    out_dir = os.path.dirname(inv_mat_file)
     out_files = []
 
-    print('read mat file: {}'.format(mat_file))
-    mat = sio.loadmat(mat_file, struct_as_record=False, squeeze_me=True)
+    print('read mat file: {}'.format(inv_mat_file))
+    mat = sio.loadmat(inv_mat_file, struct_as_record=False, squeeze_me=True)
+
+    # when num_file == 1
+    if isinstance(mat['insar'], sio.matlab.mio5_params.mat_struct):
+        mat['insar'] = [mat['insar']]
+        mat['insarPlot'] = [mat['insarPlot']]
     num_file = len(mat['insar'])
     print('number of output HDF5 file: {}'.format(num_file))
 
@@ -76,15 +81,16 @@ def gbis_mat2hdf5(mat_file, display=True):
     if display:
         fig_size = [12, 3*num_file]
         fig, axs = plt.subplots(nrows=num_file, ncols=3, figsize=fig_size)
+        axs = axs.reshape(-1,3)   #convert to 2D array when num_file is 1.
         print('creating figure in size of {}'.format(fig_size))
 
     for i in range(num_file):
-        data_file = mat['insar'][i].dataPath
+        insar_mat_file = mat['insar'][i].dataPath
         print('-'*30)
-        print('read mask from file: {}'.format(data_file))
+        print('read mask from file: {}'.format(insar_mat_file))
 
         # read mask
-        mask = sio.loadmat(data_file, struct_as_record=False, squeeze_me=True)['Mask']
+        mask = sio.loadmat(insar_mat_file, struct_as_record=False, squeeze_me=True)['Mask']
         length, width = mask.shape
 
         # convert to 2D matrix
@@ -100,7 +106,7 @@ def gbis_mat2hdf5(mat_file, display=True):
         residual[mask!=0] = insarPlot.residual
 
         # prepare metadata
-        meta = vars(sio.loadmat(data_file, struct_as_record=False, squeeze_me=True)['Metadata'])
+        meta = vars(sio.loadmat(insar_mat_file, struct_as_record=False, squeeze_me=True)['Metadata'])
         temp = meta.pop('_fieldnames') # remote _fieldnames added by Matlab
         meta['UNIT'] = 'm'
         meta['FILE_TYPE'] = 'displacement'
