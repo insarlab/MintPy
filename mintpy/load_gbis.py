@@ -45,7 +45,7 @@ def gbis_mat2hdf5(inv_mat_file, display=True):
 
     print('read mat file: {}'.format(inv_mat_file))
     mat = sio.loadmat(inv_mat_file, struct_as_record=False, squeeze_me=True)
-    
+
     # when num_file == 1
     if isinstance(mat['insar'], sio.matlab.mio5_params.mat_struct):
         mat['insar'] = [mat['insar']]
