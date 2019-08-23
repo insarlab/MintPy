@@ -254,7 +254,9 @@ def get_poly_mask(data, print_msg=True):
     Returns:    mask : 2D np.arrat in size of (length, width) in np.bool_ format
     """
     fig, ax = plt.subplots()
-    im = ax.imshow(data) #, vmin=-3, vmax=3, cmap='jet')
+    vlim = np.nanmax(np.abs(data))
+    im = ax.imshow(data, cmap='jet', vmin=-vlim, vmax=vlim)
+    fig.colorbar(im)
 
     selector = SelectFromCollection(ax, im)
     plt.show()

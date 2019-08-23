@@ -12,14 +12,9 @@ newIssueWelcomeComment: >
 
 # Comment to be posted to on PRs from first time contributors in your repository
 newPRWelcomeComment: >
-  💖  Thanks for opening this pull request! Please check out our contributing guidelines.
+  💖  Thanks for opening this pull request! Please check out our [contributing guidelines](https://github.com/insarlab/MintPy/blob/master/docs/CONTRIBUTING.md). 💖
 
-  Please make sure you read our [Contributing Guide](https://github.com/insarlab/MintPy/blob/master/docs/CONTRIBUTING.md)
-
-  A few things to keep in mind:
-
-  * All new features should be documented. It helps to write the comments below for your functions describing the it, **all** arguments, and return types before writing the code. This will help you think about your code design and results in better code.
-  * We are grateful that you put in the effort to do this! 💖 
+  Keep in mind that all new features should be documented. It helps to write the comments below for your functions describing the it, **all** arguments, and return types before writing the code. This will help you think about your code design and results in better code.
 
 # Configuration for first-pr-merge - https://github.com/behaviorbot/first-pr-merge
 
