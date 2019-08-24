@@ -24,6 +24,7 @@ TEMPLATE_FILE_LIST = [os.path.join(os.path.dirname(__file__), '{}.txt'.format(pr
 #####################################################################################
 EXAMPLE = """example:
   $MINTPY_HOME/test/test_smallbaselineApp.py
+  $MINTPY_HOME/test/test_smallbaselineApp.py  --dir ~/test
   $MINTPY_HOME/test/test_smallbaselineApp.py  --dset KujuAlosAT422F650
   $MINTPY_HOME/test/test_smallbaselineApp.py  --nofresh
 
