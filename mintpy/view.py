@@ -1127,9 +1127,12 @@ def plot_figure(j, inps, metadata):
         vprint('Note: different color scale for EACH subplot!')
     else:
         if inps.disp_cbar:
+            cbar_length = 0.4
+            if inps.fig_size[1] > 8.0:
+                cbar_length /= 2
             vprint('show colorbar')
             fig.subplots_adjust(right=0.93)
-            cax = fig.add_axes([0.94, 0.3, 0.005, 0.4])
+            cax = fig.add_axes([0.94, (1.0-cbar_length)/2, 0.005, cbar_length])
             inps, cbar = pp.plot_colorbar(inps, im, cax)
 
     # Save Figure
