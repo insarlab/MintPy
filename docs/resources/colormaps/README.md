@@ -13,7 +13,8 @@ view.py velocity.h5 -c vik
 For macOS users, if GMT is installed using [MacPorts](https://www.macports.org), all GMT cpt files (located at `/opt/local/share/gmt/cpt`) will be recognized and supported, i.e. the 20 built-in colormaps as shown below:
 
 <p align="left">
-  <img width="600" src="https://www-k12.atmos.washington.edu/~ovens/gmt/doc/html/GMT_Docs/img277.png">
+  <img width="600" src="https://docs.generic-mapping-tools.org/5.4/_images/GMT_App_M_1a.png">
+  <img width="600" src="https://docs.generic-mapping-tools.org/5.4/_images/GMT_App_M_1b.png">
 </p>
 
 ### Colormaps from [cpt-city](http://soliton.vm.bytemark.co.uk/pub/cpt-city/views/totp-cpt.html) ###
