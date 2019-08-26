@@ -1075,12 +1075,13 @@ class ifgramStack:
             print('update HDF5 dataset "/dropIfgram".')
             f['dropIfgram'][:] = np.array([i not in date12List_to_drop 
                                            for i in date12ListAll], dtype=np.bool_)
-            # update MODIFICATION_TIME for unwrapPhase datasets
-            f['unwrapPhase'].attrs['MODIFICATION_TIME'] = str(time.time())
-            dsName = 'unwrapPhase_bridging'
-            if dsName in f.keys():
-                time.sleep(1)   #to distinguish the modification time of input files
-                f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
+            # update MODIFICATION_TIME for all datasets in ifgramDatasetNames
+            for dsName in ifgramDatasetNames:
+                if dsName in f.keys():
+                    print('update MODIFICATION_TIME in HDF5 dataset "/{}"'.format(dsName))
+                    f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
+                    time.sleep(1)   #to distinguish the modification time of input files
+
 ################################# ifgramStack class end ################################
 
 
