@@ -818,6 +818,9 @@ class ifgramStack:
                 data = dset[i, box[1]:box[3], box[0]:box[2]]
                 if maskFile:
                     data[mask == 0] = np.nan
+                # ignore ZERO value for coherence
+                if datasetName == 'coherence':
+                    data[data == 0] = np.nan
                 dmean[i] = np.nanmean(data)
                 sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, numIfgram))
                 sys.stdout.flush()

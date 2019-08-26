@@ -101,7 +101,7 @@ def create_parser():
     step = parser.add_argument_group('steps processing (start/end/dostep)', STEP_HELP)
     step.add_argument('--start', dest='startStep', metavar='STEP', default=STEP_LIST[0],
                       help='start processing at the named step, default: {}'.format(STEP_LIST[0]))
-    step.add_argument('--end', dest='endStep', metavar='STEP',  default=STEP_LIST[-1],
+    step.add_argument('--end','--stop', dest='endStep', metavar='STEP',  default=STEP_LIST[-1],
                       help='end processing at the named step, default: {}'.format(STEP_LIST[-1]))
     step.add_argument('--dostep', dest='doStep', metavar='STEP',
                       help='run processing at the named step only')
