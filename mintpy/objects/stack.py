@@ -1078,6 +1078,7 @@ class ifgramStack:
             # update MODIFICATION_TIME for all datasets in ifgramDatasetNames
             for dsName in ifgramDatasetNames:
                 if dsName in f.keys():
+                    print('update MODIFICATION_TIME in HDF5 dataset "/{}"'.format(dsName))
                     f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
                     time.sleep(1)   #to distinguish the modification time of input files
 
