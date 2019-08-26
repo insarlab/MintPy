@@ -7,6 +7,7 @@
 
 
 import os
+import sys
 import argparse
 import numpy as np
 from mintpy.utils import readfile, writefile
@@ -74,4 +75,4 @@ def main(iargs=None):
 
 ############################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
