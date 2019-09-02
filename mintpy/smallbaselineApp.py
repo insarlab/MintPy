@@ -549,8 +549,10 @@ class TimeSeriesAnalysis:
         tcoh_min = self.template['mintpy.networkInversion.minTempCoh']
 
         scp_args = '{} -m {} -o {}'.format(tcoh_file, tcoh_min, mask_file)
+
         # exclude pixels in shadow if shadowMask dataset is available
-        if 'shadowMask' in readfile.get_dataset_list(geom_file):
+        apply_shadow_mask = self.template['mintpy.networkInversion.shadowMask']
+        if apply_shadow_mask is True and 'shadowMask' in readfile.get_dataset_list(geom_file):
             scp_args += ' --base {} --base-dataset shadowMask --base-value 1'.format(geom_file)
         print('generate_mask.py', scp_args)
 
