@@ -649,7 +649,7 @@ def main(iargs=None):
         geomRadarObj.write2hdf5(outputFile=inps.outfile[1],
                                 access_mode='w',
                                 box=box,
-                                compression='gzip',
+                                compression='lzf',
                                 extra_metadata=extraDict)
 
     if geomGeoObj and update_object(inps.outfile[2], geomGeoObj, boxGeo, updateMode=updateMode):
@@ -657,7 +657,7 @@ def main(iargs=None):
         geomGeoObj.write2hdf5(outputFile=inps.outfile[2],
                               access_mode='w',
                               box=boxGeo,
-                              compression='gzip')
+                              compression='lzf')
 
     return inps.outfile
 
