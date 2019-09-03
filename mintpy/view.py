@@ -16,12 +16,9 @@ import numpy as np
 #import matplotlib; matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
 # suppress UserWarning from matplotlib
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
-#import matplotlib.cbook
-#warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
 
 from mintpy.objects import (
     geometryDatasetNames,
@@ -66,8 +63,7 @@ EXAMPLE = """example:
   view.py geo_timeseries_ECMWF_demErr_ramp.h5 20180619 --ref-date 20141213 --show-gps --gps-comp enu2los --ref-gps GV01
 
   # Custom colormap
-  # Download GMT colormap and saved to $MINTPY_HOME/docs/resources/colormaps
-  # Link: http://soliton.vm.bytemark.co.uk/pub/cpt-city/views/totp-cpt.html
+  # https://github.com/insarlab/MintPy/tree/master/docs/resources/colormaps
   view.py geo_velocity.h5 velocity -c temperature
   view.py geometryRadar.h5 height -c DEM_print
   view.py geo_velocity.h5 velocity -c temperature_r3      #reverse colormap and repeat 3 times
