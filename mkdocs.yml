@@ -23,7 +23,6 @@ markdown_extensions:
 nav:
     - Home: README.md
     - User Guide:
-        - Installation: installation.md
         - Example datasets: example_dataset.md
         - Example directory structure: dir_structure.md
         - Example template files: examples/input_files/README.md
@@ -33,9 +32,9 @@ nav:
         - Google Earth KMZ: google_earth.md
         - HDF-EOS5: hdfeos5.md
     - API Documentation:
-        - Documents generation: api/doc_generation.md
         - Attributes: api/attributes.md
         - Coordinates: api/coord.md
+        - Documents generation: api/doc_generation.md
     - About:
         - Contributing: CONTRIBUTING.md
         - References: references.md
