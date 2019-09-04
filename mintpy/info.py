@@ -9,7 +9,7 @@
 import os
 import argparse
 import h5py
-from numpy import std
+import numpy as np
 from mintpy.utils import readfile, ptime
 from mintpy.objects import (giantIfgramStack, 
                             giantTimeseries, 
@@ -158,16 +158,14 @@ def print_hdf5_structure(fname, max_meta_num=200):
 ############################################################
 def print_timseries_date_stat(dateList):
     datevector = ptime.date_list2vector(dateList)[1]
-    print('Start Date: '+dateList[0])
-    print('End   Date: '+dateList[-1])
-    print('Number of acquisitions    : %d' % len(dateList))
-    print('Std. of acquisition times : %.2f yeras' % std(datevector))
+    print('Start Date: {}'.format(dateList[0]))
+    print('End   Date: {}'.format(dateList[-1]))
+    print('Number of acquisitions    : {}'.format(len(dateList)))
+    print('Std. of acquisition times : {:.2f} yeras'.format(np.std(datevector)))
     print('----------------------')
-    print('List of dates:')
-    print(dateList)
+    print('List of dates:\n{}'.format(dateList))
     print('----------------------')
-    print('List of dates in years')
-    print(datevector)
+    print('List of dates in years:\n{}'.format(datevector))
     return
 
 
@@ -252,7 +250,6 @@ def print_aux_info(fname):
     return
 
 
-
 def print_dataset(fname, dsName):
     # get available dataset list
     global dsNames
@@ -274,6 +271,11 @@ def print_dataset(fname, dsName):
     with h5py.File(fname, 'r') as f:
         data = f[dsName][:]
         print(data)
+
+    # data stats
+    print('dataset size: {}'.format(data.shape))
+    print('dataset min / max: {} / {}'.format(np.nanmin(data), np.nanmax(data)))
+    print('number of pixels in NaN: {}'.format(np.sum(np.isnan(data))))
     return
 
 

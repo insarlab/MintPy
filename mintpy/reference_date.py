@@ -72,17 +72,25 @@ def read_template2inps(templateFile, inps=None):
 
 
 def read_ref_date(inps):
+    # check input reference date
     if not inps.refDate:
         print('No reference date input, skip this step.')
-        return inps.timeseries_file
-
-    elif os.path.isfile(inps.refDate):
-        print('read reference date from file: ' + inps.refDate)
-        inps.refDate = ptime.read_date_txt(inps.refDate)[0]
+        return None
+    # string in digit
+    elif inps.refDate.isdigit():
+        pass
+    else:
+        # txt file
+        if os.path.isfile(inps.refDate):
+            print('read reference date from file: ' + inps.refDate)
+            inps.refDate = ptime.read_date_txt(inps.refDate)[0]
+        else:
+            print('input file {} does not exist, skip this step'.format(inps.refDate))
+            return None
     inps.refDate = ptime.yyyymmdd(inps.refDate)
     print('input reference date: {}'.format(inps.refDate))
 
-    # check input reference date
+    # check available dates
     date_list = timeseries(inps.timeseries_file[0]).get_date_list()
     if inps.refDate not in date_list:
         msg = 'input reference date: {} is not found.'.format(inps.refDate)
@@ -141,9 +149,10 @@ def main(iargs=None):
 
     inps.refDate = read_ref_date(inps)
 
-    for ts_file in inps.timeseries_file:
-        ref_date_file(ts_file, inps.refDate, inps.outfile)
-        time.sleep(1)   #to distinguish the modification time of input files
+    if inps.refDate:
+        for ts_file in inps.timeseries_file:
+            ref_date_file(ts_file, inps.refDate, inps.outfile)
+            time.sleep(1)   #to distinguish the modification time of input files
     return
 
 

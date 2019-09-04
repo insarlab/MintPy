@@ -1,5 +1,5 @@
 #! /bin/sh
-# Prepare dataset for an AOI
+# Extract input datasets in mintpy/inputs for an area of interest (AOI) from the one of the whole frame
 # Parameters: SNWE : string for the AOI
 #             step : string/number, output resolution in degree
 #             inputs_dir_src : source mintpy/inputs folder for the whole track in radar coordinates
@@ -21,6 +21,7 @@ step="0.000185185"   #degrees
 # 0.000092593 --> 10 m
 
 
+###########################################################################
 # create destination directory
 if [ ! -d $inputs_dir_dst ]; then
     echo "create "$inputs_dir_dst

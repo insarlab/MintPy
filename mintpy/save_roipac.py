@@ -19,6 +19,7 @@ EXAMPLE = """example:
   #----- unwrapped phase
   #for velocity: output an interferogram with temporal baseline in DATE12 metadata
   save_roipac.py  velocity.h5
+  save_roipac.py  velocity.h5 -m maskTempCoh.h5 maskAoiShinmoe.h5
 
   #for time-series: specify (date1_)date2
   save_roipac.py  timeseries_ERA5_ramp_demErr.h5  #use the last date
@@ -53,7 +54,7 @@ def create_parser():
     parser.add_argument('file', help='HDF5 file to be converted.')
     parser.add_argument('dset', nargs='?', help='date/date12 of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-o', '--output', dest='outfile', help='output file name.')
-    parser.add_argument('-m','--mask', dest='mask_file', help='mask file')
+    parser.add_argument('-m','--mask', dest='mask_file', nargs='+', help='mask file')
     parser.add_argument('--ref-yx', dest='ref_yx', type=int, nargs=2, help='custom reference pixel in y/x')
     parser.add_argument('--ref-lalo', dest='ref_lalo', type=float, nargs=2, help='custom reference pixel in lat/lon')
     return parser
@@ -278,10 +279,11 @@ def read_data(inps):
 
     # mask
     if inps.mask_file:
-        print('mask data based on input file: {}'.format(inps.mask_file))
-        mask = readfile.read(inps.mask_file)[0]
-        mask *= ~np.isnan(data)
-        data[mask==0] = np.nan
+        for m_file in inps.mask_file:
+            print('mask data based on input file: {}'.format(m_file))
+            mask = readfile.read(m_file)[0]
+            mask *= ~np.isnan(data)
+            data[mask==0] = np.nan
 
     # get rid of starting . if output as hdf5 file
     if inps.outfile.endswith('.h5'):

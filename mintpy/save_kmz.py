@@ -6,14 +6,13 @@
 ############################################################
 
 
-import os
-import argparse
-
 try:
     from pykml.factory import KML_ElementMaker as KML
 except ImportError:
     raise ImportError('Can not import pykml!')
 
+import os
+import argparse
 from lxml import etree
 import numpy as np
 import matplotlib as mpl
@@ -256,7 +255,7 @@ def write_kmz_file(data, metadata, out_file, inps=None):
     # 3) go back to the working directory
     kmz_file = '{}.kmz'.format(out_name_base)
     cmd = 'cd {d1}; zip {fz} {fl} {fd} {fc}; cd {d2}'.format(
-        d1=os.path.dirname(kmz_file),
+        d1=os.path.abspath(os.path.dirname(kmz_file)),
         fz=os.path.basename(kmz_file),
         fl=os.path.basename(kml_file),
         fd=os.path.basename(data_png_file),

@@ -17,6 +17,7 @@ from mintpy.utils import writefile
 
 EXAMPLE = """example:
   load_gbis.py invert_1_2_C.mat
+  load_gbis.py invert_1_2_C.mat --nodisplay
 """
 
 def create_parser():
@@ -37,19 +38,26 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
-def gbis_mat2hdf5(mat_file, display=True):
+def gbis_mat2hdf5(inv_mat_file, display=True):
     """Convert InSAR related GBIS inversion result .mat file into HDF5 file."""
-    out_dir = os.path.dirname(mat_file)
+    out_dir = os.path.dirname(inv_mat_file)
     out_files = []
 
-    print('read mat file: {}'.format(mat_file))
-    mat = sio.loadmat(mat_file, struct_as_record=False, squeeze_me=True)
+    print('read mat file: {}'.format(inv_mat_file))
+    mat = sio.loadmat(inv_mat_file, struct_as_record=False, squeeze_me=True)
+
+    # when num_file == 1
+    if isinstance(mat['insar'], sio.matlab.mio5_params.mat_struct):
+        mat['insar'] = [mat['insar']]
+        mat['insarPlot'] = [mat['insarPlot']]
     num_file = len(mat['insar'])
     print('number of output HDF5 file: {}'.format(num_file))
 
     # grab optimal model parameter
     parValue = mat['invResults'].optimalmodel
     parName = mat['invResults'].model.parName
+    modelName = parName[0].split()[0]
+
     mDict = {}
     for i in range(len(parValue)):
         key = parName[i].replace(' ', '_')
@@ -57,28 +65,32 @@ def gbis_mat2hdf5(mat_file, display=True):
 
     # convert model x/y to lat/lon
     ref_lon, ref_lat = mat['geo'].referencePoint
+    mDict['{}_REF_LAT'.format(modelName)] = ref_lat
+    mDict['{}_REF_LON'.format(modelName)] = ref_lon
+
     geod = pyproj.Geod(ellps='WGS84')
     mX, mY = parValue[0:2]
     mLon, mLat = geod.fwd(ref_lon, ref_lat,
                           az=np.arctan(mX/mY) * 180 / np.pi,
                           dist=(mX**2 + mY**2)**0.5,
                           radians=False)[0:2]
-    modelName = parName[0].split()[0]
-    mDict['{}_latitude'.format(modelName)] = mLat
-    mDict['{}_longitude'.format(modelName)] = mLon
+    mDict['{}_LAT'.format(modelName)] = mLat
+    mDict['{}_LON'.format(modelName)] = mLon
+    mDict['DEFORMATION_MODEL'] = modelName
 
     if display:
         fig_size = [12, 3*num_file]
         fig, axs = plt.subplots(nrows=num_file, ncols=3, figsize=fig_size)
+        axs = axs.reshape(-1,3)   #convert to 2D array when num_file is 1.
         print('creating figure in size of {}'.format(fig_size))
 
     for i in range(num_file):
-        data_file = mat['insar'][i].dataPath
+        insar_mat_file = mat['insar'][i].dataPath
         print('-'*30)
-        print('read mask from file: {}'.format(data_file))
+        print('read mask from file: {}'.format(insar_mat_file))
 
         # read mask
-        mask = sio.loadmat(data_file, struct_as_record=False, squeeze_me=True)['Mask']
+        mask = sio.loadmat(insar_mat_file, struct_as_record=False, squeeze_me=True)['Mask']
         length, width = mask.shape
 
         # convert to 2D matrix
@@ -94,11 +106,11 @@ def gbis_mat2hdf5(mat_file, display=True):
         residual[mask!=0] = insarPlot.residual
 
         # prepare metadata
-        meta = vars(sio.loadmat(data_file, struct_as_record=False, squeeze_me=True)['Metadata'])
+        meta = vars(sio.loadmat(insar_mat_file, struct_as_record=False, squeeze_me=True)['Metadata'])
         temp = meta.pop('_fieldnames') # remote _fieldnames added by Matlab
         meta['UNIT'] = 'm'
         meta['FILE_TYPE'] = 'displacement'
-        meta['PROCESSOR'] = 'isce'
+        meta['PROCESSOR'] = 'GBIS'
         if 'minHeight' in vars(insarPlot).keys():
             meta['MODEL_MIN_HEIGHT'] = insarPlot.minHeight
         for key, value in mDict.items():

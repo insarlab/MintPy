@@ -7,9 +7,10 @@
 # Modified from _gmt.py, GIANT v1.0, Caltech.
 
 
+import sys
 import argparse
 import numpy as np
-import scipy.io.netcdf as netcdf
+from scipy.io import netcdf
 from mintpy.utils import readfile, plot as pp
 
 
@@ -145,10 +146,6 @@ def write_grd_file(data, atr, fname_out=None):
     Output:
         fname_out - string, output file name
     """
-    if not fname_out:
-        fname_out = '{}.grd'.format(pp.auto_figure_title(inps.file,
-                                                         datasetNames=inps.dset,
-                                                         inps_dict=vars(inps)))
     # Get 1D array of lats and lons
     lats, lons = get_geo_lat_lon(atr)
 
@@ -168,6 +165,10 @@ def main(iargs=None):
     data, atr = readfile.read(inps.file, datasetName=inps.dset) 
 
     # 2. Write GMT .grd file
+    if not inps.outfile:
+        outbase = pp.auto_figure_title(inps.file, datasetNames=inps.dset, inps_dict=vars(inps))
+        inps.outfile = '{}.grd'.format(outbase)
+
     inps.outfile = write_grd_file(data, atr, inps.outfile)
     print('Done.')
     return inps.outfile
@@ -175,4 +176,4 @@ def main(iargs=None):
 
 ####################################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

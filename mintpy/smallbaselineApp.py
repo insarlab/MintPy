@@ -101,7 +101,7 @@ def create_parser():
     step = parser.add_argument_group('steps processing (start/end/dostep)', STEP_HELP)
     step.add_argument('--start', dest='startStep', metavar='STEP', default=STEP_LIST[0],
                       help='start processing at the named step, default: {}'.format(STEP_LIST[0]))
-    step.add_argument('--end', dest='endStep', metavar='STEP',  default=STEP_LIST[-1],
+    step.add_argument('--end','--stop', dest='endStep', metavar='STEP',  default=STEP_LIST[-1],
                       help='end processing at the named step, default: {}'.format(STEP_LIST[-1]))
     step.add_argument('--dostep', dest='doStep', metavar='STEP',
                       help='run processing at the named step only')
@@ -548,7 +548,12 @@ class TimeSeriesAnalysis:
         mask_file = 'maskTempCoh.h5'
         tcoh_min = self.template['mintpy.networkInversion.minTempCoh']
 
-        scp_args = '{} -m {} -o {} --shadow {}'.format(tcoh_file, tcoh_min, mask_file, geom_file)
+        scp_args = '{} -m {} -o {}'.format(tcoh_file, tcoh_min, mask_file)
+
+        # exclude pixels in shadow if shadowMask dataset is available
+        apply_shadow_mask = self.template['mintpy.networkInversion.shadowMask']
+        if apply_shadow_mask is True and 'shadowMask' in readfile.get_dataset_list(geom_file):
+            scp_args += ' --base {} --base-dataset shadowMask --base-value 1'.format(geom_file)
         print('generate_mask.py', scp_args)
 
         # update mode: run only if:
@@ -875,8 +880,13 @@ class TimeSeriesAnalysis:
                 tcoh_file = os.path.join(out_dir, 'geo_temporalCoherence.h5')
                 mask_file = os.path.join(out_dir, 'geo_maskTempCoh.h5')
                 tcoh_min = self.template['mintpy.networkInversion.minTempCoh']
-                scp_args = '{} -m {} -o {} --shadow {}'.format(tcoh_file, tcoh_min, mask_file, geom_file)
+
+                scp_args = '{} -m {} -o {}'.format(tcoh_file, tcoh_min, mask_file)
+                # exclude pixels in shadow if shadowMask dataset is available
+                if 'shadowMask' in readfile.get_dataset_list(geom_file):
+                    scp_args += ' --base {} --base-dataset shadowMask --base-value 1'.format(geom_file)
                 print('generate_mask.py', scp_args)
+
                 if ut.run_or_skip(out_file=mask_file, in_file=tcoh_file) == 'run':
                     mintpy.generate_mask.main(scp_args.split())
             else:

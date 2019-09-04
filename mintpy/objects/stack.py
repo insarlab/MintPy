@@ -253,7 +253,7 @@ class timeseries:
     def layout_hdf5(self, dsNameDict, metadata, compression=None):
         print('-'*50)
         print('create HDF5 file {} with w mode'.format(self.file))
-        f = h5py.File(self.file, "w") 
+        f = h5py.File(self.file, "w")
 
         for key in dsNameDict.keys():
             print("create dataset: {d:<25} of {t:<25} in size of {s}".format(
@@ -304,7 +304,7 @@ class timeseries:
                 block = [0, shape[0],
                          0, shape[1],
                          0, shape[2]]
-        
+
         print('open {} in {} mode'.format(self.file, mode))
         f = h5py.File(self.file, mode)
 
@@ -818,6 +818,9 @@ class ifgramStack:
                 data = dset[i, box[1]:box[3], box[0]:box[2]]
                 if maskFile:
                     data[mask == 0] = np.nan
+                # ignore ZERO value for coherence
+                if datasetName == 'coherence':
+                    data[data == 0] = np.nan
                 dmean[i] = np.nanmean(data)
                 sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, numIfgram))
                 sys.stdout.flush()
@@ -1070,14 +1073,15 @@ class ifgramStack:
         with h5py.File(self.file, 'r+') as f:
             print('open file {} with r+ mode'.format(self.file))
             print('update HDF5 dataset "/dropIfgram".')
-            f['dropIfgram'][:] = np.array([i not in date12List_to_drop 
+            f['dropIfgram'][:] = np.array([i not in date12List_to_drop
                                            for i in date12ListAll], dtype=np.bool_)
-            # update MODIFICATION_TIME for unwrapPhase datasets
-            f['unwrapPhase'].attrs['MODIFICATION_TIME'] = str(time.time())
-            dsName = 'unwrapPhase_bridging'
-            if dsName in f.keys():
-                time.sleep(1)   #to distinguish the modification time of input files
-                f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
+            # update MODIFICATION_TIME for all datasets in ifgramDatasetNames
+            for dsName in ifgramDatasetNames:
+                if dsName in f.keys():
+                    print('update MODIFICATION_TIME in HDF5 dataset "/{}"'.format(dsName))
+                    f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
+                    time.sleep(1)   #to distinguish the modification time of input files
+
 ################################# ifgramStack class end ################################
 
 
@@ -1142,12 +1146,12 @@ class HDFEOS:
                                      'troposphericDelay'  : 'observation',
                                      'topographicResidual': 'observation',
                                      'ramp'               : 'observation',
-                                     'date'               : 'observation', 
-                                     'temporalCoherence'  : 'quality', 
-                                     'mask'               : 'quality', 
-                                     'coherence'          : 'quality', 
-                                     'variance'           : 'quality', 
-                                     'uncertainty'        : 'quality', 
+                                     'date'               : 'observation',
+                                     'temporalCoherence'  : 'quality',
+                                     'mask'               : 'quality',
+                                     'coherence'          : 'quality',
+                                     'variance'           : 'quality',
+                                     'uncertainty'        : 'quality',
                                      'height'             : 'geometry',
                                      'incidenceAngle'     : 'geometry',
                                      'slantRangeDistance' : 'geometry',
@@ -1260,4 +1264,3 @@ class HDFEOS:
                 data = np.squeeze(data)
         return data
 ################################# HDF-EOS5 class end ###################################
-

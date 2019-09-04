@@ -15,14 +15,18 @@ from mintpy.utils import readfile, writefile, ptime, utils as ut
 dataType = np.float32
 # key configuration parameter name
 key_prefix = 'mintpy.velocity.'
-configKeys = ['excludeDate']
+configKeys = [
+    'startDate',
+    'endDate',
+    'excludeDate',
+]
 
 
 ############################################################################
 EXAMPLE = """example:
-  timeseries2velocity.py  timeSeries_ECMWF_demErr.h5
-  timeseries2velocity.py  timeseries_ECMWF_demErr_ramp.h5  -t smallbaselineApp.cfg --update
-  timeseries2velocity.py  timeseries_ECMWF_demErr_ramp.h5  -t KyushuT73F2980_2990AlosD.template
+  timeseries2velocity.py  timeseries_ERA5_demErr.h5
+  timeseries2velocity.py  timeseries_ERA5_demErr_ramp.h5  -t smallbaselineApp.cfg --update
+  timeseries2velocity.py  timeseries_ERA5_demErr_ramp.h5  -t KyushuT73F2980_2990AlosD.template
   timeseries2velocity.py  timeseries.h5  --start-date 20080201
   timeseries2velocity.py  timeseries.h5  --start-date 20080201  --end-date 20100508
   timeseries2velocity.py  timeseries.h5  --exclude-date exclude_date.txt
@@ -194,6 +198,8 @@ def read_date_info(inps):
     # Date used for estimation inps.dateList
     inps.dateList = [i for i in tsobj.dateList if i not in inps.excludeDate]
     inps.numDate = len(inps.dateList)
+    inps.startDate = inps.dateList[0]
+    inps.endDate = inps.dateList[-1]
     print('-'*50)
     print('dates from input file: {}\n{}'.format(tsobj.numDate, tsobj.dateList))
     print('-'*50)

@@ -19,7 +19,7 @@ sudo xcodebuild -license
 
 ### Notes for Docker users ###
 
-Docker allows one to run MintPy in a dedicated container (essentially an efficient virtual machine) and to be independent of platform OS. After installing [docker](https://docs.docker.com/install/), run the following to pull the [MintPy container from DockerHub](https://hub.docker.com/r/andretheronsa/mintpy) (contributed by Andre Theron) to your local machine. Check more details at [here](../docker/README.md).
+Docker allows one to run MintPy in a dedicated container (essentially an efficient virtual machine) and to be independent of platform OS. After installing [docker](https://docs.docker.com/install/), run the following to pull the [MintPy container from DockerHub](https://hub.docker.com/r/andretheronsa/mintpy) to your local machine, check more details at [here](../docker/README.md).
 
 ```
 docker pull andretheronsa/mintpy:latest
@@ -27,10 +27,7 @@ docker pull andretheronsa/mintpy:latest
 
 ### 1. Download and setup MintPy ###
 
-To use the package, you need to setup the environment:
-
-+ To make mintpy importable in python, by adding the path to MintPy directory to your _$PYTHONPATH_    
-+ To make utility scripts available in command line, by adding _${MINTPY_HOME}/mintpy_ and _${MINTPY_HOME}/sh_ to your _$path_.
+To use the package, you need to setup the environment a) by adding _${MINTPY_HOME}_ to your _$PYTHONPATH_ to make mintpy importable in Python and b) by adding _${MINTPY_HOME}/mintpy_ to your _$path_ to make application scripts executable in command line, as shown below.
 
 Add to your **_~/.bash_profile_** file for _bash_ user. For _tcsh_ user, check the example [here](https://github.com/yunjunz/macOS_Setup/blob/master/.tcshrc). Source the file for the first time. It will be sourced automatically next time when you login.
 

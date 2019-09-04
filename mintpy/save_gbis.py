@@ -174,7 +174,7 @@ def save2mat(inps):
     mdict['Metadata'] = inps.metadata
     # save to mat file
     sio.savemat(inps.outfile, mdict, long_field_names=True)
-    print('save to file: {}.mat'.format(os.path.abspath(inps.outfile)))
+    print('save to file: {}'.format(os.path.abspath(inps.outfile)))
     return
 
 

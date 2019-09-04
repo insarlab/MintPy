@@ -243,7 +243,7 @@ def read_subset_box(inpsDict):
         # Use the min bbox if files size are different
         if inpsDict['processor'] == 'snap':
             fnames = ut.get_file_list(inpsDict['mintpy.load.unwFile'])
-            pix_box = check_files_size(fnames)
+            pix_box = update_box4files_with_inconsistent_size(fnames)
 
         if not pix_box:
             return inpsDict
@@ -270,7 +270,7 @@ def read_subset_box(inpsDict):
     return inpsDict
 
 
-def check_files_size(fnames):
+def update_box4files_with_inconsistent_size(fnames):
     """Check the size (row / column number) of a list of files
     For SNAP geocoded products has one line missing in some interferograms, Andre, 2019-07-16
     Parameters: fnames  : list of path for interferogram files 
@@ -290,7 +290,7 @@ def check_files_size(fnames):
         msg += '\nWARNING: NOT all input unwrapped interferograms have the same row/column number!'
         msg += '\nMinimum size is: ({}, {})'.format(min_length, min_width)
         msg += '\n'+'-'*30
-        msg += '\nThe following dates has different size:'
+        msg += '\nThe following dates have different size:'
 
         for i in range(len(fnames)):
             if length_list[i] != min_length or width_list[i] != min_width:
@@ -308,6 +308,57 @@ def check_files_size(fnames):
     return pix_box
 
 
+def skip_files_with_inconsistent_size(dsPathDict, pix_box=None, dsName='unwrapPhase'):
+    """Skip files by removing the file path from the input dsPathDict."""
+    atr_list = [readfile.read_attribute(fname) for fname in dsPathDict[dsName]]
+    length_list = [int(atr['LENGTH']) for atr in atr_list]
+    width_list = [int(atr['WIDTH']) for atr in atr_list]
+
+    # Check size requirements
+    drop_inconsistent_files = False
+    if any(len(set(size_list)) > 1 for size_list in [length_list, width_list]):
+        if pix_box is None:
+            drop_inconsistent_files = True
+        else:
+            # if input subset is within the min file sizes: do NOT drop
+            max_box_width, max_box_length = pix_box[2:4]
+            if max_box_length > min(length_list) or max_box_width > min(width_list):
+                drop_inconsistent_files = True
+
+    # update dsPathDict
+    if drop_inconsistent_files:
+        common_length = ut.most_common(length_list)
+        common_width = ut.most_common(width_list)
+
+        # print out warning message
+        msg = '\n'+'*'*80
+        msg += '\nWARNING: NOT all input unwrapped interferograms have the same row/column number!'
+        msg += '\nThe most common size is: ({}, {})'.format(common_length, common_width)
+        msg += '\n'+'-'*30
+        msg += '\nThe following dates have different size:'
+
+        dsNames = list(dsPathDict.keys())
+        date12_list = [atr['DATE12'] for atr in atr_list]
+        for i in range(len(date12_list)):
+            if length_list[i] != common_length or width_list[i] != common_width:
+                date12 = date12_list[i]
+                dates = ptime.yyyymmdd(date12.split('-'))
+                # update file list for all datasets
+                for dsName in dsNames:
+                    fnames = [i for i in dsPathDict[dsName]
+                              if all(d[2:8] in i for d in dates)]
+                    if len(fnames) > 0:
+                        dsPathDict[dsName].remove(fnames[0])
+                msg += '\n\t{}\t({}, {})'.format(date12, length_list[i], width_list[i])
+
+        msg += '\n'+'-'*30
+        msg += '\nSkip loading the interferograms above.'
+        msg += '\nContinue to load the rest interferograms.'
+        msg += '\n'+'*'*80+'\n'
+        print(msg)
+    return dsPathDict
+
+
 def read_inps_dict2ifgram_stack_dict_object(inpsDict):
     """Read input arguments into dict of ifgramStackDict object"""
     # inpsDict --> dsPathDict
@@ -316,7 +367,6 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
     print('input data files:')
     maxDigit = max([len(i) for i in list(datasetName2templateKey.keys())])
     dsPathDict = {}
-    dsNumDict = {}
     for dsName in [i for i in ifgramDatasetNames
                    if i in datasetName2templateKey.keys()]:
         key = datasetName2templateKey[dsName]
@@ -324,7 +374,6 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
             files = sorted(glob.glob(str(inpsDict[key])))
             if len(files) > 0:
                 dsPathDict[dsName] = files
-                dsNumDict[dsName] = len(files)
                 print('{:<{width}}: {path}'.format(dsName,
                                                    width=maxDigit,
                                                    path=inpsDict[key]))
@@ -335,9 +384,18 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
         print('WARNING: No reqired {} data files found!'.format(dsName0))
         return None
 
-    # Check 2: number of files for all dataset types
-    for key, value in dsNumDict.items():
-        print('number of {:<{width}}: {num}'.format(key, width=maxDigit, num=value))
+    # Check 2: data dimension for unwrapPhase files
+    dsPathDict = skip_files_with_inconsistent_size(dsPathDict,
+                                                   pix_box=inpsDict['box'],
+                                                   dsName=dsName0)
+
+    # Check 3: number of files for all dataset types
+    # dsPathDict --> dsNumDict
+    dsNumDict = {}
+    for key in dsPathDict.keys():
+        num_file = len(dsPathDict[key])
+        dsNumDict[key] = num_file
+        print('number of {:<{width}}: {num}'.format(key, width=maxDigit, num=num_file))
 
     dsNumList = list(dsNumDict.values())
     if any(i != dsNumList[0] for i in dsNumList):
@@ -345,8 +403,6 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
         msg += ' -> skip interferograms with missing files and continue.'
         print(msg)
         #raise Exception(msg)
-
-    # Check 3: data dimension for all files
 
     # dsPathDict --> pairsDict --> stackObj
     dsNameList = list(dsPathDict.keys())
@@ -593,7 +649,7 @@ def main(iargs=None):
         geomRadarObj.write2hdf5(outputFile=inps.outfile[1],
                                 access_mode='w',
                                 box=box,
-                                compression='gzip',
+                                compression='lzf',
                                 extra_metadata=extraDict)
 
     if geomGeoObj and update_object(inps.outfile[2], geomGeoObj, boxGeo, updateMode=updateMode):
@@ -601,7 +657,7 @@ def main(iargs=None):
         geomGeoObj.write2hdf5(outputFile=inps.outfile[2],
                               access_mode='w',
                               box=boxGeo,
-                              compression='gzip')
+                              compression='lzf')
 
     return inps.outfile
 
