@@ -202,7 +202,10 @@ class connectComponent:
 
         # MST bridges with breadth_first_order
         distMatMst = csg.minimum_spanning_tree(self.distMat)
-        succs, preds = csg.breadth_first_order(distMatMst, i_start=self.labelRef-1, directed=False)
+        if self.labelRef == 0:
+            succs, preds = csg.breadth_first_order(distMatMst, i_start=self.labelRef, directed=False)
+        else:
+            succs, preds = csg.breadth_first_order(distMatMst, i_start=self.labelRef-1, directed=False)
 
         # save to self.bridges
         self.bridges = []
