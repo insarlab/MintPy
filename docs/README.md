@@ -74,7 +74,7 @@ MintPy is a toolbox with a lot of individual utility scripts, highly modulized i
 + [Example data directory](./dir_structure.md)
 + [Example template files for InSAR processors](./examples/input_files/README.md)
 + [Google Earth KMZ file](./google_earth.md)
-+ [Paper figures in Jupyter Notebook](./paper/README.md)
++ [Paper figures in Jupyter Notebook](https://github.com/geodesymiami/Yunjun_et_al-2019-MintPy)
 
 ### 4. User Forum ###
 
@@ -82,7 +82,7 @@ Join our google group [https://groups.google.com/forum/#!forum/mintpy](https://g
 
 ### 5. Citing this work ###
 
-Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: unwrapping error correction and noise reduction (under review), preprint doi:[10.31223/osf.io/9sz6m](https://eartharxiv.org/9sz6m/)
+Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: unwrapping error correction and noise reduction (under review), preprint doi:[10.31223/osf.io/9sz6m](https://eartharxiv.org/9sz6m/).
 
 In addition to the above, we recommend that you cite the original publications that describe the algorithms used in your specific analysis.
 
