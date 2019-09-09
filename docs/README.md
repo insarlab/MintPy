@@ -69,7 +69,7 @@ MintPy is a toolbox with a lot of individual utility scripts, highly modulized i
 
 ### 3. [Documentation](https://mintpy.readthedocs.io/) ###
 
-+ [Tutorials in Jupyter Notebook](./tutorials/README.md)
++ [Tutorials in Jupyter Notebook](https://github.com/insarlab/MintPy-tutorial)
 + [Example datasets](./example_dataset.md)
 + [Example data directory](./dir_structure.md)
 + [Example template files for InSAR processors](./examples/input_files/README.md)
