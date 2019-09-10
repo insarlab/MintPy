@@ -72,6 +72,8 @@ class connectComponent:
         # 2. reference label (ref_y/x or the largest one)
         if self.refY is not None:
             self.labelRef = self.labelImg[self.refY, self.refX]
+            if self.labelRef == 0:
+                 raise ValueError('input reference point is NOT included by the connected components.')
         else:
             regions = measure.regionprops(self.labelImg)
             idx = np.argmax([region.area for region in regions])
@@ -202,10 +204,7 @@ class connectComponent:
 
         # MST bridges with breadth_first_order
         distMatMst = csg.minimum_spanning_tree(self.distMat)
-        if self.labelRef == 0:
-            succs, preds = csg.breadth_first_order(distMatMst, i_start=self.labelRef, directed=False)
-        else:
-            succs, preds = csg.breadth_first_order(distMatMst, i_start=self.labelRef-1, directed=False)
+        succs, preds = csg.breadth_first_order(distMatMst, i_start=self.labelRef-1, directed=False)
 
         # save to self.bridges
         self.bridges = []
