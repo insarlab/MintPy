@@ -73,7 +73,7 @@ class connectComponent:
         if self.refY is not None:
             self.labelRef = self.labelImg[self.refY, self.refX]
             if self.labelRef == 0:
-                 raise ValueError('input reference point is NOT included by the connected components.')
+                 raise ValueError('input reference point is NOT included in the connectComponents.')
         else:
             regions = measure.regionprops(self.labelImg)
             idx = np.argmax([region.area for region in regions])
