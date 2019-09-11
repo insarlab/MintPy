@@ -65,7 +65,7 @@ def create_parser():
     parser.add_argument('-x', '--lon-step', dest='lonStep', type=float,
                         help='output pixel size in degree in longitude.')
 
-    parser.add_argument('-i', '--interpolate', dest='interpMethod', choices={'nearest', 'bilinear'},
+    parser.add_argument('-i', '--interpolate', dest='interpMethod', choices={'nearest', 'linear'},
                         help='interpolation/resampling method. Default: nearest', default='nearest')
     parser.add_argument('--fill', dest='fillValue', type=float, default=np.nan,
                         help='Value used for points outside of the interpolation domain.\n' +

@@ -129,9 +129,9 @@ def prepare_stack(iDict):
     if iDict['applyWaterMask']:
         cmd += ' --applyWaterMask'
 
-    #for SLC data: ALOS2
+    #for downloaded data in SLC format
     if iDict['sensor'] in ['Alos2']:
-        cmd += ' --nofocus'
+        cmd += ' --nofocus --zero '
 
     print(cmd)
     status = subprocess.Popen(cmd, shell=True).wait()
@@ -158,6 +158,8 @@ def run_stack(iDict, run_file_dir='run_files'):
         config_file_src = os.path.join(config_dir, os.path.basename(config_file))
         shutil.copy2(config_file_src, dir_orig)
         print('copy job config file {} to the working directory: {}'.format(os.path.basename(config_file), dir_orig))
+    else:
+        print('use existing job config file {} in the working directory: {}'.format(os.path.basename(config_file), dir_orig))
 
     # read job config file
     config = configparser.ConfigParser(delimiters='=')

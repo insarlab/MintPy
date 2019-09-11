@@ -463,6 +463,7 @@ class resample:
                                                       fill_value=fill_value,
                                                       radius=radius,
                                                       neighbours=32,
+                                                      segments=num_segment,
                                                       epsilon=0)
 
         # for debug

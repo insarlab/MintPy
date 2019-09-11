@@ -5,7 +5,7 @@
 
 if [ ! $# -eq 2 ]; then
     echo 'No input argument for alks and rlks! Example:'
-    echo './run_multilook_geometry 20 4'
+    echo './run_multilook_geometry.sh 20 4'
     exit 1
 fi
 
