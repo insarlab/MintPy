@@ -38,10 +38,10 @@ def create_parser():
     parser.add_argument('-t', dest='threshold', type=float,
                         help='threshold value used for masking.\n' +
                         'if not specified, only pixels with mask value equal to zero is masked out.')
-    parser.add_argument('--fill', dest='fill_value', type=float,
+    parser.add_argument('--fill', dest='fill_value', type=float, default=np.nan,
                         help="fill masked out area with input value. i.e. \n"
-                             "np.nan, 0, 1000, ... \n"
-                             "By default, it's np.ma.masked for int16 type and np.nan for all the others.")
+                             "np.nan (default), 0, 1000, ... \n"
+                             "If np.nan and input data matrix is not float/complex, convert matrix data type to np.float32.")
     parser.add_argument('-x', dest='subset_x', type=int, nargs=2,
                         help='subset range in x/cross-track/column direction')
     parser.add_argument('-y', dest='subset_y', type=int, nargs=2,
@@ -56,19 +56,19 @@ def cmd_line_parse(iargs=None):
 
 
 ############################################################
-def mask_matrix(data, mask, fill_value=None):
+def mask_matrix(data, mask, fill_value=np.nan):
     """mask a 2D matrxi data with mask
     Parameters: data : 2D / 3D np.array
                 mask : 2D np.array of bool
                 fill_value : number
     Returns:    data : same shape of array as input
     """
-    # Masked Value
-    if fill_value is None:
-        if data.dtype == np.float32:
-            fill_value = np.nan
-        else:
-            raise ValueError('specify fill_value for input data type: {}'.format(data.dtype))
+    # check data type
+    if np.isnan(fill_value) and data.dtype.kind not in ('f','d','c'):
+        msg = 'in order to fill the invalid pixels with np.nan'
+        msg += '\n\tconvert input matrix from {} to np.float32'.format(data.dtype)
+        print(msg)
+        data = np.array(data, dtype=np.float32)
 
     if len(data.shape) == 2:
         data[mask == 0] = fill_value
