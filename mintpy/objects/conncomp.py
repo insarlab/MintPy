@@ -23,7 +23,7 @@ from .ramp import deramp
 
 class connectComponent:
     """ Object for bridging connected components.
-    
+
     Example:
         unw_file = 'filt_fine.unw'
         # prepare connectComponent object
@@ -61,8 +61,8 @@ class connectComponent:
                  self.labelBound - 2D np.ndarray in uint8 for label boundaries to find bridges
         """
         # 1. labelImg
-        (self.labelImg, 
-         self.numLabel, 
+        (self.labelImg,
+         self.numLabel,
          self.labelBound) = self.get_large_label(self.conncomp,
                                                  min_area=min_area,
                                                  erosion_size=erosion_size,
@@ -72,6 +72,8 @@ class connectComponent:
         # 2. reference label (ref_y/x or the largest one)
         if self.refY is not None:
             self.labelRef = self.labelImg[self.refY, self.refX]
+            if self.labelRef == 0:
+                 raise ValueError('input reference point is NOT included in the connectComponent.')
         else:
             regions = measure.regionprops(self.labelImg)
             idx = np.argmax([region.area for region in regions])
@@ -106,7 +108,7 @@ class connectComponent:
             for orig_reg in measure.regionprops(label_img):
                 if orig_reg.label not in label_erosion:
                     if print_msg:
-                        print('label: {}, area: {}, bbox: {}'.format(orig_reg.label, 
+                        print('label: {}, area: {}, bbox: {}'.format(orig_reg.label,
                                                                      orig_reg.area,
                                                                      orig_reg.bbox))
                     label_img[label_img == orig_reg.label] = 0
@@ -210,7 +212,11 @@ class connectComponent:
             n0 = preds[succs[i]] + 1
             n1 = succs[i] + 1
             # read conn
-            nn = sorted([str(n0), str(n1)])
+            if n0 > n1:
+                nn = [str(n1), str(n0)]
+            else:
+                nn = [str(n0), str(n1)]
+
             conn = self.connDict['{}_{}'.format(nn[0], nn[1])]
             y0, x0 = conn[str(n0)]
             y1, x1 = conn[str(n1)]
@@ -307,7 +313,5 @@ class connectComponent:
                 ax.imshow(mask0, cmap='gray', alpha=0.3, vmin=0, vmax=1)
                 ax.imshow(mask1, cmap='gray', alpha=0.3, vmin=0, vmax=1)
         # reference pixel
-        ax.plot(self.refX, self.refY, 'ks', ms=2)        
+        ax.plot(self.refX, self.refY, 'ks', ms=2)
         return ax
-
-
