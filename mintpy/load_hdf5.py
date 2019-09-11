@@ -30,6 +30,7 @@ def create_parser():
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output HDF5 file name')
     parser.add_argument('--data-type', dest='data_type', help='output data type')
+    parser.add_argument('--dset-name', dest='dset_names', nargs='+', metavar='NAME', help='output dataset name(s)')
     return parser
 
 
@@ -62,13 +63,15 @@ def main(iargs=None):
             raise ValueError('un-recognized input data type: {}'.format(inps.data_type))
 
     atr = readfile.read_attribute(inps.file)
-    dsNames = readfile.get_dataset_list(inps.file)
+    if not inps.dset_names:
+        inps.dset_names = readfile.get_dataset_list(inps.file)
+
     dsDict = {}
-    for dsName in dsNames:
-        data = readfile.read(inps.file, datasetName=dsName)[0]
+    for ds_name in inps.dset_names:
+        data = readfile.read(inps.file, datasetName=ds_name)[0]
         if inps.data_type:
             data = np.array(data, inps.data_type)
-        dsDict[dsName] = data
+        dsDict[ds_name] = data
     writefile.write(dsDict, out_file=inps.outfile, metadata=atr)
     return inps.outfile
 
