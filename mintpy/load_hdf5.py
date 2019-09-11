@@ -15,9 +15,9 @@ from mintpy.utils import readfile, writefile
 
 ############################################################
 EXAMPLE = """example:
-  load2hdf5.py SanAndreas.dem  --data-type float32  -o demGeo.h5
-  load2hdf5.py geomap_4rlks.trans  -o geometryGeo.h5
-  load2hdf5.py filt_fine_101120-110220.unw  -o 20101120_20110220_unw.h5
+  load_hdf5.py SanAndreas.dem  --data-type float32  -o demGeo.h5
+  load_hdf5.py geomap_4rlks.trans  -o geometryGeo.h5
+  load_hdf5.py filt_fine_101120-110220.unw  -o 20101120_20110220_unw.h5
 """
 
 
