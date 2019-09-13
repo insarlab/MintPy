@@ -4,10 +4,6 @@ MintPy use [pyKML](https://pythonhosted.org/pykml/) to generate KMZ (Keyhole Mar
 
 `save_kmz_timeseries.py` takes 3D displacement time-series file and outputs a KMZ file with interactive time-seires plot.
 
-```bash
-save_kmz_timeseries.py geo_timeseries_ECMWF_ramp_demErr.h5 --vel geo_velocity_mask.h5 --tcoh geo_temporalCoherence.h5
-```
-
 <p align="center">
   <img src="https://yunjunzhang.files.wordpress.com/2019/02/fernandinasendt128_ge-1.png">
 </p>
@@ -17,10 +13,6 @@ save_kmz_timeseries.py geo_timeseries_ECMWF_ramp_demErr.h5 --vel geo_velocity_ma
 ### 2. Raster image ###
 
 `save_kmz.py` takes any 2D matrix and outputs a KMZ file with a overlay image.
-
-```bash
-save_kmz.py geo_velocity_masked.h5 --wrap --wrap-range -3 3
-```
 
 <p align="center">
   <img src="https://yunjunzhang.files.wordpress.com/2019/02/vel_fernandinasendt128_ge.png">

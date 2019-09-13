@@ -2,7 +2,7 @@
 ###############################################################
 # Plot Results from Routine Workflow with smallbaselineApp.py
 # Author: Zhang Yunjun, 2017-07-23
-# Latest update: 2019-05-18
+# Latest update: 2019-09-13
 ###############################################################
 
 
@@ -21,14 +21,6 @@ dem_file='./inputs/geometryRadar.h5'
 if [ ! -f $dem_file ]; then
     dem_file='./inputs/geometryGeo.h5'
 fi
-
-# list of GAM models
-tropo_models=(
-    'ECMWF'
-    'MERRA'
-    'NARR'
-    'ERA5'
-)
 
 ## Log File
 log_file='plot_smallbaselineApp.log'
@@ -91,12 +83,12 @@ if [ $plot_timeseries -eq 1 ]; then
     file=timeseries_LODcor_ECMWF_ramp.h5;           test -f $file && $view $file $opt >> $log_file
     file=timeseries_LODcor_ECMWF_ramp_demErr.h5;    test -f $file && $view $file $opt >> $log_file
 
-    #w trop delay corrections
-    for trop in "${tropo_models[@]}" "tropHgt"; do
-        file=timeseries_${trop}.h5;                  test -f $file && $view $file $opt >> $log_file
-        file=timeseries_${trop}_demErr.h5;           test -f $file && $view $file $opt >> $log_file
-        file=timeseries_${trop}_ramp.h5;             test -f $file && $view $file $opt >> $log_file
-        file=timeseries_${trop}_ramp_demErr.h5;      test -f $file && $view $file $opt >> $log_file
+    #w tropo delay corrections
+    for tropo in ERA5 ECMWF MERRA NARR tropHgt; do
+        file=timeseries_${tropo}.h5;                test -f $file && $view $file $opt >> $log_file
+        file=timeseries_${tropo}_demErr.h5;         test -f $file && $view $file $opt >> $log_file
+        file=timeseries_${tropo}_ramp.h5;           test -f $file && $view $file $opt >> $log_file
+        file=timeseries_${tropo}_ramp_demErr.h5;    test -f $file && $view $file $opt >> $log_file
     done
 
     #w/o trop delay correction
@@ -107,19 +99,19 @@ fi
 
 ## Geo coordinates for UNAVCO Time-series InSAR Archive Product
 if [ $plot_geocoded_data -eq 1 ]; then
-    file=./geo/geo_maskTempCoh.h5;                   test -f $file && $view $file -c gray  >> $log_file
-    file=./geo/geo_temporalCoherence.h5;             test -f $file && $view $file -c gray  >> $log_file
-    file=./geo/geo_velocity.h5;                      test -f $file && $view $file velocity >> $log_file
-    file=./geo/geo_timeseries_ECMWF_demErr_ramp.h5;  test -f $file && $view $file --noaxis >> $log_file
-    file=./geo/geo_timeseries_ECMWF_demErr.h5;       test -f $file && $view $file --noaxis >> $log_file
-    file=./geo/geo_timeseries_demErr_ramp.h5;        test -f $file && $view $file --noaxis >> $log_file
-    file=./geo/geo_timeseries_demErr.h5;             test -f $file && $view $file --noaxis >> $log_file
+    file=./geo/geo_maskTempCoh.h5;                  test -f $file && $view $file -c gray  >> $log_file
+    file=./geo/geo_temporalCoherence.h5;            test -f $file && $view $file -c gray  >> $log_file
+    file=./geo/geo_velocity.h5;                     test -f $file && $view $file velocity >> $log_file
+    file=./geo/geo_timeseries_ECMWF_demErr_ramp.h5; test -f $file && $view $file --noaxis >> $log_file
+    file=./geo/geo_timeseries_ECMWF_demErr.h5;      test -f $file && $view $file --noaxis >> $log_file
+    file=./geo/geo_timeseries_demErr_ramp.h5;       test -f $file && $view $file --noaxis >> $log_file
+    file=./geo/geo_timeseries_demErr.h5;            test -f $file && $view $file --noaxis >> $log_file
 fi
 
 
 if [ $plot_the_rest -eq 1 ]; then
-    for trop in "${tropo_models[@]}"; do
-        file=velocity${trop}.h5;    test -f $file && $view $file --mask no >> $log_file
+    for tropo in ERA5 ECMWF MERRA NARR; do
+        file=velocity${tropo}.h5;   test -f $file && $view $file --mask no >> $log_file
     done
     file=numInvIfgram.h5;           test -f $file && $view $file --mask no >> $log_file
 fi

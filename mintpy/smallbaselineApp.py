@@ -559,7 +559,7 @@ class TimeSeriesAnalysis:
         # update mode: run only if:
         # 1) output file exists and newer than input file, AND
         # 2) all config keys are the same
-        config_keys = ['mintpy.networkInversion.minTempCoh']
+        config_keys = ['mintpy.networkInversion.{}'.format(i) for i in ['minTempCoh','shadowMask']]
         print('update mode: ON')
         flag = 'skip'
         if ut.run_or_skip(out_file=mask_file, in_file=tcoh_file, print_msg=False) == 'run':

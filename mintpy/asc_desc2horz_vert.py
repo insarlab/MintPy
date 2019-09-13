@@ -117,7 +117,7 @@ def main(iargs=None):
     length = int(round((south - north) / lat_step))
 
     # Read data in common AOI: LOS displacement, heading angle, incident angle
-    u_los = np.zeros((2, width*length))
+    u_los = np.zeros((2, width*length), dtype=np.float32)
     heading = []
     incidence = []
     for i in range(len(inps.file)):
@@ -156,7 +156,7 @@ def main(iargs=None):
         A[i, 1] = np.sin(incidence[i]) * np.sin(heading[i]-inps.azimuth)
 
     A_inv = np.linalg.pinv(A)
-    u_vh = np.dot(A_inv, u_los)
+    u_vh = np.dot(A_inv, u_los).astype(np.float32)
 
     u_v = np.reshape(u_vh[0, :], (length, width))
     u_h = np.reshape(u_vh[1, :], (length, width))
