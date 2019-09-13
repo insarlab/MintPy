@@ -768,7 +768,7 @@ def check_colormap_input(metadata, cmap_name=None, datasetName=None, cmap_lut=25
     return ColormapExt(cmap_name, cmap_lut).colormap
 
 
-def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1):
+def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1, buffer_year=0.2):
     """Adjust X axis
     Input:
         ax : matplotlib figure axes object
@@ -784,8 +784,8 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1):
         datevector = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in datevector]
 
     # Min/Max
-    ts = datevector[0]  - 0.2;  ys=int(ts);  ms=int((ts - ys) * 12.0)
-    te = datevector[-1] + 0.3;  ye=int(te);  me=int((te - ye) * 12.0)
+    ts = datevector[0]  - buffer_year;        ys=int(ts);  ms=int((ts - ys) * 12.0)
+    te = datevector[-1] + buffer_year + 0.1;  ye=int(te);  me=int((te - ye) * 12.0)
     if ms > 12:   ys = ys + 1;   ms = 1
     if me > 12:   ye = ye + 1;   me = 1
     if ms < 1:    ys = ys - 1;   ms = 12

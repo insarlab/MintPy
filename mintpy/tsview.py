@@ -447,10 +447,10 @@ def _adjust_ts_axis(ax, inps):
 
 
 def _get_ts_title(y, x, coord):
-    title = 'Y = {}, X = {}'.format(y, x)
+    title = 'Y/X = {}, {}'.format(y, x)
     try:
         lat, lon = coord.radar2geo(y, x, print_msg=False)[0:2]
-        title += ', lat = {:.4f}, lon = {:.4f}'.format(lat, lon)
+        title += ', lat/lon = {:.4f}, {:.4f}'.format(lat, lon)
     except:
         pass
     return title
