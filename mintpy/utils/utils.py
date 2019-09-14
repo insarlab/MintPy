@@ -287,6 +287,49 @@ def transect_lalo(z, atr, start_lalo, end_lalo, interpolation='nearest'):
     return transect
 
 
+def transect_lines(z, atr, lines):
+    """Extract 2D matrix (z) value along multiple lines
+    Parameters: z     : 2D np.ndarray in size of (l,w)
+                atr   : dict, metadata of matrix z
+                lines : list of lines with each line is defined as:
+                    [[lat0, lon0], [lat1, lon1]] for geo coordinates
+                    [[y0, x0], [y1, x1]] for radar coordinates
+    Returns: transect : (dict) containing 1D matrix:
+                    'X' - 1D np.array for X/column coordinates in float32
+                    'Y' - 1D np.array for Y/row.   coordinates in float32
+                    'value' - 1D np.array for z value in float32
+                    'distance' - 1D np.array for distance in float32
+    """
+    transect = {}
+    start_distance = 0
+    transect['start_distance'] = []
+
+    for i in range(len(lines)):
+        # read segment data
+        start_lalo, end_lalo = lines[i][0], lines[i][1]
+        if 'Y_FIRST' in atr.keys():
+            seg = transect_lalo(z, atr, start_lalo, end_lalo)
+        else:
+            seg = transect_yx(z, atr, start_lalo, end_lalo)
+        seg['distance'] += start_distance
+
+        # connect each segment
+        if i == 0:
+            # first segment
+            for key, value in seg.items():
+                transect[key] = np.array(value, dtype=np.float32)
+        else:
+            for key, value in seg.items():
+                transect[key] = np.concatenate((transect[key], value))
+
+        # update start_distance for the next segment
+        transect['start_distance'].append(start_distance)
+        start_distance = transect['distance'][-1]
+    transect['start_distance'] = np.array(transect['start_distance'], dtype=np.float32)
+    return transect
+
+
+
 #################################################################################
 def move_dask_stdout_stderr_files():
     """ move  *o and *e files produced by dask into stdout and sderr directory """

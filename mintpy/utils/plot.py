@@ -253,9 +253,16 @@ def get_poly_mask(data, print_msg=True):
     Parameters: data : 2D np.array in size of (length, width)
     Returns:    mask : 2D np.arrat in size of (length, width) in np.bool_ format
     """
-    fig, ax = plt.subplots()
+    # disp min/max
     vlim = np.nanmax(np.abs(data))
-    im = ax.imshow(data, cmap='jet', vmin=-vlim, vmax=vlim)
+    vmin, vmax = -vlim, vlim
+    # for dataset with non-negative values such as elevation
+    if np.nanmin(data) > 0:
+        vmin = np.nanmin(data)
+
+    # plot
+    fig, ax = plt.subplots()
+    im = ax.imshow(data, cmap='jet', vmin=vmin, vmax=vmax)
     fig.colorbar(im)
 
     selector = SelectFromCollection(ax, im)

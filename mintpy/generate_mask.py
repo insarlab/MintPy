@@ -7,6 +7,7 @@
 
 
 import os
+import sys
 import time
 import warnings
 import argparse
@@ -51,6 +52,7 @@ def create_parser():
                         help='date of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file name.')
+    parser.add_argument('--revert', action='store_true', help='revert 0 and 1 value of output mask file')
 
     parser.add_argument('-m', '--min', dest='vmin', type=float,
                         help='minimum value for selected pixels')
@@ -217,6 +219,13 @@ def create_threshold_mask(inps):
         msg += 'with value == {}'.format(inps.base_value)
         print(msg)
 
+    # revert
+    if inps.revert:
+        temp = np.array(mask, dtype=np.bool_)
+        mask[temp == True] = False
+        mask[temp == False] = True
+        del temp
+
     # Write mask file
     atr['FILE_TYPE'] = 'mask'
     writefile.write(mask, out_file=inps.outfile, metadata=atr)
@@ -272,4 +281,4 @@ def main(iargs=None):
 
 ################################################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
