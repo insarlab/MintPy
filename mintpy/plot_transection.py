@@ -28,8 +28,10 @@ EXAMPLE = """example:
   plot_transection.py velocity.h5 --start-lalo 30.125 129.988 --end-lalo 30.250 130.116
   plot_transection.py velocity.h5 --line-file  transect_lonlat.xy --dem gsi10m.dem
 
-  # profile from multiple files
-  plot_transection.py AlosA*/velocity.h5 AlosD*/velocity.h5
+  # Multiple files
+  plot_transection.py AlosA*/velocity.h5 AlosD*/velocity.h5 --off 2
+  plot_transection.py Kirishima2017*.h5 Kirishima2008*.h5 --off 0 0 10 10
+  plot_transection.py Kirishima2017*.h5 Kirishima2008*.h5 --off 0 0 10 10 --start-lalo 31.947 130.843 --end-lalo 31.947 130.860
 """
 
 
@@ -59,7 +61,7 @@ def create_parser():
     lines.add_argument('--interpolation', default='nearest', choices=['nearest', 'bilinear', 'cubic'],
                         help='interpolation method while extacting profile along the line. Default: nearest.')
 
-    parser.add_argument('--offset','--off', dest='offset', type=float, default=0.05,
+    parser.add_argument('--offset','--off', dest='offset', type=float, nargs='+',
                         help='offset between transections from different files. Default: 0.05')
     parser.add_argument('--ms', '--markersize', dest='marker_size', type=float, default=2.0,
                         help='Point marker size. Default: 2.0')
@@ -79,6 +81,29 @@ def cmd_line_parse(iargs=None):
     inps.file = ut.get_file_list(inps.file)
     inps.atr = readfile.read_attribute(inps.file[0])
     inps.coord = ut.coordinate(inps.atr)
+    inps.num_file = len(inps.file)
+
+    # input offsets
+    if inps.num_file > 1:
+        # default value
+        if not inps.offset:
+            inps.offset = [0.05]
+
+        num_offset = len(inps.offset)
+        # a) one input: it's interval between adjacent files
+        if num_offset == 1:
+            inps.offset = np.ones(inps.num_file, dtype=np.float32) * inps.offset
+            inps.offset = np.cumsum(inps.offset)
+
+        # b) multiple input: it's exact offset of all files
+        elif num_offset == inps.num_file:
+            inps.offset = np.array(inps.offset, dtype=np.float32)
+
+        # c) do not support any other numbers of inputs
+        else:
+            msg = 'input number of offsets: {}.'.format(len(inps.offset))
+            msg += '\nIt should be 1 or number of files: {}'.format(inps.num_file)
+            raise ValueError(msg)
 
     if not inps.dset:
         inps.dset = readfile.get_slice_list(inps.file[0])[0]
@@ -190,7 +215,6 @@ class transectionViewer():
         self.file = inps.file
         self.dset = inps.dset
         self.fig_size = inps.fig_size
-        self.num_file = len(inps.file)
 
         # auto figure size
         if not self.fig_size:
@@ -222,7 +246,7 @@ class transectionViewer():
         # plot initial input transect
         if self.start_yx and self.end_yx:
             self.draw_line(self.start_yx, self.end_yx)
-            self.draw_transection(self.start_yx, self.end_yx)
+            self.draw_transection(self.start_yx, self.end_yx, self.start_lalo, self.end_lalo)
 
         self.fig.subplots_adjust(left=0.05, wspace=0.25)
 
@@ -258,20 +282,27 @@ class transectionViewer():
         self.fig.canvas.draw()
         return
 
-    def draw_transection(self, start_yx, end_yx):
+    def draw_transection(self, start_yx, end_yx, start_lalo=None, end_lalo=None):
         """Plot the transect as dots"""
         self.ax_txn.cla()
 
         # loop for all input files
         for i in range(self.num_file):
             # get transection data
-            transect = ut.transect_yx(self.data_list[i],
-                                      self.atr_list[i],
-                                      start_yx, end_yx,
-                                      interpolation=self.interpolation)
+            if start_lalo is not None:
+                # use lat/lon whenever it's possible to support files with different resolutions
+                txn = ut.transect_lalo(self.data_list[i],
+                                       self.atr_list[i],
+                                       start_lalo, end_lalo,
+                                       interpolation=self.interpolation)
+            else:
+                txn = ut.transect_yx(self.data_list[i],
+                                     self.atr_list[i],
+                                     start_yx, end_yx,
+                                     interpolation=self.interpolation)
             # plot
-            self.ax_txn.scatter(transect['distance']/1000.0,
-                                transect['value'] - self.offset*i,
+            self.ax_txn.scatter(txn['distance']/1000.0,
+                                txn['value'] - self.offset[i],
                                 c=pp.mplColors[i],
                                 s=self.marker_size**2)
 
@@ -291,7 +322,7 @@ class transectionViewer():
         self.ax_txn.set_ylabel(self.disp_unit, fontsize=self.font_size)
         self.ax_txn.tick_params(which='both', direction='in', labelsize=self.font_size,
                                 bottom=True, top=True, left=True, right=True)
-        self.ax_txn.set_xlim(0, transect['distance'][-1]/1000.0)
+        self.ax_txn.set_xlim(0, txn['distance'][-1]/1000.0)
         self.fig.canvas.draw()
         return
 
@@ -300,23 +331,26 @@ class transectionViewer():
         if event.inaxes == self.ax_img:
             # get row/col number
             if 'Y_FIRST' in self.atr.keys():
-                y, x = self.coord.geo2radar(event.ydata, event.xdata, print_msg=False)[0:2]
+                lalo = [event.ydata, event.xdata]
+                yx = self.coord.geo2radar(event.ydata, event.xdata, print_msg=False)[0:2]
             else:
-                y, x = int(event.ydata+0.5), int(event.xdata+0.5)
+                lalo = None
+                yx = [int(event.ydata+0.5), int(event.xdata+0.5)]
 
             # insert selected points into self.start/end_yx member
+            # print('pts_idx: {}'.format(self.pts_idx)) #for debug
             if self.pts_idx == 0:
-                self.start_yx = [y, x]
-            elif self.pts_idx == 1:
-                self.end_yx = [y, x]
+                self.start_lalo = lalo
+                self.start_yx = yx
             else:
-                raise ValueError('number of input points went wrong.')
+                self.end_lalo = lalo
+                self.end_yx = yx
 
             # update transection for every two clicks
             self.pts_idx += 1
             if self.pts_idx >= 2:
                 self.draw_line(self.start_yx, self.end_yx)
-                self.draw_transection(self.start_yx, self.end_yx)
+                self.draw_transection(self.start_yx, self.end_yx, self.start_lalo, self.end_lalo)
                 self.pts_idx = 0
         return
 
