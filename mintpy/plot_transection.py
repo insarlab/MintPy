@@ -30,7 +30,8 @@ EXAMPLE = """example:
 
   # Multiple files
   plot_transection.py AlosA*/velocity.h5 AlosD*/velocity.h5 --off 2
-  plot_transection.py Kirishima2017preHz.h5 Kirishima2017preUp.h5 Kirishima2008postHz.h5 Kirishima2008postUp.h5 --off 0 0 10 10
+  plot_transection.py Kirishima2017*.h5 Kirishima2008*.h5 --off 0 0 10 10
+  plot_transection.py Kirishima2017*.h5 Kirishima2008*.h5 --off 0 0 10 10 --start-lalo 31.947 130.843 --end-lalo 31.947 130.860
 """
 
 

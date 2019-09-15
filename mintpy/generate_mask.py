@@ -28,6 +28,8 @@ EXAMPLE = """example:
   # exclude / include an circular area
   generate_mask.py  maskTempCoh.h5 -m 0.5 --ex-circle 230 283 100 -o maskTempCoh_nonDef.h5
   generate_mask.py  maskTempCoh.h5 -m 0.5 --in-circle 230 283 100 -o maskTempCoh_Def.h5
+  # maskout an area within a circle AND with height smaller than a threshold
+  generate_mask.py  inputs/geometryGeo.h5 height --in-circle 339 370 21 -M 1400 --revert -o maskCrater.h5
 
   # use an specific dataset from multiple dataset file
   generate_mask.py  geometryRadar.dem height -m 0.5 -o waterMask.h5
