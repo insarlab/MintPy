@@ -31,9 +31,9 @@ def create_parser():
 
     parser.add_argument('file', nargs='+', help='File(s) to multilook')
     parser.add_argument('-r','--range','-x', dest='lks_x', type=int,
-                        help='number of multilooking in azimuth/y direction')
-    parser.add_argument('-a','--azimuth','-y', dest='lks_y', type=int,
                         help='number of multilooking in range  /x direction')
+    parser.add_argument('-a','--azimuth','-y', dest='lks_y', type=int,
+                        help='number of multilooking in azimuth/y direction')
     parser.add_argument('-o', '--outfile',
                         help='Output file name. Disabled when more than 1 input files')
     parser.add_argument('--no-parallel', dest='parallel', action='store_false', default=True,
