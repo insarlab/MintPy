@@ -121,8 +121,10 @@ def multilook_attribute(atr_dict, lks_y, lks_x, print_msg=True):
     atr['YMIN'] = '0'
     atr['XMAX'] = str(width_mli-1)
     atr['YMAX'] = str(length_mli-1)
+    atr['RLOOKS'] = str(int(atr.get('RLOOKS', '1')) * lks_x)
+    atr['ALOOKS'] = str(int(atr.get('ALOOKS', '1')) * lks_y)
     if print_msg:
-        print('update LENGTH, WIDTH, YMIN, YMAX, XMIN, XMAX')
+        print('update LENGTH, WIDTH, Y/XMIN/MAX, A/RLOOKS')
 
     if 'Y_STEP' in atr.keys():
         atr['Y_STEP'] = str(lks_y * float(atr['Y_STEP']))
@@ -130,17 +132,15 @@ def multilook_attribute(atr_dict, lks_y, lks_x, print_msg=True):
         if print_msg:
             print('update Y/X_STEP')
 
-    if 'RANGE_PIXEL_SIZE' in atr.keys():
+    if 'AZIMUTH_PIXEL_SIZE' in atr.keys():
         atr['AZIMUTH_PIXEL_SIZE'] = str(lks_y * float(atr['AZIMUTH_PIXEL_SIZE']))
+        if print_msg:
+            print('update AZIMUTH_PIXEL_SIZE')
+
+    if 'RANGE_PIXEL_SIZE' in atr.keys():
         atr['RANGE_PIXEL_SIZE'] = str(lks_x * float(atr['RANGE_PIXEL_SIZE']))
         if print_msg:
-            print('update AZIMUTH/RANGE_PIXEL_SIZE')
-
-    if 'Y_FIRST' not in atr.keys() and 'ALOOKS' in atr.keys():
-        atr['RLOOKS'] = str(int(atr['RLOOKS']) * lks_x)
-        atr['ALOOKS'] = str(int(atr['ALOOKS']) * lks_y)
-        if print_msg:
-            print('update R/ALOOKS')
+            print('update RANGE_PIXEL_SIZE')
 
     if 'REF_Y' in atr.keys():
         atr['REF_Y'] = str(int(int(atr['REF_Y']) / lks_y))
