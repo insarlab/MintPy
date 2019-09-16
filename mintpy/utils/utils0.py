@@ -190,6 +190,7 @@ def touch(fname_list, times=None):
 def get_lat_lon(meta, box=None):
     """extract lat/lon info of all grids into 2D matrix.
     For meta dict in geo-coordinates only.
+    Returned lat/lon are corresponds to the pixel center
     Parameters: meta : dict, including LENGTH, WIDTH and Y/X_FIRST/STEP
                 box  : 4-tuple of int for (x0, y0, x1, y1)
     Returns:    lats : 2D np.array for latitude  in size of (length, width)
@@ -204,8 +205,8 @@ def get_lat_lon(meta, box=None):
     # generate 2D matrix for lat/lon
     lat_step = float(meta['Y_STEP'])
     lon_step = float(meta['X_STEP'])
-    lat0 = float(meta['Y_FIRST']) + lat_step * box[1]
-    lon0 = float(meta['X_FIRST']) + lon_step * box[0]
+    lat0 = float(meta['Y_FIRST']) + lat_step * (box[1] + 0.5)
+    lon0 = float(meta['X_FIRST']) + lon_step * (box[0] + 0.5)
     lat1 = lat0 + lat_step * lat_num
     lon1 = lon0 + lon_step * lon_num
     lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
