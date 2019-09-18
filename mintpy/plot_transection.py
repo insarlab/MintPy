@@ -231,7 +231,7 @@ class transectionViewer():
             data, atr = readfile.read(fname, datasetName=self.dset)
             data = pp.scale_data2disp_unit(data, metadata=atr, disp_unit=self.disp_unit)[0]
             self.data_list.append(data)
-            self.atr_list.append(atr)        
+            self.atr_list.append(atr)
 
         # Figure
         self.fig, (self.ax_img, self.ax_txn) = plt.subplots(1, 2, num=self.figname, figsize=self.fig_size)

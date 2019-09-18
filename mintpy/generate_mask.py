@@ -13,7 +13,7 @@ import warnings
 import argparse
 import h5py
 import numpy as np
-from mintpy.utils import readfile, writefile, utils as ut, plot as pp
+from mintpy.utils import readfile, writefile, utils as ut
 
 
 ################################################################################################
@@ -54,6 +54,8 @@ def create_parser():
                         help='date of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file name.')
+    parser.add_argument('--keep-nan', dest='keep_nan', action='store_true',
+                        help='Do not exclude pixels with NaN value')
     parser.add_argument('--revert', action='store_true', help='revert 0 and 1 value of output mask file')
 
     parser.add_argument('-m', '--min', dest='vmin', type=float,
@@ -153,12 +155,13 @@ def create_threshold_mask(inps):
     mask = np.ones((length, width), dtype=np.bool_)
 
     # nan value
-    mask *= nanmask
-    print('all pixels with nan value = 0')
+    if not inps.keep_nan:
+        mask *= nanmask
+        print('all pixels with nan value = 0')
 
     if inps.nonzero:
-        print('exclude pixels with zero value')
         mask[nanmask] *= ~(data[nanmask] == 0.)
+        print('exclude pixels with zero value')
 
     # min threshold
     if inps.vmin is not None:
@@ -200,7 +203,8 @@ def create_threshold_mask(inps):
 
     # interactively select polygonal region of interest (ROI)
     if inps.roipoly:
-        poly_mask = pp.get_poly_mask(data)
+        from mintpy.utils import plot_ext
+        poly_mask = plot_ext.get_poly_mask(inps.file, datasetName=inps.dset)
         if poly_mask is not None:
             mask *= poly_mask
 
