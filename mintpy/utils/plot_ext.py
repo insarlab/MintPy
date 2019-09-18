@@ -6,8 +6,7 @@
 # Recommend import:
 #   from mintpy.utils import plot_ext
 
-import os
-import sys
+
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.widgets import PolygonSelector
@@ -95,7 +94,7 @@ def get_poly_mask(fname, datasetName, print_msg=True):
     #cmd += ' -u cm -v -5 5 '
 
     d_v, atr ,inps = view.prep_slice(cmd)
-    fig, ax = plt.subplots(figsize=inps.fig_size)
+    ax = plt.subplots(figsize=inps.fig_size)[1]
     inps.fig_coord = 'radar'   #selector works for radar coord plot only
     ax, inps, im = view.plot_slice(ax, d_v, atr, inps)[0:3]
 
