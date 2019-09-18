@@ -11,6 +11,7 @@ import argparse
 import time
 import h5py
 import numpy as np
+import matplotlib; matplotlib.use("Agg")  # Force matplotlib to not use any Xwindows backend.
 import matplotlib.pyplot as plt
 try:
     from cvxopt import matrix
