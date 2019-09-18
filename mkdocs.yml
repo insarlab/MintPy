@@ -32,9 +32,12 @@ nav:
         - HDF-EOS5: hdfeos5.md
     - API Documentation:
         - Attributes: api/attributes.md
+        - Colormaps: resources/colormaps/README.md
         - Coordinates: api/coord.md
+        - Docker: docker.md
         - Documents generation: api/doc_generation.md
     - About:
         - Contributing: CONTRIBUTING.md
+        - Code of Conduct: CODE_OF_CONDUCT.md
         - References: references.md
 
