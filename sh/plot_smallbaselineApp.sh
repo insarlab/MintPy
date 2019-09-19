@@ -2,7 +2,7 @@
 ###############################################################
 # Plot Results from Routine Workflow with smallbaselineApp.py
 # Author: Zhang Yunjun, 2017-07-23
-# Latest update: 2019-09-13
+# Latest update: 2019-09-18
 ###############################################################
 
 
@@ -71,8 +71,7 @@ fi
 
 
 ## Time-series files
-opt='--mask '$mask_file' --noaxis -u cm '
-#opt='--mask '$mask_file' --noaxis -u cm --vlim -10 10 '
+opt='--mask '$mask_file' --noaxis -u cm --wrap --wrap-range -10 10 '
 if [ $plot_timeseries -eq 1 ]; then
     file=timeseries.h5;                             test -f $file && $view $file $opt >> $log_file
 
