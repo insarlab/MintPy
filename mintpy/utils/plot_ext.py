@@ -90,8 +90,8 @@ def get_poly_mask(fname, datasetName, print_msg=True):
     if datasetName:
         cmd += ' {} '.format(datasetName)
     ## Customized setting for plotting (temporarily for advanced users)
-    #cmd += ' --dem ../../KirishimaAlos2AT131/mintpy/inputs/geometryGeo.h5 --contour-step 100 --contour-smooth 0.0 '
-    #cmd += ' -u cm -v -5 5 '
+    #cmd += ' --dem ./inputs/geometryGeo.h5 --contour-step 100 --contour-smooth 0.0 '
+    #cmd += ' -u cm -v -6 6 '
 
     d_v, atr ,inps = view.prep_slice(cmd)
     ax = plt.subplots(figsize=inps.fig_size)[1]

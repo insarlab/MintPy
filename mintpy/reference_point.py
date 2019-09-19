@@ -168,23 +168,25 @@ def reference_file(inps):
     if not inps:
         inps = cmd_line_parse([''])
     atr = readfile.read_attribute(inps.file)
-    if (inps.ref_y and inps.ref_x and 'REF_Y' in atr.keys()
-            and inps.ref_y == int(atr['REF_Y']) and inps.ref_x == int(atr['REF_X'])
-            and not inps.force):
-        print('Same reference pixel is already selected/saved in file, skip updating.')
-        return inps.file
 
-    # Get stack and mask
+    # Check 1 - stack and its non-nan mask pixel coverage
     stack = ut.temporal_average(inps.file, datasetName='unwrapPhase', updateMode=True, outFile=False)[0]
     mask = np.multiply(~np.isnan(stack), stack != 0.)
     if np.nansum(mask) == 0.0:
         raise ValueError('no pixel found with valid phase value in all datasets.')
 
-    if inps.ref_y and inps.ref_x and mask[inps.ref_y, inps.ref_x] == 0.:
-        raise ValueError('reference y/x have nan value in some dataset. Please re-select.')
+    # Check 2 - input ref_y/x: location and validity
+    if inps.ref_y is not None and inps.ref_x is not None:
+        if ('REF_Y' in atr.keys() and not inps.force
+                and inps.ref_y == int(atr['REF_Y']) 
+                and inps.ref_x == int(atr['REF_X'])):
+            print('Same reference pixel is already selected/saved in file, skip updating.')
+            return inps.file
 
-    # Find reference y/x
-    if not inps.ref_y or not inps.ref_x:
+        if mask[inps.ref_y, inps.ref_x] == 0.:
+            raise ValueError('reference y/x have nan value in some dataset. Please re-select.')
+    else:
+        # Find reference y/x
         if inps.method == 'maxCoherence':
             inps.ref_y, inps.ref_x = select_max_coherence_yx(coh_file=inps.coherenceFile,
                                                              mask=mask,
@@ -193,8 +195,10 @@ def reference_file(inps):
             inps.ref_y, inps.ref_x = random_select_reference_yx(mask)
         elif inps.method == 'manual':
             inps = manual_select_reference_yx(stack, inps, mask)
-    if not inps.ref_y or not inps.ref_x:
-        raise ValueError('ERROR: no reference y/x found.')
+
+        # Check ref_y/x from auto method
+        if inps.ref_y is None or inps.ref_x is None:
+            raise ValueError('ERROR: no reference y/x found.')
 
     # Seeding file with reference y/x
     atrNew = reference_point_attribute(atr, y=inps.ref_y, x=inps.ref_x)
@@ -334,10 +338,10 @@ def read_reference_file2inps(reference_file, inps=None):
     if not inps:
         inps = cmd_line_parse([''])
     atrRef = readfile.read_attribute(inps.reference_file)
-    if (not inps.ref_y or not inps.ref_x) and 'REF_X' in atrRef.keys():
+    if (inps.ref_y is None or inps.ref_x is None) and 'REF_X' in atrRef.keys():
         inps.ref_y = int(atrRef['REF_Y'])
         inps.ref_x = int(atrRef['REF_X'])
-    if (not inps.ref_lat or not inps.ref_lon) and 'REF_LON' in atrRef.keys():
+    if (inps.ref_lat is None or inps.ref_lon is None) and 'REF_LON' in atrRef.keys():
         inps.ref_lat = float(atrRef['REF_LAT'])
         inps.ref_lon = float(atrRef['REF_LON'])
     return inps
@@ -373,28 +377,26 @@ def read_reference_input(inps):
          inps.ref_x) = coord.geo2radar(np.array(inps.ref_lat),
                                        np.array(inps.ref_lon))[0:2]
         print('input reference point in lat/lon: {}'.format((inps.ref_lat, inps.ref_lon)))
-    if inps.ref_y and inps.ref_x:
+
+    # Check input ref_y/x
+    if inps.ref_y is not None and inps.ref_x is not None:
         print('input reference point in y/x: {}'.format((inps.ref_y, inps.ref_x)))
+        # Do not use ref_y/x outside of data coverage
+        if not (0 <= inps.ref_y < length and 0 <= inps.ref_x < width):
+            inps.ref_y, inps.ref_x = None, None
+            raise ValueError('input reference point is OUT of data coverage!')
 
-    # Do not use ref_y/x outside of data coverage
-    if (inps.ref_y and inps.ref_x and
-            not (0 <= inps.ref_y <= length and 0 <= inps.ref_x <= width)):
-        inps.ref_y = None
-        inps.ref_x = None
-        raise ValueError('input reference point is OUT of data coverage!')
+        # Do not use ref_y/x in masked out area
+        if inps.maskFile:
+            print('mask: '+inps.maskFile)
+            mask = readfile.read(inps.maskFile, datasetName='mask')[0]
+            if mask[inps.ref_y, inps.ref_x] == 0:
+                inps.ref_y, inps.ref_x = None, None
+                msg = 'input reference point is in masked OUT area defined by {}!'.format(inps.maskFile)
+                raise ValueError(msg)
 
-    # Do not use ref_y/x in masked out area
-    if inps.ref_y and inps.ref_x and inps.maskFile:
-        print('mask: '+inps.maskFile)
-        mask = readfile.read(inps.maskFile, datasetName='mask')[0]
-        if mask[inps.ref_y, inps.ref_x] == 0:
-            inps.ref_y = None
-            inps.ref_x = None
-            msg = 'input reference point is in masked OUT area defined by {}!'.format(inps.maskFile)
-            raise ValueError(msg)
-
-    # Select method
-    if not inps.ref_y or not inps.ref_x:
+    else:
+        # Determine auto selection method
         print('no input reference y/x.')
         if not inps.method:
             # Use existing REF_Y/X if 1) no ref_y/x input and 2) no method input and 3) ref_yx is in coverage
