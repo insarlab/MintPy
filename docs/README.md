@@ -36,7 +36,7 @@ smallbaselineApp.py GalapagosSenDT128.template --end load_data    #end after ste
 ```
 wget https://zenodo.org/record/2748487/files/FernandinaSenDT128.tar.xz
 tar -xvJf FernandinaSenDT128.tar.xz
-cd FernandinaSenDT128/MintPy
+cd FernandinaSenDT128/mintpy
 smallbaselineApp.py ${MINTPY_HOME}/docs/examples/input_files/FernandinaSenDT128.txt
 ```
 

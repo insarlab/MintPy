@@ -1,9 +1,4 @@
-Run the following command to test the demo datasets:
-
-```
-cd ${PROJECT_NAME}/mintpy
-smallbaselineApp.py ${PROJECT_NAME}.txt
-```
+Here are example interferogram stacks pre-processed using different InSAR processors.
 
 #### Sentinel-1 on Fernandina with ISCE ####
 
