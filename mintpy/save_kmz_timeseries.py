@@ -26,7 +26,8 @@ from mintpy.save_kmz import generate_cbar_element
 ############################################################
 EXAMPLE = """example:
   cd $PROJECT_NAME/mintpy/geo
-  save_kmz_timeseries.py geo_timeseries_ECMWF_ramp_demErr.h5
+  save_kmz_timeseries.py geo_timeseries_ERA5_ramp_demErr.h5
+  save_kmz_timeseries.py geo_timeseries_ERA5_ramp_demErr.h5 -v -5 5 --wrap
 
   save_kmz_timeseries.py timeseries_ERA5_demErr.h5 --vel velocity.h5 --tcoh temporalCoherence.h5 --mask maskTempCoh.h5
 """
@@ -45,6 +46,7 @@ def create_parser():
                       help='temporal coherence file, used for stat info')
     args.add_argument('--mask', dest='mask_file', metavar='FILE',
                       help='Mask file')
+    args.add_argument('-o','--output', dest='outfile', help='Output KMZ file name.')
 
     opts = parser.add_argument_group('Display options', 'configurations for the display')
     opts.add_argument('--steps', type=int, nargs=3, default=[20, 5, 2],
@@ -53,11 +55,19 @@ def create_parser():
                       help='list of level of details to determine the visible range while browering\n'+
                            'Ref: https://developers.google.com/kml/documentation/kml_21tutorial')
     opts.add_argument('--vlim','-v', dest='vlim', nargs=2, metavar=('VMIN', 'VMAX'), type=float,
-                      help='Display limits for matrix plotting.')
+                      help='min/max range in cm/yr for color coding.')
+    opts.add_argument('--wrap', dest='wrap', action='store_true',
+                      help='re-wrap data to [VMIN, VMAX) for color coding.')
     opts.add_argument('--colormap','-c', dest='colormap', default='jet',
                       help='colormap used for display, i.e. jet, RdBu, hsv, jet_r, temperature, viridis,  etc.\n'
                            'colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html\n'
                            'colormaps in GMT - http://soliton.vm.bytemark.co.uk/pub/cpt-city/')
+
+    defo = parser.add_argument_group('HD for deforming areas', 'High resolution output for deforming areas')
+    defo.add_argument('--cutoff', dest='cutoff', type=int, default=3,
+                      help='choose points with velocity >= cutoff * MAD')
+    defo.add_argument('--min-percentage','--min-perc', dest='min_percentage', type=float, default=0.2,
+                      help='choose boxes with >= min percentage of pixels are deforming')
     return parser
 
 
@@ -133,7 +143,7 @@ def split_into_sub_boxes(ds_shape, step=20, num_pixel=50**2, print_msg=True):
 
 
 def get_boxes4deforming_area(vel_file, mask_file, step=2, num_pixel=30**2, min_percentage=0.2,
-                             ramp_type='quadratic', display=False):
+                             cutoff=3, ramp_type='quadratic', display=False):
     """Get list of boxes to cover the deforming areas.
     A pixel is identified as deforming if its velocity exceeds the MAD of the whole image.
     Parameters: vel_file : str, path of velocity file
@@ -153,7 +163,7 @@ def get_boxes4deforming_area(vel_file, mask_file, step=2, num_pixel=30**2, min_p
     vel = deramp(vel, mask, ramp_type=ramp_type, metadata=atr)[0]               #remove ramp before the evaluation
 
     # get deforming pixels
-    mad = ut.median_abs_deviation_threshold(vel[mask], center=0., cutoff=3)     #deformation threshold
+    mad = ut.median_abs_deviation_threshold(vel[mask], cutoff=cutoff)     #deformation threshold
     print('velocity threshold / median abs dev: {:.3f} cm/yr'.format(mad))
     vel[mask == 0] = 0
     mask_aoi = (vel >= mad) + (vel <= -1. * mad)
@@ -362,6 +372,10 @@ def create_kml_region_document(inps, box_list, ts_obj, step):
         temp_coh = readfile.read(inps.tcoh_file, box=box)[0]
         mask = readfile.read(inps.mask_file, box=box)[0]
 
+        vel_c = np.array(vel, dtype=np.float32)
+        if inps.wrap:
+            vel_c = inps.vlim[0] + np.mod(vel_c - inps.vlim[0], inps.vlim[1] - inps.vlim[0])
+
 
         ## 2. Create KML Document
         kml_document = KML.Document()
@@ -387,13 +401,14 @@ def create_kml_region_document(inps, box_list, ts_obj, step):
                     col = cols[i, j]
                     ts = ts_data[:, i, j]
                     v = vel[i, j]
+                    vc = vel_c[i, j]
                     vstd = vel_std[i, j]
                     tcoh = temp_coh[i, j]
 
                     # 2.3.1 Create KML icon style element
                     style = KML.Style(
                         KML.IconStyle(
-                            KML.color(get_hex_color(v, colormap, norm)),
+                            KML.color(get_hex_color(vc, colormap, norm)),
                             KML.scale(0.5),
                             KML.Icon(KML.href("{}".format(dot_file)))
                         )
@@ -515,7 +530,10 @@ def generate_network_link(inps, ts_obj, step, lod):
     net_link_file = os.path.join(inps.kml_data_dir, "{0}by{0}.kml".format(step))
 
     if step < 5:
-        box_list = get_boxes4deforming_area(inps.vel_file, inps.mask_file)
+        box_list = get_boxes4deforming_area(inps.vel_file, inps.mask_file,
+                                            step=inps.steps[-1],
+                                            min_percentage=inps.min_percentage,
+                                            cutoff=inps.cutoff)
     else:
         box_list = split_into_sub_boxes((ts_obj.length, ts_obj.width), step=step)
 
@@ -538,7 +556,10 @@ def main(iargs=None):
     inps.kml_data_dir = os.path.join(inps.work_dir, 'kml_data')
 
     ## Define file names
-    inps.outfile_base = plot.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
+    if inps.outfile:
+        inps.outfile_base = os.path.splitext(os.path.basename(inps.outfile))[0]
+    else:
+        inps.outfile_base = plot.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
     kml_master_file = os.path.join(inps.work_dir, '{}_master.kml'.format(inps.outfile_base))
     kmz_file = os.path.join(inps.work_dir, '{}.kmz'.format(inps.outfile_base))
 
@@ -554,7 +575,8 @@ def main(iargs=None):
     # Set min/max velocity for colormap
     if inps.vlim is None:
         inps.vlim = [np.nanmin(vel), np.nanmax(vel)]
-
+    if inps.wrap:
+        print('re-wrapping data to {} cm/year for color coding'.format(inps.vlim))
 
     ##--------- Create master KML file with network links to data KML files --------------##
     kml_master_doc = KML.Document()
@@ -616,7 +638,7 @@ def main(iargs=None):
     os.system(cmd)
 
     print('Done.')
-    print('Open {} in Google Earth!'.format(kmz_file))
+    print('Open {} in Google Earth and play!'.format(kmz_file))
     return
 
 
