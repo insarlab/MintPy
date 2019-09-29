@@ -6,7 +6,7 @@
 [![Latest version](https://img.shields.io/badge/latest%20version-v1.2-yellowgreen.svg)](https://github.com/insarlab/MintPy/releases)
 [![License](https://img.shields.io/badge/license-GPLv3-yellow.svg)](https://github.com/insarlab/MintPy/blob/master/LICENSE)
 [![Forum](https://img.shields.io/badge/forum-Google%20Group-orange.svg)](https://groups.google.com/forum/#!forum/mintpy)
-[![Citation](https://img.shields.io/badge/DOI-10.31223%2Fosf.io%2F9sz6m-blue)](https://eartharxiv.org/9sz6m/)
+[![Citation](https://img.shields.io/badge/DOI-10.1016%2Fj.cageo.2019.104331-blue)](https://doi.org/10.1016/j.cageo.2019.104331)
 
 The Miami INsar Time-series software in PYthon (MintPy) is an open-source package for Interferometric Synthetic Aperture Radar time series analysis. It reads the stack of interferograms (coregistered and unwrapped) in [ISCE](https://github.com/isce-framework/isce2), GAMMA, [ARIA](https://github.com/aria-tools/ARIA-tools), [SNAP](http://step.esa.int/) or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground surface displacement. It includes a routine time series analysis (`smallbaselineApp.py`) and some independent toolbox.
 
@@ -82,7 +82,7 @@ Join our google group [https://groups.google.com/forum/#!forum/mintpy](https://g
 
 ### 5. Citing this work ###
 
-Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: unwrapping error correction and noise reduction (under review), preprint doi:[10.31223/osf.io/9sz6m](https://eartharxiv.org/9sz6m/).
+Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: Unwrapping error correction and noise reduction, _Computers & Geosciences_, doi:[10.1016/j.cageo.2019.104331](https://doi.org/10.1016/j.cageo.2019.104331), [ArXiv](https://eartharxiv.org/9sz6m/).
 
 In addition to the above, we recommend that you cite the original publications that describe the algorithms used in your specific analysis.
 
