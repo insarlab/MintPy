@@ -21,7 +21,7 @@ BOOL_ZERO = np.bool_(0)
 INT_ZERO = np.int16(0)
 FLOAT_ZERO = np.float32(0.0)
 CPX_ZERO = np.complex64(0.0)
-compression = 'gzip'
+compression = 'lzf'
 
 
 ################################################################
