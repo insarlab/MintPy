@@ -222,7 +222,8 @@ def mask_isce_file(in_file, mask_file, out_file=None):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    if os.path.isfile(inps.file+'.xml'):
+    ext = os.path.splitext(inps.file)[1]
+    if os.path.isfile(inps.file+'.xml') and ext in ['.unw','.int','.cor','.conncomp']:
         mask_isce_file(inps.file, inps.mask_file, inps.outfile)
     else:
         mask_file(inps.file, inps.mask_file, inps.outfile, inps)
