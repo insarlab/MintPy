@@ -151,14 +151,14 @@ def extract_stripmap_metadata(meta_file):
     metadata['radarWavelength'] = frame.radarWavelegth
     metadata['rangePixelSize'] = frame.instrument.rangePixelSize
     metadata['startingRange'] = frame.startingRange
-    metadata['polarization'] = frame.polarization.replace('/', '')
+    metadata['polarization'] = str(frame.polarization).replace('/', '')
     if metadata['polarization'].startswith("b'"):
         metadata['polarization'] = metadata['polarization'][2:4]
     metadata['trackNumber'] = frame.trackNumber
     metadata['orbitNumber'] = frame.orbitNumber
 
-    time_seconds = (frame.sensingStart.hour*3600.0 + 
-                    frame.sensingStart.minute*60.0 + 
+    time_seconds = (frame.sensingStart.hour * 3600.0 + 
+                    frame.sensingStart.minute * 60.0 + 
                     frame.sensingStart.second)
     metadata['CENTER_LINE_UTC'] = time_seconds
 

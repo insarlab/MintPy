@@ -942,10 +942,16 @@ def read_data4figure(i_start, i_end, inps, metadata):
                                  print_msg=False)[0]
         data -= ref_data
 
-    # v/dlim, adjust data if all subplots are 1) the same type OR 2) velocity or timeseries
+    # v/dlim, adjust data if all subplots share the same unit
+    # This could be:
+    # 1) the same type OR
+    # 2) velocity or timeseries OR
+    # 3) data/model output from load_gbis.py OR
+    # 4) horizontal/vertical output from asc_desc2horz_vert.py
     if (len(inps.dsetFamilyList) == 1 
-            or inps.key in ['velocity', 'timeseries', 'inversion'] 
-            or inps.dsetFamilyList == ['data','model','residual']): #geodetic inversion result
+            or all(d in inps.dsetFamilyList for d in ['horizontal', 'vertical'])
+            or inps.dsetFamilyList == ['data','model','residual']
+            or inps.key in ['velocity', 'timeseries', 'inversion']):
         data, inps = update_data_with_plot_inps(data, metadata, inps)
         if (not inps.vlim 
                 and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)
