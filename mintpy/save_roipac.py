@@ -57,6 +57,7 @@ def create_parser():
     parser.add_argument('-m','--mask', dest='mask_file', nargs='+', help='mask file')
     parser.add_argument('--ref-yx', dest='ref_yx', type=int, nargs=2, help='custom reference pixel in y/x')
     parser.add_argument('--ref-lalo', dest='ref_lalo', type=float, nargs=2, help='custom reference pixel in lat/lon')
+    parser.add_argument('--keep-all-metadata', dest='keepAllMetadata', action='store_true', help='Do not clean the metadata as ROIPAC format')
     return parser
 
 
@@ -323,7 +324,8 @@ def main(iargs=None):
 
     data, atr, out_file = read_data(inps)
 
-    atr = clean_metadata4roipac(atr)
+    if not inps.keepAllMetadata:
+        atr = clean_metadata4roipac(atr)
 
     writefile.write(data, out_file=out_file, metadata=atr)
     return inps.outfile
