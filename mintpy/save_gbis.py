@@ -13,6 +13,10 @@ import argparse
 import numpy as np
 import scipy.io as sio
 import matplotlib.pyplot as plt
+# suppress UserWarning from matplotlib
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
+
 from mintpy.objects import sensor
 from mintpy.utils import ptime, readfile, utils as ut
 
@@ -20,6 +24,7 @@ from mintpy.utils import ptime, readfile, utils as ut
 EXAMPLE = """example:
   save_gbis.py velocity.h5 -g inputs/geometryGeo.h5 -o AlosDT73_20081012_20100302.mat
   save_gbis.py 20150223_20161031_msk.unw -g inputs/geometryGeo.h5 -o Alos2DT23_20150223_20161031.mat
+  save_gbis.py 20150223_20161031.unw -g inputs/geometryGeo.h5 --out-data ../Model/data --ellipsoid2geoid
 """
 
 def create_parser():
@@ -40,6 +45,10 @@ def create_parser():
     parser.add_argument('-o', '--output', dest='outfile', help='output file name.')
     parser.add_argument('--out-dir', dest='outdir',
                         help='custom output directory, ONLY IF --output is not specified.')
+    parser.add_argument('--ellipsoid2geoid', action='store_true',
+                        help='Convert the height of ellipsoid to geoid using geoidheight module\n'+
+                             'Download/install geoidheight as below:\n'+
+                             'https://github.com/geodesymiami/Yunjun_et_al-2019-Kirishima/GBIS')
     return parser
 
 
@@ -48,6 +57,11 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     inps.file = os.path.abspath(inps.file)
+
+    # Backend setting
+    if not inps.disp_fig:
+        plt.switch_backend('Agg')
+
     return inps
 
 
@@ -105,6 +119,27 @@ def read_data(inps):
     inps.inc_angle = readfile.read(inps.geom_file, datasetName='incidenceAngle')[0]
     inps.head_angle = np.ones(inps.inc_angle.shape, dtype=np.float32) * float(inps.metadata['HEADING'])
     inps.height = readfile.read(inps.geom_file, datasetName='height')[0]
+
+    # convert the height of ellipsoid to geoid (mean sea level)
+    # ref: https://github.com/vandry/geoidheight
+    if inps.ellipsoid2geoid:
+        # import geoid module
+        try:
+            import geoid
+        except:
+            raise ImportError('Can not import geoidheight!')
+
+        # calculate offset and correct height
+        egm_file = os.path.join(os.path.dirname(geoid.__file__), 'geoids/egm2008-1.pgm')
+        gh_obj = geoid.GeoidHeight(egm_file)
+        h_offset = gh_obj.get(lat=np.nanmean(inps.lat), lon=np.nanmean(inps.lon))
+        inps.height -= h_offset
+
+        # print message
+        msg = 'convert height from ellipsoid to geoid'
+        msg += '\n\tby subtracting a constant offset of {:.2f} m'.format(h_offset)
+        print(msg)
+
     inps.lat[inps.mask==0] = np.nan
     inps.lon[inps.mask==0] = np.nan
     inps.inc_angle[inps.mask==0] = np.nan

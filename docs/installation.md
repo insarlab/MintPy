@@ -27,12 +27,11 @@ docker pull andretheronsa/mintpy:latest
 
 ### 1. Download and setup MintPy ###
 
-To use the package, you need to setup the environment a) by adding _${MINTPY_HOME}_ to your _$PYTHONPATH_ to make mintpy importable in Python and b) by adding _${MINTPY_HOME}/mintpy_ to your _$path_ to make application scripts executable in command line, as shown below.
+To use the package, you need to setup the environment a) by adding _${MINTPY_HOME}_ to your _$PYTHONPATH_ to make mintpy importable in Python and b) by adding _${MINTPY_HOME}/mintpy_ to your _$PATH_ to make application scripts executable in command line, as shown below.
 
 Add to your **_~/.bash_profile_** file for _bash_ user. For _tcsh_ user, check the example [here](https://github.com/yunjunz/macOS_Setup/blob/master/.tcshrc). Source the file for the first time. It will be sourced automatically next time when you login.
 
 ```bash
-############################  Python  ###############################
 if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
 
 ##--------- MintPy ------------------##

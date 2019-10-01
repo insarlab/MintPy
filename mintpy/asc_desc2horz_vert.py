@@ -15,7 +15,7 @@ from mintpy.utils import readfile, writefile, utils as ut
 ################################################################################
 REFERENCE = """reference:
   Wright, T. J., B. E. Parsons, and Z. Lu (2004), Toward mapping surface deformation
-    in three dimensions using InSAR, Geophysical Research Letters, 31(1), n/a-n/a, 
+    in three dimensions using InSAR, Geophysical Research Letters, 31(1), n/a-n/a,
     doi:10.1029/2003GL018827.
 """
 
@@ -100,7 +100,7 @@ def get_overlap_lalo(atr1, atr2):
     Inputs:
         atr1/2 - dict, attribute dictionary of two input files in geo coord
     Outputs:
-        W/E/S/N - float, West/East/South/North in deg 
+        W/E/S/N - float, West/East/South/North in deg
     """
     W1, E1, S1, N1 = ut.four_corners(atr1)
     W2, E2, S2, N2 = ut.four_corners(atr2)
@@ -116,7 +116,7 @@ def get_overlap_lalo(atr1, atr2):
 def get_design_matrix(atr1, atr2, az_angle=90):
     """Get the design matrix A to convert asc/desc to hz/up.
     Only asc + desc -> hz + up is implemented for now.
-    
+
     Project displacement from LOS to Horizontal and Vertical components
         math for 3D: cos(theta)*Uz - cos(alpha)*sin(theta)*Ux + sin(alpha)*sin(theta)*Uy = Ulos
         math for 2D: cos(theta)*Uv - sin(alpha-az)*sin(theta)*Uh = Ulos   #Uh_perp = 0.0
@@ -244,7 +244,7 @@ def main(iargs=None):
     else:
         print('writing horizontal component to file: '+inps.outfile[0])
         writefile.write(dH, out_file=inps.outfile[0], metadata=atr)
-    
+
         print('writing   vertical component to file: '+inps.outfile[1])
         writefile.write(dV, out_file=inps.outfile[1], metadata=atr)
 

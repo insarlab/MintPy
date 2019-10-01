@@ -12,6 +12,10 @@ import numpy as np
 import scipy.io as sio
 import matplotlib.pyplot as plt
 import pyproj
+# suppress UserWarning from matplotlib
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
+
 from mintpy.utils import writefile
 
 
@@ -35,6 +39,11 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     inps.file = os.path.abspath(inps.file)
+
+    # Backend setting
+    if not inps.disp_fig:
+            plt.switch_backend('Agg')
+
     return inps
 
 
