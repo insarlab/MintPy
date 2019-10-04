@@ -137,9 +137,11 @@ sudo /opt/local/bin/pip install git+https://github.com/matplotlib/basemap.git#eg
 
 ### Notes on [PyAPS](https://github.com/yunjunz/pyaps3) ###
 
-+ We use PyAPS for tropospheric delay correction calculated from Global Atmospheric Models (GAMs) such as ERA-5, ERA-Interim, HRES-ECMWF, MERRA and NARR.
++ We use PyAPS (Jolivet et al., 2011; 2014) for tropospheric delay correction calculated from Global Atmospheric Models (GAMs) such as ERA-5, ERA-Interim, HRES-ECMWF, MERRA and NARR.
 
-+ Check [Caltech Earthdef](http://earthdef.caltech.edu) for accounts setup information for various GAM datasets.
++ Check [Earthdef/PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main#) for accounts setup information for ERA-Interim and MERRA.
+
++ Check [pyaps3](https://github.com/yunjunz/pyaps3) for account setup for ERA-5 and run `pyaps3/examples/TestECMWF.ipynb` to test.
 
 + If you defined an environment variable named `WEATHER_DIR` to contain the path to a
 directory, MintPy applications will download the GAM files into the indicated directory. Also MintPy
