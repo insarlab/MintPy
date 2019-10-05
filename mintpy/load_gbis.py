@@ -11,7 +11,6 @@ import argparse
 import numpy as np
 import scipy.io as sio
 import matplotlib.pyplot as plt
-import pyproj
 # suppress UserWarning from matplotlib
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
@@ -73,18 +72,19 @@ def gbis_mat2hdf5(inv_mat_file, display=True):
         mDict[key] = parValue[i]
 
     # convert model x/y to lat/lon
-    ref_lon, ref_lat = mat['geo'].referencePoint
-    mDict['{}_REF_LAT'.format(modelName)] = ref_lat
-    mDict['{}_REF_LON'.format(modelName)] = ref_lon
+    #ref_lon, ref_lat = mat['geo'].referencePoint
+    #mDict['{}_REF_LAT'.format(modelName)] = ref_lat
+    #mDict['{}_REF_LON'.format(modelName)] = ref_lon
 
-    geod = pyproj.Geod(ellps='WGS84')
-    mX, mY = parValue[0:2]
-    mLon, mLat = geod.fwd(ref_lon, ref_lat,
-                          az=np.arctan(mX/mY) * 180 / np.pi,
-                          dist=(mX**2 + mY**2)**0.5,
-                          radians=False)[0:2]
-    mDict['{}_LAT'.format(modelName)] = mLat
-    mDict['{}_LON'.format(modelName)] = mLon
+    #import pyproj
+    #geod = pyproj.Geod(ellps='WGS84')
+    #mX, mY = parValue[0:2]
+    #mLon, mLat = geod.fwd(ref_lon, ref_lat,
+    #                      az=np.arctan(mX/mY) * 180 / np.pi,
+    #                      dist=(mX**2 + mY**2)**0.5,
+    #                      radians=False)[0:2]
+    #mDict['{}_LAT'.format(modelName)] = mLat
+    #mDict['{}_LON'.format(modelName)] = mLon
     mDict['DEFORMATION_MODEL'] = modelName
 
     if display:
@@ -120,8 +120,6 @@ def gbis_mat2hdf5(inv_mat_file, display=True):
         meta['UNIT'] = 'm'
         meta['FILE_TYPE'] = 'displacement'
         meta['PROCESSOR'] = 'GBIS'
-        if 'minHeight' in vars(insarPlot).keys():
-            meta['MODEL_MIN_HEIGHT'] = insarPlot.minHeight
         for key, value in mDict.items():
             meta[key] = value
 
