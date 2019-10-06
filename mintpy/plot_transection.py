@@ -84,11 +84,10 @@ def cmd_line_parse(iargs=None):
     inps.num_file = len(inps.file)
 
     # input offsets
-    if inps.num_file > 1:
-        # default value
-        if not inps.offset:
-            inps.offset = [0.05]
+    if not inps.offset:
+        inps.offset = np.array([0.05], dtype=np.float32)
 
+    if inps.num_file > 1:
         num_offset = len(inps.offset)
         # a) one input: it's interval between adjacent files
         if num_offset == 1:
