@@ -486,6 +486,7 @@ def plot_slice(ax, data, metadata, inps=None):
                                   lalo_max_num=inps.lalo_max_num,
                                   font_size=inps.font_size,
                                   color=inps.font_color,
+                                  yrotate=inps.lat_label_direction,
                                   print_msg=inps.print_msg)
             else:
                 ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
@@ -907,7 +908,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
     if (len(inps.dsetFamilyList) == 1
             and inps.key in ['timeseries', 'giantTimeseries', 'ifgramStack', 'HDFEOS', 'geometry']):
         dset_list = [inps.dset[i] for i in range(i_start, i_end)]
-        data = readfile.read(inps.file, datasetName=dset_list, box=inps.pix_box)[0]
+        data[:] = readfile.read(inps.file, datasetName=dset_list, box=inps.pix_box)[0]
 
         if inps.key == 'ifgramStack':
             # reference pixel info in unwrapPhase
@@ -969,6 +970,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
         vprint('masking data')
         msk = np.tile(inps.msk, (data.shape[0], 1, 1))
         data = np.ma.masked_where(msk == 0., data)
+
     if inps.zero_mask:
         vprint('masking pixels with zero value')
         data = np.ma.masked_where(data == 0., data)
