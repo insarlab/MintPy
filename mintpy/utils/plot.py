@@ -89,7 +89,7 @@ class BasemapExt(Basemap):
 
 
     def draw_lalo_label(self, geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max_num=4,
-                        font_size=12, color='k', xoffset=None, yoffset=None, print_msg=True):
+                        font_size=12, color='k', xoffset=None, yoffset=None, yrotate='horizontal', print_msg=True):
         """Auto draw lat/lon label/tick based on coverage from geo_box
         Parameters: geo_box : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
                     ax      : axes object the labels are drawn
@@ -130,10 +130,10 @@ class BasemapExt(Basemap):
         labels_lon = np.multiply(lalo_loc, [0, 0, 1, 1])
         self.drawparallels(lats, fmt=fmt, labels=labels_lat, linewidth=0.05,
                            fontsize=font_size, color=color, textcolor=color,
-                           xoffset=xoffset, yoffset=yoffset)
+                           xoffset=xoffset, yoffset=yoffset, rotation=yrotate)
         self.drawmeridians(lons, fmt=fmt, labels=labels_lon, linewidth=0.05,
                            fontsize=font_size, color=color, textcolor=color,
-                           xoffset=xoffset, yoffset=yoffset)
+                           xoffset=xoffset, yoffset=yoffset, rotation=0)
         return
 
     def auto_lalo_sequence(self, geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[1, 2, 3, 4, 5],
@@ -246,6 +246,9 @@ def add_dem_argument(parser):
     dem.add_argument('--contour-step', dest='dem_contour_step', metavar='NUM', type=float, default=200.0,
                      help='Background topography contour step in meters. \n'
                           'Default is 200 meters.')
+    dem.add_argument('--contour-linewidth', dest='dem_contour_linewidth', metavar='NUM', type=float, default=0.5,
+                     help='Background topography contour linewidth. \n'
+                          'Default is 0.5.')
     dem.add_argument('--shade-az', dest='shade_azdeg', type=float, default=315., metavar='DEG',
                      help='The azimuth (0-360, degrees clockwise from North) of the light source\n'
                           'Default is 315.')
@@ -378,6 +381,9 @@ def add_map_argument(parser):
                       help='Maximum number of lalo tick label, 4 by default.')
     mapg.add_argument('--lalo-step', dest='lalo_step', metavar='DEG',
                       type=float, help='Lat/lon step for lalo-label option.')
+    mapg.add_argument('--lat-label', dest='lat_label_direction', type=str,
+                      choices={'horizontal', 'vertical'}, default='horizontal',
+                      help='Rotate Lat label from default horizontal to vertical (to save space).')
 
     mapg.add_argument('--projection', dest='map_projection', default='cyl', metavar='NAME',
                       help='map projection when plotting in geo-coordinate. \n'
@@ -1301,11 +1307,13 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
         if isinstance(ax, BasemapExt) and geo_box is not None:
             yy, xx = np.mgrid[geo_box[1]:geo_box[3]:dem_contour.shape[0]*1j,
                               geo_box[0]:geo_box[2]:dem_contour.shape[1]*1j]
-            ax.contour(xx, yy, dem_contour, dem_contour_seq, origin='upper', linewidths=0.5,
+            ax.contour(xx, yy, dem_contour, dem_contour_seq, origin='upper',
+                       linewidths=inps.dem_contour_linewidth,
                        colors='black', alpha=0.5, latlon='FALSE', zorder=1)
         # radar coordinates
         elif isinstance(ax, plt.Axes):
             ax.contour(dem_contour, dem_contour_seq, origin='upper',
+                       linewidths=inps.dem_contour_linewidth,
                        colors='black', alpha=0.5, extent=extent, zorder=1)
     return ax
 
