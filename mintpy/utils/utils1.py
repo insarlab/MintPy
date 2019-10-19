@@ -414,7 +414,7 @@ def get_geometry_file(dset_list, work_dir=None, coord='geo', abspath=True, print
         work_dir = os.getcwd()
 
     # search *geometry*.h5 files
-    fname_list = [os.path.join(work_dir, i) for i in ['*/*geometry*.h5', '../*/geometry*.h5']]
+    fname_list = [os.path.join(work_dir, i) for i in ['*geometry*.h5', '*/*geometry*.h5', '../*/geometry*.h5']]
     fname_list = get_file_list(fname_list, coord=coord)
     if len(fname_list) == 0:
         if print_msg:
