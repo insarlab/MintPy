@@ -7,6 +7,7 @@
 # Recommend import:
 #     from mintpy.objects.gps import GPS
 
+
 import os
 import time
 from datetime import datetime as dt
@@ -69,6 +70,28 @@ def search_gps(SNWE, start_date=None, end_date=None, site_list_file=None, print_
         idx *= t_start <= t1
 
     return site_names[idx], site_lats[idx], site_lons[idx]
+
+
+def get_baseline_change(dates1, dis_e1, dis_n1, dis_u1,
+                        dates2, dis_e2, dis_n2, dis_u2):
+    """Calculate the baseline change between two GPS displacement time-series
+    Parameters: dates1/2     : 1D np.array of datetime.datetime object
+                dis_e/n/u1/2 : 1D np.ndarray of displacement in meters in np.float32
+    Returns:    dates        : 1D np.array of datetime.datetime object for the common dates
+                dis          : 1D np.ndarray of displacement in meters in np.float32 for the common dates
+    """
+    dates = np.array(sorted(list(set(dates1) & set(dates2))))
+    dis = np.zeros(dates.shape, dtype=np.float64)
+    for i in range(len(dates)):
+        idx1 = np.where(dates1 == dates[i])[0][0]
+        idx2 = np.where(dates2 == dates[i])[0][0]
+        disi = ((dis_e1[idx1] - dis_e2[idx2]) ** 2 
+              + (dis_n1[idx1] - dis_n2[idx2]) ** 2
+              + (dis_u1[idx1] - dis_u2[idx2]) ** 2) ** 0.5
+        dis[i] = disi
+    dis -= dis[0]
+    dis = np.array(dis, dtype=np.float32)
+    return dates, dis
 
 
 class GPS:
@@ -148,6 +171,12 @@ class GPS:
         return self.site_lat, self.site_lon
 
     def read_displacement(self, start_date=None, end_date=None, print_msg=True, display=False):
+        """ Read GPS displacement time-series (defined by start/end_date)
+        Parameters: start/end_date : str in YYYYMMDD format
+        Returns:    dates : 1D np.ndarray of datetime.datetime object
+                    dis_e/n/u : 1D np.ndarray of displacement in meters in np.float32
+                    std_e/n/u : 1D np.ndarray of displacement STD in meters in np.float32
+        """
         # download file if it's not exists.
         if not os.path.isfile(self.file):
             self.dload_site(print_msg=print_msg)
