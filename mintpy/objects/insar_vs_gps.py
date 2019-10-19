@@ -11,6 +11,7 @@ import sys
 import numpy as np
 from scipy import stats
 from scipy.interpolate import griddata
+from dateutil.relativedelta import relativedelta
 
 from mintpy.objects import timeseries, giantTimeseries
 from mintpy.utils import readfile, plot as pp, utils as ut
@@ -19,7 +20,9 @@ from mintpy.defaults.plot import *
 
 
 class insar_vs_gps:
-    def __init__(self, ts_file, geom_file, temp_coh_file, site_names, gps_dir='./GPS', ref_site='GV01'):
+    def __init__(self, ts_file, geom_file, temp_coh_file,
+                 site_names, gps_dir='./GPS', ref_site='GV01',
+                 start_date=None, end_date=None):
         self.insar_file = ts_file
         self.geom_file = geom_file
         self.temp_coh_file = temp_coh_file
@@ -28,8 +31,8 @@ class insar_vs_gps:
         self.ref_site = ref_site
         self.num_site = len(site_names)
         self.ds = {}
-        self.start_date = '20141101'
-        self.end_date = '20180625'
+        self.start_date = start_date
+        self.end_date = end_date
 
     def open(self):
         atr = readfile.read_attribute(self.insar_file)
@@ -38,10 +41,18 @@ class insar_vs_gps:
             ts_obj = timeseries(self.insar_file)
         elif k == 'giantTimeseries':
             ts_obj = giantTimeseries(self.insar_file)
+        else:
+            raise ValueError('Un-supported time-series file: {}'.format(k))
         ts_obj.open(print_msg=False)
         self.metadata = dict(ts_obj.metadata)
         self.num_date = ts_obj.numDate
         self.insar_datetime = ts_obj.times
+
+        # default start/end_date
+        if self.start_date is None:
+            self.start_date = (obj.times[0] - relativedelta(months=1)).strftime('%Y%m%d')
+        if self.end_date is None:
+            self.end_date = (obj.times[-1] + relativedelta(months=1)).strftime('%Y%m%d')
 
         self.read_gps()
         self.read_insar()
