@@ -177,7 +177,7 @@ class insar_vs_gps:
 
             # find common reference date
             ref_date = dt(*time.strptime(self.min_ref_date, "%Y%m%d")[0:5])
-            ref_idx = insar_date.index(ref_date)
+            ref_idx = insar_date.tolist().index(ref_date)
             while ref_idx < self.num_date:
                 if insar_date[ref_idx] not in gps_date:
                     ref_idx += 1
