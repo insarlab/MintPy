@@ -11,6 +11,8 @@ import sys
 import numpy as np
 from scipy import stats
 from scipy.interpolate import griddata
+import time
+from datetime import datetime as dt
 from dateutil.relativedelta import relativedelta
 
 from mintpy.objects import timeseries, giantTimeseries
@@ -20,9 +22,45 @@ from mintpy.defaults.plot import *
 
 
 class insar_vs_gps:
+    """ Comparing InSAR time-series with GPS time-series in LOS direction
+    Parameters: ts_file        : str, time-series HDF5 file
+                geom_file      : str, geometry HDF5 file
+                temp_coh_file  : str, temporal coherence HDF5 file
+                site_names     : list of str, GPS site names
+                gps_dir        : str, directory of the local GPS data files
+                ref_site       : str, common reference site in space for InSAR and GPS
+                start/end_date : str, date in YYYYMMDD format for the start/end date
+                min_ref_date   : str, date in YYYYMMDD format for the earliest common
+                    reference date between InSAR and GPS
+    Returns:    ds : dict, each element has the following components:
+                    'GV03': {
+                      'name': 'GV03',
+                      'lat': -0.7977926892712729,
+                      'lon': -91.13294444114553,
+                      'gps_datetime': array([datetime.datetime(2014, 11, 1, 0, 0),
+                             datetime.datetime(2014, 11, 2, 0, 0),
+                             ...,
+                             datetime.datetime(2018, 6, 25, 0, 0)], dtype=object),
+                      'gps_dis': array([-2.63673663e-02, ..., 6.43612206e-01], dtype=float32),
+                      'gps_std': array([0.00496152, ..., 0.00477411], dtype=float32),
+                      'reference_site': 'GV01',
+                      'insar_datetime': array([datetime.datetime(2014, 12, 13, 0, 0),
+                             datetime.datetime(2014, 12, 25, 0, 0),
+                             ...,
+                             datetime.datetime(2018, 6, 19, 0, 0)], dtype=object),
+                      'insar_dis_linear': array([-0.01476493, ...,  0.62273948]),
+                      'temp_coh': 0.9961861392598478,
+                      'gps_std_mean': 0.004515478,
+                      'comm_dis_gps': array([-0.02635017, ..., 0.61315614], dtype=float32),
+                      'comm_dis_insar': array([-0.01476493, ..., 0.60640174], dtype=float32),
+                      'r_square': 0.9993494518609801,
+                      'dis_rmse': 0.008023425326946351
+                    }
+    """
+
     def __init__(self, ts_file, geom_file, temp_coh_file,
                  site_names, gps_dir='./GPS', ref_site='GV01',
-                 start_date=None, end_date=None):
+                 start_date=None, end_date=None, min_ref_date=None):
         self.insar_file = ts_file
         self.geom_file = geom_file
         self.temp_coh_file = temp_coh_file
@@ -33,6 +71,7 @@ class insar_vs_gps:
         self.ds = {}
         self.start_date = start_date
         self.end_date = end_date
+        self.min_ref_date = min_ref_date
 
     def open(self):
         atr = readfile.read_attribute(self.insar_file)
@@ -48,11 +87,18 @@ class insar_vs_gps:
         self.num_date = ts_obj.numDate
         self.insar_datetime = ts_obj.times
 
-        # default start/end_date
+        # default start/end
         if self.start_date is None:
-            self.start_date = (obj.times[0] - relativedelta(months=1)).strftime('%Y%m%d')
+            self.start_date = (ts_obj.times[0] - relativedelta(months=1)).strftime('%Y%m%d')
         if self.end_date is None:
-            self.end_date = (obj.times[-1] + relativedelta(months=1)).strftime('%Y%m%d')
+            self.end_date = (ts_obj.times[-1] + relativedelta(months=1)).strftime('%Y%m%d')
+
+        # default min_ref_date
+        if self.min_ref_date is None:
+            self.min_ref_date = ts_obj.times[5].strftime('%Y%m%d')
+        elif self.min_ref_date not in ts_obj.dateList:
+            raise ValueError('input min_ref_date {} does not exist in insar file {}'.format(
+                self.min_ref_date, self.insar_file))
 
         self.read_gps()
         self.read_insar()
@@ -130,22 +176,25 @@ class insar_vs_gps:
             insar_date = site['insar_datetime']
 
             # find common reference date
-            idx = 5
-            while idx < self.num_date:
-                if insar_date[idx] not in gps_date:
-                    idx += 1
+            ref_date = dt(*time.strptime(self.min_ref_date, "%Y%m%d")[0:5])
+            ref_idx = insar_date.index(ref_date)
+            while ref_idx < self.num_date:
+                if insar_date[ref_idx] not in gps_date:
+                    ref_idx += 1
                 else:
                     break
-            if idx == self.num_date:
+            if ref_idx == self.num_date:
                 raise RuntimeError('InSAR and GPS do not share ANY date for site: {}'.format(site['name']))
-            comm_date = insar_date[idx]
+            comm_date = insar_date[ref_idx]
+
             # reference insar in time
-            site[self.insar_dis_name] -= site[self.insar_dis_name][idx]
+            site[self.insar_dis_name] -= site[self.insar_dis_name][ref_idx]
             # reference gps dis/std in time
-            idx_gps = np.where(gps_date == comm_date)[0][0]
-            site['gps_dis'] -= site['gps_dis'][idx_gps]
-            site['gps_std'] = np.sqrt(site['gps_std']**2 + site['gps_std'][idx_gps]**2)
+            ref_idx_gps = np.where(gps_date == comm_date)[0][0]
+            site['gps_dis'] -= site['gps_dis'][ref_idx_gps]
+            site['gps_std'] = np.sqrt(site['gps_std']**2 + site['gps_std'][ref_idx_gps]**2)
             site['gps_std_mean'] = np.mean(site['gps_std'])
+        return
 
 
     def calculate_rmse(self):
