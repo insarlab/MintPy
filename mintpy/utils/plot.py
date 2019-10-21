@@ -1387,14 +1387,14 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
                                                     ref_site=inps.ref_gps_site,
                                                     gps_comp=inps.gps_component)[1] * unit_fac
                 gps_data = dis[-1] - dis[0]
-                
+
             if np.isnan(gps_data) == False:
                 listGPS.append([site_names[i],site_lons[i], site_lats[i], gps_data])
             else: pass
 
             # save calculated GPS velocities to CSV file
             import csv
-            csv_columns = ['SiteID','Lon','Lat', 'Vel ('+str(inps.disp_unit)+' in LOS)']
+            csv_columns = ['Site ID','Lon','Lat', 'Vel ('+str(inps.disp_unit)+' in LOS)']
             csv_file = "GPSSitesVel.csv"
             try:
                 with open(csv_file, 'w') as csvfile:
