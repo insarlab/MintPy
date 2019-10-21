@@ -338,7 +338,10 @@ class GPS:
                                                     ref_site=ref_site,
                                                     gps_comp=gps_comp)[0:2]
         date_list = [dt.strftime(i, '%Y%m%d') for i in dates]
-        A = timeseries.get_design_matrix4average_velocity(date_list)
-        self.velocity = np.dot(np.linalg.pinv(A), dis)[0]
+        if len(date_list) > 2:
+            A = timeseries.get_design_matrix4average_velocity(date_list)
+            self.velocity = np.dot(np.linalg.pinv(A), dis)[0]
+        else:
+            self.velocity = np.nan
         return self.velocity
 
