@@ -369,7 +369,7 @@ def add_map_argument(parser):
     # Map
     mapg = parser.add_argument_group('Map', 'Map settings for display')
     mapg.add_argument('--coastline', action='store_true', help='Draw coastline.')
-    
+
     # lalo label
     mapg.add_argument('--lalo-loc', dest='lalo_loc', type=int, nargs=4, default=[1, 0, 0, 1],
                       metavar=('left', 'right', 'top', 'bottom'),
@@ -396,11 +396,11 @@ def add_map_argument(parser):
     mapg.add_argument('--scalebar', nargs=3, metavar=('LEN', 'X', 'Y'), type=float,
                       default=[0.2, 0.2, 0.1],
                       help='scale bar distance and location in ratio:\n' +
-                           '\tdistance in ratio of total width\n' + 
-                           '\tlocation in X/Y in ratio with respect to the lower left corner\n' + 
-                           '--scalebar 0.2 0.2 0.1  #for lower left  corner\n' + 
-                           '--scalebar 0.2 0.2 0.8  #for upper left  corner\n' + 
-                           '--scalebar 0.2 0.8 0.1  #for lower right corner\n' + 
+                           '\tdistance in ratio of total width\n' +
+                           '\tlocation in X/Y in ratio with respect to the lower left corner\n' +
+                           '--scalebar 0.2 0.2 0.1  #for lower left  corner\n' +
+                           '--scalebar 0.2 0.2 0.8  #for upper left  corner\n' +
+                           '--scalebar 0.2 0.8 0.1  #for lower right corner\n' +
                            '--scalebar 0.2 0.8 0.8  #for upper right corner\n')
     mapg.add_argument('--noscalebar', '--nosbar', dest='disp_scalebar',
                       action='store_false', help='do not display scale bar.')
@@ -447,7 +447,7 @@ def add_reference_argument(parser):
 
 def add_save_argument(parser):
     save = parser.add_argument_group('Save/Output', 'Save figure and write to file(s)')
-    save.add_argument('-o', '--outfile', type=str, nargs='*', 
+    save.add_argument('-o', '--outfile', type=str, nargs='*',
                       help="save the figure with assigned filename.\n"
                            "By default, it's calculated based on the input file name.")
     save.add_argument('--save', dest='save_fig', action='store_true',
@@ -963,7 +963,7 @@ def plot_perp_baseline_hist(ax, dateList, pbaseList, plot_dict={}, dateList_drop
     Inputs
         ax : matplotlib axes object
         dateList : list of string, date in YYYYMMDD format
-        pbaseList : list of float, perp baseline 
+        pbaseList : list of float, perp baseline
         plot_dict : dictionary with the following items:
                     fontsize
                     linewidth
@@ -1369,7 +1369,8 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         else:
             geom_obj = metadata
             print('use incidenceAngle/azimuthAngle calculated from metadata')
-        
+
+        listGPS=[]
         for i in range(num_site):
             obj = GPS(site_names[i])
             # calculate gps data value
@@ -1386,6 +1387,22 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
                                                     ref_site=inps.ref_gps_site,
                                                     gps_comp=inps.gps_component)[1] * unit_fac
                 gps_data = dis[-1] - dis[0]
+                
+            if np.isnan(gps_data) == False:
+                listGPS.append([site_names[i],site_lons[i], site_lats[i], gps_data])
+            else: pass
+
+            import csv
+            csv_columns = ['Site ID','Lon','Lat', 'Vel ('+str(inps.disp_unit)+' in LOS)']
+            csv_file = "GPSSitesVel.csv"
+            try:
+                with open(csv_file, 'w') as csvfile:
+                    wr = csv.writer(csvfile)
+                    wr.writerow(csv_columns)
+                    wr.writerows(listGPS)
+            except IOError:
+                print("I/O error")
+
             if print_msg:
                 prog_bar.update(i+1, suffix=site_names[i])
 
@@ -1460,7 +1477,7 @@ def set_shared_ylabel(axes_list, label, labelpad=0.01, font_size=12, position='l
     top = axes_list[0].get_position().y1
     bottom = axes_list[-1].get_position().y0
 
-    # get the coordinates of the left side of the tick labels 
+    # get the coordinates of the left side of the tick labels
     x0 = 1
     x1 = 0
     for ax in axes_list:
@@ -1506,7 +1523,7 @@ def set_shared_xlabel(axes_list, label, labelpad=0.01, font_size=12, position='t
     left = axes_list[0].get_position().x0
     right = axes_list[-1].get_position().x1
 
-    # get the coordinates of the left side of the tick labels 
+    # get the coordinates of the left side of the tick labels
     y0 = 1
     y1 = 0
     for ax in axes_list:
@@ -1676,7 +1693,7 @@ def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False, 
         disp_unit, wrap = check_disp_unit_and_wrap(metadata,
                                                    disp_unit=None,
                                                    wrap=wrap,
-                                                   wrap_range=wrap_range, 
+                                                   wrap_range=wrap_range,
                                                    print_msg=print_msg)
 
     # Data Operation - Scale to display unit
@@ -1706,8 +1723,8 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
     # default mask file:
-    if (not mask_file 
-            and k in ['velocity', 'timeseries'] 
+    if (not mask_file
+            and k in ['velocity', 'timeseries']
             and 'masked' not in fname):
         mask_file = 'maskTempCoh.h5'
         if 'PhaseVelocity' in fname:
@@ -1754,4 +1771,3 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
         if print_msg:
             print('read {} contained cmask dataset'.format(os.path.basename(fname)))
     return msk, mask_file
-
