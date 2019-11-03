@@ -279,26 +279,12 @@ class TimeSeriesAnalysis:
 
 
     def _read_template(self):
-        # read custom template, to:
         # 1) update default template
-        # 2) add metadata to ifgramStack file and HDF-EOS5 file
         self.customTemplate = None
         if self.customTemplateFile:
-            cfile = self.customTemplateFile
-            # Copy custom template file to inputs directory for backup
-            inputs_dir = os.path.join(self.workDir, 'inputs')
-            if not os.path.isdir(inputs_dir):
-                os.makedirs(inputs_dir)
-                print('create directory:', inputs_dir)
-            if ut.run_or_skip(out_file=os.path.join(inputs_dir, os.path.basename(cfile)),
-                              in_file=cfile,
-                              check_readable=False) == 'run':
-                shutil.copy2(cfile, inputs_dir)
-                print('copy {} to inputs directory for backup.'.format(os.path.basename(cfile)))
-
-            # Read custom template
-            print('read custom template file:', cfile)
-            cdict = readfile.read_template(cfile)
+            # customTemplateFile --> customTemplate
+            print('read custom template file:', self.customTemplateFile)
+            cdict = readfile.read_template(self.customTemplateFile)
 
             # correct some loose type errors
             standardValues = {'def':'auto', 'default':'auto',
@@ -325,10 +311,28 @@ class TimeSeriesAnalysis:
 
             self.customTemplate = dict(cdict)
 
-            # Update default template file based on custom template
+            # customTemplate --> templateFile
             print('update default template based on input custom template')
             self.templateFile = ut.update_template_file(self.templateFile, self.customTemplate)
 
+        # 2) backup custome/default template file in inputs/pic folder
+        for backup_dirname in ['inputs', 'pic']:
+            backup_dir = os.path.join(self.workDir, backup_dirname)
+            # create directory
+            if not os.path.isdir(backup_dir):
+                os.makedirs(backup_dir)
+                print('create directory:', backup_dir)
+
+            # back up to the directory
+            for tfile in [self.customTemplateFile, self.templateFile]:
+                if tfile and  ut.run_or_skip(out_file=os.path.join(backup_dir, os.path.basename(tfile)),
+                                             in_file=tfile,
+                                             check_readable=False) == 'run':
+                    shutil.copy2(tfile, backup_dir)
+                    print('copy {} to {} directory for backup.'.format(os.path.basename(tfile),
+                                                                       os.path.basename(backup_dir)))
+
+        # 3) read default template file
         print('read default template file:', self.templateFile)
         self.template = readfile.read_template(self.templateFile)
         self.template = ut.check_template_auto_value(self.template)
