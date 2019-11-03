@@ -10,6 +10,7 @@
 
 import os
 import time
+import codecs
 from datetime import datetime as dt
 import numpy as np
 from pyproj import Geod
@@ -72,28 +73,79 @@ def search_gps(SNWE, start_date=None, end_date=None, site_list_file=None, print_
     return site_names[idx], site_lats[idx], site_lons[idx]
 
 
-def get_baseline_change(dates1, dis_e1, dis_n1, dis_u1,
-                        dates2, dis_e2, dis_n2, dis_u2):
+def get_baseline_change(dates1, pos_x1, pos_y1, pos_z1,
+                        dates2, pos_x2, pos_y2, pos_z2):
     """Calculate the baseline change between two GPS displacement time-series
     Parameters: dates1/2     : 1D np.array of datetime.datetime object
-                dis_e/n/u1/2 : 1D np.ndarray of displacement in meters in np.float32
+                pos_x/y/z1/2 : 1D np.ndarray of displacement in meters in np.float32
     Returns:    dates        : 1D np.array of datetime.datetime object for the common dates
-                dis          : 1D np.ndarray of displacement in meters in np.float32 for the common dates
+                bases        : 1D np.ndarray of displacement in meters in np.float32 for the common dates
     """
     dates = np.array(sorted(list(set(dates1) & set(dates2))))
-    dis = np.zeros(dates.shape, dtype=np.float64)
+    bases = np.zeros(dates.shape, dtype=np.float64)
     for i in range(len(dates)):
         idx1 = np.where(dates1 == dates[i])[0][0]
         idx2 = np.where(dates2 == dates[i])[0][0]
-        disi = ((dis_e1[idx1] - dis_e2[idx2]) ** 2 
-              + (dis_n1[idx1] - dis_n2[idx2]) ** 2
-              + (dis_u1[idx1] - dis_u2[idx2]) ** 2) ** 0.5
-        dis[i] = disi
-    dis -= dis[0]
-    dis = np.array(dis, dtype=np.float32)
-    return dates, dis
+        basei = ((pos_x1[idx1] - pos_x2[idx2]) ** 2 
+               + (pos_y1[idx1] - pos_y2[idx2]) ** 2
+               + (pos_z1[idx1] - pos_z2[idx2]) ** 2) ** 0.5
+        bases[i] = basei
+    bases -= bases[0]
+    bases = np.array(bases, dtype=np.float32)
+    return dates, bases
 
 
+## GPS-GSI: utility functions
+def read_pos_file(fname):
+    fcp = codecs.open(fname, encoding = 'cp1252')
+    fc = np.loadtxt(fcp, skiprows=20, dtype=str, comments=('*','-DATA'))
+
+    dates = [dt(year=y, month=m, day=d) for y,m,d in zip(fc[:,0].astype(int),
+                                                         fc[:,1].astype(int),
+                                                         fc[:,2].astype(int))]
+    X = fc[:,4].astype(np.float64).tolist()
+    Y = fc[:,5].astype(np.float64).tolist()
+    Z = fc[:,6].astype(np.float64).tolist()
+    return dates, X, Y, Z
+
+def get_pos_years(gps_dir, site):
+    fpattern = os.path.join(gps_dir, '{}.*.pos'.format(site))
+    fnames = glob.glob(os.path.join(gps_dir, '{}.*.pos'.format(site)))
+    years = [os.path.basename(i).split('.')[1] for i in fnames]
+    years = ptime.yy2yyyy(years)
+    return years
+    
+def read_GSI_F3(gps_dir, site, start_date=None, end_date=None):        
+    year0 = int(start_date[0:4])
+    year1 = int(end_date[0:4])
+    num_year = year1 - year0 + 1
+
+    dates, X, Y, Z = [], [], [], []
+    for i in range(num_year):
+        yeari = str(year0 + i)
+        fname = os.path.join(gps_dir, '{}.{}.pos'.format(site, yeari[2:]))
+        datesi, Xi, Yi, Zi = read_pos_file(fname)
+        dates += datesi
+        X += Xi
+        Y += Yi
+        Z += Zi
+    dates = np.array(dates)
+    X = np.array(X)
+    Y = np.array(Y)
+    Z = np.array(Z)
+
+    date0 = dt(*time.strptime(start_date, "%Y%m%d")[0:5])
+    date1 = dt(*time.strptime(end_date, "%Y%m%d")[0:5])
+    flag = np.ones(X.shape, dtype=np.bool_)
+    flag[dates < date0] = False
+    flag[dates > date1] = False
+    return dates[flag], X[flag], Y[flag], Z[flag]
+
+
+
+
+
+#################################### Beginning of GPS-UNR class ####################################
 class GPS:
     """GPS class for GPS time-series of daily solution
 
@@ -345,3 +397,4 @@ class GPS:
             self.velocity = np.nan
         return self.velocity
 
+#################################### End of GPS-UNR class ####################################
