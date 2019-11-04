@@ -2,7 +2,7 @@ We use [Doxygen](http://www.doxygen.nl/) to generate the API documentation autom
 
 + Install Doxygen following [link](http://www.doxygen.nl/download.html) if you have not already doen so.
 
-+ Run doxygen command with `MintPy/docs/Doxyfile` to generate the API documentation in html and latex format (to `$MINTPY_HOME/../MINTPY_docs` by default).
++ Run doxygen command with `MintPy/docs/Doxyfile` to generate the API documentation in html and latex format (to `$MINTPY_HOME/docs/api_docs` by default).
 
 ```bash
 cd $MINTPY_HOME/docs/api

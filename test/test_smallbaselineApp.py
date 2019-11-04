@@ -44,8 +44,8 @@ def create_parser():
     parser.add_argument('--test-pyaps', dest='test_pyaps', action='store_true',
                         help='Include testing of PyAPS.')
 
-    parser.add_argument('--dir', dest='test_dir', default='~/insarlab/test',
-                        help='test directory. Default: ~/insarlab/test')
+    parser.add_argument('--dir', dest='test_dir', default='~/data/test',
+                        help='test directory. Default: ~/data/test')
 
     parser.add_argument('--nofresh', dest='fresh_start', action='store_false',
                         help='Use exsiting files WITHOUT starting from the scratch.')

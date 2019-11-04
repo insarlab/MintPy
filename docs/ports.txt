@@ -1,3 +1,4 @@
+gcc5
 gcc7
 cmake
 gmake
@@ -27,7 +28,7 @@ tiff
 openmotif
 subversion
 python27
-python36
+python37
 fftw +gcc7
 fftw-single +gcc7
 fftw-3 +gcc7
@@ -47,13 +48,13 @@ sfcgal
 bzr 
 git 
 rsync
-hdf4 
-hdf5 
+hdf5 +gcc7
 hdfeos 
 hdfeos5
 h5utils
-netcdf
+netcdf +gcc7
 netcdf-cxx
+netcdf-fortran
 ecCodes +gcc7
 postgresql95
 postgresql95-server
@@ -61,35 +62,30 @@ proj
 cairo
 scons
 pandoc
-opencv +gdal +python36
+opencv +python37
 gimp2
 ImageMagick
 samba3
 swig
 swig-python
-gdal +expat +geos +hdf4 +hdf5 +netcdf +openjpeg +postgresql95 +sqlite3 +grib
-py36-cython
-py36-mpi4py +gcc7 +openmpi
-py36-numpy +gcc7 +openblas
-py36-scipy +gcc7 +openblas
-py36-matplotlib +cairo +tkinter +webagg
-py36-pandas
-py36-sympy
-py36-yaml
-py36-simplejson
-py36-h5py
-py36-cartopy
-py36-shapely
-py36-fiona
-py36-networkx
-py36-scikit-image
-py36-ipython +notebook +parallel
-py36-dask
-py36-zmq
-py36-bokeh
-py36-dynd
-py36-sphinx
-py36-pip
+gdal +expat +geos +hdf5 +netcdf +openjpeg +postgresql95 +sqlite3
+py37-cython
+py37-mpi4py +gcc7 +openmpi
+py37-numpy +gcc7 +openblas
+py37-scipy +gcc7 +openblas
+py37-matplotlib +cairo +tkinter +webagg
+py37-pandas
+py37-yaml
+py37-h5py
+py37-cartopy
+py37-shapely
+py37-scikit-image
+py37-jupyter
+py37-dask
+py37-bokeh
+py37-sphinx
+py37-pip
+py37-cvxopt +accelerate +dsdp +fftw +glpk +gsl
 gmt5
 kealib
 pandoc
@@ -98,7 +94,7 @@ postgis2 +gui +postgresql95 +raster +sfcgal +topology
 wdiff
 cwdiff
 ndiff
-atlas +gcc7
+atlas +gcc5
 metis +gcc7
 parmetis +gcc7 +openmpi
 vecLibFort
@@ -108,4 +104,3 @@ superlu_dist +gcc7 +openmpi
 hypre +gcc7 +openmpi
 c2html
 sowing
-py36-cvxopt +accelerate +dsdp +fftw +glpk +gsl
