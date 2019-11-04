@@ -75,6 +75,14 @@ def yymmdd2yyyymmdd(date):
     return date
 
 
+def yy2yyyy(year):
+    if year[0] == '9':
+        year = '19'+year
+    else:
+        year = '20'+year
+    return datyeare
+
+
 def yyyymmdd(dates):
     if isinstance(dates, str):
         if len(dates) == 6:
