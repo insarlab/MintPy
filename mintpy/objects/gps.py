@@ -109,7 +109,6 @@ def read_pos_file(fname):
     return dates, X, Y, Z
 
 def get_pos_years(gps_dir, site):
-    fpattern = os.path.join(gps_dir, '{}.*.pos'.format(site))
     fnames = glob.glob(os.path.join(gps_dir, '{}.*.pos'.format(site)))
     years = [os.path.basename(i).split('.')[1] for i in fnames]
     years = ptime.yy2yyyy(years)
