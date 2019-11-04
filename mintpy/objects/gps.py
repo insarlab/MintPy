@@ -59,7 +59,7 @@ def search_gps(SNWE, start_date=None, end_date=None, site_list_file=None, print_
     t_end = np.array([dt(*time.strptime(i, "%Y-%m-%d")[0:5]) for i in txt_data[:, 8].astype(str)])
 
     # limit on space
-    idx = ((site_lats >= SNWE[0]) * (site_lats <= SNWE[1]) * 
+    idx = ((site_lats >= SNWE[0]) * (site_lats <= SNWE[1]) *
            (site_lons >= SNWE[2]) * (site_lons <= SNWE[3]))
 
     # limit on time
@@ -86,7 +86,7 @@ def get_baseline_change(dates1, pos_x1, pos_y1, pos_z1,
     for i in range(len(dates)):
         idx1 = np.where(dates1 == dates[i])[0][0]
         idx2 = np.where(dates2 == dates[i])[0][0]
-        basei = ((pos_x1[idx1] - pos_x2[idx2]) ** 2 
+        basei = ((pos_x1[idx1] - pos_x2[idx2]) ** 2
                + (pos_y1[idx1] - pos_y2[idx2]) ** 2
                + (pos_z1[idx1] - pos_z2[idx2]) ** 2) ** 0.5
         bases[i] = basei
@@ -113,8 +113,8 @@ def get_pos_years(gps_dir, site):
     years = [os.path.basename(i).split('.')[1] for i in fnames]
     years = ptime.yy2yyyy(years)
     return years
-    
-def read_GSI_F3(gps_dir, site, start_date=None, end_date=None):        
+
+def read_GSI_F3(gps_dir, site, start_date=None, end_date=None):
     year0 = int(start_date[0:4])
     year1 = int(end_date[0:4])
     num_year = year1 - year0 + 1

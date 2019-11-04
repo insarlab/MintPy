@@ -22,9 +22,9 @@ MintPy use [pyKML](https://pythonhosted.org/pykml/) to generate KMZ (Keyhole Mar
 
 ### Notes for developers ###
 
-save_kmz_timeseries.py takes the 3D HDF5 file and outputs a KMZ file at multiple levels of details (LODs). It subsets of the data into regionalized boxes, writes the required KML files, references the appropriate auxiliary resources, and zips all of the files together into a KMZ file. 
+save_kmz_timeseries.py takes the 3D HDF5 file and outputs a KMZ file at multiple levels of details (LODs). It divides the data matrix into regionalized boxes, writes the required KML files, references the appropriate auxiliary resources, and zips all of the files together into a KMZ file. 
 
-The script also embeds a javascript using [dygraphs](http://dygraphs.com) for interactive plot of the time-series deformation at each latitude, longitude point included in the original dataset. This allows for the user to select any of the onscreen placemarks and view a timeseries chart displaying the timeseries data from that unique geographic coordinate. The Placemarks are colored onscreen based on their deformation velocity, as computed from a velocity data file.
+The script also embeds a javascript using [dygraphs](http://dygraphs.com) for interactive plot of the time-series deformation at each point. This allows the user to select any placemark onscreen to display the time-series data in an interactive chart. The Placemarks are colored based on the velocity.
 
 #### KML and KMZ Performance ####
 
