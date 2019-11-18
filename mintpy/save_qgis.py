@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Author: Piyush Agram, Nov 2019
+
 
 import os
 import errno
@@ -135,8 +137,6 @@ def main(mintpyDict, outshp):
     ##Time to load the dates from time-series HDF5 field and create one attribute for each date
     ts_obj = timeseries(mintpyDict['TimeSeries'])
     ts_obj.open()
-    #dateList = getDateList(mintpyDict['TimeSeries'])
-    #dateList = [x.decode('UTF-8') for x in dateList]
     for date in ts_obj.dateList:
         fd = ogr.FieldDefn('D{0}'.format(date), ogr.OFTReal)
         fd.SetWidth(8)
@@ -202,6 +202,7 @@ if __name__ == '__main__':
     '''
     Exectuable
     '''
+
     #Parse command line
     inps = cmdLineParse()
 
