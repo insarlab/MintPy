@@ -69,7 +69,7 @@ def gatherMintpy(ts_file, geom_file):
             }
 
     #Check if the files exists.
-    for key, fname in rdict.items():
+    for fname in rdict.values():
         if not os.path.isfile(fname):
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), fname)
 
