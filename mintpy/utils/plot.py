@@ -1393,7 +1393,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             else: pass
 
             import csv
-            csv_columns = ['Site ID','Lon','Lat', 'Vel ('+str(inps.disp_unit)+' in LOS)']
+            csv_columns = ['SiteID','Lon','Lat', 'Vel ('+str(inps.disp_unit)+' in LOS)']
             csv_file = "GPSSitesVel.csv"
             try:
                 with open(csv_file, 'w') as csvfile:
