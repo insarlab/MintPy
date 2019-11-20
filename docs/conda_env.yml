@@ -29,6 +29,5 @@ dependencies:
   - scikit-image
   - scipy
   - pip:
-    - git+https://github.com/matplotlib/basemap.git#egg=mpl_toolkits
     - git+https://github.com/tylere/pykml.git
-
+    - https://github.com/matplotlib/basemap/archive/v1.2.1rel.tar.gz
