@@ -87,7 +87,7 @@ mintpy.subset.lalo = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
 """
 
 NOTE = """NOTE:
-  unwrapPhase is required, the other dataset are optional, including coherence, connectComponent, wrapPhase, etc.
+  For interferogram, unwrapPhase is required, the other dataset are optional, including coherence, connectComponent, wrapPhase, etc.
   The unwrapPhase metadata file requires DATE12 attribute in YYMMDD-YYMMDD format.
   All path of data file must contain the master and slave date, either in file name or folder name.
 """
@@ -97,6 +97,9 @@ EXAMPLE = """example:
   load_data.py -t smallbaselineApp.cfg
   load_data.py -t smallbaselineApp.cfg GalapagosSenDT128.tempalte --project GalapagosSenDT128
   load_data.py -H #Show example input template for ISCE/ROI_PAC/GAMMA products
+
+  # load geometry only
+  # fill metaFile, baselineDir and geometry datasets in the template and run load_data.py
 """
 
 
@@ -569,21 +572,20 @@ def prepare_metadata(inpsDict):
                 os.system(cmd)
 
     elif processor == 'isce':
-        ifgram_dir = os.path.dirname(os.path.dirname(inpsDict['mintpy.load.unwFile']))
-        ifgram_file = os.path.basename(inpsDict['mintpy.load.unwFile'])
         meta_files = sorted(glob.glob(inpsDict['mintpy.load.metaFile']))
         if len(meta_files) < 1:
             warnings.warn('No input metadata file found: {}'.format(inpsDict['mintpy.load.metaFile']))
         try:
             meta_file = meta_files[0]
+            ifgram_dir = os.path.dirname(os.path.dirname(inpsDict['mintpy.load.unwFile']))
+            ifgram_file = os.path.basename(inpsDict['mintpy.load.unwFile'])
             baseline_dir = inpsDict['mintpy.load.baselineDir']
             geom_dir = os.path.dirname(inpsDict['mintpy.load.demFile'])
-            cmd = '{s} -i {i} -f {f} -m {m} -b {b} -g {g}'.format(s=script_name,
-                                                                  i=ifgram_dir,
-                                                                  f=ifgram_file,
-                                                                  m=meta_file,
-                                                                  b=baseline_dir,
-                                                                  g=geom_dir)
+            cmd = '{s} -m {m} -g {g}'.format(s=script_name, m=meta_file, g=geom_dir)
+            if baseline_dir:
+                cmd += ' -b {b} '.format(b=baseline_dir)
+            if ifgram_dir:
+                cmd += ' -i {i} -f {f} '.format(i=ifgram_dir, f=ifgram_file)
             print(cmd)
             os.system(cmd)
         except:
