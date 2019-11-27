@@ -500,6 +500,10 @@ def get_slice_list(fname):
             slice_list = ['incidenceAngle', 'azimuthAngle']
         elif atr.get('number_bands', '1') == '2' and 'unw' not in k:
             slice_list = ['band1', 'band2']
+        elif atr.get('number_bands', '1') == '3' and 'unw' not in k:
+            slice_list = ['band1', 'band2', 'band3']
+        elif atr.get('number_bands', '1') == '4' and 'unw' not in k:
+            slice_list = ['band1', 'band2', 'band3', 'band4']
         else:
             slice_list = ['']
     return slice_list
