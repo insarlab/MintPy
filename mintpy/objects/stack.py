@@ -116,6 +116,7 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
                    'dem'               :'m',
                    'hgt'               :'m',
                    'hgt_sim'           :'m',
+                   'magnitude'         :'1',
                    }
 
 
@@ -473,7 +474,7 @@ class timeseries:
 
     # Functions for Unwrap error correction
     @staticmethod
-    def get_design_matrix4average_velocity(date_list):
+    def get_design_matrix4average_velocity(date_list, refDate=None):
         """design matrix/function model of linear velocity estimation
         Parameters: date_list : list of string in YYYYMMDD format
         Returns:    A : 2D array of int in size of (numDate, 2)
@@ -482,7 +483,10 @@ class timeseries:
         dt_list = [dt.strptime(i, '%Y%m%d') for i in date_list]
         yr_list = [i.year + (i.timetuple().tm_yday - 1) / 365.25 for i in dt_list]
         yr_diff = np.array(yr_list)
-        yr_diff -= yr_diff[0]
+
+        if refDate is None:
+            refDate = date_list[0]
+        yr_diff -= yr_diff[date_list.index(refDate)]
 
         #for precision, use float32 in 0.1 yr, or float64 in 2015.1 yr format
         A = np.ones([len(date_list), 2], dtype=np.float32)

@@ -296,7 +296,7 @@ def read_binary_file(fname, datasetName=None, box=None):
     fext = fext.lower()
 
     # metadata
-    atr = read_attribute(fname)
+    atr = read_attribute(fname, datasetName=datasetName)
     processor = atr['PROCESSOR']
     length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
@@ -345,6 +345,14 @@ def read_binary_file(fname, datasetName=None, box=None):
                 band = 2
             elif datasetName.lower() == 'band3':
                 band = 3
+            elif datasetName in ['magnitude','amplitude']:
+                cpx_band = 'magnitude'
+            elif datasetName in ['phase','angle']:
+                cpx_band = 'phase'
+            elif datasetName.lower() == 'real':
+                cpx_band = 'real'
+            elif datasetName.lower().startswith('imag'):
+                cpx_band = 'imag'
 
     # ROI_PAC
     elif processor in ['roipac']:
@@ -504,6 +512,8 @@ def get_slice_list(fname):
             slice_list = ['band1', 'band2', 'band3']
         elif atr.get('number_bands', '1') == '4' and 'unw' not in k:
             slice_list = ['band1', 'band2', 'band3', 'band4']
+        elif fext.lower() in ['.int']:
+            slice_list = ['magnitude', 'phase']
         else:
             slice_list = ['']
     return slice_list
