@@ -104,6 +104,8 @@ def sample_decorrelation_phase(L, coherence, size=1, display=False, scale=1.0, f
         sample    - 1D np.array in size of (size,), sampled phase
     unw_n = sample_decorrelation_phase(L=1, coherence=0.7, size=100000, display=True)
     '''
+    size = int(size)
+
     phiNum = 100
     phiMax = np.pi * float(scale)
     pdf = ifginv.phase_pdf_ds(int(L), coherence, phi_num=phiNum)[0].flatten()   #for PS: ifginv.phase_variance_ps()
@@ -121,7 +123,7 @@ def sample_decorrelation_phase(L, coherence, size=1, display=False, scale=1.0, f
         ax.plot(phi, phi_dist.cdf(phi), label='CDF')
         ax.set_xlabel('Phase', fontsize=font_size)
         ax.set_ylabel('Probability', fontsize=font_size)
-        ax.set_title(r'L = %d, $\gamma$ = %.1f, sample size = %d' % (L, coherence, size), fontsize=font_size)
+        ax.set_title(r'L = %d, $\gamma$ = %.2f, sample size = %d' % (L, coherence, size), fontsize=font_size)
         ax.set_xlim([-np.pi, np.pi])
         ax.set_xticks([-np.pi, 0, np.pi])
         ax.set_xticklabels([r'-$\pi$', '0', r'$\pi$'], fontsize=font_size)
