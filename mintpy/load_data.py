@@ -89,7 +89,7 @@ def create_parser():
     parser.add_argument('--project', type=str, dest='PROJECT_NAME',
                         help='project name of dataset for INSARMAPS Web Viewer')
     parser.add_argument('--processor', type=str, dest='processor',
-                        choices={'isce', 'snap', 'gamma', 'roipac', 'doris', 'gmtsar'},
+                        choices={'isce', 'uavsar', 'snap', 'gamma', 'roipac', 'doris', 'gmtsar'},
                         help='InSAR processor/software of the file', default='isce')
     parser.add_argument('--enforce', '-f', dest='updateMode', action='store_false',
                         help='Disable the update mode, or skip checking dataset already loaded.')
@@ -97,7 +97,7 @@ def create_parser():
                         help='compress loaded geometry while writing HDF5 file, default: None.')
 
     parser.add_argument('-o', '--output', type=str, nargs=3, dest='outfile',
-                        default=['./inputs/ifgramStack.h5',
+                        default=['./inputs/ifgramStack.h5',                                   
                                  './inputs/geometryRadar.h5',
                                  './inputs/geometryGeo.h5'],
                         help='output HDF5 file')
@@ -388,8 +388,9 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
     dsNameList = list(dsPathDict.keys())
     pairsDict = {}
     for dsPath in dsPathDict[dsName0]:
-        dates = ptime.yyyymmdd(readfile.read_attribute(dsPath)['DATE12'].split('-'))
 
+        dates = ptime.yyyymmdd(readfile.read_attribute(dsPath)['DATE12'].replace('_','-').split('-'))
+        
         #####################################
         # A dictionary of data files for a given pair.
         # One pair may have several types of dataset.
@@ -401,11 +402,11 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
         for i in range(len(dsNameList)):
             dsName = dsNameList[i]
             dsPath1 = dsPathDict[dsName][0]
-            if all(d[2:8] in dsPath1 for d in dates):
+            if all(d[2:13] in dsPath1 for d in dates):
                 ifgramPathDict[dsName] = dsPath1
             else:
                 dsPath2 = [i for i in dsPathDict[dsName]
-                           if all(d[2:8] in i for d in dates)]
+                           if all(d[2:13] in i for d in dates)]
                 if len(dsPath2) > 0:
                     ifgramPathDict[dsName] = dsPath2[0]
                 else:
@@ -413,7 +414,6 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
         ifgramObj = ifgramDict(dates=tuple(dates),
                                datasetDict=ifgramPathDict)
         pairsDict[tuple(dates)] = ifgramObj
-
     if len(pairsDict) > 0:
         stackObj = ifgramStackDict(pairsDict=pairsDict, dsName0=dsName0)
     else:
@@ -424,7 +424,7 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
 def read_inps_dict2geometry_dict_object(inpsDict):
 
     # eliminate dsName by processor
-    if inpsDict['processor'] in ['isce', 'doris']:
+    if inpsDict['processor'] in ['isce', 'uavsar', 'doris']:
         datasetName2templateKey.pop('azimuthCoord')
         datasetName2templateKey.pop('rangeCoord')
     elif inpsDict['processor'] in ['roipac', 'gamma']:

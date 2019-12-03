@@ -8,17 +8,46 @@
 
 import os
 import sys
+import re
 import time
 from datetime import datetime as dt, timedelta
 import numpy as np
 
 
 ################################################################
-def yyyymmdd2season(dateStr):
-    """Determine the season of input date in YYYYMMDD format"""
+def get_date_str_format(date_str):
+    """
+    Check if input string of date is in one of the following formats:
+        YYYYMMDDTHHMM
+        YYYYMMDD
+        YYMMDD
+    """
+    try:
+        date_str = date_str.decode('utf8')
+    except:
+        pass
+
+    date_str_format = None
+    if len(re.findall('\d{6}T\d{4}', date_str)) > 0:
+        date_str_format = '%Y%m%dT%H%M'
+    elif len(re.findall('\d{8}', date_str)) > 0:
+        date_str_format = '%Y%m%d'
+    elif len(re.findall('\d{6}', date_str)) > 0:
+        date_str_format = '%y%m%d'
+    else:
+        raise ValueError('un-recognized date string format!')
+    return date_str_format
+
+
+def yyyymmdd2season(date_str):
+    """Determine the season of input date in YYYYMMDD format
+
+    Parameters: date_str - str, date in YYYYMMDD format
+    Returns:    season   - str, season in ['WINTER', 'SPRING', 'SUMMER', 'FALL']
+    """
     # get day of the year
-    dateStr = yyyymmdd(dateStr)
-    yday = dt(*time.strptime(dateStr, "%Y%m%d")[0:5]).timetuple().tm_yday
+    date_str = yyyymmdd(date_str)
+    yday = dt(*time.strptime(date_str, "%Y%m%d")[0:5]).timetuple().tm_yday
 
     # determine the season
     season = None
@@ -79,7 +108,8 @@ def yyyymmdd2years(dates):
     elif isinstance(dates, list):
         yy = []
         for date in dates:
-            d = dt(*time.strptime(date, "%Y%m%d")[0:5])
+            date_format = get_date_str_format(date) ## TO modified
+            d = dt(*time.strptime(date, date_format)[0:5])
             yy.append(float(d.year)+float(d.timetuple().tm_yday-1)/365.25)
     else:
         raise ValueError('Unrecognized date format. Only string and list supported.')
@@ -208,7 +238,7 @@ def date_index(dateList):
 
 ################################################################
 def date_list2tbase(dateList):
-    """Get temporal Baseline in days with respect to the 1st date
+    """Get temporal Baseline in days and mins with respect to the 1st date
     Input: dateList - list of string, date in YYYYMMDD or YYMMDD format
     Output:
         tbase    - list of int, temporal baseline in days
@@ -216,8 +246,10 @@ def date_list2tbase(dateList):
                              value - int, temporal baseline in days
     """
     dateList = yyyymmdd(dateList)
-    dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
-    tbase = [(i-dates[0]).days for i in dates]
+    date_format = get_date_str_format(str(dateList)) ## TO modified
+    dates = [dt(*time.strptime(i, date_format)[0:5]) for i in dateList] ## TO modified
+    #dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
+    tbase = [(i-dates[0]).seconds for i in dates]
 
     # Dictionary: key - date, value - temporal baseline
     dateDict = {}
@@ -235,7 +267,9 @@ def date_list2vector(dateList):
         datevector - list of float, years, i.e. 2010.8020547945205
     """
     dateList = yyyymmdd(dateList)
-    dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
+    date_format = get_date_str_format(str(dateList)) ## TO modified
+    dates = [dt(*time.strptime(i, date_format)[0:5]) for i in dateList] ## TO modified
+    #dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
     # date in year - float format
     datevector = [i.year + (i.timetuple().tm_yday - 1)/365.25 for i in dates]
     #datevector2 = [round(i, 2) for i in datevector]
@@ -249,7 +283,7 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
         sar_acquisition_time - string, SAR data acquisition time in seconds
         grib_source - string, Grib Source of weather reanalysis product
     Output:
-        grib_hr - string, time of closest available weather product 
+        grib_hr - string, time of closest available weather product
     Example:
         '06' = closest_weather_product_time(atr['CENTER_LINE_UTC'])
         '12' = closest_weather_product_time(atr['CENTER_LINE_UTC'], 'NARR')
@@ -268,8 +302,8 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
 
 ###########################Simple progress bar######################
 class progressBar:
-    """Creates a text-based progress bar. Call the object with 
-    the simple print command to see the progress bar, which looks 
+    """Creates a text-based progress bar. Call the object with
+    the simple print command to see the progress bar, which looks
     something like this:
     [=======> 22%       ]
     You may specify the progress bar's min and max values on init.

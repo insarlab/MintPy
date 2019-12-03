@@ -719,10 +719,12 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
         num_col = stack_obj.width
     num_pixel = num_row * num_col
 
+
+
     # get tbase_diff
     date_list = stack_obj.get_date_list(dropIfgram=True)
     num_date = len(date_list)
-    tbase = np.array(ptime.date_list2tbase(date_list)[0], np.float32) / 365.25
+    tbase = np.array(ptime.date_list2tbase(date_list)[0], np.float32) / ( 365.25 * 24 * 60 * 60 )
     tbase_diff = np.diff(tbase).reshape(-1, 1)
 
     # design matrix
@@ -981,10 +983,11 @@ def ifgram_inversion(inps=None):
         meta[key_prefix+key] = str(vars(inps)[key])
 
     # 2.2 instantiate time-series
+    date_dtype = np.dtype('S{}'.format(len(date_list[0]))
     dsNameDict = {
-        "date"       : (np.dtype('S8'), (num_date,)),
-        "bperp"      : (np.float32,     (num_date,)),
-        "timeseries" : (np.float32,     (num_date, length, width)),
+        "date"       : (date_dtype, (num_date,)),
+        "bperp"      : (np.float32, (num_date,)),
+        "timeseries" : (np.float32, (num_date, length, width)),
     }
 
     meta['FILE_TYPE'] = 'timeseries'
