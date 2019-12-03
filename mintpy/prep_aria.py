@@ -142,10 +142,10 @@ def extract_metadata(stack):
     lat_step = geoTrans[5]
     lon1 = lon0 + lon_step * meta["WIDTH"]
     lat1 = lat0 + lat_step * meta["LENGTH"]
-    meta["X_FIRST"] = lon0
-    meta["Y_FIRST"] = lat0
-    meta["X_STEP"] = lon_step
-    meta["Y_STEP"] = lat_step
+    meta["X_FIRST"] = '{:.9f}'.format(lon0)
+    meta["Y_FIRST"] = '{:.9f}'.format(lat0)
+    meta["X_STEP"] = '{:.9f}'.format(lon_step)
+    meta["Y_STEP"] = '{:.9f}'.format(lat_step)
     meta["X_UNIT"] = "degrees"
     meta["Y_UNIT"] = "degrees"
 
