@@ -91,6 +91,12 @@ def cmd_line_parse(iargs=None):
         msg += 'Y_STEP: {} m, X_STEP: {} m'.format(atr2['Y_STEP'], atr2['X_STEP'])
         raise ValueError('input files do not have the same spatial resolution\n{}'.format(msg))
 
+    # check reference point
+    ref_lalo_1 = ['{:.4f}'.format(float(atr1[i])) for i in ['REF_LAT','REF_LON']]
+    ref_lalo_2 = ['{:.4f}'.format(float(atr2[i])) for i in ['REF_LAT','REF_LON']]
+    if ref_lalo_1 != ref_lalo_2:
+        raise ValueError('input files do not have the same reference point from REF_LAT/LON values')
+
     return inps
 
 
@@ -182,7 +188,7 @@ def asc_desc2horz_vert(fname1, fname2):
         coord = ut.coordinate(atr)
         [x0, x1] = coord.lalo2yx([west, east], coord_type='lon')
         [y0, y1] = coord.lalo2yx([north, south], coord_type='lat')
-        dLOS[i, :] = readfile.read(fname, box=(x0, y0, x1, y1))[0].flatten(0)
+        dLOS[i, :] = readfile.read(fname, box=(x0, y0, x1, y1))[0].flatten()
 
     # 3. Project displacement from LOS to Horizontal and Vertical components
     print('---------------------')
@@ -201,6 +207,13 @@ def asc_desc2horz_vert(fname1, fname2):
     atr['Y_FIRST'] = str(north)
     atr['X_STEP'] = str(lon_step)
     atr['Y_STEP'] = str(lat_step)
+
+    # update REF_X/Y
+    ref_lat, ref_lon = float(atr['REF_LAT']), float(atr['REF_LON'])
+    coord = ut.coordinate(atr)
+    [ref_y, ref_x] = coord.geo2radar(ref_lat, ref_lon)[0:2]
+    atr['REF_Y'] = int(ref_y)
+    atr['REF_X'] = int(ref_x)
 
     return dH, dV, atr, dLOS, atr_list
 
