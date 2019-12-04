@@ -208,6 +208,13 @@ def asc_desc2horz_vert(fname1, fname2):
     atr['X_STEP'] = str(lon_step)
     atr['Y_STEP'] = str(lat_step)
 
+    # update REF_X/Y
+    ref_lat, ref_lon = float(atr['REF_LAT']), float(atr['REF_LON'])
+    coord = ut.coordinate(atr)
+    [ref_y, ref_x] = coord.geo2radar(ref_lat, ref_lon)[0:2]
+    atr['REF_Y'] = int(ref_y)
+    atr['REF_X'] = int(ref_x)
+
     return dH, dV, atr, dLOS, atr_list
 
 
