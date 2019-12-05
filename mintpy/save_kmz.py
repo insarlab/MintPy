@@ -65,14 +65,12 @@ def create_parser():
                      help='Figure DPI (dots per inch). Default: 600')
     fig.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
                      help='Figure size in inches - width and length')
+    fig.add_argument('--cbar-loc', dest='cbar_loc', choices=['lower left','lower right','upper left', 'upper right'],
+                     default='lower left', help='Location of colorbar in the screen. Default: lower left.')
     fig.add_argument('--cbar-label', dest='cbar_label', metavar='LABEL', default='Mean LOS velocity',
                      help='Colorbar label. Default: Mean LOS velocity')
-    fig.add_argument('--cbar-bin-num', dest='cbar_bin_num', metavar='NUM', type=int, default=9,
-                     help='Colorbar bin number. Default: 9')
-    fig.add_argument('--cbar-height', dest='cbar_height',
-                     help='Colorbar height/elevation/altitude in meters;\n' +
-                          'if not specified and DEM exists in current directory, use mean DEM height + 1000m;\n' +
-                          'if not specified nor DEM exists, clampToGround.')
+    fig.add_argument('--cbar-bin-num', dest='cbar_bin_num', metavar='NUM', type=int, default=7,
+                     help='Colorbar bin number. Default: 7')
 
     # Reference Pixel
     ref = parser.add_argument_group('Reference Pixel')
@@ -103,12 +101,13 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
-def plot_colorbar(out_file, vmin, vmax, unit='cm/year', cmap='jet', figsize=(0.18, 3.6)):
+def plot_colorbar(out_file, vmin, vmax, unit='cm/year', cmap='jet', figsize=(0.18, 3.6),
+                  nbins=7, label='Mean LOS velocity'):
     fig, cax = plt.subplots(figsize=figsize)
     norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
     cbar = mpl.colorbar.ColorbarBase(cax, cmap=plt.get_cmap(cmap), norm=norm, orientation='vertical')
-    cbar.set_label('{} [{}]'.format("Mean LOS velocity", unit), fontsize=12)
-    cbar.locator = mpl.ticker.MaxNLocator(nbins=7)
+    cbar.set_label('{} [{}]'.format(label, unit), fontsize=12)
+    cbar.locator = mpl.ticker.MaxNLocator(nbins=nbins)
     cbar.update_ticks()
     cbar.ax.tick_params(which='both', labelsize=12)
     fig.patch.set_facecolor('white')
@@ -118,17 +117,36 @@ def plot_colorbar(out_file, vmin, vmax, unit='cm/year', cmap='jet', figsize=(0.1
     return out_file
 
 
-def generate_cbar_element(cbar_file, vmin, vmax, unit='cm/year', cmap='jet'):
-    cbar_file = plot_colorbar(out_file=cbar_file, vmin=vmin, vmax=vmax, unit=unit, cmap=cmap)
+def generate_cbar_element(cbar_file, vmin, vmax, unit='cm/year', cmap='jet', loc='lower left',
+                          nbins=7, label='Mean LOS velocity'):
+    # plot colobar and save as an image
+    cbar_file = plot_colorbar(out_file=cbar_file,
+                              vmin=vmin,
+                              vmax=vmax,
+                              unit=unit,
+                              cmap=cmap,
+                              nbins=nbins,
+                              label=label)
 
+    # colobar location
+    if loc.split()[0] == 'lower':
+        oy, sy = '0', '0'
+    elif loc.split()[0] == 'upper':
+        oy, sy = '1', '1'
+    if loc.split()[1] == 'left':
+        ox, sx = '0', '0'
+    elif loc.split()[1] == 'right':
+        ox, sx = '1', '1'
+
+    # generate KML screen overlay object
     cbar_overlay = KML.ScreenOverlay(
         KML.name('colorbar'),
         KML.Icon(
             KML.href("{}".format(os.path.basename(cbar_file))),
             KML.viewBoundScale(0.75)
         ),
-        KML.overlayXY(x="0", y="0", xunits="fraction", yunits="fraction"),
-        KML.screenXY(x="0", y="0", xunits="fraction", yunits="fraction"),
+        KML.overlayXY(x=ox, y=oy, xunits="fraction", yunits="fraction"),
+        KML.screenXY(x=sx, y=sy, xunits="fraction", yunits="fraction"),
         KML.size(x="0", y="250", xunits="pixel", yunits="pixel"),
         KML.rotation(0),
         KML.visibility(1),
@@ -239,7 +257,10 @@ def write_kmz_file(data, metadata, out_file, inps=None):
                                          vmin=inps.vlim[0],
                                          vmax=inps.vlim[1],
                                          unit=inps.disp_unit,
-                                         cmap=inps.colormap)
+                                         cmap=inps.colormap,
+                                         loc=inps.cbar_loc,
+                                         nbins=inps.cbar_bin_num,
+                                         label=inps.cbar_label)
     doc.Folder.append(cbar_overlay)
     kmlstr = etree.tostring(doc, pretty_print=True).decode('utf8')
 
