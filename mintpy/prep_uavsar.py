@@ -133,7 +133,7 @@ def extract_stripmap_metadata(meta_file):
     import isceobj.StripmapProc.StripmapProc as St
     from isceobj.Planet.Planet import Planet
 
-    if os.path.basename(meta_file) == "data.dat":    #shelve file from stripmapStack
+    if os.path.basename(meta_file) == "data":    #shelve file from stripmapStack
         fbase = os.path.splitext(meta_file)[0]
         with shelve.open(fbase, flag='r') as mdb:
             frame = mdb['frame']

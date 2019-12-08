@@ -8,17 +8,42 @@
 
 import os
 import sys
+import re
 import time
 from datetime import datetime as dt, timedelta
 import numpy as np
 
 
 ################################################################
-def yyyymmdd2season(dateStr):
+def get_date_str_format(date_str):
+    """
+    Check if input string of date is in one of the following formats:
+        YYYYMMDDTHHMM
+        YYYYMMDD
+        YYMMDD
+    """
+    try:
+        date_str = date_str.decode('utf8')
+    except:
+        pass
+
+    date_str_format = None
+    if len(re.findall('\d{6}T\d{4}', date_str)) > 0:
+        date_str_format = '%Y%m%dT%H%M'
+    elif len(re.findall('\d{8}', date_str)) > 0:
+        date_str_format = '%Y%m%d'
+    elif len(re.findall('\d{6}', date_str)) > 0:
+        date_str_format = '%y%m%d'
+    else:
+        raise ValueError('un-recognized date string format!')
+    return date_str_format
+
+
+def yyyymmdd2season(date_str):
     """Determine the season of input date in YYYYMMDD format"""
     # get day of the year
-    dateStr = yyyymmdd(dateStr)
-    yday = dt(*time.strptime(dateStr, "%Y%m%d")[0:5]).timetuple().tm_yday
+    date_str = yyyymmdd(date_str)
+    yday = dt(*time.strptime(date_str, "%Y%m%d")[0:5]).timetuple().tm_yday
 
     # determine the season
     season = None
@@ -249,7 +274,7 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
         sar_acquisition_time - string, SAR data acquisition time in seconds
         grib_source - string, Grib Source of weather reanalysis product
     Output:
-        grib_hr - string, time of closest available weather product 
+        grib_hr - string, time of closest available weather product
     Example:
         '06' = closest_weather_product_time(atr['CENTER_LINE_UTC'])
         '12' = closest_weather_product_time(atr['CENTER_LINE_UTC'], 'NARR')
@@ -268,8 +293,8 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
 
 ###########################Simple progress bar######################
 class progressBar:
-    """Creates a text-based progress bar. Call the object with 
-    the simple print command to see the progress bar, which looks 
+    """Creates a text-based progress bar. Call the object with
+    the simple print command to see the progress bar, which looks
     something like this:
     [=======> 22%       ]
     You may specify the progress bar's min and max values on init.

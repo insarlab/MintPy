@@ -10,6 +10,7 @@
 
 import os
 import sys
+import re
 import time
 import datetime as dt
 import h5py
@@ -127,12 +128,42 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
 
 
 
+################################ UTILITIES functions begin #############################
+def get_date_str_format(date_str):
+    """
+    Check if input string of date is in one of the following formats:
+        YYYYMMDDTHHMM
+        YYYYMMDD
+        YYMMDD
+    """
+    try:
+        date_str = date_str.decode('utf8')
+    except:
+        pass
+    print(date_str)  #self.date_format = get_date_str_format(dates[:, 0])
+
+    date_str_format = None
+    if len(re.findall('\d{6}T\d{4}', date_str)) > 0:
+        date_str_format = '%Y%m%dT%H%M'
+    elif len(re.findall('\d{8}', date_str)) > 0:
+        date_str_format = '%Y%m%d'
+    elif len(re.findall('\d{6}', date_str)) > 0:
+        date_str_format = '%y%m%d'
+    else:
+        raise ValueError('un-recognized date string format!')
+    return date_str_format
+
+
+################################ UTILITIES functions begin #############################
+
+
+
 ################################ timeseries class begin ################################
 class timeseries:
     """
     Time-series object for displacement of a set of SAR images from the same platform and track.
     It contains three datasets in root level: date, bperp and timeseries.
-    
+
     File structure: https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#timeseries
     """
 
@@ -459,7 +490,7 @@ class timeseries:
 ################################# geometry class begin #################################
 class geometry:
     """ Geometry object.
-    
+
     File structure: https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#geometry
     """
 
@@ -580,13 +611,14 @@ class geometry:
 ################################# ifgramStack class begin ##############################
 class ifgramStack:
     """ Interferograms Stack object.
-    
+
     File structure: https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#ifgramstack
     """
 
     def __init__(self, file=None):
         self.file = file
         self.name = 'ifgramStack'
+        self.date_format = '%Y%m%d'
 
     def close(self, print_msg=True):
         try:
@@ -677,10 +709,15 @@ class ifgramStack:
         """Read master/slave dates into array of datetime.datetime objects"""
         with h5py.File(self.file, 'r') as f:
             dates = f['date'][:]
+
+        # grab the date string format
+        self.date_format = get_date_str_format(dates[0, 0])
+
+        # convert date from str to datetime.datetime objects
         self.mDates = np.array([i.decode('utf8') for i in dates[:, 0]])
         self.sDates = np.array([i.decode('utf8') for i in dates[:, 1]])
-        self.mTimes = np.array([dt.datetime(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.mDates])
-        self.sTimes = np.array([dt.datetime(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.sDates])
+        self.mTimes = np.array([dt(*time.strptime(i, self.date_format)[0:5]) for i in self.mDates])
+        self.sTimes = np.array([dt(*time.strptime(i, self.date_format)[0:5]) for i in self.sDates])
 
     def read(self, datasetName='unwrapPhase', box=None, print_msg=True, dropIfgram=False):
         """Read 3D dataset with bounding box in space
@@ -1042,6 +1079,461 @@ class ifgramStack:
 
 ################################# ifgramStack class end ################################
 
+# ################################# uavsarifgramStack class begin ##############################
+# FILE_STRUCTURE_IFGRAM_STACK = """
+# /                  Root level group name
+# Attributes         Dictionary for metadata
+# /date              2D array of string  in size of (m, 2   ) in YYYYMMDD format for master and slave date
+# /bperp             1D array of float32 in size of (m,     ) in meter.
+# /dropIfgram        1D array of bool    in size of (m,     ) with 0/False for drop and 1/True for keep
+# /unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
+# /coherence         3D array of float32 in size of (m, l, w).
+# /connectComponent  3D array of int16   in size of (m, l, w).           (optional)
+# /wrapPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
+# /rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
+# /azimuthOffset     3D array of float32 in size of (m, l, w).           (optional)
+# """
+
+# class uavsarifgramStack:
+#     """ Interferograms Stack object."""
+
+#     def __init__(self, file=None):
+#         self.file = file
+#         self.name = 'uavsarifgramStack'
+#         self.file_structure = FILE_STRUCTURE_IFGRAM_STACK
+
+#     def close(self, print_msg=True):
+#         try:
+#             self.f.close()
+#             if print_msg:
+#                 print('close {} file: {}'.format(self.name, os.path.basename(self.file)))
+#         except:
+#             pass
+
+#     def open(self, print_msg=True):
+#         """
+#         Time format/rules:
+#             All datetime.datetime objects named with time
+#             All string in YYYYMMDD        named with date (following roipac)
+#         """
+#         if print_msg:
+#             print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
+#         self.get_metadata()
+#         self.get_size()
+#         self.read_datetimes()
+#         self.numPixel = self.length * self.width
+
+#         # time info
+#         self.date12List = ['{}_{}'.format(i, j) for i, j in zip(self.mDates, self.sDates)]
+#         self.tbaseIfgram = np.array([i.days for i in self.sTimes - self.mTimes], dtype=np.float32)
+
+#         with h5py.File(self.file, 'r') as f:
+#             self.dropIfgram = f['dropIfgram'][:]
+#             self.pbaseIfgram = f['bperp'][:]
+
+#             # get existed datasetNames in the order of ifgramDatasetNames
+#             dsNames = [i for i in f.keys()
+#                        if (isinstance(f[i], h5py.Dataset)
+#                            and f[i].shape[-2:] == (self.length, self.width))]
+#             self.datasetNames = [i for i in ifgramDatasetNames if i in dsNames]
+#             self.datasetNames += [i for i in dsNames if i not in ifgramDatasetNames]
+
+#         # Get sliceList for self.read()
+#         self.sliceList = []
+#         for dsName in self.datasetNames:
+#             self.sliceList += ['{}-{}'.format(dsName, i) for i in self.date12List]
+
+#         # Time in timeseries domain
+#         self.dateList = self.get_date_list(dropIfgram=False)
+#         self.numDate = len(self.dateList)
+
+#         # Reference pixel
+#         try:
+#             self.refY = int(self.metadata['REF_Y'])
+#             self.refX = int(self.metadata['REF_X'])
+#         except:
+#             self.refY = None
+#             self.refX = None
+#         try:
+#             self.refLat = float(self.metadata['REF_LAT'])
+#             self.refLon = float(self.metadata['REF_LON'])
+#         except:
+#             self.refLat = None
+#             self.refLon = None
+
+#     def get_metadata(self):
+#         with h5py.File(self.file, 'r') as f:
+#             self.metadata = dict(f.attrs)
+#             dates = f['date'][:].flatten()
+#         for key, value in self.metadata.items():
+#             try:
+#                 self.metadata[key] = value.decode('utf8')
+#             except:
+#                 self.metadata[key] = value
+#         dateList = sorted([i.decode('utf8') for i in dates])
+#         self.metadata['START_DATE'] = dateList[0]
+#         self.metadata['END_DATE'] = dateList[-1]
+#         return self.metadata
+
+#     def get_size(self, dropIfgram=False, datasetName='unwrapPhase'):
+#         with h5py.File(self.file, 'r') as f:
+#             self.numIfgram, self.length, self.width = f[datasetName].shape
+#             if dropIfgram:
+#                 self.numIfgram = np.sum(f['dropIfgram'][:])
+#         return self.numIfgram, self.length, self.width
+
+#     def read_datetimes(self):
+#         """Read master/slave dates into array of datetime.datetime objects"""
+#         with h5py.File(self.file, 'r') as f:
+#             dates = f['date'][:]
+#         self.mDates = np.array([i.decode('utf8') for i in dates[:, 0]])
+#         self.sDates = np.array([i.decode('utf8') for i in dates[:, 1]])
+#         self.mTimes = np.array([dt(*time.strptime(i, "%Y%m%dT%H%M")[0:5]) for i in self.mDates])
+#         self.sTimes = np.array([dt(*time.strptime(i, "%Y%m%dT%H%M")[0:5]) for i in self.sDates])
+
+#     def read(self, datasetName='unwrapPhase', box=None, print_msg=True, dropIfgram=False):
+#         """Read 3D dataset with bounding box in space
+#         Parameters: datasetName : string, to point to specific 2D dataset, e.g.:
+#                         unwrapPhase
+#                         coherence
+#                         connectComponent
+#                         ...
+#                         unwrapPhase-20161020_20161026
+#                         unwrapPhase-...
+#                         coherence-20161020_20161026
+#                         ...
+#                         ['unwrapPhase-20161020_20161026',
+#                          'unwrapPhase-20161020_20161101',
+#                          ...]
+#                     box : tuple of 4 int, for (x0,y0,x1,y1)
+#                     print_msg : bool
+#         Returns: data : 2D or 3D array
+#         Example:
+#             obj = ifgramStack('./inputs/ifgramStack.h5')
+#             obj.read(datasetName='unwrapPhase')
+#             obj.read(datasetName='coherence')
+#             obj.read(datasetName='unwrapPhase-20161020_20161026')
+#             obj.read(datasetName=['unwrapPhase-20161020_20161026',
+#                                   'unwrapPhase-20161020_20161101'])
+#         """
+#         self.get_size(dropIfgram=False)
+#         date12List = self.get_date12_list(dropIfgram=False)
+
+#         # convert input datasetName into list
+#         if datasetName is None:
+#             datasetName = ['unwrapPhase']
+#         elif isinstance(datasetName, str):
+#             datasetName = [datasetName]
+
+#         with h5py.File(self.file, 'r') as f:
+#             familyName = datasetName[0].split('-')[0]
+#             ds = f[familyName]
+#             if print_msg:
+#                 print('reading {} data from file: {} ...'.format(familyName, self.file))
+
+#             # get dateFlag - mark in time/1st dimension
+#             dateFlag = np.zeros((self.numIfgram), dtype=np.bool_)
+#             datasetName = [i.replace(familyName, '').replace('-', '') for i in datasetName]
+#             if any(not i for i in datasetName):
+#                 if dropIfgram:
+#                     dateFlag = f['dropIfgram'][:]
+#                 else:
+#                     dateFlag[:] = True
+#             else:
+#                 for e in datasetName:
+#                     dateFlag[date12List.index(e)] = True
+
+#             # get index in space/2-3 dimension
+#             if box is None:
+#                 box = (0, 0, self.width, self.length)
+
+#             data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
+#             data = np.squeeze(data)
+#         return data
+
+#     def spatial_average(self, datasetName='coherence', maskFile=None, box=None):
+#         if datasetName is None:
+#             datasetName = 'coherence'
+#         print('calculating spatial average of {} in file {} ...'.format(datasetName, self.file))
+#         if maskFile and os.path.isfile(maskFile):
+#             print('read mask from file: '+maskFile)
+#             mask = singleDataset(maskFile).read(box=box)
+#         else:
+#             maskFile = None
+
+#         with h5py.File(self.file, 'r') as f:
+#             dset = f[datasetName]
+#             numIfgram = dset.shape[0]
+#             dmean = np.zeros((numIfgram), dtype=np.float32)
+#             for i in range(numIfgram):
+#                 data = dset[i, box[1]:box[3], box[0]:box[2]]
+#                 if maskFile:
+#                     data[mask == 0] = np.nan
+#                 # ignore ZERO value for coherence
+#                 if datasetName == 'coherence':
+#                     data[data == 0] = np.nan
+#                 dmean[i] = np.nanmean(data)
+#                 sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, numIfgram))
+#                 sys.stdout.flush()
+#             print('')
+#         return dmean, self.date12List
+
+#     # Functions considering dropIfgram value
+#     def get_date12_list(self, dropIfgram=True):
+#         with h5py.File(self.file, 'r') as f:
+#             dates = f['date'][:]
+#             if dropIfgram:
+#                 dates = dates[f['dropIfgram'][:], :]
+#         mDates = np.array([i.decode('utf8') for i in dates[:, 0]])
+#         sDates = np.array([i.decode('utf8') for i in dates[:, 1]])
+#         date12List = ['{}_{}'.format(i, j) for i, j in zip(mDates, sDates)]
+#         return date12List
+
+#     def get_drop_date12_list(self):
+#         with h5py.File(self.file, 'r') as f:
+#             dates = f['date'][:]
+#             dates = dates[~f['dropIfgram'][:], :]
+#         mDates = np.array([i.decode('utf8') for i in dates[:, 0]])
+#         sDates = np.array([i.decode('utf8') for i in dates[:, 1]])
+#         date12List = ['{}_{}'.format(i, j) for i, j in zip(mDates, sDates)]
+#         return date12List
+
+#     def get_date_list(self, dropIfgram=False):
+#         with h5py.File(self.file, 'r') as f:
+#             dates = f['date'][:]
+#             if dropIfgram:
+#                 dates = dates[f['dropIfgram'][:], :]
+#         mDates = [i.decode('utf8') for i in dates[:, 0]]
+#         sDates = [i.decode('utf8') for i in dates[:, 1]]
+#         dateList = sorted(list(set(mDates + sDates)))
+#         return dateList
+
+#     def get_reference_phase(self, unwDatasetName='unwrapPhase', skip_reference=False, dropIfgram=False):
+#         """Get reference value
+#         Parameters: unwDatasetName : string, unwrapPhase, or unwrapPhase_unwCor
+#                     skip_reference : bool, skip reference value (for simulation only)
+#                     dropIfgram : bool, skip ifgrams marked as dropped or not
+#         Returns:    ref_phase : 1D np.array in size of (num_ifgram,) in float32
+#         """
+#         self.open(print_msg=False)
+#         if skip_reference:
+#             ref_phase = np.zeros(self.get_size(dropIfgram=dropIfgram)[0], np.float32)
+#             print('skip checking reference pixel info - This is for SIMULATION ONLY.')
+#         elif 'REF_Y' not in self.metadata.keys():
+#             raise ValueError('No REF_X/Y found!\nrun reference_point.py to select reference pixel.')
+#         else:
+#             print('reference pixel in y/x: ({}, {}) from dataset: {}'.format(self.refY, self.refX, unwDatasetName))
+#             ref_phase = self.read(datasetName=unwDatasetName,
+#                                   box=(self.refX, self.refY, self.refX+1, self.refY+1),
+#                                   dropIfgram=dropIfgram,
+#                                   print_msg=False)
+#         return ref_phase
+
+#     def nonzero_mask(self, datasetName=None, print_msg=True, dropIfgram=True):
+#         """Return the common mask of pixels with non-zero value in dataset of all ifgrams.
+#            Ignoring dropped ifgrams
+#         """
+#         self.open(print_msg=False)
+#         with h5py.File(self.file, 'r') as f:
+#             if datasetName is None:
+#                 datasetName = [i for i in ['connectComponent', 'unwrapPhase']
+#                                if i in f.keys()][0]
+#             print('calculate the common mask of pixels with non-zero {} value'.format(datasetName))
+
+#             dset = f[datasetName]
+#             mask = np.ones(dset.shape[1:3], dtype=np.bool_)
+#             dropIfgramFlag = np.ones(dset.shape[0], dtype=np.bool_)
+#             if dropIfgram:
+#                 dropIfgramFlag = self.dropIfgram
+#             num2read = np.sum(dropIfgramFlag)
+#             idx2read = np.where(dropIfgramFlag)[0]
+#             for i in range(num2read):  # Loop to save memory usage
+#                 data = dset[idx2read[i], :, :]
+#                 mask[data == 0.] = 0
+#                 mask[np.isnan(data)] = 0
+#                 sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, num2read))
+#                 sys.stdout.flush()
+#             print('')
+#         return mask
+
+#     def temporal_average(self, datasetName='coherence', dropIfgram=True):
+#         self.open(print_msg=False)
+#         if datasetName is None:
+#             datasetName = 'coherence'
+#         print('calculate the temporal average of {} in file {} ...'.format(datasetName, self.file))
+#         if 'unwrapPhase' in datasetName:
+#             phase2range = -1 * float(self.metadata['WAVELENGTH']) / (4.0 * np.pi)
+#             tbaseIfgram = self.tbaseIfgram / 365.25
+
+#         with h5py.File(self.file, 'r') as f:
+#             dset = f[datasetName]
+#             num_ifgram, length, width = dset.shape
+#             dmean = np.zeros((length, width), dtype=np.float32)
+#             drop_ifgram_flag = np.ones(num_ifgram, dtype=np.bool_)
+#             if dropIfgram:
+#                 drop_ifgram_flag = self.dropIfgram
+#                 if np.all(drop_ifgram_flag == 0.):
+#                     raise Exception(('ALL interferograms are marked as dropped, '
+#                                      'can not calculate temporal average.'))
+
+#             num2read = np.sum(drop_ifgram_flag)
+#             idx2read = np.where(drop_ifgram_flag)[0]
+#             for i in range(num2read):
+#                 idx = idx2read[i]
+#                 data = dset[idx, :, :]
+#                 if 'unwrapPhase' in datasetName:
+#                     if self.refY:
+#                         try:
+#                             data -= data[self.refY, self.refX]
+#                         except:
+#                             pass
+#                     data *= (phase2range * (1./tbaseIfgram[idx]))
+#                 dmean += data
+#                 sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, num2read))
+#                 sys.stdout.flush()
+#             dmean *= 1./np.sum(self.dropIfgram)
+#             print('')
+#         return dmean
+
+#     def get_max_connection_number(self):
+#         date12_list = self.get_date12_list()
+#         A = self.get_design_matrix4timeseries(date12_list, refDate=0)[0]
+#         num_conn = np.zeros(A.shape[0], dtype=np.int16)
+#         for i in range(A.shape[0]):
+#             Ai = A[i, :]
+#             num_conn[i] = np.where(Ai == 1)[0] - np.where(Ai == -1)[0]
+#         return np.max(num_conn)
+
+#     # Functions for Unwrap error correction
+#     @staticmethod
+#     def get_design_matrix4triplet(date12_list):
+#         """Generate the design matrix of ifgram triangle for unwrap error correction using phase closure
+#         Parameters: date12_list : list of string in YYYYMMDD_YYYYMMDD format
+#         Returns:    C : 2D np.array in size of (num_tri, num_ifgram) consisting 0, 1, -1
+#                         for 3 SAR acquisition in t1, t2 and t3 in time order,
+#                         ifg1 for (t1, t2) with 1
+#                         ifg2 for (t1, t3) with -1
+#                         ifg3 for (t2, t3) with 1
+#         Examples:   obj = uavsarifgramStack('./inputs/uavsarifgramStack.h5')
+#                     date12_list = obj.get_date12_list(dropIfgram=True)
+#                     C = uavsarifgramStack.get_design_matrix4triplet(date12_list)
+#         """
+#         # Date info
+#         date12_list = list(date12_list)
+
+#         # calculate triangle_idx
+#         triangle_idx = []
+#         for ifgram1 in date12_list:
+#             # ifgram1 (date1, date2)
+#             date1, date2 = ifgram1.split('_')
+
+#             # ifgram2 candidates (date1, date3)
+#             date3_list = []
+#             for ifgram2 in date12_list:
+#                 if date1 == ifgram2.split('_')[0] and ifgram2 != ifgram1:
+#                     date3_list.append(ifgram2.split('_')[1])
+
+#             # ifgram2/3
+#             if len(date3_list) > 0:
+#                 for date3 in date3_list:
+#                     ifgram3 = '{}_{}'.format(date2, date3)
+#                     if ifgram3 in date12_list:
+#                         ifgram1 = '{}_{}'.format(date1, date2)
+#                         ifgram2 = '{}_{}'.format(date1, date3)
+#                         ifgram3 = '{}_{}'.format(date2, date3)
+#                         triangle_idx.append([date12_list.index(ifgram1),
+#                                              date12_list.index(ifgram2),
+#                                              date12_list.index(ifgram3)])
+#         if len(triangle_idx) == 0:
+#             raise ValueError("No triangles found!")
+
+#         triangle_idx = np.array(triangle_idx, np.int16)
+#         triangle_idx = np.unique(triangle_idx, axis=0)
+
+#         # triangle_idx to C
+#         num_triangle = triangle_idx.shape[0]
+#         C = np.zeros((num_triangle, len(date12_list)), np.float32)
+#         for i in range(num_triangle):
+#             C[i, triangle_idx[i, 0]] = 1
+#             C[i, triangle_idx[i, 1]] = -1
+#             C[i, triangle_idx[i, 2]] = 1
+#         return C
+
+
+#     # Functions for Network Inversion
+#     @staticmethod
+#     def get_design_matrix4timeseries(date12_list, refDate=None):
+#         """Return design matrix of the input uavsarifgramStack for timeseries estimation
+#         Parameters: date12_list : list of string in YYYYMMDD_YYYYMMDD format
+#                     refDate : str, date in YYYYMMDD format
+#         Returns:    A : 2D array of float32 in size of (num_ifgram, num_date-1)
+#                     B : 2D array of float32 in size of (num_ifgram, num_date-1)
+#         Examples:   obj = uavsarifgramStack('./inputs/uavsarifgramStack.h5')
+#                     A, B = obj.get_design_matrix4timeseries(obj.get_date12_list(dropIfgram=True))
+#                     A = uavsarifgramStack.get_design_matrix4timeseries(date12_list, refDate='20101022')[0]
+#                     A = uavsarifgramStack.get_design_matrix4timeseries(date12_list, refDate=0)[0] #do not omit the 1st column
+#         """
+#         # Date info
+#         date12_list = list(date12_list)
+#         mDates = [i.split('_')[0] for i in date12_list]
+#         sDates = [i.split('_')[1] for i in date12_list]
+#         dateList = sorted(list(set(mDates + sDates)))
+#         dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
+#         tbase = np.array([(i - dates[0]).days for i in dates], np.float32) / 365.25
+#         numIfgram = len(date12_list)
+#         numDate = len(dateList)
+
+#         # calculate design matrix
+#         A = np.zeros((numIfgram, numDate), np.float32)
+#         B = np.zeros(A.shape, np.float32)
+#         for i in range(numIfgram):
+#             m_idx, s_idx = [dateList.index(j) for j in date12_list[i].split('_')]
+#             A[i, m_idx] = -1
+#             A[i, s_idx] = 1
+#             B[i, m_idx:s_idx] = tbase[m_idx+1:s_idx+1] - tbase[m_idx:s_idx]
+
+#         # Remove reference date as it can not be resolved
+#         if refDate is None:
+#             refDate = dateList[0]
+#         if refDate:
+#             refIndex = dateList.index(refDate)
+#             A = np.hstack((A[:, 0:refIndex], A[:, (refIndex+1):]))
+#             B = B[:, :-1]
+#         return A, B
+
+#     def get_perp_baseline_timeseries(self, dropIfgram=True):
+#         """Get spatial perpendicular baseline in timeseries from uavsarifgramStack, ignoring dropped ifgrams"""
+#         # read pbase of interferograms
+#         with h5py.File(self.file, 'r') as f:
+#             pbaseIfgram = f['bperp'][:]
+#             if dropIfgram:
+#                 pbaseIfgram = pbaseIfgram[f['dropIfgram'][:]]
+
+#         # estimate pbase of time-series
+#         date12List = self.get_date12_list(dropIfgram=dropIfgram)
+#         A = self.get_design_matrix4timeseries(date12List)[0]
+#         pbaseTimeseries = np.zeros(A.shape[1]+1, dtype=np.float32)
+#         pbaseTimeseries[1:] = np.linalg.lstsq(A, pbaseIfgram, rcond=None)[0]
+#         return pbaseTimeseries
+
+#     def update_drop_ifgram(self, date12List_to_drop):
+#         """Update dropIfgram dataset based on input date12List_to_drop"""
+#         if date12List_to_drop is None:
+#             return
+#         date12ListAll = self.get_date12_list(dropIfgram=False)
+#         with h5py.File(self.file, 'r+') as f:
+#             print('open file {} with r+ mode'.format(self.file))
+#             print('update HDF5 dataset "/dropIfgram".')
+#             f['dropIfgram'][:] = np.array([i not in date12List_to_drop
+#                                            for i in date12ListAll], dtype=np.bool_)
+#             # update MODIFICATION_TIME for all datasets in ifgramDatasetNames
+#             for dsName in ifgramDatasetNames:
+#                 if dsName in f.keys():
+#                     print('update MODIFICATION_TIME in HDF5 dataset "/{}"'.format(dsName))
+#                     f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
+#                     time.sleep(1)   #to distinguish the modification time of input files
+
+# ################################# uavsarifgramStack class end ################################
 
 
 ########################################################################################
@@ -1072,7 +1564,7 @@ class HDFEOS:
     Time-series object in HDF-EOS5 format for Univ of Miami's InSAR Time-series Web Viewer
         Link: http://insarmaps.miami.edu
     It contains a "timeseries" group and three datasets: date, bperp and timeseries.
-    
+
     File structure: https://github.com/yunjunz/MintPy/blob/master/docs/hdfeos5.md
     """
 
