@@ -241,7 +241,9 @@ def date_list2tbase(dateList):
                              value - int, temporal baseline in days
     """
     dateList = yyyymmdd(dateList)
-    dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
+    date_format = get_date_str_format(str(dateList)) ## TO modified
+    dates = [dt(*time.strptime(i, date_format)[0:5]) for i in dateList] ## TO modified
+    #dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
     tbase = [(i-dates[0]).days for i in dates]
 
     # Dictionary: key - date, value - temporal baseline
@@ -260,7 +262,9 @@ def date_list2vector(dateList):
         datevector - list of float, years, i.e. 2010.8020547945205
     """
     dateList = yyyymmdd(dateList)
-    dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
+    date_format = get_date_str_format(str(dateList)) ## TO modified
+    dates = [dt(*time.strptime(i, date_format)[0:5]) for i in dateList] ## TO modified
+    #dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
     # date in year - float format
     datevector = [i.year + (i.timetuple().tm_yday - 1)/365.25 for i in dates]
     #datevector2 = [round(i, 2) for i in datevector]
