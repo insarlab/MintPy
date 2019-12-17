@@ -199,9 +199,13 @@ class timeseries:
                 self.pbase -= self.pbase[self.refIndex]
             except:
                 self.pbase = None
-        self.times = np.array([dt.datetime(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.dateList])
-        self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]],
-                              dtype=np.float32)
+        date_format = get_date_str_format(self.dateList) ## To modified
+        self.times = np.array([dt(*time.strptime(i, date_format)[0:5]) for i in self.dateList]) ## TO modified
+        #self.times = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.dateList])
+        self.tbase = np.array([i.days + i.seconds / (60 * 60 * 24) for i in self.times - self.times[self.refIndex]],
+                              dtype=np.float32)  ## To Modified
+        #self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]],
+                              #dtype=np.float32)
         # list of float for year, 2014.95
         self.yearList = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in self.times]
         self.sliceList = ['{}-{}'.format(self.name, i) for i in self.dateList]
