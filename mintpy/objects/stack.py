@@ -136,6 +136,9 @@ def get_date_str_format(date_str):
         YYYYMMDD
         YYMMDD
     """
+    if isinstance(date_str, list):
+        date_str = date_str[0]
+
     try:
         date_str = date_str.decode('utf8')
     except:
@@ -199,7 +202,7 @@ class timeseries:
                 self.pbase -= self.pbase[self.refIndex]
             except:
                 self.pbase = None
-        date_format = get_date_str_format(self.dateList) ## To modified
+        date_format = get_date_str_format(self.dateList[0]) ## To modified
         self.times = np.array([dt(*time.strptime(i, date_format)[0:5]) for i in self.dateList]) ## TO modified
         #self.times = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.dateList])
         self.tbase = np.array([i.days + i.seconds / (60 * 60 * 24) for i in self.times - self.times[self.refIndex]],
@@ -474,16 +477,19 @@ class timeseries:
         Returns:    A : 2D array of int in size of (numDate, 2)
         """
         # convert list of YYYYMMDD into array of diff year in float
-        dt_list = [dt.datetime.strptime(i, '%Y%m%d') for i in date_list]
-        yr_list = [i.year + (i.timetuple().tm_yday - 1) / 365.25 for i in dt_list]
-        yr_diff = np.array(yr_list)
-
+        date_format = get_date_str_format(date_list[0]) ## To modif
+        dt_list = [dt.strptime(i, date_format) for i in date_list]
+        yr_list = [i.year + (i.timetuple().tm_yday - 1) / 365.25
+                   + i.hour / (24 * 365.25)
+                   + i.minute / (60 * 24 * 365.25)
+                   for i in dt_list]
+        yr_diff = np.array(yr_list, dtype=np.float64)
         if refDate is None:
             refDate = date_list[0]
         yr_diff -= yr_diff[date_list.index(refDate)]
 
         #for precision, use float32 in 0.1 yr, or float64 in 2015.1 yr format
-        A = np.ones([len(date_list), 2], dtype=np.float32)
+        A = np.ones([len(date_list), 2], dtype=np.float64)
         A[:, 0] = yr_diff
         return A
 
@@ -910,8 +916,9 @@ class ifgramStack:
         print('calculate the temporal average of {} in file {} ...'.format(datasetName, self.file))
         if 'unwrapPhase' in datasetName:
             phase2range = -1 * float(self.metadata['WAVELENGTH']) / (4.0 * np.pi)
-            tbaseIfgram = self.tbaseIfgram / 365.25
+            tbaseIfgram = np.array(self.tbaseIfgram, dtype=np.float64) / 365.25
 
+        import pdb; pdb.set_trace()
         with h5py.File(self.file, 'r') as f:
             dset = f[datasetName]
             num_ifgram, length, width = dset.shape

@@ -981,10 +981,12 @@ def ifgram_inversion(inps=None):
         meta[key_prefix+key] = str(vars(inps)[key])
 
     # 2.2 instantiate time-series
+    date_digit_num = len(date_list[0])
+    date_dtype = np.dtype('S{}'.format(date_digit_num))
     dsNameDict = {
-        "date"       : (np.dtype('S8'), (num_date,)),
-        "bperp"      : (np.float32,     (num_date,)),
-        "timeseries" : (np.float32,     (num_date, length, width)),
+        "date"       : (date_dtype, (num_date,)),
+        "bperp"      : (np.float32, (num_date,)),
+        "timeseries" : (np.float32, (num_date, length, width)),
     }
 
     meta['FILE_TYPE'] = 'timeseries'

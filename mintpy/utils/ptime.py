@@ -104,7 +104,8 @@ def yyyymmdd2years(dates):
     elif isinstance(dates, list):
         yy = []
         for date in dates:
-            d = dt(*time.strptime(date, "%Y%m%d")[0:5])
+            date_format = get_date_str_format(date) ## TO modified
+            d = dt(*time.strptime(date, date_format)[0:5])
             yy.append(float(d.year)+float(d.timetuple().tm_yday-1)/365.25)
     else:
         raise ValueError('Unrecognized date format. Only string and list supported.')
