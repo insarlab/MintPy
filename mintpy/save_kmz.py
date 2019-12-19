@@ -13,10 +13,11 @@ except ImportError:
 
 import os
 import argparse
-from lxml import etree
 import numpy as np
+from lxml import etree
+from zipfile import ZipFile
 import matplotlib as mpl
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
 from mintpy.objects import timeseriesKeyNames
 from mintpy.utils import readfile, utils as ut, plot as pp
 
@@ -272,25 +273,17 @@ def write_kmz_file(data, metadata, out_file, inps=None):
 
     # 2.4 Generate KMZ file, by
     # 1) go to the directory of kmz file
+    run_dir = os.path.abspath(os.getcwd())
+    os.chdir(os.path.abspath(os.path.dirname(out_file)))
     # 2) zip all data files
-    # 3) go back to the working directory
     kmz_file = '{}.kmz'.format(out_name_base)
-    cmd = 'cd {d1}; zip {fz} {fl} {fd} {fc}; cd {d2}'.format(
-        d1=os.path.abspath(os.path.dirname(kmz_file)),
-        fz=os.path.basename(kmz_file),
-        fl=os.path.basename(kml_file),
-        fd=os.path.basename(data_png_file),
-        fc=os.path.basename(cbar_file),
-        d2=os.getcwd()
-    )
-    print(cmd)
-    os.system(cmd)
-    print('finished wirting to {}'.format(kmz_file))
-
-    cmd = 'rm {} {} {}'.format(kml_file, data_png_file, cbar_file)
-    print(cmd)
-    os.system(cmd)
-
+    with ZipFile(kmz_file, 'w') as fz:
+        for fname in [kml_file, data_png_file, cbar_file]:
+            fz.write(os.path.relpath(fname))
+            os.remove(fname)
+    # 3) go back to the running directory
+    os.chdir(run_dir)
+    print('merged all files to {}'.format(kmz_file))
     return kmz_file
 
 
@@ -325,7 +318,7 @@ def main(iargs=None):
                                           inps_dict=vars(inps))
     if not inps.outfile:
         inps.outfile = '{}.kmz'.format(inps.fig_title)
-    inps.outfile = os.path.relpath(inps.outfile)
+    inps.outfile = os.path.abspath(inps.outfile)
 
     # 2. Generate Google Earth KMZ
     write_kmz_file(data,

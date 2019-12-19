@@ -13,6 +13,7 @@ except ImportError:
 import os
 import argparse
 from lxml import etree
+from zipfile import ZipFile
 import shutil
 import numpy as np
 import matplotlib as mpl
@@ -28,7 +29,6 @@ EXAMPLE = """example:
   cd $PROJECT_NAME/mintpy/geo
   save_kmz_timeseries.py geo_timeseries_ERA5_ramp_demErr.h5
   save_kmz_timeseries.py geo_timeseries_ERA5_ramp_demErr.h5 -v -5 5 --wrap
-
   save_kmz_timeseries.py timeseries_ERA5_demErr.h5 --vel velocity.h5 --tcoh temporalCoherence.h5 --mask maskTempCoh.h5
 """
 
@@ -85,6 +85,21 @@ def cmd_line_parse(iargs=None):
         if not os.path.isfile(fname):
             raise FileNotFoundError('auxliary file {} not found.'.format(fname))
     return inps
+
+
+def get_all_file_paths(directory):
+    # initializing empty file paths list 
+    file_paths = [] 
+
+    # crawling through directory and subdirectories 
+    for root, directories, files in os.walk(directory): 
+        for filename in files: 
+            # join the two strings in order to form the full filepath. 
+            filepath = os.path.join(root, filename) 
+            file_paths.append(filepath) 
+
+    # returning all file paths 
+    return file_paths
 
 
 def get_aux_filename(inps):
@@ -624,19 +639,23 @@ def main(iargs=None):
         print("copy {} to the local directory".format(src_file))
 
     ## Generate KMZ file
-    kml_files_str = ''
-    for fname in [kml_master_file, inps.kml_data_dir,
-                  inps.cbar_file,inps.dygraph_file,
-                  inps.dot_file, inps.star_file]:
-        kml_files_str += ' {}'.format(os.path.basename(fname))
-    cmd = 'cd {}; zip -r {} {}'.format(inps.work_dir, kmz_file, kml_files_str)
-    print('writing {} from kml files'.format(kmz_file))
-    os.system(cmd)
-
-    ## Remove extra files from file tree after KMZ generation
-    cmd = 'cd {}; rm -r {}'.format(inps.work_dir, kml_files_str)
-    os.system(cmd)
-
+    # 1) go to the directory of kmz file
+    run_dir = os.path.abspath(os.getcwd())
+    os.chdir(inps.work_dir)
+    # 2) zip all data files
+    with ZipFile(kmz_file, 'w') as fz:
+        kml_data_files = get_all_file_paths(inps.kml_data_dir)
+        for fname in [kml_master_file, 
+                      inps.cbar_file,
+                      inps.dygraph_file,
+                      inps.dot_file,
+                      inps.star_file] + kml_data_files:
+            fz.write(os.path.relpath(fname))
+            os.remove(fname)
+        shutil.rmtree(inps.kml_data_dir)
+    # 3) go back to the running directory
+    os.chdir(run_dir)
+    print('merged all files to {}'.format(kmz_file))
     print('Done.')
     print('Open {} in Google Earth and play!'.format(kmz_file))
     return
