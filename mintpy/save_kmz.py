@@ -318,7 +318,7 @@ def main(iargs=None):
                                           inps_dict=vars(inps))
     if not inps.outfile:
         inps.outfile = '{}.kmz'.format(inps.fig_title)
-    inps.outfile = os.path.relpath(inps.outfile)
+    inps.outfile = os.path.abspath(inps.outfile)
 
     # 2. Generate Google Earth KMZ
     write_kmz_file(data,

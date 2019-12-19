@@ -29,7 +29,6 @@ EXAMPLE = """example:
   cd $PROJECT_NAME/mintpy/geo
   save_kmz_timeseries.py geo_timeseries_ERA5_ramp_demErr.h5
   save_kmz_timeseries.py geo_timeseries_ERA5_ramp_demErr.h5 -v -5 5 --wrap
-
   save_kmz_timeseries.py timeseries_ERA5_demErr.h5 --vel velocity.h5 --tcoh temporalCoherence.h5 --mask maskTempCoh.h5
 """
 
