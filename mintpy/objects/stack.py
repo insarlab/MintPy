@@ -916,9 +916,9 @@ class ifgramStack:
         print('calculate the temporal average of {} in file {} ...'.format(datasetName, self.file))
         if 'unwrapPhase' in datasetName:
             phase2range = -1 * float(self.metadata['WAVELENGTH']) / (4.0 * np.pi)
-            tbaseIfgram = np.array(self.tbaseIfgram, dtype=np.float64) / 365.25
+            tbaseIfgram = np.array(self.tbaseIfgram, dtype=np.float64) / 365.25 
 
-        import pdb; pdb.set_trace()
+
         with h5py.File(self.file, 'r') as f:
             dset = f[datasetName]
             num_ifgram, length, width = dset.shape
@@ -1037,7 +1037,7 @@ class ifgramStack:
         date_format = get_date_str_format(str(dateList)) ## TO modified
         dates = [dt(*time.strptime(i, date_format)[0:5]) for i in dateList] ## TO modified
         #dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
-        tbase = np.array([(i - dates[0]).days for i in dates], np.float32) / 365.25
+        tbase = np.array([(i - dates[0]).seconds for i in dates], np.float32) / ( 365.25 * 24 * 60 *60 )
         numIfgram = len(date12_list)
         numDate = len(dateList)
 

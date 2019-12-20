@@ -234,7 +234,7 @@ def date_index(dateList):
 
 ################################################################
 def date_list2tbase(dateList):
-    """Get temporal Baseline in days with respect to the 1st date
+    """Get temporal Baseline in days and mins with respect to the 1st date
     Input: dateList - list of string, date in YYYYMMDD or YYMMDD format
     Output:
         tbase    - list of int, temporal baseline in days
@@ -245,7 +245,7 @@ def date_list2tbase(dateList):
     date_format = get_date_str_format(str(dateList)) ## TO modified
     dates = [dt(*time.strptime(i, date_format)[0:5]) for i in dateList] ## TO modified
     #dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
-    tbase = [(i-dates[0]).days for i in dates]
+    tbase = [(i-dates[0]).seconds for i in dates]
 
     # Dictionary: key - date, value - temporal baseline
     dateDict = {}
