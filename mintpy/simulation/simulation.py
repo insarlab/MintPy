@@ -94,7 +94,7 @@ def timeseries2ifgram(ts_sim, date_list, date12_list, wvl=0.055, display=False):
     return ifgram_sim
 
 
-def sample_decorrelation_phase(L, coherence, size=1, display=False, scale=1.0, font_size=12):
+def sample_decorrelation_phase(L, coherence, size=1, phi_num=1000, display=False, scale=1.0, font_size=12):
     '''Sample decorrelation phase noise with PDF determined by L and coherence
     Inputs:
         L         - int, multilook number
@@ -106,10 +106,9 @@ def sample_decorrelation_phase(L, coherence, size=1, display=False, scale=1.0, f
     '''
     size = int(size)
 
-    phiNum = 100
     phiMax = np.pi * float(scale)
-    pdf = ifginv.phase_pdf_ds(int(L), coherence, phi_num=phiNum)[0].flatten()   #for PS: ifginv.phase_variance_ps()
-    phi = np.linspace(-phiMax, phiMax, phiNum+1, endpoint=True)
+    pdf = ifginv.phase_pdf_ds(int(L), coherence, phi_num=phi_num)[0].flatten()   #for PS: ifginv.phase_variance_ps()
+    phi = np.linspace(-phiMax, phiMax, phi_num+1, endpoint=True)
     phi_dist = stats.rv_histogram((pdf, phi))
     #sample = np.nan
     #while sample is np.nan:
