@@ -4,7 +4,7 @@
 # Purpose: Miami InSAR Time-series software in Python      #
 # Author: Zhang Yunjun, Heresh Fattahi                     #
 # Created: July 2013                                       #
-# Copyright (c) 2013-2019, Zhang Yunjun, Heresh Fattahi    #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 ############################################################
 
 

@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2013-2019, Zhang Yunjun, Heresh Fattahi     #
-# Author:  Zhang Yunjun, Heresh Fattahi, 2013              #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 ############################################################
 # Recommend import:
 #   from mintpy.utils import readfile

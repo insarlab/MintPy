@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2017-2019, Heresh Fattahi, Zhang Yunjun     #
-# Author:  Heresh Fattahi, Zhang Yunjun, 2017              #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Heresh Fattahi, Zhang Yunjun, 2017               #
 ############################################################
 # class used for data loading from InSAR stack to MintPy timeseries
 # Recommend import:

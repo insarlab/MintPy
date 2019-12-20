@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-# Author: Piyush Agram, Nov 2019
+############################################################
+# Program is part of MintPy                                #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Piyush Agram, Nov 2019                           #
+############################################################
 
 
 import os

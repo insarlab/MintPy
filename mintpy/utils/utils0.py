@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2019, Zhang Yunjun                          #
-# Author:  Zhang Yunjun                                    #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 ############################################################
 # Low level utilities script (independent)
 # Recommend import:

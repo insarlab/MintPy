@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2017-2018, Joshua Zahner, Zhang Yunjun      #
-# Author:  Joshua Zahner, Zhang Yunjun                     #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Joshua Zahner, Zhang Yunjun, 2017                #
 ############################################################
 
 

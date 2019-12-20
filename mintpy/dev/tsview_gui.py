@@ -1,4 +1,10 @@
 #! /usr/bin/env python3
+############################################################
+# Program is part of MintPy                                #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Joshua Zahner, 2017                              #
+############################################################
+
 
 from tkinter import *
 
