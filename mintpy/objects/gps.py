@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2018-2019, Zhang Yunjun                     #
-# Author:  Zhang Yunjun, Jul 2018                          #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Zhang Yunjun, Jul 2018                           #
 ############################################################
 # Utility scripts for GPS handling
 # Recommend import:

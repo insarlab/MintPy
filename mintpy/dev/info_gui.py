@@ -1,5 +1,9 @@
 #! /usr/bin/env python3
-# Created by Joshua Zahner, April 2018
+############################################################
+# Program is part of MintPy                                #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Joshua Zahner, April 2018                        #
+############################################################
 
 
 from tkinter import *

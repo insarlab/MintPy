@@ -1,8 +1,8 @@
 #! /usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2017-2019, Zhang Yunjun                     #
-# Author:  Zhang Yunjun                                    #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Zhang Yunjun, 2017                               #
 ############################################################
 # Recommended usage:
 #   from mintpy.simulation import variance as pvar

@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2019, Zhang Yunjun                          #
-# Author:  Zhang Yunjun, Sep 2019                          #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Zhang Yunjun, Sep 2019                           #
 ############################################################
 # Recommend import:
 #   from mintpy.utils import plot_ext

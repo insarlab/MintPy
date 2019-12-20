@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-# coding: utf-8
+############################################################
+# Program is part of MintPy                                #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Zhang Yunjun, 2019-03-05                         #
+############################################################
 # Test example dataset for smallbaselineApp workflow
-# Author: Zhang Yunjun, 2019-03-05
 
 
 import os

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-#######################################################################
-# Program is part of MintPy                                           #
-# Copyright(c) 2013-2019, Zhang Yunjun, Joshua Zahner, Heresh Fattahi #
-# Author:  Zhang Yunjun, Joshua Zahner, Heresh Fattahi                #
-#######################################################################
+#############################################################
+# Program is part of MintPy                                 #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi          #
+# Author: Zhang Yunjun, Joshua Zahner, Heresh Fattahi, 2013 #
+#############################################################
 
 
 import os

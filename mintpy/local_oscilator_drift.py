@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2013-2019, Heresh Fattahi                   #
-# Author:  Heresh Fattahi                                  #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author:  Heresh Fattahi, 2013                            #
 ############################################################
 # Based on the empirical model of Marinkovic and Larsen (2013),
 # the LOD correction for each pixel is given in meters as:

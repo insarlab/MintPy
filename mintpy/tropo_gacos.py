@@ -1,8 +1,8 @@
 #! /usr/bin/env python2
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2018-2019, Bhuvan Varugu, Zhang Yunjun      #
-# Author:  Bhuvan Varugu, Zhang Yunjun                     #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Bhuvan Varugu, Zhang Yunjun, 2018                #
 ############################################################
 
 
