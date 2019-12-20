@@ -1,4 +1,10 @@
 #! /usr/bin/env python2
+############################################################
+# Program is part of MintPy                                #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Alfredo Terreco, 2016                            #
+############################################################
+
 
 import urllib.request, urllib.error, urllib.parse
 import argparse

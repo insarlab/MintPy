@@ -1,3 +1,9 @@
+############################################################
+# Program is part of MintPy                                #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Heresh Fattahi, 2013                             #
+############################################################
+
 
 ###################################################
 def timeseries_inversion_FGLS(h5flat, h5timeseries):

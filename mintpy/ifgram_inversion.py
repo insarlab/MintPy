@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2013-2019, Zhang Yunjun, Heresh Fattahi     #
-# Author:  Zhang Yunjun, Heresh Fattahi                    #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 # Parallel support added by David Grossman, April 2019     #
 ############################################################
 # Recommend import:
@@ -1109,7 +1109,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
 
         # A dictionary of the datasets which we like to have in the timeseries
         dsNameDict = {
-                "date": ((np.dtype('S8'), (num_date,))),   
+                "date": ((np.dtype('S8'), (num_date,))),
                 "bperp": (np.float32, (num_date,)),
                 "timeseries": (np.float32, (num_date, length, width)),
             }

@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2018-2019, Zhang Yunjun, Heresh Fattahi     #
-# Author:  Zhang Yunjun, Heresh Fattahi                    #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Zhang Yunjun, Heresh Fattahi, 2018               #
 ############################################################
-# Modified from prep4timeseries.py in ISCE-2.2.0/contrib/stack/topsStack
-#
 
 
 import os

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2018-2019, Zhang Yunjun                     #
-# Author:  Zhang Yunjun                                    #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Zhang Yunjun, 2019                               #
 ############################################################
 # This is a python translation of the matlab scripts originally
 # written by Ramon Hanssen, May 2000, available through the 

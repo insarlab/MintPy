@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2016-2019, Zhang Yunjun                     #
-# Author:  Zhang Yunjun                                    #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Zhang Yunjun, 2016                               #
 ############################################################
 # Recommend import:
 #   from mintpy.utils import network as pnet

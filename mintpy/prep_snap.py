@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2019, Andre Theron, Zhang Yunjun            #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Andre Theron, Zhang Yunjun, Jun 2019             #
 # Email: andretheronsa@gmail.com                           #
 ############################################################

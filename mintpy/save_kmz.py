@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2013-2019, Heresh Fattahi, Zhang Yunjun     #
-# Author:  Heresh Fattahi, Zhang Yunjun                    #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 ############################################################
 
 

@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
-# Copyright(c) 2018-2019, Zhang Yunjun, Heresh Fattahi     #
-# Author:  Zhang Yunjun, Heresh Fattahi, 2018              #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Zhang Yunjun, Heresh Fattahi, 2018               #
 ############################################################
 # class used for file operation within MintPy
 # Recommend import:
