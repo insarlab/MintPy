@@ -83,7 +83,6 @@ def extract_tops_metadata(xml_file):
     metadata['startUTC'] = burst.burstStartUTC
     metadata['stopUTC'] = burstEnd.burstStopUTC
     metadata['radarWavelength'] = burst.radarWavelength
-    metadata['rangePixelSize'] = burst.rangePixelSize
     metadata['startingRange'] = burst.startingRange
     metadata['passDirection'] = burst.passDirection
     metadata['polarization'] = burst.polarization
@@ -98,9 +97,14 @@ def extract_tops_metadata(xml_file):
     orbit = burst.orbit
     peg = orbit.interpolateOrbit(burst.sensingMid, method='hermite')
 
-    Vs = np.linalg.norm(peg.getVelocity())
-    metadata['satelliteSpeed'] = Vs
+    Vs = np.linalg.norm(peg.getVelocity())   #satellite speed
     metadata['azimuthPixelSize'] = Vs*burst.azimuthTimeInterval
+    metadata['rangePixelSize'] = burst.rangePixelSize
+
+    #grab from isce/topsStack.unwrap.py
+    # not sure if this is accurate or not
+    metadata['azimuthResolution'] = metadata['azimuthPixelSize'] * 0.8
+    metadata['rangeResolution'] = metadata['rangePixelSize'] * 0.8
 
     refElp = Planet(pname='Earth').ellipsoid
     llh = refElp.xyz_to_llh(peg.getPosition())
@@ -128,6 +132,7 @@ def extract_stripmap_metadata(meta_file):
     Parameters: meta_file : str, path of the shelve file, i.e. masterShelve/data.dat
     Returns:    meta      : dict, metadata
     """
+    SPEED_OF_LIGHT = 299792458  #m/s
     import isce
     import isceobj
     import isceobj.StripmapProc.StripmapProc as St
@@ -149,7 +154,6 @@ def extract_stripmap_metadata(meta_file):
     metadata['startUTC'] = frame.sensingStart
     metadata['stopUTC'] = frame.sensingStop
     metadata['radarWavelength'] = frame.radarWavelegth
-    metadata['rangePixelSize'] = frame.instrument.rangePixelSize
     metadata['startingRange'] = frame.startingRange
     metadata['polarization'] = str(frame.polarization).replace('/', '')
     if metadata['polarization'].startswith("b'"):
@@ -165,9 +169,14 @@ def extract_stripmap_metadata(meta_file):
     orbit = frame.orbit
     peg = orbit.interpolateOrbit(frame.sensingMid, method='hermite')
 
-    Vs = np.linalg.norm(peg.getVelocity())
-    metadata['satelliteSpeed'] = Vs
-    metadata['azimuthPixelSize'] = Vs/frame.PRF
+    Vs = np.linalg.norm(peg.getVelocity())  #satellite speed
+    metadata['azimuthResolution'] = frame.platform.antennaLength / 2.0
+    metadata['azimuthPixelSize'] = Vs / frame.PRF
+
+    frame.getInstrument()
+    rgBandwidth = frame.instrument.pulseLength * frame.instrument.chirpSlope
+    metadata['rangeResolution'] = abs(SPEED_OF_LIGHT / (2.0 * rgBandwidth))
+    metadata['rangePixelSize'] = frame.instrument.rangePixelSize
 
     refElp = Planet(pname='Earth').ellipsoid
     llh = refElp.xyz_to_llh(peg.getPosition())
@@ -196,6 +205,11 @@ def extract_multilook_number(geom_dir, metadata=dict()):
     for key in ['ALOOKS', 'RLOOKS']:
         if key not in metadata:
             metadata[key] = 1
+
+    # NCORRLOOKS for coherence calibration
+    rgfact = metadata['rangeResolution'] / metadata['rangePixelSize']
+    azfact = metadata['azimuthResolution'] / metadata['azimuthPixelSize']
+    metadata['NCORRLOOKS'] = metadata['RLOOKS'] * metadata['ALOOKS'] / (rgfact * azfact)
     return metadata
 
 
@@ -271,7 +285,7 @@ def extract_isce_metadata(meta_file, geom_dir=None, rsc_file=None, update_mode=T
     if update_mode and ut.run_or_skip(rsc_file, in_file=meta_file, check_readable=False) == 'skip':
         return readfile.read_roipac_rsc(rsc_file)
 
-    # 1. extract metadata from XML / shelve file
+    # 1. read/extract metadata from XML / shelve file
     fbase = os.path.basename(meta_file)
     if fbase.startswith("IW"):
         print('extract metadata from ISCE/topsStack xml file:', meta_file)
