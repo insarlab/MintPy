@@ -358,7 +358,10 @@ def phase_variance_ds(L,  coherence=None, epsilon=1e-3):
 
     # assign negative value (when coherence is very close to 1, i.e. 0.999) to the min positive value
     flag = var <= 0
-    var[flag] = np.nanmin(var[~flag])
+    if not np.all(flag):
+        var[flag] = np.nanmin(var[~flag])
+    else:
+        var[flag] = np.finfo(np.float64).eps
     return var, coherence
 
 
