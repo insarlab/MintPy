@@ -338,7 +338,6 @@ def phase_variance_ds(L,  coherence=None, epsilon=1e-3):
     Inputs:
         L         - int, number of independent looks
         coherence - 1D np.array for the range of coherence, with value < 1.0 for valid operation
-        phiNum    - int, number of phase sample for the numerical calculation
     Output:
         var       - 1D np.array, phase variance in size of (len(coherence))
         coherence - 1D np.array for the range of coherence
@@ -349,13 +348,20 @@ def phase_variance_ds(L,  coherence=None, epsilon=1e-3):
     """
     if coherence is None:
         coherence = np.linspace(0., 1.-epsilon, 1000, dtype=np.float64)
-    phiNum = len(coherence)
+    phi_num = len(coherence)
 
-    phi = np.linspace(-np.pi, np.pi, phiNum, dtype=np.float64).reshape(-1, 1)
-    phi_step = 2*np.pi/phiNum
+    phi = np.linspace(-np.pi, np.pi, phi_num, dtype=np.float64).reshape(-1, 1)
+    phi_step = 2*np.pi/phi_num
 
-    pdf, coherence = phase_pdf_ds(L, coherence=coherence)
+    pdf, coherence = phase_pdf_ds(L, coherence=coherence, phi_num=phi_num)
     var = np.sum(np.multiply(np.square(np.tile(phi, (1, len(coherence)))), pdf)*phi_step, axis=0)
+
+    # assign negative value (when coherence is very close to 1, i.e. 0.999) to the min positive value
+    flag = var <= 0
+    if not np.all(flag):
+        var[flag] = np.nanmin(var[~flag])
+    else:
+        var[flag] = np.finfo(np.float64).eps
     return var, coherence
 
 
