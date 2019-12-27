@@ -153,7 +153,7 @@ def generate_cbar_element(cbar_file, vmin, vmax, unit='cm/year', cmap='jet', loc
         KML.visibility(1),
         KML.open(0)
     )
-    print('add colorbar.')
+    #print('add colorbar.')
     return cbar_overlay
 
 
@@ -233,7 +233,6 @@ def write_kmz_file(data, metadata, out_file, inps=None):
                 transparent=True, dpi=inps.fig_dpi)    
 
     # 2.3 Generate KML file
-    print('generating kml file ...')
     proj_name = metadata.get('PROJECT_NAME', 'InSAR_MintPy')
     doc = KML.kml(KML.Folder(KML.name(proj_name)))
 
