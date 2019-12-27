@@ -374,6 +374,9 @@ def read_baseline_timeseries(baseline_dir, beam_mode='IW'):
     # grab all existed baseline files
     bFiles = sorted(glob.glob(os.path.join(baseline_dir, '*/*.txt')))  #for TOPS
     bFiles += sorted(glob.glob(os.path.join(baseline_dir, '*.txt')))   #for stripmap
+    if len(bFiles) == 0:
+        print('WARNING: no baseline text file found in dir {}'.format(os.path.abspath(baseline_dir)))
+        return None
 
     # read files into dict
     bDict = {}
