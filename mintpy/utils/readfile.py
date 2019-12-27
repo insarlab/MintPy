@@ -19,7 +19,6 @@ import numpy as np
 from mintpy.objects import (
     datasetUnitDict,
     geometry,
-    geometryDatasetNames,
     giantIfgramStack,
     giantTimeseries,
     ifgramDatasetNames,

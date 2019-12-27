@@ -73,7 +73,6 @@ def read_data(inps):
     inps.metadata = readfile.read_attribute(inps.file)
     k = inps.metadata['FILE_TYPE']
     inps.range2phase =  -4. * np.pi / float(inps.metadata['WAVELENGTH'])
-    ext = os.path.splitext(inps.file)[1]
 
     # mask
     if inps.mask_file:

@@ -13,7 +13,7 @@ import getopt
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+from matplotlib.ticker import MultipleLocator
 
 
 def readGPSfile(gpsFile, gps_source):
@@ -265,8 +265,8 @@ def main(argv):
     ullat = float(h5file[k[0]].attrs['Y_FIRST'])
     lon_step = float(h5file[k[0]].attrs['X_STEP'])
     lat_step = float(h5file[k[0]].attrs['Y_STEP'])
-    lon_unit = h5file[k[0]].attrs['Y_UNIT']
-    lat_unit = h5file[k[0]].attrs['X_UNIT']
+    #lon_unit = h5file[k[0]].attrs['Y_UNIT']
+    #lat_unit = h5file[k[0]].attrs['X_UNIT']
 
     Length, Width = np.shape(insarData)
 

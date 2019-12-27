@@ -143,7 +143,7 @@ def project_name2sensor_name(proj_names):
 
     if isinstance(proj_names, str):
         proj_names = [proj_names]
-    proj_names = [p for p in proj_names if p != None]
+    proj_names = [p for p in proj_names if p is not None]
 
     # get proj_name if input is the path of template file
     for proj_path in proj_names:

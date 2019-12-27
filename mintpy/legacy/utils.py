@@ -5,6 +5,10 @@
 ############################################################
 
 
+import time
+import numpy as np
+
+
 ###################################################
 def timeseries_inversion_FGLS(h5flat, h5timeseries):
     """Implementation of the SBAS algorithm.

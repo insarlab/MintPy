@@ -8,7 +8,6 @@
 #   from mintpy.simulation import variance as pvar
 #
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pyproj
 import random

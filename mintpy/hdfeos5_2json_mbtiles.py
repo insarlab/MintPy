@@ -7,7 +7,6 @@
 
 
 import json
-import h5py
 import numpy as np
 from datetime import date
 import math
@@ -15,7 +14,6 @@ import time
 import os
 import sys
 import geocoder
-from mintpy.add_attribute_insarmaps import InsarDatabaseController
 from mintpy.objects import HDFEOS
 from mintpy.mask import mask_matrix
 import argparse
@@ -100,8 +98,8 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dates, json_pat
         # if value is not equal to naN, create a new json point object and append to siu_man array
         if not math.isnan(displacement):
             # get displacement values for all the dates into array for json and string for pgsql
-            for date in dates:
-                displacement = timeseries_datasets[date][row][col]
+            for datei in dates:
+                displacement = timeseries_datasets[datei][row][col]
                 displacements += (str(displacement) + ",")
                 displacement_values.append(float(displacement))
             displacements = displacements[:len(displacements) - 1] + '}'

@@ -13,7 +13,6 @@ except ImportError:
     raise ImportError('Can not import pyresample!')
 
 import numpy as np
-import multiprocessing
 from scipy import ndimage
 from scipy.interpolate import RegularGridInterpolator as RGI
 from mintpy.utils import readfile, ptime, utils0 as ut

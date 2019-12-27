@@ -8,7 +8,6 @@
 
 
 import os
-import glob
 import argparse
 import warnings
 import datetime
@@ -530,7 +529,7 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
     if not datasetNames:
         datasetNames = []
     if isinstance(datasetNames, str):
-        datesetNames = [datasetNames]
+        datasetNames = [datasetNames]
 
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
@@ -748,12 +747,12 @@ def auto_adjust_yaxis(ax, dataList, fontsize=12, ymin=None, ymax=None):
 def plot_coherence_history(ax, date12List, cohList, plot_dict={}):
     """Plot min/max Coherence of all interferograms for each date"""
     # Figure Setting
-    if not 'fontsize'    in plot_dict.keys():   plot_dict['fontsize']    = 12
-    if not 'linewidth'   in plot_dict.keys():   plot_dict['linewidth']   = 2
-    if not 'markercolor' in plot_dict.keys():   plot_dict['markercolor'] = 'orange'
-    if not 'markersize'  in plot_dict.keys():   plot_dict['markersize']  = 16
-    if not 'disp_title'  in plot_dict.keys():   plot_dict['disp_title']  = True
-    if not 'every_year'  in plot_dict.keys():   plot_dict['every_year']  = 1
+    if 'fontsize'    not in plot_dict.keys():   plot_dict['fontsize']    = 12
+    if 'linewidth'   not in plot_dict.keys():   plot_dict['linewidth']   = 2
+    if 'markercolor' not in plot_dict.keys():   plot_dict['markercolor'] = 'orange'
+    if 'markersize'  not in plot_dict.keys():   plot_dict['markersize']  = 16
+    if 'disp_title'  not in plot_dict.keys():   plot_dict['disp_title']  = True
+    if 'every_year'  not in plot_dict.keys():   plot_dict['every_year']  = 1
 
     # Get date list
     date12List = ptime.yyyymmdd_date12(date12List)
@@ -806,23 +805,23 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     """
 
     # Figure Setting
-    if not 'fontsize'    in plot_dict.keys():  plot_dict['fontsize']    = 12
-    if not 'linewidth'   in plot_dict.keys():  plot_dict['linewidth']   = 2
-    if not 'markercolor' in plot_dict.keys():  plot_dict['markercolor'] = 'orange'
-    if not 'markersize'  in plot_dict.keys():  plot_dict['markersize']  = 16
+    if 'fontsize'    not in plot_dict.keys():  plot_dict['fontsize']    = 12
+    if 'linewidth'   not in plot_dict.keys():  plot_dict['linewidth']   = 2
+    if 'markercolor' not in plot_dict.keys():  plot_dict['markercolor'] = 'orange'
+    if 'markersize'  not in plot_dict.keys():  plot_dict['markersize']  = 16
 
     # For colorful display of coherence
-    if not 'cohList'     in plot_dict.keys():  plot_dict['cohList']     = None
-    if not 'ylabel'      in plot_dict.keys():  plot_dict['ylabel']      = 'Perp Baseline [m]'
-    if not 'cbar_label'  in plot_dict.keys():  plot_dict['cbar_label']  = 'Average Spatial Coherence'
-    if not 'disp_cbar'   in plot_dict.keys():  plot_dict['disp_cbar']   = True
-    if not 'colormap'    in plot_dict.keys():  plot_dict['colormap']    = 'RdBu'
-    if not 'cmap_vlist'  in plot_dict.keys():  plot_dict['cmap_vlist']  = [0.0, 0.4, 1.0]
-    if not 'disp_title'  in plot_dict.keys():  plot_dict['disp_title']  = True
-    if not 'disp_drop'   in plot_dict.keys():  plot_dict['disp_drop']   = True
-    if not 'disp_legend' in plot_dict.keys():  plot_dict['disp_legend'] = True
-    if not 'every_year'  in plot_dict.keys():  plot_dict['every_year']  = 1
-    if not 'number'      in plot_dict.keys():  plot_dict['number']      = None
+    if 'cohList'     not in plot_dict.keys():  plot_dict['cohList']     = None
+    if 'ylabel'      not in plot_dict.keys():  plot_dict['ylabel']      = 'Perp Baseline [m]'
+    if 'cbar_label'  not in plot_dict.keys():  plot_dict['cbar_label']  = 'Average Spatial Coherence'
+    if 'disp_cbar'   not in plot_dict.keys():  plot_dict['disp_cbar']   = True
+    if 'colormap'    not in plot_dict.keys():  plot_dict['colormap']    = 'RdBu'
+    if 'cmap_vlist'  not in plot_dict.keys():  plot_dict['cmap_vlist']  = [0.0, 0.4, 1.0]
+    if 'disp_title'  not in plot_dict.keys():  plot_dict['disp_title']  = True
+    if 'disp_drop'   not in plot_dict.keys():  plot_dict['disp_drop']   = True
+    if 'disp_legend' not in plot_dict.keys():  plot_dict['disp_legend'] = True
+    if 'every_year'  not in plot_dict.keys():  plot_dict['every_year']  = 1
+    if 'number'      not in plot_dict.keys():  plot_dict['number']      = None
 
     # support input colormap: string for colormap name, or colormap object directly
     if isinstance(plot_dict['colormap'], str):
@@ -977,12 +976,12 @@ def plot_perp_baseline_hist(ax, dateList, pbaseList, plot_dict={}, dateList_drop
         ax : matplotlib axes object
     """
     # Figure Setting
-    if not 'fontsize'    in plot_dict.keys():   plot_dict['fontsize']    = 12
-    if not 'linewidth'   in plot_dict.keys():   plot_dict['linewidth']   = 2
-    if not 'markercolor' in plot_dict.keys():   plot_dict['markercolor'] = 'orange'
-    if not 'markersize'  in plot_dict.keys():   plot_dict['markersize']  = 16
-    if not 'disp_title'  in plot_dict.keys():   plot_dict['disp_title']  = True
-    if not 'every_year'  in plot_dict.keys():   plot_dict['every_year']  = 1
+    if 'fontsize'    not in plot_dict.keys():   plot_dict['fontsize']    = 12
+    if 'linewidth'   not in plot_dict.keys():   plot_dict['linewidth']   = 2
+    if 'markercolor' not in plot_dict.keys():   plot_dict['markercolor'] = 'orange'
+    if 'markersize'  not in plot_dict.keys():   plot_dict['markersize']  = 16
+    if 'disp_title'  not in plot_dict.keys():   plot_dict['disp_title']  = True
+    if 'every_year'  not in plot_dict.keys():   plot_dict['every_year']  = 1
     transparency = 0.7
 
     # Date Convert
@@ -1036,7 +1035,7 @@ def plot_rotate_diag_coherence_matrix(ax, coh_list, date12_list, date12_list_dro
     elif isinstance(cmap, LinearSegmentedColormap):
         pass
     else:
-        raise ValueError('unrecognized colormap input: {}'.format(plot_dict['colormap']))
+        raise ValueError('unrecognized colormap input: {}'.format(cmap))
 
     #calculate coherence matrix
     coh_mat = pnet.coherence_matrix(date12_list, coh_list)
@@ -1090,18 +1089,18 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
                 im : mappable
     """
     # Figure Setting
-    if not 'fontsize'    in plot_dict.keys():   plot_dict['fontsize']    = 12
-    if not 'linewidth'   in plot_dict.keys():   plot_dict['linewidth']   = 2
-    if not 'markercolor' in plot_dict.keys():   plot_dict['markercolor'] = 'orange'
-    if not 'markersize'  in plot_dict.keys():   plot_dict['markersize']  = 16
-    if not 'disp_title'  in plot_dict.keys():   plot_dict['disp_title']  = True
-    if not 'fig_title'   in plot_dict.keys():   plot_dict['fig_title']   = 'Coherence Matrix'
-    if not 'colormap'    in plot_dict.keys():   plot_dict['colormap']    = 'jet'
-    if not 'cbar_label'  in plot_dict.keys():   plot_dict['cbar_label']  = 'Coherence'
-    if not 'ylim'        in plot_dict.keys():   plot_dict['ylim']        = (0., 1.)
-    if not 'disp_cbar'   in plot_dict.keys():   plot_dict['disp_cbar']   = True
-    if not 'legend_loc'  in plot_dict.keys():   plot_dict['legend_loc']  = 'best'
-    if not 'disp_legend' in plot_dict.keys():   plot_dict['disp_legend'] = True
+    if 'fontsize'    not in plot_dict.keys():   plot_dict['fontsize']    = 12
+    if 'linewidth'   not in plot_dict.keys():   plot_dict['linewidth']   = 2
+    if 'markercolor' not in plot_dict.keys():   plot_dict['markercolor'] = 'orange'
+    if 'markersize'  not in plot_dict.keys():   plot_dict['markersize']  = 16
+    if 'disp_title'  not in plot_dict.keys():   plot_dict['disp_title']  = True
+    if 'fig_title'   not in plot_dict.keys():   plot_dict['fig_title']   = 'Coherence Matrix'
+    if 'colormap'    not in plot_dict.keys():   plot_dict['colormap']    = 'jet'
+    if 'cbar_label'  not in plot_dict.keys():   plot_dict['cbar_label']  = 'Coherence'
+    if 'ylim'        not in plot_dict.keys():   plot_dict['ylim']        = (0., 1.)
+    if 'disp_cbar'   not in plot_dict.keys():   plot_dict['disp_cbar']   = True
+    if 'legend_loc'  not in plot_dict.keys():   plot_dict['legend_loc']  = 'best'
+    if 'disp_legend' not in plot_dict.keys():   plot_dict['disp_legend'] = True
 
     # support input colormap: string for colormap name, or colormap object directly
     if isinstance(plot_dict['colormap'], str):

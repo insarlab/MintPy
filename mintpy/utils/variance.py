@@ -10,7 +10,6 @@
 import numpy as np
 import pyproj
 import random
-import matplotlib.pyplot as plt
 from mintpy.utils import ptime
 
 

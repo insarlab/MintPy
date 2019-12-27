@@ -13,11 +13,8 @@ import itertools
 import h5py
 import numpy as np
 from scipy import sparse
-from matplotlib import (colors,
-                        dates as mdates,
-                        pyplot as plt)
+from matplotlib import dates as mdates, pyplot as plt
 from matplotlib.tri import Triangulation
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mintpy.objects import ifgramStack, sensor
 from mintpy.utils import ptime, readfile
 
@@ -115,7 +112,7 @@ def read_baseline_file(baselineFile, exDateList=[]):
     for line in lines:
         c = line.split()    # splits on white space
         date = c[0]
-        if not date in exDateList:
+        if date not in exDateList:
             date6List.append(date)
             perpBaseList.append(float(c[1]))
             try:
@@ -553,7 +550,7 @@ def pair_sort(pairs):
 def pair_merge(pairs1, pairs2):
     pairs = pairs1
     for pair in pairs2:
-        if not pair in pairs:
+        if pair not in pairs:
             pairs.append(pair)
 
     pairs = sorted(pairs)

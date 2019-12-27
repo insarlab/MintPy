@@ -77,7 +77,7 @@ def cmd_line_parse(iargs=None):
 
     # check if in geo coordinates
     atr = readfile.read_attribute(inps.ts_file)
-    if not "Y_FIRST" in atr.keys():
+    if "Y_FIRST" not in atr.keys():
         raise ValueError("input file {} is NOT geocoded".format(inps.ts_file))
 
     inps = get_aux_filename(inps)
@@ -365,7 +365,7 @@ def create_kml_region_document(inps, box_list, ts_obj, step):
         box = box_list[i]
 
         if box is None:
-            box = (0, 0, width, length)
+            box = (0, 0, ts_obj.width, ts_obj.length)
 
         length = box[3] - box[1]
         width = box[2] - box[0]

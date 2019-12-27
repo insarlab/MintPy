@@ -95,7 +95,7 @@ def manual_offset_estimate(matrix1, matrix2):
     yc = []
     print('please click on start and end point of the desired profile/line')
     print('afterward close the figure to continue the process')
-    cid = fig.canvas.mpl_connect('button_press_event', onclick)
+    fig.canvas.mpl_connect('button_press_event', onclick)
     plt.show()
     x0 = xc[0]
     x1 = xc[1]
@@ -110,7 +110,7 @@ def manual_offset_estimate(matrix1, matrix2):
     yc = []
     print('please click on start and end point of the desired profile')
     print('afterward close the figure to continue the process')
-    cid = fig.canvas.mpl_connect('button_press_event', onclick)
+    fig.canvas.mpl_connect('button_press_event', onclick)
     plt.show()
     x00 = xc[0]
     x11 = xc[1]
@@ -273,4 +273,4 @@ def main(iargs=None):
 
 #############################################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

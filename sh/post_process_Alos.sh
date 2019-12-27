@@ -146,8 +146,8 @@ if [ $unwrap_error -eq 1 ]; then
     $view ${igram}_unwCor_quadratic.h5
 
     #### Mask with Bonding Points
-    point_yx='5430,955,5429,865,5293,834,5178,832,5403,780,5714,612'
-    line_yx='5430,955,5429,865;5293,834,5178,832;5403,780,5714,612'
+    #point_yx='5430,955,5429,865,5293,834,5178,832,5403,780,5714,612'
+    #line_yx='5430,955,5429,865;5293,834,5178,832;5403,780,5714,612'
     #view.py --point=${point_yx} --line=${line_yx} --nodisplay -f $msk -o bonding_points.png
 
     #smallbaselineApp.py $tmpl

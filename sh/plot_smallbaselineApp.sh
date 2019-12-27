@@ -25,7 +25,7 @@ fi
 ## Log File
 log_file='plot_smallbaselineApp.log'
 touch $log_file
-echo "\n\n\n\n\n" >> $log_file
+printf "\n\n\n\n\n" >> $log_file
 echo "########################  ./plot_smallbaselineApp.sh  ########################" >> $log_file
 date >> $log_file
 echo "##############################################################################" >> $log_file

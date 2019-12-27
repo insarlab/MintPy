@@ -20,7 +20,6 @@ key_ifg=0
 
 
 ##------------- Data Source ---------------------------------------##
-tmpl=$TE/Kyushu${track}${frame}${satellite}.template
 projectDir=$KYUSHU_PROJECT/${satellite}${track}${frame}/TSSAR
 #projectDir=$SC/Kyushu${track}${frame}${satellite}/TSSAR/Product
 workDir=$KYUSHU_PROJECT/Volcanoes/Ata/${satellite}${track}

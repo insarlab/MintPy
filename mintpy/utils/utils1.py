@@ -407,8 +407,9 @@ def get_geometry_file(dset_list, work_dir=None, coord='geo', abspath=True, print
     """Find geometry file containing input specific dataset"""
     if isinstance(dset_list, str):
         dset_list = [dset_list]
-    if any(dset not in geometryDatasetNames for dset in dset_list):
-        raise ValueError('unrecognized geometry dataset name: {}'.format(dset))
+    for dset in dset_list:
+        if dset not in geometryDatasetNames:
+            raise ValueError('unrecognized geometry dataset name: {}'.format(dset))
 
     if not work_dir:
         work_dir = os.getcwd()

@@ -2,11 +2,8 @@
 # Author: Heresh Fattahi
 
 import os
-import imp
-import sys
 import glob
 import argparse
-import configparser
 import datetime
 import time
 from insarPair import insarPair
@@ -155,7 +152,7 @@ def main(iargs=None):
         inps.refPixel = [int(i) for i in inps.refPixel.split(',')]
         inps.refPixel = (inps.refPixel[0], inps.refPixel[1])
 
-    h5File = write2h5(inps)
+    write2h5(inps)
 
 
 if __name__ == '__main__':

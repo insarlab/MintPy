@@ -12,7 +12,7 @@ import argparse
 import h5py
 import numpy as np
 from scipy.interpolate import griddata, RegularGridInterpolator as RGI
-from mintpy.utils import ptime, readfile, writefile, utils as ut
+from mintpy.utils import ptime, readfile, utils as ut, network as pnet
 
 
 ##########################################################
