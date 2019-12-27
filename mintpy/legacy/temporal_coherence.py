@@ -11,7 +11,7 @@ import sys
 import argparse
 import numpy as np
 from mintpy.objects import ifgramStack, timeseries
-from mintpy.utils import readfile, writefile, ptime, utils as ut
+from mintpy.utils import readfile, writefile, ptime
 from mintpy import ifgram_inversion as ifginv
 
 

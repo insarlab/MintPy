@@ -1,8 +1,7 @@
 # Author: Heresh Fattahi, Zhang Yunjun
 
 import os
-from mintpy.utils import readfile
-
+import reader
 
 # A dictionary to help with reading the data when more than one band exists
 bandsDict = {

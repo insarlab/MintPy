@@ -1,11 +1,10 @@
 # Author: Heresh Fattahi
 
-import os
 import gdal
 from gdalconst import GA_ReadOnly
 import numpy as np
 from lxml import objectify
-
+import logging
 
 standardMetadatKeys = {'width': 'WIDTH', 'Width': 'WIDTH', 'length': 'LENGTH', 'FILE_LENGTH': 'LENGTH',
                        'wavelength': 'WAVELENGTH', 'Wavelength': 'WAVELENGTH', 'prf': 'PRF'

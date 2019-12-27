@@ -12,8 +12,6 @@ import os
 import h5py
 import numpy as np
 import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib.ticker import FuncFormatter
 from mintpy.utils import readfile
 
 
@@ -95,7 +93,7 @@ def main(argv):
     ##################################
     nt = float(h5file['timeseries'].attrs['LOOK_REF1'])
     ft = float(h5file['timeseries'].attrs['LOOK_REF2'])
-    sy, sx = np.shape(dset1)
+    sy, sx = np.shape(Mask)
     npixel = sx*sy
     lookangle = np.tile(np.linspace(nt, ft, sx), [sy, 1])
     lookangle = lookangle.flatten(1)*np.pi/180.0
@@ -185,13 +183,7 @@ def main(argv):
     print('     bv rate  :  ' + str(np.mean(Bvrate)) +
           '     ,  '+str(np.std(Bvrate)))
     print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-    # plt.hist(Bh,bins=8,normed=True)
-    # formatter = FuncFormatter(to_percent)
-    # Set the formatter
-    # plt.gca().yaxis.set_major_formatter(formatter)
-    # plt.show()
     print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-    # print 'Estimating Baseline error from each differences ...'
 
     orbEffect = np.zeros([len(dateList), sy, sx])
     for i in range(1, len(dateList)):

@@ -258,7 +258,6 @@ def main(iargs=None):
     bridges = search_bridge(mask_cc_file, radius=inps.bridgePtsRadius)
     run_unwrap_error_bridge(inps.ifgram_file,
                             mask_cc_file,
-                            bridges,
                             dsNameIn=inps.datasetNameIn,
                             dsNameOut=inps.datasetNameOut,
                             ramp_type=inps.ramp)

@@ -150,10 +150,6 @@ def azimuth_ground_resolution(atr):
         Height = float(atr['HEIGHT'])
         az_step = float(atr['AZIMUTH_PIXEL_SIZE']) * Re/(Re+Height)
     elif proc == 'gamma':
-        try:
-            atr = readfile.attribute_gamma2roipac(atr)
-        except:
-            pass
         az_step = float(atr['AZIMUTH_PIXEL_SIZE'])
     return az_step
 
@@ -173,7 +169,7 @@ def touch(fname_list, times=None):
     if isinstance(fname_list, str):
         fname_list = [fname_list]
 
-    fname_list = [x for x in fname_list if x != None]
+    fname_list = [x for x in fname_list if x is not None]
     for fname in fname_list:
         if os.path.isfile(fname):
             with open(fname, 'a'):
@@ -397,7 +393,7 @@ def subset_attribute(atr_dict, subset_box, print_msg=True):
             print('update REF_Y/X')
 
     # Starting Range for file in radar coord
-    if not 'Y_FIRST' in atr_dict.keys():
+    if 'Y_FIRST' not in atr_dict.keys():
         try:
             atr['STARTING_RANGE'] = float(atr['STARTING_RANGE'])
             atr['STARTING_RANGE'] += float(atr['RANGE_PIXEL_SIZE'])*sub_x[0]

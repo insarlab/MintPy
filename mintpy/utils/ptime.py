@@ -219,7 +219,7 @@ def date_list2vector(dateList):
     dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
     # date in year - float format
     datevector = [i.year + (i.timetuple().tm_yday - 1)/365.25 for i in dates]
-    datevector2 = [round(i, 2) for i in datevector]
+    #datevector2 = [round(i, 2) for i in datevector]
     return dates, datevector
 
 

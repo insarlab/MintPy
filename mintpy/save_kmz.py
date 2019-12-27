@@ -97,7 +97,7 @@ def cmd_line_parse(iargs=None):
 
     # Check 2: dset is required for multi_dataset/group files
     if not inps.dset and atr['FILE_TYPE'] in ['ifgramStack']+timeseriesKeyNames:
-        raise Exception("No date/date12 input.\nIt's required for "+k+" file")
+        raise Exception("No date/date12 input.\nIt's required for {} file".format(atr['FILE_TYPE']))
 
     return inps
 

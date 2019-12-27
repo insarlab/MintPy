@@ -130,7 +130,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             write_float32(data_list[0], data_list[1], out_file)
             meta['DATA_TYPE'] = 'float32'
         elif ext in ['.utm_to_rdc', '.UTM_TO_RDC']:
-            data = np.zeros(rg.shape, dtype=np.complex64)
+            data = np.zeros(data_list[0].shape, dtype=np.complex64)
             data.real = datasetDict['rangeCoord']
             data.imag = datasetDict['azimuthCoord']
             data.astype('>c8').tofile(out_file)

@@ -51,17 +51,22 @@ def main():
 # create working directory in scratch and copy relevant files over
     scratch_dir = os.environ["SCRATCHDIR"] + "/" + curProjName
     print("making directory " + scratch_dir)
-    os.system("mkdir " + scratch_dir)
+    os.makedirs(scratch_dir)
     command = "cp " + h5FileFullName + " " + scratch_dir + "/"
     print("copying files to scratch with command " + command)
     os.system(command)
 
 # go to scratch dir, and run the bjob command
-    unavcoToJsonMbtilesCommand = "unavco2json_mbtiles.py " + h5FileFullName + " " + jsonFolder
+    unavco2jsonCmd = "unavco2json_mbtiles.py " + h5FileFullName + " " + jsonFolder
 
-    jsonMbtilesToInsarmapsCommand = "json_mbtiles2insarmaps.py -u " + dbUsername + " -p " + dbPassword + " -U " + serverUser + " -P " + serverPassword + " --mbtiles_file " + mbtilesFile + " --json_folder " + jsonFolder + " --host " + dbHost
+    json2insarmapsCmd = "json_mbtiles2insarmaps.py " + \
+        " -u " + dbUsername + " -p " + dbPassword + \
+        " -U " + serverUser + " -P " + serverPassword + \
+        " --mbtiles_file " + mbtilesFile + \
+        " --json_folder " + jsonFolder + \
+        " --host " + dbHost
 
-    command = "echo '" + unavcoToJsonMbtilesCommand + " && " + jsonMbtilesToInsarmapsCommand + "' > " + bjobScriptFilename
+    command = "echo '" + unavco2jsonCmd + " && " + json2insarmapsCmd + "' > " + bjobScriptFilename
 
     os.chdir(scratch_dir)
     os.system(command)
