@@ -133,7 +133,6 @@ def extract_stripmap_metadata(meta_file):
     SPEED_OF_LIGHT = 299792458  #m/s
     import isce
     import isceobj
-    import isceobj.StripmapProc.StripmapProc as St
     from isceobj.Planet.Planet import Planet
 
     if os.path.basename(meta_file) == "data.dat":    #shelve file from stripmapStack

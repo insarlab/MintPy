@@ -12,7 +12,6 @@ try:
 except ImportError:
     raise ImportError('Could not import skimage!')
 
-import os
 import time
 import itertools
 import numpy as np

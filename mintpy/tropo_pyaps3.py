@@ -12,7 +12,7 @@ import subprocess
 import argparse
 import numpy as np
 from mintpy.objects import timeseries, geometry
-from mintpy.utils import readfile, writefile, ptime, utils as ut
+from mintpy.utils import readfile, ptime, utils as ut
 
 try:
     import pyaps3 as pa
@@ -80,7 +80,8 @@ ERA-5    (by ECMWF)          Global      Hourly              0.25 deg (~31 km)  
 ERA-Int  (by ECMWF)          Global      6-hourly            0.75 deg (~79 km)       2-month      4D-var
 MERRA(2) (by NASA Goddard)   Global      6-hourly           0.5*0.625 (~50 km)      2-3 weeks     3D-var
 
-To download MERRA2, you need an Earthdata account, and pre-authorize the "NASA GESDISC DATA ARCHIVE" application, following https://disc.gsfc.nasa.gov/earthdata-login.
+To download MERRA2, you need an Earthdata account, and pre-authorize the "NASA GESDISC DATA ARCHIVE" application
+    following https://disc.gsfc.nasa.gov/earthdata-login.
 """
 
 WEATHER_DIR_DEMO = """--weather-dir ~/WEATHER

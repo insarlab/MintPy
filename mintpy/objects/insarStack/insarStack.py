@@ -1,14 +1,10 @@
 # Author: Heresh Fattahi
 
-import os
-import sys
 import h5py
-import insarPair as insarPair
-from numpy import median, float32, complex64, vstack
+from numpy import median, float32, vstack
 
 chunk_shape = (128, 128)
 dataType = float32
-#dataType = complex64
 
 
 class insarStack:
@@ -129,7 +125,7 @@ class insarStack:
             # is the master time and second column the slave time of pairs.
             if len(platTrackObj.dsetObservationNames) > 0:
                 piars_idx = vstack((masterTimes, slaveTimes)).T
-                dspairs = group.create_dataset('pairs_idx', data=piars_idx, dtype=piars_idx.dtype)
+                group.create_dataset('pairs_idx', data=piars_idx, dtype=piars_idx.dtype)
             ###################################
             for key, value in metadata.items():
                 obsGroup.attrs[key] = value
@@ -171,7 +167,7 @@ class insarStack:
                 else:
                     data = reader.read(fileList[i], bands=[bands[i]])
 
-                dsg = self.h5file['/'+platTrack+'/geometry'].create_dataset(
+                self.h5file['/'+platTrack+'/geometry'].create_dataset(
                     nameList[i], data=data, shape=data.shape, dtype=data.dtype)
             self.h5file.close()
 

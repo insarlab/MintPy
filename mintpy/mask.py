@@ -86,13 +86,13 @@ def update_mask_with_inps(mask, inps=None, print_msg=True):
         mask[:, 0:inps.subset_x[0]] = 0
         mask[:, inps.subset_x[1]:] = 0
         if print_msg:
-            print('mask out area not in x: {}'.format(inps_dict['subset_x']))
+            print('mask out area not in x: {}'.format(inps.subset_x))
 
     if inps.subset_y:
         mask[0:inps.subset_y[0], :] = 0
         mask[inps.subset_y[1]:, :] = 0
         if print_msg:
-            print('mask out area not in y: {}'.format(inps_dict['subset_y']))
+            print('mask out area not in y: {}'.format(inps.subset_y))
 
     if inps.threshold:
         mask[mask < inps.threshold] = 0

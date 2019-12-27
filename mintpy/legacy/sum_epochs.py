@@ -6,7 +6,6 @@
 ############################################################
 
 
-import os
 import sys
 import numpy as np
 from mintpy.objects import timeseries

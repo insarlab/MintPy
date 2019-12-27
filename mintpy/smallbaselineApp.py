@@ -269,7 +269,7 @@ class TimeSeriesAnalysis:
 
         # 2) copy to work directory (if obsolete file detected) and rename the existing one
         elif grab_latest_update_date(os.path.basename(sh_file)) < grab_latest_update_date(sh_file):
-            os.system('mv {f} {f}_obsolete'.format(f=os.path.basename(sh_file)))
+            shutil.move(os.path.basename(sh_file), os.path.basename(sh_file)+'_obsolete')
             print('obsolete shell file detected, renamed it to: {}_obsolete'.format(os.path.basename(sh_file)))
             print('copy {} to work directory: {}'.format(sh_file, self.workDir))
             shutil.copy2(sh_file, self.workDir)
@@ -407,7 +407,7 @@ class TimeSeriesAnalysis:
                  'SLC/summary*slc.jpg']
         try:
             proj_dir = os.path.join(os.getenv('SCRATCHDIR'), self.projectName)
-            flist = get_file_list([os.path.join(proj_dir, i) for i in flist], abspath=True)
+            flist = ut.get_file_list([os.path.join(proj_dir, i) for i in flist], abspath=True)
             for fname in flist:
                 if ut.run_or_skip(out_file=os.path.basename(fname), in_file=fname, check_readable=False) == 'run':
                     shutil.copy2(fname, self.workDir)
@@ -959,7 +959,7 @@ class TimeSeriesAnalysis:
             atr = readfile.read_attribute(ts_file)
             SAT = sensor.get_unavco_mission_name(atr)
             try:
-                hdfeos5_file = get_file_list('{}_*.he5'.format(SAT))[0]
+                hdfeos5_file = ut.get_file_list('{}_*.he5'.format(SAT))[0]
             except:
                 hdfeos5_file = None
             if ut.run_or_skip(out_file=hdfeos5_file, in_file=[ts_file, tcoh_file, mask_file, geom_file]) == 'run':

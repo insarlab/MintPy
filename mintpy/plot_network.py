@@ -11,10 +11,9 @@ import sys
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-from mintpy.objects import ifgramStack, timeseries
+from mintpy.objects import ifgramStack
 from mintpy.utils import (readfile,
                           utils as ut,
-                          network as pnet,
                           plot as pp)
 
 

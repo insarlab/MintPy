@@ -157,9 +157,12 @@ def l1regls(A, y, alpha=1.0, show_progress=1):
 
     return solvers.coneqp(P, q, G, h, kktsolver = Fkkt)['x'][:n]
 
-# test
-#m, n = 100, 1000
-#setseed()
-#A = normal(m,n)
-#b = normal(m)
-#x = l1regls(A, b)
+
+def test():
+    m, n = 100, 1000
+    setseed()
+    A = normal(m,n)
+    b = normal(m)
+    x = l1regls(A, b)
+    return
+

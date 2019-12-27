@@ -28,7 +28,8 @@ EXAMPLE = """example:
 
   # 2. run prep_aria.py to load into HDF5 files
   prep_aria.py -w mintpy -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt 
-  prep_aria.py -w mintpy -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt -a azimuthAngle/20150605_20150512.vrt --water-mask mask/watermask.msk
+  prep_aria.py -w mintpy -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt 
+               -a azimuthAngle/20150605_20150512.vrt --water-mask mask/watermask.msk
 
   # 3. run smallbaselineApp.py for time series analysis
   conda deactivate

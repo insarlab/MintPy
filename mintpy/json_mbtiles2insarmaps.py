@@ -8,7 +8,11 @@
 
 import sys
 import argparse
-from mintpy.add_attribute_insarmaps import InsarDatabaseController, InsarDatasetController
+from mintpy.add_attribute_insarmaps import (
+    InsarDatabaseController,
+    InsarDatasetController,
+)
+
 import os
 import pickle
 import numpy
@@ -93,16 +97,23 @@ def upload_json(folder_path):
         # insert json file to pgsql using ogr2ogr
         file_extension = file.split(".")[1]
         if file != "metadata.pickle" and file_extension != "mbtiles":
-            command = 'ogr2ogr -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln ' + area_id + ' ' + folder_path + '/' + file
+            command = 'ogr2ogr -append -f "PostgreSQL" PG:"dbname=pgis ' + \
+                      ' host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + \
+                      '" --config PG_USE_COPY YES -nln ' + area_id + ' ' + folder_path + '/' + file
             # only provide layer creation options if this is the first file
             if firstJsonFile:
-                command = 'ogr2ogr -lco LAUNDER=NO -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln ' + area_id + ' ' + folder_path + '/' + file
+                command = 'ogr2ogr -lco LAUNDER=NO -append -f "PostgreSQL" PG:"dbname=pgis ' + \
+                          ' host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + \
+                          '" --config PG_USE_COPY YES -nln ' + area_id + ' ' + folder_path + '/' + file
                 firstJsonFile = False
 
             res = os.system(command)
 
             if res != 0:
-                sys.stderr.write("Error inserting into the database. This is most often due to running out of Memory (RAM), or incorrect database credentials... quitting")
+                msg = "Error inserting into the database."
+                msg += " This is most often due to running out of Memory (RAM)"
+                msg += ", or incorrect database credentials... quitting"
+                sys.stderr.write(msg)
                 sys.exit()
 
             print("Inserted " + file + " to db")
@@ -114,18 +125,23 @@ def upload_json(folder_path):
 
 def build_parser():
     dbHost = "insarmaps.rsmas.miami.edu"
-    parser = argparse.ArgumentParser(description='Convert a Unavco format     H5 file for ingestion into insarmaps.')
+    parser = argparse.ArgumentParser(description='Convert a Unavco format HDF5 file for ingestion into insarmaps.')
     parser.add_argument("--json_folder", help="folder containing json to upload.", required=False)
     parser.add_argument("json_folder_positional", help="folder containing json to upload.", nargs="?")
-    parser.add_argument("-U", "--server_user", help="username for the insarmaps server (the machine where the tileserver and http server reside)", required=False)
-    parser.add_argument("--remove", help="UNAVCO name of dataset to remove from insarmaps website", required=False)
-    parser.add_argument("-P", "--server_password", help="password for the insarmaps server (the machine where the tileserver and http server reside)", required=False)
+    parser.add_argument("-U", "--server_user", required=False, 
+        help="username for the insarmaps server (the machine where the tileserver and http server reside)")
+    parser.add_argument("--remove",
+        help="UNAVCO name of dataset to remove from insarmaps website", required=False)
+    parser.add_argument("-P", "--server_password", required=False,
+        help="password for the insarmaps server (the machine where the tileserver and http server reside)")
     parser.add_argument("--mbtiles_file", help="mbtiles file to upload", required=False)
-    parser.add_argument("mbtiles_file_positional", help="mbtiles file to upload, as a positional argument", nargs="?")
+    parser.add_argument("mbtiles_file_positional",
+        help="mbtiles file to upload, as a positional argument", nargs="?")
+
     required = parser.add_argument_group("required arguments")
     required.add_argument("-u", "--user", help="username for the insarmaps database", required=True)
     required.add_argument("-p", "--password", help="password for the insarmaps database", required=True)
-    required.add_argument("--host", default=dbHost, help="postgres DB URL     for insarmaps database", required=True)
+    required.add_argument("--host", default=dbHost, help="postgres DB URL for insarmaps database", required=True)
 
     return parser
 
@@ -145,7 +161,13 @@ def main():
         upload_json(parseArgs.json_folder_positional)
 
     if parseArgs.mbtiles_file or parseArgs.mbtiles_file_positional:
-        dbContoller = InsarDatasetController(dbUsername, dbPassword, dbHost, 'pgis', parseArgs.server_user, parseArgs.server_password)
+        dbContoller = InsarDatasetController(dbUsername,
+                                             dbPassword,
+                                             dbHost,
+                                             'pgis',
+                                             parseArgs.server_user,
+                                             parseArgs.server_password)
+
         if not parseArgs.server_user or not parseArgs.server_password:
             sys.stderr.write("Error: credentials for the insarmaps server not provided")
         elif parseArgs.mbtiles_file:
@@ -160,7 +182,13 @@ def main():
             sys.stderr.write("Error: credentials for the insarmaps server not provided")
         else:
             print("Removing " + parseArgs.remove)
-            dbContoller = InsarDatasetController(dbUsername, dbPassword, dbHost, 'pgis', parseArgs.server_user, parseArgs.server_password)
+            dbContoller = InsarDatasetController(dbUsername,
+                                                 dbPassword,
+                                                 dbHost,
+                                                 'pgis',
+                                                 parseArgs.server_user,
+                                                 parseArgs.server_password)
+
             dbContoller.connect()
             dbContoller.remove_dataset_if_there(parseArgs.remove)
             dbContoller.close()

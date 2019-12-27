@@ -13,7 +13,7 @@ import h5py
 import numpy as np
 import random
 from mintpy.objects import timeseries
-from mintpy.utils import readfile, writefile, ptime, utils as ut
+from mintpy.utils import readfile, writefile, utils as ut
 
 
 #########################################  Usage  ##############################################
@@ -303,7 +303,7 @@ def select_max_coherence_yx(coh_file, mask=None, min_coh=0.85):
     print('random select pixel with coherence > {}'.format(min_coh))
     print('\tbased on coherence file: '+coh_file)
     coh, coh_atr = readfile.read(coh_file)
-    if not mask is None:
+    if mask is not None:
         coh[mask == 0] = 0.0
     coh_mask = coh >= min_coh
     if np.all(coh_mask == 0.):
@@ -444,4 +444,4 @@ def main(iargs=None):
 
 ################################################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

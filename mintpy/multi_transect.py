@@ -142,8 +142,8 @@ def dist_point_from_line(m, c, x, y, dx, dy):
 
     d = np.sqrt((((x+m*y-m*c)/(m**2+1)-x)*dx)**2 +
                 ((m*(x+m*y-m*c)/(m**2+1)+c-y)*dy)**2)
-  #  a=m;b=-1;
-   # d=np.abs(a*x+b*y+c)/np.sqrt(a**2+b**2)
+    #a=m;b=-1;
+    #d=np.abs(a*x+b*y+c)/np.sqrt(a**2+b**2)
     return d
 
 
@@ -236,16 +236,16 @@ def redGPSfile(gpsFile):
 
 
 def redGPSfile_cmm4(gpsFile):
-   # gpsData = np.loadtxt(gpsFile,usecols = (1,2,3,4,5,6,7,8,9,10))
+    #gpsData = np.loadtxt(gpsFile,usecols = (1,2,3,4,5,6,7,8,9,10))
     gpsData = np.loadtxt(gpsFile, usecols=(1, 2, 3, 4, 5, 6, 7, 8, 9))
-#   gpsData_up = np.loadtxt(gpsFile,usecols = (8,9))
-#   gpsData=np.hstack((gpsData_Hz,gpsData_up))
+    #gpsData_up = np.loadtxt(gpsFile,usecols = (8,9))
+    #gpsData=np.hstack((gpsData_Hz,gpsData_up))
     Stations = np.loadtxt(gpsFile, dtype=str, usecols=(0, 1))[:, 0]
     return list(Stations), gpsData
 
 
 def nearest(x, tbase, xstep):
-  # """ find nearest neighbour """
+    """ find nearest neighbour """
     dist = np.sqrt((tbase - x)**2)
     if min(dist) <= np.abs(xstep):
         indx = dist == min(dist)
@@ -282,7 +282,7 @@ def get_lat_lon(h5file):
     lon_unit = h5file[k[0]].attrs['Y_UNIT']
     lat_unit = h5file[k[0]].attrs['X_UNIT']
 
-  #  Length,Width = np.shape(insarData)
+    #Length,Width = np.shape(insarData)
 
     lllat = ullat+(Length-1)*lat_step
     urlon = ullon+(Width-1)*lon_step
@@ -292,8 +292,8 @@ def get_lat_lon(h5file):
     lon_all = np.tile(lon, (Length, 1))
     lat_all = np.tile(lat, (Width, 1)).T
 
-#   lat=np.arange(ullat,lllat,lat_step)
-#   lon=np.arange(ullon,urlon,lon_step)
+    #lat=np.arange(ullat,lllat,lat_step)
+    #lon=np.arange(ullon,urlon,lon_step)
     return lat, lon, lat_step, lon_step, lat_all, lon_all
 
 
@@ -479,7 +479,7 @@ def main(argv):
     dx = float(h5file[k[0]].attrs['X_STEP'])*6375000.0*np.pi/180.0
     dy = float(h5file[k[0]].attrs['Y_STEP'])*6375000.0*np.pi/180.0
 
-#############################################################################
+    #############################################################################
 
     try:
         lat, lon, lat_step, lon_step, lat_all, lon_all = get_lat_lon(h5file)
@@ -488,8 +488,8 @@ def main(argv):
 
     Fault_lon, Fault_lat = read_fault_coords(Fault_coord_file, Dp)
 
-  # Fault_lon=[66.40968453947265,66.36000186563085,66.31103920134248]
-  # Fault_lat=[30.59405079532564,30.51565960186412,30.43928430936202]
+    # Fault_lon=[66.40968453947265,66.36000186563085,66.31103920134248]
+    # Fault_lat=[30.59405079532564,30.51565960186412,30.43928430936202]
 
     Num_profiles = len(Fault_lon)-1
     print('*********************************************')
@@ -532,21 +532,22 @@ def main(argv):
             print(str(Yf0) + ' , ' + str(Xf0))
             print(str(Yf1) + ' , ' + str(Xf1))
             print('*********************************************')
-#      mf=float(Yf1-Yf0)/float((Xf1-Xf0))  # slope of the fault line
-#      cf=float(Yf0-mf*Xf0)   # intercept of the fault line
-#      df0=dist_point_from_line(mf,cf,x0,y0,1,1)   #distance of the profile start point from the Fault line
-#      df1=dist_point_from_line(mf,cf,x1,y1,1,1)  #distance of the profile end point from the Fault line
+            #mf=float(Yf1-Yf0)/float((Xf1-Xf0))  # slope of the fault line
+            #cf=float(Yf0-mf*Xf0)   # intercept of the fault line
+            #df0=dist_point_from_line(mf,cf,x0,y0,1,1) #distance of the profile start point from the Fault line
+            #df1=dist_point_from_line(mf,cf,x1,y1,1,1) #distance of the profile end point from the Fault line
 
-#      mp=-1./mf  # slope of profile which is perpendicualr to the fault line
-#      x1=int((df0+df1)/np.sqrt(1+mp**2)+x0)    # correcting the end point of the profile to be on a line perpendicular to the Fault
-#      y1=int(mp*(x1-x0)+y0)
+            #mp=-1./mf  # slope of profile which is perpendicualr to the fault line
+            # correcting the end point of the profile to be on a line perpendicular to the Fault
+            #x1=int((df0+df1)/np.sqrt(1+mp**2)+x0)
+            #y1=int(mp*(x1-x0)+y0)
 
         except:
             print('*********************************************')
             print('No information about the Fault coordinates!')
             print('*********************************************')
 
-#############################################################################
+        #############################################################################
         y0, x0, y1, x1 = get_start_end_point(
             Xf0, Yf0, Xf1, Yf1, profile_Length, dx, dy)
 
@@ -579,20 +580,8 @@ def main(argv):
             x1 = xc[1]
             y0 = yc[0]
             y1 = yc[1]
-##############################################################################
-    # try:
-    #   mf=float(Yf1-Yf0)/float((Xf1-Xf0))  # slope of the fault line
-    #   cf=float(Yf0-mf*Xf0)   # intercept of the fault line
-    #   df0=dist_point_from_line(mf,cf,x0,y0,1,1)   #distance of the profile start point from the Fault line
-    #   df1=dist_point_from_line(mf,cf,x1,y1,1,1)  #distance of the profile end point from the Fault line
 
-    #   mp=-1./mf  # slope of profile which is perpendicualr to the fault line
-    #   x1=int((df0+df1)/np.sqrt(1+mp**2)+x0)    # correcting the end point of the profile to be on a line perpendicular to the Fault
-    #   y1=int(mp*(x1-x0)+y0)
-    # except:
-    #   Info_aboutFault='No'
-
-##############################################################################
+        ##############################################################################
         print('******************************************************')
         print('First profile coordinates:')
         print('Start point:  y = '+str(y0) + ',x = ' + str(x0))
@@ -610,12 +599,8 @@ def main(argv):
         except:
             lat_transect = 'Nan'
             lon_transect = 'Nan'
-    #  print '$$$$$$$$$$$$$$$'
-    #  print lat_transect
-    #  print lat_all.shape
-    #  print '$$$$$$$$$$$$$$$'
 
-    # zi=get_transect(z,x0,y0,x1,y1)
+        # zi=get_transect(z,x0,y0,x1,y1)
 
         try:
             dx = float(h5file[k[0]].attrs['X_STEP'])*6375000.0*np.pi/180.0
@@ -625,7 +610,7 @@ def main(argv):
             D = np.hypot(DX, DY)
             print('geo coordinate:')
             print('profile length = ' + str(D[-1]/1000.0) + ' km')
-        #  df0_km=dist_point_from_line(mf,cf,x0,y0,dx,dy)
+            #df0_km=dist_point_from_line(mf,cf,x0,y0,dx,dy)
         except:
             dx = float(h5file[k[0]].attrs['RANGE_PIXEL_SIZE'])
             dy = float(h5file[k[0]].attrs['AZIMUTH_PIXEL_SIZE'])
@@ -634,7 +619,7 @@ def main(argv):
             D = np.hypot(DX, DY)
             print('radar coordinate:')
             print('profile length = ' + str(D[-1]/1000.0) + ' km')
-        #   df0_km=dist_point_from_line(mf,cf,x0,y0,dx,dy)
+            #df0_km=dist_point_from_line(mf,cf,x0,y0,dx,dy)
 
         try:
             mf, cf = line(Xf0, Yf0, Xf1, Yf1)
@@ -698,18 +683,13 @@ def main(argv):
                     YY0.append(Y0)
                     YY1.append(Y1)
 
-    # print np.shape(XX0)
-    # print np.shape(XX1)
-    # print np.shape(YY0)
-    # print np.shape(YY1)
-
-
-#############################################
+        #############################################
         try:
             m_prof_edge, c_prof_edge = line(XX0[0], YY0[0], XX0[-1], YY0[-1])
         except:
             print('Plotting one profile')
-###############################################################################
+
+        ###############################################################################
         if flip_profile == 'yes':
             transect = np.flipud(transect)
             try:
@@ -729,25 +709,25 @@ def main(argv):
             insarData = z
             del z
             fileName, fileExtension = os.path.splitext(gpsFile)
-        #   print fileExtension
-        #  if fileExtension =='.cmm4':
-        #      print 'reading cmm4 velocities'
-        #      Stations, gpsData = redGPSfile_cmm4(gpsFile)
-        #      idxRef=Stations.index(refStation)
-        #      Lon,Lat,Ve,Vn,Se,Sn,Corr,Hrate,H12=gpsData[idxRef,:]
-        #      Lon=Lon-360.0
-            # Lat,Lon,Ve,Se,Vn,Sn,Corr,NumEpochs,timeSpan,AvgEpochTimes = gpsData[idxRef,:]
-        #      Vu=0
-        #  else:
-        #      Stations, gpsData = redGPSfile(gpsFile)
-        #      idxRef=Stations.index(refStation)
-        #      Lat,Lon,Vn,Ve,Sn,Se,Corr,Vu,Su = gpsData[idxRef,:]
+            #print fileExtension
+            #if fileExtension =='.cmm4':
+            #    print 'reading cmm4 velocities'
+            #    Stations, gpsData = redGPSfile_cmm4(gpsFile)
+            #    idxRef=Stations.index(refStation)
+            #    Lon,Lat,Ve,Vn,Se,Sn,Corr,Hrate,H12=gpsData[idxRef,:]
+            #    Lon=Lon-360.0
+            #    Lat,Lon,Ve,Se,Vn,Sn,Corr,NumEpochs,timeSpan,AvgEpochTimes = gpsData[idxRef,:]
+            #    Vu=0
+            #else:
+            #    Stations, gpsData = redGPSfile(gpsFile)
+            #    idxRef=Stations.index(refStation)
+            #    Lat,Lon,Vn,Ve,Sn,Se,Corr,Vu,Su = gpsData[idxRef,:]
 
             Stations, Lat, Lon, Ve, Se, Vn, Sn = readGPSfile(
                 gpsFile, gps_source)
             idxRef = Stations.index(refStation)
             Length, Width = np.shape(insarData)
-            lat, lon, lat_step, lon_step = get_lat_lon(h5file, Length, Width)
+            lat, lon, lat_step, lon_step = get_lat_lon(h5file)
             IDYref, IDXref = find_row_column(
                 Lon[idxRef], Lat[idxRef], lon, lat, lon_step, lat_step)
             if (not np.isnan(IDYref)) and (not np.isnan(IDXref)):
@@ -794,7 +774,7 @@ def main(argv):
 
             heading = 193.0*np.pi/180.0
 
-        #  unitVec=[-np.sin(theta)*np.sin(heading),-np.cos(heading)*np.sin(theta),-np.cos(theta)]
+            #unitVec=[-np.sin(theta)*np.sin(heading),-np.cos(heading)*np.sin(theta),-np.cos(theta)]
             # -np.cos(theta)]
             unitVec = [np.cos(heading)*np.sin(theta), -
                        np.sin(theta)*np.sin(heading), 0]
@@ -810,11 +790,6 @@ def main(argv):
             # print unitVec
             # print '*******************************************'
             # gpsLOS_ref=unitVec[0]*Ve[idxRef]+unitVec[1]*Vn[idxRef]#+unitVec[2]*Vu[idxRef]
-
-#       print np.shape(theta)
-#       print IDYref
-#       print IDXref
-#       print theta[IDYref,IDXref]
 
             gpsLOS_ref = gps_to_LOS(
                 Ve[idxRef], Vn[idxRef], theta[IDYref, IDXref], heading)
@@ -833,17 +808,17 @@ def main(argv):
                 try:
                     idx = Stations.index(st)
 
-                    # gpsLOS = unitVec[0]*Ve[idx]+unitVec[1]*Vn[idx]#+unitVec[2]*Vu[idx]
+                    #gpsLOS = unitVec[0]*Ve[idx]+unitVec[1]*Vn[idx]#+unitVec[2]*Vu[idx]
 
-                #  gpsLOS = gps_to_LOS(Ve[idx],Vn[idx],theta[idx],heading)
-                #  gpsLOS=gpsLOS-gpsLOS_ref
+                    #gpsLOS = gps_to_LOS(Ve[idx],Vn[idx],theta[idx],heading)
+                    #gpsLOS=gpsLOS-gpsLOS_ref
 
                     IDY, IDX = find_row_column(
                         Lon[idx], Lat[idx], lon, lat, lon_step, lat_step)
                     print(theta[IDY, IDX])
                     gpsLOS = gps_to_LOS(
                         Ve[idx], Vn[idx], theta[IDY, IDX], heading)
-                #  gpsLOS = gpsLOS-gpsLOS_ref
+                    #gpsLOS = gpsLOS-gpsLOS_ref
 
                     if which_gps == 'all':
                         if theta[IDY, IDX] != 0.0:
@@ -864,8 +839,6 @@ def main(argv):
                 except:
                     NoInSAR = 'yes'
 
-            # print GPS_station
-            # print gpsLOS
             DistGPS = []
             GPS_in_bound = []
             GPS_in_bound_st = []
@@ -874,9 +847,7 @@ def main(argv):
             for i in range(len(GPS_station)):
                 gx = GPSx[i]
                 gy = GPSy[i]
-  #        print '******************'
-            #   print gx
-            #   print gy
+
                 if which_gps in ['all', 'insar']:
                     check_result = 'True'
                 else:
@@ -912,7 +883,7 @@ def main(argv):
             print('****************************************************')
             GPS_in_bound = np.array(GPS_in_bound)
             DistGPS = np.array(DistGPS)
-    #    axes[1].plot(DistGPS/1000.0, -1*GPS_in_bound/1000, 'bo')
+            #axes[1].plot(DistGPS/1000.0, -1*GPS_in_bound/1000, 'bo')
 
         if gpsFile == 'Nogps':
 
@@ -926,8 +897,6 @@ def main(argv):
             XX1[0] = x1
             YY0[0] = y0
             YY1[0] = y1
-
-    # else:
 
         print('****************')
         print('flip up-down')
@@ -961,18 +930,16 @@ def main(argv):
 
         avgInSAR = np.array(nanmean(transect, axis=1))
         stdInSAR = np.array(nanstd(transect, axis=1))
-    #  print avgInSAR
-    #  print stdInSAR
 
         # std=np.std(transect,1)
-    # axes[1].plot(D/1000.0, avgInSAR, 'r-')
+        # axes[1].plot(D/1000.0, avgInSAR, 'r-')
         try:
             axes[1].plot(DistGPS/1000.0, -1*GPS_in_bound/1000, 'b^', ms=10)
         except:
             print('')
-    # pl.fill_between(x, y-error, y+error,alpha=0.6, facecolor='0.20')
-    # print transect
-#############################################################################
+        # pl.fill_between(x, y-error, y+error,alpha=0.6, facecolor='0.20')
+        # print transect
+        #############################################################################
 
         fig2, axes2 = plt.subplots(nrows=1)
         axes2.imshow(insarData)
@@ -997,7 +964,7 @@ def main(argv):
         print('writing '+figName)
         plt.savefig(figName)
 
-#############################################################################
+        #############################################################################
         fig = plt.figure()
         fig.set_size_inches(10, 4)
         ax = plt.Axes(fig, [0., 0., 1., 1.], )
@@ -1007,8 +974,8 @@ def main(argv):
                     ms=1, mfc='Black', linewidth='0')
 
 
-############################################################################
-# save the profile data:
+        ############################################################################
+        # save the profile data:
         if save_to_mat in ['ON', 'on', 'On']:
             import scipy.io as sio
             matFile = 'transect'+str(Np)+'.mat'
@@ -1028,13 +995,8 @@ def main(argv):
             sio.savemat(matFile, {'dataset': dataset})
             print('')
             print('*****************************************')
-############################################################################
-  #   ax.plot(D/1000.0, avgInSAR*1000, 'r-')
 
-#    ax.plot(D/1000.0,transect*1000/(np.sin(23.*np.pi/180.)*np.cos(38.*np.pi/180.0)),'o',ms=1,mfc='Black', linewidth='0')
-#    ax.plot(D/1000.0, avgInSAR*1000/(np.sin(23.*np.pi/180.)*np.cos(38.*np.pi/180.0)), 'r-')
-
-#############################################################################
+        #############################################################################
         if display_Standard_deviation in ['on', 'On', 'ON']:
 
             for i in np.arange(0.0, 1.01, 0.01):
@@ -1044,22 +1006,16 @@ def main(argv):
             for i in np.arange(0.0, 1.01, 0.01):
                 ax.plot(D/1000.0, (avgInSAR+i*stdInSAR)*1000, '-',
                         color='#DCDCDC', alpha=0.5)  # 'LightGrey')
-#############################################################################
+        #############################################################################
         if display_Average in ['on', 'On', 'ON']:
             ax.plot(D/1000.0, avgInSAR*1000, 'r-')
-###########
-    # ax.fill_between(D/1000.0, (avgInSAR-stdInSAR)*1000, (avgInSAR+stdInSAR)*1000,where=(avgInSAR+stdInSAR)*1000>=(avgInSAR-stdInSAR)*1000,alpha=1, facecolor='Red')
-
+        ###########
         try:
             ax.plot(DistGPS/1000.0, -1*GPS_in_bound, '^', ms=10, mfc='Cyan')
         except:
             print('')
         ax.set_ylabel('LOS velocity [mm/yr]', fontsize=26)
         ax.set_xlabel('Distance along profile [km]', fontsize=26)
-
-    # print '******************'
-    # print 'Dsitance of fault from the beginig of profile(km):'
-    # print df0_km/1000.0
 
         ###################################################################
         # lower and higher bounds for diplaying the profile
@@ -1073,11 +1029,8 @@ def main(argv):
 
         ###################################################################
         # To plot the Fault location on the profile
-    #  try:
         ax.plot([df0_km/1000.0, df0_km/1000.0], [lbound, hbound],
                 '--', color='black', linewidth='2')
-    #  except:
-    #     fault_loc='None'
 
         ###################################################################
 
@@ -1092,34 +1045,33 @@ def main(argv):
             xlim = 'no'
 
 
-##########
-# Temporary To plot DEM
-    # try:
-#    majorLocator = MultipleLocator(5)
-#    ax.yaxis.set_major_locator(majorLocator)
-#    minorLocator   = MultipleLocator(1)
-#    ax.yaxis.set_minor_locator(minorLocator)
-
-#    plt.tick_params(which='major', length=15,width=2)
-#    plt.tick_params(which='minor', length=6,width=2)
-
-#    try:
-#       for tick in ax.xaxis.get_major_ticks():
-#                tick.label.set_fontsize(26)
-#       for tick in ax.yaxis.get_major_ticks():
-#                tick.label.set_fontsize(26)
-#
-#       plt.tick_params(which='major', length=15,width=2)
-#       plt.tick_params(which='minor', length=6,width=2)
-#    except:
-#       print 'couldn not fix the ticks! '
+        ##########
+        # Temporary To plot DEM
+        # majorLocator = MultipleLocator(5)
+        # ax.yaxis.set_major_locator(majorLocator)
+        # minorLocator   = MultipleLocator(1)
+        # ax.yaxis.set_minor_locator(minorLocator)
+        
+        # plt.tick_params(which='major', length=15,width=2)
+        # plt.tick_params(which='minor', length=6,width=2)
+        
+        # try:
+        #    for tick in ax.xaxis.get_major_ticks():
+        #             tick.label.set_fontsize(26)
+        #    for tick in ax.yaxis.get_major_ticks():
+        #             tick.label.set_fontsize(26)
+        #
+        #    plt.tick_params(which='major', length=15,width=2)
+        #    plt.tick_params(which='minor', length=6,width=2)
+        # except:
+        #    print 'couldn not fix the ticks! '
 
         figName = 'transect_'+str(Np)+'.png'
         print('writing '+figName)
         plt.savefig(figName)
         print('')
         print('________________________________')
-    # plt.show()
+        # plt.show()
 
 
 #############################################################################
