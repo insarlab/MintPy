@@ -30,7 +30,7 @@ def phase_pdf_ds(L, coherence=None, phi_num=1000, epsilon=1e-3):
         coh = np.linspace(0., 1-epsilon, 1000)
         pdf, coh = phase_pdf_ds(1, coherence=coh)
     """
-    
+
     def gamma(x):
         """
         Gamma function equivalent to scipy.special.gamma(x)
@@ -161,14 +161,15 @@ def sample_decorrelation_phase(coherence, L, size=1, phi_num=1000, display=False
     return phase
 
 
-
 def coherence2decorrelation_phase(coh, L, coh_step=0.01, num_repeat=1, scale=1.0, display=False, print_msg=True):
     """Simulate decorrelation phase based on coherence array/matrix.
-    Parameters: coh        - 2D np.ndarray of float32 in size of (num_coh, 1) for spatial coherence
+    Parameters: coh        - 1/2/3D np.ndarray of float32 for spatial coherence
                 L          - int, number of independent looks
                 coh_step   - float, step of coherence to generate lookup table
                 num_repeat - int, number of repeatetion
-    Returns:    pha        - 2D np.ndarray of float32 in size of (num_coh, num_repeat) for decorrelation phase
+    Returns:    pha        - np.ndarray of float32 for decorrelation phase
+                                for num_repeat == 1, pha.shape = coh.shape
+                                for num_repeat >  1, pha.shape = (coh.size, num_repeat)
     """
     shape_orig = coh.shape
     coh = coh.reshape(-1,1)
@@ -205,12 +206,11 @@ def coherence2decorrelation_phase(coh, L, coh_step=0.01, num_repeat=1, scale=1.0
         for i in range(num_step):
             # find index within the coherence intervals
             coh_i = i * coh_step
-            flag = np.multiply(coh >= coh_i, coh < coh_i + coh_step)
+            flag = np.multiply(coh >= coh_i, coh < coh_i + coh_step).flatten()
             num_coh_i = np.sum(flag)
             if num_coh_i > 0:
                 pha_i = sample_decorrelation_phase(coh_i, L, size=num_coh_i*num_repeat, scale=scale)
-                row_ind = np.where(flag)[0]
-                pha[row_ind,:] = pha_i.reshape(-1, num_repeat)
+                pha[flag,:] = pha_i.reshape(-1, num_repeat)
             prog_bar.update(i+1, suffix='{:.3f}'.format(coh_i))
         prog_bar.close()
 
@@ -225,5 +225,3 @@ def coherence2decorrelation_phase(coh, L, coh_step=0.01, num_repeat=1, scale=1.0
         plt.show()
 
     return pha
-
-

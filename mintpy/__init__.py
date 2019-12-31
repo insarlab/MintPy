@@ -21,7 +21,6 @@ except KeyError:
     print('Using default MintPy Path: %s' % (mintpy_path))
     os.environ['MINTPY_HOME'] = mintpy_path
 
-
 module_dependency_graph = """
 # level N depends on level N-1, N-2, ..., 0
 /mintpy
@@ -71,5 +70,4 @@ module_dependency_graph = """
         insar_vs_gps  (objects/*, utils/{gps, plot}, simulation/*)
     /simulation
         simulation    (objects/*, utils/*, simulation/*, ./ifgram_inversion)
-
 """

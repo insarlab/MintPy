@@ -36,14 +36,11 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(95., 
                     of spectrum covered by a specific beta
                 display : bool, display simulation result or not
     Returns:    fsurf   : 2D np.array in size of (LENGTH, WIDTH)
-    Example:    data, atr = readfile.read_attribute('timeseries.h5',
-                                                    datasetName='20171115')
-                length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+    Example:    data, atr = readfile.read_attribute('timeseriesResidual_ramp.h5', datasetName='20171115')
+                shape = (int(atr['LENGTH']), int(atr['WIDTH']))
                 step = abs(ut.range_ground_resolution(atr))
-                p0 = check_power_spectrum_1d(data, resolution=step)
-                sim_trop_turb = frac_surf_atmos(shape=(length, width),
-                                                resolution=step,
-                                                p0=p0)
+                p0 = check_power_spectrum_1d(data, resolution=step)[0]
+                sim_trop_turb = fractal_surface_atmos(shape=shape, resolution=step, p0=p0)
     """
 
     beta = np.array(beta, np.float32)
@@ -212,5 +209,4 @@ def check_power_spectrum_1d(data, resolution=60., display=False):
         ax[1].loglog(freq, pow1d)
         plt.show()
     return C0, beta, D2
-
 
