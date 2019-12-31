@@ -186,7 +186,7 @@ def coherence2decorrelation_phase(coh, L, coh_step=0.01, num_repeat=1, scale=1.0
     # code for debug
     debug_mode = False
     if debug_mode is True:
-        decor = sample_decorrelation_phase(0.4, L, size=int(1e4), scale=scale).reshape(length, width)
+        decor = sample_decorrelation_phase(0.4, L, size=int(1e4), scale=scale)
         return decor
 
     # initiate output matrix
@@ -218,7 +218,7 @@ def coherence2decorrelation_phase(coh, L, coh_step=0.01, num_repeat=1, scale=1.0
         pha = pha.reshape(shape_orig)
 
     # plot
-    if display and len(shape) == 2:
+    if display and len(shape_orig) == 2:
         fig, axs = plt.subplots(nrows=1, ncols=2, figsize=[6,3])
         axs[0].imshow(coh.reshape(shape_orig), vmin=0, vmax=1, cmap='gray')
         axs[1].imshow(pha[:,0].reshape(shape_orig), vmin=-np.pi, vmax=np.pi, cmap='jet')
