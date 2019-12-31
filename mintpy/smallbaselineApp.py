@@ -433,6 +433,13 @@ class TimeSeriesAnalysis:
             print('generate {} from {} for conveniency'.format(water_mask_file, geom_file))
             if ut.run_or_skip(out_file=water_mask_file, in_file=geom_file) == 'run':
                 water_mask, atr = readfile.read(geom_file, datasetName='waterMask')
+                # ignore no-data pixels in geometry files
+                ds_name_list = readfile.get_dataset_list(geom_file)
+                for ds_name in ['latitude','longitude']:
+                    if ds_name in ds_name_list:
+                        print('set pixels with 0 in {} to 0 in waterMask'.format(ds_name))
+                        ds = readfile.read(geom_file, datasetName=ds_name)[0]
+                        water_mask[ds == 0] = 0
                 atr['FILE_TYPE'] = 'waterMask'
                 writefile.write(water_mask, out_file=water_mask_file, metadata=atr)
 

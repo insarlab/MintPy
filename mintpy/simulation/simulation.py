@@ -207,4 +207,3 @@ def add_unw_err2ifgram(ifgram, percentage=0.1, Nmax=2, print_msg=True):
     ifgram_err = np.array(ifgram, dtype=np.float32)
     ifgram_err[idx_ifg_err] += 2.*np.pi*np.random.choice(Nlist, size=num_ifg_err)
     return ifgram_err, idx_ifg_err
-
