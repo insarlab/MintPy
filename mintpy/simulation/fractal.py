@@ -130,38 +130,6 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(95., 
     return fsurf
 
 
-def power_slope(freq, power):
-    """ Derive the slope beta and C0 of an exponential function in loglog scale
-    S(k) = np.power(C0, 2) * np.power(k, -beta)
-    power = np.power(C0, 2) * np.power(freq, -beta)
-
-    Python translation of pslope.m (Ramon Hanssen, 2000)
-    
-    Parameters: freq  : 1D / 2D np.array
-                power : 1D / 2D np.array
-    Returns:    C0    : float, spectral power density at freq == 0.
-                beta  : float, slope of power profile
-    """
-    freq = freq.flatten()
-    power = power.flatten()
-
-    # check if there is zero frequency. If yes, remove it.
-    if not np.all(freq != 0.):
-        idx = freq != 0.
-        freq = freq[idx]
-        power = power[idx]
-
-    logf = np.log10(freq)
-    logp = np.log10(power)
-
-    beta = -1 * np.polyfit(logf, logp, deg=1)[0]
-
-    position = np.interp(0, logf, range(len(logf)))
-    logC0 = np.interp(position, range(len(logp)), logp)
-    C0 = np.sqrt(np.power(10, logC0))
-    return C0, beta
-
-
 def check_power_spectrum_1d(data, resolution=60., display=False):
     """Check the rotationally averaged 1D spectrum of input 2D matrix
     Check Table 4.5 in Hanssen, 2001 (Page 143) for explaination of outputs.
@@ -175,6 +143,38 @@ def check_power_spectrum_1d(data, resolution=60., display=False):
                 beta : float, slope of power profile
                 D2   : fractal dimension
     """
+
+    def power_slope(freq, power):
+        """ Derive the slope beta and C0 of an exponential function in loglog scale
+        S(k) = np.power(C0, 2) * np.power(k, -beta)
+        power = np.power(C0, 2) * np.power(freq, -beta)
+
+        Python translation of pslope.m (Ramon Hanssen, 2000)
+        
+        Parameters: freq  : 1D / 2D np.array
+                    power : 1D / 2D np.array
+        Returns:    C0    : float, spectral power density at freq == 0.
+                    beta  : float, slope of power profile
+        """
+        freq = freq.flatten()
+        power = power.flatten()
+
+        # check if there is zero frequency. If yes, remove it.
+        if not np.all(freq != 0.):
+            idx = freq != 0.
+            freq = freq[idx]
+            power = power[idx]
+
+        logf = np.log10(freq)
+        logp = np.log10(power)
+
+        beta = -1 * np.polyfit(logf, logp, deg=1)[0]
+
+        position = np.interp(0, logf, range(len(logf)))
+        logC0 = np.interp(position, range(len(logp)), logp)
+        C0 = np.sqrt(np.power(10, logC0))
+        return C0, beta
+
 
     if display:
         fig, ax = plt.subplots(nrows=1, ncols=2, figsize=[10, 3])

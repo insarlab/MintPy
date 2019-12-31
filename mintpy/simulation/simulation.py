@@ -5,19 +5,24 @@
 # Author: Zhang Yunjun, 2018                               #
 ############################################################
 # Recommend usage:
-#   import mintpy.simulation as psim
+#   from mintpy.simulation import simulation as sim
 
-import numpy as np
+
 import random
-import scipy.stats as stats
+import numpy as np
 import matplotlib.pyplot as plt
-from mintpy.objects import timeseries
-from mintpy.utils import ptime, network as pnet, utils as ut
+
 from mintpy.defaults.plot import *
-from mintpy.simulation.forward_model import mogi
-from mintpy import ifgram_inversion as ifginv
+from mintpy.objects import timeseries
+from mintpy.utils import ptime, network as pnet
+
+# load all modules in this sub-directory for easy import
+from mintpy.simulation.decorrelation import *
+from mintpy.simulation.defo_model import *
+from mintpy.simulation.fractal import *
 
 
+############################ Deformation Time-series ############################
 def velocity2timeseries(date_list, vel=0.03, display=False):
     '''Simulate displacement time-series from linear velocity
     Inputs:
@@ -94,81 +99,19 @@ def timeseries2ifgram(ts_sim, date_list, date12_list, wvl=0.055, display=False):
     return ifgram_sim
 
 
-def sample_decorrelation_phase(L, coherence, size=1, phi_num=1000, display=False, scale=1.0, font_size=12):
-    '''Sample decorrelation phase noise with PDF determined by L and coherence
-    Inputs:
-        L         - int, multilook number
-        coherence - float, spatial coherence
-        size      - int, sample number
-    Output:
-        sample    - 1D np.array in size of (size,), sampled phase
-    unw_n = sample_decorrelation_phase(L=1, coherence=0.7, size=100000, display=True)
-    '''
-    size = int(size)
-
-    phiMax = np.pi * float(scale)
-    pdf = ifginv.phase_pdf_ds(int(L), coherence, phi_num=phi_num)[0].flatten()   #for PS: ifginv.phase_variance_ps()
-    phi = np.linspace(-phiMax, phiMax, phi_num+1, endpoint=True)
-    phi_dist = stats.rv_histogram((pdf, phi))
-    #sample = np.nan
-    #while sample is np.nan:
-    sample = phi_dist.rvs(size=size)
-
-    if display:
-        #size = 10000
-        fig, ax = plt.subplots(figsize=[5,3])
-        ax.hist(sample, bins=50, density=True, label='Sample\nHistogram\n(norm)')
-        ax.plot(phi, phi_dist.pdf(phi), label='PDF')
-        ax.plot(phi, phi_dist.cdf(phi), label='CDF')
-        ax.set_xlabel('Phase', fontsize=font_size)
-        ax.set_ylabel('Probability', fontsize=font_size)
-        ax.set_title(r'L = %d, $\gamma$ = %.2f, sample size = %d' % (L, coherence, size), fontsize=font_size)
-        ax.set_xlim([-np.pi, np.pi])
-        ax.set_xticks([-np.pi, 0, np.pi])
-        ax.set_xticklabels([r'-$\pi$', '0', r'$\pi$'], fontsize=font_size)
-        ax.tick_params(direction='in', labelsize=font_size)
-        ax.legend(fontsize=font_size)
-        plt.savefig('DecorNoiseSampling.jpg', bbox_inches='tight', dpi=600)
-        plt.show()
-    return sample
-
-
-def simulate_decorrelation_noises(date12_list, cohs, L=20, size:int=1, display=False, scale=1.0):
-    '''Simuate decorrelation phase noise for input interferometric pairs
-    Inputs:
-        date12_list - list of string in YYMMDD-YYMMDD format, indicating pairs configuration
-        cohs - 2D np.array in size of (ifgram_num,1)
-        L    - int, multilook number
-    Output:
-        decorNoises - 2D np.array in size of (ifgram_num, 1)
-    Example:
-        from mintpy.utils import network as pnet
-        date12_list_all = pnet.get_date12_list('ifgram_list_all.txt')
-        cohs = pnet.simulate_coherence(date12_list_all, decor_time=1000, coh_resid=0.2, display=True, inc_angle=22.8)
-        decorNoises = simulate_decorrelation_noises(date12_list_all, cohs, L=20, display=True)
-    '''
-    ifgram_num = len(cohs)
-    decorNoises = np.zeros((ifgram_num, size), np.float32)
-    for i in range(ifgram_num):
-        decorNoises[i, :] = sample_decorrelation_phase(int(L), cohs[i], size=size, scale=scale)
-
-    if display:
-        decorNoisesMat = pnet.coherence_matrix(date12_list, decorNoises)
-        plt.figure()
-        #plt.imshow(decorNoisesMat, vmin=-np.pi, vmax=np.pi, cmap='jet')
-        plt.imshow(decorNoisesMat, cmap='jet')
-        plt.xlabel('Image number')
-        plt.ylabel('Image number')
-        cbar = plt.colorbar()
-        cbar.set_label('Decorrelation Phase Noise (radian)')
-        plt.title('Decorrelation Noise')
-        plt.show()
-    return decorNoises
-
-
-def simulate_network(ts_sim, date12_list, decor_day, coh_resid, L=75, num_sample=int(1e4),
+def simulate_network(ts_sim, date12_list, decor_day, coh_resid, L=75, num_repeat=int(1e4),
                      baseline_file='bl_list.txt', sensor_name='Sen', inc_angle=33.4):
-    """Simulate coherence --> decorrelation noise --> ifgram phase and estimated coherence"""
+    """Simulate the InSAR stack for one pixel, including:
+        simulated coherence --> decorrelation noise
+        simulated ifgram phase with / without decorrelation noise
+        estimated coherence"""
+    # simulated (true) phase
+    m_dates = [i.split('_')[0] for i in date12_list]
+    s_dates = [i.split('_')[1] for i in date12_list]
+    date_list = sorted(list(set(m_dates + s_dates)))
+    ifgram_sim = timeseries2ifgram(ts_sim, date_list, date12_list, display=False)
+
+    # simulated (true) coherence
     coh_sim = pnet.simulate_coherence(date12_list,
                                       baseline_file='bl_list.txt',
                                       sensor_name=sensor_name,
@@ -176,14 +119,13 @@ def simulate_network(ts_sim, date12_list, decor_day, coh_resid, L=75, num_sample
                                       decor_time=decor_day,
                                       coh_resid=coh_resid)
 
-    decor_noise = simulate_decorrelation_noises(date12_list, coh_sim, L=int(L), size=num_sample)
+    # simulated (estimated) phase
+    decor_noise = coherence2decorrelation_phase(coh_sim, L=int(L), num_repeat=num_repeat)
+    ifgram_est = decor_noise + np.tile(ifgram_sim.reshape(-1,1), (1, num_repeat))
 
-    m_dates = [i.split('_')[0] for i in date12_list]
-    s_dates = [i.split('_')[1] for i in date12_list]
-    date_list = sorted(list(set(m_dates + s_dates)))
-    ifgram_sim = timeseries2ifgram(ts_sim, date_list, date12_list, display=False)
-    ifgram_est = decor_noise + np.tile(ifgram_sim.reshape(-1,1), (1, num_sample))
+    # estimated coherence
     coh_est = estimate_coherence(ifgram_est, L=L, win_size=25)
+
     return ifgram_est, coh_est, ifgram_sim, coh_sim
 
 
@@ -192,7 +134,7 @@ def estimate_coherence(ifgram, L=20, win_size=25):
     Reference:
       Rodriguez and Martin, 1992;
       Agram and Simons, 2015.
-    Parameters: phase    : 2D np.array in size of (num_ifgram, num_sample)
+    Parameters: phase    : 2D np.array in size of (num_ifgram, num_repeat)
                 L        : int, number of looks used to determine the phase PDF
                 win_size : int, number of samples used to estimate phase variance
     Returns:    coh_est : 1D np.array in size of (num_ifgram,)
@@ -245,52 +187,6 @@ def check_board(water_mask, grid_step=100, scale=1., display=True):
         plt.show()
 
     return mask
-
-
-def mogi_deformation(shape, source_geom, resolution=60., scale=1., display=True):
-    """Simulate 2D deformation caused by the overpress of a Mogi source underneath
-    
-    Parameters: shape: 2-tuple of int in (length, width) or 2D np.ndarray in size of (length, width) in np.bool_
-                source_geom : 4-tuple of float, Mogi source geometry: East, North, Depth, Volomn change in SI unit.
-    
-    """
-    if isinstance(shape, np.ndarray):
-        mask = np.multiply(np.array(shape != 0), ~np.isnan(shape))
-        shape = mask.shape
-    else:
-        mask = np.ones(shape, np.bool_)
-
-    length, width = shape
-    yy, xx = np.mgrid[0:length:length*1j, 0:width:width*1j]
-    yy *= resolution
-    xx *= resolution
-    xloc = np.vstack((xx.reshape(1, -1), yy.reshape(1, -1)))
-
-    dis_map = mogi(source_geom, xloc)[0]
-    dis_e = dis_map[0, :].reshape(length, width)
-    dis_n = dis_map[1, :].reshape(length, width)
-    dis_u = dis_map[2, :].reshape(length, width)
-    dis_los = ut.enu2los(dis_e, dis_n, dis_u)
-
-    dis_los[mask == 0.] = np.nan
-    dis_los *= scale
-
-    if display:
-        fig, ax = plt.subplots(1, 4, figsize=[10, 3], sharey=True)
-        dmin = np.nanmin(dis_los)
-        dmax = np.nanmax(dis_los)
-        for i, fig_title in enumerate(['east','north','vertical']):
-            ax[i].imshow(dis_map[i, :].reshape(length, width), vmin=dmin, vmax=dmax)
-            ax[i].set_title(fig_title)
-        im = ax[3].imshow(dis_los, vmin=dmin, vmax=dmax)
-        ax[3].set_title('los - SenD')
-        fig.subplots_adjust(right=0.90)
-        cax = fig.add_axes([0.92, 0.25, 0.01, 0.5])
-        cbar = fig.colorbar(im, cax=cax)
-        cbar.set_label('Displacement [m]')
-        plt.show()
-
-    return dis_los
 
 
 def add_unw_err2ifgram(ifgram, percentage=0.1, Nmax=2, print_msg=True):
