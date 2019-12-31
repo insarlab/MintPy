@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 from mintpy.defaults.plot import *
 from mintpy.objects import timeseries
-from mintpy.utils import ptime, network as pnet, utils as ut
+from mintpy.utils import ptime, network as pnet
 
 # load all modules in this sub-directory for easy import
 from mintpy.simulation.decorrelation import *

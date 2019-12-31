@@ -3,14 +3,9 @@ import sys
 import os
 
 # get version info
-from mintpy.version import (
-    release_version,
-    release_date,
-    description,
-    logo,
-    website,
-)
+from mintpy.version import release_version, logo
 __version__ = release_version
+__logo__ = logo
 
 # check environmental variable
 mintpy_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
