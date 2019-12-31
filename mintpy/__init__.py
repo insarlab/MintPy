@@ -25,7 +25,6 @@ except KeyError:
 #-----------------------------------------------
 #    # Level 0
 #    /simulation
-#        forward_model
 #        fractal
 #    /objects
 #        colors
@@ -44,31 +43,33 @@ except KeyError:
 #-----------------------------------------------
 #    # Level 1 (depend on level 0)
 #    /simulation
-#        variance  (utils/ptime)
+#        decorrelation (utils/ptime)
+#        variance      (utils/ptime)
+#        defo_model    (utils/utils0)
 #    /objects
-#        conncomp  (objects/ramp)
+#        conncomp      (objects/ramp)
 #    /utils
-#        variance  (utils/ptime)
-#        readfile  (objects/*)
-#        writefile (objects/*, utils/readfile)
-#        network   (objects/*, utils/readfile)
-#        utils1    (objects/*, utils/writefile)
+#        variance      (utils/ptime)
+#        readfile      (objects/*)
+#        writefile     (objects/*, utils/readfile)
+#        network       (objects/*, utils/readfile)
+#        utils1        (objects/*, utils/writefile)
 #
 #-----------------------------------------------
 #    # Level 2 (depends on level 0 + 1)
 #    /objects
-#        resample     (utils/readfile)
-#        coord        (utils/utils1)
+#        resample      (utils/readfile)
+#        coord         (utils/utils1)
 #    /utils
-#        utils        (objects/*, utils/coord)
-#        gps          (objects/*, utils/utils)
-#        plot         (objects/*, utils/utils)
-#        stackDict    (objects/*, utils/utils)
+#        utils         (objects/*, utils/coord)
+#        gps           (objects/*, utils/utils)
+#        plot          (objects/*, utils/utils)
+#        stackDict     (objects/*, utils/utils)
 #
 #-----------------------------------------------
 #    # Level 3 (depends on level 0 + 1 + 2)
 #    /objects
-#        insar_vs_gps (objects/*, utils/{gps, plot}, simulation/*)
+#        insar_vs_gps  (objects/*, utils/{gps, plot}, simulation/*)
 #    /simulation
-#        simulation   (objects/*, utils/*, simulation/*, ./ifgram_inversion)
+#        simulation    (objects/*, utils/*, simulation/*, ./ifgram_inversion)
 #
