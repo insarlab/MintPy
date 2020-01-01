@@ -173,14 +173,39 @@ def check_power_spectrum_1d(data, resolution=60., display=False):
         return C0, beta
 
 
+    def crop_data_max_square(data):
+        """Get the max portion of input data in square shape"""
+        # get max square size in even number
+        N = min(data.shape)
+        N = int(N / 2) * 2
+        
+        # find corner with least number of zero values
+        flag = data != 0
+        if data.shape[0] > data.shape[1]:
+            num_top = np.sum(flag[:N, :N])
+            num_bottom = np.sum(flag[-N:, :N])
+            if num_top > num_bottom:
+                data = data[:N, :N]
+            else:
+                data = data[-N:, :N]
+        else:
+            num_left = np.sum(flag[:N, :N])
+            num_right = np.sum(flag[:N, -N:])
+            if num_left > num_right:
+                data = data[:N, :N]
+            else:
+                data = data[:N, -N:]
+        return data
+
+
     if display:
         fig, ax = plt.subplots(nrows=1, ncols=2, figsize=[10, 3])
         im = ax[0].imshow(data)
         plt.colorbar(im, ax=ax[0])
 
     # use the square part of the matrix for spectrum calculation
-    N = min(data.shape)
-    data = data[:N, :N]
+    data = crop_data_max_square(data)
+    N = data.shape[0]
 
     # The frequency coordinate
     dx = resolution / 1000.
