@@ -78,21 +78,21 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(95., 
     so we should take sqrt( k.^beta) = k.^(beta/2)  RH
     """
     beta /= 2.
-    
+
     mk = np.max(k)
     k0 = 0
     k1 = (regime[0] / 100.) * mk
     k2 = (regime[1] / 100.) * mk
     k3 = np.max(k)
-    
+
     regime1 = np.multiply(k >  k0, k <= k1)
     regime2 = np.multiply(k >= k1, k <= k2)
     regime3 = np.multiply(k >= k2, k <= k3)
-    
+
     fraction1 = np.power(k[regime1], beta[0])
     fraction2 = np.power(k[regime2], beta[1])
     fraction3 = np.power(k[regime3], beta[2])
-    
+
     fraction = np.zeros(k.shape, np.float32)
     fraction[regime1] = fraction1
     fraction[regime2] = fraction2 / np.min(fraction2) * np.max(fraction[regime1])
@@ -117,7 +117,7 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(95., 
     fsurf = np.abs(np.fft.ifft2(Hnew))
     # remove mean to get zero-mean data
     fsurf -= np.mean(fsurf)
-    fsurf = np.array(fsurf, np.float32)
+    fsurf = np.array(fsurf, dtype=np.float32)
 
     if display:
         plt.figure()

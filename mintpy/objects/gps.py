@@ -15,8 +15,10 @@ from datetime import datetime as dt
 import numpy as np
 from pyproj import Geod
 from urllib.request import urlretrieve
+
 from mintpy.objects import timeseries
-from mintpy.utils import ptime, readfile, utils as ut
+from mintpy.objects.coord import coordinate
+from mintpy.utils import ptime, readfile, utils0 as ut
 
 
 unr_site_list_file = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
@@ -321,7 +323,7 @@ class GPS:
         if isinstance(geom_obj, str):
             # geometry file
             atr = readfile.read_attribute(geom_obj)
-            coord = ut.coordinate(atr, lookup_file=geom_obj)
+            coord = coordinate(atr, lookup_file=geom_obj)
             y, x = coord.geo2radar(lat, lon, print_msg=print_msg)[0:2]
             box = (x, y, x+1, y+1)
             inc_angle = readfile.read(geom_obj, datasetName='incidenceAngle', box=box, print_msg=print_msg)[0][0,0]
