@@ -24,7 +24,7 @@ except ImportError:
 from mintpy.objects import (dataTypeDict,
                             geometryDatasetNames,
                             ifgramDatasetNames)
-from mintpy.utils import readfile, ptime, utils as ut
+from mintpy.utils import readfile, ptime, utils0 as ut
 
 
 BOOL_ZERO = np.bool_(0)
