@@ -202,7 +202,7 @@ def coherence2decorrelation_phase(coh, L, coh_step=0.01, num_repeat=1, scale=1.0
 
     else:
         # for large size --> loop through coherence lookup table and map into input coherence matrix
-        prog_bar = ptime.progressBar(maxValue=num_step, prefix='simulating decorrelation', print_msg=print_msg)
+        prog_bar = ptime.progressBar(maxValue=num_step, print_msg=print_msg)
         for i in range(num_step):
             # find index within the coherence intervals
             coh_i = i * coh_step

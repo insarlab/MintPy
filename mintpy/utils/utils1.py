@@ -144,7 +144,7 @@ def get_residual_spectral_power_density(ts_file, box=None, out_file=None, update
         # ts file info
         ts_obj = timeseries(ts_file)
         ts_obj.open()
-        step = abs(ut.range_ground_resolution(ts_obj.metadata))
+        step = abs(range_ground_resolution(ts_obj.metadata))
         date_list = ts_obj.dateList
         num_date = len(date_list)
 
