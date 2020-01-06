@@ -537,6 +537,7 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
     if isinstance(datasetNames, str):
         datasetNames = [datasetNames]
 
+    fbase, fext = os.path.splitext(os.path.basename(fname))
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
     num_pixel = int(atr['WIDTH']) * int(atr['LENGTH'])
@@ -563,21 +564,24 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
             fig_title = '{}_{}'.format(ref_date, datasetNames[0])
 
         try:
-            ext = os.path.splitext(fname)[1]
-            processMark = os.path.basename(fname).split(
-                'timeseries')[1].split(ext)[0]
+            processMark = os.path.basename(fname).split('timeseries')[1].split(fext)[0]
             fig_title += processMark
         except:
             pass
+
     elif k == 'geometry':
         if len(datasetNames) == 1:
             fig_title = datasetNames[0]
         elif datasetNames[0].startswith('bperp'):
             fig_title = 'bperp'
         else:
-            fig_title = os.path.splitext(os.path.basename(fname))[0]
+            fig_title = fbase
+
+    elif fext in ['.h5','.he5']:
+        fig_title = fbase
+
     else:
-        fig_title = os.path.splitext(os.path.basename(fname))[0]
+        fig_title = os.path.basename(fname)
 
     if inps_dict.get('pix_box', None):
         box = inps_dict['pix_box']
