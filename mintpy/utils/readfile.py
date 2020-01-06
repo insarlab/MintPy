@@ -327,11 +327,13 @@ def read_binary_file(fname, datasetName=None, box=None):
         k = atr['FILE_TYPE'].lower().replace('.', '')
         if k in ['unw']:
             band = 2
+            if datasetName and datasetName in ['band1','intensity','magnitude']:
+                band = 1
 
         elif k in ['slc']:
             cpx_band = 'magnitude'
 
-        elif k in ['los'] and datasetName and datasetName.startswith(('az', 'head')):
+        elif k in ['los'] and datasetName and datasetName.startswith(('band2','az','head')):
             band = 2
 
         elif k in ['incLocal']:
@@ -501,20 +503,15 @@ def get_slice_list(fname):
 
     # Binary Files
     else:
-        if fext.lower() in ['.trans', '.utm_to_rdc']:
+        num_band = int(atr.get('number_bands', '1'))
+        if fext in ['.trans', '.utm_to_rdc']:
             slice_list = ['rangeCoord', 'azimuthCoord']
+        elif fext in ['.int', '.unw']:
+            slice_list = ['magnitude', 'phase']
         elif fbase.startswith('los'):
             slice_list = ['incidenceAngle', 'azimuthAngle']
-        elif atr.get('number_bands', '1') == '2' and 'unw' not in k:
-            slice_list = ['band1', 'band2']
-        elif atr.get('number_bands', '1') == '3' and 'unw' not in k:
-            slice_list = ['band1', 'band2', 'band3']
-        elif atr.get('number_bands', '1') == '4' and 'unw' not in k:
-            slice_list = ['band1', 'band2', 'band3', 'band4']
-        elif fext.lower() in ['.int']:
-            slice_list = ['magnitude', 'phase']
         else:
-            slice_list = ['']
+            slice_list = ['band{}'.format(i) for i in range(1,num_band+1)]
     return slice_list
 
 
@@ -743,10 +740,12 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             atr['UNIT'] = datasetUnitDict[datasetName]
         else:
             atr['UNIT'] = 'radian'
+
+    elif datasetName and datasetName in datasetUnitDict.keys():
+        atr['UNIT'] = datasetUnitDict[datasetName]
+
     elif 'UNIT' not in atr.keys():
-        if datasetName and datasetName in datasetUnitDict.keys():
-            atr['UNIT'] = datasetUnitDict[datasetName]
-        elif k in datasetUnitDict.keys():
+        if k in datasetUnitDict.keys():
             atr['UNIT'] = datasetUnitDict[k]
         else:
             atr['UNIT'] = '1'

@@ -118,6 +118,7 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
                    'hgt'               :'m',
                    'hgt_sim'           :'m',
                    'magnitude'         :'1',
+                   'intensity'         :'1',
                    }
 
 
