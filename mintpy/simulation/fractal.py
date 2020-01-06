@@ -17,15 +17,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(95., 99., 100.),
+def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(60., 90., 100.),
                           beta=(5./3., 8./3., 2./3.), display=False):
     """Simulate an isotropic 2D fractal surface with a power law behavior.
 
     This is a python translation of fracsurfatmo.m (Ramon Hanssen, 2000).
-    The difference from Hanssen (2000) is:
+    The difference from Hanssen (2000) includes:
         1) support non-square shape output
         2) take spatial resolution into consideration
-        3) divide p0 with a ratio of 0.073483 to make p0 == C0 from check_power_spectrum_1d
+        3) adapt p0 internally so that the input p0 == C0 from check_power_spectrum_1d()
 
     Parameters: shape   : tuple of 2 int, number of rows and columns
                 resolution : float, spatial resolution in meter
@@ -36,14 +36,10 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(95., 
                     of spectrum covered by a specific beta
                 display : bool, display simulation result or not
     Returns:    fsurf   : 2D np.array in size of (LENGTH, WIDTH)
-    Example:    data, atr = readfile.read_attribute('timeseries.h5',
-                                                    datasetName='20171115')
-                length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+    Example:    data, atr = readfile.read_attribute('timeseriesResidual_ramp.h5', datasetName='20171115')
                 step = abs(ut.range_ground_resolution(atr))
-                p0 = check_power_spectrum_1d(data, resolution=step)
-                sim_trop_turb = frac_surf_atmos(shape=(length, width),
-                                                resolution=step,
-                                                p0=p0)
+                p0 = check_power_spectrum_1d(data, resolution=step)[0]
+                sim_trop_turb = fractal_surface_atmos(shape=data.shape, resolution=step, p0=p0)
     """
 
     beta = np.array(beta, np.float32)
@@ -61,7 +57,7 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(95., 
     xx -= int(width / 2. + 0.5)
     xx *= resolution / 1000.
     yy *= resolution / 1000.
-    k = np.sqrt(np.square(xx) + np.square(yy))
+    k = np.sqrt(np.square(xx) + np.square(yy))    #pixel-wise distance in km
 
     """
     beta+1 is used as beta, since, the power exponent
@@ -81,21 +77,21 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(95., 
     so we should take sqrt( k.^beta) = k.^(beta/2)  RH
     """
     beta /= 2.
-    
+
     mk = np.max(k)
     k0 = 0
     k1 = (regime[0] / 100.) * mk
     k2 = (regime[1] / 100.) * mk
     k3 = np.max(k)
-    
+
     regime1 = np.multiply(k >  k0, k <= k1)
     regime2 = np.multiply(k >= k1, k <= k2)
     regime3 = np.multiply(k >= k2, k <= k3)
-    
+
     fraction1 = np.power(k[regime1], beta[0])
     fraction2 = np.power(k[regime2], beta[1])
     fraction3 = np.power(k[regime3], beta[2])
-    
+
     fraction = np.zeros(k.shape, np.float32)
     fraction[regime1] = fraction1
     fraction[regime2] = fraction2 / np.min(fraction2) * np.max(fraction[regime1])
@@ -115,12 +111,20 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(95., 
         #plt.ylabel('Power')
         plt.show()
 
-    Hnew = p0 / 0.073483 * np.divide(H, fraction)
-    # create spectral surface by ifft
-    fsurf = np.abs(np.fft.ifft2(Hnew))
-    # remove mean to get zero-mean data
-    fsurf -= np.mean(fsurf)
-    fsurf = np.array(fsurf, np.float32)
+    # re-run to force the output power spectrum the same as input p0
+    C0 = p0
+    for i in range(2):
+        Hnew = p0 * np.divide(H, fraction)
+        # create spectral surface by ifft
+        fsurf = np.abs(np.fft.ifft2(Hnew))
+
+        # remove mean to get zero-mean data
+        fsurf -= np.mean(fsurf)
+        fsurf = np.array(fsurf, dtype=np.float32)
+
+        # update p0 value based on the 1st simulation
+        C1 = check_power_spectrum_1d(fsurf, resolution=resolution, display=False)[0]
+        p0 *= (C0/C1)
 
     if display:
         plt.figure()
@@ -182,8 +186,8 @@ def check_power_spectrum_1d(data, resolution=60., display=False):
         plt.colorbar(im, ax=ax[0])
 
     # use the square part of the matrix for spectrum calculation
-    N = min(data.shape)
-    data = data[:N, :N]
+    data = crop_data_max_square_p2(data)
+    N = data.shape[0]
 
     # The frequency coordinate
     dx = resolution / 1000.
@@ -213,4 +217,63 @@ def check_power_spectrum_1d(data, resolution=60., display=False):
         plt.show()
     return C0, beta, D2
 
+
+def crop_data_max_square_p2(data):
+    """Grab the max portion of the input 2D matrix that it's:
+        1. square in shape
+        2. dimension as a power of 2
+    """
+    # get max square size in a power of 2
+    N = min(data.shape)
+    N = np.power(2, int(np.log2(N)))
+
+    # find corner with least number of zero values
+    flag = data != 0
+    if data.shape[0] > data.shape[1]:
+        num_top = np.sum(flag[:N, :N])
+        num_bottom = np.sum(flag[-N:, :N])
+        if num_top > num_bottom:
+            data = data[:N, :N]
+        else:
+            data = data[-N:, :N]
+    else:
+        num_left = np.sum(flag[:N, :N])
+        num_right = np.sum(flag[:N, -N:])
+        if num_left > num_right:
+            data = data[:N, :N]
+        else:
+            data = data[:N, -N:]
+    return data
+
+
+def power_slope(freq, power):
+    """ Derive the slope beta and C0 of an exponential function in loglog scale
+    S(k) = np.power(C0, 2) * np.power(k, -beta)
+    power = np.power(C0, 2) * np.power(freq, -beta)
+
+    Python translation of pslope.m (Ramon Hanssen, 2000)
+    
+    Parameters: freq  : 1D / 2D np.array
+                power : 1D / 2D np.array
+    Returns:    C0    : float, spectral power density at freq == 0.
+                beta  : float, slope of power profile
+    """
+    freq = freq.flatten()
+    power = power.flatten()
+
+    # check if there is zero frequency. If yes, remove it.
+    if not np.all(freq != 0.):
+        idx = freq != 0.
+        freq = freq[idx]
+        power = power[idx]
+
+    logf = np.log10(freq)
+    logp = np.log10(power)
+
+    beta = -1 * np.polyfit(logf, logp, deg=1)[0]
+
+    position = np.interp(0, logf, range(len(logf)))
+    logC0 = np.interp(position, range(len(logp)), logp)
+    C0 = np.sqrt(np.power(10, logC0))
+    return C0, beta
 

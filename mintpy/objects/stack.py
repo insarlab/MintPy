@@ -11,9 +11,10 @@
 import os
 import sys
 import time
-from datetime import datetime as dt
+import datetime as dt
 import h5py
 import numpy as np
+
 
 BOOL_ZERO = np.bool_(0)
 INT_ZERO = np.int16(0)
@@ -169,7 +170,7 @@ class timeseries:
                 self.pbase -= self.pbase[self.refIndex]
             except:
                 self.pbase = None
-        self.times = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.dateList])
+        self.times = np.array([dt.datetime(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.dateList])
         self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]],
                               dtype=np.float32)
         # list of float for year, 2014.95
@@ -395,7 +396,7 @@ class timeseries:
         return outFile
 
     def timeseries_std(self, maskFile=None, outFile=None):
-        """Calculate the standard deviation (STD) for each epoch,
+        """Calculate the standard deviation (STD) for acquisition of time-series,
            output result to a text file.
         """
         # Calculate STD
@@ -407,7 +408,7 @@ class timeseries:
         self.std = np.nanstd(data, axis=(1, 2))
 
         # Write text file
-        header = 'Standard Deviation in space for each epoch of timeseries\n'
+        header = 'Standard Deviation in space for each acquisition of time-series\n'
         header += 'Timeseries file: {}\n'.format(self.file)
         header += 'Mask file: {}\n'.format(maskFile)
         header += 'Date\t\tSTD (m)'
@@ -420,7 +421,7 @@ class timeseries:
         return outFile
 
     def timeseries_rms(self, maskFile=None, outFile=None):
-        """Calculate the Root Mean Square for each epoch of input timeseries file
+        """Calculate the Root Mean Square for each acquisition of time-series
             and output result to a text file.
         """
         # Calculate RMS
@@ -432,7 +433,7 @@ class timeseries:
         self.rms = np.sqrt(np.nanmean(np.square(data), axis=(1, 2)))
 
         # Write text file
-        header = 'Root Mean Square in space for each epoch of timeseries\n'
+        header = 'Root Mean Square in space for each acquisition of time-series\n'
         header += 'Timeseries file: {}\n'.format(self.file)
         header += 'Mask file: {}\n'.format(maskFile)
         header += 'Date\t\tRMS (m)'
@@ -480,7 +481,7 @@ class timeseries:
         Returns:    A : 2D array of int in size of (numDate, 2)
         """
         # convert list of YYYYMMDD into array of diff year in float
-        dt_list = [dt.strptime(i, '%Y%m%d') for i in date_list]
+        dt_list = [dt.datetime.strptime(i, '%Y%m%d') for i in date_list]
         yr_list = [i.year + (i.timetuple().tm_yday - 1) / 365.25 for i in dt_list]
         yr_diff = np.array(yr_list)
 
@@ -741,8 +742,8 @@ class ifgramStack:
             dates = f['date'][:]
         self.mDates = np.array([i.decode('utf8') for i in dates[:, 0]])
         self.sDates = np.array([i.decode('utf8') for i in dates[:, 1]])
-        self.mTimes = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.mDates])
-        self.sTimes = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.sDates])
+        self.mTimes = np.array([dt.datetime(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.mDates])
+        self.sTimes = np.array([dt.datetime(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.sDates])
 
     def read(self, datasetName='unwrapPhase', box=None, print_msg=True, dropIfgram=False):
         """Read 3D dataset with bounding box in space
@@ -1031,7 +1032,7 @@ class ifgramStack:
         mDates = [i.split('_')[0] for i in date12_list]
         sDates = [i.split('_')[1] for i in date12_list]
         dateList = sorted(list(set(mDates + sDates)))
-        dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
+        dates = [dt.datetime(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
         tbase = np.array([(i - dates[0]).days for i in dates], np.float32) / 365.25
         numIfgram = len(date12_list)
         numDate = len(dateList)

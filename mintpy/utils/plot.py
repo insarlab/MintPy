@@ -15,21 +15,27 @@ import h5py
 import numpy as np
 
 import matplotlib as mpl
-from matplotlib import (dates as mdates,
-                        lines as mlines,
-                        pyplot as plt,
-                        ticker,
-                        transforms)
+from matplotlib import (
+    dates as mdates,
+    lines as mlines,
+    pyplot as plt,
+    ticker,
+    transforms,
+)
 from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import Basemap, pyproj
 
 from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
 from mintpy.objects.colors import *
-from mintpy.utils import (ptime,
-                          readfile,
-                          network as pnet,
-                          utils as ut)
+from mintpy.objects.coord import coordinate
+from mintpy.utils import (
+    ptime,
+    readfile,
+    network as pnet,
+    utils0 as ut0,
+    utils1 as ut1,
+)
 
 
 min_figsize_single = 6.0       # default min size in inch, for single plot
@@ -57,7 +63,7 @@ class BasemapExt(Basemap):
 
         # length in meter
         scene_width = gc.inv(self.lonmin, self.latmin, self.lonmax, self.latmin)[2]
-        distance = ut.round_to_1(scene_width * loc[0])
+        distance = ut0.round_to_1(scene_width * loc[0])
         lon_c = self.lonmin + loc[1] * (self.lonmax - self.lonmin)
         lat_c = self.latmin + loc[2] * (self.latmax - self.latmin)
 
@@ -151,7 +157,7 @@ class BasemapExt(Basemap):
 
         if not lalo_step:
             # Initial tick step
-            lalo_step = ut.round_to_1(max_lalo_dist/lalo_max_num)
+            lalo_step = ut0.round_to_1(max_lalo_dist/lalo_max_num)
 
             # Final tick step - choose from candidate list
             digit = np.int(np.floor(np.log10(lalo_step)))
@@ -761,7 +767,7 @@ def plot_coherence_history(ax, date12List, cohList, plot_dict={}):
     dateList = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
 
     dates, datevector = ptime.date_list2vector(dateList)
-    bar_width = ut.most_common(np.diff(dates).tolist())*3/4
+    bar_width = ut0.most_common(np.diff(dates).tolist())*3/4
     x_list = [i-bar_width/2 for i in dates]
 
     coh_mat = pnet.coherence_matrix(date12List, cohList)
@@ -1176,7 +1182,7 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
         dsName = None
 
     # get dem_pix_box
-    coord = ut.coordinate(dem_metadata)
+    coord = coordinate(dem_metadata)
     if pix_box is None:
         pix_box = (0, 0, int(dem_metadata['WIDTH']), int(dem_metadata['LENGTH']))
 
@@ -1359,7 +1365,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             prog_bar = ptime.progressBar(maxValue=num_site)
 
         # get insar_obj (meta / geom_file)
-        geom_file = ut.get_geometry_file(['incidenceAngle','azimuthAngle'],
+        geom_file = ut1.get_geometry_file(['incidenceAngle','azimuthAngle'],
                                          work_dir=os.path.dirname(inps.file),
                                          coord='geo')
         if geom_file:

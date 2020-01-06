@@ -5,8 +5,8 @@
 # Author: Zhang Yunjun, 2017                               #
 ############################################################
 # Recommended usage:
-#   from mintpy.simulation import variance as pvar
-#
+#   from mintpy.simulation import variance as var
+
 
 import numpy as np
 import pyproj
@@ -48,12 +48,13 @@ def get_distance(lat, lon, i):
     dist = g.inv(lon1, lat1, lon, lat)[2]
     return dist
 
+
 def structure_function(data, lat, lon, step=5e3, min_pair_num=100e3, print_msg=True):    
     num_sample = len(data)
     distance = np.zeros((num_sample**2))
     variance = np.zeros((num_sample**2))
     if print_msg:
-        prog_bar = ptime.progress_bar(maxValue=num_sample)
+        prog_bar = ptime.progressBar(maxValue=num_sample)
     for i in range(num_sample):
         distance[i*num_sample:(i+1)*num_sample] = get_distance(lat, lon, i)
         variance[i*num_sample:(i+1)*num_sample] = np.square(data - data[i])
@@ -62,10 +63,12 @@ def structure_function(data, lat, lon, step=5e3, min_pair_num=100e3, print_msg=T
     if print_msg:
         prog_bar.close()
 
-    bin_dist, bin_struct_func, bin_struct_func_std = bin_variance(distance, variance,
-                                                                  step=step,
-                                                                  min_pair_num=min_pair_num,
-                                                                  print_msg=print_msg)
+    (bin_dist,
+     bin_struct_func,
+     bin_struct_func_std) = bin_variance(distance, variance,
+                                         step=step,
+                                         min_pair_num=min_pair_num,
+                                         print_msg=print_msg)
     return bin_dist, bin_struct_func, bin_struct_func_std
 
 
@@ -77,7 +80,7 @@ def bin_variance(distance, variance, step=5e3, min_pair_num=100e3, print_msg=Tru
     p_num = np.zeros(x_steps.shape)
     
     if print_msg:
-        prog_bar = ptime.progress_bar(maxValue=num_step)
+        prog_bar = ptime.progressBar(maxValue=num_step)
     for i in range(num_step):
         x = x_steps[i]
         idx = (distance > max(0, x-step/2.)) * (distance < x+step/2.)

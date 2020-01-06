@@ -21,13 +21,9 @@ except KeyError:
     print('Using default MintPy Path: %s' % (mintpy_path))
     os.environ['MINTPY_HOME'] = mintpy_path
 
-
-module_dependency_graph = """
-# level N depends on level N-1, N-2, ..., 0
+module_dependency_graph = """# level N depends on level N-1, N-2, ..., 0
 /mintpy
 ------------------ level 0 --------------------
-    /simulation
-        fractal
     /objects
         colors
         giant
@@ -43,33 +39,40 @@ module_dependency_graph = """
         utils0
 
 ------------------ level 1 --------------------
-    /simulation
-        decorrelation (utils/ptime)
-        variance      (utils/ptime)
-        defo_model    (utils/utils0)
     /objects
         conncomp      (objects/ramp)
-    /utils
+    /simulation
+        decorrelation (utils/ptime)
+        defo_model    (utils/utils0)
+        fractal       (utils/{ptime, utils0}, objects/stack)
         variance      (utils/ptime)
-        readfile      (objects/*)
-        writefile     (objects/*, utils/readfile)
-        network       (objects/*, utils/readfile)
-        utils1        (objects/*, utils/writefile)
+    /utils
+        readfile      (objects/{stack, giant})
 
 ------------------ level 2 --------------------
     /objects
-        resample      (utils/readfile)
-        coord         (utils/utils1)
+        resample      (utils/{readfile, utils0, ptime})
+        coord         (utils/{readfile, utils0, utils1})
     /utils
-        utils         (objects/*, utils/coord)
-        gps           (objects/*, utils/utils)
-        plot          (objects/*, utils/utils)
-        stackDict     (objects/*, utils/utils)
+        writefile     (objects/{stack},         utils/{readfile})
+        network       (objects/{stack, sensor}, utils/{readfile})
 
 ------------------ level 3 --------------------
     /objects
-        insar_vs_gps  (objects/*, utils/{gps, plot}, simulation/*)
+        gps           (objects/{stack, coord}, utils/{ptime, utils0, readfile})
+        stackDict     (objects/{stack},        utils/{ptime, utils0, readfile})
     /simulation
-        simulation    (objects/*, utils/*, simulation/*, ./ifgram_inversion)
+        simulation    (objects/{stack},        utils/{ptime, network}, simulation/{fractal, decorrelation, defo_model})
+    /utils
+        utils1        (objects/{stack, ramp},  utils/{ptime, utils0, readfile, writefile})
+
+------------------ level 4 --------------------
+    /utils
+        plot          (objects/{stack, coord, colors}, utils/{ptime, utils0, utils1, readfile, network})
+        utils         (objects/{stack, coord},         utils/{ptime, utils0, utils1, readfile})
+
+------------------ level 5 --------------------
+    /objects
+        insar_vs_gps  (objects/{stack, giant}, utils/{readfile, gps, plot, utils})
 
 """
