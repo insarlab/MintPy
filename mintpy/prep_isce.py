@@ -14,6 +14,17 @@ import numpy as np
 from mintpy.utils import ptime, readfile, writefile, utils as ut
 
 
+# Sentinel-1 TOPS spatial resolution and pixel spacing
+# Table 7-5 in https://sentinel.esa.int/documents/247904/1877131/Sentinel-1-Product-Definition
+# Typical value:
+# azfact = azResolution / azPixelSize = 1.46
+# rgfact = rgResolution / rgPixelSize = 1.33
+TOPS_RESOLUTION = {
+    'IW1':{'rangeResolution': 2.7, 'azimuthResolution': 22.5, 'rangePixelSize': 2.3, 'azimuthPixelSize': 14.1},
+    'IW2':{'rangeResolution': 3.1, 'azimuthResolution': 22.7, 'rangePixelSize': 2.3, 'azimuthPixelSize': 14.1},
+    'IW3':{'rangeResolution': 3.5, 'azimuthResolution': 22.6, 'rangePixelSize': 2.3, 'azimuthPixelSize': 14.1},
+}
+
 EXAMPLE = """example:
   prep_isce.py -i ./merged/interferograms -m ./master/IW1.xml -b ./baselines -g ./merged/geom_master  #for topsStack
   prep_isce.py -i ./Igrams -m ./masterShelve/data.dat -b ./baselines -g ./geom_master                 #for stripmapStack
@@ -95,14 +106,17 @@ def extract_tops_metadata(xml_file):
     orbit = burst.orbit
     peg = orbit.interpolateOrbit(burst.sensingMid, method='hermite')
 
+    # Sentinel-1 TOPS pixel spacing
     Vs = np.linalg.norm(peg.getVelocity())   #satellite speed
     metadata['azimuthPixelSize'] = Vs*burst.azimuthTimeInterval
     metadata['rangePixelSize'] = burst.rangePixelSize
 
-    #grab from isce/topsStack.unwrap.py
-    # not sure if this is accurate or not
-    metadata['azimuthResolution'] = metadata['azimuthPixelSize'] * 0.8
-    metadata['rangeResolution'] = metadata['rangePixelSize'] * 0.8
+    # Sentinel-1 TOPS spatial resolution
+    iw_str = 'IW2'
+    if os.path.basename(xml_file).startswith('IW'):
+        iw_str = os.path.splitext(os.path.basename(xml_file))[0]
+    metadata['azimuthResolution'] = TOPS_RESOLUTION[iw_str]['azimuthResolution']
+    metadata['rangeResolution'] = TOPS_RESOLUTION[iw_str]['rangeResolution']
 
     refElp = Planet(pname='Earth').ellipsoid
     llh = refElp.xyz_to_llh(peg.getPosition())
