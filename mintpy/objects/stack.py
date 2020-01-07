@@ -12,7 +12,7 @@ import os
 import sys
 import re
 import time
-import datetime as dt
+from datetime import datetime as dt
 import h5py
 import numpy as np
 
