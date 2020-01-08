@@ -2,11 +2,17 @@
 
 MintPy support all colormaps from [Matplotlib](https://matplotlib.org/3.1.0/tutorials/colors/colormaps.html) and custom colormap files in **.cpt** (color palette tables) format. To add your own colormap, drop the corresponding .cpt file in `$MINTPY/docs/resources/colormaps`.
 
-To use vik colormap in view.py for example:
+To use `vik` colormap in view.py for example:
 
 ```bash
 view.py velocity.h5 -c vik
 ```
+
+The default colormap for phase/displacement data is `cmy`:
+
+<p align="left">
+  <img width="280" src="https://yunjunzhang.files.wordpress.com/2020/01/cmap_cmy.png">
+</p>
 
 ### Colormaps from [GMT](http://www.soest.hawaii.edu/gmt/) ###
 
