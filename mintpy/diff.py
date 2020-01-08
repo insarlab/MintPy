@@ -63,8 +63,8 @@ def _check_reference(atr1, atr2):
         ref_x = None
     else:
         print('consider different reference pixel')
-    ref_y = int(ref_y)
-    ref_x = int(ref_x)
+        ref_y = int(ref_y)
+        ref_x = int(ref_x)
     return ref_date, ref_y, ref_x
 
 
