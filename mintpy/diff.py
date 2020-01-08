@@ -48,19 +48,23 @@ def cmd_line_parse(iargs=None):
 
 #####################################################################################
 def _check_reference(atr1, atr2):
+    # reference date
     if atr1['REF_DATE'] == atr2['REF_DATE']:
         ref_date = None
     else:
         ref_date = atr1['REF_DATE']
         print('consider different reference date')
 
-    ref_y = int(atr1['REF_Y'])
-    ref_x = int(atr1['REF_X'])
-    if ref_y == int(atr2['REF_Y']) and ref_x == int(atr2['REF_X']):
+    # reference point
+    ref_y = atr1['REF_Y']
+    ref_x = atr1['REF_X']
+    if ref_x == atr2.get('REF_X', None) or ref_y == atr2.get('REF_Y', None):
         ref_y = None
         ref_x = None
     else:
         print('consider different reference pixel')
+    ref_y = int(ref_y)
+    ref_x = int(ref_x)
     return ref_date, ref_y, ref_x
 
 
