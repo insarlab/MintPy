@@ -382,11 +382,14 @@ def update_data_with_plot_inps(data, metadata, inps):
 ##################################################################################################
 def plot_slice(ax, data, metadata, inps=None):
     """Plot one slice of matrix 
-    Parameters: ax : matplot.pyplot axes object
+    Parameters: ax   : matplot.pyplot axes object
                 data : 2D np.array, 
                 metadata : dictionary, attributes of data
                 inps : Namespace, optional, input options for display
-    Returns:    ax  : matplot.pyplot axes object
+    Returns:    ax   : matplot.pyplot axes object
+                inps : Namespace for input options
+                im   : matplotlib.image.AxesImage object
+                cbar : matplotlib.colorbar.Colorbar object
     Example:    import matplotlib.pyplot as plt
                 import mintpy.utils.readfile as readfile
                 import mintpy.view as pv
@@ -889,6 +892,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
     # fast reading for single dataset type
     if (len(inps.dsetFamilyList) == 1
             and inps.key in ['timeseries', 'giantTimeseries', 'ifgramStack', 'HDFEOS', 'geometry']):
+        vprint('reading data as a 3D matrix ...')
         dset_list = [inps.dset[i] for i in range(i_start, i_end)]
         data[:] = readfile.read(inps.file, datasetName=dset_list, box=inps.pix_box)[0]
 
@@ -904,7 +908,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
 
     # slow reading with one 2D matrix at a time
     else:
-        vprint('reading data ...')
+        vprint('reading data as a list of 2D matrices ...')
         prog_bar = ptime.progressBar(maxValue=i_end-i_start, print_msg=inps.print_msg)
         for i in range(i_start, i_end):
             d = readfile.read(inps.file,

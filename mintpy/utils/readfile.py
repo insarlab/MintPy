@@ -807,7 +807,7 @@ def read_template(fname, delimiter='=', print_msg=True):
         line = line.strip()
         # split on the 1st occurrence of delimiter
         c = [i.strip() for i in line.split(delimiter, 1)]
-        if len(c) < 2 or line.startswith(('%', '#')):
+        if len(c) < 2 or line.startswith(('%', '#', '!')):
             if line.startswith(">"):
                 plotAttributeDict = {}
                 insidePlotObject = True

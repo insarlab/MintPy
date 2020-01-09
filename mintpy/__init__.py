@@ -37,6 +37,8 @@ module_dependency_graph = """# level N depends on level N-1, N-2, ..., 0
             lstl1
         ptime
         utils0
+    /simulation
+        fractal
 
 ------------------ level 1 --------------------
     /objects
@@ -44,7 +46,6 @@ module_dependency_graph = """# level N depends on level N-1, N-2, ..., 0
     /simulation
         decorrelation (utils/ptime)
         defo_model    (utils/utils0)
-        fractal       (utils/{ptime, utils0}, objects/stack)
         variance      (utils/ptime)
     /utils
         readfile      (objects/{stack, giant})
