@@ -3,7 +3,7 @@
 # remove environment : conda env remove -n mintpy
 # enter  environment : conda activate mintpy
 # exit   environment : conda deactivate
-name: mintpy
+name: MintPy
 channels:
   - conda-forge
   - defaults
@@ -28,6 +28,8 @@ dependencies:
   - pyresample
   - scikit-image
   - scipy
+  - geos
+  - basemap
   - pip:
     - git+https://github.com/tylere/pykml.git
-    - https://github.com/matplotlib/basemap/archive/v1.2.1rel.tar.gz
+
