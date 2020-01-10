@@ -9,6 +9,7 @@ channels:
   - defaults
 dependencies:
   - python>=3.6
+  - basemap
   - cdsapi
   - cvxopt
   - dask>=1.0,<2.0
@@ -30,4 +31,4 @@ dependencies:
   - scipy
   - pip:
     - git+https://github.com/tylere/pykml.git
-    - https://github.com/matplotlib/basemap/archive/v1.2.1rel.tar.gz
+
