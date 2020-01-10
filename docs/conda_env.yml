@@ -3,7 +3,7 @@
 # remove environment : conda env remove -n mintpy
 # enter  environment : conda activate mintpy
 # exit   environment : conda deactivate
-name: MintPy
+name: mintpy
 channels:
   - conda-forge
   - defaults
