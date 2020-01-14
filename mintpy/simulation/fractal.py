@@ -115,16 +115,17 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(60., 
     C0 = p0
     for i in range(2):
         Hnew = p0 * np.divide(H, fraction)
-        # create spectral surface by ifft
-        fsurf = np.abs(np.fft.ifft2(Hnew))
 
-        # remove mean to get zero-mean data
-        fsurf -= np.mean(fsurf)
-        fsurf = np.array(fsurf, dtype=np.float32)
+        # create spectral surface by ifft
+        fsurf = np.absolute(np.fft.ifft2(Hnew), dtype=np.float32)
 
         # update p0 value based on the 1st simulation
-        C1 = check_power_spectrum_1d(fsurf, resolution=resolution, display=False)[0]
-        p0 *= (C0/C1)
+        if i == 0:
+            C1 = check_power_spectrum_1d(fsurf, resolution=resolution, display=False)[0]
+            p0 *= (C0/C1)
+
+    # remove mean to get zero-mean data
+    fsurf -= np.mean(fsurf)
 
     if display:
         plt.figure()

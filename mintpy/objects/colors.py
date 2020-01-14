@@ -49,21 +49,22 @@ class ColormapExt(ScalarMappable):
 
     Example:
         from mintpy.objects.colors import ColormapExt
-        cmap = ColormapExt('jet').colormap()          #from matplotlib
-        cmap = ColormapExt('RdBu').colormap()         #from matplotlib
-        cmap = ColormapExt('haxby').colormap()        #from GMT
-        cmap = ColormapExt('vik').colormap()          #from Scientific Color-Maps
-        cmap = ColormapExt('temperatur').colormap()   #from cpt-city
+        cmap = ColormapExt('cmy').colormap          #for cyclic phase
+        cmap = ColormapExt('jet').colormap          #from matplotlib
+        cmap = ColormapExt('RdBu').colormap         #from matplotlib
+        cmap = ColormapExt('haxby').colormap        #from GMT
+        cmap = ColormapExt('vik').colormap          #from Scientific Color-Maps
+        cmap = ColormapExt('temperature').colormap  #from cpt-city
 
         ## derivative names
         # reverse  colormap by adding suffix "_r"
-        cmap = ColormapExt('RdBu_r').colormap()
+        cmap = ColormapExt('RdBu_r').colormap
 
         # truncate colormap by adding suffix "_truncate"
-        cmap = ColormapExt('RdBu_truncate', vlist=[0.2, 0.4, 1.0]).colormap()
+        cmap = ColormapExt('RdBu_truncate', vlist=[0.2, 0.4, 1.0]).colormap
 
         # repeat   colormap by adding suffix "_{}".format(int)
-        cmap = ColormapExt('jet_5').colormap()
+        cmap = ColormapExt('jet_5').colormap
 
         ## combined derivative names has to follow the order: _r, _truncate and _{int}:
         i.e. 'RdBu_r_truncate'
@@ -121,7 +122,7 @@ class ColormapExt(ScalarMappable):
         """
         self.cpt_cmap_name_list = self.get_cpt_colormap(cmap_name=None)
         self.plt_cmap_name_list = sorted(m for m in plt.colormaps() if not m.endswith('_r'))
-        self.cmap_name_list = self.cpt_cmap_name_list + self.plt_cmap_name_list + ['dismph']
+        self.cmap_name_list = self.cpt_cmap_name_list + self.plt_cmap_name_list + ['dismph','cmy']
         return self.cmap_name_list
 
 
@@ -202,10 +203,38 @@ class ColormapExt(ScalarMappable):
                      '#9aabf6', '#a1a5f6', '#a79ef6', '#ad98f6', '#b392f6', '#b98cf6',
                      '#bf86f6', '#c67ff6', '#cc79f6', '#d273f6', '#d86df6', '#de67f6',
                      '#e561f6', '#e967ec', '#ed6de2', '#f173d7']
-            colormap = LinearSegmentedColormap.from_list('dismph', clist)
+            colormap = LinearSegmentedColormap.from_list('dismph', clist, N=cmap_lut)
             #colormap = self.cmap_map(lambda x: x/2 + 0.5, colormap)  # brighten colormap
             #colormap = self.cmap_map(lambda x: x*0.75, colormap)     # darken colormap
             colormap.set_bad('w', 0.0)
+
+        elif cmap_name == 'cmy':
+            # Default cyclic colormap from isce/mdx, provided by Piyush Agram, Jan 2020
+            # generate the color list
+            rgbs = np.zeros((256,3), dtype=np.uint8)
+
+            for kk in range(85):
+                rgbs[kk,0] = kk*3
+                rgbs[kk,1] = 255-kk*3
+                rgbs[kk,2] = 255
+
+            rgbs[85:170,0] = rgbs[0:85,2]
+            rgbs[85:170,1] = rgbs[0:85,0]
+            rgbs[85:170,2] = rgbs[0:85,1]
+
+            rgbs[170:255,0] = rgbs[0:85,1]
+            rgbs[170:255,1] = rgbs[0:85,2]
+            rgbs[170:255,2] = rgbs[0:85,0]
+
+            rgbs[255,0] = 0
+            rgbs[255,1] = 255
+            rgbs[255,2] = 255
+            
+            rgbs = np.roll(rgbs, int(256/2-214), axis=0)  #shift green to the center
+            rgbs = np.flipud(rgbs)   #flip up-down so that orange is in the later half (positive)
+
+            # color list --> colormap object
+            colormap = LinearSegmentedColormap.from_list('cmy', rgbs/255., N=cmap_lut)
 
         elif cmap_name in self.cpt_cmap_name_list:
             colormap = self.get_cpt_colormap(cmap_name, cmap_lut=cmap_lut)

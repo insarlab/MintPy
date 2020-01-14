@@ -96,6 +96,7 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
                    'ramp'               :'m',
                    'displacement'       :'m',
 
+                   'temporalCoherence'  :'1',
                    'velocity'           :'m/year',
                    'acceleration'       :'m/year^2',
                    'mask'               :'1',
@@ -118,6 +119,7 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
                    'hgt'               :'m',
                    'hgt_sim'           :'m',
                    'magnitude'         :'1',
+                   'intensity'         :'1',
                    }
 
 

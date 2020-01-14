@@ -1,11 +1,28 @@
 ## Custom colormaps
 
-MintPy support all colormaps from [Matplotlib](https://matplotlib.org/3.1.0/tutorials/colors/colormaps.html) and custom colormap files in **.cpt** (color palette tables) format. To add your own colormap, drop the corresponding .cpt file in `$MINTPY/docs/resources/colormaps`.
+MintPy support the following colormaps:
 
-To use vik colormap in view.py for example:
++ [Matplotlib colormaps](https://matplotlib.org/3.1.0/tutorials/colors/colormaps.html)
++ Custom colormaps: `cmy` and `dismph`
++ Custom colormaps in **.cpt** (color palette tables) format. To add your own colormap, drop the corresponding .cpt file in `$MINTPY/docs/resources/colormaps`.
+
+We recommend to use cyclic colormap `cmy` for wrapped phase/displacement measurement.
+
+<p align="left">
+  <img width="280" src="https://yunjunzhang.files.wordpress.com/2020/01/cmap_cmy-1.png">
+</p>
+
+To use colormap `cmy` in view.py:
 
 ```bash
-view.py velocity.h5 -c vik
+view.py velocity.h5 -c cmy
+```
+
+To use colormap `cmy` in python:
+
+```python
+from mintpy.colors import ColormapExt
+cmap = ColormapExt('cmy').colromap
 ```
 
 ### Colormaps from [GMT](http://www.soest.hawaii.edu/gmt/) ###

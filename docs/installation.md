@@ -83,9 +83,7 @@ $PYTHON3DIR/bin/conda config --add channels conda-forge
 $PYTHON3DIR/bin/conda install --yes --file $MINTPY_HOME/docs/conda.txt
 
 # install dependencies not compatiable from conda: basemap, pykml
-# run "conda uninstall basemap" if basemap was installed with conda
 $PYTHON3DIR/bin/pip install git+https://github.com/tylere/pykml.git
-$PYTHON3DIR/bin/pip install https://github.com/matplotlib/basemap/archive/v1.2.1rel.tar.gz
 ```
 
 Or run the following in your terminal to install the dependencies to a new environment _mintpy_:
