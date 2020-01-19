@@ -32,6 +32,7 @@ from mintpy.utils import ptime, readfile, utils as ut, plot as pp
 from mintpy.multilook import multilook_data
 from mintpy import subset, version
 
+import cartopy.crs as ccrs
 
 ##################################################################################################
 EXAMPLE = """example:
@@ -474,10 +475,12 @@ def plot_slice(ax, data, metadata, inps=None):
             # Scale Bar
             if inps.disp_scalebar:
                 vprint('plot scale bar')
-                m.draw_scale_bar(loc=inps.scalebar, ax=ax,
-                                 labelpad=inps.scalebar_pad,
-                                 font_size=inps.font_size,
-                                 color=inps.font_color)
+                vprint(inps.scalebar)
+                pp.CartopyScalebar().draw(ax=ax, location=inps.scalebar[1:], length=inps.scalebar[0])
+                # m.draw_scale_bar(loc=inps.scalebar, ax=ax,
+                #                  labelpad=inps.scalebar_pad,
+                #                  font_size=inps.font_size,
+                #                  color=inps.font_color)
 
             # Lat Lon labels
             if inps.lalo_label:
@@ -649,7 +652,7 @@ def plot_slice(ax, data, metadata, inps=None):
     cbar = None
     if inps.disp_cbar:
         divider = make_axes_locatable(ax)
-        cax = divider.append_axes(inps.cbar_loc, inps.cbar_size, pad=inps.cbar_size)
+        cax = divider.append_axes(inps.cbar_loc, inps.cbar_size, pad=inps.cbar_size, axes_class=plt.Axes)
         inps, cbar = pp.plot_colorbar(inps, im, cax)
 
     # 3.2 Title
@@ -1364,7 +1367,8 @@ class viewer():
             data, self = update_data_with_plot_inps(data, self.atr, self)
 
             # prepare figure
-            fig, ax = plt.subplots(figsize=self.fig_size, num='Figure')
+            fig, ax = plt.subplots(figsize=self.fig_size, num='Figure', subplot_kw=dict(projection=ccrs.PlateCarree()))
+            #ax = plt.axes(map_projection=ccrs.PlateCarree())
             if not self.disp_whitespace:
                 fig.subplots_adjust(left=0,right=1,bottom=0,top=1)
 
