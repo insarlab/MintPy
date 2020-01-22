@@ -425,26 +425,27 @@ def plot_slice(ax, data, metadata, inps=None):
             vprint('plot in Lat/Lon coordinate')
             vprint('map projection: '+inps.map_projection)
             vprint('boundary database resolution: '+inps.resolution)
-            if inps.map_projection in ['cyl', 'merc', 'mill', 'cea', 'gall']:
-                m = pp.BasemapExt(llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],
-                                  urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],
-                                  projection=inps.map_projection,
-                                  resolution=inps.resolution, area_thresh=1.,
-                                  suppress_ticks=False, ax=ax)
-            elif inps.map_projection in ['ortho']:
-                m = pp.BasemapExt(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,
-                                  lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,
-                                  projection=inps.map_projection,
-                                  resolution=inps.resolution, area_thresh=1.,
-                                  suppress_ticks=False, ax=ax)
-            else:
-                m = pp.BasemapExt(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,
-                                  lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,
-                                  llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],
-                                  urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],
-                                  projection=inps.map_projection,
-                                  resolution=inps.resolution, area_thresh=1.,
-                                  suppress_ticks=False, ax=ax)
+            m=ax
+            # if inps.map_projection in ['cyl', 'merc', 'mill', 'cea', 'gall']:
+            #     m = pp.BasemapExt(llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],
+            #                       urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],
+            #                       projection=inps.map_projection,
+            #                       resolution=inps.resolution, area_thresh=1.,
+            #                       suppress_ticks=False, ax=ax)
+            # elif inps.map_projection in ['ortho']:
+            #     m = pp.BasemapExt(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,
+            #                       lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,
+            #                       projection=inps.map_projection,
+            #                       resolution=inps.resolution, area_thresh=1.,
+            #                       suppress_ticks=False, ax=ax)
+            # else:
+            #     m = pp.BasemapExt(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,
+            #                       lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,
+            #                       llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],
+            #                       urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],
+            #                       projection=inps.map_projection,
+            #                       resolution=inps.resolution, area_thresh=1.,
+            #                       suppress_ticks=False, ax=ax)
 
             # Draw coastline
             if inps.coastline:
@@ -454,7 +455,7 @@ def plot_slice(ax, data, metadata, inps=None):
             # Plot DEM
             if inps.dem_file:
                 vprint('plotting DEM background ...')
-                m = pp.plot_dem_background(ax=m, geo_box=inps.geo_box,
+                m = pp.plot_dem_background(ax=ax, geo_box=inps.geo_box,
                                            dem=dem, inps=inps,
                                            print_msg=inps.print_msg)
 
@@ -470,7 +471,8 @@ def plot_slice(ax, data, metadata, inps=None):
                 vprint(('referencing InSAR data to the pixel nearest to '
                         'GPS station: {} at {}').format(inps.ref_gps_site, ref_site_lalo))
 
-            im = m.imshow(data, cmap=inps.colormap, origin='upper',
+            img_extent = (inps.geo_box[0], inps.geo_box[2], inps.geo_box[3], inps.geo_box[1])
+            im = m.imshow(data, cmap=inps.colormap, origin='upper', extent=img_extent,
                           vmin=inps.vlim[0], vmax=inps.vlim[1],
                           alpha=inps.transparency, interpolation='nearest',
                           animated=inps.animation, zorder=1)
