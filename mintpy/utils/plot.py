@@ -25,9 +25,11 @@ from matplotlib import (
 from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import Basemap, pyproj
+import matplotlib.ticker as mticker
 
 import cartopy.crs as ccrs
 import cartopy.geodesic as cgeo
+from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 
 from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
 from mintpy.objects.colors import *
@@ -1962,3 +1964,82 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
         if print_msg:
             print('read {} contained cmask dataset'.format(os.path.basename(fname)))
     return msk, mask_file
+
+
+def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[1, 2, 3, 4, 5],
+                       print_msg=True):
+    """Auto calculate lat/lon label sequence based on input geo_box
+    Parameters: geo_box        : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
+                lalo_step      : float
+                lalo_max_num   : int, rough major tick number along the longer axis
+                step_candidate : list of int, candidate list for the significant number of step
+    Returns:    lats/lons : np.array of float, sequence of lat/lon auto calculated from input geo_box
+                lalo_step : float, lat/lon label step
+    Example:    geo_box = (128.0, 37.0, 138.0, 30.0)
+                lats, lons, step = m.auto_lalo_sequence(geo_box)
+    """
+    max_lalo_dist = max([geo_box[1]-geo_box[3], geo_box[2]-geo_box[0]])
+
+    if not lalo_step:
+        # Initial tick step
+        lalo_step = ut0.round_to_1(max_lalo_dist/lalo_max_num)
+
+        # Final tick step - choose from candidate list
+        digit = np.int(np.floor(np.log10(lalo_step)))
+        lalo_step_candidate = [i*10**digit for i in step_candidate]
+        distance = [(i - max_lalo_dist/lalo_max_num) ** 2
+                    for i in lalo_step_candidate]
+        lalo_step = lalo_step_candidate[distance.index(min(distance))]
+        lalo_step = [lalo_step, lalo_step]
+    if print_msg:
+        print('label step in degree: {}'.format(lalo_step))
+
+    # Auto tick sequence
+    if isinstance(lalo_step, float):
+        lalo_step = [lalo_step, lalo_step]
+
+    digit = np.int(np.floor(np.log10(lalo_step[0])))
+    lat_major = np.ceil(geo_box[3]/10**(digit+1))*10**(digit+1)
+    lats = np.unique(np.hstack((np.arange(lat_major, lat_major-10.*max_lalo_dist, -lalo_step[0]),
+                                np.arange(lat_major, lat_major+10.*max_lalo_dist, lalo_step[0]))))
+    lats = np.sort(lats[np.where(np.logical_and(lats >= geo_box[3], lats <= geo_box[1]))])
+
+    lon_major = np.ceil(geo_box[0]/10**(digit+1))*10**(digit+1)
+    lons = np.unique(np.hstack((np.arange(lon_major, lon_major-10.*max_lalo_dist, -lalo_step[1]),
+                                np.arange(lon_major, lon_major+10.*max_lalo_dist, lalo_step[1]))))
+    lons = np.sort(lons[np.where(np.logical_and(lons >= geo_box[0], lons <= geo_box[2]))])
+
+    # Need to artificially add the geo_box boundaries in order to get cartopy to draw gridlines
+    # all the way to the map edge. Can be removed if drawing of grid lines is not needed
+    lons = np.insert(lons, [0, -1], [geo_box[0], geo_box[2]])
+    lats = np.insert(lats, [0, -1], [geo_box[3], geo_box[1]])
+
+    return lats, lons, lalo_step
+
+
+def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max_num=4,
+                        font_size=12, color='k', xoffset=None, yoffset=None, yrotate='horizontal', print_msg=True):
+
+    lats, lons, step = auto_lalo_sequence(geo_box, lalo_step=lalo_step, lalo_max_num=lalo_max_num)
+
+    label_styles = {'color': color, 'size': font_size}
+    x_label_styles = label_styles.copy()
+    y_label_styles = label_styles.copy()
+    y_label_styles.update({'rotation': yrotate})
+
+    gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True, linewidth=0.05, color='black', alpha=1, linestyle='-')
+
+    gl.xlocator = mticker.FixedLocator(lons)
+    gl.ylocator = mticker.FixedLocator(lats)
+    gl.xlabels_top = False
+    gl.ylabels_right = False
+
+    gl.xformatter = LONGITUDE_FORMATTER
+    gl.yformatter = LATITUDE_FORMATTER
+    gl.xlabel_style = x_label_styles
+    gl.ylabel_style = y_label_styles
+
+    if xoffset:
+        gl.xpadding = xoffset
+    if yoffset:
+        gl.ypadding = yoffset

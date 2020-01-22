@@ -469,6 +469,7 @@ def plot_slice(ax, data, metadata, inps=None):
                 data -= data[y, x]
                 vprint(('referencing InSAR data to the pixel nearest to '
                         'GPS station: {} at {}').format(inps.ref_gps_site, ref_site_lalo))
+
             im = m.imshow(data, cmap=inps.colormap, origin='upper',
                           vmin=inps.vlim[0], vmax=inps.vlim[1],
                           alpha=inps.transparency, interpolation='nearest',
@@ -486,14 +487,16 @@ def plot_slice(ax, data, metadata, inps=None):
             # Lat Lon labels
             if inps.lalo_label:
                 vprint('plot lat/lon labels')
-                m.draw_lalo_label(inps.geo_box, ax=ax,
-                                  lalo_step=inps.lalo_step,
-                                  lalo_loc=inps.lalo_loc,
-                                  lalo_max_num=inps.lalo_max_num,
-                                  font_size=inps.font_size,
-                                  color=inps.font_color,
-                                  yrotate=inps.lat_label_direction,
-                                  print_msg=inps.print_msg)
+
+                pp.draw_lalo_label(inps.geo_box, ax,
+                                   lalo_step=inps.lalo_step,
+                                   lalo_loc=inps.lalo_loc,
+                                   lalo_max_num=inps.lalo_max_num,
+                                   font_size=inps.font_size,
+                                   color=inps.font_color,
+                                   yrotate=inps.lat_label_direction,
+                                   print_msg=inps.print_msg)
+
             else:
                 ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
 
@@ -649,6 +652,7 @@ def plot_slice(ax, data, metadata, inps=None):
 
 
     #---------------------- Figure Setting ----------------------------------------#
+
     # 3.1 Colorbar
     cbar = None
     if inps.disp_cbar:
