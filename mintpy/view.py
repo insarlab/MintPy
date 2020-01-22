@@ -34,6 +34,8 @@ from mintpy import subset, version
 
 import cartopy.crs as ccrs
 
+
+
 ##################################################################################################
 EXAMPLE = """example:
   view.py velocity.h5
@@ -476,11 +478,10 @@ def plot_slice(ax, data, metadata, inps=None):
             if inps.disp_scalebar:
                 vprint('plot scale bar')
                 vprint(inps.scalebar)
-                pp.CartopyScalebar().draw(ax=ax, location=inps.scalebar[1:], length=inps.scalebar[0])
-                # m.draw_scale_bar(loc=inps.scalebar, ax=ax,
-                #                  labelpad=inps.scalebar_pad,
-                #                  font_size=inps.font_size,
-                #                  color=inps.font_color)
+                scalebar = pp.CartopyScalebar()
+
+                # TODO: fix scalebar length to be 20% of data
+                scalebar.draw(ax=ax, location=inps.scalebar[1:], length=inps.scalebar[0])
 
             # Lat Lon labels
             if inps.lalo_label:
