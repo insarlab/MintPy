@@ -182,7 +182,7 @@ class CartopyScalebar:
 
         return self._distance_along_line(start, end, distance, dist_func, tol)
 
-    def draw(self, ax, location, length, metres_per_unit=1000, unit_name='km',
+    def draw(self, ax, location, length=0.2, metres_per_unit=1000, unit_name='km',
                   tol=0.01, angle=0, color='black', linewidth=3, text_offset=0.005,
                   ha='center', va='bottom', plot_kwargs=None, text_kwargs=None,
                   **kwargs):
@@ -223,7 +223,7 @@ class CartopyScalebar:
 
         # Convert all units and types.
         location = np.asarray(location)  # For vector addition.
-        length_metres = length * metres_per_unit
+        length_metres = round(length) * metres_per_unit
         angle_rad = angle * np.pi / 180
 
         # End-point of bar.
@@ -241,7 +241,7 @@ class CartopyScalebar:
         text_location = midpoint + offset
 
         # 'rotation' keyword argument is in text_kwargs.
-        ax.text(*text_location, f"{length} {unit_name}", rotation_mode='anchor',
+        ax.text(*text_location, f"{round(length)} {unit_name}", rotation_mode='anchor',
                 transform=ax.transAxes, **text_kwargs)
 
 ########################################### Parser utilities ##############################################
