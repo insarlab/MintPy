@@ -556,8 +556,8 @@ def add_mask_argument(parser):
 def add_map_argument(parser):
     # Map
     mapg = parser.add_argument_group('Map', 'Map settings for display')
-    mapg.add_argument('--coastline', action='store_true', help='Draw coastline.')
-
+    mapg.add_argument('--coastline', dest='coastline', type=str, default='no', choices={'10m', '50m', '110m', 'no'},
+                      help="Draw coastline with specified resolution.")
     # lalo label
     mapg.add_argument('--lalo-loc', dest='lalo_loc', type=int, nargs=4, default=[1, 0, 0, 1],
                       metavar=('left', 'right', 'top', 'bottom'),

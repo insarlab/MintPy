@@ -447,10 +447,10 @@ def plot_slice(ax, data, metadata, inps=None):
             #                       resolution=inps.resolution, area_thresh=1.,
             #                       suppress_ticks=False, ax=ax)
 
-            # Draw coastline
-            if inps.coastline:
+            # Draw coastline using cartopy resolution parameters
+            if inps.coastline != "no":
                 vprint('draw coast line')
-                m.drawcoastlines()
+                m.coastlines(resolution=inps.coastline)
 
             # Plot DEM
             if inps.dem_file:
