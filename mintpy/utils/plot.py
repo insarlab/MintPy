@@ -30,6 +30,8 @@ import matplotlib.ticker as mticker
 import cartopy.crs as ccrs
 import cartopy.geodesic as cgeo
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+import cartopy.geodesic as geodesic
+import shapely.geometry as sgeom
 
 from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
 from mintpy.objects.colors import *
@@ -2043,3 +2045,14 @@ def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lal
         gl.xpadding = xoffset
     if yoffset:
         gl.ypadding = yoffset
+
+def draw_scalebar(ax, img_extent, location=[0.1, 0.1], length=0.2):
+    scalebar = CartopyScalebar()
+
+    # Compute scalebar length as a proportion of dataset width (km)
+    geoid = geodesic.Geodesic()
+    shape = sgeom.LineString([[img_extent[0], img_extent[3]], [img_extent[1], img_extent[3]]])
+    dset_width = geoid.geometry_length(np.array(shape.coords)) / 1000
+    length = length * dset_width
+
+    scalebar.draw(ax=ax, location=location, length=length)

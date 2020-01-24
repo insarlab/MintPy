@@ -33,8 +33,7 @@ from mintpy.multilook import multilook_data
 from mintpy import subset, version
 
 import cartopy.crs as ccrs
-import cartopy.geodesic as geodesic
-import shapely.geometry as sgeom
+
 
 
 ##################################################################################################
@@ -482,15 +481,8 @@ def plot_slice(ax, data, metadata, inps=None):
             if inps.disp_scalebar:
                 vprint('plot scale bar')
                 vprint(inps.scalebar)
-                scalebar = pp.CartopyScalebar()
 
-                # Compute scalebar length as a proportion of dataset width (km)
-                geoid = geodesic.Geodesic()
-                shape = sgeom.LineString([[img_extent[0], img_extent[3]], [img_extent[1], img_extent[3]]])
-                width = geoid.geometry_length(np.array(shape.coords)) / 1000
-                inps.scalebar[0] = inps.scalebar[0] * width
-
-                scalebar.draw(ax=ax, location=inps.scalebar[1:], length=inps.scalebar[0])
+                pp.draw_scalebar(ax, img_extent, location=inps.scalebar[1:], length=inps.scalebar[0])
 
             # Lat Lon labels
             if inps.lalo_label:
