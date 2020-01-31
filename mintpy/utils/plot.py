@@ -199,8 +199,10 @@ class CartopyScalebar:
         if text_kwargs is None:
             text_kwargs = {}
 
-        plot_kwargs = {'linewidth': linewidth, 'color': color, **plot_kwargs, **kwargs}
-        text_kwargs = {'ha': ha, 'va': va, 'rotation': angle, 'color': color, **text_kwargs, **kwargs}
+        plot_kwargs = {'linewidth': linewidth, 'color': color,
+                       **plot_kwargs, **kwargs}
+        text_kwargs = {'ha': ha, 'va': va, 'rotation': angle, 'color': color,
+                       **text_kwargs, **kwargs}
 
         # Convert all units and types.
         location = np.asarray(location)  # For vector addition.
