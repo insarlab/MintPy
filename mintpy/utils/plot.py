@@ -50,12 +50,12 @@ max_figsize_height = 8.0       # max figure size in vertical direction in inch
 ######################################### Cartopy Scalebar class begin ####################################
 class CartopyScalebar:
     """From: https://stackoverflow.com/a/50674451/2676166"""
+
     def _axes_to_lonlat(self, ax, coords):
         """(lon, lat) from axes coordinates."""
         display = ax.transAxes.transform(coords)
         data = ax.transData.inverted().transform(display)
         lonlat = ccrs.PlateCarree().transform_point(*data, ax.projection)
-
         return lonlat
 
 
@@ -110,11 +110,11 @@ class CartopyScalebar:
         """
         initial_distance = dist_func(start, end)
         if initial_distance < distance:
-            raise ValueError(f"End is closer to start ({initial_distance}) than "
-                             f"given distance ({distance}).")
+            raise ValueError("End is closer to start ({}) than given distance ({}).".format(
+                initial_distance, distance))
 
         if tol <= 0:
-            raise ValueError(f"Tolerance is not positive: {tol}")
+            raise ValueError("Tolerance is not positive: {}".format(tol))
 
         # Binary search for a point at the given distance.
         left = start
@@ -164,6 +164,7 @@ class CartopyScalebar:
 
         return self._distance_along_line(start, end, distance, dist_func, tol)
 
+
     def draw(self, ax, location, length=0.2, metres_per_unit=1000, unit_name='km',
                   tol=0.01, angle=0, color='black', linewidth=3, text_offset=0.005,
                   ha='center', va='bottom', plot_kwargs=None, text_kwargs=None,
@@ -198,10 +199,8 @@ class CartopyScalebar:
         if text_kwargs is None:
             text_kwargs = {}
 
-        plot_kwargs = {'linewidth': linewidth, 'color': color, **plot_kwargs,
-                       **kwargs}
-        text_kwargs = {'ha': ha, 'va': va, 'rotation': angle, 'color': color,
-                       **text_kwargs, **kwargs}
+        plot_kwargs = {'linewidth': linewidth, 'color': color, **plot_kwargs, **kwargs}
+        text_kwargs = {'ha': ha, 'va': va, 'rotation': angle, 'color': color, **text_kwargs, **kwargs}
 
         # Convert all units and types.
         location = np.asarray(location)  # For vector addition.
@@ -223,8 +222,11 @@ class CartopyScalebar:
         text_location = midpoint + offset
 
         # 'rotation' keyword argument is in text_kwargs.
-        ax.text(*text_location, f"{round(length)} {unit_name}", rotation_mode='anchor',
-                transform=ax.transAxes, **text_kwargs)
+        ax.text(*text_location, "{} {}".format(round(length), unit_name),
+                rotation_mode='anchor', transform=ax.transAxes, **text_kwargs)
+        return ax
+
+
 
 ########################################### Parser utilities ##############################################
 def cmd_line_parse(iargs=''):
