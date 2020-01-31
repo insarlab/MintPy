@@ -1903,6 +1903,8 @@ def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lal
         gl.xpadding = xoffset
     if yoffset:
         gl.ypadding = yoffset
+    return gl
+
 
 def draw_scalebar(ax, img_extent, location=[0.1, 0.1], length=0.2):
     scalebar = CartopyScalebar()
@@ -1914,3 +1916,5 @@ def draw_scalebar(ax, img_extent, location=[0.1, 0.1], length=0.2):
     length = length * dset_width
 
     scalebar.draw(ax=ax, location=location, length=length)
+    return scalebar
+
