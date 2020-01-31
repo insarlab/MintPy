@@ -24,13 +24,9 @@ from matplotlib import (
 )
 from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import matplotlib.ticker as mticker
 
-import cartopy.mpl.geoaxes as geoaxes
-import cartopy.crs as ccrs
-import cartopy.geodesic as cgeo
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
-import cartopy.geodesic as geodesic
+from cartopy import crs as ccrs, geodesic as cgeo
+from cartopy.mpl import geoaxes, gridliner
 import shapely.geometry as sgeom
 
 from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
@@ -153,7 +149,7 @@ class CartopyScalebar:
         # Direction vector of the line in axes coordinates.
         direction = np.array([np.cos(angle), np.sin(angle)])
 
-        geodesic = cgeo.Geodesic()
+        geod = cgeo.Geodesic()
 
         # Physical distance between points.
         def dist_func(a_axes, b_axes):
@@ -162,7 +158,7 @@ class CartopyScalebar:
 
             # Geodesic().inverse returns a NumPy MemoryView like [[distance,
             # start azimuth, end azimuth]].
-            return geodesic.inverse(a_phys, b_phys).base[0, 0]
+            return geod.inverse(a_phys, b_phys).base[0, 0]
 
         end = self._upper_bound(start, direction, distance, dist_func)
 
@@ -1891,13 +1887,13 @@ def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lal
 
     gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True, linewidth=0.05, color='black', alpha=1, linestyle='-')
 
-    gl.xlocator = mticker.FixedLocator(lons)
-    gl.ylocator = mticker.FixedLocator(lats)
+    gl.xlocator = ticker.FixedLocator(lons)
+    gl.ylocator = ticker.FixedLocator(lats)
     gl.xlabels_top = False
     gl.ylabels_right = False
 
-    gl.xformatter = LONGITUDE_FORMATTER
-    gl.yformatter = LATITUDE_FORMATTER
+    gl.xformatter = gridliner.LONGITUDE_FORMATTER
+    gl.yformatter = gridliner.LATITUDE_FORMATTER
     gl.xlabel_style = x_label_styles
     gl.ylabel_style = y_label_styles
 
@@ -1910,9 +1906,9 @@ def draw_scalebar(ax, img_extent, location=[0.1, 0.1], length=0.2):
     scalebar = CartopyScalebar()
 
     # Compute scalebar length as a proportion of dataset width (km)
-    geoid = geodesic.Geodesic()
+    geod = cgeo.Geodesic()
     shape = sgeom.LineString([[img_extent[0], img_extent[3]], [img_extent[1], img_extent[3]]])
-    dset_width = geoid.geometry_length(np.array(shape.coords)) / 1000
+    dset_width = geod.geometry_length(np.array(shape.coords)) / 1000
     length = length * dset_width
 
     scalebar.draw(ax=ax, location=location, length=length)
