@@ -26,6 +26,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.ticker as mticker
 
+import cartopy.mpl.geoaxes as geoaxes
 import cartopy.crs as ccrs
 import cartopy.geodesic as cgeo
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
@@ -1349,7 +1350,7 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
 
     if dem_shade is not None:
         # geo coordinates
-        if isinstance(ax, BasemapExt) and geo_box is not None:
+        if isinstance(ax, geoaxes.GeoAxes) and geo_box is not None:
             ax.imshow(dem_shade, interpolation='spline16', origin='upper', zorder=0)
         # radar coordinates
         elif isinstance(ax, plt.Axes):
@@ -1357,7 +1358,7 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
 
     if dem_contour is not None and dem_contour_seq is not None:
         # geo coordinates
-        if isinstance(ax, BasemapExt) and geo_box is not None:
+        if isinstance(ax, geoaxes.GeoAxes) and geo_box is not None:
             yy, xx = np.mgrid[geo_box[1]:geo_box[3]:dem_contour.shape[0]*1j,
                               geo_box[0]:geo_box[2]:dem_contour.shape[1]*1j]
             ax.contour(xx, yy, dem_contour, dem_contour_seq, origin='upper',
