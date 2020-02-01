@@ -18,6 +18,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 # suppress UserWarning from matplotlib
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
+import cartopy.crs as ccrs
 
 from mintpy.objects import (
     geometryDatasetNames,
@@ -32,11 +33,13 @@ from mintpy.utils import ptime, readfile, utils as ut, plot as pp
 from mintpy.multilook import multilook_data
 from mintpy import subset, version
 
-import cartopy.crs as ccrs
-
-
 
 ##################################################################################################
+PROJECTION_NAME2OBJ = {
+    'PlateCarree': ccrs.PlateCarree(),
+    'LambertConformal': ccrs.LambertConformal(),
+}
+
 EXAMPLE = """example:
   view.py velocity.h5
   view.py velocity.h5  velocity  --vlim -2 2  -c RdBu
@@ -1371,8 +1374,8 @@ class viewer():
             data, self = update_data_with_plot_inps(data, self.atr, self)
 
             # prepare figure
-            fig, ax = plt.subplots(figsize=self.fig_size, num='Figure', subplot_kw=dict(projection=ccrs.PlateCarree()))
-            #ax = plt.axes(map_projection=ccrs.PlateCarree())
+            kwargs = dict(projection=PROJECTION_NAME2OBJ(inps.map_projection))
+            fig, ax = plt.subplots(figsize=self.fig_size, num='Figure', subplot_kw=kwargs)
             if not self.disp_whitespace:
                 fig.subplots_adjust(left=0,right=1,bottom=0,top=1)
 
