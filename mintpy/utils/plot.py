@@ -27,11 +27,6 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from cartopy import crs as ccrs, geodesic as cgeo
 from cartopy.mpl import geoaxes, gridliner
-import shapely.geometry as sgeom
-import cartopy.mpl.geoaxes as geoaxes
-import cartopy.crs as ccrs
-import cartopy.geodesic as cgeo
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import pyproj
 
 from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
