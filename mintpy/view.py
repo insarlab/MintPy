@@ -426,8 +426,8 @@ def plot_slice(ax, data, metadata, inps=None):
             # geo-coordinates in degrees using Basemap
             # Map Setup
             vprint('plot in Lat/Lon coordinate')
-            vprint('map projection: '+inps.map_projection)
-            vprint('boundary database resolution: '+inps.resolution)
+            vprint('map projection: {}'.format(inps.map_projection))
+            vprint('boundary database resolution: {}'.format(inps.resolution))
             # if inps.map_projection in ['cyl', 'merc', 'mill', 'cea', 'gall']:
             #     m = pp.BasemapExt(llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],
             #                       urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],
@@ -521,9 +521,6 @@ def plot_slice(ax, data, metadata, inps=None):
                         inps.geo_box[0], inps.geo_box[2])
                 ax = pp.plot_gps(ax, SNWE, inps, metadata, print_msg=inps.print_msg)
                 vprint('displaying GPS stations')
-    
-            # save basemapExt object
-            inps.map = ax
 
             # Status bar
             if inps.dem_file:
