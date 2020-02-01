@@ -24,8 +24,10 @@ from matplotlib import (
 )
 from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import matplotlib.ticker as mticker
 
+from cartopy import crs as ccrs, geodesic as cgeo
+from cartopy.mpl import geoaxes, gridliner
+import shapely.geometry as sgeom
 import cartopy.mpl.geoaxes as geoaxes
 import cartopy.crs as ccrs
 import cartopy.geodesic as cgeo
@@ -53,12 +55,12 @@ max_figsize_height = 8.0       # max figure size in vertical direction in inch
 ######################################### Cartopy Scalebar class begin ####################################
 class CartopyScalebar:
     """From: https://stackoverflow.com/a/50674451/2676166"""
+
     def _axes_to_lonlat(self, ax, coords):
         """(lon, lat) from axes coordinates."""
         display = ax.transAxes.transform(coords)
         data = ax.transData.inverted().transform(display)
         lonlat = ccrs.PlateCarree().transform_point(*data, ax.projection)
-
         return lonlat
 
 
@@ -78,7 +80,7 @@ class CartopyScalebar:
             Coordinates of a point (a (2, 1)-shaped NumPy array).
         """
         if distance <= 0:
-            raise ValueError(f"Minimum distance is not positive: {distance}")
+            raise ValueError("Minimum distance is not positive: {}".format(distance))
 
         if np.linalg.norm(direction) == 0:
             raise ValueError("Direction vector must not be zero.")
@@ -113,11 +115,11 @@ class CartopyScalebar:
         """
         initial_distance = dist_func(start, end)
         if initial_distance < distance:
-            raise ValueError(f"End is closer to start ({initial_distance}) than "
-                             f"given distance ({distance}).")
+            raise ValueError("End is closer to start ({}) than given distance ({}).".format(
+                initial_distance, distance))
 
         if tol <= 0:
-            raise ValueError(f"Tolerance is not positive: {tol}")
+            raise ValueError("Tolerance is not positive: {}".format(tol))
 
         # Binary search for a point at the given distance.
         left = start
@@ -152,7 +154,7 @@ class CartopyScalebar:
         # Direction vector of the line in axes coordinates.
         direction = np.array([np.cos(angle), np.sin(angle)])
 
-        geodesic = cgeo.Geodesic()
+        geod = cgeo.Geodesic()
 
         # Physical distance between points.
         def dist_func(a_axes, b_axes):
@@ -161,11 +163,12 @@ class CartopyScalebar:
 
             # Geodesic().inverse returns a NumPy MemoryView like [[distance,
             # start azimuth, end azimuth]].
-            return geodesic.inverse(a_phys, b_phys).base[0, 0]
+            return geod.inverse(a_phys, b_phys).base[0, 0]
 
         end = self._upper_bound(start, direction, distance, dist_func)
 
         return self._distance_along_line(start, end, distance, dist_func, tol)
+
 
     def draw(self, ax, location, length=0.2, metres_per_unit=1000, unit_name='km',
                   tol=0.01, angle=0, color='black', linewidth=3, text_offset=0.005,
@@ -201,8 +204,8 @@ class CartopyScalebar:
         if text_kwargs is None:
             text_kwargs = {}
 
-        plot_kwargs = {'linewidth': linewidth, 'color': color, **plot_kwargs,
-                       **kwargs}
+        plot_kwargs = {'linewidth': linewidth, 'color': color,
+                       **plot_kwargs, **kwargs}
         text_kwargs = {'ha': ha, 'va': va, 'rotation': angle, 'color': color,
                        **text_kwargs, **kwargs}
 
@@ -226,8 +229,11 @@ class CartopyScalebar:
         text_location = midpoint + offset
 
         # 'rotation' keyword argument is in text_kwargs.
-        ax.text(*text_location, f"{round(length)} {unit_name}", rotation_mode='anchor',
-                transform=ax.transAxes, **text_kwargs)
+        ax.text(*text_location, "{} {}".format(round(length), unit_name),
+                rotation_mode='anchor', transform=ax.transAxes, **text_kwargs)
+        return ax
+
+
 
 ########################################### Parser utilities ##############################################
 def cmd_line_parse(iargs=''):
@@ -1891,13 +1897,13 @@ def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lal
 
     gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True, linewidth=0.05, color='black', alpha=1, linestyle='-')
 
-    gl.xlocator = mticker.FixedLocator(lons)
-    gl.ylocator = mticker.FixedLocator(lats)
+    gl.xlocator = ticker.FixedLocator(lons)
+    gl.ylocator = ticker.FixedLocator(lats)
     gl.xlabels_top = False
     gl.ylabels_right = False
 
-    gl.xformatter = LONGITUDE_FORMATTER
-    gl.yformatter = LATITUDE_FORMATTER
+    gl.xformatter = gridliner.LONGITUDE_FORMATTER
+    gl.yformatter = gridliner.LATITUDE_FORMATTER
     gl.xlabel_style = x_label_styles
     gl.ylabel_style = y_label_styles
 
@@ -1905,6 +1911,8 @@ def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lal
         gl.xpadding = xoffset
     if yoffset:
         gl.ypadding = yoffset
+    return gl
+
 
 def draw_scalebar(ax, img_extent, location=[0.1, 0.1], length=0.2):
     """Draws scalebar on plot at location with a input proportional length
@@ -1923,5 +1931,5 @@ def draw_scalebar(ax, img_extent, location=[0.1, 0.1], length=0.2):
     length = length * dist  # scale by length proportion
 
     scalebar.draw(ax=ax, location=location, length=length)
-
     return scalebar
+
