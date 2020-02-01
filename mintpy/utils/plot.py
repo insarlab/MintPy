@@ -435,9 +435,10 @@ def add_map_argument(parser):
                       choices={'horizontal', 'vertical'}, default='horizontal',
                       help='Rotate Lat label from default horizontal to vertical (to save space).')
 
-    mapg.add_argument('--projection', dest='map_projection', default='cyl', metavar='NAME',
-                      help='map projection when plotting in geo-coordinate. \n'
-                           'Reference - http://matplotlib.org/basemap/users/mapsetup.html\n\n')
+    mapg.add_argument('--projection', dest='map_projection', default='PlateCarree', metavar='NAME',
+                      choices={'PlateCarree', 'LambertConformal'}
+                      help='map projection when plotting in geo-coordinate.\n'
+                           'https://scitools.org.uk/cartopy/docs/latest/crs/projections.html\n\n')
     mapg.add_argument('--resolution', default='c', choices={'c', 'l', 'i', 'h', 'f', None},
                       help='Resolution of boundary database to use.\n' +
                            'c (crude, default), l (low), i (intermediate), h (high), f (full) or None.')
