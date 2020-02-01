@@ -425,7 +425,6 @@ def plot_slice(ax, data, metadata, inps=None):
             vprint('plot in Lat/Lon coordinate')
             vprint('map projection: '+inps.map_projection)
             vprint('boundary database resolution: '+inps.resolution)
-            m=ax
             # if inps.map_projection in ['cyl', 'merc', 'mill', 'cea', 'gall']:
             #     m = pp.BasemapExt(llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],
             #                       urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],
@@ -450,7 +449,7 @@ def plot_slice(ax, data, metadata, inps=None):
             # Draw coastline using cartopy resolution parameters
             if inps.coastline != "no":
                 vprint('draw coast line')
-                m.coastlines(resolution=inps.coastline)
+                ax.coastlines(resolution=inps.coastline)
 
             # Plot DEM
             if inps.dem_file:
@@ -472,7 +471,7 @@ def plot_slice(ax, data, metadata, inps=None):
                         'GPS station: {} at {}').format(inps.ref_gps_site, ref_site_lalo))
 
             img_extent = (inps.geo_box[0], inps.geo_box[2], inps.geo_box[3], inps.geo_box[1])
-            im = m.imshow(data, cmap=inps.colormap, origin='upper', extent=img_extent,
+            im = ax.imshow(data, cmap=inps.colormap, origin='upper', extent=img_extent,
                           vmin=inps.vlim[0], vmax=inps.vlim[1],
                           alpha=inps.transparency, interpolation='nearest',
                           animated=inps.animation, zorder=1)
@@ -521,7 +520,7 @@ def plot_slice(ax, data, metadata, inps=None):
                 vprint('displaying GPS stations')
     
             # save basemapExt object
-            inps.map = m
+            inps.map = ax
 
             # Status bar
             if inps.dem_file:
