@@ -133,6 +133,7 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+    inps.map_projection = PROJECTION_NAME2OBJ[inps.map_projection]
 
     # --exclude
     if inps.exDsetList:
@@ -497,6 +498,7 @@ def plot_slice(ax, data, metadata, inps=None):
                                    font_size=inps.font_size,
                                    color=inps.font_color,
                                    yrotate=inps.lat_label_direction,
+                                   projection=inps.map_projection,
                                    print_msg=inps.print_msg)
 
             else:
@@ -1371,8 +1373,9 @@ class viewer():
             data, self = update_data_with_plot_inps(data, self.atr, self)
 
             # prepare figure
-            kwargs = dict(projection=PROJECTION_NAME2OBJ(inps.map_projection))
-            fig, ax = plt.subplots(figsize=self.fig_size, num='Figure', subplot_kw=kwargs)
+            fig, ax = plt.subplots(figsize=self.fig_size,
+                                   num='Figure',
+                                   subplot_kw=dict(projection=self.map_projection))
             if not self.disp_whitespace:
                 fig.subplots_adjust(left=0,right=1,bottom=0,top=1)
 
