@@ -30,8 +30,7 @@ import cartopy.mpl.geoaxes as geoaxes
 import cartopy.crs as ccrs
 import cartopy.geodesic as cgeo
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
-import cartopy.geodesic as geodesic
-import shapely.geometry as sgeom
+import pyproj
 
 from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
 from mintpy.objects.colors import *
@@ -1886,6 +1885,7 @@ def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lal
 
     label_styles = {'color': color, 'size': font_size}
     x_label_styles = label_styles.copy()
+
     y_label_styles = label_styles.copy()
     y_label_styles.update({'rotation': yrotate})
 
@@ -1907,12 +1907,21 @@ def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lal
         gl.ypadding = yoffset
 
 def draw_scalebar(ax, img_extent, location=[0.1, 0.1], length=0.2):
+    """Draws scalebar on plot at location with a input proportional length
+    Parameters: ax          : matplotlib.pyplot.Axes or BasemapExt object
+                img_extent  : 4-tuple of floats, img extent in UL lon, UL lat, LR lon, LR lat
+                location    : list of float, location on plot to draw lower left edge of scalebar
+                length      : int, proportional length to draw scalebar
+    Returns:    scalebar    : CartopyScalebar
+    Example:    scalebar = pp.draw_scalebar(ax, img_extent, location=[0.2, 0.2], length=0.5)
+    """
     scalebar = CartopyScalebar()
 
     # Compute scalebar length as a proportion of dataset width (km)
-    geoid = geodesic.Geodesic()
-    shape = sgeom.LineString([[img_extent[0], img_extent[3]], [img_extent[1], img_extent[3]]])
-    dset_width = geoid.geometry_length(np.array(shape.coords)) / 1000
-    length = length * dset_width
+    geod = pyproj.Geod(ellps='WGS84')
+    dist = geod.inv(img_extent[0], img_extent[2], img_extent[1], img_extent[3])[2] / 1000  # convert to kilometers
+    length = length * dist  # scale by length proportion
 
     scalebar.draw(ax=ax, location=location, length=length)
+
+    return scalebar
