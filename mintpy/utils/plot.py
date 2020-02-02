@@ -27,7 +27,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import pyproj
 from cartopy import crs as ccrs
-from cartopy.mpl import ticker
+from cartopy.mpl import ticker as cticker
 
 from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
 from mintpy.objects.colors import ColormapExt
@@ -1747,8 +1747,8 @@ def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lal
 
     # ticklabel symbol style
     decimal_digit = max(0, 0-digit)
-    lon_formatter = ticker.LongitudeFormatter(number_format='.{}f'.format(decimal_digit))
-    lat_formatter = ticker.LatitudeFormatter(number_format='.{}f'.format(decimal_digit))
+    lon_formatter = cticker.LongitudeFormatter(number_format='.{}f'.format(decimal_digit))
+    lat_formatter = cticker.LatitudeFormatter(number_format='.{}f'.format(decimal_digit))
     ax.xaxis.set_major_formatter(lon_formatter)
     ax.yaxis.set_major_formatter(lat_formatter)
 
