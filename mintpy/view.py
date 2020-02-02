@@ -472,7 +472,7 @@ def plot_slice(ax, data, metadata, inps=None):
                                    projection=PROJECTION_NAME2OBJ[inps.map_projection],
                                    print_msg=inps.print_msg)
             else:
-                ax.tick_params(which='both', direction='in', labelsize=inps.font_size,
+                ax.tick_params(which='both', direction='out', labelsize=inps.font_size,
                                left=True, right=True, top=True, bottom=True)
 
             # Plot Reference Point
