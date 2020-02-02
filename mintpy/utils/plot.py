@@ -25,10 +25,10 @@ from matplotlib import (
 from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-
 from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
-from mintpy.objects.colors import *
+from mintpy.objects.colors import ColormapExt
 from mintpy.objects.coord import coordinate
+from mintpy.utils.plot_map import draw_lalo_label, draw_scalebar
 from mintpy.utils import (
     ptime,
     readfile,
@@ -36,7 +36,6 @@ from mintpy.utils import (
     utils0 as ut0,
     utils1 as ut1,
 )
-from mintpy.utils.plot_map import *
 
 
 min_figsize_single = 6.0       # default min size in inch, for single plot
@@ -44,6 +43,20 @@ max_figsize_single = 10.0      # default min size in inch, for single plot
 # default size in inch, for multiple subplots
 default_figsize_multi = [15.0, 8.0]
 max_figsize_height = 8.0       # max figure size in vertical direction in inch
+
+
+# default color names in matplotlib
+# ref: https://matplotlib.org/users/dflt_style_changes.html
+mplColors = ['#1f77b4',
+             '#ff7f0e',
+             '#2ca02c',
+             '#d62728',
+             '#9467bd',
+             '#8c564b',
+             '#e377c2',
+             '#7f7f7f',
+             '#bcbd22',
+             '#17becf']
 
 
 ########################################### Parser utilities ##############################################
@@ -255,9 +268,6 @@ def add_map_argument(parser):
                       choices={'PlateCarree', 'LambertConformal'},
                       help='map projection when plotting in geo-coordinate.\n'
                            'https://scitools.org.uk/cartopy/docs/latest/crs/projections.html\n\n')
-    mapg.add_argument('--resolution', default='c', choices={'c', 'l', 'i', 'h', 'f', None},
-                      help='Resolution of boundary database to use.\n' +
-                           'c (crude, default), l (low), i (intermediate), h (high), f (full) or None.')
 
     # scale bar
     mapg.add_argument('--scalebar', nargs=3, metavar=('LEN', 'X', 'Y'), type=float,
@@ -1165,17 +1175,26 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
     extent = (pix_box[0]-0.5, pix_box[2]-0.5,
               pix_box[3]-0.5, pix_box[1]-0.5) #(left, right, bottom, top) in data coordinates
 
+    # check required module import for geo-coord
+    if geo_box is not None:
+        try:
+            from cartopy.mpl import geoaxes
+        except ImportError:
+            raise ImportError('Can not import cartopy.mpl.geoaxes!')
+
+    # plot shaded relief
     if dem_shade is not None:
         # geo coordinates
-        if isinstance(ax, geoaxes.GeoAxes) and geo_box is not None:
+        if geo_box is not None and isinstance(ax, geoaxes.GeoAxes):
             ax.imshow(dem_shade, interpolation='spline16', origin='upper', zorder=0)
         # radar coordinates
         elif isinstance(ax, plt.Axes):
             ax.imshow(dem_shade, interpolation='spline16', extent=extent, zorder=0)
 
+    # plot topo contour
     if dem_contour is not None and dem_contour_seq is not None:
         # geo coordinates
-        if isinstance(ax, geoaxes.GeoAxes) and geo_box is not None:
+        if geo_box is not None and isinstance(ax, geoaxes.GeoAxes):
             yy, xx = np.mgrid[geo_box[1]:geo_box[3]:dem_contour.shape[0]*1j,
                               geo_box[0]:geo_box[2]:dem_contour.shape[1]*1j]
             ax.contour(xx, yy, dem_contour, dem_contour_seq, origin='upper',

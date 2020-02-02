@@ -48,6 +48,7 @@ module_dependency_graph = """# level N depends on level N-1, N-2, ..., 0
         variance      (utils/ptime)
     /utils
         readfile      (objects/{stack, giant})
+        plot_map      (utils/utils0)
 
 ------------------ level 2 --------------------
     /objects

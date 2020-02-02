@@ -4,20 +4,19 @@
 # Author: Joshua Zahner, Zhang Yunjun, 2020                #
 ############################################################
 # Recommend import:
-#     from mintpy.utils import plot as pp
+#     from mintpy.utils import plot as pp OR
+#     from mintpy.utils.plot_map import draw_lalo_label, draw_scalebar
 
 
-import numpy as np
 import pyproj
-from matplotlib import ticker
-from cartopy import crs as ccrs, geodesic as cgeo
-from cartopy.mpl import geoaxes, gridliner
-
+import numpy as np
+from matplotlib import pyplot as plt
+from cartopy import crs as ccrs
+from cartopy.mpl import ticker
 from mintpy.utils import utils0 as ut0
 
 
-def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[1, 2, 3, 4, 5],
-                       print_msg=True):
+def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[1, 2, 3, 4, 5]):
     """Auto calculate lat/lon label sequence based on input geo_box
     Parameters: geo_box        : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
                 lalo_step      : float
@@ -45,9 +44,6 @@ def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[
         distance = [(i - max_lalo_dist/lalo_max_num) ** 2 for i in lalo_step_candidate]
         lalo_step = lalo_step_candidate[distance.index(min(distance))]
 
-    if print_msg:
-        print('label step in degree: {}'.format(lalo_step))
-
     # Auto tick sequence
     digit = np.int(np.floor(np.log10(lalo_step)))
     lat_major = np.ceil(geo_box[3]/10**(digit+1))*10**(digit+1)
@@ -60,16 +56,15 @@ def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[
                                 np.arange(lon_major, lon_major+10.*max_lalo_dist, lalo_step))))
     lons = np.sort(lons[np.where(np.logical_and(lons >= geo_box[0], lons <= geo_box[2]))])
 
-    # Need to artificially add the geo_box boundaries in order to get cartopy to draw gridlines
-    # all the way to the map edge. Can be removed if drawing of grid lines is not needed
-    lons = np.insert(lons, [0, -1], [geo_box[0], geo_box[2]])
-    lats = np.insert(lats, [0, -1], [geo_box[3], geo_box[1]])
-
-    return lats, lons, lalo_step
+    ## Need to artificially add the geo_box boundaries in order to get cartopy to draw gridlines
+    ## all the way to the map edge. Can be removed if drawing of grid lines is not needed
+    #lons = np.insert(lons, [0, -1], [geo_box[0], geo_box[2]])
+    #lats = np.insert(lats, [0, -1], [geo_box[3], geo_box[1]])
+    return lats, lons, lalo_step, digit
 
 
 def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max_num=4,
-                    font_size=12, color='k', xoffset=None, yoffset=None, yrotate='horizontal',
+                    font_size=12, xoffset=None, yoffset=None, yrotate='horizontal',
                     projection=ccrs.PlateCarree(), print_msg=True):
     """Auto draw lat/lon label/tick based on coverage from geo_box
     Parameters: geo_box   : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
@@ -87,41 +82,81 @@ def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lal
         ax = plt.gca()
 
     # default lat/lon sequences
-    lats, lons, step = auto_lalo_sequence(geo_box,
-                                          lalo_step=lalo_step,
-                                          lalo_max_num=lalo_max_num)
+    lats, lons, lalo_step, digit = auto_lalo_sequence(geo_box, lalo_step=lalo_step, lalo_max_num=lalo_max_num)
+    if print_msg:
+        print('plot lat/lon label in step of {} and location of {}'.format(lalo_step, lalo_loc))
 
-    # opt 1 - plot lat/lon label as gridline
-    gl = ax.gridlines(crs=projection, draw_labels=True, linewidth=0.01, color='black', alpha=1, linestyle='-')
-    gl.xlocator = ticker.FixedLocator(lons)
-    gl.ylocator = ticker.FixedLocator(lats)
-    gl.xformatter = gridliner.LONGITUDE_FORMATTER
-    gl.yformatter = gridliner.LATITUDE_FORMATTER
-    gl.xlabel_style = {'color': color, 'size': font_size}
-    gl.ylabel_style = {'color': color, 'size': font_size, 'rotation': yrotate}
-
-    if not lalo_loc[0]:
-        gl.ylabels_left = False
-    if not lalo_loc[1]:
-        gl.ylabels_right = False
-    if not lalo_loc[2]:
-        gl.xlabels_top = False
-    if not lalo_loc[3]:
-        gl.xlabels_bottom = False
-
+    # ticklabel/tick style
+    ax.tick_params(which='both', direction='in', labelsize=font_size,
+                   left=True, right=True, top=True, bottom=True,
+                   labelleft=lalo_loc[0], labelright=lalo_loc[1],
+                   labeltop=lalo_loc[2], labelbottom=lalo_loc[3])
     if xoffset is not None:
-        gl.xpadding = xoffset
+        ax.tick_params(axis='x', which='major', pad=xoffset)
     if yoffset is not None:
-        gl.ypadding = yoffset
+        ax.tick_params(axis='y', which='major', pad=yoffset)
 
-    ## opt 2 - plot tick and ticklabels
-    #ax.set_xticks(lons, crs=projection)
-    #ax.set_yticks(lats, crs=projection)
-    #ax.xaxis.set_major_formatter()
-    return
+    # ticklabel symbol style
+    decimal_digit = max(0, 0-digit)
+    lon_formatter = ticker.LongitudeFormatter(number_format='.{}f'.format(decimal_digit))
+    lat_formatter = ticker.LatitudeFormatter(number_format='.{}f'.format(decimal_digit))
+    ax.xaxis.set_major_formatter(lon_formatter)
+    ax.yaxis.set_major_formatter(lat_formatter)
+
+    ax.set_xticks(lons, crs=projection)
+    ax.set_yticks(lats, crs=projection)
+    return ax
 
 
-def draw_scalebar(ax, img_extent, location=[0.1, 0.1], length=0.2):
+def draw_scalebar(ax, geo_box, loc=[0.2, 0.2, 0.1], labelpad=0.05, font_size=12, color='k'):
+    """draw a simple map scale from x1,y to x2,y in map projection coordinates, label it with actual distance
+    ref_link: http://matplotlib.1069221.n5.nabble.com/basemap-scalebar-td14133.html
+    Parameters: ax       : matplotlib.pyplot.axes object
+                geo_box  : tuple of 4 float in (x0, y0, x1, y1) for (W, N, E, S) in degrees
+                loc      : list of 3 float, distance, lat/lon of scale bar center in ratio of width, relative coord
+                labelpad : float
+    Returns:    ax
+    Example:    from mintpy.utils import plot as pp
+                pp.draw_scale_bar(ax, geo_box)
+    """
+    if not ax:
+        ax = plt.gca()
+
+    geod = pyproj.Geod(ellps='WGS84')
+
+    # length in meter
+    scene_width = geod.inv(geo_box[0], geo_box[3], geo_box[2], geo_box[3])[2]
+    distance = ut0.round_to_1(scene_width * loc[0])
+    lon_c = geo_box[0] + loc[1] * (geo_box[2] - geo_box[0])
+    lat_c = geo_box[3] + loc[2] * (geo_box[1] - geo_box[3])
+
+    # plot scale bar
+    if distance > 1000.0:
+        distance = np.rint(distance/1000.0)*1000.0
+    lon_c2, lat_c2 = geod.fwd(lon_c, lat_c, 90, distance)[0:2]
+    length = np.abs(lon_c - lon_c2)
+    lon0 = lon_c - length/2.0
+    lon1 = lon_c + length/2.0
+
+    ax.plot([lon0, lon1], [lat_c, lat_c], color=color)
+    ax.plot([lon0, lon0], [lat_c, lat_c + 0.1*length], color=color)
+    ax.plot([lon1, lon1], [lat_c, lat_c + 0.1*length], color=color)
+
+    # plot scale bar label
+    unit = 'm'
+    if distance >= 1000.0:
+        unit = 'km'
+        distance *= 0.001
+    label = '{:.0f} {}'.format(distance, unit)
+    txt_offset = (geo_box[1] - geo_box[3]) * labelpad
+
+    ax.text(lon0+0.5*length, lat_c+txt_offset, label,
+            verticalalignment='center', horizontalalignment='center',
+            fontsize=font_size, color=color)
+    return ax
+
+
+def draw_scalebar_cartopy(ax, img_extent, location=[0.1, 0.1], length=0.2):
     """Draws scalebar on plot at location with a input proportional length
     Parameters: ax          : CartoPy axes.
                 img_extent  : 4-tuple of floats, img extent in UL lon, UL lat, LR lon, LR lat
@@ -241,6 +276,7 @@ class CartopyScalebar:
         Returns:
             Coordinates of a point (a (2, 1)-shaped NumPy array).
         """
+        from cartopy import geodesic as cgeo
         # Physical distance between points.
         def dist_func(a_axes, b_axes):
             a_phys = self._axes_to_lonlat(ax, a_axes)
