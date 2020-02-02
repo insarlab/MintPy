@@ -82,7 +82,7 @@ Run the following in your terminal to install the dependencies to the default en
 $PYTHON3DIR/bin/conda config --add channels conda-forge
 $PYTHON3DIR/bin/conda install --yes --file $MINTPY_HOME/docs/conda.txt
 
-# install dependencies not compatiable from conda: basemap, pykml
+# install dependencies not compatiable from conda: pykml
 $PYTHON3DIR/bin/pip install git+https://github.com/tylere/pykml.git
 ```
 
@@ -122,13 +122,11 @@ Run the following in your terminal in _bash_:
 sudo port install $(cat $MINTPY_HOME/docs/ports.txt)
 
 # install dependencies not available on macports: pykml, pykdtree, pyresample, cdsapi, pyhdf
-# run "sudo port uninstall py36-matplotlib-basemap" if basemap was installed with port
 sudo -H /opt/local/bin/pip install git+https://github.com/tylere/pykml.git
 sudo -H /opt/local/bin/pip install git+https://github.com/storpipfugl/pykdtree.git
 sudo -H /opt/local/bin/pip install git+https://github.com/pytroll/pyresample.git
 sudo -H /opt/local/bin/pip install git+https://github.com/ecmwf/cdsapi.git
 sudo -H /opt/local/bin/pip install git+https://github.com/fhs/pyhdf.git
-sudo -H /opt/local/bin/pip install https://github.com/matplotlib/basemap/archive/v1.2.1rel.tar.gz
 ```
 
 ### Notes on [PyAPS](https://github.com/yunjunz/pyaps3) ###

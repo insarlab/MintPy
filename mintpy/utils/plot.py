@@ -32,7 +32,6 @@ from cartopy.mpl import ticker
 from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
 from mintpy.objects.colors import ColormapExt
 from mintpy.objects.coord import coordinate
-from mintpy.utils.plot_map import draw_lalo_label, draw_scalebar
 from mintpy.utils import (
     ptime,
     readfile,
