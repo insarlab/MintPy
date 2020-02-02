@@ -27,7 +27,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import pyproj
 from cartopy import crs as ccrs
-from cartopy.mpl import ticker as cticker
+from cartopy.mpl import geoaxes, ticker as cticker
 
 from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
 from mintpy.objects.colors import ColormapExt
@@ -1177,13 +1177,6 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
         pix_box = (0, 0, data.shape[1], data.shape[0])
     extent = (pix_box[0]-0.5, pix_box[2]-0.5,
               pix_box[3]-0.5, pix_box[1]-0.5) #(left, right, bottom, top) in data coordinates
-
-    # check required module import for geo-coord
-    if geo_box is not None:
-        try:
-            from cartopy.mpl import geoaxes
-        except ImportError:
-            raise ImportError('Can not import cartopy.mpl.geoaxes!')
 
     # plot shaded relief
     if dem_shade is not None:
