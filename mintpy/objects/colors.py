@@ -5,7 +5,6 @@
 ############################################################
 # Recommend import:
 #     from mintpy.objects.colors import ColormapExt
-#     from mitnpy.objects.colors import mplColors, Color
 
 
 import os
