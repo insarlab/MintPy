@@ -9,7 +9,7 @@ channels:
   - defaults
 dependencies:
   - python>=3.6
-  - basemap
+  - cartopy
   - cdsapi
   - cvxopt
   - dask>=1.0,<2.0

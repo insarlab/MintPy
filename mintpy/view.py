@@ -18,6 +18,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 # suppress UserWarning from matplotlib
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
+import cartopy.crs as ccrs
 
 from mintpy.objects import (
     geometryDatasetNames,
@@ -34,6 +35,11 @@ from mintpy import subset, version
 
 
 ##################################################################################################
+PROJECTION_NAME2OBJ = {
+    'PlateCarree': ccrs.PlateCarree(),
+    'LambertConformal': ccrs.LambertConformal(),
+}
+
 EXAMPLE = """example:
   view.py velocity.h5
   view.py velocity.h5  velocity  --vlim -2 2  -c RdBu
@@ -135,8 +141,6 @@ def cmd_line_parse(iargs=None):
     # If output flie name assigned or figure shown is turned off, turn on the figure save
     if inps.outfile or not inps.disp_fig:
         inps.save_fig = True
-    if inps.coastline and inps.resolution in ['c', 'l']:
-        inps.resolution = 'i'
     if inps.lalo_step:
         inps.lalo_label = True
     if inps.zero_mask:
@@ -417,47 +421,25 @@ def plot_slice(ax, data, metadata, inps=None):
         coord_unit = metadata.get('Y_UNIT', 'degrees').lower()
 
         if coord_unit.startswith('deg'):
-            # geo-coordinates in degrees using Basemap
-            # Map Setup
+            # geo-coordinates in degrees
             vprint('plot in Lat/Lon coordinate')
-            vprint('map projection: '+inps.map_projection)
-            vprint('boundary database resolution: '+inps.resolution)
-            if inps.map_projection in ['cyl', 'merc', 'mill', 'cea', 'gall']:
-                m = pp.BasemapExt(llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],
-                                  urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],
-                                  projection=inps.map_projection,
-                                  resolution=inps.resolution, area_thresh=1.,
-                                  suppress_ticks=False, ax=ax)
-            elif inps.map_projection in ['ortho']:
-                m = pp.BasemapExt(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,
-                                  lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,
-                                  projection=inps.map_projection,
-                                  resolution=inps.resolution, area_thresh=1.,
-                                  suppress_ticks=False, ax=ax)
-            else:
-                m = pp.BasemapExt(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,
-                                  lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,
-                                  llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],
-                                  urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],
-                                  projection=inps.map_projection,
-                                  resolution=inps.resolution, area_thresh=1.,
-                                  suppress_ticks=False, ax=ax)
+            vprint('map projection: {}'.format(inps.map_projection))
 
-            # Draw coastline
-            if inps.coastline:
-                vprint('draw coast line')
-                m.drawcoastlines()
+            # Draw coastline using cartopy resolution parameters
+            if inps.coastline != "no":
+                vprint('draw coast line with resolution: {}'.format(inps.coastline))
+                ax.coastlines(resolution=inps.coastline)
 
             # Plot DEM
             if inps.dem_file:
                 vprint('plotting DEM background ...')
-                m = pp.plot_dem_background(ax=m, geo_box=inps.geo_box,
+                m = pp.plot_dem_background(ax=ax, geo_box=inps.geo_box,
                                            dem=dem, inps=inps,
                                            print_msg=inps.print_msg)
 
             # Plot Data
             coord = ut.coordinate(metadata)
-            vprint('plotting Data ...')
+            vprint('plotting image ...')
             if inps.disp_gps and inps.gps_component and inps.ref_gps_site:
                 ref_site_lalo = GPS(site=inps.ref_gps_site).get_stat_lat_lon(print_msg=False)
                 y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
@@ -466,32 +448,32 @@ def plot_slice(ax, data, metadata, inps=None):
                 data -= data[y, x]
                 vprint(('referencing InSAR data to the pixel nearest to '
                         'GPS station: {} at {}').format(inps.ref_gps_site, ref_site_lalo))
-            im = m.imshow(data, cmap=inps.colormap, origin='upper',
-                          vmin=inps.vlim[0], vmax=inps.vlim[1],
-                          alpha=inps.transparency, interpolation='nearest',
-                          animated=inps.animation, zorder=1)
+
+            im = ax.imshow(data, cmap=inps.colormap, origin='upper',
+                           extent=(inps.geo_box[0], inps.geo_box[2],
+                                   inps.geo_box[3], inps.geo_box[1]),
+                           vmin=inps.vlim[0], vmax=inps.vlim[1],
+                           alpha=inps.transparency, interpolation='nearest',
+                           animated=inps.animation, zorder=1)
 
             # Scale Bar
             if inps.disp_scalebar:
-                vprint('plot scale bar')
-                m.draw_scale_bar(loc=inps.scalebar, ax=ax,
-                                 labelpad=inps.scalebar_pad,
-                                 font_size=inps.font_size,
-                                 color=inps.font_color)
+                vprint('plot scale bar: {}'.format(inps.scalebar))
+                pp.draw_scalebar(ax, geo_box=inps.geo_box, loc=inps.scalebar, font_size=inps.font_size)
 
             # Lat Lon labels
             if inps.lalo_label:
-                vprint('plot lat/lon labels')
-                m.draw_lalo_label(inps.geo_box, ax=ax,
-                                  lalo_step=inps.lalo_step,
-                                  lalo_loc=inps.lalo_loc,
-                                  lalo_max_num=inps.lalo_max_num,
-                                  font_size=inps.font_size,
-                                  color=inps.font_color,
-                                  yrotate=inps.lat_label_direction,
-                                  print_msg=inps.print_msg)
+                pp.draw_lalo_label(inps.geo_box, ax,
+                                   lalo_step=inps.lalo_step,
+                                   lalo_loc=inps.lalo_loc,
+                                   lalo_max_num=inps.lalo_max_num,
+                                   font_size=inps.font_size,
+                                   yrotate=inps.lat_label_direction,
+                                   projection=PROJECTION_NAME2OBJ[inps.map_projection],
+                                   print_msg=inps.print_msg)
             else:
-                ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
+                ax.tick_params(which='both', direction='out', labelsize=inps.font_size,
+                               left=True, right=True, top=True, bottom=True)
 
             # Plot Reference Point
             if inps.disp_ref_pixel and inps.ref_lalo:
@@ -512,16 +494,13 @@ def plot_slice(ax, data, metadata, inps=None):
                         inps.geo_box[0], inps.geo_box[2])
                 ax = pp.plot_gps(ax, SNWE, inps, metadata, print_msg=inps.print_msg)
                 vprint('displaying GPS stations')
-    
-            # save basemapExt object
-            inps.map = m
 
             # Status bar
             if inps.dem_file:
                 coord_dem = ut.coordinate(dem_metadata)
                 dem_len, dem_wid = dem.shape
             def format_coord(x, y):
-                msg = 'E{:.4f}, N{:.4f}'.format(x, y)
+                msg = 'lon={:.4f}, lat={:.4f}'.format(x, y)
                 col = coord.lalo2yx(x, coord_type='lon') - inps.pix_box[0]
                 row = coord.lalo2yx(y, coord_type='lat') - inps.pix_box[1]
                 if 0 <= col < num_col and 0 <= row < num_row:
@@ -645,11 +624,12 @@ def plot_slice(ax, data, metadata, inps=None):
 
 
     #---------------------- Figure Setting ----------------------------------------#
+
     # 3.1 Colorbar
     cbar = None
     if inps.disp_cbar:
         divider = make_axes_locatable(ax)
-        cax = divider.append_axes(inps.cbar_loc, inps.cbar_size, pad=inps.cbar_size)
+        cax = divider.append_axes(inps.cbar_loc, inps.cbar_size, pad=inps.cbar_size, axes_class=plt.Axes)
         inps, cbar = pp.plot_colorbar(inps, im, cax)
 
     # 3.2 Title
@@ -1343,6 +1323,7 @@ class viewer():
                                       datasetName=self.ref_date,
                                       box=self.pix_box,
                                       print_msg=False)[0]
+
             # reference in space for unwrapPhase
             if (self.key in ['ifgramStack']
                     and self.dset[0].split('-')[0] == 'unwrapPhase'
@@ -1353,6 +1334,7 @@ class viewer():
                                          box=(ref_x, ref_y, ref_x+1, ref_y+1),
                                          print_msg=False)[0]
                 data[data != 0.] -= ref_data
+
             # masking
             if self.zero_mask:
                 vprint('masking pixels with zero value')
@@ -1360,11 +1342,21 @@ class viewer():
             if self.msk is not None:
                 vprint('masking data')
                 data = np.ma.masked_where(self.msk == 0., data)
+
             # update data
             data, self = update_data_with_plot_inps(data, self.atr, self)
 
             # prepare figure
-            fig, ax = plt.subplots(figsize=self.fig_size, num='Figure')
+            coord_unit = self.atr.get('Y_UNIT', 'degrees').lower()
+            if (self.geo_box 
+                    and self.fig_coord == 'geo' 
+                    and coord_unit.startswith('deg') 
+                    and self.lalo_label):
+                subplot_kw = dict(projection=PROJECTION_NAME2OBJ[self.map_projection])
+            else:
+                subplot_kw = {}
+
+            fig, ax = plt.subplots(figsize=self.fig_size, num='Figure', subplot_kw=subplot_kw)
             if not self.disp_whitespace:
                 fig.subplots_adjust(left=0,right=1,bottom=0,top=1)
 
