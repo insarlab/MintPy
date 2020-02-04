@@ -1,4 +1,4 @@
-MintPy use [pyKML](https://pythonhosted.org/pykml/) to generate KMZ (Keyhole Markup Zip) files for easy offline viewing in [Google Earth](https://www.google.com/earth/) via `save_kmz_timeseries.py` and `save_kmz.py` script. Below are screenshots of the displacement time-series and average velocity of [Fernandina volcano estimated from Sentinel-1 data](example_dataset.md).    
+MintPy use [pyKML](https://pythonhosted.org/pykml/) to generate KMZ (Keyhole Markup Zip) files for easy offline viewing in [Google Earth](https://www.google.com/earth/) via `save_kmz_timeseries.py` and `save_kmz.py` script. Below are screenshots of the displacement time-series and average velocity of [Fernandina volcano estimated from Sentinel-1 data](demo_dataset.md).    
 
 ### 1. Displacement time-series ###
 

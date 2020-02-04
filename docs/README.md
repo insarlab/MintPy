@@ -31,10 +31,10 @@ smallbaselineApp.py GalapagosSenDT128.template --dostep velocity  #run at step '
 smallbaselineApp.py GalapagosSenDT128.template --end load_data    #end after step 'load_data'
 ```
 
-#### [Example](./example_dataset.md) on Fernandina volcano, Galápagos with Sentinel-1 data ####
+#### [Example](./demo_dataset.md) on Fernandina volcano, Galápagos with Sentinel-1 data ####
 
 ```
-wget https://zenodo.org/record/2748487/files/FernandinaSenDT128.tar.xz
+wget https://zenodo.org/record/3635245/files/FernandinaSenDT128.tar.xz
 tar -xvJf FernandinaSenDT128.tar.xz
 cd FernandinaSenDT128/mintpy
 smallbaselineApp.py ${MINTPY_HOME}/docs/examples/input_files/FernandinaSenDT128.txt
@@ -46,7 +46,7 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/examples/input_files/FernandinaSenDT128.
 
 Inside smallbaselineApp.py, it reads the unwrapped interferograms, references all of them to the same coherent pixel (reference point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the network of interferograms into time-series, calculates a parameter called "temporal coherence" which can be used to evaluate the quality of inversion, corrects local oscillator drift (for Envisat only), corrects stratified tropospheric delay (using pyaps or phase-elevation-ratio approach), removes phase ramps (if it has been asked for), corrects DEM error,... and finally estimates the velocity.
 
-Check **./pic** folder for auto-generated figures. More details about this test data are in [here](./example_dataset.md).
+Check **./pic** folder for auto-generated figures. More details about this test data are in [here](./demo_dataset.md).
 
 #### 2.1 Data visualization ####
 
