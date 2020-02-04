@@ -20,7 +20,7 @@ mintpy.load.waterMaskFile  = None                                  #[path2water_
 ##————————————————————————————— PROCESSING Options ——-----————————————————————##
 mintpy.reference.lalo                           = 33.0655, 131.2076
 mintpy.networkInversion.weightFunc              = no
-mintpy.troposphericDelay.weatherModel           = ECMWF
+mintpy.troposphericDelay.weatherModel           = ERA5
 mintpy.topographicResidual.pixelwiseGeometry    = no
 mintpy.deramp                                   = linear
 mintpy.save.hdfEos5                             = yes
