@@ -23,7 +23,7 @@ markdown_extensions:
 nav:
     - Home: README.md
     - User Guide:
-        - Example datasets: example_dataset.md
+        - Example datasets: demo_dataset.md
         - Example directory structure: dir_structure.md
         - Example template files: examples/input_files/README.md
         - Tutorials in Jupyter Notebook: https://github.com/insarlab/MintPy-tutorial

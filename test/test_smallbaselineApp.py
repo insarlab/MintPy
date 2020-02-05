@@ -14,9 +14,9 @@ import subprocess
 
 
 URL_LIST = [
-    'https://zenodo.org/record/2748487/files/FernandinaSenDT128.tar.xz',
-    'https://zenodo.org/record/2748560/files/WellsEnvD2T399.tar.xz',
-    'https://zenodo.org/record/2748170/files/KujuAlosAT422F650.tar.xz',
+    'https://zenodo.org/record/3635245/files/FernandinaSenDT128.tar.xz',
+    'https://zenodo.org/record/3635258/files/WellsEnvD2T399.tar.xz',
+    'https://zenodo.org/record/3635262/files/KujuAlosAT422F650.tar.xz',
 ]
 
 PROJ_NAME_LIST = [os.path.basename(url).split('.tar.xz')[0] for url in URL_LIST]
@@ -112,9 +112,9 @@ def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False):
 
     # remove pyaps existing products or not
     if test_pyaps:
-        cmd = 'rm ./inputs/ECMWF.h5'
+        cmd = 'rm ./inputs/ERA5.h5'
         os.system(cmd)
-        print('remove existing tropospheric delay file: ./inputs/ECMWF.h5')
+        print('remove existing tropospheric delay file: ./inputs/ERA5.h5')
 
     # runing smallbaselineApp
     cmd = 'smallbaselineApp.py {}'.format(template_file)

@@ -24,10 +24,13 @@ from matplotlib import (
 )
 from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from mpl_toolkits.basemap import Basemap, pyproj
+
+import pyproj
+from cartopy import crs as ccrs
+from cartopy.mpl import geoaxes, ticker as cticker
 
 from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
-from mintpy.objects.colors import *
+from mintpy.objects.colors import ColormapExt
 from mintpy.objects.coord import coordinate
 from mintpy.utils import (
     ptime,
@@ -45,144 +48,18 @@ default_figsize_multi = [15.0, 8.0]
 max_figsize_height = 8.0       # max figure size in vertical direction in inch
 
 
-######################################### BasemapExt class begein ############################################
-class BasemapExt(Basemap):
-    """
-    Extend Basemap class to add drawscale(), because Basemap.drawmapscale() do not support 'cyl' projection.
-    """
-
-    def draw_scale_bar(self, loc=[0.2, 0.2, 0.1], ax=None, labelpad=0.05, font_size=12, color='k'):
-        """draw a simple map scale from x1,y to x2,y in map projection coordinates, label it with actual distance
-        ref_link: http://matplotlib.1069221.n5.nabble.com/basemap-scalebar-td14133.html
-        Parameters: loc : list of 3 float, distance, lat/lon of scale bar center in ratio of width, relative coord
-                    ax  : matplotlib.pyplot.axes object
-                    labelpad : float
-        Example:    m.drawscale()
-        """
-        gc = pyproj.Geod(a=self.rmajor, b=self.rminor)
-
-        # length in meter
-        scene_width = gc.inv(self.lonmin, self.latmin, self.lonmax, self.latmin)[2]
-        distance = ut0.round_to_1(scene_width * loc[0])
-        lon_c = self.lonmin + loc[1] * (self.lonmax - self.lonmin)
-        lat_c = self.latmin + loc[2] * (self.latmax - self.latmin)
-
-        # plot scale bar
-        if distance > 1000.0:
-            distance = np.rint(distance/1000.0)*1000.0
-        lon_c2, lat_c2 = gc.fwd(lon_c, lat_c, 90, distance)[0:2]
-        length = np.abs(lon_c - lon_c2)
-        lon0 = lon_c - length/2.0
-        lon1 = lon_c + length/2.0
-
-        self.plot([lon0, lon1], [lat_c, lat_c], color=color)
-        self.plot([lon0, lon0], [lat_c, lat_c + 0.1*length], color=color)
-        self.plot([lon1, lon1], [lat_c, lat_c + 0.1*length], color=color)
-
-        # plot scale bar label
-        unit = 'm'
-        if distance >= 1000.0:
-            unit = 'km'
-            distance *= 0.001
-        label = '{:.0f} {}'.format(distance, unit)
-        txt_offset = (self.latmax - self.latmin) * labelpad
-        if not ax:
-            ax = plt.gca()
-        ax.text(lon0+0.5*length, lat_c+txt_offset, label,
-                verticalalignment='center', horizontalalignment='center',
-                fontsize=font_size, color=color)
-
-
-    def draw_lalo_label(self, geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max_num=4,
-                        font_size=12, color='k', xoffset=None, yoffset=None, yrotate='horizontal', print_msg=True):
-        """Auto draw lat/lon label/tick based on coverage from geo_box
-        Parameters: geo_box : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
-                    ax      : axes object the labels are drawn
-                    lalo_loc  : list of 4 bool, positions where the labels are drawn as in [left, right, top, bottom]
-                                default: [1,0,0,1]
-                    lalo_step : float
-                    lalo_max_num : int
-        Example:    geo_box = (128.0, 37.0, 138.0, 30.0)
-                    m.draw_lalo_label(geo_box)
-        """
-        if isinstance(lalo_step, float):
-            lalo_step = [lalo_step, lalo_step]
-        lats, lons, lalo_step = self.auto_lalo_sequence(geo_box,
-                                                        lalo_step=lalo_step,
-                                                        lalo_max_num=lalo_max_num,
-                                                        print_msg=print_msg)
-
-        digit = np.int(np.floor(np.log10(lalo_step[0])))
-        fmt = '%.'+'%d' % (abs(min(digit, 0)))+'f'
-        # Change the 2 lines below for customized label
-        #lats = np.linspace(31.55, 31.60, 2)
-        #lons = np.linspace(130.60, 130.70, 3)
-
-        # Plot x/y tick without label
-        if not ax:
-            ax = plt.gca()
-        ax.tick_params(which='both', direction='in', labelsize=font_size,
-                       bottom=True, top=True, left=True, right=True)
-
-        ax.set_xticks(lons)
-        ax.set_yticks(lats)
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
-        # ax.xaxis.tick_top()
-
-        # Plot x/y label
-        labels_lat = np.multiply(lalo_loc, [1, 1, 0, 0])
-        labels_lon = np.multiply(lalo_loc, [0, 0, 1, 1])
-        self.drawparallels(lats, fmt=fmt, labels=labels_lat, linewidth=0.05,
-                           fontsize=font_size, color=color, textcolor=color,
-                           xoffset=xoffset, yoffset=yoffset, rotation=yrotate)
-        self.drawmeridians(lons, fmt=fmt, labels=labels_lon, linewidth=0.05,
-                           fontsize=font_size, color=color, textcolor=color,
-                           xoffset=xoffset, yoffset=yoffset, rotation=0)
-        return
-
-    def auto_lalo_sequence(self, geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[1, 2, 3, 4, 5],
-                           print_msg=True):
-        """Auto calculate lat/lon label sequence based on input geo_box
-        Parameters: geo_box        : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
-                    lalo_step      : float
-                    lalo_max_num   : int, rough major tick number along the longer axis
-                    step_candidate : list of int, candidate list for the significant number of step
-        Returns:    lats/lons : np.array of float, sequence of lat/lon auto calculated from input geo_box
-                    lalo_step : float, lat/lon label step
-        Example:    geo_box = (128.0, 37.0, 138.0, 30.0)
-                    lats, lons, step = m.auto_lalo_sequence(geo_box)
-        """
-        max_lalo_dist = max([geo_box[1]-geo_box[3], geo_box[2]-geo_box[0]])
-
-        if not lalo_step:
-            # Initial tick step
-            lalo_step = ut0.round_to_1(max_lalo_dist/lalo_max_num)
-
-            # Final tick step - choose from candidate list
-            digit = np.int(np.floor(np.log10(lalo_step)))
-            lalo_step_candidate = [i*10**digit for i in step_candidate]
-            distance = [(i - max_lalo_dist/lalo_max_num) ** 2
-                        for i in lalo_step_candidate]
-            lalo_step = lalo_step_candidate[distance.index(min(distance))]
-            lalo_step = [lalo_step, lalo_step]
-        if print_msg:
-            print('label step in degree: {}'.format(lalo_step))
-
-        # Auto tick sequence
-        digit = np.int(np.floor(np.log10(lalo_step[0])))
-        lat_major = np.ceil(geo_box[3]/10**(digit+1))*10**(digit+1)
-        lats = np.unique(np.hstack((np.arange(lat_major, lat_major-10.*max_lalo_dist, -lalo_step[0]),
-                                    np.arange(lat_major, lat_major+10.*max_lalo_dist, lalo_step[0]))))
-        lats = np.sort(lats[np.where(np.logical_and(lats >= geo_box[3], lats <= geo_box[1]))])
-
-        lon_major = np.ceil(geo_box[0]/10**(digit+1))*10**(digit+1)
-        lons = np.unique(np.hstack((np.arange(lon_major, lon_major-10.*max_lalo_dist, -lalo_step[1]),
-                                    np.arange(lon_major, lon_major+10.*max_lalo_dist, lalo_step[1]))))
-        lons = np.sort(lons[np.where(np.logical_and(lons >= geo_box[0], lons <= geo_box[2]))])
-
-        return lats, lons, lalo_step
-######################################### BasemapExt class end ############################################
+# default color names in matplotlib
+# ref: https://matplotlib.org/users/dflt_style_changes.html
+mplColors = ['#1f77b4',
+             '#ff7f0e',
+             '#2ca02c',
+             '#d62728',
+             '#9467bd',
+             '#8c564b',
+             '#e377c2',
+             '#7f7f7f',
+             '#bcbd22',
+             '#17becf']
 
 
 ########################################### Parser utilities ##############################################
@@ -373,8 +250,8 @@ def add_mask_argument(parser):
 def add_map_argument(parser):
     # Map
     mapg = parser.add_argument_group('Map', 'Map settings for display')
-    mapg.add_argument('--coastline', action='store_true', help='Draw coastline.')
-
+    mapg.add_argument('--coastline', dest='coastline', type=str, default='no', choices={'10m', '50m', '110m', 'no'},
+                      help="Draw coastline with specified resolution.")
     # lalo label
     mapg.add_argument('--lalo-loc', dest='lalo_loc', type=int, nargs=4, default=[1, 0, 0, 1],
                       metavar=('left', 'right', 'top', 'bottom'),
@@ -390,12 +267,10 @@ def add_map_argument(parser):
                       choices={'horizontal', 'vertical'}, default='horizontal',
                       help='Rotate Lat label from default horizontal to vertical (to save space).')
 
-    mapg.add_argument('--projection', dest='map_projection', default='cyl', metavar='NAME',
-                      help='map projection when plotting in geo-coordinate. \n'
-                           'Reference - http://matplotlib.org/basemap/users/mapsetup.html\n\n')
-    mapg.add_argument('--resolution', default='c', choices={'c', 'l', 'i', 'h', 'f', None},
-                      help='Resolution of boundary database to use.\n' +
-                           'c (crude, default), l (low), i (intermediate), h (high), f (full) or None.')
+    mapg.add_argument('--projection', dest='map_projection', metavar='NAME', default='PlateCarree',
+                      choices={'PlateCarree', 'LambertConformal'},
+                      help='map projection when plotting in geo-coordinate.\n'
+                           'https://scitools.org.uk/cartopy/docs/latest/crs/projections.html\n\n')
 
     # scale bar
     mapg.add_argument('--scalebar', nargs=3, metavar=('LEN', 'X', 'Y'), type=float,
@@ -1303,17 +1178,19 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
     extent = (pix_box[0]-0.5, pix_box[2]-0.5,
               pix_box[3]-0.5, pix_box[1]-0.5) #(left, right, bottom, top) in data coordinates
 
+    # plot shaded relief
     if dem_shade is not None:
         # geo coordinates
-        if isinstance(ax, BasemapExt) and geo_box is not None:
+        if geo_box is not None and isinstance(ax, geoaxes.GeoAxes):
             ax.imshow(dem_shade, interpolation='spline16', origin='upper', zorder=0)
         # radar coordinates
         elif isinstance(ax, plt.Axes):
             ax.imshow(dem_shade, interpolation='spline16', extent=extent, zorder=0)
 
+    # plot topo contour
     if dem_contour is not None and dem_contour_seq is not None:
         # geo coordinates
-        if isinstance(ax, BasemapExt) and geo_box is not None:
+        if geo_box is not None and isinstance(ax, geoaxes.GeoAxes):
             yy, xx = np.mgrid[geo_box[1]:geo_box[3]:dem_contour.shape[0]*1j,
                               geo_box[0]:geo_box[2]:dem_contour.shape[1]*1j]
             ax.contour(xx, yy, dem_contour, dem_contour_seq, origin='upper',
@@ -1781,3 +1658,141 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
         if print_msg:
             print('read {} contained cmask dataset'.format(os.path.basename(fname)))
     return msk, mask_file
+
+
+
+###############################################  Maps  ###############################################
+def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[1, 2, 3, 4, 5]):
+    """Auto calculate lat/lon label sequence based on input geo_box
+    Parameters: geo_box        : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
+                lalo_step      : float
+                lalo_max_num   : int, rough major tick number along the longer axis
+                step_candidate : list of int, candidate list for the significant number of step
+    Returns:    lats/lons : np.array of float, sequence of lat/lon auto calculated from input geo_box
+                lalo_step : float, lat/lon label step
+    Example:    geo_box = (128.0, 37.0, 138.0, 30.0)
+                lats, lons, step = m.auto_lalo_sequence(geo_box)
+    """
+    max_lalo_dist = max([geo_box[1]-geo_box[3], geo_box[2]-geo_box[0]])
+
+    if not lalo_step:
+        # Initial tick step
+        lalo_step = ut0.round_to_1(max_lalo_dist/lalo_max_num)
+
+        # reduce decimal if it ends with 8/9
+        digit = np.int(np.floor(np.log10(lalo_step)))
+        if str(lalo_step)[-1] in ['8','9']:
+            digit += 1
+            lalo_step = round(lalo_step, digit)
+
+        # Final tick step - choose from candidate list
+        lalo_step_candidate = [i*10**digit for i in step_candidate]
+        distance = [(i - max_lalo_dist/lalo_max_num) ** 2 for i in lalo_step_candidate]
+        lalo_step = lalo_step_candidate[distance.index(min(distance))]
+
+    digit = np.int(np.floor(np.log10(lalo_step)))
+
+    # Auto tick sequence
+    lat_major = np.ceil(geo_box[3]/10**(digit+1))*10**(digit+1)
+    lats = np.unique(np.hstack((np.arange(lat_major, lat_major-10.*max_lalo_dist, -lalo_step),
+                                np.arange(lat_major, lat_major+10.*max_lalo_dist, lalo_step))))
+    lats = np.sort(lats[np.where(np.logical_and(lats >= geo_box[3], lats <= geo_box[1]))])
+
+    lon_major = np.ceil(geo_box[0]/10**(digit+1))*10**(digit+1)
+    lons = np.unique(np.hstack((np.arange(lon_major, lon_major-10.*max_lalo_dist, -lalo_step),
+                                np.arange(lon_major, lon_major+10.*max_lalo_dist, lalo_step))))
+    lons = np.sort(lons[np.where(np.logical_and(lons >= geo_box[0], lons <= geo_box[2]))])
+    return lats, lons, lalo_step, digit
+
+
+def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max_num=4,
+                    font_size=12, xoffset=None, yoffset=None, yrotate='horizontal',
+                    projection=ccrs.PlateCarree(), print_msg=True):
+    """Auto draw lat/lon label/tick based on coverage from geo_box
+    Parameters: geo_box   : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
+                ax        : CartoPy axes.
+                lalo_step : float
+                lalo_loc  : list of 4 bool, positions where the labels are drawn as in [left, right, top, bottom]
+                            default: [1,0,0,1]
+                lalo_max_num : int
+                ...
+    Example:    geo_box = (128.0, 37.0, 138.0, 30.0)
+                m.draw_lalo_label(geo_box)
+    """
+    # default ax
+    if not ax:
+        ax = plt.gca()
+
+    # default lat/lon sequences
+    lats, lons, lalo_step, digit = auto_lalo_sequence(geo_box, lalo_step=lalo_step, lalo_max_num=lalo_max_num)
+    if print_msg:
+        print('plot lat/lon label in step of {} and location of {}'.format(lalo_step, lalo_loc))
+
+    # ticklabel/tick style
+    ax.tick_params(which='both', direction='in', labelsize=font_size,
+                   left=True, right=True, top=True, bottom=True,
+                   labelleft=lalo_loc[0], labelright=lalo_loc[1],
+                   labeltop=lalo_loc[2], labelbottom=lalo_loc[3])
+    if xoffset is not None:
+        ax.tick_params(axis='x', which='major', pad=xoffset)
+    if yoffset is not None:
+        ax.tick_params(axis='y', which='major', pad=yoffset)
+
+    # ticklabel symbol style
+    decimal_digit = max(0, 0-digit)
+    lon_formatter = cticker.LongitudeFormatter(number_format='.{}f'.format(decimal_digit))
+    lat_formatter = cticker.LatitudeFormatter(number_format='.{}f'.format(decimal_digit))
+    ax.xaxis.set_major_formatter(lon_formatter)
+    ax.yaxis.set_major_formatter(lat_formatter)
+
+    ax.set_xticks(lons, crs=projection)
+    ax.set_yticks(lats, crs=projection)
+    return ax
+
+
+def draw_scalebar(ax, geo_box, loc=[0.2, 0.2, 0.1], labelpad=0.05, font_size=12, color='k'):
+    """draw a simple map scale from x1,y to x2,y in map projection coordinates, label it with actual distance
+    ref_link: http://matplotlib.1069221.n5.nabble.com/basemap-scalebar-td14133.html
+    Parameters: ax       : matplotlib.pyplot.axes object
+                geo_box  : tuple of 4 float in (x0, y0, x1, y1) for (W, N, E, S) in degrees
+                loc      : list of 3 float, distance, lat/lon of scale bar center in ratio of width, relative coord
+                labelpad : float
+    Returns:    ax
+    Example:    from mintpy.utils import plot as pp
+                pp.draw_scale_bar(ax, geo_box)
+    """
+    if not ax:
+        ax = plt.gca()
+
+    geod = pyproj.Geod(ellps='WGS84')
+
+    # length in meter
+    scene_width = geod.inv(geo_box[0], geo_box[3], geo_box[2], geo_box[3])[2]
+    distance = ut0.round_to_1(scene_width * loc[0])
+    lon_c = geo_box[0] + loc[1] * (geo_box[2] - geo_box[0])
+    lat_c = geo_box[3] + loc[2] * (geo_box[1] - geo_box[3])
+
+    # plot scale bar
+    if distance > 1000.0:
+        distance = np.rint(distance/1000.0)*1000.0
+    lon_c2, lat_c2 = geod.fwd(lon_c, lat_c, 90, distance)[0:2]
+    length = np.abs(lon_c - lon_c2)
+    lon0 = lon_c - length/2.0
+    lon1 = lon_c + length/2.0
+
+    ax.plot([lon0, lon1], [lat_c, lat_c], color=color)
+    ax.plot([lon0, lon0], [lat_c, lat_c + 0.1*length], color=color)
+    ax.plot([lon1, lon1], [lat_c, lat_c + 0.1*length], color=color)
+
+    # plot scale bar label
+    unit = 'm'
+    if distance >= 1000.0:
+        unit = 'km'
+        distance *= 0.001
+    label = '{:.0f} {}'.format(distance, unit)
+    txt_offset = (geo_box[1] - geo_box[3]) * labelpad
+
+    ax.text(lon0+0.5*length, lat_c+txt_offset, label,
+            verticalalignment='center', horizontalalignment='center',
+            fontsize=font_size, color=color)
+    return ax
