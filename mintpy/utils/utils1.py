@@ -113,67 +113,6 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     return rms_list, date_list, rms_file
 
 
-def get_residual_spectral_power_density(ts_file, box=None, out_file=None, update_mode=True):
-    """Calculate the Spectral Power Density at freq = 0 for each acquisition of time-series,
-        and output result to a text file
-    Parameters: ts_file  - str, path of time-series residual phase file
-                box      - tuple of 4 int, indicating (x0, y0, x1, y1)
-                out_file - str, path of output text file
-    Returns:    C0_list  - list of float, spectral power density at freq = 0
-                date_list- list of str in YYYYMMDD format
-                out_file - str, path of output text file
-    """
-    from mintpy.simulation import fractal
-
-    # default output filename
-    ts_file = os.path.abspath(ts_file)
-    if out_file is None:
-        fbase = os.path.splitext(os.path.basename(ts_file))[0]
-        out_file = os.path.join(os.path.dirname(ts_file), 'C0_{}.txt'.format(fbase))
-
-    # update mode
-    if update_mode and os.path.isfile(out_file):
-        print('update mode is ON and output file {} already exists, skip re-calculating.'.format(out_file))
-        print('read {}'.format(out_file))
-        fc = np.loadtxt(out_file, dtype=bytes).astype(str)
-        C0_list = fc[:, 1].astype(np.float).tolist()
-        date_list = list(fc[:, 0])
-        return C0_list, date_list, out_file
-
-    else:
-        # ts file info
-        ts_obj = timeseries(ts_file)
-        ts_obj.open()
-        step = abs(range_ground_resolution(ts_obj.metadata))
-        date_list = ts_obj.dateList
-        num_date = len(date_list)
-
-        # calculate list of C0
-        print('calculating spectral power density for each acquisition')
-        C0_list = []
-        prog_bar = ptime.progressBar(maxValue=num_date)
-        for i in range(num_date):
-            data = readfile.read(ts_file, datasetName=date_list[i], box=box)[0]
-            C0 = fractal.check_power_spectrum_1d(data, resolution=step, display=False)[0]
-            C0_list.append(C0)
-            prog_bar.update(i+1, suffix=date_list[i])
-        prog_bar.close()
-
-        # write result to text file
-        header = 'Spectral power density at freq == 0 for each acquisition of time-series\n'
-        header += 'Data shape: {}'.format(data.shape)
-        header += 'Date\t\tC0'
-        np.savetxt(out_file,
-                   np.hstack((np.array(ts_obj.dateList).reshape(-1, 1),
-                              np.array(C0_list).reshape(-1, 1))),
-                   fmt='%s',
-                   delimiter='\t',
-                   header=header)
-        print('save timeseries C0 values to text file', out_file)
-
-    return C0_list, date_list, out_file
-
-
 def nonzero_mask(File, out_file='maskConnComp.h5', datasetName=None):
     """Generate mask file for non-zero value of input multi-group hdf5 file"""
     atr = readfile.read_attribute(File)

@@ -52,7 +52,7 @@ def create_parser():
     opts.add_argument('--steps', type=int, nargs=3, default=[20, 5, 2],
                       help='list of steps for output pixel. Default: 20 5 2')
     opts.add_argument('--level-of-details','--lods', dest='lods', type=int, nargs=3, default=[1500, 4000, -1],
-                      help='list of level of details to determine the visible range while browering\n'+
+                      help='list of level of details to determine the visible range while browering. Default: 1500, 4000, -1.\n'+
                            'Ref: https://developers.google.com/kml/documentation/kml_21tutorial')
     opts.add_argument('--vlim','-v', dest='vlim', nargs=2, metavar=('VMIN', 'VMAX'), type=float,
                       help='min/max range in cm/yr for color coding.')
@@ -65,9 +65,9 @@ def create_parser():
 
     defo = parser.add_argument_group('HD for deforming areas', 'High resolution output for deforming areas')
     defo.add_argument('--cutoff', dest='cutoff', type=int, default=3,
-                      help='choose points with velocity >= cutoff * MAD')
+                      help='choose points with velocity >= cutoff * MAD. Default: 3.')
     defo.add_argument('--min-percentage','--min-perc', dest='min_percentage', type=float, default=0.2,
-                      help='choose boxes with >= min percentage of pixels are deforming')
+                      help='choose boxes with >= min percentage of pixels are deforming. Default: 0.2.')
     return parser
 
 

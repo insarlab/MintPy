@@ -4,42 +4,49 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, 2019                               #
 ############################################################
-# This is a python translation of the matlab scripts originally
-# written by Ramon Hanssen, May 2000, available through the 
-# following website:
+# This module is based on the matlab scripts written by
+# Ramon Hanssen, May 2000, available in the following website:
 #     http://doris.tudelft.nl/software/insarfractal.tar.gz
 # Reference:
 #   Hanssen, R. F. (2001), Radar interferometry: data interpretation 
 # and error analysis, Kluwer Academic Pub, Dordrecht, Netherlands. Chap. 4.7.
 
 
+import os
+import multiprocessing
 import numpy as np
 import matplotlib.pyplot as plt
 
+try:
+    import pyfftw
+except ImportError:
+    raise ImportError('Cannot import pyfftw!')
 
-def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(60., 90., 100.),
+
+# speedup pyfftw
+NUM_THREADS = min(multiprocessing.cpu_count(), 4)
+print('using {} threads for pyfftw computation.'.format(NUM_THREADS))
+pyfftw.config.NUM_THREADS = NUM_THREADS
+
+
+def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(0.6, 0.9, 1.0),
                           beta=(5./3., 8./3., 2./3.), display=False):
     """Simulate an isotropic 2D fractal surface with a power law behavior.
 
-    This is a python translation of fracsurfatmo.m (Ramon Hanssen, 2000).
-    The difference from Hanssen (2000) includes:
-        1) support non-square shape output
-        2) take spatial resolution into consideration
-        3) adapt p0 internally so that the input p0 == C0 from check_power_spectrum_1d()
+    This is based on the fracsurfatmo.m written by Ramon Hanssen, 2000.
 
-    Parameters: shape   : tuple of 2 int, number of rows and columns
+    Parameters: shape      : tuple of 2 int, number of rows and columns
                 resolution : float, spatial resolution in meter
-                p0      : float, multiplier of spectrum amplitude
-                beta    : tuple of 3 float, power law exponents
-                    for a 1D profile of the data
-                regime  : tuple of 3 float, cumulative percentage
-                    of spectrum covered by a specific beta
-                display : bool, display simulation result or not
-    Returns:    fsurf   : 2D np.array in size of (LENGTH, WIDTH)
+                p0         : float, multiplier of power spectral density in m^2.
+                regime     : tuple of 3 float, transition wavelength from regime I to II and II to III
+                             in percentage of max distance 
+                beta       : tuple of 3 float, power law exponents for a 1D profile of the data
+                display    : bool, display simulation result or not
+    Returns:    fsurf      : 2D np.array in size of (length, width) in m.
     Example:    data, atr = readfile.read_attribute('timeseriesResidual_ramp.h5', datasetName='20171115')
                 step = abs(ut.range_ground_resolution(atr))
-                p0 = check_power_spectrum_1d(data, resolution=step)[0]
-                sim_trop_turb = fractal_surface_atmos(shape=data.shape, resolution=step, p0=p0)
+                p0 = get_power_spectral_density(data, resolution=step)[0]
+                tropo = fractal_surface_atmos(shape=data.shape, resolution=step, p0=p0)
     """
 
     beta = np.array(beta, np.float32)
@@ -48,16 +55,17 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(60., 
 
     # simulate a uniform random signal
     h = np.random.rand(length, width)
-    H = np.fft.fftshift(np.fft.fft2(h))
+    H = pyfftw.interfaces.numpy_fft.fft2(h)
+    H = pyfftw.interfaces.numpy_fft.fftshift(H)
 
     # scale the spectrum with the power law
     yy, xx = np.mgrid[0:length-1:length*1j,
-                      0:width-1:width*1j]
-    yy -= int(length / 2. + 0.5)
-    xx -= int(width / 2. + 0.5)
-    xx *= resolution / 1000.
-    yy *= resolution / 1000.
-    k = np.sqrt(np.square(xx) + np.square(yy))    #pixel-wise distance in km
+                      0:width-1:width*1j].astype(np.float32)
+    yy -= np.rint(length/2)
+    xx -= np.rint(width/2)
+    xx *= resolution # / 1000.
+    yy *= resolution # / 1000.
+    k = np.sqrt(np.square(xx) + np.square(yy))    #pixel-wise distance in m
 
     """
     beta+1 is used as beta, since, the power exponent
@@ -65,7 +73,7 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(60., 
     austin94: "Adler, 1981, shows that the surface profile 
       created by the intersection of a plane and a
       2-D fractal surface is itself fractal with 
-      a fractal dimension  equal to that of the 2D 
+      a fractal dimension equal to that of the 2D 
       surface decreased by one.
     """
     beta += 1.
@@ -78,15 +86,13 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(60., 
     """
     beta /= 2.
 
-    mk = np.max(k)
-    k0 = 0
-    k1 = (regime[0] / 100.) * mk
-    k2 = (regime[1] / 100.) * mk
-    k3 = np.max(k)
+    kmax = np.max(k)
+    k1 = regime[0] * kmax
+    k2 = regime[1] * kmax
 
-    regime1 = np.multiply(k >  k0, k <= k1)
+    regime1 = k <= k1
     regime2 = np.multiply(k >= k1, k <= k2)
-    regime3 = np.multiply(k >= k2, k <= k3)
+    regime3 = k >= k2
 
     fraction1 = np.power(k[regime1], beta[0])
     fraction2 = np.power(k[regime2], beta[1])
@@ -100,29 +106,18 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(60., 
     # prevent dividing by zero
     fraction[fraction == 0.] = 1.
 
-    # test
-    debug = False
-    if debug:
-        fig = plt.figure('100')
-        plt.loglog(k[regime1], 1./fraction[regime1], '.')
-        plt.loglog(k[regime2], 1./fraction[regime2], '.')
-        plt.loglog(k[regime3], 1./fraction[regime3], '.')
-        #plt.xlabel('Wavenumber')
-        #plt.ylabel('Power')
-        plt.show()
+    # get the fractal spectrum and transform to spatial domain
+    Hfrac = np.divide(H, fraction)
+    fsurf = pyfftw.interfaces.numpy_fft.ifft2(Hfrac)
+    fsurf = np.abs(fsurf, dtype=np.float32)
 
-    # re-run to force the output power spectrum the same as input p0
-    C0 = p0
-    for i in range(2):
-        Hnew = p0 * np.divide(H, fraction)
+    # calculate the power spectral density of 1st realization
+    p1 = get_power_spectral_density(fsurf, resolution=resolution, display=False)[0]
 
-        # create spectral surface by ifft
-        fsurf = np.absolute(np.fft.ifft2(Hnew), dtype=np.float32)
-
-        # update p0 value based on the 1st simulation
-        if i == 0:
-            C1 = check_power_spectrum_1d(fsurf, resolution=resolution, display=False)[0]
-            p0 *= (C0/C1)
+    # scale the spectrum to match the input power spectral density.
+    Hfrac *= np.sqrt(p0/p1)
+    fsurf = pyfftw.interfaces.numpy_fft.ifft2(Hfrac)
+    fsurf = np.abs(fsurf, dtype=np.float32)
 
     # remove mean to get zero-mean data
     fsurf -= np.mean(fsurf)
@@ -135,18 +130,21 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(60., 
     return fsurf
 
 
-def check_power_spectrum_1d(data, resolution=60., display=False):
-    """Check the rotationally averaged 1D spectrum of input 2D matrix
+def get_power_spectral_density(data, resolution=60., freq0=1e-3, display=False, outfig=None):
+    """Get the radially averaged 1D spectrum (power density) of input 2D matrix
     Check Table 4.5 in Hanssen, 2001 (Page 143) for explaination of outputs.
 
     Python translation of checkfr.m (Ramon Hanssen, 2000)
 
-    Parameters: data       : 2D np.array (free from NaN value)
+    Parameters: data       : 2D np.array (free from NaN value), displacement in m.
                 resolution : float, spatial resolution of input data in meters
+                freq0      : float, reference spatial freqency in cycle / m.
                 display    : bool, display input data and its calculated 1D power spectrum
-    Returns:    C0   : float, spectral power density at freq == 0.
-                beta : float, slope of power profile
+    Returns:    p0   : float, power spectral density at reference frequency in m^2
+                beta : float, slope of power profile in loglog scale
                 D2   : fractal dimension
+                freq : 1D np.array for frequency in cycle/m
+                psd1d: 1D np.array for the power spectral density in m^2
     """
 
     def power_slope(freq, power):
@@ -182,41 +180,47 @@ def check_power_spectrum_1d(data, resolution=60., display=False):
 
 
     if display:
-        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=[10, 3])
-        im = ax[0].imshow(data)
-        plt.colorbar(im, ax=ax[0])
+        fig, axs = plt.subplots(nrows=1, ncols=2, figsize=[10, 3])
+        im = axs[0].imshow(data*100)
+        cbar = plt.colorbar(im, ax=axs[0])
+        cbar.set_label('cm')
 
     # use the square part of the matrix for spectrum calculation
     data = crop_data_max_square_p2(data)
     N = data.shape[0]
 
-    # The frequency coordinate
-    dx = resolution / 1000.
-    Nyquist = 1. / (2. * dx)
-    df = 1. / (N * dx)
-    freq  = np.arange(-Nyquist, Nyquist, df)
-    FY, FX = np.meshgrid(freq, freq)
-    k = np.sqrt(np.square(FX) + np.square(FY))
+    # calculate the normalized power spectrum (spectral density)
+    fdata2d = pyfftw.interfaces.numpy_fft.fft2(data)
+    fdata2d = pyfftw.interfaces.numpy_fft.fftshift(fdata2d)
+    psd2d = np.abs(np.multiply(fdata2d, np.conj(fdata2d))) / (N**2)
 
-    # rotationally averaged 1D spectrum from 2D spectrum
-    fdata2d = np.fft.fftshift(np.fft.fft2(data))
-    pow2d = np.abs((1. / N**2) * np.multiply(fdata2d, np.conj(fdata2d)))
-    pow1d = np.zeros(int(N/2-1))
-    for i in range(len(pow1d)):
-        sel = np.multiply(k >= (i+1)*df, k <= (i+2)*df)
-        pow1d[i] = np.mean(pow2d[sel])
+    # The frequency coordinate in cycle / m
+    freq = np.fft.fftfreq(N, d=resolution)
+    freq = np.roll(freq, shift=np.ceil((N-1)/2).astype(int)) #shift 0 to the center
+    ky, kx = np.meshgrid(freq, freq)
 
-    freq = np.arange(1, N/2) * df
+    # calculate the radially average spectrum
+    freq, psd1d = radial_average_spectrum(kx, ky, psd2d)
 
     # calculate slopes from spectrum
-    C0, beta = power_slope(freq, pow1d)
+    p0, beta = power_slope(freq, psd1d, freq0=freq0)
     D2 = (7. - beta + 1.) / 2.
 
     if display:
-        print('C0 = {:.6f}, beta = {:.3f}, Fractal dim = {:.1f}'.format(C0, beta, D2))
-        ax[1].loglog(freq, pow1d)
+        ax = axs[1]
+        ax.loglog(freq*1000, psd1d*1e4)
+        ax.set_xlabel('Wavenumber [cycle/km]')
+        ax.set_ylabel('Power '+r'$[cm^2]$')
+        msg = r'$p_0={:.4f}\/cm^2$'.format(p0*1e4)
+        msg += '\n'+r'$\beta={:.2f}\//km$'.format(beta)
+        ax.text(0.65, 0.65, msg, transform=ax.transAxes, fontsize=12)
+        fig.tight_layout()
+
+        if outfig:
+            fig.savefig(outfig, bbox_inches='tight', transparent=True, dpi=300)
+            print('save figure to', outfig)
         plt.show()
-    return C0, beta, D2
+    return p0, beta, D2
 
 
 def crop_data_max_square_p2(data):
@@ -247,34 +251,62 @@ def crop_data_max_square_p2(data):
     return data
 
 
-def power_slope(freq, power):
-    """ Derive the slope beta and C0 of an exponential function in loglog scale
-    S(k) = np.power(C0, 2) * np.power(k, -beta)
-    power = np.power(C0, 2) * np.power(freq, -beta)
+def power_slope(freq, psd, freq0=1e-3):
+    """ Derive the slope beta and p0 of an exponential function in loglog scale
+    p = p0 * (freq/freq0)^(-beta)
 
     Python translation of pslope.m (Ramon Hanssen, 2000)
-    
-    Parameters: freq  : 1D / 2D np.array
-                power : 1D / 2D np.array
-    Returns:    C0    : float, spectral power density at freq == 0.
-                beta  : float, slope of power profile
+
+    Parameters: freq  : 1D / 2D np.array in cycle / m.
+                psd   : 1D / 2D np.array for the power spectral density
+                freq0 : reference freqency in cycle / m.
+    Returns:    p0    : float, power spectral density at reference frequency
+                        in the same unit as the input psd.
+                beta  : float, slope of power profile in loglog scale
     """
     freq = freq.flatten()
-    power = power.flatten()
+    psd = psd.flatten()
 
     # check if there is zero frequency. If yes, remove it.
     if not np.all(freq != 0.):
         idx = freq != 0.
         freq = freq[idx]
-        power = power[idx]
+        psd = psd[idx]
 
+    # convert to log-log scale
     logf = np.log10(freq)
-    logp = np.log10(power)
+    logp = np.log10(psd)
 
+    # fit a linear line
     beta = -1 * np.polyfit(logf, logp, deg=1)[0]
 
-    position = np.interp(0, logf, range(len(logf)))
-    logC0 = np.interp(position, range(len(logp)), logp)
-    C0 = np.sqrt(np.power(10, logC0))
-    return C0, beta
+    # interpolate psd at reference frequency
+    if freq0 < freq[0] or freq0 > freq[-1]:
+        raise ValueError('input frequency of interest {} is out of range ({}, {})'.format(freq0, freq[0], freq[-1]))
+    position = np.interp(np.log10(freq0), logf, range(len(logf)))
+    logp0 = np.interp(position, range(len(logp)), logp)
+    p0 = np.power(10, logp0)
+    return p0, beta
 
+
+def radial_average_spectrum(kx, ky, pds2d):
+    """Calculate the radially averaged power spectrum
+    Parameters: kx    - 2D np.ndarray in size of (N,N) for frequency in x direction
+                kx    - 2D np.ndarray in size of (N,N) for frequency in y direction
+                psd2d - 2D np.ndarray in size of (N,N) for 2D power spectral density
+    Returns:    freq  - 1D np.ndarray in size of int(N/2 - 1) for frequency in radial direction
+                psd1d - 1D np.ndarray in size of int(N/2 - 1) for power spectral density
+    """
+    N = kx.shape[0]
+    df = np.unique(kx)[np.unique(kx) > 0][0]
+    k = np.sqrt(np.square(kx) + np.square(ky))
+
+    # rotationally averaged 1D spectrum from 2D spectrum
+    psd1d = np.zeros(int(N/2-1))
+    for i in range(len(psd1d)):
+        ind = np.multiply(k >= (i+0.5)*df, k <= (i+1.5)*df)
+        psd1d[i] = np.mean(pds2d[ind])
+
+    # Only consider one half of spectrum (due to symmetry)
+    freq = np.arange(1, N/2) * df
+    return freq, psd1d
