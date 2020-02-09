@@ -63,8 +63,8 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(0.6, 
                       0:width-1:width*1j].astype(np.float32)
     yy -= np.rint(length/2)
     xx -= np.rint(width/2)
-    xx *= resolution # / 1000.
-    yy *= resolution # / 1000.
+    xx *= resolution
+    yy *= resolution
     k = np.sqrt(np.square(xx) + np.square(yy))    #pixel-wise distance in m
 
     """
@@ -180,8 +180,8 @@ def get_power_spectral_density(data, resolution=60., freq0=1e-3, display=False, 
         ax.set_xlabel('Wavenumber [cycle/km]')
         ax.set_ylabel('Power '+r'$[cm^2]$')
         msg = r'$p_0={:.4f}\/cm^2$'.format(p0*1e4)
-        msg += '\n'+r'$\beta={:.2f}\//km$'.format(beta)
-        ax.text(0.65, 0.65, msg, transform=ax.transAxes, fontsize=12)
+        msg += '\n'+r'$\beta={:.2f}$'.format(beta)
+        ax.text(0.60, 0.65, msg, transform=ax.transAxes, fontsize=12)
         fig.tight_layout()
 
         if outfig:
