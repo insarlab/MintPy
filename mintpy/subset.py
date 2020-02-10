@@ -293,11 +293,7 @@ def subset_file(fname, subset_dict_input, out_file=None):
     """
 
     # Input File Info
-    try:
-        atr = readfile.read_attribute(fname)
-    except:
-        return None
-
+    atr = readfile.read_attribute(fname)
     width = int(atr['WIDTH'])
     length = int(atr['LENGTH'])
     k = atr['FILE_TYPE']
@@ -354,6 +350,11 @@ def subset_file(fname, subset_dict_input, out_file=None):
         print('subsetting {d:<{w}} from {f} ...'.format(
             d=dsName, w=maxDigit, f=os.path.basename(fname)))
         data = readfile.read(fname, datasetName=dsName, print_msg=False)[0]
+
+        # keep timeseries data as 3D matrix when there is only one acquisition
+        # because readfile.read() will squeeze it to 2D
+        if atr['FILE_TYPE'] == 'timeseries' and len(data.shape) == 2:
+            data = np.reshape(data, (1, data.shape[0], data.shape[1]))
 
         # subset 2D data
         if len(data.shape) == 2:
