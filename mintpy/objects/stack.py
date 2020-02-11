@@ -209,7 +209,7 @@ class timeseries:
             self.dateList = [i.decode('utf8') for i in f['date'][:]]
         return self.dateList
 
-    def read(self, datasetName=None, box=None, print_msg=True):
+    def read(self, datasetName=None, box=None, squeeze=True, print_msg=True):
         """Read dataset from timeseries file
         Parameters: self : timeseries object
                     datasetName : (list of) string in YYYYMMDD format
@@ -251,7 +251,8 @@ class timeseries:
                 box = [0, 0, self.width, self.length]
 
             data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
-            data = np.squeeze(data)
+            if squeeze:
+                data = np.squeeze(data)
         return data
 
     def layout_hdf5(self, dsNameDict, metadata, compression=None):
@@ -460,7 +461,7 @@ class timeseries:
     def temporal_average(self):
         print('calculating the temporal average of timeseries file: {}'.format(self.file))
         self.open(print_msg=False)
-        data = self.read()
+        data = self.read(squeeze=False)
         dmean = np.nanmean(data, axis=0)
         return dmean
 
