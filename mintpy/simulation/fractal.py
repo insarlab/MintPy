@@ -29,17 +29,27 @@ print('using {} threads for pyfftw computation.'.format(NUM_THREADS))
 pyfftw.config.NUM_THREADS = NUM_THREADS
 
 
-def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(0.6, 0.9, 1.0),
-                          beta=(5./3., 8./3., 2./3.), display=False):
-    """Simulate an isotropic 2D fractal surface with a power law behavior.
+def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., freq0=1e-3,
+                          regime=(0.001, 0.999, 1.00), beta=(5./3., 8./3., 2./3.)):
+    """Simulate an isotropic 2D fractal surface with a power law behavior, which cooresponds with the 
+    [-5/3, -8/3, -2/3] power law.
+
+    E.g. equation (4.7.28) from Hanssen (2001):
+    P_phi(f) =  P_I(f/f0)   ^ -5/3    for 1.5  <= f0/f <= 50   km       regime[1]-regime[0]
+                P_0(f/f0)   ^ -8/3    for 0.25 <= f0/f <= 1.5  km       regime[0]
+                P_III(f/f0) ^ -2/3    for 0.02 <= f0/f <= 0.25 km       regime[2]-regime[1]
+
+    regime=[0.001, 0.999, 1.0] for larger scale turbulence
+    regime=[0.980, 0.990, 1.0] for middle scale turbulence
+    regime=[0.010, 0.020, 1.0] for small  scale turbulence
 
     This is based on the fracsurfatmo.m written by Ramon Hanssen, 2000.
 
     Parameters: shape      : tuple of 2 int, number of rows and columns
                 resolution : float, spatial resolution in meter
                 p0         : float, multiplier of power spectral density in m^2.
-                regime     : tuple of 3 float, transition wavelength from regime I to II and II to III
-                             in percentage of max distance 
+                regime     : tuple of 3 float, cumulative percentage of spectrum covered by a specific beta
+                             e.g.: (0.60, 0.90, 1.00), (0.95, 0.99, 1.00)
                 beta       : tuple of 3 float, power law exponents for a 1D profile of the data
                 display    : bool, display simulation result or not
     Returns:    fsurf      : 2D np.array in size of (length, width) in m.
@@ -63,8 +73,8 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(0.6, 
                       0:width-1:width*1j].astype(np.float32)
     yy -= np.rint(length/2)
     xx -= np.rint(width/2)
-    xx *= resolution # / 1000.
-    yy *= resolution # / 1000.
+    xx *= resolution
+    yy *= resolution
     k = np.sqrt(np.square(xx) + np.square(yy))    #pixel-wise distance in m
 
     """
@@ -110,23 +120,16 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., regime=(0.6, 
     Hfrac = np.divide(H, fraction)
     fsurf = pyfftw.interfaces.numpy_fft.ifft2(Hfrac)
     fsurf = np.abs(fsurf, dtype=np.float32)
+    fsurf -= np.mean(fsurf)
 
     # calculate the power spectral density of 1st realization
-    p1 = get_power_spectral_density(fsurf, resolution=resolution, display=False)[0]
+    p1 = get_power_spectral_density(fsurf, resolution=resolution, freq0=freq0)[0]
 
     # scale the spectrum to match the input power spectral density.
     Hfrac *= np.sqrt(p0/p1)
     fsurf = pyfftw.interfaces.numpy_fft.ifft2(Hfrac)
     fsurf = np.abs(fsurf, dtype=np.float32)
-
-    # remove mean to get zero-mean data
     fsurf -= np.mean(fsurf)
-
-    if display:
-        plt.figure()
-        plt.imshow(fsurf)
-        plt.colorbar()
-        plt.show()
     return fsurf
 
 
@@ -142,14 +145,13 @@ def get_power_spectral_density(data, resolution=60., freq0=1e-3, display=False, 
                 display    : bool, display input data and its calculated 1D power spectrum
     Returns:    p0   : float, power spectral density at reference frequency in m^2
                 beta : float, slope of power profile in loglog scale
-                D2   : fractal dimension
                 freq : 1D np.array for frequency in cycle/m
                 psd1d: 1D np.array for the power spectral density in m^2
     """
 
     if display:
         fig, axs = plt.subplots(nrows=1, ncols=2, figsize=[10, 3])
-        im = axs[0].imshow(data*100)
+        im = axs[0].imshow(data*100, cmap='jet')
         cbar = plt.colorbar(im, ax=axs[0])
         cbar.set_label('cm')
 
@@ -176,19 +178,26 @@ def get_power_spectral_density(data, resolution=60., freq0=1e-3, display=False, 
 
     if display:
         ax = axs[1]
-        ax.loglog(freq*1000, psd1d*1e4)
+        # plot
+        ax.loglog(freq*1e3, psd1d*1e4)
+
+        # reference frequency
+        ax.axvline(freq0*1e3, linestyle='--', color='k')
+
+        # axis format
         ax.set_xlabel('Wavenumber [cycle/km]')
         ax.set_ylabel('Power '+r'$[cm^2]$')
-        msg = r'$p_0={:.4f}\/cm^2$'.format(p0*1e4)
-        msg += '\n'+r'$\beta={:.2f}\//km$'.format(beta)
-        ax.text(0.65, 0.65, msg, transform=ax.transAxes, fontsize=12)
+        msg = r'$f_0=$'+'{:.3f} '.format(freq0*1e3)+r'$km^{-1}$'
+        msg += '\n'+r'$p_0={:.1f}\/cm^2$'.format(p0*1e4)
+        msg += '\n'+r'$\beta={:.2f}$'.format(beta)
+        ax.text(0.6, 0.55, msg, transform=ax.transAxes, fontsize=12)
         fig.tight_layout()
 
         if outfig:
             fig.savefig(outfig, bbox_inches='tight', transparent=True, dpi=300)
             print('save figure to', outfig)
         plt.show()
-    return p0, beta, D2
+    return p0, beta, freq, psd1d
 
 
 def crop_data_max_square_p2(data):
@@ -278,3 +287,37 @@ def radial_average_spectrum(kx, ky, pds2d):
     # Only consider one half of spectrum (due to symmetry)
     freq = np.arange(1, N/2) * df
     return freq, psd1d
+
+
+def recon_power_spectral_density(N, step, p0, beta, f0=1e-4):
+    """Reconstruct 1D power spectral density from input p0 and beta
+
+    Parameters: N    - int, min size of the 2D matrix
+                step - float, spatial resolution of the 2D matrix in meters
+                p0   - float / 1D np.ndarray, power spectral density in m^2 at frequency of f0
+                beta - float / 1D np.ndarray, power spectra slope in loglog scale
+                f0   - float, reference spatial frequency in cycle / m
+    Returns:    f    - 1D np.ndarray, spatial frequency sequence in cycle / m in size of (num_freq)
+                p    - 1D/2D np.ndarray, power spectral density in size of (num_psd, num_freq)
+    Examples:   atr = readfile.read_attribute('ERA5')
+                N = min(int(atr['LENGTH']), int(atr['WIDTH']))
+                step = abs(ut.range_ground_resolution(atr))
+                freq, psd = recon_power_spectral_density(N, step, p0, beta)
+    """
+    # frequency for x-axis after FFT
+    f = np.fft.fftfreq(N, d=step)
+    df = np.unique(f)[np.unique(f) > 0][0]
+    f = np.arange(1, N/2) * df
+    f = np.array(f, dtype=np.float32).reshape(1,-1)
+
+    # p0, beta --> psd
+    p0 = np.array(p0, dtype=np.float32).reshape(-1,1)
+    beta = np.array(beta, dtype=np.float32).reshape(-1,1)
+
+    logf = np.log10(f)
+    logf0 = np.log10(f0)
+    logp = -beta * (logf - logf0) + np.log10(p0)
+    p = np.power(10, logp)
+    f = f.flatten()
+    return f, p
+

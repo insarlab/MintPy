@@ -92,11 +92,17 @@ def cmd_line_parse(iargs=None):
         raise ValueError('input files do not have the same spatial resolution\n{}'.format(msg))
 
     # check reference point
-    ref_lalo_1 = ['{:.4f}'.format(float(atr1[i])) for i in ['REF_LAT','REF_LON']]
-    ref_lalo_2 = ['{:.4f}'.format(float(atr2[i])) for i in ['REF_LAT','REF_LON']]
+    # round to 3 decimal digits (~100 m)
+    ref_lalo_1 = ['{:.3f}'.format(float(atr1[i])) for i in ['REF_LAT','REF_LON']]
+    ref_lalo_2 = ['{:.3f}'.format(float(atr2[i])) for i in ['REF_LAT','REF_LON']]
     if ref_lalo_1 != ref_lalo_2:
         raise ValueError('input files do not have the same reference point from REF_LAT/LON values')
 
+    # use ref_file for time-series file writing
+    if atr1['FILE_TYPE'] == 'timeseries':
+        inps.ref_file = inps.file[0]
+    else:
+        inps.ref_file = None
     return inps
 
 
@@ -218,7 +224,7 @@ def asc_desc2horz_vert(fname1, fname2):
     return dH, dV, atr, dLOS, atr_list
 
 
-def write_to_one_file(outfile, dH, dV, atr, dLOS, atr_list):
+def write_to_one_file(outfile, dH, dV, atr, dLOS, atr_list, ref_file=None):
     """Write all datasets into one HDF5 file"""
     from mintpy.objects import sensor
 
@@ -241,7 +247,7 @@ def write_to_one_file(outfile, dH, dV, atr, dLOS, atr_list):
     dsDict['vertical'] = dV
     dsDict['horizontal'] = dH
 
-    writefile.write(dsDict, out_file=outfile, metadata=atr)
+    writefile.write(dsDict, out_file=outfile, metadata=atr, ref_file=ref_file)
     return outfile
 
 
@@ -253,13 +259,13 @@ def main(iargs=None):
 
     print('---------------------')
     if inps.one_outfile:
-        write_to_one_file(inps.one_outfile, dH, dV, atr, dLOS, atr_list)
+        write_to_one_file(inps.one_outfile, dH, dV, atr, dLOS, atr_list, ref_file=inps.ref_file)
     else:
         print('writing horizontal component to file: '+inps.outfile[0])
-        writefile.write(dH, out_file=inps.outfile[0], metadata=atr)
+        writefile.write(dH, out_file=inps.outfile[0], metadata=atr, ref_file=inps.ref_file)
 
         print('writing   vertical component to file: '+inps.outfile[1])
-        writefile.write(dV, out_file=inps.outfile[1], metadata=atr)
+        writefile.write(dV, out_file=inps.outfile[1], metadata=atr, ref_file=inps.ref_file)
 
     print('Done.')
     return inps.outfile

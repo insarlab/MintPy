@@ -18,6 +18,21 @@ from mintpy.utils import ptime, readfile, writefile
 from mintpy.utils.utils0 import *
 
 
+#################################### Geometry #########################################
+def get_center_lat_lon(geom_file, box=None):
+    """Get the lat/lon of the scene center"""
+    meta = readfile.read_attribute(geom_file)
+    if box is None:
+        box = (0, 0, int(meta['WIDTH']), int(meta['LENGTH']))
+
+    col_c = int((box[0] + box[2]) / 2)
+    row_c = int((box[1] + box[3]) / 2)
+    box_c = (col_c, row_c, col_c+1, row_c+1)
+    lat_c = float(readfile.read(geom_file, datasetName='latitude', box=box_c)[0])
+    lon_c = float(readfile.read(geom_file, datasetName='longitude', box=box_c)[0])
+    return lat_c, lon_c
+
+
 #################################### Data Operation ###################################
 def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_type='quadratic'):
     """Calculate deramped standard deviation in space for each epoch of input timeseries file.
