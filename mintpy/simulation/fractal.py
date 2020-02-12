@@ -30,16 +30,25 @@ pyfftw.config.NUM_THREADS = NUM_THREADS
 
 
 def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., freq0=1e-3,
-                          regime=(0.6, 0.9, 1.0), beta=(5./3., 8./3., 2./3.)):
-    """Simulate an isotropic 2D fractal surface with a power law behavior.
+                          regime=(0.001, 0.999, 1.00), beta=(5./3., 8./3., 2./3.)):
+    """Simulate an isotropic 2D fractal surface with a power law behavior, which cooresponds with the 
+    [-5/3, -8/3, -2/3] power law.
+
+    E.g. equation (4.7.28) from Hanssen (2001):
+    P_phi(f) =  P_I(f/f0)   ^ -5/3    for 1.5  <= f0/f <= 50   km       regime[1]-regime[0]
+                P_0(f/f0)   ^ -8/3    for 0.25 <= f0/f <= 1.5  km       regime[0]
+                P_III(f/f0) ^ -2/3    for 0.02 <= f0/f <= 0.25 km       regime[2]-regime[1]
+
+    regime=[0.001, 0.999, 1.0] for larger scale turbulence
+    regime=[0.980, 0.990, 1.0] for middle scale turbulence
+    regime=[0.010, 0.020, 1.0] for small  scale turbulence
 
     This is based on the fracsurfatmo.m written by Ramon Hanssen, 2000.
 
     Parameters: shape      : tuple of 2 int, number of rows and columns
                 resolution : float, spatial resolution in meter
                 p0         : float, multiplier of power spectral density in m^2.
-                regime     : tuple of 3 float, transition wavelength from regime I to II and II to III
-                             in percentage of max distance
+                regime     : tuple of 3 float, cumulative percentage of spectrum covered by a specific beta
                              e.g.: (0.60, 0.90, 1.00), (0.95, 0.99, 1.00)
                 beta       : tuple of 3 float, power law exponents for a 1D profile of the data
                 display    : bool, display simulation result or not
@@ -169,7 +178,13 @@ def get_power_spectral_density(data, resolution=60., freq0=1e-3, display=False, 
 
     if display:
         ax = axs[1]
-        ax.loglog(freq*1000, psd1d*1e4)
+        # plot
+        ax.loglog(freq*1e3, psd1d*1e4)
+
+        # reference frequency
+        ax.axvline(freq0*1e3, linestyle='--', color='k')
+
+        # axis format
         ax.set_xlabel('Wavenumber [cycle/km]')
         ax.set_ylabel('Power '+r'$[cm^2]$')
         msg = r'$f_0=$'+'{:.3f} '.format(freq0*1e3)+r'$km^{-1}$'
@@ -274,7 +289,7 @@ def radial_average_spectrum(kx, ky, pds2d):
     return freq, psd1d
 
 
-def recon_power_spectral_density(N, step, p0, beta, f0=1e-3):
+def recon_power_spectral_density(N, step, p0, beta, f0=1e-4):
     """Reconstruct 1D power spectral density from input p0 and beta
 
     Parameters: N    - int, min size of the 2D matrix
