@@ -37,13 +37,13 @@ def get_center_lat_lon(geom_file, box=None):
 def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_type='quadratic'):
     """Calculate deramped standard deviation in space for each epoch of input timeseries file.
     Parameters: timeseries_resid_file - string, timeseries HDF5 file,
-                    e.g. timeseries_ECMWF_demErrInvResid.h5
+                    e.g. timeseries_ERA5_demErrInvResid.h5
                 mask_file - string, mask file, e.g. maskTempCoh.h5
                 ramp_type - string, ramp type, e.g. linear, quadratic, no for do not remove ramp
     Returns:    std_list  - list of float, standard deviation of deramped input timeseries file
                 date_list - list of string in YYYYMMDD format, corresponding dates
     Example:    import mintpy.utils.utils as ut
-                std_list, date_list = ut.get_residual_std('timeseries_ECMWF_demErrInvResid.h5',
+                std_list, date_list = ut.get_residual_std('timeseries_ERA5_demErrInvResid.h5',
                                                           'maskTempCoh.h5')
     """
     # Intermediate files name
@@ -81,7 +81,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
 def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_type='quadratic'):
     """Calculate deramped Root Mean Square in space for each epoch of input timeseries file.
     Parameters: timeseries_resid_file : string, 
-                    timeseries HDF5 file, e.g. timeseries_ECMWF_demErrInvResid.h5
+                    timeseries HDF5 file, e.g. timeseries_ERA5_demErrInvResid.h5
                 mask_file : string,
                     mask file, e.g. maskTempCoh.h5
                 ramp_type : string, 
@@ -592,9 +592,9 @@ def run_or_skip(out_file, in_file=None, check_readable=True, print_msg=True):
                 check_readable : bool, check if the 1st output file has attribute 'WIDTH'
                 print_msg      : bool, print message
     Returns:    run/skip : str, whether to update output file or not
-    Example:    if ut.run_or_skip(out_file='timeseries_ECMWF_demErr.h5', in_file='timeseries_ECMWF.h5'):
+    Example:    if ut.run_or_skip(out_file='timeseries_ERA5_demErr.h5', in_file='timeseries_ERA5.h5'):
                 if ut.run_or_skip(out_file='exclude_date.txt',
-                                  in_file=['timeseries_ECMWF_demErrInvResid.h5',
+                                  in_file=['timeseries_ERA5_demErrInvResid.h5',
                                            'maskTempCoh.h5',
                                            'smallbaselineApp.cfg'],  
                                   check_readable=False):

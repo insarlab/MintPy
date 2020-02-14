@@ -405,7 +405,7 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
                     wrap
     Returns:    fig_title : str, output figure title
     Example:    'geo_velocity.h5' = auto_figure_title('geo_velocity.h5', None, vars(inps))
-                '101020-110220_ECMWF_demErr_quadratic' = auto_figure_title('timeseries_ECMWF_demErr_quadratic.h5', '110220')
+                '101020-110220_ERA5_ramp_demErr' = auto_figure_title('timeseries_ERA5_ramp_demErr.h5', '110220')
     """
     if not datasetNames:
         datasetNames = []
