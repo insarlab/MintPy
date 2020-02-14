@@ -26,13 +26,13 @@ EXAMPLE = """example:
   tsview.py timeseries.h5  --wrap
   tsview.py timeseries.h5  --yx 300 400 --zero-first  --nodisplay
   tsview.py geo_timeseries.h5  --lalo 33.250 131.665  --nodisplay
-  tsview.py timeseries_ECMWF_ramp_demErr.h5  --sub-x 900 1400 --sub-y 0 500
+  tsview.py timeseries_ERA5_ramp_demErr.h5  --sub-x 900 1400 --sub-y 0 500
 
   # press left / right key to slide images
 
   # multiple time-series files
-  tsview.py timeseries_ECMWF_ramp_demErr.h5 timeseries_ECMWF_ramp.h5 timeseries_ECMWF.h5 timeseries.h5 --off 5
-  tsview.py timeseries_ECMWF_ramp_demErr.h5 ../GIANT/Stack/LS-PARAMS.h5 --off 5 --label mintpy giant
+  tsview.py timeseries_ERA5_ramp_demErr.h5 timeseries_ERA5_ramp.h5 timeseries_ERA5.h5 timeseries.h5 --off 5
+  tsview.py timeseries_ERA5_ramp_demErr.h5 ../GIANT/Stack/LS-PARAMS.h5 --off 5 --label mintpy giant
 """
 
 
@@ -525,7 +525,7 @@ class timeseriesViewer():
     """Class for tsview.py
     
     Example:
-        cmd = 'tsview.py timeseries_ECMWF_ramp_demErr.h5'
+        cmd = 'tsview.py timeseries_ERA5_ramp_demErr.h5'
         obj = timeseriesViewer(cmd)
         obj.configure()
         obj.plot()

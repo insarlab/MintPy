@@ -32,7 +32,7 @@ mintpy.save.hdfEos5.subset  = auto   #[yes / no], auto for no, put subset range 
 """
 
 EXAMPLE = """example:
-  save_hdfeos5.py geo_timeseries_ECMWF_ramp_demErr.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
+  save_hdfeos5.py geo_timeseries_ERA5_ramp_demErr.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
 """
 
 
