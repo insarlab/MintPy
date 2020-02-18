@@ -417,7 +417,7 @@ class TimeSeriesAnalysis:
         return
 
 
-    def run_network_modification(self, step_name):
+    def run_network_modification(self, step_name, plot=True):
         """Modify network of interferograms before the network inversion."""
         # check the existence of ifgramStack.h5
         stack_file, geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1:3]
@@ -449,12 +449,13 @@ class TimeSeriesAnalysis:
         mintpy.modify_network.main(scp_args.split())
 
         # 3) plot network
-        scp_args = '{} -t {} --nodisplay'.format(stack_file, self.templateFile)
-        print('\nplot_network.py', scp_args)
-        if ut.run_or_skip(out_file=net_fig,
-                          in_file=[stack_file, coh_txt, self.templateFile],
-                          check_readable=False) == 'run':
-            mintpy.plot_network.main(scp_args.split())
+        if self.template['mintpy.plot'] and plot:
+            scp_args = '{} -t {} --nodisplay'.format(stack_file, self.templateFile)
+            print('\nplot_network.py', scp_args)
+            if ut.run_or_skip(out_file=net_fig,
+                              in_file=[stack_file, coh_txt, self.templateFile],
+                              check_readable=False) == 'run':
+                mintpy.plot_network.main(scp_args.split())
 
         # 4) aux files: maskConnComp and avgSpatialCoh
         self.generate_ifgram_aux_file()
@@ -1009,7 +1010,7 @@ class TimeSeriesAnalysis:
                 self.run_load_data(sname)
 
             elif sname == 'modify_network':
-                self.run_network_modification(sname)
+                self.run_network_modification(sname, plot=plot)
 
             elif sname == 'reference_point':
                 self.run_reference_point(sname)
@@ -1053,7 +1054,7 @@ class TimeSeriesAnalysis:
             elif sname == 'hdfeos5':
                 self.run_save2hdfeos5(sname)
 
-        # plot result (show aux visualization message more multiple steps processing)
+        # plot result (show aux visualization message for multiple steps processing)
         print_aux = len(steps) > 1
         self.plot_result(print_aux=print_aux, plot=plot)
 
