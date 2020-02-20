@@ -4,7 +4,7 @@
 [![Latest version](https://img.shields.io/badge/latest%20version-v1.2-yellowgreen.svg)](https://github.com/insarlab/MintPy/releases)
 [![License](https://img.shields.io/badge/license-GPLv3-yellow.svg)](https://github.com/insarlab/MintPy/blob/master/LICENSE)
 [![Forum](https://img.shields.io/badge/forum-Google%20Group-orange.svg)](https://groups.google.com/forum/#!forum/mintpy)
-[![Citation](https://img.shields.io/badge/DOI-10.1016%2Fj.cageo.2019.104331-blue)](https://doi.org/10.1016/j.cageo.2019.104331)
+[![Citation](https://img.shields.io/badge/doi-10.1016%2Fj.cageo.2019.104331-blue)](https://doi.org/10.1016/j.cageo.2019.104331)
 
 ## MintPy ##
 

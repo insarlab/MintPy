@@ -123,9 +123,9 @@ def create_parser():
                         'fim - Fisher Information Matrix as weight' +
                         'coh - spatial coherence\n' +
                         'no  - no/uniform weight')
-    parser.add_argument('--min-norm-velocity', dest='minNormVelocity', action='store_true',
-                        help=('Enable inversion with minimum-norm deformation velocity,'
-                              ' instead of minimum-norm deformation phase'))
+    parser.add_argument('--min-norm-phase', dest='minNormVelocity', action='store_false',
+                        help=('Enable inversion with minimum-norm deformation phase,'
+                              ' instead of the default minimum-norm deformation velocity.'))
     parser.add_argument('--norm', dest='residualNorm', default='L2', choices=['L1', 'L2'],
                         help='Inverse method used to residual optimization, L1 or L2 norm minimization. Default: L2')
 
