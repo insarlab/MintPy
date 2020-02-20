@@ -932,12 +932,14 @@ def read_data4figure(i_start, i_end, inps, metadata):
     # This could be:
     # 1) the same type OR
     # 2) velocity or timeseries OR
-    # 3) data/model output from load_gbis.py OR
-    # 4) horizontal/vertical output from asc_desc2horz_vert.py
+    # 3) horizontal/vertical output from asc_desc2horz_vert.py
+    # 4) data/model output from load_gbis.py OR
+    # 5) binary files with multiple undefined datasets, as band1, band2, etc.
     if (len(inps.dsetFamilyList) == 1 
+            or inps.key in ['velocity', 'timeseries', 'inversion'],
             or all(d in inps.dsetFamilyList for d in ['horizontal', 'vertical'])
             or inps.dsetFamilyList == ['data','model','residual']
-            or inps.key in ['velocity', 'timeseries', 'inversion']):
+            or inps.dsetFamilyList == ['band{}'.format(i+1) for i in range(len(inps.dsetFamilyList))]):
         data, inps = update_data_with_plot_inps(data, metadata, inps)
         if (not inps.vlim 
                 and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)
