@@ -388,8 +388,9 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
     dsNameList = list(dsPathDict.keys())
     pairsDict = {}
     for dsPath in dsPathDict[dsName0]:
-        dates = ptime.yyyymmdd(readfile.read_attribute(dsPath)['DATE12'].replace('_','-').split('-'))
 
+        dates = ptime.yyyymmdd(readfile.read_attribute(dsPath)['DATE12'].replace('_','-').split('-'))
+        
         #####################################
         # A dictionary of data files for a given pair.
         # One pair may have several types of dataset.
@@ -401,11 +402,11 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
         for i in range(len(dsNameList)):
             dsName = dsNameList[i]
             dsPath1 = dsPathDict[dsName][0]
-            if all(d[2:8] in dsPath1 for d in dates):
+            if all(d[2:13] in dsPath1 for d in dates):
                 ifgramPathDict[dsName] = dsPath1
             else:
                 dsPath2 = [i for i in dsPathDict[dsName]
-                           if all(d[2:8] in i for d in dates)]
+                           if all(d[2:13] in i for d in dates)]
                 if len(dsPath2) > 0:
                     ifgramPathDict[dsName] = dsPath2[0]
                 else:
@@ -413,7 +414,6 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
         ifgramObj = ifgramDict(dates=tuple(dates),
                                datasetDict=ifgramPathDict)
         pairsDict[tuple(dates)] = ifgramObj
-
     if len(pairsDict) > 0:
         stackObj = ifgramStackDict(pairsDict=pairsDict, dsName0=dsName0)
     else:
