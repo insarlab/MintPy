@@ -936,7 +936,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
     # 4) data/model output from load_gbis.py OR
     # 5) binary files with multiple undefined datasets, as band1, band2, etc.
     if (len(inps.dsetFamilyList) == 1 
-            or inps.key in ['velocity', 'timeseries', 'inversion'],
+            or inps.key in ['velocity', 'timeseries', 'inversion']
             or all(d in inps.dsetFamilyList for d in ['horizontal', 'vertical'])
             or inps.dsetFamilyList == ['data','model','residual']
             or inps.dsetFamilyList == ['band{}'.format(i+1) for i in range(len(inps.dsetFamilyList))]):
