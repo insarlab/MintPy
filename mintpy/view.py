@@ -817,13 +817,13 @@ def update_figure_setting(inps):
                             pp.max_figsize_height/plot_shape[1])
             inps.fig_size = [i*fig_scale for i in plot_shape]
             #inps.fig_size = [np.floor(i*fig_scale*2)/2 for i in plot_shape]
-            vprint('figure size : '+str(inps.fig_size))
+            vprint('figure size : [{:.2f}, {:.2f}]'.format(inps.fig_size[0], inps.fig_size[1]))
 
     # Multiple Plots
     else:
         if not inps.fig_size:
             inps.fig_size = pp.default_figsize_multi
-        vprint('figure size : '+str(inps.fig_size))
+        vprint('figure size : [{:.2f}, {:.2f}]'.format(inps.fig_size[0], inps.fig_size[1]))
 
         # Figure number (<= 200 subplots per figure)
         if not inps.fig_num:
