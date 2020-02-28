@@ -1170,38 +1170,45 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
          dem_contour,
          dem_contour_seq) = prepare_dem_background(dem, inps=inps, print_msg=print_msg)
 
-    # get extent
-    if hasattr(inps, 'pix_box'):
-        pix_box = tuple(inps.pix_box)
+    # get extent - (left, right, bottom, top) in data coordinates
+    if geo_box is not None:
+        geo_extent = (geo_box[0], geo_box[2],
+                      geo_box[3], geo_box[1])
     else:
-        data = [i for i in [dem, dem_shade, dem_contour] if i is not None][0]
-        pix_box = (0, 0, data.shape[1], data.shape[0])
-    extent = (pix_box[0]-0.5, pix_box[2]-0.5,
-              pix_box[3]-0.5, pix_box[1]-0.5) #(left, right, bottom, top) in data coordinates
+        if hasattr(inps, 'pix_box'):
+            pix_box = tuple(inps.pix_box)
+        else:
+            data = [i for i in [dem, dem_shade, dem_contour] if i is not None][0]
+            pix_box = (0, 0, data.shape[1], data.shape[0])
+        rdr_extent = (pix_box[0]-0.5, pix_box[2]-0.5,
+                      pix_box[3]-0.5, pix_box[1]-0.5)
 
     # plot shaded relief
     if dem_shade is not None:
         # geo coordinates
-        if geo_box is not None and isinstance(ax, geoaxes.GeoAxes):
-            ax.imshow(dem_shade, interpolation='spline16', origin='upper', zorder=0)
+        if geo_box is not None:
+            ax.imshow(dem_shade, interpolation='spline16', extent=geo_extent, zorder=0, origin='upper')
+
         # radar coordinates
         elif isinstance(ax, plt.Axes):
-            ax.imshow(dem_shade, interpolation='spline16', extent=extent, zorder=0)
+            ax.imshow(dem_shade, interpolation='spline16', extent=rdr_extent, zorder=0, origin='upper')
 
     # plot topo contour
     if dem_contour is not None and dem_contour_seq is not None:
         # geo coordinates
-        if geo_box is not None and isinstance(ax, geoaxes.GeoAxes):
+        if geo_box is not None:
             yy, xx = np.mgrid[geo_box[1]:geo_box[3]:dem_contour.shape[0]*1j,
                               geo_box[0]:geo_box[2]:dem_contour.shape[1]*1j]
-            ax.contour(xx, yy, dem_contour, dem_contour_seq, origin='upper',
-                       linewidths=inps.dem_contour_linewidth,
-                       colors='black', alpha=0.5, latlon='FALSE', zorder=1)
+
+            ax.contour(xx, yy, dem_contour, dem_contour_seq, extent=geo_extent,
+                       origin='upper', linewidths=inps.dem_contour_linewidth,
+                       colors='black', alpha=0.5, zorder=1)
+
         # radar coordinates
         elif isinstance(ax, plt.Axes):
-            ax.contour(dem_contour, dem_contour_seq, origin='upper',
-                       linewidths=inps.dem_contour_linewidth,
-                       colors='black', alpha=0.5, extent=extent, zorder=1)
+            ax.contour(dem_contour, dem_contour_seq, extent=rdr_extent,
+                       origin='upper', linewidths=inps.dem_contour_linewidth,
+                       colors='black', alpha=0.5, zorder=1)
     return ax
 
 

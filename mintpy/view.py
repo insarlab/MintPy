@@ -436,9 +436,9 @@ def plot_slice(ax, data, metadata, inps=None):
             # Plot DEM
             if inps.dem_file:
                 vprint('plotting DEM background ...')
-                m = pp.plot_dem_background(ax=ax, geo_box=inps.geo_box,
-                                           dem=dem, inps=inps,
-                                           print_msg=inps.print_msg)
+                pp.plot_dem_background(ax=ax, geo_box=inps.geo_box,
+                                       dem=dem, inps=inps,
+                                       print_msg=inps.print_msg)
 
             # Plot Data
             coord = ut.coordinate(metadata)
@@ -576,8 +576,8 @@ def plot_slice(ax, data, metadata, inps=None):
         # Plot DEM
         if inps.dem_file:
             vprint('plotting DEM background ...')
-            ax = pp.plot_dem_background(ax=ax, geo_box=None, dem=dem,
-                                        inps=inps, print_msg=inps.print_msg)
+            pp.plot_dem_background(ax=ax, geo_box=None, dem=dem,
+                                   inps=inps, print_msg=inps.print_msg)
 
         # Plot Data
         vprint('plotting Data ...')
@@ -972,12 +972,12 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     """
     # Plot DEM
     if inps.dem_file:
-        ax = pp.plot_dem_background(ax=ax, geo_box=None,
-                                    dem_shade=inps.dem_shade,
-                                    dem_contour=inps.dem_contour,
-                                    dem_contour_seq=inps.dem_contour_seq,
-                                    inps=inps,
-                                    print_msg=inps.print_msg)
+        pp.plot_dem_background(ax=ax, geo_box=None,
+                               dem_shade=inps.dem_shade,
+                               dem_contour=inps.dem_contour,
+                               dem_contour_seq=inps.dem_contour_seq,
+                               inps=inps,
+                               print_msg=inps.print_msg)
     # Plot Data
     vlim = inps.vlim
     if vlim is None:
