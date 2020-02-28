@@ -8,6 +8,7 @@
 
 
 import os
+import csv
 import argparse
 import warnings
 import datetime
@@ -1241,14 +1242,15 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
                 msg += 'displacement'
             msg += ' with respect to {} in {} direction ...'.format(inps.ref_gps_site, inps.gps_component)
             print(msg)
+            print('number of available GPS stations: {}'.format(num_site))
             print('start date: {}'.format(inps.gps_start_date))
             print('end   date: {}'.format(inps.gps_end_date))
             prog_bar = ptime.progressBar(maxValue=num_site)
 
         # get insar_obj (meta / geom_file)
         geom_file = ut1.get_geometry_file(['incidenceAngle','azimuthAngle'],
-                                         work_dir=os.path.dirname(inps.file),
-                                         coord='geo')
+                                          work_dir=os.path.dirname(inps.file),
+                                          coord='geo')
         if geom_file:
             geom_obj = geom_file
             print('use incidenceAngle/azimuthAngle from file: {}'.format(os.path.basename(geom_file)))
@@ -1256,10 +1258,13 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             geom_obj = metadata
             print('use incidenceAngle/azimuthAngle calculated from metadata')
 
-        listGPS=[]
+        gps_data_list = []
         for i in range(num_site):
-            obj = GPS(site_names[i])
+            if print_msg:
+                prog_bar.update(i+1, suffix=site_names[i])
+
             # calculate gps data value
+            obj = GPS(site_names[i])
             if k == 'velocity':
                 gps_data = obj.get_gps_los_velocity(geom_obj,
                                                     start_date=inps.gps_start_date,
@@ -1273,25 +1278,16 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
                                                     ref_site=inps.ref_gps_site,
                                                     gps_comp=inps.gps_component)[1] * unit_fac
                 gps_data = dis[-1] - dis[0]
-                
-            if np.isnan(gps_data) == False:
-                listGPS.append([site_names[i],site_lons[i], site_lats[i], gps_data])
-            else: pass
 
             # save calculated GPS velocities to CSV file
-            import csv
-            csv_columns = ['SiteID','Lon','Lat', 'Vel ('+str(inps.disp_unit)+' in LOS)']
             csv_file = "GPSSitesVel.csv"
-            try:
-                with open(csv_file, 'w') as csvfile:
-                    wr = csv.writer(csvfile)
-                    wr.writerow(csv_columns)
-                    wr.writerows(listGPS)
-            except IOError:
-                print("I/O error")
-
-            if print_msg:
-                prog_bar.update(i+1, suffix=site_names[i])
+            csv_columns = ['SiteID', 'Lon', 'Lat', 'LOS velocity [{}]'.format(inps.disp_unit)]
+            if not np.isnan(gps_data):
+                gps_data_list.append([site_names[i], site_lons[i], site_lats[i], gps_data])
+                with open(csv_file, 'w') as fc:
+                    fcw = csv.writer(fc)
+                    fcw.writerow(csv_columns)
+                    fcw.writerows(gps_data_list)
 
             # plot
             if not gps_data:
