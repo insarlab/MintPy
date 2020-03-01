@@ -218,7 +218,7 @@ class GPS:
 
     def dload_site(self, print_msg=True):
         if print_msg:
-            print('downloading {} from {}'.format(self.site, url))
+            print('downloading {} from {}'.format(self.site, self.file_url))
 
         urlretrieve(self.file_url, self.file)
         urlretrieve(self.plot_file_url, self.plot_file)
