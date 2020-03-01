@@ -8,6 +8,7 @@
 
 
 import os
+import csv
 import argparse
 import warnings
 import datetime
@@ -405,7 +406,7 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
                     wrap
     Returns:    fig_title : str, output figure title
     Example:    'geo_velocity.h5' = auto_figure_title('geo_velocity.h5', None, vars(inps))
-                '101020-110220_ECMWF_demErr_quadratic' = auto_figure_title('timeseries_ECMWF_demErr_quadratic.h5', '110220')
+                '101020-110220_ERA5_ramp_demErr' = auto_figure_title('timeseries_ERA5_ramp_demErr.h5', '110220')
     """
     if not datasetNames:
         datasetNames = []
@@ -1169,38 +1170,45 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
          dem_contour,
          dem_contour_seq) = prepare_dem_background(dem, inps=inps, print_msg=print_msg)
 
-    # get extent
-    if hasattr(inps, 'pix_box'):
-        pix_box = tuple(inps.pix_box)
+    # get extent - (left, right, bottom, top) in data coordinates
+    if geo_box is not None:
+        geo_extent = (geo_box[0], geo_box[2],
+                      geo_box[3], geo_box[1])
     else:
-        data = [i for i in [dem, dem_shade, dem_contour] if i is not None][0]
-        pix_box = (0, 0, data.shape[1], data.shape[0])
-    extent = (pix_box[0]-0.5, pix_box[2]-0.5,
-              pix_box[3]-0.5, pix_box[1]-0.5) #(left, right, bottom, top) in data coordinates
+        if hasattr(inps, 'pix_box'):
+            pix_box = tuple(inps.pix_box)
+        else:
+            data = [i for i in [dem, dem_shade, dem_contour] if i is not None][0]
+            pix_box = (0, 0, data.shape[1], data.shape[0])
+        rdr_extent = (pix_box[0]-0.5, pix_box[2]-0.5,
+                      pix_box[3]-0.5, pix_box[1]-0.5)
 
     # plot shaded relief
     if dem_shade is not None:
         # geo coordinates
-        if geo_box is not None and isinstance(ax, geoaxes.GeoAxes):
-            ax.imshow(dem_shade, interpolation='spline16', origin='upper', zorder=0)
+        if geo_box is not None:
+            ax.imshow(dem_shade, interpolation='spline16', extent=geo_extent, zorder=0, origin='upper')
+
         # radar coordinates
         elif isinstance(ax, plt.Axes):
-            ax.imshow(dem_shade, interpolation='spline16', extent=extent, zorder=0)
+            ax.imshow(dem_shade, interpolation='spline16', extent=rdr_extent, zorder=0, origin='upper')
 
     # plot topo contour
     if dem_contour is not None and dem_contour_seq is not None:
         # geo coordinates
-        if geo_box is not None and isinstance(ax, geoaxes.GeoAxes):
+        if geo_box is not None:
             yy, xx = np.mgrid[geo_box[1]:geo_box[3]:dem_contour.shape[0]*1j,
                               geo_box[0]:geo_box[2]:dem_contour.shape[1]*1j]
-            ax.contour(xx, yy, dem_contour, dem_contour_seq, origin='upper',
-                       linewidths=inps.dem_contour_linewidth,
-                       colors='black', alpha=0.5, latlon='FALSE', zorder=1)
+
+            ax.contour(xx, yy, dem_contour, dem_contour_seq, extent=geo_extent,
+                       origin='upper', linewidths=inps.dem_contour_linewidth,
+                       colors='black', alpha=0.5, zorder=1)
+
         # radar coordinates
         elif isinstance(ax, plt.Axes):
-            ax.contour(dem_contour, dem_contour_seq, origin='upper',
-                       linewidths=inps.dem_contour_linewidth,
-                       colors='black', alpha=0.5, extent=extent, zorder=1)
+            ax.contour(dem_contour, dem_contour_seq, extent=rdr_extent,
+                       origin='upper', linewidths=inps.dem_contour_linewidth,
+                       colors='black', alpha=0.5, zorder=1)
     return ax
 
 
@@ -1241,14 +1249,15 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
                 msg += 'displacement'
             msg += ' with respect to {} in {} direction ...'.format(inps.ref_gps_site, inps.gps_component)
             print(msg)
+            print('number of available GPS stations: {}'.format(num_site))
             print('start date: {}'.format(inps.gps_start_date))
             print('end   date: {}'.format(inps.gps_end_date))
             prog_bar = ptime.progressBar(maxValue=num_site)
 
         # get insar_obj (meta / geom_file)
         geom_file = ut1.get_geometry_file(['incidenceAngle','azimuthAngle'],
-                                         work_dir=os.path.dirname(inps.file),
-                                         coord='geo')
+                                          work_dir=os.path.dirname(inps.file),
+                                          coord='geo')
         if geom_file:
             geom_obj = geom_file
             print('use incidenceAngle/azimuthAngle from file: {}'.format(os.path.basename(geom_file)))
@@ -1256,10 +1265,13 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             geom_obj = metadata
             print('use incidenceAngle/azimuthAngle calculated from metadata')
 
-        listGPS=[]
+        gps_data_list = []
         for i in range(num_site):
-            obj = GPS(site_names[i])
+            if print_msg:
+                prog_bar.update(i+1, suffix=site_names[i])
+
             # calculate gps data value
+            obj = GPS(site_names[i])
             if k == 'velocity':
                 gps_data = obj.get_gps_los_velocity(geom_obj,
                                                     start_date=inps.gps_start_date,
@@ -1273,25 +1285,16 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
                                                     ref_site=inps.ref_gps_site,
                                                     gps_comp=inps.gps_component)[1] * unit_fac
                 gps_data = dis[-1] - dis[0]
-                
-            if np.isnan(gps_data) == False:
-                listGPS.append([site_names[i],site_lons[i], site_lats[i], gps_data])
-            else: pass
 
             # save calculated GPS velocities to CSV file
-            import csv
-            csv_columns = ['SiteID','Lon','Lat', 'Vel ('+str(inps.disp_unit)+' in LOS)']
             csv_file = "GPSSitesVel.csv"
-            try:
-                with open(csv_file, 'w') as csvfile:
-                    wr = csv.writer(csvfile)
-                    wr.writerow(csv_columns)
-                    wr.writerows(listGPS)
-            except IOError:
-                print("I/O error")
-
-            if print_msg:
-                prog_bar.update(i+1, suffix=site_names[i])
+            csv_columns = ['SiteID', 'Lon', 'Lat', 'LOS velocity [{}]'.format(inps.disp_unit)]
+            if not np.isnan(gps_data):
+                gps_data_list.append([site_names[i], site_lons[i], site_lats[i], gps_data])
+                with open(csv_file, 'w') as fc:
+                    fcw = csv.writer(fc)
+                    fcw.writerow(csv_columns)
+                    fcw.writerows(gps_data_list)
 
             # plot
             if not gps_data:

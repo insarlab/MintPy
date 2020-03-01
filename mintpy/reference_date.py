@@ -25,8 +25,8 @@ mintpy.reference.date  = auto   #[reference_date.txt / 20090214 / no], auto for 
 """
 
 EXAMPLE = """example:
-  reference_date.py timeseries.h5 timeseries_ECMWF.h5 timeseries_ECMWF_demErr.h5  --template smallbaselineApp.cfg
-  reference_date.py timeseries_ECMWF_demErr.h5  --ref-date 20050107
+  reference_date.py timeseries.h5 timeseries_ERA5.h5 timeseries_ERA5_demErr.h5 --template smallbaselineApp.cfg
+  reference_date.py timeseries_ERA5_demErr.h5 --ref-date 20050107
 """
 
 

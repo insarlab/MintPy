@@ -46,13 +46,13 @@ mintpy.topographicResidual.pixelwiseGeometry = auto  #[yes / no], auto for yes, 
 
 EXAMPLE = """example:
   # correct DEM error with pixel-wise geometry parameters [slow]
-  dem_error.py  timeseries_ECMWF_ramp.h5 -g inputs/geometryRadar.h5 -t smallbaselineApp.cfg
+  dem_error.py  timeseries_ERA5_ramp.h5 -g inputs/geometryRadar.h5 -t smallbaselineApp.cfg
 
   # correct DEM error with mean geometry parameters [fast]
-  dem_error.py  timeseries_ECMWF_ramp.h5 -t smallbaselineApp.cfg
+  dem_error.py  timeseries_ERA5_ramp.h5 -t smallbaselineApp.cfg
 
   # get time-series of estimated deformation model
-  diff.py timeseries_ECMWF_ramp_demErr.h5 timeseriesResidual.h5 -o timeseriesDefModel.h5
+  diff.py timeseries_ERA5_ramp_demErr.h5 timeseriesResidual.h5 -o timeseriesDefModel.h5
 
   # get updated/corrected DEM
   save_roipac.py inputs/geometryGeo.h5 -o dem.h5   #for dataset in geo coordinates

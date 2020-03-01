@@ -125,8 +125,8 @@ def get_geo_lat_lon(atr):
     Y_FIRST = float(atr['Y_FIRST'])
     X_STEP = float(atr['X_STEP'])
     Y_STEP = float(atr['Y_STEP'])
-    W = float(atr['WIDTH'])
-    L = float(atr['LENGTH'])
+    W = int(atr['WIDTH'])
+    L = int(atr['LENGTH'])
     Y_END = Y_FIRST + L*Y_STEP
     X_END = X_FIRST + W*X_STEP
 

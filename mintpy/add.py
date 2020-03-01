@@ -15,9 +15,9 @@ from mintpy.utils import readfile, writefile
 
 ################################################################################
 EXAMPLE = """example:
-  add.py  mask_1.h5 mask_2.h5 mask_3.h5           -o mask_all.h5
-  add.py  081008_100220.unw    100220_110417.unw  -o 081008_110417.unw
-  add.py  timeseries_ECMWF.h5  ECMWF.h5           -o timeseries.h5
+  add.py mask_1.h5 mask_2.h5 mask_3.h5 -o mask_all.h5
+  add.py 081008_100220.unw 100220_110417.unw -o 081008_110417.unw
+  add.py timeseries_ERA5.h5 inputs/ERA5.h5 -o timeseries.h5
 """
 
 

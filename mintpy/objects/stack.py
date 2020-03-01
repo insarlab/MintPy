@@ -216,7 +216,7 @@ class timeseries:
                     box : tuple of 4 int, indicating x0,y0,x1,y1 of range
         Returns:    data : 2D or 3D dataset
         Examples:   from mintpy.objects import timeseries
-                    tsobj = timeseries('timeseries_ECMWF_demErr.h5')
+                    tsobj = timeseries('timeseries_ERA5_demErr.h5')
                     data = tsobj.read(datasetName='20161020')
                     data = tsobj.read(datasetName='20161020', box=(100,300,500,800))
                     data = tsobj.read(datasetName=['20161020','20161026','20161101'])

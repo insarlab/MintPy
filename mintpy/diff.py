@@ -16,9 +16,9 @@ from mintpy.utils import readfile, writefile
 #####################################################################################
 EXAMPLE = """example:
   diff.py  velocity.h5    velocity_demErr.h5
-  diff.py  timeseries.h5  ECMWF.h5  -o timeseries_ECMWF.h5
-  diff.py  timeseries.h5  ECMWF.h5  -o timeseries_ECMWF.h5  --force
-  diff.py  timeseries_ECMWF_demErr_ramp.h5  ../GIANT/Stack/LS-PARAMS.h5 -o mintpy_giant.h5
+  diff.py  timeseries.h5  inputs/ERA5.h5  -o timeseries_ERA5.h5
+  diff.py  timeseries.h5  inputs/ERA5.h5  -o timeseries_ERA5.h5  --force
+  diff.py  timeseries_ERA5_ramp_demErr.h5  ../GIANT/Stack/LS-PARAMS.h5 -o mintpy_giant.h5
   diff.py  reconUnwrapIfgram.h5  ./inputs/ifgramStack.h5  -o diffUnwrapIfgram.h5
 
   # multiple files
