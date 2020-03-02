@@ -38,6 +38,10 @@ Each LOD is displayed at a different zoom-level within Google Earth. On startup,
 
 The full-resolution LOD is presently calculated and presented only for those actions showing signs of active deformation so as to further increase performance.
 
+<p align="center">
+  <img src="https://yunjunzhang.files.wordpress.com/2020/03/defo_area.png">
+</p>
+
 2. Regionalized Network Links
 
 To further increase performance, MintPy splits each LOD into 300x300 point subsets known as regions. Each region is written to a separate KML file, and are then referenced via a "Network Link" in a master level KML file. Google Earth specifically has the ability to load conditionally load Network Link elements based on whether or not the coordinates dictating their bounding box are on screen at a given moment, so this method ensures that, at high zoom-levels, only as many placemarks as are onscreen at the time are loaded.

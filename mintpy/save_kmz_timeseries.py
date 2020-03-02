@@ -202,10 +202,10 @@ def get_boxes4deforming_area(vel_file, mask_file, step=2, num_pixel=30**2, min_p
     print('number of boxes : {}'.format(len(box_list)))
 
     if display:
-        fig, axs = plt.subplots(nrows=1, ncols=2, figsize=[12, 8], sharey=True)
+        fig, axs = plt.subplots(nrows=1, ncols=2, figsize=[8, 4], sharey=True)
         vel[mask == 0] = np.nan
         axs[0].imshow(vel, cmap='jet')
-        axs[1].imshow(mask_aoi, cmap='gray')
+        axs[1].imshow(mask_aoi, cmap='gray_r')
         for box in box_list:
             for ax in axs:
                 rect = Rectangle((box[0],box[1]),
@@ -213,6 +213,10 @@ def get_boxes4deforming_area(vel_file, mask_file, step=2, num_pixel=30**2, min_p
                                  height=(box[3]-box[1]),
                                  linewidth=2, edgecolor='r', fill=False)
                 ax.add_patch(rect)
+        fig.tight_layout()
+        out_fig = os.path.join(os.path.dirname(vel_file), 'defo_area.png')
+        fig.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=300)
+        print('save figure to {}'.format(out_fig))
         plt.show()
     return box_list
 
