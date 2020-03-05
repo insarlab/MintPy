@@ -25,7 +25,7 @@ from mintpy.utils import readfile, writefile, ptime, utils as ut
 
 # key configuration parameter name
 key_prefix = 'mintpy.networkInversion.'
-configKeys = ['unwDatasetName',
+configKeys = ['obsDatasetName',
               'numIfgram',
               'weightFunc',
               'maskDataset',
@@ -45,25 +45,28 @@ EXAMPLE = """example:
   # parallel processing for HPC
   ifgram_inversion.py  inputs/ifgramStack.h5 -w var --parallel
   ifgram_inversion.py  inputs/ifgramStack.h5 -w var --parallel --num-worker 25
+
+  # invert offset stack
+  ifgram_inversion.py  inputs/ifgramStack.h5 -i azimuthOffset --water-mask waterMask.h5 --skip-reference --mask-dset offsetSNR --mask-threshold 5
 """
 
 TEMPLATE = get_template_content('invert_network')
 
 REFERENCE = """references:
-Berardino, P., Fornaro, G., Lanari, R., & Sansosti, E. (2002). A new algorithm for surface
+  Berardino, P., Fornaro, G., Lanari, R., & Sansosti, E. (2002). A new algorithm for surface
     deformation monitoring based on small baseline differential SAR interferograms. IEEE TGRS,
     40(11), 2375-2383. doi:10.1109/TGRS.2002.803792
-Guarnieri, A. M., and S. Tebaldini (2008), On the exploitation of target statistics for SAR
+  Guarnieri, A. M., and S. Tebaldini (2008), On the exploitation of target statistics for SAR
     interferometry applications, Geoscience and Remote Sensing, IEEE Transactions on, 46(11), 3436-3443.
-Just, D., & Bamler, R. (1994). Phase statistics of interferograms with applications to synthetic
+  Just, D., & Bamler, R. (1994). Phase statistics of interferograms with applications to synthetic
     aperture radar. Applied optics, 33(20), 4361-4368.
-Pepe, A., and R. Lanari (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
+  Pepe, A., and R. Lanari (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
     of multitemporal differential SAR interferograms, IEEE-TGRS, 44(9), 2374-2383.
-Perissin, D., and T. Wang (2012), Repeat-pass SAR interferometry with partially coherent targets, IEEE TGRS,
+  Perissin, D., and T. Wang (2012), Repeat-pass SAR interferometry with partially coherent targets, IEEE TGRS,
     50(1), 271-280, doi:10.1109/tgrs.2011.2160644.
-Samiei-Esfahany, S., J. E. Martins, F. v. Leijen, and R. F. Hanssen (2016), Phase Estimation for Distributed
+  Samiei-Esfahany, S., J. E. Martins, F. v. Leijen, and R. F. Hanssen (2016), Phase Estimation for Distributed
     Scatterers in InSAR Stacks Using Integer Least Squares Estimation, IEEE TGRS, 54(10), 5671-5687.
-Seymour, M. S., and I. G. Cumming (1994), Maximum likelihood estimation for SAR interferometry, 1994.
+  Seymour, M. S., and I. G. Cumming (1994), Maximum likelihood estimation for SAR interferometry, 1994.
     IGARSS '94., 8-12 Aug 1994.
 """
 
@@ -72,10 +75,9 @@ def create_parser():
     parser = argparse.ArgumentParser(description='Invert network of interferograms into time-series.',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
-
-    # I/O
+    # input dataset
     parser.add_argument('ifgramStackFile', help='interferograms stack file to be inverted')
-    parser.add_argument('-i','-d', '--dset', dest='unwDatasetName', type=str,
+    parser.add_argument('-i','-d', '--dset', dest='obsDatasetName', type=str,
                         help='dataset name of unwrap phase / offset to be used for inversion\n'
                              'e.g.: unwrapPhase, unwrapPhase_bridging, ...')
     parser.add_argument('--water-mask', '-m', dest='waterMaskFile',
@@ -148,12 +150,11 @@ def cmd_line_parse(iargs=None):
 
     # check input file type
     atr = readfile.read_attribute(inps.ifgramStackFile)
-    assert atr['FILE_TYPE'] == 'ifgramStack', 'input is {} file, only support ifgramStack file.'.format(k)
+    k = atr['FILE_TYPE']
+    assert k == 'ifgramStack', 'input is {} file, only support ifgramStack file.'.format(k)
 
     if inps.templateFile:
         inps = read_template2inps(inps.templateFile, inps)
-
-    inps.timeseriesFile, inps.tempCohFile = inps.outfile
 
     if inps.waterMaskFile and not os.path.isfile(inps.waterMaskFile):
         inps.waterMaskFile = None
@@ -169,14 +170,28 @@ def cmd_line_parse(iargs=None):
             print("\tforcing maskDataset = None")
 
     # --dset option
-    if not inps.unwDatasetName:
+    if not inps.obsDatasetName:
         stack_obj = ifgramStack(inps.ifgramStackFile)
         stack_obj.open(print_msg=False)
-        inps.unwDatasetName = [i for i in ['unwrapPhase_bridging_phaseClosure',
+        inps.obsDatasetName = [i for i in ['unwrapPhase_bridging_phaseClosure',
                                            'unwrapPhase_bridging',
                                            'unwrapPhase_phaseClosure',
                                            'unwrapPhase']
                                if i in stack_obj.datasetNames][0]
+
+    # --output option
+    if not inps.outfile:
+        if inps.obsDatasetName.startswith('unwrapPhase'):
+            inps.outfile = ['timeseries.h5', 'temporalCoherence.h5']
+        elif inps.obsDatasetName.startswith('azimuthOffset'):
+            inps.outfile = ['timeseriesAz.h5', 'temporalCoherenceAz.h5']
+        elif inps.obsDatasetName.startswith('rangeOffset'):
+            inps.outfile = ['timeseriesRg.h5', 'temporalCoherenceRg.h5']
+        else:
+            raise ValueError('un-recognized input observation dataset name: {}'.format(inps.obsDatasetName))
+
+    inps.timeseriesFile, inps.tempCohFile = inps.outfile
+
     return inps
 
 
@@ -217,13 +232,13 @@ def run_or_skip(inps):
     else:
         print('1) output files already exist: {}.'.format(inps.outfile))
         with h5py.File(inps.ifgramStackFile, 'r') as f:
-            ti = float(f[inps.unwDatasetName].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgramStackFile)))
+            ti = float(f[inps.obsDatasetName].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgramStackFile)))
         to = min(os.path.getmtime(i) for i in inps.outfile)
         if ti > to:
             flag = 'run'
-            print('2) output files are NOT newer than input dataset: {}.'.format(inps.unwDatasetName))
+            print('2) output files are NOT newer than input dataset: {}.'.format(inps.obsDatasetName))
         else:
-            print('2) output dataset is newer than input dataset: {}.'.format(inps.unwDatasetName))
+            print('2) output dataset is newer than input dataset: {}.'.format(inps.obsDatasetName))
 
     # check configuration
     if flag == 'skip':
@@ -320,7 +335,7 @@ def coherence2weight(coh_data, weight_func='var', L=20, epsilon=5e-2, print_msg=
 
 ################################# Time-series Estimator ###################################
 def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_velocity=True,
-                        rcond=1e-5, min_redundancy=1.):
+                        rcond=1e-5, min_redundancy=1., skip_zero_value=True):
     """Estimate time-series from a stack/network of interferograms with
     Least Square minimization on deformation phase / velocity.
 
@@ -377,7 +392,7 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
     num_inv_ifg = 0
 
     # Skip Zero Phase Value
-    if not np.all(ifgram):
+    if skip_zero_value and not np.all(ifgram):
         idx = (ifgram[:, 0] != 0.).flatten()
         A = A[idx, :]
         B = B[idx, :]
@@ -447,10 +462,6 @@ def write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg=None,
     metadata['UNIT'] = 'm'
 
     print('-'*50)
-    print('converting phase to range')
-    phase2range = -1*float(stack_obj.metadata['WAVELENGTH'])/(4.*np.pi)
-    ts *= phase2range
-
     print('calculating perpendicular baseline timeseries')
     pbase = stack_obj.get_perp_baseline_timeseries(dropIfgram=True)
 
@@ -469,6 +480,7 @@ def write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg=None,
     #    out_file = 'timeseriesDecorStd{}.h5'.format(suffix)
     #    metadata['FILE_TYPE'] = 'timeseries'
     #    metadata['UNIT'] = 'm'
+    #    phase2range = -1*float(stack_obj.metadata['WAVELENGTH'])/(4.*np.pi)
     #    ts_std *= abs(phase2range)
     #    print('-'*50)
     #    writefile.write(ts_std, out_file=out_file, metadata=metadata, ref_file=ts_file)
@@ -618,7 +630,7 @@ def check_design_matrix(ifgram_file, weight_func='var'):
     return A
 
 
-def read_unwrap_phase(stack_obj, box, ref_phase, unwDatasetName='unwrapPhase', dropIfgram=True,
+def read_unwrap_phase(stack_obj, box, ref_phase, obsDatasetName='unwrapPhase', dropIfgram=True,
                       print_msg=True):
     """Read unwrapPhase from ifgramStack file
     Parameters: stack_obj : ifgramStack object
@@ -629,8 +641,8 @@ def read_unwrap_phase(stack_obj, box, ref_phase, unwDatasetName='unwrapPhase', d
     # Read unwrapPhase
     num_ifgram = stack_obj.get_size(dropIfgram=dropIfgram)[0]
     if print_msg:
-        print('reading {} in {} * {} ...'.format(unwDatasetName, box, num_ifgram))
-    pha_data = stack_obj.read(datasetName=unwDatasetName,
+        print('reading {} in {} * {} ...'.format(obsDatasetName, box, num_ifgram))
+    pha_data = stack_obj.read(datasetName=obsDatasetName,
                               box=box,
                               dropIfgram=dropIfgram,
                               print_msg=False).reshape(num_ifgram, -1)
@@ -670,11 +682,11 @@ def mask_unwrap_phase(pha_data, stack_obj, box, mask_ds_name=None, mask_threshol
                                   dropIfgram=dropIfgram,
                                   print_msg=False).reshape(num_ifgram, -1)
         msk_data[np.isnan(msk_data)] = 0
-        if mask_ds_name == 'coherence':
+        if mask_ds_name in ['coherence', 'offsetSNR']:
             msk_data = msk_data >= mask_threshold
             if print_msg:
                 print('mask out pixels with {} < {}'.format(mask_ds_name, mask_threshold))
-        else:
+        elif mask_ds_name in ['connectComponent']:
             if print_msg:
                 print('mask out pixels with {} == 0'.format(mask_ds_name))
         pha_data[msk_data == 0.] = 0.
@@ -694,7 +706,7 @@ def read_coherence(stack_obj, box, dropIfgram=True, print_msg=True):
     return coh_data
 
 
-def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName='unwrapPhase',
+def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obsDatasetName='unwrapPhase',
                            weight_func='var', min_norm_velocity=True,
                            mask_dataset_name=None, mask_threshold=0.4, min_redundancy=1.0,
                            water_mask_file=None):
@@ -761,11 +773,11 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
     temp_coh    = np.zeros(num_pixel, np.float32)
     num_inv_ifg = np.zeros(num_pixel, np.int16)
 
-    # Read/Mask unwrapPhase
+    # Read/Mask unwrapPhase / offset
     pha_data = read_unwrap_phase(stack_obj,
                                  box,
                                  ref_phase,
-                                 unwDatasetName=unwDatasetName,
+                                 obsDatasetName=obsDatasetName,
                                  dropIfgram=True)
 
     pha_data = mask_unwrap_phase(pha_data,
@@ -815,6 +827,12 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
         num_inv_ifg = num_inv_ifg.reshape(num_row, num_col)
         return ts, temp_coh, num_inv_ifg
 
+    # skip zero value in the network inversion for phase
+    if obsDatasetName.startswith('unwrapPhase'):
+        skip_zero_value = True
+    else:
+        skip_zero_value = False
+
     # Inversion - SBAS
     if weight_func in ['no', 'sbas']:
         # Mask for Non-Zero Phase in ALL ifgrams (share one B in sbas inversion)
@@ -829,7 +847,8 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                                                        ifgram=pha_data[:, mask_all_net],
                                                        weight_sqrt=None,
                                                        min_norm_velocity=min_norm_velocity,
-                                                       min_redundancy=min_redundancy)
+                                                       min_redundancy=min_redundancy,
+                                                       skip_zero_value=skip_zero_value)
             ts[:, mask_all_net] = tsi
             temp_coh[mask_all_net] = tcohi
             num_inv_ifg[mask_all_net] = num_ifgi
@@ -846,7 +865,8 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                                                            ifgram=pha_data[:, idx],
                                                            weight_sqrt=None,
                                                            min_norm_velocity=min_norm_velocity,
-                                                           min_redundancy=min_redundancy)
+                                                           min_redundancy=min_redundancy,
+                                                           skip_zero_value=skip_zero_value)
                 ts[:, idx] = tsi.flatten()
                 temp_coh[idx] = tcohi
                 num_inv_ifg[idx] = num_ifgi
@@ -869,7 +889,8 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                                                        ifgram=pha_data[:, idx],
                                                        weight_sqrt=weight[:, idx],
                                                        min_norm_velocity=min_norm_velocity,
-                                                       min_redundancy=min_redundancy)
+                                                       min_redundancy=min_redundancy,
+                                                       skip_zero_value=skip_zero_value)
             ts[:, idx] = tsi.flatten()
             temp_coh[idx] = tcohi
             num_inv_ifg[idx] = num_ifgi
@@ -882,6 +903,22 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
     #ts_std = ts_std.reshape(num_date, num_row, num_col)
     temp_coh = temp_coh.reshape(num_row, num_col)
     num_inv_ifg = num_inv_ifg.reshape(num_row, num_col)
+
+    # convert displacement unit to meter
+    if obsDatasetName.startswith('unwrapPhase'):
+        print('converting LOS phase displacement unit from radian to meter')
+        phase2range = -1 * float(stack_obj.metadata['WAVELENGTH']) / (4.*np.pi)
+        ts *= phase2range
+
+    elif obsDatasetName == 'azimuthOffset':
+        print('converting azimuth offset displacement unit from pixel to meter')
+        az_pixel_size = ut.azimuth_ground_resolution(stack_obj.metadata)
+        ts *= az_pixel_size
+
+    elif obsDatasetName == 'rangeOffset':
+        print('converting range offset displacement unit from pixel to meter')
+        ts *= float(stack_obj.metadata['RANGE_PIXEL_SIZE'])
+
     return ts, temp_coh, num_inv_ifg
 
 
@@ -924,7 +961,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     msg += 'weight function: {}\n'.format(inps.weightFunc)
 
     if inps.maskDataset:
-        if inps.maskDataset == 'coherence':
+        if inps.maskDataset in ['coherence', 'offsetSNR']:
             suffix = '{} < {}'.format(inps.maskDataset, inps.maskThreshold)
         else:
             suffix = '{} == 0'.format(inps.maskDataset)
@@ -949,7 +986,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     num_box = len(box_list)
 
     # read ifgram_file in small patches and write them together
-    ref_phase = stack_obj.get_reference_phase(unwDatasetName=inps.unwDatasetName,
+    ref_phase = stack_obj.get_reference_phase(unwDatasetName=inps.obsDatasetName,
                                               skip_reference=inps.skip_ref,
                                               dropIfgram=True)
 
@@ -990,7 +1027,6 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         ts_obj.layout_hdf5(dsNameDict, metadata)
 
         # invert & write block by block
-        phase2range = -1*float(metadata['WAVELENGTH']) / (4.*np.pi)
         for i in range(num_box):
             box = box_list[i]
             if num_box > 1:
@@ -1002,7 +1038,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
              ifg_numi) = ifgram_inversion_patch(ifgram_file,
                                                 box=box,
                                                 ref_phase=ref_phase,
-                                                unwDatasetName=inps.unwDatasetName,
+                                                obsDatasetName=inps.obsDatasetName,
                                                 weight_func=inps.weightFunc,
                                                 min_norm_velocity=inps.minNormVelocity,
                                                 mask_dataset_name=inps.maskDataset,
@@ -1011,8 +1047,6 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                                                 water_mask_file=inps.waterMaskFile)
 
             # write the block of timeseries to disk
-            print('converting phase to range')
-            tsi *= phase2range
             block = [0, num_date, box[1], box[3], box[0], box[2]]
             ts_obj.write2hdf5_block(tsi, datasetName='timeseries', block=block)
 
@@ -1067,7 +1101,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
             data = (ifgram_file,
                     subbox,
                     ref_phase,
-                    inps.unwDatasetName,
+                    inps.obsDatasetName,
                     inps.weightFunc,
                     inps.minNormVelocity,
                     inps.maskDataset,
@@ -1105,10 +1139,11 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         ut.move_dask_stdout_stderr_files()
 
     # reference pixel
-    ref_y = int(stack_obj.metadata['REF_Y'])
-    ref_x = int(stack_obj.metadata['REF_X'])
-    num_inv_ifg[ref_y, ref_x] = num_ifgram
-    temp_coh[ref_y, ref_x] = 1.
+    if not inps.skip_ref:
+        ref_y = int(stack_obj.metadata['REF_Y'])
+        ref_x = int(stack_obj.metadata['REF_X'])
+        num_inv_ifg[ref_y, ref_x] = num_ifgram
+        temp_coh[ref_y, ref_x] = 1.
 
     if inps.parallel:
         # for dask still use the old function to write. This needs also migrate to block-by-block writing
@@ -1127,7 +1162,7 @@ def parallel_ifgram_inversion_patch(data):
     :param data:
     :return: The box
     """
-    (ifgram_file, box, ref_phase, unwDatasetName,
+    (ifgram_file, box, ref_phase, obsDatasetName,
      weight_func, min_norm_velocity,
      mask_dataset_name, mask_threshold,
      min_redundancy, water_mask_file) = data
@@ -1140,7 +1175,7 @@ def parallel_ifgram_inversion_patch(data):
      ifg_numi) = ifgram_inversion_patch(ifgram_file,
                                         box= box,
                                         ref_phase= ref_phase,
-                                        unwDatasetName=unwDatasetName,
+                                        obsDatasetName=obsDatasetName,
                                         weight_func=weight_func,
                                         min_norm_velocity=min_norm_velocity,
                                         mask_dataset_name=mask_dataset_name,

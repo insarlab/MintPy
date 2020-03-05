@@ -66,6 +66,7 @@ ifgramDatasetNames = ['unwrapPhase',
                       'iono',
                       'rangeOffset',
                       'azimuthOffset',
+                      'offsetSNR',
                       'refPhase']
 
 datasetUnitDict = {'unwrapPhase'        :'radian',
@@ -73,8 +74,10 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
                    'connectComponent'   :'1',
                    'wrapPhase'          :'radian',
                    'iono'               :'radian',
-                   'rangeOffset'        :'1',
-                   'azimuthOffset'      :'1',
+
+                   'azimuthOffset'      :'pixel',
+                   'rangeOffset'        :'pixel',
+                   'offsetSNR'          :'1',
 
                    'height'             :'m',
                    'latitude'           :'degree',
@@ -732,9 +735,14 @@ class ifgramStack:
         self.metadata['END_DATE'] = dateList[-1]
         return self.metadata
 
-    def get_size(self, dropIfgram=False, datasetName='unwrapPhase'):
+    def get_size(self, dropIfgram=False, datasetName=None):
         with h5py.File(self.file, 'r') as f:
+            # get default datasetName
+            if datasetName is None:
+                datasetName = [i for i in ['unwrapPhase', 'azimuthOffset'] if i in f.keys()][0]
+            # get 3D size
             self.numIfgram, self.length, self.width = f[datasetName].shape
+            # update 1st dimension size
             if dropIfgram:
                 self.numIfgram = np.sum(f['dropIfgram'][:])
         return self.numIfgram, self.length, self.width

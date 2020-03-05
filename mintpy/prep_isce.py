@@ -26,9 +26,13 @@ TOPS_RESOLUTION = {
 }
 
 EXAMPLE = """example:
-  prep_isce.py -i ./merged/interferograms -m ./master/IW1.xml -b ./baselines -g ./merged/geom_master  #for topsStack
-  prep_isce.py -i ./Igrams -m ./masterShelve/data.dat -b ./baselines -g ./geom_master                 #for stripmapStack
+  # interferogram stack
+  prep_isce.py -d ./merged/interferograms -m ./master/IW1.xml -b ./baselines -g ./merged/geom_master  #for topsStack
+  prep_isce.py -d ./Igrams -m ./masterShelve/data.dat -b ./baselines -g ./geom_master                 #for stripmapStack
   prep_isce.py -m 20120507_slc_crop.xml -g ./geometry                                                 #for stripmapApp
+
+  # offset stack from topsStack
+  prep_isce.py -d ./merged/offsets -f filtAz*.off -m ./master/IW1.xml -b ./baselines -g ./merged/offsets/geom_master
 """
 
 def create_parser():
@@ -36,13 +40,15 @@ def create_parser():
     parser = argparse.ArgumentParser(description='Prepare ISCE metadata files.',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
-    parser.add_argument('-i', '--ifg-dir', dest='ifgramDir', type=str, default=None,
-                        help='The directory which contains all pairs\n'+
-                             'e.g.: $PROJECT_DIR/merged/interferograms')
-    parser.add_argument('-f', '--file-pattern', nargs = '+', dest='ifgramFiles', type=str,
+    parser.add_argument('-d', '--ds-dir', '--dset-dir', dest='dsetDir', type=str, default=None,
+                        help='The directory which contains all pairs\n'
+                             'e.g.: $PROJECT_DIR/merged/interferograms OR \n'
+                             '      $PROJECT_DIR/merged/offsets')
+    parser.add_argument('-f', '--file-pattern', nargs = '+', dest='dsetFiles', type=str,
                         default=['filt_*.unw'],
                         help='A list of files that will be used in mintpy\n'
-                             'e.g.: filt_fine.unw filt_fine.cor')
+                             'e.g.: filt_fine.unw filt_fine.cor OR\n'
+                             '      filtAz*.off filtRa*.off')
     parser.add_argument('-m', '--meta-file', dest='metaFile', type=str, default=None,
                         help='Metadata file to extract common metada for the stack:\n'
                              'e.g.: for ISCE/topsStack: master/IW3.xml;\n'
@@ -59,7 +65,7 @@ def create_parser():
 def cmd_line_parse(iargs = None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-    if all(not i for i in [inps.ifgramDir, inps.geometryDir, inps.metaFile]):
+    if all(not i for i in [inps.dsetDir, inps.geometryDir, inps.metaFile]):
         parser.print_usage()
         raise SystemExit('error: at least one of the following arguments are required: -i, -g, -m')
     return inps
@@ -437,7 +443,10 @@ def prepare_geometry(geom_dir, metadata=dict(), update_mode=True):
     # write rsc file for each file
     for isce_file in isce_files:
         # prepare metadata for current file
-        geom_metadata = readfile.read_attribute(isce_file, metafile_ext='.xml')
+        if os.path.isfile(isce_file+'.xml'):
+            geom_metadata = readfile.read_attribute(isce_file, metafile_ext='.xml')
+        else:
+            geom_metadata = readfile.read_attribute(isce_file)
         geom_metadata.update(metadata)
 
         # write .rsc file
@@ -499,9 +508,9 @@ def main(iargs=None):
         baseline_dict = read_baseline_timeseries(inps.baselineDir, inps.processor)
 
     # prepare metadata for ifgram file
-    if inps.ifgramDir and inps.ifgramFiles:
-        for namePattern in inps.ifgramFiles:
-            prepare_stack(inps.ifgramDir, namePattern,
+    if inps.dsetDir and inps.dsetFiles:
+        for namePattern in inps.dsetFiles:
+            prepare_stack(inps.dsetDir, namePattern,
                           metadata=metadata,
                           baseline_dict=baseline_dict,
                           update_mode=inps.update_mode)

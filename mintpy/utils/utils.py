@@ -56,7 +56,7 @@ def check_loaded_dataset(work_dir='./', print_msg=True):
         obj = ifgramStack(stack_file)
         obj.open(print_msg=False)
         for dname in ['unwrapPhase', 'coherence']:
-            if dname not in obj.datasetNames:
+            if dname not in obj.datasetNames and 'azimuthOffset' not in obj.datasetNames:
                 raise ValueError('required dataset "{}" is missing in file {}'.format(dname, stack_file))
     else:
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), './inputs/ifgramStack.h5')
