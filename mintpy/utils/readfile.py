@@ -585,7 +585,7 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
 
         # FILE_TYPE - k
         py2_mintpy_stack_files = ['interferograms', 'coherence', 'wrapped'] #obsolete mintpy format
-        if any(i in d1_list for i in ['unwrapPhase']):
+        if any(i in d1_list for i in ['unwrapPhase', 'azimuthOffset']):
             k = 'ifgramStack'
         elif any(i in d1_list for i in ['height', 'latitude', 'azimuthCoord']):
             k = 'geometry'
@@ -732,6 +732,17 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
                 atr['FILE_TYPE'] = 'dem'
             else:
                 atr['FILE_TYPE'] = atr['file type']
+
+        # DATA_TYPE for ISCE products
+        dataTypeDict = {
+            'byte': 'int8',
+            'float': 'float32',
+            'double': 'float64',
+            'cfloat': 'complex64',
+        }
+        data_type = atr.get('DATA_TYPE', 'none').lower()
+        if data_type is not 'none' and data_type in dataTypeDict.keys():
+            atr['DATA_TYPE'] = dataTypeDict[data_type]
 
     # UNIT
     k = atr['FILE_TYPE'].replace('.', '')
