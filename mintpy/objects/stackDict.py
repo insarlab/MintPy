@@ -52,14 +52,15 @@ class ifgramStackDict:
         stackObj.write2hdf5(outputFile='ifgramStack.h5', box=(200,500,300,600))
     '''
 
-    def __init__(self, name='ifgramStack', pairsDict=None):
+    def __init__(self, name='ifgramStack', pairsDict=None, dsName0=ifgramDatasetNames[0]):
         self.name = name
         self.pairsDict = pairsDict
+        self.dsName0 = dsName0        #reference dataset name, unwrapPhase OR azimuthOffset
 
     def get_size(self, box=None):
         self.numIfgram = len(self.pairsDict)
         ifgramObj = [v for v in self.pairsDict.values()][0]
-        self.length, ifgramObj.width = ifgramObj.get_size()
+        self.length, ifgramObj.width = ifgramObj.get_size(family=self.dsName0)
         if box:
             self.length = box[3] - box[1]
             self.width = box[2] - box[0]
@@ -75,7 +76,7 @@ class ifgramStackDict:
 
     def get_metadata(self):
         ifgramObj = [v for v in self.pairsDict.values()][0]
-        self.metadata = ifgramObj.get_metadata()
+        self.metadata = ifgramObj.get_metadata(family=self.dsName0)
         if 'UNIT' in self.metadata.keys():
             self.metadata.pop('UNIT')
         return self.metadata
@@ -151,7 +152,7 @@ class ifgramStackDict:
                 ifgramObj = self.pairsDict[self.pairs[i]]
                 data = ifgramObj.read(dsName, box=box)[0]
                 ds[i, :, :] = data
-                self.bperp[i] = ifgramObj.get_perp_baseline()
+                self.bperp[i] = ifgramObj.get_perp_baseline(family=self.dsName0)
                 prog_bar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],
                                                            self.pairs[i][1]))
             prog_bar.close()
@@ -246,14 +247,14 @@ class ifgramDict:
         data, metadata = readfile.read(self.file, box=box)
         return data, metadata
 
-    def get_size(self, family='unwrapPhase'):
+    def get_size(self, family=ifgramDatasetNames[0]):
         self.file = self.datasetDict[family]
         metadata = readfile.read_attribute(self.file)
         self.length = int(metadata['LENGTH'])
         self.width = int(metadata['WIDTH'])
         return self.length, self.width
 
-    def get_perp_baseline(self, family='unwrapPhase'):
+    def get_perp_baseline(self, family=ifgramDatasetNames[0]):
         self.file = self.datasetDict[family]
         metadata = readfile.read_attribute(self.file)
         self.bperp_top = float(metadata['P_BASELINE_TOP_HDR'])
@@ -261,7 +262,7 @@ class ifgramDict:
         self.bperp = (self.bperp_top + self.bperp_bottom) / 2.0
         return self.bperp
 
-    def get_metadata(self, family='unwrapPhase'):
+    def get_metadata(self, family=ifgramDatasetNames[0]):
         self.file = self.datasetDict[family]
         self.metadata = readfile.read_attribute(self.file)
         self.length = int(self.metadata['LENGTH'])

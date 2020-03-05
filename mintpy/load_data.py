@@ -31,6 +31,11 @@ datasetName2templateKey = {'unwrapPhase'     : 'mintpy.load.unwFile',
                            'connectComponent': 'mintpy.load.connCompFile',
                            'wrapPhase'       : 'mintpy.load.intFile',
                            'iono'            : 'mintpy.load.ionoFile',
+
+                           'azimuthOffset'   : 'mintpy.load.azOffFile',
+                           'rangeOffset'     : 'mintpy.load.rgOffFile',
+                           'offsetSNR'       : 'mintpy.load.offSnrFile',
+
                            'height'          : 'mintpy.load.demFile',
                            'latitude'        : 'mintpy.load.lookupYFile',
                            'longitude'       : 'mintpy.load.lookupXFile',
@@ -350,10 +355,13 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
                                                    path=inpsDict[key]))
 
     # Check 1: required dataset
-    dsName0 = 'unwrapPhase'
-    if dsName0 not in dsPathDict.keys():
-        print('WARNING: No reqired {} data files found!'.format(dsName0))
+    dsName0s = ['unwrapPhase', 'azimuthOffset']
+    dsName0 = [i for i in dsName0s if i in dsPathDict.keys()]
+    if len(dsName0) == 0:
+        print('WARNING: No reqired {} data files found!'.format(dsName0s))
         return None
+    else:
+        dsName0 = dsName0[0]
 
     # Check 2: data dimension for unwrapPhase files
     dsPathDict = skip_files_with_inconsistent_size(dsPathDict,
@@ -405,7 +413,7 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
         pairsDict[tuple(dates)] = ifgramObj
 
     if len(pairsDict) > 0:
-        stackObj = ifgramStackDict(pairsDict=pairsDict)
+        stackObj = ifgramStackDict(pairsDict=pairsDict, dsName0=dsName0)
     else:
         stackObj = None
     return stackObj
@@ -553,7 +561,7 @@ def prepare_metadata(inpsDict):
             if baseline_dir:
                 cmd += ' -b {b} '.format(b=baseline_dir)
             if ifgram_dir:
-                cmd += ' -i {i} -f {f} '.format(i=ifgram_dir, f=ifgram_file)
+                cmd += ' -d {d} -f {f} '.format(d=ifgram_dir, f=ifgram_file)
             print(cmd)
             os.system(cmd)
         except:
