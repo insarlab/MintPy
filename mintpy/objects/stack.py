@@ -816,16 +816,24 @@ class ifgramStack:
             data = np.squeeze(data)
         return data
 
-    def spatial_average(self, datasetName='coherence', maskFile=None, box=None):
+    def spatial_average(self, datasetName='coherence', maskFile=None, box=None, useMedian=False):
+        """ Calculate the spatial average."""
         if datasetName is None:
             datasetName = 'coherence'
-        print('calculating spatial average of {} in file {} ...'.format(datasetName, self.file))
+
+        if useMedian:
+            print('calculating spatial median of {} in file {} ...'.format(datasetName, self.file))
+        else:
+            print('calculating spatial mean of {} in file {} ...'.format(datasetName, self.file))
+
+        # read mask
         if maskFile and os.path.isfile(maskFile):
             print('read mask from file: '+maskFile)
             mask = singleDataset(maskFile).read(box=box)
         else:
             maskFile = None
 
+        # calculation
         with h5py.File(self.file, 'r') as f:
             dset = f[datasetName]
             numIfgram = dset.shape[0]
@@ -834,10 +842,16 @@ class ifgramStack:
                 data = dset[i, box[1]:box[3], box[0]:box[2]]
                 if maskFile:
                     data[mask == 0] = np.nan
+
                 # ignore ZERO value for coherence
                 if datasetName == 'coherence':
                     data[data == 0] = np.nan
-                dmean[i] = np.nanmean(data)
+
+                if useMedian:
+                    dmean[i] = np.nanmedian(data)
+                else:
+                    dmean[i] = np.nanmean(data)
+
                 sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, numIfgram))
                 sys.stdout.flush()
             print('')

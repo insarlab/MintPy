@@ -39,6 +39,9 @@ EXAMPLE = """example:
   plot_network.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg --show-kept   #Do not plot dropped ifgrams
 
   plot_network.py ifgramStack_coherence_spatialAvg.txt
+
+  # offsetSNR
+  plot_network.py inputs/ifgramStack.h5 -d offsetSNR -v 0 20
 """
 
 TEMPLATE = """
@@ -57,6 +60,8 @@ def create_parser():
                         help='file with network information, ifgramStack.h5 or ifgramStack_coherence_spatialAvg.txt')
     parser.add_argument('--show-kept', dest='disp_drop', action='store_false',
                         help='display kept interferograms only, without dropped interferograms')
+    parser.add_argument('-d', '--dset', type=str, dest='dsetName', default='coherence',
+                        help='dataset used to calculate the mean')
 
     # Display coherence
     coh = parser.add_argument_group('Display Coherence', 'Show coherence of each interferogram pair with color')
@@ -65,9 +70,12 @@ def create_parser():
     coh.add_argument('-c', '--colormap', dest='cmap_name', default='RdBu_truncate',
                      help='colormap name for the network display. Default: RdBu_truncate')
     coh.add_argument('--cmap-vlist', dest='cmap_vlist', type=float, nargs=3, default=[0.2, 0.4, 1.0],
-                     help='start/jump/end coherence for truncated colormap. Default: 0.2 0.4 1.0')
+                     help='normalized start/jump/end value for truncated colormap. Default: 0.2 0.4 1.0')
     coh.add_argument('--mask', dest='maskFile', default='waterMask.h5',
                      help='mask file used to calculate the coherence. Default: waterMask.h5 or None.')
+
+    coh.add_argument('-v', '--vlim', nargs=2, type=float, default=(0.2, 1.0),
+                     help='display range')
 
     # Figure  Setting
     fig = parser.add_argument_group('Figure', 'Figure settings for display')
@@ -133,15 +141,18 @@ def cmd_line_parse(iargs=None):
         key = 'mintpy.network.minCoherence'
         if key in inps.template.keys():
             inps.cmap_vlist[1] = max(0.01, float(inps.template[key]))
+
         # calculate from dropped interferograms, if there is any
         elif len(inps.date12List_drop) > 0:
             idx_drop = [inps.date12List.index(i) for i in inps.date12List_drop]
             coh_drop = [inps.cohList[i] for i in idx_drop]
             inps.cmap_vlist[1] = max(coh_drop)
             print('max coherence of excluded interferograms: {}'.format(max(coh_drop)))
+
         # update default cmap_vlist[0] value if the manually input cmap_vlist[1] is too small
         if inps.cmap_vlist[1] <= inps.cmap_vlist[0]:
             inps.cmap_vlist[0] = min(0, inps.cmap_vlist[1])
+
     # in case the manually input list is not in order
     inps.cmap_vlist = sorted(inps.cmap_vlist)
     inps.colormap = pp.ColormapExt(inps.cmap_name, vlist=inps.cmap_vlist).colormap
@@ -175,8 +186,11 @@ def read_network_info(inps):
         inps.date12List = ifgramStack(inps.file).get_date12_list(dropIfgram=False)
         inps.dateList = ifgramStack(inps.file).get_date_list(dropIfgram=False)
         inps.pbaseList = ifgramStack(inps.file).get_perp_baseline_timeseries(dropIfgram=False)
-        inps.cohList = ut.spatial_average(inps.file, datasetName='coherence', maskFile=inps.maskFile,
-                                          saveList=True, checkAoi=False)[0]
+        inps.cohList = ut.spatial_average(inps.file,
+                                          datasetName=inps.dsetName,
+                                          maskFile=inps.maskFile,
+                                          saveList=True,
+                                          checkAoi=False)[0]
     elif ext == '.txt':
         inps.date12List = np.loadtxt(inps.file, dtype=bytes).astype(str)[:,0].tolist()
 
@@ -244,7 +258,7 @@ def main(iargs=None):
                                       inps.date12List,
                                       inps.cohList,
                                       inps.date12List_drop,
-                                      plot_dict=vars(inps))[0]
+                                      p_dict=vars(inps))[0]
         if inps.save_fig:
             fig.savefig(figNames[1], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
             print('save figure to {}'.format(figNames[1]))
@@ -254,7 +268,7 @@ def main(iargs=None):
         ax = pp.plot_coherence_history(ax,
                                        inps.date12List,
                                        inps.cohList,
-                                       plot_dict=vars(inps))
+                                       p_dict=vars(inps))
         if inps.save_fig:
             fig.savefig(figNames[2], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
             print('save figure to {}'.format(figNames[2]))

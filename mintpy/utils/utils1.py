@@ -221,13 +221,20 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
     except:
         pass
 
+    # use median instead of mean for offset measurement
+    if 'offset' in datasetName:
+        useMedian = True
+    else:
+        useMedian = False
+
     # Calculate mean coherence list
     if k == 'ifgramStack':
         obj = ifgramStack(File)
         obj.open(print_msg=False)
         meanList, dateList = obj.spatial_average(datasetName=datasetName,
                                                  maskFile=maskFile,
-                                                 box=box)
+                                                 box=box,
+                                                 useMedian=useMedian)
         pbase = obj.pbaseIfgram
         tbase = obj.tbaseIfgram
         obj.close()
