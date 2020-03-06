@@ -208,9 +208,15 @@ def check_inputs(inps):
                                               grib_dir=inps.grib_dir,
                                               snwe=inps.snwe)
 
+    # reference point in space
     if 'REF_Y' in atr.keys():
         inps.ref_yx = [int(atr['REF_Y']), int(atr['REF_X'])]
+
+    if inps.ref_yx is not None:
+        print('calculate spatially relative delay with respect to the point below.')
         print('reference pixel: {}'.format(inps.ref_yx))
+    else:
+        print('calculate spatially absolute delay with NO reference point.')
     return inps, atr
 
 
