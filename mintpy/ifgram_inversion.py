@@ -47,7 +47,7 @@ EXAMPLE = """example:
   ifgram_inversion.py  inputs/ifgramStack.h5 -w var --parallel --num-worker 25
 
   # invert offset stack
-  ifgram_inversion.py  inputs/ifgramStack.h5 -i azimuthOffset --water-mask waterMask.h5 --skip-reference --mask-dset offsetSNR --mask-threshold 5
+  ifgram_inversion.py  inputs/ifgramStack.h5 -i azimuthOffset --water-mask waterMask.h5 --mask-dset offsetSNR --mask-threshold 5
 """
 
 TEMPLATE = get_template_content('invert_network')
@@ -178,6 +178,10 @@ def cmd_line_parse(iargs=None):
                                            'unwrapPhase_phaseClosure',
                                            'unwrapPhase']
                                if i in stack_obj.datasetNames][0]
+
+    # --skip-ref option
+    if 'offset' in inps.obsDatasetName.lower():
+        inps.skip_ref = True
 
     # --output option
     if not inps.outfile:
@@ -806,13 +810,14 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obsDatasetName
         del waterMask
 
     # 2 - Mask for Zero Phase in ALL ifgrams
-    print('skip pixels with zero/nan value in all interferograms')
-    with warnings.catch_warnings():
-        # ignore warning message for all-NaN slices
-        warnings.simplefilter("ignore", category=RuntimeWarning)
-        phase_stack = np.nanmean(pha_data, axis=0)
-    mask *= np.multiply(~np.isnan(phase_stack), phase_stack != 0.)
-    del phase_stack
+    if 'phase' in obsDatasetName.lower():
+        print('skip pixels with zero/nan value in all interferograms')
+        with warnings.catch_warnings():
+            # ignore warning message for all-NaN slices
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            phase_stack = np.nanmean(pha_data, axis=0)
+        mask *= np.multiply(~np.isnan(phase_stack), phase_stack != 0.)
+        del phase_stack
 
     # Invert pixels on mask 1+2
     num_pixel2inv = int(np.sum(mask))
@@ -828,7 +833,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obsDatasetName
         return ts, temp_coh, num_inv_ifg
 
     # skip zero value in the network inversion for phase
-    if obsDatasetName.startswith('unwrapPhase'):
+    if 'phase' in obsDatasetName.lower():
         skip_zero_value = True
     else:
         skip_zero_value = False
@@ -836,8 +841,11 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obsDatasetName
     # Inversion - SBAS
     if weight_func in ['no', 'sbas']:
         # Mask for Non-Zero Phase in ALL ifgrams (share one B in sbas inversion)
-        mask_all_net = np.all(pha_data, axis=0)
-        mask_all_net *= mask
+        if 'phase' in obsDatasetName.lower():
+            mask_all_net = np.all(pha_data, axis=0)
+            mask_all_net *= mask
+        else:
+            mask_all_net = np.array(mask)
         mask_part_net = mask ^ mask_all_net
 
         if np.sum(mask_all_net) > 0:
@@ -906,18 +914,19 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obsDatasetName
 
     # convert displacement unit to meter
     if obsDatasetName.startswith('unwrapPhase'):
-        print('converting LOS phase displacement unit from radian to meter')
         phase2range = -1 * float(stack_obj.metadata['WAVELENGTH']) / (4.*np.pi)
         ts *= phase2range
+        print('converting LOS phase displacement unit from radian to meter')
 
     elif obsDatasetName == 'azimuthOffset':
-        print('converting azimuth offset displacement unit from pixel to meter')
         az_pixel_size = ut.azimuth_ground_resolution(stack_obj.metadata)
         ts *= az_pixel_size
+        print('converting azimuth offset displacement unit from pixel ({:.2 m}) to meter'.format(az_pixel_size))
 
     elif obsDatasetName == 'rangeOffset':
-        print('converting range offset displacement unit from pixel to meter')
-        ts *= float(stack_obj.metadata['RANGE_PIXEL_SIZE'])
+        rg_pixel_size = float(stack_obj.metadata['RANGE_PIXEL_SIZE'])
+        ts *= rg_pixel_size
+        print('converting range offset displacement unit from pixel ({:.2 m}) to meter'.format(rg_pixel_size))
 
     return ts, temp_coh, num_inv_ifg
 
@@ -955,8 +964,6 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     else:
         suffix = 'deformation phase'
     msg += 'least-squares solution with L2 min-norm on: {}\n'.format(suffix)
-    #msg += '\tLS  for pixels with full rank      network\n'
-    #msg += '\tSVD for pixels with rank deficient network\n'
     msg += 'minimum redundancy: {}\n'.format(inps.minRedundancy)
     msg += 'weight function: {}\n'.format(inps.weightFunc)
 
