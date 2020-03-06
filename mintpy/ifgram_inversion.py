@@ -613,6 +613,7 @@ def subsplit_boxes4_workers(box, num_split, dimension='y'):
 
     return subboxes
 
+
 def check_design_matrix(ifgram_file, weight_func='var'):
     """Check Rank of Design matrix for weighted inversion"""
     date12_list = ifgramStack(ifgram_file).get_date12_list(dropIfgram=True)
@@ -1153,7 +1154,8 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         temp_coh[ref_y, ref_x] = 1.
 
     if inps.parallel:
-        # for dask still use the old function to write. This needs also migrate to block-by-block writing
+        # for dask still use the old function to write.
+        # consider to migrate to block-by-block writing, if HDF5 support multiple 
         write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg, suffix='', inps=inps)
     else:
         write2hdf5_auxFiles(metadata, temp_coh, num_inv_ifg, suffix='', inps=inps)
@@ -1169,19 +1171,24 @@ def parallel_ifgram_inversion_patch(data):
     :param data:
     :return: The box
     """
-    (ifgram_file, box, ref_phase, obsDatasetName,
-     weight_func, min_norm_velocity,
-     mask_dataset_name, mask_threshold,
-     min_redundancy, water_mask_file) = data
-
+    (ifgram_file,
+     box, 
+     ref_phase,
+     obsDatasetName,
+     weight_func,
+     min_norm_velocity,
+     mask_dataset_name,
+     mask_threshold,
+     min_redundancy,
+     water_mask_file) = data
     print("BOX DIMS:", box)
 
     # This line is where all of the processing happens.
     (tsi,
      temp_cohi,
      ifg_numi) = ifgram_inversion_patch(ifgram_file,
-                                        box= box,
-                                        ref_phase= ref_phase,
+                                        box=box,
+                                        ref_phase=ref_phase,
                                         obsDatasetName=obsDatasetName,
                                         weight_func=weight_func,
                                         min_norm_velocity=min_norm_velocity,
