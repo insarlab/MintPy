@@ -313,7 +313,7 @@ class timeseries:
                          0, shape[1],
                          0, shape[2]]
 
-        print('open {} in {} mode'.format(self.file, mode))
+        print('open HDF5 file {} in {} mode'.format(self.file, mode))
         f = h5py.File(self.file, mode)
 
         print("writing dataset /{:<25} block: {}".format(datasetName, block))
@@ -330,7 +330,7 @@ class timeseries:
             f[datasetName][block[0]:block[1]] = data
 
         f.close()
-        print('close HDF5 file {}'.format(self.file))
+        print('close HDF5 file {}.'.format(self.file))
         return self.file
 
     def write2hdf5(self, data, outFile=None, dates=None, bperp=None, metadata=None, refFile=None, compression=None):
