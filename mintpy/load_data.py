@@ -552,16 +552,27 @@ def prepare_metadata(inpsDict):
         if len(meta_files) < 1:
             warnings.warn('No input metadata file found: {}'.format(inpsDict['mintpy.load.metaFile']))
         try:
+            # metadata and auxliary data
             meta_file = meta_files[0]
-            ifgram_dir = os.path.dirname(os.path.dirname(inpsDict['mintpy.load.unwFile']))
-            ifgram_file = os.path.basename(inpsDict['mintpy.load.unwFile'])
             baseline_dir = inpsDict['mintpy.load.baselineDir']
             geom_dir = os.path.dirname(inpsDict['mintpy.load.demFile'])
+
+            # observation
+            obs_keys = ['mintpy.load.unwFile', 'mintpy.load.azOffFile']
+            obs_paths = [inpsDict[key] for key in obs_keys if inpsDict[key].lower() != 'auto']
+            if len(obs_paths) > 0:
+                obs_dir = os.path.dirname(os.path.dirname(obs_paths[0]))
+                obs_file = os.path.basename(obs_paths[0])
+            else:
+                obs_dir = None
+                obs_file = None
+
+            # command line
             cmd = '{s} -m {m} -g {g}'.format(s=script_name, m=meta_file, g=geom_dir)
             if baseline_dir:
                 cmd += ' -b {b} '.format(b=baseline_dir)
-            if ifgram_dir:
-                cmd += ' -d {d} -f {f} '.format(d=ifgram_dir, f=ifgram_file)
+            if obs_dir is not None:
+                cmd += ' -d {d} -f {f} '.format(d=obs_dir, f=obs_file)
             print(cmd)
             os.system(cmd)
         except:
