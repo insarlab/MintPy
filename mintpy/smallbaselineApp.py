@@ -434,6 +434,13 @@ class TimeSeriesAnalysis:
         # 3) plot network
         if self.template['mintpy.plot'] and plot:
             scp_args = '{} -t {} --nodisplay'.format(stack_file, self.templateFile)
+
+            dsNames = readfile.get_dataset_list(stack_file)
+            if any('phase' in i.lower() for i in dsNames):
+                scp_args += ' -d coherence -v 0.2 1.0 '
+            elif any('offset' in i.lower() for i in dsNames):
+                scp_args += ' -d offsetSNR -v 0 20 '
+
             print('\nplot_network.py', scp_args)
             if ut.run_or_skip(out_file=net_fig,
                               in_file=[stack_file, coh_txt, self.templateFile],
@@ -448,16 +455,22 @@ class TimeSeriesAnalysis:
     def generate_ifgram_aux_file(self):
         """Generate auxiliary files from ifgramStack file"""
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        dsNames = readfile.get_dataset_list(stack_file)
         mask_file = 'maskConnComp.h5'
         coh_file = 'avgSpatialCoh.h5'
+        snr_file = 'avgSpatialSnr.h5'
 
         # 1) generate mask file from the common connected components
-        scp_args = '{} --nonzero -o {} --update'.format(stack_file, mask_file)
-        print('\ngenerate_mask.py', scp_args)
-        mintpy.generate_mask.main(scp_args.split())
+        if any('phase' in i.lower() for i in dsNames):
+            scp_args = '{} --nonzero -o {} --update'.format(stack_file, mask_file)
+            print('\ngenerate_mask.py', scp_args)
+            mintpy.generate_mask.main(scp_args.split())
 
         # 2) generate average spatial coherence
-        scp_args = '{} --dataset coherence -o {} --update'.format(stack_file, coh_file)
+        if any('phase' in i.lower() for i in dsNames):
+            scp_args = '{} --dataset coherence -o {} --update'.format(stack_file, coh_file)
+        elif any('offset' in i.lower() for i in dsNames):
+            scp_args = '{} --dataset offsetSNR -o {} --update'.format(stack_file, snr_file)
         print('\ntemporal_average.py', scp_args)
         mintpy.temporal_average.main(scp_args.split())
         return
