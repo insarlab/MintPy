@@ -1214,8 +1214,8 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
 
 def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     from mintpy.objects.gps import search_gps, GPS
-    from mintpy.utils import utils as ut
     import copy
+
     marker_size = 7
     vmin, vmax = inps.vlim
     if isinstance(inps.colormap, str):
@@ -1267,8 +1267,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             geom_obj = metadata
             print('use incidenceAngle/azimuthAngle calculated from metadata')
 
-        gps_data_list = []
-        #pass cropped metadata object to properly mask GPS stations
+        # pass cropped metadata object to properly mask GPS stations
         cropped_metadata=copy.deepcopy(metadata)
         cropped_metadata['WIDTH']=inps.msk.shape[1]
         cropped_metadata['LENGTH']=inps.msk.shape[0]
@@ -1282,7 +1281,9 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         cropped_metadata['LAT_REF2']=max(inps.geo_box[1::2])
         cropped_metadata['LAT_REF3']=min(inps.geo_box[1::2])
         cropped_metadata['LAT_REF4']=min(inps.geo_box[1::2])
-        coord = ut.coordinate(cropped_metadata)
+        coord = coordinate(cropped_metadata)
+
+        gps_data_list = []
         for i in range(num_site):
             if print_msg:
                 prog_bar.update(i+1, suffix=site_names[i])
@@ -1313,14 +1314,11 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
                     fcw.writerow(csv_columns)
                     fcw.writerows(gps_data_list)
 
-            # plot
-            msky, mskx = coord.geo2radar(float(site_lats[i]), float(site_lons[i]))[0:2]
-            msk_point = inps.msk[msky, mskx]
-            if not np.isnan(gps_data) and msk_point!=0:
-                cm_idx = (gps_data - vmin) / (vmax - vmin)
-                color = cmap(cm_idx)
-                #import pdb
-                #pdb.set_trace()
+            # plot if 1) valid GPS velocity value AND 2) included in the mask
+            site_y, site_x = coord.geo2radar(float(site_lats[i]), float(site_lons[i]))[0:2]
+            if not np.isnan(gps_data) and inps.msk[site_y, site_x] != 0:
+                cmap_idx = (gps_data - vmin) / (vmax - vmin)
+                color = cmap(cmap_idx)
                 ax.scatter(site_lons[i], site_lats[i], color=color,
                            s=marker_size**2, edgecolors='k', zorder=10)
         if print_msg:
