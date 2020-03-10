@@ -143,8 +143,8 @@ def cmd_line_parse(iargs=None):
         inps.save_fig = True
     if inps.lalo_step:
         inps.lalo_label = True
-    if inps.zero_mask:
-        inps.mask_file = 'no'
+    #!#if inps.zero_mask:
+        #!#inps.mask_file = 'no'
 
     if not inps.disp_whitespace:
         inps.disp_axis = False
@@ -956,12 +956,18 @@ def read_data4figure(i_start, i_end, inps, metadata):
     # mask
     if inps.msk is not None:
         vprint('masking data')
-        msk = np.tile(inps.msk, (data.shape[0], 1, 1))
-        data = np.ma.masked_where(msk == 0., data)
+        inps.msk = np.tile(inps.msk, (data.shape[0], 1, 1))
+        data = np.ma.masked_where(inps.msk == 0., data)
+
+    if inps.msk is None:
+        inps.msk = np.tile(np.ones(data.shape, dtype=np.int8), (data.shape[0], 1, 1))
 
     if inps.zero_mask:
         vprint('masking pixels with zero value')
-        data = np.ma.masked_where(data == 0., data)
+        inps.msk = np.ma.masked_array(inps.msk, mask=np.isnan(data))
+        np.ma.set_fill_value(inps.msk, 0.)
+        inps.msk=inps.msk.filled()
+
     return data
 
 
@@ -1261,9 +1267,14 @@ def prep_slice(cmd, auto_fig=False):
                                  print_msg=False)[0]
         data[data != 0.] -= ref_data
     # masking
-    if inps.zero_mask:
-        data = np.ma.masked_where(data == 0., data)
     if inps.msk is not None:
+        data = np.ma.masked_where(inps.msk == 0., data)
+    if inps.msk is None:
+        inps.msk = np.ones(data.shape, dtype=np.int8)
+    if inps.zero_mask:
+        inps.msk = np.ma.masked_array(inps.msk, mask=np.isnan(data))
+        np.ma.set_fill_value(inps.msk, 0.)
+        inps.msk=inps.msk.filled()
         data = np.ma.masked_where(inps.msk == 0., data)
 
     data, inps = update_data_with_plot_inps(data, atr, inps)
@@ -1342,11 +1353,16 @@ class viewer():
                 data[data != 0.] -= ref_data
 
             # masking
-            if self.zero_mask:
-                vprint('masking pixels with zero value')
-                data = np.ma.masked_where(data == 0., data)
             if self.msk is not None:
                 vprint('masking data')
+                data = np.ma.masked_where(self.msk == 0., data)
+            if self.msk is None:
+                self.msk = np.ones(data.shape, dtype=np.int8)
+            if self.zero_mask:
+                vprint('masking pixels with zero value')
+                self.msk = np.ma.masked_array(self.msk, mask=np.isnan(data))
+                np.ma.set_fill_value(self.msk, 0)
+                self.msk=self.msk.filled()
                 data = np.ma.masked_where(self.msk == 0., data)
 
             # update data
