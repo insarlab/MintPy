@@ -12,7 +12,7 @@ These are several ways to contribute to the MintPy project:
 If you get stuck at any point you can create an [issue on GitHub](https://github.com/insarlab/MintPy/issues) or contact us on the [user forum](https://groups.google.com/forum/#!forum/mintpy).
 
 For more information on contributing to open source projects, [GitHub's own guide](https://guides.github.com/activities/contributing-to-open-source/)
-is a great starting point if you are new to version control.
+is a great starting point if you are new to version control. Tute Costa has a great [tutorial on how to rewrite history with git rebase/squash/amend](https://thoughtbot.com/blog/git-interactive-rebase-squash-amend-rewriting-history).
 
 ## Writing documentations ##
 
@@ -24,13 +24,13 @@ We follow the [git pull request workflow](https://www.asmeurer.com/git-workflow/
 
 ### General guidelines for pull requests (PRs) ###
 
-+ **Open an issue first** describing what you want to do, except for bugs fix. If there is already an issue that matches your PR, leave a comment there instead to let us know what you plan to do.
++ **Open an issue first** describing what you want to do, except for bugs fix. If there is already an issue that matches your PR, leave a comment there instead to let us know what you plan to do. We may have easier ways to help you implement it faster. 
 + Each pull request should consist of a **small** and logical collection of changes.
 + Larger changes should be broken down into smaller components and integrated separately.
 + Bug fixes should be submitted in separate PRs.
 + Describe what your PR changes and why this is a good thing. Be as specific as you can. The PR description is how we keep track of the changes made to the project over time.
 + Do not commit changes to files that are irrelevant to your feature or bugfix (eg: `.gitignore`, IDE project files, etc).
-+ Write descriptive commit messages. Chris Beams has written a [guide](https://chris.beams.io/posts/git-commit/) on how to write good commit messages.
++ Write descriptive commit messages. Chris Beams has a [guide](https://chris.beams.io/posts/git-commit/) on how to write good commit messages. Tute Costa has a great [tutorial](https://thoughtbot.com/blog/git-interactive-rebase-squash-amend-rewriting-history) on how to rewrite a nice and clean history with git rebase/squash/amend.
 + Be willing to accept criticism and work on improving your code; we don't want to break other users' code, so care must be taken not to introduce bugs.
 + Be aware that the pull request review process is not immediate, and is generally proportional to the size of the pull request.
 
@@ -47,7 +47,11 @@ Some things that will increase the chance that your pull request is accepted qui
 
 Pull requests will automatically have tests run by Circle CI and Codacy. Github will show the status of these checks on the pull request. Try to get them all passing (green). If you have any trouble, leave a comment in the PR or contact us on the [user forum](https://groups.google.com/forum/#!forum/mintpy).
 
-### 0. Setting up a development environment ###
+### Example workflow ###
+
+This is not a git tutorial by any means. It just collects a few best practice for git usage for MintPy development. There are plenty of good resources online to help get started.
+
+#### Set up a development environment ####
 
 Fork insarlab/MintPy from GitHub UI, and then
 
@@ -57,9 +61,7 @@ cd MintPy
 git remote add upstream https://github.com/insarlab/MintPy.git
 ```
 
-### 1. Working with a feature branch ###
-
-[Here](https://thoughtbot.com/blog/git-interactive-rebase-squash-amend-rewriting-history) is a great tutorial if you are new to rewriting history with git.
+#### Work with a feature branch ####
 
 ```
 # update to the latest upstream master
@@ -75,6 +77,12 @@ git add my_modifid_message
 git rm old_file
 git commit -a 
 
+# you may need to re-synchronize against upstream/master
+# if you need some bugfix or new capability that has been
+# added to master since you created your branch
+git fetch upstream
+git rebase upstream/master
+
 # At end of your work, make sure history is reasonable by:
 # folding non significant commits into a consistent set
 # use 'fixup' for example to merge several commits together
@@ -89,9 +97,10 @@ git push
 git push -f
 ```
 
-### 2. Issue a pull request from GitHub UI ###
+#### Issue a pull request from GitHub UI ####
 
 If the pull request discussion results in changes, commit new changes to `my_user_name/my_new_feature_branch`, they will show up in the pull request in `insarlab` automatically.
+
 
 ## Testing ##
 
