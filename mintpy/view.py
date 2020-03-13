@@ -271,6 +271,7 @@ def update_inps_with_file_metadata(inps, metadata):
                                             inps.colormap,
                                             datasetName=inps.dset[0],
                                             cmap_lut=inps.cmap_lut,
+                                            cmap_vlist=inps.cmap_vlist,
                                             print_msg=inps.print_msg)
 
     # Reference Point

@@ -170,8 +170,10 @@ def add_figure_argument(parser):
                      help='colormap used for display, i.e. jet, RdBu, hsv, jet_r, temperature, viridis,  etc.\n'
                           'colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html\n'
                           'colormaps in GMT - http://soliton.vm.bytemark.co.uk/pub/cpt-city/')
-    fig.add_argument('--cm-lut', dest='cmap_lut', type=int, default=256, metavar='NUM',
+    fig.add_argument('--cm-lut','--cmap-lut', dest='cmap_lut', type=int, default=256, metavar='NUM',
                      help='number of increment of colormap lookup table')
+    fig.add_argument('--cm-vlist','--cmap-vlist', dest='cmap_vlist', type=float, nargs=3, default=[0.0, 0.7, 1.0],
+                     help='list of 3 float numbers, for truncated colormap only')
 
     # colorbar
     fig.add_argument('--nocbar', '--nocolorbar', dest='disp_cbar',
@@ -549,7 +551,8 @@ def auto_shared_lalo_location(axs, loc=(1,0,0,1), flatten=False):
     return locs
 
 
-def check_colormap_input(metadata, cmap_name=None, datasetName=None, cmap_lut=256, print_msg=True):
+def check_colormap_input(metadata, cmap_name=None, datasetName=None, cmap_lut=256,
+                         cmap_vlist=[0.0, 0.7, 1.0], print_msg=True):
     gray_dataset_key_words = ['coherence', 'temporal_coherence',
                               '.cor', '.mli', '.slc', '.amp', '.ramp']
     if not cmap_name:
@@ -561,7 +564,7 @@ def check_colormap_input(metadata, cmap_name=None, datasetName=None, cmap_lut=25
     if print_msg:
         print('colormap:', cmap_name)
 
-    return ColormapExt(cmap_name, cmap_lut).colormap
+    return ColormapExt(cmap_name, cmap_lut, vlist=cmap_vlist).colormap
 
 
 def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1, buffer_year=0.2):
