@@ -10,7 +10,7 @@
 
 The Miami INsar Time-series software in PYthon (MintPy) is an open-source package for Interferometric Synthetic Aperture Radar time series analysis. It reads the stack of interferograms (coregistered and unwrapped) in [ISCE](https://github.com/isce-framework/isce2), GAMMA, [ARIA](https://github.com/aria-tools/ARIA-tools), [SNAP](http://step.esa.int/) or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground surface displacement in line-of-sight direction. It includes a routine time series analysis (`smallbaselineApp.py`) and some independent toolbox.
 
-This package was called PySAR before version 1.1.1. For version 1.1.2 and onward, we use MintPy instead.
+This package was called PySAR before version 1.1.1. For version 1.1.2 and onward, we use MintPy instead. This is research code provided to you "as is" with NO WARRANTIES OF CORRECTNESS. Use at your own risk.
 
 ### 1. [Installation](./installation.md) ###
 
