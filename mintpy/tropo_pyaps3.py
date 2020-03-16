@@ -66,14 +66,20 @@ Notes for data access:
   For ERA-5 from CDS, you need to agree to the Terms of Use of every datasets that you intend to download.
 """
 
-WEATHER_DIR_DEMO = """--weather-dir ~/WEATHER
-WEATHER/
+WEATHER_DIR_DEMO = """--weather-dir ~/atmosphere
+atmosphere/
+    /ERA5
+        ERA5_N20_N40_E120_E140_20060624_14.grb
+        ERA5_N20_N40_E120_E140_20060924_14.grb
+        ...
     /ECMWF
         ERA-Int_20030329_06.grb
         ERA-Int_20030503_06.grb
+        ...
     /MERRA
         merra-20110126-06.nc4
         merra-20110313-06.nc4
+        ...
 """
 
 
