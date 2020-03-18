@@ -153,7 +153,7 @@ def date12_list2index(date12_list, date_list=[]):
 def get_date12_list(fname, dropIfgram=False):
     """Read date12 info from input file: Pairs.list or multi-group hdf5 file
     Parameters: fname       - string, path/name of input multi-group hdf5 file or text file
-                dropIfgram  - bool, check the "DROP_IFGRAM" attribute or not for multi-group hdf5 file
+                dropIfgram  - bool, check the "dropIfgram" dataset in ifgramStack hdf5 file
     Returns:    date12_list - list of string in YYYYMMDD_YYYYMMDD format
     Example:
         date12List = get_date12_list('ifgramStack.h5')
