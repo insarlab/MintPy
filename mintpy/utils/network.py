@@ -174,7 +174,7 @@ def get_date12_list(fname, dropIfgram=False):
         txtContent = np.loadtxt(fname, dtype=bytes).astype(str)
         if len(txtContent.shape) == 1:
             txtContent = txtContent.reshape(-1, 1)
-            date12_list = txtContent[0]
+            date12_list = txtContent.flatten().tolist()
         else:
             date12_list = [i for i in txtContent[:, 0]]    # for one interferogram
 #        date12_list = [i for i in txtContent[:, 0]]
