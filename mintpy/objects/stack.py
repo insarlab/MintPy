@@ -837,37 +837,14 @@ class ifgramStack:
 
     # Functions considering dropIfgram value
     def get_date12_list(self, dropIfgram=True):
-        try:
-            with h5py.File(self.file, 'r') as f:
-                dates = f['date'][:]
-                if dropIfgram:
-                    dates = dates[f['dropIfgram'][:], :]
-            mDates = np.array([i.decode('utf8') for i in dates[:, 0]])
-            sDates = np.array([i.decode('utf8') for i in dates[:, 1]])
-        except:
-            mDates, sDates = self.get_date12_txt()
-
+        with h5py.File(self.file, 'r') as f:
+            dates = f['date'][:]
+            if dropIfgram:
+                dates = dates[f['dropIfgram'][:], :]
+        mDates = np.array([i.decode('utf8') for i in dates[:, 0]])
+        sDates = np.array([i.decode('utf8') for i in dates[:, 1]])
         date12List = ['{}_{}'.format(i, j) for i, j in zip(mDates, sDates)]
         return date12List
-
-    def get_date12_txt(self):
-        """ 
-        Extract dates from a textfile, where each line contains ref and sec
-        Order of dates doesn't matter; separation string shouldn't matter
-        """
-        import re
-        mDates = []; sDates = []
-        with open(self.file, 'r') as f:
-            for i, line in enumerate(f):
-                if line.startswith('#'): continue # skip commented lines
-                dt  = re.search('(20\d+)\D*(20\d+)', line)
-                ref = dt.group(1)
-                sec = dt.group(2)
-                if int(sec) < int(ref): ref, sec = sec, ref
-                
-                mDates.append(ref)
-                sDates.append(sec)
-        return np.array(mDates), np.array(sDates)
 
     def get_drop_date12_list(self):
         with h5py.File(self.file, 'r') as f:
