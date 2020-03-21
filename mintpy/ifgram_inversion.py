@@ -155,6 +155,8 @@ def create_parser():
     par = parser.add_argument_group('parallel', 'parallel processing configuration for Dask')
     par.add_argument('--parallel', dest='parallel', action='store_true',
                      help='Enable parallel processing for the pixelwise weighted inversion.')
+    par.add_argument('--parallel-type', '--cluster', '--cluster-type', dest='cluster', type=str, default='SLURM',
+                     choices={'LSF', 'PBS', 'SLURM'}, help='The type of HPC cluster you are running on.')
     par.add_argument('--parallel-workers-num','--par-workers-num','--parallel-num', dest='numWorker', type=int,
                      default=40, help='Specify the number of workers the Dask cluster should use. Default: 40')
     par.add_argument('--parallel-walltime','--par-walltime','--parallel-walltime', dest='walltime', type=str,
@@ -1051,34 +1053,29 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     else:
         try:
             from dask.distributed import Client, as_completed
-            # dask_jobqueue is needed for HPC.
-            # PBSCluster (similar to LSFCluster) should also work out of the box
-            from dask_jobqueue import LSFCluster
+            from mintpy.objects.cluster import Cluster
         except ImportError:
             raise ImportError('Cannot import dask.distributed or dask_jobqueue!')
 
         ts = np.zeros((num_date, length, width), np.float32)
-        python_executable_location = sys.executable
 
         # Look at the ~/.config/dask/dask_mintpy.yaml file for Changing the Dask configuration defaults
-        #cluster = LSFCluster(config_name='default', walltime=inps.walltime, python=python_executable_location)
-        cluster = LSFCluster(walltime=inps.walltime, python=python_executable_location)
-        #cluster = LSFCluster(config_name='ifgram_inversion',
-        #                     python=python_executable_location)
+        #cluster = LSFCluster(walltime=inps.walltime, python=python_executable_location)
 
         # This line submits NUM_WORKERS jobs to Pegasus to start a bunch of workers
         # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
         # at once (other user's jobs gained higher priority in the general at that point)
         NUM_WORKERS = inps.numWorker
         # FA: the following command starts the jobs
-        cluster.scale(NUM_WORKERS)
-        print("JOB COMMAND CALLED FROM PYTHON:", cluster.job_script())
+        c = Cluster(type=inps.cluster, walltime=inps.walltime)
+        c.cluster.scale(NUM_WORKERS)
+        print("JOB COMMAND CALLED FROM PYTHON:", c.cluster.job_script())
         with open('dask_command_run_from_python.txt', 'w') as f:
-              f.write(cluster.job_script() + '\n')
+              f.write(c.cluster.job_script() + '\n')
 
         # This line needs to be in a function or in a `if __name__ == "__main__":` block. If it is in no function
         # or "main" block, each worker will try to create its own client (which is bad) when loading the module
-        client = Client(cluster)
+        client = Client(c.cluster)
 
         all_boxes = []
         for box in box_list:
@@ -1126,7 +1123,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
             num_inv_ifg[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_numi
 
         # Shut down Dask workers gracefully
-        cluster.close()
+        c.cluster.close()
         client.close()
 
         ut.move_dask_stdout_stderr_files()
