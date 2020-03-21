@@ -530,12 +530,16 @@ def get_delay_timeseries(inps, atr):
         prog_bar.update(i+1, suffix=os.path.basename(grib_file))
     prog_bar.close()
 
-    # Convert relative phase delay on reference date
-    inps.ref_date = atr.get('REF_DATE', date_list[0])
-    print('convert to relative phase delay with reference date: '+inps.ref_date)
-    inps.ref_idx = date_list.index(inps.ref_date)
-    tropo_data -= np.tile(tropo_data[inps.ref_idx, :, :], (num_date, 1, 1))
-    atr['REF_DATE'] = inps.ref_date
+    # save absolute delay for more generic usage
+    # since diff.py can handle different reference date.
+    if 'REF_DATE' in atr.keys():
+        atr.pop('REF_DATE')
+    ## Convert relative phase delay on reference date
+    #inps.ref_date = atr.get('REF_DATE', date_list[0])
+    #print('convert to relative phase delay with reference date: '+inps.ref_date)
+    #inps.ref_idx = date_list.index(inps.ref_date)
+    #tropo_data -= np.tile(tropo_data[inps.ref_idx, :, :], (num_date, 1, 1))
+    #atr['REF_DATE'] = inps.ref_date
 
     # Write tropospheric delay to HDF5
     if inps.ref_yx:
