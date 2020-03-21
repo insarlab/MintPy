@@ -14,6 +14,25 @@ import numpy as np
 
 
 ################################################################
+def yyyymmdd2season(dateStr):
+    """Determine the season of input date in YYYYMMDD format"""
+    # get day of the year
+    dateStr = yyyymmdd(dateStr)
+    yday = dt(*time.strptime(dateStr, "%Y%m%d")[0:5]).timetuple().tm_yday
+
+    # determine the season
+    season = None
+    if yday < 60 or yday > 330:
+        season = 'WINTER'
+    elif yday < 152:
+        season = 'SPRING'
+    elif yday < 244:
+        season = 'SUMMER'
+    else:
+        season = 'FALL'
+    return season
+
+
 def datenum2datetime(datenum):
     """Convert Matlab datenum into Python datetime.
     Parameters: datenum : Date in datenum format, i.e. 731763.5

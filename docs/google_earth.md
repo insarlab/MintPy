@@ -1,4 +1,4 @@
-MintPy use [pyKML](https://pythonhosted.org/pykml/) to generate KMZ (Keyhole Markup Zip) files for easy offline viewing in [Google Earth](https://www.google.com/earth/) via `save_kmz_timeseries.py` and `save_kmz.py` script. Below are screenshots of the displacement time-series and average velocity of [Fernandina volcano estimated from Sentinel-1 data](example_dataset.md).    
+MintPy use [pyKML](https://pythonhosted.org/pykml/) to generate KMZ (Keyhole Markup Zip) files for easy offline viewing in [Google Earth](https://www.google.com/earth/) via `save_kmz_timeseries.py` and `save_kmz.py` script. Below are screenshots of the displacement time-series and average velocity of [Fernandina volcano estimated from Sentinel-1 data](demo_dataset.md).    
 
 ### 1. Displacement time-series ###
 
@@ -37,6 +37,10 @@ By default, MintPy will read in the provided dataset and then subset the data in
 Each LOD is displayed at a different zoom-level within Google Earth. On startup, the low-resolution LOD is displayed, while the high-resolution LOD becomes visible around 20km in altitude, and the full-resolution LOD at around 10km in altitude. This ensures that Google Earth only has to load as many Placemark as are on the screen currently, which drastically increases performance as fewer Placemarks are onscreen at higher zoom levels.
 
 The full-resolution LOD is presently calculated and presented only for those actions showing signs of active deformation so as to further increase performance.
+
+<p align="center">
+  <img src="https://yunjunzhang.files.wordpress.com/2020/03/defo_area.png">
+</p>
 
 2. Regionalized Network Links
 

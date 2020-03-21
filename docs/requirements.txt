@@ -1,15 +1,12 @@
-cdsapi
 cvxopt
 dask[complete]>=1.0,<2.0
 dask-jobqueue>=0.3,<1.0
 h5py
 lxml
 matplotlib
-netcdf4
 numpy
 pyproj
-pykdtree
-pykml -e git+https://github.com/yunjunz/pykml.git#egg=pykml
+pykml
 pyresample
 scikit-image
 scipy

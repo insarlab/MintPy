@@ -23,7 +23,7 @@ markdown_extensions:
 nav:
     - Home: README.md
     - User Guide:
-        - Example datasets: example_dataset.md
+        - Example datasets: demo_dataset.md
         - Example directory structure: dir_structure.md
         - Example template files: examples/input_files/README.md
         - Tutorials in Jupyter Notebook: https://github.com/insarlab/MintPy-tutorial
@@ -36,8 +36,9 @@ nav:
         - Coordinates: api/coord.md
         - Docker: docker.md
         - Documents generation: api/doc_generation.md
+        - Module hierarchy: api/module_hierarchy.md
     - About:
         - Contributing: CONTRIBUTING.md
-        - Code of Conduct: CODE_OF_CONDUCT.md
+        - Code of conduct: CODE_OF_CONDUCT.md
         - References: references.md
 

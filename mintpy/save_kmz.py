@@ -28,7 +28,7 @@ EXAMPLE = """example:
   save_kmz.py geo/geo_velocity.h5 -u cm -v -2 2
   save_kmz.py geo/geo_velocity.h5 -u cm --wrap --wrap-range -3 7
 
-  save_kmz.py geo/geo_timeseries_ECMWF_ramp_demErr.h5 20101120
+  save_kmz.py geo/geo_timeseries_ERA5_ramp_demErr.h5 20101120
   save_kmz.py geo/geo_ifgramStack.h5 20101120_20110220
   save_kmz.py geo/geo_geometryRadar.h5 --cbar-label Elevation
 """

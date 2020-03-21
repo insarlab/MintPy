@@ -52,7 +52,7 @@ def create_parser():
     opts.add_argument('--steps', type=int, nargs=3, default=[20, 5, 2],
                       help='list of steps for output pixel. Default: 20 5 2')
     opts.add_argument('--level-of-details','--lods', dest='lods', type=int, nargs=3, default=[1500, 4000, -1],
-                      help='list of level of details to determine the visible range while browering\n'+
+                      help='list of level of details to determine the visible range while browering. Default: 1500, 4000, -1.\n'+
                            'Ref: https://developers.google.com/kml/documentation/kml_21tutorial')
     opts.add_argument('--vlim','-v', dest='vlim', nargs=2, metavar=('VMIN', 'VMAX'), type=float,
                       help='min/max range in cm/yr for color coding.')
@@ -65,9 +65,9 @@ def create_parser():
 
     defo = parser.add_argument_group('HD for deforming areas', 'High resolution output for deforming areas')
     defo.add_argument('--cutoff', dest='cutoff', type=int, default=3,
-                      help='choose points with velocity >= cutoff * MAD')
+                      help='choose points with velocity >= cutoff * MAD. Default: 3.')
     defo.add_argument('--min-percentage','--min-perc', dest='min_percentage', type=float, default=0.2,
-                      help='choose boxes with >= min percentage of pixels are deforming')
+                      help='choose boxes with >= min percentage of pixels are deforming. Default: 0.2.')
     return parser
 
 
@@ -202,10 +202,10 @@ def get_boxes4deforming_area(vel_file, mask_file, step=2, num_pixel=30**2, min_p
     print('number of boxes : {}'.format(len(box_list)))
 
     if display:
-        fig, axs = plt.subplots(nrows=1, ncols=2, figsize=[12, 8], sharey=True)
+        fig, axs = plt.subplots(nrows=1, ncols=2, figsize=[8, 4], sharey=True)
         vel[mask == 0] = np.nan
         axs[0].imshow(vel, cmap='jet')
-        axs[1].imshow(mask_aoi, cmap='gray')
+        axs[1].imshow(mask_aoi, cmap='gray_r')
         for box in box_list:
             for ax in axs:
                 rect = Rectangle((box[0],box[1]),
@@ -213,6 +213,10 @@ def get_boxes4deforming_area(vel_file, mask_file, step=2, num_pixel=30**2, min_p
                                  height=(box[3]-box[1]),
                                  linewidth=2, edgecolor='r', fill=False)
                 ax.add_patch(rect)
+        fig.tight_layout()
+        out_fig = os.path.join(os.path.dirname(vel_file), 'defo_area.png')
+        fig.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=300)
+        print('save figure to {}'.format(out_fig))
         plt.show()
     return box_list
 

@@ -66,6 +66,24 @@ def cmd_line_parse(iargs = None):
 
 
 #########################################################################
+def get_processor(meta_file):
+    """Get the ISCE sub-processor name"""
+    meta_dir = os.path.dirname(meta_file)
+    tops_meta_file = os.path.join(meta_dir, 'IW*.xml')
+    stripmap_meta_file = os.path.join(meta_dir, 'data.dat')
+
+    processor = None
+    if len(glob.glob(tops_meta_file)) > 0:
+        processor = 'tops'
+    elif os.path.isfile(stripmap_meta_file):
+        processor = 'stripmap'
+    elif meta_file.endswith('.xml'):
+        processor = 'stripmap'
+    else:
+        raise ValueError('Un-recognized ISCE processor for metadata file:', meta_file)
+    return processor
+
+
 def load_product(xmlname):
     """Load the product using Product Manager."""
     from iscesys.Component.ProductManager import ProductManager as PM
@@ -297,17 +315,13 @@ def extract_isce_metadata(meta_file, geom_dir=None, rsc_file=None, update_mode=T
         return readfile.read_roipac_rsc(rsc_file)
 
     # 1. read/extract metadata from XML / shelve file
-    fbase = os.path.basename(meta_file)
-    if fbase.startswith("IW"):
+    processor = get_processor(meta_file)
+    if processor == 'tops':
         print('extract metadata from ISCE/topsStack xml file:', meta_file)
         metadata = extract_tops_metadata(meta_file)[0]
-    elif fbase.startswith("data"):
+    else:
         print('extract metadata from ISCE/stripmapStack shelve file:', meta_file)
         metadata = extract_stripmap_metadata(meta_file)[0]
-    elif fbase.endswith(".xml"):
-        metadata = extract_stripmap_metadata(meta_file)[0]
-    else:
-        raise ValueError("unrecognized ISCE metadata file: {}".format(meta_file))
 
     # 2. extract metadata from geometry file
     if geom_dir:
@@ -370,11 +384,11 @@ def read_stripmap_baseline(baseline_file):
     return [bperp_top, bperp_bottom]
 
 
-def read_baseline_timeseries(baseline_dir, beam_mode='IW'):
+def read_baseline_timeseries(baseline_dir, processor='tops'):
     """Read bperp time-series from files in baselines directory
     Parameters: baseline_dir : str, path to the baselines directory
-                beam_mode    : str, IW for Sentinel-1/TOPS
-                                    SM for StripMap data
+                processor    : str, tops     for Sentinel-1/TOPS
+                                    stripmap for StripMap data
     Returns:    bDict : dict, in the following format:
                     {'20141213': [0.0, 0.0],
                      '20141225': [104.6, 110.1],
@@ -383,22 +397,30 @@ def read_baseline_timeseries(baseline_dir, beam_mode='IW'):
     """
     print('read perp baseline time-series from {}'.format(baseline_dir))
     # grab all existed baseline files
-    bFiles = sorted(glob.glob(os.path.join(baseline_dir, '*/*.txt')))  #for TOPS
-    bFiles += sorted(glob.glob(os.path.join(baseline_dir, '*.txt')))   #for stripmap
+    if processor == 'tops':
+        bFiles = sorted(glob.glob(os.path.join(baseline_dir, '*/*.txt')))
+    elif processor == 'stripmap':
+        bFiles = sorted(glob.glob(os.path.join(baseline_dir, '*.txt')))
+    else:
+        raise ValueError('Un-recognized ISCE stack processor: {}'.format(processor))
     if len(bFiles) == 0:
         print('WARNING: no baseline text file found in dir {}'.format(os.path.abspath(baseline_dir)))
         return None
+
+    # ignore files with different date1
+    # when re-run with different reference date
+    date1s = [os.path.basename(i).split('_')[0] for i in bFiles]
+    date1 = ut.most_common(date1s)
+    bFiles = [i for i in bFiles if os.path.basename(i).split('_')[0] == date1]
 
     # read files into dict
     bDict = {}
     for bFile in bFiles:
         dates = os.path.basename(bFile).split('.txt')[0].split('_')
-        if beam_mode == 'IW':
+        if processor == 'tops':
             bDict[dates[1]] = read_tops_baseline(bFile)
-        elif beam_mode == 'SM':
-            bDict[dates[1]] = read_stripmap_baseline(bFile)
         else:
-            raise ValueError('Unrecognized beam_mode/processor: {}'.format(beam_mode))
+            bDict[dates[1]] = read_stripmap_baseline(bFile)
     bDict[dates[0]] = [0, 0]
     return bDict
 
@@ -456,6 +478,7 @@ def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), 
 #########################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
+    inps.processor = get_processor(inps.metaFile)
 
     # read common metadata
     metadata = {}
@@ -473,8 +496,7 @@ def main(iargs=None):
     # read baseline info
     baseline_dict = {}
     if inps.baselineDir:
-        baseline_dict = read_baseline_timeseries(inps.baselineDir,
-                                                 beam_mode=metadata['beam_mode'])
+        baseline_dict = read_baseline_timeseries(inps.baselineDir, inps.processor)
 
     # prepare metadata for ifgram file
     if inps.ifgramDir and inps.ifgramFiles:

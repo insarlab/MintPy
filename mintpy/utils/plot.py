@@ -8,6 +8,7 @@
 
 
 import os
+import csv
 import argparse
 import warnings
 import datetime
@@ -24,17 +25,13 @@ from matplotlib import (
 )
 from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import matplotlib.ticker as mticker
 
-import cartopy.mpl.geoaxes as geoaxes
-import cartopy.crs as ccrs
-import cartopy.geodesic as cgeo
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
-import cartopy.geodesic as geodesic
-import shapely.geometry as sgeom
+import pyproj
+from cartopy import crs as ccrs
+from cartopy.mpl import geoaxes, ticker as cticker
 
 from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
-from mintpy.objects.colors import *
+from mintpy.objects.colors import ColormapExt
 from mintpy.objects.coord import coordinate
 from mintpy.utils import (
     ptime,
@@ -51,184 +48,20 @@ max_figsize_single = 10.0      # default min size in inch, for single plot
 default_figsize_multi = [15.0, 8.0]
 max_figsize_height = 8.0       # max figure size in vertical direction in inch
 
-######################################### Cartopy Scalebar class begin ####################################
-class CartopyScalebar:
-    """From: https://stackoverflow.com/a/50674451/2676166"""
-    def _axes_to_lonlat(self, ax, coords):
-        """(lon, lat) from axes coordinates."""
-        display = ax.transAxes.transform(coords)
-        data = ax.transData.inverted().transform(display)
-        lonlat = ccrs.PlateCarree().transform_point(*data, ax.projection)
 
-        return lonlat
+# default color names in matplotlib
+# ref: https://matplotlib.org/users/dflt_style_changes.html
+mplColors = ['#1f77b4',
+             '#ff7f0e',
+             '#2ca02c',
+             '#d62728',
+             '#9467bd',
+             '#8c564b',
+             '#e377c2',
+             '#7f7f7f',
+             '#bcbd22',
+             '#17becf']
 
-
-    def _upper_bound(self, start, direction, distance, dist_func):
-        """A point farther than distance from start, in the given direction.
-
-        It doesn't matter which coordinate system start is given in, as long
-        as dist_func takes points in that coordinate system.
-
-        Args:
-            start:     Starting point for the line.
-            direction  Nonzero (2, 1)-shaped array, a direction vector.
-            distance:  Positive distance to go past.
-            dist_func: A two-argument function which returns distance.
-
-        Returns:
-            Coordinates of a point (a (2, 1)-shaped NumPy array).
-        """
-        if distance <= 0:
-            raise ValueError(f"Minimum distance is not positive: {distance}")
-
-        if np.linalg.norm(direction) == 0:
-            raise ValueError("Direction vector must not be zero.")
-
-        # Exponential search until the distance between start and end is
-        # greater than the given limit.
-        length = 0.1
-        end = start + length * direction
-
-        while dist_func(start, end) < distance:
-            length *= 2
-            end = start + length * direction
-
-        return end
-
-
-    def _distance_along_line(self, start, end, distance, dist_func, tol):
-        """Point at a distance from start on the segment  from start to end.
-
-        It doesn't matter which coordinate system start is given in, as long
-        as dist_func takes points in that coordinate system.
-
-        Args:
-            start:     Starting point for the line.
-            end:       Outer bound on point's location.
-            distance:  Positive distance to travel.
-            dist_func: Two-argument function which returns distance.
-            tol:       Relative error in distance to allow.
-
-        Returns:
-            Coordinates of a point (a (2, 1)-shaped NumPy array).
-        """
-        initial_distance = dist_func(start, end)
-        if initial_distance < distance:
-            raise ValueError(f"End is closer to start ({initial_distance}) than "
-                             f"given distance ({distance}).")
-
-        if tol <= 0:
-            raise ValueError(f"Tolerance is not positive: {tol}")
-
-        # Binary search for a point at the given distance.
-        left = start
-        right = end
-
-        while not np.isclose(dist_func(start, right), distance, rtol=tol):
-            midpoint = (left + right) / 2
-
-            # If midpoint is too close, search in second half.
-            if dist_func(start, midpoint) < distance:
-                left = midpoint
-            # Otherwise the midpoint is too far, so search in first half.
-            else:
-                right = midpoint
-
-        return right
-
-
-    def _point_along_line(self, ax, start, distance, angle=0, tol=0.01):
-        """Point at a given distance from start at a given angle.
-
-        Args:
-            ax:       CartoPy axes.
-            start:    Starting point for the line in axes coordinates.
-            distance: Positive physical distance to travel.
-            angle:    Anti-clockwise angle for the bar, in radians. Default: 0
-            tol:      Relative error in distance to allow. Default: 0.01
-
-        Returns:
-            Coordinates of a point (a (2, 1)-shaped NumPy array).
-        """
-        # Direction vector of the line in axes coordinates.
-        direction = np.array([np.cos(angle), np.sin(angle)])
-
-        geodesic = cgeo.Geodesic()
-
-        # Physical distance between points.
-        def dist_func(a_axes, b_axes):
-            a_phys = self._axes_to_lonlat(ax, a_axes)
-            b_phys = self._axes_to_lonlat(ax, b_axes)
-
-            # Geodesic().inverse returns a NumPy MemoryView like [[distance,
-            # start azimuth, end azimuth]].
-            return geodesic.inverse(a_phys, b_phys).base[0, 0]
-
-        end = self._upper_bound(start, direction, distance, dist_func)
-
-        return self._distance_along_line(start, end, distance, dist_func, tol)
-
-    def draw(self, ax, location, length=0.2, metres_per_unit=1000, unit_name='km',
-                  tol=0.01, angle=0, color='black', linewidth=3, text_offset=0.005,
-                  ha='center', va='bottom', plot_kwargs=None, text_kwargs=None,
-                  **kwargs):
-        """Add a scale bar to CartoPy axes.
-
-        For angles between 0 and 90 the text and line may be plotted at
-        slightly different angles for unknown reasons. To work around this,
-        override the 'rotation' keyword argument with text_kwargs.
-
-        Args:
-            ax:              CartoPy axes.
-            location:        Position of left-side of bar in axes coordinates.
-            length:          Geodesic length of the scale bar.
-            metres_per_unit: Number of metres in the given unit. Default: 1000
-            unit_name:       Name of the given unit. Default: 'km'
-            tol:             Allowed relative error in length of bar. Default: 0.01
-            angle:           Anti-clockwise rotation of the bar.
-            color:           Color of the bar and text. Default: 'black'
-            linewidth:       Same argument as for plot.
-            text_offset:     Perpendicular offset for text in axes coordinates.
-                             Default: 0.005
-            ha:              Horizontal alignment. Default: 'center'
-            va:              Vertical alignment. Default: 'bottom'
-            **plot_kwargs:   Keyword arguments for plot, overridden by **kwargs.
-            **text_kwargs:   Keyword arguments for text, overridden by **kwargs.
-            **kwargs:        Keyword arguments for both plot and text.
-        """
-        # Setup kwargs, update plot_kwargs and text_kwargs.
-        if plot_kwargs is None:
-            plot_kwargs = {}
-        if text_kwargs is None:
-            text_kwargs = {}
-
-        plot_kwargs = {'linewidth': linewidth, 'color': color, **plot_kwargs,
-                       **kwargs}
-        text_kwargs = {'ha': ha, 'va': va, 'rotation': angle, 'color': color,
-                       **text_kwargs, **kwargs}
-
-        # Convert all units and types.
-        location = np.asarray(location)  # For vector addition.
-        length_metres = round(length) * metres_per_unit
-        angle_rad = angle * np.pi / 180
-
-        # End-point of bar.
-        end = self._point_along_line(ax, location, length_metres, angle=angle_rad,
-                                tol=tol)
-
-        # Coordinates are currently in axes coordinates, so use transAxes to
-        # put into data coordinates. *zip(a, b) produces a list of x-coords,
-        # then a list of y-coords.
-        ax.plot(*zip(location, end), transform=ax.transAxes, **plot_kwargs)
-
-        # Push text away from bar in the perpendicular direction.
-        midpoint = (location + end) / 2
-        offset = text_offset * np.array([-np.sin(angle_rad), np.cos(angle_rad)])
-        text_location = midpoint + offset
-
-        # 'rotation' keyword argument is in text_kwargs.
-        ax.text(*text_location, f"{round(length)} {unit_name}", rotation_mode='anchor',
-                transform=ax.transAxes, **text_kwargs)
 
 ########################################### Parser utilities ##############################################
 def cmd_line_parse(iargs=''):
@@ -435,12 +268,10 @@ def add_map_argument(parser):
                       choices={'horizontal', 'vertical'}, default='horizontal',
                       help='Rotate Lat label from default horizontal to vertical (to save space).')
 
-    mapg.add_argument('--projection', dest='map_projection', default='cyl', metavar='NAME',
-                      help='map projection when plotting in geo-coordinate. \n'
-                           'Reference - http://matplotlib.org/basemap/users/mapsetup.html\n\n')
-    mapg.add_argument('--resolution', default='c', choices={'c', 'l', 'i', 'h', 'f', None},
-                      help='Resolution of boundary database to use.\n' +
-                           'c (crude, default), l (low), i (intermediate), h (high), f (full) or None.')
+    mapg.add_argument('--projection', dest='map_projection', metavar='NAME', default='PlateCarree',
+                      choices={'PlateCarree', 'LambertConformal'},
+                      help='map projection when plotting in geo-coordinate.\n'
+                           'https://scitools.org.uk/cartopy/docs/latest/crs/projections.html\n\n')
 
     # scale bar
     mapg.add_argument('--scalebar', nargs=3, metavar=('LEN', 'X', 'Y'), type=float,
@@ -575,7 +406,7 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
                     wrap
     Returns:    fig_title : str, output figure title
     Example:    'geo_velocity.h5' = auto_figure_title('geo_velocity.h5', None, vars(inps))
-                '101020-110220_ECMWF_demErr_quadratic' = auto_figure_title('timeseries_ECMWF_demErr_quadratic.h5', '110220')
+                '101020-110220_ERA5_ramp_demErr' = auto_figure_title('timeseries_ERA5_ramp_demErr.h5', '110220')
     """
     if not datasetNames:
         datasetNames = []
@@ -1339,36 +1170,45 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
          dem_contour,
          dem_contour_seq) = prepare_dem_background(dem, inps=inps, print_msg=print_msg)
 
-    # get extent
-    if hasattr(inps, 'pix_box'):
-        pix_box = tuple(inps.pix_box)
+    # get extent - (left, right, bottom, top) in data coordinates
+    if geo_box is not None:
+        geo_extent = (geo_box[0], geo_box[2],
+                      geo_box[3], geo_box[1])
     else:
-        data = [i for i in [dem, dem_shade, dem_contour] if i is not None][0]
-        pix_box = (0, 0, data.shape[1], data.shape[0])
-    extent = (pix_box[0]-0.5, pix_box[2]-0.5,
-              pix_box[3]-0.5, pix_box[1]-0.5) #(left, right, bottom, top) in data coordinates
+        if hasattr(inps, 'pix_box'):
+            pix_box = tuple(inps.pix_box)
+        else:
+            data = [i for i in [dem, dem_shade, dem_contour] if i is not None][0]
+            pix_box = (0, 0, data.shape[1], data.shape[0])
+        rdr_extent = (pix_box[0]-0.5, pix_box[2]-0.5,
+                      pix_box[3]-0.5, pix_box[1]-0.5)
 
+    # plot shaded relief
     if dem_shade is not None:
         # geo coordinates
-        if isinstance(ax, geoaxes.GeoAxes) and geo_box is not None:
-            ax.imshow(dem_shade, interpolation='spline16', origin='upper', zorder=0)
+        if geo_box is not None:
+            ax.imshow(dem_shade, interpolation='spline16', extent=geo_extent, zorder=0, origin='upper')
+
         # radar coordinates
         elif isinstance(ax, plt.Axes):
-            ax.imshow(dem_shade, interpolation='spline16', extent=extent, zorder=0)
+            ax.imshow(dem_shade, interpolation='spline16', extent=rdr_extent, zorder=0, origin='upper')
 
+    # plot topo contour
     if dem_contour is not None and dem_contour_seq is not None:
         # geo coordinates
-        if isinstance(ax, geoaxes.GeoAxes) and geo_box is not None:
+        if geo_box is not None:
             yy, xx = np.mgrid[geo_box[1]:geo_box[3]:dem_contour.shape[0]*1j,
                               geo_box[0]:geo_box[2]:dem_contour.shape[1]*1j]
-            ax.contour(xx, yy, dem_contour, dem_contour_seq, origin='upper',
-                       linewidths=inps.dem_contour_linewidth,
-                       colors='black', alpha=0.5, latlon='FALSE', zorder=1)
+
+            ax.contour(xx, yy, dem_contour, dem_contour_seq, extent=geo_extent,
+                       origin='upper', linewidths=inps.dem_contour_linewidth,
+                       colors='black', alpha=0.5, zorder=1)
+
         # radar coordinates
         elif isinstance(ax, plt.Axes):
-            ax.contour(dem_contour, dem_contour_seq, origin='upper',
-                       linewidths=inps.dem_contour_linewidth,
-                       colors='black', alpha=0.5, extent=extent, zorder=1)
+            ax.contour(dem_contour, dem_contour_seq, extent=rdr_extent,
+                       origin='upper', linewidths=inps.dem_contour_linewidth,
+                       colors='black', alpha=0.5, zorder=1)
     return ax
 
 
@@ -1409,14 +1249,15 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
                 msg += 'displacement'
             msg += ' with respect to {} in {} direction ...'.format(inps.ref_gps_site, inps.gps_component)
             print(msg)
+            print('number of available GPS stations: {}'.format(num_site))
             print('start date: {}'.format(inps.gps_start_date))
             print('end   date: {}'.format(inps.gps_end_date))
             prog_bar = ptime.progressBar(maxValue=num_site)
 
         # get insar_obj (meta / geom_file)
         geom_file = ut1.get_geometry_file(['incidenceAngle','azimuthAngle'],
-                                         work_dir=os.path.dirname(inps.file),
-                                         coord='geo')
+                                          work_dir=os.path.dirname(inps.file),
+                                          coord='geo')
         if geom_file:
             geom_obj = geom_file
             print('use incidenceAngle/azimuthAngle from file: {}'.format(os.path.basename(geom_file)))
@@ -1424,10 +1265,13 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             geom_obj = metadata
             print('use incidenceAngle/azimuthAngle calculated from metadata')
 
-        listGPS=[]
+        gps_data_list = []
         for i in range(num_site):
-            obj = GPS(site_names[i])
+            if print_msg:
+                prog_bar.update(i+1, suffix=site_names[i])
+
             # calculate gps data value
+            obj = GPS(site_names[i])
             if k == 'velocity':
                 gps_data = obj.get_gps_los_velocity(geom_obj,
                                                     start_date=inps.gps_start_date,
@@ -1441,25 +1285,16 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
                                                     ref_site=inps.ref_gps_site,
                                                     gps_comp=inps.gps_component)[1] * unit_fac
                 gps_data = dis[-1] - dis[0]
-                
-            if np.isnan(gps_data) == False:
-                listGPS.append([site_names[i],site_lons[i], site_lats[i], gps_data])
-            else: pass
 
             # save calculated GPS velocities to CSV file
-            import csv
-            csv_columns = ['SiteID','Lon','Lat', 'Vel ('+str(inps.disp_unit)+' in LOS)']
             csv_file = "GPSSitesVel.csv"
-            try:
-                with open(csv_file, 'w') as csvfile:
-                    wr = csv.writer(csvfile)
-                    wr.writerow(csv_columns)
-                    wr.writerows(listGPS)
-            except IOError:
-                print("I/O error")
-
-            if print_msg:
-                prog_bar.update(i+1, suffix=site_names[i])
+            csv_columns = ['SiteID', 'Lon', 'Lat', 'LOS velocity [{}]'.format(inps.disp_unit)]
+            if not np.isnan(gps_data):
+                gps_data_list.append([site_names[i], site_lons[i], site_lats[i], gps_data])
+                with open(csv_file, 'w') as fc:
+                    fcw = csv.writer(fc)
+                    fcw.writerow(csv_columns)
+                    fcw.writerows(gps_data_list)
 
             # plot
             if not gps_data:
@@ -1828,8 +1663,9 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
     return msk, mask_file
 
 
-def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[1, 2, 3, 4, 5],
-                       print_msg=True):
+
+###############################################  Maps  ###############################################
+def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[1, 2, 3, 4, 5]):
     """Auto calculate lat/lon label sequence based on input geo_box
     Parameters: geo_box        : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
                 lalo_step      : float
@@ -1846,73 +1682,120 @@ def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[
         # Initial tick step
         lalo_step = ut0.round_to_1(max_lalo_dist/lalo_max_num)
 
-        # Final tick step - choose from candidate list
+        # reduce decimal if it ends with 8/9
         digit = np.int(np.floor(np.log10(lalo_step)))
+        if str(lalo_step)[-1] in ['8','9']:
+            digit += 1
+            lalo_step = round(lalo_step, digit)
+
+        # Final tick step - choose from candidate list
         lalo_step_candidate = [i*10**digit for i in step_candidate]
-        distance = [(i - max_lalo_dist/lalo_max_num) ** 2
-                    for i in lalo_step_candidate]
+        distance = [(i - max_lalo_dist/lalo_max_num) ** 2 for i in lalo_step_candidate]
         lalo_step = lalo_step_candidate[distance.index(min(distance))]
-        lalo_step = [lalo_step, lalo_step]
-    if print_msg:
-        print('label step in degree: {}'.format(lalo_step))
+
+    digit = np.int(np.floor(np.log10(lalo_step)))
 
     # Auto tick sequence
-    if isinstance(lalo_step, float):
-        lalo_step = [lalo_step, lalo_step]
-
-    digit = np.int(np.floor(np.log10(lalo_step[0])))
     lat_major = np.ceil(geo_box[3]/10**(digit+1))*10**(digit+1)
-    lats = np.unique(np.hstack((np.arange(lat_major, lat_major-10.*max_lalo_dist, -lalo_step[0]),
-                                np.arange(lat_major, lat_major+10.*max_lalo_dist, lalo_step[0]))))
+    lats = np.unique(np.hstack((np.arange(lat_major, lat_major-10.*max_lalo_dist, -lalo_step),
+                                np.arange(lat_major, lat_major+10.*max_lalo_dist, lalo_step))))
     lats = np.sort(lats[np.where(np.logical_and(lats >= geo_box[3], lats <= geo_box[1]))])
 
     lon_major = np.ceil(geo_box[0]/10**(digit+1))*10**(digit+1)
-    lons = np.unique(np.hstack((np.arange(lon_major, lon_major-10.*max_lalo_dist, -lalo_step[1]),
-                                np.arange(lon_major, lon_major+10.*max_lalo_dist, lalo_step[1]))))
+    lons = np.unique(np.hstack((np.arange(lon_major, lon_major-10.*max_lalo_dist, -lalo_step),
+                                np.arange(lon_major, lon_major+10.*max_lalo_dist, lalo_step))))
     lons = np.sort(lons[np.where(np.logical_and(lons >= geo_box[0], lons <= geo_box[2]))])
-
-    # Need to artificially add the geo_box boundaries in order to get cartopy to draw gridlines
-    # all the way to the map edge. Can be removed if drawing of grid lines is not needed
-    lons = np.insert(lons, [0, -1], [geo_box[0], geo_box[2]])
-    lats = np.insert(lats, [0, -1], [geo_box[3], geo_box[1]])
-
-    return lats, lons, lalo_step
+    return lats, lons, lalo_step, digit
 
 
 def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max_num=4,
-                        font_size=12, color='k', xoffset=None, yoffset=None, yrotate='horizontal', print_msg=True):
+                    font_size=12, xoffset=None, yoffset=None, yrotate='horizontal',
+                    projection=ccrs.PlateCarree(), print_msg=True):
+    """Auto draw lat/lon label/tick based on coverage from geo_box
+    Parameters: geo_box   : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
+                ax        : CartoPy axes.
+                lalo_step : float
+                lalo_loc  : list of 4 bool, positions where the labels are drawn as in [left, right, top, bottom]
+                            default: [1,0,0,1]
+                lalo_max_num : int
+                ...
+    Example:    geo_box = (128.0, 37.0, 138.0, 30.0)
+                m.draw_lalo_label(geo_box)
+    """
+    # default ax
+    if not ax:
+        ax = plt.gca()
 
-    lats, lons, step = auto_lalo_sequence(geo_box, lalo_step=lalo_step, lalo_max_num=lalo_max_num)
+    # default lat/lon sequences
+    lats, lons, lalo_step, digit = auto_lalo_sequence(geo_box, lalo_step=lalo_step, lalo_max_num=lalo_max_num)
+    if print_msg:
+        print('plot lat/lon label in step of {} and location of {}'.format(lalo_step, lalo_loc))
 
-    label_styles = {'color': color, 'size': font_size}
-    x_label_styles = label_styles.copy()
-    y_label_styles = label_styles.copy()
-    y_label_styles.update({'rotation': yrotate})
+    # ticklabel/tick style
+    ax.tick_params(which='both', direction='in', labelsize=font_size,
+                   left=True, right=True, top=True, bottom=True,
+                   labelleft=lalo_loc[0], labelright=lalo_loc[1],
+                   labeltop=lalo_loc[2], labelbottom=lalo_loc[3])
+    if xoffset is not None:
+        ax.tick_params(axis='x', which='major', pad=xoffset)
+    if yoffset is not None:
+        ax.tick_params(axis='y', which='major', pad=yoffset)
 
-    gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True, linewidth=0.05, color='black', alpha=1, linestyle='-')
+    # ticklabel symbol style
+    decimal_digit = max(0, 0-digit)
+    lon_formatter = cticker.LongitudeFormatter(number_format='.{}f'.format(decimal_digit))
+    lat_formatter = cticker.LatitudeFormatter(number_format='.{}f'.format(decimal_digit))
+    ax.xaxis.set_major_formatter(lon_formatter)
+    ax.yaxis.set_major_formatter(lat_formatter)
 
-    gl.xlocator = mticker.FixedLocator(lons)
-    gl.ylocator = mticker.FixedLocator(lats)
-    gl.xlabels_top = False
-    gl.ylabels_right = False
+    ax.set_xticks(lons, crs=projection)
+    ax.set_yticks(lats, crs=projection)
+    return ax
 
-    gl.xformatter = LONGITUDE_FORMATTER
-    gl.yformatter = LATITUDE_FORMATTER
-    gl.xlabel_style = x_label_styles
-    gl.ylabel_style = y_label_styles
 
-    if xoffset:
-        gl.xpadding = xoffset
-    if yoffset:
-        gl.ypadding = yoffset
+def draw_scalebar(ax, geo_box, loc=[0.2, 0.2, 0.1], labelpad=0.05, font_size=12, color='k'):
+    """draw a simple map scale from x1,y to x2,y in map projection coordinates, label it with actual distance
+    ref_link: http://matplotlib.1069221.n5.nabble.com/basemap-scalebar-td14133.html
+    Parameters: ax       : matplotlib.pyplot.axes object
+                geo_box  : tuple of 4 float in (x0, y0, x1, y1) for (W, N, E, S) in degrees
+                loc      : list of 3 float, distance, lat/lon of scale bar center in ratio of width, relative coord
+                labelpad : float
+    Returns:    ax
+    Example:    from mintpy.utils import plot as pp
+                pp.draw_scale_bar(ax, geo_box)
+    """
+    if not ax:
+        ax = plt.gca()
 
-def draw_scalebar(ax, img_extent, location=[0.1, 0.1], length=0.2):
-    scalebar = CartopyScalebar()
+    geod = pyproj.Geod(ellps='WGS84')
 
-    # Compute scalebar length as a proportion of dataset width (km)
-    geoid = geodesic.Geodesic()
-    shape = sgeom.LineString([[img_extent[0], img_extent[3]], [img_extent[1], img_extent[3]]])
-    dset_width = geoid.geometry_length(np.array(shape.coords)) / 1000
-    length = length * dset_width
+    # length in meter
+    scene_width = geod.inv(geo_box[0], geo_box[3], geo_box[2], geo_box[3])[2]
+    distance = ut0.round_to_1(scene_width * loc[0])
+    lon_c = geo_box[0] + loc[1] * (geo_box[2] - geo_box[0])
+    lat_c = geo_box[3] + loc[2] * (geo_box[1] - geo_box[3])
 
-    scalebar.draw(ax=ax, location=location, length=length)
+    # plot scale bar
+    if distance > 1000.0:
+        distance = np.rint(distance/1000.0)*1000.0
+    lon_c2, lat_c2 = geod.fwd(lon_c, lat_c, 90, distance)[0:2]
+    length = np.abs(lon_c - lon_c2)
+    lon0 = lon_c - length/2.0
+    lon1 = lon_c + length/2.0
+
+    ax.plot([lon0, lon1], [lat_c, lat_c], color=color)
+    ax.plot([lon0, lon0], [lat_c, lat_c + 0.1*length], color=color)
+    ax.plot([lon1, lon1], [lat_c, lat_c + 0.1*length], color=color)
+
+    # plot scale bar label
+    unit = 'm'
+    if distance >= 1000.0:
+        unit = 'km'
+        distance *= 0.001
+    label = '{:.0f} {}'.format(distance, unit)
+    txt_offset = (geo_box[1] - geo_box[3]) * labelpad
+
+    ax.text(lon0+0.5*length, lat_c+txt_offset, label,
+            verticalalignment='center', horizontalalignment='center',
+            fontsize=font_size, color=color)
+    return ax

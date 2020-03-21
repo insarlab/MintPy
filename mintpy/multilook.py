@@ -186,6 +186,12 @@ def multilook_file(infile, lks_y, lks_x, outfile=None):
         print('multilooking {d:<{w}} from {f} ...'.format(
             d=dsName, w=maxDigit, f=os.path.basename(infile)))
         data = readfile.read(infile, datasetName=dsName, print_msg=False)[0]
+
+        # keep timeseries data as 3D matrix when there is only one acquisition
+        # because readfile.read() will squeeze it to 2D
+        if atr['FILE_TYPE'] == 'timeseries' and len(data.shape) == 2:
+            data = np.reshape(data, (1, data.shape[0], data.shape[1]))
+
         data = multilook_data(data, lks_y, lks_x)
         dsDict[dsName] = data
     atr = multilook_attribute(atr, lks_y, lks_x)

@@ -312,7 +312,7 @@ def get_date12_to_drop(inps):
 
     # reference file
     if inps.referenceFile:
-        date12_to_keep = ifgramStack(inps.referenceFile).get_date12_list(dropIfgram=True)
+        date12_to_keep = pnet.get_date12_list(inps.referenceFile, dropIfgram=True)
         print('--------------------------------------------------')
         print('use reference pairs info from file: {}'.format(inps.referenceFile))
         print('number of interferograms in reference: {}'.format(len(date12_to_keep)))
