@@ -8,6 +8,7 @@
 
 import os
 import argparse
+import warnings
 from mintpy.utils import readfile, utils as ut
 
 
@@ -63,8 +64,10 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    if not inps.outfile:
-        inps.outfile = '{}_ramp.h5'.format(os.path.splitext(inps.file)[0])
+    # --update requires --outfile
+    if inps.update_mode and not inps.outfile:
+        inps.update_mode = False
+        warnings.warn('update_mode is chosen but NOT turned on because the required --outfile is missing.')
     return inps
 
 
