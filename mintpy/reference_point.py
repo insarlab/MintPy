@@ -51,14 +51,15 @@ NOTE = """note: Reference value cannot be nan, thus, all selected reference poin
 """
 
 EXAMPLE = """example:
+  # for ifgramStack file, update metadata only
+  # add --write-data to update data matrix value
   reference_point.py  inputs/ifgramStack.h5  -t smallbaselineApp.cfg  -c avgSpatialCoh.h5
-
-  reference_point.py  timeseries.h5     -r Seeded_velocity.h5
-  reference_point.py  091120_100407.unw -y 257    -x 151      -m Mask.h5 --write-data
-  reference_point.py  geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
-  
   reference_point.py  inputs/ifgramStack.h5 --method manual
   reference_point.py  inputs/ifgramStack.h5 --method random
+
+  # for all the other files, update both metadata and data matrix value
+  reference_point.py  091120_100407.unw -y 257    -x 151      -m Mask.h5
+  reference_point.py  geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
 """
 
 
@@ -74,7 +75,7 @@ def create_parser():
     parser.add_argument('-o', '--outfile',
                         help='output file name, disabled when more than 1 input files.')
     parser.add_argument('--write-data', dest='write_data', action='store_true',
-                        help='write referenced data value into file, in addition to update metadata.')
+                        help='(for ifgramStack file only) update data value, in addition to update metadata.')
     parser.add_argument('--reset', action='store_true',
                         help='remove reference pixel information from attributes in the file')
     parser.add_argument('--force', action='store_true',
@@ -113,6 +114,11 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # turn ON wirte_data for non-ifgramStack file by default
+    atr = readfile.read_attribute(inps.file)
+    if atr['FILE_TYPE'] != 'ifgramStack':
+        inps.write_data = True
     return inps
 
 
