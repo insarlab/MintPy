@@ -688,7 +688,7 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
 
     # mask
     if os.path.isfile(mask_file):
-        mask = readfile.read(mask_file, datasetName='mask')[0]
+        mask = readfile.read(mask_file)[0]
         print('read mask file: '+mask_file)
     else:
         mask = np.ones((int(atr['LENGTH']), int(atr['WIDTH'])))
