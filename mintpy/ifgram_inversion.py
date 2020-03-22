@@ -42,9 +42,8 @@ EXAMPLE = """example:
   ifgram_inversion.py  inputs/ifgramStack.h5 -w coh
 
   # parallel processing for HPC
-  # support LSF job scheduler, PBS should also work out of the box after changing module import
   ifgram_inversion.py  inputs/ifgramStack.h5 -w var --parallel
-  ifgram_inversion.py  inputs/ifgramStack.h5 -w var --parallel --parallel-workers-num 25
+  ifgram_inversion.py  inputs/ifgramStack.h5 -w var --parallel --num-worker 25
 """
 
 TEMPLATE = """
@@ -155,12 +154,13 @@ def create_parser():
     par = parser.add_argument_group('parallel', 'parallel processing configuration for Dask')
     par.add_argument('--parallel', dest='parallel', action='store_true',
                      help='Enable parallel processing for the pixelwise weighted inversion.')
-    par.add_argument('--parallel-type', '--cluster', '--cluster-type', dest='cluster', type=str, default='SLURM',
-                     choices={'LSF', 'PBS', 'SLURM'}, help='The type of HPC cluster you are running on.')
-    par.add_argument('--parallel-workers-num','--par-workers-num','--parallel-num', dest='numWorker', type=int,
-                     default=40, help='Specify the number of workers the Dask cluster should use. Default: 40')
-    par.add_argument('--parallel-walltime','--par-walltime','--parallel-walltime', dest='walltime', type=str,
-                     default='00:40', help='Specify the walltime for each dask worker. Default: 00:40')
+    par.add_argument('--cluster', '--cluster-type', dest='cluster', type=str,
+                     default='SLURM', choices={'LSF', 'PBS', 'SLURM'},
+                     help='Type of HPC cluster you are running on (default: %(default)s).')
+    par.add_argument('--num-worker', dest='numWorker', type=int, default=40,
+                     help='Number of workers the Dask cluster should use (default: %(default)s).')
+    par.add_argument('--walltime', dest='walltime', type=str, default='00:40',
+                     help='Walltime for each dask worker (default: %(default)s).')
 
     return parser
 
