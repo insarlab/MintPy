@@ -47,68 +47,72 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
     ext = os.path.splitext(out_file)[1].lower()
     # HDF5 File
     if ext in ['.h5', '.he5']:
-        if compression is None and ref_file:
-            compression = readfile.get_hdf5_compression(ref_file)
+        # grab info from reference h5 file
+        if ref_file and os.path.splitext(ref_file)[1] in ['.h5', '.he5']:
+            # compression
+            if compression is None:
+                compression = readfile.get_hdf5_compression(ref_file)
 
-        k = meta['FILE_TYPE']
-        if k == 'timeseries':
-            if ref_file is None:
-                raise Exception('Can not write {} file without reference file!'.format(k))
-            obj = timeseries(out_file)
-            obj.write2hdf5(datasetDict[k],
-                           metadata=meta,
-                           refFile=ref_file,
-                           compression=compression)
-
+            # list of auxiliary datasets
+            atr_ref = readfile.read_attribute(ref_file)
+            shape_ref = (int(atr_ref['LENGTH']), int(atr_ref['WIDTH']))
+            with h5py.File(ref_file, 'r') as fr:
+                auxDsNames = [i for i in fr.keys()
+                              if (i not in list(datasetDict.keys())
+                                  and isinstance(fr[i], h5py.Dataset) 
+                                  and fr[i].shape[-2:] != shape_ref)]
         else:
-            if os.path.isfile(out_file):
-                print('delete exsited file: {}'.format(out_file))
-                os.remove(out_file)
+            auxDsNames = []
 
-            print('create HDF5 file: {} with w mode'.format(out_file))
-            with h5py.File(out_file, 'w') as f:
-                # 1. Write input datasets
-                maxDigit = max([len(i) for i in list(datasetDict.keys())])
-                for dsName in datasetDict.keys():
-                    data = datasetDict[dsName]
-                    print(('create dataset /{d:<{w}} of {t:<10} in size of {s:<20} '
-                           'with compression={c}').format(d=dsName,
-                                                          w=maxDigit,
-                                                          t=str(data.dtype),
-                                                          s=str(data.shape),
-                                                          c=compression))
-                    ds = f.create_dataset(dsName,
-                                          data=data,
-                                          chunks=True,
-                                          compression=compression)
+        # check required datasets
+        dsNames = list(datasetDict.keys()) + auxDsNames
+        if meta['FILE_TYPE'] in ['timeseries', 'ifgramStack']:
+            if 'date' not in dsNames:
+                raise Exception("Can not write {} file without 'date' dataset!".format(meta['FILE_TYPE']))
 
-                # 2. Write extra/auxliary datasets from ref_file
-                if ref_file and os.path.splitext(ref_file)[1] in ['.h5', '.he5']:
-                    atr_ref = readfile.read_attribute(ref_file)
-                    shape_ref = (int(atr_ref['LENGTH']), int(atr_ref['WIDTH']))
-                    with h5py.File(ref_file, 'r') as fr:
-                        dsNames = [i for i in fr.keys()
-                                   if (i not in list(datasetDict.keys())
-                                       and isinstance(fr[i], h5py.Dataset) 
-                                       and fr[i].shape[-2:] != shape_ref)]
-                        maxDigit = max([len(i) for i in dsNames]+[maxDigit])
-                        for dsName in dsNames:
-                            ds = fr[dsName]
-                            print(('create dataset /{d:<{w}} of {t:<10} in size of {s:<10} '
-                                   'with compression={c}').format(d=dsName,
-                                                                  w=maxDigit,
-                                                                  t=str(ds.dtype),
-                                                                  s=str(ds.shape),
-                                                                  c=compression))
-                            f.create_dataset(dsName,
-                                             data=ds[:],
-                                             chunks=True,
-                                             compression=compression)
+        # remove existing file
+        if os.path.isfile(out_file):
+            print('delete exsited file: {}'.format(out_file))
+            os.remove(out_file)
 
-                # 3. metadata
-                for key, value in meta.items():
-                    f.attrs[key] = str(value)
-                print('finished writing to {}'.format(out_file))
+        # writing
+        print('create HDF5 file: {} with w mode'.format(out_file))
+        maxDigit = max([len(i) for i in dsNames])
+        with h5py.File(out_file, 'w') as f:
+            # 1. write input datasets
+            for dsName in datasetDict.keys():
+                data = datasetDict[dsName]
+                print(('create dataset /{d:<{w}} of {t:<10} in size of {s:<20} '
+                       'with compression={c}').format(d=dsName,
+                                                      w=maxDigit,
+                                                      t=str(data.dtype),
+                                                      s=str(data.shape),
+                                                      c=compression))
+                ds = f.create_dataset(dsName,
+                                      data=data,
+                                      chunks=True,
+                                      compression=compression)
+
+            # 2. Write extra/auxliary datasets from ref_file
+            if len(auxDsNames) > 0:
+                with h5py.File(ref_file, 'r') as fr:
+                    for dsName in auxDsNames:
+                        ds = fr[dsName]
+                        print(('create dataset /{d:<{w}} of {t:<10} in size of {s:<10} '
+                               'with compression={c}').format(d=dsName,
+                                                              w=maxDigit,
+                                                              t=str(ds.dtype),
+                                                              s=str(ds.shape),
+                                                              c=compression))
+                        f.create_dataset(dsName,
+                                         data=ds[:],
+                                         chunks=True,
+                                         compression=compression)
+
+            # 3. metadata
+            for key, value in meta.items():
+                f.attrs[key] = str(value)
+            print('finished writing to {}'.format(out_file))
 
     # ISCE / ROI_PAC GAMMA / Image product
     else:
