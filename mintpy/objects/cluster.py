@@ -1,18 +1,15 @@
 from dask_jobqueue import LSFCluster, PBSCluster, SLURMCluster
 
 
-class Cluster:
+def get_cluster(type, **kwargs):
+    print("Using cluster type: {}".format(type))
 
-    def __init__(self, type, **kwargs):
+    if type == 'LSF':
+        cluster = LSFCluster(**kwargs)
+    elif type == 'PBS':
+        cluster = PBSCluster(**kwargs)
+    elif type == 'SLURM':
+        cluster = SLURMCluster(**kwargs)
 
-        self.cluster = None
-
-        print("Using cluster type: {}".format(type))
-
-        if type == 'LSF':
-            self.cluster = LSFCluster(**kwargs)
-        elif type == 'PBS':
-            self.cluster = PBSCluster(**kwargs)
-        elif type == 'SLURM':
-            self.cluster = SLURMCluster(**kwargs)
+    return cluster
 

@@ -1053,7 +1053,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     else:
         try:
             from dask.distributed import Client, as_completed
-            from mintpy.objects.cluster import Cluster
+            import mintpy.objects.cluster as cl
         except ImportError:
             raise ImportError('Cannot import dask.distributed or dask_jobqueue!')
 
@@ -1066,15 +1066,15 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         # at once (other user's jobs gained higher priority in the general at that point)
         NUM_WORKERS = inps.numWorker
         # FA: the following command starts the jobs
-        c = Cluster(type=inps.cluster, walltime=inps.walltime)
-        c.cluster.scale(NUM_WORKERS)
-        print("JOB COMMAND CALLED FROM PYTHON:", c.cluster.job_script())
+        cluster = cl.get_cluster(type=inps.cluster, walltime=inps.walltime)
+        cluster.scale(NUM_WORKERS)
+        print("JOB COMMAND CALLED FROM PYTHON:", cluster.job_script())
         with open('dask_command_run_from_python.txt', 'w') as f:
-              f.write(c.cluster.job_script() + '\n')
+              f.write(cluster.job_script() + '\n')
 
         # This line needs to be in a function or in a `if __name__ == "__main__":` block. If it is in no function
         # or "main" block, each worker will try to create its own client (which is bad) when loading the module
-        client = Client(c.cluster)
+        client = Client(cluster)
 
         all_boxes = []
         for box in box_list:
@@ -1122,7 +1122,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
             num_inv_ifg[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_numi
 
         # Shut down Dask workers gracefully
-        c.cluster.close()
+        cluster.close()
         client.close()
 
         ut.move_dask_stdout_stderr_files()
