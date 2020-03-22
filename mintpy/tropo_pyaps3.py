@@ -91,13 +91,13 @@ def create_parser():
     # For data download
     parser.add_argument('-m', '--model', '-s', dest='tropo_model', default='ERA5',
                         choices={'ERA5', 'ERAINT', 'MERRA', 'NARR'},
-                        help='source of the atmospheric data.\nNARR is working for 1979-Jan to 2014-Oct.')
+                        help='source of the atmospheric model (default: %(default)s).')
     parser.add_argument('-d', '--date-list', dest='date_list', nargs='*',
                         help='Read the first column of text file as list of date to download data\n' +
                              'in YYYYMMDD or YYMMDD format')
     parser.add_argument('--hour', help='time of data in HH, e.g. 12, 06')
     parser.add_argument('-w', '--dir', '--weather-dir', dest='weather_dir', default='${WEATHER_DIR}',
-                        help='parent directory of downloaded weather data file. Default: ${WEATHER_DIR}\n' +
+                        help='parent directory of downloaded weather data file (default: %(default)s).\n' +
                              'e.g.: '+WEATHER_DIR_DEMO)
 
     # For delay calculation
@@ -106,7 +106,7 @@ def create_parser():
     parser.add_argument('--ref-yx', dest='ref_yx', type=int,
                         nargs=2, help='reference pixel in y/x')
     parser.add_argument('--delay', dest='delay_type', default='comb', choices={'comb', 'dry', 'wet'},
-                        help='Delay type to calculate, comb contains both wet and dry delays')
+                        help='Delay type to calculate, comb contains both wet and dry delays (default: %(default)s).')
 
     # For delay correction
     parser.add_argument('-f', '--file', dest='timeseries_file',
