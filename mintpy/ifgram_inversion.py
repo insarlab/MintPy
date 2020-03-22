@@ -42,9 +42,8 @@ EXAMPLE = """example:
   ifgram_inversion.py  inputs/ifgramStack.h5 -w coh
 
   # parallel processing for HPC
-  # support LSF job scheduler, PBS should also work out of the box after changing module import
   ifgram_inversion.py  inputs/ifgramStack.h5 -w var --parallel
-  ifgram_inversion.py  inputs/ifgramStack.h5 -w var --parallel --parallel-workers-num 25
+  ifgram_inversion.py  inputs/ifgramStack.h5 -w var --parallel --num-worker 25
 """
 
 TEMPLATE = """
@@ -155,10 +154,13 @@ def create_parser():
     par = parser.add_argument_group('parallel', 'parallel processing configuration for Dask')
     par.add_argument('--parallel', dest='parallel', action='store_true',
                      help='Enable parallel processing for the pixelwise weighted inversion.')
-    par.add_argument('--parallel-workers-num','--par-workers-num','--parallel-num', dest='numWorker', type=int,
-                     default=40, help='Specify the number of workers the Dask cluster should use. Default: 40')
-    par.add_argument('--parallel-walltime','--par-walltime','--parallel-walltime', dest='walltime', type=str,
-                     default='00:40', help='Specify the walltime for each dask worker. Default: 00:40')
+    par.add_argument('--cluster', '--cluster-type', dest='cluster', type=str,
+                     default='SLURM', choices={'LSF', 'PBS', 'SLURM'},
+                     help='Type of HPC cluster you are running on (default: %(default)s).')
+    par.add_argument('--num-worker', dest='numWorker', type=int, default=40,
+                     help='Number of workers the Dask cluster should use (default: %(default)s).')
+    par.add_argument('--walltime', dest='walltime', type=str, default='00:40',
+                     help='Walltime for each dask worker (default: %(default)s).')
 
     return parser
 
@@ -1051,26 +1053,20 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     else:
         try:
             from dask.distributed import Client, as_completed
-            # dask_jobqueue is needed for HPC.
-            # PBSCluster (similar to LSFCluster) should also work out of the box
-            from dask_jobqueue import LSFCluster
+            import mintpy.objects.cluster as cl
         except ImportError:
             raise ImportError('Cannot import dask.distributed or dask_jobqueue!')
 
         ts = np.zeros((num_date, length, width), np.float32)
-        python_executable_location = sys.executable
 
         # Look at the ~/.config/dask/dask_mintpy.yaml file for Changing the Dask configuration defaults
-        #cluster = LSFCluster(config_name='default', walltime=inps.walltime, python=python_executable_location)
-        cluster = LSFCluster(walltime=inps.walltime, python=python_executable_location)
-        #cluster = LSFCluster(config_name='ifgram_inversion',
-        #                     python=python_executable_location)
 
         # This line submits NUM_WORKERS jobs to Pegasus to start a bunch of workers
         # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
         # at once (other user's jobs gained higher priority in the general at that point)
         NUM_WORKERS = inps.numWorker
         # FA: the following command starts the jobs
+        cluster = cl.get_cluster(type=inps.cluster, walltime=inps.walltime)
         cluster.scale(NUM_WORKERS)
         print("JOB COMMAND CALLED FROM PYTHON:", cluster.job_script())
         with open('dask_command_run_from_python.txt', 'w') as f:
