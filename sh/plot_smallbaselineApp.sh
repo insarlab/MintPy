@@ -2,7 +2,7 @@
 ###############################################################
 # Plot Results from Routine Workflow with smallbaselineApp.py
 # Author: Zhang Yunjun, 2017-07-23
-# Latest update: 2020-02-25
+# Latest update: 2020-03-20
 ###############################################################
 
 
@@ -56,10 +56,15 @@ fi
 ## Loaded Dataset
 if [ $plot_loaded_data -eq 1 ]; then
     file=inputs/ifgramStack.h5
-    test -f $file && $view $file unwrapPhase-       --zero-mask --wrap >> $log_file
-    test -f $file && $view $file unwrapPhase-       --zero-mask        >> $log_file
-    test -f $file && $view $file coherence-         --mask no          >> $log_file
-    test -f $file && $view $file connectComponent-  --mask no          >> $log_file
+    test -f $file && h5ls $file/unwrapPhase      && $view $file unwrapPhase-       --zero-mask --wrap >> $log_file
+    test -f $file && h5ls $file/unwrapPhase      && $view $file unwrapPhase-       --zero-mask        >> $log_file
+    test -f $file && h5ls $file/coherence        && $view $file coherence-         --mask no          >> $log_file
+    test -f $file && h5ls $file/connectComponent && $view $file connectComponent-  --mask no          >> $log_file
+
+    # phase-unwrapping error correction
+    for dset in unwrapPhase_bridging unwrapPhase_phaseClosure unwrapPhase_bridging_phaseClosure; do
+        test -f $file && h5ls $file/$dset        && $view $file $dset-             --zero-mask        >> $log_file
+    done
 fi
 
 

@@ -4,6 +4,13 @@
 # Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 ############################################################
 # Low level utilities script (independent)
+# Contents
+#   InSAR
+#   File Operation
+#   Geometry
+#   Image Processing
+#   User Interaction
+#   Math / Statistics
 # Recommend import:
 #   from mintpy.utils import utils as ut
 
@@ -510,7 +517,7 @@ def interpolate_data(inData, outShape, interpMethod='linear'):
 
 
 
-#################################### Interaction ##########################################
+#################################### User Interaction #####################################
 def yes_or_no(question):
     """garrettdreyfus on Github: https://gist.github.com/garrettdreyfus/8153571"""
     reply = str(input(question+' (y/n): ')).lower().strip()
@@ -593,7 +600,7 @@ def check_parallel(file_num=1, print_msg=True, maxParallelNum=8):
 
 
 
-#################################### Math ##########################################
+#################################### Math / Statistics ###################################
 def median_abs_deviation_threshold(data, center=None, cutoff=3.):
     """calculate rms_threshold based on the standardised residual
     outlier detection with median absolute deviation.
@@ -621,8 +628,6 @@ def round_to_1(x):
     return round(x, -1*digit)
 
 
-
-#################################### Utilities ##########################################
 def most_common(L, k=1):
     """Return the k most common item in the list L.
     Examples:

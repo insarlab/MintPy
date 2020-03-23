@@ -56,8 +56,8 @@ def _check_reference(atr1, atr2):
         print('consider different reference date')
 
     # reference point
-    ref_y = atr1['REF_Y']
-    ref_x = atr1['REF_X']
+    ref_y = atr1.get('REF_Y', None)
+    ref_x = atr1.get('REF_X', None)
     if ref_x == atr2.get('REF_X', None) or ref_y == atr2.get('REF_Y', None):
         ref_y = None
         ref_x = None

@@ -13,7 +13,7 @@ from mintpy.utils import readfile, ptime, utils as ut, plot as pp
 
 #################################  Usage  ####################################
 EXAMPLE = """example:
-  spatial_average.py ifgramStack.h5  -d coherence -m maskConnComp.h5
+  spatial_average.py inputs/ifgramStack.h5  -d coherence -m maskConnComp.h5
   spatial_average.py timeseries_ERA5_demErr.h5 -m maskTempCoh.h5
 """
 

@@ -221,13 +221,20 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
     except:
         pass
 
+    # use median instead of mean for offset measurement
+    if 'offset' in datasetName:
+        useMedian = True
+    else:
+        useMedian = False
+
     # Calculate mean coherence list
     if k == 'ifgramStack':
         obj = ifgramStack(File)
         obj.open(print_msg=False)
         meanList, dateList = obj.spatial_average(datasetName=datasetName,
                                                  maskFile=maskFile,
-                                                 box=box)
+                                                 box=box,
+                                                 useMedian=useMedian)
         pbase = obj.pbaseIfgram
         tbase = obj.tbaseIfgram
         obj.close()
@@ -668,24 +675,26 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
                 datasetName : str, output dataset name, for ifgramStack file type only
     Returns:    out_file  : str, output file name
     """
+    start_time = time.time()
+    atr = readfile.read_attribute(fname)
+    k = atr['FILE_TYPE']
+
     print('remove {} ramp from file: {}'.format(ramp_type, fname))
     if not out_file:
         fbase, fext = os.path.splitext(fname)
         out_file = '{}_ramp{}'.format(fbase, fext)
-
-    start_time = time.time()
-    atr = readfile.read_attribute(fname)
+    if k == 'ifgramStack':
+        out_file = fname
 
     # mask
     if os.path.isfile(mask_file):
-        mask = readfile.read(mask_file, datasetName='mask')[0]
+        mask = readfile.read(mask_file)[0]
         print('read mask file: '+mask_file)
     else:
         mask = np.ones((int(atr['LENGTH']), int(atr['WIDTH'])))
         print('use mask of the whole area')
 
     # deramping
-    k = atr['FILE_TYPE']
     if k == 'timeseries':
         print('reading data ...')
         data = readfile.read(fname)[0]

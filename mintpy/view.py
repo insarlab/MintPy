@@ -271,6 +271,7 @@ def update_inps_with_file_metadata(inps, metadata):
                                             inps.colormap,
                                             datasetName=inps.dset[0],
                                             cmap_lut=inps.cmap_lut,
+                                            cmap_vlist=inps.cmap_vlist,
                                             print_msg=inps.print_msg)
 
     # Reference Point
@@ -898,7 +899,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
 
         if inps.key == 'ifgramStack':
             # reference pixel info in unwrapPhase
-            if inps.dsetFamilyList[0] == 'unwrapPhase' and inps.file_ref_yx:
+            if inps.dsetFamilyList[0].startswith('unwrapPhase') and inps.file_ref_yx:
                 ref_y, ref_x = inps.file_ref_yx
                 ref_box = (ref_x, ref_y, ref_x+1, ref_y+1)
                 ref_data = readfile.read(inps.file, datasetName=dset_list, box=ref_box, print_msg=False)[0]

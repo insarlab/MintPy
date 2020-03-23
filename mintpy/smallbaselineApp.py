@@ -18,32 +18,19 @@ import subprocess
 import numpy as np
 
 import mintpy
-import mintpy.workflow  #dynamic import for modules used by smallbaselineApp workflow
 from mintpy.objects import sensor, RAMP_LIST
 from mintpy.utils import readfile, writefile, utils as ut
 from mintpy.defaults.auto_path import autoPath
+from mintpy.defaults.template import (
+    STEP_LIST,
+    STEP_LIST4OFFSET,
+    get_template_content,
+)
+# dynamic import for modules used by smallbaselineApp workflow
+import mintpy.workflow
 
 
 ##########################################################################
-STEP_LIST = [
-    'load_data',
-    'modify_network',
-    'reference_point',
-    'correct_unwrap_error',
-    'stack_interferograms',
-    'invert_network',
-    'correct_LOD',
-    'correct_troposphere',
-    'deramp',
-    'correct_topography',
-    'residual_RMS',
-    'reference_date',
-    'velocity',
-    'geocode',
-    'google_earth',
-    'hdfeos5',
-]
-
 STEP_HELP = """Command line options for steps processing with names are chosen from the following list:
 
 {}
@@ -69,8 +56,9 @@ EXAMPLE = """example:
 """
 
 REFERENCE = """reference:
-  Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: unwrapping error
-  correction and noise reduction (under review), preprint doi:10.31223/osf.io/9sz6m.
+  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis: 
+  Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
+  doi:10.1016/j.cageo.2019.104331.
 """
 
 def create_parser():
@@ -100,9 +88,9 @@ def create_parser():
 
     step = parser.add_argument_group('steps processing (start/end/dostep)', STEP_HELP)
     step.add_argument('--start', dest='startStep', metavar='STEP', default=STEP_LIST[0],
-                      help='start processing at the named step, default: {}'.format(STEP_LIST[0]))
+                      help='start processing at the named step (default: %(default)s).')
     step.add_argument('--end','--stop', dest='endStep', metavar='STEP',  default=STEP_LIST[-1],
-                      help='end processing at the named step, default: {}'.format(STEP_LIST[-1]))
+                      help='end processing at the named step (default: %(default)s)')
     step.add_argument('--dostep', dest='doStep', metavar='STEP',
                       help='run processing at the named step only')
     return parser
@@ -115,14 +103,15 @@ def cmd_line_parse(iargs=None):
 
     template_file = os.path.join(os.path.dirname(__file__), 'defaults/smallbaselineApp.cfg')
 
-    # print default template
+    # -H (print default template)
     if inps.print_template:
         raise SystemExit(open(template_file, 'r').read())
 
-    # print software version
+    # -v (print software version)
     if inps.version:
         raise SystemExit(mintpy.version.description)
 
+    # check all input template files
     if (not inps.customTemplateFile
             and not os.path.isfile(os.path.basename(template_file))
             and not inps.generate_template):
@@ -134,21 +123,33 @@ def cmd_line_parse(iargs=None):
         print(msg)
         raise SystemExit()
 
-    # invalid input of custom template
+    # check custom input template file
     if inps.customTemplateFile:
-        inps.customTemplateFile = os.path.abspath(inps.customTemplateFile)
         if not os.path.isfile(inps.customTemplateFile):
             raise FileNotFoundError(inps.customTemplateFile)
-        elif os.path.basename(inps.customTemplateFile) == os.path.basename(template_file):
-            # ignore if smallbaselineApp.cfg is input as custom template
+
+        inps.customTemplateFile = os.path.abspath(inps.customTemplateFile)
+        # ignore if smallbaselineApp.cfg is input as custom template
+        if os.path.basename(inps.customTemplateFile) == os.path.basename(template_file):
             inps.customTemplateFile = None
 
     # check input --start/end/dostep
+    inps.runSteps = read_inps2run_steps(inps)
+    # skip plotting if --dostep is specified
+    if inps.doStep:
+        inps.plot = False
+
+    return inps
+
+
+def read_inps2run_steps(inps, step_list=STEP_LIST):
+    """read/get run_steps from """
+    # check inputs
     for key in ['startStep', 'endStep', 'doStep']:
         value = vars(inps)[key]
-        if value and value not in STEP_LIST:
+        if value and value not in step_list:
             msg = 'Input step not found: {}'.format(value)
-            msg += '\nAvailable steps: {}'.format(STEP_LIST)
+            msg += '\nAvailable steps: {}'.format(step_list)
             raise ValueError(msg)
 
     # ignore --start/end input if --dostep is specified
@@ -157,34 +158,52 @@ def cmd_line_parse(iargs=None):
         inps.endStep = inps.doStep
 
     # get list of steps to run
-    idx0 = STEP_LIST.index(inps.startStep)
-    idx1 = STEP_LIST.index(inps.endStep)
+    idx0 = step_list.index(inps.startStep)
+    idx1 = step_list.index(inps.endStep)
     if idx0 > idx1:
         msg = 'input start step "{}" is AFTER input end step "{}"'.format(inps.startStep, inps.endStep)
         raise ValueError(msg)
-    inps.runSteps = STEP_LIST[idx0:idx1+1]
+    run_steps = step_list[idx0:idx1+1]
 
     # empty the step list for -g option
     if inps.generate_template:
-        inps.runSteps = []
-
-    # message - software version
-    if len(inps.runSteps) <= 1:
-        print(mintpy.version.description)
-    else:
-        print(mintpy.version.logo)
+        run_steps = []
 
     # mssage - processing steps
-    if len(inps.runSteps) > 0:
-        print('--RUN-at-{}--'.format(datetime.datetime.now()))
-        print('Run routine processing with {} on steps: {}'.format(os.path.basename(__file__), inps.runSteps))
-        if inps.doStep:
-            print('Remaining steps: {}'.format(STEP_LIST[idx0+1:]))
-            print('--dostep option enabled, disable the plotting at the end of the processing.')
-            inps.plot = False
+    if len(run_steps) > 0:
+        # for single step - compact version info
+        if len(run_steps) == 1:
+            print(mintpy.version.description)
+        else:
+            print(mintpy.version.logo)
 
+        print('--RUN-at-{}--'.format(datetime.datetime.now()))
+        print('Run routine processing with {} on steps: {}'.format(os.path.basename(__file__), run_steps))
+        print('Remaining steps: {}'.format(step_list[idx0+1:]))
     print('-'*50)
-    return inps
+    return run_steps
+
+
+def get_the_latest_default_template_file(work_dir):
+    """Get the latest version of default template file.
+    If an obsolete file exists in the working directory, the existing option values are kept.
+    """
+    lfile = os.path.join(os.path.dirname(__file__), 'defaults/smallbaselineApp.cfg')  #latest version
+    cfile = os.path.join(work_dir, 'smallbaselineApp.cfg')                            #current version
+    if not os.path.isfile(cfile):
+        print('copy default template file {} to work directory'.format(lfile))
+        shutil.copy2(lfile, work_dir)
+    else:
+        #cfile is obsolete if any key is missing
+        ldict = readfile.read_template(lfile)
+        cdict = readfile.read_template(cfile)
+        if any([key not in cdict.keys() for key in ldict.keys()]):
+            print('obsolete default template detected, update to the latest version.')
+            shutil.copy2(lfile, work_dir)
+
+            #keep the existing option value from obsolete template file
+            ut.update_template_file(cfile, cdict)
+    return cfile
 
 
 ##########################################################################
@@ -229,24 +248,7 @@ class TimeSeriesAnalysis:
         print("Go to work directory:", self.workDir)
 
         #3. Read templates
-        #3.1 Get default template file
-        lfile = os.path.join(os.path.dirname(__file__), 'defaults/smallbaselineApp.cfg')  #latest version
-        cfile = os.path.join(self.workDir, 'smallbaselineApp.cfg')                        #current version
-        if not os.path.isfile(cfile):
-            print('copy default template file {} to work directory'.format(lfile))
-            shutil.copy2(lfile, self.workDir)
-        else:
-            #cfile is obsolete if any key is missing
-            ldict = readfile.read_template(lfile)
-            cdict = readfile.read_template(cfile)
-            if any([key not in cdict.keys() for key in ldict.keys()]):
-                print('obsolete default template detected, update to the latest version.')
-                shutil.copy2(lfile, self.workDir)
-                #keep the existing option value from obsolete template file
-                ut.update_template_file(cfile, cdict)
-        self.templateFile = cfile
-
-        # 3.2 read (custom) template files into dicts
+        self.templateFile = get_the_latest_default_template_file(self.workDir)
         self._read_template()
 
         # 4. Copy the plot shell file
@@ -451,6 +453,13 @@ class TimeSeriesAnalysis:
         # 3) plot network
         if self.template['mintpy.plot'] and plot:
             scp_args = '{} -t {} --nodisplay'.format(stack_file, self.templateFile)
+
+            dsNames = readfile.get_dataset_list(stack_file)
+            if any('phase' in i.lower() for i in dsNames):
+                scp_args += ' -d coherence -v 0.2 1.0 '
+            elif any('offset' in i.lower() for i in dsNames):
+                scp_args += ' -d offsetSNR -v 0 20 '
+
             print('\nplot_network.py', scp_args)
             if ut.run_or_skip(out_file=net_fig,
                               in_file=[stack_file, coh_txt, self.templateFile],
@@ -465,16 +474,22 @@ class TimeSeriesAnalysis:
     def generate_ifgram_aux_file(self):
         """Generate auxiliary files from ifgramStack file"""
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        dsNames = readfile.get_dataset_list(stack_file)
         mask_file = 'maskConnComp.h5'
         coh_file = 'avgSpatialCoh.h5'
+        snr_file = 'avgSpatialSnr.h5'
 
         # 1) generate mask file from the common connected components
-        scp_args = '{} --nonzero -o {} --update'.format(stack_file, mask_file)
-        print('\ngenerate_mask.py', scp_args)
-        mintpy.generate_mask.main(scp_args.split())
+        if any('phase' in i.lower() for i in dsNames):
+            scp_args = '{} --nonzero -o {} --update'.format(stack_file, mask_file)
+            print('\ngenerate_mask.py', scp_args)
+            mintpy.generate_mask.main(scp_args.split())
 
         # 2) generate average spatial coherence
-        scp_args = '{} --dataset coherence -o {} --update'.format(stack_file, coh_file)
+        if any('phase' in i.lower() for i in dsNames):
+            scp_args = '{} --dataset coherence -o {} --update'.format(stack_file, coh_file)
+        elif any('offset' in i.lower() for i in dsNames):
+            scp_args = '{} --dataset offsetSNR -o {} --update'.format(stack_file, snr_file)
         print('\ntemporal_average.py', scp_args)
         mintpy.temporal_average.main(scp_args.split())
         return

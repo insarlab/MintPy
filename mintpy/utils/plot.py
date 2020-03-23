@@ -170,8 +170,10 @@ def add_figure_argument(parser):
                      help='colormap used for display, i.e. jet, RdBu, hsv, jet_r, temperature, viridis,  etc.\n'
                           'colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html\n'
                           'colormaps in GMT - http://soliton.vm.bytemark.co.uk/pub/cpt-city/')
-    fig.add_argument('--cm-lut', dest='cmap_lut', type=int, default=256, metavar='NUM',
+    fig.add_argument('--cm-lut','--cmap-lut', dest='cmap_lut', type=int, default=256, metavar='NUM',
                      help='number of increment of colormap lookup table')
+    fig.add_argument('--cm-vlist','--cmap-vlist', dest='cmap_vlist', type=float, nargs=3, default=[0.0, 0.7, 1.0],
+                     help='list of 3 float numbers, for truncated colormap only')
 
     # colorbar
     fig.add_argument('--nocbar', '--nocolorbar', dest='disp_cbar',
@@ -549,7 +551,8 @@ def auto_shared_lalo_location(axs, loc=(1,0,0,1), flatten=False):
     return locs
 
 
-def check_colormap_input(metadata, cmap_name=None, datasetName=None, cmap_lut=256, print_msg=True):
+def check_colormap_input(metadata, cmap_name=None, datasetName=None, cmap_lut=256,
+                         cmap_vlist=[0.0, 0.7, 1.0], print_msg=True):
     gray_dataset_key_words = ['coherence', 'temporal_coherence',
                               '.cor', '.mli', '.slc', '.amp', '.ramp']
     if not cmap_name:
@@ -561,7 +564,7 @@ def check_colormap_input(metadata, cmap_name=None, datasetName=None, cmap_lut=25
     if print_msg:
         print('colormap:', cmap_name)
 
-    return ColormapExt(cmap_name, cmap_lut).colormap
+    return ColormapExt(cmap_name, cmap_lut, vlist=cmap_vlist).colormap
 
 
 def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1, buffer_year=0.2):
@@ -630,15 +633,16 @@ def auto_adjust_yaxis(ax, dataList, fontsize=12, ymin=None, ymax=None):
 
 
 ####################################### Plot ################################################
-def plot_coherence_history(ax, date12List, cohList, plot_dict={}):
+def plot_coherence_history(ax, date12List, cohList, p_dict={}):
     """Plot min/max Coherence of all interferograms for each date"""
     # Figure Setting
-    if 'fontsize'    not in plot_dict.keys():   plot_dict['fontsize']    = 12
-    if 'linewidth'   not in plot_dict.keys():   plot_dict['linewidth']   = 2
-    if 'markercolor' not in plot_dict.keys():   plot_dict['markercolor'] = 'orange'
-    if 'markersize'  not in plot_dict.keys():   plot_dict['markersize']  = 16
-    if 'disp_title'  not in plot_dict.keys():   plot_dict['disp_title']  = True
-    if 'every_year'  not in plot_dict.keys():   plot_dict['every_year']  = 1
+    if 'fontsize'    not in p_dict.keys():   p_dict['fontsize']    = 12
+    if 'linewidth'   not in p_dict.keys():   p_dict['linewidth']   = 2
+    if 'markercolor' not in p_dict.keys():   p_dict['markercolor'] = 'orange'
+    if 'markersize'  not in p_dict.keys():   p_dict['markersize']  = 16
+    if 'disp_title'  not in p_dict.keys():   p_dict['disp_title']  = True
+    if 'every_year'  not in p_dict.keys():   p_dict['every_year']  = 1
+    if 'vlim'        not in p_dict.keys():   p_dict['vlim']        = [0.2, 1.0]
 
     # Get date list
     date12List = ptime.yyyymmdd_date12(date12List)
@@ -655,28 +659,28 @@ def plot_coherence_history(ax, date12List, cohList, plot_dict={}):
     ax.bar(x_list, np.nanmax(coh_mat, axis=0), bar_width.days, label='Max Coherence')
     ax.bar(x_list, np.nanmin(coh_mat, axis=0), bar_width.days, label='Min Coherence')
 
-    if plot_dict['disp_title']:
+    if p_dict['disp_title']:
         ax.set_title('Coherence History of All Related Interferograms')
 
-    ax = auto_adjust_xaxis_date(ax, datevector, fontsize=plot_dict['fontsize'],
-                                every_year=plot_dict['every_year'])[0]
-    ax.set_ylim([0.0, 1.0])
+    ax = auto_adjust_xaxis_date(ax, datevector, fontsize=p_dict['fontsize'],
+                                every_year=p_dict['every_year'])[0]
+    ax.set_ylim([p_dict['vlim'][0], p_dict['vlim'][1]])
 
-    ax.set_xlabel('Time [years]', fontsize=plot_dict['fontsize'])
-    ax.set_ylabel('Coherence', fontsize=plot_dict['fontsize'])
+    ax.set_xlabel('Time [years]', fontsize=p_dict['fontsize'])
+    ax.set_ylabel('Coherence', fontsize=p_dict['fontsize'])
     ax.legend(loc='lower right')
 
     return ax
 
 
-def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_drop=[], print_msg=True):
+def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop=[], print_msg=True):
     """Plot Temporal-Perp baseline Network
     Inputs
         ax : matplotlib axes object
         date12List : list of string for date12 in YYYYMMDD_YYYYMMDD format
         dateList   : list of string, for date in YYYYMMDD format
         pbaseList  : list of float, perp baseline, len=number of acquisition
-        plot_dict   : dictionary with the following items:
+        p_dict   : dictionary with the following items:
                       fontsize
                       linewidth
                       markercolor
@@ -691,33 +695,33 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     """
 
     # Figure Setting
-    if 'fontsize'    not in plot_dict.keys():  plot_dict['fontsize']    = 12
-    if 'linewidth'   not in plot_dict.keys():  plot_dict['linewidth']   = 2
-    if 'markercolor' not in plot_dict.keys():  plot_dict['markercolor'] = 'orange'
-    if 'markersize'  not in plot_dict.keys():  plot_dict['markersize']  = 16
+    if 'fontsize'    not in p_dict.keys():  p_dict['fontsize']    = 12
+    if 'linewidth'   not in p_dict.keys():  p_dict['linewidth']   = 2
+    if 'markercolor' not in p_dict.keys():  p_dict['markercolor'] = 'orange'
+    if 'markersize'  not in p_dict.keys():  p_dict['markersize']  = 16
 
     # For colorful display of coherence
-    if 'cohList'     not in plot_dict.keys():  plot_dict['cohList']     = None
-    if 'ylabel'      not in plot_dict.keys():  plot_dict['ylabel']      = 'Perp Baseline [m]'
-    if 'cbar_label'  not in plot_dict.keys():  plot_dict['cbar_label']  = 'Average Spatial Coherence'
-    if 'disp_cbar'   not in plot_dict.keys():  plot_dict['disp_cbar']   = True
-    if 'colormap'    not in plot_dict.keys():  plot_dict['colormap']    = 'RdBu'
-    if 'cmap_vlist'  not in plot_dict.keys():  plot_dict['cmap_vlist']  = [0.0, 0.4, 1.0]
-    if 'disp_title'  not in plot_dict.keys():  plot_dict['disp_title']  = True
-    if 'disp_drop'   not in plot_dict.keys():  plot_dict['disp_drop']   = True
-    if 'disp_legend' not in plot_dict.keys():  plot_dict['disp_legend'] = True
-    if 'every_year'  not in plot_dict.keys():  plot_dict['every_year']  = 1
-    if 'number'      not in plot_dict.keys():  plot_dict['number']      = None
+    if 'cohList'     not in p_dict.keys():  p_dict['cohList']     = None
+    if 'ylabel'      not in p_dict.keys():  p_dict['ylabel']      = 'Perp Baseline [m]'
+    if 'cbar_label'  not in p_dict.keys():  p_dict['cbar_label']  = 'Average Spatial Coherence'
+    if 'disp_cbar'   not in p_dict.keys():  p_dict['disp_cbar']   = True
+    if 'colormap'    not in p_dict.keys():  p_dict['colormap']    = 'RdBu'
+    if 'vlim'        not in p_dict.keys():  p_dict['vlim']        = [0.2, 1.0]
+    if 'disp_title'  not in p_dict.keys():  p_dict['disp_title']  = True
+    if 'disp_drop'   not in p_dict.keys():  p_dict['disp_drop']   = True
+    if 'disp_legend' not in p_dict.keys():  p_dict['disp_legend'] = True
+    if 'every_year'  not in p_dict.keys():  p_dict['every_year']  = 1
+    if 'number'      not in p_dict.keys():  p_dict['number']      = None
 
     # support input colormap: string for colormap name, or colormap object directly
-    if isinstance(plot_dict['colormap'], str):
-        cmap = ColormapExt(plot_dict['colormap']).colormap
-    elif isinstance(plot_dict['colormap'], LinearSegmentedColormap):
-        cmap = plot_dict['colormap']
+    if isinstance(p_dict['colormap'], str):
+        cmap = ColormapExt(p_dict['colormap']).colormap
+    elif isinstance(p_dict['colormap'], LinearSegmentedColormap):
+        cmap = p_dict['colormap']
     else:
-        raise ValueError('unrecognized colormap input: {}'.format(plot_dict['colormap']))
+        raise ValueError('unrecognized colormap input: {}'.format(p_dict['colormap']))
 
-    cohList = plot_dict['cohList']
+    cohList = p_dict['cohList']
     transparency = 0.7
 
     # Date Convert
@@ -745,7 +749,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     idx_date12_keep = [date12List.index(i) for i in date12List_keep]
     idx_date12_drop = [date12List.index(i) for i in date12List_drop]
     if not date12List_drop:
-        plot_dict['disp_drop'] = False
+        p_dict['disp_drop'] = False
 
     ## Keep/Drop - date
     m_dates = [i.split('_')[0] for i in date12List_keep]
@@ -759,20 +763,19 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     if cohList is not None:
         data_min = min(cohList)
         data_max = max(cohList)
-        disp_min = plot_dict['cmap_vlist'][0]
-        disp_max = plot_dict['cmap_vlist'][-1]
+        disp_min = p_dict['vlim'][0]
+        disp_max = p_dict['vlim'][1]
         if print_msg:
             print('showing coherence')
             print('data range: {}'.format([data_min, data_max]))
-            print('display range: {}'.format(plot_dict['cmap_vlist']))
+            print('display range: {}'.format(p_dict['vlim']))
 
-        if plot_dict['disp_cbar']:
-            divider = make_axes_locatable(ax)
-            cax = divider.append_axes("right", "3%", pad="3%")
+        if p_dict['disp_cbar']:
+            cax = make_axes_locatable(ax).append_axes("right", "3%", pad="3%")
             norm = mpl.colors.Normalize(vmin=disp_min, vmax=disp_max)
             cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
-            cbar.ax.tick_params(labelsize=plot_dict['fontsize'])
-            cbar.set_label(plot_dict['cbar_label'], fontsize=plot_dict['fontsize'])
+            cbar.ax.tick_params(labelsize=p_dict['fontsize'])
+            cbar.set_label(p_dict['cbar_label'], fontsize=p_dict['fontsize'])
 
         # plot low coherent ifgram first and high coherence ifgram later
         cohList_keep = [cohList[date12List.index(i)] for i in date12List_keep]
@@ -782,15 +785,15 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     if idx_date_keep:
         x_list = [dates[i] for i in idx_date_keep]
         y_list = [pbaseList[i] for i in idx_date_keep]
-        ax.plot(x_list, y_list, 'ko', alpha=0.7, ms=plot_dict['markersize'], mfc=plot_dict['markercolor'])
+        ax.plot(x_list, y_list, 'ko', alpha=0.7, ms=p_dict['markersize'], mfc=p_dict['markercolor'])
     if idx_date_drop:
         x_list = [dates[i] for i in idx_date_drop]
         y_list = [pbaseList[i] for i in idx_date_drop]
-        ax.plot(x_list, y_list, 'ko', alpha=0.7, ms=plot_dict['markersize'], mfc='gray')
+        ax.plot(x_list, y_list, 'ko', alpha=0.7, ms=p_dict['markersize'], mfc='gray')
 
     ## Line - Pair/Interferogram
     # interferograms dropped
-    if plot_dict['disp_drop']:
+    if p_dict['disp_drop']:
         for date12 in date12List_drop:
             date1, date2 = date12.split('_')
             idx1 = dateList.index(date1)
@@ -800,9 +803,9 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
             if cohList is not None:
                 coh = cohList[date12List.index(date12)]
                 coh_norm = (coh - disp_min) / (disp_max - disp_min)
-                ax.plot(x, y, '--', lw=plot_dict['linewidth'], alpha=transparency, c=cmap(coh_norm))
+                ax.plot(x, y, '--', lw=p_dict['linewidth'], alpha=transparency, c=cmap(coh_norm))
             else:
-                ax.plot(x, y, '--', lw=plot_dict['linewidth'], alpha=transparency, c='k')
+                ax.plot(x, y, '--', lw=p_dict['linewidth'], alpha=transparency, c='k')
 
     # interferograms kept
     for date12 in date12List_keep:
@@ -814,28 +817,28 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
         if cohList is not None:
             coh = cohList[date12List.index(date12)]
             coh_norm = (coh - disp_min) / (disp_max - disp_min)
-            ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c=cmap(coh_norm))
+            ax.plot(x, y, '-', lw=p_dict['linewidth'], alpha=transparency, c=cmap(coh_norm))
         else:
-            ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c='k')
+            ax.plot(x, y, '-', lw=p_dict['linewidth'], alpha=transparency, c='k')
 
-    if plot_dict['disp_title']:
-        ax.set_title('Interferogram Network', fontsize=plot_dict['fontsize'])
+    if p_dict['disp_title']:
+        ax.set_title('Interferogram Network', fontsize=p_dict['fontsize'])
 
     # axis format
-    ax = auto_adjust_xaxis_date(ax, datevector, fontsize=plot_dict['fontsize'],
-                                every_year=plot_dict['every_year'])[0]
-    ax = auto_adjust_yaxis(ax, pbaseList, fontsize=plot_dict['fontsize'])
-    ax.set_xlabel('Time [years]', fontsize=plot_dict['fontsize'])
-    ax.set_ylabel(plot_dict['ylabel'], fontsize=plot_dict['fontsize'])
-    ax.tick_params(which='both', direction='in', labelsize=plot_dict['fontsize'],
+    ax = auto_adjust_xaxis_date(ax, datevector, fontsize=p_dict['fontsize'],
+                                every_year=p_dict['every_year'])[0]
+    ax = auto_adjust_yaxis(ax, pbaseList, fontsize=p_dict['fontsize'])
+    ax.set_xlabel('Time [years]', fontsize=p_dict['fontsize'])
+    ax.set_ylabel(p_dict['ylabel'], fontsize=p_dict['fontsize'])
+    ax.tick_params(which='both', direction='in', labelsize=p_dict['fontsize'],
                    bottom=True, top=True, left=True, right=True)
 
-    if plot_dict['number'] is not None:
-        ax.annotate(plot_dict['number'], xy=(0.03, 0.92), color='k',
-                    xycoords='axes fraction', fontsize=plot_dict['fontsize'])
+    if p_dict['number'] is not None:
+        ax.annotate(p_dict['number'], xy=(0.03, 0.92), color='k',
+                    xycoords='axes fraction', fontsize=p_dict['fontsize'])
 
     # Legend
-    if plot_dict['disp_drop'] and plot_dict['disp_legend']:
+    if p_dict['disp_drop'] and p_dict['disp_legend']:
         solid_line = mlines.Line2D([], [], color='k', ls='solid',  label='Ifg used')
         dash_line  = mlines.Line2D([], [], color='k', ls='dashed', label='Ifg dropped')
         ax.legend(handles=[solid_line, dash_line])
@@ -843,13 +846,13 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     return ax
 
 
-def plot_perp_baseline_hist(ax, dateList, pbaseList, plot_dict={}, dateList_drop=[]):
+def plot_perp_baseline_hist(ax, dateList, pbaseList, p_dict={}, dateList_drop=[]):
     """ Plot Perpendicular Spatial Baseline History
     Inputs
         ax : matplotlib axes object
         dateList : list of string, date in YYYYMMDD format
         pbaseList : list of float, perp baseline
-        plot_dict : dictionary with the following items:
+        p_dict : dictionary with the following items:
                     fontsize
                     linewidth
                     markercolor
@@ -862,12 +865,12 @@ def plot_perp_baseline_hist(ax, dateList, pbaseList, plot_dict={}, dateList_drop
         ax : matplotlib axes object
     """
     # Figure Setting
-    if 'fontsize'    not in plot_dict.keys():   plot_dict['fontsize']    = 12
-    if 'linewidth'   not in plot_dict.keys():   plot_dict['linewidth']   = 2
-    if 'markercolor' not in plot_dict.keys():   plot_dict['markercolor'] = 'orange'
-    if 'markersize'  not in plot_dict.keys():   plot_dict['markersize']  = 16
-    if 'disp_title'  not in plot_dict.keys():   plot_dict['disp_title']  = True
-    if 'every_year'  not in plot_dict.keys():   plot_dict['every_year']  = 1
+    if 'fontsize'    not in p_dict.keys():   p_dict['fontsize']    = 12
+    if 'linewidth'   not in p_dict.keys():   p_dict['linewidth']   = 2
+    if 'markercolor' not in p_dict.keys():   p_dict['markercolor'] = 'orange'
+    if 'markersize'  not in p_dict.keys():   p_dict['markersize']  = 16
+    if 'disp_title'  not in p_dict.keys():   p_dict['disp_title']  = True
+    if 'every_year'  not in p_dict.keys():   p_dict['every_year']  = 1
     transparency = 0.7
 
     # Date Convert
@@ -890,25 +893,25 @@ def plot_perp_baseline_hist(ax, dateList, pbaseList, plot_dict={}, dateList_drop
     if idx_keep:
         x_list = [dates[i] for i in idx_keep]
         y_list = [pbaseList[i] for i in idx_keep]
-        ax.plot(x_list, y_list, '-ko', alpha=transparency, lw=plot_dict['linewidth'],
-                ms=plot_dict['markersize'], mfc=plot_dict['markercolor'])
+        ax.plot(x_list, y_list, '-ko', alpha=transparency, lw=p_dict['linewidth'],
+                ms=p_dict['markersize'], mfc=p_dict['markercolor'])
 
     # Plot date dropped
     if idx_drop:
         x_list = [dates[i] for i in idx_drop]
         y_list = [pbaseList[i] for i in idx_drop]
         ax.plot(x_list, y_list, 'ko', alpha=transparency,
-                ms=plot_dict['markersize'], mfc='gray')
+                ms=p_dict['markersize'], mfc='gray')
 
-    if plot_dict['disp_title']:
-        ax.set_title('Perpendicular Baseline History', fontsize=plot_dict['fontsize'])
+    if p_dict['disp_title']:
+        ax.set_title('Perpendicular Baseline History', fontsize=p_dict['fontsize'])
 
     # axis format
-    ax = auto_adjust_xaxis_date(ax, datevector, fontsize=plot_dict['fontsize'],
-                                every_year=plot_dict['every_year'])[0]
-    ax = auto_adjust_yaxis(ax, pbaseList, fontsize=plot_dict['fontsize'])
-    ax.set_xlabel('Time [years]', fontsize=plot_dict['fontsize'])
-    ax.set_ylabel('Perpendicular Baseline [m]', fontsize=plot_dict['fontsize'])
+    ax = auto_adjust_xaxis_date(ax, datevector, fontsize=p_dict['fontsize'],
+                                every_year=p_dict['every_year'])[0]
+    ax = auto_adjust_yaxis(ax, pbaseList, fontsize=p_dict['fontsize'])
+    ax.set_xlabel('Time [years]', fontsize=p_dict['fontsize'])
+    ax.set_ylabel('Perpendicular Baseline [m]', fontsize=p_dict['fontsize'])
 
     return ax
 
@@ -961,7 +964,7 @@ def plot_rotate_diag_coherence_matrix(ax, coh_list, date12_list, date12_list_dro
     return ax, im
 
 
-def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict={}):
+def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}):
     """Plot Coherence Matrix of input network
     if date12List_drop is not empty, plot KEPT pairs in the upper triangle and
                                            ALL  pairs in the lower triangle.
@@ -969,32 +972,32 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
                 date12List : list of date12 in YYYYMMDD_YYYYMMDD format
                 cohList    : list of float, coherence value
                 date12List_drop : list of date12 for date12 marked as dropped
-                plot_dict  : dict of plot settting
+                p_dict  : dict of plot settting
     Returns:    ax : matplotlib.pyplot.Axes
                 coh_mat : 2D np.array in size of [num_date, num_date]
                 im : mappable
     """
     # Figure Setting
-    if 'fontsize'    not in plot_dict.keys():   plot_dict['fontsize']    = 12
-    if 'linewidth'   not in plot_dict.keys():   plot_dict['linewidth']   = 2
-    if 'markercolor' not in plot_dict.keys():   plot_dict['markercolor'] = 'orange'
-    if 'markersize'  not in plot_dict.keys():   plot_dict['markersize']  = 16
-    if 'disp_title'  not in plot_dict.keys():   plot_dict['disp_title']  = True
-    if 'fig_title'   not in plot_dict.keys():   plot_dict['fig_title']   = 'Coherence Matrix'
-    if 'colormap'    not in plot_dict.keys():   plot_dict['colormap']    = 'jet'
-    if 'cbar_label'  not in plot_dict.keys():   plot_dict['cbar_label']  = 'Coherence'
-    if 'ylim'        not in plot_dict.keys():   plot_dict['ylim']        = (0., 1.)
-    if 'disp_cbar'   not in plot_dict.keys():   plot_dict['disp_cbar']   = True
-    if 'legend_loc'  not in plot_dict.keys():   plot_dict['legend_loc']  = 'best'
-    if 'disp_legend' not in plot_dict.keys():   plot_dict['disp_legend'] = True
+    if 'fontsize'    not in p_dict.keys():   p_dict['fontsize']    = 12
+    if 'linewidth'   not in p_dict.keys():   p_dict['linewidth']   = 2
+    if 'markercolor' not in p_dict.keys():   p_dict['markercolor'] = 'orange'
+    if 'markersize'  not in p_dict.keys():   p_dict['markersize']  = 16
+    if 'disp_title'  not in p_dict.keys():   p_dict['disp_title']  = True
+    if 'fig_title'   not in p_dict.keys():   p_dict['fig_title']   = 'Coherence Matrix'
+    if 'colormap'    not in p_dict.keys():   p_dict['colormap']    = 'jet'
+    if 'cbar_label'  not in p_dict.keys():   p_dict['cbar_label']  = 'Coherence'
+    if 'vlim'        not in p_dict.keys():   p_dict['vlim']        = (0.2, 1.0)
+    if 'disp_cbar'   not in p_dict.keys():   p_dict['disp_cbar']   = True
+    if 'legend_loc'  not in p_dict.keys():   p_dict['legend_loc']  = 'best'
+    if 'disp_legend' not in p_dict.keys():   p_dict['disp_legend'] = True
 
     # support input colormap: string for colormap name, or colormap object directly
-    if isinstance(plot_dict['colormap'], str):
-        cmap = ColormapExt(plot_dict['colormap']).colormap
-    elif isinstance(plot_dict['colormap'], LinearSegmentedColormap):
-        cmap = plot_dict['colormap']
+    if isinstance(p_dict['colormap'], str):
+        cmap = ColormapExt(p_dict['colormap']).colormap
+    elif isinstance(p_dict['colormap'], LinearSegmentedColormap):
+        cmap = p_dict['colormap']
     else:
-        raise ValueError('unrecognized colormap input: {}'.format(plot_dict['colormap']))
+        raise ValueError('unrecognized colormap input: {}'.format(p_dict['colormap']))
 
     date12List = ptime.yyyymmdd_date12(date12List)
     coh_mat = pnet.coherence_matrix(date12List, cohList)
@@ -1014,8 +1017,8 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
     diag_mat[diag_mat == 0.] = np.nan
     im = ax.imshow(diag_mat, cmap='gray_r', vmin=0.0, vmax=1.0, interpolation='nearest')
     im = ax.imshow(coh_mat, cmap=cmap,
-                   vmin=plot_dict['cmap_vlist'][0],
-                   vmax=plot_dict['cmap_vlist'][-1],
+                   vmin=p_dict['vlim'][0],
+                   vmax=p_dict['vlim'][1],
                    interpolation='nearest')
 
     date_num = coh_mat.shape[0]
@@ -1026,26 +1029,26 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
     tick_list = list(range(0, date_num, tick_step))
     ax.get_xaxis().set_ticks(tick_list)
     ax.get_yaxis().set_ticks(tick_list)
-    ax.set_xlabel('Image Number', fontsize=plot_dict['fontsize'])
-    ax.set_ylabel('Image Number', fontsize=plot_dict['fontsize'])
-    ax.tick_params(which='both', direction='in', labelsize=plot_dict['fontsize'],
+    ax.set_xlabel('Image Number', fontsize=p_dict['fontsize'])
+    ax.set_ylabel('Image Number', fontsize=p_dict['fontsize'])
+    ax.tick_params(which='both', direction='in', labelsize=p_dict['fontsize'],
                    bottom=True, top=True, left=True, right=True)
 
-    if plot_dict['disp_title']:
-        ax.set_title(plot_dict['fig_title'])
+    if p_dict['disp_title']:
+        ax.set_title(p_dict['fig_title'])
 
     # Colorbar
-    if plot_dict['disp_cbar']:
+    if p_dict['disp_cbar']:
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", "3%", pad="3%")
         cbar = plt.colorbar(im, cax=cax)
-        cbar.set_label(plot_dict['cbar_label'], fontsize=plot_dict['fontsize'])
+        cbar.set_label(p_dict['cbar_label'], fontsize=p_dict['fontsize'])
 
     # Legend
-    if date12List_drop and plot_dict['disp_legend']:
+    if date12List_drop and p_dict['disp_legend']:
         ax.plot([], [], label='Upper: Ifgrams used')
         ax.plot([], [], label='Lower: Ifgrams all')
-        ax.legend(loc=plot_dict['legend_loc'], handlelength=0)
+        ax.legend(loc=p_dict['legend_loc'], handlelength=0)
 
     return ax, coh_mat, im
 

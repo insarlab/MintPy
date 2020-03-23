@@ -13,16 +13,12 @@ import argparse
 import h5py
 import numpy as np
 from mintpy.objects import timeseries
+from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, writefile, ptime, utils as ut
 
 
 ##################################################################
-TEMPLATE = """
-## 2) Select Reference Date
-## reference all time-series to one date in time
-## no     - do not change the default reference date (1st date)
-mintpy.reference.date  = auto   #[reference_date.txt / 20090214 / no], auto for reference_date.txt
-"""
+TEMPLATE = get_template_content('reference_date')
 
 EXAMPLE = """example:
   reference_date.py timeseries.h5 timeseries_ERA5.h5 timeseries_ERA5_demErr.h5 --template smallbaselineApp.cfg
@@ -33,7 +29,7 @@ EXAMPLE = """example:
 def create_parser():
     parser = argparse.ArgumentParser(description='Change reference date of timeseries.',
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+                                     epilog=TEMPLATE+'\n'+EXAMPLE)
 
     parser.add_argument('timeseries_file', nargs='+', help='timeseries file(s)')
     parser.add_argument('-r', '--ref-date', dest='refDate', default='minRMS',
@@ -42,7 +38,7 @@ def create_parser():
                              'reference_date.txt - text file with date in YYYYMMDD format in it\n' +
                              'minRMS             - choose date with min residual standard deviation')
     parser.add_argument('-t', '--template', dest='template_file',
-                        help='template file with options below:\n' + TEMPLATE + '\n')
+                        help='template file with options')
     parser.add_argument('-o', '--outfile', help='Output file name.')
     return parser
 

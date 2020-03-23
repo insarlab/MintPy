@@ -151,12 +151,10 @@ def date12_list2index(date12_list, date_list=[]):
 
 
 def get_date12_list(fname, dropIfgram=False):
-    """Read Date12 info from input file: Pairs.list or multi-group hdf5 file
-    Inputs:
-        fname       - string, path/name of input multi-group hdf5 file or text file
-        dropIfgram  - bool, check the "DROP_IFGRAM" attribute or not for multi-group hdf5 file
-    Output:
-        date12_list - list of string in YYMMDD-YYMMDD format
+    """Read date12 info from input file: Pairs.list or multi-group hdf5 file
+    Parameters: fname       - string, path/name of input multi-group hdf5 file or text file
+                dropIfgram  - bool, check the "dropIfgram" dataset in ifgramStack hdf5 file
+    Returns:    date12_list - list of string in YYYYMMDD_YYYYMMDD format
     Example:
         date12List = get_date12_list('ifgramStack.h5')
         date12List = get_date12_list('ifgramStack.h5', dropIfgram=True)
@@ -171,15 +169,13 @@ def get_date12_list(fname, dropIfgram=False):
         else:
             return None
     else:
-        txtContent = np.loadtxt(fname, dtype=bytes).astype(str)
-        if len(txtContent.shape) == 1:
-            txtContent = txtContent.reshape(-1, 1)
-            date12_list = txtContent[0]
-        else:
-            date12_list = [i for i in txtContent[:, 0]]    # for one interferogram
-#        date12_list = [i for i in txtContent[:, 0]]
+        date12_list = np.loadtxt(fname, dtype=bytes, usecols=0).astype(str).tolist()
+        # for txt file with only one interferogram
+        if isinstance(date12_list, str):
+            date12_list = [date12_list]
 
     date12_list = sorted(date12_list)
+    date12_list = ptime.yyyymmdd_date12(date12_list)
     return date12_list
 
 

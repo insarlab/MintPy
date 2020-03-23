@@ -12,8 +12,9 @@ import argparse
 import numpy as np
 from scipy import linalg
 from scipy.special import gamma
-from mintpy.utils import ptime, readfile, writefile, utils as ut
 from mintpy.objects import timeseries, geometry
+from mintpy.defaults.template import get_template_content
+from mintpy.utils import ptime, readfile, writefile, utils as ut
 
 
 # key configuration parameter name
@@ -27,22 +28,7 @@ configKeys = [
 
 
 ############################################################################
-TEMPLATE = """
-## reference: Fattahi and Amelung, 2013, IEEE-TGRS
-## Notes on options:
-## stepFuncDate      - Specify stepFuncDate option if you know there are sudden displacement jump in your area,
-##    i.e. volcanic eruption, or earthquake, and check timeseriesStepModel.h5 afterward for their estimation.
-## excludeDate       - Dates excluded for error estimation only
-## pixelwiseGeometry - Use pixel-wise geometry info, such as incidence angle and slant range distance for error estimation
-##    yes - use pixel-wise geometry when they are available [slow; used by default]
-##    no  - use mean geometry [fast]
-mintpy.topographicResidual                   = auto  #[yes / no], auto for yes
-mintpy.topographicResidual.polyOrder         = auto  #[1-inf], auto for 2, poly order of temporal deformation model
-mintpy.topographicResidual.phaseVelocity     = auto  #[yes / no], auto for no - phase, use phase velocity for error estimation
-mintpy.topographicResidual.stepFuncDate      = auto  #[20080529,20100611 / no], auto for no, date of step jump
-mintpy.topographicResidual.excludeDate       = auto  #[20070321 / txtFile / no], auto for exclude_date.txt
-mintpy.topographicResidual.pixelwiseGeometry = auto  #[yes / no], auto for yes, use pixel-wise geometry info
-"""
+TEMPLATE = get_template_content('correct_topography')
 
 EXAMPLE = """example:
   # correct DEM error with pixel-wise geometry parameters [slow]

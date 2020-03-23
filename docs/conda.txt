@@ -2,8 +2,8 @@ python>=3.6
 cartopy
 cdsapi
 cvxopt
-dask>=1.0,<2.0
-dask-jobqueue>=0.3,<1.0
+dask>=1.0
+dask-jobqueue>=0.3
 ecCodes
 h5py
 lxml

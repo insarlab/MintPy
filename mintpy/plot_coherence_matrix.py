@@ -249,7 +249,7 @@ class coherenceMatrixViewer():
                                            date12List=self.date12_list,
                                            cohList=coh.tolist(),
                                            date12List_drop=ex_date12_list,
-                                           plot_dict=plotDict)[1]
+                                           p_dict=plotDict)[1]
 
         self.ax_mat.annotate('ifgrams\navailable', xy=(0.05, 0.05), xycoords='axes fraction', fontsize=12)
         self.ax_mat.annotate('ifgrams\nused', ha='right', xy=(0.95, 0.85), xycoords='axes fraction', fontsize=12)

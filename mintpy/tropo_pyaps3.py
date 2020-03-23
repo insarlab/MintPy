@@ -52,46 +52,34 @@ REFERENCE = """reference:
   2324-2341.
 """
 
-TEMPLATE = """
-## correct tropospheric delay using the following methods:
-## a. height_correlation - correct stratified tropospheric delay (Doin et al., 2009, J Applied Geop)
-## b. pyaps - use Global Atmospheric Models (GAMs) data (Jolivet et al., 2011; 2014)
-##      ERA5  - ERA-5 from ECMWF [default; need to install pyaps3 on GitHub]
-##      ECMWF - ERA-Interim from ECMWF [need to install pyaps on Caltech/EarthDef]
-##      MERRA - MERRA-2 from NASA Goddard [need to install pyaps on Caltech/EarthDef]
-##      NARR  - NARR from NOAA [recommended for areas in North America; need to install pyaps on Caltech/EarthDef]
-mintpy.troposphericDelay.method = auto  #[pyaps / height_correlation / no], auto for pyaps
+DATA_INFO = """Global Atmospheric Models:
+  re-analysis_dataset         coverage   temporal_resolution  spatial_resolution      latency     analysis
+  --------------------------------------------------------------------------------------------------------
+  ERA-5    (ECMWF)             Global      Hourly              0.25 deg (~31 km)       3-month      4D-var
+  ERA-Int  (ECMWF)             Global      6-hourly            0.75 deg (~79 km)       2-month      4D-var
+  MERRA(2) (NASA Goddard)      Global      6-hourly           0.5*0.625 (~50 km)      2-3 weeks     3D-var
+  NARR     (NOAA, working from Jan 1979 to Oct 2014)
 
-## Notes for pyaps: 
-## a. GAM data latency: with the most recent SAR data, there will be GAM data missing, the correction
-## will be applied to dates with GAM data available and skipped for the others.
-## b. WEATHER_DIR: if you define an environmental variable named WEATHER_DIR to contain the path to a 
-## directory, then MintPy applications will download the GAM files into the indicated directory. Also MintPy
-## application will look for the GAM files in the directory before downloading a new one to prevent downloading
-## multiple copies if you work with different dataset that cover the same date/time.
-mintpy.troposphericDelay.weatherModel = auto  #[ERA5 / ECMWF / MERRA / NARR], auto for ERA5, for pyaps method
-mintpy.troposphericDelay.weatherDir   = auto  #[path2directory], auto for WEATHER_DIR or "./"
+Notes for data access:
+  For MERRA2, you need an Earthdata account, and pre-authorize the "NASA GESDISC DATA ARCHIVE" application
+      following https://disc.gsfc.nasa.gov/earthdata-login.
+  For ERA-5 from CDS, you need to agree to the Terms of Use of every datasets that you intend to download.
 """
 
-DATA_INFO = """
-  re-analysis_dataset       coverage   temporal_resolution  spatial_resolution      latency     analysis
-------------------------------------------------------------------------------------------------------------
-ERA-5    (by ECMWF)          Global      Hourly              0.25 deg (~31 km)       3-month      4D-var
-ERA-Int  (by ECMWF)          Global      6-hourly            0.75 deg (~79 km)       2-month      4D-var
-MERRA(2) (by NASA Goddard)   Global      6-hourly           0.5*0.625 (~50 km)      2-3 weeks     3D-var
-
-To download MERRA2, you need an Earthdata account, and pre-authorize the "NASA GESDISC DATA ARCHIVE" application
-    following https://disc.gsfc.nasa.gov/earthdata-login.
-"""
-
-WEATHER_DIR_DEMO = """--weather-dir ~/WEATHER
-WEATHER/
+WEATHER_DIR_DEMO = """--weather-dir ~/atmosphere
+atmosphere/
+    /ERA5
+        ERA5_N20_N40_E120_E140_20060624_14.grb
+        ERA5_N20_N40_E120_E140_20060924_14.grb
+        ...
     /ECMWF
         ERA-Int_20030329_06.grb
         ERA-Int_20030503_06.grb
+        ...
     /MERRA
         merra-20110126-06.nc4
         merra-20110313-06.nc4
+        ...
 """
 
 
@@ -103,13 +91,13 @@ def create_parser():
     # For data download
     parser.add_argument('-m', '--model', '-s', dest='tropo_model', default='ERA5',
                         choices={'ERA5', 'ERAINT', 'MERRA', 'NARR'},
-                        help='source of the atmospheric data.\nNARR is working for 1979-Jan to 2014-Oct.')
+                        help='source of the atmospheric model (default: %(default)s).')
     parser.add_argument('-d', '--date-list', dest='date_list', nargs='*',
                         help='Read the first column of text file as list of date to download data\n' +
                              'in YYYYMMDD or YYMMDD format')
     parser.add_argument('--hour', help='time of data in HH, e.g. 12, 06')
     parser.add_argument('-w', '--dir', '--weather-dir', dest='weather_dir', default='${WEATHER_DIR}',
-                        help='parent directory of downloaded weather data file. Default: ${WEATHER_DIR}\n' +
+                        help='parent directory of downloaded weather data file (default: %(default)s).\n' +
                              'e.g.: '+WEATHER_DIR_DEMO)
 
     # For delay calculation
@@ -118,7 +106,7 @@ def create_parser():
     parser.add_argument('--ref-yx', dest='ref_yx', type=int,
                         nargs=2, help='reference pixel in y/x')
     parser.add_argument('--delay', dest='delay_type', default='comb', choices={'comb', 'dry', 'wet'},
-                        help='Delay type to calculate, comb contains both wet and dry delays')
+                        help='Delay type to calculate, comb contains both wet and dry delays (default: %(default)s).')
 
     # For delay correction
     parser.add_argument('-f', '--file', dest='timeseries_file',
@@ -226,9 +214,15 @@ def check_inputs(inps):
                                               grib_dir=inps.grib_dir,
                                               snwe=inps.snwe)
 
+    # reference point in space
     if 'REF_Y' in atr.keys():
         inps.ref_yx = [int(atr['REF_Y']), int(atr['REF_X'])]
+
+    if inps.ref_yx is not None:
+        print('calculate spatially relative delay with respect to the point below.')
         print('reference pixel: {}'.format(inps.ref_yx))
+    else:
+        print('calculate spatially absolute delay with NO reference point.')
     return inps, atr
 
 
@@ -239,7 +233,7 @@ def closest_weather_model_hour(sar_acquisition_time, grib_source='ERA5'):
         sar_acquisition_time - string, SAR data acquisition time in seconds
         grib_source - string, Grib Source of weather reanalysis product
     Output:
-        grib_hr - string, time of closest available weather product 
+        grib_hr - string, time of closest available weather product
     Example:
         '06' = closest_weather_model_hour(atr['CENTER_LINE_UTC'])
         '12' = closest_weather_model_hour(atr['CENTER_LINE_UTC'], 'NARR')
@@ -486,7 +480,7 @@ def get_delay_timeseries(inps, atr):
         return (atr['LENGTH'], atr['WIDTH'])
 
     # check 1 - existing tropo delay file
-    if (ut.run_or_skip(out_file=inps.tropo_file, in_file=inps.grib_file_list, print_msg=False) == 'skip' 
+    if (ut.run_or_skip(out_file=inps.tropo_file, in_file=inps.grib_file_list, print_msg=False) == 'skip'
             and get_dataset_size(inps.tropo_file) == get_dataset_size(inps.geom_file)):
         print('{} file exists and is newer than all GRIB files, skip updating.'.format(inps.tropo_file))
         return
@@ -503,7 +497,7 @@ def get_delay_timeseries(inps, atr):
     geom_obj.open()
     inps.dem = geom_obj.read(datasetName='height')
     inps.inc = geom_obj.read(datasetName='incidenceAngle')
-    
+
     if 'latitude' in geom_obj.datasetNames:
         # for dataset in geo OR radar coord with lookup table in radar-coord (isce, doris)
         inps.lat = geom_obj.read(datasetName='latitude')
@@ -511,7 +505,7 @@ def get_delay_timeseries(inps, atr):
     elif 'Y_FIRST' in geom_obj.metadata:
         # for geo-coded dataset (gamma, roipac)
         inps.lat, inps.lon = ut.get_lat_lon(geom_obj.metadata)
-    else: 
+    else:
         # for radar-coded dataset (gamma, roipac)
         inps.lat, inps.lon = ut.get_lat_lon_rdc(geom_obj.metadata)
 
@@ -530,12 +524,16 @@ def get_delay_timeseries(inps, atr):
         prog_bar.update(i+1, suffix=os.path.basename(grib_file))
     prog_bar.close()
 
-    # Convert relative phase delay on reference date
-    inps.ref_date = atr.get('REF_DATE', date_list[0])
-    print('convert to relative phase delay with reference date: '+inps.ref_date)
-    inps.ref_idx = date_list.index(inps.ref_date)
-    tropo_data -= np.tile(tropo_data[inps.ref_idx, :, :], (num_date, 1, 1))
-    atr['REF_DATE'] = inps.ref_date
+    # save absolute delay for more generic usage
+    # since diff.py can handle different reference date.
+    if 'REF_DATE' in atr.keys():
+        atr.pop('REF_DATE')
+    ## Convert relative phase delay on reference date
+    #inps.ref_date = atr.get('REF_DATE', date_list[0])
+    #print('convert to relative phase delay with reference date: '+inps.ref_date)
+    #inps.ref_idx = date_list.index(inps.ref_date)
+    #tropo_data -= np.tile(tropo_data[inps.ref_idx, :, :], (num_date, 1, 1))
+    #atr['REF_DATE'] = inps.ref_date
 
     # Write tropospheric delay to HDF5
     if inps.ref_yx:

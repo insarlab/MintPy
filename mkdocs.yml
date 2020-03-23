@@ -36,8 +36,9 @@ nav:
         - Coordinates: api/coord.md
         - Docker: docker.md
         - Documents generation: api/doc_generation.md
+        - Module hierarchy: api/module_hierarchy.md
     - About:
         - Contributing: CONTRIBUTING.md
-        - Code of Conduct: CODE_OF_CONDUCT.md
+        - Code of conduct: CODE_OF_CONDUCT.md
         - References: references.md
 
