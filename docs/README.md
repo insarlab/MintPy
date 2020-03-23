@@ -84,7 +84,7 @@ Join our google group [https://groups.google.com/forum/#!forum/mintpy](https://g
 
 Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: Unwrapping error correction and noise reduction, _Computers & Geosciences_, _133_, 104331, doi:[10.1016/j.cageo.2019.104331](https://doi.org/10.1016/j.cageo.2019.104331), [ArXiv](https://eartharxiv.org/9sz6m/).
 
-In addition to the above, we recommend that you cite the original publications that describe the algorithms used in your specific analysis.
+In addition to the above, we recommend that you cite the original publications that describe the algorithms used in your specific analysis. They are noted briefly in the [default template file](../mintpy/defaults/smallbaselineApp.cfg) and listed in [here](./references.md).
 
 ### Contributors ###
 
