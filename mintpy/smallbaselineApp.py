@@ -18,32 +18,14 @@ import subprocess
 import numpy as np
 
 import mintpy
-import mintpy.workflow  #dynamic import for modules used by smallbaselineApp workflow
 from mintpy.objects import sensor, RAMP_LIST
 from mintpy.utils import readfile, writefile, utils as ut
 from mintpy.defaults.auto_path import autoPath
+from mintpy.defaults.template import STEP_LIST, get_template_content
+import mintpy.workflow  #dynamic import for modules used by smallbaselineApp workflow
 
 
 ##########################################################################
-STEP_LIST = [
-    'load_data',
-    'modify_network',
-    'reference_point',
-    'correct_unwrap_error',
-    'stack_interferograms',
-    'invert_network',
-    'correct_LOD',
-    'correct_troposphere',
-    'deramp',
-    'correct_topography',
-    'residual_RMS',
-    'reference_date',
-    'velocity',
-    'geocode',
-    'google_earth',
-    'hdfeos5',
-]
-
 STEP_HELP = """Command line options for steps processing with names are chosen from the following list:
 
 {}
@@ -69,8 +51,9 @@ EXAMPLE = """example:
 """
 
 REFERENCE = """reference:
-  Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: unwrapping error
-  correction and noise reduction (under review), preprint doi:10.31223/osf.io/9sz6m.
+  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis: 
+  Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
+  doi:10.1016/j.cageo.2019.104331.
 """
 
 def create_parser():

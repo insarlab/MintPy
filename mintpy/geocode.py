@@ -14,18 +14,12 @@ import warnings
 import multiprocessing
 import numpy as np
 from mintpy.objects.resample import resample
+from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, writefile, utils as ut
 
 
 ######################################################################################
-TEMPLATE = """template:
-mintpy.geocode              = auto  #[yes / no], auto for yes
-mintpy.geocode.SNWE         = auto  #[-1.2,0.5,-92,-91 / no ], auto for no, output coverage in S N W E in degree 
-mintpy.geocode.latStep      = auto  #[0.0-90.0 / None], auto for None, output resolution in degree
-mintpy.geocode.lonStep      = auto  #[0.0-180.0 / None], auto for None - calculate from lookup file
-mintpy.geocode.interpMethod = auto  #[nearest], auto for nearest, interpolation method
-mintpy.geocode.fillValue    = auto  #[np.nan, 0, ...], auto for np.nan, fill value for outliers.
-"""
+TEMPLATE = get_template_content('geocode')
 
 EXAMPLE = """example:
   geocode.py velocity.h5
@@ -41,7 +35,7 @@ EXAMPLE = """example:
 def create_parser():
     parser = argparse.ArgumentParser(description='Resample radar coded files into geo coordinates, or reverse',
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=TEMPLATE + '\n' + EXAMPLE)
+                                     epilog=TEMPLATE+'\n'+EXAMPLE)
 
     parser.add_argument('file', nargs='+', help='File(s) to be geocoded')
     parser.add_argument('-d', '--dset', help='dataset to be geocoded, for example:\n' +

@@ -18,8 +18,9 @@ import h5py
 import numpy as np
 from scipy import linalg   # more effieint than numpy.linalg
 from mintpy.objects import ifgramStack, timeseries
-from mintpy.utils import readfile, writefile, ptime, utils as ut
 from mintpy.simulation import decorrelation as decor
+from mintpy.defaults.template import get_template_content
+from mintpy.utils import readfile, writefile, ptime, utils as ut
 
 
 # key configuration parameter name
@@ -46,35 +47,7 @@ EXAMPLE = """example:
   ifgram_inversion.py  inputs/ifgramStack.h5 -w var --parallel --num-worker 25
 """
 
-TEMPLATE = """
-## Invert network of interferograms into time-series using weighted least sqaure (WLS) estimator.
-## weighting options for least square inversion [fast option available but not best]:
-## a. var - use inverse of covariance as weight (Tough et al., 1995; Guarnieri & Tebaldini, 2008) [recommended]
-## b. fim - use Fisher Information Matrix as weight (Seymour & Cumming, 1994; Samiei-Esfahany et al., 2016).
-## c. coh - use coherence as weight (Perissin & Wang, 2012)
-## d. no  - uniform weight (Berardino et al., 2002)
-## mask options for unwrapPhase of each interferogram before inversion (recommed if weightFunct=no):
-## a. coherence        - mask out pixels with spatial coherence < maskThreshold
-## b. connectComponent - mask out pixels with False/0 value
-## c. no               - no masking [recommended].
-## SBAS (Berardino et al., 2002) = minNormVelocity (yes) + weightFunc (no)
-mintpy.networkInversion.weightFunc      = auto #[var / fim / coh / no], auto for var
-mintpy.networkInversion.maskDataset     = auto #[coherence / connectComponent / no], auto for no
-mintpy.networkInversion.maskThreshold   = auto #[0-1], auto for 0.4
-mintpy.networkInversion.minRedundancy   = auto #[1-inf], auto for 1.0, min num_ifgram for every SAR acquisition
-mintpy.networkInversion.waterMaskFile   = auto #[filename / no], auto for waterMask.h5 or no [if no waterMask.h5 found]
-mintpy.networkInversion.minNormVelocity = auto #[yes / no], auto for yes, min-norm deformation velocity or phase
-mintpy.networkInversion.residualNorm    = auto #[L2 ], auto for L2, norm minimization solution
-
-## Parallel processing with Dask for HPC
-mintpy.networkInversion.parallel  = auto #[yes / no], auto for no, parallel processing using dask
-mintpy.networkInversion.numWorker = auto #[int > 0], auto for 40, number of works for dask cluster to use
-mintpy.networkInversion.walltime  = auto #[HH:MM], auto for 00:40, walltime for dask workers
-
-## Temporal coherence is calculated and used to generate final mask (Pepe & Lanari, 2006, IEEE-TGRS)
-mintpy.networkInversion.minTempCoh  = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
-mintpy.networkInversion.minNumPixel = auto #[int > 0], auto for 100, min number of pixels in mask above
-"""
+TEMPLATE = get_template_content('invert_network')
 
 REFERENCE = """references:
 Berardino, P., Fornaro, G., Lanari, R., & Sansosti, E. (2002). A new algorithm for surface
@@ -98,59 +71,54 @@ Seymour, M. S., and I. G. Cumming (1994), Maximum likelihood estimation for SAR 
 def create_parser():
     parser = argparse.ArgumentParser(description='Invert network of interferograms into time-series.',
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+EXAMPLE)
+                                     epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
 
-    parser.add_argument('ifgramStackFile',
-                        help='interferograms stack file to be inverted')
+    # I/O
+    parser.add_argument('ifgramStackFile', help='interferograms stack file to be inverted')
     parser.add_argument('-i','-d', '--dset', dest='unwDatasetName', type=str,
-                        help='dataset name of unwrap phase in ifgram file to be used for inversion\n'
+                        help='dataset name of unwrap phase / offset to be used for inversion\n'
                              'e.g.: unwrapPhase, unwrapPhase_bridging, ...')
+    parser.add_argument('--water-mask', '-m', dest='waterMaskFile',
+                        help='Skip inversion on the masked out region, i.e. water.')
     parser.add_argument('--template', '-t', dest='templateFile',
-                        help='template text file with the following options:\n'+TEMPLATE)
-    parser.add_argument('--ref-date', dest='ref_date',
-                        help='Reference date, first date by default.')
-    parser.add_argument('--mask-dset', dest='maskDataset',
-                        help='dataset used to mask unwrapPhase, e.g. coherence, connectComponent')
-    parser.add_argument('--mask-threshold', dest='maskThreshold', metavar='NUM', type=float, default=0.4,
-                        help='threshold to generate mask when mask is coherence')
-    parser.add_argument('--min-redundancy', dest='minRedundancy', metavar='NUM', type=float, default=1.0,
-                        help='minimum redundancy of interferograms for every SAR acquisition.')
+                        help='template text file with options')
+    parser.add_argument('-o', '--output', dest='outfile', nargs=2,
+                        metavar=('TS_FILE', 'TCOH_FILE'), default=['timeseries.h5', 'temporalCoherence.h5'],
+                        help='Output file name for timeseries and temporal coherence, default:\n' +
+                        'timeseries.h5 temporalCoherence.h5')
 
-    parser.add_argument('--weight-function', '-w', dest='weightFunc', default='no', choices={'var', 'fim', 'coh', 'no'},
+    # options rarely used or changed
+    parser.add_argument('--ref-date', dest='ref_date', help='Reference date, first date by default.')
+    parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=100e6,
+                        help='max number of data (= ifgram_num * num_row * num_col) to read per loop\n' +
+                        'default: 0.2 G; adjust it according to your computer memory.')
+    parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',
+                        help='Skip checking reference pixel value, for simulation testing.')
+
+    # solver
+    solver = parser.add_argument_group('solver', 'solver for the network inversion problem')
+    solver.add_argument('--weight-function', '-w', dest='weightFunc', default='no', choices={'var', 'fim', 'coh', 'no'},
                         help='function used to convert coherence to weight for inversion:\n' +
                         'var - inverse of phase variance due to temporal decorrelation\n' +
                         'fim - Fisher Information Matrix as weight' +
                         'coh - spatial coherence\n' +
                         'no  - no/uniform weight')
-    parser.add_argument('--min-norm-phase', dest='minNormVelocity', action='store_false',
+    solver.add_argument('--min-norm-phase', dest='minNormVelocity', action='store_false',
                         help=('Enable inversion with minimum-norm deformation phase,'
                               ' instead of the default minimum-norm deformation velocity.'))
-    parser.add_argument('--norm', dest='residualNorm', default='L2', choices=['L1', 'L2'],
+    solver.add_argument('--norm', dest='residualNorm', default='L2', choices=['L1', 'L2'],
                         help='Inverse method used to residual optimization, L1 or L2 norm minimization. Default: L2')
 
-    parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=100e6,
-                        help='max number of data (= ifgram_num * num_row * num_col) to read per loop\n' +
-                        'default: 0.2 G; adjust it according to your computer memory.')
+    # mask
+    mask = parser.add_argument_group('mask', 'mask observation data before inversion')
+    mask.add_argument('--mask-dset', dest='maskDataset',
+                      help='dataset used to mask unwrapPhase, e.g. coherence, connectComponent')
+    mask.add_argument('--mask-threshold', dest='maskThreshold', metavar='NUM', type=float, default=0.4,
+                      help='threshold to generate mask when mask is coherence')
+    mask.add_argument('--min-redundancy', dest='minRedundancy', metavar='NUM', type=float, default=1.0,
+                      help='minimum redundancy of interferograms for every SAR acquisition.')
 
-    parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',
-                        help='Skip checking reference pixel value, for simulation testing.')
-    parser.add_argument('-o', '--output', dest='outfile', nargs=2,
-                        metavar=('TS_FILE', 'TCOH_FILE'), default=['timeseries.h5', 'temporalCoherence.h5'],
-                        help='Output file name for timeseries and temporal coherence, default:\n' +
-                        'timeseries.h5 temporalCoherence.h5')
-    parser.add_argument('--update', dest='update_mode', action='store_true',
-                        help='Enable update mode, and skip inversion if output timeseries file already exists,\n' +
-                        'readable and newer than input interferograms file')
-    parser.add_argument('--water-mask', '-m', dest='waterMaskFile',
-                        help='Skip inversion on the masked out region, i.e. water.')
-    #parser.add_argument('--split-file', dest='split_file', action='store_true',
-    #                    help='Split ifgramStack file into small files and invert them separately')
-    parser.add_argument('--fast','--sbas', action='store_true',
-                        help='Fast network invertion by forcing the following options:\n'+
-                             '\t--weight-function = no\n'+
-                             '\t--mask-dset = no\n'+
-                             'This is equivalent to SBAS algorithm (Berardino et al., 2002)')
-
+    # parallel computing
     par = parser.add_argument_group('parallel', 'parallel processing configuration for Dask')
     par.add_argument('--parallel', dest='parallel', action='store_true',
                      help='Enable parallel processing for the pixelwise weighted inversion.')
@@ -162,6 +130,15 @@ def create_parser():
     par.add_argument('--walltime', dest='walltime', type=str, default='00:40',
                      help='Walltime for each dask worker (default: %(default)s).')
 
+    # efficiency
+    parser.add_argument('--update', dest='update_mode', action='store_true',
+                        help='Enable update mode, and skip inversion if output timeseries file already exists,\n' +
+                        'readable and newer than input interferograms file')
+    parser.add_argument('--fast','--sbas', action='store_true',
+                        help='Fast network invertion by forcing the following options:\n'+
+                             '\t--weight-function = no\n'+
+                             '\t--mask-dset = no\n'+
+                             'This is equivalent to SBAS algorithm (Berardino et al., 2002)')
     return parser
 
 

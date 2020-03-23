@@ -13,19 +13,20 @@ import argparse
 import datetime
 import inspect
 import matplotlib.pyplot as plt
-from mintpy.defaults.auto_path import autoPath
 from mintpy.objects import sensor, ifgramStack
+from mintpy.defaults.auto_path import autoPath
+from mintpy.defaults.template import get_template_content
 from mintpy.utils import (ptime,
                           readfile,
                           network as pnet,
                           plot as pp,
                           utils as ut)
 
-sensorNames = [i.capitalize() for i in sensor.sensorNames]
+SENSOR_NAMES = [i.capitalize() for i in sensor.SENSOR_NAMES]
 
 
 #########################################################################
-REFERENCE = """References:
+REFERENCE = """references:
   Berardino, P., G. Fornaro, R. Lanari, and E. Sansosti (2002), A new algorithm for surface deformation monitoring
     based on small baseline differential SAR interferograms, IEEE TGRS, 40(11), 2375-2383.
   Fattahi, H., and F. Amelung (2013), DEM Error Correction in InSAR Time Series, IEEE TGRS, 51(7), 4249-4259.
@@ -33,12 +34,14 @@ REFERENCE = """References:
   Pepe, A., and R. Lanari (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
     of multitemporal differential SAR interferograms, IEEE TGRS, 44(9), 2374-2383.
   Perissin D., Wang T. (2012), Repeat-pass SAR interferometry with partially coherent targets. IEEE TGRS. 271-280
+  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis: Unwrapping error
+    correction and noise reduction, Computers & Geosciences, 133, 104331, doi:10.1016/j.cageo.2019.104331.
   Zebker, H. A., and J. Villasenor (1992), Decorrelation in interferometric radar echoes, IEEE TGRS, 30(5), 950-959.
   Zhao, W., (2017), Small deformation detected from InSAR time-series and their applications in geophysics, Doctoral
     dissertation, Univ. of Miami, Section 6.3.
 """
 
-EXAMPLE = """Examples:
+EXAMPLE = """examples:
   select_network.py KirishimaT246EnvD2.template
   select_network.py KirishimaT246EnvD2.template -b bl_list.txt
   select_network.py KirishimaT246EnvD2.template -b bl_list.txt -o $SC/KirishimaT246EnvD2/PROCESS/ifgram_list.txt
@@ -46,47 +49,8 @@ EXAMPLE = """Examples:
   select_network.py KirishimaT246EnvD2.template -r Modified_LoadedData.h5
 """
 
-TEMPLATE = """Template:
-## Select network (interferometric combination)
-## 1) select initial network using method / reference File
-## selection method includes:
-##     all/sb       - all possible pairs, pair number = N*(N-1)/2 where N is acquisition num 
-##                    default, (Berardino et al., 2002, TGRS).
-##     delaunay     - Delaunay triangulation (Fattahi and Amelung, 2013, TGRS).
-##                    By default, temporal baseline is normalized using a maxPerpDiff/maxTempDiff
-##                    ratio (Pepe and Lanari, 2006, TGRS), use 'delaunay-noweight' to disable normalization. 
-##     hierarchical - Select pairs in a hierarchical way using a list of temp/perp thresholds
-##                    select.network.tempPerpList
-##                    (Zhao, 2017, PhD Thesis)
-##                    i.e. 16 days, 1600 m
-##                         32 days, 800  m
-##                         48 days, 600  m
-##                         64 days, 200  m
-##     mst          - Minimum Spanning Tree (Perissin and Wang, 2012, TGRS).
-##                    Find the MST based on the graph of temporal and perpendicular matrix.
-##     sequential   - for each acquisition, select its incrementNum nearest neighbors in the past
-##                    (Fattahi and Amelung, 2013, TGRS). 
-##                    Pair number = N*m - m*(m-1)/2; it's N when m = 1.
-##                    Designed for new satellites like Sentinel-1 and ALOS-2.
-##     star / ps    - Star-like/PS-like network/pairs, single common master interferogram
-##                    (Ferretti et al., 2001, TGRS)
-selectNetwork.method        = auto  #[all / hierarchical / sequential / mst / delaunay / star], auto for all
-selectNetwork.connNum       = auto  #[1-inf], auto for 3, for sequential method, pairs num per new acquisition
-selectNetwork.tempPerpList  = auto  #[btemp1,bperp1;...], auto for '16,1600;32,800;48,600;64,200'; max temp/perp baseline
-selectNetwork.referenceFile = auto  #[fname / no], auto for no, HDF5 or text file with pairs info
+TEMPLATE = get_template_content('modify_network')
 
-## 2) filter network/pairs using temp/perp baseline, doppler overlap threshold, etc.
-selectNetwork.perpBaseMax   = auto  #[1-inf / no], auto for 500., max perpendicular spatial baseline
-selectNetwork.tempBaseMax   = auto  #[1-inf / no], auto for 1800., max temporal baseline
-selectNetwork.tempBaseMin   = auto  #[1-inf], auto for 0.,   min temporal baseline
-selectNetwork.keepSeasonal  = auto  #[yes / no], auto for no, keep pairs with seasonal temporal baseline
-selectNetwork.dopOverlapMin = auto  #[1-inf / no], auto for 15., min dopploer overlap percentage
-
-selectNetwork.masterDate    = auto  #[100102 / no], auto for no, master date for star/ps network and reference interferogram
-selectNetwork.startDate     = auto  #[070101 / no], auto for no, date in YYMMDD or YYYYMMDD format
-selectNetwork.endDate       = auto  #[110101 / no], auto for no
-selectNetwork.excludeDate   = auto  #[080520,100726 / no], auto for no, exclude dates for pairs selection
-"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Select Interferometric Network / Pairs.',
@@ -143,7 +107,7 @@ def create_parser():
                              '--temp-perp-list 16,1600;32,800;48,600;64,200')
     method.add_argument('--no-norm', dest='norm', action='store_false',
                         help='do not normalize temp/perp baseline, for delaunay method')
-    method.add_argument('--sensor', help='Name of sensor, choose from the list below:\n'+str(sensorNames))
+    method.add_argument('--sensor', help='Name of sensor, choose from the list below:\n'+str(SENSOR_NAMES))
     method.add_argument('--master-date', dest='masterDate',
                         help='Master date in YYMMDD or YYYYMMDD format, for star/ps method')
 

@@ -13,20 +13,12 @@ import h5py
 import numpy as np
 import random
 from mintpy.objects import timeseries
+from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, writefile, utils as ut
 
 
 #########################################  Usage  ##############################################
-TEMPLATE = """
-## reference all interferograms to one common point in space
-## auto - randomly select a pixel with coherence > minCoherence
-mintpy.reference.yx            = auto   #[257,151 / auto]
-mintpy.reference.lalo          = auto   #[31.8,130.8 / auto]
-
-mintpy.reference.coherenceFile = auto   #[file name], auto for averageSpatialCoherence.h5
-mintpy.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum coherence for auto method
-mintpy.reference.maskFile      = auto   #[file name / no], auto for maskConnComp.h5
-"""
+TEMPLATE = get_template_content('reference_point')
 
 NOTE = """note: Reference value cannot be nan, thus, all selected reference point must be:
   a. non zero in mask, if mask is given
@@ -66,11 +58,11 @@ EXAMPLE = """example:
 def create_parser():
     parser = argparse.ArgumentParser(description='Reference to the same pixel in space.',
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=NOTE+'\n'+EXAMPLE)
+                                     epilog=NOTE+'\n'+TEMPLATE+'\n'+EXAMPLE)
 
     parser.add_argument('file', type=str, help='file to be referenced.')
     parser.add_argument('-t', '--template', dest='template_file',
-                        help='template with reference info as below:\n'+TEMPLATE)
+                        help='template with reference info')
     parser.add_argument('-m', '--mask', dest='maskFile', help='mask file')
     parser.add_argument('-o', '--outfile',
                         help='output file name, disabled when more than 1 input files.')

@@ -52,36 +52,18 @@ REFERENCE = """reference:
   2324-2341.
 """
 
-TEMPLATE = """
-## correct tropospheric delay using the following methods:
-## a. height_correlation - correct stratified tropospheric delay (Doin et al., 2009, J Applied Geop)
-## b. pyaps - use Global Atmospheric Models (GAMs) data (Jolivet et al., 2011; 2014)
-##      ERA5  - ERA-5 from ECMWF [default; need to install pyaps3 on GitHub]
-##      ECMWF - ERA-Interim from ECMWF [need to install pyaps on Caltech/EarthDef]
-##      MERRA - MERRA-2 from NASA Goddard [need to install pyaps on Caltech/EarthDef]
-##      NARR  - NARR from NOAA [recommended for areas in North America; need to install pyaps on Caltech/EarthDef]
-mintpy.troposphericDelay.method = auto  #[pyaps / height_correlation / no], auto for pyaps
+DATA_INFO = """Global Atmospheric Models:
+  re-analysis_dataset         coverage   temporal_resolution  spatial_resolution      latency     analysis
+  --------------------------------------------------------------------------------------------------------
+  ERA-5    (ECMWF)             Global      Hourly              0.25 deg (~31 km)       3-month      4D-var
+  ERA-Int  (ECMWF)             Global      6-hourly            0.75 deg (~79 km)       2-month      4D-var
+  MERRA(2) (NASA Goddard)      Global      6-hourly           0.5*0.625 (~50 km)      2-3 weeks     3D-var
+  NARR     (NOAA, working from Jan 1979 to Oct 2014)
 
-## Notes for pyaps: 
-## a. GAM data latency: with the most recent SAR data, there will be GAM data missing, the correction
-## will be applied to dates with GAM data available and skipped for the others.
-## b. WEATHER_DIR: if you define an environmental variable named WEATHER_DIR to contain the path to a 
-## directory, then MintPy applications will download the GAM files into the indicated directory. Also MintPy
-## application will look for the GAM files in the directory before downloading a new one to prevent downloading
-## multiple copies if you work with different dataset that cover the same date/time.
-mintpy.troposphericDelay.weatherModel = auto  #[ERA5 / ECMWF / MERRA / NARR], auto for ERA5, for pyaps method
-mintpy.troposphericDelay.weatherDir   = auto  #[path2directory], auto for WEATHER_DIR or "./"
-"""
-
-DATA_INFO = """
-  re-analysis_dataset       coverage   temporal_resolution  spatial_resolution      latency     analysis
-------------------------------------------------------------------------------------------------------------
-ERA-5    (by ECMWF)          Global      Hourly              0.25 deg (~31 km)       3-month      4D-var
-ERA-Int  (by ECMWF)          Global      6-hourly            0.75 deg (~79 km)       2-month      4D-var
-MERRA(2) (by NASA Goddard)   Global      6-hourly           0.5*0.625 (~50 km)      2-3 weeks     3D-var
-
-To download MERRA2, you need an Earthdata account, and pre-authorize the "NASA GESDISC DATA ARCHIVE" application
-    following https://disc.gsfc.nasa.gov/earthdata-login.
+Notes for data access:
+  For MERRA2, you need an Earthdata account, and pre-authorize the "NASA GESDISC DATA ARCHIVE" application
+      following https://disc.gsfc.nasa.gov/earthdata-login.
+  For ERA-5 from CDS, you need to agree to the Terms of Use of every datasets that you intend to download.
 """
 
 WEATHER_DIR_DEMO = """--weather-dir ~/WEATHER
@@ -239,7 +221,7 @@ def closest_weather_model_hour(sar_acquisition_time, grib_source='ERA5'):
         sar_acquisition_time - string, SAR data acquisition time in seconds
         grib_source - string, Grib Source of weather reanalysis product
     Output:
-        grib_hr - string, time of closest available weather product 
+        grib_hr - string, time of closest available weather product
     Example:
         '06' = closest_weather_model_hour(atr['CENTER_LINE_UTC'])
         '12' = closest_weather_model_hour(atr['CENTER_LINE_UTC'], 'NARR')
@@ -486,7 +468,7 @@ def get_delay_timeseries(inps, atr):
         return (atr['LENGTH'], atr['WIDTH'])
 
     # check 1 - existing tropo delay file
-    if (ut.run_or_skip(out_file=inps.tropo_file, in_file=inps.grib_file_list, print_msg=False) == 'skip' 
+    if (ut.run_or_skip(out_file=inps.tropo_file, in_file=inps.grib_file_list, print_msg=False) == 'skip'
             and get_dataset_size(inps.tropo_file) == get_dataset_size(inps.geom_file)):
         print('{} file exists and is newer than all GRIB files, skip updating.'.format(inps.tropo_file))
         return
@@ -503,7 +485,7 @@ def get_delay_timeseries(inps, atr):
     geom_obj.open()
     inps.dem = geom_obj.read(datasetName='height')
     inps.inc = geom_obj.read(datasetName='incidenceAngle')
-    
+
     if 'latitude' in geom_obj.datasetNames:
         # for dataset in geo OR radar coord with lookup table in radar-coord (isce, doris)
         inps.lat = geom_obj.read(datasetName='latitude')
@@ -511,7 +493,7 @@ def get_delay_timeseries(inps, atr):
     elif 'Y_FIRST' in geom_obj.metadata:
         # for geo-coded dataset (gamma, roipac)
         inps.lat, inps.lon = ut.get_lat_lon(geom_obj.metadata)
-    else: 
+    else:
         # for radar-coded dataset (gamma, roipac)
         inps.lat, inps.lon = ut.get_lat_lon_rdc(geom_obj.metadata)
 
