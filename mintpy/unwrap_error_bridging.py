@@ -13,6 +13,7 @@ import h5py
 import numpy as np
 from mintpy.objects import ifgramStack
 from mintpy.objects.conncomp import connectComponent
+from mintpy.defaults.template import get_template_content
 from mintpy.utils import (ptime,
                           readfile,
                           writefile,
@@ -33,9 +34,10 @@ EXAMPLE = """Example:
   unwrap_error_bridging.py  20180502_20180619.unw    --water-mask waterMask.h5
 """
 
-REFERENCE = """Reference:
-  Yunjun, Z., H. Fattahi, F. Amelung (2019), InSAR time series analysis: error correction
-  and noise reduction (submitted).
+REFERENCE = """reference:
+  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis:
+  Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
+  doi:10.1016/j.cageo.2019.104331.
 """
 
 NOTE = """
@@ -43,20 +45,13 @@ NOTE = """
   between neighboring regions are less than pi rad in magnitude.
 """
 
-TEMPLATE = """
-## unwrapping error correction with bridging:
-## automatic for islands with waterMaskFile option (unwrapping errors on areas separated by narrow water bodies)
-## manual    for all the other scenarios
-mintpy.unwrapError.method          = auto  #[bridging / phase_closure / no], auto for no
-mintpy.unwrapError.ramp            = auto  #[linear / quadratic], auto for linear
-mintpy.unwrapError.waterMaskFile   = auto  #[waterMask.h5 / no], auto for no
-mintpy.unwrapError.bridgePtsRadius = auto  #[1-inf], auto for 150, radius in pixel of circular area around bridge ends
-"""
+TEMPLATE = get_template_content('correct_unwrap_error')
+
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Unwrapping Error Correction with Bridging'+NOTE,
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+EXAMPLE)
+                                     epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
 
     parser.add_argument('ifgram_file', type=str, help='interferograms file to be corrected')
     parser.add_argument('-r','--radius', dest='bridgePtsRadius', type=int, default=50,

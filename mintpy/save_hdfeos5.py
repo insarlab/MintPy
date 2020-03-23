@@ -13,6 +13,7 @@ import datetime as dt
 import h5py
 import numpy as np
 from mintpy.objects import timeseries, geometry, sensor
+from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile
 from mintpy import info
 
@@ -25,11 +26,7 @@ compression = 'lzf'
 
 
 ################################################################
-TEMPALTE = """
-mintpy.save.hdfEos5         = auto   #[yes / no], auto for no, save timeseries to HDF-EOS5 format
-mintpy.save.hdfEos5.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
-mintpy.save.hdfEos5.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
-"""
+TEMPALTE = TEMPLATE = get_template_content('hdfeos5')
 
 EXAMPLE = """example:
   save_hdfeos5.py geo_timeseries_ERA5_ramp_demErr.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
@@ -40,7 +37,7 @@ def create_parser():
     parser = argparse.ArgumentParser(description='Convert MintPy timeseries product into HDF-EOS5 format\n' +
                                      'https://earthdata.nasa.gov/esdis/eso/standards-and-references/hdf-eos5',
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     epilog=EXAMPLE)
+                                     epilog=TEMPALTE+'\n'+EXAMPLE)
 
     parser.add_argument('timeseries_file', default='timeseries.h5', help='Timeseries file')
     parser.add_argument('-t', '--template', dest='template_file', help='Template file')

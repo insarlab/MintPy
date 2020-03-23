@@ -10,6 +10,7 @@ import os
 import argparse
 import numpy as np
 from mintpy.objects import timeseries, giantTimeseries, HDFEOS
+from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, writefile, ptime, utils as ut
 
 dataType = np.float32
@@ -36,12 +37,7 @@ EXAMPLE = """example:
   timeseries2velocity.py  TS-PARAMS.h5
 """
 
-TEMPLATE = """
-## estimate linear velocity from timeseries, and from tropospheric delay file if exists.
-mintpy.velocity.excludeDate = auto   #[exclude_date.txt / 20080520,20090817 / no], auto for exclude_date.txt
-mintpy.velocity.startDate   = auto   #[20070101 / no], auto for no
-mintpy.velocity.endDate     = auto   #[20101230 / no], auto for no
-"""
+TEMPLATE = get_template_content('velocity')
 
 DROP_DATE_TXT = """exclude_date.txt:
 20040502
@@ -66,7 +62,7 @@ def create_parser():
                              '--exclude 20040502 20060708 20090103\n' +
                              '--exclude exclude_date.txt\n'+DROP_DATE_TXT)
     parser.add_argument('--template', '-t', dest='template_file',
-                        help='template file with the following items:'+TEMPLATE)
+                        help='template file with options')
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file name')
     parser.add_argument('--update', dest='update_mode', action='store_true',

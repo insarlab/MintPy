@@ -12,6 +12,7 @@ import h5py
 import numpy as np
 from matplotlib import pyplot as plt, dates as mdates
 from mintpy.objects import ifgramStack
+from mintpy.defaults.template import get_template_content
 from mintpy.utils import (ptime,
                           readfile,
                           utils as ut,
@@ -20,43 +21,28 @@ from mintpy.utils import (ptime,
 
 
 ###############################  Usage  ################################
+REFERENCE = """reference:
+  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis: 
+  Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
+  doi:10.1016/j.cageo.2019.104331.
+"""
+
+TEMPLATE = get_template_content('modify_network')
+
 EXAMPLE = """example:
   modify_network.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg
   modify_network.py inputs/ifgramStack.h5 --reset
   modify_network.py inputs/ifgramStack.h5 --manual
 """
 
-TEMPLATE = """
-## 1) Coherence-based network modification = Threshold + MST, by default
-## It calculates a average coherence value for each interferogram using spatial coherence and input mask (with AOI)
-## Then it finds a minimum spanning tree (MST) network with inverse of average coherence as weight (keepMinSpanTree)
-## For all interferograms except for MST's, exclude those with average coherence < minCoherence.
-mintpy.network.coherenceBased  = auto  #[yes / no], auto for no, exclude interferograms with coherence < minCoherence
-mintpy.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
-mintpy.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
-mintpy.network.maskFile        = auto  #[file name, no], auto for waterMask.h5 or no [if no waterMask.h5 found]
-mintpy.network.aoiYX           = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
-mintpy.network.aoiLALO         = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
-
-## 2) Network modification based on temporal/perpendicular baselines, date etc.
-mintpy.network.tempBaseMax     = auto  #[1-inf, no], auto for no, maximum temporal baseline in days
-mintpy.network.perpBaseMax     = auto  #[1-inf, no], auto for no, maximum perpendicular spatial baseline in meter
-mintpy.network.connNumMax      = auto  #[1-inf, no], auto for no, maximum number of neighbors for each acquisition
-mintpy.network.startDate       = auto  #[20090101 / no], auto for no
-mintpy.network.endDate         = auto  #[20110101 / no], auto for no
-mintpy.network.excludeDate     = auto  #[20080520,20090817 / no], auto for no
-mintpy.network.excludeIfgIndex = auto  #[1:5,25 / no], auto for no, list of ifg index (start from 0)
-mintpy.network.referenceFile   = auto  #[date12_list.txt / ifgramStack.h5 / no], auto for no
-"""
-
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Modify the network of interferograms',
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+                                     epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
     parser.add_argument('file', help='Files to modify/drop network, e.g. inputs/ifgramStack.h5.')
     parser.add_argument('-t', '--template', dest='template_file',
-                        help='Template file with input options:\n'+TEMPLATE+'\n')
+                        help='Template file with input options')
     parser.add_argument('--reset', action='store_true',
                         help='restore all interferograms in the file, by marking all dropIfgram=True')
     parser.add_argument('--noaux', dest='update_aux', action='store_false',

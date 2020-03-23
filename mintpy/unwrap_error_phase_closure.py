@@ -24,6 +24,7 @@ except ImportError:
 
 from mintpy.objects import ifgramStack
 from mintpy.objects.conncomp import connectComponent
+from mintpy.defaults.template import get_template_content
 from mintpy.utils import ptime, readfile, utils as ut, plot as pp
 from mintpy.utils.solvers import l1regls
 from mintpy import ifgram_inversion as ifginv
@@ -32,19 +33,9 @@ from mintpy import ifgram_inversion as ifginv
 key_prefix = 'mintpy.unwrapError.'
 
 ##########################################################################################
-EXAMPLE = """Example:
+EXAMPLE = """example:
   unwrap_error_phase_closure.py  ./inputs/ifgramStack.h5  maskConnComp.h5  -t smallbaselineApp.cfg  --update
   unwrap_error_phase_closure.py  ./inputs/ifgramStack.h5  maskConnComp.h5  --water-mask waterMask.h5 --update
-"""
-
-TEMPLATE = """
-## Unwrapping Error Correction based on Phase Closure (Yunjun et al., 2019)
-mintpy.unwrapError.waterMaskFile   = auto  #[waterMask.h5 / no], auto for no
-"""
-
-REFERENCE = """Reference:
-  Yunjun, Z., H. Fattahi, F. Amelung, (2019) InSAR time series analysis: error correction
-  and noise reduction (submitted).
 """
 
 NOTE = """
@@ -57,6 +48,15 @@ NOTE = """
      error) to correct the wrong minority. And if most of interferograms have 
      unwrapping errors, then the minor right interferograms will turn into wrong.
 """
+
+REFERENCE = """reference:
+  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis:
+  Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
+  doi:10.1016/j.cageo.2019.104331.
+"""
+
+TEMPLATE = get_template_content('correct_unwrap_error')
+
 
 
 def create_parser():

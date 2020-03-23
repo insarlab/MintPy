@@ -3,6 +3,9 @@ Hierarchy of sub-modules within MintPy. Level N modules depends on level N-1, N-
 ```
 /mintpy
 ------------------ level 0 --------------------
+    /defaults
+        auto_path
+        template
     /objects
         colors
         giant
