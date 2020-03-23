@@ -7,6 +7,7 @@
 
 
 import os
+import sys
 import re
 import subprocess
 import argparse
@@ -35,11 +36,11 @@ EXAMPLE = """example:
   tropo_pyaps3.py -f timeseries.h5 -g inputs/geometryRadar.h5
 
   # download reanalysys dataset, calculate tropospheric delays
-  tropo_pyaps3.py -d date_list.txt     --hour 12 -m ERA5  -g inputs/geometryRadar.h5
+  tropo_pyaps3.py -d date.list         --hour 12 -m ERA5  -g inputs/geometryRadar.h5
   tropo_pyaps3.py -d 20151002 20151003 --hour 12 -m MERRA -g inputs/geometryRadar.h5
 
   # download reanalysys dataset
-  tropo_pyaps3.py -d date_list.txt     --hour 12 -m ECMWF
+  tropo_pyaps3.py -d date.list --hour 12
 """
 
 REFERENCE = """reference:
@@ -85,34 +86,35 @@ atmosphere/
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Tropospheric correction using weather models\n' +
-                                     '  PyAPS is used to download and calculate the delay for each time-series epoch.',
+                                     '  PyAPS is used to download and calculate the delay for each acquisition.',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=REFERENCE+'\n'+DATA_INFO+'\n'+EXAMPLE)
-    # For data download
-    parser.add_argument('-m', '--model', '-s', dest='tropo_model', default='ERA5',
-                        choices={'ERA5', 'ERAINT', 'MERRA', 'NARR'},
-                        help='source of the atmospheric model (default: %(default)s).')
-    parser.add_argument('-d', '--date-list', dest='date_list', nargs='*',
-                        help='Read the first column of text file as list of date to download data\n' +
-                             'in YYYYMMDD or YYMMDD format')
-    parser.add_argument('--hour', help='time of data in HH, e.g. 12, 06')
-    parser.add_argument('-w', '--dir', '--weather-dir', dest='weather_dir', default='${WEATHER_DIR}',
-                        help='parent directory of downloaded weather data file (default: %(default)s).\n' +
-                             'e.g.: '+WEATHER_DIR_DEMO)
 
-    # For delay calculation
-    parser.add_argument('-g','--geomtry', dest='geom_file', type=str,
-                        help='geometry file including height, incidenceAngle and/or latitude and longitude')
-    parser.add_argument('--ref-yx', dest='ref_yx', type=int,
-                        nargs=2, help='reference pixel in y/x')
-    parser.add_argument('--delay', dest='delay_type', default='comb', choices={'comb', 'dry', 'wet'},
-                        help='Delay type to calculate, comb contains both wet and dry delays (default: %(default)s).')
-
-    # For delay correction
     parser.add_argument('-f', '--file', dest='timeseries_file',
                         help='timeseries HDF5 file, i.e. timeseries.h5')
-    parser.add_argument('-o', dest='outfile',
+    parser.add_argument('-d', '--date-list', dest='date_list', type=str, nargs='*',
+                        help='List of dates in YYYYMMDD or YYMMDD format. It can be:\n'
+                             'a) list of strings OR\n'
+                             'b) a text file with the first column as list of date')
+    parser.add_argument('--hour', type=str, help='time of data in HH, e.g. 12, 06')
+    parser.add_argument('-o', dest='cor_timeseries_file',
                         help='Output file name for trospheric corrected timeseries.')
+
+    # delay calculation
+    delay = parser.add_argument_group('delay calculation')
+    delay.add_argument('-m', '--model', '-s', dest='tropo_model', default='ERA5',
+                       choices={'ERA5'},
+                       #choices={'ERA5', 'ERAINT', 'MERRA', 'NARR'},
+                       help='source of the atmospheric model (default: %(default)s).')
+    delay.add_argument('--delay', dest='delay_type', default='comb', choices={'comb', 'dry', 'wet'},
+                       help='Delay type to calculate, comb contains both wet and dry delays (default: %(default)s).')
+    delay.add_argument('-w', '--dir', '--weather-dir', dest='weather_dir', default='${WEATHER_DIR}',
+                       help='parent directory of downloaded weather data file (default: %(default)s).\n' +
+                            'e.g.: '+WEATHER_DIR_DEMO)
+    delay.add_argument('-g','--geomtry', dest='geom_file', type=str,
+                       help='geometry file including height, incidenceAngle and/or latitude and longitude')
+    delay.add_argument('--tropo-file', dest='tropo_file', type=str,
+                       help='tropospheric delay file name')
     return parser
 
 
@@ -121,109 +123,127 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # check the input requirements
-    key_list = ['date_list', 'hour']
-    # with timeseries file
-    if inps.timeseries_file:
-        for key in key_list+['ref_yx']:
-            if vars(inps)[key]:
-                print(('input "{:<10}" is ignored because it will be extracted from '
-                       'timeseries file {}').format(key, inps.timeseries_file))
+    ## print model info
+    print('weather model: {}'.format(inps.tropo_model))
 
-    # without timeseries file
-    elif any(not vars(inps)[key] for key in key_list):
-        msg = 'ERROR: No input timeseries file, all the following options are required: \n{}'.format(key_list)
+    ## weather_dir
+    # expand path for ~ and environmental variables in the path
+    inps.weather_dir = os.path.expanduser(inps.weather_dir)
+    inps.weather_dir = os.path.expandvars(inps.weather_dir)
+    # fallback value if WEATHER_DIR is not defined as environmental variable
+    if inps.weather_dir == '${WEATHER_DIR}':
+        inps.weather_dir = './'
+    inps.weather_dir = os.path.abspath(inps.weather_dir)
+    print('weather directory: {}'.format(inps.weather_dir))
+
+    ## ignore invalid filename inputs
+    for key in ['timeseries_file', 'geom_file']:
+        if vars(inps)[key] and not os.path.isfile(vars(inps)[key]):
+            vars(inps)[key] = None
+
+    ## required options (for date/time): --file OR --date-list, --hour
+    if (not inps.timeseries_file 
+            and any(vars(inps)[key] is None for key in ['date_list', 'hour'])):
+        msg = 'ERROR: --file OR (--date-list, --hour) is required.'
         msg += '\n\n'+EXAMPLE
         raise SystemExit(msg)
 
-    ## default values
-    print('weather model: '+inps.tropo_model)
+    ## output filename - tropo delay file
+    if inps.geom_file and not inps.tropo_file:
+        inps.tropo_file = os.path.join(os.path.dirname(inps.geom_file), '{}.h5'.format(inps.tropo_model))
+    if inps.tropo_file:
+        print('output tropospheric delay file: {}'.format(inps.tropo_file))
 
-    # weather_dir
-    inps.weather_dir = os.path.expanduser(inps.weather_dir)
-    inps.weather_dir = os.path.expandvars(inps.weather_dir)
-    # Fallback value if WEATHER_DIR is not defined as environmental variable
-    if inps.weather_dir == '${WEATHER_DIR}':
-        inps.weather_dir = './'
-    print('weather data directory: '+inps.weather_dir)
+    ## output filename - corrected displacement file
+    if inps.timeseries_file and not inps.cor_timeseries_file:
+        fbase = os.path.splitext(inps.timeseries_file)[0]
+        inps.cor_timeseries_file = '{}_{}.h5'.format(fbase, inps.tropo_model)
+    if inps.cor_timeseries_file:
+        print('output corrected time-series file: {}'.format(inps.cor_timeseries_file))
 
     return inps
 
 
 ###############################################################
-def check_inputs(inps):
-    parser = create_parser()
+def read_inps2date_time(inps):
+    """Read dates and time info from input arguments.
+    Related options: --file OR --date-list, --hour
 
-    # output directories/files
-    atr = dict()
-    mintpy_dir = None
+    Parameters: inps      - Namespace for the input arguments
+    Returns:    date_list - list of str, dates in YYYYMMDD format
+                hour      - str, hour in 2-digit with zero padding
+    """
+
+    # if --file is specified
     if inps.timeseries_file:
-        atr = readfile.read_attribute(inps.timeseries_file)
-        mintpy_dir = os.path.dirname(inps.timeseries_file)
-        if not inps.outfile:
-            fbase = os.path.splitext(inps.timeseries_file)[0]
-            inps.outfile = '{}_{}.h5'.format(fbase, inps.tropo_model)
-    elif inps.geom_file:
-        atr = readfile.read_attribute(inps.geom_file)
-        mintpy_dir = os.path.join(os.path.dirname(inps.geom_file), '..')
-    else:
-        mintpy_dir = os.path.abspath(os.getcwd())
+        # 1) ignore --date-list and --hour
+        for key in ['date_list', 'hour']:
+            if vars(inps)[key] is not None:
+                vars(inps)[key] = None
+                msg = 'input "{:<10}" is ignored'.format(key)
+                msg += ', use info from file {} instead'.format(inps.timeseries_file)
+                print(msg)
 
-    # tropo_file
-    inps.tropo_file = os.path.join(mintpy_dir, 'inputs/{}.h5'.format(inps.tropo_model))
-    print('output tropospheric delay file: {}'.format(inps.tropo_file))
-
-    # hour
-    if not inps.hour:
-        if 'CENTER_LINE_UTC' in atr.keys():
-            inps.hour = closest_weather_model_hour(atr['CENTER_LINE_UTC'], inps.tropo_model)
-        else:
-            parser.print_usage()
-            raise Exception('no input for hour')
-    print('time of cloest available product: {}:00 UTC'.format(inps.hour))
-
-    # date list
-    if inps.timeseries_file:
-        print('read date list from timeseries file: {}'.format(inps.timeseries_file))
+        # 2) read dates/time from time-series file
+        print('read dates/time info from file: {}'.format(inps.timeseries_file))
         ts_obj = timeseries(inps.timeseries_file)
         ts_obj.open(print_msg=False)
         inps.date_list = ts_obj.dateList
-    elif len(inps.date_list) == 1:
-        if os.path.isfile(inps.date_list[0]):
-            print('read date list from text file: {}'.format(inps.date_list[0]))
-            inps.date_list = ptime.yyyymmdd(np.loadtxt(inps.date_list[0],
-                                                       dtype=bytes,
-                                                       usecols=(0,)).astype(str).tolist())
-        else:
-            parser.print_usage()
-            raise Exception('ERROR: input date list < 2')
+        inps.hour = closest_weather_model_hour(ts_obj.metadata['CENTER_LINE_UTC'],
+                                               grib_source=inps.tropo_model)
 
-    # Grib data directory
+    # read dates if --date-list is text file
+    if len(inps.date_list) == 1 and os.path.isfile(inps.date_list[0]):
+        print('read date list from text file: {}'.format(inps.date_list[0]))
+        inps.date_list = np.loadtxt(inps.date_list[0],
+                                    dtype=bytes,
+                                    usecols=(0,)).astype(str).tolist()
+        inps.date_list = ptime.yyyymmdd(inps.date_list)
+
+    # at east 2 dates are required (for meaningful calculation)
+    if len(inps.date_list) < 2:
+        raise SystemExit('ERROR: input date list < 2')      
+
+    # print time info
+    print('time of cloest available product: {}:00 UTC'.format(inps.hour))
+
+    return inps.date_list, inps.hour
+
+
+def get_grib_info(inps):
+    """Read the following info from inps
+        inps.grib_dir
+        inps.atr
+        inps.snwe
+        inps.grib_files
+    """
+    # grib data directory, under weather_dir
     inps.grib_dir = os.path.join(inps.weather_dir, inps.tropo_model)
     if not os.path.isdir(inps.grib_dir):
         os.makedirs(inps.grib_dir)
-        print('making directory: '+inps.grib_dir)
+        print('make directory: {}'.format(inps.grib_dir))
+
+    # read metadata
+    if inps.timeseries_file:
+        inps.atr = readfile.read_attribute(inps.timeseries_file)
+    elif inps.geom_file:
+        inps.atr = readfile.read_attribute(inps.geom_file)
+    else:
+        inps.atr = dict()
 
     # area extent for ERA5 grib data download
-    inps.snwe = get_snwe(atr)
-
-    # Date list to grib file list
-    inps.grib_file_list = date_list2grib_file(date_list=inps.date_list,
-                                              hour=inps.hour,
-                                              model=inps.tropo_model,
-                                              grib_dir=inps.grib_dir,
-                                              snwe=inps.snwe)
-
-    # reference point in space
-    if 'REF_Y' in atr.keys():
-        inps.ref_yx = [int(atr['REF_Y']), int(atr['REF_X'])]
-
-    if inps.ref_yx is not None:
-        print('calculate spatially relative delay with respect to the point below.')
-        print('reference pixel: {}'.format(inps.ref_yx))
+    if inps.atr:
+        inps.snwe = get_snwe(inps.atr)
     else:
-        print('calculate spatially absolute delay with NO reference point.')
-    return inps, atr
+        inps.snwe = None
+
+    # grib file list
+    inps.grib_files = get_grib_filenames(date_list=inps.date_list,
+                                         hour=inps.hour,
+                                         model=inps.tropo_model,
+                                         grib_dir=inps.grib_dir,
+                                         snwe=inps.snwe)
+    return inps
 
 
 ###############################################################
@@ -231,26 +251,34 @@ def closest_weather_model_hour(sar_acquisition_time, grib_source='ERA5'):
     """Find closest available time of weather product from SAR acquisition time
     Inputs:
         sar_acquisition_time - string, SAR data acquisition time in seconds
-        grib_source - string, Grib Source of weather reanalysis product
+        grib_source          - string, Grib Source of weather reanalysis product
     Output:
-        grib_hr - string, time of closest available weather product
+        grib_hr              - string, time of closest available weather product
     Example:
         '06' = closest_weather_model_hour(atr['CENTER_LINE_UTC'])
         '12' = closest_weather_model_hour(atr['CENTER_LINE_UTC'], 'NARR')
     """
-    # Get hour/min of SAR acquisition time
+    # get hour/min of SAR acquisition time
     sar_time = float(sar_acquisition_time)
 
-    # Find closest time in available weather products
+    # find closest time in available weather products
     grib_hr_list = WEATHER_MODEL_HOURS[grib_source]
     grib_hr = int(min(grib_hr_list, key=lambda x: abs(x-sar_time/3600.)))
 
-    # Adjust time output format
-    grib_hr = "%02d" % grib_hr
+    # add zero padding
+    grib_hr = "{:02d}".format(grib_hr)
     return grib_hr
 
 
-def date_list2grib_file(date_list, hour, model, grib_dir, snwe=None):
+def get_grib_filenames(date_list, hour, model, grib_dir, snwe=None):
+    """Get default grib file names based on input info.
+    Parameters: date_list  - list of str, date in YYYYMMDD format
+                hour       - str, hour in 2-digit with zero padding
+                model      - str, global atmospheric model name
+                grib_dir   - str, local directory to save grib files
+                snwe       - tuple of 4 int, for ERA5 only.
+    Returns:    grib_files - list of str, local grib file path
+    """
     # area extent
     area = snwe2str(snwe)
 
@@ -367,25 +395,25 @@ def check_exist_grib_file(gfile_list, print_msg=True):
     return gfile_exist
 
 
-def dload_grib_files(grib_file_list, tropo_model='ERA5', snwe=None):
+def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
     """Download weather re-analysis grib files using PyAPS
-    Parameters: grib_file_list : list of string of grib files
-    Returns:    grib_file_list : list of string
+    Parameters: grib_files : list of string of grib files
+    Returns:    grib_files : list of string
     """
     print('\n------------------------------------------------------------------------------')
     print('downloading weather model data using PyAPS ...')
 
     # Get date list to download (skip already downloaded files)
-    grib_file_exist = check_exist_grib_file(grib_file_list, print_msg=True)
-    grib_file2dload = sorted(list(set(grib_file_list) - set(grib_file_exist)))
-    date_list2dload = [str(re.findall('\d{8}', i)[0]) for i in grib_file2dload]
+    grib_files_exist = check_exist_grib_file(grib_files, print_msg=True)
+    grib_files2dload = sorted(list(set(grib_files) - set(grib_files_exist)))
+    date_list2dload = [str(re.findall('\d{8}', i)[0]) for i in grib_files2dload]
     print('number of grib files to download: %d' % len(date_list2dload))
     print('------------------------------------------------------------------------------\n')
 
     # Download grib file using PyAPS
     if len(date_list2dload) > 0:
-        hour = re.findall('\d{8}[-_]\d{2}', grib_file2dload[0])[0].replace('-', '_').split('_')[1]
-        grib_dir = os.path.dirname(grib_file2dload[0])
+        hour = re.findall('\d{8}[-_]\d{2}', grib_files2dload[0])[0].replace('-', '_').split('_')[1]
+        grib_dir = os.path.dirname(grib_files2dload[0])
 
         # try 3 times to download, then use whatever downloaded to calculate delay
         i = 0
@@ -396,7 +424,7 @@ def dload_grib_files(grib_file_list, tropo_model='ERA5', snwe=None):
                     pa.ECMWFdload(date_list2dload, hour, grib_dir,
                                   model=tropo_model,
                                   snwe=snwe,
-                                  flist=grib_file2dload)
+                                  flist=grib_files2dload)
 
                 elif tropo_model == 'MERRA':
                     pa.MERRAdload(date_list2dload, hour, grib_dir)
@@ -406,8 +434,9 @@ def dload_grib_files(grib_file_list, tropo_model='ERA5', snwe=None):
             except:
                 pass
 
-    grib_file_list = check_exist_grib_file(grib_file_list, print_msg=False)
-    return grib_file_list
+    # check potentially corrupted files
+    grib_files = check_exist_grib_file(grib_files, print_msg=False)
+    return grib_files
 
 
 def get_delay(grib_file, inps):
@@ -437,10 +466,8 @@ def get_delay(grib_file, inps):
     pha = np.zeros((aps_obj.ny, aps_obj.nx), dtype=np.float32)
     aps_obj.getdelay(pha)
 
-    # Get relative phase delay in space
-    if inps.ref_yx:
-        pha -= pha[inps.ref_yx[0], inps.ref_yx[1]]
-    pha *= -1  # reverse the sign for consistency between different phase correction steps/methods
+    # reverse the sign for consistency between different phase correction steps/methods
+    pha *= -1
     return pha
 
 
@@ -469,27 +496,20 @@ def get_bounding_box(meta):
     return lat0, lat1, lon0, lon1
 
 
-def get_delay_timeseries(inps, atr):
+def calculate_delay_timeseries(inps):
     """Calculate delay time-series and write it to HDF5 file.
     Parameters: inps : namespace, all input parameters
-                atr  : dict, metadata to be saved in tropo_file
     Returns:    tropo_file : str, file name of ECMWF.h5
     """
     def get_dataset_size(fname):
         atr = readfile.read_attribute(fname)
-        return (atr['LENGTH'], atr['WIDTH'])
+        shape = (int(atr['LENGTH']), int(atr['WIDTH']))
+        return shape
 
-    # check 1 - existing tropo delay file
-    if (ut.run_or_skip(out_file=inps.tropo_file, in_file=inps.grib_file_list, print_msg=False) == 'skip'
+    # check existing tropo delay file
+    if (ut.run_or_skip(out_file=inps.tropo_file, in_file=inps.grib_files, print_msg=False) == 'skip'
             and get_dataset_size(inps.tropo_file) == get_dataset_size(inps.geom_file)):
         print('{} file exists and is newer than all GRIB files, skip updating.'.format(inps.tropo_file))
-        return
-
-    # check 2 - geometry file
-    if any(i is None for i in [inps.geom_file]):
-        print('No DEM / incidenceAngle found, skip calculating tropospheric delays.')
-        if not os.path.isfile(inps.tropo_file):
-            inps.tropo_file = None
         return
 
     # prepare geometry data
@@ -510,46 +530,40 @@ def get_delay_timeseries(inps, atr):
         inps.lat, inps.lon = ut.get_lat_lon_rdc(geom_obj.metadata)
 
     # calculate phase delay
-    length, width = int(atr['LENGTH']), int(atr['WIDTH'])
-    num_date = len(inps.grib_file_list)
-    date_list = [str(re.findall('\d{8}', i)[0]) for i in inps.grib_file_list]
+    length, width = int(inps.atr['LENGTH']), int(inps.atr['WIDTH'])
+    num_date = len(inps.grib_files)
+    date_list = [str(re.findall('\d{8}', i)[0]) for i in inps.grib_files]
     tropo_data = np.zeros((num_date, length, width), np.float32)
-
-    print('calcualting delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
+    print('\n------------------------------------------------------------------------------')
+    print('calcualting absolute delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
     print('number of grib files used: {}'.format(num_date))
     prog_bar = ptime.progressBar(maxValue=num_date)
     for i in range(num_date):
-        grib_file = inps.grib_file_list[i]
+        grib_file = inps.grib_files[i]
         tropo_data[i] = get_delay(grib_file, inps)
         prog_bar.update(i+1, suffix=os.path.basename(grib_file))
     prog_bar.close()
 
-    # save absolute delay for more generic usage
-    # since diff.py can handle different reference date.
-    if 'REF_DATE' in atr.keys():
-        atr.pop('REF_DATE')
-    ## Convert relative phase delay on reference date
-    #inps.ref_date = atr.get('REF_DATE', date_list[0])
-    #print('convert to relative phase delay with reference date: '+inps.ref_date)
-    #inps.ref_idx = date_list.index(inps.ref_date)
-    #tropo_data -= np.tile(tropo_data[inps.ref_idx, :, :], (num_date, 1, 1))
-    #atr['REF_DATE'] = inps.ref_date
+    # remove metadata related with double reference
+    # because absolute delay is calculated and saved
+    for key in ['REF_DATE','REF_X','REF_Y','REF_LAT','REF_LON']:
+        if key in inps.atr.keys():
+            inps.atr.pop(key)
 
     # Write tropospheric delay to HDF5
-    if inps.ref_yx:
-        atr['REF_Y'] = inps.ref_yx[0]
-        atr['REF_X'] = inps.ref_yx[1]
     ts_obj = timeseries(inps.tropo_file)
     ts_obj.write2hdf5(data=tropo_data,
                       dates=date_list,
-                      metadata=atr,
+                      metadata=inps.atr,
                       refFile=inps.timeseries_file)
-    return
+    return inps.tropo_file
 
 
 def correct_timeseries(timeseries_file, tropo_file, out_file):
+    # diff.py can handle different reference in space and time
+    # between the absolute tropospheric delay and the double referenced time-series
     print('\n------------------------------------------------------------------------------')
-    print('correcting delay for input time-series by calling diff.py')
+    print('correcting relative delay for input time-series using diff.py')
     cmd = 'diff.py {} {} -o {} --force'.format(timeseries_file,
                                                tropo_file,
                                                out_file)
@@ -564,24 +578,36 @@ def correct_timeseries(timeseries_file, tropo_file, out_file):
 ###############################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    inps, atr = check_inputs(inps)
 
-    inps.grib_file_list = dload_grib_files(inps.grib_file_list,
-                                           inps.tropo_model,
-                                           snwe=inps.snwe)
+    # read dates / time info
+    read_inps2date_time(inps)
 
-    get_delay_timeseries(inps, atr)
+    # get corresponding grib files info
+    get_grib_info(inps)
 
-    if atr and atr['FILE_TYPE'] == 'timeseries':
-        inps.outfile = correct_timeseries(inps.timeseries_file,
-                                          inps.tropo_file,
-                                          out_file=inps.outfile)
+    # download
+    inps.grib_files = dload_grib_files(inps.grib_files, 
+                                       tropo_model=inps.tropo_model,
+                                       snwe=inps.snwe)
+
+    # calculate tropo delay and save to h5 file
+    if inps.geom_file:
+        calculate_delay_timeseries(inps)
+    else:
+        print('No input geometry file, skip calculating and correcting tropospheric delays.')
+        return
+
+    # correct tropo delay from displacement time-series
+    if inps.timeseries_file and inps.atr['FILE_TYPE'] == 'timeseries':
+        correct_timeseries(inps.timeseries_file,
+                           tropo_file=inps.tropo_file,
+                           out_file=inps.cor_timeseries_file)
     else:
         print('No input timeseries file, skip correcting tropospheric delays.')
 
-    return inps.outfile
+    return
 
 
 ###############################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
