@@ -12,6 +12,16 @@ import os
 import re
 
 
+STEP_LIST4OFFSET = [
+    'load_data',
+    'modify_network',
+    'invert_network',
+    'deramp',
+    'velocity',
+    'geocode',
+    'google_earth',
+]
+
 STEP_LIST = [
     'load_data',
     'modify_network',
