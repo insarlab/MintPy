@@ -150,7 +150,7 @@ def cmd_line_parse(iargs=None):
 
     # check input file type
     atr = readfile.read_attribute(inps.ifgramStackFile)
-    if atr['FILE_TYPE'] is not in ['ifgramStack']:
+    if atr['FILE_TYPE'] not in ['ifgramStack']:
         raise ValueError('input is {} file, support ifgramStack file only.'.format(atr['FILE_TYPE']))
 
     if inps.templateFile:
