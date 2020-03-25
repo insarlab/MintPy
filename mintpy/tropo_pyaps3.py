@@ -124,7 +124,14 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     ## print model info
-    print('weather model: {}'.format(inps.tropo_model))
+    msg = 'weather model: {}'.format(inps.tropo_model)
+    if inps.delay_type == 'dry':
+        msg += ' - dry (hydrostatic) delay'
+    elif inps.delay_type == 'wet':
+        msg += ' - wet delay'
+    else:
+        msg += ' - dry (hydrostatic) and wet delay'
+    print(msg)
 
     ## weather_dir
     # expand path for ~ and environmental variables in the path
@@ -138,8 +145,9 @@ def cmd_line_parse(iargs=None):
 
     ## ignore invalid filename inputs
     for key in ['timeseries_file', 'geom_file']:
-        if vars(inps)[key] and not os.path.isfile(vars(inps)[key]):
-            vars(inps)[key] = None
+        fname = vars(inps)[key]
+        if fname and not os.path.isfile(fname):
+            raise FileExistsError('input file not exist: {}'.format(fname))
 
     ## required options (for date/time): --file OR --date-list, --hour
     if (not inps.timeseries_file 

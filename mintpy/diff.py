@@ -43,17 +43,28 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # for timeseries and ifgramStack, only two files differencing is supported
+    atr = readfile.read_attribute(inps.file1)
+    if atr['FILE_TYPE'] in ['timeseries', 'ifgramStack']:
+        if len(inps.file2) > 1:
+            raise SystemExit('ERROR: only one file2 is inputed for {} type'.format(atr['FILE_TYPE']))
     return inps
 
 
 #####################################################################################
 def _check_reference(atr1, atr2):
+    """Check reference date and point
+    Parameters: atr1/2   - dict, metadata of file1/2
+    Returns:    ref_date - str, None for re-referencing in time  is NOT needed
+                ref_y/x  - int, None for re-referencing in space is NOT needed
+    """
     # reference date
-    if atr1['REF_DATE'] == atr2['REF_DATE']:
+    if atr1['REF_DATE'] == atr2.get('REF_DATE', None):
         ref_date = None
     else:
         ref_date = atr1['REF_DATE']
-        print('consider different reference date')
+        #print('consider different reference date')
 
     # reference point
     ref_y = atr1.get('REF_Y', None)
@@ -62,8 +73,13 @@ def _check_reference(atr1, atr2):
         ref_y = None
         ref_x = None
     else:
-        print('consider different reference pixel')
+        ref_y = ref_y
+        ref_x = ref_x
+        #print('consider different reference pixel')
+
+    if ref_y is not None:
         ref_y = int(ref_y)
+    if ref_x is not None:
         ref_x = int(ref_x)
     return ref_date, ref_y, ref_x
 
@@ -91,40 +107,42 @@ def diff_file(file1, file2, outFile=None, force=False):
             raise Exception(('Only 2 files substraction is supported for time-series file,'
                              ' {} input.'.format(len(file2)+1)))
 
-        obj1 = timeseries(file1)
-        obj1.open()
+        atr1 = readfile.read_attribute(file1)
+        atr2 = readfile.read_attribute(file2[0])
+        dateList1 = timeseries(file1).get_date_list()
         if k2 == 'timeseries':
-            obj2 = timeseries(file2[0])
+            dateList2 = timeseries(file2[0]).get_date_list()
             unit_fac = 1.
         elif k2 == 'giantTimeseries':
-            obj2 = giantTimeseries(file2[0])
+            dateList2 = giantTimeseries(file2[0]).get_date_list()
             unit_fac = 0.001
-        obj2.open()
-        ref_date, ref_y, ref_x = _check_reference(obj1.metadata, obj2.metadata)
+        ref_date, ref_y, ref_x = _check_reference(atr1, atr2)
 
         # check dates shared by two timeseries files
-        dateListShared = [i for i in obj1.dateList if i in obj2.dateList]
-        dateShared = np.ones((obj1.numDate), dtype=np.bool_)
-        if dateListShared != obj1.dateList:
+        dateListShared = [i for i in dateList1 if i in dateList2]
+        dateShared = np.ones((len(dateList1)), dtype=np.bool_)
+        if dateListShared != dateList1:
             print('WARNING: {} does not contain all dates in {}'.format(file2, file1))
             if force:
-                dateExcluded = list(set(obj1.dateList) - set(dateListShared))
+                dateExcluded = list(set(dateList1) - set(dateListShared))
                 print('Continue and enforce the differencing for their shared dates only.')
                 print('\twith following dates are ignored for differencing:\n{}'.format(dateExcluded))
-                dateShared[np.array([obj1.dateList.index(i) for i in dateExcluded])] = 0
+                dateShared[np.array([dateList1.index(i) for i in dateExcluded])] = 0
             else:
                 raise Exception('To enforce the differencing anyway, use --force option.')
 
         # consider different reference_date/pixel
         data2 = readfile.read(file2[0], datasetName=dateListShared)[0] * unit_fac
         if ref_date:
+            print('* referencing data from {} to date: {}'.format(os.path.basename(file2[0]), ref_date))
             data2 -= np.tile(data2[dateListShared.index(ref_date), :, :],
                              (data2.shape[0], 1, 1))
         if ref_y and ref_x:
+            print('* referencing data from {} to y/x: {}/{}'.format(os.path.basename(file2[0]), ref_y, ref_x))
             data2 -= np.tile(data2[:, ref_y, ref_x].reshape(-1, 1, 1),
                              (1, data2.shape[1], data2.shape[2]))
 
-        data = obj1.read()
+        data = readfile.read(file1)[0]
         mask = data == 0.
         data[dateShared] -= data2
         data[mask] = 0.               # Do not change zero phase value
@@ -184,11 +202,11 @@ def diff_file(file1, file2, outFile=None, force=False):
 
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    start_time = time.time()
+    #start_time = time.time()
 
     inps.outfile = diff_file(inps.file1, inps.file2, inps.outfile, force=inps.force)
 
-    m, s = divmod(time.time()-start_time, 60)
+    #m, s = divmod(time.time()-start_time, 60)
     #print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))
     return inps.outfile
 
