@@ -570,9 +570,12 @@ def check_colormap_input(metadata, cmap_name=None, datasetName=None, cmap_lut=25
 def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1, buffer_year=0.2):
     """Adjust X axis
     Input:
-        ax : matplotlib figure axes object
-        datevector : list of float, date in years
-                     i.e. [2007.013698630137, 2007.521917808219, 2007.6463470319634]
+        ax          - matplotlib figure axes object
+        datevector  - list of float, date in years
+                         i.e. [2007.013698630137, 2007.521917808219, 2007.6463470319634]
+                      OR list of datetime.datetime objects
+        every_year  - int, number of years per major locator
+        buffer_year - float in years, None for keep the original xlim range.
     Output:
         ax  - matplotlib figure axes object
         dss - datetime.datetime object, xmin
@@ -583,14 +586,17 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1, buffer_yea
         datevector = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in datevector]
 
     # Min/Max
-    ts = datevector[0]  - buffer_year;        ys=int(ts);  ms=int((ts - ys) * 12.0)
-    te = datevector[-1] + buffer_year + 0.1;  ye=int(te);  me=int((te - ye) * 12.0)
-    if ms > 12:   ys = ys + 1;   ms = 1
-    if me > 12:   ye = ye + 1;   me = 1
-    if ms < 1:    ys = ys - 1;   ms = 12
-    if me < 1:    ye = ye - 1;   me = 12
-    dss = datetime.datetime(ys, ms, 1, 0, 0)
-    dee = datetime.datetime(ye, me, 1, 0, 0)
+    if buffer_year is not None:
+        ts = datevector[0]  - buffer_year;        ys=int(ts);  ms=int((ts - ys) * 12.0)
+        te = datevector[-1] + buffer_year + 0.1;  ye=int(te);  me=int((te - ye) * 12.0)
+        if ms > 12:   ys = ys + 1;   ms = 1
+        if me > 12:   ye = ye + 1;   me = 1
+        if ms < 1:    ys = ys - 1;   ms = 12
+        if me < 1:    ye = ye - 1;   me = 12
+        dss = datetime.datetime(ys, ms, 1, 0, 0)
+        dee = datetime.datetime(ye, me, 1, 0, 0)
+    else:
+        (dss, dee) = ax.get_xlim()
     ax.set_xlim(dss, dee)
 
     # Label/Tick format
