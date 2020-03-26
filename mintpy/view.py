@@ -1029,6 +1029,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
                 subplot_title = dt.datetime.strptime(inps.dset[i].split('-')[1], '%Y%m%d').isoformat()[0:10]
             except:
                 subplot_title = str(inps.dset[i])
+
         elif inps.key in ['ifgramStack', 'interferograms', 'coherence', 'wrapped']:
             num_subplot = inps.fig_row_num * inps.fig_col_num
             if num_subplot <= 10:
@@ -1043,15 +1044,28 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
 
         # plot title
         if subplot_title:
-            if not inps.fig_title_in:
-                if inps.dset[i] in inps.dropDatasetList:
-                    ax.set_title(subplot_title, fontsize=inps.font_size,
-                                 color='crimson', fontweight='bold')
-                else:
-                    ax.set_title(subplot_title, fontsize=inps.font_size)
-            else:
+            if inps.fig_title_in:
                 prop = dict(size=inps.font_size)
                 pp.add_inner_title(ax, subplot_title, loc=1, prop=prop)
+            else:
+                kwarg = dict(fontsize=inps.font_size)
+                # mark dropped interferograms in bold crimson
+                if inps.dset[i] in inps.dropDatasetList:
+                    kwarg['color'] = 'crimson'
+                    kwarg['fontweight'] = 'bold'
+                else:
+                    # special titles for Sentinel-1 data
+                    if metadata.get('PLATFORM', None) == 'Sen' and inps.disp_title4sentinel1:
+                        # display S1A/B in different colors
+                        s1_sensor = metadata['SENTINEL1_SENSOR'].split()[i]
+                        if s1_sensor == 'A':
+                            kwarg['color'] = pp.mplColors[0]
+                        else:
+                            kwarg['color'] = pp.mplColors[1]
+                        # display IPF in subplot title
+                        s1_IPF = metadata['SENTINEL1_IPF'].split()[i]
+                        subplot_title += ' : {}'.format(s1_IPF)
+                ax.set_title(subplot_title, **kwarg)
 
     # Flip Left-Right / Up-Down
     if inps.flip_lr:

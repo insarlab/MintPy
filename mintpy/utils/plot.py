@@ -196,6 +196,8 @@ def add_figure_argument(parser):
                      action='store_true', help='draw title in/out of axes')
     fig.add_argument('--figtitle', dest='fig_title',
                      help='Title shown in the figure.')
+    fig.add_argument('--title4sen','--title4sentinel1', dest='disp_title4sentinel1', action='store_true',
+                     help='display Sentinel-1 A/B and IPF info in title.')
 
     # size, subplots number and space
     fig.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
