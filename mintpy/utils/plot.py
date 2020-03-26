@@ -1643,15 +1643,18 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
     if os.path.isfile(str(mask_file)):
         try:
             atrMsk = readfile.read_attribute(mask_file)
-            if atrMsk['LENGTH'] == atr['LENGTH'] and atrMsk['WIDTH'] == atr['WIDTH']:
+            if all(int(atrMsk[key]) == int(atr[key]) for key in ['LENGTH','WIDTH']):
                 msk = readfile.read(mask_file, box=box, print_msg=print_msg)[0]
                 if print_msg:
                     print('read mask from file:', os.path.basename(mask_file))
             else:
                 mask_file = None
                 if print_msg:
-                    print('WARNING: input file has different size from mask file: {}'.format(mask_file))
-                    print('    Continue without mask')
+                    msg = 'WARNING: input file has different size from mask file: {}'.format(mask_file)
+                    msg += '\n    data file {} row/column number: {} / {}'.format(fname, atr['LENGTH'], atr['WIDTH'])
+                    msg += '\n    mask file {} row/column number: {} / {}'.format(mask_file, atrMsk['LENGTH'], atrMsk['WIDTH'])
+                    msg += '\n    Continue without mask.'
+                    print(msg)
         except:
             mask_file = None
             if print_msg:

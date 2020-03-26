@@ -134,6 +134,12 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # check invalid file inputs
+    for key in ['file','dem_file','mask_file','pts_file']:
+        fname = vars(inps)[key]
+        if fname not in [None,'no'] and not os.path.isfile(fname):
+            raise FileExistsError('input {} file {} NOT exist!'.format(key, fname))
+
     # --exclude
     if inps.exDsetList:
         inps.exDsetList = ptime.read_date_list(inps.exDsetList)
