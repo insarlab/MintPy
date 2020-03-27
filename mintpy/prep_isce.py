@@ -92,6 +92,7 @@ def get_processor(meta_file):
 
 def load_product(xmlname):
     """Load the product using Product Manager."""
+    import isce
     from iscesys.Component.ProductManager import ProductManager as PM
     pm = PM()
     pm.configure()
@@ -105,6 +106,7 @@ def extract_tops_metadata(xml_file):
     Returns:    meta     : dict, metadata
     """
     import isce
+    import isceobj
     from isceobj.Planet.Planet import Planet
 
     obj = load_product(xml_file)

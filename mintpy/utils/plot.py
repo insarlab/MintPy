@@ -196,6 +196,8 @@ def add_figure_argument(parser):
                      action='store_true', help='draw title in/out of axes')
     fig.add_argument('--figtitle', dest='fig_title',
                      help='Title shown in the figure.')
+    fig.add_argument('--title4sen','--title4sentinel1', dest='disp_title4sentinel1', action='store_true',
+                     help='display Sentinel-1 A/B and IPF info in title.')
 
     # size, subplots number and space
     fig.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
@@ -570,9 +572,12 @@ def check_colormap_input(metadata, cmap_name=None, datasetName=None, cmap_lut=25
 def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1, buffer_year=0.2):
     """Adjust X axis
     Input:
-        ax : matplotlib figure axes object
-        datevector : list of float, date in years
-                     i.e. [2007.013698630137, 2007.521917808219, 2007.6463470319634]
+        ax          - matplotlib figure axes object
+        datevector  - list of float, date in years
+                         i.e. [2007.013698630137, 2007.521917808219, 2007.6463470319634]
+                      OR list of datetime.datetime objects
+        every_year  - int, number of years per major locator
+        buffer_year - float in years, None for keep the original xlim range.
     Output:
         ax  - matplotlib figure axes object
         dss - datetime.datetime object, xmin
@@ -583,14 +588,17 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1, buffer_yea
         datevector = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in datevector]
 
     # Min/Max
-    ts = datevector[0]  - buffer_year;        ys=int(ts);  ms=int((ts - ys) * 12.0)
-    te = datevector[-1] + buffer_year + 0.1;  ye=int(te);  me=int((te - ye) * 12.0)
-    if ms > 12:   ys = ys + 1;   ms = 1
-    if me > 12:   ye = ye + 1;   me = 1
-    if ms < 1:    ys = ys - 1;   ms = 12
-    if me < 1:    ye = ye - 1;   me = 12
-    dss = datetime.datetime(ys, ms, 1, 0, 0)
-    dee = datetime.datetime(ye, me, 1, 0, 0)
+    if buffer_year is not None:
+        ts = datevector[0]  - buffer_year;        ys=int(ts);  ms=int((ts - ys) * 12.0)
+        te = datevector[-1] + buffer_year + 0.1;  ye=int(te);  me=int((te - ye) * 12.0)
+        if ms > 12:   ys = ys + 1;   ms = 1
+        if me > 12:   ye = ye + 1;   me = 1
+        if ms < 1:    ys = ys - 1;   ms = 12
+        if me < 1:    ye = ye - 1;   me = 12
+        dss = datetime.datetime(ys, ms, 1, 0, 0)
+        dee = datetime.datetime(ye, me, 1, 0, 0)
+    else:
+        (dss, dee) = ax.get_xlim()
     ax.set_xlim(dss, dee)
 
     # Label/Tick format
@@ -1635,15 +1643,18 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
     if os.path.isfile(str(mask_file)):
         try:
             atrMsk = readfile.read_attribute(mask_file)
-            if atrMsk['LENGTH'] == atr['LENGTH'] and atrMsk['WIDTH'] == atr['WIDTH']:
+            if all(int(atrMsk[key]) == int(atr[key]) for key in ['LENGTH','WIDTH']):
                 msk = readfile.read(mask_file, box=box, print_msg=print_msg)[0]
                 if print_msg:
                     print('read mask from file:', os.path.basename(mask_file))
             else:
                 mask_file = None
                 if print_msg:
-                    print('WARNING: input file has different size from mask file: {}'.format(mask_file))
-                    print('    Continue without mask')
+                    msg = 'WARNING: input file has different size from mask file: {}'.format(mask_file)
+                    msg += '\n    data file {} row/column number: {} / {}'.format(fname, atr['LENGTH'], atr['WIDTH'])
+                    msg += '\n    mask file {} row/column number: {} / {}'.format(mask_file, atrMsk['LENGTH'], atrMsk['WIDTH'])
+                    msg += '\n    Continue without mask.'
+                    print(msg)
         except:
             mask_file = None
             if print_msg:
