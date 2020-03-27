@@ -10,7 +10,9 @@
 
 The Miami INsar Time-series software in PYthon (MintPy) is an open-source package for Interferometric Synthetic Aperture Radar time series analysis. It reads the stack of interferograms (coregistered and unwrapped) in [ISCE](https://github.com/isce-framework/isce2), GAMMA, [ARIA](https://github.com/aria-tools/ARIA-tools), [SNAP](http://step.esa.int/) or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground surface displacement in line-of-sight direction. It includes a routine time series analysis (`smallbaselineApp.py`) and some independent toolbox.
 
-This package was called PySAR before version 1.1.1. For version 1.1.2 and onward, we use MintPy instead. This is research code provided to you "as is" with NO WARRANTIES OF CORRECTNESS. Use at your own risk.
+This package was called PySAR before version 1.1.1. For version 1.1.2 and onward, we use MintPy instead. 
+
+This is research code provided to you "as is" with NO WARRANTIES OF CORRECTNESS. Use at your own risk.
 
 ### 1. [Installation](./installation.md) ###
 
@@ -74,7 +76,6 @@ MintPy is a toolbox with a lot of individual utility scripts, modulized in Pytho
 + [Example data directory](./dir_structure.md)
 + [Example template files for InSAR processors](./examples/input_files/README.md)
 + [Google Earth KMZ file](./google_earth.md)
-+ [Paper figures in Jupyter Notebook](https://github.com/geodesymiami/Yunjun_et_al-2019-MintPy)
 
 ### 4. User Forum ###
 
@@ -82,7 +83,7 @@ Join our google group [https://groups.google.com/forum/#!forum/mintpy](https://g
 
 ### 5. Citing this work ###
 
-Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: Unwrapping error correction and noise reduction, _Computers & Geosciences_, _133_, 104331, doi:[10.1016/j.cageo.2019.104331](https://doi.org/10.1016/j.cageo.2019.104331), [ArXiv](https://eartharxiv.org/9sz6m/).
+Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: Unwrapping error correction and noise reduction, _Computers & Geosciences_, _133_, 104331, doi:[10.1016/j.cageo.2019.104331](https://doi.org/10.1016/j.cageo.2019.104331), [arXiv](https://eartharxiv.org/9sz6m/), [data & figures](https://github.com/geodesymiami/Yunjun_et_al-2019-MintPy).
 
 In addition to the above, we recommend that you cite the original publications that describe the algorithms used in your specific analysis. They are noted briefly in the [default template file](../mintpy/defaults/smallbaselineApp.cfg) and listed in [here](./references.md).
 

@@ -1273,7 +1273,7 @@ def prep_slice(cmd, auto_fig=False):
                               print_msg=False)[0]
     # reference in space for unwrapPhase
     if (inps.key in ['ifgramStack']
-            and inps.dset[0].split('-')[0] == 'unwrapPhase'
+            and inps.dset[0].split('-')[0].startswith('unwrapPhase')
             and 'REF_Y' in atr.keys()):
         ref_y, ref_x = int(atr['REF_Y']), int(atr['REF_X'])
         ref_data = readfile.read(inps.file,
@@ -1353,7 +1353,7 @@ class viewer():
 
             # reference in space for unwrapPhase
             if (self.key in ['ifgramStack']
-                    and self.dset[0].split('-')[0] == 'unwrapPhase'
+                    and self.dset[0].split('-')[0].startswith('unwrapPhase')
                     and 'REF_Y' in self.atr.keys()):
                 ref_y, ref_x = int(self.atr['REF_Y']), int(self.atr['REF_X'])
                 ref_data = readfile.read(self.file,
