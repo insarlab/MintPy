@@ -26,8 +26,14 @@ class resample:
        (https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.RegularGridInterpolator.html)
 
     Example:
+        # prepare resample object
         res_obj = resample(lookupFile='./inputs/geometryGeo.h5', dataFile='velocity.h5')
         res_obj = resample(lookupFile='./inputs/geometryRadar.h5', dataFile='temporalCoherence.h5')
+        res_obj.open()
+
+        # run geocoding
+        rdr_data = readfile.read('temporalCoherence.h5')[0]
+        geo_data = res_obj.run_resample(src_data=rdr_data, interp_method='nearest', fill_value=np.nan)
     """
 
     def __init__(self, lookupFile, dataFile, SNWE=None, laloStep=None, processor=None):

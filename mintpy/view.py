@@ -35,11 +35,6 @@ from mintpy import subset, version
 
 
 ##################################################################################################
-PROJECTION_NAME2OBJ = {
-    'PlateCarree': ccrs.PlateCarree(),
-    'LambertConformal': ccrs.LambertConformal(),
-}
-
 EXAMPLE = """example:
   view.py velocity.h5
   view.py velocity.h5  velocity  --vlim -2 2  -c RdBu
@@ -309,6 +304,16 @@ def update_inps_with_file_metadata(inps, metadata):
                                                             wrap_range=inps.wrap_range,
                                                             print_msg=inps.print_msg)
 
+    # Map info - coordinate unit and map projection
+    inps.coord_unit = metadata.get('Y_UNIT', 'degrees').lower()
+    if (inps.geo_box
+            and inps.fig_coord == 'geo'
+            and inps.coord_unit.startswith('deg')
+            and inps.lalo_label):
+        inps.proj_obj = eval('ccrs.{}()'.format(inps.map_projection))
+    else:
+        inps.proj_obj = None
+
     # Min / Max - Display
     if not inps.vlim:
         if (any(i in inps.key.lower() for i in ['coherence', '.cor'])
@@ -428,9 +433,8 @@ def plot_slice(ax, data, metadata, inps=None):
     #----------------------- Plot in Geo-coordinate --------------------------------------------#
     num_row, num_col = data.shape
     if inps.geo_box and inps.fig_coord == 'geo':
-        coord_unit = metadata.get('Y_UNIT', 'degrees').lower()
 
-        if coord_unit.startswith('deg'):
+        if inps.coord_unit.startswith('deg'):
             # geo-coordinates in degrees
             vprint('plot in Lat/Lon coordinate')
             vprint('map projection: {}'.format(inps.map_projection))
@@ -469,7 +473,11 @@ def plot_slice(ax, data, metadata, inps=None):
             # Scale Bar
             if inps.disp_scalebar:
                 vprint('plot scale bar: {}'.format(inps.scalebar))
-                pp.draw_scalebar(ax, geo_box=inps.geo_box, loc=inps.scalebar, font_size=inps.font_size)
+                pp.draw_scalebar(ax,
+                                 geo_box=inps.geo_box,
+                                 loc=inps.scalebar,
+                                 labelpad=inps.scalebar_pad,
+                                 font_size=inps.font_size)
 
             # Lat Lon labels
             if inps.lalo_label:
@@ -479,7 +487,7 @@ def plot_slice(ax, data, metadata, inps=None):
                                    lalo_max_num=inps.lalo_max_num,
                                    font_size=inps.font_size,
                                    yrotate=inps.lat_label_direction,
-                                   projection=PROJECTION_NAME2OBJ[inps.map_projection],
+                                   projection=inps.proj_obj,
                                    print_msg=inps.print_msg)
             else:
                 ax.tick_params(which='both', direction='out', labelsize=inps.font_size,
@@ -530,7 +538,7 @@ def plot_slice(ax, data, metadata, inps=None):
                 return msg
             ax.format_coord = format_coord
 
-        elif coord_unit == 'm':
+        elif inps.coord_unit == 'm':
             # geo-coordinates in meters
             vprint('plot in geo-coordinates in meters')
 
@@ -574,7 +582,7 @@ def plot_slice(ax, data, metadata, inps=None):
             ax.format_coord = format_coord
 
         else:
-            raise ValueError('un-recognized coordinate unit: {}'.format(coord_unit))
+            raise ValueError('un-recognized coordinate unit: {}'.format(inps.coord_unit))
 
     #------------------------ Plot in Y/X-coordinate ------------------------------------------------#
     else:
@@ -1238,7 +1246,7 @@ def prep_slice(cmd, auto_fig=False):
                 atr  : dict, metadata
                 inps : namespace, input argument for plot setup
     Example:
-        fig, ax = plt.subplots(figsize=[4, 3])
+        fig, ax = plt.subplots(figsize=[4, 3], projection=ccrs.PlateCarree())
         geo_box = (-91.670, -0.255, -91.370, -0.515)    # W, N, E, S
         cmd = 'view.py geo_velocity.h5 velocity --mask geo_maskTempCoh.h5 '
         cmd += '--sub-lon {w} {e} --sub-lat {s} {n} '.format(w=geo_box[0], n=geo_box[1], e=geo_box[2], s=geo_box[3])
@@ -1291,7 +1299,12 @@ def prep_slice(cmd, auto_fig=False):
 
     # matplotlib.Axes
     if auto_fig == True:
-        fig, ax = plt.subplots(figsize=[i/2.0 for i in inps.fig_size], num='Figure')
+        figsize = [i/2.0 for i in inps.fig_size]
+        if self.proj_obj is not None:
+            subplot_kw = dict(projection=proj_obj)
+        else:
+            subplot_kw = {}
+        fig, ax = plt.subplots(figsize=figsize, num='Figure', subplot_kw=subplot_kw)
         return data, atr, inps, ax
     else:
         return data, atr, inps
@@ -1374,12 +1387,8 @@ class viewer():
             data, self = update_data_with_plot_inps(data, self.atr, self)
 
             # prepare figure
-            coord_unit = self.atr.get('Y_UNIT', 'degrees').lower()
-            if (self.geo_box
-                    and self.fig_coord == 'geo'
-                    and coord_unit.startswith('deg')
-                    and self.lalo_label):
-                subplot_kw = dict(projection=PROJECTION_NAME2OBJ[self.map_projection])
+            if self.proj_obj is not None:
+                subplot_kw = dict(projection=proj_obj)
             else:
                 subplot_kw = {}
 

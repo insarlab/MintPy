@@ -12,6 +12,11 @@ import time
 import argparse
 import subprocess
 
+CMAP_DICT = {
+    'FernandinaSenDT128' : 'jet',
+    'WellsEnvD2T399'     : 'jet_r',
+    'KujuAlosAT422F650'  : 'jet_r',
+}
 
 URL_LIST = [
     'https://zenodo.org/record/3635245/files/FernandinaSenDT128.tar.xz',
@@ -121,6 +126,13 @@ def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False):
     status = subprocess.Popen(cmd, shell=True).wait()
     if status is not 0:
         raise RuntimeError('Test failed for example dataset {}'.format(dset_name))
+
+    # custom plot of velocity map
+    if dset_name in CMAP_DICT.keys():
+        cmd = 'view.py geo/geo_velocity.h5 velocity --nodisplay -o pic/geo_velocity.png --noverbose '
+        cmd += ' -c {}'.format(CMAP_DICT[dset_name])
+        print(cmd)
+        subprocess.Popen(cmd, shell=True).wait()
 
     # open final velocity map
     cmd = 'open pic/geo_velocity.png'

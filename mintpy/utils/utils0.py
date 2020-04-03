@@ -271,21 +271,21 @@ def enu2los(e, n, u, inc_angle=34., head_angle=-168.):
 
     inc_angle *= np.pi/180.
     head_angle *= np.pi/180.
-    v_los = (-1 * e * np.cos(head_angle) * np.sin(inc_angle)
-             + n * np.sin(head_angle) * np.sin(inc_angle)
+    v_los = (  e * np.sin(inc_angle) * np.cos(head_angle)  * -1
+             + n * np.sin(inc_angle) * np.sin(head_angle) 
              + u * np.cos(inc_angle))
     return v_los
 
 def four_corners(atr):
     """Return 4 corners lat/lon"""
-    width = int(atr['WIDTH'])
+    width  = int(atr['WIDTH'])
     length = int(atr['LENGTH'])
     lon_step = float(atr['X_STEP'])
     lat_step = float(atr['Y_STEP'])
-    west = float(atr['X_FIRST'])
+    west  = float(atr['X_FIRST'])
     north = float(atr['Y_FIRST'])
-    south = north + lat_step*length
-    east = west + lon_step*width
+    south = north + lat_step * length
+    east  = west  + lon_step * width
     return west, east, south, north
 
 
@@ -626,6 +626,13 @@ def round_to_1(x):
     """Return the most significant digit of input number"""
     digit = int(np.floor(np.log10(abs(x))))
     return round(x, -1*digit)
+
+
+def highest_power_of_2(x):
+    """Given a number x, find the highest power of 2 that <= x"""
+    res = np.power(2, np.floor(np.log2(x)))
+    res = np.int16(res)
+    return res
 
 
 def most_common(L, k=1):
