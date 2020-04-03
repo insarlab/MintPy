@@ -36,7 +36,7 @@ EXAMPLE = """example:
   tropo_pyaps3.py -f timeseries.h5 -g inputs/geometryRadar.h5
 
   # download reanalysys dataset, calculate tropospheric delays
-  tropo_pyaps3.py -d date.list         --hour 12 -m ERA5  -g inputs/geometryRadar.h5
+  tropo_pyaps3.py -d date.list         --hour 12 -m ERA5  -g inputs/geometryGeo.h5
   tropo_pyaps3.py -d 20151002 20151003 --hour 12 -m MERRA -g inputs/geometryRadar.h5
 
   # download reanalysys dataset
@@ -308,7 +308,7 @@ def get_grib_filenames(date_list, hour, model, grib_dir, snwe=None):
 
 
 def ceil2multiple(x, step=10):
-    """Return the closest number in multiple of step in the larger direction"""
+    """Given a number x, find the smallest number in multiple of step >= x."""
     assert isinstance(x, (int, np.int16, np.int32, np.int64)), 'input number is not int: {}'.format(type(x))
     if x % step == 0:
         return x
@@ -316,7 +316,7 @@ def ceil2multiple(x, step=10):
 
 
 def floor2multiple(x, step=10):
-    """Return the closest number in multiple of step in the lesser direction"""
+    """Given a number x, find the largest number in multiple of step <= x."""
     assert isinstance(x, (int, np.int16, np.int32, np.int64)), 'input number is not int: {}'.format(type(x))
     return x - x % step
 
@@ -331,7 +331,7 @@ def get_snwe(meta, min_buffer=2, step=10):
     W = np.floor(min(lon0, lon1) - min_buffer).astype(int)
     E = np.ceil( max(lon0, lon1) + min_buffer).astype(int)
 
-    # SNWE in multiple of 5
+    # SNWE in multiple of 10
     if step > 1:
         S = floor2multiple(S, step=step)
         W = floor2multiple(W, step=step)

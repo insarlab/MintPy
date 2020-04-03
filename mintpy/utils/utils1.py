@@ -62,7 +62,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 msg += '\nRe-run dem_error.py to generate it.'
                 raise Exception(msg)
             else:
-                print('removing a {} ramp from file: {}'.format(ramp_type, timeseries_resid_file))
+                #print('removing a {} ramp from file: {}'.format(ramp_type, timeseries_resid_file))
                 deramped_file = run_deramp(timeseries_resid_file,
                                            ramp_type=ramp_type,
                                            mask_file=mask_file,
@@ -112,7 +112,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 msg += '\nRe-run dem_error.py to generate it.'
                 raise Exception(msg)
             else:
-                print('removing a {} ramp from file: {}'.format(ramp_type, timeseries_resid_file))
+                #print('remove {} ramp from file: {}'.format(ramp_type, timeseries_resid_file))
                 deramped_file = run_deramp(timeseries_resid_file,
                                            ramp_type=ramp_type,
                                            mask_file=mask_file,
