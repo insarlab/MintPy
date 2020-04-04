@@ -206,11 +206,10 @@ def read_template2inps(template_file, inps):
     iDict = vars(inps)
     template = readfile.read_template(template_file)
     template = ut.check_template_auto_value(template)
-
     keyList = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
     for key in keyList:
         value = template[key_prefix+key]
-        if key in ['maskDataset', 'minNormVelocity', 'parallel']:
+        if key in ['maskDataset', 'minNormVelocity', 'parallel', 'cluster']:
             iDict[key] = value
         elif value:
             if key in ['numWorker']:
