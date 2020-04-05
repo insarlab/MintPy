@@ -57,3 +57,30 @@ jobqueue:
     job-extra: []
     log-directory: null
 
+########################################################
+
+  slurm:
+    name: dask-worker
+
+    cores: null			# Total number of cores per job
+    memory: null		# Total amount of memory per job
+    processes: 1		# Number of Python processes per job
+
+    interface: null		# Network interface to use like eth0 or ib0
+    death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
+    local-directory: null   	# Location of fast local storage like /scratch or $TMPDIR
+
+    # LSF resource manager options
+    shebang: "#!/usr/bin/env bash"
+    queue: null
+    project: null
+    walltime: '00:30:00'
+    extra: []
+    env-extra: []
+    ncpus: null
+
+    job-extra: []
+    log-directory: null
+
+    job-cpu: null
+    job-mem: null
