@@ -1073,6 +1073,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     # Parallel loop
     else:
         try:
+            import dask
             from dask.distributed import Client, as_completed
             import mintpy.objects.cluster as cl
         except ImportError:
@@ -1087,6 +1088,15 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         # at once (other user's jobs gained higher priority in the general at that point)
         NUM_WORKERS = inps.numWorker
         # FA: the following command starts the jobs
+
+        if inps.clusterConfig:
+            try:
+                dask.config.get('jobqueue.{}'.format(inps.clusterConfig))
+            except KeyError as k:
+                print('Dask configuration "{}" was not found in ~/.config/dask/dask.yaml. Falling back to default config name: "{}"'.format(
+                        inps.clusterConfig, inps.cluster.lower())
+                )
+                inps.clusterConfig = False
 
         if not inps.clusterConfig:
             inps.clusterConfig = inps.cluster.lower()
