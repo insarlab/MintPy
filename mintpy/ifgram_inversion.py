@@ -127,8 +127,8 @@ def create_parser():
     par.add_argument('--cluster', '--cluster-type', dest='cluster', type=str,
                      default='SLURM', choices={'LSF', 'PBS', 'SLURM'},
                      help='Type of HPC cluster you are running on (default: %(default)s).')
-    par.add_argument('--cluster-config', dest='clusterConfig', type=str, default=None, 
-                     help='The name of the config to use in dask.yaml. Default: same as --cluster')
+    par.add_argument('--config', '--config-name', dest='config', type=str, default='no', 
+                     help='Configuration name to use in dask.yaml (default: %(default)s).')
     par.add_argument('--num-worker', dest='numWorker', type=int, default=40,
                      help='Number of workers the Dask cluster should use (default: %(default)s).')
     par.add_argument('--walltime', dest='walltime', type=str, default='00:40',
@@ -198,6 +198,21 @@ def cmd_line_parse(iargs=None):
 
     inps.timeseriesFile, inps.tempCohFile = inps.outfile
 
+    # --config option
+    inps.config = inps.config.lower()    # use lowercase all the time
+    if inps.config == 'no':
+        inps.config = ipns.cluster.lower()
+
+    if inps.parallel and inps.config != inps.cluster.lower():
+        import dask
+        try:
+            dask.config.get('jobqueue.{}'.format(inps.config))
+        except KeyError:
+            msg = 'Dask configuration "{}" was not found in ~/.config/dask/mintpy.yaml'.format(inps.config)
+            msg += '\nFall back to default config name: "{}"'.format(inps.cluster.lower())
+            print(msg)
+            inps.config = ipns.cluster.lower()
+
     return inps
 
 
@@ -217,7 +232,7 @@ def read_template2inps(template_file, inps):
         elif value:
             if key in ['numWorker']:
                 iDict[key] = int(value)
-            elif key in ['walltime', 'clusterConfig']:
+            elif key in ['walltime', 'config']:
                 iDict[key] = str(value)
             elif key in ['maskThreshold', 'minRedundancy']:
                 iDict[key] = float(value)
@@ -1087,21 +1102,9 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
         # at once (other user's jobs gained higher priority in the general at that point)
         NUM_WORKERS = inps.numWorker
+
         # FA: the following command starts the jobs
-
-        if inps.clusterConfig:
-            try:
-                dask.config.get('jobqueue.{}'.format(inps.clusterConfig))
-            except KeyError as k:
-                print('Dask configuration "{}" was not found in ~/.config/dask/dask.yaml. Falling back to default config name: "{}"'.format(
-                        inps.clusterConfig, inps.cluster.lower())
-                )
-                inps.clusterConfig = False
-
-        if not inps.clusterConfig:
-            inps.clusterConfig = inps.cluster.lower()
-
-        cluster = cl.get_cluster(type=inps.cluster, walltime=inps.walltime, config_name=inps.clusterConfig)
+        cluster = cl.get_cluster(type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
         cluster.scale(NUM_WORKERS)
         print("JOB COMMAND CALLED FROM PYTHON:", cluster.job_script())
         with open('dask_command_run_from_python.txt', 'w') as f:
