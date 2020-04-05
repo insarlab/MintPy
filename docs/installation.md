@@ -151,7 +151,9 @@ mkdir -p ~/.config/dask
 cp $MINTPY_HOME/mintpy/defaults/dask_mintpy.yaml ~/.config/dask/dask_mintpy.yaml
 ```
 
-Edit `~/.config/dask/dask_mintpy.yaml` file according to your HPC settings. Currently, only `LSFCluster` job scheduler is tested, `PBSCluster` should also work after minor adjustment in `ifgram_inversion.py`.
+Edit `~/.config/dask/dask_mintpy.yaml` file according to your HPC settings. Currently, the `LSFCluster` job scheduler and the `SLURMCluster` job scheduler have been tested. `PBSCluster` should also work after setting proper configuration values in `~/.config/dask/dask_mintpy.yaml`. 
+
+MintPy allows you to set the scheduler type you are using (one of LSF/PBS/SLURM) in `smallbaselineApp.cfg`, as well as the name of the specific config section in `dask.yaml` to use. This allows you to quickly try different configuration, or switch between configurations by modifying `smallbaselineApp.cfg`.
 
 ### Notes on vim ###
 
