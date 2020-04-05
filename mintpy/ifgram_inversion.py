@@ -211,6 +211,7 @@ def read_template2inps(template_file, inps):
     keyList = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
     for key in keyList:
         value = template[key_prefix+key]
+        print(key, value)
         if key in ['maskDataset', 'minNormVelocity', 'parallel', 'cluster']:
             iDict[key] = value
         elif value:
@@ -1086,7 +1087,8 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         # at once (other user's jobs gained higher priority in the general at that point)
         NUM_WORKERS = inps.numWorker
         # FA: the following command starts the jobs
-        if inps.clusterConfig == "None":
+
+        if not inps.clusterConfig:
             inps.clusterConfig = inps.cluster.lower()
 
         cluster = cl.get_cluster(type=inps.cluster, walltime=inps.walltime, config_name=inps.clusterConfig)
