@@ -201,7 +201,7 @@ def cmd_line_parse(iargs=None):
     # --config option
     inps.config = inps.config.lower()    # use lowercase all the time
     if inps.config == 'no':
-        inps.config = ipns.cluster.lower()
+        inps.config = inps.cluster.lower()
 
     if inps.parallel and inps.config != inps.cluster.lower():
         import dask
@@ -211,7 +211,7 @@ def cmd_line_parse(iargs=None):
             msg = 'Dask configuration "{}" was not found in ~/.config/dask/mintpy.yaml'.format(inps.config)
             msg += '\nFall back to default config name: "{}"'.format(inps.cluster.lower())
             print(msg)
-            inps.config = ipns.cluster.lower()
+            inps.config = inps.cluster.lower()
 
     return inps
 
