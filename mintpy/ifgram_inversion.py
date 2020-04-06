@@ -199,7 +199,6 @@ def cmd_line_parse(iargs=None):
     inps.timeseriesFile, inps.tempCohFile = inps.outfile
 
     # --config option
-    inps.config = inps.config.lower()    # use lowercase all the time
     if inps.config == 'no':
         inps.config = inps.cluster.lower()
 
