@@ -197,7 +197,7 @@ def cmd_line_parse(iargs=None):
             raise ValueError('un-recognized input observation dataset name: {}'.format(inps.obsDatasetName))
 
     inps.timeseriesFile, inps.tempCohFile = inps.outfile
-
+    
     # --config option
     if inps.config == 'no':
         inps.config = inps.cluster.lower()
@@ -225,7 +225,6 @@ def read_template2inps(template_file, inps):
     keyList = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
     for key in keyList:
         value = template[key_prefix+key]
-        print(key, value)
         if key in ['maskDataset', 'minNormVelocity', 'parallel', 'cluster']:
             iDict[key] = value
         elif value:
