@@ -169,7 +169,7 @@ def get_number_of_nonzero_closure_phase(ifgram_file, dsName='unwrapPhase', step=
         box = (0, r0, stack_obj.width, r1)
         unw = ifginv.read_unwrap_phase(stack_obj, box=box,
                                        ref_phase=ref_phase,
-                                       unwDatasetName=dsName,
+                                       obsDatasetName=dsName,
                                        dropIfgram=True,
                                        print_msg=False).reshape(num_ifgram, -1)
         closure_pha = np.dot(C, unw)
@@ -281,7 +281,7 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
                 unw = ifginv.read_unwrap_phase(stack_obj,
                                                box=(x, y, x+1, y+1),
                                                ref_phase=ref_phase,
-                                               unwDatasetName=dsNameIn,
+                                               obsDatasetName=dsNameIn,
                                                dropIfgram=True,
                                                print_msg=False).reshape(num_ifgram, -1)
 
