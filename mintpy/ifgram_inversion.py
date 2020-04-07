@@ -1086,15 +1086,14 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     # Parallel loop
     else:
         try:
-            import dask
             from dask.distributed import Client, as_completed
             import mintpy.objects.cluster as cl
         except ImportError:
-            raise ImportError('Cannot import dask!')
+            raise ImportError('Cannot import dask.distributed!')
 
         ts = np.zeros((num_date, length, width), np.float32)
 
-        # Look at the ~/.config/dask/dask_mintpy.yaml file for Changing the Dask configuration defaults
+        # Look at the ~/.config/dask/mintpy.yaml file for Changing the Dask configuration defaults
 
         # This line submits NUM_WORKERS jobs to Pegasus to start a bunch of workers
         # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
