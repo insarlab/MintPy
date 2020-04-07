@@ -3,7 +3,7 @@
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Heresh Fattahi, 2013               #
-# Parallel support added by David Grossman, April 2019     #
+# Parallel support added by David Grossman, Joshua Zahner  #
 ############################################################
 # Recommend import:
 #     from mintpy import ifgram_inversion as ifginv
@@ -1090,7 +1090,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
             from dask.distributed import Client, as_completed
             import mintpy.objects.cluster as cl
         except ImportError:
-            raise ImportError('Cannot import dask.distributed or dask_jobqueue!')
+            raise ImportError('Cannot import dask!')
 
         ts = np.zeros((num_date, length, width), np.float32)
 
