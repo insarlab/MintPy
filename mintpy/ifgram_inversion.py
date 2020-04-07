@@ -1102,7 +1102,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         NUM_WORKERS = inps.numWorker
 
         # FA: the following command starts the jobs
-        cluster = cl.get_cluster(type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
+        cluster = cl.get_cluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
         cluster.scale(NUM_WORKERS)
         print("JOB COMMAND CALLED FROM PYTHON:", cluster.job_script())
         with open('dask_command_run_from_python.txt', 'w') as f:
