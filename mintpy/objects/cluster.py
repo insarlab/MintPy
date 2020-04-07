@@ -46,7 +46,7 @@ def get_cluster(cluster_type, **kwargs):
     return cluster
 
 
-def check_config_name(config_name, cluster_type)
+def check_config_name(config_name, cluster_type):
     # due to the pre-set in mintpy.yaml, default config_name is the same as cluster_type
     if config_name == 'no':
         config_name = cluster_type
@@ -56,13 +56,14 @@ def check_config_name(config_name, cluster_type)
     if config_name not in config_names:
         msg = 'Dask configuration "{}" was not found in ~/.config/dask/*.yaml'.format(config_name)
         msg += '\nFall back to default config name: "{}"'.format(cluster_type)
+        print(msg)
         config_name = cluster_type
 
     return config_name
 
 
 def check_walltime_format(walltime, cluster_type):
-    """format the walltime str for different clsuters
+    """format the walltime str for different clusters
     HH:MM:SS - pbs / slurm
     HH:MM    - lsf
     """
