@@ -48,7 +48,7 @@ def get_cluster(cluster_type, **kwargs):
 
 def check_config_name(config_name, cluster_type):
     # due to the pre-set in mintpy.yaml, default config_name is the same as cluster_type
-    if config_name == 'no':
+    if not config_name:
         config_name = cluster_type
 
     # check if config_name exists in ~/.config/dask/*.yaml

@@ -211,12 +211,12 @@ def read_template2inps(template_file, inps):
     keyList = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
     for key in keyList:
         value = template[key_prefix+key]
-        if key in ['maskDataset', 'minNormVelocity', 'parallel', 'cluster']:
+        if key in ['maskDataset', 'minNormVelocity', 'parallel', 'cluster', 'config']:
             iDict[key] = value
         elif value:
             if key in ['numWorker']:
                 iDict[key] = int(value)
-            elif key in ['walltime', 'config']:
+            elif key in ['walltime']:
                 iDict[key] = str(value)
             elif key in ['maskThreshold', 'minRedundancy']:
                 iDict[key] = float(value)
@@ -1089,7 +1089,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         # FA: the following command starts the jobs
         cluster = get_cluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
         cluster.scale(NUM_WORKERS)
-        print("JOB COMMAND CALLED FROM PYTHON:", cluster.job_script())
+        print("JOB COMMAND CALLED FROM PYTHON:\n\n", cluster.job_script())
         with open('dask_command_run_from_python.txt', 'w') as f:
               f.write(cluster.job_script() + '\n')
 
