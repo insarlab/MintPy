@@ -12,7 +12,7 @@ def get_cluster(cluster_type, **kwargs):
     if cluster_type not in cluster_list:
         msg = "Cluster type '{}' not supported".format(cluster_type)
         msg += '\nsupported cluster types: {}'.format(cluster_list)
-        raise ValueError()
+        raise ValueError(msg)
 
     print("Using cluster type: {}".format(cluster_type))
     print("Using config name: {}".format(kwargs['config_name']))
