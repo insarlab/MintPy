@@ -197,8 +197,12 @@ def cmd_line_parse(iargs=None):
             raise ValueError('un-recognized input observation dataset name: {}'.format(inps.obsDatasetName))
 
     inps.timeseriesFile, inps.tempCohFile = inps.outfile
+    
+    # --config option
+    if inps.config == 'no':
+        inps.config = inps.cluster.lower()
 
-    if inps.parallel:
+    if inps.parallel and inps.config != inps.cluster.lower():
         import dask
         try:
             dask.config.get('jobqueue.{}'.format(inps.config))
@@ -1082,10 +1086,11 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     # Parallel loop
     else:
         try:
+            import dask
             from dask.distributed import Client, as_completed
             import mintpy.objects.cluster as cl
         except ImportError:
-            raise ImportError('Cannot import dask.distributed!')
+            raise ImportError('Cannot import dask.distributed or dask_jobqueue!')
 
         ts = np.zeros((num_date, length, width), np.float32)
 
