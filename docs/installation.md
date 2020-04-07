@@ -144,14 +144,14 @@ multiple copies if you work with different dataset that cover the same date/time
 
 ### Notes on parallel processing ###
 
-We use [Dask](https://www.dask.org) for parallel processing on High Performance Compute (HPC) cluster, it can be setup as below:
+We use [Dask](https://www.dask.org) for parallel processing on High Performance Compute (HPC) cluster. We have tested the `LSFCluster` and `SLURMCluster` job scheduler, but not the `PBSCluster` one. It can be setup as below:
 
 ```
 mkdir -p ~/.config/dask
-cp $MINTPY_HOME/mintpy/defaults/dask_mintpy.yaml ~/.config/dask/dask_mintpy.yaml
+cp $MINTPY_HOME/mintpy/defaults/mintpy.yaml ~/.config/dask/mintpy.yaml
 ```
 
-Edit `~/.config/dask/dask_mintpy.yaml` file according to your HPC settings. Currently, only `LSFCluster` job scheduler is tested, `PBSCluster` should also work after minor adjustment in `ifgram_inversion.py`.
+Edit `~/.config/dask/mintpy.yaml` file according to your HPC settings. You can choose the scheduler type (one of lsf/pbs/slurm) and configuration name in `smallbaselineApp.cfg`. The latter allows you to quickly try/switch different configurations.
 
 ### Notes on vim ###
 
