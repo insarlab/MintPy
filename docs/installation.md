@@ -151,7 +151,7 @@ mkdir -p ~/.config/dask
 cp $MINTPY_HOME/mintpy/defaults/mintpy.yaml ~/.config/dask/mintpy.yaml
 ```
 
-Edit `~/.config/dask/mintpy.yaml` file according to your HPC settings. You can choose the scheduler type (one of LSF/PBS/SLURM) and configuration name in `smallbaselineApp.cfg`. The latter allows you to quickly try/switch different configurations.
+Edit `~/.config/dask/mintpy.yaml` file according to your HPC settings. You can choose the scheduler type (one of lsf/pbs/slurm) and configuration name in `smallbaselineApp.cfg`. The latter allows you to quickly try/switch different configurations.
 
 ### Notes on vim ###
 
