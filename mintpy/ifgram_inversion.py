@@ -197,20 +197,6 @@ def cmd_line_parse(iargs=None):
             raise ValueError('un-recognized input observation dataset name: {}'.format(inps.obsDatasetName))
 
     inps.timeseriesFile, inps.tempCohFile = inps.outfile
-    
-    # --config option
-    if inps.config == 'no':
-        inps.config = inps.cluster.lower()
-
-    if inps.parallel and inps.config != inps.cluster.lower():
-        import dask
-        try:
-            dask.config.get('jobqueue.{}'.format(inps.config))
-        except KeyError:
-            msg = 'Dask configuration "{}" was not found in ~/.config/dask/mintpy.yaml'.format(inps.config)
-            msg += '\nFall back to default config name: "{}"'.format(inps.cluster.lower())
-            print(msg)
-            inps.config = inps.cluster.lower()
 
     return inps
 
@@ -1087,9 +1073,9 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     else:
         try:
             from dask.distributed import Client, as_completed
-            import mintpy.objects.cluster as cl
         except ImportError:
             raise ImportError('Cannot import dask.distributed!')
+        from mintpy.objects.cluster import get_cluster
 
         ts = np.zeros((num_date, length, width), np.float32)
 
@@ -1101,7 +1087,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         NUM_WORKERS = inps.numWorker
 
         # FA: the following command starts the jobs
-        cluster = cl.get_cluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
+        cluster = get_cluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
         cluster.scale(NUM_WORKERS)
         print("JOB COMMAND CALLED FROM PYTHON:", cluster.job_script())
         with open('dask_command_run_from_python.txt', 'w') as f:
