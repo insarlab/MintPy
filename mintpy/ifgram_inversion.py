@@ -156,9 +156,9 @@ def cmd_line_parse(iargs=None):
         raise ValueError('input is {} file, support ifgramStack file only.'.format(atr['FILE_TYPE']))
 
     if inps.templateFile:
-        inps = read_template2inps(inps.templateFile, inps)
-        template = readfile.read_template(inps.templateFile)
-        template = ut.check_template_auto_value(template)
+        inps, template = read_template2inps(inps.templateFile, inps)
+    else:
+        template = dict()
 
     if inps.waterMaskFile and not os.path.isfile(inps.waterMaskFile):
         inps.waterMaskFile = None
@@ -175,22 +175,25 @@ def cmd_line_parse(iargs=None):
 
     # --dset option
     if not inps.obsDatasetName:
+        inps.obsDatasetName = 'unwrapPhase'
+
+        # determine suffix based on unwrapping error correction method
+        obs_suffix_map = {'bridging'               : '_bridging',
+                          'phase_closure'          : '_phaseClosure',
+                          'bridging+phase_closure' : '_bridging_phaseClosure'}
+        key = 'mintpy.unwrapError.method'
+        if key in template.keys():
+            unw_err_method = template[key].replace(' ','')
+            if unw_err_method:
+                inps.obsDatasetName += obs_suffix_map[unw_err_method]
+                print('phase unwrapping error correction {} is turn ON'.format(unw_err_method))
+        print('use dataset "{}" by default.'.format(inps.obsDatasetName))
+
+        # check if input observation dataset exists.
         stack_obj = ifgramStack(inps.ifgramStackFile)
         stack_obj.open(print_msg=False)
-        obsMap = {False: '', 'bridging' : '_bridging', 'phase_closure': '_phaseClosure', 
-                                    'bridging+phase_closure' : '_bridging_phaseClosure'}
-
-        try:
-            unw_method = template['mintpy.unwrapError.method']
-            inps.obsDatasetName = 'unwrapPhase' + obsMap[unw_method]
-            
-        except:
-            inps.obsDatasetName = [i for i in ['unwrapPhase_bridging_phaseClosure',
-                                           'unwrapPhase_bridging',
-                                           'unwrapPhase_phaseClosure',
-                                           'unwrapPhase']
-                               if i in stack_obj.datasetNames][0]
-            pass
+        if inps.obsDatasetName not in stack_obj.datasetNames:
+            raise ValueError('input dataset name not found in file: {}'.format(inps.ifgramStackFile))
 
     # --skip-ref option
     if 'offset' in inps.obsDatasetName.lower():
@@ -233,7 +236,7 @@ def read_template2inps(template_file, inps):
                 iDict[key] = float(value)
             elif key in ['weightFunc', 'residualNorm', 'waterMaskFile']:
                 iDict[key] = value
-    return inps
+    return inps, template
 
 
 def run_or_skip(inps):
