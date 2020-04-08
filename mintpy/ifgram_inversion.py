@@ -157,6 +157,8 @@ def cmd_line_parse(iargs=None):
 
     if inps.templateFile:
         inps = read_template2inps(inps.templateFile, inps)
+        template = readfile.read_template(inps.templateFile)
+        template = ut.check_template_auto_value(template)
 
     if inps.waterMaskFile and not os.path.isfile(inps.waterMaskFile):
         inps.waterMaskFile = None
@@ -175,11 +177,20 @@ def cmd_line_parse(iargs=None):
     if not inps.obsDatasetName:
         stack_obj = ifgramStack(inps.ifgramStackFile)
         stack_obj.open(print_msg=False)
-        inps.obsDatasetName = [i for i in ['unwrapPhase_bridging_phaseClosure',
+        obsMap = {False: '', 'bridging' : '_bridging', 'phase_closure': '_phaseClosure', 
+                                    'bridging+phase_closure' : '_bridging_phaseClosure'}
+
+        try:
+            unw_method = template['mintpy.unwrapError.method']
+            inps.obsDatasetName = 'unwrapPhase' + obsMap[unw_method]
+            
+        except:
+            inps.obsDatasetName = [i for i in ['unwrapPhase_bridging_phaseClosure',
                                            'unwrapPhase_bridging',
                                            'unwrapPhase_phaseClosure',
                                            'unwrapPhase']
                                if i in stack_obj.datasetNames][0]
+            pass
 
     # --skip-ref option
     if 'offset' in inps.obsDatasetName.lower():
