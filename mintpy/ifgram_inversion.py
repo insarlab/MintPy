@@ -125,7 +125,7 @@ def create_parser():
     par.add_argument('--parallel', dest='parallel', action='store_true',
                      help='Enable parallel processing for the pixelwise weighted inversion.')
     par.add_argument('--cluster', '--cluster-type', dest='cluster', type=str,
-                     default='SLURM', choices={'LSF', 'PBS', 'SLURM'},
+                     default='slurm', choices={'lsf', 'pbs', 'slurm'},
                      help='Type of HPC cluster you are running on (default: %(default)s).')
     par.add_argument('--config', '--config-name', dest='config', type=str, default='no', 
                      help='Configuration name to use in dask.yaml (default: %(default)s).')
@@ -182,12 +182,11 @@ def cmd_line_parse(iargs=None):
                           'phase_closure'          : '_phaseClosure',
                           'bridging+phase_closure' : '_bridging_phaseClosure'}
         key = 'mintpy.unwrapError.method'
-        if key in template.keys():
-            unw_err_method = template[key].replace(' ','')
-            if unw_err_method:
-                inps.obsDatasetName += obs_suffix_map[unw_err_method]
-                print('phase unwrapping error correction {} is turn ON'.format(unw_err_method))
-        print('use dataset "{}" by default.'.format(inps.obsDatasetName))
+        if key in template.keys() and template[key]:
+            unw_err_method = template[key].lower().replace(' ','')   # fix potential typo
+            inps.obsDatasetName += obs_suffix_map[unw_err_method]
+            print('phase unwrapping error correction "{}" is turned ON'.format(unw_err_method))
+        print('use dataset "{}" by default'.format(inps.obsDatasetName))
 
         # check if input observation dataset exists.
         stack_obj = ifgramStack(inps.ifgramStackFile)
