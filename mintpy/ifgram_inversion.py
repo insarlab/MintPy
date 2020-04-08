@@ -192,7 +192,8 @@ def cmd_line_parse(iargs=None):
         stack_obj = ifgramStack(inps.ifgramStackFile)
         stack_obj.open(print_msg=False)
         if inps.obsDatasetName not in stack_obj.datasetNames:
-            raise ValueError('input dataset name not found in file: {}'.format(inps.ifgramStackFile))
+            msg = 'input dataset name "{}" not found in file: {}'.format(inps.obsDatasetName, inps.ifgramStackFile)
+            raise ValueError(msg)
 
     # --skip-ref option
     if 'offset' in inps.obsDatasetName.lower():
