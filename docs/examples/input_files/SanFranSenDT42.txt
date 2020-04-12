@@ -12,8 +12,8 @@ mintpy.load.corFile        = ../stack/cohStack.vrt
 mintpy.load.connCompFile   = ../stack/connCompStack.vrt
 ##---------geometry datasets:
 mintpy.load.demFile        = ../DEM/SRTM_3arcsec.dem
-mintpy.load.incAngleFile   = ../incidenceAngle/20150605_20150512.vrt
-mintpy.load.azAngleFile    = ../azimuthAngle/20150605_20150512.vrt
+mintpy.load.incAngleFile   = ../incidenceAngle/*.vrt
+mintpy.load.azAngleFile    = ../azimuthAngle/*.vrt
 mintpy.load.waterMaskFile  = ../mask/watermask.msk
 
 mintpy.reference.lalo           = 37.70, -122.07
