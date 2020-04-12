@@ -21,11 +21,7 @@ import mintpy
 from mintpy.objects import sensor, RAMP_LIST
 from mintpy.utils import readfile, writefile, utils as ut
 from mintpy.defaults.auto_path import autoPath
-from mintpy.defaults.template import (
-    STEP_LIST,
-    STEP_LIST4OFFSET,
-    get_template_content,
-)
+from mintpy.defaults.template import STEP_LIST
 # dynamic import for modules used by smallbaselineApp workflow
 import mintpy.workflow
 
@@ -329,7 +325,8 @@ class TimeSeriesAnalysis:
             for tfile in [self.customTemplateFile, self.templateFile]:
                 if tfile and  ut.run_or_skip(out_file=os.path.join(backup_dir, os.path.basename(tfile)),
                                              in_file=tfile,
-                                             check_readable=False) == 'run':
+                                             check_readable=False,
+                                             print_msg=False) == 'run':
                     shutil.copy2(tfile, backup_dir)
                     print('copy {} to {} directory for backup.'.format(os.path.basename(tfile),
                                                                        os.path.basename(backup_dir)))
@@ -360,14 +357,27 @@ class TimeSeriesAnalysis:
         self._copy_aux_file()
 
         # 2) loading data
-        scp_args = '--template {}'.format(self.templateFile)
-        if self.customTemplateFile:
-            scp_args += ' {}'.format(self.customTemplateFile)
-        if self.projectName:
-            scp_args += ' --project {}'.format(self.projectName)
-        # run
-        print("load_data.py", scp_args)
-        mintpy.load_data.main(scp_args.split())
+        stack_processor = self.template['mintpy.load.processor'].lower()
+        if stack_processor == 'aria':
+            # use subprocess instead of main() here to avoid import gdal3
+            # which is required in prep_aria.py
+            cmd = 'prep_aria.py --template {} --update '.format(self.templateFile)
+            print(cmd)
+            subprocess.Popen(cmd, shell=True).wait()
+
+        else:
+            # compose command line
+            scp_args = '--template {}'.format(self.templateFile)
+            if self.customTemplateFile:
+                scp_args += ' {}'.format(self.customTemplateFile)
+            if self.projectName:
+                scp_args += ' --project {}'.format(self.projectName)
+
+            # run command line
+            print("load_data.py", scp_args)
+            mintpy.load_data.main(scp_args.split())
+
+        # come back to working directory
         os.chdir(self.workDir)
 
         # 3) check loading result
@@ -1078,7 +1088,7 @@ class TimeSeriesAnalysis:
         os.chdir(self.cwd)
 
         # message
-        msg = '\n################################################'
+        msg  = '\n################################################'
         msg += '\n   Normal end of smallbaselineApp processing!'
         msg += '\n################################################'
         print(msg)

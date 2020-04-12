@@ -5,6 +5,8 @@
 ############################################################
 # Recommend import:
 #     from mintpy.objects.colors import ColormapExt
+#     from mintpy.utils import plot as pp
+#     cmap = pp.ColormapExt('cmy').colormap
 
 
 import os
