@@ -11,6 +11,7 @@ import time
 import argparse
 import h5py
 import numpy as np
+import glob
 from mintpy.objects import ifgramStack, geometry
 from mintpy.utils import ptime, readfile, utils as ut
 try:
@@ -23,7 +24,7 @@ except ImportError:
 EXAMPLE = """example:
   prep_aria.py -t SanFranSenDT42.txt --update
   prep_aria.py -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt
-  prep_aria.py -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt 
+  prep_aria.py -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt
                -a azimuthAngle/20150605_20150512.vrt --water-mask mask/watermask.msk
 
   # run ARIA-tools to download / extract / prepare inteferograms stack before MintPy.
@@ -46,8 +47,8 @@ TEMPLATE = """template options:
   mintpy.load.connCompFile   = ../stack/connCompStack.vrt
   ##---------geometry datasets:
   mintpy.load.demFile        = ../DEM/SRTM_3arcsec.dem
-  mintpy.load.incAngleFile   = ../incidenceAngle/20150605_20150512.vrt
-  mintpy.load.azAngleFile    = ../azimuthAngle/20150605_20150512.vrt
+  mintpy.load.incAngleFile   = ../incidenceAngle/*.vrt
+  mintpy.load.azAngleFile    = ../azimuthAngle/*.vrt
   mintpy.load.waterMaskFile  = ../mask/watermask.msk
 """
 
@@ -112,11 +113,20 @@ def cmd_line_parse(iargs = None):
         inps.unwFile = os.path.join(inps.stackDir, inps.unwFile)
         inps.connCompFile = os.path.join(inps.stackDir, inps.connCompFile)
 
-    # required datasets
-    required_keys = ['unwFile', 'corFile', 'connCompFile', 'demFile', 'incAngleFile']
-    for key in required_keys:
-        fname = vars(inps)[key]
-        if not os.path.isfile(fname):
+    # check datasets
+    # 1. translate wildcard path input with search result
+    # 2. raise error if required datasets are missing
+    iDict = vars(inps)
+    ds_keys = [key for key in list(iDict.keys()) if key.endswith('File')]
+    required_ds_keys = ['unwFile', 'corFile', 'demFile', 'incAngleFile']
+
+    for key in ds_keys:
+        fname = iDict[key]
+        fnames = glob.glob(fname)
+        if len(fnames) > 0:
+            iDict[key] = fnames[0]
+
+        elif key in required_ds_keys:
             parser.print_usage()
             print('required dataset "{}" not found in: {}.'.format(key, fname))
             raise SystemExit()
@@ -161,7 +171,7 @@ def run_or_skip(inps, dsNameDict, out_file):
     if 'unwrapPhase' in dsNameDict.keys():
         # compare date12 and size
         ds = gdal.Open(inps.unwFile, gdal.GA_ReadOnly)
-        in_date12_list = [ds.GetRasterBand(i+1).GetMetadata("unwrappedPhase")['Dates'] 
+        in_date12_list = [ds.GetRasterBand(i+1).GetMetadata("unwrappedPhase")['Dates']
                           for i in range(inps.num_pair)]
         in_date12_list = ['_'.join(d.split('_')[::-1]) for d in in_date12_list]
 
@@ -188,7 +198,7 @@ def run_or_skip(inps, dsNameDict, out_file):
             print(('All datasets exists in file {} with same size as required,'
                    ' no need to re-load.'.format(os.path.basename(out_file))))
             flag = 'skip'
-            
+
     return flag
 
 
@@ -222,7 +232,7 @@ def extract_metadata(stack):
     # Note from YZ, 2019-07-25
     # convert isce azimuth angle to roipac orbit heading angle
     # This value is not consistent with band2 of los.rdr from ISCE/topsStack
-    # need to check with ARIA-tools team. 
+    # need to check with ARIA-tools team.
     # use hardwired value for now
     #az_angle = float(meta["azimuthAngle"])
     #head_angle = -1 * (270 + az_angle)
@@ -454,7 +464,6 @@ def main(iargs=None):
         print('update mode: ON')
     else:
         print('update mode: OFF')
-
     # extract metadata
     metadata = extract_metadata(inps.unwFile)
     inps.length = metadata["LENGTH"]

@@ -47,7 +47,7 @@ def create_parser():
                         help='Filter parameter for low/high pass filter. Default=\n' +
                              'Sigma       for low/high pass gaussian filter, default: 3.0\n' +
                              'Kernel Size for low/high pass average filter, default: 5')
-    parser.add_argument('-o', '--outfile', help='Output file name.')
+    parser.add_argument('-o', '--outfile',default=None, help='Output file name.')
     return parser
 
 
@@ -158,7 +158,10 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    inps.outfile = filter_file(inps.file, inps.filter_type, inps.filter_par)
+    inps.outfile = filter_file(inps.file, 
+                               filter_type=inps.filter_type,
+                               filter_par=inps.filter_par,
+                               fname_out=inps.outfile)
     print('Done.')
     return inps.outfile
 
