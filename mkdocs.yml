@@ -27,6 +27,7 @@ nav:
         - Example directory structure: dir_structure.md
         - Example template files: examples/input_files/README.md
         - Tutorials in Jupyter Notebook: https://github.com/insarlab/MintPy-tutorial
+        - Parallel processing with Dask: dask.md
     - Output:
         - Google Earth KMZ: google_earth.md
         - HDF-EOS5: hdfeos5.md

@@ -3,7 +3,7 @@
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Heresh Fattahi, 2013               #
-# Parallel support added by David Grossman, April 2019     #
+# Parallel support added by David Grossman, Joshua Zahner  #
 ############################################################
 # Recommend import:
 #     from mintpy import ifgram_inversion as ifginv
@@ -125,8 +125,10 @@ def create_parser():
     par.add_argument('--parallel', dest='parallel', action='store_true',
                      help='Enable parallel processing for the pixelwise weighted inversion.')
     par.add_argument('--cluster', '--cluster-type', dest='cluster', type=str,
-                     default='SLURM', choices={'LSF', 'PBS', 'SLURM'},
+                     default='slurm', choices={'lsf', 'pbs', 'slurm'},
                      help='Type of HPC cluster you are running on (default: %(default)s).')
+    par.add_argument('--config', '--config-name', dest='config', type=str, default='no', 
+                     help='Configuration name to use in dask.yaml (default: %(default)s).')
     par.add_argument('--num-worker', dest='numWorker', type=int, default=40,
                      help='Number of workers the Dask cluster should use (default: %(default)s).')
     par.add_argument('--walltime', dest='walltime', type=str, default='00:40',
@@ -154,7 +156,9 @@ def cmd_line_parse(iargs=None):
         raise ValueError('input is {} file, support ifgramStack file only.'.format(atr['FILE_TYPE']))
 
     if inps.templateFile:
-        inps = read_template2inps(inps.templateFile, inps)
+        inps, template = read_template2inps(inps.templateFile, inps)
+    else:
+        template = dict()
 
     if inps.waterMaskFile and not os.path.isfile(inps.waterMaskFile):
         inps.waterMaskFile = None
@@ -171,13 +175,25 @@ def cmd_line_parse(iargs=None):
 
     # --dset option
     if not inps.obsDatasetName:
+        inps.obsDatasetName = 'unwrapPhase'
+
+        # determine suffix based on unwrapping error correction method
+        obs_suffix_map = {'bridging'               : '_bridging',
+                          'phase_closure'          : '_phaseClosure',
+                          'bridging+phase_closure' : '_bridging_phaseClosure'}
+        key = 'mintpy.unwrapError.method'
+        if key in template.keys() and template[key]:
+            unw_err_method = template[key].lower().replace(' ','')   # fix potential typo
+            inps.obsDatasetName += obs_suffix_map[unw_err_method]
+            print('phase unwrapping error correction "{}" is turned ON'.format(unw_err_method))
+        print('use dataset "{}" by default'.format(inps.obsDatasetName))
+
+        # check if input observation dataset exists.
         stack_obj = ifgramStack(inps.ifgramStackFile)
         stack_obj.open(print_msg=False)
-        inps.obsDatasetName = [i for i in ['unwrapPhase_bridging_phaseClosure',
-                                           'unwrapPhase_bridging',
-                                           'unwrapPhase_phaseClosure',
-                                           'unwrapPhase']
-                               if i in stack_obj.datasetNames][0]
+        if inps.obsDatasetName not in stack_obj.datasetNames:
+            msg = 'input dataset name "{}" not found in file: {}'.format(inps.obsDatasetName, inps.ifgramStackFile)
+            raise ValueError(msg)
 
     # --skip-ref option
     if 'offset' in inps.obsDatasetName.lower():
@@ -206,11 +222,10 @@ def read_template2inps(template_file, inps):
     iDict = vars(inps)
     template = readfile.read_template(template_file)
     template = ut.check_template_auto_value(template)
-
     keyList = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
     for key in keyList:
         value = template[key_prefix+key]
-        if key in ['maskDataset', 'minNormVelocity', 'parallel']:
+        if key in ['maskDataset', 'minNormVelocity', 'parallel', 'cluster', 'config']:
             iDict[key] = value
         elif value:
             if key in ['numWorker']:
@@ -221,7 +236,7 @@ def read_template2inps(template_file, inps):
                 iDict[key] = float(value)
             elif key in ['weightFunc', 'residualNorm', 'waterMaskFile']:
                 iDict[key] = value
-    return inps
+    return inps, template
 
 
 def run_or_skip(inps):
@@ -1072,22 +1087,23 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     else:
         try:
             from dask.distributed import Client, as_completed
-            import mintpy.objects.cluster as cl
         except ImportError:
-            raise ImportError('Cannot import dask.distributed or dask_jobqueue!')
+            raise ImportError('Cannot import dask.distributed!')
+        from mintpy.objects.cluster import get_cluster
 
         ts = np.zeros((num_date, length, width), np.float32)
 
-        # Look at the ~/.config/dask/dask_mintpy.yaml file for Changing the Dask configuration defaults
+        # Look at the ~/.config/dask/mintpy.yaml file for Changing the Dask configuration defaults
 
         # This line submits NUM_WORKERS jobs to Pegasus to start a bunch of workers
         # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
         # at once (other user's jobs gained higher priority in the general at that point)
         NUM_WORKERS = inps.numWorker
+
         # FA: the following command starts the jobs
-        cluster = cl.get_cluster(type=inps.cluster, walltime=inps.walltime)
+        cluster = get_cluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
         cluster.scale(NUM_WORKERS)
-        print("JOB COMMAND CALLED FROM PYTHON:", cluster.job_script())
+        print("JOB COMMAND CALLED FROM PYTHON:\n\n", cluster.job_script())
         with open('dask_command_run_from_python.txt', 'w') as f:
               f.write(cluster.job_script() + '\n')
 

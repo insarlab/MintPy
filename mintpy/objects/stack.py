@@ -376,6 +376,12 @@ class timeseries:
         metadata = dict(metadata)
         metadata['FILE_TYPE'] = self.name
 
+        # directory
+        outDir = os.path.dirname(os.path.abspath(outFile))
+        if not os.path.isdir(outDir):
+            os.makedirs(outDir)
+            print('create directory: {}'.format(outDir))
+
         # 3D dataset - timeseries
         print('create timeseries HDF5 file: {} with w mode'.format(outFile))
         f = h5py.File(outFile, 'w')
