@@ -158,9 +158,12 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    outfile = filter_file(inps.file, inps.filter_type, inps.filter_par,inps.outfile)
+    inps.outfile = filter_file(inps.file, 
+                               filter_type=inps.filter_type,
+                               filter_par=inps.filter_par,
+                               fname_out=inps.outfile)
     print('Done.')
-    return outfile
+    return inps.outfile
 
 
 ################################################################################################
