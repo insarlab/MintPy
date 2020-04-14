@@ -113,11 +113,20 @@ def cmd_line_parse(iargs = None):
         inps.unwFile = os.path.join(inps.stackDir, inps.unwFile)
         inps.connCompFile = os.path.join(inps.stackDir, inps.connCompFile)
 
-    # required datasets
-    required_keys = ['unwFile', 'corFile', 'connCompFile', 'demFile', 'incAngleFile']
-    for key in required_keys:
-        fnames = glob.glob(vars(inps)[key])
-        if len(fnames) < 1:
+    # check datasets
+    # 1. translate wildcard path input with search result
+    # 2. raise error if required datasets are missing
+    iDict = vars(inps)
+    ds_keys = [key for key in list(iDict.keys()) if key.endswith('File')]
+    required_ds_keys = ['unwFile', 'corFile', 'demFile', 'incAngleFile']
+
+    for key in ds_keys:
+        fname = iDict[key]
+        fnames = glob.glob(fname)
+        if len(fnames) > 0:
+            iDict[key] = fnames[0]
+
+        elif key in required_ds_keys:
             parser.print_usage()
             print('required dataset "{}" not found in: {}.'.format(key, fname))
             raise SystemExit()
@@ -334,7 +343,6 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
     h5['slantRangeDistance'][:,:] = float(h5.attrs['STARTING_RANGE'])
 
     # incidenceAngle
-    incAngleFile = glob.glob(incAngleFile)[0]
     ds = gdal.Open(incAngleFile, gdal.GA_ReadOnly)
     data = ds.ReadAsArray()
     data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
@@ -342,7 +350,6 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
 
     # azimuthAngle
     if azAngleFile is not None:
-        azAngleFile = glob.glob(azAngleFile)[0]
         ds = gdal.Open(azAngleFile, gdal.GA_ReadOnly)
         data = ds.ReadAsArray()
         data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
