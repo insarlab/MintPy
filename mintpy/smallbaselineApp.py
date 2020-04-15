@@ -1004,8 +1004,8 @@ class TimeSeriesAnalysis:
 
     def plot_result(self, print_aux=True, plot=True):
         """Plot data files and save to figures in pic folder"""
-        print('\n******************** plot & save to pic ********************')
         if self.template['mintpy.plot'] and plot:
+            print('\n******************** plot & save to pic ********************')
             print(self.plot_sh_cmd)
             subprocess.Popen(self.plot_sh_cmd, shell=True).wait()
 

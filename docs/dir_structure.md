@@ -1,6 +1,6 @@
 ## Example data directory for different InSAR processors
 
-### ISCE / topsStack ###
+### ISCE / [topsStack](https://github.com/isce-framework/isce2/blob/master/contrib/stack/topsStack/README.md) ###
 
 ```
 $DATA_DIR/GalapagosSenDT128
@@ -66,7 +66,7 @@ $DATA_DIR/GalapagosSenDT128
     └── GalapagosSenDT128.txt
 ```
 
-The corresponding template options for load_data:
+The corresponding template options for `load_data`:
 
 ```cfg
 mintpy.load.processor        = isce
@@ -86,7 +86,7 @@ mintpy.load.azAngleFile      = $DATA_DIR/GalapagosSenDT128/merged/geom_master/lo
 mintpy.load.shadowMaskFile   = $DATA_DIR/GalapagosSenDT128/merged/geom_master/shadowMask.rdr
 ```
 
-### ISCE / stripmapStack ###
+### ISCE / [stripmapStack](https://github.com/isce-framework/isce2/blob/master/contrib/stack/stripmapStack/README.md) ###
 
 ```
 $DATA_DIR/KirishimaAlosAT424F620_630
@@ -170,7 +170,7 @@ $DATA_DIR/KirishimaAlosAT424F620_630
     └── KirishimaAlosAT424F620_630.txt
 ```
 
-The corresponding template options for load_data:
+The corresponding template options for `load_data`:
 
 ```cfg
 mintpy.load.processor        = isce
@@ -190,7 +190,10 @@ mintpy.load.azAngleFile      = $DATA_DIR/KirishimaAlosAT424F620_630/geom_master/
 mintpy.load.shadowMaskFile   = $DATA_DIR/KirishimaAlosAT424F620_630/geom_master/shadowMask.rdr
 ```
 
-### ARIA from ARIA-tools ###
+### ARIA from [ARIA-tools](https://github.com/aria-tools/ARIA-tools) ###
+
+1. Download GUNW products using [ariaDownload.py](https://nbviewer.jupyter.org/github/aria-tools/ARIA-tools-docs/blob/master/JupyterDocs/ariaDownload/ariaDownload_tutorial.ipynb).
+2. Prepare GUNW products layers for time series analysis using [ariaTSsetup.py](https://nbviewer.jupyter.org/github/aria-tools/ARIA-tools-docs/blob/master/JupyterDocs/ariaTSsetup/ariaTSsetup_tutorial.ipynb)
 
 ```
 $DATA_DIR/SanFranSenDT42
@@ -257,7 +260,7 @@ $DATA_DIR/SanFranSenDT42
 │   ├── ...
 ```
 
-The corresponding template options:
+The corresponding template options for `load_data`:
 
 ```cfg
 mintpy.load.processor        = aria
@@ -267,8 +270,8 @@ mintpy.load.corFile          = $DATA_DIR/SanFranSenDT42/stack/cohStack.vrt
 mintpy.load.connCompFile     = $DATA_DIR/SanFranSenDT42/stack/connCompStack.vrt
 ##---------geometry datasets:
 mintpy.load.demFile          = $DATA_DIR/SanFranSenDT42/DEM/SRTM_3arcsec.dem
-mintpy.load.incAngleFile     = $DATA_DIR/SanFranSenDT42/incidenceAngle/20150605_20150512.vrt
-mintpy.load.azAngleFile      = $DATA_DIR/SanFranSenDT42/azimuthAngle/20150605_20150512.vrt
+mintpy.load.incAngleFile     = $DATA_DIR/SanFranSenDT42/incidenceAngle/*.vrt
+mintpy.load.azAngleFile      = $DATA_DIR/SanFranSenDT42/azimuthAngle/*.vrt
 mintpy.load.waterMaskFile    = $DATA_DIR/SanFranSenDT42/mask/watermask.msk
 ```
 
@@ -298,7 +301,7 @@ $DATA_DIR/GalapagosEnvA2T061
     └── GalapagosEnvA2T061.txt
 ```
 
-The corresponding template options for load_data:
+The corresponding template options for `load_data`:
 
 ```cfg
 mintpy.load.processor        = gamma
@@ -312,7 +315,7 @@ mintpy.load.lookupYFile      = $DATA_DIR/GalapagosEnvA2T061/geom_master/sim*rlks
 mintpy.load.lookupXFile      = $DATA_DIR/GalapagosEnvA2T061/geom_master/sim*rlks.UTM_TO_RDC
 ```
 
-### SNAP ###
+### [SNAP](https://github.com/insarlab/MintPy/wiki/SNAP-input-data) ###
 
 ```
 $DATA_DIR/SAfricaSenAT29
@@ -340,7 +343,7 @@ $DATA_DIR/SAfricaSenAT29
     └── SAfricaSenAT29.txt
 ```
 
-The corresponding template options for load_data:
+The corresponding template options for `load_data`:
 
 ```cfg
 mintpy.load.processor        = snap
@@ -378,7 +381,7 @@ $DATA_DIR/GalapagosAlosAT133
     └── GalapagosAlosAT133.txt
 ```
 
-The corresponding template options for load_data:
+The corresponding template options for `load_data`:
 
 ```cfg
 mintpy.load.processor      = roipac  #[isce,roipac,gamma,], auto for isce
