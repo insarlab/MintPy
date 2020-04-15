@@ -292,7 +292,7 @@ def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
     # Open HDF5 File
     f = h5py.File(out_file, 'w')
     print('create HDF5 file: {} with w mode'.format(out_file))
-    maxDigit = 20
+    maxDigit = 55
 
     # Write Observation - Displacement
     gName = 'HDFEOS/GRIDS/timeseries/observation'
@@ -301,9 +301,8 @@ def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
 
     dsName = 'displacement'
     data = ts_obj.read(print_msg=False)
-    print(('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s}'
-           ' with compression={c}').format(g=gName,
-                                           d=dsName,
+    print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
+           ' with compression={c}').format(d='{}/{}'.format(gName, dsName),
                                            w=maxDigit,
                                            t=str(data.dtype),
                                            s=data.shape,
@@ -321,20 +320,18 @@ def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
     dsName = 'date'
     data = np.array(dateList, dtype=np.string_)
     group.create_dataset(dsName, data=data)
-    print('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s}'.format(g=gName,
-                                                                          d=dsName,
-                                                                          w=maxDigit,
-                                                                          t=str(data.dtype),
-                                                                          s=data.shape))
+    print('create dataset /{d:<{w}} of {t:<10} in size of {s}'.format(d='{}/{}'.format(gName, dsName),
+                                                                      w=maxDigit,
+                                                                      t=str(data.dtype),
+                                                                      s=data.shape))
 
     dsName = 'bperp'
     data = np.array(ts_obj.pbase, dtype=np.float32)
     group.create_dataset(dsName, data=data)
-    print('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s}'.format(g=gName,
-                                                                          d=dsName,
-                                                                          w=maxDigit,
-                                                                          t=str(data.dtype),
-                                                                          s=data.shape))
+    print('create dataset /{d:<{w}} of {t:<10} in size of {s}'.format(d='{}/{}'.format(gName, dsName),
+                                                                      w=maxDigit,
+                                                                      t=str(data.dtype),
+                                                                      s=data.shape))
 
     # Write Quality
     gName = 'HDFEOS/GRIDS/timeseries/quality'
@@ -344,9 +341,8 @@ def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
     ## 1 - temporalCoherence
     dsName = 'temporalCoherence'
     data = readfile.read(coh_file)[0]
-    print(('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s}'
-           ' with compression={c}').format(g=gName,
-                                           d=dsName,
+    print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
+           ' with compression={c}').format(d='{}/{}'.format(gName, dsName),
                                            w=maxDigit,
                                            t=str(data.dtype),
                                            s=data.shape,
@@ -363,9 +359,8 @@ def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
     ## 2 - mask
     dsName = 'mask'
     data = readfile.read(mask_file, datasetName='mask')[0]
-    print(('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s}'
-           ' with compression={c}').format(g=gName,
-                                           d=dsName,
+    print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
+           ' with compression={c}').format(d='{}/{}'.format(gName, dsName),
                                            w=maxDigit,
                                            t=str(data.dtype),
                                            s=data.shape,
@@ -390,9 +385,8 @@ def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
     geom_obj.open(print_msg=False)
     for dsName in geom_obj.datasetNames:
         data = geom_obj.read(datasetName=dsName, print_msg=False)
-        print(('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s}'
-               ' with compression={c}').format(g=gName,
-                                               d=dsName,
+        print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
+               ' with compression={c}').format(d='{}/{}'.format(gName, dsName),
                                                w=maxDigit,
                                                t=str(data.dtype),
                                                s=data.shape,
