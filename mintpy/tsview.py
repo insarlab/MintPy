@@ -201,7 +201,7 @@ def read_init_info(inps):
      inps.unit_fac) = pp.scale_data2disp_unit(metadata=atr, disp_unit=inps.disp_unit)[1:3]
 
     # Map info - coordinate unit
-    inps.coord_unit = atr['Y_UNIT']
+    inps.coord_unit = atr.get('Y_UNIT', 'degrees').lower()
 
     # Read Error List
     inps.error_ts = None
