@@ -246,7 +246,7 @@ def add_gps_argument(parser):
 def add_mask_argument(parser):
     mask = parser.add_argument_group('Mask', 'Mask file/options')
     mask.add_argument('-m','--mask', dest='mask_file', metavar='FILE',
-                      help='mask file for display')
+                      help='mask file for display. "no" to turn OFF masking.')
     mask.add_argument('--zm','--zero-mask', dest='zero_mask', action='store_true',
                       help='mask pixels with zero value.')
     return parser
@@ -1623,16 +1623,20 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
     """
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
+
     # default mask file:
     if (not mask_file
             and k in ['velocity', 'timeseries']
             and 'masked' not in fname):
+
         mask_file = 'maskTempCoh.h5'
         if 'PhaseVelocity' in fname:
             mask_file = None #'maskSpatialCoh.h5'
+
         # check coordinate
         if os.path.basename(fname).startswith('geo_'):
             mask_file = 'geo_{}'.format(mask_file)
+
         # absolute path and file existence
         mask_file = os.path.join(os.path.dirname(fname), str(mask_file))
         if not os.path.isfile(mask_file):
@@ -1644,9 +1648,20 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
         try:
             atrMsk = readfile.read_attribute(mask_file)
             if all(int(atrMsk[key]) == int(atr[key]) for key in ['LENGTH','WIDTH']):
-                msk = readfile.read(mask_file, box=box, print_msg=print_msg)[0]
+                # grab dsname for conn comp mask [None for the others]
+                dsName=None
+                if all(meta['FILE_TYPE'] == 'ifgramStack' for meta in [atr, atrMsk]):
+                    date12 = datasetName.split('-')[1]
+                    dsName = 'connectComponent-{}'.format(date12)
+
+                # read mask data
+                msk = readfile.read(mask_file,
+                                    box=box,
+                                    datasetName=dsName,
+                                    print_msg=print_msg)[0]
                 if print_msg:
                     print('read mask from file:', os.path.basename(mask_file))
+
             else:
                 mask_file = None
                 if print_msg:
@@ -1655,10 +1670,11 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
                     msg += '\n    mask file {} row/column number: {} / {}'.format(mask_file, atrMsk['LENGTH'], atrMsk['WIDTH'])
                     msg += '\n    Continue without mask.'
                     print(msg)
+
         except:
             mask_file = None
             if print_msg:
-                print('Can not open mask file:', mask_file)
+                print('Can not open mask file:', mask_file)        
 
     elif k in ['HDFEOS']:
         if datasetName.split('-')[0] in timeseriesDatasetNames:
