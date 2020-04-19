@@ -93,7 +93,7 @@ def add_data_disp_argument(parser):
                       help='re-wrap data to display data in fringes.')
     data.add_argument('--wrap-range', dest='wrap_range', type=float, nargs=2,
                       default=[-1.*np.pi, np.pi], metavar=('MIN', 'MAX'),
-                      help='range of one cycle after wrapping, default: [-pi, pi]')
+                      help='range of one cycle after wrapping (default: %(default)s).')
 
     data.add_argument('--flip-lr', dest='flip_lr',
                       action='store_true', help='flip left-right')
@@ -103,7 +103,7 @@ def add_data_disp_argument(parser):
                       help='turn off auto flip for radar coordinate file')
 
     data.add_argument('--multilook-num', dest='multilook_num', type=int, default=1, metavar='NUM',
-                      help='multilook data in X and Y direction with a factor for display')
+                      help='multilook data in X and Y direction with a factor for display (default: %(default)s).')
     data.add_argument('--nomultilook', '--no-multilook', dest='multilook', action='store_false',
                       help='do not multilook, for high quality display. \n'
                            'If multilook and multilook_num=1, multilook_num will be estimated automatically.\n'
@@ -123,29 +123,26 @@ def add_dem_argument(parser):
                      help='do not show DEM shaded relief')
     dem.add_argument('--dem-nocontour', dest='disp_dem_contour', action='store_false',
                      help='do not show DEM contour lines')
+
     dem.add_argument('--contour-smooth', dest='dem_contour_smooth', type=float, default=3.0,
                      help='Background topography contour smooth factor - sigma of Gaussian filter. \n'
-                          'Default is 3.0; set to 0.0 for no smoothing.')
+                          'Set to 0.0 for no smoothing; (default: %(default)s).')
     dem.add_argument('--contour-step', dest='dem_contour_step', metavar='NUM', type=float, default=200.0,
-                     help='Background topography contour step in meters. \n'
-                          'Default is 200 meters.')
+                     help='Background topography contour step in meters (default: %(default)s).')
     dem.add_argument('--contour-linewidth', dest='dem_contour_linewidth', metavar='NUM', type=float, default=0.5,
-                     help='Background topography contour linewidth. \n'
-                          'Default is 0.5.')
+                     help='Background topography contour linewidth (default: %(default)s).')
+
     dem.add_argument('--shade-az', dest='shade_azdeg', type=float, default=315., metavar='DEG',
-                     help='The azimuth (0-360, degrees clockwise from North) of the light source\n'
-                          'Default is 315.')
+                     help='The azimuth (0-360, degrees clockwise from North) of the light source (default: %(default)s).')
     dem.add_argument('--shade-alt', dest='shade_altdeg', type=float, default=45., metavar='DEG',
-                     help='The altitude (0-90, degrees up from horizontal) of the light source.\n'
-                          'Default is 45.')
+                     help='The altitude (0-90, degrees up from horizontal) of the light source (default: %(default)s).')
+
     dem.add_argument('--shade-min', dest='shade_min', type=float, default=-4000., metavar='MIN',
-                     help='The min height in m of colormap of shaded relief topography\n'
-                          'Default: -4000 m')
+                     help='The min height in m of colormap of shaded relief topography (default: %(default)s).')
     dem.add_argument('--shade-max', dest='shade_max', type=float, default=999., metavar='MAX',
-                     help='The max height of colormap of shaded relief topography\n'
-                          'Default: max(DEM) + 2000 m')
+                     help='The max height of colormap of shaded relief topography (default: max(DEM)+2000).')
     dem.add_argument('--shade-exag', dest='shade_exag', type=float, default=0.5,
-                     help='Vertical exaggeration ratio, default: 0.5')
+                     help='Vertical exaggeration ratio (default: %(default)s).')
     return parser
 
 
@@ -155,7 +152,7 @@ def add_figure_argument(parser):
     fig.add_argument('--fontsize', dest='font_size',
                      type=int, help='font size')
     fig.add_argument('--fontcolor', dest='font_color',
-                     default='k', help='font color')
+                     default='k', help='font color (default: %(default)s).')
 
     # axis format
     fig.add_argument('--nowhitespace', dest='disp_whitespace',
@@ -167,27 +164,26 @@ def add_figure_argument(parser):
 
     # colormap
     fig.add_argument('-c', '--colormap', dest='colormap',
-                     help='colormap used for display, i.e. jet, RdBu, hsv, jet_r, temperature, viridis,  etc.\n'
-                          'colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html\n'
-                          'colormaps in GMT - http://soliton.vm.bytemark.co.uk/pub/cpt-city/')
+                     help='colormap used for display, i.e. jet, cmy, RdBu, hsv, jet_r, temperature, viridis, etc.\n'
+                          'More details: https://mintpy.readthedocs.io/en/latest/resources/colormaps/')
     fig.add_argument('--cm-lut','--cmap-lut', dest='cmap_lut', type=int, default=256, metavar='NUM',
-                     help='number of increment of colormap lookup table')
+                     help='number of increment of colormap lookup table (default: %(default)s).')
     fig.add_argument('--cm-vlist','--cmap-vlist', dest='cmap_vlist', type=float, nargs=3, default=[0.0, 0.7, 1.0],
-                     help='list of 3 float numbers, for truncated colormap only')
+                     help='list of 3 float numbers, for truncated colormap only (default: %(default)s).')
 
     # colorbar
     fig.add_argument('--nocbar', '--nocolorbar', dest='disp_cbar',
                      action='store_false', help='do not display colorbar')
     fig.add_argument('--cbar-nbins', dest='cbar_nbins', metavar='NUM',
-                     type=int, help='number of bins for colorbar')
+                     type=int, help='number of bins for colorbar.')
     fig.add_argument('--cbar-ext', dest='cbar_ext', default=None,
                      choices={'neither', 'min', 'max', 'both', None},
                      help='Extend setting of colorbar; based on data stat by default.')
     fig.add_argument('--cbar-label', dest='cbar_label', default=None, help='colorbar label')
     fig.add_argument('--cbar-loc', dest='cbar_loc', type=str, default='right',
-                     help='colorbar location for single plot')
+                     help='colorbar location for single plot (default: %(default)s).')
     fig.add_argument('--cbar-size', dest='cbar_size', type=str, default="2%",
-                     help='colorbar size and pad')
+                     help='colorbar size and pad (default: %(default)s).')
 
     # title
     fig.add_argument('--notitle', dest='disp_title',
@@ -203,24 +199,27 @@ def add_figure_argument(parser):
     fig.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
                      help='figure size in inches - width and length')
     fig.add_argument('--dpi', dest='fig_dpi', metavar='DPI', type=int, default=300,
-                     help='DPI - dot per inch - for display/write')
-    fig.add_argument('--figext', dest='fig_ext',
-                     default='.png', choices=['.emf', '.eps', '.pdf', '.png', '.ps', '.raw', '.rgba', '.svg', '.svgz'],
-                     help='File extension for figure output file')
+                     help='DPI - dot per inch - for display/write (default: %(default)s).')
+    fig.add_argument('--figext', dest='fig_ext', default='.png',
+                     choices=['.emf', '.eps', '.pdf', '.png', '.ps', '.raw', '.rgba', '.svg', '.svgz'],
+                     help='File extension for figure output file (default: %(default)s).')
+
     fig.add_argument('--fignum', dest='fig_num', type=int, metavar='NUM',
                      help='number of figure windows')
     fig.add_argument('--nrows', dest='fig_row_num', type=int, default=1, metavar='NUM',
                      help='subplot number in row')
     fig.add_argument('--ncols', dest='fig_col_num', type=int, default=1, metavar='NUM',
                      help='subplot number in column')
+
     fig.add_argument('--wspace', dest='fig_wid_space', type=float,
                      help='width space between subplots in inches')
     fig.add_argument('--hspace', dest='fig_hei_space', type=float,
                      help='height space between subplots in inches')
     fig.add_argument('--no-tight-layout', dest='fig_tight_layout', action='store_false',
                      help='disable automatic tight layout for multiple subplots')
+
     fig.add_argument('--coord', dest='fig_coord', choices=['radar', 'geo'], default='geo',
-                     help='Display in radar/geo coordination system, for geocoded file only.')
+                     help='Display in radar/geo coordination system, for geocoded file only (default: %(default)s).')
     fig.add_argument('--animation', action='store_true',
                      help='enable animation mode')
 
@@ -236,6 +235,7 @@ def add_gps_argument(parser):
     gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los'},
                      help='Plot GPS in color indicating deformation velocity direction')
     gps.add_argument('--ref-gps', dest='ref_gps_site', type=str, help='Reference GPS site')
+
     gps.add_argument('--gps-start-date', dest='gps_start_date', type=str, metavar='YYYYMMDD',
                      help='start date of GPS data, default is date of the 1st SAR acquisiton')
     gps.add_argument('--gps-end-date', dest='gps_end_date', type=str, metavar='YYYYMMDD',
@@ -255,17 +255,18 @@ def add_mask_argument(parser):
 def add_map_argument(parser):
     # Map
     mapg = parser.add_argument_group('Map', 'Map settings for display')
-    mapg.add_argument('--coastline', dest='coastline', type=str, default='no', choices={'10m', '50m', '110m', 'no'},
-                      help="Draw coastline with specified resolution.")
+    mapg.add_argument('--coastline', dest='coastline', type=str, default='no',
+                      choices={'10m', '50m', '110m', 'no'},
+                      help="Draw coastline with specified resolution (default: %(default)s).")
     # lalo label
     mapg.add_argument('--lalo-loc', dest='lalo_loc', type=int, nargs=4, default=[1, 0, 0, 1],
                       metavar=('left', 'right', 'top', 'bottom'),
-                      help='Draw lalo label in [left, right, top, bottom], default is [1,0,0,1]')
+                      help='Draw lalo label in [left, right, top, bottom] (default: %(default)s).')
     mapg.add_argument('--lalo-label', dest='lalo_label', action='store_true',
                       help='Show N, S, E, W tick label for plot in geo-coordinate.\n'
                            'Useful for final figure output.')
     mapg.add_argument('--lalo-max-num', dest='lalo_max_num', type=int, default=4, metavar='NUM',
-                      help='Maximum number of lalo tick label, 4 by default.')
+                      help='Maximum number of lalo tick label (default: %(default)s).')
     mapg.add_argument('--lalo-step', dest='lalo_step', metavar='DEG',
                       type=float, help='Lat/lon step for lalo-label option.')
     mapg.add_argument('--lat-label', dest='lat_label_direction', type=str,
@@ -274,13 +275,13 @@ def add_map_argument(parser):
 
     mapg.add_argument('--projection', dest='map_projection', metavar='NAME', default='PlateCarree',
                       choices={'PlateCarree', 'LambertConformal'},
-                      help='map projection when plotting in geo-coordinate.\n'
+                      help='map projection when plotting in geo-coordinate (default: %(default)s).\n'
                            'https://scitools.org.uk/cartopy/docs/latest/crs/projections.html\n\n')
 
     # scale bar
     mapg.add_argument('--scalebar', nargs=3, metavar=('LEN', 'X', 'Y'), type=float,
                       default=[0.2, 0.2, 0.1],
-                      help='scale bar distance and location in ratio:\n' +
+                      help='scale bar distance and location in ratio (default: %(default)s).\n' +
                            '\tdistance in ratio of total width\n' +
                            '\tlocation in X/Y in ratio with respect to the lower left corner\n' +
                            '--scalebar 0.2 0.2 0.1  #for lower left  corner\n' +
@@ -290,7 +291,7 @@ def add_map_argument(parser):
     mapg.add_argument('--noscalebar', '--nosbar', dest='disp_scalebar',
                       action='store_false', help='do not display scale bar.')
     mapg.add_argument('--scalebar-pad','--sbar-pad', dest='scalebar_pad', type=float,
-                      default=0.05, help='scale bar label pad in ratio of scalebar width, default: 0.05')
+                      default=0.05, help='scale bar label pad in ratio of scalebar width (default: %(default)s).')
 
     return parser
 
@@ -304,9 +305,9 @@ def add_point_argument(parser):
     pts.add_argument('--pts-file', dest='pts_file', type=str,
                      help='Point(s) defined in text file in lat/lon column')
     pts.add_argument('--pts-marker', dest='pts_marker', type=str, default='k^',
-                     help='Marker of points of interest. Default: black triangle.')
+                     help='Marker of points of interest (default: %(default)s).')
     pts.add_argument('--pts-ms', dest='pts_marker_size', type=float, default=6.,
-                     help='Marker size for points of interest. Default: 6.')
+                     help='Marker size for points of interest (default: %(default)s).')
     return parser
 
 
@@ -315,18 +316,20 @@ def add_reference_argument(parser):
     # reference date
     ref.add_argument('--ref-date', dest='ref_date', metavar='DATE',
                      help='Change reference date for display')
+
     # reference pixel
     ref.add_argument('--ref-lalo', dest='ref_lalo', metavar=('LAT', 'LON'), type=float, nargs=2,
                      help='Change referene point LAT LON for display')
     ref.add_argument('--ref-yx', dest='ref_yx', metavar=('Y', 'X'), type=int, nargs=2,
                      help='Change referene point Y X for display')
+
     # reference pixel style
     ref.add_argument('--noreference', dest='disp_ref_pixel',
                      action='store_false', help='do not show reference point')
     ref.add_argument('--ref-marker', dest='ref_marker', default='ks',
-                     help='marker of reference pixel')
+                     help='marker of reference pixel (default: %(default)s).')
     ref.add_argument('--ref-size', dest='ref_marker_size', metavar='NUM', type=int, default=6,
-                     help='marker size of reference point, default: 10')
+                     help='marker size of reference point (default: %(default)s).')
     return parser
 
 

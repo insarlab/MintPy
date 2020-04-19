@@ -7,6 +7,7 @@
 
 
 import os
+import sys
 import argparse
 import time
 import h5py
@@ -61,14 +62,15 @@ REFERENCE = """reference:
   doi:10.1016/j.cageo.2019.104331.
 """
 
-TEMPLATE = get_template_content('correct_unwrap_error')
+TEMPLATE1 = get_template_content('quick_overview')
+TEMPLATE2 = get_template_content('correct_unwrap_error')
 
 
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Unwrapping Error Correction based on Phase Closure'+NOTE,
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
+                                     epilog=REFERENCE+'\n'+TEMPLATE1+'\n'+TEMPLATE2+'\n'+EXAMPLE)
 
     parser.add_argument('ifgram_file', help='interferograms file to be corrected')
     parser.add_argument('-c','--cc-mask', dest='cc_mask_file', default='maskConnComp.h5',
@@ -168,20 +170,33 @@ def run_or_skip(inps):
 
 
 ##########################################################################################
-def calc_num_nonzero_closure_phase(ifgram_file, mask_file=None, dsName='unwrapPhase',
-                                   step=50, out_file=None):
+def calc_num_nonzero_integer_closure_phase(ifgram_file, mask_file=None, dsName='unwrapPhase',
+                                           out_file=None, step=50, update_mode=True):
     """Calculate the number of non-zero integer ambiguity of closure phase.
 
     T_int as shown in equation (8-9) and inline in Yunjun et al. (2019, CAGEO).
+
+    Parameters: ifgram_file - str, path of interferogram stack file
+                mask_file   - str, path of mask file
+                dsName      - str, unwrapped phase dataset name used to calculate the closure phase
+                out_file    - str, custom output filename
+                step        - int, number of row in each block to calculate T_int
+                update_mode - bool
+    Returns:    out_file    - str, custom output filename
+    Example:    calc_num_nonzero_integer_closure_phase('inputs/ifgramStack.h5', mask_file='waterMask.h5')
     """
 
     # default output file path
     if out_file is None:
         out_dir = os.path.dirname(os.path.dirname(ifgram_file))
-        out_file = 'numNonzeroClosure4{}.h5'.format(dsName)
+        if dsName == 'unwrapPhase':
+            # skip the default dsName in output filename
+            out_file = 'numNonzeroIntClosure.h5'
+        else:
+            out_file = 'numNonzeroIntClosure4{}.h5'.format(dsName)
         out_file = os.path.join(out_dir, out_file)
 
-    if os.path.isfile(out_file):
+    if update_mode and os.path.isfile(out_file):
         print('output file "{}" already exists, skip re-calculating.'.format(out_file))
         return out_file
 
@@ -192,30 +207,36 @@ def calc_num_nonzero_closure_phase(ifgram_file, mask_file=None, dsName='unwrapPh
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
     num_ifgram = len(date12_list)
 
-    print('get design matrix for the interferogram triplets')
     C = stack_obj.get_design_matrix4triplet(date12_list)
     ref_phase = stack_obj.get_reference_phase(unwDatasetName=dsName, dropIfgram=True).reshape(num_ifgram, -1)
+    print('get design matrix for the interferogram triplets in size of {}'.format(C.shape))    
 
     # calculate number of nonzero closure phase
-    print('calcualting the number of interferogram triplets with non-zero integer ambiguity of closure phase ...')
     num_loop = int(np.ceil(length / step))
-    num_nonzero_closure = np.zeros((length, width), np.int16)
+    num_nonzero_closure = np.zeros((length, width), dtype=np.float32)
+    msg = 'calcualting the number of triplets with non-zero integer ambiguity of closure phase ...'
+    msg += '\n    block by block with size up to {}, {} blocks in total'.format((step, width), num_loop)
+    print(msg)
+
     prog_bar = ptime.progressBar(maxValue=num_loop)
     for i in range(num_loop):
         # box
         r0 = i * step
         r1 = min((r0+step), stack_obj.length)
         box = (0, r0, stack_obj.width, r1)
+
         # read data
         unw = ifginv.read_unwrap_phase(stack_obj, box=box,
                                        ref_phase=ref_phase,
                                        obsDatasetName=dsName,
                                        dropIfgram=True,
                                        print_msg=False).reshape(num_ifgram, -1)
-        # calculate 
+
+        # calculate based on equation (8-9) and T_int equation inline.
         closure_pha = np.dot(C, unw)
         closure_int = np.round((closure_pha - ut.wrap(closure_pha)) / (2.*np.pi))
         num_nonzero_closure[r0:r1, :] = np.sum(closure_int != 0, axis=0).reshape(-1, width)
+
         prog_bar.update(i+1, every=1)
     prog_bar.close()
 
@@ -223,7 +244,7 @@ def calc_num_nonzero_closure_phase(ifgram_file, mask_file=None, dsName='unwrapPh
     if mask_file is not None:
         print('masking with file', mask_file)
         mask = readfile.read(mask_file)[0]
-        num_nonzero_closure[mask == 0] = 0
+        num_nonzero_closure[mask == 0] = np.nan
 
     # write to disk
     print('write to file', out_file)
@@ -232,35 +253,43 @@ def calc_num_nonzero_closure_phase(ifgram_file, mask_file=None, dsName='unwrapPh
     meta['UNIT'] = '1'
     writefile.write(num_nonzero_closure, out_file, meta)
 
+    # plot
+    plot_num_nonzero_integer_closure_phase(out_file)
+
     return out_file
 
 
-def hist_num_nonzero_closure_phase(fname, font_size=12):
+def plot_num_nonzero_integer_closure_phase(fname, font_size=12):
     """Plot the histogram for the number of non-zero integer ambiguity
 
-    Fig. 3e in Yunjun et al. (2019, CAGEO).
+    Fig. 3d-e in Yunjun et al. (2019, CAGEO).
     """
 
-    # check output file
-    fbase = os.path.splitext(os.path.basename(fname))[0]
-    out_file = os.path.join(os.path.dirname(fname), 'hist_{}.png'.format(fbase))
-    if os.path.isfile(out_file):
-        print('output file "{}" already exists, skip re-plotting.'.format(out_file))
-        return out_file
-
     # read data
-    data = readfile.read(fname)[0]
-    data = data[~np.isnan(data)].flatten()
-    vmax = ut.round_to_1(np.max(data))
+    data, atr = readfile.read(fname)
+    vmax = int(np.nanmax(data))
 
     # plot
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[5, 2.5])
+    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=[9, 3])
 
+    # subplot 1 - map
+    ax = axs[0]
+    im = ax.imshow(data, cmap='RdBu_r', interpolation='nearest')
+
+    # reference point
+    if all(key in atr.keys() for key in ['REF_Y','REF_X']):
+        ax.plot(int(atr['REF_X']), int(atr['REF_Y']), 's', color='white', ms=3)
+
+    # format
+    pp.auto_flip_direction(atr, ax=ax, print_msg=False)
+    fig.colorbar(im, ax=ax)
+    ax.set_title(r'$T_{int}$', fontsize=font_size)
+
+    # subplot 2 - histogram
+    ax = axs[1]
     ax.hist(data[~np.isnan(data)].flatten(), range=(0, vmax), log=True, bins=vmax)
 
     # axis format
-    #ax.set_xlim(-20, vmax-20)
-    #ax.set_ylim(1e1, 2e6)
     ax.set_xlabel(r'# of non-zero integer ambiguity $T_{int}$', fontsize=font_size)
     ax.set_ylabel('# of pixels', fontsize=font_size)
     ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
@@ -268,17 +297,23 @@ def hist_num_nonzero_closure_phase(fname, font_size=12):
     ax.yaxis.set_minor_locator(ticker.LogLocator(base=10.0, numticks=15,
                                                  subs=(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)))
     ax.yaxis.set_minor_formatter(ticker.NullFormatter())
-    ax.tick_params(which='both', direction='in', labelsize=font_size,
-                   bottom=True, top=True, left=True, right=True)
+
+    for ax in axs:
+        ax.tick_params(which='both', direction='in', labelsize=font_size,
+                       bottom=True, top=True, left=True, right=True)
+
+    fig.tight_layout()
 
     # output
-    print('save figure to file', out_file)
-    fig.savefig(out_file, bbox_inches='tight', transparent=True, dpi=300)
+    out_fig = '{}.png'.format(os.path.splitext(fname)[0])
+    print('plot and save figure to file', out_fig)
+    fig.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=300)
     plt.close(fig)
 
-    return out_file
+    return
 
 
+##########################################################################################
 def write_hdf5_file_patch(ifgram_file, data, box=None, dsName='unwrapPhase_phaseClosure'):
     """Write a patch of 3D dataset into an existing h5 file.
     Parameters: ifgram_file : string, name/path of output hdf5 file
@@ -494,31 +529,34 @@ def run_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_file=
 ####################################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-
-    # update mode
-    if inps.update_mode and run_or_skip(inps) == 'skip':
-        return inps.ifgram_file
-
     start_time = time.time()
 
     if inps.action == 'correct':
+        # update mode
+        if inps.update_mode and run_or_skip(inps) == 'skip':
+            return inps.ifgram_file
+
+        # solve integer ambiguity for common connected components
         common_regions = get_common_region_int_ambiguity(ifgram_file=inps.ifgram_file,
                                                          cc_mask_file=inps.cc_mask_file,
                                                          water_mask_file=inps.waterMaskFile,
                                                          num_sample=100,
                                                          dsNameIn=inps.datasetNameIn)
 
+        # apply the integer ambiguity from common conn comp to the whole ifgram
         run_unwrap_error_phase_closure(inps.ifgram_file, common_regions,
                                        water_mask_file=inps.waterMaskFile,
                                        dsNameIn=inps.datasetNameIn,
                                        dsNameOut=inps.datasetNameOut)
 
     else:
-        out_file = calc_num_nonzero_closure_phase(inps.ifgram_file,
-                                                  mask_file=inps.waterMaskFile,
-                                                  dsName=inps.datasetNameIn)
-        hist_num_nonzero_closure_phase(out_file)
-
+        # calculate the number of triplets with non-zero integer ambiguity
+        out_file = calc_num_nonzero_integer_closure_phase(inps.ifgram_file,
+                                                          mask_file=inps.waterMaskFile,
+                                                          dsName=inps.datasetNameIn,
+                                                          update_mode=inps.update_mode)
+        # for debug
+        #plot_num_nonzero_integer_closure_phase(out_file)
     m, s = divmod(time.time()-start_time, 60)
     print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
     return
@@ -526,4 +564,4 @@ def main(iargs=None):
 
 ####################################################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

@@ -96,19 +96,19 @@ def create_parser():
     infile = parser.add_argument_group('Input File', 'File/Dataset to display')
     infile.add_argument('file', type=str, help='file for display')
     infile.add_argument('dset', type=str, nargs='*', default=[],
-                        help='optional - dataset(s) to display')
+                        help='optional - dataset(s) to display (default: %(default)s).')
     infile.add_argument('-n', '--dset-num', dest='dsetNumList', metavar='NUM', type=int, nargs='*', default=[],
-                        help='optional - order number of date/dataset(s) to display')
+                        help='optional - order number of date/dataset(s) to display (default: %(default)s).')
     infile.add_argument('--nosearch', dest='search_dset', action='store_false',
-                        help='Disable glob search for input dset')
+                        help='Disable glob search for input dset.')
     infile.add_argument('--ex', '--exclude', dest='exDsetList', metavar='Dset', nargs='*', default=[],
-                        help='dates will not be displayed')
+                        help='dates will not be displayed (default: %(default)s).')
 
     parser.add_argument('--plot-setting', dest='disp_setting_file',
                         help='Template file with plot setting.\n'+PLOT_TEMPLATE)
 
     parser.add_argument('--noverbose', dest='print_msg', action='store_false',
-                        help='Disable the verbose message printing.')
+                        help='Disable the verbose message printing (default: %(default)s).')
 
     parser = pp.add_data_disp_argument(parser)
     parser = pp.add_dem_argument(parser)

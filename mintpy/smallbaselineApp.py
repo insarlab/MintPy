@@ -520,6 +520,28 @@ class TimeSeriesAnalysis:
         return
 
 
+    def run_quick_overview(self, step_name):
+        """A quick overview on the interferogram stack for:
+            1) possible ground deformation through interferogram stacking
+            2) phase unwrapping errors through the integer ambiguity of phase closure
+        """
+        # check the existence of ifgramStack.h5
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+
+        # 1) stack interferograms
+        pha_vel_file = 'avgPhaseVelocity.h5'
+        scp_args = '{} --dataset unwrapPhase -o {} --update'.format(stack_file, pha_vel_file)
+        print('temporal_average.py', scp_args)
+        mintpy.temporal_average.main(scp_args.split())
+
+        # 2) calculate the integer ambiguity of closure phase
+        water_mask_file = 'waterMask.h5'
+        scp_args = '{} --water-mask {} --action calculate --update'.format(stack_file, water_mask_file)
+        print('unwrap_error_phase_closure.py', scp_args)
+        mintpy.unwrap_error_phase_closure.main(scp_args.split())
+        return
+
+
     def run_unwrap_error_correction(self, step_name):
         """Correct phase-unwrapping errors"""
         method = self.template['mintpy.unwrapError.method']
@@ -534,33 +556,25 @@ class TimeSeriesAnalysis:
         scp_args_bridge = '{} --template {} --update'.format(stack_file, self.templateFile)
         scp_args_closure = '{} --cc-mask {} --template {} --update'.format(stack_file, mask_file, self.templateFile)
 
-        from mintpy import unwrap_error_bridging, unwrap_error_phase_closure
         if method == 'bridging':
-            unwrap_error_bridging.main(scp_args_bridge.split())
+            print('unwrap_error_bridging.py', scp_args_bridge)
+            mintpy.unwrap_error_bridging.main(scp_args_bridge.split())
 
         elif method == 'phase_closure':
-            unwrap_error_phase_closure.main(scp_args_closure.split())
+            print('unwrap_error_phase_closure.py', scp_args_closure)
+            mintpy.unwrap_error_phase_closure.main(scp_args_closure.split())
 
         elif method == 'bridging+phase_closure':
             scp_args_bridge += ' -i unwrapPhase -o unwrapPhase_bridging'
-            unwrap_error_bridging.main(scp_args_bridge.split())
+            print('unwrap_error_bridging.py', scp_args_bridge)
+            mintpy.unwrap_error_bridging.main(scp_args_bridge.split())
 
             scp_args_closure += ' -i unwrapPhase_bridging -o unwrapPhase_bridging_phaseClosure'
-            unwrap_error_phase_closure.main(scp_args_closure.split())
+            print('unwrap_error_phase_closure.py', scp_args_closure)
+            mintpy.unwrap_error_phase_closure.main(scp_args_closure.split())
 
         else:
             raise ValueError('un-recognized method: {}'.format(method))
-        return
-
-
-    def run_ifgram_stacking(self, step_name):
-        """Traditional interferograms stacking."""
-        # check the existence of ifgramStack.h5
-        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
-        pha_vel_file = 'avgPhaseVelocity.h5'
-        scp_args = '{} --dataset unwrapPhase -o {} --update'.format(stack_file, pha_vel_file)
-        print('temporal_average.py', scp_args)
-        mintpy.temporal_average.main(scp_args.split())
         return
 
 
@@ -1044,11 +1058,11 @@ class TimeSeriesAnalysis:
             elif sname == 'reference_point':
                 self.run_reference_point(sname)
 
+            elif sname == 'quick_overview':
+                self.run_quick_overview(sname)
+
             elif sname == 'correct_unwrap_error':
                 self.run_unwrap_error_correction(sname)
-
-            elif sname == 'stack_interferograms':
-                self.run_ifgram_stacking(sname)
 
             elif sname == 'invert_network':
                 self.run_network_inversion(sname)
