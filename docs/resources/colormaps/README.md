@@ -60,7 +60,7 @@ The following colormaps is included by default:
 + roma (seismic tomography)
 + vik (diverging)
 + vikO (cyclic diverging)
-+ More at [Scientific Color-Maps](http://www.fabiocrameri.ch/colourmaps.php)
++ More at [Scientific Color-Maps](http://www.fabiocrameri.ch/colourmaps.php) ([Crameri, 2018](https://doi.org/10.5194/gmd-11-2541-2018))
 
 <p align="left">
   <img width="600" src="http://www.fabiocrameri.ch/resources/ScientificColourMaps_FabioCrameriCompact.png">
