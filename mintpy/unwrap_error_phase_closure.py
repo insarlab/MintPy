@@ -12,7 +12,6 @@ import argparse
 import time
 import h5py
 import numpy as np
-import matplotlib; matplotlib.use("Agg")  # Force matplotlib to not use any Xwindows backend.
 from matplotlib import pyplot as plt, ticker
 
 try:
@@ -103,6 +102,9 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # backend setting for matplotlib
+    plt.switch_backend('Agg')
 
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
@@ -445,6 +447,7 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
     out_img = 'common_region_sample.png'
     fig.savefig(out_img, bbox_inches='tight', transparent=True, dpi=300)
     print('saved common regions and sample pixels to file', out_img)
+    plt.close(fig)
 
     return common_regions
 
