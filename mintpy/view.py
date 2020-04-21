@@ -10,6 +10,7 @@
 
 import os
 import sys
+import re
 import argparse
 import datetime as dt
 import numpy as np
@@ -37,42 +38,40 @@ from mintpy import subset, version
 ##################################################################################################
 EXAMPLE = """example:
   view.py velocity.h5
-  view.py velocity.h5  velocity  --vlim -2 2  -c RdBu
-  view.py velocity.h5  velocity  --wrap --wrap-range -3 7              #wrap data into [-3, 7] cm/yr
-  view.py velocity.h5  --ref-yx  210 566                               #Change reference pixel for display
-  view.py velocity.h5  --sub-x 100 600  --sub-y 200 800                #plot subset in yx
-  view.py velocity.h5  --sub-lat 31.05 31.10  --sub-lon 130.05 130.10  #plot subset in lalo
+  view.py velocity.h5 velocity --wrap --wrap-range -2 2 -c cmy --lalo-label
+  view.py velocity.h5 --ref-yx  210 566                              #change reference pixel for display
+  view.py velocity.h5 --sub-lat 31.05 31.10 --sub-lon 130.05 130.10  #subset in lalo / yx
 
   view.py timeseries.h5
-  view.py timeseries.h5 -m no                          #Do not use auto mask
-  view.py timeseries.h5 --ref-date 20101120            #Change reference date
-  view.py timeseries.h5 --ex drop_date.txt             #Exclude dates to plot
+  view.py timeseries.h5 -m no                   #do not use auto mask
+  view.py timeseries.h5 --ref-date 20101120     #change reference date
+  view.py timeseries.h5 --ex drop_date.txt      #exclude dates to plot
+  view.py timeseries.h5 '*2017*'                #all acquisitions in 2017
+  view.py timeseries.h5 '*2017*' '*2018*'       #all acquisitions in 2017 and 2018
 
-  view.py inputs/ifgramStack.h5 coherence
-  view.py inputs/ifgramStack.h5 unwrapPhase-           #Display unwrapPhase only in the presence of unwrapPhase_unwCor dset
-  view.py inputs/ifgramStack.h5 unwrapPhase-20070927_20100217 --zero-mask --wrap
-  view.py inputs/ifgramStack.h5 -n 6
-  view.py inputs/ifgramStack.h5 20171010_20171115      #Display all data related with one interferometric pair
+  view.py ifgramStack.h5 coherence
+  view.py ifgramStack.h5 unwrapPhase-           #unwrapPhase only in the presence of unwrapPhase_bridging
+  view.py ifgramStack.h5 -n 6                   #the 6th slice
+  view.py ifgramStack.h5 20171010_20171115      #all data      related with 20171010_20171115
+  view.py ifgramStack.h5 'coherence*20171010*'  #all coherence related with 20171010
+  view.py ifgramStack.h5 unwrapPhase-20070927_20100217 --zero-mask --wrap     #wrapped phase
+  view.py ifgramStack.h5 unwrapPhase-20070927_20100217 --mask ifgramStack.h5  #mask using connected components
 
-  view.py geo/geo_velocity.h5  --pts-file pts.yx   #Plot points with lat/lon in file
-
-  # InSAR v.s. GPS
-  # for one subplot only
-  view.py geo_velocity_msk.h5 velocity --show-gps   #show locations of available GPS
+  # GPS (for one subplot in geo-coordinates only)
+  view.py geo_velocity_msk.h5 velocity --show-gps       #show locations of available GPS
   view.py geo_velocity_msk.h5 velocity --show-gps --gps-comp enu2los --ref-gps GV01
   view.py geo_timeseries_ERA5_ramp_demErr.h5 20180619 --ref-date 20141213 --show-gps --gps-comp enu2los --ref-gps GV01
 
   # Custom colormap
-  # https://github.com/insarlab/MintPy/tree/master/docs/resources/colormaps
-  view.py geo_velocity.h5 velocity -c temperature
-  view.py geometryRadar.h5 height -c DEM_print
-  view.py geo_velocity.h5 velocity -c temperature_r3      #reverse colormap and repeat 3 times
+  # https://mintpy.readthedocs.io/en/latest/resources/colormaps/
+  view.py velocity.h5 velocity -c temporature_r
+  view.py geometryRadar.h5 height   -c DEM_print
 
-  # Save and Output:
+  # Save and Output
   view.py velocity.h5 --save
   view.py velocity.h5 --nodisplay
   view.py velocity.h5 --nodisplay --update
-  view.py geo_velocity.h5 velocity --nowhitespace --save  #save figure without whitespace
+  view.py geo_velocity.h5 velocity --nowhitespace
 """
 
 PLOT_TEMPLATE = """Plot Setting:
@@ -97,18 +96,19 @@ def create_parser():
     infile = parser.add_argument_group('Input File', 'File/Dataset to display')
     infile.add_argument('file', type=str, help='file for display')
     infile.add_argument('dset', type=str, nargs='*', default=[],
-                        help='optional - dataset(s) to display')
+                        help='optional - dataset(s) to display (default: %(default)s).')
     infile.add_argument('-n', '--dset-num', dest='dsetNumList', metavar='NUM', type=int, nargs='*', default=[],
-                        help='optional - order number of date/dataset(s) to display')
-    infile.add_argument('--exact', '--no-glob', dest='globSearch', action='store_false',
-                        help='Disable glob search for input dset')
+                        help='optional - order number of date/dataset(s) to display (default: %(default)s).')
+    infile.add_argument('--nosearch', dest='search_dset', action='store_false',
+                        help='Disable glob search for input dset.')
     infile.add_argument('--ex', '--exclude', dest='exDsetList', metavar='Dset', nargs='*', default=[],
-                        help='dates will not be displayed')
-    infile.add_argument('--plot-setting', dest='disp_setting_file',
+                        help='dates will not be displayed (default: %(default)s).')
+
+    parser.add_argument('--plot-setting', dest='disp_setting_file',
                         help='Template file with plot setting.\n'+PLOT_TEMPLATE)
 
     parser.add_argument('--noverbose', dest='print_msg', action='store_false',
-                        help='Disable the verbose message printing.')
+                        help='Disable the verbose message printing (default: %(default)s).')
 
     parser = pp.add_data_disp_argument(parser)
     parser = pp.add_dem_argument(parser)
@@ -132,7 +132,7 @@ def cmd_line_parse(iargs=None):
     # check invalid file inputs
     for key in ['file','dem_file','mask_file','pts_file']:
         fname = vars(inps)[key]
-        if fname not in [None,'no'] and not os.path.isfile(fname):
+        if fname not in [None, 'no'] and not os.path.isfile(fname):
             raise FileExistsError('input {} file {} NOT exist!'.format(key, fname))
 
     # --exclude
@@ -679,7 +679,7 @@ def plot_slice(ax, data, metadata, inps=None):
     return ax, inps, im, cbar
 
 
-def check_input_file_info(inps):
+def read_input_file_info(inps):
     # File Baic Info
     atr = readfile.read_attribute(inps.file)
     msg = 'input file is '
@@ -709,22 +709,36 @@ def check_input_file_info(inps):
     return inps, atr
 
 
-def check_dataset_input(allList, inList=[], inNumList=[], globSearch=True):
+def search_dataset_input(allList, inList=[], inNumList=[], search_dset=True):
     """Get dataset(es) from input dataset / dataset_num"""
-    # inList + inNumList --> outNumList --> outList
+    # inList --> inNumList --> outNumList --> outList
     if inList:
         if isinstance(inList, str):
             inList = [inList]
+
         tempList = []
-        if globSearch:
-            for i in inList:
-                tempList += [e for e in allList if i in e]
+        if search_dset:
+            for ds in inList:
+                # style of regular expression
+                if '*' not in ds:
+                    ds = '*{}*'.format(ds)
+                ds = ds.replace('*','.*')
+
+                # search
+                tempList += [e for e in allList
+                             if re.match(ds, e) is not None]
+
         else:
             tempList += [i for i in inList if i in allList]
         tempList = sorted(list(set(tempList)))
         inNumList += [allList.index(e) for e in tempList]
+
+    # inNumList --> outNumList
     outNumList = sorted(list(set(inNumList)))
+
+    # outNumList --> outList
     outList = [allList[i] for i in outNumList]
+
     return outList, outNumList
 
 
@@ -732,13 +746,18 @@ def read_dataset_input(inps):
     """Check input / exclude / reference dataset input with file dataset list"""
     # read inps.dset + inps.dsetNumList --> inps.dsetNumList
     if len(inps.dset) > 0 or len(inps.dsetNumList) > 0:
+        # message
+        if len(inps.dset) > 0:
+            print('input dataset: "{}"'.format(inps.dset))
+
+        # search
         if inps.key == 'velocity':
-            inps.globSearch = False
+            inps.search_dset = False
             vprint('turning glob search OFF for {} file'.format(inps.key))
-        inps.dsetNumList = check_dataset_input(inps.sliceList,
-                                               inps.dset,
-                                               inps.dsetNumList,
-                                               inps.globSearch)[1]
+        inps.dsetNumList = search_dataset_input(inps.sliceList,
+                                                inps.dset,
+                                                inps.dsetNumList,
+                                                inps.search_dset)[1]
     else:
         # default dataset to display for certain type of files
         if inps.key == 'geometry':
@@ -756,16 +775,16 @@ def read_dataset_input(inps):
             inps.dset = [obj.sliceList[0].split('-')[0]]
         else:
             inps.dset = inps.sliceList
-        inps.dsetNumList = check_dataset_input(inps.sliceList,
-                                               inps.dset,
-                                               inps.dsetNumList,
-                                               inps.globSearch)[1]
+        inps.dsetNumList = search_dataset_input(inps.sliceList,
+                                                inps.dset,
+                                                inps.dsetNumList,
+                                                inps.search_dset)[1]
 
     # read inps.exDsetList
-    inps.exDsetList, inps.exDsetNumList = check_dataset_input(inps.sliceList,
-                                                              inps.exDsetList,
-                                                              [],
-                                                              inps.globSearch)
+    inps.exDsetList, inps.exDsetNumList = search_dataset_input(inps.sliceList,
+                                                               inps.exDsetList,
+                                                               [],
+                                                               inps.search_dset)
 
     # get inps.dset
     inps.dsetNumList = sorted(list(set(inps.dsetNumList) - set(inps.exDsetNumList)))
@@ -775,10 +794,10 @@ def read_dataset_input(inps):
     if inps.ref_date:
         if inps.key not in timeseriesKeyNames:
             inps.ref_date = None
-        ref_date = check_dataset_input(inps.sliceList,
-                                       [inps.ref_date],
-                                       [],
-                                       inps.globSearch)[0][0]
+        ref_date = search_dataset_input(inps.sliceList,
+                                        [inps.ref_date],
+                                        [],
+                                        inps.search_dset)[0][0]
         if not ref_date:
             vprint('WARNING: input reference date is not included in input file!')
             vprint('input reference date: '+inps.ref_date)
@@ -1259,7 +1278,7 @@ def prep_slice(cmd, auto_fig=False):
     """
     inps = cmd_line_parse(cmd.split()[1:])
     vprint(cmd)
-    inps, atr = check_input_file_info(inps)
+    inps, atr = read_input_file_info(inps)
     inps = update_inps_with_file_metadata(inps, atr)
 
     inps.msk, inps.mask_file = pp.read_mask(inps.file,
@@ -1332,7 +1351,7 @@ class viewer():
 
     def configure(self):
         inps = cmd_line_parse(self.iargs)
-        inps, self.atr = check_input_file_info(inps)
+        inps, self.atr = read_input_file_info(inps)
         inps = update_inps_with_file_metadata(inps, self.atr)
 
         # copy inps to self object
