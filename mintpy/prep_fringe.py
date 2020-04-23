@@ -19,7 +19,7 @@ from mintpy.prep_isce import read_baseline_timeseries
 try:
     import gdal
 except ImportError:
-    raise ImportError('Can not import gdal [version>=3.0]!')
+    raise ImportError("Can not import gdal [version>=3.0]!")
 
 
 ####################################################################################
@@ -29,17 +29,17 @@ prep_fringe.py -s merged/SLC -i unwrap -f *.unw -m IW*.xml -g merged/geom_master
 
 def create_parser():
     """Command Line Parser"""
-    parser = argparse.ArgumentParser(description='Create MintPy objects from FRInGE output',
+    parser = argparse.ArgumentParser(description="Create MintPy objects from FRInGE output",
                                      formatter_class=argparse.RawTextHelpFormatter)
     
-    parser.add_argument('-s', '--slc_dir', dest='slcDir', help='ISCE generated SLC directory')
-    parser.add_argument('-i', '--ifg_dir', dest='ifgDir', help='unwrapped interferogram directory')
-    parser.add_argument('-f', '--file', dest='file', help='unwrapped interferogram file pattern (*.unw)')
-    parser.add_argument('-m', '--meta-file', dest='metafile', help='Metadata file to extract common metada for the stack')
-    parser.add_argument('-g', '--geom_dir', dest='geomDir', help='geometry directory')
-    parser.add_argument('-c', '--coherence', dest='cohFile', help='coherence file')
-    parser.add_argument('-b', '--bperp_dir', dest='baselineDir', help='baseline text file directory')
-    parser.add_argument('-B', '--bbox', dest='bbox', type=int, nargs='+', help='pixel bounding box used in FRInGE: xMin yMin xMax yMax')
+    parser.add_argument("-s", "--slc_dir", dest="slcDir", help="ISCE generated SLC directory")
+    parser.add_argument("-i", "--ifg_dir", dest="ifgDir", help="unwrapped interferogram directory")
+    parser.add_argument("-f", "--file", dest="file", help="unwrapped interferogram file pattern (*.unw)")
+    parser.add_argument("-m", "--meta-file", dest="metafile", help="Metadata file to extract common metada for the stack")
+    parser.add_argument("-g", "--geom_dir", dest="geomDir", help="geometry directory")
+    parser.add_argument("-c", "--coherence", dest="cohFile", help="coherence file")
+    parser.add_argument("-b", "--bperp_dir", dest="baselineDir", help="baseline text file directory")
+    parser.add_argument("-B", "--bbox", dest="bbox", type=int, nargs="+", help="pixel bounding box used in FRInGE: xMin yMin xMax yMax")
 
     return parser
 
@@ -48,13 +48,13 @@ def cmd_line_parse(iargs = None):
     inps = parser.parse_args(args=iargs)
     if all(not i for i in [inps.ifgDir, inps.geomDir, inps.cohFile, inps.baselineDir, inps.bbox]):
         parser.print_usage()
-        raise SystemExit('error: all of the following arguments are required: -i, -f, -g, -c, -p, -b')
+        raise SystemExit("error: all of the following arguments are required: -i, -f, -g, -c, -p, -b")
     return inps
 
 ####################################################################################
 def layout_hdf5(fname, dsNameDict, metadata):
-    print('-'*50)
-    print('create HDF5 file {} with w mode'.format(fname))
+    print("-"*50)
+    print("create HDF5 file {} with w mode".format(fname))
     h5 = h5py.File(fname, "w")
 
     # initiate dataset
@@ -83,20 +83,20 @@ def layout_hdf5(fname, dsNameDict, metadata):
         h5.attrs[key] = metadata[key]
 
     h5.close()
-    print('close HDF5 file {}'.format(fname))
+    print("close HDF5 file {}".format(fname))
     return
 
 def write_geometry(outFile, geomDir, bbox):
     f = h5py.File(outFile, "a")
     
-    hgt = os.path.join(geomDir, 'hgt.rdr.full')
-    lat = os.path.join(geomDir, 'lat.rdr.full')
-    lon = os.path.join(geomDir, 'lon.rdr.full')
-    los = os.path.join(geomDir, 'los.rdr.full')
-    shdw = os.path.join(geomDir, 'shadowMask.rdr.full')
+    hgt = os.path.join(geomDir, "hgt.rdr.full")
+    lat = os.path.join(geomDir, "lat.rdr.full")
+    lon = os.path.join(geomDir, "lon.rdr.full")
+    los = os.path.join(geomDir, "los.rdr.full")
+    shdw = os.path.join(geomDir, "shadowMask.rdr.full")
     
-    geomDict = {'height':hgt, 'latitude':lat, 'longitude':lon,
-                   'incidenceAngle':los, 'azimuthAngle':los,'shadowMask':shdw}
+    geomDict = {"height":hgt, "latitude":lat, "longitude":lon,
+                   "incidenceAngle":los, "azimuthAngle":los,"shadowMask":shdw}
     
     for key in geomDict:
         ds = gdal.Open(geomDict[key], gdal.GA_ReadOnly)
@@ -127,14 +127,14 @@ def write_timeseries(outFile, ifgs, baselineDir):
     #Prepare timeseries data
     f = h5py.File(outFile, "a")
     
-    bperpDict = read_baseline_timeseries(baselineDir, 'tops')
+    bperpDict = read_baseline_timeseries(baselineDir, "tops")
     
     dates = list(bperpDict.keys())
     dates.sort()
     f["date"][:,] = [np.string_(x) for x in dates]
     
     bperps = [bperpDict[x][0] for x in dates]
-    f["bperps"][:,] = bperps
+    f["bperp"][:,] = bperps
         
     #Add data to arrays
     for i in range(0, len(ifgs)):
@@ -149,7 +149,7 @@ def write_temporalcoherence(outFile, cohFile):
     f = h5py.File(outFile, "a")
     
     cohGdal = gdal.Open(cohFile)
-    cohArray = np.array(cohGdal.GetRasterBand(1).ReadAsArray(), dtype = 'float32')
+    cohArray = np.array(cohGdal.GetRasterBand(1).ReadAsArray(), dtype = "float32")
     cohArray[cohArray < 0] = 0
     f["temporalCoherence"][:,:] = cohArray
 
@@ -163,7 +163,7 @@ def main(iargs=None):
     ifgs = glob.glob(os.path.join(inps.ifgDir, inps.file))
     
     # prepare metadata
-    script_name = "prep_isce2.py"
+    script_name = "prep_isce.py"
     cmd = script_name+" -d {} -f *.slc.full -m {} -b {} -g {} --force".format(inps.slcDir, inps.metafile, inps.baselineDir, inps.geomDir)
     os.system(cmd)
     
@@ -175,7 +175,7 @@ def main(iargs=None):
     numPairs = len(ifgs)
     numDates = numPairs + 1
     metadata["NUMBER_OF_PAIRS"] = numPairs
-    metadata["REF_DATE"] = metadata['startUTC'][0:10].replace('-', '') #could also be done using datetime
+    metadata["REF_DATE"] = metadata["startUTC"][0:10].replace("-", "") #could also be done using datetime
     
 
     # prepare output directory
@@ -197,21 +197,21 @@ def main(iargs=None):
 
     # write data to disk
     geom_file = os.path.join(inputDir, "geometryRadar.h5")
-    metadata['FILE_TYPE'] = 'geometry'
+    metadata["FILE_TYPE"] = "geometry"
     layout_hdf5(geom_file, dsNameDict, metadata)
     write_geometry(geom_file,inps.geomDir,inps.bbox)
 
     # 2. timeseries
     # define dataset structure
     dsNameDict = {
-        "bperps": (np.float32, (numDates,)),
-        "date": (np.dtype('S8'), (numDates,)),
+        "bperp": (np.float32, (numDates,)),
+        "date": (np.dtype("S8"), (numDates,)),
         "timeseries": (np.float32, (numDates, length, width))
     }
 
     # write data to disk
     timeseries_file = "timeseries.h5"
-    metadata['FILE_TYPE'] = "timeseries"
+    metadata["FILE_TYPE"] = "timeseries"
     layout_hdf5(timeseries_file, dsNameDict, metadata)
     write_timeseries(timeseries_file, ifgs, inps.baselineDir)
 
@@ -223,7 +223,7 @@ def main(iargs=None):
 
     # write data to disk
     coherence_file = "temporalCoherence.h5"
-    metadata['FILE_TYPE'] = "temporalCoherence"
+    metadata["FILE_TYPE"] = "temporalCoherence"
     layout_hdf5(coherence_file, dsNameDict, metadata)
     write_temporalcoherence(coherence_file, inps.cohFile)
     
