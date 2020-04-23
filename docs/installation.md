@@ -27,20 +27,20 @@ docker pull andretheronsa/mintpy:latest
 
 ### 1. Download and setup MintPy ###
 
-To use the package, you need to setup the environment a) by adding _${MINTPY_HOME}_ to your _$PYTHONPATH_ to make mintpy importable in Python and b) by adding _${MINTPY_HOME}/mintpy_ to your _$PATH_ to make application scripts executable in command line, as shown below.
+To use the package, you need to setup the environment 1) by adding _${MINTPY_HOME}_ to your _$PYTHONPATH_ to make mintpy module importable in Python and 2) by adding _${MINTPY_HOME}/mintpy_ to your _$PATH_ to make scripts executable in command line, as shown below.
 
-Add to your **_~/.bash_profile_** file for _bash_ user. For _tcsh_ user, check the example [here](https://github.com/yunjunz/macOS_Setup/blob/master/.tcshrc). Source the file for the first time. It will be sourced automatically next time when you login.
+Set the following variables. For _bash_ user for example, add to your **_~/.bash_profile_** file, source it for the first time, it will be sourced automatically next time when you login. For _tcsh_ user, check the example [here](https://github.com/yunjunz/macOS_Setup/blob/master/.tcshrc).
 
 ```bash
 if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
 
 ##--------- MintPy ------------------##
-export MINTPY_HOME=~/python/MintPy
+export MINTPY_HOME=~/tools/MintPy
 export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}
 export PATH=${PATH}:${MINTPY_HOME}/mintpy
 
-##--------- PyAPS ------------------##
-export PYAPS_HOME=~/python/PyAPS
+##--------- PyAPS -------------------##
+export PYAPS_HOME=~/tools/PyAPS
 export PYTHONPATH=${PYTHONPATH}:${PYAPS_HOME}
 ```
 
@@ -54,29 +54,37 @@ git clone https://github.com/yunjunz/pyaps3.git $PYAPS_HOME/pyaps3
 
 ### 2. Install dependencies ###
 
-MintPy is written in Python3 and relies on several Python modules, check the [requirements.txt](https://github.com/insarlab/MintPy/blob/master/docs/requirements.txt) file for details. We recommend using [conda](https://conda.io/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
+MintPy is written in Python3 and relies on several Python modules, check the [requirements.txt](https://github.com/insarlab/MintPy/blob/master/docs/requirements.txt) file for details. We recommend using [conda](https://docs.conda.io/en/latest/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
 
 #### Installing via conda ####
 
-Add to your **_~/.bash_profile_** file:
+Add to your **_~/.bash_profile_** file to setup miniconda:
 
 ```bash
-export PYTHON3DIR=~/python/miniconda3
+export PYTHON3DIR=~/tools/miniconda3
 export PATH=${PATH}:${PYTHON3DIR}/bin
 ```
 
-Run the following in your terminal to install miniconda:
+Run the following in your terminal to install [miniconda](https://docs.conda.io/en/latest/miniconda.html):
 
 ```
 # download and install miniconda
-# use wget or curl to download in command line or from anaconda's web brower
+# use wget or curl to download in command line or click from the web brower
 # curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o Miniconda3-latest-MacOSX-x86_64.sh
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
 chmod +x Miniconda3-latest-MacOSX-x86_64.sh
 ./Miniconda3-latest-MacOSX-x86_64.sh -b -p $PYTHON3DIR
 ```
 
-Run the following in your terminal to install the dependencies to the default environment _base_:
+Run the following in your terminal to install the dependencies to a new environment _mintpy_ (recommended):
+
+```
+$PYTHON3DIR/bin/conda env create -f $MINTPY_HOME/docs/conda_env.yml
+$PYTHON3DIR/bin/conda activate mintpy
+```
+
+Or run the following in your terminal to install the dependencies to the default environment _base_:
+
 ```
 # install dependencies with conda
 $PYTHON3DIR/bin/conda config --add channels conda-forge
@@ -84,13 +92,6 @@ $PYTHON3DIR/bin/conda install --yes --file $MINTPY_HOME/docs/conda.txt
 
 # install dependencies not compatiable from conda: pykml
 $PYTHON3DIR/bin/pip install git+https://github.com/tylere/pykml.git
-```
-
-Or run the following in your terminal to install the dependencies to a new environment _mintpy_:
-
-```
-$PYTHON3DIR/bin/conda env create -f $MINTPY_HOME/docs/conda_env.yml
-$PYTHON3DIR/bin/conda activate mintpy
 ```
 
 #### Installing via MacPorts ####
@@ -155,4 +156,4 @@ Edit `~/.config/dask/mintpy.yaml` file according to your HPC settings. You can c
 
 ### Notes on vim ###
 
-[Here](https://github.com/yunjunz/macOS_Setup/blob/master/vim.md) is some useful setup of Vim editor for general use and Python.
+[Here](https://github.com/yunjunz/macOS_Setup/blob/master/vimrc.md) is some useful setup of Vim editor for general use and Python.
