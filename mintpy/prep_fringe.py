@@ -24,7 +24,7 @@ except ImportError:
 
 ####################################################################################
 EXAMPLE = """example:
-prep_fringe.py -i unwrap -f *.unw -g merged/geom_master -c tcorr_ds_ps.bin -p baselines -b 4966 1145 5485 1349
+prep_fringe.py -s merged/SLC -i unwrap -f *.unw -m IW*.xml -g merged/geom_master -c tcorr_ds_ps.bin -b baselines -B 4966 1145 5485 1349
 """
 
 def create_parser():
