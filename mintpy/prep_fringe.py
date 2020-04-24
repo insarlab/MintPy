@@ -147,7 +147,8 @@ def write_timeseries(outFile, ifgs, baselineDir):
         ifg = gdal.Open(ifgs[i])
         array = np.array(ifg.GetRasterBand(2).ReadAsArray())
         f["timeseries"][i+1] = array
-
+    
+    f["timeseries"][0] = np.zeros_like(array, dtype=np.float32)
     f.close()
     return
 
