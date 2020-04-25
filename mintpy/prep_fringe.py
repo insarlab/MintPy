@@ -31,7 +31,7 @@ def create_parser():
     parser = argparse.ArgumentParser(description="Create MintPy objects from FRInGE output",
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
-    
+
     parser.add_argument("-s", "--slc_dir", dest="slcDir", help="ISCE generated SLC directory")
     parser.add_argument("-i", "--ifg_dir", dest="ifgDir", help="unwrapped interferogram directory")
     parser.add_argument("-f", "--file", dest="file", help="unwrapped interferogram file pattern (*.unw)")
@@ -129,25 +129,27 @@ def write_geometry(outFile, geomDir, bbox):
     return outFile
 
 
-def write_timeseries(outFile, ifgs, baselineDir):
+def write_timeseries(outFile, ifgs, baselineDir, meta):
     #Prepare timeseries data
     f = h5py.File(outFile, "a")
-    
+
+    # read/write date and bperp
     bperpDict = read_baseline_timeseries(baselineDir, processor="tops")
-    
+
     dates = list(bperpDict.keys())
     dates.sort()
     f["date"][:,] = [np.string_(x) for x in dates]
-    
+
     bperps = [bperpDict[x][0] for x in dates]
     f["bperp"][:,] = bperps
 
-    #Add data to arrays
+    # write dataset to disk
+    phase2range = -1 * float(meta['WAVELENGTH']) / (4. * np.pi)
     for i in range(0, len(ifgs)):
-        ifg = gdal.Open(ifgs[i])
-        array = np.array(ifg.GetRasterBand(2).ReadAsArray())
-        f["timeseries"][i+1] = array
-    
+        ds = gdal.Open(ifgs[i])
+        data = np.array(ds.GetRasterBand(2).ReadAsArray()) * phase2range
+        f["timeseries"][i+1] = data
+
     f["timeseries"][0] = np.zeros_like(array, dtype=np.float32)
     f.close()
     return
@@ -221,8 +223,9 @@ def main(iargs=None):
     # write data to disk
     timeseries_file = "timeseries.h5"
     metadata["FILE_TYPE"] = "timeseries"
+    metadata["UNIT"] = "m"
     layout_hdf5(timeseries_file, dsNameDict, metadata)
-    write_timeseries(timeseries_file, ifgs, inps.baselineDir)
+    write_timeseries(timeseries_file, ifgs, inps.baselineDir, metadata)
 
     # 3. temporalCoherence
     # define dataset structure
@@ -233,6 +236,7 @@ def main(iargs=None):
     # write data to disk
     coherence_file = "temporalCoherence.h5"
     metadata["FILE_TYPE"] = "temporalCoherence"
+    metadata["UNIT"] = "1"
     layout_hdf5(coherence_file, dsNameDict, metadata)
     write_temporalcoherence(coherence_file, inps.cohFile)
 
