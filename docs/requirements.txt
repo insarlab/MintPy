@@ -9,4 +9,5 @@ pyproj
 pykml
 pyresample
 scikit-image
+scikit-learn
 scipy

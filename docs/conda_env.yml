@@ -28,7 +28,7 @@ dependencies:
   - pyproj
   - pyresample
   - scikit-image
+  - scikit-learn
   - scipy
   - pip:
     - git+https://github.com/tylere/pykml.git
-
