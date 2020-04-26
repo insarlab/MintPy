@@ -17,4 +17,5 @@ pykdtree
 pyproj
 pyresample
 scikit-image
+scikit-learn
 scipy
