@@ -225,11 +225,12 @@ def extract_stripmap_metadata(meta_file):
     metadata['beam_mode'] = 'SM'
     return metadata, frame
 
-
 def extract_multilook_number(geom_dir, metadata=dict()):
     for fbase in ['hgt','lat','lon','los']:
         fbase = os.path.join(geom_dir, fbase)
         fnames = glob.glob('{}*.rdr'.format(fbase)) + glob.glob('{}*.geo'.format(fbase))
+        if len(fnames) == 0:
+            fnames = glob.glob('{}*.rdr.full'.format(fbase)) + glob.glob('{}*.geo.full'.format(fbase))
         if len(fnames) > 0:
             fullXmlFile = '{}.full.xml'.format(fnames[0])
             if os.path.isfile(fullXmlFile):
@@ -248,7 +249,6 @@ def extract_multilook_number(geom_dir, metadata=dict()):
     azfact = metadata['azimuthResolution'] / metadata['azimuthPixelSize']
     metadata['NCORRLOOKS'] = metadata['RLOOKS'] * metadata['ALOOKS'] / (rgfact * azfact)
     return metadata
-
 
 def extract_geometry_metadata(geom_dir, metadata=dict()):
     """extract metadata from geometry files"""
@@ -269,6 +269,12 @@ def extract_geometry_metadata(geom_dir, metadata=dict()):
     geom_files = [os.path.join(os.path.abspath(geom_dir), '{}.rdr'.format(i)) 
                   for i in ['hgt','lat','lon','los']]
     geom_files = [i for i in geom_files if os.path.isfile(i)]
+    
+    if len(geom_files) == 0:
+        geom_files = [os.path.join(os.path.abspath(geom_dir), '{}.rdr.full'.format(i)) 
+                  for i in ['hgt','lat','lon','los']]
+        geom_files = [i for i in geom_files if os.path.isfile(i)]
+        
     print('extract metadata from geometry files: {}'.format(
         [os.path.basename(i) for i in geom_files]))
 
@@ -441,6 +447,10 @@ def prepare_geometry(geom_dir, metadata=dict(), update_mode=True):
     isce_files = [os.path.join(os.path.abspath(geom_dir), '{}.rdr'.format(i)) 
                   for i in ['hgt','lat','lon','los','shadowMask','incLocal']]
     isce_files = [i for i in isce_files if os.path.isfile(i)]
+    if len(isce_files) == 0:
+        isce_files = [os.path.join(os.path.abspath(geom_dir), '{}.rdr.full'.format(i)) 
+                       for i in ['hgt','lat','lon','los','shadowMask','incLocal']]
+        isce_files = [i for i in isce_files if os.path.isfile(i)]
 
     # write rsc file for each file
     for isce_file in isce_files:
@@ -458,7 +468,6 @@ def prepare_geometry(geom_dir, metadata=dict(), update_mode=True):
                                    print_msg=True)
     return metadata
 
-
 def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), update_mode=True):
     print('prepare .rsc file for ', filePattern)
     isce_files = sorted(glob.glob(os.path.join(os.path.abspath(inputDir), '*', filePattern)))
@@ -473,7 +482,14 @@ def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), 
         # prepare metadata for current file
         ifg_metadata = readfile.read_attribute(isce_file, metafile_ext='.xml')
         ifg_metadata.update(metadata)
+
         dates = os.path.basename(os.path.dirname(isce_file)).split('_')
+        if len(dates) == 1:
+            date1 = metadata['startUTC'][0:10].replace('-', '') #could also be done using datetime
+            date2 = os.path.basename(os.path.dirname(isce_file))
+            dates = [date1, date2]
+            
+        
         ifg_metadata = add_ifgram_metadata(ifg_metadata, dates, baseline_dict)
 
         # write .rsc file
@@ -484,7 +500,6 @@ def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), 
         prog_bar.update(i+1, suffix='{}_{}'.format(dates[0], dates[1]))
     prog_bar.close()
     return
-
 
 #########################################################################
 def main(iargs=None):
@@ -508,7 +523,7 @@ def main(iargs=None):
     baseline_dict = {}
     if inps.baselineDir:
         baseline_dict = read_baseline_timeseries(inps.baselineDir, inps.processor)
-
+     
     # prepare metadata for ifgram file
     if inps.dsetDir and inps.dsetFiles:
         for namePattern in inps.dsetFiles:
