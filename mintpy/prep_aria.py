@@ -266,10 +266,7 @@ def extract_metadata(stack):
     meta["Y_UNIT"] = "degrees"
 
     utc = meta["UTCTime (HH:MM:SS.ss)"]
-    try:
-        utc = time.strptime(utc, "%H:%M:%S.%f")
-    except ValueError:
-        utc = time.strptime(utc, "%H:%M:%S")
+    utc = time.strptime(utc, "%H:%M:%S.%f")
     meta["CENTER_LINE_UTC"] = utc.tm_hour*3600.0 + utc.tm_min*60.0 + utc.tm_sec
 
     # following values probably won't be used anywhere for the geocoded data
