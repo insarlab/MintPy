@@ -122,7 +122,12 @@ def cmd_line_parse(iargs = None):
 
     for key in ds_keys:
         fname = iDict[key]
-        fnames = glob.glob(fname)
+
+        if fname:
+            fnames = glob.glob(fname)
+        else:
+            fnames = []
+
         if len(fnames) > 0:
             iDict[key] = fnames[0]
 
@@ -387,16 +392,16 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack):
     dsCoh = gdal.Open(cohStack, gdal.GA_ReadOnly)
     dsComp = gdal.Open(connCompStack, gdal.GA_ReadOnly)
 
-    # extract NoDataValue (from the 2nd */date2_date1.vrt file for example)
-    ds = gdal.Open(dsUnw.GetFileList()[2], gdal.GA_ReadOnly)
+    # extract NoDataValue (from the last */date2_date1.vrt file for example)
+    ds = gdal.Open(dsUnw.GetFileList()[-1], gdal.GA_ReadOnly)
     noDataValueUnw = ds.GetRasterBand(1).GetNoDataValue()
     print('grab NoDataValue for unwrapPhase:      {:<5} and convert to 0.'.format(noDataValueUnw))
 
-    ds = gdal.Open(dsCoh.GetFileList()[2], gdal.GA_ReadOnly)
+    ds = gdal.Open(dsCoh.GetFileList()[-1], gdal.GA_ReadOnly)
     noDataValueCoh = ds.GetRasterBand(1).GetNoDataValue()
     print('grab NoDataValue for coherence:        {:<5} and convert to 0.'.format(noDataValueCoh))
 
-    ds = gdal.Open(dsComp.GetFileList()[2], gdal.GA_ReadOnly)
+    ds = gdal.Open(dsComp.GetFileList()[-1], gdal.GA_ReadOnly)
     noDataValueComp = ds.GetRasterBand(1).GetNoDataValue()
     print('grab NoDataValue for connectComponent: {:<5} and convert to 0.'.format(noDataValueComp))
     ds = None
