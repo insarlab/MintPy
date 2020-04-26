@@ -81,6 +81,7 @@ py37-h5py
 py37-cartopy
 py37-shapely
 py37-scikit-image
+py37-scikit-learn
 py37-jupyter
 py37-dask
 py37-bokeh
