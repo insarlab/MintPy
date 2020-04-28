@@ -31,6 +31,7 @@ nav:
     - Output:
         - Google Earth KMZ: google_earth.md
         - HDF-EOS5: hdfeos5.md
+        - QGIS: QGIS.md
     - API Documentation:
         - Attributes: api/attributes.md
         - Colormaps: resources/colormaps/README.md
