@@ -618,7 +618,7 @@ def main(iargs=None):
     stackObj = read_inps_dict2ifgram_stack_dict_object(inpsDict)
     geomRadarObj, geomGeoObj = read_inps_dict2geometry_dict_object(inpsDict)
 
-    # prepare wirte
+    # prepare write
     updateMode, comp, box, boxGeo = print_write_setting(inpsDict)
     if any([stackObj, geomRadarObj, geomGeoObj]) and not os.path.isdir(inps.outdir):
         os.makedirs(inps.outdir)

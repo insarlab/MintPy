@@ -16,8 +16,8 @@ from mintpy.utils import writefile
 # DEHM basic info
 dehm = argparse.Namespace
 dehm.step = 0.4 / 3600  #decimal degree
-dehm.length = 6000      #40 mins in latitude per grid
-dehm.width = 9000       #60 mins in longitude per grid
+dehm.length = 6000      #40 mins in latitude  per grid
+dehm.width  = 9000      #60 mins in longitude per grid
 dehm.data_type = np.float32
 
 
@@ -25,7 +25,7 @@ dehm.data_type = np.float32
 EXAMPLE = """example:
   cd $KIRISHIMA/KirishimaAlosAT424/DEM
   dem_gsi.py -b 31.1 32.8 130.1 131.9
-  dem_gsi.py -b 31.1 32.8 130.1 131.9 --grid-dir ~/insarlab/DEHM10m
+  dem_gsi.py -b 31.1 32.8 130.1 131.9 --grid-dir ~/data/DEM/GSI_DEHM10m
 """
 
 REFERENCE = """DEHM: Digital Ellipsoidal Height Model
@@ -40,13 +40,11 @@ def create_parser():
                                      epilog=EXAMPLE)
 
     parser.add_argument('-b','--bbox', dest='SNWE', type=float, nargs=4, metavar=('S','N','W','E'), required=True,
-                        help='Spatial region in the format south north west east.\n'
-                             'The values should be from (-90,90) for latitudes and '
-                             '(-180,180) for longitudes.')
+                        help='Bounding box in latitude [-90, 90] and longitude [-180, 180].')
     parser.add_argument('-o','--output', dest='outfile', default='gsi10m.dem.wgs84',
-                        help='output file name. Default: gsi10m.dem.wgs84')
-    parser.add_argument('-g','--grid-dir', dest='grid_dir', default='/famelung/data/gsi10m',
-                        help='Directory of DEHM grib files. Default=/famelung/data/gsi10m')
+                        help='output file name (default: %(default)s).')
+    parser.add_argument('-g','--grid-dir', dest='grid_dir', default='$DEMDB/GSI_DEHM10m',
+                        help='Directory of DEHM grib files (default: %(default)s).')
     return parser
 
 
@@ -174,7 +172,7 @@ def write_vrt_file(meta, out_file):
            xs=meta.lon_step, 
            y0=meta.north,
            ys=meta.lat_step,
-           f=meta.file_path,
+           f=os.path.basename(meta.file_path),
            lo=2*meta.width)
 
     # write to vrt file

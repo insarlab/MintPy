@@ -71,8 +71,8 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
                      RANGE_PIXEL_SIZE
                      EARTH_RADIUS
                      HEIGHT
-                     LENGTH
                      WIDTH
+                     LENGTH     #for dimension=2
                 dem : 2D array for height to calculate local incidence angle
                 dimension : int,
                             2 for 2d matrix
@@ -95,7 +95,6 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
     dR = float(atr['RANGE_PIXEL_SIZE'])
     r = float(atr['EARTH_RADIUS'])
     H = float(atr['HEIGHT'])
-    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
 
     # Calculation
@@ -116,6 +115,8 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
                                 endpoint='FALSE', dtype=np.float32)
 
     elif dimension == 2:
+        length = int(atr['LENGTH'])
+
         # consider the local variable due to topography
         if dem is not None:
             range_dist = range_distance(atr, dimension=2, print_msg=False)
