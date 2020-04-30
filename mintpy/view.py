@@ -5,7 +5,7 @@
 # Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 ############################################################
 # Recommend import:
-#   import mintpy.view as view
+#   from mintpy import view
 
 
 import os
