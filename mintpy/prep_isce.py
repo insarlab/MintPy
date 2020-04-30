@@ -320,10 +320,8 @@ def extract_isce_metadata(meta_file, geom_dir=None, rsc_file=None, update_mode=T
                 geom_dir  : str, path of geometry directory.
                 rsc_file  : str, output file name of ROIPAC format rsc file
     Returns:    metadata  : dict
+                frame     : object, isceobj.Scene.Frame.Frame / 
     """
-    if not rsc_file:
-        rsc_file = os.path.join(os.path.dirname(meta_file), 'data.rsc')
-
     # check existing rsc_file
     if update_mode and ut.run_or_skip(rsc_file, in_file=meta_file, check_readable=False) == 'skip':
         return readfile.read_roipac_rsc(rsc_file)
@@ -332,10 +330,10 @@ def extract_isce_metadata(meta_file, geom_dir=None, rsc_file=None, update_mode=T
     processor = get_processor(meta_file)
     if processor == 'tops':
         print('extract metadata from ISCE/topsStack xml file:', meta_file)
-        metadata = extract_tops_metadata(meta_file)[0]
+        metadata, frame = extract_tops_metadata(meta_file)
     else:
         print('extract metadata from ISCE/stripmapStack shelve file:', meta_file)
-        metadata = extract_stripmap_metadata(meta_file)[0]
+        metadata, frame = extract_stripmap_metadata(meta_file)
 
     # 2. extract metadata from geometry file
     if geom_dir:
@@ -354,7 +352,7 @@ def extract_isce_metadata(meta_file, geom_dir=None, rsc_file=None, update_mode=T
     if rsc_file:
         print('writing ', rsc_file)
         writefile.write_roipac_rsc(metadata, rsc_file)
-    return metadata
+    return metadata, frame
 
 
 def add_ifgram_metadata(metadata_in, dates=[], baseline_dict={}):
@@ -509,9 +507,11 @@ def main(iargs=None):
     # read common metadata
     metadata = {}
     if inps.metaFile:
+        rsc_file = os.path.join(os.path.dirname(inps.metaFile), 'data.rsc')
         metadata = extract_isce_metadata(inps.metaFile,
                                          geom_dir=inps.geometryDir,
-                                         update_mode=inps.update_mode)
+                                         rsc_file=rsc_file,
+                                         update_mode=inps.update_mode)[0]
 
     # prepare metadata for geometry file
     if inps.geometryDir:

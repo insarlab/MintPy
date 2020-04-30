@@ -1074,6 +1074,7 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
                     imag, imaginary
                     phase,
                     mag, magnitude
+                    cpx
     Returns:    data : 2D np.array
     Examples:   # ISCE files
                 atr = read_attribute(fname)
@@ -1136,6 +1137,8 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
             data = np.angle(data)
         elif cpx_band.startswith('mag'):
             data = np.absolute(data)
+        elif cpx_band.startswith(('cpx', 'complex')):
+            pass
         else:
             raise ValueError('unrecognized complex band:', cpx_band)
 
