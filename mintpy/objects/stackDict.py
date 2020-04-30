@@ -6,7 +6,7 @@
 # class used for data loading from InSAR stack to MintPy timeseries
 # Recommend import:
 #     from mintpy.objects.stackDict import (geometryDict,
-#                                           ifgramStackDict, 
+#                                           ifgramStackDict,
 #                                           ifgramDict)
 
 
@@ -92,7 +92,7 @@ class ifgramStackDict:
 
     def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, compression=None, extra_metadata=None):
         '''Save/write an ifgramStackDict object into an HDF5 file with the structure defined in:
-        
+
         https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#ifgramstack
 
         Parameters: outputFile : str, Name of the HDF5 file for the InSAR stack
@@ -402,7 +402,7 @@ class geometryDict:
 
     def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, compression='lzf', extra_metadata=None):
         ''' Save/write to HDF5 file with structure defined in:
-        
+
         https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#geometry
         '''
         if len(self.datasetDict) == 0:

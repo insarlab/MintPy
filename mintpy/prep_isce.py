@@ -90,11 +90,11 @@ def prepare_geometry(geom_dir, metadata=dict(), update_mode=True):
     """Prepare and extract metadata from geometry files"""
     print('prepare .rsc file for geometry files')
     # grab all existed files
-    isce_files = [os.path.join(os.path.abspath(geom_dir), '{}.rdr'.format(i)) 
+    isce_files = [os.path.join(os.path.abspath(geom_dir), '{}.rdr'.format(i))
                   for i in ['hgt','lat','lon','los','shadowMask','incLocal']]
     isce_files = [i for i in isce_files if os.path.isfile(i)]
     if len(isce_files) == 0:
-        isce_files = [os.path.join(os.path.abspath(geom_dir), '{}.rdr.full'.format(i)) 
+        isce_files = [os.path.join(os.path.abspath(geom_dir), '{}.rdr.full'.format(i))
                        for i in ['hgt','lat','lon','los','shadowMask','incLocal']]
         isce_files = [i for i in isce_files if os.path.isfile(i)]
 
@@ -135,8 +135,8 @@ def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), 
             date1 = metadata['startUTC'][0:10].replace('-', '') #could also be done using datetime
             date2 = os.path.basename(os.path.dirname(isce_file))
             dates = [date1, date2]
-            
-        
+
+
         ifg_metadata = add_ifgram_metadata(ifg_metadata, dates, baseline_dict)
 
         # write .rsc file
@@ -174,7 +174,7 @@ def main(iargs=None):
     if inps.baselineDir:
         baseline_dict = isce_utils.read_baseline_timeseries(inps.baselineDir,
                                                             processor=inps.processor)
-     
+
     # prepare metadata for ifgram file
     if inps.dsetDir and inps.dsetFiles:
         for namePattern in inps.dsetFiles:
@@ -189,4 +189,4 @@ def main(iargs=None):
 #########################################################################
 if __name__ == '__main__':
     """Main driver."""
-    main() 
+    main()
