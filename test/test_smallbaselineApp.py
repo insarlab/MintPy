@@ -123,6 +123,7 @@ def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False):
 
     # runing smallbaselineApp
     cmd = 'smallbaselineApp.py {}'.format(template_file)
+    print(cmd)
     status = subprocess.Popen(cmd, shell=True).wait()
     if status is not 0:
         raise RuntimeError('Test failed for example dataset {}'.format(dset_name))

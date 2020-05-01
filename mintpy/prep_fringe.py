@@ -12,8 +12,7 @@ import h5py
 import argparse
 import numpy as np
 from mintpy.objects import timeseries
-from mintpy.utils import readfile, writefile, ptime, utils
-from mintpy.prep_isce import read_baseline_timeseries
+from mintpy.utils import ptime, readfile, writefile, isce_utils, utils
 try:
     import gdal
 except ImportError:
@@ -134,7 +133,7 @@ def write_timeseries(outFile, ifgs, baselineDir, meta):
     f = h5py.File(outFile, "a")
 
     # read/write date and bperp
-    bperpDict = read_baseline_timeseries(baselineDir, processor="tops")
+    bperpDict = isce_utils.read_baseline_timeseries(baselineDir, processor="tops")
 
     dates = list(bperpDict.keys())
     dates.sort()
