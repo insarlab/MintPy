@@ -30,7 +30,7 @@ datasetName2templateKey = {'unwrapPhase'     : 'mintpy.load.unwFile',
                            'coherence'       : 'mintpy.load.corFile',
                            'connectComponent': 'mintpy.load.connCompFile',
                            'wrapPhase'       : 'mintpy.load.intFile',
-                           'iono'            : 'mintpy.load.ionoFile',
+                           'ionoPhase'       : 'mintpy.load.ionoFile',
 
                            'azimuthOffset'   : 'mintpy.load.azOffFile',
                            'rangeOffset'     : 'mintpy.load.rgOffFile',
@@ -392,7 +392,8 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
         #####################################
         # A dictionary of data files for a given pair.
         # One pair may have several types of dataset.
-        # example ifgramPathDict = {'unwrapPhase': /pathToFile/filt.unw, 'iono':/PathToFile/iono.bil}
+        # example ifgramPathDict = {'unwrapPhase': /pathToFile/filt.unw,
+        #                           'ionoPhase'  : /PathToFile/iono.bil}
         # All path of data file must contain the master and slave date, either in file name or folder name.
 
         ifgramPathDict = {}

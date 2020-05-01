@@ -102,7 +102,7 @@ class ifgramStackDict:
         /coherence         3D array of float32 in size of (m, l, w).
         /connectComponent  3D array of int16   in size of (m, l, w).           (optional)
         /wrapPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
-        /iono              3D array of float32 in size of (m, l, w) in radian. (optional)
+        /ionoPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
         /rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
         /azimuthOffset     3D array of float32 in size of (m, l, w).           (optional)
 
@@ -214,7 +214,7 @@ class ifgramStackDict:
 class ifgramDict:
     """
     Ifgram object for a single InSAR pair of interferogram. It includes dataset name (family) of:
-        'unwrapPhase','coherence','connectComponent','wrapPhase','iono','rangeOffset','azimuthOffset', etc.
+        'unwrapPhase','coherence','connectComponent','wrapPhase','ionoPhase','rangeOffset','azimuthOffset', etc.
 
     Example:
         from mintpy.objects.insarobj import ifgramDict
@@ -222,7 +222,7 @@ class ifgramDict:
                        'coherence'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.cor',
                        'connectComponent':'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.unw.conncomp',
                        'wrapPhase'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.int',
-                       'iono'            :'$PROJECT_DIR/merged/ionosphere/20151220_20160206/iono.bil.unwCor.filt',
+                       'ionoPhase'       :'$PROJECT_DIR/merged/ionosphere/20151220_20160206/iono.bil.unwCor.filt',
                        ...
                       }
         ifgramObj = ifgramDict(dates=('20160524','20160530'), datasetDict=datasetDict)
