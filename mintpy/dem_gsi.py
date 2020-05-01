@@ -218,20 +218,25 @@ def main(iargs=None):
                           dem_file=inps.outfile,
                           grid_dir=inps.grid_dir)
 
+    # rsc file for roipac
     write_rsc_file(meta, out_file='{}.rsc'.format(inps.outfile))
 
+    # vrt file for gdal
     write_vrt_file(meta, out_file='{}.vrt'.format(inps.outfile))
 
-    if 'ISCE_STACK' in os.environ:
+    # vrt file to xml file
+    try:
         print('generate {}.xml file using ISCE command'.format(inps.outfile))
-        cmd = os.path.expandvars('${ISCE_STACK}/../../../applications/gdal2isce_xml.py')
-        cmd += ' -i {}.vrt'.format(inps.outfile)
+        cmd = 'gdal2isce_xml.py -i {}.vrt'.format(inps.outfile)
         print(cmd)
         os.system(cmd)
 
-        # DEHM from GSI is already in ellipsoid, add the information
-        add_reference_datum('{}.xml'.format(inps.outfile))
+    except RuntimeError:
+        raise RuntimeError('$ISCE_HOME/applications/gdal2isce_xml.py command not found!')
 
+    # DEHM from GSI is already in ellipsoid, add the information to xml file
+    if os.path.isfile(inps.outfile+'.xml'):
+        add_reference_datum(inps.outfile+'.xml')
     return
 
 
