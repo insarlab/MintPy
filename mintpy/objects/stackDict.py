@@ -91,20 +91,9 @@ class ifgramStackDict:
         return dsDataType
 
     def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, compression=None, extra_metadata=None):
-        '''Save/write an ifgramStackDict object into an HDF5 file with the structure below:
-
-        /                  Root level
-        Attributes         Dictionary for metadata
-        /date              2D array of string  in size of (m, 2   ) in YYYYMMDD format for master and slave date
-        /bperp             1D array of float32 in size of (m,     ) in meter.
-        /dropIfgram        1D array of bool    in size of (m,     ) True by default for keeping interferogram.
-        /unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
-        /coherence         3D array of float32 in size of (m, l, w).
-        /connectComponent  3D array of int16   in size of (m, l, w).           (optional)
-        /wrapPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
-        /ionoPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
-        /rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
-        /azimuthOffset     3D array of float32 in size of (m, l, w).           (optional)
+        '''Save/write an ifgramStackDict object into an HDF5 file with the structure defined in:
+        
+        https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#ifgramstack
 
         Parameters: outputFile : str, Name of the HDF5 file for the InSAR stack
                     access_mode : str, access mode of output File, e.g. w, r+
@@ -412,20 +401,9 @@ class geometryDict:
         return self.metadata
 
     def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, compression='lzf', extra_metadata=None):
-        '''
-        /                        Root level
-        Attributes               Dictionary for metadata. 'X/Y_FIRST/STEP' attribute for geocoded.
-        /height                  2D array of float32 in size of (l, w   ) in meter.
-        /latitude (azimuthCoord) 2D array of float32 in size of (l, w   ) in degree.
-        /longitude (rangeCoord)  2D array of float32 in size of (l, w   ) in degree.
-        /incidenceAngle          2D array of float32 in size of (l, w   ) in degree.
-        /slantRangeDistance      2D array of float32 in size of (l, w   ) in meter.
-        /azimuthAngle            2D array of float32 in size of (l, w   ) in degree. (optional)
-        /shadowMask              2D array of bool    in size of (l, w   ).           (optional)
-        /waterMask               2D array of bool    in size of (l, w   ).           (optional)
-        /bperp                   3D array of float32 in size of (n, l, w) in meter   (optional)
-        /date                    1D array of string  in size of (n,     ) in YYYYMMDD(optional)
-        ...
+        ''' Save/write to HDF5 file with structure defined in:
+        
+        https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#geometry
         '''
         if len(self.datasetDict) == 0:
             print('No dataset file path in the object, skip HDF5 file writing.')

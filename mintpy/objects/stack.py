@@ -128,24 +128,17 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
 
 
 ################################ timeseries class begin ################################
-FILE_STRUCTURE_TIMESERIES = """
-/                Root level
-Attributes       Dictionary for metadata
-/timeseries      3D array of float32 in size of (n, l, w) in meter.
-/date            1D array of string  in size of (n,     ) in YYYYMMDD format
-/bperp           1D array of float32 in size of (n,     ) in meter. (optional)
-"""
-
 class timeseries:
     """
     Time-series object for displacement of a set of SAR images from the same platform and track.
     It contains three datasets in root level: date, bperp and timeseries.
+    
+    File structure: https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#timeseries
     """
 
     def __init__(self, file=None):
         self.file = file
         self.name = 'timeseries'
-        self.file_structure = FILE_STRUCTURE_TIMESERIES
 
     def close(self, print_msg=True):
         try:
@@ -511,29 +504,15 @@ class timeseries:
 
 
 ################################# geometry class begin #################################
-FILE_STRUCTURE_GEOMETRY = """
-/                        Root level
-Attributes               Dictionary for metadata. 'X/Y_FIRST/STEP' attribute for geocoded.
-/height                  2D array of float32 in size of (l, w   ) in meter.
-/latitude (azimuthCoord) 2D array of float32 in size of (l, w   ) in degree.
-/longitude (rangeCoord)  2D array of float32 in size of (l, w   ) in degree.
-/incidenceAngle          2D array of float32 in size of (l, w   ) in degree.
-/slantRangeDistance      2D array of float32 in size of (l, w   ) in meter.
-/azimuthAngle            2D array of float32 in size of (l, w   ) in degree. (optional)
-/shadowMask              2D array of bool    in size of (l, w   ).           (optional)
-/waterMask               2D array of bool    in size of (l, w   ).           (optional)
-/bperp                   3D array of float32 in size of (n, l, w) in meter   (optional)
-/date                    1D array of string  in size of (n,     ) in YYYYMMDD(optional)
-...
-"""
-
 class geometry:
-    """ Geometry object."""
+    """ Geometry object.
+    
+    File structure: https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#geometry
+    """
 
     def __init__(self, file=None):
         self.file = file
         self.name = 'geometry'
-        self.file_structure = FILE_STRUCTURE_GEOMETRY
 
     def close(self, print_msg=True):
         try:
@@ -646,27 +625,15 @@ class geometry:
 
 
 ################################# ifgramStack class begin ##############################
-FILE_STRUCTURE_IFGRAM_STACK = """
-/                  Root level group name
-Attributes         Dictionary for metadata
-/date              2D array of string  in size of (m, 2   ) in YYYYMMDD format for master and slave date
-/bperp             1D array of float32 in size of (m,     ) in meter.
-/dropIfgram        1D array of bool    in size of (m,     ) with 0/False for drop and 1/True for keep
-/unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
-/coherence         3D array of float32 in size of (m, l, w).
-/connectComponent  3D array of int16   in size of (m, l, w).           (optional)
-/wrapPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
-/rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
-/azimuthOffset     3D array of float32 in size of (m, l, w).           (optional)
-"""
-
 class ifgramStack:
-    """ Interferograms Stack object."""
+    """ Interferograms Stack object.
+    
+    File structure: https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#ifgramstack
+    """
 
     def __init__(self, file=None):
         self.file = file
         self.name = 'ifgramStack'
-        self.file_structure = FILE_STRUCTURE_IFGRAM_STACK
 
     def close(self, print_msg=True):
         try:
@@ -1145,38 +1112,18 @@ class singleDataset:
 
 
 ################################# HDF-EOS5 class begin #################################
-FILE_STRUCTURE_HDFEOS = """
-/                             Root level group
-Attributes                    metadata in dict.
-/HDFEOS/GRIDS/timeseries      timeseries group
-    /observation
-        /displacement         3D array of float32 in size of (n, l, w) in meter
-        /date                 1D array of string  in size of (n,     ) in YYYYMMDD format.
-        /bperp                1D array of float32 in size of (n,     ) in meter
-    /quality
-        /temporalCoherence    2D array of float32 in size of (   l, w).
-        /mask                 2D array of bool_   in size of (   l, w).
-    /geometry
-        /height               2D array of float32 in size of (   l, w) in meter.
-        /incidenceAngle       2D array of float32 in size of (   l, w) in degree.
-        /slantRangeDistance   2D array of float32 in size of (   l, w) in meter.
-        /azimuthAngle         2D array of float32 in size of (   l, w) in degree. (optional)
-        /shadowMask           2D array of bool    in size of (   l, w).           (optional)
-        /waterMask            2D array of bool    in size of (   l, w).           (optional)
-        /bperp                3D array of float32 in size of (n, l, w) in meter.  (optional)
-"""
-
 class HDFEOS:
     """
     Time-series object in HDF-EOS5 format for Univ of Miami's InSAR Time-series Web Viewer
         Link: http://insarmaps.miami.edu
     It contains a "timeseries" group and three datasets: date, bperp and timeseries.
+    
+    File structure: https://github.com/yunjunz/MintPy/blob/master/docs/hdfeos5.md
     """
 
     def __init__(self, file=None):
         self.file = file
         self.name = 'HDFEOS'
-        self.file_structure = FILE_STRUCTURE_HDFEOS
         self.datasetGroupNameDict = {'displacement'       : 'observation',
                                      'raw'                : 'observation',
                                      'troposphericDelay'  : 'observation',

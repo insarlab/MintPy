@@ -36,6 +36,7 @@ nav:
         - Attributes: api/attributes.md
         - Colormaps: resources/colormaps/README.md
         - Coordinates: api/coord.md
+        - Data structure: api/data_structure.md
         - Docker: docker.md
         - Documents generation: api/doc_generation.md
         - Module hierarchy: api/module_hierarchy.md
