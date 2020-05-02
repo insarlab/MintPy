@@ -6,7 +6,7 @@
 newIssueWelcomeComment: >
   👋  Thanks for opening your first issue here! Please make sure you filled out the template with as much detail as possible. We appreciate that you took the time to contribute!
 
-  Please make sure you read our [Contributing Guide](https://github.com/insarlab/MintPy/blob/master/docs/CONTRIBUTING.md)
+  Make sure you read our [contributing guidelines](https://github.com/insarlab/MintPy/blob/master/docs/CONTRIBUTING.md)
 
 # Configuration for new-pr-welcome - https://github.com/behaviorbot/new-pr-welcome
 
@@ -23,4 +23,3 @@ firstPRMergeComment: >
   🎉 🎉 🎉  Congrats on merging your first pull request! We here at behaviorbot are proud of you! 🎉 🎉 🎉 
 
 # It is recommend to include as many gifs and emojis as possible
-
