@@ -73,27 +73,39 @@ standardMetadataKeys = {
 }
 
 
+GDAL2ISCE_DATATYPE = {
+    1 : 'BYTE',
+    2 : 'uint16',
+    3 : 'SHORT',
+    4 : 'uint32',
+    5 : 'INT',
+    6 : 'FLOAT',
+    7 : 'DOUBLE',
+    10: 'CFLOAT',
+    11: 'complex128',
+}
+
 GDAL2NUMPY_DATATYPE = {
-    '1': 'uint8',
-    '2': 'uint16',
-    '3': 'int16',
-    '4': 'uint32',
-    '5': 'int32',
-    '6': 'float32',
-    '7': 'float64',
-    '10': 'complex64',
-    '11': 'complex128',
+    1 : 'uint8',
+    2 : 'uint16',
+    3 : 'int16',
+    4 : 'uint32',
+    5 : 'int32',
+    6 : 'float32',
+    7 : 'float64',
+    10: 'complex64',
+    11: 'complex128',
 }
 
 # reference: https://subversion.renater.fr/efidir/trunk/efidir_soft/doc/Programming_C_EFIDIR/header_envi.pdf
 ENVI2NUMPY_DATATYPE = {
-    '1': 'uint8',
-    '2': 'int16',
-    '3': 'int32',
-    '4': 'float32',
-    '5': 'float64',
-    '6': 'complex64',
-    '9': 'complex128',
+    '1' : 'uint8',
+    '2' : 'int16',
+    '3' : 'int32',
+    '4' : 'float32',
+    '5' : 'float64',
+    '6' : 'complex64',
+    '9' : 'complex128',
     '12': 'uint16',
     '13': 'uint32',
     '14': 'int64',
@@ -101,8 +113,8 @@ ENVI2NUMPY_DATATYPE = {
 }
 
 ENVI_BAND_INTERLEAVE = {
-    'BAND': 'BSQ',
-    'LINE': 'BIL',
+    'BAND' : 'BSQ',
+    'LINE' : 'BIL',
     'PIXEL': 'BIP',
 }
 
@@ -667,60 +679,63 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             atr['PROCESSOR'] = 'mintpy'
 
     else:
-        # get metadata file basename
-        metafile_base = fname
-        # for SNAP BEAM-DIMAP format
-        if fname.endswith('.img') and os.path.isfile(os.path.splitext(fname)[0]+'.hdr'):
-            metafile_base = os.path.splitext(fname)[0]
+        # potential file bases and extensions for metadata file given the data file
+        metafile_bases = [fname, os.path.splitext(fname)[0]]
+        metafile_exts = ['.rsc', '.xml', '.aux.xml', '.par', '.hdr', '.vrt']
 
-        # get existing metadata file extensions
-        metafile_exts = ['.rsc', '.xml', '.aux.xml', '.par', '.hdr']
-        if metafile_ext:
-            metafile_exts = [i for i in metafile_exts if i.endswith(metafile_ext)]
-        metafile_exts = [i for i in metafile_exts if os.path.isfile(metafile_base+i)]
-        if len(metafile_exts) == 0:
+        # grab all existed metadata files in prefered order/priority defined above
+        metafiles = []
+        for metafile_base in metafile_bases:
+            metafiles += [metafile_base+i for i in metafile_exts if os.path.isfile(metafile_base+i)]
+
+        if len(metafiles) == 0:
             raise FileNotFoundError('No metadata file found for data file: {}'.format(fname))
 
         atr = {}
         # PROCESSOR
-        if any(i.endswith('.hdr') for i in metafile_exts) and fname.endswith('.img'):
+        if fname.endswith('.img') and any(i.endswith('.hdr') for i in metafiles):
             atr['PROCESSOR'] = 'snap'
-        elif any(i.endswith('.xml') for i in metafile_exts):
+
+        elif any(i.endswith(('.xml', '.hdr', '.vrt')) for i in metafiles):
             atr['PROCESSOR'] = 'isce'
-            xml_exts = [i for i in metafile_exts if i.endswith('.xml')]
-            if len(xml_exts) > 0:
-                atr.update(read_isce_xml(metafile_base+xml_exts[0]))
-        elif any(i.endswith('.par') for i in metafile_exts):
+            xml_files = [i for i in metafiles if i.endswith('.xml')]
+            if len(xml_files) > 0:
+                atr.update(read_isce_xml(xml_files[0]))
+
+        elif any(i.endswith('.par') for i in metafiles):
             atr['PROCESSOR'] = 'gamma'
-        elif any(i.endswith('.rsc') for i in metafile_exts):
+
+        elif any(i.endswith('.rsc') for i in metafiles):
             if 'PROCESSOR' not in atr.keys():
                 atr['PROCESSOR'] = 'roipac'
+
         if 'PROCESSOR' not in atr.keys():
             atr['PROCESSOR'] = 'mintpy'
 
         # Read metadata file and FILE_TYPE
-        metafile0 = metafile_base + metafile_exts[0]
+        metafile = metafiles[0]
         while fext in ['.geo', '.rdr', '.full']:
             fbase, fext = os.path.splitext(fbase)
         if not fext:
             fext = fbase
 
-        if metafile0.endswith('.rsc'):
-            atr.update(read_roipac_rsc(metafile0))
+        if metafile.endswith('.rsc'):
+            atr.update(read_roipac_rsc(metafile))
             if 'FILE_TYPE' not in atr.keys():
                 atr['FILE_TYPE'] = fext
 
-        elif metafile0.endswith('.xml'):
-            atr.update(read_isce_xml(metafile0))
+        elif metafile.endswith('.xml'):
+            atr.update(read_isce_xml(metafile))
             if 'FILE_TYPE' not in atr.keys():
-                atr['FILE_TYPE'] = fext  #atr.get('image_type', fext)
+                atr['FILE_TYPE'] = fext
 
-        elif metafile0.endswith('.par'):
-            atr.update(read_gamma_par(metafile0))
+        elif metafile.endswith('.par'):
+            atr.update(read_gamma_par(metafile))
             atr['FILE_TYPE'] = fext
 
-        elif metafile0.endswith('.hdr'):
-            atr.update(read_envi_hdr(metafile0))
+        elif metafile.endswith('.hdr'):
+            atr.update(read_envi_hdr(metafile))
+
             fbase = os.path.basename(fname).lower()
             if fbase.startswith('unw'):
                 atr['FILE_TYPE'] = '.unw'
@@ -732,6 +747,10 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
                 atr['FILE_TYPE'] = 'dem'
             else:
                 atr['FILE_TYPE'] = atr['file type']
+
+        elif metafile.endswith('.vrt'):
+            atr.update(read_gdal_vrt(metafile))
+            atr['FILE_TYPE'] = fext
 
         # DATA_TYPE for ISCE products
         dataTypeDict = {
@@ -867,7 +886,7 @@ def is_plot_attribute(attribute):
 
 
 def read_roipac_rsc(fname, delimiter=' ', standardize=True):
-    """Read ROI_PAC style RSC file.
+    """Read ROI_PAC .rsc file into a python dict structure.
     Parameters: fname : str.
                     File path of .rsc file.
     Returns:    rscDict : dict
@@ -894,7 +913,7 @@ def read_roipac_rsc(fname, delimiter=' ', standardize=True):
 
 
 def read_gamma_par(fname, delimiter=':', skiprows=3, standardize=True):
-    """Read GAMMA .par/.off file into a python dictionary structure.
+    """Read GAMMA .par/.off file into a python dict structure.
     Parameters: fname : str.
                     File path of .par, .off file.
                 delimiter : str, optional
@@ -964,7 +983,7 @@ def read_isce_xml(fname, standardize=True):
 
 
 def read_envi_hdr(fname, standardize=True):
-    """Read ENVI .hdr file into a python dict strcture"""
+    """Read ENVI .hdr file into a python dict structure"""
     atr = read_template(fname, delimiter='=')
     atr['DATA_TYPE'] = ENVI2NUMPY_DATATYPE[atr.get('data type', '4')]
     atr['BYTE_ORDER'] = ENVI_BYTE_ORDER[atr.get('byte order', '1')]
@@ -983,6 +1002,52 @@ def read_envi_hdr(fname, standardize=True):
             atr['Y_UNIT'] = unit
     if standardize:
         atr = standardize_metadata(atr)
+    return atr
+
+
+def read_gdal_vrt(fname, standardize=True):
+    """Read GDAL .vrt file into a python dict structure
+
+    Modified from $ISCE_HOME/applications/gdal2isce_xml.gdal2isce_xml() written by David Bekaert.
+    """
+
+    # read dataset using gdal
+    try:
+        import gdal
+    except ImportError:
+        raise ImportError('Cannot import gdal!')
+    ds = gdal.Open(fname, gdal.GA_ReadOnly)
+
+    atr = {}
+    atr['WIDTH']  = ds.RasterXSize
+    atr['LENGTH'] = ds.RasterYSize
+    atr['number_bands'] = ds.RasterCount
+
+    # data type
+    data_type = ds.GetRasterBand(1).DataType
+    atr['DATA_TYPE'] = GDAL2ISCE_DATATYPE[data_type]
+
+    # interleave
+    scheme = ds.GetMetadata('IMAGE_STRUCTURE').get('INTERLEAVE', 'BIP')
+    atr['scheme'] = ENVI_BAND_INTERLEAVE[scheme]
+
+    # transformation contains gridcorners
+    # (lines/pixels or lonlat and the spacing 1/-1 or deltalon/deltalat)
+    transform = ds.GetGeoTransform()
+    x0 = transform[0]
+    y0 = transform[3]
+    x_step = abs(transform[1])
+    y_step = abs(transform[5]) * -1.
+
+    if abs(x_step) < 1. and abs(x_step) > 1e-7:
+        atr['X_FIRST'] = x0 - x_step / 2.
+        atr['Y_FIRST'] = y0 - y_step / 2.
+        atr['X_STEP'] = x_step
+        atr['Y_STEP'] = y_step
+
+    if standardize:
+        atr = standardize_metadata(atr)
+
     return atr
 
 
