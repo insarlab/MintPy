@@ -16,6 +16,7 @@
 
 
 import os
+import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 import multiprocessing
@@ -191,10 +192,13 @@ def touch(fname_list, times=None):
 
 
 #################################### Geometry ##########################################
-def get_lat_lon(meta, box=None):
-    """extract lat/lon info of all grids into 2D matrix.
-    For meta dict in geo-coordinates only.
+def get_lat_lon(meta, geom_file=None, box=None):
+    """Extract precise pixel-wise lat/lon.
+
+    For meta dict in geo-coordinates OR geom_file with latitude/longitude dataset
+
     Returned lat/lon are corresponds to the pixel center
+
     Parameters: meta : dict, including LENGTH, WIDTH and Y/X_FIRST/STEP
                 box  : 4-tuple of int for (x0, y0, x1, y1)
     Returns:    lats : 2D np.array for latitude  in size of (length, width)
@@ -203,18 +207,37 @@ def get_lat_lon(meta, box=None):
     length, width = int(meta['LENGTH']), int(meta['WIDTH'])
     if box is None:
         box = (0, 0, width, length)
-    lat_num = box[3] - box[1]
-    lon_num = box[2] - box[0]
 
-    # generate 2D matrix for lat/lon
-    lat_step = float(meta['Y_STEP'])
-    lon_step = float(meta['X_STEP'])
-    lat0 = float(meta['Y_FIRST']) + lat_step * (box[1] + 0.5)
-    lon0 = float(meta['X_FIRST']) + lon_step * (box[0] + 0.5)
-    lat1 = lat0 + lat_step * lat_num
-    lon1 = lon0 + lon_step * lon_num
-    lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
-                          lon0:lon1:lon_num*1j]
+    ds_list = []
+    if geom_file is not None:
+        with h5py.File(geom_file, 'r') as f:
+            ds_list = list(f.keys())
+
+    if 'latitude' in ds_list:
+        # read 2D matrices from geometry file
+        with h5py.File(geom_file, 'r') as f:
+            lats = f['latitude'][box[1]:box[3], box[0]:box[2]]
+            lons = f['longitude'][box[1]:box[3], box[0]:box[2]]
+
+    elif 'Y_FIRST' in meta.keys():
+        # generate 2D matrices for lat/lon
+        lat_step = float(meta['Y_STEP'])
+        lon_step = float(meta['X_STEP'])
+        lat0 = float(meta['Y_FIRST']) + lat_step * (box[1] + 0.5)
+        lon0 = float(meta['X_FIRST']) + lon_step * (box[0] + 0.5)
+
+        lat_num = box[3] - box[1]
+        lon_num = box[2] - box[0]
+
+        lat1 = lat0 + lat_step * lat_num
+        lon1 = lon0 + lon_step * lon_num
+        lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
+                              lon0:lon1:lon_num*1j]
+
+    else:
+        msg = 'Can not get pixel-wise lat/lon!'
+        msg += '\nmeta dict is not geocoded and/or geometry file does not contains latitude/longitude dataset.'
+        raise ValueError(msg)
 
     lats = np.array(lats, dtype=np.float32)
     lons = np.array(lons, dtype=np.float32)

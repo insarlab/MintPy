@@ -398,8 +398,8 @@ class coordinate:
 
     def bbox_radar2geo(self, pix_box, print_msg=False):
         """Calculate bounding box in lat/lon for file in geo coord, based on input radar/pixel box
-        Parameters: pix_box - tuple of 4 int, indicating the UL/LR x/y
-        Returns:    geo_box - tuple of 4 float, indicating the UL/LR lon/lat of the bounding box
+        Parameters: pix_box - tuple of 4 int, in (x0, y0, x1, y1)
+        Returns:    geo_box - tuple of 4 float, in (W, N, E, S)
         """
         x = np.array([pix_box[0], pix_box[2], pix_box[0], pix_box[2]])
         y = np.array([pix_box[1], pix_box[1], pix_box[3], pix_box[3]])
