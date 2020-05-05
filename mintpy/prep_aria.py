@@ -23,11 +23,10 @@ except ImportError:
 ####################################################################################
 EXAMPLE = """example:
   prep_aria.py -t SanFranSenDT42.txt --update
-  prep_aria.py -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt
-  prep_aria.py -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/20150605_20150512.vrt
-               -a azimuthAngle/20150605_20150512.vrt --water-mask mask/watermask.msk
+  prep_aria.py -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/*.vrt
+  prep_aria.py -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/*.vrt  -a azimuthAngle/*.vrt --water-mask mask/watermask.msk
 
-  # run ARIA-tools to download / extract / prepare inteferograms stack before MintPy.
+  # before above, one should run ARIA-tools to download / extract / prepare inteferograms stack.
   # reference: https://github.com/aria-tools/ARIA-tools
   ariaDownload.py -b '37.25 38.1 -122.6 -121.75' --track 42
   ariaTSsetup.py -f 'products/*.nc' -b '37.25 38.1 -122.6 -121.75' --mask Download

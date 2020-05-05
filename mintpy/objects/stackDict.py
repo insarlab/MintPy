@@ -331,26 +331,66 @@ class geometryDict:
         return data, metadata
 
     def get_slant_range_distance(self, box=None):
-        if not self.extraMetadata or 'Y_FIRST' in self.extraMetadata.keys():
+        """Generate 2D slant range distance if missing from input template file"""
+        if not self.extraMetadata:
             return None
-        data = ut.range_distance(self.extraMetadata,
-                                 dimension=2,
-                                 print_msg=False)
+
+        if 'Y_FIRST' in self.extraMetadata.keys():
+            # for dataset in geo-coordinates, use contant value from SLANT_RANGE_DISTANCE.
+            key = 'SLANT_RANGE_DISTANCE'
+            print('geocoded input, use contant value from metadata {}'.format(key))
+            if key in self.extraMetadata.keys():
+                length = int(self.extraMetadata['LENGTH'])
+                width = int(self.extraMetadata['WIDTH'])
+                range_dist = float(self.extraMetadata[key])
+                data = np.ones((length, width), dtype=np.float32) * range_dist
+
+            else:
+                return None
+
+        else:
+            # for dataset in radar-coordinates, calculate 2D pixel-wise value from geometry
+            data = ut.range_distance(self.extraMetadata,
+                                     dimension=2,
+                                     print_msg=False)
+
+        # subset
         if box is not None:
             data = data[box[1]:box[3], box[0]:box[2]]
         return data
 
     def get_incidence_angle(self, box=None):
-        if not self.extraMetadata or 'Y_FIRST' in self.extraMetadata.keys():
+        """Generate 2D slant range distance if missing from input template file"""
+        if not self.extraMetadata:
             return None
-        if 'height' in self.dsNames:
-            dem = readfile.read(self.datasetDict['height'], datasetName='height')[0]
+
+        if 'Y_FIRST' in self.extraMetadata.keys():
+            # for dataset in geo-coordinates, use contant value from INCIDENCE_ANGLE.
+            key = 'INCIDENCE_ANGLE'
+            print('geocoded input, use contant value from metadata {}'.format(key))
+            if key in self.extraMetadata.keys():
+                length = int(self.extraMetadata['LENGTH'])
+                width = int(self.extraMetadata['WIDTH'])
+                inc_angle = float(self.extraMetadata[key])
+                data = np.ones((length, width), dtype=np.float32) * inc_angle
+
+            else:
+                return None
+
         else:
-            dem = None
-        data = ut.incidence_angle(self.extraMetadata,
-                                  dem=dem,
-                                  dimension=2,
-                                  print_msg=False)
+            # read DEM if available for more previse calculation
+            if 'height' in self.dsNames:
+                dem = readfile.read(self.datasetDict['height'], datasetName='height')[0]
+            else:
+                dem = None
+
+            # for dataset in radar-coordinates, calculate 2D pixel-wise value from geometry
+            data = ut.incidence_angle(self.extraMetadata,
+                                      dem=dem,
+                                      dimension=2,
+                                      print_msg=False)
+
+        # subset
         if box is not None:
             data = data[box[1]:box[3], box[0]:box[2]]
         return data

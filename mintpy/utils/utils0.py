@@ -131,6 +131,40 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
     return inc_angle
 
 
+def incidence_angle2slant_range_distance(atr, inc_angle):
+    """Calculate the corresponding slant range distance given an incidence angle
+
+    Law of sines:
+               r + H                   r               range_dist
+       --------------------- = ----------------- = ------------------ = 2R
+        sin(pi - inc_angle)     sin(look_angle)     sin(range_angle)
+
+    where range_angle = inc_angle - look_angle
+          R is the radius of the circumcircle.
+
+    link: http://www.ambrsoft.com/TrigoCalc/Triangle/BasicLaw/BasicTriangle.htm
+
+    Parameters: atr         - dict, metadata including the following items:
+                                  EARTH_RADIUS
+                                  HEIGHT
+                inc_angle   - float, incidence angle in degree
+    Returns:    slant_range - float, slant range distance
+    """
+
+    inc_angle = float(inc_angle) / 180 * np.pi
+    r = float(atr['EARTH_RADIUS'])
+    H = float(atr['HEIGHT'])
+
+    # calculate 2R based on the law of sines
+    R2 = (r + H) / np.sin(np.pi - inc_angle)
+
+    look_angle = np.arcsin( r / R2 )
+    range_angle = inc_angle - look_angle
+    range_dist = R2 * np.sin(range_angle)
+
+    return range_dist
+
+
 def range_ground_resolution(atr, print_msg=False):
     """Get range resolution on the ground in meters,
         from ROI_PAC attributes, for file in radar coord

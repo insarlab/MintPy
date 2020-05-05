@@ -15,6 +15,12 @@ try:
     import gdal
 except ImportError:
     raise ImportError("Can not import gdal!")
+
+# suppress matplotlib DEBUG message
+import logging
+mpl_logger = logging.getLogger('matplotlib')
+mpl_logger.setLevel(logging.WARNING)
+
 import isce
 import isceobj
 from mintpy.utils import readfile, writefile, utils1 as ut
