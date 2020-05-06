@@ -36,6 +36,8 @@ EXAMPLE = """example:
   timeseries2velocity.py  LS-PARAMS.h5
   timeseries2velocity.py  NSBAS-PARAMS.h5
   timeseries2velocity.py  TS-PARAMS.h5
+
+  timeseries2velocity.py timeseries_ERA5_demErr.h5 -m bootstrap -bc 400
 """
 
 TEMPLATE = get_template_content('velocity')
