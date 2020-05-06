@@ -9,6 +9,7 @@
 import os
 import argparse
 import numpy as np
+from sklearn.utils import resample
 from mintpy.objects import timeseries, giantTimeseries, HDFEOS
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, writefile, ptime, utils as ut
@@ -65,6 +66,11 @@ def create_parser():
                         help='template file with options')
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file name')
+    parser.add_argument('-m', '--method', dest='method', default='linear',
+                        help='velocity estimation method (bootstrap or linear)')
+    parser.add_argument('-bc', '--bootcount', dest='boot_count',default=400, type=int,
+                        help='number of iterations to run for bootstrapping\n'+
+                             'default=400')
     parser.add_argument('--update', dest='update_mode', action='store_true',
                         help='Enable update mode, and skip estimation if:\n'+
                              '1) output velocity file already exists, readable '+
@@ -178,7 +184,7 @@ def read_exclude_date(inps, dateListAll):
 def read_date_info(inps):
     """Get inps.excludeDate full list
     Inputs:
-        inps          - Namespace, 
+        inps          - Namespace,
     Output:
         inps.excludeDate  - list of string for exclude date in YYYYMMDD format
     """
@@ -259,6 +265,64 @@ def estimate_linear_velocity(inps):
     writefile.write(dsDict, out_file=inps.outfile, metadata=atr)
     return inps.outfile
 
+def bootstrap(inps):
+    """
+    Bootstrapping is a resampling method which can be used to estimate properties
+    of an estimator. The method relies on independently sampling the data set with
+    replacement.
+
+    Reference:
+    Efron, B. and Tibshirani, R.J., 1994. An introduction to the bootstrap. CRC press.
+    """
+
+    print('reading data from file {} ...'.format(inps.timeseries_file))
+    ts_data, atr = readfile.read(inps.timeseries_file)
+    ts_data = ts_data[inps.dropDate, :, :].reshape(inps.numDate, -1)
+    if atr['UNIT'] == 'mm':
+        ts_data *= 1./1000.
+    length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+
+    sampleNo = len(inps.dateList)
+    vel = np.zeros((inps.boot_count,(length*width)))
+    prog_bar = ptime.progressBar(maxValue=inps.boot_count,prefix='Calculating ')
+    for i in range(inps.boot_count):
+        bootSamples = list(np.sort(resample(inps.dateList, replace=True, n_samples=sampleNo)))
+        # dropList = [x for x in dateList if x not in bootSamples]
+
+        prog_bar.update(i+1, suffix='Running iteration no: '+str(i+1))
+        bootList = []
+        for k in bootSamples:
+            bootList.append(inps.dateList.index(k))
+
+        ts_data_sub = ts_data[bootList, :].reshape(inps.numDate, -1)
+
+        A = timeseries.get_design_matrix4average_velocity(bootSamples)
+        X = np.dot(np.linalg.pinv(A), ts_data_sub)
+        vel[i] = np.array(X[0, :], dtype='float32')
+
+    prog_bar.close()
+    print('Finished resampling and velocity calculation')
+    vel_mean = vel.mean(axis=0).reshape(length,width)
+    vel_std = vel.std(axis=0).reshape(length,width)
+    print('Calculated mean and standard deviation of bootstrap estimations')
+
+    # prepare attributes
+    atr['FILE_TYPE'] = 'velocity'
+    atr['UNIT'] = 'm/year'
+    atr['START_DATE'] = inps.dateList[0]
+    atr['END_DATE'] = inps.dateList[-1]
+    atr['DATE12'] = '{}_{}'.format(inps.dateList[0], inps.dateList[-1])
+    # config parameter
+    print('add/update the following configuration metadata:\n{}'.format(configKeys))
+    for key in configKeys:
+        atr[key_prefix+key] = str(vars(inps)[key])
+
+    # write to HDF5 file
+    dsDict = dict()
+    dsDict['velocity'] = vel_mean
+    dsDict['velocityStd'] = vel_std
+    writefile.write(dsDict, out_file=inps.outfile, metadata=atr)
+    return inps.outfile
 
 ############################################################################
 def main(iargs=None):
@@ -269,7 +333,12 @@ def main(iargs=None):
     if inps.update_mode and run_or_skip(inps) == 'skip':
         return inps.outfile
 
-    inps.outfile = estimate_linear_velocity(inps)
+    if inps.method == 'bootstrap' and inps.boot_count > 1:
+        print('Velocity estimation method:',inps.method,'\n')
+        inps.outfile=bootstrap(inps)
+    else:
+        print('Velocity estimation method: linear\n')
+        inps.outfile = estimate_linear_velocity(inps)
     return inps.outfile
 
 
