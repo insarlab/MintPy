@@ -147,11 +147,12 @@ def incidence_angle2slant_range_distance(atr, inc_angle):
     Parameters: atr         - dict, metadata including the following items:
                                   EARTH_RADIUS
                                   HEIGHT
-                inc_angle   - float, incidence angle in degree
+                inc_angle   - float / np.ndarray, incidence angle in degree
     Returns:    slant_range - float, slant range distance
     """
-
-    inc_angle = float(inc_angle) / 180 * np.pi
+    if isinstance(inc_angle, str):
+        inc_angle = float(inc_angle)
+    inc_angle = np.array(inc_angle, dtype=np.float32) / 180 * np.pi
     r = float(atr['EARTH_RADIUS'])
     H = float(atr['HEIGHT'])
 
