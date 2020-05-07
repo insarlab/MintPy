@@ -103,11 +103,12 @@ def cmd_line_parse(iargs=None):
     if inps.key not in ['timeseries', 'giantTimeseries', 'HDFEOS']:
         raise Exception('input file is {}, NOT timeseries!'.format(inps.key))
 
+    # check bootstrap count number
     if inps.bootstrap and inps.bootstrapCount <= 1:
         inps.bootstrap = False
-        print('bootstrap-count should be larger than 1')
-        print('bootstrapping methos is turned OFF')
-        print('continue without bootstrapping')
+        print('bootstrap-count should be larger than 1, otherwise it does not make sense')
+        print('turn OFF bootstrapping and continue without it.')
+
     if inps.bootstrap:
         print('bootstrapping is turned ON.')
 
