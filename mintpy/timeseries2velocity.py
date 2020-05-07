@@ -103,6 +103,12 @@ def cmd_line_parse(iargs=None):
     if inps.key not in ['timeseries', 'giantTimeseries', 'HDFEOS']:
         raise Exception('input file is {}, NOT timeseries!'.format(inps.key))
 
+    # check bootstrap count number
+    if inps.bootstrap and inps.bootstrapCount <= 1:
+        inps.bootstrap = False
+        print('bootstrap-count should be larger than 1, otherwise it does not make sense')
+        print('turn OFF bootstrapping and continue without it.')
+
     if inps.bootstrap:
         print('bootstrapping is turned ON.')
 
@@ -326,7 +332,7 @@ def run_velocity_estimation(inps):
         t_diff = A[:, 0] - np.mean(A[:, 0])
         vel_std = np.sqrt(np.sum(ts_diff ** 2, axis=0) / np.sum(t_diff ** 2)  / (inps.numDate - 2))
         vel_std = np.array(vel_std.reshape(length, width), dtype=dataType)
-
+        
     # prepare attributes
     atr['FILE_TYPE'] = 'velocity'
     atr['UNIT'] = 'm/year'
