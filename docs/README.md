@@ -96,6 +96,7 @@ In addition to the above, we recommend that you cite the original publications t
 * Joshua Zahner
 * Alfredo Terreco
 * David Grossman
+* Emre Havazli
 * Yunmeng Cao
 * Andre Theron
 * [Other community members.](https://github.com/insarlab/MintPy/graphs/contributors) [[Contribute](./CONTRIBUTING.md)]
