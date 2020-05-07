@@ -89,7 +89,7 @@ def create_parser():
     bootstrap = parser.add_argument_group('bootstrapping', 'estimating the mean / STD of the velocity estimator')
     bootstrap.add_argument('--bootstrap', '--bootstrapping', dest='bootstrap', action='store_true',
                            help='Enable bootstrapping to estimate the mean and STD of the velocity estimator.')
-    bootstrap.add_argument('--bc', '--bootcount', dest='boot_count', type=int, default=400,
+    bootstrap.add_argument('--bc', '--bootstrap-count', dest='bootstrapCount', type=int, default=400,
                            help='number of iterations for bootstrapping (default: %(default)s).')
 
     return parser
@@ -293,13 +293,13 @@ def run_velocity_estimation(inps):
         replacement.
         """
         from sklearn.utils import resample
-        print('using bootstrap resampling {} times ...'.format(inps.boot_count))
+        print('using bootstrap resampling {} times ...'.format(inps.bootstrapCount))
 
-        boot_vel_lin = np.zeros((inps.boot_count, (length*width)), dtype=dataType)
+        boot_vel_lin = np.zeros((inps.bootstrapCount, (length*width)), dtype=dataType)
         ts_date = np.array(inps.dateList)
 
-        prog_bar = ptime.progressBar(maxValue=inps.boot_count)
-        for i in range(inps.boot_count):
+        prog_bar = ptime.progressBar(maxValue=inps.bootstrapCount)
+        for i in range(inps.bootstrapCount):
             # bootstrap resampling
             boot_ind = resample(np.arange(inps.numDate),
                                 replace=True,
@@ -310,7 +310,7 @@ def run_velocity_estimation(inps):
             A, X = estimate_velocity(ts_date[boot_ind].tolist(), ts_data[boot_ind])
 
             boot_vel_lin[i] = np.array(X[0, :], dtype=dataType)
-            prog_bar.update(i+1, suffix='iteration {} / {}'.format(i+1, inps.boot_count))
+            prog_bar.update(i+1, suffix='iteration {} / {}'.format(i+1, inps.bootstrapCount))
         prog_bar.close()
 
         print('calculate mean and standard deviation of bootstrap estimations')
