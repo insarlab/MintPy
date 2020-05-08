@@ -30,7 +30,16 @@ from mintpy.utils import (
 
 ####################################################################################
 EXAMPLE = """example:
-  prep_fringe.py -u './fringe/PS_DS/unwrap/*.unw' -c ./fringe/PS_DS/tcorr_ds_ps.bin -g ./fringe/geometry -m ./master/IW1.xml -b ./baselines -o ./mintpy
+  prep_fringe.py -u './PS_DS/unwrap/*.unw' -c ./PS_DS/tcorr_ds_ps.bin -g ./geometry -m ../master/IW1.xml -b ../baselines -o ./mintpy
+
+  ## example commands after prep_fringe.py
+  reference_point.py timeseries.h5 -y 500 -x 1150
+  generate_mask.py temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5
+  tropo_pyaps3.py -f timeseries.h5 -g inputs/geometryRadar.h5
+  remove_ramp.py timeseries_ERA5.h5 -m maskTempCoh.h5 -s linear
+  dem_error.py timeseries_ERA5_ramp.h5 -g inputs/geometryRadar.h5
+  timeseries2velocity.py timeseries_ERA5_ramp_demErr.h5
+  geocode.py velocity.h5 -l inputs/geometryRadar.h5
 """
 
 def create_parser():
@@ -39,20 +48,20 @@ def create_parser():
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
-    parser.add_argument('-u', '--unw-file', dest='unwFile', type=str, default='./fringe/PS_DS/unwrap/*.unw',
+    parser.add_argument('-u', '--unw-file', dest='unwFile', type=str, default='./PS_DS/unwrap/*.unw',
                         help='path pattern of unwrapped interferograms (default: %(default)s).')
-    parser.add_argument('-c', '--coh-file', dest='cohFile', type=str, default='./fringe/PS_DS/tcorr_ds_ps.bin',
+    parser.add_argument('-c', '--coh-file', dest='cohFile', type=str, default='./PS_DS/tcorr_ds_ps.bin',
                         help='temporal coherence file (default: %(default)s).')
-    parser.add_argument('-g', '--geom-dir', dest='geomDir', type=str, default='./fringe/geometry',
+    parser.add_argument('-g', '--geom-dir', dest='geomDir', type=str, default='./geometry',
                         help='FRInGE geometry directory (default: %(default)s).\n'
                              'This is used to grab 1) bounding box\n'
                              '                 AND 2) geometry source directory where the binary files are.')
 
-    parser.add_argument('-m', '--meta-file', dest='metaFile', type=str, default='./master/IW*.xml',
+    parser.add_argument('-m', '--meta-file', dest='metaFile', type=str, default='../master/IW*.xml',
                         help='metadata file (default: %(default)s).\n'
                              'e.g.: ./master/IW1.xml        for ISCE/topsStack OR\n'
                              '      ./masterShelve/data.dat for ISCE/stripmapStack')
-    parser.add_argument('-b', '--baseline-dir', dest='baselineDir', type=str, default='./baselines',
+    parser.add_argument('-b', '--baseline-dir', dest='baselineDir', type=str, default='../baselines',
                         help='baseline directory (default: %(default)s).')
 
     parser.add_argument('-o', '--out-dir', dest='outDir', type=str, default='./mintpy',
@@ -147,9 +156,9 @@ def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None
     print('number of unwrapped interferograms: {}'.format(num_file))
 
     ref_date = date12_list[0].split('_')[0]
-    date_list = [ref_date] + [date12.split('_')[0] for date12 in date12_list]
+    date_list = [ref_date] + [date12.split('_')[1] for date12 in date12_list]
     num_date = len(date_list)
-    print('number of acquisitions: {}'.format(num_date))
+    print('number of acquisitions: {}\n{}'.format(num_date, date_list))
 
     # define dataset structure
     length, width = int(meta['LENGTH']), int(meta['WIDTH'])
