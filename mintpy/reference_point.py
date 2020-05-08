@@ -23,7 +23,7 @@ TEMPLATE = get_template_content('reference_point')
 NOTE = """note: Reference value cannot be nan, thus, all selected reference point must be:
   a. non zero in mask, if mask is given
   b. non nan  in data (stack)
-  
+
   Priority:
       input reference_lat/lon
       input reference_y/x
@@ -111,7 +111,7 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    
+
     atr = readfile.read_attribute(inps.file)
     if atr['FILE_TYPE'] != 'ifgramStack':
         # turn ON wirte_data for non-ifgramStack file by default
@@ -187,7 +187,7 @@ def reference_file(inps):
     # Check 2 - input ref_y/x: location and validity
     if inps.ref_y is not None and inps.ref_x is not None:
         if ('REF_Y' in atr.keys() and not inps.force
-                and inps.ref_y == int(atr['REF_Y']) 
+                and inps.ref_y == int(atr['REF_Y'])
                 and inps.ref_x == int(atr['REF_X'])):
             print('Same reference pixel is already selected/saved in file, skip updating.')
             return inps.file
@@ -298,7 +298,7 @@ def reference_point_attribute(atr, y, x):
 ###############################################################
 def manual_select_reference_yx(data, inps, mask=None):
     """
-    Input: 
+    Input:
         data4display : 2D np.array, stack of input file
         inps    : namespace, with key 'REF_X' and 'REF_Y', which will be updated
     """
@@ -442,9 +442,9 @@ def read_reference_input(inps):
         print('no input reference y/x.')
         if not inps.method:
             # Use existing REF_Y/X if 1) no ref_y/x input and 2) no method input and 3) ref_yx is in coverage
-            if (not inps.force 
+            if (not inps.force
                     and 'REF_X' in atr.keys()
-                    and 0 <= float(atr['REF_Y']) <= length 
+                    and 0 <= float(atr['REF_Y']) <= length
                     and 0 <= float(atr['REF_X']) <= width):
                 print('REF_Y/X exists in input file, skip updating.')
                 print('REF_Y: '+atr['REF_Y'])
