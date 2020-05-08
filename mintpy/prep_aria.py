@@ -12,8 +12,8 @@ import argparse
 import h5py
 import numpy as np
 import glob
-from mintpy.objects import ifgramStack, geometry
-from mintpy.utils import ptime, readfile, utils as ut
+from mintpy.objects import ifgramStack
+from mintpy.utils import ptime, readfile, writefile, utils as ut
 try:
     import gdal
 except ImportError:
@@ -293,45 +293,6 @@ def extract_metadata(stack):
     return meta
 
 
-def layout_hdf5(fname, dsNameDict, metadata):
-    print('-'*50)
-    print('create HDF5 file {} with w mode'.format(fname))
-    h5 = h5py.File(fname, "w")
-
-    # initiate dataset
-    for key in dsNameDict.keys():
-        # turn ON compression
-        if key in ['connectComponent']:
-            compression = 'lzf'
-        else:
-            compression = None
-
-        # changable dataset shape
-        if len(dsNameDict[key][1]) == 3:
-            maxShape = (None, dsNameDict[key][1][1], dsNameDict[key][1][2])
-        else:
-            maxShape = dsNameDict[key][1]
-
-        print("create dataset: {d:<25} of {t:<25} in size of {s}".format(
-            d=key,
-            t=str(dsNameDict[key][0]),
-            s=dsNameDict[key][1]))
-        h5.create_dataset(key,
-                          shape=dsNameDict[key][1],
-                          maxshape=maxShape,
-                          dtype=dsNameDict[key][0],
-                          chunks=True,
-                          compression=compression)
-
-    # write attributes
-    for key in metadata.keys():
-        h5.attrs[key] = metadata[key]
-
-    h5.close()
-    print('close HDF5 file {}'.format(fname))
-    return
-
-
 def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFile=None):
     print('-'*50)
     print('writing data to HDF5 file {} with a mode ...'.format(outfile))
@@ -493,7 +454,7 @@ def main(iargs=None):
     if run_or_skip(inps, dsNameDict, out_file=inps.outfile[0]) == 'run':
         # initiate h5 file with defined structure
         metadata['FILE_TYPE'] = 'ifgramStack'
-        layout_hdf5(inps.outfile[0], dsNameDict, metadata)
+        writefile.layout_hdf5(inps.outfile[0], dsNameDict, metadata)
 
         # write data to h5 file in disk
         write_ifgram_stack(inps.outfile[0],
@@ -516,7 +477,7 @@ def main(iargs=None):
     if run_or_skip(inps, dsNameDict, out_file=inps.outfile[1]) == 'run':
         # initiate h5 file with defined structure
         metadata['FILE_TYPE'] = 'geometry'
-        layout_hdf5(inps.outfile[1], dsNameDict, metadata)
+        writefile.layout_hdf5(inps.outfile[1], dsNameDict, metadata)
 
         # write data to disk
         write_geometry(inps.outfile[1],

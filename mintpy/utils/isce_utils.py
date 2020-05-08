@@ -320,12 +320,14 @@ def extract_stripmap_metadata(meta_file):
 
 
 #####################################  geometry  #######################################
-def extract_multilook_number(geom_dir, metadata=dict()):
+def extract_multilook_number(geom_dir, metadata=dict(), fext_list=['.rdr','.geo','.rdr.full','.geo.full']):
     for fbase in ['hgt','lat','lon','los']:
         fbase = os.path.join(geom_dir, fbase)
-        fnames = glob.glob('{}*.rdr'.format(fbase)) + glob.glob('{}*.geo'.format(fbase))
-        if len(fnames) == 0:
-            fnames = glob.glob('{}*.rdr.full'.format(fbase)) + glob.glob('{}*.geo.full'.format(fbase))
+        for fext in fext_list:
+            fnames = glob.glob(fbase+fext)
+            if len(fnames) > 0:
+                break
+
         if len(fnames) > 0:
             fullXmlFile = '{}.full.xml'.format(fnames[0])
             if os.path.isfile(fullXmlFile):
@@ -341,13 +343,23 @@ def extract_multilook_number(geom_dir, metadata=dict()):
             metadata[key] = 1
 
     # NCORRLOOKS for coherence calibration
-    rgfact = metadata['rangeResolution'] / metadata['rangePixelSize']
-    azfact = metadata['azimuthResolution'] / metadata['azimuthPixelSize']
+    rgfact = float(metadata['rangeResolution']) / float(metadata['rangePixelSize'])
+    azfact = float(metadata['azimuthResolution']) / float(metadata['azimuthPixelSize'])
     metadata['NCORRLOOKS'] = metadata['RLOOKS'] * metadata['ALOOKS'] / (rgfact * azfact)
     return metadata
 
-def extract_geometry_metadata(geom_dir, metadata=dict()):
-    """extract metadata from geometry files"""
+
+def extract_geometry_metadata(geom_dir, metadata=dict(), box=None, fbase_list=['hgt','lat','lon','los'],
+                              fext_list=['.rdr','.geo','.rdr.full','.geo.full']):
+    """Extract / update metadata from geometry files
+
+    extract LAT_REF1/2/3/4 from lat*
+    extract LON_REF1/2/3/4 from lon*
+    extract HEADING from los (azimuth angle)
+
+    extract A/RLOOKS by comparing hgt.xml and hgt.full.xml file
+    update azimuthPixelSize / rangePixelSize based on A/RLOOKS
+    """
 
     def get_nonzero_row_number(data, buffer=2):
         """Find the first and last row number of rows without zero value
@@ -362,20 +374,25 @@ def extract_geometry_metadata(geom_dir, metadata=dict()):
         return r0, r1
 
     # grab existing files
-    geom_files = [os.path.join(os.path.abspath(geom_dir), '{}.rdr'.format(i)) 
-                  for i in ['hgt','lat','lon','los']]
-    geom_files = [i for i in geom_files if os.path.isfile(i)]
-    
-    if len(geom_files) == 0:
-        geom_files = [os.path.join(os.path.abspath(geom_dir), '{}.rdr.full'.format(i)) 
-                  for i in ['hgt','lat','lon','los']]
+    geom_dir = os.path.abspath(geom_dir)
+    for fext in fext_list:
+        geom_files = [os.path.join(geom_dir, fbase+fext) for fbase in fbase_list]
         geom_files = [i for i in geom_files if os.path.isfile(i)]
-        
-    print('extract metadata from geometry files: {}'.format(
-        [os.path.basename(i) for i in geom_files]))
+        if len(geom_files) > 0:
+            break
+
+    # printout message
+    if len(geom_files) == 0:
+        msg = 'WARNING: No geometry files found with the following pattern!'
+        msg += '\n    file basenme: {}'.format(fbase_list)
+        msg += '\n    file extension: {}'.format(fext_list)
+        print(msg)
+        return metadata
+
+    print('extract metadata from geometry files: {}'.format([os.path.basename(i) for i in geom_files]))
 
     # get A/RLOOKS
-    metadata = extract_multilook_number(geom_dir, metadata)
+    metadata = extract_multilook_number(geom_dir, metadata, fext_list=fext_list)
 
     # update pixel_size for multilooked data
     metadata['rangePixelSize'] *= metadata['RLOOKS']
@@ -384,7 +401,7 @@ def extract_geometry_metadata(geom_dir, metadata=dict()):
     # get LAT/LON_REF1/2/3/4 and HEADING into metadata
     for geom_file in geom_files:
         if 'lat' in os.path.basename(geom_file):
-            data = readfile.read(geom_file)[0]
+            data = readfile.read(geom_file, box=box)[0]
             r0, r1 = get_nonzero_row_number(data)
             metadata['LAT_REF1'] = str(data[r0, 0])
             metadata['LAT_REF2'] = str(data[r0, -1])
@@ -392,7 +409,7 @@ def extract_geometry_metadata(geom_dir, metadata=dict()):
             metadata['LAT_REF4'] = str(data[r1, -1])
 
         if 'lon' in os.path.basename(geom_file):
-            data = readfile.read(geom_file)[0]
+            data = readfile.read(geom_file, box=box)[0]
             r0, r1 = get_nonzero_row_number(data)
             metadata['LON_REF1'] = str(data[r0, 0])
             metadata['LON_REF2'] = str(data[r0, -1])
@@ -400,7 +417,7 @@ def extract_geometry_metadata(geom_dir, metadata=dict()):
             metadata['LON_REF4'] = str(data[r1, -1])
 
         if 'los' in os.path.basename(geom_file):
-            data = readfile.read(geom_file, datasetName='az')[0]
+            data = readfile.read(geom_file, datasetName='az', box=box)[0]
             data[data == 0.] = np.nan
             az_angle = np.nanmean(data)
             # convert isce azimuth angle to roipac orbit heading angle
@@ -448,7 +465,7 @@ def read_stripmap_baseline(baseline_file):
     return [bperp_top, bperp_bottom]
 
 
-def read_baseline_timeseries(baseline_dir, processor='tops'):
+def read_baseline_timeseries(baseline_dir, processor='tops', ref_date=None):
     """Read bperp time-series from files in baselines directory
     Parameters: baseline_dir : str, path to the baselines directory
                 processor    : str, tops     for Sentinel-1/TOPS
@@ -487,5 +504,15 @@ def read_baseline_timeseries(baseline_dir, processor='tops'):
         else:
             bDict[dates[1]] = read_stripmap_baseline(bFile)
     bDict[dates[0]] = [0, 0]
+
+    # change reference date
+    if ref_date is not None and ref_date != dates[0]:
+        print('change reference date to {}'.format(ref_date))
+        ref_bperp = bDict[ref_date]
+
+        for key in bDict.keys():
+            bDict[key][0] -= ref_bperp[0]
+            bDict[key][1] -= ref_bperp[1]
+
     return bDict
 
