@@ -225,13 +225,16 @@ def reference_file(inps):
 
         if fext == '.h5':
             if inps.outfile == inps.file:
-                ## update data value without writing to a new file
+                print('updating data value without re-writing to a new file')
 
                 if k == 'ifgramStack':
                     with h5py.File(inps.file, 'r+') as f:
                         ds = f['unwrapPhase']
                         for i in range(ds.shape[0]):
                             ds[i, :, :] -= ds[i, inps.ref_y, inps.ref_x]
+
+                        print('update metadata')
+                        f.attrs.update(atrNew)
 
                 else:
                     with h5py.File(inps.file, 'r+') as f:
@@ -245,13 +248,12 @@ def reference_file(inps):
                             # 2D matrix
                             ds[:] -= ds[inps.ref_y, inps.ref_x]
 
-                # update metadata
-                import pdb; pdb.set_trace()
-                for key, value in atrNew.items():
-                    f.attrs[key] = value
+                        print('update metadata')
+                        f.attrs.update(atrNew)
 
             else:
                 ## write to a new file
+                print('writing the referenced data into file: {}'.format(inps.outfile))
 
                 # 1. read and update data value
                 data, atr = readfile.read(inps.file)

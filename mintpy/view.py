@@ -1320,7 +1320,7 @@ def prep_slice(cmd, auto_fig=False):
     if auto_fig == True:
         figsize = [i/2.0 for i in inps.fig_size]
         if self.proj_obj is not None:
-            subplot_kw = dict(projection=proj_obj)
+            subplot_kw = dict(projection=self.proj_obj)
         else:
             subplot_kw = {}
         fig, ax = plt.subplots(figsize=figsize, num='Figure', subplot_kw=subplot_kw)
@@ -1407,7 +1407,7 @@ class viewer():
 
             # prepare figure
             if self.proj_obj is not None:
-                subplot_kw = dict(projection=proj_obj)
+                subplot_kw = dict(projection=self.proj_obj)
             else:
                 subplot_kw = {}
 
