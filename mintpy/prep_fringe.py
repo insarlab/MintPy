@@ -183,7 +183,7 @@ def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None
     # writing data to HDF5 file
     print('writing data to HDF5 file {} with a mode ...'.format(outfile))
     with h5py.File(outfile, "a") as f:
-        f["date"][:,] = [np.string_(i) for i in date_list]
+        f["date"][:,] = np.array([np.string_(i) for i in date_list])
         f["bperp"][:,] = pbase
 
         prog_bar = ptime.progressBar(maxValue=num_file)
