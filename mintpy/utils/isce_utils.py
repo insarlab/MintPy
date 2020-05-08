@@ -11,19 +11,12 @@ import os
 import glob
 import shelve
 import numpy as np
-try:
-    import gdal
-except ImportError:
-    raise ImportError("Can not import gdal!")
+from mintpy.utils import readfile, writefile, utils1 as ut
 
 # suppress matplotlib DEBUG message
 import logging
 mpl_logger = logging.getLogger('matplotlib')
 mpl_logger.setLevel(logging.WARNING)
-
-import isce
-import isceobj
-from mintpy.utils import readfile, writefile, utils1 as ut
 
 
 SPEED_OF_LIGHT = 299792458  #m/s
@@ -150,6 +143,7 @@ def get_processor(meta_file):
 #####################################  metadata  #######################################
 def load_product(xmlname):
     """Load the product using Product Manager."""
+    import isce
     from iscesys.Component.ProductManager import ProductManager as PM
     pm = PM()
     pm.configure()
@@ -203,6 +197,8 @@ def extract_tops_metadata(xml_file):
     Parameters: xml_file : str, path of the .xml file, i.e. master/IW1.xml
     Returns:    meta     : dict, metadata
     """
+    import isce
+    import isceobj
     from isceobj.Planet.Planet import Planet
 
     obj = load_product(xml_file)
@@ -266,6 +262,8 @@ def extract_stripmap_metadata(meta_file):
     Parameters: meta_file : str, path of the shelve file, i.e. masterShelve/data.dat
     Returns:    meta      : dict, metadata
     """
+    import isce
+    import isceobj
     from isceobj.Planet.Planet import Planet
 
     if os.path.basename(meta_file) == "data.dat":    #shelve file from stripmapStack
