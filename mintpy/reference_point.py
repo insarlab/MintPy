@@ -64,10 +64,14 @@ def create_parser():
     parser.add_argument('-t', '--template', dest='template_file',
                         help='template with reference info')
     parser.add_argument('-m', '--mask', dest='maskFile', help='mask file')
-    parser.add_argument('-o', '--outfile',
-                        help='output file name, disabled when more than 1 input files.')
+
+    parser.add_argument('-o', '--outfile', type=str, default=None,
+                        help='output file name (default: %(default)s). This option is diabled for ifgramStack file.\n'
+                             'None (default) for update data value directly without writing to a new file.\n')
+
     parser.add_argument('--write-data', dest='write_data', action='store_true',
-                        help='(for ifgramStack file only) update data value, in addition to update metadata.')
+                        help='(option for ifgramStack file only) update data value, in addition to update metadata.')
+
     parser.add_argument('--reset', action='store_true',
                         help='remove reference pixel information from attributes in the file')
     parser.add_argument('--force', action='store_true',
@@ -107,10 +111,17 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # turn ON wirte_data for non-ifgramStack file by default
+    
     atr = readfile.read_attribute(inps.file)
     if atr['FILE_TYPE'] != 'ifgramStack':
+        # turn ON wirte_data for non-ifgramStack file by default
         inps.write_data = True
+
+    else:
+        # disable --output option for ifgramStack file
+        if inps.outfile:
+            raise SystemExit('--outfile is disabled for "ifgramStack" input file!')
+
     return inps
 
 
@@ -207,34 +218,65 @@ def reference_file(inps):
 
     else:
         if not inps.outfile:
-            inps.outfile = '{}_seeded{}'.format(os.path.splitext(inps.file)[0],
-                                                os.path.splitext(inps.file)[1])
-        k = atr['FILE_TYPE']
-
-        # For ifgramStack file, update data value directly, do not write to new file
-        if k == 'ifgramStack':
-            f = h5py.File(inps.file, 'r+')
-            ds = f[k].get('unwrapPhase')
-            for i in range(ds.shape[0]):
-                ds[i, :, :] -= ds[i, inps.ref_y, inps.ref_x]
-            f[k].attrs.update(atrNew)
-            f.close()
             inps.outfile = inps.file
 
-        elif k == 'timeseries':
-            data = timeseries(inps.file).read()
-            for i in range(data.shape[0]):
-                data[i, :, :] -= data[i, inps.ref_y, inps.ref_x]
-            obj = timeseries(inps.outfile)
-            atr.update(atrNew)
-            obj.write2hdf5(data=data, metadata=atr, refFile=inps.file)
-            obj.close()
+        k = atr['FILE_TYPE']
+        fext = os.path.splitext(inps.file)[1]
+
+        if fext == '.h5':
+            if inps.outfile == inps.file:
+                ## update data value without writing to a new file
+
+                if k == 'ifgramStack':
+                    with h5py.File(inps.file, 'r+') as f:
+                        ds = f['unwrapPhase']
+                        for i in range(ds.shape[0]):
+                            ds[i, :, :] -= ds[i, inps.ref_y, inps.ref_x]
+
+                else:
+                    with h5py.File(inps.file, 'r+') as f:
+                        ds = f[k]
+                        if len(ds.shape) == 3:
+                            # 3D matrix
+                            for i in range(ds.shape[0]):
+                                ds[i, :, :] -= ds[i, inps.ref_y, inps.ref_x]
+
+                        else:
+                            # 2D matrix
+                            ds[:] -= ds[inps.ref_y, inps.ref_x]
+
+                # update metadata
+                import pdb; pdb.set_trace()
+                for key, value in atrNew.items():
+                    f.attrs[key] = value
+
+            else:
+                ## write to a new file
+
+                # 1. read and update data value
+                data, atr = readfile.read(inps.file)
+                if len(data.shape) == 3:
+                    # 3D matrix
+                    for i in range(data.shape[0]):
+                        data[i, :, :] -= data[i, inps.ref_y, inps.ref_x]
+
+                else:
+                    # 2D matrix
+                    data -= data[inps.ref_y, inps.ref_x]
+
+                # 2. update metadata
+                atr.update(atrNew)
+
+                # 3. write to file
+                writefile.write(data, inps.outfile, metadata=atr, ref_file=inps.file)
+
         else:
-            print('writing >>> '+inps.outfile)
+            # for binary file, over-write directly
             data = readfile.read(inps.file)[0]
             data -= data[inps.ref_y, inps.ref_x]
             atr.update(atrNew)
             writefile.write(data, out_file=inps.outfile, metadata=atr)
+
     ut.touch([inps.coherenceFile, inps.maskFile])
     return inps.outfile
 
