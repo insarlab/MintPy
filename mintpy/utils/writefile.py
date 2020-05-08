@@ -185,6 +185,81 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
     return out_file
 
 
+def layout_hdf5(fname, dsNameDict, metadata):
+    """Create HDF5 file with defined metadata and (empty) dataset structure
+
+    Parameters: fname      - str, HDF5 file path
+                dsNameDict - dict, dataset structure definition, as below:
+                metadata   - dict, metadata
+    Returns:    fname      - str, HDF5 file path
+
+    Example:
+
+    # structure for ifgramStack
+    dsNameDict = {
+        "date"             : (np.dtype('S8'), (inps.num_pair, 2)),
+        "dropIfgram"       : (np.bool_,       (inps.num_pair,)),
+        "bperp"            : (np.float32,     (inps.num_pair,)),
+        "unwrapPhase"      : (np.float32,     (inps.num_pair, inps.length, inps.width)),
+        "coherence"        : (np.float32,     (inps.num_pair, inps.length, inps.width)),
+        "connectComponent" : (np.int16,       (inps.num_pair, inps.length, inps.width)),
+    }
+
+    # structure for geometry
+    dsNameDict = {
+        "height"             : (np.float32, (inps.length, inps.width)),
+        "incidenceAngle"     : (np.float32, (inps.length, inps.width)),
+        "slantRangeDistance" : (np.float32, (inps.length, inps.width)),
+    }
+
+    # structure for timeseries
+    dsNameDict = {
+        "date"       : (np.dtype("S8"), (numDates,)),
+        "bperp"      : (np.float32,     (numDates,)),
+        "timeseries" : (np.float32,     (numDates, length, width))
+    }
+    """
+
+    print('-'*50)
+    print('create HDF5 file {} with w mode'.format(fname))
+    h5 = h5py.File(fname, "w")
+
+    # initiate dataset
+    for key in dsNameDict.keys():
+        data_type = dsNameDict[key][0]
+        data_shape = dsNameDict[key][1]
+
+        # turn ON compression
+        if key in ['connectComponent']:
+            compression = 'lzf'
+        else:
+            compression = None
+
+        # changable dataset shape
+        if len(data_shape) == 3:
+            maxShape = (None, data_shape[1], data_shape[2])
+        else:
+            maxShape = data_shape
+
+        print("create dataset: {d:<25} of {t:<25} in size of {s}".format(d=key,
+                                                                         t=str(data_type),
+                                                                         s=data_shape))
+        h5.create_dataset(key,
+                          shape=data_shape,
+                          maxshape=maxShape,
+                          dtype=data_type,
+                          chunks=True,
+                          compression=compression)
+
+    # write attributes
+    for key in metadata.keys():
+        h5.attrs[key] = metadata[key]
+
+    h5.close()
+    print('close HDF5 file {}'.format(fname))
+    return fname
+
+
 def remove_hdf5_dataset(fname, datasetNames, print_msg=True):
     """Remove an existing dataset from an HDF5 file.
     Parameters: fname : str, HDF5 file name/path
