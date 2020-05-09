@@ -26,6 +26,10 @@ def get_cluster(cluster_type, **kwargs):
         raise ValueError(msg)
     print("Dask cluster type: {}".format(cluster_type))
 
+    # No need to do the extra configuration checking if using LocalCluster
+    if cluster_type == 'local':
+        return LocalCluster()
+
     # check input config name
     if 'config_name' in kwargs.keys():
         kwargs['config_name'] = check_config_name(kwargs['config_name'], cluster_type)
@@ -43,9 +47,12 @@ def get_cluster(cluster_type, **kwargs):
         cluster = PBSCluster(**kwargs)
     elif cluster_type == 'slurm':
         cluster = SLURMCluster(**kwargs)
-    else:
-        cluster = LocalCluster()
 
+    # Print and write job command file for HPC cluster types
+    print("JOB COMMAND CALLED FROM PYTHON:\n\n", cluster.job_script())
+    with open('dask_command_run_from_python.txt', 'w') as f:
+        f.write(cluster.job_script() + '\n')
+    
     return cluster
 
 
