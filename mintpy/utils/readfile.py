@@ -10,7 +10,7 @@
 import os
 import re
 import warnings
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 
 import h5py
 import json
@@ -960,12 +960,11 @@ def read_isce_xml(fname, standardize=True):
         # in form: root/component coordinate*/property name/value
         for coord_name, prefix in zip(['coordinate1', 'coordinate2'], ['X', 'Y']):
             child = root.find("./component[@name='{}']".format(coord_name))
-            if ET.iselement(child):
-                v_step  = float(child.find("./property[@name='delta']").find('value').text)
-                v_first = float(child.find("./property[@name='startingvalue']").find('value').text)
-                if abs(v_step) < 1. and abs(v_step) > 1e-7:
-                    xmlDict['{}_STEP'.format(prefix)] = v_step
-                    xmlDict['{}_FIRST'.format(prefix)] = v_first - v_step / 2.
+            v_step  = float(child.find("./property[@name='delta']").find('value').text)
+            v_first = float(child.find("./property[@name='startingvalue']").find('value').text)
+            if abs(v_step) < 1. and abs(v_step) > 1e-7:
+                xmlDict['{}_STEP'.format(prefix)] = v_step
+                xmlDict['{}_FIRST'.format(prefix)] = v_first - v_step / 2.
 
     # PAMDataset, e.g. hgt.rdr.aux.xml
     elif root.tag == 'PAMDataset':
@@ -1006,16 +1005,16 @@ def read_envi_hdr(fname, standardize=True):
 
 
 def read_gdal_vrt(fname, standardize=True):
-    """Read GDAL .vrt file into a python dict structure
+    """Read GDAL .vrt file into a python dict structure using gdal
 
     Modified from $ISCE_HOME/applications/gdal2isce_xml.gdal2isce_xml() written by David Bekaert.
     """
-
-    # read dataset using gdal
     try:
         import gdal
     except ImportError:
         raise ImportError('Cannot import gdal!')
+
+    # read dataset using gdal
     ds = gdal.Open(fname, gdal.GA_ReadOnly)
 
     atr = {}

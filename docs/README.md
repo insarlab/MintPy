@@ -82,7 +82,7 @@ ts_data, meta = readfile.read('timeseries_ERA5_ramp_demErr.h5')
 
 ### 3. [Documentation](https://mintpy.readthedocs.io/) ###
 
-Detailed algorithms implemented in the software are described in [Yunjun et al. (2019)](https://doi.org/10.1016/j.cageo.2019.104331).
+Algorithms implemented in the software are described in details in [Yunjun et al. (2019)](https://doi.org/10.1016/j.cageo.2019.104331).
 
 + [Tutorials in Jupyter Notebook](https://github.com/insarlab/MintPy-tutorial)
 + [Example datasets](./demo_dataset.md)
