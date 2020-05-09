@@ -4,6 +4,7 @@ cdsapi
 cvxopt
 dask>=1.0
 dask-jobqueue>=0.3
+defusedxml
 ecCodes
 h5py
 lxml

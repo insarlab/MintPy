@@ -70,6 +70,7 @@ swig
 swig-python
 gdal +expat +geos +hdf5 +netcdf +openjpeg +postgresql95 +sqlite3
 py37-cython
+py37-defusedxml
 py37-mpi4py +gcc7 +openmpi
 py37-numpy +gcc7 +openblas
 py37-scipy +gcc7 +openblas
