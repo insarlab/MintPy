@@ -125,7 +125,7 @@ def create_parser():
     par.add_argument('--parallel', dest='parallel', action='store_true',
                      help='Enable parallel processing for the pixelwise weighted inversion.')
     par.add_argument('--cluster', '--cluster-type', dest='cluster', type=str,
-                     default='slurm', choices={'lsf', 'pbs', 'slurm'},
+                     default='local', choices={'lsf', 'pbs', 'slurm', 'local'},
                      help='Type of HPC cluster you are running on (default: %(default)s).')
     par.add_argument('--config', '--config-name', dest='config', type=str, default='no', 
                      help='Configuration name to use in dask.yaml (default: %(default)s).')
@@ -1099,13 +1099,16 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
         # at once (other user's jobs gained higher priority in the general at that point)
         NUM_WORKERS = inps.numWorker
+        if inps.cluster == 'local':
+            import multiprocessing as mpc
+            NUM_WORKERS = mpc.cpu_count()
 
         # FA: the following command starts the jobs
         cluster = get_cluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
         cluster.scale(NUM_WORKERS)
-        print("JOB COMMAND CALLED FROM PYTHON:\n\n", cluster.job_script())
-        with open('dask_command_run_from_python.txt', 'w') as f:
-              f.write(cluster.job_script() + '\n')
+        #print("JOB COMMAND CALLED FROM PYTHON:\n\n", cluster.job_script())
+        #with open('dask_command_run_from_python.txt', 'w') as f:
+        #      f.write(cluster.job_script() + '\n')
 
         # This line needs to be in a function or in a `if __name__ == "__main__":` block. If it is in no function
         # or "main" block, each worker will try to create its own client (which is bad) when loading the module

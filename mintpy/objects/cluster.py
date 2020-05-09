@@ -9,6 +9,7 @@
 try:
     import dask
     from dask_jobqueue import LSFCluster, PBSCluster, SLURMCluster
+    from dask.distributed import LocalCluster
 except ImportError:
     raise ImportError('Cannot import dask or dask_jobqueue!')
 
@@ -18,7 +19,7 @@ def get_cluster(cluster_type, **kwargs):
 
     # check input cluster type
     cluster_type = cluster_type.lower()
-    cluster_list = ['lsf','pbs','slurm']
+    cluster_list = ['lsf','pbs','slurm','local']
     if cluster_type not in cluster_list:
         msg = "Cluster type '{}' not supported".format(cluster_type)
         msg += '\nsupported cluster types: {}'.format(cluster_list)
@@ -42,6 +43,8 @@ def get_cluster(cluster_type, **kwargs):
         cluster = PBSCluster(**kwargs)
     elif cluster_type == 'slurm':
         cluster = SLURMCluster(**kwargs)
+    else:
+        cluster = LocalCluster()
 
     return cluster
 
