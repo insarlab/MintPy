@@ -12,7 +12,7 @@ import glob
 import argparse
 import h5py
 import numpy as np
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 
 try:
     import gdal
