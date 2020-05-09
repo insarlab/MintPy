@@ -6,16 +6,17 @@
 ############################################################
 
 
+import os
 import sys
 import argparse
-from mintpy.add_attribute_insarmaps import (
+import pickle
+import numpy
+
+from mintpy.insarmaps.add_attribute_insarmaps import (
     InsarDatabaseController,
     InsarDatasetController,
 )
 
-import os
-import pickle
-import numpy
 
 dbUsername = "INSERT"
 dbPassword = "INSERT"

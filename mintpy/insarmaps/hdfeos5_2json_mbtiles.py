@@ -6,18 +6,19 @@
 ############################################################
 
 
-import json
-import numpy as np
-from datetime import date
-import math
-import time
 import os
 import sys
-import geocoder
-from mintpy.objects import HDFEOS
-from mintpy.mask import mask_matrix
 import argparse
 import pickle
+import json
+import time
+from datetime import date
+import math
+import geocoder
+import numpy as np
+
+from mintpy.objects import HDFEOS
+from mintpy.mask import mask_matrix
 
 # ex: python Converter_unavco.py Alos_SM_73_2980_2990_20070107_20110420.h5
 
