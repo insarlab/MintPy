@@ -9,6 +9,7 @@
 try:
     import dask
     from dask_jobqueue import LSFCluster, PBSCluster, SLURMCluster
+    from dask.distributed import LocalCluster
 except ImportError:
     raise ImportError('Cannot import dask or dask_jobqueue!')
 
@@ -18,12 +19,16 @@ def get_cluster(cluster_type, **kwargs):
 
     # check input cluster type
     cluster_type = cluster_type.lower()
-    cluster_list = ['lsf','pbs','slurm']
+    cluster_list = ['lsf','pbs','slurm','local']
     if cluster_type not in cluster_list:
         msg = "Cluster type '{}' not supported".format(cluster_type)
         msg += '\nsupported cluster types: {}'.format(cluster_list)
         raise ValueError(msg)
     print("Dask cluster type: {}".format(cluster_type))
+
+    # No need to do the extra configuration checking if using LocalCluster
+    if cluster_type == 'local':
+        return LocalCluster()
 
     # check input config name
     if 'config_name' in kwargs.keys():
@@ -43,6 +48,11 @@ def get_cluster(cluster_type, **kwargs):
     elif cluster_type == 'slurm':
         cluster = SLURMCluster(**kwargs)
 
+    # Print and write job command file for HPC cluster types
+    print("JOB COMMAND CALLED FROM PYTHON:\n\n", cluster.job_script())
+    with open('dask_command_run_from_python.txt', 'w') as f:
+        f.write(cluster.job_script() + '\n')
+    
     return cluster
 
 

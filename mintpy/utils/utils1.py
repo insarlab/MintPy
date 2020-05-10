@@ -11,6 +11,7 @@
 import os
 import time
 import glob
+import multiprocessing as mpc
 import h5py
 import numpy as np
 from mintpy.objects import deramp, ifgramStack, timeseries, geometryDatasetNames
@@ -648,6 +649,12 @@ def check_template_auto_value(templateDict, auto_file='../defaults/smallbaseline
     templateAutoFile = os.path.join(os.path.dirname(__file__), auto_file)
     templateAutoDict = readfile.read_template(templateAutoFile)
 
+    cluster_key = 'mintpy.networkInversion.cluster'
+    num_worker_key = 'mintpy.networkInversion.numWorker'
+    cluster = templateDict.get(cluster_key, templateAutoDict[cluster_key])
+    if cluster == 'local':
+        templateAutoDict[num_worker_key] = 4
+
     # Update auto value of input template dict
     for key, value in templateDict.items():
         if value == 'auto' and key in templateAutoDict.keys():
@@ -663,6 +670,11 @@ def check_template_auto_value(templateDict, auto_file='../defaults/smallbaseline
     for key, value in templateDict.items():
         if value in specialValues.keys():
             templateDict[key] = specialValues[value]
+
+    # Special case to allocate all computing resources to dask for local cluster type
+    if templateDict[num_worker_key] == 'all' and templateDict[cluster_key] == 'local':
+        templateDict[num_worker_key] = mpc.cpu_count()
+
     return templateDict
 
 
