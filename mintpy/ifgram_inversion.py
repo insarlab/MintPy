@@ -1102,9 +1102,9 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         # When running as a local cluster, we want to use all available cpus on the computing node, 
         # which is accssible via the `multiprocessing` stndard library.
         NUM_WORKERS = inps.numWorker
-        if inps.cluster == 'local':
-            import multiprocessing as mpc
-            NUM_WORKERS = mpc.cpu_count()
+        # if inps.cluster == 'local':
+        #     import multiprocessing as mpc
+        #     NUM_WORKERS = mpc.cpu_count()
 
         # FA: the following command starts the jobs
         cluster = get_cluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
