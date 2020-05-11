@@ -645,17 +645,18 @@ def run_or_skip(out_file, in_file=None, check_readable=True, print_msg=True):
 
 def check_template_auto_value(templateDict, auto_file='../defaults/smallbaselineApp_auto.cfg'):
     """Replace auto value based on the input auto config file."""
-    # Read default template value and turn yes/no to True/False
+    ## Read default template value and turn yes/no to True/False
     templateAutoFile = os.path.join(os.path.dirname(__file__), auto_file)
     templateAutoDict = readfile.read_template(templateAutoFile)
 
+    # if cluster == local, change auto value for numWorker
     cluster_key = 'mintpy.networkInversion.cluster'
     num_worker_key = 'mintpy.networkInversion.numWorker'
     cluster = templateDict.get(cluster_key, templateAutoDict[cluster_key])
     if cluster == 'local':
-        templateAutoDict[num_worker_key] = 4
+        templateAutoDict[num_worker_key] = '4'
 
-    # Update auto value of input template dict
+    ## Update auto value of input template dict
     for key, value in templateDict.items():
         if value == 'auto' and key in templateAutoDict.keys():
             templateDict[key] = templateAutoDict[key]
@@ -671,8 +672,10 @@ def check_template_auto_value(templateDict, auto_file='../defaults/smallbaseline
         if value in specialValues.keys():
             templateDict[key] = specialValues[value]
 
-    # Special case to allocate all computing resources to dask for local cluster type
-    if templateDict[num_worker_key] == 'all' and templateDict[cluster_key] == 'local':
+    # if cluster == local, translate numWorker = all 
+    # to allocate all computing resources to dask for local cluster type
+    num_worker = templateDict.get(num_worker_key, templateAutoDict[num_worker_key]).lower()
+    if cluster == 'local' and num_worker == 'all':
         templateDict[num_worker_key] = mpc.cpu_count()
 
     return templateDict
