@@ -261,7 +261,7 @@ def calc_num_nonzero_integer_closure_phase(ifgram_file, mask_file=None, dsName='
     return out_file
 
 
-def plot_num_nonzero_integer_closure_phase(fname, font_size=12):
+def plot_num_nonzero_integer_closure_phase(fname, display=False, font_size=12, fig_size=[9,3]):
     """Plot the histogram for the number of non-zero integer ambiguity
 
     Fig. 3d-e in Yunjun et al. (2019, CAGEO).
@@ -272,7 +272,7 @@ def plot_num_nonzero_integer_closure_phase(fname, font_size=12):
     vmax = int(np.nanmax(data))
 
     # plot
-    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=[9, 3])
+    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=fig_size)
 
     # subplot 1 - map
     ax = axs[0]
@@ -310,7 +310,11 @@ def plot_num_nonzero_integer_closure_phase(fname, font_size=12):
     out_fig = '{}.png'.format(os.path.splitext(fname)[0])
     print('plot and save figure to file', out_fig)
     fig.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=300)
-    plt.close(fig)
+
+    if display:
+        plt.show()
+    else:
+        plt.close(fig)
 
     return
 
