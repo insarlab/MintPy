@@ -30,7 +30,7 @@ EXAMPLE = """example:
   mask.py velocity.h5 -m maskTempCoh.h5
   geocode.py velocity_msk.h5 -l inputs/geometryRadar.h5 -x 0.00027778 -y -0.00027778 --bbox 32.0 32.5 130.1 130.5
 
-  asc_desc2horz_vert.py AlosAT424/mintpy/geo_velocity_msk.py AlosDT73/mintpy/geo_velocity_msk.py
+  asc_desc2horz_vert.py AlosAT424/mintpy/geo_velocity_msk.h5 AlosDT73/mintpy/geo_velocity_msk.h5
 
   # write horz/vert to two files
   asc_desc2horz_vert.py AlosAT424/mintpy/velocity_msk.h5 AlosDT73/mintpy/velocity_msk.h5
@@ -85,10 +85,9 @@ def cmd_line_parse(iargs=None):
 
     # check spatial resolution
     if any(atr1[i] != atr2[i] for i in ['X_STEP','Y_STEP']):
-        msg = 'file1: {}\n'.format(inps.file[0])
-        msg += 'Y_STEP: {} m, X_STEP: {} m\n'.format(atr1['Y_STEP'], atr1['X_STEP'])
-        msg += 'file2: {}\n'.format(inps.file[1])
-        msg += 'Y_STEP: {} m, X_STEP: {} m'.format(atr2['Y_STEP'], atr2['X_STEP'])
+        msg  = '\tfile1: {}, Y/X_STEP: {} / {} m\n'.format(inps.file[0], atr1['Y_STEP'], atr1['X_STEP'])
+        msg += '\tfile2: {}, Y/X_STEP: {} / {} m\n'.format(inps.file[1], atr2['Y_STEP'], atr2['X_STEP'])
+        msg += '\tRe-run geocode.py --lat-step --lon-step to make them consistent.'
         raise ValueError('input files do not have the same spatial resolution\n{}'.format(msg))
 
     # check reference point
@@ -96,7 +95,10 @@ def cmd_line_parse(iargs=None):
     ref_lalo_1 = ['{:.3f}'.format(float(atr1[i])) for i in ['REF_LAT','REF_LON']]
     ref_lalo_2 = ['{:.3f}'.format(float(atr2[i])) for i in ['REF_LAT','REF_LON']]
     if ref_lalo_1 != ref_lalo_2:
-        raise ValueError('input files do not have the same reference point from REF_LAT/LON values')
+        msg  = '\tfile1: {}, REF_LAT/LON: {} {}\n'.format(inps.file[0], ref_lalo_1, atr1.get('X_UNIT', 'deg'))
+        msg += '\tfile2: {}, REF_LAT/LON: {} {}\n'.format(inps.file[1], ref_lalo_2, atr2.get('X_UNIT', 'deg'))
+        msg += '\tRe-run reference_point.py --lat --lon to make them consistent.'
+        raise ValueError('input files do not have the same reference point from REF_LAT/LON values!\n{}'.format(msg))
 
     # use ref_file for time-series file writing
     if atr1['FILE_TYPE'] == 'timeseries':

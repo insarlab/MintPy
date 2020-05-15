@@ -31,6 +31,16 @@ EXAMPLE = """example:
   geocode.py geo_velocity.h5 --geo2radar
 """
 
+DEG2METER = """
+degrees     --> meters on equator
+0.000925926 --> 100
+0.000555556 --> 60
+0.000462963 --> 50
+0.000277778 --> 30
+0.000185185 --> 20
+0.000092593 --> 10
+"""
+
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Resample radar coded files into geo coordinates, or reverse',
@@ -50,24 +60,27 @@ def create_parser():
     parser.add_argument('-t', '--template', dest='templateFile',
                         help="Template file with geocoding options.")
 
-    parser.add_argument('-b', '--bbox', dest='SNWE', type=float, nargs=4, metavar=('S', 'N', 'W', 'E'),
-                        help='Bounding box of area to be geocoded.\n' +
-                        'Include the uppler left corner of the first pixel' +
-                        '    and the lower right corner of the last pixel')
-    parser.add_argument('-y', '--lat-step', dest='latStep', type=float,
-                        help='output pixel size in degree in latitude.')
-    parser.add_argument('-x', '--lon-step', dest='lonStep', type=float,
-                        help='output pixel size in degree in longitude.')
+    out = parser.add_argument_group('output grid')
+    out.add_argument('-b', '--bbox', dest='SNWE', type=float, nargs=4, metavar=('S', 'N', 'W', 'E'),
+                     help='Bounding box of area to be geocoded.\n' +
+                     'Include the uppler left corner of the first pixel' +
+                     '    and the lower right corner of the last pixel')
+    out.add_argument('-y', '--lat-step', dest='latStep', type=float,
+                     help='output pixel size in degree in latitude.')
+    out.add_argument('-x', '--lon-step', dest='lonStep', type=float,
+                     help='output pixel size in degree in longitude.'
+                          '{}'.format(DEG2METER))
 
-    parser.add_argument('-i', '--interpolate', dest='interpMethod', choices={'nearest', 'linear'},
+    interp = parser.add_argument_group('interpolation')
+    interp.add_argument('-i', '--interpolate', dest='interpMethod', choices={'nearest', 'linear'},
                         help='interpolation/resampling method. Default: nearest', default='nearest')
-    parser.add_argument('--fill', dest='fillValue', type=float, default=np.nan,
+    interp.add_argument('--fill', dest='fillValue', type=float, default=np.nan,
                         help='Value used for points outside of the interpolation domain.\n' +
                              'Default: np.nan')
-    parser.add_argument('-n','--nprocs', dest='nprocs', type=int, default=1,
+    interp.add_argument('-n','--nprocs', dest='nprocs', type=int, default=1,
                         help='number of processors to be used for calculation. Default: 1\n' + 
                              'Note: Do not use more processes than available processor cores.')
-    parser.add_argument('-p','--processor', dest='processor', type=str, choices={'pyresample', 'scipy'},
+    interp.add_argument('-p','--processor', dest='processor', type=str, choices={'pyresample', 'scipy'},
                         help='processor module used for interpolation.')
 
     parser.add_argument('--update', dest='updateMode', action='store_true',

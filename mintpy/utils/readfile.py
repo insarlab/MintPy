@@ -338,7 +338,7 @@ def read_binary_file(fname, datasetName=None, box=None):
 
         k = atr['FILE_TYPE'].lower().replace('.', '')
         if k in ['unw']:
-            band = 2
+            band = min(2, num_band)
             if datasetName and datasetName in ['band1','intensity','magnitude']:
                 band = 1
 
@@ -346,10 +346,10 @@ def read_binary_file(fname, datasetName=None, box=None):
             cpx_band = 'magnitude'
 
         elif k in ['los'] and datasetName and datasetName.startswith(('band2','az','head')):
-            band = 2
+            band = min(2, num_band)
 
         elif k in ['incLocal']:
-            band = 2
+            band = min(2, num_band)
             if datasetName and 'local' not in datasetName.lower():
                 band = 1
 
@@ -507,6 +507,8 @@ def get_slice_list(fname):
                 if isinstance(obj, h5py.Dataset) and obj.shape[-2:] == (length, width):
                     if obj.ndim == 2:
                         slice_list.append(name)
+                    elif obj.ndim == 3:
+                        slice_list += ['{}-{}'.format(name, i+1) for i in range(obj.shape[0])]
                     else:
                         warnings.warn('file has un-defined {}D dataset: {}'.format(obj.ndim, name))
             slice_list = []
@@ -516,11 +518,11 @@ def get_slice_list(fname):
     # Binary Files
     else:
         num_band = int(atr.get('number_bands', '1'))
-        if fext in ['.trans', '.utm_to_rdc']:
+        if fext in ['.trans', '.utm_to_rdc'] and num_band == 2:
             slice_list = ['rangeCoord', 'azimuthCoord']
-        elif fext in ['.int', '.unw']:
+        elif fext in ['.int', '.unw'] and num_band == 2:
             slice_list = ['magnitude', 'phase']
-        elif fbase.startswith('los'):
+        elif fbase.startswith('los') and num_band == 2:
             slice_list = ['incidenceAngle', 'azimuthAngle']
         else:
             slice_list = ['band{}'.format(i) for i in range(1,num_band+1)]
@@ -1027,7 +1029,7 @@ def read_gdal_vrt(fname, standardize=True):
     atr['DATA_TYPE'] = GDAL2ISCE_DATATYPE[data_type]
 
     # interleave
-    scheme = ds.GetMetadata('IMAGE_STRUCTURE').get('INTERLEAVE', 'BIP')
+    scheme = ds.GetMetadata('IMAGE_STRUCTURE').get('INTERLEAVE', 'PIXEL')
     atr['scheme'] = ENVI_BAND_INTERLEAVE[scheme]
 
     # transformation contains gridcorners
