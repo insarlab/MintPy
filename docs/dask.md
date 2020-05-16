@@ -2,10 +2,42 @@
 
 Dask and dask-jobqueue (`dask` and `dask_jobqueue`) are two libraries, both maintained by the dask organization, that provide the ability to run python code in parallel across multiple machines or across multiple computing cores on a single machine. The base `dask` library provides wrappers around two common python libraries (`numpy` and `pandas`) that allows for many of the common computations performed with these libraries (such as data transformations on large datasets or matrix inversions on large matrices) in parallel. Meanwhile, `dask_jobqueue` adds the ability to submit data and python commands to an HPC job scheduler (such as `LSF` or `SLURM`). In both cases, `dask` completely handles waiting for each task to complete (there is no longer any guarantee that they finish in the same order they were submitted) as well as properly merging the outputs back together. 
 
-In `MintPy`, `dask_jobqueue` is utilized to dramatically speed up the runtime of complex calculations when running `MintPy` on an HPC cluster with a valid job scheduler. A host of various configuration parameters that determine the amount of computing resources that allocated to each dask “worker job” by the job scheduler can be specified in a dask configuration file, found at: `~/.config/dask/dask.yaml`. The remainder of this page discusses various configuration parameters and believed best practices pertaining to configuring and running `MintPy` in parallel on various HPC systems. 
+In `MintPy`, `dask_jobqueue` is utilized to dramatically speed up the runtime of complex calculations when running `MintPy` on an HPC cluster with a valid job scheduler. A host of various configuration parameters that determine the amount of computing resources that allocated to each dask “worker job” by the job scheduler can be specified in a dask configuration file, found at: `~/.config/dask/dask.yaml`.
 
+`MintPy` currently supports utilizing dask in two ways: locally on a single machine with multiple CPU cores, and via a distributed HPC scheduler. The required options and recommended best practices for each differ slightly and are covered in the following section.
 
-### Common Configuration Parameters ###
+### Running Dask Locally using LocalCluster
+Dask has the ability to utilize multiple CPUs (also known as "cores") running on the same physical machine to parallelize computations. This is the best way to use dask is you are running `MintPy` on a local machine with multiple available cores, or if you have access to an HPC cluster but wish to allocate only a single node's worth of resources towards MintPy but still take advantage of multiple cores. To use dask in this way, simply set the following options in `smallbaselineApp.cfg`:
+
+    mintpy.networkInversion.parallel   = yes
+    mintpy.networkInversion.cluster    = local
+
+The number of cores that are allocated to dask can be controlled using the `mintpy.networkInversion.numWorkers` option in `smallbaselineApp.cfg`. This parameter can be specified as any positive integer, which will be taken as the number of CPUs you would like to allocate to dask. If you would like to unconditionally allocate all available CPUs on the computer to dask, you can set: 
+
+    mintpy.networkInversion.numWorkers = all
+    
+ which will then allocate `multiprocessing.cpu_count()` number of workers to the dask computation. The default number of workers for LocalCluster is 4.
+ 
+ Below is a figure depicting the running time of three datasets (Galapagos, Fernandina, and Kilauea) versus the number of allocated cores when running with the LocalCluster. These tests were conducted in May 2020, on the Stampede2 cluster, using 1 compute node from the 'skx-normal' queue ([node details here](https://portal.tacc.utexas.edu/user-guides/stampede2#overview-skxcomputenodes)). Dask options were as follows:
+ 
+    mintpy.networkInversion.parallel    = yes
+    mintpy.networkInversion.cluster     = local
+    mintpy.networkInversion.config      = auto
+    mintpy.networkInversion.numWorkers  = ____ # varied by test
+    mintpy.networkInversion.walltime    = auto
+ 
+| Property              | Fernandina Dataset | Galapagos Dataset | Kilauea Dataset            |
+|-----------------------|--------------------|-------------------|----------------------------|
+| Input File Size       | 0.623 GB           | 0.233 GB          | 15.0 GB                    |
+| Dask Configuration    | None               | None              | None                       |
+| Cluster Memory Used   | 16 GB              | 16 GB             | 16 GB (64 GB for 1-2 cores)|
+| Chunk Size Used       | 100e6 (1 GB)       | 100e6 (1 GB)      | 100e6 (1 GB)               | 
+ 
+![dask-local-cluster-performance](resources/dask-local-cluster-performance.png "Dask LocalCluster Peformance")
+
+### Running Dask using an HPC Cluster
+
+#### Common Configuration Parameters ####
 
 **name** - This is the name of the worker job as it will appear to the job scheduler. Any values are perfectly fine.
 
@@ -28,7 +60,7 @@ In `MintPy`, `dask_jobqueue` is utilized to dramatically speed up the runtime of
 *There are a multitude of other configuration options that can be specified to dask to further customize the way in which jobs are run and executed on your HPC cluster, but the above are the most commonly used ones for MintPy. For further details and info on possible config options, see the dask-jobqueue documentation*
 
 
-### Using `~/.config/dask/dask.yaml` configuration files
+#### Using `~/.config/dask/dask.yaml` configuration files
 
 The `dask-jobqueue` cluster objects (`LSFCluster`, `PBSCluster`, `SLURMCluster`, etc.) accepts configuration parameters in two ways: (a) they can be passed directly to the object within the code, or (b) they can be specified in a `dask.yaml` file and be sourced by `dask` at runtime.  Option (b) is the way `MintPy` is designed to take these parameters. 
 
@@ -45,10 +77,10 @@ There are five options related to the dask features in `MintPy` that can be cont
 
 `mintpy.networkInversion.parallel` - this is a simple boolean value that can be either ‘yes’ or ‘no’ indicating whether or not you would like to run the `ifgram_inversion` steps of the processing routine using dask or not. If ‘no’ a serial version of the function is performed. *Default: no*
 
-`mintpy.networkInversion.cluster` - this is a string value that indicates what job scheduler your HPC system is using. Currently, valid options are “LSF”, “PBS”, or “SLURM”, and “SLURM” is used by default (it seems that more systems than not use SLURM). 
+`mintpy.networkInversion.cluster` - this is a string value that indicates what job scheduler your HPC system is using. Currently, valid options are “LSF”, “PBS”, “SLURM”, or "Local" and “Local” is used by default (as most users do not have access to a job scheduler to use othe scheduler options.). *Default: local* 
 
 `mintpy.networkInversion.config` - this is the name of the configuration section of your `dask.yaml` file to use if any. By default, this value is ‘no’ indicating there is no special config name to use, in which case, dask uses the default config name for the cluster type specified.
 
-`mintpy.networkInversion.numWorker` - this is the number of worker jobs you would like dask to run. Each worker job is assigned to a unique process allocated a given amount of memory and allocated across a given number of cores as specified in the `dask.yaml` configuration. *Default: 40*
+`mintpy.networkInversion.numWorker` - this is the number of worker jobs you would like dask to run. If you are using the 'local' `cluster` option value, this will specify the number of CPU cores to allocate to dask (*Default: 4*). If you are using a job scheduler on an HPC cluster, this will specify the number of worker jobs to submit to the scheduler (*Default: 40*). To use all available CPU cores when using the 'local' cluster type, provide the value 'all', which allocates `multiprocessing.cpu_count()` cores to dask.
 
-`mintpy.networkInversion.walltime` - this is a string value indicating the walltime to be used for each dask job. By default, this is "00:40”, which corresponds to 40 minutes. For LSF cluster, wall times are specified in HH:MM format, while PBS and SLURM cluster use HH:MM:SS format for wall times. In the event a wall time is specified that does not match the format desired by the cluster you are using, `MintPy` will convert the value to the appropriate format. 
+`mintpy.networkInversion.walltime` - this is a string value indicating the walltime to be used for each dask job. By default, this is "00:40”, which corresponds to 40 minutes. For LSF cluster, wall times are specified in HH:MM format, while PBS and SLURM cluster use HH:MM:SS format for wall times. In the event a wall time is specified that does not match the format desired by the cluster you are using, `MintPy` will attempt to convert the value to the appropriate format. 
