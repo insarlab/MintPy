@@ -72,12 +72,10 @@ Note on `DASK_ROOT_CONFIG`: if you would like to not use the ~/.config/dask/ dir
 
 There are 5 options related to the dask features that can be controlled in MintPy via the `smallbaselineApp.cfg` file:
 
-`mintpy.networkInversion.parallel` - "yes" or "no" (default) to turn ON or OFF the parallel processing with dask.
-
-`mintpy.networkInversion.cluster` - job scheduler in your HPC system. Currently support "lsf", "pbs", "slurm", or "local" (default).
-
-`mintpy.networkInversion.config` - name of the configuration section of your `~/.config/dask/mintpy.yaml` file. Default is "no" to use the same name as the cluster type specified above. 
-
-`mintpy.networkInversion.numWorker` - number of worker to submit and run (40 by default).
-
-`mintpy.networkInversion.walltime` - walltime to be used for each dask job in "HH:MM" format. Default is "00:40" for 40 minutes. MintPy will convert this value internally to the appropriate format for different job schedulers (HH:MM for LSF and HH:MM:SS for PBS and SLURM).
+```cfg
+mintpy.networkInversion.parallel  = auto #[yes / no], turn ON or OFF the parallel processing with dask, auto for no.
+mintpy.networkInversion.cluster   = auto #[lsf / pbs / slurm / local], job scheduler in your HPC system auto for local.
+mintpy.networkInversion.config    = auto #[name / no], name of the configuration section in YAML file, auto for no (to use the same name as the cluster type specified above)
+mintpy.networkInversion.numWorker = auto #[int > 1], number of worker to submit and run, auto for 4 (local) or 40 (non-local), set to "all" to use all available cores.
+mintpy.networkInversion.walltime  = auto #[HH:MM], walltime to be used for each dask job, auto for 00:40.
+```
