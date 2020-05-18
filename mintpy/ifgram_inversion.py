@@ -1019,8 +1019,6 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     pbase = stack_obj.get_perp_baseline_timeseries(dropIfgram=True)
     date_list = stack_obj.get_date_list(dropIfgram=True)
 
-    #ts     = np.zeros((num_date, length, width), np.float32)
-    #ts_std = np.zeros((num_date, length, width), np.float32)
     temp_coh    = np.zeros((length, width), np.float32)
     num_inv_ifg = np.zeros((length, width), np.int16)
 
@@ -1049,17 +1047,19 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
 
     # invert & write block by block
     for box_i, box in enumerate(box_list):
-        box_width = box[2] - box[0]
+
+        # Get box dimensions for dask computation results
+        box_width  = box[2] - box[0]
         box_length = box[3] - box[1]
 
         if num_box > 1:
             print('\n------- Processing Patch {} out of {} --------------'.format(box_i+1, num_box))
 
-        print('Box Width: {}'.format(box_width))
+        print('Box Width:  {}'.format(box_width))
         print('Box Length: {}'.format(box_length))
 
         if not inps.parallel:
-            # invert the network
+            # invert the network for complete box
             (tsi,
              temp_cohi,
              ifg_numi) = ifgram_inversion_patch(ifgram_file,
@@ -1080,21 +1080,17 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                 raise ImportError('Cannot import dask.distributed!')
             from mintpy.objects.cluster import get_cluster
 
+            # Arrays for results of dask computations
+            # tsi is 3D while temp_cohi and ifg_numi are only 2D
             tsi = np.zeros((num_date, box_length, box_width), np.float32)
             temp_cohi = np.zeros((box_length, box_width), np.float32)
             ifg_numi = np.zeros((box_length, box_width), np.float32)
-            # Look at the ~/.config/dask/mintpy.yaml file for Changing the Dask configuration defaults
 
+            # Look at the ~/.config/dask/mintpy.yaml file for changing the Dask configuration defaults
             # This line submits NUM_WORKERS jobs to the cluster to start a bunch of workers
             # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
             # at once (other user's jobs gained higher priority in the general at that point)
-            #
-            # When running as a local cluster, we want to use all available cpus on the computing node,
-            # which is accssible via the `multiprocessing` stndard library.
             NUM_WORKERS = inps.numWorker
-            # if inps.cluster == 'local':
-            #     import multiprocessing as mpc
-            #     NUM_WORKERS = mpc.cpu_count()
 
             # FA: the following command starts the jobs
             cluster = get_cluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
@@ -1136,11 +1132,11 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                       "seconds. Box:", subbox, "Time:", time.time())
                 tsi_sub, temp_cohi_sub, ifg_numi_sub, subbox = result
 
+                # Need to realign subbox to proper position in master box
                 subbox[1] -= box_length*box_i
                 subbox[3] -= box_length*box_i
 
                 tsi[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi_sub
-                # ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
                 temp_cohi[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_cohi_sub
                 ifg_numi[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_numi_sub
 
@@ -1163,88 +1159,6 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     ts_obj.write2hdf5_block(date_list_utf8, datasetName='date')
     ts_obj.write2hdf5_block(pbase, datasetName='bperp')
 
-    # Parallel loop
-    # else:
-    #     try:
-    #         from dask.distributed import Client, as_completed
-    #     except ImportError:
-    #         raise ImportError('Cannot import dask.distributed!')
-    #     from mintpy.objects.cluster import get_cluster
-    #
-    #     ts = np.zeros((num_date, length, width), np.float32)
-    #
-    #     # Look at the ~/.config/dask/mintpy.yaml file for Changing the Dask configuration defaults
-    #
-    #     # This line submits NUM_WORKERS jobs to the cluster to start a bunch of workers
-    #     # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
-    #     # at once (other user's jobs gained higher priority in the general at that point)
-    #     #
-    #     # When running as a local cluster, we want to use all available cpus on the computing node,
-    #     # which is accssible via the `multiprocessing` stndard library.
-    #     NUM_WORKERS = inps.numWorker
-    #     # if inps.cluster == 'local':
-    #     #     import multiprocessing as mpc
-    #     #     NUM_WORKERS = mpc.cpu_count()
-    #
-    #     # FA: the following command starts the jobs
-    #     cluster = get_cluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
-    #     cluster.scale(NUM_WORKERS)
-    #
-    #     # This line needs to be in a function or in a `if __name__ == "__main__":` block. If it is in no function
-    #     # or "main" block, each worker will try to create its own client (which is bad) when loading the module
-    #     client = Client(cluster)
-    #
-    #     all_boxes = []
-    #     for box in box_list:
-    #         # `box_list` is split into smaller boxes and then each box is processed in parallel
-    #         # With larger jobs, increasing the `num_split` factor may improve runtime
-    #         all_boxes += subsplit_boxes4_workers(box, num_split=1 * NUM_WORKERS, dimension='x')
-    #
-    #     futures = []
-    #     start_time_subboxes = time.time()
-    #     for i, subbox in enumerate(all_boxes):
-    #         print(i, subbox)
-    #
-    #         data = (ifgram_file,
-    #                 subbox,
-    #                 ref_phase,
-    #                 inps.obsDatasetName,
-    #                 inps.weightFunc,
-    #                 inps.minNormVelocity,
-    #                 inps.maskDataset,
-    #                 inps.maskThreshold,
-    #                 inps.minRedundancy,
-    #                 inps.waterMaskFile)
-    #
-    #         # David: I haven't played with fussing with `retries`, however sometimes a future fails
-    #         # on a worker for an unknown reason. retrying will save the whole process from failing.
-    #         # TODO:  I don't know what to do if a future fails > 3 times. I don't think an error is
-    #         # thrown in that case, therefore I don't know how to recognize when this happens.
-    #         future = client.submit(parallel_ifgram_inversion_patch, data, retries=3)
-    #         futures.append(future)
-    #
-    #     # Some workers are slower than others. When #(futures to complete) < #workers, we should
-    #     # investigate whether `Client.replicate(future)` will speed up work on the final futures.
-    #     # It's a slight speedup, but depending how computationally complex each future is, this could be a
-    #     # decent speedup
-    #     i_future = 0
-    #     for future, result in as_completed(futures, with_results=True):
-    #         i_future += 1
-    #         print("FUTURE #" + str(i_future), "complete in", time.time() - start_time_subboxes,
-    #               "seconds. Box:", subbox, "Time:", time.time())
-    #         tsi, temp_cohi, ifg_numi, subbox = result
-    #
-    #         ts[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi
-    #         #ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
-    #         temp_coh[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_cohi
-    #         num_inv_ifg[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_numi
-    #
-    #     # Shut down Dask workers gracefully
-    #     cluster.close()
-    #     client.close()
-    #
-    #     ut.move_dask_stdout_stderr_files()
-
     # reference pixel
     if not inps.skip_ref:
         ref_y = int(stack_obj.metadata['REF_Y'])
@@ -1252,11 +1166,6 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         num_inv_ifg[ref_y, ref_x] = num_ifgram
         temp_coh[ref_y, ref_x] = 1.
 
-    # if inps.parallel:
-    #     # for dask still use the old function to write.
-    #     # consider to migrate to block-by-block writing, if HDF5 support multiple
-    #     write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg, suffix='', inps=inps)
-    # else:
     write2hdf5_auxFiles(metadata, temp_coh, num_inv_ifg, suffix='', inps=inps)
 
     m, s = divmod(time.time()-start_time, 60)
