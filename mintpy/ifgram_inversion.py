@@ -1033,128 +1033,126 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     metadata['FILE_TYPE'] = 'timeseries'
     metadata['UNIT'] = 'm'
 
-    # Loop
-    if not inps.parallel:
-        # instantiate a timeseries object
-        ts_file = '{}.h5'.format(os.path.splitext(inps.outfile[0])[0])
-        ts_obj = timeseries(ts_file)
+    # instantiate a timeseries object
+    ts_file = '{}.h5'.format(os.path.splitext(inps.outfile[0])[0])
+    ts_obj = timeseries(ts_file)
 
-        # A dictionary of the datasets which we like to have in the timeseries
-        dsNameDict = {
-                "date": ((np.dtype('S8'), (num_date,))),
-                "bperp": (np.float32, (num_date,)),
-                "timeseries": (np.float32, (num_date, length, width)),
-            }
+    # A dictionary of the datasets which we like to have in the timeseries
+    dsNameDict = {
+            "date": ((np.dtype('S8'), (num_date,))),
+            "bperp": (np.float32, (num_date,)),
+            "timeseries": (np.float32, (num_date, length, width)),
+        }
 
-        # layout the HDF5 file for the datasets and the metadata
-        ts_obj.layout_hdf5(dsNameDict, metadata)
+    # layout the HDF5 file for the datasets and the metadata
+    ts_obj.layout_hdf5(dsNameDict, metadata)
 
-        # invert & write block by block
-        for box in box_list:
+    # invert & write block by block
+    for box in box_list:
 
-            if num_box > 1:
-                print('\n------- Processing Patch {} out of {} --------------'.format(i+1, num_box))
+        if num_box > 1:
+            print('\n------- Processing Patch {} out of {} --------------'.format(i+1, num_box))
 
-            if not inps.parallel:
-                # invert the network
-                (tsi,
-                 temp_cohi,
-                 ifg_numi) = ifgram_inversion_patch(ifgram_file,
-                                                    box=box,
-                                                    ref_phase=ref_phase,
-                                                    obsDatasetName=inps.obsDatasetName,
-                                                    weight_func=inps.weightFunc,
-                                                    min_norm_velocity=inps.minNormVelocity,
-                                                    mask_dataset_name=inps.maskDataset,
-                                                    mask_threshold=inps.maskThreshold,
-                                                    min_redundancy=inps.minRedundancy,
-                                                    water_mask_file=inps.waterMaskFile)
+        if not inps.parallel:
+            # invert the network
+            (tsi,
+             temp_cohi,
+             ifg_numi) = ifgram_inversion_patch(ifgram_file,
+                                                box=box,
+                                                ref_phase=ref_phase,
+                                                obsDatasetName=inps.obsDatasetName,
+                                                weight_func=inps.weightFunc,
+                                                min_norm_velocity=inps.minNormVelocity,
+                                                mask_dataset_name=inps.maskDataset,
+                                                mask_threshold=inps.maskThreshold,
+                                                min_redundancy=inps.minRedundancy,
+                                                water_mask_file=inps.waterMaskFile)
 
-            else:
-                try:
-                    from dask.distributed import Client, as_completed
-                except ImportError:
-                    raise ImportError('Cannot import dask.distributed!')
-                from mintpy.objects.cluster import get_cluster
+        else:
+            try:
+                from dask.distributed import Client, as_completed
+            except ImportError:
+                raise ImportError('Cannot import dask.distributed!')
+            from mintpy.objects.cluster import get_cluster
 
-                ts = np.zeros((num_date, length, width), np.float32)
+            ts = np.zeros((num_date, length, width), np.float32)
 
-                # Look at the ~/.config/dask/mintpy.yaml file for Changing the Dask configuration defaults
+            # Look at the ~/.config/dask/mintpy.yaml file for Changing the Dask configuration defaults
 
-                # This line submits NUM_WORKERS jobs to the cluster to start a bunch of workers
-                # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
-                # at once (other user's jobs gained higher priority in the general at that point)
-                #
-                # When running as a local cluster, we want to use all available cpus on the computing node,
-                # which is accssible via the `multiprocessing` stndard library.
-                NUM_WORKERS = inps.numWorker
-                # if inps.cluster == 'local':
-                #     import multiprocessing as mpc
-                #     NUM_WORKERS = mpc.cpu_count()
+            # This line submits NUM_WORKERS jobs to the cluster to start a bunch of workers
+            # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
+            # at once (other user's jobs gained higher priority in the general at that point)
+            #
+            # When running as a local cluster, we want to use all available cpus on the computing node,
+            # which is accssible via the `multiprocessing` stndard library.
+            NUM_WORKERS = inps.numWorker
+            # if inps.cluster == 'local':
+            #     import multiprocessing as mpc
+            #     NUM_WORKERS = mpc.cpu_count()
 
-                # FA: the following command starts the jobs
-                cluster = get_cluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
-                cluster.scale(NUM_WORKERS)
+            # FA: the following command starts the jobs
+            cluster = get_cluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
+            cluster.scale(NUM_WORKERS)
 
-                # This line needs to be in a function or in a `if __name__ == "__main__":` block. If it is in no function
-                # or "main" block, each worker will try to create its own client (which is bad) when loading the module
-                client = Client(cluster)
+            # This line needs to be in a function or in a `if __name__ == "__main__":` block. If it is in no function
+            # or "main" block, each worker will try to create its own client (which is bad) when loading the module
+            client = Client(cluster)
 
-                dask_boxes = subsplit_boxes4_workers(box, num_split=1*NUM_WORKERS, dimension='x')
+            dask_boxes = subsplit_boxes4_workers(box, num_split=1*NUM_WORKERS, dimension='x')
 
-                futures = []
-                start_time_subboxes = time.time()
-                for i, subbox in enumerate(dask_boxes):
-                    print(i, subbox)
+            futures = []
+            start_time_subboxes = time.time()
+            for i, subbox in enumerate(dask_boxes):
+                print(i, subbox)
 
-                    data = (ifgram_file,
-                            subbox,
-                            ref_phase,
-                            inps.obsDatasetName,
-                            inps.weightFunc,
-                            inps.minNormVelocity,
-                            inps.maskDataset,
-                            inps.maskThreshold,
-                            inps.minRedundancy,
-                            inps.waterMaskFile)
+                data = (ifgram_file,
+                        subbox,
+                        ref_phase,
+                        inps.obsDatasetName,
+                        inps.weightFunc,
+                        inps.minNormVelocity,
+                        inps.maskDataset,
+                        inps.maskThreshold,
+                        inps.minRedundancy,
+                        inps.waterMaskFile)
 
-                    # David: I haven't played with fussing with `retries`, however sometimes a future fails
-                    # on a worker for an unknown reason. retrying will save the whole process from failing.
-                    # TODO:  I don't know what to do if a future fails > 3 times. I don't think an error is
-                    # thrown in that case, therefore I don't know how to recognize when this happens.
-                    future = client.submit(parallel_ifgram_inversion_patch, data, retries=3)
-                    futures.append(future)
+                # David: I haven't played with fussing with `retries`, however sometimes a future fails
+                # on a worker for an unknown reason. retrying will save the whole process from failing.
+                # TODO:  I don't know what to do if a future fails > 3 times. I don't think an error is
+                # thrown in that case, therefore I don't know how to recognize when this happens.
+                future = client.submit(parallel_ifgram_inversion_patch, data, retries=3)
+                futures.append(future)
 
-                i_future = 0
-                for future, result in as_completed(futures, with_results=True):
-                    i_future += 1
-                    print("FUTURE #" + str(i_future), "complete in", time.time() - start_time_subboxes,
-                          "seconds. Box:", subbox, "Time:", time.time())
-                    ts_ifut, temp_coh_ifut, ifg_num_ifut, subbox = result
+            i_future = 0
+            for future, result in as_completed(futures, with_results=True):
+                i_future += 1
+                print("FUTURE #" + str(i_future), "complete in", time.time() - start_time_subboxes,
+                      "seconds. Box:", subbox, "Time:", time.time())
+                ts_ifut, temp_coh_ifut, ifg_num_ifut, subbox = result
 
-                    tsi[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_ifut
-                    # ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
-                    temp_cohi[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_coh_ifut
-                    ifg_numi[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_num_ifut
+                tsi[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_ifut
+                # ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
+                temp_cohi[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_coh_ifut
+                ifg_numi[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_num_ifut
 
-                cluster.close()
-                client.close()
+            cluster.close()
+            client.close()
 
-                ut.move_dask_stdout_stderr_files()
+            ut.move_dask_stdout_stderr_files()
 
-            # write the block of timeseries to disk
-            block = [0, num_date, box[1], box[3], box[0], box[2]]
-            ts_obj.write2hdf5_block(tsi, datasetName='timeseries', block=block)
+        # write the block of timeseries to disk
+        block = [0, num_date, box[1], box[3], box[0], box[2]]
+        ts_obj.write2hdf5_block(tsi, datasetName='timeseries', block=block)
 
-            # save the block of aux datasets
-            temp_coh[box[1]:box[3], box[0]:box[2]] = temp_cohi
-            num_inv_ifg[box[1]:box[3], box[0]:box[2]] = ifg_numi
+        # save the block of aux datasets
+        temp_coh[box[1]:box[3], box[0]:box[2]] = temp_cohi
+        num_inv_ifg[box[1]:box[3], box[0]:box[2]] = ifg_numi
 
-        # write date and bperp to disk
-        print('-'*50)
-        date_list_utf8 = [dt.encode('utf-8') for dt in date_list]
-        ts_obj.write2hdf5_block(date_list_utf8, datasetName='date')
-        ts_obj.write2hdf5_block(pbase, datasetName='bperp')
+    # write date and bperp to disk
+    print('-'*50)
+    date_list_utf8 = [dt.encode('utf-8') for dt in date_list]
+    ts_obj.write2hdf5_block(date_list_utf8, datasetName='date')
+    ts_obj.write2hdf5_block(pbase, datasetName='bperp')
 
     # Parallel loop
     # else:
@@ -1247,7 +1245,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
 
     if inps.parallel:
         # for dask still use the old function to write.
-        # consider to migrate to block-by-block writing, if HDF5 support multiple 
+        # consider to migrate to block-by-block writing, if HDF5 support multiple
         write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg, suffix='', inps=inps)
     else:
         write2hdf5_auxFiles(metadata, temp_coh, num_inv_ifg, suffix='', inps=inps)
