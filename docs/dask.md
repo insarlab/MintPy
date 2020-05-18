@@ -31,8 +31,10 @@ To show the run time improvement, we test three datasets (Galapagos, Fernandina,
 | Dask Configuration    | None               | None              | None                       |
 | Cluster Memory Used   | 16 GB              | 16 GB             | 16 GB (64 GB for 1-2 cores)|
 | Chunk Size Used       | 100e6 (1 GB)       | 100e6 (1 GB)      | 100e6 (1 GB)               | 
- 
-![dask-local-cluster-performance](resources/dask-local-cluster-performance.png "Dask LocalCluster Peformance")
+
+<p align="center">
+  <img src="https://github.com/insarlab/MintPy-tutorial/blob/master/docs/dask_local_cluster_performance.png">
+</p>
 
 ## via `dask_jobqueue` on HPC ##
 
