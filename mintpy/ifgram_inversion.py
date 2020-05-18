@@ -1050,24 +1050,97 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         ts_obj.layout_hdf5(dsNameDict, metadata)
 
         # invert & write block by block
-        for i in range(num_box):
-            box = box_list[i]
+        for box in box_list:
+
             if num_box > 1:
                 print('\n------- Processing Patch {} out of {} --------------'.format(i+1, num_box))
 
-            # invert the network
-            (tsi,
-             temp_cohi,
-             ifg_numi) = ifgram_inversion_patch(ifgram_file,
-                                                box=box,
-                                                ref_phase=ref_phase,
-                                                obsDatasetName=inps.obsDatasetName,
-                                                weight_func=inps.weightFunc,
-                                                min_norm_velocity=inps.minNormVelocity,
-                                                mask_dataset_name=inps.maskDataset,
-                                                mask_threshold=inps.maskThreshold,
-                                                min_redundancy=inps.minRedundancy,
-                                                water_mask_file=inps.waterMaskFile)
+            if not inps.parallel:
+                # invert the network
+                (tsi,
+                 temp_cohi,
+                 ifg_numi) = ifgram_inversion_patch(ifgram_file,
+                                                    box=box,
+                                                    ref_phase=ref_phase,
+                                                    obsDatasetName=inps.obsDatasetName,
+                                                    weight_func=inps.weightFunc,
+                                                    min_norm_velocity=inps.minNormVelocity,
+                                                    mask_dataset_name=inps.maskDataset,
+                                                    mask_threshold=inps.maskThreshold,
+                                                    min_redundancy=inps.minRedundancy,
+                                                    water_mask_file=inps.waterMaskFile)
+
+            else:
+                try:
+                    from dask.distributed import Client, as_completed
+                except ImportError:
+                    raise ImportError('Cannot import dask.distributed!')
+                from mintpy.objects.cluster import get_cluster
+
+                ts = np.zeros((num_date, length, width), np.float32)
+
+                # Look at the ~/.config/dask/mintpy.yaml file for Changing the Dask configuration defaults
+
+                # This line submits NUM_WORKERS jobs to the cluster to start a bunch of workers
+                # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
+                # at once (other user's jobs gained higher priority in the general at that point)
+                #
+                # When running as a local cluster, we want to use all available cpus on the computing node,
+                # which is accssible via the `multiprocessing` stndard library.
+                NUM_WORKERS = inps.numWorker
+                # if inps.cluster == 'local':
+                #     import multiprocessing as mpc
+                #     NUM_WORKERS = mpc.cpu_count()
+
+                # FA: the following command starts the jobs
+                cluster = get_cluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
+                cluster.scale(NUM_WORKERS)
+
+                # This line needs to be in a function or in a `if __name__ == "__main__":` block. If it is in no function
+                # or "main" block, each worker will try to create its own client (which is bad) when loading the module
+                client = Client(cluster)
+
+                dask_boxes = subsplit_boxes4_workers(box, num_split=1*NUM_WORKERS, dimension='x')
+
+                futures = []
+                start_time_subboxes = time.time()
+                for i, subbox in enumerate(dask_boxes):
+                    print(i, subbox)
+
+                    data = (ifgram_file,
+                            subbox,
+                            ref_phase,
+                            inps.obsDatasetName,
+                            inps.weightFunc,
+                            inps.minNormVelocity,
+                            inps.maskDataset,
+                            inps.maskThreshold,
+                            inps.minRedundancy,
+                            inps.waterMaskFile)
+
+                    # David: I haven't played with fussing with `retries`, however sometimes a future fails
+                    # on a worker for an unknown reason. retrying will save the whole process from failing.
+                    # TODO:  I don't know what to do if a future fails > 3 times. I don't think an error is
+                    # thrown in that case, therefore I don't know how to recognize when this happens.
+                    future = client.submit(parallel_ifgram_inversion_patch, data, retries=3)
+                    futures.append(future)
+
+                i_future = 0
+                for future, result in as_completed(futures, with_results=True):
+                    i_future += 1
+                    print("FUTURE #" + str(i_future), "complete in", time.time() - start_time_subboxes,
+                          "seconds. Box:", subbox, "Time:", time.time())
+                    ts_ifut, temp_coh_ifut, ifg_num_ifut, subbox = result
+
+                    tsi[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_ifut
+                    # ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
+                    temp_cohi[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_coh_ifut
+                    ifg_numi[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_num_ifut
+
+                cluster.close()
+                client.close()
+
+                ut.move_dask_stdout_stderr_files()
 
             # write the block of timeseries to disk
             block = [0, num_date, box[1], box[3], box[0], box[2]]
@@ -1084,86 +1157,86 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         ts_obj.write2hdf5_block(pbase, datasetName='bperp')
 
     # Parallel loop
-    else:
-        try:
-            from dask.distributed import Client, as_completed
-        except ImportError:
-            raise ImportError('Cannot import dask.distributed!')
-        from mintpy.objects.cluster import get_cluster
-
-        ts = np.zeros((num_date, length, width), np.float32)
-
-        # Look at the ~/.config/dask/mintpy.yaml file for Changing the Dask configuration defaults
-
-        # This line submits NUM_WORKERS jobs to the cluster to start a bunch of workers
-        # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
-        # at once (other user's jobs gained higher priority in the general at that point)
-        #
-        # When running as a local cluster, we want to use all available cpus on the computing node, 
-        # which is accssible via the `multiprocessing` stndard library.
-        NUM_WORKERS = inps.numWorker
-        # if inps.cluster == 'local':
-        #     import multiprocessing as mpc
-        #     NUM_WORKERS = mpc.cpu_count()
-
-        # FA: the following command starts the jobs
-        cluster = get_cluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
-        cluster.scale(NUM_WORKERS)
-
-        # This line needs to be in a function or in a `if __name__ == "__main__":` block. If it is in no function
-        # or "main" block, each worker will try to create its own client (which is bad) when loading the module
-        client = Client(cluster)
-
-        all_boxes = []
-        for box in box_list:
-            # `box_list` is split into smaller boxes and then each box is processed in parallel
-            # With larger jobs, increasing the `num_split` factor may improve runtime
-            all_boxes += subsplit_boxes4_workers(box, num_split=1 * NUM_WORKERS, dimension='x')
-
-        futures = []
-        start_time_subboxes = time.time()
-        for i, subbox in enumerate(all_boxes):
-            print(i, subbox)
-
-            data = (ifgram_file,
-                    subbox,
-                    ref_phase,
-                    inps.obsDatasetName,
-                    inps.weightFunc,
-                    inps.minNormVelocity,
-                    inps.maskDataset,
-                    inps.maskThreshold,
-                    inps.minRedundancy,
-                    inps.waterMaskFile)
-
-            # David: I haven't played with fussing with `retries`, however sometimes a future fails
-            # on a worker for an unknown reason. retrying will save the whole process from failing.
-            # TODO:  I don't know what to do if a future fails > 3 times. I don't think an error is
-            # thrown in that case, therefore I don't know how to recognize when this happens.
-            future = client.submit(parallel_ifgram_inversion_patch, data, retries=3)
-            futures.append(future)
-
-        # Some workers are slower than others. When #(futures to complete) < #workers, we should
-        # investigate whether `Client.replicate(future)` will speed up work on the final futures.
-        # It's a slight speedup, but depending how computationally complex each future is, this could be a
-        # decent speedup
-        i_future = 0
-        for future, result in as_completed(futures, with_results=True):
-            i_future += 1
-            print("FUTURE #" + str(i_future), "complete in", time.time() - start_time_subboxes,
-                  "seconds. Box:", subbox, "Time:", time.time())
-            tsi, temp_cohi, ifg_numi, subbox = result
-
-            ts[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi
-            #ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
-            temp_coh[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_cohi
-            num_inv_ifg[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_numi
-
-        # Shut down Dask workers gracefully
-        cluster.close()
-        client.close()
-
-        ut.move_dask_stdout_stderr_files()
+    # else:
+    #     try:
+    #         from dask.distributed import Client, as_completed
+    #     except ImportError:
+    #         raise ImportError('Cannot import dask.distributed!')
+    #     from mintpy.objects.cluster import get_cluster
+    #
+    #     ts = np.zeros((num_date, length, width), np.float32)
+    #
+    #     # Look at the ~/.config/dask/mintpy.yaml file for Changing the Dask configuration defaults
+    #
+    #     # This line submits NUM_WORKERS jobs to the cluster to start a bunch of workers
+    #     # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
+    #     # at once (other user's jobs gained higher priority in the general at that point)
+    #     #
+    #     # When running as a local cluster, we want to use all available cpus on the computing node,
+    #     # which is accssible via the `multiprocessing` stndard library.
+    #     NUM_WORKERS = inps.numWorker
+    #     # if inps.cluster == 'local':
+    #     #     import multiprocessing as mpc
+    #     #     NUM_WORKERS = mpc.cpu_count()
+    #
+    #     # FA: the following command starts the jobs
+    #     cluster = get_cluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
+    #     cluster.scale(NUM_WORKERS)
+    #
+    #     # This line needs to be in a function or in a `if __name__ == "__main__":` block. If it is in no function
+    #     # or "main" block, each worker will try to create its own client (which is bad) when loading the module
+    #     client = Client(cluster)
+    #
+    #     all_boxes = []
+    #     for box in box_list:
+    #         # `box_list` is split into smaller boxes and then each box is processed in parallel
+    #         # With larger jobs, increasing the `num_split` factor may improve runtime
+    #         all_boxes += subsplit_boxes4_workers(box, num_split=1 * NUM_WORKERS, dimension='x')
+    #
+    #     futures = []
+    #     start_time_subboxes = time.time()
+    #     for i, subbox in enumerate(all_boxes):
+    #         print(i, subbox)
+    #
+    #         data = (ifgram_file,
+    #                 subbox,
+    #                 ref_phase,
+    #                 inps.obsDatasetName,
+    #                 inps.weightFunc,
+    #                 inps.minNormVelocity,
+    #                 inps.maskDataset,
+    #                 inps.maskThreshold,
+    #                 inps.minRedundancy,
+    #                 inps.waterMaskFile)
+    #
+    #         # David: I haven't played with fussing with `retries`, however sometimes a future fails
+    #         # on a worker for an unknown reason. retrying will save the whole process from failing.
+    #         # TODO:  I don't know what to do if a future fails > 3 times. I don't think an error is
+    #         # thrown in that case, therefore I don't know how to recognize when this happens.
+    #         future = client.submit(parallel_ifgram_inversion_patch, data, retries=3)
+    #         futures.append(future)
+    #
+    #     # Some workers are slower than others. When #(futures to complete) < #workers, we should
+    #     # investigate whether `Client.replicate(future)` will speed up work on the final futures.
+    #     # It's a slight speedup, but depending how computationally complex each future is, this could be a
+    #     # decent speedup
+    #     i_future = 0
+    #     for future, result in as_completed(futures, with_results=True):
+    #         i_future += 1
+    #         print("FUTURE #" + str(i_future), "complete in", time.time() - start_time_subboxes,
+    #               "seconds. Box:", subbox, "Time:", time.time())
+    #         tsi, temp_cohi, ifg_numi, subbox = result
+    #
+    #         ts[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi
+    #         #ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
+    #         temp_coh[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_cohi
+    #         num_inv_ifg[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_numi
+    #
+    #     # Shut down Dask workers gracefully
+    #     cluster.close()
+    #     client.close()
+    #
+    #     ut.move_dask_stdout_stderr_files()
 
     # reference pixel
     if not inps.skip_ref:
