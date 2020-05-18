@@ -1049,6 +1049,8 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
 
     # invert & write block by block
     for box in box_list:
+        box_width = box[2] - box[0]
+        box_length = box[3] - box[1]
 
         if num_box > 1:
             print('\n------- Processing Patch {} out of {} --------------'.format(i+1, num_box))
@@ -1075,8 +1077,9 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                 raise ImportError('Cannot import dask.distributed!')
             from mintpy.objects.cluster import get_cluster
 
-            ts = np.zeros((num_date, length, width), np.float32)
-
+            tsi = np.zeros((num_date, box_length, box_width), np.float32)
+            temp_cohi = np.zeros((box_length, box_width), np.float32)
+            ifg_numi = np.zeros((box_length, box_width), np.float32)
             # Look at the ~/.config/dask/mintpy.yaml file for Changing the Dask configuration defaults
 
             # This line submits NUM_WORKERS jobs to the cluster to start a bunch of workers
@@ -1128,12 +1131,12 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                 i_future += 1
                 print("FUTURE #" + str(i_future), "complete in", time.time() - start_time_subboxes,
                       "seconds. Box:", subbox, "Time:", time.time())
-                ts_ifut, temp_coh_ifut, ifg_num_ifut, subbox = result
+                tsi_sub, temp_cohi_sub, ifg_numi_sub, subbox = result
 
-                tsi[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_ifut
+                tsi[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi_sub
                 # ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
-                temp_cohi[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_coh_ifut
-                ifg_numi[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_num_ifut
+                temp_cohi[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_cohi_sub
+                ifg_numi[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_numi_sub
 
             cluster.close()
             client.close()
