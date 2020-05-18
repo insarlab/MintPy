@@ -1243,12 +1243,12 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         num_inv_ifg[ref_y, ref_x] = num_ifgram
         temp_coh[ref_y, ref_x] = 1.
 
-    if inps.parallel:
-        # for dask still use the old function to write.
-        # consider to migrate to block-by-block writing, if HDF5 support multiple
-        write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg, suffix='', inps=inps)
-    else:
-        write2hdf5_auxFiles(metadata, temp_coh, num_inv_ifg, suffix='', inps=inps)
+    # if inps.parallel:
+    #     # for dask still use the old function to write.
+    #     # consider to migrate to block-by-block writing, if HDF5 support multiple
+    #     write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg, suffix='', inps=inps)
+    # else:
+    write2hdf5_auxFiles(metadata, temp_coh, num_inv_ifg, suffix='', inps=inps)
 
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
