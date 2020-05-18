@@ -1048,12 +1048,15 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     ts_obj.layout_hdf5(dsNameDict, metadata)
 
     # invert & write block by block
-    for box in box_list:
+    for box_i, box in enumerate(box_list):
         box_width = box[2] - box[0]
         box_length = box[3] - box[1]
 
         if num_box > 1:
-            print('\n------- Processing Patch {} out of {} --------------'.format(i+1, num_box))
+            print('\n------- Processing Patch {} out of {} --------------'.format(box_i+1, num_box))
+
+        print('Box Width: {}'.format(box_width))
+        print('Box Length: {}'.format(box_length))
 
         if not inps.parallel:
             # invert the network
@@ -1132,6 +1135,9 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                 print("FUTURE #" + str(i_future), "complete in", time.time() - start_time_subboxes,
                       "seconds. Box:", subbox, "Time:", time.time())
                 tsi_sub, temp_cohi_sub, ifg_numi_sub, subbox = result
+
+                subbox[1] -= box_length*box_i
+                subbox[3] -= box_length*box_i
 
                 tsi[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi_sub
                 # ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
