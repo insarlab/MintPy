@@ -91,12 +91,9 @@ def create_parser():
 
     # options rarely used or changed
     parser.add_argument('--ref-date', dest='ref_date', help='Reference date, first date by default.')
-    # parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=100e6,
-    #                     help='max number of data (= ifgram_num * num_row * num_col) to read per loop\n' +
-    #                     'default: 0.2 G; adjust it according to your computer memory.')
     parser.add_argument('-r', '--ram', '--memory', dest='memorySize', type=float, default=4,
                         help='Max amount of memory (in GB) to allocate per loop\n' +
-                        'default: 0.2 GB; adjust according to your computer memory.')
+                        'default: 4GB; adjust according to your computer memory.')
     parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',
                         help='Skip checking reference pixel value, for simulation testing.')
 
@@ -235,7 +232,7 @@ def read_template2inps(template_file, inps):
                 iDict[key] = int(value)
             elif key in ['walltime']:
                 iDict[key] = str(value)
-            elif key in ['maskThreshold', 'minRedundancy']:
+            elif key in ['maskThreshold', 'minRedundancy', 'memorySize']:
                 iDict[key] = float(value)
             elif key in ['weightFunc', 'residualNorm', 'waterMaskFile']:
                 iDict[key] = value
