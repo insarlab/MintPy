@@ -1051,6 +1051,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     # layout the HDF5 file for the datasets and the metadata
     ts_obj.layout_hdf5(dsNameDict, metadata)
 
+    box_offset = 0
     # invert & write block by block
     for box_i, box in enumerate(box_list):
 
@@ -1139,8 +1140,8 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                 tsi_sub, temp_cohi_sub, ifg_numi_sub, subbox = result
 
                 # Need to realign subbox to proper position in master box
-                subbox[1] -= box_length*box_i
-                subbox[3] -= box_length*box_i
+                subbox[1] -= box_offset
+                subbox[3] -= box_offset
 
                 tsi[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi_sub
                 temp_cohi[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_cohi_sub
@@ -1158,6 +1159,8 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         # save the block of aux datasets
         temp_coh[box[1]:box[3], box[0]:box[2]] = temp_cohi
         num_inv_ifg[box[1]:box[3], box[0]:box[2]] = ifg_numi
+
+        box_offset += box_length
 
     # write date and bperp to disk
     print('-'*50)
