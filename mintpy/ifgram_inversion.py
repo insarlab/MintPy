@@ -532,49 +532,12 @@ def write2hdf5_auxFiles(metadata, temp_coh, num_inv_ifg=None, suffix='', inps=No
     return None
 
 
-def split_ifgram_file(ifgram_file, memory_size=4):
-    """Split ifgramStack file into several smaller files."""
-    stack_obj = ifgramStack(ifgram_file)
-    stack_obj.open(print_msg=False)
-    metadata = dict(stack_obj.metadata)
-
-    # get reference phase
-    ref_phase = stack_obj.get_reference_phase(dropIfgram=False)
-
-    # get list of boxes
-    box_list = split2boxes(dataset_shape=stack_obj.get_size(),
-                           memory_size=memory_size,
-                           print_msg=True)
-    num_box = len(box_list)
-
-    # read/write each patch file
-    outfile_list = []
-    for i in range(num_box):
-        box = box_list[i]
-        outfile = '{}_{:03d}{}'.format(os.path.splitext(ifgram_file)[0], i+1,
-                                       os.path.splitext(ifgram_file)[1])
-
-        # datasets
-        print('-'*50)
-        print('reading all datasets in {} from file: {} ...'.format(box, ifgram_file))
-        dsNames = readfile.get_dataset_list(ifgram_file)
-        dsDict = {}
-        dsDict['refPhase'] = ref_phase
-        for dsName in dsNames:
-            data = stack_obj.read(datasetName=dsName, box=box, print_msg=False)
-            dsDict[dsName] = data
-
-        # metadata
-        metadata['LENGTH'] = box[3] - box[1]
-        metadata['WIDTH'] = box[2] - box[0]
-        writefile.write(dsDict, out_file=outfile, metadata=metadata, ref_file=ifgram_file)
-        outfile_list.append(outfile)
-    return outfile_list
-
-
 def split2boxes(dataset_shape, memory_size=4, print_msg=True):
     """Split into chunks in rows to reduce memory usage
-    Parameters:
+    Parameters: dataset_shape - tuple of 3 int
+                memory_size   - float, max memory to use in GB
+                print_msg     - bool
+    Returns:    box_list      - list of tuple of 4 int
     """
 
     chunk_size = memory_size * (1024**3) / 10
