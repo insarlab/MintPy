@@ -91,9 +91,12 @@ def create_parser():
 
     # options rarely used or changed
     parser.add_argument('--ref-date', dest='ref_date', help='Reference date, first date by default.')
-    parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=100e6,
-                        help='max number of data (= ifgram_num * num_row * num_col) to read per loop\n' +
-                        'default: 0.2 G; adjust it according to your computer memory.')
+    # parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=100e6,
+    #                     help='max number of data (= ifgram_num * num_row * num_col) to read per loop\n' +
+    #                     'default: 0.2 G; adjust it according to your computer memory.')
+    parser.add_argument('-r', '--ram', '--memory', dest='memorySize', type=float, default=1,
+                        help='Max amount of memory (in GB) to allocate per loop\n' +
+                        'default: 0.2 GB; adjust according to your computer memory.')
     parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',
                         help='Skip checking reference pixel value, for simulation testing.')
 
@@ -532,7 +535,7 @@ def write2hdf5_auxFiles(metadata, temp_coh, num_inv_ifg=None, suffix='', inps=No
     return None
 
 
-def split_ifgram_file(ifgram_file, chunk_size=100e6):
+def split_ifgram_file(ifgram_file, memory_size=1):
     """Split ifgramStack file into several smaller files."""
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
@@ -543,7 +546,7 @@ def split_ifgram_file(ifgram_file, chunk_size=100e6):
 
     # get list of boxes
     box_list = split2boxes(dataset_shape=stack_obj.get_size(),
-                           chunk_size=chunk_size,
+                           memory_size=memory_size,
                            print_msg=True)
     num_box = len(box_list)
 
@@ -572,16 +575,19 @@ def split_ifgram_file(ifgram_file, chunk_size=100e6):
     return outfile_list
 
 
-def split2boxes(dataset_shape, chunk_size=100e6, print_msg=True):
+def split2boxes(dataset_shape, memory_size=1, print_msg=True):
     """Split into chunks in rows to reduce memory usage
     Parameters:
     """
+
+    chunk_size = memory_size * (1024**3) / 10
     # Get r_step / chunk_num
     r_step = chunk_size / (dataset_shape[0] * dataset_shape[2])         # split in lines
     r_step = int(ut.round_to_1(r_step))
     chunk_num = int((dataset_shape[1]-1)/r_step) + 1
 
     if print_msg and chunk_num > 1:
+        print('maximum memory size: %.1E GB' % memory_size)
         print('maximum chunk size: %.1E' % chunk_size)
         print('split %d lines into %d patches for processing' % (dataset_shape[1], chunk_num))
         print('    with each patch up to %d lines' % r_step)
@@ -1005,7 +1011,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     print('number of columns : {}'.format(width))
 
     # split ifgram_file into blocks to save memory
-    box_list = split2boxes(dataset_shape=stack_obj.get_size(), chunk_size=inps.chunk_size)
+    box_list = split2boxes(dataset_shape=stack_obj.get_size(), memory_size=inps.memorySize)
     num_box = len(box_list)
 
     # read ifgram_file in small patches and write them together
