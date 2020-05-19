@@ -27,14 +27,11 @@ To show the run time improvement, we test three datasets (Galapagos, Fernandina,
 
 | Property              | Fernandina Dataset    | Galapagos Dataset | Kilauea Dataset            |
 |-----------------------|-----------------------|-------------------|----------------------------|
-| Input File Size       | 0.6 GB (288,450,600)  | 0.2 GB            | 15.0 GB                    |
-| Dimensions (T, L, W)  | (98, 600, 450)        | (7, 1364, 1100)   | (118, 2345, 1430)          | 
-| Cluster Memory Used   | 16 GB                 | 16 GB             | 16 GB (64 GB for 1-2 cores)|
+| Input File Size       | 0.6 GB                | 0.2 GB            | 15.0 GB                    |
+| Dimensions (T, L, W)  | (288, 450, 600)       | (20, 1100, 1364)  | (575, 1430, 2345)          |
 | Chunk Size Used       | 100e6 (1 GB)          | 100e6 (1 GB)      | 100e6 (1 GB)               |
 
-<p align="center">
-  <img src="https://github.com/insarlab/MintPy-tutorial/blob/master/docs/dask_local_cluster_performance.png">
-</p>
+![Dask LocalCluster Performance](https://raw.githubusercontent.com/insarlab/MintPy-tutorial/master/docs/dask_local_cluster_performance.png)
 
 ## via `dask_jobqueue` on HPC ##
 
