@@ -94,7 +94,7 @@ def create_parser():
     # parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=100e6,
     #                     help='max number of data (= ifgram_num * num_row * num_col) to read per loop\n' +
     #                     'default: 0.2 G; adjust it according to your computer memory.')
-    parser.add_argument('-r', '--ram', '--memory', dest='memorySize', type=float, default=1,
+    parser.add_argument('-r', '--ram', '--memory', dest='memorySize', type=float, default=4,
                         help='Max amount of memory (in GB) to allocate per loop\n' +
                         'default: 0.2 GB; adjust according to your computer memory.')
     parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',
@@ -535,7 +535,7 @@ def write2hdf5_auxFiles(metadata, temp_coh, num_inv_ifg=None, suffix='', inps=No
     return None
 
 
-def split_ifgram_file(ifgram_file, memory_size=1):
+def split_ifgram_file(ifgram_file, memory_size=4):
     """Split ifgramStack file into several smaller files."""
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
@@ -575,7 +575,7 @@ def split_ifgram_file(ifgram_file, memory_size=1):
     return outfile_list
 
 
-def split2boxes(dataset_shape, memory_size=1, print_msg=True):
+def split2boxes(dataset_shape, memory_size=4, print_msg=True):
     """Split into chunks in rows to reduce memory usage
     Parameters:
     """
