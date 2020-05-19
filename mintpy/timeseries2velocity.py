@@ -376,7 +376,7 @@ def run_velocity_estimation(inps):
         replacement.
         """
         from sklearn.utils import resample
-        print('using bootstrap resampling {} times ...'.format(inps.boot_count))
+        print('using bootstrap resampling {} times ...'.format(inps.bootstrapCount))
 
         boot_vel_lin = np.zeros((inps.bootstrapCount, (length*width)), dtype=dataType)
         ts_date = np.array(inps.dateList)
