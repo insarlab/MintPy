@@ -1114,13 +1114,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                 data = (ifgram_file,
                         subbox,
                         ref_phase,
-                        inps.obsDatasetName,
-                        inps.weightFunc,
-                        inps.minNormVelocity,
-                        inps.maskDataset,
-                        inps.maskThreshold,
-                        inps.minRedundancy,
-                        inps.waterMaskFile)
+                        inps)
 
                 # David: I haven't played with fussing with `retries`, however sometimes a future fails
                 # on a worker for an unknown reason. retrying will save the whole process from failing.
@@ -1188,28 +1182,21 @@ def parallel_ifgram_inversion_patch(data):
     (ifgram_file,
      box, 
      ref_phase,
-     obsDatasetName,
-     weight_func,
-     min_norm_velocity,
-     mask_dataset_name,
-     mask_threshold,
-     min_redundancy,
-     water_mask_file) = data
+     inps) = data
     print("BOX DIMS:", box)
 
-    # This line is where all of the processing happens.
     (tsi,
      temp_cohi,
      ifg_numi) = ifgram_inversion_patch(ifgram_file,
                                         box=box,
                                         ref_phase=ref_phase,
-                                        obsDatasetName=obsDatasetName,
-                                        weight_func=weight_func,
-                                        min_norm_velocity=min_norm_velocity,
-                                        mask_dataset_name=mask_dataset_name,
-                                        mask_threshold=mask_threshold,
-                                        min_redundancy=min_redundancy,
-                                        water_mask_file=water_mask_file)
+                                        obsDatasetName=inps.obsDatasetName,
+                                        weight_func=inps.weightFunc,
+                                        min_norm_velocity=inps.minNormVelocity,
+                                        mask_dataset_name=inps.maskDataset,
+                                        mask_threshold=inps.maskThreshold,
+                                        min_redundancy=inps.minRedundancy,
+                                        water_mask_file=inps.waterMaskFile)
 
     return tsi, temp_cohi, ifg_numi, box
 
