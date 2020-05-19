@@ -25,11 +25,10 @@ mintpy.networkInversion.numWorkers = auto   #auto for 4 (local) or 40 (non-local
 
 To show the run time improvement, we test three datasets (Galapagos, Fernandina, and Kilauea) with different number of cores on a compute node in the [Stampede2 cluster's skx-normal queue](https://portal.tacc.utexas.edu/user-guides/stampede2#overview-skxcomputenodes). Results are as below:
 
-| Property              | Fernandina Dataset    | Galapagos Dataset | Kilauea Dataset            |
-|-----------------------|-----------------------|-------------------|----------------------------|
-| Input File Size       | 0.6 GB                | 0.2 GB            | 15.0 GB                    |
-| Dimensions (T, L, W)  | (288, 450, 600)       | (20, 1100, 1364)  | (575, 1430, 2345)          |
-| Chunk Size Used       | 100e6 (1 GB)          | 100e6 (1 GB)      | 100e6 (1 GB)               |
+| Property              | Fernandina             | Galapagos               | Kilauea                   |
+|-----------------------|------------------------|-------------------------|---------------------------|
+| Input file size       | 0.6 GB (288, 450, 600) | 0.2 GB (20, 1100, 1364) | 15.0 GB (575, 1430, 2345) |
+| Setted memory size    | 1 GB                   | 1 GB                    | 1 GB                      |
 
 ![Dask LocalCluster Performance](https://raw.githubusercontent.com/insarlab/MintPy-tutorial/master/docs/dask_local_cluster_performance.png)
 
