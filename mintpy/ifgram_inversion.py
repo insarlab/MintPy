@@ -518,7 +518,7 @@ def write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg=None,
     return
 
 
-def write2hdf5_auxFiles(metadata, temp_coh, num_inv_ifg=None, suffix='', inps=None):
+def write_aux2hdf5_file(metadata, temp_coh, num_inv_ifg=None, suffix='', inps=None):
 
     # File 2 - temporalCoherence.h5
     out_file = '{}{}.h5'.format(suffix, os.path.splitext(inps.outfile[1])[0])
@@ -574,31 +574,27 @@ def split2boxes(dataset_shape, memory_size=4, print_msg=True):
 
 def split_box2sub_boxes(box, num_split, dimension='x'):
     """Further divides the box size into `num_split` different sub_boxes.
-    Note that this is different from `split2boxes`, whic splits based on chunk_size (memory-based).
+    Note that this is different from `split2boxes()`, whic splits based on chunk_size (memory-based).
 
     :param box: [x0, y0, x1, y1]: list[int] of size 4
     :param num_split: int, the number of sub_boxes to split a box into
     :param dimension: str = 'y' or 'x', the dimension along which to split the boxes
     """
-
     x0, y0, x1, y1 = box
     length, width = y1 - y0, x1 - x0
 
     sub_boxes = []
     if dimension == 'y':
         for i in range(num_split):
-            start = (i * length) // num_split
-            end = ((i + 1) * length) // num_split
+            start = (i * length) // num_split + y0
+            end = ((i + 1) * length) // num_split + y0
             sub_boxes.append([x0, start, x1, end])
 
-    elif dimension == 'x':
-        for i in range(num_split):
-            start = (i * width) // num_split
-            end = ((i + 1) * width) // num_split
-            sub_boxes.append([start, y0, end, y1])
-
     else:
-        raise Exception("Unknown value for dimension parameter:", dimension)
+        for i in range(num_split):
+            start = (i * width) // num_split + x0
+            end = ((i + 1) * width) // num_split + x0
+            sub_boxes.append([start, y0, end, y1])
 
     return sub_boxes
 
@@ -1067,7 +1063,7 @@ def ifgram_inversion(inps=None):
 
             # split the primary box into sub boxes for each worker
             sub_boxes = split_box2sub_boxes(box, num_split=1*NUM_WORKERS, dimension='x')
-            print('split the patch to {} sub boxes for workers to process'.format(len(sub_boxes)))
+            print('split the patch to {} sub boxes in x direction for workers to process'.format(len(sub_boxes)))
 
             # submit jobs for each worker
             start_time_sub = time.time()
@@ -1086,10 +1082,13 @@ def ifgram_inversion(inps=None):
             # assemble results from all workers
             i_future = 0
             for future, result in as_completed(futures, with_results=True):
+                # catch result
+                tsi_sub, temp_cohi_sub, num_inv_ifgi_sub, sub_box = result
+
+                # message
                 i_future += 1
                 t_sub = time.time() - start_time_sub
                 print("FUTURE #{} box {} complete. Time used: {:.0f} seconds".format(i_future, sub_box, t_sub))
-                tsi_sub, temp_cohi_sub, num_inv_ifgi_sub = result
 
                 # convert the abosulte sub_box into local col/row start/end relative to the primary box
                 # to assemble the result from each worker
@@ -1138,7 +1137,7 @@ def ifgram_inversion(inps=None):
         temp_coh[ref_y, ref_x] = 1.
 
     # write auxliary data to files: temporal coherence, number of inv ifgrams, etc.
-    write2hdf5_auxFiles(metadata, temp_coh, num_inv_ifg, suffix='', inps=inps)
+    write_aux2hdf5_file(metadata, temp_coh, num_inv_ifg, suffix='', inps=inps)
 
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
@@ -1167,7 +1166,7 @@ def parallel_ifgram_inversion_patch(data):
                                             mask_threshold=inps.maskThreshold,
                                             min_redundancy=inps.minRedundancy)
 
-    return tsi, temp_cohi, num_inv_ifgi
+    return tsi, temp_cohi, num_inv_ifgi, box
 
 
 ################################################################################################
