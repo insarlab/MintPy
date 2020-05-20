@@ -339,6 +339,9 @@ def move_dask_stdout_stderr_files():
     stderr_files  = glob.glob('*.e')
     job_files = glob.glob('dask_command_run_from_python.txt*')
 
+    if len(stdout_files + stderr_files + job_files) == 0:
+        return
+
     stdout_folder = 'stdout_ifgram_inversion_dask'
     stderr_folder = 'stderr_ifgram_inversion_dask'
     for std_dir in [stdout_folder, stderr_folder]:
@@ -348,6 +351,7 @@ def move_dask_stdout_stderr_files():
 
     for item in stdout_files + job_files:
         shutil.move(item, stdout_folder)
+
     for item in stderr_files:
         shutil.move(item, stderr_folder)
 

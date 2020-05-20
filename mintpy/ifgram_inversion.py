@@ -14,6 +14,7 @@ import sys
 import time
 import argparse
 import warnings
+import multiprocessing
 import h5py
 import numpy as np
 from scipy import linalg   # more effieint than numpy.linalg
@@ -37,14 +38,10 @@ configKeys = ['obsDatasetName',
 ################################################################################################
 EXAMPLE = """example:
   ifgram_inversion.py  inputs/ifgramStack.h5 -t smallbaselineApp.cfg --update
-  ifgram_inversion.py  inputs/ifgramStack.h5 -t smallbaselineApp.cfg --fast
   ifgram_inversion.py  inputs/ifgramStack.h5 -w var
-  ifgram_inversion.py  inputs/ifgramStack.h5 -w fim
-  ifgram_inversion.py  inputs/ifgramStack.h5 -w coh
 
-  # parallel processing for HPC
+  # parallel processing
   ifgram_inversion.py  inputs/ifgramStack.h5 -w var --parallel
-  ifgram_inversion.py  inputs/ifgramStack.h5 -w var --parallel --num-worker 25
 
   # invert offset stack
   ifgram_inversion.py  inputs/ifgramStack.h5 -i azimuthOffset --water-mask waterMask.h5 --mask-dset offsetSNR --mask-threshold 5
@@ -77,23 +74,21 @@ def create_parser():
                                      epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
     # input dataset
     parser.add_argument('ifgramStackFile', help='interferograms stack file to be inverted')
+    parser.add_argument('--template', '-t', dest='templateFile',
+                        help='template text file with options')
+
     parser.add_argument('-i','-d', '--dset', dest='obsDatasetName', type=str,
                         help='dataset name of unwrap phase / offset to be used for inversion\n'
                              'e.g.: unwrapPhase, unwrapPhase_bridging, ...')
     parser.add_argument('--water-mask', '-m', dest='waterMaskFile',
                         help='Skip inversion on the masked out region, i.e. water.')
-    parser.add_argument('--template', '-t', dest='templateFile',
-                        help='template text file with options')
+
+    # options rarely used or changed
     parser.add_argument('-o', '--output', dest='outfile', nargs=2,
                         metavar=('TS_FILE', 'TCOH_FILE'), default=['timeseries.h5', 'temporalCoherence.h5'],
                         help='Output file name for timeseries and temporal coherence, default:\n' +
                         'timeseries.h5 temporalCoherence.h5')
-
-    # options rarely used or changed
     parser.add_argument('--ref-date', dest='ref_date', help='Reference date, first date by default.')
-    parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=100e6,
-                        help='max number of data (= ifgram_num * num_row * num_col) to read per loop\n' +
-                        'default: 0.2 G; adjust it according to your computer memory.')
     parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',
                         help='Skip checking reference pixel value, for simulation testing.')
 
@@ -120,7 +115,11 @@ def create_parser():
     mask.add_argument('--min-redundancy', dest='minRedundancy', metavar='NUM', type=float, default=1.0,
                       help='minimum redundancy of interferograms for every SAR acquisition.')
 
-    # parallel computing
+    # computing
+    parser.add_argument('-r', '--ram', '--memory', dest='memorySize', type=float, default=4,
+                        help='Max amount of memory in GB to use (default: %(default)s).\n' +
+                             'Adjust according to your computer memory.')
+
     par = parser.add_argument_group('parallel', 'parallel processing configuration for Dask')
     par.add_argument('--parallel', dest='parallel', action='store_true',
                      help='Enable parallel processing for the pixelwise weighted inversion.')
@@ -129,8 +128,8 @@ def create_parser():
                      help='Type of HPC cluster you are running on (default: %(default)s).')
     par.add_argument('--config', '--config-name', dest='config', type=str, default='no', 
                      help='Configuration name to use in dask.yaml (default: %(default)s).')
-    par.add_argument('--num-worker', dest='numWorker', type=int, default=40,
-                     help='Number of workers the Dask cluster should use (default: %(default)s).')
+    par.add_argument('--num-worker', dest='numWorker', type=str, default='4',
+                     help='Number of workers to use (default: %(default)s).')
     par.add_argument('--walltime', dest='walltime', type=str, default='00:40',
                      help='Walltime for each dask worker (default: %(default)s).')
 
@@ -138,11 +137,7 @@ def create_parser():
     parser.add_argument('--update', dest='update_mode', action='store_true',
                         help='Enable update mode, and skip inversion if output timeseries file already exists,\n' +
                         'readable and newer than input interferograms file')
-    parser.add_argument('--fast','--sbas', action='store_true',
-                        help='Fast network invertion by forcing the following options:\n'+
-                             '\t--weight-function = no\n'+
-                             '\t--mask-dset = no\n'+
-                             'This is equivalent to SBAS algorithm (Berardino et al., 2002)')
+
     return parser
 
 
@@ -160,18 +155,30 @@ def cmd_line_parse(iargs=None):
     else:
         template = dict()
 
+    # --num-worker option
+    if inps.parallel:
+        if inps.cluster == 'local':
+            # translate numWorker = all
+            num_core = multiprocessing.cpu_count()
+            if inps.numWorker == 'all':
+                inps.numWorker = num_core
+
+            inps.numWorker = int(inps.numWorker)
+            if inps.numWorker > num_core:
+                msg = '\nWARNING: input number of worker: {} > available cores: {}'.format(inps.numWorker, num_core)
+                msg += '\nchange number of worker to {} and continue\n'.format(int(num_core/2))
+                print(msg)
+                inps.numWorker = int(num_core / 2)
+
+        else:
+            if inps.numWorker == 'all':
+                msg = 'numWorker = all is NOT supported for cluster type: {}'.format(inps.cluster)
+                raise ValueError(msg)
+            inps.numWorker = int(inps.numWorker)
+
+    # --water-mask option
     if inps.waterMaskFile and not os.path.isfile(inps.waterMaskFile):
         inps.waterMaskFile = None
-
-    # --fast option
-    if inps.fast:
-        print("Enable fast network inversion.")
-        if inps.weightFunc != 'no':
-            inps.weightFunc = 'no'
-            print("\tforcing weightFunc = 'no'")
-        if inps.maskDataset is not None:
-            inps.maskDataset = None
-            print("\tforcing maskDataset = None")
 
     # --dset option
     if not inps.obsDatasetName:
@@ -228,11 +235,9 @@ def read_template2inps(template_file, inps):
         if key in ['maskDataset', 'minNormVelocity', 'parallel', 'cluster', 'config']:
             iDict[key] = value
         elif value:
-            if key in ['numWorker']:
-                iDict[key] = int(value)
-            elif key in ['walltime']:
+            if key in ['walltime', 'numWorker']:
                 iDict[key] = str(value)
-            elif key in ['maskThreshold', 'minRedundancy']:
+            elif key in ['maskThreshold', 'minRedundancy', 'memorySize']:
                 iDict[key] = float(value)
             elif key in ['weightFunc', 'residualNorm', 'waterMaskFile']:
                 iDict[key] = value
@@ -513,7 +518,7 @@ def write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg=None,
     return
 
 
-def write2hdf5_auxFiles(metadata, temp_coh, num_inv_ifg=None, suffix='', inps=None):
+def write_aux2hdf5_file(metadata, temp_coh, num_inv_ifg=None, suffix='', inps=None):
 
     # File 2 - temporalCoherence.h5
     out_file = '{}{}.h5'.format(suffix, os.path.splitext(inps.outfile[1])[0])
@@ -532,101 +537,66 @@ def write2hdf5_auxFiles(metadata, temp_coh, num_inv_ifg=None, suffix='', inps=No
     return None
 
 
-def split_ifgram_file(ifgram_file, chunk_size=100e6):
-    """Split ifgramStack file into several smaller files."""
-    stack_obj = ifgramStack(ifgram_file)
-    stack_obj.open(print_msg=False)
-    metadata = dict(stack_obj.metadata)
-
-    # get reference phase
-    ref_phase = stack_obj.get_reference_phase(dropIfgram=False)
-
-    # get list of boxes
-    box_list = split2boxes(dataset_shape=stack_obj.get_size(),
-                           chunk_size=chunk_size,
-                           print_msg=True)
-    num_box = len(box_list)
-
-    # read/write each patch file
-    outfile_list = []
-    for i in range(num_box):
-        box = box_list[i]
-        outfile = '{}_{:03d}{}'.format(os.path.splitext(ifgram_file)[0], i+1,
-                                       os.path.splitext(ifgram_file)[1])
-
-        # datasets
-        print('-'*50)
-        print('reading all datasets in {} from file: {} ...'.format(box, ifgram_file))
-        dsNames = readfile.get_dataset_list(ifgram_file)
-        dsDict = {}
-        dsDict['refPhase'] = ref_phase
-        for dsName in dsNames:
-            data = stack_obj.read(datasetName=dsName, box=box, print_msg=False)
-            dsDict[dsName] = data
-
-        # metadata
-        metadata['LENGTH'] = box[3] - box[1]
-        metadata['WIDTH'] = box[2] - box[0]
-        writefile.write(dsDict, out_file=outfile, metadata=metadata, ref_file=ifgram_file)
-        outfile_list.append(outfile)
-    return outfile_list
-
-
-def split2boxes(dataset_shape, chunk_size=100e6, print_msg=True):
+def split2boxes(dataset_shape, memory_size=4, print_msg=True):
     """Split into chunks in rows to reduce memory usage
-    Parameters:
+    Parameters: dataset_shape - tuple of 3 int
+                memory_size   - float, max memory to use in GB
+                print_msg     - bool
+    Returns:    box_list      - list of tuple of 4 int
     """
-    # Get r_step / chunk_num
-    r_step = chunk_size / (dataset_shape[0] * dataset_shape[2])         # split in lines
-    r_step = int(ut.round_to_1(r_step))
-    chunk_num = int((dataset_shape[1]-1)/r_step) + 1
+    # memory_size --> chunk_size
+    # 10 is from phase (4 bytes), weight (4 bytes)
+    # and time-series (4 bytes but half the size on the 1st dimension on average)
+    chunk_size = memory_size * (1024**3) / 10
+
+    # chunk_size --> y_step / chunk_num
+    length, width = dataset_shape[1:3]
+    y_step = chunk_size / (dataset_shape[0] * width)         # split in lines
+    y_step = int(ut.round_to_1(y_step))
+    chunk_num = int((length - 1) / y_step) + 1
 
     if print_msg and chunk_num > 1:
-        print('maximum chunk size: %.1E' % chunk_size)
-        print('split %d lines into %d patches for processing' % (dataset_shape[1], chunk_num))
-        print('    with each patch up to %d lines' % r_step)
+        print('maximum memory size: %.1E GB' % memory_size)
+        print('maximum chunk  size: %.1E' % chunk_size)
+        print('split %d lines into %d patches for processing' % (length, chunk_num))
+        print('    with each patch up to %d lines' % y_step)
 
-    # Computing the inversion
+    # y_step / chunk_num --> box_list
     box_list = []
     for i in range(chunk_num):
-        r0 = i * r_step
-        r1 = min([dataset_shape[1], r0+r_step])
-        box = (0, r0, dataset_shape[2], r1)
+        y0 = i * y_step
+        y1 = min([length, y0 + y_step])
+        box = (0, y0, width, y1)
         box_list.append(box)
+
     return box_list
 
 
-def subsplit_boxes4_workers(box, num_split, dimension='y'):
-    """ This is a bit hacky, but after creating the patches,
-    this function further divides the box size into `num_split` different subboxes.
-    Note that `split2boxes`  splits based on chunk_size (memory-based).
+def split_box2sub_boxes(box, num_split, dimension='x'):
+    """Further divides the box size into `num_split` different sub_boxes.
+    Note that this is different from `split2boxes()`, whic splits based on chunk_size (memory-based).
 
     :param box: [x0, y0, x1, y1]: list[int] of size 4
-    :param num_split: int, the number of subboxes to split a box into
+    :param num_split: int, the number of sub_boxes to split a box into
     :param dimension: str = 'y' or 'x', the dimension along which to split the boxes
     """
-
-    # Flip x and y coordinates if splitting along 'x' dimension
     x0, y0, x1, y1 = box
-    subboxes = []
+    length, width = y1 - y0, x1 - x0
 
+    sub_boxes = []
     if dimension == 'y':
-        y_diff = y1 - y0
-        # `start` and `end` are the new bounds of the subdivided box
         for i in range(num_split):
-            start = (i * y_diff) // num_split
-            end = ((i + 1) * y_diff) // num_split
-            subboxes.append([x0, start, x1, end])
-    elif dimension == 'x':
-        x_diff = x1 - x0
-        for i in range(num_split):
-            start = (i * x_diff) // num_split
-            end = ((i + 1) * x_diff) // num_split
-            subboxes.append([start, y0, end, y1])
-    else:
-        raise Exception("Unknown value for dimension parameter:", dimension)
+            start = (i * length) // num_split + y0
+            end = ((i + 1) * length) // num_split + y0
+            sub_boxes.append([x0, start, x1, end])
 
-    return subboxes
+    else:
+        for i in range(num_split):
+            start = (i * width) // num_split + x0
+            end = ((i + 1) * width) // num_split + x0
+            sub_boxes.append([start, y0, end, y1])
+
+    return sub_boxes
 
 
 def check_design_matrix(ifgram_file, weight_func='var'):
@@ -727,23 +697,22 @@ def read_coherence(stack_obj, box, dropIfgram=True, print_msg=True):
 
 
 def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obsDatasetName='unwrapPhase',
-                           weight_func='var', min_norm_velocity=True,
-                           mask_dataset_name=None, mask_threshold=0.4, min_redundancy=1.0,
-                           water_mask_file=None):
+                           weight_func='var', min_norm_velocity=True, water_mask_file=None,
+                           mask_dataset_name=None, mask_threshold=0.4, min_redundancy=1.0):
     """Invert one patch of an ifgram stack into timeseries.
     Parameters: ifgram_file       : str, interferograms stack HDF5 file, e.g. ./inputs/ifgramStack.h5
                 box               : tuple of 4 int, indicating (x0, y0, x1, y1) pixel coordinate of area of interest
                                     or None, to process the whole file and write output file
-                ref_phase         : 1D array in size of (num_ifgram)
-                                    or None
+                ref_phase         : 1D array in size of (num_ifgram), or None
+                obsDatasetName    : str, dataset to feed the inversion.
                 weight_func       : str, weight function, choose in ['no', 'fim', 'var', 'coh']
+                water_mask_file   : str, water mask filename if available, to skip inversion on water
                 mask_dataset_name : str, dataset name in ifgram_file used to mask unwrapPhase pixelwisely
                 mask_threshold    : float, min coherence of pixels if mask_dataset_name='coherence'
-                water_mask_file   : str, water mask filename if available,
-                                    skip inversion on water to speed up the process
-    Returns:    ts          : 3D array in size of (num_date, num_row, num_col)
-                temp_coh    : 2D array in size of (num_row, num_col)
-                num_inv_ifg : 2D array in size of (num_row, num_col)
+                min_redundancy    : float, the min number of ifgrams for every acquisition.
+    Returns:    ts                : 3D array in size of (num_date, num_row, num_col)
+                temp_coh          : 2D array in size of (num_row, num_col)
+                num_inv_ifg       : 2D array in size of (num_row, num_col)
     Example:    ifgram_inversion_patch('ifgramStack.h5', box=(0,200,1316,400), ref_phase=np.array(),
                                        weight_func='var', min_norm_velocity=True, mask_dataset_name='coherence')
                 ifgram_inversion_patch('ifgramStack_001.h5', box=None, ref_phase=None,
@@ -947,15 +916,11 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obsDatasetName
     return ts, temp_coh, num_inv_ifg
 
 
-def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
+def ifgram_inversion(inps=None):
     """Implementation of the SBAS algorithm.
-    Parameters: ifgram_file : string,
-                    HDF5 file name of the interferograms stck
-                inps : namespace, including the following options:
-    Returns:    timeseriesFile : string
-                    HDF5 file name of the output timeseries
-                tempCohFile : string
-                    HDF5 file name of temporal coherence
+    Parameters: inps           : namespace
+    Returns:    timeseriesFile : string, HDF5 file name of the output timeseries
+                tempCohFile    : string, HDF5 file name of temporal coherence
     Example:
         inps = cmd_line_parse()
         ifgram_inversion('ifgramStack.h5', inps)
@@ -966,11 +931,16 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     if not inps:
         inps = cmd_line_parse()
 
-    stack_obj = ifgramStack(ifgram_file)
+    # basic info
+    stack_obj = ifgramStack(inps.ifgramStackFile)
     stack_obj.open(print_msg=False)
-    A = stack_obj.get_design_matrix4timeseries(stack_obj.get_date12_list(dropIfgram=True))[0]
-    num_ifgram, num_date = A.shape[0], A.shape[1]+1
+    date12_list = stack_obj.get_date12_list(dropIfgram=True)
+    date_list = stack_obj.get_date_list(dropIfgram=True)
     length, width = stack_obj.length, stack_obj.width
+
+    # design matrix
+    A = stack_obj.get_design_matrix4timeseries(date12_list)[0]
+    num_ifgram, num_date = A.shape[0], A.shape[1]+1
     inps.numIfgram = num_ifgram
 
     # print key setup info
@@ -1005,22 +975,15 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     print('number of columns : {}'.format(width))
 
     # split ifgram_file into blocks to save memory
-    box_list = split2boxes(dataset_shape=stack_obj.get_size(), chunk_size=inps.chunk_size)
+    box_list = split2boxes(dataset_shape=stack_obj.get_size(), memory_size=inps.memorySize)
     num_box = len(box_list)
 
     # read ifgram_file in small patches and write them together
-    ref_phase = stack_obj.get_reference_phase(unwDatasetName=inps.obsDatasetName,
-                                              skip_reference=inps.skip_ref,
-                                              dropIfgram=True)
+    inps.ref_phase = stack_obj.get_reference_phase(unwDatasetName=inps.obsDatasetName,
+                                                   skip_reference=inps.skip_ref,
+                                                   dropIfgram=True)
 
     # Initialization of output matrix
-    stack_obj = ifgramStack(ifgram_file)
-    stack_obj.open(print_msg=False)
-    pbase = stack_obj.get_perp_baseline_timeseries(dropIfgram=True)
-    date_list = stack_obj.get_date_list(dropIfgram=True)
-
-    #ts     = np.zeros((num_date, length, width), np.float32)
-    #ts_std = np.zeros((num_date, length, width), np.float32)
     temp_coh    = np.zeros((length, width), np.float32)
     num_inv_ifg = np.zeros((length, width), np.int16)
 
@@ -1033,137 +996,138 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     metadata['FILE_TYPE'] = 'timeseries'
     metadata['UNIT'] = 'm'
 
-    # Loop
-    if not inps.parallel:
-        # instantiate a timeseries object
-        ts_file = '{}.h5'.format(os.path.splitext(inps.outfile[0])[0])
-        ts_obj = timeseries(ts_file)
+    # instantiate a timeseries object
+    ts_file = '{}.h5'.format(os.path.splitext(inps.outfile[0])[0])
+    ts_obj = timeseries(ts_file)
 
-        # A dictionary of the datasets which we like to have in the timeseries
-        dsNameDict = {
-                "date": ((np.dtype('S8'), (num_date,))),
-                "bperp": (np.float32, (num_date,)),
-                "timeseries": (np.float32, (num_date, length, width)),
-            }
+    # layout the HDF5 file for the datasets and the metadata
+    dsNameDict = {"date": ((np.dtype('S8'), (num_date,))),
+                  "bperp": (np.float32, (num_date,)),
+                  "timeseries": (np.float32, (num_date, length, width))}
+    ts_obj.layout_hdf5(dsNameDict, metadata)
 
-        # layout the HDF5 file for the datasets and the metadata
-        ts_obj.layout_hdf5(dsNameDict, metadata)
+    # invert & write block by block
+    for box_i, box in enumerate(box_list):
+        if num_box > 1:
+            print('\n------- processing patch {} out of {} --------------'.format(box_i+1, num_box))
 
-        # invert & write block by block
-        for i in range(num_box):
-            box = box_list[i]
-            if num_box > 1:
-                print('\n------- Processing Patch {} out of {} --------------'.format(i+1, num_box))
+        # initiate the output matrice for the box
+        box_width  = box[2] - box[0]
+        box_length = box[3] - box[1]
+        tsi = np.zeros((num_date, box_length, box_width), np.float32)
+        temp_cohi    = np.zeros((box_length, box_width), np.float32)
+        num_inv_ifgi = np.zeros((box_length, box_width), np.float32)
+        print('box width:  {}'.format(box_width))
+        print('box length: {}'.format(box_length))
 
-            # invert the network
+        if not inps.parallel:
+            # invert the network for complete box
             (tsi,
              temp_cohi,
-             ifg_numi) = ifgram_inversion_patch(ifgram_file,
-                                                box=box,
-                                                ref_phase=ref_phase,
-                                                obsDatasetName=inps.obsDatasetName,
-                                                weight_func=inps.weightFunc,
-                                                min_norm_velocity=inps.minNormVelocity,
-                                                mask_dataset_name=inps.maskDataset,
-                                                mask_threshold=inps.maskThreshold,
-                                                min_redundancy=inps.minRedundancy,
-                                                water_mask_file=inps.waterMaskFile)
+             num_inv_ifgi) = ifgram_inversion_patch(ifgram_file=inps.ifgramStackFile,
+                                                    box=box,
+                                                    ref_phase=inps.ref_phase,
+                                                    obsDatasetName=inps.obsDatasetName,
+                                                    weight_func=inps.weightFunc,
+                                                    min_norm_velocity=inps.minNormVelocity,
+                                                    water_mask_file=inps.waterMaskFile,
+                                                    mask_dataset_name=inps.maskDataset,
+                                                    mask_threshold=inps.maskThreshold,
+                                                    min_redundancy=inps.minRedundancy)
 
-            # write the block of timeseries to disk
-            block = [0, num_date, box[1], box[3], box[0], box[2]]
-            ts_obj.write2hdf5_block(tsi, datasetName='timeseries', block=block)
+        else:
+            print('\n\n'+'------- start parallel processing using dask -------'+'\n\n')
 
-            # save the block of aux datasets
-            temp_coh[box[1]:box[3], box[0]:box[2]] = temp_cohi
-            num_inv_ifg[box[1]:box[3], box[0]:box[2]] = ifg_numi
+            try:
+                from dask.distributed import Client, as_completed
+            except ImportError:
+                raise ImportError('Cannot import dask.distributed!')
+            from mintpy.objects.cluster import get_cluster
 
-        # write date and bperp to disk
-        print('-'*50)
-        date_list_utf8 = [dt.encode('utf-8') for dt in date_list]
-        ts_obj.write2hdf5_block(date_list_utf8, datasetName='date')
-        ts_obj.write2hdf5_block(pbase, datasetName='bperp')
+            # intiate the cluster client
+            # Look at the ~/.config/dask/mintpy.yaml file for changing the Dask configuration defaults
+            print('initiate dask cluster')
+            cluster = get_cluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
 
-    # Parallel loop
-    else:
-        try:
-            from dask.distributed import Client, as_completed
-        except ImportError:
-            raise ImportError('Cannot import dask.distributed!')
-        from mintpy.objects.cluster import get_cluster
+            # This line submits NUM_WORKERS jobs to the cluster to start a bunch of workers
+            # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
+            # at once (other user's jobs gained higher priority in the general at that point)
+            print('scale the cluster to {} workers'.format(inps.numWorker))
+            NUM_WORKERS = inps.numWorker
+            cluster.scale(NUM_WORKERS)
 
-        ts = np.zeros((num_date, length, width), np.float32)
+            # This line needs to be in a function or in a `if __name__ == "__main__":` block. If it is in no function
+            # or "main" block, each worker will try to create its own client (which is bad) when loading the module
+            print('initiate dask client')
+            client = Client(cluster)
 
-        # Look at the ~/.config/dask/mintpy.yaml file for Changing the Dask configuration defaults
+            # split the primary box into sub boxes for each worker
+            sub_boxes = split_box2sub_boxes(box, num_split=1*NUM_WORKERS, dimension='x')
+            print('split the patch to {} sub boxes in x direction for workers to process'.format(len(sub_boxes)))
 
-        # This line submits NUM_WORKERS jobs to the cluster to start a bunch of workers
-        # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
-        # at once (other user's jobs gained higher priority in the general at that point)
-        #
-        # When running as a local cluster, we want to use all available cpus on the computing node, 
-        # which is accssible via the `multiprocessing` stndard library.
-        NUM_WORKERS = inps.numWorker
-        # if inps.cluster == 'local':
-        #     import multiprocessing as mpc
-        #     NUM_WORKERS = mpc.cpu_count()
+            # submit jobs for each worker
+            start_time_sub = time.time()
+            futures = []
+            for i, sub_box in enumerate(sub_boxes):
+                print('submit job to workers for sub box {}: {}'.format(i, sub_box))
+                data = (sub_box, inps)
 
-        # FA: the following command starts the jobs
-        cluster = get_cluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
-        cluster.scale(NUM_WORKERS)
+                # David: I haven't played with fussing with `retries`, however sometimes a future fails
+                # on a worker for an unknown reason. retrying will save the whole process from failing.
+                # TODO:  I don't know what to do if a future fails > 3 times. I don't think an error is
+                # thrown in that case, therefore I don't know how to recognize when this happens.
+                future = client.submit(parallel_ifgram_inversion_patch, data, retries=3)
+                futures.append(future)
 
-        # This line needs to be in a function or in a `if __name__ == "__main__":` block. If it is in no function
-        # or "main" block, each worker will try to create its own client (which is bad) when loading the module
-        client = Client(cluster)
+            # assemble results from all workers
+            i_future = 0
+            for future, result in as_completed(futures, with_results=True):
+                # catch result
+                tsi_sub, temp_cohi_sub, num_inv_ifgi_sub, sub_box = result
 
-        all_boxes = []
-        for box in box_list:
-            # `box_list` is split into smaller boxes and then each box is processed in parallel
-            # With larger jobs, increasing the `num_split` factor may improve runtime
-            all_boxes += subsplit_boxes4_workers(box, num_split=1 * NUM_WORKERS, dimension='x')
+                # message
+                i_future += 1
+                t_sub = time.time() - start_time_sub
+                print("FUTURE #{} box {} complete. Time used: {:.0f} seconds".format(i_future, sub_box, t_sub))
 
-        futures = []
-        start_time_subboxes = time.time()
-        for i, subbox in enumerate(all_boxes):
-            print(i, subbox)
+                # convert the abosulte sub_box into local col/row start/end relative to the primary box
+                # to assemble the result from each worker
+                x0, y0, x1, y1 = sub_box
+                x0 -= box[0]
+                x1 -= box[0]
+                y0 -= box[1]
+                y1 -= box[1]
 
-            data = (ifgram_file,
-                    subbox,
-                    ref_phase,
-                    inps.obsDatasetName,
-                    inps.weightFunc,
-                    inps.minNormVelocity,
-                    inps.maskDataset,
-                    inps.maskThreshold,
-                    inps.minRedundancy,
-                    inps.waterMaskFile)
+                tsi[:, y0:y1, x0:x1] = tsi_sub
+                temp_cohi[y0:y1, x0:x1] = temp_cohi_sub
+                num_inv_ifgi[y0:y1, x0:x1] = num_inv_ifgi_sub
 
-            # David: I haven't played with fussing with `retries`, however sometimes a future fails
-            # on a worker for an unknown reason. retrying will save the whole process from failing.
-            # TODO:  I don't know what to do if a future fails > 3 times. I don't think an error is
-            # thrown in that case, therefore I don't know how to recognize when this happens.
-            future = client.submit(parallel_ifgram_inversion_patch, data, retries=3)
-            futures.append(future)
+            # close dask cluster and client
+            cluster.close()
+            client.close()
+            print('close dask cluster')
+            print('close dask client')
 
-        # Some workers are slower than others. When #(futures to complete) < #workers, we should
-        # investigate whether `Client.replicate(future)` will speed up work on the final futures.
-        # It's a slight speedup, but depending how computationally complex each future is, this could be a
-        # decent speedup
-        i_future = 0
-        for future, result in as_completed(futures, with_results=True):
-            i_future += 1
-            print("FUTURE #" + str(i_future), "complete in", time.time() - start_time_subboxes,
-                  "seconds. Box:", subbox, "Time:", time.time())
-            tsi, temp_cohi, ifg_numi, subbox = result
+            # move *.o/.e files produced by dask in stdout/stderr
+            ut.move_dask_stdout_stderr_files()
 
-            ts[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi
-            #ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
-            temp_coh[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_cohi
-            num_inv_ifg[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_numi
+            print('\n\n------- finished parallel processing -------\n\n')
 
-        # Shut down Dask workers gracefully
-        cluster.close()
-        client.close()
+        # write the block of timeseries to disk
+        block = [0, num_date, box[1], box[3], box[0], box[2]]
+        ts_obj.write2hdf5_block(tsi, datasetName='timeseries', block=block)
 
-        ut.move_dask_stdout_stderr_files()
+        # save the block of aux datasets
+        temp_coh[box[1]:box[3], box[0]:box[2]] = temp_cohi
+        num_inv_ifg[box[1]:box[3], box[0]:box[2]] = num_inv_ifgi
+
+    # write date and bperp to disk
+    print('-'*50)
+    date_list_utf8 = [dt.encode('utf-8') for dt in date_list]
+    ts_obj.write2hdf5_block(date_list_utf8, datasetName='date')
+
+    pbase = stack_obj.get_perp_baseline_timeseries(dropIfgram=True)
+    ts_obj.write2hdf5_block(pbase, datasetName='bperp')
 
     # reference pixel
     if not inps.skip_ref:
@@ -1172,12 +1136,8 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         num_inv_ifg[ref_y, ref_x] = num_ifgram
         temp_coh[ref_y, ref_x] = 1.
 
-    if inps.parallel:
-        # for dask still use the old function to write.
-        # consider to migrate to block-by-block writing, if HDF5 support multiple 
-        write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg, suffix='', inps=inps)
-    else:
-        write2hdf5_auxFiles(metadata, temp_coh, num_inv_ifg, suffix='', inps=inps)
+    # write auxliary data to files: temporal coherence, number of inv ifgrams, etc.
+    write_aux2hdf5_file(metadata, temp_coh, num_inv_ifg, suffix='', inps=inps)
 
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
@@ -1190,33 +1150,23 @@ def parallel_ifgram_inversion_patch(data):
     :param data:
     :return: The box
     """
-    (ifgram_file,
-     box, 
-     ref_phase,
-     obsDatasetName,
-     weight_func,
-     min_norm_velocity,
-     mask_dataset_name,
-     mask_threshold,
-     min_redundancy,
-     water_mask_file) = data
-    print("BOX DIMS:", box)
+    (box, inps) = data
 
-    # This line is where all of the processing happens.
+    # call ifgram_inversion_patch()
     (tsi,
      temp_cohi,
-     ifg_numi) = ifgram_inversion_patch(ifgram_file,
-                                        box=box,
-                                        ref_phase=ref_phase,
-                                        obsDatasetName=obsDatasetName,
-                                        weight_func=weight_func,
-                                        min_norm_velocity=min_norm_velocity,
-                                        mask_dataset_name=mask_dataset_name,
-                                        mask_threshold=mask_threshold,
-                                        min_redundancy=min_redundancy,
-                                        water_mask_file=water_mask_file)
+     num_inv_ifgi) = ifgram_inversion_patch(ifgram_file=inps.ifgramStackFile,
+                                            box=box,
+                                            ref_phase=inps.ref_phase,
+                                            obsDatasetName=inps.obsDatasetName,
+                                            weight_func=inps.weightFunc,
+                                            min_norm_velocity=inps.minNormVelocity,
+                                            water_mask_file=inps.waterMaskFile,
+                                            mask_dataset_name=inps.maskDataset,
+                                            mask_threshold=inps.maskThreshold,
+                                            min_redundancy=inps.minRedundancy)
 
-    return tsi, temp_cohi, ifg_numi, box
+    return tsi, temp_cohi, num_inv_ifgi, box
 
 
 ################################################################################################
@@ -1229,10 +1179,12 @@ def main(iargs=None):
 
     # Network Inversion
     if inps.residualNorm == 'L2':
-        ifgram_inversion(inps.ifgramStackFile, inps)
+        ifgram_inversion(inps)
+
     else:
         raise NotImplementedError('L1 norm minimization is not fully tested.')
         #ut.timeseries_inversion_L1(inps.ifgramStackFile, inps.timeseriesFile)
+
     return inps.outfile
 
 

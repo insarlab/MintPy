@@ -85,6 +85,7 @@ py37-scikit-image
 py37-scikit-learn
 py37-jupyter
 py37-dask
+py37-distributed
 py37-bokeh
 py37-sphinx
 py37-pip

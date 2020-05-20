@@ -8,36 +8,45 @@
 
 try:
     import dask
-    from dask_jobqueue import LSFCluster, PBSCluster, SLURMCluster
-    from dask.distributed import LocalCluster
 except ImportError:
-    raise ImportError('Cannot import dask or dask_jobqueue!')
+    raise ImportError('Cannot import dask!')
 
 
 def get_cluster(cluster_type, **kwargs):
     """Generic dask cluster wrapper"""
-
-    # check input cluster type
     cluster_type = cluster_type.lower()
     cluster_list = ['lsf','pbs','slurm','local']
     if cluster_type not in cluster_list:
         msg = "Cluster type '{}' not supported".format(cluster_type)
         msg += '\nsupported cluster types: {}'.format(cluster_list)
         raise ValueError(msg)
-    print("Dask cluster type: {}".format(cluster_type))
+    print("dask cluster type: {}".format(cluster_type))
 
-    # No need to do the extra configuration checking if using LocalCluster
+    # import related dask module only
+    # because job_queue is not available on macports, which make sense
+    if cluster_type == 'local':
+        try:
+            from dask.distributed import LocalCluster
+        except ImportError:
+            raise ImportError('Cannot import dask.distributed.LocalCluster!')
+    else:
+        try:
+            from dask_jobqueue import LSFCluster, PBSCluster, SLURMCluster
+        except ImportError:
+            raise ImportError('Cannot import dask_jobqueue!')
+
+    # for local cluster, NO need to do the extra configuration
     if cluster_type == 'local':
         return LocalCluster()
 
     # check input config name
     if 'config_name' in kwargs.keys():
-        kwargs['config_name'] = check_config_name(kwargs['config_name'], cluster_type)
+        kwargs['config_name'] = format_config_name(kwargs['config_name'], cluster_type)
     print("Dask config name: {}".format(kwargs['config_name']))
 
     # check walltime format for each cluster type
     if 'walltime' in kwargs.keys():
-        kwargs['walltime'] = check_walltime_format(kwargs["walltime"], cluster_type)
+        kwargs['walltime'] = format_walltime(kwargs["walltime"], cluster_type)
     print('Dask worker walltime: {}'.format(kwargs['walltime']))
 
     # initiate cluster object
@@ -52,11 +61,11 @@ def get_cluster(cluster_type, **kwargs):
     print("JOB COMMAND CALLED FROM PYTHON:\n\n", cluster.job_script())
     with open('dask_command_run_from_python.txt', 'w') as f:
         f.write(cluster.job_script() + '\n')
-    
+
     return cluster
 
 
-def check_config_name(config_name, cluster_type):
+def format_config_name(config_name, cluster_type):
     # due to the pre-set in mintpy.yaml, default config_name is the same as cluster_type
     if not config_name:
         config_name = cluster_type
@@ -72,7 +81,7 @@ def check_config_name(config_name, cluster_type):
     return config_name
 
 
-def check_walltime_format(walltime, cluster_type):
+def format_walltime(walltime, cluster_type):
     """format the walltime str for different clusters
     HH:MM:SS - pbs / slurm
     HH:MM    - lsf
