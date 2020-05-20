@@ -522,8 +522,8 @@ class TimeSeriesAnalysis:
 
     def run_quick_overview(self, step_name):
         """A quick overview on the interferogram stack for:
-            1) possible ground deformation through interferogram stacking
-            2) phase unwrapping errors through the integer ambiguity of phase closure
+            1) avgPhaseVelocity.h5: possible ground deformation through interferogram stacking
+            2) numNonzeroIntClosure.h5: phase unwrapping errors through the integer ambiguity of phase closure
         """
         # check the existence of ifgramStack.h5
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]

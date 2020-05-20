@@ -210,8 +210,13 @@ def calc_num_nonzero_integer_closure_phase(ifgram_file, mask_file=None, dsName='
     num_ifgram = len(date12_list)
 
     C = stack_obj.get_design_matrix4triplet(date12_list)
-    ref_phase = stack_obj.get_reference_phase(unwDatasetName=dsName, dropIfgram=True).reshape(num_ifgram, -1)
-    print('get design matrix for the interferogram triplets in size of {}'.format(C.shape))    
+    if C is None:
+        msg = 'No triangles found from ifgramStack file: {}!'.format(ifgram_file)
+        msg += '\n    Skip calculating the number of triplets with non-zero integer ambiguity.'
+        print(msg)
+        return None
+    else:
+        print('get design matrix for the interferogram triplets in size of {}'.format(C.shape))
 
     # calculate number of nonzero closure phase
     num_loop = int(np.ceil(length / step))
@@ -220,6 +225,7 @@ def calc_num_nonzero_integer_closure_phase(ifgram_file, mask_file=None, dsName='
     msg += '\n    block by block with size up to {}, {} blocks in total'.format((step, width), num_loop)
     print(msg)
 
+    ref_phase = stack_obj.get_reference_phase(unwDatasetName=dsName, dropIfgram=True).reshape(num_ifgram, -1)
     prog_bar = ptime.progressBar(maxValue=num_loop)
     for i in range(num_loop):
         # box

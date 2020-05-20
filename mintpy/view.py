@@ -1063,17 +1063,18 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
             except:
                 subplot_title = str(inps.dset[i])
 
-        elif inps.key in ['ifgramStack', 'interferograms', 'coherence', 'wrapped']:
-            num_subplot = inps.fig_row_num * inps.fig_col_num
-            if num_subplot <= 10:
-                subplot_title = '{}\n{}'.format(i, inps.dset[i])
-            elif num_subplot <= 50:
-                date12 = inps.dset[i].split('-')[1]
-                subplot_title = '\n_'.join(date12.split('_'))
-            elif num_subplot <= 200:
-                subplot_title = '{}'.format(i)
         else:
-            subplot_title = str(inps.dset[i])
+            title_str = inps.dset[i]
+            if len(inps.dsetFamilyList) == 1:
+                title_str = title_str.split('-')[1]
+
+            num_subplot = inps.fig_row_num * inps.fig_col_num
+            if num_subplot <= 20:
+                subplot_title = '{}\n{}'.format(i, title_str)
+            elif num_subplot <= 50:
+                subplot_title = title_str
+            else:
+                subplot_title = '{}'.format(i)
 
         # plot title
         if subplot_title:
