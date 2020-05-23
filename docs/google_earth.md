@@ -22,30 +22,22 @@ MintPy use [pyKML](https://pythonhosted.org/pykml/) to generate KMZ (Keyhole Mar
 
 ### Notes for developers ###
 
-save_kmz_timeseries.py takes the 3D HDF5 file and outputs a KMZ file at multiple levels of details (LODs). It divides the data matrix into regionalized boxes, writes the required KML files, references the appropriate auxiliary resources, and zips all of the files together into a KMZ file. 
+save_kmz_timeseries.py embeds a [dygraphs](http://dygraphs.com) javascript for interactive plot of the time-series deformation at each point. This allows the user to select any placemark onscreen to display the time-series data in an interactive chart. Placemarks are colored based on the velocity.
 
-The script also embeds a javascript using [dygraphs](http://dygraphs.com) for interactive plot of the time-series deformation at each point. This allows the user to select any placemark onscreen to display the time-series data in an interactive chart. The Placemarks are colored based on the velocity.
+The script also use the [regions KML feature](https://developers.google.com/kml/documentation/regions) to support very large datasets without sacrificing resolution. It divides the data matrix into regionalized boxes, nests them using network links so that Google Earth could load them in a "smart" way. 
 
-#### KML and KMZ Performance ####
+**Alert: for very large datasets, the default settings are not generic due to the various computer memories, data sizes and different prefered details. The user is highly recommended to read the following to understand how the regions feature works and adjust parameters accordingly.**
 
-KML files are capable of holding a very large amount of data, but earth viewer programs, such as Google Earth, often struggle to display extremely large datasets effectively. As such, a few tradeoffs and specialized file structures have been enabled within `save_kmz_timeseries.py` to increase Google Earth's performance with large data sets.
+1. Level of Detail (LOD)
 
-1. Multiple Levels of Detail
+The script samples the input 3D dataset at 3 levels of details by default (`--steps` option): low-, moderate- and high-resolution. Each LOD is displayed at a different zoom-level (`--level-of-details` option) within Google Earth. On startup, the low-resolution LOD is displayed; then at ~20km in altitude, the low-resolution LOD disappears and the moderate-resolution LOD becomes visible; similarly, the high-resolution LOD shows at ~10km. In this way, Google Earth only has to load as many placemark as are on the screen currently. This LOD strategy drastically increases performance.
 
-By default, MintPy will read in the provided dataset and then subset the data into three separate levels of details: a low resolution, a high-resolution, and a full-resolution. The low-resolution LOD contains 1 point for every 20x20 points in the original file. The high-resolution LOD contains 1 point for every 3x3 points in the original file. And the full-resolution LOD contains every point in the original file. 
-
-Each LOD is displayed at a different zoom-level within Google Earth. On startup, the low-resolution LOD is displayed, while the high-resolution LOD becomes visible around 20km in altitude, and the full-resolution LOD at around 10km in altitude. This ensures that Google Earth only has to load as many Placemark as are on the screen currently, which drastically increases performance as fewer Placemarks are onscreen at higher zoom levels.
-
-The full-resolution LOD is presently calculated and presented only for those actions showing signs of active deformation so as to further increase performance.
+The low- and moderate-resolution LODs cover the entire region, while the high-resolution LOD covers only the actively deforming regions. These regions (red boxes below) are currently identified as boxes having >20% pixels with velocity magnitude > the global velocity median absolute deviation [[source code](https://github.com/insarlab/MintPy/blob/master/mintpy/save_kmz_timeseries.py#L160)].
 
 <p align="center">
   <img src="https://yunjunzhang.files.wordpress.com/2020/03/defo_area.png">
 </p>
 
-2. Regionalized Network Links
+2. Region-based Network Links
 
-To further increase performance, MintPy splits each LOD into 300x300 point subsets known as regions. Each region is written to a separate KML file, and are then referenced via a "Network Link" in a master level KML file. Google Earth specifically has the ability to load conditionally load Network Link elements based on whether or not the coordinates dictating their bounding box are on screen at a given moment, so this method ensures that, at high zoom-levels, only as many placemarks as are onscreen at the time are loaded.
-
-#### Modify save_kmz_timeseries.py ####
-
-If you wish to add or modify the levels of detail or other aspects of the KMZ generation process, the function `generate_network_link(inps, ts_obj, box_list, step, lod, output_file=None)` handles the generation and reference linking of the required files. Be sure to handle the initial reading of the data and filesystem cleanup afterward.
+To further increase performance, the script splits each LOD into 300x300 point subsets known as regions. Each region is written to a separate KML file and referenced via a "Network Link" in a master level KML file. Based on whether the bounding box of each region is currently on screen or not, Google Earth will load them accordingly.
