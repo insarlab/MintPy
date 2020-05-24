@@ -89,11 +89,13 @@ class connectComponent:
         if print_msg:
             print('remove regions with area < {}'.format(int(min_area)))
         min_area = min(min_area, label_img.size * 3e-3)
-        flag_slabel = np.bincount(label_img.flatten()) < min_area
-        flag_slabel[0] = False
-        label_small = np.where(flag_slabel)[0]
-        for i in label_small:
-            label_img[label_img == i] = 0
+        #flag_slabel = np.bincount(label_img.flatten()) < min_area
+        #flag_slabel[0] = False
+        #label_small = np.where(flag_slabel)[0]
+        #for i in label_small:
+        #    label_img[label_img == i] = 0
+        mask = morph.remove_small_objects(label_img, min_size=min_area, connectivity=1)
+        label_img[mask == 0] = 0
         label_img, num_label = measure.label(label_img, connectivity=1, return_num=True) # re-label
 
         # remove regions that would disappear after erosion operation
@@ -227,6 +229,7 @@ class connectComponent:
             bridge['y1'] = y1
             bridge['label0'] = n0
             bridge['label1'] = n1
+            bridge['distance'] = ((x1 - x0)**2 + (y1 - y0)**2)**0.5
             self.bridges.append(bridge)
         self.num_bridge = len(self.bridges)
         return self.bridges
@@ -297,7 +300,7 @@ class connectComponent:
 
     def plot_bridge(self, ax, cmap='jet', radius=50):
         # label background
-        im = ax.imshow(self.labelImg, cmap=cmap)
+        im = ax.imshow(self.labelImg, cmap=cmap, interpolation='nearest')
         # bridges
         for bridge in self.bridges:
             ax.plot([bridge['x0'], bridge['x1']],
