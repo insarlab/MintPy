@@ -913,7 +913,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obsDatasetName
         ts *= rg_pixel_size
         print('converting range offset displacement unit from pixel ({:.2f} m) to meter'.format(rg_pixel_size))
 
-    return ts, temp_coh, num_inv_ifg
+    return ts, temp_coh, num_inv_ifg, box
 
 
 def ifgram_inversion(inps=None):
