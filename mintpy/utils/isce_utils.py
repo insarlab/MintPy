@@ -416,12 +416,19 @@ def extract_geometry_metadata(geom_dir, metadata=dict(), box=None, fbase_list=['
 
         if 'los' in os.path.basename(geom_file):
             data = readfile.read(geom_file, datasetName='az', box=box)[0]
+            # HEADING
             data[data == 0.] = np.nan
             az_angle = np.nanmean(data)
             # convert isce azimuth angle to roipac orbit heading angle
             head_angle = -1 * (270 + az_angle)
             head_angle -= np.round(head_angle / 360.) * 360.
             metadata['HEADING'] = str(head_angle)
+
+            # CENTER_INCIDENCE_ANGLE
+            data = readfile.read(geom_file, datasetName='inc', box=box)[0]
+            data[data == 0.] = np.nan
+            inc_angle = data[int(data.shape[0]/2), int(data.shape[1]/2)]
+            metadata['CENTER_INCIDENCE_ANGLE'] = str(inc_angle)
     return metadata
 
 

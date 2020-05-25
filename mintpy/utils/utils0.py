@@ -50,8 +50,8 @@ def range_distance(atr, dimension=2, print_msg=True):
     range_f = range_n + dR*(width-1)
     range_c = (range_f + range_n)/2.0
     if print_msg:
-        print('center range : %.2f m' % (range_c))
         print('near   range : %.2f m' % (range_n))
+        print('center range : %.2f m' % (range_c))
         print('far    range : %.2f m' % (range_f))
 
     if dimension == 0:
@@ -102,14 +102,14 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
     range_f = range_n+dR*width
     inc_angle_n = (np.pi - np.arccos((r**2 + range_n**2 - (r+H)**2)/(2*r*range_n))) * 180.0/np.pi
     inc_angle_f = (np.pi - np.arccos((r**2 + range_f**2 - (r+H)**2)/(2*r*range_f))) * 180.0/np.pi
+    inc_angle_c = (inc_angle_n + inc_angle_f) / 2.0
     if print_msg:
         print('near   incidence angle : {:.4f} degree'.format(inc_angle_n))
+        print('center incidence angle : {:.4f} degree'.format(inc_angle_c))
         print('far    incidence angle : {:.4f} degree'.format(inc_angle_f))
 
     if dimension == 0:
-        inc_angle = (inc_angle_n + inc_angle_f) / 2.0
-        if print_msg:
-            print('center incidence angle : {:.4f} degree'.format(inc_angle))
+        inc_angle = inc_angle_c
 
     elif dimension == 1:
         inc_angle = np.linspace(inc_angle_n, inc_angle_f, num=width,
@@ -315,11 +315,12 @@ def azimuth2heading_angle(az_angle):
 
 def enu2los(e, n, u, inc_angle=34., head_angle=-168.):
     """
-    Parameters: e : np.array or float, displacement in east-west direction, east as positive
-                n : np.array or float, displacement in north-south direction, north as positive
-                u : np.array or float, displacement in vertical direction, up as positive
-                inc_angle  : np.array or float, local incidence angle from vertical
-                head_angle : np.array or float, satellite orbit from the north in clock-wise direction as positive
+    Parameters: e          - np.array or float, displacement in east-west direction, east as positive
+                n          - np.array or float, displacement in north-south direction, north as positive
+                u          - np.array or float, displacement in vertical direction, up as positive
+                inc_angle  - np.array or float, local incidence angle from vertical
+                head_angle - np.array or float, satellite orbit from the north in clock-wise direction as positive
+    Returns:    v_los      - np.array or float, displacement in line-of-sight direction, moving toward satellite as positive
     For AlosA: inc_angle = 34, head_angle = -12.873
     For AlosD: inc_angle = 34, head_angle = -167.157
     For SenD: inc_angle = 34, head_angle = -168
@@ -330,7 +331,7 @@ def enu2los(e, n, u, inc_angle=34., head_angle=-168.):
 
     inc_angle *= np.pi/180.
     head_angle *= np.pi/180.
-    v_los = (  e * np.sin(inc_angle) * np.cos(head_angle)  * -1
+    v_los = (  e * np.sin(inc_angle) * np.cos(head_angle) * -1
              + n * np.sin(inc_angle) * np.sin(head_angle) 
              + u * np.cos(inc_angle))
     return v_los

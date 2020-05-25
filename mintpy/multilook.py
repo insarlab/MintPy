@@ -221,7 +221,18 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, margin=[0,0,0,0]):
 
         data = multilook_data(data, lks_y, lks_x)
         dsDict[dsName] = data
+
+    # update metadata
     atr = multilook_attribute(atr, lks_y, lks_x, box=box)
+
+    # for binary file with 2 bands, always use BIL scheme
+    if (len(dsDict.keys()) == 2
+            and os.path.splitext(infile)[1] not in ['.h5','.he5']
+            and atr.get('scheme', 'BIL').upper() != 'BIL'):
+        print('the input binary file has 2 bands with band interleave as: {}'.format(atr['scheme']))
+        print('for the output binary file, change the band interleave to BIL as default.')
+        atr['scheme'] = 'BIL'
+
     writefile.write(dsDict, out_file=outfile, metadata=atr, ref_file=infile)
     return outfile
 
