@@ -711,7 +711,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     pha_data = read_unwrap_phase(stack_obj,
                                  box,
                                  ref_phase,
-                                 obs_ds_name=ds_name,
+                                 obs_ds_name=obs_ds_name,
                                  dropIfgram=True)
 
     pha_data = mask_unwrap_phase(pha_data,
