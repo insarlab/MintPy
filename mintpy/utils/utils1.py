@@ -649,8 +649,8 @@ def check_template_auto_value(templateDict, auto_file='../defaults/smallbaseline
     templateAutoDict = readfile.read_template(templateAutoFile)
 
     # if cluster != local, change auto value of numWorker
-    cluster_key = 'mintpy.networkInversion.cluster'
-    num_worker_key = 'mintpy.networkInversion.numWorker'
+    cluster_key = 'mintpy.compute.cluster'
+    num_worker_key = 'mintpy.compute.numWorker'
     cluster = templateDict.get(cluster_key, templateAutoDict[cluster_key]).lower()
     if cluster != 'local':
         templateAutoDict[num_worker_key] = '40'

@@ -40,9 +40,6 @@ EXAMPLE = """example:
   ifgram_inversion.py  inputs/ifgramStack.h5 -t smallbaselineApp.cfg --update
   ifgram_inversion.py  inputs/ifgramStack.h5 -w var
 
-  # parallel processing
-  ifgram_inversion.py  inputs/ifgramStack.h5 -w var --parallel
-
   # invert offset stack
   ifgram_inversion.py  inputs/ifgramStack.h5 -i azimuthOffset --water-mask waterMask.h5 --mask-dset offsetSNR --mask-threshold 5
 """
@@ -117,20 +114,19 @@ def create_parser():
                         help='Max amount of memory in GB to use (default: %(default)s).\n' +
                              'Adjust according to your computer memory.')
 
-    par = parser.add_argument_group('parallel', 'parallel processing configuration for Dask')
-    par.add_argument('--parallel', dest='parallel', action='store_true',
-                     help='Enable parallel processing for the pixelwise weighted inversion.')
+    par = parser.add_argument_group('parallel', 'parallel processing using dask')
     par.add_argument('--cluster', '--cluster-type', dest='cluster', type=str,
-                     default='local', choices={'lsf', 'pbs', 'slurm', 'local'},
-                     help='Type of HPC cluster you are running on (default: %(default)s).')
-    par.add_argument('--config', '--config-name', dest='config', type=str, default='no', 
-                     help='Configuration name to use in dask.yaml (default: %(default)s).')
+                     default='local', choices={'local', 'lsf', 'pbs', 'slurm', 'no'},
+                     help='Cluster to use for parallel computing, no to turn OFF. (default: %(default)s).')
     par.add_argument('--num-worker', dest='numWorker', type=str, default='4',
                      help='Number of workers to use (default: %(default)s).')
+
+    par.add_argument('--config', '--config-name', dest='config', type=str, default='no', 
+                     help='Configuration name to use in dask.yaml (default: %(default)s).')
     par.add_argument('--walltime', dest='walltime', type=str, default='00:40',
                      help='Walltime for each dask worker (default: %(default)s).')
 
-    # efficiency
+    # update / skip
     parser.add_argument('--update', dest='update_mode', action='store_true',
                         help='Enable update mode, and skip inversion if output timeseries file already exists,\n' +
                         'readable and newer than input interferograms file')
@@ -153,25 +149,24 @@ def cmd_line_parse(iargs=None):
         template = dict()
 
     # --num-worker option
-    if inps.parallel:
-        if inps.cluster == 'local':
-            # translate numWorker = all
-            num_core = multiprocessing.cpu_count()
-            if inps.numWorker == 'all':
-                inps.numWorker = num_core
+    if inps.cluster == 'local':
+        # translate numWorker = all
+        num_core = multiprocessing.cpu_count()
+        if inps.numWorker == 'all':
+            inps.numWorker = num_core
 
-            inps.numWorker = int(inps.numWorker)
-            if inps.numWorker > num_core:
-                msg = '\nWARNING: input number of worker: {} > available cores: {}'.format(inps.numWorker, num_core)
-                msg += '\nchange number of worker to {} and continue\n'.format(int(num_core/2))
-                print(msg)
-                inps.numWorker = int(num_core / 2)
+        inps.numWorker = int(inps.numWorker)
+        if inps.numWorker > num_core:
+            msg = '\nWARNING: input number of worker: {} > available cores: {}'.format(inps.numWorker, num_core)
+            msg += '\nchange number of worker to {} and continue\n'.format(int(num_core/2))
+            print(msg)
+            inps.numWorker = int(num_core / 2)
 
-        else:
-            if inps.numWorker == 'all':
-                msg = 'numWorker = all is NOT supported for cluster type: {}'.format(inps.cluster)
-                raise ValueError(msg)
-            inps.numWorker = int(inps.numWorker)
+    else:
+        if inps.numWorker == 'all':
+            msg = 'numWorker = all is NOT supported for cluster type: {}'.format(inps.cluster)
+            raise ValueError(msg)
+        inps.numWorker = int(inps.numWorker)
 
     # --water-mask option
     if inps.waterMaskFile and not os.path.isfile(inps.waterMaskFile):
@@ -229,15 +224,27 @@ def read_template2inps(template_file, inps):
     keyList = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
     for key in keyList:
         value = template[key_prefix+key]
-        if key in ['maskDataset', 'minNormVelocity', 'parallel', 'cluster', 'config']:
+        if key in ['maskDataset', 'minNormVelocity']:
+            iDict[key] = value
+        elif value:
+            if key in ['maskThreshold', 'minRedundancy', 'memorySize']:
+                iDict[key] = float(value)
+            elif key in ['weightFunc', 'residualNorm', 'waterMaskFile']:
+                iDict[key] = value
+
+    # computing configurations
+    dask_key_prefix = 'mintpy.compute.'
+    keyList = [i for i in list(iDict.keys()) if dask_key_prefix+i in template.keys()]
+    for key in keyList:
+        value = template[dask_key_prefix+key]
+        if key in ['cluster', 'config']:
             iDict[key] = value
         elif value:
             if key in ['walltime', 'numWorker']:
                 iDict[key] = str(value)
-            elif key in ['maskThreshold', 'minRedundancy', 'memorySize']:
+            elif key in ['memorySize']:
                 iDict[key] = float(value)
-            elif key in ['weightFunc', 'residualNorm', 'waterMaskFile']:
-                iDict[key] = value
+
     return inps, template
 
 
@@ -950,7 +957,7 @@ def ifgram_inversion(inps=None):
         print('box width:  {}'.format(box_width))
         print('box length: {}'.format(box_length))
 
-        if not inps.parallel:
+        if inps.cluster.lower() == 'no':
             # invert the network for complete box
             tsi, temp_cohi, num_inv_ifgi = ifgram_inversion_patch(box, inps)
 
