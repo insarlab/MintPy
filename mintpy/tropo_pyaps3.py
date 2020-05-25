@@ -440,6 +440,12 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
                 elif tropo_model == 'NARR':
                     pa.NARRdload(date_list2dload, hour, grib_dir)
             except:
+                if i < 3:
+                    print('WARNING: the {} attampt to download failed, retry it.\n'.format(i))
+                else:
+                    print('\n\n'+'*'*50)
+                    print('WARNING: downloading failed for 3 times, stop trying and continue.')
+                    print('*'*50+'\n\n')
                 pass
 
     # check potentially corrupted files

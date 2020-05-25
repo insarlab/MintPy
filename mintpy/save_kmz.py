@@ -29,6 +29,8 @@ EXAMPLE = """example:
   save_kmz.py geo/geo_velocity.h5 -u cm --wrap --wrap-range -3 7
 
   save_kmz.py geo/geo_timeseries_ERA5_ramp_demErr.h5 20101120
+  save_kmz.py geo/geo_timeseries_ERA5_demErr.h5 20200505_20200517
+
   save_kmz.py geo/geo_ifgramStack.h5 20101120_20110220
   save_kmz.py geo/geo_geometryRadar.h5 --cbar-label Elevation
 """
@@ -292,7 +294,15 @@ def main(iargs=None):
     plt.switch_backend('Agg')  # Backend setting
 
     # Read data
+    k = readfile.read_attribute(inps.file)['FILE_TYPE']
+    if k == 'timeseries' and inps.dset and '_' in inps.dset:
+        inps.ref_date, inps.dset = inps.dset.split('_')
+    else:
+        inps.ref_date = None
+
     data, atr = readfile.read(inps.file, datasetName=inps.dset)
+    if k == 'timeseries' and inps.ref_date:
+        data -= readfile.read(inps.file, datasetName=inps.ref_date)[0]
 
     # mask
     mask = pp.read_mask(inps.file, mask_file=inps.mask_file, datasetName=inps.dset, print_msg=True)[0]

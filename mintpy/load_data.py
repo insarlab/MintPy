@@ -560,6 +560,7 @@ def prepare_metadata(inpsDict):
 
             # observation
             obs_keys = ['mintpy.load.unwFile', 'mintpy.load.azOffFile']
+            obs_keys = [i for i in obs_keys if i in inpsDict.keys()]
             obs_paths = [inpsDict[key] for key in obs_keys if inpsDict[key].lower() != 'auto']
             if len(obs_paths) > 0:
                 obs_dir = os.path.dirname(os.path.dirname(obs_paths[0]))
