@@ -100,7 +100,7 @@ def get_nonzero_phase_closure(ifgram_file, out_file=None, thres=0.1, unwDatasetN
             pha_data = ifginv.read_unwrap_phase(obj,
                                                 box,
                                                 ref_phase,
-                                                unwDatasetName=unwDatasetName,
+                                                obs_ds_name=unwDatasetName,
                                                 dropIfgram=False,
                                                 print_msg=False)
             # calculate phase closure
