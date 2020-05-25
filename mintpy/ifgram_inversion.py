@@ -1156,32 +1156,6 @@ def ifgram_inversion(inps=None):
     print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
     return
 
-
-def parallel_ifgram_inversion_patch(data):
-    """
-    This is the starting point for Dask futures. Futures start executing code here.
-    :param data:
-    :return: The box
-    """
-    (box, inps) = data
-
-    # call ifgram_inversion_patch()
-    (tsi,
-     temp_cohi,
-     num_inv_ifgi) = ifgram_inversion_patch(ifgram_file=inps.ifgramStackFile,
-                                            box=box,
-                                            ref_phase=inps.ref_phase,
-                                            obsDatasetName=inps.obsDatasetName,
-                                            weight_func=inps.weightFunc,
-                                            min_norm_velocity=inps.minNormVelocity,
-                                            water_mask_file=inps.waterMaskFile,
-                                            mask_dataset_name=inps.maskDataset,
-                                            mask_threshold=inps.maskThreshold,
-                                            min_redundancy=inps.minRedundancy)
-
-    return tsi, temp_cohi, num_inv_ifgi, box
-
-
 ################################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
