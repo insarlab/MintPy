@@ -110,9 +110,16 @@ def phase_variance_ds(L,  coherence=None, epsilon=1e-3):
 
 
 def phase_variance_ps(L, coherence=None, epsilon=1e-3):
-    """the Cramer-Rao bound (CRB) of phase variance
+    """
+    the Cramer-Rao bound (CRB) of phase variance
     Given by Eq. 25 (Rodriguez and Martin, 1992)and Eq 4.2.32 (Hanssen, 2001)
     Valid when coherence is close to 1.
+
+    Parameters: L         - int, number of independent looks applied
+                coherence - float / np.ndarray, spatial coherence
+                epsilon   - float, a small number to avoid denominator to be zero
+    Returns:    var       - float / np.ndarray, phase variance
+                coherence - float / np.ndarray, spatial coherence (for reference purpose)
     """
     if coherence is None:
         coherence = np.linspace(0.9, 1.-epsilon, 1000, dtype=np.float64)
@@ -124,8 +131,8 @@ def phase_variance_ps(L, coherence=None, epsilon=1e-3):
 def sample_decorrelation_phase(coherence, L, size=1, phi_num=1000, display=False, scale=1.0, font_size=12):
     '''Sample decorrelation phase based on PDF determined by L and coherence value
     Parameters: coherence - float, spatial coherence
-                L         - int, multilook number
-                size      - int, sample number
+                L         - int, number of independent looks
+                phi_num   - int, sample number
     Returns:    phase     - 1D np.array in size of (size,), sampled phase
     Examples:
         decor_noise = sample_decorrelation_phase(0.7, L=1, size=1e4, display=True)
@@ -225,3 +232,81 @@ def coherence2decorrelation_phase(coh, L, coh_step=0.01, num_repeat=1, scale=1.0
         plt.show()
 
     return pha
+
+
+#################################### Weight Functions #####################################
+def coherence2phase_variance(coherence, L=32, epsilon=1e-3, print_msg=False):
+    """Convert coherence to phase variance based on DS phase PDF (Tough et al., 1995)"""
+    lineStr = '    number of looks L={}'.format(L)
+    if L > 80:
+        L = 80
+        lineStr += ', use L=80 to avoid dividing by 0 in calculation with negligible effect'
+    if print_msg:
+        print(lineStr)
+
+    coh_num = 1000
+    coh_min = 0.0 + epsilon
+    coh_max = 1.0 - epsilon
+    coh_lut = np.linspace(coh_min, coh_max, coh_num)
+    coh_min = np.min(coh_lut)
+    coh_max = np.max(coh_lut)
+    coh_step = (coh_max - coh_min) / (coh_num - 1)
+
+    coherence = np.array(coherence)
+    coherence[coherence < coh_min] = coh_min
+    coherence[coherence > coh_max] = coh_max
+    coherence_idx = np.array((coherence - coh_min) / coh_step, np.int16)
+
+    var_lut = phase_variance_ds(int(L), coh_lut)[0]
+    variance = var_lut[coherence_idx]
+    return variance
+
+
+def coherence2fisher_info_index(data, L=32, epsilon=1e-3):
+    """Convert coherence to Fisher information index (Seymour & Cumming, 1994, IGARSS)"""
+    # prepare input data
+    if data.dtype != np.float64:
+        data = np.array(data, np.float64)
+    data[data > 1-epsilon] = 1-epsilon
+    # calculation
+    data = 2.0 * int(L) * np.square(data) / (1 - np.square(data))
+    return data
+
+
+def coherence2weight(coh_data, weight_func='var', L=20, epsilon=5e-2, print_msg=True):
+    """Convert spaital coherence to weight given the weight function name"""
+    coh_data[np.isnan(coh_data)] = epsilon
+    coh_data[coh_data < epsilon] = epsilon
+    coh_data = np.array(coh_data, np.float64)
+
+    # Calculate Weight matrix
+    weight_func = weight_func.lower()
+    if 'var' in weight_func:
+        if print_msg:
+            print('convert coherence to weight using inverse of phase variance')
+            print('    with phase PDF for distributed scatterers from Tough et al. (1995)')
+        weight = 1.0 / coherence2phase_variance(coh_data, L, print_msg=print_msg)
+
+    elif any(i in weight_func for i in ['coh', 'lin']):
+        if print_msg:
+            print('use coherence as weight directly (Perissin & Wang, 2012; Tong et al., 2016)')
+        weight = coh_data
+
+    elif any(i in weight_func for i in ['fim', 'fisher']):
+        if print_msg:
+            print('convert coherence to weight using Fisher Information Index (Seymour & Cumming, 1994)')
+        weight = coherence2fisher_info_index(coh_data, L)
+
+    elif weight_func in ['no', 'sbas', 'uniform']:
+        weight = None
+
+    else:
+        raise Exception('Un-recognized weight function: %s' % weight_func)
+
+    # weight data is calculated in float64 for numerical precision
+    # and saved in float32 after calculation for computing speed efficiency.
+    if weight is not None:
+        weight = np.array(weight, np.float32)
+    del coh_data
+    return weight
+
