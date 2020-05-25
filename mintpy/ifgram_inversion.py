@@ -1071,12 +1071,25 @@ def ifgram_inversion(inps=None):
             for i, sub_box in enumerate(sub_boxes):
                 print('submit job to workers for sub box {}: {}'.format(i, sub_box))
                 data = (sub_box, inps)
+                
+                data = {
+                        "ifgram_file": inps.ifgramStackFile,
+                        "box": sub_box,
+                        "ref_phase": inps.ref_phase,
+                        "obsDatasetName": inps.obsDatasetName,
+                        "weight_func": inps.weightFunc,
+                        "min_norm_velocity": inps.minNormVelocity,
+                        "water_mask_file": inps.waterMaskFile,
+                        "mask_dataset_name": inps.maskDataset,
+                        "mask_threshold": inps.maskThreshold,
+                        "min_redundancy": inps.minRedundancy
+                }
 
                 # David: I haven't played with fussing with `retries`, however sometimes a future fails
                 # on a worker for an unknown reason. retrying will save the whole process from failing.
                 # TODO:  I don't know what to do if a future fails > 3 times. I don't think an error is
                 # thrown in that case, therefore I don't know how to recognize when this happens.
-                future = client.submit(parallel_ifgram_inversion_patch, data, retries=3)
+                future = client.submit(ifgram_inversion_patch, **data, retries=3)
                 futures.append(future)
 
             # assemble results from all workers
