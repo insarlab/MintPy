@@ -154,3 +154,39 @@ class DaskCluster:
             futures.append(future)
 
         return futures, start_time_sub
+
+    def compile_workers(self, futures, start_time_sub, master_result_boxes):
+
+        i_future = 0
+        for future, result in as_completed(futures, with_results=True):
+
+            # message
+            i_future += 1
+            sub_t = time.time() - start_time_sub
+            print("FUTURE #{} complete. Time used: {:.0f} seconds".format(i_future, sub_t))
+
+            # catch result
+            #sub_tsi, sub_temp_cohi, sub_num_inv_ifgi, sub_box = result
+            result_list = list(result)
+            sub_box = result_list.pop()
+
+            for i, subresult in enumerate(result_list):
+
+                # convert the abosulte sub_box into local col/row start/end relative to the primary box
+                # to assemble the result from each worker
+                x0, y0, x1, y1 = sub_box
+                x0 -= self.box[0]
+                x1 -= self.box[0]
+                y0 -= self.box[1]
+                y1 -= self.box[1]
+
+                master_result_box = master_result_boxes[i]
+                dim = subresult.ndim
+                if dim == 3:
+                    master_result_box[:, y0:y1, x0:x1] = subresult
+                elif dim == 2:
+                    master_result_box[y0:y1, x0:x1] = subresult
+                else:
+                    raise Exception("subresult has unexpected dimension {}".format(subresult.ndim))
+
+            return tuple(master_result_boxes)

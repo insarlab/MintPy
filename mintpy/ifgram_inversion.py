@@ -989,34 +989,36 @@ def ifgram_inversion(inps=None):
                 raise ImportError('Cannot import dask.distributed!')
             from mintpy.objects.cluster import DaskCluster
 
+            master_results = [tsi, temp_cohi, num_inv_ifgi]
+
             # intiate the cluster client
             # Look at the ~/.config/dask/mintpy.yaml file for changing the Dask configuration defaults
             print('initiate dask cluster')
             cluster_obj = DaskCluster(cluster_type=inps.cluster, num_workers=inps.numWorker, walltime=inps.walltime, config_name=inps.config)
             futures, start_time_sub = cluster_obj.submit_workers(ifgram_inversion_patch, kwargs)
-
+            tsi, temp_cohi, num_inv_ifgi = cluster_obj.compile_workers(futures, start_time_sub, master_results)
             # assemble results from all workers
-            i_future = 0
-            for future, result in as_completed(futures, with_results=True):
-                # catch result
-                sub_tsi, sub_temp_cohi, sub_num_inv_ifgi, sub_box = result
-
-                # message
-                i_future += 1
-                sub_t = time.time() - start_time_sub
-                print("FUTURE #{} box {} complete. Time used: {:.0f} seconds".format(i_future, sub_box, sub_t))
-
-                # convert the abosulte sub_box into local col/row start/end relative to the primary box
-                # to assemble the result from each worker
-                x0, y0, x1, y1 = sub_box
-                x0 -= box[0]
-                x1 -= box[0]
-                y0 -= box[1]
-                y1 -= box[1]
-
-                tsi[:, y0:y1, x0:x1] = sub_tsi
-                temp_cohi[y0:y1, x0:x1] = sub_temp_cohi
-                num_inv_ifgi[y0:y1, x0:x1] = sub_num_inv_ifgi
+            # i_future = 0
+            # for future, result in as_completed(futures, with_results=True):
+            #     # catch result
+            #     sub_tsi, sub_temp_cohi, sub_num_inv_ifgi, sub_box = result
+            #
+            #     # message
+            #     i_future += 1
+            #     sub_t = time.time() - start_time_sub
+            #     print("FUTURE #{} box {} complete. Time used: {:.0f} seconds".format(i_future, sub_box, sub_t))
+            #
+            #     # convert the abosulte sub_box into local col/row start/end relative to the primary box
+            #     # to assemble the result from each worker
+            #     x0, y0, x1, y1 = sub_box
+            #     x0 -= box[0]
+            #     x1 -= box[0]
+            #     y0 -= box[1]
+            #     y1 -= box[1]
+            #
+            #     tsi[:, y0:y1, x0:x1] = sub_tsi
+            #     temp_cohi[y0:y1, x0:x1] = sub_temp_cohi
+            #     num_inv_ifgi[y0:y1, x0:x1] = sub_num_inv_ifgi
 
             # close dask cluster and client
             cluster_obj.cluster.close()
