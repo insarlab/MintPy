@@ -1,3 +1,6 @@
+import glob
+import os
+import shutil
 import time
 import dask
 from dask.distributed import LocalCluster, Client, as_completed
@@ -5,12 +8,11 @@ from dask.distributed import LocalCluster, Client, as_completed
 
 class DaskCluster:
 
-    def __init__(self, cluster_type, num_workers, box, write_job_script=True, **kwargs):
+    def __init__(self, cluster_type, num_workers, write_job_script=True, **kwargs):
         """Generic dask cluster wrapper"""
 
         self.cluster = None
         self.client = None
-        self.box = box
         self.num_workers = num_workers
 
         # Properly format cluster type for consistency
@@ -136,7 +138,8 @@ class DaskCluster:
         self.client = Client(self.cluster)
 
         # split the primary box into sub boxes for each worker
-        sub_boxes = self.split_box2sub_boxes(self.box, num_split=self.num_workers, dimension='x')
+        box = func_data["box"]
+        sub_boxes = self.split_box2sub_boxes(box, num_split=self.num_workers, dimension='x')
         print('Split patch into {} sub boxes in x direction for workers to process'.format(len(sub_boxes)))
 
         # submit jobs for each worker
@@ -153,9 +156,9 @@ class DaskCluster:
             future = self.client.submit(func, **func_data, retries=3)
             futures.append(future)
 
-        return futures, start_time_sub
+        return futures, start_time_sub, box
 
-    def compile_workers(self, futures, start_time_sub, master_result_boxes):
+    def compile_workers(self, futures, start_time_sub, box, master_result_boxes):
 
         i_future = 0
         for future, result in as_completed(futures, with_results=True):
@@ -175,10 +178,10 @@ class DaskCluster:
                 # convert the abosulte sub_box into local col/row start/end relative to the primary box
                 # to assemble the result from each worker
                 x0, y0, x1, y1 = sub_box
-                x0 -= self.box[0]
-                x1 -= self.box[0]
-                y0 -= self.box[1]
-                y1 -= self.box[1]
+                x0 -= box[0]
+                x1 -= box[0]
+                y0 -= box[1]
+                y1 -= box[1]
 
                 master_result_box = master_result_boxes[i]
                 dim = subresult.ndim
@@ -190,3 +193,40 @@ class DaskCluster:
                     raise Exception("subresult has unexpected dimension {}".format(subresult.ndim))
 
             return tuple(master_result_boxes)
+
+    def run(self, func, func_data, master_result_boxes):
+        futures, start_time_sub, box = self.submit_workers(func, func_data)
+        return self.compile_workers(futures, start_time_sub, box, master_result_boxes)
+
+    def shutdown(self):
+        self.cluster.close()
+        self.client.close()
+
+    def move_dask_stdout_stderr_files(self):
+        """ move  *o and *e files produced by dask into stdout and sderr directory """
+
+        stdout_files = glob.glob('*.o')
+        stderr_files = glob.glob('*.e')
+        job_files = glob.glob('dask_command_run_from_python.txt*')
+
+        if len(stdout_files + stderr_files + job_files) == 0:
+            return
+
+        stdout_folder = 'stdout_ifgram_inversion_dask'
+        stderr_folder = 'stderr_ifgram_inversion_dask'
+        for std_dir in [stdout_folder, stderr_folder]:
+            if os.path.isdir(std_dir):
+                shutil.rmtree(std_dir)
+            os.mkdir(std_dir)
+
+        for item in stdout_files + job_files:
+            shutil.move(item, stdout_folder)
+
+        for item in stderr_files:
+            shutil.move(item, stderr_folder)
+
+        return
+
+    def cleanup(self):
+        self.shutdown()
+        self.move_dask_stdout_stderr_files()

@@ -976,17 +976,13 @@ def ifgram_inversion(inps=None):
         print('box width:  {}'.format(box_width))
         print('box length: {}'.format(box_length))
 
+        kwargs['box'] = box
         if inps.cluster.lower() == 'no':
-            kwargs['box'] = box
             tsi, temp_cohi, num_inv_ifgi, box = ifgram_inversion_patch(**kwargs)
 
         else:
             print('\n\n'+'------- start parallel processing using dask -------'+'\n\n')
 
-            try:
-                from dask.distributed import Client, as_completed
-            except ImportError:
-                raise ImportError('Cannot import dask.distributed!')
             from mintpy.objects.cluster import DaskCluster
 
             master_results = [tsi, temp_cohi, num_inv_ifgi]
@@ -995,8 +991,8 @@ def ifgram_inversion(inps=None):
             # Look at the ~/.config/dask/mintpy.yaml file for changing the Dask configuration defaults
             print('initiate dask cluster')
             cluster_obj = DaskCluster(cluster_type=inps.cluster, num_workers=inps.numWorker, walltime=inps.walltime, config_name=inps.config)
-            futures, start_time_sub = cluster_obj.submit_workers(ifgram_inversion_patch, kwargs)
-            tsi, temp_cohi, num_inv_ifgi = cluster_obj.compile_workers(futures, start_time_sub, master_results)
+            tsi, temp_cohi, num_inv_ifgi = cluster_obj.run(ifgram_inversion_patch, kwargs, master_results)
+
             # assemble results from all workers
             # i_future = 0
             # for future, result in as_completed(futures, with_results=True):
@@ -1020,14 +1016,8 @@ def ifgram_inversion(inps=None):
             #     temp_cohi[y0:y1, x0:x1] = sub_temp_cohi
             #     num_inv_ifgi[y0:y1, x0:x1] = sub_num_inv_ifgi
 
-            # close dask cluster and client
-            cluster_obj.cluster.close()
-            cluster_obj.client.close()
-            print('close dask cluster')
-            print('close dask client')
-
-            # move *.o/.e files produced by dask in stdout/stderr
-            ut.move_dask_stdout_stderr_files()
+            # close dask cluster and client and move *.o/*.e files
+            cluster_obj.cleanup()
 
             print('\n\n------- finished parallel processing -------\n\n')
 
