@@ -992,37 +992,8 @@ def ifgram_inversion(inps=None):
             # intiate the cluster client
             # Look at the ~/.config/dask/mintpy.yaml file for changing the Dask configuration defaults
             print('initiate dask cluster')
-            cluster_obj = DaskCluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
-            cluster = cluster_obj.cluster
-            # This line submits NUM_WORKERS jobs to the cluster to start a bunch of workers
-            # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
-            # at once (other user's jobs gained higher priority in the general at that point)
-            print('scale the cluster to {} workers'.format(inps.numWorker))
-            NUM_WORKERS = inps.numWorker
-            cluster.scale(NUM_WORKERS)
-
-            # This line needs to be in a function or in a `if __name__ == "__main__":` block. If it is in no function
-            # or "main" block, each worker will try to create its own client (which is bad) when loading the module
-            print('initiate dask client')
-            client = Client(cluster)
-
-            # split the primary box into sub boxes for each worker
-            sub_boxes = split_box2sub_boxes(box, num_split=1*NUM_WORKERS, dimension='x')
-            print('split the patch to {} sub boxes in x direction for workers to process'.format(len(sub_boxes)))
-
-            # submit jobs for each worker
-            start_time_sub = time.time()
-            futures = []
-            for i, sub_box in enumerate(sub_boxes):
-                print('submit job to workers for sub box {}: {}'.format(i, sub_box))
-                kwargs['box'] = sub_box
-
-                # David: I haven't played with fussing with `retries`, however sometimes a future fails
-                # on a worker for an unknown reason. retrying will save the whole process from failing.
-                # TODO:  I don't know what to do if a future fails > 3 times. I don't think an error is
-                # thrown in that case, therefore I don't know how to recognize when this happens.
-                future = client.submit(ifgram_inversion_patch, **kwargs, retries=3)
-                futures.append(future)
+            cluster_obj = DaskCluster(cluster_type=inps.cluster, num_workers=inps.numWorker, walltime=inps.walltime, config_name=inps.config)
+            futures, start_time_sub = cluster_obj.submit_workers(ifgram_inversion_patch, kwargs)
 
             # assemble results from all workers
             i_future = 0
@@ -1048,8 +1019,8 @@ def ifgram_inversion(inps=None):
                 num_inv_ifgi[y0:y1, x0:x1] = sub_num_inv_ifgi
 
             # close dask cluster and client
-            cluster.close()
-            client.close()
+            cluster_obj.cluster.close()
+            cluster_obj.client.close()
             print('close dask cluster')
             print('close dask client')
 

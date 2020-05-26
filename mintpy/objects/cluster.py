@@ -1,16 +1,17 @@
 import time
 import dask
-from dask.distributed import LocalCluster, Client
+from dask.distributed import LocalCluster, Client, as_completed
 
 
 class DaskCluster:
 
-    def __init__(self, cluster_type, num_workers, write_job_script=True, **kwargs):
+    def __init__(self, cluster_type, num_workers, box, write_job_script=True, **kwargs):
         """Generic dask cluster wrapper"""
 
         self.cluster = None
         self.client = None
-        self.num_workers = 0
+        self.box = box
+        self.num_workers = num_workers
 
         # Properly format cluster type for consistency
         cluster_type = cluster_type.lower()
@@ -135,8 +136,7 @@ class DaskCluster:
         self.client = Client(self.cluster)
 
         # split the primary box into sub boxes for each worker
-        box = func_data['box']
-        sub_boxes = self.split_box2sub_boxes(box, num_split=self.num_workers, dimension='x')
+        sub_boxes = self.split_box2sub_boxes(self.box, num_split=self.num_workers, dimension='x')
         print('Split patch into {} sub boxes in x direction for workers to process'.format(len(sub_boxes)))
 
         # submit jobs for each worker
