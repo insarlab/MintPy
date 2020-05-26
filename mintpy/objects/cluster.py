@@ -48,12 +48,14 @@ class DaskCluster:
         elif cluster_type == 'slurm':
             self.cluster = jobqueue.SLURMCluster(**kwargs)
 
-    # Print and write job command file for HPC cluster types
-    print("JOB COMMAND CALLED FROM PYTHON:\n\n", cluster.job_script())
-    with open('dask_command_run_from_python.txt', 'w') as f:
-        f.write(cluster.job_script() + '\n')
+        if write_job_script:
+            self.write_job_script()
 
-    return cluster
+    def write_job_script(self):
+        # Print and write job command file for HPC cluster types
+        print("JOB COMMAND CALLED FROM PYTHON:\n\n", self.cluster.job_script())
+        with open('dask_command_run_from_python.txt', 'w') as f:
+            f.write(self.cluster.job_script() + '\n')
 
     @staticmethod
     def format_config_name(config_name, cluster_type):
