@@ -55,39 +55,40 @@ class DaskCluster:
 
     return cluster
 
+    @staticmethod
+    def format_config_name(config_name, cluster_type):
 
-def format_config_name(config_name, cluster_type):
-    # due to the pre-set in mintpy.yaml, default config_name is the same as cluster_type
-    if not config_name:
-        config_name = cluster_type
+        # check if config_name exists in ~/.config/dask/*.yaml
+        config_names = list(dask.config.get('jobqueue').keys())
+        if config_name not in config_names:
+            config_location = dask.config.get('config')
+            msg = 'Dask configuration "{}" was not found in {}'.format(config_name, config_location)
+            msg += '\nFalling back to default config name: "{}"'.format(cluster_type)
+            print(msg)
 
-    # check if config_name exists in ~/.config/dask/*.yaml
-    config_names = list(dask.config.get('jobqueue').keys())
-    if config_name not in config_names:
-        msg = 'Dask configuration "{}" was not found in ~/.config/dask/*.yaml'.format(config_name)
-        msg += '\nFall back to default config name: "{}"'.format(cluster_type)
-        print(msg)
-        config_name = cluster_type
+            # due to the pre-set in dask.yaml, default config_name is the same as cluster_type
+            config_name = cluster_type
 
-    return config_name
+        return config_name
 
+    @staticmethod
+    def format_walltime(walltime, cluster_type):
+        """format the walltime str for different clusters
+        HH:MM:SS - pbs / slurm
+        HH:MM    - lsf
+        """
 
-def format_walltime(walltime, cluster_type):
-    """format the walltime str for different clusters
-    HH:MM:SS - pbs / slurm
-    HH:MM    - lsf
-    """
-    num_digit = len(walltime)
-    if cluster_type in ['pbs', 'slurm'] and num_digit != 8:
-        if num_digit == 5:
-            walltime += ":00"
-        else:
-            raise ValueError("input walltime ({}) not in HH:MM:SS or HH:MM format.".format(walltime))
+        num_digit = len(walltime)
+        if cluster_type in ['pbs', 'slurm'] and num_digit != 8:
+            if num_digit == 5:
+                walltime += ":00"
+            else:
+                raise ValueError("input walltime ({}) not in HH:MM:SS or HH:MM format.".format(walltime))
 
-    elif cluster_type in ['lsf'] and num_digit != 5:
-        if num_digit == 8:
-            walltime = walltime[:5]
-        else:
-            raise ValueError("input walltime ({}) not in HH:MM:SS or HH:MM format.".format(walltime))
+        elif cluster_type in ['lsf'] and num_digit != 5:
+            if num_digit == 8:
+                walltime = walltime[:5]
+            else:
+                raise ValueError("input walltime ({}) not in HH:MM:SS or HH:MM format.".format(walltime))
 
-    return walltime
+        return walltime

@@ -987,13 +987,13 @@ def ifgram_inversion(inps=None):
                 from dask.distributed import Client, as_completed
             except ImportError:
                 raise ImportError('Cannot import dask.distributed!')
-            from mintpy.objects.cluster import get_cluster
+            from mintpy.objects.cluster import DaskCluster
 
             # intiate the cluster client
             # Look at the ~/.config/dask/mintpy.yaml file for changing the Dask configuration defaults
             print('initiate dask cluster')
-            cluster = get_cluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
-
+            cluster_obj = DaskCluster(cluster_type=inps.cluster, walltime=inps.walltime, config_name=inps.config)
+            cluster = cluster_obj.cluster
             # This line submits NUM_WORKERS jobs to the cluster to start a bunch of workers
             # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
             # at once (other user's jobs gained higher priority in the general at that point)
