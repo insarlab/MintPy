@@ -1,61 +1,52 @@
-#!/usr/bin/env python3
-############################################################
-# Program is part of MintPy                                #
-# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Joshua Zahner, March 2020                        #
-############################################################
+import time
+import dask
+from dask.distributed import LocalCluster, Client
 
 
-try:
-    import dask
-except ImportError:
-    raise ImportError('Cannot import dask!')
+class DaskCluster:
 
+    def __init__(self, cluster_type, write_job_script=True, **kwargs):
+        """Generic dask cluster wrapper"""
 
-def get_cluster(cluster_type, **kwargs):
-    """Generic dask cluster wrapper"""
-    cluster_type = cluster_type.lower()
-    cluster_list = ['lsf','pbs','slurm','local']
-    if cluster_type not in cluster_list:
-        msg = "Cluster type '{}' not supported".format(cluster_type)
-        msg += '\nsupported cluster types: {}'.format(cluster_list)
-        raise ValueError(msg)
-    print("dask cluster type: {}".format(cluster_type))
+        # Properly format cluster type for consistency
+        cluster_type = cluster_type.lower()
+        cluster_list = ['lsf', 'pbs', 'slurm', 'local']
+        if cluster_type not in cluster_list:
+            msg = "Cluster type '{}' not supported".format(cluster_type)
+            msg += '\nSupported cluster types: {}'.format(cluster_list)
+            raise ValueError(msg)
+        print("Dask cluster type: {}".format(cluster_type))
 
-    # import related dask module only
-    # because job_queue is not available on macports, which make sense
-    if cluster_type == 'local':
-        try:
-            from dask.distributed import LocalCluster
-        except ImportError:
-            raise ImportError('Cannot import dask.distributed.LocalCluster!')
-    else:
-        try:
-            from dask_jobqueue import LSFCluster, PBSCluster, SLURMCluster
-        except ImportError:
-            raise ImportError('Cannot import dask_jobqueue!')
+        # import related dask module only
+        # because job_queue is not available on macports, which make sense
+        if cluster_type is not 'local':
+            try:
+                import dask_jobqueue as jobqueue
+            except ImportError:
+                raise ImportError('Cannot import dask_jobqueue!')
 
-    # for local cluster, NO need to do the extra configuration
-    if cluster_type == 'local':
-        return LocalCluster()
+        # for local cluster, NO need to do the extra configuration
+        if cluster_type == 'local':
+            self.cluster = LocalCluster()
+            return
 
-    # check input config name
-    if 'config_name' in kwargs.keys():
-        kwargs['config_name'] = format_config_name(kwargs['config_name'], cluster_type)
-    print("Dask config name: {}".format(kwargs['config_name']))
+        # check input config name
+        if 'config_name' in kwargs.keys():
+            kwargs['config_name'] = self.format_config_name(kwargs['config_name'], cluster_type)
+        print("Dask config name: {}".format(kwargs['config_name']))
 
-    # check walltime format for each cluster type
-    if 'walltime' in kwargs.keys():
-        kwargs['walltime'] = format_walltime(kwargs["walltime"], cluster_type)
-    print('Dask worker walltime: {}'.format(kwargs['walltime']))
+        # check walltime format for each cluster type
+        if 'walltime' in kwargs.keys():
+            kwargs['walltime'] = self.format_walltime(kwargs["walltime"], cluster_type)
+        print('Dask worker walltime: {}'.format(kwargs['walltime']))
 
-    # initiate cluster object
-    if cluster_type == 'lsf':
-        cluster = LSFCluster(**kwargs)
-    elif cluster_type == 'pbs':
-        cluster = PBSCluster(**kwargs)
-    elif cluster_type == 'slurm':
-        cluster = SLURMCluster(**kwargs)
+        # initiate cluster object
+        if cluster_type == 'lsf':
+            self.cluster = jobqueue.LSFCluster(**kwargs)
+        elif cluster_type == 'pbs':
+            self.cluster = jobqueue.PBSCluster(**kwargs)
+        elif cluster_type == 'slurm':
+            self.cluster = jobqueue.SLURMCluster(**kwargs)
 
     # Print and write job command file for HPC cluster types
     print("JOB COMMAND CALLED FROM PYTHON:\n\n", cluster.job_script())
