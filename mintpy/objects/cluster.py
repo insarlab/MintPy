@@ -26,7 +26,7 @@ class DaskCluster:
 
         # import related dask module only
         # because job_queue is not available on macports, which make sense
-        if cluster_type is not 'local':
+        if cluster_type != 'local':
             try:
                 import dask_jobqueue as jobqueue
             except ImportError:
