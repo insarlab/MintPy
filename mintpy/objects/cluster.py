@@ -169,8 +169,6 @@ class DaskCluster:
             print("FUTURE #{} complete. Time used: {:.0f} seconds".format(i_future, sub_t))
 
             # catch result
-            #sub_tsi, sub_temp_cohi, sub_num_inv_ifgi, sub_box = result
-            print(result)
             result_list = list(result)
             sub_box = result_list.pop()
 
@@ -183,10 +181,6 @@ class DaskCluster:
                 x1 -= box[0]
                 y0 -= box[1]
                 y1 -= box[1]
-
-                print("BOX: {}".format(box))
-                print("SUBBOX: {}".format(sub_box))
-                print(x0, y0, x1, y1)
 
                 master_result_box = master_result_boxes[i]
                 dim = subresult.ndim
