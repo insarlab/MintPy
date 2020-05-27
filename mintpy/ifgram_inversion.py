@@ -503,34 +503,6 @@ def split2boxes(dataset_shape, memory_size=4, print_msg=True):
 
     return box_list
 
-
-def split_box2sub_boxes(box, num_split, dimension='x'):
-    """Further divides the box size into `num_split` different sub_boxes.
-    Note that this is different from `split2boxes()`, whic splits based on chunk_size (memory-based).
-
-    :param box: [x0, y0, x1, y1]: list[int] of size 4
-    :param num_split: int, the number of sub_boxes to split a box into
-    :param dimension: str = 'y' or 'x', the dimension along which to split the boxes
-    """
-    x0, y0, x1, y1 = box
-    length, width = y1 - y0, x1 - x0
-
-    sub_boxes = []
-    if dimension == 'y':
-        for i in range(num_split):
-            start = (i * length) // num_split + y0
-            end = ((i + 1) * length) // num_split + y0
-            sub_boxes.append([x0, start, x1, end])
-
-    else:
-        for i in range(num_split):
-            start = (i * width) // num_split + x0
-            end = ((i + 1) * width) // num_split + x0
-            sub_boxes.append([start, y0, end, y1])
-
-    return sub_boxes
-
-
 def check_design_matrix(ifgram_file, weight_func='var'):
     """
     Check Rank of Design matrix for weighted inversion
@@ -985,38 +957,18 @@ def ifgram_inversion(inps=None):
 
             from mintpy.objects.cluster import DaskCluster
 
+            # need to be in same order as is returned by ifgram_inversion_patch
             master_results = [tsi, temp_cohi, num_inv_ifgi]
 
-            # intiate the cluster client
+            # intiate the dask cluster and client
             # Look at the ~/.config/dask/mintpy.yaml file for changing the Dask configuration defaults
-            print('initiate dask cluster')
             cluster_obj = DaskCluster(cluster_type=inps.cluster, num_workers=inps.numWorker, walltime=inps.walltime, config_name=inps.config)
+
+            # Handles submitting and recompiling all of the dask workers
             tsi, temp_cohi, num_inv_ifgi = cluster_obj.run(ifgram_inversion_patch, kwargs, master_results)
 
-            # assemble results from all workers
-            # i_future = 0
-            # for future, result in as_completed(futures, with_results=True):
-            #     # catch result
-            #     sub_tsi, sub_temp_cohi, sub_num_inv_ifgi, sub_box = result
-            #
-            #     # message
-            #     i_future += 1
-            #     sub_t = time.time() - start_time_sub
-            #     print("FUTURE #{} box {} complete. Time used: {:.0f} seconds".format(i_future, sub_box, sub_t))
-            #
-            #     # convert the abosulte sub_box into local col/row start/end relative to the primary box
-            #     # to assemble the result from each worker
-            #     x0, y0, x1, y1 = sub_box
-            #     x0 -= box[0]
-            #     x1 -= box[0]
-            #     y0 -= box[1]
-            #     y1 -= box[1]
-            #
-            #     tsi[:, y0:y1, x0:x1] = sub_tsi
-            #     temp_cohi[y0:y1, x0:x1] = sub_temp_cohi
-            #     num_inv_ifgi[y0:y1, x0:x1] = sub_num_inv_ifgi
-
-            # close dask cluster and client and move *.o/*.e files
+            # Closes open connections to both the cluster and client objects
+            # and moves output/error files to the proper directories
             cluster_obj.cleanup()
 
             print('\n\n------- finished parallel processing -------\n\n')

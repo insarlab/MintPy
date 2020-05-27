@@ -24,36 +24,36 @@ class DaskCluster:
             raise ValueError(msg)
         print("Dask cluster type: {}".format(cluster_type))
 
-        # import related dask module only
-        # because job_queue is not available on macports, which make sense
-        if cluster_type != 'local':
+
+        # for local cluster, NO need to do the extra configuration
+        if cluster_type == 'local':
+            self.cluster = LocalCluster()
+        else:
+
+            # import related dask module only
+            # because job_queue is not available on macports, which make sense
             try:
                 import dask_jobqueue as jobqueue
             except ImportError:
                 raise ImportError('Cannot import dask_jobqueue!')
 
-        # for local cluster, NO need to do the extra configuration
-        if cluster_type == 'local':
-            self.cluster = LocalCluster()
-            return
+            # check input config name
+            if 'config_name' in kwargs.keys():
+                kwargs['config_name'] = self.format_config_name(kwargs['config_name'], cluster_type)
+            print("Dask config name: {}".format(kwargs['config_name']))
 
-        # check input config name
-        if 'config_name' in kwargs.keys():
-            kwargs['config_name'] = self.format_config_name(kwargs['config_name'], cluster_type)
-        print("Dask config name: {}".format(kwargs['config_name']))
+            # check walltime format for each cluster type
+            if 'walltime' in kwargs.keys():
+                kwargs['walltime'] = self.format_walltime(kwargs["walltime"], cluster_type)
+            print('Dask worker walltime: {}'.format(kwargs['walltime']))
 
-        # check walltime format for each cluster type
-        if 'walltime' in kwargs.keys():
-            kwargs['walltime'] = self.format_walltime(kwargs["walltime"], cluster_type)
-        print('Dask worker walltime: {}'.format(kwargs['walltime']))
-
-        # initiate cluster object
-        if cluster_type == 'lsf':
-            self.cluster = jobqueue.LSFCluster(**kwargs)
-        elif cluster_type == 'pbs':
-            self.cluster = jobqueue.PBSCluster(**kwargs)
-        elif cluster_type == 'slurm':
-            self.cluster = jobqueue.SLURMCluster(**kwargs)
+            # initiate cluster object
+            if cluster_type == 'lsf':
+                self.cluster = jobqueue.LSFCluster(**kwargs)
+            elif cluster_type == 'pbs':
+                self.cluster = jobqueue.PBSCluster(**kwargs)
+            elif cluster_type == 'slurm':
+                self.cluster = jobqueue.SLURMCluster(**kwargs)
 
         self.cluster.scale(num_workers)
 
@@ -84,7 +84,7 @@ class DaskCluster:
 
     @staticmethod
     def format_walltime(walltime, cluster_type):
-        """format the walltime str for different clusters
+        """ format the walltime str for different clusters
         HH:MM:SS - pbs / slurm
         HH:MM    - lsf
         """
@@ -131,9 +131,16 @@ class DaskCluster:
         return sub_boxes
 
     def submit_workers(self, func, func_data):
+        """ Submits dask workers to the networking client that run the specified function (func)
+        on the specified data (func_data). Each dask worker is in charge of a small subbox of the main box.
 
-        # This line needs to be in a function or in a `if __name__ == "__main__":` block. If it is in no function
-        # or "main" block, each worker will try to create its own client (which is bad) when loading the module
+        :param func: function, a python function to run in parallel
+        :param func_data: dict, a dictionary of the argument to pass to the function
+        :return: futures: [Future], a list of dask futures containing the workers and their results
+                 start_time_sub: time, the initial starting time for the futures (used for runtime profiling)
+                 box: [x0, y0, x1, y1]: list[int], the complete box being worked on
+        """
+
         print('Initiating dask client')
         self.client = Client(self.cluster)
 
@@ -159,6 +166,17 @@ class DaskCluster:
         return futures, start_time_sub, box
 
     def compile_workers(self, futures, start_time_sub, box, master_result_boxes):
+        """ Compiles results from completed workers and recompiles their sub outputs into the output
+        for the complete box being worked on.
+
+        :param futures: [Future], the to-be-completed dask futures
+        :param start_time_sub: time, the starting time of the submitted futures
+        :param box: [x0, y0, x1, y1]: list[int], the dimensions of the complete box
+        :param master_result_boxes: list[numpy.nd.array], arrays of the appropriate structure representing
+               the final output of processed box (need to be in the same order as the function passed in
+               submit_workers returns in)
+        :return: master_result_boxes: tuple(numpy.nd.arrays), the processed results of the box
+        """
 
         i_future = 0
         for future, result in as_completed(futures, with_results=True):
@@ -170,8 +188,11 @@ class DaskCluster:
 
             # catch result
             result_list = list(result)
+
+            # the box always needs to be the final return item
             sub_box = result_list.pop()
 
+            # Loop across all of the returned data in order to rebuild complete box
             for i, subresult in enumerate(result_list):
 
                 # convert the abosulte sub_box into local col/row start/end relative to the primary box
@@ -183,7 +204,7 @@ class DaskCluster:
                 y1 -= box[1]
 
                 master_result_box = master_result_boxes[i]
-                dim = subresult.ndim
+                dim = subresult.ndim  # number of dimensions of dataset (should be 2 or 3)
                 if dim == 3:
                     master_result_box[:, y0:y1, x0:x1] = subresult
                 elif dim == 2:
@@ -194,10 +215,20 @@ class DaskCluster:
         return tuple(master_result_boxes)
 
     def run(self, func, func_data, master_result_boxes):
+        """ Wrapper function encapsulating submit_workers and compile_workers.
+
+        :param func: function, a python function to run in parallel
+        :param func_data: dict, a dictionary of the argument to pass to the function
+        :param master_result_boxes: list[numpy.nd.array], arrays of the appropriate structure representing
+               the final output of processed box (need to be in the same order as the function passed in
+               submit_workers returns in)
+        :return: master_result_boxes: tuple(numpy.nd.arrays), the processed results of the box
+        """
         futures, start_time_sub, box = self.submit_workers(func, func_data)
         return self.compile_workers(futures, start_time_sub, box, master_result_boxes)
 
     def shutdown(self):
+        """ Closes connnection to cluster and client objects. """
         self.cluster.close()
         self.client.close()
 
@@ -227,5 +258,6 @@ class DaskCluster:
         return
 
     def cleanup(self):
+        """ Closes connections to dask client and cluster and moves dask output/error files. """
         self.shutdown()
         self.move_dask_stdout_stderr_files()
