@@ -55,12 +55,13 @@ class DaskCluster:
             elif cluster_type == 'slurm':
                 self.cluster = jobqueue.SLURMCluster(**kwargs)
 
+            if write_job_script:
+                self.write_job_script()
+
         self.cluster.scale(num_workers)
 
-        if write_job_script:
-            self.write_job_script()
-
     def write_job_script(self):
+        """ Writes the dask cluster job script to a file for reference. """
         # Print and write job command file for HPC cluster types
         print("JOB COMMAND CALLED FROM PYTHON:\n\n", self.cluster.job_script())
         with open('dask_command_run_from_python.txt', 'w') as f:
@@ -68,6 +69,13 @@ class DaskCluster:
 
     @staticmethod
     def format_config_name(config_name, cluster_type):
+        """ Formats dask config_name property based on presence or absence of user specified config name.
+        :param config_name: str, the user specified config name to use
+        :param cluster_type: str, the type of HPC cluster being used (slurm, lsf, pbs)
+        :return: config_name: str, the config_name formatted as follows:
+                 - the user specified config name if its exists in $DASK_CONFIG/dask.yaml
+                 - the default cluster_type config in $DASK_CONFIG/dask.yaml
+        """
 
         # check if config_name exists in ~/.config/dask/*.yaml
         config_names = list(dask.config.get('jobqueue').keys())
@@ -84,9 +92,14 @@ class DaskCluster:
 
     @staticmethod
     def format_walltime(walltime, cluster_type):
-        """ format the walltime str for different clusters
-        HH:MM:SS - pbs / slurm
-        HH:MM    - lsf
+        """ Formats the walltime str for different clusters
+            HH:MM:SS - pbs / slurm
+            HH:MM    - lsf
+
+            :param walltime: str, the walltime as provided by the user
+            :param cluster_type: str, the type of HPC cluster being used (slurm, lsf, pbs)
+            :return walltime, str, the walltime formatted to fit the desired time format for
+                    given cluster type
         """
 
         num_digit = len(walltime)
