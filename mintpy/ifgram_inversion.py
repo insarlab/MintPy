@@ -87,13 +87,13 @@ def create_parser():
 
     # solver
     solver = parser.add_argument_group('solver', 'solver for the network inversion problem')
-    solver.add_argument('-w', '--weight-func', dest='weightFunc', default='no',
+    solver.add_argument('-w', '--weight-func', dest='weightFunc', default='var',
                         choices={'var', 'fim', 'coh', 'no'},
                         help='function used to convert coherence to weight for inversion:\n' +
-                             'var - inverse of phase variance due to temporal decorrelation\n' +
+                             'var - inverse of phase variance due to temporal decorrelation (default)\n' +
                              'fim - Fisher Information Matrix as weight' +
                              'coh - spatial coherence\n' +
-                             'no  - no/uniform weight (default)')
+                             'no  - no/uniform weight')
     solver.add_argument('--min-norm-phase', dest='minNormVelocity', action='store_false',
                         help=('Enable inversion with minimum-norm deformation phase,'
                               ' instead of the default minimum-norm deformation velocity.'))
