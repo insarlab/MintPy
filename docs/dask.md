@@ -18,7 +18,7 @@ mintpy.compute.cluster    = local
 mintpy.compute.numWorkers = auto   #auto for 4 (local) or 40 (non-local), set to "all" to use all available cores.
 ```
 
-`mintpy.networkInversion.numWorkers = all` will allocate `multiprocessing.cpu_count()` number of workers to the dask computation. If the specified number of workers exceeds system resources `multiprocessing.cpu_count()/2` number of workers will be submitted to avoid overtaxing local systems.
+`mintpy.compute.numWorkers = all` will allocate `multiprocessing.cpu_count()` number of workers to the dask computation. If the specified number of workers exceeds system resources, `multiprocessing.cpu_count()/2` number of workers will be submitted instead to avoid overtaxing local systems.
 
 ### Test on Stampede2 ###
 
