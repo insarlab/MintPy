@@ -78,7 +78,7 @@ Note that the walltime format changes slightly depending on the job scheduler th
 
 ### Control parameters in `smallbaselineApp.cfg` ###
 
-There are 5 options related to the dask features that can be controlled in MintPy via the `smallbaselineApp.cfg` file:
+There are 4 options related to the dask features that can be controlled in MintPy via the `smallbaselineApp.cfg` file:
 
 ```cfg
 mintpy.compute.cluster   = auto #[lsf / pbs / slurm / local], job scheduler in your HPC system auto for local.
@@ -94,9 +94,10 @@ Test `LocalCuster` on your system using:
 cd FernandinaSenDT128/mintpy
 ifgram_inversion.py inputs/ifgramStack.h5 --cluster local -w no --num-worker 2
 ifgram_inversion.py inputs/ifgramStack.h5 --cluster local -w no --num-worker 8
-ifgram_inversion.py inputs/ifgramStack.h5 --cluster no  -w no
 ```
-It should take around 30 seconds.  `-w no` switches off weighting in the network inversion to make it fast. To test `dask_jobqueue`, try:
+It should take around 30 seconds. `-w no` switches off weighting in the network inversion, which increases computational speed at the cost of accuracy. Leaving out the `-w` option will cause `ifgram_inversion.py` to use a more accurate, but much slower inversion algorithm. 
+
+To test `dask_jobqueue`, try:
 ```
 ifgram_inversion.py inputs/ifgramStack.h5 --cluster slurm -w no --num-worker 4
 ifgram_inversion.py inputs/ifgramStack.h5 --cluster pbs -w no --num-worker 4
@@ -104,51 +105,3 @@ ifgram_inversion.py inputs/ifgramStack.h5 --cluster lsf -w no --num-worker 4
 ```
 In this case the `mintpy.yaml` is used.
 
-### Known issues  ###
-
-* On UM's pegasus system LocalCLuster does not work, We don't know why. 
-
-* `ifgran_inversion.py` uses a walltime default of 00:40:00 instead of reading from `mintpy.yaml` 
-
-* If too many workers are selected (`--num-worker 40`) you may see the error below. We don't know why. Try a smaller number of workers.
-```
-/home/famelung/test/operations/rsmas_insar/3rdparty/miniconda3/bin/python3 -m distributed.cli.dask_worker tcp://198.202.113.253:40137 --nthreads 1 --memory-limit 2.00GB --name mintpy-bee--${JOB_ID}-- --death-timeout 60
-
-Initiating dask client
-Traceback (most recent call last):
-  File "/home/famelung/test/operations/rsmas_insar/sources/MintPy/mintpy/ifgram_inversion.py", line 1028, in <module>
-    main()
-  File "/home/famelung/test/operations/rsmas_insar/sources/MintPy/mintpy/ifgram_inversion.py", line 1017, in main
-    ifgram_inversion(inps)
-  File "/home/famelung/test/operations/rsmas_insar/sources/MintPy/mintpy/ifgram_inversion.py", line 968, in ifgram_inversion
-    tsi, temp_cohi, num_inv_ifgi = cluster_obj.run(ifgram_inversion_patch, kwargs, master_results)
-  File "/home/famelung/test/operations/rsmas_insar/sources/MintPy/mintpy/objects/cluster.py", line 240, in run
-    futures, start_time_sub, box = self.submit_workers(func, func_data)
-  File "/home/famelung/test/operations/rsmas_insar/sources/MintPy/mintpy/objects/cluster.py", line 158, in submit_workers
-    self.client = Client(self.cluster)
-  File "/home/famelung/test/operations/rsmas_insar/3rdparty/miniconda3/lib/python3.7/site-packages/distributed/client.py", line 712, in __init__
-    self.start(timeout=timeout)
-  File "/home/famelung/test/operations/rsmas_insar/3rdparty/miniconda3/lib/python3.7/site-packages/distributed/client.py", line 858, in start
-    sync(self.loop, self._start, **kwargs)
-  File "/home/famelung/test/operations/rsmas_insar/3rdparty/miniconda3/lib/python3.7/site-packages/distributed/utils.py", line 331, in sync
-    six.reraise(*error[0])
-  File "/home/famelung/test/operations/rsmas_insar/3rdparty/miniconda3/lib/python3.7/site-packages/six.py", line 693, in reraise
-    raise value
-  File "/home/famelung/test/operations/rsmas_insar/3rdparty/miniconda3/lib/python3.7/site-packages/distributed/utils.py", line 316, in f
-    result[0] = yield future
-  File "/home/famelung/test/operations/rsmas_insar/3rdparty/miniconda3/lib/python3.7/site-packages/tornado/gen.py", line 735, in run
-    value = future.result()
-  File "/home/famelung/test/operations/rsmas_insar/3rdparty/miniconda3/lib/python3.7/site-packages/tornado/gen.py", line 742, in run
-    yielded = self.gen.throw(*exc_info)  # type: ignore
-  File "/home/famelung/test/operations/rsmas_insar/3rdparty/miniconda3/lib/python3.7/site-packages/distributed/client.py", line 954, in _start
-    yield self._ensure_connected(timeout=timeout)
-  File "/home/famelung/test/operations/rsmas_insar/3rdparty/miniconda3/lib/python3.7/site-packages/tornado/gen.py", line 735, in run
-    value = future.result()
-  File "/home/famelung/test/operations/rsmas_insar/3rdparty/miniconda3/lib/python3.7/site-packages/tornado/gen.py", line 742, in run
-    yielded = self.gen.throw(*exc_info)  # type: ignore
-  File "/home/famelung/test/operations/rsmas_insar/3rdparty/miniconda3/lib/python3.7/site-packages/distributed/client.py", line 1015, in _ensure_connected
-    timedelta(seconds=timeout), self._update_scheduler_info()
-  File "/home/famelung/test/operations/rsmas_insar/3rdparty/miniconda3/lib/python3.7/site-packages/tornado/gen.py", line 735, in run
-    value = future.result()
-tornado.util.TimeoutError: Timeout
-```
