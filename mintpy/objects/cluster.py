@@ -42,11 +42,6 @@ class DaskCluster:
                 kwargs['config_name'] = self.format_config_name(kwargs['config_name'], cluster_type)
             print("Dask config name: {}".format(kwargs['config_name']))
 
-            # check walltime format for each cluster type
-            if 'walltime' in kwargs.keys():
-                kwargs['walltime'] = self.format_walltime(kwargs["walltime"], cluster_type)
-            print('Dask worker walltime: {}'.format(kwargs['walltime']))
-
             # initiate cluster object
             if cluster_type == 'lsf':
                 self.cluster = jobqueue.LSFCluster(**kwargs)
@@ -89,33 +84,6 @@ class DaskCluster:
             config_name = cluster_type
 
         return config_name
-
-    @staticmethod
-    def format_walltime(walltime, cluster_type):
-        """ Formats the walltime str for different clusters
-            HH:MM:SS - pbs / slurm
-            HH:MM    - lsf
-
-            :param walltime: str, the walltime as provided by the user
-            :param cluster_type: str, the type of HPC cluster being used (slurm, lsf, pbs)
-            :return walltime, str, the walltime formatted to fit the desired time format for
-                    given cluster type
-        """
-
-        num_digit = len(walltime)
-        if cluster_type in ['pbs', 'slurm'] and num_digit != 8:
-            if num_digit == 5:
-                walltime += ":00"
-            else:
-                raise ValueError("input walltime ({}) not in HH:MM:SS or HH:MM format.".format(walltime))
-
-        elif cluster_type in ['lsf'] and num_digit != 5:
-            if num_digit == 8:
-                walltime = walltime[:5]
-            else:
-                raise ValueError("input walltime ({}) not in HH:MM:SS or HH:MM format.".format(walltime))
-
-        return walltime
 
     def split_box2sub_boxes(self, box, num_split, dimension='x'):
         """Further divides the box size into `num_split` different sub_boxes.

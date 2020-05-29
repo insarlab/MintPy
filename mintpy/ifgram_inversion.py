@@ -123,8 +123,6 @@ def create_parser():
 
     par.add_argument('--config', '--config-name', dest='config', type=str, default='no', 
                      help='Configuration name to use in dask.yaml (default: %(default)s).')
-    par.add_argument('--walltime', dest='walltime', type=str, default='00:40',
-                     help='Walltime for each dask worker (default: %(default)s).')
 
     # update / skip
     parser.add_argument('--update', dest='update_mode', action='store_true',
@@ -240,7 +238,7 @@ def read_template2inps(template_file, inps):
         if key in ['cluster', 'config']:
             iDict[key] = value
         elif value:
-            if key in ['walltime', 'numWorker']:
+            if key in ['numWorker']:
                 iDict[key] = str(value)
             elif key in ['memorySize']:
                 iDict[key] = float(value)
@@ -962,7 +960,7 @@ def ifgram_inversion(inps=None):
 
             # intiate the dask cluster and client
             # Look at the ~/.config/dask/mintpy.yaml file for changing the Dask configuration defaults
-            cluster_obj = DaskCluster(cluster_type=inps.cluster, num_workers=inps.numWorker, walltime=inps.walltime, config_name=inps.config)
+            cluster_obj = DaskCluster(cluster_type=inps.cluster, num_workers=inps.numWorker, config_name=inps.config)
 
             # Handles submitting and recompiling all of the dask workers
             tsi, temp_cohi, num_inv_ifgi = cluster_obj.run(ifgram_inversion_patch, kwargs, master_results)
