@@ -35,14 +35,14 @@ jobqueue:
 ########################################################
 
   pbs:
-    name: dask-worker
+    name: mintpy-bee
 
     # Dask worker options
-    cores: null                 # Total number of cores per job
-    memory: null                # Total amount of memory per job
+    cores: 1                 # Total number of cores per job
+    memory: 2GB                # Total amount of memory per job
     processes: 1                # Number of Python processes per job
 
-    interface: null             # Network interface to use like eth0 or ib0
+    interface: ib0             # Network interface to use like eth0 or ib0
     death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
     local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
 
@@ -60,10 +60,10 @@ jobqueue:
 ########################################################
 
   slurm:
-    name: dask-worker
+    name: mintpy-bee
 
-    cores: null	        # Total number of cores per job
-    memory: null        # Total amount of memory per job
+    cores: 1	        # Total number of cores per job
+    memory: 2GB        # Total amount of memory per job
     processes: 1        # Number of Python processes per job
 
     interface: null     # Network interface to use like eth0 or ib0
