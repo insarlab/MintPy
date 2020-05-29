@@ -86,3 +86,31 @@ mintpy.compute.config    = auto #[name / no], name of the configuration section 
 mintpy.compute.numWorker = auto #[int > 1], number of worker to submit and run, auto for 4 (local) or 40 (non-local), set to "all" to use all available cores.
 mintpy.compute.walltime  = auto #[HH:MM], walltime to be used for each dask job, auto for 00:40.
 ```
+
+### Testing dask ###
+
+Test `LocalCuster` on your system using:
+```
+cd FernandinaSenDT128/mintpy
+ifgram_inversion.py inputs/ifgramStack.h5 --cluster local --num-worker 2
+ifgram_inversion.py inputs/ifgramStack.h5 --cluster local --num-worker 8
+ifgram_inversion.py inputs/ifgramStack.h5 --cluster no
+```
+It should take around 30 seconds. To test `dask_jobqueue`, try:
+```
+ifgram_inversion.py inputs/ifgramStack.h5 --cluster slurm --num-worker 4
+ifgram_inversion.py inputs/ifgramStack.h5 --cluster pbs --num-worker 4
+ifgram_inversion.py inputs/ifgramStack.h5 --cluster lsf --num-worker 4
+```
+In this case your `~/.config/dask/mintpy.yaml` will be used.
+
+Note that `ifgram_inversion.py` is much faster than `smallbaselineApp.py` because it has different default weighting ('no' weighting versus 'var' weighting).
+
+### Known issues  ###
+
+* On XSEDE's comet system in San Diego LocalCluster is very slow (60 times slower, the test data take 15 min!).  We don't know why.  `slurm` cluster works reasonably well (2 min).
+
+* On UM's pegasus system LocalCLuster does not work, We don't know why. 
+
+* `ifgran_inversion.py` uses a walltime default of 00:40:00 instead of reading from `mintpy.yaml` 
+
