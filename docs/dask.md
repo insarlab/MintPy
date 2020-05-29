@@ -102,7 +102,7 @@ ifgram_inversion.py inputs/ifgramStack.h5 --cluster slurm -w no --num-worker 4
 ifgram_inversion.py inputs/ifgramStack.h5 --cluster pbs -w no --num-worker 4
 ifgram_inversion.py inputs/ifgramStack.h5 --cluster lsf -w no --num-worker 4
 ```
-In this case your `~/.config/dask/mintpy.yaml` will be used.
+In this case the `mintpy.yaml` is used.
 
 ### Known issues  ###
 
