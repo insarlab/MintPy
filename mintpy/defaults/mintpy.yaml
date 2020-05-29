@@ -1,9 +1,8 @@
 jobqueue:
   lsf:
+    name: mintpy_bee
     queue: general
     project: insarlab
-
-    name: mintpy_bee
 
     # Dask worker options
     cores: 2                    # Total number of cores per job
@@ -36,6 +35,8 @@ jobqueue:
 
   pbs:
     name: mintpy-bee
+    queue: batch
+    project: null
 
     # Dask worker options
     cores: 1                 # Total number of cores per job
@@ -44,12 +45,10 @@ jobqueue:
 
     interface: ib0             # Network interface to use like eth0 or ib0
     death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
-    local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
+    local-directory: $SCRATCHDIR  # Location of fast local storage like /scratch or $TMPDIR
 
-    # PBS resource manager options
+    # resource manager options
     shebang: "#!/usr/bin/env bash"
-    queue: null
-    project: null
     walltime: '00:30:00'
     extra: []
     env-extra: []
@@ -61,19 +60,19 @@ jobqueue:
 
   slurm:
     name: mintpy-bee
+    project: TG-EAR180014
+    queue: shared
 
-    cores: 1	        # Total number of cores per job
-    memory: 2GB        # Total amount of memory per job
-    processes: 1        # Number of Python processes per job
+    cores: 1                       # Total number of cores per job
+    memory: 2GB                    # Total amount of memory per job
+    processes: 1                   # Number of Python processes per job
 
-    interface: null     # Network interface to use like eth0 or ib0
-    death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
-    local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
+    interface: null                # Network interface to use like eth0 or ib0
+    death-timeout: 60              # Number of seconds to wait if a worker can not find a scheduler
+    local-directory: null          # Location of fast local storage like /scratch or $TMPDIR
 
-    # LSF resource manager options
+    # resource manager options
     shebang: "#!/usr/bin/env bash"
-    queue: null
-    project: null
     walltime: '00:30:00'
     extra: []
     env-extra: []
