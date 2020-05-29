@@ -24,10 +24,19 @@ mintpy.compute.numWorkers = auto   #auto for 4 (local) or 40 (non-local), set to
 
 To show the run time improvement, we test three datasets (Galapagos, Fernandina, and Kilauea) with different number of cores on a compute node in the [Stampede2 cluster's skx-normal queue](https://portal.tacc.utexas.edu/user-guides/stampede2#overview-skxcomputenodes). Results are as below:
 
-| Property              | Fernandina             | Galapagos               | Kilauea                   |
+| Property              | Fernandina             | Isabela                 | Kilauea                   |
 |-----------------------|------------------------|-------------------------|---------------------------|
 | Input file size       | 0.6 GB (288, 450, 600) | 0.2 GB (20, 1100, 1364) | 15.0 GB (575, 1430, 2345) |
-| Setted memory size    | 1 GB                   | 1 GB                    | 1 GB                      |
+| Setted memory size    | 4 GB                   | 4 GB                    | 4 GB                      |
+|-----------------------|------------------------|-------------------------|---------------------------|
+| 1-Core Runtime        | 11.54 min              | 2.87 min                | 235.89 min                |
+| 2-core Runtime        | 6.07 min               | 1.59 min                | 120.46 min                |
+| 4-core Runtime        | 2.64 min               | 1.00 min                | 59.33 min                 |
+| 8-core Runtime        | 1.57 min               | 38.1 sec                | 32.01 min                 |
+| 16-core Runtime       | 56.4 sec               | 30.3 sec                | 18.71 min                 |
+| 32-core Runtime       | 46.2 sec               | 29.0 sec                | 12.53 min                 |
+| 48-core Runtime       | 49.3 sec               | 36.6 sec                | 10.11 min                 |
+| 64-core Runtime       | 54.1 sec               | 42.1 sec                | 11.18 min                 |
 
 ![Dask LocalCluster Performance](https://raw.githubusercontent.com/insarlab/MintPy-tutorial/master/docs/dask_local_cluster_performance.png)
 
