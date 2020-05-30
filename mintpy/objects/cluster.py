@@ -8,7 +8,7 @@ from dask.distributed import LocalCluster, Client, as_completed
 
 class DaskCluster:
 
-    def __init__(self, cluster_type, num_workers, write_job_script=True, **kwargs):
+    def __init__(self, cluster_type, num_workers, **kwargs):
         """Generic dask cluster wrapper"""
 
         self.cluster = None
@@ -50,7 +50,9 @@ class DaskCluster:
             elif cluster_type == 'slurm':
                 self.cluster = jobqueue.SLURMCluster(**kwargs)
 
-            if write_job_script:
+            print("\n", self.cluster.job_script())
+            debug_mode=False
+            if debug_mode:
                 self.write_job_script()
 
         self.cluster.scale(num_workers)
@@ -58,7 +60,6 @@ class DaskCluster:
     def write_job_script(self):
         """ Writes the dask cluster job script to a file for reference. """
         # Print and write job command file for HPC cluster types
-        print("JOB COMMAND CALLED FROM PYTHON:\n\n", self.cluster.job_script())
         with open('dask_command_run_from_python.txt', 'w') as f:
             f.write(self.cluster.job_script() + '\n')
 
