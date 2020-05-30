@@ -1,6 +1,6 @@
 jobqueue:
   lsf:
-    name: dask-worker
+    name: mintpy_bee
 
     # Dask worker options
     cores: null                 # Total number of cores per job
@@ -31,7 +31,7 @@ jobqueue:
 ########################################################
 
   pbs:
-    name: dask-worker
+    name: mintpy_bee
 
     # Dask worker options
     cores: null                 # Total number of cores per job
@@ -56,7 +56,7 @@ jobqueue:
 ########################################################
 
   slurm:
-    name: dask-worker
+    name: mintpy_bee
 
     cores: null	        # Total number of cores per job
     memory: null        # Total amount of memory per job
