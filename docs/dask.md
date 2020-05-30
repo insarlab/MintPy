@@ -9,42 +9,51 @@ MintPy uses dask for parallel processing (currently implemeted only in `ifgram_i
 
 The required options and recommended best practices for each cluster/scheduler differ slightly and are covered in the following section.
 
-## via `LocalCluster` ##
+## 1. via `LocalCluster` ##
 
-Recommended if you are running MintPy on a local machine with multiple available cores, or if you have access to an HPC cluster but wish to allocate only a single node's worth of resources but still take advantage of multiple cores. For that, simply set the following options in `smallbaselineApp.cfg`:
+Recommended if you are running MintPy on a local machine with multiple available cores, or if you have access to an HPC cluster but wish to allocate only a single node's worth of resources but still take advantage of multiple cores. 
+
+To use LocalCluster, you can simply run in command line:
+
+```bash
+ifgram_inversion.py inputs/ifgramStack.h5 --cluster local
+ifgram_inversion.py inputs/ifgramStack.h5 --cluster local --num-worker 8
+```
+
+or in the template file:
 
 ```cfg
 mintpy.compute.cluster    = local
 mintpy.compute.numWorkers = auto   #auto for 4 (local) or 40 (non-local), set to "all" to use all available cores.
 ```
 
-`mintpy.compute.numWorkers = all` will allocate `multiprocessing.cpu_count()` number of workers to the dask computation. If the specified number of workers exceeds system resources, `multiprocessing.cpu_count()/2` number of workers will be submitted instead to avoid overtaxing local systems.
+`numWorkers = all` will allocate `multiprocessing.cpu_count()` number of workers to the dask computation. If the specified number of workers exceeds system resources, `multiprocessing.cpu_count()/2` number of workers will be submitted instead to avoid overtaxing local systems.
 
-### Test on Stampede2 ###
+### 1.1 Runtime performance test on Stampede2 ###
 
-To show the run time improvement, we test three datasets (Galapagos, Fernandina, and Kilauea) with different number of cores on a compute node in the [Stampede2 cluster's skx-normal queue](https://portal.tacc.utexas.edu/user-guides/stampede2#overview-skxcomputenodes). Results are as below:
+To show the run time improvement, we test three datasets (Galapagos, Fernandina, and Kilauea) with different number of cores and same amount of allocated memory (4 GB) on a compute node in the [Stampede2 cluster's skx-normal queue](https://portal.tacc.utexas.edu/user-guides/stampede2#overview-skxcomputenodes). Results are as below:
 
-| Property              | Fernandina             | Isabela                 | Kilauea                   |
+|                       | Fernandina             | South Isabela           | Kilauea                   |
 |-----------------------|------------------------|-------------------------|---------------------------|
-| Input file size       | 0.6 GB (288, 450, 600) | 0.2 GB (20, 1100, 1364) | 15.0 GB (575, 1430, 2345) |
-| Setted memory size    | 4 GB                   | 4 GB                    | 4 GB                      |
-|-----------------------|------------------------|-------------------------|---------------------------|
-| 1-Core Runtime        | 11.54 min              | 2.87 min                | 235.89 min                |
-| 2-core Runtime        | 6.07 min               | 1.59 min                | 120.46 min                |
-| 4-core Runtime        | 2.64 min               | 1.00 min                | 59.33 min                 |
-| 8-core Runtime        | 1.57 min               | 38.1 sec                | 32.01 min                 |
-| 16-core Runtime       | 56.4 sec               | 30.3 sec                | 18.71 min                 |
-| 32-core Runtime       | 46.2 sec               | 29.0 sec                | 12.53 min                 |
-| 48-core Runtime       | 49.3 sec               | 36.6 sec                | 10.11 min                 |
-| 64-core Runtime       | 54.1 sec               | 42.1 sec                | 11.18 min                 |
+| file size             | 0.6 GB (288, 450, 600) | 0.2 GB (20, 1100, 1364) | 15.0 GB (575, 1430, 2345) |
+| 1-Core Runtime        | 12 min                 | 3 min                   | 236 min                   |
+| 2-core Runtime        | 6 min                  | 2 min                   | 121 min                   |
+| 4-core Runtime        | 3 min                  | 1 min                   | 59 min                    |
+| 8-core Runtime        | 2 min                  | 38 sec                  | 32 min                    |
+| 16-core Runtime       | 56 sec                 | 30 sec                  | 19 min                    |
+| 32-core Runtime       | 46 sec                 | 29 sec                  | 13 min                    |
+| 48-core Runtime       | 49 sec                 | 37 sec                  | 10 min                    |
+| 64-core Runtime       | 54 sec                 | 42 sec                  | 11 min                    |
 
 ![Dask LocalCluster Performance](https://raw.githubusercontent.com/insarlab/MintPy-tutorial/master/docs/dask_local_cluster_performance.png)
 
-## via `dask_jobqueue` on HPC ##
+## 2. via `dask_jobqueue` on HPC ##
 
-The dask_jobqueue cluster objects (`LSFCluster`, `PBSCluster`, `SLURMCluster`, etc.) accept configuration parameters in two ways: 
-(a) passed directly to the object within the code, or 
-(b) specified in a YAML file and be sourced by dask at runtime. 
+The dask_jobqueue cluster objects (`LSFCluster`, `PBSCluster`, `SLURMCluster`, etc.) accept configuration parameters in two ways:
+
+ a. passed directly to the object within the code, or       
+ b. specified in a YAML file and be sourced by dask at runtime. 
+
 MintPy uses option (b). Any `*.yaml` file in the `~/.config/dask/` directory will be sourced and used by dask regardless of its name. `dask.yaml`,  `distributed.yaml` and `jobqueue.yaml` file will be created in this directory by default during dask installation. 
 
 We provide a MintPy-specific YAML file at `$MINTPY_HOME/mintpy/defaults/mintpy.yaml`. It is recommended to copy this over to the `~/.config/dask/` directory before running MintPy in parallel on your HPC system. One can then modify this file according to their own available computing environment, i.e. naming the configuration by 1) the job scheduler type (lsf, pbs, slurm) or 2) HPC name (stampede, comet, pegasus, etc.). The latter is useful if you are using MintPy on multiple HPC systems or in different resource schemes.
@@ -53,9 +62,19 @@ We provide a MintPy-specific YAML file at `$MINTPY_HOME/mintpy/defaults/mintpy.y
 cp $MINTPY_HOME/mintpy/defaults/mintpy.yaml ~/.config/dask/mintpy.yaml
 ```
 
+To use dask_jobqueue, you can simply run in command line:
+
+```bash
+ifgram_inversion.py inputs/ifgramStack.h5 --cluster slurm --num-worker 4
+ifgram_inversion.py inputs/ifgramStack.h5 --cluster pbs --num-worker 4
+ifgram_inversion.py inputs/ifgramStack.h5 --cluster lsf --num-worker 4
+```
+
+All the other parameters will be grabbed by dask from `~/.config/dask/mintpy.yaml`.
+
 Note on `DASK_CONFIG`: if you would like to not use the ~/.config/dask/ directory to store your configuration files for some reason, you can also set the `DASK_CONFIG` environment variable to a custom directory. Any YAML files in this directory will be searched and added to the dask configuration object for the dask_jobqueue cluster object. However, files in `DASK_CONFIG` directory has lower priority than the `~/.config/dask/` directory. However, it is **generally NOT recommended** to set a custom DASK_CONFIG variable.
 
-### Configuration parameters in `~/.config/dask/mintpy.yaml` ###
+### 2.1 Configuration parameters in `~/.config/dask/mintpy.yaml` ###
 
 **name:** Name of the worker job as it will appear to the job scheduler. Any values are perfectly fine.
 
@@ -73,7 +92,7 @@ It is generally **recommended** by dask to keep the number of processes low and 
 
 It is recommended to use relatively short walltimes for MintPy (the test dataset uses `wall time: 00:30:00` (30 minutes)) to have a higher priority in the job queue, but not too short, or your job may never connect to the dask scheduler and finish its computation (when in doubt, start small and work towards larger wall times as needed). 
 
-Note that the walltime format changes slightly depending on the job scheduler that is in place on your HPC system. For `LSF` schedulers, walltime is accepted and expected to be in `HH:MM` format, while `SLURM` and `PBS` schedulers only accept walltime in `HH:MM:SS` format. MintPy will attempt to automatically convert the provided input to the proper format.
+Note that the walltime format changes slightly depending on the job scheduler that is in place on your HPC system. For `LSF` schedulers, walltime is accepted and expected to be in `HH:MM` format, while `SLURM` and `PBS` schedulers only accept walltime in `HH:MM:SS` format.
 
 **queue:** Scheduler queue to submit your jobs to. Most systems have several different queues with different amounts and types of resources you can request. For this reason, it is important to check with your HPC cluster admin or documentation to determine the most appropriate queue and what resources are available on that queue. Requesting for more resources (core, memory, nodes, etc.) on a queue than are available often leads to your jobs being rejected from queue, and can, on some systems, lead to fines or account suspensions.
 
@@ -85,7 +104,7 @@ Note that the walltime format changes slightly depending on the job scheduler th
 
 *There are a multitude of other configuration options that can be specified to dask to further customize the way in which jobs are run and executed on your HPC cluster, but the above are the most commonly used ones for MintPy. For further details and info on possible config options, see the [dask_jobqueue documentation](https://jobqueue.dask.org/en/latest/configuration.html)*
 
-### Control parameters in `smallbaselineApp.cfg` ###
+### 2.2 Control parameters in `smallbaselineApp.cfg` ###
 
 There are 4 options related to the dask features that can be controlled in MintPy via the `smallbaselineApp.cfg` file:
 
@@ -95,22 +114,3 @@ mintpy.compute.config    = auto #[name / no], name of the configuration section 
 mintpy.compute.numWorker = auto #[int > 1], number of worker to submit and run, auto for 4 (local) or 40 (non-local), set to "all" to use all available cores.
 mintpy.compute.walltime  = auto #[HH:MM], walltime to be used for each dask job, auto for 00:40.
 ```
-
-### Testing dask ###
-
-Test `LocalCuster` on your system using:
-```
-cd FernandinaSenDT128/mintpy
-ifgram_inversion.py inputs/ifgramStack.h5 --cluster local -w no --num-worker 2
-ifgram_inversion.py inputs/ifgramStack.h5 --cluster local -w no --num-worker 8
-```
-It should take around 30 seconds. `-w no` switches off weighting in the network inversion, which increases computational speed at the cost of accuracy. Leaving out the `-w` option will cause `ifgram_inversion.py` to use a more accurate, but much slower inversion algorithm. 
-
-To test `dask_jobqueue`, try:
-```
-ifgram_inversion.py inputs/ifgramStack.h5 --cluster slurm -w no --num-worker 4
-ifgram_inversion.py inputs/ifgramStack.h5 --cluster pbs -w no --num-worker 4
-ifgram_inversion.py inputs/ifgramStack.h5 --cluster lsf -w no --num-worker 4
-```
-In this case the `mintpy.yaml` is used.
-
