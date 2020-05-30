@@ -42,17 +42,17 @@ smallbaselineApp.py -t smallbaselineApp.cfg
 
 To show the run time improvement, we test three datasets (Galapagos, Fernandina, and Kilauea) with different number of cores and same amount of allocated memory (4 GB) on a compute node in the [Stampede2 cluster's skx-normal queue](https://portal.tacc.utexas.edu/user-guides/stampede2#overview-skxcomputenodes). Results are as below:
 
-|                       | Fernandina             | South Isabela           | Kilauea                   |
-|-----------------------|------------------------|-------------------------|---------------------------|
-| file size             | 0.6 GB (288, 450, 600) | 0.2 GB (20, 1100, 1364) | 15.0 GB (575, 1430, 2345) |
-| 1-Core Runtime        | 12 min                 | 3 min                   | 236 min                   |
-| 2-core Runtime        | 6 min                  | 2 min                   | 121 min                   |
-| 4-core Runtime        | 3 min                  | 1 min                   | 59 min                    |
-| 8-core Runtime        | 2 min                  | 38 sec                  | 32 min                    |
-| 16-core Runtime       | 56 sec                 | 30 sec                  | 19 min                    |
-| 32-core Runtime       | 46 sec                 | 29 sec                  | 13 min                    |
-| 48-core Runtime       | 49 sec                 | 37 sec                  | 10 min                    |
-| 64-core Runtime       | 54 sec                 | 42 sec                  | 11 min                    |
+|                       | South Isabela           | Fernandina             | Kilauea                   |
+|-----------------------|-------------------------|------------------------|---------------------------|
+| file size             | 0.2 GB (20, 1100, 1364) | 0.6 GB (288, 450, 600) | 15.0 GB (575, 1430, 2345) |
+| 1-Core Runtime        | 3 min                   | 12 min                 | 236 min                   |
+| 2-core Runtime        | 2 min                   | 6 min                  | 121 min                   |
+| 4-core Runtime        | 1 min                   | 3 min                  | 59 min                    |
+| 8-core Runtime        | 38 sec                  | 2 min                  | 32 min                    |
+| 16-core Runtime       | 30 sec                  | 56 sec                 | 19 min                    |
+| 32-core Runtime       | 29 sec                  | 46 sec                 | 13 min                    |
+| 48-core Runtime       | 37 sec                  | 49 sec                 | 10 min                    |
+| 64-core Runtime       | 42 sec                  | 54 sec                 | 11 min                    |
 
 ![Dask LocalCluster Performance](https://raw.githubusercontent.com/insarlab/MintPy-tutorial/master/docs/dask_local_cluster_performance.png)
 
