@@ -1,33 +1,36 @@
 # Configure dask for parallel processing #
 
-`dask` and `dask_jobqueue`, maintained by the [dask organization](https://dask.org/), provide the ability to run python code in parallel across multiple machines or across multiple computing cores on a single machine. The base `dask` library provides wrappers around two common python libraries (`numpy` and `pandas`) to perform common computations, such as data transformations and matrix operations, in parallel. The `dask_jobqueue` library adds the ability to submit data and python commands to an High Performance Cluster (HPC) job scheduler, such as `PBS`, `LSF` and `SLURM`. Internally, dask handles waiting for each task to complete (since jobs could finish in a different order they were submitted) and properly merging the outputs back together. 
+Most computations in MintPy are operated in either a pixel-by-pixel or a epoch-by-epoch basis. This implementation strategy allows processing different blocks (in space or in time) in parallel. For this purpose, we use the [`Dask`](https://docs.dask.org/en/latest/) library for its danymic task scheduling and data collection. Dask support is currently implemented in `ifgram_inversion.py` only (expansions to other modules are welcomed) through a thin wrapper in [`mintpy.objects.cluster`](https://github.com/insarlab/MintPy/blob/master/mintpy/objects/cluster.py). We have tested two types of clusters:
 
-MintPy uses dask for parallel processing (currently implemeted only in `ifgram_inversion.py`) in two ways: 
++ **local cluster:** on a single machine (laptop or computing node) with multiple CPU cores, suitable for laptops, local cluster/stations and distributed High Performance Cluster (HPC). No job scheduler is required. This is turned ON by default.
++ **non-local cluster:** on a distributed HPC with job scheduler installed, including PBS, LSF and SLURM.
 
-+ locally on a single machine with multiple CPU cores via `Dask.distributed.LocalCluster`. 
-+ on a distributed HPC via job schedulera defined in `dask_jobqueue`. The various parameters are specified in a YAML file in `~/.config/dask/` directory to determine the amount of computing resources that allocated to each dask “worker” by the job scheduler.
+Below is a brief description of the required options and recommended best practices for each cluster/scheduler.
 
-The required options and recommended best practices for each cluster/scheduler differ slightly and are covered in the following section.
+## 1. local cluster ##
 
-## 1. via `LocalCluster` ##
+The parallel processing on a single machine is supported via [`Dask.distributed.LocalCluster`](https://docs.dask.org/en/latest/setup/single-distributed.html#localcluster). This is recommended if you are running MintPy on a local machine with multiple available cores, or on an HPC but wish to allocate only a single node's worth of resources. This is turned on by default.
 
-Recommended if you are running MintPy on a local machine with multiple available cores, or if you have access to an HPC cluster but wish to allocate only a single node's worth of resources but still take advantage of multiple cores. 
-
-To use LocalCluster, you can simply run in command line:
+To use it, one can run the script in command line:
 
 ```bash
 ifgram_inversion.py inputs/ifgramStack.h5 --cluster local
 ifgram_inversion.py inputs/ifgramStack.h5 --cluster local --num-worker 8
 ```
 
-or in the template file:
+or adjust options in the template file as below and feed it to the script:
 
 ```cfg
 mintpy.compute.cluster    = local
 mintpy.compute.numWorkers = auto   #auto for 4 (local) or 40 (non-local), set to "all" to use all available cores.
 ```
 
-`numWorkers = all` will allocate `multiprocessing.cpu_count()` number of workers to the dask computation. If the specified number of workers exceeds system resources, `multiprocessing.cpu_count()/2` number of workers will be submitted instead to avoid overtaxing local systems.
+```bash
+ifgram_inversion.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg
+smallbaselineApp.py -t smallbaselineApp.cfg
+```
+
+`numWorkers = all` will allocate `multiprocessing.cpu_count()` number of workers to the dask computation (for local cluster only). If the specified number of workers exceeds system resources, `multiprocessing.cpu_count()/2` number of workers will be submitted instead to avoid overtaxing local systems.
 
 ### 1.1 Runtime performance test on Stampede2 ###
 
@@ -47,34 +50,42 @@ To show the run time improvement, we test three datasets (Galapagos, Fernandina,
 
 ![Dask LocalCluster Performance](https://raw.githubusercontent.com/insarlab/MintPy-tutorial/master/docs/dask_local_cluster_performance.png)
 
-## 2. via `dask_jobqueue` on HPC ##
+## 2. non-local cluster on HPC ##
 
-The dask_jobqueue cluster objects (`LSFCluster`, `PBSCluster`, `SLURMCluster`, etc.) accept configuration parameters in two ways:
+The parallel proceesing on multiple machines is supported via [`Dask-jobqueue`](https://jobqueue.dask.org/en/latest/index.html). One can specify configuration either with keyword arguments when creating a `Cluster` object, or with a configuration file in YAML format. MintPy assumes the YAML configuration file only.
 
- a. passed directly to the object within the code, or       
- b. specified in a YAML file and be sourced by dask at runtime. 
-
-MintPy uses option (b). Any `*.yaml` file in the `~/.config/dask/` directory will be sourced and used by dask regardless of its name. `dask.yaml`,  `distributed.yaml` and `jobqueue.yaml` file will be created in this directory by default during dask installation. 
-
-We provide a MintPy-specific YAML file at `$MINTPY_HOME/mintpy/defaults/mintpy.yaml`. It is recommended to copy this over to the `~/.config/dask/` directory before running MintPy in parallel on your HPC system. One can then modify this file according to their own available computing environment, i.e. naming the configuration by 1) the job scheduler type (lsf, pbs, slurm) or 2) HPC name (stampede, comet, pegasus, etc.). The latter is useful if you are using MintPy on multiple HPC systems or in different resource schemes.
+We provide an example [YAML configuration file](https://github.com/insarlab/MintPy/blob/master/mintpy/defaults/mintpy.yaml), besides the `dask.yaml`,  `distributed.yaml` and `jobqueue.yaml` files in `~/.config/dask` installed by dask by default. One can copy it over to the `~/.config/dask` directory as below for dask to identify and use it.
 
 ```bash
 cp $MINTPY_HOME/mintpy/defaults/mintpy.yaml ~/.config/dask/mintpy.yaml
 ```
 
-To use dask_jobqueue, you can simply run in command line:
+To use it, one can run the script in command line:
 
 ```bash
-ifgram_inversion.py inputs/ifgramStack.h5 --cluster slurm --num-worker 4
-ifgram_inversion.py inputs/ifgramStack.h5 --cluster pbs --num-worker 4
-ifgram_inversion.py inputs/ifgramStack.h5 --cluster lsf --num-worker 4
+ifgram_inversion.py inputs/ifgramStack.h5 --cluster slurm --config slurm --num-worker 40
+ifgram_inversion.py inputs/ifgramStack.h5 --cluster pbs --config pbs --num-worker 40
+ifgram_inversion.py inputs/ifgramStack.h5 --cluster lsf --config lsf --num-worker 40
 ```
 
-All the other parameters will be grabbed by dask from `~/.config/dask/mintpy.yaml`.
+or adjust options in the template file as below and feed it to the script:
 
-Note on `DASK_CONFIG`: if you would like to not use the ~/.config/dask/ directory to store your configuration files for some reason, you can also set the `DASK_CONFIG` environment variable to a custom directory. Any YAML files in this directory will be searched and added to the dask configuration object for the dask_jobqueue cluster object. However, files in `DASK_CONFIG` directory has lower priority than the `~/.config/dask/` directory. However, it is **generally NOT recommended** to set a custom DASK_CONFIG variable.
+```cfg
+mintpy.compute.cluster   = auto #[lsf / pbs / slurm / local], job scheduler in your HPC system, auto for local.
+mintpy.compute.numWorker = auto #[int > 1], number of worker to submit and run, auto for 4 (local) or 40 (non-local)
+mintpy.compute.config    = auto #[name / no], name of the configuration section in YAML file, auto for no (to use the same name as the cluster type specified above)
+```
+
+```bash
+ifgram_inversion.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg
+smallbaselineApp.py -t smallbaselineApp.cfg
+```
+
+Note on `DASK_CONFIG`: besides the default `~/.config/dask` directory, one can use the `DASK_CONFIG` environmental variable to use a custom directory to store the configuration files. However, it has lower priority than the default directory; and it is **generally NOT recommended**.
 
 ### 2.1 Configuration parameters in `~/.config/dask/mintpy.yaml` ###
+
+We provide a brief description below for the most commonly used configurations of dask-jobqueue for MintPy. Users are recommended to check [Dask-Jobqueue](https://jobqueue.dask.org/en/latest/configuration-setup.html) for more detailed and comprehensive documentaion. 
 
 **name:** Name of the worker job as it will appear to the job scheduler. Any values are perfectly fine.
 
@@ -101,16 +112,3 @@ Note that the walltime format changes slightly depending on the job scheduler th
 **interface:** Network interface being used by your HPC cluster. For all tested clusters, this has been the `ib0` interface. Available network interfaces can be fond by running `ipconfig` on your login node.
 
 **job-extra:** This allows you to specify additional scheduler parameters that are not support out of the box by dask. For example, some `SLURM` clusters require the presence of the `--nodes` SBATCH directive in order to be accepted by the job scheduler, but dask does not use this directive directly. It can instead be specified in the `job-extra` array, and will be written with the other directive at submit time.
-
-*There are a multitude of other configuration options that can be specified to dask to further customize the way in which jobs are run and executed on your HPC cluster, but the above are the most commonly used ones for MintPy. For further details and info on possible config options, see the [dask_jobqueue documentation](https://jobqueue.dask.org/en/latest/configuration.html)*
-
-### 2.2 Control parameters in `smallbaselineApp.cfg` ###
-
-There are 4 options related to the dask features that can be controlled in MintPy via the `smallbaselineApp.cfg` file:
-
-```cfg
-mintpy.compute.cluster   = auto #[lsf / pbs / slurm / local], job scheduler in your HPC system auto for local.
-mintpy.compute.config    = auto #[name / no], name of the configuration section in YAML file, auto for no (to use the same name as the cluster type specified above)
-mintpy.compute.numWorker = auto #[int > 1], number of worker to submit and run, auto for 4 (local) or 40 (non-local), set to "all" to use all available cores.
-mintpy.compute.walltime  = auto #[HH:MM], walltime to be used for each dask job, auto for 00:40.
-```
