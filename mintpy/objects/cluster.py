@@ -288,7 +288,7 @@ class DaskCluster:
 
 
     def move_dask_stdout_stderr_files(self):
-        """Move  *o and *e files produced by dask into stdout and sderr directory """
+        """Move *o and *e files produced by dask into stdout and sderr directory"""
 
         stdout_files = glob.glob('*.o')
         stderr_files = glob.glob('*.e')
@@ -297,8 +297,8 @@ class DaskCluster:
         if len(stdout_files + stderr_files + job_files) == 0:
             return
 
-        stdout_folder = 'stdout_ifgram_inversion_dask'
-        stderr_folder = 'stderr_ifgram_inversion_dask'
+        stdout_folder = 'stdout_dask'
+        stderr_folder = 'stderr_dask'
         for std_dir in [stdout_folder, stderr_folder]:
             if os.path.isdir(std_dir):
                 shutil.rmtree(std_dir)
