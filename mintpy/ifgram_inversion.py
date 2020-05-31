@@ -120,8 +120,7 @@ def create_parser():
                      help='Cluster to use for parallel computing, no to turn OFF. (default: %(default)s).')
     par.add_argument('--num-worker', dest='numWorker', type=str, default='4',
                      help='Number of workers to use (default: %(default)s).')
-
-    par.add_argument('--config', '--config-name', dest='config', type=str, default='no', 
+    par.add_argument('--config', '--config-name', dest='config', type=str, default=None, 
                      help='Configuration name to use in dask.yaml (default: %(default)s).')
 
     # update / skip
@@ -920,7 +919,7 @@ def ifgram_inversion(inps=None):
     ts_obj.layout_hdf5(dsNameDict, metadata)
 
     # prepare the input arguments for *_patch()
-    kwargs = {
+    data_kwargs = {
         "ifgram_file"       : inps.ifgramStackFile,
         "ref_phase"         : inps.refPhase,
         "obs_ds_name"       : inps.obsDatasetName,
@@ -940,36 +939,37 @@ def ifgram_inversion(inps=None):
         # initiate the output matrice for the box
         box_width  = box[2] - box[0]
         box_length = box[3] - box[1]
-        tsi = np.zeros((num_date, box_length, box_width), np.float32)
-        temp_cohi    = np.zeros((box_length, box_width), np.float32)
-        num_inv_ifgi = np.zeros((box_length, box_width), np.float32)
         print('box width:  {}'.format(box_width))
         print('box length: {}'.format(box_length))
 
-        kwargs['box'] = box
+        data_kwargs['box'] = box
         if inps.cluster.lower() == 'no':
-            tsi, temp_cohi, num_inv_ifgi, box = ifgram_inversion_patch(**kwargs)
+            tsi, temp_cohi, num_inv_ifgi, box = ifgram_inversion_patch(**data_kwargs)
 
         else:
-            print('\n\n'+'------- start parallel processing using dask -------'+'\n\n')
-
             from mintpy.objects.cluster import DaskCluster
 
-            # need to be in same order as is returned by ifgram_inversion_patch
-            master_results = [tsi, temp_cohi, num_inv_ifgi]
+            print('\n\n------- start parallel processing using Dask -------')
 
-            # intiate the dask cluster and client
-            # Look at the ~/.config/dask/mintpy.yaml file for changing the Dask configuration defaults
-            cluster_obj = DaskCluster(cluster_type=inps.cluster, num_workers=inps.numWorker, config_name=inps.config)
+            # initiate the output data
+            tsi = np.zeros((num_date, box_length, box_width), np.float32)
+            temp_cohi    = np.zeros((box_length, box_width), np.float32)
+            num_inv_ifgi = np.zeros((box_length, box_width), np.float32)
+            out_data_list = [tsi, temp_cohi, num_inv_ifgi]
 
-            # Handles submitting and recompiling all of the dask workers
-            tsi, temp_cohi, num_inv_ifgi = cluster_obj.run(ifgram_inversion_patch, kwargs, master_results)
+            # initiate dask cluster and client
+            cluster_obj = DaskCluster(inps.cluster, inps.numWorker, config_name=inps.config)
+            cluster_obj.open()
 
-            # Closes open connections to both the cluster and client objects
-            # and moves output/error files to the proper directories
-            cluster_obj.cleanup()
+            # run dask
+            tsi, temp_cohi, num_inv_ifgi = cluster_obj.run(func=ifgram_inversion_patch,
+                                                           func_data=data_kwargs,
+                                                           results=out_data_list)
 
-            print('\n\n------- finished parallel processing -------\n\n')
+            # close dask cluster and client
+            cluster_obj.close()
+
+            print('------- finished parallel processing -------\n\n')
 
         # write the block of timeseries to disk
         block = [0, num_date, box[1], box[3], box[0], box[2]]
