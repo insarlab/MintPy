@@ -25,14 +25,13 @@ CLUSTER_LIST = ['lsf', 'pbs', 'slurm', 'local']
 
 class DaskCluster:
     """
-    A generic wrapper of dask clusters for parallel processing blocks in space or in time
+    Generic dask cluster wrapper for parallel processing blocks in space or in time
 
-    Example:
-
+    Check ifgram_inversion.py as an example.
     """
 
     def __init__(self, cluster_type, num_worker, config_name=None, **kwargs):
-        """Generic dask cluster wrapper
+        """Initiate object
         :param cluster_type: str, cluster to use (local, slurm, lsf, pbs)
         :param num_worker: int, number of workers to use
         :other param **kwargs: dask configuration parameters
@@ -60,7 +59,7 @@ class DaskCluster:
 
 
     def open(self):
-        """initiate and scale the cluster"""
+        """Initiate and scale the cluster"""
 
         # initiate the cluster object
         # Look at the ~/.config/dask/mintpy.yaml file for changing the Dask configuration defaults
@@ -93,11 +92,13 @@ class DaskCluster:
                 msg += '\nsupported clusters: {}'.format(CLUSTER_LIST)
                 raise ValueError(msg)
 
+            # show dask cluster job script for reference
             print("\n", self.cluster.job_script())
             # for debug
             debug_mode = False
             if debug_mode:
-                self.write_job_script()
+                with open('dask_command_run_from_python.txt', 'w') as f:
+                    f.write(self.cluster.job_script() + '\n')
 
         # This line submits num_worker jobs to the cluster to start a bunch of workers
         # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
@@ -109,7 +110,10 @@ class DaskCluster:
 
 
     def run(self, func, func_data, results):
-        """ Wrapper function encapsulating submit_workers and compile_workers.
+        """Wrapper function encapsulating submit_workers and compile_workers.
+
+        For a generic result collection without prior knowledge of the computing function,
+        we assume that the output of "func" is: several 2D or 3D matrices + a box
 
         :param func: function, a python function to run in parallel
         :param func_data: dict, a dictionary of the argument to pass to the function
@@ -137,7 +141,7 @@ class DaskCluster:
 
 
     def submit_job(self, func, func_data):
-        """ Submits dask workers to the networking client that run the specified function (func)
+        """Submit dask workers to the networking client that run the specified function (func)
         on the specified data (func_data). Each dask worker is in charge of a small subbox of the main box.
 
         :param func: function, a python function to run in parallel
@@ -161,7 +165,7 @@ class DaskCluster:
 
 
     def collect_result(self, results):
-        """ Compiles results from completed workers and recompiles their sub outputs into the output
+        """Compile results from completed workers and recompiles their sub outputs into the output
         for the complete box being worked on.
 
         :param results: list[numpy.nd.array], arrays of the appropriate structure representing
@@ -208,7 +212,8 @@ class DaskCluster:
 
 
     def close(self):
-        """ Closes connections to dask client and cluster and moves dask output/error files. """
+        """Close connections to dask client and cluster and moves dask output/error files. """
+
         self.cluster.close()
         print('close dask cluster')
 
@@ -251,15 +256,8 @@ class DaskCluster:
         return sub_boxes
 
 
-    def write_job_script(self):
-        """ Writes the dask cluster job script to a file for reference. """
-        with open('dask_command_run_from_python.txt', 'w') as f:
-            f.write(self.cluster.job_script() + '\n')
-        return
-
-
     def format_config_name(self):
-        """ Formats dask config_name property based on presence or absence of user specified config name.
+        """Formats dask config_name property based on presence or absence of user specified config name.
 
         :param config_name: str, the user specified config name to use
         :param cluster_type: str, the type of HPC cluster being used (slurm, lsf, pbs)
@@ -290,7 +288,7 @@ class DaskCluster:
 
 
     def move_dask_stdout_stderr_files(self):
-        """ move  *o and *e files produced by dask into stdout and sderr directory """
+        """Move  *o and *e files produced by dask into stdout and sderr directory """
 
         stdout_files = glob.glob('*.o')
         stderr_files = glob.glob('*.e')

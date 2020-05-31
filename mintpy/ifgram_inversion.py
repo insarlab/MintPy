@@ -500,6 +500,7 @@ def split2boxes(dataset_shape, memory_size=4, print_msg=True):
 
     return box_list
 
+
 def check_design_matrix(ifgram_file, weight_func='var'):
     """
     Check Rank of Design matrix for weighted inversion
@@ -944,7 +945,7 @@ def ifgram_inversion(inps=None):
 
         data_kwargs['box'] = box
         if inps.cluster.lower() == 'no':
-            tsi, temp_cohi, num_inv_ifgi, box = ifgram_inversion_patch(**data_kwargs)
+            tsi, temp_cohi, num_inv_ifgi = ifgram_inversion_patch(**data_kwargs)[:-1]
 
         else:
             from mintpy.objects.cluster import DaskCluster

@@ -650,24 +650,27 @@ def check_template_auto_value(templateDict, auto_file='../defaults/smallbaseline
 
     # if cluster != local, change auto value of numWorker
     cluster_key = 'mintpy.compute.cluster'
-    num_worker_key = 'mintpy.compute.numWorker'
-    cluster = templateDict.get(cluster_key, templateAutoDict[cluster_key]).lower()
+    cluster = templateDict.get(cluster_key, 'auto').lower()
+    if cluster == 'auto':
+        cluster = templateAutoDict[cluster_key]
+
     if cluster != 'local':
-        templateAutoDict[num_worker_key] = '40'
+        templateAutoDict['mintpy.compute.numWorker'] = '40'
 
     ## Update auto value of input template dict
     for key, value in templateDict.items():
         if value == 'auto' and key in templateAutoDict.keys():
             templateDict[key] = templateAutoDict[key]
 
-    # Change yes --> True and no --> False
-    specialValues = {'yes': True,
-                     'True': True,
-                     'no': False,
-                     'False': False,
-                     'none': None,
+    # Change yes --> True, no --> False and none --> None
+    specialValues = {'yes'  : True,
+                     'true' : True,
+                     'no'   : False,
+                     'false': False,
+                     'none' : None,
                      }
     for key, value in templateDict.items():
+        value = value.lower()
         if value in specialValues.keys():
             templateDict[key] = specialValues[value]
 
