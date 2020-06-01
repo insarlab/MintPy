@@ -180,7 +180,8 @@ class DaskCluster:
                the final output of processed box (need to be in the same order as the function passed in
                submit_workers returns in)
         :param box: numpy.nd.array, the initial complete box being processed
-        :param
+        :param submission_time: time, the time of submission of the dask workers (used to determine worker
+               runtimes as a performance diagnostic)
         :return: results: tuple(numpy.nd.arrays), the processed results of the box
         """
 
