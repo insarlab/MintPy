@@ -40,7 +40,7 @@ class DaskCluster:
 
     """
 
-    def __init__(self, cluster_type, num_worker, config_name=None, **kwargs):
+    def __init__(self, cluster_type, num_worker, config_name=None):
         """Initiate object
         :param cluster_type: str, cluster to use (local, slurm, lsf, pbs)
         :param num_worker: int, number of workers to use
@@ -51,7 +51,6 @@ class DaskCluster:
         self.cluster_type = cluster_type.lower()
         self.num_worker = num_worker
         self.config_name = config_name
-        self.kwargs = kwargs
 
         # format input config name
         self.format_config_name()
@@ -65,10 +64,7 @@ class DaskCluster:
         self.cluster = None
         self.client = None
 
-        return
-
-
-    def open(self):
+    def open(self, **kwargs):
         """Initiate and scale the cluster"""
 
         # initiate the cluster object
@@ -85,17 +81,17 @@ class DaskCluster:
             except ImportError:
                 raise ImportError('Cannot import dask_jobqueue!')
 
-            self.kwargs['config_name'] = self.config_name
+            kwargs['config_name'] = self.config_name
 
             # initiate cluster object
             if self.cluster_type == 'lsf':
-                self.cluster = jobqueue.LSFCluster(**self.kwargs)
+                self.cluster = jobqueue.LSFCluster(**kwargs)
 
             elif self.cluster_type == 'pbs':
-                self.cluster = jobqueue.PBSCluster(**self.kwargs)
+                self.cluster = jobqueue.PBSCluster(**kwargs)
 
             elif self.cluster_type == 'slurm':
-                self.cluster = jobqueue.SLURMCluster(**self.kwargs)
+                self.cluster = jobqueue.SLURMCluster(**kwargs)
 
             else:
                 msg = 'un-recognized input cluster: {}'.format(self.cluster_type)
@@ -118,7 +114,6 @@ class DaskCluster:
 
         return
 
-
     def run(self, func, func_data, results):
         """Wrapper function encapsulating submit_workers and compile_workers.
 
@@ -139,28 +134,32 @@ class DaskCluster:
         self.client = Client(self.cluster)
 
         # split the primary box into sub boxes for each worker
-        self.box = func_data["box"]
-        self.sub_boxes = self.split_box2sub_boxes(self.box, num_split=self.num_worker, dimension='x')
-        print('split patch into {} sub boxes in x direction for workers to process'.format(len(self.sub_boxes)))
+        box = func_data["box"]
+        sub_boxes = self.split_box2sub_boxes(box, num_split=self.num_worker, dimension='x')
+        print('split patch into {} sub boxes in x direction for workers to process'.format(len(sub_boxes)))
 
         # submit job for each worker
-        futures = self.submit_job(func, func_data)
+        futures, sub_time = self.submit_job(func, func_data, sub_boxes)
 
         # assemble results from all workers
-        return self.collect_result(futures, results)
+        return self.collect_result(futures, results, box, sub_time)
 
-
-    def submit_job(self, func, func_data):
+    def submit_job(self, func, func_data, boxes):
         """Submit dask workers to the networking client that run the specified function (func)
         on the specified data (func_data). Each dask worker is in charge of a small subbox of the main box.
 
         :param func: function, a python function to run in parallel
         :param func_data: dict, a dictionary of the argument to pass to the function
+        :param boxes: list(np.nd.array), list of boxes to be computed in parallel
+
+        :return futures: list(dask.Future), list of futures representing future dask worker calculations
+        :return submission_time: time, the time of submission of the dask workers (used to determine worker
+                runtimes as a performance diagnostic)
         """
 
-        self.start_time_sub = time.time()
+        start_time_sub = time.time()
         futures = []
-        for i, sub_box in enumerate(self.sub_boxes):
+        for i, sub_box in enumerate(boxes):
             print('submit a job to the worker for sub box {}: {}'.format(i, sub_box))
             func_data['box'] = sub_box
 
@@ -171,16 +170,17 @@ class DaskCluster:
             future = self.client.submit(func, **func_data, retries=3)
             futures.append(future)
 
-        return futures
+        return futures, start_time_sub
 
-
-    def collect_result(self, futures, results):
+    def collect_result(self, futures, results, box, submission_time):
         """Compile results from completed workers and recompiles their sub outputs into the output
         for the complete box being worked on.
-
+        :param futures: list(dask.Future), list of futures representing future dask worker calculations
         :param results: list[numpy.nd.array], arrays of the appropriate structure representing
                the final output of processed box (need to be in the same order as the function passed in
                submit_workers returns in)
+        :param box: numpy.nd.array, the initial complete box being processed
+        :param
         :return: results: tuple(numpy.nd.arrays), the processed results of the box
         """
 
@@ -189,7 +189,7 @@ class DaskCluster:
 
             # message
             num_future += 1
-            sub_t = time.time() - self.start_time_sub
+            sub_t = time.time() - submission_time
             print("FUTURE #{} complete. Time used: {:.0f} seconds".format(num_future, sub_t))
 
             # catch result - sub_box
@@ -197,10 +197,10 @@ class DaskCluster:
             # to assemble the result from each worker
             sub_box = sub_results[-1]
             x0, y0, x1, y1 = sub_box
-            x0 -= self.box[0]
-            x1 -= self.box[0]
-            y0 -= self.box[1]
-            y1 -= self.box[1]
+            x0 -= box[0]
+            x1 -= box[0]
+            y0 -= box[1]
+            y1 -= box[1]
 
             # catch result - matrices
             # and loop across all of the returned data to rebuild complete box
@@ -220,7 +220,6 @@ class DaskCluster:
 
         return results
 
-
     def close(self):
         """Close connections to dask client and cluster and moves dask output/error files. """
 
@@ -232,7 +231,6 @@ class DaskCluster:
 
         # move *.o/.e files produced by dask in stdout/stderr
         self.move_dask_stdout_stderr_files()
-        return
 
 
     ##### Utilities functions
@@ -319,6 +317,4 @@ class DaskCluster:
 
         for item in stderr_files:
             shutil.move(item, stderr_folder)
-
-        return
 
