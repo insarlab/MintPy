@@ -119,7 +119,7 @@ def create_parser():
                      help='Cluster to use for parallel computing, no to turn OFF. (default: %(default)s).')
     par.add_argument('--num-worker', dest='numWorker', type=str, default='4',
                      help='Number of workers to use (default: %(default)s).')
-    par.add_argument('--config', '--config-name', dest='config', type=str, default=None, 
+    par.add_argument('--config', '--config-name', dest='config', type=str, default=None,
                      help='Configuration name to use in dask.yaml (default: %(default)s).')
 
     # update / skip
@@ -652,7 +652,6 @@ def calc_weight(stack_obj, box, weight_func='var', dropIfgram=True, chunk_size=1
     L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
 
     num_chunk = int(np.ceil(num_pixel / chunk_size))
-    prog_bar = ptime.progressBar(maxValue=num_chunk)
     print(('convert coherence to weight in chunks of {c} pixels'
            ': {n} chunks in total ...').format(c=chunk_size, n=num_chunk))
 
@@ -672,8 +671,9 @@ def calc_weight(stack_obj, box, weight_func='var', dropIfgram=True, chunk_size=1
                                                   print_msg=print_msg)
         weight[:, c0:c1] = np.sqrt(weight[:, c0:c1])
 
-        prog_bar.update(i+1, every=1, suffix='{} / {}'.format(i+1, num_chunk))
-    prog_bar.close()
+        # print out message
+        if (i+1) % 1 == 0:
+            print('chunk {} / {}'.format(i+1, num_chunk))
 
     return weight
 
@@ -1013,7 +1013,7 @@ def ifgram_inversion(inps=None):
     dsNameDict = {"mask" : (np.float32, (length, width))}
     meta['FILE_TYPE'] = 'mask'
     meta['UNIT'] = '1'
-    writefile.layout_hdf5(inps.numInvFile, dsNameDict, metadata=meta)    
+    writefile.layout_hdf5(inps.numInvFile, dsNameDict, metadata=meta)
 
     ## 3. run the inversion / estimation and write to disk
 
@@ -1072,7 +1072,7 @@ def ifgram_inversion(inps=None):
 
             print('------- finished parallel processing -------\n\n')
 
-        # write the block to disk 
+        # write the block to disk
         # with 3D block in [z0, z1, y0, y1, x0, x1]
         # and  2D block in         [y0, y1, x0, x1]
         # time-series - 3D

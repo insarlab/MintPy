@@ -69,11 +69,11 @@ save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-se
 
 #### 2.3 Customized processing recipe: [example](https://github.com/insarlab/MintPy/blob/master/sh/compare_velocity_with_diff_tropo.sh) ####
 
-MintPy is a toolbox with a lot of individual utility scripts. Check its documentation or simply run the script with `-h / --help` to see its usage, you could build your own customized processing recipe! Here is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections: [link](https://github.com/insarlab/MintPy/blob/master/sh/compare_velocity_with_diff_tropo.sh)
+MintPy is a toolbox with individual utility scripts. Simply run the script with `-h / --help` to see its usage, you could build your own customized processing recipe! Here is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections: [link](https://github.com/insarlab/MintPy/blob/master/sh/compare_velocity_with_diff_tropo.sh)
 
 #### 2.4 Build on top of mintpy python module ####
 
-MintPy is modulized in Python with a lot of utilities class and functions and well commented in the code level. Users who are familiar with Python could build their own functions and modules on top of [`mintpy.objects`](../mintpy/objects) and [`mintpy.utils`](../mintpy/utils). However, we don't have a complete API document website yet (maybe you can contribute this!). Below is an example of reading the 3D matrix of displacement time-series from an HDF5 file.
+MintPy is modulized in Python with utilities classes and functions and well commented in the code level. Users who are familiar with Python could build their own functions and modules on top of [`mintpy.objects`](../mintpy/objects) and [`mintpy.utils`](../mintpy/utils). However, we don't have a complete API document website yet (maybe you can contribute this!). Below is an example of reading the 3D matrix of displacement time-series from an HDF5 file.
 
 ```python
 from mintpy.utils import readfile

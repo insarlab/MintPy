@@ -305,9 +305,15 @@ def get_lat_lon_rdc(meta):
 
 def azimuth2heading_angle(az_angle):
     """Convert azimuth angle from ISCE los.rdr band2 into satellite orbit heading angle
-    ISCE los.band2 is azimuth angle of LOS vector from ground target to the satellite 
-    measured from the north in anti-clockwise as positive
+
+    ISCE-2 los.* file band2 is azimuth angle of LOS vector from ground target to the satellite 
+        measured from the north in anti-clockwise as positive
+
+    Below are typical values in deg for satellites with near-polar orbit:
+        ascending  orbit: heading angle of -12  and azimuth angle of 102
+        descending orbit: heading angle of -168 and azimuth angle of -102
     """
+
     head_angle = -1 * (180 + az_angle + 90)
     head_angle -= np.round(head_angle / 360.) * 360.
     return head_angle
@@ -321,12 +327,14 @@ def enu2los(e, n, u, inc_angle=34., head_angle=-168.):
                 inc_angle  - np.array or float, local incidence angle from vertical
                 head_angle - np.array or float, satellite orbit from the north in clock-wise direction as positive
     Returns:    v_los      - np.array or float, displacement in line-of-sight direction, moving toward satellite as positive
-    For AlosA: inc_angle = 34, head_angle = -12.873
-    For AlosD: inc_angle = 34, head_angle = -167.157
-    For SenD: inc_angle = 34, head_angle = -168
+
+    Typical values in deg for satellites with near-polar orbit:
+        For AlosA: inc_angle = 34, head_angle = -12.9,  az_angle = 102.9
+        For AlosD: inc_angle = 34, head_angle = -167.2, az_angle = -12.8
+        For  SenD: inc_angle = 34, head_angle = -168.0, az_angle = -102
     """
     # if input angle is azimuth angle
-    if (head_angle + 180.) > 45.:
+    if np.abs(np.abs(head_angle) - 90) < 30:
         head_angle = azimuth2heading_angle(head_angle)
 
     inc_angle *= np.pi/180.
