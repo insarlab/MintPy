@@ -25,9 +25,19 @@ CLUSTER_LIST = ['lsf', 'pbs', 'slurm', 'local']
 
 class DaskCluster:
     """
-    Generic dask cluster wrapper for parallel processing blocks in space or in time
+    Generic dask cluster wrapper for parallel processing in blocks.
+
+    This object takes in a computing function for one block in space.
+    For the computing function:
+        1. the output is always several matrices and one box.
+        2. the number of matrices may vary for different applications/functions.
+        3. all matrices will be in 2D in size of (len, wid) or 3D in size of (n, len, wid),
+           thus, the last two dimension (in space) will be the same.
+    This charateristics allows the automatic result collection without prior knowledge
+        of the computing funciton, thus being a generic wrapper.
 
     Check ifgram_inversion.py as an example.
+
     """
 
     def __init__(self, cluster_type, num_worker, config_name=None, **kwargs):

@@ -79,7 +79,7 @@ def create_parser():
 
     # options rarely used or changed
     parser.add_argument('-o', '--output', dest='outfile', nargs=2, metavar=('TS_FILE', 'TCOH_FILE'),
-                        default=['timeseries.h5', 'temporalCoherence.h5'],
+                        default=['timeseries.h5', 'temporalCoherence.h5', 'numInvIfgram.h5'],
                         help='Output file name. (default: %(default)s).')
     parser.add_argument('--ref-date', dest='ref_date', help='Reference date, first date by default.')
     parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',
@@ -198,15 +198,18 @@ def cmd_line_parse(iargs=None):
     # --output option
     if not inps.outfile:
         if inps.obsDatasetName.startswith('unwrapPhase'):
-            inps.outfile = ['timeseries.h5', 'temporalCoherence.h5']
+            inps.outfile = ['timeseries.h5', 'temporalCoherence.h5', 'numInvIfgram.h5']
+
         elif inps.obsDatasetName.startswith('azimuthOffset'):
-            inps.outfile = ['timeseriesAz.h5', 'temporalCoherenceAz.h5']
+            inps.outfile = ['timeseriesAz.h5', 'temporalCoherenceAz.h5', 'numInvOffset.h5']
+
         elif inps.obsDatasetName.startswith('rangeOffset'):
-            inps.outfile = ['timeseriesRg.h5', 'temporalCoherenceRg.h5']
+            inps.outfile = ['timeseriesRg.h5', 'temporalCoherenceRg.h5', 'numInvOffset.h5']
+
         else:
             raise ValueError('un-recognized input observation dataset name: {}'.format(inps.obsDatasetName))
 
-    inps.timeseriesFile, inps.tempCohFile = inps.outfile
+    inps.tsFile, inps.tempCohFile, inps.numInvFile = inps.outfile
 
     return inps
 
@@ -269,7 +272,7 @@ def run_or_skip(inps):
     if flag == 'skip':
         meta_keys = ['REF_Y', 'REF_X']
         atr_ifg = readfile.read_attribute(inps.ifgramStackFile)
-        atr_ts = readfile.read_attribute(inps.timeseriesFile)
+        atr_ts = readfile.read_attribute(inps.tsFile)
         inps.numIfgram = len(ifgramStack(inps.ifgramStackFile).get_date12_list(dropIfgram=True))
 
         if any(str(vars(inps)[key]) != atr_ts.get(key_prefix+key, 'None') for key in configKeys):
@@ -447,25 +450,6 @@ def write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg=None,
     return
 
 
-def write_aux2hdf5_file(metadata, temp_coh, num_inv_ifg=None, suffix='', inps=None):
-
-    # File 2 - temporalCoherence.h5
-    out_file = '{}{}.h5'.format(suffix, os.path.splitext(inps.outfile[1])[0])
-    metadata['FILE_TYPE'] = 'temporalCoherence'
-    metadata['UNIT'] = '1'
-    print('-'*50)
-    writefile.write(temp_coh, out_file=out_file, metadata=metadata)
-
-    # File 3 - numInvIfgram.h5
-    out_file = 'numInvIfgram{}.h5'.format(suffix)
-    metadata['FILE_TYPE'] = 'mask'
-    metadata['UNIT'] = '1'
-    print('-'*50)
-    writefile.write(num_inv_ifg, out_file=out_file, metadata=metadata)
-
-    return None
-
-
 def split2boxes(dataset_shape, memory_size=4, print_msg=True):
     """Split into chunks in rows to reduce memory usage
     Parameters: dataset_shape - tuple of 3 int
@@ -638,11 +622,13 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
 
-    ## debug
+    # debug
     #y, x = 258, 454
     #box = (x, y, x+1, y+1)
 
-    # Size Info - Patch
+    ## 1. input info
+
+    # size
     if box:
         num_row = box[3] - box[1]
         num_col = box[2] - box[0]
@@ -657,7 +643,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     tbase = np.array(ptime.date_list2tbase(date_list)[0], np.float32) / 365.25
     tbase_diff = np.diff(tbase).reshape(-1, 1)
 
-    # Design matrix
+    # design matrix
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
     A, B = stack_obj.get_design_matrix4timeseries(date12_list=date12_list)[0:2]
 
@@ -671,13 +657,22 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     #time_idx = [i for i in range(num_date)]
     #time_idx.remove(ref_idx)
 
-    # Initialization of output matrix
-    ts     = np.zeros((num_date, num_pixel), np.float32)
-    #ts_std = np.zeros((num_date, num_pixel), np.float32)
-    temp_coh    = np.zeros(num_pixel, np.float32)
-    num_inv_ifg = np.zeros(num_pixel, np.int16)
+    # skip zero value in the network inversion for phase
+    if 'phase' in obs_ds_name.lower():
+        skip_zero_value = True
+    else:
+        skip_zero_value = False
 
-    # Read/Mask unwrapPhase / offset
+    # 1.1 read / calculate weight from coherence
+    if weight_func in ['no', 'sbas']:
+        weight = None
+    else:
+        L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
+        weight = read_coherence(stack_obj, box=box, dropIfgram=True)
+        weight = decor.coherence2weight(weight, weight_func, L=L, epsilon=5e-2)
+        weight = np.sqrt(weight)
+
+    # 1.2 read / mask unwrapPhase / offset
     pha_data = read_unwrap_phase(stack_obj,
                                  box,
                                  ref_phase,
@@ -691,10 +686,10 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
                                  mask_ds_name=mask_ds_name,
                                  mask_threshold=mask_threshold)
 
-    # Mask for pixels to invert
+    # 1.3 mask of pixels to invert
     mask = np.ones(num_pixel, np.bool_)
 
-    # 1 - Water Mask
+    # 1.3.1 - Water Mask
     if water_mask_file:
         print('skip pixels on water with mask from file: {}'.format(os.path.basename(water_mask_file)))
         atr_msk = readfile.read_attribute(water_mask_file)
@@ -707,7 +702,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
         mask *= np.array(waterMask, dtype=np.bool_)
         del waterMask
 
-    # 2 - Mask for Zero Phase in ALL ifgrams
+    # 1.3.2 - Mask for Zero Phase in ALL ifgrams
     if 'phase' in obs_ds_name.lower():
         print('skip pixels with zero/nan value in all interferograms')
         with warnings.catch_warnings():
@@ -717,13 +712,21 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
         mask *= np.multiply(~np.isnan(phase_stack), phase_stack != 0.)
         del phase_stack
 
-    # Invert pixels on mask 1+2
+    # 1.3.3 invert pixels on mask 1+2
     num_pixel2inv = int(np.sum(mask))
     idx_pixel2inv = np.where(mask)[0]
-    print('number of pixels to invert: {} out of {} ({:.1f}%)'.format(num_pixel2inv,
-                                                                      num_pixel,
-                                                                      num_pixel2inv/num_pixel*100))
+    print('number of pixels to invert: {} out of {} ({:.1f}%)'.format(
+        num_pixel2inv, num_pixel, num_pixel2inv/num_pixel*100))
 
+    ## 2. inversion
+
+    # 2.1 initiale the output matrices
+    ts = np.zeros((num_date, num_pixel), np.float32)
+    #ts_std = np.zeros((num_date, num_pixel), np.float32)
+    temp_coh    = np.zeros(num_pixel, np.float32)
+    num_inv_ifg = np.zeros(num_pixel, np.int16)
+
+    # return directly if there is nothing to invert
     if num_pixel2inv < 1:
         ts = ts.reshape(num_date, num_row, num_col)
         #ts_std = ts_std.reshape(num_date, num_row, num_col)
@@ -731,15 +734,10 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
         num_inv_ifg = num_inv_ifg.reshape(num_row, num_col)
         return ts, temp_coh, num_inv_ifg
 
-    # skip zero value in the network inversion for phase
-    if 'phase' in obs_ds_name.lower():
-        skip_zero_value = True
-    else:
-        skip_zero_value = False
-
-    # Inversion - SBAS
+    # 2.2 un-weighted inversion (classic SBAS)
     if weight_func in ['no', 'sbas']:
-        # Mask for Non-Zero Phase in ALL ifgrams (share one B in sbas inversion)
+
+        # a. mask for Non-Zero Phase in ALL ifgrams (share one B in sbas inversion)
         if 'phase' in obs_ds_name.lower():
             mask_all_net = np.all(pha_data, axis=0)
             mask_all_net *= mask
@@ -747,6 +745,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
             mask_all_net = np.array(mask)
         mask_part_net = mask ^ mask_all_net
 
+        # b. invert once for all pixels with obs in all ifgrams
         if np.sum(mask_all_net) > 0:
             print(('inverting pixels with valid phase in all  ifgrams'
                    ' ({:.0f} pixels) ...').format(np.sum(mask_all_net)))
@@ -760,6 +759,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
             temp_coh[mask_all_net] = tcohi
             num_inv_ifg[mask_all_net] = num_ifgi
 
+        # c. pixel-by-pixel for pixels with obs not in all ifgrams
         if np.sum(mask_part_net) > 0:
             print(('inverting pixels with valid phase in some ifgrams'
                    ' ({:.0f} pixels) ...').format(np.sum(mask_part_net)))
@@ -780,15 +780,8 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
                 prog_bar.update(i+1, every=2000, suffix='{}/{} pixels'.format(i+1, num_pixel2inv))
             prog_bar.close()
 
-    # Inversion - WLS
+    # 2.3 weighted inversion - pixel-by-pixel
     else:
-        # calculate weight from coherence
-        L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
-        weight = read_coherence(stack_obj, box=box, dropIfgram=True)
-        weight = decor.coherence2weight(weight, weight_func, L=L, epsilon=5e-2)
-        weight = np.sqrt(weight)
-
-        # weighted inversion pixel by pixel
         print('inverting network of interferograms into time-series ...')
         prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
         for i in range(num_pixel2inv):
@@ -807,12 +800,15 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
         del weight
     del pha_data
 
+    ## 3. prepare output
+
+    # 3.1 reshape
     ts = ts.reshape(num_date, num_row, num_col)
     #ts_std = ts_std.reshape(num_date, num_row, num_col)
     temp_coh = temp_coh.reshape(num_row, num_col)
     num_inv_ifg = num_inv_ifg.reshape(num_row, num_col)
 
-    # convert displacement unit to meter
+    # 3.2 convert displacement unit to meter
     if obs_ds_name.startswith('unwrapPhase'):
         phase2range = -1 * float(stack_obj.metadata['WAVELENGTH']) / (4.*np.pi)
         ts *= phase2range
@@ -838,25 +834,30 @@ def ifgram_inversion(inps=None):
     Example:    inps = cmd_line_parse()
                 ifgram_inversion(inps)
     """
-    start_time = time.time()
 
-    # Check Inputs
     if not inps:
         inps = cmd_line_parse()
+    start_time = time.time()
 
-    # basic info
+    ## 1. input info
+
     stack_obj = ifgramStack(inps.ifgramStackFile)
     stack_obj.open(print_msg=False)
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
     date_list = stack_obj.get_date_list(dropIfgram=True)
     length, width = stack_obj.length, stack_obj.width
 
-    # design matrix
+    # 1.1 read values on the reference pixel
+    inps.refPhase = stack_obj.get_reference_phase(unwDatasetName=inps.obsDatasetName,
+                                                  skip_reference=inps.skip_ref,
+                                                  dropIfgram=True)
+
+    # 1.2 design matrix
     A = stack_obj.get_design_matrix4timeseries(date12_list)[0]
     num_ifgram, num_date = A.shape[0], A.shape[1]+1
     inps.numIfgram = num_ifgram
 
-    # print key setup info
+    # 1.3 print key setup info
     msg = '-------------------------------------------------------------------------------\n'
     if inps.minNormVelocity:
         suffix = 'deformation velocity'
@@ -887,39 +888,55 @@ def ifgram_inversion(inps=None):
     print('number of lines   : {}'.format(length))
     print('number of columns : {}'.format(width))
 
-    # split ifgram_file into blocks to save memory
+    ## 2. prepare output
+
+    # 2.1 metadata
+    meta = dict(stack_obj.metadata)
+    for key in configKeys:
+        meta[key_prefix+key] = str(vars(inps)[key])
+
+    # 2.2 instantiate time-series
+    dsNameDict = {
+        "date"       : (np.dtype('S8'), (num_date,)),
+        "bperp"      : (np.float32,     (num_date,)),
+        "timeseries" : (np.float32,     (num_date, length, width)),
+    }
+
+    meta['FILE_TYPE'] = 'timeseries'
+    meta['UNIT'] = 'm'
+    meta['REF_DATE'] = date_list[0]
+
+    ts_obj = timeseries(inps.tsFile)
+    ts_obj.layout_hdf5(dsNameDict, meta)
+
+    # write date time-series
+    date_list_utf8 = [dt.encode('utf-8') for dt in date_list]
+    ts_obj.write_hdf5_block(date_list_utf8, datasetName='date')
+
+    # write bperp time-series
+    pbase = stack_obj.get_perp_baseline_timeseries(dropIfgram=True)
+    ts_obj.write_hdf5_block(pbase, datasetName='bperp')
+
+    # 2.3 instantiate temporal coherence
+    dsNameDict = {"temporalCoherence" : (np.float32, (length, width))}
+    meta['FILE_TYPE'] = 'temporalCoherence'
+    meta['UNIT'] = '1'
+    meta.pop('REF_DATE')
+    writefile.layout_hdf5(inps.tempCohFile, dsNameDict, metadata=meta)
+
+    # 2.4 instantiate number of inverted observations
+    dsNameDict = {"mask" : (np.float32, (length, width))}
+    meta['FILE_TYPE'] = 'mask'
+    meta['UNIT'] = '1'
+    writefile.layout_hdf5(inps.numInvFile, dsNameDict, metadata=meta)    
+
+    ## 3. run the inversion / estimation and write to disk
+
+    # 3.1 split ifgram_file into blocks to save memory
     box_list = split2boxes(dataset_shape=stack_obj.get_size(), memory_size=inps.memorySize)
     num_box = len(box_list)
 
-    # read ifgram_file in small patches and write them together
-    inps.refPhase = stack_obj.get_reference_phase(unwDatasetName=inps.obsDatasetName,
-                                                  skip_reference=inps.skip_ref,
-                                                  dropIfgram=True)
-
-    # Initialization of output matrix
-    temp_coh    = np.zeros((length, width), np.float32)
-    num_inv_ifg = np.zeros((length, width), np.int16)
-
-    # metadata
-    metadata = dict(stack_obj.metadata)
-    for key in configKeys:
-        metadata[key_prefix+key] = str(vars(inps)[key])
-
-    metadata['REF_DATE'] = date_list[0]
-    metadata['FILE_TYPE'] = 'timeseries'
-    metadata['UNIT'] = 'm'
-
-    # instantiate a timeseries object
-    ts_file = '{}.h5'.format(os.path.splitext(inps.outfile[0])[0])
-    ts_obj = timeseries(ts_file)
-
-    # layout the HDF5 file for the datasets and the metadata
-    dsNameDict = {"date": ((np.dtype('S8'), (num_date,))),
-                  "bperp": (np.float32, (num_date,)),
-                  "timeseries": (np.float32, (num_date, length, width))}
-    ts_obj.layout_hdf5(dsNameDict, metadata)
-
-    # prepare the input arguments for *_patch()
+    # 3.2 prepare the input arguments for *_patch()
     data_kwargs = {
         "ifgram_file"       : inps.ifgramStackFile,
         "ref_phase"         : inps.refPhase,
@@ -932,71 +949,81 @@ def ifgram_inversion(inps=None):
         "min_redundancy"    : inps.minRedundancy
     }
 
-    # invert & write block by block
-    for box_i, box in enumerate(box_list):
-        if num_box > 1:
-            print('\n------- processing patch {} out of {} --------------'.format(box_i+1, num_box))
-
-        # initiate the output matrice for the box
+    # 3.3 invert / write block-by-block
+    for i, box in enumerate(box_list):
         box_width  = box[2] - box[0]
         box_length = box[3] - box[1]
-        print('box width:  {}'.format(box_width))
-        print('box length: {}'.format(box_length))
+        if num_box > 1:
+            print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
+            print('box width:  {}'.format(box_width))
+            print('box length: {}'.format(box_length))
 
         data_kwargs['box'] = box
+
         if inps.cluster.lower() == 'no':
-            tsi, temp_cohi, num_inv_ifgi = ifgram_inversion_patch(**data_kwargs)[:-1]
+            # non-parallel
+            ts, temp_coh, num_inv_ifg = ifgram_inversion_patch(**data_kwargs)[:-1]
 
         else:
+            # parallel
             from mintpy.objects.cluster import DaskCluster
 
             print('\n\n------- start parallel processing using Dask -------')
 
             # initiate the output data
-            tsi = np.zeros((num_date, box_length, box_width), np.float32)
-            temp_cohi    = np.zeros((box_length, box_width), np.float32)
-            num_inv_ifgi = np.zeros((box_length, box_width), np.float32)
-            out_data_list = [tsi, temp_cohi, num_inv_ifgi]
+            ts = np.zeros((num_date, box_length, box_width), np.float32)
+            temp_coh     = np.zeros((box_length, box_width), np.float32)
+            num_inv_ifg  = np.zeros((box_length, box_width), np.float32)
+            out_data_list = [ts, temp_coh, num_inv_ifg]
 
             # initiate dask cluster and client
             cluster_obj = DaskCluster(inps.cluster, inps.numWorker, config_name=inps.config)
             cluster_obj.open()
 
             # run dask
-            tsi, temp_cohi, num_inv_ifgi = cluster_obj.run(func=ifgram_inversion_patch,
-                                                           func_data=data_kwargs,
-                                                           results=out_data_list)
+            ts, temp_coh, num_inv_ifg = cluster_obj.run(func=ifgram_inversion_patch,
+                                                        func_data=data_kwargs,
+                                                        results=out_data_list)
 
             # close dask cluster and client
             cluster_obj.close()
 
             print('------- finished parallel processing -------\n\n')
 
-        # write the block of timeseries to disk
+        # write the block to disk 
+        # with 3D block in [z0, z1, y0, y1, x0, x1]
+        # and  2D block in         [y0, y1, x0, x1]
+        # time-series - 3D
         block = [0, num_date, box[1], box[3], box[0], box[2]]
-        ts_obj.write2hdf5_block(tsi, datasetName='timeseries', block=block)
+        ts_obj.write_hdf5_block(ts, datasetName='timeseries', block=block)
 
-        # save the block of aux datasets
-        temp_coh[box[1]:box[3], box[0]:box[2]] = temp_cohi
-        num_inv_ifg[box[1]:box[3], box[0]:box[2]] = num_inv_ifgi
+        # temporal coherence / number of inverted obs - 2D
+        block = [box[1], box[3], box[0], box[2]]
+        writefile.write_hdf5_block(inps.tempCohFile,
+                                   temp_coh,
+                                   datasetName='temporalCoherence',
+                                   block=block)
 
-    # write date and bperp to disk
-    print('-'*50)
-    date_list_utf8 = [dt.encode('utf-8') for dt in date_list]
-    ts_obj.write2hdf5_block(date_list_utf8, datasetName='date')
+        writefile.write_hdf5_block(inps.numInvFile,
+                                   num_inv_ifg,
+                                   datasetName='mask',
+                                   block=block)
 
-    pbase = stack_obj.get_perp_baseline_timeseries(dropIfgram=True)
-    ts_obj.write2hdf5_block(pbase, datasetName='bperp')
-
-    # reference pixel
+    # 3.4 update output data on the reference pixel
     if not inps.skip_ref:
+        # grab ref_y/x
         ref_y = int(stack_obj.metadata['REF_Y'])
         ref_x = int(stack_obj.metadata['REF_X'])
-        num_inv_ifg[ref_y, ref_x] = num_ifgram
-        temp_coh[ref_y, ref_x] = 1.
+        print('-'*50)
+        print('update values on the reference pixel: ({}, {})'.format(ref_y, ref_x))
 
-    # write auxliary data to files: temporal coherence, number of inv ifgrams, etc.
-    write_aux2hdf5_file(metadata, temp_coh, num_inv_ifg, suffix='', inps=inps)
+        print('set temporal coherence on the reference pixel to 1.')
+        with h5py.File(inps.tempCohFile, 'r+') as f:
+            f['temporalCoherence'][ref_y, ref_x] = 1.
+
+        print('set  # of observations on the reference pixel as {}'.format(num_ifgram))
+        with h5py.File(inps.numInvFile, 'r+') as f:
+            f['mask'][ref_y, ref_x] = num_ifgram
 
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
@@ -1017,7 +1044,7 @@ def main(iargs=None):
 
     else:
         raise NotImplementedError('L1 norm minimization is not fully tested.')
-        #ut.timeseries_inversion_L1(inps.ifgramStackFile, inps.timeseriesFile)
+        #ut.timeseries_inversion_L1(inps.ifgramStackFile, inps.tsFile)
 
     return inps.outfile
 

@@ -278,7 +278,7 @@ class timeseries:
         f.close()
         return self.file
 
-    def write2hdf5_block(self, data, datasetName, block=None, mode='a'):
+    def write_hdf5_block(self, data, datasetName, block=None, mode='a'):
         """Write data to existing HDF5 dataset in disk block by block.
         Parameters: data : np.ndarray 1/2/3D matrix
                     datasetName : str, dataset name
@@ -306,7 +306,8 @@ class timeseries:
                          0, shape[1],
                          0, shape[2]]
 
-        print('open HDF5 file {} in {} mode'.format(self.file, mode))
+        print('-'*50)
+        print('open  HDF5 file {} in {} mode'.format(self.file, mode))
         f = h5py.File(self.file, mode)
 
         print("writing dataset /{:<25} block: {}".format(datasetName, block))
