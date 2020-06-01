@@ -5,7 +5,7 @@
 # Author: Joshua Zahner, David Grossman, Zhang Yunjun, 2020 #
 #############################################################
 # Recommend import:
-#     from mintpy.objects.cluster import DaskCluster
+#     from mintpy.objects import cluster
 
 
 import os
