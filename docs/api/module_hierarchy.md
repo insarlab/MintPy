@@ -7,6 +7,7 @@ Hierarchy of sub-modules within MintPy. Level N modules depends on level N-1, N-
         auto_path
         template
     /objects
+        cluster
         colors
         giant
         ramp

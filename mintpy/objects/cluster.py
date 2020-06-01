@@ -144,10 +144,10 @@ class DaskCluster:
         print('split patch into {} sub boxes in x direction for workers to process'.format(len(self.sub_boxes)))
 
         # submit job for each worker
-        self.submit_job(func, func_data)
+        futures = self.submit_job(func, func_data)
 
         # assemble results from all workers
-        return self.collect_result(results)
+        return self.collect_result(futures, results)
 
 
     def submit_job(self, func, func_data):
@@ -159,7 +159,7 @@ class DaskCluster:
         """
 
         self.start_time_sub = time.time()
-        self.futures = []
+        futures = []
         for i, sub_box in enumerate(self.sub_boxes):
             print('submit a job to the worker for sub box {}: {}'.format(i, sub_box))
             func_data['box'] = sub_box
@@ -169,12 +169,12 @@ class DaskCluster:
             # TODO:  I don't know what to do if a future fails > 3 times. I don't think an error is
             # thrown in that case, therefore I don't know how to recognize when this happens.
             future = self.client.submit(func, **func_data, retries=3)
-            self.futures.append(future)
+            futures.append(future)
 
-        return
+        return futures
 
 
-    def collect_result(self, results):
+    def collect_result(self, futures, results):
         """Compile results from completed workers and recompiles their sub outputs into the output
         for the complete box being worked on.
 
@@ -185,7 +185,7 @@ class DaskCluster:
         """
 
         num_future = 0
-        for future, sub_results in as_completed(self.futures, with_results=True):
+        for future, sub_results in as_completed(futures, with_results=True):
 
             # message
             num_future += 1
@@ -239,12 +239,12 @@ class DaskCluster:
 
     @staticmethod
     def split_box2sub_boxes(box, num_split, dimension='x'):
-        """Further divides the box size into `num_split` different sub_boxes.
-        Note that this is different from `split2boxes()`, whic splits based on chunk_size (memory-based).
+        """Divide the input box into `num_split` different sub_boxes.
 
         :param box: [x0, y0, x1, y1]: list[int] of size 4
         :param num_split: int, the number of sub_boxes to split a box into
         :param dimension: str = 'y' or 'x', the dimension along which to split the boxes
+        :return: sub_boxes: list(list(4 int)), the splited sub boxes
         """
 
         x0, y0, x1, y1 = box

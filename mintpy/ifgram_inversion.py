@@ -375,7 +375,10 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
             if weight_sqrt is not None:
                 B_w = np.multiply(B, weight_sqrt)
                 ifgram_w = np.multiply(ifgram, weight_sqrt)
+                del weight_sqrt
+
                 X = linalg.lstsq(B_w, ifgram_w, cond=rcond)[0]
+                del ifgram_w
             else:
                 X = linalg.lstsq(B, ifgram, cond=rcond)[0]
 
@@ -388,11 +391,15 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
             if weight_sqrt is not None:
                 A_w = np.multiply(A, weight_sqrt)
                 ifgram_w = np.multiply(ifgram, weight_sqrt)
+                del weight_sqrt
+
                 X = linalg.lstsq(A_w, ifgram_w, cond=rcond)[0]
+                del ifgram_w
             else:
                 X = linalg.lstsq(A, ifgram, cond=rcond)[0]
             ts[1: ,:] = X
             ifgram_diff = ifgram - np.dot(A, X)
+        del ifgram
 
         # calculate temporal coherence
         num_inv_ifg = A.shape[0]
@@ -450,33 +457,34 @@ def write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg=None,
     return
 
 
-def split2boxes(dataset_shape, memory_size=4, print_msg=True):
+def split2boxes(ifgram_file, memory_size=4, print_msg=True):
     """Split into chunks in rows to reduce memory usage
     Parameters: dataset_shape - tuple of 3 int
                 memory_size   - float, max memory to use in GB
                 print_msg     - bool
     Returns:    box_list      - list of tuple of 4 int
     """
-    # memory_size --> chunk_size
-    # 10 is from phase (4 bytes), weight (4 bytes)
-    # and time-series (4 bytes but half the size on the 1st dimension on average)
-    chunk_size = memory_size * (1024**3) / 10
+    ifg_obj = ifgramStack(ifgram_file)
+    ifg_obj.open(print_msg=False)
 
-    # chunk_size --> y_step / chunk_num
-    length, width = dataset_shape[1:3]
-    y_step = chunk_size / (dataset_shape[0] * width)         # split in lines
+    # 1st dimension size: defo obs (phase / offset) + weight + time-series
+    num_epoch = ifg_obj.numIfgram * 2 + ifg_obj.numDate + 5
+    length, width = ifg_obj.length, ifg_obj.width
+
+    # split in lines based on the input memory limit
+    # use 0.8 to be conservative
+    y_step = 0.8 * (memory_size * (1e3**3)) / (num_epoch * width * 4)
     y_step = int(ut.round_to_1(y_step))
-    chunk_num = int((length - 1) / y_step) + 1
+    num_box = int((length - 1) / y_step) + 1
 
-    if print_msg and chunk_num > 1:
+    if print_msg and num_box > 1:
         print('maximum memory size: %.1E GB' % memory_size)
-        print('maximum chunk  size: %.1E' % chunk_size)
-        print('split %d lines into %d patches for processing' % (length, chunk_num))
+        print('split %d lines into %d patches for processing' % (length, num_box))
         print('    with each patch up to %d lines' % y_step)
 
-    # y_step / chunk_num --> box_list
+    # y_step / num_box --> box_list
     box_list = []
-    for i in range(chunk_num):
+    for i in range(num_box):
         y0 = i * y_step
         y1 = min([length, y0 + y_step])
         box = (0, y0, width, y1)
@@ -744,6 +752,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
         else:
             mask_all_net = np.array(mask)
         mask_part_net = mask ^ mask_all_net
+        del mask
 
         # b. invert once for all pixels with obs in all ifgrams
         if np.sum(mask_all_net) > 0:
@@ -933,7 +942,7 @@ def ifgram_inversion(inps=None):
     ## 3. run the inversion / estimation and write to disk
 
     # 3.1 split ifgram_file into blocks to save memory
-    box_list = split2boxes(dataset_shape=stack_obj.get_size(), memory_size=inps.memorySize)
+    box_list = split2boxes(inps.ifgramStackFile, memory_size=inps.memorySize)
     num_box = len(box_list)
 
     # 3.2 prepare the input arguments for *_patch()
@@ -974,7 +983,6 @@ def ifgram_inversion(inps=None):
             ts = np.zeros((num_date, box_length, box_width), np.float32)
             temp_coh     = np.zeros((box_length, box_width), np.float32)
             num_inv_ifg  = np.zeros((box_length, box_width), np.float32)
-            out_data_list = [ts, temp_coh, num_inv_ifg]
 
             # initiate dask cluster and client
             cluster_obj = DaskCluster(inps.cluster, inps.numWorker, config_name=inps.config)
@@ -983,7 +991,7 @@ def ifgram_inversion(inps=None):
             # run dask
             ts, temp_coh, num_inv_ifg = cluster_obj.run(func=ifgram_inversion_patch,
                                                         func_data=data_kwargs,
-                                                        results=out_data_list)
+                                                        results=[ts, temp_coh, num_inv_ifg])
 
             # close dask cluster and client
             cluster_obj.close()
@@ -996,18 +1004,19 @@ def ifgram_inversion(inps=None):
         # time-series - 3D
         block = [0, num_date, box[1], box[3], box[0], box[2]]
         ts_obj.write_hdf5_block(ts, datasetName='timeseries', block=block)
+        del ts
 
         # temporal coherence / number of inverted obs - 2D
         block = [box[1], box[3], box[0], box[2]]
-        writefile.write_hdf5_block(inps.tempCohFile,
-                                   temp_coh,
+        writefile.write_hdf5_block(inps.tempCohFile, temp_coh,
                                    datasetName='temporalCoherence',
                                    block=block)
+        del temp_coh
 
-        writefile.write_hdf5_block(inps.numInvFile,
-                                   num_inv_ifg,
+        writefile.write_hdf5_block(inps.numInvFile, num_inv_ifg,
                                    datasetName='mask',
                                    block=block)
+        del num_inv_ifg
 
     # 3.4 update output data on the reference pixel
     if not inps.skip_ref:
@@ -1025,7 +1034,7 @@ def ifgram_inversion(inps=None):
         with h5py.File(inps.numInvFile, 'r+') as f:
             f['mask'][ref_y, ref_x] = num_ifgram
 
-    m, s = divmod(time.time()-start_time, 60)
+    m, s = divmod(time.time() - start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
     return
 
