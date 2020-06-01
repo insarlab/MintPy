@@ -14,11 +14,10 @@ import sys
 import time
 import argparse
 import warnings
-import multiprocessing
 import h5py
 import numpy as np
 from scipy import linalg   # more effieint than numpy.linalg
-from mintpy.objects import ifgramStack, timeseries
+from mintpy.objects import ifgramStack, timeseries, cluster
 from mintpy.simulation import decorrelation as decor
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, writefile, ptime, utils as ut
@@ -38,8 +37,8 @@ configKeys = ['obsDatasetName',
 ################################################################################################
 EXAMPLE = """example:
   ifgram_inversion.py  inputs/ifgramStack.h5 -t smallbaselineApp.cfg --update
-  ifgram_inversion.py  inputs/ifgramStack.h5 -w var
-
+  ifgram_inversion.py  inputs/ifgramStack.h5 -w no  # turn off weight for fast processing
+  ifgram_inversion.py. inputs/ifgramStack.h5 -c no  # turn off parallel processing
   # invert offset stack
   ifgram_inversion.py  inputs/ifgramStack.h5 -i azimuthOffset --water-mask waterMask.h5 --mask-dset offsetSNR --mask-threshold 5
 """
@@ -115,8 +114,8 @@ def create_parser():
                              'Adjust according to your computer memory.')
 
     par = parser.add_argument_group('parallel', 'parallel processing using dask')
-    par.add_argument('--cluster', '--cluster-type', dest='cluster', type=str,
-                     default='local', choices={'local', 'lsf', 'pbs', 'slurm', 'no'},
+    par.add_argument('-c', '--cluster', '--cluster-type', dest='cluster', type=str,
+                     default='local', choices=cluster.CLUSTER_LIST + ['no'],
                      help='Cluster to use for parallel computing, no to turn OFF. (default: %(default)s).')
     par.add_argument('--num-worker', dest='numWorker', type=str, default='4',
                      help='Number of workers to use (default: %(default)s).')
@@ -144,26 +143,6 @@ def cmd_line_parse(iargs=None):
         inps, template = read_template2inps(inps.templateFile, inps)
     else:
         template = dict()
-
-    # --num-worker option
-    if inps.cluster == 'local':
-        # translate numWorker = all
-        num_core = multiprocessing.cpu_count()
-        if inps.numWorker == 'all':
-            inps.numWorker = num_core
-
-        inps.numWorker = int(inps.numWorker)
-        if inps.numWorker > num_core:
-            msg = '\nWARNING: input number of worker: {} > available cores: {}'.format(inps.numWorker, num_core)
-            msg += '\nchange number of worker to {} and continue\n'.format(int(num_core/2))
-            print(msg)
-            inps.numWorker = int(num_core / 2)
-
-    else:
-        if inps.numWorker == 'all':
-            msg = 'numWorker = all is NOT supported for cluster type: {}'.format(inps.cluster)
-            raise ValueError(msg)
-        inps.numWorker = int(inps.numWorker)
 
     # --water-mask option
     if inps.waterMaskFile and not os.path.isfile(inps.waterMaskFile):
@@ -224,12 +203,12 @@ def read_template2inps(template_file, inps):
     keyList = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
     for key in keyList:
         value = template[key_prefix+key]
-        if key in ['maskDataset', 'minNormVelocity']:
+        if key in ['weightFunc', 'maskDataset', 'minNormVelocity']:
             iDict[key] = value
         elif value:
             if key in ['maskThreshold', 'minRedundancy', 'memorySize']:
                 iDict[key] = float(value)
-            elif key in ['weightFunc', 'residualNorm', 'waterMaskFile']:
+            elif key in ['residualNorm', 'waterMaskFile']:
                 iDict[key] = value
 
     # computing configurations
@@ -244,6 +223,11 @@ def read_template2inps(template_file, inps):
                 iDict[key] = str(value)
             elif key in ['memorySize']:
                 iDict[key] = float(value)
+
+    # False/None --> 'no'
+    for key in ['weightFunc', 'cluster']:
+        if not key:
+            iDict[key] = 'no'
 
     return inps, template
 
@@ -967,16 +951,15 @@ def ifgram_inversion(inps=None):
             print('box width:  {}'.format(box_width))
             print('box length: {}'.format(box_length))
 
+        # update box argument in the input data
         data_kwargs['box'] = box
 
-        if inps.cluster.lower() == 'no':
+        if inps.cluster == 'no':
             # non-parallel
             ts, temp_coh, num_inv_ifg = ifgram_inversion_patch(**data_kwargs)[:-1]
 
         else:
             # parallel
-            from mintpy.objects.cluster import DaskCluster
-
             print('\n\n------- start parallel processing using Dask -------')
 
             # initiate the output data
@@ -985,7 +968,7 @@ def ifgram_inversion(inps=None):
             num_inv_ifg  = np.zeros((box_length, box_width), np.float32)
 
             # initiate dask cluster and client
-            cluster_obj = DaskCluster(inps.cluster, inps.numWorker, config_name=inps.config)
+            cluster_obj = cluster.DaskCluster(inps.cluster, inps.numWorker, config_name=inps.config)
             cluster_obj.open()
 
             # run dask

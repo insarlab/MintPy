@@ -9,14 +9,10 @@
 
 
 import os
+import time
 import glob
 import shutil
-import time
-try:
-    import dask
-    from dask.distributed import LocalCluster, Client, as_completed
-except ImportError:
-    raise ImportError('Cannot import dask!')
+import multiprocessing
 
 
 # supported / tested clusters
@@ -43,7 +39,7 @@ class DaskCluster:
     def __init__(self, cluster_type, num_worker, config_name=None, **kwargs):
         """Initiate object
         :param cluster_type: str, cluster to use (local, slurm, lsf, pbs)
-        :param num_worker: int, number of workers to use
+        :param num_worker: str, number of workers to use
         :other param **kwargs: dask configuration parameters
                  e.g. config_name: str, the user specified config name to use
         """
@@ -53,16 +49,20 @@ class DaskCluster:
         self.config_name = config_name
         self.cluster_kwargs = kwargs
 
-        # format input config name
+        ## format input arguments
+        # num_worker
+        self.format_num_worker()
+
+        # config_name
         self.format_config_name()
         self.cluster_kwargs['config_name'] = self.config_name
 
-        # printout message
+        ## printout message
         print("input Dask cluster type: {}".format(self.cluster_type))
         if self.config_name is not None:
             print("input Dask config name: {}".format(self.config_name))
 
-        # intitial value
+        ## intitial value
         self.cluster = None
         self.client = None
 
@@ -74,25 +74,25 @@ class DaskCluster:
         # Look at the ~/.config/dask/mintpy.yaml file for changing the Dask configuration defaults
         print('initiate Dask cluster')
         if self.cluster_type == 'local':
+            from dask.distributed import LocalCluster
+
+            # initiate cluster object
             self.cluster = LocalCluster()
 
         else:
             # for non-local cluster, import related dask module only when it's needed
             # because job_queue is not available on macports, which make sense
-            try:
-                import dask_jobqueue as jobqueue
-            except ImportError:
-                raise ImportError('Cannot import dask_jobqueue!')
+            import dask_jobqueue
 
             # initiate cluster object
             if self.cluster_type == 'lsf':
-                self.cluster = jobqueue.LSFCluster(**self.cluster_kwargs)
+                self.cluster = dask_jobqueue.LSFCluster(**self.cluster_kwargs)
 
             elif self.cluster_type == 'pbs':
-                self.cluster = jobqueue.PBSCluster(**self.cluster_kwargs)
+                self.cluster = dask_jobqueue.PBSCluster(**self.cluster_kwargs)
 
             elif self.cluster_type == 'slurm':
-                self.cluster = jobqueue.SLURMCluster(**self.cluster_kwargs)
+                self.cluster = dask_jobqueue.SLURMCluster(**self.cluster_kwargs)
 
             else:
                 msg = 'un-recognized input cluster: {}'.format(self.cluster_type)
@@ -127,6 +127,7 @@ class DaskCluster:
                submit_workers returns in)
         :return: results: tuple(numpy.nd.arrays), the processed results of the box
         """
+        from dask.distributed import Client
 
         # This line needs to be in a function or in a `if __name__ == "__main__":` block. If it is in no function
         # or "main" block, each worker will try to create its own client (which is bad) when loading the module
@@ -186,6 +187,7 @@ class DaskCluster:
                runtimes as a performance diagnostic)
         :return: results: tuple(numpy.nd.arrays), the processed results of the box
         """
+        from dask.distributed import as_completed
 
         num_future = 0
         for future, sub_results in as_completed(futures, with_results=True):
@@ -269,14 +271,14 @@ class DaskCluster:
 
 
     def format_config_name(self):
-        """Formats dask config_name property based on presence or absence of user specified config name.
+        """Format dask config_name property based on presence or absence of user specified config name.
 
-        :param config_name: str, the user specified config name to use
-        :param cluster_type: str, the type of HPC cluster being used (slurm, lsf, pbs)
         :return: config_name: str, the config_name formatted as follows:
                  - the user specified config name if its exists in $DASK_CONFIG/dask.yaml
                  - the default cluster_type config in $DASK_CONFIG/dask.yaml
         """
+        import dask
+
         # config_name is not needed for local cluster
         if self.cluster_type == 'local':
             self.config_name = None
@@ -297,6 +299,42 @@ class DaskCluster:
             self.config_name = self.cluster_type
 
         return self.config_name
+
+
+    def format_num_worker(self):
+        """Format dask num_worker.
+
+        :return: num_worker: int, the number of workers to use
+        """
+        num_worker = self.num_worker
+
+        if self.cluster_type == 'local':
+            num_core = multiprocessing.cpu_count()
+
+            # all --> num_core
+            if num_worker == 'all':
+                num_worker = str(num_core)
+
+            # str --> int
+            num_worker = int(num_worker)
+
+            # if num_worker > num_core,
+            # then we assume that the user is not aware of the available resources 
+            # and use num_core/2 instead to be conservative.
+            if num_worker > num_core:
+                msg = '\nWARNING: input number of worker: {} > available cores: {}'.format(num_worker, num_core)
+                msg += '\nchange number of worker to {} and continue\n'.format(int(num_core/2))
+                print(msg)
+                num_worker = int(num_core / 2)
+
+        else:
+            if num_worker == 'all':
+                msg = 'numWorker = all is NOT supported for cluster type: {}'.format(self.cluster_type)
+                raise ValueError(msg)
+            num_worker = int(num_worker)
+
+        self.num_worker = num_worker
+        return self.num_worker
 
 
     def move_dask_stdout_stderr_files(self):
