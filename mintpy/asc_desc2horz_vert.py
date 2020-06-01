@@ -196,7 +196,7 @@ def asc_desc2horz_vert(fname1, fname2):
         coord = ut.coordinate(atr)
         [x0, x1] = coord.lalo2yx([west, east], coord_type='lon')
         [y0, y1] = coord.lalo2yx([north, south], coord_type='lat')
-        dLOS[i, :] = readfile.read(fname, box=(x0, y0, x1, y1))[0].flatten()
+        dLOS[i, :] = readfile.read(fname, box=(x0, y0, x0 + width, y0 + length))[0].flatten()
 
     # 3. Project displacement from LOS to Horizontal and Vertical components
     print('---------------------')
