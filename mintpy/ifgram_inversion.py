@@ -920,11 +920,11 @@ def ifgram_inversion(inps=None):
 
     # write date time-series
     date_list_utf8 = [dt.encode('utf-8') for dt in date_list]
-    ts_obj.write_hdf5_block(date_list_utf8, datasetName='date')
+    writefile.write_hdf5_block(inps.tsFile, date_list_utf8, datasetName='date')
 
     # write bperp time-series
     pbase = stack_obj.get_perp_baseline_timeseries(dropIfgram=True)
-    ts_obj.write_hdf5_block(pbase, datasetName='bperp')
+    writefile.write_hdf5_block(inps.tsFile, pbase, datasetName='bperp')
 
     # 2.3 instantiate temporal coherence
     dsNameDict = {"temporalCoherence" : (np.float32, (length, width))}
@@ -1003,20 +1003,23 @@ def ifgram_inversion(inps=None):
         # and  2D block in         [y0, y1, x0, x1]
         # time-series - 3D
         block = [0, num_date, box[1], box[3], box[0], box[2]]
-        ts_obj.write_hdf5_block(ts, datasetName='timeseries', block=block)
-        del ts
+        writefile.write_hdf5_block(inps.tsFile,
+                                   data=ts,
+                                   datasetName='timeseries',
+                                   block=block)
 
-        # temporal coherence / number of inverted obs - 2D
+        # temporal coherence - 2D
         block = [box[1], box[3], box[0], box[2]]
-        writefile.write_hdf5_block(inps.tempCohFile, temp_coh,
+        writefile.write_hdf5_block(inps.tempCohFile,
+                                   data=temp_coh,
                                    datasetName='temporalCoherence',
                                    block=block)
-        del temp_coh
 
-        writefile.write_hdf5_block(inps.numInvFile, num_inv_ifg,
+        # number of inverted obs - 2D
+        writefile.write_hdf5_block(inps.numInvFile,
+                                   data=num_inv_ifg,
                                    datasetName='mask',
                                    block=block)
-        del num_inv_ifg
 
     # 3.4 update output data on the reference pixel
     if not inps.skip_ref:
