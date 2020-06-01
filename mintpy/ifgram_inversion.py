@@ -198,6 +198,7 @@ def read_template2inps(template_file, inps):
     if not inps:
         inps = cmd_line_parse()
     iDict = vars(inps)
+
     template = readfile.read_template(template_file)
     template = ut.check_template_auto_value(template)
     keyList = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
@@ -226,7 +227,7 @@ def read_template2inps(template_file, inps):
 
     # False/None --> 'no'
     for key in ['weightFunc', 'cluster']:
-        if not key:
+        if not iDict[key]:
             iDict[key] = 'no'
 
     return inps, template
