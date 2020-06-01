@@ -40,7 +40,7 @@ class DaskCluster:
 
     """
 
-    def __init__(self, cluster_type, num_worker, config_name=None):
+    def __init__(self, cluster_type, num_worker, config_name=None, **kwargs):
         """Initiate object
         :param cluster_type: str, cluster to use (local, slurm, lsf, pbs)
         :param num_worker: int, number of workers to use
@@ -64,7 +64,9 @@ class DaskCluster:
         self.cluster = None
         self.client = None
 
-    def open(self, **kwargs):
+        self.cluster_kwargs=kwargs
+
+    def open(self):
         """Initiate and scale the cluster"""
 
         # initiate the cluster object
@@ -81,17 +83,17 @@ class DaskCluster:
             except ImportError:
                 raise ImportError('Cannot import dask_jobqueue!')
 
-            kwargs['config_name'] = self.config_name
+            self.cluster_kwargs['config_name'] = self.config_name
 
             # initiate cluster object
             if self.cluster_type == 'lsf':
-                self.cluster = jobqueue.LSFCluster(**kwargs)
+                self.cluster = jobqueue.LSFCluster(**self.cluster_kwargs)
 
             elif self.cluster_type == 'pbs':
-                self.cluster = jobqueue.PBSCluster(**kwargs)
+                self.cluster = jobqueue.PBSCluster(**self.cluster_kwargs)
 
             elif self.cluster_type == 'slurm':
-                self.cluster = jobqueue.SLURMCluster(**kwargs)
+                self.cluster = jobqueue.SLURMCluster(**self.cluster_kwargs)
 
             else:
                 msg = 'un-recognized input cluster: {}'.format(self.cluster_type)
