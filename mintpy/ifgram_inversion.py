@@ -109,7 +109,7 @@ def create_parser():
                       help='minimum redundancy of interferograms for every SAR acquisition. (default: %(default)s).')
 
     # computing
-    parser.add_argument('-r', '--ram', '--memory', dest='memorySize', type=float, default=4,
+    parser.add_argument('-r', '--ram', '--memory', dest='memorySize', type=float, default=2,
                         help='Max amount of memory in GB to use (default: %(default)s).\n' +
                              'Adjust according to your computer memory.')
 
@@ -143,6 +143,12 @@ def cmd_line_parse(iargs=None):
         inps, template = read_template2inps(inps.templateFile, inps)
     else:
         template = dict()
+
+    # --cluster and --num-worker option
+    inps.numWorker = str(cluster.DaskCluster.format_num_worker(inps.cluster, inps.numWorker))
+    if inps.cluster != 'no' and inps.numWorker == '1':
+        print('WARNING: number of workers is 1, turn OFF parallel processing and continue')
+        inps.cluster = 'no'
 
     # --water-mask option
     if inps.waterMaskFile and not os.path.isfile(inps.waterMaskFile):
@@ -318,7 +324,7 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
                 min_redundancy    - min redundancy defined as min num_ifgram for every SAR acquisition
     Returns:    ts                - 2D np.array in size of (num_date, num_pixel), phase time-series
                 temp_coh          - 1D np.array in size of (num_pixel), temporal coherence
-                num_inv_ifg       - 1D np.array in size of (num_pixel), number of ifgrams
+                num_inv_obs       - 1D np.array in size of (num_pixel), number of observatons (ifgrams / offsets)
                                     used during the inversion
     """
     ifgram = ifgram.reshape(A.shape[0], -1)
@@ -327,73 +333,116 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
     num_date = A.shape[1] + 1
     num_pixel = ifgram.shape[1]
 
-    # Initial output value
-    ts = np.zeros((num_date, num_pixel), np.float32)
+    # initial output value
+    ts = np.zeros((num_date, num_pixel), dtype=np.float32)
     temp_coh = 0.
-    num_inv_ifg = 0
+    num_inv_obs = 0
 
-    # Skip Zero Phase Value
+    # skip zero phase value
     if skip_zero_value and not np.all(ifgram):
         idx = (ifgram[:, 0] != 0.).flatten()
         A = A[idx, :]
         B = B[idx, :]
 
-        # Skip the pixel if its redundancy < threshold
+        # skip the pixel if its redundancy < threshold
         if np.min(np.sum(A != 0., axis=0)) < min_redundancy:
-            return ts, temp_coh, num_inv_ifg
+            return ts, temp_coh, num_inv_obs
 
         # check matrix invertability
         if weight_sqrt is not None:  #for WLS only because OLS contains it already
             try:
                 linalg.inv(np.dot(B.T, B))
             except linalg.LinAlgError:
-                return ts, temp_coh, num_inv_ifg
+                return ts, temp_coh, num_inv_obs
 
         ifgram = ifgram[idx, :]
         if weight_sqrt is not None:
             weight_sqrt = weight_sqrt[idx, :]
+
+    # update number of observations used for inversion
+    num_inv_obs = A.shape[0]
 
     # invert time-series
     try:
         # assume minimum-norm deformation velocity
         if min_norm_velocity:
             if weight_sqrt is not None:
-                B_w = np.multiply(B, weight_sqrt)
-                ifgram_w = np.multiply(ifgram, weight_sqrt)
-                del weight_sqrt
-
-                X = linalg.lstsq(B_w, ifgram_w, cond=rcond)[0]
-                del ifgram_w
+                X = linalg.lstsq(np.multiply(B, weight_sqrt),
+                                 np.multiply(ifgram, weight_sqrt),
+                                 cond=rcond)[0]
             else:
                 X = linalg.lstsq(B, ifgram, cond=rcond)[0]
 
+            # calc temporal coherence
+            temp_coh = calc_temporal_coherence(ifgram, B, X)
+
+            # assemble time-series
             ts_diff = X * np.tile(tbase_diff, (1, num_pixel))
             ts[1:, :] = np.cumsum(ts_diff, axis=0)
-            ifgram_diff = ifgram - np.dot(B, X)
 
         # assume minimum-norm deformation phase
         else:
             if weight_sqrt is not None:
-                A_w = np.multiply(A, weight_sqrt)
-                ifgram_w = np.multiply(ifgram, weight_sqrt)
-                del weight_sqrt
-
-                X = linalg.lstsq(A_w, ifgram_w, cond=rcond)[0]
-                del ifgram_w
+                X = linalg.lstsq(np.multiply(A, weight_sqrt),
+                                 np.multiply(ifgram, weight_sqrt),
+                                 cond=rcond)[0]
             else:
                 X = linalg.lstsq(A, ifgram, cond=rcond)[0]
-            ts[1: ,:] = X
-            ifgram_diff = ifgram - np.dot(A, X)
-        del ifgram
 
-        # calculate temporal coherence
-        num_inv_ifg = A.shape[0]
-        temp_coh = np.abs(np.sum(np.exp(1j*ifgram_diff), axis=0)) / num_inv_ifg
+            # calc temporal coherence
+            temp_coh = calc_temporal_coherence(ifgram, A, X)
+
+            # assemble time-series
+            ts[1: ,:] = X
 
     except linalg.LinAlgError:
         pass
 
-    return ts, temp_coh, num_inv_ifg
+    return ts, temp_coh, num_inv_obs
+
+
+def calc_temporal_coherence(ifgram, G, X):
+    """Calculate the temporal coherence from the network inversion results
+
+    Parameters: ifgram   - 2D np.array in size of (num_ifgram, num_pixel), phase or offset
+                G        - 2D np.array in size of (num_ifgram, num_date-1), design matrix A or B
+                X        - 2D np.array in size of (num_date-1, num_pixel), solution
+    Returns:    temp_coh - 1D np.array in size of (num_pixel), temporal coherence
+    """
+
+    num_inv_obs = G.shape[0]
+    num_pixel = ifgram.shape[1]
+    temp_coh = np.zeros(num_pixel, dtype=np.float32)
+
+    chunk_size = 1000
+    if num_pixel > chunk_size:
+        num_chunk = int(np.ceil(num_pixel / chunk_size))
+        print(('calcualting temporal coherence in chunks of {} pixels'
+               ': {} chunks in total ...').format(chunk_size, num_chunk))
+
+        for i in range(num_chunk):
+            c0 = i * chunk_size
+            c1 = min((i + 1) * chunk_size, num_pixel)
+
+            # calc residual
+            ifgram_diff = ifgram[:, c0:c1] - np.dot(G, X[:, c0:c1])
+
+            # calc temporal coherence
+            temp_coh[c0:c1] = np.abs(np.sum(np.exp(1j*ifgram_diff), axis=0)) / num_inv_obs
+
+            # print out message
+            if (i+1) % 20 == 0:
+                print('chunk {} / {}'.format(i+1, num_chunk))
+
+    else:
+        # calc residual
+        ifgram_diff = ifgram - np.dot(G, X)
+
+        # calc temporal coherence
+        temp_coh = np.abs(np.sum(np.exp(1j*ifgram_diff), axis=0)) / num_inv_obs
+
+    return temp_coh
+
 
 
 ###################################### File IO ############################################
@@ -448,6 +497,7 @@ def split2boxes(ifgram_file, memory_size=4, print_msg=True):
                 memory_size   - float, max memory to use in GB
                 print_msg     - bool
     Returns:    box_list      - list of tuple of 4 int
+                num_box       - int, number of boxes
     """
     ifg_obj = ifgramStack(ifgram_file)
     ifg_obj.open(print_msg=False)
@@ -457,11 +507,12 @@ def split2boxes(ifgram_file, memory_size=4, print_msg=True):
     length, width = ifg_obj.length, ifg_obj.width
 
     # split in lines based on the input memory limit
-    # use 0.8 to be conservative
-    y_step = 0.8 * (memory_size * (1e3**3)) / (num_epoch * width * 4)
-    y_step = int(ut.round_to_1(y_step))
-    num_box = int((length - 1) / y_step) + 1
+    y_step = (memory_size * (1e3**3)) / (num_epoch * width * 4)
 
+    # calibrate based on experience
+    y_step = int(ut.round_to_1(y_step * 0.6))
+
+    num_box = int((length - 1) / y_step) + 1
     if print_msg and num_box > 1:
         print('maximum memory size: %.1E GB' % memory_size)
         print('split %d lines into %d patches for processing' % (length, num_box))
@@ -475,7 +526,7 @@ def split2boxes(ifgram_file, memory_size=4, print_msg=True):
         box = (0, y0, width, y1)
         box_list.append(box)
 
-    return box_list
+    return box_list, num_box
 
 
 def check_design_matrix(ifgram_file, weight_func='var'):
@@ -589,6 +640,44 @@ def read_coherence(stack_obj, box, dropIfgram=True, print_msg=True):
     return coh_data
 
 
+def calc_weight(stack_obj, box, weight_func='var', dropIfgram=True, chunk_size=100000):
+    """Read coherence and calculate weight from it, chunk by chunk to save memory
+    """
+
+    # read coherence
+    weight = read_coherence(stack_obj, box=box, dropIfgram=dropIfgram)
+    num_pixel = weight.shape[1]
+
+    # convert coherence to weight chunk-by-chunk to save memory
+    L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
+
+    num_chunk = int(np.ceil(num_pixel / chunk_size))
+    prog_bar = ptime.progressBar(maxValue=num_chunk)
+    print(('convert coherence to weight in chunks of {c} pixels'
+           ': {n} chunks in total ...').format(c=chunk_size, n=num_chunk))
+
+    for i in range(num_chunk):
+        c0 = i * chunk_size
+        c1 = min((i + 1) * chunk_size, num_pixel)
+        if i == 0:
+            print_msg = True
+        else:
+            print_msg = False
+
+        # calc weight from coherence
+        weight[:, c0:c1] = decor.coherence2weight(weight[:, c0:c1],
+                                                  weight_func,
+                                                  L=L,
+                                                  epsilon=5e-2,
+                                                  print_msg=print_msg)
+        weight[:, c0:c1] = np.sqrt(weight[:, c0:c1])
+
+        prog_bar.update(i+1, every=1, suffix='{} / {}'.format(i+1, num_chunk))
+    prog_bar.close()
+
+    return weight
+
+
 def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='unwrapPhase',
                            weight_func='var', water_mask_file=None, min_norm_velocity=True,
                            mask_ds_name=None, mask_threshold=0.4, min_redundancy=1.0):
@@ -656,14 +745,15 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     else:
         skip_zero_value = False
 
-    # 1.1 read / calculate weight from coherence
+    # 1.1 read / calcualte weight
     if weight_func in ['no', 'sbas']:
         weight = None
     else:
-        L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
-        weight = read_coherence(stack_obj, box=box, dropIfgram=True)
-        weight = decor.coherence2weight(weight, weight_func, L=L, epsilon=5e-2)
-        weight = np.sqrt(weight)
+        weight = calc_weight(stack_obj,
+                             box,
+                             weight_func=weight_func,
+                             dropIfgram=True,
+                             chunk_size=100000)
 
     # 1.2 read / mask unwrapPhase / offset
     pha_data = read_unwrap_phase(stack_obj,
@@ -789,6 +879,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
             ts[:, idx] = tsi.flatten()
             temp_coh[idx] = tcohi
             num_inv_ifg[idx] = num_ifgi
+
             prog_bar.update(i+1, every=2000, suffix='{}/{} pixels'.format(i+1, num_pixel2inv))
         prog_bar.close()
         del weight
@@ -927,8 +1018,7 @@ def ifgram_inversion(inps=None):
     ## 3. run the inversion / estimation and write to disk
 
     # 3.1 split ifgram_file into blocks to save memory
-    box_list = split2boxes(inps.ifgramStackFile, memory_size=inps.memorySize)
-    num_box = len(box_list)
+    box_list, num_box = split2boxes(inps.ifgramStackFile, memory_size=inps.memorySize)
 
     # 3.2 prepare the input arguments for *_patch()
     data_kwargs = {
@@ -1004,6 +1094,9 @@ def ifgram_inversion(inps=None):
                                    data=num_inv_ifg,
                                    datasetName='mask',
                                    block=block)
+
+        m, s = divmod(time.time() - start_time, 60)
+        print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
 
     # 3.4 update output data on the reference pixel
     if not inps.skip_ref:

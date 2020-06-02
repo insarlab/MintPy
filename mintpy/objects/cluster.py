@@ -40,6 +40,7 @@ class DaskCluster:
         """Initiate object
         :param cluster_type: str, cluster to use (local, slurm, lsf, pbs)
         :param num_worker: str, number of workers to use
+        :param config_name: str, the name of configuratino section
         :other param **kwargs: dask configuration parameters
                  e.g. config_name: str, the user specified config name to use
         """
@@ -51,7 +52,7 @@ class DaskCluster:
 
         ## format input arguments
         # num_worker
-        self.format_num_worker()
+        self.num_worker = self.format_num_worker(self.cluster_type, self.num_worker)
 
         # config_name
         self.format_config_name()
@@ -270,6 +271,41 @@ class DaskCluster:
         return sub_boxes
 
 
+    @staticmethod
+    def format_num_worker(cluster_type, num_worker):
+        """Format dask num_worker.
+        :param cluster_type: str
+        :param num_worker: str, number of workers to use
+        :return: num_worker: int, number of workers to use
+        """
+
+        if cluster_type == 'local':
+            num_core = multiprocessing.cpu_count()
+
+            # all --> num_core
+            if num_worker == 'all':
+                num_worker = str(num_core)
+
+            # str --> int
+            num_worker = int(num_worker)
+
+            # if num_worker > num_core,
+            # then we assume that the user is not aware of the available resources 
+            # and use max(num_core/2, 1) instead to be conservative.
+            if num_worker > num_core:
+                print('\nWARNING: input number of worker: {} > available cores: {}'.format(num_worker, num_core))
+                num_worker = max(int(num_core / 2), 1)
+                print('change number of worker to {} and continue\n'.format(num_worker))
+
+        else:
+            if num_worker == 'all':
+                msg = 'numWorker = all is NOT supported for cluster type: {}'.format(cluster_type)
+                raise ValueError(msg)
+            num_worker = int(num_worker)
+
+        return num_worker
+
+
     def format_config_name(self):
         """Format dask config_name property based on presence or absence of user specified config name.
 
@@ -299,42 +335,6 @@ class DaskCluster:
             self.config_name = self.cluster_type
 
         return self.config_name
-
-
-    def format_num_worker(self):
-        """Format dask num_worker.
-
-        :return: num_worker: int, the number of workers to use
-        """
-        num_worker = self.num_worker
-
-        if self.cluster_type == 'local':
-            num_core = multiprocessing.cpu_count()
-
-            # all --> num_core
-            if num_worker == 'all':
-                num_worker = str(num_core)
-
-            # str --> int
-            num_worker = int(num_worker)
-
-            # if num_worker > num_core,
-            # then we assume that the user is not aware of the available resources 
-            # and use num_core/2 instead to be conservative.
-            if num_worker > num_core:
-                msg = '\nWARNING: input number of worker: {} > available cores: {}'.format(num_worker, num_core)
-                msg += '\nchange number of worker to {} and continue\n'.format(int(num_core/2))
-                print(msg)
-                num_worker = int(num_core / 2)
-
-        else:
-            if num_worker == 'all':
-                msg = 'numWorker = all is NOT supported for cluster type: {}'.format(self.cluster_type)
-                raise ValueError(msg)
-            num_worker = int(num_worker)
-
-        self.num_worker = num_worker
-        return self.num_worker
 
 
     def move_dask_stdout_stderr_files(self):
