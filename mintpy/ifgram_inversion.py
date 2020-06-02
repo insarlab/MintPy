@@ -335,7 +335,7 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
 
     # initial output value
     ts = np.zeros((num_date, num_pixel), dtype=np.float32)
-    temp_coh = 0
+    temp_coh = 0.
     num_inv_obs = 0
 
     # skip zero phase value
