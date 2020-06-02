@@ -144,6 +144,12 @@ def cmd_line_parse(iargs=None):
     else:
         template = dict()
 
+    # --cluster and --num-worker option
+    inps.numWorker = str(cluster.DaskCluster.format_num_worker(inps.cluster, inps.numWorker))
+    if inps.cluster != 'no' and inps.numWorker == '1':
+        print('WARNING: number of workers is 1, turn OFF parallel processing and continue')
+        inps.cluster = 'no'
+
     # --water-mask option
     if inps.waterMaskFile and not os.path.isfile(inps.waterMaskFile):
         inps.waterMaskFile = None
