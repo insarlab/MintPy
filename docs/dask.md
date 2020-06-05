@@ -40,7 +40,7 @@ smallbaselineApp.py -t smallbaselineApp.cfg
 
 #### 1.3 Runtime performance test on Stampede2 ####
 
-To show the run time improvement, we test three datasets (Galapagos, Fernandina, and Kilauea) with different number of cores and same amount of allocated memory (4 GB) on a compute node in the [Stampede2 cluster's skx-normal queue](https://portal.tacc.utexas.edu/user-guides/stampede2#overview-skxcomputenodes). Results are as below:
+To show the run time improvement, we test three datasets (South Isabela, Fernandina, and Kilauea) with different number of cores and same amount of allocated memory (4 GB) on a compute node in the [Stampede2 cluster's skx-normal queue](https://portal.tacc.utexas.edu/user-guides/stampede2#overview-skxcomputenodes). Results are as below:
 
 ![Dask LocalCluster Performance](https://raw.githubusercontent.com/insarlab/MintPy-tutorial/master/docs/dask_local_cluster_performance.png)
 
@@ -62,8 +62,8 @@ Run the following in the terminal:
 
 ```bash
 ifgram_inversion.py inputs/ifgramStack.h5 --cluster slurm --config slurm --num-worker 40
-ifgram_inversion.py inputs/ifgramStack.h5 --cluster pbs --config pbs --num-worker 40
-ifgram_inversion.py inputs/ifgramStack.h5 --cluster lsf --config lsf --num-worker 40
+ifgram_inversion.py inputs/ifgramStack.h5 --cluster pbs   --config pbs   --num-worker 40
+ifgram_inversion.py inputs/ifgramStack.h5 --cluster lsf   --config lsf   --num-worker 40
 ```
 
 #### 2.2 via template file ####

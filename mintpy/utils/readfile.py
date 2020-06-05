@@ -358,14 +358,18 @@ def read_binary_file(fname, datasetName=None, box=None):
                 band = 2
             elif datasetName.lower() == 'band3':
                 band = 3
-            elif datasetName in ['magnitude','amplitude']:
+            elif datasetName.startswith(('mag', 'amp')):
                 cpx_band = 'magnitude'
-            elif datasetName in ['phase','angle']:
+            elif datasetName in ['phase', 'angle']:
                 cpx_band = 'phase'
             elif datasetName.lower() == 'real':
                 cpx_band = 'real'
             elif datasetName.lower().startswith('imag'):
                 cpx_band = 'imag'
+            elif datasetName .startswith(('cpx', 'complex')):
+                cpx_band = 'complex'
+
+        band = min(band, num_band)
 
     # ROI_PAC
     elif processor in ['roipac']:

@@ -73,17 +73,17 @@ You may need to close and restart the shell for changes to take effect.
 Run the following in your terminal to install the dependencies to a new environment _mintpy_ (recommended):
 
 ```
-$PYTHON3DIR/bin/conda env create -f $MINTPY_HOME/docs/conda_env.yml
-$PYTHON3DIR/bin/conda activate mintpy
+$CONDA_PREFIX/bin/conda env create -f $MINTPY_HOME/docs/conda_env.yml
+$CONDA_PREFIX/bin/conda activate mintpy
 ```
 
 Or run the following in your terminal to install the dependencies to the default environment _base_:
 
 ```
 # install dependencies with conda
-$PYTHON3DIR/bin/conda config --add channels conda-forge
-$PYTHON3DIR/bin/conda install --yes --file $MINTPY_HOME/docs/conda.txt
-$PYTHON3DIR/bin/pip install git+https://github.com/tylere/pykml.git
+$CONDA_PREFIX/bin/conda config --add channels conda-forge
+$CONDA_PREFIX/bin/conda install --yes --file $MINTPY_HOME/docs/conda.txt
+$CONDA_PREFIX/bin/pip install git+https://github.com/tylere/pykml.git
 ```
 
 #### Installing via MacPorts ####
