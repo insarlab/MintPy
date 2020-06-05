@@ -1553,9 +1553,16 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
     # amplitude/coherence unit - 1
     elif data_unit[0] == '1':
         if disp_unit[0] == 'db' and data is not None:
-            ind = np.nonzero(data)
-            data[ind] = 10*np.log10(np.absolute(data[ind]))
             disp_unit[0] = 'dB'
+
+            if metadata['FILE_TYPE'] in ['.cor', '.int', '.unw']:
+                # dB for power quantities
+                data = 10 * np.log10(np.clip(data, a_min=1e-1, a_max=None))
+
+            else:
+                # dB for field quantities, e.g. amp, slc
+                data = 20 * np.log10(np.clip(data, a_min=1e-1, a_max=None))
+
         else:
             try:
                 scale /= float(disp_unit[0])
