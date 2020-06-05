@@ -628,7 +628,7 @@ def seconds_UTC(seconds):
 
     return secondsOut
 
-def safe_list2date_list(inps):
+def safe_list2inps(inps):
     """generate date_list and hour from safe_list"""
     if os.path.isfile(inps.safe_list[0]):
         print('read date list from text file: {}'.format(inps.safe_list[0]))
@@ -640,18 +640,8 @@ def safe_list2date_list(inps):
         for second in second_list:
             hour = closest_weather_model_hour(float(second), inps.tropo_model)
             hour_list.append(str(hour))
-        
         hour_sum = sum([float(i) for i in hour_list])
         hour_average = int(hour_sum / (len(hour_list)))
-    
-    return date_list, hour_average
-
-def check_inputs_download_only(inps):
-    
-    parser = create_parser()
-
-    # date list and hour
-    date_list,hour = safe_list2date_list(inps)
     
     inps.date_list = date_list
     inps.hour = str(hour)
@@ -668,9 +658,8 @@ def main(iargs=None):
    
     else:
         # only download  weather data according to safe_list
-        # read saft_list info
         print("\ndownload only")
-        inps = check_inputs_download_only(inps)
+        safe_list2inps(inps)
      
     # get corresponding grib files info
     get_grib_info(inps)
