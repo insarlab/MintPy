@@ -606,7 +606,7 @@ def define_date(string):
     return date
 
 def define_second(string):
-    """extract CENTER_LINE_UTC frm *.SAFE"""
+    """extract CENTER_LINE_UTC from *.SAFE"""
     filename = string.split(str.encode('.'))[0].split(str.encode('/'))[-1]
     time1 = filename.split(str.encode('_'))[5][9:15]
     time2 = filename.split(str.encode('_'))[6][9:15]
