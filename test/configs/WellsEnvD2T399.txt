@@ -1,5 +1,7 @@
 # vim: set filetype=cfg:
 ##------------------------  MintPy ----------------------------------##
+mintpy.compute.cluster = local
+
 mintpy.load.processor      = gamma
 mintpy.load.unwFile        = ./../interferograms/*/diff_*rlks.unw
 mintpy.load.corFile        = ./../interferograms/*/filt_*rlks.cor

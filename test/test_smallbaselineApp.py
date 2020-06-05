@@ -25,7 +25,7 @@ URL_LIST = [
 ]
 
 PROJ_NAME_LIST = [os.path.basename(url).split('.tar.xz')[0] for url in URL_LIST]
-TEMPLATE_FILE_LIST = [os.path.join(os.path.dirname(__file__), '{}.txt'.format(proj_name))
+TEMPLATE_FILE_LIST = [os.path.join(os.path.dirname(__file__), 'configs/{}.txt'.format(proj_name))
                       for proj_name in PROJ_NAME_LIST]
 
 
