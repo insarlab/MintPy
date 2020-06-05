@@ -58,7 +58,7 @@ jobqueue:
   slurm:
     name: mintpy_bee
 
-    cores: null	        # Total number of cores per job
+    cores: null.        # Total number of cores per job
     memory: null        # Total amount of memory per job
     processes: 1        # Number of Python processes per job
 
