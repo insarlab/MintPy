@@ -41,6 +41,12 @@ EXAMPLE = """example:
 
   # download reanalysys dataset
   tropo_pyaps3.py -d date.list --hour 12
+
+  # only download reanalysys dataset
+  # download reanalysys dataset of the whole world
+  tropo_pyaps3.py --download_only --safe_list safe_list
+  # download reanalysys dataset only covering the interested area
+  tropo_pyaps3.py --download_only --safe_list safe_list -g inputs/geometryRadar.h5  
 """
 
 REFERENCE = """reference:
@@ -99,6 +105,9 @@ def create_parser():
     parser.add_argument('--hour', type=str, help='time of data in HH, e.g. 12, 06')
     parser.add_argument('-o', dest='cor_timeseries_file',
                         help='Output file name for trospheric corrected timeseries.')
+    parser.add_argument('--download_only', action='store_true', default=False, help='whether only download weather data.')
+    parser.add_argument('--safe_list', dest='safe_list', type=str, nargs=1, help='list of Sentinel safe files')
+
 
     # delay calculation
     delay = parser.add_argument_group('delay calculation')
@@ -149,10 +158,11 @@ def cmd_line_parse(iargs=None):
         if fname and not os.path.isfile(fname):
             raise FileExistsError('input file not exist: {}'.format(fname))
 
-    ## required options (for date/time): --file OR --date-list, --hour
+    ## required options (for date/time): --file OR --date-list, --hour OR --safe_list
     if (not inps.timeseries_file 
-            and any(vars(inps)[key] is None for key in ['date_list', 'hour'])):
-        msg = 'ERROR: --file OR (--date-list, --hour) is required.'
+            and any(vars(inps)[key] is None for key in ['date_list', 'hour'])
+                and vars(inps)['safe_list'] is None):
+        msg = 'ERROR: --file OR (--date-list, --hour) OR --safe_list is required.'
         msg += '\n\n'+EXAMPLE
         raise SystemExit(msg)
 
@@ -588,14 +598,80 @@ def correct_timeseries(timeseries_file, tropo_file, out_file):
                          'using diff.py with tropospheric delay file.'))
     return out_file
 
+def define_date(string):
+    """extract date from *.SAFE"""
+    filename = string.split(str.encode('.'))[0].split(str.encode('/'))[-1]
+    date = filename.split(str.encode('_'))[5][0:8]
+
+    return date
+
+def define_second(string):
+    """extract CENTER_LINE_UTC frm *.SAFE"""
+    filename = string.split(str.encode('.'))[0].split(str.encode('/'))[-1]
+    time1 = filename.split(str.encode('_'))[5][9:15]
+    time2 = filename.split(str.encode('_'))[6][9:15]
+    time1_second = int(time1[0:2]) * 3600 + int(time1[2:4]) * 60 + int(time1[4:6])
+    time2_second = int(time2[0:2]) * 3600 + int(time2[2:4]) * 60 + int(time2[4:6])
+    CENTER_LINE_UTC = (time1_second + time2_second) / 2
+
+    return CENTER_LINE_UTC
+
+def seconds_UTC(seconds):
+    """generate second list"""
+    if isinstance(seconds, list):
+        secondsOut = []
+        for second in seconds:
+            secondsOut.append(second)
+    else:
+        print('\nUn-recognized CENTER_LINE_ UTC input!')
+        return None
+
+    return secondsOut
+
+def safe_list2date_list(inps):
+    """generate date_list and hour from safe_list"""
+    if os.path.isfile(inps.safe_list[0]):
+        print('read date list from text file: {}'.format(inps.safe_list[0]))
+        date_list = ptime.yyyymmdd(np.loadtxt(inps.safe_list[0],dtype=bytes,converters={0:define_date}).astype(str).tolist())
+        second_list = seconds_UTC(np.loadtxt(inps.safe_list[0],dtype=bytes,converters={0:define_second}).astype(str).tolist())
+        
+        # change second into hour
+        hour_list = []
+        for second in second_list:
+            hour = closest_weather_model_hour(float(second), inps.tropo_model)
+            hour_list.append(str(hour))
+        
+        hour_sum = sum([float(i) for i in hour_list])
+        hour_average = int(hour_sum / (len(hour_list)))
+    
+    return date_list, hour_average
+
+def check_inputs_download_only(inps):
+    
+    parser = create_parser()
+
+    # date list and hour
+    date_list,hour = safe_list2date_list(inps)
+    
+    inps.date_list = date_list
+    inps.hour = str(hour)
+    
+    return inps
 
 ###############################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    # read dates / time info
-    read_inps2date_time(inps)
-
+    if not inps.download_only:
+        # read dates / time info
+        read_inps2date_time(inps)
+   
+    else:
+        # only download  weather data according to safe_list
+        # read saft_list info
+        print("\ndownload only")
+        inps = check_inputs_download_only(inps)
+     
     # get corresponding grib files info
     get_grib_info(inps)
 
@@ -605,10 +681,10 @@ def main(iargs=None):
                                        snwe=inps.snwe)
 
     # calculate tropo delay and save to h5 file
-    if inps.geom_file:
+    if not inps.download_only and inps.geom_file:
         calculate_delay_timeseries(inps)
     else:
-        print('No input geometry file, skip calculating and correcting tropospheric delays.')
+        print('No input geometry file OR using download_only option, skip calculating and correcting tropospheric delays.')
         return
 
     # correct tropo delay from displacement time-series
@@ -619,8 +695,8 @@ def main(iargs=None):
     else:
         print('No input timeseries file, skip correcting tropospheric delays.')
 
+    
     return
-
 
 ###############################################################
 if __name__ == '__main__':
