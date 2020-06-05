@@ -1,4 +1,5 @@
 jobqueue:
+
   lsf:
     name: mintpy_bee
 
@@ -58,11 +59,11 @@ jobqueue:
   slurm:
     name: mintpy_bee
 
-    cores: null.        # Total number of cores per job
-    memory: null        # Total amount of memory per job
-    processes: 1        # Number of Python processes per job
+    cores: null                 # Total number of cores per job
+    memory: null                # Total amount of memory per job
+    processes: 1                # Number of Python processes per job
 
-    interface: null     # Network interface to use like eth0 or ib0
+    interface: null             # Network interface to use like eth0 or ib0
     death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
     local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
 
