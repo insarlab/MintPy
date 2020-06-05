@@ -9,7 +9,7 @@ Below is a brief description of the required options and recommended best practi
 
 ## 1. local cluster ##
 
-The parallel processing on a single machine is supported via [`Dask.distributed.LocalCluster`](https://docs.dask.org/en/latest/setup/single-distributed.html#localcluster). This is recommended if you are running MintPy on a local machine with multiple available cores, or on an HPC but wish to allocate only a single node's worth of resources. This is turned on by default.
+The parallel processing on a single machine is supported via [`Dask.distributed.LocalCluster`](https://docs.dask.org/en/latest/setup/single-distributed.html#localcluster). This is recommended if you are running MintPy on a local machine with multiple available cores, or on an HPC but wish to allocate only a single node's worth of resources.
 
 #### 1.1 via command line ####
 
@@ -71,7 +71,7 @@ ifgram_inversion.py inputs/ifgramStack.h5 --cluster lsf --config lsf --num-worke
 Adjust options in the template file as below
 
 ```cfg
-mintpy.compute.cluster   = auto #[lsf / pbs / slurm / local], job scheduler in your HPC system, auto for local.
+mintpy.compute.cluster   = auto #[local / lsf / pbs / slurm / no], auto for no, job scheduler in your HPC system
 mintpy.compute.numWorker = auto #[int > 1], number of worker to submit and run, auto for 4 (local) or 40 (non-local)
 mintpy.compute.config    = auto #[name / no], name of the configuration section in YAML file, auto for no (to use the same name as the cluster type specified above)
 ```
