@@ -1,42 +1,64 @@
-version: 2.1
 jobs:
-  test:
+  build:
     docker:
-      - image: hysds/pge-base:latest
+      - image: ubuntu:bionic
+        user: root
+
     steps:
-      - checkout
       - run:
-          name: Test
+          name: Setting Environment Variables
           command: |
-            source $HOME/verdi/bin/activate
-            sudo yum -y update
-            #sudo yum -y install gcc
-            #pip install -U pytest jsonschema
-            mkdir test-reports
-            #pytest --junitxml=test-reports/junit.xml
+            apt-get update
+            apt-get upgrade -y
+            apt-get install -y git
+            apt-get install -y wget
+            # if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
+            export MINTPY_HOME=~/tools/MintPy
+            export PYAPS_HOME=~/tools/PyAPS
+            export CONDA_PREFIX=~/tools/miniconda3
+            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
+            export PATH=${PATH}:${CONDA_PREFIX}/bin:${MINTPY_HOME}/mintpy
+            echo $MINTPY_HOME
 
-      - store_test_results:
-          path: test-reports
+      - run:
+          name: Downloading MintPy and PyAPS
+          command: | 
+            export MINTPY_HOME=~/tools/MintPy
+            export PYAPS_HOME=~/tools/PyAPS
+            git clone https://github.com/insarlab/MintPy.git $MINTPY_HOME
+            git clone https://github.com/yunjunz/pyaps3.git $PYAPS_HOME/pyaps3
+            pwd
+            ls
 
-      - store_artifacts:
-          path: test-reports    
+      - run:
+          name: Installing Dependencies via Conda
+          command: |
+            pwd
+            ls
+            export MINTPY_HOME=~/tools/MintPy
+            export CONDA_PREFIX=~/tools/miniconda3
+            export PATH=${PATH}:${CONDA_PREFIX}/bin:${MINTPY_HOME}/mintpy
+            wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+            chmod +x Miniconda3-latest-Linux-x86_64.sh
+            ./Miniconda3-latest-Linux-x86_64.sh -b -p ${CONDA_PREFIX}
+            ${CONDA_PREFIX}/bin/conda config --add channels conda-forge
+            ${CONDA_PREFIX}/bin/conda install --yes --file $MINTPY_HOME/docs/conda.txt
+            ${CONDA_PREFIX}/bin/pip install git+https://github.com/tylere/pykml.git
 
+      - run:
+          name: Testing MintPy on Example Datasets
+          command: |
+            export MINTPY_HOME=~/tools/MintPy
+            export PYAPS_HOME=~/tools/PyAPS
+            export CONDA_PREFIX=~/tools/miniconda3
+            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
+            export PATH=${PATH}:${CONDA_PREFIX}/bin:${MINTPY_HOME}/mintpy
+            mkdir -p /root/data
+            cd /root/data
+            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir /root/data --dset all
 
 workflows:
   version: 2
-  test:
+  build_and_test:
     jobs:
-      - test
-  weekly:
-    triggers:
-      - schedule:
-          cron: "0 7 * * 0"
-          filters:
-            branches:
-              only:
-                - master
-    jobs:
-      - test:
-          filters:
-            branches:
-              only: master
+      - build
