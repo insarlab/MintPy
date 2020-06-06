@@ -53,7 +53,9 @@ jobs:
             export CONDA_PREFIX=~/tools/miniconda3
             export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
             export PATH=${PATH}:${CONDA_PREFIX}/bin:${MINTPY_HOME}/mintpy
-            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ~/data --dset FernandinaSenDT128
+            mkdir -p /root/data
+            cd /root/data
+            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir /root/data --dset FernandinaSenDT128
 
       - run:
           name: Testing Mintpy on Wells
@@ -63,6 +65,8 @@ jobs:
             export CONDA_PREFIX=~/tools/miniconda3
             export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
             export PATH=${PATH}:${CONDA_PREFIX}/bin:${MINTPY_HOME}/mintpy
+            mkdir -p /root/data
+            cd /root/data
             ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ~/data --dset WellsEnvD2T399
 
       - run:
@@ -73,6 +77,8 @@ jobs:
             export CONDA_PREFIX=~/tools/miniconda3
             export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
             export PATH=${PATH}:${CONDA_PREFIX}/bin:${MINTPY_HOME}/mintpy
+            mkdir -p /root/data
+            cd /root/data
             ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ~/data --dset KujuAlosAT422F650
 
 workflows:
