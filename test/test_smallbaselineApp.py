@@ -8,6 +8,7 @@
 
 
 import os
+import sys
 import time
 import argparse
 import subprocess
@@ -139,10 +140,11 @@ def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False):
         print(cmd)
         subprocess.Popen(cmd, shell=True).wait()
 
-    # open final velocity map
-    cmd = 'open pic/geo_velocity.png'
-    print(cmd)
-    subprocess.Popen(cmd, shell=True).wait()
+    # open final velocity map if on mac
+    if sys.platform.lower().startswith('darwin'):
+        cmd = 'open pic/geo_velocity.png'
+        print(cmd)
+        subprocess.Popen(cmd, shell=True).wait()
     return
 
 
