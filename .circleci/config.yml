@@ -55,11 +55,38 @@ jobs:
             export PATH=${PATH}:${PYTHON3DIR}/bin
             export PYAPS_HOME=~/tools/PyAPS
             export PYTHONPATH=${PYTHONPATH}:${PYAPS_HOME}
-            wget https://zenodo.org/record/3635245/files/FernandinaSenDT128.tar.xz
-            tar -xvJf FernandinaSenDT128.tar.xz
-            cd FernandinaSenDT128/mintpy
-            smallbaselineApp.py ${MINTPY_HOME}/test/configs/FernandinaSenDT128.txt 
-      
+            export PATH=${PATH}:${MINTPY_HOME}/test
+            cd ${MINTPY_HOME}/test
+            test_smallbaselineApp.py --dir ${MINTPY_HOME}/test --dset FernandinaSenDT128
+
+      - run:
+          name: Testing Mintpy on Wells
+          command: |
+            export MINTPY_HOME=~/tools/MintPy
+            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}
+            export PATH=${PATH}:${MINTPY_HOME}/mintpy
+            export PYTHON3DIR=~/tools/miniconda3
+            export PATH=${PATH}:${PYTHON3DIR}/bin
+            export PYAPS_HOME=~/tools/PyAPS
+            export PYTHONPATH=${PYTHONPATH}:${PYAPS_HOME}
+            export PATH=${PATH}:${MINTPY_HOME}/test
+            cd ${MINTPY_HOME}/test
+            test_smallbaselineApp.py --dir ${MINTPY_HOME}/test --dset WellsEnvD2T399
+
+      - run:
+          name: Testing Mintpy on Kuju
+          command: |
+            export MINTPY_HOME=~/tools/MintPy
+            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}
+            export PATH=${PATH}:${MINTPY_HOME}/mintpy
+            export PYTHON3DIR=~/tools/miniconda3
+            export PATH=${PATH}:${PYTHON3DIR}/bin
+            export PYAPS_HOME=~/tools/PyAPS
+            export PYTHONPATH=${PYTHONPATH}:${PYAPS_HOME}
+            export PATH=${PATH}:${MINTPY_HOME}/test
+            cd ${MINTPY_HOME}/test
+            test_smallbaselineApp.py --dir ${MINTPY_HOME}/test --dset KujuAlosAT422F650
+
 workflows:
   version: 2
   build_and_test:
