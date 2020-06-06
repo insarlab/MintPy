@@ -3,6 +3,7 @@ jobs:
     docker:
       - image: ubuntu:bionic
         user: root
+
     steps:
       - run:
           name: Setting Environment Variables
@@ -12,12 +13,13 @@ jobs:
             apt-get install -y git
             apt-get install -y wget
             # if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
-            echo $MINTPY_HOME
             export MINTPY_HOME=~/tools/MintPy
-            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}
-            export PATH=${PATH}:${MINTPY_HOME}/mintpy
             export PYAPS_HOME=~/tools/PyAPS
-            export PYTHONPATH=${PYTHONPATH}:${PYAPS_HOME}
+            export CONDA_PREFIX=~/tools/miniconda3
+            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
+            export PATH=${PATH}:${CONDA_PREFIX}/bin:${MINTPY_HOME}/mintpy
+            echo $MINTPY_HOME
+
       - run:
           name: Downloading MintPy and PyAPS
           command: | 
@@ -27,58 +29,50 @@ jobs:
             git clone https://github.com/yunjunz/pyaps3.git $PYAPS_HOME/pyaps3
             pwd
             ls
+
       - run:
           name: Installing Dependencies via Conda
           command: |
             pwd
             ls
             export MINTPY_HOME=~/tools/MintPy
-            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}
-            export PATH=${PATH}:${MINTPY_HOME}/mintpy
-            export PYTHON3DIR=~/tools/miniconda3
-            export PATH=${PATH}:${PYTHON3DIR}/bin
-            export PYAPS_HOME=~/tools/PyAPS
-            export PYTHONPATH=${PYTHONPATH}:${PYAPS_HOME}
+            export CONDA_PREFIX=~/tools/miniconda3
+            export PATH=${PATH}:${CONDA_PREFIX}/bin:${MINTPY_HOME}/mintpy
             wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
             chmod +x Miniconda3-latest-Linux-x86_64.sh
-            ./Miniconda3-latest-Linux-x86_64.sh -b -p $PYTHON3DIR
-            $PYTHON3DIR/bin/conda config --add channels conda-forge
-            $PYTHON3DIR/bin/conda install --yes --file $MINTPY_HOME/docs/conda.txt
-            $PYTHON3DIR/bin/pip install git+https://github.com/tylere/pykml.git
+            ./Miniconda3-latest-Linux-x86_64.sh -b -p ${CONDA_PREFIX}
+            ${CONDA_PREFIX}/bin/conda config --add channels conda-forge
+            ${CONDA_PREFIX}/bin/conda install --yes --file $MINTPY_HOME/docs/conda.txt
+            ${CONDA_PREFIX}/bin/pip install git+https://github.com/tylere/pykml.git
+
       - run:
           name: Testing Mintpy on Fernandina
           command: |
             export MINTPY_HOME=~/tools/MintPy
-            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}
-            export PATH=${PATH}:${MINTPY_HOME}/mintpy
-            export PYTHON3DIR=~/tools/miniconda3
-            export PATH=${PATH}:${PYTHON3DIR}/bin
             export PYAPS_HOME=~/tools/PyAPS
-            export PYTHONPATH=${PYTHONPATH}:${PYAPS_HOME}
+            export CONDA_PREFIX=~/tools/miniconda3
+            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
+            export PATH=${PATH}:${CONDA_PREFIX}/bin:${MINTPY_HOME}/mintpy
             ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ~/data --dset FernandinaSenDT128
 
       - run:
           name: Testing Mintpy on Wells
           command: |
             export MINTPY_HOME=~/tools/MintPy
-            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}
-            export PATH=${PATH}:${MINTPY_HOME}/mintpy
-            export PYTHON3DIR=~/tools/miniconda3
-            export PATH=${PATH}:${PYTHON3DIR}/bin
             export PYAPS_HOME=~/tools/PyAPS
-            export PYTHONPATH=${PYTHONPATH}:${PYAPS_HOME}
+            export CONDA_PREFIX=~/tools/miniconda3
+            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
+            export PATH=${PATH}:${CONDA_PREFIX}/bin:${MINTPY_HOME}/mintpy
             ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ~/data --dset WellsEnvD2T399
 
       - run:
           name: Testing Mintpy on Kuju
           command: |
             export MINTPY_HOME=~/tools/MintPy
-            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}
-            export PATH=${PATH}:${MINTPY_HOME}/mintpy
-            export PYTHON3DIR=~/tools/miniconda3
-            export PATH=${PATH}:${PYTHON3DIR}/bin
             export PYAPS_HOME=~/tools/PyAPS
-            export PYTHONPATH=${PYTHONPATH}:${PYAPS_HOME}
+            export CONDA_PREFIX=~/tools/miniconda3
+            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
+            export PATH=${PATH}:${CONDA_PREFIX}/bin:${MINTPY_HOME}/mintpy
             ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ~/data --dset KujuAlosAT422F650
 
 workflows:
