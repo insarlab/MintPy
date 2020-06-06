@@ -44,10 +44,10 @@ EXAMPLE = """example:
   tropo_pyaps3.py -d SAFE_files.txt -g inputs/geometryRadar.h5
 """
 
-SAFE_FILE = """
-/data/SanAndreasSenDT42/SLC/S1B_IW_SLC__1SDV_20191117T140737_20191117T140804_018968_023C8C_82DC.zip
-/data/SanAndreasSenDT42/SLC/S1A_IW_SLC__1SDV_20191111T140819_20191111T140846_029864_036803_69CA.zip
-...
+SAFE_FILE = """SAFE_files.txt:
+    /data/SanAndreasSenDT42/SLC/S1B_IW_SLC__1SDV_20191117T140737_20191117T140804_018968_023C8C_82DC.zip
+    /data/SanAndreasSenDT42/SLC/S1A_IW_SLC__1SDV_20191111T140819_20191111T140846_029864_036803_69CA.zip
+    ...
 """
 
 REFERENCE = """reference:
@@ -103,7 +103,7 @@ def create_parser():
                         help='List of dates in YYYYMMDD or YYMMDD format. It can be:\n'
                              'a) list of strings in YYYYMMDD or YYMMDD format OR\n'
                              'b) a text file with the first column as list of date in YYYYMMDD or YYMMDD format OR\n'
-                             'c) a text file with Sentinel-1 SAFE filenames \ne.g.: '+SAFE_FILE)
+                             'c) a text file with Sentinel-1 SAFE filenames\ne.g.: '+SAFE_FILE)
     parser.add_argument('--hour', type=str, help='time of data in HH, e.g. 12, 06')
     parser.add_argument('-o', dest='cor_timeseries_file',
                         help='Output file name for trospheric corrected timeseries.')
