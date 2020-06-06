@@ -64,13 +64,17 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # expand test_dir
     inps.test_dir = os.path.expanduser(inps.test_dir)
     inps.test_dir = os.path.expandvars(inps.test_dir)
 
+    # translate --dset all
     if inps.dset_name.lower() == 'all':
         inps.dset_name = PROJ_NAME_LIST
+
     elif isinstance(inps.dset_name, str):
         inps.dset_name = [inps.dset_name]
+
     return inps
 
 
@@ -147,6 +151,10 @@ def main(iargs=None):
     start_time = time.time()
     inps = cmd_line_parse(iargs)
 
+    # create test directory
+    os.makedirs(inps.test_dir, exist_ok=True)
+
+    # run test
     num_dset = len(inps.dset_name)
     for i in range(num_dset):
         dset_name = inps.dset_name[i]
@@ -158,6 +166,7 @@ def main(iargs=None):
                      test_pyaps=inps.test_pyaps)
         print('PASS testing smallbaselineApp workflow on exmaple dataset {}/{}: {}'.format(i+1, num_dset, dset_name))
 
+    # print message
     if num_dset == len(PROJ_NAME_LIST):
         m, s = divmod(time.time()-start_time, 60)
         msg = '-'*50
