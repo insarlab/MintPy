@@ -55,9 +55,7 @@ jobs:
             export PATH=${PATH}:${PYTHON3DIR}/bin
             export PYAPS_HOME=~/tools/PyAPS
             export PYTHONPATH=${PYTHONPATH}:${PYAPS_HOME}
-            export PATH=${PATH}:${MINTPY_HOME}/test
-            cd ${MINTPY_HOME}/test
-            test_smallbaselineApp.py --dir ${MINTPY_HOME}/test --dset FernandinaSenDT128
+            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ~/data --dset FernandinaSenDT128
 
       - run:
           name: Testing Mintpy on Wells
@@ -69,9 +67,7 @@ jobs:
             export PATH=${PATH}:${PYTHON3DIR}/bin
             export PYAPS_HOME=~/tools/PyAPS
             export PYTHONPATH=${PYTHONPATH}:${PYAPS_HOME}
-            export PATH=${PATH}:${MINTPY_HOME}/test
-            cd ${MINTPY_HOME}/test
-            test_smallbaselineApp.py --dir ${MINTPY_HOME}/test --dset WellsEnvD2T399
+            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ~/data --dset WellsEnvD2T399
 
       - run:
           name: Testing Mintpy on Kuju
@@ -83,9 +79,7 @@ jobs:
             export PATH=${PATH}:${PYTHON3DIR}/bin
             export PYAPS_HOME=~/tools/PyAPS
             export PYTHONPATH=${PYTHONPATH}:${PYAPS_HOME}
-            export PATH=${PATH}:${MINTPY_HOME}/test
-            cd ${MINTPY_HOME}/test
-            test_smallbaselineApp.py --dir ${MINTPY_HOME}/test --dset KujuAlosAT422F650
+            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ~/data --dset KujuAlosAT422F650
 
 workflows:
   version: 2
