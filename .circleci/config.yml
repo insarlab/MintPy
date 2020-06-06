@@ -46,7 +46,7 @@ jobs:
             ${CONDA_PREFIX}/bin/pip install git+https://github.com/tylere/pykml.git
 
       - run:
-          name: Testing Mintpy on Fernandina
+          name: Testing MintPy on Example Datasets
           command: |
             export MINTPY_HOME=~/tools/MintPy
             export PYAPS_HOME=~/tools/PyAPS
@@ -55,31 +55,7 @@ jobs:
             export PATH=${PATH}:${CONDA_PREFIX}/bin:${MINTPY_HOME}/mintpy
             mkdir -p /root/data
             cd /root/data
-            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir /root/data --dset FernandinaSenDT128
-
-      - run:
-          name: Testing Mintpy on Wells
-          command: |
-            export MINTPY_HOME=~/tools/MintPy
-            export PYAPS_HOME=~/tools/PyAPS
-            export CONDA_PREFIX=~/tools/miniconda3
-            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
-            export PATH=${PATH}:${CONDA_PREFIX}/bin:${MINTPY_HOME}/mintpy
-            mkdir -p /root/data
-            cd /root/data
-            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ~/data --dset WellsEnvD2T399
-
-      - run:
-          name: Testing Mintpy on Kuju
-          command: |
-            export MINTPY_HOME=~/tools/MintPy
-            export PYAPS_HOME=~/tools/PyAPS
-            export CONDA_PREFIX=~/tools/miniconda3
-            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
-            export PATH=${PATH}:${CONDA_PREFIX}/bin:${MINTPY_HOME}/mintpy
-            mkdir -p /root/data
-            cd /root/data
-            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ~/data --dset KujuAlosAT422F650
+            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir /root/data --dset all
 
 workflows:
   version: 2
