@@ -47,9 +47,8 @@ def cmd_line_parse(iargs=None):
     if not inps.xml_file:
         inps.xml_file = auto_xml_file4giant(inps.file)
     if not inps.xml_file:
-        print('error: no xml file found.')
         parser.print_usage()
-        raise SystemExit()
+        raise SystemExit('ERROR: no xml file found.')
 
     return inps
 

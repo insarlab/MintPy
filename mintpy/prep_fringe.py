@@ -79,7 +79,7 @@ def cmd_line_parse(iargs = None):
 
     #if all(not i for i in [inps.ifgDir, inps.geomDir, inps.cohFile, inps.baselineDir, inps.bbox]):
     #    parser.print_usage()
-    #    raise SystemExit("error: all of the following arguments are required: -i, -f, -g, -c, -p, -b")
+    #    raise SystemExit("ERROR: all of the following arguments are required: -i, -f, -g, -c, -p, -b")
     return inps
 
 

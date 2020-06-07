@@ -6,56 +6,51 @@ jobs:
 
     steps:
       - run:
-          name: Setting Environment Variables
+          name: Setting Environment with Miniconda
           command: |
-            apt-get update
-            apt-get upgrade -y
-            apt-get install -y git
-            apt-get install -y wget
-            # if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
-            export MINTPY_HOME=~/tools/MintPy
-            export PYAPS_HOME=~/tools/PyAPS
-            export CONDA_PREFIX=~/tools/miniconda3
-            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
-            export PATH=${PATH}:${CONDA_PREFIX}/bin:${MINTPY_HOME}/mintpy
-            echo $MINTPY_HOME
-
-      - run:
-          name: Downloading MintPy and PyAPS
-          command: | 
-            export MINTPY_HOME=~/tools/MintPy
-            export PYAPS_HOME=~/tools/PyAPS
-            git clone https://github.com/insarlab/MintPy.git $MINTPY_HOME
-            git clone https://github.com/yunjunz/pyaps3.git $PYAPS_HOME/pyaps3
-            pwd
-            ls
-
-      - run:
-          name: Installing Dependencies via Conda
-          command: |
-            pwd
-            ls
-            export MINTPY_HOME=~/tools/MintPy
-            export CONDA_PREFIX=~/tools/miniconda3
-            export PATH=${PATH}:${CONDA_PREFIX}/bin:${MINTPY_HOME}/mintpy
+            apt update
+            apt-get update --yes && apt-get upgrade --yes
+            apt-get install --yes git wget
+            # download and install miniconda3
+            mkdir -p ${HOME}/tools
+            cd ${HOME}/tools
             wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
             chmod +x Miniconda3-latest-Linux-x86_64.sh
-            ./Miniconda3-latest-Linux-x86_64.sh -b -p ${CONDA_PREFIX}
-            ${CONDA_PREFIX}/bin/conda config --add channels conda-forge
-            ${CONDA_PREFIX}/bin/conda install --yes --file $MINTPY_HOME/docs/conda.txt
-            ${CONDA_PREFIX}/bin/pip install git+https://github.com/tylere/pykml.git
+            ./Miniconda3-latest-Linux-x86_64.sh -b -p ${HOME}/tools/miniconda3
+
+      - run:
+          name: Installing MintPy and PyAPS
+          command: | 
+            # setup environment variable
+            export MINTPY_HOME=${HOME}/tools/MintPy
+            export PYAPS_HOME=${HOME}/tools/PyAPS
+            export CONDA_PREFIX=${HOME}/tools/miniconda3
+            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
+            export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
+            # download source code
+            git clone https://github.com/insarlab/MintPy.git $MINTPY_HOME
+            git clone https://github.com/yunjunz/pyaps3.git $PYAPS_HOME/pyaps3
+            # install dependencies
+            conda config --add channels conda-forge
+            conda install --yes --file $MINTPY_HOME/docs/conda.txt
+            pip install git+https://github.com/tylere/pykml.git
+            # test installation
+            python -c "import mintpy; print(mintpy.version.description)"
+            smallbaselineApp.py -h
+            tropo_pyaps3.py -h
 
       - run:
           name: Testing MintPy on Example Datasets
           command: |
-            export MINTPY_HOME=~/tools/MintPy
-            export PYAPS_HOME=~/tools/PyAPS
-            export CONDA_PREFIX=~/tools/miniconda3
+            export MINTPY_HOME=${HOME}/tools/MintPy
+            export PYAPS_HOME=${HOME}/tools/PyAPS
+            export CONDA_PREFIX=${HOME}/tools/miniconda3
             export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
-            export PATH=${PATH}:${CONDA_PREFIX}/bin:${MINTPY_HOME}/mintpy
-            mkdir -p /root/data
-            cd /root/data
-            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir /root/data --dset all
+            export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
+            mkdir -p ${HOME}/data
+            cd ${HOME}/data
+            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ${HOME}/data --dset FernandinaSenDT128
+            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ${HOME}/data --dset WellsEnvD2T399
 
 workflows:
   version: 2
