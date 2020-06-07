@@ -1,3 +1,4 @@
+version: 2.1
 jobs:
   build:
     docker:
@@ -5,6 +6,7 @@ jobs:
         user: root
 
     steps:
+      - checkout
       - run:
           name: Setting Environment with Miniconda
           command: |
@@ -20,7 +22,7 @@ jobs:
 
       - run:
           name: Installing MintPy and PyAPS
-          command: | 
+          command: |
             # setup environment variable
             export MINTPY_HOME=${HOME}/tools/MintPy
             export PYAPS_HOME=${HOME}/tools/PyAPS
