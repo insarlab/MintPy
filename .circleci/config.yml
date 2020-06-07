@@ -35,7 +35,8 @@ jobs:
             conda install --yes --file $MINTPY_HOME/docs/conda.txt
             pip install git+https://github.com/tylere/pykml.git
             # test installation
-            smallbaselineApp.py -v
+            python -c "import mintpy; print(mintpy.version.description)"
+            smallbaselineApp.py -h
             tropo_pyaps3.py -h
 
       - run:
