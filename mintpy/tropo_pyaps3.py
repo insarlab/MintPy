@@ -162,9 +162,7 @@ def cmd_line_parse(iargs=None):
     ## required options (for date/time): --file OR --date-list
     if (not inps.timeseries_file 
             and any(vars(inps)[key] is None for key in ['date_list'])):
-        msg = 'ERROR: --file OR --date-list is required.'
-        msg += '\n\n'+EXAMPLE
-        raise SystemExit(msg)
+        raise SystemExit('ERROR: --file OR --date-list is required.\n\n'+EXAMPLE)
 
     ## output filename - tropo delay file
     if inps.geom_file and not inps.tropo_file:

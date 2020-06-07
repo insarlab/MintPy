@@ -60,7 +60,7 @@ def cmd_line_parse(iargs = None):
     inps = parser.parse_args(args=iargs)
     if all(not i for i in [inps.dsetDir, inps.geometryDir, inps.metaFile]):
         parser.print_usage()
-        raise SystemExit('error: at least one of the following arguments are required: -i, -g, -m')
+        raise SystemExit('ERROR: at least one of the following arguments are required: -i, -g, -m')
     return inps
 
 
