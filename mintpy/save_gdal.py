@@ -2,20 +2,35 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Forrest Williams, 2013                           #
+# Author: Forrest Williams, Jun 2020                       #
 ############################################################
 
-import gdal, ogr, os, osr
-import numpy as np
+
+import os
 import argparse
-from mintpy.utils import readfile
+import numpy as np
+import gdal, ogr, osr
+from mintpy.utils import readfile, plot as pp
+
+
+# link: https://gdal.org/drivers/raster/index.html
+GDAL_DRIVER2EXT = {
+    'GTiff' : '.tif',
+    'ENVI'  : '',
+    'GMT'   : '.grd',
+    'GRIB'  : '.grb',
+    'JPEG'  : '.jpg',
+    'PNG'   : '.png',
+}
+
 
 EXAMPLE = """example:
   save_tif.py geo/geo_velocity.h5 
-  save_tif.py geo/geo_timeseries_ERA5_ramp_demErr.h5 -d 20101120 -o corrected20101120
-  save_tif.py geo/geo_timeseries_ERA5_demErr.h5 -d 20200505_20200517 -f ISCE
-  save_tif.py geo/geo_ifgramStack.h5 -d 20101120_20110220 -f 
+  save_tif.py geo/geo_timeseries_ERA5_demErr.h5 -d 20200505_20200517 --of ENVI
+  save_tif.py geo/geo_ifgramStack.h5 -d unwrapPhase-20101120_20110220 --of ISCE
+  save_tif.py geo/geo_ifgramStack.h5 -d coherence-20101120_20110220 --of ISCE
 """
+
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Generate GDAL raster from MintPy h5 file.',
@@ -23,13 +38,15 @@ def create_parser():
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', help='file to be converted, in geo coordinate.')
-    parser.add_argument('-d', '--dataset', dest='dset',
+    parser.add_argument('-d', '--dset', '--dataset', dest='dset',
                         help='date of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file base name. Extension is fixed by GDAL driver')
-    parser.add_argument('-f', '--fileformat', dest='fileformat', default='GTiff',
-                        help='file format as defined by GDAL driver name.\nGDAL driver names can be found at gdal.org/drivers/raster/index.html\nDefault file type is GTiff')
+    parser.add_argument('--of', '--out-format', '--output-format', dest='out_format', default='GTiff',
+                        help='file format as defined by GDAL driver name, e.g. GTiff, ENVI, default: %(default)s\n'
+                             'GDAL driver names can be found at https://gdal.org/drivers/raster/index.html')
     return parser
+
 
 def cmd_line_parse(iargs=None):
     parser = create_parser()
@@ -42,42 +59,77 @@ def cmd_line_parse(iargs=None):
 
     return inps
 
-def array2raster(rasterName,rasterFormat,rasterOrigin,pixelWidth,pixelHeight,array):
 
+def array2raster(array, rasterName, rasterFormat, rasterOrigin, xStep, yStep):
+
+    # transform info
     cols = array.shape[1]
     rows = array.shape[0]
     originX = rasterOrigin[0]
     originY = rasterOrigin[1]
+    transform = (originX, xStep, 0, originY, 0, yStep)
 
+    # write
     driver = gdal.GetDriverByName(rasterFormat)
+    print('initiate GDAL driver: {}'.format(driver.LongName))
+
+    print('create raster band')
+    print('raster row / column number: {}, {}'.format(rows, cols))
+    print('raster transform info: {}'.format(transform))
     outRaster = driver.Create(rasterName, cols, rows, 1, gdal.GDT_Float64)
-    outRaster.SetGeoTransform((originX, pixelWidth, 0, originY, 0, pixelHeight))
+    outRaster.SetGeoTransform(transform)
+
+    print('write data to raster band')
     outband = outRaster.GetRasterBand(1)
     outband.WriteArray(array)
+
+    print('set projectection as: EPSG 4326')
     outRasterSRS = osr.SpatialReference()
     outRasterSRS.ImportFromEPSG(4326)
     outRaster.SetProjection(outRasterSRS.ExportToWkt())
     outband.FlushCache()
+    print('finished writing to {}'.format(rasterName))
+
+    return rasterName
+
 
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    if not inps.dset:
-        array, attr = readfile.read(inps.file)
+    # check reference date
+    print('read metadata from file: {}'.format(inps.file))
+    attr = readfile.read_attribute(inps.file)
+    if attr['FILE_TYPE'] == 'timeseries' and inps.dset and '_' in inps.dset:
+        inps.ref_date, inps.dset = inps.dset.split('_')
     else:
-    	array, attr = readfile.read(inps.file, datasetName=inps.dset)
+        inps.ref_date = None
 
+    # read data
+    print('read data     from file: {}'.format(inps.file))
+    array, attr = readfile.read(inps.file, datasetName=inps.dset)
+    if attr['FILE_TYPE'] == 'timeseries' and inps.ref_date:
+        array -= readfile.read(inps.file, datasetName=inps.ref_date)[0]
+
+    # output filename
     if not inps.outfile:
-        inps.outfile = os.path.splitext(inps.file)[0]
+        fbase = pp.auto_figure_title(inps.file,
+                                     datasetNames=inps.dset,
+                                     inps_dict=vars(inps))
+        inps.outfile = fbase + GDAL_DRIVER2EXT.get(inps.out_format, '')
     else:
-    	inps.outfile = os.path.abspath(inps.outfile)
+        inps.outfile = os.path.abspath(inps.outfile)
 
+    # coordinate info
     rasterOrigin = (float(attr['X_FIRST']),float(attr['Y_FIRST']))
     xStep = float(attr['X_STEP'])
     yStep = float(attr['Y_STEP'])
 
+    # convert array to raster
     reversed_arr = array[::-1]
-    array2raster(inps.outfile,inps.fileformat,rasterOrigin,xStep,yStep,reversed_arr) # convert array to raster
+    array2raster(reversed_arr, inps.outfile, inps.out_format, rasterOrigin, xStep, yStep)
+
+    return
+
 
 if __name__ == "__main__":
     main()
