@@ -523,13 +523,21 @@ def get_slice_list(fname):
     else:
         num_band = int(atr.get('number_bands', '1'))
         if fext in ['.trans', '.utm_to_rdc'] and num_band == 2:
+            # roipac / gamma lookup table
             slice_list = ['rangeCoord', 'azimuthCoord']
-        elif fext in ['.int', '.unw'] and num_band == 2:
-            slice_list = ['magnitude', 'phase']
+
         elif fbase.startswith('los') and num_band == 2:
+            # isce los file
             slice_list = ['incidenceAngle', 'azimuthAngle']
+
+        elif fext in ['.int', '.unw']:
+            # do not check the actual num_band in order to support
+            # mag / pha / cpx reading like "multiple bands"
+            slice_list = ['magnitude', 'phase']
+
         else:
             slice_list = ['band{}'.format(i) for i in range(1,num_band+1)]
+
     return slice_list
 
 
