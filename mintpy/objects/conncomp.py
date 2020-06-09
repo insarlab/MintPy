@@ -54,7 +54,7 @@ class connectComponent:
         self.length, self.width = self.conncomp.shape
 
 
-    def label(self, min_area=2.5e3, erosion_size=5, print_msg=False):
+    def label(self, min_area=2.5e3, erosion_size=30, print_msg=False): ## default erosion 5 
         """ Label the connected components
         Returns: self.labelImg   - 2D np.ndarray in int64 to mask areas to be corrected
                  self.labelBound - 2D np.ndarray in uint8 for label boundaries to find bridges
