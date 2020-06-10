@@ -23,25 +23,21 @@ markdown_extensions:
 nav:
     - Home: README.md
     - User Guide:
-        - Example datasets: demo_dataset.md
+        - Example datasets: example_dataset.md
         - Example directory structure: dir_structure.md
         - Example template files: examples/input_files/README.md
         - Tutorials in Jupyter Notebook: https://github.com/insarlab/MintPy-tutorial
-        - Parallel processing with Dask: dask.md
     - Output:
         - Google Earth KMZ: google_earth.md
         - HDF-EOS5: hdfeos5.md
-        - QGIS: QGIS.md
     - API Documentation:
         - Attributes: api/attributes.md
         - Colormaps: resources/colormaps/README.md
         - Coordinates: api/coord.md
-        - Data structure: api/data_structure.md
         - Docker: docker.md
         - Documents generation: api/doc_generation.md
-        - Module hierarchy: api/module_hierarchy.md
     - About:
         - Contributing: CONTRIBUTING.md
-        - Code of conduct: CODE_OF_CONDUCT.md
+        - Code of Conduct: CODE_OF_CONDUCT.md
         - References: references.md
 

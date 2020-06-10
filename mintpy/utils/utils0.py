@@ -4,19 +4,11 @@
 # Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 ############################################################
 # Low level utilities script (independent)
-# Contents
-#   InSAR
-#   File Operation
-#   Geometry
-#   Image Processing
-#   User Interaction
-#   Math / Statistics
 # Recommend import:
 #   from mintpy.utils import utils as ut
 
 
 import os
-import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 import multiprocessing
@@ -50,8 +42,8 @@ def range_distance(atr, dimension=2, print_msg=True):
     range_f = range_n + dR*(width-1)
     range_c = (range_f + range_n)/2.0
     if print_msg:
-        print('near   range : %.2f m' % (range_n))
         print('center range : %.2f m' % (range_c))
+        print('near   range : %.2f m' % (range_n))
         print('far    range : %.2f m' % (range_f))
 
     if dimension == 0:
@@ -72,8 +64,8 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
                      RANGE_PIXEL_SIZE
                      EARTH_RADIUS
                      HEIGHT
+                     LENGTH
                      WIDTH
-                     LENGTH     #for dimension=2
                 dem : 2D array for height to calculate local incidence angle
                 dimension : int,
                             2 for 2d matrix
@@ -96,28 +88,27 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
     dR = float(atr['RANGE_PIXEL_SIZE'])
     r = float(atr['EARTH_RADIUS'])
     H = float(atr['HEIGHT'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
 
     # Calculation
     range_f = range_n+dR*width
     inc_angle_n = (np.pi - np.arccos((r**2 + range_n**2 - (r+H)**2)/(2*r*range_n))) * 180.0/np.pi
     inc_angle_f = (np.pi - np.arccos((r**2 + range_f**2 - (r+H)**2)/(2*r*range_f))) * 180.0/np.pi
-    inc_angle_c = (inc_angle_n + inc_angle_f) / 2.0
     if print_msg:
         print('near   incidence angle : {:.4f} degree'.format(inc_angle_n))
-        print('center incidence angle : {:.4f} degree'.format(inc_angle_c))
         print('far    incidence angle : {:.4f} degree'.format(inc_angle_f))
 
     if dimension == 0:
-        inc_angle = inc_angle_c
+        inc_angle = (inc_angle_n + inc_angle_f) / 2.0
+        if print_msg:
+            print('center incidence angle : {:.4f} degree'.format(inc_angle))
 
     elif dimension == 1:
         inc_angle = np.linspace(inc_angle_n, inc_angle_f, num=width,
                                 endpoint='FALSE', dtype=np.float32)
 
     elif dimension == 2:
-        length = int(atr['LENGTH'])
-
         # consider the local variable due to topography
         if dem is not None:
             range_dist = range_distance(atr, dimension=2, print_msg=False)
@@ -129,41 +120,6 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
     else:
         raise Exception('un-supported dimension input: {}'.format(dimension))
     return inc_angle
-
-
-def incidence_angle2slant_range_distance(atr, inc_angle):
-    """Calculate the corresponding slant range distance given an incidence angle
-
-    Law of sines:
-               r + H                   r               range_dist
-       --------------------- = ----------------- = ------------------ = 2R
-        sin(pi - inc_angle)     sin(look_angle)     sin(range_angle)
-
-    where range_angle = inc_angle - look_angle
-          R is the radius of the circumcircle.
-
-    link: http://www.ambrsoft.com/TrigoCalc/Triangle/BasicLaw/BasicTriangle.htm
-
-    Parameters: atr         - dict, metadata including the following items:
-                                  EARTH_RADIUS
-                                  HEIGHT
-                inc_angle   - float / np.ndarray, incidence angle in degree
-    Returns:    slant_range - float, slant range distance
-    """
-    if isinstance(inc_angle, str):
-        inc_angle = float(inc_angle)
-    inc_angle = np.array(inc_angle, dtype=np.float32) / 180 * np.pi
-    r = float(atr['EARTH_RADIUS'])
-    H = float(atr['HEIGHT'])
-
-    # calculate 2R based on the law of sines
-    R2 = (r + H) / np.sin(np.pi - inc_angle)
-
-    look_angle = np.arcsin( r / R2 )
-    range_angle = inc_angle - look_angle
-    range_dist = R2 * np.sin(range_angle)
-
-    return range_dist
 
 
 def range_ground_resolution(atr, print_msg=False):
@@ -227,13 +183,10 @@ def touch(fname_list, times=None):
 
 
 #################################### Geometry ##########################################
-def get_lat_lon(meta, geom_file=None, box=None):
-    """Extract precise pixel-wise lat/lon.
-
-    For meta dict in geo-coordinates OR geom_file with latitude/longitude dataset
-
+def get_lat_lon(meta, box=None):
+    """extract lat/lon info of all grids into 2D matrix.
+    For meta dict in geo-coordinates only.
     Returned lat/lon are corresponds to the pixel center
-
     Parameters: meta : dict, including LENGTH, WIDTH and Y/X_FIRST/STEP
                 box  : 4-tuple of int for (x0, y0, x1, y1)
     Returns:    lats : 2D np.array for latitude  in size of (length, width)
@@ -242,37 +195,18 @@ def get_lat_lon(meta, geom_file=None, box=None):
     length, width = int(meta['LENGTH']), int(meta['WIDTH'])
     if box is None:
         box = (0, 0, width, length)
+    lat_num = box[3] - box[1]
+    lon_num = box[2] - box[0]
 
-    ds_list = []
-    if geom_file is not None:
-        with h5py.File(geom_file, 'r') as f:
-            ds_list = list(f.keys())
-
-    if 'latitude' in ds_list:
-        # read 2D matrices from geometry file
-        with h5py.File(geom_file, 'r') as f:
-            lats = f['latitude'][box[1]:box[3], box[0]:box[2]]
-            lons = f['longitude'][box[1]:box[3], box[0]:box[2]]
-
-    elif 'Y_FIRST' in meta.keys():
-        # generate 2D matrices for lat/lon
-        lat_step = float(meta['Y_STEP'])
-        lon_step = float(meta['X_STEP'])
-        lat0 = float(meta['Y_FIRST']) + lat_step * (box[1] + 0.5)
-        lon0 = float(meta['X_FIRST']) + lon_step * (box[0] + 0.5)
-
-        lat_num = box[3] - box[1]
-        lon_num = box[2] - box[0]
-
-        lat1 = lat0 + lat_step * lat_num
-        lon1 = lon0 + lon_step * lon_num
-        lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
-                              lon0:lon1:lon_num*1j]
-
-    else:
-        msg = 'Can not get pixel-wise lat/lon!'
-        msg += '\nmeta dict is not geocoded and/or geometry file does not contains latitude/longitude dataset.'
-        raise ValueError(msg)
+    # generate 2D matrix for lat/lon
+    lat_step = float(meta['Y_STEP'])
+    lon_step = float(meta['X_STEP'])
+    lat0 = float(meta['Y_FIRST']) + lat_step * (box[1] + 0.5)
+    lon0 = float(meta['X_FIRST']) + lon_step * (box[0] + 0.5)
+    lat1 = lat0 + lat_step * lat_num
+    lon1 = lon0 + lon_step * lon_num
+    lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
+                          lon0:lon1:lon_num*1j]
 
     lats = np.array(lats, dtype=np.float32)
     lons = np.array(lons, dtype=np.float32)
@@ -305,15 +239,9 @@ def get_lat_lon_rdc(meta):
 
 def azimuth2heading_angle(az_angle):
     """Convert azimuth angle from ISCE los.rdr band2 into satellite orbit heading angle
-
-    ISCE-2 los.* file band2 is azimuth angle of LOS vector from ground target to the satellite 
-        measured from the north in anti-clockwise as positive
-
-    Below are typical values in deg for satellites with near-polar orbit:
-        ascending  orbit: heading angle of -12  and azimuth angle of 102
-        descending orbit: heading angle of -168 and azimuth angle of -102
+    ISCE los.band2 is azimuth angle of LOS vector from ground target to the satellite 
+    measured from the north in anti-clockwise as positive
     """
-
     head_angle = -1 * (180 + az_angle + 90)
     head_angle -= np.round(head_angle / 360.) * 360.
     return head_angle
@@ -321,39 +249,36 @@ def azimuth2heading_angle(az_angle):
 
 def enu2los(e, n, u, inc_angle=34., head_angle=-168.):
     """
-    Parameters: e          - np.array or float, displacement in east-west direction, east as positive
-                n          - np.array or float, displacement in north-south direction, north as positive
-                u          - np.array or float, displacement in vertical direction, up as positive
-                inc_angle  - np.array or float, local incidence angle from vertical
-                head_angle - np.array or float, satellite orbit from the north in clock-wise direction as positive
-    Returns:    v_los      - np.array or float, displacement in line-of-sight direction, moving toward satellite as positive
-
-    Typical values in deg for satellites with near-polar orbit:
-        For AlosA: inc_angle = 34, head_angle = -12.9,  az_angle = 102.9
-        For AlosD: inc_angle = 34, head_angle = -167.2, az_angle = -12.8
-        For  SenD: inc_angle = 34, head_angle = -168.0, az_angle = -102
+    Parameters: e : np.array or float, displacement in east-west direction, east as positive
+                n : np.array or float, displacement in north-south direction, north as positive
+                u : np.array or float, displacement in vertical direction, up as positive
+                inc_angle  : np.array or float, local incidence angle from vertical
+                head_angle : np.array or float, satellite orbit from the north in clock-wise direction as positive
+    For AlosA: inc_angle = 34, head_angle = -12.873
+    For AlosD: inc_angle = 34, head_angle = -167.157
+    For SenD: inc_angle = 34, head_angle = -168
     """
     # if input angle is azimuth angle
-    if np.abs(np.abs(head_angle) - 90) < 30:
+    if (head_angle + 180.) > 45.:
         head_angle = azimuth2heading_angle(head_angle)
 
     inc_angle *= np.pi/180.
     head_angle *= np.pi/180.
-    v_los = (  e * np.sin(inc_angle) * np.cos(head_angle) * -1
-             + n * np.sin(inc_angle) * np.sin(head_angle) 
+    v_los = (-1 * e * np.cos(head_angle) * np.sin(inc_angle)
+             + n * np.sin(head_angle) * np.sin(inc_angle)
              + u * np.cos(inc_angle))
     return v_los
 
 def four_corners(atr):
     """Return 4 corners lat/lon"""
-    width  = int(atr['WIDTH'])
+    width = int(atr['WIDTH'])
     length = int(atr['LENGTH'])
     lon_step = float(atr['X_STEP'])
     lat_step = float(atr['Y_STEP'])
-    west  = float(atr['X_FIRST'])
+    west = float(atr['X_FIRST'])
     north = float(atr['Y_FIRST'])
-    south = north + lat_step * length
-    east  = west  + lon_step * width
+    south = north + lat_step*length
+    east = west + lon_step*width
     return west, east, south, north
 
 
@@ -585,7 +510,7 @@ def interpolate_data(inData, outShape, interpMethod='linear'):
 
 
 
-#################################### User Interaction #####################################
+#################################### Interaction ##########################################
 def yes_or_no(question):
     """garrettdreyfus on Github: https://gist.github.com/garrettdreyfus/8153571"""
     reply = str(input(question+' (y/n): ')).lower().strip()
@@ -668,7 +593,7 @@ def check_parallel(file_num=1, print_msg=True, maxParallelNum=8):
 
 
 
-#################################### Math / Statistics ###################################
+#################################### Math ##########################################
 def median_abs_deviation_threshold(data, center=None, cutoff=3.):
     """calculate rms_threshold based on the standardised residual
     outlier detection with median absolute deviation.
@@ -696,13 +621,8 @@ def round_to_1(x):
     return round(x, -1*digit)
 
 
-def highest_power_of_2(x):
-    """Given a number x, find the highest power of 2 that <= x"""
-    res = np.power(2, np.floor(np.log2(x)))
-    res = np.int16(res)
-    return res
 
-
+#################################### Utilities ##########################################
 def most_common(L, k=1):
     """Return the k most common item in the list L.
     Examples:

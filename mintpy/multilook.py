@@ -11,12 +11,6 @@ import sys
 import argparse
 import warnings
 import numpy as np
-
-# suppress numpy.RuntimeWarning message
-import logging
-np_logger = logging.getLogger('numpy')
-np_logger.setLevel(logging.WARNING)
-
 from mintpy.utils import readfile, writefile, utils as ut
 
 
@@ -25,11 +19,8 @@ EXAMPLE = """example:
   multilook.py  velocity.h5  -r 15 -a 15
   multilook.py  srtm30m.dem  -r 10 -a 10  -o srtm30m_300m.dem
 
-  # To interpolate input file into larger size file:
+  To interpolate input file into larger size file:
   multilook.py  bperp.rdr  -10 -2 -o bperp_full.rdr
-
-  # Ignore / skip marginal pixels
-  multilook.py ../../geom_master/hgt.rdr.full -r 300 -a 100 --margin 58 58 58 58 -o hgt.rdr
 """
 
 
@@ -45,8 +36,8 @@ def create_parser():
                         help='number of multilooking in azimuth/y direction')
     parser.add_argument('-o', '--outfile',
                         help='Output file name. Disabled when more than 1 input files')
-    parser.add_argument('--margin', dest='margin', type=int, nargs=4, metavar=('TOP','BOTTOM','LEFT','RIGHT'),
-                        default=[0,0,0,0], help='number of pixels on the margin to skip, default: 0 0 0 0.')
+    parser.add_argument('--no-parallel', dest='parallel', action='store_false', default=True,
+                        help='Disable parallel processing. Diabled auto for 1 input file.')
     return parser
 
 
@@ -86,66 +77,50 @@ def multilook_matrix(matrix, lks_y, lks_x):
     return matrix_mli
 
 
-def multilook_data(data, lks_y, lks_x):
+def multilook_data(data, lksY, lksX):
     """Modified from Praveen on StackOverflow:
-
-    link: https://stackoverflow.com/questions/34689519/how-to-coarser-the-2-d-array-data-resolution
-
-    Parameters: data        : 2D / 3D np.array in real or complex
-                lks_y       : int, number of multilook in y/azimuth direction
-                lks_x       : int, number of multilook in x/range direction
-    Returns:    coarse_data : 2D / 3D np.array after multilooking in last two dimension
+    https://stackoverflow.com/questions/34689519/how-to-coarser-the-2-d-array-data-resolution
+    Parameters: data : 2D / 3D np.array
+                lksY : int, number of multilook in y/azimuth direction
+                lksX : int, number of multilook in x/range direction
+    Returns:    coarseData : 2D / 3D np.array after multilooking in last two dimension
     """
-
     shape = np.array(data.shape, dtype=float)
     if len(shape) == 2:
-        # crop data to the exact multiple of the multilook number
-        new_shape = np.floor(shape / (lks_y, lks_x)).astype(int) * (lks_y, lks_x)
-        crop_data = data[:new_shape[0],
-                         :new_shape[1]]
-
-        # reshape to more dimensions and collapse the extra dimensions with mean
-        temp = crop_data.reshape((new_shape[0] // lks_y, lks_y,
-                                  new_shape[1] // lks_x, lks_x))
-        coarse_data = np.nanmean(temp, axis=(1, 3))
-
+        newShape = np.floor(shape / (lksY, lksX)).astype(int) * (lksY, lksX)
+        cropData = data[:newShape[0], :newShape[1]]
+        temp = cropData.reshape((newShape[0] // lksY, lksY,
+                                 newShape[1] // lksX, lksX))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            coarseData = np.nanmean(temp, axis=(1, 3))
     elif len(shape) == 3:
-        # crop data to the exact multiple of the multilook number
-        new_shape = np.floor(shape / (1, lks_y, lks_x)).astype(int) * (1, lks_y, lks_x)
-        crop_data = data[:new_shape[0],
-                         :new_shape[1],
-                         :new_shape[2]]
-
-        # reshape to more dimensions and collapse the extra dimensions with mean
-        temp = crop_data.reshape((new_shape[0],
-                                  new_shape[1] // lks_y, lks_y,
-                                  new_shape[2] // lks_x, lks_x))
-        coarse_data = np.nanmean(temp, axis=(2, 4))
-
-    return coarse_data
+        newShape = np.floor(shape / (1, lksY, lksX)).astype(int) * (1, lksY, lksX)
+        cropData = data[:newShape[0], :newShape[1], :newShape[2]]
+        temp = cropData.reshape((newShape[0],
+                                 newShape[1] // lksY, lksY,
+                                 newShape[2] // lksX, lksX))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            coarseData = np.nanmean(temp, axis=(2, 4))
+    return coarseData
 
 
-def multilook_attribute(atr_dict, lks_y, lks_x, box=None, print_msg=True):
-    # make a copy of original meta dict
+def multilook_attribute(atr_dict, lks_y, lks_x, print_msg=True):
     atr = dict()
     for key, value in iter(atr_dict.items()):
         atr[key] = str(value)
 
-    if box is None:
-        box = (0, 0, int(atr['WIDTH']), int(atr['LENGTH']))
-    length, width = box[3] - box[1], box[2] - box[0]
-
-    length_mli = length // lks_y
-    width_mli = width // lks_x
-    print('output data in size: {}, {}'.format(length_mli, width_mli))
+    length_mli = int(np.floor(int(atr['LENGTH']) / lks_y))
+    width_mli = int(np.floor(int(atr['WIDTH']) / lks_x))
 
     # Update attributes
     atr['LENGTH'] = str(length_mli)
     atr['WIDTH'] = str(width_mli)
-    atr['XMIN'] = str(box[0])
-    atr['YMIN'] = str(box[1])
-    atr['XMAX'] = str(width_mli - 1 + box[0])
-    atr['YMAX'] = str(length_mli - 1 + box[1])
+    atr['XMIN'] = '0'
+    atr['YMIN'] = '0'
+    atr['XMAX'] = str(width_mli-1)
+    atr['YMAX'] = str(length_mli-1)
     atr['RLOOKS'] = str(int(atr.get('RLOOKS', '1')) * lks_x)
     atr['ALOOKS'] = str(int(atr.get('ALOOKS', '1')) * lks_y)
     if print_msg:
@@ -168,49 +143,31 @@ def multilook_attribute(atr_dict, lks_y, lks_x, box=None, print_msg=True):
             print('update RANGE_PIXEL_SIZE')
 
     if 'REF_Y' in atr.keys():
-        atr['REF_Y'] = str( (int(atr['REF_Y']) - box[1]) // lks_y )
-        atr['REF_X'] = str( (int(atr['REF_X']) - box[0]) // lks_x )
+        atr['REF_Y'] = str(int(int(atr['REF_Y']) / lks_y))
+        atr['REF_X'] = str(int(int(atr['REF_X']) / lks_x))
         if print_msg:
             print('update REF_Y/X')
 
     if 'SUBSET_XMIN' in atr.keys():
-        atr['SUBSET_YMIN'] = str( (int(atr['SUBSET_YMIN']) - box[1]) // lks_y )
-        atr['SUBSET_YMAX'] = str( (int(atr['SUBSET_YMAX']) - box[1]) // lks_y )
-        atr['SUBSET_XMIN'] = str( (int(atr['SUBSET_XMIN']) - box[0]) // lks_x )
-        atr['SUBSET_XMAX'] = str( (int(atr['SUBSET_XMAX']) - box[0]) // lks_x )
+        atr['SUBSET_YMIN'] = str(int(int(atr['SUBSET_YMIN'])/lks_y))
+        atr['SUBSET_YMAX'] = str(int(int(atr['SUBSET_YMAX'])/lks_y))
+        atr['SUBSET_XMIN'] = str(int(int(atr['SUBSET_XMIN'])/lks_x))
+        atr['SUBSET_XMAX'] = str(int(int(atr['SUBSET_XMAX'])/lks_x))
         if print_msg:
             print('update SUBSET_XMIN/XMAX/YMIN/YMAX')
     return atr
 
 
-def multilook_file(infile, lks_y, lks_x, outfile=None, margin=[0,0,0,0]):
-    """ Multilook input file
-    Parameters: infile - str, path of input file to be multilooked.
-                lks_y  - int, number of looks in y / row direction.
-                lks_x  - int, number of looks in x / column direction.
-                margin - list of 4 int, number of pixels to be skipped during multilooking.
-                         useful for offset product, where the marginal pixels are ignored during
-                         cross correlation matching.
-                outfile - str, path of output file
-    Returns:    outfile - str, path of output file
-    """
+def multilook_file(infile, lks_y, lks_x, outfile=None):
     lks_y = int(lks_y)
     lks_x = int(lks_x)
 
     # input file info
     atr = readfile.read_attribute(infile)
-    length, width = int(atr['LENGTH']), int(atr['WIDTH'])
     k = atr['FILE_TYPE']
     print('multilooking {} {} file: {}'.format(atr['PROCESSOR'], k, infile))
     print('number of looks in y / azimuth direction: %d' % lks_y)
     print('number of looks in x / range   direction: %d' % lks_x)
-
-    # margin --> box
-    if margin is not [0,0,0,0]:    # top, bottom, left, right
-        box = (margin[2], margin[0], width - margin[3], length - margin[1])
-        print('number of pixels to skip in top/bottom/left/right boundaries: {}'.format(margin))
-    else:
-        box = (0, 0, width, length)
 
     # output file name
     if not outfile:
@@ -228,27 +185,10 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, margin=[0,0,0,0]):
     for dsName in dsNames:
         print('multilooking {d:<{w}} from {f} ...'.format(
             d=dsName, w=maxDigit, f=os.path.basename(infile)))
-        data = readfile.read(infile, datasetName=dsName, box=box, print_msg=False)[0]
-
-        # keep timeseries data as 3D matrix when there is only one acquisition
-        # because readfile.read() will squeeze it to 2D
-        if atr['FILE_TYPE'] == 'timeseries' and len(data.shape) == 2:
-            data = np.reshape(data, (1, data.shape[0], data.shape[1]))
-
+        data = readfile.read(infile, datasetName=dsName, print_msg=False)[0]
         data = multilook_data(data, lks_y, lks_x)
         dsDict[dsName] = data
-
-    # update metadata
-    atr = multilook_attribute(atr, lks_y, lks_x, box=box)
-
-    # for binary file with 2 bands, always use BIL scheme
-    if (len(dsDict.keys()) == 2
-            and os.path.splitext(infile)[1] not in ['.h5','.he5']
-            and atr.get('scheme', 'BIL').upper() != 'BIL'):
-        print('the input binary file has 2 bands with band interleave as: {}'.format(atr['scheme']))
-        print('for the output binary file, change the band interleave to BIL as default.')
-        atr['scheme'] = 'BIL'
-
+    atr = multilook_attribute(atr, lks_y, lks_x)
     writefile.write(dsDict, out_file=outfile, metadata=atr, ref_file=infile)
     return outfile
 
@@ -258,11 +198,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     for infile in inps.file:
-        multilook_file(infile,
-                       lks_y=inps.lks_y,
-                       lks_x=inps.lks_x,
-                       outfile=inps.outfile,
-                       margin=inps.margin)
+        multilook_file(infile, lks_y=inps.lks_y, lks_x=inps.lks_x, outfile=inps.outfile)
 
     print('Done.')
     return

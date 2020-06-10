@@ -3,11 +3,11 @@ Here are example interferogram stacks pre-processed using different InSAR proces
 #### Sentinel-1 on Fernandina with ISCE ####
 
 Area: Fernandina volcano at Galápagos Islands, Ecuador     
-Data: Sentinel-1 A/B descending track 128 during Dec 2014 - June 2018 (98 acquisitions; [Zenodo](https://zenodo.org/record/3635245))      
+Data: Sentinel-1 A/B descending track 128 during Dec 2014 - June 2018 (98 acquisitions; [Zenodo](https://zenodo.org/record/2748487))      
 Size: ~750 MB     
 
 ```
-wget https://zenodo.org/record/3635245/files/FernandinaSenDT128.tar.xz
+wget https://zenodo.org/record/2748487/files/FernandinaSenDT128.tar.xz
 tar -xvJf FernandinaSenDT128.tar.xz
 cd FernandinaSenDT128/mintpy
 smallbaselineApp.py ${MINTPY_HOME}/docs/examples/input_files/FernandinaSenDT128.txt     
@@ -17,17 +17,14 @@ smallbaselineApp.py ${MINTPY_HOME}/docs/examples/input_files/FernandinaSenDT128.
   <img width="650" src="https://yunjunzhang.files.wordpress.com/2019/06/fernandinasendt128_poi.jpg">
 </p>
 
-Relevant literature:
-+ Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis: Unwrapping error correction and noise reduction, _Computers & Geosciences, 133,_ 104331, doi:10.1016/j.cageo.2019.104331.
-
 #### Envisat of the 2008 Wells earthquake with Gamma ####
 
 Area: Wells, Nevada, USA       
-Data: Envisat ASAR descending track 399 during July 2007 - September 2008 (11 acquisitions; [Zenodo](https://zenodo.org/record/3635258))      
+Data: Envisat ASAR descending track 399 during July 2007 - September 2008 (11 acquisitions; [Zenodo](https://zenodo.org/record/2748560))      
 Size: ~280 MB      
 
 ```
-wget https://zenodo.org/record/3635258/files/WellsEnvD2T399.tar.xz
+wget https://zenodo.org/record/2748560/files/WellsEnvD2T399.tar.xz
 tar -xvJf WellsEnvD2T399.tar.xz
 cd WellsEnvD2T399/mintpy
 smallbaselineApp.py ${MINTPY_HOME}/docs/examples/input_files/WellsEnvD2T399.txt
@@ -43,11 +40,11 @@ Relevant literature:
 #### ALOS-1 on Kuju with ROI_PAC ####
 
 Area: Kuju volcano at Kyushu island, SW Japan     
-Data: ALOS-1 PALSAR ascending track 422 during January 2007 - January 2011 (24 acquisitions; [Zenodo](https://zenodo.org/record/3635262))     
+Data: ALOS-1 PALSAR ascending track 422 during January 2007 - January 2011 (24 acquisitions; [Zenodo](https://zenodo.org/record/2748170))     
 Size: ~240 MB
 
 ```
-wget https://zenodo.org/record/3635262/files/KujuAlosAT422F650.tar.xz
+wget https://zenodo.org/record/2748170/files/KujuAlosAT422F650.tar.xz
 tar -xvJf KujuAlosAT422F650.tar.xz
 cd KujuAlosAT422F650/mintpy
 smallbaselineApp.py ${MINTPY_HOME}/docs/examples/input_files/KujuAlosAT422F650.txt     

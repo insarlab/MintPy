@@ -10,7 +10,7 @@
 import os
 import re
 import warnings
-import defusedxml.ElementTree as ET
+import xml.etree.ElementTree as ET
 
 import h5py
 import json
@@ -73,39 +73,27 @@ standardMetadataKeys = {
 }
 
 
-GDAL2ISCE_DATATYPE = {
-    1 : 'BYTE',
-    2 : 'uint16',
-    3 : 'SHORT',
-    4 : 'uint32',
-    5 : 'INT',
-    6 : 'FLOAT',
-    7 : 'DOUBLE',
-    10: 'CFLOAT',
-    11: 'complex128',
-}
-
 GDAL2NUMPY_DATATYPE = {
-    1 : 'uint8',
-    2 : 'uint16',
-    3 : 'int16',
-    4 : 'uint32',
-    5 : 'int32',
-    6 : 'float32',
-    7 : 'float64',
-    10: 'complex64',
-    11: 'complex128',
+    '1': 'uint8',
+    '2': 'uint16',
+    '3': 'int16',
+    '4': 'uint32',
+    '5': 'int32',
+    '6': 'float32',
+    '7': 'float64',
+    '10': 'complex64',
+    '11': 'complex128',
 }
 
 # reference: https://subversion.renater.fr/efidir/trunk/efidir_soft/doc/Programming_C_EFIDIR/header_envi.pdf
 ENVI2NUMPY_DATATYPE = {
-    '1' : 'uint8',
-    '2' : 'int16',
-    '3' : 'int32',
-    '4' : 'float32',
-    '5' : 'float64',
-    '6' : 'complex64',
-    '9' : 'complex128',
+    '1': 'uint8',
+    '2': 'int16',
+    '3': 'int32',
+    '4': 'float32',
+    '5': 'float64',
+    '6': 'complex64',
+    '9': 'complex128',
     '12': 'uint16',
     '13': 'uint32',
     '14': 'int64',
@@ -113,8 +101,8 @@ ENVI2NUMPY_DATATYPE = {
 }
 
 ENVI_BAND_INTERLEAVE = {
-    'BAND' : 'BSQ',
-    'LINE' : 'BIL',
+    'BAND': 'BSQ',
+    'LINE': 'BIL',
     'PIXEL': 'BIP',
 }
 
@@ -339,18 +327,16 @@ def read_binary_file(fname, datasetName=None, box=None):
 
         k = atr['FILE_TYPE'].lower().replace('.', '')
         if k in ['unw']:
-            band = min(2, num_band)
-            if datasetName and datasetName in ['band1','intensity','magnitude']:
-                band = 1
+            band = 2
 
         elif k in ['slc']:
             cpx_band = 'magnitude'
 
-        elif k in ['los'] and datasetName and datasetName.startswith(('band2','az','head')):
-            band = min(2, num_band)
+        elif k in ['los'] and datasetName and datasetName.startswith(('az', 'head')):
+            band = 2
 
         elif k in ['incLocal']:
-            band = min(2, num_band)
+            band = 2
             if datasetName and 'local' not in datasetName.lower():
                 band = 1
 
@@ -359,18 +345,14 @@ def read_binary_file(fname, datasetName=None, box=None):
                 band = 2
             elif datasetName.lower() == 'band3':
                 band = 3
-            elif datasetName.startswith(('mag', 'amp')):
+            elif datasetName in ['magnitude','amplitude']:
                 cpx_band = 'magnitude'
-            elif datasetName in ['phase', 'angle']:
+            elif datasetName in ['phase','angle']:
                 cpx_band = 'phase'
             elif datasetName.lower() == 'real':
                 cpx_band = 'real'
             elif datasetName.lower().startswith('imag'):
                 cpx_band = 'imag'
-            elif datasetName .startswith(('cpx', 'complex')):
-                cpx_band = 'complex'
-
-        band = min(band, num_band)
 
     # ROI_PAC
     elif processor in ['roipac']:
@@ -512,8 +494,6 @@ def get_slice_list(fname):
                 if isinstance(obj, h5py.Dataset) and obj.shape[-2:] == (length, width):
                     if obj.ndim == 2:
                         slice_list.append(name)
-                    elif obj.ndim == 3:
-                        slice_list += ['{}-{}'.format(name, i+1) for i in range(obj.shape[0])]
                     else:
                         warnings.warn('file has un-defined {}D dataset: {}'.format(obj.ndim, name))
             slice_list = []
@@ -522,15 +502,20 @@ def get_slice_list(fname):
 
     # Binary Files
     else:
-        num_band = int(atr.get('number_bands', '1'))
-        if fext in ['.trans', '.utm_to_rdc'] and num_band == 2:
+        if fext.lower() in ['.trans', '.utm_to_rdc']:
             slice_list = ['rangeCoord', 'azimuthCoord']
-        elif fext in ['.int', '.unw'] and num_band == 2:
-            slice_list = ['magnitude', 'phase']
-        elif fbase.startswith('los') and num_band == 2:
+        elif fbase.startswith('los'):
             slice_list = ['incidenceAngle', 'azimuthAngle']
+        elif atr.get('number_bands', '1') == '2' and 'unw' not in k:
+            slice_list = ['band1', 'band2']
+        elif atr.get('number_bands', '1') == '3' and 'unw' not in k:
+            slice_list = ['band1', 'band2', 'band3']
+        elif atr.get('number_bands', '1') == '4' and 'unw' not in k:
+            slice_list = ['band1', 'band2', 'band3', 'band4']
+        elif fext.lower() in ['.int']:
+            slice_list = ['magnitude', 'phase']
         else:
-            slice_list = ['band{}'.format(i) for i in range(1,num_band+1)]
+            slice_list = ['']
     return slice_list
 
 
@@ -604,7 +589,7 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
 
         # FILE_TYPE - k
         py2_mintpy_stack_files = ['interferograms', 'coherence', 'wrapped'] #obsolete mintpy format
-        if any(i in d1_list for i in ['unwrapPhase', 'azimuthOffset']):
+        if any(i in d1_list for i in ['unwrapPhase']):
             k = 'ifgramStack'
         elif any(i in d1_list for i in ['height', 'latitude', 'azimuthCoord']):
             k = 'geometry'
@@ -686,63 +671,60 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             atr['PROCESSOR'] = 'mintpy'
 
     else:
-        # potential file bases and extensions for metadata file given the data file
-        metafile_bases = [fname, os.path.splitext(fname)[0]]
-        metafile_exts = ['.rsc', '.xml', '.aux.xml', '.par', '.hdr', '.vrt']
+        # get metadata file basename
+        metafile_base = fname
+        # for SNAP BEAM-DIMAP format
+        if fname.endswith('.img') and os.path.isfile(os.path.splitext(fname)[0]+'.hdr'):
+            metafile_base = os.path.splitext(fname)[0]
 
-        # grab all existed metadata files in prefered order/priority defined above
-        metafiles = []
-        for metafile_base in metafile_bases:
-            metafiles += [metafile_base+i for i in metafile_exts if os.path.isfile(metafile_base+i)]
-
-        if len(metafiles) == 0:
+        # get existing metadata file extensions
+        metafile_exts = ['.rsc', '.xml', '.aux.xml', '.par', '.hdr']
+        if metafile_ext:
+            metafile_exts = [i for i in metafile_exts if i.endswith(metafile_ext)]
+        metafile_exts = [i for i in metafile_exts if os.path.isfile(metafile_base+i)]
+        if len(metafile_exts) == 0:
             raise FileNotFoundError('No metadata file found for data file: {}'.format(fname))
 
         atr = {}
         # PROCESSOR
-        if fname.endswith('.img') and any(i.endswith('.hdr') for i in metafiles):
+        if any(i.endswith('.hdr') for i in metafile_exts) and fname.endswith('.img'):
             atr['PROCESSOR'] = 'snap'
-
-        elif any(i.endswith(('.xml', '.hdr', '.vrt')) for i in metafiles):
+        elif any(i.endswith('.xml') for i in metafile_exts):
             atr['PROCESSOR'] = 'isce'
-            xml_files = [i for i in metafiles if i.endswith('.xml')]
-            if len(xml_files) > 0:
-                atr.update(read_isce_xml(xml_files[0]))
-
-        elif any(i.endswith('.par') for i in metafiles):
+            xml_exts = [i for i in metafile_exts if i.endswith('.xml')]
+            if len(xml_exts) > 0:
+                atr.update(read_isce_xml(metafile_base+xml_exts[0]))
+        elif any(i.endswith('.par') for i in metafile_exts):
             atr['PROCESSOR'] = 'gamma'
-
-        elif any(i.endswith('.rsc') for i in metafiles):
+        elif any(i.endswith('.rsc') for i in metafile_exts):
             if 'PROCESSOR' not in atr.keys():
                 atr['PROCESSOR'] = 'roipac'
-
         if 'PROCESSOR' not in atr.keys():
             atr['PROCESSOR'] = 'mintpy'
 
         # Read metadata file and FILE_TYPE
-        metafile = metafiles[0]
+        metafile0 = metafile_base + metafile_exts[0]
         while fext in ['.geo', '.rdr', '.full']:
             fbase, fext = os.path.splitext(fbase)
         if not fext:
             fext = fbase
 
-        if metafile.endswith('.rsc'):
-            atr.update(read_roipac_rsc(metafile))
+        if metafile0.endswith('.rsc'):
+            atr.update(read_roipac_rsc(metafile0))
             if 'FILE_TYPE' not in atr.keys():
                 atr['FILE_TYPE'] = fext
 
-        elif metafile.endswith('.xml'):
-            atr.update(read_isce_xml(metafile))
+        elif metafile0.endswith('.xml'):
+            atr.update(read_isce_xml(metafile0))
             if 'FILE_TYPE' not in atr.keys():
-                atr['FILE_TYPE'] = fext
+                atr['FILE_TYPE'] = fext  #atr.get('image_type', fext)
 
-        elif metafile.endswith('.par'):
-            atr.update(read_gamma_par(metafile))
+        elif metafile0.endswith('.par'):
+            atr.update(read_gamma_par(metafile0))
             atr['FILE_TYPE'] = fext
 
-        elif metafile.endswith('.hdr'):
-            atr.update(read_envi_hdr(metafile))
-
+        elif metafile0.endswith('.hdr'):
+            atr.update(read_envi_hdr(metafile0))
             fbase = os.path.basename(fname).lower()
             if fbase.startswith('unw'):
                 atr['FILE_TYPE'] = '.unw'
@@ -755,21 +737,6 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             else:
                 atr['FILE_TYPE'] = atr['file type']
 
-        elif metafile.endswith('.vrt'):
-            atr.update(read_gdal_vrt(metafile))
-            atr['FILE_TYPE'] = fext
-
-        # DATA_TYPE for ISCE products
-        dataTypeDict = {
-            'byte': 'int8',
-            'float': 'float32',
-            'double': 'float64',
-            'cfloat': 'complex64',
-        }
-        data_type = atr.get('DATA_TYPE', 'none').lower()
-        if data_type is not 'none' and data_type in dataTypeDict.keys():
-            atr['DATA_TYPE'] = dataTypeDict[data_type]
-
     # UNIT
     k = atr['FILE_TYPE'].replace('.', '')
     if k == 'ifgramStack':
@@ -777,12 +744,10 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             atr['UNIT'] = datasetUnitDict[datasetName]
         else:
             atr['UNIT'] = 'radian'
-
-    elif datasetName and datasetName in datasetUnitDict.keys():
-        atr['UNIT'] = datasetUnitDict[datasetName]
-
     elif 'UNIT' not in atr.keys():
-        if k in datasetUnitDict.keys():
+        if datasetName and datasetName in datasetUnitDict.keys():
+            atr['UNIT'] = datasetUnitDict[datasetName]
+        elif k in datasetUnitDict.keys():
             atr['UNIT'] = datasetUnitDict[k]
         else:
             atr['UNIT'] = '1'
@@ -844,7 +809,7 @@ def read_template(fname, delimiter='=', print_msg=True):
         line = line.strip()
         # split on the 1st occurrence of delimiter
         c = [i.strip() for i in line.split(delimiter, 1)]
-        if len(c) < 2 or line.startswith(('%', '#', '!')):
+        if len(c) < 2 or line.startswith(('%', '#')):
             if line.startswith(">"):
                 plotAttributeDict = {}
                 insidePlotObject = True
@@ -893,7 +858,7 @@ def is_plot_attribute(attribute):
 
 
 def read_roipac_rsc(fname, delimiter=' ', standardize=True):
-    """Read ROI_PAC .rsc file into a python dict structure.
+    """Read ROI_PAC style RSC file.
     Parameters: fname : str.
                     File path of .rsc file.
     Returns:    rscDict : dict
@@ -920,7 +885,7 @@ def read_roipac_rsc(fname, delimiter=' ', standardize=True):
 
 
 def read_gamma_par(fname, delimiter=':', skiprows=3, standardize=True):
-    """Read GAMMA .par/.off file into a python dict structure.
+    """Read GAMMA .par/.off file into a python dictionary structure.
     Parameters: fname : str.
                     File path of .par, .off file.
                 delimiter : str, optional
@@ -967,11 +932,12 @@ def read_isce_xml(fname, standardize=True):
         # in form: root/component coordinate*/property name/value
         for coord_name, prefix in zip(['coordinate1', 'coordinate2'], ['X', 'Y']):
             child = root.find("./component[@name='{}']".format(coord_name))
-            v_step  = float(child.find("./property[@name='delta']").find('value').text)
-            v_first = float(child.find("./property[@name='startingvalue']").find('value').text)
-            if abs(v_step) < 1. and abs(v_step) > 1e-7:
-                xmlDict['{}_STEP'.format(prefix)] = v_step
-                xmlDict['{}_FIRST'.format(prefix)] = v_first - v_step / 2.
+            if ET.iselement(child):
+                v_step  = float(child.find("./property[@name='delta']").find('value').text)
+                v_first = float(child.find("./property[@name='startingvalue']").find('value').text)
+                if abs(v_step) < 1. and abs(v_step) > 1e-7:
+                    xmlDict['{}_STEP'.format(prefix)] = v_step
+                    xmlDict['{}_FIRST'.format(prefix)] = v_first - v_step / 2.
 
     # PAMDataset, e.g. hgt.rdr.aux.xml
     elif root.tag == 'PAMDataset':
@@ -989,7 +955,7 @@ def read_isce_xml(fname, standardize=True):
 
 
 def read_envi_hdr(fname, standardize=True):
-    """Read ENVI .hdr file into a python dict structure"""
+    """Read ENVI .hdr file into a python dict strcture"""
     atr = read_template(fname, delimiter='=')
     atr['DATA_TYPE'] = ENVI2NUMPY_DATATYPE[atr.get('data type', '4')]
     atr['BYTE_ORDER'] = ENVI_BYTE_ORDER[atr.get('byte order', '1')]
@@ -998,65 +964,16 @@ def read_envi_hdr(fname, standardize=True):
         map_info = [i.strip() for i in atr['map info'].split(',')]
         x_step = abs(float(map_info[5]))
         y_step = abs(float(map_info[6])) * -1.
-        #unit = map_info[-1].replace('}','').split('=')[1].lower()
-
+        unit = map_info[-1].replace('}','').split('=')[1].lower()
         if abs(x_step) < 1. and abs(x_step) > 1e-7:
             atr['X_FIRST'] = str(float(map_info[3]) - x_step / 2.)
             atr['Y_FIRST'] = str(float(map_info[4]) - y_step / 2.)
             atr['X_STEP'] = str(x_step)
             atr['Y_STEP'] = str(y_step)
-            atr['X_UNIT'] = 'degrees'
-            atr['Y_UNIT'] = 'degrees'
-
+            atr['X_UNIT'] = unit
+            atr['Y_UNIT'] = unit
     if standardize:
         atr = standardize_metadata(atr)
-
-    return atr
-
-
-def read_gdal_vrt(fname, standardize=True):
-    """Read GDAL .vrt file into a python dict structure using gdal
-
-    Modified from $ISCE_HOME/applications/gdal2isce_xml.gdal2isce_xml() written by David Bekaert.
-    """
-    try:
-        import gdal
-    except ImportError:
-        raise ImportError('Cannot import gdal!')
-
-    # read dataset using gdal
-    ds = gdal.Open(fname, gdal.GA_ReadOnly)
-
-    atr = {}
-    atr['WIDTH']  = ds.RasterXSize
-    atr['LENGTH'] = ds.RasterYSize
-    atr['number_bands'] = ds.RasterCount
-
-    # data type
-    data_type = ds.GetRasterBand(1).DataType
-    atr['DATA_TYPE'] = GDAL2ISCE_DATATYPE[data_type]
-
-    # interleave
-    scheme = ds.GetMetadata('IMAGE_STRUCTURE').get('INTERLEAVE', 'PIXEL')
-    atr['scheme'] = ENVI_BAND_INTERLEAVE[scheme]
-
-    # transformation contains gridcorners
-    # (lines/pixels or lonlat and the spacing 1/-1 or deltalon/deltalat)
-    transform = ds.GetGeoTransform()
-    x0 = transform[0]
-    y0 = transform[3]
-    x_step = abs(transform[1])
-    y_step = abs(transform[5]) * -1.
-
-    if abs(x_step) < 1. and abs(x_step) > 1e-7:
-        atr['X_FIRST'] = x0 - x_step / 2.
-        atr['Y_FIRST'] = y0 - y_step / 2.
-        atr['X_STEP'] = x_step
-        atr['Y_STEP'] = y_step
-
-    if standardize:
-        atr = standardize_metadata(atr)
-
     return atr
 
 
@@ -1148,7 +1065,6 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
                     imag, imaginary
                     phase,
                     mag, magnitude
-                    cpx
     Returns:    data : 2D np.array
     Examples:   # ISCE files
                 atr = read_attribute(fname)
@@ -1211,8 +1127,6 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
             data = np.angle(data)
         elif cpx_band.startswith('mag'):
             data = np.absolute(data)
-        elif cpx_band.startswith(('cpx', 'complex')):
-            pass
         else:
             raise ValueError('unrecognized complex band:', cpx_band)
 

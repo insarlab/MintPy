@@ -11,12 +11,19 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, ptime, utils as ut, plot as pp
 
 
 ######################################################################################################
-TEMPLATE = get_template_content('residual_RMS')
+TEMPLATE = """
+## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual
+## To get rid of long wavelength component in space, a ramp is removed for each epoch.
+## Set optimal reference date to date with min RMS
+## Set exclude dates (outliers) to dates with RMS > cutoff * median RMS (Median Absolute Deviation)
+mintpy.residualRMS.maskFile = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
+mintpy.residualRMS.deramp   = auto  #[quadratic / ramp / no], auto for quadratic
+mintpy.residualRMS.cutoff   = auto  #[0.0-inf], auto for 3
+"""
 
 EXAMPLE = """example:
   timeseries_rms.py  timeseriesResidual.h5 
@@ -34,11 +41,11 @@ Rousseeuw, P. J., and M. Hubert (2011), Robust statistics for outlier detection,
 def create_parser():
     parser = argparse.ArgumentParser(description='Calculate Root Mean Square (RMS) of deramped residual phase time-series.',
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=TEMPLATE+'\n'+EXAMPLE)
+                                     epilog=EXAMPLE)
 
     parser.add_argument('timeseries_file', help='Timeseries file')
     parser.add_argument('-t', '--template', dest='template_file',
-                        help='template file with options')
+                        help='template file with options below:\n'+TEMPLATE+'\n')
     parser.add_argument('-m', '--mask', dest='maskFile', default='maskTempCoh.h5',
                         help='mask file for estimation')
     parser.add_argument('-r','--ramp','--deramp', dest='deramp', default='quadratic',

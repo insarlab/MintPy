@@ -8,7 +8,7 @@ docs/examples/dev/*
 docs/resources/*logo*
 docs/resources/*.ai
 docs/resources/*.pdf
-isce.log
+isce*
 mintpy/dev/*
 mintpy/modis*
 setup.py

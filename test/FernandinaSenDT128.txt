@@ -1,5 +1,4 @@
 # vim: set filetype=cfg:
-mintpy.compute.cluster = local
 ########## 1. Load Data (--load to exit after this step)
 ## load_data.py -H to check more details and example inputs.
 mintpy.load.processor        = isce
@@ -21,7 +20,7 @@ mintpy.load.waterMaskFile    = None
 
 mintpy.reference.lalo                           = -0.30,-91.43
 mintpy.networkInversion.weightFunc              = no
-mintpy.troposphericDelay.weatherModel           = ERA5
+mintpy.troposphericDelay.weatherModel           = ECMWF
 mintpy.topographicResidual.pixelwiseGeometry    = no
 mintpy.topographicResidual.stepFuncDate         = 20170910,20180613  #eruption dates
 mintpy.deramp                                   = linear

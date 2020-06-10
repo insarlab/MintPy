@@ -70,11 +70,11 @@ swig
 swig-python
 gdal +expat +geos +hdf5 +netcdf +openjpeg +postgresql95 +sqlite3
 py37-cython
-py37-defusedxml
 py37-mpi4py +gcc7 +openmpi
 py37-numpy +gcc7 +openblas
 py37-scipy +gcc7 +openblas
 py37-matplotlib +cairo +tkinter +webagg
+py37-matplotlib-basemap
 py37-netcdf4 +gcc7
 py37-pandas
 py37-yaml
@@ -82,10 +82,8 @@ py37-h5py
 py37-cartopy
 py37-shapely
 py37-scikit-image
-py37-scikit-learn
 py37-jupyter
 py37-dask
-py37-distributed
 py37-bokeh
 py37-sphinx
 py37-pip

@@ -15,8 +15,8 @@ from mintpy.utils import ptime
 
 ############################################################
 EXAMPLE = """example:
- temporal_filter.py timeseries_ERA5_demErr.h5
- temporal_filter.py timeseries_ERA5_demErr.h5 -t 0.1
+ temporal_filter.py timeseries_ECMWF_demErr.h5
+ temporal_filter.py timeseries_ECMWF_demErr.h5 -t 0.1
 """
 
 REFERENCE="""reference:

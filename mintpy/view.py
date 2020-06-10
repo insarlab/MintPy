@@ -5,12 +5,11 @@
 # Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 ############################################################
 # Recommend import:
-#   from mintpy import view
+#   import mintpy.view as view
 
 
 import os
 import sys
-import re
 import argparse
 import datetime as dt
 import numpy as np
@@ -19,7 +18,6 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 # suppress UserWarning from matplotlib
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
-import cartopy.crs as ccrs
 
 from mintpy.objects import (
     geometryDatasetNames,
@@ -38,47 +36,49 @@ from mintpy import subset, version
 ##################################################################################################
 EXAMPLE = """example:
   view.py velocity.h5
-  view.py velocity.h5 velocity --wrap --wrap-range -2 2 -c cmy --lalo-label
-  view.py velocity.h5 --ref-yx  210 566                              #change reference pixel for display
-  view.py velocity.h5 --sub-lat 31.05 31.10 --sub-lon 130.05 130.10  #subset in lalo / yx
+  view.py velocity.h5  velocity  --vlim -2 2  -c RdBu
+  view.py velocity.h5  velocity  --wrap --wrap-range -3 7              #wrap data into [-3, 7] cm/yr
+  view.py velocity.h5  --ref-yx  210 566                               #Change reference pixel for display
+  view.py velocity.h5  --sub-x 100 600  --sub-y 200 800                #plot subset in yx
+  view.py velocity.h5  --sub-lat 31.05 31.10  --sub-lon 130.05 130.10  #plot subset in lalo
 
-  view.py timeseries.h5
-  view.py timeseries.h5 -m no                   #do not use auto mask
-  view.py timeseries.h5 --ref-date 20101120     #change reference date
-  view.py timeseries.h5 --ex drop_date.txt      #exclude dates to plot
-  view.py timeseries.h5 '*2017*'                #all acquisitions in 2017
-  view.py timeseries.h5 '*2017*' '*2018*'       #all acquisitions in 2017 and 2018
+  view.py timeseries.h5 
+  view.py timeseries.h5 -m no                          #Do not use auto mask
+  view.py timeseries.h5 --ref-date 20101120            #Change reference date
+  view.py timeseries.h5 --ex drop_date.txt             #Exclude dates to plot
 
-  view.py ifgramStack.h5 coherence
-  view.py ifgramStack.h5 unwrapPhase-           #unwrapPhase only in the presence of unwrapPhase_bridging
-  view.py ifgramStack.h5 -n 6                   #the 6th slice
-  view.py ifgramStack.h5 20171010_20171115      #all data      related with 20171010_20171115
-  view.py ifgramStack.h5 'coherence*20171010*'  #all coherence related with 20171010
-  view.py ifgramStack.h5 unwrapPhase-20070927_20100217 --zero-mask --wrap     #wrapped phase
-  view.py ifgramStack.h5 unwrapPhase-20070927_20100217 --mask ifgramStack.h5  #mask using connected components
+  view.py inputs/ifgramStack.h5 coherence
+  view.py inputs/ifgramStack.h5 unwrapPhase-           #Display unwrapPhase only in the presence of unwrapPhase_unwCor dset
+  view.py inputs/ifgramStack.h5 unwrapPhase-20070927_20100217 --zero-mask --wrap
+  view.py inputs/ifgramStack.h5 -n 6
+  view.py inputs/ifgramStack.h5 20171010_20171115      #Display all data related with one interferometric pair
 
-  # GPS (for one subplot in geo-coordinates only)
-  view.py geo_velocity_msk.h5 velocity --show-gps       #show locations of available GPS
+  view.py geo/geo_velocity.h5  --pts-file pts.yx   #Plot points with lat/lon in file
+
+  # InSAR v.s. GPS
+  # for one subplot only
+  view.py geo_velocity_msk.h5 velocity --show-gps   #show locations of available GPS
   view.py geo_velocity_msk.h5 velocity --show-gps --gps-comp enu2los --ref-gps GV01
-  view.py geo_timeseries_ERA5_ramp_demErr.h5 20180619 --ref-date 20141213 --show-gps --gps-comp enu2los --ref-gps GV01
+  view.py geo_timeseries_ECMWF_demErr_ramp.h5 20180619 --ref-date 20141213 --show-gps --gps-comp enu2los --ref-gps GV01
 
   # Custom colormap
-  # https://mintpy.readthedocs.io/en/latest/resources/colormaps/
-  view.py velocity.h5 velocity -c temporature_r
-  view.py geometryRadar.h5 height   -c DEM_print
+  # https://github.com/insarlab/MintPy/tree/master/docs/resources/colormaps
+  view.py geo_velocity.h5 velocity -c temperature
+  view.py geometryRadar.h5 height -c DEM_print
+  view.py geo_velocity.h5 velocity -c temperature_r3      #reverse colormap and repeat 3 times
 
-  # Save and Output
+  # Save and Output:
   view.py velocity.h5 --save
   view.py velocity.h5 --nodisplay
   view.py velocity.h5 --nodisplay --update
-  view.py geo_velocity.h5 velocity --nowhitespace
+  view.py geo_velocity.h5 velocity --nowhitespace --save  #save figure without whitespace
 """
 
 PLOT_TEMPLATE = """Plot Setting:
   plot.name          = 'Yunjun et al., 2016, AGU, Fig 4f'
   plot.type          = LOS_VELOCITY
-  plot.startDate     =
-  plot.endDate       =
+  plot.startDate     = 
+  plot.endDate       = 
   plot.displayUnit   = cm/yr
   plot.displayMin    = -2
   plot.displayMax    = 2
@@ -96,19 +96,18 @@ def create_parser():
     infile = parser.add_argument_group('Input File', 'File/Dataset to display')
     infile.add_argument('file', type=str, help='file for display')
     infile.add_argument('dset', type=str, nargs='*', default=[],
-                        help='optional - dataset(s) to display (default: %(default)s).')
+                        help='optional - dataset(s) to display')
     infile.add_argument('-n', '--dset-num', dest='dsetNumList', metavar='NUM', type=int, nargs='*', default=[],
-                        help='optional - order number of date/dataset(s) to display (default: %(default)s).')
-    infile.add_argument('--nosearch', dest='search_dset', action='store_false',
-                        help='Disable glob search for input dset.')
+                        help='optional - order number of date/dataset(s) to display')
+    infile.add_argument('--exact', '--no-glob', dest='globSearch', action='store_false',
+                        help='Disable glob search for input dset')
     infile.add_argument('--ex', '--exclude', dest='exDsetList', metavar='Dset', nargs='*', default=[],
-                        help='dates will not be displayed (default: %(default)s).')
-
-    parser.add_argument('--plot-setting', dest='disp_setting_file',
+                        help='dates will not be displayed')
+    infile.add_argument('--plot-setting', dest='disp_setting_file',
                         help='Template file with plot setting.\n'+PLOT_TEMPLATE)
 
     parser.add_argument('--noverbose', dest='print_msg', action='store_false',
-                        help='Disable the verbose message printing (default: %(default)s).')
+                        help='Disable the verbose message printing.')
 
     parser = pp.add_data_disp_argument(parser)
     parser = pp.add_dem_argument(parser)
@@ -129,12 +128,6 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # check invalid file inputs
-    for key in ['file','dem_file','mask_file','pts_file']:
-        fname = vars(inps)[key]
-        if fname not in [None, 'no'] and not os.path.isfile(fname):
-            raise FileExistsError('input {} file {} NOT exist!'.format(key, fname))
-
     # --exclude
     if inps.exDsetList:
         inps.exDsetList = ptime.read_date_list(inps.exDsetList)
@@ -142,6 +135,8 @@ def cmd_line_parse(iargs=None):
     # If output flie name assigned or figure shown is turned off, turn on the figure save
     if inps.outfile or not inps.disp_fig:
         inps.save_fig = True
+    if inps.coastline and inps.resolution in ['c', 'l']:
+        inps.resolution = 'i'
     if inps.lalo_step:
         inps.lalo_label = True
     if inps.zero_mask:
@@ -272,7 +267,6 @@ def update_inps_with_file_metadata(inps, metadata):
                                             inps.colormap,
                                             datasetName=inps.dset[0],
                                             cmap_lut=inps.cmap_lut,
-                                            cmap_vlist=inps.cmap_vlist,
                                             print_msg=inps.print_msg)
 
     # Reference Point
@@ -303,16 +297,6 @@ def update_inps_with_file_metadata(inps, metadata):
                                                             wrap=inps.wrap,
                                                             wrap_range=inps.wrap_range,
                                                             print_msg=inps.print_msg)
-
-    # Map info - coordinate unit and map projection
-    inps.coord_unit = metadata.get('Y_UNIT', 'degrees').lower()
-    if (inps.geo_box
-            and inps.fig_coord == 'geo'
-            and inps.coord_unit.startswith('deg')
-            and inps.lalo_label):
-        inps.proj_obj = eval('ccrs.{}()'.format(inps.map_projection))
-    else:
-        inps.proj_obj = None
 
     # Min / Max - Display
     if not inps.vlim:
@@ -393,15 +377,12 @@ def update_data_with_plot_inps(data, metadata, inps):
 
 ##################################################################################################
 def plot_slice(ax, data, metadata, inps=None):
-    """Plot one slice of matrix
-    Parameters: ax   : matplot.pyplot axes object
-                data : 2D np.array,
+    """Plot one slice of matrix 
+    Parameters: ax : matplot.pyplot axes object
+                data : 2D np.array, 
                 metadata : dictionary, attributes of data
                 inps : Namespace, optional, input options for display
-    Returns:    ax   : matplot.pyplot axes object
-                inps : Namespace for input options
-                im   : matplotlib.image.AxesImage object
-                cbar : matplotlib.colorbar.Colorbar object
+    Returns:    ax  : matplot.pyplot axes object
     Example:    import matplotlib.pyplot as plt
                 import mintpy.utils.readfile as readfile
                 import mintpy.view as pv
@@ -418,10 +399,8 @@ def plot_slice(ax, data, metadata, inps=None):
     if not inps:
         inps = cmd_line_parse([''])
         inps = update_inps_with_file_metadata(inps, metadata)
-    if isinstance(inps.colormap, str):
-        inps.colormap = pp.ColormapExt(inps.colormap).colormap
 
-    # read DEM
+    # read DEM 
     if inps.dem_file:
         dem, dem_metadata, dem_pix_box = pp.read_dem(inps.dem_file,
                                                      pix_box=inps.pix_box,
@@ -433,27 +412,50 @@ def plot_slice(ax, data, metadata, inps=None):
     #----------------------- Plot in Geo-coordinate --------------------------------------------#
     num_row, num_col = data.shape
     if inps.geo_box and inps.fig_coord == 'geo':
+        coord_unit = metadata.get('Y_UNIT', 'degrees').lower()
 
-        if inps.coord_unit.startswith('deg'):
-            # geo-coordinates in degrees
+        if coord_unit.startswith('deg'):
+            # geo-coordinates in degrees using Basemap
+            # Map Setup
             vprint('plot in Lat/Lon coordinate')
-            vprint('map projection: {}'.format(inps.map_projection))
+            vprint('map projection: '+inps.map_projection)
+            vprint('boundary database resolution: '+inps.resolution)
+            if inps.map_projection in ['cyl', 'merc', 'mill', 'cea', 'gall']:
+                m = pp.BasemapExt(llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],
+                                  urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],
+                                  projection=inps.map_projection,
+                                  resolution=inps.resolution, area_thresh=1.,
+                                  suppress_ticks=False, ax=ax)
+            elif inps.map_projection in ['ortho']:
+                m = pp.BasemapExt(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,
+                                  lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,
+                                  projection=inps.map_projection,
+                                  resolution=inps.resolution, area_thresh=1.,
+                                  suppress_ticks=False, ax=ax)
+            else:
+                m = pp.BasemapExt(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,
+                                  lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,
+                                  llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],
+                                  urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],
+                                  projection=inps.map_projection,
+                                  resolution=inps.resolution, area_thresh=1.,
+                                  suppress_ticks=False, ax=ax)
 
-            # Draw coastline using cartopy resolution parameters
-            if inps.coastline != "no":
-                vprint('draw coast line with resolution: {}'.format(inps.coastline))
-                ax.coastlines(resolution=inps.coastline)
+            # Draw coastline
+            if inps.coastline:
+                vprint('draw coast line')
+                m.drawcoastlines()
 
             # Plot DEM
             if inps.dem_file:
                 vprint('plotting DEM background ...')
-                pp.plot_dem_background(ax=ax, geo_box=inps.geo_box,
-                                       dem=dem, inps=inps,
-                                       print_msg=inps.print_msg)
+                m = pp.plot_dem_background(ax=m, geo_box=inps.geo_box,
+                                           dem=dem, inps=inps,
+                                           print_msg=inps.print_msg)
 
             # Plot Data
             coord = ut.coordinate(metadata)
-            vprint('plotting image ...')
+            vprint('plotting Data ...')
             if inps.disp_gps and inps.gps_component and inps.ref_gps_site:
                 ref_site_lalo = GPS(site=inps.ref_gps_site).get_stat_lat_lon(print_msg=False)
                 y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
@@ -462,63 +464,62 @@ def plot_slice(ax, data, metadata, inps=None):
                 data -= data[y, x]
                 vprint(('referencing InSAR data to the pixel nearest to '
                         'GPS station: {} at {}').format(inps.ref_gps_site, ref_site_lalo))
-
-            im = ax.imshow(data, cmap=inps.colormap, origin='upper',
-                           extent=(inps.geo_box[0], inps.geo_box[2],
-                                   inps.geo_box[3], inps.geo_box[1]),
-                           vmin=inps.vlim[0], vmax=inps.vlim[1],
-                           alpha=inps.transparency, interpolation='nearest',
-                           animated=inps.animation, zorder=1)
+            im = m.imshow(data, cmap=inps.colormap, origin='upper',
+                          vmin=inps.vlim[0], vmax=inps.vlim[1],
+                          alpha=inps.transparency, interpolation='nearest',
+                          animated=inps.animation, zorder=1)
 
             # Scale Bar
             if inps.disp_scalebar:
-                vprint('plot scale bar: {}'.format(inps.scalebar))
-                pp.draw_scalebar(ax,
-                                 geo_box=inps.geo_box,
-                                 loc=inps.scalebar,
+                vprint('plot scale bar')
+                m.draw_scale_bar(loc=inps.scalebar, ax=ax,
                                  labelpad=inps.scalebar_pad,
-                                 font_size=inps.font_size)
+                                 font_size=inps.font_size,
+                                 color=inps.font_color)
 
             # Lat Lon labels
             if inps.lalo_label:
-                pp.draw_lalo_label(inps.geo_box, ax,
-                                   lalo_step=inps.lalo_step,
-                                   lalo_loc=inps.lalo_loc,
-                                   lalo_max_num=inps.lalo_max_num,
-                                   font_size=inps.font_size,
-                                   yrotate=inps.lat_label_direction,
-                                   projection=inps.proj_obj,
-                                   print_msg=inps.print_msg)
+                vprint('plot lat/lon labels')
+                m.draw_lalo_label(inps.geo_box, ax=ax,
+                                  lalo_step=inps.lalo_step,
+                                  lalo_loc=inps.lalo_loc,
+                                  lalo_max_num=inps.lalo_max_num,
+                                  font_size=inps.font_size,
+                                  color=inps.font_color,
+                                  yrotate=inps.lat_label_direction,
+                                  print_msg=inps.print_msg)
             else:
-                ax.tick_params(which='both', direction='out', labelsize=inps.font_size,
-                               left=True, right=True, top=True, bottom=True)
+                ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
 
             # Plot Reference Point
             if inps.disp_ref_pixel and inps.ref_lalo:
                 ax.plot(inps.ref_lalo[1], inps.ref_lalo[0],
                         inps.ref_marker, ms=inps.ref_marker_size)
                 vprint('plot reference point')
-
+    
             # Plot points of interest
             if inps.pts_lalo is not None:
                 ax.plot(inps.pts_lalo[:, 1], inps.pts_lalo[:, 0],
                         inps.pts_marker, ms=inps.pts_marker_size,
                         mec='k', mew=1.)
                 vprint('plot points of interest')
-
+    
             # Show UNR GPS stations
             if inps.disp_gps:
                 SNWE = (inps.geo_box[3], inps.geo_box[1],
                         inps.geo_box[0], inps.geo_box[2])
                 ax = pp.plot_gps(ax, SNWE, inps, metadata, print_msg=inps.print_msg)
                 vprint('displaying GPS stations')
+    
+            # save basemapExt object
+            inps.map = m
 
             # Status bar
             if inps.dem_file:
                 coord_dem = ut.coordinate(dem_metadata)
                 dem_len, dem_wid = dem.shape
             def format_coord(x, y):
-                msg = 'lon={:.4f}, lat={:.4f}'.format(x, y)
+                msg = 'E{:.4f}, N{:.4f}'.format(x, y)
                 col = coord.lalo2yx(x, coord_type='lon') - inps.pix_box[0]
                 row = coord.lalo2yx(y, coord_type='lat') - inps.pix_box[1]
                 if 0 <= col < num_col and 0 <= row < num_row:
@@ -538,7 +539,7 @@ def plot_slice(ax, data, metadata, inps=None):
                 return msg
             ax.format_coord = format_coord
 
-        elif inps.coord_unit == 'm':
+        elif coord_unit == 'm':
             # geo-coordinates in meters
             vprint('plot in geo-coordinates in meters')
 
@@ -582,7 +583,7 @@ def plot_slice(ax, data, metadata, inps=None):
             ax.format_coord = format_coord
 
         else:
-            raise ValueError('un-recognized coordinate unit: {}'.format(inps.coord_unit))
+            raise ValueError('un-recognized coordinate unit: {}'.format(coord_unit))
 
     #------------------------ Plot in Y/X-coordinate ------------------------------------------------#
     else:
@@ -591,8 +592,8 @@ def plot_slice(ax, data, metadata, inps=None):
         # Plot DEM
         if inps.dem_file:
             vprint('plotting DEM background ...')
-            pp.plot_dem_background(ax=ax, geo_box=None, dem=dem,
-                                   inps=inps, print_msg=inps.print_msg)
+            ax = pp.plot_dem_background(ax=ax, geo_box=None, dem=dem,
+                                        inps=inps, print_msg=inps.print_msg)
 
         # Plot Data
         vprint('plotting Data ...')
@@ -642,12 +643,11 @@ def plot_slice(ax, data, metadata, inps=None):
 
 
     #---------------------- Figure Setting ----------------------------------------#
-
     # 3.1 Colorbar
     cbar = None
     if inps.disp_cbar:
         divider = make_axes_locatable(ax)
-        cax = divider.append_axes(inps.cbar_loc, inps.cbar_size, pad=inps.cbar_size, axes_class=plt.Axes)
+        cax = divider.append_axes(inps.cbar_loc, inps.cbar_size, pad=inps.cbar_size)
         inps, cbar = pp.plot_colorbar(inps, im, cax)
 
     # 3.2 Title
@@ -679,7 +679,7 @@ def plot_slice(ax, data, metadata, inps=None):
     return ax, inps, im, cbar
 
 
-def read_input_file_info(inps):
+def check_input_file_info(inps):
     # File Baic Info
     atr = readfile.read_attribute(inps.file)
     msg = 'input file is '
@@ -709,36 +709,22 @@ def read_input_file_info(inps):
     return inps, atr
 
 
-def search_dataset_input(allList, inList=[], inNumList=[], search_dset=True):
+def check_dataset_input(allList, inList=[], inNumList=[], globSearch=True):
     """Get dataset(es) from input dataset / dataset_num"""
-    # inList --> inNumList --> outNumList --> outList
+    # inList + inNumList --> outNumList --> outList
     if inList:
         if isinstance(inList, str):
             inList = [inList]
-
         tempList = []
-        if search_dset:
-            for ds in inList:
-                # style of regular expression
-                if '*' not in ds:
-                    ds = '*{}*'.format(ds)
-                ds = ds.replace('*','.*')
-
-                # search
-                tempList += [e for e in allList
-                             if re.match(ds, e) is not None]
-
+        if globSearch:
+            for i in inList:
+                tempList += [e for e in allList if i in e]
         else:
             tempList += [i for i in inList if i in allList]
         tempList = sorted(list(set(tempList)))
         inNumList += [allList.index(e) for e in tempList]
-
-    # inNumList --> outNumList
     outNumList = sorted(list(set(inNumList)))
-
-    # outNumList --> outList
     outList = [allList[i] for i in outNumList]
-
     return outList, outNumList
 
 
@@ -746,18 +732,13 @@ def read_dataset_input(inps):
     """Check input / exclude / reference dataset input with file dataset list"""
     # read inps.dset + inps.dsetNumList --> inps.dsetNumList
     if len(inps.dset) > 0 or len(inps.dsetNumList) > 0:
-        # message
-        if len(inps.dset) > 0:
-            print('input dataset: "{}"'.format(inps.dset))
-
-        # search
         if inps.key == 'velocity':
-            inps.search_dset = False
+            inps.globSearch = False
             vprint('turning glob search OFF for {} file'.format(inps.key))
-        inps.dsetNumList = search_dataset_input(inps.sliceList,
-                                                inps.dset,
-                                                inps.dsetNumList,
-                                                inps.search_dset)[1]
+        inps.dsetNumList = check_dataset_input(inps.sliceList,
+                                               inps.dset,
+                                               inps.dsetNumList,
+                                               inps.globSearch)[1]
     else:
         # default dataset to display for certain type of files
         if inps.key == 'geometry':
@@ -775,16 +756,16 @@ def read_dataset_input(inps):
             inps.dset = [obj.sliceList[0].split('-')[0]]
         else:
             inps.dset = inps.sliceList
-        inps.dsetNumList = search_dataset_input(inps.sliceList,
-                                                inps.dset,
-                                                inps.dsetNumList,
-                                                inps.search_dset)[1]
+        inps.dsetNumList = check_dataset_input(inps.sliceList,
+                                               inps.dset,
+                                               inps.dsetNumList,
+                                               inps.globSearch)[1]
 
     # read inps.exDsetList
-    inps.exDsetList, inps.exDsetNumList = search_dataset_input(inps.sliceList,
-                                                               inps.exDsetList,
-                                                               [],
-                                                               inps.search_dset)
+    inps.exDsetList, inps.exDsetNumList = check_dataset_input(inps.sliceList,
+                                                              inps.exDsetList,
+                                                              [],
+                                                              inps.globSearch)
 
     # get inps.dset
     inps.dsetNumList = sorted(list(set(inps.dsetNumList) - set(inps.exDsetNumList)))
@@ -794,10 +775,10 @@ def read_dataset_input(inps):
     if inps.ref_date:
         if inps.key not in timeseriesKeyNames:
             inps.ref_date = None
-        ref_date = search_dataset_input(inps.sliceList,
-                                        [inps.ref_date],
-                                        [],
-                                        inps.search_dset)[0][0]
+        ref_date = check_dataset_input(inps.sliceList,
+                                       [inps.ref_date],
+                                       [],
+                                       inps.globSearch)[0][0]
         if not ref_date:
             vprint('WARNING: input reference date is not included in input file!')
             vprint('input reference date: '+inps.ref_date)
@@ -851,13 +832,13 @@ def update_figure_setting(inps):
                             pp.max_figsize_height/plot_shape[1])
             inps.fig_size = [i*fig_scale for i in plot_shape]
             #inps.fig_size = [np.floor(i*fig_scale*2)/2 for i in plot_shape]
-            vprint('figure size : [{:.2f}, {:.2f}]'.format(inps.fig_size[0], inps.fig_size[1]))
+            vprint('figure size : '+str(inps.fig_size))
 
     # Multiple Plots
     else:
         if not inps.fig_size:
             inps.fig_size = pp.default_figsize_multi
-        vprint('figure size : [{:.2f}, {:.2f}]'.format(inps.fig_size[0], inps.fig_size[1]))
+        vprint('figure size : '+str(inps.fig_size))
 
         # Figure number (<= 200 subplots per figure)
         if not inps.fig_num:
@@ -866,7 +847,7 @@ def update_figure_setting(inps):
                 inps.fig_num += 1
 
         # Row/Column number
-        if (inps.fig_row_num == 1 and inps.fig_col_num == 1
+        if (inps.fig_row_num == 1 and inps.fig_col_num == 1 
                 and all(i not in sys.argv for i in ['--nrows', '--ncols'])):
             # calculate row and col number based on input info
             data_shape = [length*1.1, width]
@@ -876,7 +857,7 @@ def update_figure_setting(inps):
                                                      data_shape,
                                                      fig_size4plot,
                                                      inps.fig_num)
-        inps.fig_num = np.ceil(float(inps.dsetNum) / float(inps.fig_row_num *
+        inps.fig_num = np.ceil(float(inps.dsetNum) / float(inps.fig_row_num * 
                                                            inps.fig_col_num)).astype(int)
         vprint('dataset number: '+str(inps.dsetNum))
         vprint('row     number: '+str(inps.fig_row_num))
@@ -911,7 +892,7 @@ def update_figure_setting(inps):
         if inps.fig_num == 1:
             inps.outfile = ['{}{}'.format(inps.outfile_base, inps.fig_ext)]
         else:
-            inps.outfile = ['{}_{}{}'.format(inps.outfile_base, str(j), inps.fig_ext)
+            inps.outfile = ['{}_{}{}'.format(inps.outfile_base, str(j), inps.fig_ext) 
                             for j in range(1, inps.fig_num+1)]
         inps.outfile = [os.path.join(inps.outdir, outfile) for outfile in inps.outfile]
     return inps
@@ -926,13 +907,12 @@ def read_data4figure(i_start, i_end, inps, metadata):
     # fast reading for single dataset type
     if (len(inps.dsetFamilyList) == 1
             and inps.key in ['timeseries', 'giantTimeseries', 'ifgramStack', 'HDFEOS', 'geometry']):
-        vprint('reading data as a 3D matrix ...')
         dset_list = [inps.dset[i] for i in range(i_start, i_end)]
         data[:] = readfile.read(inps.file, datasetName=dset_list, box=inps.pix_box)[0]
 
         if inps.key == 'ifgramStack':
             # reference pixel info in unwrapPhase
-            if inps.dsetFamilyList[0].startswith('unwrapPhase') and inps.file_ref_yx:
+            if inps.dsetFamilyList[0] == 'unwrapPhase' and inps.file_ref_yx:
                 ref_y, ref_x = inps.file_ref_yx
                 ref_box = (ref_x, ref_y, ref_x+1, ref_y+1)
                 ref_data = readfile.read(inps.file, datasetName=dset_list, box=ref_box, print_msg=False)[0]
@@ -942,7 +922,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
 
     # slow reading with one 2D matrix at a time
     else:
-        vprint('reading data as a list of 2D matrices ...')
+        vprint('reading data ...')
         prog_bar = ptime.progressBar(maxValue=i_end-i_start, print_msg=inps.print_msg)
         for i in range(i_start, i_end):
             d = readfile.read(inps.file,
@@ -966,16 +946,14 @@ def read_data4figure(i_start, i_end, inps, metadata):
     # This could be:
     # 1) the same type OR
     # 2) velocity or timeseries OR
-    # 3) horizontal/vertical output from asc_desc2horz_vert.py
-    # 4) data/model output from load_gbis.py OR
-    # 5) binary files with multiple undefined datasets, as band1, band2, etc.
+    # 3) data/model output from load_gbis.py OR
+    # 4) horizontal/vertical output from asc_desc2horz_vert.py
     if (len(inps.dsetFamilyList) == 1 
-            or inps.key in ['velocity', 'timeseries', 'inversion']
             or all(d in inps.dsetFamilyList for d in ['horizontal', 'vertical'])
             or inps.dsetFamilyList == ['data','model','residual']
-            or inps.dsetFamilyList == ['band{}'.format(i+1) for i in range(len(inps.dsetFamilyList))]):
+            or inps.key in ['velocity', 'timeseries', 'inversion']):
         data, inps = update_data_with_plot_inps(data, metadata, inps)
-        if (not inps.vlim
+        if (not inps.vlim 
                 and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)
                 and inps.dsetFamilyList[0] not in ['bperp']):
             data_mli = multilook_data(data, 10, 10)
@@ -1006,12 +984,12 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     """
     # Plot DEM
     if inps.dem_file:
-        pp.plot_dem_background(ax=ax, geo_box=None,
-                               dem_shade=inps.dem_shade,
-                               dem_contour=inps.dem_contour,
-                               dem_contour_seq=inps.dem_contour_seq,
-                               inps=inps,
-                               print_msg=inps.print_msg)
+        ax = pp.plot_dem_background(ax=ax, geo_box=None,
+                                    dem_shade=inps.dem_shade,
+                                    dem_contour=inps.dem_contour,
+                                    dem_contour_seq=inps.dem_contour_seq,
+                                    inps=inps,
+                                    print_msg=inps.print_msg)
     # Plot Data
     vlim = inps.vlim
     if vlim is None:
@@ -1062,44 +1040,29 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
                 subplot_title = dt.datetime.strptime(inps.dset[i].split('-')[1], '%Y%m%d').isoformat()[0:10]
             except:
                 subplot_title = str(inps.dset[i])
-
-        else:
-            title_str = inps.dset[i]
-            if len(inps.dsetFamilyList) == 1:
-                title_str = title_str.split('-')[1]
-
+        elif inps.key in ['ifgramStack', 'interferograms', 'coherence', 'wrapped']:
             num_subplot = inps.fig_row_num * inps.fig_col_num
-            if num_subplot <= 20:
-                subplot_title = '{}\n{}'.format(i, title_str)
+            if num_subplot <= 10:
+                subplot_title = '{}\n{}'.format(i, inps.dset[i])
             elif num_subplot <= 50:
-                subplot_title = title_str
-            else:
+                date12 = inps.dset[i].split('-')[1]
+                subplot_title = '\n_'.join(date12.split('_'))
+            elif num_subplot <= 200:
                 subplot_title = '{}'.format(i)
+        else:
+            subplot_title = str(inps.dset[i])
 
         # plot title
         if subplot_title:
-            if inps.fig_title_in:
+            if not inps.fig_title_in:
+                if inps.dset[i] in inps.dropDatasetList:
+                    ax.set_title(subplot_title, fontsize=inps.font_size,
+                                 color='crimson', fontweight='bold')
+                else:
+                    ax.set_title(subplot_title, fontsize=inps.font_size)
+            else:
                 prop = dict(size=inps.font_size)
                 pp.add_inner_title(ax, subplot_title, loc=1, prop=prop)
-            else:
-                kwarg = dict(fontsize=inps.font_size)
-                # mark dropped interferograms in bold crimson
-                if inps.dset[i] in inps.dropDatasetList:
-                    kwarg['color'] = 'crimson'
-                    kwarg['fontweight'] = 'bold'
-                else:
-                    # special titles for Sentinel-1 data
-                    if metadata.get('PLATFORM', None) == 'Sen' and inps.disp_title4sentinel1:
-                        # display S1A/B in different colors
-                        s1_sensor = metadata['SENTINEL1_SENSOR'].split()[i]
-                        if s1_sensor == 'A':
-                            kwarg['color'] = pp.mplColors[0]
-                        else:
-                            kwarg['color'] = pp.mplColors[1]
-                        # display IPF in subplot title
-                        s1_IPF = metadata['SENTINEL1_IPF'].split()[i]
-                        subplot_title += ' : {}'.format(s1_IPF)
-                ax.set_title(subplot_title, **kwarg)
 
     # Flip Left-Right / Up-Down
     if inps.flip_lr:
@@ -1156,7 +1119,7 @@ def plot_figure(j, inps, metadata):
         fig.tight_layout()
 
     # Min and Max for this figure
-    inps.dlim_all = [np.nanmin([inps.dlim_all[0], inps.dlim[0]]),
+    inps.dlim_all = [np.nanmin([inps.dlim_all[0], inps.dlim[0]]), 
                      np.nanmax([inps.dlim_all[1], inps.dlim[1]])]
     vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
     if inps.vlim:
@@ -1263,10 +1226,10 @@ def prep_slice(cmd, auto_fig=False):
     """Prepare data from command line as input, for easy call plot_slice() externally
     Parameters: cmd : string, command to be run in terminal
     Returns:    data : 2D np.ndarray, data to be plotted
-                atr  : dict, metadata
+                atr  : dict, metadata 
                 inps : namespace, input argument for plot setup
     Example:
-        fig, ax = plt.subplots(figsize=[4, 3], projection=ccrs.PlateCarree())
+        fig, ax = plt.subplots(figsize=[4, 3])
         geo_box = (-91.670, -0.255, -91.370, -0.515)    # W, N, E, S
         cmd = 'view.py geo_velocity.h5 velocity --mask geo_maskTempCoh.h5 '
         cmd += '--sub-lon {w} {e} --sub-lat {s} {n} '.format(w=geo_box[0], n=geo_box[1], e=geo_box[2], s=geo_box[3])
@@ -1279,7 +1242,7 @@ def prep_slice(cmd, auto_fig=False):
     """
     inps = cmd_line_parse(cmd.split()[1:])
     vprint(cmd)
-    inps, atr = read_input_file_info(inps)
+    inps, atr = check_input_file_info(inps)
     inps = update_inps_with_file_metadata(inps, atr)
 
     inps.msk, inps.mask_file = pp.read_mask(inps.file,
@@ -1301,7 +1264,7 @@ def prep_slice(cmd, auto_fig=False):
                               print_msg=False)[0]
     # reference in space for unwrapPhase
     if (inps.key in ['ifgramStack']
-            and inps.dset[0].split('-')[0].startswith('unwrapPhase')
+            and inps.dset[0].split('-')[0] == 'unwrapPhase'
             and 'REF_Y' in atr.keys()):
         ref_y, ref_x = int(atr['REF_Y']), int(atr['REF_X'])
         ref_data = readfile.read(inps.file,
@@ -1319,12 +1282,7 @@ def prep_slice(cmd, auto_fig=False):
 
     # matplotlib.Axes
     if auto_fig == True:
-        figsize = [i/2.0 for i in inps.fig_size]
-        if self.proj_obj is not None:
-            subplot_kw = dict(projection=self.proj_obj)
-        else:
-            subplot_kw = {}
-        fig, ax = plt.subplots(figsize=figsize, num='Figure', subplot_kw=subplot_kw)
+        fig, ax = plt.subplots(figsize=[i/2.0 for i in inps.fig_size], num='Figure')
         return data, atr, inps, ax
     else:
         return data, atr, inps
@@ -1352,7 +1310,7 @@ class viewer():
 
     def configure(self):
         inps = cmd_line_parse(self.iargs)
-        inps, self.atr = read_input_file_info(inps)
+        inps, self.atr = check_input_file_info(inps)
         inps = update_inps_with_file_metadata(inps, self.atr)
 
         # copy inps to self object
@@ -1383,10 +1341,9 @@ class viewer():
                                       datasetName=self.ref_date,
                                       box=self.pix_box,
                                       print_msg=False)[0]
-
             # reference in space for unwrapPhase
             if (self.key in ['ifgramStack']
-                    and self.dset[0].split('-')[0].startswith('unwrapPhase')
+                    and self.dset[0].split('-')[0] == 'unwrapPhase'
                     and 'REF_Y' in self.atr.keys()):
                 ref_y, ref_x = int(self.atr['REF_Y']), int(self.atr['REF_X'])
                 ref_data = readfile.read(self.file,
@@ -1394,7 +1351,6 @@ class viewer():
                                          box=(ref_x, ref_y, ref_x+1, ref_y+1),
                                          print_msg=False)[0]
                 data[data != 0.] -= ref_data
-
             # masking
             if self.zero_mask:
                 vprint('masking pixels with zero value')
@@ -1402,17 +1358,11 @@ class viewer():
             if self.msk is not None:
                 vprint('masking data')
                 data = np.ma.masked_where(self.msk == 0., data)
-
             # update data
             data, self = update_data_with_plot_inps(data, self.atr, self)
 
             # prepare figure
-            if self.proj_obj is not None:
-                subplot_kw = dict(projection=self.proj_obj)
-            else:
-                subplot_kw = {}
-
-            fig, ax = plt.subplots(figsize=self.fig_size, num='Figure', subplot_kw=subplot_kw)
+            fig, ax = plt.subplots(figsize=self.fig_size, num='Figure')
             if not self.disp_whitespace:
                 fig.subplots_adjust(left=0,right=1,bottom=0,top=1)
 

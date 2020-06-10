@@ -13,12 +13,20 @@ import h5py
 import numpy as np
 import random
 from mintpy.objects import timeseries
-from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, writefile, utils as ut
 
 
 #########################################  Usage  ##############################################
-TEMPLATE = get_template_content('reference_point')
+TEMPLATE = """
+## reference all interferograms to one common point in space
+## auto - randomly select a pixel with coherence > minCoherence
+mintpy.reference.yx            = auto   #[257,151 / auto]
+mintpy.reference.lalo          = auto   #[31.8,130.8 / auto]
+
+mintpy.reference.coherenceFile = auto   #[file name], auto for averageSpatialCoherence.h5
+mintpy.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum coherence for auto method
+mintpy.reference.maskFile      = auto   #[file name / no], auto for maskConnComp.h5
+"""
 
 NOTE = """note: Reference value cannot be nan, thus, all selected reference point must be:
   a. non zero in mask, if mask is given
@@ -43,35 +51,30 @@ NOTE = """note: Reference value cannot be nan, thus, all selected reference poin
 """
 
 EXAMPLE = """example:
-  # for ifgramStack file, update metadata only
-  # add --write-data to update data matrix value
   reference_point.py  inputs/ifgramStack.h5  -t smallbaselineApp.cfg  -c avgSpatialCoh.h5
+
+  reference_point.py  timeseries.h5     -r Seeded_velocity.h5
+  reference_point.py  091120_100407.unw -y 257    -x 151      -m Mask.h5 --write-data
+  reference_point.py  geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
+  
   reference_point.py  inputs/ifgramStack.h5 --method manual
   reference_point.py  inputs/ifgramStack.h5 --method random
-
-  # for all the other files, update both metadata and data matrix value
-  reference_point.py  091120_100407.unw -y 257    -x 151      -m Mask.h5
-  reference_point.py  geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
 """
 
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Reference to the same pixel in space.',
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=NOTE+'\n'+TEMPLATE+'\n'+EXAMPLE)
+                                     epilog=NOTE+'\n'+EXAMPLE)
 
     parser.add_argument('file', type=str, help='file to be referenced.')
     parser.add_argument('-t', '--template', dest='template_file',
-                        help='template with reference info')
+                        help='template with reference info as below:\n'+TEMPLATE)
     parser.add_argument('-m', '--mask', dest='maskFile', help='mask file')
-
-    parser.add_argument('-o', '--outfile', type=str, default=None,
-                        help='output file name (default: %(default)s). This option is diabled for ifgramStack file.\n'
-                             'None (default) for update data value directly without writing to a new file.\n')
-
+    parser.add_argument('-o', '--outfile',
+                        help='output file name, disabled when more than 1 input files.')
     parser.add_argument('--write-data', dest='write_data', action='store_true',
-                        help='(option for ifgramStack file only) update data value, in addition to update metadata.')
-
+                        help='write referenced data value into file, in addition to update metadata.')
     parser.add_argument('--reset', action='store_true',
                         help='remove reference pixel information from attributes in the file')
     parser.add_argument('--force', action='store_true',
@@ -110,18 +113,6 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-
-    
-    atr = readfile.read_attribute(inps.file)
-    if atr['FILE_TYPE'] != 'ifgramStack':
-        # turn ON wirte_data for non-ifgramStack file by default
-        inps.write_data = True
-
-    else:
-        # disable --output option for ifgramStack file
-        if inps.outfile:
-            raise SystemExit('--outfile is disabled for "ifgramStack" input file!')
-
     return inps
 
 
@@ -218,67 +209,34 @@ def reference_file(inps):
 
     else:
         if not inps.outfile:
+            inps.outfile = '{}_seeded{}'.format(os.path.splitext(inps.file)[0],
+                                                os.path.splitext(inps.file)[1])
+        k = atr['FILE_TYPE']
+
+        # For ifgramStack file, update data value directly, do not write to new file
+        if k == 'ifgramStack':
+            f = h5py.File(inps.file, 'r+')
+            ds = f[k].get('unwrapPhase')
+            for i in range(ds.shape[0]):
+                ds[i, :, :] -= ds[i, inps.ref_y, inps.ref_x]
+            f[k].attrs.update(atrNew)
+            f.close()
             inps.outfile = inps.file
 
-        k = atr['FILE_TYPE']
-        fext = os.path.splitext(inps.file)[1]
-
-        if fext == '.h5':
-            if inps.outfile == inps.file:
-                print('updating data value without re-writing to a new file')
-
-                if k == 'ifgramStack':
-                    with h5py.File(inps.file, 'r+') as f:
-                        ds = f['unwrapPhase']
-                        for i in range(ds.shape[0]):
-                            ds[i, :, :] -= ds[i, inps.ref_y, inps.ref_x]
-
-                        print('update metadata')
-                        f.attrs.update(atrNew)
-
-                else:
-                    with h5py.File(inps.file, 'r+') as f:
-                        ds = f[k]
-                        if len(ds.shape) == 3:
-                            # 3D matrix
-                            for i in range(ds.shape[0]):
-                                ds[i, :, :] -= ds[i, inps.ref_y, inps.ref_x]
-
-                        else:
-                            # 2D matrix
-                            ds[:] -= ds[inps.ref_y, inps.ref_x]
-
-                        print('update metadata')
-                        f.attrs.update(atrNew)
-
-            else:
-                ## write to a new file
-                print('writing the referenced data into file: {}'.format(inps.outfile))
-
-                # 1. read and update data value
-                data, atr = readfile.read(inps.file)
-                if len(data.shape) == 3:
-                    # 3D matrix
-                    for i in range(data.shape[0]):
-                        data[i, :, :] -= data[i, inps.ref_y, inps.ref_x]
-
-                else:
-                    # 2D matrix
-                    data -= data[inps.ref_y, inps.ref_x]
-
-                # 2. update metadata
-                atr.update(atrNew)
-
-                # 3. write to file
-                writefile.write(data, inps.outfile, metadata=atr, ref_file=inps.file)
-
+        elif k == 'timeseries':
+            data = timeseries(inps.file).read()
+            for i in range(data.shape[0]):
+                data[i, :, :] -= data[i, inps.ref_y, inps.ref_x]
+            obj = timeseries(inps.outfile)
+            atr.update(atrNew)
+            obj.write2hdf5(data=data, metadata=atr, refFile=inps.file)
+            obj.close()
         else:
-            # for binary file, over-write directly
+            print('writing >>> '+inps.outfile)
             data = readfile.read(inps.file)[0]
             data -= data[inps.ref_y, inps.ref_x]
             atr.update(atrNew)
             writefile.write(data, out_file=inps.outfile, metadata=atr)
-
     ut.touch([inps.coherenceFile, inps.maskFile])
     return inps.outfile
 

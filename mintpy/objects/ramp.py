@@ -77,7 +77,7 @@ def deramp(data, mask_in, ramp_type='linear', metadata=None):
     ramp = np.dot(G, X)
 
     # reference in space if metadata
-    if metadata and all(key in metadata.keys() for key in ['REF_X','REF_Y']):
+    if metadata:
         ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
         ref_idx = ref_y * width + ref_x
         ramp -= ramp[ref_idx, :]

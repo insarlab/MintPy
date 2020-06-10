@@ -56,7 +56,7 @@ def check_loaded_dataset(work_dir='./', print_msg=True):
         obj = ifgramStack(stack_file)
         obj.open(print_msg=False)
         for dname in ['unwrapPhase', 'coherence']:
-            if dname not in obj.datasetNames and 'azimuthOffset' not in obj.datasetNames:
+            if dname not in obj.datasetNames:
                 raise ValueError('required dataset "{}" is missing in file {}'.format(dname, stack_file))
     else:
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), './inputs/ifgramStack.h5')
@@ -332,4 +332,23 @@ def transect_lines(z, atr, lines):
 
 
 #################################################################################
+def move_dask_stdout_stderr_files():
+    """ move  *o and *e files produced by dask into stdout and sderr directory """
 
+    stdout_files  = glob.glob('*.o')
+    stderr_files  = glob.glob('*.e')
+    job_files = glob.glob('dask_command_run_from_python.txt*')
+
+    stdout_folder = 'stdout_ifgram_inversion_dask'
+    stderr_folder = 'stderr_ifgram_inversion_dask'
+    for std_dir in [stdout_folder, stderr_folder]:
+        if os.path.isdir(std_dir):
+            shutil.rmtree(std_dir)
+        os.mkdir(std_dir)
+
+    for item in stdout_files + job_files:
+        shutil.move(item, stdout_folder)
+    for item in stderr_files:
+        shutil.move(item, stderr_folder)
+
+    return

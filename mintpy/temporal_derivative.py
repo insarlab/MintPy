@@ -8,53 +8,48 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 from mintpy.objects import timeseries
 
 
 ############################################################################
-EXAMPLE = """example:
+USAGE = """
+usage:  temporal_derivative.py  timeseries_file 
+
+Calculate the temporal derivative of time-series displacement.
+  Useful to check time-dependent deformation.
+
+example:
   temporal_derivative.py  timeseries.h5 
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Calculate the temporal derivative of time-series.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
-    parser.add_argument('file', type=str, help='time-series displacement file.')
-    parser.add_argument('-o','--output', dest='outfile', type=str, help='output derivative time-series file.')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-    return inps
+def usage():
+    print(USAGE)
+    return
 
 
 ############################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
+def main(argv):
+    try:
+        timeseries_file = argv[0]
+    except:
+        usage()
+        sys.exit(1)
 
-    # read data
-    obj = timeseries(inps.file)
+    obj = timeseries(timeseries_file)
     obj.open(print_msg=False)
-    print('reading timeseries data from file: {}'.format(inps.file))
+    print('reading timeseries data from file: {}'.format(timeseries_file))
     ts_data = obj.read(print_msg=False)
 
-    # calculation
     print('calculate the 1st derivative of timeseries data')
     ts_data_1d = np.zeros(ts_data.shape, np.float32)
     ts_data_1d[1:, :, :] = np.diff(ts_data, n=1, axis=0)
 
-    # write to file
-    if not inps.outfile:
-        inps.outfile = '{}_1stDiff.h5'.format(os.path.splitext(inps.file)[0])
-    obj_out = timeseries(inps.outfile)
-    obj_out.write2hdf5(ts_data_1d, refFile=inps.file)
+    out_file = '{}_1stDerivative.h5'.format(os.path.splitext(timeseries_file)[0])
+    obj_out = timeseries(out_file)
+    obj_out.write2hdf5(ts_data_1d, refFile=timeseries_file)
 
-    return inps.outfile
+    return out_file
 
 
 ############################################################################

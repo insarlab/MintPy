@@ -185,8 +185,8 @@ def read_data(inps):
         slice_list = readfile.get_slice_list(inps.file)
         if 'displacement' in inps.dset:
             # read/prepare data
-            slice_name1 = view.search_dataset_input(slice_list, '{}-{}'.format(dname, date1))[0][0]
-            slice_name2 = view.search_dataset_input(slice_list, '{}-{}'.format(dname, date2))[0][0]
+            slice_name1 = view.check_dataset_input(slice_list, '{}-{}'.format(dname, date1))[0][0]
+            slice_name2 = view.check_dataset_input(slice_list, '{}-{}'.format(dname, date2))[0][0]
             data = readfile.read(inps.file, datasetName=slice_name1)[0]
             data -= readfile.read(inps.file, datasetName=slice_name2)[0]
             print('converting range to phase')
@@ -194,7 +194,7 @@ def read_data(inps):
             if inps.ref_yx:
                 data -= data[inps.ref_yx[0], inps.ref_yx[1]]
         else:
-            slice_name = view.search_dataset_input(slice_list, inps.dset)[0][0]
+            slice_name = view.check_dataset_input(slice_list, inps.dset)[0][0]
             data = readfile.read(inps.file, datasetName=slice_name)[0]
 
         # metadata

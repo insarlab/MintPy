@@ -30,7 +30,7 @@ EXAMPLE = """example:
   mask.py velocity.h5 -m maskTempCoh.h5
   geocode.py velocity_msk.h5 -l inputs/geometryRadar.h5 -x 0.00027778 -y -0.00027778 --bbox 32.0 32.5 130.1 130.5
 
-  asc_desc2horz_vert.py AlosAT424/mintpy/geo_velocity_msk.h5 AlosDT73/mintpy/geo_velocity_msk.h5
+  asc_desc2horz_vert.py AlosAT424/mintpy/geo_velocity_msk.py AlosDT73/mintpy/geo_velocity_msk.py
 
   # write horz/vert to two files
   asc_desc2horz_vert.py AlosAT424/mintpy/velocity_msk.h5 AlosDT73/mintpy/velocity_msk.h5
@@ -85,26 +85,18 @@ def cmd_line_parse(iargs=None):
 
     # check spatial resolution
     if any(atr1[i] != atr2[i] for i in ['X_STEP','Y_STEP']):
-        msg  = '\tfile1: {}, Y/X_STEP: {} / {} m\n'.format(inps.file[0], atr1['Y_STEP'], atr1['X_STEP'])
-        msg += '\tfile2: {}, Y/X_STEP: {} / {} m\n'.format(inps.file[1], atr2['Y_STEP'], atr2['X_STEP'])
-        msg += '\tRe-run geocode.py --lat-step --lon-step to make them consistent.'
+        msg = 'file1: {}\n'.format(inps.file[0])
+        msg += 'Y_STEP: {} m, X_STEP: {} m\n'.format(atr1['Y_STEP'], atr1['X_STEP'])
+        msg += 'file2: {}\n'.format(inps.file[1])
+        msg += 'Y_STEP: {} m, X_STEP: {} m'.format(atr2['Y_STEP'], atr2['X_STEP'])
         raise ValueError('input files do not have the same spatial resolution\n{}'.format(msg))
 
     # check reference point
-    # round to 3 decimal digits (~100 m)
-    ref_lalo_1 = ['{:.3f}'.format(float(atr1[i])) for i in ['REF_LAT','REF_LON']]
-    ref_lalo_2 = ['{:.3f}'.format(float(atr2[i])) for i in ['REF_LAT','REF_LON']]
+    ref_lalo_1 = ['{:.4f}'.format(float(atr1[i])) for i in ['REF_LAT','REF_LON']]
+    ref_lalo_2 = ['{:.4f}'.format(float(atr2[i])) for i in ['REF_LAT','REF_LON']]
     if ref_lalo_1 != ref_lalo_2:
-        msg  = '\tfile1: {}, REF_LAT/LON: {} {}\n'.format(inps.file[0], ref_lalo_1, atr1.get('X_UNIT', 'deg'))
-        msg += '\tfile2: {}, REF_LAT/LON: {} {}\n'.format(inps.file[1], ref_lalo_2, atr2.get('X_UNIT', 'deg'))
-        msg += '\tRe-run reference_point.py --lat --lon to make them consistent.'
-        raise ValueError('input files do not have the same reference point from REF_LAT/LON values!\n{}'.format(msg))
+        raise ValueError('input files do not have the same reference point from REF_LAT/LON values')
 
-    # use ref_file for time-series file writing
-    if atr1['FILE_TYPE'] == 'timeseries':
-        inps.ref_file = inps.file[0]
-    else:
-        inps.ref_file = None
     return inps
 
 
@@ -196,7 +188,7 @@ def asc_desc2horz_vert(fname1, fname2):
         coord = ut.coordinate(atr)
         [x0, x1] = coord.lalo2yx([west, east], coord_type='lon')
         [y0, y1] = coord.lalo2yx([north, south], coord_type='lat')
-        dLOS[i, :] = readfile.read(fname, box=(x0, y0, x0 + width, y0 + length))[0].flatten()
+        dLOS[i, :] = readfile.read(fname, box=(x0, y0, x1, y1))[0].flatten()
 
     # 3. Project displacement from LOS to Horizontal and Vertical components
     print('---------------------')
@@ -226,7 +218,7 @@ def asc_desc2horz_vert(fname1, fname2):
     return dH, dV, atr, dLOS, atr_list
 
 
-def write_to_one_file(outfile, dH, dV, atr, dLOS, atr_list, ref_file=None):
+def write_to_one_file(outfile, dH, dV, atr, dLOS, atr_list):
     """Write all datasets into one HDF5 file"""
     from mintpy.objects import sensor
 
@@ -249,7 +241,7 @@ def write_to_one_file(outfile, dH, dV, atr, dLOS, atr_list, ref_file=None):
     dsDict['vertical'] = dV
     dsDict['horizontal'] = dH
 
-    writefile.write(dsDict, out_file=outfile, metadata=atr, ref_file=ref_file)
+    writefile.write(dsDict, out_file=outfile, metadata=atr)
     return outfile
 
 
@@ -261,13 +253,13 @@ def main(iargs=None):
 
     print('---------------------')
     if inps.one_outfile:
-        write_to_one_file(inps.one_outfile, dH, dV, atr, dLOS, atr_list, ref_file=inps.ref_file)
+        write_to_one_file(inps.one_outfile, dH, dV, atr, dLOS, atr_list)
     else:
         print('writing horizontal component to file: '+inps.outfile[0])
-        writefile.write(dH, out_file=inps.outfile[0], metadata=atr, ref_file=inps.ref_file)
+        writefile.write(dH, out_file=inps.outfile[0], metadata=atr)
 
         print('writing   vertical component to file: '+inps.outfile[1])
-        writefile.write(dV, out_file=inps.outfile[1], metadata=atr, ref_file=inps.ref_file)
+        writefile.write(dV, out_file=inps.outfile[1], metadata=atr)
 
     print('Done.')
     return inps.outfile

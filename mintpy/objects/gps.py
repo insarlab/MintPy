@@ -34,13 +34,12 @@ def dload_site_list(print_msg=True):
     return out_file
 
 
-def search_gps(SNWE, start_date=None, end_date=None, site_list_file=None, min_num_solution=50, print_msg=True):
+def search_gps(SNWE, start_date=None, end_date=None, site_list_file=None, print_msg=True):
     """Search available GPS sites within the geo bounding box from UNR website
-    Parameters: SNWE       : tuple of 4 float, indicating (South, North, West, East) in degrees
+    Parameters: SNWE : tuple of 4 float, indicating (South, North, West, East) in degrees
                 start_date : string in YYYYMMDD format
                 end_date   : string in YYYYMMDD format
                 site_list_file : string.
-                min_num_solution : int, minimum number of solutions available
     Returns:    site_names : 1D np.array of string for GPS station names
                 site_lats  : 1D np.array for lat
                 site_lons  : 1D np.array for lon
@@ -54,13 +53,12 @@ def search_gps(SNWE, start_date=None, end_date=None, site_list_file=None, min_nu
     txt_data = np.loadtxt(site_list_file,
                           dtype=bytes,
                           skiprows=1,
-                          usecols=(0,1,2,3,4,5,6,7,8,9,10)).astype(str)
+                          usecols=(0,1,2,3,4,5,6,7,8,9)).astype(str)
     site_names = txt_data[:, 0]
     site_lats, site_lons = txt_data[:, 1:3].astype(np.float32).T
     site_lons  -= np.round(site_lons / (360.)) * 360.
     t_start = np.array([dt(*time.strptime(i, "%Y-%m-%d")[0:5]) for i in txt_data[:, 7].astype(str)])
     t_end = np.array([dt(*time.strptime(i, "%Y-%m-%d")[0:5]) for i in txt_data[:, 8].astype(str)])
-    num_solution = txt_data[:, 10].astype(np.int16)
 
     # limit on space
     idx = ((site_lats >= SNWE[0]) * (site_lats <= SNWE[1]) *
@@ -73,10 +71,6 @@ def search_gps(SNWE, start_date=None, end_date=None, site_list_file=None, min_nu
     if end_date:
         t1 = ptime.date_list2vector([end_date])[0][0]
         idx *= t_start <= t1
-
-    # limit on number of solutions
-    if min_num_solution is not None:
-        idx *= num_solution >= min_num_solution
 
     return site_names[idx], site_lats[idx], site_lons[idx]
 
@@ -171,44 +165,16 @@ class GPS:
       plt.show()
     """
 
-    def __init__(self, site, data_dir='./GPS', version='IGS14'):
+    def __init__(self, site, data_dir='./GPS', data_format='env3'):
         self.site = site
         self.data_dir = data_dir
-        self.version = version
+        self.data_format = data_format
         self.source = 'Nevada Geodetic Lab'
-
-        # time-series data from Nevada Geodetic Lab
-        # example link: http://geodesy.unr.edu/gps_timeseries/tenv3/IGS08/1LSU.IGS08.tenv3
-        #               http://geodesy.unr.edu/gps_timeseries/tenv3/IGS14/CASU.tenv3
-        if version == 'IGS08':
-            self.file = os.path.join(data_dir, '{s}.{v}.tenv3'.format(s=site, v=version))
-        elif version == 'IGS14':
-            self.file = os.path.join(data_dir, '{s}.tenv3'.format(s=site))
-        else:
-            raise ValueError('un-recognized GPS data version: {}'.format(version))
-
-        url_prefix = 'http://geodesy.unr.edu/gps_timeseries/tenv3'
-        self.file_url = os.path.join(url_prefix, version, os.path.basename(self.file))
-
-        # time-series plot from Nevada Geodetic Lab
-        # example link: http://geodesy.unr.edu/tsplots/IGS08/TimeSeries/CAMO.png
-        #               http://geodesy.unr.edu/tsplots/IGS14/IGS14/TimeSeries/CASU.png
-        self.plot_file = os.path.join(data_dir, 'pic/{}.png'.format(site))
-
-        url_prefix = 'http://geodesy.unr.edu/tsplots'
-        if version == 'IGS08':
-            url_prefix += '/{0}'.format(version)
-        elif version == 'IGS14':
-            url_prefix += '/{0}/{0}'.format(version)
-        self.plot_file_url = os.path.join(url_prefix, 'TimeSeries/{}.png'.format(site))
-
-        # list of stations from Nevada Geodetic Lab
+        self.file = os.path.join(data_dir, '{}.IGS08.t{}'.format(site, data_format))
+        self.img_file = os.path.join(data_dir, 'pic/{}.png'.format(site))
         self.site_list_file = os.path.join(data_dir, 'DataHoldings.txt')
-
-        # directories for data files and plot files
-        for fdir in [data_dir, os.path.dirname(self.plot_file)]:
-            if not os.path.isdir(fdir):
-                os.makedirs(fdir)
+        if not os.path.isdir(data_dir):
+            os.makedirs(data_dir)
 
     def open(self, print_msg=True):
         if not os.path.isfile(self.file):
@@ -217,11 +183,25 @@ class GPS:
         self.read_displacement(print_msg=print_msg)
 
     def dload_site(self, print_msg=True):
-        if print_msg:
-            print('downloading {} from {}'.format(self.site, self.file_url))
+        # download time-series data from Nevada Geodetic Lab
+        url = 'http://geodesy.unr.edu/gps_timeseries'
+        if self.data_format == 'env3':
+            url = os.path.join(url, 'tenv3')
+        elif self.data_format == 'xyz2':
+            url = os.path.join(url, 'txyz')
+        url = os.path.join(url, 'IGS08/{}'.format(os.path.basename(self.file)))
 
-        urlretrieve(self.file_url, self.file)
-        urlretrieve(self.plot_file_url, self.plot_file)
+        if print_msg:
+            print('downloading {} from {}'.format(self.site, url))
+        urlretrieve(url, self.file)
+
+        # download PNG file
+        if not os.path.isdir(os.path.dirname(self.img_file)):
+            os.makedirs(os.path.dirname(self.img_file))
+        url = 'http://geodesy.unr.edu/tsplots/IGS08/TimeSeries/{}.png'.format(self.site)
+        if print_msg:
+            print('downloading {}.png from {}'.format(self.site, url))
+        urlretrieve(url, self.img_file)
 
         return self.file
 
@@ -231,7 +211,6 @@ class GPS:
             print('calculating station lat/lon')
         if not os.path.isfile(self.file):
             self.dload_site(print_msg=print_msg)
-
         data = np.loadtxt(self.file, dtype=bytes, skiprows=1).astype(str)
         ref_lon, ref_lat = float(data[0, 6]), 0.
         e0, e_off, n0, n_off = data[0, 7:11].astype(np.float)

@@ -6,7 +6,7 @@
 newIssueWelcomeComment: >
   👋  Thanks for opening your first issue here! Please make sure you filled out the template with as much detail as possible. We appreciate that you took the time to contribute!
 
-  Make sure you read our [contributing guidelines](https://github.com/insarlab/MintPy/blob/master/docs/CONTRIBUTING.md)
+  Please make sure you read our [Contributing Guide](https://github.com/insarlab/MintPy/blob/master/docs/CONTRIBUTING.md)
 
 # Configuration for new-pr-welcome - https://github.com/behaviorbot/new-pr-welcome
 
@@ -14,7 +14,7 @@ newIssueWelcomeComment: >
 newPRWelcomeComment: >
   💖  Thanks for opening this pull request! Please check out our [contributing guidelines](https://github.com/insarlab/MintPy/blob/master/docs/CONTRIBUTING.md). 💖
 
-  Keep in mind that all new features should be documented. It helps to write the comments next to the code or below your functions describing **all** arguments, and return types before writing the code. This will help you think about your code design and usually results in better code.
+  Keep in mind that all new features should be documented. It helps to write the comments below for your functions describing the it, **all** arguments, and return types before writing the code. This will help you think about your code design and results in better code.
 
 # Configuration for first-pr-merge - https://github.com/behaviorbot/first-pr-merge
 
@@ -23,3 +23,4 @@ firstPRMergeComment: >
   🎉 🎉 🎉  Congrats on merging your first pull request! We here at behaviorbot are proud of you! 🎉 🎉 🎉 
 
 # It is recommend to include as many gifs and emojis as possible
+

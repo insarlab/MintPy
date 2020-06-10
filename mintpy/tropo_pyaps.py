@@ -47,6 +47,14 @@ REFERENCE = """reference:
   2324-2341.
 """
 
+TEMPLATE = """
+## 7. Tropospheric Delay Correction (optional and recommended)
+## For pyaps method, correction is applied to dates with data available, and skipped for dates (usually recent) without it.
+mintpy.troposphericDelay.method       = auto  #[pyaps / height_correlation / base_trop_cor / no], auto for pyaps
+mintpy.troposphericDelay.weatherModel = auto  #[ERA / MERRA / NARR], auto for ECMWF, for pyaps method
+mintpy.troposphericDelay.weatherDir   = auto  #[path2directory], auto for "./../WEATHER"
+"""
+
 DATA_INFO = """
   re-analysis_dataset        coverage   temporal_resolution    spatial_resolution      latency     analysis
 ------------------------------------------------------------------------------------------------------------

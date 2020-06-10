@@ -47,72 +47,68 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
     ext = os.path.splitext(out_file)[1].lower()
     # HDF5 File
     if ext in ['.h5', '.he5']:
-        # grab info from reference h5 file
-        if ref_file and os.path.splitext(ref_file)[1] in ['.h5', '.he5']:
-            # compression
-            if compression is None:
-                compression = readfile.get_hdf5_compression(ref_file)
+        if compression is None and ref_file:
+            compression = readfile.get_hdf5_compression(ref_file)
 
-            # list of auxiliary datasets
-            atr_ref = readfile.read_attribute(ref_file)
-            shape_ref = (int(atr_ref['LENGTH']), int(atr_ref['WIDTH']))
-            with h5py.File(ref_file, 'r') as fr:
-                auxDsNames = [i for i in fr.keys()
-                              if (i not in list(datasetDict.keys())
-                                  and isinstance(fr[i], h5py.Dataset) 
-                                  and fr[i].shape[-2:] != shape_ref)]
+        k = meta['FILE_TYPE']
+        if k == 'timeseries':
+            if ref_file is None:
+                raise Exception('Can not write {} file without reference file!'.format(k))
+            obj = timeseries(out_file)
+            obj.write2hdf5(datasetDict[k],
+                           metadata=meta,
+                           refFile=ref_file,
+                           compression=compression)
+
         else:
-            auxDsNames = []
+            if os.path.isfile(out_file):
+                print('delete exsited file: {}'.format(out_file))
+                os.remove(out_file)
 
-        # check required datasets
-        dsNames = list(datasetDict.keys()) + auxDsNames
-        if meta['FILE_TYPE'] in ['timeseries', 'ifgramStack']:
-            if 'date' not in dsNames:
-                raise Exception("Can not write {} file without 'date' dataset!".format(meta['FILE_TYPE']))
+            print('create HDF5 file: {} with w mode'.format(out_file))
+            with h5py.File(out_file, 'w') as f:
+                # 1. Write input datasets
+                maxDigit = max([len(i) for i in list(datasetDict.keys())])
+                for dsName in datasetDict.keys():
+                    data = datasetDict[dsName]
+                    print(('create dataset /{d:<{w}} of {t:<10} in size of {s:<20} '
+                           'with compression={c}').format(d=dsName,
+                                                          w=maxDigit,
+                                                          t=str(data.dtype),
+                                                          s=str(data.shape),
+                                                          c=compression))
+                    ds = f.create_dataset(dsName,
+                                          data=data,
+                                          chunks=True,
+                                          compression=compression)
 
-        # remove existing file
-        if os.path.isfile(out_file):
-            print('delete exsited file: {}'.format(out_file))
-            os.remove(out_file)
+                # 2. Write extra/auxliary datasets from ref_file
+                if ref_file and os.path.splitext(ref_file)[1] in ['.h5', '.he5']:
+                    atr_ref = readfile.read_attribute(ref_file)
+                    shape_ref = (int(atr_ref['LENGTH']), int(atr_ref['WIDTH']))
+                    with h5py.File(ref_file, 'r') as fr:
+                        dsNames = [i for i in fr.keys()
+                                   if (i not in list(datasetDict.keys())
+                                       and isinstance(fr[i], h5py.Dataset) 
+                                       and fr[i].shape[-2:] != shape_ref)]
+                        maxDigit = max([len(i) for i in dsNames]+[maxDigit])
+                        for dsName in dsNames:
+                            ds = fr[dsName]
+                            print(('create dataset /{d:<{w}} of {t:<10} in size of {s:<10} '
+                                   'with compression={c}').format(d=dsName,
+                                                                  w=maxDigit,
+                                                                  t=str(ds.dtype),
+                                                                  s=str(ds.shape),
+                                                                  c=compression))
+                            f.create_dataset(dsName,
+                                             data=ds[:],
+                                             chunks=True,
+                                             compression=compression)
 
-        # writing
-        print('create HDF5 file: {} with w mode'.format(out_file))
-        maxDigit = max([len(i) for i in dsNames])
-        with h5py.File(out_file, 'w') as f:
-            # 1. write input datasets
-            for dsName in datasetDict.keys():
-                data = datasetDict[dsName]
-                print(('create dataset /{d:<{w}} of {t:<10} in size of {s:<20} '
-                       'with compression={c}').format(d=dsName,
-                                                      w=maxDigit,
-                                                      t=str(data.dtype),
-                                                      s=str(data.shape),
-                                                      c=compression))
-                ds = f.create_dataset(dsName,
-                                      data=data,
-                                      chunks=True,
-                                      compression=compression)
-
-            # 2. Write extra/auxliary datasets from ref_file
-            if len(auxDsNames) > 0:
-                with h5py.File(ref_file, 'r') as fr:
-                    for dsName in auxDsNames:
-                        ds = fr[dsName]
-                        print(('create dataset /{d:<{w}} of {t:<10} in size of {s:<10} '
-                               'with compression={c}').format(d=dsName,
-                                                              w=maxDigit,
-                                                              t=str(ds.dtype),
-                                                              s=str(ds.shape),
-                                                              c=compression))
-                        f.create_dataset(dsName,
-                                         data=ds[:],
-                                         chunks=True,
-                                         compression=compression)
-
-            # 3. metadata
-            for key, value in meta.items():
-                f.attrs[key] = str(value)
-            print('finished writing to {}'.format(out_file))
+                # 3. metadata
+                for key, value in meta.items():
+                    f.attrs[key] = str(value)
+                print('finished writing to {}'.format(out_file))
 
     # ISCE / ROI_PAC GAMMA / Image product
     else:
@@ -120,7 +116,6 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
         data_list = []
         for key in key_list:
             data_list.append(datasetDict[key])
-        data_type = meta.get('DATA_TYPE', str(data_list[0].dtype)).lower()
 
         # Write Data File
         print('write {}'.format(out_file))
@@ -128,54 +123,36 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
         if ext in ['.unw', '.cor', '.hgt']:
             write_float32(data_list[0], out_file)
             meta['DATA_TYPE'] = 'float32'
-
         elif ext == '.dem':
             write_real_int16(data_list[0], out_file)
             meta['DATA_TYPE'] = 'int16'
-
         elif ext in ['.trans']:
             write_float32(data_list[0], data_list[1], out_file)
             meta['DATA_TYPE'] = 'float32'
-
         elif ext in ['.utm_to_rdc', '.UTM_TO_RDC']:
             data = np.zeros(data_list[0].shape, dtype=np.complex64)
             data.real = datasetDict['rangeCoord']
             data.imag = datasetDict['azimuthCoord']
             data.astype('>c8').tofile(out_file)
-
         elif ext in ['.mli', '.flt']:
             write_real_float32(data_list[0], out_file)
-
         elif ext == '.slc':
             write_complex_int16(data_list[0], out_file)
-
         elif ext == '.int':
             write_complex64(data_list[0], out_file)
-
         elif ext == '.msk':
             write_byte(data_list[0], out_file)
             meta['DATA_TYPE'] = 'byte'
 
         # determined by DATA_TYPE
-        elif data_type in ['float64']:
-            write_real_float64(data_list[0], out_file)
-
-        elif data_type in ['float32', 'float']:
-            if len(data_list) == 1:
-                write_real_float32(data_list[0], out_file)
-
-            elif len(data_list) == 2 and meta['scheme'] == 'BIL':
-                write_float32(data_list[0], data_list[1], out_file)
-
-        elif data_type in ['int16', 'short']:
+        elif meta['DATA_TYPE'].lower() in ['float32', 'float']:
+            write_real_float32(data_list[0], out_file)
+        elif meta['DATA_TYPE'].lower() in ['int16', 'short']:
             write_real_int16(data_list[0], out_file)
-
-        elif data_type in ['int8', 'byte']:
+        elif meta['DATA_TYPE'].lower() in ['byte']:
             write_byte(data_list[0], out_file)
-
-        elif data_type in ['bool']:
+        elif meta['DATA_TYPE'].lower() in ['bool']:
             write_bool(data_list[0], out_file)
-
         else:
             print('Un-supported file type: '+ext)
             return 0
@@ -183,135 +160,6 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
         # write metadata file
         write_roipac_rsc(meta, out_file+'.rsc', print_msg=True)
     return out_file
-
-
-def layout_hdf5(fname, dsNameDict, metadata):
-    """Create HDF5 file with defined metadata and (empty) dataset structure
-
-    Parameters: fname      - str, HDF5 file path
-                dsNameDict - dict, dataset structure definition, as below:
-                metadata   - dict, metadata
-    Returns:    fname      - str, HDF5 file path
-
-    Example:
-
-    # structure for ifgramStack
-    dsNameDict = {
-        "date"             : (np.dtype('S8'), (inps.num_pair, 2)),
-        "dropIfgram"       : (np.bool_,       (inps.num_pair,)),
-        "bperp"            : (np.float32,     (inps.num_pair,)),
-        "unwrapPhase"      : (np.float32,     (inps.num_pair, inps.length, inps.width)),
-        "coherence"        : (np.float32,     (inps.num_pair, inps.length, inps.width)),
-        "connectComponent" : (np.int16,       (inps.num_pair, inps.length, inps.width)),
-    }
-
-    # structure for geometry
-    dsNameDict = {
-        "height"             : (np.float32, (inps.length, inps.width)),
-        "incidenceAngle"     : (np.float32, (inps.length, inps.width)),
-        "slantRangeDistance" : (np.float32, (inps.length, inps.width)),
-    }
-
-    # structure for timeseries
-    dsNameDict = {
-        "date"       : (np.dtype("S8"), (numDates,)),
-        "bperp"      : (np.float32,     (numDates,)),
-        "timeseries" : (np.float32,     (numDates, length, width))
-    }
-    """
-
-    print('-'*50)
-    print('create HDF5 file {} with w mode'.format(fname))
-    h5 = h5py.File(fname, "w")
-
-    # initiate dataset
-    for key in dsNameDict.keys():
-        data_type = dsNameDict[key][0]
-        data_shape = dsNameDict[key][1]
-
-        # turn ON compression
-        if key in ['connectComponent']:
-            compression = 'lzf'
-        else:
-            compression = None
-
-        # changable dataset shape
-        if len(data_shape) == 3:
-            maxShape = (None, data_shape[1], data_shape[2])
-        else:
-            maxShape = data_shape
-
-        print("create dataset: {d:<25} of {t:<25} in size of {s}".format(d=key,
-                                                                         t=str(data_type),
-                                                                         s=data_shape))
-        h5.create_dataset(key,
-                          shape=data_shape,
-                          maxshape=maxShape,
-                          dtype=data_type,
-                          chunks=True,
-                          compression=compression)
-
-    # write attributes
-    for key in metadata.keys():
-        h5.attrs[key] = metadata[key]
-
-    h5.close()
-    print('close  HDF5 file {}'.format(fname))
-    return fname
-
-
-def write_hdf5_block(fname, data, datasetName, block=None, mode='a'):
-    """Write data to existing HDF5 dataset in disk block by block.
-    Parameters: data        - np.ndarray 1/2/3D matrix
-                datasetName - str, dataset name
-                block       - list of 2/4/6 int, for
-                              [zStart, zEnd,
-                               yStart, yEnd,
-                               xStart, xEnd]
-                mode        - str, open mode
-    Returns:    fname
-    """
-
-    # default block value
-    if block is None:
-
-        # data shape
-        if isinstance(data, list):
-            shape=(len(data),)
-        else:
-            shape = data.shape
-
-        # set default block as the entire data
-        if len(shape) ==1:
-            block = [0, shape[0]]
-        elif len(shape) == 2:
-            block = [0, shape[0],
-                     0, shape[1]]
-        elif len(shape) == 3:
-            block = [0, shape[0],
-                     0, shape[1],
-                     0, shape[2]]
-
-    # write
-    print('-'*50)
-    print('open  HDF5 file {} in {} mode'.format(fname, mode))
-    with h5py.File(fname, mode) as f:
-        print("writing dataset /{:<25} block: {}".format(datasetName, block))
-
-        if len(block) == 6:
-            f[datasetName][block[0]:block[1],
-                           block[2]:block[3],
-                           block[4]:block[5]] = data
-
-        elif len(block) == 4:
-            f[datasetName][block[0]:block[1],
-                           block[2]:block[3]] = data
-
-        elif len(block) == 2:
-            f[datasetName][block[0]:block[1]] = data
-
-    print('close HDF5 file {}.'.format(fname))
-    return fname
 
 
 def remove_hdf5_dataset(fname, datasetNames, print_msg=True):
@@ -445,6 +293,25 @@ def write_complex64(data, out_file):
     return out_file
 
 
+def write_real_int16(data, out_file):
+    data = np.array(data, dtype=np.int16)
+    data.tofile(out_file)
+    return out_file
+
+
+def write_dem(data, out_file):
+    data = np.array(data, dtype=np.int16)
+    data.tofile(out_file)
+    return out_file
+
+
+def write_real_float32(data, out_file):
+    """write gamma float data, i.e. .mli file."""
+    data = np.array(data, dtype=np.float32)
+    data.tofile(out_file)
+    return out_file
+
+
 def write_complex_int16(data, out_file):
     """Write gamma scomplex data, i.e. .slc file.
         data is complex 2-D matrix
@@ -458,26 +325,6 @@ def write_complex_int16(data, out_file):
     F[id1] = np.reshape(np.array(data.real, np.int16), (num_pixel, 1))
     F[id2] = np.reshape(np.array(data.imag, np.int16), (num_pixel, 1))
     F.tofile(out_file)
-    return out_file
-
-
-def write_real_float64(data, out_file):
-    """write isce float data, i.e. hgt.rdr file."""
-    data = np.array(data, dtype=np.float64)
-    data.tofile(out_file)
-    return out_file
-
-
-def write_real_float32(data, out_file):
-    """write gamma float data, i.e. .mli file."""
-    data = np.array(data, dtype=np.float32)
-    data.tofile(out_file)
-    return out_file
-
-
-def write_real_int16(data, out_file):
-    data = np.array(data, dtype=np.int16)
-    data.tofile(out_file)
     return out_file
 
 

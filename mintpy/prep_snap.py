@@ -8,15 +8,11 @@
 
 
 import os
-import sys
 import argparse
 import datetime
 import math
 from mintpy.objects.sensor import standardedSensorNames
 from mintpy.utils import readfile, writefile, utils as ut
-
-
-SPEED_OF_LIGHT = 299792458  # m / s
 
 
 ##################################################################################################
@@ -35,6 +31,28 @@ DESCRIPTION = """
   then extract the elevation band only. Use Band Subset > save BEAM-DIMAP file
 
   Currently only works for geocoded (terrain correction step in SNAP) interferograms.
+
+  Metadata extraction from .dim was built around products generated via the following
+  workflow:
+    - Read
+    - Slice assembly (if required)
+    - Apply orbit file
+    - Split product (extract relevant polarisation and subswath swaths)
+    + Following is done per subswath [IW1, IW2, IW3]
+        - Back geocoding
+        - Enhanced spectral diversity (if more than one burst)
+        - Interferogram generation
+        - TOPSAR Deburst
+        - Topophase removal
+        - Goldstein phase filtering
+    - Merge subswaths (if more than one swath was done)
+    - Add elevation
+    - Coherence
+    - Subset geometry and all seperate bands (elevation, ifg, coh) (by geometry only possible after working with bursts)
+    - Snaphu export for ifg
+    - SNAPHU phase unwrapping
+    - Snaphu import
+    - Terrain correct (all products)
 """
 
 EXAMPLE = """example:
@@ -61,9 +79,8 @@ def cmd_line_parse(iargs=None):
 ##################################################################################################
 def get_ellpsoid_local_radius(xyz):
     """Calculate satellite height and ellpsoid local radius from orbital state vector
-    Parameters: xyz          - tuple of 3 float, orbital state vector
-    Reference:  height       - float, satellite altitude in m
-                earth_radius - float, Earth radius in m
+    Parameters: xyz : tuple of 3 float, orbital state vector
+    Reference: isce2.isceobj.Planet
     """
 
     # Code simplified from from ISCE2.isceobj.Planet.xyz_to_llh())
@@ -102,10 +119,13 @@ def get_ellpsoid_local_radius(xyz):
     return height, earth_radius
 
 
-def extract_snap_metadata(fname):
-    ''' read and extract attributes from a SNAP .dim file
-    Parameters: fname - str, path of SNAP .dim file
-    Returns:    atr   - dict, metadata
+# Parse .dim file
+def utm_dim_to_rsc(fname):
+    ''' read and extract attributes from a SNAP .dim file and create mintpy .rsc file
+    Inputs: 
+        fname: SNAP .dim interferogram/coherence/unwrapped filepath
+    Outputs:
+        atr : dict, Attributes dictionary
     '''
 
     # Read XML and extract required vals - using basic file reader 
@@ -121,10 +141,9 @@ def extract_snap_metadata(fname):
             if "Master: " in line:
                 dates.append(line.split(": ")[1].split('">')[0])
             if "radar_frequency" in line:
-                freq = float(line.split(">")[1].split("<")[0]) * 1e6
-                wvl = SPEED_OF_LIGHT / freq
+                rf = 299.792458 / float(line.split(">")[1].split("<")[0])  
             if "NROWS" in line:
-                length = int(line.split(">")[1].split("<")[0])
+                lenght = int(line.split(">")[1].split("<")[0])
             if "NCOLS" in line:
                 width = int(line.split(">")[1].split("<")[0])
             if "DATA_TYPE" in line:
@@ -181,25 +200,24 @@ def extract_snap_metadata(fname):
                 y.append(line.split(">")[1].split("<")[0])
             if '"z"' in line:
                 z.append(line.split(">")[1].split("<")[0])
-
-    atr = {}
+            
+    # Do datetime things needed after the loop
     # Calculate the center of the scene as floating point seconds
-    start_utc = datetime.datetime.strptime(first_time, '%d-%b-%Y %H:%M:%S.%f')
-    end_utc   = datetime.datetime.strptime(last_time,  '%d-%b-%Y %H:%M:%S.%f')
-    center_utc = start_utc + ((end_utc - start_utc) / 2)
-    center_seconds = (center_utc.hour * 3600.0 + 
-                      center_utc.minute * 60. + 
-                      center_utc.second)
-    atr["CENTER_LINE_UTC"] = center_seconds
-
+    first_time_dt = datetime.datetime.strptime(first_time, '%d-%b-%Y %H:%M:%S.%f')
+    last_time_dt = datetime.datetime.strptime(last_time, '%d-%b-%Y %H:%M:%S.%f')
+    center_time_dt = first_time_dt + ((last_time_dt - first_time_dt) / 2)
+    center_time_s = float(datetime.timedelta(
+        hours=center_time_dt.hour, 
+        minutes=center_time_dt.minute,
+        seconds=center_time_dt.second,
+        microseconds=center_time_dt.microsecond).total_seconds())
     # Extract master slave date in yymmdd format
-    date1 = datetime.datetime.strptime(dates[0], "%d%b%Y").strftime("%Y%m%d")[2:8]
-    date2 = datetime.datetime.strptime(dates[1], "%d%b%Y").strftime("%Y%m%d")[2:8]
-    atr["DATE12"] = "{}-{}".format(date1, date2)
+    master_dt = datetime.datetime.strptime(dates[0], "%d%b%Y")
+    master = master_dt.strftime("%Y%m%d")[2:8]
+    slave_dt = datetime.datetime.strptime(dates[1], "%d%b%Y")
+    slave = slave_dt.strftime("%Y%m%d")[2:8]
 
-    # calculate ellipsoid radius and satellite height from state vector
-    # using first state vector for simplicity
-    xyz = (float(x[0]), float(y[0]), float(z[0]))
+    xyz = (float(x[0]), float(y[0]), float(z[0])) # Using first state vector for simplicity
     height, earth_radius = get_ellpsoid_local_radius(xyz)
 
     # Calculate range/azimuth pixel sizes
@@ -207,33 +225,31 @@ def extract_snap_metadata(fname):
     azimuth_pixel_size = float(az_pixel[0])*((earth_radius + height)/earth_radius)
 
     # Add values to dict
+    atr = {}
     atr['PROCESSOR'] = 'snap'
     atr['FILE_TYPE'] = os.path.basename(fname).split('_')[-2] # yyyymmdd_yyyymmdd_type_tc.dim
+    atr["WAVELENGTH"] = rf
+    atr["P_BASELINE_TOP_HDR"], atr["P_BASELINE_BOTTOM_HDR"] = bp[1], bp[1]
+    atr["DATE12"] = str(master) + "-" + str(slave)
     atr["WIDTH"] = width
-    atr["LENGTH"] = length
+    atr["LENGTH"], atr["FILE_LENGTH"]  = lenght, lenght
     atr["DATA_TYPE"] = data_type
-    atr["WAVELENGTH"] = wvl
-    atr["P_BASELINE_TOP_HDR"] = bp[1]
-    atr["P_BASELINE_BOTTOM_HDR"] = bp[1]
     atr["ANTENNA_SIDE"] = antenna_side
+    atr["CENTER_LINE_UTC"] = center_time_s
     atr["LAT_REF1"], atr["LONG_REF1"] = first_near_lat, first_near_long
     atr["LAT_REF2"], atr["LONG_REF2"] = first_far_lat, first_far_long
     atr["LAT_REF3"], atr["LONG_REF3"] = last_near_lat, last_near_long
     atr["LAT_REF4"], atr["LONG_REF4"] = last_far_lat, last_far_long
     atr["ORBIT_DIRECTION"] = direction
-    atr["ALOOKS"] = int(float(azimuth_looks[0]))
-    atr["RLOOKS"] = int(float(range_looks[0]))
+    atr["ALOOKS"], atr["RLOOKS"] = int(float(azimuth_looks[0])), int(float(range_looks[0]))
     atr["PRF"] = prf
+    atr["STARTING_RANGE"] = starting_range
     atr["PLATFORM"] = standardedSensorNames[platform.replace('-','').lower()]
     atr["HEADING"] = heading
     atr["EARTH_RADIUS"] =  earth_radius
     atr["HEIGHT"] = height
     atr["RANGE_PIXEL_SIZE"] = range_pixel_size
     atr["AZIMUTH_PIXEL_SIZE"] = azimuth_pixel_size
-
-    atr['INCIDENCE_ANGLE'] = inc_angle_mid
-    atr["STARTING_RANGE"] = starting_range
-    atr["SLANT_RANGE_DISTANCE"] = ut.incidence_angle2slant_range_distance(atr, inc_angle_mid)
 
     # Convert 3.333e-4 to 0.0003333
     transform = [str(float(i)) for i in transform]
@@ -270,15 +286,14 @@ def main(iargs=None):
         dim_file = os.path.dirname(img_file)[:-4]+'dim'
 
         # get metadata dict from *.dim file
-        atr = extract_snap_metadata(dim_file)
+        atr = utm_dim_to_rsc(dim_file)
 
         # write metadata dict to *.rsc file
         rsc_file = os.path.splitext(img_file)[0]+'.rsc'
         rsc_file = write_rsc(atr, out_file=rsc_file)
-
     return
 
 
 ##################################################################################################
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

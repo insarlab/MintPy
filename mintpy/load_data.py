@@ -12,7 +12,6 @@ import glob
 import argparse
 import warnings
 from mintpy.defaults import auto_path
-from mintpy.defaults.template import get_template_content
 from mintpy.objects import (geometryDatasetNames,
                             geometry,
                             ifgramDatasetNames,
@@ -30,12 +29,7 @@ datasetName2templateKey = {'unwrapPhase'     : 'mintpy.load.unwFile',
                            'coherence'       : 'mintpy.load.corFile',
                            'connectComponent': 'mintpy.load.connCompFile',
                            'wrapPhase'       : 'mintpy.load.intFile',
-                           'ionoPhase'       : 'mintpy.load.ionoFile',
-
-                           'azimuthOffset'   : 'mintpy.load.azOffFile',
-                           'rangeOffset'     : 'mintpy.load.rgOffFile',
-                           'offsetSNR'       : 'mintpy.load.offSnrFile',
-
+                           'iono'            : 'mintpy.load.ionoFile',
                            'height'          : 'mintpy.load.demFile',
                            'latitude'        : 'mintpy.load.lookupYFile',
                            'longitude'       : 'mintpy.load.lookupXFile',
@@ -57,7 +51,40 @@ DEFAULT_TEMPLATE = """template:
            auto_path.roipacAutoPath,
            auto_path.gammaAutoPath)
 
-TEMPLATE = get_template_content('load_data')
+TEMPLATE = """template:
+########## 1. Load Data
+## auto - automatic path pattern for Univ of Miami file structure
+## load_data.py -H to check more details and example inputs.
+## compression to save disk usage for ifgramStack.h5 file:
+## no   - save   0% disk usage, fast [default]
+## lzf  - save ~57% disk usage, relative slow
+## gzip - save ~62% disk usage, very slow [not recommend]
+mintpy.load.processor      = auto  #[isce,snap,gamma,roipac], auto for isce
+mintpy.load.updateMode     = auto  #[yes / no], auto for yes, skip re-loading if HDF5 files are complete
+mintpy.load.compression    = auto  #[gzip / lzf / no], auto for no.
+##---------for ISCE only:
+mintpy.load.metaFile       = auto  #[path2metadata_file], i.e.: ./master/IW1.xml, ./masterShelve/data.dat
+mintpy.load.baselineDir    = auto  #[path2baseline_dir], i.e.: ./baselines
+##---------interferogram datasets:
+mintpy.load.unwFile        = auto  #[path2unw_file]
+mintpy.load.corFile        = auto  #[path2cor_file]
+mintpy.load.connCompFile   = auto  #[path2conn_file], optional
+mintpy.load.intFile        = auto  #[path2int_file], optional
+mintpy.load.ionoFile       = auto  #[path2iono_file], optional
+##---------geometry datasets:
+mintpy.load.demFile        = auto  #[path2hgt_file]
+mintpy.load.lookupYFile    = auto  #[path2lat_file], not required for geocoded data
+mintpy.load.lookupXFile    = auto  #[path2lon_file], not required for geocoded data
+mintpy.load.incAngleFile   = auto  #[path2los_file], optional
+mintpy.load.azAngleFile    = auto  #[path2los_file], optional
+mintpy.load.shadowMaskFile = auto  #[path2shadow_file], optional
+mintpy.load.waterMaskFile  = auto  #[path2water_mask_file], optional
+mintpy.load.bperpFile      = auto  #[path2bperp_file], optional
+##---------subset (optional):
+## if both yx and lalo are specified, use lalo option unless a) no lookup file AND b) dataset is in radar coord
+mintpy.subset.yx   = auto    #[1800:2000,700:800 / no], auto for no
+mintpy.subset.lalo = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
+"""
 
 NOTE = """NOTE:
   For interferogram, unwrapPhase is required, the other dataset are optional, including coherence, connectComponent, wrapPhase, etc.
@@ -112,8 +139,7 @@ def cmd_line_parse(iargs=None):
     if inps.template_file:
         pass
     elif inps.print_example_template:
-        print(DEFAULT_TEMPLATE)
-        sys.exit(0)
+        raise SystemExit(DEFAULT_TEMPLATE)
     else:
         parser.print_usage()
         print(('{}: error: one of the following arguments are required:'
@@ -250,7 +276,7 @@ def read_subset_box(inpsDict):
 def update_box4files_with_inconsistent_size(fnames):
     """Check the size (row / column number) of a list of files
     For SNAP geocoded products has one line missing in some interferograms, Andre, 2019-07-16
-    Parameters: fnames  : list of path for interferogram files
+    Parameters: fnames  : list of path for interferogram files 
     Returns:    pix_box : None if all files are in same size
                           (0, 0, min_width, min_length) if not.
     """
@@ -356,13 +382,10 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
                                                    path=inpsDict[key]))
 
     # Check 1: required dataset
-    dsName0s = ['unwrapPhase', 'azimuthOffset']
-    dsName0 = [i for i in dsName0s if i in dsPathDict.keys()]
-    if len(dsName0) == 0:
-        print('WARNING: No reqired {} data files found!'.format(dsName0s))
+    dsName0 = 'unwrapPhase'
+    if dsName0 not in dsPathDict.keys():
+        print('WARNING: No reqired {} data files found!'.format(dsName0))
         return None
-    else:
-        dsName0 = dsName0[0]
 
     # Check 2: data dimension for unwrapPhase files
     dsPathDict = skip_files_with_inconsistent_size(dsPathDict,
@@ -394,8 +417,7 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
         #####################################
         # A dictionary of data files for a given pair.
         # One pair may have several types of dataset.
-        # example ifgramPathDict = {'unwrapPhase': /pathToFile/filt.unw,
-        #                           'ionoPhase'  : /PathToFile/iono.bil}
+        # example ifgramPathDict = {'unwrapPhase': /pathToFile/filt.unw, 'iono':/PathToFile/iono.bil}
         # All path of data file must contain the master and slave date, either in file name or folder name.
 
         ifgramPathDict = {}
@@ -415,7 +437,7 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
                                datasetDict=ifgramPathDict)
         pairsDict[tuple(dates)] = ifgramObj
     if len(pairsDict) > 0:
-        stackObj = ifgramStackDict(pairsDict=pairsDict, dsName0=dsName0)
+        stackObj = ifgramStackDict(pairsDict=pairsDict)
     else:
         stackObj = None
     return stackObj
@@ -554,28 +576,16 @@ def prepare_metadata(inpsDict):
         if len(meta_files) < 1:
             warnings.warn('No input metadata file found: {}'.format(inpsDict['mintpy.load.metaFile']))
         try:
-            # metadata and auxliary data
             meta_file = meta_files[0]
+            ifgram_dir = os.path.dirname(os.path.dirname(inpsDict['mintpy.load.unwFile']))
+            ifgram_file = os.path.basename(inpsDict['mintpy.load.unwFile'])
             baseline_dir = inpsDict['mintpy.load.baselineDir']
             geom_dir = os.path.dirname(inpsDict['mintpy.load.demFile'])
-
-            # observation
-            obs_keys = ['mintpy.load.unwFile', 'mintpy.load.azOffFile']
-            obs_keys = [i for i in obs_keys if i in inpsDict.keys()]
-            obs_paths = [inpsDict[key] for key in obs_keys if inpsDict[key].lower() != 'auto']
-            if len(obs_paths) > 0:
-                obs_dir = os.path.dirname(os.path.dirname(obs_paths[0]))
-                obs_file = os.path.basename(obs_paths[0])
-            else:
-                obs_dir = None
-                obs_file = None
-
-            # command line
             cmd = '{s} -m {m} -g {g}'.format(s=script_name, m=meta_file, g=geom_dir)
             if baseline_dir:
                 cmd += ' -b {b} '.format(b=baseline_dir)
-            if obs_dir is not None:
-                cmd += ' -d {d} -f {f} '.format(d=obs_dir, f=obs_file)
+            if ifgram_dir:
+                cmd += ' -i {i} -f {f} '.format(i=ifgram_dir, f=ifgram_file)
             print(cmd)
             os.system(cmd)
         except:
@@ -608,7 +618,7 @@ def get_extra_metadata(inpsDict):
 
 #################################################################
 def main(iargs=None):
-    inps = cmd_line_parse(iargs)
+    inps = cmd_line_parse(iargs)        
 
     # read input options
     inpsDict = read_inps2dict(inps)
@@ -621,7 +631,7 @@ def main(iargs=None):
     stackObj = read_inps_dict2ifgram_stack_dict_object(inpsDict)
     geomRadarObj, geomGeoObj = read_inps_dict2geometry_dict_object(inpsDict)
 
-    # prepare write
+    # prepare wirte
     updateMode, comp, box, boxGeo = print_write_setting(inpsDict)
     if any([stackObj, geomRadarObj, geomGeoObj]) and not os.path.isdir(inps.outdir):
         os.makedirs(inps.outdir)

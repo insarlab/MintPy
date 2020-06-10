@@ -16,8 +16,8 @@ from mintpy.utils import writefile
 # DEHM basic info
 dehm = argparse.Namespace
 dehm.step = 0.4 / 3600  #decimal degree
-dehm.length = 6000      #40 mins in latitude  per grid
-dehm.width  = 9000      #60 mins in longitude per grid
+dehm.length = 6000      #40 mins in latitude per grid
+dehm.width = 9000       #60 mins in longitude per grid
 dehm.data_type = np.float32
 
 
@@ -25,7 +25,7 @@ dehm.data_type = np.float32
 EXAMPLE = """example:
   cd $KIRISHIMA/KirishimaAlosAT424/DEM
   dem_gsi.py -b 31.1 32.8 130.1 131.9
-  dem_gsi.py -b 31.1 32.8 130.1 131.9 --grid-dir ~/data/DEM/GSI_DEHM10m
+  dem_gsi.py -b 31.1 32.8 130.1 131.9 --grid-dir ~/insarlab/DEHM10m
 """
 
 REFERENCE = """DEHM: Digital Ellipsoidal Height Model
@@ -40,11 +40,13 @@ def create_parser():
                                      epilog=EXAMPLE)
 
     parser.add_argument('-b','--bbox', dest='SNWE', type=float, nargs=4, metavar=('S','N','W','E'), required=True,
-                        help='Bounding box in latitude [-90, 90] and longitude [-180, 180].')
+                        help='Spatial region in the format south north west east.\n'
+                             'The values should be from (-90,90) for latitudes and '
+                             '(-180,180) for longitudes.')
     parser.add_argument('-o','--output', dest='outfile', default='gsi10m.dem.wgs84',
-                        help='output file name (default: %(default)s).')
-    parser.add_argument('-g','--grid-dir', dest='grid_dir', default='$DEMDB/GSI_DEHM10m',
-                        help='Directory of DEHM grib files (default: %(default)s).')
+                        help='output file name. Default: gsi10m.dem.wgs84')
+    parser.add_argument('-g','--grid-dir', dest='grid_dir', default='/famelung/data/gsi10m',
+                        help='Directory of DEHM grib files. Default=/famelung/data/gsi10m')
     return parser
 
 
@@ -126,7 +128,7 @@ def write_dem_file(SNWE, dem_file, grid_dir):
     return meta
 
 
-def write_rsc_file(meta, fname):
+def write_rsc_file(meta, out_file):
     # initiate meta dict
     rsc = dict()
     rsc['FILE_LENGTH'] = meta.length
@@ -148,15 +150,12 @@ def write_rsc_file(meta, fname):
     rsc['PROJECTION'] = 'LATLON'
     rsc['DATE12'] = '111111-222222'
     rsc['DATA_TYPE'] = 'int16'
-
     # write rsc file
-    rsc_file = fname + '.rsc'
-    writefile.write_roipac_rsc(rsc, rsc_file, print_msg=True)
-
-    return rsc_file
+    writefile.write_roipac_rsc(rsc, out_file, print_msg=True)
+    return out_file
 
 
-def write_vrt_file(meta, fname):
+def write_vrt_file(meta, out_file):
     # initiate vrt string
     vrt_str = """<VRTDataset rasterXSize="{w}" rasterYSize="{l}">
     <SRS>EPSG:4326</SRS>
@@ -175,76 +174,42 @@ def write_vrt_file(meta, fname):
            xs=meta.lon_step, 
            y0=meta.north,
            ys=meta.lat_step,
-           f=os.path.basename(meta.file_path),
+           f=meta.file_path,
            lo=2*meta.width)
 
     # write to vrt file
-    vrt_file = fname + '.vrt'
-    with open(vrt_file, 'w') as f:
+    with open(out_file, 'w') as f:
         f.write(vrt_str)
-    print('write {}'.format(vrt_file))
-
-    return vrt_file
-
-
-def write_isce_metadata(meta, fname):
-    """
-    Write metadata files in ISCE format (.vrt and .xml files)
-    """
-    import isce
-    import isceobj
-
-    # create isce object for xml file
-    img = isceobj.createDemImage()
-    img.setFilename(os.path.abspath(fname))
-    img.setWidth(meta.width)
-    img.setLength(meta.length)
-    img.setAccessMode('READ')
-    img.bands = 1
-    img.dataType = 'SHORT'
-    img.scheme = 'BIP'
-    img.reference = 'WGS84'
-
-    img.firstLatitude  = meta.north + meta.lat_step / 2.
-    img.firstLongitude = meta.west + meta.lon_step / 2.
-    img.deltaLatitude  = meta.lat_step
-    img.deltaLongitude = meta.lon_step
-
-    # write to xml file
-    xml_file = fname + '.xml'
-    img.dump(xml_file)
-
-    return xml_file
+    print('write {}'.format(out_file))
+    return out_file
 
 
 def add_reference_datum(xml_file):
-    """
-    Example of modifying an existing XML file
-    """
-
     import xml.etree.ElementTree as ET
     from xml.dom import minidom
     print('add <reference> info to xml file: {}'.format(os.path.basename(xml_file)))
-
-    # get property element for reference
-    ref = ET.Element("property", attrib={'name': 'reference'})
-    
-    val = ET.SubElement(ref, "value")
-    val.text = "WGS84"
-    
-    doc = ET.SubElement(ref, "doc")
-    doc.text = "Geodetic datum"
-
-    # pretty xml
-    ref_str = minidom.parseString(ET.tostring(ref)).toprettyxml(indent="    ")
-    ref = ET.fromstring(ref_str)
-
-    # write back to xml file
     tree = ET.parse(xml_file)
     root = tree.getroot()
+
+    # get property element for reference
+    ref = ET.Element("property")
+    ref.attrib = {'name': 'reference'}
+    
+    elm1 = ET.Element("value")
+    elm1.text = "WGS84"
+    ref.append(elm1)
+    
+    elm1 = ET.Element("doc")
+    elm1.text = "Geodetic datum"
+    ref.append(elm1)
+    
+    ref = ET.fromstring(minidom.parseString(ET.tostring(ref)).toprettyxml(indent="    "))
+
+    # write back to xml file
     root.append(ref)
     tree.write(xml_file)
     return xml_file
+
 
 
 ##################################################################################################
@@ -255,11 +220,19 @@ def main(iargs=None):
                           dem_file=inps.outfile,
                           grid_dir=inps.grid_dir)
 
-    # rsc file for roipac
-    write_rsc_file(meta, inps.outfile)
+    write_rsc_file(meta, out_file='{}.rsc'.format(inps.outfile))
 
-    # vrt/xml file for isce
-    write_isce_metadata(meta, inps.outfile)
+    write_vrt_file(meta, out_file='{}.vrt'.format(inps.outfile))
+
+    if 'ISCE_STACK' in os.environ:
+        print('generate {}.xml file using ISCE command'.format(inps.outfile))
+        cmd = os.path.expandvars('${ISCE_STACK}/../../../applications/gdal2isce_xml.py')
+        cmd += ' -i {}.vrt'.format(inps.outfile)
+        print(cmd)
+        os.system(cmd)
+
+        # DEHM from GSI is already in ellipsoid, add the information
+        add_reference_datum('{}.xml'.format(inps.outfile))
 
     return
 

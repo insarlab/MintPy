@@ -6,15 +6,14 @@
 ############################################################
 
 
+import psycopg2
 import sys
 import argparse
-import psycopg2
 import pycurl
 from io import BytesIO
 import urllib.request, urllib.parse, urllib.error
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
-
 import mintpy.utils.readfile as readfile
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)

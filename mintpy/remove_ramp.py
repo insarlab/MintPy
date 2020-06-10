@@ -8,8 +8,6 @@
 
 import os
 import argparse
-import warnings
-from mintpy.objects import RAMP_LIST
 from mintpy.utils import readfile, utils as ut
 
 
@@ -20,24 +18,33 @@ configKeys = ['mintpy.deramp',
 
 
 ###########################################################################################
+TEMPLATE = """template:
+## remove phase ramp for each epoch, useful to check localized deformation, i.e. volcanic, land subsidence, etc.
+## [linear, quadratic]
+mintpy.deramp          = auto  #[no / linear / quadratic], auto for no - no ramp will be removed
+mintpy.deramp.maskFile = auto  #[filename / no], auto for maskTempCoh.h5, mask file for ramp estimation
+"""
+
 EXAMPLE = """example:
   remove_ramp.py  timeseries.h5      -m maskTempCoh.h5
   remove_ramp.py  ifgramStack.h5     -m maskTempCoh.h5  -d unwrapPhase_bridging
   remove_ramp.py  090214_101120.unw  -m maskTempCoh.h5  -s quadratic
 """
 
-
 def create_parser():
     parser = argparse.ArgumentParser(description='Remove phase ramp',
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+                                     epilog=TEMPLATE + '\n' + EXAMPLE)
 
     parser.add_argument('file', help='File for ramp removal')
     parser.add_argument('-m', '--mask', dest='mask_file', default='maskTempCoh.h5',
                         help='mask for pixels used in ramp estimation\n' +
                              'default - maskTempCoh.h5\n' +
                              'no - use the whole area')
-    parser.add_argument('-s', dest='surface_type', default='linear', choices=RAMP_LIST,
+    parser.add_argument('-s', dest='surface_type', default='linear',
+                        choices={'linear', 'quadratic',
+                                 'linear_range', 'linear_azimuth',
+                                 'quadratic_range', 'quadratic_azimuth'},
                         help='type of surface/ramp to remove, linear by default')
     parser.add_argument('-d','--dset', dest='dset', 
                         help='dataset name to be derampped in ifgramStack file\n' + 
@@ -56,10 +63,8 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # --update requires --outfile
-    if inps.update_mode and not inps.outfile:
-        inps.update_mode = False
-        warnings.warn('update_mode is chosen but NOT turned on because the required --outfile is missing.')
+    if not inps.outfile:
+        inps.outfile = '{}_ramp.h5'.format(os.path.splitext(inps.file)[0])
     return inps
 
 

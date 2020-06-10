@@ -259,7 +259,7 @@ def main(iargs=None):
             inps.outfile = 'geo_'+inps.outfile
 
     # default vmin for temporal coherence
-    if inps.vmin is None and inps.file.endswith('temporalCoherence.h5'):
+    if not inps.vmin and inps.file.endswith('temporalCoherence.h5'):
         inps.vmin = 0.7
 
     ##### Mask: Non-zero

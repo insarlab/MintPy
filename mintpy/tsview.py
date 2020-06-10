@@ -26,13 +26,13 @@ EXAMPLE = """example:
   tsview.py timeseries.h5  --wrap
   tsview.py timeseries.h5  --yx 300 400 --zero-first  --nodisplay
   tsview.py geo_timeseries.h5  --lalo 33.250 131.665  --nodisplay
-  tsview.py timeseries_ERA5_ramp_demErr.h5  --sub-x 900 1400 --sub-y 0 500
+  tsview.py timeseries_ECMWF_ramp_demErr.h5  --sub-x 900 1400 --sub-y 0 500
 
   # press left / right key to slide images
 
   # multiple time-series files
-  tsview.py timeseries_ERA5_ramp_demErr.h5 timeseries_ERA5_ramp.h5 timeseries_ERA5.h5 timeseries.h5 --off 5
-  tsview.py timeseries_ERA5_ramp_demErr.h5 ../GIANT/Stack/LS-PARAMS.h5 --off 5 --label mintpy giant
+  tsview.py timeseries_ECMWF_ramp_demErr.h5 timeseries_ECMWF_ramp.h5 timeseries_ECMWF.h5 timeseries.h5 --off 5
+  tsview.py timeseries_ECMWF_ramp_demErr.h5 ../GIANT/Stack/LS-PARAMS.h5 --off 5 --label mintpy giant
 """
 
 
@@ -199,9 +199,6 @@ def read_init_info(inps):
     # Display Unit
     (inps.disp_unit,
      inps.unit_fac) = pp.scale_data2disp_unit(metadata=atr, disp_unit=inps.disp_unit)[1:3]
-
-    # Map info - coordinate unit
-    inps.coord_unit = atr.get('Y_UNIT', 'degrees').lower()
 
     # Read Error List
     inps.error_ts = None
@@ -526,9 +523,9 @@ def save_ts_plot(yx, fig_img, fig_pts, d_ts, inps):
 
 class timeseriesViewer():
     """Class for tsview.py
-
+    
     Example:
-        cmd = 'tsview.py timeseries_ERA5_ramp_demErr.h5'
+        cmd = 'tsview.py timeseries_ECMWF_ramp_demErr.h5'
         obj = timeseriesViewer(cmd)
         obj.configure()
         obj.plot()
@@ -701,7 +698,7 @@ class timeseriesViewer():
         elif num_file == 3: ms_step = 3
         elif num_file == 4: ms_step = 2
         elif num_file >= 5: ms_step = 1
-
+    
         d_ts = []
         y = yx[0] - self.pix_box[1]
         x = yx[1] - self.pix_box[0]
@@ -721,13 +718,13 @@ class timeseriesViewer():
                 ppar.mfc = 'gray'
             if self.offset:
                 d_tsi += self.offset * (num_file - 1 - i)
-
+    
             # plot
             if self.error_file:
                 self.ax_pts = plot_ts_errorbar(self.ax_pts, d_tsi, self, ppar)
             else:
                 self.ax_pts = plot_ts_scatter(self.ax_pts, d_tsi, self, ppar)
-
+    
         # format
         self.ax_pts = _adjust_ts_axis(self.ax_pts, self)
         title_ts = _get_ts_title(yx[0], yx[1], self.coord)

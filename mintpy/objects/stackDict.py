@@ -6,7 +6,7 @@
 # class used for data loading from InSAR stack to MintPy timeseries
 # Recommend import:
 #     from mintpy.objects.stackDict import (geometryDict,
-#                                           ifgramStackDict,
+#                                           ifgramStackDict, 
 #                                           ifgramDict)
 
 
@@ -52,15 +52,14 @@ class ifgramStackDict:
         stackObj.write2hdf5(outputFile='ifgramStack.h5', box=(200,500,300,600))
     '''
 
-    def __init__(self, name='ifgramStack', pairsDict=None, dsName0=ifgramDatasetNames[0]):
+    def __init__(self, name='ifgramStack', pairsDict=None):
         self.name = name
         self.pairsDict = pairsDict
-        self.dsName0 = dsName0        #reference dataset name, unwrapPhase OR azimuthOffset
 
     def get_size(self, box=None):
         self.numIfgram = len(self.pairsDict)
         ifgramObj = [v for v in self.pairsDict.values()][0]
-        self.length, ifgramObj.width = ifgramObj.get_size(family=self.dsName0)
+        self.length, ifgramObj.width = ifgramObj.get_size()
         if box:
             self.length = box[3] - box[1]
             self.width = box[2] - box[0]
@@ -76,7 +75,7 @@ class ifgramStackDict:
 
     def get_metadata(self):
         ifgramObj = [v for v in self.pairsDict.values()][0]
-        self.metadata = ifgramObj.get_metadata(family=self.dsName0)
+        self.metadata = ifgramObj.get_metadata()
         if 'UNIT' in self.metadata.keys():
             self.metadata.pop('UNIT')
         return self.metadata
@@ -91,9 +90,20 @@ class ifgramStackDict:
         return dsDataType
 
     def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, compression=None, extra_metadata=None):
-        '''Save/write an ifgramStackDict object into an HDF5 file with the structure defined in:
+        '''Save/write an ifgramStackDict object into an HDF5 file with the structure below:
 
-        https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#ifgramstack
+        /                  Root level
+        Attributes         Dictionary for metadata
+        /date              2D array of string  in size of (m, 2   ) in YYYYMMDD format for master and slave date
+        /bperp             1D array of float32 in size of (m,     ) in meter.
+        /dropIfgram        1D array of bool    in size of (m,     ) True by default for keeping interferogram.
+        /unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
+        /coherence         3D array of float32 in size of (m, l, w).
+        /connectComponent  3D array of int16   in size of (m, l, w).           (optional)
+        /wrapPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
+        /iono              3D array of float32 in size of (m, l, w) in radian. (optional)
+        /rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
+        /azimuthOffset     3D array of float32 in size of (m, l, w).           (optional)
 
         Parameters: outputFile : str, Name of the HDF5 file for the InSAR stack
                     access_mode : str, access mode of output File, e.g. w, r+
@@ -141,7 +151,7 @@ class ifgramStackDict:
                 ifgramObj = self.pairsDict[self.pairs[i]]
                 data = ifgramObj.read(dsName, box=box)[0]
                 ds[i, :, :] = data
-                self.bperp[i] = ifgramObj.get_perp_baseline(family=self.dsName0)
+                self.bperp[i] = ifgramObj.get_perp_baseline()
                 prog_bar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],
                                                            self.pairs[i][1]))
             prog_bar.close()
@@ -203,7 +213,7 @@ class ifgramStackDict:
 class ifgramDict:
     """
     Ifgram object for a single InSAR pair of interferogram. It includes dataset name (family) of:
-        'unwrapPhase','coherence','connectComponent','wrapPhase','ionoPhase','rangeOffset','azimuthOffset', etc.
+        'unwrapPhase','coherence','connectComponent','wrapPhase','iono','rangeOffset','azimuthOffset', etc.
 
     Example:
         from mintpy.objects.insarobj import ifgramDict
@@ -211,7 +221,7 @@ class ifgramDict:
                        'coherence'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.cor',
                        'connectComponent':'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.unw.conncomp',
                        'wrapPhase'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.int',
-                       'ionoPhase'       :'$PROJECT_DIR/merged/ionosphere/20151220_20160206/iono.bil.unwCor.filt',
+                       'iono'            :'$PROJECT_DIR/merged/ionosphere/20151220_20160206/iono.bil.unwCor.filt',
                        ...
                       }
         ifgramObj = ifgramDict(dates=('20160524','20160530'), datasetDict=datasetDict)
@@ -236,14 +246,14 @@ class ifgramDict:
         data, metadata = readfile.read(self.file, box=box)
         return data, metadata
 
-    def get_size(self, family=ifgramDatasetNames[0]):
+    def get_size(self, family='unwrapPhase'):
         self.file = self.datasetDict[family]
         metadata = readfile.read_attribute(self.file)
         self.length = int(metadata['LENGTH'])
         self.width = int(metadata['WIDTH'])
         return self.length, self.width
 
-    def get_perp_baseline(self, family=ifgramDatasetNames[0]):
+    def get_perp_baseline(self, family='unwrapPhase'):
         self.file = self.datasetDict[family]
         metadata = readfile.read_attribute(self.file)
         self.bperp_top = float(metadata['P_BASELINE_TOP_HDR'])
@@ -251,7 +261,7 @@ class ifgramDict:
         self.bperp = (self.bperp_top + self.bperp_bottom) / 2.0
         return self.bperp
 
-    def get_metadata(self, family=ifgramDatasetNames[0]):
+    def get_metadata(self, family='unwrapPhase'):
         self.file = self.datasetDict[family]
         self.metadata = readfile.read_attribute(self.file)
         self.length = int(self.metadata['LENGTH'])
@@ -331,66 +341,26 @@ class geometryDict:
         return data, metadata
 
     def get_slant_range_distance(self, box=None):
-        """Generate 2D slant range distance if missing from input template file"""
-        if not self.extraMetadata:
+        if not self.extraMetadata or 'Y_FIRST' in self.extraMetadata.keys():
             return None
-
-        if 'Y_FIRST' in self.extraMetadata.keys():
-            # for dataset in geo-coordinates, use contant value from SLANT_RANGE_DISTANCE.
-            key = 'SLANT_RANGE_DISTANCE'
-            print('geocoded input, use contant value from metadata {}'.format(key))
-            if key in self.extraMetadata.keys():
-                length = int(self.extraMetadata['LENGTH'])
-                width = int(self.extraMetadata['WIDTH'])
-                range_dist = float(self.extraMetadata[key])
-                data = np.ones((length, width), dtype=np.float32) * range_dist
-
-            else:
-                return None
-
-        else:
-            # for dataset in radar-coordinates, calculate 2D pixel-wise value from geometry
-            data = ut.range_distance(self.extraMetadata,
-                                     dimension=2,
-                                     print_msg=False)
-
-        # subset
+        data = ut.range_distance(self.extraMetadata,
+                                 dimension=2,
+                                 print_msg=False)
         if box is not None:
             data = data[box[1]:box[3], box[0]:box[2]]
         return data
 
     def get_incidence_angle(self, box=None):
-        """Generate 2D slant range distance if missing from input template file"""
-        if not self.extraMetadata:
+        if not self.extraMetadata or 'Y_FIRST' in self.extraMetadata.keys():
             return None
-
-        if 'Y_FIRST' in self.extraMetadata.keys():
-            # for dataset in geo-coordinates, use contant value from INCIDENCE_ANGLE.
-            key = 'INCIDENCE_ANGLE'
-            print('geocoded input, use contant value from metadata {}'.format(key))
-            if key in self.extraMetadata.keys():
-                length = int(self.extraMetadata['LENGTH'])
-                width = int(self.extraMetadata['WIDTH'])
-                inc_angle = float(self.extraMetadata[key])
-                data = np.ones((length, width), dtype=np.float32) * inc_angle
-
-            else:
-                return None
-
+        if 'height' in self.dsNames:
+            dem = readfile.read(self.datasetDict['height'], datasetName='height')[0]
         else:
-            # read DEM if available for more previse calculation
-            if 'height' in self.dsNames:
-                dem = readfile.read(self.datasetDict['height'], datasetName='height')[0]
-            else:
-                dem = None
-
-            # for dataset in radar-coordinates, calculate 2D pixel-wise value from geometry
-            data = ut.incidence_angle(self.extraMetadata,
-                                      dem=dem,
-                                      dimension=2,
-                                      print_msg=False)
-
-        # subset
+            dem = None
+        data = ut.incidence_angle(self.extraMetadata,
+                                  dem=dem,
+                                  dimension=2,
+                                  print_msg=False)
         if box is not None:
             data = data[box[1]:box[3], box[0]:box[2]]
         return data
@@ -441,9 +411,20 @@ class geometryDict:
         return self.metadata
 
     def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, compression='lzf', extra_metadata=None):
-        ''' Save/write to HDF5 file with structure defined in:
-
-        https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#geometry
+        '''
+        /                        Root level
+        Attributes               Dictionary for metadata. 'X/Y_FIRST/STEP' attribute for geocoded.
+        /height                  2D array of float32 in size of (l, w   ) in meter.
+        /latitude (azimuthCoord) 2D array of float32 in size of (l, w   ) in degree.
+        /longitude (rangeCoord)  2D array of float32 in size of (l, w   ) in degree.
+        /incidenceAngle          2D array of float32 in size of (l, w   ) in degree.
+        /slantRangeDistance      2D array of float32 in size of (l, w   ) in meter.
+        /azimuthAngle            2D array of float32 in size of (l, w   ) in degree. (optional)
+        /shadowMask              2D array of bool    in size of (l, w   ).           (optional)
+        /waterMask               2D array of bool    in size of (l, w   ).           (optional)
+        /bperp                   3D array of float32 in size of (n, l, w) in meter   (optional)
+        /date                    1D array of string  in size of (n,     ) in YYYYMMDD(optional)
+        ...
         '''
         if len(self.datasetDict) == 0:
             print('No dataset file path in the object, skip HDF5 file writing.')

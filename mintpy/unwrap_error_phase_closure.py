@@ -7,13 +7,12 @@
 
 
 import os
-import sys
 import argparse
 import time
 import h5py
 import numpy as np
-from matplotlib import pyplot as plt, ticker
-
+import matplotlib; matplotlib.use("Agg")  # Force matplotlib to not use any Xwindows backend.
+import matplotlib.pyplot as plt
 try:
     from cvxopt import matrix
 except ImportError:
@@ -25,8 +24,7 @@ except ImportError:
 
 from mintpy.objects import ifgramStack
 from mintpy.objects.conncomp import connectComponent
-from mintpy.defaults.template import get_template_content
-from mintpy.utils import ptime, readfile, writefile, utils as ut, plot as pp
+from mintpy.utils import ptime, readfile, utils as ut, plot as pp
 from mintpy.utils.solvers import l1regls
 from mintpy import ifgram_inversion as ifginv
 
@@ -34,14 +32,19 @@ from mintpy import ifgram_inversion as ifginv
 key_prefix = 'mintpy.unwrapError.'
 
 ##########################################################################################
-EXAMPLE = """example:
-  # correct phase unwrapping error with phase closure
-  unwrap_error_phase_closure.py  ./inputs/ifgramStack.h5  --cc-mask maskConnComp.h5  -t smallbaselineApp.cfg   --update
-  unwrap_error_phase_closure.py  ./inputs/ifgramStack.h5  --cc-mask maskConnComp.h5  --water-mask waterMask.h5 --update
+EXAMPLE = """Example:
+  unwrap_error_phase_closure.py  ./inputs/ifgramStack.h5  maskConnComp.h5  -t smallbaselineApp.cfg  --update
+  unwrap_error_phase_closure.py  ./inputs/ifgramStack.h5  maskConnComp.h5  --water-mask waterMask.h5 --update
+"""
 
-  # calculate the number of non-zero closure phase
-  unwrap_error_phase_closure.py  ./inputs/ifgramStack.h5  --action calculate
-  unwrap_error_phase_closure.py  ./inputs/ifgramStack.h5  --action calculate  --water-mask waterMask.h5
+TEMPLATE = """
+## Unwrapping Error Correction based on Phase Closure (Yunjun et al., 2019)
+mintpy.unwrapError.waterMaskFile   = auto  #[waterMask.h5 / no], auto for no
+"""
+
+REFERENCE = """Reference:
+  Yunjun, Z., H. Fattahi, F. Amelung, (2019) InSAR time series analysis: error correction
+  and noise reduction (submitted).
 """
 
 NOTE = """
@@ -55,45 +58,22 @@ NOTE = """
      unwrapping errors, then the minor right interferograms will turn into wrong.
 """
 
-REFERENCE = """reference:
-  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis:
-  Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
-  doi:10.1016/j.cageo.2019.104331.
-"""
-
-TEMPLATE1 = get_template_content('quick_overview')
-TEMPLATE2 = get_template_content('correct_unwrap_error')
-
-
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Unwrapping Error Correction based on Phase Closure'+NOTE,
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+TEMPLATE1+'\n'+TEMPLATE2+'\n'+EXAMPLE)
+                                     epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
 
     parser.add_argument('ifgram_file', help='interferograms file to be corrected')
-    parser.add_argument('-c','--cc-mask', dest='cc_mask_file', default='maskConnComp.h5',
-                        help='common connected components file, required for --action correct')
-
-    parser.add_argument('-a','--action', dest='action', type=str, default='correct',
-                        choices={'correct', 'calculate'},
-                        help='action to take (default: %(default)s):\n'+
-                             'correct   - correct phase unwrapping error\n'+
-                             'calculate - calculate the number of non-zero closure phase')
-
-    # IO
+    parser.add_argument('cc_mask_file', default='maskConnComp.h5', help='common connected components file')
     parser.add_argument('-i','--in-dataset', dest='datasetNameIn', default='unwrapPhase',
                         help="name of dataset to be corrected, default: unwrapPhase")
     parser.add_argument('-o','--out-dataset', dest='datasetNameOut',
                         help='name of dataset to be written after correction, default: {}_phaseClosure')
 
-    # mask
-    mask = parser.add_argument_group('mask')
-    mask.add_argument('--water-mask','--wm', dest='waterMaskFile', type=str,
-                      help='path of water mask file.')
-    mask.add_argument('-t', '--template', dest='template_file',
-                      help='template file with options for setting.')
-
+    parser.add_argument('--water-mask','--wm', dest='waterMaskFile', type=str, help='path of water mask file.')
+    parser.add_argument('-t', '--template', dest='template_file',
+                        help='template file with options for setting.')
     parser.add_argument('--update', dest='update_mode', action='store_true',
                         help='Enable update mode: if unwrapPhase_phaseClosure dataset exists, skip the correction.')
     return parser
@@ -102,9 +82,6 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-
-    # backend setting for matplotlib
-    plt.switch_backend('Agg')
 
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
@@ -115,7 +92,7 @@ def cmd_line_parse(iargs=None):
         raise ValueError('input file is not ifgramStack: {}'.format(k))
 
     # check 2 cc_mask_file
-    if inps.action == 'correct' and not os.path.isfile(inps.cc_mask_file):
+    if not os.path.isfile(inps.cc_mask_file):
         raise FileNotFoundError(inps.cc_mask_file)
 
     if not inps.datasetNameOut:
@@ -172,161 +149,37 @@ def run_or_skip(inps):
 
 
 ##########################################################################################
-def calc_num_nonzero_integer_closure_phase(ifgram_file, mask_file=None, dsName='unwrapPhase',
-                                           out_file=None, step=50, update_mode=True):
-    """Calculate the number of non-zero integer ambiguity of closure phase.
-
-    T_int as shown in equation (8-9) and inline in Yunjun et al. (2019, CAGEO).
-
-    Parameters: ifgram_file - str, path of interferogram stack file
-                mask_file   - str, path of mask file
-                dsName      - str, unwrapped phase dataset name used to calculate the closure phase
-                out_file    - str, custom output filename
-                step        - int, number of row in each block to calculate T_int
-                update_mode - bool
-    Returns:    out_file    - str, custom output filename
-    Example:    calc_num_nonzero_integer_closure_phase('inputs/ifgramStack.h5', mask_file='waterMask.h5')
-    """
-
-    # default output file path
-    if out_file is None:
-        out_dir = os.path.dirname(os.path.dirname(ifgram_file))
-        if dsName == 'unwrapPhase':
-            # skip the default dsName in output filename
-            out_file = 'numNonzeroIntClosure.h5'
-        else:
-            out_file = 'numNonzeroIntClosure4{}.h5'.format(dsName)
-        out_file = os.path.join(out_dir, out_file)
-
-    if update_mode and os.path.isfile(out_file):
-        print('output file "{}" already exists, skip re-calculating.'.format(out_file))
-        return out_file
-
+def get_number_of_nonzero_closure_phase(ifgram_file, dsName='unwrapPhase', step=100):
     # read ifgramStack file
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open()
     length, width = stack_obj.length, stack_obj.width
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
     num_ifgram = len(date12_list)
-
     C = stack_obj.get_design_matrix4triplet(date12_list)
-    if C is None:
-        msg = 'No triangles found from ifgramStack file: {}!'.format(ifgram_file)
-        msg += '\n    Skip calculating the number of triplets with non-zero integer ambiguity.'
-        print(msg)
-        return None
-    else:
-        print('get design matrix for the interferogram triplets in size of {}'.format(C.shape))
+    ref_phase = stack_obj.get_reference_phase(unwDatasetName=dsName, dropIfgram=True).reshape(num_ifgram, -1)
 
     # calculate number of nonzero closure phase
+    closure_int = np.zeros((length, width), np.int16)
     num_loop = int(np.ceil(length / step))
-    num_nonzero_closure = np.zeros((length, width), dtype=np.float32)
-    msg = 'calcualting the number of triplets with non-zero integer ambiguity of closure phase ...'
-    msg += '\n    block by block with size up to {}, {} blocks in total'.format((step, width), num_loop)
-    print(msg)
-
-    ref_phase = stack_obj.get_reference_phase(unwDatasetName=dsName, dropIfgram=True).reshape(num_ifgram, -1)
     prog_bar = ptime.progressBar(maxValue=num_loop)
     for i in range(num_loop):
-        # box
         r0 = i * step
         r1 = min((r0+step), stack_obj.length)
         box = (0, r0, stack_obj.width, r1)
-
-        # read data
-        unw = ifginv.read_unwrap_phase(stack_obj,
-                                       box=box,
+        unw = ifginv.read_unwrap_phase(stack_obj, box=box,
                                        ref_phase=ref_phase,
-                                       obs_ds_name=dsName,
+                                       unwDatasetName=dsName,
                                        dropIfgram=True,
                                        print_msg=False).reshape(num_ifgram, -1)
-
-        # calculate based on equation (8-9) and T_int equation inline.
         closure_pha = np.dot(C, unw)
-        closure_int = np.round((closure_pha - ut.wrap(closure_pha)) / (2.*np.pi))
-        num_nonzero_closure[r0:r1, :] = np.sum(closure_int != 0, axis=0).reshape(-1, width)
-
+        cint = np.round((closure_pha - ut.wrap(closure_pha)) / (2.*np.pi))
+        closure_int[r0:r1, :] = np.sum(cint != 0, axis=0).reshape(-1, width)
         prog_bar.update(i+1, every=1)
     prog_bar.close()
-
-    # mask
-    if mask_file is not None:
-        print('masking with file', mask_file)
-        mask = readfile.read(mask_file)[0]
-        num_nonzero_closure[mask == 0] = np.nan
-
-    # write to disk
-    print('write to file', out_file)
-    meta = dict(stack_obj.metadata)
-    meta['FILE_TYPE'] = 'mask'
-    meta['UNIT'] = '1'
-    writefile.write(num_nonzero_closure, out_file, meta)
-
-    # plot
-    plot_num_nonzero_integer_closure_phase(out_file)
-
-    return out_file
+    return closure_int
 
 
-def plot_num_nonzero_integer_closure_phase(fname, display=False, font_size=12, fig_size=[9,3]):
-    """Plot the histogram for the number of non-zero integer ambiguity
-
-    Fig. 3d-e in Yunjun et al. (2019, CAGEO).
-    """
-
-    # read data
-    data, atr = readfile.read(fname)
-    vmax = int(np.nanmax(data))
-
-    # plot
-    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=fig_size)
-
-    # subplot 1 - map
-    ax = axs[0]
-    im = ax.imshow(data, cmap='RdBu_r', interpolation='nearest')
-
-    # reference point
-    if all(key in atr.keys() for key in ['REF_Y','REF_X']):
-        ax.plot(int(atr['REF_X']), int(atr['REF_Y']), 's', color='white', ms=3)
-
-    # format
-    pp.auto_flip_direction(atr, ax=ax, print_msg=False)
-    fig.colorbar(im, ax=ax)
-    ax.set_title(r'$T_{int}$', fontsize=font_size)
-
-    # subplot 2 - histogram
-    ax = axs[1]
-    ax.hist(data[~np.isnan(data)].flatten(), range=(0, vmax), log=True, bins=vmax)
-
-    # axis format
-    ax.set_xlabel(r'# of non-zero integer ambiguity $T_{int}$', fontsize=font_size)
-    ax.set_ylabel('# of pixels', fontsize=font_size)
-    ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
-    ax.yaxis.set_major_locator(ticker.LogLocator(base=10.0, numticks=15))
-    ax.yaxis.set_minor_locator(ticker.LogLocator(base=10.0, numticks=15,
-                                                 subs=(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)))
-    ax.yaxis.set_minor_formatter(ticker.NullFormatter())
-
-    for ax in axs:
-        ax.tick_params(which='both', direction='in', labelsize=font_size,
-                       bottom=True, top=True, left=True, right=True)
-
-    fig.tight_layout()
-
-    # output
-    out_fig = '{}.png'.format(os.path.splitext(fname)[0])
-    print('plot and save figure to file', out_fig)
-    fig.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=300)
-
-    if display:
-        plt.show()
-    else:
-        plt.close(fig)
-
-    return
-
-
-##########################################################################################
 def write_hdf5_file_patch(ifgram_file, data, box=None, dsName='unwrapPhase_phaseClosure'):
     """Write a patch of 3D dataset into an existing h5 file.
     Parameters: ifgram_file : string, name/path of output hdf5 file
@@ -428,7 +281,7 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
                 unw = ifginv.read_unwrap_phase(stack_obj,
                                                box=(x, y, x+1, y+1),
                                                ref_phase=ref_phase,
-                                               obs_ds_name=dsNameIn,
+                                               unwDatasetName=dsNameIn,
                                                dropIfgram=True,
                                                print_msg=False).reshape(num_ifgram, -1)
 
@@ -458,7 +311,6 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
     out_img = 'common_region_sample.png'
     fig.savefig(out_img, bbox_inches='tight', transparent=True, dpi=300)
     print('saved common regions and sample pixels to file', out_img)
-    plt.close(fig)
 
     return common_regions
 
@@ -543,39 +395,28 @@ def run_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_file=
 ####################################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
+
+    # update mode
+    if inps.update_mode and run_or_skip(inps) == 'skip':
+        return inps.ifgram_file
+
     start_time = time.time()
+    common_regions = get_common_region_int_ambiguity(ifgram_file=inps.ifgram_file,
+                                                     cc_mask_file=inps.cc_mask_file,
+                                                     water_mask_file=inps.waterMaskFile,
+                                                     num_sample=100,
+                                                     dsNameIn=inps.datasetNameIn)
 
-    if inps.action == 'correct':
-        # update mode
-        if inps.update_mode and run_or_skip(inps) == 'skip':
-            return inps.ifgram_file
+    run_unwrap_error_phase_closure(inps.ifgram_file, common_regions,
+                                   water_mask_file=inps.waterMaskFile,
+                                   dsNameIn=inps.datasetNameIn,
+                                   dsNameOut=inps.datasetNameOut)
 
-        # solve integer ambiguity for common connected components
-        common_regions = get_common_region_int_ambiguity(ifgram_file=inps.ifgram_file,
-                                                         cc_mask_file=inps.cc_mask_file,
-                                                         water_mask_file=inps.waterMaskFile,
-                                                         num_sample=100,
-                                                         dsNameIn=inps.datasetNameIn)
-
-        # apply the integer ambiguity from common conn comp to the whole ifgram
-        run_unwrap_error_phase_closure(inps.ifgram_file, common_regions,
-                                       water_mask_file=inps.waterMaskFile,
-                                       dsNameIn=inps.datasetNameIn,
-                                       dsNameOut=inps.datasetNameOut)
-
-    else:
-        # calculate the number of triplets with non-zero integer ambiguity
-        out_file = calc_num_nonzero_integer_closure_phase(inps.ifgram_file,
-                                                          mask_file=inps.waterMaskFile,
-                                                          dsName=inps.datasetNameIn,
-                                                          update_mode=inps.update_mode)
-        # for debug
-        #plot_num_nonzero_integer_closure_phase(out_file)
     m, s = divmod(time.time()-start_time, 60)
     print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
-    return
+    return inps.ifgram_file
 
 
 ####################################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()

@@ -1,10 +1,8 @@
 python>=3.6
-cartopy
 cdsapi
 cvxopt
-dask>=1.0
-dask-jobqueue>=0.3
-defusedxml
+dask>=1.0,<2.0
+dask-jobqueue>=0.3,<1.0
 ecCodes
 h5py
 lxml
@@ -18,5 +16,4 @@ pykdtree
 pyproj
 pyresample
 scikit-image
-scikit-learn
 scipy

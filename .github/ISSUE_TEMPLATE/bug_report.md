@@ -10,11 +10,12 @@ assignees: ''
 **Description of the problem**
 
 
-<!-- Please be as detailed as you can when describing an issue. The more information we have, the easier it will be for us to track this down. -->
 
+<!-- Please be as detailed as you can when describing an issue. The more information we have, the easier it will be for us to track this down. -->
 
 **Full script that generated the error**
 
+<!-- It helps a lot if you share any data files required to run your script. You can drag-and-drop them here or paste a link to Dropbox/GoogleDrive/etc. -->
 
 ```
 PASTE CODE HERE
@@ -23,7 +24,7 @@ PASTE CODE HERE
 
 **Full error message**
 
-
+<!-- Tip: you'll get more detailed error messages if you add -Vd to your gmt commands. -->
 
 ```
 PASTE ERROR MESSAGE HERE
@@ -35,4 +36,5 @@ PASTE ERROR MESSAGE HERE
 * Operating system:
 * Version of Python and relevant dependencies if applicable
 * Version of MintPy (output of `smallbaselineApp.py -v`):
-* Your custom / default template file (`smallbaselineApp.cfg`): <!-- It helps the diagnose a lot if you could post the configurations you used. You can drag-and-drop them here directly. -->
+
+

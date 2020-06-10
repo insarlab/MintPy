@@ -8,25 +8,19 @@
 
 
 import os
-import sys
 import time
 import argparse
 import subprocess
 
-CMAP_DICT = {
-    'FernandinaSenDT128' : 'jet',
-    'WellsEnvD2T399'     : 'jet_r',
-    'KujuAlosAT422F650'  : 'jet_r',
-}
 
 URL_LIST = [
-    'https://zenodo.org/record/3635245/files/FernandinaSenDT128.tar.xz',
-    'https://zenodo.org/record/3635258/files/WellsEnvD2T399.tar.xz',
-    'https://zenodo.org/record/3635262/files/KujuAlosAT422F650.tar.xz',
+    'https://zenodo.org/record/2748487/files/FernandinaSenDT128.tar.xz',
+    'https://zenodo.org/record/2748560/files/WellsEnvD2T399.tar.xz',
+    'https://zenodo.org/record/2748170/files/KujuAlosAT422F650.tar.xz',
 ]
 
 PROJ_NAME_LIST = [os.path.basename(url).split('.tar.xz')[0] for url in URL_LIST]
-TEMPLATE_FILE_LIST = [os.path.join(os.path.dirname(__file__), 'configs/{}.txt'.format(proj_name))
+TEMPLATE_FILE_LIST = [os.path.join(os.path.dirname(__file__), '{}.txt'.format(proj_name))
                       for proj_name in PROJ_NAME_LIST]
 
 
@@ -65,17 +59,13 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # expand test_dir
     inps.test_dir = os.path.expanduser(inps.test_dir)
     inps.test_dir = os.path.expandvars(inps.test_dir)
 
-    # translate --dset all
     if inps.dset_name.lower() == 'all':
         inps.dset_name = PROJ_NAME_LIST
-
     elif isinstance(inps.dset_name, str):
         inps.dset_name = [inps.dset_name]
-
     return inps
 
 
@@ -122,29 +112,20 @@ def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False):
 
     # remove pyaps existing products or not
     if test_pyaps:
-        cmd = 'rm ./inputs/ERA5.h5'
+        cmd = 'rm ./inputs/ECMWF.h5'
         os.system(cmd)
-        print('remove existing tropospheric delay file: ./inputs/ERA5.h5')
+        print('remove existing tropospheric delay file: ./inputs/ECMWF.h5')
 
     # runing smallbaselineApp
     cmd = 'smallbaselineApp.py {}'.format(template_file)
-    print(cmd)
     status = subprocess.Popen(cmd, shell=True).wait()
     if status is not 0:
         raise RuntimeError('Test failed for example dataset {}'.format(dset_name))
 
-    # custom plot of velocity map
-    if dset_name in CMAP_DICT.keys():
-        cmd = 'view.py geo/geo_velocity.h5 velocity --nodisplay -o pic/geo_velocity.png --noverbose '
-        cmd += ' -c {}'.format(CMAP_DICT[dset_name])
-        print(cmd)
-        subprocess.Popen(cmd, shell=True).wait()
-
-    # open final velocity map if on mac
-    if sys.platform.lower().startswith('darwin'):
-        cmd = 'open pic/geo_velocity.png'
-        print(cmd)
-        subprocess.Popen(cmd, shell=True).wait()
+    # open final velocity map
+    cmd = 'open pic/geo_velocity.png'
+    print(cmd)
+    subprocess.Popen(cmd, shell=True).wait()
     return
 
 
@@ -153,10 +134,6 @@ def main(iargs=None):
     start_time = time.time()
     inps = cmd_line_parse(iargs)
 
-    # create test directory
-    os.makedirs(inps.test_dir, exist_ok=True)
-
-    # run test
     num_dset = len(inps.dset_name)
     for i in range(num_dset):
         dset_name = inps.dset_name[i]
@@ -168,7 +145,6 @@ def main(iargs=None):
                      test_pyaps=inps.test_pyaps)
         print('PASS testing smallbaselineApp workflow on exmaple dataset {}/{}: {}'.format(i+1, num_dset, dset_name))
 
-    # print message
     if num_dset == len(PROJ_NAME_LIST):
         m, s = divmod(time.time()-start_time, 60)
         msg = '-'*50

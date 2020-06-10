@@ -1,5 +1,4 @@
 # vim: set filetype=cfg:
-mintpy.compute.cluster = local
 ########## 1. Load Data (--load to exit after this step)
 ## auto - automatic path pattern for Univ of Miami file structure
 ## load_data.py -H to check more details and example inputs.
@@ -21,7 +20,7 @@ mintpy.load.waterMaskFile  = None                                  #[path2water_
 ##————————————————————————————— PROCESSING Options ——-----————————————————————##
 mintpy.reference.lalo                           = 33.0655, 131.2076
 mintpy.networkInversion.weightFunc              = no
-mintpy.troposphericDelay.weatherModel           = ERA5
+mintpy.troposphericDelay.weatherModel           = ECMWF
 mintpy.topographicResidual.pixelwiseGeometry    = no
 mintpy.deramp                                   = linear
 mintpy.save.hdfEos5                             = yes

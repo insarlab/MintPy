@@ -18,32 +18,17 @@ from mintpy.utils import ptime, readfile, writefile
 from mintpy.utils.utils0 import *
 
 
-#################################### Geometry #########################################
-def get_center_lat_lon(geom_file, box=None):
-    """Get the lat/lon of the scene center"""
-    meta = readfile.read_attribute(geom_file)
-    if box is None:
-        box = (0, 0, int(meta['WIDTH']), int(meta['LENGTH']))
-
-    col_c = int((box[0] + box[2]) / 2)
-    row_c = int((box[1] + box[3]) / 2)
-    box_c = (col_c, row_c, col_c+1, row_c+1)
-    lat_c = float(readfile.read(geom_file, datasetName='latitude', box=box_c)[0])
-    lon_c = float(readfile.read(geom_file, datasetName='longitude', box=box_c)[0])
-    return lat_c, lon_c
-
-
 #################################### Data Operation ###################################
 def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_type='quadratic'):
     """Calculate deramped standard deviation in space for each epoch of input timeseries file.
     Parameters: timeseries_resid_file - string, timeseries HDF5 file,
-                    e.g. timeseries_ERA5_demErrInvResid.h5
+                    e.g. timeseries_ECMWF_demErrInvResid.h5
                 mask_file - string, mask file, e.g. maskTempCoh.h5
                 ramp_type - string, ramp type, e.g. linear, quadratic, no for do not remove ramp
     Returns:    std_list  - list of float, standard deviation of deramped input timeseries file
                 date_list - list of string in YYYYMMDD format, corresponding dates
     Example:    import mintpy.utils.utils as ut
-                std_list, date_list = ut.get_residual_std('timeseries_ERA5_demErrInvResid.h5',
+                std_list, date_list = ut.get_residual_std('timeseries_ECMWF_demErrInvResid.h5',
                                                           'maskTempCoh.h5')
     """
     # Intermediate files name
@@ -62,7 +47,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 msg += '\nRe-run dem_error.py to generate it.'
                 raise Exception(msg)
             else:
-                #print('removing a {} ramp from file: {}'.format(ramp_type, timeseries_resid_file))
+                print('removing a {} ramp from file: {}'.format(ramp_type, timeseries_resid_file))
                 deramped_file = run_deramp(timeseries_resid_file,
                                            ramp_type=ramp_type,
                                            mask_file=mask_file,
@@ -81,7 +66,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
 def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_type='quadratic'):
     """Calculate deramped Root Mean Square in space for each epoch of input timeseries file.
     Parameters: timeseries_resid_file : string, 
-                    timeseries HDF5 file, e.g. timeseries_ERA5_demErrInvResid.h5
+                    timeseries HDF5 file, e.g. timeseries_ECMWF_demErrInvResid.h5
                 mask_file : string,
                     mask file, e.g. maskTempCoh.h5
                 ramp_type : string, 
@@ -112,7 +97,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 msg += '\nRe-run dem_error.py to generate it.'
                 raise Exception(msg)
             else:
-                #print('remove {} ramp from file: {}'.format(ramp_type, timeseries_resid_file))
+                print('removing a {} ramp from file: {}'.format(ramp_type, timeseries_resid_file))
                 deramped_file = run_deramp(timeseries_resid_file,
                                            ramp_type=ramp_type,
                                            mask_file=mask_file,
@@ -126,6 +111,67 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     rms_list = fc[:, 1].astype(np.float).tolist()
     date_list = list(fc[:, 0])
     return rms_list, date_list, rms_file
+
+
+def get_residual_spectral_power_density(ts_file, box=None, out_file=None, update_mode=True):
+    """Calculate the Spectral Power Density at freq = 0 for each acquisition of time-series,
+        and output result to a text file
+    Parameters: ts_file  - str, path of time-series residual phase file
+                box      - tuple of 4 int, indicating (x0, y0, x1, y1)
+                out_file - str, path of output text file
+    Returns:    C0_list  - list of float, spectral power density at freq = 0
+                date_list- list of str in YYYYMMDD format
+                out_file - str, path of output text file
+    """
+    from mintpy.simulation import fractal
+
+    # default output filename
+    ts_file = os.path.abspath(ts_file)
+    if out_file is None:
+        fbase = os.path.splitext(os.path.basename(ts_file))[0]
+        out_file = os.path.join(os.path.dirname(ts_file), 'C0_{}.txt'.format(fbase))
+
+    # update mode
+    if update_mode and os.path.isfile(out_file):
+        print('update mode is ON and output file {} already exists, skip re-calculating.'.format(out_file))
+        print('read {}'.format(out_file))
+        fc = np.loadtxt(out_file, dtype=bytes).astype(str)
+        C0_list = fc[:, 1].astype(np.float).tolist()
+        date_list = list(fc[:, 0])
+        return C0_list, date_list, out_file
+
+    else:
+        # ts file info
+        ts_obj = timeseries(ts_file)
+        ts_obj.open()
+        step = abs(range_ground_resolution(ts_obj.metadata))
+        date_list = ts_obj.dateList
+        num_date = len(date_list)
+
+        # calculate list of C0
+        print('calculating spectral power density for each acquisition')
+        C0_list = []
+        prog_bar = ptime.progressBar(maxValue=num_date)
+        for i in range(num_date):
+            data = readfile.read(ts_file, datasetName=date_list[i], box=box)[0]
+            C0 = fractal.check_power_spectrum_1d(data, resolution=step, display=False)[0]
+            C0_list.append(C0)
+            prog_bar.update(i+1, suffix=date_list[i])
+        prog_bar.close()
+
+        # write result to text file
+        header = 'Spectral power density at freq == 0 for each acquisition of time-series\n'
+        header += 'Data shape: {}'.format(data.shape)
+        header += 'Date\t\tC0'
+        np.savetxt(out_file,
+                   np.hstack((np.array(ts_obj.dateList).reshape(-1, 1),
+                              np.array(C0_list).reshape(-1, 1))),
+                   fmt='%s',
+                   delimiter='\t',
+                   header=header)
+        print('save timeseries C0 values to text file', out_file)
+
+    return C0_list, date_list, out_file
 
 
 def nonzero_mask(File, out_file='maskConnComp.h5', datasetName=None):
@@ -221,20 +267,13 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
     except:
         pass
 
-    # use median instead of mean for offset measurement
-    if 'offset' in datasetName:
-        useMedian = True
-    else:
-        useMedian = False
-
     # Calculate mean coherence list
     if k == 'ifgramStack':
         obj = ifgramStack(File)
         obj.open(print_msg=False)
         meanList, dateList = obj.spatial_average(datasetName=datasetName,
                                                  maskFile=maskFile,
-                                                 box=box,
-                                                 useMedian=useMedian)
+                                                 box=box)
         pbase = obj.pbaseIfgram
         tbase = obj.tbaseIfgram
         obj.close()
@@ -599,9 +638,9 @@ def run_or_skip(out_file, in_file=None, check_readable=True, print_msg=True):
                 check_readable : bool, check if the 1st output file has attribute 'WIDTH'
                 print_msg      : bool, print message
     Returns:    run/skip : str, whether to update output file or not
-    Example:    if ut.run_or_skip(out_file='timeseries_ERA5_demErr.h5', in_file='timeseries_ERA5.h5'):
+    Example:    if ut.run_or_skip(out_file='timeseries_ECMWF_demErr.h5', in_file='timeseries_ECMWF.h5'):
                 if ut.run_or_skip(out_file='exclude_date.txt',
-                                  in_file=['timeseries_ERA5_demErrInvResid.h5',
+                                  in_file=['timeseries_ECMWF_demErrInvResid.h5',
                                            'maskTempCoh.h5',
                                            'smallbaselineApp.cfg'],  
                                   check_readable=False):
@@ -644,36 +683,25 @@ def run_or_skip(out_file, in_file=None, check_readable=True, print_msg=True):
 
 def check_template_auto_value(templateDict, auto_file='../defaults/smallbaselineApp_auto.cfg'):
     """Replace auto value based on the input auto config file."""
-    ## Read default template value and turn yes/no to True/False
+    # Read default template value and turn yes/no to True/False
     templateAutoFile = os.path.join(os.path.dirname(__file__), auto_file)
     templateAutoDict = readfile.read_template(templateAutoFile)
 
-    # if cluster != local, change auto value of numWorker
-    cluster_key = 'mintpy.compute.cluster'
-    cluster = templateDict.get(cluster_key, 'auto').lower()
-    if cluster == 'auto':
-        cluster = templateAutoDict[cluster_key]
-
-    if cluster != 'local':
-        templateAutoDict['mintpy.compute.numWorker'] = '40'
-
-    ## Update auto value of input template dict
+    # Update auto value of input template dict
     for key, value in templateDict.items():
         if value == 'auto' and key in templateAutoDict.keys():
             templateDict[key] = templateAutoDict[key]
 
-    # Change yes --> True, no --> False and none --> None
-    specialValues = {'yes'  : True,
-                     'true' : True,
-                     'no'   : False,
-                     'false': False,
-                     'none' : None,
+    # Change yes --> True and no --> False
+    specialValues = {'yes': True,
+                     'True': True,
+                     'no': False,
+                     'False': False,
+                     'none': None,
                      }
     for key, value in templateDict.items():
-        value = value.lower()
         if value in specialValues.keys():
             templateDict[key] = specialValues[value]
-
     return templateDict
 
 
@@ -686,26 +714,24 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
                 datasetName : str, output dataset name, for ifgramStack file type only
     Returns:    out_file  : str, output file name
     """
-    start_time = time.time()
-    atr = readfile.read_attribute(fname)
-    k = atr['FILE_TYPE']
-
     print('remove {} ramp from file: {}'.format(ramp_type, fname))
     if not out_file:
         fbase, fext = os.path.splitext(fname)
         out_file = '{}_ramp{}'.format(fbase, fext)
-    if k == 'ifgramStack':
-        out_file = fname
+
+    start_time = time.time()
+    atr = readfile.read_attribute(fname)
 
     # mask
     if os.path.isfile(mask_file):
-        mask = readfile.read(mask_file)[0]
+        mask = readfile.read(mask_file, datasetName='mask')[0]
         print('read mask file: '+mask_file)
     else:
         mask = np.ones((int(atr['LENGTH']), int(atr['WIDTH'])))
         print('use mask of the whole area')
 
     # deramping
+    k = atr['FILE_TYPE']
     if k == 'timeseries':
         print('reading data ...')
         data = readfile.read(fname)[0]

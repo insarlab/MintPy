@@ -1,7 +1,5 @@
 # vim: set filetype=cfg:
 ##------------------------  MintPy ----------------------------------##
-mintpy.compute.cluster = local
-
 mintpy.load.processor      = gamma
 mintpy.load.unwFile        = ./../interferograms/*/diff_*rlks.unw
 mintpy.load.corFile        = ./../interferograms/*/filt_*rlks.cor
@@ -22,7 +20,7 @@ mintpy.network.coherenceBased     = yes       #[yes / no], auto for yes, exclude
 mintpy.network.keepMinSpanTree    = no
 mintpy.network.excludeDate        = 20071231, 20080204, 20080310
 mintpy.networkInversion.weightFunc              = no
-mintpy.troposphericDelay.weatherModel           = ERA5
+mintpy.troposphericDelay.weatherModel           = ECMWF
 mintpy.topographicResidual.stepFuncDate         = 20080221
 mintpy.topographicResidual.pixelwiseGeometry    = no
 mintpy.save.hdfEos5         = yes

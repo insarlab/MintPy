@@ -9,10 +9,10 @@
 
 import os
 
-SENSOR_NAMES = ['ers', 'env', 'sen', 'rsat', 'rsat2', 'ksat5', 'gaofen3',
-                'jers', 'alos2', 'alos', 'nisar',
-                'tsx', 'csk'
-               ]
+sensorNames = ['ers', 'env', 'sen', 'rsat', 'rsat2', 'ksat5', 'gaofen3',
+               'jers', 'alos2', 'alos', 'nisar',
+               'tsx', 'csk'
+              ]
 
 # remove -_ and user lower case before standardize sensor names
 standardedSensorNames = {'ers1': 'ers', 'ers2': 'ers', 'ers12': 'ers',
@@ -147,23 +147,24 @@ def project_name2sensor_name(proj_names):
 
     # get proj_name if input is the path of template file
     for proj_path in proj_names:
-        if any(s in proj_path.lower() for s in SENSOR_NAMES) and proj_name is None:
+        if any(s in proj_path.lower() for s in sensorNames) and proj_name is None:
             proj_path_segs = [p for p in proj_path.split(os.sep) 
                               if p.lower() not in ['user']]
             for proj_path_seg in proj_path_segs:
-                if any(s in proj_path_seg.lower() for s in SENSOR_NAMES):
+                if any(s in proj_path_seg.lower() for s in sensorNames):
                     proj_name = os.path.splitext(proj_path_seg)[0]
 
     # proj_name --> sensor
     if proj_name:
-        sensor = [s.capitalize() for s in SENSOR_NAMES
+        sensor = [s.capitalize() for s in sensorNames
                   if s.lower() in proj_name.lower()]
-        if len(sensor) > 0:
-            # if more than one, i.e. ['Alos','Alos2'], use the last one
-            sensor = sorted(sensor)[-1]
+        if len(sensor) > 1:
+            sensor = [s for s in sensor if s in proj_name][0]
+        elif len(sensor) == 1:
+            sensor = sensor[0]
         else:
             msg = "No sensor name found in project_name: {}\n".format(proj_name)
-            msg += "Available sensor names: {}".format(SENSOR_NAMES)
+            msg += "Available sensor names: {}".format(sensorNames)
             raise ValueError(msg)
 
     return sensor, proj_name
