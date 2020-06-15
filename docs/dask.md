@@ -38,14 +38,35 @@ smallbaselineApp.py -t smallbaselineApp.cfg
 
 `numWorkers = all` will allocate `multiprocessing.cpu_count()` number of workers to the dask computation (for local cluster only). If the specified number of workers exceeds system resources, `multiprocessing.cpu_count()/2` number of workers will be submitted instead to avoid overtaxing local systems.
 
-#### 1.3 Runtime performance test on Stampede2 ####
+#### 1.3 Testing using example data
+
+Download the FernandinaSenDT128 example data and run `smallbaselineApp.py` so that you get a `mintpy/inputs/ifgramStack.h5` and run with and without local clasuter:
+```
+export OMP_NUM_THREADS=1
+cd FernandinaSenDT128/mintpy
+ifgram_inversion.py inputs/ifgramStack.h5 -w no --cluster no 
+ifgram_inversion.py inputs/ifgramStack.h5 -w no --cluster local --num-worker 8
+```
+A typical run time without local cluster is `time used: 00 mins 30.1 secs` and with 8 workers is `time used: 00 mins 11.4 secs.` 
+
+#### 1.4 Runtime performance test on Stampede2 ####
 
 To show the run time improvement, we test three datasets (South Isabela, Fernandina, and Kilauea) with different number of cores and same amount of allocated memory (4 GB) on a compute node in the [Stampede2 cluster's skx-normal queue](https://portal.tacc.utexas.edu/user-guides/stampede2#overview-skxcomputenodes). Results are as below:
 
 ![Dask LocalCluster Performance](https://raw.githubusercontent.com/insarlab/MintPy-tutorial/master/docs/dask_local_cluster_performance.png)
 
-## 2. non-local cluster on HPC ##
+#### 1.5 Known problems ####
 
+We have tried on one HPC system where local cluster worked on the head node but not on compute nodes. We attribute this to HPC configuration but don't know what exactly is the cause.
+
+
+## 2. non-local cluster on HPC - work in progress
+
+***Note:** This has not been  tested much.   SlurmCluster works for us using a shared queue (on XSEDE's comet at SDSC) but not LSFCluster  (on Miami's pegasus). We believe this is caused by the HPC configuration, but we don't know by what. Please tell us if you have an idea.   
+
+*PBScluster did not work either. But we tested only on a small server without shared disk space between the workers and the client (the compute and login nodes respectively). This leads to the dask workers running on the compute nodes being unable to use mintpy code as the codebase is local to login node [see this issue](https://github.com/dask/dask-jobqueue/issues/436)
+
+-------------------------------------------
 The parallel proceesing on multiple machines is supported via [`Dask-jobqueue`](https://jobqueue.dask.org/en/latest/index.html). One can specify configuration either with keyword arguments when creating a `Cluster` object, or with a configuration file in YAML format. MintPy assumes the YAML configuration file only.
 
 We provide an example [YAML configuration file](https://github.com/insarlab/MintPy/blob/master/mintpy/defaults/mintpy.yaml), besides the `dask.yaml`,  `distributed.yaml` and `jobqueue.yaml` files in `~/.config/dask` installed by dask by default. One can copy it over to the `~/.config/dask` directory as below for dask to identify and use it.
