@@ -49,7 +49,7 @@ ifgram_inversion.py inputs/ifgramStack.h5 -w no --cluster no
 ifgram_inversion.py inputs/ifgramStack.h5 -w no --cluster local --num-worker 8
 ```
 
-A typical run time without local cluster is 30 secs and with 8 workers 11.4 secs.
+A typical run time without local cluster is 30 secs and with 8 workers 11.4 secs (Xeon E5-2620 v4 @ 2.10GHz).
 
 #### 1.4 Runtime performance test on Stampede2 ####
 
