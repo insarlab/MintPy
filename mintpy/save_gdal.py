@@ -25,10 +25,10 @@ GDAL_DRIVER2EXT = {
 
 
 EXAMPLE = """example:
-  save_tif.py geo/geo_velocity.h5 
-  save_tif.py geo/geo_timeseries_ERA5_demErr.h5 -d 20200505_20200517 --of ENVI
-  save_tif.py geo/geo_ifgramStack.h5 -d unwrapPhase-20101120_20110220 --of ISCE
-  save_tif.py geo/geo_ifgramStack.h5 -d coherence-20101120_20110220 --of ISCE
+  save_gdal.py geo/geo_velocity.h5 
+  save_gdal.py geo/geo_timeseries_ERA5_demErr.h5 -d 20200505_20200517 --of ENVI
+  save_gdal.py geo/geo_ifgramStack.h5 -d unwrapPhase-20101120_20110220 --of ISCE
+  save_gdal.py geo/geo_ifgramStack.h5 -d coherence-20101120_20110220 --of ISCE
 """
 
 
@@ -61,6 +61,8 @@ def cmd_line_parse(iargs=None):
 
 
 def array2raster(array, rasterName, rasterFormat, rasterOrigin, xStep, yStep):
+    # reverse array
+    array = array[::-1]
 
     # transform info
     cols = array.shape[1]
