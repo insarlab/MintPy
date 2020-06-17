@@ -61,8 +61,6 @@ def cmd_line_parse(iargs=None):
 
 
 def array2raster(array, rasterName, rasterFormat, rasterOrigin, xStep, yStep):
-    # reverse array
-    array = array[::-1]
 
     # transform info
     cols = array.shape[1]
@@ -127,7 +125,6 @@ def main(iargs=None):
     yStep = float(attr['Y_STEP'])
 
     # convert array to raster
-    reversed_arr = array[::-1]
     array2raster(reversed_arr, inps.outfile, inps.out_format, rasterOrigin, xStep, yStep)
 
     return
