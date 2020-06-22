@@ -10,8 +10,9 @@
 
 import os
 import sys
+import re
 import time
-import datetime as dt
+from datetime import datetime as dt
 import h5py
 import numpy as np
 
@@ -63,21 +64,18 @@ ifgramDatasetNames = ['unwrapPhase',
                       'coherence',
                       'connectComponent',
                       'wrapPhase',
-                      'ionoPhase',
+                      'iono',
                       'rangeOffset',
                       'azimuthOffset',
-                      'offsetSNR',
                       'refPhase']
 
 datasetUnitDict = {'unwrapPhase'        :'radian',
                    'coherence'          :'1',
                    'connectComponent'   :'1',
                    'wrapPhase'          :'radian',
-                   'ionoPhase'          :'radian',
-
-                   'azimuthOffset'      :'pixel',
-                   'rangeOffset'        :'pixel',
-                   'offsetSNR'          :'1',
+                   'iono'               :'radian',
+                   'rangeOffset'        :'1',
+                   'azimuthOffset'      :'1',
 
                    'height'             :'m',
                    'latitude'           :'degree',
@@ -99,7 +97,6 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
                    'ramp'               :'m',
                    'displacement'       :'m',
 
-                   'temporalCoherence'  :'1',
                    'velocity'           :'m/year',
                    'acceleration'       :'m/year^2',
                    'mask'               :'1',
@@ -122,23 +119,62 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
                    'hgt'               :'m',
                    'hgt_sim'           :'m',
                    'magnitude'         :'1',
-                   'intensity'         :'1',
                    }
 
 
 
+################################ UTILITIES functions begin #############################
+def get_date_str_format(date_str):
+    """
+    Check if input string of date is in one of the following formats:
+        YYYYMMDDTHHMM
+        YYYYMMDD
+        YYMMDD
+    """
+    if isinstance(date_str, list):
+        date_str = date_str[0]
+
+    try:
+        date_str = date_str.decode('utf8')
+    except:
+        pass
+    print(date_str)  #self.date_format = get_date_str_format(dates[:, 0])
+
+    date_str_format = None
+    if len(re.findall('\d{6}T\d{4}', date_str)) > 0:
+        date_str_format = '%Y%m%dT%H%M'
+    elif len(re.findall('\d{8}', date_str)) > 0:
+        date_str_format = '%Y%m%d'
+    elif len(re.findall('\d{6}', date_str)) > 0:
+        date_str_format = '%y%m%d'
+    else:
+        raise ValueError('un-recognized date string format!')
+    return date_str_format
+
+
+################################ UTILITIES functions begin #############################
+
+
+
 ################################ timeseries class begin ################################
+FILE_STRUCTURE_TIMESERIES = """
+/                Root level
+Attributes       Dictionary for metadata
+/timeseries      3D array of float32 in size of (n, l, w) in meter.
+/date            1D array of string  in size of (n,     ) in YYYYMMDD format
+/bperp           1D array of float32 in size of (n,     ) in meter. (optional)
+"""
+
 class timeseries:
     """
     Time-series object for displacement of a set of SAR images from the same platform and track.
     It contains three datasets in root level: date, bperp and timeseries.
-    
-    File structure: https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#timeseries
     """
 
     def __init__(self, file=None):
         self.file = file
         self.name = 'timeseries'
+        self.file_structure = FILE_STRUCTURE_TIMESERIES
 
     def close(self, print_msg=True):
         try:
@@ -168,9 +204,13 @@ class timeseries:
                 self.pbase -= self.pbase[self.refIndex]
             except:
                 self.pbase = None
-        self.times = np.array([dt.datetime(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.dateList])
-        self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]],
-                              dtype=np.float32)
+        date_format = get_date_str_format(self.dateList[0]) ## To modified
+        self.times = np.array([dt(*time.strptime(i, date_format)[0:5]) for i in self.dateList]) ## TO modified
+        #self.times = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.dateList])
+        self.tbase = np.array([i.days + i.seconds / (60 * 60 * 24) for i in self.times - self.times[self.refIndex]],
+                              dtype=np.float32)  ## To Modified
+        #self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]],
+                              #dtype=np.float32)
         # list of float for year, 2014.95
         self.yearList = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in self.times]
         self.sliceList = ['{}-{}'.format(self.name, i) for i in self.dateList]
@@ -205,14 +245,14 @@ class timeseries:
             self.dateList = [i.decode('utf8') for i in f['date'][:]]
         return self.dateList
 
-    def read(self, datasetName=None, box=None, squeeze=True, print_msg=True):
+    def read(self, datasetName=None, box=None, print_msg=True):
         """Read dataset from timeseries file
         Parameters: self : timeseries object
                     datasetName : (list of) string in YYYYMMDD format
                     box : tuple of 4 int, indicating x0,y0,x1,y1 of range
         Returns:    data : 2D or 3D dataset
         Examples:   from mintpy.objects import timeseries
-                    tsobj = timeseries('timeseries_ERA5_demErr.h5')
+                    tsobj = timeseries('timeseries_ECMWF_demErr.h5')
                     data = tsobj.read(datasetName='20161020')
                     data = tsobj.read(datasetName='20161020', box=(100,300,500,800))
                     data = tsobj.read(datasetName=['20161020','20161026','20161101'])
@@ -247,8 +287,7 @@ class timeseries:
                 box = [0, 0, self.width, self.length]
 
             data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
-            if squeeze:
-                data = np.squeeze(data)
+            data = np.squeeze(data)
         return data
 
     def layout_hdf5(self, dsNameDict, metadata, compression=None):
@@ -278,6 +317,53 @@ class timeseries:
         f.close()
         return self.file
 
+    def write2hdf5_block(self, data, datasetName, block=None, mode='a'):
+        """Write data to existing HDF5 dataset in disk block by block.
+        Parameters: data : np.ndarray 1/2/3D matrix
+                    datasetName : str, dataset name
+                    block : list of 2/4/6 int, for
+                        [zStart, zEnd,
+                         yStart, yEnd,
+                         xStart, xEnd]
+                    mode : str, open mode
+        Returns: self.file
+        """
+        if block is None:
+            # data shape
+            if isinstance(data, list):
+                shape=(len(data),)
+            else:
+                shape = data.shape
+
+            if len(shape) ==1:
+                block = [0, shape[0]]
+            elif len(shape) == 2:
+                block = [0, shape[0],
+                         0, shape[1]]
+            elif len(shape) == 3:
+                block = [0, shape[0],
+                         0, shape[1],
+                         0, shape[2]]
+
+        print('open {} in {} mode'.format(self.file, mode))
+        f = h5py.File(self.file, mode)
+
+        print("writing dataset /{:<25} block: {}".format(datasetName, block))
+        if len(block) == 6:
+            f[datasetName][block[0]:block[1],
+                           block[2]:block[3],
+                           block[4]:block[5]] = data
+
+        elif len(block) == 4:
+            f[datasetName][block[0]:block[1],
+                           block[2]:block[3]] = data
+
+        elif len(block) == 2:
+            f[datasetName][block[0]:block[1]] = data
+
+        f.close()
+        print('close HDF5 file {}'.format(self.file))
+        return self.file
 
     def write2hdf5(self, data, outFile=None, dates=None, bperp=None, metadata=None, refFile=None, compression=None):
         """
@@ -321,12 +407,6 @@ class timeseries:
         bperp = np.array(bperp, dtype=np.float32)
         metadata = dict(metadata)
         metadata['FILE_TYPE'] = self.name
-
-        # directory
-        outDir = os.path.dirname(os.path.abspath(outFile))
-        if not os.path.isdir(outDir):
-            os.makedirs(outDir)
-            print('create directory: {}'.format(outDir))
 
         # 3D dataset - timeseries
         print('create timeseries HDF5 file: {} with w mode'.format(outFile))
@@ -416,7 +496,7 @@ class timeseries:
     def temporal_average(self):
         print('calculating the temporal average of timeseries file: {}'.format(self.file))
         self.open(print_msg=False)
-        data = self.read(squeeze=False)
+        data = self.read()
         dmean = np.nanmean(data, axis=0)
         return dmean
 
@@ -439,16 +519,19 @@ class timeseries:
         Returns:    A : 2D array of int in size of (numDate, 2)
         """
         # convert list of YYYYMMDD into array of diff year in float
-        dt_list = [dt.datetime.strptime(i, '%Y%m%d') for i in date_list]
-        yr_list = [i.year + (i.timetuple().tm_yday - 1) / 365.25 for i in dt_list]
-        yr_diff = np.array(yr_list)
-
+        date_format = get_date_str_format(date_list[0]) ## To modif
+        dt_list = [dt.strptime(i, date_format) for i in date_list]
+        yr_list = [i.year + (i.timetuple().tm_yday - 1) / 365.25
+                   + i.hour / (24 * 365.25)
+                   + i.minute / (60 * 24 * 365.25)
+                   for i in dt_list]
+        yr_diff = np.array(yr_list, dtype=np.float64)
         if refDate is None:
             refDate = date_list[0]
         yr_diff -= yr_diff[date_list.index(refDate)]
 
         #for precision, use float32 in 0.1 yr, or float64 in 2015.1 yr format
-        A = np.ones([len(date_list), 2], dtype=np.float32)
+        A = np.ones([len(date_list), 2], dtype=np.float64)
         A[:, 0] = yr_diff
         return A
 
@@ -457,15 +540,29 @@ class timeseries:
 
 
 ################################# geometry class begin #################################
+FILE_STRUCTURE_GEOMETRY = """
+/                        Root level
+Attributes               Dictionary for metadata. 'X/Y_FIRST/STEP' attribute for geocoded.
+/height                  2D array of float32 in size of (l, w   ) in meter.
+/latitude (azimuthCoord) 2D array of float32 in size of (l, w   ) in degree.
+/longitude (rangeCoord)  2D array of float32 in size of (l, w   ) in degree.
+/incidenceAngle          2D array of float32 in size of (l, w   ) in degree.
+/slantRangeDistance      2D array of float32 in size of (l, w   ) in meter.
+/azimuthAngle            2D array of float32 in size of (l, w   ) in degree. (optional)
+/shadowMask              2D array of bool    in size of (l, w   ).           (optional)
+/waterMask               2D array of bool    in size of (l, w   ).           (optional)
+/bperp                   3D array of float32 in size of (n, l, w) in meter   (optional)
+/date                    1D array of string  in size of (n,     ) in YYYYMMDD(optional)
+...
+"""
+
 class geometry:
-    """ Geometry object.
-    
-    File structure: https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#geometry
-    """
+    """ Geometry object."""
 
     def __init__(self, file=None):
         self.file = file
         self.name = 'geometry'
+        self.file_structure = FILE_STRUCTURE_GEOMETRY
 
     def close(self, print_msg=True):
         try:
@@ -578,15 +675,28 @@ class geometry:
 
 
 ################################# ifgramStack class begin ##############################
+FILE_STRUCTURE_IFGRAM_STACK = """
+/                  Root level group name
+Attributes         Dictionary for metadata
+/date              2D array of string  in size of (m, 2   ) in YYYYMMDD format for master and slave date
+/bperp             1D array of float32 in size of (m,     ) in meter.
+/dropIfgram        1D array of bool    in size of (m,     ) with 0/False for drop and 1/True for keep
+/unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
+/coherence         3D array of float32 in size of (m, l, w).
+/connectComponent  3D array of int16   in size of (m, l, w).           (optional)
+/wrapPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
+/rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
+/azimuthOffset     3D array of float32 in size of (m, l, w).           (optional)
+"""
+
 class ifgramStack:
-    """ Interferograms Stack object.
-    
-    File structure: https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#ifgramstack
-    """
+    """ Interferograms Stack object."""
 
     def __init__(self, file=None):
         self.file = file
         self.name = 'ifgramStack'
+        self.file_structure = FILE_STRUCTURE_IFGRAM_STACK
+        self.date_format = '%Y%m%d'
 
     def close(self, print_msg=True):
         try:
@@ -611,7 +721,8 @@ class ifgramStack:
 
         # time info
         self.date12List = ['{}_{}'.format(i, j) for i, j in zip(self.mDates, self.sDates)]
-        self.tbaseIfgram = np.array([i.days for i in self.sTimes - self.mTimes], dtype=np.float32)
+        self.tbaseIfgram = np.array([i.days + i.seconds / (60 * 60 * 24) for i in self.sTimes - self.mTimes], dtype=np.float32) ## TO modified
+        #self.tbaseIfgram = np.array([i.seconds for i in self.sTimes - self.mTimes], dtype=np.float32) ## TO modified
 
         with h5py.File(self.file, 'r') as f:
             self.dropIfgram = f['dropIfgram'][:]
@@ -661,14 +772,9 @@ class ifgramStack:
         self.metadata['END_DATE'] = dateList[-1]
         return self.metadata
 
-    def get_size(self, dropIfgram=False, datasetName=None):
+    def get_size(self, dropIfgram=False, datasetName='unwrapPhase'):
         with h5py.File(self.file, 'r') as f:
-            # get default datasetName
-            if datasetName is None:
-                datasetName = [i for i in ['unwrapPhase', 'azimuthOffset'] if i in f.keys()][0]
-            # get 3D size
             self.numIfgram, self.length, self.width = f[datasetName].shape
-            # update 1st dimension size
             if dropIfgram:
                 self.numIfgram = np.sum(f['dropIfgram'][:])
         return self.numIfgram, self.length, self.width
@@ -677,10 +783,15 @@ class ifgramStack:
         """Read master/slave dates into array of datetime.datetime objects"""
         with h5py.File(self.file, 'r') as f:
             dates = f['date'][:]
+
+        # grab the date string format
+        self.date_format = get_date_str_format(dates[0, 0])
+
+        # convert date from str to datetime.datetime objects
         self.mDates = np.array([i.decode('utf8') for i in dates[:, 0]])
         self.sDates = np.array([i.decode('utf8') for i in dates[:, 1]])
-        self.mTimes = np.array([dt.datetime(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.mDates])
-        self.sTimes = np.array([dt.datetime(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.sDates])
+        self.mTimes = np.array([dt(*time.strptime(i, self.date_format)[0:5]) for i in self.mDates])
+        self.sTimes = np.array([dt(*time.strptime(i, self.date_format)[0:5]) for i in self.sDates])
 
     def read(self, datasetName='unwrapPhase', box=None, print_msg=True, dropIfgram=False):
         """Read 3D dataset with bounding box in space
@@ -742,24 +853,16 @@ class ifgramStack:
             data = np.squeeze(data)
         return data
 
-    def spatial_average(self, datasetName='coherence', maskFile=None, box=None, useMedian=False):
-        """ Calculate the spatial average."""
+    def spatial_average(self, datasetName='coherence', maskFile=None, box=None):
         if datasetName is None:
             datasetName = 'coherence'
-
-        if useMedian:
-            print('calculating spatial median of {} in file {} ...'.format(datasetName, self.file))
-        else:
-            print('calculating spatial mean of {} in file {} ...'.format(datasetName, self.file))
-
-        # read mask
+        print('calculating spatial average of {} in file {} ...'.format(datasetName, self.file))
         if maskFile and os.path.isfile(maskFile):
             print('read mask from file: '+maskFile)
             mask = singleDataset(maskFile).read(box=box)
         else:
             maskFile = None
 
-        # calculation
         with h5py.File(self.file, 'r') as f:
             dset = f[datasetName]
             numIfgram = dset.shape[0]
@@ -768,16 +871,10 @@ class ifgramStack:
                 data = dset[i, box[1]:box[3], box[0]:box[2]]
                 if maskFile:
                     data[mask == 0] = np.nan
-
                 # ignore ZERO value for coherence
                 if datasetName == 'coherence':
                     data[data == 0] = np.nan
-
-                if useMedian:
-                    dmean[i] = np.nanmedian(data)
-                else:
-                    dmean[i] = np.nanmean(data)
-
+                dmean[i] = np.nanmean(data)
                 sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, numIfgram))
                 sys.stdout.flush()
             print('')
@@ -868,7 +965,8 @@ class ifgramStack:
         print('calculate the temporal average of {} in file {} ...'.format(datasetName, self.file))
         if 'unwrapPhase' in datasetName:
             phase2range = -1 * float(self.metadata['WAVELENGTH']) / (4.0 * np.pi)
-            tbaseIfgram = self.tbaseIfgram / 365.25
+            tbaseIfgram = np.array(self.tbaseIfgram, dtype=np.float64) / 365.25 
+
 
         with h5py.File(self.file, 'r') as f:
             dset = f[datasetName]
@@ -949,10 +1047,8 @@ class ifgramStack:
                         triangle_idx.append([date12_list.index(ifgram1),
                                              date12_list.index(ifgram2),
                                              date12_list.index(ifgram3)])
-
         if len(triangle_idx) == 0:
-            print('\nWARNING: No triangles found from input date12_list:\n{}!\n'.format(date12_list))
-            return None
+            raise ValueError("No triangles found!")
 
         triangle_idx = np.array(triangle_idx, np.int16)
         triangle_idx = np.unique(triangle_idx, axis=0)
@@ -985,8 +1081,10 @@ class ifgramStack:
         mDates = [i.split('_')[0] for i in date12_list]
         sDates = [i.split('_')[1] for i in date12_list]
         dateList = sorted(list(set(mDates + sDates)))
-        dates = [dt.datetime(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
-        tbase = np.array([(i - dates[0]).days for i in dates], np.float32) / 365.25
+        date_format = get_date_str_format(str(dateList)) ## TO modified
+        dates = [dt(*time.strptime(i, date_format)[0:5]) for i in dateList] ## TO modified
+        #dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
+        tbase = np.array([(i - dates[0]).seconds for i in dates], np.float32) / ( 365.25 * 24 * 60 *60 )
         numIfgram = len(date12_list)
         numDate = len(dateList)
 
@@ -1067,18 +1165,38 @@ class singleDataset:
 
 
 ################################# HDF-EOS5 class begin #################################
+FILE_STRUCTURE_HDFEOS = """
+/                             Root level group
+Attributes                    metadata in dict.
+/HDFEOS/GRIDS/timeseries      timeseries group
+    /observation
+        /displacement         3D array of float32 in size of (n, l, w) in meter
+        /date                 1D array of string  in size of (n,     ) in YYYYMMDD format.
+        /bperp                1D array of float32 in size of (n,     ) in meter
+    /quality
+        /temporalCoherence    2D array of float32 in size of (   l, w).
+        /mask                 2D array of bool_   in size of (   l, w).
+    /geometry
+        /height               2D array of float32 in size of (   l, w) in meter.
+        /incidenceAngle       2D array of float32 in size of (   l, w) in degree.
+        /slantRangeDistance   2D array of float32 in size of (   l, w) in meter.
+        /azimuthAngle         2D array of float32 in size of (   l, w) in degree. (optional)
+        /shadowMask           2D array of bool    in size of (   l, w).           (optional)
+        /waterMask            2D array of bool    in size of (   l, w).           (optional)
+        /bperp                3D array of float32 in size of (n, l, w) in meter.  (optional)
+"""
+
 class HDFEOS:
     """
     Time-series object in HDF-EOS5 format for Univ of Miami's InSAR Time-series Web Viewer
         Link: http://insarmaps.miami.edu
     It contains a "timeseries" group and three datasets: date, bperp and timeseries.
-    
-    File structure: https://github.com/yunjunz/MintPy/blob/master/docs/hdfeos5.md
     """
 
     def __init__(self, file=None):
         self.file = file
         self.name = 'HDFEOS'
+        self.file_structure = FILE_STRUCTURE_HDFEOS
         self.datasetGroupNameDict = {'displacement'       : 'observation',
                                      'raw'                : 'observation',
                                      'troposphericDelay'  : 'observation',
