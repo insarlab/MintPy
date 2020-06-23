@@ -34,8 +34,11 @@ def get_date_str_format(date_str):
         pass
 
     date_str_format = None
-    if len(re.findall('\d{6}T\d{4}', date_str)) > 0: # changed from 8 to 6 to fit with year without a century
-        date_str_format = '%y%m%dT%H%M'  # %Y changed to year without a century
+    if len(re.findall('\d{8}T\d{4}', date_str)) > 0:
+        date_str_format = '%Y%m%dT%H%M'
+
+    elif len(re.findall('\d{6}T\d{4}', date_str)) > 0:
+        date_str_format = '%y%m%dT%H%M'
 
     elif len(re.findall('\d{8}', date_str)) > 0:
         date_str_format = '%Y%m%d'
