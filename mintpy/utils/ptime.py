@@ -34,8 +34,8 @@ def get_date_str_format(date_str):
         pass
 
     date_str_format = None
-    if len(re.findall('\d{8}T\d{4}', date_str)) > 0:
-        date_str_format = '%Y%m%dT%H%M'
+    if len(re.findall('\d{6}T\d{4}', date_str)) > 0: # changed from 8 to 6 to fit with year without a century
+        date_str_format = '%y%m%dT%H%M'  # %Y changed to year without a century
 
     elif len(re.findall('\d{8}', date_str)) > 0:
         date_str_format = '%Y%m%d'
@@ -280,7 +280,7 @@ def date_list2tbase(date_list):
     tbase = []
     for date in dates:
         date_delta = date - dates[0]
-        tbase_i = date_delta.days + deta_delta.seconds / (24 * 60 * 60)
+        tbase_i = date_delta.days + date_delta.seconds / (24 * 60 * 60)
         tbase.append(tbase_i)
 
     # Dictionary: key - date, value - temporal baseline
