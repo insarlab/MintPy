@@ -719,12 +719,10 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
         num_col = stack_obj.width
     num_pixel = num_row * num_col
 
-
-
-    # get tbase_diff
+    # get tbase_diff in the unit of year
     date_list = stack_obj.get_date_list(dropIfgram=True)
     num_date = len(date_list)
-    tbase = np.array(ptime.date_list2tbase(date_list)[0], np.float32) / ( 365.25 * 24 * 60 * 60 )
+    tbase = np.array(ptime.date_list2tbase(date_list)[0], np.float32) / 365.25
     tbase_diff = np.diff(tbase).reshape(-1, 1)
 
     # design matrix
