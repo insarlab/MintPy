@@ -97,7 +97,7 @@ def create_parser():
                         help='compress loaded geometry while writing HDF5 file, default: None.')
 
     parser.add_argument('-o', '--output', type=str, nargs=3, dest='outfile',
-                        default=['./inputs/ifgramStack.h5',                                   
+                        default=['./inputs/ifgramStack.h5',
                                  './inputs/geometryRadar.h5',
                                  './inputs/geometryGeo.h5'],
                         help='output HDF5 file')
@@ -388,9 +388,12 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
     dsNameList = list(dsPathDict.keys())
     pairsDict = {}
     for dsPath in dsPathDict[dsName0]:
+        # date string used in the file/dir path
+        # YYYYMMDDTHHMM for uavsar
+        # YYYYMMDD for all the others
+        date12 = readfile.read_attribute(dsPath)['DATE12'].replace('_','-')
+        dates = ptime.yyyymmdd(date12.split('-'))
 
-        dates = ptime.yyyymmdd(readfile.read_attribute(dsPath)['DATE12'].replace('_','-').split('-'))
-        
         #####################################
         # A dictionary of data files for a given pair.
         # One pair may have several types of dataset.
@@ -402,11 +405,11 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
         for i in range(len(dsNameList)):
             dsName = dsNameList[i]
             dsPath1 = dsPathDict[dsName][0]
-            if all(d[2:13] in dsPath1 for d in dates):
+            if all(d[2:] in dsPath1 for d in dates):
                 ifgramPathDict[dsName] = dsPath1
             else:
                 dsPath2 = [i for i in dsPathDict[dsName]
-                           if all(d[2:13] in i for d in dates)]
+                           if all(d[2:] in i for d in dates)]
                 if len(dsPath2) > 0:
                     ifgramPathDict[dsName] = dsPath2[0]
                 else:
