@@ -981,7 +981,7 @@ def ifgram_inversion(inps=None):
         meta[key_prefix+key] = str(vars(inps)[key])
 
     # 2.2 instantiate time-series
-    date_dtype = np.dtype('S{}'.format(len(date_list[0]))
+    date_dtype = np.dtype('S{}'.format(len(date_list[0])))
     dsNameDict = {
         "date"       : (date_dtype, (num_date,)),
         "bperp"      : (np.float32, (num_date,)),

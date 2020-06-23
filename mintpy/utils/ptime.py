@@ -115,26 +115,25 @@ def yyyymmdd2years(dates):
     """Convert date(s) string into float number in the unit of year"""
 
     if isinstance(dates, str):
-        d = dt(*time.strptime(dates, "%Y%m%d")[0:5])
-        yy =    d.year + (d.timetuple().tm_yday - 1) / 365.25 + 
-                d.hour / (365.25 * 24) + 
-                d.minute / (365.25 * 24 * 60) + 
-                d.second / (365.25 * 24 * 60 * 60)
-
-    elif isinstance(dates, list):
-        yy = []
-        for date in dates:
-            date_format = get_date_str_format(date)
-            d = dt(*time.strptime(date, date_format)[0:5])
-            y = d.year + (d.timetuple().tm_yday - 1) / 365.25 + 
-                d.hour / (365.25 * 24) + 
-                d.minute / (365.25 * 24 * 60) + 
-                d.second / (365.25 * 24 * 60 * 60)
-            yy.append(y)
-
+        date_list = [dates]
     else:
-        raise ValueError('Unrecognized date format. Only string and list supported.')
-    return yy
+        date_list = list(dates)
+
+    date_format = get_date_str_format(date_list[0])
+
+    y_list = []
+    for date_str in dates:
+        d = dt(*time.strptime(date_str, date_format)[0:5])
+        y = (d.year + (d.timetuple().tm_yday - 1) / 365.25 + 
+             d.hour / (365.25 * 24) + 
+             d.minute / (365.25 * 24 * 60) + 
+             d.second / (365.25 * 24 * 60 * 60))
+        y_list.append(y)
+
+    if isinstance(dates, str):
+        y_list = y_list[0]
+
+    return y_list
 
 
 def yymmdd2yyyymmdd(date):
@@ -306,11 +305,11 @@ def date_list2vector(dateList):
 
     # date in year - float format
     datevector = []
-    for date in dates:
-        date_vec =  date.year + (date.timetuple().tm_yday - 1) / 365.25 + 
-                    date.hour / (365.25 * 24) + 
-                    date.minute / (365.25 * 24 * 60) + 
-                    date.second / (365.25 * 24 * 60 * 60)
+    for d in dates:
+        date_vec = (d.year + (d.timetuple().tm_yday - 1) / 365.25 + 
+                    d.hour / (365.25 * 24) + 
+                    d.minute / (365.25 * 24 * 60) + 
+                    d.second / (365.25 * 24 * 60 * 60))
         datevector.append(date_vec)
 
     return dates, datevector
