@@ -127,11 +127,14 @@ def get_processor(meta_file):
     meta_dir = os.path.dirname(meta_file)
     tops_meta_file = os.path.join(meta_dir, 'IW*.xml')
     stripmap_meta_file = os.path.join(meta_dir, 'data.dat')
+    stripmap_uavsar_meta_file = os.path.join(meta_dir, 'data')  #uavsar metafile format 
 
     processor = None
     if len(glob.glob(tops_meta_file)) > 0:
         processor = 'tops'
     elif os.path.isfile(stripmap_meta_file):
+        processor = 'stripmap'
+    elif os.path.isfile(stripmap_uavsar_meta_file):  #Added check for uavsar metafile 
         processor = 'stripmap'
     elif meta_file.endswith('.xml'):
         processor = 'stripmap'
