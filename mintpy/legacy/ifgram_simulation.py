@@ -8,8 +8,7 @@
 
 import sys
 import argparse
-import time
-import datetime
+from datetime import datetime as dt
 
 import h5py
 import numpy as np
@@ -118,10 +117,10 @@ def main(iargs=None):
     for i in range(ifgram_num):
         ifgram = ifgram_list[i]
         # Get temporal baseline in years
-        t1 = datetime.datetime(*time.strptime(m_dates[i], "%Y%m%d")[0:5])
-        t2 = datetime.datetime(*time.strptime(s_dates[i], "%Y%m%d")[0:5])
-        dt = (t2-t1)
-        dt = float(dt.days)/365.25
+        t1 = dt.strptime(m_dates[i], "%Y%m%d")
+        t2 = dt.strptime(s_dates[i], "%Y%m%d")
+        dt = (t2 - t1)
+        dt = float(dt.days) / 365.25
 
         # Simuated interferograms with unwrap error
         unw = velocity*dt*range2phase

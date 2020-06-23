@@ -8,8 +8,7 @@
 
 import os
 import sys
-import time
-import datetime
+from datetime import datetime as dt
 import h5py
 import numpy as np
 import scipy.io as sio
@@ -33,7 +32,7 @@ def usage():
 
 
 def yyyymmdd2years(date):
-    d = datetime.datetime(*time.strptime(date, "%Y%m%d")[0:5])
+    d = dt.strptime(date, "%Y%m%d")
     yy = np.float(d.year) + np.float(d.month-1)/12 + np.float(d.day-1)/365
     return yy
 

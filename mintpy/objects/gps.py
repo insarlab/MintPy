@@ -9,7 +9,6 @@
 
 
 import os
-import time
 import codecs
 from datetime import datetime as dt
 import numpy as np
@@ -57,9 +56,9 @@ def search_gps(SNWE, start_date=None, end_date=None, site_list_file=None, min_nu
                           usecols=(0,1,2,3,4,5,6,7,8,9,10)).astype(str)
     site_names = txt_data[:, 0]
     site_lats, site_lons = txt_data[:, 1:3].astype(np.float32).T
-    site_lons  -= np.round(site_lons / (360.)) * 360.
-    t_start = np.array([dt(*time.strptime(i, "%Y-%m-%d")[0:5]) for i in txt_data[:, 7].astype(str)])
-    t_end = np.array([dt(*time.strptime(i, "%Y-%m-%d")[0:5]) for i in txt_data[:, 8].astype(str)])
+    site_lons -= np.round(site_lons / (360.)) * 360.
+    t_start = np.array([dt.strptime(i, "%Y-%m-%d") for i in txt_data[:, 7].astype(str)])
+    t_end   = np.array([dt.strptime(i, "%Y-%m-%d") for i in txt_data[:, 8].astype(str)])
     num_solution = txt_data[:, 10].astype(np.int16)
 
     # limit on space
@@ -141,8 +140,8 @@ def read_GSI_F3(gps_dir, site, start_date=None, end_date=None):
     Y = np.array(Y)
     Z = np.array(Z)
 
-    date0 = dt(*time.strptime(start_date, "%Y%m%d")[0:5])
-    date1 = dt(*time.strptime(end_date, "%Y%m%d")[0:5])
+    date0 = dt.strptime(start_date, "%Y%m%d")
+    date1 = dt.strptime(end_date, "%Y%m%d")
     flag = np.ones(X.shape, dtype=np.bool_)
     flag[dates < date0] = False
     flag[dates > date1] = False
@@ -259,9 +258,10 @@ class GPS:
         if print_msg:
             print('reading time and displacement in east/north/vertical direction')
         data = np.loadtxt(self.file, dtype=bytes, skiprows=1).astype(str)
-        self.dates = np.array([dt(*time.strptime(i, "%y%b%d")[0:5])
-                               for i in data[:, 1]])
+
+        self.dates = np.array([dt.strptime(i, "%y%b%d") for i in data[:, 1]])
         #self.dates = np.array([ptime.decimal_year2datetime(i) for i in data[:, 2]])
+
         (self.dis_e,
          self.dis_n,
          self.dis_u,

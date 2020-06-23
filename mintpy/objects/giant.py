@@ -8,7 +8,6 @@
 #     from mintpy.objects import giantTimeseries, giantIfgramStack
 
 import os
-import time
 from datetime import datetime as dt
 import h5py
 import numpy as np
@@ -42,7 +41,6 @@ class giantTimeseries:
     def __init__(self, file=None):
         self.file = file
         self.name = 'giantTimeseries'
-        self.file_structure = FILE_STRUCTURE_GIANT_TIMESERIES
 
     def open(self, print_msg=True):
         if print_msg:
@@ -52,7 +50,7 @@ class giantTimeseries:
         self.numPixel = self.length * self.width
 
         # Time Info
-        self.times = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.dateList])
+        self.times = np.array([dt.strptime(i, "%Y%m%d") for i in self.dateList])
         self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]], dtype=np.float32)
         self.yearList = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in self.times]  #e.g. 2014.95
 
@@ -130,7 +128,6 @@ class giantIfgramStack:
     def __init__(self, file=None):
         self.file = file
         self.name = 'giantIfgramStack'
-        self.file_structure = FILE_STRUCTURE_GIANT_TIMESERIES
 
     def open(self, print_msg=True):
         if print_msg:

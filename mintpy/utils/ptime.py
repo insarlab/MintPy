@@ -57,7 +57,7 @@ def yyyymmdd2season(date_str):
     """
     # get day of the year
     date_str = yyyymmdd(date_str)
-    yday = dt(*time.strptime(date_str, "%Y%m%d")[0:5]).timetuple().tm_yday
+    yday = dt.strptime(date_str, "%Y%m%d").timetuple().tm_yday
 
     # determine the season
     season = None
@@ -93,7 +93,7 @@ def decimal_year2datetime(years):
         yday = np.floor((x - year) * 365.25).astype(int) + 1
         x2 = '{:d}-{:d}'.format(year, yday)
         try:
-            xt = dt(*time.strptime(x2, "%Y-%j")[0:5])
+            xt = dt.strptime(x2, "%Y-%j")
         except:
             raise ValueError('wrong format: ',x)
         return xt
@@ -123,7 +123,7 @@ def yyyymmdd2years(dates):
 
     y_list = []
     for date_str in dates:
-        d = dt(*time.strptime(date_str, date_format)[0:5])
+        d = dt.strptime(date_str, date_format)
         y = (d.year + (d.timetuple().tm_yday - 1) / 365.25 + 
              d.hour / (365.25 * 24) + 
              d.minute / (365.25 * 24 * 60) + 
@@ -256,26 +256,25 @@ def read_date_list(date_list_in, date_list_all=None):
 
 
 ################################################################
-def date_index(dateList):
-    dateIndex = {}
-    for ni in range(len(dateList)):
-        dateIndex[dateList[ni]] = ni
-    return dateIndex
+def date_index(date_list):
+    date_inds = {}
+    for ni in range(len(date_list)):
+        date_inds[date_list[ni]] = ni
+    return date_inds
 
 
 ################################################################
-def date_list2tbase(dateList):
+def date_list2tbase(date_list):
     """Get temporal Baseline in days with respect to the 1st date
-    Input: dateList - list of string, date in YYYYMMDD or YYMMDD format
-    Output:
-        tbase    - list of int, temporal baseline in days
-        dateDict - dict with key   - string, date in YYYYMMDD format
-                             value - int, temporal baseline in days
+    Parameters: date_list - list of string, date in YYYYMMDD or YYMMDD format
+    Returns:    tbase     - list of int, temporal baseline in days
+                dateDict  - dict with key   - string, date in YYYYMMDD format
+                                      value - int, temporal baseline in days
     """
     # date str to dt object
-    dateList = yyyymmdd(dateList)
-    date_format = get_date_str_format(str(dateList))
-    dates = [dt(*time.strptime(i, date_format)[0:5]) for i in dateList]
+    date_list = yyyymmdd(date_list)
+    date_format = get_date_str_format(str(date_list))
+    dates = [dt.strptime(i, date_format) for i in date_list]
 
     # dt object to time difference in days
     tbase = []
@@ -286,22 +285,21 @@ def date_list2tbase(dateList):
 
     # Dictionary: key - date, value - temporal baseline
     dateDict = {}
-    for i in range(len(dateList)):
-        dateDict[dateList[i]] = tbase[i]
+    for i in range(len(date_list)):
+        dateDict[date_list[i]] = tbase[i]
     return tbase, dateDict
 
 
 ################################################################
-def date_list2vector(dateList):
+def date_list2vector(date_list):
     """Get time in datetime format: datetime.datetime(2006, 5, 26, 0, 0)
-    Input: dateList - list of string, date in YYYYMMDD or YYMMDD format
-    Outputs:
-        dates      - list of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
-        datevector - list of float, years, i.e. 2010.8020547945205
+    Parameters: date_list  - list of string, date in YYYYMMDD or YYMMDD format
+    Returns:    dates      - list of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
+                datevector - list of float, years, i.e. 2010.8020547945205
     """
-    dateList = yyyymmdd(dateList)
-    date_format = get_date_str_format(str(dateList))
-    dates = [dt(*time.strptime(i, date_format)[0:5]) for i in dateList]
+    date_list = yyyymmdd(date_list)
+    date_format = get_date_str_format(str(date_list))
+    dates = [dt.strptime(i, date_format) for i in date_list]
 
     # date in year - float format
     datevector = []
