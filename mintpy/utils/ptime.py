@@ -112,15 +112,26 @@ def decimal_year2datetime(years):
 
 
 def yyyymmdd2years(dates):
+    """Convert date(s) string into float number in the unit of year"""
+
     if isinstance(dates, str):
         d = dt(*time.strptime(dates, "%Y%m%d")[0:5])
-        yy = float(d.year)+float(d.timetuple().tm_yday-1)/365.25
+        yy =    d.year + (d.timetuple().tm_yday - 1) / 365.25 + 
+                d.hour / (365.25 * 24) + 
+                d.minute / (365.25 * 24 * 60) + 
+                d.second / (365.25 * 24 * 60 * 60)
+
     elif isinstance(dates, list):
         yy = []
         for date in dates:
-            date_format = get_date_str_format(date) ## TO modified
+            date_format = get_date_str_format(date)
             d = dt(*time.strptime(date, date_format)[0:5])
-            yy.append(float(d.year)+float(d.timetuple().tm_yday-1)/365.25)
+            y = d.year + (d.timetuple().tm_yday - 1) / 365.25 + 
+                d.hour / (365.25 * 24) + 
+                d.minute / (365.25 * 24 * 60) + 
+                d.second / (365.25 * 24 * 60 * 60)
+            yy.append(y)
+
     else:
         raise ValueError('Unrecognized date format. Only string and list supported.')
     return yy
@@ -143,37 +154,41 @@ def yy2yyyy(year):
 
 
 def yyyymmdd(dates):
+    """Convert date strings in yymmdd format, if exists, to yyyymmdd format"""
     if isinstance(dates, str):
         if len(dates) == 6:
             datesOut = yymmdd2yyyymmdd(dates)
         else:
             datesOut = dates
+
     elif isinstance(dates, list):
         datesOut = []
         for date in dates:
             if len(date) == 6:
                 date = yymmdd2yyyymmdd(date)
             datesOut.append(date)
+
     else:
-        # print 'Un-recognized date input!'
         return None
     return datesOut
 
 
 def yymmdd(dates):
+    """Convert date strings in yyyymmdd format, if exists, to yymmdd format"""
     if isinstance(dates, str):
         if len(dates) == 8:
             datesOut = dates[2:8]
         else:
             datesOut = dates
+
     elif isinstance(dates, list):
         datesOut = []
         for date in dates:
             if len(date) == 8:
                 date = date[2:8]
             datesOut.append(date)
+
     else:
-        # print 'Un-recognized date input!'
         return None
     return datesOut
 
@@ -184,6 +199,7 @@ def yyyymmdd_date12(date12_list):
     s_dates = yyyymmdd([i.replace('-', '_').split('_')[1] for i in date12_list])
     date12_list = ['{}_{}'.format(m, s) for m, s in zip(m_dates, s_dates)]
     return date12_list
+
 
 def yymmdd_date12(date12_list):
     """Convert date12 into YYMMDD-YYMMDD format"""
@@ -227,6 +243,7 @@ def read_date_list(date_list_in, date_list_all=None):
             if os.path.isfile(d):
                 ds = read_date_txt(d)
                 date_list_out += ds
+
         else:
             ds = [d]
             date_list_out += ds
@@ -246,20 +263,27 @@ def date_index(dateList):
         dateIndex[dateList[ni]] = ni
     return dateIndex
 
+
 ################################################################
 def date_list2tbase(dateList):
-    """Get temporal Baseline in days and mins with respect to the 1st date
+    """Get temporal Baseline in days with respect to the 1st date
     Input: dateList - list of string, date in YYYYMMDD or YYMMDD format
     Output:
         tbase    - list of int, temporal baseline in days
         dateDict - dict with key   - string, date in YYYYMMDD format
                              value - int, temporal baseline in days
     """
+    # date str to dt object
     dateList = yyyymmdd(dateList)
-    date_format = get_date_str_format(str(dateList)) ## TO modified
-    dates = [dt(*time.strptime(i, date_format)[0:5]) for i in dateList] ## TO modified
-    #dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
-    tbase = [(i-dates[0]).seconds for i in dates]
+    date_format = get_date_str_format(str(dateList))
+    dates = [dt(*time.strptime(i, date_format)[0:5]) for i in dateList]
+
+    # dt object to time difference in days
+    tbase = []
+    for date in dates:
+        date_delta = date - dates[0]
+        tbase_i = date_delta.days + deta_delta.seconds / (24 * 60 * 60)
+        tbase.append(tbase_i)
 
     # Dictionary: key - date, value - temporal baseline
     dateDict = {}
@@ -277,12 +301,18 @@ def date_list2vector(dateList):
         datevector - list of float, years, i.e. 2010.8020547945205
     """
     dateList = yyyymmdd(dateList)
-    date_format = get_date_str_format(str(dateList)) ## TO modified
-    dates = [dt(*time.strptime(i, date_format)[0:5]) for i in dateList] ## TO modified
-    #dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
+    date_format = get_date_str_format(str(dateList))
+    dates = [dt(*time.strptime(i, date_format)[0:5]) for i in dateList]
+
     # date in year - float format
-    datevector = [i.year + (i.timetuple().tm_yday - 1)/365.25 for i in dates]
-    #datevector2 = [round(i, 2) for i in datevector]
+    datevector = []
+    for date in dates:
+        date_vec =  date.year + (date.timetuple().tm_yday - 1) / 365.25 + 
+                    date.hour / (365.25 * 24) + 
+                    date.minute / (365.25 * 24 * 60) + 
+                    date.second / (365.25 * 24 * 60 * 60)
+        datevector.append(date_vec)
+
     return dates, datevector
 
 
