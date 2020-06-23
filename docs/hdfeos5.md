@@ -37,7 +37,7 @@ E.g. S1_IW12_128_0593_0597_20141213_20170928.he5
 
   | Items     | Descriptions | Values |
   | --------- | ------------ | -------|
-  | &lt;SAT>    | Mission name | ERS, ENV, S1, RS1, RS2, CSK, TSX, JERS, ALOS, ALOS2, NISAR |
+  | &lt;SAT>    | Mission name | ALOS, ALOS2, CSK, ENV, ERS, JERS, NISAR, RS1, RS2, S1, TSX, UAV |
   | &lt;SW>     | Beam mode with swath number   | SM2 (for ENV), IW3 (for S1) |
   | &lt;RELORB> | Relative orbit (track) number | 3 digits with zero padding  |
   | &lt;FRAME1> | Start frame number | 4 digits with zero padding  |

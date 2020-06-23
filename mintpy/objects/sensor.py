@@ -21,8 +21,8 @@ standardedSensorNames = {
     'palsar2': 'alos2',
     'cosmo': 'csk', 'cosmosky': 'csk', 'cosmoskymed': 'csk',
     'csk1': 'csk', 'csk2': 'csk', 'csk3': 'csk', 'csk4': 'csk',
-    'ers1': 'ers', 'ers2': 'ers', 'ers12': 'ers',
     'envisat': 'env', 'asar': 'env',
+    'ers1': 'ers', 'ers2': 'ers', 'ers12': 'ers',
     'g3': 'gaofen3', 'gaofen': 'gaofen3',
     'jers1': 'jers',
     'kompsat5': 'ksat5', 'kompsat': 'ksat5', 'kmps5': 'ksat5',
@@ -199,11 +199,11 @@ def get_unavco_mission_name(meta_dict):
     elif value.startswith(('csk', 'cos')):
         mission_name = 'CSK'
 
-    elif value.startswith('ers'):
-        mission_name = 'ERS'
-
     elif value.startswith(('env', 'asar')):
         mission_name = 'ENV'
+
+    elif value.startswith('ers'):
+        mission_name = 'ERS'
 
     elif value.startswith('jers'):
         mission_name = 'JERS'
