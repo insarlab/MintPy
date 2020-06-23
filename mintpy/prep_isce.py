@@ -77,7 +77,10 @@ def add_ifgram_metadata(metadata_in, dates=[], baseline_dict={}):
     for k in metadata_in.keys():
         metadata[k] = metadata_in[k]
 
+    # DATE12
     metadata['DATE12'] = '{}-{}'.format(dates[0][2:], dates[1][2:])
+
+    # P_BASELINE*
     if baseline_dict:
         bperp_top = baseline_dict[dates[1]][0] - baseline_dict[dates[0]][0]
         bperp_bottom = baseline_dict[dates[1]][1] - baseline_dict[dates[0]][1]
@@ -125,18 +128,11 @@ def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), 
     num_file = len(isce_files)
     prog_bar = ptime.progressBar(maxValue=num_file)
     for i in range(num_file):
-        isce_file = isce_files[i]
         # prepare metadata for current file
+        isce_file = isce_files[i]
+        dates = os.path.basename(os.path.dirname(isce_file)).split('_')  # to modify to YYYYMMDDTHHMMSS
         ifg_metadata = readfile.read_attribute(isce_file, metafile_ext='.xml')
         ifg_metadata.update(metadata)
-
-        dates = os.path.basename(os.path.dirname(isce_file)).split('_')
-        if len(dates) == 1:
-            date1 = metadata['startUTC'][0:10].replace('-', '') #could also be done using datetime
-            date2 = os.path.basename(os.path.dirname(isce_file))
-            dates = [date1, date2]
-
-
         ifg_metadata = add_ifgram_metadata(ifg_metadata, dates, baseline_dict)
 
         # write .rsc file
