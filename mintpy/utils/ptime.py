@@ -16,26 +16,36 @@ import numpy as np
 
 ################################################################
 def get_date_str_format(date_str):
+    """Get the datetime string format as defined in:
+    https://docs.python.org/3.7/library/datetime.html#strftime-and-strptime-behavior
+
+    Parameters: date_str - str, date in one of the following formats:
+                            YYYYMMDDTHHMM
+                            YYYYMMDD
+                            YYMMDD
+    Returns:    date_str_format - str, datetime string format
     """
-    Check if input string of date is in one of the following formats:
-        YYYYMMDDTHHMM
-        YYYYMMDD
-        YYMMDD
-    """
+    if isinstance(date_str, list):
+        date_str = date_str[0]
+
     try:
         date_str = date_str.decode('utf8')
     except:
         pass
 
     date_str_format = None
-    if len(re.findall('\d{6}T\d{4}', date_str)) > 0:
+    if len(re.findall('\d{8}T\d{4}', date_str)) > 0:
         date_str_format = '%Y%m%dT%H%M'
+
     elif len(re.findall('\d{8}', date_str)) > 0:
         date_str_format = '%Y%m%d'
+
     elif len(re.findall('\d{6}', date_str)) > 0:
         date_str_format = '%y%m%d'
+
     else:
         raise ValueError('un-recognized date string format!')
+
     return date_str_format
 
 

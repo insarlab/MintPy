@@ -135,6 +135,8 @@ def get_date_str_format(date_str):
         YYYYMMDDTHHMM
         YYYYMMDD
         YYMMDD
+
+    Duplicated with utils.ptime.get_date_str_format(), will be removed later.
     """
     if isinstance(date_str, list):
         date_str = date_str[0]
@@ -143,17 +145,22 @@ def get_date_str_format(date_str):
         date_str = date_str.decode('utf8')
     except:
         pass
-    print(date_str)  #self.date_format = get_date_str_format(dates[:, 0])
+
+    print(date_str)
 
     date_str_format = None
-    if len(re.findall('\d{6}T\d{4}', date_str)) > 0:
+    if len(re.findall('\d{8}T\d{4}', date_str)) > 0:
         date_str_format = '%Y%m%dT%H%M'
+
     elif len(re.findall('\d{8}', date_str)) > 0:
         date_str_format = '%Y%m%d'
+
     elif len(re.findall('\d{6}', date_str)) > 0:
         date_str_format = '%y%m%d'
+
     else:
         raise ValueError('un-recognized date string format!')
+
     return date_str_format
 
 
