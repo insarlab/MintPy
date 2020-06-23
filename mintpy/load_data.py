@@ -405,18 +405,25 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
         for i in range(len(dsNameList)):
             dsName = dsNameList[i]
             dsPath1 = dsPathDict[dsName][0]
+
             if all(d[2:] in dsPath1 for d in dates):
                 ifgramPathDict[dsName] = dsPath1
+
             else:
                 dsPath2 = [i for i in dsPathDict[dsName]
                            if all(d[2:] in i for d in dates)]
+
                 if len(dsPath2) > 0:
                     ifgramPathDict[dsName] = dsPath2[0]
                 else:
                     print('WARNING: {} file missing for pair {}'.format(dsName, dates))
-        ifgramObj = ifgramDict(dates=tuple(dates),
-                               datasetDict=ifgramPathDict)
+
+        # initiate ifgramDict object
+        ifgramObj = ifgramDict(dates=tuple(dates), datasetDict=ifgramPathDict)
+
+        # update pairsDict object
         pairsDict[tuple(dates)] = ifgramObj
+
     if len(pairsDict) > 0:
         stackObj = ifgramStackDict(pairsDict=pairsDict, dsName0=dsName0)
     else:
