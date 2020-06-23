@@ -16,6 +16,8 @@ from datetime import datetime as dt
 import h5py
 import numpy as np
 
+from mintpy.utils import ptime
+
 
 BOOL_ZERO = np.bool_(0)
 INT_ZERO = np.int16(0)
@@ -128,46 +130,6 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
 
 
 
-################################ UTILITIES functions begin #############################
-def get_date_str_format(date_str):
-    """
-    Check if input string of date is in one of the following formats:
-        YYYYMMDDTHHMM
-        YYYYMMDD
-        YYMMDD
-
-    Duplicated with utils.ptime.get_date_str_format(), will be removed later.
-    """
-    if isinstance(date_str, list):
-        date_str = date_str[0]
-
-    try:
-        date_str = date_str.decode('utf8')
-    except:
-        pass
-
-    print(date_str)
-
-    date_str_format = None
-    if len(re.findall('\d{8}T\d{4}', date_str)) > 0:
-        date_str_format = '%Y%m%dT%H%M'
-
-    elif len(re.findall('\d{8}', date_str)) > 0:
-        date_str_format = '%Y%m%d'
-
-    elif len(re.findall('\d{6}', date_str)) > 0:
-        date_str_format = '%y%m%d'
-
-    else:
-        raise ValueError('un-recognized date string format!')
-
-    return date_str_format
-
-
-################################ UTILITIES functions begin #############################
-
-
-
 ################################ timeseries class begin ################################
 class timeseries:
     """
@@ -211,7 +173,7 @@ class timeseries:
                 self.pbase = None
 
         # time info
-        self.dateFormat = get_date_str_format(self.dateList[0])
+        self.dateFormat = ptime.get_date_str_format(self.dateList[0])
         self.times = np.array([dt.strptime(i, self.dateFormat) for i in self.dateList])
         self.tbase = np.array([(i.days + i.seconds / (24 * 60 * 60)) 
                                for i in (self.times - self.times[self.refIndex])],
@@ -485,7 +447,7 @@ class timeseries:
         Returns:    A : 2D array of int in size of (numDate, 2)
         """
         # convert list of YYYYMMDD into array of years in float
-        date_format = get_date_str_format(date_list[0])
+        date_format = ptime.get_date_str_format(date_list[0])
         dt_list = [dt.strptime(i, date_format) for i in date_list]
         yr_list = [(d.year + (d.timetuple().tm_yday - 1) / 365.25 + 
                     d.hour / (365.25 * 24) + 
@@ -740,7 +702,7 @@ class ifgramStack:
             dates = f['date'][:]
 
         # grab the date string format
-        self.dateFormat = get_date_str_format(dates[0, 0])
+        self.dateFormat = ptime.get_date_str_format(dates[0, 0])
 
         # convert date from str to datetime.datetime objects
         self.mDates = np.array([i.decode('utf8') for i in dates[:, 0]])
@@ -1056,7 +1018,7 @@ class ifgramStack:
         num_date = len(date_list)
 
         # tbase in the unit of years
-        date_format = get_date_str_format(date_list[0])
+        date_format = ptime.get_date_str_format(date_list[0])
         dates = [dt.strptime(i, date_format) for i in date_list]
         tbase = [i.days + i.seconds / (24 * 60 * 60) for i in (np.array(dates) - dates[0])]
         tbase = np.array(tbase, dtype=np.float32) / 365.25
