@@ -209,13 +209,14 @@ class timeseries:
                 self.pbase -= self.pbase[self.refIndex]
             except:
                 self.pbase = None
-        date_format = get_date_str_format(self.dateList[0]) ## To modified
-        self.times = np.array([dt(*time.strptime(i, date_format)[0:5]) for i in self.dateList]) ## TO modified
-        #self.times = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.dateList])
-        self.tbase = np.array([i.days + i.seconds / (60 * 60 * 24) for i in self.times - self.times[self.refIndex]],
-                              dtype=np.float32)  ## To Modified
-        #self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]],
-                              #dtype=np.float32)
+
+        # time info
+        self.dateFormat = get_date_str_format(self.dateList[0])
+        self.times = np.array([dt.strptime(i, self.dateFormat) for i in self.dateList])
+        self.tbase = np.array([(i.days + i.seconds / (24 * 60 * 60)) 
+                               for i in (self.times - self.times[self.refIndex])],
+                              dtype=np.float32)
+
         # list of float for year, 2014.95
         self.yearList = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in self.times]
         self.sliceList = ['{}-{}'.format(self.name, i) for i in self.dateList]
@@ -483,19 +484,22 @@ class timeseries:
         Parameters: date_list : list of string in YYYYMMDD format
         Returns:    A : 2D array of int in size of (numDate, 2)
         """
-        # convert list of YYYYMMDD into array of diff year in float
-        date_format = get_date_str_format(date_list[0]) ## To modif
+        # convert list of YYYYMMDD into array of years in float
+        date_format = get_date_str_format(date_list[0])
         dt_list = [dt.strptime(i, date_format) for i in date_list]
-        yr_list = [i.year + (i.timetuple().tm_yday - 1) / 365.25
-                   + i.hour / (24 * 365.25)
-                   + i.minute / (60 * 24 * 365.25)
-                   for i in dt_list]
+        yr_list = [(d.year + (d.timetuple().tm_yday - 1) / 365.25 + 
+                    d.hour / (365.25 * 24) + 
+                    d.minute / (365.25 * 24 * 60) +
+                    d.second / (365.25 * 24 * 60 * 60))
+                   for d in dt_list]
         yr_diff = np.array(yr_list, dtype=np.float64)
+
+        # reference date
         if refDate is None:
             refDate = date_list[0]
         yr_diff -= yr_diff[date_list.index(refDate)]
 
-        #for precision, use float32 in 0.1 yr, or float64 in 2015.1 yr format
+        # use float64 to support very short tbase for UAVSAR data
         A = np.ones([len(date_list), 2], dtype=np.float64)
         A[:, 0] = yr_diff
         return A
@@ -635,7 +639,6 @@ class ifgramStack:
     def __init__(self, file=None):
         self.file = file
         self.name = 'ifgramStack'
-        self.date_format = '%Y%m%d'
 
     def close(self, print_msg=True):
         try:
@@ -660,8 +663,9 @@ class ifgramStack:
 
         # time info
         self.date12List = ['{}_{}'.format(i, j) for i, j in zip(self.mDates, self.sDates)]
-        self.tbaseIfgram = np.array([i.days + i.seconds / (60 * 60 * 24) for i in self.sTimes - self.mTimes], dtype=np.float32) ## TO modified
-        #self.tbaseIfgram = np.array([i.seconds for i in self.sTimes - self.mTimes], dtype=np.float32) ## TO modified
+        self.tbaseIfgram = np.array([i.days + i.seconds / (24 * 60 * 60) 
+                                     for i in (self.sTimes - self.mTimes)],
+                                    dtype=np.float32)
 
         with h5py.File(self.file, 'r') as f:
             self.dropIfgram = f['dropIfgram'][:]
@@ -698,14 +702,19 @@ class ifgramStack:
             self.refLon = None
 
     def get_metadata(self):
+        # read metadata from root level
         with h5py.File(self.file, 'r') as f:
             self.metadata = dict(f.attrs)
             dates = f['date'][:].flatten()
+
+        # decode metadata
         for key, value in self.metadata.items():
             try:
                 self.metadata[key] = value.decode('utf8')
             except:
                 self.metadata[key] = value
+
+        # START/END_DATE
         dateList = sorted([i.decode('utf8') for i in dates])
         self.metadata['START_DATE'] = dateList[0]
         self.metadata['END_DATE'] = dateList[-1]
@@ -716,8 +725,10 @@ class ifgramStack:
             # get default datasetName
             if datasetName is None:
                 datasetName = [i for i in ['unwrapPhase', 'azimuthOffset'] if i in f.keys()][0]
+
             # get 3D size
             self.numIfgram, self.length, self.width = f[datasetName].shape
+
             # update 1st dimension size
             if dropIfgram:
                 self.numIfgram = np.sum(f['dropIfgram'][:])
@@ -729,13 +740,13 @@ class ifgramStack:
             dates = f['date'][:]
 
         # grab the date string format
-        self.date_format = get_date_str_format(dates[0, 0])
+        self.dateFormat = get_date_str_format(dates[0, 0])
 
         # convert date from str to datetime.datetime objects
         self.mDates = np.array([i.decode('utf8') for i in dates[:, 0]])
         self.sDates = np.array([i.decode('utf8') for i in dates[:, 1]])
-        self.mTimes = np.array([dt(*time.strptime(i, self.date_format)[0:5]) for i in self.mDates])
-        self.sTimes = np.array([dt(*time.strptime(i, self.date_format)[0:5]) for i in self.sDates])
+        self.mTimes = np.array([dt.strptime(i, self.dateFormat) for i in self.mDates])
+        self.sTimes = np.array([dt.strptime(i, self.dateFormat) for i in self.sDates])
 
     def read(self, datasetName='unwrapPhase', box=None, print_msg=True, dropIfgram=False):
         """Read 3D dataset with bounding box in space
@@ -923,8 +934,8 @@ class ifgramStack:
         print('calculate the temporal average of {} in file {} ...'.format(datasetName, self.file))
         if 'unwrapPhase' in datasetName:
             phase2range = -1 * float(self.metadata['WAVELENGTH']) / (4.0 * np.pi)
+            # use float64 to support very short tbase for UAVSAR data
             tbaseIfgram = np.array(self.tbaseIfgram, dtype=np.float64) / 365.25
-
 
         with h5py.File(self.file, 'r') as f:
             dset = f[datasetName]
@@ -1040,29 +1051,31 @@ class ifgramStack:
         date12_list = list(date12_list)
         mDates = [i.split('_')[0] for i in date12_list]
         sDates = [i.split('_')[1] for i in date12_list]
-        dateList = sorted(list(set(mDates + sDates)))
-        date_format = get_date_str_format(str(dateList)) ## TO modified
-        dates = [dt(*time.strptime(i, date_format)[0:5]) for i in dateList] ## TO modified
-        #dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
-        tbase = np.array([(i - dates[0]).seconds for i in dates], np.float32) / ( 365.25 * 24 * 60 *60 )
-        numIfgram = len(date12_list)
-        numDate = len(dateList)
+        date_list = sorted(list(set(mDates + sDates)))
+        num_ifgram = len(date12_list)
+        num_date = len(date_list)
+
+        # tbase in the unit of years
+        date_format = get_date_str_format(date_list[0])
+        dates = [dt.strptime(i, date_format) for i in date_list]
+        tbase = [i.days + i.seconds / (24 * 60 * 60) for i in (np.array(dates) - dates[0])]
+        tbase = np.array(tbase, dtype=np.float32) / 365.25
 
         # calculate design matrix
-        A = np.zeros((numIfgram, numDate), np.float32)
-        B = np.zeros(A.shape, np.float32)
-        for i in range(numIfgram):
-            m_idx, s_idx = [dateList.index(j) for j in date12_list[i].split('_')]
+        A = np.zeros((num_ifgram, num_date), np.float32)
+        B = np.zeros((num_ifgram, num_date), np.float32)
+        for i in range(num_ifgram):
+            m_idx, s_idx = [date_list.index(j) for j in date12_list[i].split('_')]
             A[i, m_idx] = -1
             A[i, s_idx] = 1
             B[i, m_idx:s_idx] = tbase[m_idx+1:s_idx+1] - tbase[m_idx:s_idx]
 
         # Remove reference date as it can not be resolved
         if refDate is None:
-            refDate = dateList[0]
+            refDate = date_list[0]
         if refDate:
-            refIndex = dateList.index(refDate)
-            A = np.hstack((A[:, 0:refIndex], A[:, (refIndex+1):]))
+            ref_ind = date_list.index(refDate)
+            A = np.hstack((A[:, 0:ref_ind], A[:, (ref_ind+1):]))
             B = B[:, :-1]
         return A, B
 
