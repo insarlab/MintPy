@@ -12,7 +12,7 @@ import os
 SENSOR_NAMES = [
     'tsx', 'csk',                                                # X-band
     'ers', 'env', 'sen', 'rsat', 'rsat2', 'ksat5', 'gaofen3',    # C-band
-    'jers', 'alos2', 'alos', 'nisar', 'uavsar',                  # L-band
+    'jers', 'alos2', 'alos', 'nisar', 'uav',                     # L-band
 ]
 
 # remove -_ and user lower case before standardize sensor names
@@ -30,6 +30,7 @@ standardedSensorNames = {
     'radarsat2': 'rsat2',
     'sentinel1': 'sen',  'sentinel1a': 'sen', 'sentinel1b': 'sen', 's1': 'sen', 's1a': 'sen', 's1b': 'sen',
     'terra': 'tsx', 'terrasar': 'tsx', 'terrasarx': 'tsx', 'tdx': 'tsx', 'tandemx': 'tsx',
+    'uavsar': 'uav',
 }
 
 
