@@ -454,15 +454,14 @@ class timeseries:
                     d.minute / (365.25 * 24 * 60) +
                     d.second / (365.25 * 24 * 60 * 60))
                    for d in dt_list]
-        yr_diff = np.array(yr_list, dtype=np.float64)
+        yr_diff = np.array(yr_list)
 
         # reference date
         if refDate is None:
             refDate = date_list[0]
         yr_diff -= yr_diff[date_list.index(refDate)]
 
-        # use float64 to support very short tbase for UAVSAR data
-        A = np.ones([len(date_list), 2], dtype=np.float64)
+        A = np.ones([len(date_list), 2], dtype=np.float32)
         A[:, 0] = yr_diff
         return A
 
@@ -896,8 +895,8 @@ class ifgramStack:
         print('calculate the temporal average of {} in file {} ...'.format(datasetName, self.file))
         if 'unwrapPhase' in datasetName:
             phase2range = -1 * float(self.metadata['WAVELENGTH']) / (4.0 * np.pi)
-            # use float64 to support very short tbase for UAVSAR data
-            tbaseIfgram = np.array(self.tbaseIfgram, dtype=np.float64) / 365.25
+            # temporal baseline in years (float64 for very short tbase of UAVSAR data)
+            tbase = np.array(self.tbaseIfgram, dtype=np.float64) / 365.25
 
         with h5py.File(self.file, 'r') as f:
             dset = f[datasetName]
@@ -921,7 +920,7 @@ class ifgramStack:
                             data -= data[self.refY, self.refX]
                         except:
                             pass
-                    data *= (phase2range * (1./tbaseIfgram[idx]))
+                    data *= (phase2range / tbase[idx])
                 dmean += data
                 sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, num2read))
                 sys.stdout.flush()
@@ -1011,33 +1010,33 @@ class ifgramStack:
         """
         # Date info
         date12_list = list(date12_list)
-        mDates = [i.split('_')[0] for i in date12_list]
-        sDates = [i.split('_')[1] for i in date12_list]
-        date_list = sorted(list(set(mDates + sDates)))
+        date1s = [i.split('_')[0] for i in date12_list]
+        date2s = [i.split('_')[1] for i in date12_list]
+        date_list = sorted(list(set(date1s + date2s)))
         num_ifgram = len(date12_list)
         num_date = len(date_list)
 
         # tbase in the unit of years
         date_format = ptime.get_date_str_format(date_list[0])
-        dates = [dt.strptime(i, date_format) for i in date_list]
-        tbase = [i.days + i.seconds / (24 * 60 * 60) for i in (np.array(dates) - dates[0])]
+        dates = np.array([dt.strptime(i, date_format) for i in date_list])
+        tbase = [i.days + i.seconds / (24 * 60 * 60) for i in (dates - dates[0])]
         tbase = np.array(tbase, dtype=np.float32) / 365.25
 
         # calculate design matrix
         A = np.zeros((num_ifgram, num_date), np.float32)
         B = np.zeros((num_ifgram, num_date), np.float32)
         for i in range(num_ifgram):
-            m_idx, s_idx = [date_list.index(j) for j in date12_list[i].split('_')]
-            A[i, m_idx] = -1
-            A[i, s_idx] = 1
-            B[i, m_idx:s_idx] = tbase[m_idx+1:s_idx+1] - tbase[m_idx:s_idx]
+            ind1, ind2 = [date_list.index(d) for d in date12_list[i].split('_')]
+            A[i, ind1] = -1
+            A[i, ind2] = 1
+            B[i, ind1:ind2] = tbase[ind1+1:ind2+1] - tbase[ind1:ind2]
 
         # Remove reference date as it can not be resolved
         if refDate is None:
             refDate = date_list[0]
         if refDate:
-            ref_ind = date_list.index(refDate)
-            A = np.hstack((A[:, 0:ref_ind], A[:, (ref_ind+1):]))
+            ind_r = date_list.index(refDate)
+            A = np.hstack((A[:, 0:ind_r], A[:, (ind_r+1):]))
             B = B[:, :-1]
         return A, B
 
