@@ -410,13 +410,14 @@ def calc_temporal_coherence(ifgram, G, X):
     Returns:    temp_coh - 1D np.array in size of (num_pixel), temporal coherence
     """
 
-    num_inv_obs = G.shape[0]
-    num_pixel = ifgram.shape[1]
+    num_ifgram, num_pixel = ifgram.shape
     temp_coh = np.zeros(num_pixel, dtype=np.float32)
 
-    chunk_size = 1000
+    # chunk_size as the number of pixels
+    chunk_size = int(ut.round_to_1(2e5 / num_ifgram))
     if num_pixel > chunk_size:
         num_chunk = int(np.ceil(num_pixel / chunk_size))
+        num_chunk_step = int(ut.round_to_1(num_chunk / 5))
         print(('calcualting temporal coherence in chunks of {} pixels'
                ': {} chunks in total ...').format(chunk_size, num_chunk))
 
@@ -428,10 +429,10 @@ def calc_temporal_coherence(ifgram, G, X):
             ifgram_diff = ifgram[:, c0:c1] - np.dot(G, X[:, c0:c1])
 
             # calc temporal coherence
-            temp_coh[c0:c1] = np.abs(np.sum(np.exp(1j*ifgram_diff), axis=0)) / num_inv_obs
+            temp_coh[c0:c1] = np.abs(np.sum(np.exp(1j*ifgram_diff), axis=0)) / num_ifgram
 
             # print out message
-            if (i+1) % 20 == 0:
+            if (i+1) % num_chunk_step == 0:
                 print('chunk {} / {}'.format(i+1, num_chunk))
 
     else:
@@ -439,7 +440,7 @@ def calc_temporal_coherence(ifgram, G, X):
         ifgram_diff = ifgram - np.dot(G, X)
 
         # calc temporal coherence
-        temp_coh = np.abs(np.sum(np.exp(1j*ifgram_diff), axis=0)) / num_inv_obs
+        temp_coh = np.abs(np.sum(np.exp(1j*ifgram_diff), axis=0)) / num_ifgram
 
     return temp_coh
 
