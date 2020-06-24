@@ -34,7 +34,10 @@ def get_date_str_format(date_str):
         pass
 
     date_str_format = None
-    if len(re.findall('\d{8}T\d{4}', date_str)) > 0:
+    if len(re.findall('\d{8}T\d{6}', date_str)) > 0:
+        date_str_format = '%Y%m%dT%H%M%S'
+
+    elif len(re.findall('\d{8}T\d{4}', date_str)) > 0:
         date_str_format = '%Y%m%dT%H%M'
 
     elif len(re.findall('\d{6}T\d{4}', date_str)) > 0:

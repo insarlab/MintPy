@@ -454,15 +454,14 @@ class timeseries:
                     d.minute / (365.25 * 24 * 60) +
                     d.second / (365.25 * 24 * 60 * 60))
                    for d in dt_list]
-        yr_diff = np.array(yr_list, dtype=np.float64)
+        yr_diff = np.array(yr_list)
 
         # reference date
         if refDate is None:
             refDate = date_list[0]
         yr_diff -= yr_diff[date_list.index(refDate)]
 
-        # use float64 to support very short tbase for UAVSAR data
-        A = np.ones([len(date_list), 2], dtype=np.float64)
+        A = np.ones([len(date_list), 2], dtype=np.float32)
         A[:, 0] = yr_diff
         return A
 
@@ -896,8 +895,8 @@ class ifgramStack:
         print('calculate the temporal average of {} in file {} ...'.format(datasetName, self.file))
         if 'unwrapPhase' in datasetName:
             phase2range = -1 * float(self.metadata['WAVELENGTH']) / (4.0 * np.pi)
-            # use float64 to support very short tbase for UAVSAR data
-            tbaseIfgram = np.array(self.tbaseIfgram, dtype=np.float64) / 365.25
+            # temporal baseline in years (float64 for very short tbase of UAVSAR data)
+            tbase = np.array(self.tbaseIfgram, dtype=np.float64) / 365.25
 
         with h5py.File(self.file, 'r') as f:
             dset = f[datasetName]
@@ -921,7 +920,7 @@ class ifgramStack:
                             data -= data[self.refY, self.refX]
                         except:
                             pass
-                    data *= (phase2range * (1./tbaseIfgram[idx]))
+                    data *= (phase2range / tbase[idx])
                 dmean += data
                 sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, num2read))
                 sys.stdout.flush()
