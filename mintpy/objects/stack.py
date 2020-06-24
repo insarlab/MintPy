@@ -1010,33 +1010,33 @@ class ifgramStack:
         """
         # Date info
         date12_list = list(date12_list)
-        mDates = [i.split('_')[0] for i in date12_list]
-        sDates = [i.split('_')[1] for i in date12_list]
-        date_list = sorted(list(set(mDates + sDates)))
+        date1s = [i.split('_')[0] for i in date12_list]
+        date2s = [i.split('_')[1] for i in date12_list]
+        date_list = sorted(list(set(date1s + date2s)))
         num_ifgram = len(date12_list)
         num_date = len(date_list)
 
         # tbase in the unit of years
         date_format = ptime.get_date_str_format(date_list[0])
-        dates = [dt.strptime(i, date_format) for i in date_list]
-        tbase = [i.days + i.seconds / (24 * 60 * 60) for i in (np.array(dates) - dates[0])]
+        dates = np.array([dt.strptime(i, date_format) for i in date_list])
+        tbase = [i.days + i.seconds / (24 * 60 * 60) for i in (dates - dates[0])]
         tbase = np.array(tbase, dtype=np.float32) / 365.25
 
         # calculate design matrix
         A = np.zeros((num_ifgram, num_date), np.float32)
         B = np.zeros((num_ifgram, num_date), np.float32)
         for i in range(num_ifgram):
-            m_idx, s_idx = [date_list.index(j) for j in date12_list[i].split('_')]
-            A[i, m_idx] = -1
-            A[i, s_idx] = 1
-            B[i, m_idx:s_idx] = tbase[m_idx+1:s_idx+1] - tbase[m_idx:s_idx]
+            ind1, ind2 = [date_list.index(d) for d in date12_list[i].split('_')]
+            A[i, ind1] = -1
+            A[i, ind2] = 1
+            B[i, ind1:ind2] = tbase[ind1+1:ind2+1] - tbase[ind1:ind2]
 
         # Remove reference date as it can not be resolved
         if refDate is None:
             refDate = date_list[0]
         if refDate:
-            ref_ind = date_list.index(refDate)
-            A = np.hstack((A[:, 0:ref_ind], A[:, (ref_ind+1):]))
+            ind_r = date_list.index(refDate)
+            A = np.hstack((A[:, 0:ind_r], A[:, (ind_r+1):]))
             B = B[:, :-1]
         return A, B
 
