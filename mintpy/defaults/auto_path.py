@@ -20,7 +20,7 @@ autoPath = True
 
 
 # Default path of data files from different InSAR processors to be loaded into MintPy
-isceAutoPath = '''##----------Default file path of ISCE-topsStack products
+isceTopsAutoPath = '''##----------Default file path of ISCE-topsStack products
 mintpy.load.processor      = isce
 mintpy.load.metaFile       = ${PROJECT_DIR}/master/IW*.xml
 mintpy.load.baselineDir    = ${PROJECT_DIR}/baselines
@@ -38,6 +38,28 @@ mintpy.load.incAngleFile   = ${PROJECT_DIR}/merged/geom_master/los.rdr
 mintpy.load.azAngleFile    = ${PROJECT_DIR}/merged/geom_master/los.rdr
 mintpy.load.shadowMaskFile = ${PROJECT_DIR}/merged/geom_master/shadowMask.rdr
 mintpy.load.bperpFile      = None
+
+'''
+
+isceStripmapAutoPath = '''##----------Default file path of ISCE-topsStack products
+mintpy.load.processor      = isce
+mintpy.load.metaFile       = ${masterShelve}/masterShelve/data.dat
+mintpy.load.baselineDir    = ${PROJECT_DIR}/baselines
+
+mintpy.load.unwFile        = ${PROJECT_DIR}/Igrams/*/filt*.unw
+mintpy.load.corFile        = ${PROJECT_DIR}/Igrams/*/filt*.cor
+mintpy.load.connCompFile   = ${PROJECT_DIR}/Igrams/*/filt*.unw.conncomp
+mintpy.load.ionoFile       = None
+mintpy.load.intFile        = None
+
+mintpy.load.demFile        = ${PROJECT_DIR}/geom_master/hgt.rdr
+mintpy.load.lookupYFile    = ${PROJECT_DIR}/geom_master/lat.rdr
+mintpy.load.lookupXFile    = ${PROJECT_DIR}/geom_master/lon.rdr
+mintpy.load.incAngleFile   = ${PROJECT_DIR}/geom_master/los.rdr
+mintpy.load.azAngleFile    = ${PROJECT_DIR}/geom_master/los.rdr
+mintpy.load.shadowMaskFile = ${PROJECT_DIR}/geom_master/shadowMask.rdr
+mintpy.load.bperpFile      = None
+
 '''
 
 roipacAutoPath = '''##----------Default file path of ROI_PAC products
@@ -73,7 +95,8 @@ mintpy.load.bperpFile      = ${PROJECT_DIR}/merged/baselines/*/*.base_perp
 '''
 
 autoPathDict = {
-    'isce'  : isceAutoPath,
+    'isceTops'  : isceTopsAutoPath,
+    'isceStripmap'  : isceStripmapAutoPath,
     'roipac': roipacAutoPath,
     'gamma' : gammaAutoPath,
 }
@@ -113,11 +136,17 @@ def get_auto_path(processor, project_name, template=dict()):
                 template : dict, 
     Returns:    template : dict,
     """
+
+    project_dir = os.path.join(os.getenv('SCRATCHDIR'), project_name)
+    if processor == 'isce':
+        if os.path.exists(project_dir + '/master'):
+            processor = 'isceTops'
+        else:
+            processor = 'isceStripmap'
     # read auto_path_dict
     auto_path_dict = read_str2dict(autoPathDict[processor], print_msg=False)
-
+    
     # grab variable value: SCRATCHDIR, m_date12
-    project_dir = os.path.join(os.getenv('SCRATCHDIR'), project_name)
     m_date12 = None
     if processor in ['roipac', 'gamma']:
         m_date12 = get_master_date12(project_dir, processor=processor)
@@ -132,6 +161,9 @@ def get_auto_path(processor, project_name, template=dict()):
     var_dict['${PROJECT_DIR}'] = project_dir
     if m_date12:
         var_dict['${m_date12}'] = m_date12
+     
+    if processor == 'isceStripmap':
+        var_dict['${masterShelve}'] = os.path.join(project_dir, 'merged/SLC', os.listdir(os.path.join(project_dir, 'merged/SLC'))[0])
 
     # update auto_path_dict
     for key, value in auto_path_dict.items():
@@ -172,3 +204,4 @@ def get_master_date12(project_dir, processor='roipac'):
         except:
             print("No master interferogram found! Check the PROCESS/SIM/sim_* folder")
     return m_date12
+

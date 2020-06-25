@@ -53,7 +53,8 @@ DEFAULT_TEMPLATE = """template:
 {}\n
 {}\n
 {}\n
-""".format(auto_path.isceAutoPath,
+""".format(auto_path.isceTopsAutoPath,
+           auto_path.isceStripmapAutoPath,
            auto_path.roipacAutoPath,
            auto_path.gammaAutoPath)
 
