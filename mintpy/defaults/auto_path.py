@@ -20,7 +20,7 @@ autoPath = True
 
 
 # Default path of data files from different InSAR processors to be loaded into MintPy
-isceTopsAutoPath = '''##----------Default file path of ISCE-topsStack products
+isceTopsAutoPath = '''##----------Default file path of ISCE/topsStack products
 mintpy.load.processor      = isce
 mintpy.load.metaFile       = ${PROJECT_DIR}/master/IW*.xml
 mintpy.load.baselineDir    = ${PROJECT_DIR}/baselines
@@ -41,7 +41,7 @@ mintpy.load.bperpFile      = None
 
 '''
 
-isceStripmapAutoPath = '''##----------Default file path of ISCE-topsStack products
+isceStripmapAutoPath = '''##----------Default file path of ISCE/stripmapStack products
 mintpy.load.processor      = isce
 mintpy.load.metaFile       = ${masterShelve}/masterShelve/data.dat
 mintpy.load.baselineDir    = ${PROJECT_DIR}/baselines
