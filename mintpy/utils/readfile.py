@@ -829,8 +829,6 @@ def read_template(fname, delimiter='=', print_msg=True):
     Examples:
         tmpl = read_template(KyushuT424F610_640AlosA.template)
         tmpl = read_template(R1_54014_ST5_L0_F898.000.pi, ':')
-        from mintpy.defaults.auto_path import isceAutoPath
-        tmpl = read_template(isceAutoPath, print_msg=False)
     """
     template_dict = {}
     plotAttributeDict = {}
