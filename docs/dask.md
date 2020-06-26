@@ -42,7 +42,7 @@ smallbaselineApp.py -t smallbaselineApp.cfg
 
 Download and run the FernandinaSenDT128 example data; then run with and without local clasuter:
 
-```
+```bash
 export OMP_NUM_THREADS=1
 cd FernandinaSenDT128/mintpy
 ifgram_inversion.py inputs/ifgramStack.h5 -w no --cluster no 
