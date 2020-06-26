@@ -37,6 +37,7 @@ mintpy.load.lookupXFile    = ${PROJECT_DIR}/merged/geom_master/lon.rdr
 mintpy.load.incAngleFile   = ${PROJECT_DIR}/merged/geom_master/los.rdr
 mintpy.load.azAngleFile    = ${PROJECT_DIR}/merged/geom_master/los.rdr
 mintpy.load.shadowMaskFile = ${PROJECT_DIR}/merged/geom_master/shadowMask.rdr
+mintpy.load.waterMaskFile  = ${PROJECT_DIR}/merged/geom_master/waterMask.rdr
 mintpy.load.bperpFile      = None
 
 '''
@@ -58,6 +59,7 @@ mintpy.load.lookupXFile    = ${PROJECT_DIR}/geom_master/lon.rdr
 mintpy.load.incAngleFile   = ${PROJECT_DIR}/geom_master/los.rdr
 mintpy.load.azAngleFile    = ${PROJECT_DIR}/geom_master/los.rdr
 mintpy.load.shadowMaskFile = ${PROJECT_DIR}/geom_master/shadowMask.rdr
+mintpy.load.waterMaskFile  = ${PROJECT_DIR}/geom_master/waterMask.rdr
 mintpy.load.bperpFile      = None
 
 '''
