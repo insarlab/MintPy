@@ -383,15 +383,21 @@ def get_file_list(file_list, abspath=False, coord=None):
     return file_list_out
 
 
-def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
-    """Find lookup table file with/without input file pattern"""
+def get_lookup_file(filePattern=None, abspath=False, work_dir='./', print_msg=True):
+    """Find lookup table file with/without input file pattern
+    Parameters: filePattern - list of str
+                abspath     - bool, return absolute path or not
+                work_dir    - str, mintpy working directory
+                print_msg   - bool, printout message or not
+    Returns:    outFile     - str, path of the lookup file
+    """
     # Search Existing Files
     if not filePattern:
         filePattern = ['geometryRadar.h5',
                        'geometryGeo_tight.h5', 'geometryGeo.h5',
                        'geomap*lks_tight.trans', 'geomap*lks.trans',
                        'sim*_tight.UTM_TO_RDC', 'sim*.UTM_TO_RDC']
-        filePattern = [os.path.join('inputs', i) for i in filePattern] + filePattern
+        filePattern = [os.path.join(work_dir, 'inputs', i) for i in filePattern] + filePattern
     existFiles = []
     try:
         existFiles = get_file_list(filePattern)
