@@ -295,7 +295,7 @@ def update_inps_with_file_metadata(inps, metadata):
         inps.ref_lalo = None
 
     # Points of interest
-    inps = pp.read_point2inps(inps, coord)
+    inps = pp.read_pts2inps(inps, coord)
 
     # Unit and Wrap
     inps.disp_unit, inps.wrap = pp.check_disp_unit_and_wrap(metadata,
