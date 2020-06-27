@@ -97,7 +97,8 @@ def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False):
         cmd = 'wget {}'.format(dset_url)
         print(cmd)
         os.system(cmd)
-    print('tar file exists, skip re-downloading.')
+    else:
+        print('tar file exists, skip re-downloading.')
 
     # uncompress tar file
     if not fresh_start and os.path.isdir(dset_name):
