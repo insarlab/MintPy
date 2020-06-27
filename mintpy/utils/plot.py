@@ -298,10 +298,10 @@ def add_map_argument(parser):
 
 def add_point_argument(parser):
     pts = parser.add_argument_group('Point', 'Plot points defined by y/x or lat/lon')
-    pts.add_argument('--pts-yx', dest='pts_yx', type=int, nargs='*', metavar=('Y', 'X'),
-                     help='Point in (Y, X)')
-    pts.add_argument('--pts-lalo', dest='pts_lalo', type=float, nargs='*', metavar=('LAT', 'LON'),
-                     help='Point in (Lat, Lon)')
+    pts.add_argument('--pts-yx', dest='pts_yx', type=int, nargs=2, metavar=('Y', 'X'),
+                     help='Point in (Y, X) for plot in row/col coordinates only')
+    pts.add_argument('--pts-lalo', dest='pts_lalo', type=float, nargs=2, metavar=('LAT', 'LON'),
+                     help='Point in (Lat, Lon) for plot in geo coordinates only')
     pts.add_argument('--pts-file', dest='pts_file', type=str,
                      help='Point(s) defined in text file in lat/lon column')
     pts.add_argument('--pts-marker', dest='pts_marker', type=str, default='k^',
@@ -363,16 +363,24 @@ def add_subset_argument(parser):
     return parser
 
 
-def read_point2inps(inps, coord_obj):
+def read_pts2inps(inps, coord_obj):
+    """Read pts_* options"""
+    # pts_file --> pts_lalo
     if inps.pts_file and os.path.isfile(inps.pts_file):
         inps.pts_lalo = np.loadtxt(inps.pts_file, dtype=bytes).astype(float)
+
+    # pts_lalo --> pts_yx
     if inps.pts_lalo is not None:
+        # format pts_lalo to 2D array in size of (num_pts, 2)
         inps.pts_lalo = np.array(inps.pts_lalo).reshape(-1, 2)
         inps.pts_yx = coord_obj.geo2radar(inps.pts_lalo[:, 0],
                                           inps.pts_lalo[:, 1],
                                           print_msg=False)
+
     if inps.pts_yx is not None:
+        # format pts_yx to 2D array in size of (num_pts, 2)
         inps.pts_yx = np.array(inps.pts_yx).reshape(-1, 2)
+
     return inps
 
 

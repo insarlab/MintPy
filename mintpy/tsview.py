@@ -92,7 +92,6 @@ def create_parser():
     parser = pp.add_gps_argument(parser)
     parser = pp.add_mask_argument(parser)
     parser = pp.add_map_argument(parser)
-    parser = pp.add_point_argument(parser)
     parser = pp.add_reference_argument(parser)
     parser = pp.add_save_argument(parser)
     parser = pp.add_subset_argument(parser)
@@ -571,6 +570,7 @@ class timeseriesViewer():
         # input figsize for the point time-series plot
         self.figsize_pts = self.fig_size
         self.pts_marker = 'r^'
+        self.pts_marker_size = 6.
         return
 
 
@@ -627,13 +627,13 @@ class timeseriesViewer():
         disp_date = self.dates[self.idx].strftime('%Y-%m-%d')
         self.fig_title = 'N = {}, Time = {}'.format(self.idx, disp_date)
 
-        # Initial Pixel
+        # Initial Pixel of interest
+        self.pts_yx = None
+        self.pts_lalo = None
         if self.yx and self.yx != self.ref_yx:
             self.pts_yx = np.array(self.yx).reshape(-1, 2)
             if self.lalo:
                 self.pts_lalo = np.array(self.lalo).reshape(-1, 2)
-            else:
-                self.pts_lalo = None
 
         # call view.py to plot
         self.img, self.cbar_img = view.plot_slice(self.ax_img, img_data, self.atr, self)[2:4]
