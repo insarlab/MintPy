@@ -45,9 +45,7 @@ class coordinate:
         """
         self.src_metadata = metadata
         if lookup_file is None:
-            # search the default lookup file based on the directory of input file
-            work_dir = os.path.dirname(metadata['FILE_PATH'])
-            lookup_file = get_lookup_file(lookup_file, work_dir=work_dir, print_msg=False)
+            lookup_file = get_lookup_file(lookup_file, print_msg=False)
         if isinstance(lookup_file, str):
             lookup_file = [lookup_file, lookup_file]
         self.lookup_file = lookup_file
