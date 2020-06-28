@@ -80,11 +80,11 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
 
 def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_type='quadratic'):
     """Calculate deramped Root Mean Square in space for each epoch of input timeseries file.
-    Parameters: timeseries_resid_file : string, 
+    Parameters: timeseries_resid_file : string,
                     timeseries HDF5 file, e.g. timeseries_ERA5_demErrInvResid.h5
                 mask_file : string,
                     mask file, e.g. maskTempCoh.h5
-                ramp_type : string, 
+                ramp_type : string,
                     ramp type, e.g. linear, quadratic, no for do not remove ramp
     Returns:    rms_list : list of float,
                     Root Mean Square of deramped input timeseries file
@@ -210,7 +210,7 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
             mask_line_orig = [i for i in lines if '# Mask file:' in i][0]
         except:
             mask_line_orig = ''
-        if (aoi_line_orig == aoi_line 
+        if (aoi_line_orig == aoi_line
                 and mask_line_orig == mask_line
                 and run_or_skip(out_file=txtFile,
                                 in_file=[File, maskFile],
@@ -614,7 +614,7 @@ def run_or_skip(out_file, in_file=None, check_readable=True, print_msg=True):
                 if ut.run_or_skip(out_file='exclude_date.txt',
                                   in_file=['timeseries_ERA5_demErrInvResid.h5',
                                            'maskTempCoh.h5',
-                                           'smallbaselineApp.cfg'],  
+                                           'smallbaselineApp.cfg'],
                                   check_readable=False):
     """
     # 1 - check existance of output files
@@ -759,4 +759,3 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
     return out_file
-

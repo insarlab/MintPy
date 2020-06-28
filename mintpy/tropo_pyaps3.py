@@ -13,7 +13,7 @@ import subprocess
 import argparse
 import numpy as np
 from mintpy.objects import timeseries, geometry
-from mintpy.utils import readfile, ptime, utils as ut
+from mintpy.utils import ptime, readfile, writefile, utils as ut
 
 try:
     import pyaps3 as pa
@@ -32,6 +32,7 @@ WEATHER_MODEL_HOURS = {
 EXAMPLE = """example:
   # download datasets, calculate tropospheric delays and correct time-series file.
   tropo_pyaps3.py -f timeseries.h5 -g inputs/geometryRadar.h5
+  tropo_pyaps3.py -f filt_fine.unw -g ../../../mintpy/inputs/geometryRadar.h5
 
   # download datasets, calculate tropospheric delays
   tropo_pyaps3.py -d date.list         --hour 12 -m ERA5  -g inputs/geometryGeo.h5
@@ -58,14 +59,19 @@ REFERENCE = """reference:
   Jolivet, R., P. S. Agram, N. Y. Lin, M. Simons, M. P. Doin, G. Peltzer, and Z. Li (2014), Improving
   InSAR geodesy using global atmospheric models, Journal of Geophysical Research: Solid Earth, 119(3),
   2324-2341, doi:10.1002/2013JB010588.
+
+  # ERA-5
+  Copernicus Climate Change Service (2017): ERA5: Fifth generation of ECMWF atmospheric reanalyses of 
+  the global climate. Copernicus Climate Change Service Climate Data Store, 
+  date of access: {your_date_of_access}. https://cds.climate.copernicus.eu/cdsapp#!/hom
 """
 
 DATA_INFO = """Global Atmospheric Models:
-  re-analysis_dataset         coverage   temporal_resolution  spatial_resolution      latency     analysis
+  re-analysis_dataset      coverage  temp_resolution  spatial_resolution       latency       assimilation
   --------------------------------------------------------------------------------------------------------
-  ERA-5    (ECMWF)             Global      Hourly              0.25 deg (~31 km)       3-month      4D-var
-  ERA-Int  (ECMWF)             Global      6-hourly            0.75 deg (~79 km)       2-month      4D-var
-  MERRA(2) (NASA Goddard)      Global      6-hourly           0.5*0.625 (~50 km)      2-3 weeks     3D-var
+  ERA-5(T) (ECMWF)          global       hourly        0.25 deg (~31 km)   3 months (5 days)    4D-Var
+  ERA-Int  (ECMWF)          global       6-hourly      0.75 deg (~79 km)        2 months        4D-Var
+  MERRA(2) (NASA Goddard)   global       6-hourly     0.5*0.625 (~50 km)       2-3 weeks        3D-Var
   NARR     (NOAA, working from Jan 1979 to Oct 2014)
 
 Notes for data access:
@@ -97,7 +103,7 @@ def create_parser():
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=REFERENCE+'\n'+DATA_INFO+'\n'+EXAMPLE)
 
-    parser.add_argument('-f', '--file', dest='timeseries_file',
+    parser.add_argument('-f', '--file', dest='dis_file',
                         help='timeseries HDF5 file, i.e. timeseries.h5')
     parser.add_argument('-d', '--date-list', dest='date_list', type=str, nargs='*',
                         help='List of dates in YYYYMMDD or YYMMDD format. It can be:\n'
@@ -105,7 +111,7 @@ def create_parser():
                              'b) a text file with the first column as list of date in YYYYMMDD or YYMMDD format OR\n'
                              'c) a text file with Sentinel-1 SAFE filenames\ne.g.: '+SAFE_FILE)
     parser.add_argument('--hour', type=str, help='time of data in HH, e.g. 12, 06')
-    parser.add_argument('-o', dest='cor_timeseries_file',
+    parser.add_argument('-o', dest='cor_dis_file',
                         help='Output file name for trospheric corrected timeseries.')
 
     # delay calculation
@@ -154,13 +160,13 @@ def cmd_line_parse(iargs=None):
     print('weather directory: {}'.format(inps.weather_dir))
 
     ## ignore invalid filename inputs
-    for key in ['timeseries_file', 'geom_file']:
+    for key in ['dis_file', 'geom_file']:
         fname = vars(inps)[key]
         if fname and not os.path.isfile(fname):
             raise FileExistsError('input file not exist: {}'.format(fname))
 
     ## required options (for date/time): --file OR --date-list
-    if (not inps.timeseries_file 
+    if (not inps.dis_file 
             and any(vars(inps)[key] is None for key in ['date_list'])):
         raise SystemExit('ERROR: --file OR --date-list is required.\n\n'+EXAMPLE)
 
@@ -171,11 +177,11 @@ def cmd_line_parse(iargs=None):
         print('output tropospheric delay file: {}'.format(inps.tropo_file))
 
     ## output filename - corrected displacement file
-    if inps.timeseries_file and not inps.cor_timeseries_file:
-        fbase = os.path.splitext(inps.timeseries_file)[0]
-        inps.cor_timeseries_file = '{}_{}.h5'.format(fbase, inps.tropo_model)
-    if inps.cor_timeseries_file:
-        print('output corrected time-series file: {}'.format(inps.cor_timeseries_file))
+    if inps.dis_file and not inps.cor_dis_file:
+        fbase, fext = os.path.splitext(inps.dis_file)
+        inps.cor_dis_file = '{fbase}_{suffix}{fext}'.format(fbase=fbase, suffix=inps.tropo_model, fext=fext)
+    if inps.cor_dis_file:
+        print('output corrected time-series file: {}'.format(inps.cor_dis_file))
 
     return inps
 
@@ -191,22 +197,25 @@ def read_inps2date_time(inps):
     """
 
     # if --file is specified
-    if inps.timeseries_file:
+    if inps.dis_file:
         # 1) ignore --date-list and --hour
         for key in ['date_list', 'hour']:
             if vars(inps)[key] is not None:
                 vars(inps)[key] = None
                 msg = 'input "{:<10}" is ignored'.format(key)
-                msg += ', use info from file {} instead'.format(inps.timeseries_file)
+                msg += ', use info from file {} instead'.format(inps.dis_file)
                 print(msg)
 
         # 2) read dates/time from time-series file
-        print('read dates/time info from file: {}'.format(inps.timeseries_file))
-        ts_obj = timeseries(inps.timeseries_file)
-        ts_obj.open(print_msg=False)
-        inps.date_list = ts_obj.dateList
-        inps.hour = closest_weather_model_hour(ts_obj.metadata['CENTER_LINE_UTC'],
-                                               grib_source=inps.tropo_model)
+        print('read dates/time info from file: {}'.format(inps.dis_file))
+        atr = readfile.read_attribute(inps.dis_file)
+        if atr['FILE_TYPE'] == 'timeseries':
+            ts_obj = timeseries(inps.dis_file)
+            ts_obj.open(print_msg=False)
+            inps.date_list = ts_obj.dateList
+        else:
+            inps.date_list = ptime.yyyymmdd(atr['DATE12'].split('-'))
+        inps.hour = closest_weather_model_hour(atr['CENTER_LINE_UTC'], grib_source=inps.tropo_model)
 
     # read dates if --date-list is text file
     if len(inps.date_list) == 1 and os.path.isfile(inps.date_list[0]):
@@ -245,8 +254,8 @@ def get_grib_info(inps):
         print('make directory: {}'.format(inps.grib_dir))
 
     # read metadata
-    if inps.timeseries_file:
-        inps.atr = readfile.read_attribute(inps.timeseries_file)
+    if inps.dis_file:
+        inps.atr = readfile.read_attribute(inps.dis_file)
     elif inps.geom_file:
         inps.atr = readfile.read_attribute(inps.geom_file)
     else:
@@ -635,25 +644,42 @@ def calculate_delay_timeseries(inps):
     ts_obj = timeseries(inps.tropo_file)
     ts_obj.write2hdf5(data=tropo_data,
                       dates=date_list,
-                      metadata=inps.atr,
-                      refFile=inps.timeseries_file)
+                      metadata=inps.atr)
     return inps.tropo_file
 
 
-def correct_timeseries(timeseries_file, tropo_file, out_file):
+def correct_timeseries(dis_file, tropo_file, cor_ts_file):
     # diff.py can handle different reference in space and time
     # between the absolute tropospheric delay and the double referenced time-series
     print('\n------------------------------------------------------------------------------')
     print('correcting relative delay for input time-series using diff.py')
-    cmd = 'diff.py {} {} -o {} --force'.format(timeseries_file,
+    cmd = 'diff.py {} {} -o {} --force'.format(dis_file,
                                                tropo_file,
-                                               out_file)
+                                               cor_ts_file)
     print(cmd)
     status = subprocess.Popen(cmd, shell=True).wait()
     if status is not 0:
         raise Exception(('Error while correcting timeseries file '
                          'using diff.py with tropospheric delay file.'))
-    return out_file
+    return cor_ts_file
+
+
+def correct_single_ifgram(dis_file, tropo_file, cor_dis_file):
+    print('\n------------------------------------------------------------------------------')
+    print('correcting relative delay for input interferogram')
+
+    print('read data from {}'.format(dis_file))
+    data, atr = readfile.read(dis_file, datasetName='phase')
+    date1, date2 = ptime.yyyymmdd(atr['DATE12'].split('-'))
+
+    print('calc tropospheric delay for {}-{} from {}'.format(date1, date2, tropo_file))
+    tropo = readfile.read(tropo_file, datasetName=date2)[0]
+    tropo -= readfile.read(tropo_file, datasetName=date1)[0]
+    tropo *= -4. * np.pi / float(atr['WAVELENGTH'])
+
+    print('write corrected data to {}'.format(cor_dis_file))
+    writefile.write(data-tropo, cor_dis_file, atr)
+    return cor_dis_file
 
 
 ###############################################################
@@ -679,12 +705,22 @@ def main(iargs=None):
         return
 
     # correct tropo delay from displacement time-series
-    if inps.timeseries_file and inps.atr['FILE_TYPE'] == 'timeseries':
-        correct_timeseries(inps.timeseries_file,
-                           tropo_file=inps.tropo_file,
-                           out_file=inps.cor_timeseries_file)
+    if inps.dis_file:
+        ftype = inps.atr['FILE_TYPE']
+        if ftype == 'timeseries':
+            correct_timeseries(dis_file=inps.dis_file,
+                               tropo_file=inps.tropo_file,
+                               cor_dis_file=inps.cor_dis_file)
+
+        elif ftype == '.unw':
+            correct_single_ifgram(dis_file=inps.dis_file,
+                                  tropo_file=inps.tropo_file,
+                                  cor_dis_file=inps.cor_dis_file)
+        else:
+            print('input file {} is not timeseries nor .unw, correction is not supported yet.'.format(ftype))
+
     else:
-        print('No input timeseries file, skip correcting tropospheric delays.')
+        print('No input displacement file, skip correcting tropospheric delays.')
 
     
     return
