@@ -396,7 +396,7 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
                     'geometryGeo_tight.h5', 'geometryGeo.h5',
                     'geomap*lks_tight.trans', 'geomap*lks.trans',
                     'sim*_tight.UTM_TO_RDC', 'sim*.UTM_TO_RDC']
-        dirList = ['./inputs', './', './../inputs']
+        dirList = ['inputs', '', '../inputs']
 
         # file/dirList --> filePattern
         filePattern = []
