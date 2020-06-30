@@ -14,7 +14,6 @@ import datetime
 import inspect
 import matplotlib.pyplot as plt
 from mintpy.objects import sensor, ifgramStack
-from mintpy.defaults.auto_path import autoPath
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import (ptime,
                           readfile,
@@ -246,7 +245,7 @@ def read_template2inps(templateFile, inps=None):
 
     # Output directory/filename
     if not inps.outfile:
-        if autoPath and 'SCRATCHDIR' in os.environ:
+        if 'SCRATCHDIR' in os.environ:
             inps.out_dir = os.getenv('SCRATCHDIR')+'/'+project_name+'/PROCESS'
         else:
             try:
@@ -256,7 +255,7 @@ def read_template2inps(templateFile, inps=None):
         inps.outfile = inps.out_dir+'/ifgram_list.txt'
 
     # Auto path of bl_list.txt file (for Miami user)
-    if not inps.baseline_file and autoPath and 'SCRATCHDIR' in os.environ:
+    if not inps.baseline_file and 'SCRATCHDIR' in os.environ:
         bl_file = os.path.join(os.getenv('SCRATCHDIR'), '{}/SLC/bl_list.txt'.format(project_name))
         if os.path.isfile(bl_file):
             inps.baseline_file = bl_file

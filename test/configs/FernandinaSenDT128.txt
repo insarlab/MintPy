@@ -1,23 +1,8 @@
 # vim: set filetype=cfg:
 mintpy.compute.cluster = local
-########## 1. Load Data (--load to exit after this step)
-## load_data.py -H to check more details and example inputs.
-mintpy.load.processor        = isce
-##---------for ISCE only:
-mintpy.load.metaFile         = ../master/IW*.xml
-mintpy.load.baselineDir      = ../baselines
-##---------interferogram datasets:
-mintpy.load.unwFile          = ../merged/interferograms/*/filt_*.unw
-mintpy.load.corFile          = ../merged/interferograms/*/filt_*.cor
-mintpy.load.connCompFile     = ../merged/interferograms/*/filt_*.unw.conncomp
-##---------geometry datasets:
-mintpy.load.demFile          = ../merged/geom_master/hgt.rdr
-mintpy.load.lookupYFile      = ../merged/geom_master/lat.rdr
-mintpy.load.lookupXFile      = ../merged/geom_master/lon.rdr
-mintpy.load.incAngleFile     = ../merged/geom_master/los.rdr
-mintpy.load.azAngleFile      = ../merged/geom_master/los.rdr
-mintpy.load.shadowMaskFile   = ../merged/geom_master/shadowMask.rdr
-mintpy.load.waterMaskFile    = None
+
+mintpy.load.processor  = isce
+mintpy.load.autoPath   = yes
 
 mintpy.reference.lalo                           = -0.30,-91.43
 mintpy.networkInversion.weightFunc              = no

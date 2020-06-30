@@ -21,7 +21,6 @@ import numpy as np
 import mintpy
 from mintpy.objects import sensor, RAMP_LIST
 from mintpy.utils import readfile, writefile, utils as ut
-from mintpy.defaults.auto_path import autoPath
 from mintpy.defaults.template import STEP_LIST
 # dynamic import for modules used by smallbaselineApp workflow
 import mintpy.workflow
@@ -58,6 +57,7 @@ REFERENCE = """reference:
   doi:10.1016/j.cageo.2019.104331.
 """
 
+
 def create_parser():
     parser = argparse.ArgumentParser(description='Routine Time Series Analysis for Small Baseline InSAR Stack',
                                      formatter_class=argparse.RawTextHelpFormatter,
@@ -66,13 +66,8 @@ def create_parser():
     parser.add_argument('customTemplateFile', nargs='?',
                         help='custom template with option settings.\n' +
                              "ignored if the default smallbaselineApp.cfg is input.")
-    parser.add_argument('--dir', dest='workDir',
-                        help='specify custom working directory. The default is:\n' +
-                             'a) current directory, OR\n' +
-                             'b) $SCRATCHDIR/$projectName/mintpy, if:\n' +
-                             '    1) autoPath == True in $MINTPY_HOME/mintpy/defaults/auto_path.py AND\n' +
-                             '    2) environment variable $SCRATCHDIR exists AND\n' +
-                             '    3) customTemplateFile is specified (projectName.*)\n')
+    parser.add_argument('--dir', '--work-dir', dest='workDir', default='./',
+                        help='work directory, (default: %(default)s).')
 
     parser.add_argument('-g', dest='generate_template', action='store_true',
                         help='generate default template (if it does not exist) and exit.')
@@ -211,14 +206,14 @@ class TimeSeriesAnalysis:
 
     def __init__(self, customTemplateFile=None, workDir=None):
         self.customTemplateFile = customTemplateFile
-        self.workDir = workDir
+        self.workDir = os.path.abspath(workDir)
         self.cwd = os.path.abspath(os.getcwd())
         return
 
     def startup(self):
         """The starting point of the workflow. It runs everytime. 
         It 1) grab project name if given
-           2) grab and go to work directory
+           2) go to work directory
            3) get and read template(s) options
            4) get plot shell script to work directory
         """
@@ -229,21 +224,10 @@ class TimeSeriesAnalysis:
             self.projectName = os.path.splitext(os.path.basename(self.customTemplateFile))[0]
             print('Project name:', self.projectName)
 
-        #2. Go to the work directory
-        #2.1 Get workDir
-        if not self.workDir:
-            if autoPath and 'SCRATCHDIR' in os.environ and self.projectName:
-                self.workDir = os.path.join(os.getenv('SCRATCHDIR'), self.projectName, 'mintpy')
-            else:
-                self.workDir = os.getcwd()
-        self.workDir = os.path.abspath(self.workDir)
-
-        #2.2 Go to workDir
-        if not os.path.isdir(self.workDir):
-            os.makedirs(self.workDir)
-            print('create directory:', self.workDir)
+        #2. Go to work directory
+        os.makedirs(self.workDir, exist_ok=True)
         os.chdir(self.workDir)
-        print("Go to work directory:", self.workDir)
+        print('Go to work directory:', self.workDir)
 
         #3. Read templates
         self.templateFile = get_the_latest_default_template_file(self.workDir)
@@ -319,9 +303,7 @@ class TimeSeriesAnalysis:
         for backup_dirname in ['inputs', 'pic']:
             backup_dir = os.path.join(self.workDir, backup_dirname)
             # create directory
-            if not os.path.isdir(backup_dir):
-                os.makedirs(backup_dir)
-                print('create directory:', backup_dir)
+            os.makedirs(backup_dir, exist_ok=True)
 
             # back up to the directory
             for tfile in [self.customTemplateFile, self.templateFile]:
@@ -918,9 +900,7 @@ class TimeSeriesAnalysis:
             if 'Y_FIRST' not in atr.keys():
                 # 1. geocode
                 out_dir = os.path.join(self.workDir, 'geo')
-                if not os.path.isdir(out_dir):
-                    os.makedirs(out_dir)
-                    print('create directory:', out_dir)
+                os.makedirs(out_dir, exist_ok=True)
 
                 geom_file, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2:4]
                 in_files = [geom_file, 'temporalCoherence.h5', ts_file, 'velocity.h5']
