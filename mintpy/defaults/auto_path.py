@@ -4,6 +4,8 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Mar 2018                           #
 ############################################################
+# recommended usage:
+#   from mintpy.defaults import auto_path
 
 
 import os
@@ -11,96 +13,87 @@ import re
 import glob
 import numpy as np
 
-# Auto setting for file structure of Univ. of Miami, as shown below.
-# It required 3 conditions: 1) autoPath = True
-#                           2) $SCRATCHDIR is defined in environmental variable
-#                           3) input custom template with basename same as project_name
-# Change it to False if you are not using it.
-autoPath = True
-
 
 # Default path of data files from different InSAR processors to be loaded into MintPy
-isceTopsAutoPath = '''##----------Default file path of ISCE/topsStack products
+AUTO_PATH_ISCE_TOPS = '''##----------Default file path of ISCE/topsStack products
 mintpy.load.processor      = isce
-mintpy.load.metaFile       = ${PROJECT_DIR}/master/IW*.xml
-mintpy.load.baselineDir    = ${PROJECT_DIR}/baselines
+mintpy.load.metaFile       = ../master/IW*.xml
+mintpy.load.baselineDir    = ../baselines
 
-mintpy.load.unwFile        = ${PROJECT_DIR}/merged/interferograms/*/filt*.unw
-mintpy.load.corFile        = ${PROJECT_DIR}/merged/interferograms/*/filt*.cor
-mintpy.load.connCompFile   = ${PROJECT_DIR}/merged/interferograms/*/filt*.unw.conncomp
+mintpy.load.unwFile        = ../merged/interferograms/*/filt*.unw
+mintpy.load.corFile        = ../merged/interferograms/*/filt*.cor
+mintpy.load.connCompFile   = ../merged/interferograms/*/filt*.unw.conncomp
 mintpy.load.ionoFile       = None
 mintpy.load.intFile        = None
 
-mintpy.load.demFile        = ${PROJECT_DIR}/merged/geom_master/hgt.rdr
-mintpy.load.lookupYFile    = ${PROJECT_DIR}/merged/geom_master/lat.rdr
-mintpy.load.lookupXFile    = ${PROJECT_DIR}/merged/geom_master/lon.rdr
-mintpy.load.incAngleFile   = ${PROJECT_DIR}/merged/geom_master/los.rdr
-mintpy.load.azAngleFile    = ${PROJECT_DIR}/merged/geom_master/los.rdr
-mintpy.load.shadowMaskFile = ${PROJECT_DIR}/merged/geom_master/shadowMask.rdr
-mintpy.load.waterMaskFile  = ${PROJECT_DIR}/merged/geom_master/waterMask.rdr
+mintpy.load.demFile        = ../merged/geom_master/hgt.rdr
+mintpy.load.lookupYFile    = ../merged/geom_master/lat.rdr
+mintpy.load.lookupXFile    = ../merged/geom_master/lon.rdr
+mintpy.load.incAngleFile   = ../merged/geom_master/los.rdr
+mintpy.load.azAngleFile    = ../merged/geom_master/los.rdr
+mintpy.load.shadowMaskFile = ../merged/geom_master/shadowMask.rdr
+mintpy.load.waterMaskFile  = ../merged/geom_master/waterMask.rdr
 mintpy.load.bperpFile      = None
-
 '''
 
-isceStripmapAutoPath = '''##----------Default file path of ISCE/stripmapStack products
+AUTO_PATH_ISCE_STRIPMAP = '''##----------Default file path of ISCE/stripmapStack products
 mintpy.load.processor      = isce
-mintpy.load.metaFile       = ${masterShelve}/masterShelve/data.dat
-mintpy.load.baselineDir    = ${PROJECT_DIR}/baselines
+mintpy.load.metaFile       = ${m_shelve}/data.dat
+mintpy.load.baselineDir    = ../baselines
 
-mintpy.load.unwFile        = ${PROJECT_DIR}/Igrams/*/filt*.unw
-mintpy.load.corFile        = ${PROJECT_DIR}/Igrams/*/filt*.cor
-mintpy.load.connCompFile   = ${PROJECT_DIR}/Igrams/*/filt*.unw.conncomp
+mintpy.load.unwFile        = ../Igrams/*/filt*.unw
+mintpy.load.corFile        = ../Igrams/*/filt*.cor
+mintpy.load.connCompFile   = ../Igrams/*/filt*.unw.conncomp
 mintpy.load.ionoFile       = None
 mintpy.load.intFile        = None
 
-mintpy.load.demFile        = ${PROJECT_DIR}/geom_master/hgt.rdr
-mintpy.load.lookupYFile    = ${PROJECT_DIR}/geom_master/lat.rdr
-mintpy.load.lookupXFile    = ${PROJECT_DIR}/geom_master/lon.rdr
-mintpy.load.incAngleFile   = ${PROJECT_DIR}/geom_master/los.rdr
-mintpy.load.azAngleFile    = ${PROJECT_DIR}/geom_master/los.rdr
-mintpy.load.shadowMaskFile = ${PROJECT_DIR}/geom_master/shadowMask.rdr
-mintpy.load.waterMaskFile  = ${PROJECT_DIR}/geom_master/waterMask.rdr
+mintpy.load.demFile        = ../geom_master/hgt.rdr
+mintpy.load.lookupYFile    = ../geom_master/lat.rdr
+mintpy.load.lookupXFile    = ../geom_master/lon.rdr
+mintpy.load.incAngleFile   = ../geom_master/los.rdr
+mintpy.load.azAngleFile    = ../geom_master/los.rdr
+mintpy.load.shadowMaskFile = ../geom_master/shadowMask.rdr
+mintpy.load.waterMaskFile  = ../geom_master/waterMask.rdr
 mintpy.load.bperpFile      = None
-
 '''
 
-roipacAutoPath = '''##----------Default file path of ROI_PAC products
+AUTO_PATH_ROIPAC = '''##----------Default file path of ROI_PAC products
 mintpy.load.processor      = roipac
-mintpy.load.unwFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/filt*.unw
-mintpy.load.corFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/filt*.cor
-mintpy.load.connCompFile   = ${PROJECT_DIR}/PROCESS/DONE/IFG*/filt*snap_connect.byt
+mintpy.load.unwFile        = ../PROCESS/DONE/IFG*/filt*.unw
+mintpy.load.corFile        = ../PROCESS/DONE/IFG*/filt*.cor
+mintpy.load.connCompFile   = ../PROCESS/DONE/IFG*/filt*snap_connect.byt
 mintpy.load.intFile        = None
 
-mintpy.load.demFile        = ${PROJECT_DIR}/PROCESS/DONE/*${m_date12}*/radar_*rlks.hgt
-mintpy.load.lookupYFile    = ${PROJECT_DIR}/PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
-mintpy.load.lookupXFile    = ${PROJECT_DIR}/PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
+mintpy.load.demFile        = ../PROCESS/DONE/*${m_date12}*/radar_*rlks.hgt
+mintpy.load.lookupYFile    = ../PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
+mintpy.load.lookupXFile    = ../PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
 mintpy.load.incAngleFile   = None
 mintpy.load.azAngleFile    = None
 mintpy.load.shadowMaskFile = None
 mintpy.load.bperpFile      = None
 '''
 
-gammaAutoPath = '''##----------Default file path of GAMMA products
+AUTO_PATH_GAMMA = '''##----------Default file path of GAMMA products
 mintpy.load.processor      = gamma
-mintpy.load.unwFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/diff*rlks.unw
-mintpy.load.corFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/*filt*rlks.cor
+mintpy.load.unwFile        = ../PROCESS/DONE/IFG*/diff*rlks.unw
+mintpy.load.corFile        = ../PROCESS/DONE/IFG*/*filt*rlks.cor
 mintpy.load.connCompFile   = None
 mintpy.load.intFile        = None
 
-mintpy.load.demFile        = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*.hgt_sim
-mintpy.load.lookupYFile    = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*.UTM_TO_RDC
-mintpy.load.lookupXFile    = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*.UTM_TO_RDC
+mintpy.load.demFile        = ../PROCESS/SIM/sim_${m_date12}/sim*.hgt_sim
+mintpy.load.lookupYFile    = ../PROCESS/SIM/sim_${m_date12}/sim*.UTM_TO_RDC
+mintpy.load.lookupXFile    = ../PROCESS/SIM/sim_${m_date12}/sim*.UTM_TO_RDC
 mintpy.load.incAngleFile   = None
 mintpy.load.azAngleFile    = None
 mintpy.load.shadowMaskFile = None
-mintpy.load.bperpFile      = ${PROJECT_DIR}/merged/baselines/*/*.base_perp
+mintpy.load.bperpFile      = ../merged/baselines/*/*.base_perp
 '''
 
-autoPathDict = {
-    'isceTops'  : isceTopsAutoPath,
-    'isceStripmap'  : isceStripmapAutoPath,
-    'roipac': roipacAutoPath,
-    'gamma' : gammaAutoPath,
+AUTO_PATH_DICT = {
+    'isce_tops'     : AUTO_PATH_ISCE_TOPS,
+    'isce_stripmap' : AUTO_PATH_ISCE_STRIPMAP,
+    'roipac'        : AUTO_PATH_ROIPAC,
+    'gamma'         : AUTO_PATH_GAMMA,
 }
 
 prefix = 'mintpy.load.'
@@ -131,41 +124,44 @@ def read_str2dict(inString, delimiter='=', print_msg=False):
 
 
 ##----------------------------------------------------------------------------------------##
-def get_auto_path(processor, project_name, template=dict()):
-    """Update template options with auto path defined in autoPathDict
-    Parameters: processor : str, isce / roipac / gamma
-                project_name : str, Project name, e.g. GalapagosSenDT128
-                template : dict, 
-    Returns:    template : dict,
+def get_auto_path(processor, work_dir, template):
+    """Update template options with auto path defined in AUTO_PATH_DICT
+    Parameters: processor - str, isce / roipac / gamma
+                work_dir  - str, mintpy work directory, e.g. ./GalapagosSenDT128/mintpy
+                template  - dict,
+    Returns:    template  - dict,
     """
+    ## 1. *AutoPath --> auto_path_dict
+    proj_dir = os.path.dirname(work_dir)
 
-    project_dir = os.path.join(os.getenv('SCRATCHDIR'), project_name)
+    # specific stack processor within ISCE
     if processor == 'isce':
-        if os.path.exists(project_dir + '/master'):
-            processor = 'isceTops'
+        if os.path.exists(proj_dir + '/master'):
+            processor = 'isce_tops'
+        elif os.path.exists(proj_dir + '/Igrams'):
+            processor = 'isce_stripmap'
         else:
-            processor = 'isceStripmap'
+            raise ValueError('un-recognized ISCE file directory, thus, cannot use auto path setting!')
+
     # read auto_path_dict
-    auto_path_dict = read_str2dict(autoPathDict[processor], print_msg=False)
-    
-    # grab variable value: SCRATCHDIR, m_date12
-    m_date12 = None
+    auto_path_dict = read_str2dict(AUTO_PATH_DICT[processor], print_msg=False)
+
+    ## 2. translate variables in *AutoPath
+    ## e.g.: m_shelve, m_date12
+    var_dict = {}
+
     if processor in ['roipac', 'gamma']:
-        m_date12 = get_master_date12(project_dir, processor=processor)
-        if m_date12 and processor == 'roipac':
-            # determine nlooks in case both radar_2rlks.hgt and radar_8rlks.hgt exist.
-            lookup_file = os.path.join(project_dir, 'PROCESS/GEO/geo_{}/geomap*.trans'.format(m_date12))
-            lks = re.findall('_\d+rlks', glob.glob(lookup_file)[0])[0]
-            dem_file = os.path.join('${PROJECT_DIR}/PROCESS/DONE/*${m_date12}*', 'radar{}.hgt'.format(lks))
+        m_date12 = get_master_date12(proj_dir, processor)
+        if m_date12:
+            var_dict['${m_date12}'] = m_date12
+
+        dem_file = get_dem_file(proj_dir, m_date12, processor)
+        if dem_file:
             auto_path_dict[prefix+'demFile'] = dem_file
 
-    var_dict = {}
-    var_dict['${PROJECT_DIR}'] = project_dir
-    if m_date12:
-        var_dict['${m_date12}'] = m_date12
-     
-    if processor == 'isceStripmap':
-        var_dict['${masterShelve}'] = os.path.join(project_dir, 'merged/SLC', os.listdir(os.path.join(project_dir, 'merged/SLC'))[0])
+    elif processor == 'isce_stripmap':
+        date_str = os.listdir(os.path.join(proj_dir, 'merged/SLC'))[0]
+        var_dict['${m_shelve}'] = os.path.join(proj_dir, 'merged/SLC', date_str, 'masterShelve')
 
     # update auto_path_dict
     for key, value in auto_path_dict.items():
@@ -174,19 +170,22 @@ def get_auto_path(processor, project_name, template=dict()):
                 value = value.replace(var1, var2)    
             auto_path_dict[key] = value
 
-    # update template option with auto value
+    ## 3. update input template option with auto value
+    max_digit = max([len(key) for key in auto_path_dict.keys()])
     for key, value in auto_path_dict.items():
         if value and template[key] == 'auto':
             template[key] = value
+            print('    {k:<{d}} : auto --> {v}'.format(d=max_digit, k=key, v=value))
+
     return template
 
 
-def get_master_date12(project_dir, processor='roipac'):
+def get_master_date12(proj_dir, processor='roipac'):
     """date12 of reference interferogram in YYMMDD-YYMMDD format"""
     m_date12 = None
 
     # opt 1 - master_ifgram.txt
-    m_ifg_file = os.path.join(project_dir, 'PROCESS', 'master_ifgram.txt')
+    m_ifg_file = os.path.join(proj_dir, 'PROCESS', 'master_ifgram.txt')
     if os.path.isfile(m_ifg_file):
         m_date12 = str(np.loadtxt(m_ifg_file, dtype=bytes).astype(str))
         return m_date12
@@ -194,16 +193,31 @@ def get_master_date12(project_dir, processor='roipac'):
     # opt 2 - folders under GEO/SIM
     if processor == 'roipac':
         try:
-            lookup_file = glob.glob(os.path.join(project_dir, 'PROCESS/GEO/geo_*/geomap*.trans'))[0]
+            lookup_file = glob.glob(os.path.join(proj_dir, 'PROCESS/GEO/geo_*/geomap*.trans'))[0]
             m_date12 = re.findall('\d{6}-\d{6}', lookup_file)[0]
         except:
             print("No master interferogram found! Check the PROCESS/GEO/geo_* folder")
 
     elif processor == 'gamma':
-        geom_dir = os.path.join(project_dir, 'PROCESS/SIM')
+        geom_dir = os.path.join(proj_dir, 'PROCESS/SIM')
         try:
             m_date12 = os.walk(geom_dir).next()[1][0].split('sim_')[1]
         except:
             print("No master interferogram found! Check the PROCESS/SIM/sim_* folder")
+
     return m_date12
 
+
+def get_dem_file(proj_dir, m_date12, processor):
+    """get DEM file in case both radar_2rlks.hgt and radar_8rlks.hgt exist"""
+    dem_file = None
+
+    if m_date12 and processor == 'roipac':
+        # get the number of looks used in lookup table file
+        lookup_file = os.path.join(proj_dir, 'PROCESS/GEO/geo_{}/geomap*.trans'.format(m_date12))
+        lks = re.findall('_\d+rlks', glob.glob(lookup_file)[0])[0]
+
+        # use the one with same multilook info as the lookup table file.
+        dem_file = os.path.join(proj_dir, 'PROCESS/DONE/*${m_date12}*', 'radar{}.hgt'.format(lks))
+
+    return dem_file

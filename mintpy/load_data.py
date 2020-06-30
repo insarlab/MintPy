@@ -52,11 +52,11 @@ DEFAULT_TEMPLATE = """template:
 ########## 1. Load Data (--load to exit after this step)
 {}\n
 {}\n
-{}\n
-""".format(auto_path.isceTopsAutoPath,
-           auto_path.isceStripmapAutoPath,
-           auto_path.roipacAutoPath,
-           auto_path.gammaAutoPath)
+{}""".format(
+    auto_path.AUTO_PATH_GAMMA,
+    auto_path.AUTO_PATH_ISCE_STRIPMAP,
+    auto_path.AUTO_PATH_ISCE_TOPS,
+)
 
 TEMPLATE = get_template_content('load_data')
 
@@ -110,11 +110,14 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # check --template option
     if inps.template_file:
         pass
+
     elif inps.print_example_template:
         print(DEFAULT_TEMPLATE)
         sys.exit(0)
+
     else:
         parser.print_usage()
         print(('{}: error: one of the following arguments are required:'
@@ -150,7 +153,7 @@ def read_inps2dict(inps):
     key_list = [i.split(prefix)[1] for i in template.keys() if i.startswith(prefix)]
     for key in key_list:
         value = template[prefix+key]
-        if key in ['processor', 'updateMode', 'compression']:
+        if key in ['processor', 'autoPath', 'updateMode', 'compression']:
             inpsDict[key] = template[prefix+key]
         elif value:
             inpsDict[prefix+key] = template[prefix+key]
@@ -162,20 +165,16 @@ def read_inps2dict(inps):
     if not inpsDict['PROJECT_NAME']:
         cfile = [i for i in list(inps.template_file) if os.path.basename(i) != 'smallbaselineApp.cfg']
         inpsDict['PROJECT_NAME'] = sensor.project_name2sensor_name(cfile)[1]
+
     inpsDict['PLATFORM'] = str(sensor.project_name2sensor_name(str(inpsDict['PROJECT_NAME']))[0])
-    if inpsDict['PLATFORM']:
-        print('SAR platform/sensor : {}'.format(inpsDict['PLATFORM']))
+    print('SAR platform/sensor : {}'.format(inpsDict['PLATFORM']))
     print('processor: {}'.format(inpsDict['processor']))
 
-    # Here to insert code to check default file path for miami user
-    if (auto_path.autoPath
-            and 'SCRATCHDIR' in os.environ
-            and inpsDict['PROJECT_NAME'] is not None
-            and inpsDict['mintpy.load.unwFile']) == 'auto':
-        print(('check auto path setting for Univ of Miami users'
-               ' for processor: {}'.format(inpsDict['processor'])))
+    # update file path with auto
+    if inpsDict['autoPath']:
+        print('use auto path defined in mintpy.defaults.auto_path for options in auto')
         inpsDict = auto_path.get_auto_path(processor=inpsDict['processor'],
-                                           project_name=inpsDict['PROJECT_NAME'],
+                                           work_dir=os.path.dirname(inpsDict['outdir']),
                                            template=inpsDict)
     return inpsDict
 
