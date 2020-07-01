@@ -459,9 +459,6 @@ class TimeSeriesAnalysis:
                               in_file=[stack_file, coh_txt, self.templateFile],
                               check_readable=False) == 'run':
                 mintpy.plot_network.main(scp_args.split())
-
-        # 4) aux files: maskConnComp and avgSpatialCoh
-        self.generate_ifgram_aux_file()
         return
 
 
@@ -495,6 +492,10 @@ class TimeSeriesAnalysis:
            2) generate average spatial coherence and its mask
            3) add REF_X/Y and/or REF_LAT/LON attribute to stack file
         """
+        # 1-2) aux files: maskConnComp and avgSpatialCoh
+        self.generate_ifgram_aux_file()
+
+        # 3) add REF_X/Y(/LAT/LON) of the reference point
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
         coh_file = 'avgSpatialCoh.h5'
 
