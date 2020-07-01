@@ -384,14 +384,25 @@ def get_file_list(file_list, abspath=False, coord=None):
 
 
 def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
-    """Find lookup table file with/without input file pattern"""
+    """Find lookup table file with/without input file pattern
+    Parameters: filePattern - list of str
+                abspath     - bool, return absolute path or not
+                print_msg   - bool, printout message or not
+    Returns:    outFile     - str, path of the lookup file
+    """
     # Search Existing Files
     if not filePattern:
-        filePattern = ['geometryRadar.h5',
-                       'geometryGeo_tight.h5', 'geometryGeo.h5',
-                       'geomap*lks_tight.trans', 'geomap*lks.trans',
-                       'sim*_tight.UTM_TO_RDC', 'sim*.UTM_TO_RDC']
-        filePattern = [os.path.join('inputs', i) for i in filePattern] + filePattern
+        fileList = ['geometryRadar.h5',
+                    'geometryGeo_tight.h5', 'geometryGeo.h5',
+                    'geomap*lks_tight.trans', 'geomap*lks.trans',
+                    'sim*_tight.UTM_TO_RDC', 'sim*.UTM_TO_RDC']
+        dirList = ['inputs', '', '../inputs']
+
+        # file/dirList --> filePattern
+        filePattern = []
+        for dirname in dirList:
+            filePattern += [os.path.join(dirname, fname) for fname in fileList]
+
     existFiles = []
     try:
         existFiles = get_file_list(filePattern)

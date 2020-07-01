@@ -358,14 +358,18 @@ def read_binary_file(fname, datasetName=None, box=None):
                 band = 2
             elif datasetName.lower() == 'band3':
                 band = 3
-            elif datasetName in ['magnitude','amplitude']:
+            elif datasetName.startswith(('mag', 'amp')):
                 cpx_band = 'magnitude'
-            elif datasetName in ['phase','angle']:
+            elif datasetName in ['phase', 'angle']:
                 cpx_band = 'phase'
             elif datasetName.lower() == 'real':
                 cpx_band = 'real'
             elif datasetName.lower().startswith('imag'):
                 cpx_band = 'imag'
+            elif datasetName .startswith(('cpx', 'complex')):
+                cpx_band = 'complex'
+
+        band = min(band, num_band)
 
     # ROI_PAC
     elif processor in ['roipac']:
@@ -519,13 +523,21 @@ def get_slice_list(fname):
     else:
         num_band = int(atr.get('number_bands', '1'))
         if fext in ['.trans', '.utm_to_rdc'] and num_band == 2:
+            # roipac / gamma lookup table
             slice_list = ['rangeCoord', 'azimuthCoord']
-        elif fext in ['.int', '.unw'] and num_band == 2:
-            slice_list = ['magnitude', 'phase']
+
         elif fbase.startswith('los') and num_band == 2:
+            # isce los file
             slice_list = ['incidenceAngle', 'azimuthAngle']
+
+        elif fext in ['.int', '.unw']:
+            # do not check the actual num_band in order to support
+            # mag / pha / cpx reading like "multiple bands"
+            slice_list = ['magnitude', 'phase']
+
         else:
             slice_list = ['band{}'.format(i) for i in range(1,num_band+1)]
+
     return slice_list
 
 
@@ -817,8 +829,6 @@ def read_template(fname, delimiter='=', print_msg=True):
     Examples:
         tmpl = read_template(KyushuT424F610_640AlosA.template)
         tmpl = read_template(R1_54014_ST5_L0_F898.000.pi, ':')
-        from mintpy.defaults.auto_path import isceAutoPath
-        tmpl = read_template(isceAutoPath, print_msg=False)
     """
     template_dict = {}
     plotAttributeDict = {}
@@ -993,16 +1003,19 @@ def read_envi_hdr(fname, standardize=True):
         map_info = [i.strip() for i in atr['map info'].split(',')]
         x_step = abs(float(map_info[5]))
         y_step = abs(float(map_info[6])) * -1.
-        unit = map_info[-1].replace('}','').split('=')[1].lower()
+        #unit = map_info[-1].replace('}','').split('=')[1].lower()
+
         if abs(x_step) < 1. and abs(x_step) > 1e-7:
             atr['X_FIRST'] = str(float(map_info[3]) - x_step / 2.)
             atr['Y_FIRST'] = str(float(map_info[4]) - y_step / 2.)
             atr['X_STEP'] = str(x_step)
             atr['Y_STEP'] = str(y_step)
-            atr['X_UNIT'] = unit
-            atr['Y_UNIT'] = unit
+            atr['X_UNIT'] = 'degrees'
+            atr['Y_UNIT'] = 'degrees'
+
     if standardize:
         atr = standardize_metadata(atr)
+
     return atr
 
 

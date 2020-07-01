@@ -1,42 +1,61 @@
 version: 2.1
 jobs:
-  test:
+  build:
     docker:
-      - image: hysds/pge-base:latest
+      - image: ubuntu:bionic
+        user: root
+
     steps:
       - checkout
       - run:
-          name: Test
+          name: Setting Environment with Miniconda
           command: |
-            source $HOME/verdi/bin/activate
-            sudo yum -y update
-            #sudo yum -y install gcc
-            #pip install -U pytest jsonschema
-            mkdir test-reports
-            #pytest --junitxml=test-reports/junit.xml
+            apt update
+            apt-get update --yes && apt-get upgrade --yes
+            apt-get install --yes git wget
+            # download and install miniconda3
+            mkdir -p ${HOME}/tools
+            cd ${HOME}/tools
+            wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+            chmod +x Miniconda3-latest-Linux-x86_64.sh
+            ./Miniconda3-latest-Linux-x86_64.sh -b -p ${HOME}/tools/miniconda3
 
-      - store_test_results:
-          path: test-reports
+      - run:
+          name: Installing MintPy and PyAPS
+          command: |
+            # setup environment variable
+            export MINTPY_HOME=${HOME}/tools/MintPy
+            export PYAPS_HOME=${HOME}/tools/PyAPS
+            export CONDA_PREFIX=${HOME}/tools/miniconda3
+            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
+            export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
+            # download source code
+            git clone https://github.com/insarlab/MintPy.git $MINTPY_HOME
+            git clone https://github.com/yunjunz/pyaps3.git $PYAPS_HOME/pyaps3
+            # install dependencies
+            conda config --add channels conda-forge
+            conda install --yes --file $MINTPY_HOME/docs/conda.txt
+            pip install git+https://github.com/tylere/pykml.git
+            # test installation
+            python -c "import mintpy; print(mintpy.version.description)"
+            smallbaselineApp.py -h
+            tropo_pyaps3.py -h
 
-      - store_artifacts:
-          path: test-reports    
-
+      - run:
+          name: Testing MintPy on Example Datasets
+          command: |
+            export MINTPY_HOME=${HOME}/tools/MintPy
+            export PYAPS_HOME=${HOME}/tools/PyAPS
+            export CONDA_PREFIX=${HOME}/tools/miniconda3
+            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
+            export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
+            mkdir -p ${HOME}/data
+            cd ${HOME}/data
+            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ${HOME}/data --dset FernandinaSenDT128
+            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ${HOME}/data --dset WellsEnvD2T399
 
 workflows:
   version: 2
-  test:
+  build_and_test:
     jobs:
-      - test
-  weekly:
-    triggers:
-      - schedule:
-          cron: "0 7 * * 0"
-          filters:
-            branches:
-              only:
-                - master
-    jobs:
-      - test:
-          filters:
-            branches:
-              only: master
+      - build

@@ -132,8 +132,7 @@ def cmd_line_parse(iargs = None):
 
         elif key in required_ds_keys:
             parser.print_usage()
-            print('required dataset "{}" not found in: {}.'.format(key, fname))
-            raise SystemExit()
+            raise SystemExit('ERROR: required dataset "{}" not found in: {}.'.format(key, fname))
 
     return inps
 

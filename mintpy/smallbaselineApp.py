@@ -10,6 +10,7 @@
 
 import os
 import re
+import sys
 import time
 import datetime
 import shutil
@@ -101,11 +102,13 @@ def cmd_line_parse(iargs=None):
 
     # -H (print default template)
     if inps.print_template:
-        raise SystemExit(open(template_file, 'r').read())
+        print(open(template_file, 'r').read())
+        sys.exit(0)
 
     # -v (print software version)
     if inps.version:
-        raise SystemExit(mintpy.version.description)
+        print(mintpy.version.description)
+        sys.exit(0)
 
     # check all input template files
     if (not inps.customTemplateFile
@@ -113,11 +116,10 @@ def cmd_line_parse(iargs=None):
             and not inps.generate_template):
         parser.print_usage()
         print(EXAMPLE)
-        msg = "ERROR: no template file found! It requires:"
+        msg = "no template file found! It requires:"
         msg += "\n  1) input a custom template file, OR"
         msg += "\n  2) there is a default template 'smallbaselineApp.cfg' in current directory." 
-        print(msg)
-        raise SystemExit()
+        raise SystemExit('ERROR: '+msg)
 
     # check custom input template file
     if inps.customTemplateFile:

@@ -54,8 +54,8 @@ def deramp(data, mask_in, ramp_type='linear', metadata=None):
     # design matrix
     xx, yy = np.meshgrid(np.arange(0, width),
                          np.arange(0, length))
-    xx = xx.reshape(-1, 1)
-    yy = yy.reshape(-1, 1)
+    xx = np.array(xx, dtype=np.float32).reshape(-1, 1)
+    yy = np.array(yy, dtype=np.float32).reshape(-1, 1)
     ones = np.ones(xx.shape, dtype=np.float32)
     if ramp_type == 'linear':
         G = np.hstack((yy, xx, ones))
@@ -75,6 +75,7 @@ def deramp(data, mask_in, ramp_type='linear', metadata=None):
     # estimate ramp
     X = np.dot(np.linalg.pinv(G[mask, :], rcond=1e-15), data[mask, :])
     ramp = np.dot(G, X)
+    del X
 
     # reference in space if metadata
     if metadata and all(key in metadata.keys() for key in ['REF_X','REF_Y']):

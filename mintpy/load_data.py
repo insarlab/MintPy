@@ -53,7 +53,8 @@ DEFAULT_TEMPLATE = """template:
 {}\n
 {}\n
 {}\n
-""".format(auto_path.isceAutoPath,
+""".format(auto_path.isceTopsAutoPath,
+           auto_path.isceStripmapAutoPath,
            auto_path.roipacAutoPath,
            auto_path.gammaAutoPath)
 
@@ -112,7 +113,8 @@ def cmd_line_parse(iargs=None):
     if inps.template_file:
         pass
     elif inps.print_example_template:
-        raise SystemExit(DEFAULT_TEMPLATE)
+        print(DEFAULT_TEMPLATE)
+        sys.exit(0)
     else:
         parser.print_usage()
         print(('{}: error: one of the following arguments are required:'

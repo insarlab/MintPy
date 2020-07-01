@@ -25,11 +25,9 @@ Docker allows one to run MintPy in a dedicated container (essentially an efficie
 docker pull andretheronsa/mintpy:latest
 ```
 
-### 1. Download and setup MintPy ###
+### 1. Download and setup ###
 
-To use the package, you need to setup the environment 1) by adding _${MINTPY_HOME}_ to your _$PYTHONPATH_ to make mintpy module importable in Python and 2) by adding _${MINTPY_HOME}/mintpy_ to your _$PATH_ to make scripts executable in command line, as shown below.
-
-Set the following variables. For _bash_ user for example, add to your **_~/.bash_profile_** file, source it for the first time, it will be sourced automatically next time when you login. For _tcsh_ user, check the example [here](https://github.com/yunjunz/macOS_Setup/blob/master/.tcshrc).
+Set the following environment variables in your source file. It could be **_~/.bash_profile_** file for _bash_ user or **_~/.cshrc_** file for _csh/tcsh_ user.
 
 ```bash
 if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
@@ -46,7 +44,7 @@ export PYTHONPATH=${PYTHONPATH}:${PYAPS_HOME}
 
 Run the following in your terminal to download the development version of MintPy and PyAPS:
 
-```
+```bash
 # download MintPy and PyAPS
 git clone https://github.com/insarlab/MintPy.git $MINTPY_HOME
 git clone https://github.com/yunjunz/pyaps3.git $PYAPS_HOME/pyaps3
@@ -58,40 +56,34 @@ MintPy is written in Python3 and relies on several Python modules, check the [re
 
 #### Installing via conda ####
 
-Add to your **_~/.bash_profile_** file to setup miniconda:
-
-```bash
-export PYTHON3DIR=~/tools/miniconda3
-export PATH=${PATH}:${PYTHON3DIR}/bin
-```
-
 Run the following in your terminal to install [miniconda](https://docs.conda.io/en/latest/miniconda.html):
 
-```
+```bash
 # download and install miniconda
 # use wget or curl to download in command line or click from the web brower
 # curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o Miniconda3-latest-MacOSX-x86_64.sh
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
 chmod +x Miniconda3-latest-MacOSX-x86_64.sh
-./Miniconda3-latest-MacOSX-x86_64.sh -b -p $PYTHON3DIR
+./Miniconda3-latest-MacOSX-x86_64.sh -b -p ~/tools/miniconda3
+~/tools/miniconda3/bin/conda init bash
 ```
+
+You may need to close and restart the shell for changes to take effect.
 
 Run the following in your terminal to install the dependencies to a new environment _mintpy_ (recommended):
 
 ```
-$PYTHON3DIR/bin/conda env create -f $MINTPY_HOME/docs/conda_env.yml
-$PYTHON3DIR/bin/conda activate mintpy
+$CONDA_PREFIX/bin/conda env create -f $MINTPY_HOME/docs/conda_env.yml
+$CONDA_PREFIX/bin/conda activate mintpy
 ```
 
 Or run the following in your terminal to install the dependencies to the default environment _base_:
 
 ```
 # install dependencies with conda
-$PYTHON3DIR/bin/conda config --add channels conda-forge
-$PYTHON3DIR/bin/conda install --yes --file $MINTPY_HOME/docs/conda.txt
-
-# install dependencies not compatiable from conda: pykml
-$PYTHON3DIR/bin/pip install git+https://github.com/tylere/pykml.git
+$CONDA_PREFIX/bin/conda config --add channels conda-forge
+$CONDA_PREFIX/bin/conda install --yes --file $MINTPY_HOME/docs/conda.txt
+$CONDA_PREFIX/bin/pip install git+https://github.com/tylere/pykml.git
 ```
 
 #### Installing via MacPorts ####
@@ -142,18 +134,3 @@ sudo -H /opt/local/bin/pip install git+https://github.com/fhs/pyhdf.git
 directory, MintPy applications will download the GAM files into the indicated directory. Also MintPy
 application will look for the GAM files in the directory before downloading a new one to prevent downloading
 multiple copies if you work with different dataset that cover the same date/time.
-
-### Notes on parallel processing ###
-
-We use [Dask](https://www.dask.org) for parallel processing on High Performance Compute (HPC) cluster. We have tested the `LSFCluster` and `SLURMCluster` job scheduler, but not the `PBSCluster` one. It can be setup as below:
-
-```
-mkdir -p ~/.config/dask
-cp $MINTPY_HOME/mintpy/defaults/mintpy.yaml ~/.config/dask/mintpy.yaml
-```
-
-Edit `~/.config/dask/mintpy.yaml` file according to your HPC settings. You can choose the scheduler type (one of lsf/pbs/slurm) and configuration name in `smallbaselineApp.cfg`. The latter allows you to quickly try/switch different configurations.
-
-### Notes on vim ###
-
-[Here](https://github.com/yunjunz/macOS_Setup/blob/master/vimrc.md) is some useful setup of Vim editor for general use and Python.

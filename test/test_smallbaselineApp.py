@@ -8,6 +8,7 @@
 
 
 import os
+import sys
 import time
 import argparse
 import subprocess
@@ -25,7 +26,7 @@ URL_LIST = [
 ]
 
 PROJ_NAME_LIST = [os.path.basename(url).split('.tar.xz')[0] for url in URL_LIST]
-TEMPLATE_FILE_LIST = [os.path.join(os.path.dirname(__file__), '{}.txt'.format(proj_name))
+TEMPLATE_FILE_LIST = [os.path.join(os.path.dirname(__file__), 'configs/{}.txt'.format(proj_name))
                       for proj_name in PROJ_NAME_LIST]
 
 
@@ -64,13 +65,17 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # expand test_dir
     inps.test_dir = os.path.expanduser(inps.test_dir)
     inps.test_dir = os.path.expandvars(inps.test_dir)
 
+    # translate --dset all
     if inps.dset_name.lower() == 'all':
         inps.dset_name = PROJ_NAME_LIST
+
     elif isinstance(inps.dset_name, str):
         inps.dset_name = [inps.dset_name]
+
     return inps
 
 
@@ -92,7 +97,8 @@ def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False):
         cmd = 'wget {}'.format(dset_url)
         print(cmd)
         os.system(cmd)
-    print('tar file exists, skip re-downloading.')
+    else:
+        print('tar file exists, skip re-downloading.')
 
     # uncompress tar file
     if not fresh_start and os.path.isdir(dset_name):
@@ -135,10 +141,11 @@ def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False):
         print(cmd)
         subprocess.Popen(cmd, shell=True).wait()
 
-    # open final velocity map
-    cmd = 'open pic/geo_velocity.png'
-    print(cmd)
-    subprocess.Popen(cmd, shell=True).wait()
+    # open final velocity map if on mac
+    if sys.platform.lower().startswith('darwin'):
+        cmd = 'open pic/geo_velocity.png'
+        print(cmd)
+        subprocess.Popen(cmd, shell=True).wait()
     return
 
 
@@ -147,6 +154,10 @@ def main(iargs=None):
     start_time = time.time()
     inps = cmd_line_parse(iargs)
 
+    # create test directory
+    os.makedirs(inps.test_dir, exist_ok=True)
+
+    # run test
     num_dset = len(inps.dset_name)
     for i in range(num_dset):
         dset_name = inps.dset_name[i]
@@ -158,6 +169,7 @@ def main(iargs=None):
                      test_pyaps=inps.test_pyaps)
         print('PASS testing smallbaselineApp workflow on exmaple dataset {}/{}: {}'.format(i+1, num_dset, dset_name))
 
+    # print message
     if num_dset == len(PROJ_NAME_LIST):
         m, s = divmod(time.time()-start_time, 60)
         msg = '-'*50

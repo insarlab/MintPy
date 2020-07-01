@@ -1,4 +1,5 @@
 # vim: set filetype=cfg:
+mintpy.compute.cluster = local
 ########## 1. Load Data (--load to exit after this step)
 ## load_data.py -H to check more details and example inputs.
 mintpy.load.processor        = isce

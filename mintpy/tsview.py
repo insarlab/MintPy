@@ -92,7 +92,6 @@ def create_parser():
     parser = pp.add_gps_argument(parser)
     parser = pp.add_mask_argument(parser)
     parser = pp.add_map_argument(parser)
-    parser = pp.add_point_argument(parser)
     parser = pp.add_reference_argument(parser)
     parser = pp.add_save_argument(parser)
     parser = pp.add_subset_argument(parser)
@@ -204,11 +203,16 @@ def read_init_info(inps):
     inps.coord_unit = atr.get('Y_UNIT', 'degrees').lower()
 
     # Read Error List
+    inps.ts_plot_func = plot_ts_scatter
     inps.error_ts = None
     inps.ex_error_ts = None
     if inps.error_file:
-        error_fileContent = np.loadtxt(inps.error_file, dtype=bytes).astype(str)
-        inps.error_ts = error_fileContent[:, 1].astype(np.float)*inps.unit_fac
+        # assign plot function
+        inps.ts_plot_func = plot_ts_errorbar
+        # read error file
+        error_fc = np.loadtxt(inps.error_file, dtype=bytes).astype(str)
+        inps.error_ts = error_fc[:, 1].astype(np.float)*inps.unit_fac
+        # update error file with exlcude date
         if inps.ex_date_list:
             e_ts = inps.error_ts[:]
             inps.ex_error_ts = e_ts[inps.ex_flag == 0]
@@ -571,6 +575,7 @@ class timeseriesViewer():
         # input figsize for the point time-series plot
         self.figsize_pts = self.fig_size
         self.pts_marker = 'r^'
+        self.pts_marker_size = 6.
         return
 
 
@@ -627,13 +632,13 @@ class timeseriesViewer():
         disp_date = self.dates[self.idx].strftime('%Y-%m-%d')
         self.fig_title = 'N = {}, Time = {}'.format(self.idx, disp_date)
 
-        # Initial Pixel
+        # Initial Pixel of interest
+        self.pts_yx = None
+        self.pts_lalo = None
         if self.yx and self.yx != self.ref_yx:
             self.pts_yx = np.array(self.yx).reshape(-1, 2)
             if self.lalo:
                 self.pts_lalo = np.array(self.lalo).reshape(-1, 2)
-            else:
-                self.pts_lalo = None
 
         # call view.py to plot
         self.img, self.cbar_img = view.plot_slice(self.ax_img, img_data, self.atr, self)[2:4]
@@ -723,12 +728,10 @@ class timeseriesViewer():
                 d_tsi += self.offset * (num_file - 1 - i)
 
             # plot
-            if self.error_file:
-                self.ax_pts = plot_ts_errorbar(self.ax_pts, d_tsi, self, ppar)
-            else:
-                self.ax_pts = plot_ts_scatter(self.ax_pts, d_tsi, self, ppar)
+            if not np.all(np.isnan(d_tsi)):
+                self.ax_pts = self.ts_plot_func(self.ax_pts, d_tsi, self, ppar)
 
-        # format
+        # axis format
         self.ax_pts = _adjust_ts_axis(self.ax_pts, self)
         title_ts = _get_ts_title(yx[0], yx[1], self.coord)
         if self.mask[y, x] == 0:
@@ -743,19 +746,23 @@ class timeseriesViewer():
         if len(self.ts_data) > 1:
             self.ax_pts.legend()
 
-        self.fig_pts.canvas.draw()
-
         # Print to terminal
         vprint('\n---------------------------------------')
         vprint(title_ts)
         float_formatter = lambda x: [float('{:.2f}'.format(i)) for i in x]
         vprint(float_formatter(d_ts[0]))
-        vprint('displacement range: [{:.2f}, {:.2f}] {}'.format(np.nanmin(d_ts[0]),
-                                                                np.nanmax(d_ts[0]),
-                                                                self.disp_unit))
 
-        # Slope estimation
-        estimate_slope(d_ts[0], self.yearList, ex_flag=self.ex_flag, disp_unit=self.disp_unit)
+        if not np.all(np.isnan(d_ts[0])):
+            # stat info
+            vprint('displacement range: [{:.2f}, {:.2f}] {}'.format(np.nanmin(d_ts[0]),
+                                                                    np.nanmax(d_ts[0]),
+                                                                    self.disp_unit))
+
+            # estimate (print) slope
+            estimate_slope(d_ts[0], self.yearList, ex_flag=self.ex_flag, disp_unit=self.disp_unit)
+
+            # update figure
+            self.fig_pts.canvas.draw()
         return d_ts
 
 
