@@ -130,7 +130,16 @@ def sim_variable_timeseries_v1(tbase, scale=3., display=False):
     return ts_sim
 
 
-def timeseries2ifgram(ts_sim, date_list, date12_list, wvl=0.055, display=False):
+def timeseries2ifgram(ts_sim, date_list, date12_list, wvl=0.055, display=False, ax=None):
+    """re-construct a stack of interferometric phase from a time-series
+    Parameters: ts_sim      - 1D np.ndarray in size of (num_date,) in unit of m
+                date_list   - list of str in YYYYMMDD in size of (num_date,)
+                date12_list - list of str in YYYYMMDD_YYYYMMDD in size of (num_ifg,)
+                wvl         - float, wavelength in m
+                display     - bool, display the reconstruction result
+                ax          - matplotlib.axes object, for display
+    Returns:    ifgram_sim  - 1D np.ndarray in size of (num_ifg) in unit of radian
+    """
     range2phase = -4.0 * np.pi / wvl
     num_ifgram = len(date12_list)
     ifgram_sim = np.zeros((num_ifgram,1), np.float32)
@@ -142,15 +151,19 @@ def timeseries2ifgram(ts_sim, date_list, date12_list, wvl=0.055, display=False):
     ifgram_sim *= range2phase
 
     if display:
+        if not ax:
+            fig, ax = plt.subplots(nrows=1, ncols=1)
+        else:
+            fig = None
         ifgram_sim_mat = pnet.coherence_matrix(date12_list, ifgram_sim)
-        plt.figure()
-        plt.imshow(ifgram_sim_mat, cmap='jet')
-        plt.xlabel('image number')
-        plt.ylabel('image number')
-        cbar = plt.colorbar()
+        im = ax.imshow(ifgram_sim_mat, cmap='jet', interpolation='nearest')
+        ax.set_xlabel('image number')
+        ax.set_ylabel('image number')
+        ax.set_title('interferometric phase')
+        cbar = plt.colorbar(im, ax=ax)
         cbar.set_label('phase [rad]')
-        plt.title('interferometric phase')
-        plt.show()
+        if fig is not None:
+            plt.show()
     return ifgram_sim
 
 
