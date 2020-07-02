@@ -126,17 +126,23 @@ def get_processor(meta_file):
     """
     meta_dir = os.path.dirname(meta_file)
     tops_meta_file = os.path.join(meta_dir, 'IW*.xml')
-    stripmap_meta_file = os.path.join(meta_dir, 'data.dat')
+    stripmap_meta_files = [os.path.join(meta_dir, i) for i in ['data.dat', 'data']]
 
     processor = None
     if len(glob.glob(tops_meta_file)) > 0:
+        # topsStack
         processor = 'tops'
-    elif os.path.isfile(stripmap_meta_file):
+
+    elif any(os.path.isfile(i) for i in stripmap_meta_files):
+        # stripmapStack
         processor = 'stripmap'
+
     elif meta_file.endswith('.xml'):
+        # stripmapApp
         processor = 'stripmap'
+
     else:
-        raise ValueError('Un-recognized ISCE processor for metadata file:', meta_file)
+        raise ValueError('Un-recognized ISCE processor for metadata file: {}'.format(meta_file))
     return processor
 
 
@@ -168,6 +174,7 @@ def extract_isce_metadata(meta_file, geom_dir=None, rsc_file=None, update_mode=T
     if processor == 'tops':
         print('extract metadata from ISCE/topsStack xml file:', meta_file)
         metadata, frame = extract_tops_metadata(meta_file)
+
     else:
         print('extract metadata from ISCE/stripmapStack shelve file:', meta_file)
         metadata, frame = extract_stripmap_metadata(meta_file)
@@ -266,7 +273,10 @@ def extract_stripmap_metadata(meta_file):
     import isceobj
     from isceobj.Planet.Planet import Planet
 
-    if os.path.basename(meta_file) == "data.dat":    #shelve file from stripmapStack
+    if os.path.basename(meta_file).startswith('data'):
+        # shelve file from stripmapStack
+        # masterShelve/data     for uavsar
+        # masterShelve/data.dat for all the others
         fbase = os.path.splitext(meta_file)[0]
         with shelve.open(fbase, flag='r') as mdb:
             frame = mdb['frame']

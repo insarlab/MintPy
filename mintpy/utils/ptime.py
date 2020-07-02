@@ -8,17 +8,62 @@
 
 import os
 import sys
+import re
 import time
 from datetime import datetime as dt, timedelta
 import numpy as np
 
 
 ################################################################
-def yyyymmdd2season(dateStr):
-    """Determine the season of input date in YYYYMMDD format"""
+def get_date_str_format(date_str):
+    """Get the datetime string format as defined in:
+    https://docs.python.org/3.7/library/datetime.html#strftime-and-strptime-behavior
+
+    Parameters: date_str - str, date in one of the following formats:
+                            YYYYMMDDTHHMM
+                            YYYYMMDD
+                            YYMMDD
+    Returns:    date_str_format - str, datetime string format
+    """
+    if isinstance(date_str, list):
+        date_str = date_str[0]
+
+    try:
+        date_str = date_str.decode('utf8')
+    except:
+        pass
+
+    date_str_format = None
+    if len(re.findall('\d{8}T\d{6}', date_str)) > 0:
+        date_str_format = '%Y%m%dT%H%M%S'
+
+    elif len(re.findall('\d{8}T\d{4}', date_str)) > 0:
+        date_str_format = '%Y%m%dT%H%M'
+
+    elif len(re.findall('\d{6}T\d{4}', date_str)) > 0:
+        date_str_format = '%y%m%dT%H%M'
+
+    elif len(re.findall('\d{8}', date_str)) > 0:
+        date_str_format = '%Y%m%d'
+
+    elif len(re.findall('\d{6}', date_str)) > 0:
+        date_str_format = '%y%m%d'
+
+    else:
+        raise ValueError('un-recognized date string format!')
+
+    return date_str_format
+
+
+def yyyymmdd2season(date_str):
+    """Determine the season of input date in YYYYMMDD format
+
+    Parameters: date_str - str, date in YYYYMMDD format
+    Returns:    season   - str, season in ['WINTER', 'SPRING', 'SUMMER', 'FALL']
+    """
     # get day of the year
-    dateStr = yyyymmdd(dateStr)
-    yday = dt(*time.strptime(dateStr, "%Y%m%d")[0:5]).timetuple().tm_yday
+    date_str = yyyymmdd(date_str)
+    yday = dt.strptime(date_str, "%Y%m%d").timetuple().tm_yday
 
     # determine the season
     season = None
@@ -54,7 +99,7 @@ def decimal_year2datetime(years):
         yday = np.floor((x - year) * 365.25).astype(int) + 1
         x2 = '{:d}-{:d}'.format(year, yday)
         try:
-            xt = dt(*time.strptime(x2, "%Y-%j")[0:5])
+            xt = dt.strptime(x2, "%Y-%j")
         except:
             raise ValueError('wrong format: ',x)
         return xt
@@ -73,17 +118,28 @@ def decimal_year2datetime(years):
 
 
 def yyyymmdd2years(dates):
+    """Convert date(s) string into float number in the unit of year"""
+
     if isinstance(dates, str):
-        d = dt(*time.strptime(dates, "%Y%m%d")[0:5])
-        yy = float(d.year)+float(d.timetuple().tm_yday-1)/365.25
-    elif isinstance(dates, list):
-        yy = []
-        for date in dates:
-            d = dt(*time.strptime(date, "%Y%m%d")[0:5])
-            yy.append(float(d.year)+float(d.timetuple().tm_yday-1)/365.25)
+        date_list = [dates]
     else:
-        raise ValueError('Unrecognized date format. Only string and list supported.')
-    return yy
+        date_list = list(dates)
+
+    date_format = get_date_str_format(date_list[0])
+
+    y_list = []
+    for date_str in dates:
+        d = dt.strptime(date_str, date_format)
+        y = (d.year + (d.timetuple().tm_yday - 1) / 365.25 + 
+             d.hour / (365.25 * 24) + 
+             d.minute / (365.25 * 24 * 60) + 
+             d.second / (365.25 * 24 * 60 * 60))
+        y_list.append(y)
+
+    if isinstance(dates, str):
+        y_list = y_list[0]
+
+    return y_list
 
 
 def yymmdd2yyyymmdd(date):
@@ -103,37 +159,41 @@ def yy2yyyy(year):
 
 
 def yyyymmdd(dates):
+    """Convert date strings in yymmdd format, if exists, to yyyymmdd format"""
     if isinstance(dates, str):
         if len(dates) == 6:
             datesOut = yymmdd2yyyymmdd(dates)
         else:
             datesOut = dates
+
     elif isinstance(dates, list):
         datesOut = []
         for date in dates:
             if len(date) == 6:
                 date = yymmdd2yyyymmdd(date)
             datesOut.append(date)
+
     else:
-        # print 'Un-recognized date input!'
         return None
     return datesOut
 
 
 def yymmdd(dates):
+    """Convert date strings in yyyymmdd format, if exists, to yymmdd format"""
     if isinstance(dates, str):
         if len(dates) == 8:
             datesOut = dates[2:8]
         else:
             datesOut = dates
+
     elif isinstance(dates, list):
         datesOut = []
         for date in dates:
             if len(date) == 8:
                 date = date[2:8]
             datesOut.append(date)
+
     else:
-        # print 'Un-recognized date input!'
         return None
     return datesOut
 
@@ -144,6 +204,7 @@ def yyyymmdd_date12(date12_list):
     s_dates = yyyymmdd([i.replace('-', '_').split('_')[1] for i in date12_list])
     date12_list = ['{}_{}'.format(m, s) for m, s in zip(m_dates, s_dates)]
     return date12_list
+
 
 def yymmdd_date12(date12_list):
     """Convert date12 into YYMMDD-YYMMDD format"""
@@ -187,6 +248,7 @@ def read_date_list(date_list_in, date_list_all=None):
             if os.path.isfile(d):
                 ds = read_date_txt(d)
                 date_list_out += ds
+
         else:
             ds = [d]
             date_list_out += ds
@@ -200,45 +262,60 @@ def read_date_list(date_list_in, date_list_all=None):
 
 
 ################################################################
-def date_index(dateList):
-    dateIndex = {}
-    for ni in range(len(dateList)):
-        dateIndex[dateList[ni]] = ni
-    return dateIndex
+def date_index(date_list):
+    date_inds = {}
+    for ni in range(len(date_list)):
+        date_inds[date_list[ni]] = ni
+    return date_inds
+
 
 ################################################################
-def date_list2tbase(dateList):
+def date_list2tbase(date_list):
     """Get temporal Baseline in days with respect to the 1st date
-    Input: dateList - list of string, date in YYYYMMDD or YYMMDD format
-    Output:
-        tbase    - list of int, temporal baseline in days
-        dateDict - dict with key   - string, date in YYYYMMDD format
-                             value - int, temporal baseline in days
+    Parameters: date_list - list of string, date in YYYYMMDD or YYMMDD format
+    Returns:    tbase     - list of int, temporal baseline in days
+                dateDict  - dict with key   - string, date in YYYYMMDD format
+                                      value - int, temporal baseline in days
     """
-    dateList = yyyymmdd(dateList)
-    dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
-    tbase = [(i-dates[0]).days for i in dates]
+    # date str to dt object
+    date_list = yyyymmdd(date_list)
+    date_format = get_date_str_format(str(date_list))
+    dates = [dt.strptime(i, date_format) for i in date_list]
+
+    # dt object to time difference in days
+    tbase = []
+    for date in dates:
+        date_delta = date - dates[0]
+        tbase_i = date_delta.days + date_delta.seconds / (24 * 60 * 60)
+        tbase.append(tbase_i)
 
     # Dictionary: key - date, value - temporal baseline
     dateDict = {}
-    for i in range(len(dateList)):
-        dateDict[dateList[i]] = tbase[i]
+    for i in range(len(date_list)):
+        dateDict[date_list[i]] = tbase[i]
     return tbase, dateDict
 
 
 ################################################################
-def date_list2vector(dateList):
+def date_list2vector(date_list):
     """Get time in datetime format: datetime.datetime(2006, 5, 26, 0, 0)
-    Input: dateList - list of string, date in YYYYMMDD or YYMMDD format
-    Outputs:
-        dates      - list of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
-        datevector - list of float, years, i.e. 2010.8020547945205
+    Parameters: date_list  - list of string, date in YYYYMMDD or YYMMDD format
+    Returns:    dates      - list of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
+                datevector - list of float, years, i.e. 2010.8020547945205
     """
-    dateList = yyyymmdd(dateList)
-    dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
+    date_list = yyyymmdd(date_list)
+    date_format = get_date_str_format(str(date_list))
+    dates = [dt.strptime(i, date_format) for i in date_list]
+
     # date in year - float format
-    datevector = [i.year + (i.timetuple().tm_yday - 1)/365.25 for i in dates]
-    #datevector2 = [round(i, 2) for i in datevector]
+    datevector = []
+    for d in dates:
+        date_vec = (d.year + (d.timetuple().tm_yday - 1) / 365.25 + 
+                    d.hour / (365.25 * 24) + 
+                    d.minute / (365.25 * 24 * 60) + 
+                    d.second / (365.25 * 24 * 60 * 60))
+        datevector.append(date_vec)
+
     return dates, datevector
 
 
@@ -249,7 +326,7 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
         sar_acquisition_time - string, SAR data acquisition time in seconds
         grib_source - string, Grib Source of weather reanalysis product
     Output:
-        grib_hr - string, time of closest available weather product 
+        grib_hr - string, time of closest available weather product
     Example:
         '06' = closest_weather_product_time(atr['CENTER_LINE_UTC'])
         '12' = closest_weather_product_time(atr['CENTER_LINE_UTC'], 'NARR')
@@ -268,8 +345,8 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
 
 ###########################Simple progress bar######################
 class progressBar:
-    """Creates a text-based progress bar. Call the object with 
-    the simple print command to see the progress bar, which looks 
+    """Creates a text-based progress bar. Call the object with
+    the simple print command to see the progress bar, which looks
     something like this:
     [=======> 22%       ]
     You may specify the progress bar's min and max values on init.

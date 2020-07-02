@@ -389,7 +389,11 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
     dsNameList = list(dsPathDict.keys())
     pairsDict = {}
     for dsPath in dsPathDict[dsName0]:
-        dates = ptime.yyyymmdd(readfile.read_attribute(dsPath)['DATE12'].split('-'))
+        # date string used in the file/dir path
+        # YYYYMMDDTHHMM for uavsar
+        # YYYYMMDD for all the others
+        date12 = readfile.read_attribute(dsPath)['DATE12'].replace('_','-')
+        dates = ptime.yyyymmdd(date12.split('-'))
 
         #####################################
         # A dictionary of data files for a given pair.
@@ -402,17 +406,23 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
         for i in range(len(dsNameList)):
             dsName = dsNameList[i]
             dsPath1 = dsPathDict[dsName][0]
-            if all(d[2:8] in dsPath1 for d in dates):
+
+            if all(d[2:] in dsPath1 for d in dates):
                 ifgramPathDict[dsName] = dsPath1
+
             else:
                 dsPath2 = [i for i in dsPathDict[dsName]
-                           if all(d[2:8] in i for d in dates)]
+                           if all(d[2:] in i for d in dates)]
+
                 if len(dsPath2) > 0:
                     ifgramPathDict[dsName] = dsPath2[0]
                 else:
                     print('WARNING: {} file missing for pair {}'.format(dsName, dates))
-        ifgramObj = ifgramDict(dates=tuple(dates),
-                               datasetDict=ifgramPathDict)
+
+        # initiate ifgramDict object
+        ifgramObj = ifgramDict(dates=tuple(dates), datasetDict=ifgramPathDict)
+
+        # update pairsDict object
         pairsDict[tuple(dates)] = ifgramObj
 
     if len(pairsDict) > 0:

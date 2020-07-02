@@ -45,33 +45,88 @@ def velocity2timeseries(date_list, vel=0.03, display=False):
         marker_size = 5
         plt.figure()
         plt.scatter(dates, ts*100.0, s=marker_size**2)
-        plt.xlabel('Time (years)')
-        plt.ylabel('LOS Displacement (cm)')
-        plt.title('Displacement time-series with velocity = '+str(vel)+' m/yr')
+        plt.xlabel('time [years]')
+        plt.ylabel('LOS displacement [cm]')
+        plt.title('displacement time-series with velocity = '+str(vel)+' m/yr')
         plt.show()
     return ts
 
 
-def sim_variable_timeseries(tbase, scale=3., display=False):
-    # Opt 2 - Time variable
-    ts_sim = np.zeros(tbase.shape, np.float32)
-    idx1 = 20
+def sim_variable_timeseries(num_date=100, display=False):
+    """Simulate time variable displacement time-series
+
+    Parameters: num_date - int, number of acquisitions
+    Returns:    ts_sim   - 1D np.ndarray in size of (num_date,), displacement time-series in meters
+    """
+    tbase = np.linspace(0, num_date-1, num=num_date) * 12 # days
+
+    ts_sim = np.zeros(num_date, np.float32)
+
+    # comp 1 - exponential increase
+    idx1 = int(0.2 * num_date)
     ts_sim[idx1:] = 0.01 * np.log(tbase[idx1:] - tbase[idx1-1])
-    idx2 = 50
-    ts_sim[idx2:] = 0.03 + 0.06 * (tbase[idx2:] - tbase[idx2-1]) / 365.25
-    idx3 = 70
+
+    # comp 2 - step decrease + linear increase of 5 cm/yr
+    idx2 = int(0.5 * num_date)
+    ts_sim[idx2:] = 0.03 + 0.05 * (tbase[idx2:] - tbase[idx2-1]) / 365.25
+
+    idx3 = int(0.8 * num_date)
     ts_sim[idx3:] = 0.
+
+    # comp 3 - overall linear descrease of 0.5 cm/yr
     ts_sim += tbase * -0.005 / 365.25
+
+    # scale and reference to the 1st image
     ts_sim *= 3.
     ts_sim -= ts_sim[0]
 
     if display:
         fig, ax = plt.subplots(figsize=[6, 3])
         ax.plot(tbase, ts_sim * 100., '--')
-        ax.set_xlabel('Time (days)', fontsize=font_size)
-        ax.set_ylabel('Displacement (cm)', fontsize=font_size)
+        ax.set_xlabel('time [days]', fontsize=font_size)
+        ax.set_ylabel('displacement [cm]', fontsize=font_size)
         ax.tick_params(direction='in', labelsize=font_size)
         plt.show()
+    return ts_sim
+
+
+def sim_variable_timeseries_v1(tbase, scale=3., display=False):
+    """Simulate time variable displacement time-series
+
+    Parameters: tbase  - 1D np.ndarray in size of (num_date,), temporal baseline in days
+    Returns:    ts_sim - 1D np.ndarray in size of (num_date,), displacement time-series in meters
+    """
+
+    # Opt 2 - Time variable
+    num_date = len(tbase)
+    ts_sim = np.zeros(num_date, np.float32)
+
+    # comp 1 - exponential increase
+    idx1 = int(0.2*num_date)
+    ts_sim[idx1:] = 0.01 * np.log(tbase[idx1:] - tbase[idx1-1])
+
+    # comp 2 - step decrease + linear increase of 5 cm/yr
+    idx2 = int(0.5*num_date)
+    ts_sim[idx2:] = 0.03 + 0.05 * (tbase[idx2:] - tbase[idx2-1]) / 365.25
+
+    idx3 = int(0.8*num_date)
+    ts_sim[idx3:] = 0.
+
+    # comp 3 - overall linear descrease of 0.5 cm/yr
+    ts_sim += tbase * -0.005 / 365.25
+
+    # scale and reference to the 1st image
+    ts_sim *= 3.
+    ts_sim -= ts_sim[0]
+
+    if display:
+        fig, ax = plt.subplots(figsize=[6, 3])
+        ax.plot(tbase, ts_sim * 100., '--')
+        ax.set_xlabel('time [days]', fontsize=font_size)
+        ax.set_ylabel('displacement [cm]', fontsize=font_size)
+        ax.tick_params(direction='in', labelsize=font_size)
+        plt.show()
+
     return ts_sim
 
 
@@ -90,11 +145,11 @@ def timeseries2ifgram(ts_sim, date_list, date12_list, wvl=0.055, display=False):
         ifgram_sim_mat = pnet.coherence_matrix(date12_list, ifgram_sim)
         plt.figure()
         plt.imshow(ifgram_sim_mat, cmap='jet')
-        plt.xlabel('Image number')
-        plt.ylabel('Image number')
+        plt.xlabel('image number')
+        plt.ylabel('image number')
         cbar = plt.colorbar()
-        cbar.set_label('Phase (radian)')
-        plt.title('Interferometric Phase')
+        cbar.set_label('phase [rad]')
+        plt.title('interferometric phase')
         plt.show()
     return ifgram_sim
 

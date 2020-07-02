@@ -10,10 +10,13 @@
 
 import os
 import sys
+import re
 import time
-import datetime as dt
+from datetime import datetime as dt
 import h5py
 import numpy as np
+
+from mintpy.utils import ptime
 
 
 BOOL_ZERO = np.bool_(0)
@@ -132,7 +135,7 @@ class timeseries:
     """
     Time-series object for displacement of a set of SAR images from the same platform and track.
     It contains three datasets in root level: date, bperp and timeseries.
-    
+
     File structure: https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#timeseries
     """
 
@@ -168,9 +171,14 @@ class timeseries:
                 self.pbase -= self.pbase[self.refIndex]
             except:
                 self.pbase = None
-        self.times = np.array([dt.datetime(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.dateList])
-        self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]],
+
+        # time info
+        self.dateFormat = ptime.get_date_str_format(self.dateList[0])
+        self.times = np.array([dt.strptime(i, self.dateFormat) for i in self.dateList])
+        self.tbase = np.array([(i.days + i.seconds / (24 * 60 * 60)) 
+                               for i in (self.times - self.times[self.refIndex])],
                               dtype=np.float32)
+
         # list of float for year, 2014.95
         self.yearList = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in self.times]
         self.sliceList = ['{}-{}'.format(self.name, i) for i in self.dateList]
@@ -438,16 +446,21 @@ class timeseries:
         Parameters: date_list : list of string in YYYYMMDD format
         Returns:    A : 2D array of int in size of (numDate, 2)
         """
-        # convert list of YYYYMMDD into array of diff year in float
-        dt_list = [dt.datetime.strptime(i, '%Y%m%d') for i in date_list]
-        yr_list = [i.year + (i.timetuple().tm_yday - 1) / 365.25 for i in dt_list]
+        # convert list of YYYYMMDD into array of years in float
+        date_format = ptime.get_date_str_format(date_list[0])
+        dt_list = [dt.strptime(i, date_format) for i in date_list]
+        yr_list = [(d.year + (d.timetuple().tm_yday - 1) / 365.25 + 
+                    d.hour / (365.25 * 24) + 
+                    d.minute / (365.25 * 24 * 60) +
+                    d.second / (365.25 * 24 * 60 * 60))
+                   for d in dt_list]
         yr_diff = np.array(yr_list)
 
+        # reference date
         if refDate is None:
             refDate = date_list[0]
         yr_diff -= yr_diff[date_list.index(refDate)]
 
-        #for precision, use float32 in 0.1 yr, or float64 in 2015.1 yr format
         A = np.ones([len(date_list), 2], dtype=np.float32)
         A[:, 0] = yr_diff
         return A
@@ -459,7 +472,7 @@ class timeseries:
 ################################# geometry class begin #################################
 class geometry:
     """ Geometry object.
-    
+
     File structure: https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#geometry
     """
 
@@ -580,7 +593,7 @@ class geometry:
 ################################# ifgramStack class begin ##############################
 class ifgramStack:
     """ Interferograms Stack object.
-    
+
     File structure: https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#ifgramstack
     """
 
@@ -611,7 +624,9 @@ class ifgramStack:
 
         # time info
         self.date12List = ['{}_{}'.format(i, j) for i, j in zip(self.mDates, self.sDates)]
-        self.tbaseIfgram = np.array([i.days for i in self.sTimes - self.mTimes], dtype=np.float32)
+        self.tbaseIfgram = np.array([i.days + i.seconds / (24 * 60 * 60) 
+                                     for i in (self.sTimes - self.mTimes)],
+                                    dtype=np.float32)
 
         with h5py.File(self.file, 'r') as f:
             self.dropIfgram = f['dropIfgram'][:]
@@ -648,14 +663,19 @@ class ifgramStack:
             self.refLon = None
 
     def get_metadata(self):
+        # read metadata from root level
         with h5py.File(self.file, 'r') as f:
             self.metadata = dict(f.attrs)
             dates = f['date'][:].flatten()
+
+        # decode metadata
         for key, value in self.metadata.items():
             try:
                 self.metadata[key] = value.decode('utf8')
             except:
                 self.metadata[key] = value
+
+        # START/END_DATE
         dateList = sorted([i.decode('utf8') for i in dates])
         self.metadata['START_DATE'] = dateList[0]
         self.metadata['END_DATE'] = dateList[-1]
@@ -666,8 +686,10 @@ class ifgramStack:
             # get default datasetName
             if datasetName is None:
                 datasetName = [i for i in ['unwrapPhase', 'azimuthOffset'] if i in f.keys()][0]
+
             # get 3D size
             self.numIfgram, self.length, self.width = f[datasetName].shape
+
             # update 1st dimension size
             if dropIfgram:
                 self.numIfgram = np.sum(f['dropIfgram'][:])
@@ -677,10 +699,15 @@ class ifgramStack:
         """Read master/slave dates into array of datetime.datetime objects"""
         with h5py.File(self.file, 'r') as f:
             dates = f['date'][:]
+
+        # grab the date string format
+        self.dateFormat = ptime.get_date_str_format(dates[0, 0])
+
+        # convert date from str to datetime.datetime objects
         self.mDates = np.array([i.decode('utf8') for i in dates[:, 0]])
         self.sDates = np.array([i.decode('utf8') for i in dates[:, 1]])
-        self.mTimes = np.array([dt.datetime(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.mDates])
-        self.sTimes = np.array([dt.datetime(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.sDates])
+        self.mTimes = np.array([dt.strptime(i, self.dateFormat) for i in self.mDates])
+        self.sTimes = np.array([dt.strptime(i, self.dateFormat) for i in self.sDates])
 
     def read(self, datasetName='unwrapPhase', box=None, print_msg=True, dropIfgram=False):
         """Read 3D dataset with bounding box in space
@@ -868,7 +895,8 @@ class ifgramStack:
         print('calculate the temporal average of {} in file {} ...'.format(datasetName, self.file))
         if 'unwrapPhase' in datasetName:
             phase2range = -1 * float(self.metadata['WAVELENGTH']) / (4.0 * np.pi)
-            tbaseIfgram = self.tbaseIfgram / 365.25
+            # temporal baseline in years (float64 for very short tbase of UAVSAR data)
+            tbase = np.array(self.tbaseIfgram, dtype=np.float64) / 365.25
 
         with h5py.File(self.file, 'r') as f:
             dset = f[datasetName]
@@ -892,7 +920,7 @@ class ifgramStack:
                             data -= data[self.refY, self.refX]
                         except:
                             pass
-                    data *= (phase2range * (1./tbaseIfgram[idx]))
+                    data *= (phase2range / tbase[idx])
                 dmean += data
                 sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, num2read))
                 sys.stdout.flush()
@@ -982,29 +1010,33 @@ class ifgramStack:
         """
         # Date info
         date12_list = list(date12_list)
-        mDates = [i.split('_')[0] for i in date12_list]
-        sDates = [i.split('_')[1] for i in date12_list]
-        dateList = sorted(list(set(mDates + sDates)))
-        dates = [dt.datetime(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
-        tbase = np.array([(i - dates[0]).days for i in dates], np.float32) / 365.25
-        numIfgram = len(date12_list)
-        numDate = len(dateList)
+        date1s = [i.split('_')[0] for i in date12_list]
+        date2s = [i.split('_')[1] for i in date12_list]
+        date_list = sorted(list(set(date1s + date2s)))
+        num_ifgram = len(date12_list)
+        num_date = len(date_list)
+
+        # tbase in the unit of years
+        date_format = ptime.get_date_str_format(date_list[0])
+        dates = np.array([dt.strptime(i, date_format) for i in date_list])
+        tbase = [i.days + i.seconds / (24 * 60 * 60) for i in (dates - dates[0])]
+        tbase = np.array(tbase, dtype=np.float32) / 365.25
 
         # calculate design matrix
-        A = np.zeros((numIfgram, numDate), np.float32)
-        B = np.zeros(A.shape, np.float32)
-        for i in range(numIfgram):
-            m_idx, s_idx = [dateList.index(j) for j in date12_list[i].split('_')]
-            A[i, m_idx] = -1
-            A[i, s_idx] = 1
-            B[i, m_idx:s_idx] = tbase[m_idx+1:s_idx+1] - tbase[m_idx:s_idx]
+        A = np.zeros((num_ifgram, num_date), np.float32)
+        B = np.zeros((num_ifgram, num_date), np.float32)
+        for i in range(num_ifgram):
+            ind1, ind2 = [date_list.index(d) for d in date12_list[i].split('_')]
+            A[i, ind1] = -1
+            A[i, ind2] = 1
+            B[i, ind1:ind2] = tbase[ind1+1:ind2+1] - tbase[ind1:ind2]
 
         # Remove reference date as it can not be resolved
         if refDate is None:
-            refDate = dateList[0]
+            refDate = date_list[0]
         if refDate:
-            refIndex = dateList.index(refDate)
-            A = np.hstack((A[:, 0:refIndex], A[:, (refIndex+1):]))
+            ind_r = date_list.index(refDate)
+            A = np.hstack((A[:, 0:ind_r], A[:, (ind_r+1):]))
             B = B[:, :-1]
         return A, B
 
@@ -1072,7 +1104,7 @@ class HDFEOS:
     Time-series object in HDF-EOS5 format for Univ of Miami's InSAR Time-series Web Viewer
         Link: http://insarmaps.miami.edu
     It contains a "timeseries" group and three datasets: date, bperp and timeseries.
-    
+
     File structure: https://github.com/yunjunz/MintPy/blob/master/docs/hdfeos5.md
     """
 

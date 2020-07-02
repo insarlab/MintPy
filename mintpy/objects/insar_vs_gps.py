@@ -11,7 +11,6 @@ import sys
 import numpy as np
 from scipy import stats
 from scipy.interpolate import griddata
-import time
 from datetime import datetime as dt
 from dateutil.relativedelta import relativedelta
 
@@ -176,7 +175,7 @@ class insar_vs_gps:
             insar_date = site['insar_datetime']
 
             # find common reference date
-            ref_date = dt(*time.strptime(self.min_ref_date, "%Y%m%d")[0:5])
+            ref_date = dt.strptime(self.min_ref_date, "%Y%m%d")
             ref_idx = insar_date.tolist().index(ref_date)
             while ref_idx < self.num_date:
                 if insar_date[ref_idx] not in gps_date:

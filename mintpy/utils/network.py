@@ -570,31 +570,43 @@ def select_pairs_all(date_list, date12_format='YYMMDD-YYMMDD'):
     return date12_list
 
 
-def select_pairs_sequential(date_list, num_connection=2, date12_format='YYMMDD-YYMMDD'):
+def select_pairs_sequential(date_list, num_conn=2, date_format=None):
     """Select Pairs in a Sequential way:
         For each acquisition, find its num_connection nearest acquisitions in the past time.
-    Inputs:
-        date_list  : list of date in YYMMDD/YYYYMMDD format
+
     Reference:
         Fattahi, H., and F. Amelung (2013), DEM Error Correction in InSAR Time Series, IEEE TGRS, 51(7), 4249-4259.
+
+    Parameters: date_list   - list of str for date
+                num_conn    - int, number of sequential connections
+                date_format - str / None, output date format
+    Returns:    date12_list - list of str for date12 
     """
-    date8_list = sorted(ptime.yyyymmdd(date_list))
-    date6_list = ptime.yymmdd(date8_list)
-    date_idx_list = list(range(len(date6_list)))
+
+    date_list = sorted(date_list)
+    date_inds = list(range(len(date_list)))
 
     # Get pairs index list
-    date12_idx_list = []
-    for date_idx in date_idx_list:
-        for i in range(num_connection):
-            if date_idx-i-1 >= 0:
-                date12_idx_list.append([date_idx-i-1, date_idx])
-    date12_idx_list = [sorted(idx) for idx in sorted(date12_idx_list)]
+    date12_inds = []
+    for date_ind in date_inds:
+        for i in range(num_conn):
+            if date_ind-i-1 >= 0:
+                date12_inds.append([date_ind-i-1, date_ind])
+    date12_inds = [sorted(i) for i in sorted(date12_inds)]
 
     # Convert index into date12
-    date12_list = [date6_list[idx[0]]+'-'+date6_list[idx[1]]
-                   for idx in date12_idx_list]
-    if date12_format == 'YYYYMMDD_YYYYMMDD':
-        date12_list = ptime.yyyymmdd_date12(date12_list)
+    date12_list = ['{}_{}'.format(date_list[ind12[0]], date_list[ind12[1]])
+                  for ind12 in date12_inds]
+
+    # adjust output date format
+    if date_format is not None:
+        if date_format == 'YYYYMMDD':
+            date12_list = ptime.yyyymmdd_date12(date12_list)
+        elif date_format == 'YYMMDD':
+            date12_list = ptime.yymmdd_date12(date12_list)
+        else:
+            raise ValueError('un-supported date format: {}!'.format(date_format))
+
     return date12_list
 
 

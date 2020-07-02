@@ -9,26 +9,29 @@
 
 import os
 
-SENSOR_NAMES = ['ers', 'env', 'sen', 'rsat', 'rsat2', 'ksat5', 'gaofen3',
-                'jers', 'alos2', 'alos', 'nisar',
-                'tsx', 'csk'
-               ]
+SENSOR_NAMES = [
+    'tsx', 'csk',                                                # X-band
+    'ers', 'env', 'sen', 'rsat', 'rsat2', 'ksat5', 'gaofen3',    # C-band
+    'jers', 'alos2', 'alos', 'nisar', 'uav',                     # L-band
+]
 
 # remove -_ and user lower case before standardize sensor names
-standardedSensorNames = {'ers1': 'ers', 'ers2': 'ers', 'ers12': 'ers',
-                         'envisat': 'env', 'asar': 'env',
-                         'sentinel1': 'sen',  'sentinel1a': 'sen', 'sentinel1b': 'sen', 's1': 'sen', 's1a': 'sen', 's1b': 'sen',
-                         'radarsat': 'rsat', 'radarsat1': 'rsat', 'rsat1': 'rsat',
-                         'radarsat2': 'rsat2',
-                         'kompsat5': 'ksat5', 'kompsat': 'ksat5', 'kmps5': 'ksat5',
-                         'g3': 'gaofen3', 'gaofen': 'gaofen3',
-                         'jers1': 'jers',
-                         'alos1': 'alos', 'palsar': 'alos', 'palsar1': 'alos',
-                         'palsar2': 'alos2',
-                         'terra': 'tsx', 'terrasar': 'tsx', 'terrasarx': 'tsx', 'tdx': 'tsx', 'tandemx': 'tsx',
-                         'cosmo': 'csk', 'cosmosky': 'csk', 'cosmoskymed': 'csk',
-                         'csk1': 'csk', 'csk2': 'csk', 'csk3': 'csk', 'csk4': 'csk'
-                         }
+standardedSensorNames = {
+    'alos1': 'alos', 'palsar': 'alos', 'palsar1': 'alos',
+    'palsar2': 'alos2',
+    'cosmo': 'csk', 'cosmosky': 'csk', 'cosmoskymed': 'csk',
+    'csk1': 'csk', 'csk2': 'csk', 'csk3': 'csk', 'csk4': 'csk',
+    'envisat': 'env', 'asar': 'env',
+    'ers1': 'ers', 'ers2': 'ers', 'ers12': 'ers',
+    'g3': 'gaofen3', 'gaofen': 'gaofen3',
+    'jers1': 'jers',
+    'kompsat5': 'ksat5', 'kompsat': 'ksat5', 'kmps5': 'ksat5',
+    'radarsat': 'rsat', 'radarsat1': 'rsat', 'rsat1': 'rsat',
+    'radarsat2': 'rsat2',
+    'sentinel1': 'sen',  'sentinel1a': 'sen', 'sentinel1b': 'sen', 's1': 'sen', 's1a': 'sen', 's1b': 'sen',
+    'terra': 'tsx', 'terrasar': 'tsx', 'terrasarx': 'tsx', 'tdx': 'tsx', 'tandemx': 'tsx',
+    'uavsar': 'uav',
+}
 
 
 class JERS(object):
@@ -188,29 +191,40 @@ def get_unavco_mission_name(meta_dict):
 
     # Convert to UNAVCO Mission name
     ## ERS, ENV, S1, RS1, RS2, CSK, TSX, JERS, ALOS, ALOS2
-    if value.startswith('ers'):
-        mission_name = 'ERS'
+    if value.startswith(('alos', 'palsar')):
+        if value.endswith('2'):
+            mission_name = 'ALOS2'
+        else:
+            mission_name = 'ALOS'
+
+    elif value.startswith(('csk', 'cos')):
+        mission_name = 'CSK'
+
     elif value.startswith(('env', 'asar')):
         mission_name = 'ENV'
-    elif value.startswith(('s1', 'sen')):
-        mission_name = 'S1'
+
+    elif value.startswith('ers'):
+        mission_name = 'ERS'
+
+    elif value.startswith('jers'):
+        mission_name = 'JERS'
+
     elif value.startswith(('rs', 'rsat', 'radarsat')):
         mission_name = 'RS'
         if value.endswith('1'):
             mission_name += '1'
         else:
             mission_name += '2'
-    elif value.startswith(('csk', 'cos')):
-        mission_name = 'CSK'
+
+    elif value.startswith(('s1', 'sen')):
+        mission_name = 'S1'
+
     elif value.startswith(('tsx', 'tdx', 'terra', 'tandem')):
         mission_name = 'TSX'
-    elif value.startswith('jers'):
-        mission_name = 'JERS'
-    elif value.startswith(('alos', 'palsar')):
-        if value.endswith('2'):
-            mission_name = 'ALOS2'
-        else:
-            mission_name = 'ALOS'
+
+    elif value.startswith('uav'):
+        mission_name = 'UAV'
+
     else:
         print('Un-recognized PLATFORM attribute:', value)
         print('return None')
