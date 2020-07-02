@@ -89,7 +89,7 @@ def create_parser():
     parser.add_argument('--project', type=str, dest='PROJECT_NAME',
                         help='project name of dataset for INSARMAPS Web Viewer')
     parser.add_argument('--processor', type=str, dest='processor',
-                        choices={'isce', 'uavsar', 'snap', 'gamma', 'roipac', 'doris', 'gmtsar'},
+                        choices={'isce', 'snap', 'gamma', 'roipac', 'doris', 'gmtsar'},
                         help='InSAR processor/software of the file', default='isce')
     parser.add_argument('--enforce', '-f', dest='updateMode', action='store_false',
                         help='Disable the update mode, or skip checking dataset already loaded.')
@@ -434,7 +434,7 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
 def read_inps_dict2geometry_dict_object(inpsDict):
 
     # eliminate dsName by processor
-    if inpsDict['processor'] in ['isce', 'uavsar', 'doris']:
+    if inpsDict['processor'] in ['isce', 'doris']:
         datasetName2templateKey.pop('azimuthCoord')
         datasetName2templateKey.pop('rangeCoord')
     elif inpsDict['processor'] in ['roipac', 'gamma']:
