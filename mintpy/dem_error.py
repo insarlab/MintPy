@@ -67,18 +67,20 @@ def create_parser():
     parser.add_argument('-o', '--outfile',
                         help='Output file name for corrected time-series')
 
+    # temporal functions
+    parser.add_argument('-t', '--template', dest='template_file',
+                        help='template file with the options')
     parser.add_argument('--ex', '--exclude', dest='excludeDate', nargs='*', default=[],
                         help='Exclude date(s) for DEM error estimation.\n' +
                              'All dates will be corrected for DEM residual phase still.')
-    parser.add_argument('-t', '--template', dest='template_file',
-                        help='template file with the options')
+    parser.add_argument('-p', '--poly-order', dest='polyOrder', type=int, default=2,
+                        help='polynomial order number of temporal deformation model, default = 2')
     parser.add_argument('-s', '--step-date', dest='stepFuncDate', nargs='*', default=[],
                         help='Date of step jump for temporal deformation model,'+
                              ' i.e. date of earthquake/volcanic eruption')
+
     parser.add_argument('--phase-velocity', dest='phaseVelocity', action='store_true',
                         help='Use phase velocity instead of phase for inversion constrain.')
-    parser.add_argument('-p', '--poly-order', dest='polyOrder', type=int, default=2,
-                        help='polynomial order number of temporal deformation model, default = 2')
     parser.add_argument('--update', dest='update_mode', action='store_true',
                         help='Enable update mode, and skip inversion if:\n'+
                              '1) output timeseries file already exists, readable '+
@@ -188,42 +190,6 @@ def read_exclude_date(ex_date_list, date_list_all, print_msg=True):
     return drop_date, ex_date_list
 
 
-def design_matrix4deformation(inps):
-    # Date Info
-    ts_obj = timeseries(inps.timeseries_file)
-    ts_obj.open()
-
-    # Design matrix - temporal deformation model
-    print('-'*80)
-    print('correct topographic phase residual (DEM error) (Fattahi & Amelung, 2013, IEEE-TGRS)')
-    msg = 'ordinal least squares (OLS) inversion with L2-norm minimization on: phase'
-    if inps.phaseVelocity:
-        msg += ' velocity'
-    if inps.rangeDist.size != 1:
-        msg += ' (pixel-wisely)'
-    print(msg)
-
-    tbase = np.array(ts_obj.tbase, np.float32) / 365.25
-
-    # 1. Polynomial - 2D matrix in size of (numDate, polyOrder+1)
-    print("temporal deformation model: polynomial order = "+str(inps.polyOrder))
-    A_def = np.ones((ts_obj.numDate, 1), np.float32)
-    for i in range(inps.polyOrder):
-        Ai = np.array(tbase**(i+1) / gamma(i+2), np.float32).reshape(-1, 1)
-        A_def = np.hstack((A_def, Ai))
-
-    # 2. Step function - 2D matrix in size of (numDate, len(inps.stepFuncDate))
-    if inps.stepFuncDate:
-        print("temporal deformation model: step functions at "+str(inps.stepFuncDate))
-        t_steps = ptime.yyyymmdd2years(inps.stepFuncDate)
-        t = np.array(ptime.yyyymmdd2years(ts_obj.dateList))
-        for t_step in t_steps:
-            Ai = np.array(t > t_step, np.float32).reshape(-1, 1)
-            A_def = np.hstack((A_def, Ai))
-    print('-'*80)
-    return A_def
-
-
 def read_geometry(inps):
     ts_obj = timeseries(inps.timeseries_file)
     ts_obj.open(print_msg=False)
@@ -258,6 +224,29 @@ def read_geometry(inps):
 
     inps.sinIncAngle = np.sin(inps.incAngle * np.pi / 180.)
     return inps
+
+
+def get_design_matrix4time_func(date_list, poly_order=2, step_func_dates=[]):
+    """get design matrix for temporal deformation model"""
+    # temporal baseline in the unit of years
+    tbase = ptime.date_list2tbase(date_list)[0]
+    tbase = np.array(tbase, dtype=np.float32) / 365.25
+
+    # 1. Polynomial - 2D matrix in size of (numDate, polyOrder+1)
+    A_def = np.ones((len(date_list), 1), np.float32)
+    for i in range(poly_order):
+        Ai = np.array(tbase**(i+1) / gamma(i+2), np.float32).reshape(-1, 1)
+        A_def = np.hstack((A_def, Ai))
+
+    # 2. Step function - 2D matrix in size of (numDate, len(step_func_dates))
+    if step_func_dates:
+        t_steps = ptime.yyyymmdd2years(step_func_dates)
+        t = np.array(ptime.yyyymmdd2years(date_list))
+        for t_step in t_steps:
+            Ai = np.array(t > t_step, np.float32).reshape(-1, 1)
+            A_def = np.hstack((A_def, Ai))
+
+    return A_def
 
 
 def estimate_dem_error(ts0, A0, tbase, drop_date=None, phaseVelocity=False, num_step=0):
@@ -473,7 +462,23 @@ def main(iargs=None):
     start_time = time.time()
     inps = read_geometry(inps)
 
-    A_def = design_matrix4deformation(inps)
+    ## model setup info
+    msg = '-'*80
+    msg += '\ncorrect topographic phase residual (DEM error) (Fattahi & Amelung, 2013, IEEE-TGRS)'
+    msg += '\nordinal least squares (OLS) inversion with L2-norm minimization on: phase'
+    if inps.phaseVelocity:
+        msg += ' velocity'
+    if inps.rangeDist.size != 1:
+        msg += ' (pixel-wisely)'
+    msg += "\ntemporal deformation model: polynomial order = {}".format(inps.polyOrder)
+    if inps.stepFuncDate:
+        msg += "\ntemporal deformation model: step functions at {}".format(inps.stepFuncDate)
+    msg += '-'*80
+    print(msg)
+
+    A_def = get_design_matrix4time_func(date_list=timeseries(inps.timeseries_file).get_date_list(),
+                                        poly_order=inps.polyOrder,
+                                        step_func_dates=inps.stepFuncDate)
 
     inps = correct_dem_error(inps, A_def)
 
