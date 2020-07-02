@@ -142,7 +142,7 @@ def get_processor(meta_file):
         processor = 'stripmap'
 
     else:
-        raise ValueError('Un-recognized ISCE processor for metadata file:', meta_file)
+        raise ValueError('Un-recognized ISCE processor for metadata file: {}'.format(meta_file))
     return processor
 
 
