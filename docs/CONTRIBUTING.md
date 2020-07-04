@@ -1,116 +1,104 @@
 # Contributing Guidelines
 
-This document is inspired by similar instructions from GMT, ISCE, gdal and jupyterhub. If you're reading this section, you're probably interested in contributing to MintPy. Welcome and thanks for your interest in contributing! 
+This document is inspired by similar instructions from numpy, GMT, ISCE, gdal and jupyterhub. If you're reading this section, you're probably interested in contributing to MintPy. Welcome and thanks for your interest in contributing! 
 
 These are several ways to contribute to the MintPy project:
 
-* Submitting bug reports, feature requests on [GitHub issue](https://github.com/insarlab/MintPy/issues)
-* Writing/improving documentation, tutorials and jupyter-notebooks
-* Fixing typos, bugs in code
+* Writing or proofreading documentation (including tutorials and examples in jupyter-notebooks)
+* Submitting bug reports or feature requests on [GitHub issue](https://github.com/insarlab/MintPy/issues)
+* Suggesting or implementing tests
+* Fixing typos or bugs in code
 * Writing code for everyone to use
+* Giving feedback about the projects (including giving feedback about the contribution process)
 
-If you get stuck at any point you can create an [issue on GitHub](https://github.com/insarlab/MintPy/issues) or contact us on the [user forum](https://groups.google.com/forum/#!forum/mintpy).
+If you get stuck at any point you can open an [issue on GitHub](https://github.com/insarlab/MintPy/issues) or comment on any open issue or pull request or contact us on the [user forum](https://groups.google.com/forum/#!forum/mintpy).
 
 For more information on contributing to open source projects, [GitHub's own guide](https://guides.github.com/activities/contributing-to-open-source/)
-is a great starting point if you are new to version control. Tute Costa has a great [tutorial on how to rewrite history with git rebase/squash/amend](https://thoughtbot.com/blog/git-interactive-rebase-squash-amend-rewriting-history).
+is a great starting point if you are new to version control. 
 
-## Writing documentations ##
+## Development process ##
 
-Documentation is written in Markdown. ANY GitHub user can edit pages and/or create new pages on [GitHub Wiki](https://github.com/insarlab/MintPy/wiki) directly for documentation, examples, support, or anything you wish. Eventually, mature documents on the wiki will be moved to the `insarlab/MintPy/docs` through standard code review process to be shown in the [readthedocs](https://mintpy.readthedocs.io/en/latest/).
+#### 1. If you are a first-time contributor: ####
 
-## Writing code ##
++ Go to https://github.com/insarlab/MintPy.git and click "fork" button to create your own copy of the project.
 
-We follow the [git pull request workflow](https://www.asmeurer.com/git-workflow/) to make changes to our codebase. Every change made goes through a pull request, even our own, so that our [continuous integration](https://en.wikipedia.org/wiki/Continuous_integration) services have a change to check that the code is up to standards. This way, the master branch is always stable.
++ Clone the project to your local computer and add the upstream repository:
 
-### General guidelines for pull requests (PRs) ###
+   ```
+   git clone https://github.com/your_user_name/MintPy.git
+   cd MintPy
+   git remote add upstream https://github.com/insarlab/MintPy.git
+   ```
 
-+ **Open an issue first** describing what you want to do, except for bugs fix. If there is already an issue that matches your PR, leave a comment there instead to let us know what you plan to do. We may have easier ways to help you implement it faster. 
++ Now, `git remote -v` will show two remote repositories named:
+
+   - `upstream`, which refers to the `insarlab` repository
+   - `origin`, which refers to your personal fork
+
+#### 2. Develop your contribution: ####
+
++ **Open an [issue](https://github.com/insarlab/MintPy/issues) first** if you want plan to introduce a new feature or to change funcationality, we may have easier ways to help you implement it. If there is already an issue that matches your idea, leave a comment there instead to let us know what you plan to do. For bug fixes, documentation updates, etc., this is generally not necessary.
+
++ Pull the latest changes from upstream:
+
+   ```
+   git checkout master
+   git pull upstream/master
+   ```
+
++ Create a branch for the feature you want to work on. Since the branch name will appear in the merge message, use a sensible name such as 'seasonal_fitting':
+
+   ```
+   git checkout -b seasonal_fitting
+   ```
+
++ Work on your idea, run tests and commit locally (`git add` and `git commit`) and/or to your fork on GitHub as you progress (`git push` in command line or [GitHub Desktop](https://desktop.github.com/) with graphical user interface). Use a clear commit message describing the motivation of a change, the nature of a bug for bug fixes or some details on what an enchancement does.
+
++ Run the [overall test](./CONTRIBUTING.md#testing) locally.
+
+#### 3. To submit your contribution: ####
+
++ Go to GitHub. The new branch will show up with a Pull request button. Click and fill out the pull request template, make sure the title and message are clear, concise, and self-explanatory (these descriptions are how we keep track of the changes made to the project over time). Then click the button to submit it.
+
+#### 4. Review process: ####
+
+We follow the [git pull request (PR) workflow](https://www.asmeurer.com/git-workflow/) to make changes to our codebase. Every change made goes through a PR, even our own, so that our [continuous integration](https://en.wikipedia.org/wiki/Continuous_integration) services have a change to check that the code is up to standards. GitHub will show the status of the these checks on the PR. Try to get them all passsing (green). If you have any trouble, leave a comment in the PR.
+
++ Reviewers (the other developers and interested community members) will write inline and/or general comments on your PR to help you improve its implementation, documentation and style. We don't want to break the shared codebase, so care must be taken not to introduce bugs. Please don’t let the review discourage you from contributing: its only aim is to improve the quality of project, not to criticize (we are, after all, very grateful for the time you’re donating!).
+
++ To update your PR, make your changes on your local repository, run tests, and only if they succeed commit and push to your fork. As soon as those changes are pushed up (to the same branch as before) the PR will update automatically. If you have no idea how to fix the test failures, you may push your changes anyway and ask for help in a PR comment.
+
+
+## Divergence between `upstream/master` and your feature branch ##
+
+If GitHub indicates that the branch of your Pull Request can no longer be merged automatically, you have to incorporate changes that have been made since you started into your branch. Our recommended way to do this is to rebase on master. Tute Costa has a great tutorial on how to [rewrite history with git rebase/squash/amend](https://thoughtbot.com/blog/git-interactive-rebase-squash-amend-rewriting-history).
+
+
+## General guidelines for pull requests (PRs) ##
+
 + Each pull request should consist of a **small** and logical collection of changes.
 + Larger changes should be broken down into smaller components and integrated separately.
-+ Bug fixes should be submitted in separate PRs.
 + Describe what your PR changes and why this is a good thing. Be as specific as you can. The PR description is how we keep track of the changes made to the project over time.
 + Do not commit changes to files that are irrelevant to your feature or bugfix (eg: `.gitignore`, IDE project files, etc).
-+ Write descriptive commit messages. Chris Beams has a [guide](https://chris.beams.io/posts/git-commit/) on how to write good commit messages. Tute Costa has a great [tutorial](https://thoughtbot.com/blog/git-interactive-rebase-squash-amend-rewriting-history) on how to rewrite a nice and clean history with git rebase/squash/amend.
-+ Be willing to accept criticism and work on improving your code; we don't want to break other users' code, so care must be taken not to introduce bugs.
++ Write descriptive commit messages. Chris Beams has a [guide](https://chris.beams.io/posts/git-commit/) on how to write good commit messages.
 + Be aware that the pull request review process is not immediate, and is generally proportional to the size of the pull request.
-
-### Code Review ###
-
-After you've submitted a pull request, you should expect to hear at least a comment within a couple of days. We may suggest some changes or improvements or alternatives.
 
 Some things that will increase the chance that your pull request is accepted quickly:
 
 + Write a good and detailed description of what the PR does.
 + Readable code is better than clever code (even with comments).
 + Write documentation for your code and leave comments explaining the _reason_ behind non-obvious things.
-+ Include an example of new features in the gallery or tutorials, if possible.
-
-Pull requests will automatically have tests run by Circle CI and Codacy. Github will show the status of these checks on the pull request. Try to get them all passing (green). If you have any trouble, leave a comment in the PR or contact us on the [user forum](https://groups.google.com/forum/#!forum/mintpy).
-
-### Example workflow ###
-
-This is not a git tutorial by any means. It just collects a few best practice for git usage for MintPy development. There are plenty of good resources online to help get started.
-
-#### Set up a development environment ####
-
-Fork insarlab/MintPy from GitHub UI, and then
-
-```
-git clone https://github.com/my_user_name/MintPy.git
-cd MintPy
-git remote add upstream https://github.com/insarlab/MintPy.git
-```
-
-#### Work with a feature branch ####
-
-```
-# update to the latest upstream master
-git checkout master
-git fetch upstream
-git rebase upstream/master
-git push -f
-git checkout -b my_new_feature_branch
-
-# do work. For example:
-git add my_new_file
-git add my_modifid_message
-git rm old_file
-git commit -a 
-
-# you may need to re-synchronize against upstream/master
-# if you need some bugfix or new capability that has been
-# added to master since you created your branch
-git fetch upstream
-git rebase upstream/master
-
-# At end of your work, make sure history is reasonable by:
-# folding non significant commits into a consistent set
-# use 'fixup' for example to merge several commits together
-# use 'reword' to modify commit messages
-# to re-write the last 5 commits for example:
-git rebase -i HEAD~5
-
-# push your local changes to your fork on GitHub
-git push
-
-# you may need to force-push your branch with
-git push -f
-```
-
-#### Issue a pull request from GitHub UI ####
-
-If the pull request discussion results in changes, commit new changes to `my_user_name/my_new_feature_branch`, they will show up in the pull request in `insarlab` automatically.
 
 
 ## Testing ##
 
-It's a good idea to test any changes or bugs you have fixed, in the feature branch before issuing the pull request. We realize that we don't have a complete testing system in place yet (maybe you can contribute this!), except for an overall testing script `test_smallbaselineApp.py`, run
+It's a good idea to test any changes or bugs you have fixed, in the feature branch before issuing the pull request. We realize that we don't have a complete testing system in place yet (maybe you can contribute this!), except for an overall testing script `test_smallbaselineApp.py`:
 
 ```
 ${MINTPY_HOME}/test/test_smallbaselineApp.py
 ```
 
-to see the testing result, it takes about 10 mins to finish.
+It takes about 10 mins to finish.
 
 
 ## Things you should NOT do ##

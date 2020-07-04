@@ -65,9 +65,9 @@ save_kmz.py                #generate Google Earth KMZ file in raster image
 save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
 ```
 
-#### 2.2 Customized processing recipe: [example](https://github.com/insarlab/MintPy/blob/master/sh/compare_velocity_with_diff_tropo.sh) ####
+#### 2.2 Customized processing recipe ####
 
-MintPy is a toolbox with individual utility scripts. Simply run the script with `-h / --help` to see its usage, you could build your own customized processing recipe! Here is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections: [link](https://github.com/insarlab/MintPy/blob/master/sh/compare_velocity_with_diff_tropo.sh)
+MintPy is a toolbox with individual utility scripts. Simply run the script with `-h / --help` to see its usage, you could build your own customized processing recipe! [Here](https://github.com/insarlab/MintPy/blob/master/sh/compare_velocity_with_diff_tropo.sh) is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections.
 
 #### 2.3 Build on top of `mintpy` module ####
 
@@ -82,32 +82,32 @@ ts_data, meta = readfile.read('timeseries_ERA5_ramp_demErr.h5')
 
 Algorithms implemented in the software are described in details in [Yunjun et al. (2019)](https://doi.org/10.1016/j.cageo.2019.104331).
 
-+ [Tutorials in Jupyter Notebook](https://github.com/insarlab/MintPy-tutorial)
-+ [Example datasets](./demo_dataset.md)
++ [Quick start with example datasets](./demo_dataset.md)
 + [Example data directory](./dir_structure.md)
 + [Example template files for InSAR processors](./examples/input_files/README.md)
-+ [Google Earth KMZ file](./google_earth.md)
++ [Tutorials in Jupyter Notebook](https://github.com/insarlab/MintPy-tutorial)
 
-### 4. User Forum ###
+### 4. Contact us ###
 
-Join our google group [https://groups.google.com/forum/#!forum/mintpy](https://groups.google.com/forum/#!forum/mintpy) to ask questions, get notice of latest features pushed to you!
++ Most development discussion happens on GitHub. Feel free to [open an issue](https://github.com/insarlab/MintPy/issues) or comment on any open issue or pull request.
++ Join our google group [https://groups.google.com/forum/#!forum/mintpy](https://groups.google.com/forum/#!forum/mintpy) to ask questions or leave comments.
 
 ### 5. Citing this work ###
 
 Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: Unwrapping error correction and noise reduction, _Computers & Geosciences_, _133_, 104331, doi:[10.1016/j.cageo.2019.104331](https://doi.org/10.1016/j.cageo.2019.104331), [arXiv](https://eartharxiv.org/9sz6m/), [data & figures](https://github.com/geodesymiami/Yunjun_et_al-2019-MintPy).
 
-In addition to the above, we recommend that you cite the original publications that describe the algorithms used in your specific analysis. They are noted briefly in the [default template file](../mintpy/defaults/smallbaselineApp.cfg) and listed in [here](./references.md).
+In addition to the above, we recommend that you cite the original publications that describe the algorithms used in your specific analysis. They are noted briefly in the [default template file](../mintpy/defaults/smallbaselineApp.cfg) and listed in the [references.md file](./references.md).
 
-### 6. Contributors [[guideline](./CONTRIBUTING.md)] ###
+### 6. Contributing ###
 
-* Zhang Yunjun
-* Heresh Fattahi
-* Falk Amelung
-* Scott Baker
-* Joshua Zahner
-* Alfredo Terreco
-* David Grossman
-* Emre Havazli
-* Yunmeng Cao
-* Andre Theron
-* [Other community members.](https://github.com/insarlab/MintPy/graphs/contributors)
+**Imposter syndrome disclaimer:** We want your help. No, really.
+
+There may be a little voice inside your head that is telling you that you're not ready to be an open source contributor; that your skills aren't nearly good enough to contribute. What could you possibly offer?
+
+We assure you - the little voice in your head is wrong. If you can write code at all, you can contribute code to open source. Contributing to open source projects is a fantastic way to advance one's coding skills. Writing perfect code isn't the measure of a good developer (that would disqualify all of us!); it's trying to create something, making mistakes, and learning from those mistakes. That's how we all improve, and we are happy to help others learn.
+
+**Being an open source contributor doesn't just mean writing code.** You can help out by writing or proofreading documentation, suggesting or implementing tests, or even giving feedback about the project (and yes - that includes giving feedback about the contribution process). Some of these contributions may be the most valuable to the project as a whole, because you're coming to the project with fresh eyes, so you can see the errors and assumptions that seasoned contributors have glossed over.
+
+For more information, please read our [contributing guide](./CONTRIBUTING.md).
+
+_This disclaimer was adapted from the [MetPy project](https://github.com/Unidata/MetPy)._
