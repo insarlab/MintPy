@@ -80,7 +80,7 @@ ts_data, meta = readfile.read('timeseries_ERA5_ramp_demErr.h5')
 
 ### 3. [Documentation](https://mintpy.readthedocs.io/) ###
 
-Algorithms implemented in the software are described in details in [Yunjun et al. (2019)](https://doi.org/10.1016/j.cageo.2019.104331).
+Algorithms implemented in the software are described in details at [Yunjun et al. (2019)](https://doi.org/10.1016/j.cageo.2019.104331).
 
 + [Quick start with example datasets](./demo_dataset.md)
 + [Example data directory](./dir_structure.md)
@@ -92,13 +92,7 @@ Algorithms implemented in the software are described in details in [Yunjun et al
 + Most development discussion happens on GitHub. Feel free to [open an issue](https://github.com/insarlab/MintPy/issues) or comment on any open issue or pull request.
 + Join our google group [https://groups.google.com/forum/#!forum/mintpy](https://groups.google.com/forum/#!forum/mintpy) to ask questions or leave comments.
 
-### 5. Citing this work ###
-
-Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: Unwrapping error correction and noise reduction, _Computers & Geosciences_, _133_, 104331, doi:[10.1016/j.cageo.2019.104331](https://doi.org/10.1016/j.cageo.2019.104331), [arXiv](https://eartharxiv.org/9sz6m/), [data & figures](https://github.com/geodesymiami/Yunjun_et_al-2019-MintPy).
-
-In addition to the above, we recommend that you cite the original publications that describe the algorithms used in your specific analysis. They are noted briefly in the [default template file](../mintpy/defaults/smallbaselineApp.cfg) and listed in the [references.md file](./references.md).
-
-### 6. Contributing ###
+### 5. Contributing ###
 
 **Imposter syndrome disclaimer:** We want your help. No, really.
 
@@ -111,3 +105,9 @@ We assure you - the little voice in your head is wrong. If you can write code at
 For more information, please read our [contributing guide](./CONTRIBUTING.md).
 
 _This disclaimer was adapted from the [MetPy project](https://github.com/Unidata/MetPy)._
+
+### 6. Citing this work ###
+
+Yunjun, Z., H. Fattahi, F. Amelung (2019), Small baseline InSAR time series analysis: Unwrapping error correction and noise reduction, _Computers & Geosciences_, _133_, 104331, doi:[10.1016/j.cageo.2019.104331](https://doi.org/10.1016/j.cageo.2019.104331), [arXiv](https://eartharxiv.org/9sz6m/), [data & figures](https://github.com/geodesymiami/Yunjun_et_al-2019-MintPy).
+
+In addition to the above, we recommend that you cite the original publications that describe the algorithms used in your specific analysis. They are noted briefly in the [default template file](../mintpy/defaults/smallbaselineApp.cfg) and listed in the [references.md file](./references.md).

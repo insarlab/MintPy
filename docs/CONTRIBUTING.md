@@ -37,7 +37,7 @@ is a great starting point if you are new to version control.
 
 #### 2. Develop your contribution: ####
 
-+ **Open an [issue](https://github.com/insarlab/MintPy/issues) first** if you want plan to introduce a new feature or to change funcationality, we may have easier ways to help you implement it. If there is already an issue that matches your idea, leave a comment there instead to let us know what you plan to do. For bug fixes, documentation updates, etc., this is generally not necessary.
++ **Open an [issue](https://github.com/insarlab/MintPy/issues) first** if you plan to introduce a new feature or to change funcationality, we may have easier ways to help you implement it. If there is already an issue that matches your idea, leave a comment there instead to let us know what you plan to do. For bug fixes, documentation updates, etc., this is generally not necessary.
 
 + Pull the latest changes from upstream:
 
@@ -58,7 +58,7 @@ is a great starting point if you are new to version control.
 
 #### 3. To submit your contribution: ####
 
-+ Go to GitHub. The new branch will show up with a Pull request button. Click and fill out the pull request template, make sure the title and message are clear, concise, and self-explanatory (these descriptions are how we keep track of the changes made to the project over time). Then click the button to submit it.
++ Go to your fork on GitHub. The new branch will show up with a Pull request button. Click and fill out the pull request template, make sure the title and message are clear, concise, and self-explanatory (these descriptions are how we keep track of the changes made to the project over time). Then click the button to submit it.
 
 #### 4. Review process: ####
 
@@ -78,9 +78,9 @@ If GitHub indicates that the branch of your Pull Request can no longer be merged
 
 + Each pull request should consist of a **small** and logical collection of changes.
 + Larger changes should be broken down into smaller components and integrated separately.
-+ Describe what your PR changes and why this is a good thing. Be as specific as you can. The PR description is how we keep track of the changes made to the project over time.
-+ Do not commit changes to files that are irrelevant to your feature or bugfix (eg: `.gitignore`, IDE project files, etc).
-+ Write descriptive commit messages. Chris Beams has a [guide](https://chris.beams.io/posts/git-commit/) on how to write good commit messages.
++ Describe what your PR changes and why this is a good thing. Be as specific as you can.
++ Do not commit changes to files that are irrelevant to your feature or bugfix (_e.g._: `.gitignore`, IDE project files, etc.).
++ Write descriptive commit messages. Chris Beams has a [guide on writing good commit messages](https://chris.beams.io/posts/git-commit/).
 + Be aware that the pull request review process is not immediate, and is generally proportional to the size of the pull request.
 
 Some things that will increase the chance that your pull request is accepted quickly:
@@ -92,7 +92,7 @@ Some things that will increase the chance that your pull request is accepted qui
 
 ## Testing ##
 
-It's a good idea to test any changes or bugs you have fixed, in the feature branch before issuing the pull request. We realize that we don't have a complete testing system in place yet (maybe you can contribute this!), except for an overall testing script `test_smallbaselineApp.py`:
+It's a good idea to test any changes or bugs you have fixed, in the feature branch locally, before issuing/submitting the pull request. We realize that we don't have a complete testing system in place yet (maybe you can contribute this!), except for an overall testing script `test_smallbaselineApp.py`:
 
 ```
 ${MINTPY_HOME}/test/test_smallbaselineApp.py

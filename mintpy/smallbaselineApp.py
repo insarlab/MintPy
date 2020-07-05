@@ -171,6 +171,7 @@ def read_inps2run_steps(inps, step_list=STEP_LIST):
             print(mintpy.version.logo)
 
         print('--RUN-at-{}--'.format(datetime.datetime.now()))
+        print('Current directory: {}'.format(os.getcwd()))
         print('Run routine processing with {} on steps: {}'.format(os.path.basename(__file__), run_steps))
         print('Remaining steps: {}'.format(step_list[idx0+1:]))
     print('-'*50)
