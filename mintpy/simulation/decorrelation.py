@@ -11,6 +11,7 @@
 
 import math
 import numpy as np
+import numpy.polynomial.polynomial as poly
 import scipy.stats as stats
 from matplotlib import pyplot as plt
 from mintpy.utils import ptime
@@ -23,7 +24,7 @@ def phase_pdf_ds(L, coherence=None, phi_num=1000, epsilon=1e-3):
     Parameters: L         - int, number of independent looks
                 coherence - 1D np.array for the range of coherence, with value < 1.0 for valid operation
                 phi_num   - int, number of phase sample for the numerical calculation
-    Returns:    pdf       - 2D np.array, phase pdf in size of (phi_num, len(coherence))
+    Returns:    pdf       - 2D np.array, phase PDF in size of (phi_num, len(coherence))
                 coherence - 1D np.array for the range of coherence
     Example:
         epsilon = 1e-4
@@ -83,7 +84,7 @@ def phase_variance_ds(L,  coherence=None, epsilon=1e-3):
     Eq. 2.1.2 (Box et al., 2015) and Eq. 4.2.27 (Hanssen, 2001)
     Parameters: L         - int, number of independent looks
                 coherence - 1D np.array for the range of coherence, with value < 1.0 for valid operation
-    Returns:    var       - 1D np.array, phase variance in size of (len(coherence))
+    Returns:    var       - 1D np.array, phase variance in size of (len(coherence)) in radians^2
                 coherence - 1D np.array for the range of coherence
     Example:
         epsilon = 1e-4
@@ -118,7 +119,7 @@ def phase_variance_ps(L, coherence=None, epsilon=1e-3):
     Parameters: L         - int, number of independent looks applied
                 coherence - float / np.ndarray, spatial coherence
                 epsilon   - float, a small number to avoid denominator to be zero
-    Returns:    var       - float / np.ndarray, phase variance
+    Returns:    var       - float / np.ndarray, phase variance in radians^2
                 coherence - float / np.ndarray, spatial coherence (for reference purpose)
     """
     if coherence is None:
@@ -128,53 +129,58 @@ def phase_variance_ps(L, coherence=None, epsilon=1e-3):
 
 
 ########################################## Simulations #########################################
-def sample_decorrelation_phase(coherence, L, size=1, phi_num=1000, display=False, scale=1.0, font_size=12):
-    '''Sample decorrelation phase based on PDF determined by L and coherence value
-    Parameters: coherence - float, spatial coherence
-                L         - int, number of independent looks
-                phi_num   - int, sample number
-    Returns:    phase     - 1D np.array in size of (size,), sampled phase
-    Examples:
-        decor_noise = sample_decorrelation_phase(0.7, L=1, size=1e4, display=True)
-    '''
-    size = int(size)
-    phiMax = np.pi * float(scale)
+def calibrate_coherence4phase_pdf_bias(coh, L, coh_step=0.02, num_sample=1e5, print_msg=True):
+    """Calculate coherence for the bias caused by the imperfect phase PDF of DS.
 
-    # numerical solution of phase PDF for distributed scatterers
-    pdf = phase_pdf_ds(int(L), coherence, phi_num=phi_num)[0].flatten()
+    By comparing the estimated coherence from the simulated decorrelation noise based on its PDF
+    with the specified true coherence.
 
-    # generate phase distribution
-    phi = np.linspace(-phiMax, phiMax, phi_num+1, endpoint=True)
-    phi_dist = stats.rv_histogram((pdf, phi))
+    A very large sample size is used to avoid the overestimation bias due to limited sample size.
+    No other phase components are added to avoid the underestimation bias due to the underlying fringe.
 
-    # sample from the distribution
-    phase = phi_dist.rvs(size=size)
+    Parameters: coh        - 1/2/3D np.ndarray of float32 for spatial coherence
+                L          - int, number of independent looks
+                coh_step   - float, step of coherence to generate lookup table
+                num_sample - int, number of samples used for coherence estimation
+    Returns:    coh_cal    - 1/2/3D np.ndarray of float32 for calibrated coherence
+    """
 
-    if display:
-        fig, ax = plt.subplots(figsize=[5,3])
-        ax.hist(phase, bins=50, density=True, label='Sample\nHistogram\n(norm)')
-        ax.plot(phi, phi_dist.pdf(phi), label='PDF')
-        ax.plot(phi, phi_dist.cdf(phi), label='CDF')
-        ax.set_xlabel('Phase', fontsize=font_size)
-        ax.set_ylabel('Probability', fontsize=font_size)
-        ax.set_title(r'L = %d, $\gamma$ = %.2f, sample size = %d' % (L, coherence, size), fontsize=font_size)
-        ax.set_xlim([-np.pi, np.pi])
-        ax.set_xticks([-np.pi, 0, np.pi])
-        ax.set_xticklabels([r'-$\pi$', '0', r'$\pi$'], fontsize=font_size)
-        ax.tick_params(direction='in', labelsize=font_size)
-        ax.legend(fontsize=font_size)
-        plt.savefig('DecorNoiseSampling.jpg', bbox_inches='tight', dpi=600)
-        plt.show()
-    return phase
+    ## 1. calculate the bias due to phase PDF numerically
+    # list of coherence
+    num_coh = int(1 / coh_step)
+    coh_sim = np.linspace(1, coh_step, num=num_coh)
+    coh_sim -= coh_step/2   # use value in the bin center
+
+    # loop over different coherence
+    coh_est = np.zeros(num_coh, dtype=np.float32)
+    for i in range(num_coh):
+        # sim decor noise
+        sim_pha = sample_decorrelation_phase(coh_sim[i], L=L, size=num_sample)
+
+        # form interferometric phase
+        sim_int = np.array(np.exp(1j*sim_pha), dtype=np.complex64)
+
+        # calc coherence from interferometric phase
+        coh_est[i] = np.abs(np.mean(sim_int))
+
+    ## 2. fit a polynomial curve to calibrate the bias
+    if print_msg:
+        print('calibrate the coherence for the phase PDF bias with a polynomial of degree 10')
+    ffit = poly.Polynomial(poly.polyfit(coh_est, coh_sim, deg=10, rcond=1e-15))
+    coh_cal = ffit(coh)
+
+    return coh_cal
 
 
 def coherence2decorrelation_phase(coh, L, coh_step=0.01, num_repeat=1, scale=1.0, display=False, print_msg=True):
-    """Simulate decorrelation phase based on coherence array/matrix.
+    """Simulate decorrelation phase based on coherence array/matrix
+    based on the phase PDF of DS from Tough et al. (1995).
+
     Parameters: coh        - 1/2/3D np.ndarray of float32 for spatial coherence
                 L          - int, number of independent looks
                 coh_step   - float, step of coherence to generate lookup table
                 num_repeat - int, number of repeatetion
-    Returns:    pha        - np.ndarray of float32 for decorrelation phase
+    Returns:    pha        - np.ndarray of float32 for decorrelation phase in radians
                                 for num_repeat == 1, pha.shape = coh.shape
                                 for num_repeat >  1, pha.shape = (coh.size, num_repeat)
     """
@@ -184,7 +190,7 @@ def coherence2decorrelation_phase(coh, L, coh_step=0.01, num_repeat=1, scale=1.0
 
     # check number of looks
     L = int(L)
-    msg = 'number of looks L={}'.format(L)
+    msg = 'number of independent looks L={}'.format(L)
     if L > 80:
         L = 80
         msg += ', use L=80 to avoid dividing by 0 in calculation with negligible effect'
@@ -234,9 +240,58 @@ def coherence2decorrelation_phase(coh, L, coh_step=0.01, num_repeat=1, scale=1.0
     return pha
 
 
+def sample_decorrelation_phase(coherence, L, size=1, phi_num=1000, display=False, scale=1.0, font_size=12):
+    '''Sample decorrelation phase based on PDF determined by L and coherence value
+    Parameters: coherence - float, spatial coherence
+                L         - int, number of independent looks
+                phi_num   - int, sample number
+    Returns:    phase     - 1D np.array in size of (size,), sampled phase in radians
+    Examples:
+        decor_noise = sample_decorrelation_phase(0.7, L=1, size=1e4, display=True)
+    '''
+    size = int(size)
+    phiMax = np.pi * float(scale)
+
+    # numerical solution of phase PDF for distributed scatterers
+    pdf = phase_pdf_ds(int(L), coherence, phi_num=phi_num)[0].flatten()
+
+    # generate phase distribution
+    phi = np.linspace(-phiMax, phiMax, phi_num+1, endpoint=True)
+    phi_dist = stats.rv_histogram((pdf, phi))
+
+    # sample from the distribution
+    phase = phi_dist.rvs(size=size)
+
+    if display:
+        fig, ax = plt.subplots(figsize=[5,3])
+        ax.hist(phase, bins=50, density=True, label='Sample\nHistogram\n(norm)')
+        ax.plot(phi, phi_dist.pdf(phi), label='PDF')
+        ax.plot(phi, phi_dist.cdf(phi), label='CDF')
+        ax.set_xlabel('Phase', fontsize=font_size)
+        ax.set_ylabel('Probability', fontsize=font_size)
+        ax.set_title(r'L = %d, $\gamma$ = %.2f, sample size = %d' % (L, coherence, size), fontsize=font_size)
+        ax.set_xlim([-np.pi, np.pi])
+        ax.set_xticks([-np.pi, 0, np.pi])
+        ax.set_xticklabels([r'-$\pi$', '0', r'$\pi$'], fontsize=font_size)
+        ax.tick_params(direction='in', labelsize=font_size)
+        ax.legend(fontsize=font_size)
+        plt.savefig('DecorNoiseSampling.jpg', bbox_inches='tight', dpi=600)
+        plt.show()
+    return phase
+
+
 #################################### Weight Functions #####################################
-def coherence2phase_variance(coherence, L=32, epsilon=1e-3, print_msg=False):
-    """Convert coherence to phase variance based on DS phase PDF (Tough et al., 1995)"""
+def coherence2phase_variance(coherence, L=32, scatter='DS', epsilon=1e-3, print_msg=False):
+    """Convert coherence to phase variance, depending on the type of scatterers
+
+    For DS, it is equation (66) from Tough et al. (1995).
+    For PS, it is equation (25) from Rodriguez and Martin (1992).
+
+    Parameters: coherence - 1/2/3D np.ndarray of float32 for spatial coherence
+                L         - int, number of independent looks
+                scatter   - str, type of scatterers, PS or DS
+    Returns:    variance  - 1/2/3D np.ndarray of float32 for the phase variance in radians^2
+    """
     lineStr = '    number of looks L={}'.format(L)
     if L > 80:
         L = 80
@@ -257,8 +312,17 @@ def coherence2phase_variance(coherence, L=32, epsilon=1e-3, print_msg=False):
     coherence[coherence > coh_max] = coh_max
     coherence_idx = np.array((coherence - coh_min) / coh_step, np.int16)
 
-    var_lut = phase_variance_ds(int(L), coh_lut)[0]
-    variance = var_lut[coherence_idx]
+    scatter = scatter.upper()
+    if scatter == 'DS':
+        var_lut = phase_variance_ds(int(L), coh_lut)[0]
+        variance = var_lut[coherence_idx]
+
+    elif scatter == 'PS':
+        variance = phase_variance_ps(int(L), coherence)[0]
+
+    else:
+        raise ValueError('un-recognized scatterer type: {}'.format(scatter))
+
     return variance
 
 
