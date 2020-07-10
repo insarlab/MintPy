@@ -15,118 +15,126 @@ import time
 from datetime import datetime as dt
 import h5py
 import numpy as np
-
 from mintpy.utils import ptime
 
 
-BOOL_ZERO = np.bool_(0)
-INT_ZERO = np.int16(0)
-FLOAT_ZERO = np.float32(0.0)
-CPX_ZERO = np.complex64(0.0)
+##------------------ Global Variables ---------------------##
 
-dataType = np.float32
+dataTypeDict = {
+    'bool': np.bool_, 'byte': np.bool_, 'flag': np.bool_,
+    'int': np.int16, 'int16': np.int16, 'short': np.int16, 'int32': np.int32,
+    'int64': np.int64, 'long': np.int64,
+    'float': np.float32, 'float32': np.float32,
+    'float_': np.float64, 'float64': np.float64,
+    'complex': np.complex64, 'complex64': np.complex64, 'cpx_float32': np.complex64,
+    'cfloat': np.complex64, 'cfloat32': np.complex64,
+    'complex128': np.complex128, 'complex_': np.complex128, 'cpx_float64': np.complex128,
+}
 
-dataTypeDict = {'bool': np.bool_, 'byte': np.bool_, 'flag': np.bool_,
-                'int': np.int16, 'int16': np.int16, 'short': np.int16, 'int32': np.int32,
-                'int64': np.int64, 'long': np.int64,
-                'float': np.float32, 'float32': np.float32,
-                'float_': np.float64, 'float64': np.float64,
-                'complex': np.complex64, 'complex64': np.complex64, 'cpx_float32': np.complex64,
-                'cfloat': np.complex64, 'cfloat32': np.complex64,
-                'complex128': np.complex128, 'complex_': np.complex128, 'cpx_float64': np.complex128
-                }
-
-##------------------ Variables ---------------------##
 timeseriesKeyNames = ['timeseries', 'HDFEOS', 'giantTimeseries']
 
-timeseriesDatasetNames = ['timeseries',
-                          'raw',
-                          'troposphericDelay',
-                          'topographicResidual',
-                          'ramp',
-                          'displacement']
+timeseriesDatasetNames = [
+    'timeseries',
+    'raw',
+    'troposphericDelay',
+    'topographicResidual',
+    'ramp',
+    'displacement',
+]
 
-geometryDatasetNames = ['height',
-                        'latitude',
-                        'longitude',
-                        'rangeCoord',
-                        'azimuthCoord',
-                        'incidenceAngle',
-                        'azimuthAngle',
-                        'slantRangeDistance',
-                        'shadowMask',
-                        'waterMask',
-                        'commonMask',
-                        'bperp']
+geometryDatasetNames = [
+    'height',
+    'latitude',
+    'longitude',
+    'rangeCoord',
+    'azimuthCoord',
+    'incidenceAngle',
+    'azimuthAngle',
+    'slantRangeDistance',
+    'shadowMask',
+    'waterMask',
+    'commonMask',
+    'bperp',
+]
 
-ifgramDatasetNames = ['unwrapPhase',
-                      'unwrapPhase_bridging_phaseClosure',
-                      'unwrapPhase_bridging',
-                      'unwrapPhase_phaseClosure',
-                      'coherence',
-                      'connectComponent',
-                      'wrapPhase',
-                      'ionoPhase',
-                      'rangeOffset',
-                      'azimuthOffset',
-                      'offsetSNR',
-                      'refPhase']
+ifgramDatasetNames = [
+    'unwrapPhase',
+    'unwrapPhase_bridging_phaseClosure',
+    'unwrapPhase_bridging',
+    'unwrapPhase_phaseClosure',
+    'coherence',
+    'connectComponent',
+    'wrapPhase',
+    'ionoPhase',
+    'rangeOffset',
+    'azimuthOffset',
+    'offsetSNR',
+    'refPhase',
+]
 
-datasetUnitDict = {'unwrapPhase'        :'radian',
-                   'coherence'          :'1',
-                   'connectComponent'   :'1',
-                   'wrapPhase'          :'radian',
-                   'ionoPhase'          :'radian',
+datasetUnitDict = {
+    # interferogram
+    'unwrapPhase'      : 'radian',
+    'coherence'        : '1',
+    'connectComponent' : '1',
+    'wrapPhase'        : 'radian',
+    'ionoPhase'        : 'radian',
 
-                   'azimuthOffset'      :'pixel',
-                   'rangeOffset'        :'pixel',
-                   'offsetSNR'          :'1',
+    # offset
+    'azimuthOffset' : 'pixel',
+    'rangeOffset'   : 'pixel',
+    'offsetSNR'     : '1',
 
-                   'height'             :'m',
-                   'latitude'           :'degree',
-                   'longitude'          :'degree',
-                   'rangeCoord'         :'1',
-                   'azimuthCoord'       :'1',
-                   'incidenceAngle'     :'degree',
-                   'azimuthAngle'       :'degree',
-                   'slantRangeDistance' :'m',
-                   'shadowMask'         :'1',
-                   'waterMask'          :'1',
-                   'commonMask'         :'1',
-                   'bperp'              :'m',
+    # geometry
+    'height'             : 'm',
+    'latitude'           : 'degree',
+    'longitude'          : 'degree',
+    'rangeCoord'         : '1',
+    'azimuthCoord'       : '1',
+    'incidenceAngle'     : 'degree',
+    'azimuthAngle'       : 'degree',
+    'slantRangeDistance' : 'm',
+    'shadowMask'         : '1',
+    'waterMask'          : '1',
+    'commonMask'         : '1',
+    'bperp'              : 'm',
 
-                   'timeseries'         :'m',
-                   'raw'                :'m',
-                   'troposphericDelay'  :'m',
-                   'topographicResidual':'m',
-                   'ramp'               :'m',
-                   'displacement'       :'m',
+    # time-series
+    'timeseries'          : 'm',
+    'raw'                 : 'm',
+    'troposphericDelay'   : 'm',
+    'topographicResidual' : 'm',
+    'ramp'                : 'm',
+    'displacement'        : 'm',
 
-                   'temporalCoherence'  :'1',
-                   'velocity'           :'m/year',
-                   'acceleration'       :'m/year^2',
-                   'mask'               :'1',
+    # others
+    'temporalCoherence' : '1',
+    'velocity'          : 'm/year',
+    'acceleration'      : 'm/year^2',
+    'mask'              : '1',
 
-                   'giantTimeseries'    :'mm',
-                   'recons'             :'mm',
-                   'rawts'              :'mm',
-                   'sar_aps'            :'mm',
-                   'igram_aps'          :'mm',
-                   'figram'             :'mm',
-                   'igram'              :'mm',
-                   'cmask'              :'1',
-                   'ifgcnt'             :'1',
+    # giant
+    'giantTimeseries' : 'mm',
+    'recons'          : 'mm',
+    'rawts'           : 'mm',
+    'sar_aps'         : 'mm',
+    'igram_aps'       : 'mm',
+    'figram'          : 'mm',
+    'igram'           : 'mm',
+    'cmask'           : '1',
+    'ifgcnt'          : '1',
 
-                   'unw'               :'radian',
-                   'int'               :'radian',
-                   'flat'              :'radian',
-                   'cor'               :'1',
-                   'dem'               :'m',
-                   'hgt'               :'m',
-                   'hgt_sim'           :'m',
-                   'magnitude'         :'1',
-                   'intensity'         :'1',
-                   }
+    # binary
+    'unw'       : 'radian',
+    'int'       : 'radian',
+    'flat'      : 'radian',
+    'cor'       : '1',
+    'dem'       : 'm',
+    'hgt'       : 'm',
+    'hgt_sim'   : 'm',
+    'magnitude' : '1',
+    'intensity' : '1',
+}
 
 
 
