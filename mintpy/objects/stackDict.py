@@ -15,24 +15,17 @@ import time
 import warnings
 import h5py
 import numpy as np
-
 try:
     from skimage.transform import resize
 except ImportError:
     raise ImportError('Could not import skimage!')
 
-from mintpy.objects import (dataTypeDict,
-                            geometryDatasetNames,
-                            ifgramDatasetNames)
+from mintpy.objects import (
+    dataTypeDict,
+    geometryDatasetNames,
+    ifgramDatasetNames,
+)
 from mintpy.utils import readfile, ptime, utils0 as ut
-
-
-BOOL_ZERO = np.bool_(0)
-INT_ZERO = np.int16(0)
-FLOAT_ZERO = np.float32(0.0)
-CPX_ZERO = np.complex64(0.0)
-
-dataType = np.float32
 
 
 ########################################################################################
@@ -85,10 +78,8 @@ class ifgramStackDict:
         ifgramObj = [v for v in self.pairsDict.values()][0]
         dsFile = ifgramObj.datasetDict[dsName]
         metadata = readfile.read_attribute(dsFile)
-        dsDataType = dataType
-        if 'DATA_TYPE' in metadata.keys():
-            dsDataType = dataTypeDict[metadata['DATA_TYPE'].lower()]
-        return dsDataType
+        dataType = dataTypeDict[metadata.get('DATA_TYPE', 'float32').lower()]
+        return dataType
 
     def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, compression=None, extra_metadata=None):
         '''Save/write an ifgramStackDict object into an HDF5 file with the structure defined in:
@@ -117,7 +108,7 @@ class ifgramStackDict:
         # 3D datasets containing unwrapPhase, coherence, connectComponent, wrapPhase, etc.
         for dsName in self.dsNames:
             dsShape = (self.numIfgram, self.length, self.width)
-            dsDataType = dataType
+            dsDataType = np.float32
             dsCompression = compression
             if dsName in ['connectComponent']:
                 dsDataType = np.int16
@@ -162,7 +153,7 @@ class ifgramStackDict:
         ###############################
         # 1D dataset containing perpendicular baseline of all pairs
         dsName = 'bperp'
-        dsDataType = dataType
+        dsDataType = np.float32
         dsShape = (self.numIfgram,)
         print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
                                                                           w=maxDigit,
@@ -466,7 +457,7 @@ class geometryDict:
             # 3D datasets containing bperp
             if dsName == 'bperp':
                 self.dateList = list(self.datasetDict[dsName].keys())
-                dsDataType = dataType
+                dsDataType = np.float32
                 self.numDate = len(self.dateList)
                 dsShape = (self.numDate, length, width)
                 ds = f.create_dataset(dsName,
@@ -507,7 +498,7 @@ class geometryDict:
 
             # 2D datasets containing height, latitude, incidenceAngle, shadowMask, etc.
             else:
-                dsDataType = dataType
+                dsDataType = np.float32
                 if dsName.lower().endswith('mask'):
                     dsDataType = np.bool_
                 dsShape = (length, width)
@@ -537,7 +528,7 @@ class geometryDict:
             # Write dataset
             if data is not None:
                 dsShape = data.shape
-                dsDataType = dataType
+                dsDataType = np.float32
                 print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
                        ' with compression = {c}').format(d=dsName,
                                                          w=maxDigit,
@@ -546,7 +537,7 @@ class geometryDict:
                                                          c=str(compression)))
                 ds = f.create_dataset(dsName,
                                       data=data,
-                                      dtype=dataType,
+                                      dtype=dsDataType,
                                       chunks=True,
                                       compression=compression)
 
