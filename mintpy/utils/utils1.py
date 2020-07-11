@@ -11,6 +11,7 @@
 import os
 import time
 import glob
+import shutil
 import h5py
 import numpy as np
 from mintpy.objects import deramp, ifgramStack, timeseries, geometryDatasetNames
@@ -497,8 +498,7 @@ def update_template_file(template_file, extra_dict):
     f_tmp.close()
 
     # Overwrite exsting original template file
-    mvCmd = 'mv {} {}'.format(tmp_file, template_file)
-    os.system(mvCmd)
+    shutil.move(tmp_file, template_file)
     return template_file
 
 
@@ -634,9 +634,7 @@ def run_or_skip(out_file, in_file=None, check_readable=True, print_msg=True):
         except:
             if print_msg:
                 print('{} exists, but can not read, remove it.'.format(out_file[0]))
-            rmCmd = 'rm {}'.format(out_file[0])
-            print(rmCmd)
-            os.system(rmCmd)
+            os.remove(out_file[0])
             return 'run'
 
     # 3 - check modification time of output and input files
