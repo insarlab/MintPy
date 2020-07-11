@@ -473,7 +473,7 @@ def main(iargs=None):
     msg += "\ntemporal deformation model: polynomial order = {}".format(inps.polyOrder)
     if inps.stepFuncDate:
         msg += "\ntemporal deformation model: step functions at {}".format(inps.stepFuncDate)
-    msg += '-'*80
+    msg += '\n'+'-'*80
     print(msg)
 
     A_def = get_design_matrix4time_func(date_list=timeseries(inps.timeseries_file).get_date_list(),

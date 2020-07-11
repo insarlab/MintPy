@@ -8,6 +8,7 @@
 
 import os
 import sys
+import shutil
 import argparse
 import numpy as np
 from mintpy.utils import readfile, writefile
@@ -207,12 +208,11 @@ def mask_isce_file(in_file, mask_file, out_file=None):
     # 2. update file path inside files
     for ext in ['xml', 'vrt']:
         # copy
-        cmd = 'cp {i}.{e} {o}.{e}'.format(i=in_file, o=out_file, e=ext)
-        os.system(cmd)
-
-        msg = cmd
-        msg += ' and update the corresponding filename'
-        print(msg)
+        in_meta_file = '{}.{}'.format(in_file, ext)
+        out_meta_file = '{}.{}'.format(out_file, ext)
+        shutil.copy2(in_meta_file, out_meta_file)
+        print('copy {} to {}'.format(in_meta_file, out_meta_file))
+        print('   and update the corresponding filename')
 
         # update file path
         meta_file = '{o}.{e}'.format(o=out_file, e=ext)

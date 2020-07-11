@@ -486,11 +486,12 @@ def check_exist_grib_file(gfile_list, print_msg=True):
                 print('------------------------------------------------------------------------------')
                 print('corrupted grib files detected! Delete them and re-download...')
                 print('number of grib files corrupted  : {}'.format(len(gfile_corrupt)))
-            for i in gfile_corrupt:
-                rmCmd = 'rm '+i
-                print(rmCmd)
-                os.system(rmCmd)
-                gfile_exist.remove(i)
+
+            for gfile in gfile_corrupt:
+                print('remove {}'.format(gfile))
+                os.remove(gfile)
+                gfile_exist.remove(gfile)
+
             if print_msg:
                 print('------------------------------------------------------------------------------')
     return gfile_exist
@@ -648,20 +649,17 @@ def calculate_delay_timeseries(inps):
     return inps.tropo_file
 
 
-def correct_timeseries(dis_file, tropo_file, cor_ts_file):
+def correct_timeseries(dis_file, tropo_file, cor_dis_file):
     # diff.py can handle different reference in space and time
     # between the absolute tropospheric delay and the double referenced time-series
     print('\n------------------------------------------------------------------------------')
     print('correcting relative delay for input time-series using diff.py')
-    cmd = 'diff.py {} {} -o {} --force'.format(dis_file,
-                                               tropo_file,
-                                               cor_ts_file)
-    print(cmd)
-    status = subprocess.Popen(cmd, shell=True).wait()
-    if status is not 0:
-        raise Exception(('Error while correcting timeseries file '
-                         'using diff.py with tropospheric delay file.'))
-    return cor_ts_file
+    from mintpy import diff
+
+    iargs = [dis_file, tropo_file, '-o', cor_dis_file]
+    print('diff.py', ' '.join(iargs))
+    diff.main(iargs)
+    return cor_dis_file
 
 
 def correct_single_ifgram(dis_file, tropo_file, cor_dis_file):

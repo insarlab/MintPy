@@ -7,6 +7,7 @@
 
 
 import os
+import shutil
 import argparse
 from mintpy.utils import readfile, writefile, utils as ut
 
@@ -79,9 +80,8 @@ def extract_metadata(fname):
     basic_rsc_file = fname+'.rsc'
     if not os.path.isfile(basic_rsc_file) and fname.endswith('_snap_connect.byt'):
         unw_rsc_file = '{}.unw.rsc'.format(fname.split('_snap_connect.byt')[0])
-        copyCmd = 'cp {} {}'.format(unw_rsc_file, basic_rsc_file)
-        print(copyCmd)
-        os.system(copyCmd)
+        print('copy {} to {}'.format(unw_rsc_file, basic_rsc_file))
+        shutil.copy2(unw_rsc_file, basic_rsc_file)
     basic_dict = readfile.read_roipac_rsc(basic_rsc_file)
 
     # return if baseline attributes are already existed.

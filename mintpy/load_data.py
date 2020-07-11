@@ -553,13 +553,26 @@ def prepare_metadata(inpsDict):
     print('prepare metadata files for {} products'.format(processor))
 
     if processor in ['gamma', 'roipac', 'snap']:
+        # import prep_module
+        if processor == 'gamma':
+            from mintpy import prep_gamma as prep_module
+        elif processor == 'roipac':
+            from mintpy import prep_roipac as prep_module
+        elif processor == 'snap':
+            from mintpy import prep_snap as prep_module
+
+        # run prep_module
         for key in [i for i in inpsDict.keys() if (i.startswith('mintpy.load.') and i.endswith('File'))]:
             if len(glob.glob(str(inpsDict[key]))) > 0:
-                cmd = '{} {}'.format(script_name, inpsDict[key])
-                print(cmd)
-                os.system(cmd)
+                # print command line
+                script_name = '{}.py'.format(os.path.basename(prep_module.__name__).split('.')[-1])
+                iargs = [inpsDict[key]]
+                print(script_name, ' '.join(iargs))
+                # run
+                prep_module.main(iargs)
 
     elif processor == 'isce':
+        from mintpy import prep_isce
         meta_files = sorted(glob.glob(inpsDict['mintpy.load.metaFile']))
         if len(meta_files) < 1:
             warnings.warn('No input metadata file found: {}'.format(inpsDict['mintpy.load.metaFile']))
@@ -580,14 +593,17 @@ def prepare_metadata(inpsDict):
                 obs_dir = None
                 obs_file = None
 
-            # command line
-            cmd = '{s} -m {m} -g {g}'.format(s=script_name, m=meta_file, g=geom_dir)
+            # compose list of input arguments
+            iargs = ['-m', meta_file, '-g', geom_dir]
             if baseline_dir:
-                cmd += ' -b {b} '.format(b=baseline_dir)
+                iargs += ['-b', baseline_dir]
             if obs_dir is not None:
-                cmd += ' -d {d} -f {f} '.format(d=obs_dir, f=obs_file)
-            print(cmd)
-            os.system(cmd)
+                iargs += ['-d', obs_dir, '-f', obs_file]
+            print('prep_isce.py', ' '.join(iargs))
+            
+            # run module
+            prep_isce.main(iargs)
+
         except:
             pass
     return

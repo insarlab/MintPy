@@ -10,8 +10,11 @@
 import os
 import sys
 import time
+import shutil
 import argparse
 import subprocess
+import tarfile
+
 
 CMAP_DICT = {
     'FernandinaSenDT128' : 'jet',
@@ -106,15 +109,14 @@ def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False):
     else:
         # remove existing directory
         if os.path.isdir(dset_name):
-            cmd = 'rm -r {}'.format(dset_name)
-            print('removing existing project directory')
-            print(cmd)
-            os.system(cmd)
+            print('removing existing project directory: {}'.format(dset_name))
+            shutil.rmtree(dset_name)
 
         # uncompress tar file
-        cmd = 'tar -xJf {}'.format(tar_file)
-        print(cmd)
-        os.system(cmd)
+        print('extract content from tar file: {}'.format(tar_file))
+        tar = tarfile.open(tar_file)
+        tar.extractall()
+        tar.close()
 
     # set working directory
     work_dir = os.path.join(test_dir, dset_name, 'mintpy')
@@ -123,9 +125,8 @@ def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False):
 
     # remove pyaps existing products or not
     if test_pyaps:
-        cmd = 'rm ./inputs/ERA5.h5'
-        os.system(cmd)
         print('remove existing tropospheric delay file: ./inputs/ERA5.h5')
+        os.remove('./inputs/ERA5.h5')
 
     # runing smallbaselineApp
     cmd = 'smallbaselineApp.py {}'.format(template_file)

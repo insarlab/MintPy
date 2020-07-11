@@ -8,6 +8,7 @@
 
 
 import os
+import shutil
 import h5py
 import numpy as np
 from mintpy.objects import timeseries
@@ -329,9 +330,8 @@ def remove_hdf5_dataset(fname, datasetNames, print_msg=True):
         print('delete {} from file {}'.format(datasetNames, fname))
     # 1. rename the file to a temporary file
     temp_file = os.path.join(os.path.dirname(fname), 'tmp_{}'.format(os.path.basename(fname)))
-    cmd = 'mv {} {}'.format(fname, temp_file)
-    print(cmd)
-    os.system(cmd)
+    print('move {} to {}'.format(fname, temp_file))
+    shutil.move(fname, temp_file)
 
     # 2. write a new file with all data except for the one to be deleted
     if print_msg:

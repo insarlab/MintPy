@@ -119,9 +119,7 @@ def analyze_rms(date_list, rms_list, inps):
     else:
         print('None.')
         if os.path.isfile(ex_date_file):
-            rmCmd = 'rm {}'.format(ex_date_file)
-            print(rmCmd)
-            os.system(rmCmd)
+            os.remove(ex_date_file)
 
     # plot bar figure and save
     fig_file = os.path.splitext(inps.rms_file)[0]+'.pdf'

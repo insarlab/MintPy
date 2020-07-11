@@ -344,23 +344,23 @@ class TimeSeriesAnalysis:
         # 2) loading data
         stack_processor = self.template['mintpy.load.processor'].lower()
         if stack_processor == 'aria':
-            # use subprocess instead of main() here to avoid import gdal3
-            # which is required in prep_aria.py
-            cmd = 'prep_aria.py --template {} --update '.format(self.templateFile)
-            print(cmd)
-            subprocess.Popen(cmd, shell=True).wait()
+            from mintpy import prep_aria
+            iargs = ['--template', self.templateFile, '--update']
+            prep_aria.main(iargs)
 
         else:
-            # compose command line
-            scp_args = '--template {}'.format(self.templateFile)
+            # compose list of input arguments
+            # instead of using command line then split
+            # to support path with whitespace
+            iargs = ['--template', self.templateFile]
             if self.customTemplateFile:
-                scp_args += ' {}'.format(self.customTemplateFile)
+                iargs += [self.customTemplateFile]
             if self.projectName:
-                scp_args += ' --project {}'.format(self.projectName)
+                iargs += ['--project', self.projectName]
 
             # run command line
-            print("load_data.py", scp_args)
-            mintpy.load_data.main(scp_args.split())
+            print('load_data.py', ' '.join(iargs))
+            mintpy.load_data.main(iargs)
 
         # come back to working directory
         os.chdir(self.workDir)
@@ -441,25 +441,25 @@ class TimeSeriesAnalysis:
                 writefile.write(water_mask, out_file=water_mask_file, metadata=atr)
 
         # 2) modify network
-        scp_args = '{} -t {}'.format(stack_file, self.templateFile)
-        print('modify_network.py', scp_args)
-        mintpy.modify_network.main(scp_args.split())
+        iargs = [stack_file, '-t', self.templateFile]
+        print('modify_network.py', ' '.join(iargs))
+        mintpy.modify_network.main(iargs)
 
         # 3) plot network
         if self.template['mintpy.plot'] and plot:
-            scp_args = '{} -t {} --nodisplay'.format(stack_file, self.templateFile)
+            iargs = [stack_file, '-t', self.templateFile, '--nodisplay']
 
             dsNames = readfile.get_dataset_list(stack_file)
             if any('phase' in i.lower() for i in dsNames):
-                scp_args += ' -d coherence -v 0.2 1.0 '
+                iargs += ['-d', 'coherence', '-v', '0.2', '1.0']
             elif any('offset' in i.lower() for i in dsNames):
-                scp_args += ' -d offsetSNR -v 0 20 '
+                iargs += ['-d', 'offsetSNR', '-v', '0', '20']
 
-            print('\nplot_network.py', scp_args)
+            print('\nplot_network.py', ' '.join(iargs))
             if ut.run_or_skip(out_file=net_fig,
                               in_file=[stack_file, coh_txt, self.templateFile],
                               check_readable=False) == 'run':
-                mintpy.plot_network.main(scp_args.split())
+                mintpy.plot_network.main(iargs)
         return
 
 
@@ -473,17 +473,17 @@ class TimeSeriesAnalysis:
 
         # 1) generate mask file from the common connected components
         if any('phase' in i.lower() for i in dsNames):
-            scp_args = '{} --nonzero -o {} --update'.format(stack_file, mask_file)
-            print('\ngenerate_mask.py', scp_args)
-            mintpy.generate_mask.main(scp_args.split())
+            iargs = [stack_file, '--nonzero', '-o', mask_file, '--update']
+            print('\ngenerate_mask.py', ' '.join(iargs))
+            mintpy.generate_mask.main(iargs)
 
         # 2) generate average spatial coherence
         if any('phase' in i.lower() for i in dsNames):
-            scp_args = '{} --dataset coherence -o {} --update'.format(stack_file, coh_file)
+            iargs = [stack_file, '--dataset', 'coherence', '-o', coh_file, '--update']
         elif any('offset' in i.lower() for i in dsNames):
-            scp_args = '{} --dataset offsetSNR -o {} --update'.format(stack_file, snr_file)
-        print('\ntemporal_average.py', scp_args)
-        mintpy.temporal_average.main(scp_args.split())
+            iargs = [stack_file, '--dataset', 'offsetSNR', '-o', snr_file, '--update']
+        print('\ntemporal_average.py', ' '.join(iargs))
+        mintpy.temporal_average.main(iargs)
         return
 
 
@@ -500,9 +500,9 @@ class TimeSeriesAnalysis:
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
         coh_file = 'avgSpatialCoh.h5'
 
-        scp_args = '{} -t {} -c {}'.format(stack_file, self.templateFile, coh_file)
-        print('reference_point.py', scp_args)
-        mintpy.reference_point.main(scp_args.split())
+        iargs = [stack_file, '-t', self.templateFile, '-c', coh_file]
+        print('reference_point.py', ' '.join(iargs))
+        mintpy.reference_point.main(iargs)
         return
 
 
@@ -516,15 +516,15 @@ class TimeSeriesAnalysis:
 
         # 1) stack interferograms
         pha_vel_file = 'avgPhaseVelocity.h5'
-        scp_args = '{} --dataset unwrapPhase -o {} --update'.format(stack_file, pha_vel_file)
-        print('temporal_average.py', scp_args)
-        mintpy.temporal_average.main(scp_args.split())
+        iargs = [stack_file, '--dataset', 'unwrapPhase', '-o', pha_vel_file, '--update']
+        print('temporal_average.py', ' '.join(iargs))
+        mintpy.temporal_average.main(iargs)
 
         # 2) calculate the integer ambiguity of closure phase
         water_mask_file = 'waterMask.h5'
-        scp_args = '{} --water-mask {} --action calculate --update'.format(stack_file, water_mask_file)
-        print('unwrap_error_phase_closure.py', scp_args)
-        mintpy.unwrap_error_phase_closure.main(scp_args.split())
+        iargs = [stack_file, '--water-mask', water_mask_file, '--action', 'calculate', '--update']
+        print('unwrap_error_phase_closure.py', ' '.join(iargs))
+        mintpy.unwrap_error_phase_closure.main(iargs)
         return
 
 
@@ -539,25 +539,27 @@ class TimeSeriesAnalysis:
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
         mask_file = 'maskConnComp.h5'
 
-        scp_args_bridge = '{} --template {} --update'.format(stack_file, self.templateFile)
-        scp_args_closure = '{} --cc-mask {} --template {} --update'.format(stack_file, mask_file, self.templateFile)
+        iargs_bridge = [stack_file, '--template', self.templateFile, '--update']
+        iargs_closure = iargs_bridge + ['--cc-mask', mask_file]
 
         if method == 'bridging':
-            print('unwrap_error_bridging.py', scp_args_bridge)
-            mintpy.unwrap_error_bridging.main(scp_args_bridge.split())
+            print('unwrap_error_bridging.py', ' '.join(iargs_bridge))
+            mintpy.unwrap_error_bridging.main(iargs_bridge)
 
         elif method == 'phase_closure':
-            print('unwrap_error_phase_closure.py', scp_args_closure)
-            mintpy.unwrap_error_phase_closure.main(scp_args_closure.split())
+            print('unwrap_error_phase_closure.py', ' '.join(iargs_closure))
+            mintpy.unwrap_error_phase_closure.main(iargs_closure)
 
         elif method == 'bridging+phase_closure':
-            scp_args_bridge += ' -i unwrapPhase -o unwrapPhase_bridging'
-            print('unwrap_error_bridging.py', scp_args_bridge)
-            mintpy.unwrap_error_bridging.main(scp_args_bridge.split())
+            iargs_bridge += ['-i', 'unwrapPhase',
+                             '-o', 'unwrapPhase_bridging']
+            print('unwrap_error_bridging.py', ' '.join(iargs_bridge))
+            mintpy.unwrap_error_bridging.main(iargs_bridge)
 
-            scp_args_closure += ' -i unwrapPhase_bridging -o unwrapPhase_bridging_phaseClosure'
-            print('unwrap_error_phase_closure.py', scp_args_closure)
-            mintpy.unwrap_error_phase_closure.main(scp_args_closure.split())
+            iargs_closure += ['-i', 'unwrapPhase_bridging',
+                              '-o', 'unwrapPhase_bridging_phaseClosure']
+            print('unwrap_error_phase_closure.py', ' '.join(iargs_closure))
+            mintpy.unwrap_error_phase_closure.main(iargs_closure)
 
         else:
             raise ValueError('un-recognized method: {}'.format(method))
@@ -573,9 +575,9 @@ class TimeSeriesAnalysis:
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
 
         # 1) invert ifgramStack for time-series
-        scp_args = '{} -t {} --update '.format(stack_file, self.templateFile)
-        print('ifgram_inversion.py', scp_args)
-        mintpy.ifgram_inversion.main(scp_args.split())
+        iargs = [stack_file, '-t', self.templateFile, '--update']
+        print('ifgram_inversion.py', ' '.join(iargs))
+        mintpy.ifgram_inversion.main(iargs)
 
         # 2) get reliable pixel mask: maskTempCoh.h5
         self.generate_temporal_coherence_mask()
@@ -589,13 +591,13 @@ class TimeSeriesAnalysis:
         mask_file = 'maskTempCoh.h5'
         tcoh_min = self.template['mintpy.networkInversion.minTempCoh']
 
-        scp_args = '{} -m {} -o {}'.format(tcoh_file, tcoh_min, mask_file)
-
+        # compose list of arguments
+        iargs = [tcoh_file, '-m', tcoh_min, '-o', mask_file]
         # exclude pixels in shadow if shadowMask dataset is available
-        apply_shadow_mask = self.template['mintpy.networkInversion.shadowMask']
-        if apply_shadow_mask is True and 'shadowMask' in readfile.get_dataset_list(geom_file):
-            scp_args += ' --base {} --base-dataset shadowMask --base-value 1'.format(geom_file)
-        print('generate_mask.py', scp_args)
+        if (self.template['mintpy.networkInversion.shadowMask'] is True 
+                and 'shadowMask' in readfile.get_dataset_list(geom_file)):
+            iargs += ['--base', geom_file, '--base-dataset', 'shadowMask', '--base-value', '1']
+        print('generate_mask.py', ' '.join(iargs))
 
         # update mode: run only if:
         # 1) output file exists and newer than input file, AND
@@ -616,7 +618,7 @@ class TimeSeriesAnalysis:
         print('run or skip: {}'.format(flag))
 
         if flag == 'run':
-            mintpy.generate_mask.main(scp_args.split())
+            mintpy.generate_mask.main(iargs)
             # update configKeys
             atr = {}
             for key in config_keys:
@@ -723,10 +725,10 @@ class TimeSeriesAnalysis:
         in_file = fnames['input']
         out_file = fnames['output']
         if in_file != out_file:
-            scp_args = '{} {} -o {}'.format(in_file, geom_file, out_file)
-            print('local_oscilator_drift.py', scp_args)
+            iargs = [in_file, geom_file, '-o', out_file]
+            print('local_oscilator_drift.py', ' '.join(iargs))
             if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
-                mintpy.local_oscilator_drift.main(scp_args.split())
+                mintpy.local_oscilator_drift.main(iargs)
         else:
             atr = readfile.read_attribute(in_file)
             sat = atr.get('PLATFORM', None)
@@ -757,48 +759,45 @@ class TimeSeriesAnalysis:
             if method == 'height_correlation':
                 tropo_look = self.template['mintpy.troposphericDelay.looks']
                 tropo_min_cor = self.template['mintpy.troposphericDelay.minCorrelation']
-                scp_args = '{f} -g {g} -p {p} -m {m} -o {o} -l {l} -t {t}'.format(f=in_file,
-                                                                                  g=geom_file,
-                                                                                  p=poly_order,
-                                                                                  m=mask_file,
-                                                                                  o=out_file,
-                                                                                  l=tropo_look,
-                                                                                  t=tropo_min_cor)
+                iargs = [in_file, 
+                         '-g', geom_file,
+                         '-p', poly_order,
+                         '-m', mask_file,
+                         '-o', out_file,
+                         '-l', tropo_look, 
+                         '-t', tropo_min_cor]
                 print('tropospheric delay correction with height-correlation approach')
-                print('tropo_phase_elevation.py', scp_args)
+                print('tropo_phase_elevation.py', ' '.join(iargs))
                 if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
-                    mintpy.tropo_phase_elevation.main(scp_args.split())
+                    mintpy.tropo_phase_elevation.main(iargs)
 
             # Weather Re-analysis Data (Jolivet et al., 2011;2014)
             elif method == 'pyaps':
-                scp_args = '-f {f} --model {m} -g {g} -w {w}'.format(f=in_file,
-                                                                     m=tropo_model,
-                                                                     g=geom_file,
-                                                                     w=weather_dir)
+                iargs = ['-f', in_file, '--model', tropo_model, '-g', geom_file, '-w', weather_dir]
                 print('Atmospheric correction using Weather Re-analysis dataset (PyAPS, Jolivet et al., 2011)')
                 print('Weather Re-analysis dataset:', tropo_model)
                 tropo_file = './inputs/{}.h5'.format(tropo_model)
                 if ut.run_or_skip(out_file=out_file, in_file=[in_file, tropo_file]) == 'run':
                     if os.path.isfile(tropo_file) and get_dataset_size(tropo_file) == get_dataset_size(in_file):
-                        scp_args = '{f} {t} -o {o} --force'.format(f=in_file, t=tropo_file, o=out_file)
+                        iargs = [in_file, tropo_file, '-o', out_file, '--force']
                         print('--------------------------------------------')
                         print('Use existed tropospheric delay file: {}'.format(tropo_file))
-                        print('diff.py', scp_args)
-                        mintpy.diff.main(scp_args.split())
+                        print('diff.py', ' '.join(iargs))
+                        mintpy.diff.main(iargs)
                     else:
                         if tropo_model in ['ERA5']:
                             from mintpy import tropo_pyaps3
-                            print('tropo_pyaps3.py', scp_args)
-                            tropo_pyaps3.main(scp_args.split())
+                            print('tropo_pyaps3.py', ' '.join(iargs))
+                            tropo_pyaps3.main(iargs)
                         else:
                             # opt 1 - using tropo_pyaps as python module and call its main function
                             # prefered, disabled for now to make it compatible with python2-pyaps
-                            #print('tropo_pyaps.py', scp_args)
+                            #print('tropo_pyaps.py', ' '.join(iargs))
                             #from mintpy import tropo_pyaps
-                            #tropo_pyaps.main(scp_args.split())
+                            #tropo_pyaps.main(iargs)
                             # opt 2 - using tropo_pyaps as executable script
                             # will be deprecated after python3-pyaps is fully funcational
-                            cmd = 'tropo_pyaps.py '+scp_args
+                            cmd = 'tropo_pyaps.py '+' '.join(iargs)
                             print(cmd)
                             status = subprocess.Popen(cmd, shell=True).wait()
 
@@ -817,9 +816,9 @@ class TimeSeriesAnalysis:
         out_file = fnames['output']
         if in_file != out_file:
             print('Remove for each acquisition a phase ramp: {}'.format(method))
-            scp_args = '{f} -s {s} -m {m} -o {o} --update '.format(f=in_file, s=method, m=mask_file, o=out_file)
-            print('remove_ramp.py', scp_args)
-            mintpy.remove_ramp.main(scp_args.split())
+            iargs = [in_file, '-s', method, '-m', mask_file, '-o', out_file, '--update']
+            print('remove_ramp.py', ' '.join(iargs))
+            mintpy.remove_ramp.main(iargs)
         else:
             print('No phase ramp removal.')
         return
@@ -833,12 +832,14 @@ class TimeSeriesAnalysis:
         fnames = self.get_timeseries_filename(self.template)[step_name]
         in_file = fnames['input']
         out_file = fnames['output']
+
         if in_file != out_file:
-            scp_args = '{f} -t {t} -o {o} --update'.format(f=in_file, t=self.templateFile, o=out_file)
+            iargs = [in_file, '-t', self.templateFile, '-o', out_file, '--update']
             if self.template['mintpy.topographicResidual.pixelwiseGeometry']:
-                scp_args += ' -g {}'.format(geom_file)
-            print('dem_error.py', scp_args)
-            mintpy.dem_error.main(scp_args.split())
+                iargs += ['-g', geom_file]
+            print('dem_error.py', ' '.join(iargs))
+            mintpy.dem_error.main(iargs)
+
         else:
             print('No topographic residual correction.')
         return
@@ -848,9 +849,9 @@ class TimeSeriesAnalysis:
         """Noise evaluation based on the phase residual."""
         res_file = 'timeseriesResidual.h5'
         if os.path.isfile(res_file):
-            scp_args = '{} -t {}'.format(res_file, self.templateFile)
-            print('timeseries_rms.py', scp_args)
-            mintpy.timeseries_rms.main(scp_args.split())
+            iargs = [res_file, '-t', self.templateFile]
+            print('timeseries_rms.py', ' '.join(iargs))
+            mintpy.timeseries_rms.main(iargs)
         else:
             print('No residual phase file found! Skip residual RMS analysis.')
         return
@@ -859,12 +860,12 @@ class TimeSeriesAnalysis:
     def run_reference_date(self, step_name):
         """Change reference date for all time-series files (optional)."""
         if self.template['mintpy.reference.date']:
+            iargs = ['-t', self.templateFile]
             in_files = self.get_timeseries_filename(self.template)[step_name]['input']
-            scp_args = '-t {} '.format(self.templateFile)
             for in_file in in_files:
-                scp_args += ' {}'.format(in_file)
-            print('reference_date.py', scp_args)
-            mintpy.reference_date.main(scp_args.split())
+                iargs += [in_file]
+            print('reference_date.py', ' '.join(iargs))
+            mintpy.reference_date.main(iargs)
         else:
             print('No reference date change.')
         return
@@ -874,23 +875,21 @@ class TimeSeriesAnalysis:
         """Estimate average velocity from displacement time-series"""
         ts_file = self.get_timeseries_filename(self.template)[step_name]['input']
         vel_file = 'velocity.h5'
-        scp_args = '{f} -t {t} -o {o} --update'.format(f=ts_file,
-                                                       t=self.templateFile,
-                                                       o=vel_file)
-        print('timeseries2velocity.py', scp_args)
-        mintpy.timeseries2velocity.main(scp_args.split())
+
+        iargs = [ts_file, '-t', self.templateFile, '-o', vel_file, '--update']
+        print('timeseries2velocity.py', ' '.join(iargs))
+        mintpy.timeseries2velocity.main(iargs)
 
         # Velocity from estimated tropospheric delays
         tropo_model = self.template['mintpy.troposphericDelay.weatherModel']
         tropo_file = './inputs/{}.h5'.format(tropo_model)
         if os.path.isfile(tropo_file):
-            suffix = os.path.splitext(os.path.basename(tropo_file))[0]  #.title()
+            suffix = os.path.splitext(os.path.basename(tropo_file))[0]
             tropo_vel_file = '{}{}.h5'.format(os.path.splitext(vel_file)[0], suffix)
-            scp_args= '{f} -t {t} -o {o} --update'.format(f=tropo_file,
-                                                          t=self.templateFile,
-                                                          o=tropo_vel_file)
-            print('timeseries2velocity.py', scp_args)
-            mintpy.timeseries2velocity.main(scp_args.split())
+
+            iargs = [tropo_file, '-t', self.templateFile, '-o', tropo_vel_file, '--update']
+            print('timeseries2velocity.py', ' '.join(iargs))
+            mintpy.timeseries2velocity.main(iargs)
         return
 
 
@@ -906,13 +905,11 @@ class TimeSeriesAnalysis:
 
                 geom_file, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2:4]
                 in_files = [geom_file, 'temporalCoherence.h5', ts_file, 'velocity.h5']
-                scp_args = '-l {l} -t {t} --outdir {o} --update '.format(l=lookup_file,
-                                                                         t=self.templateFile,
-                                                                         o=out_dir)
+                iargs = ['-l', lookup_file, '-t', self.templateFile, '--outdir', out_dir, '--update']
                 for in_file in in_files:
-                    scp_args += ' {}'.format(in_file)
-                print('geocode.py', scp_args)
-                mintpy.geocode.main(scp_args.split())
+                    iargs += [in_file]
+                print('geocode.py', ' '.join(iargs))
+                mintpy.geocode.main(iargs)
 
                 # 2. generate reliable pixel mask in geo coordinate
                 geom_file = os.path.join(out_dir, 'geo_{}'.format(os.path.basename(geom_file)))
@@ -920,14 +917,15 @@ class TimeSeriesAnalysis:
                 mask_file = os.path.join(out_dir, 'geo_maskTempCoh.h5')
                 tcoh_min = self.template['mintpy.networkInversion.minTempCoh']
 
-                scp_args = '{} -m {} -o {}'.format(tcoh_file, tcoh_min, mask_file)
+                iargs = [tcoh_file, '-m', tcoh_min, '-o', mask_file]
                 # exclude pixels in shadow if shadowMask dataset is available
-                if 'shadowMask' in readfile.get_dataset_list(geom_file):
-                    scp_args += ' --base {} --base-dataset shadowMask --base-value 1'.format(geom_file)
-                print('generate_mask.py', scp_args)
+                if (self.template['mintpy.networkInversion.shadowMask'] is True 
+                        and 'shadowMask' in readfile.get_dataset_list(geom_file)):
+                    iargs += ['--base', geom_file, '--base-dataset', 'shadowMask', '--base-value', '1']
+                print('generate_mask.py', ' '.join(iargs))
 
                 if ut.run_or_skip(out_file=mask_file, in_file=tcoh_file) == 'run':
-                    mintpy.generate_mask.main(scp_args.split())
+                    mintpy.generate_mask.main(iargs)
             else:
                 print('dataset is geocoded, skip geocoding and continue.')
         else:
@@ -947,8 +945,8 @@ class TimeSeriesAnalysis:
 
             # output
             kmz_file = '{}.kmz'.format(os.path.splitext(vel_file)[0])
-            scp_args = '{} -o {}'.format(vel_file, kmz_file)
-            print('save_kmz.py', scp_args)
+            iargs = [vel_file, '-o', kmz_file]
+            print('save_kmz.py', ' '.join(iargs))
 
             # update mode
             try:
@@ -958,7 +956,7 @@ class TimeSeriesAnalysis:
             except:
                 kmz_file = None
             if ut.run_or_skip(out_file=kmz_file, in_file=vel_file, check_readable=False) == 'run':
-                mintpy.save_kmz.main(scp_args.split())
+                mintpy.save_kmz.main(iargs)
         else:
             print('save velocity to Google Earth format is OFF.')
         return
@@ -983,12 +981,12 @@ class TimeSeriesAnalysis:
 
             # cmd
             print('--------------------------------------------')
-            scp_args = '{f} -c {c} -m {m} -g {g} -t {t}'.format(f=ts_file,
-                                                                c=tcoh_file,
-                                                                m=mask_file,
-                                                                g=geom_file,
-                                                                t=self.templateFile)
-            print('save_hdfeos5.py', scp_args)
+            iargs = [ts_file,
+                     '-c', tcoh_file, 
+                     '-m', mask_file,
+                     '-g', geom_file, 
+                     '-t', self.templateFile]
+            print('save_hdfeos5.py', ' '.join(iargs))
 
             # output (check existing file)
             atr = readfile.read_attribute(ts_file)
@@ -998,7 +996,7 @@ class TimeSeriesAnalysis:
             except:
                 hdfeos5_file = None
             if ut.run_or_skip(out_file=hdfeos5_file, in_file=[ts_file, tcoh_file, mask_file, geom_file]) == 'run':
-                mintpy.save_hdfeos5.main(scp_args.split())
+                mintpy.save_hdfeos5.main(iargs)
         else:
             print('save time-series to HDF-EOS5 format is OFF.')
         return

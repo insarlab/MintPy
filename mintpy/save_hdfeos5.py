@@ -85,20 +85,14 @@ def metadata_mintpy2unavco(meta_dict_in, dateList):
 
     # beam_mode/swath
     unavco_meta_dict['beam_mode'] = meta_dict['beam_mode']
-    try:
-        unavco_meta_dict['beam_swath'] = int(meta_dict['beam_swath'])
-    except:
-        unavco_meta_dict['beam_swath'] = 0
+    unavco_meta_dict['beam_swath'] = int(meta_dict.get('beam_swath', '0'))
 
     # relative_orbit, or track number
     #atr_dict['relative_orbit'] = int(re.match(r'(\w+)T([0-9+])',atr['PROJECT_NAME']).groups()[1])
     unavco_meta_dict['relative_orbit'] = int(meta_dict['relative_orbit'])
 
     # processing info
-    try:
-        unavco_meta_dict['processing_type'] = meta_dict['processing_type']
-    except:
-        unavco_meta_dict['processing_type'] = 'LOS_TIMESERIES'
+    unavco_meta_dict['processing_type'] = meta_dict.get('processing_type', 'LOS_TIMESERIES')
     #unavco_meta_dict['processing_software'] = meta_dict['processing_software']
 
     # Grabbed by script
@@ -135,44 +129,22 @@ def metadata_mintpy2unavco(meta_dict_in, dateList):
     else:
         unavco_meta_dict['frame'] = 0
 
-    try:
-        unavco_meta_dict['atmos_correct_method'] = meta_dict['atmos_correct_method']
-    except:
-        pass
-    try:
-        unavco_meta_dict['post_processing_method'] = meta_dict['post_processing_method']
-    except:
-        unavco_meta_dict['post_processing_method'] = 'MintPy'
-    try:
-        unavco_meta_dict['processing_dem'] = meta_dict['processing_dem']
-    except:
-        pass
-    try:
-        unavco_meta_dict['unwrap_method'] = meta_dict['unwrap_method']
-    except:
-        pass
+    unavco_meta_dict['atmos_correct_method']   = meta_dict.get('atmos_correct_method', 'None')
+    unavco_meta_dict['post_processing_method'] = meta_dict.get('post_processing_method', 'MintPy')
+    unavco_meta_dict['processing_dem'] = meta_dict.get('processing_dem', 'Unknown')
+    unavco_meta_dict['unwrap_method']  = meta_dict.get('unwrap_method', 'Unknown')
 
     # Grabbed by script
-    try:
-        unavco_meta_dict['flight_direction'] = meta_dict['ORBIT_DIRECTION'][0].upper()
-    except:
-        pass
+    unavco_meta_dict['flight_direction'] = meta_dict.get('ORBIT_DIRECTION', 'Unknown')[0].upper()
+
     if meta_dict['ANTENNA_SIDE'] == '-1':
         unavco_meta_dict['look_direction'] = 'R'
     else:
         unavco_meta_dict['look_direction'] = 'L'
-    try:
-        unavco_meta_dict['polarization'] = meta_dict['POLARIZATION']
-    except:
-        pass
-    try:
-        unavco_meta_dict['prf'] = float(meta_dict['PRF'])
-    except:
-        pass
-    try:
-        unavco_meta_dict['wavelength'] = float(meta_dict['WAVELENGTH'])
-    except:
-        pass
+
+    unavco_meta_dict['polarization'] = meta_dict.get('POLARIZATION', 'Unknown')
+    unavco_meta_dict['prf'] = float(meta_dict.get('PRF', '0'))
+    unavco_meta_dict['wavelength'] = float(meta_dict['WAVELENGTH'])
 
     #################################
     # insarmaps metadata

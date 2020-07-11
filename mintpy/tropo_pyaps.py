@@ -303,11 +303,11 @@ def check_exist_grib_file(gfile_list, print_msg=True):
                 print('------------------------------------------------------------------------------')
                 print('corrupted grib files detected! Delete them and re-download...')
                 print('number of grib files corrupted  : {}'.format(len(gfile_corrupt)))
-            for i in gfile_corrupt:
-                rmCmd = 'rm '+i
-                print(rmCmd)
-                os.system(rmCmd)
-                gfile_exist.remove(i)
+
+            for gfile in gfile_corrupt:
+                os.remove(gfile)
+                gfile_exist.remove(gfile)
+
             if print_msg:
                 print('------------------------------------------------------------------------------')
     return gfile_exist
@@ -452,12 +452,10 @@ def get_delay_timeseries(inps, atr):
                                          inps.lon_file] 
                      if (fname is not None and 'pyaps' in fname)]
         if temp_files:
-            print('delete temporary geometry files')
-            rmCmd = 'rm '
-            for fname in temp_files:
-                rmCmd += ' {f} {f}.rsc '.format(f=fname)
-            print(rmCmd)
-            os.system(rmCmd)
+            print('delete temporary geometry files: {}'.format(temp_files))
+            for temp_file in temp_files:
+                os.remove(temp_file)
+                os.remove(temp_file+'.rsc')
     return
 
 
