@@ -12,7 +12,7 @@ import argparse
 import h5py
 import numpy as np
 import glob
-from mintpy.objects import ifgramStack
+from mintpy.objects import ifgramStack, geometry
 from mintpy.utils import ptime, readfile, writefile, utils as ut
 try:
     import gdal
@@ -428,6 +428,7 @@ def main(iargs=None):
         print('update mode: ON')
     else:
         print('update mode: OFF')
+
     # extract metadata
     metadata = extract_metadata(inps.unwFile)
     inps.length = metadata["LENGTH"]
