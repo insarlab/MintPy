@@ -12,7 +12,7 @@ import argparse
 import h5py
 import numpy as np
 import glob
-from mintpy.objects import ifgramStack
+from mintpy.objects import ifgramStack, geometry
 from mintpy.utils import ptime, readfile, writefile, utils as ut
 try:
     import gdal
@@ -106,7 +106,7 @@ def cmd_line_parse(iargs = None):
         inps = read_template2inps(inps.template_file, inps)
 
     # --stack-dir
-    if inps.stackDir is not None:
+    elif inps.stackDir is not None:
         inps.stackDir = os.path.abspath(inps.stackDir)
         inps.corFile = os.path.join(inps.stackDir, inps.corFile)
         inps.unwFile = os.path.join(inps.stackDir, inps.unwFile)
@@ -122,17 +122,20 @@ def cmd_line_parse(iargs = None):
     for key in ds_keys:
         fname = iDict[key]
 
+        # search for wildcard pattern
         if fname:
             fnames = glob.glob(fname)
         else:
             fnames = []
 
+        # user the first element if more than one exist
         if len(fnames) > 0:
             iDict[key] = fnames[0]
 
         elif key in required_ds_keys:
+            # raise exception if any required DS is missing
             parser.print_usage()
-            raise SystemExit('ERROR: required dataset "{}" not found in: {}.'.format(key, fname))
+            raise SystemExit('ERROR: no file found for {} in input path: "{}"!'.format(key, iDict[key]))
 
     return inps
 
@@ -428,6 +431,7 @@ def main(iargs=None):
         print('update mode: ON')
     else:
         print('update mode: OFF')
+
     # extract metadata
     metadata = extract_metadata(inps.unwFile)
     inps.length = metadata["LENGTH"]

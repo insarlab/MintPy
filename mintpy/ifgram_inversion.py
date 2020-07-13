@@ -816,7 +816,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
         #ts_std = ts_std.reshape(num_date, num_row, num_col)
         temp_coh = temp_coh.reshape(num_row, num_col)
         num_inv_ifg = num_inv_ifg.reshape(num_row, num_col)
-        return ts, temp_coh, num_inv_ifg
+        return ts, temp_coh, num_inv_ifg, box
 
     # 2.2 un-weighted inversion (classic SBAS)
     if weight_func in ['no', 'sbas']:
