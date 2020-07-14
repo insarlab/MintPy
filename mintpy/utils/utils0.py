@@ -23,6 +23,12 @@ import multiprocessing
 from scipy import ndimage
 
 
+# global variables
+SPEED_OF_LIGHT = 299792458 # m/s
+EARTH_RADIUS = 6371e3      # Earth radius in meters
+K = 40.31                  # m^3/s^2, constant
+
+
 #################################### InSAR ##########################################
 def range_distance(atr, dimension=2, print_msg=True):
     """Calculate slant range distance from input attribute dict
@@ -227,6 +233,61 @@ def touch(fname_list, times=None):
 
 
 #################################### Geometry ##########################################
+
+def lalo_ground2iono_shell_along_los(lat, lon, inc_angle=30, head_angle=-168, iono_height=450e3):
+    """Convert the lat/lon of a point on the ground to the ionosphere thin-shell 
+    along the line-of-sight (LOS) direction.
+
+    Reference: Jingyi, C., and H. A. Zebker (2012), Ionospheric Artifacts in Simultaneous
+        L-Band InSAR and GPS Observations, Geoscience and Remote Sensing, IEEE Transactions on,
+        50(4), 1227-1239, doi:10.1109/TGRS.2011.2164805.
+
+    Parameters: lat/lon     - float, latitude/longitude of the point on the ground in degrees
+                inc_angle   - float, incidence angle of the line-of-sight on the ground in degrees
+                head_angle  - float, heading angle of the satellite orbit in degrees
+                              from the north direction with positive in clockwise direction
+                iono_height - float, height of the ionosphere thin-shell in meters
+    """
+    # degrees to radians
+    inc_angle /= 180 / np.pi
+    head_angle /= 180 / np.pi
+
+    # offset angle from equation (25) in Chen and Zebker (2012)
+    off_iono = inc_angle - np.arcsin(EARTH_RADIUS / (EARTH_RADIUS + iono_height) * np.sin(np.pi - inc_angle))
+
+    # update lat/lon
+    lat += off_iono * np.cos(head_angle) * 180 / np.pi
+    lon += off_iono * np.sin(head_angle) * 180 / np.pi
+    return lat, lon
+
+
+def incidence_angle_ground2iono_shell_along_los(inc_angle, iono_height=450e3):
+    """Calibrate the incidence angle of LOS vector on the ground surface to the ionosphere shell
+    based on equation (6) in Chen ang Zebker (2012, TGRS)
+
+    Reference: Jingyi, C., and H. A. Zebker (2012), Ionospheric Artifacts in Simultaneous
+        L-Band InSAR and GPS Observations, Geoscience and Remote Sensing, IEEE Transactions on,
+        50(4), 1227-1239, doi:10.1109/TGRS.2011.2164805.
+
+    Parameters: inc_angle      - float/np.ndarray, incidence angle on the ground in degrees
+                iono_height    - float, effective ionosphere height in meters
+                                 under the thin-shell assumption
+    Returns:    inc_angle_iono - float/np.ndarray, incidence angle on the iono shell in degrees
+    """
+    inc_angle = np.array(inc_angle) * np.pi / 180.0
+
+    # ignore nodata in inc_angle
+    flag = np.multiply(~np.isnan(inc_angle), inc_angle == 0)
+
+    # calculation
+    inc_angle_iono = np.zeros(inc_angle.shape, dtype=np.float32)
+    inc_angle_iono[~flag] = np.nan
+
+    cos_inc_angle_iono = np.sqrt(1 - (EARTH_RADIUS * np.sin(inc_angle[flag]) / (EARTH_RADIUS + iono_height))**2)
+    inc_angle_iono[flag] = np.arccos(cos_inc_angle_iono) / np.pi * 180.0
+    return inc_angle_iono
+
+
 def get_lat_lon(meta, geom_file=None, box=None):
     """Extract precise pixel-wise lat/lon.
 
