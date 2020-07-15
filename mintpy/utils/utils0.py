@@ -274,17 +274,14 @@ def incidence_angle_ground2iono_shell_along_los(inc_angle, iono_height=450e3):
                                  under the thin-shell assumption
     Returns:    inc_angle_iono - float/np.ndarray, incidence angle on the iono shell in degrees
     """
-    inc_angle = np.array(inc_angle) * np.pi / 180.0
-
     # ignore nodata in inc_angle
-    flag = np.multiply(~np.isnan(inc_angle), inc_angle == 0)
+    if type(inc_angle) is np.ndarray:
+        inc_angle[inc_angle == 0] = np.nan
+    inc_angle *= np.pi / 180.
 
     # calculation
-    inc_angle_iono = np.zeros(inc_angle.shape, dtype=np.float32)
-    inc_angle_iono[~flag] = np.nan
-
-    cos_inc_angle_iono = np.sqrt(1 - (EARTH_RADIUS * np.sin(inc_angle[flag]) / (EARTH_RADIUS + iono_height))**2)
-    inc_angle_iono[flag] = np.arccos(cos_inc_angle_iono) / np.pi * 180.0
+    cos_inc_angle_iono = np.sqrt(1 - (EARTH_RADIUS * np.sin(inc_angle) / (EARTH_RADIUS + iono_height))**2)
+    inc_angle_iono = np.arccos(cos_inc_angle_iono) / np.pi * 180.0
     return inc_angle_iono
 
 
