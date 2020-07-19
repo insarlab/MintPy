@@ -208,8 +208,6 @@ class TimeSeriesAnalysis:
     def __init__(self, customTemplateFile=None, workDir=None):
         self.customTemplateFile = customTemplateFile
         self.workDir = os.path.abspath(workDir)
-        if not 'mintpy' in self.workDir:
-            self.workDir = self.workDir + '/mintpy'
         self.cwd = os.path.abspath(os.getcwd())
         return
 
