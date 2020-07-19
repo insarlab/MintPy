@@ -11,6 +11,7 @@ import os
 import glob
 import shelve
 import numpy as np
+from mintpy.objects import sensor
 from mintpy.utils import readfile, writefile, utils1 as ut
 
 # suppress matplotlib DEBUG message
@@ -21,17 +22,6 @@ mpl_logger.setLevel(logging.WARNING)
 
 SPEED_OF_LIGHT = 299792458  #m/s
 EARTH_RADIUS = 6378122.65  # m
-
-# Sentinel-1 TOPS spatial resolution and pixel spacing
-# Table 7-5 in https://sentinel.esa.int/documents/247904/1877131/Sentinel-1-Product-Definition
-# Typical value:
-# azfact = azResolution / azPixelSize = 1.46
-# rgfact = rgResolution / rgPixelSize = 1.33
-S1_TOPS_RESOLUTION = {
-    'IW1':{'rangeResolution': 2.7, 'azimuthResolution': 22.5, 'rangePixelSize': 2.3, 'azimuthPixelSize': 14.1},
-    'IW2':{'rangeResolution': 3.1, 'azimuthResolution': 22.7, 'rangePixelSize': 2.3, 'azimuthPixelSize': 14.1},
-    'IW3':{'rangeResolution': 3.5, 'azimuthResolution': 22.6, 'rangePixelSize': 2.3, 'azimuthPixelSize': 14.1},
-}
 
 
 
@@ -240,8 +230,8 @@ def extract_tops_metadata(xml_file):
     iw_str = 'IW2'
     if os.path.basename(xml_file).startswith('IW'):
         iw_str = os.path.splitext(os.path.basename(xml_file))[0]
-    metadata['azimuthResolution'] = S1_TOPS_RESOLUTION[iw_str]['azimuthResolution']
-    metadata['rangeResolution'] = S1_TOPS_RESOLUTION[iw_str]['rangeResolution']
+    metadata['azimuthResolution'] = sensor.SENSOR_DICT['sen'][iw_str]['azimuthResolution']
+    metadata['rangeResolution'] = sensor.SENSOR_DICT['sen'][iw_str]['rangeResolution']
 
     refElp = Planet(pname='Earth').ellipsoid
     llh = refElp.xyz_to_llh(peg.getPosition())

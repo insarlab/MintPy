@@ -385,7 +385,7 @@ def prune_network(date12_list, inps):
 
         # Doppler Overlap Percentage
         if inps.sensor and inps.dop_list:
-            bandwidth_az = sensor.azimuth_bandwidth(inps.sensor)
+            bandwidth_az = sensor.SENSOR_DICT[inps.sensor.lower()]['doppler_bandwidth']
             date12_list = pnet.threshold_doppler_overlap(date12_list,
                                                          inps.date_list,
                                                          inps.dop_list,
