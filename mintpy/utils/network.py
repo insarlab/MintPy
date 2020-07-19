@@ -19,6 +19,9 @@ from mintpy.objects import ifgramStack, sensor
 from mintpy.utils import ptime, readfile
 
 
+SPEED_OF_LIGHT = 299792458   # m/s, speed of light
+
+
 ##################################################################
 BASELINE_LIST_FILE = """
 # Date  Bperp    dop0/PRF  dop1/PRF   dop2/PRF   PRF    slcDir
@@ -194,22 +197,19 @@ def igram_perp_baseline_list(fname):
     return p_baseline_list
 
 
-def critical_perp_baseline(sensor_name, inc_angle=None, print_msg=False):
+def critical_perp_baseline(sensor_name, inc_angle, print_msg=False):
     """Critical Perpendicular Baseline for each satellite"""
     # Jers: 5.712e3 m (near_range=688849.0551m)
     # Alos: 6.331e3 m (near_range=842663.2917m)
     # Tsx : 8.053e3 m (near_range=634509.1271m)
-
-    c = 299792458   # m/s, speed of light
-    wvl = sensor.wavelength(sensor_name)
-    # Yunjun 5/2016, case for Jers, need a automatic way to get this number
-    near_range = 688849
-    rg_bandwidth = sensor.range_bandwidth(sensor_name)
-    inc_angle = sensor.incidence_angle(sensor_name, inc_angle) / 180 * np.pi
-    Bperp_c = wvl * (rg_bandwidth/c) * near_range * np.tan(inc_angle)
+    sensor_dict = sensor.SENSOR_DICT[sensor_name.lower()]
+    wvl = SPEED_OF_LIGHT / sensor_dict['carrier_frequency']
+    near_range = 688849  # Yunjun 5/2016, case for Jers, need a automatic way to get this number
+    rg_bandwidth = sensor_dict['chirp_bandwidth']
+    bperp_c = wvl * (rg_bandwidth / SPEED_OF_LIGHT) * near_range * np.tan(inc_angle * np.pi / 180.0)
     if print_msg:
-        print(('Critical Perpendicular Baseline: '+str(Bperp_c)+' m'))
-    return Bperp_c
+        print('Critical Perpendicular Baseline: {} m'.format(bperp_c))
+    return bperp_c
 
 
 def calculate_doppler_overlap(dop_a, dop_b, bandwidth_az):
@@ -261,6 +261,8 @@ def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor_name='En
         cohs = simulate_coherences(date12_list, 'bl_list.txt', sensor_name='Tsx')
 
     References:
+        Guarnieri, A. M. (2013), Introduction to RADAR, Politecnico di Milano Dipartimento di Elettronica
+            e Informazione, Milano.
         Zebker, H. A., & Villasenor, J. (1992). Decorrelation in interferometric radar echoes.
             IEEE-TGRS, 30(5), 950-959. 
         Hanssen, R. F. (2001). Radar interferometry: data interpretation and error analysis
@@ -275,11 +277,11 @@ def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor_name='En
     tbase_list = ptime.date_list2tbase(date_list)[0]
 
     # Thermal decorrelation (Zebker and Villasenor, 1992, Eq.4)
-    SNR = sensor.signal2noise_ratio(sensor_name)
+    SNR = 19.5  # hardwired for Envisat (Guarnieri, 2013)
     coh_thermal = 1. / (1. + 1./SNR)
 
     pbase_c = critical_perp_baseline(sensor_name, inc_angle)
-    bandwidth_az = sensor.azimuth_bandwidth(sensor_name)
+    bandwidth_az = sensor.SENSOR_DICT[sensor_name.lower()]['doppler_bandwidth']
 
     date12_list = ptime.yyyymmdd_date12(date12_list)
     ifgram_num = len(date12_list)

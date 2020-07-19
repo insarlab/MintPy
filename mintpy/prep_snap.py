@@ -12,7 +12,7 @@ import sys
 import argparse
 import datetime
 import math
-from mintpy.objects.sensor import standardedSensorNames
+from mintpy.objects.sensor import standardize_sensor_name
 from mintpy.utils import readfile, writefile, utils as ut
 
 
@@ -224,7 +224,7 @@ def extract_snap_metadata(fname):
     atr["ALOOKS"] = int(float(azimuth_looks[0]))
     atr["RLOOKS"] = int(float(range_looks[0]))
     atr["PRF"] = prf
-    atr["PLATFORM"] = standardedSensorNames[platform.replace('-','').lower()]
+    atr["PLATFORM"] = standardize_sensor_name(platform)
     atr["HEADING"] = heading
     atr["EARTH_RADIUS"] =  earth_radius
     atr["HEIGHT"] = height
