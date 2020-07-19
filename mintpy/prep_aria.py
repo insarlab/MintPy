@@ -12,7 +12,7 @@ import argparse
 import h5py
 import numpy as np
 import glob
-from mintpy.objects import ifgramStack, geometry
+from mintpy.objects import ifgramStack, geometry, sensor
 from mintpy.utils import ptime, readfile, writefile, utils as ut
 try:
     import gdal
@@ -234,6 +234,7 @@ def extract_metadata(stack):
     meta["WAVELENGTH"] = float(meta["Wavelength (m)"])
     meta["WIDTH"] = ds.RasterXSize
     meta["NUMBER_OF_PAIRS"] = ds.RasterCount
+    meta["STARTING_RANGE"] = float(meta["startRange"])
 
     # Note from YZ, 2019-07-25
     # convert isce azimuth angle to roipac orbit heading angle
@@ -254,7 +255,12 @@ def extract_metadata(stack):
     meta["ALOOKS"] = 7
     meta["RLOOKS"] = 19
     meta["RANGE_PIXEL_SIZE"] = float(meta["slantRangeSpacing"]) * meta["RLOOKS"]
-    meta["STARTING_RANGE"] = float(meta["startRange"])
+
+    # number of independent looks
+    sen_dict = sensor.SENSOR_DICT['sen']
+    rgfact = sen_dict['IW2']['range_resolution'] / sen_dict['range_pixel_size']
+    azfact = sen_dict['IW2']['azimuth_resolution'] / sen_dict['azimuth_pixel_size']
+    meta['NCORRLOOKS'] = metadata['RLOOKS'] * metadata['ALOOKS'] / (rgfact * azfact)
 
     # geo transformation
     geoTrans = ds.GetGeoTransform()

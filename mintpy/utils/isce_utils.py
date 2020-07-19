@@ -20,8 +20,8 @@ mpl_logger = logging.getLogger('matplotlib')
 mpl_logger.setLevel(logging.WARNING)
 
 
-SPEED_OF_LIGHT = 299792458  #m/s
-EARTH_RADIUS = 6378122.65  # m
+SPEED_OF_LIGHT = 299792458  # m/s
+EARTH_RADIUS = 6378122.65   # m
 
 
 

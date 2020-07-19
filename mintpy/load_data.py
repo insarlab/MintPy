@@ -171,7 +171,7 @@ def read_inps2dict(inps):
     print('processor: {}'.format(inpsDict['processor']))
 
     # update file path with auto
-    if inpsDict['autoPath']:
+    if inpsDict.get('autoPath', False):
         print('use auto path defined in mintpy.defaults.auto_path for options in auto')
         inpsDict = auto_path.get_auto_path(processor=inpsDict['processor'],
                                            work_dir=os.path.dirname(inpsDict['outdir']),
@@ -567,6 +567,8 @@ def prepare_metadata(inpsDict):
                 # print command line
                 script_name = '{}.py'.format(os.path.basename(prep_module.__name__).split('.')[-1])
                 iargs = [inpsDict[key]]
+                if processor == 'gamma' and inpsDict['PLATFORM']:
+                    iargs += ['--sensor', inpsDict['PLATFORM'].lower()]
                 print(script_name, ' '.join(iargs))
                 # run
                 prep_module.main(iargs)

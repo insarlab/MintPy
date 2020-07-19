@@ -43,6 +43,7 @@ If using ROI_PAC as InSAR processor, both **baseline parameter RSC** file (i.e. 
 +  REF_X/Y/LAT/LON = column/row/latitude/longitude of reference point
 +  SUBSET_XMIN/XMAX/YMIN/YMAX = start/end column/row number of subset in the original coverage
 +  MODIFICATION_TIME = dataset modification time, exists in ifgramStack.h5 file for 3D dataset, used for --update option of unwrap error corrections.
++  NCORRLOOKS = number of independent looks, as explained in [SNAPHU](https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/snaphu.conf.full)
 
 ### Reference ###
 
