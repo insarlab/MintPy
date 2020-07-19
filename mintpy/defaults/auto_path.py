@@ -17,7 +17,7 @@ import numpy as np
 # Default path of data files from different InSAR processors to be loaded into MintPy
 AUTO_PATH_ISCE_TOPS = '''##----------Default file path of ISCE/topsStack products
 mintpy.load.processor      = isce
-mintpy.load.metaFile       = ../master/IW*.xml
+mintpy.load.metaFile       = ../reference/IW*.xml
 mintpy.load.baselineDir    = ../baselines
 
 mintpy.load.unwFile        = ../merged/interferograms/*/filt*.unw
@@ -26,13 +26,13 @@ mintpy.load.connCompFile   = ../merged/interferograms/*/filt*.unw.conncomp
 mintpy.load.ionoFile       = None
 mintpy.load.intFile        = None
 
-mintpy.load.demFile        = ../merged/geom_master/hgt.rdr
-mintpy.load.lookupYFile    = ../merged/geom_master/lat.rdr
-mintpy.load.lookupXFile    = ../merged/geom_master/lon.rdr
-mintpy.load.incAngleFile   = ../merged/geom_master/los.rdr
-mintpy.load.azAngleFile    = ../merged/geom_master/los.rdr
-mintpy.load.shadowMaskFile = ../merged/geom_master/shadowMask.rdr
-mintpy.load.waterMaskFile  = ../merged/geom_master/waterMask.rdr
+mintpy.load.demFile        = ../merged/geom_reference/hgt.rdr
+mintpy.load.lookupYFile    = ../merged/geom_reference/lat.rdr
+mintpy.load.lookupXFile    = ../merged/geom_reference/lon.rdr
+mintpy.load.incAngleFile   = ../merged/geom_reference/los.rdr
+mintpy.load.azAngleFile    = ../merged/geom_reference/los.rdr
+mintpy.load.shadowMaskFile = ../merged/geom_reference/shadowMask.rdr
+mintpy.load.waterMaskFile  = ../merged/geom_reference/waterMask.rdr
 mintpy.load.bperpFile      = None
 '''
 
@@ -47,13 +47,13 @@ mintpy.load.connCompFile   = ../Igrams/*/filt*.unw.conncomp
 mintpy.load.ionoFile       = None
 mintpy.load.intFile        = None
 
-mintpy.load.demFile        = ../geom_master/hgt.rdr
-mintpy.load.lookupYFile    = ../geom_master/lat.rdr
-mintpy.load.lookupXFile    = ../geom_master/lon.rdr
-mintpy.load.incAngleFile   = ../geom_master/los.rdr
-mintpy.load.azAngleFile    = ../geom_master/los.rdr
-mintpy.load.shadowMaskFile = ../geom_master/shadowMask.rdr
-mintpy.load.waterMaskFile  = ../geom_master/waterMask.rdr
+mintpy.load.demFile        = ../geom_reference/hgt.rdr
+mintpy.load.lookupYFile    = ../geom_reference/lat.rdr
+mintpy.load.lookupXFile    = ../geom_reference/lon.rdr
+mintpy.load.incAngleFile   = ../geom_reference/los.rdr
+mintpy.load.azAngleFile    = ../geom_reference/los.rdr
+mintpy.load.shadowMaskFile = ../geom_reference/shadowMask.rdr
+mintpy.load.waterMaskFile  = ../geom_reference/waterMask.rdr
 mintpy.load.bperpFile      = None
 '''
 
@@ -136,7 +136,7 @@ def get_auto_path(processor, work_dir, template):
 
     # specific stack processor within ISCE
     if processor == 'isce':
-        if os.path.exists(proj_dir + '/master'):
+        if os.path.exists(proj_dir + '/reference'):
             processor = 'isce_tops'
         elif os.path.exists(proj_dir + '/Igrams'):
             processor = 'isce_stripmap'
