@@ -1099,7 +1099,7 @@ class TimeSeriesAnalysis:
 def main(iargs=None):
     start_time = time.time()
     inps = cmd_line_parse(iargs)
-    
+
     app = TimeSeriesAnalysis(inps.customTemplateFile, inps.workDir)
     app.startup()
     if len(inps.runSteps) > 0:
