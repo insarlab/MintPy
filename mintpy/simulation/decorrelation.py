@@ -292,7 +292,7 @@ def coherence2phase_variance(coherence, L=32, scatter='DS', epsilon=1e-3, print_
                 scatter   - str, type of scatterers, PS or DS
     Returns:    variance  - 1/2/3D np.ndarray of float32 for the phase variance in radians^2
     """
-    lineStr = '    number of looks L={}'.format(L)
+    lineStr = '    number of independent looks L={}'.format(L)
     if L > 80:
         L = 80
         lineStr += ', use L=80 to avoid dividing by 0 in calculation with negligible effect'
@@ -328,6 +328,7 @@ def coherence2phase_variance(coherence, L=32, scatter='DS', epsilon=1e-3, print_
 
 def coherence2fisher_info_index(data, L=32, epsilon=1e-3):
     """Convert coherence to Fisher information index (Seymour & Cumming, 1994, IGARSS)"""
+    print('    number of independent looks L={}'.format(L))
     # prepare input data
     if data.dtype != np.float64:
         data = np.array(data, np.float64)

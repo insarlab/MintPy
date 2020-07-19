@@ -649,9 +649,14 @@ def calc_weight(stack_obj, box, weight_func='var', dropIfgram=True, chunk_size=1
     weight = read_coherence(stack_obj, box=box, dropIfgram=dropIfgram)
     num_pixel = weight.shape[1]
 
-    # convert coherence to weight chunk-by-chunk to save memory
-    L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
+    if 'NCORRLOOKS' in stack_obj.metadata.keys():
+        L = np.rint(float(stack_obj.metadata['NCORRLOOKS'])).astype(np.int16)
+    else:
+        # use the typical ratio of resolution vs pixel size of Sentinel-1 IW mode
+        L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
+        L = np.rint(L / 1.94)
 
+    # convert coherence to weight chunk-by-chunk to save memory
     num_chunk = int(np.ceil(num_pixel / chunk_size))
     print(('convert coherence to weight in chunks of {c} pixels'
            ': {n} chunks in total ...').format(c=chunk_size, n=num_chunk))
