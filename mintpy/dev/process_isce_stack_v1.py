@@ -34,7 +34,7 @@ isce.azimuthLooks       = 20
 isce.rangeLooks         = 8
 isce.maxTempBaseline    = 1800
 isce.maxPerpBaseline    = 1800
-isce.masterDate         = 20080212
+isce.referenceDate      = 20080212
 isce.unwrapMethod       = snaphu
 isce.filtStrength       = 0.5
 isce.applyWaterMask     = yes
@@ -91,7 +91,7 @@ def read_inps2dict(inps):
 #####################################################################################
 def reset_process_directory():
     cmd_str="""------ Copy and paste the following the command to reset the process direction ----
-rm -r baselines/ configs/ coregSLC/ geom_master/ Igrams/ merged/ offsets/ refineSlaveTiming/ run_* SLC/ masterShelve/
+rm -r baselines/ configs/ coregSLC/ geom_reference/ Igrams/ merged/ offsets/ refineSecondaryTiming/ run_* SLC/ referenceShelve/
 cd download
 rm -rf 20* AL*
 mv ARCHIVED_FILES/* .
@@ -128,8 +128,8 @@ def prepare_stack(iDict):
                                                   b=iDict['maxPerpBaseline'],
                                                   a=iDict['azimuthLooks'],
                                                   r=iDict['rangeLooks'])
-    if 'masterDate' in iDict.keys():
-        cmd += ' -m {}'.format(iDict['masterDate'])
+    if 'referenceDate' in iDict.keys():
+        cmd += ' -m {}'.format(iDict['referenceDate'])
     if iDict['applyWaterMask']:
         cmd += ' --applyWaterMask'
 
@@ -232,14 +232,14 @@ def write_job_file(iDict):
     return job_file
 
 
-def copy_masterShelve(iDict, out_dir='masterShelve'):
+def copy_referenceShelve(iDict, out_dir='referenceShelve'):
     """Copy shelve files into root directory"""
     proj_dir = os.path.abspath(os.getcwd())
 
     # check folders
     shelve_dir = os.path.join(proj_dir, out_dir)
     if os.path.isdir(shelve_dir) :
-        print('masterShelve folder already exists: {}'.format(shelve_dir))
+        print('referenceShelve folder already exists: {}'.format(shelve_dir))
         return
     else:
         print('create directory: {}'.format(shelve_dir))
@@ -252,7 +252,7 @@ def copy_masterShelve(iDict, out_dir='masterShelve'):
         return
     else:
         date_list = sorted([os.path.basename(i) for i in glob.glob('SLC/*')])
-        m_date = iDict.get('masterDate', date_list[0])
+        m_date = iDict.get('referenceDate', date_list[0])
         slc_dir = os.path.join(proj_dir, 'SLC/{}'.format(m_date))
         for shelve_file in shelve_files:
             shelve_file = os.path.join(slc_dir, shelve_file)
@@ -306,7 +306,7 @@ def main(iargs=None):
     # submit stack as jobs
     run_stack(iDict)
 
-    copy_masterShelve(iDict)
+    copy_referenceShelve(iDict)
 
     return
 

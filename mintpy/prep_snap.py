@@ -192,7 +192,7 @@ def extract_snap_metadata(fname):
                       center_utc.second)
     atr["CENTER_LINE_UTC"] = center_seconds
 
-    # Extract master slave date in yymmdd format
+    # Extract reference / secondary date in yymmdd format
     date1 = datetime.datetime.strptime(dates[0], "%d%b%Y").strftime("%Y%m%d")[2:8]
     date2 = datetime.datetime.strptime(dates[1], "%d%b%Y").strftime("%Y%m%d")[2:8]
     atr["DATE12"] = "{}-{}".format(date1, date2)

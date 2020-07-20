@@ -107,8 +107,8 @@ def create_parser():
     method.add_argument('--no-norm', dest='norm', action='store_false',
                         help='do not normalize temp/perp baseline, for delaunay method')
     method.add_argument('--sensor', help='Name of sensor, choose from the list below:\n'+str(SENSOR_NAMES))
-    method.add_argument('--master-date', dest='masterDate',
-                        help='Master date in YYMMDD or YYYYMMDD format, for star/ps method')
+    method.add_argument('--reference-date', dest='referenceDate',
+                        help='reference date in YYMMDD or YYYYMMDD format, for star/ps method')
 
     # Thresholds
     threshold = parser.add_argument_group('Thresholds to filter the initial network')
@@ -198,7 +198,7 @@ def read_template2inps(templateFile, inps=None):
             if key in ['method', 'referenceFile', 'tempPerpList']:
                 inpsDict[key] = value
             # date in YYYYMMDD
-            elif key in ['masterDate', 'startDate', 'endDate']:
+            elif key in ['referenceDate', 'startDate', 'endDate']:
                 inpsDict[key] = ptime.yyyymmdd(value)
             # list of dates in YYYYMMDD
             elif key in ['excludeDate']:

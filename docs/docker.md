@@ -30,6 +30,6 @@ docker run -it -v /path/to/data/dir:/home/work/ andretheronsa/mintpy:latest pyth
 
 + The container may have strong permissions for directories you map to it.   
 
-+ Container was built on insarlab/master - should be updated with new releases.  
++ Container was built on `insarlab/main` - should be updated with new releases.  
 
 + Needs further testing and improvement - can be made smaller (use Alpine instead of Debian...)  

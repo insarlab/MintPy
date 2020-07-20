@@ -151,7 +151,7 @@ def get_auto_path(processor, work_dir, template):
     var_dict = {}
 
     if processor in ['roipac', 'gamma']:
-        m_date12 = get_master_date12(proj_dir, processor)
+        m_date12 = get_reference_date12(proj_dir, processor)
         if m_date12:
             var_dict['${m_date12}'] = m_date12
 
@@ -161,7 +161,7 @@ def get_auto_path(processor, work_dir, template):
 
     elif processor == 'isce_stripmap':
         date_str = os.listdir(os.path.join(proj_dir, 'merged/SLC'))[0]
-        var_dict['${m_shelve}'] = os.path.join(proj_dir, 'merged/SLC', date_str, 'masterShelve')
+        var_dict['${m_shelve}'] = os.path.join(proj_dir, 'merged/SLC', date_str, 'referenceShelve')
 
     # update auto_path_dict
     for key, value in auto_path_dict.items():
@@ -180,12 +180,12 @@ def get_auto_path(processor, work_dir, template):
     return template
 
 
-def get_master_date12(proj_dir, processor='roipac'):
+def get_reference_date12(proj_dir, processor='roipac'):
     """date12 of reference interferogram in YYMMDD-YYMMDD format"""
     m_date12 = None
 
-    # opt 1 - master_ifgram.txt
-    m_ifg_file = os.path.join(proj_dir, 'PROCESS', 'master_ifgram.txt')
+    # opt 1 - reference_ifgram.txt
+    m_ifg_file = os.path.join(proj_dir, 'PROCESS', 'reference_ifgram.txt')
     if os.path.isfile(m_ifg_file):
         m_date12 = str(np.loadtxt(m_ifg_file, dtype=bytes).astype(str))
         return m_date12
@@ -196,14 +196,14 @@ def get_master_date12(proj_dir, processor='roipac'):
             lookup_file = glob.glob(os.path.join(proj_dir, 'PROCESS/GEO/geo_*/geomap*.trans'))[0]
             m_date12 = re.findall('\d{6}-\d{6}', lookup_file)[0]
         except:
-            print("No master interferogram found! Check the PROCESS/GEO/geo_* folder")
+            print("No reference interferogram found! Check the PROCESS/GEO/geo_* folder")
 
     elif processor == 'gamma':
         geom_dir = os.path.join(proj_dir, 'PROCESS/SIM')
         try:
             m_date12 = os.walk(geom_dir).next()[1][0].split('sim_')[1]
         except:
-            print("No master interferogram found! Check the PROCESS/SIM/sim_* folder")
+            print("No reference interferogram found! Check the PROCESS/SIM/sim_* folder")
 
     return m_date12
 

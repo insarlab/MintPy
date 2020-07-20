@@ -2,7 +2,7 @@
 [![Docs Status](https://readthedocs.org/projects/mintpy/badge/?version=latest)](https://mintpy.readthedocs.io/?badge=latest)
 [![CircleCI](https://img.shields.io/circleci/build/github/insarlab/MintPy.svg?color=green&logo=circleci)](https://circleci.com/gh/insarlab/MintPy)
 [![Latest version](https://img.shields.io/badge/latest%20version-v1.2.3-yellowgreen.svg)](https://github.com/insarlab/MintPy/releases)
-[![License](https://img.shields.io/badge/license-GPLv3-yellow.svg)](https://github.com/insarlab/MintPy/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/license-GPLv3-yellow.svg)](https://github.com/insarlab/MintPy/blob/main/LICENSE)
 [![Forum](https://img.shields.io/badge/forum-Google%20Group-orange.svg)](https://groups.google.com/forum/#!forum/mintpy)
 [![Citation](https://img.shields.io/badge/doi-10.1016%2Fj.cageo.2019.104331-blue)](https://doi.org/10.1016/j.cageo.2019.104331)
 
@@ -42,7 +42,7 @@ Configuration parameters for each step are initiated with default values in a cu
 #### [Example](./demo_dataset.md) on Fernandina volcano, Galápagos with Sentinel-1 data ####
 
 ```bash
-wget https://zenodo.org/record/3635245/files/FernandinaSenDT128.tar.xz
+wget https://zenodo.org/record/3952953/files/FernandinaSenDT128.tar.xz
 tar -xvJf FernandinaSenDT128.tar.xz
 cd FernandinaSenDT128/mintpy
 smallbaselineApp.py ${MINTPY_HOME}/docs/examples/input_files/FernandinaSenDT128.txt
@@ -67,7 +67,7 @@ save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-se
 
 #### 2.2 Customized processing recipe ####
 
-MintPy is a toolbox with individual utility scripts. Simply run the script with `-h / --help` to see its usage, you could build your own customized processing recipe! [Here](https://github.com/insarlab/MintPy/blob/master/sh/compare_velocity_with_diff_tropo.sh) is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections.
+MintPy is a toolbox with individual utility scripts. Simply run the script with `-h / --help` to see its usage, you could build your own customized processing recipe! [Here](../sh/compare_velocity_with_diff_tropo.sh) is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections.
 
 #### 2.3 Build on top of `mintpy` module ####
 

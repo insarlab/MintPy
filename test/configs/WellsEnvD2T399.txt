@@ -8,9 +8,9 @@ mintpy.load.corFile        = ./../interferograms/*/filt_*rlks.cor
 mintpy.load.connCompFile   = None
 mintpy.load.intFile        = None
 
-mintpy.load.demFile        = ./../geom_master/sim_*.rdc.dem
-mintpy.load.lookupYFile    = ./../geom_master/sim_*.UTM_TO_RDC
-mintpy.load.lookupXFile    = ./../geom_master/sim_*.UTM_TO_RDC
+mintpy.load.demFile        = ./../geometry/sim_*.rdc.dem
+mintpy.load.lookupYFile    = ./../geometry/sim_*.UTM_TO_RDC
+mintpy.load.lookupXFile    = ./../geometry/sim_*.UTM_TO_RDC
 mintpy.load.incAngleFile   = None
 mintpy.load.azAngleFile    = None
 mintpy.load.shadowMaskFile = None

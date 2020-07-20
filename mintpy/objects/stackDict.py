@@ -84,7 +84,7 @@ class ifgramStackDict:
     def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, compression=None, extra_metadata=None):
         '''Save/write an ifgramStackDict object into an HDF5 file with the structure defined in:
 
-        https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#ifgramstack
+        https://mintpy.readthedocs.io/en/latest/api/data_structure/#ifgramstack
 
         Parameters: outputFile : str, Name of the HDF5 file for the InSAR stack
                     access_mode : str, access mode of output File, e.g. w, r+
@@ -139,7 +139,7 @@ class ifgramStackDict:
             ds.attrs['MODIFICATION_TIME'] = str(time.time())
 
         ###############################
-        # 2D dataset containing master and slave dates of all pairs
+        # 2D dataset containing reference and secondary dates of all pairs
         dsName = 'date'
         dsDataType = np.string_
         dsShape = (self.numIfgram, 2)
@@ -205,13 +205,12 @@ class ifgramDict:
                        'ionoPhase'       :'$PROJECT_DIR/merged/ionosphere/20151220_20160206/iono.bil.unwCor.filt',
                        ...
                       }
-        ifgramObj = ifgramDict(dates=('20160524','20160530'), datasetDict=datasetDict)
+        ifgramObj = ifgramDict(datasetDict=datasetDict)
         data, atr = ifgramObj.read('unwrapPhase')
     """
 
-    def __init__(self, name='ifgram', dates=None, datasetDict={}, metadata=None):
+    def __init__(self, name='ifgram', datasetDict={}, metadata=None):
         self.name = name
-        self.masterDate, self.slaveDate = dates
         self.datasetDict = datasetDict
 
         self.platform = None
@@ -282,12 +281,12 @@ class geometryDict:
     Example:
         from mintpy.utils import readfile
         from mintpy.utils.insarobj import geometryDict
-        datasetDict = {'height'        :'$PROJECT_DIR/merged/geom_master/hgt.rdr',
-                       'latitude'      :'$PROJECT_DIR/merged/geom_master/lat.rdr',
-                       'longitude'     :'$PROJECT_DIR/merged/geom_master/lon.rdr',
-                       'incidenceAngle':'$PROJECT_DIR/merged/geom_master/los.rdr',
-                       'heandingAngle' :'$PROJECT_DIR/merged/geom_master/los.rdr',
-                       'shadowMask'    :'$PROJECT_DIR/merged/geom_master/shadowMask.rdr',
+        datasetDict = {'height'        :'$PROJECT_DIR/merged/geom_reference/hgt.rdr',
+                       'latitude'      :'$PROJECT_DIR/merged/geom_reference/lat.rdr',
+                       'longitude'     :'$PROJECT_DIR/merged/geom_reference/lon.rdr',
+                       'incidenceAngle':'$PROJECT_DIR/merged/geom_reference/los.rdr',
+                       'heandingAngle' :'$PROJECT_DIR/merged/geom_reference/los.rdr',
+                       'shadowMask'    :'$PROJECT_DIR/merged/geom_reference/shadowMask.rdr',
                        'bperp'         :bperpDict
                        ...
                       }
@@ -434,7 +433,7 @@ class geometryDict:
     def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, compression='lzf', extra_metadata=None):
         ''' Save/write to HDF5 file with structure defined in:
 
-        https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#geometry
+        https://mintpy.readthedocs.io/en/latest/api/data_structure/#geometry
         '''
         if len(self.datasetDict) == 0:
             print('No dataset file path in the object, skip HDF5 file writing.')

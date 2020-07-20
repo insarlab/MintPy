@@ -9,9 +9,9 @@ mintpy.load.corFile        = ./../interferograms/*/filt_*.cor      #[path2cor_fi
 mintpy.load.connCompFile   = None                                  #[path2conn_file]
 mintpy.load.intFile        = None                                  #[path2int_file]
 ##---------geometry datasets:
-mintpy.load.demFile        = ./../geom_master/radar*.hgt           #[path2hgt_file]
-mintpy.load.lookupYFile    = ./../geom_master/geomap*.trans        #[path2lookup_lat/y_file]
-mintpy.load.lookupXFile    = ./../geom_master/geomap*.trans        #[path2lookup_lon/x_file]
+mintpy.load.demFile        = ./../geometry/radar*.hgt              #[path2hgt_file]
+mintpy.load.lookupYFile    = ./../geometry/geomap*.trans           #[path2lookup_lat/y_file]
+mintpy.load.lookupXFile    = ./../geometry/geomap*.trans           #[path2lookup_lon/x_file]
 mintpy.load.incAngleFile   = None                                  #[path2los_file]
 mintpy.load.azAngleFile    = None                                  #[path2los_file]
 mintpy.load.shadowMaskFile = None                                  #[path2shadow_file]

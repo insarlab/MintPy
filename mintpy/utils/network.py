@@ -735,9 +735,9 @@ def select_pairs_mst(date_list, pbase_list, date12_format='YYMMDD-YYMMDD'):
 
 
 def select_pairs_star(date_list, m_date=None, pbase_list=[], date12_format='YYMMDD-YYMMDD'):
-    """Select Star-like network/interferograms/pairs, it's a single master network, similar to PS approach.
+    """Select Star-like network/interferograms/pairs, it's a single reference network, similar to PS approach.
     Usage:
-        m_date : master date, choose it based on the following cretiria:
+        m_date : reference date, choose it based on the following cretiria:
                  1) near the center in temporal and spatial baseline
                  2) prefer winter season than summer season for less temporal decorrelation
     Reference:
@@ -746,17 +746,17 @@ def select_pairs_star(date_list, m_date=None, pbase_list=[], date12_format='YYMM
     date8_list = sorted(ptime.yyyymmdd(date_list))
     date6_list = ptime.yymmdd(date8_list)
 
-    # Select master date if not existed
+    # Select reference date if not existed
     if not m_date:
-        m_date = select_master_date(date8_list, pbase_list)
-        print(('auto select master date: '+m_date))
+        m_date = select_reference_date(date8_list, pbase_list)
+        print(('auto select reference date: '+m_date))
 
-    # Check input master date
+    # Check input reference date
     m_date8 = ptime.yyyymmdd(m_date)
     if m_date8 not in date8_list:
-        print('Input master date is not existed in date list!')
-        print(('Input master date: '+str(m_date8)))
-        print(('Input date list: '+str(date8_list)))
+        print('Input reference date is not existed in date list!')
+        print('Input reference date: {}'.format(m_date8))
+        print('Input date list: {}'.format(date8_list))
         m_date8 = None
 
     # Generate star/ps network
@@ -770,9 +770,9 @@ def select_pairs_star(date_list, m_date=None, pbase_list=[], date12_format='YYMM
     return date12_list
 
 
-def select_master_date(date_list, pbase_list=[]):
-    """Select super master date based on input temporal and/or perpendicular baseline info.
-    Return master date in YYYYMMDD format.
+def select_reference_date(date_list, pbase_list=[]):
+    """Select super reference date based on input temporal and/or perpendicular baseline info.
+    Return reference date in YYYYMMDD format.
     """
     date8_list = ptime.yyyymmdd(date_list)
     if not pbase_list:
@@ -801,13 +801,13 @@ def select_master_date(date_list, pbase_list=[]):
     return m_date8
 
 
-def select_master_interferogram(date12_list, date_list, pbase_list, m_date=None):
+def select_reference_interferogram(date12_list, date_list, pbase_list, m_date=None):
     """Select reference interferogram based on input temp/perp baseline info
-    If master_date is specified, select its closest slave_date, which is newer than master_date;
-        otherwise, choose the closest pair among all pairs as master interferogram.
+    If m_date is specified, select its closest s_date, which is newer than m_date;
+        otherwise, choose the closest pair among all pairs as reference interferogram.
     Example:
-        master_date12   = pnet.select_master_ifgram(date12_list, date_list, pbase_list)
-        '080211-080326' = pnet.select_master_ifgram(date12_list, date_list, pbase_list, m_date='080211')
+        m_date12   = pnet.select_reference_ifgram(date12_list, date_list, pbase_list)
+        '080211-080326' = pnet.select_reference_ifgram(date12_list, date_list, pbase_list, m_date='080211')
     """
     pbase_array = np.array(pbase_list, dtype='float64')
     # Get temporal baseline
@@ -824,7 +824,7 @@ def select_master_interferogram(date12_list, date_list, pbase_list, m_date=None)
     base_distance = np.sqrt((tbase_array[idx2] - tbase_array[idx1])**2 +
                             (pbase_array[idx2] - pbase_array[idx1])**2)
 
-    # Get master interferogram index
+    # Get reference interferogram index
     if not m_date:
         # Choose pair with shortest temp/perp baseline
         m_date12_idx = np.argmin(base_distance)

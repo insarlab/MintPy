@@ -42,8 +42,8 @@ is a great starting point if you are new to version control.
 + Pull the latest changes from upstream:
 
    ```
-   git checkout master
-   git pull upstream/master
+   git checkout main
+   git pull upstream/main
    ```
 
 + Create a branch for the feature you want to work on. Since the branch name will appear in the merge message, use a sensible name such as 'seasonal_fitting':
@@ -69,9 +69,9 @@ We follow the [git pull request (PR) workflow](https://www.asmeurer.com/git-work
 + To update your PR, make your changes on your local repository, run tests, and only if they succeed commit and push to your fork. As soon as those changes are pushed up (to the same branch as before) the PR will update automatically. If you have no idea how to fix the test failures, you may push your changes anyway and ask for help in a PR comment.
 
 
-## Divergence between `upstream/master` and your feature branch ##
+## Divergence between `upstream/main` and your feature branch ##
 
-If GitHub indicates that the branch of your Pull Request can no longer be merged automatically, you have to incorporate changes that have been made since you started into your branch. Our recommended way to do this is to rebase on master. Tute Costa has a great tutorial on how to [rewrite history with git rebase/squash/amend](https://thoughtbot.com/blog/git-interactive-rebase-squash-amend-rewriting-history).
+If GitHub indicates that the branch of your Pull Request can no longer be merged automatically, you have to incorporate changes that have been made since you started into your branch. Our recommended way to do this is to rebase on `main`. Tute Costa has a great tutorial on how to [rewrite history with git rebase/squash/amend](https://thoughtbot.com/blog/git-interactive-rebase-squash-amend-rewriting-history).
 
 
 ## General guidelines for pull requests (PRs) ##
@@ -103,4 +103,4 @@ It takes about 10 mins to finish.
 
 ## Things you should NOT do ##
 
-(For anyone with push rights to github.com/insarlab/MintPy) Never modify a commit or the history of anything that has been committed to the `master` branch.
+(For anyone with push rights to github.com/insarlab/MintPy) Never modify a commit or the history of anything that has been committed to the `main` branch.

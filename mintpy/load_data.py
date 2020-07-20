@@ -63,7 +63,7 @@ TEMPLATE = get_template_content('load_data')
 NOTE = """NOTE:
   For interferogram, unwrapPhase is required, the other dataset are optional, including coherence, connectComponent, wrapPhase, etc.
   The unwrapPhase metadata file requires DATE12 attribute in YYMMDD-YYMMDD format.
-  All path of data file must contain the master and slave date, either in file name or folder name.
+  All path of data file must contain the reference and secondary date, either in file name or folder name.
 """
 
 EXAMPLE = """example:
@@ -399,7 +399,7 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
         # One pair may have several types of dataset.
         # example ifgramPathDict = {'unwrapPhase': /pathToFile/filt.unw,
         #                           'ionoPhase'  : /PathToFile/iono.bil}
-        # All path of data file must contain the master and slave date, either in file name or folder name.
+        # All path of data file must contain the reference and secondary date, either in file name or folder name.
 
         ifgramPathDict = {}
         for i in range(len(dsNameList)):
@@ -419,7 +419,7 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
                     print('WARNING: {} file missing for pair {}'.format(dsName, dates))
 
         # initiate ifgramDict object
-        ifgramObj = ifgramDict(dates=tuple(dates), datasetDict=ifgramPathDict)
+        ifgramObj = ifgramDict(datasetDict=ifgramPathDict)
 
         # update pairsDict object
         pairsDict[tuple(dates)] = ifgramObj

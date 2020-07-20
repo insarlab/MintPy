@@ -458,7 +458,7 @@ def create_kml_region_document(inps, box_list, ts_obj, step):
 
 
 def write_network_link_file(region_docs, ts_obj, box_list, lod, net_link_file):
-    """Write 1) the list of KML.Document() into data KML file and 2) the master kml file for the list"""
+    """Write 1) the list of KML.Document() into data KML file and 2) the root kml file for the list"""
 
     ## 1. Create directory to store regioalized KML data files
     links_dir = os.path.splitext(net_link_file)[0]
@@ -466,24 +466,24 @@ def write_network_link_file(region_docs, ts_obj, box_list, lod, net_link_file):
         os.makedirs(links_dir)
     print("create KML region links directory: {}".format(os.path.basename(links_dir)))
 
-    ## 2. Create master KML element and KML Document element
+    ## 2. Create root KML element and KML Document element
     kml = KML.kml()
     kml_document = KML.Document()
 
-    ## 5. Generate a new network link element for each region
+    ## 3. Generate a new network link element for each region
     for num, (region_doc, box) in enumerate(zip(region_docs, box_list)):
         region_kml_file = os.path.join(links_dir, "region_{}.kml".format(num))
 
-        ## 5.1 Write the first region_document to a file and move it to the proper subdircetory
+        ## 3.1 Write the first region_document to a file and move it to the proper subdircetory
         kml_1 = KML.kml()
         kml_1.append(region_doc)
         with open(region_kml_file, 'w') as f:
             f.write(etree.tostring(kml_1, pretty_print=True).decode('utf-8'))
 
-        ## 5.2 Flatten lats and lons data
+        ## 3.2 Flatten lats and lons data
         lats, lons = flatten_lat_lon(box, ts_obj)
 
-        ## 5.3 Define new NetworkLink element
+        ## 3.3 Define new NetworkLink element
         network_link = KML.NetworkLink(
             KML.name('Region {}'.format(num)),
             KML.visibility(1),
@@ -505,11 +505,11 @@ def write_network_link_file(region_docs, ts_obj, box_list, lod, net_link_file):
             )
         )
 
-        ## 5.4 Append new NetworkLink to KML document
+        ## 3.4 Append new NetworkLink to KML document
         kml_document.append(network_link)
     kml.append(kml_document)
 
-    ## 6. Write the full KML document to the output file and move it to the proper directory
+    ## 4. Write the full KML document to the output file and move it to the proper directory
     with open(net_link_file, 'w') as f:
         f.write(etree.tostring(kml, pretty_print=True).decode('utf-8'))
     return net_link_file
@@ -579,7 +579,7 @@ def main(iargs=None):
         inps.outfile_base = os.path.splitext(os.path.basename(inps.outfile))[0]
     else:
         inps.outfile_base = plot.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
-    kml_master_file = os.path.join(inps.work_dir, '{}_master.kml'.format(inps.outfile_base))
+    kml_root_file = os.path.join(inps.work_dir, '{}_root.kml'.format(inps.outfile_base))
     kmz_file = os.path.join(inps.work_dir, '{}.kmz'.format(inps.outfile_base))
 
     ## read data
@@ -597,22 +597,22 @@ def main(iargs=None):
     if inps.wrap:
         print('re-wrapping data to {} cm/year for color coding'.format(inps.vlim))
 
-    ##--------- Create master KML file with network links to data KML files --------------##
-    kml_master_doc = KML.Document()
+    ##--------- Create root KML file with network links to data KML files --------------##
+    kml_root_doc = KML.Document()
 
     # 1 Create Overlay element for colorbar
     cbar_overlay = generate_cbar_element(cbar_file=inps.cbar_file,
                                          vmin=inps.vlim[0],
                                          vmax=inps.vlim[1],
                                          cmap=inps.colormap)
-    kml_master_doc.append(cbar_overlay)
+    kml_root_doc.append(cbar_overlay)
 
     # 2 Generate the placemark for the Reference Pixel
     ref_point = create_reference_point_element(inps, lats, lons, ts_obj)
     print('add reference point.')
     ref_folder = KML.Folder(KML.name("ReferencePoint"))
     ref_folder.append(ref_point)
-    kml_master_doc.append(ref_folder)
+    kml_root_doc.append(ref_folder)
 
     # 3 Create data folder to contain actual data elements
     net_link1 = generate_network_link(inps, ts_obj, step=inps.steps[0], lod=(0, inps.lods[0]))
@@ -624,16 +624,16 @@ def main(iargs=None):
     data_folder.append(net_link1)
     data_folder.append(net_link2)
     data_folder.append(net_link3)
-    kml_master_doc.append(data_folder)
+    kml_root_doc.append(data_folder)
 
 
-    ##---------------------------- Write master KML file ------------------------------##
+    ##---------------------------- Write root KML file ------------------------------##
     print('-'*30)
-    print('writing ' + kml_master_file)
-    kml_master = KML.kml()
-    kml_master.append(kml_master_doc)
-    with open(kml_master_file, 'w') as f:
-        f.write(etree.tostring(kml_master, pretty_print=True).decode('utf-8'))
+    print('writing ' + kml_root_file)
+    kml_root = KML.kml()
+    kml_root.append(kml_root_doc)
+    with open(kml_root_file, 'w') as f:
+        f.write(etree.tostring(kml_root, pretty_print=True).decode('utf-8'))
 
     ## Copy auxiliary files
     res_dir = os.path.join(os.path.dirname(__file__), "../docs/resources")
@@ -649,7 +649,7 @@ def main(iargs=None):
     # 2) zip all data files
     with ZipFile(kmz_file, 'w') as fz:
         kml_data_files = get_all_file_paths(inps.kml_data_dir)
-        for fname in [kml_master_file, 
+        for fname in [kml_root_file, 
                       inps.cbar_file,
                       inps.dygraph_file,
                       inps.dot_file,

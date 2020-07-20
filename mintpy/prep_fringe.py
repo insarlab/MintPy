@@ -30,7 +30,7 @@ from mintpy.utils import (
 
 ####################################################################################
 EXAMPLE = """example:
-  prep_fringe.py -u './PS_DS/unwrap/*.unw' -c ./PS_DS/tcorr_ds_ps.bin -g ./geometry -m ../master/IW1.xml -b ../baselines -o ./mintpy
+  prep_fringe.py -u './PS_DS/unwrap/*.unw' -c ./PS_DS/tcorr_ds_ps.bin -g ./geometry -m ../reference/IW1.xml -b ../baselines -o ./mintpy
 
   ## example commands after prep_fringe.py
   reference_point.py timeseries.h5 -y 500 -x 1150
@@ -57,10 +57,10 @@ def create_parser():
                              'This is used to grab 1) bounding box\n'
                              '                 AND 2) geometry source directory where the binary files are.')
 
-    parser.add_argument('-m', '--meta-file', dest='metaFile', type=str, default='../master/IW*.xml',
+    parser.add_argument('-m', '--meta-file', dest='metaFile', type=str, default='../reference/IW*.xml',
                         help='metadata file (default: %(default)s).\n'
-                             'e.g.: ./master/IW1.xml        for ISCE/topsStack OR\n'
-                             '      ./masterShelve/data.dat for ISCE/stripmapStack')
+                             'e.g.: ./reference/IW1.xml        for ISCE/topsStack OR\n'
+                             '      ./referenceShelve/data.dat for ISCE/stripmapStack')
     parser.add_argument('-b', '--baseline-dir', dest='baselineDir', type=str, default='../baselines',
                         help='baseline directory (default: %(default)s).')
 

@@ -2,13 +2,13 @@
 ##------------------------------- ISCE/topsStack ----------------------##
 #ssaraopt = --platform=SENTINEL-1A,SENTINEL-1B -r 128 -f 589,590,591,592,593  -e 2017-07-01
 #sentinelStack.boundingBox      = '-1 0.15 -91.6 -90.9'
-#sentinelStack.subswath         = 1 2  # comment 
-#sentinelStack.numConnections   = 5   # comment
-#sentinelStack.azimuthLooks     = 5   # comment
-#sentinelStack.rangeLooks       = 15  # comment
-#sentinelStack.filtStrength     = 0.2  # comment
+#sentinelStack.subswath         = 1 2     # comment 
+#sentinelStack.numConnections   = 5       # comment
+#sentinelStack.azimuthLooks     = 5       # comment
+#sentinelStack.rangeLooks       = 15      # comment
+#sentinelStack.filtStrength     = 0.2     # comment
 #sentinelStack.unwMethod        = snaphu  # comment
-#sentinelStack.coregistration   = auto  # comment
+#sentinelStack.coregistration   = auto    # comment
 #subset.y0:y1,x0:x1 = 1150:1600,1070:1670
 
 
@@ -17,19 +17,19 @@
 ## load_data.py -H to check more details and example inputs.
 mintpy.load.processor        = isce
 ##---------for ISCE only:
-mintpy.load.metaFile         = ../master/IW*.xml
+mintpy.load.metaFile         = ../reference/IW*.xml
 mintpy.load.baselineDir      = ../baselines
 ##---------interferogram datasets:
 mintpy.load.unwFile          = ../merged/interferograms/*/filt_*.unw
 mintpy.load.corFile          = ../merged/interferograms/*/filt_*.cor
 mintpy.load.connCompFile     = ../merged/interferograms/*/filt_*.unw.conncomp
 ##---------geometry datasets:
-mintpy.load.demFile          = ../merged/geom_master/hgt.rdr
-mintpy.load.lookupYFile      = ../merged/geom_master/lat.rdr
-mintpy.load.lookupXFile      = ../merged/geom_master/lon.rdr
-mintpy.load.incAngleFile     = ../merged/geom_master/los.rdr
-mintpy.load.azAngleFile      = ../merged/geom_master/los.rdr
-mintpy.load.shadowMaskFile   = ../merged/geom_master/shadowMask.rdr
+mintpy.load.demFile          = ../merged/geom_reference/hgt.rdr
+mintpy.load.lookupYFile      = ../merged/geom_reference/lat.rdr
+mintpy.load.lookupXFile      = ../merged/geom_reference/lon.rdr
+mintpy.load.incAngleFile     = ../merged/geom_reference/los.rdr
+mintpy.load.azAngleFile      = ../merged/geom_reference/los.rdr
+mintpy.load.shadowMaskFile   = ../merged/geom_reference/shadowMask.rdr
 mintpy.load.waterMaskFile    = None
 
 mintpy.reference.lalo        = -0.30,-91.43
