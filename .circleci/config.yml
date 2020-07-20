@@ -3,8 +3,12 @@ jobs:
   build:
     docker:
       - image: ubuntu:bionic
+        environment:
+          PYAPS_HOME: /root/tools/PyAPS
+          CONDA_PREFIX: /root/tools/miniconda3
+          MINTPY_HOME: /root/tools/MintPy
         user: root
-
+    working_directory: /root/tools/MintPy
     steps:
       - checkout
       - run:
@@ -24,13 +28,9 @@ jobs:
           name: Installing MintPy and PyAPS
           command: |
             # setup environment variable
-            export MINTPY_HOME=${HOME}/tools/MintPy
-            export PYAPS_HOME=${HOME}/tools/PyAPS
-            export CONDA_PREFIX=${HOME}/tools/miniconda3
             export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
             export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
             # download source code
-            git clone https://github.com/insarlab/MintPy.git $MINTPY_HOME
             git clone https://github.com/yunjunz/pyaps3.git $PYAPS_HOME/pyaps3
             # install dependencies
             conda config --add channels conda-forge
@@ -44,9 +44,6 @@ jobs:
       - run:
           name: Testing MintPy on Example Datasets
           command: |
-            export MINTPY_HOME=${HOME}/tools/MintPy
-            export PYAPS_HOME=${HOME}/tools/PyAPS
-            export CONDA_PREFIX=${HOME}/tools/miniconda3
             export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
             export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
