@@ -15,7 +15,7 @@ If using ROI_PAC as InSAR processor, both **baseline parameter RSC** file (i.e. 
 +  CENTER_LINE_UTC = Time at middle of interferogram in seconds, used in tropo correction using PyAPS.   
 +  HEIGHT = Height of satellite in meters, used in dem_error, incidence_angle, convert2mat.   
 +  STARTING_RANGE = Distance from satellite to first ground pixel in meters, used in incidence_angle calculation   
-+  DATE12 = (date1)-(date2), master - slave date of interferogram in 6 digit number.   
++  DATE12 = (date1)-(date2), reference - secondary date of interferogram in 6 digit number.   
 +  PLATFORM = satellite/sensor name, used in Local Oscillator Drift correction for Envisat.   
 +  ORBIT_DIRECTION = ascending, or descending.   
 +  P_BASELINE_TOP_HDR = Perpendicular baseline at top (first line) of interferogram in meters.   

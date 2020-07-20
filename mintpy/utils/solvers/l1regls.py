@@ -1,9 +1,9 @@
 # L1-norm regularized least-squares solver, or LASSO (least absolute shrinkage and selection operator)
 # 
-# Modified from CVXOPT-1.2 (https://github.com/cvxopt/cvxopt/blob/master/examples/doc/chap8/l1regls.py)
+# Modified from CVXOPT-1.2 on GitHub (examples/doc/chap8/l1regls.py)
 # by Zhang Yunjun, 10 Jan 2019 (add alpha argument)
 # 
-# Another implementation is in cvxpy (https://github.com/cvxgrp/cvxpy/blob/master/examples/lasso.py),
+# Another implementation is in cvxpy on GitHub (examples/lasso.py),
 # which also support integer solution. But this implementation is very slow.
 #
 # Reference:

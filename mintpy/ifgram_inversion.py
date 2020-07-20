@@ -311,7 +311,7 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
     Parameters: A                 - 2D np.array in size of (num_ifgram, num_date-1)
                 B                 - 2D np.array in size of (num_ifgram, num_date-1),
                                     design matrix B, each row represents differential temporal
-                                    baseline history between master and slave date of one interferogram
+                                    baseline history between reference and secondary date of one interferogram
                 tbase_diff        - 2D np.array in size of (num_date-1, 1),
                                     differential temporal baseline history
                 ifgram            - 2D np.array in size of (num_ifgram, num_pixel),

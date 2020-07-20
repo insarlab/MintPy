@@ -149,7 +149,7 @@ def load_product(xmlname):
 
 def extract_isce_metadata(meta_file, geom_dir=None, rsc_file=None, update_mode=True):
     """Extract metadata from ISCE stack products
-    Parameters: meta_file : str, path of metadata file, master/IW1.xml or masterShelve/data.dat
+    Parameters: meta_file : str, path of metadata file, reference/IW1.xml or referenceShelve/data.dat
                 geom_dir  : str, path of geometry directory.
                 rsc_file  : str, output file name of ROIPAC format rsc file. None for not write to disk.
     Returns:    metadata  : dict
@@ -191,7 +191,7 @@ def extract_isce_metadata(meta_file, geom_dir=None, rsc_file=None, update_mode=T
 
 def extract_tops_metadata(xml_file):
     """Read metadata from xml file for Sentinel-1/TOPS
-    Parameters: xml_file : str, path of the .xml file, i.e. master/IW1.xml
+    Parameters: xml_file : str, path of the .xml file, i.e. reference/IW1.xml
     Returns:    meta     : dict, metadata
     """
     import isce
@@ -256,7 +256,7 @@ def extract_tops_metadata(xml_file):
 
 def extract_stripmap_metadata(meta_file):
     """Read metadata from shelve file for StripMap stack from ISCE
-    Parameters: meta_file : str, path of the shelve file, i.e. masterShelve/data.dat
+    Parameters: meta_file : str, path of the shelve file, i.e. referenceShelve/data.dat
     Returns:    meta      : dict, metadata
     """
     import isce
@@ -265,8 +265,8 @@ def extract_stripmap_metadata(meta_file):
 
     if os.path.basename(meta_file).startswith('data'):
         # shelve file from stripmapStack
-        # masterShelve/data     for uavsar
-        # masterShelve/data.dat for all the others
+        # referenceShelve/data     for uavsar
+        # referenceShelve/data.dat for all the others
         fbase = os.path.splitext(meta_file)[0]
         with shelve.open(fbase, flag='r') as mdb:
             frame = mdb['frame']

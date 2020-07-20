@@ -20,7 +20,7 @@ from matplotlib.colors import LinearSegmentedColormap, to_rgb
 
 
 # To manually create custom diverging colormaps, check the link below:
-# https://github.com/ethankruse/kepler_orrery/blob/master/diverging_map.py
+# diverging_map.py in https://github.com/ethankruse/kepler_orrery
 # https://www.kennethmoreland.com/color-maps/
 
 
@@ -180,7 +180,7 @@ class ColormapExt(ScalarMappable):
     def get_single_colormap(self, cmap_name, cmap_lut=256):
         if cmap_name == 'dismph':
             # color list from bakerunavco/pygmtsar:
-            # Link: https://github.com/bakerunavco/pygmtsar/blob/master/showintf.py
+            # reference: showintf.py in https://github.com/bakerunavco/pygmtsar
             clist = ['#f579cd', '#f67fc6', '#f686bf', '#f68cb9', '#f692b3', '#f698ad',
                      '#f69ea7', '#f6a5a1', '#f6ab9a', '#f6b194', '#f6b78e', '#f6bd88',
                      '#f6c482', '#f6ca7b', '#f6d075', '#f6d66f', '#f6dc69', '#f6e363',

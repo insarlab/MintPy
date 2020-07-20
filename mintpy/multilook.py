@@ -26,7 +26,7 @@ EXAMPLE = """example:
   multilook.py  srtm30m.dem  -r 10 -a 10  -o srtm30m_300m.dem
 
   # Ignore / skip marginal pixels
-  multilook.py ../../geom_master/hgt.rdr.full -r 300 -a 100 --margin 58 58 58 58 -o hgt.rdr
+  multilook.py ../../geom_reference/hgt.rdr.full -r 300 -a 100 --margin 58 58 58 58 -o hgt.rdr
 """
 
 

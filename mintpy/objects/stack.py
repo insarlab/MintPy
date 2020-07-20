@@ -144,7 +144,7 @@ class timeseries:
     Time-series object for displacement of a set of SAR images from the same platform and track.
     It contains three datasets in root level: date, bperp and timeseries.
 
-    File structure: https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#timeseries
+    File structure: https://mintpy.readthedocs.io/en/latest/api/data_structure/#timeseries
     """
 
     def __init__(self, file=None):
@@ -481,7 +481,7 @@ class timeseries:
 class geometry:
     """ Geometry object.
 
-    File structure: https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#geometry
+    File structure: https://mintpy.readthedocs.io/en/latest/api/data_structure/#geometry
     """
 
     def __init__(self, file=None):
@@ -602,7 +602,7 @@ class geometry:
 class ifgramStack:
     """ Interferograms Stack object.
 
-    File structure: https://github.com/yunjunz/MintPy/blob/master/docs/api/data_structure.md#ifgramstack
+    File structure: https://mintpy.readthedocs.io/en/latest/api/data_structure/#ifgramstack
     """
 
     def __init__(self, file=None):
@@ -704,7 +704,7 @@ class ifgramStack:
         return self.numIfgram, self.length, self.width
 
     def read_datetimes(self):
-        """Read master/slave dates into array of datetime.datetime objects"""
+        """Read date1/2 into array of datetime.datetime objects"""
         with h5py.File(self.file, 'r') as f:
             dates = f['date'][:]
 
@@ -1113,7 +1113,7 @@ class HDFEOS:
         Link: http://insarmaps.miami.edu
     It contains a "timeseries" group and three datasets: date, bperp and timeseries.
 
-    File structure: https://github.com/yunjunz/MintPy/blob/master/docs/hdfeos5.md
+    File structure: https://mintpy.readthedocs.io/en/latest/hdfeos5/#file_structure
     """
 
     def __init__(self, file=None):

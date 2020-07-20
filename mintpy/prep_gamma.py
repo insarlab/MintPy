@@ -32,8 +32,8 @@ EXAMPLE = """example:
 
 DESCRIPTION = """
   For each interferogram, including unwrapped/wrapped interferograms and coherence, 3 metadata files are required:
-  1) master .par file, e.g. 130118_4rlks.amp.par
-  2) slave  .par file, e.g. 130129_4rlks.amp.par
+  1) reference .par file, e.g. 130118_4rlks.amp.par
+  2) secondary .par file, e.g. 130129_4rlks.amp.par
   3) interferogram .off file, e.g. 130118-130129_4rlks.off
 
   Other metadata files are recommended and can be generated from the above 3 if not existed, more specifically:
@@ -126,9 +126,9 @@ def cmd_line_parse(iargs=None):
 
 ######################################## Sub Functions ############################################
 def get_perp_baseline(m_par_file, s_par_file, off_file, atr_dict={}):
-    """Get perpendicular baseline info from master/slave par file and off file.
-    Parameters: m_par_file : str, path, master parameter file, i.e. 130118_4rlks.amp.par
-                s_par_file : str, path, slave  parameter file, i.e. 130129_4rlks.amp.oar
+    """Get perpendicular baseline info from reference/secondary par file and off file.
+    Parameters: m_par_file : str, path, reference parameter file, i.e. 130118_4rlks.amp.par
+                s_par_file : str, path, secondary parameter file, i.e. 130129_4rlks.amp.oar
                 off_file   : str, path, interferogram off file, i.e. 130118-130129_4rlks.off
                 atr_dict   : dict, optional, attributes dictionary
     Returns:  bperp : str, perpendicular baseline for pixel at [0,0]
@@ -179,7 +179,7 @@ def get_lalo_ref(m_par_file, atr_dict={}):
     If it's not existed, call Gamma script - SLC_corners - to generate it from SLC par file
         e.g. 130118_4rlks.amp.par
 
-    Parameters: m_par_file : str, path, master date parameter file, i.e. 130118_4rlks.amp.par
+    Parameters: m_par_file : str, path, reference date parameter file, i.e. 130118_4rlks.amp.par
                 atr_dict   : dict, optional, attributes dictionary
     Returns:    lalo_ref
     """
@@ -251,12 +251,12 @@ def extract_metadata4interferogram(fname, sensor_name=None):
         m_par_file = ut.get_file_list(m_par_files)[0]
     except:
         m_par_file = None
-        print('\nERROR: Can not find master date .par file, it supposed to be like: '+m_par_files)
+        print('\nERROR: Can not find reference date .par file, it supposed to be like: '+m_par_files)
     try:
         s_par_file = ut.get_file_list(s_par_files)[0]
     except:
         s_par_file = None
-        print('\nERROR: Can not find slave date .par file, it supposed to be like: '+s_par_files)
+        print('\nERROR: Can not find secondary date .par file, it supposed to be like: '+s_par_files)
 
     try:
         off_file = ut.get_file_list(off_files)[0]
@@ -335,7 +335,7 @@ def extract_metadata4geometry_radar(fname):
         m_date = str(re.findall('\d{6}', fname_base)[0])
 
     # search existing par file
-    geom_dir = os.path.dirname(fname)              #PROJECT_DIR/geom_master
+    geom_dir = os.path.dirname(fname)              #PROJECT_DIR/geom_reference
     ifg_dir = os.path.join(geom_dir, '../*/{}_*'.format(m_date))  #PROJECT_DIR/interferograms/{m_date}_20141225
     m_par_files = [os.path.join(geom_dir, '*{}*{}'.format(m_date, ext)) for ext in PAR_EXT_LIST]
     m_par_files += [os.path.join(ifg_dir, '*{}*{}'.format(m_date, ext)) for ext in PAR_EXT_LIST]

@@ -23,9 +23,9 @@ CMAP_DICT = {
 }
 
 URL_LIST = [
-    'https://zenodo.org/record/3635245/files/FernandinaSenDT128.tar.xz',
-    'https://zenodo.org/record/3635258/files/WellsEnvD2T399.tar.xz',
-    'https://zenodo.org/record/3635262/files/KujuAlosAT422F650.tar.xz',
+    'https://zenodo.org/record/3952953/files/FernandinaSenDT128.tar.xz',
+    'https://zenodo.org/record/3952950/files/WellsEnvD2T399.tar.xz',
+    'https://zenodo.org/record/3952917/files/KujuAlosAT422F650.tar.xz',
 ]
 
 PROJ_NAME_LIST = [os.path.basename(url).split('.tar.xz')[0] for url in URL_LIST]
