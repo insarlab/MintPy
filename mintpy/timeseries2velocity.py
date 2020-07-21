@@ -85,6 +85,22 @@ def create_parser():
                            '--exclude 20040502 20060708 20090103\n' +
                            '--exclude exclude_date.txt\n'+DROP_DATE_TXT)
 
+    # velocity model
+    model = parser.add_argument_group('velocity models of interest (default is a pure linear model)')
+    model.add_argument('--polynomial', '--mpoly', dest='modelPolynomial', default=1,
+                      help='polynomial degree of a polynomial function (Type: Interger); Default is 1; i.e.:\n' +
+                           '--polynomial 1                  # linear fitting (default)\n' +
+                           '--polynomial 2                  # quadratic fitting\n' + 
+                           '--polynomial 3                  # cubic fitting\n')
+    model.add_argument('--periodic', '--mperi', dest='modelPeriodic', nargs='+', default=[],
+                      help='periodic functions with period in decimal years (Type: Float); Default is none; i.e.:\n' +
+                           '--periodic 1.0                  # an annual cycle\n' +
+                           '--periodic 1.0 0.5              # an annual cycle plus a semi-annual cycle\n')
+    model.add_argument('--stepfunc', '--mstep', dest='modelStepfunc', nargs='+', default=[],
+                      help='step function at YYYYMMDD (Type: String); Default is none; i.e.:\n' +
+                           '--stepfunc 20061014             # a coseismic step at 20061014\n' +
+                           '--stepfunc 20110311 20120928    # coseismic steps at 20110311 and 20120928\n')
+
     # bootstrap
     bootstrap = parser.add_argument_group('bootstrapping', 'estimating the mean / STD of the velocity estimator')
     bootstrap.add_argument('--bootstrap', '--bootstrapping', dest='bootstrap', action='store_true',
@@ -256,23 +272,41 @@ def read_date_info(inps):
 
 
 ############################################################################
-def estimate_velocity(date_list, ts_obs, model=['linear']):
+def estimate_velocity(date_list, ts_obs, models):
     """
     Velocity estimator.
 
-    Linear velocity is assumed currently. More complex model, i.e. periodic, step can be added here.
+    We can use a combination of linear, periodic, step function models
 
     Parameters: date_list - list of str, dates in YYYYMMDD format
                 ts_obs    - 2D np.array, displacement observation in size of (num_date, num_pixel)
-                model     - list of str, list of models used for velocity estimation.
+                models    - list of velocity models:
+                            models[0]: polynomial degree. 1=linear, 2=quadratic, 3=cubic, etc.
+                            models[1]: list of periods in years. 1.0=annual, 0.5=semiannual, etc.
+                            models[2]: list of Heaviside step functions. format=YYYYMMDD
     Returns:    A         - 2D np.array, design matrix in size of (num_date, num_par)
                 X         - 2D np.array, parameter solution in size of (num_par, num_pixel)
     """
 
-    if 'linear' in model:
-        A = timeseries.get_design_matrix4average_velocity(date_list)
+    print('User-defined velocity estimation models:')
+    poly_deg = models[0]
+    periodic = models[1]
+    steps    = models[2]
+
+    if poly_deg == 1:
+        print(' - Include a linear model')
+    elif poly_deg > 1:
+        print(' - Include a {}-degree polynomial model'.format(int(poly_deg)))
     else:
-        raise ValueError('linear model is NOT included in the velocity estimation! Are you sure?!')
+        raise ValueError('linear/polynomial model is NOT included in the velocity estimation! Are you sure?!')
+    if len(periodic) != 0:
+        for i in range(len(periodic)):
+            print(' - Include a periodic model: {}-year cycle'.format(periodic[i]))
+    if len(steps) != 0:
+        for i in range(len(steps)):
+            print(' - Include a Heaviside step model at date: {}'.format(steps[i]))
+
+    A = timeseries.get_design_matrix4average_velocity(date_list, models)
 
     # least squares solver
     # The following is equivalent
@@ -291,6 +325,12 @@ def run_velocity_estimation(inps):
     if atr['UNIT'] == 'mm':
         ts_data *= 1./1000.
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+
+    # get velocity models from parsers
+    poly_deg = int(inps.modelPolynomial)                      # polynomial model
+    periodic = np.array(inps.modelPeriodic, dtype=np.float32) # seasonal terms
+    steps    = inps.modelStepfunc                             # coseismic step functions
+    models   = [poly_deg, periodic, steps]
 
     if inps.bootstrap:
         """
@@ -313,9 +353,9 @@ def run_velocity_estimation(inps):
             boot_ind.sort()
 
             # velocity estimation
-            A, X = estimate_velocity(ts_date[boot_ind].tolist(), ts_data[boot_ind])
+            A, X = estimate_velocity(ts_date[boot_ind].tolist(), ts_data[boot_ind], models)
 
-            boot_vel_lin[i] = np.array(X[0, :], dtype=dataType)
+            boot_vel_lin[i] = np.array(X[1, :], dtype=dataType)
             prog_bar.update(i+1, suffix='iteration {} / {}'.format(i+1, inps.bootstrapCount))
         prog_bar.close()
 
@@ -324,12 +364,12 @@ def run_velocity_estimation(inps):
         vel_std = boot_vel_lin.std(axis=0).reshape(length,width)
 
     else:
-        A, X = estimate_velocity(inps.dateList, ts_data)
-        vel_lin = np.array(X[0, :].reshape(length, width), dtype=dataType)
+        A, X = estimate_velocity(inps.dateList, ts_data, models)
+        vel_lin = np.array(X[1, :].reshape(length, width), dtype=dataType)
 
         # velocity STD (Eq. (10), Fattahi and Amelung, 2015)
         ts_diff = ts_data - np.dot(A, X)
-        t_diff = A[:, 0] - np.mean(A[:, 0])
+        t_diff = A[:, 1] - np.mean(A[:, 1])
         vel_std = np.sqrt(np.sum(ts_diff ** 2, axis=0) / np.sum(t_diff ** 2)  / (inps.numDate - 2))
         vel_std = np.array(vel_std.reshape(length, width), dtype=dataType)
         
@@ -348,6 +388,31 @@ def run_velocity_estimation(inps):
     dsDict = dict()
     dsDict['velocity'] = vel_lin
     dsDict['velocityStd'] = vel_std
+
+    # estimate the amplitude of periodic terms (if any)
+    period_amp = []
+    for i in range(len(periodic)):
+        period_amp.append(np.sqrt(X[poly_deg+2*i+1, :]**2 + X[poly_deg+2*i+2, :]**2))
+    if len(period_amp) != 0:
+        for i in range(len(period_amp)):
+            if periodic[i]   == 1.0:
+                dsDict['annualAmp']         = period_amp[i].reshape(length, width)
+            elif periodic[i] == 0.5:
+                dsDict['semiannualAmp']     = period_amp[i].reshape(length, width)
+            elif periodic[i] == 0.25:
+                dsDict['seasonalAmp']       = period_amp[i].reshape(length, width)
+            else:
+                dsDict[f'periodicAmp{i+1}'] = period_amp[i].reshape(length, width)
+
+
+    # estimate the amplitude of Heaviside step functions (if any)
+    step_amp = []
+    for i in range(len(steps)):
+        step_amp.append(X[poly_deg+2*len(periodic)+1+i, :])
+    if len(step_amp) != 0:
+        for i in range(len(step_amp)):
+            dsDict[f'stepAmp{steps[i]}']         = step_amp[i].reshape(length, width)
+
     writefile.write(dsDict, out_file=inps.outfile, metadata=atr)
     return inps.outfile
 
