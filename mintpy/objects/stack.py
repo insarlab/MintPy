@@ -449,11 +449,50 @@ class timeseries:
 
     # Functions for Unwrap error correction
     @staticmethod
-    def get_design_matrix4average_velocity(date_list, refDate=None):
+    def get_design_matrix4average_velocity(date_list, models, refDate=None):
         """design matrix/function model of linear velocity estimation
-        Parameters: date_list : list of string in YYYYMMDD format
-        Returns:    A : 2D array of int in size of (numDate, 2)
+        Parameters: date_list : list of string in YYYYMMDD format, size=numDate
+                    models    : list of velocity models:
+                                models[0]: poly_deg - polynomial degree. 1=linear, 2=quadratic, 3=cubic, etc.
+                                models[1]: periodic - list of periods in years. 1=annual, 0.5=semiannual, etc.
+                                models[2]: steps    - list of Heaviside step functions. format=YYYYMMDD
+        Returns:    A         : 2D array of design matrix in size of (numDate, numParam)
+                                numParam = (poly_deg + 1) + 2*len(periodic) + len(steps)
         """
+
+        def get_polynomial(yr_diff, degree):
+            """design matrix/function model of linear/polynomial velocity estimation
+            Parameters: yr_diff: time difference from refDate in decimal years
+                        degree : polynomial models: 1=linear, 2=quadratic, 3=cubic, etc.
+            Returns:    A      : 2D array of poly-coeff. in size of (numDate, degree+1)
+            """
+            A = np.zeros([len(yr_diff), degree + 1], dtype=np.float32)
+            for i in range(degree+1):
+                A[:,i] = yr_diff**i
+            return A
+
+        def get_periodic(yr_diff, period):
+            """design matrix/function model of periodic velocity estimation
+            Parameters: yr_diff: time difference from refDate in decimal years
+                        period : period in years: 1=annual, 0.5=semiannual, etc.
+            Returns:    A      : 2D array of periodic sine & cosine coeff. in size of (numDate, 2)
+            """        
+            A = np.zeros([len(yr_diff), 2], dtype=np.float32)
+            A[:,0] = np.cos(yr_diff*2*np.pi/period)
+            A[:,1] = np.sin(yr_diff*2*np.pi/period)
+            return A
+
+        def get_step(yr_diff, tstep):
+            """design matrix/function model of coseismic velocity estimation
+            Parameters: yr_diff: time difference from refDate in decimal years
+                        tstep  : Heaviside step function at time in years since refDate
+            Returns:    A      : 2D array of zeros & ones in size of (numDate, 1)
+            """
+            A = np.zeros(len(yr_diff), dtype=np.float32)
+            idx = (np.abs(yr_diff-tstep)).argmin()
+            A[idx:] = 1
+            return A  
+
         # convert list of YYYYMMDD into array of years in float
         date_format = ptime.get_date_str_format(date_list[0])
         dt_list = [dt.strptime(i, date_format) for i in date_list]
@@ -469,11 +508,39 @@ class timeseries:
             refDate = date_list[0]
         yr_diff -= yr_diff[date_list.index(refDate)]
 
-        A = np.ones([len(date_list), 2], dtype=np.float32)
-        A[:, 0] = yr_diff
+        # read the models
+        poly_deg = models[0]
+        periodic = models[1]
+        steps    = models[2]
+
+        # initialize the design matrix A -------------------------------------
+        numDate = len(yr_diff)
+        numParam = (poly_deg + 1) + 2*len(periodic) + len(steps)
+        A = np.zeros([numDate, numParam], dtype=np.float32)
+
+        # insert linear/polynomial term(s) -----------------------------------
+        A[:, 0:poly_deg+1] = get_polynomial(yr_diff, degree=poly_deg)
+
+        # insert periodic term(s) --------------------------------------------
+        icol = poly_deg + 1
+        for T in periodic:
+            A[:, icol:icol+2] = get_periodic(yr_diff, period=T)
+            icol += 2
+
+        # insert coseismic/step term(s) --------------------------------------
+        ## convert list of YYYYMMDD steps into array of diff year in float
+        dt_step_list = [dt.strptime(i, '%Y%m%d') for i in steps]
+        tstep_list = [i.year + (i.timetuple().tm_yday - 1) / 365.25 for i in dt_step_list]
+        tsteps = np.array(tstep_list)
+        tsteps -= yr_list[date_list.index(refDate)]
+        for istep in tsteps:
+            A[:, icol] = get_step(yr_diff, tstep=istep)
+            icol += 1
+
         return A
 
 ################################ timeseries class end ##################################
+
 
 
 
