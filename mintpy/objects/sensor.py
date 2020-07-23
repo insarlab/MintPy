@@ -270,9 +270,9 @@ SEN = {
     'azimuth_pixel_size'         : 14.1,      # m
     'range_pixel_size'           : 2.3,       # m
     'ground_range_pixel_size'    : 4.1,       # m
-    'IW1' : {'rangeResolution' : 2.7, 'azimuthResolution': 22.5},
-    'IW2' : {'rangeResolution' : 3.1, 'azimuthResolution': 22.7},
-    'IW3' : {'rangeResolution' : 3.5, 'azimuthResolution': 22.6},
+    'IW1' : {'range_resolution' : 2.7, 'azimuth_resolution': 22.5},
+    'IW2' : {'range_resolution' : 3.1, 'azimuth_resolution': 22.7},
+    'IW3' : {'range_resolution' : 3.5, 'azimuth_resolution': 22.6},
 }
 
 # Radarsat-2 stripmap ultra-fine mode

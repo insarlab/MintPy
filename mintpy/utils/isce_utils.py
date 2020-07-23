@@ -230,8 +230,8 @@ def extract_tops_metadata(xml_file):
     iw_str = 'IW2'
     if os.path.basename(xml_file).startswith('IW'):
         iw_str = os.path.splitext(os.path.basename(xml_file))[0]
-    metadata['azimuthResolution'] = sensor.SENSOR_DICT['sen'][iw_str]['azimuthResolution']
-    metadata['rangeResolution'] = sensor.SENSOR_DICT['sen'][iw_str]['rangeResolution']
+    metadata['azimuthResolution'] = sensor.SENSOR_DICT['sen'][iw_str]['azimuth_resolution']
+    metadata['rangeResolution'] = sensor.SENSOR_DICT['sen'][iw_str]['range_resolution']
 
     refElp = Planet(pname='Earth').ellipsoid
     llh = refElp.xyz_to_llh(peg.getPosition())
