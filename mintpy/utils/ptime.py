@@ -118,31 +118,36 @@ def decimal_year2datetime(years):
 
 
 def yyyymmdd2years(dates):
-    """Convert date(s) string into float number in the unit of year"""
+    """Convert date(s) string into float number in the unit of year
+
+    Parameters: dates - (list of) str, date in YYYYMMDD format
+    Returns:    years - (list of) float, years including the date and time info
+    """
 
     if isinstance(dates, str):
-        date_list = [dates]
+        dates = [dates]
     else:
-        date_list = list(dates)
+        dates = list(dates)
 
-    date_format = get_date_str_format(date_list[0])
+    date_format = get_date_str_format(dates[0])
 
-    y_list = []
+    years = []
     for date_str in dates:
         d = dt.strptime(date_str, date_format)
         y = (d.year + (d.timetuple().tm_yday - 1) / 365.25 + 
              d.hour / (365.25 * 24) + 
              d.minute / (365.25 * 24 * 60) + 
              d.second / (365.25 * 24 * 60 * 60))
-        y_list.append(y)
+        years.append(y)
 
     if isinstance(dates, str):
-        y_list = y_list[0]
+        years = years[0]
 
-    return y_list
+    return years
 
 
 def yymmdd2yyyymmdd(date):
+    """Convert date str from YYMMDD to YYYYMMDD format"""
     if date[0] == '9':
         date = '19'+date
     else:
@@ -151,6 +156,7 @@ def yymmdd2yyyymmdd(date):
 
 
 def yy2yyyy(year):
+    """Convert year str from YY to YYYY format"""
     if year[0] == '9':
         year = '19'+year
     else:
@@ -159,7 +165,7 @@ def yy2yyyy(year):
 
 
 def yyyymmdd(dates):
-    """Convert date strings in yymmdd format, if exists, to yyyymmdd format"""
+    """Convert date str from (YY)YYMMDD to YYYYMMDD format"""
     if isinstance(dates, str):
         if len(dates) == 6:
             datesOut = yymmdd2yyyymmdd(dates)
@@ -179,7 +185,7 @@ def yyyymmdd(dates):
 
 
 def yymmdd(dates):
-    """Convert date strings in yyyymmdd format, if exists, to yymmdd format"""
+    """Convert date str in (YY)YYMMDD to YYMMDD format"""
     if isinstance(dates, str):
         if len(dates) == 8:
             datesOut = dates[2:8]
@@ -262,14 +268,6 @@ def read_date_list(date_list_in, date_list_all=None):
 
 
 ################################################################
-def date_index(date_list):
-    date_inds = {}
-    for ni in range(len(date_list)):
-        date_inds[date_list[ni]] = ni
-    return date_inds
-
-
-################################################################
 def date_list2tbase(date_list):
     """Get temporal Baseline in days with respect to the 1st date
     Parameters: date_list - list of string, date in YYYYMMDD or YYMMDD format
@@ -318,29 +316,6 @@ def date_list2vector(date_list):
 
     return dates, datevector
 
-
-################################################################
-def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
-    """Find closest available time of weather product from SAR acquisition time
-    Inputs:
-        sar_acquisition_time - string, SAR data acquisition time in seconds
-        grib_source - string, Grib Source of weather reanalysis product
-    Output:
-        grib_hr - string, time of closest available weather product
-    Example:
-        '06' = closest_weather_product_time(atr['CENTER_LINE_UTC'])
-        '12' = closest_weather_product_time(atr['CENTER_LINE_UTC'], 'NARR')
-    """
-    # Get hour/min of SAR acquisition time
-    sar_time = float(sar_acquisition_time)
-
-    # Find closest time in available weather products
-    grib_hr_list = [0, 6, 12, 18]
-    grib_hr = int(min(grib_hr_list, key=lambda x: abs(x-sar_time/3600.)))
-
-    # Adjust time output format
-    grib_hr = "%02d" % grib_hr
-    return grib_hr
 
 
 ###########################Simple progress bar######################
