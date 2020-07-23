@@ -164,7 +164,7 @@ def check_inputs(inps):
     # hour
     if not inps.hour:
         if 'CENTER_LINE_UTC' in atr.keys():
-            inps.hour = ptime.closest_weather_product_time(atr['CENTER_LINE_UTC'], inps.trop_model)
+            inps.hour = closest_weather_product_time(atr['CENTER_LINE_UTC'], inps.trop_model)
         else:
             parser.print_usage()
             raise Exception('no input for hour')
@@ -250,6 +250,29 @@ def check_inputs(inps):
 
 
 ###############################################################
+def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
+    """Find closest available time of weather product from SAR acquisition time
+    Inputs:
+        sar_acquisition_time - string, SAR data acquisition time in seconds
+        grib_source - string, Grib Source of weather reanalysis product
+    Output:
+        grib_hr - string, time of closest available weather product
+    Example:
+        '06' = closest_weather_product_time(atr['CENTER_LINE_UTC'])
+        '12' = closest_weather_product_time(atr['CENTER_LINE_UTC'], 'NARR')
+    """
+    # Get hour/min of SAR acquisition time
+    sar_time = float(sar_acquisition_time)
+
+    # Find closest time in available weather products
+    grib_hr_list = [0, 6, 12, 18]
+    grib_hr = int(min(grib_hr_list, key=lambda x: abs(x-sar_time/3600.)))
+
+    # Adjust time output format
+    grib_hr = "%02d" % grib_hr
+    return grib_hr
+
+
 def standardize_trop_model(tropModel, standardWeatherModelNames):
     tropModel = tropModel.replace('-', '').upper()
     if tropModel in standardWeatherModelNames.keys():
