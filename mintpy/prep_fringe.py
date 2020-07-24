@@ -94,8 +94,21 @@ def read_vrt_info(vrt_file):
     '''
     root = ET.parse(vrt_file).getroot()
 
+    # get VRT tag structure
+    prefix_cand = ['VRTRasterBand/SimpleSource', 'VRTRasterBand']
+    prefix_list = [prefix for prefix  in prefix_cand
+                   if root.find(prefix + '/SourceFilename') is not None]
+    if len(prefix_list) > 0:
+        prefix = prefix_list[0]
+    else:
+        msg = 'No pre-defined tag structure found in file: {}!'.format(vrt_file)
+        msg += '\nPre-defined tag structure candidates:'
+        for prefix in prefix_cand:
+            msg += '\n    {}/SourceFilename'.format(prefix)
+        raise ValueError(msg)
+
     # box
-    type_tag = root.find('VRTRasterBand/SimpleSource/SrcRect')
+    type_tag = root.find(prefix + '/SrcRect')
     xmin = int(type_tag.get('xOff'))
     ymin = int(type_tag.get('yOff'))
     xsize = int(type_tag.get('xSize'))
@@ -106,7 +119,7 @@ def read_vrt_info(vrt_file):
     print('read bounding box from VRT file: {} as (x0, y0, x1, y1): {}'.format(vrt_file, box))
 
     # source dir
-    type_tag = root.find('VRTRasterBand/SimpleSource/SourceFilename')
+    type_tag = root.find(prefix + '/SourceFilename')
     src_dir = os.path.dirname(type_tag.text)
 
     return box, src_dir
