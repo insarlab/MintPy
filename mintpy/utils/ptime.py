@@ -124,15 +124,16 @@ def yyyymmdd2years(dates):
     Returns:    years - (list of) float, years including the date and time info
     """
 
+    # make a copy in list of input arg
     if isinstance(dates, str):
-        dates = [dates]
+        date_list = [dates]
     else:
-        dates = list(dates)
+        date_list = list(dates)
 
-    date_format = get_date_str_format(dates[0])
+    date_format = get_date_str_format(date_list[0])
 
     years = []
-    for date_str in dates:
+    for date_str in date_list:
         d = dt.strptime(date_str, date_format)
         y = (d.year + (d.timetuple().tm_yday - 1) / 365.25 + 
              d.hour / (365.25 * 24) + 
