@@ -191,7 +191,7 @@ def read_exclude_date(inps, dateListAll):
     # 3. startDate
     if inps.startDate:
         print('start date: '+inps.startDate)
-        yy_min = ptime.yyyymmdd2years(ptime.yyyymmdd(inps.startDate))[0]
+        yy_min = ptime.yyyymmdd2years(ptime.yyyymmdd(inps.startDate))
         for i in range(len(dateListAll)):
             date = dateListAll[i]
             if yy_list_all[i] < yy_min and date not in exDateList:
