@@ -15,7 +15,7 @@ import glob
 from mintpy.objects import ifgramStack, geometry, sensor
 from mintpy.utils import ptime, readfile, writefile, utils as ut
 try:
-    import gdal
+    from osgeo import gdal
 except ImportError:
     raise ImportError('Can not import gdal [version>=3.0]!')
 
