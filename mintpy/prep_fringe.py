@@ -15,7 +15,7 @@ import numpy as np
 import defusedxml.ElementTree as ET
 
 try:
-    import gdal
+    from osgeo import gdal
 except ImportError:
     raise ImportError("Can not import gdal!")
 

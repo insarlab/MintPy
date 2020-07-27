@@ -1028,7 +1028,7 @@ def read_gdal_vrt(fname, standardize=True):
     Modified from $ISCE_HOME/applications/gdal2isce_xml.gdal2isce_xml() written by David Bekaert.
     """
     try:
-        import gdal
+        from osgeo import gdal
     except ImportError:
         raise ImportError('Cannot import gdal!')
 
