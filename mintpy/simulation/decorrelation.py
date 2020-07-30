@@ -137,7 +137,8 @@ def phase_variance_ps(L, coherence=None, epsilon=1e-3):
 
 
 ########################################## Simulations #########################################
-def calibrate_coherence4phase_pdf_bias(coh, L, coh_step=0.02, num_sample=1e5, print_msg=True):
+def calibrate_coherence4phase_pdf_bias(coh, L, coh_step=0.02, num_sample=1e5, print_msg=True,
+                                       poly_deg=None, poly_rcond=1e-5):
     """Calibrate coherence for the bias caused by the imperfect phase PDF of DS
     during decorrelation noise simulation.
 
@@ -151,12 +152,14 @@ def calibrate_coherence4phase_pdf_bias(coh, L, coh_step=0.02, num_sample=1e5, pr
                 L          - int, number of independent looks
                 coh_step   - float, step of coherence to generate lookup table
                 num_sample - int, number of samples used for coherence estimation
+                poly_deg   - int, polynomial order degree. Default: 10 for L <=10, 40 for 10 < L <= 20.
+                poly_rcond - float, relative condition number of the fit.
     Returns:    coh_cal    - 1/2/3D np.ndarray of float32 for calibrated coherence
                 ffit       - the polynomial function of this calibration curve
     """
     if L > 20:
         raise ValueError('input L ({}) > 20! Polynomial fitting will be poorly conditioned!'.format(L))
- 
+
     ## 1. calculate the bias due to phase PDF numerically
     # list of coherence
     num_coh = int(1 / coh_step)
@@ -169,18 +172,33 @@ def calibrate_coherence4phase_pdf_bias(coh, L, coh_step=0.02, num_sample=1e5, pr
         sim_pha = sample_decorrelation_phase(coh_sim[i], L=L, size=num_sample)
 
         # form interferometric phase
-        sim_int = np.array(np.exp(1j*sim_pha), dtype=np.complex64)
+        sim_int = np.array(np.exp(1j * sim_pha), dtype=np.complex64)
 
         # calc coherence from interferometric phase
         coh_est[i] = np.abs(np.mean(sim_int))
 
-    ## 2. fit a polynomial curve to calibrate the bias
-    if print_msg:
-        print('calibrate coherence for the phase PDF bias with a polynomial of degree 40')
-    ffit = poly.Polynomial(poly.polyfit(coh_est, coh_sim, deg=40, rcond=1e-4))
+    # add 1 as the last data point
+    # for better fitting for values close to 1.
+    coh_sim = np.hstack((coh_sim, np.array([1])))
+    coh_est = np.hstack((coh_est, np.array([1])))
 
-    # apply the calibration
+    ## 2. fit a polynomial curve to calibrate the bias
+    # default degree of polynomial
+    if poly_deg is None:
+        if L < 10:
+            poly_deg = 10
+        else:
+            poly_deg = 40
+    if print_msg:
+        print('calibrate coherence for the phase PDF bias with a polynomial of degree {}'.format(poly_deg))
+
+    # https://numpy.org/doc/stable/reference/generated/numpy.polynomial.polynomial.polyfit.html
+    ffit = poly.Polynomial(poly.polyfit(coh_est, coh_sim, deg=poly_deg, rcond=poly_rcond, full=True)[0])
+
+    ## 3. apply the calibration
     coh_cal = ffit(coh)
+    coh_cal[coh_cal < 0] = 0
+    coh_cal[coh_cal > 1] = 1
 
     return coh_cal, ffit
 
