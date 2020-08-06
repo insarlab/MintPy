@@ -175,11 +175,11 @@ def extract_snap_metadata(fname):
                 rg_pixel.append(line.split(">")[1].split("<")[0])
             if "incidenceAngleMidSwath" in line:
                 inc_angle_mid = line.split(">")[1].split("<")[0]
-            if '"x"' in line:
+            if "x_pos" in line:
                 x.append(line.split(">")[1].split("<")[0])
-            if '"y"' in line:
+            if "y_pos" in line:
                 y.append(line.split(">")[1].split("<")[0])
-            if '"z"' in line:
+            if "z_pos" in line:
                 z.append(line.split(">")[1].split("<")[0])
 
     atr = {}
@@ -265,7 +265,11 @@ def write_rsc(atr, out_file):
 ##################################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
+
     for img_file in inps.file:
+        if not img_file.endswith('.img'):
+            raise ValueError('input data file does not end with .img: {}'.format(img_file))
+
         # *.dim metadata file for the input *.img data file
         dim_file = os.path.dirname(img_file)[:-4]+'dim'
 

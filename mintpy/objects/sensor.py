@@ -42,7 +42,7 @@ def standardize_sensor_name(sensor_name):
         pass
     else:
         # otherwise, check all the possible variations
-        for key, values in SENSOR_NAME_VARIATION:
+        for key, values in SENSOR_NAME_VARIATION.items():
             if sensor_name in values:
                 sensor_name = key
             else:
