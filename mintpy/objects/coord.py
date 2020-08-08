@@ -35,8 +35,8 @@ class coordinate:
 
     def __init__(self, metadata, lookup_file=None):
         """Define a coordinate object
-        Parameters: metadata : dict, source metadata
-                    lookup_file : list of 2 strings, or string, lookup table file(s)
+        Parameters: metadata    - dict, source metadata
+                    lookup_file - list of 2 strings, or string, lookup table file(s)
         Example:    from mintpy.utils import readfile, utils as ut
                     atr = readfile.read_attribute('./velocity.h5')
                     coord = ut.coordinate(atr, './inputs/geometryRadar.h5')
@@ -71,9 +71,9 @@ class coordinate:
 
     def lalo2yx(self, coord_in, coord_type):
         """convert geo coordinates into radar coordinates for Geocoded file only
-        Parameters: geoCoord  : coordinate (list / tuple) in latitude/longitude in float
-                    metadata : dictionary of file attributes
-                    coord_type : coordinate type: latitude, longitude
+        Parameters: geoCoord   - list / tuple / 1D np.ndarray / float, coordinate(s) in latitude or longitude
+                    metadata   - dict, dictionary of file attributes
+                    coord_type - str, coordinate type: latitude or longitude
         Example:    300 = coordinate.lalo2yx(32.104990,    metadata,'lat')
                     [1000,1500] = coordinate.lalo2yx([130.5,131.4],metadata,'lon')
         """
@@ -111,9 +111,9 @@ class coordinate:
     def yx2lalo(self, coord_in, coord_type):
         """convert radar coordinates into geo coordinates (pixel center)
             for Geocoded file only
-        Parameters: coord_in : coordinate (list) in row/col in int
-                    metadata : dictionary of file attributes
-                    coord_type  : coordinate type: row, col, y, x
+        Parameters: coord_in   _ list / tuple / 1D np.ndarray / int, coordinate(s) in row or col in int
+                    metadata   _ dict, dictionary of file attributes
+                    coord_type _ str, coordinate type: row / col / y / x
         Example:    32.104990 = coord_yx2lalo(300, metadata, 'y')
                     [130.5,131.4] = coord_yx2lalo([1000,1500], metadata, 'x')
         """
@@ -219,9 +219,9 @@ class coordinate:
 
     def geo2radar(self, lat, lon, print_msg=True, debug_mode=False):
         """Convert geo coordinates into radar coordinates.
-        Parameters: lat/lon : np.array, float, latitude/longitude
-        Returns:    az/rg : np.array, float, range/azimuth pixel number
-                    az/rg_res : float, residul/uncertainty of coordinate conversion
+        Parameters: lat/lon   - np.array / float, latitude/longitude
+        Returns:    az/rg     - np.array / int, range/azimuth pixel number
+                    az/rg_res - float, residul/uncertainty of coordinate conversion
         """
         self.open()
         if self.geocoded:
@@ -304,10 +304,10 @@ class coordinate:
 
     def radar2geo(self, az, rg, print_msg=True, debug_mode=False):
         """Convert radar coordinates into geo coordinates (pixel center)
-        Parameters: rg/az : np.array, int, range/azimuth pixel number
-        Returns:    lon/lat : np.array, float, longitude/latitude of input point (rg,az);
-                        nan if not found.
-                    latlon_res : float, residul/uncertainty of coordinate conversion
+        Parameters: rg/az      - np.array / int, range/azimuth pixel number
+        Returns:    lon/lat    - np.array / float, longitude/latitude of input point (rg,az);
+                                 nan if not found.
+                    latlon_res - float, residul/uncertainty of coordinate conversion
         """
         self.open()
         if self.geocoded:
@@ -369,8 +369,8 @@ class coordinate:
 
     def box_pixel2geo(self, pixel_box):
         """Convert pixel_box to geo_box in UL corner
-        Parameters: pixel_box : list/tuple of 4 int   in (x0, y0, x1, y1)
-        Returns:    geo_box   : tuple      of 4 float in (W, N, E, S)
+        Parameters: pixel_box - list/tuple of 4 int   in (x0, y0, x1, y1)
+        Returns:    geo_box   - tuple      of 4 float in (W, N, E, S)
         """
         try:
             lat = self.yx2lalo([pixel_box[1], pixel_box[3]], coord_type='y')
@@ -385,8 +385,8 @@ class coordinate:
 
     def box_geo2pixel(self, geo_box):
         """Convert geo_box to pixel_box
-        Parameters: geo_box   : tuple      of 4 float in (W, N, E, S)
-        Returns:    pixel_box : list/tuple of 4 int   in (x0, y0, x1, y1)
+        Parameters: geo_box   - tuple      of 4 float in (W, N, E, S)
+        Returns:    pixel_box - list/tuple of 4 int   in (x0, y0, x1, y1)
         """
         try:
             y = self.lalo2yx([geo_box[1], geo_box[3]], coord_type='latitude')
@@ -413,7 +413,7 @@ class coordinate:
         """Calculate bounding box in x/y for file in radar coord, based on input geo box.
         Parameters: geo_box - tuple of 4 float, indicating the UL/LR lon/lat 
         Returns:    pix_box - tuple of 4 int, indicating the UL/LR x/y of the bounding box in radar coord
-                          for the corresponding lat/lon coverage.
+                              for the corresponding lat/lon coverage.
         """
         lat = np.array([geo_box[3], geo_box[3], geo_box[1], geo_box[1]])
         lon = np.array([geo_box[0], geo_box[2], geo_box[0], geo_box[2]])
@@ -425,8 +425,8 @@ class coordinate:
 
     def check_box_within_data_coverage(self, pixel_box, print_msg=True):
         """Check the subset box's conflict with data coverage
-        Parameters:  pixel_box : 4-tuple of int, indicating y/x coordinates of subset
-        Returns:     out_box   : 4-tuple of int
+        Parameters:  pixel_box - 4-tuple of int, indicating y/x coordinates of subset
+        Returns:     out_box   - 4-tuple of int
         """
         self.open()
         length, width = int(self.src_metadata['LENGTH']), int(self.src_metadata['WIDTH'])
