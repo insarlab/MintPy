@@ -165,7 +165,7 @@ def add_figure_argument(parser):
     # colormap
     fig.add_argument('-c', '--colormap', dest='colormap',
                      help='colormap used for display, i.e. jet, cmy, RdBu, hsv, jet_r, temperature, viridis, etc.\n'
-                          'More details: https://mintpy.readthedocs.io/en/latest/resources/colormaps/')
+                          'More at https://mintpy.readthedocs.io/en/latest/resources/colormaps/')
     fig.add_argument('--cm-lut','--cmap-lut', dest='cmap_lut', type=int, default=256, metavar='NUM',
                      help='number of increment of colormap lookup table (default: %(default)s).')
     fig.add_argument('--cm-vlist','--cmap-vlist', dest='cmap_vlist', type=float, nargs=3, default=[0.0, 0.7, 1.0],
@@ -254,7 +254,7 @@ def add_mask_argument(parser):
 
 def add_map_argument(parser):
     # Map
-    mapg = parser.add_argument_group('Map', 'Map settings for display')
+    mapg = parser.add_argument_group('Map', 'for one subplot in geo-coordinates only')
     mapg.add_argument('--coastline', dest='coastline', type=str, default='no',
                       choices={'10m', '50m', '110m', 'no'},
                       help="Draw coastline with specified resolution (default: %(default)s).")
@@ -372,7 +372,7 @@ def read_pts2inps(inps, coord_obj):
     # pts_file --> pts_lalo
     if inps.pts_file and os.path.isfile(inps.pts_file):
         print('read points lat/lon from text file: {}'.format(inps.pts_file))
-        inps.pts_lalo = np.loadtxt(inps.pts_file, dtype=bytes).astype(float)
+        inps.pts_lalo = np.loadtxt(inps.pts_file, usecols=(0,1), dtype=bytes).astype(float)
 
     # pts_lalo --> pts_yx
     if inps.pts_lalo is not None:
@@ -382,6 +382,7 @@ def read_pts2inps(inps, coord_obj):
         inps.pts_yx = coord_obj.geo2radar(inps.pts_lalo[:, 0],
                                           inps.pts_lalo[:, 1],
                                           print_msg=False)[:2]
+        inps.pts_yx = np.array(inps.pts_yx).T.reshape(-1, 2)
 
     ## 2. pts_yx --> pts_yx/lalo
     if inps.pts_yx is not None:
@@ -391,8 +392,7 @@ def read_pts2inps(inps, coord_obj):
         inps.pts_lalo = coord_obj.radar2geo(inps.pts_yx[:, 0],
                                             inps.pts_yx[:, 1],
                                             print_msg=False)[:2]
-        # format pts_lalo to 2D array in size of (num_pts, 2)
-        inps.pts_lalo = np.array(inps.pts_lalo).reshape(-1, 2)
+        inps.pts_lalo = np.array(inps.pts_lalo).T.reshape(-1, 2)
 
     return inps
 
