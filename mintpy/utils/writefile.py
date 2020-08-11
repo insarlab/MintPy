@@ -189,6 +189,8 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
     return out_file
 
 
+#########################################################################
+
 def layout_hdf5(fname, dsNameDict, metadata):
     """Create HDF5 file with defined metadata and (empty) dataset structure
 
@@ -364,6 +366,9 @@ def remove_hdf5_dataset(fname, datasetNames, print_msg=True):
     return fname
 
 
+
+#########################################################################
+
 def write_roipac_rsc(metadata, out_file, update_mode=False, print_msg=False):
     """Write attribute dict into ROI_PAC .rsc file
     Inputs:
@@ -408,6 +413,73 @@ def write_roipac_rsc(metadata, out_file, update_mode=False, print_msg=False):
                                                    v=str(metadata[key])))
     return out_file
 
+
+def write_isce_xml(fname, width, length, bands=1, data_type='FLOAT', scheme='BIP'):
+    """Write XML metadata file in ISCE-2 format
+
+    Parameters: fname     - str, path of data file
+                width     - int, number of columns
+                length    - int, number of rows
+                bands     - int, number of band
+                data_type - str, data type name in ISCE convention
+                            readfile.GDAL2ISCE_DATATYPE
+                scheme    - str, band interleave, BIP, BIL, BSQ
+    """
+    import isce
+    import isceobj
+
+    img = isceobj.Image.createImage()
+    img.setFilename(fname)
+    img.setWidth(width)
+    img.setLength(length)
+    img.setAccessMode('READ')
+    img.bands = bands
+    img.dataType = data_type
+    img.scheme = scheme
+    img.renderHdr()
+    img.renderVRT()
+
+    return
+
+
+def write_isce_file(data, out_file, file_type='isce_unw'):
+    """write data to file in ISCE format
+
+    Parameters: data      - 2D np.ndarray, binary data matrix
+                out_file  - str, path of output binary data file
+                file_type - str, file type
+    Returns:    out_file  - str, path of output binary data file
+    """
+    import isce
+    import isceobj
+
+    # fix potential typo
+    file_type = file_type.replace('-', '_')
+
+    # write data to binary file
+    data.tofile(out_file)
+
+    # write isce xml metadata file
+    length, width = data.shape
+
+    if file_type == 'isce_unw':
+        width = int(width / 2)
+        write_isce_xml(out_file, width, length, bands=2, data_type='FLOAT', scheme='BIL')
+
+    elif file_type == 'isce_int':
+        write_isce_xml(out_file, width, length, bands=1, data_type='CFLOAT', scheme='BIL')
+
+    elif file_type == 'isce_cor':
+        write_isce_xml(out_file, width, length, bands=1, data_type='FLOAT', scheme='BIL')
+
+    else:
+        raise ValueError('un-recognized ISCE file type: {}'.format(file_type))
+
+    return out_file
+
+
+
+#########################################################################
 
 def write_float32(*args):
     """Write ROI_PAC rmg format with float32 precision (BIL)
