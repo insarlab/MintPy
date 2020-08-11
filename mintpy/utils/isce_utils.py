@@ -25,6 +25,35 @@ EARTH_RADIUS = 6378122.65   # m
 
 
 
+def get_processor(meta_file):
+    """
+    Get the name of ISCE processor (imaging mode)
+    """
+    meta_dir = os.path.dirname(meta_file)
+    tops_meta_file = os.path.join(meta_dir, 'IW*.xml')
+    stripmap_meta_files = [os.path.join(meta_dir, i) for i in ['data.dat', 'data']]
+
+    processor = None
+    if len(glob.glob(tops_meta_file)) > 0:
+        # topsStack
+        processor = 'tops'
+
+    elif any(os.path.isfile(i) for i in stripmap_meta_files):
+        # stripmapStack
+        processor = 'stripmap'
+
+    elif meta_file.endswith('.xml'):
+        # stripmapApp
+        processor = 'stripmap'
+
+    else:
+        raise ValueError('Un-recognized ISCE processor for metadata file: {}'.format(meta_file))
+    return processor
+
+
+
+#####################################  multilook  #######################################
+
 def multilook_number2resolution(meta_file, az_looks, rg_looks):
     # get full resolution info
     az_pixel_size, az_spacing, rg_pixel_size, rg_spacing = get_full_resolution(meta_file)
@@ -109,31 +138,6 @@ def get_full_resolution(meta_file):
 
     return az_pixel_size, az_spacing, rg_pixel_size, rg_spacing
 
-
-def get_processor(meta_file):
-    """
-    Get the name of ISCE processor (imaging mode)
-    """
-    meta_dir = os.path.dirname(meta_file)
-    tops_meta_file = os.path.join(meta_dir, 'IW*.xml')
-    stripmap_meta_files = [os.path.join(meta_dir, i) for i in ['data.dat', 'data']]
-
-    processor = None
-    if len(glob.glob(tops_meta_file)) > 0:
-        # topsStack
-        processor = 'tops'
-
-    elif any(os.path.isfile(i) for i in stripmap_meta_files):
-        # stripmapStack
-        processor = 'stripmap'
-
-    elif meta_file.endswith('.xml'):
-        # stripmapApp
-        processor = 'stripmap'
-
-    else:
-        raise ValueError('Un-recognized ISCE processor for metadata file: {}'.format(meta_file))
-    return processor
 
 
 #####################################  metadata  #######################################

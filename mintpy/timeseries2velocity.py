@@ -2,7 +2,8 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Heresh Fattahi, Zhang Yunjun, Emre Havazli, 2013 #
+# Author: Zhang Yunjun, Heresh Fattahi, Yuan-Kai Liu,      #
+#         Emre Havazli, 2013                               #
 ############################################################
 
 
@@ -469,11 +470,11 @@ def run_velocity_estimation(inps):
             for i in range(num_period):
                 # calculate the amplitude and phase of the periodic signal
                 # following equation (9-10) in Minchew et al. (2017, JGR)
-                par1 = m[p0 + 2*i, :]
-                par2 = m[p0 + 2*i + 1, :]
-                period_amp = np.sqrt(par1**2 + par2**2)
+                coef_cos = m[p0 + 2*i, :]
+                coef_sin = m[p0 + 2*i + 1, :]
+                period_amp = np.sqrt(coef_cos**2 + coef_sin**2)
                 period_pha = np.zeros(length*width, dtype=dataType)
-                period_pha[mask] = np.arctan(par1[mask] / par2[mask])
+                period_pha[mask] = np.arctan(coef_cos[mask] / coef_sin[mask])
 
                 # dataset basename
                 period = model['periodic'][i]
