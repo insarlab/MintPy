@@ -4,6 +4,8 @@
 
 + Chaussard, E., F. Amelung, and Y. Aoki (2013), Characterization of open and closed volcanic systems in Indonesia and Mexico using InSAR time series, _Journal of Geophysical Research: Solid Earth, 118_(8), 3957-3969, doi:10.1002/jgrb.50288.
 
++ Chaussard, E., R. Bürgmann, H. Fattahi, R. M. Nadeau, T. Taira, C. W. Johnson, and I. Johanson (2015), Potential for larger earthquakes in the East San Francisco Bay Area due to the direct connection between the Hayward and Calaveras Faults, _Geophysical Research Letters, 42_(8), 2734-2741, doi:10.1002/2015GL063575.
+
 + Chen, C. W., and H. A. Zebker (2001), Two-dimensional phase unwrapping with use of statistical models for cost functions in nonlinear optimization, _JOSA A, 18_(2), 338-351, doi:10.1364/JOSAA.18.000338.
 
 + Doin, M. P., C. Lasserre, G. Peltzer, O. Cavalié, and C. Doubre (2009), Corrections of stratified tropospheric delays in SAR interferometry: Validation with global atmospheric models, _Journal of Applied Geophysics, 69_(1), 35-50, doi:10.1016/j.jappgeo.2009.03.010.
