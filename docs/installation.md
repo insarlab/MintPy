@@ -128,7 +128,9 @@ sudo -H /opt/local/bin/pip install git+https://github.com/fhs/pyhdf.git
 
 + Check [Earthdef/PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main#) for accounts setup information for ERA-Interim and MERRA.
 
-+ Check [pyaps3](https://github.com/yunjunz/pyaps3) for account setup for ERA-5 and run `pyaps3/examples/TestECMWF.ipynb` to test.
++ Check [pyaps3](https://github.com/yunjunz/pyaps3) for account setup for ERA-5. Make sure that you:
+   - accept the data license in the Terms of use on ECMWF website and 
+   - run `pyaps3/examples/TestECMWF.ipynb` to test the data downloading and running.
 
 + If you defined an environment variable named `WEATHER_DIR` to contain the path to a
 directory, MintPy applications will download the GAM files into the indicated directory. Also MintPy
