@@ -193,6 +193,7 @@ def extract_tops_metadata(xml_file):
     """Read metadata from xml file for Sentinel-1/TOPS
     Parameters: xml_file : str, path of the .xml file, i.e. reference/IW1.xml
     Returns:    meta     : dict, metadata
+                burst    : isceobj.Sensor.TOPS.BurstSLC.BurstSLC object
     """
     import isce
     import isceobj
@@ -212,6 +213,7 @@ def extract_tops_metadata(xml_file):
     metadata['polarization'] = burst.polarization
     metadata['trackNumber'] = burst.trackNumber
     metadata['orbitNumber'] = burst.orbitNumber
+    metadata['PLATFORM'] = sensor.standardize_sensor_name(obj.spacecraftName)
 
     time_seconds = (burst.burstStartUTC.hour * 3600.0 +
                     burst.burstStartUTC.minute * 60.0 +
@@ -258,6 +260,7 @@ def extract_stripmap_metadata(meta_file):
     """Read metadata from shelve file for StripMap stack from ISCE
     Parameters: meta_file : str, path of the shelve file, i.e. referenceShelve/data.dat
     Returns:    meta      : dict, metadata
+                frame     : isceobj.Scene.Frame.Frame object
     """
     import isce
     import isceobj
@@ -288,6 +291,7 @@ def extract_stripmap_metadata(meta_file):
         metadata['polarization'] = metadata['polarization'][2:4]
     metadata['trackNumber'] = frame.trackNumber
     metadata['orbitNumber'] = frame.orbitNumber
+    metadata['PLATFORM'] = sensor.standardize_sensor_name(frame.platform.getSpacecraftName())
 
     time_seconds = (frame.sensingStart.hour * 3600.0 + 
                     frame.sensingStart.minute * 60.0 + 

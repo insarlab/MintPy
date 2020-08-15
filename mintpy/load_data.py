@@ -157,6 +157,7 @@ def read_inps2dict(inps):
             inpsDict[key] = template[prefix+key]
         elif value:
             inpsDict[prefix+key] = template[prefix+key]
+    print('processor : {}'.format(inpsDict['processor']))
 
     if inpsDict['compression'] == False:
         inpsDict['compression'] = None
@@ -166,9 +167,14 @@ def read_inps2dict(inps):
         cfile = [i for i in list(inps.template_file) if os.path.basename(i) != 'smallbaselineApp.cfg']
         inpsDict['PROJECT_NAME'] = sensor.project_name2sensor_name(cfile)[1]
 
-    inpsDict['PLATFORM'] = str(sensor.project_name2sensor_name(str(inpsDict['PROJECT_NAME']))[0])
-    print('SAR platform/sensor : {}'.format(inpsDict['PLATFORM']))
-    print('processor: {}'.format(inpsDict['processor']))
+    msg = 'SAR platform/sensor : '
+    sensor_name = sensor.project_name2sensor_name(str(inpsDict['PROJECT_NAME']))[0]
+    if sensor_name:
+        msg += str(sensor_name)
+        inpsDict['PLATFORM'] = str(sensor_name)
+    else:
+        msg += 'unknown from project name "{}"'.format(inpsDict['PROJECT_NAME'])
+    print(msg)
 
     # update file path with auto
     if inpsDict.get('autoPath', False):
@@ -561,7 +567,7 @@ def prepare_metadata(inpsDict):
         elif processor == 'snap':
             from mintpy import prep_snap as prep_module
 
-        # run prep_module
+        # run prep_{processor} module
         for key in [i for i in inpsDict.keys() if (i.startswith('mintpy.load.') and i.endswith('File'))]:
             if len(glob.glob(str(inpsDict[key]))) > 0:
                 # print command line
