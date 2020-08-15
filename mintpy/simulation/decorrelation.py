@@ -344,6 +344,9 @@ def coherence2weight(coh_data, weight_func='var', L=20, epsilon=5e-2, print_msg=
     coh_data[coh_data < epsilon] = epsilon
     coh_data = np.array(coh_data, np.float64)
 
+    # make sure L >= 1
+    L = max(L, 1)
+
     # Calculate Weight matrix
     weight_func = weight_func.lower()
     if 'var' in weight_func:
