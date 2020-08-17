@@ -60,7 +60,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             with h5py.File(ref_file, 'r') as fr:
                 auxDsNames = [i for i in fr.keys()
                               if (i not in list(datasetDict.keys())
-                                  and isinstance(fr[i], h5py.Dataset) 
+                                  and isinstance(fr[i], h5py.Dataset)
                                   and fr[i].shape[-2:] != shape_ref)]
         else:
             auxDsNames = []
@@ -112,7 +112,10 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
 
             # 3. metadata
             for key, value in meta.items():
-                f.attrs[key] = str(value)
+                try:
+                    f.attrs[key] = str(value)
+                except:
+                    f.attrs[key] = str(value.encode('utf-8'))
             print('finished writing to {}'.format(out_file))
 
     # ISCE / ROI_PAC GAMMA / Image product
@@ -366,7 +369,7 @@ def write_roipac_rsc(metadata, out_file, update_mode=False, print_msg=False):
     Inputs:
         metadata : dict, attributes dictionary
         out_file : rsc file name, to which attribute is writen
-        update_mode : bool, skip writing if 
+        update_mode : bool, skip writing if
                       1) output file existed AND
                       2) no new metadata key/value
         print_msg   : bool, print message
@@ -491,4 +494,3 @@ def write_bool(data, out_file):
     data = np.array(data, dtype=np.bool_)
     data.tofile(out_file)
     return out_file
-
