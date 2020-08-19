@@ -43,7 +43,7 @@ def create_parser():
     parser.add_argument('file', nargs='+',
                         help='input file to show transection')
     parser.add_argument('--dset', dest='dset', help='Dataset name to read')
-    parser.add_argument('--offset','--off', dest='offset', type=float, nargs='+', default=0.05,
+    parser.add_argument('--offset','--off', dest='offset', type=float, nargs='+', default=[0.05],
                         help='offset between transects [for multiple files only; default: %(default)s m].\n'
                              'number of input offsets should be:\n'
                              '    1 - same (sequential) offset between adjacent transects OR\n'
