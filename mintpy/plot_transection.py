@@ -18,7 +18,7 @@ from mintpy import view
 #####################################################################
 # Only one line is supported right now.
 GMT_FILE = """GMT xy file, i.e. transect_lonlat.xy:
->\n
+>
 131.1663    33.1157
 131.2621    33.0860
 """
@@ -31,7 +31,7 @@ EXAMPLE = """example:
   # Multiple files
   plot_transection.py AlosA*/velocity.h5 AlosD*/velocity.h5 --off 2
   plot_transection.py Kirishima2017*.h5 Kirishima2008*.h5 --off 0 0 10 10
-  plot_transection.py Kirishima2017*.h5 Kirishima2008*.h5 --off 0 0 10 10 --start-lalo 31.947 130.843 --end-lalo 31.947 130.860
+  plot_transection.py Kirishima2017*.h5 Kirishima2008*.h5 --off 0 0 10 10 --lalo0 31.947 130.843 --lalo1 31.947 130.860
 """
 
 
@@ -43,10 +43,15 @@ def create_parser():
     parser.add_argument('file', nargs='+',
                         help='input file to show transection')
     parser.add_argument('--dset', dest='dset', help='Dataset name to read')
+    parser.add_argument('--offset','--off', dest='offset', type=float, nargs='+', default=[0.05],
+                        help='offset between transects [for multiple files only; default: %(default)s m].\n'
+                             'number of input offsets should be:\n'
+                             '    1 - same (sequential) offset between adjacent transects OR\n'
+                             '    num_file - different (cumulative) offset for each file, starting from 0.')
     parser.add_argument('--noverbose', dest='print_msg', action='store_false',
                         help='Disable the verbose message printing.')
 
-    lines = parser.add_argument_group('Start and End Point of Profile')
+    lines = parser.add_argument_group('Profile location', 'Start/end points of profile')
     lines.add_argument('--start-yx','--yx0', dest='start_yx', metavar=('Y0', 'X0'), type=int, nargs=2,
                        help='start point of the profile in pixel number [y, x]')
     lines.add_argument('--end-yx','--yx1', dest='end_yx', metavar=('Y1', 'X1'), type=int, nargs=2,
@@ -59,12 +64,9 @@ def create_parser():
                        help='file with start and end point info in lon lat, same as GMT format.\n'+GMT_FILE)
 
     lines.add_argument('--interpolation', default='nearest', choices=['nearest', 'bilinear', 'cubic'],
-                        help='interpolation method while extacting profile along the line. Default: nearest.')
-
-    parser.add_argument('--offset','--off', dest='offset', type=float, nargs='+',
-                        help='offset between transections from different files. Default: 0.05')
-    parser.add_argument('--ms', '--markersize', dest='marker_size', type=float, default=2.0,
-                        help='Point marker size. Default: 2.0')
+                       help='interpolation method while extacting profile along the line. Default: nearest.')
+    lines.add_argument('--ms', '--markersize', dest='marker_size', type=float, default=2.0,
+                       help='Point marker size. Default: 2.0')
 
     parser = pp.add_figure_argument(parser)
     parser = pp.add_save_argument(parser)
@@ -83,19 +85,15 @@ def cmd_line_parse(iargs=None):
     inps.coord = ut.coordinate(inps.atr)
     inps.num_file = len(inps.file)
 
-    # input offsets
-    if not inps.offset:
-        inps.offset = np.array([0.05], dtype=np.float32)
-
     if inps.num_file > 1:
-        num_offset = len(inps.offset)
         # a) one input: it's interval between adjacent files
-        if num_offset == 1:
+        if len(inps.offset) == 1:
             inps.offset = np.ones(inps.num_file, dtype=np.float32) * inps.offset
+            inps.offset[0] = 0.
             inps.offset = np.cumsum(inps.offset)
 
         # b) multiple input: it's exact offset of all files
-        elif num_offset == inps.num_file:
+        elif len(inps.offset) == inps.num_file:
             inps.offset = np.array(inps.offset, dtype=np.float32)
 
         # c) do not support any other numbers of inputs
@@ -103,6 +101,9 @@ def cmd_line_parse(iargs=None):
             msg = 'input number of offsets: {}.'.format(len(inps.offset))
             msg += '\nIt should be 1 or number of files: {}'.format(inps.num_file)
             raise ValueError(msg)
+    else:
+        # disable offset for single input file
+        inps.offset = np.array([0], dtype=np.float32)
 
     if not inps.dset:
         inps.dset = readfile.get_slice_list(inps.file[0])[0]
@@ -208,7 +209,7 @@ class transectionViewer():
         for key, value in inps_view.__dict__.items():
             setattr(self, key, value)
 
-        self.offset *= self.disp_scale
+        self.offset *= self.disp_scale  # due to unit change from view.prep_slice()
 
         # do not update the following setting from view.py
         self.file = inps.file
