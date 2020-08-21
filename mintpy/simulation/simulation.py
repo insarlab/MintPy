@@ -217,7 +217,7 @@ def estimate_coherence(ifgram, L=20, win_size=25):
 
 def timeseries2velocity(date_list, defo_list):
     # date_list --> design_matrix
-    A = timeseries.get_design_matrix4average_velocity(date_list)
+    A = timeseries.get_design_matrix4time_func(date_list)
     A_inv = np.linalg.pinv(A)
 
     # least square inversion
