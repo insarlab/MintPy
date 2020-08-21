@@ -620,6 +620,8 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             k = 'geometry'
         elif any(i in g1_list+d1_list for i in ['timeseries', 'displacement']):
             k = 'timeseries'
+        elif any(i in d1_list for i in ['velocity']):
+            k = 'velocity'
         elif 'HDFEOS' in g1_list:
             k = 'HDFEOS'
         elif 'recons' in d1_list:

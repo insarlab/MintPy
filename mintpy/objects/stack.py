@@ -449,93 +449,113 @@ class timeseries:
 
     # Functions for Unwrap error correction
     @staticmethod
-    def get_design_matrix4average_velocity(date_list, models, refDate=None):
+    def get_design_matrix4time_func(date_list, model=None, refDate=None):
         """design matrix/function model of linear velocity estimation
-        Parameters: date_list : list of string in YYYYMMDD format, size=numDate
-                    models    : list of velocity models:
-                                models[0]: poly_deg - polynomial degree. 1=linear, 2=quadratic, 3=cubic, etc.
-                                models[1]: periodic - list of periods in years. 1=annual, 0.5=semiannual, etc.
-                                models[2]: steps    - list of Heaviside step functions. format=YYYYMMDD
-        Returns:    A         : 2D array of design matrix in size of (numDate, numParam)
-                                numParam = (poly_deg + 1) + 2*len(periodic) + len(steps)
+        Parameters: date_list : list of str in YYYYMMDD format, size=num_date
+                    model     : dict of time functions, e.g.:
+                                {'polynomial' : 2,            # int, polynomial with 1 (linear), 2 (quadratic), 3 (cubic), etc.
+                                 'periodic'   : [1.0, 0.5],   # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
+                                 'step'       : ['20061014'], # list of str, date(s) in YYYYMMDD.
+                                 ...
+                                 }
+        Returns:    A         : 2D array of design matrix in size of (num_date, num_param)
+                                num_param = (poly_deg + 1) + 2*len(periodic) + len(steps)
         """
 
-        def get_polynomial(yr_diff, degree):
+        def get_design_matrix4polynomial_func(yr_diff, degree):
             """design matrix/function model of linear/polynomial velocity estimation
             Parameters: yr_diff: time difference from refDate in decimal years
                         degree : polynomial models: 1=linear, 2=quadratic, 3=cubic, etc.
-            Returns:    A      : 2D array of poly-coeff. in size of (numDate, degree+1)
+            Returns:    A      : 2D array of poly-coeff. in size of (num_date, degree+1)
             """
             A = np.zeros([len(yr_diff), degree + 1], dtype=np.float32)
             for i in range(degree+1):
                 A[:,i] = yr_diff**i
+
             return A
 
-        def get_periodic(yr_diff, period):
+        def get_design_matrix4periodic_func(yr_diff, periods):
             """design matrix/function model of periodic velocity estimation
-            Parameters: yr_diff: time difference from refDate in decimal years
-                        period : period in years: 1=annual, 0.5=semiannual, etc.
-            Returns:    A      : 2D array of periodic sine & cosine coeff. in size of (numDate, 2)
-            """        
-            A = np.zeros([len(yr_diff), 2], dtype=np.float32)
-            A[:,0] = np.cos(yr_diff*2*np.pi/period)
-            A[:,1] = np.sin(yr_diff*2*np.pi/period)
+            Parameters: yr_diff : 1D array of time difference from refDate in decimal years
+                        periods : list of period in years: 1=annual, 0.5=semiannual, etc.
+            Returns:    A       : 2D array of periodic sine & cosine coeff. in size of (num_date, 2)
+            """
+            num_date = len(yr_diff)
+            num_period = len(periods)
+            A = np.zeros((num_date, 2*num_period), dtype=np.float32)
+
+            for i, period in enumerate(periods):
+                c0, c1 = 2*i, 2*i+1
+                A[:, c0] = np.cos(2*np.pi/period * yr_diff)
+                A[:, c1] = np.sin(2*np.pi/period * yr_diff)
+
             return A
 
-        def get_step(yr_diff, tstep):
-            """design matrix/function model of coseismic velocity estimation
-            Parameters: yr_diff: time difference from refDate in decimal years
-                        tstep  : Heaviside step function at time in years since refDate
-            Returns:    A      : 2D array of zeros & ones in size of (numDate, 1)
-            """
-            A = np.zeros(len(yr_diff), dtype=np.float32)
-            idx = (np.abs(yr_diff-tstep)).argmin()
-            A[idx:] = 1
-            return A  
 
-        # convert list of YYYYMMDD into array of years in float
-        date_format = ptime.get_date_str_format(date_list[0])
-        dt_list = [dt.strptime(i, date_format) for i in date_list]
-        yr_list = [(d.year + (d.timetuple().tm_yday - 1) / 365.25 + 
-                    d.hour / (365.25 * 24) + 
-                    d.minute / (365.25 * 24 * 60) +
-                    d.second / (365.25 * 24 * 60 * 60))
-                   for d in dt_list]
-        yr_diff = np.array(yr_list)
+        def get_design_matrix4step_func(date_list, step_date_list):
+            """design matrix/function model of coseismic velocity estimation
+            Parameters: date_list      : list of dates in YYYYMMDD format
+                        step_date_list : Heaviside step function(s) with date in YYYYMMDD
+            Returns:    A              : 2D array of zeros & ones in size of (num_date, num_step)
+            """
+            num_date = len(date_list)
+            num_step = len(step_date_list)
+            A = np.zeros((num_date, num_step), dtype=np.float32)
+
+            t = np.array(ptime.yyyymmdd2years(date_list))
+            t_steps = ptime.yyyymmdd2years(step_date_list)
+            for i, t_step in enumerate(t_steps):
+                A[:, i] = np.array(t > t_step).flatten()
+
+            return A
+
+        ## prepare time info
+        # convert list of date into array of years in float
+        yr_diff = np.array(ptime.yyyymmdd2years(date_list))
 
         # reference date
         if refDate is None:
             refDate = date_list[0]
         yr_diff -= yr_diff[date_list.index(refDate)]
 
+        ## construct design matrix A
+        # default model value
+        if not model:
+            model = {'polynomial' : 1}
+
         # read the models
-        poly_deg = models[0]
-        periodic = models[1]
-        steps    = models[2]
+        poly_deg = model.get('polynomial', 0)
+        periods  = model.get('periodic', [])
+        steps    = model.get('step', [])
+        num_period = len(periods)
+        num_step = len(steps)
 
-        # initialize the design matrix A -------------------------------------
-        numDate = len(yr_diff)
-        numParam = (poly_deg + 1) + 2*len(periodic) + len(steps)
-        A = np.zeros([numDate, numParam], dtype=np.float32)
+        num_param = (poly_deg + 1) + (2 * num_period) + num_step
+        if num_param <= 1:
+            raise ValueError('NO time functions specified!')
 
-        # insert linear/polynomial term(s) -----------------------------------
-        A[:, 0:poly_deg+1] = get_polynomial(yr_diff, degree=poly_deg)
+        # initialize the design matrix
+        num_date = len(yr_diff)
+        A = np.zeros((num_date, num_param), dtype=np.float32)
+        c0 = 0
 
-        # insert periodic term(s) --------------------------------------------
-        icol = poly_deg + 1
-        for T in periodic:
-            A[:, icol:icol+2] = get_periodic(yr_diff, period=T)
-            icol += 2
+        # update linear/polynomial term(s)
+        if poly_deg > 0:
+            c1 = c0 + poly_deg + 1
+            A[:, c0:c1] = get_design_matrix4polynomial_func(yr_diff, poly_deg)
+            c0 = c1
 
-        # insert coseismic/step term(s) --------------------------------------
-        ## convert list of YYYYMMDD steps into array of diff year in float
-        dt_step_list = [dt.strptime(i, '%Y%m%d') for i in steps]
-        tstep_list = [i.year + (i.timetuple().tm_yday - 1) / 365.25 for i in dt_step_list]
-        tsteps = np.array(tstep_list)
-        tsteps -= yr_list[date_list.index(refDate)]
-        for istep in tsteps:
-            A[:, icol] = get_step(yr_diff, tstep=istep)
-            icol += 1
+        # update periodic term(s)
+        if num_period > 0:
+            c1 = c0 + 2 * num_period
+            A[:, c0:c1] = get_design_matrix4periodic_func(yr_diff, periods)
+            c0 = c1
+
+        # update coseismic/step term(s)
+        if num_step > 0:
+            c1 = c0 + num_step
+            A[:, c0:c1] = get_design_matrix4step_func(date_list, steps)
+            c0 = c1
 
         return A
 

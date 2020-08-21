@@ -7,8 +7,11 @@
 
 
 import os
+import sys
 import argparse
+import h5py
 import numpy as np
+from scipy import linalg
 from mintpy.objects import timeseries, giantTimeseries, HDFEOS
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, writefile, ptime, utils as ut
@@ -38,9 +41,7 @@ REFERENCE = """references:
 
 EXAMPLE = """example:
   timeseries2velocity.py  timeseries_ERA5_demErr.h5
-  timeseries2velocity.py  timeseries_ERA5_demErr_ramp.h5  -t smallbaselineApp.cfg --update
   timeseries2velocity.py  timeseries_ERA5_demErr_ramp.h5  -t KyushuT73F2980_2990AlosD.template
-  timeseries2velocity.py  timeseries.h5  --start-date 20080201
   timeseries2velocity.py  timeseries.h5  --start-date 20080201  --end-date 20100508
   timeseries2velocity.py  timeseries.h5  --exclude-date exclude_date.txt
 
@@ -48,8 +49,11 @@ EXAMPLE = """example:
   timeseries2velocity.py  NSBAS-PARAMS.h5
   timeseries2velocity.py  TS-PARAMS.h5
 
-  # bootstrapping
+  # bootstrapping for STD calculation
   timeseries2velocity.py timeseries_ERA5_demErr.h5 --bootstrap
+
+  # complex time functions
+  timeseries2velocity.py timeseries_ERA5_ramp_demErr.h5 --poly 3 --period 1 0.5 --step 20170910
 """
 
 DROP_DATE_TXT = """exclude_date.txt:
@@ -85,21 +89,21 @@ def create_parser():
                            '--exclude 20040502 20060708 20090103\n' +
                            '--exclude exclude_date.txt\n'+DROP_DATE_TXT)
 
-    # velocity model
-    model = parser.add_argument_group('velocity models of interest (default is a pure linear model)')
-    model.add_argument('--polynomial', '--mpoly', dest='modelPolynomial', default=1,
-                      help='polynomial degree of a polynomial function (Type: Interger); Default is 1; i.e.:\n' +
-                           '--polynomial 1                  # linear fitting (default)\n' +
-                           '--polynomial 2                  # quadratic fitting\n' + 
-                           '--polynomial 3                  # cubic fitting\n')
-    model.add_argument('--periodic', '--mperi', dest='modelPeriodic', nargs='+', default=[],
-                      help='periodic functions with period in decimal years (Type: Float); Default is none; i.e.:\n' +
-                           '--periodic 1.0                  # an annual cycle\n' +
-                           '--periodic 1.0 0.5              # an annual cycle plus a semi-annual cycle\n')
-    model.add_argument('--stepfunc', '--mstep', dest='modelStepfunc', nargs='+', default=[],
-                      help='step function at YYYYMMDD (Type: String); Default is none; i.e.:\n' +
-                           '--stepfunc 20061014             # a coseismic step at 20061014\n' +
-                           '--stepfunc 20110311 20120928    # coseismic steps at 20110311 and 20120928\n')
+    # time functions
+    model = parser.add_argument_group('deformation model', 'a suite of time functions')
+    model.add_argument('--polynomial', '--poly', '--poly-order', dest='polynomial', type=int, default=1,
+                      help='a polynomial function with the input degree (default: %(default)s). E.g.:\n' +
+                           '--polynomial 1            # linear\n' +
+                           '--polynomial 2            # quadratic\n' + 
+                           '--polynomial 3            # cubic\n')
+    model.add_argument('--periodic', '--peri', dest='periodic', type=float, nargs='+', default=[],
+                      help='periodic function(s) with period in decimal years (default: %(default)s). E.g.:\n' +
+                           '--periodic 1.0            # an annual cycle\n' +
+                           '--periodic 1.0 0.5        # an annual cycle plus a semi-annual cycle\n')
+    model.add_argument('--step', dest='step', type=str, nargs='+', default=[],
+                      help='step function(s) at YYYYMMDD (default: %(default)s). E.g.:\n' +
+                           '--step 20061014           # coseismic step  at 2006-10-14\n' +
+                           '--step 20110311 20120928  # coseismic steps at 2011-03-11 and 2012-09-28\n')
 
     # bootstrap
     bootstrap = parser.add_argument_group('bootstrapping', 'estimating the mean / STD of the velocity estimator')
@@ -127,6 +131,8 @@ def cmd_line_parse(iargs=None):
 
     if inps.bootstrap:
         print('bootstrapping is turned ON.')
+        if (inps.polynomial != 1 or inps.periodic or inps.step):
+            raise ValueError('bootstrapping currently support polynomial ONLY and ONLY with the order of 1!')
 
     return inps
 
@@ -272,49 +278,42 @@ def read_date_info(inps):
 
 
 ############################################################################
-def estimate_velocity(date_list, ts_obs, models):
+def estimate_velocity(date_list, dis_ts, model):
     """
-    Velocity estimator.
+    Deformation model estimator, using a suite of linear, periodic, step function(s).
 
-    We can use a combination of linear, periodic, step function models
+    Gm = d
 
     Parameters: date_list - list of str, dates in YYYYMMDD format
-                ts_obs    - 2D np.array, displacement observation in size of (num_date, num_pixel)
-                models    - list of velocity models:
-                            models[0]: polynomial degree. 1=linear, 2=quadratic, 3=cubic, etc.
-                            models[1]: list of periods in years. 1.0=annual, 0.5=semiannual, etc.
-                            models[2]: list of Heaviside step functions. format=YYYYMMDD
-    Returns:    A         - 2D np.array, design matrix in size of (num_date, num_par)
-                X         - 2D np.array, parameter solution in size of (num_par, num_pixel)
+                dis_ts    - 2D np.ndarray, displacement observation in size of (num_date, num_pixel)
+                model     - dict of time functions, e.g.:
+                            {'polynomial' : 2,            # int, polynomial with 1 (linear), 2 (quadratic), 3 (cubic), etc.
+                             'periodic'   : [1.0, 0.5],   # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
+                             'step'       : ['20061014'], # list of str, date(s) in YYYYMMDD.
+                             ...
+                             }
+    Returns:    G         - 2D np.ndarray, design matrix           in size of (num_date, num_par)
+                m         - 2D np.ndarray, parameter solution      in size of (num_par, num_pixel)
+                e2        - 1D np.ndarray, sum of squared residual in size of (num_pixel,)
     """
 
-    print('User-defined velocity estimation models:')
-    poly_deg = models[0]
-    periodic = models[1]
-    steps    = models[2]
+    print('estimate deformation model with the following assumed time functions:')
+    for key, value in model.items():
+        print('{:<10} : {}'.format(key, value))
 
-    if poly_deg == 1:
-        print(' - Include a linear model')
-    elif poly_deg > 1:
-        print(' - Include a {}-degree polynomial model'.format(int(poly_deg)))
-    else:
-        raise ValueError('linear/polynomial model is NOT included in the velocity estimation! Are you sure?!')
-    if len(periodic) != 0:
-        for i in range(len(periodic)):
-            print(' - Include a periodic model: {}-year cycle'.format(periodic[i]))
-    if len(steps) != 0:
-        for i in range(len(steps)):
-            print(' - Include a Heaviside step model at date: {}'.format(steps[i]))
+    if 'polynomial' not in model.keys():
+        raise ValueError('linear/polynomial model is NOT included! Are you sure?!')
 
-    A = timeseries.get_design_matrix4average_velocity(date_list, models)
+    G = timeseries.get_design_matrix4time_func(date_list, model)
 
     # least squares solver
+    # m = np.dot(np.linalg.pinv(G), dis_ts)
     # The following is equivalent
-    # X = scipy.linalg.lstsq(A, ts_obs, cond=1e-15)[0]
-    # It is not used because it can not handle NaN value in ts_obs
-    X = np.dot(np.linalg.pinv(A), ts_obs)
+    # m = scipy.linalg.lstsq(G, dis_ts, cond=1e-15)[0]
+    # It is not used because it can not handle NaN value in dis_ts
+    m, e2 = linalg.lstsq(G, dis_ts)[:2]
 
-    return A, X
+    return G, m, e2
 
 
 def run_velocity_estimation(inps):
@@ -325,12 +324,17 @@ def run_velocity_estimation(inps):
     if atr['UNIT'] == 'mm':
         ts_data *= 1./1000.
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+    num_date = inps.numDate
 
-    # get velocity models from parsers
-    poly_deg = int(inps.modelPolynomial)                      # polynomial model
-    periodic = np.array(inps.modelPeriodic, dtype=np.float32) # seasonal terms
-    steps    = inps.modelStepfunc                             # coseismic step functions
-    models   = [poly_deg, periodic, steps]
+    # get deformation model from parsers
+    model = dict()
+    model['polynomial'] = inps.polynomial
+    model['periodic'] = inps.periodic
+    model['step'] = inps.step
+    poly_deg = inps.polynomial
+    num_period = len(inps.periodic)
+    num_step = len(inps.step)
+    num_param = (poly_deg + 1) + (2 * num_period) + num_step
 
     if inps.bootstrap:
         """
@@ -343,19 +347,15 @@ def run_velocity_estimation(inps):
 
         boot_vel_lin = np.zeros((inps.bootstrapCount, (length*width)), dtype=dataType)
         ts_date = np.array(inps.dateList)
-
         prog_bar = ptime.progressBar(maxValue=inps.bootstrapCount)
         for i in range(inps.bootstrapCount):
             # bootstrap resampling
-            boot_ind = resample(np.arange(inps.numDate),
-                                replace=True,
-                                n_samples=inps.numDate)
+            boot_ind = resample(np.arange(inps.numDate), replace=True, n_samples=inps.numDate)
             boot_ind.sort()
 
             # velocity estimation
-            A, X = estimate_velocity(ts_date[boot_ind].tolist(), ts_data[boot_ind], models)
-
-            boot_vel_lin[i] = np.array(X[1, :], dtype=dataType)
+            m = estimate_velocity(ts_date[boot_ind].tolist(), ts_data[boot_ind], model)[1]
+            boot_vel_lin[i] = np.array(m[1, :], dtype=dataType)
             prog_bar.update(i+1, suffix='iteration {} / {}'.format(i+1, inps.bootstrapCount))
         prog_bar.close()
 
@@ -363,16 +363,55 @@ def run_velocity_estimation(inps):
         vel_lin = boot_vel_lin.mean(axis=0).reshape(length,width)
         vel_std = boot_vel_lin.std(axis=0).reshape(length,width)
 
-    else:
-        A, X = estimate_velocity(inps.dateList, ts_data, models)
-        vel_lin = np.array(X[1, :].reshape(length, width), dtype=dataType)
+        # prepare attributes
+        atr['FILE_TYPE'] = 'velocity'
+        atr['UNIT'] = 'm/year'
+        atr['START_DATE'] = inps.dateList[0]
+        atr['END_DATE'] = inps.dateList[-1]
+        atr['DATE12'] = '{}_{}'.format(inps.dateList[0], inps.dateList[-1])
+        # config parameter
+        print('add/update the following configuration metadata:\n{}'.format(configKeys))
+        for key in configKeys:
+            atr[key_prefix+key] = str(vars(inps)[key])
 
-        # velocity STD (Eq. (10), Fattahi and Amelung, 2015)
-        ts_diff = ts_data - np.dot(A, X)
-        t_diff = A[:, 1] - np.mean(A[:, 1])
-        vel_std = np.sqrt(np.sum(ts_diff ** 2, axis=0) / np.sum(t_diff ** 2)  / (inps.numDate - 2))
-        vel_std = np.array(vel_std.reshape(length, width), dtype=dataType)
-        
+        # write to HDF5 file
+        dsDict = dict()
+        dsDict['velocity'] = vel_lin
+        dsDict['velocityStd'] = vel_std
+        writefile.write(dsDict, out_file=inps.outfile, metadata=atr)
+        return inps.outfile
+
+    # mask of pixels to invert
+    mask = np.ones(length*width, np.bool_)
+    print('skip pixels with zero/nan value in all acquisitions')
+    ts_stack = np.nanmean(ts_data, axis=0)
+    mask *= np.multiply(~np.isnan(ts_stack), ts_stack!=0.)
+    del ts_stack
+
+    ## Solve Gm = d
+    m = np.zeros((num_param, length*width), dtype=dataType)
+    e2 = np.zeros((length*width), dtype=dataType)
+    G, m[:, mask], e2[mask] = estimate_velocity(inps.dateList, ts_data[:, mask], model)
+
+    ## Compute the covariance matrix for model parameters: Gm = d
+    # C_m_hat = (G.T * C_d^-1, * G)^-1  # the most generic form
+    #         = sigma^2 * (G.T * G)^-1  # assuming the obs error is normally distributed in time.
+    # Based on the law of integrated expectation, we estimate the obs sigma^2 using
+    # the OLS estimation residual e_hat_i = d_i - d_hat_i
+    # sigma^2 = sigma_hat^2 * N / (N - P)
+    #         = (e_hat.T * e_hat) / (N - P)  # sigma_hat^2 = (e_hat.T * e_hat) / N
+
+    G_inv = linalg.inv(np.dot(G.T, G))
+    var_param = e2.reshape(1, -1) / (num_date - num_param)
+    m_std = np.sqrt(np.dot(np.diag(G_inv).reshape(-1, 1), var_param))
+
+    ## for linear velocity, the STD can also be calculated using Eq. (10) from Fattahi and Amelung (2015, JGR)
+    #ts_diff = ts_data - np.dot(G, m)
+    #t_diff = G[:, 1] - np.mean(G[:, 1])
+    #vel_std = np.sqrt(np.sum(ts_diff ** 2, axis=0) / np.sum(t_diff ** 2)  / (num_date - 2))
+    #vel_std = np.array(vel_std.reshape(length, width), dtype=dataType)
+
+    ##### write to HDF5 file
     # prepare attributes
     atr['FILE_TYPE'] = 'velocity'
     atr['UNIT'] = 'm/year'
@@ -384,36 +423,92 @@ def run_velocity_estimation(inps):
     for key in configKeys:
         atr[key_prefix+key] = str(vars(inps)[key])
 
-    # write to HDF5 file
-    dsDict = dict()
-    dsDict['velocity'] = vel_lin
-    dsDict['velocityStd'] = vel_std
+    # utils setup/function for hdf5 file writing
+    def print_create_dataset(dsName, dtype=dataType, shape=(length, width)):
+        print(('create dataset /{d:<20} of {t:<25} in size of {s:<12} '
+               'with compression={c}').format(d=dsName,
+                                              t=str(dataType),
+                                              s=str(shape),
+                                              c=str(None)))
+    kwargs = dict(dtype=dataType, shape=(length, width), chunks=True, compression=None)
 
-    # estimate the amplitude of periodic terms (if any)
-    period_amp = []
-    for i in range(len(periodic)):
-        period_amp.append(np.sqrt(X[poly_deg+2*i+1, :]**2 + X[poly_deg+2*i+2, :]**2))
-    if len(period_amp) != 0:
-        for i in range(len(period_amp)):
-            if periodic[i]   == 1.0:
-                dsDict['annualAmp']         = period_amp[i].reshape(length, width)
-            elif periodic[i] == 0.5:
-                dsDict['semiannualAmp']     = period_amp[i].reshape(length, width)
-            elif periodic[i] == 0.25:
-                dsDict['seasonalAmp']       = period_amp[i].reshape(length, width)
-            else:
-                dsDict[f'periodicAmp{i+1}'] = period_amp[i].reshape(length, width)
+    print('open file: {} with "w" mode'.format(inps.outfile))
+    with h5py.File(inps.outfile, 'w') as f:
 
+        # write attributes in the root level
+        for key, value in atr.items():
+            f.attrs[key] = str(value)
 
-    # estimate the amplitude of Heaviside step functions (if any)
-    step_amp = []
-    for i in range(len(steps)):
-        step_amp.append(X[poly_deg+2*len(periodic)+1+i, :])
-    if len(step_amp) != 0:
-        for i in range(len(step_amp)):
-            dsDict[f'stepAmp{steps[i]}']         = step_amp[i].reshape(length, width)
+        # write dataset
+        # 1. polynomial
+        if poly_deg > 0:
+            for i in range(1, poly_deg+1):
+                # dataset name
+                if i == 1:
+                    dsName = 'velocity'
+                    unit = 'm/year'
+                elif i == 2:
+                    dsName = 'acceleration'
+                    unit = 'm/year^2'
+                else:
+                    dsName = 'poly{}'.format(i)
+                    unit = 'm/year^{}'.format(i)
 
-    writefile.write(dsDict, out_file=inps.outfile, metadata=atr)
+                # write
+                print_create_dataset(dsName)
+                ds = f.create_dataset(dsName, data=m[i, :], **kwargs)
+                ds.attrs['UNIT'] = unit
+
+                print_create_dataset(dsName+'Std')
+                ds = f.create_dataset(dsName+'Std', data=m_std[i, :], **kwargs)
+                ds.attrs['UNIT'] = unit
+
+        # 2. periodic
+        p0 = poly_deg + 1
+        if num_period > 0:
+            for i in range(num_period):
+                # calculate the amplitude and phase of the periodic signal
+                # following equation (9-10) in Minchew et al. (2017, JGR)
+                par1 = m[p0 + 2*i, :]
+                par2 = m[p0 + 2*i + 1, :]
+                period_amp = np.sqrt(par1**2 + par2**2)
+                period_pha = np.zeros(length*width, dtype=dataType)
+                period_pha[mask] = np.arctan(par1[mask] / par2[mask])
+
+                # dataset basename
+                period = model['periodic'][i]
+                if period == 1:
+                    dsName = 'annualAmp'
+                elif period == 0.5:
+                    dsName = 'semiAnnualAmp'
+                else:
+                    dsName = 'periodY{}Amp'.format(period)
+
+                # write to hdf5 file
+                print_create_dataset(dsName)
+                ds = f.create_dataset(dsName, data=period_amp, **kwargs)
+                ds.attrs['UNIT'] = 'm'
+
+                # 1. figure out a proper way to save the phase data in radians
+                #    and keeping smart display in view.py 
+                #    to avoid messy scaling together with dataset in m
+                # 2. add code for the error propagation for the periodic amp/pha
+
+        # 3. step
+        p0 = (poly_deg + 1) + (2 * num_period)
+        if num_step > 0:
+            for i in range(num_step):
+                dsName = 'step{}'.format(model['step'][i])
+
+                print_create_dataset(dsName)
+                ds = f.create_dataset(dsName, data=m[p0+i, :], **kwargs)
+                ds.attrs['UNIT'] = 'm'
+
+                print_create_dataset(dsName+'Std')
+                ds = f.create_dataset(dsName+'Std', data=m_std[p0+i, :], **kwargs)
+                ds.attrs['UNIT'] = 'm'
+
+    print('finished writing to file: {}'.format(inps.outfile))
     return inps.outfile
 
 
@@ -433,4 +528,4 @@ def main(iargs=None):
 
 ############################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
