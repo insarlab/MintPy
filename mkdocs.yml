@@ -28,6 +28,7 @@ nav:
         - Example template files: examples/input_files/README.md
         - Parallel processing with Dask: dask.md
         - Tutorials in Jupyter Notebook: https://github.com/insarlab/MintPy-tutorial
+        - Frequently Asked Questions: FAQs.md
     - Output:
         - Google Earth KMZ: google_earth.md
         - HDF-EOS5: hdfeos5.md
