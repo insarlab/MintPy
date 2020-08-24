@@ -915,22 +915,30 @@ def update_figure_setting(inps):
 def read_data4figure(i_start, i_end, inps, metadata):
     """Read multiple datasets for one figure into 3D matrix based on i_start/end"""
     data = np.zeros((i_end - i_start,
-                     inps.pix_box[3] - inps.pix_box[1],
-                     inps.pix_box[2] - inps.pix_box[0]))
+                     int((inps.pix_box[3] - inps.pix_box[1]) / inps.multilook_num),
+                     int((inps.pix_box[2] - inps.pix_box[0]) / inps.multilook_num)), dtype=np.float32)
 
     # fast reading for single dataset type
     if (len(inps.dsetFamilyList) == 1
             and inps.key in ['timeseries', 'giantTimeseries', 'ifgramStack', 'HDFEOS', 'geometry']):
+
         vprint('reading data as a 3D matrix ...')
         dset_list = [inps.dset[i] for i in range(i_start, i_end)]
-        data[:] = readfile.read(inps.file, datasetName=dset_list, box=inps.pix_box)[0]
+        data[:] = readfile.read(inps.file,
+                                datasetName=dset_list,
+                                box=inps.pix_box,
+                                xstep=inps.multilook_num,
+                                ystep=inps.multilook_num)[0]
 
         if inps.key == 'ifgramStack':
             # reference pixel info in unwrapPhase
             if inps.dsetFamilyList[0].startswith('unwrapPhase') and inps.file_ref_yx:
                 ref_y, ref_x = inps.file_ref_yx
                 ref_box = (ref_x, ref_y, ref_x+1, ref_y+1)
-                ref_data = readfile.read(inps.file, datasetName=dset_list, box=ref_box, print_msg=False)[0]
+                ref_data = readfile.read(inps.file,
+                                         datasetName=dset_list,
+                                         box=ref_box,
+                                         print_msg=False)[0]
                 for i in range(data.shape[0]):
                     mask = data[i, :, :] != 0.
                     data[i, mask] -= ref_data[i]
@@ -943,7 +951,9 @@ def read_data4figure(i_start, i_end, inps, metadata):
             d = readfile.read(inps.file,
                               datasetName=inps.dset[i],
                               box=inps.pix_box,
-                              print_msg=False)[0]
+                              print_msg=False,
+                              xstep=inps.multilook_num,
+                              ystep=inps.multilook_num)[0]
             data[i - i_start, :, :] = d
             prog_bar.update(i - i_start + 1, suffix=inps.dset[i].split('/')[-1])
         prog_bar.close()
@@ -954,7 +964,9 @@ def read_data4figure(i_start, i_end, inps, metadata):
         ref_data = readfile.read(inps.file,
                                  datasetName=inps.ref_date,
                                  box=inps.pix_box,
-                                 print_msg=False)[0]
+                                 print_msg=False,
+                                 xstep=inps.multilook_num,
+                                 ystep=inps.multilook_num)[0]
         data -= ref_data
 
     # v/dlim, adjust data if all subplots share the same unit
@@ -970,6 +982,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
             or inps.dsetFamilyList == ['data','model','residual']
             or inps.dsetFamilyList == ['band{}'.format(i+1) for i in range(len(inps.dsetFamilyList))]):
         data, inps = update_data_with_plot_inps(data, metadata, inps)
+
         if (not inps.vlim
                 and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)
                 and inps.dsetFamilyList[0] not in ['bperp']):
@@ -977,10 +990,6 @@ def read_data4figure(i_start, i_end, inps, metadata):
             inps.vlim = [np.nanmin(data_mli), np.nanmax(data_mli)]
             del data_mli
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
-
-    # multilook
-    if inps.multilook:
-        data = multilook_data(data, inps.multilook_num, inps.multilook_num)
 
     # mask
     if inps.msk is not None:
@@ -1196,12 +1205,14 @@ def prepare4multi_subplots(inps, metadata):
         for dsFamily in inps.dsetFamilyList:
             if any(i in dsFamily.lower() for i in ['mask', 'coord']):
                 auto_multilook = False
+
         if auto_multilook:
             inps.multilook, inps.multilook_num = check_multilook_input(inps.pix_box,
                                                                        inps.fig_row_num,
                                                                        inps.fig_col_num)
         if inps.msk is not None:
-            inps.msk = multilook_data(inps.msk, inps.multilook_num, inps.multilook_num)
+            inps.msk = inps.msk[int(inps.multilook_num/2)::inps.multilook_num,
+                                int(inps.multilook_num/2)::inps.multilook_num]
 
     # Reference pixel for timeseries and ifgramStack
     #metadata = readfile.read_attribute(inps.file)
@@ -1238,9 +1249,9 @@ def prepare4multi_subplots(inps, metadata):
             dem = readfile.read(inps.dem_file,
                                 datasetName='height',
                                 box=inps.pix_box,
-                                print_msg=False)[0]
-            if inps.multilook:
-                dem = multilook_data(dem, inps.multilook_num, inps.multilook_num)
+                                print_msg=False,
+                                xstep=inps.multilook_num,
+                                ystep=inps.multilook_num)[0]
             (inps.dem_shade,
              inps.dem_contour,
              inps.dem_contour_seq) = pp.prepare_dem_background(dem=dem,

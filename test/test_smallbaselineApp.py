@@ -109,11 +109,11 @@ def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False):
     else:
         # remove existing directory
         if os.path.isdir(dset_name):
-            print('removing existing project directory: {}'.format(dset_name))
+            print('remove existing project directory: {}'.format(dset_name))
             shutil.rmtree(dset_name)
 
         # uncompress tar file
-        print('extract content from tar file: {}'.format(tar_file))
+        print('extracting content from tar file: {}'.format(tar_file))
         tar = tarfile.open(tar_file)
         tar.extractall()
         tar.close()
