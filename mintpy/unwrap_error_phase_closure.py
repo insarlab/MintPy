@@ -246,7 +246,7 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
         closure_int = np.round((closure_pha - ut.wrap(closure_pha)) / (2.*np.pi))
         num_nonzero_closure[r0:r1, :] = np.sum(closure_int != 0, axis=0).reshape(-1, width)
 
-        prog_bar.update(i+1, every=1)
+        prog_bar.update(i+1, every=1, suffix='line {} / {}'.format(r0, length))
     prog_bar.close()
 
     # mask

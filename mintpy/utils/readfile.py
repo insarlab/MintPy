@@ -177,13 +177,14 @@ ENVI_BYTE_ORDER = {
 
 
 #########################################################################
-def read(fname, box=None, datasetName=None, print_msg=True):
+def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1):
     """Read one dataset and its attributes from input file.
-    Parameters: fname : str, path of file to read
+    Parameters: fname       : str, path of file to read
                 datasetName : str or list of str, slice names
-                box : 4-tuple of int area to read, defined in (x0, y0, x1, y1) in pixel coordinate
-    Returns:    data : 2/3-D matrix in numpy.array format, return None if failed
-                atr : dictionary, attributes of data, return None if failed
+                box         : 4-tuple of int area to read, defined in (x0, y0, x1, y1) in pixel coordinate
+                x/ystep     : int, number of pixels to pick/multilook for each output pixel
+    Returns:    data        : 2/3-D matrix in numpy.array format, return None if failed
+                atr         : dictionary, attributes of data, return None if failed
     Examples:
         from mintpy.utils import readfile
         data, atr = readfile.read('velocity.h5')
@@ -212,16 +213,25 @@ def read(fname, box=None, datasetName=None, print_msg=True):
     # Read Data
     fext = os.path.splitext(os.path.basename(fname))[1].lower()
     if fext in ['.h5', '.he5']:
-        data = read_hdf5_file(fname, datasetName=datasetName, box=box)
+        data = read_hdf5_file(fname,
+                              datasetName=datasetName,
+                              box=box,
+                              xstep=xstep,
+                              ystep=ystep)
+
     else:
-        data, atr = read_binary_file(fname, datasetName=datasetName, box=box)
+        data, atr = read_binary_file(fname,
+                                     datasetName=datasetName,
+                                     box=box,
+                                     xstep=xstep,
+                                     ystep=ystep)
     return data, atr
 
 
 #########################################################################
-def read_hdf5_file(fname, datasetName=None, box=None):
+def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     """
-    Parameters: fname : str, name of HDF5 file to read
+    Parameters: fname       : str, name of HDF5 file to read
                 datasetName : str or list of str, dataset name in root level with/without date info
                     'timeseries'
                     'timeseries-20150215'
@@ -235,9 +245,10 @@ def read_hdf5_file(fname, datasetName=None, box=None):
                     'cmask'
                     'igram-20150215_20150227'
                     ...
-                box : 4-tuple of int area to read, defined in (x0, y0, x1, y1) in pixel coordinate
-    Returns:    data : 2D/3D array
-                atr : dict, metadata
+                box         : 4-tuple of int area to read, defined in (x0, y0, x1, y1) in pixel coordinate
+                x/ystep     : int, number of pixels to pick/multilook for each output pixel
+    Returns:    data        : 2D/3D array
+                atr         : dict, metadata
     """
     # File Info: list of slice / dataset / dataset2d / dataset3d
     slice_list = get_slice_list(fname)
@@ -276,7 +287,8 @@ def read_hdf5_file(fname, datasetName=None, box=None):
 
         # 2D dataset
         if ds.ndim == 2:
-            data = ds[box[1]:box[3], box[0]:box[2]]
+            data = ds[box[1]+int(ystep/2):box[3]:ystep,
+                      box[0]+int(xstep/2):box[2]:xstep]
 
         # 3D dataset
         elif ds.ndim == 3:
@@ -291,19 +303,22 @@ def read_hdf5_file(fname, datasetName=None, box=None):
                     slice_flag[date_list.index(d)] = True
 
             # read data
-            data = ds[slice_flag, box[1]:box[3], box[0]:box[2]]
+            data = ds[slice_flag,
+                      box[1]+int(ystep/2):box[3]:ystep,
+                      box[0]+int(xstep/2):box[2]:xstep]
             data = np.squeeze(data)
     return data
 
 
-def read_binary_file(fname, datasetName=None, box=None):
+def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     """Read data from binary file, such as .unw, .cor, etc.
-    Parameters: fname : str, path/name of binary file
+    Parameters: fname       : str, path/name of binary file
                 datasetName : str, dataset name for file with multiple bands of data
                     e.g.: incidenceAngle, azimuthAngle, rangeCoord, azimuthCoord, ...
-                box  : 4-tuple of int area to read, defined in (x0, y0, x1, y1) in pixel coordinate
-    Returns:    data : 2D array in size of (length, width) in BYTE / int16 / float32 / complex64 / float64 etc.
-                atr  : dict, metadata of binary file
+                box         : 4-tuple of int area to read, defined in (x0, y0, x1, y1) in pixel coordinate
+                x/ystep     : int, number of pixels to pick/multilook for each output pixel
+    Returns:    data        : 2D array in size of (length, width) in BYTE / int16 / float32 / complex64 / float64 etc.
+                atr         : dict, metadata of binary file
     """
     # Basic Info
     fbase, fext = os.path.splitext(os.path.basename(fname))
@@ -456,7 +471,9 @@ def read_binary_file(fname, datasetName=None, box=None):
                        num_band=num_band,
                        band_interleave=band_interleave,
                        band=band,
-                       cpx_band=cpx_band)
+                       cpx_band=cpx_band,
+                       xstep=xstep,
+                       ystep=ystep)
 
     if 'DATA_TYPE' not in atr:
         atr['DATA_TYPE'] = data_type
@@ -1136,7 +1153,8 @@ def attribute_gamma2roipac(par_dict_in):
 
 #########################################################################
 def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
-                num_band=1, band_interleave='BIL', band=1, cpx_band='phase'):
+                num_band=1, band_interleave='BIL', band=1, cpx_band='phase',
+                xstep=1, ystep=1):
     """Read binary file using np.fromfile
     Parameters: fname : str, path/name of data file to read
                 shape : tuple of 2 int in (length, width)
@@ -1146,20 +1164,21 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
                     int8, int16, int32
                     float16, float32, float64
                     complex64, complex128
-                byte_order : str, little/big-endian
-                num_band   : int, number of bands
+                byte_order      : str, little/big-endian
+                num_band        : int, number of bands
                 band_interleave : str, band interleaving scheme, e.g.:
                     BIP
                     BIL
                     BSQ
-                band : int, band of interest, between 1 and num_band.
+                band     : int, band of interest, between 1 and num_band.
                 cpx_band : str, e.g.:
                     real,
                     imag, imaginary
                     phase,
                     mag, magnitude
                     cpx
-    Returns:    data : 2D np.array
+                x/ystep  : int, number of pixels to pick/multilook for each output pixel
+    Returns:    data     : 2D np.array
     Examples:   # ISCE files
                 atr = read_attribute(fname)
                 shape = (int(atr['LENGTH']), int(atr['WIDTH']))
@@ -1225,6 +1244,11 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
             pass
         else:
             raise ValueError('unrecognized complex band:', cpx_band)
+
+    # skipping/multilooking 
+    if xstep * ystep > 1:
+        data = data[int(ystep/2)::ystep,
+                    int(xstep/2)::xstep]
 
     return data
 
