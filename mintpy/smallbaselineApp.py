@@ -509,7 +509,7 @@ class TimeSeriesAnalysis:
     def run_quick_overview(self, step_name):
         """A quick overview on the interferogram stack for:
             1) avgPhaseVelocity.h5: possible ground deformation through interferogram stacking
-            2) numNonzeroIntClosure.h5: phase unwrapping errors through the integer ambiguity of phase closure
+            2) numTriNonzeroIntAmbiguity.h5: phase unwrapping errors through the integer ambiguity of phase closure
         """
         # check the existence of ifgramStack.h5
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
@@ -520,7 +520,7 @@ class TimeSeriesAnalysis:
         print('temporal_average.py', ' '.join(iargs))
         mintpy.temporal_average.main(iargs)
 
-        # 2) calculate the integer ambiguity of closure phase
+        # 2) calculate the number of interferogram triplets with non-zero integer ambiguity
         water_mask_file = 'waterMask.h5'
         iargs = [stack_file, '--water-mask', water_mask_file, '--action', 'calculate', '--update']
         print('unwrap_error_phase_closure.py', ' '.join(iargs))

@@ -172,9 +172,9 @@ def run_or_skip(inps):
 
 
 ##########################################################################################
-def calc_num_nonzero_integer_closure_phase(ifgram_file, mask_file=None, dsName='unwrapPhase',
-                                           out_file=None, step=50, update_mode=True):
-    """Calculate the number of non-zero integer ambiguity of closure phase.
+def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None, dsName='unwrapPhase',
+                                                    out_file=None, step=50, update_mode=True):
+    """Calculate the number of triplets with non-zero integer ambiguity of closure phase.
 
     T_int as shown in equation (8-9) and inline in Yunjun et al. (2019, CAGEO).
 
@@ -185,7 +185,7 @@ def calc_num_nonzero_integer_closure_phase(ifgram_file, mask_file=None, dsName='
                 step        - int, number of row in each block to calculate T_int
                 update_mode - bool
     Returns:    out_file    - str, custom output filename
-    Example:    calc_num_nonzero_integer_closure_phase('inputs/ifgramStack.h5', mask_file='waterMask.h5')
+    Example:    calc_num_triplet_with_nonzero_integer_ambiguity('inputs/ifgramStack.h5', mask_file='waterMask.h5')
     """
 
     # default output file path
@@ -193,9 +193,9 @@ def calc_num_nonzero_integer_closure_phase(ifgram_file, mask_file=None, dsName='
         out_dir = os.path.dirname(os.path.dirname(ifgram_file))
         if dsName == 'unwrapPhase':
             # skip the default dsName in output filename
-            out_file = 'numNonzeroIntClosure.h5'
+            out_file = 'numTriNonzeroIntAmbiguity.h5'
         else:
-            out_file = 'numNonzeroIntClosure4{}.h5'.format(dsName)
+            out_file = 'numTriNonzeroIntAmbiguity4{}.h5'.format(dsName)
         out_file = os.path.join(out_dir, out_file)
 
     if update_mode and os.path.isfile(out_file):
@@ -263,13 +263,13 @@ def calc_num_nonzero_integer_closure_phase(ifgram_file, mask_file=None, dsName='
     writefile.write(num_nonzero_closure, out_file, meta)
 
     # plot
-    plot_num_nonzero_integer_closure_phase(out_file)
+    plot_num_triplet_with_nonzero_integer_ambiguity(out_file)
 
     return out_file
 
 
-def plot_num_nonzero_integer_closure_phase(fname, display=False, font_size=12, fig_size=[9,3]):
-    """Plot the histogram for the number of non-zero integer ambiguity
+def plot_num_triplet_with_nonzero_integer_ambiguity(fname, display=False, font_size=12, fig_size=[9,3]):
+    """Plot the histogram for the number of triplets with non-zero integer ambiguity
 
     Fig. 3d-e in Yunjun et al. (2019, CAGEO).
     """
@@ -299,7 +299,7 @@ def plot_num_nonzero_integer_closure_phase(fname, display=False, font_size=12, f
     ax.hist(data[~np.isnan(data)].flatten(), range=(0, vmax), log=True, bins=vmax)
 
     # axis format
-    ax.set_xlabel(r'# of non-zero integer ambiguity $T_{int}$', fontsize=font_size)
+    ax.set_xlabel(r'# of triplets w non-zero int ambiguity $T_{int}$', fontsize=font_size)
     ax.set_ylabel('# of pixels', fontsize=font_size)
     ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
     ax.yaxis.set_major_locator(ticker.LogLocator(base=10.0, numticks=15))
@@ -565,12 +565,12 @@ def main(iargs=None):
 
     else:
         # calculate the number of triplets with non-zero integer ambiguity
-        out_file = calc_num_nonzero_integer_closure_phase(inps.ifgram_file,
-                                                          mask_file=inps.waterMaskFile,
-                                                          dsName=inps.datasetNameIn,
-                                                          update_mode=inps.update_mode)
+        out_file = calc_num_triplet_with_nonzero_integer_ambiguity(inps.ifgram_file,
+                                                                   mask_file=inps.waterMaskFile,
+                                                                   dsName=inps.datasetNameIn,
+                                                                   update_mode=inps.update_mode)
         # for debug
-        #plot_num_nonzero_integer_closure_phase(out_file)
+        #plot_num_triplet_with_nonzero_integer_ambiguity(out_file)
     m, s = divmod(time.time()-start_time, 60)
     print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
     return
