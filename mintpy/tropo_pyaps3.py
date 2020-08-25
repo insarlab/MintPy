@@ -128,6 +128,9 @@ def create_parser():
                             'e.g.: '+WEATHER_DIR_DEMO)
     delay.add_argument('-g','--geomtry', dest='geom_file', type=str,
                        help='geometry file including height, incidenceAngle and/or latitude and longitude')
+    delay.add_argument('--custom-height', dest='custom_height', type=float,
+                       help='[for testing] specify a custom height value for delay calculation.')
+
     delay.add_argument('--tropo-file', dest='tropo_file', type=str,
                        help='tropospheric delay file name')
     delay.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose message.')
@@ -601,8 +604,13 @@ def calculate_delay_timeseries(inps):
     # prepare geometry data
     geom_obj = geometry(inps.geom_file)
     geom_obj.open()
-    inps.dem = geom_obj.read(datasetName='height')
     inps.inc = geom_obj.read(datasetName='incidenceAngle')
+    inps.dem = geom_obj.read(datasetName='height')
+
+    # for testing
+    if inps.custom_height:
+        print('use input custom height of {} m for vertical integration'.format(inps.custom_height))
+        inps.dem[:] = inps.custom_height
 
     if 'latitude' in geom_obj.datasetNames:
         # for dataset in geo OR radar coord with lookup table in radar-coord (isce, doris)

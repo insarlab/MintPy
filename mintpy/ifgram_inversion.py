@@ -82,7 +82,7 @@ def create_parser():
                         help='Output file name. (default: %(default)s).')
     parser.add_argument('--ref-date', dest='ref_date', help='Reference date, first date by default.')
     parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',
-                        help='Skip checking reference pixel value, for simulation testing.')
+                        help='[for offset and testing] do not apply spatial referencing.')
 
     # solver
     solver = parser.add_argument_group('solver', 'solver for the network inversion problem')

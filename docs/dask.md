@@ -55,7 +55,7 @@ A typical run time without local cluster is 30 secs and with 8 workers 11.4 secs
 
 To show the run time improvement, we test three datasets (South Isabela, Fernandina, and Kilauea) with different number of cores and same amount of allocated memory (4 GB) on a compute node in the [Stampede2 cluster's skx-normal queue](https://portal.tacc.utexas.edu/user-guides/stampede2#overview-skxcomputenodes). Results are as below:
 
-![Dask LocalCluster Performance](https://github.com/insarlab/MintPy-tutorial/blob/main/docs/dask_local_cluster_performance.png)
+![Dask LocalCluster Performance](https://yunjunzhang.files.wordpress.com/2020/08/dask_local_cluster_performance.png)
 
 #### 1.5 Known problems ####
 
