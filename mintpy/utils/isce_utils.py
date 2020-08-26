@@ -217,8 +217,13 @@ def extract_tops_metadata(xml_file):
     metadata['polarization'] = burst.polarization
     metadata['trackNumber'] = burst.trackNumber
     metadata['orbitNumber'] = burst.orbitNumber
-    metadata['PLATFORM'] = sensor.standardize_sensor_name(obj.spacecraftName)
 
+    try:
+        metadata['PLATFORM'] = sensor.standardize_sensor_name(obj.spacecraftName)
+    except:
+        if os.path.basename(xml_file).startswith('IW'):
+            metadata['PLATFORM'] = 'sen'
+    
     time_seconds = (burst.burstStartUTC.hour * 3600.0 +
                     burst.burstStartUTC.minute * 60.0 +
                     burst.burstStartUTC.second)
