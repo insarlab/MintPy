@@ -727,18 +727,46 @@ def check_parallel(file_num=1, print_msg=True, maxParallelNum=8):
 
 
 #################################### Math / Statistics ###################################
+def median_abs_deviation(data, center=None, scale=0.67449):
+    """Compute the median absolute deviation of the data along the LAST axis.
+
+    This function is also included as:
+        scipy.stats.median_abs_deviation() in scipy v1.5.0
+            https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.median_abs_deviation.html
+        statsmodels.robust.mad() in statsmodels
+            https://www.statsmodels.org/dev/generated/statsmodels.robust.scale.mad.html
+
+    Parameters: data   - 1/2D np.ndarray, input array
+                center - 0/1D np.ndarray or None
+                scale  - float, the normalization constant
+    Returns:    mad    - 0/1D np.ndarray
+    """
+    # compute MAD over 1/2D matrix only
+    data = np.array(data)
+    if data.ndim > 2:
+        ntime = data.shape[0]
+        data = data.reshape(ntime, -1)
+
+    # default center value: median
+    if center is None:
+        center = np.nanmedian(data, axis=-1)
+
+    # calculation
+    if data.ndim == 2:
+        center = np.tile(center.reshape(-1,1), (1, data.shape[1]))
+    mad = np.nanmedian(np.abs(data - center), axis=-1) * scale
+    return mad
+
+
 def median_abs_deviation_threshold(data, center=None, cutoff=3.):
     """calculate rms_threshold based on the standardised residual
-    outlier detection with median absolute deviation.
-    https://www.statsmodels.org/dev/generated/statsmodels.robust.scale.mad.html
+
+    Outlier detection with median absolute deviation.
     """
-    data = np.array(data)
     if center is None:
-        center = np.median(data)
-    #from statsmodels.robust import mad
-    #data_mad = mad(data, center=center)
-    data_mad = np.median(np.abs(data - center)) / 0.67448975019608171
-    threshold = center + cutoff * data_mad
+        center = np.nanmedian(data)
+    mad = median_abs_deviation(data, center=center)
+    threshold = center + cutoff * mad
     return threshold
 
 
