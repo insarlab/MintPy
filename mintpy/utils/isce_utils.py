@@ -156,7 +156,7 @@ def extract_isce_metadata(meta_file, geom_dir=None, rsc_file=None, update_mode=T
     Parameters: meta_file : str, path of metadata file, reference/IW1.xml or referenceShelve/data.dat
                 geom_dir  : str, path of geometry directory.
                 rsc_file  : str, output file name of ROIPAC format rsc file. None for not write to disk.
-    Returns:    metadata  : dict
+    Returns:    meta      : dict
                 frame     : object, isceobj.Scene.Frame.Frame / isceobj.Scene.Burst.Burst
     """
     # check existing rsc_file
@@ -167,30 +167,31 @@ def extract_isce_metadata(meta_file, geom_dir=None, rsc_file=None, update_mode=T
     processor = get_processor(meta_file)
     if processor == 'tops':
         print('extract metadata from ISCE/topsStack xml file:', meta_file)
-        metadata, frame = extract_tops_metadata(meta_file)
+        meta, frame = extract_tops_metadata(meta_file)
 
     else:
         print('extract metadata from ISCE/stripmapStack shelve file:', meta_file)
-        metadata, frame = extract_stripmap_metadata(meta_file)
+        meta, frame = extract_stripmap_metadata(meta_file)
 
     # 2. extract metadata from geometry file
     if geom_dir:
-        metadata = extract_geometry_metadata(geom_dir, metadata)
+        meta = extract_geometry_metadata(geom_dir, meta)
 
     # 3. common metadata
-    metadata['PROCESSOR'] = 'isce'
-    metadata['ANTENNA_SIDE'] = '-1'
+    meta['PROCESSOR'] = 'isce'
+    if 'ANTENNA_SIDE' not in meta.keys():
+        meta['ANTENNA_SIDE'] = '-1'
 
     # convert all value to string format
-    for key, value in metadata.items():
-        metadata[key] = str(value)
+    for key, value in meta.items():
+        meta[key] = str(value)
 
     # write to .rsc file
-    metadata = readfile.standardize_metadata(metadata)
+    meta = readfile.standardize_metadata(meta)
     if rsc_file:
         print('writing ', rsc_file)
-        writefile.write_roipac_rsc(metadata, rsc_file)
-    return metadata, frame
+        writefile.write_roipac_rsc(meta, rsc_file)
+    return meta, frame
 
 
 def extract_tops_metadata(xml_file):
@@ -207,62 +208,63 @@ def extract_tops_metadata(xml_file):
     burst = obj.bursts[0]
     burstEnd = obj.bursts[-1]
 
-    metadata = {}
-    metadata['prf'] = burst.prf
-    metadata['startUTC'] = burst.burstStartUTC
-    metadata['stopUTC'] = burstEnd.burstStopUTC
-    metadata['radarWavelength'] = burst.radarWavelength
-    metadata['startingRange'] = burst.startingRange
-    metadata['passDirection'] = burst.passDirection
-    metadata['polarization'] = burst.polarization
-    metadata['trackNumber'] = burst.trackNumber
-    metadata['orbitNumber'] = burst.orbitNumber
+    meta = {}
+    meta['prf']             = burst.prf
+    meta['startUTC']        = burst.burstStartUTC
+    meta['stopUTC']         = burstEnd.burstStopUTC
+    meta['radarWavelength'] = burst.radarWavelength
+    meta['startingRange']   = burst.startingRange
+    meta['passDirection']   = burst.passDirection
+    meta['polarization']    = burst.polarization
+    meta['trackNumber']     = burst.trackNumber
+    meta['orbitNumber']     = burst.orbitNumber
 
     try:
-        metadata['PLATFORM'] = sensor.standardize_sensor_name(obj.spacecraftName)
+        meta['PLATFORM'] = sensor.standardize_sensor_name(obj.spacecraftName)
     except:
         if os.path.basename(xml_file).startswith('IW'):
-            metadata['PLATFORM'] = 'sen'
-    
-    time_seconds = (burst.burstStartUTC.hour * 3600.0 +
-                    burst.burstStartUTC.minute * 60.0 +
-                    burst.burstStartUTC.second)
-    metadata['CENTER_LINE_UTC'] = time_seconds
+            meta['PLATFORM'] = 'sen'
+
+    time_seconds = (burst.sensingMid.hour * 3600.0 +
+                    burst.sensingMid.minute * 60.0 +
+                    burst.sensingMid.second)
+    meta['CENTER_LINE_UTC'] = time_seconds
 
     orbit = burst.orbit
     peg = orbit.interpolateOrbit(burst.sensingMid, method='hermite')
 
     # Sentinel-1 TOPS pixel spacing
     Vs = np.linalg.norm(peg.getVelocity())   #satellite speed
-    metadata['azimuthPixelSize'] = Vs*burst.azimuthTimeInterval
-    metadata['rangePixelSize'] = burst.rangePixelSize
+    meta['azimuthPixelSize'] = Vs * burst.azimuthTimeInterval
+    meta['rangePixelSize'] = burst.rangePixelSize
 
     # Sentinel-1 TOPS spatial resolution
     iw_str = 'IW2'
     if os.path.basename(xml_file).startswith('IW'):
         iw_str = os.path.splitext(os.path.basename(xml_file))[0]
-    metadata['azimuthResolution'] = sensor.SENSOR_DICT['sen'][iw_str]['azimuth_resolution']
-    metadata['rangeResolution'] = sensor.SENSOR_DICT['sen'][iw_str]['range_resolution']
+    meta['azimuthResolution'] = sensor.SENSOR_DICT['sen'][iw_str]['azimuth_resolution']
+    meta['rangeResolution']   = sensor.SENSOR_DICT['sen'][iw_str]['range_resolution']
 
-    refElp = Planet(pname='Earth').ellipsoid
-    llh = refElp.xyz_to_llh(peg.getPosition())
-    refElp.setSCH(llh[0], llh[1], orbit.getENUHeading(burst.sensingMid))
-    metadata['earthRadius'] = refElp.pegRadCur
-    metadata['altitude'] = llh[2]
+    elp = Planet(pname='Earth').ellipsoid
+    llh = elp.xyz_to_llh(peg.getPosition())
+    elp.setSCH(llh[0], llh[1], orbit.getENUHeading(burst.sensingMid))
+    meta['HEADING'] = orbit.getENUHeading(burst.sensingMid)
+    meta['earthRadius'] = elp.pegRadCur
+    meta['altitude'] = llh[2]
 
     # for Sentinel-1
-    metadata['beam_mode'] = 'IW'
-    metadata['swathNumber'] = burst.swathNumber
+    meta['beam_mode'] = 'IW'
+    meta['swathNumber'] = burst.swathNumber
     # 1. multipel subswaths
     xml_files = glob.glob(os.path.join(os.path.dirname(xml_file), 'IW*.xml'))
     if len(xml_files) > 1:
         swath_num = [load_product(fname).bursts[0].swathNumber for fname in xml_files]
-        metadata['swathNumber'] = ''.join(str(i) for i in sorted(swath_num))
+        meta['swathNumber'] = ''.join(str(i) for i in sorted(swath_num))
 
     # 2. calculate ASF frame number for Sentinel-1
-    metadata['firstFrameNumber'] = int(0.2 * (burst.burstStartUTC - obj.ascendingNodeTime).total_seconds())
-    metadata['lastFrameNumber'] = int(0.2 * (burstEnd.burstStopUTC - obj.ascendingNodeTime).total_seconds())
-    return metadata, burst
+    meta['firstFrameNumber'] = int(0.2 * (burst.burstStartUTC   - obj.ascendingNodeTime).total_seconds())
+    meta['lastFrameNumber']  = int(0.2 * (burstEnd.burstStopUTC - obj.ascendingNodeTime).total_seconds())
+    return meta, burst
 
 
 def extract_stripmap_metadata(meta_file):
@@ -289,49 +291,50 @@ def extract_stripmap_metadata(meta_file):
     else:
         raise ValueError('un-recognized isce/stripmap metadata file: {}'.format(meta_file))
 
-    metadata = {}
-    metadata['prf'] = frame.PRF
-    metadata['startUTC'] = frame.sensingStart
-    metadata['stopUTC'] = frame.sensingStop
-    metadata['radarWavelength'] = frame.radarWavelegth
-    metadata['startingRange'] = frame.startingRange
-    metadata['polarization'] = str(frame.polarization).replace('/', '')
-    if metadata['polarization'].startswith("b'"):
-        metadata['polarization'] = metadata['polarization'][2:4]
-    metadata['trackNumber'] = frame.trackNumber
-    metadata['orbitNumber'] = frame.orbitNumber
-    metadata['PLATFORM'] = sensor.standardize_sensor_name(frame.platform.getSpacecraftName())
+    meta = {}
+    meta['prf']             = frame.PRF
+    meta['startUTC']        = frame.sensingStart
+    meta['stopUTC']         = frame.sensingStop
+    meta['radarWavelength'] = frame.radarWavelegth
+    meta['startingRange']   = frame.startingRange
+    meta['trackNumber']     = frame.trackNumber
+    meta['orbitNumber']     = frame.orbitNumber
+    meta['PLATFORM'] = sensor.standardize_sensor_name(frame.platform.getSpacecraftName())
+    meta['polarization'] = str(frame.polarization).replace('/', '')
+    if meta['polarization'].startswith("b'"):
+        meta['polarization'] = meta['polarization'][2:4]
 
-    time_seconds = (frame.sensingStart.hour * 3600.0 + 
-                    frame.sensingStart.minute * 60.0 + 
-                    frame.sensingStart.second)
-    metadata['CENTER_LINE_UTC'] = time_seconds
+    time_seconds = (frame.sensingMid.hour * 3600.0 +
+                    frame.sensingMid.minute * 60.0 +
+                    frame.sensingMid.second)
+    meta['CENTER_LINE_UTC'] = time_seconds
 
     orbit = frame.orbit
     peg = orbit.interpolateOrbit(frame.sensingMid, method='hermite')
 
     Vs = np.linalg.norm(peg.getVelocity())  #satellite speed
-    metadata['azimuthResolution'] = frame.platform.antennaLength / 2.0
-    metadata['azimuthPixelSize'] = Vs / frame.PRF
+    meta['azimuthResolution'] = frame.platform.antennaLength / 2.0
+    meta['azimuthPixelSize'] = Vs / frame.PRF
 
     frame.getInstrument()
     rgBandwidth = frame.instrument.pulseLength * frame.instrument.chirpSlope
-    metadata['rangeResolution'] = abs(SPEED_OF_LIGHT / (2.0 * rgBandwidth))
-    metadata['rangePixelSize'] = frame.instrument.rangePixelSize
+    meta['rangeResolution'] = abs(SPEED_OF_LIGHT / (2.0 * rgBandwidth))
+    meta['rangePixelSize'] = frame.instrument.rangePixelSize
 
-    refElp = Planet(pname='Earth').ellipsoid
-    llh = refElp.xyz_to_llh(peg.getPosition())
-    refElp.setSCH(llh[0], llh[1], orbit.getENUHeading(frame.sensingMid))
-    metadata['earthRadius'] = refElp.pegRadCur
-    metadata['altitude'] = llh[2]
+    elp = Planet(pname='Earth').ellipsoid
+    llh = elp.xyz_to_llh(peg.getPosition())
+    elp.setSCH(llh[0], llh[1], orbit.getENUHeading(burst.sensingMid))
+    meta['HEADING'] = orbit.getENUHeading(burst.sensingMid)
+    meta['earthRadius'] = elp.pegRadCur
+    meta['altitude'] = llh[2]
 
     # for StripMap
-    metadata['beam_mode'] = 'SM'
-    return metadata, frame
+    meta['beam_mode'] = 'SM'
+    return meta, frame
 
 
 #####################################  geometry  #######################################
-def extract_multilook_number(geom_dir, metadata=dict(), fext_list=['.rdr','.geo','.rdr.full','.geo.full']):
+def extract_multilook_number(geom_dir, meta=dict(), fext_list=['.rdr','.geo','.rdr.full','.geo.full']):
     for fbase in ['hgt','lat','lon','los']:
         fbase = os.path.join(geom_dir, fbase)
         for fext in fext_list:
@@ -344,23 +347,23 @@ def extract_multilook_number(geom_dir, metadata=dict(), fext_list=['.rdr','.geo'
             if os.path.isfile(fullXmlFile):
                 fullXmlDict = readfile.read_isce_xml(fullXmlFile)
                 xmlDict = readfile.read_attribute(fnames[0])
-                metadata['ALOOKS'] = int(int(fullXmlDict['LENGTH']) / int(xmlDict['LENGTH']))
-                metadata['RLOOKS'] = int(int(fullXmlDict['WIDTH']) / int(xmlDict['WIDTH']))
+                meta['ALOOKS'] = int(int(fullXmlDict['LENGTH']) / int(xmlDict['LENGTH']))
+                meta['RLOOKS'] = int(int(fullXmlDict['WIDTH']) / int(xmlDict['WIDTH']))
                 break
 
     # default value
     for key in ['ALOOKS', 'RLOOKS']:
-        if key not in metadata:
-            metadata[key] = 1
+        if key not in meta:
+            meta[key] = 1
 
     # NCORRLOOKS for coherence calibration
-    rgfact = float(metadata['rangeResolution']) / float(metadata['rangePixelSize'])
-    azfact = float(metadata['azimuthResolution']) / float(metadata['azimuthPixelSize'])
-    metadata['NCORRLOOKS'] = metadata['RLOOKS'] * metadata['ALOOKS'] / (rgfact * azfact)
-    return metadata
+    rgfact = float(meta['rangeResolution']) / float(meta['rangePixelSize'])
+    azfact = float(meta['azimuthResolution']) / float(meta['azimuthPixelSize'])
+    meta['NCORRLOOKS'] = meta['RLOOKS'] * meta['ALOOKS'] / (rgfact * azfact)
+    return meta
 
 
-def extract_geometry_metadata(geom_dir, metadata=dict(), box=None, fbase_list=['hgt','lat','lon','los'],
+def extract_geometry_metadata(geom_dir, meta=dict(), box=None, fbase_list=['hgt','lat','lon','los'],
                               fext_list=['.rdr','.geo','.rdr.full','.geo.full']):
     """Extract / update metadata from geometry files
 
@@ -398,51 +401,42 @@ def extract_geometry_metadata(geom_dir, metadata=dict(), box=None, fbase_list=['
         msg += '\n    file basenme: {}'.format(fbase_list)
         msg += '\n    file extension: {}'.format(fext_list)
         print(msg)
-        return metadata
+        return meta
 
     print('extract metadata from geometry files: {}'.format([os.path.basename(i) for i in geom_files]))
 
     # get A/RLOOKS
-    metadata = extract_multilook_number(geom_dir, metadata, fext_list=fext_list)
+    meta = extract_multilook_number(geom_dir, meta, fext_list=fext_list)
 
     # update pixel_size for multilooked data
-    metadata['rangePixelSize'] *= metadata['RLOOKS']
-    metadata['azimuthPixelSize'] *= metadata['ALOOKS']
+    meta['rangePixelSize'] *= meta['RLOOKS']
+    meta['azimuthPixelSize'] *= meta['ALOOKS']
 
-    # get LAT/LON_REF1/2/3/4 and HEADING into metadata
+    # get LAT/LON_REF1/2/3/4 into metadata
     for geom_file in geom_files:
         if 'lat' in os.path.basename(geom_file):
             data = readfile.read(geom_file, box=box)[0]
             r0, r1 = get_nonzero_row_number(data)
-            metadata['LAT_REF1'] = str(data[r0, 0])
-            metadata['LAT_REF2'] = str(data[r0, -1])
-            metadata['LAT_REF3'] = str(data[r1, 0])
-            metadata['LAT_REF4'] = str(data[r1, -1])
+            meta['LAT_REF1'] = str(data[r0, 0])
+            meta['LAT_REF2'] = str(data[r0, -1])
+            meta['LAT_REF3'] = str(data[r1, 0])
+            meta['LAT_REF4'] = str(data[r1, -1])
 
         if 'lon' in os.path.basename(geom_file):
             data = readfile.read(geom_file, box=box)[0]
             r0, r1 = get_nonzero_row_number(data)
-            metadata['LON_REF1'] = str(data[r0, 0])
-            metadata['LON_REF2'] = str(data[r0, -1])
-            metadata['LON_REF3'] = str(data[r1, 0])
-            metadata['LON_REF4'] = str(data[r1, -1])
+            meta['LON_REF1'] = str(data[r0, 0])
+            meta['LON_REF2'] = str(data[r0, -1])
+            meta['LON_REF3'] = str(data[r1, 0])
+            meta['LON_REF4'] = str(data[r1, -1])
 
         if 'los' in os.path.basename(geom_file):
-            data = readfile.read(geom_file, datasetName='az', box=box)[0]
-            # HEADING
-            data[data == 0.] = np.nan
-            az_angle = np.nanmean(data)
-            # convert isce azimuth angle to roipac orbit heading angle
-            head_angle = -1 * (270 + az_angle)
-            head_angle -= np.round(head_angle / 360.) * 360.
-            metadata['HEADING'] = str(head_angle)
-
             # CENTER_INCIDENCE_ANGLE
             data = readfile.read(geom_file, datasetName='inc', box=box)[0]
             data[data == 0.] = np.nan
             inc_angle = data[int(data.shape[0]/2), int(data.shape[1]/2)]
-            metadata['CENTER_INCIDENCE_ANGLE'] = str(inc_angle)
-    return metadata
+            meta['CENTER_INCIDENCE_ANGLE'] = str(inc_angle)
+    return meta
 
 
 #####################################  baseline  #######################################

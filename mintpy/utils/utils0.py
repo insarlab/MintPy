@@ -197,8 +197,8 @@ def azimuth_ground_resolution(atr):
         proc = 'isce'
     if proc in ['roipac', 'isce']:
         Re = float(atr['EARTH_RADIUS'])
-        Height = float(atr['HEIGHT'])
-        az_step = float(atr['AZIMUTH_PIXEL_SIZE']) * Re/(Re+Height)
+        height = float(atr['HEIGHT'])
+        az_step = float(atr['AZIMUTH_PIXEL_SIZE']) * Re / (Re + height)
     elif proc == 'gamma':
         az_step = float(atr['AZIMUTH_PIXEL_SIZE'])
     return az_step
