@@ -923,7 +923,7 @@ class TimeSeriesAnalysis:
                     print('create directory:', out_dir)
 
                 geom_file, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2:4]
-                in_files = [geom_file, 'temporalCoherence.h5', ts_file, 'velocity.h5']
+                in_files = [geom_file, 'temporalCoherence.h5', 'avgSpatialCoh.h5', ts_file, 'velocity.h5']
                 scp_args = '-l {l} -t {t} --outdir {o} --update '.format(l=lookup_file,
                                                                          t=self.templateFile,
                                                                          o=out_dir)
@@ -992,17 +992,20 @@ class TimeSeriesAnalysis:
                 ut.add_attribute(ts_file, self.customTemplate)
 
             tcoh_file = 'temporalCoherence.h5'
+            scoh_file = 'avgSpatialCoh.h5'
             mask_file = 'geo_maskTempCoh.h5'
             geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
             if 'geo' in ts_file:
                 tcoh_file = './geo/geo_temporalCoherence.h5'
+                scoh_file = './geo/geo_avgSpatialCoh.h5'
                 mask_file = './geo/geo_maskTempCoh.h5'
                 geom_file = './geo/geo_{}'.format(os.path.basename(geom_file))
 
             # cmd
             print('--------------------------------------------')
-            scp_args = '{f} -c {c} -m {m} -g {g} -t {t}'.format(f=ts_file,
-                                                                c=tcoh_file,
+            scp_args = '{f} -tc {tc} -asc {asc} -m {m} -g {g} -t {t}'.format(f=ts_file,
+                                                                tc=tcoh_file,
+                                                                asc=scoh_file,
                                                                 m=mask_file,
                                                                 g=geom_file,
                                                                 t=self.templateFile)
