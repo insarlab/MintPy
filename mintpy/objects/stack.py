@@ -404,7 +404,9 @@ class timeseries:
             print('read mask from file: '+maskFile)
             mask = singleDataset(maskFile).read()
             data[:, mask == 0] = np.nan
-        self.rms = np.sqrt(np.nanmean(np.square(data), axis=(1, 2)))
+        self.rms = np.zeros(data.shape[0]) * np.nan
+        for i in range(data.shape[0]):
+            self.rms[i] = np.sqrt(np.nanmean(np.square(data[i,:]), axis=(0, 1)))
 
         # Write text file
         header = 'Root Mean Square in space for each acquisition of time-series\n'

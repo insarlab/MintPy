@@ -719,7 +719,8 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
         print('reading data ...')
         data = readfile.read(fname)[0]
         print('estimating phase ramp ...')
-        data = deramp(data, mask, ramp_type=ramp_type, metadata=atr)[0]
+        for i in range(data.shape[0]):
+            data[i,:] = deramp(data[i,:], mask, ramp_type=ramp_type, metadata=atr)[0]
         writefile.write(data, out_file, ref_file=fname)
 
     elif k == 'ifgramStack':
@@ -741,7 +742,8 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
             prog_bar = ptime.progressBar(maxValue=obj.numIfgram)
             for i in range(obj.numIfgram):
                 data = ds[i, :, :]
-                data = deramp(data, mask, ramp_type=ramp_type, metadata=atr)[0]
+                for j in range(data.shape[0]):
+                    data[j,:] = deramp(data[j,:], mask, ramp_type=ramp_type, metadata=atr)[0]
                 dsOut[i, :, :] = data
                 prog_bar.update(i+1, suffix='{}/{}'.format(i+1, obj.numIfgram))
             prog_bar.close()
@@ -750,7 +752,8 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
     # Single Dataset File
     else:
         data = readfile.read(fname)[0]
-        data = deramp(data, mask, ramp_type, metadata=atr)[0]
+        for i in range(data.shape[0]):
+            data[i,:] = deramp(data[i,:], mask, ramp_type=ramp_type, metadata=atr)[0]
         print('writing >>> {}'.format(out_file))
         writefile.write(data, out_file=out_file, ref_file=fname)
 

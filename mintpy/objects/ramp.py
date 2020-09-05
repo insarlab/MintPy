@@ -75,6 +75,7 @@ def deramp(data, mask_in, ramp_type='linear', metadata=None):
     # estimate ramp
     X = np.dot(np.linalg.pinv(G[mask, :], rcond=1e-15), data[mask, :])
     ramp = np.dot(G, X)
+    ramp = np.array(ramp, dtype=data.dtype)
     del X
 
     # reference in space if metadata
@@ -85,7 +86,6 @@ def deramp(data, mask_in, ramp_type='linear', metadata=None):
 
     # do not change pixel with original zero value
     ramp[data == 0] = 0
-    ramp = np.array(ramp, dtype=data.dtype)
 
     data_out = data - ramp
     if len(dshape) == 3:
