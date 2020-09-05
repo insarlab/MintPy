@@ -12,7 +12,7 @@ import os
 import sys
 import re
 import time
-from datetime import datetime as dt
+from datetime import datetime as dt, timedelta
 import h5py
 import numpy as np
 from mintpy.utils import ptime
@@ -183,6 +183,10 @@ class timeseries:
         # time info
         self.dateFormat = ptime.get_date_str_format(self.dateList[0])
         self.times = np.array([dt.strptime(i, self.dateFormat) for i in self.dateList])
+        # add hh/mm/ss info to the datetime objects
+        if 'T' not in self.dateFormat or all(i.hour==0 and i.minute==0 for i in self.times):
+            utc_sec = float(self.metadata['CENTER_LINE_UTC'])
+            self.times = np.array([i + timedelta(seconds=utc_sec) for i in self.times])
         self.tbase = np.array([(i.days + i.seconds / (24 * 60 * 60)) 
                                for i in (self.times - self.times[self.refIndex])],
                               dtype=np.float32)
