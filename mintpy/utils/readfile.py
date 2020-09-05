@@ -796,7 +796,7 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             'cfloat': 'complex64',
         }
         data_type = atr.get('DATA_TYPE', 'none').lower()
-        if data_type is not 'none' and data_type in dataTypeDict.keys():
+        if data_type != 'none' and data_type in dataTypeDict.keys():
             atr['DATA_TYPE'] = dataTypeDict[data_type]
 
     # UNIT
