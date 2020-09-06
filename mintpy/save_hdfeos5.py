@@ -29,7 +29,7 @@ compression = 'lzf'
 TEMPALTE = TEMPLATE = get_template_content('hdfeos5')
 
 EXAMPLE = """example:
-  save_hdfeos5.py geo_timeseries_ERA5_ramp_demErr.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
+  save_hdfeos5.py geo_timeseries_ERA5_ramp_demErr.h5 --tc geo_temporalCoherence.h5 --asc geo_avgSpatialCoh.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
 """
 
 
@@ -42,8 +42,10 @@ def create_parser():
     parser.add_argument('timeseries_file', default='timeseries.h5', help='Timeseries file')
     parser.add_argument('-t', '--template', dest='template_file', help='Template file')
 
-    parser.add_argument('-c', '--coherence', dest='coherence_file', required=True, 
-                        help='Coherence/correlation file, i.e. avgSpatialCoh.h5, temporalCoherence.h5')
+    parser.add_argument('--tc', dest='temporalcoherence_file', required=True, 
+                        help='Temporal coherence/correlation file, i.e. temporalCoherence.h5')
+    parser.add_argument('--asc', dest='avgspatialcoherence_file', required=True,
+                        help='Average spatial coherence file, i.e. avgSpatialCoh.h5')
     parser.add_argument('-m', '--mask', dest='mask_file', required=True, help='Mask file')
     parser.add_argument('-g', '--geometry', dest='geom_file', required=True, help='geometry file')
 
@@ -85,14 +87,20 @@ def metadata_mintpy2unavco(meta_dict_in, dateList):
 
     # beam_mode/swath
     unavco_meta_dict['beam_mode'] = meta_dict['beam_mode']
-    unavco_meta_dict['beam_swath'] = int(meta_dict.get('beam_swath', '0'))
+    try:
+        unavco_meta_dict['beam_swath'] = int(meta_dict['beam_swath'])
+    except:
+        unavco_meta_dict['beam_swath'] = 0
 
     # relative_orbit, or track number
     #atr_dict['relative_orbit'] = int(re.match(r'(\w+)T([0-9+])',atr['PROJECT_NAME']).groups()[1])
     unavco_meta_dict['relative_orbit'] = int(meta_dict['relative_orbit'])
 
     # processing info
-    unavco_meta_dict['processing_type'] = meta_dict.get('processing_type', 'LOS_TIMESERIES')
+    try:
+        unavco_meta_dict['processing_type'] = meta_dict['processing_type']
+    except:
+        unavco_meta_dict['processing_type'] = 'LOS_TIMESERIES'
     #unavco_meta_dict['processing_software'] = meta_dict['processing_software']
 
     # Grabbed by script
@@ -129,22 +137,44 @@ def metadata_mintpy2unavco(meta_dict_in, dateList):
     else:
         unavco_meta_dict['frame'] = 0
 
-    unavco_meta_dict['atmos_correct_method']   = meta_dict.get('atmos_correct_method', 'None')
-    unavco_meta_dict['post_processing_method'] = meta_dict.get('post_processing_method', 'MintPy')
-    unavco_meta_dict['processing_dem'] = meta_dict.get('processing_dem', 'Unknown')
-    unavco_meta_dict['unwrap_method']  = meta_dict.get('unwrap_method', 'Unknown')
+    try:
+        unavco_meta_dict['atmos_correct_method'] = meta_dict['atmos_correct_method']
+    except:
+        pass
+    try:
+        unavco_meta_dict['post_processing_method'] = meta_dict['post_processing_method']
+    except:
+        unavco_meta_dict['post_processing_method'] = 'MintPy'
+    try:
+        unavco_meta_dict['processing_dem'] = meta_dict['processing_dem']
+    except:
+        pass
+    try:
+        unavco_meta_dict['unwrap_method'] = meta_dict['unwrap_method']
+    except:
+        pass
 
     # Grabbed by script
-    unavco_meta_dict['flight_direction'] = meta_dict.get('ORBIT_DIRECTION', 'Unknown')[0].upper()
-
+    try:
+        unavco_meta_dict['flight_direction'] = meta_dict['ORBIT_DIRECTION'][0].upper()
+    except:
+        pass
     if meta_dict['ANTENNA_SIDE'] == '-1':
         unavco_meta_dict['look_direction'] = 'R'
     else:
         unavco_meta_dict['look_direction'] = 'L'
-
-    unavco_meta_dict['polarization'] = meta_dict.get('POLARIZATION', 'Unknown')
-    unavco_meta_dict['prf'] = float(meta_dict.get('PRF', '0'))
-    unavco_meta_dict['wavelength'] = float(meta_dict['WAVELENGTH'])
+    try:
+        unavco_meta_dict['polarization'] = meta_dict['POLARIZATION']
+    except:
+        pass
+    try:
+        unavco_meta_dict['prf'] = float(meta_dict['PRF'])
+    except:
+        pass
+    try:
+        unavco_meta_dict['wavelength'] = float(meta_dict['WAVELENGTH'])
+    except:
+        pass
 
     #################################
     # insarmaps metadata
@@ -255,7 +285,7 @@ def read_template2inps(template_file, inps=None):
     return inps
 
 
-def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
+def write2hdf5(out_file, ts_file, tcoh_file, scoh_file, mask_file, geom_file, metadata):
     """Write HDF5 file in HDF-EOS5 format"""
     ts_obj = timeseries(ts_file)
     ts_obj.open(print_msg=False)
@@ -312,7 +342,7 @@ def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
 
     ## 1 - temporalCoherence
     dsName = 'temporalCoherence'
-    data = readfile.read(coh_file)[0]
+    data = readfile.read(tcoh_file)[0]
     print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
            ' with compression={c}').format(d='{}/{}'.format(gName, dsName),
                                            w=maxDigit,
@@ -328,7 +358,26 @@ def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
     dset.attrs['_FillValue'] = FLOAT_ZERO
     dset.attrs['Units'] = '1'
 
-    ## 2 - mask
+    ## 2 - average spatial coherence
+    dsName = 'avgSpatialCoherence'
+    data = readfile.read(scoh_file)[0]
+    print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
+           ' with compression={c}').format(d='{}/{}'.format(gName, dsName),
+                                           w=maxDigit, 
+                                           t=str(data.dtype),
+                                           s=data.shape,
+                                           c=compression))
+
+    dset = group.create_dataset(dsName,
+                                data=data,
+                                chunks=True,
+                                compression=compression)
+    dset.attrs['Title'] = dsName
+    dset.attrs['MissingValue'] = FLOAT_ZERO
+    dset.attrs['_FillValue'] = FLOAT_ZERO
+    dset.attrs['Units'] = '1' 
+
+    ## 3 - mask
     dsName = 'mask'
     data = readfile.read(mask_file, datasetName='mask')[0]
     print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
@@ -420,7 +469,8 @@ def main(iargs=None):
     # Open HDF5 File
     write2hdf5(out_file=outName,
                ts_file=inps.timeseries_file,
-               coh_file=inps.coherence_file,
+               tcoh_file=inps.temporalcoherence_file,
+               scoh_file=inps.avgspatialcoherence_file,
                mask_file=inps.mask_file,
                geom_file=inps.geom_file,
                metadata=meta_dict)
