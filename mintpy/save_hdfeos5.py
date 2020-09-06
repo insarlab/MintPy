@@ -29,7 +29,7 @@ compression = 'lzf'
 TEMPALTE = TEMPLATE = get_template_content('hdfeos5')
 
 EXAMPLE = """example:
-  save_hdfeos5.py geo_timeseries_ERA5_ramp_demErr.h5 -tc geo_temporalCoherence.h5 --asc geo_avgSpatialCoh.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
+  save_hdfeos5.py geo_timeseries_ERA5_ramp_demErr.h5 --tc geo_temporalCoherence.h5 --asc geo_avgSpatialCoh.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
 """
 
 
@@ -42,9 +42,9 @@ def create_parser():
     parser.add_argument('timeseries_file', default='timeseries.h5', help='Timeseries file')
     parser.add_argument('-t', '--template', dest='template_file', help='Template file')
 
-    parser.add_argument('--tc', dest='temporalCoherence_file', required=True, 
+    parser.add_argument('--tc','--temp-coh', dest='temp_coh_file', required=True, 
                         help='Coherence/correlation file, i.e. temporalCoherence.h5')
-    parser.add_argument('--asc', dest='averageSpatialCoherence_file', required=True,
+    parser.add_argument('--asc','--avg-spatial-coh', dest='avg_spatial_coh_file', required=True,
                         help='Average spatial coherence file, i.e. avgSpatialCoh.h5')
     parser.add_argument('-m', '--mask', dest='mask_file', required=True, help='Mask file')
     parser.add_argument('-g', '--geometry', dest='geom_file', required=True, help='geometry file')
@@ -330,8 +330,8 @@ def write2hdf5(out_file, ts_file, tcoh_file, scoh_file, mask_file, geom_file, me
     dset.attrs['_FillValue'] = FLOAT_ZERO
     dset.attrs['Units'] = '1'
 
-    ## 2 - averageSpatialCoherence
-    dsName = 'averageSpatialCoherence'
+    ## 2 - avgSpatialCoherence
+    dsName = 'avgSpatialCoherence'
     data = readfile.read(scoh_file)[0]
     print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
            ' with compression={c}').format(d='{}/{}'.format(gName, dsName),
@@ -440,8 +440,8 @@ def main(iargs=None):
     # Open HDF5 File
     write2hdf5(out_file=outName,
                ts_file=inps.timeseries_file,
-               tcoh_file=inps.temporalCoherence_file,
-               scoh_file=inps.averageSpatialCoherence_file,
+               tcoh_file=inps.temp_coh_file,
+               scoh_file=inps.avg_spatial_coh_file,
                mask_file=inps.mask_file,
                geom_file=inps.geom_file,
                metadata=meta_dict)

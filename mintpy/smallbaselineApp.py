@@ -972,8 +972,8 @@ class TimeSeriesAnalysis:
                 ut.add_attribute(ts_file, self.customTemplate)
 
             tcoh_file = 'temporalCoherence.h5'
-            scoh_file = 'averageSpatialCoherence.h5'
-            mask_file = 'geo_maskTempCoh.h5'
+            scoh_file = 'avgSpatialCoh.h5'
+            mask_file = 'maskTempCoh.h5'
             geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
             if 'geo' in ts_file:
                 tcoh_file = './geo/geo_temporalCoherence.h5'
