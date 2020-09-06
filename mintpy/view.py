@@ -300,6 +300,12 @@ def update_inps_with_file_metadata(inps, metadata):
                                                             print_msg=inps.print_msg)
 
     # Map info - coordinate unit and map projection
+    # Use cartopy GeoAxes instance if input data is:
+    # 1. geocoded in the unit of degrees AND 
+    # 2. displayed in geo-coordinates
+    # to support:
+    # 1. fancy lat/lon label
+    # 2. coastline
     inps.coord_unit = metadata.get('Y_UNIT', 'degrees').lower()
     if (inps.geo_box
             and inps.fig_coord == 'geo'
