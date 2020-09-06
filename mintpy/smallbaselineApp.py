@@ -904,7 +904,7 @@ class TimeSeriesAnalysis:
                 os.makedirs(out_dir, exist_ok=True)
 
                 geom_file, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2:4]
-                in_files = [geom_file, 'temporalCoherence.h5', ts_file, 'velocity.h5']
+                in_files = [geom_file, 'temporalCoherence.h5', 'avgSpatialCoh.h5', ts_file, 'velocity.h5']
                 iargs = ['-l', lookup_file, '-t', self.templateFile, '--outdir', out_dir, '--update']
                 for in_file in in_files:
                     iargs += [in_file]
@@ -972,17 +972,20 @@ class TimeSeriesAnalysis:
                 ut.add_attribute(ts_file, self.customTemplate)
 
             tcoh_file = 'temporalCoherence.h5'
-            mask_file = 'geo_maskTempCoh.h5'
+            scoh_file = 'avgSpatialCoh.h5'
+            mask_file = 'maskTempCoh.h5'
             geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
             if 'geo' in ts_file:
                 tcoh_file = './geo/geo_temporalCoherence.h5'
+                scoh_file = './geo/geo_avgSpatialCoh.h5'
                 mask_file = './geo/geo_maskTempCoh.h5'
                 geom_file = './geo/geo_{}'.format(os.path.basename(geom_file))
 
             # cmd
             print('--------------------------------------------')
             iargs = [ts_file,
-                     '-c', tcoh_file, 
+                     '--tc', tcoh_file,
+                     '--asc', scoh_file, 
                      '-m', mask_file,
                      '-g', geom_file, 
                      '-t', self.templateFile]
@@ -995,7 +998,7 @@ class TimeSeriesAnalysis:
                 hdfeos5_file = ut.get_file_list('{}_*.he5'.format(SAT))[0]
             except:
                 hdfeos5_file = None
-            if ut.run_or_skip(out_file=hdfeos5_file, in_file=[ts_file, tcoh_file, mask_file, geom_file]) == 'run':
+            if ut.run_or_skip(out_file=hdfeos5_file, in_file=[ts_file, tcoh_file, scoh_file, mask_file, geom_file]) == 'run':
                 mintpy.save_hdfeos5.main(iargs)
         else:
             print('save time-series to HDF-EOS5 format is OFF.')

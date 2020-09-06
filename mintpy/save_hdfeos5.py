@@ -29,7 +29,7 @@ compression = 'lzf'
 TEMPALTE = TEMPLATE = get_template_content('hdfeos5')
 
 EXAMPLE = """example:
-  save_hdfeos5.py geo_timeseries_ERA5_ramp_demErr.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
+  save_hdfeos5.py geo_timeseries_ERA5_ramp_demErr.h5 --tc geo_temporalCoherence.h5 --asc geo_avgSpatialCoh.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
 """
 
 
@@ -42,8 +42,10 @@ def create_parser():
     parser.add_argument('timeseries_file', default='timeseries.h5', help='Timeseries file')
     parser.add_argument('-t', '--template', dest='template_file', help='Template file')
 
-    parser.add_argument('-c', '--coherence', dest='coherence_file', required=True, 
-                        help='Coherence/correlation file, i.e. avgSpatialCoh.h5, temporalCoherence.h5')
+    parser.add_argument('--tc','--temp-coh', dest='temp_coh_file', required=True, 
+                        help='Coherence/correlation file, i.e. temporalCoherence.h5')
+    parser.add_argument('--asc','--avg-spatial-coh', dest='avg_spatial_coh_file', required=True,
+                        help='Average spatial coherence file, i.e. avgSpatialCoh.h5')
     parser.add_argument('-m', '--mask', dest='mask_file', required=True, help='Mask file')
     parser.add_argument('-g', '--geometry', dest='geom_file', required=True, help='geometry file')
 
@@ -255,7 +257,7 @@ def read_template2inps(template_file, inps=None):
     return inps
 
 
-def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
+def write2hdf5(out_file, ts_file, tcoh_file, scoh_file, mask_file, geom_file, metadata):
     """Write HDF5 file in HDF-EOS5 format"""
     ts_obj = timeseries(ts_file)
     ts_obj.open(print_msg=False)
@@ -312,7 +314,7 @@ def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
 
     ## 1 - temporalCoherence
     dsName = 'temporalCoherence'
-    data = readfile.read(coh_file)[0]
+    data = readfile.read(tcoh_file)[0]
     print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
            ' with compression={c}').format(d='{}/{}'.format(gName, dsName),
                                            w=maxDigit,
@@ -328,7 +330,25 @@ def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
     dset.attrs['_FillValue'] = FLOAT_ZERO
     dset.attrs['Units'] = '1'
 
-    ## 2 - mask
+    ## 2 - avgSpatialCoherence
+    dsName = 'avgSpatialCoherence'
+    data = readfile.read(scoh_file)[0]
+    print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
+           ' with compression={c}').format(d='{}/{}'.format(gName, dsName),
+                                           w=maxDigit,
+                                           t=str(data.dtype),
+                                           s=data.shape,
+                                           c=compression))
+    dset = group.create_dataset(dsName,
+                                data=data,
+                                chunks=True,
+                                compression=compression)
+    dset.attrs['Title'] = dsName
+    dset.attrs['MissingValue'] = FLOAT_ZERO
+    dset.attrs['_FillValue'] = FLOAT_ZERO
+    dset.attrs['Units'] = '1'
+
+    ## 3 - mask
     dsName = 'mask'
     data = readfile.read(mask_file, datasetName='mask')[0]
     print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
@@ -420,7 +440,8 @@ def main(iargs=None):
     # Open HDF5 File
     write2hdf5(out_file=outName,
                ts_file=inps.timeseries_file,
-               coh_file=inps.coherence_file,
+               tcoh_file=inps.temp_coh_file,
+               scoh_file=inps.avg_spatial_coh_file,
                mask_file=inps.mask_file,
                geom_file=inps.geom_file,
                metadata=meta_dict)

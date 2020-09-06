@@ -15,8 +15,9 @@ Attributes                    metadata in dict.
         /date                 1D array of string  in size of (n,     ) in YYYYMMDD format.
         /bperp                1D array of float32 in size of (n,     ) in meter
     /quality
-        /temporalCoherence    2D array of float32 in size of (   l, w).
         /mask                 2D array of bool_   in size of (   l, w).
+        /temporalCoherence    2D array of float32 in size of (   l, w).
+        /avgSpatialCoherence  2D array of float32 in size of (   l, w).
     /geometry
         /height               2D array of float32 in size of (   l, w) in meter.
         /incidenceAngle       2D array of float32 in size of (   l, w) in degree.
