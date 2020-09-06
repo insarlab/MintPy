@@ -304,7 +304,7 @@ def update_inps_with_file_metadata(inps, metadata):
     if (inps.geo_box
             and inps.fig_coord == 'geo'
             and inps.coord_unit.startswith('deg')
-            and inps.lalo_label):
+            and (inps.lalo_label or inps.coastline)):
         inps.proj_obj = eval('ccrs.{}()'.format(inps.map_projection))
     else:
         inps.proj_obj = None
