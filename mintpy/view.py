@@ -444,6 +444,7 @@ def plot_slice(ax, data, metadata, inps=None):
             if inps.coastline:
                 vprint('draw coast line with resolution: {}'.format(inps.coastline))
                 ax.coastlines(resolution=inps.coastline)
+                inps.lalo_label = True
 
             # Plot DEM
             if inps.dem_file:

@@ -257,20 +257,21 @@ def add_map_argument(parser):
     mapg = parser.add_argument_group('Map', 'for one subplot in geo-coordinates only')
     mapg.add_argument('--coastline', dest='coastline', type=str, choices={'10m', '50m', '110m'},
                       help="Draw coastline with specified resolution (default: %(default)s).\n"
+                           "This will enable --lalo-label option.\n"
                            "Link: https://scitools.org.uk/cartopy/docs/latest/matplotlib/geoaxes.html"
                            "#cartopy.mpl.geoaxes.GeoAxes.coastlines")
 
     # lalo label
-    mapg.add_argument('--lalo-loc', dest='lalo_loc', type=int, nargs=4, default=[1, 0, 0, 1],
-                      metavar=('left', 'right', 'top', 'bottom'),
-                      help='Draw lalo label in [left, right, top, bottom] (default: %(default)s).')
     mapg.add_argument('--lalo-label', dest='lalo_label', action='store_true',
                       help='Show N, S, E, W tick label for plot in geo-coordinate.\n'
                            'Useful for final figure output.')
-    mapg.add_argument('--lalo-max-num', dest='lalo_max_num', type=int, default=4, metavar='NUM',
-                      help='Maximum number of lalo tick label (default: %(default)s).')
     mapg.add_argument('--lalo-step', dest='lalo_step', metavar='DEG',
                       type=float, help='Lat/lon step for lalo-label option.')
+    mapg.add_argument('--lalo-max-num', dest='lalo_max_num', type=int, default=3, metavar='NUM',
+                      help='Maximum number of lalo tick label (default: %(default)s).')
+    mapg.add_argument('--lalo-loc', dest='lalo_loc', type=int, nargs=4, default=[1, 0, 0, 1],
+                      metavar=('left', 'right', 'top', 'bottom'),
+                      help='Draw lalo label in [left, right, top, bottom] (default: %(default)s).')
     mapg.add_argument('--lat-label', dest='lat_label_direction', type=str,
                       choices={'horizontal', 'vertical'}, default='horizontal',
                       help='Rotate Lat label from default horizontal to vertical (to save space).')
@@ -1714,7 +1715,7 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
         except:
             mask_file = None
             if print_msg:
-                print('Can not open mask file:', mask_file)        
+                print('Can not open mask file:', mask_file)
 
     elif k in ['HDFEOS']:
         if datasetName.split('-')[0] in timeseriesDatasetNames:
