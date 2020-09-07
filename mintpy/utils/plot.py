@@ -255,9 +255,11 @@ def add_mask_argument(parser):
 def add_map_argument(parser):
     # Map
     mapg = parser.add_argument_group('Map', 'for one subplot in geo-coordinates only')
-    mapg.add_argument('--coastline', dest='coastline', type=str, default='no',
-                      choices={'10m', '50m', '110m', 'no'},
-                      help="Draw coastline with specified resolution (default: %(default)s).")
+    mapg.add_argument('--coastline', dest='coastline', type=str, choices={'10m', '50m', '110m'},
+                      help="Draw coastline with specified resolution (default: %(default)s).\n"
+                           "Link: https://scitools.org.uk/cartopy/docs/latest/matplotlib/geoaxes.html"
+                           "#cartopy.mpl.geoaxes.GeoAxes.coastlines")
+
     # lalo label
     mapg.add_argument('--lalo-loc', dest='lalo_loc', type=int, nargs=4, default=[1, 0, 0, 1],
                       metavar=('left', 'right', 'top', 'bottom'),

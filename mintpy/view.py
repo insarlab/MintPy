@@ -441,7 +441,7 @@ def plot_slice(ax, data, metadata, inps=None):
             vprint('map projection: {}'.format(inps.map_projection))
 
             # Draw coastline using cartopy resolution parameters
-            if inps.coastline != "no":
+            if inps.coastline:
                 vprint('draw coast line with resolution: {}'.format(inps.coastline))
                 ax.coastlines(resolution=inps.coastline)
 
