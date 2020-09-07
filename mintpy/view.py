@@ -441,7 +441,7 @@ def plot_slice(ax, data, metadata, inps=None):
             vprint('map projection: {}'.format(inps.map_projection))
 
             # Draw coastline using cartopy resolution parameters
-            if inps.coastline != "no":
+            if inps.coastline:
                 vprint('draw coast line with resolution: {}'.format(inps.coastline))
                 ax.coastlines(resolution=inps.coastline)
 
@@ -921,8 +921,9 @@ def update_figure_setting(inps):
 def read_data4figure(i_start, i_end, inps, metadata):
     """Read multiple datasets for one figure into 3D matrix based on i_start/end"""
     data = np.zeros((i_end - i_start,
-                     int((inps.pix_box[3] - inps.pix_box[1]) / inps.multilook_num),
-                     int((inps.pix_box[2] - inps.pix_box[0]) / inps.multilook_num)), dtype=np.float32)
+                     np.rint((inps.pix_box[3] - inps.pix_box[1]) / inps.multilook_num - 1e-4).astype(int),
+                     np.rint((inps.pix_box[2] - inps.pix_box[0]) / inps.multilook_num - 1e-4).astype(int),
+                    ), dtype=np.float32)
 
     # fast reading for single dataset type
     if (len(inps.dsetFamilyList) == 1
