@@ -115,7 +115,7 @@ def create_parser():
 
     par = parser.add_argument_group('parallel', 'parallel processing using dask')
     par.add_argument('-c', '--cluster', '--cluster-type', dest='cluster', type=str,
-                     default='local', choices=cluster.CLUSTER_LIST + ['no'],
+                     default='no', choices=cluster.CLUSTER_LIST + ['no'],
                      help='Cluster to use for parallel computing, no to turn OFF. (default: %(default)s).')
     par.add_argument('--num-worker', dest='numWorker', type=str, default='4',
                      help='Number of workers to use (default: %(default)s).')
@@ -417,7 +417,7 @@ def calc_temporal_coherence(ifgram, G, X):
     chunk_size = int(ut.round_to_1(2e5 / num_ifgram))
     if num_pixel > chunk_size:
         num_chunk = int(np.ceil(num_pixel / chunk_size))
-        num_chunk_step = int(ut.round_to_1(num_chunk / 5))
+        num_chunk_step = max(1, int(ut.round_to_1(num_chunk / 5)))
         print(('calcualting temporal coherence in chunks of {} pixels'
                ': {} chunks in total ...').format(chunk_size, num_chunk))
 
@@ -652,13 +652,13 @@ def calc_weight(stack_obj, box, weight_func='var', dropIfgram=True, chunk_size=1
     num_pixel = weight.shape[1]
 
     if 'NCORRLOOKS' in stack_obj.metadata.keys():
-        L = np.rint(float(stack_obj.metadata['NCORRLOOKS'])).astype(np.int16)
+        L = float(stack_obj.metadata['NCORRLOOKS'])
     else:
         # use the typical ratio of resolution vs pixel size of Sentinel-1 IW mode
         L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
-        L = np.rint(L / 1.94)
+        L /= 1.94
     # make sure L >= 1
-    L = max(L, 1)
+    L = max(np.rint(L).astype(int), 1)
 
     # convert coherence to weight chunk-by-chunk to save memory
     num_chunk = int(np.ceil(num_pixel / chunk_size))
@@ -795,8 +795,9 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
         mask *= np.array(waterMask, dtype=np.bool_)
         del waterMask
 
-    # 1.3.2 - Mask for Zero Phase in ALL ifgrams
+    # 1.3.2 - Mask for phase observations
     if 'phase' in obs_ds_name.lower():
+        # Mask for Zero Phase in ALL ifgrams
         print('skip pixels with zero/nan value in all interferograms')
         with warnings.catch_warnings():
             # ignore warning message for all-NaN slices
@@ -804,6 +805,15 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
             phase_stack = np.nanmean(pha_data, axis=0)
         mask *= np.multiply(~np.isnan(phase_stack), phase_stack != 0.)
         del phase_stack
+
+        # Mask for zero coherence in the average spatail coherence
+        # due to lack of data in the processing
+        coh_file = os.path.join(os.path.dirname(ifgram_file), '../avgSpatialCoh.h5')
+        if os.path.isfile(coh_file):
+            print('skip pixels with zero average spatial coherence value')
+            avg_spatial_coh = readfile.read(coh_file, box=box)[0].flatten()
+            mask *= avg_spatial_coh != 0.
+            del avg_spatial_coh
 
     # 1.3.3 invert pixels on mask 1+2
     num_pixel2inv = int(np.sum(mask))
@@ -842,7 +852,8 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
         # b. invert once for all pixels with obs in all ifgrams
         if np.sum(mask_all_net) > 0:
             print(('inverting pixels with valid phase in all  ifgrams'
-                   ' ({:.0f} pixels) ...').format(np.sum(mask_all_net)))
+                   ' ({:.0f} pixels; {:.1f}%) ...').format(np.sum(mask_all_net),
+                                                           np.sum(mask_all_net)/num_pixel2inv*100))
             tsi, tcohi, num_ifgi = estimate_timeseries(A, B, tbase_diff,
                                                        ifgram=pha_data[:, mask_all_net],
                                                        weight_sqrt=None,
@@ -856,7 +867,8 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
         # c. pixel-by-pixel for pixels with obs not in all ifgrams
         if np.sum(mask_part_net) > 0:
             print(('inverting pixels with valid phase in some ifgrams'
-                   ' ({:.0f} pixels) ...').format(np.sum(mask_part_net)))
+                   ' ({:.0f} pixels; {:.1f}%) ...').format(np.sum(mask_part_net),
+                                                           np.sum(mask_all_net)/num_pixel2inv*100))
             num_pixel2inv = int(np.sum(mask_part_net))
             idx_pixel2inv = np.where(mask_part_net)[0]
             prog_bar = ptime.progressBar(maxValue=num_pixel2inv)

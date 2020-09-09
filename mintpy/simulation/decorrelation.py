@@ -295,7 +295,7 @@ def coherence2phase_variance(coherence, L=32, scatter='DS', epsilon=1e-3, print_
     lineStr = '    number of independent looks L={}'.format(L)
     if L > 80:
         L = 80
-        lineStr += ', use L=80 to avoid dividing by 0 in calculation with negligible effect'
+        lineStr += ', use L=80 to avoid dividing by 0 with negligible effect'
     if print_msg:
         print(lineStr)
 

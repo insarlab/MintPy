@@ -340,6 +340,13 @@ def correct_dem_error(inps, A_def):
     print('skip pixels with NaN  in ANY acquisitions')
     mask *= np.sum(np.isnan(ts_data), axis=0) == 0
 
+    tcoh_file = os.path.join(os.path.dirname(inps.timeseries_file), 'temporalCoherence.h5')
+    if os.path.isfile(tcoh_file):
+        print('skip pixels with ZERO temporal coherence')
+        tcoh = readfile.read(tcoh_file)[0].flatten()
+        mask *= tcoh != 0.
+        del tcoh
+
     if inps.rangeDist.size == 1:
         A_geom = inps.pbase / (inps.rangeDist * inps.sinIncAngle)
         A = np.hstack((A_geom, A_def))
