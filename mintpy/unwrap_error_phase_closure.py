@@ -189,8 +189,8 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
     """
 
     # default output file path
+    out_dir = os.path.dirname(os.path.dirname(ifgram_file))
     if out_file is None:
-        out_dir = os.path.dirname(os.path.dirname(ifgram_file))
         if dsName == 'unwrapPhase':
             # skip the default dsName in output filename
             out_file = 'numTriNonzeroIntAmbiguity.h5'
@@ -251,9 +251,15 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
 
     # mask
     if mask_file is not None:
-        print('masking with file', mask_file)
         mask = readfile.read(mask_file)[0]
         num_nonzero_closure[mask == 0] = np.nan
+        print('mask out pixels with zero in file:', mask_file)
+
+    coh_file = os.path.join(out_dir, 'avgSpatialCoh.h5')
+    if os.path.isfile(coh_file):
+        coh = readfile.read(coh_file)[0]
+        num_nonzero_closure[coh == 0] = np.nan
+        print('mask out pixels with zero in file:', coh_file)
 
     # write to disk
     print('write to file', out_file)
@@ -572,7 +578,7 @@ def main(iargs=None):
         # for debug
         #plot_num_triplet_with_nonzero_integer_ambiguity(out_file)
     m, s = divmod(time.time()-start_time, 60)
-    print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
+    print('time used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
     return
 
 
