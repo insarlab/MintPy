@@ -173,15 +173,7 @@ def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None
     num_date = len(date_list)
     print('number of acquisitions: {}\n{}'.format(num_date, date_list))
 
-    # define dataset structure
-    length, width = int(meta['LENGTH']), int(meta['WIDTH'])
-    dsNameDict = {
-        "date"       : (np.dtype("S8"), (num_date,)),
-        "timeseries" : (np.float32,     (num_date, length, width))
-    }
-
     # baseline info
-    baseline_dict = {}
     if baseline_dir is not None:
         # read baseline data
         baseline_dict = isce_utils.read_baseline_timeseries(baseline_dir,
@@ -193,21 +185,24 @@ def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None
             pbase_top, pbase_bottom = baseline_dict[date_list[i]]
             pbase[i] = (pbase_top + pbase_bottom) / 2.0
 
-        # update dataset structure
-        dsNameDict["bperp"] = (np.float32, (num_date,))
+    # define dataset structure
+    length, width = int(meta['LENGTH']), int(meta['WIDTH'])
+    dates = np.array(date_list, dtype=np.string_)
+    ds_name_dict = {
+        "date"       : [dates.dtype, (num_date,), dates],
+        "bperp"      : [np.float32,  (num_date,), pbase],
+        "timeseries" : [np.float32,  (num_date, length, width), None],
+    }
 
     # initiate HDF5 file
     meta["FILE_TYPE"] = "timeseries"
     meta["UNIT"] = "m"
     meta['REF_DATE'] = ref_date
-    writefile.layout_hdf5(outfile, dsNameDict, meta)
+    writefile.layout_hdf5(outfile, ds_name_dict, meta)
 
     # writing data to HDF5 file
     print('writing data to HDF5 file {} with a mode ...'.format(outfile))
     with h5py.File(outfile, "a") as f:
-        f["date"][:,] = np.array([np.string_(i) for i in date_list])
-        f["bperp"][:,] = pbase
-
         prog_bar = ptime.progressBar(maxValue=num_file)
         for i in range(num_file):
             # read data using gdal

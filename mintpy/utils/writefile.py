@@ -55,13 +55,12 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                 compression = readfile.get_hdf5_compression(ref_file)
 
             # list of auxiliary datasets
-            atr_ref = readfile.read_attribute(ref_file)
-            shape_ref = (int(atr_ref['LENGTH']), int(atr_ref['WIDTH']))
+            shape2d = (int(meta['LENGTH']), int(meta['WIDTH']))
             with h5py.File(ref_file, 'r') as fr:
                 auxDsNames = [i for i in fr.keys()
                               if (i not in list(datasetDict.keys())
                                   and isinstance(fr[i], h5py.Dataset)
-                                  and fr[i].shape[-2:] != shape_ref)]
+                                  and fr[i].shape[-2:] != shape2d)]
         else:
             auxDsNames = []
 
@@ -191,50 +190,91 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
 
 #########################################################################
 
-def layout_hdf5(fname, dsNameDict, metadata, print_msg=True):
+def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, print_msg=True):
     """Create HDF5 file with defined metadata and (empty) dataset structure
 
-    Parameters: fname      - str, HDF5 file path
-                dsNameDict - dict, dataset structure definition, as below:
-                metadata   - dict, metadata
-    Returns:    fname      - str, HDF5 file path
+    Parameters: fname        - str, HDF5 file path
+                ds_name_dict - dict, dataset structure definition
+                               {dname : [dtype, dshape],
+                                dname : [dtype, dshape, None],
+                                dname : [dtype, dshape, 1/2/3D np.ndarray], #for aux data
+                                ...
+                               }
+                metadata     - dict, metadata
+    Returns:    fname        - str, HDF5 file path
 
-    Example:
+    Example:    layout_hdf5('timeseries_ERA5.h5', ref_file='timeseries.h5')
+                layout_hdf5('timeseries_ERA5.5h', ds_name_dict, metadata)
 
     # structure for ifgramStack
-    dsNameDict = {
-        "date"             : (np.dtype('S8'), (inps.num_pair, 2)),
-        "dropIfgram"       : (np.bool_,       (inps.num_pair,)),
-        "bperp"            : (np.float32,     (inps.num_pair,)),
-        "unwrapPhase"      : (np.float32,     (inps.num_pair, inps.length, inps.width)),
-        "coherence"        : (np.float32,     (inps.num_pair, inps.length, inps.width)),
-        "connectComponent" : (np.int16,       (inps.num_pair, inps.length, inps.width)),
+    ds_name_dict = {
+        "date"             : [np.dtype('S8'), (num_ifgram, 2)],
+        "dropIfgram"       : [np.bool_,       (num_ifgram,)],
+        "bperp"            : [np.float32,     (num_ifgram,)],
+        "unwrapPhase"      : [np.float32,     (num_ifgram, length, width)],
+        "coherence"        : [np.float32,     (num_ifgram, length, width)],
+        "connectComponent" : [np.int16,       (num_ifgram, length, width)],
     }
 
     # structure for geometry
-    dsNameDict = {
-        "height"             : (np.float32, (inps.length, inps.width)),
-        "incidenceAngle"     : (np.float32, (inps.length, inps.width)),
-        "slantRangeDistance" : (np.float32, (inps.length, inps.width)),
+    ds_name_dict = {
+        "height"             : [np.float32, (length, width), None],
+        "incidenceAngle"     : [np.float32, (length, width), None],
+        "slantRangeDistance" : [np.float32, (length, width), None],
     }
 
     # structure for timeseries
-    dsNameDict = {
-        "date"       : (np.dtype("S8"), (numDates,)),
-        "bperp"      : (np.float32,     (numDates,)),
-        "timeseries" : (np.float32,     (numDates, length, width))
+    dates = np.array(date_list, np.string_)
+    ds_name_dict = {
+        "date"       : [np.dtype("S8"), (num_date,), dates],
+        "bperp"      : [np.float32,     (num_date,), pbase],
+        "timeseries" : [np.float32,     (num_date, length, width)],
     }
     """
 
-    h5 = h5py.File(fname, "w")
+    # get meta from metadata and ref_file
+    if metadata:
+        meta = {key: value for key, value in metadata.items()}
+    elif ref_file:
+        with h5py.File(ref_file, 'r') as fr:
+            meta = {key: value for key, value in fr.attrs.items()}
+        if print_msg:
+            print('grab metadata from ref_file: {}'.format(ref_file))
+    else:
+        raise ValueError('No metadata or ref_file found.')
+
+    # check ds_name_dict
+    if ds_name_dict is None:
+        ds_name_dict = {}
+
+        if ref_file and os.path.splitext(ref_file)[1] in ['.h5', '.he5']:
+            shape2d = (int(meta['LENGTH']), int(meta['WIDTH']))
+            with h5py.File(ref_file, 'r') as fr:
+                for key in fr.keys():
+                    ds = fr[key]
+                    if isinstance(ds, h5py.Dataset):
+                        # save all dataset info 
+                        ds_name_dict[key] = [ds.dtype, ds.shape, None]
+
+                        # save auxliary dataset value
+                        if ds.shape[-2:] != shape2d:
+                            ds_name_dict[key][2] = ds[:]
+    
+            if print_msg:
+                print('grab dataset structure from ref_file: {}'.format(ref_file))
+        else:
+            raise ValueError('No ds_name_dict or ref_file found.')
+
+    # create file
+    f = h5py.File(fname, "w")
     if print_msg:
         print('-'*50)
         print('create HDF5 file {} with w mode'.format(fname))
 
     # initiate dataset
-    for key in dsNameDict.keys():
-        data_type = dsNameDict[key][0]
-        data_shape = dsNameDict[key][1]
+    for key in ds_name_dict.keys():
+        data_type  = ds_name_dict[key][0]
+        data_shape = ds_name_dict[key][1]
 
         # turn ON compression
         if key in ['connectComponent']:
@@ -244,26 +284,31 @@ def layout_hdf5(fname, dsNameDict, metadata, print_msg=True):
 
         # changable dataset shape
         if len(data_shape) == 3:
-            maxShape = (None, data_shape[1], data_shape[2])
+            max_shape = (None, data_shape[1], data_shape[2])
         else:
-            maxShape = data_shape
+            max_shape = data_shape
 
+        # create empty dataset
         if print_msg:
             print("create dataset: {d:<25} of {t:<25} in size of {s}".format(d=key,
                                                                              t=str(data_type),
                                                                              s=data_shape))
-        h5.create_dataset(key,
-                          shape=data_shape,
-                          maxshape=maxShape,
-                          dtype=data_type,
-                          chunks=True,
-                          compression=compression)
+        ds = f.create_dataset(key,
+                              shape=data_shape,
+                              maxshape=max_shape,
+                              dtype=data_type,
+                              chunks=True,
+                              compression=compression)
+
+        # write auxliary data
+        if len(ds_name_dict[key]) > 2 and ds_name_dict[key][2] is not None:
+            ds[:] = np.array(ds_name_dict[key][2])
 
     # write attributes
-    for key in metadata.keys():
-        h5.attrs[key] = metadata[key]
+    for key in meta.keys():
+        f.attrs[key] = meta[key]
 
-    h5.close()
+    f.close()
     if print_msg:
         print('close  HDF5 file {}'.format(fname))
     return fname
