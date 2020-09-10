@@ -716,12 +716,42 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
 
     # deramping
     if k == 'timeseries':
-        print('reading data ...')
-        data = readfile.read(fname)[0]
+        # initialize dataset structure
+        ts_obj     = timeseries(fname)
+        ts_obj.open()
+        date_list  = ts_obj.dateList
+        num_date   = len(date_list)
+        length     = int(atr['LENGTH'])
+        width      = int(atr['WIDTH'])
+        date_dtype = np.dtype('S{}'.format(len(date_list[0])))
+        dsNameDict = {
+            "date"       : (date_dtype, (num_date,)),
+            "bperp"      : (np.float32, (num_date,)),
+            "timeseries" : (np.float32, (num_date, length, width)),
+        }
+     
+        # write HDF5 file with defined metadata and (empty) dataset structure
+        writefile.layout_hdf5(out_file, dsNameDict, atr)
+
+        # write date time-series
+        date_list_utf8 = [dt.encode('utf-8') for dt in date_list]
+        writefile.write_hdf5_block(out_file, date_list_utf8, datasetName='date')
+
+        # write bperp time-series
+        bperp = ts_obj.pbase
+        writefile.write_hdf5_block(out_file, bperp, datasetName='bperp')
+
+        print('reading data one date at a time ...')
         print('estimating phase ramp ...')
-        for i in range(data.shape[0]):
-            data[i,:] = deramp(data[i,:], mask, ramp_type=ramp_type, metadata=atr)[0]
-        writefile.write(data, out_file, ref_file=fname)
+        prog_bar = ptime.progressBar(maxValue=num_date)
+        for i in range(num_date):
+            dSet = 'timeseries-{}'.format(date_list[i])
+            data = readfile.read(fname, datasetName=dSet)[0]
+            data = deramp(data, mask, ramp_type=ramp_type, metadata=atr)[0]
+            block = [i, i+1, 0, length, 0, width]
+            writefile.write_hdf5_block(out_file, data, datasetName='timeseries', block=block, print_msg=False)
+            prog_bar.update(i+1, suffix='{}/{}'.format(i+1, num_date))
+        prog_bar.close()
 
     elif k == 'ifgramStack':
         obj = ifgramStack(fname)

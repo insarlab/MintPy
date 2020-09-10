@@ -266,7 +266,7 @@ def layout_hdf5(fname, dsNameDict, metadata):
     return fname
 
 
-def write_hdf5_block(fname, data, datasetName, block=None, mode='a'):
+def write_hdf5_block(fname, data, datasetName, block=None, mode='a', print_msg=True):
     """Write data to existing HDF5 dataset in disk block by block.
     Parameters: data        - np.ndarray 1/2/3D matrix
                 datasetName - str, dataset name
@@ -299,11 +299,11 @@ def write_hdf5_block(fname, data, datasetName, block=None, mode='a'):
                      0, shape[2]]
 
     # write
-    print('-'*50)
-    print('open  HDF5 file {} in {} mode'.format(fname, mode))
-    with h5py.File(fname, mode) as f:
+    if print_msg is True:
+        print('-'*50)
+        print('open  HDF5 file {} in {} mode'.format(fname, mode))
         print("writing dataset /{:<25} block: {}".format(datasetName, block))
-
+    with h5py.File(fname, mode) as f:
         if len(block) == 6:
             f[datasetName][block[0]:block[1],
                            block[2]:block[3],
@@ -315,8 +315,9 @@ def write_hdf5_block(fname, data, datasetName, block=None, mode='a'):
 
         elif len(block) == 2:
             f[datasetName][block[0]:block[1]] = data
-
-    print('close HDF5 file {}.'.format(fname))
+    
+    if print_msg is True:
+        print('close HDF5 file {}.'.format(fname))
     return fname
 
 
