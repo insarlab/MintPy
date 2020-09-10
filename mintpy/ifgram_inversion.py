@@ -1002,8 +1002,7 @@ def ifgram_inversion(inps=None):
     meta['UNIT'] = 'm'
     meta['REF_DATE'] = date_list[0]
 
-    ts_obj = timeseries(inps.tsFile)
-    ts_obj.layout_hdf5(dsNameDict, meta)
+    writefile.layout_hdf5(inps.tsFile, dsNameDict, meta)
 
     # write date time-series
     date_list_utf8 = [dt.encode('utf-8') for dt in date_list]

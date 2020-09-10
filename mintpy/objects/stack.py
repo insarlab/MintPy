@@ -398,13 +398,26 @@ class timeseries:
         """Calculate the Root Mean Square for each acquisition of time-series
             and output result to a text file.
         """
-        # Calculate RMS
-        data = self.read()
+        # Get date list
+        date_list = self.get_date_list()
+        num_date  = len(date_list)
+
+        # Get mask
         if maskFile and os.path.isfile(maskFile):
             print('read mask from file: '+maskFile)
             mask = singleDataset(maskFile).read()
-            data[:, mask == 0] = np.nan
-        self.rms = np.sqrt(np.nanmean(np.square(data), axis=(1, 2)))
+
+        # Calculate RMS one date at a time
+        self.rms = np.zeros(num_date) * np.nan
+        print('reading {} data from file: {} ...'.format(self.name, self.file))
+        prog_bar = ptime.progressBar(maxValue=num_date)
+        for i in range(num_date):
+            data = self.read(datasetName='{}'.format(date_list[i]), print_msg=False)
+            if maskFile and os.path.isfile(maskFile):
+                data[mask == 0] = np.nan
+            self.rms[i] = np.sqrt(np.nanmean(np.square(data), axis=(0, 1)))
+            prog_bar.update(i+1, suffix='{}/{}'.format(i+1, num_date))
+        prog_bar.close()
 
         # Write text file
         header = 'Root Mean Square in space for each acquisition of time-series\n'
