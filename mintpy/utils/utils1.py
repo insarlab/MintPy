@@ -741,17 +741,22 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
         bperp = ts_obj.pbase
         writefile.write_hdf5_block(out_file, bperp, datasetName='bperp')
 
-        print('reading data one date at a time ...')
-        print('estimating phase ramp ...')
+        print('estimating phase ramp one date at a time ...')
         prog_bar = ptime.progressBar(maxValue=num_date)
         for i in range(num_date):
-            dSet = 'timeseries-{}'.format(date_list[i])
-            data = readfile.read(fname, datasetName=dSet)[0]
+            # read
+            dsName = 'timeseries-{}'.format(date_list[i])
+            data = readfile.read(fname, datasetName=dsName)[0]
+            # deramp
             data = deramp(data, mask, ramp_type=ramp_type, metadata=atr)[0]
-            block = [i, i+1, 0, length, 0, width]
-            writefile.write_hdf5_block(out_file, data, datasetName='timeseries', block=block, print_msg=False)
+            # write
+            writefile.write_hdf5_block(out_file, data,
+                                       datasetName='timeseries',
+                                       block=[i, i+1, 0, length, 0, width],
+                                       print_msg=False)
             prog_bar.update(i+1, suffix='{}/{}'.format(i+1, num_date))
         prog_bar.close()
+        print('finished writing to file: {}'.format(fname))
 
     elif k == 'ifgramStack':
         obj = ifgramStack(fname)
@@ -765,15 +770,17 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
                 dsOut = f[dsNameOut]
                 print('access HDF5 dataset /{}'.format(dsNameOut))
             else:
-                dsOut = f.create_dataset(dsNameOut, shape=(obj.numIfgram, obj.length, obj.width),
-                                         dtype=np.float32, chunks=True, compression=None)
+                dsOut = f.create_dataset(dsNameOut,
+                                         shape=(obj.numIfgram, obj.length, obj.width),
+                                         dtype=np.float32,
+                                         chunks=True,
+                                         compression=None)
                 print('create HDF5 dataset /{}'.format(dsNameOut))
 
             prog_bar = ptime.progressBar(maxValue=obj.numIfgram)
             for i in range(obj.numIfgram):
                 data = ds[i, :, :]
-                for j in range(data.shape[0]):
-                    data[j,:] = deramp(data[j,:], mask, ramp_type=ramp_type, metadata=atr)[0]
+                data = deramp(data, mask, ramp_type=ramp_type, metadata=atr)[0]
                 dsOut[i, :, :] = data
                 prog_bar.update(i+1, suffix='{}/{}'.format(i+1, obj.numIfgram))
             prog_bar.close()
@@ -782,8 +789,7 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
     # Single Dataset File
     else:
         data = readfile.read(fname)[0]
-        for i in range(data.shape[0]):
-            data[i,:] = deramp(data[i,:], mask, ramp_type=ramp_type, metadata=atr)[0]
+        data = deramp(data, mask, ramp_type, metadata=atr)[0]
         print('writing >>> {}'.format(out_file))
         writefile.write(data, out_file=out_file, ref_file=fname)
 
