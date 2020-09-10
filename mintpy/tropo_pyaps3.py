@@ -664,7 +664,7 @@ def correct_timeseries(dis_file, tropo_file, cor_dis_file):
     print('correcting relative delay for input time-series using diff.py')
     from mintpy import diff
 
-    iargs = [dis_file, tropo_file, '-o', cor_dis_file]
+    iargs = [dis_file, tropo_file, '-o', cor_dis_file, '--force']
     print('diff.py', ' '.join(iargs))
     diff.main(iargs)
     return cor_dis_file

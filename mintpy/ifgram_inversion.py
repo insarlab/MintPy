@@ -990,40 +990,32 @@ def ifgram_inversion(inps=None):
     for key in configKeys:
         meta[key_prefix+key] = str(vars(inps)[key])
 
-    # 2.2 instantiate time-series
-    date_dtype = np.dtype('S{}'.format(len(date_list[0])))
-    dsNameDict = {
-        "date"       : (date_dtype, (num_date,)),
-        "bperp"      : (np.float32, (num_date,)),
-        "timeseries" : (np.float32, (num_date, length, width)),
-    }
-
     meta['FILE_TYPE'] = 'timeseries'
     meta['UNIT'] = 'm'
     meta['REF_DATE'] = date_list[0]
 
-    writefile.layout_hdf5(inps.tsFile, dsNameDict, meta)
-
-    # write date time-series
-    date_list_utf8 = [dt.encode('utf-8') for dt in date_list]
-    writefile.write_hdf5_block(inps.tsFile, date_list_utf8, datasetName='date')
-
-    # write bperp time-series
+    # 2.2 instantiate time-series
+    dates = np.array(date_list, dtype=np.string_)
     pbase = stack_obj.get_perp_baseline_timeseries(dropIfgram=True)
-    writefile.write_hdf5_block(inps.tsFile, pbase, datasetName='bperp')
+    ds_name_dict = {
+        "date"       : [dates.dtype, (num_date,), dates],
+        "bperp"      : [np.float32,  (num_date,), pbase],
+        "timeseries" : [np.float32,  (num_date, length, width), None],
+    }
+    writefile.layout_hdf5(inps.tsFile, ds_name_dict, meta)
 
     # 2.3 instantiate temporal coherence
-    dsNameDict = {"temporalCoherence" : (np.float32, (length, width))}
     meta['FILE_TYPE'] = 'temporalCoherence'
     meta['UNIT'] = '1'
     meta.pop('REF_DATE')
-    writefile.layout_hdf5(inps.tempCohFile, dsNameDict, metadata=meta)
+    ds_name_dict = {"temporalCoherence" : [np.float32, (length, width)]}
+    writefile.layout_hdf5(inps.tempCohFile, ds_name_dict, metadata=meta)
 
     # 2.4 instantiate number of inverted observations
-    dsNameDict = {"mask" : (np.float32, (length, width))}
     meta['FILE_TYPE'] = 'mask'
     meta['UNIT'] = '1'
-    writefile.layout_hdf5(inps.numInvFile, dsNameDict, metadata=meta)
+    ds_name_dict = {"mask" : [np.float32, (length, width)]}
+    writefile.layout_hdf5(inps.numInvFile, ds_name_dict, metadata=meta)
 
     ## 3. run the inversion / estimation and write to disk
 
