@@ -717,29 +717,27 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
     # deramping
     if k == 'timeseries':
         # initialize dataset structure
-        ts_obj     = timeseries(fname)
-        ts_obj.open()
+        ts_obj = timeseries(fname)
+        ts_obj.open(print_msg=False)
         date_list  = ts_obj.dateList
         num_date   = len(date_list)
-        length     = int(atr['LENGTH'])
-        width      = int(atr['WIDTH'])
         date_dtype = np.dtype('S{}'.format(len(date_list[0])))
         dsNameDict = {
             "date"       : (date_dtype, (num_date,)),
             "bperp"      : (np.float32, (num_date,)),
-            "timeseries" : (np.float32, (num_date, length, width)),
+            "timeseries" : (np.float32, (num_date, ts_obj.length, ts_obj.width)),
         }
-     
+
         # write HDF5 file with defined metadata and (empty) dataset structure
-        writefile.layout_hdf5(out_file, dsNameDict, atr)
+        writefile.layout_hdf5(out_file, dsNameDict, atr, print_msg=False)
 
         # write date time-series
         date_list_utf8 = [dt.encode('utf-8') for dt in date_list]
-        writefile.write_hdf5_block(out_file, date_list_utf8, datasetName='date')
+        writefile.write_hdf5_block(out_file, date_list_utf8, datasetName='date', print_msg=False)
 
         # write bperp time-series
         bperp = ts_obj.pbase
-        writefile.write_hdf5_block(out_file, bperp, datasetName='bperp')
+        writefile.write_hdf5_block(out_file, bperp, datasetName='bperp', print_msg=False)
 
         print('estimating phase ramp one date at a time ...')
         prog_bar = ptime.progressBar(maxValue=num_date)
@@ -752,11 +750,11 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
             # write
             writefile.write_hdf5_block(out_file, data,
                                        datasetName='timeseries',
-                                       block=[i, i+1, 0, length, 0, width],
+                                       block=[i, i+1, 0, ts_obj.length, 0, ts_obj.width],
                                        print_msg=False)
             prog_bar.update(i+1, suffix='{}/{}'.format(i+1, num_date))
         prog_bar.close()
-        print('finished writing to file: {}'.format(fname))
+        print('finished writing to file: {}'.format(out_file))
 
     elif k == 'ifgramStack':
         obj = ifgramStack(fname)
