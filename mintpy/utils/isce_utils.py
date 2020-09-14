@@ -323,8 +323,8 @@ def extract_stripmap_metadata(meta_file):
 
     elp = Planet(pname='Earth').ellipsoid
     llh = elp.xyz_to_llh(peg.getPosition())
-    elp.setSCH(llh[0], llh[1], orbit.getENUHeading(burst.sensingMid))
-    meta['HEADING'] = orbit.getENUHeading(burst.sensingMid)
+    elp.setSCH(llh[0], llh[1], orbit.getENUHeading(frame.sensingMid))
+    meta['HEADING'] = orbit.getENUHeading(frame.sensingMid)
     meta['earthRadius'] = elp.pegRadCur
     meta['altitude'] = llh[2]
 
