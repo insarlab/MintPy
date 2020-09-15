@@ -25,6 +25,11 @@ REFERENCE = """reference:
   Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis: 
   Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
   doi:10.1016/j.cageo.2019.104331.
+
+  Chaussard, E., R. Bürgmann, H. Fattahi, R. M. Nadeau, T. Taira, C. W. Johnson, and I. Johanson
+  (2015), Potential for larger earthquakes in the East San Francisco Bay Area due to the direct 
+  connection between the Hayward and Calaveras Faults, Geophysical Research Letters, 42(8),
+  2734-2741, doi:10.1002/2015GL063575.
 """
 
 TEMPLATE = get_template_content('modify_network')
@@ -213,7 +218,7 @@ def reset_network(stackFile):
     else:
         with h5py.File(stackFile, 'r+') as f:
             f['dropIfgram'][:] = True
-        ut.touch(os.path.splitext(os.path.basename(stackFile))[0]+'_coherence_spatialAvg.txt')
+        ut.touch('coherenceSpatialAvg.txt')
     return stackFile
 
 
@@ -457,7 +462,7 @@ def main(iargs=None):
 
     if inps.date12_to_drop is not None:
         ifgramStack(inps.file).update_drop_ifgram(date12List_to_drop=inps.date12_to_drop)
-        ut.touch(os.path.splitext(os.path.basename(inps.file))[0]+'_coherence_spatialAvg.txt')
+        ut.touch('coherenceSpatialAvg.txt')
         print('Done.')
     return
 

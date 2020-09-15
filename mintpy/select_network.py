@@ -455,7 +455,7 @@ def plot_network_info(inps):
     if not inps.disp_fig:
         plt.switch_backend('Agg')
 
-    out_fig_name = os.path.join(inps.out_dir, 'Network{}'.format(inps.figext))
+    out_fig_name = os.path.join(inps.out_dir, 'network{}'.format(inps.figext))
     log('plot network / pairs to file: '+os.path.basename(out_fig_name))
     fig1, ax1 = plt.subplots(figsize=inps.fig_size)
     ax1 = pp.plot_network(ax1,
@@ -466,7 +466,7 @@ def plot_network_info(inps):
                           print_msg=False)
     plt.savefig(out_fig_name, bbox_inches='tight', dpi=inps.figdpi)
 
-    out_fig_name = os.path.join(inps.out_dir, 'BperpHistory{}'.format(inps.figext))
+    out_fig_name = os.path.join(inps.out_dir, 'bperpHistory{}'.format(inps.figext))
     log('plot baseline history to file: '+os.path.basename(out_fig_name))
     fig2, ax2 = plt.subplots(figsize=inps.fig_size)
     ax2 = pp.plot_perp_baseline_hist(ax2,
@@ -474,7 +474,7 @@ def plot_network_info(inps):
                                      inps.pbase_list)
     plt.savefig(out_fig_name, bbox_inches='tight', dpi=inps.figdpi)
 
-    out_fig_name = os.path.join(inps.out_dir, 'CoherenceMatrix{}'.format(inps.figext))
+    out_fig_name = os.path.join(inps.out_dir, 'coherenceMatrix{}'.format(inps.figext))
     if inps.cohList:
         log('plot predicted coherence matrix to file: '+os.path.basename(out_fig_name))
         fig3, ax3 = plt.subplots(figsize=inps.fig_size)

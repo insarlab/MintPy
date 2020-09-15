@@ -322,6 +322,7 @@ def skip_files_with_inconsistent_size(dsPathDict, pix_box=None, dsName='unwrapPh
 
         dsNames = list(dsPathDict.keys())
         date12_list = [atr['DATE12'] for atr in atr_list]
+        num_drop = 0
         for i in range(len(date12_list)):
             if length_list[i] != common_length or width_list[i] != common_width:
                 date12 = date12_list[i]
@@ -333,10 +334,11 @@ def skip_files_with_inconsistent_size(dsPathDict, pix_box=None, dsName='unwrapPh
                     if len(fnames) > 0:
                         dsPathDict[dsName].remove(fnames[0])
                 msg += '\n\t{}\t({}, {})'.format(date12, length_list[i], width_list[i])
+                num_drop += 1
 
         msg += '\n'+'-'*30
-        msg += '\nSkip loading the interferograms above.'
-        msg += '\nContinue to load the rest interferograms.'
+        msg += '\nSkip loading the above interferograms ({}).'.format(num_drop)
+        msg += '\nContinue to load the rest interferograms ({}).'.format(len(date12_list) - num_drop)
         msg += '\n'+'*'*80+'\n'
         print(msg)
     return dsPathDict

@@ -37,8 +37,7 @@ EXAMPLE = """example:
   plot_network.py inputs/ifgramStack.h5
   plot_network.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg --nodisplay   #Save figures to files without display
   plot_network.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg --show-kept   #Do not plot dropped ifgrams
-
-  plot_network.py ifgramStack_coherence_spatialAvg.txt
+  plot_network.py coherenceSpatialAvg.txt
 
   # offsetSNR
   plot_network.py inputs/ifgramStack.h5 -d offsetSNR -v 0 20
@@ -57,7 +56,7 @@ def create_parser():
                                      epilog=EXAMPLE)
 
     parser.add_argument('file',
-                        help='file with network information, ifgramStack.h5 or ifgramStack_coherence_spatialAvg.txt')
+                        help='file with network information, ifgramStack.h5 or coherenceSpatialAvg.txt')
     parser.add_argument('--show-kept', dest='disp_drop', action='store_false',
                         help='display kept interferograms only, without dropped interferograms')
     parser.add_argument('-d', '--dset', type=str, dest='dsetName', default='coherence',
@@ -238,7 +237,7 @@ def main(iargs=None):
 
     # Plot
     inps.cbar_label = 'Average Spatial Coherence'
-    figNames = [i+'.pdf' for i in ['BperpHistory', 'CoherenceMatrix', 'CoherenceHistory', 'Network']]
+    figNames = [i+'.pdf' for i in ['bperpHistory', 'coherenceMatrix', 'coherenceHistory', 'network']]
 
     # Fig 1 - Baseline History
     fig, ax = plt.subplots(figsize=inps.fig_size)

@@ -418,9 +418,9 @@ class TimeSeriesAnalysis:
         """Modify network of interferograms before the network inversion."""
         # check the existence of ifgramStack.h5
         stack_file, geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1:3]
-        coh_txt = '{}_coherence_spatialAvg.txt'.format(os.path.splitext(os.path.basename(stack_file))[0])
+        coh_txt = 'coherenceSpatialAvg.txt'
         try:
-            net_fig = [i for i in ['Network.pdf', 'pic/Network.pdf'] if os.path.isfile(i)][0]
+            net_fig = [i for i in ['network.pdf', 'pic/network.pdf'] if os.path.isfile(i)][0]
         except:
             net_fig = None
 

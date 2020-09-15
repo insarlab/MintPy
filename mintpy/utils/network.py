@@ -161,7 +161,7 @@ def get_date12_list(fname, dropIfgram=False):
     Example:
         date12List = get_date12_list('ifgramStack.h5')
         date12List = get_date12_list('ifgramStack.h5', dropIfgram=True)
-        date12List = get_date12_list('ifgramStack_coherence_spatialAvg.txt')
+        date12List = get_date12_list('coherenceSpatialAvg.txt')
     """
     date12_list = []
     ext = os.path.splitext(fname)[1].lower()
