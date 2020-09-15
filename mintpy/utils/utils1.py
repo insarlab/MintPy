@@ -180,21 +180,24 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
     if not box:
         box = (0, 0, int(atr['WIDTH']), int(atr['LENGTH']))
 
-    # If input is text file
-    suffix = ''
+    # default output filename
     if k == 'ifgramStack':
-        suffix += '_'+datasetName
-    suffix += '_spatialAvg.txt'
+        prefix = datasetName
+    else:
+        prefix = os.path.splitext(os.path.basename(File))[0]
+    suffix = 'SpatialAvg.txt'
+    txtFile = prefix + suffix
+
+    # If input is text file
     if File.endswith(suffix):
         print('Input file is spatial average txt already, read it directly')
         meanList, dateList = read_text_file(File)
         return meanList, dateList
 
     # Read existing txt file only if 1) data file is older AND 2) same AOI
-    txtFile = os.path.splitext(os.path.basename(File))[0]+suffix
     file_line = '# Data file: {}\n'.format(os.path.basename(File))
     mask_line = '# Mask file: {}\n'.format(maskFile)
-    aoi_line = '# AOI box: {}\n'.format(box)
+    aoi_line  = '# AOI box: {}\n'.format(box)
     try:
         # Read AOI line from existing txt file
         fl = open(txtFile, 'r')
