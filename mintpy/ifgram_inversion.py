@@ -249,15 +249,26 @@ def run_or_skip(inps):
         flag = 'run'
         print('1) NOT ALL output files found: {}.'.format(inps.outfile))
     else:
-        print('1) output files already exist: {}.'.format(inps.outfile))
-        with h5py.File(inps.ifgramStackFile, 'r') as f:
-            ti = float(f[inps.obsDatasetName].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgramStackFile)))
-        to = min(os.path.getmtime(i) for i in inps.outfile)
-        if ti > to:
+        # check if time-series file is partly written using file size
+        # since time-series file is not compressed
+        with h5py.File(inps.outfile[0], 'r') as f:
+            fsize_ref = f['timeseries'].size * 4
+        fsize = os.path.getsize(inps.outfile[0])
+        if fsize <= fsize_ref:
             flag = 'run'
-            print('2) output files are NOT newer than input dataset: {}.'.format(inps.obsDatasetName))
+            print('1) output file {} is NOT fully written.'.format(inps.outfile[0]))
+
         else:
-            print('2) output dataset is newer than input dataset: {}.'.format(inps.obsDatasetName))
+            print('1) output files already exist: {}.'.format(inps.outfile))
+            # check modification time
+            with h5py.File(inps.ifgramStackFile, 'r') as f:
+                ti = float(f[inps.obsDatasetName].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgramStackFile)))
+            to = min(os.path.getmtime(i) for i in inps.outfile)
+            if ti > to:
+                flag = 'run'
+                print('2) output files are NOT newer than input dataset: {}.'.format(inps.obsDatasetName))
+            else:
+                print('2) output dataset is newer than input dataset: {}.'.format(inps.obsDatasetName))
 
     # check configuration
     if flag == 'skip':
