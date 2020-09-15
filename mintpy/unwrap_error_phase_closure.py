@@ -198,9 +198,35 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
             out_file = 'numTriNonzeroIntAmbiguity4{}.h5'.format(dsName)
         out_file = os.path.join(out_dir, out_file)
 
+    # update mode
     if update_mode and os.path.isfile(out_file):
-        print('output file "{}" already exists, skip re-calculating.'.format(out_file))
-        return out_file
+        print('update mode: ON')
+        print('1) output file "{}" already exists'.format(out_file))
+        flag = 'skip'
+
+        # check modification time
+        with h5py.File(ifgram_file, 'r') as f:
+            ti = float(f[dsName].attrs.get('MODIFICATION_TIME', os.path.getmtime(ifgram_file)))
+        to = os.path.getmtime(out_file)
+        if ti > to:
+            print('2) output file is NOT newer than input dataset')
+            flag = 'run'
+        else:
+            print('2) output file is newer than input dataset')
+
+        # check REF_Y/X
+        key_list = ['REF_Y', 'REF_X']
+        atri = readfile.read_attribute(ifgram_file)
+        atro = readfile.read_attribute(out_file)
+        if not all(atri[i] == atro[i] for i in key_list):
+            print('3) NOT all key configurations are the same: {}'.format(key_list))
+            flag = 'run'
+        else:
+            print('3) all key configurations are the same: {}'.format(key_list))
+
+        print('run or skip: {}.'.format(flag))
+        if flag == 'skip':
+            return out_file
 
     # read ifgramStack file
     stack_obj = ifgramStack(ifgram_file)
