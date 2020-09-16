@@ -2,6 +2,7 @@
 *.pyc
 *.idea/*
 *ipynb_checkpoints*
+*.dSYM*
 build/
 docs/api_docs/
 docs/examples/dev/*

@@ -48,6 +48,7 @@ EXAMPLE = """example:
   view.py timeseries.h5 --ex drop_date.txt      #exclude dates to plot
   view.py timeseries.h5 '*2017*'                #all acquisitions in 2017
   view.py timeseries.h5 '*2017*' '*2018*'       #all acquisitions in 2017 and 2018
+  view.py timeseries.h5 20200616_20200908       #reconstruct interferogram on the fly
 
   view.py ifgramStack.h5 coherence
   view.py ifgramStack.h5 unwrapPhase-           #unwrapPhase only in the presence of unwrapPhase_bridging
@@ -355,11 +356,19 @@ def update_inps_with_file_metadata(inps, metadata):
 def update_data_with_plot_inps(data, metadata, inps):
     # 1. spatial referencing with respect to the seed point
     if inps.ref_yx:   # and inps.ref_yx != [int(metadata['REF_Y']), int(metadata['REF_X'])]:
+        # update ref_y/x to subset
         try:
             ref_y = inps.ref_yx[0] - inps.pix_box[1]
             ref_x = inps.ref_yx[1] - inps.pix_box[0]
         except:
             pass
+
+        # update ref_y/x to multilooking
+        if inps.multilook_num > 1:
+            ref_y = int((ref_y - int(inps.multilook_num / 2)) / inps.multilook_num)
+            ref_x = int((ref_x - int(inps.multilook_num / 2)) / inps.multilook_num)
+
+        # applying spatial referencing
         if len(data.shape) == 2:
             data -= data[ref_y, ref_x]
         elif len(data.shape) == 3:
@@ -752,10 +761,17 @@ def read_dataset_input(inps):
         if len(inps.dset) > 0:
             print('input dataset: "{}"'.format(inps.dset))
 
-        # search
+        # special rule for special file types
         if inps.key == 'velocity':
             inps.search_dset = False
             vprint('turning glob search OFF for {} file'.format(inps.key))
+
+        elif inps.key == 'timeseries' and len(inps.dset) == 1 and '_' in inps.dset[0]:
+            date1, date2 = inps.dset[0].split('_')
+            inps.dset = [date2]
+            inps.ref_date = date1
+
+        # search
         inps.dsetNumList = search_dataset_input(inps.sliceList,
                                                 inps.dset,
                                                 inps.dsetNumList,
@@ -777,6 +793,7 @@ def read_dataset_input(inps):
             inps.dset = [obj.sliceList[0].split('-')[0]]
         else:
             inps.dset = inps.sliceList
+
         inps.dsetNumList = search_dataset_input(inps.sliceList,
                                                 inps.dset,
                                                 inps.dsetNumList,
@@ -796,10 +813,12 @@ def read_dataset_input(inps):
     if inps.ref_date:
         if inps.key not in timeseriesKeyNames:
             inps.ref_date = None
+
         ref_date = search_dataset_input(inps.sliceList,
                                         [inps.ref_date],
                                         [],
                                         inps.search_dset)[0][0]
+
         if not ref_date:
             vprint('WARNING: input reference date is not included in input file!')
             vprint('input reference date: '+inps.ref_date)

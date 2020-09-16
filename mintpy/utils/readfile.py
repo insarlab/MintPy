@@ -287,8 +287,11 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
 
         # 2D dataset
         if ds.ndim == 2:
-            data = ds[box[1]+int(ystep/2):box[3]:ystep,
-                      box[0]+int(xstep/2):box[2]:xstep]
+            data = ds[box[1]:box[3],
+                      box[0]:box[2]]
+            if xstep * ystep > 1:
+                data = data[int(ystep/2)::ystep,
+                            int(xstep/2)::xstep]
 
         # 3D dataset
         elif ds.ndim == 3:
@@ -304,8 +307,12 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
 
             # read data
             data = ds[slice_flag,
-                      box[1]+int(ystep/2):box[3]:ystep,
-                      box[0]+int(xstep/2):box[2]:xstep]
+                      box[1]:box[3],
+                      box[0]:box[2]]
+            if xstep * ystep > 1:
+                data = data[:,
+                            int(ystep/2)::ystep,
+                            int(xstep/2)::xstep]
             data = np.squeeze(data)
     return data
 
