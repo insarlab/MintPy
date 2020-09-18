@@ -597,8 +597,9 @@ def calculate_delay_timeseries(inps):
 
     # check existing tropo delay file
     if (ut.run_or_skip(out_file=inps.tropo_file, in_file=inps.grib_files, print_msg=False) == 'skip'
-            and get_dataset_size(inps.tropo_file) == get_dataset_size(inps.geom_file)):
-        print('{} file exists and is newer than all GRIB files, skip updating.'.format(inps.tropo_file))
+            and get_dataset_size(inps.tropo_file) == get_dataset_size(inps.geom_file)
+            and all(i in timeseries(inps.tropo_file).get_date_list() for i in inps.date_list)):
+        print('{} file exists, is newer than all GRIB files and contains all dates, skip updating'.format(inps.tropo_file))
         return
 
     # prepare geometry data
