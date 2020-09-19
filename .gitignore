@@ -2,7 +2,6 @@
 *.pyc
 *.idea/*
 *ipynb_checkpoints*
-*.dSYM*
 build/
 docs/api_docs/
 docs/examples/dev/*
@@ -12,6 +11,7 @@ docs/resources/*.pdf
 isce.log
 mintpy/dev/*
 mintpy/modis*
+mintpy/objects/solid/solid_f.*.so*
 setup.py
 site/
 test/unwrap_error_bridging/
