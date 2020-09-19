@@ -110,7 +110,7 @@ def extract_snap_metadata(fname):
 
     # Read XML and extract required vals - using basic file reader 
     # xmltree or minidom might be better but this works    
-    with open(fname) as f:
+    with open(fname, 'r') as f:
         lines = f.readlines()
         # use lists so that elements where there are more than one, only the first mention can be extracted - 
         # Usually the first mention (list item 0) is the final subsetted/geocoded product metadata

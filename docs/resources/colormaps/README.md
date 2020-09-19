@@ -63,5 +63,5 @@ The following colormaps is included by default:
 + More at [Scientific Color-Maps](http://www.fabiocrameri.ch/colourmaps.php) ([Crameri, 2018](https://doi.org/10.5194/gmd-11-2541-2018))
 
 <p align="left">
-  <img width="600" src="http://www.fabiocrameri.ch/resources/ScientificColourMaps_FabioCrameriCompact.png">
+  <img src="http://www.fabiocrameri.ch/resources/ScientificColourMaps_FabioCrameri.png">
 </p>
