@@ -308,10 +308,9 @@ def estimate_velocity(date_list, dis_ts, model):
     G = timeseries.get_design_matrix4time_func(date_list, model)
 
     # least squares solver
-    # m = np.dot(np.linalg.pinv(G), dis_ts)
-    # The following is equivalent
-    # m = scipy.linalg.lstsq(G, dis_ts, cond=1e-15)[0]
-    # It is not used because it can not handle NaN value in dis_ts
+    # Opt. 1: m = np.linalg.pinv(G).dot(dis_ts)
+    # Opt. 2: m = scipy.linalg.lstsq(G, dis_ts, cond=1e-15)[0]
+    # Numpy is not used because it can not handle NaN value in dis_ts
     m, e2 = linalg.lstsq(G, dis_ts)[:2]
 
     return G, m, e2

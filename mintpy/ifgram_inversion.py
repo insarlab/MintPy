@@ -36,11 +36,12 @@ configKeys = ['obsDatasetName',
 
 ################################################################################################
 EXAMPLE = """example:
-  ifgram_inversion.py  inputs/ifgramStack.h5 -t smallbaselineApp.cfg --update
-  ifgram_inversion.py  inputs/ifgramStack.h5 -w no  # turn off weight for fast processing
-  ifgram_inversion.py. inputs/ifgramStack.h5 -c no  # turn off parallel processing
-  # invert offset stack
-  ifgram_inversion.py  inputs/ifgramStack.h5 -i azimuthOffset --water-mask waterMask.h5 --mask-dset offsetSNR --mask-threshold 5
+  ifgram_inversion.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg --update
+  ifgram_inversion.py inputs/ifgramStack.h5 -w no  # turn off weight for fast processing
+  ifgram_inversion.py inputs/ifgramStack.h5 -c no  # turn off parallel processing
+  # offset
+  ifgram_inversion.py inputs/ifgramStack.h5 -i rangeOffset   -w no -m waterMask.h5 --md offsetSNR --mt 5
+  ifgram_inversion.py inputs/ifgramStack.h5 -i azimuthOffset -w no -m waterMask.h5 --md offsetSNR --mt 5
 """
 
 TEMPLATE = get_template_content('invert_network')
@@ -77,8 +78,8 @@ def create_parser():
                         help='Skip inversion on the masked out region, i.e. water.')
 
     # options rarely used or changed
-    parser.add_argument('-o', '--output', dest='outfile', nargs=2, metavar=('TS_FILE', 'TCOH_FILE'),
-                        default=['timeseries.h5', 'temporalCoherence.h5', 'numInvIfgram.h5'],
+    parser.add_argument('-o', '--output', dest='outfile', nargs=3,
+                        metavar=('TS_FILE', 'TCOH_FILE', 'NUM_INV_FILE'),
                         help='Output file name. (default: %(default)s).')
     parser.add_argument('--ref-date', dest='ref_date', help='Reference date, first date by default.')
     parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',
@@ -101,11 +102,11 @@ def create_parser():
 
     # mask
     mask = parser.add_argument_group('mask', 'mask observation data before inversion')
-    mask.add_argument('--mask-dset', dest='maskDataset',
+    mask.add_argument('--mask-dset','--md', dest='maskDataset',
                       help='dataset used to mask unwrapPhase, e.g. coherence, connectComponent')
-    mask.add_argument('--mask-threshold', dest='maskThreshold', metavar='NUM', type=float, default=0.4,
+    mask.add_argument('--mask-threshold','--mt', dest='maskThreshold', metavar='NUM', type=float, default=0.4,
                       help='threshold to generate mask when mask is coherence (default: %(default)s).')
-    mask.add_argument('--min-redundancy', dest='minRedundancy', metavar='NUM', type=float, default=1.0,
+    mask.add_argument('--min-redundancy','--mr', dest='minRedundancy', metavar='NUM', type=float, default=1.0,
                       help='minimum redundancy of interferograms for every SAR acquisition. (default: %(default)s).')
 
     # computing
