@@ -446,20 +446,24 @@ class TimeSeriesAnalysis:
         mintpy.modify_network.main(iargs)
 
         # 3) plot network
+        iargs = [stack_file, '-t', self.templateFile, '--nodisplay']
+
+        dsNames = readfile.get_dataset_list(stack_file)
+        if any('phase' in i.lower() for i in dsNames):
+            iargs += ['-d', 'coherence', '-v', '0.2', '1.0']
+        elif any('offset' in i.lower() for i in dsNames):
+            iargs += ['-d', 'offsetSNR', '-v', '0', '20']
+
+        print('\nplot_network.py', ' '.join(iargs))
+
+        # run
         if self.template['mintpy.plot'] and plot:
-            iargs = [stack_file, '-t', self.templateFile, '--nodisplay']
-
-            dsNames = readfile.get_dataset_list(stack_file)
-            if any('phase' in i.lower() for i in dsNames):
-                iargs += ['-d', 'coherence', '-v', '0.2', '1.0']
-            elif any('offset' in i.lower() for i in dsNames):
-                iargs += ['-d', 'offsetSNR', '-v', '0', '20']
-
-            print('\nplot_network.py', ' '.join(iargs))
             if ut.run_or_skip(out_file=net_fig,
                               in_file=[stack_file, coh_txt, self.templateFile],
                               check_readable=False) == 'run':
                 mintpy.plot_network.main(iargs)
+        else:
+            print('mintpy.plot is turned OFF, skip plotting network.')
         return
 
 

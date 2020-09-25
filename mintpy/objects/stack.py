@@ -962,7 +962,7 @@ class ifgramStack:
         self.open(print_msg=False)
         if skip_reference:
             ref_phase = np.zeros(self.get_size(dropIfgram=dropIfgram)[0], np.float32)
-            print('skip checking reference pixel info - This is for SIMULATION ONLY.')
+            print('skip checking reference pixel info - This is for offset and testing ONLY.')
         elif 'REF_Y' not in self.metadata.keys():
             raise ValueError('No REF_X/Y found!\nrun reference_point.py to select reference pixel.')
         else:
