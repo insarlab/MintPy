@@ -636,7 +636,7 @@ def main(iargs=None):
         f.write(etree.tostring(kml_root, pretty_print=True).decode('utf-8'))
 
     ## Copy auxiliary files
-    res_dir = os.path.join(os.path.dirname(__file__), "resources")
+    res_dir = os.path.join(os.path.dirname(__file__), "data")
     for fname in [inps.star_file, inps.dot_file, inps.dygraph_file]:
         src_file = os.path.join(res_dir, os.path.basename(fname))
         shutil.copy2(src_file, inps.work_dir)

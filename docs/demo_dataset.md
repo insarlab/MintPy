@@ -10,7 +10,7 @@ Size: ~750 MB
 wget https://zenodo.org/record/3952953/files/FernandinaSenDT128.tar.xz
 tar -xvJf FernandinaSenDT128.tar.xz
 cd FernandinaSenDT128/mintpy
-smallbaselineApp.py ${MINTPY_HOME}/docs/examples/input_files/FernandinaSenDT128.txt     
+smallbaselineApp.py ${MINTPY_HOME}/mintpy/data/input_files/FernandinaSenDT128.txt     
 ```
 
 <p align="left">
@@ -31,7 +31,7 @@ Size: ~280 MB
 wget https://zenodo.org/record/3952950/files/WellsEnvD2T399.tar.xz
 tar -xvJf WellsEnvD2T399.tar.xz
 cd WellsEnvD2T399/mintpy
-smallbaselineApp.py ${MINTPY_HOME}/docs/examples/input_files/WellsEnvD2T399.txt
+smallbaselineApp.py ${MINTPY_HOME}/mintpy/data/input_files/WellsEnvD2T399.txt
 ```
 
 <p align="left">
@@ -52,7 +52,7 @@ Size: ~560 MB
 wget https://zenodo.org/record/4127335/files/WCapeSenAT29.tar.xz
 tar -xvJf WCapeSenAT29.tar.xz
 cd WCapeSenAT29
-smallbaselineApp.py ${MINTPY_HOME}/docs/examples/input_files/WCapeSenAT29.txt
+smallbaselineApp.py ${MINTPY_HOME}/mintpy/data/input_files/WCapeSenAT29.txt
 ```
 
 #### ALOS-1 on Kuju with ROI_PAC ####
@@ -65,7 +65,7 @@ Size: ~240 MB
 wget https://zenodo.org/record/3952917/files/KujuAlosAT422F650.tar.xz
 tar -xvJf KujuAlosAT422F650.tar.xz
 cd KujuAlosAT422F650/mintpy
-smallbaselineApp.py ${MINTPY_HOME}/docs/examples/input_files/KujuAlosAT422F650.txt     
+smallbaselineApp.py ${MINTPY_HOME}/mintpy/data/input_files/KujuAlosAT422F650.txt     
 ```
 
 <p align="left">
