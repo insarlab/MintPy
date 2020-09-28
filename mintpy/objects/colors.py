@@ -87,8 +87,8 @@ class ColormapExt(ScalarMappable):
         if cpt_dir:
             self.cpt_dirs.append(cpt_dir)
 
-        # add cpt files existed in $MINTPY/mintpy/resources/colormaps directory
-        self.cpt_dirs.append(os.path.join(os.path.dirname(__file__), '../resources/colormaps'))
+        # add cpt files existed in $MINTPY/mintpy/data/colormaps directory
+        self.cpt_dirs.append(os.path.join(os.path.dirname(__file__), '../data/colormaps'))
 
         # add cpt files if GMT is installed using MacPorts for macOS users
         gmt_cpt_dir = '/opt/local/share/gmt/cpt'

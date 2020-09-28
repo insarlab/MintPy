@@ -25,7 +25,7 @@ nav:
     - User Guide:
         - Example datasets: demo_dataset.md
         - Example directory structure: dir_structure.md
-        - Example template files: examples/input_files/README.md
+        - Example template files: ../mintpy/examples/input_files/README.md
         - Parallel processing with Dask: dask.md
         - Tutorials in Jupyter Notebook: https://github.com/insarlab/MintPy-tutorial
         - Frequently Asked Questions: FAQs.md

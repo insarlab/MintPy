@@ -39,6 +39,10 @@ def get_release_info(version='v1.2.3', date='2020-07-14'):
 ###########################################################################
 
 release_version, release_date = get_release_info()
+release_description = """MintPy release version {v}, release date {d}""".format(
+    v=release_version,
+    d=release_date,
+)
 
 # generate_from: http://patorjk.com/software/taag/
 logo = """
@@ -61,5 +65,5 @@ ___________________________________________________________
 
 website = 'https://github.com/insarlab/MintPy'
 
-description = """MintPy release version {v}, release date {d}""".format(v=release_version,
-                                                                        d=release_date)
+description = 'Miami INsar Time-series software in PYthon'
+

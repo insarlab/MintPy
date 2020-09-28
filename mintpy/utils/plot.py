@@ -165,7 +165,7 @@ def add_figure_argument(parser):
     # colormap
     fig.add_argument('-c', '--colormap', dest='colormap',
                      help='colormap used for display, i.e. jet, cmy, RdBu, hsv, jet_r, temperature, viridis, etc.\n'
-                          'More at https://mintpy.readthedocs.io/en/latest/resources/colormaps/')
+                          'More at https://mintpy.readthedocs.io/en/latest/api/colormaps/')
     fig.add_argument('--cm-lut','--cmap-lut', dest='cmap_lut', type=int, default=256, metavar='NUM',
                      help='number of increment of colormap lookup table (default: %(default)s).')
     fig.add_argument('--cm-vlist','--cmap-vlist', dest='cmap_vlist', type=float, nargs=3, default=[0.0, 0.7, 1.0],

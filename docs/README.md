@@ -1,4 +1,4 @@
-[![Language](https://img.shields.io/badge/python-3.5%2B-blue.svg)](https://www.python.org/)
+[![Language](https://img.shields.io/badge/python-3.6%2B-blue.svg)](https://www.python.org/)
 [![Docs Status](https://readthedocs.org/projects/mintpy/badge/?version=latest)](https://mintpy.readthedocs.io/?badge=latest)
 [![CircleCI](https://img.shields.io/circleci/build/github/insarlab/MintPy.svg?color=green&logo=circleci)](https://circleci.com/gh/insarlab/MintPy)
 [![Version](https://img.shields.io/badge/version-v1.2.3-yellowgreen.svg)](https://github.com/insarlab/MintPy/releases)
@@ -45,7 +45,7 @@ Configuration parameters for each step are initiated with default values in a cu
 wget https://zenodo.org/record/3952953/files/FernandinaSenDT128.tar.xz
 tar -xvJf FernandinaSenDT128.tar.xz
 cd FernandinaSenDT128/mintpy
-smallbaselineApp.py ${MINTPY_HOME}/docs/examples/input_files/FernandinaSenDT128.txt
+smallbaselineApp.py ${MINTPY_HOME}/mintpy/data/input_files/FernandinaSenDT128.txt
 ```
 
 <p align="left">
@@ -67,7 +67,7 @@ save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-se
 
 #### 2.2 Customized processing recipe ####
 
-MintPy is a toolbox with individual utility scripts. Simply run the script with `-h / --help` to see its usage, you could build your own customized processing recipe! [Here](../sh/compare_velocity_with_diff_tropo.sh) is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections.
+MintPy is a toolbox with individual utility scripts. Simply run the script with `-h / --help` to see its usage, you could build your own customized processing recipe! [Here](../mintpy/sh/compare_velocity_with_diff_tropo.sh) is an example to compare the velocities estimated from displacement time-series with different tropospheric delay corrections.
 
 #### 2.3 Build on top of `mintpy` module ####
 
@@ -84,7 +84,7 @@ Algorithms implemented in the software are described in details at [Yunjun et al
 
 + [Quick start with example datasets](./demo_dataset.md)
 + [Example data directory](./dir_structure.md)
-+ [Example template files for InSAR processors](./examples/input_files/README.md)
++ [Example template files for InSAR processors](./../mintpy/data/input_files/README.md)
 + [Tutorials in Jupyter Notebook](https://github.com/insarlab/MintPy-tutorial)
 
 ### 4. Contact us ###

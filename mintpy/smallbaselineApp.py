@@ -102,7 +102,7 @@ def cmd_line_parse(iargs=None):
 
     # -v (print software version)
     if inps.version:
-        print(mintpy.version.description)
+        print(mintpy.version.release_description)
         sys.exit(0)
 
     # check all input template files
@@ -166,7 +166,7 @@ def read_inps2run_steps(inps, step_list=STEP_LIST):
     if len(run_steps) > 0:
         # for single step - compact version info
         if len(run_steps) == 1:
-            print(mintpy.version.description)
+            print(mintpy.version.release_description)
         else:
             print(mintpy.version.logo)
 
@@ -235,7 +235,7 @@ class TimeSeriesAnalysis:
         self._read_template()
 
         # 4. Copy the plot shell file
-        sh_file = os.path.join(os.path.dirname(__file__), '../sh/plot_smallbaselineApp.sh')
+        sh_file = os.path.join(os.path.dirname(__file__), 'sh/plot_smallbaselineApp.sh')
 
         def grab_latest_update_date(fname, prefix='# Latest update:'):
             try:
