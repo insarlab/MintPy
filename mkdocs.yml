@@ -35,7 +35,7 @@ nav:
         - QGIS: QGIS.md
     - API Documentation:
         - Attributes: api/attributes.md
-        - Colormaps: resources/colormaps/README.md
+        - Colormaps: api/colormaps.md
         - Coordinates: api/coord.md
         - Data structure: api/data_structure.md
         - Docker: docker.md

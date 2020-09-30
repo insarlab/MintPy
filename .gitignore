@@ -14,5 +14,3 @@ mintpy/modis*
 mintpy/objects/solid/solid_f.*.so*
 setup.py
 site/
-test/unwrap_error_bridging/
-docs/deps.svg
