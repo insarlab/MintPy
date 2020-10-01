@@ -226,33 +226,10 @@ def read_geometry(inps):
     return inps
 
 
-def get_design_matrix4time_func(date_list, poly_order=2, step_func_dates=[]):
-    """get design matrix for temporal deformation model"""
-    # temporal baseline in the unit of years
-    tbase = ptime.date_list2tbase(date_list)[0]
-    tbase = np.array(tbase, dtype=np.float32) / 365.25
-
-    # 1. Polynomial - 2D matrix in size of (numDate, polyOrder+1)
-    A_def = np.ones((len(date_list), 1), np.float32)
-    for i in range(poly_order):
-        Ai = np.array(tbase**(i+1) / gamma(i+2), np.float32).reshape(-1, 1)
-        A_def = np.hstack((A_def, Ai))
-
-    # 2. Step function - 2D matrix in size of (numDate, len(step_func_dates))
-    if step_func_dates:
-        t_steps = ptime.yyyymmdd2years(step_func_dates)
-        t = np.array(ptime.yyyymmdd2years(date_list))
-        for t_step in t_steps:
-            Ai = np.array(t > t_step, np.float32).reshape(-1, 1)
-            A_def = np.hstack((A_def, Ai))
-
-    return A_def
-
-
-def estimate_dem_error(ts0, A0, tbase, drop_date=None, phaseVelocity=False, num_step=0):
+def estimate_dem_error(ts0, G0, tbase, drop_date=None, phaseVelocity=False, num_step=0):
     """Estimate DEM error with least square optimization.
     Parameters: ts0 : 2D np.array in size of (numDate, numPixel), original displacement time-series
-                A0  : 2D np.array in size of (numDate, model_num), design matrix in [A_geom, A_def]
+                G0  : 2D np.array in size of (numDate, model_num), design matrix in [G_geom, G_defo]
                 tbase : 2D np.array in size of (numDate, 1), temporal baseline
                 drop_date : 1D np.array in bool data type, mark the date used in the estimation
                 phaseVelocity : bool, use phase history or phase velocity for minimization
@@ -261,31 +238,31 @@ def estimate_dem_error(ts0, A0, tbase, drop_date=None, phaseVelocity=False, num_
                             corrected timeseries = tsOrig - delta_z_phase
                 ts_res : 2D np.array in size of (numDate, numPixel),
                             residual timeseries = tsOrig - delta_z_phase - defModel
-    Example:    delta_z, ts_cor, ts_res = estimate_dem_error(ts, A, tbase, drop_date)
+    Example:    delta_z, ts_cor, ts_res = estimate_dem_error(ts, G, tbase, drop_date)
     """
     if len(ts0.shape) == 1:
         ts0 = ts0.reshape(-1, 1)
     if drop_date is None:
         drop_date = np.ones(ts0.shape[0], np.bool_)
 
-    # Prepare Design matrix A and observations ts for inversion
-    A = A0[drop_date, :]
+    # Prepare Design matrix G and observations ts for inversion
+    G = G0[drop_date, :]
     ts = ts0[drop_date, :]
     if phaseVelocity:
         tbase = tbase[drop_date, :]
-        A = np.diff(A, axis=0) / np.diff(tbase, axis=0)
+        G = np.diff(G, axis=0) / np.diff(tbase, axis=0)
         ts = np.diff(ts, axis=0) / np.diff(tbase, axis=0)
 
     # Inverse using L-2 norm to get unknown parameters X
     # X = [delta_z, constC, vel, acc, deltaAcc, ..., step1, step2, ...]
-    # equivalent to X = np.dot(np.dot(np.linalg.inv(np.dot(A.T, A)), A.T), ts)
-    #               X = np.dot(np.linalg.pinv(A), ts)
-    X = linalg.lstsq(A, ts, cond=1e-15)[0]
+    # equivalent to X = np.dot(np.dot(np.linalg.inv(np.dot(G.T, G)), G.T), ts)
+    #               X = np.dot(np.linalg.pinv(G), ts)
+    X = linalg.lstsq(G, ts, cond=1e-15)[0]
 
     # Prepare Outputs
     delta_z = X[0, :]
-    ts_cor = ts0 - np.dot(A0[:, 0].reshape(-1, 1), delta_z.reshape(1, -1))
-    ts_res = ts0 - np.dot(A0, X)
+    ts_cor = ts0 - np.dot(G0[:, 0].reshape(-1, 1), delta_z.reshape(1, -1))
+    ts_res = ts0 - np.dot(G0, X)
 
     step_def = None
     if num_step > 0:
@@ -308,7 +285,7 @@ def estimate_dem_error(ts0, A0, tbase, drop_date=None, phaseVelocity=False, num_
     return delta_z, ts_cor, ts_res, step_def
 
 
-def correct_dem_error(inps, A_def):
+def correct_dem_error(inps, G_defo):
     """Correct DEM error of input timeseries file"""
     # Read Date Info
     ts_obj = timeseries(inps.timeseries_file)
@@ -348,14 +325,14 @@ def correct_dem_error(inps, A_def):
         del tcoh
 
     if inps.rangeDist.size == 1:
-        A_geom = inps.pbase / (inps.rangeDist * inps.sinIncAngle)
-        A = np.hstack((A_geom, A_def))
+        G_geom = inps.pbase / (inps.rangeDist * inps.sinIncAngle)
+        G = np.hstack((G_geom, G_defo))
 
         ts_data = ts_data[:, mask]
         (delta_z_i,
          ts_cor_i,
          ts_res_i,
-         step_model_i) = estimate_dem_error(ts_data, A,
+         step_model_i) = estimate_dem_error(ts_data, G,
                                             tbase=tbase,
                                             drop_date=drop_date,
                                             phaseVelocity=inps.phaseVelocity,
@@ -397,13 +374,13 @@ def correct_dem_error(inps, A_def):
                 pbase = inps.pbase
             else:
                 pbase = inps.pbase[:, i].reshape(-1, 1)
-            A_geom = pbase / (inps.rangeDist[i] * inps.sinIncAngle[i])
-            A = np.hstack((A_geom, A_def))
+            G_geom = pbase / (inps.rangeDist[i] * inps.sinIncAngle[i])
+            G = np.hstack((G_geom, G_defo))
 
             (delta_z_i,
              ts_cor_i,
              ts_res_i,
-             step_model_i) = estimate_dem_error(ts_data[:, i], A,
+             step_model_i) = estimate_dem_error(ts_data[:, i], G,
                                                 tbase=tbase,
                                                 drop_date=drop_date,
                                                 phaseVelocity=inps.phaseVelocity,
@@ -469,7 +446,7 @@ def main(iargs=None):
     start_time = time.time()
     inps = read_geometry(inps)
 
-    ## model setup info
+    # key msg
     msg = '-'*80
     msg += '\ncorrect topographic phase residual (DEM error) (Fattahi & Amelung, 2013, IEEE-TGRS)'
     msg += '\nordinal least squares (OLS) inversion with L2-norm minimization on: phase'
@@ -483,11 +460,14 @@ def main(iargs=None):
     msg += '\n'+'-'*80
     print(msg)
 
-    A_def = get_design_matrix4time_func(date_list=timeseries(inps.timeseries_file).get_date_list(),
-                                        poly_order=inps.polyOrder,
-                                        step_func_dates=inps.stepFuncDate)
+    # get design matrix for temporal deformation model
+    model = dict()
+    model['polynomial'] = inps.polyOrder
+    model['step'] = inps.stepFuncDate
+    date_list = timeseries(inps.timeseries_file).get_date_list()
+    G_defo = timeseries.get_design_matrix4time_func(date_list, model)
 
-    inps = correct_dem_error(inps, A_def)
+    inps = correct_dem_error(inps, G_defo)
 
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
