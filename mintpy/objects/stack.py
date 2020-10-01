@@ -481,13 +481,19 @@ class timeseries:
 
         def get_design_matrix4polynomial_func(yr_diff, degree):
             """design matrix/function model of linear/polynomial velocity estimation
+
+            The k! denominator makes the estimated polynomial coefficient (c_k) physically meaningful:
+                k=1 makes c_1 the velocity;
+                k=2 makes c_2 the acceleration;
+                k=3 makes c_3 the acceleration rate;
+
             Parameters: yr_diff: time difference from refDate in decimal years
                         degree : polynomial models: 1=linear, 2=quadratic, 3=cubic, etc.
             Returns:    A      : 2D array of poly-coeff. in size of (num_date, degree+1)
             """
             A = np.zeros([len(yr_diff), degree + 1], dtype=np.float32)
             for i in range(degree+1):
-                A[:,i] = yr_diff**i
+                A[:,i] = (yr_diff**i) / np.math.factorial(i)
 
             return A
 
