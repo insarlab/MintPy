@@ -487,7 +487,7 @@ class timeseries:
             """
             A = np.zeros([len(yr_diff), degree + 1], dtype=np.float32)
             for i in range(degree+1):
-                A[:,i] = yr_diff**i
+                A[:,i] = (yr_diff**i) / np.math.factorial(i)
 
             return A
 
