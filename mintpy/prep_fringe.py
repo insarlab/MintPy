@@ -138,7 +138,7 @@ def prepare_metadata(meta_file, geom_src_dir, box=None):
 
     # add LAT/LON_REF1/2/3/4, HEADING, A/RLOOKS
     meta = isce_utils.extract_geometry_metadata(geom_src_dir,
-                                                metadata=meta,
+                                                meta=meta,
                                                 box=box,
                                                 fext_list=[geom_ext])
 
