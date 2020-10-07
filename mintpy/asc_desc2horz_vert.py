@@ -25,16 +25,15 @@ EXAMPLE = """example:
   cd AlosAT424/mintpy
   mask.py velocity.h5 -m maskTempCoh.h5
   geocode.py velocity_msk.h5 -l inputs/geometryRadar.h5 -x 0.00027778 -y -0.00027778 --bbox 32.0 32.5 130.1 130.5
-
   cd AlosDT73/mintpy
   mask.py velocity.h5 -m maskTempCoh.h5
   geocode.py velocity_msk.h5 -l inputs/geometryRadar.h5 -x 0.00027778 -y -0.00027778 --bbox 32.0 32.5 130.1 130.5
-
   asc_desc2horz_vert.py AlosAT424/mintpy/geo_velocity_msk.h5 AlosDT73/mintpy/geo_velocity_msk.h5
 
   # write horz/vert to two files
   asc_desc2horz_vert.py AlosAT424/mintpy/velocity_msk.h5 AlosDT73/mintpy/velocity_msk.h5
   asc_desc2horz_vert.py AlosAT424/mintpy/velocity_msk.h5 AlosDT73/mintpy/velocity_msk.h5  --azimuth 16
+  asc_desc2horz_vert.py AlosAT424/mintpy/velocity_msk.h5 AlosDT73/mintpy/velocity_msk.h5  --dset step20200107
 
   # write all asc/desc/horz/vert datasets into one file
   asc_desc2horz_vert.py Alos2AT131/mintpy/20171219_20190702.unw Alos2DT23/mintpy/20171211_20190819.unw --output-one Kirishima2017post.h5
@@ -50,6 +49,7 @@ def create_parser():
     parser.add_argument('file', nargs=2,
                         help='ascending and descending files\n' +
                              'Both files need to be geocoded in the same spatial resolution.')
+    parser.add_argument('-d', '--dset', dest='dsname', type=str, help='dataset to use, default: 1st dataset')
     parser.add_argument('--azimuth', '--az', dest='azimuth', type=float, default=90.0,
                         help='azimuth angle in degree (clockwise) of the direction of the horizontal movement\n' +
                              'default is 90.0 for E-W component, assuming no N-S displacement.\n' +
@@ -164,18 +164,19 @@ def get_design_matrix(atr1, atr2, az_angle=90):
     return A
 
 
-def asc_desc2horz_vert(fname1, fname2):
+def asc_desc2horz_vert(fname1, fname2, dsname=None):
     """Decompose asc / desc LOS data into horz / vert data.
     Parameters: fname1/2 : str, LOS data
     Returns:    dH/dV    : 2D matrix
                 atr      : dict, metadata with updated size and resolution.
     """
+    print('---------------------')
     fnames = [fname1, fname2]
     # 1. Extract the common area of two input files
     # Basic info
     atr_list = []
     for fname in fnames:
-        atr_list.append(readfile.read_attribute(fname))
+        atr_list.append(readfile.read_attribute(fname, datasetName=dsname))
 
     # Common AOI in lalo
     west, east, south, north = get_overlap_lalo(atr_list[0], atr_list[1])
@@ -183,20 +184,28 @@ def asc_desc2horz_vert(fname1, fname2):
     lat_step = float(atr_list[0]['Y_STEP'])
     width = int(round((east - west) / lon_step))
     length = int(round((south - north) / lat_step))
+    print('common area in SNWE: {}'.format((south, north, west, east)))
 
     # 2. Read data in common AOI: LOS displacement, heading angle, incident angle
-    print('---------------------')
     dLOS = np.zeros((2, width*length), dtype=np.float32)
     for i in range(len(fnames)):
         fname = fnames[i]
-        print('reading '+fname)
-        atr = readfile.read_attribute(fname)
+        atr = readfile.read_attribute(fname, datasetName=dsname)
 
         # get box2read for the current file
         coord = ut.coordinate(atr)
         [x0, x1] = coord.lalo2yx([west, east], coord_type='lon')
         [y0, y1] = coord.lalo2yx([north, south], coord_type='lat')
-        dLOS[i, :] = readfile.read(fname, box=(x0, y0, x0 + width, y0 + length))[0].flatten()
+        box = (x0, y0, x0 + width, y0 + length)
+
+        dLOS[i, :] = readfile.read(fname, box=box, datasetName=dsname)[0].flatten()
+
+        # msg
+        msg = 'read '
+        if dsname:
+            msg += '{} '.format(dsname)
+        msg += 'from file: {}'.format(fname)
+        print(msg)
 
     # 3. Project displacement from LOS to Horizontal and Vertical components
     print('---------------------')
@@ -209,6 +218,9 @@ def asc_desc2horz_vert(fname1, fname2):
 
     # 4. Update Attributes
     atr = atr_list[0].copy()
+    if dsname:
+        atr['FILE_TYPE'] = dsname
+
     atr['WIDTH'] = str(width)
     atr['LENGTH'] = str(length)
     atr['X_FIRST'] = str(west)
@@ -257,11 +269,12 @@ def write_to_one_file(outfile, dH, dV, atr, dLOS, atr_list, ref_file=None):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    dH, dV, atr, dLOS, atr_list = asc_desc2horz_vert(inps.file[0], inps.file[1])
+    dH, dV, atr, dLOS, atr_list = asc_desc2horz_vert(inps.file[0], inps.file[1], dsname=inps.dsname)
 
     print('---------------------')
     if inps.one_outfile:
         write_to_one_file(inps.one_outfile, dH, dV, atr, dLOS, atr_list, ref_file=inps.ref_file)
+
     else:
         print('writing horizontal component to file: '+inps.outfile[0])
         writefile.write(dH, out_file=inps.outfile[0], metadata=atr, ref_file=inps.ref_file)
