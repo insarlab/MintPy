@@ -25,9 +25,10 @@ from mintpy.subset import read_subset_template2box
 
 ####################################################################################
 EXAMPLE = """example:
-  prep_aria.py -t SanFranSenDT42.txt --update
-  prep_aria.py -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/*.vrt
-  prep_aria.py -s stack/ -d DEM/SRTM_3arcsec.dem -i incidenceAngle/*.vrt  -a azimuthAngle/*.vrt --water-mask mask/watermask.msk
+  prep_aria.py -t smallbaselineApp.cfg    # recommended
+  prep_aria.py -t SanFranSenDT42.txt 
+  prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i ../incidenceAngle/*.vrt
+  prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i ../incidenceAngle/*.vrt -a ../azimuthAngle/*.vrt -w ../mask/watermask.msk
 
   # before above, one should run ARIA-tools to download / extract / prepare inteferograms stack.
   # reference: https://github.com/aria-tools/ARIA-tools
@@ -101,7 +102,7 @@ def create_parser():
                       help='Name of the incidence angle file')
     geom.add_argument('-a','--az-angle','--azimuth-angle', dest='azAngleFile', type=str,
                       help='Name of the azimuth angle file.')
-    geom.add_argument('--water-mask', dest='waterMaskFile', type=str,
+    geom.add_argument('-w','--water-mask', dest='waterMaskFile', type=str,
                       help='Name of the water mask file')
     return parser
 
@@ -234,24 +235,26 @@ def read_subset_box(template_file, meta):
 
     Parameters: template_file - str, path of template file
                 meta          - dict, metadata
-    Returns:    pix_box       - tuple of 4 int in (x0, y0, x1, y1) or None
+    Returns:    pix_box       - tuple of 4 int in (x0, y0, x1, y1)
     """
 
-    pix_box = None
+    if template_file and os.path.isfile(template_file):
 
-    # read subset info from template file
-    pix_box, geo_box = read_subset_template2box(template_file)
+        # read subset info from template file
+        pix_box, geo_box = read_subset_template2box(template_file)
 
-    # geo_box --> pix_box
-    if geo_box is not None:
-        coord = ut.coordinate(meta)
-        pix_box = coord.bbox_geo2radar(geo_box)
-        pix_box = coord.check_box_within_data_coverage(pix_box)
-        print('input bounding box in lalo: {}'.format(geo_box))
+        # geo_box --> pix_box
+        if geo_box is not None:
+            coord = ut.coordinate(meta)
+            pix_box = coord.bbox_geo2radar(geo_box)
+            pix_box = coord.check_box_within_data_coverage(pix_box)
+            print('input bounding box in lalo: {}'.format(geo_box))
+
+    else:
+        pix_box = None
 
     if pix_box is not None:
         print('input bounding box in yx: {}'.format(pix_box))
-
     else:
         length, width = int(meta['LENGTH']), int(meta['WIDTH'])
         pix_box = (0, 0, width, length)
