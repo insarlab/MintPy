@@ -190,7 +190,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
 
 #########################################################################
 
-def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, print_msg=True):
+def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, compression=None, print_msg=True):
     """Create HDF5 file with defined metadata and (empty) dataset structure
 
     Parameters: fname        - str, HDF5 file path
@@ -201,6 +201,8 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, print_ms
                                 ...
                                }
                 metadata     - dict, metadata
+                ref_file     - str, reference file for the data structure
+                compression  - str, HDF5 compression type
     Returns:    fname        - str, HDF5 file path
 
     Example:    layout_hdf5('timeseries_ERA5.h5', ref_file='timeseries.h5')
@@ -272,15 +274,14 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, print_ms
         print('create HDF5 file {} with w mode'.format(fname))
 
     # initiate dataset
+    max_digit = max([len(i) for i in ds_name_dict.keys()])
     for key in ds_name_dict.keys():
         data_type  = ds_name_dict[key][0]
         data_shape = ds_name_dict[key][1]
 
-        # turn ON compression
+        # turn ON compression for conn comp
         if key in ['connectComponent']:
             compression = 'lzf'
-        else:
-            compression = None
 
         # changable dataset shape
         if len(data_shape) == 3:
@@ -290,9 +291,12 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, print_ms
 
         # create empty dataset
         if print_msg:
-            print("create dataset: {d:<25} of {t:<25} in size of {s}".format(d=key,
-                                                                             t=str(data_type),
-                                                                             s=data_shape))
+            print(("create dataset: {d:<{w}} of {t:<25} in size of {s} with "
+                   "compression = {c}").format(d=key,
+                                               w=max_digit,
+                                               t=str(data_type),
+                                               s=data_shape,
+                                               c=compression))
         ds = f.create_dataset(key,
                               shape=data_shape,
                               maxshape=max_shape,

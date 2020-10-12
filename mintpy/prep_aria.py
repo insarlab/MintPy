@@ -8,16 +8,19 @@
 
 import os
 import time
+import glob
 import argparse
 import h5py
 import numpy as np
-import glob
-from mintpy.objects import ifgramStack, geometry, sensor
-from mintpy.utils import ptime, readfile, writefile, utils as ut
+
 try:
     from osgeo import gdal
 except ImportError:
     raise ImportError('Can not import gdal [version>=3.0]!')
+
+from mintpy.objects import ifgramStack, geometry, sensor
+from mintpy.utils import ptime, readfile, writefile, utils as ut
+from mintpy.subset import read_subset_template2box
 
 
 ####################################################################################
@@ -49,6 +52,10 @@ TEMPLATE = """template options:
   mintpy.load.incAngleFile   = ../incidenceAngle/*.vrt
   mintpy.load.azAngleFile    = ../azimuthAngle/*.vrt
   mintpy.load.waterMaskFile  = ../mask/watermask.msk
+  ##---------subset (optional):
+  ## if both yx and lalo are specified, use lalo option
+  mintpy.subset.yx           = auto    #[y0:y1,x0:x1 / no], auto for no
+  mintpy.subset.lalo         = auto    #[lat0:lat1,lon0:lon1 / no], auto for no
 """
 
 
@@ -60,12 +67,14 @@ def create_parser():
 
     parser.add_argument('-t','--template', dest='template_file', type=str,
                         help='template file with the options')
-    parser.add_argument('--update', dest='updateMode', action='store_true',
-                        help='Enable the update mode: checking dataset already loaded.')
     parser.add_argument('-o', '--output', type=str, nargs=2, dest='outfile',
                         default=['./inputs/ifgramStack.h5',
                                  './inputs/geometryGeo.h5'],
                         help='output HDF5 file')
+    parser.add_argument('--update', dest='updateMode', action='store_true',
+                        help='Enable the update mode: checking dataset already loaded.')
+    parser.add_argument('--compression', choices={'gzip', 'lzf', None}, default=None,
+                        help='HDF5 file compression, default: %(default)s')
 
     # ifgramStack
     stack = parser.add_argument_group('interferogram stack')
@@ -150,11 +159,14 @@ def read_template2inps(template_file, inps=None):
     template = readfile.read_template(template_file)
     template = ut.check_template_auto_value(template)
 
+    # pass options from template to inps
     key_prefix = 'mintpy.load.'
     keys = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
     for key in keys:
         value = template[key_prefix+key]
-        if value:
+        if key in ['updateMode', 'compression']:
+            iDict[key] = value
+        elif value:
             iDict[key] = str(value)
 
     return inps
@@ -172,40 +184,79 @@ def run_or_skip(inps, dsNameDict, out_file):
         return flag
 
     # check 3 - output dataset info
-    in_size = (inps.length, inps.width)
+    key = [i for i in ['unwrapPhase', 'height'] if i in dsNameDict.keys()][0]
+    ds_shape = dsNameDict[key][1]
+    in_shape = ds_shape[-2:]
 
     if 'unwrapPhase' in dsNameDict.keys():
         # compare date12 and size
         ds = gdal.Open(inps.unwFile, gdal.GA_ReadOnly)
         in_date12_list = [ds.GetRasterBand(i+1).GetMetadata("unwrappedPhase")['Dates']
-                          for i in range(inps.num_pair)]
+                          for i in range(ds_shape[0])]
         in_date12_list = ['_'.join(d.split('_')[::-1]) for d in in_date12_list]
 
-        out_obj = ifgramStack(out_file)
-        out_obj.open(print_msg=False)
-        out_size = (out_obj.length, out_obj.width)
-        out_date12_list = out_obj.get_date12_list(dropIfgram=False)
+        try:
+            out_obj = ifgramStack(out_file)
+            out_obj.open(print_msg=False)
+            out_shape = (out_obj.length, out_obj.width)
+            out_date12_list = out_obj.get_date12_list(dropIfgram=False)
 
-        if out_size == in_size and set(in_date12_list).issubset(set(out_date12_list)):
-            print(('All date12   exists in file {} with same size as required,'
-                   ' no need to re-load.'.format(os.path.basename(out_file))))
-            flag = 'skip'
+            if out_shape == in_shape and set(in_date12_list).issubset(set(out_date12_list)):
+                print(('All date12   exists in file {} with same size as required,'
+                       ' no need to re-load.'.format(os.path.basename(out_file))))
+                flag = 'skip'
+        except:
+            pass
 
     elif 'height' in dsNameDict.keys():
         # compare dataset names and size
         in_dsNames = list(dsNameDict.keys())
+        in_size = in_shape[0] * in_shape[1] * 4 * len(in_dsNames)
 
         out_obj = geometry(out_file)
         out_obj.open(print_msg=False)
-        out_size = (out_obj.length, out_obj.width)
         out_dsNames = out_obj.datasetNames
+        out_shape = (out_obj.length, out_obj.width)
+        out_size = os.path.getsize(out_file)
 
-        if out_size == in_size and set(in_dsNames).issubset(set(out_dsNames)):
+        if (set(in_dsNames).issubset(set(out_dsNames)) 
+                and out_shape == in_shape 
+                and out_size > in_size * 0.3):
             print(('All datasets exists in file {} with same size as required,'
                    ' no need to re-load.'.format(os.path.basename(out_file))))
             flag = 'skip'
 
     return flag
+
+
+def read_subset_box(template_file, meta):
+    """Read subset info from template file
+
+    Parameters: template_file - str, path of template file
+                meta          - dict, metadata
+    Returns:    pix_box       - tuple of 4 int in (x0, y0, x1, y1) or None
+    """
+
+    pix_box = None
+
+    # read subset info from template file
+    pix_box, geo_box = read_subset_template2box(template_file)
+
+    # geo_box --> pix_box
+    if geo_box is not None:
+        coord = ut.coordinate(meta)
+        pix_box = coord.bbox_geo2radar(geo_box)
+        pix_box = coord.check_box_within_data_coverage(pix_box)
+        print('input bounding box in lalo: {}'.format(geo_box))
+
+    if pix_box is not None:
+        print('input bounding box in yx: {}'.format(pix_box))
+
+    else:
+        length, width = int(meta['LENGTH']), int(meta['WIDTH'])
+        pix_box = (0, 0, width, length)
+
+    return pix_box
 
 
 ####################################################################################
@@ -301,14 +352,26 @@ def extract_metadata(stack):
     return meta
 
 
-def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFile=None):
+def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFile=None, box=None):
+    """Write geometry HDF5 file from list of VRT files."""
+
     print('-'*50)
+    # box to gdal arguments
+    # link: https://gdal.org/python/osgeo.gdal.Dataset-class.html#ReadAsArray
+    if box is not None:
+        kwargs = dict(xoff=box[0],
+                      yoff=box[1],
+                      xsize=box[2]-box[0],
+                      ysize=box[3]-box[1])
+    else:
+        kwargs = dict()
+
     print('writing data to HDF5 file {} with a mode ...'.format(outfile))
     h5 = h5py.File(outfile, 'a')
 
     # height
     ds = gdal.Open(demFile, gdal.GA_ReadOnly)
-    data = np.array(ds.ReadAsArray(), dtype=np.float32)
+    data = np.array(ds.ReadAsArray(**kwargs), dtype=np.float32)
     data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
     h5['height'][:,:] = data
 
@@ -317,14 +380,14 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
 
     # incidenceAngle
     ds = gdal.Open(incAngleFile, gdal.GA_ReadOnly)
-    data = ds.ReadAsArray()
+    data = ds.ReadAsArray(**kwargs)
     data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
     h5['incidenceAngle'][:,:] = data
 
     # azimuthAngle
     if azAngleFile is not None:
         ds = gdal.Open(azAngleFile, gdal.GA_ReadOnly)
-        data = ds.ReadAsArray()
+        data = ds.ReadAsArray(**kwargs)
         data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
         # azimuth angle of the line-of-sight vector:
         # ARIA: vector from target to sensor measured from the east  in counterclockwise direction
@@ -336,12 +399,12 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
     # waterMask
     if waterMaskFile is not None:
         ds = gdal.Open(waterMaskFile, gdal.GA_ReadOnly)
-        water_mask = ds.ReadAsArray()
+        water_mask = ds.ReadAsArray(**kwargs)
         water_mask[water_mask == ds.GetRasterBand(1).GetNoDataValue()] = False
 
         # assign False to invalid pixels based on incAngle data
         ds = gdal.Open(incAngleFile, gdal.GA_ReadOnly)
-        data = ds.ReadAsArray()
+        data = ds.ReadAsArray(**kwargs)
         water_mask[data == ds.GetRasterBand(1).GetNoDataValue()] = False
         h5['waterMask'][:,:] = water_mask
 
@@ -350,7 +413,9 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
     return outfile
 
 
-def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack):
+def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, box=None):
+    """Write ifgramStack HDF5 file from stack VRT files
+    """
 
     print('-'*50)
     print('opening {}, {}, {} with gdal ...'.format(os.path.basename(unwStack),
@@ -384,6 +449,17 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack):
         d12 = '{}_{}'.format(d12[0], d12[1])
         d12BandDict[d12] = ii+1
     d12List = sorted(d12BandDict.keys())
+    print('number of interferograms: {}'.format(len(d12List)))
+
+    # box to gdal arguments
+    # link: https://gdal.org/python/osgeo.gdal.Band-class.html#ReadAsArray
+    if box is not None:
+        kwargs = dict(xoff=box[0],
+                      yoff=box[1],
+                      win_xsize=box[2]-box[0],
+                      win_ysize=box[3]-box[1])
+    else:
+        kwargs = dict()
 
     print('writing data to HDF5 file {} with a mode ...'.format(outfile))
     h5 = h5py.File(outfile, "a")
@@ -399,7 +475,7 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack):
         h5["dropIfgram"][ii] = True
 
         bnd = dsUnw.GetRasterBand(bndIdx)
-        data = bnd.ReadAsArray()
+        data = bnd.ReadAsArray(**kwargs)
         data[data == noDataValueUnw] = 0      #assign pixel with no-data to 0
         h5["unwrapPhase"][ii,:,:] = -1.0*data #date2_date1 -> date1_date2
 
@@ -407,12 +483,12 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack):
         h5["bperp"][ii] = -1.0*bperp          #date2_date1 -> date1_date2
 
         bnd = dsCoh.GetRasterBand(bndIdx)
-        data = bnd.ReadAsArray()
+        data = bnd.ReadAsArray(**kwargs)
         data[data == noDataValueCoh] = 0      #assign pixel with no-data to 0
         h5["coherence"][ii,:,:] = data
 
         bnd = dsComp.GetRasterBand(bndIdx)
-        data = bnd.ReadAsArray()
+        data = bnd.ReadAsArray(**kwargs)
         data[data == noDataValueComp] = 0     #assign pixel with no-data to 0
         h5["connectComponent"][ii,:,:] = data
 
@@ -440,60 +516,67 @@ def main(iargs=None):
 
     # extract metadata
     meta = extract_metadata(inps.unwFile)
-    inps.length = meta["LENGTH"]
-    inps.width = meta["WIDTH"]
-    inps.num_pair = meta["NUMBER_OF_PAIRS"]
+    box = read_subset_box(inps.template_file, meta)
+    meta["LENGTH"] = box[3] - box[1]
+    meta["WIDTH"] = box[2] - box[0]
+
+    length = int(meta["LENGTH"])
+    width = int(meta["WIDTH"])
+    num_pair = meta["NUMBER_OF_PAIRS"]
 
     # prepare output directory
     out_dir = os.path.dirname(inps.outfile[0])
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
+    os.makedirs(out_dir, exist_ok=True)
 
     ########## output file 1 - ifgramStack
     # define dataset structure for ifgramStack
     dsNameDict = {
-        "date"             : (np.dtype('S8'), (inps.num_pair, 2)),
-        "dropIfgram"       : (np.bool_,       (inps.num_pair,)),
-        "bperp"            : (np.float32,     (inps.num_pair,)),
-        "unwrapPhase"      : (np.float32,     (inps.num_pair, inps.length, inps.width)),
-        "coherence"        : (np.float32,     (inps.num_pair, inps.length, inps.width)),
-        "connectComponent" : (np.int16,       (inps.num_pair, inps.length, inps.width)),
+        "date"             : (np.dtype('S8'), (num_pair, 2)),
+        "dropIfgram"       : (np.bool_,       (num_pair,)),
+        "bperp"            : (np.float32,     (num_pair,)),
+        "unwrapPhase"      : (np.float32,     (num_pair, length, width)),
+        "coherence"        : (np.float32,     (num_pair, length, width)),
+        "connectComponent" : (np.int16,       (num_pair, length, width)),
     }
 
     if run_or_skip(inps, dsNameDict, out_file=inps.outfile[0]) == 'run':
         # initiate h5 file with defined structure
         meta['FILE_TYPE'] = 'ifgramStack'
-        writefile.layout_hdf5(inps.outfile[0], dsNameDict, meta)
+        writefile.layout_hdf5(inps.outfile[0], dsNameDict, meta,
+                              compression=inps.compression)
 
         # write data to h5 file in disk
         write_ifgram_stack(inps.outfile[0],
                            inps.unwFile,
                            inps.corFile,
-                           inps.connCompFile)
+                           inps.connCompFile,
+                           box=box)
 
     ########## output file 2 - geometryGeo
     # define dataset structure for geometry
     dsNameDict = {
-        "height"             : (np.float32, (inps.length, inps.width)),
-        "incidenceAngle"     : (np.float32, (inps.length, inps.width)),
-        "slantRangeDistance" : (np.float32, (inps.length, inps.width)),
+        "height"             : (np.float32, (length, width)),
+        "incidenceAngle"     : (np.float32, (length, width)),
+        "slantRangeDistance" : (np.float32, (length, width)),
     }
     if inps.azAngleFile is not None:
-        dsNameDict["azimuthAngle"] = (np.float32, (inps.length, inps.width))
+        dsNameDict["azimuthAngle"] = (np.float32, (length, width))
     if inps.waterMaskFile is not None:
-        dsNameDict["waterMask"]    = (np.bool_,   (inps.length, inps.width))
+        dsNameDict["waterMask"]    = (np.bool_,   (length, width))
 
     if run_or_skip(inps, dsNameDict, out_file=inps.outfile[1]) == 'run':
         # initiate h5 file with defined structure
         meta['FILE_TYPE'] = 'geometry'
-        writefile.layout_hdf5(inps.outfile[1], dsNameDict, meta)
+        writefile.layout_hdf5(inps.outfile[1], dsNameDict, meta,
+                              compression=inps.compression)
 
         # write data to disk
         write_geometry(inps.outfile[1],
                        demFile=inps.demFile,
                        incAngleFile=inps.incAngleFile,
                        azAngleFile=inps.azAngleFile,
-                       waterMaskFile=inps.waterMaskFile)
+                       waterMaskFile=inps.waterMaskFile,
+                       box=box)
 
     print('-'*50)
     return inps.outfile

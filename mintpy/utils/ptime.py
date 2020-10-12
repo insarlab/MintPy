@@ -50,7 +50,7 @@ def get_date_str_format(date_str):
         date_str_format = '%y%m%d'
 
     else:
-        raise ValueError('un-recognized date string format!')
+        raise ValueError('un-recognized date string format for "{}"!'.format(date_str))
 
     return date_str_format
 
