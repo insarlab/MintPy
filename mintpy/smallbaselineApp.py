@@ -345,7 +345,7 @@ class TimeSeriesAnalysis:
         stack_processor = self.template['mintpy.load.processor'].lower()
         if stack_processor == 'aria':
             from mintpy import prep_aria
-            iargs = ['--template', self.templateFile, '--update']
+            iargs = ['--template', self.templateFile]
             prep_aria.main(iargs)
 
         else:
