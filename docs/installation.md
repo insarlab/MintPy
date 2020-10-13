@@ -70,19 +70,19 @@ chmod +x Miniconda3-latest-MacOSX-x86_64.sh
 
 You may need to close and restart the shell for changes to take effect.
 
-Run the following in your terminal to install the dependencies to a new environment _mintpy_ (recommended):
+Run the following in your terminal to install the dependencies to a new environment _**mintpy**_ (recommended):
 
 ```
-$CONDA_PREFIX/bin/conda env create -f $MINTPY_HOME/docs/conda_env.yml
-$CONDA_PREFIX/bin/conda activate mintpy
+conda env create -f $MINTPY_HOME/docs/conda_env.yml
+conda activate mintpy
 ```
 
-Or run the following in your terminal to install the dependencies to the default environment _base_:
+Or run the following in your terminal to install the dependencies to the default environment _**base**_:
 
 ```
 # install dependencies with conda
-$CONDA_PREFIX/bin/conda config --add channels conda-forge
-$CONDA_PREFIX/bin/conda install --yes --file $MINTPY_HOME/docs/conda.txt
+conda config --add channels conda-forge
+conda install --yes --file $MINTPY_HOME/docs/conda.txt
 $CONDA_PREFIX/bin/pip install git+https://github.com/tylere/pykml.git
 ```
 
