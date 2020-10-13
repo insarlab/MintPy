@@ -12,6 +12,7 @@ matplotlib
 netcdf4
 numpy
 openmp
+pip
 pygrib
 pyhdf
 pykdtree
