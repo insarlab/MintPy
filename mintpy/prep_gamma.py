@@ -334,11 +334,18 @@ def extract_metadata4geometry_radar(fname):
     except:
         m_date = str(re.findall('\d{6}', fname_base)[0])
 
-    # search existing par file
-    geom_dir = os.path.dirname(fname)              #PROJECT_DIR/geom_reference
-    ifg_dir = os.path.join(geom_dir, '../*/{}_*'.format(m_date))  #PROJECT_DIR/interferograms/{m_date}_20141225
-    m_par_files = [os.path.join(geom_dir, '*{}*{}'.format(m_date, ext)) for ext in PAR_EXT_LIST]
-    m_par_files += [os.path.join(ifg_dir, '*{}*{}'.format(m_date, ext)) for ext in PAR_EXT_LIST]
+    ## search existing par file
+    # potential directories
+    geom_dir = os.path.dirname(fname)
+    proj_dir = os.path.dirname(geom_dir)
+    par_dirs = [geom_dir,                                              #PROJECT_DIR/geom_reference
+                os.path.join(proj_dir, '*/{}_*'.format(m_date[2:])),   #PROJECT_DIR/interferograms/{m_date}_(20)141225
+                os.path.join(proj_dir, '*/{}-*'.format(m_date[2:]))]   #PROJECT_DIR/interferograms/{m_date}-(20)141225
+    # potential file patterns
+    m_par_files = []
+    for par_dir in par_dirs:
+        m_par_files += [os.path.join(par_dir, '*{}*{}'.format(m_date, ext)) for ext in PAR_EXT_LIST]
+    # search existing files that meet the file patterns
     m_par_files = ut.get_file_list(m_par_files)
 
     # read par file
