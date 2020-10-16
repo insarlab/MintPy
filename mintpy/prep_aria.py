@@ -236,6 +236,7 @@ def read_subset_box(template_file, meta):
     Parameters: template_file - str, path of template file
                 meta          - dict, metadata
     Returns:    pix_box       - tuple of 4 int in (x0, y0, x1, y1)
+                meta          - dict, metadata
     """
 
     if template_file and os.path.isfile(template_file):
@@ -254,12 +255,15 @@ def read_subset_box(template_file, meta):
         pix_box = None
 
     if pix_box is not None:
+        # update metadata against the new bounding box
         print('input bounding box in yx: {}'.format(pix_box))
+        meta = ut.subset_attribute(meta, pix_box)
     else:
+        # translate box of None to tuple of 4 int
         length, width = int(meta['LENGTH']), int(meta['WIDTH'])
         pix_box = (0, 0, width, length)
 
-    return pix_box
+    return pix_box, meta
 
 
 ####################################################################################
@@ -519,9 +523,7 @@ def main(iargs=None):
 
     # extract metadata
     meta = extract_metadata(inps.unwFile)
-    box = read_subset_box(inps.template_file, meta)
-    meta["LENGTH"] = box[3] - box[1]
-    meta["WIDTH"] = box[2] - box[0]
+    box, meta = read_subset_box(inps.template_file, meta)
 
     length = int(meta["LENGTH"])
     width = int(meta["WIDTH"])
