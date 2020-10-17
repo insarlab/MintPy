@@ -1006,43 +1006,57 @@ class ifgramStack:
             print('')
         return mask
 
-    def temporal_average(self, datasetName='coherence', dropIfgram=True):
+    def temporal_average(self, datasetName='coherence', dropIfgram=True, row_step=200):
         self.open(print_msg=False)
         if datasetName is None:
             datasetName = 'coherence'
         print('calculate the temporal average of {} in file {} ...'.format(datasetName, self.file))
+
+        # index of pairs to read
+        ifgram_flag = np.ones(self.numIfgram, dtype=np.bool_)
+        if dropIfgram:
+            ifgram_flag = self.dropIfgram
+            if np.all(ifgram_flag == 0.):
+                raise Exception(('ALL interferograms are marked as dropped, '
+                                 'can not calculate temporal average.'))
+
+        # temporal baseline for phase
+        # with unit of years (float64 for very short tbase of UAVSAR data)
         if 'unwrapPhase' in datasetName:
             phase2range = -1 * float(self.metadata['WAVELENGTH']) / (4.0 * np.pi)
-            # temporal baseline in years (float64 for very short tbase of UAVSAR data)
             tbase = np.array(self.tbaseIfgram, dtype=np.float64) / 365.25
+            tbase = tbase[ifgram_flag]
 
         with h5py.File(self.file, 'r') as f:
             dset = f[datasetName]
-            num_ifgram, length, width = dset.shape
-            dmean = np.zeros((length, width), dtype=np.float32)
-            drop_ifgram_flag = np.ones(num_ifgram, dtype=np.bool_)
-            if dropIfgram:
-                drop_ifgram_flag = self.dropIfgram
-                if np.all(drop_ifgram_flag == 0.):
-                    raise Exception(('ALL interferograms are marked as dropped, '
-                                     'can not calculate temporal average.'))
 
-            num2read = np.sum(drop_ifgram_flag)
-            idx2read = np.where(drop_ifgram_flag)[0]
-            for i in range(num2read):
-                idx = idx2read[i]
-                data = dset[idx, :, :]
+            # reference value for phase
+            ref_val = None
+            if 'unwrapPhase' in datasetName and self.refY:
+                ref_val = dset[ifgram_flag, self.refY, self.refX]
+
+            # calculate lines by lines
+            num_step = np.ceil(self.length / row_step).astype(int)
+            dmean = np.zeros(dset.shape[1:3], dtype=np.float32)
+            for i in range(num_step):
+                r0 = i * row_step
+                r1 = min(r0 + row_step, self.length)
+                data = dset[ifgram_flag, r0:r1, :]
+
+                # referencing / normalizing for phase
                 if 'unwrapPhase' in datasetName:
                     if self.refY:
                         try:
-                            data -= data[self.refY, self.refX]
+                            data -= np.tile(ref_val.reshape(-1, 1, 1), (1, data.shape[1], data.shape[2]))
                         except:
                             pass
-                    data *= (phase2range / tbase[idx])
-                dmean += data
-                sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, num2read))
+                    for j in range(data.shape[0]):
+                        data[j,:,:] *= (phase2range / tbase[j])
+
+                # use nanmean to better handle NaN values
+                dmean[r0:r1, :] = np.nanmean(data, axis=0)
+                sys.stdout.write('\rreading & calculating lines {}/{} ...'.format(r1, self.length))
                 sys.stdout.flush()
-            dmean *= 1./np.sum(self.dropIfgram)
             print('')
         return dmean
 

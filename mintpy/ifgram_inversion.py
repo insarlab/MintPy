@@ -7,6 +7,12 @@
 ############################################################
 # Recommend import:
 #     from mintpy import ifgram_inversion as ifginv
+#
+# Offset inversion considerations (different from phases):
+#   1. referencing is turned off because offset is spatially absolute measure
+#   2. zero value is valid for offset
+#   3. unit is ground pixel size in range/azimuth directions
+#   4. add Az/Rg suffix in all output files to distinguish azimuth/range
 
 
 import os
@@ -69,12 +75,12 @@ def create_parser():
                                      epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
     # input dataset
     parser.add_argument('ifgramStackFile', help='interferograms stack file to be inverted')
-    parser.add_argument('--template', '-t', dest='templateFile', help='template text file with options')
+    parser.add_argument('-t','--template', dest='templateFile', help='template text file with options')
 
     parser.add_argument('-i','-d', '--dset', dest='obsDatasetName', type=str,
                         help='dataset name of unwrap phase / offset to be used for inversion'
                              '\ne.g.: unwrapPhase, unwrapPhase_bridging, ...')
-    parser.add_argument('--water-mask', '-m', dest='waterMaskFile',
+    parser.add_argument('-m','--water-mask', dest='waterMaskFile',
                         help='Skip inversion on the masked out region, i.e. water.')
 
     # options rarely used or changed
@@ -82,7 +88,7 @@ def create_parser():
                         metavar=('TS_FILE', 'TCOH_FILE', 'NUM_INV_FILE'),
                         help='Output file name. (default: %(default)s).')
     parser.add_argument('--ref-date', dest='ref_date', help='Reference date, first date by default.')
-    parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',
+    parser.add_argument('--skip-reference','--skip-ref', dest='skip_ref', action='store_true',
                         help='[for offset and testing] do not apply spatial referencing.')
 
     # solver
@@ -102,11 +108,11 @@ def create_parser():
 
     # mask
     mask = parser.add_argument_group('mask', 'mask observation data before inversion')
-    mask.add_argument('--mask-dset','--md', dest='maskDataset',
+    mask.add_argument('--mask-dset','--mask-dataset','--md', dest='maskDataset',
                       help='dataset used to mask unwrapPhase, e.g. coherence, connectComponent')
-    mask.add_argument('--mask-threshold','--mt', dest='maskThreshold', metavar='NUM', type=float, default=0.4,
+    mask.add_argument('--mask-thres','--mask-threshold','--mt', dest='maskThreshold', metavar='NUM', type=float, default=0.4,
                       help='threshold to generate mask when mask is coherence (default: %(default)s).')
-    mask.add_argument('--min-redundancy','--mr', dest='minRedundancy', metavar='NUM', type=float, default=1.0,
+    mask.add_argument('--min-redun','--min-redundancy','--mr', dest='minRedundancy', metavar='NUM', type=float, default=1.0,
                       help='minimum redundancy of interferograms for every SAR acquisition. (default: %(default)s).')
 
     # computing
@@ -294,7 +300,7 @@ def run_or_skip(inps):
 
 ################################# Time-series Estimator ###################################
 def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_velocity=True,
-                        rcond=1e-5, min_redundancy=1., skip_zero_value=True):
+                        rcond=1e-5, min_redundancy=1.):
     """Estimate time-series from a stack/network of interferograms with
     Least Square minimization on deformation phase / velocity.
 
@@ -327,7 +333,8 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
                 tbase_diff        - 2D np.array in size of (num_date-1, 1),
                                     differential temporal baseline history
                 ifgram            - 2D np.array in size of (num_ifgram, num_pixel),
-                                    phase of all interferograms
+                                    phase/offset of all interferograms.
+                                    no-data value: NaN.
                 weight_sqrt       - 2D np.array in size of (num_ifgram, num_pixel),
                                     square root of weight of all interferograms
                 min_norm_velocity - bool, assume minimum-norm deformation velocity, or not
@@ -350,26 +357,29 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
     temp_coh = 0.
     num_inv_obs = 0
 
-    # skip zero phase value
-    if skip_zero_value and not np.all(ifgram):
-        idx = (ifgram[:, 0] != 0.).flatten()
-        A = A[idx, :]
-        B = B[idx, :]
+    # skip nan phase/offset value
+    # apply to the pixel-wised inversion only
+    # since the region-wised inversion has valid obs in all pairs
+    if np.any(np.isnan(ifgram)):
+        flag = (~np.isnan(ifgram[:, 0])).flatten()
+        A = A[flag, :]
+        B = B[flag, :]
 
         # skip the pixel if its redundancy < threshold
         if np.min(np.sum(A != 0., axis=0)) < min_redundancy:
             return ts, temp_coh, num_inv_obs
 
         # check matrix invertability
-        if weight_sqrt is not None:  #for WLS only because OLS contains it already
+        # for WLS only because OLS contains it already
+        if weight_sqrt is not None:
             try:
                 linalg.inv(np.dot(B.T, B))
             except linalg.LinAlgError:
                 return ts, temp_coh, num_inv_obs
 
-        ifgram = ifgram[idx, :]
+        ifgram = ifgram[flag, :]
         if weight_sqrt is not None:
-            weight_sqrt = weight_sqrt[idx, :]
+            weight_sqrt = weight_sqrt[flag, :]
 
     # update number of observations used for inversion
     num_inv_obs = A.shape[0]
@@ -620,20 +630,28 @@ def mask_unwrap_phase(pha_data, stack_obj, box, mask_ds_name=None, mask_threshol
     if mask_ds_name and mask_ds_name in stack_obj.datasetNames:
         if print_msg:
             print('reading {} in {} * {} ...'.format(mask_ds_name, box, num_ifgram))
+
         msk_data = stack_obj.read(datasetName=mask_ds_name,
                                   box=box,
                                   dropIfgram=dropIfgram,
                                   print_msg=False).reshape(num_ifgram, -1)
+        # set all NaN values in coherence, connectComponent, offsetSNR to zero
+        # to avoid RuntimeWarning msg during math operation
         msk_data[np.isnan(msk_data)] = 0
+
         if mask_ds_name in ['coherence', 'offsetSNR']:
             msk_data = msk_data >= mask_threshold
             if print_msg:
-                print('mask out pixels with {} < {}'.format(mask_ds_name, mask_threshold))
+                print('mask out pixels with {} < {} by setting them to NaN'.format(mask_ds_name, mask_threshold))
+
         elif mask_ds_name in ['connectComponent']:
             if print_msg:
-                print('mask out pixels with {} == 0'.format(mask_ds_name))
-        pha_data[msk_data == 0.] = 0.
+                print('mask out pixels with {} == 0 by setting them to NaN'.format(mask_ds_name))
+
+        # set values of mask-out pixels to NaN
+        pha_data[msk_data == 0.] = np.nan
         del msk_data
+
     return pha_data
 
 
@@ -761,12 +779,6 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     #time_idx = [i for i in range(num_date)]
     #time_idx.remove(ref_idx)
 
-    # skip zero value in the network inversion for phase
-    if 'phase' in obs_ds_name.lower():
-        skip_zero_value = True
-    else:
-        skip_zero_value = False
-
     # 1.1 read / calcualte weight
     if weight_func in ['no', 'sbas']:
         weight = None
@@ -784,6 +796,12 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
                                  obs_ds_name=obs_ds_name,
                                  dropIfgram=True)
 
+    # translate zero phase value to nan (no-data value)
+    # becuase it's the common filled value used in phase masking
+    if 'phase' in obs_ds_name.lower():
+        pha_data[pha_data == 0.] = np.nan
+        print('convert zero value in {} to NaN (no-data value)'.format(obs_ds_name))
+
     pha_data = mask_unwrap_phase(pha_data,
                                  stack_obj,
                                  box,
@@ -796,38 +814,38 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
     # 1.3.1 - Water Mask
     if water_mask_file:
-        print('skip pixels on water with mask from file: {}'.format(os.path.basename(water_mask_file)))
+        print('skip pixels (on the water) with zero value in file: {}'.format(os.path.basename(water_mask_file)))
         atr_msk = readfile.read_attribute(water_mask_file)
         len_msk, wid_msk = int(atr_msk['LENGTH']), int(atr_msk['WIDTH'])
         if (len_msk, wid_msk) != (stack_obj.length, stack_obj.width):
             raise ValueError('Input water mask file has different size from ifgramStack file.')
 
-        dsName = [i for i in readfile.get_dataset_list(water_mask_file) if i in ['waterMask', 'mask']][0]
+        dsNames = readfile.get_dataset_list(water_mask_file)
+        dsName = [i for i in dsNames if i in ['waterMask', 'mask']][0]
         waterMask = readfile.read(water_mask_file, datasetName=dsName, box=box)[0].flatten()
         mask *= np.array(waterMask, dtype=np.bool_)
         del waterMask
 
-    # 1.3.2 - Mask for phase observations
+    # 1.3.2 - Mask for NaN value in ALL ifgrams
+    print('skip pixels with {} = NaN in all interferograms'.format(obs_ds_name))
+    mask *= ~np.all(np.isnan(pha_data), axis=0)
+
+    # 1.3.3 Mask for zero quality measure (average spatial coherence/SNR)
+    # usually due to lack of data in the processing
     if 'phase' in obs_ds_name.lower():
-        # Mask for Zero Phase in ALL ifgrams
-        print('skip pixels with zero/nan value in all interferograms')
-        with warnings.catch_warnings():
-            # ignore warning message for all-NaN slices
-            warnings.simplefilter("ignore", category=RuntimeWarning)
-            phase_stack = np.nanmean(pha_data, axis=0)
-        mask *= np.multiply(~np.isnan(phase_stack), phase_stack != 0.)
-        del phase_stack
+        quality_file = os.path.join(os.path.dirname(ifgram_file), '../avgSpatialCoh.h5')
+    elif 'offset' in obs_ds_name.lower():
+        quality_file = os.path.join(os.path.dirname(ifgram_file), '../avgSpatialSnr.h5')
+    else:
+        quality_file = None
 
-        # Mask for zero coherence in the average spatail coherence
-        # due to lack of data in the processing
-        coh_file = os.path.join(os.path.dirname(ifgram_file), '../avgSpatialCoh.h5')
-        if os.path.isfile(coh_file):
-            print('skip pixels with zero average spatial coherence value')
-            avg_spatial_coh = readfile.read(coh_file, box=box)[0].flatten()
-            mask *= avg_spatial_coh != 0.
-            del avg_spatial_coh
+    if quality_file and os.path.isfile(quality_file):
+        print('skip pixels with zero value in file: {}'.format(os.path.basename(quality_file)))
+        quality = readfile.read(quality_file, box=box)[0].flatten()
+        mask *= quality != 0.
+        del quality
 
-    # 1.3.3 invert pixels on mask 1+2
+    # invert pixels on mask 1+2
     num_pixel2inv = int(np.sum(mask))
     idx_pixel2inv = np.where(mask)[0]
     print('number of pixels to invert: {} out of {} ({:.1f}%)'.format(
@@ -852,12 +870,10 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     # 2.2 un-weighted inversion (classic SBAS)
     if weight_func in ['no', 'sbas']:
 
-        # a. mask for Non-Zero Phase in ALL ifgrams (share one B in sbas inversion)
-        if 'phase' in obs_ds_name.lower():
-            mask_all_net = np.all(pha_data, axis=0)
-            mask_all_net *= mask
-        else:
-            mask_all_net = np.array(mask)
+        # a. split mask into mask_all/part_net
+        # mask for valid (~NaN) observations in ALL ifgrams (share one B in sbas inversion)
+        mask_all_net = np.all(~np.isnan(pha_data), axis=0)
+        mask_all_net *= mask
         mask_part_net = mask ^ mask_all_net
         del mask
 
@@ -870,8 +886,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
                                                        ifgram=pha_data[:, mask_all_net],
                                                        weight_sqrt=None,
                                                        min_norm_velocity=min_norm_velocity,
-                                                       min_redundancy=min_redundancy,
-                                                       skip_zero_value=skip_zero_value)
+                                                       min_redundancy=min_redundancy)
             ts[:, mask_all_net] = tsi
             temp_coh[mask_all_net] = tcohi
             num_inv_ifg[mask_all_net] = num_ifgi
@@ -890,8 +905,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
                                                            ifgram=pha_data[:, idx],
                                                            weight_sqrt=None,
                                                            min_norm_velocity=min_norm_velocity,
-                                                           min_redundancy=min_redundancy,
-                                                           skip_zero_value=skip_zero_value)
+                                                           min_redundancy=min_redundancy)
                 ts[:, idx] = tsi.flatten()
                 temp_coh[idx] = tcohi
                 num_inv_ifg[idx] = num_ifgi
@@ -908,8 +922,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
                                                        ifgram=pha_data[:, idx],
                                                        weight_sqrt=weight[:, idx],
                                                        min_norm_velocity=min_norm_velocity,
-                                                       min_redundancy=min_redundancy,
-                                                       skip_zero_value=skip_zero_value)
+                                                       min_redundancy=min_redundancy)
             ts[:, idx] = tsi.flatten()
             temp_coh[idx] = tcohi
             num_inv_ifg[idx] = num_ifgi

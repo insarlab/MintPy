@@ -271,7 +271,7 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, compress
     f = h5py.File(fname, "w")
     if print_msg:
         print('-'*50)
-        print('create HDF5 file {} with w mode'.format(fname))
+        print('create HDF5 file: {} with w mode'.format(fname))
 
     # initiate dataset
     max_digit = max([len(i) for i in ds_name_dict.keys()])
@@ -291,7 +291,7 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, compress
 
         # create empty dataset
         if print_msg:
-            print(("create dataset: {d:<{w}} of {t:<25} in size of {s} with "
+            print(("create dataset  : {d:<{w}} of {t:<25} in size of {s} with "
                    "compression = {c}").format(d=key,
                                                w=max_digit,
                                                t=str(data_type),
@@ -314,7 +314,7 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, compress
 
     f.close()
     if print_msg:
-        print('close  HDF5 file {}'.format(fname))
+        print('close  HDF5 file: {}'.format(fname))
     return fname
 
 
