@@ -759,7 +759,7 @@ def read_dataset_input(inps):
     if len(inps.dset) > 0 or len(inps.dsetNumList) > 0:
         # message
         if len(inps.dset) > 0:
-            print('input dataset: "{}"'.format(inps.dset))
+            vprint('input dataset: "{}"'.format(inps.dset))
 
         # special rule for special file types
         if inps.key == 'velocity':
