@@ -1111,7 +1111,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
             if num_subplot <= 20:
                 subplot_title = '{}\n{}'.format(i, title_str)
             elif num_subplot <= 50:
-                subplot_title = title_str
+                subplot_title = title_str.replace('_','\n').replace('-','\n')
             else:
                 subplot_title = '{}'.format(i)
 
