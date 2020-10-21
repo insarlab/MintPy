@@ -362,7 +362,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
             data_type = dataTypeDict[data_type]
 
         k = atr['FILE_TYPE'].lower().replace('.', '')
-        if k in ['unw']:
+        if k in ['unw', 'cor']:
             band = min(2, num_band)
             if datasetName and datasetName in ['band1','intensity','magnitude']:
                 band = 1

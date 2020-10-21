@@ -583,9 +583,12 @@ def prepare_metadata(inpsDict):
 
     elif processor == 'isce':
         from mintpy import prep_isce
+        from mintpy.utils.isce_utils import get_processor
+
         meta_files = sorted(glob.glob(inpsDict['mintpy.load.metaFile']))
         if len(meta_files) < 1:
             warnings.warn('No input metadata file found: {}'.format(inpsDict['mintpy.load.metaFile']))
+
         try:
             # metadata and auxliary data
             meta_file = meta_files[0]
@@ -597,7 +600,11 @@ def prepare_metadata(inpsDict):
             obs_keys = [i for i in obs_keys if i in inpsDict.keys()]
             obs_paths = [inpsDict[key] for key in obs_keys if inpsDict[key].lower() != 'auto']
             if len(obs_paths) > 0:
-                obs_dir = os.path.dirname(os.path.dirname(obs_paths[0]))
+                processor = get_processor(meta_file)
+                if processor == 'alosStack':
+                    obs_dir = os.path.dirname(obs_paths[0])
+                else:
+                    obs_dir = os.path.dirname(os.path.dirname(obs_paths[0]))
                 obs_file = os.path.basename(obs_paths[0])
             else:
                 obs_dir = None
