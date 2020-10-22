@@ -20,12 +20,12 @@ from mintpy.utils import (
 
 EXAMPLE = """example:
   # interferogram stack
-  prep_isce.py -d ./merged/interferograms -m ./reference/IW1.xml -b ./baselines -g ./merged/geom_reference                  #for topsStack
-  prep_isce.py -d ./Igrams -m ./referenceShelve/data.dat -b ./baselines -g ./geom_reference                                 #for stripmapStack
-  prep_isce.py -m 20120507_slc_crop.xml -g ./geometry                                                                       #for stripmapApp
+  prep_isce.py -d ./merged/interferograms -m ./reference/IW1.xml -b ./baselines -g ./merged/geom_reference      #for topsStack
+  prep_isce.py -d ./Igrams -m ./referenceShelve/data.dat -b ./baselines -g ./geom_reference                     #for stripmapStack
+  prep_isce.py -m 20120507_slc_crop.xml -g ./geometry                                                           #for stripmapApp
 
-  # here 150408 is the reference date of alosStack processing
-  prep_isce.py -d "pairs/*-*/insar" -m "pairs/*-*/150408.track.xml" -b baseline -g dates_resampled/150408/insar  #for alosStack
+  # 150408 is the reference date of alosStack processing
+  prep_isce.py -d "pairs/*-*/insar" -m "pairs/*-*/150408.track.xml" -b baseline -g dates_resampled/150408/insar #for alosStack
 
   # offset stack from topsStack
   prep_isce.py -d ./merged/offsets -f filtAz*.off -m ./reference/IW1.xml -b ./baselines -g ./merged/offsets/geom_reference
@@ -139,7 +139,7 @@ def prepare_geometry(geom_dir, metadata=dict(), processor='tops', update_mode=Tr
         writefile.write_roipac_rsc(geom_metadata, rsc_file,
                                    update_mode=update_mode,
                                    print_msg=True)
-    return metadata
+    return
 
 
 def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), processor='tops', update_mode=True):
@@ -164,8 +164,7 @@ def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), 
             dates = os.path.basename(os.path.dirname(isce_file)).split('_')  # to modify to YYYYMMDDTHHMMSS
         elif processor == 'alosStack':
             dates = os.path.basename(os.path.dirname(os.path.dirname(isce_file))).split('-')  # to modify to YYYYMMDDTHHMMSS
-            #to fit into the format of other processors, all alos satellites are after 2000
-            dates = ['20'+x for x in dates]
+            dates = ptime.yyyymmdd(dates)
         else:
             raise ValueError('Un-recognized ISCE stack processor: {}'.format(processor))
 
@@ -199,23 +198,22 @@ def main(iargs=None):
 
     # prepare metadata for geometry file
     if inps.geometryDir:
-        #metadata not changed here
-        metadata = prepare_geometry(inps.geometryDir,
-                                    metadata=metadata,
-                                    processor=inps.processor,
-                                    update_mode=inps.update_mode)
+        prepare_geometry(inps.geometryDir,
+                         metadata=metadata,
+                         processor=inps.processor,
+                         update_mode=inps.update_mode)
 
     # read baseline info
     baseline_dict = {}
     if inps.baselineDir:
-        #for alosStack, if ref_date is provided, it should also be YYYYMMDD, rather than YYMMDD.
         baseline_dict = isce_utils.read_baseline_timeseries(inps.baselineDir,
                                                             processor=inps.processor)
 
     # prepare metadata for ifgram file
     if inps.dsetDir and inps.dsetFiles:
         for namePattern in inps.dsetFiles:
-            prepare_stack(inps.dsetDir, namePattern,
+            prepare_stack(inps.dsetDir,
+                          namePattern,
                           metadata=metadata,
                           baseline_dict=baseline_dict,
                           processor=inps.processor,

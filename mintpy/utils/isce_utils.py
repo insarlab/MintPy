@@ -15,7 +15,7 @@ import shelve
 import datetime
 import numpy as np
 from mintpy.objects import sensor
-from mintpy.utils import readfile, writefile, utils1 as ut
+from mintpy.utils import ptime, readfile, writefile, utils1 as ut
 
 # suppress matplotlib DEBUG message
 import logging
@@ -35,7 +35,7 @@ def get_processor(meta_file):
     meta_dir = os.path.dirname(meta_file)
     tops_meta_file = os.path.join(meta_dir, 'IW*.xml')
     stripmap_meta_files = [os.path.join(meta_dir, i) for i in ['data.dat', 'data']]
-    alos_stack_meta_frame_files = glob.glob(os.path.join(meta_dir, 'f1_*', '*.frame.xml'))
+    alosStack_meta_frame_files = glob.glob(os.path.join(meta_dir, 'f1_*', '*.frame.xml'))
 
     processor = None
     if len(glob.glob(tops_meta_file)) > 0:
@@ -46,7 +46,7 @@ def get_processor(meta_file):
         # stripmapStack
         processor = 'stripmap'
 
-    elif alos_stack_meta_frame_files != []:
+    elif alosStack_meta_frame_files != []:
         # alosStack
         processor = 'alosStack'
 
@@ -380,17 +380,16 @@ def extract_alosStack_metadata(meta_file, geom_dir):
     meta['azimuthPixelSize'] = Vs * track.azimuthLineInterval
     meta['rangePixelSize'] = track.rangePixelSize
 
-    azb = track.prf * 0.8
+    azBandwidth = track.prf * 0.8
     if track.operationMode in scansarNominalModes:
-        azb /= 5.0
+        azBandwidth /= 5.0
     if track.operationMode in scansarWideModes:
-        azb /= 7.0
-
+        azBandwidth /= 7.0
     #use a mean burst synchronizatino here
     if track.operationMode in scansarModes:
-        azb *= 0.85
+        azBandwidth *= 0.85
 
-    meta['azimuthResolution'] = Vs * (1.0/azb)
+    meta['azimuthResolution'] = Vs * (1.0/azBandwidth)
     meta['rangeResolution']   = 0.5 * SPEED_OF_LIGHT * (1.0/track.frames[0].swaths[0].rangeBandwidth)
 
     elp = Planet(pname='Earth').ellipsoid
@@ -665,6 +664,7 @@ def read_baseline_timeseries(baseline_dir, processor='tops', ref_date=None):
     Parameters: baseline_dir : str, path to the baselines directory
                 processor    : str, tops     for Sentinel-1/TOPS
                                     stripmap for StripMap data
+                ref_date     : str, reference date in (YY)YYMMDD
     Returns:    bDict : dict, in the following format:
                     {'20141213': [0.0, 0.0],
                      '20141225': [104.6, 110.1],
@@ -683,6 +683,7 @@ def read_baseline_timeseries(baseline_dir, processor='tops', ref_date=None):
         bFiles = glob.glob(os.path.join(baseline_dir, 'baseline_center.txt'))
     else:
         raise ValueError('Un-recognized ISCE stack processor: {}'.format(processor))
+
     if len(bFiles) == 0:
         print('WARNING: no baseline text file found in dir {}'.format(os.path.abspath(baseline_dir)))
         return None
@@ -704,13 +705,16 @@ def read_baseline_timeseries(baseline_dir, processor='tops', ref_date=None):
                 bDict[dates[1]] = read_stripmap_baseline(bFile)
         bDict[dates[0]] = [0, 0]
         ref_date0 = dates[0]
+
     elif processor == 'alosStack':
         bDict, ref_date0 = read_alosStack_baseline(bFiles[0])
+
     else:
         raise ValueError('Un-recognized ISCE stack processor: {}'.format(processor))
 
     # change reference date
     if ref_date is not None and ref_date != ref_date0:
+        ref_date = ptime.yyyymmdd(ref_date)
         print('change reference date to {}'.format(ref_date))
         ref_bperp = bDict[ref_date]
 
