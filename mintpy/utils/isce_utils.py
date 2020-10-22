@@ -3,6 +3,8 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Heresh Fattahi, Apr 2020           #
 ############################################################
+# 2020-07: Talib Oliver-Cabrera, add UAVSAR support w/in stripmapStack
+# 2020-10: Cunren Liang, add alosStack support
 # Recommend import:
 #   from mintpy.utils import isce_utils
 
@@ -10,9 +12,10 @@
 import os
 import glob
 import shelve
+import datetime
 import numpy as np
 from mintpy.objects import sensor
-from mintpy.utils import readfile, writefile, utils1 as ut
+from mintpy.utils import ptime, readfile, writefile, utils1 as ut
 
 # suppress matplotlib DEBUG message
 import logging
@@ -32,6 +35,7 @@ def get_processor(meta_file):
     meta_dir = os.path.dirname(meta_file)
     tops_meta_file = os.path.join(meta_dir, 'IW*.xml')
     stripmap_meta_files = [os.path.join(meta_dir, i) for i in ['data.dat', 'data']]
+    alosStack_meta_frame_files = glob.glob(os.path.join(meta_dir, 'f1_*', '*.frame.xml'))
 
     processor = None
     if len(glob.glob(tops_meta_file)) > 0:
@@ -41,6 +45,10 @@ def get_processor(meta_file):
     elif any(os.path.isfile(i) for i in stripmap_meta_files):
         # stripmapStack
         processor = 'stripmap'
+
+    elif alosStack_meta_frame_files != []:
+        # alosStack
+        processor = 'alosStack'
 
     elif meta_file.endswith('.xml'):
         # stripmapApp
@@ -169,13 +177,18 @@ def extract_isce_metadata(meta_file, geom_dir=None, rsc_file=None, update_mode=T
         print('extract metadata from ISCE/topsStack xml file:', meta_file)
         meta, frame = extract_tops_metadata(meta_file)
 
+    elif processor == 'alosStack':
+        print('extract metadata from ISCE/alosStack xml file:', meta_file)
+        meta, frame = extract_alosStack_metadata(meta_file, geom_dir)
+
     else:
         print('extract metadata from ISCE/stripmapStack shelve file:', meta_file)
         meta, frame = extract_stripmap_metadata(meta_file)
 
     # 2. extract metadata from geometry file
     if geom_dir:
-        meta = extract_geometry_metadata(geom_dir, meta)
+        if processor != 'alosStack':
+            meta = extract_geometry_metadata(geom_dir, meta)
 
     # 3. common metadata
     meta['PROCESSOR'] = 'isce'
@@ -333,6 +346,158 @@ def extract_stripmap_metadata(meta_file):
     return meta, frame
 
 
+def extract_alosStack_metadata(meta_file, geom_dir):
+
+    import isce
+    import isceobj
+    from isceobj.Planet.Planet import Planet
+
+    track = load_track(os.path.dirname(meta_file), os.path.basename(meta_file).strip('.track.xml'))
+    rlooks, alooks, width, length = extract_image_size_alosStack(geom_dir)
+    spotlightModes, stripmapModes, scansarNominalModes, scansarWideModes, scansarModes = alos2_acquisition_modes()
+
+    meta = {}
+    meta['prf']             = track.prf
+    meta['startUTC']        = track.sensingStart + datetime.timedelta(seconds=(alooks-1.0)/2.0*track.azimuthLineInterval)
+    meta['stopUTC']         = meta['startUTC'] + datetime.timedelta(seconds=(length-1)*alooks*track.azimuthLineInterval)
+    meta['radarWavelength'] = track.radarWavelength
+    meta['startingRange']   = track.startingRange + (rlooks-1.0)/2.0*track.rangePixelSize
+    meta['passDirection']   = track.passDirection.upper()
+    meta['polarization']    = track.frames[0].swaths[0].polarization
+    #meta['trackNumber']     = track.trackNumber
+    #meta['orbitNumber']     = track.orbitNumber
+
+    meta['PLATFORM'] = sensor.standardize_sensor_name('alos2')
+
+    sensingMid = meta['startUTC'] + datetime.timedelta(seconds=(meta['stopUTC']-meta['startUTC']).total_seconds()/2.0)
+    time_seconds = (sensingMid.hour * 3600.0 +
+                    sensingMid.minute * 60.0 +
+                    sensingMid.second)
+    meta['CENTER_LINE_UTC'] = time_seconds
+
+    peg = track.orbit.interpolateOrbit(sensingMid, method='hermite')
+    Vs = np.linalg.norm(peg.getVelocity())
+    meta['azimuthPixelSize'] = Vs * track.azimuthLineInterval
+    meta['rangePixelSize'] = track.rangePixelSize
+
+    azBandwidth = track.prf * 0.8
+    if track.operationMode in scansarNominalModes:
+        azBandwidth /= 5.0
+    if track.operationMode in scansarWideModes:
+        azBandwidth /= 7.0
+    #use a mean burst synchronizatino here
+    if track.operationMode in scansarModes:
+        azBandwidth *= 0.85
+
+    meta['azimuthResolution'] = Vs * (1.0/azBandwidth)
+    meta['rangeResolution']   = 0.5 * SPEED_OF_LIGHT * (1.0/track.frames[0].swaths[0].rangeBandwidth)
+
+    elp = Planet(pname='Earth').ellipsoid
+    llh = elp.xyz_to_llh(peg.getPosition())
+    elp.setSCH(llh[0], llh[1], track.orbit.getENUHeading(sensingMid))
+    meta['HEADING'] = track.orbit.getENUHeading(sensingMid)
+    meta['earthRadius'] = elp.pegRadCur
+    meta['altitude'] = llh[2]
+
+    meta['beam_mode'] = track.operationMode
+    meta['swathNumber'] = ''.join(str(swath.swathNumber) for swath in track.frames[0].swaths)
+
+    meta['firstFrameNumber'] = track.frames[0].frameNumber
+    meta['lastFrameNumber']  = track.frames[-1].frameNumber
+
+    meta['ALOOKS'] = alooks
+    meta['RLOOKS'] = rlooks
+
+    # NCORRLOOKS for coherence calibration
+    rgfact = float(meta['rangeResolution']) / float(meta['rangePixelSize'])
+    azfact = float(meta['azimuthResolution']) / float(meta['azimuthPixelSize'])
+    meta['NCORRLOOKS'] = meta['RLOOKS'] * meta['ALOOKS'] / (rgfact * azfact)
+
+    # update pixel_size for multilooked data
+    meta['rangePixelSize'] *= meta['RLOOKS']
+    meta['azimuthPixelSize'] *= meta['ALOOKS']
+
+    edge = 3
+    lat_file = glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.lat'.format(rlooks, alooks)))[0]
+    img = isceobj.createImage()
+    img.load(lat_file+'.xml')
+    width = img.width
+    length = img.length
+    data = np.memmap(lat_file, dtype='float64', mode='r', shape=(length, width))
+    meta['LAT_REF1'] = str(data[0+edge, 0+edge])
+    meta['LAT_REF2'] = str(data[0+edge, -1-edge])
+    meta['LAT_REF3'] = str(data[-1-edge, 0+edge])
+    meta['LAT_REF4'] = str(data[-1-edge, -1-edge])
+
+    lon_file = glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.lon'.format(rlooks, alooks)))[0]
+    data = np.memmap(lon_file, dtype='float64', mode='r', shape=(length, width))
+    meta['LON_REF1'] = str(data[0+edge, 0+edge])
+    meta['LON_REF2'] = str(data[0+edge, -1-edge])
+    meta['LON_REF3'] = str(data[-1-edge, 0+edge])
+    meta['LON_REF4'] = str(data[-1-edge, -1-edge])
+
+    los_file = glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.los'.format(rlooks, alooks)))[0]
+    data = np.memmap(los_file, dtype='float32', mode='r', shape=(length*2, width))[0:length*2:2, :]
+    inc_angle = data[int(length/2), int(width/2)]
+    meta['CENTER_INCIDENCE_ANGLE'] = str(inc_angle)
+
+    pointingDirection = {'right': -1, 'left' :1}
+    meta['ANTENNA_SIDE'] = str(pointingDirection[track.pointingDirection])
+
+    return meta, track
+
+
+def alos2_acquisition_modes():
+    '''
+    return ALOS-2 acquisition mode
+    '''
+
+    spotlightModes = ['SBS']
+    stripmapModes = ['UBS', 'UBD', 'HBS', 'HBD', 'HBQ', 'FBS', 'FBD', 'FBQ']
+    scansarNominalModes = ['WBS', 'WBD', 'WWS', 'WWD']
+    scansarWideModes = ['VBS', 'VBD']
+    scansarModes = ['WBS', 'WBD', 'WWS', 'WWD', 'VBS', 'VBD']
+
+    return (spotlightModes, stripmapModes, scansarNominalModes, scansarWideModes, scansarModes)
+
+
+def extract_image_size_alosStack(geom_dir):
+    import isce
+    import isceobj
+
+    # grab the number of looks in azimuth / range direction
+    lats = glob.glob(os.path.join(geom_dir, '*_*rlks_*alks.lat'))
+    rlooks = max([int(os.path.splitext(os.path.basename(x))[0].split('_')[1].strip('rlks')) for x in lats])
+    alooks = max([int(os.path.splitext(os.path.basename(x))[0].split('_')[2].strip('alks')) for x in lats])
+
+    # grab the number of rows / coluns
+    lat = glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.lat'.format(rlooks, alooks)))[0]
+    img = isceobj.createImage()
+    img.load(lat+'.xml')
+    width = img.width
+    length = img.length
+
+    return (rlooks, alooks, width, length)
+
+
+def load_track(trackDir, date):
+    '''
+    Load the track using Product Manager.
+    trackDir: where *.track.xml is located
+    date: YYMMDD
+    '''
+
+    track = load_product(os.path.join(trackDir, '{}.track.xml'.format(date)))
+
+    track.frames = []
+    fnames = sorted(glob.glob(os.path.join(trackDir, 'f*_*/{}.frame.xml'.format(date))))
+    for fname in fnames:
+        track.frames.append(load_product(fname))
+
+    return track
+
+
+
 #####################################  geometry  #######################################
 def extract_multilook_number(geom_dir, meta=dict(), fext_list=['.rdr','.geo','.rdr.full','.geo.full']):
     for fbase in ['hgt','lat','lon','los']:
@@ -477,11 +642,29 @@ def read_stripmap_baseline(baseline_file):
     return [bperp_top, bperp_bottom]
 
 
+def read_alosStack_baseline(baseline_file):
+    '''read baseline file generated by alosStack
+    '''
+    bDict = {}
+    with open(baseline_file, 'r') as f:
+        lines = [line for line in f if line.strip() != '']
+        for x in lines[2:]:
+            blist = x.split()
+            #to fit into the format of other processors, all alos satellites are after 2000
+            blist[0] = '20' + blist[0]
+            blist[1] = '20' + blist[1]
+            bDict[blist[1]] = [float(blist[3]), float(blist[3])]
+        bDict[blist[0]] = [0, 0]
+
+    return bDict, blist[0]
+
+
 def read_baseline_timeseries(baseline_dir, processor='tops', ref_date=None):
     """Read bperp time-series from files in baselines directory
     Parameters: baseline_dir : str, path to the baselines directory
                 processor    : str, tops     for Sentinel-1/TOPS
                                     stripmap for StripMap data
+                ref_date     : str, reference date in (YY)YYMMDD
     Returns:    bDict : dict, in the following format:
                     {'20141213': [0.0, 0.0],
                      '20141225': [104.6, 110.1],
@@ -495,30 +678,43 @@ def read_baseline_timeseries(baseline_dir, processor='tops', ref_date=None):
         bFiles = sorted(glob.glob(os.path.join(baseline_dir, '*/*.txt')))
     elif processor == 'stripmap':
         bFiles = sorted(glob.glob(os.path.join(baseline_dir, '*.txt')))
+    elif processor == 'alosStack':
+        # all baselines are in baseline_center.txt
+        bFiles = glob.glob(os.path.join(baseline_dir, 'baseline_center.txt'))
     else:
         raise ValueError('Un-recognized ISCE stack processor: {}'.format(processor))
+
     if len(bFiles) == 0:
         print('WARNING: no baseline text file found in dir {}'.format(os.path.abspath(baseline_dir)))
         return None
 
-    # ignore files with different date1
-    # when re-run with different reference date
-    date1s = [os.path.basename(i).split('_')[0] for i in bFiles]
-    date1 = ut.most_common(date1s)
-    bFiles = [i for i in bFiles if os.path.basename(i).split('_')[0] == date1]
+    if processor in ['tops', 'stripmap']:
+        # ignore files with different date1
+        # when re-run with different reference date
+        date1s = [os.path.basename(i).split('_')[0] for i in bFiles]
+        date1 = ut.most_common(date1s)
+        bFiles = [i for i in bFiles if os.path.basename(i).split('_')[0] == date1]
 
-    # read files into dict
-    bDict = {}
-    for bFile in bFiles:
-        dates = os.path.basename(bFile).split('.txt')[0].split('_')
-        if processor == 'tops':
-            bDict[dates[1]] = read_tops_baseline(bFile)
-        else:
-            bDict[dates[1]] = read_stripmap_baseline(bFile)
-    bDict[dates[0]] = [0, 0]
+        # read files into dict
+        bDict = {}
+        for bFile in bFiles:
+            dates = os.path.basename(bFile).split('.txt')[0].split('_')
+            if processor == 'tops':
+                bDict[dates[1]] = read_tops_baseline(bFile)
+            else:
+                bDict[dates[1]] = read_stripmap_baseline(bFile)
+        bDict[dates[0]] = [0, 0]
+        ref_date0 = dates[0]
+
+    elif processor == 'alosStack':
+        bDict, ref_date0 = read_alosStack_baseline(bFiles[0])
+
+    else:
+        raise ValueError('Un-recognized ISCE stack processor: {}'.format(processor))
 
     # change reference date
-    if ref_date is not None and ref_date != dates[0]:
+    if ref_date is not None and ref_date != ref_date0:
+        ref_date = ptime.yyyymmdd(ref_date)
         print('change reference date to {}'.format(ref_date))
         ref_bperp = bDict[ref_date]
 

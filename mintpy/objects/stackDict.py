@@ -287,6 +287,7 @@ class geometryDict:
                        'incidenceAngle':'$PROJECT_DIR/merged/geom_reference/los.rdr',
                        'heandingAngle' :'$PROJECT_DIR/merged/geom_reference/los.rdr',
                        'shadowMask'    :'$PROJECT_DIR/merged/geom_reference/shadowMask.rdr',
+                       'waterMask'     :'$PROJECT_DIR/merged/geom_reference/waterMask.rdr',
                        'bperp'         :bperpDict
                        ...
                       }
@@ -507,7 +508,18 @@ class geometryDict:
                                                          t=str(dsDataType),
                                                          s=dsShape,
                                                          c=str(compression)))
+
+                # read
                 data = np.array(self.read(family=dsName, box=box)[0], dtype=dsDataType)
+                # water body: -1 for water and 0 for land
+                # water mask:  0 for water and 1 for land
+                fname = os.path.basename(self.datasetDict[dsName])
+                if fname.startswith('waterBody') or fname.endswith('.wbd'):
+                    data = data > -0.5
+                    print(('    input file "{}" is water body (-1/0 for water/land), '
+                           'convert to water mask (0/1 for water/land).'.format(fname)))
+
+                # write
                 ds = f.create_dataset(dsName,
                                       data=data,
                                       chunks=True,
