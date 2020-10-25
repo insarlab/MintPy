@@ -42,6 +42,19 @@ Relevant literature:
 
 + Nealy, J. L., H. M. Benz, G. P. Hayes, E. A. Bergman, and W. D. Barnhart (2017), The 2008 Wells, Nevada, Earthquake Sequence: Source Constraints Using Calibrated Multiple‐Event Relocation and InSARThe 2008 Wells, Nevada, Earthquake Sequence: Source Constraints Using Calibrated Multiple‐Event Relocation, _Bulletin of the Seismological Society of America_, 107(3), 1107-1117, doi:10.1785/0120160298.
 
+#### Sentinel-1 on Western Cape, South Africa with SNAP ####
+
+Area: West coast of Western Cape province, South Africa        
+Data: Sentinel-1 ascending track 29 during March - June 2019 (10 acquisitions; [Zenodo](https://zenodo.org/record/4127335))       
+Size: ~560 MB
+
+```bash
+wget https://zenodo.org/record/4127335/files/WCapeSenAT29.tar.xz
+tar -xvJf WCapeSenAT29.tar.xz
+cd WCapeSenAT29
+smallbaselineApp.py ${MINTPY_HOME}/docs/examples/input_files/WCapeSenAT29.txt
+```
+
 #### ALOS-1 on Kuju with ROI_PAC ####
 
 Area: Kuju volcano at Kyushu island, SW Japan     

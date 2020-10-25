@@ -1,0 +1,16 @@
+# vim: set filetype=cfg:
+##-------------------------------- MintPy -----------------------------##
+########## 1. Load Data (--load to exit after this step)
+## load_data.py -H to check more details and example inputs.
+mintpy.load.processor   = snap
+mintpy.load.unwFile     = ../interferograms/*/*/Unw_*.img
+mintpy.load.corFile     = ../interferograms/*/*/coh_*.img
+mintpy.load.demFile     = ../dem*/dem*.img
+
+mintpy.subset.lalo      = -33.10:-32.95, 17.98:18.13
+mintpy.reference.lalo   = -33, 18.05
+
+mintpy.networkInversion.weightFunc              = no
+mintpy.deramp                                   = linear
+mintpy.topographicResidual.pixelwiseGeometry    = no
+
