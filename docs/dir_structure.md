@@ -608,7 +608,7 @@ mintpy.load.lookupXFile      = $DATA_DIR/GalapagosEnvA2T061/geometry/sim*rlks.UT
 ### [SNAP](https://github.com/insarlab/MintPy/wiki/SNAP-input-data) ###
 
 ```
-$DATA_DIR/SAfricaSenAT29
+$DATA_DIR/WCapeSenAT29
 ├── interferograms
 │   ├── 20190408_20190420
 │   │   ├── 20190408_20190420_coh_tc.dim
@@ -630,7 +630,7 @@ $DATA_DIR/SAfricaSenAT29
 │   ├── dem*.img
 │   ├── dem*.hdr
 └── mintpy
-    └── SAfricaSenAT29.txt
+    └── WCapeSenAT29.txt
 ```
 
 The corresponding template options for `load_data`:
@@ -638,10 +638,10 @@ The corresponding template options for `load_data`:
 ```cfg
 mintpy.load.processor        = snap
 ##---------interferogram datasets:
-mintpy.load.unwFile          = $DATA_DIR/SAfricaSenAT29/interferograms/*/*/Unw_*.img
-mintpy.load.corFile          = $DATA_DIR/SAfricaSenAT29/interferograms/*/*/coh_*.img
+mintpy.load.unwFile          = $DATA_DIR/WCapeSenAT29/interferograms/*/*/Unw_*.img
+mintpy.load.corFile          = $DATA_DIR/WCapeSenAT29/interferograms/*/*/coh_*.img
 ##---------geometry datasets:
-mintpy.load.demFile          = $DATA_DIR/SAfricaSenAT29/dem_tc.data/dem*.img
+mintpy.load.demFile          = $DATA_DIR/WCapeSenAT29/dem_tc.data/dem*.img
 ```
 
 ### ROI_PAC (rsmas version) ###

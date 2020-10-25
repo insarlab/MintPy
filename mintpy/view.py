@@ -302,7 +302,7 @@ def update_inps_with_file_metadata(inps, metadata):
 
     # Map info - coordinate unit and map projection
     # Use cartopy GeoAxes instance if input data is:
-    # 1. geocoded in the unit of degrees AND 
+    # 1. geocoded in the unit of degrees AND
     # 2. displayed in geo-coordinates
     # to support:
     # 1. fancy lat/lon label
@@ -1042,8 +1042,8 @@ def read_data4figure(i_start, i_end, inps, metadata):
         data = np.ma.masked_where(data == 0., data)
 
     # update display min/max
-    if (same_unit4all_subplots 
-            and all(arg not in sys.argv for arg in ['-v', '--vlim'])
+    if (same_unit4all_subplots
+            and all(arg not in sys.argv for arg in ['-v', '--vlim', '--wrap'])
             and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)
             and inps.dsetFamilyList[0] not in ['bperp']):
         data_mli = multilook_data(data, 10, 10)
