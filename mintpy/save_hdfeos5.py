@@ -30,12 +30,13 @@ TEMPALTE = TEMPLATE = get_template_content('hdfeos5')
 
 EXAMPLE = """example:
   save_hdfeos5.py geo_timeseries_ERA5_ramp_demErr.h5 --tc geo_temporalCoherence.h5 --asc geo_avgSpatialCoh.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
+  save_hdfeos5.py timeseries_ERA5_ramp_demErr.h5     --tc temporalCoherence.h5     --asc avgSpatialCoh.h5     -m maskTempCoh.h5     -g inputs/geometryGeo.h5
 """
 
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Convert MintPy timeseries product into HDF-EOS5 format\n' +
-                                     'https://earthdata.nasa.gov/esdis/eso/standards-and-references/hdf-eos5',
+                                     '  https://earthdata.nasa.gov/esdis/eso/standards-and-references/hdf-eos5',
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
                                      epilog=TEMPALTE+'\n'+EXAMPLE)
 

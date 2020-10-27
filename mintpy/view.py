@@ -637,6 +637,20 @@ def plot_slice(ax, data, metadata, inps=None):
 
         # Status bar
         # extent is (-0.5, -0.5, width-0.5, length-0.5)
+
+        # read lats/lons if exist
+        geom_file = os.path.join(os.path.dirname(metadata['FILE_PATH']), 'inputs/geometryRadar.h5')
+        if os.path.isfile(geom_file):
+            try:
+                lats = readfile.read(geom_file, datasetName='latitude',  box=inps.pix_box)[0]
+                lons = readfile.read(geom_file, datasetName='longitude', box=inps.pix_box)[0]
+            except:
+                msg = 'WARNING: no latitude / longitude found in file: {}'.format(os.path.basename(geom_file))
+                msg += ', skip showing lat/lon in the status bar.'
+                vprint(msg)
+        else:
+            geom_file = None
+
         def format_coord(x, y):
             msg = 'x={:.1f}, y={:.1f}'.format(x, y)
             col = int(np.rint(x - inps.pix_box[0]))
@@ -647,7 +661,9 @@ def plot_slice(ax, data, metadata, inps=None):
                 if inps.dem_file:
                     h = dem[row, col]
                     msg += ', h={:.0f} m'.format(h)
-            #msg += ', v ='
+                # lat/lon
+                if geom_file:
+                    msg += ', lat={:.4f}, lon={:.4f}'.format(lats[row, col], lons[row, col])
             return msg
         ax.format_coord = format_coord
 

@@ -59,6 +59,49 @@ def get_processor(meta_file):
     return processor
 
 
+def get_IPF(proj_dir, ts_file):
+    """Grab the IPF version number of each sub-swatch for Sentinel-1 time-series
+
+    Parameters: proj_dir    - str, path of the project directory
+                              E.g.: ~/data/AtacamaSenDT149
+                ts_file     - str, path of HDF5 file for time-series
+    Returns:    date_list   - list of str, dates in YYYYMMDD format
+                IFP_IW1/2/3 - list of str, IFP version number
+    """
+    from mintpy.objects import timeseries
+
+    s_dir = os.path.join(proj_dir, 'secondarys')
+    m_dir = os.path.join(proj_dir, 'reference')
+
+    # date list
+    date_list = timeseries(ts_file).get_date_list()
+    num_date = len(date_list)
+    # reference date
+    m_date = [i for i in date_list if not os.path.isdir(os.path.join(s_dir, i))][0]
+
+    # grab IPF numver
+    IPF_IW1, IPF_IW2, IPF_IW3 = [], [], []
+    prog_bar = ptime.progressBar(maxValue=num_date)
+    for i in range(num_date):
+        date_str = date_list[i]
+
+        # get xml_dir
+        if date_str == m_date:
+            xml_dir = m_dir
+        else:
+            xml_dir = os.path.join(s_dir, date_str)
+
+        # grab IPF version number
+        for j, IPF_IW in enumerate([IPF_IW1, IPF_IW2, IPF_IW3]):
+            xml_file = os.path.join(xml_dir, 'IW{}.xml'.format(j+1))
+            IPFv = load_product(xml_file).processingSoftwareVersion
+            IPF_IW.append('{:.02f}'.format(float(IPFv)))
+
+        prog_bar.update(i+1, suffix='{} IW1/2/3'.format(date_str))
+    prog_bar.close()
+    return date_list, IPF_IW1, IPF_IW2, IPF_IW3
+
+
 
 #####################################  multilook  #######################################
 
@@ -723,4 +766,3 @@ def read_baseline_timeseries(baseline_dir, processor='tops', ref_date=None):
             bDict[key][1] -= ref_bperp[1]
 
     return bDict
-

@@ -1,7 +1,8 @@
 We support output geocoded displacement time-series product into [HDF-EOS5](http://hdfeos.org) format via `save_hdfeos5.py`. This is designed to easily share the InSAR time-series products to the broader community.
 
 ```bash
-save_hdfeos5.py geo_timeseries_ECMWF_ramp_demErr.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
+save_hdfeos5.py geo_timeseries_ERA5_ramp_demErr.h5 --tc geo_temporalCoherence.h5 --asc geo_avgSpatialCoh.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
+save_hdfeos5.py timeseries_ERA5_ramp_demErr.h5     --tc temporalCoherence.h5     --asc avgSpatialCoh.h5     -m maskTempCoh.h5     -g inputs/geometryGeo.h5
 ```
 
 ### File structure ###

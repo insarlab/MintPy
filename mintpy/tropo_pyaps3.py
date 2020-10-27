@@ -80,15 +80,11 @@ Notes for data access:
   For ERA-5 from CDS, you need to agree to the Terms of Use of every datasets that you intend to download.
 """
 
-WEATHER_DIR_DEMO = """--weather-dir ~/atmosphere
+WEATHER_DIR_DEMO = """--weather-dir ~/data/aux
 atmosphere/
     /ERA5
         ERA5_N20_N40_E120_E140_20060624_14.grb
         ERA5_N20_N40_E120_E140_20060924_14.grb
-        ...
-    /ECMWF
-        ERA-Int_20030329_06.grb
-        ERA-Int_20030503_06.grb
         ...
     /MERRA
         merra-20110126-06.nc4
@@ -118,7 +114,7 @@ def create_parser():
     delay = parser.add_argument_group('delay calculation')
     delay.add_argument('-m', '--model', '-s', dest='tropo_model', default='ERA5',
                        choices={'ERA5'},
-                       #choices={'ERA5', 'ERAINT', 'MERRA', 'NARR'},
+                       #choices={'ERA5', 'MERRA', 'NARR'},
                        help='source of the atmospheric model (default: %(default)s).')
     delay.add_argument('--delay', dest='delay_type', default='comb', choices={'comb', 'dry', 'wet'},
                        help='Delay type to calculate, comb contains both wet and dry delays (default: %(default)s).')
