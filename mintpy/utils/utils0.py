@@ -234,6 +234,31 @@ def touch(fname_list, times=None):
 
 #################################### Geometry ##########################################
 
+def vtec2range_delay(vtec, inc_angle_iono, freq):
+    """Calculate/predict the range delay in SAR from TEC in zenith direction
+
+    L-band: 1.2575 GHz (ALOS2, NISAR-L)
+    S-band: 3.2 GHz    (NISAR-S)
+    C-band: 5.405 GHz  (Sentinel-1)
+
+    Parameters: vtec           - float, zenith TEC in TECU
+                inc_angle_iono - float/np.ndarray, incidence angle at the ionospheric shell in deg
+                freq           - float, radar carrier frequency in Hz.
+    Returns:    rg_delay       - float/np.ndarray, predicted range delay in meters
+    """
+    # ignore no-data value in inc_angle
+    if type(inc_angle_iono) is np.ndarray:
+        inc_angle_iono[inc_angle_iono == 0] = np.nan
+
+    # convert to TEC in LOS based on equation (3) in Chen and Zebker (2012)
+    tec = vtec / np.cos(inc_angle_iono * np.pi / 180.0)
+
+    # calculate range delay based on equation (1) in Chen and Zebker (2012)
+    range_delay = (tec * 1e16 * K / (freq**2)).astype(np.float32)
+
+    return range_delay
+
+
 def lalo_ground2iono_shell_along_los(lat, lon, inc_angle=30, head_angle=-168, iono_height=450e3):
     """Convert the lat/lon of a point on the ground to the ionosphere thin-shell 
     along the line-of-sight (LOS) direction.

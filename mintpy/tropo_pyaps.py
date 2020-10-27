@@ -57,7 +57,7 @@ To download MERRA2, you need an Earthdata account, and pre-authorize the "NASA G
     following https://disc.gsfc.nasa.gov/earthdata-login.
 """
 
-WEATHER_DIR_DEMO = """--weather-dir ~/WEATHER
+WEATHER_DIR_DEMO = """--weather-dir ~/data/aux
 WEATHER/
     /ECMWF
         ERA-Int_20030329_06.grb

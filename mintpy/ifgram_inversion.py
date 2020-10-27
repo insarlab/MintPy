@@ -948,11 +948,13 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
     elif obs_ds_name == 'azimuthOffset':
         az_pixel_size = ut.azimuth_ground_resolution(stack_obj.metadata)
+        az_pixel_size /= float(stack_obj.metadata['ALOOKS'])
         ts *= az_pixel_size
         print('converting azimuth offset unit from pixel ({:.2f} m) to meter'.format(az_pixel_size))
 
     elif obs_ds_name == 'rangeOffset':
         rg_pixel_size = float(stack_obj.metadata['RANGE_PIXEL_SIZE'])
+        rg_pixel_size /= float(stack_obj.metadata['RLOOKS'])
         ts *= rg_pixel_size
         print('converting range offset unit from pixel ({:.2f} m) to meter'.format(rg_pixel_size))
 
