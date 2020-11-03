@@ -6,6 +6,7 @@
 ############################################################
 
 
+import sys
 import argparse
 import numpy as np
 from mintpy.objects import ifgramStack
@@ -14,8 +15,8 @@ from mintpy.utils import readfile, writefile
 
 #####################################################################################
 EXAMPLE = """example:
-  ifgram_reconstruction.py  timeseries.h5  inputs/ifgramStack.h5  
-  ifgram_reconstruction.py  timeseries_ECWMF_ramp_demErr.h5  inputs/ifgramStack.h5  -d reconCorUnwrapPhase
+  ifgram_reconstruction.py timeseries_ERA5_ramp_demErr.h5
+  ifgram_reconstruction.py timeseries_ERA5_ramp_demErr.h5 -r inputs/ifgramStack.h5 -o ifgramStackRecon.h5
 """
 
 def create_parser():
@@ -26,7 +27,7 @@ def create_parser():
     parser.add_argument('timeseries_file', type=str, help='time-series file.')
     parser.add_argument('-r', dest='ifgram_file', type=str, default='./inputs/ifgramStack.h5',
                         help='reference interferograms stack file')
-    parser.add_argument('-o','--output', dest='out_file', default='reconUnwrapIfgram.h5',
+    parser.add_argument('-o','--output', dest='out_file', default='ifgramStackRecon.h5',
                         help='output filename for the reconstructed interferograms.')
     return parser
 
@@ -50,11 +51,9 @@ def timeseries2ifgram(ts_file, ifgram_file, out_file='reconUnwrapIfgram.h5'):
     print('reconstructing the interferograms from timeseries')
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
-    A1 = stack_obj.get_design_matrix4timeseries(stack_obj.get_date12_list(dropIfgram=False))[0]
-    num_ifgram = A1.shape[0]
-    A0 = -1.*np.ones((num_ifgram, 1))
-    A = np.hstack((A0, A1))
-    ifgram_est = np.dot(A, ts_data).reshape(num_ifgram, length, width)
+    date12_list = stack_obj.get_date12_list(dropIfgram=False)
+    A = stack_obj.get_design_matrix4timeseries(date12_list, refDate='no')[0]
+    ifgram_est = np.dot(A, ts_data).reshape(A.shape[0], length, width)
     ifgram_est = np.array(ifgram_est, dtype=ts_data.dtype)
     del ts_data
 
@@ -73,4 +72,5 @@ def main(iargs=None):
 
 #####################################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
+

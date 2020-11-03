@@ -1131,10 +1131,12 @@ class ifgramStack:
     @staticmethod
     def get_design_matrix4timeseries(date12_list, refDate=None):
         """Return design matrix of the input ifgramStack for timeseries estimation
-        Parameters: date12_list : list of string in YYYYMMDD_YYYYMMDD format
-                    refDate : str, date in YYYYMMDD format
-        Returns:    A : 2D array of float32 in size of (num_ifgram, num_date-1)
-                    B : 2D array of float32 in size of (num_ifgram, num_date-1)
+        Parameters: date12_list - list of string in YYYYMMDD_YYYYMMDD format
+                    refDate     - str, date in YYYYMMDD format
+                                  set to None for the 1st date
+                                  set to 'no' to disable reference date
+        Returns:    A - 2D array of float32 in size of (num_ifgram, num_date-1)
+                    B - 2D array of float32 in size of (num_ifgram, num_date-1)
         Examples:   obj = ifgramStack('./inputs/ifgramStack.h5')
                     A, B = obj.get_design_matrix4timeseries(obj.get_date12_list(dropIfgram=True))
                     A = ifgramStack.get_design_matrix4timeseries(date12_list, refDate='20101022')[0]
@@ -1164,13 +1166,19 @@ class ifgramStack:
             B[i, ind1:ind2] = tbase[ind1+1:ind2+1] - tbase[ind1:ind2]
 
         # Remove reference date as it can not be resolved
-        if refDate is None:
-            refDate = date_list[0]
-        if refDate:
-            ind_r = date_list.index(refDate)
-            A = np.hstack((A[:, 0:ind_r], A[:, (ind_r+1):]))
-            B = B[:, :-1]
+        if refDate != 'no':
+            # default refDate
+            if refDate is None:
+                refDate = date_list[0]
+
+            # apply refDate
+            if refDate:
+                ind_r = date_list.index(refDate)
+                A = np.hstack((A[:, 0:ind_r], A[:, (ind_r+1):]))
+                B = B[:, :-1]
+
         return A, B
+
 
     def get_perp_baseline_timeseries(self, dropIfgram=True):
         """Get spatial perpendicular baseline in timeseries from ifgramStack, ignoring dropped ifgrams"""
