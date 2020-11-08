@@ -306,9 +306,9 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
                     slice_flag[date_list.index(d)] = True
 
             # read data
-            data = ds[slice_flag,
+            data = ds[:,
                       box[1]:box[3],
-                      box[0]:box[2]]
+                      box[0]:box[2]][slice_flag]
             if xstep * ystep > 1:
                 data = data[:,
                             int(ystep/2)::ystep,

@@ -263,6 +263,9 @@ def read_subset_box(template_file, meta):
         length, width = int(meta['LENGTH']), int(meta['WIDTH'])
         pix_box = (0, 0, width, length)
 
+    # ensure all index are in int16
+    pix_box = tuple([int(i) for i in pix_box])
+
     return pix_box, meta
 
 

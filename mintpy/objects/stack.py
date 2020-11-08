@@ -266,7 +266,7 @@ class timeseries:
             if box is None:
                 box = [0, 0, self.width, self.length]
 
-            data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
+            data = ds[:, box[1]:box[3], box[0]:box[2]][dateFlag]
             if squeeze:
                 data = np.squeeze(data)
         return data
@@ -701,7 +701,7 @@ class geometry:
                 else:
                     for e in datasetName:
                         dateFlag[self.dateList.index(e)] = True
-                data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
+                data = ds[:, box[1]:box[3], box[0]:box[2]][dateFlag]
                 data = np.squeeze(data)
         return data
 ################################# geometry class end ###################################
@@ -883,7 +883,7 @@ class ifgramStack:
             if box is None:
                 box = (0, 0, self.width, self.length)
 
-            data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
+            data = ds[:, box[1]:box[3], box[0]:box[2]][dateFlag]
             data = np.squeeze(data)
         return data
 
@@ -1033,7 +1033,7 @@ class ifgramStack:
             # reference value for phase
             ref_val = None
             if 'unwrapPhase' in datasetName and self.refY:
-                ref_val = dset[ifgram_flag, self.refY, self.refX]
+                ref_val = dset[:, self.refY, self.refX][ifgram_flag]
 
             # calculate lines by lines
             num_step = np.ceil(self.length / row_step).astype(int)
@@ -1041,7 +1041,7 @@ class ifgramStack:
             for i in range(num_step):
                 r0 = i * row_step
                 r1 = min(r0 + row_step, self.length)
-                data = dset[ifgram_flag, r0:r1, :]
+                data = dset[:, r0:r1, :][ifgram_flag]
 
                 # referencing / normalizing for phase
                 if 'unwrapPhase' in datasetName:
@@ -1370,7 +1370,7 @@ class HDFEOS:
                 else:
                     for e in datasetName:
                         dateFlag[self.dateList.index(e)] = True
-                data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
+                data = ds[:, box[1]:box[3], box[0]:box[2]][dateFlag]
                 data = np.squeeze(data)
         return data
 ################################# HDF-EOS5 class end ###################################
