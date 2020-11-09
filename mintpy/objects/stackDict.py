@@ -519,6 +519,12 @@ class geometryDict:
                     print(('    input file "{}" is water body (-1/0 for water/land), '
                            'convert to water mask (0/1 for water/land).'.format(fname)))
 
+                if dsName == 'height':
+                    noDataValueDEM = -32768
+                    if np.any(data == noDataValueDEM):
+                        data[data == noDataValueDEM] = np.nan
+                        print('    convert no-data value for DEM {} to NaN.'.format(noDataValueDEM))
+
                 # write
                 ds = f.create_dataset(dsName,
                                       data=data,

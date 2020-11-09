@@ -248,6 +248,7 @@ def read_subset_box(inpsDict):
             box4geo_lut = ut.coordinate(atrLut).bbox_geo2radar(geo_box)
             print('box to read for geocoded lookup file in y/x: {}'.format(box4geo_lut))
 
+    inpsDict['geocoded'] = geocoded
     inpsDict['box'] = pix_box
     inpsDict['box4geo_lut'] = box4geo_lut
     return inpsDict
@@ -633,7 +634,13 @@ def print_write_setting(inpsDict):
     print('updateMode : {}'.format(updateMode))
     print('compression: {}'.format(comp))
     box = inpsDict['box']
-    boxGeo = inpsDict['box4geo_lut']
+
+    # box for geometry file in geo-coordinates
+    if not inpsDict.get('geocoded', False):
+        boxGeo = inpsDict['box4geo_lut']
+    else:
+        boxGeo = box
+
     return updateMode, comp, box, boxGeo
 
 
