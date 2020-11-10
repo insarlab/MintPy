@@ -21,6 +21,27 @@ Relevant literature:
 
 + Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis: Unwrapping error correction and noise reduction, _Computers & Geosciences, 133,_ 104331, doi:10.1016/j.cageo.2019.104331.
 
+#### Sentinel-1 on San Francisco Bay with ARIA ####
+
+Area: San Francisco Bay, California, USA     
+Data: Sentinel-1 A/B descending track 42 during May 2015 - March 2020 (114 acquisitoins; [Zenodo](https://zenodo.org/record/4265413))    
+Size: ~2.7 GB
+
+```bash
+wget https://zenodo.org/record/4265413/files/SanFranSenDT42.tar.xz
+tar -xvJf SanFranSenDT42.tar.xz
+cd SanFranSenDT42/mintpy
+smallbaselineApp.py ${MINTPY_HOME}/mintpy/data/input_files/SanFranSenDT42.txt     
+```
+
+<p align="left">
+  <img width="650" src="https://yunjunzhang.files.wordpress.com/2020/11/sanfransendt42_transect.jpg">
+</p>
+
+Relevant literature:
+
++ Chaussard, E., R. Bürgmann, H. Fattahi, R. M. Nadeau, T. Taira, C. W. Johnson, and I. Johanson (2015), Potential for larger earthquakes in the East San Francisco Bay Area due to the direct connection between the Hayward and Calaveras Faults, Geophysical Research Letters, 42(8), 2734-2741, doi:10.1002/2015GL063575.
+
 #### Envisat of the 2008 Wells earthquake with Gamma ####
 
 Area: Wells, Nevada, USA       
