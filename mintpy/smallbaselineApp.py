@@ -342,25 +342,18 @@ class TimeSeriesAnalysis:
         self._copy_aux_file()
 
         # 2) loading data
-        stack_processor = self.template['mintpy.load.processor'].lower()
-        if stack_processor == 'aria':
-            from mintpy import prep_aria
-            iargs = ['--template', self.templateFile]
-            prep_aria.main(iargs)
+        # compose list of input arguments
+        # instead of using command line then split
+        # to support path with whitespace
+        iargs = ['--template', self.templateFile]
+        if self.customTemplateFile:
+            iargs += [self.customTemplateFile]
+        if self.projectName:
+            iargs += ['--project', self.projectName]
 
-        else:
-            # compose list of input arguments
-            # instead of using command line then split
-            # to support path with whitespace
-            iargs = ['--template', self.templateFile]
-            if self.customTemplateFile:
-                iargs += [self.customTemplateFile]
-            if self.projectName:
-                iargs += ['--project', self.projectName]
-
-            # run command line
-            print('load_data.py', ' '.join(iargs))
-            mintpy.load_data.main(iargs)
+        # run command line
+        print('load_data.py', ' '.join(iargs))
+        mintpy.load_data.main(iargs)
 
         # come back to working directory
         os.chdir(self.workDir)

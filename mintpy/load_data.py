@@ -26,6 +26,8 @@ from mintpy import subset
 
 
 #################################################################
+PROCESSOR_LIST = ['isce', 'aria', 'snap', 'gamma', 'roipac']
+
 datasetName2templateKey = {'unwrapPhase'     : 'mintpy.load.unwFile',
                            'coherence'       : 'mintpy.load.corFile',
                            'connectComponent': 'mintpy.load.connCompFile',
@@ -89,8 +91,7 @@ def create_parser():
 
     parser.add_argument('--project', type=str, dest='PROJECT_NAME',
                         help='project name of dataset for INSARMAPS Web Viewer')
-    parser.add_argument('--processor', type=str, dest='processor',
-                        choices={'isce', 'snap', 'gamma', 'roipac', 'doris', 'gmtsar'},
+    parser.add_argument('--processor', type=str, dest='processor', choices=PROCESSOR_LIST,
                         help='InSAR processor/software of the file', default='isce')
     parser.add_argument('--enforce', '-f', dest='updateMode', action='store_false',
                         help='Disable the update mode, or skip checking dataset already loaded.')
@@ -133,7 +134,14 @@ def cmd_line_parse(iargs=None):
 
 #################################################################
 def read_inps2dict(inps):
-    """Read input Namespace object info into inpsDict"""
+    """Read input Namespace object info into inpsDict
+
+    It grab the following contents into inpsDict
+    1. inps & all template files
+    2. configurations: processor, autoPath, updateMode, compression
+    3. extra metadata: PLATFORM, PROJECT_NAME, 
+    4. translate autoPath
+    """
     # Read input info into inpsDict
     inpsDict = vars(inps)
     inpsDict['PLATFORM'] = None
@@ -623,7 +631,60 @@ def prepare_metadata(inpsDict):
             prep_isce.main(iargs)
 
         except:
-            pass
+            warnings.warn('prep_isce.py failed. Assuming its result exists and continue...')
+
+    elif processor == 'aria':
+        from mintpy import prep_aria
+
+        ## compose input arguments
+        # use the default template file is exists & input
+        default_temp_files = [fname for fname in inpsDict['template_file'] if fname.endswith('smallbaselineApp.cfg')]
+        if len(default_temp_files) > 0:
+            temp_file = default_temp_files[0]
+        else:
+            temp_file = inpsDict['template_file'][0]
+        iargs = ['--template', temp_file]
+
+        # file name/dir/path
+        ARG2OPT_DICT = {
+            '--stack-dir'           : 'mintpy.load.unwFile',
+            '--unwrap-stack-name'   : 'mintpy.load.unwFile',
+            '--coherence-stack-name': 'mintpy.load.corFile',
+            '--conn-comp-stack-name': 'mintpy.load.connCompFile',
+            '--dem'                 : 'mintpy.load.demFile',
+            '--incidence-angle'     : 'mintpy.load.incAngleFile',
+            '--azimuth-angle'       : 'mintpy.load.azAngleFile',
+            '--water-mask'          : 'mintpy.load.waterMaskFile',
+        }
+
+        for arg_name, opt_name in ARG2OPT_DICT.items():
+            arg_value = inpsDict.get(opt_name, 'auto')
+            if arg_value.lower() not in ['auto', 'no', 'none']:
+                if arg_name.endswith('dir'):
+                    iargs += [arg_name, os.path.dirname(arg_value)]
+                elif arg_name.endswith('name'):
+                    iargs += [arg_name, os.path.basename(arg_value)]
+                else:
+                    iargs += [arg_name, arg_value]
+
+        # configurations
+        if inpsDict['compression']:
+            iargs += ['--compression', inpsDict['compression']]
+        if inpsDict['updateMode']:
+            iargs += ['--update']
+
+        ## run
+        print('prep_aria.py', ' '.join(iargs))
+        try:
+            prep_aria.main(iargs)
+        except:
+            warnings.warn('prep_aria.py failed. Assuming its result exists and continue...')
+
+    else:
+        msg = 'un-recognized InSAR processor: {}'.format(processor)
+        msg += '\nsupported processors: {}'.format(PROCESSOR_LIST)
+        raise ValueError(msg)
+
     return
 
 
@@ -662,7 +723,13 @@ def main(iargs=None):
 
     # read input options
     inpsDict = read_inps2dict(inps)
+
+    # prepare metadata
     prepare_metadata(inpsDict)
+
+    # skip data writing for aria as it is included in prep_aria
+    if inpsDict['processor'] == 'aria':
+        return
 
     inpsDict = read_subset_box(inpsDict)
     extraDict = get_extra_metadata(inpsDict)

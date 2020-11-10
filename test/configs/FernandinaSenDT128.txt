@@ -3,27 +3,13 @@ mintpy.compute.cluster = local
 ########## 1. Load Data (--load to exit after this step)
 ## load_data.py -H to check more details and example inputs.
 mintpy.load.processor  = isce
-##---------for ISCE only:
-mintpy.load.metaFile         = ../reference/IW*.xml
-mintpy.load.baselineDir      = ../baselines
-##---------interferogram datasets:
-mintpy.load.unwFile          = ../merged/interferograms/*/filt_*.unw
-mintpy.load.corFile          = ../merged/interferograms/*/filt_*.cor
-mintpy.load.connCompFile     = ../merged/interferograms/*/filt_*.unw.conncomp
-##---------geometry datasets:
-mintpy.load.demFile          = ../merged/geom_reference/hgt.rdr
-mintpy.load.lookupYFile      = ../merged/geom_reference/lat.rdr
-mintpy.load.lookupXFile      = ../merged/geom_reference/lon.rdr
-mintpy.load.incAngleFile     = ../merged/geom_reference/los.rdr
-mintpy.load.azAngleFile      = ../merged/geom_reference/los.rdr
-mintpy.load.shadowMaskFile   = ../merged/geom_reference/shadowMask.rdr
-mintpy.load.waterMaskFile    = None
+mintpy.load.autoPath   = yes
 
-mintpy.reference.lalo                           = -0.30,-91.43
+mintpy.reference.lalo  = -0.30,-91.43
 mintpy.networkInversion.weightFunc              = no
 mintpy.troposphericDelay.weatherModel           = ERA5
 mintpy.topographicResidual.pixelwiseGeometry    = no
 mintpy.topographicResidual.stepFuncDate         = 20170910,20180613  #eruption dates
-mintpy.deramp                                   = linear
-mintpy.save.hdfEos5                             = yes
+mintpy.deramp          = linear
+mintpy.save.hdfEos5    = yes
 

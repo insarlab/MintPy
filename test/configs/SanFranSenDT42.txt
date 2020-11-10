@@ -1,0 +1,14 @@
+# vim: set filetype=cfg:
+mintpy.load.processor       = aria  #[isce, aria, snap, gamma, roipac], auto for isce
+mintpy.load.autoPath        = yes
+
+mintpy.subset.lalo          = 37.35:38.00, -122.45:-121.80
+mintpy.network.endDate      = 20170510
+mintpy.reference.lalo       = 37.69, -122.07
+mintpy.unwrapError.method   = bridging
+mintpy.deramp               = no
+
+mintpy.networkInversion.weightFunc           = no
+mintpy.troposphericDelay.method              = no
+mintpy.topographicResidual.pixelwiseGeometry = no
+
