@@ -89,7 +89,7 @@ def create_parser():
                        default="cohStack.vrt",
                        help='Name of the stack VRT file of coherence data.\n'+
                             'default: %(default)s')
-    stack.add_argument('-l','--conn-comp-name', dest='connCompFile', type=str,
+    stack.add_argument('-l','--conn-comp-stack-name', dest='connCompFile', type=str,
                        default="connCompStack.vrt",
                        help='Name of the stack VRT file of connected component data.\n' +
                             'default: %(default)s')
@@ -116,11 +116,11 @@ def cmd_line_parse(iargs = None):
         inps = read_template2inps(inps.template_file, inps)
 
     # --stack-dir
-    elif inps.stackDir is not None:
-        inps.stackDir = os.path.abspath(inps.stackDir)
-        inps.corFile = os.path.join(inps.stackDir, inps.corFile)
-        inps.unwFile = os.path.join(inps.stackDir, inps.unwFile)
-        inps.connCompFile = os.path.join(inps.stackDir, inps.connCompFile)
+    if inps.stackDir is not None:
+        inps.stackDir     = os.path.abspath(inps.stackDir)
+        inps.corFile      = os.path.join(inps.stackDir, os.path.basename(inps.corFile))
+        inps.unwFile      = os.path.join(inps.stackDir, os.path.basename(inps.unwFile))
+        inps.connCompFile = os.path.join(inps.stackDir, os.path.basename(inps.connCompFile))
 
     # check datasets
     # 1. translate wildcard path input with search result
@@ -144,7 +144,6 @@ def cmd_line_parse(iargs = None):
 
         elif key in required_ds_keys:
             # raise exception if any required DS is missing
-            parser.print_usage()
             raise SystemExit('ERROR: no file found for {} in input path: "{}"!'.format(key, iDict[key]))
 
     return inps
@@ -160,6 +159,13 @@ def read_template2inps(template_file, inps=None):
     template = readfile.read_template(template_file)
     template = ut.check_template_auto_value(template)
 
+    # ignore template options with default auto values
+    # so that options from input arguments have higher priority 
+    # than template options with auto values
+    for key in list(template.keys()):
+        if template[key] == 'auto':
+            template.pop(key)
+
     # pass options from template to inps
     key_prefix = 'mintpy.load.'
     keys = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
@@ -167,6 +173,8 @@ def read_template2inps(template_file, inps=None):
         value = template[key_prefix+key]
         if key in ['updateMode', 'compression']:
             iDict[key] = value
+        elif key in ['unwFile']:
+            iDict['stackDir'] = os.path.dirname(value)
         elif value:
             iDict[key] = str(value)
 

@@ -9,6 +9,7 @@
 
 
 import os
+import re
 import time
 import glob
 import shutil
@@ -474,7 +475,7 @@ def get_geometry_file(dset_list, work_dir=None, coord='geo', abspath=True, print
     return geom_file
 
 
-def update_template_file(template_file, extra_dict):
+def update_template_file(template_file, extra_dict, delimiter='='):
     """Update option value in template_file with value from input extra_dict"""
     # Compare and skip updating template_file if no new option value found.
     update = False
@@ -490,12 +491,17 @@ def update_template_file(template_file, extra_dict):
     tmp_file = template_file+'.tmp'
     f_tmp = open(tmp_file, 'w')
     for line in open(template_file, 'r'):
-        c = [i.strip() for i in line.strip().split('=', 1)]
+        c = [i.strip() for i in line.strip().split(delimiter, 1)]
         if not line.startswith(('%', '#')) and len(c) > 1:
             key = c[0]
             value = str.replace(c[1], '\n', '').split("#")[0].strip()
             if key in extra_dict.keys() and extra_dict[key] != value:
-                line = line.replace(value, extra_dict[key], 1)
+                # use "= {OLD_VALUE}" for search/replace to be more robust
+                # against the scenario when key name contains {OLD_VALUE}
+                # i.e. mintpy.load.autoPath
+                old_value_str = re.findall(delimiter+'[\s]*'+value, line)[0]
+                new_value_str = old_value_str.replace(value, extra_dict[key])
+                line = line.replace(old_value_str, new_value_str, 1)
                 print('    {}: {} --> {}'.format(key, value, extra_dict[key]))
         f_tmp.write(line)
     f_tmp.close()

@@ -99,6 +99,9 @@ if [ $plot_timeseries -eq 1 ]; then
     #w/o trop delay correction
     file=timeseries_ramp.h5;                        test -f $file && $view $file $opt >> $log_file
     file=timeseries_demErr_ramp.h5;                 test -f $file && $view $file $opt >> $log_file
+
+    #w/o trop delay and deramp
+    file=timeseries_demErr.h5;                      test -f $file && $view $file $opt >> $log_file
 fi
 
 

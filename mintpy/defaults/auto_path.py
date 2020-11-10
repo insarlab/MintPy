@@ -62,7 +62,6 @@ mintpy.load.processor      = roipac
 mintpy.load.unwFile        = ../PROCESS/DONE/IFG*/filt*.unw
 mintpy.load.corFile        = ../PROCESS/DONE/IFG*/filt*.cor
 mintpy.load.connCompFile   = ../PROCESS/DONE/IFG*/filt*snap_connect.byt
-mintpy.load.intFile        = None
 
 mintpy.load.demFile        = ../PROCESS/DONE/*${m_date12}*/radar_*rlks.hgt
 mintpy.load.lookupYFile    = ../PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
@@ -78,7 +77,6 @@ mintpy.load.processor      = gamma
 mintpy.load.unwFile        = ../PROCESS/DONE/IFG*/diff*rlks.unw
 mintpy.load.corFile        = ../PROCESS/DONE/IFG*/*filt*rlks.cor
 mintpy.load.connCompFile   = None
-mintpy.load.intFile        = None
 
 mintpy.load.demFile        = ../PROCESS/SIM/sim_${m_date12}/sim*.hgt_sim
 mintpy.load.lookupYFile    = ../PROCESS/SIM/sim_${m_date12}/sim*.UTM_TO_RDC
@@ -89,11 +87,28 @@ mintpy.load.shadowMaskFile = None
 mintpy.load.bperpFile      = ../merged/baselines/*/*.base_perp
 '''
 
+AUTO_PATH_ARIA = '''##----------Default file path of ARIA products
+mintpy.load.processor      = aria
+mintpy.load.unwFile        = ../stack/unwrapStack.vrt
+mintpy.load.corFile        = ../stack/cohStack.vrt
+mintpy.load.connCompFile   = ../stack/connCompStack.vrt
+
+mintpy.load.demFile        = ../DEM/*.dem
+mintpy.load.lookupYFile    = None
+mintpy.load.lookupXFile    = None
+mintpy.load.incAngleFile   = ../incidenceAngle/*.vrt
+mintpy.load.azAngleFile    = ../azimuthAngle/*.vrt
+mintpy.load.shadowMaskFile = None
+mintpy.load.waterMaskFile  = ../mask/water*.msk
+'''
+
+
 AUTO_PATH_DICT = {
     'isce_tops'     : AUTO_PATH_ISCE_TOPS,
     'isce_stripmap' : AUTO_PATH_ISCE_STRIPMAP,
     'roipac'        : AUTO_PATH_ROIPAC,
     'gamma'         : AUTO_PATH_GAMMA,
+    'aria'          : AUTO_PATH_ARIA,
 }
 
 prefix = 'mintpy.load.'
