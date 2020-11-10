@@ -1323,7 +1323,8 @@ def prep_slice(cmd, auto_fig=False):
                 atr  : dict, metadata
                 inps : namespace, input argument for plot setup
     Example:
-        fig, ax = plt.subplots(figsize=[4, 3], projection=ccrs.PlateCarree())
+        subplot_kw = dict(projection=ccrs.PlateCarree())
+        fig, ax = plt.subplots(figsize=[4, 3], subplot_kw=subplot_kw)
         geo_box = (-91.670, -0.255, -91.370, -0.515)    # W, N, E, S
         cmd = 'view.py geo_velocity.h5 velocity --mask geo_maskTempCoh.h5 '
         cmd += '--sub-lon {w} {e} --sub-lat {s} {n} '.format(w=geo_box[0], n=geo_box[1], e=geo_box[2], s=geo_box[3])
