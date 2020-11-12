@@ -30,7 +30,13 @@ from mintpy.objects import (
     timeseries,
 )
 from mintpy.objects.gps import GPS
-from mintpy.utils import ptime, readfile, utils as ut, plot as pp
+from mintpy.utils import (
+    arg_group,
+    ptime,
+    readfile,
+    utils as ut,
+    plot as pp,
+)
 from mintpy.multilook import multilook_data
 from mintpy import subset, version
 
@@ -106,16 +112,16 @@ def create_parser():
     parser.add_argument('--noverbose', dest='print_msg', action='store_false',
                         help='Disable the verbose message printing (default: %(default)s).')
 
-    parser = pp.add_data_disp_argument(parser)
-    parser = pp.add_dem_argument(parser)
-    parser = pp.add_figure_argument(parser)
-    parser = pp.add_gps_argument(parser)
-    parser = pp.add_mask_argument(parser)
-    parser = pp.add_map_argument(parser)
-    parser = pp.add_point_argument(parser)
-    parser = pp.add_reference_argument(parser)
-    parser = pp.add_save_argument(parser)
-    parser = pp.add_subset_argument(parser)
+    parser = arg_group.add_data_disp_argument(parser)
+    parser = arg_group.add_dem_argument(parser)
+    parser = arg_group.add_figure_argument(parser)
+    parser = arg_group.add_gps_argument(parser)
+    parser = arg_group.add_mask_argument(parser)
+    parser = arg_group.add_map_argument(parser)
+    parser = arg_group.add_point_argument(parser)
+    parser = arg_group.add_reference_argument(parser)
+    parser = arg_group.add_save_argument(parser)
+    parser = arg_group.add_subset_argument(parser)
 
     return parser
 

@@ -14,8 +14,9 @@ import scipy.stats as stats
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 from matplotlib.widgets import Slider
+
 from mintpy.objects import timeseries, giantTimeseries, HDFEOS
-from mintpy.utils import readfile, ptime, plot as pp, utils as ut
+from mintpy.utils import arg_group, readfile, ptime, plot as pp, utils as ut
 from mintpy.multilook import multilook_data
 from mintpy import subset, view
 
@@ -86,15 +87,15 @@ def create_parser():
     parser.add_argument('--noverbose', dest='print_msg', action='store_false',
                         help='Disable the verbose message printing.')
 
-    parser = pp.add_data_disp_argument(parser)
-    parser = pp.add_dem_argument(parser)
-    parser = pp.add_figure_argument(parser)
-    parser = pp.add_gps_argument(parser)
-    parser = pp.add_mask_argument(parser)
-    parser = pp.add_map_argument(parser)
-    parser = pp.add_reference_argument(parser)
-    parser = pp.add_save_argument(parser)
-    parser = pp.add_subset_argument(parser)
+    parser = arg_group.add_data_disp_argument(parser)
+    parser = arg_group.add_dem_argument(parser)
+    parser = arg_group.add_figure_argument(parser)
+    parser = arg_group.add_gps_argument(parser)
+    parser = arg_group.add_mask_argument(parser)
+    parser = arg_group.add_map_argument(parser)
+    parser = arg_group.add_reference_argument(parser)
+    parser = arg_group.add_save_argument(parser)
+    parser = arg_group.add_subset_argument(parser)
 
     return parser
 
