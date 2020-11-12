@@ -26,7 +26,7 @@ from scipy import linalg   # more effieint than numpy.linalg
 from mintpy.objects import ifgramStack, timeseries, cluster
 from mintpy.simulation import decorrelation as decor
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import readfile, writefile, ptime, utils as ut
+from mintpy.utils import readfile, writefile, ptime, utils as ut, arg_group
 
 
 # key configuration parameter name
@@ -120,14 +120,7 @@ def create_parser():
                         help='Max amount of memory in GB to use (default: %(default)s).\n' +
                              'Adjust according to your computer memory.')
 
-    par = parser.add_argument_group('parallel', 'parallel processing using dask')
-    par.add_argument('-c', '--cluster', '--cluster-type', dest='cluster', type=str,
-                     default='no', choices=cluster.CLUSTER_LIST + ['no'],
-                     help='Cluster to use for parallel computing, no to turn OFF. (default: %(default)s).')
-    par.add_argument('--num-worker', dest='numWorker', type=str, default='4',
-                     help='Number of workers to use (default: %(default)s).')
-    par.add_argument('--config', '--config-name', dest='config', type=str, default=None,
-                     help='Configuration name to use in dask.yaml (default: %(default)s).')
+    parser = arg_group.add_parallel_argument(parser)
 
     # update / skip
     parser.add_argument('--update', dest='update_mode', action='store_true',
