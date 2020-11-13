@@ -45,7 +45,13 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
         datasetDict = dict()
         datasetDict[meta['FILE_TYPE']] = data
 
+    # output file info
     ext = os.path.splitext(out_file)[1].lower()
+    out_dir = os.path.dirname(os.path.abspath(out_file))
+    if not os.path.isdir(out_dir):
+        os.makedirs(out_dir)
+        print('create directory: {}'.format(out_dir))
+
     # HDF5 File
     if ext in ['.h5', '.he5']:
         # grab info from reference h5 file
@@ -250,22 +256,34 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, compress
         ds_name_dict = {}
 
         if ref_file and os.path.splitext(ref_file)[1] in ['.h5', '.he5']:
-            shape2d = (int(meta['LENGTH']), int(meta['WIDTH']))
             with h5py.File(ref_file, 'r') as fr:
+                shape2d = (int(fr.attrs['LENGTH']), int(fr.attrs['WIDTH']))
+                shape2d_out = (int(meta['LENGTH']), int(meta['WIDTH']))
+
                 for key in fr.keys():
                     ds = fr[key]
                     if isinstance(ds, h5py.Dataset):
-                        # save all dataset info 
-                        ds_name_dict[key] = [ds.dtype, ds.shape, None]
 
-                        # save auxliary dataset value
+                        # auxliary dataset
                         if ds.shape[-2:] != shape2d:
-                            ds_name_dict[key][2] = ds[:]
-    
+                            ds_name_dict[key] = [ds.dtype, ds.shape, ds[:]]
+
+                        # dataset
+                        else:
+                            ds_shape = list(ds.shape)
+                            ds_shape[-2:] = shape2d_out
+                            ds_name_dict[key] = [ds.dtype, tuple(ds_shape), None]
+
             if print_msg:
                 print('grab dataset structure from ref_file: {}'.format(ref_file))
         else:
             raise ValueError('No ds_name_dict or ref_file found.')
+
+    # directory
+    fdir = os.path.dirname(os.path.abspath(fname))
+    if not os.path.isdir(fdir):
+        os.makedirs(fdir)
+        print('crerate directory: {}'.format(fdir))
 
     # create file
     f = h5py.File(fname, "w")
