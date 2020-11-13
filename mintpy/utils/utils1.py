@@ -119,7 +119,8 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                                            ramp_type=ramp_type,
                                            mask_file=mask_file,
                                            out_file=deramped_file)
-        print('Calculating residual RMS for each epoch from file: '+deramped_file)
+
+        print('\ncalculating residual RMS for each epoch from file: '+deramped_file)
         rms_file = timeseries(deramped_file).timeseries_rms(maskFile=mask_file, outFile=rms_file)
 
     # Read residual RMS text file

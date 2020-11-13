@@ -19,7 +19,7 @@ RAMP_LIST = [
 ]
 
 
-def deramp(data, mask_in, ramp_type='linear', metadata=None):
+def deramp(data, mask_in, ramp_type='linear', metadata=None, max_num_sample=1e6):
     '''Remove ramp from input data matrix based on pixel marked by mask
     Ignore data with nan or zero value.
     Parameters: data      : 2D / 3D np.ndarray, data to be derampped
@@ -44,12 +44,26 @@ def deramp(data, mask_in, ramp_type='linear', metadata=None):
         dmean = np.array(data).flatten()
 
     ## mask
-    # default
+
+    # 1. default
     if mask_in is None:
         mask_in = np.ones((length, width), dtype=np.float32)
     mask = (mask_in != 0).flatten()
-    # ignore pixels with NaN or zero data value
+    del mask_in
+
+    # 2. ignore pixels with NaN or zero data value
     mask *= np.multiply(~np.isnan(dmean), dmean != 0.)
+    del dmean
+
+    # 3. for big dataset: uniformally sample the data for ramp estimation
+    if max_num_sample and np.sum(mask) > max_num_sample:
+        step = int(np.ceil(np.sqrt(np.sum(mask) / max_num_sample)))
+        if step > 1:
+            sample_flag = np.zeros((length, width), dtype=np.bool_)
+            sample_flag[int(step/2)::step,
+                        int(step/2)::step] = 1
+            mask *= sample_flag.flatten()
+            del sample_flag
 
     # design matrix
     xx, yy = np.meshgrid(np.arange(0, width),
