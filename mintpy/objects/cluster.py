@@ -19,6 +19,49 @@ import multiprocessing
 CLUSTER_LIST = ['lsf', 'pbs', 'slurm', 'local']
 
 
+############################## Utilities functions #########################################
+
+def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
+    """Divide the input box into `num_split` different sub_boxes.
+
+    :param box: [x0, y0, x1, y1]: list[int] of size 4
+    :param num_split: int, the number of sub_boxes to split a box into
+    :param dimension: str = 'y' or 'x', the dimension along which to split the boxes
+    :return: sub_boxes: list(list(4 int)), the splited sub boxes
+    """
+
+    if num_split <= 1:
+        return [box]
+
+    x0, y0, x1, y1 = box
+    length, width = y1 - y0, x1 - x0
+
+    sub_boxes = []
+    max_step = 0
+    for i in range(num_split):
+        if dimension == 'y':
+            start = (i * length) // num_split + y0
+            end = ((i + 1) * length) // num_split + y0
+            sub_boxes.append([x0, start, x1, end])
+
+        else:
+            start = (i * width) // num_split + x0
+            end = ((i + 1) * width) // num_split + x0
+            sub_boxes.append([start, y0, end, y1])
+
+        # stats
+        max_step = max(end - start, max_step)
+
+    if print_msg:
+        print('split along {} dimension ({:d}) into {:d} boxes'.format(dimension, end, num_split))
+        print('    with each box up to {:d} in {} dimension'.format(max_step, dimension))
+
+    return sub_boxes
+
+
+
+############################## Beginning of DaskCluster class ##############################
+
 class DaskCluster:
     """
     Generic dask cluster wrapper for parallel processing in blocks.
@@ -137,7 +180,7 @@ class DaskCluster:
 
         # split the primary box into sub boxes for each worker
         box = func_data["box"]
-        sub_boxes = self.split_box2sub_boxes(box, num_split=self.num_worker, dimension='x')
+        sub_boxes = split_box2sub_boxes(box, num_split=self.num_worker, dimension='x')
         print('split patch into {} sub boxes in x direction for workers to process'.format(len(sub_boxes)))
 
         # submit job for each worker
@@ -243,35 +286,6 @@ class DaskCluster:
     ##### Utilities functions
 
     @staticmethod
-    def split_box2sub_boxes(box, num_split, dimension='x'):
-        """Divide the input box into `num_split` different sub_boxes.
-
-        :param box: [x0, y0, x1, y1]: list[int] of size 4
-        :param num_split: int, the number of sub_boxes to split a box into
-        :param dimension: str = 'y' or 'x', the dimension along which to split the boxes
-        :return: sub_boxes: list(list(4 int)), the splited sub boxes
-        """
-
-        x0, y0, x1, y1 = box
-        length, width = y1 - y0, x1 - x0
-
-        sub_boxes = []
-        if dimension == 'y':
-            for i in range(num_split):
-                start = (i * length) // num_split + y0
-                end = ((i + 1) * length) // num_split + y0
-                sub_boxes.append([x0, start, x1, end])
-
-        else:
-            for i in range(num_split):
-                start = (i * width) // num_split + x0
-                end = ((i + 1) * width) // num_split + x0
-                sub_boxes.append([start, y0, end, y1])
-
-        return sub_boxes
-
-
-    @staticmethod
     def format_num_worker(cluster_type, num_worker):
         """Format dask num_worker.
         :param cluster_type: str
@@ -359,4 +373,6 @@ class DaskCluster:
 
         for item in stderr_files:
             shutil.move(item, stderr_folder)
+
+############################## End of DaskCluster class ####################################
 
