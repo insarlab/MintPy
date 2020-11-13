@@ -178,6 +178,13 @@ def reference_file(inps):
         inps = cmd_line_parse([''])
     atr = readfile.read_attribute(inps.file)
 
+    # update_mode
+    if (not inps.force 
+            and inps.ref_y is not None and inps.ref_y == int(atr.get('REF_Y', -999)) 
+            and inps.ref_x is not None and inps.ref_x == int(atr.get('REF_X', -999))):
+        print('SAME reference pixel is already selected/saved in file, skip updating.')
+        return inps.file
+
     # Check 1 - stack and its non-nan mask pixel coverage
     stack = ut.temporal_average(inps.file, datasetName='unwrapPhase', updateMode=True, outFile=False)[0]
     mask = np.multiply(~np.isnan(stack), stack != 0.)
@@ -186,12 +193,6 @@ def reference_file(inps):
 
     # Check 2 - input ref_y/x: location and validity
     if inps.ref_y is not None and inps.ref_x is not None:
-        if ('REF_Y' in atr.keys() and not inps.force
-                and inps.ref_y == int(atr['REF_Y']) 
-                and inps.ref_x == int(atr['REF_X'])):
-            print('Same reference pixel is already selected/saved in file, skip updating.')
-            return inps.file
-
         if mask[inps.ref_y, inps.ref_x] == 0.:
             raise ValueError('reference y/x have nan value in some dataset. Please re-select.')
     else:
