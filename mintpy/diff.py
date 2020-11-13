@@ -9,7 +9,14 @@ import os
 import time
 import argparse
 import numpy as np
-from mintpy.objects import timeseries, giantTimeseries, ifgramStack, ifgramDatasetNames
+
+from mintpy.objects import (
+    cluster,
+    timeseries,
+    giantTimeseries,
+    ifgramStack,
+    ifgramDatasetNames,
+)
 from mintpy.utils import readfile, writefile
 
 
@@ -84,14 +91,23 @@ def _check_reference(atr1, atr2):
     return ref_date, ref_y, ref_x
 
 
-def diff_file(file1, file2, outFile=None, force=False):
-    """Subtraction/difference of two input files"""
-    if not outFile:
+def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
+    """calculate/write file1 - file2
+
+    Parameters: file1   - str, path of file1
+                file2   - list of str, path of file2(s)
+                out_file - str, path of output file
+                force   - bool, overwrite existing output file
+                max_num_pixel - float, maximum number of pixels for each block 
+    """
+    start_time = time.time()
+
+    if not out_file:
         fbase, fext = os.path.splitext(file1)
         if len(file2) > 1:
             raise ValueError('Output file name is needed for more than 2 files input.')
-        outFile = '{}_diff_{}{}'.format(fbase, os.path.splitext(os.path.basename(file2[0]))[0], fext)
-    print('{} - {} --> {}'.format(file1, file2, outFile))
+        out_file = '{}_diff_{}{}'.format(fbase, os.path.splitext(os.path.basename(file2[0]))[0], fext)
+    print('{} - {} --> {}'.format(file1, file2, out_file))
 
     # Read basic info
     atr1 = readfile.read_attribute(file1)
@@ -116,6 +132,8 @@ def diff_file(file1, file2, outFile=None, force=False):
         elif k2 == 'giantTimeseries':
             dateList2 = giantTimeseries(file2[0]).get_date_list()
             unit_fac = 0.001
+
+        # check reference point
         ref_date, ref_y, ref_x = _check_reference(atr1, atr2)
 
         # check dates shared by two timeseries files
@@ -131,23 +149,57 @@ def diff_file(file1, file2, outFile=None, force=False):
             else:
                 raise Exception('To enforce the differencing anyway, use --force option.')
 
-        # consider different reference_date/pixel
-        data2 = readfile.read(file2[0], datasetName=dateListShared)[0] * unit_fac
-        if ref_date:
-            print('* referencing data from {} to date: {}'.format(os.path.basename(file2[0]), ref_date))
-            data2 -= np.tile(data2[dateListShared.index(ref_date), :, :],
-                             (data2.shape[0], 1, 1))
-        if ref_y and ref_x:
-            print('* referencing data from {} to y/x: {}/{}'.format(os.path.basename(file2[0]), ref_y, ref_x))
-            data2 -= np.tile(data2[:, ref_y, ref_x].reshape(-1, 1, 1),
-                             (1, data2.shape[1], data2.shape[2]))
+        # instantiate the output file
+        writefile.layout_hdf5(out_file, ref_file=file1)
 
-        data = readfile.read(file1)[0]
-        mask = data == 0.
-        data[dateShared] -= data2
-        data[mask] = 0.               # Do not change zero phase value
-        del data2
-        writefile.write(data, out_file=outFile, ref_file=file1)
+        # block-by-block IO
+        length, width = int(atr1['LENGTH']), int(atr1['WIDTH'])
+        num_box = int(np.ceil(len(dateList1) * length * width / max_num_pixel))
+        box_list = cluster.split_box2sub_boxes(box=(0, 0, width, length),
+                                               num_split=num_box,
+                                               dimension='y',
+                                               print_msg=True)
+
+        for i, box in enumerate(box_list):
+            if num_box > 1:
+                print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
+                print('box: {}'.format(box))
+
+            # read data2 (consider different reference_date/pixel)
+            print('read from file: {}'.format(file2[0]))
+            data2 = readfile.read(file2[0],
+                                  datasetName=dateListShared,
+                                  box=box)[0] * unit_fac
+
+            if ref_date:
+                print('* referencing data from {} to date: {}'.format(os.path.basename(file2[0]), ref_date))
+                ref_ind = dateListShared.index(ref_date)
+                data2 -= np.tile(data2[ref_ind, :, :], (data2.shape[0], 1, 1))
+
+            if ref_y and ref_x:
+                print('* referencing data from {} to y/x: {}/{}'.format(os.path.basename(file2[0]), ref_y, ref_x))
+                ref_box = (ref_x, ref_y, ref_x+1, ref_y+1)
+                ref_val = readfile.read(file2[0],
+                                        datasetName=dateListShared,
+                                        box=ref_box)[0] * unit_fac
+                data2 -= np.tile(ref_val.reshape(-1, 1, 1), (1, data2.shape[1], data2.shape[2]))
+
+            # read data1
+            print('read from file: {}'.format(file1))
+            data = readfile.read(file1, box=box)[0]
+
+            # apply differencing
+            mask = data == 0.
+            data[dateShared] -= data2
+            data[mask] = 0.               # Do not change zero phase value
+            del data2
+
+            # write the block
+            block = [0, data.shape[0], box[1], box[3], box[0], box[2]]
+            writefile.write_hdf5_block(out_file,
+                                       data=data,
+                                       datasetName=k1,
+                                       block=block)
 
     elif all(i == 'ifgramStack' for i in [k1, k2]):
         obj1 = ifgramStack(file1)
@@ -184,7 +236,7 @@ def diff_file(file1, file2, outFile=None, force=False):
         # write to file
         dsDict = {}
         dsDict[dsName] = data
-        writefile.write(dsDict, out_file=outFile, ref_file=file1)
+        writefile.write(dsDict, out_file=out_file, ref_file=file1)
 
     # Sing dataset file
     else:
@@ -194,20 +246,20 @@ def diff_file(file1, file2, outFile=None, force=False):
             data2 = readfile.read(fname)[0]
             data = np.array(data, dtype=np.float32) - np.array(data2, dtype=np.float32)
             data = np.array(data, data1.dtype)
-        print('writing >>> '+outFile)
-        writefile.write(data, out_file=outFile, metadata=atr1)
+        print('writing >>> '+out_file)
+        writefile.write(data, out_file=out_file, metadata=atr1)
 
-    return outFile
+    m, s = divmod(time.time()-start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))
+
+    return out_file
 
 
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    #start_time = time.time()
 
     inps.outfile = diff_file(inps.file1, inps.file2, inps.outfile, force=inps.force)
 
-    #m, s = divmod(time.time()-start_time, 60)
-    #print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))
     return inps.outfile
 
 
