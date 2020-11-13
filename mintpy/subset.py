@@ -7,9 +7,17 @@
 
 
 import os
+import sys
 import argparse
+import h5py
 import numpy as np
-from mintpy.utils import readfile, writefile, utils as ut
+
+from mintpy.utils import (
+    ptime,
+    readfile,
+    writefile,
+    utils as ut,
+)
 
 
 ###########################################################################################
@@ -273,6 +281,45 @@ def subset_input_dict2box(subset_dict, meta_dict):
 
 
 ################################################################
+def subset_dataset(fname, dsName, pix_box, pix_box4data, pix_box4subset):
+
+    # read data
+    print('reading {d} in {b} from {f} ...'.format(d=dsName,
+                                                   b=pix_box4data,
+                                                   f=os.path.basename(fname)))
+    data, atr = readfile.read(fname,
+                              datasetName=dsName,
+                              box=pix_box4data,
+                              print_msg=False)
+    ds_shape = data.shape
+    ds_ndim = len(ds_shape)
+
+    # keep timeseries data as 3D matrix when there is only one acquisition
+    # because readfile.read() will squeeze it to 2D
+    if atr['FILE_TYPE'] == 'timeseries' and ds_ndim == 2:
+        data = np.reshape(data, (1, ds_shape[0], ds_shape[1]))
+
+    # subset 2D data
+    if ds_ndim == 2:
+        data_out = np.ones((pix_box[3] - pix_box[1],
+                            pix_box[2] - pix_box[0]),
+                           data.dtype) * subset_dict['fill_value']
+        data_out[pix_box4subset[1]:pix_box4subset[3],
+                 pix_box4subset[0]:pix_box4subset[2]] = data
+
+    # subset 3D data
+    elif ds_ndim == 3:
+        data_out = np.ones((ds_shape[0],
+                            pix_box[3] - pix_box[1],
+                            pix_box[2] - pix_box[0]),
+                           data.dtype) * subset_dict['fill_value']
+        data_out[:,
+                 pix_box4subset[1]:pix_box4subset[3],
+                 pix_box4subset[0]:pix_box4subset[2]] = data
+
+    return data_out
+
+
 def subset_file(fname, subset_dict_input, out_file=None):
     """Subset file with
     Inputs:
@@ -342,45 +389,92 @@ def subset_file(fname, subset_dict_input, out_file=None):
             out_file = os.path.basename(fname)
     print('writing >>> '+out_file)
 
+    # update metadata
+    atr = ut.subset_attribute(atr, pix_box)
+
     # subset datasets one by one
     dsNames = readfile.get_dataset_list(fname)
     maxDigit = max([len(i) for i in dsNames])
-    dsDict = dict()
-    for dsName in dsNames:
-        print('subsetting {d:<{w}} from {f} ...'.format(
-            d=dsName, w=maxDigit, f=os.path.basename(fname)))
-        data = readfile.read(fname, datasetName=dsName, print_msg=False)[0]
 
-        # keep timeseries data as 3D matrix when there is only one acquisition
-        # because readfile.read() will squeeze it to 2D
-        if atr['FILE_TYPE'] == 'timeseries' and len(data.shape) == 2:
-            data = np.reshape(data, (1, data.shape[0], data.shape[1]))
+    ext = os.path.splitext(out_file)[1]
+    if ext in ['.h5', '.he5']:
+        # initiate the output file
+        writefile.layout_hdf5(out_file, metadata=atr, ref_file=fname)
 
-        # subset 2D data
-        if len(data.shape) == 2:
-            data_overlap = data[pix_box4data[1]:pix_box4data[3],
-                                pix_box4data[0]:pix_box4data[2]]
-            data = np.ones((pix_box[3] - pix_box[1],
-                            pix_box[2] - pix_box[0]), data.dtype) * subset_dict['fill_value']
-            data[pix_box4subset[1]:pix_box4subset[3],
-                 pix_box4subset[0]:pix_box4subset[2]] = data_overlap
+        # subset dataset one-by-one
+        for dsName in dsNames:
+            with h5py.File(fname, 'r') as fi:
+                ds = fi[dsName]
+                ds_shape = ds.shape
+                ds_ndim = ds.ndim
+                print('cropping {d} in {b} from {f} ...'.format(d=dsName,
+                                                                b=pix_box4data,
+                                                                f=os.path.basename(fname)))
 
-        # subset 3D data
-        elif len(data.shape) == 3:
-            data_overlap = data[:,
-                                pix_box4data[1]:pix_box4data[3],
-                                pix_box4data[0]:pix_box4data[2]]
-            data = np.ones((data.shape[0],
-                            pix_box[3] - pix_box[1],
-                            pix_box[2] - pix_box[0]), data.dtype) * subset_dict['fill_value']
-            data[:,
-                 pix_box4subset[1]:pix_box4subset[3],
-                 pix_box4subset[0]:pix_box4subset[2]] = data_overlap
+                if ds_ndim == 2:
+                    # read
+                    data = ds[pix_box4data[1]:pix_box4data[3],
+                              pix_box4data[0]:pix_box4data[2]]
 
-        dsDict[dsName] = data
+                    # crop
+                    data_out = np.ones((pix_box[3] - pix_box[1],
+                                        pix_box[2] - pix_box[0]),
+                                       data.dtype) * subset_dict['fill_value']
+                    data_out[pix_box4subset[1]:pix_box4subset[3],
+                             pix_box4subset[0]:pix_box4subset[2]] = data
+                    data_out = np.array(data_out, dtype=data.dtype)
 
-    atr = ut.subset_attribute(atr, pix_box)
-    writefile.write(dsDict, out_file=out_file, metadata=atr, ref_file=fname)
+                    # write
+                    block = [0, int(atr['LENGTH']), 0, int(atr['WIDTH'])]
+                    writefile.write_hdf5_block(out_file,
+                                               data=data_out,
+                                               datasetName=dsName,
+                                               block=block,
+                                               print_msg=True)
+
+                if ds_ndim == 3:
+                    prog_bar = ptime.progressBar(maxValue=ds_shape[0])
+                    for i in range(ds_shape[0]):
+                        # read
+                        data = ds[i,
+                                  pix_box4data[1]:pix_box4data[3],
+                                  pix_box4data[0]:pix_box4data[2]]
+
+                        # crop
+                        data_out = np.ones((1,
+                                            pix_box[3] - pix_box[1],
+                                            pix_box[2] - pix_box[0]),
+                                           data.dtype) * subset_dict['fill_value']
+                        data_out[:,
+                                 pix_box4subset[1]:pix_box4subset[3],
+                                 pix_box4subset[0]:pix_box4subset[2]] = data
+
+                        # write
+                        block = [i, i+1, 0, int(atr['LENGTH']), 0, int(atr['WIDTH'])]
+                        writefile.write_hdf5_block(out_file,
+                                                   data=data_out,
+                                                   datasetName=dsName,
+                                                   block=block,
+                                                   print_msg=False)
+
+                        prog_bar.update(i+1, suffix='{}/{}'.format(i+1, ds_shape[0]))
+                    prog_bar.close()
+                    print('finished writing to file: {}'.format(fname))
+
+    else:
+        # IO for binary files
+        dsDict = dict()
+        for dsName in dsNames:
+            dsDict[dsName] = subset_dataset(fname,
+                                            dsName,
+                                            pix_box,
+                                            pix_box4data,
+                                            pix_box4subset)
+        writefile.write(dsDict,
+                        out_file=out_file,
+                        metadata=atr,
+                        ref_file=fname)
+
     return out_file
 
 
@@ -448,4 +542,5 @@ def main(iargs=None):
 
 ###########################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
+
