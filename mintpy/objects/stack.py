@@ -187,7 +187,7 @@ class timeseries:
         if 'T' not in self.dateFormat or all(i.hour==0 and i.minute==0 for i in self.times):
             utc_sec = float(self.metadata['CENTER_LINE_UTC'])
             self.times = np.array([i + timedelta(seconds=utc_sec) for i in self.times])
-        self.tbase = np.array([(i.days + i.seconds / (24 * 60 * 60)) 
+        self.tbase = np.array([(i.days + i.seconds / (24 * 60 * 60))
                                for i in (self.times - self.times[self.refIndex])],
                               dtype=np.float32)
 
@@ -266,8 +266,12 @@ class timeseries:
             if box is None:
                 box = [0, 0, self.width, self.length]
 
-            data = ds[:, box[1]:box[3], box[0]:box[2]][dateFlag]
-            if squeeze:
+            # read
+            data = ds[dateFlag,
+                      box[1]:box[3],
+                      box[0]:box[2]]
+
+            if squeeze and any(i == 1 for i in data.shape):
                 data = np.squeeze(data)
         return data
 
@@ -701,8 +705,14 @@ class geometry:
                 else:
                     for e in datasetName:
                         dateFlag[self.dateList.index(e)] = True
-                data = ds[:, box[1]:box[3], box[0]:box[2]][dateFlag]
-                data = np.squeeze(data)
+
+                # read
+                data = ds[dateFlag,
+                          box[1]:box[3],
+                          box[0]:box[2]]
+
+                if any(i == 1 for i in data.shape):
+                    data = np.squeeze(data)
         return data
 ################################# geometry class end ###################################
 
@@ -742,7 +752,7 @@ class ifgramStack:
 
         # time info
         self.date12List = ['{}_{}'.format(i, j) for i, j in zip(self.mDates, self.sDates)]
-        self.tbaseIfgram = np.array([i.days + i.seconds / (24 * 60 * 60) 
+        self.tbaseIfgram = np.array([i.days + i.seconds / (24 * 60 * 60)
                                      for i in (self.sTimes - self.mTimes)],
                                     dtype=np.float32)
 
@@ -883,8 +893,13 @@ class ifgramStack:
             if box is None:
                 box = (0, 0, self.width, self.length)
 
-            data = ds[:, box[1]:box[3], box[0]:box[2]][dateFlag]
-            data = np.squeeze(data)
+            # read
+            data = ds[dateFlag,
+                      box[1]:box[3],
+                      box[0]:box[2]]
+
+            if any(i == 1 for i in data.shape):
+                data = np.squeeze(data)
         return data
 
     def spatial_average(self, datasetName='coherence', maskFile=None, box=None, useMedian=False):
@@ -909,7 +924,12 @@ class ifgramStack:
             dset = f[datasetName]
             numIfgram = dset.shape[0]
             dmean = np.zeros((numIfgram), dtype=np.float32)
+
+            prog_bar = ptime.progressBar(maxValue=numIfgram)
             for i in range(numIfgram):
+                prog_bar.update(i+1, suffix='{}/{}'.format(i+1, numIfgram))
+
+                # read
                 data = dset[i, box[1]:box[3], box[0]:box[2]]
                 if maskFile:
                     data[mask == 0] = np.nan
@@ -922,10 +942,7 @@ class ifgramStack:
                     dmean[i] = np.nanmedian(data)
                 else:
                     dmean[i] = np.nanmean(data)
-
-                sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, numIfgram))
-                sys.stdout.flush()
-            print('')
+            prog_bar.close()
         return dmean, self.date12List
 
     # Functions considering dropIfgram value
@@ -997,16 +1014,18 @@ class ifgramStack:
                 dropIfgramFlag = self.dropIfgram
             num2read = np.sum(dropIfgramFlag)
             idx2read = np.where(dropIfgramFlag)[0]
-            for i in range(num2read):  # Loop to save memory usage
+
+            # Loop to save memory usage
+            prog_bar = ptime.progressBar(maxValue=num2read)
+            for i in range(num2read):
+                prog_bar.update(i+1, suffix='{}/{}'.format(i+1, num2read))
                 data = dset[idx2read[i], :, :]
                 mask[data == 0.] = 0
                 mask[np.isnan(data)] = 0
-                sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, num2read))
-                sys.stdout.flush()
-            print('')
+            prog_bar.close()
         return mask
 
-    def temporal_average(self, datasetName='coherence', dropIfgram=True, row_step=200):
+    def temporal_average(self, datasetName='coherence', dropIfgram=True, row_step=-1):
         self.open(print_msg=False)
         if datasetName is None:
             datasetName = 'coherence'
@@ -1032,32 +1051,41 @@ class ifgramStack:
 
             # reference value for phase
             ref_val = None
-            if 'unwrapPhase' in datasetName and self.refY:
-                ref_val = dset[:, self.refY, self.refX][ifgram_flag]
+            if ('unwrapPhase' in datasetName
+                   and self.refY is not None and 0 <= self.refY <= self.width
+                   and self.refX is not None and 0 <= self.refX <= self.length):
+                ref_val = dset[ifgram_flag, self.refY, self.refX]
+
+            # get step size and number
+            if row_step == -1:
+                num_step = int(np.ceil(np.sum(ifgram_flag) * self.length * self.width / 2e8))
+                row_step = int(np.ceil(self.length / num_step))
+                row_step = round(row_step, -1 * int(np.floor(np.log10(abs(row_step))))) # round to 1
+            num_step = np.ceil(self.length / row_step).astype(int)
 
             # calculate lines by lines
-            num_step = np.ceil(self.length / row_step).astype(int)
             dmean = np.zeros(dset.shape[1:3], dtype=np.float32)
+            prog_bar = ptime.progressBar(maxValue=num_step)
             for i in range(num_step):
                 r0 = i * row_step
                 r1 = min(r0 + row_step, self.length)
-                data = dset[:, r0:r1, :][ifgram_flag]
+                prog_bar.update(i+1, suffix='lines {}/{}'.format(r1, self.length))
+
+                # read
+                data = dset[ifgram_flag, r0:r1, :]
 
                 # referencing / normalizing for phase
                 if 'unwrapPhase' in datasetName:
-                    if self.refY:
-                        try:
-                            data -= np.tile(ref_val.reshape(-1, 1, 1), (1, data.shape[1], data.shape[2]))
-                        except:
-                            pass
+                    # spatial referencing
+                    if ref_val is not None:
+                        data -= np.tile(ref_val.reshape(-1, 1, 1), (1, data.shape[1], data.shape[2]))
+                    # phase to phase velocity
                     for j in range(data.shape[0]):
                         data[j,:,:] *= (phase2range / tbase[j])
 
                 # use nanmean to better handle NaN values
                 dmean[r0:r1, :] = np.nanmean(data, axis=0)
-                sys.stdout.write('\rreading & calculating lines {}/{} ...'.format(r1, self.length))
-                sys.stdout.flush()
-            print('')
+            prog_bar.close()
         return dmean
 
     def get_max_connection_number(self):
@@ -1370,7 +1398,14 @@ class HDFEOS:
                 else:
                     for e in datasetName:
                         dateFlag[self.dateList.index(e)] = True
-                data = ds[:, box[1]:box[3], box[0]:box[2]][dateFlag]
-                data = np.squeeze(data)
+
+                # read
+                data = ds[dateFlag,
+                          box[1]:box[3],
+                          box[0]:box[2]]
+
+                # squeeze/shrink dimension whenever it is possible
+                if any(i == 1 for i in data.shape):
+                    data = np.squeeze(data)
         return data
 ################################# HDF-EOS5 class end ###################################

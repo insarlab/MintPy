@@ -279,7 +279,7 @@ def read_date_info(inps):
 
 
 ############################################################################
-def estimate_velocity(date_list, dis_ts, model):
+def estimate_time_func(date_list, dis_ts, model):
     """
     Deformation model estimator, using a suite of linear, periodic, step function(s).
 
@@ -288,11 +288,11 @@ def estimate_velocity(date_list, dis_ts, model):
     Parameters: date_list - list of str, dates in YYYYMMDD format
                 dis_ts    - 2D np.ndarray, displacement observation in size of (num_date, num_pixel)
                 model     - dict of time functions, e.g.:
-                            {'polynomial' : 2,            # int, polynomial with 1 (linear), 2 (quadratic), 3 (cubic), etc.
-                             'periodic'   : [1.0, 0.5],   # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
-                             'step'       : ['20061014'], # list of str, date(s) in YYYYMMDD.
-                             ...
-                             }
+                    {'polynomial' : 2,            # int, polynomial with 1 (linear), 2 (quadratic), 3 (cubic), etc.
+                     'periodic'   : [1.0, 0.5],   # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
+                     'step'       : ['20061014'], # list of str, date(s) in YYYYMMDD.
+                     ...
+                     }
     Returns:    G         - 2D np.ndarray, design matrix           in size of (num_date, num_par)
                 m         - 2D np.ndarray, parameter solution      in size of (num_par, num_pixel)
                 e2        - 1D np.ndarray, sum of squared residual in size of (num_pixel,)
@@ -316,7 +316,7 @@ def estimate_velocity(date_list, dis_ts, model):
     return G, m, e2
 
 
-def run_velocity_estimation(inps):
+def timeseries2time_func(inps):
     # read time-series data
     print('reading data from file {} ...'.format(inps.timeseries_file))
     ts_data, atr = readfile.read(inps.timeseries_file)
@@ -342,7 +342,10 @@ def run_velocity_estimation(inps):
         of an estimator. The method relies on independently sampling the data set with
         replacement.
         """
-        from sklearn.utils import resample
+        try:
+            from sklearn.utils import resample
+        except ImportError:
+            raise ImportError('can not import scikit-learn!')
         print('using bootstrap resampling {} times ...'.format(inps.bootstrapCount))
 
         boot_vel_lin = np.zeros((inps.bootstrapCount, (length*width)), dtype=dataType)
@@ -354,7 +357,7 @@ def run_velocity_estimation(inps):
             boot_ind.sort()
 
             # velocity estimation
-            m = estimate_velocity(ts_date[boot_ind].tolist(), ts_data[boot_ind], model)[1]
+            m = estimate_time_func(ts_date[boot_ind].tolist(), ts_data[boot_ind], model)[1]
             boot_vel_lin[i] = np.array(m[1, :], dtype=dataType)
             prog_bar.update(i+1, suffix='iteration {} / {}'.format(i+1, inps.bootstrapCount))
         prog_bar.close()
@@ -391,7 +394,8 @@ def run_velocity_estimation(inps):
     ## Solve Gm = d
     m = np.zeros((num_param, length*width), dtype=dataType)
     e2 = np.zeros((length*width), dtype=dataType)
-    G, m[:, mask], e2[mask] = estimate_velocity(inps.dateList, ts_data[:, mask], model)
+    G, m[:, mask], e2[mask] = estimate_time_func(inps.dateList, ts_data[:, mask], model)
+    del ts_data
 
     ## Compute the covariance matrix for model parameters: Gm = d
     # C_m_hat = (G.T * C_d^-1, * G)^-1  # the most generic form
@@ -521,7 +525,7 @@ def main(iargs=None):
     if inps.update_mode and run_or_skip(inps) == 'skip':
         return inps.outfile
 
-    inps.outfile = run_velocity_estimation(inps)
+    timeseries2time_func(inps)
 
     return inps.outfile
 

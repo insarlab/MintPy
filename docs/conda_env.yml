@@ -8,28 +8,32 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python>=3.6
+  - python>=3.6,<3.9
   - cartopy
-  - cdsapi
   - cvxopt
   - dask>=1.0
   - dask-jobqueue>=0.3
   - defusedxml
-  - ecCodes
-  - h5py
+  - h5py<3
   - lxml
   - matplotlib
-  - netcdf4
   - numpy
-  - openmp
   - pip
-  - pygrib
-  - pyhdf
-  - pykdtree
   - pyproj
-  - pyresample
   - scikit-image
-  - scikit-learn
   - scipy
   - pip:
     - git+https://github.com/tylere/pykml.git
+  # pyaps dependencies
+  - cdsapi
+  - ecCodes
+  - netcdf4
+  - pygrib
+  - pyhdf
+  # pyresample dependencies
+  - pyresample
+  - openmp
+  - pykdtree
+  - xarray
+  - zarr
+
