@@ -306,14 +306,17 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
                     slice_flag[date_list.index(d)] = True
 
             # read data
-            data = ds[:,
+            data = ds[slice_flag,
                       box[1]:box[3],
-                      box[0]:box[2]][slice_flag]
+                      box[0]:box[2]]
+
             if xstep * ystep > 1:
                 data = data[:,
                             int(ystep/2)::ystep,
                             int(xstep/2)::xstep]
-            data = np.squeeze(data)
+
+            if any(i == 1 for i in data.shape):
+                data = np.squeeze(data)
     return data
 
 

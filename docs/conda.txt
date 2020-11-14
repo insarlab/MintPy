@@ -1,23 +1,26 @@
-python>=3.6
+python>=3.6,<3.9
 cartopy
-cdsapi
 cvxopt
 dask>=1.0
 dask-jobqueue>=0.3
 defusedxml
-ecCodes
-h5py
+h5py<3
 lxml
 matplotlib
-netcdf4
 numpy
-openmp
 pip
+pyproj
+scikit-image
+scipy
+# pyaps dependencies
+cdsapi
+ecCodes
+netcdf4
 pygrib
 pyhdf
-pykdtree
-pyproj
+# pyresample dependencies
 pyresample
-scikit-image
-scikit-learn
-scipy
+openmp
+pykdtree
+xarray
+zarr

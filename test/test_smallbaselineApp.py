@@ -146,7 +146,9 @@ def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False):
 
     # open final velocity map if on mac
     if sys.platform.lower().startswith('darwin'):
-        cmd = 'open pic/geo_velocity.png'
+        png_file = [i for i in ['pic/geo_velocity.png', 'pic/velocity.png']
+                    if os.path.isfile(i)]
+        cmd = 'open {}'.format(png_file)
         print(cmd)
         subprocess.Popen(cmd, shell=True).wait()
     return

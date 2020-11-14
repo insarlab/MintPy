@@ -1,3 +1,8 @@
+# requirements.txt for readthedocs, which could not handle python>=3.6
+# conda.txt     for actual installation via conda
+# conda_env.yml for actual installation via conda create environment
+# ports.txt     for actual installation via mac-ports
+# setup.py      for actual installation via pip
 cvxopt
 dask>=1.0
 dask-jobqueue>=0.3
@@ -7,8 +12,6 @@ lxml
 matplotlib
 numpy
 pyproj
-pykml
 pyresample
 scikit-image
-scikit-learn
 scipy
