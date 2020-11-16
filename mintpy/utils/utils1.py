@@ -29,9 +29,17 @@ def get_center_lat_lon(geom_file, box=None):
 
     col_c = int((box[0] + box[2]) / 2)
     row_c = int((box[1] + box[3]) / 2)
-    box_c = (col_c, row_c, col_c+1, row_c+1)
-    lat_c = float(readfile.read(geom_file, datasetName='latitude', box=box_c)[0])
-    lon_c = float(readfile.read(geom_file, datasetName='longitude', box=box_c)[0])
+    if 'Y_FIRST' in meta.keys():
+        lat0 = float(meta['Y_FIRST'])
+        lon0 = float(meta['X_FIRST'])
+        lat_step = float(meta['Y_STEP'])
+        lon_step = float(meta['X_STEP'])
+        lat_c = lat0 + lat_step * row_c
+        lon_c = lon0 + lon_step * col_c
+    else:
+        box_c = (col_c, row_c, col_c+1, row_c+1)
+        lat_c = float(readfile.read(geom_file, datasetName='latitude', box=box_c)[0])
+        lon_c = float(readfile.read(geom_file, datasetName='longitude', box=box_c)[0])
     return lat_c, lon_c
 
 

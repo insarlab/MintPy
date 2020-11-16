@@ -104,11 +104,15 @@ def read_pts2inps(inps, coord_obj):
     if inps.pts_yx is not None:
         # format pts_yx to 2D array in size of (num_pts, 2)
         inps.pts_yx = np.array(inps.pts_yx).reshape(-1, 2)
+
         # pts_yx --> pts_lalo
-        inps.pts_lalo = coord_obj.radar2geo(inps.pts_yx[:, 0],
-                                            inps.pts_yx[:, 1],
-                                            print_msg=False)[:2]
-        inps.pts_lalo = np.array(inps.pts_lalo).T.reshape(-1, 2)
+        try:
+            inps.pts_lalo = coord_obj.radar2geo(inps.pts_yx[:, 0],
+                                                inps.pts_yx[:, 1],
+                                                print_msg=False)[:2]
+            inps.pts_lalo = np.array(inps.pts_lalo).T.reshape(-1, 2)
+        except:
+            pass
 
     return inps
 

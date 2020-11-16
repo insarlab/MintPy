@@ -36,14 +36,17 @@ def create_parser():
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', nargs='+', help='File(s) to multilook')
-    parser.add_argument('-r','--range','-x', dest='lks_x', type=int,
-                        help='number of multilooking in range  /x direction')
-    parser.add_argument('-a','--azimuth','-y', dest='lks_y', type=int,
-                        help='number of multilooking in azimuth/y direction')
+    parser.add_argument('-r','--range','-x', dest='lks_x', type=int, default=1,
+                        help='number of multilooking in range  /x direction (default: %(default)s).')
+    parser.add_argument('-a','--azimuth','-y', dest='lks_y', type=int, default=1,
+                        help='number of multilooking in azimuth/y direction (default: %(default)s).')
     parser.add_argument('-o', '--outfile',
                         help='Output file name. Disabled when more than 1 input files')
+    parser.add_argument('-m','--method', dest='method', type=str, default='average', choices=['average', 'nearest'],
+                        help='downsampling method (default: %(default)s) \n'
+                             'e.g. nearest for geometry, average for observations')
     parser.add_argument('--margin', dest='margin', type=int, nargs=4, metavar=('TOP','BOTTOM','LEFT','RIGHT'),
-                        default=[0,0,0,0], help='number of pixels on the margin to skip, default: 0 0 0 0.')
+                        default=[0,0,0,0], help='number of pixels on the margin to skip, (default: %(default)s).')
     return parser
 
 
@@ -52,6 +55,11 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
     inps.file = ut.get_file_list(inps.file)
 
+    # check 1 - num of multilooks
+    if inps.lks_x == 1 and inps.lks_y == 1:
+        raise SystemExit('ERROR: no multilooking specified: lks_x/y=1!')
+
+    # check 2 - output file name
     if len(inps.file) > 1 and inps.outfile:
         inps.outfile = None
         print('more than one file is input, disable custom output filename.')
@@ -93,7 +101,7 @@ def multilook_data(data, lks_y, lks_x):
                 lks_x       : int, number of multilook in x/range direction
     Returns:    coarse_data : 2D / 3D np.array after multilooking in last two dimension
     """
-
+    dtype = data.dtype
     shape = np.array(data.shape, dtype=float)
     if len(shape) == 2:
         # crop data to the exact multiple of the multilook number
@@ -124,6 +132,8 @@ def multilook_data(data, lks_y, lks_x):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             coarse_data = np.nanmean(temp, axis=(2, 4))
+
+    coarse_data = np.array(coarse_data, dtype=dtype)
 
     return coarse_data
 
@@ -186,7 +196,7 @@ def multilook_attribute(atr_dict, lks_y, lks_x, box=None, print_msg=True):
     return atr
 
 
-def multilook_file(infile, lks_y, lks_x, outfile=None, margin=[0,0,0,0]):
+def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=[0,0,0,0]):
     """ Multilook input file
     Parameters: infile - str, path of input file to be multilooked.
                 lks_y  - int, number of looks in y / row direction.
@@ -207,6 +217,7 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, margin=[0,0,0,0]):
     print('multilooking {} {} file: {}'.format(atr['PROCESSOR'], k, infile))
     print('number of looks in y / azimuth direction: %d' % lks_y)
     print('number of looks in x / range   direction: %d' % lks_x)
+    print('multilook method: {}'.format(method))
 
     # margin --> box
     if margin is not [0,0,0,0]:    # top, bottom, left, right
@@ -216,13 +227,18 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, margin=[0,0,0,0]):
         box = (0, 0, width, length)
 
     # output file name
+    ext = os.path.splitext(infile)[1]
     if not outfile:
         if os.getcwd() == os.path.dirname(os.path.abspath(infile)):
-            ext = os.path.splitext(infile)[1]
             outfile = os.path.splitext(infile)[0]+'_'+str(lks_y)+'alks_'+str(lks_x)+'rlks'+ext
         else:
             outfile = os.path.basename(infile)
-    #print('writing >>> '+outfile)
+
+    # update metadata
+    atr = multilook_attribute(atr, lks_y, lks_x, box=box)
+
+    if ext in ['.h5', '.he5']:
+        writefile.layout_hdf5(outfile, metadata=atr, ref_file=infile)
 
     # read source data and multilooking
     dsNames = readfile.get_dataset_list(infile)
@@ -231,18 +247,74 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, margin=[0,0,0,0]):
     for dsName in dsNames:
         print('multilooking {d:<{w}} from {f} ...'.format(
             d=dsName, w=maxDigit, f=os.path.basename(infile)))
-        data = readfile.read(infile, datasetName=dsName, box=box, print_msg=False)[0]
 
-        # keep timeseries data as 3D matrix when there is only one acquisition
-        # because readfile.read() will squeeze it to 2D
-        if atr['FILE_TYPE'] == 'timeseries' and len(data.shape) == 2:
-            data = np.reshape(data, (1, data.shape[0], data.shape[1]))
+        # split in Y/row direction for IO for HDF5 only
+        if ext in ['.h5', '.he5']:
+            row_step = 200
+        else:
+            row_step = box[3] - box[1]
 
-        data = multilook_data(data, lks_y, lks_x)
-        dsDict[dsName] = data
+        num_step = int(np.ceil((box[3] - box[1]) / (row_step * lks_y)))
+        for i in range(num_step):
+            r0 = box[1] + row_step * lks_y * i
+            r1 = box[1] + row_step * lks_y * (i + 1)
+            r1 = min(r1, box[3])
+            # IO box
+            box_i = (box[0], r0, box[2], r1)
+            box_o = (int((box[0] - box[0]) / lks_x),
+                     int((r0     - box[1]) / lks_y),
+                     int((box[2] - box[0]) / lks_x),
+                     int((r1     - box[1]) / lks_y))
+            print('box: {}'.format(box_o))
 
-    # update metadata
-    atr = multilook_attribute(atr, lks_y, lks_x, box=box)
+            # read / multilook
+            if method == 'nearest':
+                data = readfile.read(infile,
+                                     datasetName=dsName,
+                                     box=box_i,
+                                     xstep=lks_x,
+                                     ystep=lks_y,
+                                     print_msg=False)[0]
+
+                # fix the size discrepency between average / nearest method
+                out_len = box_o[3] - box_o[1]
+                out_wid = box_o[2] - box_o[0]
+                if data.ndim == 3:
+                    data = data[:, :out_len, :out_wid]
+                else:
+                    data = data[:out_len, :out_wid]
+
+            else:
+                data = readfile.read(infile,
+                                     datasetName=dsName,
+                                     box=box_i,
+                                     print_msg=False)[0]
+
+                # keep timeseries data as 3D matrix when there is only one acquisition
+                # because readfile.read() will squeeze it to 2D
+                if atr['FILE_TYPE'] == 'timeseries' and len(data.shape) == 2:
+                    data = np.reshape(data, (1, data.shape[0], data.shape[1]))
+
+                data = multilook_data(data, lks_y, lks_x)
+
+            # output block
+            if data.ndim == 3:
+                block = [0, data.shape[0],
+                         box_o[1], box_o[3],
+                         box_o[0], box_o[2]]
+            else:
+                block = [box_o[1], box_o[3],
+                         box_o[0], box_o[2]]
+
+            # write
+            if ext in ['.h5', '.he5']:
+                writefile.write_hdf5_block(outfile,
+                                           data=data,
+                                           datasetName=dsName,
+                                           block=block,
+                                           print_msg=False)
+            else:
+                dsDict[dsName] = data
 
     # for binary file with 2 bands, always use BIL scheme
     if (len(dsDict.keys()) == 2
@@ -252,7 +324,8 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, margin=[0,0,0,0]):
         print('for the output binary file, change the band interleave to BIL as default.')
         atr['scheme'] = 'BIL'
 
-    writefile.write(dsDict, out_file=outfile, metadata=atr, ref_file=infile)
+    if ext not in ['.h5', '.he5']:
+        writefile.write(dsDict, out_file=outfile, metadata=atr, ref_file=infile)
     return outfile
 
 
@@ -265,6 +338,7 @@ def main(iargs=None):
                        lks_y=inps.lks_y,
                        lks_x=inps.lks_x,
                        outfile=inps.outfile,
+                       method=inps.method,
                        margin=inps.margin)
 
     print('Done.')
