@@ -894,9 +894,14 @@ class ifgramStack:
                 box = (0, 0, self.width, self.length)
 
             # read
-            data = ds[dateFlag,
-                      box[1]:box[3],
-                      box[0]:box[2]]
+            if np.sum(dateFlag) < 50:
+                data = ds[dateFlag,
+                          box[1]:box[3],
+                          box[0]:box[2]]
+            else:
+                data = ds[:,
+                          box[1]:box[3],
+                          box[0]:box[2]][dateFlag]
 
             if any(i == 1 for i in data.shape):
                 data = np.squeeze(data)
@@ -1072,7 +1077,7 @@ class ifgramStack:
                 prog_bar.update(i+1, suffix='lines {}/{}'.format(r1, self.length))
 
                 # read
-                data = dset[ifgram_flag, r0:r1, :]
+                data = dset[:, r0:r1, :][ifgram_flag]
 
                 # referencing / normalizing for phase
                 if 'unwrapPhase' in datasetName:
