@@ -309,11 +309,11 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, compress
 
         # create empty dataset
         if print_msg:
-            print(("create dataset  : {d:<{w}} of {t:<25} in size of {s} with "
+            print(("create dataset  : {d:<{w}} of {t:<25} in size of {s:<20} with "
                    "compression = {c}").format(d=key,
                                                w=max_digit,
                                                t=str(data_type),
-                                               s=data_shape,
+                                               s=str(data_shape),
                                                c=compression))
         ds = f.create_dataset(key,
                               shape=data_shape,
@@ -495,6 +495,7 @@ def write_isce_xml(fname, width, length, bands=1, data_type='FLOAT', scheme='BIP
                 data_type - str, data type name in ISCE convention
                             readfile.GDAL2ISCE_DATATYPE
                 scheme    - str, band interleave, BIP, BIL, BSQ
+    Examples:   write_isce_xml(out_file='filt_fine.cor', width=400, length=500)
     """
     import isce
     import isceobj
