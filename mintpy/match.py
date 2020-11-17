@@ -41,8 +41,8 @@ def create_parser():
 
     parser.add_argument('--manual', dest='manual_match', action='store_true',
                         help='manually select lines to estimate offset for matching.')
-    parser.add_argument('--no-offset', dest='no_offset', action='store_true',
-                        help='if data sets are merely to be stitched and no adjustment of values needs to be made '
+    parser.add_argument('--no-offset', dest='apply_offset', action='store_false',
+                        help='Do not apply offset if data sets are merely to be stitched and no adjustment of values needs to be made '
                              '(i.e., for two coherence maps), use this flag')
     parser.add_argument('--nodisplay', dest='disp_fig', action='store_false',
                         help='do not display the result ploting.')
@@ -138,7 +138,7 @@ def rescale_data_resolution(data, metadata, ref_metadata):
 
 
 #############################################################################################
-def match_two_files(file1, file2, out_file=None, manual_match=False, no_offset=False, disp_fig=False):
+def match_two_files(file1, file2, out_file=None, manual_match=False, apply_offset=True, disp_fig=False):
     """Match two geocoded files by estimating their offset.
     Better for two files with common area overlaping.
     """
@@ -203,20 +203,20 @@ def match_two_files(file1, file2, out_file=None, manual_match=False, no_offset=F
         offset = manual_offset_estimate(V1, V2)
 
     # Adjust file2 value using offset
-    if np.isnan(offset):
+    # Do not apply offset if
+    # 1) --no-offset flag is raised OR
+    # 2) estimated offset between overlap region is NaN
+    if not apply_offset or np.isnan(offset):
         print('**************************************************')
-        print('WARNING:')
-        print('')
+        if apply_offset:
+            print('WARNING:')
+            print('')
         print('No offset is estimated and no matching applied.')
         print('continue to merge two input files without any adjustment.')
         print('**************************************************')
     else:
         print('average offset between two velocity in the common area is: ' + str(offset))
-        # Do not apply offset if --no-offset flag is raised
-        if no_offset == True:
-            pass
-        else:
-            V2 = V2 - offset
+        V2 = V2 - offset
 
     # Get merged data matrix value
     indv2 = np.isfinite(V2)
@@ -272,7 +272,7 @@ def main(iargs=None):
             out_file = None
 
         # match two files
-        file1 = match_two_files(file1, file2, out_file, inps.manual_match, inps.no_offset, inps.disp_fig)
+        file1 = match_two_files(file1, file2, out_file, inps.manual_match, inps.apply_offset, inps.disp_fig)
 
     print('Done.')
     return file1
