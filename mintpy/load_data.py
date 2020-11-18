@@ -33,6 +33,7 @@ datasetName2templateKey = {'unwrapPhase'     : 'mintpy.load.unwFile',
                            'connectComponent': 'mintpy.load.connCompFile',
                            'wrapPhase'       : 'mintpy.load.intFile',
                            'ionoPhase'       : 'mintpy.load.ionoFile',
+                           'magnitude'       : 'mintpy.load.magFile',
 
                            'azimuthOffset'   : 'mintpy.load.azOffFile',
                            'rangeOffset'     : 'mintpy.load.rgOffFile',

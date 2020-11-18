@@ -105,7 +105,7 @@ class ifgramStackDict:
 
         self.bperp = np.zeros(self.numIfgram)
         ###############################
-        # 3D datasets containing unwrapPhase, coherence, connectComponent, wrapPhase, etc.
+        # 3D datasets containing unwrapPhase, magnitude, coherence, connectComponent, wrapPhase, etc.
         for dsName in self.dsNames:
             dsShape = (self.numIfgram, self.length, self.width)
             dsDataType = np.float32
@@ -203,6 +203,7 @@ class ifgramDict:
                        'connectComponent':'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.unw.conncomp',
                        'wrapPhase'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.int',
                        'ionoPhase'       :'$PROJECT_DIR/merged/ionosphere/20151220_20160206/iono.bil.unwCor.filt',
+                       'magnitude'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.unw',
                        ...
                       }
         ifgramObj = ifgramDict(datasetDict=datasetDict)
@@ -223,7 +224,7 @@ class ifgramDict:
 
     def read(self, family, box=None):
         self.file = self.datasetDict[family]
-        data, metadata = readfile.read(self.file, box=box)
+        data, metadata = readfile.read(self.file, datasetName=family, box=box)
         return data, metadata
 
     def get_size(self, family=ifgramDatasetNames[0]):
