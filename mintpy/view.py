@@ -722,7 +722,7 @@ def read_input_file_info(inps):
     if 'DATA_TYPE' in atr.keys():
         msg += ' in {} format'.format(atr['DATA_TYPE'])
 
-    vprint('run {} in {}'.format(os.path.basename(__file__), version.description))
+    vprint('run {} in {}'.format(os.path.basename(__file__), version.release_description))
     vprint(msg)
 
     ## size and name
