@@ -134,8 +134,15 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
         # Write Data File
         print('write {}'.format(out_file))
         # determined by ext
-        if ext in ['.unw', '.cor', '.hgt']:
+        if ext in ['.unw']:
             write_float32(data_list[0], out_file)
+            meta['DATA_TYPE'] = 'float32'
+
+        elif ext in ['.cor', '.hgt']:
+            if meta.get('PROCESSOR', 'isce') == 'roipac':
+                write_float32(data_list[0], out_file)
+            else:
+                write_real_float32(data_list[0], out_file)
             meta['DATA_TYPE'] = 'float32'
 
         elif ext == '.dem':
