@@ -23,8 +23,7 @@ try:
 except ImportError:
     raise ImportError('Could not import skimage!')
 
-from mintpy.objects import ifgramStack
-from mintpy.objects.conncomp import connectComponent
+from mintpy.objects import ifgramStack, conncomp
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import ptime, readfile, writefile, utils as ut, plot as pp
 from mintpy.utils.solvers import l1regls
@@ -433,7 +432,7 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
         print('refine common mask based on water mask file', water_mask_file)
         cc_mask[water_mask == 0] = 0
 
-    label_img, num_label = connectComponent.get_large_label(cc_mask, min_area=2.5e3, print_msg=True)
+    label_img, num_label = conncomp.label_conn_comp(cc_mask, min_area=2.5e3, print_msg=True)
     common_regions = measure.regionprops(label_img)
     print('number of common regions:', num_label)
 
@@ -545,7 +544,7 @@ def run_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_file=
             cc = np.squeeze(f[ccName][i, :, :])
             if water_mask is not None:
                 cc[water_mask == 0] = 0
-            cc_obj = connectComponent(conncomp=cc, metadata=stack_obj.metadata)
+            cc_obj = conncomp.connectComponent(conncomp=cc, metadata=stack_obj.metadata)
             cc_obj.label()
             local_regions = measure.regionprops(cc_obj.labelImg)
 

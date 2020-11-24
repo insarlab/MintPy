@@ -20,6 +20,100 @@ from scipy.spatial import cKDTree
 from .ramp import deramp
 
 
+
+######################################## utilities functions ##############################
+def label_conn_comp(mask, min_area=2.5e3, erosion_size=5, print_msg=False):
+    """Label / clean up the conn comp (mask)
+
+    Parameters: mask         - 2D np.ndarray of bool/int
+                min_area     - float, minimum region/area size
+                erosion_size - int (odd number), size of erosion structure
+                               set to 0 to turn it off.
+    Returns:    label_img    - 2d np.ndarray of int, labeled array where all 
+                               connected regions are assigned the same value
+                num_label    - int, number of labeled regions
+    """
+
+    # label
+    label_img, num_label = measure.label(mask, connectivity=1, return_num=True)
+
+    ## remove small regions
+    min_area = min(min_area, label_img.size * 3e-3)
+    if print_msg:
+        print('remove regions with area < {}'.format(int(min_area)))
+    mask = morph.remove_small_objects(label_img, min_size=min_area, connectivity=1)
+    label_img[mask == 0] = 0
+    # update label
+    label_img, num_label = measure.label(label_img, connectivity=1, return_num=True) # re-label
+
+    ## remove regions that would disappear after erosion
+    # to ensure the consistency between label_img and label_bound
+    if erosion_size > 0:
+        erosion_structure = np.ones((erosion_size, erosion_size))
+        label_erosion_img = morph.erosion(label_img, erosion_structure).astype(np.uint8)
+
+        erosion_regions = measure.regionprops(label_erosion_img)
+        if len(erosion_regions) < num_label:
+            if print_msg:
+                print('regions lost during morphological erosion operation:')
+
+            label_erosion = [reg.label for reg in erosion_regions]
+            for orig_reg in measure.regionprops(label_img):
+                if orig_reg.label not in label_erosion:
+                    label_img[label_img == orig_reg.label] = 0
+                    if print_msg:
+                        print('label: {}, area: {}, bbox: {}'.format(orig_reg.label,
+                                                                     orig_reg.area,
+                                                                     orig_reg.bbox))
+
+            # update label
+            label_img, num_label = measure.label(label_img, connectivity=1, return_num=True)
+
+    return label_img, num_label
+
+
+def label_boundary(label_img, num_label, erosion_size=5, print_msg=False):
+    """Label the boundary of the labeled array
+
+    Parameters: label_img    - 2d np.ndarray of int, labeled array where all connected regions are assigned the same value
+                num_label    - int, number of labeled regions
+    Returns:    label_img    - 2d np.ndarray of int, labeled array where all connected regions are assigned the same value
+                num_label    - int, number of labeled regions
+                label_bound  - 2d np.ndarrary of bool, where True represent a boundary pixel.
+    """
+
+    if erosion_size > 0:
+        # remove regions that would disappear after erosion
+        # to ensure the consistency between label_img and label_bound
+        erosion_structure = np.ones((erosion_size, erosion_size))
+        label_erosion_img = morph.erosion(label_img, erosion_structure).astype(np.uint8)
+
+        erosion_regions = measure.regionprops(label_erosion_img)
+        if len(erosion_regions) < num_label:
+            if print_msg:
+                print('regions lost during morphological erosion operation:')
+
+            label_erosion = [reg.label for reg in erosion_regions]
+            for orig_reg in measure.regionprops(label_img):
+                if orig_reg.label not in label_erosion:
+                    label_img[label_img == orig_reg.label] = 0
+                    if print_msg:
+                        print('label: {}, area: {}, bbox: {}'.format(orig_reg.label,
+                                                                     orig_reg.area,
+                                                                     orig_reg.bbox))
+
+        # update label
+        label_img, num_label = measure.label(label_img, connectivity=1, return_num=True) # re-label
+
+    # get label boundaries to facilitate bridge finding
+    label_bound = seg.find_boundaries(label_erosion_img, mode='thick').astype(np.uint8)
+    label_bound *= label_erosion_img
+
+    return label_img, num_label, label_bound
+
+
+
+######################################## beginning of connectComponent class ##############################
 class connectComponent:
     """ Object for bridging connected components.
 
@@ -31,12 +125,15 @@ class connectComponent:
         cc = connectComponent(conncomp=conncomp, metadata=atr)
         cc.label()
         cc.find_mst_bridge()
+
         # run bridging
         unw = readfile.read(unw_file)[0]
         bdg_unw = cc.unwrap_conn_comp(unw, ramp_type='linear')
+
         # write output file
         writefile.write(bdg_unw, 'bdg_'+unw_file, atr)
     """
+
     def __init__(self, conncomp, metadata):
         """Parameters: conncomp : 2D np.ndarray in np.bool_ format
                        metadata : dict, attributes
@@ -59,16 +156,21 @@ class connectComponent:
         Returns: self.labelImg   - 2D np.ndarray in int64 to mask areas to be corrected
                  self.labelBound - 2D np.ndarray in uint8 for label boundaries to find bridges
         """
-        # 1. labelImg
+        # label conn comp
+        (self.labelImg,
+         self.numLabel) = label_conn_comp(self.conncomp,
+                                          min_area=min_area,
+                                          print_msg=print_msg)
+
+        # label conn comp boundaries
         (self.labelImg,
          self.numLabel,
-         self.labelBound) = self.get_large_label(self.conncomp,
-                                                 min_area=min_area,
-                                                 erosion_size=erosion_size,
-                                                 get_boundary=True,
-                                                 print_msg=print_msg)
+         self.labelBound) = label_boundary(self.labelImg,
+                                           self.numLabel,
+                                           erosion_size=erosion_size,
+                                           print_msg=print_msg)
 
-        # 2. reference label (ref_y/x or the largest one)
+        # reference label (ref_y/x or the largest one)
         if self.refY is not None:
             self.labelRef = self.labelImg[self.refY, self.refX]
             if self.labelRef == 0:
@@ -78,50 +180,6 @@ class connectComponent:
             idx = np.argmax([region.area for region in regions])
             self.labelRef = regions[idx].label
         return
-
-
-    @staticmethod
-    def get_large_label(mask, min_area=2.5e3, erosion_size=5, get_boundary=False, print_msg=False):
-        # initial label
-        label_img, num_label = measure.label(mask, connectivity=1, return_num=True)
-
-        # remove regions with small area
-        if print_msg:
-            print('remove regions with area < {}'.format(int(min_area)))
-        min_area = min(min_area, label_img.size * 3e-3)
-        #flag_slabel = np.bincount(label_img.flatten()) < min_area
-        #flag_slabel[0] = False
-        #label_small = np.where(flag_slabel)[0]
-        #for i in label_small:
-        #    label_img[label_img == i] = 0
-        mask = morph.remove_small_objects(label_img, min_size=min_area, connectivity=1)
-        label_img[mask == 0] = 0
-        label_img, num_label = measure.label(label_img, connectivity=1, return_num=True) # re-label
-
-        # remove regions that would disappear after erosion operation
-        erosion_structure = np.ones((erosion_size, erosion_size))
-        label_erosion_img = morph.erosion(label_img, erosion_structure).astype(np.uint8)
-        erosion_regions = measure.regionprops(label_erosion_img)
-        if len(erosion_regions) < num_label:
-            if print_msg:
-                print('Some regions are lost during morphological erosion operation')
-            label_erosion = [reg.label for reg in erosion_regions]
-            for orig_reg in measure.regionprops(label_img):
-                if orig_reg.label not in label_erosion:
-                    if print_msg:
-                        print('label: {}, area: {}, bbox: {}'.format(orig_reg.label,
-                                                                     orig_reg.area,
-                                                                     orig_reg.bbox))
-                    label_img[label_img == orig_reg.label] = 0
-        label_img, num_label = measure.label(label_img, connectivity=1, return_num=True) # re-label
-
-        # get label boundaries to facilitate bridge finding
-        if get_boundary:
-            label_bound = seg.find_boundaries(label_erosion_img, mode='thick').astype(np.uint8)
-            label_bound *= label_erosion_img
-            return label_img, num_label, label_bound
-        else:
-            return label_img, num_label
 
 
     def get_all_bridge(self):
@@ -317,3 +375,5 @@ class connectComponent:
         # reference pixel
         ax.plot(self.refX, self.refY, 'ks', ms=2)
         return ax
+
+######################################## end of connectComponent class ####################################
