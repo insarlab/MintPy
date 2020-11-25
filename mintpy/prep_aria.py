@@ -50,6 +50,7 @@ TEMPLATE = """template options:
   mintpy.load.unwFile        = ../stack/unwrapStack.vrt
   mintpy.load.corFile        = ../stack/cohStack.vrt
   mintpy.load.connCompFile   = ../stack/connCompStack.vrt
+  mintpy.load.magFile        = ../stack/ampStack.vrt        # optional
   ##---------geometry datasets:
   mintpy.load.demFile        = ../DEM/SRTM_3arcsec.dem
   mintpy.load.incAngleFile   = ../incidenceAngle/*.vrt
@@ -98,6 +99,10 @@ def create_parser():
     stack.add_argument('-l','--conn-comp-stack-name', dest='connCompFile', type=str,
                        default="connCompStack.vrt",
                        help='Name of the stack VRT file of connected component data.\n' +
+                            'default: %(default)s')
+    stack.add_argument('--amp-stack-name','--amplitude-stack-name', dest='magFile', type=str,
+                       default="ampStack.vrt",
+                       help='Name of the stack VRT file of interferogram amplitude data (optional).\n' +
                             'default: %(default)s')
 
     # geometryGeo
@@ -459,32 +464,45 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
     return outfile
 
 
-def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack,
+def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, ampStack=None,
                        box=None, xstep=1, ystep=1):
     """Write ifgramStack HDF5 file from stack VRT files
     """
 
     print('-'*50)
-    print('opening {}, {}, {} with gdal ...'.format(os.path.basename(unwStack),
-                                                    os.path.basename(cohStack),
-                                                    os.path.basename(connCompStack)))
+    stackFiles = [unwStack, cohStack, connCompStack, ampStack]
+    max_digit = max([len(os.path.basename(str(i))) for i in stackFiles])
+    for stackFile in stackFiles:
+        if stackFile is not None:
+            print('open {f:<{w}} with gdal ...'.format(f=os.path.basename(stackFile), w=max_digit))
+
     dsUnw = gdal.Open(unwStack, gdal.GA_ReadOnly)
     dsCoh = gdal.Open(cohStack, gdal.GA_ReadOnly)
     dsComp = gdal.Open(connCompStack, gdal.GA_ReadOnly)
+    if ampStack is not None:
+        dsAmp = gdal.Open(ampStack, gdal.GA_ReadOnly)
+    else:
+        dsAmp = None
 
     # extract NoDataValue (from the last */date2_date1.vrt file for example)
     ds = gdal.Open(dsUnw.GetFileList()[-1], gdal.GA_ReadOnly)
     noDataValueUnw = ds.GetRasterBand(1).GetNoDataValue()
-    print('grab NoDataValue for unwrapPhase:      {:<5} and convert to 0.'.format(noDataValueUnw))
+    print('grab NoDataValue for unwrapPhase     : {:<5} and convert to 0.'.format(noDataValueUnw))
 
     ds = gdal.Open(dsCoh.GetFileList()[-1], gdal.GA_ReadOnly)
     noDataValueCoh = ds.GetRasterBand(1).GetNoDataValue()
-    print('grab NoDataValue for coherence:        {:<5} and convert to 0.'.format(noDataValueCoh))
+    print('grab NoDataValue for coherence       : {:<5} and convert to 0.'.format(noDataValueCoh))
 
     ds = gdal.Open(dsComp.GetFileList()[-1], gdal.GA_ReadOnly)
     noDataValueComp = ds.GetRasterBand(1).GetNoDataValue()
     print('grab NoDataValue for connectComponent: {:<5} and convert to 0.'.format(noDataValueComp))
     ds = None
+
+    if dsAmp is not None:
+        ds = gdal.Open(dsAmp.GetFileList()[-1], gdal.GA_ReadOnly)
+        noDataValueAmp = ds.GetRasterBand(1).GetNoDataValue()
+        print('grab NoDataValue for magnitude       : {:<5} and convert to 0.'.format(noDataValueAmp))
+        ds = None
 
     # sort the order of interferograms based on date1_date2 with date1 < date2
     nPairs = dsUnw.RasterCount
@@ -542,6 +560,13 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack,
         data[data == noDataValueComp] = 0     #assign pixel with no-data to 0
         h5["connectComponent"][ii,:,:] = data
 
+        if dsAmp is not None:
+            bnd = dsAmp.GetRasterBand(bndIdx)
+            data = bnd.ReadAsArray(**kwargs)
+            data = multilook_data(data, ystep, xstep, method='nearest')
+            data[data == noDataValueAmp] = 0     #assign pixel with no-data to 0
+            h5["magnitude"][ii,:,:] = data
+
     prog_bar.close()
 
     # add MODIFICATION_TIME metadata to each 3D dataset
@@ -553,6 +578,7 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack,
     dsUnw = None
     dsCoh = None
     dsComp = None
+    dsAmp = None
     return outfile
 
 
@@ -590,6 +616,8 @@ def main(iargs=None):
         "coherence"        : (np.float32,     (num_pair, length, width)),
         "connectComponent" : (np.int16,       (num_pair, length, width)),
     }
+    if inps.magFile is not None:
+        dsNameDict['magnitude'] = (np.float32, (num_pair, length, width))
 
     if run_or_skip(inps, dsNameDict, out_file=inps.outfile[0]) == 'run':
         # initiate h5 file with defined structure
@@ -602,6 +630,7 @@ def main(iargs=None):
                            unwStack=inps.unwFile,
                            cohStack=inps.corFile,
                            connCompStack=inps.connCompFile,
+                           ampStack=inps.magFile,
                            box=box,
                            xstep=inps.xstep,
                            ystep=inps.ystep)
