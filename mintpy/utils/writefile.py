@@ -306,8 +306,9 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, compress
         data_shape = ds_name_dict[key][1]
 
         # turn ON compression for conn comp
+        ds_comp = compression
         if key in ['connectComponent']:
-            compression = 'lzf'
+            ds_comp = 'lzf'
 
         # changable dataset shape
         if len(data_shape) == 3:
@@ -322,13 +323,13 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, compress
                                                w=max_digit,
                                                t=str(data_type),
                                                s=str(data_shape),
-                                               c=compression))
+                                               c=ds_comp))
         ds = f.create_dataset(key,
                               shape=data_shape,
                               maxshape=max_shape,
                               dtype=data_type,
                               chunks=True,
-                              compression=compression)
+                              compression=ds_comp)
 
         # write auxliary data
         if len(ds_name_dict[key]) > 2 and ds_name_dict[key][2] is not None:
