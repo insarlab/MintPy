@@ -599,38 +599,37 @@ def prepare_metadata(inpsDict):
         if len(meta_files) < 1:
             warnings.warn('No input metadata file found: {}'.format(inpsDict['mintpy.load.metaFile']))
 
-        try:
-            # metadata and auxliary data
-            meta_file = meta_files[0]
-            baseline_dir = inpsDict['mintpy.load.baselineDir']
-            geom_dir = os.path.dirname(inpsDict['mintpy.load.demFile'])
+        # metadata and auxliary data
+        meta_file = meta_files[0]
+        baseline_dir = inpsDict['mintpy.load.baselineDir']
+        geom_dir = os.path.dirname(inpsDict['mintpy.load.demFile'])
 
-            # observation
-            obs_keys = ['mintpy.load.unwFile', 'mintpy.load.azOffFile']
-            obs_keys = [i for i in obs_keys if i in inpsDict.keys()]
-            obs_paths = [inpsDict[key] for key in obs_keys if inpsDict[key].lower() != 'auto']
-            if len(obs_paths) > 0:
-                processor = get_processor(meta_file)
-                if processor == 'alosStack':
-                    obs_dir = os.path.dirname(obs_paths[0])
-                else:
-                    obs_dir = os.path.dirname(os.path.dirname(obs_paths[0]))
-                obs_file = os.path.basename(obs_paths[0])
+        # observation
+        obs_keys = ['mintpy.load.unwFile', 'mintpy.load.azOffFile']
+        obs_keys = [i for i in obs_keys if i in inpsDict.keys()]
+        obs_paths = [inpsDict[key] for key in obs_keys if inpsDict[key].lower() != 'auto']
+        if len(obs_paths) > 0:
+            processor = get_processor(meta_file)
+            if processor == 'alosStack':
+                obs_dir = os.path.dirname(obs_paths[0])
             else:
-                obs_dir = None
-                obs_file = None
+                obs_dir = os.path.dirname(os.path.dirname(obs_paths[0]))
+            obs_file = os.path.basename(obs_paths[0])
+        else:
+            obs_dir = None
+            obs_file = None
 
-            # compose list of input arguments
-            iargs = ['-m', meta_file, '-g', geom_dir]
-            if baseline_dir:
-                iargs += ['-b', baseline_dir]
-            if obs_dir is not None:
-                iargs += ['-d', obs_dir, '-f', obs_file]
-            print('prep_isce.py', ' '.join(iargs))
-            
-            # run module
+        # compose list of input arguments
+        iargs = ['-m', meta_file, '-g', geom_dir]
+        if baseline_dir:
+            iargs += ['-b', baseline_dir]
+        if obs_dir is not None:
+            iargs += ['-d', obs_dir, '-f', obs_file]
+
+        # run module
+        print('prep_isce.py', ' '.join(iargs))
+        try:
             prep_isce.main(iargs)
-
         except:
             warnings.warn('prep_isce.py failed. Assuming its result exists and continue...')
 
