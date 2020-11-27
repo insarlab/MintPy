@@ -11,6 +11,7 @@ import sys
 import re
 import subprocess
 import argparse
+import h5py
 import numpy as np
 from mintpy.objects import timeseries, geometry
 from mintpy.utils import ptime, readfile, writefile, utils as ut
@@ -546,31 +547,28 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
     return grib_files
 
 
-def get_delay(grib_file, inps):
+def get_delay(grib_file, tropo_model, delay_type, dem, inc, lat, lon, verbose):
     """Get delay matrix using PyAPS for one acquisition
-    Inputs:
-        grib_file - strng, grib file path
-        atr       - dict, including the following attributes:
-                    dem_file    - string, DEM file path
-                    tropo_model - string, Weather re-analysis data source
-                    delay_type  - string, comb/dry/wet
-                    ref_y/x     - string, reference pixel row/col number
-                    inc_angle   - np.array, 0/1/2 D
-    Output:
-        pha - 2D np.array, absolute tropospheric phase delay relative to ref_y/x
+    Parameters: grib_file       - str, grib file path
+                tropo_model     - str, GAM model
+                delay_type      - str, dry/wet/comb
+                dem/inc/lat/lon - 2D np.ndarray in float32 for DEM, incidence angle, latitude/longitude
+                verbose         - bool, verbose message
+    Returns:    pha             - 2D np.ndarray in float32, single path tropospheric delay
+                                  temporally absolute, spatially referenced to ref_y/x
     """
-    if inps.verbose:
+    if verbose:
         print('GRIB FILE: {}'.format(grib_file))
 
     # initiate pyaps object
     aps_obj = pa.PyAPS(grib_file,
-                       grib=inps.tropo_model,
-                       Del=inps.delay_type,
-                       dem=inps.dem,
-                       inc=inps.inc,
-                       lat=inps.lat,
-                       lon=inps.lon,
-                       verb=inps.verbose)
+                       grib=tropo_model,
+                       Del=delay_type,
+                       dem=dem,
+                       inc=inc,
+                       lat=lat,
+                       lon=lon,
+                       verb=verbose)
 
     # estimate delay
     pha = np.zeros((aps_obj.ny, aps_obj.nx), dtype=np.float32)
@@ -581,7 +579,7 @@ def get_delay(grib_file, inps):
     return pha
 
 
-def calculate_delay_timeseries(inps):
+def calc_delay_timeseries(inps):
     """Calculate delay time-series and write it to HDF5 file.
     Parameters: inps : namespace, all input parameters
     Returns:    tropo_file : str, file name of ECMWF.h5
@@ -591,14 +589,45 @@ def calculate_delay_timeseries(inps):
         shape = (int(atr['LENGTH']), int(atr['WIDTH']))
         return shape
 
-    # check existing tropo delay file
-    if (ut.run_or_skip(out_file=inps.tropo_file, in_file=inps.grib_files, print_msg=False) == 'skip'
-            and get_dataset_size(inps.tropo_file) == get_dataset_size(inps.geom_file)
-            and all(i in timeseries(inps.tropo_file).get_date_list() for i in inps.date_list)):
-        print('{} file exists, is newer than all GRIB files and contains all dates, skip updating'.format(inps.tropo_file))
+    def run_or_skip(grib_files, tropo_file, geom_file):
+        print('update mode: ON')
+        print('output file: {}'.format(tropo_file))
+        flag = 'skip'
+
+        # check existance and modification time
+        if ut.run_or_skip(out_file=tropo_file, in_file=grib_files, print_msg=False) == 'run':
+            flag = 'run'
+            print('1) output file either do NOT exist or is NOT newer than all GRIB files.')
+
+        else:
+            print('1) output file exists and is newer than all GRIB files.')
+
+            # check dataset size in space / time
+            date_list = [str(re.findall('\d{8}', i)[0]) for i in grib_files]
+            if (get_dataset_size(tropo_file) != get_dataset_size(geom_file) 
+                    or any(i not in timeseries(tropo_file).get_date_list() for i in date_list)):
+                flag = 'run'
+                print('2) output file does NOT have the same len/wid as the geometry file {} or does NOT contain all dates'.format(geom_file))
+            else:
+                print('2) output file has the same len/wid as the geometry file and contains all dates')
+
+                # check if output file is fully written
+                with h5py.File(tropo_file, 'r') as f:
+                    if np.all(f['timeseries'][-1,:,:] == 0):
+                        flag = 'run'
+                        print('3) output file is NOT fully written.')
+                    else:
+                        print('3) output file is fully written.')
+
+        # result
+        print('run or skip: {}'.format(flag))
+        return flag
+
+    if run_or_skip(inps.grib_files, inps.tropo_file, inps.geom_file) == 'skip':
         return
 
-    # prepare geometry data
+
+    ## 1. prepare geometry data
     geom_obj = geometry(inps.geom_file)
     geom_obj.open()
     inps.inc = geom_obj.read(datasetName='incidenceAngle')
@@ -620,37 +649,61 @@ def calculate_delay_timeseries(inps):
         # for radar-coded dataset (gamma, roipac)
         inps.lat, inps.lon = ut.get_lat_lon_rdc(geom_obj.metadata)
 
-    # calculate phase delay
-    length, width = int(inps.atr['LENGTH']), int(inps.atr['WIDTH'])
-    num_date = len(inps.grib_files)
-    date_list = [str(re.findall('\d{8}', i)[0]) for i in inps.grib_files]
-    tropo_data = np.zeros((num_date, length, width), np.float32)
-    print('\n------------------------------------------------------------------------------')
-    print('calcualting absolute delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
-    print('number of grib files used: {}'.format(num_date))
 
-    if not inps.verbose:
-        prog_bar = ptime.progressBar(maxValue=num_date)
-    for i in range(num_date):
-        grib_file = inps.grib_files[i]
-        tropo_data[i] = get_delay(grib_file, inps)
-
-        if not inps.verbose:
-            prog_bar.update(i+1, suffix=os.path.basename(grib_file))
-    if not inps.verbose:
-        prog_bar.close()
+    ## 2. prepare output file
+    # metadata
+    atr = inps.atr.copy()
+    atr['FILE_TYPE'] = 'timeseries'
+    atr['UNIT'] = 'm'
 
     # remove metadata related with double reference
     # because absolute delay is calculated and saved
     for key in ['REF_DATE','REF_X','REF_Y','REF_LAT','REF_LON']:
-        if key in inps.atr.keys():
-            inps.atr.pop(key)
+        if key in atr.keys():
+            atr.pop(key)
 
-    # Write tropospheric delay to HDF5
-    ts_obj = timeseries(inps.tropo_file)
-    ts_obj.write2hdf5(data=tropo_data,
-                      dates=date_list,
-                      metadata=inps.atr)
+    # instantiate time-series
+    length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+    num_date = len(inps.grib_files)
+    date_list = [str(re.findall('\d{8}', i)[0]) for i in inps.grib_files]
+    dates = np.array(date_list, dtype=np.string_)
+    ds_name_dict = {
+        "date"       : [dates.dtype, (num_date,), dates],
+        "timeseries" : [np.float32,  (num_date, length, width), None],
+    }
+    writefile.layout_hdf5(inps.tropo_file, ds_name_dict, metadata=atr)
+
+
+    ## 3. calculate phase delay
+    print('\n------------------------------------------------------------------------------')
+    print('calcualting absolute delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
+    print('number of grib files used: {}'.format(num_date))
+
+    prog_bar = ptime.progressBar(maxValue=num_date, print_msg=~inps.verbose)
+    for i in range(num_date):
+        grib_file = inps.grib_files[i]
+
+        # calc tropo delay
+        tropo_data = get_delay(grib_file,
+                               tropo_model=inps.tropo_model,
+                               delay_type=inps.delay_type,
+                               dem=inps.dem,
+                               inc=inps.inc,
+                               lat=inps.lat,
+                               lon=inps.lon,
+                               verbose=inps.verbose)
+
+        # write tropo delay to file
+        block = [i, i+1, 0, length, 0, width]
+        writefile.write_hdf5_block(inps.tropo_file,
+                                   data=tropo_data,
+                                   datasetName='timeseries',
+                                   block=block,
+                                   print_msg=False)
+
+        prog_bar.update(i+1, suffix=os.path.basename(grib_file))
+    prog_bar.close()
+
     return inps.tropo_file
 
 
@@ -691,7 +744,7 @@ def main(iargs=None):
 
     # read dates / time info
     read_inps2date_time(inps)
-     
+
     # get corresponding grib files info
     get_grib_info(inps)
 
@@ -702,7 +755,7 @@ def main(iargs=None):
 
     # calculate tropo delay and save to h5 file
     if inps.geom_file:
-        calculate_delay_timeseries(inps)
+        calc_delay_timeseries(inps)
     else:
         print('No input geometry file, skip calculating and correcting tropospheric delays.')
         return
