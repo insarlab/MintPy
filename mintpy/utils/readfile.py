@@ -727,7 +727,7 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
     else:
         # potential file bases and extensions for metadata file given the data file
         metafile_bases = [fname, os.path.splitext(fname)[0]]
-        metafile_exts = ['.rsc', '.xml', '.aux.xml', '.par', '.hdr', '.vrt']
+        metafile_exts = ['.rsc', '.xml', '.par', '.hdr', '.vrt', '.aux.xml']
 
         # grab all existed metadata files in prefered order/priority defined above
         metafiles = []
