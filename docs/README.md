@@ -10,7 +10,7 @@
 
 The Miami INsar Time-series software in PYthon (MintPy as /mɪnt paɪ/) is an open-source package for Interferometric Synthetic Aperture Radar (InSAR) time series analysis. It reads the stack of interferograms (coregistered and unwrapped) in [ISCE](https://github.com/isce-framework/isce2), [ARIA](https://github.com/aria-tools/ARIA-tools), [FRInGE](https://github.com/isce-framework/fringe), [SNAP](http://step.esa.int/), [GAMMA](https://www.gamma-rs.ch/no_cache/software.html) or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground surface displacement in line-of-sight direction. It includes a routine time series analysis (`smallbaselineApp.py`) and some independent toolbox.
 
-This package was called PySAR before version 1.1.1. For version 1.1.2 and onward, we use MintPy instead. 
+This package was called PySAR before version 1.1.1. For version 1.1.2 and onward, we use MintPy instead.
 
 This is research code provided to you "as is" with NO WARRANTIES OF CORRECTNESS. Use at your own risk.
 
@@ -20,7 +20,7 @@ This is research code provided to you "as is" with NO WARRANTIES OF CORRECTNESS.
 
 #### 2.1 Routine workflow `smallbaselineApp.py` ####
 
-MintPy reads a stack of interferograms (unwrapped interferograms, coherence and connected components from SNAPHU if available) and the geometry files (DEM, lookup table, incidence angle, etc.). You need to give the [path to where the files are](dir_structure.md) and MintPy takes care of the rest! 
+MintPy reads a stack of interferograms (unwrapped interferograms, coherence and connected components from SNAPHU if available) and the geometry files (DEM, lookup table, incidence angle, etc.). You need to give the [path to where the files are](dir_structure.md) and MintPy takes care of the rest!
 
 ```bash
 smallbaselineApp.py                         #run with default template 'smallbaselineApp.cfg'
@@ -35,9 +35,9 @@ smallbaselineApp.py GalapagosSenDT128.template --dostep velocity  #run at step '
 smallbaselineApp.py GalapagosSenDT128.template --end load_data    #end after step 'load_data'
 ```
 
-Inside smallbaselineApp.py, it reads the unwrapped interferograms, references all of them to the same coherent pixel (reference point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the network of interferograms into time-series, calculates the temporal coherence to evaluate the quality of inversion, corrects local oscillator drift (for Envisat only), corrects stratified tropospheric delay (using global atmospheric models or phase-elevation-ratio approach), removes phase ramps (if it has been asked for), corrects DEM error,... and finally estimates the velocity. 
+Inside smallbaselineApp.py, it reads the unwrapped interferograms, references all of them to the same coherent pixel (reference point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the network of interferograms into time-series, calculates the temporal coherence to evaluate the quality of inversion, corrects local oscillator drift (for Envisat only), corrects stratified tropospheric delay (using global atmospheric models or phase-elevation-ratio approach), removes phase ramps (if it has been asked for), corrects DEM error,... and finally estimates the velocity.
 
-Configuration parameters for each step are initiated with default values in a customizable text file [**smallbaselineApp.cfg**](../mintpy/defaults/smallbaselineApp.cfg). 
+Configuration parameters for each step are initiated with default values in a customizable text file [**smallbaselineApp.cfg**](../mintpy/defaults/smallbaselineApp.cfg).
 
 #### [Example](./demo_dataset.md) on Fernandina volcano, Galápagos with Sentinel-1 data ####
 

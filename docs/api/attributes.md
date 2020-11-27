@@ -2,7 +2,7 @@ MintPy mainly uses attribute names from [ROI_PAC](http://www.geo.cornell.edu/eas
 
 ### Required attributes ###
 
-If using ROI_PAC as InSAR processor, both **baseline parameter RSC** file (i.e. *100416-100901_baseline.rsc*) and **basic metadata file** (i.e. *filt_100416-100901-sim_HDR_4rlks_c10.unw.rsc*) will be imported into MintPy. The following attributes for each interferogram are required in order to run MintPy:
+If using ROI_PAC as the InSAR processor, both **baseline parameter RSC** file (i.e. *100416-100901_baseline.rsc*) and **basic metadata file** (i.e. *filt_100416-100901-sim_HDR_4rlks_c10.unw.rsc*) will be imported into MintPy. The following attributes for each interferogram are required in order to run MintPy:
 
 +  FILE_LENGTH = number of rows.  
 +  WIDTH = number of columns.  
@@ -15,13 +15,16 @@ If using ROI_PAC as InSAR processor, both **baseline parameter RSC** file (i.e. 
 +  CENTER_LINE_UTC = Time at middle of interferogram in seconds, used in tropo correction using PyAPS.   
 +  HEIGHT = Height of satellite in meters, used in dem_error, incidence_angle, convert2mat.   
 +  STARTING_RANGE = Distance from satellite to first ground pixel in meters, used in incidence_angle calculation   
-+  DATE12 = (date1)-(date2), reference - secondary date of interferogram in 6 digit number.   
 +  PLATFORM = satellite/sensor name, used in Local Oscillator Drift correction for Envisat.   
 +  ORBIT_DIRECTION = ascending, or descending.   
++  ALOOKS/RLOOKS = multilook number in azimuth/range direction, used in weighted network inversion.
+    
+The following attributes vary for each interferogram:
+    
++  DATE12 = (date1)-(date2), reference - secondary date of interferogram in 6 digit number.   
 +  P_BASELINE_TOP_HDR = Perpendicular baseline at top (first line) of interferogram in meters.   
 +  P_BASELINE_BOTTOM_HDR = Perpendicular baseline at bottom (last line) of interferogram in meters.   
-+  ALOOKS/RLOOKS = multilook number in azimuth/range direction, used in weighted network inversion.
-   
+    
 ### Optional attributes ###
 
 +  ANTENNA_SIDE = -1 for right looking radar, used in save_unavco
@@ -36,9 +39,9 @@ If using ROI_PAC as InSAR processor, both **baseline parameter RSC** file (i.e. 
     - for binary files, it's the file extension name, such as `.unw, .cor, .int, .amp, .mli, .dem, .hgt, .unw.conncomp, .UTM_TO_RDC, .trans, etc.`, except for ISCE geometry files, which is the file base name such as `hgt, lat, lon, los, shadowMask, incLocal`.  
 +  FILE_PATH = absolute file path   
 +  LENGTH = row number, equivalent to FILE_LENGTH
-+  PROCESSOR = processing software, i.e. isce, roipac, gamma
++  PROCESSOR = processing software, i.e. isce, aria, snap, gamma, roipac etc.
 +  DATA_TYPE = data type, i.e. float32, int16, etc., for isce product read using GDAL
-+  UNIT = data unit, i.e. m, m/yr, radian, and 1 for file without unit, such as coherence
++  UNIT = data unit, i.e. m, m/yr, radian, and 1 for file without unit, such as coherence [[source]](https://github.com/insarlab/MintPy/blob/main/mintpy/objects/stack.py#L75)
 +  REF_DATE = reference date
 +  REF_X/Y/LAT/LON = column/row/latitude/longitude of reference point
 +  SUBSET_XMIN/XMAX/YMIN/YMAX = start/end column/row number of subset in the original coverage
