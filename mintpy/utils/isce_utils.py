@@ -390,12 +390,25 @@ def extract_stripmap_metadata(meta_file):
 
 
 def extract_alosStack_metadata(meta_file, geom_dir):
+    """Read metadata for ISCE/alosStack from the following files:
+
+    pairs/*-*/
+        {date1}.track.xml
+        f1_{frame1}/{date1}.frame.xml
+        f2_{frame2}/{date1}.frame.xml
+        ...
+
+    Parameters: meta_file : str, path of the track xml file, i.e. pairs/*-*/150408/track.xml
+                geom_dir  : str, path of the geometry directory, i.e. dates_resampled/150408/insar
+    Returns:    meta      : dict, metadata
+                track     : isceobj.Sensor.MultiMode.Track.Track object
+    """
 
     import isce
     import isceobj
     from isceobj.Planet.Planet import Planet
 
-    track = load_track(os.path.dirname(meta_file), os.path.basename(meta_file).strip('.track.xml'))
+    track = load_track(os.path.dirname(meta_file), dateStr=os.path.basename(meta_file).strip('.track.xml'))
     rlooks, alooks, width, length = extract_image_size_alosStack(geom_dir)
     spotlightModes, stripmapModes, scansarNominalModes, scansarWideModes, scansarModes = alos2_acquisition_modes()
 
@@ -412,7 +425,8 @@ def extract_alosStack_metadata(meta_file, geom_dir):
 
     meta['PLATFORM'] = sensor.standardize_sensor_name('alos2')
 
-    sensingMid = meta['startUTC'] + datetime.timedelta(seconds=(meta['stopUTC']-meta['startUTC']).total_seconds()/2.0)
+    sensingSec = (meta['stopUTC'] - meta['startUTC']).total_seconds()
+    sensingMid = meta['startUTC'] + datetime.timedelta(seconds=sensingSec/2.0)
     time_seconds = (sensingMid.hour * 3600.0 +
                     sensingMid.minute * 60.0 +
                     sensingMid.second)
@@ -460,6 +474,7 @@ def extract_alosStack_metadata(meta_file, geom_dir):
     meta['rangePixelSize'] *= meta['RLOOKS']
     meta['azimuthPixelSize'] *= meta['ALOOKS']
 
+    # LAT/LON_REF1/2/3/4
     edge = 3
     lat_file = glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.lat'.format(rlooks, alooks)))[0]
     img = isceobj.createImage()
@@ -523,17 +538,20 @@ def extract_image_size_alosStack(geom_dir):
     return (rlooks, alooks, width, length)
 
 
-def load_track(trackDir, date):
-    '''
-    Load the track using Product Manager.
-    trackDir: where *.track.xml is located
-    date: YYMMDD
+def load_track(trackDir, dateStr):
+    '''Load the track using Product Manager.
+
+    Parameters: trackDir - str, directory of the *.track.xml file
+                dateStr  - str, date in YYMMDD format
+    Returns:    track    - isceobj.Sensor.MultiMode.Track.Track object
     '''
 
-    track = load_product(os.path.join(trackDir, '{}.track.xml'.format(date)))
+    # read *.track.xml file
+    track = load_product(os.path.join(trackDir, '{}.track.xml'.format(dateStr)))
 
+    # read *.frame.xml files
     track.frames = []
-    fnames = sorted(glob.glob(os.path.join(trackDir, 'f*_*/{}.frame.xml'.format(date))))
+    fnames = sorted(glob.glob(os.path.join(trackDir, 'f*_*/{}.frame.xml'.format(dateStr))))
     for fname in fnames:
         track.frames.append(load_product(fname))
 

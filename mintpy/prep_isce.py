@@ -23,9 +23,7 @@ EXAMPLE = """example:
   prep_isce.py -d ./merged/interferograms -m ./reference/IW1.xml -b ./baselines -g ./merged/geom_reference      #for topsStack
   prep_isce.py -d ./Igrams -m ./referenceShelve/data.dat -b ./baselines -g ./geom_reference                     #for stripmapStack
   prep_isce.py -m 20120507_slc_crop.xml -g ./geometry                                                           #for stripmapApp
-
-  # 150408 is the reference date of alosStack processing
-  prep_isce.py -d "pairs/*-*/insar" -m "pairs/*-*/150408.track.xml" -b baseline -g dates_resampled/150408/insar #for alosStack
+  prep_isce.py -d "pairs/*-*/insar" -m "pairs/*-*/150408.track.xml" -b baseline -g dates_resampled/150408/insar #for alosStack with 150408 as ref date
 
   # offset stack from topsStack
   prep_isce.py -d ./merged/offsets -f filtAz*.off -m ./reference/IW1.xml -b ./baselines -g ./merged/offsets/geom_reference

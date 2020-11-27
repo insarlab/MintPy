@@ -13,4 +13,3 @@ mintpy.reference.lalo   = -33, 18.05
 mintpy.networkInversion.weightFunc              = var
 mintpy.deramp                                   = linear
 mintpy.topographicResidual.pixelwiseGeometry    = no
-
