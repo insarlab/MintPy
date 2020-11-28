@@ -414,7 +414,7 @@ class GPS:
         date_list = [dt.strftime(i, '%Y%m%d') for i in dates]
         if len(date_list) > 2:
             A = timeseries.get_design_matrix4time_func(date_list)
-            self.velocity = np.dot(np.linalg.pinv(A), dis)[0]
+            self.velocity = np.dot(np.linalg.pinv(A), dis)[1]
         else:
             self.velocity = np.nan
         return self.velocity
