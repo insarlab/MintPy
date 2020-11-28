@@ -461,7 +461,7 @@ def main(iargs=None):
     inps.date12_to_drop = get_date12_to_drop(inps)
 
     if inps.date12_to_drop is not None:
-        ifgramStack(inps.file).update_drop_ifgram(date12List_to_drop=inps.date12_to_drop)
+        ifgramStack(inps.file).update_drop_ifgram(inps.date12_to_drop)
         ut.touch('coherenceSpatialAvg.txt')
         print('Done.')
     return

@@ -1230,16 +1230,24 @@ class ifgramStack:
         pbaseTimeseries[1:] = np.linalg.lstsq(A, pbaseIfgram, rcond=None)[0]
         return pbaseTimeseries
 
-    def update_drop_ifgram(self, date12List_to_drop):
-        """Update dropIfgram dataset based on input date12List_to_drop"""
-        if date12List_to_drop is None:
+    def update_drop_ifgram(self, date12List2Drop):
+        """Update dropIfgram dataset based on input date12List2Drop"""
+        if date12List2Drop is None:
             return
         date12ListAll = self.get_date12_list(dropIfgram=False)
+
+        # check date12 list to drop: old vs new
+        date12ListKeptOld = self.get_date12_list(dropIfgram=True)
+        date12List2DropOld = sorted(list(set(date12ListAll) - set(date12ListKeptOld)))
+        if date12List2DropOld == date12List2Drop:
+            print('The same date12List2Drop / dropIfgram is already marked in the file, skip updating dropIfgram.')
+            return
+
         with h5py.File(self.file, 'r+') as f:
             print('open file {} with r+ mode'.format(self.file))
             print('update HDF5 dataset "/dropIfgram".')
-            f['dropIfgram'][:] = np.array([i not in date12List_to_drop
-                                           for i in date12ListAll], dtype=np.bool_)
+            f['dropIfgram'][:] = np.array([i not in date12List2Drop for i in date12ListAll], dtype=np.bool_)
+
             # update MODIFICATION_TIME for all datasets in ifgramDatasetNames
             for dsName in ifgramDatasetNames:
                 if dsName in f.keys():
