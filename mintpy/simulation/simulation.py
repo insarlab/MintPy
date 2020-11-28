@@ -222,7 +222,7 @@ def timeseries2velocity(date_list, defo_list):
 
     # least square inversion
     defo = np.array(defo_list, np.float32).reshape(-1,1)
-    vel = np.dot(A_inv, defo)[0, :]
+    vel = np.dot(A_inv, defo)[1, :]
     return vel
 
 

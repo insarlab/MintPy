@@ -20,6 +20,64 @@ from mintpy.objects.gps import GPS
 from mintpy.defaults.plot import *
 
 
+
+############################## utilities functions ##########################################
+
+def plot_insar_vs_gps_scatter(gps_csv_file = 'GPSSitesVel.csv', insar_vel_file = 'velocity.h5'):
+    """Plot/compare the average velocity between InSAR and GPS.
+
+    Parameters: gps_csv_file   - str, path of GPS CSV file, generated after running view.py --gps-comp
+                insar_vel_file - str, path of InSAR LOS velocity HDF5 file.
+    Example:    plot_insar_vs_gps_scatter()
+    """
+    from mintpy.utils import readfile, utils as ut
+
+    # read GPS velocity from CSV file (generated during view.py call)
+    print('read GPS velocity from file: {}'.format(gps_csv_file))
+    fc = np.loadtxt(gps_csv_file, dtype=bytes, delimiter=',', skiprows=1).astype(str)
+    sites = fc[:, 0]
+    lons = fc[:, 1].astype(np.float32)
+    lats = fc[:, 2].astype(np.float32)
+    vels_gps = fc[:, 3].astype(np.float32)
+
+    # read InSAR velocity
+    print('read InSAR velocity from file: {}'.format(insar_vel_file))
+    atr = readfile.read_attribute(insar_vel_file)
+    coord = ut.coordinate(atr)
+    ys, xs = coord.geo2radar(lats, lons)[:2]
+
+    num_site = sites.size
+    vels_insar = np.zeros(num_site, dtype=np.float32)
+    for i in range(num_site):
+        x, y = xs[i], ys[i]
+        box = (x, y, x+1, y+1)
+        vels_insar[i] = readfile.read(insar_vel_file, datasetName='velocity', box=box)[0] * 100.
+
+    # plot
+    plt.rcParams.update({'font.size': 12})
+    vmin, vmax = np.min(vels_insar), np.max(vels_insar)
+    buffer = (vmax - vmin) * 0.1
+    vmin -= buffer
+    vmax += buffer
+
+    fig, ax = plt.subplots(figsize=[6, 6])
+    ax.plot((vmin, vmax), (vmin, vmax), 'k--')
+    ax.plot(vels_insar, vels_gps, '.', ms=15)
+
+    # axis format
+    ax.set_xlim(vmin, vmax)
+    ax.set_ylim(vmin, vmax)
+    ax.set_xlabel('InSAR [cm/yr]')
+    ax.set_ylabel('GPS [cm/yr]')
+    ax.set_aspect('equal', 'box')
+    fig.tight_layout()
+    plt.show()
+    
+    return
+
+
+
+############################## beginning of insar_vs_gps class ##############################
 class insar_vs_gps:
     """ Comparing InSAR time-series with GPS time-series in LOS direction
     Parameters: ts_file        : str, time-series HDF5 file
@@ -280,5 +338,7 @@ class insar_vs_gps:
                     xycoords=ax.get_yaxis_transform(),  # y in data untis, x in axes fraction
                     color='k', fontsize=font_size)
         return ax
+
+############################## end of insar_vs_gps class ####################################
 
 
