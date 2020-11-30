@@ -269,7 +269,7 @@ class timeseries:
                 box = [0, 0, self.width, self.length]
 
             # read
-            data = ds[dateFlag,
+            data = ds[np.ix_(dateFlag)[0],
                       box[1]:box[3],
                       box[0]:box[2]]
 
