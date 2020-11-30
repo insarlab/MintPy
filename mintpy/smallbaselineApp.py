@@ -663,6 +663,9 @@ class TimeSeriesAnalysis:
                     if method == 'height_correlation':
                         fname1 = '{}_tropHgt.h5'.format(os.path.splitext(fname0)[0])
 
+                    elif method == 'gacos':
+                        fname1 = '{}_GACOS.h5'.format(os.path.splitext(fname0)[0])
+
                     elif method == 'pyaps':
                         fname1 = '{}_{}.h5'.format(os.path.splitext(fname0)[0], model)
 
@@ -769,6 +772,19 @@ class TimeSeriesAnalysis:
                     mintpy.tropo_phase_elevation.main(iargs)
 
             # Weather Re-analysis Data (Jolivet et al., 2011;2014)
+            elif method == 'gacos':
+                from mintpy.tropo_pyaps3 import correct_timeseries
+                import glob
+                tropo_file = self.workDir + '/GACOS.h5'
+                GACOS_dir = self.template['mintpy.troposphericDelay.gacosDir']
+                iargs = [in_file, '-l', geom_file, '-i', geom_file, '-o', tropo_file, '--GACOS-dir', GACOS_dir]
+                print('tropospheric delay correction with gacos approach')
+                print('\ntropo_gacos.py', ' '.join(iargs))
+                if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
+                    mintpy.tropo_gacos.main(iargs)
+                    correct_timeseries(in_file, tropo_file, out_file)
+
+
             elif method == 'pyaps':
                 iargs = ['-f', in_file, '--model', tropo_model, '-g', geom_file, '-w', weather_dir]
                 print('Atmospheric correction using Weather Re-analysis dataset (PyAPS, Jolivet et al., 2011)')
