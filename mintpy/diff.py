@@ -160,10 +160,11 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
                                                dimension='y',
                                                print_msg=True)
 
-        ref_box = (ref_x, ref_y, ref_x + 1, ref_y + 1)
-        ref_val = readfile.read(file2[0],
-                                datasetName=dateListShared,
-                                box=ref_box)[0] * unit_fac
+        if ref_y and ref_x:
+            ref_box = (ref_x, ref_y, ref_x + 1, ref_y + 1)
+            ref_val = readfile.read(file2[0],
+                                    datasetName=dateListShared,
+                                    box=ref_box)[0] * unit_fac
 
         for i, box in enumerate(box_list):
             if num_box > 1:
