@@ -208,7 +208,7 @@ def main(argv):
         inps.inc_angle = readfile.read(inps.inc_angle, datasetName='incidenceAngle')[0]
         inps.inc_angle = np.nan_to_num(inps.inc_angle)
     else:
-        inps.inps.inc_angle = float(inps.inc_angle)
+        inps.inc_angle = float(inps.inc_angle)
         print('incidence angle: ' + str(inps.inc_angle))
     cinc = np.cos(inps.inc_angle * np.pi / 180.0)
     
