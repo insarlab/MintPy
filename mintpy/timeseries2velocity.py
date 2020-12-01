@@ -4,7 +4,7 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 ############################################################
-# Add bootstraping method for mean / std. dev. estimation, Emre Havazli, May 2020.
+# Add bootstrap method for std. dev. estimation, Emre Havazli, May 2020.
 # Add poly / periodic / step func., Yuan-Kai Liu, Aug 2020.
 
 
@@ -15,9 +15,11 @@ import argparse
 import h5py
 import numpy as np
 from scipy import linalg
-from mintpy.objects import timeseries, giantTimeseries, HDFEOS
+
+from mintpy.objects import timeseries, giantTimeseries, HDFEOS, cluster
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, writefile, ptime, utils as ut
+
 
 dataType = np.float32
 # key configuration parameter name
@@ -290,8 +292,32 @@ def read_date_info(inps):
     return inps
 
 
+def read_inps2model(inps):
+    """get model info from inps"""
+
+    model = dict()
+    model['polynomial'] = inps.polynomial
+    model['periodic'] = inps.periodic
+    model['step'] = inps.step
+
+    # msg
+    print('estimate deformation model with the following assumed time functions:')
+    for key, value in model.items():
+        print('{:<10} : {}'.format(key, value))
+
+    if 'polynomial' not in model.keys():
+        raise ValueError('linear/polynomial model is NOT included! Are you sure?!')
+
+    # number of parameters
+    num_param = (model['polynomial'] + 1
+                 + len(model['periodic']) * 2 
+                 + len(model['step']))
+
+    return model, num_param
+
+
 ############################################################################
-def estimate_time_func(date_list, dis_ts, model, print_msg=True):
+def estimate_time_func(date_list, dis_ts, model):
     """
     Deformation model estimator, using a suite of linear, periodic, step function(s).
 
@@ -310,14 +336,6 @@ def estimate_time_func(date_list, dis_ts, model, print_msg=True):
                 e2        - 1D np.ndarray, sum of squared residual in size of (num_pixel,)
     """
 
-    if print_msg:
-        print('estimate deformation model with the following assumed time functions:')
-        for key, value in model.items():
-            print('{:<10} : {}'.format(key, value))
-
-    if 'polynomial' not in model.keys():
-        raise ValueError('linear/polynomial model is NOT included! Are you sure?!')
-
     G = timeseries.get_design_matrix4time_func(date_list, model)
 
     # least squares solver
@@ -331,35 +349,15 @@ def estimate_time_func(date_list, dis_ts, model, print_msg=True):
 
 def run_timeseries2time_func(inps):
 
-    # read time-series data
-    print('reading data from file {} ...'.format(inps.timeseries_file))
-    ts_data, atr = readfile.read(inps.timeseries_file)
-    ts_data = ts_data[inps.dropDate, :, :].reshape(inps.numDate, -1)
-    if atr['UNIT'] == 'mm':
-        ts_data *= 1./1000.
+    # basic info
+    atr = readfile.read_attribute(inps.timeseries_file)
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
-    num_pixel = length * width
     num_date = inps.numDate
+    dates = np.array(inps.dateList)
 
     # get deformation model from parsers
-    model = dict()
-    model['polynomial'] = inps.polynomial
-    model['periodic'] = inps.periodic
-    model['step'] = inps.step
-    num_param = (model['polynomial'] + 1
-                 + len(model['periodic']) * 2 
-                 + len(model['step']))
+    model, num_param = read_inps2model(inps)
 
-    # mask of pixels to invert
-    print('skip pixels with zero/nan value in all acquisitions')
-    ts_stack = np.nanmean(ts_data, axis=0)
-    mask = np.multiply(~np.isnan(ts_stack), ts_stack!=0.)
-    del ts_stack
-
-    num_pixel2inv = int(np.sum(mask))
-    ts_data = ts_data[:, mask]
-    print('number of pixels to invert: {} out of {} ({:.1f}%)'.format(
-        num_pixel2inv, num_pixel, num_pixel2inv/num_pixel*100))
 
     ## output preparation
 
@@ -375,189 +373,320 @@ def run_timeseries2time_func(inps):
     for key in configKeys:
         atr[key_prefix+key] = str(vars(inps)[key])
 
-    # initiate matrices
-    m = np.zeros((num_param, length*width), dtype=dataType)
-    m_std = np.zeros((num_param, length*width), dtype=dataType)
+    # instantiate output file
+    layout_hdf5(inps.outfile, atr, model)
 
 
-    ## run estimation (solve Gm = d)
+    ## estimation
 
+    # calc number of box based on memory limit
+    memoryAll = (num_date + num_param * 2 + 2) * length * width * 4 
     if inps.bootstrap:
-        ## option 1 - least squares with bootstrapping
-        # Bootstrapping is a resampling method which can be used to estimate properties
-        # of an estimator. The method relies on independently sampling the data set with
-        # replacement.
+        memoryAll += inps.bootstrapCount * num_param * length * width * 4
+    num_box = int(np.ceil(memoryAll * 3 / (inps.memorySize * 1024**3)))
+    box_list = cluster.split_box2sub_boxes(box=(0, 0, width, length),
+                                           num_split=num_box,
+                                           dimension='y',
+                                           print_msg=True)
 
-        try:
-            from sklearn.utils import resample
-        except ImportError:
-            raise ImportError('can not import scikit-learn!')
-        print('using bootstrap resampling {} times ...'.format(inps.bootstrapCount)) 
+    # loop for block-by-block IO
+    for i, box in enumerate(box_list):
+        box_width  = box[2] - box[0]
+        box_length = box[3] - box[1]
+        num_pixel = box_length * box_width
+        if num_box > 1:
+            print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
+            print('box width:  {}'.format(box_width))
+            print('box length: {}'.format(box_length))
 
-        # calc model of all bootstrap sampling
-        m_boot = np.zeros((inps.bootstrapCount, num_param, num_pixel2inv), dtype=dataType)
-        dates = np.array(inps.dateList)
+        # initiate output
+        m = np.zeros((num_param, num_pixel), dtype=dataType)
+        m_std = np.zeros((num_param, num_pixel), dtype=dataType)
 
-        prog_bar = ptime.progressBar(maxValue=inps.bootstrapCount)
-        for i in range(inps.bootstrapCount):
-            # bootstrap resampling
-            boot_ind = resample(np.arange(inps.numDate), replace=True, n_samples=inps.numDate)
-            boot_ind.sort()
+        # read input
+        print('reading data from file {} ...'.format(inps.timeseries_file))
+        ts_data = readfile.read(inps.timeseries_file, box=box)[0]
+        ts_data = ts_data[inps.dropDate, :, :].reshape(inps.numDate, -1)
+        if atr['UNIT'] == 'mm':
+            ts_data *= 1./1000.
 
-            # estimation
-            m_boot[i] = estimate_time_func(dates[boot_ind].tolist(), ts_data[boot_ind], model, print_msg=False)[1]
+        # mask invalid pixels
+        print('skip pixels with zero/nan value in all acquisitions')
+        ts_stack = np.nanmean(ts_data, axis=0)
+        mask = np.multiply(~np.isnan(ts_stack), ts_stack!=0.)
+        del ts_stack
 
-            prog_bar.update(i+1, suffix='iteration {} / {}'.format(i+1, inps.bootstrapCount))
-        prog_bar.close()
-        del ts_data
+        ts_data = ts_data[:, mask]
+        num_pixel2inv = int(np.sum(mask))
+        print('number of pixels to invert: {} out of {} ({:.1f}%)'.format(
+            num_pixel2inv, num_pixel, num_pixel2inv/num_pixel*100))
 
-        # get mean/std among all bootstrap sampling
-        print('calculate mean and standard deviation of bootstrap estimations')
-        m[:, mask] = m_boot.mean(axis=0).reshape(num_param, -1)
-        m_std[:, mask] = m_boot.std(axis=0).reshape(num_param, -1)
-        del m_boot
-
-
-    else:
-        ## option 2 - least squares with uncertainty propagation
-
-        G, m[:, mask], e2 = estimate_time_func(inps.dateList, ts_data, model)
-        del ts_data
-
-        ## Compute the covariance matrix for model parameters: Gm = d
-        # C_m_hat = (G.T * C_d^-1, * G)^-1  # the most generic form
-        #         = sigma^2 * (G.T * G)^-1  # assuming the obs error is normally distributed in time.
-        # Based on the law of integrated expectation, we estimate the obs sigma^2 using
-        # the OLS estimation residual e_hat_i = d_i - d_hat_i
-        # sigma^2 = sigma_hat^2 * N / (N - P)
-        #         = (e_hat.T * e_hat) / (N - P)  # sigma_hat^2 = (e_hat.T * e_hat) / N
-
-        G_inv = linalg.inv(np.dot(G.T, G))
-        m_var = e2.reshape(1, -1) / (num_date - num_param)
-        m_std[:, mask] = np.sqrt(np.dot(np.diag(G_inv).reshape(-1, 1), m_var))
-
-        ## for linear velocity, the STD can also be calculated using Eq. (10) from Fattahi and Amelung (2015, JGR)
-        #ts_diff = ts_data - np.dot(G, m)
-        #t_diff = G[:, 1] - np.mean(G[:, 1])
-        #vel_std = np.sqrt(np.sum(ts_diff ** 2, axis=0) / np.sum(t_diff ** 2)  / (num_date - 2))
-        #vel_std = np.array(vel_std.reshape(length, width), dtype=dataType)
-
-    # write
-    write_time_func(inps.outfile, atr, model, m, m_std)
-
-    return
+        # go to next if no valid pixel found
+        if num_pixel2inv == 0:
+            block = [box[1], box[3], box[0], box[2]]
+            write_hdf5_block(inps.outfile, model, m, m_std,
+                             mask=mask,
+                             block=block)
+            continue
 
 
-def write_time_func(out_file, atr, model, m, m_std, box=None):
-    """write the estimated time function parameters to file
+        ### estimation / solve Gm = d
 
-    Parameters: out_file - str, path of output time func file
-                atr      - dict, attributes
-                model    - dict, dict of time functions, e.g.:
-                    {'polynomial' : 2,            # int, polynomial with 1 (linear), 2 (quad), 3 (cubic), etc.
-                     'periodic'   : [1.0, 0.5],   # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
-                     'step'       : ['20061014'], # list of str, date(s) in YYYYMMDD.
-                     ...
-                     }
-                m/m_std  - 3D np.ndarray in float32 in size of (num_param, length*width), est. time func parameters (Std. Dev.)
-                box      - tuple of 4 int, indicating (x0, y0, x1, y1) for the area of interest
-                    None for the whole area
+        if inps.bootstrap:
+            ## option 1 - least squares with bootstrapping
+            # Bootstrapping is a resampling method which can be used to estimate properties
+            # of an estimator. The method relies on independently sampling the data set with
+            # replacement.
+
+            try:
+                from sklearn.utils import resample
+            except ImportError:
+                raise ImportError('can not import scikit-learn!')
+            print('using bootstrap resampling {} times ...'.format(inps.bootstrapCount)) 
+
+            # calc model of all bootstrap sampling
+            m_boot = np.zeros((inps.bootstrapCount, num_param, num_pixel2inv), dtype=dataType)
+            prog_bar = ptime.progressBar(maxValue=inps.bootstrapCount)
+            for i in range(inps.bootstrapCount):
+                # bootstrap resampling
+                boot_ind = resample(np.arange(inps.numDate),
+                                    replace=True,
+                                    n_samples=inps.numDate)
+                boot_ind.sort()
+
+                # estimation
+                m_boot[i] = estimate_time_func(dates[boot_ind].tolist(),
+                                               ts_data[boot_ind],
+                                               model)[1]
+
+                prog_bar.update(i+1, suffix='iteration {} / {}'.format(i+1, inps.bootstrapCount))
+            prog_bar.close()
+            del ts_data
+
+            # get mean/std among all bootstrap sampling
+            print('calculate mean and standard deviation of bootstrap estimations')
+            m[:, mask] = m_boot.mean(axis=0).reshape(num_param, -1)
+            m_std[:, mask] = m_boot.std(axis=0).reshape(num_param, -1)
+            del m_boot
+
+
+        else:
+            ## option 2 - least squares with uncertainty propagation
+
+            print('estimate time functions via linalg.lstsq ...')
+            G, m[:, mask], e2 = estimate_time_func(inps.dateList,
+                                                   ts_data,
+                                                   model)
+            del ts_data
+
+            ## Compute the covariance matrix for model parameters: Gm = d
+            # C_m_hat = (G.T * C_d^-1, * G)^-1  # the most generic form
+            #         = sigma^2 * (G.T * G)^-1  # assuming the obs error is normally distributed in time.
+            # Based on the law of integrated expectation, we estimate the obs sigma^2 using
+            # the OLS estimation residual e_hat_i = d_i - d_hat_i
+            # sigma^2 = sigma_hat^2 * N / (N - P)
+            #         = (e_hat.T * e_hat) / (N - P)  # sigma_hat^2 = (e_hat.T * e_hat) / N
+
+            G_inv = linalg.inv(np.dot(G.T, G))
+            m_var = e2.reshape(1, -1) / (num_date - num_param)
+            m_std[:, mask] = np.sqrt(np.dot(np.diag(G_inv).reshape(-1, 1), m_var))
+
+            ## for linear velocity, the STD can also be calculated 
+            # using Eq. (10) from Fattahi and Amelung (2015, JGR)
+            # ts_diff = ts_data - np.dot(G, m)
+            # t_diff = G[:, 1] - np.mean(G[:, 1])
+            # vel_std = np.sqrt(np.sum(ts_diff ** 2, axis=0) / np.sum(t_diff ** 2)  / (num_date - 2))
+
+        # write
+        block = [box[1], box[3], box[0], box[2]]
+        write_hdf5_block(inps.outfile, model, m, m_std,
+                         mask=mask,
+                         block=block)
+
+    return inps.outfile
+
+
+def layout_hdf5(out_file, atr, model):
+    """create HDF5 file for estimated time functions
+    with defined metadata and (empty) dataset structure
     """
+
     # deformation model info
     poly_deg = model['polynomial']
     num_period = len(model['periodic'])
     num_step = len(model['step'])
 
+    # size info
     length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
 
-    # dataset configuration (msg)
-    def print_create_dataset(dsName, dtype=dataType, shape=(length, width)):
-        print('create dataset /{d:<20} of {t:<25} in size of {s:<12} with compression={c}'.format(
-            d=dsName, t=str(dataType), s=str(shape), c=str(None)))
+    ds_name_dict = {}
+    ds_unit_dict = {}
 
-    kwargs = dict(dtype=dataType,
-                  shape=(length, width),
-                  chunks=True,
-                  compression=None)
+    # time func 1 - polynomial
+    for i in range(1, poly_deg + 1):
+        # dataset name
+        if i == 1:
+            dsName = 'velocity'
+            unit = 'm/year'
+        elif i == 2:
+            dsName = 'acceleration'
+            unit = 'm/year^2'
+        else:
+            dsName = 'poly{}'.format(i)
+            unit = 'm/year^{}'.format(i)
 
-    print('open file: {} with "w" mode'.format(out_file))
-    with h5py.File(out_file, 'w') as f:
+        # update ds_name/unit_dict
+        ds_name_dict[dsName] = [dataType, (length, width), None]
+        ds_unit_dict[dsName] = unit
+        ds_name_dict[dsName+'Std'] = [dataType, (length, width), None]
+        ds_unit_dict[dsName+'Std'] = unit
 
-        # write attributes in the root level
-        for key, value in atr.items():
-            f.attrs[key] = str(value)
+    # time func 2 - periodic
+    for i in range(num_period):
+        # dataset name
+        period = model['periodic'][i]
+        if period == 1:
+            dsName = 'annualAmp'
+        elif period == 0.5:
+            dsName = 'semiAnnualAmp'
+        else:
+            dsName = 'periodY{}Amp'.format(period)
 
-        # write dataset
-        # 1. polynomial
-        if poly_deg > 0:
-            for i in range(1, poly_deg+1):
-                # dataset name
-                if i == 1:
-                    dsName = 'velocity'
-                    unit = 'm/year'
-                elif i == 2:
-                    dsName = 'acceleration'
-                    unit = 'm/year^2'
-                else:
-                    dsName = 'poly{}'.format(i)
-                    unit = 'm/year^{}'.format(i)
+        # update ds_name/unit_dict
+        ds_name_dict[dsName] = [dataType, (length, width), None]
+        ds_unit_dict[dsName] = 'm'
 
-                # write
-                print_create_dataset(dsName)
-                ds = f.create_dataset(dsName, data=m[i, :], **kwargs)
-                ds.attrs['UNIT'] = unit
+    # time func 3 - step
+    for i in range(num_step):
+        # dataset name
+        dsName = 'step{}'.format(model['step'][i])
 
-                print_create_dataset(dsName+'Std')
-                ds = f.create_dataset(dsName+'Std', data=m_std[i, :], **kwargs)
-                ds.attrs['UNIT'] = unit
+        # update ds_name/unit_dict
+        ds_name_dict[dsName] = [dataType, (length, width), None]
+        ds_unit_dict[dsName] = 'm'
+        ds_name_dict[dsName+'Std'] = [dataType, (length, width), None]
+        ds_unit_dict[dsName+'Std'] = 'm'
 
-        # 2. periodic
+    # layout hdf5
+    writefile.layout_hdf5(out_file, ds_name_dict, metadata=atr)
+
+    # add metadata to HDF5 dataset
+    max_digit = max([len(i) for i in ds_unit_dict.keys()])
+    with h5py.File(out_file, 'r+') as f:
+        for key, value in ds_unit_dict.items():
+            f[key].attrs['UNIT'] = value
+            print('add /{d:<{w}} attribute: UNIT = {u}'.format(d=key,
+                                                               w=max_digit,
+                                                               u=value))
+
+    return out_file
+
+
+def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
+    """write the estimated time function parameters to file
+
+    Parameters: out_file - str, path of output time func file
+                model    - dict, dict of time functions, e.g.:
+                    {'polynomial' : 2,            # int, polynomial with
+                                                  # e.g.: 1 (linear), 2 (quad), 3 (cubic), etc.
+                     'periodic'   : [1.0, 0.5],   # list of float, period(s) in years.
+                                                  # e.g.: 1.0 (annual), 0.5 (semiannual), etc.
+                     'step'       : ['20061014'], # list of str, date(s) in YYYYMMDD.
+                     ...
+                     }
+                m/m_std  - 2D np.ndarray in float32 in size of (num_param, length*width), time func param. (Std. Dev.)
+                mask     - 1D np.ndarray in float32 in size of (length*width), mask of valid pixels
+                block    - list of 4 int, for [yStart, yEnd, xStart, xEnd]
+    """
+
+    def write_dataset_block(f, dsName, data, block):
+        print('write dataset /{:<20} block: {}'.format(dsName, block))
+        f[dsName][block[0]:block[1], 
+                  block[2]:block[3]] = data.reshape(block[1] - block[0],
+                                                    block[3] - block[2])
+
+    # deformation model info
+    poly_deg = model['polynomial']
+    num_period = len(model['periodic'])
+    num_step = len(model['step'])
+
+    length = block[1] - block[0]
+    width = block[3] - block[2]
+    if mask is None:
+        mask = np.ones(length*width, dtype=np.bool_)
+
+    print('open file: {} with "a" mode'.format(out_file))
+    with h5py.File(out_file, 'a') as f:
+
+        # time func 1 - polynomial
+        for i in range(1, poly_deg+1):
+            # dataset name
+            if i == 1:
+                dsName = 'velocity'
+            elif i == 2:
+                dsName = 'acceleration'
+            else:
+                dsName = 'poly{}'.format(i)
+
+            # write
+            write_dataset_block(f, 
+                                dsName=dsName,
+                                data=m[i, :],
+                                block=block)
+            write_dataset_block(f, 
+                                dsName=dsName+'Std',
+                                data=m_std[i, :],
+                                block=block)
+
+        # time func 2 - periodic
         p0 = poly_deg + 1
-        if num_period > 0:
-            for i in range(num_period):
-                # calculate the amplitude and phase of the periodic signal
-                # following equation (9-10) in Minchew et al. (2017, JGR)
-                coef_cos = m[p0 + 2*i, :]
-                coef_sin = m[p0 + 2*i + 1, :]
-                period_amp = np.sqrt(coef_cos**2 + coef_sin**2)
-                period_pha = np.zeros(length*width, dtype=dataType)
-                period_pha[mask] = np.arctan(coef_cos[mask] / coef_sin[mask])
+        for i in range(num_period):
+            # calculate the amplitude and phase of the periodic signal
+            # following equation (9-10) in Minchew et al. (2017, JGR)
+            coef_cos = m[p0 + 2*i, :]
+            coef_sin = m[p0 + 2*i + 1, :]
+            period_amp = np.sqrt(coef_cos**2 + coef_sin**2)
+            period_pha = np.zeros(length*width, dtype=dataType)
+            period_pha[mask] = np.arctan(coef_cos[mask] / coef_sin[mask])
 
-                # dataset basename
-                period = model['periodic'][i]
-                if period == 1:
-                    dsName = 'annualAmp'
-                elif period == 0.5:
-                    dsName = 'semiAnnualAmp'
-                else:
-                    dsName = 'periodY{}Amp'.format(period)
+            # dataset name
+            period = model['periodic'][i]
+            if period == 1:
+                dsName = 'annualAmp'
+            elif period == 0.5:
+                dsName = 'semiAnnualAmp'
+            else:
+                dsName = 'periodY{}Amp'.format(period)
 
-                # write to hdf5 file
-                print_create_dataset(dsName)
-                ds = f.create_dataset(dsName, data=period_amp, **kwargs)
-                ds.attrs['UNIT'] = 'm'
+            # write
+            write_dataset_block(f, 
+                                dsName=dsName,
+                                data=period_amp,
+                                block=block)
 
-                # 1. figure out a proper way to save the phase data in radians
-                #    and keeping smart display in view.py 
-                #    to avoid messy scaling together with dataset in m
-                # 2. add code for the error propagation for the periodic amp/pha
+            # 1. figure out a proper way to save the phase data in radians
+            #    and keeping smart display in view.py 
+            #    to avoid messy scaling together with dataset in m
+            # 2. add code for the error propagation for the periodic amp/pha
 
         # 3. step
         p0 = (poly_deg + 1) + (2 * num_period)
-        if num_step > 0:
-            for i in range(num_step):
-                dsName = 'step{}'.format(model['step'][i])
+        for i in range(num_step):
+            # dataset name
+            dsName = 'step{}'.format(model['step'][i])
 
-                print_create_dataset(dsName)
-                ds = f.create_dataset(dsName, data=m[p0+i, :], **kwargs)
-                ds.attrs['UNIT'] = 'm'
+            # write
+            write_dataset_block(f,
+                                dsName=dsName,
+                                data=m[p0+i, :],
+                                block=block)
+            write_dataset_block(f,
+                                dsName=dsName+'Std',
+                                data=m_std[p0+i, :],
+                                block=block)
 
-                print_create_dataset(dsName+'Std')
-                ds = f.create_dataset(dsName+'Std', data=m_std[p0+i, :], **kwargs)
-                ds.attrs['UNIT'] = 'm'
-
-    print('finished writing to file: {}'.format(out_file))
+    print('close HDF5 file {}'.format(out_file))
     return out_file
 
 
