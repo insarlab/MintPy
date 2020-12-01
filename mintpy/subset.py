@@ -294,11 +294,6 @@ def subset_dataset(fname, dsName, pix_box, pix_box4data, pix_box4subset, fill_va
     ds_shape = data.shape
     ds_ndim = len(ds_shape)
 
-    # keep timeseries data as 3D matrix when there is only one acquisition
-    # because readfile.read() will squeeze it to 2D
-    if atr['FILE_TYPE'] == 'timeseries' and ds_ndim == 2:
-        data = np.reshape(data, (1, ds_shape[0], ds_shape[1]))
-
     # subset 2D data
     if ds_ndim == 2:
         data_out = np.ones((pix_box[3] - pix_box[1],

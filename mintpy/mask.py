@@ -127,12 +127,6 @@ def mask_file(fname, mask_file, out_file, inps=None):
     for dsName in dsNames:
         print('masking {d:<{w}} from {f} ...'.format(d=dsName, w=maxDigit, f=fname))
         data = readfile.read(fname, datasetName=dsName, print_msg=False)[0]
-
-        # keep timeseries data as 3D matrix when there is only one acquisition
-        # because readfile.read() will squeeze it to 2D
-        if atr['FILE_TYPE'] == 'timeseries' and len(data.shape) == 2:
-            data = np.reshape(data, (1, data.shape[0], data.shape[1]))
-
         data = mask_matrix(data, mask, fill_value=inps.fill_value)
         dsDict[dsName] = data
 
