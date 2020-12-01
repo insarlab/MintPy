@@ -2,13 +2,15 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Zhang Yunjun, Heresh Fattahi, Yuan-Kai Liu,      #
-#         Emre Havazli, 2013                               #
+# Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 ############################################################
+# Add bootstraping method for mean / std. dev. estimation, Emre Havazli, May 2020.
+# Add poly / periodic / step func., Yuan-Kai Liu, Aug 2020.
 
 
 import os
 import sys
+import time
 import argparse
 import h5py
 import numpy as np
@@ -113,6 +115,11 @@ def create_parser():
     bootstrap.add_argument('--bc', '--bootstrap-count', dest='bootstrapCount', type=int, default=400,
                            help='number of iterations for bootstrapping (default: %(default)s).')
 
+    # computing
+    parser.add_argument('--ram', '--memory', dest='memorySize', type=float, default=2,
+                        help='Max amount of memory in GB to use (default: %(default)s).\n' +
+                             'Adjust according to your computer memory.')
+
     return parser
 
 
@@ -161,6 +168,11 @@ def read_template2inps(template_file, inps=None):
                 iDict[key] = ptime.yyyymmdd(value.replace(',', ' ').split())
             elif key in ['bootstrapCount']:
                 iDict[key] = int(value)
+
+    key = 'mintpy.compute.memorySize'
+    if key in template.keys() and template[key]:
+        inps.memorySize = float(template[key])
+
     return inps
 
 
@@ -279,7 +291,7 @@ def read_date_info(inps):
 
 
 ############################################################################
-def estimate_time_func(date_list, dis_ts, model):
+def estimate_time_func(date_list, dis_ts, model, print_msg=True):
     """
     Deformation model estimator, using a suite of linear, periodic, step function(s).
 
@@ -298,9 +310,10 @@ def estimate_time_func(date_list, dis_ts, model):
                 e2        - 1D np.ndarray, sum of squared residual in size of (num_pixel,)
     """
 
-    print('estimate deformation model with the following assumed time functions:')
-    for key, value in model.items():
-        print('{:<10} : {}'.format(key, value))
+    if print_msg:
+        print('estimate deformation model with the following assumed time functions:')
+        for key, value in model.items():
+            print('{:<10} : {}'.format(key, value))
 
     if 'polynomial' not in model.keys():
         raise ValueError('linear/polynomial model is NOT included! Are you sure?!')
@@ -316,7 +329,8 @@ def estimate_time_func(date_list, dis_ts, model):
     return G, m, e2
 
 
-def timeseries2time_func(inps):
+def run_timeseries2time_func(inps):
+
     # read time-series data
     print('reading data from file {} ...'.format(inps.timeseries_file))
     ts_data, atr = readfile.read(inps.timeseries_file)
@@ -324,6 +338,7 @@ def timeseries2time_func(inps):
     if atr['UNIT'] == 'mm':
         ts_data *= 1./1000.
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+    num_pixel = length * width
     num_date = inps.numDate
 
     # get deformation model from parsers
@@ -331,113 +346,143 @@ def timeseries2time_func(inps):
     model['polynomial'] = inps.polynomial
     model['periodic'] = inps.periodic
     model['step'] = inps.step
-    poly_deg = inps.polynomial
-    num_period = len(inps.periodic)
-    num_step = len(inps.step)
-    num_param = (poly_deg + 1) + (2 * num_period) + num_step
+    num_param = (model['polynomial'] + 1
+                 + len(model['periodic']) * 2 
+                 + len(model['step']))
+
+    # mask of pixels to invert
+    print('skip pixels with zero/nan value in all acquisitions')
+    ts_stack = np.nanmean(ts_data, axis=0)
+    mask = np.multiply(~np.isnan(ts_stack), ts_stack!=0.)
+    del ts_stack
+
+    num_pixel2inv = int(np.sum(mask))
+    ts_data = ts_data[:, mask]
+    print('number of pixels to invert: {} out of {} ({:.1f}%)'.format(
+        num_pixel2inv, num_pixel, num_pixel2inv/num_pixel*100))
+
+    ## output preparation
+
+    # attributes
+    atr['FILE_TYPE'] = 'velocity'
+    atr['UNIT'] = 'm/year'
+    atr['START_DATE'] = inps.dateList[0]
+    atr['END_DATE'] = inps.dateList[-1]
+    atr['DATE12'] = '{}_{}'.format(inps.dateList[0], inps.dateList[-1])
+
+    # config parameter
+    print('add/update the following configuration metadata:\n{}'.format(configKeys))
+    for key in configKeys:
+        atr[key_prefix+key] = str(vars(inps)[key])
+
+    # initiate matrices
+    m = np.zeros((num_param, length*width), dtype=dataType)
+    m_std = np.zeros((num_param, length*width), dtype=dataType)
+
+
+    ## run estimation (solve Gm = d)
 
     if inps.bootstrap:
-        """
-        Bootstrapping is a resampling method which can be used to estimate properties
-        of an estimator. The method relies on independently sampling the data set with
-        replacement.
-        """
+        ## option 1 - least squares with bootstrapping
+        # Bootstrapping is a resampling method which can be used to estimate properties
+        # of an estimator. The method relies on independently sampling the data set with
+        # replacement.
+
         try:
             from sklearn.utils import resample
         except ImportError:
             raise ImportError('can not import scikit-learn!')
-        print('using bootstrap resampling {} times ...'.format(inps.bootstrapCount))
+        print('using bootstrap resampling {} times ...'.format(inps.bootstrapCount)) 
 
-        boot_vel_lin = np.zeros((inps.bootstrapCount, (length*width)), dtype=dataType)
-        ts_date = np.array(inps.dateList)
+        # calc model of all bootstrap sampling
+        m_boot = np.zeros((inps.bootstrapCount, num_param, num_pixel2inv), dtype=dataType)
+        dates = np.array(inps.dateList)
+
         prog_bar = ptime.progressBar(maxValue=inps.bootstrapCount)
         for i in range(inps.bootstrapCount):
             # bootstrap resampling
             boot_ind = resample(np.arange(inps.numDate), replace=True, n_samples=inps.numDate)
             boot_ind.sort()
 
-            # velocity estimation
-            m = estimate_time_func(ts_date[boot_ind].tolist(), ts_data[boot_ind], model)[1]
-            boot_vel_lin[i] = np.array(m[1, :], dtype=dataType)
+            # estimation
+            m_boot[i] = estimate_time_func(dates[boot_ind].tolist(), ts_data[boot_ind], model, print_msg=False)[1]
+
             prog_bar.update(i+1, suffix='iteration {} / {}'.format(i+1, inps.bootstrapCount))
         prog_bar.close()
+        del ts_data
 
+        # get mean/std among all bootstrap sampling
         print('calculate mean and standard deviation of bootstrap estimations')
-        vel_lin = boot_vel_lin.mean(axis=0).reshape(length,width)
-        vel_std = boot_vel_lin.std(axis=0).reshape(length,width)
+        m[:, mask] = m_boot.mean(axis=0).reshape(num_param, -1)
+        m_std[:, mask] = m_boot.std(axis=0).reshape(num_param, -1)
+        del m_boot
 
-        # prepare attributes
-        atr['FILE_TYPE'] = 'velocity'
-        atr['UNIT'] = 'm/year'
-        atr['START_DATE'] = inps.dateList[0]
-        atr['END_DATE'] = inps.dateList[-1]
-        atr['DATE12'] = '{}_{}'.format(inps.dateList[0], inps.dateList[-1])
-        # config parameter
-        print('add/update the following configuration metadata:\n{}'.format(configKeys))
-        for key in configKeys:
-            atr[key_prefix+key] = str(vars(inps)[key])
 
-        # write to HDF5 file
-        dsDict = dict()
-        dsDict['velocity'] = vel_lin
-        dsDict['velocityStd'] = vel_std
-        writefile.write(dsDict, out_file=inps.outfile, metadata=atr)
-        return inps.outfile
+    else:
+        ## option 2 - least squares with uncertainty propagation
 
-    # mask of pixels to invert
-    mask = np.ones(length*width, np.bool_)
-    print('skip pixels with zero/nan value in all acquisitions')
-    ts_stack = np.nanmean(ts_data, axis=0)
-    mask *= np.multiply(~np.isnan(ts_stack), ts_stack!=0.)
-    del ts_stack
+        G, m[:, mask], e2 = estimate_time_func(inps.dateList, ts_data, model)
+        del ts_data
 
-    ## Solve Gm = d
-    m = np.zeros((num_param, length*width), dtype=dataType)
-    e2 = np.zeros((length*width), dtype=dataType)
-    G, m[:, mask], e2[mask] = estimate_time_func(inps.dateList, ts_data[:, mask], model)
-    del ts_data
+        ## Compute the covariance matrix for model parameters: Gm = d
+        # C_m_hat = (G.T * C_d^-1, * G)^-1  # the most generic form
+        #         = sigma^2 * (G.T * G)^-1  # assuming the obs error is normally distributed in time.
+        # Based on the law of integrated expectation, we estimate the obs sigma^2 using
+        # the OLS estimation residual e_hat_i = d_i - d_hat_i
+        # sigma^2 = sigma_hat^2 * N / (N - P)
+        #         = (e_hat.T * e_hat) / (N - P)  # sigma_hat^2 = (e_hat.T * e_hat) / N
 
-    ## Compute the covariance matrix for model parameters: Gm = d
-    # C_m_hat = (G.T * C_d^-1, * G)^-1  # the most generic form
-    #         = sigma^2 * (G.T * G)^-1  # assuming the obs error is normally distributed in time.
-    # Based on the law of integrated expectation, we estimate the obs sigma^2 using
-    # the OLS estimation residual e_hat_i = d_i - d_hat_i
-    # sigma^2 = sigma_hat^2 * N / (N - P)
-    #         = (e_hat.T * e_hat) / (N - P)  # sigma_hat^2 = (e_hat.T * e_hat) / N
+        G_inv = linalg.inv(np.dot(G.T, G))
+        m_var = e2.reshape(1, -1) / (num_date - num_param)
+        m_std[:, mask] = np.sqrt(np.dot(np.diag(G_inv).reshape(-1, 1), m_var))
 
-    G_inv = linalg.inv(np.dot(G.T, G))
-    var_param = e2.reshape(1, -1) / (num_date - num_param)
-    m_std = np.sqrt(np.dot(np.diag(G_inv).reshape(-1, 1), var_param))
+        ## for linear velocity, the STD can also be calculated using Eq. (10) from Fattahi and Amelung (2015, JGR)
+        #ts_diff = ts_data - np.dot(G, m)
+        #t_diff = G[:, 1] - np.mean(G[:, 1])
+        #vel_std = np.sqrt(np.sum(ts_diff ** 2, axis=0) / np.sum(t_diff ** 2)  / (num_date - 2))
+        #vel_std = np.array(vel_std.reshape(length, width), dtype=dataType)
 
-    ## for linear velocity, the STD can also be calculated using Eq. (10) from Fattahi and Amelung (2015, JGR)
-    #ts_diff = ts_data - np.dot(G, m)
-    #t_diff = G[:, 1] - np.mean(G[:, 1])
-    #vel_std = np.sqrt(np.sum(ts_diff ** 2, axis=0) / np.sum(t_diff ** 2)  / (num_date - 2))
-    #vel_std = np.array(vel_std.reshape(length, width), dtype=dataType)
+    # write
+    write_time_func(inps.outfile, atr, model, m, m_std)
 
-    ##### write to HDF5 file
-    # prepare attributes
-    atr['FILE_TYPE'] = 'velocity'
-    atr['UNIT'] = 'm/year'
-    atr['START_DATE'] = inps.dateList[0]
-    atr['END_DATE'] = inps.dateList[-1]
-    atr['DATE12'] = '{}_{}'.format(inps.dateList[0], inps.dateList[-1])
-    # config parameter
-    print('add/update the following configuration metadata:\n{}'.format(configKeys))
-    for key in configKeys:
-        atr[key_prefix+key] = str(vars(inps)[key])
+    return
 
-    # utils setup/function for hdf5 file writing
+
+def write_time_func(out_file, atr, model, m, m_std, box=None):
+    """write the estimated time function parameters to file
+
+    Parameters: out_file - str, path of output time func file
+                atr      - dict, attributes
+                model    - dict, dict of time functions, e.g.:
+                    {'polynomial' : 2,            # int, polynomial with 1 (linear), 2 (quad), 3 (cubic), etc.
+                     'periodic'   : [1.0, 0.5],   # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
+                     'step'       : ['20061014'], # list of str, date(s) in YYYYMMDD.
+                     ...
+                     }
+                m/m_std  - 3D np.ndarray in float32 in size of (num_param, length*width), est. time func parameters (Std. Dev.)
+                box      - tuple of 4 int, indicating (x0, y0, x1, y1) for the area of interest
+                    None for the whole area
+    """
+    # deformation model info
+    poly_deg = model['polynomial']
+    num_period = len(model['periodic'])
+    num_step = len(model['step'])
+
+    length = int(atr['LENGTH'])
+    width = int(atr['WIDTH'])
+
+    # dataset configuration (msg)
     def print_create_dataset(dsName, dtype=dataType, shape=(length, width)):
-        print(('create dataset /{d:<20} of {t:<25} in size of {s:<12} '
-               'with compression={c}').format(d=dsName,
-                                              t=str(dataType),
-                                              s=str(shape),
-                                              c=str(None)))
-    kwargs = dict(dtype=dataType, shape=(length, width), chunks=True, compression=None)
+        print('create dataset /{d:<20} of {t:<25} in size of {s:<12} with compression={c}'.format(
+            d=dsName, t=str(dataType), s=str(shape), c=str(None)))
 
-    print('open file: {} with "w" mode'.format(inps.outfile))
-    with h5py.File(inps.outfile, 'w') as f:
+    kwargs = dict(dtype=dataType,
+                  shape=(length, width),
+                  chunks=True,
+                  compression=None)
+
+    print('open file: {} with "w" mode'.format(out_file))
+    with h5py.File(out_file, 'w') as f:
 
         # write attributes in the root level
         for key, value in atr.items():
@@ -512,20 +557,26 @@ def timeseries2time_func(inps):
                 ds = f.create_dataset(dsName+'Std', data=m_std[p0+i, :], **kwargs)
                 ds.attrs['UNIT'] = 'm'
 
-    print('finished writing to file: {}'.format(inps.outfile))
-    return inps.outfile
+    print('finished writing to file: {}'.format(out_file))
+    return out_file
 
 
 ############################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
+    start_time = time.time()
+
     inps = read_date_info(inps)
 
     # --update option
     if inps.update_mode and run_or_skip(inps) == 'skip':
         return inps.outfile
 
-    timeseries2time_func(inps)
+    run_timeseries2time_func(inps)
+
+    # time info
+    m, s = divmod(time.time()-start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
 
     return inps.outfile
 
