@@ -281,7 +281,7 @@ def subset_input_dict2box(subset_dict, meta_dict):
 
 
 ################################################################
-def subset_dataset(fname, dsName, pix_box, pix_box4data, pix_box4subset):
+def subset_dataset(fname, dsName, pix_box, pix_box4data, pix_box4subset, subset_dict):
 
     # read data
     print('reading {d} in {b} from {f} ...'.format(d=dsName,
@@ -469,7 +469,8 @@ def subset_file(fname, subset_dict_input, out_file=None):
                                             dsName,
                                             pix_box,
                                             pix_box4data,
-                                            pix_box4subset)
+                                            pix_box4subset,
+                                            subset_dict)
         writefile.write(dsDict,
                         out_file=out_file,
                         metadata=atr,
