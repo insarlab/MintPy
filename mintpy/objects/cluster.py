@@ -12,6 +12,7 @@ import os
 import time
 import glob
 import shutil
+import numpy as np
 import multiprocessing
 
 
@@ -30,31 +31,44 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
     :return: sub_boxes: list(list(4 int)), the splited sub boxes
     """
 
+    def round_to_1(x):
+        """Return the most significant digit of input number"""
+        digit = int(np.floor(np.log10(abs(x))))
+        return round(x, -1*digit)
+
+    dimension = dimension.lower()
     if num_split <= 1:
         return [box]
 
+    # basic info
     x0, y0, x1, y1 = box
     length, width = y1 - y0, x1 - x0
 
+    # calc step 
+    if dimension == 'y':
+        dim_size = length
+    else:
+        dim_size = width
+    step = int(np.ceil(dim_size / num_split))
+
+    # get list of boxes
     sub_boxes = []
-    max_step = 0
     for i in range(num_split):
         if dimension == 'y':
-            start = (i * length) // num_split + y0
-            end = ((i + 1) * length) // num_split + y0
-            sub_boxes.append([x0, start, x1, end])
+            r0 = y0 + step * i
+            r1 = y0 + step * (i + 1)
+            r1 = min(r1, y1)
+            sub_boxes.append([x0, r0, x1, r1])
 
         else:
-            start = (i * width) // num_split + x0
-            end = ((i + 1) * width) // num_split + x0
-            sub_boxes.append([start, y0, end, y1])
-
-        # stats
-        max_step = max(end - start, max_step)
+            c0 = x0 + step * i
+            c1 = x0 + step * (i + 1)
+            c1 = min(c1, x1)
+            sub_boxes.append([c0, y0, c1, y1])
 
     if print_msg:
-        print('split along {} dimension ({:d}) into {:d} boxes'.format(dimension, end, num_split))
-        print('    with each box up to {:d} in {} dimension'.format(max_step, dimension))
+        print('split along {} dimension ({:d}) into {:d} boxes'.format(dimension, dim_size, num_split))
+        print('    with each box up to {:d} in {} dimension'.format(step, dimension))
 
     return sub_boxes
 
