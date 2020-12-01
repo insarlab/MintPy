@@ -7,12 +7,15 @@
 
 
 import os
+import sys
 import time
 import shutil
 import argparse
 import h5py
 import numpy as np
+
 from mintpy.objects import timeseries
+from mintpy.objects.cluster import split_box2sub_boxes
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, writefile, ptime, utils as ut
 
@@ -40,6 +43,11 @@ def create_parser():
     parser.add_argument('-t', '--template', dest='template_file',
                         help='template file with options')
     parser.add_argument('-o', '--outfile', help='Output file name.')
+
+    # computing
+    parser.add_argument('--ram', '--memory', dest='memorySize', type=float, default=2,
+                        help='Max amount of memory in GB to use (default: %(default)s).\n' +
+                             'Adjust according to your computer memory.')
     return parser
 
 
@@ -64,6 +72,11 @@ def read_template2inps(templateFile, inps=None):
     key = 'mintpy.reference.date'
     if key in template.keys() and template[key]:
         inps.refDate = template[key]
+
+    key = 'mintpy.compute.memorySize'
+    if key in template.keys() and template[key]:
+        inps.memorySize = float(template[key])
+
     return inps
 
 
@@ -96,62 +109,119 @@ def read_ref_date(inps):
 
 
 ##################################################################
-def ref_date_file(ts_file, ref_date, outfile=None):
+def change_timeseries_ref_date(ts_file, ref_date, outfile=None, memorySize=2.0):
     """Change input file reference date to a different one.
     Parameters: ts_file : str, timeseries file to be changed
                 ref_date : str, date in YYYYMMDD format
                 outfile  : if str, save to a different file
                            if None, modify the data value in the existing input file
     """
+    ts_file = os.path.abspath(ts_file)
+    if not outfile:
+        outfile = ts_file
+    outfile = os.path.abspath(outfile)
+
     print('-'*50)
     print('change reference date for file: {}'.format(ts_file))
     atr = readfile.read_attribute(ts_file)
+    dsName = atr['FILE_TYPE']
+
+    # if input same reference is the same as the existing one.
     if ref_date == atr['REF_DATE']:
         print('same reference date chosen as existing reference date.')
-        if not outfile:
+        if outfile == ts_file:
             print('Nothing to be done.')
             return ts_file
         else:
             print('Copy {} to {}'.format(ts_file, outfile))
             shutil.copy2(ts_file, outfile)
             return outfile
+
+    # basic info
+    obj = timeseries(ts_file)
+    obj.open(print_msg=False)
+    num_date = obj.numDate
+    length = obj.length
+    width = obj.width
+    ref_idx = obj.dateList.index(ref_date)
+
+    # get list of boxes for block-by-block IO
+    num_box = int(np.ceil((num_date * length * width * 4 * 2) / (memorySize * 1024**3)))
+    box_list = split_box2sub_boxes(box=(0, 0, width, length),
+                                   num_split=num_box,
+                                   dimension='y',
+                                   print_msg=True)
+
+    # updating existing file or write new file
+    if outfile == ts_file:
+        mode = 'r+'
+
     else:
-        obj = timeseries(ts_file)
-        obj.open(print_msg=False)
-        ref_idx = obj.dateList.index(ref_date)
+        mode = 'a'
+        # instantiate output file
+        writefile.layout_hdf5(outfile, ref_file=ts_file)
+
+    # loop for block-by-block IO
+    for i, box in enumerate(box_list):
+        box_width  = box[2] - box[0]
+        box_length = box[3] - box[1]
+        if num_box > 1:
+            print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
+            print('box width:  {}'.format(box_width))
+            print('box length: {}'.format(box_length))
+
+        # reading
         print('reading data ...')
-        ts_data = readfile.read(ts_file)[0]
+        ts_data = readfile.read(ts_file, box=box)[0]
 
-        ts_data -= np.tile(ts_data[ref_idx, :, :].reshape(1, obj.length, obj.width), (obj.numDate, 1, 1))
+        print('referencing in time ...')
+        ts_data -= np.tile(ts_data[ref_idx, :, :].reshape(1, ts_data.shape[1], ts_data.shape[2]), (ts_data.shape[0], 1, 1))
 
-        if not outfile:
-            print('open {} with r+ mode'.format(ts_file))
-            with h5py.File(ts_file, 'r+') as f:
-                print("update /timeseries dataset and 'REF_DATE' attribute value")
-                f['timeseries'][:] = ts_data
-                f.attrs['REF_DATE'] = ref_date
-            print('close {}'.format(ts_file))
-        else:
-            atr['REF_DATE'] = ref_date
-            writefile.write(ts_data, outfile, metadata=atr, ref_file=ts_file)
+        # writing
+        block = (0, 0, box[1], box[3], box[0], box[2])
+        writefile.write_hdf5_block(outfile,
+                                   data=ts_data,
+                                   datasetName=dsName,
+                                   block=block,
+                                   mode=mode)
+
+    # update metadata
+    print('update "REF_DATE" attribute value to {}'.format(ref_date))
+    with h5py.File(ts_file, 'r+') as f:
+        f.attrs['REF_DATE'] = ref_date
+
     return outfile
 
 
 ##################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
+    start_time = time.time()
+
+    # read reference date
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 
     inps.refDate = read_ref_date(inps)
 
+    # run referencing in time
     if inps.refDate:
         for ts_file in inps.timeseries_file:
-            ref_date_file(ts_file, inps.refDate, inps.outfile)
-            time.sleep(1)   #to distinguish the modification time of input files
+            change_timeseries_ref_date(ts_file,
+                                       ref_date=inps.refDate,
+                                       outfile=inps.outfile,
+                                       memorySize=inps.memorySize)
+
+            #to distinguish the modification time of input files
+            time.sleep(1)
+
+    # time info
+    m, s = divmod(time.time()-start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+
     return
 
 
 ##################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
