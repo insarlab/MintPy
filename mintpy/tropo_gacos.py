@@ -95,7 +95,7 @@ def get_delay(delay_file, atr, cinc, pts_new=None):
         phs = readfile.read(delay_file, box=box)[0]
         out_shape = (length, width)
         delay_geo = resize(phs, out_shape, order=1, mode='constant', anti_aliasing=True, preserve_range=True)
-        delay_geo = delay_geo / cinc
+        delay_geo = -1 * delay_geo / cinc
         return delay_geo
 
     else:
@@ -112,7 +112,7 @@ def get_delay(delay_file, atr, cinc, pts_new=None):
         RGI_func = RGI(pts_old, data, method='linear', bounds_error=False)
         delay_rdr = RGI_func(pts_new)
         delay_rdr = delay_rdr.reshape(length, width)
-        delay_rdr = delay_rdr / cinc
+        delay_rdr = -1 * delay_rdr / cinc
         del pts_new
         return delay_rdr
 
@@ -131,7 +131,7 @@ EXAMPLE = '''example:
 
 '''
 
-def cmdLineParse():
+def create_parser():
     parser = argparse.ArgumentParser(description='Tropospheric correction using GACOS delays\n',
                                      formatter_class=argparse.RawTextHelpFormatter, epilog=EXAMPLE)
 
@@ -147,20 +147,16 @@ def cmdLineParse():
     parser.add_argument('--ref-yx', dest='ref_yx', type=int, nargs=2, help='reference pixel in y/x')
     parser.add_argument('-o', dest='out_file', help='Output file name for trospheric corrected timeseries.')
 
-    inps = parser.parse_args()
-
-    # Correcting TIMESERIES or DOWNLOAD DATA ONLY, required one of them
-    if not inps.dis_file and not inps.download:
-        parser.print_help()
-        sys.exit(1)
-    return inps
+    return parser
 
 
-def main(argv):
-    inps = cmdLineParse()
-
+def main(iargs=None):
+    
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
+    
     if inps.dis_file:
-        inps.dis_file = ut.get_file_list([inps.dis_file])[0]
+        #inps.dis_file = ut.get_file_list([inps.dis_file])[0]
         atr = readfile.read_attribute(inps.dis_file)
         k = atr['FILE_TYPE']
         if 'REF_Y' not in list(atr.keys()) and inps.ref_yx:
@@ -304,4 +300,4 @@ def main(argv):
 
 ###############################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
