@@ -307,11 +307,6 @@ def run_geocode(inps):
             else:
                 data, atr = readfile.read(infile, datasetName=dsName, print_msg=False)
 
-            # keep timeseries data as 3D matrix when there is only one acquisition
-            # because readfile.read() will squeeze it to 2D
-            if atr['FILE_TYPE'] == 'timeseries' and len(data.shape) == 2:
-                data = np.reshape(data, (1, data.shape[0], data.shape[1]))
-
             res_data = res_obj.run_resample(src_data=data,
                                             interp_method=inps.interpMethod,
                                             fill_value=inps.fillValue,

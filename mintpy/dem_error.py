@@ -12,8 +12,7 @@ import argparse
 import h5py
 import numpy as np
 from scipy import linalg
-from scipy.special import gamma
-from mintpy.objects import timeseries, geometry
+from mintpy.objects import timeseries, geometry, cluster
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import ptime, readfile, writefile, utils as ut
 
@@ -218,49 +217,6 @@ def read_exclude_date(ex_date_list, date_list_all, print_msg=True):
     return date_flag, ex_date_list
 
 
-def split2boxes(ts_file, geom_file=None, memory_size=4, num_step=0, print_msg=True):
-    """Split into chunks in rows to reduce memory usage
-    Parameters: ts_file     - str, path of time-series h5 file
-                memory_size - float, max memory to use in GB
-                print_msg   - bool
-    Returns:    box_list    - list of tuple of 4 int
-                num_box     - int, number of boxes
-    """
-    ts_obj = timeseries(ts_file)
-    ts_obj.open(print_msg=False)
-    length, width = ts_obj.length, ts_obj.width
-
-    # 1st dimension size: ts (obs / cor / res / step) + dem_err/inc_angle/rg_dist (+pbase)
-    num_epoch = ts_obj.numDate * 3 + num_step + 3
-    if geom_file:
-        geom_obj = geometry(geom_file)
-        geom_obj.open(print_msg=False)
-        if 'bperp' in geom_obj.datasetNames:
-            num_epoch += ts_obj.numDate
-
-    # split in lines based on the input memory limit
-    y_step = (memory_size * (1e3**3)) / (num_epoch * width * 4)
-
-    # calibrate based on experience
-    y_step = int(ut.round_to_1(y_step * 0.7))
-
-    num_box = int((length - 1) / y_step) + 1
-    if print_msg and num_box > 1:
-        print('maximum memory size: %.1E GB' % memory_size)
-        print('split %d lines into %d patches for processing' % (length, num_box))
-        print('    with each patch up to %d lines' % y_step)
-
-    # y_step / num_box --> box_list
-    box_list = []
-    for i in range(num_box):
-        y0 = i * y_step
-        y1 = min([length, y0 + y_step])
-        box = (0, y0, width, y1)
-        box_list.append(box)
-
-    return box_list, num_box
-
-
 def get_design_matrix4defo(inps):
     """Get the design matrix for ground surface deformation
     Parameters: inps   - namespace
@@ -345,7 +301,7 @@ def read_geometry(ts_file, geom_file=None, box=None):
     return sin_inc_angle, range_dist, pbase
 
 
-def estimate_dem_error(ts0, G0, tbase, date_flag=None, phase_velocity=False, num_step=0):
+def estimate_dem_error(ts0, G0, tbase, date_flag=None, phase_velocity=False):
     """Estimate DEM error with least square optimization.
     Parameters: ts0            - 2D np.array in size of (numDate, numPixel), original displacement time-series
                 G0             - 2D np.array in size of (numDate, numParam), design matrix in [G_geom, G_defo]
@@ -357,8 +313,7 @@ def estimate_dem_error(ts0, G0, tbase, date_flag=None, phase_velocity=False, num
                                     corrected timeseries = tsOrig - delta_z_phase
                 ts_res         - 2D np.array in size of (numDate, numPixel),
                                     residual timeseries = tsOrig - delta_z_phase - defModel
-                step_def       - 2D np.array in size of (numParam, numPixel),
-    Example:    delta_z, ts_cor, ts_res, step_def = estimate_dem_error(ts, G, tbase, date_flag)
+    Example:    delta_z, ts_cor, ts_res = estimate_dem_error(ts, G, tbase, date_flag)
     """
     if len(ts0.shape) == 1:
         ts0 = ts0.reshape(-1, 1)
@@ -384,10 +339,6 @@ def estimate_dem_error(ts0, G0, tbase, date_flag=None, phase_velocity=False, num
     ts_cor = ts0 - np.dot(G0[:, 0].reshape(-1, 1), delta_z.reshape(1, -1))
     ts_res = ts0 - np.dot(G0, X)
 
-    step_def = None
-    if num_step > 0:
-        step_def = X[-1*num_step:, :].reshape(num_step, -1)
-
     # for debug
     debug_mode = False
     if debug_mode:
@@ -402,11 +353,11 @@ def estimate_dem_error(ts0, G0, tbase, date_flag=None, phase_velocity=False, num
         ax4.plot(ts_cor-ts_res, '.'); ax4.set_ylim((ymin, ymax)); ax4.set_title('Fitted Deformation Model')
         plt.show()
 
-    return delta_z, ts_cor, ts_res, step_def
+    return delta_z, ts_cor, ts_res
 
 
 def correct_dem_error_patch(G_defo, ts_file, geom_file=None, box=None,
-                            date_flag=None, num_step=0, phase_velocity=False):
+                            date_flag=None, phase_velocity=False):
     """
     Correct one path of a time-series for DEM error.
 
@@ -415,12 +366,10 @@ def correct_dem_error_patch(G_defo, ts_file, geom_file=None, box=None,
                 geom_file      - str, path of geometry file
                 box            - tuple of 4 int in (x0, y0, x1, y1) for the area of interest
                 date_flag      - 1D np.ndarray in bool in size of (num_date), dates used for the estimation
-                num_step       - int, number of step functions
                 phase_velocity - bool, minimize the resdiual phase or phase velocity
     Returns:    delta_z        - 2D np.ndarray in size of (num_row, num_col)
                 ts_cor         - 3D np.ndarray in size of (num_date, num_row, num_col)
                 ts_res         - 3D np.ndarray in size of (num_date, num_row, num_col)
-                step_model     - 3D np.ndarray in size of (num_step, num_row, num_col)
     """
 
     ts_obj = timeseries(ts_file)
@@ -481,18 +430,13 @@ def correct_dem_error_patch(G_defo, ts_file, geom_file=None, box=None,
     delta_z = np.zeros(num_pixel, dtype=np.float32)
     ts_cor = np.zeros((num_date, num_pixel), dtype=np.float32)
     ts_res = np.zeros((num_date, num_pixel), dtype=np.float32)
-    step_model = None
-    if num_step > 0:
-        step_model = np.zeros((num_step, num_pixel), dtype=np.float32)
 
     # return directly if there is nothing to invert
     if num_pixel2inv < 1:
         delta_z = delta_z.reshape((num_row, num_col))
         ts_cor = ts_cor.reshape((num_date, num_row, num_col))
         ts_res = ts_res.reshape((num_date, num_row, num_col))
-        if num_step > 0:
-            step_model = step_model.reshape((num_step, num_row, num_col))
-        return delta_z, ts_cor, ts_res, step_model
+        return delta_z, ts_cor, ts_res
 
     # 2.2 estimate
     if range_dist.size == 1:
@@ -504,19 +448,15 @@ def correct_dem_error_patch(G_defo, ts_file, geom_file=None, box=None,
         # run
         (delta_z_i,
          ts_cor_i,
-         ts_res_i,
-         step_model_i) = estimate_dem_error(ts_data[:, mask], G,
-                                            tbase=tbase,
-                                            date_flag=date_flag,
-                                            phase_velocity=phase_velocity,
-                                            num_step=num_step)
+         ts_res_i) = estimate_dem_error(ts_data[:, mask], G,
+                                        tbase=tbase,
+                                        date_flag=date_flag,
+                                        phase_velocity=phase_velocity)
 
         # assemble
         delta_z[mask] = delta_z_i
         ts_cor[:, mask] = ts_cor_i
         ts_res[:, mask] = ts_res_i
-        if num_step > 0:
-            step_model[:, mask] = step_model_i
 
     else:
         print('estimating DEM error pixel-wisely ...')
@@ -536,19 +476,15 @@ def correct_dem_error_patch(G_defo, ts_file, geom_file=None, box=None,
             # run
             (delta_z_i,
              ts_cor_i,
-             ts_res_i,
-             step_model_i) = estimate_dem_error(ts_data[:, idx], G,
-                                                tbase=tbase,
-                                                date_flag=date_flag,
-                                                phase_velocity=phase_velocity,
-                                                num_step=num_step)
+             ts_res_i) = estimate_dem_error(ts_data[:, idx], G,
+                                            tbase=tbase,
+                                            date_flag=date_flag,
+                                            phase_velocity=phase_velocity)
 
             # assemble
             delta_z[idx] = delta_z_i
             ts_cor[:, idx] = ts_cor_i.flatten()
             ts_res[:, idx] = ts_res_i.flatten()
-            if num_step > 0:
-                step_model[:, idx] = step_model_i.flatten()
 
             prog_bar.update(i+1, every=2000, suffix='{}/{}'.format(i+1, num_pixel2inv))
         prog_bar.close()
@@ -558,10 +494,8 @@ def correct_dem_error_patch(G_defo, ts_file, geom_file=None, box=None,
     delta_z = delta_z.reshape((num_row, num_col))
     ts_cor = ts_cor.reshape((num_date, num_row, num_col))
     ts_res = ts_res.reshape((num_date, num_row, num_col))
-    if num_step > 0:
-        step_model = step_model.reshape((num_step, num_row, num_col))
 
-    return delta_z, ts_cor, ts_res, step_model
+    return delta_z, ts_cor, ts_res
 
 
 def correct_dem_error(inps):
@@ -613,26 +547,24 @@ def correct_dem_error(inps):
     ts_res_file = os.path.join(os.path.dirname(inps.outfile), 'timeseriesResidual.h5')
     writefile.layout_hdf5(ts_res_file, metadata=meta, ref_file=inps.timeseries_file)
 
-    # 2.5 instantiate est. step model(s)
-    step_file = None
-    if num_step > 0:
-        step_file = os.path.join(os.path.dirname(inps.outfile), 'timeseriesStepModel.h5')
-        meta.pop('REF_DATE')
-        step_dates = np.array(inps.stepFuncDate, dtype=np.string_)
-        ds_name_dict = {
-            'date'       : [step_dates.dtype, (num_step,), step_dates],
-            'timeseries' : [np.float32,       (num_step, length, width), None]
-        }
-        writefile.layout_hdf5(step_file, ds_name_dict, metadata=meta)
-
 
     ## 3. run the estimation and write to disk
 
     # 3.1 split ts_file into blocks to save memory
-    box_list, num_box = split2boxes(inps.timeseries_file,
-                                    geom_file=inps.geom_file,
-                                    memory_size=inps.memorySize,
-                                    num_step=num_step)
+    # 1st dimension size: ts (obs / cor / res / step) + dem_err/inc_angle/rg_dist (+pbase)
+    num_epoch = num_date * 3 + num_step + 3
+    if inps.geom_file:
+        geom_obj = geometry(inps.geom_file)
+        geom_obj.open(print_msg=False)
+        if 'bperp' in geom_obj.datasetNames:
+            num_epoch += num_date
+
+    # split in row/line direction based on the input memory limit
+    scale_factor = 2.0
+    num_box = int(np.ceil((num_epoch * length * width * 4) * scale_factor / (inps.memorySize * 1024**3)))
+    box_list = cluster.split_box2sub_boxes(box=(0, 0, width, length),
+                                           num_split=num_box,
+                                           dimension='y')
 
     # 3.2 invert / write block-by-block
     for i, box in enumerate(box_list):
@@ -646,14 +578,12 @@ def correct_dem_error(inps):
         # invert
         (delta_z,
          ts_cor,
-         ts_res,
-         step_model) = correct_dem_error_patch(G_defo,
-                                               ts_file=inps.timeseries_file,
-                                               geom_file=inps.geom_file,
-                                               box=box,
-                                               date_flag=date_flag,
-                                               num_step=num_step,
-                                               phase_velocity=inps.phaseVelocity)
+         ts_res) = correct_dem_error_patch(G_defo,
+                                           ts_file=inps.timeseries_file,
+                                           geom_file=inps.geom_file,
+                                           box=box,
+                                           date_flag=date_flag,
+                                           phase_velocity=inps.phaseVelocity)
 
         # write the block to disk
         # with 3D block in [z0, z1, y0, y1, x0, x1]
@@ -680,19 +610,11 @@ def correct_dem_error(inps):
                                    datasetName='timeseries',
                                    block=block)
 
-        # step func time-series - 3D
-        if num_step > 0:
-            block = [0, num_step, box[1], box[3], box[0], box[2]]
-            writefile.write_hdf5_block(step_file,
-                                       data=step_model,
-                                       datasetName='timeseries',
-                                       block=block)
-
     # time info
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
 
-    return dem_err_file, ts_cor_file, ts_res_file, step_file
+    return dem_err_file, ts_cor_file, ts_res_file
 
 
 ############################################################################

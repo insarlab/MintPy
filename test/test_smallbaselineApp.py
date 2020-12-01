@@ -14,6 +14,7 @@ import shutil
 import argparse
 import subprocess
 import tarfile
+from mintpy import view
 
 
 CMAP_DICT = {
@@ -138,16 +139,16 @@ def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False):
         raise RuntimeError('Test failed for example dataset {}'.format(dset_name))
 
     # custom plot of velocity map
+    vel_file = [i for i in ['geo/geo_velocity.h5', 'velocity.h5'] if os.path.isfile(i)][0]
+    png_file = 'pic/{}.png'.format(os.path.splitext(os.path.basename(vel_file))[0])
+    iargs = [vel_file, 'velocity', '--nodisplay', '--noverbose', '-o', png_file]
     if dset_name in CMAP_DICT.keys():
-        cmd = 'view.py geo/geo_velocity.h5 velocity --nodisplay -o pic/geo_velocity.png --noverbose '
-        cmd += ' -c {}'.format(CMAP_DICT[dset_name])
-        print(cmd)
-        subprocess.Popen(cmd, shell=True).wait()
+        iargs += ['-c', CMAP_DICT[dset_name]]
+    print('view.py', ' '.join(iargs))
+    view.main(iargs)
 
     # open final velocity map if on mac
     if sys.platform.lower().startswith('darwin'):
-        png_file = [i for i in ['pic/geo_velocity.png', 'pic/velocity.png']
-                    if os.path.isfile(i)][0]
         cmd = 'open {}'.format(png_file)
         print(cmd)
         subprocess.Popen(cmd, shell=True).wait()
@@ -166,20 +167,22 @@ def main(iargs=None):
     num_dset = len(inps.dset_name)
     for i in range(num_dset):
         dset_name = inps.dset_name[i]
-        print('-'*50)
+        print('#'*100)
         print('Start testing smallbaselineApp workflow on exmaple dataset {}/{}: {}'.format(i+1, num_dset, dset_name))
         test_dataset(dset_name,
                      test_dir=inps.test_dir,
                      fresh_start=inps.fresh_start,
                      test_pyaps=inps.test_pyaps)
-        print('PASS testing smallbaselineApp workflow on exmaple dataset {}/{}: {}'.format(i+1, num_dset, dset_name))
+        print('#'*100)
+        print('   PASS testing of smallbaselineApp workflow on exmaple dataset {}/{}: {}'.format(i+1, num_dset, dset_name))
+        print('#'*100+'\n'*3)
 
     # print message
     if num_dset == len(PROJ_NAME_LIST):
         m, s = divmod(time.time()-start_time, 60)
-        msg = '-'*50
-        msg += '\nPASS ALL testings without running errors.'
-        msg += '\n'+'-'*50
+        msg  = '#'*50
+        msg += '\n    PASS ALL testings without running errors.\n'
+        msg += '#'*50
         msg += '\nTotal time used: {:02.0f} mins {:02.1f} secs\n'.format(m, s)
         print(msg)
 

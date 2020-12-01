@@ -98,7 +98,7 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
                 file2   - list of str, path of file2(s)
                 out_file - str, path of output file
                 force   - bool, overwrite existing output file
-                max_num_pixel - float, maximum number of pixels for each block 
+                max_num_pixel - float, maximum number of pixels for each block
     """
     start_time = time.time()
 
