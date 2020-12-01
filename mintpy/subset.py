@@ -281,7 +281,7 @@ def subset_input_dict2box(subset_dict, meta_dict):
 
 
 ################################################################
-def subset_dataset(fname, dsName, pix_box, pix_box4data, pix_box4subset, subset_dict):
+def subset_dataset(fname, dsName, pix_box, pix_box4data, pix_box4subset, fill_value=np.nan):
 
     # read data
     print('reading {d} in {b} from {f} ...'.format(d=dsName,
@@ -303,7 +303,7 @@ def subset_dataset(fname, dsName, pix_box, pix_box4data, pix_box4subset, subset_
     if ds_ndim == 2:
         data_out = np.ones((pix_box[3] - pix_box[1],
                             pix_box[2] - pix_box[0]),
-                           data.dtype) * subset_dict['fill_value']
+                           data.dtype) * fill_value
         data_out[pix_box4subset[1]:pix_box4subset[3],
                  pix_box4subset[0]:pix_box4subset[2]] = data
 
@@ -312,7 +312,7 @@ def subset_dataset(fname, dsName, pix_box, pix_box4data, pix_box4subset, subset_
         data_out = np.ones((ds_shape[0],
                             pix_box[3] - pix_box[1],
                             pix_box[2] - pix_box[0]),
-                           data.dtype) * subset_dict['fill_value']
+                           data.dtype) * fill_value
         data_out[:,
                  pix_box4subset[1]:pix_box4subset[3],
                  pix_box4subset[0]:pix_box4subset[2]] = data
@@ -470,7 +470,7 @@ def subset_file(fname, subset_dict_input, out_file=None):
                                             pix_box,
                                             pix_box4data,
                                             pix_box4subset,
-                                            subset_dict)
+                                            fill_value=subset_dict['fill_value'])
         writefile.write(dsDict,
                         out_file=out_file,
                         metadata=atr,
