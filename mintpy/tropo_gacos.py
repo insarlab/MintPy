@@ -131,6 +131,7 @@ def get_delay_radar(ztd_file, cos_inc_angle, pts_ztd, pts_new):
     """
     # read ztd file
     delay_ztd = readfile.read(ztd_file)[0]
+    # flip to be consistent with the reversed lats
     delay_ztd = np.flipud(delay_ztd)
 
     # resample in pts_new coordinates
