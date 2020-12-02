@@ -12,7 +12,6 @@ import re
 import argparse
 import h5py
 import numpy as np
-import datetime
 from skimage.transform import resize
 from scipy.interpolate import RegularGridInterpolator as RGI
 
@@ -126,24 +125,20 @@ def get_delay_radar(ztd_file, cos_inc_angle, pts_new):
 
     Parameters: ztd_file      - str, path of zenith delay file
                 cos_inc_angle - 2D np.ndarray in (len, wid) in float32, cos(inc_angle)
-                pts_ztd       - 2D np.ndarray in (len_ztd*wid_ztd, 2) in float32
                 pts_new       - 2D np.ndarray in (len*wid, 2) in float32
     Returns:    delay         - 2D np.ndarray in float32, LOS delay
     """
     # read ztd file
-    delay_ztd = readfile.read(ztd_file)[0]
+    delay_ztd, atr_ztd = readfile.read(ztd_file)
     # flip to be consistent with the reversed lats
     delay_ztd = np.flipud(delay_ztd)
 
     # pixel coordinates in ztd file
-    print('get pixel coordinates in ztd file')
-    atr_ztd = readfile.read_attribute(ztd_file)
     lats, lons = ut.get_lat_lon(atr_ztd, dimension=1)
     # set lats in ascending order as required by RGI
     lats = np.flipud(lats)
     pts_ztd = ((lats.flatten(),
                 lons.flatten()))
-    del lats, lons
 
     # resample in pts_new coordinates
     RGI_func = RGI(pts_ztd, delay_ztd,
@@ -162,17 +157,23 @@ def get_delay_radar(ztd_file, cos_inc_angle, pts_new):
     return delay
 
 
-def calculate_delay_timeseries(tropo_file, dis_file, geom_file, GACOS_dir, ftype='timeseries'):
+def calculate_delay_timeseries(tropo_file, dis_file, geom_file, GACOS_dir):
     """calculate delay time-series and write to HDF5 file"""
 
-    ## get list of dates and ztd files
+    ## get list of dates
+    atr = readfile.read_attribute(dis_file)
+    ftype = atr['FILE_TYPE']
     if ftype == 'timeseries':
         date_list = timeseries(dis_file).get_date_list()
+
     elif ftype == '.unw':
         date12 = readfile.read_attribute(dis_file)['DATE12']
-        date_list = date12.split('-')
-        date_list = [datetime.datetime.strptime(x, '%y%m%d').strftime('%Y%m%d') for x in date_list]
+        date_list = ptime.yyyymmdd(date12.split('-'))
 
+    else:
+        raise ValueError('un-supported displacement file type: {}'.format(ftype))
+
+    # list of dates --> list of ztd files
     ztd_files = [os.path.join(GACOS_dir, '{}.ztd'.format(i)) for i in date_list]
 
     # check missing ztd files
@@ -232,7 +233,6 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, GACOS_dir, ftype
     ## prepare output file
 
     # metadata
-    atr = readfile.read_attribute(dis_file)
     atr['FILE_TYPE'] = 'timeseries'
     atr['UNIT'] = 'm'
 
@@ -262,7 +262,6 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, GACOS_dir, ftype
 
     if 'Y_FIRST' in atr.keys():
         pts_new = None
-        pts_ztd = None
 
     else:
         # pixel coordinates in geometry file
@@ -321,8 +320,8 @@ def correct_single_ifgram(dis_file, tropo_file, cor_dis_file):
 
     print('calc tropospheric delay for {}-{} from {}'.format(date1, date2, tropo_file))
     date_list = timeseries(tropo_file).get_date_list()
-    tropo = readfile.read(tropo_file, datasetName='timeseries')[0][date_list.index(date2)]
-    tropo -= readfile.read(tropo_file, datasetName='timeseries')[0][date_list.index(date1)]
+    tropo  = readfile.read(tropo_file, datasetName='timeseries-{}'.format(date2))[0]
+    tropo -= readfile.read(tropo_file, datasetName='timeseries-{}'.format(date1))[0]
     tropo *= -4. * np.pi / float(atr['WAVELENGTH'])
 
     print('write corrected data to {}'.format(cor_dis_file))
@@ -334,16 +333,14 @@ def correct_single_ifgram(dis_file, tropo_file, cor_dis_file):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    # correct tropo delay from dis time-series
-    ftype = readfile.read_attribute(inps.dis_file)['FILE_TYPE']
-
     # calculate tropo delay and savee to h5 file
     calculate_delay_timeseries(tropo_file=inps.tropo_file,
                                dis_file=inps.dis_file,
                                geom_file=inps.geom_file,
-                               GACOS_dir=inps.GACOS_dir,
-                               ftype=ftype)
+                               GACOS_dir=inps.GACOS_dir)
 
+    # correct tropo delay from dis time-series
+    ftype = readfile.read_attribute(inps.dis_file)['FILE_TYPE']
     if ftype == 'timeseries':
         correct_timeseries(dis_file=inps.dis_file,
                            tropo_file=inps.tropo_file,
