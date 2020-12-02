@@ -319,7 +319,6 @@ def correct_single_ifgram(dis_file, tropo_file, cor_dis_file):
     date1, date2 = ptime.yyyymmdd(atr['DATE12'].split('-'))
 
     print('calc tropospheric delay for {}-{} from {}'.format(date1, date2, tropo_file))
-    date_list = timeseries(tropo_file).get_date_list()
     tropo  = readfile.read(tropo_file, datasetName='timeseries-{}'.format(date2))[0]
     tropo -= readfile.read(tropo_file, datasetName='timeseries-{}'.format(date1))[0]
     tropo *= -4. * np.pi / float(atr['WAVELENGTH'])
