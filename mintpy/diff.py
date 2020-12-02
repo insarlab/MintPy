@@ -160,6 +160,12 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
                                                dimension='y',
                                                print_msg=True)
 
+        if ref_y and ref_x:
+            ref_box = (ref_x, ref_y, ref_x + 1, ref_y + 1)
+            ref_val = readfile.read(file2[0],
+                                    datasetName=dateListShared,
+                                    box=ref_box)[0] * unit_fac
+
         for i, box in enumerate(box_list):
             if num_box > 1:
                 print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
@@ -171,18 +177,14 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
                                   datasetName=dateListShared,
                                   box=box)[0] * unit_fac
 
+            if ref_y and ref_x:
+                print('* referencing data from {} to y/x: {}/{}'.format(os.path.basename(file2[0]), ref_y, ref_x))
+                data2 -= np.tile(ref_val.reshape(-1, 1, 1), (1, data2.shape[1], data2.shape[2]))
+
             if ref_date:
                 print('* referencing data from {} to date: {}'.format(os.path.basename(file2[0]), ref_date))
                 ref_ind = dateListShared.index(ref_date)
                 data2 -= np.tile(data2[ref_ind, :, :], (data2.shape[0], 1, 1))
-
-            if ref_y and ref_x:
-                print('* referencing data from {} to y/x: {}/{}'.format(os.path.basename(file2[0]), ref_y, ref_x))
-                ref_box = (ref_x, ref_y, ref_x+1, ref_y+1)
-                ref_val = readfile.read(file2[0],
-                                        datasetName=dateListShared,
-                                        box=ref_box)[0] * unit_fac
-                data2 -= np.tile(ref_val.reshape(-1, 1, 1), (1, data2.shape[1], data2.shape[2]))
 
             # read data1
             print('read from file: {}'.format(file1))

@@ -28,6 +28,7 @@ __all__ = [
     'timeseries2velocity',
     'timeseries_rms',
     'tropo_phase_elevation',
+    'tropo_gacos',
     'unwrap_error_bridging',
     'unwrap_error_phase_closure',
     'version',
