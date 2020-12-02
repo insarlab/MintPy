@@ -2,28 +2,292 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Bhuvan Varugu, Zhang Yunjun, 2018                #
-# Update: Sara Mirzaee, 2020                               #
+# Author: Sara Mirzaee, Zhang Yunjun, Bhuvan Varugu, 2018  #
 ############################################################
 
 
 import os
 import sys
+import re
 import argparse
 import h5py
 import numpy as np
 from skimage.transform import resize
-from scipy.interpolate import griddata, RegularGridInterpolator as RGI
-from mintpy.utils import ptime, readfile, utils as ut, network as pnet
-import multiprocessing as mp
+from scipy.interpolate import RegularGridInterpolator as RGI
+
+from mintpy.objects import timeseries
+from mintpy.utils import ptime, readfile, writefile, utils as ut
 
 
-##########################################################
+
+############################################################################
+REFERENCE = """references:
+  Yu, C., Penna, N. T., & Li, Z. (2017). Generation of real‐time mode high‐resolution water vapor fields
+    from GPS observations. Journal of Geophysical Research: Atmospheres, 122(3), 2008-2025.
+  Yu, C., Li, Z., Penna, N. T., & Crippa, P. (2018). Generic atmospheric correction model for Interferometric
+    Synthetic Aperture Radar observations. Journal of Geophysical Research: Solid Earth, 123(10), 9202-9222.
+  Yu, C., Li, Z., & Penna, N. T. (2018). Interferometric synthetic aperture radar atmospheric correction
+    using a GPS-based iterative tropospheric decomposition model. Remote Sensing of Environment, 204, 109-121.
+"""
+
+DIR_DEMO = """--dir ./GACOS
+  20060624.ztd
+  20060624.ztd.rsc
+  20061225.ztd
+  20061225.ztd.rsc
+  ...
+"""
+
+EXAMPLE = """example:
+  tropo_gacos.py -f timeseries.h5 -g inputs/geometryRadar.h5 --dir ./GACOS
+  tropo_gacos.py -f geo/geo_timeseries.h5 -g geo/geo_geometryRadar.h5 --dir ./GACOS
+"""
 
 
-def get_dataset_size(fname):
-    atr = readfile.read_attribute(fname)
-    return (atr['LENGTH'], atr['WIDTH'])
+def create_parser():
+    parser = argparse.ArgumentParser(description='Tropospheric correction using GACOS delays\n',
+                                     formatter_class=argparse.RawTextHelpFormatter,
+                                     epilog=REFERENCE+'\n'+DIR_DEMO+'\n'+EXAMPLE)
+
+    parser.add_argument('-f', '--file', dest='dis_file', required=True,
+                        help='timeseries HDF5 file, i.e. timeseries.h5')
+    parser.add_argument('-g', '--geom', dest='geom_file', required=True,
+                        help='geometry file.')
+    parser.add_argument('--dir','--GACOS-dir', dest='GACOS_dir', default='./GACOS',
+                        help='directory to downloaded GACOS delays data (default: %(default)s).')
+    parser.add_argument('-o', dest='cor_dis_file',
+                        help='Output file name for trospheric corrected timeseries.')
+
+    return parser
+
+
+def cmd_line_parse(iargs=None):
+    """Command line parser."""
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
+
+    inps.GACOS_dir = os.path.abspath(inps.GACOS_dir)
+    print('Use GACOS products at directory:', inps.GACOS_dir)
+
+    # ignore invalid filename inputs
+    for key in ['dis_file', 'geom_file']:
+        fname = vars(inps)[key]
+        if fname and not os.path.isfile(fname):
+            raise FileExistsError('input file not exist: {}'.format(fname))
+
+    # default output filenames
+    inps.tropo_file = os.path.join(os.path.dirname(inps.geom_file), 'GACOS.h5')
+    if not inps.cor_dis_file:
+        inps.cor_dis_file = inps.dis_file.split('.')[0] + '_GACOS.h5'
+
+    return inps
+
+
+############################################################################
+def get_delay_geo(ztd_file, atr, cos_inc_angle):
+    """calc single path tropo delay in line-of-sight direction
+
+    Parameters: ztd_file      - str, path of zenith delay file
+                atr           - dict, dictionary of attribute for output file
+                cos_inc_angle - 2D np.ndarray in float32, cos(inc_angle)
+    Returns:    delay         - 2D np.ndarray in float32, LOS delay
+    """
+
+    # get geo_box from ts_file attributes
+    length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+    geo_box = ut.coordinate(atr).box_pixel2geo(pixel_box=(0, 0, width, length))
+
+    # geo_box --> pix_box in ztd file
+    atr_ztd = readfile.read_attribute(ztd_file)
+    pix_box = ut.coordinate(atr_ztd).box_geo2pixel(geo_box)
+
+    # read ztd file
+    delay = readfile.read(ztd_file, box=pix_box)[0]
+
+    # interpolate/resample into the same resolution as ts_file
+    delay = resize(delay, (length, width),
+                   order=1,
+                   mode='constant',
+                   anti_aliasing=True,
+                   preserve_range=True)
+
+    # project from zenith to line-of-sight
+    delay /= cos_inc_angle
+
+    # reverse the sign for consistency between different phase correction steps/methods
+    delay *= -1
+
+    return delay
+
+
+def get_delay_radar(ztd_file, cos_inc_angle, pts_ztd, pts_new):
+    """calc single path tropo delay in line-of-sight direction
+
+    Parameters: ztd_file      - str, path of zenith delay file
+                cos_inc_angle - 2D np.ndarray in (len, wid) in float32, cos(inc_angle)
+                pts_ztd       - 2D np.ndarray in (len_ztd*wid_ztd, 2) in float32
+                pts_new       - 2D np.ndarray in (len*wid, 2) in float32
+    Returns:    delay         - 2D np.ndarray in float32, LOS delay
+    """
+    # read ztd file
+    delay_ztd = readfile.read(ztd_file)[0]
+    delay_ztd = np.flipud(delay_ztd)
+
+    # resample in pts_new coordinates
+    RGI_func = RGI(pts_ztd, delay_ztd,
+                   method='nearest',
+                   bounds_error=False,
+                   fill_value=0)
+    delay = RGI_func(pts_new)
+    delay = delay.reshape(cos_inc_angle.shape)
+
+    # project from zenith to line-of-sight
+    delay /= cos_inc_angle
+
+    # reverse the sign for consistency between different phase correction steps/methods
+    delay *= -1
+
+    return delay
+
+
+def calculate_delay_timeseries(tropo_file, dis_file, geom_file, GACOS_dir):
+    """calculate delay time-series and write to HDF5 file"""
+
+    ## get list of dates and ztd files
+    date_list = timeseries(dis_file).get_date_list()
+    ztd_files = [os.path.join(GACOS_dir, '{}.ztd'.format(i)) for i in date_list]
+
+    # check missing ztd files
+    flag = np.ones(len(date_list), dtype=np.bool_)
+    for i in range(len(date_list)):
+        if not os.path.isfile(ztd_files[i]):
+            print('WARNING: {} file not found, ignore it and continue'.format(ztd_files[i]))
+            flag[i] = False
+
+    if np.any(flag == 0):
+        date_list = np.array(date_list)[flag].tolist()
+        ztd_files = np.array(ztd_files)[flag].tolist()
+
+    ## update_mode
+    def get_dataset_size(fname):
+        atr = readfile.read_attribute(fname)
+        return (atr['LENGTH'], atr['WIDTH'])
+
+    def run_or_skip(ztd_files, tropo_file, geom_file):
+        print('update mode: ON')
+        print('output file: {}'.format(tropo_file))
+        flag = 'skip'
+
+        # check existance and modification time
+        if ut.run_or_skip(out_file=tropo_file, in_file=ztd_files, print_msg=False) == 'run':
+            flag = 'run'
+            print('1) output file either do NOT exist or is NOT newer than all ZTD files.')
+
+        else:
+            print('1) output file exists and is newer than all ZTD files.')
+
+            # check dataset size in space / time
+            date_list = [str(re.findall('\d{8}', i)[0]) for i in ztd_files]
+            if (get_dataset_size(tropo_file) != get_dataset_size(geom_file)
+                    or any(i not in timeseries(tropo_file).get_date_list() for i in date_list)):
+                flag = 'run'
+                print('2) output file does NOT have the same len/wid as the geometry file {} or does NOT contain all dates'.format(geom_file))
+            else:
+                print('2) output file has the same len/wid as the geometry file and contains all dates')
+
+                # check if output file is fully written
+                with h5py.File(tropo_file, 'r') as f:
+                    if np.all(f['timeseries'][-1,:,:] == 0):
+                        flag = 'run'
+                        print('3) output file is NOT fully written.')
+                    else:
+                        print('3) output file is fully written.')
+
+        # result
+        print('run or skip: {}'.format(flag))
+        return flag
+
+    if run_or_skip(ztd_files, tropo_file, geom_file) == 'skip':
+        return
+
+
+    ## prepare output file
+
+    # metadata
+    atr = readfile.read_attribute(dis_file)
+    atr['FILE_TYPE'] = 'timeseries'
+    atr['UNIT'] = 'm'
+
+    # remove metadata related with double reference
+    # because absolute delay is calculated and saved
+    for key in ['REF_DATE', 'REF_X', 'REF_Y', 'REF_LAT', 'REF_LON']:
+        if key in atr.keys():
+            atr.pop(key)
+
+    # instantiate time-series
+    length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+    num_date = len(date_list)
+    dates = np.array(date_list, dtype=np.string_)
+    ds_name_dict = {
+        "date"       : [dates.dtype, (num_date,), dates],
+        "timeseries" : [np.float32,  (num_date, length, width), None],
+    }
+    writefile.layout_hdf5(tropo_file, ds_name_dict, metadata=atr)
+
+
+    ## calculate phase delay
+
+    # read geometry
+    print('read incidenceAngle from file: {}'.format(geom_file))
+    inc_angle = readfile.read(geom_file, datasetName='incidenceAngle')[0]
+    cos_inc_angle = np.cos(inc_angle * np.pi / 180.0)
+
+    if 'Y_FIRST' in atr.keys():
+        pts_new = None
+        pts_ztd = None
+
+    else:
+        # pixel coordinates in geometry file
+        print('get pixel coordinates in geometry file')
+        lats, lons = ut.get_lat_lon(atr, geom_file)
+        pts_new = np.hstack((lats.reshape(-1, 1),
+                             lons.reshape(-1, 1)))
+
+        # pixel coordinates in ztd file
+        print('get pixel coordinates in ztd file')
+        atr_ztd = readfile.read_attribute(ztd_files[0])
+        lats, lons = ut.get_lat_lon(atr_ztd, dimension=1)
+        # set lats in ascending order as required by RGI
+        lats = np.flipud(lats)
+        pts_ztd = ((lats.flatten(),
+                    lons.flatten()))
+        del lats, lons
+
+    # loop for date-by-date IO
+    prog_bar = ptime.progressBar(maxValue=num_date)
+    for i in range(num_date):
+        date_str = date_list[i]
+        ztd_file = ztd_files[i]
+
+        # calc delay
+        if 'Y_FIRST' in atr.keys():
+            delay = get_delay_geo(ztd_file, atr, cos_inc_angle)
+
+        else:
+            delay = get_delay_radar(ztd_file, cos_inc_angle, pts_ztd, pts_new)
+
+        # write delay to file
+        block = [i, i+1, 0, length, 0, width]
+        writefile.write_hdf5_block(tropo_file,
+                                   data=delay,
+                                   datasetName='timeseries',
+                                   block=block,
+                                   print_msg=False)
+
+        prog_bar.update(i + 1, suffix=os.path.basename(ztd_file))
+    prog_bar.close()
+
+    return tropo_file
 
 
 def correct_timeseries(dis_file, tropo_file, cor_dis_file):
@@ -57,247 +321,33 @@ def correct_single_ifgram(dis_file, tropo_file, cor_dis_file):
     return cor_dis_file
 
 
-def read_params(filename):
-    fil = open(filename + '.rsc', 'r')
-    line = fil.readline()
-    rscdict = {}
-    while line:
-        llist = line.split()
-        if len(llist) > 0:
-            rscdict[llist[0]] = llist[1]
-        line = fil.readline()
-    fil.close()
-    nx = np.int(rscdict['WIDTH'])
-    ny = np.int(rscdict['FILE_LENGTH'])
-    lat = np.zeros((4, 1))
-    lon = np.zeros((4, 1))
-    lat[0] = np.float(rscdict['Y_FIRST'])
-    lat[1] = np.float(rscdict['Y_FIRST'])
-    lat[2] = np.float(rscdict['Y_FIRST']) + (ny - 1) * np.float(rscdict['Y_STEP'])
-    lat[3] = np.float(rscdict['Y_FIRST']) + (ny - 1) * np.float(rscdict['Y_STEP'])
-    lon[0] = np.float(rscdict['X_FIRST'])
-    lon[1] = np.float(rscdict['X_FIRST']) + (nx - 1) * np.float(rscdict['X_STEP'])
-    lon[2] = np.float(rscdict['X_FIRST'])
-    lon[3] = np.float(rscdict['X_FIRST']) + (nx - 1) * np.float(rscdict['X_STEP'])
-    return lat, lon, nx, ny
-
-
-def get_delay(delay_file, atr, cinc, pts_new=None):
-    length = int(atr['FILE_LENGTH'])
-    width = int(atr['WIDTH'])
-
-    if 'X_FIRST' in list(atr.keys()):
-        pixel_box = (0, 0, int(atr['WIDTH']), int(atr['LENGTH']))
-        geo_box = ut.coordinate(atr).box_pixel2geo(pixel_box)
-        atr_ztd = readfile.read_attribute(delay_file)
-        coord = ut.coordinate(atr_ztd)
-        box = coord.box_geo2pixel(geo_box)
-        phs = readfile.read(delay_file, box=box)[0]
-        out_shape = (length, width)
-        delay_geo = resize(phs, out_shape, order=1, mode='constant', anti_aliasing=True, preserve_range=True)
-        delay_geo = -1 * delay_geo / cinc
-        return delay_geo
-
-    else:
-        [lat, lon, nx, ny] = read_params(delay_file)
-        data1 = np.fromfile(delay_file, dtype=np.float32, sep=(""))
-        data = data1.reshape(ny, nx)
-        data = np.flipud(data)
-        lats, step = np.linspace(lat[2], lat[0], num=ny, endpoint=True, retstep=True)
-        lats = np.asarray(lats)
-        lons, step = np.linspace(lon[0], lon[1], num=nx, endpoint=True, retstep=True)
-        lons = np.asarray(lons)
-        pts_old = tuple((lats.flatten(), lons.flatten()))
-
-        RGI_func = RGI(pts_old, data, method='linear', bounds_error=False)
-        delay_rdr = RGI_func(pts_new)
-        delay_rdr = delay_rdr.reshape(length, width)
-        delay_rdr = -1 * delay_rdr / cinc
-        del pts_new
-        return delay_rdr
-
-
-def lookup_table_read(lookup_file):
-    lon_lut = readfile.read(lookup_file, datasetName='longitude')[0]
-    lat_lut = readfile.read(lookup_file, datasetName='latitude')[0]
-    pts_new = np.hstack((lat_lut.reshape(-1, 1), lon_lut.reshape(-1, 1)))
-    return pts_new
-
-
-###############################################################
-EXAMPLE = '''example:
-  tropo_gacos.py -f timeseries.h5 -l inputs/geometryRadar.h5 --GACOS_dir ./GACOS
-  tropo_gacos.py -f geo/geo_timeseries.h5 -l geo/geo_geometryRadar.h5 --GACOS_dir ./GACOS
-
-'''
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Tropospheric correction using GACOS delays\n',
-                                     formatter_class=argparse.RawTextHelpFormatter, epilog=EXAMPLE)
-
-    parser.add_argument('-f', '--file', dest='dis_file', help='timeseries HDF5 file, i.e. timeseries.h5')
-    parser.add_argument('-l', '--lookup', dest='lookup_file',
-                        help='a file containing all information to tranfer from radar to geo coordinates.')
-    parser.add_argument('--GACOS-dir', dest='GACOS_dir',
-                        help='directory to downloaded GACOS delays data, i.e. ./GACOS\n' +
-                             'use directory of input timeseries_file if not specified.')
-    parser.add_argument('--date-list', dest='date_list_file',
-                        help='Read the first column of text file as list of date to download data\n' +
-                             'in YYYYMMDD or YYMMDD format')
-    parser.add_argument('--ref-yx', dest='ref_yx', type=int, nargs=2, help='reference pixel in y/x')
-    parser.add_argument('-o', dest='out_file', help='Output file name for trospheric corrected timeseries.')
-
-    return parser
-
-
+############################################################################
 def main(iargs=None):
-    
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-    
-    if inps.dis_file:
-        #inps.dis_file = ut.get_file_list([inps.dis_file])[0]
-        atr = readfile.read_attribute(inps.dis_file)
-        k = atr['FILE_TYPE']
-        if 'REF_Y' not in list(atr.keys()) and inps.ref_yx:
-            print('No reference info found in input file, use input ref_yx: ' + str(inps.ref_yx))
-            atr['REF_Y'] = inps.ref_yx[0]
-            atr['REF_X'] = inps.ref_yx[1]
+    inps = cmd_line_parse(iargs)
 
-    # ****reading incidence angle file***/
-    inps.inc_angle = readfile.read(inps.lookup_file, datasetName='incidenceAngle')[0]
-    cinc = np.cos(inps.inc_angle * np.pi / 180.0)
+    # calculate tropo delay and savee to h5 file
+    calculate_delay_timeseries(tropo_file=inps.tropo_file,
+                               dis_file=inps.dis_file,
+                               geom_file=inps.geom_file,
+                               GACOS_dir=inps.GACOS_dir)
 
-    # ****look up file****/
-    if inps.lookup_file:
-        inps.lookup_file = ut.get_file_list([inps.lookup_file])[0]
+    # correct tropo delay from dis time-series
+    ftype = readfile.read_attribute(inps.dis_file)['FILE_TYPE']
+    if ftype == 'timeseries':
+        correct_timeseries(dis_file=inps.dis_file,
+                           tropo_file=inps.tropo_file,
+                           cor_dis_file=inps.cor_dis_file)
 
-    # ****GACOS****/
-    # Get weather directory
-    if not inps.GACOS_dir:
-        if inps.dis_file:
-            inps.GACOS_dir = os.path.dirname(os.path.abspath(inps.dis_file)) + '/GACOS'
-        elif inps.lookup_file:
-            inps.GACOS_dir = os.path.dirname(os.path.abspath(inps.lookup_file)) + '/GACOS'
-        else:
-            inps.GACOS_dir = os.path.abspath(os.getcwd())
-
-    print('Store weather data into directory: ' + inps.GACOS_dir)
-
-    # source_dir=os.path.dirname(os.path.abspath('inps.dis_file'))+'/Agung/GACOS/data';print source_dir
-    # os.makedirs(GACOS_dir)  -----------------------------------------------add part to copy/download weather data------#
-    # ----get date list-----#
-    if not inps.date_list_file:
-        print('read date list info from: ' + inps.dis_file)
-        h5 = h5py.File(inps.dis_file, 'r')
-        if 'timeseries' in list(h5.keys()):
-            date_list = sorted([i.decode('utf8') for i in h5['date'][:]])
-        elif k in ['interferograms', 'coherence', 'wrapped']:
-            ifgram_list = sorted([i.decode('utf8') for i in h5['date'][:]])
-            date12_list = pnet.get_date12_list(inps.dis_file)
-            m_dates = [i.split('-')[0] for i in date12_list]
-            s_dates = [i.split('-')[1] for i in date12_list]
-            date_list = ptime.yyyymmdd(sorted(list(set(m_dates + s_dates))))
-        else:
-            raise ValueError('Un-support input file type:' + k)
-        h5.close()
+    elif ftype == '.unw':
+        correct_single_ifgram(dis_file=inps.dis_file,
+                              tropo_file=inps.tropo_file,
+                              cor_dis_file=inps.cor_dis_file)
     else:
-        date_list = ptime.yyyymmdd(np.loadtxt(inps.date_list_file, dtype=str, usecols=(0,)).tolist())
-        print('read date list info from: ' + inps.date_list_file)
-
-    # ****cheacking availability of delays****/
-    print('checking availability of delays')
-    tropFile = os.path.dirname(os.path.abspath(inps.dis_file)) + '/GACOS.h5'
-    if os.path.isfile(tropFile) and get_dataset_size(tropFile) == get_dataset_size(inps.dis_file):
-        print(tropFile + ' exists ...')
-    else:
-        delay_file_list = []
-        for d in date_list:
-            delay_file = inps.GACOS_dir + '/' + d + '.ztd'
-            delay_file_list.append(delay_file)
-        delay_file_existed = ut.get_file_list(delay_file_list)
-
-        if len(delay_file_existed) == len(date_list):
-            print('no missing files')
-        else:
-            print('no. of date files found:', len(delay_file_existed))
-            print('no. of dates:', len(date_list))
-
-        # *****Calculating delays***/
-        print('calculating delays')
-        length = int(atr['FILE_LENGTH'])
-        width = int(atr['WIDTH'])
-
-        date_num = len(date_list)
-
-        # Write tropospheric delay to HDF5
-        print('writing >>> %s' % (tropFile))
-
-        h5trop = h5py.File(tropFile, 'w')
-        trop_ts = h5trop.create_dataset('timeseries',
-                                        shape=(date_num, length, width),
-                                        maxshape=(None, length, width),
-                                        chunks=True,
-                                        dtype=np.float32)
-
-        prog_bar = ptime.progressBar(maxValue=date_num)
-
-        if 'X_FIRST' in list(atr.keys()):
-            pts_new = None
-        else:
-            pts_new = lookup_table_read(inps.lookup_file)
-
-        for i in range(date_num):
-            delay_file = delay_file_existed[i]
-            date = date_list[i]
-            delay = get_delay(delay_file, atr, cinc, pts_new)
-            trop_ts[i, :, :] = delay
-            prog_bar.update(i + 1, suffix=date)
-
-        dates = np.array(date_list, dtype=np.string_)
-        h5trop.create_dataset('date', data=dates)
-
-        with h5py.File(inps.dis_file, 'r') as f:
-            bperp = f['bperp'][:]
-        bperp = np.array(bperp, dtype=np.float32)
-        h5trop.create_dataset('bperp', data=bperp)
-
-        # remove metadata related with double reference
-        # because absolute delay is calculated and saved
-        for key in ['REF_DATE', 'REF_X', 'REF_Y', 'REF_LAT', 'REF_LON']:
-            if key in atr.keys():
-                atr.pop(key)
-
-        # Write Attributes
-        for key, value in atr.items():
-            h5trop.attrs[key] = value
-
-        h5trop.close()
-
-    # correct tropo delay from displacement time-series
-    if not inps.out_file:
-        inps.out_file = inps.dis_file.split('.')[0] + '_GACOS.h5'
-
-    if inps.dis_file:
-        ftype = atr['FILE_TYPE']
-        if ftype == 'timeseries':
-            correct_timeseries(dis_file=inps.dis_file,
-                               tropo_file=tropFile,
-                               cor_dis_file=inps.out_file)
-
-        elif ftype == '.unw':
-            correct_single_ifgram(dis_file=inps.dis_file,
-                                  tropo_file=tropFile,
-                                  cor_dis_file=inps.out_file)
-        else:
-            print('input file {} is not timeseries nor .unw, correction is not supported yet.'.format(ftype))
-
-    else:
-        print('No input displacement file, skip correcting tropospheric delays.')
+        print('input file {} is not timeseries nor .unw, correction is not supported yet.'.format(ftype))
 
     return
 
 
-###############################################################
+############################################################################
 if __name__ == '__main__':
     main()

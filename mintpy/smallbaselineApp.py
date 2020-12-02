@@ -735,6 +735,7 @@ class TimeSeriesAnalysis:
             print('No local oscillator drift correction is needed for {}.'.format(sat))
         return
 
+
     def run_tropospheric_delay_correction(self, step_name):
         """Correct tropospheric delays."""
         geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
@@ -769,15 +770,17 @@ class TimeSeriesAnalysis:
                 if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
                     mintpy.tropo_phase_elevation.main(iargs)
 
-            # Weather Re-analysis Data (Jolivet et al., 2011;2014)
+            # Weather re-analysis data with iterative tropospheric decomposition (GACOS)
+            # Yu et al., 2017; 2018a; 2018b
             elif method == 'gacos':
                 GACOS_dir = self.template['mintpy.troposphericDelay.gacosDir']
-                iargs = ['-f', in_file, '-l', geom_file, '-o', out_file, '--GACOS-dir', GACOS_dir]
+                iargs = ['-f', in_file, '-g', geom_file, '-o', out_file, '--dir', GACOS_dir]
                 print('tropospheric delay correction with gacos approach')
                 print('\ntropo_gacos.py', ' '.join(iargs))
                 if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
                     mintpy.tropo_gacos.main(iargs)
 
+            # Weather Re-analysis Data (Jolivet et al., 2011;2014)
             elif method == 'pyaps':
                 iargs = ['-f', in_file, '--model', tropo_model, '-g', geom_file, '-w', weather_dir]
                 print('Atmospheric correction using Weather Re-analysis dataset (PyAPS, Jolivet et al., 2011)')

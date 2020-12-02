@@ -310,7 +310,7 @@ def incidence_angle_ground2iono_shell_along_los(inc_angle, iono_height=450e3):
     return inc_angle_iono
 
 
-def get_lat_lon(meta, geom_file=None, box=None):
+def get_lat_lon(meta, geom_file=None, box=None, dimension=2):
     """Extract precise pixel-wise lat/lon.
 
     For meta dict in geo-coordinates OR geom_file with latitude/longitude dataset
@@ -338,7 +338,7 @@ def get_lat_lon(meta, geom_file=None, box=None):
             lons = f['longitude'][box[1]:box[3], box[0]:box[2]]
 
     elif 'Y_FIRST' in meta.keys():
-        # generate 2D matrices for lat/lon
+        # get lat/lon0/1
         lat_step = float(meta['Y_STEP'])
         lon_step = float(meta['X_STEP'])
         lat0 = float(meta['Y_FIRST']) + lat_step * (box[1] + 0.5)
@@ -347,10 +347,20 @@ def get_lat_lon(meta, geom_file=None, box=None):
         lat_num = box[3] - box[1]
         lon_num = box[2] - box[0]
 
-        lat1 = lat0 + lat_step * lat_num
-        lon1 = lon0 + lon_step * lon_num
-        lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
-                              lon0:lon1:lon_num*1j]
+        lat1 = lat0 + lat_step * (lat_num - 1)
+        lon1 = lon0 + lon_step * (lon_num - 1)
+
+        # get matrix of lat/lon
+        if dimension == 2:
+            lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
+                                  lon0:lon1:lon_num*1j]
+
+        elif dimension == 1:
+            lats = np.linspace(lat0, lat1, num=lat_num, endpoint=True)
+            lons = np.linspace(lon0, lon1, num=lon_num, endpoint=True)
+
+        else:
+            raise ValueError('un-supported dimension = {}'.format(dimension))
 
     else:
         msg = 'Can not get pixel-wise lat/lon!'
