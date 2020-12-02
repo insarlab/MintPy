@@ -10,6 +10,7 @@ import os
 import sys
 import argparse
 import warnings
+import h5py
 import numpy as np
 
 # suppress numpy.RuntimeWarning message
@@ -91,7 +92,7 @@ def multilook_matrix(matrix, lks_y, lks_x):
     return matrix_mli
 
 
-def multilook_data(data, lks_y, lks_x):
+def multilook_data(data, lks_y, lks_x, method='average'):
     """Modified from Praveen on StackOverflow:
 
     link: https://stackoverflow.com/questions/34689519/how-to-coarser-the-2-d-array-data-resolution
@@ -99,40 +100,64 @@ def multilook_data(data, lks_y, lks_x):
     Parameters: data        : 2D / 3D np.array in real or complex
                 lks_y       : int, number of multilook in y/azimuth direction
                 lks_x       : int, number of multilook in x/range direction
+                method      : str, multilook method, average or nearest
     Returns:    coarse_data : 2D / 3D np.array after multilooking in last two dimension
     """
     dtype = data.dtype
     shape = np.array(data.shape, dtype=float)
+    ysize = int(shape[0] / lks_y)
+    xsize = int(shape[1] / lks_x)
+
     if len(shape) == 2:
-        # crop data to the exact multiple of the multilook number
-        new_shape = np.floor(shape / (lks_y, lks_x)).astype(int) * (lks_y, lks_x)
-        crop_data = data[:new_shape[0],
-                         :new_shape[1]]
+        if method == 'average':
+            # crop data to the exact multiple of the multilook number
+            new_shape = np.floor(shape / (lks_y, lks_x)).astype(int) * (lks_y, lks_x)
+            crop_data = data[:new_shape[0],
+                             :new_shape[1]]
 
-        # reshape to more dimensions and collapse the extra dimensions with mean
-        temp = crop_data.reshape((new_shape[0] // lks_y, lks_y,
-                                  new_shape[1] // lks_x, lks_x))
+            # reshape to more dimensions and collapse the extra dimensions with mean
+            temp = crop_data.reshape((new_shape[0] // lks_y, lks_y,
+                                      new_shape[1] // lks_x, lks_x))
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
-            coarse_data = np.nanmean(temp, axis=(1, 3))
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                coarse_data = np.nanmean(temp, axis=(1, 3))
+
+        elif method == 'nearest':
+            coarse_data = data[int(lks_y/2)::lks_y,
+                               int(lks_x/2)::lks_x]
+
+            # fix size discrepency from average method
+            if coarse_data.shape != (ysize, xsize):
+                coarse_data = coarse_data[:ysize, :xsize]
 
     elif len(shape) == 3:
-        # crop data to the exact multiple of the multilook number
-        new_shape = np.floor(shape / (1, lks_y, lks_x)).astype(int) * (1, lks_y, lks_x)
-        crop_data = data[:new_shape[0],
-                         :new_shape[1],
-                         :new_shape[2]]
+        if method == 'average':
+            # crop data to the exact multiple of the multilook number
+            new_shape = np.floor(shape / (1, lks_y, lks_x)).astype(int) * (1, lks_y, lks_x)
+            crop_data = data[:new_shape[0],
+                             :new_shape[1],
+                             :new_shape[2]]
 
-        # reshape to more dimensions and collapse the extra dimensions with mean
-        temp = crop_data.reshape((new_shape[0],
-                                  new_shape[1] // lks_y, lks_y,
-                                  new_shape[2] // lks_x, lks_x))
+            # reshape to more dimensions and collapse the extra dimensions with mean
+            temp = crop_data.reshape((new_shape[0],
+                                      new_shape[1] // lks_y, lks_y,
+                                      new_shape[2] // lks_x, lks_x))
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
-            coarse_data = np.nanmean(temp, axis=(2, 4))
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                coarse_data = np.nanmean(temp, axis=(2, 4))
 
+        elif method == 'nearest':
+            coarse_data = data[:,
+                               int(lks_y/2)::lks_y,
+                               int(lks_x/2)::lks_x]
+
+            # fix size discrepency from average method
+            if coarse_data.shape != (ysize, xsize):
+                coarse_data = coarse_data[:ysize, :xsize]
+
+    # ensure output data type
     coarse_data = np.array(coarse_data, dtype=dtype)
 
     return coarse_data
@@ -250,7 +275,14 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=
 
         # split in Y/row direction for IO for HDF5 only
         if ext in ['.h5', '.he5']:
-            row_step = 200
+            # calc step size with memory usage up to 4 GB
+            max_memory = 4 * 1024**3
+            with h5py.File(infile, 'r') as f:
+                ds = f[dsName]
+                row_size = np.prod(ds.shape) / width
+            row_step = int(ut.round_to_1(max_memory / (row_size * 4 * 4)))
+            row_step = max(row_step, 10)
+
         else:
             row_step = box[3] - box[1]
 
@@ -275,14 +307,6 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=
                                      xstep=lks_x,
                                      ystep=lks_y,
                                      print_msg=False)[0]
-
-                # fix the size discrepency between average / nearest method
-                out_len = box_o[3] - box_o[1]
-                out_wid = box_o[2] - box_o[0]
-                if data.ndim == 3:
-                    data = data[:, :out_len, :out_wid]
-                else:
-                    data = data[:out_len, :out_wid]
 
             else:
                 data = readfile.read(infile,

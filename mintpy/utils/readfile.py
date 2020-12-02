@@ -287,11 +287,20 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
 
         # 2D dataset
         if ds.ndim == 2:
+            # read data
             data = ds[box[1]:box[3],
                       box[0]:box[2]]
+
+            # sampling / nearest interplation in y/xstep
             if xstep * ystep > 1:
+                # output size if x/ystep > 1
+                xsize = int((box[2] - box[0]) / xstep)
+                ysize = int((box[3] - box[1]) / ystep)
+
+                # sampling
                 data = data[int(ystep/2)::ystep,
                             int(xstep/2)::xstep]
+                data = data[:ysize, :xsize]
 
         # 3D dataset
         elif ds.ndim == 3:
@@ -306,17 +315,33 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
                     slice_flag[date_list.index(d)] = True
 
             # read data
-            data = ds[slice_flag,
-                      box[1]:box[3],
-                      box[0]:box[2]]
+            if xstep * ystep == 1:
+                data = ds[slice_flag,
+                          box[1]:box[3],
+                          box[0]:box[2]]
 
-            if xstep * ystep > 1:
-                data = data[:,
-                            int(ystep/2)::ystep,
+            else:
+                # output size if x/ystep > 1
+                xsize = int((box[2] - box[0]) / xstep)
+                ysize = int((box[3] - box[1]) / ystep)
+
+                # sampling / nearest interplation in y/xstep
+                # use for loop to save memory
+                num_slice = np.sum(slice_flag)
+                data = np.zeros((num_slice, ysize, xsize), ds.dtype)
+
+                inds = np.where(slice_flag)[0]
+                for i in range(num_slice):
+                    d2 = ds[inds[i],
+                            box[1]:box[3],
+                            box[0]:box[2]]
+                    d2 = d2[int(ystep/2)::ystep,
                             int(xstep/2)::xstep]
+                    data[i, :, :] = d2[:ysize, :xsize]
 
             if any(i == 1 for i in data.shape):
                 data = np.squeeze(data)
+
     return data
 
 
@@ -1219,11 +1244,6 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
         data_type = '>{}{}'.format(letter, digit)
 
     # read data
-    #data = np.fromfile(fname,
-    #                   dtype=data_type,
-    #                   count=box[3]*width).reshape(-1, width)
-    #data = data[box[1]:box[3],
-    #            box[0]:box[2]]
     band_interleave = band_interleave.upper()
     if band_interleave == 'BIL':
         data = np.fromfile(fname,
@@ -1265,8 +1285,14 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
 
     # skipping/multilooking
     if xstep * ystep > 1:
+        # output size if x/ystep > 1
+        xsize = int((box[2] - box[0]) / xstep)
+        ysize = int((box[3] - box[1]) / ystep)
+
+        # sampling
         data = data[int(ystep/2)::ystep,
                     int(xstep/2)::xstep]
+        data = data[:ysize, :xsize]
 
     return data
 
