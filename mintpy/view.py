@@ -200,20 +200,20 @@ def run_or_skip(inps):
 ##################################################################################################
 def check_multilook_input(pixel_box, row_num, col_num):
     # Estimate multilook_num
-    multilook_num=1
-    if row_num * col_num > 10:
-        box_size = (pixel_box[2] - pixel_box[0]) * (pixel_box[3] - pixel_box[1])
-        pixel_num_per_figure = box_size * row_num * col_num
-        if   pixel_num_per_figure > (8e6*160):   multilook_num=16;      ## 2k * 2k image with 120 subplots
-        elif pixel_num_per_figure > (4e6*80) :   multilook_num=8;       ## 2k * 2k image with 80  subplots
-        elif pixel_num_per_figure > (4e6*20) :   multilook_num=4;       ## 2k * 2k image with 40  subplots
-        elif pixel_num_per_figure > (1e6*20) :   multilook_num=2;       ## 2k * 2k image with 40  subplots
+    box_size = (pixel_box[2] - pixel_box[0]) * (pixel_box[3] - pixel_box[1])
+    pixel_num_per_figure = box_size * row_num * col_num
+    if   pixel_num_per_figure > (64e6*320):  multilook_num = 32;      # 16k * 4k image with 320 subplots
+    elif pixel_num_per_figure > (32e6*160):  multilook_num = 16;      #  8k * 4k image with 160 subplots
+    elif pixel_num_per_figure > ( 8e6*160):  multilook_num = 8;       #  4k * 2k image with 160 subplots
+    elif pixel_num_per_figure > ( 4e6*80) :  multilook_num = 4;       #  2k * 2k image with 80  subplots
+    elif pixel_num_per_figure > ( 4e6*20) :  multilook_num = 2;       #  2k * 2k image with 20  subplots
+    else:                                    multilook_num = 1;
 
     # Update multilook based on multilook_num
     if multilook_num > 1:
         multilook = True
-        vprint('number of data points per figures: {:.1E}'.format(pixel_num_per_figure))
-        vprint('multilook with a factor of {} for display'.format(multilook_num))
+        vprint('original number of data points per figures: {:.1E}'.format(pixel_num_per_figure))
+        vprint('* multilook {0} by {0} for display to save memory'.format(multilook_num))
     else:
         multilook = False
     return multilook, multilook_num
@@ -963,8 +963,8 @@ def update_figure_setting(inps):
 def read_data4figure(i_start, i_end, inps, metadata):
     """Read multiple datasets for one figure into 3D matrix based on i_start/end"""
     data = np.zeros((i_end - i_start,
-                     np.rint((inps.pix_box[3] - inps.pix_box[1]) / inps.multilook_num - 1e-4).astype(int),
-                     np.rint((inps.pix_box[2] - inps.pix_box[0]) / inps.multilook_num - 1e-4).astype(int),
+                     int((inps.pix_box[3] - inps.pix_box[1]) / inps.multilook_num),
+                     int((inps.pix_box[2] - inps.pix_box[0]) / inps.multilook_num),
                     ), dtype=np.float32)
 
     # fast reading for single dataset type
@@ -1268,8 +1268,10 @@ def prepare4multi_subplots(inps, metadata):
                                                                        inps.fig_row_num,
                                                                        inps.fig_col_num)
         if inps.msk is not None:
-            inps.msk = inps.msk[int(inps.multilook_num/2)::inps.multilook_num,
-                                int(inps.multilook_num/2)::inps.multilook_num]
+            inps.msk = multilook_data(inps.msk,
+                                      inps.multilook_num,
+                                      inps.multilook_num,
+                                      method='nearest')
 
     # Reference pixel for timeseries and ifgramStack
     #metadata = readfile.read_attribute(inps.file)
