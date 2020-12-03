@@ -72,16 +72,16 @@ def create_parser():
                           '{}'.format(DEG2METER))
 
     interp = parser.add_argument_group('interpolation')
-    interp.add_argument('-i', '--interpolate', dest='interpMethod', choices={'nearest', 'linear'},
-                        help='interpolation/resampling method. Default: nearest', default='nearest')
+    interp.add_argument('-i', '--interp', dest='interpMethod', default='nearest', choices={'nearest', 'linear'},
+                        help='interpolation/resampling method (default: %(default)s).')
     interp.add_argument('--fill', dest='fillValue', type=float, default=np.nan,
-                        help='Value used for points outside of the interpolation domain.\n' +
-                             'Default: np.nan')
+                        help='Fill value for extrapolation (default: %(default)s).')
     interp.add_argument('-n','--nprocs', dest='nprocs', type=int, default=1,
-                        help='number of processors to be used for calculation. Default: 1\n' + 
+                        help='number of processors to be used for calculation (default: %(default)s).\n' + 
                              'Note: Do not use more processes than available processor cores.')
-    interp.add_argument('-p','--processor', dest='processor', type=str, choices={'pyresample', 'scipy'},
-                        help='processor module used for interpolation.')
+    interp.add_argument('--software', dest='software', default='pyresample', choices={'pyresample', 'scipy'},
+                        help='software/module used for interpolation (default: %(default)s)\n'
+                             'Note: --bbox is not supported for -p scipy')
 
     parser.add_argument('--update', dest='updateMode', action='store_true',
                         help='skip resampling if output file exists and newer than input file')
@@ -93,7 +93,6 @@ def create_parser():
 
 
 def cmd_line_parse(iargs=None):
-    print('{} {}'.format(os.path.basename(__file__), ' '.join(iargs)))
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
@@ -129,9 +128,9 @@ def _check_inps(inps):
     if inps.SNWE:
         inps.SNWE = tuple(inps.SNWE)
 
-    inps.laloStep = [inps.latStep, inps.lonStep]
-    if None in inps.laloStep:
-        inps.laloStep = None
+    inps.lalo_step = [inps.latStep, inps.lonStep]
+    if None in inps.lalo_step:
+        inps.lalo_step = None
 
     inps.nprocs = check_num_processor(inps.nprocs)
     return inps
@@ -163,9 +162,9 @@ def read_template2inps(template_file, inps):
                 else:
                     inps_dict[key] = float(value)
 
-    inps.laloStep = [inps.latStep, inps.lonStep]
-    if None in inps.laloStep:
-        inps.laloStep = None
+    inps.lalo_step = [inps.latStep, inps.lonStep]
+    if None in inps.lalo_step:
+        inps.lalo_step = None
     return inps
 
 
@@ -195,20 +194,16 @@ def metadata_radar2geo(atr_in, res_obj, print_msg=True):
     atr = dict(atr_in)
     atr['LENGTH'] = res_obj.length
     atr['WIDTH'] = res_obj.width
-    atr['Y_STEP'] = res_obj.laloStep[0]
-    atr['X_STEP'] = res_obj.laloStep[1]
-    if 'Y_FIRST' in atr_in.keys():  #roipac, gamma
-        atr['Y_FIRST'] = res_obj.SNWE[1]
-        atr['X_FIRST'] = res_obj.SNWE[2]
-    else:                           #isce, doris
-        atr['Y_FIRST'] = res_obj.SNWE[1] - res_obj.laloStep[0] / 2.
-        atr['X_FIRST'] = res_obj.SNWE[2] - res_obj.laloStep[1] / 2.
-    atr['Y_UNIT'] = res_obj.lut_metadata.get('Y_UNIT', 'degrees')
-    atr['X_UNIT'] = res_obj.lut_metadata.get('X_UNIT', 'degrees')
+    atr['Y_STEP'] = res_obj.lalo_step[0]
+    atr['X_STEP'] = res_obj.lalo_step[1]
+    atr['Y_FIRST'] = res_obj.SNWE[1]
+    atr['X_FIRST'] = res_obj.SNWE[2]
+    atr['Y_UNIT'] = res_obj.lut_meta.get('Y_UNIT', 'degrees')
+    atr['X_UNIT'] = res_obj.lut_meta.get('X_UNIT', 'degrees')
 
     # Reference point from y/x to lat/lon
     if 'REF_Y' in atr.keys():
-        coord = ut.coordinate(atr_in, lookup_file=res_obj.file)
+        coord = ut.coordinate(atr_in, lookup_file=res_obj.lut_file)
         ref_lat, ref_lon = coord.radar2geo(np.array(int(atr['REF_Y'])),
                                            np.array(int(atr['REF_X'])),
                                            print_msg=False)[0:2]
@@ -277,11 +272,11 @@ def run_geocode(inps):
     start_time = time.time()
 
     # Prepare geometry for geocoding
-    res_obj = resample(lookupFile=inps.lookupFile,
-                       dataFile=inps.file[0],
+    res_obj = resample(lut_file=inps.lookupFile,
+                       src_file=inps.file[0],
                        SNWE=inps.SNWE,
-                       laloStep=inps.laloStep,
-                       processor=inps.processor)
+                       lalo_step=inps.lalo_step,
+                       software=inps.software)
     res_obj.open()
 
     # resample input files one by one
@@ -312,6 +307,7 @@ def run_geocode(inps):
                                             fill_value=inps.fillValue,
                                             nprocs=inps.nprocs,
                                             print_msg=True)
+            del data
             dsResDict[dsName] = res_data
 
         # update metadata
@@ -319,10 +315,8 @@ def run_geocode(inps):
             atr = metadata_radar2geo(atr, res_obj)
         else:
             atr = metadata_geo2radar(atr, res_obj)
-        #if len(dsNames) == 1 and dsName not in ['timeseries']:
-        #    atr['FILE_TYPE'] = dsNames[0]
-        #    infile = None
 
+        # write file
         writefile.write(dsResDict, out_file=outfile, metadata=atr, ref_file=infile)
 
     m, s = divmod(time.time()-start_time, 60)

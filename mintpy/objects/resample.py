@@ -27,44 +27,57 @@ class resample:
 
     Example:
         # prepare resample object
-        res_obj = resample(lookupFile='./inputs/geometryGeo.h5', dataFile='velocity.h5')
-        res_obj = resample(lookupFile='./inputs/geometryRadar.h5', dataFile='temporalCoherence.h5')
+        res_obj = resample(lut_file='./inputs/geometryRadar.h5', src_file='velocity.h5')
         res_obj.open()
 
         # run geocoding
-        rdr_data = readfile.read('temporalCoherence.h5')[0]
+        rdr_data = readfile.read('velocity.h5')[0]
         geo_data = res_obj.run_resample(src_data=rdr_data, interp_method='nearest', fill_value=np.nan)
     """
 
-    def __init__(self, lookupFile, dataFile, SNWE=None, laloStep=None, processor=None):
-        self.file = lookupFile
-        self.dataFile = dataFile
+    def __init__(self, lut_file, src_file, SNWE=None, lalo_step=None, software='pyresample'):
+        """
+        Parameters: lut_file  - str, path of lookup table file, containing datasets:
+                                latitude / longitude      for lut_file in radar-coord
+                                azimuthCoord / rangeCoord for lut_file in geo-coord
+                    src_file  - str, path of data file to be resampled.
+                    SNWE      - tuple of 4 float, indicating south/north/west/east
+                    lalo_step - list of 2 float, output step in lat/lon direction in degree / meter
+                    software  - str, interpolation software
+        """
+        self.lut_file = lut_file
+        self.src_file = src_file
         self.SNWE = SNWE
-        self.laloStep = laloStep
-        self.processor = processor
+        self.lalo_step = lalo_step
+        self.software = software
         self.valid_index = None
+
 
     def open(self):
         """Prepare aux data before interpolation operation"""
-        self.lut_metadata = readfile.read_attribute(self.file)
-        self.src_metadata = readfile.read_attribute(self.dataFile)
+        self.lut_meta = readfile.read_attribute(self.lut_file)
+        self.src_meta = readfile.read_attribute(self.src_file)
 
-        if not self.processor:
-            if 'Y_FIRST' in self.lut_metadata.keys():
-                self.processor = 'scipy'
+        if not self.software:
+            if 'Y_FIRST' in self.lut_meta.keys():
+                self.software = 'scipy'
             else:
-                self.processor = 'pyresample'
+                self.software = 'pyresample'
 
-        # get src_def and dest_def, update SNWE and laloStep
-        if self.processor == 'pyresample':
-            if 'Y_FIRST' not in self.lut_metadata.keys():
-                self.prepare_geometry_definition_radar()
-            else:
+        # get src_def and dest_def, update SNWE and lalo_step
+        if self.software == 'pyresample':
+            if 'Y_FIRST' in self.lut_meta.keys():
+                # gamma / roipac
                 self.prepare_geometry_definition_geo()
+            else:
+                # isce / doris
+                self.prepare_geometry_definition_radar()
             self.length, self.width = self.dest_def.lats.shape
 
-        elif self.processor == 'scipy' and 'Y_FIRST' in self.lut_metadata.keys():
+        elif self.software == 'scipy' and 'Y_FIRST' in self.lut_meta.keys():
+            # gamma / roipac
             self.prepare_regular_grid_interpolator()
+
 
     def run_resample(self, src_data, interp_method='nearest', fill_value=np.nan, nprocs=1, print_msg=True):
         """Run interpolation operation for input 2D/3D data
@@ -76,7 +89,7 @@ class resample:
         Returns:    geo_data      : 2D/3D np.array
         """
         # use pyresample
-        if self.processor == 'pyresample':
+        if self.software == 'pyresample':
             if len(src_data.shape) == 3:
                 src_data = np.moveaxis(src_data, 0, -1)
 
@@ -95,13 +108,13 @@ class resample:
             if len(geo_data.shape) == 3:
                 geo_data = np.moveaxis(geo_data, -1, 0)
 
-        # use scipy.interpolater.RegularGridInterpolator
+        # use scipy.interpolate.RegularGridInterpolator
         else:
             if print_msg:
-                print('resampling using scipy.interpolate.RegularGridInterpolator ...')
+                print('{} resampling using scipy.interpolate.RegularGridInterpolator ...'.format(interp_method))
             if len(src_data.shape) == 3:
                 geo_data = np.empty((src_data.shape[0], self.length, self.width), src_data.dtype)
-                prog_bar = ptime.progressBar(maxValue=src_data.shape[0])
+                prog_bar = ptime.progressBar(maxValue=src_data.shape[0], print_msg=print_msg)
                 for i in range(src_data.shape[0]):
                     geo_data[i, :, :] = self.run_regular_grid_interpolator(src_data=src_data[i, :, :],
                                                                            interp_method=interp_method,
@@ -116,37 +129,41 @@ class resample:
                                                               print_msg=True)
         return geo_data
 
+
+    ##### resample using scipy.interpolate
     def prepare_regular_grid_interpolator(self):
         """Prepare aux data for RGI module"""
         # source points in regular grid
-        src_length = int(self.src_metadata['LENGTH'])
-        src_width = int(self.src_metadata['WIDTH'])
-        self.src_pts = (np.arange(src_length), np.arange(src_width))
+        src_length = int(self.src_meta['LENGTH'])
+        src_width = int(self.src_meta['WIDTH'])
+        self.src_pts = (np.arange(src_length) + 0.5,
+                        np.arange(src_width) + 0.5)
 
         # destination points
-        dest_y = readfile.read(self.file, datasetName='azimuthCoord')[0]
-        dest_x = readfile.read(self.file, datasetName='rangeCoord')[0]
-        if 'SUBSET_XMIN' in self.src_metadata.keys():
+        dest_y = readfile.read(self.lut_file, datasetName='azimuthCoord')[0]
+        dest_x = readfile.read(self.lut_file, datasetName='rangeCoord')[0]
+        if 'SUBSET_XMIN' in self.src_meta.keys():
             print('input data file was cropped before.')
-            dest_y[dest_y != 0.] -= float(self.src_metadata['SUBSET_YMIN'])
-            dest_x[dest_x != 0.] -= float(self.src_metadata['SUBSET_XMIN'])
+            dest_y[dest_y != 0.] -= float(self.src_meta['SUBSET_YMIN'])
+            dest_x[dest_x != 0.] -= float(self.src_meta['SUBSET_XMIN'])
         self.interp_mask = np.multiply(np.multiply(dest_y > 0, dest_y < src_length),
                                        np.multiply(dest_x > 0, dest_x < src_width))
         self.dest_pts = np.hstack((dest_y[self.interp_mask].reshape(-1, 1),
                                    dest_x[self.interp_mask].reshape(-1, 1)))
 
         # destimation data size
-        self.length = int(self.lut_metadata['LENGTH'])
-        self.width = int(self.lut_metadata['WIDTH'])
-        lat0 = float(self.lut_metadata['Y_FIRST'])
-        lon0 = float(self.lut_metadata['X_FIRST'])
-        lat_step = float(self.lut_metadata['Y_STEP'])
-        lon_step = float(self.lut_metadata['X_STEP'])
-        self.laloStep = (lat_step, lon_step)
-        self.SNWE = (lat0 + lat_step * (self.length - 1),
+        self.length = int(self.lut_meta['LENGTH'])
+        self.width = int(self.lut_meta['WIDTH'])
+        lat0 = float(self.lut_meta['Y_FIRST'])
+        lon0 = float(self.lut_meta['X_FIRST'])
+        lat_step = float(self.lut_meta['Y_STEP'])
+        lon_step = float(self.lut_meta['X_STEP'])
+        self.lalo_step = (lat_step, lon_step)
+        self.SNWE = (lat0 + lat_step * self.length,
                      lat0,
                      lon0,
-                     lon0 + lon_step * (self.width - 1))
+                     lon0 + lon_step * self.width)
+
 
     def run_regular_grid_interpolator(self, src_data, interp_method='nearest', fill_value=np.nan, print_msg=True):
         """Interpolate 2D matrix"""
@@ -166,6 +183,7 @@ class resample:
         return geo_data
 
 
+    ##### resample using pyresample.kd_tree
     def prepare_geometry_definition_radar(self):
         """Get src_def and dest_def for lookup table from ISCE, DORIS"""
 
@@ -198,46 +216,58 @@ class resample:
             return lat, lon, mask
 
         # radar2geo
-        if 'Y_FIRST' not in self.src_metadata.keys():
+        if 'Y_FIRST' not in self.src_meta.keys():
 
-            # src_def
-            src_lat = readfile.read(self.file, datasetName='latitude')[0]
-            src_lon = readfile.read(self.file, datasetName='longitude')[0]
+            ## source
+            # src_lat/lon at pixel center
+            src_lat = readfile.read(self.lut_file, datasetName='latitude')[0]
+            src_lon = readfile.read(self.lut_file, datasetName='longitude')[0]
             src_lat, src_lon, mask = mark_lalo_anomoly(src_lat, src_lon)
 
-            # laloStep
+            # SNWE at pixel center
             SNWE = (np.nanmin(src_lat[mask]), np.nanmax(src_lat[mask]),
                     np.nanmin(src_lon[mask]), np.nanmax(src_lon[mask]))
-            if self.laloStep is None:
-                self.laloStep = ((SNWE[0] - SNWE[1]) / (src_lat.shape[0] - 1),
-                                 (SNWE[3] - SNWE[2]) / (src_lat.shape[1] - 1))
+
+            ## destination
+            # 1. lalo_step
+            if self.lalo_step is None:
+                self.lalo_step = ((SNWE[0] - SNWE[1]) / (src_lat.shape[0] - 1),
+                                  (SNWE[3] - SNWE[2]) / (src_lat.shape[1] - 1))
             else:
-                self.laloStep = (abs(self.laloStep[0]) * -1.,
-                                 abs(self.laloStep[1]) * 1.)
-            print('output pixel size in (lat, lon) in degree: {}'.format(self.laloStep))
+                # ensure lat/lon step sign
+                self.lalo_step = (abs(self.lalo_step[0]) * -1.,
+                                  abs(self.lalo_step[1]) * 1.)
+            print('output pixel size in (lat, lon) in degree: {}'.format(self.lalo_step))
 
-            # SNWE
+            # SNWE at pixel center --> SNWE at pixel outer boundary
+            # to be consistent with input bounding box
+            SNWE = (SNWE[0] + self.lalo_step[0] / 2.0,
+                    SNWE[1] - self.lalo_step[0] / 2.0,
+                    SNWE[2] - self.lalo_step[1] / 2.0,
+                    SNWE[3] + self.lalo_step[1] / 2.0)
+
+            # 2. SNWE at pixel outer boundary
+            # consistent with Y/X_FIRST
             if self.SNWE is None:
-                lat_num = int((SNWE[0] - SNWE[1]) / self.laloStep[0] + 0.5) + 1
-                lon_num = int((SNWE[3] - SNWE[2]) / self.laloStep[1] + 0.5) + 1
-                SNWE = (SNWE[1] + self.laloStep[0] * (lat_num - 1),
-                        SNWE[1],
-                        SNWE[2],
-                        SNWE[2] + self.laloStep[1] * (lon_num - 1))
                 self.SNWE = SNWE
-            print('output area extent in (S N W E) in degree: {}'.format(self.SNWE))
-
-            # dest_def
-            lat_num = int((self.SNWE[0] - self.SNWE[1]) / self.laloStep[0] + 0.5) + 1
-            lon_num = int((self.SNWE[3] - self.SNWE[2]) / self.laloStep[1] + 0.5) + 1
-            self.SNWE = (self.SNWE[1] + self.laloStep[0] * (lat_num - 1),
+            # adjust SNWE ending coordinate (S, E) for precise alignment
+            lat_num = int(np.rint((self.SNWE[0] - self.SNWE[1]) / self.lalo_step[0]))
+            lon_num = int(np.rint((self.SNWE[3] - self.SNWE[2]) / self.lalo_step[1]))
+            self.SNWE = (self.SNWE[1] + self.lalo_step[0] * lat_num,
                          self.SNWE[1],
                          self.SNWE[2],
-                         self.SNWE[2] + self.laloStep[1] * (lon_num - 1))
-            dest_lat, dest_lon = np.mgrid[self.SNWE[1]:self.SNWE[0]:lat_num*1j,
-                                          self.SNWE[2]:self.SNWE[3]:lon_num*1j]
+                         self.SNWE[2] + self.lalo_step[1] * lon_num)
+            print('output area extent in (S, N, W, E) in degree: {}'.format(self.SNWE))
 
-            # reduction of swath data
+            # 3. dest_lat/lon at pixel center
+            lat0 = self.SNWE[1] + self.lalo_step[0]/2
+            lat1 = self.SNWE[0] - self.lalo_step[0]/2
+            lon0 = self.SNWE[2] + self.lalo_step[1]/2
+            lon1 = self.SNWE[3] - self.lalo_step[1]/2
+            dest_lat, dest_lon = np.mgrid[lat0:lat1:lat_num*1j,
+                                          lon0:lon1:lon_num*1j]
+
+            ## reduction of swath data
             # https://pyresample.readthedocs.io/en/latest/data_reduce.html
             src_size_deg = (SNWE[1] - SNWE[0]) * (SNWE[3] - SNWE[2])
             dest_size_deg = (self.SNWE[1] - self.SNWE[0]) * (self.SNWE[3] - self.SNWE[2])
@@ -255,31 +285,35 @@ class resample:
                 self.valid_box = (np.min(idx_col), np.min(idx_row),
                                   np.max(idx_col), np.max(idx_row))
 
+            ## geometry definition
             self.src_def = pr.geometry.SwathDefinition(lons=src_lon, lats=src_lat)
             self.dest_def = pr.geometry.GridDefinition(lons=dest_lon, lats=dest_lat)
 
         # geo2radar
         else:
-            # dest_def
-            dest_lat = readfile.read(self.file, datasetName='latitude')[0]
-            dest_lon = readfile.read(self.file, datasetName='longitude')[0]
+            # dest_lat/lon at pixel center
+            dest_lat = readfile.read(self.lut_file, datasetName='latitude')[0]
+            dest_lon = readfile.read(self.lut_file, datasetName='longitude')[0]
             dest_lat, dest_lon, mask = mark_lalo_anomoly(dest_lat, dest_lon)
 
-            # src_def
-            lat0 = float(self.src_metadata['Y_FIRST'])
-            lon0 = float(self.src_metadata['X_FIRST'])
-            lat_step = float(self.src_metadata['Y_STEP'])
-            lon_step = float(self.src_metadata['X_STEP'])
-            lat_num = int(self.src_metadata['LENGTH'])
-            lon_num = int(self.src_metadata['WIDTH'])
+            # src_lat/lon at pixel center
+            lat_step = float(self.src_meta['Y_STEP'])
+            lon_step = float(self.src_meta['X_STEP'])
+            lat_num = int(self.src_meta['LENGTH'])
+            lon_num = int(self.src_meta['WIDTH'])
+            lat0 = float(self.src_meta['Y_FIRST']) + lat_step / 2.0
+            lon0 = float(self.src_meta['X_FIRST']) + lon_step / 2.0
             lat1 = lat0 + lat_step * (lat_num - 1)
             lon1 = lon0 + lon_step * (lon_num - 1)
 
             src_lat, src_lon = np.mgrid[lat0:lat1:lat_num * 1j,
                                         lon0:lon1:lon_num * 1j]
 
+            # geometry definition
             self.src_def = pr.geometry.GridDefinition(lons=src_lon, lats=src_lat)
             self.dest_def = pr.geometry.SwathDefinition(lons=dest_lon, lats=dest_lat)
+
+        return src_def, dest_def, src_valid_index
 
 
     ## Currently NOT used by default, as GAMMA/ROI_PAC geocoding is using RGI from scipy
@@ -297,51 +331,60 @@ class resample:
             return lats, lons
 
         # radar2geo
-        if 'Y_FIRST' not in self.src_metadata.keys():
-            lat0 = float(self.lut_metadata['Y_FIRST'])
-            lon0 = float(self.lut_metadata['X_FIRST'])
-            lat_step = float(self.lut_metadata['Y_STEP'])
-            lon_step = float(self.lut_metadata['X_STEP'])
-            lat_num = int(self.lut_metadata['LENGTH'])
-            lon_num = int(self.lut_metadata['WIDTH'])
+        if 'Y_FIRST' not in self.src_meta.keys():
+            lat_step = float(self.lut_meta['Y_STEP'])
+            lon_step = float(self.lut_meta['X_STEP'])
+            lat_num = int(self.lut_meta['LENGTH'])
+            lon_num = int(self.lut_meta['WIDTH'])
+            lat0 = float(self.lut_meta['Y_FIRST']) + lat_step * 0.5
+            lon0 = float(self.lut_meta['X_FIRST']) + lon_step * 0.5
 
-            # laloStep
-            if self.laloStep is None:
-                self.laloStep = (lat_step, lon_step)
+            ## lalo_step
+            if self.lalo_step is None:
+                self.lalo_step = (lat_step, lon_step)
             else:
-                self.laloStep = (abs(self.laloStep[0]) * -1.,
-                                 abs(self.laloStep[1]) * 1.)
-            print('output pixel size in (lat, lon) in degree: {}'.format(self.laloStep))
+                self.lalo_step = (abs(self.lalo_step[0]) * -1.,
+                                  abs(self.lalo_step[1]) * 1.)
+            print('output pixel size in (lat, lon) in degree: {}'.format(self.lalo_step))
 
-            # SNWE
+            ## SNWE at pixel outer boundary
             if self.SNWE is None:
-                self.SNWE = (lat0 + lat_step * (lat_num - 1),
-                             lat0,
-                             lon0,
-                             lon0 + lon_step * (lon_num - 1))
-            dest_box = (int((self.SNWE[2] - lon0) / lon_step + 0.5),
-                        int((self.SNWE[1] - lat0) / lat_step + 0.5),
-                        int((self.SNWE[3] - lon0) / lon_step + 0.5) + 1,
-                        int((self.SNWE[0] - lat0) / lat_step + 0.5) + 1)
-            self.SNWE = (lat0 + lat_step * (dest_box[3] - 1),
-                         lat0 + lat_step * dest_box[1],
-                         lon0 + lon_step * dest_box[0],
-                         lon0 + lon_step * (dest_box[2] - 1))
-            print('output area extent in (S N W E) in degree: {}'.format(self.SNWE))
+                self.SNWE = (lat0 + lat_step * (lat_num - 0.5),
+                             lat0 - lat_step * 0.5,
+                             lon0 - lon_step * 0.5,
+                             lon0 + lon_step * (lon_num - 0.5))
+            # SNWE --> dest_box
+            dest_box = (int(np.rint((self.SNWE[2] + lat_step * 0.5 - lon0) / lon_step)),  # x0 - W
+                        int(np.rint((self.SNWE[1] + lat_step * 0.5 - lat0) / lat_step)),  # y0 - N
+                        int(np.rint((self.SNWE[3] + lon_step * 0.5 - lon0) / lon_step)),  # x1 - E
+                        int(np.rint((self.SNWE[0] + lat_step * 0.5 - lat0) / lat_step)))  # y1 - S
+            dest_box = (max(dest_box[0], 0),
+                        max(dest_box[1], 0),
+                        min(dest_box[2], lon_num),
+                        min(dest_box[3], lat_num))
+            # dest_box --> SNWE
+            # adjust SNWE to precisely align with lookup table in geo-coord, based on dest_box,
+            # including the starting coordinates (N, W).
+            # This is different/disadvantage from the procedure for lookup table in radar-coord
+            self.SNWE = (lat0 + lat_step * (dest_box[3] - 0.5),
+                         lat0 + lat_step * (dest_box[1] - 0.5),
+                         lon0 + lon_step * (dest_box[0] - 0.5),
+                         lon0 + lon_step * (dest_box[2] - 0.5))
+            print('output area extent in (S, N, W, E) in degree: {}'.format(self.SNWE))
 
-            # src_y/x
-            length = int(self.src_metadata['LENGTH'])
-            width = int(self.src_metadata['WIDTH'])
-            src_y, src_x = np.mgrid[0:length-1:length*1j,
-                                    0:width-1:width*1j]
+            # src_y/x at pixel center
+            length = int(self.src_meta['LENGTH'])
+            width = int(self.src_meta['WIDTH'])
+            src_y, src_x = np.mgrid[0.5:length-0.5:length*1j,
+                                    0.5:width-0.5:width*1j]
 
-            # dest_y/x
-            dest_y = readfile.read(self.file, datasetName='azimuthCoord', box=dest_box)[0]
-            dest_x = readfile.read(self.file, datasetName='rangeCoord', box=dest_box)[0]
-            if 'SUBSET_XMIN' in self.src_metadata.keys():
+            # dest_y/x at pixel center
+            dest_y = readfile.read(self.lut_file, datasetName='azimuthCoord', box=dest_box)[0]
+            dest_x = readfile.read(self.lut_file, datasetName='rangeCoord', box=dest_box)[0]
+            if 'SUBSET_XMIN' in self.src_meta.keys():
                 print('input data file was cropped before.')
-                dest_y[dest_y != 0.] -= float(self.src_metadata['SUBSET_YMIN'])
-                dest_x[dest_x != 0.] -= float(self.src_metadata['SUBSET_XMIN'])
+                dest_y[dest_y != 0.] -= float(self.src_meta['SUBSET_YMIN'])
+                dest_x[dest_x != 0.] -= float(self.src_meta['SUBSET_XMIN'])
 
             # Convert y/x to lat/lon to be able to use pyresample.geometryDefinition
             commMask = np.multiply(np.multiply(dest_y > 0, dest_y < length),
@@ -353,6 +396,7 @@ class resample:
                         self.SNWE[2] + lon_step * np.max(idx_col))
             laloScale = ((commSNWE[0] - commSNWE[1]) / length,
                          (commSNWE[3] - commSNWE[2]) / width)
+
             src_lat, src_lon = project_yx2lalo(src_y, src_x, commSNWE, laloScale)
             dest_y[dest_y == 0.] = np.nan
             dest_x[dest_x == 0.] = np.nan
@@ -362,17 +406,19 @@ class resample:
             self.src_def = pr.geometry.GridDefinition(lons=src_lon, lats=src_lat)
             self.dest_def = pr.geometry.SwathDefinition(lons=dest_lon, lats=dest_lat)
 
-        # geo2radar
+        # geo2radar [not finished]
         else:
+            raise ValueError('geo2radar with lookup table in geo-coord it NOT supported yet!')
+
             # provide dest_lat/dest_lon to get dest_x, dest_y
-            dest_y_lt = readfile.read(self.file, datasetName='azimuthCoord', box=dest_box)[0]
-            dest_x_lt = readfile.read(self.file, datasetName='rangeCoord', box=dest_box)[0]
+            dest_y_lt = readfile.read(self.lut_file, datasetName='azimuthCoord', box=dest_box)[0]
+            dest_x_lt = readfile.read(self.lut_file, datasetName='rangeCoord', box=dest_box)[0]
 
             # please check this is right, I am not sure what self is. Just copy the above code
-            lat0 = float(self.lut_metadata['Y_FIRST'])
-            lon0 = float(self.lut_metadata['X_FIRST'])
-            lat_step = float(self.lut_metadata['Y_STEP'])
-            lon_step = float(self.lut_metadata['X_STEP'])
+            lat0 = float(self.lut_meta['Y_FIRST'])
+            lon0 = float(self.lut_meta['X_FIRST'])
+            lat_step = float(self.lut_meta['Y_STEP'])
+            lon_step = float(self.lut_meta['X_STEP'])
 
             yy = int((dest_lat - lat0)/lat_step)
             xx = int((dest_lon - lon0)/lon_step)
@@ -398,8 +444,8 @@ class resample:
         earth_radius = 6371.0e3
         # Get lat/lon resolution/step in meter
         lat_c = np.nanmean(self.dest_def.lats)
-        lat_step = self.laloStep[1] * np.pi/180.0 * earth_radius
-        lon_step = self.laloStep[0] * np.pi/180.0 * earth_radius * np.cos(lat_c * np.pi/180)
+        lat_step = self.lalo_step[1] * np.pi/180.0 * earth_radius
+        lon_step = self.lalo_step[0] * np.pi/180.0 * earth_radius * np.cos(lat_c * np.pi/180)
         radius = np.max(np.abs([lat_step, lon_step])) * ratio
         return radius
 
@@ -425,7 +471,7 @@ class resample:
         """
         if not radius:
             # geo2radar
-            if 'Y_FIRST' in self.src_metadata.keys():
+            if 'Y_FIRST' in self.src_meta.keys():
                 radius = 100e3
             # radar2geo
             else:
@@ -446,8 +492,8 @@ class resample:
 
         if interp_method.startswith('near'):
             if print_msg:
-                msg = 'nearest resampling with kd_tree '
-                msg += 'using {} processor cores in {} segments ...'.format(nprocs, num_segment)
+                msg = '{} resampling with pyresample.kd_tree '.format(interp_method)
+                msg += 'using {} CPU cores in {} segments ...'.format(nprocs, num_segment)
                 print(msg)
             dest_data = pr.kd_tree.resample_nearest(self.src_def,
                                                     src_data,
@@ -460,7 +506,9 @@ class resample:
 
         elif interp_method.endswith('linear'):
             if print_msg:
-                print('bilinear resampling using {} processor cores ...'.format(nprocs))
+                msg = '{} resampling with pyresample.bilinear '.format(interp_method)
+                msg += 'using {} CPU cores ...'.format(nprocs)
+                print(msg)
             dest_data = pr.bilinear.resample_bilinear(src_data,
                                                       self.src_def,
                                                       self.dest_def,
