@@ -9,7 +9,7 @@
 import os
 import sys
 from mintpy.utils import readfile, writefile, utils as ut
-import mintpy.info as info
+from mintpy import info
 
 
 ################################################################################

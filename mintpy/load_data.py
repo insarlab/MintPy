@@ -773,7 +773,4 @@ def main(iargs=None):
 
 #################################################################
 if __name__ == '__main__':
-    """
-    loading a stack of InSAR pairs to and HDF5 file
-    """
-    main()
+    main(sys.argv[1:])

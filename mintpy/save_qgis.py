@@ -45,6 +45,7 @@ def cmd_line_parse(iargs=None):
     return parser.parse_args(iargs)
 
 
+#################################################################
 def add_metadata(feature, location, attrs):
     '''
     Create one point in compatible shape format.
@@ -249,6 +250,7 @@ def write_shape_file(fDict, shp_file, box=None):
     return shp_file
 
 
+#################################################################
 def main(iargs=None):
     '''Main driver
     '''
@@ -272,7 +274,6 @@ def main(iargs=None):
     return inps.shp_file
 
 
+#################################################################
 if __name__ == '__main__':
-    ''' 
-    '''
     main(sys.argv[1:])

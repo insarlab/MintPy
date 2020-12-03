@@ -7,6 +7,7 @@
 
 
 import os
+import sys
 import argparse
 from lxml import objectify
 from mintpy.utils import readfile, utils as ut
@@ -150,5 +151,4 @@ def main(iargs=None):
 
 ###################################################################################################
 if __name__ == '__main__':
-    main()
-
+    main(sys.argv[1:])

@@ -8,6 +8,7 @@
 
 import os
 import re
+import sys
 import subprocess
 try:
     import pyaps as pa
@@ -518,4 +519,4 @@ def main(iargs=None):
 
 ###############################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

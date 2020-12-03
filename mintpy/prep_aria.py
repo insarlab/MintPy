@@ -7,6 +7,7 @@
 
 
 import os
+import sys
 import time
 import glob
 import argparse
@@ -129,6 +130,8 @@ def cmd_line_parse(iargs = None):
     ds_keys = [key for key in list(iDict.keys()) if key.endswith('File')]
     required_ds_keys = ['unwFile', 'corFile', 'demFile', 'incAngleFile']
 
+    print('search input data file info:')
+    max_digit = max([len(i) for i in ds_keys])
     for key in ds_keys:
         fname = iDict[key]
 
@@ -141,10 +144,14 @@ def cmd_line_parse(iargs = None):
         # user the first element if more than one exist
         if len(fnames) > 0:
             iDict[key] = fnames[0]
+            print('{k:<{w}} : {f}'.format(k=key, w=max_digit, f=fnames[0]))
 
         elif key in required_ds_keys:
             # raise exception if any required DS is missing
             raise SystemExit('ERROR: no file found for {} in input path: "{}"!'.format(key, iDict[key]))
+
+        else:
+            iDict[key] = None
 
     return inps
 
@@ -600,4 +607,4 @@ def main(iargs=None):
 
 ####################################################################################
 if __name__=="__main__":
-    main()
+    main(sys.argv[1:])

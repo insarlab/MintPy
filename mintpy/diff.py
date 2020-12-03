@@ -5,7 +5,9 @@
 # Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 ############################################################
 
+
 import os
+import sys
 import time
 import argparse
 import numpy as np
@@ -267,4 +269,4 @@ def main(iargs=None):
 
 #####################################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

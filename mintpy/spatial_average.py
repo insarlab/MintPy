@@ -6,6 +6,7 @@
 ############################################################
 
 
+import sys
 import argparse
 import matplotlib.pyplot as plt
 from mintpy.utils import readfile, ptime, utils as ut, plot as pp
@@ -64,4 +65,4 @@ def main(iargs=None):
 
 ##############################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

@@ -7,6 +7,7 @@
 
 
 import os
+import sys
 import shutil
 import argparse
 from mintpy.utils import readfile, writefile, utils as ut
@@ -128,4 +129,4 @@ def main(iargs=None):
 
 ###################################################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

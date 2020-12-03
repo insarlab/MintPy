@@ -5,29 +5,32 @@
 # Author: Yunmeng Cao, Jul 2019                            #
 ############################################################
 
+
 import os
 import sys
 import argparse
-
 import h5py
 import numpy as np
-from mintpy.utils import readfile #, ptime
-
+from mintpy.utils import readfile
 from scipy.interpolate import griddata
 #from scipy.interpolate import RegularGridInterpolator as RGI
 
-from tqdm import tqdm
-from concurrent.futures import ProcessPoolExecutor, as_completed
+try:
+    from tqdm import tqdm
+except ImportError:
+    raise ImportError('Can not import tqdm!')
+
+try
+    from concurrent.futures import ProcessPoolExecutor, as_completed
+except ImportError:
+    raise ImportError('Can not import concurrent!')
 
 
 INTRODUCTION = '''
-
 Convert lookup-table in geo-coordinates (GAMMA, ROI_PAC) into the one in radar-coordinates (ISCE) using scipy.interpolate.griddata
-
 '''
 
 EXAMPLE = '''examples:
-
     lookup_geo2radar.py geometryGeo.h5 
     lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5 
     lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5 --parallel 4
@@ -152,7 +155,7 @@ def function(data0):
         return grid_lat0, grid_lon0
 
     
-def cmd_line_parse():
+def cmd_line_parse(iargs=None):
     parser = argparse.ArgumentParser(description='Convert geo-coord lookup table (GAMMA, ROI_PAC) into radar-coord (ISCE)',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=INTRODUCTION+'\n'+EXAMPLE)
@@ -162,16 +165,16 @@ def cmd_line_parse():
                       help='update geometryRadar.h5 file by adding the radar-coordinates based lookup-table.')
     parser.add_argument('--parallel', dest='parallelNumb', type=int, metavar='NUM',default = 1,
                       help='Enable parallel processing and specify the the used processor number.[default: 1]')
-    
-    inps = parser.parse_args()
+
+    inps = parser.parse_args(args=iargs)
 
     return inps
-################################################################################    
+
+
+################################################################################        
+def main(iargs=None):
     
-    
-def main(argv):
-    
-    inps = cmd_line_parse() 
+    inps = cmd_line_parse(iargs) 
     geom = inps.geometryGeo
     rangeCoord = readfile.read(geom,datasetName = 'rangeCoord')[0]
     azimuthCoord = readfile.read(geom,datasetName = 'azimuthCoord')[0]

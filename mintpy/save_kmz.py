@@ -6,18 +6,21 @@
 ############################################################
 
 
-try:
-    from pykml.factory import KML_ElementMaker as KML
-except ImportError:
-    raise ImportError('Can not import pykml!')
 
 import os
+import sys
 import argparse
 import numpy as np
 from lxml import etree
 from zipfile import ZipFile
 import matplotlib as mpl
 from matplotlib import pyplot as plt
+
+try:
+    from pykml.factory import KML_ElementMaker as KML
+except ImportError:
+    raise ImportError('Can not import pykml!')
+
 from mintpy.objects import timeseriesKeyNames
 from mintpy.utils import readfile, utils as ut, plot as pp
 
@@ -339,4 +342,4 @@ def main(iargs=None):
 
 #######################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

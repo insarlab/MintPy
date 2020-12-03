@@ -7,17 +7,21 @@
 
 
 import os
+import sys
 import argparse
 import h5py
 import numpy as np
 from matplotlib import pyplot as plt, dates as mdates
+
 from mintpy.objects import ifgramStack
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import (ptime,
-                          readfile,
-                          utils as ut,
-                          network as pnet,
-                          plot as pp)
+from mintpy.utils import (
+    ptime,
+    readfile,
+    utils as ut,
+    network as pnet,
+    plot as pp,
+)
 
 
 ###############################  Usage  ################################
@@ -469,4 +473,4 @@ def main(iargs=None):
 
 ########################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
