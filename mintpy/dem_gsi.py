@@ -7,6 +7,7 @@
 
 
 import os
+import sys
 import glob
 import argparse
 import numpy as np
@@ -266,5 +267,4 @@ def main(iargs=None):
 
 ###################################################################################################
 if __name__ == '__main__':
-    main()
-
+    main(sys.argv[1:])

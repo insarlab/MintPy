@@ -99,7 +99,7 @@ mintpy.load.lookupXFile    = None
 mintpy.load.incAngleFile   = ../incidenceAngle/*.vrt
 mintpy.load.azAngleFile    = ../azimuthAngle/*.vrt
 mintpy.load.shadowMaskFile = None
-mintpy.load.waterMaskFile  = ../mask/water*.msk
+mintpy.load.waterMaskFile  = ../mask/watermask.msk
 '''
 
 

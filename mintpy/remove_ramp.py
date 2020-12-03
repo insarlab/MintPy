@@ -7,6 +7,7 @@
 
 
 import os
+import sys
 import argparse
 import warnings
 from mintpy.objects import RAMP_LIST
@@ -127,4 +128,4 @@ def main(iargs=None):
 
 ###########################################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

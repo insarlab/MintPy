@@ -7,6 +7,7 @@
 
 
 import os
+import sys
 import time
 import argparse
 import h5py
@@ -633,4 +634,4 @@ def main(iargs=None):
 
 ################################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

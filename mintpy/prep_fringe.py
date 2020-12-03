@@ -70,7 +70,7 @@ def create_parser():
     return parser
 
 
-def cmd_line_parse(iargs = None):
+def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 

@@ -7,15 +7,19 @@
 
 
 import os
+import sys
 import argparse
 import h5py
 import numpy as np
+
 from mintpy.utils import readfile, ptime
-from mintpy.objects import (giantIfgramStack, 
-                            giantTimeseries, 
-                            ifgramStack, 
-                            timeseries, 
-                            HDFEOS)
+from mintpy.objects import (
+    giantIfgramStack, 
+    giantTimeseries, 
+    ifgramStack, 
+    timeseries, 
+    HDFEOS,
+)
 
 
 ############################################################
@@ -323,4 +327,4 @@ def main(iargs=None):
 
 ############################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

@@ -5,12 +5,9 @@
 # Author: Joshua Zahner, Zhang Yunjun, 2018                #
 ############################################################
 
-try:
-    from pykml.factory import KML_ElementMaker as KML
-except ImportError:
-    raise ImportError('Can not import pykml!')
 
 import os
+import sys
 import argparse
 from lxml import etree
 from zipfile import ZipFile
@@ -19,6 +16,12 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
+
+try:
+    from pykml.factory import KML_ElementMaker as KML
+except ImportError:
+    raise ImportError('Can not import pykml!')
+
 from mintpy.objects import timeseries, deramp
 from mintpy.utils import readfile, plot, utils as ut
 from mintpy.save_kmz import generate_cbar_element
@@ -667,4 +670,4 @@ def main(iargs=None):
 
 ######################################################################################
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

@@ -7,6 +7,7 @@
 
 
 import os
+import sys
 import argparse
 import numpy as np
 from osgeo import gdal, ogr, osr
@@ -60,6 +61,7 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
+##############################################################################
 def array2raster(array, rasterName, rasterFormat, rasterOrigin, xStep, yStep):
 
     # transform info
@@ -93,6 +95,7 @@ def array2raster(array, rasterName, rasterFormat, rasterOrigin, xStep, yStep):
     return rasterName
 
 
+##############################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
@@ -130,6 +133,6 @@ def main(iargs=None):
     return
 
 
+##############################################################################
 if __name__ == "__main__":
-    main()
-
+    main(sys.argv[1:])
