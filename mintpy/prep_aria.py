@@ -534,6 +534,8 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, box=None):
 ####################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
+    start_time = time.time()
+
     if inps.updateMode:
         print('update mode: ON')
     else:
@@ -602,6 +604,11 @@ def main(iargs=None):
                        box=box)
 
     print('-'*50)
+
+    # time info
+    m, s = divmod(time.time()-start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+
     return inps.outfile
 
 

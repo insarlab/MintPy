@@ -172,7 +172,7 @@ def run_or_skip(inps):
 
 ##########################################################################################
 def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None, dsName='unwrapPhase',
-                                                    out_file=None, step=50, update_mode=True):
+                                                    out_file=None, max_memory=4, update_mode=True):
     """Calculate the number of triplets with non-zero integer ambiguity of closure phase.
 
     T_int as shown in equation (8-9) and inline in Yunjun et al. (2019, CAGEO).
@@ -181,7 +181,6 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
                 mask_file   - str, path of mask file
                 dsName      - str, unwrapped phase dataset name used to calculate the closure phase
                 out_file    - str, custom output filename
-                step        - int, number of row in each block to calculate T_int
                 update_mode - bool
     Returns:    out_file    - str, custom output filename
     Example:    calc_num_triplet_with_nonzero_integer_ambiguity('inputs/ifgramStack.h5', mask_file='waterMask.h5')
@@ -244,6 +243,9 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
         print('get design matrix for the interferogram triplets in size of {}'.format(C.shape))
 
     # calculate number of nonzero closure phase
+    ds_size = (C.shape[0] * 2 + C.shape[1]) * length * width * 4
+    num_loop = int(np.ceil(ds_size * 2 / (max_memory * 1024**3)))
+    step = int(np.rint(length / num_loop / 10) * 10)
     num_loop = int(np.ceil(length / step))
     num_nonzero_closure = np.zeros((length, width), dtype=np.float32)
     msg = 'calcualting the number of triplets with non-zero integer ambiguity of closure phase ...'

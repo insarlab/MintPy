@@ -1016,10 +1016,15 @@ class TimeSeriesAnalysis:
 
     def plot_result(self, print_aux=True, plot=True):
         """Plot data files and save to figures in pic folder"""
+        start_time = time.time()
         if self.template['mintpy.plot'] and plot:
             print('\n******************** plot & save to pic ********************')
             print(self.plot_sh_cmd)
             subprocess.Popen(self.plot_sh_cmd, shell=True).wait()
+
+            # time info
+            m, s = divmod(time.time()-start_time, 60)
+            print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
 
         # message for more visualization scripts
         msg = """Explore more info & visualization options with the following scripts:

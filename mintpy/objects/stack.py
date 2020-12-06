@@ -1032,7 +1032,7 @@ class ifgramStack:
             prog_bar.close()
         return mask
 
-    def temporal_average(self, datasetName='coherence', dropIfgram=True, row_step=-1):
+    def temporal_average(self, datasetName='coherence', dropIfgram=True, max_memory=4):
         self.open(print_msg=False)
         if datasetName is None:
             datasetName = 'coherence'
@@ -1064,11 +1064,10 @@ class ifgramStack:
                 ref_val = dset[ifgram_flag, self.refY, self.refX]
 
             # get step size and number
-            if row_step == -1:
-                num_step = int(np.ceil(np.sum(ifgram_flag) * self.length * self.width / 2e8))
-                row_step = int(np.ceil(self.length / num_step))
-                row_step = round(row_step, -1 * int(np.floor(np.log10(abs(row_step))))) # round to 1
-            num_step = np.ceil(self.length / row_step).astype(int)
+            ds_size = np.sum(ifgram_flag) * self.length * self.width * 4
+            num_step = int(np.ceil(ds_size * 3 / (max_memory * 1024**3)))
+            row_step = int(np.rint(self.length / num_step / 10) * 10)
+            num_step = int(np.ceil(self.length / row_step))
 
             # calculate lines by lines
             dmean = np.zeros(dset.shape[1:3], dtype=np.float32)

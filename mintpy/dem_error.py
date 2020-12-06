@@ -564,8 +564,7 @@ def correct_dem_error(inps):
             num_epoch += num_date
 
     # split in row/line direction based on the input memory limit
-    scale_factor = 2.0
-    num_box = int(np.ceil((num_epoch * length * width * 4) * scale_factor / (inps.maxMemory * 1024**3)))
+    num_box = int(np.ceil((num_epoch * length * width * 4) * 2.5 / (inps.maxMemory * 1024**3)))
     box_list = cluster.split_box2sub_boxes(box=(0, 0, width, length),
                                            num_split=num_box,
                                            dimension='y')
