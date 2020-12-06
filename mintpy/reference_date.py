@@ -17,7 +17,7 @@ import numpy as np
 from mintpy.objects import timeseries
 from mintpy.objects.cluster import split_box2sub_boxes
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import readfile, writefile, ptime, utils as ut
+from mintpy.utils import arg_group, readfile, writefile, ptime, utils as ut
 
 
 ##################################################################
@@ -45,9 +45,8 @@ def create_parser():
     parser.add_argument('-o', '--outfile', help='Output file name.')
 
     # computing
-    parser.add_argument('--ram', '--memory', dest='memorySize', type=float, default=2,
-                        help='Max amount of memory in GB to use (default: %(default)s).\n' +
-                             'Adjust according to your computer memory.')
+    parser = arg_group.add_memory_argument(parser)
+
     return parser
 
 
@@ -73,9 +72,9 @@ def read_template2inps(templateFile, inps=None):
     if key in template.keys() and template[key]:
         inps.refDate = template[key]
 
-    key = 'mintpy.compute.memorySize'
+    key = 'mintpy.compute.maxMemory'
     if key in template.keys() and template[key]:
-        inps.memorySize = float(template[key])
+        inps.maxMemory = float(template[key])
 
     return inps
 
@@ -109,7 +108,7 @@ def read_ref_date(inps):
 
 
 ##################################################################
-def change_timeseries_ref_date(ts_file, ref_date, outfile=None, memorySize=2.0):
+def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0):
     """Change input file reference date to a different one.
     Parameters: ts_file : str, timeseries file to be changed
                 ref_date : str, date in YYYYMMDD format
@@ -146,7 +145,7 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, memorySize=2.0):
     ref_idx = obj.dateList.index(ref_date)
 
     # get list of boxes for block-by-block IO
-    num_box = int(np.ceil((num_date * length * width * 4 * 2) / (memorySize * 1024**3)))
+    num_box = int(np.ceil((num_date * length * width * 4 * 2) / (max_memory * 1024**3)))
     box_list = split_box2sub_boxes(box=(0, 0, width, length),
                                    num_split=num_box,
                                    dimension='y',
@@ -210,7 +209,7 @@ def main(iargs=None):
             change_timeseries_ref_date(ts_file,
                                        ref_date=inps.refDate,
                                        outfile=inps.outfile,
-                                       memorySize=inps.memorySize)
+                                       max_memory=inps.maxMemory)
 
             #to distinguish the modification time of input files
             time.sleep(1)

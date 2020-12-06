@@ -15,7 +15,7 @@ import numpy as np
 from scipy import linalg
 from mintpy.objects import timeseries, geometry, cluster
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import ptime, readfile, writefile, utils as ut
+from mintpy.utils import arg_group, ptime, readfile, writefile, utils as ut
 
 
 # key configuration parameter name
@@ -88,9 +88,8 @@ def create_parser():
                              'and newer than input interferograms file\n' +
                              '2) all configuration parameters are the same.')
     # computing
-    parser.add_argument('-r', '--ram', '--memory', dest='memorySize', type=float, default=2,
-                        help='Max amount of memory in GB to use (default: %(default)s).\n' +
-                             'Adjust according to your computer memory.')
+    parser = arg_group.add_memory_argument(parser)
+    parser = arg_group.add_parallel_argument(parser)
 
     return parser
 
@@ -192,8 +191,12 @@ def read_template2inps(template_file, inps=None):
     keyList = [i for i in list(iDict.keys()) if dask_key_prefix+i in template.keys()]
     for key in keyList:
         value = template[dask_key_prefix+key]
-        if value:
-            if key in ['memorySize']:
+        if key in ['cluster', 'config']:
+            iDict[key] = value
+        elif value:
+            if key in ['numWorker']:
+                iDict[key] = str(value)
+            elif key in ['maxMemory']:
                 iDict[key] = float(value)
 
     return inps
@@ -562,7 +565,7 @@ def correct_dem_error(inps):
 
     # split in row/line direction based on the input memory limit
     scale_factor = 2.0
-    num_box = int(np.ceil((num_epoch * length * width * 4) * scale_factor / (inps.memorySize * 1024**3)))
+    num_box = int(np.ceil((num_epoch * length * width * 4) * scale_factor / (inps.maxMemory * 1024**3)))
     box_list = cluster.split_box2sub_boxes(box=(0, 0, width, length),
                                            num_split=num_box,
                                            dimension='y')
