@@ -116,10 +116,7 @@ def create_parser():
                       help='minimum redundancy of interferograms for every SAR acquisition. (default: %(default)s).')
 
     # computing
-    parser.add_argument('-r', '--ram', '--memory', dest='memorySize', type=float, default=2,
-                        help='Max amount of memory in GB to use (default: %(default)s).\n' +
-                             'Adjust according to your computer memory.')
-
+    parser = arg_group.add_memory_argument(parser)
     parser = arg_group.add_parallel_argument(parser)
 
     # update / skip
@@ -213,7 +210,7 @@ def read_template2inps(template_file, inps):
         if key in ['weightFunc', 'maskDataset', 'minNormVelocity']:
             iDict[key] = value
         elif value:
-            if key in ['maskThreshold', 'minRedundancy', 'memorySize']:
+            if key in ['maskThreshold', 'minRedundancy']:
                 iDict[key] = float(value)
             elif key in ['residualNorm', 'waterMaskFile']:
                 iDict[key] = value
@@ -228,7 +225,7 @@ def read_template2inps(template_file, inps):
         elif value:
             if key in ['numWorker']:
                 iDict[key] = str(value)
-            elif key in ['memorySize']:
+            elif key in ['maxMemory']:
                 iDict[key] = float(value)
 
     # False/None --> 'no'
@@ -507,10 +504,10 @@ def write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg=None,
     return
 
 
-def split2boxes(ifgram_file, memory_size=4, print_msg=True):
+def split2boxes(ifgram_file, max_memory=4, print_msg=True):
     """Split into chunks in rows to reduce memory usage
     Parameters: dataset_shape - tuple of 3 int
-                memory_size   - float, max memory to use in GB
+                max_memory    - float, max memory to use in GB
                 print_msg     - bool
     Returns:    box_list      - list of tuple of 4 int
                 num_box       - int, number of boxes
@@ -523,14 +520,14 @@ def split2boxes(ifgram_file, memory_size=4, print_msg=True):
     length, width = ifg_obj.length, ifg_obj.width
 
     # split in lines based on the input memory limit
-    y_step = (memory_size * (1e3**3)) / (num_epoch * width * 4)
+    y_step = (max_memory * (1e3**3)) / (num_epoch * width * 4)
 
     # calibrate based on experience
     y_step = int(ut.round_to_1(y_step * 0.6))
 
     num_box = int((length - 1) / y_step) + 1
     if print_msg and num_box > 1:
-        print('maximum memory size: %.1E GB' % memory_size)
+        print('maximum memory size: %.1E GB' % max_memory)
         print('split %d lines into %d patches for processing' % (length, num_box))
         print('    with each patch up to %d lines' % y_step)
 
@@ -1052,7 +1049,7 @@ def ifgram_inversion(inps=None):
     ## 3. run the inversion / estimation and write to disk
 
     # 3.1 split ifgram_file into blocks to save memory
-    box_list, num_box = split2boxes(inps.ifgramStackFile, memory_size=inps.memorySize)
+    box_list, num_box = split2boxes(inps.ifgramStackFile, max_memory=inps.maxMemory)
 
     # 3.2 prepare the input arguments for *_patch()
     data_kwargs = {

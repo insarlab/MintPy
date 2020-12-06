@@ -232,6 +232,14 @@ def add_map_argument(parser):
     return parser
 
 
+def add_memory_argument(parser):
+    """Argument parser for memory usage options"""
+    parser.add_argument('--ram', '--memory', dest='maxMemory', type=float, default=4.0,
+                        help='Max amount of memory in GB to use (default: %(default)s).\n' +
+                             'Adjust according to your computer memory.')
+    return parser
+
+
 def add_parallel_argument(parser):
     """Argument group parser for parallel computing options"""
     from mintpy.objects.cluster import CLUSTER_LIST

@@ -18,7 +18,7 @@ from scipy import linalg
 
 from mintpy.objects import timeseries, giantTimeseries, HDFEOS, cluster
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import readfile, writefile, ptime, utils as ut
+from mintpy.utils import arg_group, readfile, writefile, ptime, utils as ut
 
 
 dataType = np.float32
@@ -118,9 +118,7 @@ def create_parser():
                            help='number of iterations for bootstrapping (default: %(default)s).')
 
     # computing
-    parser.add_argument('--ram', '--memory', dest='memorySize', type=float, default=2,
-                        help='Max amount of memory in GB to use (default: %(default)s).\n' +
-                             'Adjust according to your computer memory.')
+    parser = arg_group.add_memory_argument(parser)
 
     return parser
 
@@ -143,6 +141,9 @@ def cmd_line_parse(iargs=None):
         print('bootstrapping is turned ON.')
         if (inps.polynomial != 1 or inps.periodic or inps.step):
             raise ValueError('bootstrapping currently support polynomial ONLY and ONLY with the order of 1!')
+
+    if inps.template_file:
+        inps = read_template2inps(inps.template_file, inps)
 
     return inps
 
@@ -171,9 +172,9 @@ def read_template2inps(template_file, inps=None):
             elif key in ['bootstrapCount']:
                 iDict[key] = int(value)
 
-    key = 'mintpy.compute.memorySize'
+    key = 'mintpy.compute.maxMemory'
     if key in template.keys() and template[key]:
-        inps.memorySize = float(template[key])
+        inps.maxMemory = float(template[key])
 
     return inps
 
@@ -215,17 +216,13 @@ def read_exclude_date(inps, dateListAll):
     # Merge ex_date/startDate/endDate into ex_date
     yy_list_all = ptime.yyyymmdd2years(dateListAll)
     exDateList = []
-    # 1. template_file
-    if inps.template_file:
-        print('read option from template file: '+inps.template_file)
-        inps = read_template2inps(inps.template_file, inps)
 
-    # 2. ex_date
+    # ex_date
     exDateList += ptime.read_date_list(list(inps.excludeDate), date_list_all=dateListAll)
     if exDateList:
         print('exclude date:'+str(exDateList))
 
-    # 3. startDate
+    # startDate
     if inps.startDate:
         print('start date: '+inps.startDate)
         yy_min = ptime.yyyymmdd2years(ptime.yyyymmdd(inps.startDate))
@@ -235,7 +232,7 @@ def read_exclude_date(inps, dateListAll):
                 print('  remove date: '+date)
                 exDateList.append(date)
 
-    # 4. endDate
+    # endDate
     if inps.endDate:
         print('end date: '+inps.endDate)
         yy_max = ptime.yyyymmdd2years(ptime.yyyymmdd(inps.endDate))
@@ -383,7 +380,7 @@ def run_timeseries2time_func(inps):
     memoryAll = (num_date + num_param * 2 + 2) * length * width * 4 
     if inps.bootstrap:
         memoryAll += inps.bootstrapCount * num_param * length * width * 4
-    num_box = int(np.ceil(memoryAll * 3 / (inps.memorySize * 1024**3)))
+    num_box = int(np.ceil(memoryAll * 3 / (inps.maxMemory * 1024**3)))
     box_list = cluster.split_box2sub_boxes(box=(0, 0, width, length),
                                            num_split=num_box,
                                            dimension='y',
