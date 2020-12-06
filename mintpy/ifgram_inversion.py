@@ -515,17 +515,14 @@ def split2boxes(ifgram_file, max_memory=4, print_msg=True):
     ifg_obj = ifgramStack(ifgram_file)
     ifg_obj.open(print_msg=False)
 
-    # 1st dimension size: defo obs (phase / offset) + weight + time-series
-    num_epoch = ifg_obj.numIfgram * 2 + ifg_obj.numDate + 5
-    length, width = ifg_obj.length, ifg_obj.width
+    # dataset size: defo obs (phase / offset) + weight + time-series
+    length = ifg_obj.length
+    width = ifg_obj.width
+    ds_size = (ifg_obj.numIfgram * 2 + ifg_obj.numDate + 5) * length * width * 4
 
-    # split in lines based on the input memory limit
-    y_step = (max_memory * (1e3**3)) / (num_epoch * width * 4)
-
-    # calibrate based on experience
-    y_step = int(ut.round_to_1(y_step * 0.6))
-
-    num_box = int((length - 1) / y_step) + 1
+    num_box = int(np.ceil(ds_size * 1.5 / (max_memory * 1024**3)))
+    y_step = int(np.rint((length / num_box) / 10) * 10)
+    num_box = int(np.ceil(length / y_step))
     if print_msg and num_box > 1:
         print('maximum memory size: %.1E GB' % max_memory)
         print('split %d lines into %d patches for processing' % (length, num_box))

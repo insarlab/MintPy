@@ -9,6 +9,7 @@
 import os
 import sys
 import glob
+import time
 import argparse
 import warnings
 from mintpy.defaults import auto_path
@@ -720,6 +721,7 @@ def get_extra_metadata(inpsDict):
 #################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
+    start_time = time.time()
 
     # read input options
     inpsDict = read_inps2dict(inps)
@@ -767,6 +769,10 @@ def main(iargs=None):
                               access_mode='w',
                               box=boxGeo,
                               compression='lzf')
+
+    # time info
+    m, s = divmod(time.time()-start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
 
     return inps.outfile
 

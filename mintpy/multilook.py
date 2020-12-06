@@ -221,7 +221,7 @@ def multilook_attribute(atr_dict, lks_y, lks_x, box=None, print_msg=True):
     return atr
 
 
-def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=[0,0,0,0]):
+def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=[0,0,0,0], max_memory=4):
     """ Multilook input file
     Parameters: infile - str, path of input file to be multilooked.
                 lks_y  - int, number of looks in y / row direction.
@@ -276,11 +276,11 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=
         # split in Y/row direction for IO for HDF5 only
         if ext in ['.h5', '.he5']:
             # calc step size with memory usage up to 4 GB
-            max_memory = 4 * 1024**3
             with h5py.File(infile, 'r') as f:
                 ds = f[dsName]
-                row_size = np.prod(ds.shape) / width
-            row_step = int(ut.round_to_1(max_memory / (row_size * 4 * 4)))
+                ds_size = np.prod(ds.shape) * 4
+            num_step = int(np.ceil(ds_size * 4 / (max_memory * 1024**3)))
+            row_step = int(np.rint(length / num_step / 10) * 10)
             row_step = max(row_step, 10)
 
         else:

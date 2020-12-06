@@ -31,11 +31,6 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
     :return: sub_boxes: list(list(4 int)), the splited sub boxes
     """
 
-    def round_to_1(x):
-        """Return the most significant digit of input number"""
-        digit = int(np.floor(np.log10(abs(x))))
-        return round(x, -1*digit)
-
     dimension = dimension.lower()
     if num_split <= 1:
         return [box]
