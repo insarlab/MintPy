@@ -247,6 +247,8 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, compress
     }
     """
 
+    print('-'*50)
+
     # get meta from metadata and ref_file
     if metadata:
         meta = {key: value for key, value in metadata.items()}
@@ -295,7 +297,6 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, compress
     # create file
     f = h5py.File(fname, "w")
     if print_msg:
-        print('-'*50)
         print('create HDF5 file: {} with w mode'.format(fname))
 
     # initiate dataset
