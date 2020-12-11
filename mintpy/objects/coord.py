@@ -438,10 +438,10 @@ class coordinate:
         if sub_y[0] >= length or sub_y[1] <= 0 or sub_x[0] >= width or sub_x[1] <= 0:
             data_box = (0, 0, width, length)
             msg = 'ERROR: input index is out of data range!\n'
-            msg += '\tdata   range in x/y: {}\n'.format(data_box)
-            msg += '\tsubset range in x/y: {}\n'.format(pixel_box)
-            msg += '\tdata   range in lat/lon: {}\n'.format(self.box_pixel2geo(data_box))
-            msg += '\tsubset range in lat/lon: {}\n'.format(self.box_pixel2geo(pixel_box))
+            msg += '\tdata   range in (x0,y0,x1,y1): {}\n'.format(data_box)
+            msg += '\tsubset range in (x0,y0,x1,y1): {}\n'.format(pixel_box)
+            msg += '\tdata   range in (W, N, E, S): {}\n'.format(self.box_pixel2geo(data_box))
+            msg += '\tsubset range in (W, N, E, S): {}\n'.format(self.box_pixel2geo(pixel_box))
             raise ValueError(msg)
 
         # Check Y/Azimuth/Latitude subset range

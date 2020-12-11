@@ -364,10 +364,10 @@ def subset_file(fname, subset_dict_input, out_file=None):
 
     geo_box = coord.box_pixel2geo(pix_box)
     data_box = (0, 0, width, length)
-    print('data   range in y/x: '+str(data_box))
-    print('subset range in y/x: '+str(pix_box))
-    print('data   range in lat/lon: '+str(coord.box_pixel2geo(data_box)))
-    print('subset range in lat/lon: '+str(geo_box))
+    print('data   range in (x0,y0,x1,y1): {}'.format(data_box))
+    print('subset range in (x0,y0,x1,y1): {}'.format(pix_box))
+    print('data   range in (W, N, E, S): {}'.format(coord.box_pixel2geo(data_box)))
+    print('subset range in (W, N, E, S): {}'.format(geo_box))
 
     if pix_box == data_box:
         print('Subset range == data coverage, no need to subset. Skip.')

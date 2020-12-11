@@ -10,7 +10,8 @@ mintpy.load.demFile     = ../dem*/dem*.img
 mintpy.subset.lalo      = -33.10:-32.95, 17.98:18.13
 mintpy.reference.lalo   = -33, 18.05
 
-mintpy.networkInversion.weightFunc              = no
-mintpy.deramp                                   = linear
+mintpy.networkInversion.weightFunc  = no
+mintpy.troposphericDelay.method     = no
+mintpy.deramp                       = linear
 mintpy.topographicResidual.pixelwiseGeometry    = no
 

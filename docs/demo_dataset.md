@@ -66,11 +66,11 @@ Relevant literature:
 #### Sentinel-1 on Western Cape, South Africa with SNAP ####
 
 Area: West coast of Western Cape province, South Africa        
-Data: Sentinel-1 ascending track 29 during March - June 2019 (10 acquisitions; [Zenodo](https://zenodo.org/record/4127335))       
-Size: ~560 MB
+Data: Sentinel-1 ascending track 29 during March - June 2019 (10 acquisitions; [Zenodo](https://zenodo.org/record/4318134))       
+Size: ~520 MB
 
 ```bash
-wget https://zenodo.org/record/4127335/files/WCapeSenAT29.tar.xz
+wget https://zenodo.org/record/4318134/files/WCapeSenAT29.tar.xz
 tar -xvJf WCapeSenAT29.tar.xz
 cd WCapeSenAT29
 smallbaselineApp.py ${MINTPY_HOME}/mintpy/data/input_files/WCapeSenAT29.txt
