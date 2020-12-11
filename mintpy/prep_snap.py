@@ -271,14 +271,15 @@ def main(iargs=None):
             raise ValueError('input data file does not end with .img: {}'.format(img_file))
 
         # *.dim metadata file for the input *.img data file
+        # the map info from *.img.hdr file is NOT right, thus, not used.
         dim_file = os.path.dirname(img_file)[:-4]+'dim'
 
         # get metadata dict from *.dim file
         atr = extract_snap_metadata(dim_file)
 
         # write metadata dict to *.rsc file
-        rsc_file = os.path.splitext(img_file)[0]+'.rsc'
-        rsc_file = write_rsc(atr, out_file=rsc_file)
+        rsc_file = img_file + '.rsc'
+        write_rsc(atr, out_file=rsc_file)
 
     return
 

@@ -725,15 +725,18 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             atr['PROCESSOR'] = 'mintpy'
 
     else:
-        # potential file bases and extensions for metadata file given the data file
-        metafile_bases = [fname, os.path.splitext(fname)[0]]
-        metafile_exts = ['.rsc', '.xml', '.par', '.hdr', '.vrt', '.aux.xml']
-
-        # grab all existed metadata files in prefered order/priority defined above
-        metafiles = []
-        for metafile_base in metafile_bases:
-            metafiles += [metafile_base+i for i in metafile_exts if os.path.isfile(metafile_base+i)]
-
+        # grab all existed potential metadata file given the data file in prefered order/priority
+        # .aux.xml file does not have geo-coordinates info
+        # .vrt file (e.g. incLocal.rdr.vrt from isce) does not have band interleavee info
+        metafiles = [
+            fname + '.rsc',
+            fname + '.xml',
+            fname + '.par',
+            os.path.splitext(fname)[0] + '.hdr',
+            fname + '.vrt',
+            fname + '.aux.xml',
+        ]
+        metafiles = [i for i in metafiles if os.path.isfile(i)]
         if len(metafiles) == 0:
             raise FileNotFoundError('No metadata file found for data file: {}'.format(fname))
 
