@@ -18,7 +18,12 @@ import logging
 np_logger = logging.getLogger('numpy')
 np_logger.setLevel(logging.WARNING)
 
-from mintpy.utils import readfile, writefile, utils as ut
+from mintpy.utils import (
+    readfile,
+    writefile,
+    utils as ut,
+    attribute as attr,
+)
 
 
 ##################################################################################################
@@ -163,64 +168,6 @@ def multilook_data(data, lks_y, lks_x, method='average'):
     return coarse_data
 
 
-def multilook_attribute(atr_dict, lks_y, lks_x, box=None, print_msg=True):
-    # make a copy of original meta dict
-    atr = dict()
-    for key, value in iter(atr_dict.items()):
-        atr[key] = str(value)
-
-    if box is None:
-        box = (0, 0, int(atr['WIDTH']), int(atr['LENGTH']))
-    length, width = box[3] - box[1], box[2] - box[0]
-
-    length_mli = length // lks_y
-    width_mli = width // lks_x
-    print('output data in size: {}, {}'.format(length_mli, width_mli))
-
-    # Update attributes
-    atr['LENGTH'] = str(length_mli)
-    atr['WIDTH'] = str(width_mli)
-    atr['XMIN'] = str(box[0])
-    atr['YMIN'] = str(box[1])
-    atr['XMAX'] = str(width_mli - 1 + box[0])
-    atr['YMAX'] = str(length_mli - 1 + box[1])
-    atr['RLOOKS'] = str(int(atr.get('RLOOKS', '1')) * lks_x)
-    atr['ALOOKS'] = str(int(atr.get('ALOOKS', '1')) * lks_y)
-    if print_msg:
-        print('update LENGTH, WIDTH, Y/XMIN/MAX, A/RLOOKS')
-
-    if 'Y_STEP' in atr.keys():
-        atr['Y_STEP'] = str(lks_y * float(atr['Y_STEP']))
-        atr['X_STEP'] = str(lks_x * float(atr['X_STEP']))
-        if print_msg:
-            print('update Y/X_STEP')
-
-    if 'AZIMUTH_PIXEL_SIZE' in atr.keys():
-        atr['AZIMUTH_PIXEL_SIZE'] = str(lks_y * float(atr['AZIMUTH_PIXEL_SIZE']))
-        if print_msg:
-            print('update AZIMUTH_PIXEL_SIZE')
-
-    if 'RANGE_PIXEL_SIZE' in atr.keys():
-        atr['RANGE_PIXEL_SIZE'] = str(lks_x * float(atr['RANGE_PIXEL_SIZE']))
-        if print_msg:
-            print('update RANGE_PIXEL_SIZE')
-
-    if 'REF_Y' in atr.keys():
-        atr['REF_Y'] = str( (int(atr['REF_Y']) - box[1]) // lks_y )
-        atr['REF_X'] = str( (int(atr['REF_X']) - box[0]) // lks_x )
-        if print_msg:
-            print('update REF_Y/X')
-
-    if 'SUBSET_XMIN' in atr.keys():
-        atr['SUBSET_YMIN'] = str( (int(atr['SUBSET_YMIN']) - box[1]) // lks_y )
-        atr['SUBSET_YMAX'] = str( (int(atr['SUBSET_YMAX']) - box[1]) // lks_y )
-        atr['SUBSET_XMIN'] = str( (int(atr['SUBSET_XMIN']) - box[0]) // lks_x )
-        atr['SUBSET_XMAX'] = str( (int(atr['SUBSET_XMAX']) - box[0]) // lks_x )
-        if print_msg:
-            print('update SUBSET_XMIN/XMAX/YMIN/YMAX')
-    return atr
-
-
 def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=[0,0,0,0], max_memory=4):
     """ Multilook input file
     Parameters: infile - str, path of input file to be multilooked.
@@ -260,7 +207,7 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=
             outfile = os.path.basename(infile)
 
     # update metadata
-    atr = multilook_attribute(atr, lks_y, lks_x, box=box)
+    atr = attr.updatea_attribute4multilook(atr, lks_y, lks_x, box=box)
 
     if ext in ['.h5', '.he5']:
         writefile.layout_hdf5(outfile, metadata=atr, ref_file=infile)

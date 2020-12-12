@@ -20,7 +20,7 @@ except ImportError:
     raise ImportError('Can not import gdal [version>=3.0]!')
 
 from mintpy.objects import ifgramStack, geometry, sensor
-from mintpy.utils import ptime, readfile, writefile, utils as ut
+from mintpy.utils import ptime, readfile, writefile, utils as ut, attribute as attr
 from mintpy.subset import read_subset_template2box
 
 
@@ -272,7 +272,7 @@ def read_subset_box(template_file, meta):
     if pix_box is not None:
         # update metadata against the new bounding box
         print('input bounding box in yx: {}'.format(pix_box))
-        meta = ut.subset_attribute(meta, pix_box)
+        meta = attr.update_attribute4subset(meta, pix_box)
     else:
         # translate box of None to tuple of 4 int
         length, width = int(meta['LENGTH']), int(meta['WIDTH'])

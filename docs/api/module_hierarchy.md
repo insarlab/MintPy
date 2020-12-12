@@ -17,6 +17,7 @@ Hierarchy of sub-modules within MintPy. Level N modules depends on level N-1, N-
             l1
             l1regls
             lstl1
+        arg_group
         ptime
         utils0
     /simulation
@@ -46,6 +47,7 @@ Hierarchy of sub-modules within MintPy. Level N modules depends on level N-1, N-
     /simulation
         simulation    (objects/{stack},        utils/{ptime, network}, simulation/{fractal, decorrelation, defo_model})
     /utils
+        attribute     (objects/{coord},        utils/{readfile})
         utils1        (objects/{stack, ramp},  utils/{ptime, utils0, readfile, writefile})
 ------------------ level 5 --------------------
     /utils
