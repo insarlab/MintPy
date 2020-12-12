@@ -785,17 +785,22 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
         elif metafile.endswith('.hdr'):
             atr.update(read_envi_hdr(metafile))
 
-            fbase = os.path.basename(fname).lower()
-            if fbase.startswith('unw'):
-                atr['FILE_TYPE'] = '.unw'
-            elif fbase.startswith(('coh','cor')):
-                atr['FILE_TYPE'] = '.cor'
-            elif fbase.startswith('phase_ifg'):
-                atr['FILE_TYPE'] = '.int'
-            elif 'dem' in fbase:
-                atr['FILE_TYPE'] = 'dem'
+            # both snap and isce produce .hdr file
+            # grab file type based on their different naming conventions
+            if atr['PROCESSOR'] == 'snap':
+                fbase = os.path.basename(fname).lower()
+                if fbase.startswith('unw'):
+                    atr['FILE_TYPE'] = '.unw'
+                elif fbase.startswith(('coh','cor')):
+                    atr['FILE_TYPE'] = '.cor'
+                elif fbase.startswith('phase_ifg'):
+                    atr['FILE_TYPE'] = '.int'
+                elif 'dem' in fbase:
+                    atr['FILE_TYPE'] = 'dem'
+                else:
+                    atr['FILE_TYPE'] = atr['file type']
             else:
-                atr['FILE_TYPE'] = atr['file type']
+                atr['FILE_TYPE'] = fext
 
         elif metafile.endswith('.vrt'):
             atr.update(read_gdal_vrt(metafile))
@@ -871,7 +876,7 @@ def read_template(fname, delimiter='=', print_msg=True):
     plotAttributes = []
     # the below logic for plotattributes object can be made much more simple
     # if we assume that any plot attribute coming after a > belongs to the
-    # same object. Must Ask Falk and Yunjung if we can assume this to eliminate
+    # same object. Must Ask Falk and Yunjun if we can assume this to eliminate
     # all these conditionals
 
     if os.path.isfile(fname):
