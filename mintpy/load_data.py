@@ -136,17 +136,17 @@ def cmd_line_parse(iargs=None):
 
 #################################################################
 def read_inps2dict(inps):
-    """Read input Namespace object info into inpsDict
+    """Read input Namespace object info into iDict
 
-    It grab the following contents into inpsDict
+    It grab the following contents into iDict
     1. inps & all template files
-    2. configurations: processor, autoPath, updateMode, compression
+    2. configurations: processor, autoPath, updateMode, compression, x/ystep
     3. extra metadata: PLATFORM, PROJECT_NAME, 
     4. translate autoPath
     """
-    # Read input info into inpsDict
-    inpsDict = vars(inps)
-    inpsDict['PLATFORM'] = None
+    # Read input info into iDict
+    iDict = vars(inps)
+    iDict['PLATFORM'] = None
 
     # Read template file
     template = {}
@@ -155,7 +155,7 @@ def read_inps2dict(inps):
         temp = ut.check_template_auto_value(temp)
         template.update(temp)
     for key, value in template.items():
-        inpsDict[key] = value
+        iDict[key] = value
     if 'processor' in template.keys():
         template['mintpy.load.processor'] = template['processor']
 
@@ -164,54 +164,64 @@ def read_inps2dict(inps):
     for key in key_list:
         value = template[prefix+key]
         if key in ['processor', 'autoPath', 'updateMode', 'compression']:
-            inpsDict[key] = template[prefix+key]
+            iDict[key] = template[prefix+key]
+        elif key in ['xstep', 'ystep']:
+            iDict[key] = int(template[prefix+key])
         elif value:
-            inpsDict[prefix+key] = template[prefix+key]
-    print('processor : {}'.format(inpsDict['processor']))
+            iDict[prefix+key] = template[prefix+key]
+    print('processor : {}'.format(iDict['processor']))
 
-    if inpsDict['compression'] == False:
-        inpsDict['compression'] = None
+    if iDict['compression'] == False:
+        iDict['compression'] = None
+
+    iDict['xstep'] = iDict.get('xstep', 1)
+    iDict['ystep'] = iDict.get('ystep', 1)
 
     # PROJECT_NAME --> PLATFORM
-    if not inpsDict['PROJECT_NAME']:
+    if not iDict['PROJECT_NAME']:
         cfile = [i for i in list(inps.template_file) if os.path.basename(i) != 'smallbaselineApp.cfg']
-        inpsDict['PROJECT_NAME'] = sensor.project_name2sensor_name(cfile)[1]
+        iDict['PROJECT_NAME'] = sensor.project_name2sensor_name(cfile)[1]
 
     msg = 'SAR platform/sensor : '
-    sensor_name = sensor.project_name2sensor_name(str(inpsDict['PROJECT_NAME']))[0]
+    sensor_name = sensor.project_name2sensor_name(str(iDict['PROJECT_NAME']))[0]
     if sensor_name:
         msg += str(sensor_name)
-        inpsDict['PLATFORM'] = str(sensor_name)
+        iDict['PLATFORM'] = str(sensor_name)
     else:
-        msg += 'unknown from project name "{}"'.format(inpsDict['PROJECT_NAME'])
+        msg += 'unknown from project name "{}"'.format(iDict['PROJECT_NAME'])
     print(msg)
 
     # update file path with auto
-    if inpsDict.get('autoPath', False):
+    if iDict.get('autoPath', False):
         print('use auto path defined in mintpy.defaults.auto_path for options in auto')
-        inpsDict = auto_path.get_auto_path(processor=inpsDict['processor'],
-                                           work_dir=os.path.dirname(inpsDict['outdir']),
-                                           template=inpsDict)
-    return inpsDict
+        iDict = auto_path.get_auto_path(processor=iDict['processor'],
+                                        work_dir=os.path.dirname(iDict['outdir']),
+                                        template=iDict)
+    return iDict
 
 
-def read_subset_box(inpsDict):
+def read_subset_box(iDict):
+    """read the following items:
+    geocoded
+    box
+    box4geo_lut
+    """
     # Read subset info from template
-    inpsDict['box'] = None
-    inpsDict['box4geo_lut'] = None
-    pix_box, geo_box = subset.read_subset_template2box(inpsDict['template_file'][0])
+    iDict['box'] = None
+    iDict['box4geo_lut'] = None
+    pix_box, geo_box = subset.read_subset_template2box(iDict['template_file'][0])
 
     # Grab required info to read input geo_box into pix_box
     try:
-        lookupFile = [glob.glob(str(inpsDict['mintpy.load.lookupYFile']))[0],
-                      glob.glob(str(inpsDict['mintpy.load.lookupXFile']))[0]]
+        lookupFile = [glob.glob(str(iDict['mintpy.load.lookupYFile']))[0],
+                      glob.glob(str(iDict['mintpy.load.lookupXFile']))[0]]
     except:
         lookupFile = None
 
     try:
         pathKey = [i for i in datasetName2templateKey.values()
-                   if i in inpsDict.keys()][0]
-        file = glob.glob(str(inpsDict[pathKey]))[0]
+                   if i in iDict.keys()][0]
+        file = glob.glob(str(iDict[pathKey]))[0]
         atr = readfile.read_attribute(file)
     except:
         atr = dict()
@@ -234,12 +244,12 @@ def read_subset_box(inpsDict):
         # adjust for the size inconsistency problem in SNAP geocoded products
         # ONLY IF there is no input subset
         # Use the min bbox if files size are different
-        if inpsDict['processor'] == 'snap':
-            fnames = ut.get_file_list(inpsDict['mintpy.load.unwFile'])
+        if iDict['processor'] == 'snap':
+            fnames = ut.get_file_list(iDict['mintpy.load.unwFile'])
             pix_box = update_box4files_with_inconsistent_size(fnames)
 
         if not pix_box:
-            return inpsDict
+            return iDict
 
     # geo_box --> pix_box
     coord = ut.coordinate(atr, lookup_file=lookupFile)
@@ -258,10 +268,10 @@ def read_subset_box(inpsDict):
             box4geo_lut = ut.coordinate(atrLut).bbox_geo2radar(geo_box)
             print('box to read for geocoded lookup file in y/x: {}'.format(box4geo_lut))
 
-    inpsDict['geocoded'] = geocoded
-    inpsDict['box'] = pix_box
-    inpsDict['box4geo_lut'] = box4geo_lut
-    return inpsDict
+    iDict['geocoded'] = geocoded
+    iDict['box'] = pix_box
+    iDict['box4geo_lut'] = box4geo_lut
+    return iDict
 
 
 def update_box4files_with_inconsistent_size(fnames):
@@ -355,9 +365,9 @@ def skip_files_with_inconsistent_size(dsPathDict, pix_box=None, dsName='unwrapPh
     return dsPathDict
 
 
-def read_inps_dict2ifgram_stack_dict_object(inpsDict):
+def read_inps_dict2ifgram_stack_dict_object(iDict):
     """Read input arguments into dict of ifgramStackDict object"""
-    # inpsDict --> dsPathDict
+    # iDict --> dsPathDict
     print('-'*50)
     print('searching interferometric pairs info')
     print('input data files:')
@@ -366,13 +376,13 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
     for dsName in [i for i in ifgramDatasetNames
                    if i in datasetName2templateKey.keys()]:
         key = datasetName2templateKey[dsName]
-        if key in inpsDict.keys():
-            files = sorted(glob.glob(str(inpsDict[key])))
+        if key in iDict.keys():
+            files = sorted(glob.glob(str(iDict[key])))
             if len(files) > 0:
                 dsPathDict[dsName] = files
                 print('{:<{width}}: {path}'.format(dsName,
                                                    width=maxDigit,
-                                                   path=inpsDict[key]))
+                                                   path=iDict[key]))
 
     # Check 1: required dataset
     dsName0s = ['unwrapPhase', 'azimuthOffset']
@@ -385,7 +395,7 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
 
     # Check 2: data dimension for unwrapPhase files
     dsPathDict = skip_files_with_inconsistent_size(dsPathDict,
-                                                   pix_box=inpsDict['box'],
+                                                   pix_box=iDict['box'],
                                                    dsName=dsName0)
 
     # Check 3: number of files for all dataset types
@@ -450,22 +460,22 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
     return stackObj
 
 
-def read_inps_dict2geometry_dict_object(inpsDict):
+def read_inps_dict2geometry_dict_object(iDict):
 
     # eliminate dsName by processor
-    if inpsDict['processor'] in ['isce', 'doris']:
+    if iDict['processor'] in ['isce', 'doris']:
         datasetName2templateKey.pop('azimuthCoord')
         datasetName2templateKey.pop('rangeCoord')
-    elif inpsDict['processor'] in ['roipac', 'gamma']:
+    elif iDict['processor'] in ['roipac', 'gamma']:
         datasetName2templateKey.pop('latitude')
         datasetName2templateKey.pop('longitude')
-    elif inpsDict['processor'] in ['snap']:
+    elif iDict['processor'] in ['snap']:
         #check again when there is a SNAP product in radar coordiantes
         pass
     else:
-        print('Un-recognized InSAR processor: {}'.format(inpsDict['processor']))
+        print('Un-recognized InSAR processor: {}'.format(iDict['processor']))
 
-    # inpsDict --> dsPathDict
+    # iDict --> dsPathDict
     print('-'*50)
     print('searching geometry files info')
     print('input data files:')
@@ -474,8 +484,8 @@ def read_inps_dict2geometry_dict_object(inpsDict):
     for dsName in [i for i in geometryDatasetNames
                    if i in datasetName2templateKey.keys()]:
         key = datasetName2templateKey[dsName]
-        if key in inpsDict.keys():
-            files = sorted(glob.glob(str(inpsDict[key])))
+        if key in iDict.keys():
+            files = sorted(glob.glob(str(iDict[key])))
             if len(files) > 0:
                 if dsName == 'bperp':
                     bperpDict = {}
@@ -485,7 +495,7 @@ def read_inps_dict2geometry_dict_object(inpsDict):
                     dsPathDict[dsName] = bperpDict
                     print('{:<{width}}: {path}'.format(dsName,
                                                        width=maxDigit,
-                                                       path=inpsDict[key]))
+                                                       path=iDict[key]))
                     print('number of bperp files: {}'.format(len(list(bperpDict.keys()))))
                 else:
                     dsPathDict[dsName] = files[0]
@@ -501,8 +511,8 @@ def read_inps_dict2geometry_dict_object(inpsDict):
     # metadata
     ifgramRadarMetadata = None
     ifgramKey = datasetName2templateKey['unwrapPhase']
-    if ifgramKey in inpsDict.keys():
-        ifgramFiles = glob.glob(str(inpsDict[ifgramKey]))
+    if ifgramKey in iDict.keys():
+        ifgramFiles = glob.glob(str(iDict[ifgramKey]))
         if len(ifgramFiles) > 0:
             atr = readfile.read_attribute(ifgramFiles[0])
             if 'Y_FIRST' not in atr.keys():
@@ -525,11 +535,11 @@ def read_inps_dict2geometry_dict_object(inpsDict):
     geomRadarObj = None
     geomGeoObj = None
     if len(dsRadarPathDict) > 0:
-        geomRadarObj = geometryDict(processor=inpsDict['processor'],
+        geomRadarObj = geometryDict(processor=iDict['processor'],
                                     datasetDict=dsRadarPathDict,
                                     extraMetadata=ifgramRadarMetadata)
     if len(dsGeoPathDict) > 0:
-        geomGeoObj = geometryDict(processor=inpsDict['processor'],
+        geomGeoObj = geometryDict(processor=iDict['processor'],
                                   datasetDict=dsGeoPathDict,
                                   extraMetadata=None)
     return geomRadarObj, geomGeoObj
@@ -565,8 +575,8 @@ def update_object(outFile, inObj, box, updateMode=True):
     return write_flag
 
 
-def prepare_metadata(inpsDict):
-    processor = inpsDict['processor']
+def prepare_metadata(iDict):
+    processor = iDict['processor']
     script_name = 'prep_{}.py'.format(processor)
     print('-'*50)
     print('prepare metadata files for {} products'.format(processor))
@@ -581,13 +591,13 @@ def prepare_metadata(inpsDict):
             from mintpy import prep_snap as prep_module
 
         # run prep_{processor} module
-        for key in [i for i in inpsDict.keys() if (i.startswith('mintpy.load.') and i.endswith('File'))]:
-            if len(glob.glob(str(inpsDict[key]))) > 0:
+        for key in [i for i in iDict.keys() if (i.startswith('mintpy.load.') and i.endswith('File'))]:
+            if len(glob.glob(str(iDict[key]))) > 0:
                 # print command line
                 script_name = '{}.py'.format(os.path.basename(prep_module.__name__).split('.')[-1])
-                iargs = [inpsDict[key]]
-                if processor == 'gamma' and inpsDict['PLATFORM']:
-                    iargs += ['--sensor', inpsDict['PLATFORM'].lower()]
+                iargs = [iDict[key]]
+                if processor == 'gamma' and iDict['PLATFORM']:
+                    iargs += ['--sensor', iDict['PLATFORM'].lower()]
                 print(script_name, ' '.join(iargs))
                 # run
                 prep_module.main(iargs)
@@ -596,19 +606,19 @@ def prepare_metadata(inpsDict):
         from mintpy import prep_isce
         from mintpy.utils.isce_utils import get_processor
 
-        meta_files = sorted(glob.glob(inpsDict['mintpy.load.metaFile']))
+        meta_files = sorted(glob.glob(iDict['mintpy.load.metaFile']))
         if len(meta_files) < 1:
-            warnings.warn('No input metadata file found: {}'.format(inpsDict['mintpy.load.metaFile']))
+            warnings.warn('No input metadata file found: {}'.format(iDict['mintpy.load.metaFile']))
 
         # metadata and auxliary data
         meta_file = meta_files[0]
-        baseline_dir = inpsDict['mintpy.load.baselineDir']
-        geom_dir = os.path.dirname(inpsDict['mintpy.load.demFile'])
+        baseline_dir = iDict['mintpy.load.baselineDir']
+        geom_dir = os.path.dirname(iDict['mintpy.load.demFile'])
 
         # observation
         obs_keys = ['mintpy.load.unwFile', 'mintpy.load.azOffFile']
-        obs_keys = [i for i in obs_keys if i in inpsDict.keys()]
-        obs_paths = [inpsDict[key] for key in obs_keys if inpsDict[key].lower() != 'auto']
+        obs_keys = [i for i in obs_keys if i in iDict.keys()]
+        obs_paths = [iDict[key] for key in obs_keys if iDict[key].lower() != 'auto']
         if len(obs_paths) > 0:
             processor = get_processor(meta_file)
             if processor == 'alosStack':
@@ -639,11 +649,11 @@ def prepare_metadata(inpsDict):
 
         ## compose input arguments
         # use the default template file is exists & input
-        default_temp_files = [fname for fname in inpsDict['template_file'] if fname.endswith('smallbaselineApp.cfg')]
+        default_temp_files = [fname for fname in iDict['template_file'] if fname.endswith('smallbaselineApp.cfg')]
         if len(default_temp_files) > 0:
             temp_file = default_temp_files[0]
         else:
-            temp_file = inpsDict['template_file'][0]
+            temp_file = iDict['template_file'][0]
         iargs = ['--template', temp_file]
 
         # file name/dir/path
@@ -659,7 +669,7 @@ def prepare_metadata(inpsDict):
         }
 
         for arg_name, opt_name in ARG2OPT_DICT.items():
-            arg_value = inpsDict.get(opt_name, 'auto')
+            arg_value = iDict.get(opt_name, 'auto')
             if arg_value.lower() not in ['auto', 'no', 'none']:
                 if arg_name.endswith('dir'):
                     iargs += [arg_name, os.path.dirname(arg_value)]
@@ -669,9 +679,9 @@ def prepare_metadata(inpsDict):
                     iargs += [arg_name, arg_value]
 
         # configurations
-        if inpsDict['compression']:
-            iargs += ['--compression', inpsDict['compression']]
-        if inpsDict['updateMode']:
+        if iDict['compression']:
+            iargs += ['--compression', iDict['compression']]
+        if iDict['updateMode']:
             iargs += ['--update']
 
         ## run
@@ -689,32 +699,41 @@ def prepare_metadata(inpsDict):
     return
 
 
-def print_write_setting(inpsDict):
-    updateMode = inpsDict['updateMode']
-    comp = inpsDict['compression']
+def print_write_setting(iDict):
+    updateMode = iDict['updateMode']
+    comp = iDict['compression']
     print('-'*50)
     print('updateMode : {}'.format(updateMode))
     print('compression: {}'.format(comp))
-    box = inpsDict['box']
 
+    # box
+    box = iDict['box']
     # box for geometry file in geo-coordinates
-    if not inpsDict.get('geocoded', False):
-        boxGeo = inpsDict['box4geo_lut']
+    if not iDict.get('geocoded', False):
+        boxGeo = iDict['box4geo_lut']
     else:
         boxGeo = box
 
-    return updateMode, comp, box, boxGeo
+    # step
+    xyStep = (iDict['xstep'], iDict['ystep'])
+    if not iDict.get('geocoded', False):
+        xyStepGeo = (1, 1)
+    else:
+        xyStepGeo = xyStep
+    print('x/ystep: {}/{}'.format(xyStep[0], xyStep[1]))
+
+    return updateMode, comp, box, boxGeo, xyStep, xyStepGeo
 
 
-def get_extra_metadata(inpsDict):
+def get_extra_metadata(iDict):
     """Extra metadata to be written into stack file"""
     extraDict = {}
     for key in ['PROJECT_NAME', 'PLATFORM']:
-        if inpsDict[key]:
-            extraDict[key] = inpsDict[key]
+        if iDict[key]:
+            extraDict[key] = iDict[key]
     for key in ['SUBSET_XMIN', 'SUBSET_YMIN']:
-        if key in inpsDict.keys():
-            extraDict[key] = inpsDict[key]
+        if key in iDict.keys():
+            extraDict[key] = iDict[key]
     return extraDict
 
 
@@ -724,24 +743,24 @@ def main(iargs=None):
     start_time = time.time()
 
     # read input options
-    inpsDict = read_inps2dict(inps)
+    iDict = read_inps2dict(inps)
 
     # prepare metadata
-    prepare_metadata(inpsDict)
+    prepare_metadata(iDict)
 
     # skip data writing for aria as it is included in prep_aria
-    if inpsDict['processor'] == 'aria':
+    if iDict['processor'] == 'aria':
         return
 
-    inpsDict = read_subset_box(inpsDict)
-    extraDict = get_extra_metadata(inpsDict)
+    iDict = read_subset_box(iDict)
+    extraDict = get_extra_metadata(iDict)
 
     # initiate objects
-    stackObj = read_inps_dict2ifgram_stack_dict_object(inpsDict)
-    geomRadarObj, geomGeoObj = read_inps_dict2geometry_dict_object(inpsDict)
+    stackObj = read_inps_dict2ifgram_stack_dict_object(iDict)
+    geomRadarObj, geomGeoObj = read_inps_dict2geometry_dict_object(iDict)
 
     # prepare write
-    updateMode, comp, box, boxGeo = print_write_setting(inpsDict)
+    updateMode, comp, box, boxGeo, xyStep, xyStepGeo = print_write_setting(iDict)
     if any([stackObj, geomRadarObj, geomGeoObj]) and not os.path.isdir(inps.outdir):
         os.makedirs(inps.outdir)
         print('create directory: {}'.format(inps.outdir))
@@ -752,6 +771,8 @@ def main(iargs=None):
         stackObj.write2hdf5(outputFile=inps.outfile[0],
                             access_mode='w',
                             box=box,
+                            xstep=xyStep[0],
+                            ystep=xyStep[1],
                             compression=comp,
                             extra_metadata=extraDict)
 
@@ -760,6 +781,8 @@ def main(iargs=None):
         geomRadarObj.write2hdf5(outputFile=inps.outfile[1],
                                 access_mode='w',
                                 box=box,
+                                xstep=xyStep[0],
+                                ystep=xyStep[1],
                                 compression='lzf',
                                 extra_metadata=extraDict)
 
@@ -768,6 +791,8 @@ def main(iargs=None):
         geomGeoObj.write2hdf5(outputFile=inps.outfile[2],
                               access_mode='w',
                               box=boxGeo,
+                              xstep=xyStepGeo[0],
+                              ystep=xyStepGeo[1],
                               compression='lzf')
 
     # time info

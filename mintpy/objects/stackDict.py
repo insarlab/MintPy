@@ -55,16 +55,23 @@ class ifgramStackDict:
         self.pairsDict = pairsDict
         self.dsName0 = dsName0        #reference dataset name, unwrapPhase OR azimuthOffset
 
-    def get_size(self, box=None):
+    def get_size(self, box=None, xstep=1, ystep=1):
         self.numIfgram = len(self.pairsDict)
         ifgramObj = [v for v in self.pairsDict.values()][0]
         self.length, ifgramObj.width = ifgramObj.get_size(family=self.dsName0)
+
+        # update due to subset
         if box:
             self.length = box[3] - box[1]
             self.width = box[2] - box[0]
         else:
             self.length = ifgramObj.length
             self.width = ifgramObj.width
+
+        # update due to multilook
+        self.length = self.length // ystep
+        self.width = self.width // xstep
+
         return self.numIfgram, self.length, self.width
 
     def get_date12_list(self):
@@ -86,7 +93,8 @@ class ifgramStackDict:
         dataType = dataTypeDict[metadata.get('DATA_TYPE', 'float32').lower()]
         return dataType
 
-    def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, compression=None, extra_metadata=None):
+    def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, xstep=1, ystep=1,
+                   compression=None, extra_metadata=None):
         '''Save/write an ifgramStackDict object into an HDF5 file with the structure defined in:
 
         https://mintpy.readthedocs.io/en/latest/api/data_structure/#ifgramstack
@@ -106,9 +114,10 @@ class ifgramStackDict:
         self.dsNames = list(self.pairsDict[self.pairs[0]].datasetDict.keys())
         self.dsNames = [i for i in ifgramDatasetNames if i in self.dsNames]
         maxDigit = max([len(i) for i in self.dsNames])
-        self.get_size(box)
+        self.get_size(box=box,
+                      xstep=xstep,
+                      ystep=ystep)
 
-        self.bperp = np.zeros(self.numIfgram)
         ###############################
         # 3D datasets containing unwrapPhase, magnitude, coherence, connectComponent, wrapPhase, etc.
         for dsName in self.dsNames:
@@ -134,10 +143,14 @@ class ifgramStackDict:
 
             prog_bar = ptime.progressBar(maxValue=self.numIfgram)
             for i in range(self.numIfgram):
+                # read
                 ifgramObj = self.pairsDict[self.pairs[i]]
-                data = ifgramObj.read(dsName, box=box)[0]
+                data = ifgramObj.read(dsName,
+                                      box=box,
+                                      xstep=xstep,
+                                      ystep=ystep)[0]
+                # write
                 ds[i, :, :] = data
-                self.bperp[i] = ifgramObj.get_perp_baseline(family=self.dsName0)
                 prog_bar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],
                                                            self.pairs[i][1]))
             prog_bar.close()
@@ -164,7 +177,12 @@ class ifgramStackDict:
                                                                           w=maxDigit,
                                                                           t=str(dsDataType),
                                                                           s=dsShape))
-        data = np.array(self.bperp, dtype=dsDataType)
+        # get bperp
+        data = np.zeros(self.numIfgram, dtype=dsDataType)
+        for i in range(self.numIfgram):
+            ifgramObj = self.pairsDict[self.pairs[i]]
+            data[i] = ifgramObj.get_perp_baseline(family=self.dsName0)
+        # write
         f.create_dataset(dsName, data=data)
 
         ###############################
@@ -185,7 +203,13 @@ class ifgramStackDict:
         if extra_metadata:
             self.metadata.update(extra_metadata)
             print('add extra metadata: {}'.format(extra_metadata))
+
+        # update metadata due to subset
         self.metadata = attr.update_attribute4subset(self.metadata, box)
+        # update metadata due to multilook
+        if xstep * ystep > 1:
+            self.metadata = attr.update_attribute4multilook(self.metadata, ystep, xstep)
+
         self.metadata['FILE_TYPE'] = self.name
         for key, value in self.metadata.items():
             f.attrs[key] = value
@@ -227,9 +251,13 @@ class ifgramDict:
             for key, value in metadata.items():
                 setattr(self, key, value)
 
-    def read(self, family, box=None):
+    def read(self, family, box=None, xstep=1, ystep=1):
         self.file = self.datasetDict[family]
-        data, metadata = readfile.read(self.file, datasetName=family, box=box)
+        data, metadata = readfile.read(self.file,
+                                       datasetName=family,
+                                       box=box,
+                                       xstep=xstep,
+                                       ystep=ystep)
         return data, metadata
 
     def get_size(self, family=ifgramDatasetNames[0]):
@@ -320,14 +348,16 @@ class geometryDict:
             if all(i in metadata.keys() for i in ['STARTING_RANGE', 'RANGE_PIXEL_SIZE']):
                 self.extraMetadata = metadata
 
-    def read(self, family, box=None):
+    def read(self, family, box=None, xstep=1, ystep=1):
         self.file = self.datasetDict[family]
         data, metadata = readfile.read(self.file,
                                        datasetName=family,
-                                       box=box)
+                                       box=box,
+                                       xstep=xstep,
+                                       ystep=ystep)
         return data, metadata
 
-    def get_slant_range_distance(self, box=None):
+    def get_slant_range_distance(self, box=None, xstep=1, ystep=1):
         """Generate 2D slant range distance if missing from input template file"""
         if not self.extraMetadata:
             return None
@@ -353,10 +383,23 @@ class geometryDict:
 
         # subset
         if box is not None:
-            data = data[box[1]:box[3], box[0]:box[2]]
+            data = data[box[1]:box[3],
+                        box[0]:box[2]]
+
+        # multilook
+        if xstep * ystep > 1:
+            # output size if x/ystep > 1
+            xsize = int(data.shape[1] / xstep)
+            ysize = int(data.shape[0] / ystep)
+
+            # sampling
+            data = data[int(ystep/2)::ystep,
+                        int(xstep/2)::xstep]
+            data = data[:ysize, :xsize]
+
         return data
 
-    def get_incidence_angle(self, box=None):
+    def get_incidence_angle(self, box=None, xstep=1, ystep=1):
         """Generate 2D slant range distance if missing from input template file"""
         if not self.extraMetadata:
             return None
@@ -389,20 +432,40 @@ class geometryDict:
 
         # subset
         if box is not None:
-            data = data[box[1]:box[3], box[0]:box[2]]
+            data = data[box[1]:box[3],
+                        box[0]:box[2]]
+
+        # multilook
+        if xstep * ystep > 1:
+            # output size if x/ystep > 1
+            xsize = int(data.shape[1] / xstep)
+            ysize = int(data.shape[0] / ystep)
+
+            # sampling
+            data = data[int(ystep/2)::ystep,
+                        int(xstep/2)::xstep]
+            data = data[:ysize, :xsize]
+
         return data
 
-    def get_size(self, family=None, box=None):
+    def get_size(self, family=None, box=None, xstep=1, ystep=1):
         if not family:
             family = [i for i in self.datasetDict.keys() if i != 'bperp'][0]
         self.file = self.datasetDict[family]
         metadata = readfile.read_attribute(self.file)
+
+        # update due to subset
         if box:
             length = box[3] - box[1]
             width = box[2] - box[0]
         else:
             length = int(metadata['LENGTH'])
             width = int(metadata['WIDTH'])
+
+        # update due to multilook
+        length = length // ystep
+        width = width // xstep
+
         return length, width
 
     def get_dataset_list(self):
@@ -437,7 +500,8 @@ class geometryDict:
         #self.metadata['PROCESSOR'] = self.processor
         return self.metadata
 
-    def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, compression='lzf', extra_metadata=None):
+    def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, xstep=1, ystep=1,
+                   compression='lzf', extra_metadata=None):
         ''' Save/write to HDF5 file with structure defined in:
 
         https://mintpy.readthedocs.io/en/latest/api/data_structure/#geometry
@@ -455,8 +519,7 @@ class geometryDict:
         #print('create group   /{}'.format(groupName))
 
         maxDigit = max([len(i) for i in geometryDatasetNames])
-        length, width = self.get_size(box=box)
-        self.length, self.width = self.get_size()
+        length, width = self.get_size(box=box, xstep=xstep, ystep=ystep)
 
         ###############################
         for dsName in self.dsNames:
@@ -484,8 +547,10 @@ class geometryDict:
                 for i in range(self.numDate):
                     fname = self.datasetDict[dsName][self.dateList[i]]
                     data = read_isce_bperp_file(fname=fname,
-                                                out_shape=(self.length, self.width),
-                                                box=box)
+                                                full_shape=self.get_size(),
+                                                box=box,
+                                                xstep=xstep,
+                                                ystep=ystep)
                     ds[i, :, :] = data
                     prog_bar.update(i+1, suffix=self.dateList[i])
                 prog_bar.close()
@@ -516,7 +581,11 @@ class geometryDict:
                                                          c=str(compression)))
 
                 # read
-                data = np.array(self.read(family=dsName, box=box)[0], dtype=dsDataType)
+                data = np.array(self.read(family=dsName,
+                                          box=box,
+                                          xstep=xstep,
+                                          ystep=ystep)[0], dtype=dsDataType)
+
                 # water body: -1 for water and 0 for land
                 # water mask:  0 for water and 1 for land
                 fname = os.path.basename(self.datasetDict[dsName])
@@ -544,9 +613,13 @@ class geometryDict:
             # Calculate data
             data = None
             if dsName == 'incidenceAngle':
-                data = self.get_incidence_angle(box=box)
+                data = self.get_incidence_angle(box=box,
+                                                xstep=xstep,
+                                                ystep=ystep)
             elif dsName == 'slantRangeDistance':
-                data = self.get_slant_range_distance(box=box)
+                data = self.get_slant_range_distance(box=box,
+                                                     xstep=xstep,
+                                                     ystep=ystep)
 
             # Write dataset
             if data is not None:
@@ -570,7 +643,13 @@ class geometryDict:
         if extra_metadata:
             self.metadata.update(extra_metadata)
             print('add extra metadata: {}'.format(extra_metadata))
+
+        # update due to subset
         self.metadata = attr.update_attribute4subset(self.metadata, box)
+        # update due to multilook
+        if xstep * ystep > 1:
+            self.metadata = attr.update_attribute4multilook(self.metadata, ystep, xstep)
+
         self.metadata['FILE_TYPE'] = self.name
         for key, value in self.metadata.items():
             f.attrs[key] = value
@@ -581,7 +660,7 @@ class geometryDict:
 
 
 ########################################################################################
-def read_isce_bperp_file(fname, out_shape, box=None):
+def read_isce_bperp_file(fname, full_shape, box=None, xstep=1, ystep=1):
     '''Read ISCE coarse grid perpendicular baseline file, and project it to full size
     Parameters: self : geometry object,
                 fname : str, bperp file name
@@ -600,7 +679,7 @@ def read_isce_bperp_file(fname, out_shape, box=None):
         data_c = (data_c - data_min) / (data_max - data_min)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=UserWarning)
-        data = resize(data_c, out_shape, order=1, mode='edge', preserve_range=True)
+        data = resize(data_c, full_shape, order=1, mode='edge', preserve_range=True)
     if data_max != data_min:
         data = data * (data_max - data_min) + data_min
 
@@ -613,8 +692,22 @@ def read_isce_bperp_file(fname, out_shape, box=None):
         im = ax2.imshow(data);  fig.colorbar(im, ax=ax2)
         plt.show()
 
+    # subset
     if box is not None:
-        data = data[box[1]:box[3], box[0]:box[2]]
+        data = data[box[1]:box[3],
+                    box[0]:box[2]]
+
+    # multilook
+    if xstep * ystep > 1:
+        # output size if x/ystep > 1
+        xsize = int(data.shape[1] / xstep)
+        ysize = int(data.shape[0] / ystep)
+
+        # sampling
+        data = data[int(ystep/2)::ystep,
+                    int(xstep/2)::xstep]
+        data = data[:ysize, :xsize]
+
     return data
 
 

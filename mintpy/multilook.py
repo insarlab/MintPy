@@ -97,7 +97,7 @@ def multilook_matrix(matrix, lks_y, lks_x):
     return matrix_mli
 
 
-def multilook_data(data, lks_y, lks_x, method='average'):
+def multilook_data(data, lks_y=1, lks_x=1, method='average'):
     """Modified from Praveen on StackOverflow:
 
     link: https://stackoverflow.com/questions/34689519/how-to-coarser-the-2-d-array-data-resolution
@@ -108,6 +108,12 @@ def multilook_data(data, lks_y, lks_x, method='average'):
                 method      : str, multilook method, average or nearest
     Returns:    coarse_data : 2D / 3D np.array after multilooking in last two dimension
     """
+    # do nothing if no multilook is applied
+    lks_y = int(lks_y)
+    lks_x = int(lks_x)
+    if lks_y * lks_x == 1:
+        return data
+
     dtype = data.dtype
     shape = np.array(data.shape, dtype=float)
     ysize = int(shape[0] / lks_y)
