@@ -8,7 +8,7 @@ mintpy.load.connCompFile   = ../stack/connCompStack.vrt
 mintpy.load.demFile        = ../DEM/*.dem
 mintpy.load.incAngleFile   = ../incidenceAngle/*.vrt
 mintpy.load.azAngleFile    = ../azimuthAngle/*.vrt
-mintpy.load.waterMaskFile  = ../mask/water*.msk
+mintpy.load.waterMaskFile  = ../mask/watermask.msk
 
 mintpy.network.excludeIfgIndex  = auto #25, 30, 34, 40, 46, 52, 56, 57, 61, 62, 67, 70, 74, 80
 mintpy.reference.lalo           = 37.69, -122.07

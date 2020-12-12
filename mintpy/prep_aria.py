@@ -22,12 +22,13 @@ except ImportError:
 from mintpy.objects import ifgramStack, geometry, sensor
 from mintpy.utils import ptime, readfile, writefile, utils as ut, attribute as attr
 from mintpy.subset import read_subset_template2box
+from mintpy.multilook import multilook_data
 
 
 ####################################################################################
 EXAMPLE = """example:
   prep_aria.py -t smallbaselineApp.cfg    # recommended
-  prep_aria.py -t SanFranSenDT42.txt 
+  prep_aria.py -t SanFranSenDT42.txt
   prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i ../incidenceAngle/*.vrt
   prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i ../incidenceAngle/*.vrt -a ../azimuthAngle/*.vrt -w ../mask/watermask.msk
 
@@ -54,6 +55,10 @@ TEMPLATE = """template options:
   mintpy.load.incAngleFile   = ../incidenceAngle/*.vrt
   mintpy.load.azAngleFile    = ../azimuthAngle/*.vrt
   mintpy.load.waterMaskFile  = ../mask/watermask.msk
+  ##---------multilook (optional):
+  ## multilook while loading data with nearest interpolation, to reduce dataset size
+  mintpy.load.ystep          = auto    #[int >= 1], auto for 1 - no multilooking
+  mintpy.load.xstep          = auto    #[int >= 1], auto for 1 - no multilooking
   ##---------subset (optional):
   ## if both yx and lalo are specified, use lalo option
   mintpy.subset.yx           = auto    #[y0:y1,x0:x1 / no], auto for no
@@ -112,9 +117,15 @@ def cmd_line_parse(iargs = None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # default x/ystep
+    iDict = vars(inps)
+    iDict['xstep'] = iDict.get('xstep', 1)
+    iDict['ystep'] = iDict.get('ystep', 1)
+
     # --template
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
+    print('x/ystep: {}/{}'.format(iDict['xstep'], iDict['ystep']))
 
     # --stack-dir
     if inps.stackDir is not None:
@@ -123,10 +134,9 @@ def cmd_line_parse(iargs = None):
         inps.unwFile      = os.path.join(inps.stackDir, os.path.basename(inps.unwFile))
         inps.connCompFile = os.path.join(inps.stackDir, os.path.basename(inps.connCompFile))
 
-    # check datasets
-    # 1. translate wildcard path input with search result
-    # 2. raise error if required datasets are missing
-    iDict = vars(inps)
+    # translate wildcard path input with search result
+    # if not exist, raise error for required datasets
+    #               set to None for the other datasets
     ds_keys = [key for key in list(iDict.keys()) if key.endswith('File')]
     required_ds_keys = ['unwFile', 'corFile', 'demFile', 'incAngleFile']
 
@@ -167,7 +177,7 @@ def read_template2inps(template_file, inps=None):
     template = ut.check_template_auto_value(template)
 
     # ignore template options with default auto values
-    # so that options from input arguments have higher priority 
+    # so that options from input arguments have higher priority
     # than template options with auto values
     for key in list(template.keys()):
         if template[key] == 'auto':
@@ -180,6 +190,8 @@ def read_template2inps(template_file, inps=None):
         value = template[key_prefix+key]
         if key in ['updateMode', 'compression']:
             iDict[key] = value
+        elif key in ['xstep', 'ystep']:
+            iDict[key] = int(value)
         elif key in ['unwFile']:
             iDict['stackDir'] = os.path.dirname(value)
         elif value:
@@ -235,8 +247,8 @@ def run_or_skip(inps, dsNameDict, out_file):
         out_shape = (out_obj.length, out_obj.width)
         out_size = os.path.getsize(out_file)
 
-        if (set(in_dsNames).issubset(set(out_dsNames)) 
-                and out_shape == in_shape 
+        if (set(in_dsNames).issubset(set(out_dsNames))
+                and out_shape == in_shape
                 and out_size > in_size * 0.3):
             print(('All datasets exists in file {} with same size as required,'
                    ' no need to re-load.'.format(os.path.basename(out_file))))
@@ -377,7 +389,8 @@ def extract_metadata(stack):
     return meta
 
 
-def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFile=None, box=None):
+def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFile=None,
+                   box=None, xstep=1, ystep=1):
     """Write geometry HDF5 file from list of VRT files."""
 
     print('-'*50)
@@ -397,6 +410,7 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
     # height
     ds = gdal.Open(demFile, gdal.GA_ReadOnly)
     data = np.array(ds.ReadAsArray(**kwargs), dtype=np.float32)
+    data = multilook_data(data, ystep, xstep, method='nearest')
     data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
     h5['height'][:,:] = data
 
@@ -406,6 +420,7 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
     # incidenceAngle
     ds = gdal.Open(incAngleFile, gdal.GA_ReadOnly)
     data = ds.ReadAsArray(**kwargs)
+    data = multilook_data(data, ystep, xstep, method='nearest')
     data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
     h5['incidenceAngle'][:,:] = data
 
@@ -413,6 +428,7 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
     if azAngleFile is not None:
         ds = gdal.Open(azAngleFile, gdal.GA_ReadOnly)
         data = ds.ReadAsArray(**kwargs)
+        data = multilook_data(data, ystep, xstep, method='nearest')
         data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
         # azimuth angle of the line-of-sight vector:
         # ARIA: vector from target to sensor measured from the east  in counterclockwise direction
@@ -423,14 +439,19 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
 
     # waterMask
     if waterMaskFile is not None:
+        # read
         ds = gdal.Open(waterMaskFile, gdal.GA_ReadOnly)
         water_mask = ds.ReadAsArray(**kwargs)
+        water_mask = multilook_data(water_mask, ystep, xstep, method='nearest')
         water_mask[water_mask == ds.GetRasterBand(1).GetNoDataValue()] = False
 
         # assign False to invalid pixels based on incAngle data
         ds = gdal.Open(incAngleFile, gdal.GA_ReadOnly)
         data = ds.ReadAsArray(**kwargs)
+        data = multilook_data(data, ystep, xstep, method='nearest')
         water_mask[data == ds.GetRasterBand(1).GetNoDataValue()] = False
+
+        # write
         h5['waterMask'][:,:] = water_mask
 
     h5.close()
@@ -438,7 +459,8 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
     return outfile
 
 
-def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, box=None):
+def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack,
+                       box=None, xstep=1, ystep=1):
     """Write ifgramStack HDF5 file from stack VRT files
     """
 
@@ -501,6 +523,7 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, box=None):
 
         bnd = dsUnw.GetRasterBand(bndIdx)
         data = bnd.ReadAsArray(**kwargs)
+        data = multilook_data(data, ystep, xstep, method='nearest')
         data[data == noDataValueUnw] = 0      #assign pixel with no-data to 0
         h5["unwrapPhase"][ii,:,:] = -1.0*data #date2_date1 -> date1_date2
 
@@ -509,11 +532,13 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, box=None):
 
         bnd = dsCoh.GetRasterBand(bndIdx)
         data = bnd.ReadAsArray(**kwargs)
+        data = multilook_data(data, ystep, xstep, method='nearest')
         data[data == noDataValueCoh] = 0      #assign pixel with no-data to 0
         h5["coherence"][ii,:,:] = data
 
         bnd = dsComp.GetRasterBand(bndIdx)
         data = bnd.ReadAsArray(**kwargs)
+        data = multilook_data(data, ystep, xstep, method='nearest')
         data[data == noDataValueComp] = 0     #assign pixel with no-data to 0
         h5["connectComponent"][ii,:,:] = data
 
@@ -544,10 +569,12 @@ def main(iargs=None):
     # extract metadata
     meta = extract_metadata(inps.unwFile)
     box, meta = read_subset_box(inps.template_file, meta)
+    if inps.xstep * inps.ystep > 1:
+        meta = attr.update_attribute4multilook(meta, lks_y=inps.ystep, lks_x=inps.xstep)
 
     length = int(meta["LENGTH"])
     width = int(meta["WIDTH"])
-    num_pair = meta["NUMBER_OF_PAIRS"]
+    num_pair = int(meta["NUMBER_OF_PAIRS"])
 
     # prepare output directory
     out_dir = os.path.dirname(inps.outfile[0])
@@ -572,10 +599,12 @@ def main(iargs=None):
 
         # write data to h5 file in disk
         write_ifgram_stack(inps.outfile[0],
-                           inps.unwFile,
-                           inps.corFile,
-                           inps.connCompFile,
-                           box=box)
+                           unwStack=inps.unwFile,
+                           cohStack=inps.corFile,
+                           connCompStack=inps.connCompFile,
+                           box=box,
+                           xstep=inps.xstep,
+                           ystep=inps.ystep)
 
     ########## output file 2 - geometryGeo
     # define dataset structure for geometry
@@ -601,7 +630,9 @@ def main(iargs=None):
                        incAngleFile=inps.incAngleFile,
                        azAngleFile=inps.azAngleFile,
                        waterMaskFile=inps.waterMaskFile,
-                       box=box)
+                       box=box,
+                       xstep=inps.xstep,
+                       ystep=inps.ystep)
 
     print('-'*50)
 
