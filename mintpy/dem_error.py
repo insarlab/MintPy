@@ -38,9 +38,6 @@ EXAMPLE = """example:
   # correct DEM error with mean geometry parameters [fast]
   dem_error.py  timeseries_ERA5_ramp.h5 -t smallbaselineApp.cfg
 
-  # get time-series of estimated deformation model
-  diff.py timeseries_ERA5_ramp_demErr.h5 timeseriesResidual.h5 -o timeseriesDefModel.h5
-
   # get updated/corrected DEM
   save_roipac.py inputs/geometryGeo.h5 -o dem.h5   #for dataset in geo coordinates
   mask.py demErr.h5 -m maskTempCoh.h5 -o demErr_msk.h5
@@ -101,6 +98,12 @@ def cmd_line_parse(iargs=None):
 
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
+
+    # --cluster and --num-worker option
+    inps.numWorker = str(cluster.DaskCluster.format_num_worker(inps.cluster, inps.numWorker))
+    if inps.cluster and inps.numWorker == '1':
+        print('WARNING: number of workers is 1, turn OFF parallel processing and continue')
+        inps.cluster = None
 
     # ignore non-existed exclude_date.txt
     if inps.excludeDate == 'exclude_date.txt' and not os.path.isfile(inps.excludeDate):
@@ -374,6 +377,7 @@ def correct_dem_error_patch(G_defo, ts_file, geom_file=None, box=None,
     Returns:    delta_z        - 2D np.ndarray in size of (num_row, num_col)
                 ts_cor         - 3D np.ndarray in size of (num_date, num_row, num_col)
                 ts_res         - 3D np.ndarray in size of (num_date, num_row, num_col)
+                box            - tuple of 4 int in (x0, y0, x1, y1) for the area of interest
     """
 
     ts_obj = timeseries(ts_file)
@@ -440,7 +444,7 @@ def correct_dem_error_patch(G_defo, ts_file, geom_file=None, box=None,
         delta_z = delta_z.reshape((num_row, num_col))
         ts_cor = ts_cor.reshape((num_date, num_row, num_col))
         ts_res = ts_res.reshape((num_date, num_row, num_col))
-        return delta_z, ts_cor, ts_res
+        return delta_z, ts_cor, ts_res, box
 
     # 2.2 estimate
     if range_dist.size == 1:
@@ -499,7 +503,7 @@ def correct_dem_error_patch(G_defo, ts_file, geom_file=None, box=None,
     ts_cor = ts_cor.reshape((num_date, num_row, num_col))
     ts_res = ts_res.reshape((num_date, num_row, num_col))
 
-    return delta_z, ts_cor, ts_res
+    return delta_z, ts_cor, ts_res, box
 
 
 def correct_dem_error(inps):
@@ -569,24 +573,54 @@ def correct_dem_error(inps):
                                            num_split=num_box,
                                            dimension='y')
 
-    # 3.2 invert / write block-by-block
+    # 3.2 prepare the input arguments for *_patch()
+    data_kwargs = {
+        'G_defo'         : G_defo,
+        'ts_file'        : inps.timeseries_file,
+        'geom_file'      : inps.geom_file,
+        'date_flag'      : date_flag,
+        'phase_velocity' : inps.phaseVelocity,
+    }
+
+    # 3.3 invert / write block-by-block
     for i, box in enumerate(box_list):
-        box_width  = box[2] - box[0]
-        box_length = box[3] - box[1]
+        box_wid = box[2] - box[0]
+        box_len = box[3] - box[1]
         if num_box > 1:
             print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
-            print('box width:  {}'.format(box_width))
-            print('box length: {}'.format(box_length))
+            print('box width:  {}'.format(box_wid))
+            print('box length: {}'.format(box_len))
+
+        # update box argument in the input data
+        data_kwargs['box'] = box
 
         # invert
-        (delta_z,
-         ts_cor,
-         ts_res) = correct_dem_error_patch(G_defo,
-                                           ts_file=inps.timeseries_file,
-                                           geom_file=inps.geom_file,
-                                           box=box,
-                                           date_flag=date_flag,
-                                           phase_velocity=inps.phaseVelocity)
+        if not inps.cluster:
+            # non-parallel
+            delta_z, ts_cor, ts_res = correct_dem_error_patch(**data_kwargs)[:-1]
+
+        else:
+            # parallel
+            print('\n\n------- start parallel processing using Dask -------')
+
+            # initiate the output data
+            delta_z = np.zeros((box_len, box_wid), dtype=np.float32)
+            ts_cor = np.zeros((num_date, box_len, box_wid), dtype=np.float32)
+            ts_res = np.zeros((num_date, box_len, box_wid), dtype=np.float32)
+
+            # initiate dask cluster and client
+            cluster_obj = cluster.DaskCluster(inps.cluster, inps.numWorker, config_name=inps.config)
+            cluster_obj.open()
+
+            # run dask
+            delta_z, ts_cor, ts_res = cluster_obj.run(func=correct_dem_error_patch,
+                                                      func_data=data_kwargs,
+                                                      results=[delta_z, ts_cor, ts_res])
+
+            # close dask cluster and client
+            cluster_obj.close()
+
+            print('------- finished parallel processing -------\n\n')
 
         # write the block to disk
         # with 3D block in [z0, z1, y0, y1, x0, x1]
