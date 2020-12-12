@@ -246,8 +246,8 @@ def add_parallel_argument(parser):
 
     par = parser.add_argument_group('parallel', 'parallel processing using dask')
     par.add_argument('-c', '--cluster', '--cluster-type', dest='cluster', type=str, 
-                     default='no', choices=CLUSTER_LIST + ['no'],
-                     help='Cluster to use for parallel computing, no to turn OFF. (default: %(default)s).')
+                     choices=CLUSTER_LIST,
+                     help='Cluster to use for parallel computing (default: %(default)s to turn OFF).')
     par.add_argument('--num-worker', dest='numWorker', type=str, default='4',
                      help='Number of workers to use (default: %(default)s).')
     par.add_argument('--config', '--config-name', dest='config', type=str, default=None,

@@ -143,9 +143,9 @@ def cmd_line_parse(iargs=None):
 
     # --cluster and --num-worker option
     inps.numWorker = str(cluster.DaskCluster.format_num_worker(inps.cluster, inps.numWorker))
-    if inps.cluster != 'no' and inps.numWorker == '1':
+    if inps.cluster and inps.numWorker == '1':
         print('WARNING: number of workers is 1, turn OFF parallel processing and continue')
-        inps.cluster = 'no'
+        inps.cluster = None
 
     # --water-mask option
     if inps.waterMaskFile and not os.path.isfile(inps.waterMaskFile):
@@ -229,7 +229,7 @@ def read_template2inps(template_file, inps):
                 iDict[key] = float(value)
 
     # False/None --> 'no'
-    for key in ['weightFunc', 'cluster']:
+    for key in ['weightFunc']:
         if not iDict[key]:
             iDict[key] = 'no'
 
@@ -1063,17 +1063,17 @@ def ifgram_inversion(inps=None):
 
     # 3.3 invert / write block-by-block
     for i, box in enumerate(box_list):
-        box_width  = box[2] - box[0]
-        box_length = box[3] - box[1]
+        box_wid = box[2] - box[0]
+        box_len = box[3] - box[1]
         if num_box > 1:
             print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
-            print('box width:  {}'.format(box_width))
-            print('box length: {}'.format(box_length))
+            print('box width:  {}'.format(box_wid))
+            print('box length: {}'.format(box_len))
 
         # update box argument in the input data
         data_kwargs['box'] = box
 
-        if inps.cluster == 'no':
+        if not inps.cluster:
             # non-parallel
             ts, temp_coh, num_inv_ifg = ifgram_inversion_patch(**data_kwargs)[:-1]
 
@@ -1082,9 +1082,9 @@ def ifgram_inversion(inps=None):
             print('\n\n------- start parallel processing using Dask -------')
 
             # initiate the output data
-            ts = np.zeros((num_date, box_length, box_width), np.float32)
-            temp_coh     = np.zeros((box_length, box_width), np.float32)
-            num_inv_ifg  = np.zeros((box_length, box_width), np.float32)
+            ts = np.zeros((num_date, box_len, box_wid), np.float32)
+            temp_coh     = np.zeros((box_len, box_wid), np.float32)
+            num_inv_ifg  = np.zeros((box_len, box_wid), np.float32)
 
             # initiate dask cluster and client
             cluster_obj = cluster.DaskCluster(inps.cluster, inps.numWorker, config_name=inps.config)
