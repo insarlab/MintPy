@@ -13,9 +13,16 @@ import argparse
 import warnings
 import multiprocessing
 import numpy as np
+
 from mintpy.objects.resample import resample
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import arg_group, readfile, writefile, utils as ut
+from mintpy.utils import (
+    arg_group,
+    readfile,
+    writefile,
+    utils as ut,
+    attribute as attr,
+)
 
 
 ######################################################################################
@@ -204,62 +211,6 @@ def check_num_processor(nprocs):
     return nprocs
 
 
-def metadata_radar2geo(atr_in, res_obj, print_msg=True):
-    """update metadata for radar to geo coordinates"""
-    atr = dict(atr_in)
-    atr['LENGTH'] = res_obj.length
-    atr['WIDTH'] = res_obj.width
-    atr['Y_STEP'] = res_obj.lalo_step[0]
-    atr['X_STEP'] = res_obj.lalo_step[1]
-    atr['Y_FIRST'] = res_obj.SNWE[1]
-    atr['X_FIRST'] = res_obj.SNWE[2]
-    atr['Y_UNIT'] = res_obj.lut_meta.get('Y_UNIT', 'degrees')
-    atr['X_UNIT'] = res_obj.lut_meta.get('X_UNIT', 'degrees')
-
-    # Reference point from y/x to lat/lon
-    if 'REF_Y' in atr.keys():
-        coord = ut.coordinate(atr_in, lookup_file=res_obj.lut_file)
-        ref_lat, ref_lon = coord.radar2geo(np.array(int(atr['REF_Y'])),
-                                           np.array(int(atr['REF_X'])),
-                                           print_msg=False)[0:2]
-        if ~np.isnan(ref_lat) and ~np.isnan(ref_lon):
-            ref_y = int(np.rint((ref_lat - float(atr['Y_FIRST'])) / float(atr['Y_STEP'])))
-            ref_x = int(np.rint((ref_lon - float(atr['X_FIRST'])) / float(atr['X_STEP'])))
-            atr['REF_LAT'] = str(ref_lat)
-            atr['REF_LON'] = str(ref_lon)
-            atr['REF_Y'] = str(ref_y)
-            atr['REF_X'] = str(ref_x)
-            if print_msg:
-                print('update REF_LAT/LON/Y/X')
-        else:
-            warnings.warn("original reference pixel is out of .trans file's coverage. Continue.")
-            try:
-                atr.pop('REF_Y')
-                atr.pop('REF_X')
-            except:
-                pass
-            try:
-                atr.pop('REF_LAT')
-                atr.pop('REF_LON')
-            except:
-                pass
-    return atr
-
-
-def metadata_geo2radar(atr_in, res_obj, print_msg=True):
-    """update metadata for geo to radar coordinates"""
-    atr = dict(atr_in)
-    atr['LENGTH'] = res_obj.length
-    atr['WIDTH'] = res_obj.width
-    for i in ['Y_FIRST', 'X_FIRST', 'Y_STEP', 'X_STEP', 'Y_UNIT', 'X_UNIT',
-              'REF_Y', 'REF_X', 'REF_LAT', 'REF_LON']:
-        try:
-            atr.pop(i)
-        except:
-            pass
-    return atr
-
-
 def auto_output_filename(infile, inps):
     if len(inps.file) == 1 and inps.outfile:
         return inps.outfile
@@ -317,10 +268,16 @@ def run_geocode(inps):
 
         ## prepare output
         # update metadata
+        shape2d = (res_obj.length, res_obj.width)
         if inps.radar2geo:
-            atr = metadata_radar2geo(atr, res_obj)
+            atr = attr.update_attribute4radar2geo(atr,
+                                                  shape2d=shape2d,
+                                                  lalo_step=res_obj.lalo_step,
+                                                  SNWE=res_obj.SNWE,
+                                                  lut_file=res_obj.lut_file)
         else:
-            atr = metadata_geo2radar(atr, res_obj)
+            atr = attr.update_attribute4geo2radar(atr,
+                                                  shape2d=shape2d)
 
         # instantiate output file
         file_is_hdf5 = os.path.splitext(infile)[1] in ['.h5', '.he5']

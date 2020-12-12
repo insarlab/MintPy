@@ -25,7 +25,12 @@ from mintpy.objects import (
     geometryDatasetNames,
     ifgramDatasetNames,
 )
-from mintpy.utils import readfile, ptime, utils0 as ut
+from mintpy.utils import (
+    ptime,
+    readfile,
+    utils0 as ut,
+    attribute as attr,
+)
 
 
 ########################################################################################
@@ -180,7 +185,7 @@ class ifgramStackDict:
         if extra_metadata:
             self.metadata.update(extra_metadata)
             print('add extra metadata: {}'.format(extra_metadata))
-        self.metadata = ut.subset_attribute(self.metadata, box)
+        self.metadata = attr.update_attribute4subset(self.metadata, box)
         self.metadata['FILE_TYPE'] = self.name
         for key, value in self.metadata.items():
             f.attrs[key] = value
@@ -565,7 +570,7 @@ class geometryDict:
         if extra_metadata:
             self.metadata.update(extra_metadata)
             print('add extra metadata: {}'.format(extra_metadata))
-        self.metadata = ut.subset_attribute(self.metadata, box)
+        self.metadata = attr.update_attribute4subset(self.metadata, box)
         self.metadata['FILE_TYPE'] = self.name
         for key, value in self.metadata.items():
             f.attrs[key] = value

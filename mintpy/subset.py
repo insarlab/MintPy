@@ -17,6 +17,7 @@ from mintpy.utils import (
     readfile,
     writefile,
     utils as ut,
+    attribute as attr,
 )
 
 
@@ -385,7 +386,7 @@ def subset_file(fname, subset_dict_input, out_file=None):
     print('writing >>> '+out_file)
 
     # update metadata
-    atr = ut.subset_attribute(atr, pix_box)
+    atr = attr.update_attribute4subset(atr, pix_box)
 
     # subset datasets one by one
     dsNames = readfile.get_dataset_list(fname)

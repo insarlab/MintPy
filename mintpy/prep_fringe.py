@@ -25,6 +25,7 @@ from mintpy.utils import (
     writefile,
     utils0 as ut,
     isce_utils,
+    attribute as attr,
 )
 
 
@@ -149,7 +150,7 @@ def prepare_metadata(meta_file, geom_src_dir, box=None):
 
     ## update metadata due to subset
     print('update metadata due to subset with bounding box')
-    meta = ut.subset_attribute(meta, box)
+    meta = attr.update_attribute4subset(meta, box)
 
     return meta
 

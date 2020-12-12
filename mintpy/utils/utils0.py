@@ -513,65 +513,6 @@ def circle_index(atr, circle_par):
     return idx
 
 
-def subset_attribute(atr_dict, subset_box, print_msg=True):
-    """Update attributes dictionary due to subset
-    Parameters: atr_dict : dict, data attributes to update
-                subset_box : 4-tuple of int, subset box defined in (x0, y0, x1, y1)
-    Returns:    atr : dict, updated data attributes
-    """
-    if subset_box is None:
-        return atr_dict
-
-    sub_x = [subset_box[0], subset_box[2]]
-    sub_y = [subset_box[1], subset_box[3]]
-
-    # Update attribute variable
-    atr = dict(atr_dict)
-    atr['LENGTH'] = str(sub_y[1]-sub_y[0])
-    atr['WIDTH'] = str(sub_x[1]-sub_x[0])
-    atr['YMAX'] = str(sub_y[1]-sub_y[0] - 1)
-    atr['XMAX'] = str(sub_x[1]-sub_x[0] - 1)
-    if print_msg:
-        print('update LENGTH, WIDTH, Y/XMAX')
-
-    # Subset atribute
-    atr['SUBSET_YMAX'] = str(sub_y[1] + int(atr_dict.get('SUBSET_YMIN', '0')))
-    atr['SUBSET_YMIN'] = str(sub_y[0] + int(atr_dict.get('SUBSET_YMIN', '0')))
-    atr['SUBSET_XMAX'] = str(sub_x[1] + int(atr_dict.get('SUBSET_XMIN', '0')))
-    atr['SUBSET_XMIN'] = str(sub_x[0] + int(atr_dict.get('SUBSET_XMIN', '0')))
-    if print_msg:
-        print(('update/add SUBSET_XMIN/YMIN/XMAX/YMAX: '
-               '{x0}/{y0}/{x1}/{y1}').format(x0=atr['SUBSET_XMIN'],
-                                             y0=atr['SUBSET_YMIN'],
-                                             x1=atr['SUBSET_XMAX'],
-                                             y1=atr['SUBSET_YMAX']))
-
-    # Geo coord
-    if 'Y_FIRST' in atr.keys():
-        atr['Y_FIRST'] = str(float(atr['Y_FIRST']) + sub_y[0]*float(atr['Y_STEP']))
-        atr['X_FIRST'] = str(float(atr['X_FIRST']) + sub_x[0]*float(atr['X_STEP']))
-        if print_msg:
-            print('update Y/X_FIRST')
-
-    # Reference in space
-    if 'REF_Y' in atr.keys():
-        atr['REF_Y'] = str(int(atr['REF_Y']) - sub_y[0])
-        atr['REF_X'] = str(int(atr['REF_X']) - sub_x[0])
-        if print_msg:
-            print('update REF_Y/X')
-
-    # Starting Range for file in radar coord
-    if 'Y_FIRST' not in atr_dict.keys():
-        try:
-            atr['STARTING_RANGE'] = float(atr['STARTING_RANGE'])
-            atr['STARTING_RANGE'] += float(atr['RANGE_PIXEL_SIZE'])*sub_x[0]
-            if print_msg:
-                print('update STARTING_RANGE')
-        except:
-            pass
-
-    return atr
-
 
 #################################### Image Processing ##########################################
 def wrap(data_in, wrap_range=[-1.*np.pi, np.pi]):
