@@ -13,9 +13,10 @@ import argparse
 import datetime as dt
 import h5py
 import numpy as np
+
 from mintpy.objects import timeseries, geometry, sensor
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import readfile
+from mintpy.utils import ptime, readfile
 from mintpy import info
 
 
@@ -30,7 +31,7 @@ compression = 'lzf'
 TEMPALTE = TEMPLATE = get_template_content('hdfeos5')
 
 EXAMPLE = """example:
-  save_hdfeos5.py geo_timeseries_ERA5_ramp_demErr.h5 --tc geo_temporalCoherence.h5 --asc geo_avgSpatialCoh.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
+  save_hdfeos5.py geo/geo_timeseries_ERA5_ramp_demErr.h5 --tc geo/geo_temporalCoherence.h5 --asc geo/geo_avgSpatialCoh.h5 -m geo/geo_maskTempCoh.h5 -g geo/geo_geometryRadar.h5
   save_hdfeos5.py timeseries_ERA5_ramp_demErr.h5     --tc temporalCoherence.h5     --asc avgSpatialCoh.h5     -m maskTempCoh.h5     -g inputs/geometryGeo.h5
 """
 
@@ -96,8 +97,8 @@ def metadata_mintpy2unavco(meta_dict_in, dateList):
     unavco_meta_dict['relative_orbit'] = int(meta_dict['relative_orbit'])
 
     # processing info
-    unavco_meta_dict['processing_type'] = meta_dict.get('processing_type', 'LOS_TIMESERIES')
-    #unavco_meta_dict['processing_software'] = meta_dict['processing_software']
+    unavco_meta_dict['processing_type'] = 'LOS_TIMESERIES'
+    unavco_meta_dict['processing_software'] = meta_dict.get('PROCESSOR', 'isce')
 
     # Grabbed by script
     # date info
@@ -125,16 +126,11 @@ def metadata_mintpy2unavco(meta_dict_in, dateList):
     #################################
     # Recommended metadata
     #################################
-    # Given manually
-    if 'frame' in meta_dict.keys():
-        unavco_meta_dict['frame'] = int(meta_dict['frame'])
-    elif 'first_frame' in meta_dict.keys():
-        unavco_meta_dict['frame'] = int(meta_dict['first_frame'])
-    else:
-        unavco_meta_dict['frame'] = 0
+    unavco_meta_dict['first_frame'] = int(meta_dict.get('first_frame', 0))
+    unavco_meta_dict['last_frame'] = int(meta_dict.get('last_frame', unavco_meta_dict['first_frame']))
 
     unavco_meta_dict['atmos_correct_method']   = meta_dict.get('atmos_correct_method', 'None')
-    unavco_meta_dict['post_processing_method'] = meta_dict.get('post_processing_method', 'MintPy')
+    unavco_meta_dict['post_processing_method'] = 'MintPy'
     unavco_meta_dict['processing_dem'] = meta_dict.get('processing_dem', 'Unknown')
     unavco_meta_dict['unwrap_method']  = meta_dict.get('unwrap_method', 'Unknown')
 
@@ -195,16 +191,11 @@ def get_output_filename(metadata, update_mode=False, subset_mode=False):
     RELORB = "%03d" % (int(metadata['relative_orbit']))
 
     # Frist and/or Last Frame
-    frame1 = int(metadata['frame'])
-    key = 'first_frame'
-    if key in metadata.keys():
-        frame1 = int(metadata[key])
-    FRAME = "%04d" % (frame1)
-    key = 'last_frame'
-    if key in metadata.keys():
-        frame2 = int(metadata[key])
-        if frame2 != frame1:
-            FRAME += "_%04d" % (frame2)
+    frame1 = metadata['first_frame']
+    frame2 = metadata['last_frame']
+    FRAME = "%04d" % (int(frame1))
+    if frame2 != frame1:
+        FRAME += "_%04d" % (frame2)            
 
     DATE1 = dt.datetime.strptime(metadata['first_date'], '%Y-%m-%d').strftime('%Y%m%d')
     DATE2 = dt.datetime.strptime(metadata['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
@@ -264,35 +255,49 @@ def write2hdf5(out_file, ts_file, tcoh_file, scoh_file, mask_file, geom_file, me
     ts_obj = timeseries(ts_file)
     ts_obj.open(print_msg=False)
     dateList = ts_obj.dateList
+    numDate = len(dateList)
 
     # Open HDF5 File
     f = h5py.File(out_file, 'w')
     print('create HDF5 file: {} with w mode'.format(out_file))
     maxDigit = 55
 
-    # Write Observation - Displacement
+    # Write Observation
     gName = 'HDFEOS/GRIDS/timeseries/observation'
     print('create group   /{}'.format(gName))
     group = f.create_group(gName)
 
+    ## 1 - displacement
     dsName = 'displacement'
-    data = ts_obj.read(print_msg=False)
+    dsShape = (numDate, ts_obj.length, ts_obj.width)
+    dsDataType = np.float32
     print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
            ' with compression={c}').format(d='{}/{}'.format(gName, dsName),
                                            w=maxDigit,
-                                           t=str(data.dtype),
-                                           s=data.shape,
+                                           t='float32',
+                                           s=dsShape,
                                            c=compression))
     dset = group.create_dataset(dsName,
-                                data=data,
-                                dtype=np.float32,
+                                shape=dsShape,
+                                maxshape=(None, dsShape[1], dsShape[2]),
+                                dtype=dsDataType,
                                 chunks=True,
                                 compression=compression)
+
+    print('write data acquition by acquition ...')
+    prog_bar = ptime.progressBar(maxValue=numDate)
+    for i in range(numDate):
+        dset[i, :, :] = readfile.read(ts_file, datasetName=dateList[i])[0]
+        prog_bar.update(i+1, suffix='{}/{} {}'.format(i+1, numDate, dateList[i]))
+    prog_bar.close()
+
+    # attributes
     dset.attrs['Title'] = dsName
     dset.attrs['MissingValue'] = FLOAT_ZERO
     dset.attrs['_FillValue'] = FLOAT_ZERO
     dset.attrs['Units'] = 'meters'
 
+    ## 2 - date
     dsName = 'date'
     data = np.array(dateList, dtype=np.string_)
     group.create_dataset(dsName, data=data)
@@ -301,6 +306,7 @@ def write2hdf5(out_file, ts_file, tcoh_file, scoh_file, mask_file, geom_file, me
                                                                       t=str(data.dtype),
                                                                       s=data.shape))
 
+    ## 3 - perp baseline
     dsName = 'bperp'
     data = np.array(ts_obj.pbase, dtype=np.float32)
     group.create_dataset(dsName, data=data)
