@@ -252,6 +252,7 @@ def run_geocode(inps):
                        software=inps.software,
                        print_msg=True)
     res_obj.open()
+    res_obj.prepare()
 
     # resample input files one by one
     for infile in inps.file:
@@ -268,16 +269,10 @@ def run_geocode(inps):
 
         ## prepare output
         # update metadata
-        shape2d = (res_obj.length, res_obj.width)
         if inps.radar2geo:
-            atr = attr.update_attribute4radar2geo(atr,
-                                                  shape2d=shape2d,
-                                                  lalo_step=res_obj.lalo_step,
-                                                  SNWE=res_obj.SNWE,
-                                                  lut_file=res_obj.lut_file)
+            atr = attr.update_attribute4radar2geo(atr, res_obj=res_obj)
         else:
-            atr = attr.update_attribute4geo2radar(atr,
-                                                  shape2d=shape2d)
+            atr = attr.update_attribute4geo2radar(atr, res_obj=res_obj)
 
         # instantiate output file
         file_is_hdf5 = os.path.splitext(infile)[1] in ['.h5', '.he5']

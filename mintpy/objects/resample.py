@@ -31,14 +31,54 @@ class resample:
        (https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.RegularGridInterpolator.html)
 
     Example:
-        res_obj = resample(lut_file='./inputs/geometryRadar.h5', src_file='velocity.h5')
+        from mintpy.objects.resample import resample
+        from mintpy.utils import readfile, attribute as attr
+
+        ##### opt 1 - entire matrix (by not changing max_memory=0)
+        src_file = 'velocity.h5'
+        res_obj = resample(lut_file='./inputs/geometryRadar.h5', src_file=src_file)
         res_obj.open()
-        rdr_data = readfile.read('velocity.h5')[0]
-        geo_data = res_obj.run_resample(src_data=rdr_data)
+        res_obj.prepare()
+
+        # read data / attribute
+        rdr_data, atr = readfile.read(src_file)
+        # resample data
+        box = res_obj.src_box_list[0]
+        geo_data = res_obj.run_resample(src_data=rdr_data[box[1]:box[3], box[0]:box[2]])
+        # update attribute
+        atr = attr.update_attribute4radar2geo(atr, res_obj=res_obj)
+
+        ##### opt 2 - block-by-block IO (by setting max_memory=4)
+        src_file = 'timeseries.h5'
+        res_obj = resample(lut_file='./inputs/geometryRadar.h5', src_file=src_file, max_memory=4)
+        res_obj.open()
+        res_obj.prepare()
+
+        # prepare output: metadata and initial file
+        atr = readfile.read_attribute(src_file)
+        atr = attr.update_attribute4radar2geo(atr, res_obj=res_obj)
+        writefile.layout_hdf5(outfile, metadata=atr, ref_file=src_file)
+
+        # block-by-block IO
+        for i in range(res_obj.num_bix):
+            src_box = res_obj.src_box_list[i]
+            dest_box = res_obj.dest_box_list[i]
+            # read
+            data = readfile.read(src_file, box=src_box)[0]
+            # resample
+            data = res_obj.run_resample(src_data=rdr_data, box_ind=i)
+            # write
+            block = [0, data.shape[0],
+                     dest_box[1], dest_box[3],
+                     dest_box[0], dest_box[2]]
+            writefile.write_hdf5_block(outfile,
+                                       data=data,
+                                       datasetName='timeseries',
+                                       block=block)
     """
 
-    def __init__(self, lut_file, src_file, SNWE=None, lalo_step=None, interp_method='nearest', fill_value=np.nan,
-                 nprocs=1, max_memory=4, software='pyresample', print_msg=True):
+    def __init__(self, lut_file, src_file=None, SNWE=None, lalo_step=None, interp_method='nearest', fill_value=np.nan,
+                 nprocs=1, max_memory=0, software='pyresample', print_msg=True):
         """
         Parameters: lut_file      - str, path of lookup table file, containing datasets:
                                     latitude / longitude      for lut_file in radar-coord
@@ -52,6 +92,7 @@ class resample:
                     fill_value    - number, fill value for extrapolation pixels
                     nprocs        - int, number of processors used in parallel
                     max_memory    - float, maximum memory to use
+                                    set to 0 or negative value to disable block-by-block IO (default)
                     software      - str, interpolation software, pyresample / scipy
         """
         # input variables
@@ -73,11 +114,33 @@ class resample:
 
 
     def open(self):
+        """Read metadata
+
+        Note: separate open() from prepare() to handle numpy matrix directly w/o src_file
+        by assigning src_meta after open() and before prepare()
+        """
+        # read metadata: lookup table and source data
+        if self.lut_file:
+            self.lut_meta = readfile.read_attribute(self.lut_file)
+        else:
+            self.lut_meta = None
+
+        if self.src_file:
+            self.src_meta = readfile.read_attribute(self.src_file)
+        else:
+            self.src_meta = None
+
+        # get num_box
+        if self.software == 'pyresample':
+            self.num_box = self.get_num_box(self.src_file, self.max_memory)
+
+
+    def prepare(self):
         """Prepare aux data before interpolation operation"""
 
-        # read metadata: lookup table and source data
-        self.lut_meta = readfile.read_attribute(self.lut_file)
-        self.src_meta = readfile.read_attribute(self.src_file)
+        # check metadata: lookup table and source data
+        if self.lut_meta is None or self.src_meta is None:
+            raise ValueError('lookup table or source data metadata is None!')
 
         # prepare geometry for resampling
         print('resampling software: {}'.format(self.software))
@@ -89,9 +152,6 @@ class resample:
                 raise ValueError('resampling using scipy with lookup table in radar-coord (ISCE / DORIS) is NOT supported!')
 
         elif self.software == 'pyresample':
-            # get num_box
-            self.num_box = self.get_num_box(self.src_file, self.max_memory)
-
             if 'Y_FIRST' in self.lut_meta.keys():
                 # gamma / roipac
                 self.prepare_geometry_definition_geo()
@@ -104,7 +164,7 @@ class resample:
             self.radius = self.get_radius_of_influence(self.lalo_step, self.src_meta)
 
 
-    def run_resample(self, src_data, box_ind=1, print_msg=True):
+    def run_resample(self, src_data, box_ind=0, print_msg=True):
         """Run interpolation operation for input 2D/3D data
         Parameters: src_data   - 2D/3D np.array, source data to be resampled
                     box_ind    - int, index of the current box of interest
@@ -169,7 +229,7 @@ class resample:
 
 
     @staticmethod
-    def get_num_box(src_file, max_memory, scale_fac=3.0):
+    def get_num_box(src_file=None, max_memory=0, scale_fac=3.0):
         """Get the number of boxes to split to not exceed the max memory
         Parameters: src_file   - str, path of source data file (largest one if multiple)
                     max_memory - float, memory size in GB
@@ -179,8 +239,12 @@ class resample:
         """
         num_box = 1
 
-        # for HDF5 file only
-        if os.path.splitext(src_file)[1] in ['.h5', '.he5']:
+        # auto split into list of boxes ONLY IF:
+        # 1. source file is in HDF5 format AND
+        # 2. max_memory > 0
+        if (src_file and os.path.isfile(src_file)
+                and os.path.splitext(src_file)[1] in ['.h5', '.he5'] 
+                and max_memory > 0):
             # get max dataset shape
             with h5py.File(src_file, 'r') as f:
                 ds_shapes = [f[i].shape for i in f.keys()
@@ -219,11 +283,11 @@ class resample:
             # ignore pixels with zero value
             zero_mask = np.multiply(lat != 0., lon != 0.)
 
-            # ignore anomaly non-zero values 
+            # ignore anomaly non-zero values
             # by get the most common data range (d_min, d_max) based on histogram
             mask = np.array(zero_mask, np.bool_)
             for data in [lat, lon]:
-                bin_value, bin_edge = np.histogram(data[mask], bins=10)                
+                bin_value, bin_edge = np.histogram(data[mask], bins=10)
                 # if there is anomaly, histogram won't be evenly distributed
                 while np.max(bin_value) > np.sum(zero_mask) * 0.3:
                     # find the continous bins where the largest bin is --> normal data range
@@ -319,7 +383,7 @@ class resample:
                 if dest_area < src_area * 0.5:
                     # reduction of swath data
                     # https://pyresample.readthedocs.io/en/latest/data_reduce.html
-                    # get src_box (in swath) from lat/lon (from dest_box in grid) 
+                    # get src_box (in swath) from lat/lon (from dest_box in grid)
                     print('searching relevant box covering the current SNWE')
                     flag = pr.data_reduce.get_valid_index_from_lonlat_grid(dest_lon,
                                                                            dest_lat,
@@ -409,7 +473,7 @@ class resample:
             return lats, lons
 
         # radar2geo
-        # block-by-block support is NOT implemented because: 
+        # block-by-block support is NOT implemented because:
         # writefile.write_hdf5_block requires split in dest_box for writing
         # while data_reduce.get_valid_index_from_lonlat_grid() requires split in grid (src_box)
         #   resulting in uneven / overlapped flag matrix in dest_box
@@ -664,4 +728,3 @@ class resample:
         # interpolate output matrix
         geo_data[self.interp_mask] = rgi_func(self.dest_pts)
         return geo_data
-
