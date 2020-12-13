@@ -81,15 +81,22 @@ def update_attribute4multilook(atr_in, lks_y, lks_x, box=None, print_msg=True):
     return atr
 
 
-def update_attribute4geo2radar(atr_in, shape2d, print_msg=True):
+def update_attribute4geo2radar(atr_in, shape2d=None, res_obj=None, print_msg=True):
     """update input dictionary of attributes due to resampling from geo to radar coordinates
 
     Parameters: atr_in  - dict, input dictionary of attributes
+                # combination 1
                 shape2d - tuple of 2 int in (length, width)
+                # combination 2
+                res_obj   - mintpy.objects.resample.resample object
     Returns:    atr     - dict, updated dictionary of attributes
     """
     # make a copy of original meta dict
     atr = dict(atr_in)
+
+    # grab info from res_obj
+    if res_obj is not None:
+        shape2d = (res_obj.length, res_obj.width)
 
     # update shape
     atr['LENGTH'] = shape2d[0]
@@ -105,18 +112,29 @@ def update_attribute4geo2radar(atr_in, shape2d, print_msg=True):
     return atr
 
 
-def update_attribute4radar2geo(atr_in, shape2d, lalo_step, SNWE, lut_file, print_msg=True):
+def update_attribute4radar2geo(atr_in, shape2d=None, lalo_step=None, SNWE=None, lut_file=None,
+                               res_obj=None, print_msg=True):
     """update input dictionary of attributes due to resampling from radar to geo coordinates
 
     Parameters: atr_in  - dict, input dictionary of attributes
+                # combination 1
                 shape2d - tuple of 2 int in (length, width)
                 lalo_step - tuple of 2 float, step size in lat/lon direction
                 SNWE      - tuple of 4 float
                 lut_file  - str, path of lookup table file
+                # combination 2
+                res_obj   - mintpy.objects.resample.resample object
     Returns:    atr     - dict, updated dictionary of attributes
     """
     # make a copy of original meta dict
     atr = dict(atr_in)
+
+    # grab info from res_obj
+    if res_obj is not None:
+        shape2d = (res_obj.length, res_obj.width)
+        lalo_step = res_obj.lalo_step
+        SNWE = res_obj.SNWE
+        lut_file = res_obj.lut_file
 
     atr['LENGTH'] = shape2d[0]
     atr['WIDTH'] = shape2d[1]
