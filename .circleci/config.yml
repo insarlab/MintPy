@@ -34,7 +34,7 @@ jobs:
             git clone https://github.com/yunjunz/pyaps3.git $PYAPS_HOME/pyaps3
             # install dependencies
             conda config --add channels conda-forge
-            conda install --yes --file $MINTPY_HOME/docs/conda.txt
+            conda install --yes --file $MINTPY_HOME/docs/conda.txt gdal>=3
             pip install git+https://github.com/tylere/pykml.git
             # test installation
             python -c "import mintpy; print(mintpy.version.description)"
@@ -50,6 +50,7 @@ jobs:
             cd ${HOME}/data
             ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ${HOME}/data --dset FernandinaSenDT128
             ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ${HOME}/data --dset WellsEnvD2T399
+            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ${HOME}/data --dset SanFranSenDT42
             ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ${HOME}/data --dset WCapeSenAT29
 
 workflows:

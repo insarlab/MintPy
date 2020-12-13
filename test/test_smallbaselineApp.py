@@ -27,7 +27,7 @@ URL_LIST = [
     'https://zenodo.org/record/3952953/files/FernandinaSenDT128.tar.xz',
     'https://zenodo.org/record/3952950/files/WellsEnvD2T399.tar.xz',
     'https://zenodo.org/record/3952917/files/KujuAlosAT422F650.tar.xz',
-    'https://zenodo.org/record/4265413/files/SanFranSenDT42.tar.xz',
+    'https://zenodo.org/record/4320005/files/SanFranSenDT42.tar.xz',
     'https://zenodo.org/record/4318134/files/WCapeSenAT29.tar.xz',
 ]
 
