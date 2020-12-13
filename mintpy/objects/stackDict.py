@@ -350,8 +350,14 @@ class geometryDict:
 
     def read(self, family, box=None, xstep=1, ystep=1):
         self.file = self.datasetDict[family]
+        # relax dataset name constraint for HDF5 file
+        # to support reading waterMask from waterMask.h5 file with /mask dataset
+        if self.file.endswith('.h5'):
+            dsName = None
+        else:
+            dsName = family
         data, metadata = readfile.read(self.file,
-                                       datasetName=family,
+                                       datasetName=dsName,
                                        box=box,
                                        xstep=xstep,
                                        ystep=ystep)
