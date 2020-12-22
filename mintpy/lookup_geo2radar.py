@@ -13,22 +13,17 @@ import h5py
 import numpy as np
 from mintpy.utils import readfile
 from scipy.interpolate import griddata
-#from scipy.interpolate import RegularGridInterpolator as RGI
 
 try:
     from tqdm import tqdm
 except ImportError:
     raise ImportError('Can not import tqdm!')
 
-try
+try:
     from concurrent.futures import ProcessPoolExecutor, as_completed
 except ImportError:
     raise ImportError('Can not import concurrent!')
 
-
-INTRODUCTION = '''
-Convert lookup-table in geo-coordinates (GAMMA, ROI_PAC) into the one in radar-coordinates (ISCE) using scipy.interpolate.griddata
-'''
 
 EXAMPLE = '''examples:
     lookup_geo2radar.py geometryGeo.h5 
@@ -148,17 +143,17 @@ def split_box(data,row_sample,col_sample):
     return data_split
             
 def function(data0):
-        points, zz1, zz2, grid_x0, grid_y0 = data0
-        grid_lat0 = griddata(points, zz1, (grid_x0, grid_y0), method='nearest')
-        grid_lon0 = griddata(points, zz2, (grid_x0, grid_y0), method='nearest')
-        
-        return grid_lat0, grid_lon0
+    points, zz1, zz2, grid_x0, grid_y0 = data0
+    grid_lat0 = griddata(points, zz1, (grid_x0, grid_y0), method='nearest')
+    grid_lon0 = griddata(points, zz2, (grid_x0, grid_y0), method='nearest')
 
-    
+    return grid_lat0, grid_lon0
+
+
 def cmd_line_parse(iargs=None):
-    parser = argparse.ArgumentParser(description='Convert geo-coord lookup table (GAMMA, ROI_PAC) into radar-coord (ISCE)',
+    parser = argparse.ArgumentParser(description='Convert lookup table from geo-coord (GAMMA, ROI_PAC) into radar-coord (ISCE)',
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=INTRODUCTION+'\n'+EXAMPLE)
+                                     epilog=EXAMPLE)
 
     parser.add_argument('geometryGeo',help='geometryGeo file which includes geo-coordinates based lookup-table')
     parser.add_argument('-w','--write', dest='write', metavar='FILE', default = 'geometryRadar.h5',

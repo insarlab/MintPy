@@ -36,7 +36,7 @@ ifgram_inversion.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg
 smallbaselineApp.py -t smallbaselineApp.cfg
 ```
 
-`numWorkers = all` will allocate `multiprocessing.cpu_count()` number of workers to the dask computation (for local cluster only). If the specified number of workers exceeds system resources, `multiprocessing.cpu_count()/2` number of workers will be submitted instead to avoid overtaxing local systems.
+`numWorkers = all` will allocate `os.cpu_count()` number of workers to the dask computation (for local cluster only). If the specified number of workers exceeds system resources, `os.cpu_count()/2` number of workers will be submitted instead to avoid overtaxing local systems.
 
 #### 1.3 Testing using example data ####
 

@@ -13,7 +13,6 @@
 
 
 import os
-import multiprocessing
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -24,7 +23,7 @@ except ImportError:
 
 
 # speedup pyfftw
-NUM_THREADS = min(multiprocessing.cpu_count(), 4)
+NUM_THREADS = min(os.cpu_count(), 4)
 print('using {} threads for pyfftw computation.'.format(NUM_THREADS))
 pyfftw.config.NUM_THREADS = NUM_THREADS
 
