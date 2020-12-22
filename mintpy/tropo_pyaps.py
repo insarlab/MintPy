@@ -491,7 +491,7 @@ def correct_timeseries(timeseries_file, trop_file, out_file):
                                                out_file)
     print(cmd)
     status = subprocess.Popen(cmd, shell=True).wait()
-    if status is not 0:
+    if status != 0:
         raise Exception(('Error while correcting timeseries file '
                          'using diff.py with tropospheric delay file.'))
     return out_file

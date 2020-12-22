@@ -13,7 +13,6 @@ import time
 import glob
 import shutil
 import numpy as np
-import multiprocessing
 
 
 # supported / tested clusters
@@ -303,7 +302,7 @@ class DaskCluster:
         """
 
         if cluster_type == 'local':
-            num_core = multiprocessing.cpu_count()
+            num_core = os.cpu_count()
 
             # all --> num_core
             if num_worker == 'all':
