@@ -897,6 +897,9 @@ class TimeSeriesAnalysis:
             tropo_vel_file = '{}{}.h5'.format(os.path.splitext(vel_file)[0], suffix)
 
             iargs = [tropo_file, '-t', self.templateFile, '-o', tropo_vel_file, '--update']
+            # add reference info for a meaningful velocity to assess the impact of tropo delay on velocity
+            atr = readfile.read_attribute(vel_file)
+            iargs += ['--ref-date', atr['REF_DATE'], '--ref-yx', atr['REF_Y'], atr['REF_X']]
             print('\ntimeseries2velocity.py', ' '.join(iargs))
             mintpy.timeseries2velocity.main(iargs)
         return

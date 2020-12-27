@@ -1328,7 +1328,7 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
 
     # Scale input data
     if data is not None:
-        data *= scale
+        data *= np.array(scale, dtype=data.dtype)
     return data, disp_unit, scale
 
 

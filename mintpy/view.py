@@ -435,7 +435,7 @@ def plot_slice(ax, data, metadata, inps=None):
         inps = cmd_line_parse([''])
         inps = update_inps_with_file_metadata(inps, metadata)
     if isinstance(inps.colormap, str):
-        inps.colormap = pp.ColormapExt(inps.colormap).colormap
+        inps.colormap = pp.ColormapExt(inps.colormap, cmap_lut=inps.cmap_lut).colormap
 
     # read DEM
     if inps.dem_file:
