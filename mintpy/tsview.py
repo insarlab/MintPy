@@ -68,7 +68,7 @@ def create_parser():
                        help='Edge width. Default: 1.0')
 
     parser.add_argument('-n', dest='idx', metavar='NUM', type=int,
-                        help='Epoch/slice number to display.')
+                        help='Epoch/slice number for initial display.')
     parser.add_argument('--error', dest='error_file',
                         help='txt file with error for each date.')
 
@@ -185,13 +185,15 @@ def read_init_info(inps):
     #else:
     #    inps.ref_idx = 0
 
+    if not inps.ref_date:
+        inps.ref_date = atr.get('REF_DATE', None)
     if inps.ref_date:
         inps.ref_idx = inps.date_list.index(inps.ref_date)
     else:
-        inps.ref_idx = 1
+        inps.ref_idx = None
 
     if not inps.idx:
-        if inps.ref_idx < inps.num_date / 2.:
+        if (not inps.ref_idx) or (inps.ref_idx < inps.num_date / 2.):
             inps.idx = inps.num_date - 2
         else:
             inps.idx = 2
@@ -324,13 +326,15 @@ def read_timeseries_data(inps):
         vprint('reading timeseries from file {} ...'.format(fname))
         data, atr = readfile.read(fname, datasetName=inps.date_list, box=inps.pix_box)
         try:
-            ref_phase = data[:, inps.ref_yx[0]-inps.pix_box[1], inps.ref_yx[1]-inps.pix_box[0]]
-            data -= np.tile(ref_phase.reshape(-1, 1, 1), (1, data.shape[-2], data.shape[-1]))
-            vprint('reference to pixel: {}'.format(inps.ref_yx))
+            if inps.ref_yx != (int(atr['REF_Y']), int(atr['REF_X'])):
+                ref_phase = data[:, inps.ref_yx[0]-inps.pix_box[1], inps.ref_yx[1]-inps.pix_box[0]]
+                data -= np.tile(ref_phase.reshape(-1, 1, 1), (1, data.shape[-2], data.shape[-1]))
+                vprint('reference to pixel: {}'.format(inps.ref_yx))
         except:
             pass
-        vprint('reference to date: {}'.format(inps.date_list[inps.ref_idx]))
-        data -= np.tile(data[inps.ref_idx, :, :], (inps.num_date, 1, 1))
+        if inps.ref_idx is not None:
+            vprint('reference to date: {}'.format(inps.date_list[inps.ref_idx]))
+            data -= np.tile(data[inps.ref_idx, :, :], (inps.num_date, 1, 1))
 
         # Display Unit
         (data,
@@ -351,8 +355,10 @@ def read_timeseries_data(inps):
     del msk
 
     ts_stack = np.sum(ts_data[0], axis=0)
-    mask[ts_stack == 0.] = False
     mask[np.isnan(ts_stack)] = False
+    # keep all-zero value for unwrapError time-series
+    if atr['UNIT'] not in ['cycle']:
+        mask[ts_stack == 0.] = False
     del ts_stack
 
     #do not mask the reference point
@@ -362,22 +368,21 @@ def read_timeseries_data(inps):
     except:
         pass
 
-    #vprint('masking data')
-    #ts_mask = np.tile(mask, (inps.num_date, 1, 1))
-    #for i in range(len(ts_data)):
-    #    ts_data[i][ts_mask == 0] = np.nan
-    #    try:
-    #        ts_data[i][:, inps.ref_yx[0], inps.ref_yx[1]] = 0.   # keep value on reference pixel
-    #    except:
-    #        pass
-    #del ts_mask
-
     # default vlim
     inps.dlim = [np.nanmin(ts_data[0]), np.nanmax(ts_data[0])]
-    ts_data_mli = multilook_data(np.squeeze(ts_data[0]), 10, 10)
     if not inps.vlim:
-        inps.vlim = [np.nanmin(ts_data_mli[inps.ex_flag != 0]),
-                     np.nanmax(ts_data_mli[inps.ex_flag != 0])]
+        unique_values = np.unique(ts_data[0][~np.isnan(ts_data[0])])
+        if unique_values.size <= 20:
+            # adjust for matrix with limited unique values, e.g. unwrapError time-series
+            print('limited number of unique values: {}, adjust colormap accordingly'.format(unique_values.size))
+            inps.cmap_lut = unique_values.size
+            inps.vlim = [np.min(unique_values) - 0.5,
+                         np.max(unique_values) + 0.5]
+        else:
+            inps.cmap_lut = 256
+            ts_data_mli = multilook_data(np.squeeze(ts_data[0]), 10, 10)
+            inps.vlim = [np.nanmin(ts_data_mli[inps.ex_flag != 0]),
+                         np.nanmax(ts_data_mli[inps.ex_flag != 0])]
     vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
     vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
 
@@ -646,7 +651,7 @@ class timeseriesViewer():
         return self.img, self.cbar_img
 
 
-    def plot_init_time_slider(self, init_idx=-1, ref_idx=0):
+    def plot_init_time_slider(self, init_idx=-1, ref_idx=None):
         val_step = np.min(np.diff(self.yearList))
         val_min = self.yearList[0]
         val_max = self.yearList[-1]
@@ -660,7 +665,8 @@ class timeseriesViewer():
         bar_width = val_step / 4.
         datex = np.array(self.yearList) - bar_width / 2.
         self.tslider.ax.bar(datex, np.ones(len(datex)), bar_width, facecolor='black', ecolor=None)
-        self.tslider.ax.bar(datex[ref_idx], 1., bar_width*3, facecolor='crimson', ecolor=None)
+        if ref_idx is not None:
+            self.tslider.ax.bar(datex[ref_idx], 1., bar_width*3, facecolor='crimson', ecolor=None)
 
         # xaxis tick format
         if np.floor(val_max) == np.floor(val_min):

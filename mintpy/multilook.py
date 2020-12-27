@@ -97,7 +97,7 @@ def multilook_matrix(matrix, lks_y, lks_x):
     return matrix_mli
 
 
-def multilook_data(data, lks_y=1, lks_x=1, method='average'):
+def multilook_data(data, lks_y=1, lks_x=1, method='mean'):
     """Modified from Praveen on StackOverflow:
 
     link: https://stackoverflow.com/questions/34689519/how-to-coarser-the-2-d-array-data-resolution
@@ -105,9 +105,15 @@ def multilook_data(data, lks_y=1, lks_x=1, method='average'):
     Parameters: data        : 2D / 3D np.array in real or complex
                 lks_y       : int, number of multilook in y/azimuth direction
                 lks_x       : int, number of multilook in x/range direction
-                method      : str, multilook method, average or nearest
+                method      : str, multilook method, mean, median or nearest
     Returns:    coarse_data : 2D / 3D np.array after multilooking in last two dimension
     """
+    method_list = ['mean', 'median', 'nearest']
+    if method not in method_list:
+        msg = 'un-supported multilook method: {}. '.format(method)
+        msg += 'Available methods: {}'.format(method_list)
+        raise ValueError(msg)
+
     # do nothing if no multilook is applied
     lks_y = int(lks_y)
     lks_x = int(lks_x)
@@ -120,7 +126,7 @@ def multilook_data(data, lks_y=1, lks_x=1, method='average'):
     xsize = int(shape[1] / lks_x)
 
     if len(shape) == 2:
-        if method == 'average':
+        if method in ['mean', 'median']:
             # crop data to the exact multiple of the multilook number
             new_shape = np.floor(shape / (lks_y, lks_x)).astype(int) * (lks_y, lks_x)
             crop_data = data[:new_shape[0],
@@ -132,7 +138,10 @@ def multilook_data(data, lks_y=1, lks_x=1, method='average'):
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
-                coarse_data = np.nanmean(temp, axis=(1, 3))
+                if method == 'mean':
+                    coarse_data = np.nanmean(temp, axis=(1, 3))
+                elif method == 'median':
+                    coarse_data = np.nanmedian(temp, axis=(1, 3))
 
         elif method == 'nearest':
             coarse_data = data[int(lks_y/2)::lks_y,
@@ -143,7 +152,7 @@ def multilook_data(data, lks_y=1, lks_x=1, method='average'):
                 coarse_data = coarse_data[:ysize, :xsize]
 
     elif len(shape) == 3:
-        if method == 'average':
+        if method in ['mean', 'median']:
             # crop data to the exact multiple of the multilook number
             new_shape = np.floor(shape / (1, lks_y, lks_x)).astype(int) * (1, lks_y, lks_x)
             crop_data = data[:new_shape[0],
@@ -157,7 +166,10 @@ def multilook_data(data, lks_y=1, lks_x=1, method='average'):
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
-                coarse_data = np.nanmean(temp, axis=(2, 4))
+                if method == 'mean':
+                    coarse_data = np.nanmean(temp, axis=(2, 4))
+                elif method == 'median':
+                    coarse_data = np.nanmedian(temp, axis=(2, 4))
 
         elif method == 'nearest':
             coarse_data = data[:,
@@ -165,8 +177,8 @@ def multilook_data(data, lks_y=1, lks_x=1, method='average'):
                                int(lks_x/2)::lks_x]
 
             # fix size discrepency from average method
-            if coarse_data.shape != (ysize, xsize):
-                coarse_data = coarse_data[:ysize, :xsize]
+            if coarse_data.shape[-2:] != (ysize, xsize):
+                coarse_data = coarse_data[:, :ysize, :xsize]
 
     # ensure output data type
     coarse_data = np.array(coarse_data, dtype=dtype)
