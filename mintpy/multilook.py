@@ -21,7 +21,7 @@ np_logger.setLevel(logging.WARNING)
 from mintpy.utils import (
     readfile,
     writefile,
-    utils as ut,
+    utils1 as ut,
     attribute as attr,
 )
 

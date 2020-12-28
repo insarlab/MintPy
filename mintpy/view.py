@@ -270,12 +270,9 @@ def update_inps_with_file_metadata(inps, metadata):
         inps.multilook = True
 
     # Colormap
-    inps.colormap = pp.check_colormap_input(metadata,
-                                            inps.colormap,
-                                            datasetName=inps.dset[0],
-                                            cmap_lut=inps.cmap_lut,
-                                            cmap_vlist=inps.cmap_vlist,
-                                            print_msg=inps.print_msg)
+    inps.colormap = pp.auto_colormap_name(metadata, inps.colormap,
+                                          datasetName=inps.dset[0],
+                                          print_msg=inps.print_msg)
 
     # Reference Point
     # Convert ref_lalo if existed, to ref_yx, and use ref_yx for the following
@@ -400,7 +397,7 @@ def update_data_with_plot_inps(data, metadata, inps):
     # 3. update display min/max
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
     if not inps.vlim: # and data.ndim < 3:
-        inps.vlim = [np.nanmin(data), np.nanmax(data)]
+        inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(data)
     vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
     vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
 
@@ -435,7 +432,9 @@ def plot_slice(ax, data, metadata, inps=None):
         inps = cmd_line_parse([''])
         inps = update_inps_with_file_metadata(inps, metadata)
     if isinstance(inps.colormap, str):
-        inps.colormap = pp.ColormapExt(inps.colormap, cmap_lut=inps.cmap_lut).colormap
+        inps.colormap = pp.ColormapExt(inps.colormap,
+                                       cmap_lut=inps.cmap_lut,
+                                       vlist=inps.cmap_vlist).colormap
 
     # read DEM
     if inps.dem_file:
@@ -1048,14 +1047,14 @@ def read_data4figure(i_start, i_end, inps, metadata):
         data = np.ma.masked_where(data == 0., data)
 
     # update display min/max
+    inps.dlim = [np.nanmin(data), np.nanmax(data)]
     if (same_unit4all_subplots
             and all(arg not in sys.argv for arg in ['-v', '--vlim', '--wrap'])
             and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)
             and inps.dsetFamilyList[0] not in ['bperp']):
-        data_mli = multilook_data(data, 10, 10)
-        inps.vlim = [np.nanmin(data_mli), np.nanmax(data_mli)]
-        del data_mli
-    inps.dlim = [np.nanmin(data), np.nanmax(data)]
+        inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(data,
+                                                                              num_multilook=10,
+                                                                              print_msg=False)
 
     return data
 
@@ -1099,13 +1098,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
 
     # Subplot Setting
     ## Tick and Label
-    #ax.set_yticklabels([])
-    #ax.set_xticklabels([])
-    #ax.set_xticks([])
-    #ax.set_yticks([])
     if not inps.disp_tick or inps.fig_row_num * inps.fig_col_num > 10:
-        # ax.set_xticklabels([])
-        # ax.set_yticklabels([])
         ax.get_xaxis().set_ticks([])
         ax.get_yaxis().set_ticks([])
 
@@ -1193,6 +1186,11 @@ def plot_figure(j, inps, metadata):
     i_start = (j - 1) * inps.fig_row_num * inps.fig_col_num
     i_end = min([inps.dsetNum, i_start + inps.fig_row_num * inps.fig_col_num])
     data = read_data4figure(i_start, i_end, inps, metadata)
+
+    if isinstance(inps.colormap, str):
+        inps.colormap = pp.ColormapExt(inps.colormap,
+                                       cmap_lut=inps.cmap_lut,
+                                       vlist=inps.cmap_vlist).colormap
 
     # Loop - Subplots
     vprint('plotting ...')
