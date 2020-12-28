@@ -188,13 +188,13 @@ def read_init_info(inps):
     if inps.ref_date:
         inps.ref_idx = inps.date_list.index(inps.ref_date)
     else:
-        inps.ref_idx = 3
+        inps.ref_idx = 1
 
     if not inps.idx:
         if inps.ref_idx < inps.num_date / 2.:
-            inps.idx = inps.num_date - 3
+            inps.idx = inps.num_date - 2
         else:
-            inps.idx = 3
+            inps.idx = 2
 
     # Display Unit
     (inps.disp_unit,
