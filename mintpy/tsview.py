@@ -179,12 +179,7 @@ def read_init_info(inps):
      inps.ex_dates,
      inps.ex_flag) = read_exclude_date(inps.ex_date_list, inps.date_list)
 
-    # initial display index
-    #if atr['REF_DATE'] in inps.date_list:
-    #    inps.ref_idx = inps.date_list.index(atr['REF_DATE'])
-    #else:
-    #    inps.ref_idx = 0
-
+    # reference date/index
     if not inps.ref_date:
         inps.ref_date = atr.get('REF_DATE', None)
     if inps.ref_date:
@@ -192,6 +187,7 @@ def read_init_info(inps):
     else:
         inps.ref_idx = None
 
+    # date/index of interest for initial display
     if not inps.idx:
         if (not inps.ref_idx) or (inps.ref_idx < inps.num_date / 2.):
             inps.idx = inps.num_date - 2
@@ -371,18 +367,7 @@ def read_timeseries_data(inps):
     # default vlim
     inps.dlim = [np.nanmin(ts_data[0]), np.nanmax(ts_data[0])]
     if not inps.vlim:
-        unique_values = np.unique(ts_data[0][~np.isnan(ts_data[0])])
-        if unique_values.size <= 20:
-            # adjust for matrix with limited unique values, e.g. unwrapError time-series
-            print('limited number of unique values: {}, adjust colormap accordingly'.format(unique_values.size))
-            inps.cmap_lut = unique_values.size
-            inps.vlim = [np.min(unique_values) - 0.5,
-                         np.max(unique_values) + 0.5]
-        else:
-            inps.cmap_lut = 256
-            ts_data_mli = multilook_data(np.squeeze(ts_data[0]), 10, 10)
-            inps.vlim = [np.nanmin(ts_data_mli[inps.ex_flag != 0]),
-                         np.nanmax(ts_data_mli[inps.ex_flag != 0])]
+        inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(ts_data[0], num_multilook=10)
     vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
     vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
 

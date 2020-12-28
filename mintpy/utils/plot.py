@@ -304,8 +304,7 @@ def auto_shared_lalo_location(axs, loc=(1,0,0,1), flatten=False):
     return locs
 
 
-def check_colormap_input(metadata, cmap_name=None, datasetName=None, cmap_lut=256,
-                         cmap_vlist=[0.0, 0.7, 1.0], print_msg=True):
+def auto_colormap_name(metadata, cmap_name=None, datasetName=None, print_msg=True):
     gray_dataset_key_words = ['coherence', 'temporal_coherence',
                               '.cor', '.mli', '.slc', '.amp', '.ramp']
     if not cmap_name:
@@ -317,7 +316,37 @@ def check_colormap_input(metadata, cmap_name=None, datasetName=None, cmap_lut=25
     if print_msg:
         print('colormap:', cmap_name)
 
-    return ColormapExt(cmap_name, cmap_lut, vlist=cmap_vlist).colormap
+    return cmap_name
+
+
+def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_num_step=20, print_msg=True):
+
+    # max step size / min step number for a uniform colormap
+    unique_values = np.unique(data[~np.isnan(data)])
+    min_val = np.min(unique_values).astype(float)
+    max_val = np.max(unique_values).astype(float)
+    vstep = np.min(np.diff(unique_values)).astype(float)
+    min_num_step = int((max_val - min_val) / vstep + 1)
+
+    # use discrete colromap for data with uniform AND limited unique values
+    # e.g. unwrapError time-series
+    if min_num_step <= max_discrete_num_step:
+        cmap_lut = min_num_step
+        vlim = [min_val - vstep/2, max_val + vstep/2]
+
+        if print_msg:
+            msg = 'data has uniform and limited number ({} <= {})'.format(unique_values.size, max_discrete_num_step)
+            msg += ' of unique values --> discretize colormap'
+            print(msg)
+
+    else:
+        from mintpy.multilook import multilook_data
+        data_mli = multilook_data(data, num_multilook, num_multilook)
+
+        cmap_lut = 256
+        vlim = [np.nanmin(data_mli), np.nanmax(data_mli)]
+
+    return cmap_lut, vlim
 
 
 def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1, buffer_year=0.2):
@@ -1080,18 +1109,20 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
 
 
 def plot_colorbar(inps, im, cax):
-    # Colorbar Extend
+    # extend
     if not inps.cbar_ext:
         if   inps.vlim[0] <= inps.dlim[0] and inps.vlim[1] >= inps.dlim[1]: inps.cbar_ext='neither'
         elif inps.vlim[0] >  inps.dlim[0] and inps.vlim[1] >= inps.dlim[1]: inps.cbar_ext='min'
         elif inps.vlim[0] <= inps.dlim[0] and inps.vlim[1] <  inps.dlim[1]: inps.cbar_ext='max'
         else:  inps.cbar_ext='both'
 
+    # orientation
     if inps.cbar_loc in ['left', 'right']:
         orientation = 'vertical'
     else:
         orientation = 'horizontal'
 
+    # plot colorbar
     if inps.wrap and (inps.wrap_range[1] - inps.wrap_range[0]) == 2.*np.pi:
         cbar = plt.colorbar(im, cax=cax, ticks=[inps.wrap_range[0], 0, inps.wrap_range[1]],
                             orientation=orientation)
@@ -1099,17 +1130,22 @@ def plot_colorbar(inps, im, cax):
     else:
         cbar = plt.colorbar(im, cax=cax, extend=inps.cbar_ext, orientation=orientation)
 
+    # update ticks
+    if inps.cmap_lut <= 5:
+        inps.cbar_nbins = inps.cmap_lut
+
     if inps.cbar_nbins:
         cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
         cbar.update_ticks()
 
-    cbar.ax.tick_params(which='both', direction='out',
-                        labelsize=inps.font_size, colors=inps.font_color)
+    cbar.ax.tick_params(which='both', direction='out', labelsize=inps.font_size, colors=inps.font_color)
 
-    if not inps.cbar_label:
-        cbar.set_label(inps.disp_unit, fontsize=inps.font_size, color=inps.font_color)
-    else:
+    # add label
+    if inps.cbar_label:
         cbar.set_label(inps.cbar_label, fontsize=inps.font_size, color=inps.font_color)
+    elif inps.disp_unit != '1':
+        cbar.set_label(inps.disp_unit, fontsize=inps.font_size, color=inps.font_color)
+        
     return inps, cbar
 
 
@@ -1271,7 +1307,7 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
             scale *= range2phase
         else:
             print('Unrecognized display phase/length unit:', disp_unit[0])
-            return data, data_unit, scale
+            pass
 
         if   data_unit[0] == 'mm': scale *= 0.001
         elif data_unit[0] == 'cm': scale *= 0.01
@@ -1289,7 +1325,7 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
             pass
         else:
             print('Unrecognized phase/length unit:', disp_unit[0])
-            return data, data_unit, scale
+            pass
 
     # amplitude/coherence unit - 1
     elif data_unit[0] == '1':
@@ -1326,9 +1362,10 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
     else:
         disp_unit = disp_unit[0]
 
-    # Scale input data
-    if data is not None:
+    # scale input data
+    if data is not None and scale != 1.0:
         data *= np.array(scale, dtype=data.dtype)
+
     return data, disp_unit, scale
 
 

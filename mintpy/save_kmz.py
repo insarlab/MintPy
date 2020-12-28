@@ -187,8 +187,12 @@ def write_kmz_file(data, metadata, out_file, inps=None):
     if not inps:
         inps = cmd_line_parse()
 
+    # disp min/max and colormap
+    cmap_lut = 256
     if not inps.vlim:
-        inps.vlim = [np.nanmin(data), np.nanmax(data)]
+        cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(data)        
+    inps.colormap = pp.auto_colormap_name(metadata, inps.colormap)
+    inps.colormap = pp.ColormapExt(inps.colormap, cmap_lut).colormap
 
     west, east, south, north = ut.four_corners(metadata)
 
@@ -207,7 +211,6 @@ def write_kmz_file(data, metadata, out_file, inps=None):
     ax = fig.add_axes([0., 0., 1., 1.])
     ax.set_axis_off()
 
-    inps.colormap = pp.check_colormap_input(metadata, inps.colormap)
     # Plot - data matrix
     ax.imshow(data, cmap=inps.colormap,
               vmin=inps.vlim[0], vmax=inps.vlim[1],
