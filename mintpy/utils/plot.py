@@ -1124,11 +1124,10 @@ def plot_colorbar(inps, im, cax):
 
     # plot colorbar
     if inps.wrap and (inps.wrap_range[1] - inps.wrap_range[0]) == 2.*np.pi:
-        cbar = plt.colorbar(im, cax=cax, ticks=[inps.wrap_range[0], 0, inps.wrap_range[1]],
-                            orientation=orientation)
+        cbar = plt.colorbar(im, cax=cax, orientation=orientation, ticks=[-np.pi, 0, np.pi])
         cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
     else:
-        cbar = plt.colorbar(im, cax=cax, extend=inps.cbar_ext, orientation=orientation)
+        cbar = plt.colorbar(im, cax=cax, orientation=orientation, extend=inps.cbar_ext)
 
     # update ticks
     if inps.cmap_lut <= 5:
@@ -1144,7 +1143,7 @@ def plot_colorbar(inps, im, cax):
     if inps.cbar_label:
         cbar.set_label(inps.cbar_label, fontsize=inps.font_size, color=inps.font_color)
     elif inps.disp_unit != '1':
-        cbar.set_label(inps.disp_unit, fontsize=inps.font_size, color=inps.font_color)
+        cbar.set_label(inps.disp_unit,  fontsize=inps.font_size, color=inps.font_color)
         
     return inps, cbar
 

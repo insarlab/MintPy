@@ -22,8 +22,7 @@ import mintpy
 from mintpy.objects import sensor, RAMP_LIST
 from mintpy.utils import readfile, writefile, utils as ut
 from mintpy.defaults.template import STEP_LIST
-# dynamic import for modules used by smallbaselineApp workflow
-import mintpy.workflow
+import mintpy.workflow   # dynamic import of modules for smallbaselineApp
 
 
 ##########################################################################
@@ -97,7 +96,16 @@ def cmd_line_parse(iargs=None):
 
     # -H (print default template)
     if inps.print_template:
-        print(open(template_file, 'r').read())
+        with open(template_file, 'r') as f:
+            lines = f.read()
+        try:
+            # syntax highlight via rich
+            from rich.console import Console
+            from rich.syntax import Syntax
+            console = Console()
+            console.print(Syntax(lines, "cfg", background_color='default'))
+        except:
+            print(lines)
         sys.exit(0)
 
     # -v (print software version)
