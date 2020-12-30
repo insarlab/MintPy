@@ -18,6 +18,9 @@ from matplotlib import pyplot as plt
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LinearSegmentedColormap, to_rgb
 
+import mintpy
+CMAP_DIR = os.path.join(os.path.dirname(mintpy.__file__), 'data', 'colormaps')
+
 
 # To manually create custom diverging colormaps, check the link below:
 # diverging_map.py in https://github.com/ethankruse/kepler_orrery
@@ -83,12 +86,10 @@ class ColormapExt(ScalarMappable):
         self.vlist = vlist
 
         # initiate cpt_dirs for custom colormaps
-        self.cpt_dirs = []
+        # with cpt files existed in $MINTPY/mintpy/data/colormaps directory
+        self.cpt_dirs = [CMAP_DIR]
         if cpt_dir:
             self.cpt_dirs.append(cpt_dir)
-
-        # add cpt files existed in $MINTPY/mintpy/data/colormaps directory
-        self.cpt_dirs.append(os.path.join(os.path.dirname(__file__), '../data/colormaps'))
 
         # add cpt files if GMT is installed using MacPorts for macOS users
         gmt_cpt_dir = '/opt/local/share/gmt/cpt'

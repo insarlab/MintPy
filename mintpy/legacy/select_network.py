@@ -13,13 +13,17 @@ import argparse
 import datetime
 import inspect
 import matplotlib.pyplot as plt
+
+import mintpy
 from mintpy.objects import sensor, ifgramStack
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import (ptime,
-                          readfile,
-                          network as pnet,
-                          plot as pp,
-                          utils as ut)
+from mintpy.utils import (
+    ptime,
+    readfile,
+    network as pnet,
+    plot as pp,
+    utils as ut,
+)
 
 SENSOR_NAMES = [i.capitalize() for i in sensor.SENSOR_NAMES]
 
@@ -167,7 +171,7 @@ def read_template2inps(templateFile, inps=None):
 
     # Read template file
     template = readfile.read_template(templateFile)
-    auto_file = os.path.join(os.path.dirname(__file__), 'defaults/selectNetwork.cfg')
+    auto_file = os.path.join(os.path.dirname(mintpy.__file__), 'defaults/selectNetwork.cfg')
     template = ut.check_template_auto_value(template, auto_file=auto_file)
     if not template:
         log('Empty template: '+templateFile)
