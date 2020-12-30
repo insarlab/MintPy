@@ -1065,7 +1065,7 @@ def read_envi_hdr(fname, standardize=True):
     atr['BYTE_ORDER'] = ENVI_BYTE_ORDER[atr.get('byte order', '1')]
 
     if 'map info' in atr.keys():
-        map_info = [i.strip() for i in atr['map info'].split(',')]
+        map_info = [i.replace('{','').replace('}','').strip() for i in atr['map info'].split(',')]
         x_step = abs(float(map_info[5]))
         y_step = abs(float(map_info[6])) * -1.
         #unit = map_info[-1].replace('}','').split('=')[1].lower()

@@ -22,6 +22,7 @@ try:
 except ImportError:
     raise ImportError('Can not import pykml!')
 
+import mintpy
 from mintpy.objects import timeseries, deramp
 from mintpy.utils import readfile, plot, utils as ut
 from mintpy.save_kmz import generate_cbar_element
@@ -639,7 +640,7 @@ def main(iargs=None):
         f.write(etree.tostring(kml_root, pretty_print=True).decode('utf-8'))
 
     ## Copy auxiliary files
-    res_dir = os.path.join(os.path.dirname(__file__), "data")
+    res_dir = os.path.join(os.path.dirname(mintpy.__file__), "data")
     for fname in [inps.star_file, inps.dot_file, inps.dygraph_file]:
         src_file = os.path.join(res_dir, os.path.basename(fname))
         shutil.copy2(src_file, inps.work_dir)

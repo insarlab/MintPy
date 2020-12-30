@@ -92,7 +92,7 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    template_file = os.path.join(os.path.dirname(__file__), 'defaults/smallbaselineApp.cfg')
+    template_file = os.path.join(os.path.dirname(mintpy.__file__), 'defaults/smallbaselineApp.cfg')
 
     # -H (print default template)
     if inps.print_template:
@@ -190,8 +190,8 @@ def get_the_latest_default_template_file(work_dir):
     """Get the latest version of default template file.
     If an obsolete file exists in the working directory, the existing option values are kept.
     """
-    lfile = os.path.join(os.path.dirname(__file__), 'defaults/smallbaselineApp.cfg')  #latest version
-    cfile = os.path.join(work_dir, 'smallbaselineApp.cfg')                            #current version
+    lfile = os.path.join(os.path.dirname(mintpy.__file__), 'defaults/smallbaselineApp.cfg')  #latest version
+    cfile = os.path.join(work_dir, 'smallbaselineApp.cfg')                                   #current version
     if not os.path.isfile(cfile):
         print('copy default template file {} to work directory'.format(lfile))
         shutil.copy2(lfile, work_dir)
@@ -243,7 +243,7 @@ class TimeSeriesAnalysis:
         self._read_template()
 
         # 4. Copy the plot shell file
-        sh_file = os.path.join(os.path.dirname(__file__), 'sh/plot_smallbaselineApp.sh')
+        sh_file = os.path.join(os.path.dirname(mintpy.__file__), 'sh/plot_smallbaselineApp.sh')
 
         def grab_latest_update_date(fname, prefix='# Latest update:'):
             try:

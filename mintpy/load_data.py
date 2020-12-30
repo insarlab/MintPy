@@ -29,28 +29,29 @@ from mintpy import subset
 #################################################################
 PROCESSOR_LIST = ['isce', 'aria', 'snap', 'gamma', 'roipac']
 
-datasetName2templateKey = {'unwrapPhase'     : 'mintpy.load.unwFile',
-                           'coherence'       : 'mintpy.load.corFile',
-                           'connectComponent': 'mintpy.load.connCompFile',
-                           'wrapPhase'       : 'mintpy.load.intFile',
-                           'ionoPhase'       : 'mintpy.load.ionoFile',
-                           'magnitude'       : 'mintpy.load.magFile',
+datasetName2templateKey = {
+    'unwrapPhase'     : 'mintpy.load.unwFile',
+    'coherence'       : 'mintpy.load.corFile',
+    'connectComponent': 'mintpy.load.connCompFile',
+    'wrapPhase'       : 'mintpy.load.intFile',
+    'ionoPhase'       : 'mintpy.load.ionoFile',
+    'magnitude'       : 'mintpy.load.magFile',
 
-                           'azimuthOffset'   : 'mintpy.load.azOffFile',
-                           'rangeOffset'     : 'mintpy.load.rgOffFile',
-                           'offsetSNR'       : 'mintpy.load.offSnrFile',
+    'azimuthOffset'   : 'mintpy.load.azOffFile',
+    'rangeOffset'     : 'mintpy.load.rgOffFile',
+    'offsetSNR'       : 'mintpy.load.offSnrFile',
 
-                           'height'          : 'mintpy.load.demFile',
-                           'latitude'        : 'mintpy.load.lookupYFile',
-                           'longitude'       : 'mintpy.load.lookupXFile',
-                           'azimuthCoord'    : 'mintpy.load.lookupYFile',
-                           'rangeCoord'      : 'mintpy.load.lookupXFile',
-                           'incidenceAngle'  : 'mintpy.load.incAngleFile',
-                           'azimuthAngle'    : 'mintpy.load.azAngleFile',
-                           'shadowMask'      : 'mintpy.load.shadowMaskFile',
-                           'waterMask'       : 'mintpy.load.waterMaskFile',
-                           'bperp'           : 'mintpy.load.bperpFile'
-                           }
+    'height'          : 'mintpy.load.demFile',
+    'latitude'        : 'mintpy.load.lookupYFile',
+    'longitude'       : 'mintpy.load.lookupXFile',
+    'azimuthCoord'    : 'mintpy.load.lookupYFile',
+    'rangeCoord'      : 'mintpy.load.lookupXFile',
+    'incidenceAngle'  : 'mintpy.load.incAngleFile',
+    'azimuthAngle'    : 'mintpy.load.azAngleFile',
+    'shadowMask'      : 'mintpy.load.shadowMaskFile',
+    'waterMask'       : 'mintpy.load.waterMaskFile',
+    'bperp'           : 'mintpy.load.bperpFile',
+}
 
 DEFAULT_TEMPLATE = """template:
 ########## 1. Load Data (--load to exit after this step)
@@ -197,6 +198,12 @@ def read_inps2dict(inps):
         iDict = auto_path.get_auto_path(processor=iDict['processor'],
                                         work_dir=os.path.dirname(iDict['outdir']),
                                         template=iDict)
+
+    # copy global var dsName2templateKey to iDict as a local var
+    iDict['ds_name2key'] = dict()
+    for key, value in datasetName2templateKey.items():
+        iDict['ds_name2key'][key] = value
+
     return iDict
 
 
@@ -219,7 +226,7 @@ def read_subset_box(iDict):
         lookupFile = None
 
     try:
-        pathKey = [i for i in datasetName2templateKey.values()
+        pathKey = [i for i in iDict['ds_name2key'].values()
                    if i in iDict.keys()][0]
         file = glob.glob(str(iDict[pathKey]))[0]
         atr = readfile.read_attribute(file)
@@ -371,11 +378,11 @@ def read_inps_dict2ifgram_stack_dict_object(iDict):
     print('-'*50)
     print('searching interferometric pairs info')
     print('input data files:')
-    maxDigit = max([len(i) for i in list(datasetName2templateKey.keys())])
+    maxDigit = max([len(i) for i in list(iDict['ds_name2key'].keys())])
     dsPathDict = {}
     for dsName in [i for i in ifgramDatasetNames
-                   if i in datasetName2templateKey.keys()]:
-        key = datasetName2templateKey[dsName]
+                   if i in iDict['ds_name2key'].keys()]:
+        key = iDict['ds_name2key'][dsName]
         if key in iDict.keys():
             files = sorted(glob.glob(str(iDict[key])))
             if len(files) > 0:
@@ -464,11 +471,11 @@ def read_inps_dict2geometry_dict_object(iDict):
 
     # eliminate dsName by processor
     if iDict['processor'] in ['isce', 'doris']:
-        datasetName2templateKey.pop('azimuthCoord')
-        datasetName2templateKey.pop('rangeCoord')
+        iDict['ds_name2key'].pop('azimuthCoord')
+        iDict['ds_name2key'].pop('rangeCoord')
     elif iDict['processor'] in ['roipac', 'gamma']:
-        datasetName2templateKey.pop('latitude')
-        datasetName2templateKey.pop('longitude')
+        iDict['ds_name2key'].pop('latitude')
+        iDict['ds_name2key'].pop('longitude')
     elif iDict['processor'] in ['snap']:
         #check again when there is a SNAP product in radar coordiantes
         pass
@@ -479,11 +486,11 @@ def read_inps_dict2geometry_dict_object(iDict):
     print('-'*50)
     print('searching geometry files info')
     print('input data files:')
-    maxDigit = max([len(i) for i in list(datasetName2templateKey.keys())])
+    maxDigit = max([len(i) for i in list(iDict['ds_name2key'].keys())])
     dsPathDict = {}
     for dsName in [i for i in geometryDatasetNames
-                   if i in datasetName2templateKey.keys()]:
-        key = datasetName2templateKey[dsName]
+                   if i in iDict['ds_name2key'].keys()]:
+        key = iDict['ds_name2key'][dsName]
         if key in iDict.keys():
             files = sorted(glob.glob(str(iDict[key])))
             if len(files) > 0:
@@ -510,7 +517,7 @@ def read_inps_dict2geometry_dict_object(iDict):
 
     # metadata
     ifgramRadarMetadata = None
-    ifgramKey = datasetName2templateKey['unwrapPhase']
+    ifgramKey = iDict['ds_name2key']['unwrapPhase']
     if ifgramKey in iDict.keys():
         ifgramFiles = glob.glob(str(iDict[ifgramKey]))
         if len(ifgramFiles) > 0:
