@@ -27,7 +27,7 @@ cmap = ColormapExt('cmy').colromap
 
 ### Colormaps from [GMT](http://www.soest.hawaii.edu/gmt/) ###
 
-For macOS users, if GMT is installed using [MacPorts](https://www.macports.org), all GMT cpt files (located at `/opt/local/share/gmt/cpt`) will be recognized and supported, i.e. the 20 built-in colormaps as shown below:
+All GMT cpt files, e.g. the 20 built-in colormaps shown below, can be recognized by setting the variable `GMT_CPT_DIR` in `$MINTPY_HOME/mintpy/objects/colors.py`. The default hardwired value is `/opt/local/share/gmt/cpt` for macOS users with GMT installed using [MacPorts](https://www.macports.org).
 
 <p align="left">
   <img width="600" src="https://docs.generic-mapping-tools.org/5.4/_images/GMT_App_M_1a.png">
@@ -63,5 +63,6 @@ The following colormaps is included by default:
 + More at [Scientific Color-Maps](http://www.fabiocrameri.ch/colourmaps.php) ([Crameri, 2018](https://doi.org/10.5194/gmd-11-2541-2018))
 
 <p align="left">
-  <img src="http://www.fabiocrameri.ch/resources/ScientificColourMaps_FabioCrameri.png">
+  <img src="https://yunjunzhang.files.wordpress.com/2021/01/scientificcolourmaps_fabiocrameri.png">
 </p>
+

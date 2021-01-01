@@ -383,7 +383,7 @@ def read_timeseries_data(inps):
         inps.ylim = [ymin - ybuffer, ymax + ybuffer]
         if inps.offset:
             inps.ylim[1] += inps.offset * (num_file - 1)
-    del ts_data_mli
+        del ts_data_mli
 
     return ts_data, mask, inps
 

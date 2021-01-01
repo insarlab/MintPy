@@ -432,7 +432,7 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
     outFile = None
     for fname in existFiles:
         atr = readfile.read_attribute(fname)
-        for dsName in ['rangeCoord', 'longitude']:
+        for dsName in ['longitude', 'rangeCoord']:
             try:
                 dset = readfile.read(fname, datasetName=dsName, print_msg=False)[0]
                 outFile = fname

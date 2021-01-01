@@ -360,49 +360,6 @@ def plot_num_triplet_with_nonzero_integer_ambiguity(fname, display=False, font_s
 
 
 ##########################################################################################
-def write_hdf5_file_patch(ifgram_file, data, box=None, dsName='unwrapPhase_phaseClosure'):
-    """Write a patch of 3D dataset into an existing h5 file.
-    Parameters: ifgram_file : string, name/path of output hdf5 file
-                data : 3D np.array to be written
-                box  : tuple of 4 int, indicating of (x0, y0, x1, y1) of data in file
-                dsName : output dataset name
-    Returns:    ifgram_file
-    """
-    num_ifgram, length, width = ifgramStack(ifgram_file).get_size(dropIfgram=False)
-    if not box:
-        box = (0, 0, width, length)
-    num_row = box[3] - box[1]
-    num_col = box[2] - box[0]
-
-    # write to existing HDF5 file
-    print('open {} with r+ mode'.format(ifgram_file))
-    f = h5py.File(ifgram_file, 'r+')
-
-    # get h5py.Dataset
-    msg = 'dataset /{d} of {t:<10} in size of {s}'.format(d=dsName, t=str(data.dtype),
-                                                          s=(num_ifgram, box[3], box[2]))
-    if dsName in f.keys():
-        print('update '+msg)
-        ds = f[dsName]
-    else:
-        print('create '+msg)
-        ds = f.create_dataset(dsName, (num_ifgram, num_row, num_col),
-                              maxshape=(None, None, None),
-                              chunks=True, compression=None)
-
-    # resize h5py.Dataset if current size is not enough
-    if ds.shape != (num_ifgram, length, width):
-        ds.resize((num_ifgram, box[3], box[2]))
-
-    # write data to file
-    ds[:, box[1]:box[3], box[0]:box[2]] = data
-
-    ds.attrs['MODIFICATION_TIME'] = str(time.time())
-    f.close()
-    print('close {}'.format(ifgram_file))
-    return ifgram_file
-
-
 def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=None, num_sample=100,
                                     dsNameIn='unwrapPhase'):
     """Solve the phase unwrapping integer ambiguity for the common regions among all interferograms
@@ -517,59 +474,59 @@ def run_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_file=
 
     # prepare output data writing
     print('open {} with r+ mode'.format(ifgram_file))
-    f = h5py.File(ifgram_file, 'r+')
-    print('input  dataset:', dsNameIn)
-    print('output dataset:', dsNameOut)
-    if dsNameOut in f.keys():
-        ds = f[dsNameOut]
-        print('access /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
-    else:
-        ds = f.create_dataset(dsNameOut,
-                              shape_out,
-                              maxshape=(None, None, None),
-                              chunks=True,
-                              compression=None)
-        print('create /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
+    with h5py.File(ifgram_file, 'r+') as f:
+        print('input  dataset:', dsNameIn)
+        print('output dataset:', dsNameOut)
+        if dsNameOut in f.keys():
+            ds = f[dsNameOut]
+            print('access /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
+        else:
+            ds = f.create_dataset(dsNameOut,
+                                  shape_out,
+                                  maxshape=(None, None, None),
+                                  chunks=True,
+                                  compression=None)
+            print('create /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
 
-    # correct unwrap error ifgram by ifgram
-    prog_bar = ptime.progressBar(maxValue=num_ifgram)
-    for i in range(num_ifgram):
-        date12 = date12_list[i]
+        # correct unwrap error ifgram by ifgram
+        prog_bar = ptime.progressBar(maxValue=num_ifgram)
+        for i in range(num_ifgram):
+            date12 = date12_list[i]
 
-        # read unwrap phase to be updated
-        unw_cor = np.squeeze(f[dsNameIn][i, :, :]).astype(np.float32)
-        unw_cor -= unw_cor[ref_y, ref_x]
+            # read unwrap phase to be updated
+            unw_cor = np.squeeze(f[dsNameIn][i, :, :]).astype(np.float32)
+            unw_cor -= unw_cor[ref_y, ref_x]
 
-        # update kept interferograms only
-        if stack_obj.dropIfgram[i]:
-            # get local region info from connectComponent
-            cc = np.squeeze(f[ccName][i, :, :])
-            if water_mask is not None:
-                cc[water_mask == 0] = 0
-            cc_obj = conncomp.connectComponent(conncomp=cc, metadata=stack_obj.metadata)
-            cc_obj.label()
-            local_regions = measure.regionprops(cc_obj.labelImg)
+            # update kept interferograms only
+            if stack_obj.dropIfgram[i]:
+                # get local region info from connectComponent
+                cc = np.squeeze(f[ccName][i, :, :])
+                if water_mask is not None:
+                    cc[water_mask == 0] = 0
+                cc_obj = conncomp.connectComponent(conncomp=cc, metadata=stack_obj.metadata)
+                cc_obj.label()
+                local_regions = measure.regionprops(cc_obj.labelImg)
 
-            # matching regions and correct unwrap error
-            idx_common = common_regions[0].date12_list.index(date12)
-            for local_reg in local_regions:
-                local_mask = cc_obj.labelImg == local_reg.label
-                U = 0
-                for common_reg in common_regions:
-                    y = common_reg.sample_coords[:,0]
-                    x = common_reg.sample_coords[:,1]
-                    if all(local_mask[y, x]):
-                        U = common_reg.int_ambiguity[idx_common]
-                        break
-                unw_cor[local_mask] += 2. * np.pi * U
+                # matching regions and correct unwrap error
+                idx_common = common_regions[0].date12_list.index(date12)
+                for local_reg in local_regions:
+                    local_mask = cc_obj.labelImg == local_reg.label
+                    U = 0
+                    for common_reg in common_regions:
+                        y = common_reg.sample_coords[:,0]
+                        x = common_reg.sample_coords[:,1]
+                        if all(local_mask[y, x]):
+                            U = common_reg.int_ambiguity[idx_common]
+                            break
+                    unw_cor[local_mask] += 2. * np.pi * U
 
-        # write to hdf5 file
-        ds[i, :, :] = unw_cor
-        prog_bar.update(i+1, suffix=date12)
-    prog_bar.close()
-    ds.attrs['MODIFICATION_TIME'] = str(time.time())
-    f.close()
+            # write to hdf5 file
+            ds[i, :, :] = unw_cor
+            prog_bar.update(i+1, suffix=date12)
+        prog_bar.close()
+        ds.attrs['MODIFICATION_TIME'] = str(time.time())
     print('close {} file.'.format(ifgram_file))
+
     return ifgram_file
 
 

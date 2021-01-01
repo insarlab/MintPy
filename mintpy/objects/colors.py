@@ -19,8 +19,8 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LinearSegmentedColormap, to_rgb
 
 import mintpy
-CMAP_DIR = os.path.join(os.path.dirname(mintpy.__file__), 'data', 'colormaps')
-
+MINTPY_CPT_DIR = os.path.join(os.path.dirname(mintpy.__file__), 'data', 'colormaps')
+GMT_CPT_DIR = '/opt/local/share/gmt/cpt'  #location of GMT colormap files, default for macOS with GMT installed via MacPorts
 
 # To manually create custom diverging colormaps, check the link below:
 # diverging_map.py in https://github.com/ethankruse/kepler_orrery
@@ -38,6 +38,12 @@ def isnumber(n):
 ################################## ColormapExt class begin #####################################
 class ColormapExt(ScalarMappable):
     """Extended colormap class inherited from matplotlib.cm.ScalarMappable class
+
+    Colormaps priority:
+        1. (user_input)
+        2. MINTPY_CPT_DIR (cpt-city + sci colormap)
+        3. Matplotlib
+        4. (GMT_CPT_DIR)
 
     Example:
         from mintpy.objects.colors import ColormapExt
@@ -66,14 +72,10 @@ class ColormapExt(ScalarMappable):
 
     def __init__(self, cmap_name, cmap_lut=256, vlist=[0.0, 0.7, 1.0], cpt_dir=None):
         """ Initiate an ColormapExt object
-        Parameters: cmap_name : string, colormap name. Default: viridis
-                    cmap_lut : int, number of increment in the color lookup table
-                    vlist : list of 3 float numbers, for truncated colormap only
-                    cpt_dir : extra directory of cpt files to be recognized
-                        Priority: 1. (user_input)
-                                  2. mintpy/docs/res*/colormaps(cpt-city + sci colormap)
-                                  3. Matplotlib
-                                  4. (GMT)
+        Parameters: cmap_name - str, colormap name. Default: viridis
+                    cmap_lut  - int, number of increment in the color lookup table
+                    vlist     - list of 3 float numbers, for truncated colormap only
+                    cpt_dir   - list of str, extra directories of cpt files to be recognized
         """
         # default setup
         self.reverse_colormap = False
@@ -85,16 +87,12 @@ class ColormapExt(ScalarMappable):
         self.cmap_lut = cmap_lut
         self.vlist = vlist
 
-        # initiate cpt_dirs for custom colormaps
-        # with cpt files existed in $MINTPY/mintpy/data/colormaps directory
-        self.cpt_dirs = [CMAP_DIR]
-        if cpt_dir:
-            self.cpt_dirs.append(cpt_dir)
-
-        # add cpt files if GMT is installed using MacPorts for macOS users
-        gmt_cpt_dir = '/opt/local/share/gmt/cpt'
-        if os.path.isdir(gmt_cpt_dir):
-            self.cpt_dirs.append(gmt_cpt_dir)
+        # initiate cpt_dirs for custom colormaps with:
+        # 1. cpt_dir from custom input argument during initiation
+        # 2. MINTPY_CPT_DIR, including some from cpt-city and scientific color maps
+        # 3. GMT_CPT_DIR, if GMT is installed
+        self.cpt_dirs = [i for i in [cpt_dir, MINTPY_CPT_DIR, GMT_CPT_DIR]
+                         if i and os.path.isdir(i)]
 
         # initiate member functions
         self.get_colormap_name_list()

@@ -99,11 +99,11 @@ def main(iargs=None):
     if inps.update_mode and run_or_skip(inps) == 'skip':
         return inps.outfile
 
-    inps.outfile = ut.temporal_average(inps.file, datasetName=inps.datasetName, outFile=inps.outfile)
+    ut.temporal_average(inps.file, datasetName=inps.datasetName, outFile=inps.outfile)
 
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs\n'.format(m, s))
-    return inps.outfile
+    return
 
 
 ##############################################################################
