@@ -207,48 +207,47 @@ def run_unwrap_error_bridge(ifgram_file, water_mask_file, ramp_type=None, radius
 
         # prepare output data writing
         print('open {} with r+ mode'.format(ifgram_file))
-        f = h5py.File(ifgram_file, 'r+')
-        print('input  dataset:', dsNameIn)
-        print('output dataset:', dsNameOut)
-        if dsNameOut in f.keys():
-            ds = f[dsNameOut]
-            print('access /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
-        else:
-            ds = f.create_dataset(dsNameOut,
-                                  shape_out,
-                                  maxshape=(None, None, None),
-                                  chunks=True,
-                                  compression=None)
-            print('create /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
-
-        # correct unwrap error ifgram by ifgram
-        prog_bar = ptime.progressBar(maxValue=num_ifgram)
-        for i in range(num_ifgram):
-            # read unwrapPhase
-            date12 = date12_list[i]
-            unw = np.squeeze(f[dsNameIn][i, :, :])
-
-            # skip dropped interferograms
-            if date12 not in date12_list_kept:
-                ds[i, :, :] = unw
+        with h5py.File(ifgram_file, 'r+') as f:
+            print('input  dataset:', dsNameIn)
+            print('output dataset:', dsNameOut)
+            if dsNameOut in f.keys():
+                ds = f[dsNameOut]
+                print('access /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
             else:
-                # read connectComponent
-                cc = np.squeeze(f[ccName][i, :, :])
-                if water_mask is not None:
-                    cc[water_mask == 0] = 0
+                ds = f.create_dataset(dsNameOut,
+                                      shape_out,
+                                      maxshape=(None, None, None),
+                                      chunks=True,
+                                      compression=None)
+                print('create /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
 
-                # bridging
-                cc_obj = connectComponent(conncomp=cc, metadata=atr)
-                cc_obj.label()
-                cc_obj.find_mst_bridge()
-                unw_cor = cc_obj.unwrap_conn_comp(unw, radius=radius, ramp_type=ramp_type)
+            # correct unwrap error ifgram by ifgram
+            prog_bar = ptime.progressBar(maxValue=num_ifgram)
+            for i in range(num_ifgram):
+                # read unwrapPhase
+                date12 = date12_list[i]
+                unw = np.squeeze(f[dsNameIn][i, :, :])
 
-                # write to hdf5 file
-                ds[i, :, :] = unw_cor
-            prog_bar.update(i+1, suffix=date12)
-        prog_bar.close()
-        ds.attrs['MODIFICATION_TIME'] = str(time.time())
-        f.close()
+                # skip dropped interferograms
+                if date12 not in date12_list_kept:
+                    ds[i, :, :] = unw
+                else:
+                    # read connectComponent
+                    cc = np.squeeze(f[ccName][i, :, :])
+                    if water_mask is not None:
+                        cc[water_mask == 0] = 0
+
+                    # bridging
+                    cc_obj = connectComponent(conncomp=cc, metadata=atr)
+                    cc_obj.label()
+                    cc_obj.find_mst_bridge()
+                    unw_cor = cc_obj.unwrap_conn_comp(unw, radius=radius, ramp_type=ramp_type)
+
+                    # write to hdf5 file
+                    ds[i, :, :] = unw_cor
+                prog_bar.update(i+1, suffix=date12)
+            prog_bar.close()
+            ds.attrs['MODIFICATION_TIME'] = str(time.time())
         print('close {} file.'.format(ifgram_file))
 
     if k == '.unw':

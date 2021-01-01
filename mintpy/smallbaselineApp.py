@@ -419,14 +419,15 @@ class TimeSeriesAnalysis:
         """Modify network of interferograms before the network inversion."""
         # check the existence of ifgramStack.h5
         stack_file, geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1:3]
-        coh_txt = 'coherenceSpatialAvg.txt'
+        coh_txt = os.path.join(self.workDir, 'coherenceSpatialAvg.txt')
+        net_fig = [os.path.join(self.workDir, i, 'network.pdf') for i in ['', 'pic']]
         try:
-            net_fig = [i for i in ['network.pdf', 'pic/network.pdf'] if os.path.isfile(i)][0]
+            net_fig = [i for i in net_fig if os.path.isfile(i)][0]
         except:
             net_fig = None
 
         # 1) output waterMask.h5 to simplify the detection/use of waterMask
-        water_mask_file = 'waterMask.h5'
+        water_mask_file = os.path.join(self.workDir, 'waterMask.h5')
         if 'waterMask' in readfile.get_dataset_list(geom_file):
             print('generate {} from {} for conveniency'.format(water_mask_file, geom_file))
             if ut.run_or_skip(out_file=water_mask_file, in_file=geom_file) == 'run':
@@ -472,9 +473,9 @@ class TimeSeriesAnalysis:
         """Generate auxiliary files from ifgramStack file"""
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
         dsNames = readfile.get_dataset_list(stack_file)
-        mask_file = 'maskConnComp.h5'
-        coh_file = 'avgSpatialCoh.h5'
-        snr_file = 'avgSpatialSnr.h5'
+        mask_file = os.path.join(self.workDir, 'maskConnComp.h5')
+        coh_file = os.path.join(self.workDir, 'avgSpatialCoh.h5')
+        snr_file = os.path.join(self.workDir, 'avgSpatialSnr.h5')
 
         # 1) generate mask file from the common connected components
         if any('phase' in i.lower() for i in dsNames):
@@ -502,10 +503,12 @@ class TimeSeriesAnalysis:
         self.generate_ifgram_aux_file()
 
         # 3) add REF_X/Y(/LAT/LON) of the reference point
-        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
-        coh_file = 'avgSpatialCoh.h5'
+        stack_file, geom_file, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1:4]
+        coh_file = os.path.join(self.workDir, 'avgSpatialCoh.h5')
 
         iargs = [stack_file, '-t', self.templateFile, '-c', coh_file]
+        if lookup_file is not None:
+            iargs += ['--lookup', lookup_file]
         print('\nreference_point.py', ' '.join(iargs))
         mintpy.reference_point.main(iargs)
         return
@@ -520,13 +523,13 @@ class TimeSeriesAnalysis:
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
 
         # 1) stack interferograms
-        pha_vel_file = 'avgPhaseVelocity.h5'
+        pha_vel_file = os.path.join(self.workDir, 'avgPhaseVelocity.h5')
         iargs = [stack_file, '--dataset', 'unwrapPhase', '-o', pha_vel_file, '--update']
         print('\ntemporal_average.py', ' '.join(iargs))
         mintpy.temporal_average.main(iargs)
 
         # 2) calculate the number of interferogram triplets with non-zero integer ambiguity
-        water_mask_file = 'waterMask.h5'
+        water_mask_file = os.path.join(self.workDir, 'waterMask.h5')
         iargs = [stack_file, '--water-mask', water_mask_file, '--action', 'calculate', '--update']
         print('\nunwrap_error_phase_closure.py', ' '.join(iargs))
         mintpy.unwrap_error_phase_closure.main(iargs)
@@ -542,7 +545,7 @@ class TimeSeriesAnalysis:
 
         # check required input files
         stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
-        mask_file = 'maskConnComp.h5'
+        mask_file = os.path.join(self.workDir, 'maskConnComp.h5')
 
         iargs_bridge = [stack_file, '--template', self.templateFile, '--update']
         iargs_closure = iargs_bridge + ['--cc-mask', mask_file]
@@ -592,8 +595,8 @@ class TimeSeriesAnalysis:
     def generate_temporal_coherence_mask(self):
         """Generate reliable pixel mask from temporal coherence"""
         geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
-        tcoh_file = 'temporalCoherence.h5'
-        mask_file = 'maskTempCoh.h5'
+        tcoh_file = os.path.join(self.workDir, 'temporalCoherence.h5')
+        mask_file = os.path.join(self.workDir, 'maskTempCoh.h5')
         tcoh_min = self.template['mintpy.networkInversion.minTempCoh']
 
         # compose list of arguments
@@ -645,17 +648,18 @@ class TimeSeriesAnalysis:
 
 
     @staticmethod
-    def get_timeseries_filename(template):
+    def get_timeseries_filename(template, work_dir='./'):
         """Get input/output time-series filename for each step
         Parameters: template : dict, content of smallbaselineApp.cfg
         Returns:    steps    : dict of dicts, input/output filenames for each step
         """
-        steps = dict()
-        fname0 = 'timeseries.h5'
-        fname1 = 'timeseries.h5'
+        work_dir = os.path.abspath(work_dir)
+        fname0 = os.path.join(work_dir, 'timeseries.h5')
+        fname1 = os.path.join(work_dir, 'timeseries.h5')
         atr = readfile.read_attribute(fname0)
 
         # loop for all steps
+        steps = dict()
         phase_correction_steps = ['correct_LOD', 'correct_troposphere', 'deramp', 'correct_topography']
         for sname in phase_correction_steps:
             # fname0 == fname1 if no valid correction method is set.
@@ -718,7 +722,9 @@ class TimeSeriesAnalysis:
         # step - hdfeos5
         if 'Y_FIRST' not in atr.keys():
             step = dict()
-            step['input'] = './geo/geo_{}'.format(steps['reference_date']['input'][-1])
+            fdir = os.path.dirname(steps['reference_date']['input'][-1])
+            fbase = os.path.basename(steps['reference_date']['input'][-1])
+            step['input'] = os.path.join(fdir, 'geo/geo_{}'.format(fbase))
         steps['hdfeos5'] = step
         return steps
 
@@ -729,7 +735,7 @@ class TimeSeriesAnalysis:
         Automatically skipped for all the other data.
         """
         geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
-        fnames = self.get_timeseries_filename(self.template)[step_name]
+        fnames = self.get_timeseries_filename(self.template, self.workDir)[step_name]
         in_file = fnames['input']
         out_file = fnames['output']
         if in_file != out_file:
@@ -747,9 +753,9 @@ class TimeSeriesAnalysis:
     def run_tropospheric_delay_correction(self, step_name):
         """Correct tropospheric delays."""
         geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
-        mask_file = 'maskTempCoh.h5'
+        mask_file = os.path.join(self.workDir, 'maskTempCoh.h5')
 
-        fnames = self.get_timeseries_filename(self.template)[step_name]
+        fnames = self.get_timeseries_filename(self.template, self.workDir)[step_name]
         in_file = fnames['input']
         out_file = fnames['output']
         if in_file != out_file:
@@ -828,7 +834,7 @@ class TimeSeriesAnalysis:
         mask_file = self.template['mintpy.deramp.maskFile']
         method    = self.template['mintpy.deramp']
 
-        fnames = self.get_timeseries_filename(self.template)[step_name]
+        fnames = self.get_timeseries_filename(self.template, self.workDir)[step_name]
         in_file = fnames['input']
         out_file = fnames['output']
         if in_file != out_file:
@@ -846,7 +852,7 @@ class TimeSeriesAnalysis:
         Topographic residual (DEM error) correction (optional).
         """
         geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
-        fnames = self.get_timeseries_filename(self.template)[step_name]
+        fnames = self.get_timeseries_filename(self.template, self.workDir)[step_name]
         in_file = fnames['input']
         out_file = fnames['output']
 
@@ -878,7 +884,7 @@ class TimeSeriesAnalysis:
         """Change reference date for all time-series files (optional)."""
         if self.template['mintpy.reference.date']:
             iargs = ['-t', self.templateFile]
-            in_files = self.get_timeseries_filename(self.template)[step_name]['input']
+            in_files = self.get_timeseries_filename(self.template, self.workDir)[step_name]['input']
             for in_file in in_files:
                 iargs += [in_file]
             print('\nreference_date.py', ' '.join(iargs))
@@ -890,8 +896,8 @@ class TimeSeriesAnalysis:
 
     def run_timeseries2velocity(self, step_name):
         """Estimate average velocity from displacement time-series"""
-        ts_file = self.get_timeseries_filename(self.template)[step_name]['input']
-        vel_file = 'velocity.h5'
+        ts_file = self.get_timeseries_filename(self.template, self.workDir)[step_name]['input']
+        vel_file = os.path.join(self.workDir, 'velocity.h5')
 
         iargs = [ts_file, '-t', self.templateFile, '-o', vel_file, '--update']
         print('\ntimeseries2velocity.py', ' '.join(iargs))
@@ -899,10 +905,11 @@ class TimeSeriesAnalysis:
 
         # Velocity from estimated tropospheric delays
         tropo_model = self.template['mintpy.troposphericDelay.weatherModel']
-        tropo_file = './inputs/{}.h5'.format(tropo_model)
+        tropo_file = os.path.join(self.workDir, 'inputs/{}.h5'.format(tropo_model))
         if os.path.isfile(tropo_file):
             suffix = os.path.splitext(os.path.basename(tropo_file))[0]
             tropo_vel_file = '{}{}.h5'.format(os.path.splitext(vel_file)[0], suffix)
+            tropo_vel_file = os.path.join(self.workDir, tropo_vel_file)
 
             iargs = [tropo_file, '-t', self.templateFile, '-o', tropo_vel_file, '--update']
             # add reference info for a meaningful velocity to assess the impact of tropo delay on velocity
@@ -916,7 +923,7 @@ class TimeSeriesAnalysis:
     def run_geocode(self, step_name):
         """geocode data files in radar coordinates into ./geo folder."""
         if self.template['mintpy.geocode']:
-            ts_file = self.get_timeseries_filename(self.template)[step_name]['input']
+            ts_file = self.get_timeseries_filename(self.template, self.workDir)[step_name]['input']
             atr = readfile.read_attribute(ts_file)
             if 'Y_FIRST' not in atr.keys():
                 # 1. geocode
@@ -958,7 +965,7 @@ class TimeSeriesAnalysis:
         if self.template['mintpy.save.kmz'] is True:
             print('creating Google Earth KMZ file for geocoded velocity file: ...')
             # input
-            vel_file = 'velocity.h5'
+            vel_file = os.path.join(self.workDir, 'velocity.h5')
             atr = readfile.read_attribute(vel_file)
             if 'Y_FIRST' not in atr.keys():
                 vel_file = os.path.join(self.workDir, 'geo/geo_velocity.h5')
@@ -986,20 +993,20 @@ class TimeSeriesAnalysis:
         """Save displacement time-series and its aux data in geo coordinate into HDF-EOS5 format"""
         if self.template['mintpy.save.hdfEos5'] is True:
             # input
-            ts_file = self.get_timeseries_filename(self.template)[step_name]['input']
+            ts_file = self.get_timeseries_filename(self.template, self.workDir)[step_name]['input']
             # Add attributes from custom template to timeseries file
             if self.customTemplate is not None:
                 ut.add_attribute(ts_file, self.customTemplate)
 
-            tcoh_file = 'temporalCoherence.h5'
-            scoh_file = 'avgSpatialCoh.h5'
-            mask_file = 'maskTempCoh.h5'
+            tcoh_file = os.path.join(self.workDir, 'temporalCoherence.h5')
+            scoh_file = os.path.join(self.workDir, 'avgSpatialCoh.h5')
+            mask_file = os.path.join(self.workDir, 'maskTempCoh.h5')
             geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
             if 'geo' in ts_file:
-                tcoh_file = './geo/geo_temporalCoherence.h5'
-                scoh_file = './geo/geo_avgSpatialCoh.h5'
-                mask_file = './geo/geo_maskTempCoh.h5'
-                geom_file = './geo/geo_{}'.format(os.path.basename(geom_file))
+                tcoh_file = os.path.join(self.workDir, 'geo/geo_temporalCoherence.h5')
+                scoh_file = os.path.join(self.workDir, 'geo/geo_avgSpatialCoh.h5')
+                mask_file = os.path.join(self.workDir, 'geo/geo_maskTempCoh.h5')
+                geom_file = os.path.join(self.workDir, 'geo/geo_{}'.format(os.path.basename(geom_file)))
 
             # cmd
             print('--------------------------------------------')

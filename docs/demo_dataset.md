@@ -40,7 +40,7 @@ smallbaselineApp.py ${MINTPY_HOME}/mintpy/data/input_files/SanFranSenDT42.txt
 
 Relevant literature:
 
-+ Chaussard, E., R. Bürgmann, H. Fattahi, R. M. Nadeau, T. Taira, C. W. Johnson, and I. Johanson (2015), Potential for larger earthquakes in the East San Francisco Bay Area due to the direct connection between the Hayward and Calaveras Faults, Geophysical Research Letters, 42(8), 2734-2741, doi:10.1002/2015GL063575.
++ Chaussard, E., R. Bürgmann, H. Fattahi, R. M. Nadeau, T. Taira, C. W. Johnson, and I. Johanson (2015), Potential for larger earthquakes in the East San Francisco Bay Area due to the direct connection between the Hayward and Calaveras Faults, _Geophysical Research Letters,_ 42(8), 2734-2741, doi:10.1002/2015GL063575.
 
 #### Envisat of the 2008 Wells earthquake with Gamma ####
 

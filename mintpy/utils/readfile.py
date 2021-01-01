@@ -608,6 +608,7 @@ def get_dataset_list(fname, datasetName=None):
     if fext in ['.h5', '.he5']:
         atr = read_attribute(fname)
         length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+
         def get_hdf5_dataset(name, obj):
             global ds_list
             if isinstance(obj, h5py.Dataset) and obj.shape[-2:] == (length, width):
@@ -660,9 +661,10 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
 
     # HDF5 files
     if fext in ['.h5', '.he5']:
-        f = h5py.File(fname, 'r')
-        g1_list = [i for i in f.keys() if isinstance(f[i], h5py.Group)]
-        d1_list = [i for i in f.keys() if isinstance(f[i], h5py.Dataset) and f[i].ndim >= 2]
+        with h5py.File(fname, 'r') as f:
+            atr = dict(f.attrs)
+            g1_list = [i for i in f.keys() if isinstance(f[i], h5py.Group)]
+            d1_list = [i for i in f.keys() if isinstance(f[i], h5py.Dataset) and f[i].ndim >= 2]
 
         # FILE_TYPE - k
         py2_mintpy_stack_files = ['interferograms', 'coherence', 'wrapped'] #obsolete mintpy format
@@ -694,24 +696,28 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             atr = giantTimeseries(fname).get_metadata()
         elif k == 'giantIfgramStack':
             atr = giantIfgramStack(fname).get_metadata()
+        elif len(atr) > 0 and 'WIDTH' in atr.keys():
+            # use the attribute at root level
+            pass
         else:
-            if len(f.attrs) > 0 and 'WIDTH' in f.attrs.keys():
-                atr = dict(f.attrs)
-            else:
-                # grab the list of attrs in HDF5 file
+            # otherwise, grab the list of attrs in HDF5 file
+            # and use the attrs with most items
+            global atr_list
+            def get_hdf5_attrs(name, obj):
                 global atr_list
-                def get_hdf5_attrs(name, obj):
-                    global atr_list
-                    if len(obj.attrs) > 0 and 'WIDTH' in obj.attrs.keys():
-                        atr_list.append(dict(obj.attrs))
-                atr_list = []
+                if len(obj.attrs) > 0 and 'WIDTH' in obj.attrs.keys():
+                    atr_list.append(dict(obj.attrs))
+
+            atr_list = []
+            with h5py.File(fname, 'r') as f:
                 f.visititems(get_hdf5_attrs)
-                # use the attrs with most items
-                if atr_list:
-                    num_list = [len(i) for i in atr_list]
-                    atr = atr_list[np.argmax(num_list)]
-                else:
-                    raise ValueError('No attribute WIDTH found in file:', fname)
+
+            # use the attrs with most items
+            if atr_list:
+                num_list = [len(i) for i in atr_list]
+                atr = atr_list[np.argmax(num_list)]
+            else:
+                raise ValueError('No attribute WIDTH found in file:', fname)
 
         # decode string format
         for key, value in atr.items():
@@ -726,22 +732,24 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
 
         # 2. DATA_TYPE
         ds = None
-        if datasetName and datasetName in f.keys():
-            ds = f[datasetName]
-        else:
-            # get the 1st dataset
-            global ds_list
-            def get_hdf5_dataset(name, obj):
+        with h5py.File(fname, 'r') as f:
+            if datasetName and datasetName in f.keys():
+                # get the dataset in the root level
+                ds = f[datasetName]
+            else:
+                # get the 1st dataset in deeper levels
                 global ds_list
-                if isinstance(obj, h5py.Dataset) and obj.ndim >= 2:
-                    ds_list.append(obj)
-            ds_list = []
-            f.visititems(get_hdf5_dataset)
-            if ds_list:
-                ds = ds_list[0]
-        if ds is not None:
-            atr['DATA_TYPE'] = str(ds.dtype)
-        f.close()
+                def get_hdf5_dataset(name, obj):
+                    global ds_list
+                    if isinstance(obj, h5py.Dataset) and obj.ndim >= 2:
+                        ds_list.append(obj)
+                ds_list = []
+                f.visititems(get_hdf5_dataset)
+                if ds_list:
+                    ds = ds_list[0]
+
+            if ds is not None:
+                atr['DATA_TYPE'] = str(ds.dtype)
 
         # 3. PROCESSOR
         if 'INSAR_PROCESSOR' in atr.keys():
