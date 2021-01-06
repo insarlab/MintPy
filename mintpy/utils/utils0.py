@@ -748,13 +748,19 @@ def median_abs_deviation_threshold(data, center=None, cutoff=3.):
 def ceil_to_1(x):
     """Return the most significant digit of input number and ceiling it"""
     digit = int(np.floor(np.log10(abs(x))))
-    return round(x, -digit)+10**digit
+    x_round = round(x, -digit)
+    # round to ceil
+    if x_round >= x:
+        x_ceil = x_round
+    else:
+        x_ceil = x_round + 10**digit
+    return x_ceil
 
 
 def round_to_1(x):
     """Return the most significant digit of input number"""
     digit = int(np.floor(np.log10(abs(x))))
-    return round(x, -1*digit)
+    return round(x, -digit)
 
 
 def highest_power_of_2(x):

@@ -240,7 +240,7 @@ def plot_stitch(mat11, mat22, mat, mat_diff, out_fig=None):
     return
 
 
-def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True):
+def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_value=None):
     """Stitch all input files into one
     """
     # printout msg
@@ -249,14 +249,19 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True):
         print('\t{}'.format(fname))
 
     # stitching
-    mat, atr = readfile.read(fnames[0])
     print('read data from file: {}'.format(fnames[0]))
+    mat, atr = readfile.read(fnames[0])
+    if no_data_value is not None:
+        print('convert no_data_value from {} to NaN'.format(no_data_value))
+        mat[mat==no_data_value] = np.nan
 
     for i in range(1, len(fnames)):
         fname = fnames[i]
         print('-'*50)
         print('read data from file: {}'.format(fname))
         mat2, atr2 = readfile.read(fname)
+        if no_data_value is not None:
+            mat2[mat2==no_data_value] = np.nan
 
         print('stitching ...')
         (mat, atr,
