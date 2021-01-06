@@ -131,16 +131,34 @@ def add_inner_title(ax, title, loc, prop=None, **kwargs):
     return at
 
 
-def auto_figure_size(shape, disp_cbar=False, ratio=1.0):
-    """Get auto figure size based on input data shape"""
-    length, width = shape
-    plot_shape = [width*1.25, length]
-    if not disp_cbar:
-        plot_shape = [width, length]
-    fig_scale = min(min_figsize_single/min(plot_shape),
-                    max_figsize_single/max(plot_shape),
-                    max_figsize_height/plot_shape[1])
-    fig_size = [i*fig_scale*ratio for i in plot_shape]
+def auto_figure_size(ds_shape, scale=1.0, disp_cbar=False, disp_slider=False,
+                     cbar_ratio=0.25, slider_ratio=0.30, print_msg=True):
+    """Get auto figure size based on input data shape
+    Adjust if display colobar on the right and/or slider on the bottom
+
+    Parameters: ds_shape          - tuple/list of 2 int for the 2D matrix shape in [length, width]
+                scale             - floag, scale the final figure size
+                disp_cbar/slider  - bool, plot colorbar on the right / slider on the bottom
+                cbar/slider_ratio - float, size ratio of the additional colobar / slider
+    Returns:    figsize           - list of 2 float for the figure size in [width, lenght] in inches
+    """
+    # figure shape
+    fig_shape = list(ds_shape)[::-1]
+    if disp_cbar:
+        fig_shape[0] *= (1 + cbar_ratio)
+    if disp_slider:
+        fig_shape[1] *= (1 + slider_ratio)
+
+    # get scale to meet the min/max figure size constrain
+    fig_scale = min(min_figsize_single / min(fig_shape),
+                    max_figsize_single / max(fig_shape),
+                    max_figsize_height / fig_shape[1])
+
+    # fig_shape/scale --> fig_size
+    fig_size = [i*fig_scale*scale for i in fig_shape]
+    if print_msg:
+        print('figure size : [{:.2f}, {:.2f}]'.format(fig_size[0], fig_size[1]))
+
     return fig_size
 
 
@@ -1147,96 +1165,6 @@ def plot_colorbar(inps, im, cax):
         
     return inps, cbar
 
-
-def set_shared_ylabel(axes_list, label, labelpad=0.01, font_size=12, position='left'):
-    """Set a y label shared by multiple axes
-    Parameters: axes_list : list of axes in left/right most col direction
-                label : string
-                labelpad : float, Sets the padding between ticklabels and axis label
-                font_size : int
-                position : string, 'left' or 'right'
-    """
-
-    f = axes_list[0].get_figure()
-    f.canvas.draw() #sets f.canvas.renderer needed below
-
-    # get the center position for all plots
-    top = axes_list[0].get_position().y1
-    bottom = axes_list[-1].get_position().y0
-
-    # get the coordinates of the left side of the tick labels
-    x0 = 1
-    x1 = 0
-    for ax in axes_list:
-        ax.set_ylabel('') # just to make sure we don't and up with multiple labels
-        bboxes = ax.yaxis.get_ticklabel_extents(f.canvas.renderer)[0]
-        bboxes = bboxes.inverse_transformed(f.transFigure)
-        x0t = bboxes.x0
-        if x0t < x0:
-            x0 = x0t
-        x1t = bboxes.x1
-        if x1t > x1:
-            x1 = x1t
-    tick_label_left = x0
-    tick_label_right = x1
-
-    # set position of label
-    axes_list[-1].set_ylabel(label, fontsize=font_size)
-    if position == 'left':
-        axes_list[-1].yaxis.set_label_coords(tick_label_left - labelpad,
-                                             (bottom + top)/2,
-                                             transform=f.transFigure)
-    else:
-        axes_list[-1].yaxis.set_label_coords(tick_label_right + labelpad,
-                                             (bottom + top)/2,
-                                             transform=f.transFigure)
-    return
-
-
-def set_shared_xlabel(axes_list, label, labelpad=0.01, font_size=12, position='top'):
-    """Set a y label shared by multiple axes
-    Parameters: axes_list : list of axes in top/bottom row direction
-                label : string
-                labelpad : float, Sets the padding between ticklabels and axis label
-                font_size : int
-                position : string, 'top' or 'bottom'
-    Example:    pp.set_shared_xlabel([ax1, ax2, ax3], 'Range (Pix.)')
-    """
-
-    f = axes_list[0].get_figure()
-    f.canvas.draw() #sets f.canvas.renderer needed below
-
-    # get the center position for all plots
-    left = axes_list[0].get_position().x0
-    right = axes_list[-1].get_position().x1
-
-    # get the coordinates of the left side of the tick labels
-    y0 = 1
-    y1 = 0
-    for ax in axes_list:
-        ax.set_xlabel('') # just to make sure we don't and up with multiple labels
-        bboxes = ax.yaxis.get_ticklabel_extents(f.canvas.renderer)[0]
-        bboxes = bboxes.inverse_transformed(f.transFigure)
-        y0t = bboxes.y0
-        if y0t < y0:
-            y0 = y0t
-        y1t = bboxes.y1
-        if y1t > y1:
-            y1 = y1t
-    tick_label_bottom = y0
-    tick_label_top = y1
-
-    # set position of label
-    axes_list[-1].set_xlabel(label, fontsize=font_size)
-    if position == 'top':
-        axes_list[-1].xaxis.set_label_coords((left + right) / 2,
-                                             tick_label_top + labelpad,
-                                             transform=f.transFigure)
-    else:
-        axes_list[-1].xaxis.set_label_coords((left + right) / 2,
-                                             tick_label_bottom - labelpad,
-                                             transform=f.transFigure)
-    return
 
 
 ##################### Data Scale based on Unit and Wrap Range ##################
