@@ -96,7 +96,7 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., freq0=1e-3,
     beta /= 2.
 
     kmax = np.max(k)
-    k1 = regime[0] * kmax
+    k1 = max(regime[0] * kmax, 4 * resolution)
     k2 = regime[1] * kmax
 
     regime1 = k <= k1
