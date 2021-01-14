@@ -244,7 +244,8 @@ def read_init_info(inps):
                                              print_msg=False)[0:2]
 
     # do not plot native reference point if it's out of the coverage due to subset
-    if (inps.ref_yx == (int(atr['REF_Y']), int(atr['REF_X'])) 
+    if (inps.ref_yx and 'Y_FIRST' in atr.keys()
+        and inps.ref_yx == (int(atr['REF_Y']), int(atr['REF_X'])) 
         and not (inps.pix_box[0] <= inps.ref_yx[1] < inps.pix_box[2] 
                  and inps.pix_box[1] <= inps.ref_yx[0] < inps.pix_box[3])):
         inps.disp_ref_pixel = False
