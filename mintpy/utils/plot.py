@@ -1464,7 +1464,7 @@ def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lal
                     font_size=12, xoffset=None, yoffset=None, yrotate='horizontal',
                     projection=ccrs.PlateCarree(), print_msg=True):
     """Auto draw lat/lon label/tick based on coverage from geo_box
-    Parameters: geo_box   : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
+    Parameters: geo_box   : 4-tuple of float, (W, N, E, S) in degree
                 ax        : CartoPy axes.
                 lalo_step : float
                 lalo_loc  : list of 4 bool, positions where the labels are drawn as in [left, right, top, bottom]

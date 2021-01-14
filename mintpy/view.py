@@ -479,6 +479,7 @@ def plot_slice(ax, data, metadata, inps=None):
                 vprint(('referencing InSAR data to the pixel nearest to '
                         'GPS station: {} at {}').format(inps.ref_gps_site, ref_site_lalo))
 
+            # extent = (W, E, S, N)
             im = ax.imshow(data, cmap=inps.colormap, origin='upper',
                            extent=(inps.geo_box[0], inps.geo_box[2],
                                    inps.geo_box[3], inps.geo_box[1]),

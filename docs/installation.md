@@ -27,34 +27,30 @@ docker pull andretheronsa/mintpy:latest
 
 ### 1. Download and setup ###
 
-Set the following environment variables in your source file. It could be **_~/.bash_profile_** file for _bash_ user or **_~/.cshrc_** file for _csh/tcsh_ user.
+Run the following in your terminal to download the development version of MintPy and PyAPS:
+
+```bash
+cd ~/tools
+git clone https://github.com/insarlab/MintPy.git
+git clone https://github.com/yunjunz/PyAPS.git
+```
+
+Set the following environment variables in your source file (e.g. **_~/.bash_profile_** for _bash_ users or **_~/.cshrc_** for _csh/tcsh_ users).
 
 ```bash
 if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
 
 ##--------- MintPy ------------------##
 export MINTPY_HOME=~/tools/MintPy
-export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}
 export PATH=${PATH}:${MINTPY_HOME}/mintpy
-
-##--------- PyAPS -------------------##
-export PYAPS_HOME=~/tools/PyAPS
-export PYTHONPATH=${PYTHONPATH}:${PYAPS_HOME}
-```
-
-Run the following in your terminal to download the development version of MintPy and PyAPS:
-
-```bash
-# download MintPy and PyAPS
-git clone https://github.com/insarlab/MintPy.git $MINTPY_HOME
-git clone https://github.com/yunjunz/pyaps3.git $PYAPS_HOME/pyaps3
+export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:~/tools/PyAPS
 ```
 
 ### 2. Install dependencies ###
 
 MintPy is written in Python3 and relies on several Python modules, check the [requirements.txt](https://github.com/insarlab/MintPy/blob/main/docs/requirements.txt) file for details. We recommend using [conda](https://docs.conda.io/en/latest/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree). You can control the number of threads used by setting the _environment variables_, e.g. `OMP_NUM_THREADS`.
 
-#### Installing via conda ####
+#### via conda ####
 
 Run the following in your terminal to install [miniconda](https://docs.conda.io/en/latest/miniconda.html):
 
@@ -86,7 +82,7 @@ conda install --yes --file $MINTPY_HOME/docs/conda.txt
 $CONDA_PREFIX/bin/pip install git+https://github.com/tylere/pykml.git
 ```
 
-#### Installing via MacPorts ####
+#### via MacPorts ####
 
 Install [macports](https://www.macports.org/install.php) if you have not done so. Add the following at the bottom of your **_~/.bash_profile_** file:
 
@@ -122,15 +118,15 @@ sudo -H /opt/local/bin/pip install git+https://github.com/ecmwf/cdsapi.git
 sudo -H /opt/local/bin/pip install git+https://github.com/fhs/pyhdf.git
 ```
 
-### Notes on [PyAPS](https://github.com/yunjunz/pyaps3) ###
+### Notes on [PyAPS](https://github.com/yunjunz/PyAPS) ###
 
 + We use PyAPS (Jolivet et al., 2011; 2014) for tropospheric delay correction calculated from Global Atmospheric Models (GAMs) such as ERA-5, ERA-Interim, HRES-ECMWF, MERRA and NARR.
 
 + Check [Earthdef/PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main#) for accounts setup information for ERA-Interim and MERRA.
 
-+ Check [pyaps3](https://github.com/yunjunz/pyaps3) for account setup for ERA-5. Make sure that you:
++ Check [GitHub/PyAPS](https://github.com/yunjunz/PyAPS) for account setup for ERA-5. Make sure that you:
   - accept the data license in the Terms of use on ECMWF website and 
-  - run `pyaps3/examples/TestECMWF.ipynb` to test the data downloading and running.
+  - run `examples/TestECMWF.ipynb` to test the data downloading and running.
 
 + If you defined an environment variable named `WEATHER_DIR` to contain the path to a
 directory, MintPy applications will download the GAM files into the indicated directory. Also MintPy
