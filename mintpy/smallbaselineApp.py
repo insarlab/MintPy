@@ -35,7 +35,7 @@ STEP_HELP = """Command line options for steps processing with names are chosen f
 In order to use either --start or --dostep, it is necessary that a
 previous run was done using one of the steps options to process at least
 through the step immediately preceding the starting step of the current run.
-""".format(STEP_LIST[0:5], STEP_LIST[5:10], STEP_LIST[10:])
+""".format(STEP_LIST[0:5], STEP_LIST[5:11], STEP_LIST[11:])
 
 EXAMPLE = """example:
   smallbaselineApp.py                         #run with default template 'smallbaselineApp.cfg'
@@ -658,15 +658,25 @@ class TimeSeriesAnalysis:
         fname1 = os.path.join(work_dir, 'timeseries.h5')
         atr = readfile.read_attribute(fname0)
 
+        phase_correction_steps = ['correct_LOD',
+                                  'correct_SET',
+                                  'correct_troposphere',
+                                  'deramp',
+                                  'correct_topography']
+
         # loop for all steps
         steps = dict()
-        phase_correction_steps = ['correct_LOD', 'correct_troposphere', 'deramp', 'correct_topography']
         for sname in phase_correction_steps:
             # fname0 == fname1 if no valid correction method is set.
             fname0 = fname1
             if sname == 'correct_LOD':
                 if atr['PLATFORM'].lower().startswith('env'):
-                    fname1 = '{}_LODcor.h5'.format(os.path.splitext(fname0)[0])
+                    fname1 = '{}_LOD.h5'.format(os.path.splitext(fname0)[0])
+
+            elif sname == 'correct_SET':
+                method = template['mintpy.solidEarthTides']
+                if method:
+                    fname1 = '{}_SET.h5'.format(os.path.splitext(fname0)[0])
 
             elif sname == 'correct_troposphere':
                 method = template['mintpy.troposphericDelay.method']
@@ -747,6 +757,24 @@ class TimeSeriesAnalysis:
             atr = readfile.read_attribute(in_file)
             sat = atr.get('PLATFORM', None)
             print('No local oscillator drift correction is needed for {}.'.format(sat))
+        return
+
+
+    def run_solid_earth_tides_correction(self, step_name):
+        """Correct solid Earth tides (SET)."""
+        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
+        fnames = self.get_timeseries_filename(self.template, self.workDir)[step_name]
+        in_file = fnames['input']
+        out_file = fnames['output']
+
+        if in_file != out_file:
+            iargs = [in_file, '-g', geom_file, '-o', out_file, '--update']
+            print('\nsolid_earth_tides.py', ' '.join(iargs))
+            if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
+                from mintpy import solid_earth_tides
+                solid_earth_tides.main(iargs)
+        else:
+            print('No solid Earth tides correction.')
         return
 
 
@@ -1086,6 +1114,9 @@ class TimeSeriesAnalysis:
 
             elif sname == 'correct_LOD':
                 self.run_local_oscillator_drift_correction(sname)
+
+            elif sname == 'correct_SET':
+                self.run_solid_earth_tides_correction(sname)
 
             elif sname == 'correct_troposphere':
                 self.run_tropospheric_delay_correction(sname)

@@ -8,6 +8,7 @@ mintpy.reference.lalo       = 37.69, -122.07
 mintpy.unwrapError.method   = bridging
 
 mintpy.networkInversion.weightFunc              = no
+mintpy.solidEarthTides                          = yes
 mintpy.deramp                                   = no
 mintpy.topographicResidual.pixelwiseGeometry    = no
 

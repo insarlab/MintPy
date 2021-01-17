@@ -31,6 +31,7 @@ STEP_LIST = [
     'correct_unwrap_error',
     'invert_network',
     'correct_LOD',
+    'correct_SET',
     'correct_troposphere',
     'deramp',
     'correct_topography',
