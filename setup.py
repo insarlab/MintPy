@@ -67,8 +67,6 @@ def do_setup():
             "dask>=1.0",
             "dask-jobqueue>=0.3",
             "defusedxml",
-            #"gfortran_linux-64;platform_system=='Linux'",
-            #"gfortran_osx-64;platform_system=='Darwin'",
             "h5py",
             "lxml",
             "matplotlib",
@@ -91,7 +89,8 @@ def do_setup():
             "zarr",
         ],
         dependency_links=[
-            "git+https://github.com/tylere/pykml.git"
+            "git+https://github.com/insarlab/PySolid.git",
+            "git+https://github.com/tylere/pykml.git",
         ],
 
         # data files
