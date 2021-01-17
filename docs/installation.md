@@ -79,6 +79,7 @@ Or run the following in your terminal to install the dependencies to the default
 # install dependencies with conda
 conda config --add channels conda-forge
 conda install --yes --file $MINTPY_HOME/docs/conda.txt
+$CONDA_PREFIX/bin/pip install git+https://github.com/insarlab/PySolid.git
 $CONDA_PREFIX/bin/pip install git+https://github.com/tylere/pykml.git
 ```
 
@@ -111,6 +112,7 @@ Run the following in your terminal in _bash_:
 sudo port install $(cat $MINTPY_HOME/docs/ports.txt)
 
 # install dependencies not available on macports: pykml, pykdtree, pyresample, cdsapi, pyhdf
+sudo -H /opt/local/bin/pip install git+https://github.com/insarlab/PySolid.git
 sudo -H /opt/local/bin/pip install git+https://github.com/tylere/pykml.git
 sudo -H /opt/local/bin/pip install git+https://github.com/storpipfugl/pykdtree.git
 sudo -H /opt/local/bin/pip install git+https://github.com/pytroll/pyresample.git

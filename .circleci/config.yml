@@ -4,7 +4,6 @@ jobs:
     docker:
       - image: ubuntu:bionic
         environment:
-          PYAPS_HOME: /root/tools/PyAPS
           CONDA_PREFIX: /root/tools/miniconda3
           MINTPY_HOME: /root/tools/MintPy
         user: root
@@ -23,28 +22,34 @@ jobs:
             wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
             chmod +x Miniconda3-latest-Linux-x86_64.sh
             ./Miniconda3-latest-Linux-x86_64.sh -b -p ${HOME}/tools/miniconda3
+            ${HOME}/tools/miniconda3/bin/conda init bash
 
       - run:
           name: Installing MintPy and PyAPS
           command: |
             # setup environment variable
-            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
+            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${HOME}/tools/PyAPS:${HOME}/tools/PySolid
             export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
             # download source code
-            git clone https://github.com/yunjunz/pyaps3.git $PYAPS_HOME/pyaps3
+            git clone https://github.com/yunjunz/PyAPS.git ${HOME}/tools/PyAPS
+            git clone https://github.com/insarlab/PySolid.git ${HOME}/tools/PySolid
             # install dependencies
+            source activate root
             conda config --add channels conda-forge
-            conda install --yes --file $MINTPY_HOME/docs/conda.txt gdal>=3
+            conda install --yes --file $MINTPY_HOME/docs/conda.txt gdal>=3 gfortran_linux-64
             pip install git+https://github.com/tylere/pykml.git
+            # compile pysolid Fortran code
+            cd ${HOME}/tools/PySolid/pysolid
+            f2py -c -m solid solid.for
             # test installation
-            python -c "import mintpy; print(mintpy.version.description)"
-            smallbaselineApp.py -h
+            smallbaselineApp.py -v
             tropo_pyaps3.py -h
+            solid_earth_tides.py -h
 
       - run:
           name: Testing MintPy on Example Datasets
           command: |
-            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
+            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${HOME}/tools/PyAPS:${HOME}/tools/PySolid
             export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
             cd ${HOME}/data
