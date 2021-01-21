@@ -384,10 +384,10 @@ def get_lat_lon_rdc(meta):
     length, width = int(meta['LENGTH']), int(meta['WIDTH'])
     lats = [float(meta['LAT_REF{}'.format(i)]) for i in [1,2,3,4]]
     lons = [float(meta['LON_REF{}'.format(i)]) for i in [1,2,3,4]]
-    
+
     lat = np.zeros((length,width),dtype = np.float32)
     lon = np.zeros((length,width),dtype = np.float32)
-    
+
     for i in range(length):
         for j in range(width):
             lat[i,j] = lats[0] + j*(lats[1] - lats[0])/width + i*(lats[2] - lats[0])/length

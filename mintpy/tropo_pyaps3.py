@@ -639,15 +639,17 @@ def calc_delay_timeseries(inps):
         inps.dem[:] = inps.custom_height
 
     if 'latitude' in geom_obj.datasetNames:
-        # for dataset in geo OR radar coord with lookup table in radar-coord (isce, doris)
+        # for lookup table in radar-coord (isce, doris)
         inps.lat = geom_obj.read(datasetName='latitude')
         inps.lon = geom_obj.read(datasetName='longitude')
+
     elif 'Y_FIRST' in geom_obj.metadata:
-        # for geo-coded dataset (gamma, roipac)
+        # for lookup table in geo-coded (gamma, roipac) and obs. in geo-coord
         inps.lat, inps.lon = ut.get_lat_lon(geom_obj.metadata)
+
     else:
-        # for radar-coded dataset (gamma, roipac)
-        inps.lat, inps.lon = ut.get_lat_lon_rdc(geom_obj.metadata)
+        # for lookup table in geo-coded (gamma, roipac) and obs. in radar-coord
+        inps.lat, inps.lon = ut.get_lat_lon_rdc(inps.atr)
 
 
     ## 2. prepare output file

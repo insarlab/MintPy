@@ -35,7 +35,7 @@ from mintpy.utils import (
 
 ########################################################################################
 class ifgramStackDict:
-    '''
+    """
     IfgramStack object for a set of InSAR pairs from the same platform and track.
 
     Example:
@@ -48,7 +48,7 @@ class ifgramStackDict:
                      }
         stackObj = ifgramStackDict(pairsDict=pairsDict)
         stackObj.write2hdf5(outputFile='ifgramStack.h5', box=(200,500,300,600))
-    '''
+    """
 
     def __init__(self, name='ifgramStack', pairsDict=None, dsName0=ifgramDatasetNames[0]):
         self.name = name
@@ -95,7 +95,7 @@ class ifgramStackDict:
 
     def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, xstep=1, ystep=1,
                    compression=None, extra_metadata=None):
-        '''Save/write an ifgramStackDict object into an HDF5 file with the structure defined in:
+        """Save/write an ifgramStackDict object into an HDF5 file with the structure defined in:
 
         https://mintpy.readthedocs.io/en/latest/api/data_structure/#ifgramstack
 
@@ -104,7 +104,7 @@ class ifgramStackDict:
                     box : tuple, subset range in (x0, y0, x1, y1)
                     extra_metadata : dict, extra metadata to be added into output file
         Returns:    outputFile
-        '''
+        """
 
         self.pairs = sorted([pair for pair in self.pairsDict.keys()])
         self.dsNames = list(self.pairsDict[self.pairs[0]].datasetDict.keys())
@@ -308,7 +308,7 @@ class ifgramDict:
 
 ########################################################################################
 class geometryDict:
-    '''
+    """
     Geometry object for Lat, Lon, Heigt, Incidence, Heading, Bperp, ... from the same platform and track.
 
     Example:
@@ -331,7 +331,7 @@ class geometryDict:
         metadata = readfile.read_attribute('$PROJECT_DIR/merged/interferograms/20160629_20160723/filt_fine.unw')
         geomObj = geometryDict(processor='isce', datasetDict=datasetDict, extraMetadata=metadata)
         geomObj.write2hdf5(outputFile='geometryRadar.h5', access_mode='w', box=(200,500,300,600))
-    '''
+    """
 
     def __init__(self, name='geometry', processor=None, datasetDict={}, extraMetadata=None):
         self.name = name
@@ -507,10 +507,9 @@ class geometryDict:
 
     def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, xstep=1, ystep=1,
                    compression='lzf', extra_metadata=None):
-        ''' Save/write to HDF5 file with structure defined in:
-
-        https://mintpy.readthedocs.io/en/latest/api/data_structure/#geometry
-        '''
+        """Save/write to HDF5 file with structure defined in:
+            https://mintpy.readthedocs.io/en/latest/api/data_structure/#geometry
+        """
         if len(self.datasetDict) == 0:
             print('No dataset file path in the object, skip HDF5 file writing.')
             return None
@@ -568,7 +567,7 @@ class geometryDict:
                     data = np.array(self.dateList, dtype=dsDataType)
                     ds = f.create_dataset(dsName, data=data)
 
-                # 2D datasets containing height, latitude, incidenceAngle, shadowMask, etc.
+                # 2D datasets containing height, latitude/longitude, range/azimuthCoord, incidenceAngle, shadowMask, etc.
                 else:
                     dsDataType = np.float32
                     if dsName.lower().endswith('mask'):
@@ -595,11 +594,19 @@ class geometryDict:
                         print(('    input file "{}" is water body (-1/0 for water/land), '
                                'convert to water mask (0/1 for water/land).'.format(fname)))
 
-                    if dsName == 'height':
+                    elif dsName == 'height':
                         noDataValueDEM = -32768
                         if np.any(data == noDataValueDEM):
                             data[data == noDataValueDEM] = np.nan
                             print('    convert no-data value for DEM {} to NaN.'.format(noDataValueDEM))
+
+                    elif dsName == 'rangeCoord' and xstep != 1:
+                        print('    scale value of {:<15} by 1/{} due to multilooking'.format(dsName, xstep))
+                        data /= xstep
+
+                    elif dsName == 'azimuthCoord' and ystep != 1:
+                        print('    scale value of {:<15} by 1/{} due to multilooking'.format(dsName, ystep))
+                        data /= ystep
 
                     # write
                     ds = f.create_dataset(dsName,
@@ -656,7 +663,7 @@ class geometryDict:
 
 ########################################################################################
 def read_isce_bperp_file(fname, full_shape, box=None, xstep=1, ystep=1):
-    '''Read ISCE coarse grid perpendicular baseline file, and project it to full size
+    """Read ISCE coarse grid perpendicular baseline file, and project it to full size
     Parameters: self : geometry object,
                 fname : str, bperp file name
                 outShape : tuple of 2int, shape of file in full resolution
@@ -664,7 +671,7 @@ def read_isce_bperp_file(fname, full_shape, box=None, xstep=1, ystep=1):
     Returns:    data : 2D array of float32
     Example:    fname = '$PROJECT_DIR/merged/baselines/20160418/bperp'
                 data = self.read_sice_bperp_file(fname, (3600,2200), box=(200,400,1000,1000))
-    '''
+    """
     # read original data
     data_c = readfile.read(fname)[0]
 
