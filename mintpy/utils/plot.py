@@ -349,7 +349,7 @@ def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_
         vlim = [min_val, max_val]
 
     else:
-        vstep = np.min(np.diff(unique_values)).astype(float)
+        vstep = np.min(np.abs(np.diff(unique_values))).astype(float)
         min_num_step = int((max_val - min_val) / vstep + 1)
 
         # use discrete colromap for data with uniform AND limited unique values
@@ -1017,13 +1017,13 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
 
             ax.contour(xx, yy, dem_contour, dem_contour_seq, extent=geo_extent,
                        origin='upper', linewidths=inps.dem_contour_linewidth,
-                       colors='black', alpha=0.5, zorder=1)
+                       colors='black', alpha=0.5, zorder=2)
 
         # radar coordinates
         elif isinstance(ax, plt.Axes):
             ax.contour(dem_contour, dem_contour_seq, extent=rdr_extent,
                        origin='upper', linewidths=inps.dem_contour_linewidth,
-                       colors='black', alpha=0.5, zorder=1)
+                       colors='black', alpha=0.5, zorder=2)
     return ax
 
 
@@ -1168,7 +1168,7 @@ def plot_colorbar(inps, im, cax):
         cbar.set_label(inps.cbar_label, fontsize=inps.font_size, color=inps.font_color)
     elif inps.disp_unit != '1':
         cbar.set_label(inps.disp_unit,  fontsize=inps.font_size, color=inps.font_color)
-        
+
     return inps, cbar
 
 
@@ -1467,8 +1467,7 @@ def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[
 
 
 def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max_num=4,
-                    font_size=12, xoffset=None, yoffset=None, yrotate='horizontal',
-                    projection=ccrs.PlateCarree(), print_msg=True):
+                    font_size=12, xoffset=None, yoffset=None, projection=ccrs.PlateCarree(), print_msg=True):
     """Auto draw lat/lon label/tick based on coverage from geo_box
     Parameters: geo_box   : 4-tuple of float, (W, N, E, S) in degree
                 ax        : CartoPy axes.

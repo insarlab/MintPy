@@ -225,7 +225,7 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=
             outfile = os.path.basename(infile)
 
     # update metadata
-    atr = attr.updatea_attribute4multilook(atr, lks_y, lks_x, box=box)
+    atr = attr.update_attribute4multilook(atr, lks_y, lks_x, box=box)
 
     if ext in ['.h5', '.he5']:
         writefile.layout_hdf5(outfile, metadata=atr, ref_file=infile)

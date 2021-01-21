@@ -46,14 +46,15 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
         datasetDict[meta['FILE_TYPE']] = data
 
     # output file info
-    ext = os.path.splitext(out_file)[1].lower()
+    fbase, fext = os.path.splitext(out_file)
+    fext = fext.lower()
     out_dir = os.path.dirname(os.path.abspath(out_file))
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
         print('create directory: {}'.format(out_dir))
 
     # HDF5 File
-    if ext in ['.h5', '.he5']:
+    if fext in ['.h5', '.he5']:
         # grab info from reference h5 file
         if ref_file and os.path.splitext(ref_file)[1] in ['.h5', '.he5']:
             # compression
@@ -131,44 +132,50 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             data_list.append(datasetDict[key])
         data_type = meta.get('DATA_TYPE', str(data_list[0].dtype)).lower()
 
+        # ignore certain meaningless file extensions
+        while fext in ['.geo', '.rdr', '.full', '.wgs84']:
+            fbase, fext = os.path.splitext(fbase)
+        if not fext:
+            fext = fbase
+
         # Write Data File
         print('write {}'.format(out_file))
-        # determined by ext
-        if ext in ['.unw']:
+        # determined by fext
+        if fext in ['.unw']:
             write_float32(data_list[0], out_file)
             meta['DATA_TYPE'] = 'float32'
 
-        elif ext in ['.cor', '.hgt']:
+        elif fext in ['.cor', '.hgt']:
             if meta.get('PROCESSOR', 'isce') == 'roipac':
                 write_float32(data_list[0], out_file)
             else:
                 write_real_float32(data_list[0], out_file)
             meta['DATA_TYPE'] = 'float32'
 
-        elif ext == '.dem':
+        elif fext == '.dem':
             write_real_int16(data_list[0], out_file)
             meta['DATA_TYPE'] = 'int16'
 
-        elif ext in ['.trans']:
+        elif fext in ['.trans']:
             write_float32(data_list[0], data_list[1], out_file)
             meta['DATA_TYPE'] = 'float32'
 
-        elif ext in ['.utm_to_rdc', '.UTM_TO_RDC']:
+        elif fext in ['.utm_to_rdc', '.UTM_TO_RDC']:
             data = np.zeros(data_list[0].shape, dtype=np.complex64)
             data.real = datasetDict['rangeCoord']
             data.imag = datasetDict['azimuthCoord']
             data.astype('>c8').tofile(out_file)
 
-        elif ext in ['.mli', '.flt']:
+        elif fext in ['.mli', '.flt']:
             write_real_float32(data_list[0], out_file)
 
-        elif ext == '.slc':
+        elif fext == '.slc':
             write_complex_int16(data_list[0], out_file)
 
-        elif ext == '.int':
+        elif fext == '.int':
             write_complex64(data_list[0], out_file)
 
-        elif ext == '.msk':
+        elif fext == '.msk':
             write_byte(data_list[0], out_file)
             meta['DATA_TYPE'] = 'byte'
 
@@ -193,7 +200,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             write_bool(data_list[0], out_file)
 
         else:
-            print('Un-supported file type: '+ext)
+            print('Un-supported file type:', fext)
             return 0
 
         # write metadata file

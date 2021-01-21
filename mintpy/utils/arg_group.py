@@ -206,9 +206,6 @@ def add_map_argument(parser):
     mapg.add_argument('--lalo-loc', dest='lalo_loc', type=int, nargs=4, default=[1, 0, 0, 1],
                       metavar=('left', 'right', 'top', 'bottom'),
                       help='Draw lalo label in [left, right, top, bottom] (default: %(default)s).')
-    mapg.add_argument('--lat-label', dest='lat_label_direction', type=str,
-                      choices={'horizontal', 'vertical'}, default='horizontal',
-                      help='Rotate Lat label from default horizontal to vertical (to save space).')
 
     mapg.add_argument('--projection', dest='map_projection', metavar='NAME', default='PlateCarree',
                       choices={'PlateCarree', 'LambertConformal'},
