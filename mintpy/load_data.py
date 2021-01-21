@@ -712,6 +712,7 @@ def print_write_setting(iDict):
     print('-'*50)
     print('updateMode : {}'.format(updateMode))
     print('compression: {}'.format(comp))
+    print('x/ystep: {}/{}'.format(iDict['xstep'], iDict['ystep']))
 
     # box
     box = iDict['box']
@@ -721,15 +722,7 @@ def print_write_setting(iDict):
     else:
         boxGeo = box
 
-    # step
-    xyStep = (iDict['xstep'], iDict['ystep'])
-    if not iDict.get('geocoded', False):
-        xyStepGeo = (1, 1)
-    else:
-        xyStepGeo = xyStep
-    print('x/ystep: {}/{}'.format(xyStep[0], xyStep[1]))
-
-    return updateMode, comp, box, boxGeo, xyStep, xyStepGeo
+    return updateMode, comp, box, boxGeo
 
 
 def get_extra_metadata(iDict):
@@ -767,7 +760,7 @@ def main(iargs=None):
     geomRadarObj, geomGeoObj = read_inps_dict2geometry_dict_object(iDict)
 
     # prepare write
-    updateMode, comp, box, boxGeo, xyStep, xyStepGeo = print_write_setting(iDict)
+    updateMode, comp, box, boxGeo = print_write_setting(iDict)
     if any([stackObj, geomRadarObj, geomGeoObj]) and not os.path.isdir(inps.outdir):
         os.makedirs(inps.outdir)
         print('create directory: {}'.format(inps.outdir))
@@ -778,8 +771,8 @@ def main(iargs=None):
         stackObj.write2hdf5(outputFile=inps.outfile[0],
                             access_mode='w',
                             box=box,
-                            xstep=xyStep[0],
-                            ystep=xyStep[1],
+                            xstep=iDict['xstep'],
+                            ystep=iDict['ystep'],
                             compression=comp,
                             extra_metadata=extraDict)
 
@@ -788,8 +781,8 @@ def main(iargs=None):
         geomRadarObj.write2hdf5(outputFile=inps.outfile[1],
                                 access_mode='w',
                                 box=box,
-                                xstep=xyStep[0],
-                                ystep=xyStep[1],
+                                xstep=iDict['xstep'],
+                                ystep=iDict['ystep'],
                                 compression='lzf',
                                 extra_metadata=extraDict)
 
@@ -798,8 +791,8 @@ def main(iargs=None):
         geomGeoObj.write2hdf5(outputFile=inps.outfile[2],
                               access_mode='w',
                               box=boxGeo,
-                              xstep=xyStepGeo[0],
-                              ystep=xyStepGeo[1],
+                              xstep=iDict['xstep'],
+                              ystep=iDict['ystep'],
                               compression='lzf')
 
     # time info

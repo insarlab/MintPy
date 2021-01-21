@@ -343,26 +343,32 @@ def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_
     unique_values = np.unique(data[~np.isnan(data)])
     min_val = np.min(unique_values).astype(float)
     max_val = np.max(unique_values).astype(float)
-    vstep = np.min(np.diff(unique_values)).astype(float)
-    min_num_step = int((max_val - min_val) / vstep + 1)
 
-    # use discrete colromap for data with uniform AND limited unique values
-    # e.g. unwrapError time-series
-    if min_num_step <= max_discrete_num_step:
-        cmap_lut = min_num_step
-        vlim = [min_val - vstep/2, max_val + vstep/2]
-
-        if print_msg:
-            msg = 'data has uniform and limited number ({} <= {})'.format(unique_values.size, max_discrete_num_step)
-            msg += ' of unique values --> discretize colormap'
-            print(msg)
+    if min_val == max_val:
+        cmap_lut = 256
+        vlim = [min_val, max_val]
 
     else:
-        from mintpy.multilook import multilook_data
-        data_mli = multilook_data(data, num_multilook, num_multilook)
+        vstep = np.min(np.diff(unique_values)).astype(float)
+        min_num_step = int((max_val - min_val) / vstep + 1)
 
-        cmap_lut = 256
-        vlim = [np.nanmin(data_mli), np.nanmax(data_mli)]
+        # use discrete colromap for data with uniform AND limited unique values
+        # e.g. unwrapError time-series
+        if min_num_step <= max_discrete_num_step:
+            cmap_lut = min_num_step
+            vlim = [min_val - vstep/2, max_val + vstep/2]
+
+            if print_msg:
+                msg = 'data has uniform and limited number ({} <= {})'.format(unique_values.size, max_discrete_num_step)
+                msg += ' of unique values --> discretize colormap'
+                print(msg)
+
+        else:
+            from mintpy.multilook import multilook_data
+            data_mli = multilook_data(data, num_multilook, num_multilook)
+
+            cmap_lut = 256
+            vlim = [np.nanmin(data_mli), np.nanmax(data_mli)]
 
     return cmap_lut, vlim
 
