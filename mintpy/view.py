@@ -503,7 +503,6 @@ def plot_slice(ax, data, metadata, inps=None):
                                    lalo_loc=inps.lalo_loc,
                                    lalo_max_num=inps.lalo_max_num,
                                    font_size=inps.font_size,
-                                   yrotate=inps.lat_label_direction,
                                    projection=inps.proj_obj,
                                    print_msg=inps.print_msg)
             else:
@@ -544,12 +543,14 @@ def plot_slice(ax, data, metadata, inps=None):
                         msg += ', v=[]'
                     else:
                         msg += ', v={:.3f}'.format(v)
+                    # DEM
                     if inps.dem_file:
                         dem_col = coord_dem.lalo2yx(x, coord_type='lon') - dem_pix_box[0]
                         dem_row = coord_dem.lalo2yx(y, coord_type='lat') - dem_pix_box[1]
                         if 0 <= dem_col < dem_wid and 0 <= dem_row < dem_len:
                             h = dem[dem_row, dem_col]
                             msg += ', h={:.0f}'.format(h)
+                    # x/y
                     msg += ', x={:.0f}, y={:.0f}'.format(col+inps.pix_box[0],
                                                          row+inps.pix_box[1])
                 return msg
@@ -591,7 +592,11 @@ def plot_slice(ax, data, metadata, inps=None):
                 row = int(np.rint((y - inps.geo_box[1]) / float(metadata['Y_STEP'])))
                 if 0 <= col < num_col and 0 <= row < num_row:
                     v = data[row, col]
-                    msg += ', v={:.3f}'.format(v)
+                    if np.isnan(v) or np.ma.is_masked(v):
+                        msg += ', v=[]'
+                    else:
+                        msg += ', v={:.3f}'.format(v)
+                    # DEM
                     if inps.dem_file:
                         h = dem[row, col]
                         msg += ', h={:.0f} m'.format(h)
@@ -663,7 +668,11 @@ def plot_slice(ax, data, metadata, inps=None):
             row = int(np.rint(y - inps.pix_box[1]))
             if 0 <= col < num_col and 0 <= row < num_row:
                 v = data[row, col]
-                msg += ', v={:.3f}'.format(v)
+                if np.isnan(v) or np.ma.is_masked(v):
+                    msg += ', v=[]'
+                else:
+                    msg += ', v={:.3f}'.format(v)
+                # DEM
                 if inps.dem_file:
                     h = dem[row, col]
                     msg += ', h={:.0f} m'.format(h)

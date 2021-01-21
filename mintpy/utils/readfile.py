@@ -796,7 +796,8 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
 
         # Read metadata file and FILE_TYPE
         metafile = metafiles[0]
-        while fext in ['.geo', '.rdr', '.full']:
+        # ignore certain meaningless file extensions
+        while fext in ['.geo', '.rdr', '.full', '.wgs84']:
             fbase, fext = os.path.splitext(fbase)
         if not fext:
             fext = fbase
