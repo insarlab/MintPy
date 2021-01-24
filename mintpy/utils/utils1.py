@@ -15,6 +15,7 @@ import glob
 import shutil
 import h5py
 import numpy as np
+import mintpy
 from mintpy.objects import deramp, ifgramStack, timeseries, geometryDatasetNames
 from mintpy.utils import ptime, readfile, writefile
 from mintpy.utils.utils0 import *
@@ -431,7 +432,7 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
     outFile = None
     for fname in existFiles:
         atr = readfile.read_attribute(fname)
-        for dsName in ['rangeCoord', 'longitude']:
+        for dsName in ['longitude', 'rangeCoord']:
             try:
                 dset = readfile.read(fname, datasetName=dsName, print_msg=False)[0]
                 outFile = fname
@@ -669,10 +670,10 @@ def run_or_skip(out_file, in_file=None, check_readable=True, print_msg=True):
     return 'skip'
 
 
-def check_template_auto_value(templateDict, auto_file='../defaults/smallbaselineApp_auto.cfg'):
+def check_template_auto_value(templateDict, auto_file='defaults/smallbaselineApp_auto.cfg'):
     """Replace auto value based on the input auto config file."""
     ## Read default template value and turn yes/no to True/False
-    templateAutoFile = os.path.join(os.path.dirname(__file__), auto_file)
+    templateAutoFile = os.path.join(os.path.dirname(mintpy.__file__), auto_file)
     templateAutoDict = readfile.read_template(templateAutoFile)
 
     # if cluster != local, change auto value of numWorker

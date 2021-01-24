@@ -270,12 +270,9 @@ def update_inps_with_file_metadata(inps, metadata):
         inps.multilook = True
 
     # Colormap
-    inps.colormap = pp.check_colormap_input(metadata,
-                                            inps.colormap,
-                                            datasetName=inps.dset[0],
-                                            cmap_lut=inps.cmap_lut,
-                                            cmap_vlist=inps.cmap_vlist,
-                                            print_msg=inps.print_msg)
+    inps.colormap = pp.auto_colormap_name(metadata, inps.colormap,
+                                          datasetName=inps.dset[0],
+                                          print_msg=inps.print_msg)
 
     # Reference Point
     # Convert ref_lalo if existed, to ref_yx, and use ref_yx for the following
@@ -400,7 +397,7 @@ def update_data_with_plot_inps(data, metadata, inps):
     # 3. update display min/max
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
     if not inps.vlim: # and data.ndim < 3:
-        inps.vlim = [np.nanmin(data), np.nanmax(data)]
+        inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(data)
     vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
     vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
 
@@ -435,7 +432,9 @@ def plot_slice(ax, data, metadata, inps=None):
         inps = cmd_line_parse([''])
         inps = update_inps_with_file_metadata(inps, metadata)
     if isinstance(inps.colormap, str):
-        inps.colormap = pp.ColormapExt(inps.colormap).colormap
+        inps.colormap = pp.ColormapExt(inps.colormap,
+                                       cmap_lut=inps.cmap_lut,
+                                       vlist=inps.cmap_vlist).colormap
 
     # read DEM
     if inps.dem_file:
@@ -480,6 +479,7 @@ def plot_slice(ax, data, metadata, inps=None):
                 vprint(('referencing InSAR data to the pixel nearest to '
                         'GPS station: {} at {}').format(inps.ref_gps_site, ref_site_lalo))
 
+            # extent = (W, E, S, N)
             im = ax.imshow(data, cmap=inps.colormap, origin='upper',
                            extent=(inps.geo_box[0], inps.geo_box[2],
                                    inps.geo_box[3], inps.geo_box[1]),
@@ -503,7 +503,6 @@ def plot_slice(ax, data, metadata, inps=None):
                                    lalo_loc=inps.lalo_loc,
                                    lalo_max_num=inps.lalo_max_num,
                                    font_size=inps.font_size,
-                                   yrotate=inps.lat_label_direction,
                                    projection=inps.proj_obj,
                                    print_msg=inps.print_msg)
             else:
@@ -544,12 +543,14 @@ def plot_slice(ax, data, metadata, inps=None):
                         msg += ', v=[]'
                     else:
                         msg += ', v={:.3f}'.format(v)
+                    # DEM
                     if inps.dem_file:
                         dem_col = coord_dem.lalo2yx(x, coord_type='lon') - dem_pix_box[0]
                         dem_row = coord_dem.lalo2yx(y, coord_type='lat') - dem_pix_box[1]
                         if 0 <= dem_col < dem_wid and 0 <= dem_row < dem_len:
                             h = dem[dem_row, dem_col]
                             msg += ', h={:.0f}'.format(h)
+                    # x/y
                     msg += ', x={:.0f}, y={:.0f}'.format(col+inps.pix_box[0],
                                                          row+inps.pix_box[1])
                 return msg
@@ -591,7 +592,11 @@ def plot_slice(ax, data, metadata, inps=None):
                 row = int(np.rint((y - inps.geo_box[1]) / float(metadata['Y_STEP'])))
                 if 0 <= col < num_col and 0 <= row < num_row:
                     v = data[row, col]
-                    msg += ', v={:.3f}'.format(v)
+                    if np.isnan(v) or np.ma.is_masked(v):
+                        msg += ', v=[]'
+                    else:
+                        msg += ', v={:.3f}'.format(v)
+                    # DEM
                     if inps.dem_file:
                         h = dem[row, col]
                         msg += ', h={:.0f} m'.format(h)
@@ -663,7 +668,11 @@ def plot_slice(ax, data, metadata, inps=None):
             row = int(np.rint(y - inps.pix_box[1]))
             if 0 <= col < num_col and 0 <= row < num_row:
                 v = data[row, col]
-                msg += ', v={:.3f}'.format(v)
+                if np.isnan(v) or np.ma.is_masked(v):
+                    msg += ', v=[]'
+                else:
+                    msg += ', v={:.3f}'.format(v)
+                # DEM
                 if inps.dem_file:
                     h = dem[row, col]
                     msg += ', h={:.0f} m'.format(h)
@@ -882,19 +891,14 @@ def update_figure_setting(inps):
         if not inps.font_size:
             inps.font_size = 16
         if not inps.fig_size:
+            # update length/width based on lat/lon
             if inps.geo_box and inps.fig_coord == 'geo':
                 length = abs(inps.geo_box[3] - inps.geo_box[1])
                 width = abs(inps.geo_box[2] - inps.geo_box[0])
-                plot_shape = []
-            plot_shape = [width*1.25, length]
-            if not inps.disp_cbar:
-                plot_shape = [width, length]
-            fig_scale = min(pp.min_figsize_single/min(plot_shape),
-                            pp.max_figsize_single/max(plot_shape),
-                            pp.max_figsize_height/plot_shape[1])
-            inps.fig_size = [i*fig_scale for i in plot_shape]
-            #inps.fig_size = [np.floor(i*fig_scale*2)/2 for i in plot_shape]
-            vprint('figure size : [{:.2f}, {:.2f}]'.format(inps.fig_size[0], inps.fig_size[1]))
+            # auto figure size
+            inps.fig_size = pp.auto_figure_size(ds_shape=(length, width),
+                                                disp_cbar=inps.disp_cbar,
+                                                print_msg=inps.print_msg)
 
     # Multiple Plots
     else:
@@ -1048,14 +1052,14 @@ def read_data4figure(i_start, i_end, inps, metadata):
         data = np.ma.masked_where(data == 0., data)
 
     # update display min/max
+    inps.dlim = [np.nanmin(data), np.nanmax(data)]
     if (same_unit4all_subplots
             and all(arg not in sys.argv for arg in ['-v', '--vlim', '--wrap'])
             and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)
             and inps.dsetFamilyList[0] not in ['bperp']):
-        data_mli = multilook_data(data, 10, 10)
-        inps.vlim = [np.nanmin(data_mli), np.nanmax(data_mli)]
-        del data_mli
-    inps.dlim = [np.nanmin(data), np.nanmax(data)]
+        inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(data,
+                                                                              num_multilook=10,
+                                                                              print_msg=False)
 
     return data
 
@@ -1099,13 +1103,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
 
     # Subplot Setting
     ## Tick and Label
-    #ax.set_yticklabels([])
-    #ax.set_xticklabels([])
-    #ax.set_xticks([])
-    #ax.set_yticks([])
     if not inps.disp_tick or inps.fig_row_num * inps.fig_col_num > 10:
-        # ax.set_xticklabels([])
-        # ax.set_yticklabels([])
         ax.get_xaxis().set_ticks([])
         ax.get_yaxis().set_ticks([])
 
@@ -1193,6 +1191,11 @@ def plot_figure(j, inps, metadata):
     i_start = (j - 1) * inps.fig_row_num * inps.fig_col_num
     i_end = min([inps.dsetNum, i_start + inps.fig_row_num * inps.fig_col_num])
     data = read_data4figure(i_start, i_end, inps, metadata)
+
+    if isinstance(inps.colormap, str):
+        inps.colormap = pp.ColormapExt(inps.colormap,
+                                       cmap_lut=inps.cmap_lut,
+                                       vlist=inps.cmap_vlist).colormap
 
     # Loop - Subplots
     vprint('plotting ...')

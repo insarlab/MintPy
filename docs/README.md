@@ -3,7 +3,7 @@
 [![CircleCI](https://img.shields.io/circleci/build/github/insarlab/MintPy.svg?color=green&logo=circleci)](https://circleci.com/gh/insarlab/MintPy)
 [![Version](https://img.shields.io/badge/version-v1.2.3-yellowgreen.svg)](https://github.com/insarlab/MintPy/releases)
 [![License](https://img.shields.io/badge/license-GPLv3-yellow.svg)](https://github.com/insarlab/MintPy/blob/main/LICENSE)
-[![Forum](https://img.shields.io/badge/forum-Google%20Group-orange.svg)](https://groups.google.com/forum/#!forum/mintpy)
+[![Forum](https://img.shields.io/badge/forum-Google%20Groups-orange.svg)](https://groups.google.com/g/mintpy)
 [![Citation](https://img.shields.io/badge/doi-10.1016%2Fj.cageo.2019.104331-blue)](https://doi.org/10.1016/j.cageo.2019.104331)
 
 ## MintPy ##
@@ -90,7 +90,7 @@ Algorithms implemented in the software are described in details at [Yunjun et al
 ### 4. Contact us ###
 
 + Most development discussion happens on GitHub. Feel free to [open an issue](https://github.com/insarlab/MintPy/issues) or comment on any open issue or pull request.
-+ Join our google group [https://groups.google.com/forum/#!forum/mintpy](https://groups.google.com/forum/#!forum/mintpy) to ask questions or leave comments.
++ Join our [user forum on google groups](https://groups.google.com/g/mintpy) or use [github discussions](https://github.com/insarlab/MintPy/discussions) to ask questions or leave comments.
 
 ### 5. Contributing ###
 

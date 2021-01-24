@@ -165,7 +165,7 @@ class coherenceMatrixViewer():
         # auto figure size
         if not self.fig_size:
             ds_shape = readfile.read(self.img_file)[0].shape
-            fig_size = pp.auto_figure_size(ds_shape, disp_cbar=True, ratio=0.7)
+            fig_size = pp.auto_figure_size(ds_shape, disp_cbar=True, scale=0.7)
             self.fig_size = [fig_size[0]+fig_size[1], fig_size[1]]
             vprint('create figure in size of {} inches'.format(self.fig_size))
 

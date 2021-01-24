@@ -46,46 +46,30 @@ def create_parser():
                              'i.e.: timeseries_ERA5_ramp_demErr.h5 (MintPy)\n'
                              '      LS-PARAMS.h5 (GIAnT)\n'
                              '      S1_IW12_128_0593_0597_20141213_20180619.he5 (HDF-EOS5)')
-    parser.add_argument('--label', dest='file_label', nargs='*',
-                        help='labels to display for multiple input files')
-    parser.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN', 'YMAX'), type=float,
-                        help='Y limits for point plotting.')
-    parser.add_argument('--tick-right', dest='tick_right', action='store_true',
-                        help='set tick and tick label to the right')
-
-    parser.add_argument('-l','--lookup', dest='lookup_file', type=str,
-                        help='lookup table file')
+    parser.add_argument('--label', dest='file_label', nargs='*', help='labels to display for multiple input files')
+    parser.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN', 'YMAX'), type=float, help='Y limits for point plotting.')
+    parser.add_argument('--tick-right', dest='tick_right', action='store_true', help='set tick and tick label to the right')
+    parser.add_argument('-l','--lookup', dest='lookup_file', type=str, help='lookup table file')
 
     pixel = parser.add_argument_group('Pixel Input')
-    pixel.add_argument('--yx', type=int, metavar=('Y', 'X'), nargs=2,
-                       help='initial pixel to plot in Y/X coord')
-    pixel.add_argument('--lalo', type=float, metavar=('LAT', 'LON'), nargs=2,
-                       help='initial pixel to plot in lat/lon coord')
+    pixel.add_argument('--yx', type=int, metavar=('Y', 'X'), nargs=2, help='initial pixel to plot in Y/X coord')
+    pixel.add_argument('--lalo', type=float, metavar=('LAT', 'LON'), nargs=2, help='initial pixel to plot in lat/lon coord')
 
-    pixel.add_argument('--ms', '--markersize', dest='marker_size', type=float, default=6.0,
-                       help='Point marker size. Default: 6')
-    pixel.add_argument('--ew', '--edgewidth', dest='edge_width', type=float, default=1.0,
-                       help='Edge width. Default: 1.0')
+    pixel.add_argument('--marker', type=str, default='o', help='marker style (default: %(default)s).')
+    pixel.add_argument('--ms', '--markersize', dest='marker_size', type=float, default=6.0, help='marker size (default: %(default)s).')
+    pixel.add_argument('--lw', '--linewidth', dest='linewidth', type=float, default=0, help='line width (default: %(default)s).')
+    pixel.add_argument('--ew', '--edgewidth', dest='edge_width', type=float, default=1.0, help='Edge width for the error bar (default: %(default)s)')
 
-    parser.add_argument('-n', dest='idx', metavar='NUM', type=int,
-                        help='Epoch/slice number to display.')
-    parser.add_argument('--error', dest='error_file',
-                        help='txt file with error for each date.')
+    parser.add_argument('-n', dest='idx', metavar='NUM', type=int, help='Epoch/slice number for initial display.')
+    parser.add_argument('--error', dest='error_file', help='txt file with error for each date.')
 
-    parser.add_argument('--start-date', dest='start_date', type=str,
-                        help='start date of displacement to display')
-    parser.add_argument('--end-date', dest='end_date', type=str,
-                        help='end date of displacement to display')
-    parser.add_argument('--exclude', '--ex', dest='ex_date_list',
-                        nargs='*', default=['exclude_date.txt'],
-                        help='Exclude date shown as gray.')
-    parser.add_argument('--zf', '--zero-first', dest='zero_first', action='store_true',
-                        help='Set displacement at first acquisition to zero.')
-    parser.add_argument('--off','--offset', dest='offset', type=float,
-                        help='Offset for each timeseries file.')
+    parser.add_argument('--start-date', dest='start_date', type=str, help='start date of displacement to display')
+    parser.add_argument('--end-date', dest='end_date', type=str, help='end date of displacement to display')
+    parser.add_argument('--exclude', '--ex', dest='ex_date_list', nargs='*', default=['exclude_date.txt'], help='Exclude date shown as gray.')
+    parser.add_argument('--zf', '--zero-first', dest='zero_first', action='store_true', help='Set displacement at first acquisition to zero.')
+    parser.add_argument('--off','--offset', dest='offset', type=float, help='Offset for each timeseries file.')
 
-    parser.add_argument('--noverbose', dest='print_msg', action='store_false',
-                        help='Disable the verbose message printing.')
+    parser.add_argument('--noverbose', dest='print_msg', action='store_false', help='Disable the verbose message printing.')
 
     parser = arg_group.add_data_disp_argument(parser)
     parser = arg_group.add_dem_argument(parser)
@@ -179,22 +163,20 @@ def read_init_info(inps):
      inps.ex_dates,
      inps.ex_flag) = read_exclude_date(inps.ex_date_list, inps.date_list)
 
-    # initial display index
-    #if atr['REF_DATE'] in inps.date_list:
-    #    inps.ref_idx = inps.date_list.index(atr['REF_DATE'])
-    #else:
-    #    inps.ref_idx = 0
-
+    # reference date/index
+    if not inps.ref_date:
+        inps.ref_date = atr.get('REF_DATE', None)
     if inps.ref_date:
         inps.ref_idx = inps.date_list.index(inps.ref_date)
     else:
-        inps.ref_idx = 3
+        inps.ref_idx = None
 
+    # date/index of interest for initial display
     if not inps.idx:
-        if inps.ref_idx < inps.num_date / 2.:
-            inps.idx = inps.num_date - 3
+        if (not inps.ref_idx) or (inps.ref_idx < inps.num_date / 2.):
+            inps.idx = inps.num_date - 2
         else:
-            inps.idx = 3
+            inps.idx = 2
 
     # Display Unit
     (inps.disp_unit,
@@ -243,11 +225,31 @@ def read_init_info(inps):
     if not inps.ref_lalo and 'REF_LAT' in atr.keys():
         inps.ref_lalo = (float(atr['REF_LAT']), float(atr['REF_LON']))
     if inps.ref_lalo:
-        if inps.ref_lalo[1] > 180.:
+        # set longitude to [-180, 180)
+        if inps.ref_lalo[1] >= 180.:
             inps.ref_lalo[1] -= 360.
-        inps.ref_yx = inps.coord.geo2radar(inps.ref_lalo[0], inps.ref_lalo[1], print_msg=False)[0:2]
+        # ref_lalo --> ref_yx if not set in cmd
+        if not inps.ref_yx:
+            inps.ref_yx = inps.coord.geo2radar(inps.ref_lalo[0],
+                                               inps.ref_lalo[1],
+                                               print_msg=False)[0:2]
+    # use REF_Y/X if ref_yx not set in cmd
     if not inps.ref_yx and 'REF_Y' in atr.keys():
-        inps.ref_yx = [int(atr['REF_Y']), int(atr['REF_X'])]
+        inps.ref_yx = (int(atr['REF_Y']), int(atr['REF_X']))
+
+    # ref_yx --> ref_lalo if in geo-coord
+    if inps.ref_yx and 'Y_FIRST' in atr.keys():
+        inps.ref_lalo = inps.coord.radar2geo(inps.ref_yx[0],
+                                             inps.ref_yx[1],
+                                             print_msg=False)[0:2]
+
+    # do not plot native reference point if it's out of the coverage due to subset
+    if (inps.ref_yx and 'Y_FIRST' in atr.keys()
+        and inps.ref_yx == (int(atr['REF_Y']), int(atr['REF_X']))
+        and not (inps.pix_box[0] <= inps.ref_yx[1] < inps.pix_box[2]
+                 and inps.pix_box[1] <= inps.ref_yx[0] < inps.pix_box[3])):
+        inps.disp_ref_pixel = False
+        print('the native REF_Y/X is out of subset box, thus do not display')
 
     # Initial Pixel Coord
     if inps.lalo:
@@ -324,13 +326,15 @@ def read_timeseries_data(inps):
         vprint('reading timeseries from file {} ...'.format(fname))
         data, atr = readfile.read(fname, datasetName=inps.date_list, box=inps.pix_box)
         try:
-            ref_phase = data[:, inps.ref_yx[0]-inps.pix_box[1], inps.ref_yx[1]-inps.pix_box[0]]
-            data -= np.tile(ref_phase.reshape(-1, 1, 1), (1, data.shape[-2], data.shape[-1]))
-            vprint('reference to pixel: {}'.format(inps.ref_yx))
+            if inps.ref_yx != (int(atr['REF_Y']), int(atr['REF_X'])):
+                ref_phase = data[:, inps.ref_yx[0]-inps.pix_box[1], inps.ref_yx[1]-inps.pix_box[0]]
+                data -= np.tile(ref_phase.reshape(-1, 1, 1), (1, data.shape[-2], data.shape[-1]))
+                vprint('reference to pixel: {}'.format(inps.ref_yx))
         except:
             pass
-        vprint('reference to date: {}'.format(inps.date_list[inps.ref_idx]))
-        data -= np.tile(data[inps.ref_idx, :, :], (inps.num_date, 1, 1))
+        if inps.ref_idx is not None:
+            vprint('reference to date: {}'.format(inps.date_list[inps.ref_idx]))
+            data -= np.tile(data[inps.ref_idx, :, :], (inps.num_date, 1, 1))
 
         # Display Unit
         (data,
@@ -351,8 +355,10 @@ def read_timeseries_data(inps):
     del msk
 
     ts_stack = np.sum(ts_data[0], axis=0)
-    mask[ts_stack == 0.] = False
     mask[np.isnan(ts_stack)] = False
+    # keep all-zero value for unwrapError time-series
+    if atr['UNIT'] not in ['cycle']:
+        mask[ts_stack == 0.] = False
     del ts_stack
 
     #do not mask the reference point
@@ -362,22 +368,10 @@ def read_timeseries_data(inps):
     except:
         pass
 
-    #vprint('masking data')
-    #ts_mask = np.tile(mask, (inps.num_date, 1, 1))
-    #for i in range(len(ts_data)):
-    #    ts_data[i][ts_mask == 0] = np.nan
-    #    try:
-    #        ts_data[i][:, inps.ref_yx[0], inps.ref_yx[1]] = 0.   # keep value on reference pixel
-    #    except:
-    #        pass
-    #del ts_mask
-
     # default vlim
     inps.dlim = [np.nanmin(ts_data[0]), np.nanmax(ts_data[0])]
-    ts_data_mli = multilook_data(np.squeeze(ts_data[0]), 10, 10)
     if not inps.vlim:
-        inps.vlim = [np.nanmin(ts_data_mli[inps.ex_flag != 0]),
-                     np.nanmax(ts_data_mli[inps.ex_flag != 0])]
+        inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(ts_data[0], num_multilook=10)
     vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
     vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
 
@@ -393,7 +387,7 @@ def read_timeseries_data(inps):
         inps.ylim = [ymin - ybuffer, ymax + ybuffer]
         if inps.offset:
             inps.ylim[1] += inps.offset * (num_file - 1)
-    del ts_data_mli
+        del ts_data_mli
 
     return ts_data, mask, inps
 
@@ -438,10 +432,10 @@ def plot_ts_scatter(ax, dis_ts, inps, ppar):
 
         # Plot excluded dates
         ex_d_ts = dis_ts[inps.ex_flag == 0]
-        ax.scatter(inps.ex_dates, ex_d_ts, s=ppar.ms**2, color='gray')
+        ax.plot(inps.ex_dates, ex_d_ts, color='gray', lw=0, ms=ppar.ms, marker=inps.marker)
 
     # Plot kept dates
-    ax.scatter(dates, d_ts, s=ppar.ms**2, label=ppar.label, color=ppar.mfc)
+    ax.plot(dates, d_ts, color=ppar.mfc, label=ppar.label, lw=inps.linewidth, ms=ppar.ms, marker=inps.marker)
     return ax
 
 
@@ -500,8 +494,11 @@ def save_ts_plot(yx, fig_img, fig_pts, d_ts, inps):
     outName = '{}_ts.txt'.format(inps.outfile_base)
     header_info = 'time-series file={}\n'.format(inps.file)
     header_info += '{}\n'.format(_get_ts_title(yx[0], yx[1], inps.coord))
-    header_info += 'reference pixel: y={}, x={}\n'.format(inps.ref_yx[0], inps.ref_yx[1])
-    header_info += 'reference date: {}\n'.format(inps.date_list[inps.ref_idx])
+    try:
+        header_info += 'reference pixel: y={}, x={}\n'.format(inps.ref_yx[0], inps.ref_yx[1])
+        header_info += 'reference date: {}\n'.format(inps.date_list[inps.ref_idx])
+    except:
+        pass
     header_info += 'unit: {}\n'.format(inps.disp_unit)
     header_info += 'slope: {:.2f} +/- {:.2f} [{}/yr]'.format(vel, std, inps.disp_unit)
 
@@ -585,6 +582,10 @@ class timeseriesViewer():
         self.ts_data, self.mask = read_timeseries_data(self)[0:2]
 
         # Figure 1 - Cumulative Displacement Map
+        self.figsize_img = pp.auto_figure_size(ds_shape=self.ts_data[0].shape[-2:],
+                                               disp_cbar=True,
+                                               disp_slider=True,
+                                               print_msg=self.print_msg)
         self.fig_img = plt.figure(self.figname_img, figsize=self.figsize_img)
 
         # Figure 1 - Axes 1 - Displacement Map
@@ -594,7 +595,7 @@ class timeseriesViewer():
         self.plot_init_image(img_data)
 
         # Figure 1 - Axes 2 - Time Slider
-        self.ax_tslider = self.fig_img.add_axes([0.2, 0.1, 0.6, 0.07])
+        self.ax_tslider = self.fig_img.add_axes([0.125, 0.1, 0.75, 0.07])
         self.plot_init_time_slider(init_idx=self.idx, ref_idx=self.ref_idx)
         self.tslider.on_changed(self.update_time_slider)
 
@@ -646,12 +647,12 @@ class timeseriesViewer():
         return self.img, self.cbar_img
 
 
-    def plot_init_time_slider(self, init_idx=-1, ref_idx=0):
+    def plot_init_time_slider(self, init_idx=-1, ref_idx=None):
         val_step = np.min(np.diff(self.yearList))
         val_min = self.yearList[0]
         val_max = self.yearList[-1]
 
-        self.tslider = Slider(self.ax_tslider, label='Years',
+        self.tslider = Slider(self.ax_tslider, label='Time',
                               valinit=self.yearList[init_idx],
                               valmin=val_min,
                               valmax=val_max,
@@ -660,7 +661,8 @@ class timeseriesViewer():
         bar_width = val_step / 4.
         datex = np.array(self.yearList) - bar_width / 2.
         self.tslider.ax.bar(datex, np.ones(len(datex)), bar_width, facecolor='black', ecolor=None)
-        self.tslider.ax.bar(datex[ref_idx], 1., bar_width*3, facecolor='crimson', ecolor=None)
+        if ref_idx is not None:
+            self.tslider.ax.bar(datex[ref_idx], 1., bar_width*3, facecolor='crimson', ecolor=None)
 
         # xaxis tick format
         if np.floor(val_max) == np.floor(val_min):
@@ -671,6 +673,7 @@ class timeseriesViewer():
         self.tslider.ax.xaxis.set_minor_locator(MultipleLocator(1./12.))
         self.tslider.ax.set_xlim([val_min, val_max])
         self.tslider.ax.set_yticks([])
+        self.tslider.valtext.set_visible(False)   #hide slider values
         return self.tslider
 
 

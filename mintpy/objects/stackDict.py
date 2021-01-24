@@ -35,7 +35,7 @@ from mintpy.utils import (
 
 ########################################################################################
 class ifgramStackDict:
-    '''
+    """
     IfgramStack object for a set of InSAR pairs from the same platform and track.
 
     Example:
@@ -48,7 +48,7 @@ class ifgramStackDict:
                      }
         stackObj = ifgramStackDict(pairsDict=pairsDict)
         stackObj.write2hdf5(outputFile='ifgramStack.h5', box=(200,500,300,600))
-    '''
+    """
 
     def __init__(self, name='ifgramStack', pairsDict=None, dsName0=ifgramDatasetNames[0]):
         self.name = name
@@ -95,7 +95,7 @@ class ifgramStackDict:
 
     def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, xstep=1, ystep=1,
                    compression=None, extra_metadata=None):
-        '''Save/write an ifgramStackDict object into an HDF5 file with the structure defined in:
+        """Save/write an ifgramStackDict object into an HDF5 file with the structure defined in:
 
         https://mintpy.readthedocs.io/en/latest/api/data_structure/#ifgramstack
 
@@ -104,11 +104,7 @@ class ifgramStackDict:
                     box : tuple, subset range in (x0, y0, x1, y1)
                     extra_metadata : dict, extra metadata to be added into output file
         Returns:    outputFile
-        '''
-
-        self.outputFile = outputFile
-        f = h5py.File(self.outputFile, access_mode)
-        print('create HDF5 file {} with {} mode'.format(self.outputFile, access_mode))
+        """
 
         self.pairs = sorted([pair for pair in self.pairsDict.keys()])
         self.dsNames = list(self.pairsDict[self.pairs[0]].datasetDict.keys())
@@ -118,103 +114,106 @@ class ifgramStackDict:
                       xstep=xstep,
                       ystep=ystep)
 
-        ###############################
-        # 3D datasets containing unwrapPhase, magnitude, coherence, connectComponent, wrapPhase, etc.
-        for dsName in self.dsNames:
-            dsShape = (self.numIfgram, self.length, self.width)
+        self.outputFile = outputFile
+        with h5py.File(self.outputFile, access_mode) as f:
+            print('create HDF5 file {} with {} mode'.format(self.outputFile, access_mode))
+
+            ###############################
+            # 3D datasets containing unwrapPhase, magnitude, coherence, connectComponent, wrapPhase, etc.
+            for dsName in self.dsNames:
+                dsShape = (self.numIfgram, self.length, self.width)
+                dsDataType = np.float32
+                dsCompression = compression
+                if dsName in ['connectComponent']:
+                    dsDataType = np.int16
+                    dsCompression = 'lzf'
+
+                print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
+                       ' with compression = {c}').format(d=dsName,
+                                                         w=maxDigit,
+                                                         t=str(dsDataType),
+                                                         s=dsShape,
+                                                         c=dsCompression))
+                ds = f.create_dataset(dsName,
+                                      shape=dsShape,
+                                      maxshape=(None, dsShape[1], dsShape[2]),
+                                      dtype=dsDataType,
+                                      chunks=True,
+                                      compression=dsCompression)
+
+                prog_bar = ptime.progressBar(maxValue=self.numIfgram)
+                for i in range(self.numIfgram):
+                    # read
+                    ifgramObj = self.pairsDict[self.pairs[i]]
+                    data = ifgramObj.read(dsName,
+                                          box=box,
+                                          xstep=xstep,
+                                          ystep=ystep)[0]
+                    # write
+                    ds[i, :, :] = data
+                    prog_bar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],
+                                                               self.pairs[i][1]))
+                prog_bar.close()
+                ds.attrs['MODIFICATION_TIME'] = str(time.time())
+
+            ###############################
+            # 2D dataset containing reference and secondary dates of all pairs
+            dsName = 'date'
+            dsDataType = np.string_
+            dsShape = (self.numIfgram, 2)
+            print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
+                                                                              w=maxDigit,
+                                                                              t=str(dsDataType),
+                                                                              s=dsShape))
+            data = np.array(self.pairs, dtype=dsDataType)
+            f.create_dataset(dsName, data=data)
+
+            ###############################
+            # 1D dataset containing perpendicular baseline of all pairs
+            dsName = 'bperp'
             dsDataType = np.float32
-            dsCompression = compression
-            if dsName in ['connectComponent']:
-                dsDataType = np.int16
-                dsCompression = 'lzf'
-
-            print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
-                   ' with compression = {c}').format(d=dsName,
-                                                     w=maxDigit,
-                                                     t=str(dsDataType),
-                                                     s=dsShape,
-                                                     c=dsCompression))
-            ds = f.create_dataset(dsName,
-                                  shape=dsShape,
-                                  maxshape=(None, dsShape[1], dsShape[2]),
-                                  dtype=dsDataType,
-                                  chunks=True,
-                                  compression=dsCompression)
-
-            prog_bar = ptime.progressBar(maxValue=self.numIfgram)
+            dsShape = (self.numIfgram,)
+            print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
+                                                                              w=maxDigit,
+                                                                              t=str(dsDataType),
+                                                                              s=dsShape))
+            # get bperp
+            data = np.zeros(self.numIfgram, dtype=dsDataType)
             for i in range(self.numIfgram):
-                # read
                 ifgramObj = self.pairsDict[self.pairs[i]]
-                data = ifgramObj.read(dsName,
-                                      box=box,
-                                      xstep=xstep,
-                                      ystep=ystep)[0]
-                # write
-                ds[i, :, :] = data
-                prog_bar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],
-                                                           self.pairs[i][1]))
-            prog_bar.close()
-            ds.attrs['MODIFICATION_TIME'] = str(time.time())
+                data[i] = ifgramObj.get_perp_baseline(family=self.dsName0)
+            # write
+            f.create_dataset(dsName, data=data)
 
-        ###############################
-        # 2D dataset containing reference and secondary dates of all pairs
-        dsName = 'date'
-        dsDataType = np.string_
-        dsShape = (self.numIfgram, 2)
-        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
-                                                                          w=maxDigit,
-                                                                          t=str(dsDataType),
-                                                                          s=dsShape))
-        data = np.array(self.pairs, dtype=dsDataType)
-        f.create_dataset(dsName, data=data)
+            ###############################
+            # 1D dataset containing bool value of dropping the interferograms or not
+            dsName = 'dropIfgram'
+            dsDataType = np.bool_
+            dsShape = (self.numIfgram,)
+            print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
+                                                                              w=maxDigit,
+                                                                              t=str(dsDataType),
+                                                                              s=dsShape))
+            data = np.ones(dsShape, dtype=dsDataType)
+            f.create_dataset(dsName, data=data)
 
-        ###############################
-        # 1D dataset containing perpendicular baseline of all pairs
-        dsName = 'bperp'
-        dsDataType = np.float32
-        dsShape = (self.numIfgram,)
-        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
-                                                                          w=maxDigit,
-                                                                          t=str(dsDataType),
-                                                                          s=dsShape))
-        # get bperp
-        data = np.zeros(self.numIfgram, dtype=dsDataType)
-        for i in range(self.numIfgram):
-            ifgramObj = self.pairsDict[self.pairs[i]]
-            data[i] = ifgramObj.get_perp_baseline(family=self.dsName0)
-        # write
-        f.create_dataset(dsName, data=data)
+            ###############################
+            # Attributes
+            self.get_metadata()
+            if extra_metadata:
+                self.metadata.update(extra_metadata)
+                print('add extra metadata: {}'.format(extra_metadata))
 
-        ###############################
-        # 1D dataset containing bool value of dropping the interferograms or not
-        dsName = 'dropIfgram'
-        dsDataType = np.bool_
-        dsShape = (self.numIfgram,)
-        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
-                                                                          w=maxDigit,
-                                                                          t=str(dsDataType),
-                                                                          s=dsShape))
-        data = np.ones(dsShape, dtype=dsDataType)
-        f.create_dataset(dsName, data=data)
+            # update metadata due to subset
+            self.metadata = attr.update_attribute4subset(self.metadata, box)
+            # update metadata due to multilook
+            if xstep * ystep > 1:
+                self.metadata = attr.update_attribute4multilook(self.metadata, ystep, xstep)
 
-        ###############################
-        # Attributes
-        self.get_metadata()
-        if extra_metadata:
-            self.metadata.update(extra_metadata)
-            print('add extra metadata: {}'.format(extra_metadata))
+            self.metadata['FILE_TYPE'] = self.name
+            for key, value in self.metadata.items():
+                f.attrs[key] = value
 
-        # update metadata due to subset
-        self.metadata = attr.update_attribute4subset(self.metadata, box)
-        # update metadata due to multilook
-        if xstep * ystep > 1:
-            self.metadata = attr.update_attribute4multilook(self.metadata, ystep, xstep)
-
-        self.metadata['FILE_TYPE'] = self.name
-        for key, value in self.metadata.items():
-            f.attrs[key] = value
-
-        f.close()
         print('Finished writing to {}'.format(self.outputFile))
         return self.outputFile
 
@@ -309,7 +308,7 @@ class ifgramDict:
 
 ########################################################################################
 class geometryDict:
-    '''
+    """
     Geometry object for Lat, Lon, Heigt, Incidence, Heading, Bperp, ... from the same platform and track.
 
     Example:
@@ -332,7 +331,7 @@ class geometryDict:
         metadata = readfile.read_attribute('$PROJECT_DIR/merged/interferograms/20160629_20160723/filt_fine.unw')
         geomObj = geometryDict(processor='isce', datasetDict=datasetDict, extraMetadata=metadata)
         geomObj.write2hdf5(outputFile='geometryRadar.h5', access_mode='w', box=(200,500,300,600))
-    '''
+    """
 
     def __init__(self, name='geometry', processor=None, datasetDict={}, extraMetadata=None):
         self.name = name
@@ -508,166 +507,163 @@ class geometryDict:
 
     def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, xstep=1, ystep=1,
                    compression='lzf', extra_metadata=None):
-        ''' Save/write to HDF5 file with structure defined in:
-
-        https://mintpy.readthedocs.io/en/latest/api/data_structure/#geometry
-        '''
+        """Save/write to HDF5 file with structure defined in:
+            https://mintpy.readthedocs.io/en/latest/api/data_structure/#geometry
+        """
         if len(self.datasetDict) == 0:
             print('No dataset file path in the object, skip HDF5 file writing.')
             return None
 
-        self.outputFile = outputFile
-        f = h5py.File(self.outputFile, access_mode)
-        print('create HDF5 file {} with {} mode'.format(self.outputFile, access_mode))
-
-        #groupName = self.name
-        #group = f.create_group(groupName)
-        #print('create group   /{}'.format(groupName))
-
         maxDigit = max([len(i) for i in geometryDatasetNames])
         length, width = self.get_size(box=box, xstep=xstep, ystep=ystep)
 
-        ###############################
-        for dsName in self.dsNames:
-            # 3D datasets containing bperp
-            if dsName == 'bperp':
-                self.dateList = list(self.datasetDict[dsName].keys())
-                dsDataType = np.float32
-                self.numDate = len(self.dateList)
-                dsShape = (self.numDate, length, width)
-                ds = f.create_dataset(dsName,
-                                      shape=dsShape,
-                                      maxshape=(None, dsShape[1], dsShape[2]),
-                                      dtype=dsDataType,
-                                      chunks=True,
-                                      compression=compression)
-                print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
-                       ' with compression = {c}').format(d=dsName,
-                                                         w=maxDigit,
-                                                         t=str(dsDataType),
-                                                         s=dsShape,
-                                                         c=str(compression)))
+        self.outputFile = outputFile
+        with h5py.File(self.outputFile, access_mode) as f:
+            print('create HDF5 file {} with {} mode'.format(self.outputFile, access_mode))
 
-                print('read coarse grid baseline files and linear interpolate into full resolution ...')
-                prog_bar = ptime.progressBar(maxValue=self.numDate)
-                for i in range(self.numDate):
-                    fname = self.datasetDict[dsName][self.dateList[i]]
-                    data = read_isce_bperp_file(fname=fname,
-                                                full_shape=self.get_size(),
-                                                box=box,
-                                                xstep=xstep,
-                                                ystep=ystep)
-                    ds[i, :, :] = data
-                    prog_bar.update(i+1, suffix=self.dateList[i])
-                prog_bar.close()
+            ###############################
+            for dsName in self.dsNames:
+                # 3D datasets containing bperp
+                if dsName == 'bperp':
+                    self.dateList = list(self.datasetDict[dsName].keys())
+                    dsDataType = np.float32
+                    self.numDate = len(self.dateList)
+                    dsShape = (self.numDate, length, width)
+                    ds = f.create_dataset(dsName,
+                                          shape=dsShape,
+                                          maxshape=(None, dsShape[1], dsShape[2]),
+                                          dtype=dsDataType,
+                                          chunks=True,
+                                          compression=compression)
+                    print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
+                           ' with compression = {c}').format(d=dsName,
+                                                             w=maxDigit,
+                                                             t=str(dsDataType),
+                                                             s=dsShape,
+                                                             c=str(compression)))
 
-                # Write 1D dataset date
-                dsName = 'date'
-                dsShape = (self.numDate,)
-                dsDataType = np.string_
-                print(('create dataset /{d:<{w}} of {t:<25}'
-                       ' in size of {s}').format(d=dsName,
-                                                 w=maxDigit,
-                                                 t=str(dsDataType),
-                                                 s=dsShape))
-                data = np.array(self.dateList, dtype=dsDataType)
-                ds = f.create_dataset(dsName, data=data)
+                    print('read coarse grid baseline files and linear interpolate into full resolution ...')
+                    prog_bar = ptime.progressBar(maxValue=self.numDate)
+                    for i in range(self.numDate):
+                        fname = self.datasetDict[dsName][self.dateList[i]]
+                        data = read_isce_bperp_file(fname=fname,
+                                                    full_shape=self.get_size(),
+                                                    box=box,
+                                                    xstep=xstep,
+                                                    ystep=ystep)
+                        ds[i, :, :] = data
+                        prog_bar.update(i+1, suffix=self.dateList[i])
+                    prog_bar.close()
 
-            # 2D datasets containing height, latitude, incidenceAngle, shadowMask, etc.
-            else:
-                dsDataType = np.float32
-                if dsName.lower().endswith('mask'):
-                    dsDataType = np.bool_
-                dsShape = (length, width)
-                print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
-                       ' with compression = {c}').format(d=dsName,
-                                                         w=maxDigit,
-                                                         t=str(dsDataType),
-                                                         s=dsShape,
-                                                         c=str(compression)))
+                    # Write 1D dataset date accompnay the 3D bperp
+                    dsName = 'date'
+                    dsShape = (self.numDate,)
+                    dsDataType = np.string_
+                    print(('create dataset /{d:<{w}} of {t:<25}'
+                           ' in size of {s}').format(d=dsName,
+                                                     w=maxDigit,
+                                                     t=str(dsDataType),
+                                                     s=dsShape))
+                    data = np.array(self.dateList, dtype=dsDataType)
+                    ds = f.create_dataset(dsName, data=data)
 
-                # read
-                data = np.array(self.read(family=dsName,
-                                          box=box,
-                                          xstep=xstep,
-                                          ystep=ystep)[0], dtype=dsDataType)
+                # 2D datasets containing height, latitude/longitude, range/azimuthCoord, incidenceAngle, shadowMask, etc.
+                else:
+                    dsDataType = np.float32
+                    if dsName.lower().endswith('mask'):
+                        dsDataType = np.bool_
+                    dsShape = (length, width)
+                    print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
+                           ' with compression = {c}').format(d=dsName,
+                                                             w=maxDigit,
+                                                             t=str(dsDataType),
+                                                             s=dsShape,
+                                                             c=str(compression)))
 
-                # water body: -1 for water and 0 for land
-                # water mask:  0 for water and 1 for land
-                fname = os.path.basename(self.datasetDict[dsName])
-                if fname.startswith('waterBody') or fname.endswith('.wbd'):
-                    data = data > -0.5
-                    print(('    input file "{}" is water body (-1/0 for water/land), '
-                           'convert to water mask (0/1 for water/land).'.format(fname)))
+                    # read
+                    data = np.array(self.read(family=dsName,
+                                              box=box,
+                                              xstep=xstep,
+                                              ystep=ystep)[0], dtype=dsDataType)
 
-                if dsName == 'height':
-                    noDataValueDEM = -32768
-                    if np.any(data == noDataValueDEM):
-                        data[data == noDataValueDEM] = np.nan
-                        print('    convert no-data value for DEM {} to NaN.'.format(noDataValueDEM))
+                    # water body: -1 for water and 0 for land
+                    # water mask:  0 for water and 1 for land
+                    fname = os.path.basename(self.datasetDict[dsName])
+                    if fname.startswith('waterBody') or fname.endswith('.wbd'):
+                        data = data > -0.5
+                        print(('    input file "{}" is water body (-1/0 for water/land), '
+                               'convert to water mask (0/1 for water/land).'.format(fname)))
 
-                # write
-                ds = f.create_dataset(dsName,
-                                      data=data,
-                                      chunks=True,
-                                      compression=compression)
+                    elif dsName == 'height':
+                        noDataValueDEM = -32768
+                        if np.any(data == noDataValueDEM):
+                            data[data == noDataValueDEM] = np.nan
+                            print('    convert no-data value for DEM {} to NaN.'.format(noDataValueDEM))
 
-        ###############################
-        # Generate Dataset if not existed in binary file: incidenceAngle, slantRangeDistance
-        for dsName in [i for i in ['incidenceAngle', 'slantRangeDistance']
-                       if i not in self.dsNames]:
-            # Calculate data
-            data = None
-            if dsName == 'incidenceAngle':
-                data = self.get_incidence_angle(box=box,
-                                                xstep=xstep,
-                                                ystep=ystep)
-            elif dsName == 'slantRangeDistance':
-                data = self.get_slant_range_distance(box=box,
-                                                     xstep=xstep,
-                                                     ystep=ystep)
+                    elif dsName == 'rangeCoord' and xstep != 1:
+                        print('    scale value of {:<15} by 1/{} due to multilooking'.format(dsName, xstep))
+                        data /= xstep
 
-            # Write dataset
-            if data is not None:
-                dsShape = data.shape
-                dsDataType = np.float32
-                print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
-                       ' with compression = {c}').format(d=dsName,
-                                                         w=maxDigit,
-                                                         t=str(dsDataType),
-                                                         s=dsShape,
-                                                         c=str(compression)))
-                ds = f.create_dataset(dsName,
-                                      data=data,
-                                      dtype=dsDataType,
-                                      chunks=True,
-                                      compression=compression)
+                    elif dsName == 'azimuthCoord' and ystep != 1:
+                        print('    scale value of {:<15} by 1/{} due to multilooking'.format(dsName, ystep))
+                        data /= ystep
 
-        ###############################
-        # Attributes
-        self.get_metadata()
-        if extra_metadata:
-            self.metadata.update(extra_metadata)
-            print('add extra metadata: {}'.format(extra_metadata))
+                    # write
+                    ds = f.create_dataset(dsName,
+                                          data=data,
+                                          chunks=True,
+                                          compression=compression)
 
-        # update due to subset
-        self.metadata = attr.update_attribute4subset(self.metadata, box)
-        # update due to multilook
-        if xstep * ystep > 1:
-            self.metadata = attr.update_attribute4multilook(self.metadata, ystep, xstep)
+            ###############################
+            # Generate Dataset if not existed in binary file: incidenceAngle, slantRangeDistance
+            for dsName in [i for i in ['incidenceAngle', 'slantRangeDistance'] if i not in self.dsNames]:
+                # Calculate data
+                data = None
+                if dsName == 'incidenceAngle':
+                    data = self.get_incidence_angle(box=box, xstep=xstep, ystep=ystep)
+                elif dsName == 'slantRangeDistance':
+                    data = self.get_slant_range_distance(box=box, xstep=xstep, ystep=ystep)
 
-        self.metadata['FILE_TYPE'] = self.name
-        for key, value in self.metadata.items():
-            f.attrs[key] = value
+                # Write dataset
+                if data is not None:
+                    dsShape = data.shape
+                    dsDataType = np.float32
+                    print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
+                           ' with compression = {c}').format(d=dsName,
+                                                             w=maxDigit,
+                                                             t=str(dsDataType),
+                                                             s=dsShape,
+                                                             c=str(compression)))
+                    ds = f.create_dataset(dsName,
+                                          data=data,
+                                          dtype=dsDataType,
+                                          chunks=True,
+                                          compression=compression)
 
-        f.close()
+            ###############################
+            # Attributes
+            self.get_metadata()
+            if extra_metadata:
+                self.metadata.update(extra_metadata)
+                print('add extra metadata: {}'.format(extra_metadata))
+
+            # update due to subset
+            self.metadata = attr.update_attribute4subset(self.metadata, box)
+            # update due to multilook
+            if xstep * ystep > 1:
+                self.metadata = attr.update_attribute4multilook(self.metadata, ystep, xstep)
+
+            self.metadata['FILE_TYPE'] = self.name
+            for key, value in self.metadata.items():
+                f.attrs[key] = value
+
         print('Finished writing to {}'.format(self.outputFile))
         return self.outputFile
 
 
 ########################################################################################
 def read_isce_bperp_file(fname, full_shape, box=None, xstep=1, ystep=1):
-    '''Read ISCE coarse grid perpendicular baseline file, and project it to full size
+    """Read ISCE coarse grid perpendicular baseline file, and project it to full size
     Parameters: self : geometry object,
                 fname : str, bperp file name
                 outShape : tuple of 2int, shape of file in full resolution
@@ -675,7 +671,7 @@ def read_isce_bperp_file(fname, full_shape, box=None, xstep=1, ystep=1):
     Returns:    data : 2D array of float32
     Example:    fname = '$PROJECT_DIR/merged/baselines/20160418/bperp'
                 data = self.read_sice_bperp_file(fname, (3600,2200), box=(200,400,1000,1000))
-    '''
+    """
     # read original data
     data_c = readfile.read(fname)[0]
 

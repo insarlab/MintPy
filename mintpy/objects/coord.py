@@ -45,7 +45,7 @@ class coordinate:
         """
         self.src_metadata = metadata
         if lookup_file is None:
-            lookup_file = get_lookup_file(lookup_file, print_msg=False)
+            lookup_file = get_lookup_file(lookup_file, abspath=True, print_msg=False)
         if isinstance(lookup_file, str):
             lookup_file = [lookup_file, lookup_file]
         self.lookup_file = lookup_file

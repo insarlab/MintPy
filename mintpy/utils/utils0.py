@@ -19,7 +19,6 @@ import os
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-import multiprocessing
 from scipy import ndimage
 
 
@@ -385,10 +384,10 @@ def get_lat_lon_rdc(meta):
     length, width = int(meta['LENGTH']), int(meta['WIDTH'])
     lats = [float(meta['LAT_REF{}'.format(i)]) for i in [1,2,3,4]]
     lons = [float(meta['LON_REF{}'.format(i)]) for i in [1,2,3,4]]
-    
+
     lat = np.zeros((length,width),dtype = np.float32)
     lon = np.zeros((length,width),dtype = np.float32)
-    
+
     for i in range(length):
         for j in range(width):
             lat[i,j] = lats[0] + j*(lats[1] - lats[0])/width + i*(lats[2] - lats[0])/length
@@ -687,11 +686,11 @@ def check_parallel(file_num=1, print_msg=True, maxParallelNum=8):
         return 1, enable_parallel, None, None
 
     # Find proper number of cores for parallel processing
-    num_cores = min(multiprocessing.cpu_count(), file_num, maxParallelNum)
+    num_cores = min(os.cpu_count(), file_num, maxParallelNum)
     if num_cores <= 1:
         enable_parallel = False
         print('parallel processing is disabled because min of the following two numbers <= 1:')
-        print('available cpu number of the computer: {}'.format(multiprocessing.cpu_count()))
+        print('available cpu number of the computer: {}'.format(os.cpu_count()))
     elif print_msg:
         print('parallel processing using %d cores ...' % (num_cores))
 
@@ -749,13 +748,19 @@ def median_abs_deviation_threshold(data, center=None, cutoff=3.):
 def ceil_to_1(x):
     """Return the most significant digit of input number and ceiling it"""
     digit = int(np.floor(np.log10(abs(x))))
-    return round(x, -digit)+10**digit
+    x_round = round(x, -digit)
+    # round to ceil
+    if x_round >= x:
+        x_ceil = x_round
+    else:
+        x_ceil = x_round + 10**digit
+    return x_ceil
 
 
 def round_to_1(x):
     """Return the most significant digit of input number"""
     digit = int(np.floor(np.log10(abs(x))))
-    return round(x, -1*digit)
+    return round(x, -digit)
 
 
 def highest_power_of_2(x):

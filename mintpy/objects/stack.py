@@ -162,11 +162,6 @@ class timeseries:
             pass
         return None
 
-    def open_hdf5(self, mode='a'):
-        print('open {} in {} mode'.format(self.file, mode))
-        self.f = h5py.File(self.file, mode)
-        return self.f
-
     def open(self, print_msg=True):
         if print_msg:
             print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
@@ -277,34 +272,6 @@ class timeseries:
                 data = np.squeeze(data)
         return data
 
-    def layout_hdf5(self, dsNameDict, metadata, compression=None):
-        print('-'*50)
-        print('create HDF5 file {} with w mode'.format(self.file))
-        f = h5py.File(self.file, "w")
-
-        for key in dsNameDict.keys():
-            print("create dataset: {d:<25} of {t:<25} in size of {s}".format(
-                d=key,
-                t=str(dsNameDict[key][0]),
-                s=dsNameDict[key][1]))
-
-            f.create_dataset(key,
-                             shape=dsNameDict[key][1],
-                             dtype=dsNameDict[key][0],
-                             chunks=True,
-                             compression=compression)
-
-        # write attributes
-        metadata = dict(metadata)
-        metadata['FILE_TYPE'] = self.name
-        for key in metadata.keys():
-            f.attrs[key] = metadata[key]
-
-        print('close HDF5 file {}'.format(self.file))
-        f.close()
-        return self.file
-
-
     def write2hdf5(self, data, outFile=None, dates=None, bperp=None, metadata=None, refFile=None, compression=None):
         """
         Parameters: data  : 3D array of float32
@@ -356,26 +323,27 @@ class timeseries:
 
         # 3D dataset - timeseries
         print('create timeseries HDF5 file: {} with w mode'.format(outFile))
-        f = h5py.File(outFile, 'w')
-        print(('create dataset /timeseries of {t:<10} in size of {s} '
-               'with compression={c}').format(t=str(data.dtype),
-                                              s=data.shape,
-                                              c=compression))
-        f.create_dataset('timeseries', data=data, chunks=True, compression=compression)
+        with h5py.File(outFile, 'w') as f:
+            print(('create dataset /timeseries of {t:<10} in size of {s} '
+                   'with compression={c}').format(t=str(data.dtype),
+                                                  s=data.shape,
+                                                  c=compression))
+            f.create_dataset('timeseries',
+                             data=data,
+                             chunks=True,
+                             compression=compression)
 
-        # 1D dataset - date / bperp
-        print('create dataset /dates      of {:<10} in size of {}'.format(str(dates.dtype), dates.shape))
-        f.create_dataset('date', data=dates)
+            # 1D dataset - date / bperp
+            print('create dataset /dates      of {:<10} in size of {}'.format(str(dates.dtype), dates.shape))
+            f.create_dataset('date', data=dates)
 
-        if bperp.shape != ():
-            print('create dataset /bperp      of {:<10} in size of {}'.format(str(bperp.dtype), bperp.shape))
-            f.create_dataset('bperp', data=bperp)
+            if bperp.shape != ():
+                print('create dataset /bperp      of {:<10} in size of {}'.format(str(bperp.dtype), bperp.shape))
+                f.create_dataset('bperp', data=bperp)
 
-        # Attributes
-        for key, value in metadata.items():
-            f.attrs[key] = str(value)
-
-        f.close()
+            # Attributes
+            for key, value in metadata.items():
+                f.attrs[key] = str(value)
         print('finished writing to {}'.format(outFile))
         return outFile
 
@@ -1263,20 +1231,14 @@ class singleDataset:
     def __init__(self, file=None):
         self.file = file
 
-    def close(self, print_msg=True):
-        try:
-            self.f.close()
-            if print_msg:
-                print('close file: {}'.format(os.path.basename(self.file)))
-        except:
-            pass
-
     def read(self, box=None):
-        self.f = h5py.File(self.file, 'r')
-        k = list(self.f.keys())[0]
-        data = self.f[k][:]
+        with h5py.File(self.file, 'r') as f:
+            dsName = list(f.keys())[0]
+            data = f[dsName][:]
+
         if box is not None:
-            data = data[box[1]:box[3], box[0]:box[2]]
+            data = data[box[1]:box[3],
+                        box[0]:box[2]]
         return data
 
 

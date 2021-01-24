@@ -11,7 +11,6 @@ import sys
 import time
 import argparse
 import warnings
-import multiprocessing
 import numpy as np
 
 from mintpy.objects.resample import resample
@@ -205,8 +204,8 @@ def check_num_processor(nprocs):
         if 'OMP_NUM_THREADS' in os.environ:
             nprocs = int(os.getenv('OMP_NUM_THREADS'))
         else:
-            nprocs = int(multiprocessing.cpu_count() / 2)
-    nprocs = min(multiprocessing.cpu_count(), nprocs)
+            nprocs = int(os.cpu_count() / 2)
+    nprocs = min(os.cpu_count(), nprocs)
     print('number of processor to be used: {}'.format(nprocs))
     return nprocs
 

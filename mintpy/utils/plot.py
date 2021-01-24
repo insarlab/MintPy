@@ -131,16 +131,34 @@ def add_inner_title(ax, title, loc, prop=None, **kwargs):
     return at
 
 
-def auto_figure_size(shape, disp_cbar=False, ratio=1.0):
-    """Get auto figure size based on input data shape"""
-    length, width = shape
-    plot_shape = [width*1.25, length]
-    if not disp_cbar:
-        plot_shape = [width, length]
-    fig_scale = min(min_figsize_single/min(plot_shape),
-                    max_figsize_single/max(plot_shape),
-                    max_figsize_height/plot_shape[1])
-    fig_size = [i*fig_scale*ratio for i in plot_shape]
+def auto_figure_size(ds_shape, scale=1.0, disp_cbar=False, disp_slider=False,
+                     cbar_ratio=0.25, slider_ratio=0.30, print_msg=True):
+    """Get auto figure size based on input data shape
+    Adjust if display colobar on the right and/or slider on the bottom
+
+    Parameters: ds_shape          - tuple/list of 2 int for the 2D matrix shape in [length, width]
+                scale             - floag, scale the final figure size
+                disp_cbar/slider  - bool, plot colorbar on the right / slider on the bottom
+                cbar/slider_ratio - float, size ratio of the additional colobar / slider
+    Returns:    figsize           - list of 2 float for the figure size in [width, lenght] in inches
+    """
+    # figure shape
+    fig_shape = list(ds_shape)[::-1]
+    if disp_cbar:
+        fig_shape[0] *= (1 + cbar_ratio)
+    if disp_slider:
+        fig_shape[1] *= (1 + slider_ratio)
+
+    # get scale to meet the min/max figure size constrain
+    fig_scale = min(min_figsize_single / min(fig_shape),
+                    max_figsize_single / max(fig_shape),
+                    max_figsize_height / fig_shape[1])
+
+    # fig_shape/scale --> fig_size
+    fig_size = [i*fig_scale*scale for i in fig_shape]
+    if print_msg:
+        print('figure size : [{:.2f}, {:.2f}]'.format(fig_size[0], fig_size[1]))
+
     return fig_size
 
 
@@ -304,8 +322,7 @@ def auto_shared_lalo_location(axs, loc=(1,0,0,1), flatten=False):
     return locs
 
 
-def check_colormap_input(metadata, cmap_name=None, datasetName=None, cmap_lut=256,
-                         cmap_vlist=[0.0, 0.7, 1.0], print_msg=True):
+def auto_colormap_name(metadata, cmap_name=None, datasetName=None, print_msg=True):
     gray_dataset_key_words = ['coherence', 'temporal_coherence',
                               '.cor', '.mli', '.slc', '.amp', '.ramp']
     if not cmap_name:
@@ -317,7 +334,43 @@ def check_colormap_input(metadata, cmap_name=None, datasetName=None, cmap_lut=25
     if print_msg:
         print('colormap:', cmap_name)
 
-    return ColormapExt(cmap_name, cmap_lut, vlist=cmap_vlist).colormap
+    return cmap_name
+
+
+def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_num_step=20, print_msg=True):
+
+    # max step size / min step number for a uniform colormap
+    unique_values = np.unique(data[~np.isnan(data)])
+    min_val = np.min(unique_values).astype(float)
+    max_val = np.max(unique_values).astype(float)
+
+    if min_val == max_val:
+        cmap_lut = 256
+        vlim = [min_val, max_val]
+
+    else:
+        vstep = np.min(np.abs(np.diff(unique_values))).astype(float)
+        min_num_step = int((max_val - min_val) / vstep + 1)
+
+        # use discrete colromap for data with uniform AND limited unique values
+        # e.g. unwrapError time-series
+        if min_num_step <= max_discrete_num_step:
+            cmap_lut = min_num_step
+            vlim = [min_val - vstep/2, max_val + vstep/2]
+
+            if print_msg:
+                msg = 'data has uniform and limited number ({} <= {})'.format(unique_values.size, max_discrete_num_step)
+                msg += ' of unique values --> discretize colormap'
+                print(msg)
+
+        else:
+            from mintpy.multilook import multilook_data
+            data_mli = multilook_data(data, num_multilook, num_multilook)
+
+            cmap_lut = 256
+            vlim = [np.nanmin(data_mli), np.nanmax(data_mli)]
+
+    return cmap_lut, vlim
 
 
 def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1, buffer_year=0.2):
@@ -964,13 +1017,13 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
 
             ax.contour(xx, yy, dem_contour, dem_contour_seq, extent=geo_extent,
                        origin='upper', linewidths=inps.dem_contour_linewidth,
-                       colors='black', alpha=0.5, zorder=1)
+                       colors='black', alpha=0.5, zorder=2)
 
         # radar coordinates
         elif isinstance(ax, plt.Axes):
             ax.contour(dem_contour, dem_contour_seq, extent=rdr_extent,
                        origin='upper', linewidths=inps.dem_contour_linewidth,
-                       colors='black', alpha=0.5, zorder=1)
+                       colors='black', alpha=0.5, zorder=2)
     return ax
 
 
@@ -1080,128 +1133,44 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
 
 
 def plot_colorbar(inps, im, cax):
-    # Colorbar Extend
+    # extend
     if not inps.cbar_ext:
         if   inps.vlim[0] <= inps.dlim[0] and inps.vlim[1] >= inps.dlim[1]: inps.cbar_ext='neither'
         elif inps.vlim[0] >  inps.dlim[0] and inps.vlim[1] >= inps.dlim[1]: inps.cbar_ext='min'
         elif inps.vlim[0] <= inps.dlim[0] and inps.vlim[1] <  inps.dlim[1]: inps.cbar_ext='max'
         else:  inps.cbar_ext='both'
 
+    # orientation
     if inps.cbar_loc in ['left', 'right']:
         orientation = 'vertical'
     else:
         orientation = 'horizontal'
 
+    # plot colorbar
     if inps.wrap and (inps.wrap_range[1] - inps.wrap_range[0]) == 2.*np.pi:
-        cbar = plt.colorbar(im, cax=cax, ticks=[inps.wrap_range[0], 0, inps.wrap_range[1]],
-                            orientation=orientation)
+        cbar = plt.colorbar(im, cax=cax, orientation=orientation, ticks=[-np.pi, 0, np.pi])
         cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
     else:
-        cbar = plt.colorbar(im, cax=cax, extend=inps.cbar_ext, orientation=orientation)
+        cbar = plt.colorbar(im, cax=cax, orientation=orientation, extend=inps.cbar_ext)
+
+    # update ticks
+    if inps.cmap_lut <= 5:
+        inps.cbar_nbins = inps.cmap_lut
 
     if inps.cbar_nbins:
         cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
         cbar.update_ticks()
 
-    cbar.ax.tick_params(which='both', direction='out',
-                        labelsize=inps.font_size, colors=inps.font_color)
+    cbar.ax.tick_params(which='both', direction='out', labelsize=inps.font_size, colors=inps.font_color)
 
-    if not inps.cbar_label:
-        cbar.set_label(inps.disp_unit, fontsize=inps.font_size, color=inps.font_color)
-    else:
+    # add label
+    if inps.cbar_label:
         cbar.set_label(inps.cbar_label, fontsize=inps.font_size, color=inps.font_color)
+    elif inps.disp_unit != '1':
+        cbar.set_label(inps.disp_unit,  fontsize=inps.font_size, color=inps.font_color)
+
     return inps, cbar
 
-
-def set_shared_ylabel(axes_list, label, labelpad=0.01, font_size=12, position='left'):
-    """Set a y label shared by multiple axes
-    Parameters: axes_list : list of axes in left/right most col direction
-                label : string
-                labelpad : float, Sets the padding between ticklabels and axis label
-                font_size : int
-                position : string, 'left' or 'right'
-    """
-
-    f = axes_list[0].get_figure()
-    f.canvas.draw() #sets f.canvas.renderer needed below
-
-    # get the center position for all plots
-    top = axes_list[0].get_position().y1
-    bottom = axes_list[-1].get_position().y0
-
-    # get the coordinates of the left side of the tick labels
-    x0 = 1
-    x1 = 0
-    for ax in axes_list:
-        ax.set_ylabel('') # just to make sure we don't and up with multiple labels
-        bboxes = ax.yaxis.get_ticklabel_extents(f.canvas.renderer)[0]
-        bboxes = bboxes.inverse_transformed(f.transFigure)
-        x0t = bboxes.x0
-        if x0t < x0:
-            x0 = x0t
-        x1t = bboxes.x1
-        if x1t > x1:
-            x1 = x1t
-    tick_label_left = x0
-    tick_label_right = x1
-
-    # set position of label
-    axes_list[-1].set_ylabel(label, fontsize=font_size)
-    if position == 'left':
-        axes_list[-1].yaxis.set_label_coords(tick_label_left - labelpad,
-                                             (bottom + top)/2,
-                                             transform=f.transFigure)
-    else:
-        axes_list[-1].yaxis.set_label_coords(tick_label_right + labelpad,
-                                             (bottom + top)/2,
-                                             transform=f.transFigure)
-    return
-
-
-def set_shared_xlabel(axes_list, label, labelpad=0.01, font_size=12, position='top'):
-    """Set a y label shared by multiple axes
-    Parameters: axes_list : list of axes in top/bottom row direction
-                label : string
-                labelpad : float, Sets the padding between ticklabels and axis label
-                font_size : int
-                position : string, 'top' or 'bottom'
-    Example:    pp.set_shared_xlabel([ax1, ax2, ax3], 'Range (Pix.)')
-    """
-
-    f = axes_list[0].get_figure()
-    f.canvas.draw() #sets f.canvas.renderer needed below
-
-    # get the center position for all plots
-    left = axes_list[0].get_position().x0
-    right = axes_list[-1].get_position().x1
-
-    # get the coordinates of the left side of the tick labels
-    y0 = 1
-    y1 = 0
-    for ax in axes_list:
-        ax.set_xlabel('') # just to make sure we don't and up with multiple labels
-        bboxes = ax.yaxis.get_ticklabel_extents(f.canvas.renderer)[0]
-        bboxes = bboxes.inverse_transformed(f.transFigure)
-        y0t = bboxes.y0
-        if y0t < y0:
-            y0 = y0t
-        y1t = bboxes.y1
-        if y1t > y1:
-            y1 = y1t
-    tick_label_bottom = y0
-    tick_label_top = y1
-
-    # set position of label
-    axes_list[-1].set_xlabel(label, fontsize=font_size)
-    if position == 'top':
-        axes_list[-1].xaxis.set_label_coords((left + right) / 2,
-                                             tick_label_top + labelpad,
-                                             transform=f.transFigure)
-    else:
-        axes_list[-1].xaxis.set_label_coords((left + right) / 2,
-                                             tick_label_bottom - labelpad,
-                                             transform=f.transFigure)
-    return
 
 
 ##################### Data Scale based on Unit and Wrap Range ##################
@@ -1271,7 +1240,7 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
             scale *= range2phase
         else:
             print('Unrecognized display phase/length unit:', disp_unit[0])
-            return data, data_unit, scale
+            pass
 
         if   data_unit[0] == 'mm': scale *= 0.001
         elif data_unit[0] == 'cm': scale *= 0.01
@@ -1289,7 +1258,7 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
             pass
         else:
             print('Unrecognized phase/length unit:', disp_unit[0])
-            return data, data_unit, scale
+            pass
 
     # amplitude/coherence unit - 1
     elif data_unit[0] == '1':
@@ -1326,9 +1295,10 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
     else:
         disp_unit = disp_unit[0]
 
-    # Scale input data
-    if data is not None:
-        data *= scale
+    # scale input data
+    if data is not None and scale != 1.0:
+        data *= np.array(scale, dtype=data.dtype)
+
     return data, disp_unit, scale
 
 
@@ -1497,10 +1467,9 @@ def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[
 
 
 def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max_num=4,
-                    font_size=12, xoffset=None, yoffset=None, yrotate='horizontal',
-                    projection=ccrs.PlateCarree(), print_msg=True):
+                    font_size=12, xoffset=None, yoffset=None, projection=ccrs.PlateCarree(), print_msg=True):
     """Auto draw lat/lon label/tick based on coverage from geo_box
-    Parameters: geo_box   : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
+    Parameters: geo_box   : 4-tuple of float, (W, N, E, S) in degree
                 ax        : CartoPy axes.
                 lalo_step : float
                 lalo_loc  : list of 4 bool, positions where the labels are drawn as in [left, right, top, bottom]

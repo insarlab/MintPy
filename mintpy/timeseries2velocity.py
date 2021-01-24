@@ -83,6 +83,13 @@ def create_parser():
                              'and newer than input file\n' +
                              '2) all configuration parameters are the same.')
 
+    # reference in time and space
+    # for input file without reference info, e.g. ERA5.h5
+    parser.add_argument('--ref-yx', dest='ref_yx', metavar=('Y', 'X'), type=int, nargs=2,
+                        help='Change referene point Y X for display')
+    parser.add_argument('--ref-date', dest='ref_date', metavar='DATE',
+                        help='Change reference date for display')
+
     # dates of interest
     date = parser.add_argument_group('dates of interest')
     date.add_argument('--start-date','-s', dest='startDate',
@@ -364,6 +371,11 @@ def run_timeseries2time_func(inps):
     atr['START_DATE'] = inps.dateList[0]
     atr['END_DATE'] = inps.dateList[-1]
     atr['DATE12'] = '{}_{}'.format(inps.dateList[0], inps.dateList[-1])
+    if inps.ref_yx:
+        atr['REF_Y'] = inps.ref_yx[0]
+        atr['REF_X'] = inps.ref_yx[1]
+    if inps.ref_date:
+        atr['REF_DATE'] = inps.ref_date
 
     # config parameter
     print('add/update the following configuration metadata:\n{}'.format(configKeys))
@@ -403,6 +415,18 @@ def run_timeseries2time_func(inps):
         # read input
         print('reading data from file {} ...'.format(inps.timeseries_file))
         ts_data = readfile.read(inps.timeseries_file, box=box)[0]
+        # referencing in time and space
+        # for file w/o reference info. e.g. ERA5.h5
+        if inps.ref_date:
+            print('referecing to date: {}'.format(inps.ref_date))
+            ref_ind = inps.dateList.index(inps.ref_date)
+            ts_data -= np.tile(ts_data[ref_ind, :, :], (ts_data.shape[0], 1, 1))
+        if inps.ref_yx:
+            print('referencing to point (y, x): ({}, {})'.format(inps.ref_yx[0], inps.ref_yx[0]))
+            ref_box = (inps.ref_yx[1], inps.ref_yx[0], inps.ref_yx[1]+1, inps.ref_yx[0]+1)
+            ref_val = readfile.read(inps.timeseries_file, box=ref_box)[0]
+            ts_data -= np.tile(ref_val.reshape(ts_data.shape[0], 1, 1), (1, ts_data.shape[1], ts_data.shape[2]))
+
         ts_data = ts_data[inps.dropDate, :, :].reshape(inps.numDate, -1)
         if atr['UNIT'] == 'mm':
             ts_data *= 1./1000.

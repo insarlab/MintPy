@@ -260,7 +260,14 @@ def read_data(inps):
         data = readfile.read(inps.file, datasetName=inps.dset)[0]
 
         if inps.outfile:
-            fext = os.path.splitext(inps.outfile)[1]
+            # get file extension
+            fbase, fext = os.path.splitext(inps.outfile)
+            # ignore certain meaningless file extensions
+            while fext in ['.geo', '.rdr', '.full', '.wgs84']:
+                fbase, fext = os.path.splitext(fbase)
+            if not fext:
+                fext = os.path.basename(fbase)
+
             atr['FILE_TYPE'] = fext
         else:
             # metadata
