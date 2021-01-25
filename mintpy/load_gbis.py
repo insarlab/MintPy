@@ -47,6 +47,22 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
+def grab_data_paths_from_inp_file(inp_file):
+    """Grab data paths from inp file."""
+    data_paths = []
+    with open(inp_file, 'r') as f:
+        lines = f.readlines()
+        lines = [i.strip() for i in lines if not i.startswith('%')]
+        lines = [i for i in lines if i]
+        for line in lines:
+            c = [i.strip() for i in line.strip().split('=', 1)]
+            if (len(c) >= 2 and c[0] == 'insar{insarID}.dataPath'):
+                mat_file = c[1].replace('\n','').split(";")[0].strip()
+                mat_file = mat_file.replace("'","").replace('"','')
+                data_paths.append(mat_file)
+    return data_paths
+
+
 def gbis_mat2hdf5(inv_mat_file, display=True):
     """Convert InSAR related GBIS inversion result .mat file into HDF5 file."""
     out_dir = os.path.dirname(inv_mat_file)
@@ -71,21 +87,6 @@ def gbis_mat2hdf5(inv_mat_file, display=True):
     for i in range(len(parValue)):
         key = parName[i].replace(' ', '_')
         mDict[key] = parValue[i]
-
-    # convert model x/y to lat/lon
-    #ref_lon, ref_lat = mat['geo'].referencePoint
-    #mDict['{}_REF_LAT'.format(modelName)] = ref_lat
-    #mDict['{}_REF_LON'.format(modelName)] = ref_lon
-
-    #import pyproj
-    #geod = pyproj.Geod(ellps='WGS84')
-    #mX, mY = parValue[0:2]
-    #mLon, mLat = geod.fwd(ref_lon, ref_lat,
-    #                      az=np.arctan(mX/mY) * 180 / np.pi,
-    #                      dist=(mX**2 + mY**2)**0.5,
-    #                      radians=False)[0:2]
-    #mDict['{}_LAT'.format(modelName)] = mLat
-    #mDict['{}_LON'.format(modelName)] = mLon
     mDict['DEFORMATION_MODEL'] = modelName
 
     if display:
@@ -96,6 +97,9 @@ def gbis_mat2hdf5(inv_mat_file, display=True):
 
     for i in range(num_file):
         insar_mat_file = mat['insar'][i].dataPath
+        if not os.path.isfile(insar_mat_file):
+            inp_file = os.path.dirname(os.path.dirname(inv_mat_file))+'.inp'
+            insar_mat_file = grab_data_paths_from_inp_file(inp_file)[i]            
         print('-'*30)
         print('read mask from file: {}'.format(insar_mat_file))
 
@@ -117,7 +121,7 @@ def gbis_mat2hdf5(inv_mat_file, display=True):
 
         # prepare metadata
         meta = vars(sio.loadmat(insar_mat_file, struct_as_record=False, squeeze_me=True)['Metadata'])
-        temp = meta.pop('_fieldnames') # remote _fieldnames added by Matlab
+        temp = meta.pop('_fieldnames') # remove _fieldnames added by Matlab
         meta['UNIT'] = 'm'
         meta['FILE_TYPE'] = 'displacement'
         meta['PROCESSOR'] = 'GBIS'
