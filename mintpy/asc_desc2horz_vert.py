@@ -59,6 +59,11 @@ def create_parser():
                              'b. Near north direction can not be well resolved due to the lack of\n' +
                              '   diversity in viewing geometry. Check exact dilution of precision for \n' +
                              '   each component in Wright et al., 2004, GRL')
+    parser.add_argument('--max-ref-yx-diff', dest='max_ref_yx_diff', type=int, default=3,
+                        help='Maximum difference between REF_Y/X (derived from REF_LAT/LON) of input files '+
+                             '(default: %(default)s).')
+
+    # output
     parser.add_argument('-o', '--output', dest='outfile', nargs=2, metavar=('HZ_FILE','UP_FILE'), default=['hz.h5', 'up.h5'],
                         help='output file name for vertical and horizontal components')
     parser.add_argument('--one-output','--oo', dest='one_outfile',
@@ -88,17 +93,23 @@ def cmd_line_parse(iargs=None):
         msg  = '\tfile1: {}, Y/X_STEP: {} / {} m\n'.format(inps.file[0], atr1['Y_STEP'], atr1['X_STEP'])
         msg += '\tfile2: {}, Y/X_STEP: {} / {} m\n'.format(inps.file[1], atr2['Y_STEP'], atr2['X_STEP'])
         msg += '\tRe-run geocode.py --lat-step --lon-step to make them consistent.'
-        raise ValueError('input files do not have the same spatial resolution\n{}'.format(msg))
+        raise ValueError('input files do NOT have the same spatial resolution\n{}'.format(msg))
 
     # check reference point
-    # round to 3 decimal digits (~100 m)
-    ref_lalo_1 = ['{:.3f}'.format(float(atr1[i])) for i in ['REF_LAT','REF_LON']]
-    ref_lalo_2 = ['{:.3f}'.format(float(atr2[i])) for i in ['REF_LAT','REF_LON']]
-    if ref_lalo_1 != ref_lalo_2:
-        msg  = '\tfile1: {}, REF_LAT/LON: {} {}\n'.format(inps.file[0], ref_lalo_1, atr1.get('X_UNIT', 'deg'))
-        msg += '\tfile2: {}, REF_LAT/LON: {} {}\n'.format(inps.file[1], ref_lalo_2, atr2.get('X_UNIT', 'deg'))
-        msg += '\tRe-run reference_point.py --lat --lon to make them consistent.'
-        raise ValueError('input files do not have the same reference point from REF_LAT/LON values!\n{}'.format(msg))
+    coord1 = ut.coordinate(atr1)
+    coord2 = ut.coordinate(atr2)
+    ref_lalo1 = [float(atr1[i]) for i in ['REF_LAT', 'REF_LON']]
+    ref_lalo2 = [float(atr2[i]) for i in ['REF_LAT', 'REF_LON']]
+    ref_yx1 = coord1.geo2radar(ref_lalo1[0], ref_lalo1[1])[:2]
+    ref_yx2 = coord2.geo2radar(ref_lalo2[0], ref_lalo2[1])[:2]
+
+    if any(abs(i1 - i2) > inps.max_ref_yx_diff for i1,i2 in zip(ref_yx1, ref_yx2)):
+        msg = 'REF_Y/X difference between input files > {}!\n'.format(inps.max_ref_yx_diff)
+        for fname, ref_lalo, ref_yx in zip(inps.file, [ref_lalo1, ref_lalo2], [ref_yx1, ref_yx2]):
+            msg += 'file1: {}\n'.format(fname)
+            msg += '\tREF_LAT/LON: {}\n'.format(ref_lalo)
+            msg += '\tREF_Y/X: {}\n'.format(ref_yx)
+        raise ValueError(msg)
 
     # use ref_file for time-series file writing
     if atr1['FILE_TYPE'] == 'timeseries':

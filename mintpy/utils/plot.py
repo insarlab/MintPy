@@ -1017,13 +1017,13 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
 
             ax.contour(xx, yy, dem_contour, dem_contour_seq, extent=geo_extent,
                        origin='upper', linewidths=inps.dem_contour_linewidth,
-                       colors='black', alpha=0.5, zorder=2)
+                       colors='black', alpha=0.5, zorder=1)
 
         # radar coordinates
         elif isinstance(ax, plt.Axes):
             ax.contour(dem_contour, dem_contour_seq, extent=rdr_extent,
                        origin='upper', linewidths=inps.dem_contour_linewidth,
-                       colors='black', alpha=0.5, zorder=2)
+                       colors='black', alpha=0.5, zorder=1)
     return ax
 
 
