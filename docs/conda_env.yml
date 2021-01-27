@@ -14,6 +14,7 @@ dependencies:
   - dask>=1.0
   - dask-jobqueue>=0.3
   - defusedxml
+  - gdal>=3.0,<=3.0.4
   - h5py<3
   - lxml
   - matplotlib
