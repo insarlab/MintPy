@@ -99,7 +99,7 @@ def gbis_mat2hdf5(inv_mat_file, display=True):
         insar_mat_file = mat['insar'][i].dataPath
         if not os.path.isfile(insar_mat_file):
             inp_file = os.path.dirname(os.path.dirname(inv_mat_file))+'.inp'
-            insar_mat_file = grab_data_paths_from_inp_file(inp_file)[i]            
+            insar_mat_file = grab_data_paths_from_inp_file(inp_file)[i]
         print('-'*30)
         print('read mask from file: {}'.format(insar_mat_file))
 
@@ -121,7 +121,8 @@ def gbis_mat2hdf5(inv_mat_file, display=True):
 
         # prepare metadata
         meta = vars(sio.loadmat(insar_mat_file, struct_as_record=False, squeeze_me=True)['Metadata'])
-        temp = meta.pop('_fieldnames') # remove _fieldnames added by Matlab
+        if '_fieldnames' in meta.keys():
+            meta.pop('_fieldnames')
         meta['UNIT'] = 'm'
         meta['FILE_TYPE'] = 'displacement'
         meta['PROCESSOR'] = 'GBIS'
