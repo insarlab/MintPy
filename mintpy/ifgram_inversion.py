@@ -269,15 +269,15 @@ def run_or_skip(inps):
 
     # check configuration
     if flag == 'skip':
-        meta_keys = ['REF_Y', 'REF_X']
         atr_ifg = readfile.read_attribute(inps.ifgramStackFile)
         atr_ts = readfile.read_attribute(inps.tsFile)
         inps.numIfgram = len(ifgramStack(inps.ifgramStackFile).get_date12_list(dropIfgram=True))
+        meta_keys = [i for i in ['REF_Y', 'REF_X'] if i in atr_ts.keys()]
 
         if any(str(vars(inps)[key]) != atr_ts.get(key_prefix+key, 'None') for key in configKeys):
             flag = 'run'
             print('3) NOT all key configration parameters are the same: {}'.format(configKeys))
-        elif any(atr_ts[key] != atr_ifg[key] for key in meta_keys):
+        elif meta_keys and any(atr_ts[key] != atr_ifg[key] for key in meta_keys):
             flag = 'run'
             print('3) NOT all the metadata are the same: {}'.format(meta_keys))
         else:
@@ -1123,8 +1123,9 @@ def ifgram_inversion(inps=None):
                                    datasetName='mask',
                                    block=block)
 
-        m, s = divmod(time.time() - start_time, 60)
-        print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
+        if num_box > 1:
+            m, s = divmod(time.time() - start_time, 60)
+            print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
 
     # 3.4 update output data on the reference pixel
     if not inps.skip_ref:

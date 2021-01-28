@@ -325,13 +325,10 @@ def read_timeseries_data(inps):
     for fname in inps.file:
         vprint('reading timeseries from file {} ...'.format(fname))
         data, atr = readfile.read(fname, datasetName=inps.date_list, box=inps.pix_box)
-        try:
-            if inps.ref_yx != (int(atr['REF_Y']), int(atr['REF_X'])):
-                ref_phase = data[:, inps.ref_yx[0]-inps.pix_box[1], inps.ref_yx[1]-inps.pix_box[0]]
-                data -= np.tile(ref_phase.reshape(-1, 1, 1), (1, data.shape[-2], data.shape[-1]))
-                vprint('reference to pixel: {}'.format(inps.ref_yx))
-        except:
-            pass
+        if inps.ref_yx and inps.ref_yx != (int(atr.get('REF_Y', -1)), int(atr.get('REF_X', -1))):
+            ref_phase = data[:, inps.ref_yx[0]-inps.pix_box[1], inps.ref_yx[1]-inps.pix_box[0]]
+            data -= np.tile(ref_phase.reshape(-1, 1, 1), (1, data.shape[-2], data.shape[-1]))
+            vprint('reference to pixel: {}'.format(inps.ref_yx))
         if inps.ref_idx is not None:
             vprint('reference to date: {}'.format(inps.date_list[inps.ref_idx]))
             data -= np.tile(data[inps.ref_idx, :, :], (inps.num_date, 1, 1))
