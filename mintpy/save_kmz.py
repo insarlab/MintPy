@@ -49,6 +49,8 @@ def create_parser():
                         help='date of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-m','--mask', dest='mask_file', metavar='FILE',
                         help='mask file for display')
+    parser.add_argument('--zero-mask', dest='zero_mask', action='store_true',
+                        help='Mask pixels with zero value.')
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file base name. Extension is fixed with .kmz')
 
@@ -314,6 +316,9 @@ def main(iargs=None):
     mask = pp.read_mask(inps.file, mask_file=inps.mask_file, datasetName=inps.dset, print_msg=True)[0]
     if mask is not None:
         data = np.ma.masked_where(mask == 0., data)
+    if inps.zero_mask:
+        print('masking pixels with zero value')
+        data = np.ma.masked_where(data == 0., data)
 
     # Data Operation - Display Unit & Rewrapping
     (data,

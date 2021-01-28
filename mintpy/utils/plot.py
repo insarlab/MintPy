@@ -340,7 +340,7 @@ def auto_colormap_name(metadata, cmap_name=None, datasetName=None, print_msg=Tru
 def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_num_step=20, print_msg=True):
 
     # max step size / min step number for a uniform colormap
-    unique_values = np.unique(data[~np.isnan(data)])
+    unique_values = np.unique(data[~np.isnan(data) * np.isfinite(data)])
     min_val = np.min(unique_values).astype(float)
     max_val = np.max(unique_values).astype(float)
 

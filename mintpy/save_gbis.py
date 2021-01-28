@@ -27,10 +27,19 @@ EXAMPLE = """example:
   save_gbis.py 20150223_20161031.unw -g inputs/geometryGeo.h5 --out-data ../Model/data --ellipsoid2geoid
 """
 
+REFERENCE = """references:
+  Bagnardi, M., and A. Hooper (2018), Inversion of Surface Deformation Data for Rapid Estimates of Source 
+  Parameters and Uncertainties: A Bayesian Approach, Geochemistry, Geophysics, Geosystems, 19, 
+  doi:10.1029/2018GC007585.
+
+  Yunjun, Z., F. Amelung, Y. Aoki, (2021), Imaging the Hydrothermal System of Kirishima Volcanic Complex, 
+  Japan from ALOS-1/2 InSAR time-series, (in prep.).
+"""
+
 def create_parser():
     parser = argparse.ArgumentParser(description='Convert MintPy product to GBIS .mat format.',
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+                                     epilog=REFERENCE+'\n'+EXAMPLE)
 
     parser.add_argument('file', help='deformation file.')
     parser.add_argument('dset', nargs='?',

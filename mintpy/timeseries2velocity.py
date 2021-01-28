@@ -86,9 +86,9 @@ def create_parser():
     # reference in time and space
     # for input file without reference info, e.g. ERA5.h5
     parser.add_argument('--ref-yx', dest='ref_yx', metavar=('Y', 'X'), type=int, nargs=2,
-                        help='Change referene point Y X for display')
+                        help='Change referene point Y X for estimation.')
     parser.add_argument('--ref-date', dest='ref_date', metavar='DATE',
-                        help='Change reference date for display')
+                        help='Change reference date for estimation.')
 
     # dates of interest
     date = parser.add_argument_group('dates of interest')
