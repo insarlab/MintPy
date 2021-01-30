@@ -66,6 +66,9 @@ def create_parser():
     parser.add_argument('--test-pyaps', dest='test_pyaps', action='store_true',
                         help='Include testing of PyAPS (default: %(default)s).')
 
+    parser.add_argument('--test-isce', dest='test_isce', action='store_true',
+                        help='Include testing of ISCE-2/topsStack (default: %(default)s).')
+
     parser.add_argument('--dir', dest='test_dir', default='~/data/test',
                         help='test directory (default: %(default)s).')
 
@@ -88,7 +91,7 @@ def cmd_line_parse(iargs=None):
 #####################################################################################
 
 
-def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False):
+def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False, test_isce=False):
     print('Go to test directory:', test_dir)
     os.chdir(test_dir)
 
@@ -127,10 +130,17 @@ def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False):
     os.chdir(work_dir)
     print('Go to work directory:', work_dir)
 
-    # remove pyaps existing products or not
-    if test_pyaps:
-        print('remove existing tropospheric delay file: ./inputs/ERA5.h5')
-        os.remove('./inputs/ERA5.h5')
+    # test pyaps: remove existing tropo delay file
+    tropo_file = './inputs/ERA5.h5'
+    if test_pyaps and os.path.isfile(tropo_file):
+        print('remove existing tropospheric delay file:', tropo_file)
+        os.remove(tropo_file)
+
+    # test isce: remove existing metadata file
+    meta_file = '../reference/data.rsc'   #for ISCE-2/topsStack
+    if test_isce and os.path.isfile(meta_file):
+        print('remove existing metadata file:', meta_file)
+        os.remove(meta_file)
 
     # runing smallbaselineApp
     # Note: execute script in command line instead of call main() for a clean run
@@ -177,7 +187,8 @@ def main(iargs=None):
         test_dataset(dset_name,
                      test_dir=inps.test_dir,
                      fresh_start=inps.fresh_start,
-                     test_pyaps=inps.test_pyaps)
+                     test_pyaps=inps.test_pyaps,
+                     test_isce=inps.test_isce)
         print('#'*100)
         print('   PASS testing of smallbaselineApp workflow on exmaple dataset {}/{}: {}'.format(i+1, num_dset, dset_name))
         print('#'*100+'\n'*3)
