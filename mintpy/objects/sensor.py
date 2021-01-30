@@ -34,6 +34,12 @@ SENSOR_NAMES = list(SENSOR_NAME_VARIATION.keys())
 
 def standardize_sensor_name(sensor_name):
     """"""
+    # decode if encoded
+    try:
+        sensor_name = sensor_name.decode()
+    except (UnicodeDecodeError, AttributeError):
+        pass
+
     # remove -_ and user lower case before standardize sensor names
     sensor_name = sensor_name.replace('-', '').replace('_', '').lower()
 
