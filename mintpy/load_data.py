@@ -726,14 +726,19 @@ def print_write_setting(iDict):
 
 
 def get_extra_metadata(iDict):
-    """Extra metadata to be written into stack file"""
+    """Extra metadata with key names in MACRO_CASE to be written into stack file.
+    E.g.: PROJECT_NAME, PLATFORM, ORBIT_DIRECTION, SUBSET_X/YMIN, etc.
+    """
     extraDict = {}
-    for key in ['PROJECT_NAME', 'PLATFORM']:
-        if iDict[key]:
-            extraDict[key] = iDict[key]
-    for key in ['SUBSET_XMIN', 'SUBSET_YMIN']:
-        if key in iDict.keys():
-            extraDict[key] = iDict[key]
+    # all keys in MACRO_CASE
+    upper_keys = [i for i in iDict.keys() if i.isupper()]
+    for key in upper_keys:
+        value  = iDict[key]
+        if key in ['PROJECT_NAME', 'PLATFORM']:
+            if value:
+                extraDict[key] = value
+        else:
+            extraDict[key] = value
     return extraDict
 
 
