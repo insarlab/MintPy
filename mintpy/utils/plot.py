@@ -233,8 +233,11 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
     if inps_dict.get('wrap', False):
         fig_title += '_wrap'
         wrap_range = inps_dict.get('wrap_range', [-1.*np.pi, np.pi])
-        if (wrap_range[1] - wrap_range[0]) != 2*np.pi:
-            fig_title += str(wrap_range[1] - wrap_range[0])
+        wrap_range = wrap_range[1] - wrap_range[0]
+        if wrap_range != 2*np.pi:
+            if wrap_range == int(wrap_range):
+                wrap_range = int(wrap_range)
+            fig_title += str(wrap_range)
 
     return fig_title
 

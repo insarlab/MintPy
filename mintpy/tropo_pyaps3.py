@@ -150,7 +150,7 @@ def cmd_line_parse(iargs=None):
     print(msg)
 
     ## weather_dir
-    # expand path for ~ and environmental variables in the path
+    # expand path for ~ and environment variables in the path
     inps.weather_dir = os.path.expanduser(inps.weather_dir)
     inps.weather_dir = os.path.expandvars(inps.weather_dir)
     # fallback value if WEATHER_DIR is not defined as environmental variable
