@@ -131,7 +131,7 @@ def cmd_line_parse(iargs=None):
     # weather_dir
     inps.weather_dir = os.path.expanduser(inps.weather_dir)
     inps.weather_dir = os.path.expandvars(inps.weather_dir)
-    # Fallback value if WEATHER_DIR is not defined as environmental variable
+    # Fallback value if WEATHER_DIR is not defined as environment variable
     if inps.weather_dir == '${WEATHER_DIR}':
         inps.weather_dir = './'
     print('weather data directory: '+inps.weather_dir)

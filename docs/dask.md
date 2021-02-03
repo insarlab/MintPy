@@ -76,7 +76,7 @@ We provide an example [YAML configuration file](../mintpy/defaults/mintpy.yaml),
 cp $MINTPY_HOME/mintpy/defaults/mintpy.yaml ~/.config/dask/mintpy.yaml
 ```
 
-**Note on `DASK_CONFIG`:** Besides the default `~/.config/dask` directory, one can use the `DASK_CONFIG` environmental variable to use a custom directory to store the configuration files. However, it has lower priority than the default directory; and it is **generally NOT recommended**.
+**Note on `DASK_CONFIG`:** Besides the default `~/.config/dask` directory, one can use the `DASK_CONFIG` environment variable to use a custom directory to store the configuration files. However, it has lower priority than the default directory; and it is **generally NOT recommended**.
 
 #### 2.1 via command line ####
 

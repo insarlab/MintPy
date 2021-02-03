@@ -321,8 +321,8 @@ class TimeSeriesAnalysis:
                                              check_readable=False,
                                              print_msg=False) == 'run':
                     shutil.copy2(tfile, backup_dir)
-                    print('copy {} to {} directory for backup.'.format(os.path.basename(tfile),
-                                                                       os.path.basename(backup_dir)))
+                    print('copy {} to {:<8} directory for backup.'.format(os.path.basename(tfile),
+                                                                          os.path.basename(backup_dir)))
 
         # 3) read default template file
         print('read default template file:', self.templateFile)

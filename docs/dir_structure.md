@@ -180,25 +180,25 @@ The corresponding template options for `load_data`:
 ```cfg
 mintpy.load.processor        = isce
 ##---------for ISCE only:
-mintpy.load.metaFile         = $DATA_DIR/KirishimaAlosAT424F620_630/merged/SLC/*/referenceShelve/data.dat
-mintpy.load.baselineDir      = $DATA_DIR/KirishimaAlosAT424F620_630/baselines
+mintpy.load.metaFile         = $DATA_DIR/KirishimaAlosAT424/merged/SLC/*/referenceShelve/data.dat
+mintpy.load.baselineDir      = $DATA_DIR/KirishimaAlosAT424/baselines
 ##---------interferogram datasets:
-mintpy.load.unwFile          = $DATA_DIR/KirishimaAlosAT424F620_630/Igrams/*/filt_*.unw
-mintpy.load.corFile          = $DATA_DIR/KirishimaAlosAT424F620_630/Igrams/*/filt_*.cor
-mintpy.load.connCompFile     = $DATA_DIR/KirishimaAlosAT424F620_630/Igrams/*/filt_*.unw.conncomp
+mintpy.load.unwFile          = $DATA_DIR/KirishimaAlosAT424/Igrams/*/filt_*.unw
+mintpy.load.corFile          = $DATA_DIR/KirishimaAlosAT424/Igrams/*/filt_*.cor
+mintpy.load.connCompFile     = $DATA_DIR/KirishimaAlosAT424/Igrams/*/filt_*.unw.conncomp
 ##---------geometry datasets:
-mintpy.load.demFile          = $DATA_DIR/KirishimaAlosAT424F620_630/geom_reference/hgt.rdr
-mintpy.load.lookupYFile      = $DATA_DIR/KirishimaAlosAT424F620_630/geom_reference/lat.rdr
-mintpy.load.lookupXFile      = $DATA_DIR/KirishimaAlosAT424F620_630/geom_reference/lon.rdr
-mintpy.load.incAngleFile     = $DATA_DIR/KirishimaAlosAT424F620_630/geom_reference/los.rdr
-mintpy.load.azAngleFile      = $DATA_DIR/KirishimaAlosAT424F620_630/geom_reference/los.rdr
-mintpy.load.shadowMaskFile   = $DATA_DIR/KirishimaAlosAT424F620_630/geom_reference/shadowMask.rdr
+mintpy.load.demFile          = $DATA_DIR/KirishimaAlosAT424/geom_reference/hgt.rdr
+mintpy.load.lookupYFile      = $DATA_DIR/KirishimaAlosAT424/geom_reference/lat.rdr
+mintpy.load.lookupXFile      = $DATA_DIR/KirishimaAlosAT424/geom_reference/lon.rdr
+mintpy.load.incAngleFile     = $DATA_DIR/KirishimaAlosAT424/geom_reference/los.rdr
+mintpy.load.azAngleFile      = $DATA_DIR/KirishimaAlosAT424/geom_reference/los.rdr
+mintpy.load.shadowMaskFile   = $DATA_DIR/KirishimaAlosAT424/geom_reference/shadowMask.rdr
 ```
 
 ### ISCE / [alosStack](https://github.com/isce-framework/isce2/blob/main/contrib/stack/alosStack/alosStack_tutorial.txt) ###
 
 ```
-$DATA_DIR/NCalAlos2ScanSARDT169
+$DATA_DIR/NCalAlos2DT169
 ├── alosStack.xml
 ├── baseline
 │   ├── 150225-150408.rmg
@@ -212,7 +212,7 @@ $DATA_DIR/NCalAlos2ScanSARDT169
 │   │   ├── 150225.track.xml
 │   │   ├── f1_2800
 │   │   │   ├── 150225.frame.xml
-│   │   │   ├── mosaic #only in reference date folder
+│   │   │   ├── mosaic               #only in reference date folder
 │   │   │   │   └── swath_offset.txt
 │   │   │   ├── s1
 │   │   │   │   ├── 150225.slc.vrt
@@ -229,9 +229,9 @@ $DATA_DIR/NCalAlos2ScanSARDT169
 │   └── ...
 ├── dates_resampled
 │   ├── 150225
-│   │   ├── 150225.track.xml #only in reference date folder
+│   │   ├── 150225.track.xml         #only in reference date folder
 │   │   ├── f1_2800
-│   │   │   ├── 150225.frame.xml #only in reference date folder
+│   │   │   ├── 150225.frame.xml     #only in reference date folder
 │   │   │   ├── s1
 │   │   │   │   ├── 150225_lower.slc
 │   │   │   │   ├── 150225_lower.slc.vrt
@@ -245,7 +245,7 @@ $DATA_DIR/NCalAlos2ScanSARDT169
 │   │   │   └── ...
 │   │   ├── ...
 │   │   └── insar
-│   │       ├── 150225_1rlks_14alks.hgt #the following files only in reference date folder
+│   │       ├── 150225_1rlks_14alks.hgt        #the following files only in reference date folder
 │   │       ├── 150225_1rlks_14alks.hgt.vrt
 │   │       ├── 150225_1rlks_14alks.hgt.xml
 │   │       ├── 150225_1rlks_14alks.lat
@@ -278,12 +278,7 @@ $DATA_DIR/NCalAlos2ScanSARDT169
 │   │       ├── 150225_5rlks_28alks.wbd
 │   │       ├── 150225_5rlks_28alks.wbd.vrt
 │   │       ├── 150225_5rlks_28alks.wbd.xml
-│   │       ├── affine_transform.txt
-│   │       ├── crop.dem
-│   │       ├── crop.dem.vrt
-│   │       ├── crop.dem.xml
-│   │       ├── rdr_dem_offset
-│   │       ├── 150408_1rlks_14alks_az.off #the following files only in secondary date folders
+│   │       ├── 150408_1rlks_14alks_az.off     #the following files only in secondary date folders
 │   │       ├── 150408_1rlks_14alks_az.off.vrt
 │   │       ├── 150408_1rlks_14alks_az.off.xml
 │   │       ├── 150408_1rlks_14alks_rg.off
@@ -305,9 +300,6 @@ $DATA_DIR/NCalAlos2ScanSARDT169
 │   │   │   ├── 150408.frame.xml
 │   │   │   ├── mosaic
 │   │   │   ├── s1
-│   │   │   │   ├── 150225-150408_1rlks_14alks.amp
-│   │   │   │   ├── 150225-150408_1rlks_14alks.amp.vrt
-│   │   │   │   ├── 150225-150408_1rlks_14alks.amp.xml
 │   │   │   │   ├── 150225-150408_1rlks_14alks.int
 │   │   │   │   ├── 150225-150408_1rlks_14alks.int.vrt
 │   │   │   │   ├── 150225-150408_1rlks_14alks.int.xml
@@ -320,36 +312,13 @@ $DATA_DIR/NCalAlos2ScanSARDT169
 │   │   │   └── ...
 │   │   ├── ...
 │   │   └── insar
-│   │       ├── 150225-150408_1rlks_14alks.amp
-│   │       ├── 150225-150408_1rlks_14alks.amp.vrt
-│   │       ├── 150225-150408_1rlks_14alks.amp.xml
-│   │       ├── 150225-150408_1rlks_14alks.int
-│   │       ├── 150225-150408_1rlks_14alks.int.vrt
-│   │       ├── 150225-150408_1rlks_14alks.int.xml
-│   │       ├── 150225-150408_5rlks_28alks.amp
-│   │       ├── 150225-150408_5rlks_28alks.amp.vrt
-│   │       ├── 150225-150408_5rlks_28alks.amp.xml
+│   │       ├── ...
 │   │       ├── 150225-150408_5rlks_28alks.cor
 │   │       ├── 150225-150408_5rlks_28alks.cor.vrt
 │   │       ├── 150225-150408_5rlks_28alks.cor.xml
-│   │       ├── 150225-150408_5rlks_28alks.cor.geo
-│   │       ├── 150225-150408_5rlks_28alks.cor.geo.vrt
-│   │       ├── 150225-150408_5rlks_28alks.cor.geo.xml
 │   │       ├── 150225-150408_5rlks_28alks.phsig
 │   │       ├── 150225-150408_5rlks_28alks.phsig.vrt
 │   │       ├── 150225-150408_5rlks_28alks.phsig.xml
-│   │       ├── crop.dem
-│   │       ├── crop.dem.vrt
-│   │       ├── crop.dem.xml
-│   │       ├── diff_150225-150408_1rlks_14alks.int
-│   │       ├── diff_150225-150408_1rlks_14alks.int.vrt
-│   │       ├── diff_150225-150408_1rlks_14alks.int.xml
-│   │       ├── diff_150225-150408_5rlks_28alks.int
-│   │       ├── diff_150225-150408_5rlks_28alks.int.vrt
-│   │       ├── diff_150225-150408_5rlks_28alks.int.xml
-│   │       ├── diff_150225-150408_5rlks_28alks_ori.int
-│   │       ├── diff_150225-150408_5rlks_28alks_ori.int.vrt
-│   │       ├── diff_150225-150408_5rlks_28alks_ori.int.xml
 │   │       ├── filt_150225-150408_5rlks_28alks.int
 │   │       ├── filt_150225-150408_5rlks_28alks.int.vrt
 │   │       ├── filt_150225-150408_5rlks_28alks.int.xml
@@ -390,9 +359,6 @@ $DATA_DIR/NCalAlos2ScanSARDT169
     │       │   ├── diff_150225-150408_80rlks_448alks.int
     │       │   ├── diff_150225-150408_80rlks_448alks.int.vrt
     │       │   ├── diff_150225-150408_80rlks_448alks.int.xml
-    │       │   ├── diff_150225-150408_80rlks_448alks_ori.int
-    │       │   ├── diff_150225-150408_80rlks_448alks_ori.int.vrt
-    │       │   ├── diff_150225-150408_80rlks_448alks_ori.int.xml
     │       │   ├── diff_80rlks_448alks.cor
     │       │   ├── diff_80rlks_448alks.cor.vrt
     │       │   ├── diff_80rlks_448alks.cor.xml
@@ -414,45 +380,14 @@ $DATA_DIR/NCalAlos2ScanSARDT169
     │       │   ├── lon_80rlks_448alks.lon
     │       │   ├── lon_80rlks_448alks.lon.vrt
     │       │   ├── lon_80rlks_448alks.lon.xml
-    │       │   ├── lower_80rlks_448alks.amp
-    │       │   ├── lower_80rlks_448alks.amp.vrt
-    │       │   ├── lower_80rlks_448alks.amp.xml
-    │       │   ├── lower_80rlks_448alks.cor
-    │       │   ├── lower_80rlks_448alks.cor.vrt
-    │       │   ├── lower_80rlks_448alks.cor.xml
     │       │   ├── lower_80rlks_448alks.int
     │       │   ├── lower_80rlks_448alks.int.vrt
     │       │   ├── lower_80rlks_448alks.int.xml
-    │       │   ├── lower_80rlks_448alks.phsig
-    │       │   ├── lower_80rlks_448alks.phsig.vrt
-    │       │   ├── lower_80rlks_448alks.phsig.xml
-    │       │   ├── lower_80rlks_448alks.unw
-    │       │   ├── lower_80rlks_448alks.unw.conncomp
-    │       │   ├── lower_80rlks_448alks.unw.conncomp.vrt
-    │       │   ├── lower_80rlks_448alks.unw.conncomp.xml
-    │       │   ├── lower_80rlks_448alks.unw.vrt
-    │       │   ├── lower_80rlks_448alks.unw.xml
-    │       │   ├── upper_80rlks_448alks.amp
-    │       │   ├── upper_80rlks_448alks.amp.vrt
-    │       │   ├── upper_80rlks_448alks.amp.xml
-    │       │   ├── upper_80rlks_448alks.cor
-    │       │   ├── upper_80rlks_448alks.cor.vrt
-    │       │   ├── upper_80rlks_448alks.cor.xml
+    │       │   ├── ...
     │       │   ├── upper_80rlks_448alks.int
     │       │   ├── upper_80rlks_448alks.int.vrt
     │       │   ├── upper_80rlks_448alks.int.xml
-    │       │   ├── upper_80rlks_448alks.phsig
-    │       │   ├── upper_80rlks_448alks.phsig.vrt
-    │       │   ├── upper_80rlks_448alks.phsig.xml
-    │       │   ├── upper_80rlks_448alks.unw
-    │       │   ├── upper_80rlks_448alks.unw.conncomp
-    │       │   ├── upper_80rlks_448alks.unw.conncomp.vrt
-    │       │   ├── upper_80rlks_448alks.unw.conncomp.xml
-    │       │   ├── upper_80rlks_448alks.unw.vrt
-    │       │   ├── upper_80rlks_448alks.unw.xml
-    │       │   ├── wbd_80rlks_448alks.wbd
-    │       │   ├── wbd_80rlks_448alks.wbd.vrt
-    │       │   └── wbd_80rlks_448alks.wbd.xml
+    │       │   ├── ...
     │       ├── lower
     │       └── upper
     └── ...
@@ -465,19 +400,19 @@ mintpy.load.processor        = isce
 ##NOTE: 150408 is the reference date of alosStack processing.
 ##      (parameter "reference date of the stack" of alosStack input xml file)
 ##---------for ISCE only:
-mintpy.load.metaFile         = $DATA_DIR/NCalAlos2ScanSARDT169/pairs/*-*/150408.track.xml
-mintpy.load.baselineDir      = $DATA_DIR/NCalAlos2ScanSARDT169/baseline
+mintpy.load.metaFile         = $DATA_DIR/NCalAlos2DT169/pairs/*-*/150408.track.xml
+mintpy.load.baselineDir      = $DATA_DIR/NCalAlos2DT169/baseline
 ##---------interferogram datasets:
-mintpy.load.unwFile          = $DATA_DIR/NCalAlos2ScanSARDT169/pairs/*-*/insar/filt_*-*_5rlks_28alks.unw
-mintpy.load.corFile          = $DATA_DIR/NCalAlos2ScanSARDT169/pairs/*-*/insar/*-*_5rlks_28alks.cor
-mintpy.load.connCompFile     = $DATA_DIR/NCalAlos2ScanSARDT169/pairs/*-*/insar/filt_*-*_5rlks_28alks.unw.conncomp
+mintpy.load.unwFile          = $DATA_DIR/NCalAlos2DT169/pairs/*-*/insar/filt_*-*_5rlks_28alks.unw
+mintpy.load.corFile          = $DATA_DIR/NCalAlos2DT169/pairs/*-*/insar/*-*_5rlks_28alks.cor
+mintpy.load.connCompFile     = $DATA_DIR/NCalAlos2DT169/pairs/*-*/insar/filt_*-*_5rlks_28alks.unw.conncomp
 ##---------geometry datasets:
-mintpy.load.demFile          = $DATA_DIR/NCalAlos2ScanSARDT169/dates_resampled/150408/insar/*_5rlks_28alks.hgt
-mintpy.load.lookupYFile      = $DATA_DIR/NCalAlos2ScanSARDT169/dates_resampled/150408/insar/*_5rlks_28alks.lat
-mintpy.load.lookupXFile      = $DATA_DIR/NCalAlos2ScanSARDT169/dates_resampled/150408/insar/*_5rlks_28alks.lon
-mintpy.load.incAngleFile     = $DATA_DIR/NCalAlos2ScanSARDT169/dates_resampled/150408/insar/*_5rlks_28alks.los
-mintpy.load.azAngleFile      = $DATA_DIR/NCalAlos2ScanSARDT169/dates_resampled/150408/insar/*_5rlks_28alks.los
-mintpy.load.waterMaskFile    = $DATA_DIR/NCalAlos2ScanSARDT169/dates_resampled/150408/insar/*_5rlks_28alks.wbd
+mintpy.load.demFile          = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.hgt
+mintpy.load.lookupYFile      = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.lat
+mintpy.load.lookupXFile      = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.lon
+mintpy.load.incAngleFile     = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.los
+mintpy.load.azAngleFile      = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.los
+mintpy.load.waterMaskFile    = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/insar/*_5rlks_28alks.wbd
 ```
 
 ### ARIA from [ARIA-tools](https://github.com/aria-tools/ARIA-tools) ###
