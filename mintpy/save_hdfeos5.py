@@ -24,33 +24,35 @@ BOOL_ZERO = np.bool_(0)
 INT_ZERO = np.int16(0)
 FLOAT_ZERO = np.float32(0.0)
 CPX_ZERO = np.complex64(0.0)
-compression = 'lzf'
+COMPRESSION = 'lzf'
 
 
 ################################################################
 TEMPALTE = TEMPLATE = get_template_content('hdfeos5')
 
 EXAMPLE = """example:
-  save_hdfeos5.py geo/geo_timeseries_ERA5_ramp_demErr.h5 --tc geo/geo_temporalCoherence.h5 --asc geo/geo_avgSpatialCoh.h5 -m geo/geo_maskTempCoh.h5 -g geo/geo_geometryRadar.h5
-  save_hdfeos5.py timeseries_ERA5_ramp_demErr.h5     --tc temporalCoherence.h5     --asc avgSpatialCoh.h5     -m maskTempCoh.h5     -g inputs/geometryGeo.h5
+  save_hdfeos5.py geo/geo_timeseries_ERA5_ramp_demErr.h5
+  save_hdfeos5.py timeseries_ERA5_ramp_demErr.h5 --tc temporalCoherence.h5 --asc avgSpatialCoh.h5 -m maskTempCoh.h5 -g inputs/geometryGeo.h5
 """
 
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Convert MintPy timeseries product into HDF-EOS5 format\n' +
-                                     '  https://earthdata.nasa.gov/esdis/eso/standards-and-references/hdf-eos5',
+                                     '  https://earthdata.nasa.gov/esdis/eso/standards-and-references/hdf-eos5\n' +
+                                     '  https://mintpy.readthedocs.io/en/latest/hdfeos5/',
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
                                      epilog=TEMPALTE+'\n'+EXAMPLE)
 
-    parser.add_argument('timeseries_file', default='timeseries.h5', help='Timeseries file')
-    parser.add_argument('-t', '--template', dest='template_file', help='Template file')
+    parser.add_argument('ts_file', default='timeseries.h5', help='Timeseries file')
+    parser.add_argument('-t', '--template', dest='template_file',
+                        help='Template file for 1) arguments/options and 2) missing metadata')
 
-    parser.add_argument('--tc','--temp-coh', dest='temp_coh_file', required=True, 
+    parser.add_argument('--tc','--temp-coh', dest='tcoh_file',
                         help='Coherence/correlation file, i.e. temporalCoherence.h5')
-    parser.add_argument('--asc','--avg-spatial-coh', dest='avg_spatial_coh_file', required=True,
+    parser.add_argument('--asc','--avg-spatial-coh', dest='scoh_file',
                         help='Average spatial coherence file, i.e. avgSpatialCoh.h5')
-    parser.add_argument('-m', '--mask', dest='mask_file', required=True, help='Mask file')
-    parser.add_argument('-g', '--geometry', dest='geom_file', required=True, help='geometry file')
+    parser.add_argument('-m', '--mask', dest='mask_file', help='Mask file')
+    parser.add_argument('-g', '--geometry', dest='geom_file', help='geometry file')
 
     parser.add_argument('--update', action='store_true',
                         help='Enable update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year')
@@ -62,21 +64,98 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # default filenames
+    ts_dir = os.path.dirname(inps.ts_file)
+    if os.path.basename(inps.ts_file).startswith('geo_'):
+        tcoh_file = os.path.join(ts_dir, 'geo_temporalCoherence.h5')
+        scoh_file = os.path.join(ts_dir, 'geo_avgSpatialCoh.h5')
+        mask_file = os.path.join(ts_dir, 'geo_maskTempCoh.h5')
+        geom_file = os.path.join(ts_dir, 'geo_geometryRadar.h5')
+    else:
+        tcoh_file = os.path.join(ts_dir, 'temporalCoherence.h5')
+        scoh_file = os.path.join(ts_dir, 'avgSpatialCoh.h5')
+        mask_file = os.path.join(ts_dir, 'maskTempCoh.h5')
+        geom_file = os.path.join(ts_dir, 'inputs/geometryGeo.h5')
+
+    if not inps.tcoh_file:  inps.tcoh_file = tcoh_file
+    if not inps.scoh_file:  inps.scoh_file = scoh_file
+    if not inps.mask_file:  inps.mask_file = mask_file
+    if not inps.geom_file:  inps.geom_file = geom_file
+
+    # check file existence
+    for fname in [inps.ts_file, inps.tcoh_file, inps.scoh_file, inps.mask_file, inps.geom_file]:
+        if not os.path.isfile(fname):
+            raise FileNotFoundError(fname)
+
     return inps
 
 
+def read_template2inps(template_file, inps=None):
+    """Read input template options into Namespace inps"""
+    if not inps:
+        inps = cmd_line_parse()
+
+    if not template_file:
+        return inps, None
+
+    print('read options from template file: '+os.path.basename(template_file))
+    template = readfile.read_template(template_file)
+
+    # Coherence-based network modification
+    prefix = 'mintpy.save.hdfEos5.'
+
+    key = prefix+'update'
+    if key in template.keys() and template[key] == 'yes':
+        inps.update = True
+
+    key = prefix+'subset'
+    if key in template.keys() and template[key] == 'yes':
+        inps.subset = True
+
+    return inps, template
+
+
 ################################################################
-def metadata_mintpy2unavco(meta_dict_in, dateList):
+def prep_metadata(ts_file, template=None, print_msg=True):
+    """Prepare metadata for HDF-EOS5 file."""
+    # read metadata from ts_file
+    ts_obj = timeseries(ts_file)
+    ts_obj.open(print_msg=False)
+    meta = dict(ts_obj.metadata)
+
+    # read metadata from template_file
+    for key, value in template.items():
+        if not key.startswith(('mintpy', 'isce')):
+            meta[key] = value
+
+    # grab unavco metadata
+    unavco_meta = metadata_mintpy2unavco(meta, ts_obj.dateList)
+    if print_msg:
+        print('## UNAVCO Metadata:')
+        print('-----------------------------------------')
+        info.print_attributes(unavco_meta)
+        print('-----------------------------------------')
+
+    # update metadata from unavco metadata
+    meta.update(unavco_meta)
+    meta['FILE_TYPE'] = 'HDFEOS'
+
+    return meta
+
+
+def metadata_mintpy2unavco(meta_in, dateList):
+    """Convert metadata from mintpy format into unavco format."""
     # Extract UNAVCO format metadata from MintPy attributes dictionary and dateList
-    meta_dict = {}
-    for key in meta_dict_in.keys():
-        meta_dict[key] = meta_dict_in[key]
+    meta = {}
+    for key in meta_in.keys():
+        meta[key] = meta_in[key]
         for prefix in ['unavco.', 'hdfeos5.']:
             if prefix in key.lower():
                 key2 = key.lower().split(prefix)[1]
-                meta_dict[key2] = meta_dict_in[key]
+                meta[key2] = meta_in[key]
 
-    unavco_meta_dict = dict()
+    unavco_meta = dict()
     #################################
     # Required metadata
     #################################
@@ -84,106 +163,89 @@ def metadata_mintpy2unavco(meta_dict_in, dateList):
     # mission
     # ERS,ENV,S1,RS1,RS2,CSK,TSX,JERS,ALOS,ALOS2
     try:
-        unavco_meta_dict['mission'] = sensor.get_unavco_mission_name(meta_dict)
+        unavco_meta['mission'] = sensor.get_unavco_mission_name(meta)
     except ValueError:
         print('Missing required attribute: mission')
 
     # beam_mode/swath
-    unavco_meta_dict['beam_mode'] = meta_dict['beam_mode']
-    unavco_meta_dict['beam_swath'] = int(meta_dict.get('beam_swath', '0'))
+    unavco_meta['beam_mode'] = meta['beam_mode']
+    unavco_meta['beam_swath'] = int(meta.get('beam_swath', '0'))
 
     # relative_orbit, or track number
     #atr_dict['relative_orbit'] = int(re.match(r'(\w+)T([0-9+])',atr['PROJECT_NAME']).groups()[1])
-    unavco_meta_dict['relative_orbit'] = int(meta_dict['relative_orbit'])
+    unavco_meta['relative_orbit'] = int(meta['relative_orbit'])
 
     # processing info
-    unavco_meta_dict['processing_type'] = 'LOS_TIMESERIES'
-    unavco_meta_dict['processing_software'] = meta_dict.get('PROCESSOR', 'isce')
+    unavco_meta['processing_type'] = 'LOS_TIMESERIES'
+    unavco_meta['processing_software'] = meta.get('PROCESSOR', 'isce')
 
     # Grabbed by script
     # date info
-    unavco_meta_dict['first_date'] = dt.datetime.strptime(dateList[0], '%Y%m%d').isoformat()[0:10]
-    unavco_meta_dict['last_date'] = dt.datetime.strptime(dateList[-1], '%Y%m%d').isoformat()[0:10]
+    unavco_meta['first_date'] = dt.datetime.strptime(dateList[0], '%Y%m%d').isoformat()[0:10]
+    unavco_meta['last_date'] = dt.datetime.strptime(dateList[-1], '%Y%m%d').isoformat()[0:10]
 
     # footprint
-    lons = [meta_dict['LON_REF1'],
-            meta_dict['LON_REF3'],
-            meta_dict['LON_REF4'],
-            meta_dict['LON_REF2'],
-            meta_dict['LON_REF1']]
+    lons = [meta['LON_REF1'],
+            meta['LON_REF3'],
+            meta['LON_REF4'],
+            meta['LON_REF2'],
+            meta['LON_REF1']]
 
-    lats = [meta_dict['LAT_REF1'],
-            meta_dict['LAT_REF3'],
-            meta_dict['LAT_REF4'],
-            meta_dict['LAT_REF2'],
-            meta_dict['LAT_REF1']]
+    lats = [meta['LAT_REF1'],
+            meta['LAT_REF3'],
+            meta['LAT_REF4'],
+            meta['LAT_REF2'],
+            meta['LAT_REF1']]
 
-    unavco_meta_dict['scene_footprint'] = "POLYGON((" + ",".join(
+    unavco_meta['scene_footprint'] = "POLYGON((" + ",".join(
         [lon+' '+lat for lon, lat in zip(lons, lats)]) + "))"
 
-    unavco_meta_dict['history'] = dt.datetime.utcnow().isoformat()[0:10]
+    unavco_meta['history'] = dt.datetime.utcnow().isoformat()[0:10]
 
     #################################
     # Recommended metadata
     #################################
-    unavco_meta_dict['first_frame'] = int(meta_dict.get('first_frame', 0))
-    unavco_meta_dict['last_frame'] = int(meta_dict.get('last_frame', unavco_meta_dict['first_frame']))
+    unavco_meta['first_frame'] = int(meta.get('first_frame', 0))
+    unavco_meta['last_frame'] = int(meta.get('last_frame', unavco_meta['first_frame']))
 
-    unavco_meta_dict['atmos_correct_method']   = meta_dict.get('atmos_correct_method', 'None')
-    unavco_meta_dict['post_processing_method'] = 'MintPy'
-    unavco_meta_dict['processing_dem'] = meta_dict.get('processing_dem', 'Unknown')
-    unavco_meta_dict['unwrap_method']  = meta_dict.get('unwrap_method', 'Unknown')
+    unavco_meta['atmos_correct_method']   = meta.get('atmos_correct_method', 'None')
+    unavco_meta['post_processing_method'] = 'MintPy'
+    unavco_meta['processing_dem'] = meta.get('processing_dem', 'Unknown')
+    unavco_meta['unwrap_method']  = meta.get('unwrap_method', 'Unknown')
 
     # Grabbed by script
-    unavco_meta_dict['flight_direction'] = meta_dict.get('ORBIT_DIRECTION', 'Unknown')[0].upper()
+    unavco_meta['flight_direction'] = meta.get('ORBIT_DIRECTION', 'Unknown')[0].upper()
 
-    if meta_dict['ANTENNA_SIDE'] == '-1':
-        unavco_meta_dict['look_direction'] = 'R'
+    if meta['ANTENNA_SIDE'] == '-1':
+        unavco_meta['look_direction'] = 'R'
     else:
-        unavco_meta_dict['look_direction'] = 'L'
+        unavco_meta['look_direction'] = 'L'
 
-    unavco_meta_dict['polarization'] = meta_dict.get('POLARIZATION', 'Unknown')
-    unavco_meta_dict['prf'] = float(meta_dict.get('PRF', '0'))
-    unavco_meta_dict['wavelength'] = float(meta_dict['WAVELENGTH'])
+    unavco_meta['polarization'] = meta.get('POLARIZATION', 'Unknown')
+    unavco_meta['prf'] = float(meta.get('PRF', '0'))
+    unavco_meta['wavelength'] = float(meta['WAVELENGTH'])
 
     #################################
     # insarmaps metadata
     #################################
     # footprint for data coverage
-    if 'X_FIRST' in meta_dict.keys():
-        lon0 = float(meta_dict['X_FIRST'])
-        lat0 = float(meta_dict['Y_FIRST'])
-        lon1 = lon0 + float(meta_dict['X_STEP'])*int(meta_dict['WIDTH'])
-        lat1 = lat0 + float(meta_dict['Y_STEP'])*int(meta_dict['LENGTH'])
+    if 'X_FIRST' in meta.keys():
+        lon0 = float(meta['X_FIRST'])
+        lat0 = float(meta['Y_FIRST'])
+        lon1 = lon0 + float(meta['X_STEP'])*int(meta['WIDTH'])
+        lat1 = lat0 + float(meta['Y_STEP'])*int(meta['LENGTH'])
         lons = [str(lon0), str(lon1), str(lon1), str(lon0), str(lon0)]
         lats = [str(lat0), str(lat0), str(lat1), str(lat1), str(lat0)]
-        unavco_meta_dict['data_footprint'] = "POLYGON((" + ",".join(
+        unavco_meta['data_footprint'] = "POLYGON((" + ",".join(
             [lon+' '+lat for lon, lat in zip(lons, lats)]) + "))"
     else:
         print('Input file is not geocoded, no data_footprint without X/Y_FIRST/STEP info.')
 
-    return unavco_meta_dict
-
-
-def prep_metadata(ts_file, print_msg=True):
-    """Prepare metadata for HDF-EOS5 file"""
-    ts_obj = timeseries(ts_file)
-    ts_obj.open(print_msg=False)
-    unavco_meta_dict = metadata_mintpy2unavco(ts_obj.metadata, ts_obj.dateList)
-    if print_msg:
-        print('## UNAVCO Metadata:')
-        print('-----------------------------------------')
-        info.print_attributes(unavco_meta_dict)
-        print('-----------------------------------------')
-
-    meta_dict = dict(ts_obj.metadata)
-    meta_dict.update(unavco_meta_dict)
-    meta_dict['FILE_TYPE'] = 'HDFEOS'
-    return meta_dict
+    return unavco_meta
 
 
 def get_output_filename(metadata, update_mode=False, subset_mode=False):
-    """Get output file name of HDF-EOS5 time-series file"""
+    """Get output file name of HDF-EOS5 time-series file."""
     SAT = metadata['mission']
     SW = metadata['beam_mode']
     if metadata['beam_swath']:
@@ -228,30 +290,27 @@ def get_output_filename(metadata, update_mode=False, subset_mode=False):
     return outName
 
 
-def read_template2inps(template_file, inps=None):
-    """Read input template options into Namespace inps"""
-    if not inps:
-        inps = cmd_line_parse()
+def create_hdf5_dataset(group, dsName, data, max_digit=55, compression=COMPRESSION):
+    """Create HDF5 dataset and print out message."""
+    msg = 'create dataset {d:<{w}}'.format(d='{}/{}'.format(group.name, dsName), w=max_digit)
+    msg += ' of {t:<10} in size of {s}'.format(t=str(data.dtype), s=data.shape)
+    msg += ' with compression={c}'.format(c=compression)
+    print(msg)
 
-    print('read options from template file: '+os.path.basename(template_file))
-    template = readfile.read_template(template_file)
-
-    # Coherence-based network modification
-    prefix = 'mintpy.save.hdfEos5.'
-
-    key = prefix+'update'
-    if key in template.keys() and template[key] == 'yes':
-        inps.update = True
-
-    key = prefix+'subset'
-    if key in template.keys() and template[key] == 'yes':
-        inps.subset = True
-
-    return inps
+    if data.ndim == 1:
+        dset = group.create_dataset(dsName,
+                                    data=data,
+                                    compression=compression)
+    elif data.ndim == 2:
+        dset = group.create_dataset(dsName,
+                                    data=data,
+                                    chunks=True,
+                                    compression=compression)
+    return dset
 
 
-def write2hdf5(out_file, ts_file, tcoh_file, scoh_file, mask_file, geom_file, metadata):
-    """Write HDF5 file in HDF-EOS5 format"""
+def write_hdf5_file(metadata, out_file, ts_file, tcoh_file, scoh_file, mask_file, geom_file):
+    """Write HDF5 file in HDF-EOS5 format."""
     ts_obj = timeseries(ts_file)
     ts_obj.open(print_msg=False)
     dateList = ts_obj.dateList
@@ -260,29 +319,29 @@ def write2hdf5(out_file, ts_file, tcoh_file, scoh_file, mask_file, geom_file, me
     # Open HDF5 File
     f = h5py.File(out_file, 'w')
     print('create HDF5 file: {} with w mode'.format(out_file))
-    maxDigit = 55
+    max_digit = 55
 
-    # Write Observation
+    ##### Group - Observation
     gName = 'HDFEOS/GRIDS/timeseries/observation'
     print('create group   /{}'.format(gName))
     group = f.create_group(gName)
 
-    ## 1 - displacement
+    ## O1 - displacement
     dsName = 'displacement'
     dsShape = (numDate, ts_obj.length, ts_obj.width)
     dsDataType = np.float32
     print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
            ' with compression={c}').format(d='{}/{}'.format(gName, dsName),
-                                           w=maxDigit,
+                                           w=max_digit,
                                            t='float32',
                                            s=dsShape,
-                                           c=compression))
+                                           c=COMPRESSION))
     dset = group.create_dataset(dsName,
                                 shape=dsShape,
                                 maxshape=(None, dsShape[1], dsShape[2]),
                                 dtype=dsDataType,
                                 chunks=True,
-                                compression=compression)
+                                compression=COMPRESSION)
 
     print('write data acquition by acquition ...')
     prog_bar = ptime.progressBar(maxValue=numDate)
@@ -297,84 +356,58 @@ def write2hdf5(out_file, ts_file, tcoh_file, scoh_file, mask_file, geom_file, me
     dset.attrs['_FillValue'] = FLOAT_ZERO
     dset.attrs['Units'] = 'meters'
 
-    ## 2 - date
+    ## O2 - date
     dsName = 'date'
     data = np.array(dateList, dtype=np.string_)
-    group.create_dataset(dsName, data=data)
-    print('create dataset /{d:<{w}} of {t:<10} in size of {s}'.format(d='{}/{}'.format(gName, dsName),
-                                                                      w=maxDigit,
-                                                                      t=str(data.dtype),
-                                                                      s=data.shape))
+    dset = create_hdf5_dataset(group, dsName, data)
 
-    ## 3 - perp baseline
+    ## O3 - perp baseline
     dsName = 'bperp'
     data = np.array(ts_obj.pbase, dtype=np.float32)
-    group.create_dataset(dsName, data=data)
-    print('create dataset /{d:<{w}} of {t:<10} in size of {s}'.format(d='{}/{}'.format(gName, dsName),
-                                                                      w=maxDigit,
-                                                                      t=str(data.dtype),
-                                                                      s=data.shape))
+    dset = create_hdf5_dataset(group, dsName, data)
 
-    # Write Quality
+    ##### Group - Quality
     gName = 'HDFEOS/GRIDS/timeseries/quality'
     print('create group   /{}'.format(gName))
     group = f.create_group(gName)
 
-    ## 1 - temporalCoherence
+    ## Q1 - temporalCoherence
     dsName = 'temporalCoherence'
+    # read
     data = readfile.read(tcoh_file)[0]
-    print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
-           ' with compression={c}').format(d='{}/{}'.format(gName, dsName),
-                                           w=maxDigit,
-                                           t=str(data.dtype),
-                                           s=data.shape,
-                                           c=compression))
-    dset = group.create_dataset(dsName,
-                                data=data,
-                                chunks=True,
-                                compression=compression)
+    # write
+    dset = create_hdf5_dataset(group, dsName, data)
+    # attributes
     dset.attrs['Title'] = dsName
     dset.attrs['MissingValue'] = FLOAT_ZERO
     dset.attrs['_FillValue'] = FLOAT_ZERO
     dset.attrs['Units'] = '1'
 
-    ## 2 - avgSpatialCoherence
+    ## Q2 - avgSpatialCoherence
     dsName = 'avgSpatialCoherence'
+    # read
     data = readfile.read(scoh_file)[0]
-    print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
-           ' with compression={c}').format(d='{}/{}'.format(gName, dsName),
-                                           w=maxDigit,
-                                           t=str(data.dtype),
-                                           s=data.shape,
-                                           c=compression))
-    dset = group.create_dataset(dsName,
-                                data=data,
-                                chunks=True,
-                                compression=compression)
+    # write
+    dset = create_hdf5_dataset(group, dsName, data)
+    # attributes
     dset.attrs['Title'] = dsName
     dset.attrs['MissingValue'] = FLOAT_ZERO
     dset.attrs['_FillValue'] = FLOAT_ZERO
     dset.attrs['Units'] = '1'
 
-    ## 3 - mask
+    ## Q3 - mask
     dsName = 'mask'
+    # read
     data = readfile.read(mask_file, datasetName='mask')[0]
-    print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
-           ' with compression={c}').format(d='{}/{}'.format(gName, dsName),
-                                           w=maxDigit,
-                                           t=str(data.dtype),
-                                           s=data.shape,
-                                           c=compression))
-    dset = group.create_dataset(dsName,
-                                data=data,
-                                chunks=True,
-                                compression=compression)
+    # write
+    dset = create_hdf5_dataset(group, dsName, data)
+    # attributes
     dset.attrs['Title'] = dsName
     dset.attrs['MissingValue'] = BOOL_ZERO
     dset.attrs['_FillValue'] = BOOL_ZERO
     dset.attrs['Units'] = '1'
 
-    # Write Geometry
+    ##### Group - Write Geometry
     # Required: height, incidenceAngle
     # Optional: rangeCoord, azimuthCoord, azimuthAngle, slantRangeDistance, waterMask, shadowMask
     gName = 'HDFEOS/GRIDS/timeseries/geometry'
@@ -384,30 +417,19 @@ def write2hdf5(out_file, ts_file, tcoh_file, scoh_file, mask_file, geom_file, me
     geom_obj = geometry(geom_file)
     geom_obj.open(print_msg=False)
     for dsName in geom_obj.datasetNames:
+        # read
         data = geom_obj.read(datasetName=dsName, print_msg=False)
-        print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
-               ' with compression={c}').format(d='{}/{}'.format(gName, dsName),
-                                               w=maxDigit,
-                                               t=str(data.dtype),
-                                               s=data.shape,
-                                               c=compression))
-        dset = group.create_dataset(dsName,
-                                    data=data,
-                                    chunks=True,
-                                    compression=compression)
+        # write
+        dset = create_hdf5_dataset(group, dsName, data)
 
+        # attributes
         dset.attrs['Title'] = dsName
-        if dsName in ['height',
-                      'slantRangeDistance',
-                      'bperp']:
+        if dsName in ['height', 'slantRangeDistance', 'bperp']:
             dset.attrs['MissingValue'] = FLOAT_ZERO
             dset.attrs['_FillValue'] = FLOAT_ZERO
             dset.attrs['Units'] = 'meters'
 
-        elif dsName in ['incidenceAngle',
-                        'azimuthAngle',
-                        'latitude',
-                        'longitude']:
+        elif dsName in ['incidenceAngle', 'azimuthAngle', 'latitude', 'longitude']:
             dset.attrs['MissingValue'] = FLOAT_ZERO
             dset.attrs['_FillValue'] = FLOAT_ZERO
             dset.attrs['Units'] = 'degrees'
@@ -434,28 +456,30 @@ def write2hdf5(out_file, ts_file, tcoh_file, scoh_file, mask_file, geom_file, me
 ################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    if inps.template_file:
-        inps = read_template2inps(inps.template_file, inps)
+    inps, template = read_template2inps(inps.template_file, inps)
 
     # Prepare Metadata
-    meta_dict = prep_metadata(ts_file=inps.timeseries_file, print_msg=True)
+    meta = prep_metadata(ts_file=inps.ts_file,
+                         template=template,
+                         print_msg=True)
 
     # Get output filename
-    outName = get_output_filename(metadata=meta_dict,
-                                  update_mode=inps.update,
-                                  subset_mode=inps.subset)
+    out_file = get_output_filename(metadata=meta,
+                                   update_mode=inps.update,
+                                   subset_mode=inps.subset)
 
     # Open HDF5 File
-    write2hdf5(out_file=outName,
-               ts_file=inps.timeseries_file,
-               tcoh_file=inps.temp_coh_file,
-               scoh_file=inps.avg_spatial_coh_file,
-               mask_file=inps.mask_file,
-               geom_file=inps.geom_file,
-               metadata=meta_dict)
-    return outName
+    write_hdf5_file(metadata=meta,
+                    out_file=out_file,
+                    ts_file=inps.ts_file,
+                    tcoh_file=inps.tcoh_file,
+                    scoh_file=inps.scoh_file,
+                    mask_file=inps.mask_file,
+                    geom_file=inps.geom_file)
+    return out_file
 
 
 ################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
+

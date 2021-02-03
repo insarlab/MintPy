@@ -1,15 +1,15 @@
-We support output geocoded displacement time-series product into [HDF-EOS5](http://hdfeos.org) format via `save_hdfeos5.py`. This is designed to easily share the InSAR time-series products to the broader community.
+We support output geocoded displacement time-series product into [HDF-EOS5](http://hdfeos.org) format via `save_hdfeos5.py`. This is designed to easily share the InSAR time-series product to the broader community.
 
 ```bash
 save_hdfeos5.py geo_timeseries_ERA5_ramp_demErr.h5 --tc geo_temporalCoherence.h5 --asc geo_avgSpatialCoh.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
 save_hdfeos5.py timeseries_ERA5_ramp_demErr.h5     --tc temporalCoherence.h5     --asc avgSpatialCoh.h5     -m maskTempCoh.h5     -g inputs/geometryGeo.h5
 ```
 
-### File structure ###
+### 1. File structure ###
 
 ```
 /                             Root level group
-Attributes                    metadata in dict.
+Attributes                    metadata in dict
 /HDFEOS/GRIDS/timeseries      timeseries group
     /observation
         /displacement         3D array of float32 in size of (n, l, w) in meter
@@ -29,11 +29,11 @@ Attributes                    metadata in dict.
         /bperp                3D array of float32 in size of (n, l, w) in meter.  (optional)
 ```
 
-### Metadata
+### 2. Metadata
 
 Besides [the attributes used in MintPy](./api/attributes.md), we add extra metadata inheritated from [UNAVCO InSAR Product Archive](https://winsar.unavco.org/insar/) ([format specification](https://docs.google.com/document/d/1fm6RY8aL4hhRa88M9cd_Ejh6OL3YfibfjN1UQ7TWsmI/edit?usp=sharing)) as below:    
 
-#### require manual specification in custom template file
+#### 2.1 required & manual
 
 The following metadata requires manual specification in the custom template file, e.g. [WellsEnvD2T399.txt](https://github.com/insarlab/MintPy/blob/main/mintpy/data/input_files/WellsEnvD2T399.txt).    
 
@@ -42,14 +42,14 @@ The following metadata requires manual specification in the custom template file
 + relative_orbit: relative orbit (track / path) number [auto-grabbed for tops/stripmapStack only]
 + first/last_frame: first and last frame number (same if only one frame) [auto-grabbed for tops/alosStack only]
 
-#### recommend manual specification in the custom template file
+#### 2.2 recommended & manual
 
 + beam_swath: value used by the space agency, e.g. 1/2/3 for Sentinel-1 IW (default: 0)
 + processing_dem: DEM data source used during processing, e.g. SRTM, ASTER, NED (default: Unknown) ...
 + unwrap_method: method used for phase unwrapping, e.g. snaphu (default: Unknown)
 + atmos_correct_method: method/model used for atmospheric correction (default: None)
 
-#### auto-grabbed / hardwired by script
+#### 2.3 auto-grabbed / hardwired by script
 
 + first/last_date: ISO 8601 format (YYYY-MM-DD) [auto-grabbed]
 + data_footprint: WKT formatted polygon outlining the area covered by the data [precise; for geocoded file only; auto-grabbed from Y/X_FIRST/STEP]. This is temporary and should be merged into scene_footprint.
@@ -65,7 +65,7 @@ The following metadata requires manual specification in the custom template file
 + wavelength: radar wavelength [auto-grabbed from WAVELENGTH]
 
 
-### Filename convention ###
+### 3. Filename convention ###
 
 Inherited from [UNAVCO InSAR Product Archive](https://winsar.unavco.org/insar/) ([format specification](https://docs.google.com/document/d/1fm6RY8aL4hhRa88M9cd_Ejh6OL3YfibfjN1UQ7TWsmI/edit?usp=sharing)), we use the filename convention below:
 
@@ -84,7 +84,7 @@ E.g. S1_IW12_128_0593_0597_20141213_20170928.he5
   | &lt;DATE2>  | End date           | YYYYMMDD; "XXXXXXXX" if update mode is ON. |
   | &lt;SUB>    | Subset range       | N{:05d}_S{:05d}_W{:05d}_E{:05d} in degrees; number with precision of 3 digits after decimal * 1000; e.g. S00500_N01300_W001200_E005800; shown only if data is cropped. |
 
-### Web Viewer ###
+### 4. Web Viewer ###
 
 HDF-EOS5 file format is used as the input of the University of Miami's web viewer for InSAR time-series products. Below is a screenshot of the web viewer for the dataset on Kuju volcano from ALOS-1 acending track 422.
 
