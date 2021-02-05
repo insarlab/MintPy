@@ -171,7 +171,7 @@ def get_design_matrix(atr1, atr2, az_angle=90):
 
         # construct design matrix
         A[i, 0] = np.cos(inc_angle)
-        A[i, 1] = np.sin(inc_angle) * np.sin(head_angle - az_angle)
+        A[i, 1] = np.sin(inc_angle) * np.sin(head_angle - az_angle*np.pi/180)
     return A
 
 
