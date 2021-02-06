@@ -203,17 +203,17 @@ def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None,
 #####################################################################
 def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
     """Extract 2D matrix (z) value along the line [x0,y0;x1,y1]
-    Ref link: http://stackoverflow.com/questions/7878398/how-to-e
-              xtract-an-arbitrary-line-of-values-from-a-numpy-array
+    Link: http://stackoverflow.com/questions/7878398/how-to-extract-an-arbitrary-line-of-values-from-a-numpy-array
 
     Parameters: z : (np.array) 2D data matrix
                 atr : (dict) attribute
                 start_yx : (list) y,x coordinate of start point
                 end_yx : (list) y,x coordinate of end   point
                 interpolation : str, sampling/interpolation method, including:
-                    'nearest'  - nearest neighbour, by default
-                    'cubic'    - cubic interpolation
-                    'bilinear' - bilinear interpolation
+                    'nearest' - nearest neighbour
+                    'linear'  - linear  spline interpolation (order of 1)
+                    'cubic'   - cubic   spline interpolation (order of 3)
+                    'quintic' - quintic spline interpolation (order of 5)
 
     Returns:    transect: (dict) containing 1D matrix:
                     'X' - 1D np.array for X/column coordinates in float32
@@ -223,6 +223,7 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
 
     Example: transect = transect_yx(dem, demRsc, [10,15], [100,115])
     """
+    interpolation = interpolation.lower()
     [y0, x0] = start_yx
     [y1, x1] = end_yx
 
@@ -241,16 +242,25 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
     xs = np.linspace(x0, x1, num_pts, dtype=np.float32)
 
     # Extract z value along the line
-    if interpolation.lower() == 'nearest':
+    # for nearest neighbor sampling, use indexing directly
+    # for other interpolation, use scipy.ndimage.map_coordinates
+    if interpolation == 'nearest':
         z_line = z[np.rint(ys).astype(np.int), np.rint(xs).astype(np.int)]
-    elif interpolation.lower() == 'cubic':
-        z_line = map_coordinates(z, np.vstack((ys, xs)), order=3)
-    elif interpolation.lower() == 'bilinear':
-        z_line = map_coordinates(z, np.vstack((ys, xs)), order=2)
+
     else:
-        print('Un-recognized interpolation method: '+interpolation)
-        print('Continue with nearest ...')
-        z_line = z[np.rint(ys).astype(np.int), np.rint(xs).astype(np.int)]  # nearest neighbour
+        # interpolation name to order
+        interpolate_name2order = {
+            'linear' : 1,
+            'cubic'  : 3,
+            'quintic': 5,
+        }
+        if interpolation not in interpolate_name2order.keys():
+            msg = 'un-supported interpolation method: {}'.format(interpolation)
+            msg += '\navailable methods: {}'.format(interpolate_name2order.keys())
+            raise ValueError(msg)
+        interp_order = interpolate_name2order[interpolation.lower()]
+        # run interpolation
+        z_line = map_coordinates(z, np.vstack((ys, xs)), order=interp_order)
 
     # Calculate Distance along the line
     earth_radius = 6.3781e6    # in meter

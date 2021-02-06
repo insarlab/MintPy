@@ -960,9 +960,7 @@ class TimeSeriesAnalysis:
 
                 geom_file, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2:4]
                 in_files = [geom_file, 'temporalCoherence.h5', 'avgSpatialCoh.h5', ts_file, 'velocity.h5']
-                iargs = ['-l', lookup_file, '-t', self.templateFile, '--outdir', out_dir, '--update']
-                for in_file in in_files:
-                    iargs += [in_file]
+                iargs = in_files + ['-l', lookup_file, '-t', self.templateFile, '--outdir', out_dir, '--update']
                 print('\ngeocode.py', ' '.join(iargs))
                 mintpy.geocode.main(iargs)
 

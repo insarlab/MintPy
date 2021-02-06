@@ -138,7 +138,12 @@ def read_init_info(inps):
     obj.open(print_msg=inps.print_msg)
 
     if not inps.file_label:
-        inps.file_label = [str(i) for i in list(range(len(inps.file)))]
+        #inps.file_label = [str(i) for i in list(range(len(inps.file)))]
+        inps.file_label = []
+        for fname in inps.file:
+            fbase = os.path.splitext(os.path.basename(fname))[0]
+            fbase = fbase.replace('timeseries', '')
+            inps.file_label.append(fbase)
 
     # default mask file
     if not inps.mask_file and 'masked' not in ts_file0:
@@ -679,8 +684,9 @@ class timeseriesViewer():
         idx = np.argmin(np.abs(np.array(self.yearList) - self.tslider.val))
         # update title
         disp_date = self.dates[idx].strftime('%Y-%m-%d')
-        self.ax_img.set_title('N = {n}, Time = {t}'.format(n=idx, t=disp_date),
-                              fontsize=self.font_size)
+        sub_title = 'N = {n}, Time = {t}'.format(n=idx, t=disp_date)
+        self.ax_img.set_title(sub_title, fontsize=self.font_size)
+
         # read data
         data_img = np.array(self.ts_data[0][idx, :, :])
         data_img[self.mask == 0] = np.nan
@@ -688,6 +694,7 @@ class timeseriesViewer():
             if self.disp_unit_img == 'radian':
                 data_img *= self.range2phase
             data_img = ut.wrap(data_img, wrap_range=self.wrap_range)
+
         # update data
         self.img.set_data(data_img)
         self.idx = idx
@@ -755,9 +762,9 @@ class timeseriesViewer():
 
         if not np.all(np.isnan(d_ts[0])):
             # stat info
-            vprint('displacement range: [{:.2f}, {:.2f}] {}'.format(np.nanmin(d_ts[0]),
-                                                                    np.nanmax(d_ts[0]),
-                                                                    self.disp_unit))
+            vprint('time-series range: [{:.2f}, {:.2f}] {}'.format(np.nanmin(d_ts[0]),
+                                                                   np.nanmax(d_ts[0]),
+                                                                   self.disp_unit))
 
             # estimate (print) slope
             estimate_slope(d_ts[0], self.yearList, ex_flag=self.ex_flag, disp_unit=self.disp_unit)
@@ -793,8 +800,8 @@ class timeseriesViewer():
             if idx is not None and idx != self.idx:
                 # update title
                 disp_date = self.dates[idx].strftime('%Y-%m-%d')
-                self.ax_img.set_title('N = {n}, Time = {t}'.format(n=idx, t=disp_date),
-                                      fontsize=self.font_size)
+                sub_title = 'N = {n}, Time = {t}'.format(n=idx, t=disp_date)
+                self.ax_img.set_title(sub_title, fontsize=self.font_size)
 
                 # read data
                 data_img = np.array(self.ts_data[0][idx, :, :])
@@ -805,8 +812,8 @@ class timeseriesViewer():
                     data_img = ut.wrap(data_img, wrap_range=self.wrap_range)
 
                 # update
-                self.img.set_data(data_img)              # update image
                 self.tslider.set_val(self.yearList[idx]) # update slider
+                self.img.set_data(data_img)              # update image
                 self.idx = idx
                 self.fig_img.canvas.draw()
         return

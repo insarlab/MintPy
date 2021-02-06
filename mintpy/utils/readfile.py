@@ -608,6 +608,9 @@ def get_slice_list(fname):
             # mag / pha / cpx reading like "multiple bands"
             slice_list = ['magnitude', 'phase']
 
+        elif os.path.basename(fname) == 'offset.bip' and num_band == 2:
+            slice_list = ['azimuthOffset', 'rangeOffset']
+
         else:
             slice_list = ['band{}'.format(i) for i in range(1,num_band+1)]
 

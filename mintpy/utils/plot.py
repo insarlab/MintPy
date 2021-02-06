@@ -1355,23 +1355,25 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
 
-    # default mask file:
+    # default mask file
     if (not mask_file
             and k in ['velocity', 'timeseries']
-            and 'masked' not in fname):
+            and 'msk' not in fname):
 
-        mask_file = 'maskTempCoh.h5'
-        if 'PhaseVelocity' in fname:
-            mask_file = None #'maskSpatialCoh.h5'
+        for mask_file in ['maskTempCoh.h5', 'maskResInv.h5']:
+            if 'PhaseVelocity' in fname:
+                mask_file = None #'maskSpatialCoh.h5'
 
-        # check coordinate
-        if os.path.basename(fname).startswith('geo_'):
-            mask_file = 'geo_{}'.format(mask_file)
+            # check coordinate
+            if os.path.basename(fname).startswith('geo_'):
+                mask_file = 'geo_{}'.format(mask_file)
 
-        # absolute path and file existence
-        mask_file = os.path.join(os.path.dirname(fname), str(mask_file))
-        if not os.path.isfile(mask_file):
-            mask_file = None
+            # absolute path and file existence
+            mask_file = os.path.join(os.path.dirname(fname), str(mask_file))
+            if os.path.isfile(mask_file):
+                break
+            else:
+                mask_file = None
 
     # Read mask file if inputed
     msk = None
