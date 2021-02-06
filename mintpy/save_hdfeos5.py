@@ -257,7 +257,7 @@ def get_output_filename(metadata, update_mode=False, subset_mode=False):
     frame2 = metadata['last_frame']
     FRAME = "%04d" % (int(frame1))
     if frame2 != frame1:
-        FRAME += "_%04d" % (frame2)            
+        FRAME += "_%04d" % (frame2)
 
     DATE1 = dt.datetime.strptime(metadata['first_date'], '%Y-%m-%d').strftime('%Y%m%d')
     DATE2 = dt.datetime.strptime(metadata['last_date'], '%Y-%m-%d').strftime('%Y%m%d')

@@ -229,7 +229,7 @@ def write_kmz_file(data, metadata, out_file, inps=None):
             print('show reference point')
         except:
             inps.disp_ref_pixel = False
-            print('Cannot find reference point info!')
+            print('WARNING: Cannot find reference point info!')
 
     width = int(metadata['WIDTH'])
     length = int(metadata['LENGTH'])
