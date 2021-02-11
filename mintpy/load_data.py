@@ -552,14 +552,14 @@ def read_inps_dict2geometry_dict_object(iDict):
     return geomRadarObj, geomGeoObj
 
 
-def update_object(outFile, inObj, box, updateMode=True):
+def update_object(outFile, inObj, box, updateMode=True, xstep=1, ystep=1):
     """Do not write h5 file if: 1) h5 exists and readable,
                                 2) it contains all date12 from ifgramStackDict,
                                             or all datasets from geometryDict"""
     write_flag = True
     if updateMode and ut.run_or_skip(outFile, check_readable=True) == 'skip':
         if inObj.name == 'ifgramStack':
-            in_size = inObj.get_size(box=box)[1:]
+            in_size = inObj.get_size(box=box, xstep=xstep, ystep=ystep)[1:]
             in_date12_list = inObj.get_date12_list()
 
             outObj = ifgramStack(outFile)
@@ -572,13 +572,19 @@ def update_object(outFile, inObj, box, updateMode=True):
                 write_flag = False
 
         elif inObj.name == 'geometry':
+            in_size = inObj.get_size(box=box, xstep=xstep, ystep=ystep)
+            in_dset_list = inObj.get_dataset_list()
+
             outObj = geometry(outFile)
             outObj.open(print_msg=False)
-            if (outObj.get_size() == inObj.get_size(box=box)
-                    and all(i in outObj.datasetNames for i in inObj.get_dataset_list())):
+            out_size = outObj.get_size()
+            out_dset_list = outObj.datasetNames
+
+            if out_size == in_size and set(in_dset_list).issubset(set(out_dset_list)):
                 print(('All datasets exists in file {} with same size as required,'
                        ' no need to re-load.'.format(os.path.basename(outFile))))
                 write_flag = False
+
     return write_flag
 
 
@@ -771,7 +777,10 @@ def main(iargs=None):
         print('create directory: {}'.format(inps.outdir))
 
     # write
-    if stackObj and update_object(inps.outfile[0], stackObj, box, updateMode=updateMode):
+    if stackObj and update_object(inps.outfile[0], stackObj, box,
+                                  updateMode=updateMode,
+                                  xstep=iDict['xstep'],
+                                  ystep=iDict['ystep']):
         print('-'*50)
         stackObj.write2hdf5(outputFile=inps.outfile[0],
                             access_mode='w',
@@ -781,7 +790,10 @@ def main(iargs=None):
                             compression=comp,
                             extra_metadata=extraDict)
 
-    if geomRadarObj and update_object(inps.outfile[1], geomRadarObj, box, updateMode=updateMode):
+    if geomRadarObj and update_object(inps.outfile[1], geomRadarObj, box,
+                                      updateMode=updateMode,
+                                      xstep=iDict['xstep'],
+                                      ystep=iDict['ystep']):
         print('-'*50)
         geomRadarObj.write2hdf5(outputFile=inps.outfile[1],
                                 access_mode='w',
@@ -791,7 +803,10 @@ def main(iargs=None):
                                 compression='lzf',
                                 extra_metadata=extraDict)
 
-    if geomGeoObj and update_object(inps.outfile[2], geomGeoObj, boxGeo, updateMode=updateMode):
+    if geomGeoObj and update_object(inps.outfile[2], geomGeoObj, boxGeo,
+                                    updateMode=updateMode,
+                                    xstep=iDict['xstep'],
+                                    ystep=iDict['ystep']):
         print('-'*50)
         geomGeoObj.write2hdf5(outputFile=inps.outfile[2],
                               access_mode='w',

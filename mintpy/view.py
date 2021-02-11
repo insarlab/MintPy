@@ -914,7 +914,7 @@ def update_figure_setting(inps):
 
         # Row/Column number
         if (inps.fig_row_num == 1 and inps.fig_col_num == 1
-                and all(i not in sys.argv for i in ['--nrows', '--ncols'])):
+                and all(i not in inps.argv for i in ['--nrows', '--ncols'])):
             # calculate row and col number based on input info
             data_shape = [length*1.1, width]
             fig_size4plot = [inps.fig_size[0]*0.95, inps.fig_size[1]]
@@ -1054,7 +1054,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
     # update display min/max
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
     if (same_unit4all_subplots
-            and all(arg not in sys.argv for arg in ['-v', '--vlim', '--wrap'])
+            and all(arg not in inps.argv for arg in ['-v', '--vlim', '--wrap'])
             and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)
             and inps.dsetFamilyList[0] not in ['bperp']):
         inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(data,
@@ -1423,6 +1423,7 @@ class viewer():
 
     def configure(self):
         inps = cmd_line_parse(self.iargs)
+        inps.argv = list(self.iargs)
         inps, self.atr = read_input_file_info(inps)
         inps = update_inps_with_file_metadata(inps, self.atr)
 
