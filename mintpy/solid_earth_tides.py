@@ -11,9 +11,13 @@
 import os
 import sys
 import time
+import datetime as dt
 import argparse
 import warnings
+import h5py
 import numpy as np
+from matplotlib import pyplot as plt
+plt.rcParams.update({'font.size': 12})
 
 try:
     import pysolid
@@ -42,19 +46,23 @@ EXAMPLE = """example:
 """
 
 REFERENCE = """reference:
-  Milbert, D., SOLID EARTH TIDE, http://geodesyworld.github.io/SOFTS/solid.htm, Accessd 2020 September 6.
+  Milbert, D., Solid Earth Tide, http://geodesyworld.github.io/SOFTS/solid.htm, Accessd 2020 September 6.
   Fattahi, H., Z. Yunjun, X. Pi, P. S. Agram, P. Rosen, and Y. Aoki (2020), Absolute geolocation of SAR 
     Big-Data: The first step for operational InSAR time-series analysis, AGU Fall Meeting 2020, 1-17 Dec 2020.
 """
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Solid Earth tides correction',
+    parser = argparse.ArgumentParser(description='Solid Earth tides (SET) correction',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog='{}\n{}\n{}'.format(REFERENCE, TEMPLATE, EXAMPLE))
 
     parser.add_argument('dis_file', help='timeseries HDF5 file, i.e. timeseries.h5')
     parser.add_argument('-g','--geomtry', dest='geom_file', type=str, required=True,
                         help='geometry file including incidence/azimuthAngle.')
+    parser.add_argument('--date-wise-acq-time', dest='date_wise_acq_time', action='store_true',
+                        help='Use the exact date-wise acquisition time instead of the common one for tides calculation.\n' +
+                             'For ISCE-2/topsStack products only, and requires ../reference and ../secondarys folder.\n' +
+                             'There is <1 min difference btw. S1A/B -> Negligible impact for InSAR.')
 
     parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose message.')
     parser.add_argument('--update', dest='update_mode', action='store_true', help='Enable update mode.')
@@ -71,24 +79,29 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # check coordinates of time-series / geometry files
+    # check input files - processors & coordinates
     atr1 = readfile.read_attribute(inps.dis_file)
     atr2 = readfile.read_attribute(inps.geom_file)
-    geo_or_rdr1 = 'Y_FIRST' in atr1.keys()
-    geo_or_rdr2 = 'Y_FIRST' in atr2.keys()
-    if geo_or_rdr1 != geo_or_rdr2:
-        msg = 'input time-series and geometry file do not have the same coordinates!'
-        msg += 'time-series file in geo-coordinates: {}'.format(geo_or_rdr1)
-        msg += 'geometry    file in geo-coordinates: {}'.format(geo_or_rdr2)
+    coord1 = 'geo' if 'Y_FIRST' in atr1.keys() else 'radar'
+    coord2 = 'geo' if 'Y_FIRST' in atr2.keys() else 'radar'
+    proc = atr1.get('PROCESSOR', 'isce')
+
+    if coord1 == 'radar' and proc in ['gamma', 'roipac']:
+        msg = 'Radar-coded file from {} is NOT supported!'.format(proc)
+        msg += '\n    Try to geocode the time-series and geometry files and re-run with them instead.'
+        raise ValueError(msg)
+
+    if coord1 != coord2:
+        n = max(len(os.path.basename(i)) for i in [inps.dis_file, inps.geom_file])
+        msg = 'Input time-series and geometry file are NOT in the same coordinate!'
+        msg += '\n    file {f:<{n}} coordinate: {c}'.format(f=os.path.basename(inps.dis_file),  n=n, c=coord1)
+        msg += '\n    file {f:<{n}} coordinate: {c}'.format(f=os.path.basename(inps.geom_file), n=n, c=coord2)
         raise ValueError(msg)
 
     # default SET filename
     if not inps.set_file:
         geom_dir = os.path.dirname(inps.geom_file)
-        fname = 'SET.h5'
-        if os.path.basename(inps.dis_file).startswith('geo_'):
-            fname = 'geo_SET.h5'
-        inps.set_file = os.path.join(geom_dir, fname)
+        inps.set_file = os.path.join(geom_dir, 'SET.h5')
 
     # default corrected time-series filename
     if not inps.cor_dis_file:
@@ -141,22 +154,98 @@ def prepare_los_geometry(geom_file):
     return inc_angle, head_angle, atr
 
 
-def calc_solid_earth_tides_timeseries(date_list, geom_file, out_file, update_mode=True, verbose=False):
-    """Calculate the time-series of solid Earth tides in LOS direction.
-    Parameters: date_list - list of str, dates in YYYYMMDD
-                geom_file - str, path of geometry file in geo coordinates
-                out_file  - str, output time-sereis file
-    Returns:    out_file  - str, output time-sereis file
+def get_datetime_list(ts_file, date_wise_acq_time=False):
+    """Prepare exact datetime for each acquisition in the time-series file.
+
+    Parameters: ts_file            - str, path of the time-series HDF5 file
+                date_wise_acq_time - bool, use the exact date-wise acquisition time
+    Returns:    sensingMid         - list of datetime.datetime objects
+    """
+    print('\nprepare datetime info for each acquisition')
+
+    ts_file = os.path.abspath(ts_file)
+    date_list = timeseries(ts_file).get_date_list()
+
+    proj_dir = os.path.dirname(os.path.dirname(ts_file))
+    xml_dirs = [os.path.join(proj_dir, i) for i in ['reference', 'secondarys']]
+
+    # list of existing dataset names
+    with h5py.File(ts_file, 'r') as f:
+        ds_names = [i for i in f.keys() if isinstance(f[i], h5py.Dataset)]
+
+    dt_name = 'sensingMid'
+    if dt_name in ds_names:
+        # opt 1. read sensingMid if exists
+        print('read exact datetime info from /{} in file: {}'.format(dt_name, os.path.basename(ts_file)))
+        with h5py.File(ts_file, 'r') as f:
+            sensingMidStr = [i.decode('utf-8') for i in f[dt_name][:]]
+
+        # convert string to datetime object
+        date_str_format = ptime.get_date_str_format(sensingMidStr[0])
+        sensingMid = [dt.datetime.strptime(i, date_str_format) for i in sensingMidStr]
+
+    elif date_wise_acq_time and all(os.path.isdir(i) for i in xml_dirs):
+        # opt 2. read sensingMid in xml files
+        print('read exact datetime info in XML files from ISCE-2/topsStack results in directory:', proj_dir)
+        from mintpy.utils import isce_utils
+        sensingMid = isce_utils.get_sensing_datetime_list(proj_dir, date_list=date_list)[0]
+
+        # plot
+        plot_sensingMid_variation(sensingMid)
+
+    else:
+        # opt 3. use constant time of the day for all acquisitions
+        msg =  'Use the same time of the day for all acquisitions from CENTER_LINE_UTC\n'
+        msg += 'With <= 1 min variation for Sentinel-1A/B for example, this simplication has negligible impact on SET calculation.'
+        print(msg)
+        atr = readfile.read_attribute(ts_file)
+        utc_sec = dt.timedelta(seconds=float(atr['CENTER_LINE_UTC']))
+        sensingMid = [dt.datetime.strptime(i, '%Y%m%d') + utc_sec for i in date_list]
+
+    return sensingMid
+
+
+def plot_sensingMid_variation(sensingMid, save_fig=True, disp_fig=False, figsize=[8, 3]):
+    # calc diff in secs
+    dt0 = sensingMid[0]
+    sensingMidTime = [i.replace(year=dt0.year, month=dt0.month, day=dt0.day, microsecond=0) for i in sensingMid]
+
+    # plot
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=figsize)
+    ax.plot(sensingMid, sensingMidTime, '.')
+    ax.set_ylabel('time of the day\nsensingMid')
+    fig.tight_layout()
+
+    # output
+    if save_fig:
+        out_fig = os.path.abspath('sensingMid_variation.png')
+        print('save figure to file', out_fig)
+        plt.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=300)
+    if disp_fig:
+        plt.show()
+    else:
+        plt.close()
+    return
+
+
+###############################################################
+def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_file, date_wise_acq_time=False,
+                                      update_mode=True, verbose=False):
+    """Calculate the time-series of solid Earth tides (SET) in LOS direction.
+    Parameters: ts_file   - str, path of the time-series HDF5 file
+                geom_file - str, path of the geometry HDF5 file
+                set_file  - str, output SET time-sereis file
+                date_wise_acq_time - bool, use the exact date-wise acquisition time
+    Returns:    set_file  - str, output SET time-sereis file
     """
 
-    if update_mode and os.path.isfile(out_file):
+    if update_mode and os.path.isfile(set_file):
         print('update mode: ON')
-        print('skip re-calculating and use existing file: {}'.format(out_file))
-        return out_file
+        print('skip re-calculating and use existing file: {}'.format(set_file))
+        return set_file
 
     # prepare LOS geometry: geocoding if in radar-coordinates
     inc_angle, head_angle, atr_geo = prepare_los_geometry(geom_file)
-
     # get LOS unit vector
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
@@ -166,8 +255,11 @@ def calc_solid_earth_tides_timeseries(date_list, geom_file, out_file, update_mod
             np.cos(inc_angle),
         ]
 
+    # prepare datetime
+    dt_objs = get_datetime_list(ts_file, date_wise_acq_time=date_wise_acq_time)
+
     # initiate data matrix
-    num_date = len(date_list)
+    num_date = len(dt_objs)
     length = int(atr_geo['LENGTH'])
     width = int(atr_geo['WIDTH'])
     ts_tide = np.zeros((num_date, length, width), dtype=np.float32)
@@ -176,13 +268,11 @@ def calc_solid_earth_tides_timeseries(date_list, geom_file, out_file, update_mod
     print('\n'+'-'*50)
     print('calculating solid Earth tides using solid.for (D. Milbert, 2018) ...')
     prog_bar = ptime.progressBar(maxValue=num_date, print_msg=not verbose)
-    for i in range(num_date):
-        date_str = date_list[i]
-
+    for i, dt_obj in enumerate(dt_objs):
         # calculate tide in ENU direction
         (tide_e,
          tide_n,
-         tide_u) = pysolid.calc_solid_earth_tides_grid(date_str, atr_geo,
+         tide_u) = pysolid.calc_solid_earth_tides_grid(dt_obj, atr_geo,
                                                        display=False,
                                                        verbose=verbose)
 
@@ -192,7 +282,7 @@ def calc_solid_earth_tides_timeseries(date_list, geom_file, out_file, update_mod
                           + tide_n * unit_vec[1]
                           + tide_u * unit_vec[2])
 
-        prog_bar.update(i+1, suffix='{} ({}/{})'.format(date_list[i], i+1, num_date))
+        prog_bar.update(i+1, suffix='{} ({}/{})'.format(dt_obj.isoformat(), i+1, num_date))
     prog_bar.close()
 
     # radar-coding if input in radar-coordinates
@@ -220,11 +310,11 @@ def calc_solid_earth_tides_timeseries(date_list, geom_file, out_file, update_mod
 
     # write
     ds_dict = {}
-    ds_dict['date'] = np.array(date_list, dtype=np.string_)
     ds_dict['timeseries'] = ts_tide
-    writefile.write(ds_dict, out_file=out_file, metadata=atr)
+    ds_dict['sensingMid'] = np.array([i.strftime('%Y%m%dT%H%M%S') for i in dt_objs], dtype=np.string_)
+    writefile.write(ds_dict, out_file=set_file, metadata=atr, ref_file=ts_file)
 
-    return out_file
+    return set_file
 
 
 def correct_timeseries(dis_file, set_file, cor_dis_file):
@@ -246,13 +336,11 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
     start_time = time.time()
 
-    # calc SET - prepare
-    print('read date list from file: {}'.format(inps.dis_file))
-    date_list = timeseries(inps.dis_file).get_date_list()
-
-    # calc SET - run
-    calc_solid_earth_tides_timeseries(date_list, inps.geom_file,
-                                      out_file=inps.set_file,
+    # calc SET
+    calc_solid_earth_tides_timeseries(ts_file=inps.dis_file,
+                                      geom_file=inps.geom_file,
+                                      set_file=inps.set_file,
+                                      date_wise_acq_time=inps.date_wise_acq_time,
                                       update_mode=inps.update_mode,
                                       verbose=inps.verbose)
 

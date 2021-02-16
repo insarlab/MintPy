@@ -339,7 +339,7 @@ def safe2date_time(safe_file, tropo_model):
             for second in seconds:
                 secondsOut.append(second)
         else:
-            print('\nUn-recognized CENTER_LINE_ UTC input!')
+            print('\nUn-recognized CENTER_LINE_UTC input!')
             return None
 
         return secondsOut
