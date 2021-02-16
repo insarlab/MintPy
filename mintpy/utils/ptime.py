@@ -56,6 +56,16 @@ def get_date_str_format(date_str):
     return date_str_format
 
 
+def round_seconds(datetime_obj):
+    """Round datetime object to the nearest second.
+    Link: https://stackoverflow.com/questions/47792242/rounding-time-off-to-the-nearest-second-python
+    """
+    datetime_obj_out = datetime_obj
+    if datetime_obj_out.microsecond >= 5e5:
+        datetime_obj_out += timedelta(seconds=1)
+    return datetime_obj_out.replace(microsecond=0)
+
+
 def yyyymmdd2season(date_str):
     """Determine the season of input date in YYYYMMDD format
 
