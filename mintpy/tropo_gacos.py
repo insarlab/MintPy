@@ -22,8 +22,6 @@ from mintpy.utils import ptime, readfile, writefile, utils as ut
 
 ############################################################################
 REFERENCE = """references:
-  Yu, C., Penna, N. T., & Li, Z. (2017). Generation of real‐time mode high‐resolution water vapor fields
-    from GPS observations. Journal of Geophysical Research: Atmospheres, 122(3), 2008-2025.
   Yu, C., Li, Z., Penna, N. T., & Crippa, P. (2018). Generic atmospheric correction model for Interferometric
     Synthetic Aperture Radar observations. Journal of Geophysical Research: Solid Earth, 123(10), 9202-9222.
   Yu, C., Li, Z., & Penna, N. T. (2018). Interferometric synthetic aperture radar atmospheric correction
@@ -36,6 +34,10 @@ DIR_DEMO = """--dir ./GACOS
   20061225.ztd
   20061225.ztd.rsc
   ...
+  OR
+  20060624.ztd.tif
+  20061225.ztd.tif
+  ...
 """
 
 EXAMPLE = """example:
@@ -45,7 +47,7 @@ EXAMPLE = """example:
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Tropospheric correction using GACOS delays\n',
+    parser = argparse.ArgumentParser(description='Tropospheric correction using GACOS (http://www.gacos.net) delays\n',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=REFERENCE+'\n'+DIR_DEMO+'\n'+EXAMPLE)
 
@@ -69,11 +71,30 @@ def cmd_line_parse(iargs=None):
     inps.GACOS_dir = os.path.abspath(inps.GACOS_dir)
     print('Use GACOS products at directory:', inps.GACOS_dir)
 
-    # ignore invalid filename inputs
+    # check input files - existance
     for key in ['dis_file', 'geom_file']:
         fname = vars(inps)[key]
         if fname and not os.path.isfile(fname):
             raise FileExistsError('input file not exist: {}'.format(fname))
+
+    # check input files - processors & coordinates
+    atr1 = readfile.read_attribute(inps.dis_file)
+    atr2 = readfile.read_attribute(inps.geom_file)
+    coord1 = 'geo' if 'Y_FIRST' in atr1.keys() else 'radar'
+    coord2 = 'geo' if 'Y_FIRST' in atr2.keys() else 'radar'
+    proc = atr1.get('PROCESSOR', 'isce')
+
+    if coord1 == 'radar' and proc in ['gamma', 'roipac']:
+        msg = 'Radar-coded file from {} is NOT supported!'.format(proc)
+        msg += '\n    Try to geocode the time-series and geometry files and re-run with them instead.'
+        raise ValueError(msg)
+
+    if coord1 != coord2:
+        n = max(len(os.path.basename(i)) for i in [inps.dis_file, inps.geom_file])
+        msg = 'Input time-series and geometry file are NOT in the same coordinate!'
+        msg += '\n    file {f:<{n}} coordinate: {c}'.format(f=os.path.basename(inps.dis_file),  n=n, c=coord1)
+        msg += '\n    file {f:<{n}} coordinate: {c}'.format(f=os.path.basename(inps.geom_file), n=n, c=coord2)
+        raise ValueError(msg)
 
     # default output filenames
     inps.tropo_file = os.path.join(os.path.dirname(inps.geom_file), 'GACOS.h5')
@@ -174,18 +195,20 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, GACOS_dir):
         raise ValueError('un-supported displacement file type: {}'.format(ftype))
 
     # list of dates --> list of ztd files
-    ztd_files = [os.path.join(GACOS_dir, '{}.ztd'.format(i)) for i in date_list]
-
-    # check missing ztd files
+    ztd_files = []
     flag = np.ones(len(date_list), dtype=np.bool_)
-    for i in range(len(date_list)):
-        if not os.path.isfile(ztd_files[i]):
-            print('WARNING: {} file not found, ignore it and continue'.format(ztd_files[i]))
+    for i, date_str in enumerate(date_list):
+        fnames = [os.path.join(GACOS_dir, '{}{}'.format(date_str, fext)) for fext in ['.ztd', '.ztd.tif']]
+        fnames = [f for f in fnames if os.path.exists(f)]
+        if len(fnames) > 0:
+            ztd_files.append(fnames[0])
+        else:
+            print('WARNING: NO ztd file found for {}! Continue without it.'.format(date_str))
             flag[i] = False
 
+    # update date_list to be consistent with ztd_files
     if np.any(flag == 0):
         date_list = np.array(date_list)[flag].tolist()
-        ztd_files = np.array(ztd_files)[flag].tolist()
 
     ## update_mode
     def get_dataset_size(fname):
@@ -210,7 +233,8 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, GACOS_dir):
             if (get_dataset_size(tropo_file) != get_dataset_size(geom_file)
                     or any(i not in timeseries(tropo_file).get_date_list() for i in date_list)):
                 flag = 'run'
-                print('2) output file does NOT have the same len/wid as the geometry file {} or does NOT contain all dates'.format(geom_file))
+                print(('2) output file does NOT have the same len/wid as the geometry file {}'
+                       ' or does NOT contain all dates').format(geom_file))
             else:
                 print('2) output file has the same len/wid as the geometry file and contains all dates')
 
@@ -261,10 +285,11 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, GACOS_dir):
     cos_inc_angle = np.cos(inc_angle * np.pi / 180.0)
 
     if 'Y_FIRST' in atr.keys():
+        # No need for data in geo-coordinates
         pts_new = None
 
     else:
-        # pixel coordinates in geometry file
+        # Get pixel lat/lon for data in radar-coordinates
         print('get pixel coordinates in geometry file')
         lats, lons = ut.get_lat_lon(atr, geom_file)
         pts_new = np.hstack((lats.reshape(-1, 1),
