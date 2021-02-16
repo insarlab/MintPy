@@ -372,8 +372,10 @@ def get_lat_lon(meta, geom_file=None, box=None, dimension=2):
 
 
 def get_lat_lon_rdc(meta):
-    """Get 2D array of lat and lon.
-    For metadata dict in radar-coord
+    """Get 2D array of lat and lon for metadata dict in radar-coord.
+
+    WARNING: This is a rough lat/lon value, NOT accurate!
+
     Parameters: meta : dict, including LENGTH, WIDTH and LAT/LON_REF1/2/3/4
     Returns:    lats : 2D np.array for latitude  in size of (length, width)
                 lons : 2D np.array for longitude in size of (length, width)

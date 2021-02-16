@@ -21,7 +21,6 @@ from mintpy.objects import (
     geometry,
     giantIfgramStack,
     giantTimeseries,
-    ifgramDatasetNames,
     ifgramStack,
     timeseriesDatasetNames,
     timeseries,
@@ -96,6 +95,9 @@ GDAL2NUMPY_DATATYPE = {
     10: 'complex64',
     11: 'complex128',
 }
+
+# single file (data + attributes) supported by GDAL
+GDAL_FILE_EXTS = ['.tif', '.grd']
 
 # reference: https://subversion.renater.fr/efidir/trunk/efidir_soft/doc/Programming_C_EFIDIR/header_envi.pdf
 ENVI2NUMPY_DATATYPE = {
@@ -356,8 +358,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
                 atr         : dict, metadata of binary file
     """
     # Basic Info
-    fbase, fext = os.path.splitext(os.path.basename(fname))
-    fext = fext.lower()
+    fext = os.path.splitext(os.path.basename(fname))[1].lower()
 
     # metadata
     atr = read_attribute(fname, datasetName=datasetName)
@@ -495,20 +496,37 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
         if 'byte order' in atr.keys() and atr['byte order'] == '0':
             byte_order = 'little-endian'
 
+    # gdal (e.g. GACOS TIF files)
+    elif processor == 'gdal':
+        pass
+
     else:
-        print('Unknown InSAR processor.')
+        print('Unknown InSAR processor: {}'.format(processor))
 
     # reading
-    data = read_binary(fname, (length, width),
-                       box=box,
-                       data_type=data_type,
-                       byte_order=byte_order,
-                       num_band=num_band,
-                       band_interleave=band_interleave,
-                       band=band,
-                       cpx_band=cpx_band,
-                       xstep=xstep,
-                       ystep=ystep)
+    if processor == 'gdal':
+        data = read_gdal(
+            fname,
+            box=box,
+            band=band,
+            cpx_band=cpx_band,
+            xstep=xstep,
+            ystep=ystep,
+        )
+    else:
+        data = read_binary(
+            fname,
+            shape=(length, width),
+            box=box,
+            data_type=data_type,
+            byte_order=byte_order,
+            num_band=num_band,
+            band_interleave=band_interleave,
+            band=band,
+            cpx_band=cpx_band,
+            xstep=xstep,
+            ystep=ystep,
+        )
 
     if 'DATA_TYPE' not in atr:
         atr['DATA_TYPE'] = data_type
@@ -771,7 +789,11 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
         ]
         metafiles = [i for i in metafiles if os.path.isfile(i)]
         if len(metafiles) == 0:
-            raise FileNotFoundError('No metadata file found for data file: {}'.format(fname))
+            # for .tif/.grd files, extract metadata from the file itself
+            if fext in GDAL_FILE_EXTS:
+                metafiles = [fname]
+            else:
+                raise FileNotFoundError('No metadata file found for data file: {}'.format(fname))
 
         atr = {}
         # PROCESSOR
@@ -791,32 +813,37 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             if 'PROCESSOR' not in atr.keys():
                 atr['PROCESSOR'] = 'roipac'
 
+        elif fext in GDAL_FILE_EXTS:
+            atr['PROCESSOR'] = 'gdal'
+
         if 'PROCESSOR' not in atr.keys():
             atr['PROCESSOR'] = 'mintpy'
 
         # Read metadata file and FILE_TYPE
         metafile = metafiles[0]
+        meta_ext = os.path.splitext(metafile)[1]
+
         # ignore certain meaningless file extensions
         while fext in ['.geo', '.rdr', '.full', '.wgs84']:
             fbase, fext = os.path.splitext(fbase)
         if not fext:
             fext = fbase
 
-        if metafile.endswith('.rsc'):
+        if meta_ext == '.rsc':
             atr.update(read_roipac_rsc(metafile))
             if 'FILE_TYPE' not in atr.keys():
                 atr['FILE_TYPE'] = fext
 
-        elif metafile.endswith('.xml'):
+        elif meta_ext == '.xml':
             atr.update(read_isce_xml(metafile))
             if 'FILE_TYPE' not in atr.keys():
                 atr['FILE_TYPE'] = fext
 
-        elif metafile.endswith('.par'):
+        elif meta_ext == '.par':
             atr.update(read_gamma_par(metafile))
             atr['FILE_TYPE'] = fext
 
-        elif metafile.endswith('.hdr'):
+        elif meta_ext == '.hdr':
             atr.update(read_envi_hdr(metafile))
 
             # both snap and isce produce .hdr file
@@ -836,7 +863,7 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             else:
                 atr['FILE_TYPE'] = fext
 
-        elif metafile.endswith('.vrt'):
+        elif meta_ext in ['.vrt'] + GDAL_FILE_EXTS:
             atr.update(read_gdal_vrt(metafile))
             atr['FILE_TYPE'] = fext
 
@@ -869,6 +896,9 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
             atr['UNIT'] = '1'
 
     # FILE_PATH
+    if 'FILE_PATH' in atr.keys() and 'OG_FILE_PATH' not in atr.keys():
+        # need to check original source file to successfully subset legacy-sensor products
+        atr['OG_FILE_PATH'] = atr['FILE_PATH']
     atr['FILE_PATH'] = os.path.abspath(fname)
 
     if standardize:
@@ -1214,7 +1244,8 @@ def attribute_gamma2roipac(par_dict_in):
 def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
                 num_band=1, band_interleave='BIL', band=1, cpx_band='phase',
                 xstep=1, ystep=1):
-    """Read binary file using np.fromfile
+    """Read binary file using np.fromfile.
+
     Parameters: fname : str, path/name of data file to read
                 shape : tuple of 2 int in (length, width)
                 box   : tuple of 4 int in (x0, y0, x1, y1)
@@ -1313,10 +1344,70 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
     return data
 
 
+def read_gdal(fname, box=None, band=1, cpx_band='phase', xstep=1, ystep=1):
+    """Read binary data file using gdal.
+
+    Parameters: fname    : str, path/name of data file to read
+                box      : tuple of 4 int in (x0, y0, x1, y1)
+                band     : int, band of interest, between 1 and num_band.
+                cpx_band : str, e.g.: real, imag, phase, mag, cpx
+                x/ystep  : int, number of pixels to pick/multilook for each output pixel
+    Returns:    data     : 2D np.array
+    """
+    try:
+        from osgeo import gdal
+    except ImportError:
+        raise ImportError('Cannot import gdal!')
+
+    # open data file
+    ds = gdal.Open(fname, gdal.GA_ReadOnly)
+    bnd = ds.GetRasterBand(band)
+
+    # box
+    if not box:
+        box = (0, 0, ds.RasterXSize, ds.RasterYSize)
+
+    # read
+    # link: https://gdal.org/python/osgeo.gdal.Band-class.html#ReadAsArray
+    kwargs = dict(xoff=box[0],
+                  yoff=box[1],
+                  win_xsize=box[2]-box[0],
+                  win_ysize=box[3]-box[1])
+    data = bnd.ReadAsArray(**kwargs)
+
+    # adjust output band for complex data
+    data_type = GDAL2ISCE_DATATYPE[bnd.DataType]
+    if data_type.replace('>', '').startswith('c'):
+        if cpx_band.startswith('real'):
+            data = data.real
+        elif cpx_band.startswith('imag'):
+            data = data.imag
+        elif cpx_band.startswith('pha'):
+            data = np.angle(data)
+        elif cpx_band.startswith('mag'):
+            data = np.absolute(data)
+        elif cpx_band.startswith(('cpx', 'complex')):
+            pass
+        else:
+            raise ValueError('unrecognized complex band:', cpx_band)
+
+    # skipping/multilooking
+    if xstep * ystep > 1:
+        # output size if x/ystep > 1
+        xsize = int((box[2] - box[0]) / xstep)
+        ysize = int((box[3] - box[1]) / ystep)
+
+        # sampling
+        data = data[int(ystep/2)::ystep,
+                    int(xstep/2)::xstep]
+        data = data[:ysize, :xsize]
+
+    return data
+
+
 ############################ Obsolete Functions ###############################
 def read_float32(fname, box=None, byte_order='l'):
-    """Reads roi_pac data (RMG format, interleaved line by line)
-    should rename it to read_rmg_float32()
+    """Reads roi_pac data (RMG format, interleaved line by line).
 
     ROI_PAC file: .unw, .cor, .hgt, .trans, .msk
 
