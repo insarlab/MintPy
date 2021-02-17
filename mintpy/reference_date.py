@@ -125,9 +125,9 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0):
     atr = readfile.read_attribute(ts_file)
     dsName = atr['FILE_TYPE']
 
-    # if input same reference is the same as the existing one.
-    if ref_date == atr['REF_DATE']:
-        print('same reference date chosen as existing reference date.')
+    # if the input reference date is the same as the existing one.
+    if ref_date == atr.get('REF_DATE', None):
+        print('input refDate is the same as the existing REF_DATE.')
         if outfile == ts_file:
             print('Nothing to be done.')
             return ts_file
@@ -154,7 +154,6 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0):
     # updating existing file or write new file
     if outfile == ts_file:
         mode = 'r+'
-
     else:
         mode = 'a'
         # instantiate output file
@@ -174,10 +173,11 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0):
         ts_data = readfile.read(ts_file, box=box)[0]
 
         print('referencing in time ...')
-        ts_data -= np.tile(ts_data[ref_idx, :, :].reshape(1, ts_data.shape[1], ts_data.shape[2]), (ts_data.shape[0], 1, 1))
+        dshape = ts_data.shape
+        ts_data -= np.tile(ts_data[ref_idx, :, :].reshape(1, dshape[1], dshape[2]), (dshape[0], 1, 1))
 
         # writing
-        block = (0, 0, box[1], box[3], box[0], box[2])
+        block = (0, num_date, box[1], box[3], box[0], box[2])
         writefile.write_hdf5_block(outfile,
                                    data=ts_data,
                                    datasetName=dsName,
@@ -186,8 +186,9 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0):
 
     # update metadata
     print('update "REF_DATE" attribute value to {}'.format(ref_date))
-    with h5py.File(ts_file, 'r+') as f:
+    with h5py.File(outfile, 'r+') as f:
         f.attrs['REF_DATE'] = ref_date
+        f.attrs['FILE_PATH'] = outfile
 
     return outfile
 
