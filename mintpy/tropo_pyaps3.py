@@ -163,7 +163,7 @@ def cmd_line_parse(iargs=None):
     for key in ['dis_file', 'geom_file']:
         fname = vars(inps)[key]
         if fname and not os.path.isfile(fname):
-            raise FileExistsError('input file not exist: {}'.format(fname))
+            raise FileNotFoundError('input file not exist: {}'.format(fname))
 
     ## required options (for date/time): --file OR --date-list
     if (not inps.dis_file 

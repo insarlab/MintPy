@@ -400,66 +400,70 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
 
     print('-'*50)
     # box to gdal arguments
-    # link: https://gdal.org/python/osgeo.gdal.Dataset-class.html#ReadAsArray
+    # link: https://gdal.org/python/osgeo.gdal.Band-class.html#ReadAsArray
     if box is not None:
         kwargs = dict(xoff=box[0],
                       yoff=box[1],
-                      xsize=box[2]-box[0],
-                      ysize=box[3]-box[1])
+                      win_xsize=box[2]-box[0],
+                      win_ysize=box[3]-box[1])
     else:
         kwargs = dict()
 
     print('writing data to HDF5 file {} with a mode ...'.format(outfile))
-    h5 = h5py.File(outfile, 'a')
+    with h5py.File(outfile, 'a') as f:
 
-    # height
-    ds = gdal.Open(demFile, gdal.GA_ReadOnly)
-    data = np.array(ds.ReadAsArray(**kwargs), dtype=np.float32)
-    data = multilook_data(data, ystep, xstep, method='nearest')
-    data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
-    h5['height'][:,:] = data
-
-    # slantRangeDistance
-    h5['slantRangeDistance'][:,:] = float(h5.attrs['STARTING_RANGE'])
-
-    # incidenceAngle
-    ds = gdal.Open(incAngleFile, gdal.GA_ReadOnly)
-    data = ds.ReadAsArray(**kwargs)
-    data = multilook_data(data, ystep, xstep, method='nearest')
-    data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
-    h5['incidenceAngle'][:,:] = data
-
-    # azimuthAngle
-    if azAngleFile is not None:
-        ds = gdal.Open(azAngleFile, gdal.GA_ReadOnly)
-        data = ds.ReadAsArray(**kwargs)
+        # height
+        ds = gdal.Open(demFile, gdal.GA_ReadOnly)
+        bnd = ds.GetRasterBand(1)
+        data = np.array(bnd.ReadAsArray(**kwargs), dtype=np.float32)
         data = multilook_data(data, ystep, xstep, method='nearest')
-        data[data == ds.GetRasterBand(1).GetNoDataValue()] = np.nan
-        # azimuth angle of the line-of-sight vector:
-        # ARIA: vector from target to sensor measured from the east  in counterclockwise direction
-        # ISCE: vector from sensor to target measured from the north in counterclockwise direction
-        # convert ARIA format to ISCE format, which is used in mintpy
-        data -= 90
-        h5['azimuthAngle'][:,:] = data
+        data[data == bnd.GetNoDataValue()] = np.nan
+        f['height'][:,:] = data
 
-    # waterMask
-    if waterMaskFile is not None:
-        # read
-        ds = gdal.Open(waterMaskFile, gdal.GA_ReadOnly)
-        water_mask = ds.ReadAsArray(**kwargs)
-        water_mask = multilook_data(water_mask, ystep, xstep, method='nearest')
-        water_mask[water_mask == ds.GetRasterBand(1).GetNoDataValue()] = False
+        # slantRangeDistance
+        f['slantRangeDistance'][:,:] = float(f.attrs['STARTING_RANGE'])
 
-        # assign False to invalid pixels based on incAngle data
+        # incidenceAngle
         ds = gdal.Open(incAngleFile, gdal.GA_ReadOnly)
-        data = ds.ReadAsArray(**kwargs)
+        bnd = ds.GetRasterBand(1)
+        data = bnd.ReadAsArray(**kwargs)
         data = multilook_data(data, ystep, xstep, method='nearest')
-        water_mask[data == ds.GetRasterBand(1).GetNoDataValue()] = False
+        data[data == bnd.GetNoDataValue()] = np.nan
+        f['incidenceAngle'][:,:] = data
 
-        # write
-        h5['waterMask'][:,:] = water_mask
+        # azimuthAngle
+        if azAngleFile is not None:
+            ds = gdal.Open(azAngleFile, gdal.GA_ReadOnly)
+            bnd = ds.GetRasterBand(1)
+            data = bnd.ReadAsArray(**kwargs)
+            data = multilook_data(data, ystep, xstep, method='nearest')
+            data[data == bnd.GetNoDataValue()] = np.nan
+            # azimuth angle of the line-of-sight vector:
+            # ARIA: vector from target to sensor measured from the east  in counterclockwise direction
+            # ISCE: vector from sensor to target measured from the north in counterclockwise direction
+            # convert ARIA format to ISCE format, which is used in mintpy
+            data -= 90
+            f['azimuthAngle'][:,:] = data
 
-    h5.close()
+        # waterMask
+        if waterMaskFile is not None:
+            # read
+            ds = gdal.Open(waterMaskFile, gdal.GA_ReadOnly)
+            bnd = ds.GetRasterBand(1)
+            water_mask = bnd.ReadAsArray(**kwargs)
+            water_mask = multilook_data(water_mask, ystep, xstep, method='nearest')
+            water_mask[water_mask == bnd.GetNoDataValue()] = False
+
+            # assign False to invalid pixels based on incAngle data
+            ds = gdal.Open(incAngleFile, gdal.GA_ReadOnly)
+            bnd = ds.GetRasterBand(1)
+            data = bnd.ReadAsArray(**kwargs)
+            data = multilook_data(data, ystep, xstep, method='nearest')
+            water_mask[data == bnd.GetNoDataValue()] = False
+
+            # write
+            f['waterMask'][:,:] = water_mask
+
     print('finished writing to HD5 file: {}'.format(outfile))
     return outfile
 
@@ -527,53 +531,54 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, ampStack=None
         kwargs = dict()
 
     print('writing data to HDF5 file {} with a mode ...'.format(outfile))
-    h5 = h5py.File(outfile, "a")
+    with h5py.File(outfile, "a") as f:
 
-    prog_bar = ptime.progressBar(maxValue=nPairs)
-    for ii in range(nPairs):
-        d12 = d12List[ii]
-        bndIdx = d12BandDict[d12]
-        prog_bar.update(ii+1, suffix='{}'.format(d12))
+        prog_bar = ptime.progressBar(maxValue=nPairs)
+        for ii in range(nPairs):
+            d12 = d12List[ii]
+            bndIdx = d12BandDict[d12]
+            prog_bar.update(ii+1, suffix='{}'.format(d12))
 
-        h5["date"][ii,0] = d12.split("_")[0].encode("utf-8")
-        h5["date"][ii,1] = d12.split("_")[1].encode("utf-8")
-        h5["dropIfgram"][ii] = True
+            f["date"][ii,0] = d12.split("_")[0].encode("utf-8")
+            f["date"][ii,1] = d12.split("_")[1].encode("utf-8")
+            f["dropIfgram"][ii] = True
 
-        bnd = dsUnw.GetRasterBand(bndIdx)
-        data = bnd.ReadAsArray(**kwargs)
-        data = multilook_data(data, ystep, xstep, method='nearest')
-        data[data == noDataValueUnw] = 0      #assign pixel with no-data to 0
-        h5["unwrapPhase"][ii,:,:] = -1.0*data #date2_date1 -> date1_date2
-
-        bperp = float(bnd.GetMetadata("unwrappedPhase")["perpendicularBaseline"])
-        h5["bperp"][ii] = -1.0*bperp          #date2_date1 -> date1_date2
-
-        bnd = dsCoh.GetRasterBand(bndIdx)
-        data = bnd.ReadAsArray(**kwargs)
-        data = multilook_data(data, ystep, xstep, method='nearest')
-        data[data == noDataValueCoh] = 0      #assign pixel with no-data to 0
-        h5["coherence"][ii,:,:] = data
-
-        bnd = dsComp.GetRasterBand(bndIdx)
-        data = bnd.ReadAsArray(**kwargs)
-        data = multilook_data(data, ystep, xstep, method='nearest')
-        data[data == noDataValueComp] = 0     #assign pixel with no-data to 0
-        h5["connectComponent"][ii,:,:] = data
-
-        if dsAmp is not None:
-            bnd = dsAmp.GetRasterBand(bndIdx)
+            bnd = dsUnw.GetRasterBand(bndIdx)
             data = bnd.ReadAsArray(**kwargs)
             data = multilook_data(data, ystep, xstep, method='nearest')
-            data[data == noDataValueAmp] = 0     #assign pixel with no-data to 0
-            h5["magnitude"][ii,:,:] = data
+            data[data == noDataValueUnw] = 0      #assign pixel with no-data to 0
+            data *= -1.0                          #date2_date1 -> date1_date2
+            f["unwrapPhase"][ii,:,:] = data
 
-    prog_bar.close()
+            bperp = float(bnd.GetMetadata("unwrappedPhase")["perpendicularBaseline"])
+            bperp *= -1.0                         #date2_date1 -> date1_date2
+            f["bperp"][ii] = bperp
 
-    # add MODIFICATION_TIME metadata to each 3D dataset
-    for dsName in ['unwrapPhase','coherence','connectComponent']:
-        h5[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
+            bnd = dsCoh.GetRasterBand(bndIdx)
+            data = bnd.ReadAsArray(**kwargs)
+            data = multilook_data(data, ystep, xstep, method='nearest')
+            data[data == noDataValueCoh] = 0      #assign pixel with no-data to 0
+            f["coherence"][ii,:,:] = data
 
-    h5.close()
+            bnd = dsComp.GetRasterBand(bndIdx)
+            data = bnd.ReadAsArray(**kwargs)
+            data = multilook_data(data, ystep, xstep, method='nearest')
+            data[data == noDataValueComp] = 0     #assign pixel with no-data to 0
+            f["connectComponent"][ii,:,:] = data
+
+            if dsAmp is not None:
+                bnd = dsAmp.GetRasterBand(bndIdx)
+                data = bnd.ReadAsArray(**kwargs)
+                data = multilook_data(data, ystep, xstep, method='nearest')
+                data[data == noDataValueAmp] = 0  #assign pixel with no-data to 0
+                f["magnitude"][ii,:,:] = data
+
+        prog_bar.close()
+
+        # add MODIFICATION_TIME metadata to each 3D dataset
+        for dsName in ['unwrapPhase','coherence','connectComponent']:
+            f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
+
     print('finished writing to HD5 file: {}'.format(outfile))
     dsUnw = None
     dsCoh = None
