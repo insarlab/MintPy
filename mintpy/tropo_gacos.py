@@ -75,7 +75,7 @@ def cmd_line_parse(iargs=None):
     for key in ['dis_file', 'geom_file']:
         fname = vars(inps)[key]
         if fname and not os.path.isfile(fname):
-            raise FileExistsError('input file not exist: {}'.format(fname))
+            raise FileNotFoundError('input file not exist: {}'.format(fname))
 
     # check input files - processors & coordinates
     atr1 = readfile.read_attribute(inps.dis_file)
