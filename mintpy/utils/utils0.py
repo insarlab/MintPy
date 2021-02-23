@@ -713,6 +713,14 @@ def median_abs_deviation(data, center=None, scale=0.67449):
         statsmodels.robust.mad() in statsmodels
             https://www.statsmodels.org/dev/generated/statsmodels.robust.scale.mad.html
 
+    The differences are:
+        1. scipy: out = out / scale while mintpy: out = out * scale
+        2. scipy propagates nan by default, while mintpy omit nan by default.
+
+    The following two are equivalent for a 2D np.ndarray X:
+        mintpy.utils.utils0.median_abs_deviation(X)
+        scipy.stats.median_abs_deviation(X, axis=-1, center=np.nanmedian, scale=1./0.67449, nan_policy='omit')
+
     Parameters: data   - 1/2D np.ndarray, input array
                 center - 0/1D np.ndarray or None
                 scale  - float, the normalization constant
