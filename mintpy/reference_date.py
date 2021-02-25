@@ -43,6 +43,8 @@ def create_parser():
     parser.add_argument('-t', '--template', dest='template_file',
                         help='template file with options')
     parser.add_argument('-o', '--outfile', help='Output file name.')
+    parser.add_argument('--force', action='store_true',
+                        help='Force updating the data matrix.')
 
     # computing
     parser = arg_group.add_memory_argument(parser)
@@ -108,7 +110,7 @@ def read_ref_date(inps):
 
 
 ##################################################################
-def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0):
+def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0, force=False):
     """Change input file reference date to a different one.
     Parameters: ts_file : str, timeseries file to be changed
                 ref_date : str, date in YYYYMMDD format
@@ -126,7 +128,7 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0):
     dsName = atr['FILE_TYPE']
 
     # if the input reference date is the same as the existing one.
-    if ref_date == atr.get('REF_DATE', None):
+    if ref_date == atr.get('REF_DATE', None) and not force:
         print('input refDate is the same as the existing REF_DATE.')
         if outfile == ts_file:
             print('Nothing to be done.')
@@ -210,7 +212,8 @@ def main(iargs=None):
             change_timeseries_ref_date(ts_file,
                                        ref_date=inps.refDate,
                                        outfile=inps.outfile,
-                                       max_memory=inps.maxMemory)
+                                       max_memory=inps.maxMemory,
+                                       force=inps.force)
 
             #to distinguish the modification time of input files
             time.sleep(1)
