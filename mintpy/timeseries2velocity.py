@@ -268,6 +268,17 @@ def read_date_info(inps):
     tsobj.open()
     inps.excludeDate = read_exclude_date(inps, tsobj.dateList)
 
+    # exclude dates without obs data [for offset time-series only for now]
+    if os.path.basename(inps.timeseries_file).startswith('timeseriesRg'):
+        date_list = timeseries(inps.timeseries_file).get_date_list()
+        data, atr = readfile.read(inps.timeseries_file)
+        flag = np.nansum(data, axis=(1,2)) == 0
+        flag[date_list.index(atr['REF_DATE'])] = 0
+        if np.sum(flag) > 0:
+            print('number of empty dates to exclude: {}'.format(np.sum(flag)))
+            inps.excludeDate += np.array(date_list)[flag].tolist()
+            inps.excludeDate = sorted(list(set(inps.excludeDate)))
+
     # Date used for estimation inps.dateList
     inps.dateList = [i for i in tsobj.dateList if i not in inps.excludeDate]
     inps.numDate = len(inps.dateList)
