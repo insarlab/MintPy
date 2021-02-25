@@ -351,7 +351,7 @@ def read_timeseries_data(inps):
     mask[msk == 0.] = False
     del msk
 
-    ts_stack = np.sum(ts_data[0], axis=0)
+    ts_stack = np.nansum(ts_data[0], axis=0)
     mask[np.isnan(ts_stack)] = False
     # keep all-zero value for unwrapError time-series
     if atr['UNIT'] not in ['cycle']:
@@ -439,7 +439,7 @@ def plot_ts_scatter(ax, dis_ts, inps, ppar):
 def _adjust_ts_axis(ax, inps):
     ax.tick_params(which='both', direction='in', labelsize=inps.font_size, bottom=True, top=True, left=True, right=True)
     ax = pp.auto_adjust_xaxis_date(ax, inps.yearList, fontsize=inps.font_size)[0]
-    ax.set_xlabel('Time [years]', fontsize=inps.font_size)
+    #ax.set_xlabel('Time [years]', fontsize=inps.font_size)
     ax.set_ylabel('Displacement [{}]'.format(inps.disp_unit), fontsize=inps.font_size)
     ax.set_ylim(inps.ylim)
     return ax
