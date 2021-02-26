@@ -678,6 +678,22 @@ def median_abs_deviation_threshold(data, center=None, cutoff=3.):
     return threshold
 
 
+def root_mean_sq_error(x, y=None):
+    """Calculate the root-mean-square error between x and y."""
+    # make a copy & ensure 1D numpy array format
+    x = np.array(x).flatten()
+    if y is not None:
+        y = np.array(y).flatten()
+        if x.size != y.size:
+            raise ValueError('Input x & y have different size: {} vs. {}!'.format(x.size, y.size))
+        x -= y
+
+    # omit NaN values
+    x = x[~np.isnan(x)]
+    rmse = np.sqrt(np.sum(x**2) / (x.size - 1))
+    return rmse
+
+
 def ceil_to_1(x):
     """Return the most significant digit of input number and ceiling it"""
     digit = int(np.floor(np.log10(abs(x))))
