@@ -2,7 +2,7 @@
 ###############################################################
 # Plot Results from Routine Workflow with smallbaselineApp.py
 # Author: Zhang Yunjun, 2017-07-23
-# Latest update: 2020-03-20
+# Latest update: 2021-02-25
 ###############################################################
 
 
@@ -56,10 +56,10 @@ fi
 ## Loaded Dataset
 if [ $plot_loaded_data -eq 1 ]; then
     file=inputs/ifgramStack.h5
-    test -f $file && h5ls $file/unwrapPhase      && $view $file unwrapPhase-       --zero-mask --wrap >> $log_file
-    test -f $file && h5ls $file/unwrapPhase      && $view $file unwrapPhase-       --zero-mask        >> $log_file
-    test -f $file && h5ls $file/coherence        && $view $file coherence-         --mask no          >> $log_file
-    test -f $file && h5ls $file/connectComponent && $view $file connectComponent-  --mask no          >> $log_file
+    test -f $file && h5ls $file/unwrapPhase      && $view $file unwrapPhase- --zero-mask --wrap -c cmy >> $log_file
+    test -f $file && h5ls $file/unwrapPhase      && $view $file unwrapPhase- --zero-mask               >> $log_file
+    test -f $file && h5ls $file/coherence        && $view $file coherence-         --mask no -v 0 1    >> $log_file
+    test -f $file && h5ls $file/connectComponent && $view $file connectComponent-  --mask no           >> $log_file
 
     # phase-unwrapping error correction
     for dset in unwrapPhase_bridging unwrapPhase_phaseClosure unwrapPhase_bridging_phaseClosure; do
@@ -79,29 +79,7 @@ fi
 ## Time-series files
 opt='--mask '$mask_file' --noaxis -u cm --wrap --wrap-range -10 10 '
 if [ $plot_timeseries -eq 1 ]; then
-    file=timeseries.h5;                             test -f $file && $view $file $opt >> $log_file
-
-    #LOD for Envisat
-    file=timeseries_LODcor.h5;                      test -f $file && $view $file $opt >> $log_file
-    file=timeseries_LODcor_ECMWF.h5;                test -f $file && $view $file $opt >> $log_file
-    file=timeseries_LODcor_ECMWF_demErr.h5;         test -f $file && $view $file $opt >> $log_file
-    file=timeseries_LODcor_ECMWF_ramp.h5;           test -f $file && $view $file $opt >> $log_file
-    file=timeseries_LODcor_ECMWF_ramp_demErr.h5;    test -f $file && $view $file $opt >> $log_file
-
-    #w tropo delay corrections
-    for tropo in ERA5 ECMWF MERRA NARR tropHgt; do
-        file=timeseries_${tropo}.h5;                test -f $file && $view $file $opt >> $log_file
-        file=timeseries_${tropo}_demErr.h5;         test -f $file && $view $file $opt >> $log_file
-        file=timeseries_${tropo}_ramp.h5;           test -f $file && $view $file $opt >> $log_file
-        file=timeseries_${tropo}_ramp_demErr.h5;    test -f $file && $view $file $opt >> $log_file
-    done
-
-    #w/o trop delay correction
-    file=timeseries_ramp.h5;                        test -f $file && $view $file $opt >> $log_file
-    file=timeseries_demErr_ramp.h5;                 test -f $file && $view $file $opt >> $log_file
-
-    #w/o trop delay and deramp
-    file=timeseries_demErr.h5;                      test -f $file && $view $file $opt >> $log_file
+    find . -name 'timeseries_*.h5' -exec $view {} $opt >> $log_file \;
 fi
 
 

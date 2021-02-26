@@ -1208,6 +1208,11 @@ def plot_figure(j, inps, metadata):
         im = plot_subplot4figure(i, inps, ax=ax,
                                  data=data[idx, :, :],
                                  metadata=metadata)
+
+        # colorbar for each subplot
+        if inps.disp_cbar and not inps.vlim:
+            fig.colorbar(im, ax=ax, pad=0.03, shrink=0.5, aspect=30, orientation='vertical')
+
         prog_bar.update(idx+1, suffix=inps.dset[i].split('/')[-1])
     prog_bar.close()
     del data
@@ -1229,10 +1234,13 @@ def plot_figure(j, inps, metadata):
         vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
 
     # Colorbar
-    if not inps.vlim:
-        vprint('Note: different color scale for EACH subplot!')
-    else:
-        if inps.disp_cbar:
+    if inps.disp_cbar:
+        if not inps.vlim:
+            vprint('Note: different color scale for EACH subplot!')
+            vprint('Adjust figsize for the colorbar of each subplot.')
+            fig.set_size_inches(inps.fig_size[0] * 1.1,
+                                inps.fig_size[1])
+        else:
             cbar_length = 0.4
             if inps.fig_size[1] > 8.0:
                 cbar_length /= 2

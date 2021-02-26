@@ -619,12 +619,15 @@ def prepare_metadata(iDict):
         from mintpy import prep_isce
         from mintpy.utils.isce_utils import get_processor
 
+        # metadata
         meta_files = sorted(glob.glob(iDict['mintpy.load.metaFile']))
-        if len(meta_files) < 1:
+        if len(meta_files) > 0:
+            meta_file = meta_files[0]
+        else:
             warnings.warn('No input metadata file found: {}'.format(iDict['mintpy.load.metaFile']))
+            meta_file = 'auto'
 
-        # metadata and auxliary data
-        meta_file = meta_files[0]
+        # auxliary data
         baseline_dir = iDict['mintpy.load.baselineDir']
         geom_dir = os.path.dirname(iDict['mintpy.load.demFile'])
 
