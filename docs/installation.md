@@ -6,16 +6,16 @@ Tested on macOS and Linux, not sure about Windows.
 
 Install Xcode with command line tools, if you have not already done so.
 
-+ Install `Xcode` from App store
++   Install `Xcode` from App store
 
-+ Install `command line tools` within XCode and agree to the terms of license.
++   Install `command line tools` within XCode and agree to the terms of license.
 
 ```
 xcode-select --install -s /Applications/Xcode.app/Contents/Developer/
 sudo xcodebuild -license
 ```
 
-+ Install [XQuartz](https://www.xquartz.org), then restart the terminal.
++   Install [XQuartz](https://www.xquartz.org), then restart the terminal.
 
 ### Notes for Docker users ###
 
@@ -25,7 +25,7 @@ Docker allows one to run MintPy in a dedicated container (essentially an efficie
 docker pull andretheronsa/mintpy:latest
 ```
 
-### 1. Download and setup ###
+### 1. Download and Setup ###
 
 Run the following in your terminal to download the development version of MintPy and PyAPS:
 
@@ -50,9 +50,9 @@ export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:~/tools/PyAPS
 
 MintPy is written in Python3 and relies on several Python modules, check the [requirements.txt](https://github.com/insarlab/MintPy/blob/main/docs/requirements.txt) file for details. We recommend using [conda](https://docs.conda.io/en/latest/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree). You can control the number of threads used by setting the _environment variables_, e.g. `OMP_NUM_THREADS`.
 
-#### via conda ####
+#### a. via conda ####
 
-Run the following in your terminal to install [miniconda](https://docs.conda.io/en/latest/miniconda.html):
+Install [miniconda](https://docs.conda.io/en/latest/miniconda.html) if you have not already done so. You may need to close and restart the shell for changes to take effect.
 
 ```bash
 # download and install miniconda
@@ -64,8 +64,6 @@ chmod +x Miniconda3-latest-MacOSX-x86_64.sh
 ~/tools/miniconda3/bin/conda init bash
 ```
 
-You may need to close and restart the shell for changes to take effect.
-
 Run the following in your terminal to install the dependencies to a new environment _**mintpy**_ (recommended):
 
 ```
@@ -73,17 +71,15 @@ conda env create -f $MINTPY_HOME/docs/conda_env.yml
 conda activate mintpy
 ```
 
-Or run the following in your terminal to install the dependencies to the default environment _**base**_:
+Or run the following in your terminal to install the dependencies to your custom environment, the default is _**base**_:
 
 ```
-# install dependencies with conda
-conda config --add channels conda-forge
-conda install --yes --file $MINTPY_HOME/docs/conda.txt
+conda install --yes -c conda-forge --file ~/tools/MintPy/docs/conda.txt
 $CONDA_PREFIX/bin/pip install git+https://github.com/insarlab/PySolid.git
 $CONDA_PREFIX/bin/pip install git+https://github.com/tylere/pykml.git
 ```
 
-#### via MacPorts ####
+#### b. via MacPorts ####
 
 Install [macports](https://www.macports.org/install.php) if you have not done so. Add the following at the bottom of your **_~/.bash_profile_** file:
 
@@ -104,14 +100,14 @@ Update the port tree with the following command. If your network prevent the use
 sudo port selfupdate
 ```
 
-Run the following in your terminal in _bash_:
+Run the following in your terminal in _bash_ to install the dependencies:
 
 ```bash
 # install dependencies with macports
 # use "port -N install" to use the safe default for prompt questions
 sudo port install $(cat $MINTPY_HOME/docs/ports.txt)
 
-# install dependencies not available on macports: pykml, pykdtree, pyresample, cdsapi, pyhdf
+# install dependencies not available on macports: pysolid, pykml, pykdtree, pyresample, cdsapi, pyhdf
 sudo -H /opt/local/bin/pip install git+https://github.com/insarlab/PySolid.git
 sudo -H /opt/local/bin/pip install git+https://github.com/tylere/pykml.git
 sudo -H /opt/local/bin/pip install git+https://github.com/storpipfugl/pykdtree.git
@@ -120,17 +116,31 @@ sudo -H /opt/local/bin/pip install git+https://github.com/ecmwf/cdsapi.git
 sudo -H /opt/local/bin/pip install git+https://github.com/fhs/pyhdf.git
 ```
 
+### Notes on [PySolid](https://github.com/insarlab/PySolid) ###
+
+We use PySolid for solid Earth tides correction. If the pre-compiled version install from above does not work, run the following to compile from source:
+
+```bash
+# install Fortran compiler via conda
+conda install -c conda-forge fortran-compiler
+
+# compile Fortran code into a Python interface using f2py
+cd ~/tools/PySolid/pysolid
+f2py -c -m solid solid.for
+```
+
 ### Notes on [PyAPS](https://github.com/yunjunz/PyAPS) ###
 
-+ We use PyAPS (Jolivet et al., 2011; 2014) for tropospheric delay correction calculated from Global Atmospheric Models (GAMs) such as ERA-5, ERA-Interim, HRES-ECMWF, MERRA and NARR.
++   We use PyAPS (Jolivet et al., 2011; 2014) for tropospheric delay correction calculated from Global Atmospheric Models (GAMs) such as ERA-5, ERA-Interim, HRES-ECMWF, MERRA and NARR.
 
-+ Check [Earthdef/PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main#) for accounts setup information for ERA-Interim and MERRA.
++   Check [Earthdef/PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main#) for accounts setup information for ERA-Interim and MERRA.
 
-+ Check [GitHub/PyAPS](https://github.com/yunjunz/PyAPS) for account setup for ERA-5. Make sure that you:
-  - accept the data license in the Terms of use on ECMWF website and 
-  - run `examples/TestECMWF.ipynb` to test the data downloading and running.
++   Check [GitHub/PyAPS](https://github.com/yunjunz/PyAPS) for account setup for ERA-5. **Make sure that you:**
 
-+ If you defined an environment variable named `WEATHER_DIR` to contain the path to a
+    -   accept the data license in the Terms of use on ECMWF website and 
+    -   run `examples/TestECMWF.ipynb` to test the data downloading and running.
+
++   If you defined an environment variable named `WEATHER_DIR` to contain the path to a
 directory, MintPy applications will download the GAM files into the indicated directory. Also MintPy
 application will look for the GAM files in the directory before downloading a new one to prevent downloading
 multiple copies if you work with different dataset that cover the same date/time.
