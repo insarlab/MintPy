@@ -4,7 +4,7 @@ MintPy mainly uses attribute names from [ROI_PAC](http://www.geo.cornell.edu/eas
 
 If using ROI_PAC as the InSAR processor, both **baseline parameter RSC** file (i.e. *100416-100901_baseline.rsc*) and **basic metadata file** (i.e. *filt_100416-100901-sim_HDR_4rlks_c10.unw.rsc*) will be imported into MintPy. The following attributes for each interferogram are required in order to run MintPy:
 
-+  FILE_LENGTH = number of rows.  
++  LENGTH = number of rows.  
 +  WIDTH = number of columns.  
 +  X/Y_STEP = (for geocoded product) Ground resolution in degree in Longitude/latitude direction.   
 +  X/Y_FIRST = (for geocoded product) Longitude/latitude in degree of the upper left corner of the first pixel.
@@ -38,7 +38,6 @@ The following attributes vary for each interferogram:
     - for HDF5 files, it's the root level dataset name, such as `velocity, timeseries, ifgramStack, temporalCoherence, mask, HDFEOS, dem, coherence, etc.`;`
     - for binary files, it's the file extension name, such as `.unw, .cor, .int, .amp, .mli, .dem, .hgt, .unw.conncomp, .UTM_TO_RDC, .trans, etc.`, except for ISCE geometry files, which is the file base name such as `hgt, lat, lon, los, shadowMask, incLocal`.  
 +  FILE_PATH = absolute file path   
-+  LENGTH = row number, equivalent to FILE_LENGTH
 +  PROCESSOR = processing software, i.e. isce, aria, snap, gamma, roipac etc.
 +  DATA_TYPE = data type, i.e. float32, int16, etc., for isce product read using GDAL
 +  UNIT = data unit, i.e. m, m/yr, radian, and 1 for file without unit, such as coherence [[source]](https://github.com/insarlab/MintPy/blob/main/mintpy/objects/stack.py#L75)
