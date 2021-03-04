@@ -705,13 +705,14 @@ def check_template_auto_value(templateDict, auto_file='defaults/smallbaselineApp
     return templateDict
 
 
-def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None):
+def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None, save_ramp_coeff=False):
     """ Remove ramp from each 2D matrix of input file
     Parameters: fname     : str, data file to be derampped
                 ramp_type : str, name of ramp to be estimated.
                 mask_file : str, file of mask of pixels used for ramp estimation
                 out_file  : str, output file name
-                datasetName : str, output dataset name, for ifgramStack file type only
+                datasetName     : str, output dataset name, for ifgramStack file type only
+                save_ramp_coeff : bool, save the estimated ramp coefficients to text file
     Returns:    out_file  : str, output file name
     """
     start_time = time.time()
@@ -735,6 +736,16 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
         mask = np.ones((length, width), dtype=np.bool_)
         print('use mask of the whole area')
 
+    # write coefficient of specified surface function fit
+    coeff_file = None
+    if save_ramp_coeff:
+        fbase = os.path.splitext(os.path.basename(fname))[0]
+        coeff_file = os.path.join(os.path.dirname(fbase), 'rampCoeff_{}.txt'.format(fbase))
+        with open(coeff_file, 'w') as f:
+            f.write('# input  file: {}\n'.format(fname))
+            f.write('# output file: {}\n'.format(out_file))
+            f.write('# ramp type: {}\n'.format(ramp_type))
+
     # deramping
     if k == 'timeseries':
         # write HDF5 file with defined metadata and (empty) dataset structure
@@ -745,10 +756,17 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
         num_date = len(date_list)
         prog_bar = ptime.progressBar(maxValue=num_date)
         for i in range(num_date):
+            if coeff_file:
+                # prepend epoch name to line of coefficients
+                with open(coeff_file, 'a') as f:
+                    f.write('{}    '.format((date_list[i])))
             # read
             data = readfile.read(fname, datasetName=date_list[i])[0]
             # deramp
-            data = deramp(data, mask, ramp_type=ramp_type, metadata=atr)[0]
+            data = deramp(data, mask,
+                          ramp_type=ramp_type,
+                          metadata=atr,
+                          coeff_file=coeff_file)[0]
             # write
             writefile.write_hdf5_block(out_file, data,
                                        datasetName='timeseries',
@@ -763,6 +781,7 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
         obj.open(print_msg=False)
         if not datasetName:
             datasetName = 'unwrapPhase'
+
         with h5py.File(fname, 'a') as f:
             ds = f[datasetName]
             dsNameOut = '{}_ramp'.format(datasetName)
@@ -779,8 +798,18 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
 
             prog_bar = ptime.progressBar(maxValue=obj.numIfgram)
             for i in range(obj.numIfgram):
+                if coeff_file:
+                    # prepend IFG date12 to line of coefficients
+                    with open(coeff_file, 'a') as f:
+                        f.write('{}    '.format(str(obj.date12List[i])))
+                # read
                 data = ds[i, :, :]
-                data = deramp(data, mask, ramp_type=ramp_type, metadata=atr)[0]
+                # deramp
+                data = deramp(data, mask,
+                              ramp_type=ramp_type,
+                              metadata=atr,
+                              coeff_file=coeff_file)[0]
+                # write
                 dsOut[i, :, :] = data
                 prog_bar.update(i+1, suffix='{}/{}'.format(i+1, obj.numIfgram))
             prog_bar.close()
@@ -788,8 +817,18 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
 
     # Single Dataset File
     else:
+        if coeff_file:
+            # prepend file-type to line of coefficients
+            with open(coeff_file, 'a') as f:
+                f.write('{}    '.format(atr['FILE_TYPE']))
+        # read
         data = readfile.read(fname)[0]
-        data = deramp(data, mask, ramp_type, metadata=atr)[0]
+        # deramp
+        data = deramp(data, mask,
+                      ramp_type=ramp_type,
+                      metadata=atr,
+                      coeff_file=coeff_file)[0]
+        # write
         print('writing >>> {}'.format(out_file))
         writefile.write(data, out_file=out_file, ref_file=fname)
 

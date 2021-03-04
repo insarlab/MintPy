@@ -45,6 +45,8 @@ def create_parser():
                              'e.g.: unwrapPhase\n' +
                              '      unwrapPhase_bridging')
     parser.add_argument('-o', '--outfile', help='Output file name.')
+    parser.add_argument('--save-ramp-coeff', dest='save_ramp_coeff', action='store_true',
+                        help='Save the estimated ramp coefficients into text file.')
     parser.add_argument('--update', dest='update_mode', action='store_true',
                         help='Enable update mode, and skip inversion if:\n'+
                              '1) output file already exists, readable '+
@@ -115,7 +117,8 @@ def main(iargs=None):
                              ramp_type=inps.surface_type,
                              mask_file=inps.mask_file,
                              out_file=inps.outfile,
-                             datasetName=inps.dset)
+                             datasetName=inps.dset,
+                             save_ramp_coeff=inps.save_ramp_coeff)
 
     # config parameter
     print('add/update the following configuration metadata to file:\n{}'.format(configKeys))
