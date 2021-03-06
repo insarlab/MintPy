@@ -12,5 +12,4 @@ docs/resources/*.pdf
 docs/deps.svg
 isce.log
 mintpy/modis*
-mintpy/objects/solid/solid_f.*.so*
 site/
