@@ -1,4 +1,4 @@
-Hierarchy of sub-modules within MintPy. Level N modules depends on level N-1, N-2, ..., 0 modules.
+Hierarchy of sub-modules within MintPy. Level _N_ modules depends on level _N-1_, _N-2_, ..., 0 modules. Be cautious of introducing circular imports.
 
 ```
 /mintpy
