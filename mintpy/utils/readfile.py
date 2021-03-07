@@ -28,49 +28,53 @@ from mintpy.objects import (
 )
 
 
+SPEED_OF_LIGHT = 299792458.0   # meter/second
+
 standardMetadataKeys = {
-    # ordered in alphabet by value names
-    'swathNumber':'beam_swath',
-    'firstFrameNumber':'first_frame',
-    'lastFrameNumber':'last_frame',
-    'trackNumber':'relative_orbit',
-    'bands': 'number_bands',
-    'interleave': 'scheme',
+    # ROI_PAC/MintPy attributes
+    'ALOOKS'             : ['azimuth_looks'],
+    'RLOOKS'             : ['range_looks'],
+    'AZIMUTH_PIXEL_SIZE' : ['azimuthPixelSize', 'azimuth_pixel_spacing', 'az_pixel_spacing'],
+    'RANGE_PIXEL_SIZE'   : ['rangePixelSize', 'range_pixel_spacing', 'rg_pixel_spacing'],
+    'CENTER_LINE_UTC'    : ['center_time'],
+    'DATA_TYPE'          : ['dataType', 'data_type'],
+    'EARTH_RADIUS'       : ['earthRadius', 'earth_radius_below_sensor', 'earth_radius'],
+    'HEADING'            : ['HEADING_DEG', 'heading'],
+    'HEIGHT'             : ['altitude', 'SC_height'],
+    'LENGTH'             : ['length', 'FILE_LENGTH', 'lines', 'azimuth_lines', 'nlines', 'az_samp', 'interferogram_azimuth_lines'],
+    'ORBIT_DIRECTION'    : ['passDirection'],
+    'PLATFORM'           : ['spacecraftName', 'sensor'],
+    'POLARIZATION'       : ['polarization'],
+    'PRF'                : ['prf'],
+    'STARTING_RANGE'     : ['startingRange', 'near_range_slc'],
+    'WAVELENGTH'         : ['wavelength', 'Wavelength', 'radarWavelength'],
+    'WIDTH'              : ['width', 'Width', 'samples', 'range_samp', 'interferogram_width'],
+    # from PySAR [MintPy<=1.1.1]
+    'REF_DATE'           : ['ref_date'],
+    'REF_LAT'            : ['ref_lat'],
+    'REF_LON'            : ['ref_lon'],
+    'REF_X'              : ['ref_x'],
+    'REF_Y'              : ['ref_y'],
+    'SUBSET_XMIN'        : ['subset_x0'],
+    'SUBSET_XMAX'        : ['subset_x1'],
+    'SUBSET_YMIN'        : ['subset_y0'],
+    'SUBSET_YMAX'        : ['subset_y1'],
+    # from Gamma geo-coordinates - degree / meter
+    'X_FIRST'            : ['corner_lon', 'corner_east'],
+    'Y_FIRST'            : ['corner_lat', 'corner_north'],
+    'X_STEP'             : ['post_lon', 'post_east'],
+    'Y_STEP'             : ['post_lat', 'post_north'],
 
-    'altitude': 'HEIGHT',
-    'azimuth_looks': 'ALOOKS',
-    'azimuthPixelSize': 'AZIMUTH_PIXEL_SIZE',
-    'azimuth_pixel_spacing': 'AZIMUTH_PIXEL_SIZE', 'az_pixel_spacing': 'AZIMUTH_PIXEL_SIZE',
-    'center_time': 'CENTER_LINE_UTC',
+    # HDF-EOS5 attributes
+    'beam_swath'     : ['swathNumber'],
+    'first_frame'    : ['firstFrameNumber'],
+    'last_frame'     : ['lastFrameNumber'],
+    'relative_orbit' : ['trackNumber'],
 
-    # Gamma geo coordinates - degrees
-    'corner_lon': 'X_FIRST', 'post_lon': 'X_STEP',
-    'corner_lat': 'Y_FIRST', 'post_lat': 'Y_STEP',
-    # Gamma geo coordinates - meters
-    'post_east': 'X_STEP',
-    'post_north': 'Y_STEP', 'corner_north': 'Y_FIRST',
-
-    'dataType': 'DATA_TYPE', 'data_type': 'DATA_TYPE',
-    'drop_ifgram': 'DROP_IFGRAM',
-    'earthRadius': 'EARTH_RADIUS', 'earth_radius_below_sensor': 'EARTH_RADIUS',
-    'HEADING_DEG': 'HEADING',
-    'length': 'LENGTH', 'FILE_LENGTH': 'LENGTH', 'lines': 'LENGTH',
-    'passDirection':'ORBIT_DIRECTION',
-    'polarization':'POLARIZATION',
-    'prf': 'PRF',
-    'rangePixelSize': 'RANGE_PIXEL_SIZE',
-    'range_pixel_spacing': 'RANGE_PIXEL_SIZE', 'rg_pixel_spacing': 'RANGE_PIXEL_SIZE',
-    'range_looks': 'RLOOKS',
-    'ref_date': 'REF_DATE',
-    'ref_x': 'REF_X', 'ref_y': 'REF_Y', 'ref_lat': 'REF_LAT', 'ref_lon': 'REF_LON',
-    'spacecraftName':'PLATFORM',
-    'startingRange': 'STARTING_RANGE', 'near_range_slc': 'STARTING_RANGE',
-    'subset_x0': 'SUBSET_XMIN', 'subset_x1': 'SUBSET_XMAX',
-    'subset_y0': 'SUBSET_YMIN', 'subset_y1': 'SUBSET_YMAX',
-    'wavelength': 'WAVELENGTH', 'Wavelength': 'WAVELENGTH', 'radarWavelength': 'WAVELENGTH',
-    'width': 'WIDTH', 'Width': 'WIDTH', 'samples': 'WIDTH',
+    # ISCE attributes
+    'number_bands' : ['bands'],
+    'scheme'       : ['interleave'],
 }
-
 
 GDAL2ISCE_DATATYPE = {
     1 : 'BYTE',
@@ -661,7 +665,7 @@ def get_hdf5_compression(fname):
 
 
 #########################################################################
-def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None):
+def read_attribute(fname, datasetName=None, metafile_ext=None):
     """Read attributes of input file into a dictionary
     Parameters: fname : str, path/name of data file
                 datasetName : str, name of dataset of interest, for file with multiple datasets
@@ -670,7 +674,6 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
                          height      in geometryRadar.h5
                          latitude    in geometryRadar.h5
                          ...
-                standardize : bool, grab standardized metadata key name
     Returns:    atr : dict, attributes dictionary
     """
     fbase, fext = os.path.splitext(os.path.basename(fname))
@@ -904,22 +907,33 @@ def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None)
         atr['OG_FILE_PATH'] = atr['FILE_PATH']
     atr['FILE_PATH'] = os.path.abspath(fname)
 
-    if standardize:
-        atr = standardize_metadata(atr)
+    atr = standardize_metadata(atr)
+
     return atr
 
 
-def standardize_metadata(metaDict, standardKeys=standardMetadataKeys):
-    metaDict_out = {}
-    for k in metaDict.keys():
-        metaDict_out[k] = metaDict[k]
-        if k in standardKeys.keys():
-            k2 = standardKeys[k]
-            if k2 in metaDict.keys():
-                metaDict_out[k2] = metaDict[k2]
-            else:
-                metaDict_out[k2] = metaDict[k]
-    return metaDict_out
+def standardize_metadata(metaDictIn, standardKeys=None):
+    """Convert metadata input ROI_PAC/MintPy format (for metadata with the same values)."""
+    if standardKeys is None:
+        standardKeys = standardMetadataKeys
+
+    # make a copy
+    metaDict = dict()
+    for key, value in iter(metaDictIn.items()):
+        metaDict[key] = value
+
+    # get potential keys to match
+    in_keys = [i for i in metaDict.keys() if i not in standardKeys.keys()]
+    std_keys = [i for i in standardKeys.keys() if i not in metaDict.keys()]
+
+    # loop to find match and assign values
+    for std_key in std_keys:
+        cand_keys = standardKeys[std_key]
+        cand_keys = [i for i in cand_keys if i in in_keys]
+        if len(cand_keys) > 0:
+            metaDict[std_key] = metaDict[cand_keys[0]]
+
+    return metaDict
 
 
 #########################################################################
@@ -947,6 +961,12 @@ def read_template(fname, delimiter='=', print_msg=True):
     insidePlotObject = False
     plotAttributes = []
 
+    def is_plot_attribute(attribute):
+        tokens = attribute.split(".")
+        if tokens is None:
+            return False
+        return tokens[0] == "plot" and len(tokens) > 1
+
     # read input text file or string
     lines = None
     if os.path.isfile(fname):
@@ -963,6 +983,7 @@ def read_template(fname, delimiter='=', print_msg=True):
 
         # ignore commented lines or those without variables
         if len(c) < 2 or line.startswith(('%', '#', '!')):
+            # next
 
             # insarmaps:
             if line.startswith(">"):
@@ -975,7 +996,6 @@ def read_template(fname, delimiter='=', print_msg=True):
                 insidePlotObject = False
                 plotAttributes.append(plotAttributeDict)
 
-            next
         else:
             key = c[0]
             value = str.replace(c[1], '\n', '').split("#")[0].strip()
@@ -1004,14 +1024,7 @@ def read_template(fname, delimiter='=', print_msg=True):
     return template_dict
 
 
-def is_plot_attribute(attribute):
-    tokens = attribute.split(".")
-    if tokens is None:
-        return False
-    return tokens[0] == "plot" and len(tokens) > 1
-
-
-def read_roipac_rsc(fname, delimiter=' ', standardize=True):
+def read_roipac_rsc(fname, delimiter=' '):
     """Read ROI_PAC .rsc file into a python dict structure.
     Parameters: fname : str.
                     File path of .rsc file.
@@ -1033,12 +1046,12 @@ def read_roipac_rsc(fname, delimiter=' ', standardize=True):
         value = c[1].replace('\n', '').strip()
         rscDict[key] = value
 
-    if standardize:
-        rscDict = standardize_metadata(rscDict)
+    rscDict = standardize_metadata(rscDict)
+
     return rscDict
 
 
-def read_gamma_par(fname, delimiter=':', skiprows=3, standardize=True):
+def read_gamma_par(fname, delimiter=':', skiprows=3):
     """Read GAMMA .par/.off file into a python dict structure.
     Parameters: fname : str.
                     File path of .par, .off file.
@@ -1065,12 +1078,12 @@ def read_gamma_par(fname, delimiter=':', skiprows=3, standardize=True):
             parDict[key] = value
 
     parDict = attribute_gamma2roipac(parDict)
-    if standardize:
-        parDict = standardize_metadata(parDict)
+    parDict = standardize_metadata(parDict)
+
     return parDict
 
 
-def read_isce_xml(fname, standardize=True):
+def read_isce_xml(fname):
     """Read ISCE .xml file into a python dict structure."""
     root = ET.parse(fname).getroot()
     xmlDict = {}
@@ -1101,13 +1114,12 @@ def read_isce_xml(fname, standardize=True):
             xmlDict[key] = value
         xmlDict['data_type'] = ENVI2NUMPY_DATATYPE[xmlDict['data_type']]
 
-    if standardize:
-        xmlDict = standardize_metadata(xmlDict)
+    xmlDict = standardize_metadata(xmlDict)
 
     return xmlDict
 
 
-def read_envi_hdr(fname, standardize=True):
+def read_envi_hdr(fname):
     """Read ENVI .hdr file into a python dict structure"""
     atr = read_template(fname, delimiter='=')
     atr['DATA_TYPE'] = ENVI2NUMPY_DATATYPE[atr.get('data type', '4')]
@@ -1127,13 +1139,12 @@ def read_envi_hdr(fname, standardize=True):
             atr['X_UNIT'] = 'degrees'
             atr['Y_UNIT'] = 'degrees'
 
-    if standardize:
-        atr = standardize_metadata(atr)
+    atr = standardize_metadata(atr)
 
     return atr
 
 
-def read_gdal_vrt(fname, standardize=True):
+def read_gdal_vrt(fname):
     """Read GDAL .vrt file into a python dict structure using gdal
 
     Modified from $ISCE_HOME/applications/gdal2isce_xml.gdal2isce_xml() written by David Bekaert.
@@ -1173,19 +1184,18 @@ def read_gdal_vrt(fname, standardize=True):
         atr['X_STEP'] = x_step
         atr['Y_STEP'] = y_step
 
-    if standardize:
-        atr = standardize_metadata(atr)
+    atr = standardize_metadata(atr)
 
     return atr
 
 
 def attribute_gamma2roipac(par_dict_in):
-    """Convert Gamma par attribute into ROI_PAC format"""
+    """Convert Gamma metadata into ROI_PAC/MintPy format (for metadata with different values)."""
     par_dict = dict()
     for key, value in iter(par_dict_in.items()):
         par_dict[key] = value
 
-    # Length - number of rows
+    # LENGTH - number of rows
     for key in par_dict_in.keys():
         if any(key.startswith(i) for i in ['azimuth_lines',
                                            'nlines',
@@ -1193,45 +1203,45 @@ def attribute_gamma2roipac(par_dict_in):
                                            'interferogram_azimuth_lines']):
             par_dict['LENGTH'] = par_dict[key]
 
-    # Width - number of columns
+    # WIDTH - number of columns
     for key in par_dict_in.keys():
         if any(key.startswith(i) for i in ['width',
                                            'range_samp',
                                            'interferogram_width']):
             par_dict['WIDTH'] = par_dict[key]
 
-    # WAVELENGTH
-    speed_of_light = 299792458.0   # meter/second
+    # radar_frequency -> WAVELENGTH
     key = 'radar_frequency'
     if key in par_dict_in.keys():
-        par_dict['WAVELENGTH'] = str(speed_of_light/float(par_dict[key]))
+        value = float(par_dict[key])
+        par_dict['WAVELENGTH'] = str(SPEED_OF_LIGHT / value)
 
-    # HEIGHT & EARTH_RADIUS
+    # sar_to_earth_center/earth_radius_below_sensor -> HEIGHT/EARTH_RADIUS
     key = 'earth_radius_below_sensor'
     if key in par_dict_in.keys():
-        par_dict['EARTH_RADIUS'] = par_dict[key]
+        Re = float(par_dict[key])
+        par_dict['EARTH_RADIUS'] = str(Re)
 
         key2 = 'sar_to_earth_center'
         if key2 in par_dict_in.keys():
-            par_dict['HEIGHT'] = str(float(par_dict[key2]) - float(par_dict[key]))
+            value = float(par_dict[key2])
+            par_dict['HEIGHT'] = str(value - Re)
 
-    # PLATFORM
+    # sensor -> PLATFORM
     key = 'sensor'
     if key in par_dict_in.keys():
         par_dict['PLATFORM'] = par_dict[key]
 
-    # ORBIT_DIRECTION
+    # heading -> ORBIT_DIRECTION
     key = 'heading'
     if key in par_dict_in.keys():
         value = float(par_dict[key])
-        if 270 < value < 360 or -90 < value < 90:
+        if (270 < value < 360) or (-90 < value < 90):
             par_dict['ORBIT_DIRECTION'] = 'ascending'
         else:
             par_dict['ORBIT_DIRECTION'] = 'descending'
-        par_dict['HEADING'] = str(value)
 
-    # Optional attributes for MintPy from ROI_PAC
-    # ANTENNA_SIDE
+    # azimuth_angle -> ANTENNA_SIDE
     key = 'azimuth_angle'
     if key in par_dict_in.keys():
         value = float(par_dict[key])

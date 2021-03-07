@@ -7,11 +7,13 @@
 #   from mintpy.utils import utils as ut
 
 
-from argparse import Namespace
 import numpy as np
-from mintpy.utils import readfile
-from mintpy.utils.utils0 import *
-from mintpy.utils.utils1 import *
+from argparse import Namespace
+from mintpy.utils import (
+    readfile,
+    utils0 as ut0,
+    utils1 as ut1
+)
 
 
 #####################################  coordinate class begin ##############################################
@@ -45,7 +47,7 @@ class coordinate:
         """
         self.src_metadata = metadata
         if lookup_file is None:
-            lookup_file = get_lookup_file(lookup_file, abspath=True, print_msg=False)
+            lookup_file = ut1.get_lookup_file(lookup_file, abspath=True, print_msg=False)
         if isinstance(lookup_file, str):
             lookup_file = [lookup_file, lookup_file]
         self.lookup_file = lookup_file
@@ -253,8 +255,8 @@ class coordinate:
 
             # uncertainty due to different resolution between src and lut file
             try:
-                az_step = azimuth_ground_resolution(self.src_metadata)
-                rg_step = range_ground_resolution(self.src_metadata, print_msg=False)
+                az_step = ut0.azimuth_ground_resolution(self.src_metadata)
+                rg_step = ut0.range_ground_resolution(self.src_metadata, print_msg=False)
                 x_factor = np.ceil(abs(lut.lon_step) / rg_step).astype(int)
                 y_factor = np.ceil(abs(lut.lat_step) / az_step).astype(int)
             except:
@@ -270,8 +272,8 @@ class coordinate:
         # For lookup table in radar-coord, search the buffer and use center pixel (ISCE)
         else:
             # get resolution in degree in range/azimuth direction
-            az_step = azimuth_ground_resolution(self.src_metadata)
-            rg_step = range_ground_resolution(self.src_metadata, print_msg=False)
+            az_step = ut0.azimuth_ground_resolution(self.src_metadata)
+            rg_step = ut0.range_ground_resolution(self.src_metadata, print_msg=False)
             lat_c = (np.nanmax(lat) + np.nanmin(lat)) / 2.
             az_step_deg = 180./np.pi * az_step / (self.earth_radius)
             rg_step_deg = 180./np.pi * rg_step / (self.earth_radius * np.cos(lat_c * np.pi/180.))
@@ -331,8 +333,8 @@ class coordinate:
 
             # Get buffer ratio from range/azimuth ground resolution/step
             try:
-                az_step = azimuth_ground_resolution(self.src_metadata)
-                rg_step = range_ground_resolution(self.src_metadata, print_msg=False)
+                az_step = ut0.azimuth_ground_resolution(self.src_metadata)
+                rg_step = ut0.range_ground_resolution(self.src_metadata, print_msg=False)
                 x_factor = 2 * np.ceil(abs(lut.lon_step) / rg_step)
                 y_factor = 2 * np.ceil(abs(lut.lat_step) / az_step)
             except:
