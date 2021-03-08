@@ -46,8 +46,8 @@ standardMetadataKeys = {
     'PLATFORM'           : ['spacecraftName', 'sensor'],
     'POLARIZATION'       : ['polarization'],
     'PRF'                : ['prf'],
-    'STARTING_RANGE'     : ['startingRange', 'near_range_slc'],
-    'WAVELENGTH'         : ['wavelength', 'Wavelength', 'radarWavelength'],
+    'STARTING_RANGE'     : ['startingRange', 'near_range_slc', 'near_range'],
+    'WAVELENGTH'         : ['wavelength', 'Wavelength', 'radarWavelength', 'radar_wavelength'],
     'WIDTH'              : ['width', 'Width', 'samples', 'range_samp', 'interferogram_width'],
     # from PySAR [MintPy<=1.1.1]
     'REF_DATE'           : ['ref_date'],
@@ -500,15 +500,15 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
         if 'byte order' in atr.keys() and atr['byte order'] == '0':
             byte_order = 'little-endian'
 
-    # gdal (e.g. GACOS TIF files or HyP3 TIF files)
-    elif processor in ['gdal','hyp3']:
+    # GDAL / GMTSAR
+    elif processor in ['gdal', 'gmtsar', 'hyp3']:
         pass
 
     else:
         print('Unknown InSAR processor: {}'.format(processor))
 
     # reading
-    if processor in ['gdal','hyp3']:
+    if processor in ['gdal', 'gmtsar', 'hyp3']:
         data = read_gdal(
             fname,
             box=box,
@@ -858,7 +858,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
         meta_ext = os.path.splitext(metafile)[1]
 
         # ignore certain meaningless file extensions
-        while fext in ['.geo', '.rdr', '.full', '.wgs84']:
+        while fext in ['.geo', '.rdr', '.full', '.wgs84', '.grd']:
             fbase, fext = os.path.splitext(fbase)
         if not fext:
             fext = fbase
@@ -1111,6 +1111,70 @@ def read_gamma_par(fname, delimiter=':', skiprows=3):
     return parDict
 
 
+def attribute_gamma2roipac(par_dict_in):
+    """Convert Gamma metadata into ROI_PAC/MintPy format."""
+    par_dict = dict()
+    for key, value in iter(par_dict_in.items()):
+        par_dict[key] = value
+
+    # LENGTH - number of rows
+    for key in par_dict_in.keys():
+        if any(key.startswith(i) for i in ['azimuth_lines',
+                                           'nlines',
+                                           'az_samp',
+                                           'interferogram_azimuth_lines']):
+            par_dict['LENGTH'] = par_dict[key]
+
+    # WIDTH - number of columns
+    for key in par_dict_in.keys():
+        if any(key.startswith(i) for i in ['width',
+                                           'range_samp',
+                                           'interferogram_width']):
+            par_dict['WIDTH'] = par_dict[key]
+
+    # radar_frequency -> WAVELENGTH
+    key = 'radar_frequency'
+    if key in par_dict_in.keys():
+        value = float(par_dict[key])
+        par_dict['WAVELENGTH'] = str(SPEED_OF_LIGHT / value)
+
+    # sar_to_earth_center/earth_radius_below_sensor -> HEIGHT/EARTH_RADIUS
+    key = 'earth_radius_below_sensor'
+    if key in par_dict_in.keys():
+        Re = float(par_dict[key])
+        par_dict['EARTH_RADIUS'] = str(Re)
+
+        key2 = 'sar_to_earth_center'
+        if key2 in par_dict_in.keys():
+            value = float(par_dict[key2])
+            par_dict['HEIGHT'] = str(value - Re)
+
+    # sensor -> PLATFORM
+    key = 'sensor'
+    if key in par_dict_in.keys():
+        par_dict['PLATFORM'] = par_dict[key]
+
+    # heading -> ORBIT_DIRECTION
+    key = 'heading'
+    if key in par_dict_in.keys():
+        value = float(par_dict[key])
+        if (270 < value < 360) or (-90 < value < 90):
+            par_dict['ORBIT_DIRECTION'] = 'ascending'
+        else:
+            par_dict['ORBIT_DIRECTION'] = 'descending'
+
+    # azimuth_angle -> ANTENNA_SIDE
+    key = 'azimuth_angle'
+    if key in par_dict_in.keys():
+        value = float(par_dict[key])
+        if 0 < value < 180:
+            par_dict['ANTENNA_SIDE'] = '-1'
+        else:
+            par_dict['ANTENNA_SIDE'] = '1'
+
+    return par_dict
+
+
 def read_isce_xml(fname):
     """Read ISCE .xml file into a python dict structure."""
     root = ET.parse(fname).getroot()
@@ -1207,78 +1271,82 @@ def read_gdal_vrt(fname):
     y_step = abs(transform[5]) * -1.
 
     if abs(x_step) < 1. and abs(x_step) > 1e-7:
-        atr['X_FIRST'] = x0 - x_step / 2.
-        atr['Y_FIRST'] = y0 - y_step / 2.
         atr['X_STEP'] = x_step
         atr['Y_STEP'] = y_step
+        atr['X_FIRST'] = x0 - x_step / 2.
+        atr['Y_FIRST'] = y0 - y_step / 2.
+        # constrain longitude within (-180, 180]
+        if atr['X_FIRST'] > 180.:
+            atr['X_FIRST'] -= 360.
 
     atr = standardize_metadata(atr)
 
     return atr
 
 
-def attribute_gamma2roipac(par_dict_in):
-    """Convert Gamma metadata into ROI_PAC/MintPy format (for metadata with different values)."""
-    par_dict = dict()
-    for key, value in iter(par_dict_in.items()):
-        par_dict[key] = value
+def read_gmtsar_prm(fname, delimiter='='):
+    """Read GMTSAR .prm file into a python dict structure.
+    Parameters: fname : str.
+                    File path of .rsc file.
+    Returns:    prmDict : dict
+                    Dictionary of keys and values in the PRM file.
+    """
+    # read .prm file
+    with open(fname, 'r') as f:
+        lines = f.readlines()
 
-    # LENGTH - number of rows
-    for key in par_dict_in.keys():
-        if any(key.startswith(i) for i in ['azimuth_lines',
-                                           'nlines',
-                                           'az_samp',
-                                           'interferogram_azimuth_lines']):
-            par_dict['LENGTH'] = par_dict[key]
+    # convert list of str into dict
+    prmDict = {}
+    for line in lines:
+        c = [i.strip() for i in line.strip().replace('\t',' ').split(delimiter, 1)]
+        key = c[0]
+        value = c[1].replace('\n', '').strip()
+        prmDict[key] = value
 
-    # WIDTH - number of columns
-    for key in par_dict_in.keys():
-        if any(key.startswith(i) for i in ['width',
-                                           'range_samp',
-                                           'interferogram_width']):
-            par_dict['WIDTH'] = par_dict[key]
+    prmDict = attribute_gmtsar2roipac(prmDict)
+    prmDict = standardize_metadata(prmDict)
 
-    # radar_frequency -> WAVELENGTH
-    key = 'radar_frequency'
-    if key in par_dict_in.keys():
-        value = float(par_dict[key])
-        par_dict['WAVELENGTH'] = str(SPEED_OF_LIGHT / value)
+    return prmDict
 
-    # sar_to_earth_center/earth_radius_below_sensor -> HEIGHT/EARTH_RADIUS
-    key = 'earth_radius_below_sensor'
-    if key in par_dict_in.keys():
-        Re = float(par_dict[key])
-        par_dict['EARTH_RADIUS'] = str(Re)
 
-        key2 = 'sar_to_earth_center'
-        if key2 in par_dict_in.keys():
-            value = float(par_dict[key2])
-            par_dict['HEIGHT'] = str(value - Re)
+def attribute_gmtsar2roipac(prm_dict_in):
+    """Convert GMTSAR metadata into ROI_PAC/MintPy format (for metadata with different values)."""
+    prm_dict = dict()
+    for key, value in iter(prm_dict_in.items()):
+        prm_dict[key] = value
 
-    # sensor -> PLATFORM
-    key = 'sensor'
-    if key in par_dict_in.keys():
-        par_dict['PLATFORM'] = par_dict[key]
-
-    # heading -> ORBIT_DIRECTION
-    key = 'heading'
-    if key in par_dict_in.keys():
-        value = float(par_dict[key])
-        if (270 < value < 360) or (-90 < value < 90):
-            par_dict['ORBIT_DIRECTION'] = 'ascending'
+    # lookdir -> ANTENNA_SIDE
+    key = 'lookdir'
+    if key in prm_dict_in.keys():
+        value = prm_dict[key]
+        if value.upper() == 'R':
+            prm_dict['ANTENNA_SIDE'] = '-1'
         else:
-            par_dict['ORBIT_DIRECTION'] = 'descending'
+            prm_dict['ANTENNA_SIDE'] = '1'
 
-    # azimuth_angle -> ANTENNA_SIDE
-    key = 'azimuth_angle'
-    if key in par_dict_in.keys():
-        value = float(par_dict[key])
-        if 0 < value < 180:
-            par_dict['ANTENNA_SIDE'] = '-1'
-        else:
-            par_dict['ANTENNA_SIDE'] = '1'
+    # SC_vel -> AZIMUTH_PIXEL_SIZE (in single look)
+    key = 'SC_vel'
+    if key in prm_dict_in.keys():
+        vel = float(prm_dict[key])
+        Re = float(prm_dict['earth_radius'])
+        PRF = float(prm_dict['PRF'])
+        height = float(prm_dict['SC_height'])
+        az_pixel_size = vel / PRF * Re / (Re + height)
+        prm_dict['AZIMUTH_PIXEL_SIZE'] = az_pixel_size
 
-    return par_dict
+    # rng_samp_rate -> RANGE_PIXEL_SIZE (in single look)
+    key = 'rng_samp_rate'
+    if key in prm_dict_in.keys():
+        value = float(prm_dict[key])
+        prm_dict['RANGE_PIXEL_SIZE'] = SPEED_OF_LIGHT / value / 2.0
+
+    # SC_clock_start/stop -> CENTER_LINE_TUC
+    dt_center = (float(prm_dict['SC_clock_start']) + float(prm_dict['SC_clock_stop'])) / 2.0
+    t_center = dt_center - int(dt_center)
+    prm_dict['CENTER_LINE_UTC'] = str(t_center * 24. * 60. * 60.)
+
+    return prm_dict
+
 
 
 #########################################################################
