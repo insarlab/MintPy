@@ -1142,10 +1142,6 @@ class TimeSeriesAnalysis:
             ['numInvIfgram.h5',           '--mask', 'no'],
         ]
 
-        # add the following common options to all element lists
-        opt_common = ['--dpi', '150', '--noverbose', '--nodisplay', '--update']
-        iargs_list0 = [iargs + opt_common for iargs in iargs_list0]
-
         # translate element list whose file path has *
         iargs_list = []
         for iargs in iargs_list0:
@@ -1171,6 +1167,10 @@ class TimeSeriesAnalysis:
                       if (iargs[0] != stack_file
                           or (iargs[0] == stack_file
                               and iargs[1] in stack_dset_list))]
+
+        # add the following common options to all element lists
+        opt_common = ['--dpi', '150', '--noverbose', '--nodisplay', '--update']
+        iargs_list = [opt_common + iargs for iargs in iargs_list]
 
         # run view
         start_time = time.time()

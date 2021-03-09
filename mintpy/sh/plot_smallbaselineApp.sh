@@ -107,4 +107,3 @@ echo "Copy *.txt files into ./pic folder."
 cp *.txt pic/
 echo "Move *.png/pdf/kmz files into ./pic folder."
 mv *.png *.pdf *.kmz ./geo/*.kmz pic/
-
