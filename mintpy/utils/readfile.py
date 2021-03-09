@@ -500,7 +500,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
         if 'byte order' in atr.keys() and atr['byte order'] == '0':
             byte_order = 'little-endian'
 
-    # GDAL / GMTSAR
+    # GDAL / GMTSAR / ASF HyP3
     elif processor in ['gdal', 'gmtsar', 'hyp3']:
         pass
 

@@ -100,7 +100,7 @@ def get_lalo_ref(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasefilt', 'unwra
     E = W + x_step * ds.RasterXSize
     S = N + y_step * ds.RasterYSize
 
-    if prm_dict['ORBIT_DIRECTION'].startswith('asc'):
+    if prm_dict['ORBIT_DIRECTION'].upper().startswith('ASC'):
         prm_dict['LAT_REF1'] = str(S)
         prm_dict['LAT_REF2'] = str(S)
         prm_dict['LAT_REF3'] = str(N)
@@ -118,6 +118,25 @@ def get_lalo_ref(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasefilt', 'unwra
         prm_dict['LON_REF2'] = str(W)
         prm_dict['LON_REF3'] = str(E)
         prm_dict['LON_REF4'] = str(W)
+
+    return prm_dict
+
+
+def get_slant_range_distance(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasefilt', 'unwrap']):
+    """Get a constant slant range distance in the image center, for dataset in geo-coord."""
+    # grab an arbitrary file in radar-coordiantes
+    rdr_files = [os.path.join(ifg_dir, '{}.grd'.format(i)) for i in fbases]
+    if len(rdr_files) == 0:
+        raise ValueError('No radar-coord files found in {} with suffix: {}'.format(ifg_dir, fbases))
+
+    # read width from rdr_file
+    ds = gdal.Open(rdr_files[0], gdal.GA_ReadOnly)
+    width = ds.RasterXSize
+
+    near_range = float(prm_dict['STARTING_RANGE'])
+    range_pixel_size = float(prm_dict['RANGE_PIXEL_SIZE'])
+    slant_range_dist = near_range + range_pixel_size * width / 2.
+    prm_dict['SLANT_RANGE_DISTANCE'] = slant_range_dist
 
     return prm_dict
 
@@ -166,6 +185,16 @@ def extract_gmtsar_metadata(unw_file, template_file, rsc_file=None, update_mode=
         if meta['X_FIRST'] > 180.:
             meta['X_FIRST'] -= 360.
 
+    # 6. extra metadata for the missing geometry dataset: SLANT_RANGE_DISTANCE / INCIDENCE_ANGLE
+    # for dataset in geo-coordinates
+    if 'Y_FIRST' in meta.keys():
+        meta = get_slant_range_distance(ifg_dir, meta)
+        Re = float(meta['EARTH_RADIUS'])
+        H = float(meta['HEIGHT'])
+        Rg = float(meta['SLANT_RANGE_DISTANCE'])
+        Inc = (np.pi - np.arccos((Re**2 + Rg**2 - (Re+H)**2) / (2*Re*Rg))) * 180./np.pi
+        meta['INCIDENCE_ANGLE'] = Inc
+
     # convert all value to string format
     for key, value in meta.items():
         meta[key] = str(value)
@@ -178,6 +207,31 @@ def extract_gmtsar_metadata(unw_file, template_file, rsc_file=None, update_mode=
         writefile.write_roipac_rsc(meta, rsc_file)
 
     return meta
+
+
+def prepare_geometry(geom_files, meta, update_mode=True):
+    """Prepare .rsc file for all geometry files."""
+    num_file = len(geom_files)
+    if num_file == 0:
+        raise FileNotFoundError('NO geometry file found!')
+
+    # write .rsc file for each geometry file
+    for i, geom_file in enumerate(geom_files):
+        # copy over the common metadata
+        geom_meta = {}
+        for key, value in meta.items():
+            geom_meta[key] = value
+
+        # update from .grd file
+        geom_meta.update(readfile.read_gdal_vrt(geom_file))
+
+        # write .rsc file
+        rsc_file = geom_file+'.rsc'
+        writefile.write_roipac_rsc(geom_meta, rsc_file,
+                                   update_mode=update_mode,
+                                   print_msg=True)
+
+    return
 
 
 def prepare_stack(unw_files, meta, update_mode=True):
@@ -245,7 +299,10 @@ def main(iargs=None):
                                    rsc_file=rsc_file,
                                    update_mode=inps.update_mode)
 
-    # prepare metadata for ifgram files
+    # prepare metadata for geometry files
+    prepare_geometry([inps.dem_file], meta=meta, update_mode=inps.update_mode)
+
+    # prepare metadata for interferogram files
     prepare_stack(inps.unw_files, meta=meta, update_mode=inps.update_mode)
 
     print('Done.')

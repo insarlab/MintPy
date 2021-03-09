@@ -12,22 +12,27 @@ import glob
 import time
 import argparse
 import warnings
+
 from mintpy.defaults import auto_path
 from mintpy.defaults.template import get_template_content
-from mintpy.objects import (geometryDatasetNames,
-                            geometry,
-                            ifgramDatasetNames,
-                            ifgramStack,
-                            sensor)
-from mintpy.objects.stackDict import (geometryDict,
-                                      ifgramStackDict,
-                                      ifgramDict)
+from mintpy.objects import (
+    geometryDatasetNames,
+    geometry,
+    ifgramDatasetNames,
+    ifgramStack,
+    sensor,
+)
+from mintpy.objects.stackDict import (
+    geometryDict,
+    ifgramStackDict,
+    ifgramDict,
+)
 from mintpy.utils import readfile, ptime, utils as ut
 from mintpy import subset
 
 
 #################################################################
-PROCESSOR_LIST = ['isce', 'aria', 'snap', 'gamma', 'roipac', 'hyp3']
+PROCESSOR_LIST = ['isce', 'aria', 'gmtsar', 'snap', 'gamma', 'hyp3', 'roipac']
 
 datasetName2templateKey = {
     'unwrapPhase'     : 'mintpy.load.unwFile',
@@ -142,7 +147,7 @@ def read_inps2dict(inps):
     It grab the following contents into iDict
     1. inps & all template files
     2. configurations: processor, autoPath, updateMode, compression, x/ystep
-    3. extra metadata: PLATFORM, PROJECT_NAME, 
+    3. extra metadata: PLATFORM, PROJECT_NAME,
     4. translate autoPath
     """
     # Read input info into iDict
@@ -422,43 +427,65 @@ def read_inps_dict2ifgram_stack_dict_object(iDict):
 
     # dsPathDict --> pairsDict --> stackObj
     dsNameList = list(dsPathDict.keys())
+
+    #####################################
+    # A dictionary of data file paths for a list of pairs, e.g.:
+    # pairsDict = {
+    #     ('date1', 'date2') : ifgramPathDict1,
+    #     ('date1', 'date3') : ifgramPathDict2,
+    #     ...,
+    # }
+
     pairsDict = {}
-    for dsPath in dsPathDict[dsName0]:
+    for i, dsPath0 in enumerate(dsPathDict[dsName0]):
         # date string used in the file/dir path
+        # YYYYDDD       for gmtsar [modern Julian date]
         # YYYYMMDDTHHMM for uavsar
-        # YYYYMMDD for all the others
-        date12 = readfile.read_attribute(dsPath)['DATE12'].replace('_','-')
-        dates = ptime.yyyymmdd(date12.split('-'))
+        # YYYYMMDD      for all the others
+        date6s = readfile.read_attribute(dsPath0)['DATE12'].replace('_','-').split('-')
+        if iDict['processor'] == 'gmtsar':
+            date12MJD = os.path.basename(os.path.dirname(dsPath0))
+        else:
+            date12MJD = None
 
         #####################################
-        # A dictionary of data files for a given pair.
-        # One pair may have several types of dataset.
-        # example ifgramPathDict = {'unwrapPhase': /pathToFile/filt.unw,
-        #                           'ionoPhase'  : /PathToFile/iono.bil}
-        # All path of data file must contain the reference and secondary date, either in file name or folder name.
+        # A dictionary of data file paths for a given pair.
+        # One pair may have several types of dataset, e.g.:
+        # ifgramPathDict1 = {
+        #     'unwrapPhase': /dirPathToFile/filt_fine.unw,
+        #     'coherence'  : /dirPathToFile/filt_fine.cor,
+        #     'ionoPhase'  : /dirPathToFile/iono.bil,
+        #     ...
+        # }
+        # All path of data file must contain the reference and secondary date, in file/dir name.
 
         ifgramPathDict = {}
-        for i in range(len(dsNameList)):
-            dsName = dsNameList[i]
-            dsPath1 = dsPathDict[dsName][0]
-
-            if all(d[2:] in dsPath1 for d in dates):
+        for dsName in dsNameList:
+            # search the matching data file for the given date12
+            # 1st guess: file in the same order as the one for dsName0
+            dsPath1 = dsPathDict[dsName][i]
+            if (all(d6 in dsPath1 for d6 in date6s)
+                    or (date12MJD and date12MJD in dsPath1)):
                 ifgramPathDict[dsName] = dsPath1
 
             else:
-                dsPath2 = [i for i in dsPathDict[dsName]
-                           if all(d[2:] in i for d in dates)]
+                # 2nd guess: any file in the list
+                dsPath2 = [p for p in dsPathDict[dsName]
+                           if (all(d6 in p for d6 in date6s)
+                                   or (date12MJD and date12MJD in dsPath1))]
 
                 if len(dsPath2) > 0:
                     ifgramPathDict[dsName] = dsPath2[0]
+
                 else:
-                    print('WARNING: {} file missing for pair {}'.format(dsName, dates))
+                    print('WARNING: {:>18} file missing for pair {}'.format(dsName, date6s))
 
         # initiate ifgramDict object
         ifgramObj = ifgramDict(datasetDict=ifgramPathDict)
 
         # update pairsDict object
-        pairsDict[tuple(dates)] = ifgramObj
+        date8s = ptime.yyyymmdd(date6s)
+        pairsDict[tuple(date8s)] = ifgramObj
 
     if len(pairsDict) > 0:
         stackObj = ifgramStackDict(pairsDict=pairsDict, dsName0=dsName0)
@@ -478,7 +505,7 @@ def read_inps_dict2geometry_dict_object(iDict):
         # for processors with lookup table in geo-coordinates, remove latitude/longitude
         iDict['ds_name2key'].pop('latitude')
         iDict['ds_name2key'].pop('longitude')
-    elif iDict['processor'] in ['snap', 'aria', 'hyp3']:
+    elif iDict['processor'] in ['aria', 'gmtsar', 'snap', 'hyp3']:
         # for processors with geocoded products support only, do nothing for now.
         # check again when adding products support in radar-coordiantes
         pass
@@ -669,7 +696,7 @@ def prepare_metadata(iDict):
         from mintpy import prep_aria
 
         ## compose input arguments
-        # use the default template file is exists & input
+        # use the default template file if exists & input
         default_temp_files = [fname for fname in iDict['template_file'] if fname.endswith('smallbaselineApp.cfg')]
         if len(default_temp_files) > 0:
             temp_file = default_temp_files[0]
@@ -711,6 +738,22 @@ def prepare_metadata(iDict):
             prep_aria.main(iargs)
         except:
             warnings.warn('prep_aria.py failed. Assuming its result exists and continue...')
+
+    elif processor == 'gmtsar':
+        from mintpy import prep_gmtsar
+
+        # use the custom template file if exists & input
+        custom_temp_files = [fname for fname in iDict['template_file'] if not fname.endswith('smallbaselineApp.cfg')]
+        if len(custom_temp_files) == 0:
+            raise FileExistsError('Custom template file NOT found and is required for GMTSAR!')
+
+        # run prep_*.py
+        iargs = [custom_temp_files[0], '--mintpy-dir', os.path.dirname(iDict['outdir'])]
+        print('prep_gmtsar.py', ' '.join(iargs))
+        try:
+            prep_gmtsar.main(iargs)
+        except:
+            warnings.warn('prep_gmtsar.py failed. Assuming its result exists and continue...')
 
     else:
         msg = 'un-recognized InSAR processor: {}'.format(processor)
