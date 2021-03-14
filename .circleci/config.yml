@@ -1,6 +1,6 @@
 version: 2.1
 jobs:
-  build:
+  test:
     docker:
       - image: ubuntu:bionic
         environment:
@@ -25,7 +25,7 @@ jobs:
             ${HOME}/tools/miniconda3/bin/conda init bash
 
       - run:
-          name: Installing MintPy and PyAPS
+          name: Installing MintPy, PyAPS and PySolid
           command: |
             # setup environment variable
             export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${HOME}/tools/PyAPS:${HOME}/tools/PySolid
@@ -47,19 +47,44 @@ jobs:
             solid_earth_tides.py -h
 
       - run:
-          name: Testing MintPy on Example Datasets
+          name: Testing MintPy on Example Dataset 1/4 - FernandinaSenDT128 (ISCE/topsStack)
           command: |
             export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${HOME}/tools/PyAPS:${HOME}/tools/PySolid
             export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
             cd ${HOME}/data
             ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ${HOME}/data --dset FernandinaSenDT128
-            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ${HOME}/data --dset WellsEnvD2T399
+
+      - run:
+          name: Testing MintPy on Example Dataset 2/4 - SanFranSenDT42 (ARIA)
+          command: |
+            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${HOME}/tools/PyAPS:${HOME}/tools/PySolid
+            export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
+            mkdir -p ${HOME}/data
+            cd ${HOME}/data
             ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ${HOME}/data --dset SanFranSenDT42
+
+      - run:
+          name: Testing MintPy on Example Dataset 3/4 - WellsEnvD2T399 (Gamma)
+          command: |
+            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${HOME}/tools/PyAPS:${HOME}/tools/PySolid
+            export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
+            mkdir -p ${HOME}/data
+            cd ${HOME}/data
+            ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ${HOME}/data --dset WellsEnvD2T399
+
+      - run:
+          name: Testing MintPy on Example Dataset 4/4 - WCapeSenAT29 (SNAP)
+          command: |
+            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${HOME}/tools/PyAPS:${HOME}/tools/PySolid
+            export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
+            mkdir -p ${HOME}/data
+            cd ${HOME}/data
             ${MINTPY_HOME}/test/test_smallbaselineApp.py --dir ${HOME}/data --dset WCapeSenAT29
 
 workflows:
   version: 2
-  build_and_test:
+  test:
     jobs:
-      - build
+      - test
+
