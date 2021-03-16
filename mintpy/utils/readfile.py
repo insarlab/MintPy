@@ -781,6 +781,34 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
         if 'PROCESSOR' not in atr.keys():
             atr['PROCESSOR'] = 'mintpy'
 
+    elif fext == '.dehm':
+        # 10 m Digital Ellipsoidal Height Model files from GSI
+        atr = {}
+        atr['LENGTH'] = 6000           # 40 mins in latitude  per grid
+        atr['WIDTH']  = 9000           # 60 mins in longitude per grid
+        atr['Y_STEP'] = - 0.4 / 3600.  # degree
+        atr['X_STEP'] =   0.4 / 3600.  # degree
+        atr['Y_UNIT'] = 'degrees'
+        atr['X_UNIT'] = 'degrees'
+
+        # Y/X_FIRST based on the naming convention
+        yy, xx = float(fbase[:2]), float(fbase[2:])
+        atr['Y_FIRST'] = (yy + 1.) / 1.5
+        atr['X_FIRST'] = xx + 100.
+
+        atr['PROCESSOR'] = 'GSI'
+        atr['FILE_TYPE'] = fext
+        atr['DATA_TYPE'] = 'float32'
+        atr['PROJECTION'] = 'LATLON'
+        atr['GEODETIC_DATUM'] = 'WGS84'
+        atr['UNIT'] = 'm'
+
+        # check file size for potential 5m DEHM data
+        if os.path.getsize(fname) != atr['LENGTH'] * atr['WIDTH'] * 4:
+            msg = 'input DEHM file size do NOT match with the pre-defined 10m DEHM: '
+            msg += '{} * {} in {}!'.format(atr['LENGTH'], atr['WIDTH'], atr['DATA_TYPE'])
+            raise ValueError(msg)
+
     else:
         # grab all existed potential metadata file given the data file in prefered order/priority
         # .aux.xml file does not have geo-coordinates info
