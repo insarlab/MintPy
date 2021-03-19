@@ -1321,5 +1321,4 @@ def main(iargs=None):
 
 ###########################################################################################
 if __name__ == '__main__':
-    os.environ['ECCODES_DEFINITION_PATH'] = r'C:\Users\Angelo\Miniconda3\envs\dinsar\Library\share\eccodes'
     main(sys.argv[1:])
