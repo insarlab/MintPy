@@ -1032,7 +1032,7 @@ class ifgramStack:
                 ref_val = dset[ifgram_flag, self.refY, self.refX]
 
             # get step size and number
-            ds_size = np.sum(ifgram_flag) * self.length * self.width * 4
+            ds_size = np.sum(ifgram_flag, dtype=np.int64) * self.length * self.width * 4
             num_step = int(np.ceil(ds_size * 3 / (max_memory * 1024**3)))
             row_step = int(np.rint(self.length / num_step / 10) * 10)
             num_step = int(np.ceil(self.length / row_step))
