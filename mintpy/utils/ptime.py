@@ -177,9 +177,9 @@ def yy2yyyy(year):
 
 
 def yyyymmdd(dates):
-    """Convert date str from (YY)YYMMDD to YYYYMMDD format"""
+    """Convert date str from (YY)YYMMDD(THHMM) to YYYYMMDD(THHMM) format"""
     if isinstance(dates, str):
-        if len(dates) == 6:
+        if len(dates.split('T')[0]) == 6:
             datesOut = yymmdd2yyyymmdd(dates)
         else:
             datesOut = dates
@@ -187,7 +187,7 @@ def yyyymmdd(dates):
     elif isinstance(dates, list):
         datesOut = []
         for date in dates:
-            if len(date) == 6:
+            if len(date.split('T')[0]) == 6:
                 date = yymmdd2yyyymmdd(date)
             datesOut.append(date)
 
