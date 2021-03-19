@@ -1003,30 +1003,38 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
 
     # plot shaded relief
     if dem_shade is not None:
+        # config
+        kwargs = dict(interpolation='spline16', zorder=0, origin='upper')
+
         # geo coordinates
         if geo_box is not None:
-            ax.imshow(dem_shade, interpolation='spline16', extent=geo_extent, zorder=0, origin='upper')
+            ax.imshow(dem_shade, extent=geo_extent, **kwargs)
 
         # radar coordinates
         elif isinstance(ax, plt.Axes):
-            ax.imshow(dem_shade, interpolation='spline16', extent=rdr_extent, zorder=0, origin='upper')
+            ax.imshow(dem_shade, extent=rdr_extent, **kwargs)
 
     # plot topo contour
     if dem_contour is not None and dem_contour_seq is not None:
+        # config
+        kwargs = dict(origin='upper', colors='black',
+                      linewidths=inps.dem_contour_linewidth,
+                      alpha=0.5, zorder=1)
+        # plot contour line above data (zorder=1) if no DEM shade
+        if dem_shade is None:
+            kwargs['zorder'] = 2
+
         # geo coordinates
         if geo_box is not None:
             yy, xx = np.mgrid[geo_box[1]:geo_box[3]:dem_contour.shape[0]*1j,
                               geo_box[0]:geo_box[2]:dem_contour.shape[1]*1j]
 
-            ax.contour(xx, yy, dem_contour, dem_contour_seq, extent=geo_extent,
-                       origin='upper', linewidths=inps.dem_contour_linewidth,
-                       colors='black', alpha=0.5, zorder=1)
+            ax.contour(xx, yy, dem_contour, dem_contour_seq, extent=geo_extent, **kwargs)
 
         # radar coordinates
         elif isinstance(ax, plt.Axes):
-            ax.contour(dem_contour, dem_contour_seq, extent=rdr_extent,
-                       origin='upper', linewidths=inps.dem_contour_linewidth,
-                       colors='black', alpha=0.5, zorder=1)
+            ax.contour(dem_contour, dem_contour_seq, extent=rdr_extent, **kwargs)
+
     return ax
 
 
