@@ -17,6 +17,7 @@ import shutil
 import argparse
 import subprocess
 import numpy as np
+import glob
 
 import mintpy
 from mintpy.objects import sensor, RAMP_LIST
@@ -1065,150 +1066,71 @@ class TimeSeriesAnalysis:
         if self.template['mintpy.plot'] and plot:
             print('\n******************** plot & save to pic ********************')
 
-            # Load tropo model params
-            tropo_model = self.template['mintpy.troposphericDelay.weatherModel']
-
-            # Set paths
+            dem_file = os.path.join(self.workDir, 'inputs', 'geometryRadar.h5')
+            if not os.path.isfile(dem_file):
+                dem_file = os.path.join(self.workDir, 'inputs', 'geometryGeo.h5')
+            mask_file = os.path.join(self.workDir, 'maskTempCoh.h5')
             pic_dir = os.path.join(self.workDir, 'pic')
             ifgram_stack = os.path.join(self.workDir, 'inputs', 'ifgramStack.h5')
-            dem = os.path.join(self.workDir, 'inputs', 'geometryGeo.h5')
-            mask = os.path.join(self.workDir, 'maskTempCoh.h5')
-            velocity = os.path.join(self.workDir, 'velocity.h5')
-            velocity_tropo = os.path.join(self.workDir, f'velocity{tropo_model}.h5')
-            num_inv_ifgram = os.path.join(self.workDir, f'numInvIfgram.h5')
-            temporal_coherence = os.path.join(self.workDir, 'temporalCoherence.h5')
-            avg_phase_velocity = os.path.join(self.workDir, 'avgPhaseVelocity.h5')
-            avg_spatial_coh = os.path.join(self.workDir, 'avgSpatialCoh.h5')
-            mask_conn_comp = os.path.join(self.workDir, 'maskConnComp.h5')
-            ts = os.path.join(self.workDir, 'timeseries.h5')
-            ts_era = os.path.join(self.workDir, f'timeseries_{tropo_model}.h5')
-            ts_era_demerr = os.path.join(self.workDir, f'timeseries_{tropo_model}_demErr.h5')
-            # Paths for Envisat LOD
-            ts_envi = os.path.join(self.workDir, 'timeseries_LODcor.h5')
-            ts_envi_ecmwf = os.path.join(self.workDir, 'timeseries_LODcor_ECMWF.h5')
-            ts_envi_ecmwf_demerr = os.path.join(self.workDir, 'timeseries_LODcor_ECMWF_demErr.h5')
-            ts_envi_ecmwf_ramp = os.path.join(self.workDir, 'timeseries_LODcor_ECMWF_ramp.h5')
-            ts_envi_ecmwf_ramp_demerr = os.path.join(self.workDir, 'timeseries_LODcor_ECMWF_ramp_demErr.h5')
-            # Paths for UNAVCO timeseries data
-            unavco_maskcoh = os.path.join(self.workDir, 'geo', 'geo_maskTempCoh.h5')
-            unavco_tempcoh = os.path.join(self.workDir, 'geo', 'geo_temporalCoherence.h5')
-            unavco_velocity = os.path.join(self.workDir, 'geo', 'geo_velocity.h5')
-            unavco_ts_ecmwf_demerr_ramp = os.path.join(self.workDir, 'geo', 'geo_timeseries_ECMWF_demErr_ramp.h5')
-            unavco_ts_ecmwf_demerr = os.path.join(self.workDir, 'geo', 'geo_timeseries_ECMWF_demErr.h5')
-            unavco_ts_demerr = os.path.join(self.workDir, 'geo', 'geo_timeseries_demErr.h5')
+            tropo_model = self.template['mintpy.troposphericDelay.weatherModel']
+            geo_dir = os.path.join(self.workDir, 'geo')
 
-            # View and Tsview Options
-            view_options = ['--nodisplay', '--dpi', '150', '--update']
-            tsview_options = ['--nodisplay', f'--mask', mask, '--noaxis', '-u', 'cm', '--wrap', '--wrap-range', '-10',
-                              '10']
+            # view options
+            opt1 = ['--nodisplay', '--dpi', '150', '--update']
+            opt2 = ['--nodisplay', '--dpi', '150', '--update', '--mask', mask_file, '--noaxis', '-u', 'cm', '--wrap-range', '-10', '10']
 
-            # Run commands
-            if os.path.exists(dem) and os.path.exists(velocity) and os.path.exists(mask):
-                iargs = view_options + [velocity, '--dem', dem, '--mask', mask, '-u', 'cm', '-o',
-                                        os.path.join(pic_dir, "velocity.png")]
-                view.main(iargs)
+            iargs_list = [
+                ['velocity.h5'] + opt1,
+                ['temporalCoherence.h5'] + opt1 + ['-c', 'gray', '--vlim', '0', '1'],
+                ['maskTempCoh.h5'] + opt1 + ['-c', 'gray', '--vlim', '0', '1'],
+                [dem_file] + opt1,
+                [ifgram_stack] + opt1 + ['-unwrapPhase', '--zero-mask', '--wrap'],
+                [ifgram_stack] + opt1 + ['-unwrapPhase', '--zero-mask'],
+                # [ifgram_stack] + opt1 + ['-coherence', '--mask', 'no'],
+                # [ifgram_stack] + opt1 + ['-connectComponent', '--mask', 'no'],
+                [ifgram_stack] + opt1 + ['-unwrapPhase_bridging', '--zero-mask'],
+                [ifgram_stack] + opt1 + ['-unwrapPhase_closure', '--zero-mask'],
+                [ifgram_stack] + opt1 + ['-unwrapPhase_bridging_phaseClosure', '--zero-mask'],
+                ['avgPhaseVelocity.h5'] + opt1,
+                ['avgSpatialCoh.h5'] + opt1 + ['-c', 'gray', '--vlim', '0', '1'],
+                ['maskConnComp.h5'] + opt1 + ['-c', 'gray', '--vlim', '0', '1'],
+                ['timeseries.h5'] + opt2,
+                ['timeseries_LODcor.h5'] + opt2,
+                ['timeseries_LODcor_ECMWF.h5'] + opt2,
+                ['timeseries_LODcor_ECMWF_demErr.h5'] + opt2,
+                ['timeseries_LODcor_ECMWF_ramp.h5'] + opt2,
+                ['timeseries_LODcor_ECMWF_ramp_demErr.h5'] + opt2,
+                [f'timeseries_{tropo_model}.h5'] + opt2,
+                [f'timeseries_{tropo_model}_demErr.h5'] + opt2,
+                [f'timeseries_{tropo_model}_ramp.h5'] + opt2,
+                [f'timeseries_{tropo_model}_ramp_demErr.h5'] + opt2,
+                [f'timeseries_ramp.h5'] + opt2,
+                [f'timeseries_demErr_ramp.h5'] + opt2,
+                [f'timeseries_demErr.h5'] + opt2,
+                [os.path.join(geo_dir, 'geo_maskTempCoh.h5')] + opt1 + ['-c', 'gray'],
+                [os.path.join(geo_dir, 'geo_temporalCoherence.h5')] + opt1 + ['-c', 'gray'],
+                [os.path.join(geo_dir, 'geo_velocity.h5')] + opt1 + ['velocity'],
+                [os.path.join(geo_dir, 'geo_timeseries_ECMWF_demErr_ramp.h5')] + opt1 + ['--noaxis'],
+                [os.path.join(geo_dir, 'geo_timeseries_ECMWF_demErr.h5')] + opt1 + ['--noaxis'],
+                [os.path.join(geo_dir, 'geo_timeseries_demErr_ramp.h5')] + opt1 + ['--noaxis'],
+                [os.path.join(geo_dir, 'geo_timeseries_demErr.h5')] + opt1 + ['--noaxis'],
+                [f'velocity{tropo_model}.h5'] + opt1 + ['--mask', 'no'],
+                [f'numInvIfgram.h5'] + opt1 + ['--mask', 'no']
+            ]
 
-            if os.path.exists(dem) and os.path.exists(velocity_tropo) and os.path.exists(mask):
-                iargs = view_options + [velocity_tropo, '--dem', dem, '--mask', mask, '-u', 'cm', '-o',
-                                        os.path.join(pic_dir, f"velocity{tropo_model}.png")]
-                view.main(iargs)
+            for iargs in iargs_list:
+                if os.path.isfile(iargs[0]):
+                    view.main(iargs)
 
-            if os.path.exists(num_inv_ifgram):
-                iargs = [num_inv_ifgram, '--mask', 'no', '-o', os.path.join(pic_dir, 'numInvIfgram.png')]
-                view.main(iargs)
-
-            if os.path.exists(temporal_coherence):
-                iargs = view_options + [temporal_coherence, '-c', 'gray', '--vlim', '0', '1', '-o',
-                                        os.path.join(pic_dir, 'temporalCoherence.png')]
-                view.main(iargs)
-
-            if os.path.exists(mask):
-                iargs = view_options + [mask, '-c', 'gray', '--vlim', '0', '1', '-o', os.path.join(pic_dir, 'maskTempCoh.png')]
-                view.main(iargs)
-
-            if os.path.exists(ifgram_stack):
-                iargs = view_options + [ifgram_stack, 'unwrapPhase-', '--zero-mask', '--wrap', '-o',
-                                        os.path.join(pic_dir, 'unwrapPhase_wrap.png')]
-                view.main(iargs)
-
-                iargs = view_options + [ifgram_stack, 'unwrapPhase-', '--zero-mask', '-o',
-                                        os.path.join(pic_dir, 'unwrapPhase_wrap.png')]
-                view.main(iargs)
-
-                iargs = view_options + [ifgram_stack, 'coherence', '--mask', 'no', '-o', os.path.join(pic_dir, 'coherence.png')]
-                view.main(iargs)
-
-            if os.path.exists(avg_phase_velocity):
-                iargs = view_options + [avg_phase_velocity, '-o', os.path.join(pic_dir, 'avgPhaseVelocity.png')]
-                view.main(iargs)
-
-            if os.path.exists(avg_spatial_coh):
-                iargs = view_options + [avg_spatial_coh, '-c', 'gray', '--vlim', '0', '1', '-o',
-                                        os.path.join(pic_dir, 'avgSpatialCoh.png')]
-                view.main(iargs)
-
-            if os.path.exists(mask_conn_comp):
-                iargs = view_options + [mask_conn_comp, '-c', 'gray', '--vlim', '0', '1', '-o',
-                                        os.path.join(pic_dir, 'maskConnComp.png')]
-                view.main(iargs)
-
-            if os.path.exists(ts):
-                iargs = [ts, '-o', os.path.join(pic_dir, 'timeseries_wrap.png')] + tsview_options
-                view.main(iargs)
-
-            if os.path.exists(ts_era):
-                iargs = [ts_era, '-o', os.path.join(pic_dir, f'timeseries_{tropo_model}_wrap.png')] + tsview_options
-                view.main(iargs)
-
-            if os.path.exists(ts_era_demerr):
-                iargs = [ts_era_demerr, '-o', os.path.join(pic_dir, f'timeseries_{tropo_model}_demErr_wrap.png')] + tsview_options
-                view.main(iargs)
-
-            # Envisat Data
-            if os.path.exists(ts_envi):
-                iargs = [ts_envi, '-o', os.path.join(pic_dir, 'timeseries_LODcor.png')] + tsview_options
-                view.main(iargs)
-
-            if os.path.exists(ts_envi_ecmwf):
-                iargs = [ts_envi_ecmwf, '-o', os.path.join(pic_dir, 'timeseries_LODcor_ECMWF.png')] + tsview_options
-                view.main(iargs)
-
-            if os.path.exists(ts_envi_ecmwf_demerr):
-                iargs = [ts_envi_ecmwf_demerr, '-o', os.path.join(pic_dir, 'timeseries_LODcor_ECMWF_demErr.png')] + tsview_options
-                view.main(iargs)
-
-            if os.path.exists(ts_envi_ecmwf_ramp):
-                iargs = [ts_envi_ecmwf_ramp, '-o', os.path.join(pic_dir, 'timeseries_LODcor_ECMWF_ramp.png')] + tsview_options
-                view.main(iargs)
-
-            if os.path.exists(ts_envi_ecmwf_ramp_demerr):
-                iargs = [ts_envi_ecmwf_ramp_demerr, '-o', os.path.join(pic_dir, 'timeseries_LODcor_ECMWF_ramp_demErr.png')] + tsview_options
-                view.main(iargs)
-
-            # UNVACO paths
-            if os.path.exists(unavco_maskcoh):
-                iargs = view_options + [unavco_maskcoh, '-c', 'gray', '-o', os.path.join(pic_dir, 'geo_maskTempCoh.png')]
-                view.main(iargs)
-
-            if os.path.exists(unavco_tempcoh):
-                iargs = view_options + [unavco_tempcoh, '-c', 'gray', '-o', os.path.join(pic_dir, 'geo_temporalCoh.png')]
-                view.main(iargs)
-
-            if os.path.exists(unavco_velocity):
-                iargs = view_options + [unavco_velocity, 'velocity', '-o', os.path.join(pic_dir, 'geo_velocity.png')]
-                view.main(iargs)
-
-            if os.path.exists(unavco_ts_demerr):
-                iargs = [unavco_ts_demerr, '--noaxis', '-o', os.path.join(pic_dir, 'geo_timeseries_demErr.png')]
-                view.main(iargs)
-
-            if os.path.exists(unavco_ts_ecmwf_demerr):
-                iargs = [unavco_ts_ecmwf_demerr, '--noaxis', '-o', os.path.join(pic_dir, 'geo_timeseries_ECMWF_demErr.png')]
-                view.main(iargs)
-
-            if os.path.exists(unavco_ts_ecmwf_demerr_ramp):
-                iargs = [unavco_ts_ecmwf_demerr_ramp, '--noaxis', '-o', os.path.join(pic_dir, 'geo_timeseries_ECMWF_demErr_ramp.png')]
-                view.main(iargs)
+            ## Move/copy picture files to pic folder
+            print('Moving pictures and figures to pic directory')
+            src_pics = glob.glob('*.png')
+            src_pdfs = glob.glob('*.pdf')
+            src_kmzs = glob.glob('*.kmz')
+            output_files = src_pics + src_pdfs + src_kmzs
+            for src in output_files:
+                dst = os.path.join(pic_dir, os.path.basename(src))
+                shutil.move(src, dst)
 
             # time info
             m, s = divmod(time.time()-start_time, 60)
