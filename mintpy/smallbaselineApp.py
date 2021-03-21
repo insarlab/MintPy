@@ -370,22 +370,17 @@ class TimeSeriesAnalysis:
 
 
     def _copy_aux_file(self):
-        if not self.projectName:
-            return
-
         # for Univ of Miami
-        flist = ['PROCESS/unavco_attributes.txt',
-                 'PROCESS/bl_list.txt',
-                 'SLC/summary*slc.jpg']
-        try:
+        if os.getenv('SCRATCHDIR') and self.projectName:
             proj_dir = os.path.join(os.getenv('SCRATCHDIR'), self.projectName)
+            flist = ['PROCESS/unavco_attributes.txt',
+                     'PROCESS/bl_list.txt',
+                     'SLC/summary*slc.jpg']
             flist = ut.get_file_list([os.path.join(proj_dir, i) for i in flist], abspath=True)
             for fname in flist:
                 if ut.run_or_skip(out_file=os.path.basename(fname), in_file=fname, check_readable=False) == 'run':
                     shutil.copy2(fname, self.workDir)
                     print('copy {} to work directory'.format(os.path.basename(fname)))
-        except FileExistsError:
-            pass
         return
 
 
@@ -969,14 +964,16 @@ class TimeSeriesAnalysis:
             print('\nsave_kmz.py', ' '.join(iargs))
 
             # update mode
-            try:
-                fbase = os.path.basename(kmz_file)
-                kmz_file = [i for i in [fbase, './geo/{}'.format(fbase), './pic/{}'.format(fbase)]
-                            if os.path.isfile(i)][0]
-            except FileExistsError:
-                kmz_file = None
+            fbase = os.path.basename(kmz_file)
+            kmz_files = [i for i in [fbase,
+                                     './geo/{}'.format(fbase),
+                                     './pic/{}'.format(fbase)]
+                         if os.path.isfile(i)]
+            kmz_file = kmz_files[0] if len(kmz_files) > 0 else None
+
             if ut.run_or_skip(out_file=kmz_file, in_file=vel_file, check_readable=False) == 'run':
                 mintpy.save_kmz.main(iargs)
+
         else:
             print('save velocity to Google Earth format is OFF.')
         return
@@ -1014,12 +1011,12 @@ class TimeSeriesAnalysis:
             # output (check existing file)
             atr = readfile.read_attribute(ts_file)
             SAT = sensor.get_unavco_mission_name(atr)
-            try:
-                hdfeos5_file = ut.get_file_list('{}_*.he5'.format(SAT))[0]
-            except:
-                hdfeos5_file = None
+            hdfeos5_files = ut.get_file_list('{}_*.he5'.format(SAT))
+            hdfeos5_file = hdfeos5_files[0] if len(hdfeos5_files) > 0 else None
+
             if ut.run_or_skip(out_file=hdfeos5_file, in_file=[ts_file, tcoh_file, scoh_file, mask_file, geom_file]) == 'run':
                 mintpy.save_hdfeos5.main(iargs)
+
         else:
             print('save time-series to HDF-EOS5 format is OFF.')
         return
