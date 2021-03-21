@@ -373,7 +373,9 @@ def read_timeseries_data(inps):
     # default vlim
     inps.dlim = [np.nanmin(ts_data[0]), np.nanmax(ts_data[0])]
     if not inps.vlim:
-        inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(ts_data[0], num_multilook=10)
+        inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(ts_data[0],
+                                                                              num_multilook=10,
+                                                                              print_msg=inps.print_msg)
     vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
     vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
 
@@ -485,7 +487,7 @@ def save_ts_plot(yx, fig_img, fig_pts, d_ts, inps):
             vprint(('Output file extension is fixed to .pdf,'
                     ' input extension {} is ignored.').format(ext))
     else:
-        inps.outfile_base = 'y{}_x{}'.format(yx[0], yx[1])
+        inps.outfile_base = 'y{}x{}'.format(yx[0], yx[1])
 
     # get aux info
     vel, std = estimate_slope(d_ts[0], inps.yearList,

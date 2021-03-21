@@ -142,6 +142,7 @@ def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_
     y, x = coord.geo2radar(lat, lon)[0:2]
     if print_msg:
         print('input lat / lon: {} / {}'.format(lat, lon))
+        print('corresponding y / x: {} / {}'.format(y, x))
 
     # reference pixel
     ref_y, ref_x = None, None
