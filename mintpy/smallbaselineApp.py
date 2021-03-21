@@ -1090,11 +1090,11 @@ class TimeSeriesAnalysis:
         pic_dir = os.path.join(self.workDir, 'pic')
 
         # use relative path for shorter and cleaner printout view command
-        stack_file  = os.path.relpath(stack_file)
-        geom_file   = os.path.relpath(geom_file)
-        lookup_file = os.path.relpath(lookup_file)
-        mask_file   = os.path.relpath(mask_file)
-        geo_dir     = os.path.relpath(geo_dir)
+        stack_file  = os.path.relpath(stack_file)  if stack_file  else stack_file
+        geom_file   = os.path.relpath(geom_file)   if geom_file   else geom_file
+        lookup_file = os.path.relpath(lookup_file) if lookup_file else lookup_file
+        mask_file   = os.path.relpath(mask_file)   if mask_file   else mask_file
+        geo_dir     = os.path.relpath(geo_dir)     if geo_dir     else geo_dir
 
         # view options
         # for each element list:
@@ -1150,6 +1150,9 @@ class TimeSeriesAnalysis:
         iargs_list = []
         for iargs in iargs_list0:
             fname, args = iargs[0], iargs[1:]
+            if not fname:
+                continue
+
             if '*' in fname:
                 fnames = sorted(glob.glob(fname))
                 if len(fnames) > 0:
