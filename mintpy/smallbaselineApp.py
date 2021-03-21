@@ -1097,7 +1097,7 @@ class TimeSeriesAnalysis:
                 ['timeseries_*.h5'] + opt2,
                 [os.path.join(geo_dir, 'geo_maskTempCoh.h5')] + opt1 + ['-c', 'gray'],
                 [os.path.join(geo_dir, 'geo_temporalCoherence.h5')] + opt1 + ['-c', 'gray'],
-                [os.path.join(geo_dir, 'geo_velocity.h5')] + opt1 + ['velocity'],
+                [os.path.join(geo_dir, 'geo_velocity.h5'), 'velocity'] + opt1,
                 [os.path.join(geo_dir, 'geo_timeseries*.h5')] + opt1 + ['--noaxis'],
                 [f'velocity{tropo_model}.h5'] + opt1 + ['--mask', 'no'],
                 ['numInvIfgram.h5'] + opt1 + ['--mask', 'no']
@@ -1105,6 +1105,7 @@ class TimeSeriesAnalysis:
             if 'connectComponent' in readfile.get_dataset_list(ifgram_stack):
                 iargs_list.append([ifgram_stack, 'connectComponent'] + opt1 + ['--mask', 'no'])
 
+            # Convert glob paths and their arguments to lists
             for idx, iargs in enumerate(iargs_list):
                 if '*' in iargs[0]:
                     # Get the arguments of the filename
@@ -1117,6 +1118,7 @@ class TimeSeriesAnalysis:
                         for path in glob_list:
                             iargs_list.insert(idx, [path] + args)
 
+            # Generate figures
             for iargs in iargs_list:
                 if os.path.isfile(iargs[0]):
                     mintpy.view.main(iargs)
