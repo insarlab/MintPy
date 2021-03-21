@@ -810,7 +810,7 @@ def read_dataset_input(inps):
     else:
         # default dataset to display for certain type of files
         if inps.key == 'geometry':
-            inps.dset = geometryDatasetNames
+            inps.dset = list(geometryDatasetNames)
             inps.dset.remove('bperp')
         elif inps.key == 'ifgramStack':
             inps.dset = ['unwrapPhase']
