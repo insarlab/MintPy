@@ -1086,8 +1086,7 @@ class TimeSeriesAnalysis:
                 [dem_file] + opt1,
                 [ifgram_stack] + opt1 + ['-unwrapPhase', '--zero-mask', '--wrap'],
                 [ifgram_stack] + opt1 + ['-unwrapPhase', '--zero-mask'],
-                # [ifgram_stack] + opt1 + ['-coherence', '--mask', 'no'],
-                # [ifgram_stack] + opt1 + ['-connectComponent', '--mask', 'no'],
+                [ifgram_stack, 'coherence'] + opt1 + ['--mask', 'no'],
                 [ifgram_stack] + opt1 + ['-unwrapPhase_bridging', '--zero-mask'],
                 [ifgram_stack] + opt1 + ['-unwrapPhase_closure', '--zero-mask'],
                 [ifgram_stack] + opt1 + ['-unwrapPhase_bridging_phaseClosure', '--zero-mask'],
@@ -1095,34 +1094,34 @@ class TimeSeriesAnalysis:
                 ['avgSpatialCoh.h5'] + opt1 + ['-c', 'gray', '--vlim', '0', '1'],
                 ['maskConnComp.h5'] + opt1 + ['-c', 'gray', '--vlim', '0', '1'],
                 ['timeseries.h5'] + opt2,
-                ['timeseries_LODcor.h5'] + opt2,
-                ['timeseries_LODcor_ECMWF.h5'] + opt2,
-                ['timeseries_LODcor_ECMWF_demErr.h5'] + opt2,
-                ['timeseries_LODcor_ECMWF_ramp.h5'] + opt2,
-                ['timeseries_LODcor_ECMWF_ramp_demErr.h5'] + opt2,
-                [f'timeseries_{tropo_model}.h5'] + opt2,
-                [f'timeseries_{tropo_model}_demErr.h5'] + opt2,
-                [f'timeseries_{tropo_model}_ramp.h5'] + opt2,
-                [f'timeseries_{tropo_model}_ramp_demErr.h5'] + opt2,
-                [f'timeseries_ramp.h5'] + opt2,
-                [f'timeseries_demErr_ramp.h5'] + opt2,
-                [f'timeseries_demErr.h5'] + opt2,
+                ['timeseries_*.h5'] + opt2,
                 [os.path.join(geo_dir, 'geo_maskTempCoh.h5')] + opt1 + ['-c', 'gray'],
                 [os.path.join(geo_dir, 'geo_temporalCoherence.h5')] + opt1 + ['-c', 'gray'],
                 [os.path.join(geo_dir, 'geo_velocity.h5')] + opt1 + ['velocity'],
-                [os.path.join(geo_dir, 'geo_timeseries_ECMWF_demErr_ramp.h5')] + opt1 + ['--noaxis'],
-                [os.path.join(geo_dir, 'geo_timeseries_ECMWF_demErr.h5')] + opt1 + ['--noaxis'],
-                [os.path.join(geo_dir, 'geo_timeseries_demErr_ramp.h5')] + opt1 + ['--noaxis'],
-                [os.path.join(geo_dir, 'geo_timeseries_demErr.h5')] + opt1 + ['--noaxis'],
+                [os.path.join(geo_dir, 'geo_timeseries*.h5')] + opt1 + ['--noaxis'],
                 [f'velocity{tropo_model}.h5'] + opt1 + ['--mask', 'no'],
-                [f'numInvIfgram.h5'] + opt1 + ['--mask', 'no']
+                ['numInvIfgram.h5'] + opt1 + ['--mask', 'no']
             ]
+            if 'connectComponent' in readfile.get_dataset_list(ifgram_stack):
+                iargs_list.append([ifgram_stack, 'connectComponent'] + opt1 + ['--mask', 'no'])
+
+            for idx, iargs in enumerate(iargs_list):
+                if '*' in iargs[0]:
+                    # Get the arguments of the filename
+                    args = iargs_list[idx][1:]
+                    # Delete path at current index
+                    del iargs_list[idx]
+                    glob_list = glob.glob(iargs[0])
+                    # If glob returns a populated list then insert glob list paths at that index
+                    if glob_list:
+                        for path in glob_list:
+                            iargs_list.insert(idx, [path] + args)
 
             for iargs in iargs_list:
                 if os.path.isfile(iargs[0]):
-                    view.main(iargs)
+                    mintpy.view.main(iargs)
 
-            ## Move/copy picture files to pic folder
+            # Move/copy picture files to pic folder
             print('Moving pictures and figures to pic directory')
             src_pics = glob.glob('*.png')
             src_pdfs = glob.glob('*.pdf')
