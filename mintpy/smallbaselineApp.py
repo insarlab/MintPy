@@ -1025,8 +1025,8 @@ class TimeSeriesAnalysis:
         return
 
 
-    def run(self, steps=STEP_LIST):
-        # run the chosen steps
+    def run(self, steps):
+        """run the chosen steps."""
         for sname in steps:
             print('\n\n******************** step - {} ********************'.format(sname))
 
@@ -1171,7 +1171,7 @@ class TimeSeriesAnalysis:
         stack_dset_list = readfile.get_dataset_list(stack_file)
         iargs_list = [iargs for iargs in iargs_list
                       if (iargs[0] != stack_file
-                          or (iargs[0] == stack_file 
+                          or (iargs[0] == stack_file
                               and iargs[1] in stack_dset_list))]
 
         # run view
@@ -1241,7 +1241,7 @@ def main(iargs=None):
     # plot if:
     # a. --plot in command line
     # OR b. template['mintpy.plot'] = yes AND runSteps > 1
-    if inps.plot or (self.template['mintpy.plot'] and len(inps.runSteps) > 1):
+    if inps.plot or (app.template['mintpy.plot'] and len(inps.runSteps) > 1):
         app.plot_result()
 
     app.close()
