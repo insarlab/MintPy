@@ -373,11 +373,36 @@ def update_data_with_plot_inps(data, metadata, inps):
 
         # applying spatial referencing
         if len(data.shape) == 2:
-            data -= data[ref_y, ref_x]
+            ref_val = data[ref_y, ref_x]
+            if not np.ma.is_masked(ref_val) and not np.isnan(ref_val):
+                data -= ref_val
+                vprint('set reference pixel to: {}'.format(inps.ref_yx))
+            else:
+                msg = 'WARNING: input reference pixel ({}, {}) has either masked or NaN value!'.format(ref_y, ref_x)
+                msg += ' -> skip re-referencing.'
+                vprint(msg)
+                inps.ref_yx = None
+
         elif len(data.shape) == 3:
-            data -= np.tile(data[:, ref_y, ref_x].reshape(-1, 1, 1),
-                            (1, data.shape[1], data.shape[2]))
-        vprint('set reference pixel to: {}'.format(inps.ref_yx))
+            # read ref_val
+            if 0 <= ref_y < data.shape[-2] and 0 <= ref_x < data.shape[-1]:
+                ref_val = np.squeeze(data[:, ref_y, ref_x])
+            elif inps.key == 'timeseries':
+                ref_box = [inps.ref_yx[1],     inps.ref_yx[0],
+                           inps.ref_yx[1] + 1, inps.ref_yx[0] + 1]
+                ref_val = readfile.read(inps.file, datasetName=inps.dset, box=ref_box)[0]
+            else:
+                raise ValueError('input reference point {} is out of data coverage!'.format(inps.ref_yx))
+
+            # apply referencing
+            if not np.ma.is_masked(ref_val) and np.all(~np.isnan(ref_val)):
+                data -= np.tile(ref_val.reshape(-1, 1, 1), (1, data.shape[1], data.shape[2]))
+                vprint('set reference pixel to: {}'.format(inps.ref_yx))
+            else:
+                msg = 'WARNING: input reference pixel ({}, {}) has either masked or NaN value!'.format(ref_y, ref_x)
+                msg += ' -> skip re-referencing.'
+                vprint(msg)
+                inps.ref_yx = None
     else:
         inps.ref_yx = None
 
@@ -397,7 +422,7 @@ def update_data_with_plot_inps(data, metadata, inps):
     # 3. update display min/max
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
     if not inps.vlim: # and data.ndim < 3:
-        inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(data)
+        inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(data, print_msg=inps.print_msg)
     vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
     vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
 

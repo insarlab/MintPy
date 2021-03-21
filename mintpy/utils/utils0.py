@@ -541,6 +541,23 @@ def interpolate_data(inData, outShape, interpMethod='linear'):
     return outData
 
 
+def polygon2mask(polygon, shape):
+    """Create a 2D mask (numpy array in binary) from a polygon.
+
+    Link: https://stackoverflow.com/questions/3654289/scipy-create-2d-polygon-mask
+    Parameters: polygon - list of tuples of 2 int, e.g. [(x1, y1), (x2, y2), ...]
+                shape   - list/tuple of 2 int, for length and width
+    Returns:    mask    - 2D np.ndarray in bool in size of (length, width)
+    """
+    from PIL import Image, ImageDraw
+    length, width = shape
+
+    img = Image.new('L', (width, length), 0)
+    ImageDraw.Draw(img).polygon(polygon, outline=1, fill=1)
+    mask = np.array(img, dtype=np.bool_)
+
+    return mask
+
 
 
 #################################### User Interaction #####################################

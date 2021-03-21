@@ -19,7 +19,7 @@ RAMP_LIST = [
 ]
 
 
-def deramp(data, mask_in, ramp_type='linear', metadata=None, max_num_sample=1e6, coeff_file=None):
+def deramp(data, mask_in=None, ramp_type='linear', metadata=None, max_num_sample=1e6, coeff_file=None):
     '''Remove ramp from input data matrix based on pixel marked by mask
     Ignore data with nan or zero value.
     Parameters: data       : 2D / 3D np.ndarray, data to be derampped
