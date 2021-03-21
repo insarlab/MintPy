@@ -9,14 +9,12 @@
 
 
 import os
-import re
 import sys
 import glob
 import time
 import datetime
 import shutil
 import argparse
-import subprocess
 import numpy as np
 
 import mintpy
