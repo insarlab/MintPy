@@ -32,6 +32,7 @@ __all__ = [
     'unwrap_error_bridging',
     'unwrap_error_phase_closure',
     'version',
+    'view',
 ]
 
 root_module = Path(__file__).parent.parent.name   #mintpy

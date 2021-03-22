@@ -27,7 +27,7 @@ from mintpy.objects.coord import coordinate
 
 
 #################################################################################
-def check_loaded_dataset(work_dir='./', print_msg=True):
+def check_loaded_dataset(work_dir='./', print_msg=True, relpath=False):
     """Check the result of loading data for the following two rules:
         1. file existance
         2. file attribute readability
@@ -102,6 +102,11 @@ def check_loaded_dataset(work_dir='./', print_msg=True):
     else:
         print("Input data seems to be geocoded. Lookup file not needed.")
 
+    if relpath:
+        stack_file  = os.path.relpath(stack_file)  if stack_file  else stack_file
+        geom_file   = os.path.relpath(geom_file)   if geom_file   else geom_file
+        lookup_file = os.path.relpath(lookup_file) if lookup_file else lookup_file
+
     # print message
     if print_msg:
         print(('Loaded dataset are processed by '
@@ -117,6 +122,7 @@ def check_loaded_dataset(work_dir='./', print_msg=True):
             print('-'*50)
             print('All data needed found/loaded/copied. Processed 2-pass InSAR data can be removed.')
         print('-'*50)
+
     return load_complete, stack_file, geom_file, lookup_file
 
 
