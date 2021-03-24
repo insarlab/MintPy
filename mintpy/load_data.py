@@ -27,7 +27,7 @@ from mintpy import subset
 
 
 #################################################################
-PROCESSOR_LIST = ['isce', 'aria', 'snap', 'gamma', 'roipac']
+PROCESSOR_LIST = ['isce', 'aria', 'snap', 'gamma', 'roipac', 'hyp3']
 
 datasetName2templateKey = {
     'unwrapPhase'     : 'mintpy.load.unwFile',
@@ -594,10 +594,12 @@ def prepare_metadata(iDict):
     print('-'*50)
     print('prepare metadata files for {} products'.format(processor))
 
-    if processor in ['gamma', 'roipac', 'snap']:
+    if processor in ['gamma', 'hyp3', 'roipac', 'snap']:
         # import prep_module
         if processor == 'gamma':
             from mintpy import prep_gamma as prep_module
+        elif processor == 'hyp3':
+            from mintpy import prep_hyp3 as prep_module
         elif processor == 'roipac':
             from mintpy import prep_roipac as prep_module
         elif processor == 'snap':
