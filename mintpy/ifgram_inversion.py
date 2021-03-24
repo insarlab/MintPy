@@ -888,7 +888,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
         # b. invert once for all pixels with obs in all ifgrams
         if np.sum(mask_all_net) > 0:
-            print(('inverting pixels with valid {} in all ifgrams'
+            print(('inverting pixels with valid {} in all  ifgrams'
                    ' ({:.0f} pixels; {:.1f}%) ...').format(obs_ds_name,
                                                            np.sum(mask_all_net),
                                                            np.sum(mask_all_net)/num_pixel2inv*100))
