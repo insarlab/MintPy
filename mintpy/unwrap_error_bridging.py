@@ -157,7 +157,7 @@ def run_or_skip(inps):
                         if str(inps_dict[key]) != atr.get(key_prefix+key, 'no')]
         if len(changed_keys) > 0:
             flag = 'run'
-            print('3) NOT all key configration parameters are the same: {}.'.format(configKeys))
+            print('3) NOT all key configuration parameters are the same: {}.'.format(configKeys))
             for key in changed_keys:
                 print('\t{}\t: {} --> {}'.format(key, atr.get(key_prefix+key, 'no'), str(inps_dict[key])))
         else:

@@ -587,7 +587,7 @@ class TimeSeriesAnalysis:
             atr = readfile.read_attribute(mask_file)
             if any(str(self.template[i]) != atr.get(i, 'False') for i in config_keys):
                 flag = 'run'
-                print('2) NOT all key configration parameters are the same: {}'.format(config_keys))
+                print('2) NOT all key configuration parameters are the same: {}'.format(config_keys))
             else:
                 print('2) all key configuration parameters are the same: {}'.format(config_keys))
         print('run or skip: {}'.format(flag))

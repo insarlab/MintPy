@@ -277,7 +277,7 @@ def run_or_skip(inps):
 
         if any(str(vars(inps)[key]) != atr_ts.get(key_prefix+key, 'None') for key in configKeys):
             flag = 'run'
-            print('3) NOT all key configration parameters are the same: {}'.format(configKeys))
+            print('3) NOT all key configuration parameters are the same: {}'.format(configKeys))
         elif meta_keys and any(atr_ts[key] != atr_ifg[key] for key in meta_keys):
             flag = 'run'
             print('3) NOT all the metadata are the same: {}'.format(meta_keys))
@@ -335,7 +335,7 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
                 inv_quality_name  - str, inversion quality type/name
     Returns:    ts                - 2D np.array in size of (num_date, num_pixel), phase time-series
                 inv_quality       - 1D np.array in size of (num_pixel), temporal coherence (for phase) or residual (for offset)
-                num_inv_obs       - 1D np.array in size of (num_pixel), number of observatons (ifgrams / offsets)
+                num_inv_obs       - 1D np.array in size of (num_pixel), number of observations (ifgrams / offsets)
                                     used during the inversion
     """
     ifgram = ifgram.reshape(A.shape[0], -1)
@@ -445,7 +445,7 @@ def calc_inv_quality(ifgram, G, X, inv_quality_name='temporalCoherence'):
     if num_pixel > chunk_size:
         num_chunk = int(np.ceil(num_pixel / chunk_size))
         num_chunk_step = max(1, int(ut.round_to_1(num_chunk / 5)))
-        print('calcualting {} in chunks of {} pixels: {} chunks in total ...'.format(
+        print('calculating {} in chunks of {} pixels: {} chunks in total ...'.format(
             inv_quality_name, chunk_size, num_chunk))
 
         for i in range(num_chunk):
@@ -787,7 +787,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     #time_idx = [i for i in range(num_date)]
     #time_idx.remove(ref_idx)
 
-    # 1.1 read / calcualte weight
+    # 1.1 read / calculate weight
     if weight_func in ['no', 'sbas']:
         weight = None
     else:
