@@ -500,15 +500,15 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
         if 'byte order' in atr.keys() and atr['byte order'] == '0':
             byte_order = 'little-endian'
 
-    # gdal (e.g. GACOS TIF files)
-    elif processor == 'gdal':
+    # gdal (e.g. GACOS TIF files or HyP3 TIF files)
+    elif processor in ['gdal','hyp3']:
         pass
 
     else:
         print('Unknown InSAR processor: {}'.format(processor))
 
     # reading
-    if processor == 'gdal':
+    if processor in ['gdal','hyp3']:
         data = read_gdal(
             fname,
             box=box,
