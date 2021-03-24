@@ -699,7 +699,7 @@ def calc_delay_timeseries(inps):
 
     ## 3. calculate phase delay
     print('\n------------------------------------------------------------------------------')
-    print('calcualting absolute delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
+    print('calculating absolute delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
     print('number of grib files used: {}'.format(num_date))
 
     prog_bar = ptime.progressBar(maxValue=num_date, print_msg=~inps.verbose)
