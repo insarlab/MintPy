@@ -2,14 +2,20 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Forrest Williams                                 #
+# Author: Forrest Williams, Mar 2021                       #
 ############################################################
+
 
 import os
 import sys
 import argparse
 from datetime import datetime
-from osgeo import gdal
+
+try:
+    from osgeo import gdal
+except ImportError:
+    raise ImportError('Can not import gdal!')
+
 from mintpy.objects import sensor
 from mintpy.utils import writefile, utils as ut
 
