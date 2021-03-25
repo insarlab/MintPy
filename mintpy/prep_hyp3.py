@@ -7,13 +7,11 @@
 
 import os
 import sys
-# import re
 import argparse
-# import numpy as np
 from datetime import datetime
 from osgeo import gdal
 from mintpy.objects import sensor
-from mintpy.utils import writefile, utils as ut #readfile, writefile, ptime,
+from mintpy.utils import writefile, utils as ut
 
 
 SPEED_OF_LIGHT = 299792458  # m/s
@@ -166,7 +164,7 @@ def add_ifg_metadata(fname,meta):
     directory = os.path.dirname(fname)
 
     sat, date1_string, date2_string, pol, res, soft, proc, ids, *_ = os.path.basename(fname).split('_')
-    
+
     job_id = '_'.join([sat, date1_string, date2_string, pol, res, soft, proc, ids])
     date1 = datetime.strptime(date1_string,'%Y%m%dT%H%M%S')
     date2 = datetime.strptime(date2_string,'%Y%m%dT%H%M%S')
@@ -205,7 +203,7 @@ def main(iargs=None):
         # add interferogram-specific metadata
         if any([x in fname for x in ['unw_phase','corr']]):
             meta = add_ifg_metadata(fname, meta)
-        
+
         rsc_file = fname+'.rsc'
         writefile.write_roipac_rsc(meta, out_file=rsc_file)
 
