@@ -148,7 +148,7 @@ def general_metadata(fname):
 
     # Earth radius probably won't be used anywhere for the geocoded data
     meta['EARTH_RADIUS'] = 6337286.638938101
-    
+
     return(meta)
 
 
@@ -171,14 +171,14 @@ def add_ifg_metadata(fname,meta):
     date1 = datetime.strptime(date1_string,'%Y%m%dT%H%M%S')
     date2 = datetime.strptime(date2_string,'%Y%m%dT%H%M%S')
     date_avg = date1 + (date2 - date1) / 2
-    
+
     ifg_meta_file = f'{os.path.join(directory,job_id)}.txt'
     ifg_meta = {}
     with open(ifg_meta_file, 'r') as f:
         for line in f:
             key, value = line.strip().split(': ')
             ifg_meta[key] = value
-    
+
     # Add relevant data to meta object
     meta['CENTER_LINE_UTC'] = date_avg.strftime('%y%m%d')
     meta['DATE12'] = f'{date1.strftime("%y%m%d")}-{date2.strftime("%y%m%d")}'
