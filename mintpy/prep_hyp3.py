@@ -139,6 +139,8 @@ def add_geospatial_metadata(fname, meta):
     # Earth radius probably won't be used anywhere for the geocoded data
     meta['EARTH_RADIUS'] = 6337286.638938101
 
+    del ds
+
     return(meta)
 
 # extract data from HyP3 interferogram metadata
