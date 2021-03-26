@@ -95,103 +95,150 @@ def cmd_line_parse(iargs=None):
 
 #########################################################################
 
-# Extract geospatial and sensor metadata
-def general_metadata(fname):
-    '''Read/extract attribute data from HyP3 gdal geotiff metadata file and add to metadata dictionary
+# extract geospatial and add to meta
+def add_geospatial_metadata(fname, meta):
+    '''Read/extract attribute data from HyP3 gdal geotiff metadata and add to metadata dictionary
     Inputs:
-        *unw_phase.tif or *corr.tif file name or *dem.tif file name, e.g.
+        *unw_phase.tif, *corr.tif file name or *dem.tif file name, e.g.
             S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase.tif
             S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr.tif
             dem.tif
+        Metadata dictionary (meta)
     Output:
         Metadata dictionary (meta)
     '''
 
-    meta = {}
-
-    # Geospatial Data
+    # geospatial Data
     ds = gdal.Open(fname, gdal.GA_ReadOnly)
+    transform = ds.GetGeoTransform()
+
+    x_step = abs(transform[1])
+    y_step = abs(transform[5]) * -1.
+
+    W = transform[0] - x_step / 2.
+    N = transform[3] - y_step / 2.
+    E = W + x_step * ds.RasterXSize
+    S = N + y_step * ds.RasterYSize
+
     meta['FILE_LENGTH'] = ds.RasterYSize
     meta['LENGTH'] = ds.RasterYSize
     meta['WIDTH'] = ds.RasterXSize
-    geoTrans = ds.GetGeoTransform()
-    del ds
 
-    x0 = geoTrans[0]
-    y0 = geoTrans[3]
-    x_step = geoTrans[1]
-    y_step = geoTrans[5]
-    x1 = x0 + x_step * meta['WIDTH']
-    y1 = y0 + y_step * meta['LENGTH']
+    meta['NORTH'] = N
+    meta['SOUTH'] = S
+    meta['EAST'] = E
+    meta['WEST'] = W
 
-    meta['X_FIRST'] = f'{x0:.9f}'
-    meta['Y_FIRST'] = f'{y0:.9f}'
-    meta['X_STEP'] = f'{x_step:.9f}'
-    meta['Y_STEP'] = f'{y_step:.9f}'
+    meta['X_FIRST'] = transform[0]
+    meta['Y_FIRST'] = transform[3]
+    meta['X_STEP'] = x_step
+    meta['Y_STEP'] = y_step
     meta['X_UNIT'] = 'METERS'
     meta['Y_UNIT'] = 'METERS'
-
-    meta["LON_REF1"] = x0
-    meta["LON_REF2"] = x1
-    meta["LON_REF3"] = x0
-    meta["LON_REF4"] = x1
-
-    meta["LAT_REF1"] = y0
-    meta["LAT_REF2"] = y0
-    meta["LAT_REF3"] = y1
-    meta["LAT_REF4"] = y1
-
-    # Satellite platform data
-    #   Note: HyP3 currently only supports Sentinel-1 data, so Sentinel-1
-    #         configuration is hard-coded.
-    meta['PROCESSOR'] = 'hyp3'
-    meta['PLATFORM'] = 'Sen'
-    meta['ANTENNA_SIDE'] = -1
-    meta['WAVELENGTH'] = SPEED_OF_LIGHT / sensor.SEN['carrier_frequency']
-    meta['HEIGHT'] = 693000.0 # nominal altitude of Sentinel1 orbit
 
     # Earth radius probably won't be used anywhere for the geocoded data
     meta['EARTH_RADIUS'] = 6337286.638938101
 
     return(meta)
 
-
-# Extract data from HyP3 interferogram metadata
-def add_ifg_metadata(fname,meta):
+# extract data from HyP3 interferogram metadata
+def add_hyp3_metadata(fname,meta,is_ifg=True):
     '''Read/extract attribute data from HyP3 metadata file and add to metadata dictionary
     Inputs:
-        *unw_phase.tif or *corr.tif file name, e.g.
+        *unw_phase.tif or *corr.tif file name, *dem.tif e.g.
             S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase.tif
             S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr.tif
+            dem.tif
         Metadata dictionary (meta)
     Output:
         Metadata dictionary (meta)
     '''
-    directory = os.path.dirname(fname)
 
-    sat, date1_string, date2_string, pol, res, soft, proc, ids, *_ = os.path.basename(fname).split('_')
+    if is_ifg:
+        # determine interferogram pair info and hyp3 metadata file name
+        sat, date1_string, date2_string, pol, res, soft, proc, ids, *_ = os.path.basename(fname).split('_')
 
-    job_id = '_'.join([sat, date1_string, date2_string, pol, res, soft, proc, ids])
-    date1 = datetime.strptime(date1_string,'%Y%m%dT%H%M%S')
-    date2 = datetime.strptime(date2_string,'%Y%m%dT%H%M%S')
-    date_avg = date1 + (date2 - date1) / 2
+        job_id = '_'.join([sat, date1_string, date2_string, pol, res, soft, proc, ids])
+        directory = os.path.dirname(fname)
+        meta_file = f'{os.path.join(directory,job_id)}.txt'
 
-    ifg_meta_file = f'{os.path.join(directory,job_id)}.txt'
-    ifg_meta = {}
-    with open(ifg_meta_file, 'r') as f:
-        for line in f:
-            key, value = line.strip().split(': ')
-            ifg_meta[key] = value
+        date1 = datetime.strptime(date1_string,'%Y%m%dT%H%M%S')
+        date2 = datetime.strptime(date2_string,'%Y%m%dT%H%M%S')
+        date_avg = date1 + (date2 - date1) / 2
+        date_avg_seconds = (date_avg - date_avg.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
 
-    # Add relevant data to meta object
-    meta['CENTER_LINE_UTC'] = date_avg.strftime('%y%m%d')
-    meta['DATE12'] = f'{date1.strftime("%y%m%d")}-{date2.strftime("%y%m%d")}'
-    meta['HEADING'] = ifg_meta['Heading']
+        # open and read hyp3 metadata
+        hyp3_meta = {}
+        with open(meta_file, 'r') as f:
+            for line in f:
+                key, value = line.strip().split(': ')
+                hyp3_meta[key] = value
+
+        # add relevant data to meta object
+        meta['CENTER_LINE_UTC'] = date_avg_seconds
+        meta['DATE12'] = f'{date1.strftime("%y%m%d")}-{date2.strftime("%y%m%d")}'
+        meta['HEADING'] = hyp3_meta['Heading']
+        meta['ALOOKS'] = hyp3_meta['Azimuth looks']
+        meta['RLOOKS'] = hyp3_meta['Range looks']
+        meta['P_BASELINE_TOP_HDR'] = hyp3_meta['Baseline']
+        meta['P_BASELINE_BOTTOM_HDR'] = hyp3_meta['Baseline']
+
+    else:
+        meta_file = os.path.splitext(fname)[0]+'.txt'
+
+        # open and read hyp3 metadata
+        hyp3_meta = {}
+        with open(meta_file, 'r') as f:
+            for line in f:
+                key, value = line.strip().split(': ')
+                hyp3_meta[key] = value
+
+        # add relevant data to meta object
+        meta['HEADING'] = hyp3_meta['Heading']
+
+    return(meta)
+
+# add sentinel-1 metadata and remove unnessecary metadata
+def add_sentinel1_metadata(meta):
+    '''Add Sentinel-1 attribute data to metadata dictionary
+    Inputs:
+        Metadata dictionary (meta)
+    Output:
+        Metadata dictionary (meta)
+    '''
+
+    # note: HyP3 currently only supports Sentinel-1 data, so Sentinel-1
+    #       configuration is hard-coded.
+
+    meta['PROCESSOR'] = 'hyp3'
+    meta['PLATFORM'] = 'Sen'
+    meta['ANTENNA_SIDE'] = -1
+    meta['WAVELENGTH'] = SPEED_OF_LIGHT / sensor.SEN['carrier_frequency']
+    meta['HEIGHT'] = 693000.0 # nominal altitude of Sentinel1 orbit
+
+    # add LAT/LON_REF1/2/3/4 based on whether satellite ascending or descending
     meta['ORBIT_DIRECTION'] = 'ASCENDING' if float(meta['HEADING']) > -90 else 'DESCENDING'
-    meta['ALOOKS'] = ifg_meta['Azimuth looks']
-    meta['RLOOKS'] = ifg_meta['Range looks']
-    meta['P_BASELINE_TOP_HDR'] = ifg_meta['Baseline']
-    meta['P_BASELINE_BOTTOM_HDR'] = ifg_meta['Baseline']
+
+    if meta['ORBIT_DIRECTION'] == 'ASCENDING':
+        meta['LAT_REF1'] = str(meta['SOUTH'])
+        meta['LAT_REF2'] = str(meta['SOUTH'])
+        meta['LAT_REF3'] = str(meta['NORTH'])
+        meta['LAT_REF4'] = str(meta['NORTH'])
+        meta['LON_REF1'] = str(meta['WEST'])
+        meta['LON_REF2'] = str(meta['EAST'])
+        meta['LON_REF3'] = str(meta['WEST'])
+        meta['LON_REF4'] = str(meta['EAST'])
+    else:
+        meta['LAT_REF1'] = str(meta['NORTH'])
+        meta['LAT_REF2'] = str(meta['NORTH'])
+        meta['LAT_REF3'] = str(meta['SOUTH'])
+        meta['LAT_REF4'] = str(meta['SOUTH'])
+        meta['LON_REF1'] = str(meta['EAST'])
+        meta['LON_REF2'] = str(meta['WEST'])
+        meta['LON_REF3'] = str(meta['EAST'])
+        meta['LON_REF4'] = str(meta['WEST'])
+    
+    del meta['NORTH'], meta['SOUTH'], meta['EAST'], meta['WEST']
 
     return(meta)
 
@@ -204,12 +251,15 @@ def main(iargs=None):
 
     # for each filename, generate metadata rsc file
     for fname in inps.file:
-        meta = general_metadata(fname)
+        meta = {}
+        meta = add_geospatial_metadata(fname,meta)
 
-        # add interferogram-specific metadata
         if any([x in fname for x in ['unw_phase','corr']]):
-            meta = add_ifg_metadata(fname, meta)
+            meta = add_hyp3_metadata(fname, meta, is_ifg=True)
+        else:
+            meta = add_hyp3_metadata(fname, meta, is_ifg=False)
 
+        meta = add_sentinel1_metadata(meta)
         rsc_file = fname+'.rsc'
         writefile.write_roipac_rsc(meta, out_file=rsc_file)
 
