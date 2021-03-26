@@ -129,12 +129,12 @@ def add_geospatial_metadata(fname, meta):
     meta['EAST'] = E
     meta['WEST'] = W
 
-    meta['X_FIRST'] = transform[0]
-    meta['Y_FIRST'] = transform[3]
+    meta['X_FIRST'] = W
+    meta['Y_FIRST'] = N
     meta['X_STEP'] = x_step
     meta['Y_STEP'] = y_step
-    meta['X_UNIT'] = 'METERS'
-    meta['Y_UNIT'] = 'METERS'
+    meta['X_UNIT'] = 'meters'
+    meta['Y_UNIT'] = 'meters'
 
     # Earth radius probably won't be used anywhere for the geocoded data
     meta['EARTH_RADIUS'] = 6337286.638938101
