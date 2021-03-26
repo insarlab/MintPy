@@ -620,10 +620,10 @@ mintpy.load.lookupYFile    = $DATA_DIR/GalapagosAlosAT133/PROCESS/GEO/geo_100610
 mintpy.load.lookupXFile    = $DATA_DIR/GalapagosAlosAT133/PROCESS/GEO/geo_100610-100910/geomap_*rlks.trans
 ```
 
-### HyP3
+### [ASF HyP3](https://hyp3.asf.alaska.edu/)
 
 1. Request and download GUNW products using [hyp3_sdk](https://nbviewer.jupyter.org/github/ASFHyP3/hyp3-sdk/blob/main/docs/sdk_example.ipynb).
-2. Download the corresponding DEM used in processing using the [hyp3lib](https://github.com/ASFHyP3/hyp3-lib) [getDEMfor.getDemFile](https://github.com/ASFHyP3/hyp3-lib/blob/d108842345ae0c2be8078a9b6cc04bbabe9a4dee/hyp3lib/getDemFor.py#L16) function.
+2. Download the corresponding DEM used in processing using the [hyp3lib](https://github.com/ASFHyP3/hyp3-lib) [getDEMfor.getDemFile()](https://github.com/ASFHyP3/hyp3-lib/blob/develop/hyp3lib/getDemFor.py#L16) function.
 3. Paste HyP3 interferogram metadata file (e.g. S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85.txt) into the same directory as your dem and give it the same name as your dem (e.g. dem.txt)
 4. Clip DEM and all interferograms to the same area using the hyp3lib [cutGeotiffs.py](https://github.com/ASFHyP3/hyp3-lib/blob/develop/hyp3lib/cutGeotiffs.py) script.
 
@@ -652,8 +652,8 @@ The corresponding template options for `load_data`:
 ```cfg
 mintpy.load.processor        = hyp3
 ##---------interferogram datasets:
-mintpy.load.unwFile          = $DATA_DIR/tongariroSen/*/*unw_phase_clip.tif
-mintpy.load.corFile          = $DATA_DIR/tongariroSen/*/*corr_clip.tif
+mintpy.load.unwFile          = $DATA_DIR/TongariroSen/*/*unw_phase_clip.tif
+mintpy.load.corFile          = $DATA_DIR/TongariroSen/*/*corr_clip.tif
 ##---------geometry datasets:
-mintpy.load.demFile          = $DATA_DIR/tongariroSen/dem_clip.tif
+mintpy.load.demFile          = $DATA_DIR/TongariroSen/dem_clip.tif
 ```
