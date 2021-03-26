@@ -356,17 +356,20 @@ def extract_metadata(stack):
     meta['NCORRLOOKS'] = meta['RLOOKS'] * meta['ALOOKS'] / (rgfact * azfact)
 
     # geo transformation
-    geoTrans = ds.GetGeoTransform()
-    lon0 = geoTrans[0]
-    lat0 = geoTrans[3]
-    lon_step = geoTrans[1]
-    lat_step = geoTrans[5]
-    lon1 = lon0 + lon_step * meta["WIDTH"]
-    lat1 = lat0 + lat_step * meta["LENGTH"]
-    meta["X_FIRST"] = '{:.9f}'.format(lon0)
-    meta["Y_FIRST"] = '{:.9f}'.format(lat0)
-    meta["X_STEP"] = '{:.9f}'.format(lon_step)
-    meta["Y_STEP"] = '{:.9f}'.format(lat_step)
+    transform = ds.GetGeoTransform()
+
+    x_step = abs(transform[1])
+    y_step = abs(transform[5]) * -1.
+
+    W = transform[0] - x_step / 2.
+    N = transform[3] - y_step / 2.
+    E = W + x_step * ds.RasterXSize
+    S = N + y_step * ds.RasterYSize
+
+    meta["X_FIRST"] = '{:.9f}'.format(transform[0])
+    meta["Y_FIRST"] = '{:.9f}'.format(transform[3])
+    meta["X_STEP"] = '{:.9f}'.format(x_step)
+    meta["Y_STEP"] = '{:.9f}'.format(y_step)
     meta["X_UNIT"] = "degrees"
     meta["Y_UNIT"] = "degrees"
 
@@ -380,15 +383,24 @@ def extract_metadata(stack):
     # nominal altitude of Sentinel1 orbit
     meta["HEIGHT"] = 693000.0
 
-    meta["LON_REF1"] = lon0
-    meta["LON_REF2"] = lon1
-    meta["LON_REF3"] = lon0
-    meta["LON_REF4"] = lon1
-
-    meta["LAT_REF1"] = lat0
-    meta["LAT_REF2"] = lat0
-    meta["LAT_REF3"] = lat1
-    meta["LAT_REF4"] = lat1
+    if meta["ORBIT_DIRECTION"].startswith("asc"):
+        meta["LAT_REF1"] = str(S)
+        meta["LAT_REF2"] = str(S)
+        meta["LAT_REF3"] = str(N)
+        meta["LAT_REF4"] = str(N)
+        meta["LON_REF1"] = str(W)
+        meta["LON_REF2"] = str(E)
+        meta["LON_REF3"] = str(W)
+        meta["LON_REF4"] = str(E)
+    else:
+        meta["LAT_REF1"] = str(N)
+        meta["LAT_REF2"] = str(N)
+        meta["LAT_REF3"] = str(S)
+        meta["LAT_REF4"] = str(S)
+        meta["LON_REF1"] = str(E)
+        meta["LON_REF2"] = str(W)
+        meta["LON_REF3"] = str(E)
+        meta["LON_REF4"] = str(W)
 
     ds = None
     return meta
