@@ -366,8 +366,8 @@ def extract_metadata(stack):
     E = W + x_step * ds.RasterXSize
     S = N + y_step * ds.RasterYSize
 
-    meta["X_FIRST"] = '{:.9f}'.format(transform[0])
-    meta["Y_FIRST"] = '{:.9f}'.format(transform[3])
+    meta["X_FIRST"] = '{:.9f}'.format(W)
+    meta["Y_FIRST"] = '{:.9f}'.format(N)
     meta["X_STEP"] = '{:.9f}'.format(x_step)
     meta["Y_STEP"] = '{:.9f}'.format(y_step)
     meta["X_UNIT"] = "degrees"
@@ -383,7 +383,7 @@ def extract_metadata(stack):
     # nominal altitude of Sentinel1 orbit
     meta["HEIGHT"] = 693000.0
 
-    if meta["ORBIT_DIRECTION"].startswith("asc"):
+    if meta["ORBIT_DIRECTION"].startswith("ASC"):
         meta["LAT_REF1"] = str(S)
         meta["LAT_REF2"] = str(S)
         meta["LAT_REF3"] = str(N)
