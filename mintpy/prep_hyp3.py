@@ -239,7 +239,7 @@ def add_sentinel1_metadata(meta):
         meta['LON_REF2'] = str(meta['WEST'])
         meta['LON_REF3'] = str(meta['EAST'])
         meta['LON_REF4'] = str(meta['WEST'])
-    
+
     del meta['NORTH'], meta['SOUTH'], meta['EAST'], meta['WEST']
 
     return(meta)
