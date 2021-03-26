@@ -627,9 +627,9 @@ mintpy.load.lookupXFile    = $DATA_DIR/GalapagosAlosAT133/PROCESS/GEO/geo_100610
 3. Paste HyP3 interferogram metadata file (e.g. S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85.txt) into the same directory as your dem and give it the same name as your dem (e.g. dem.txt)
 4. Clip DEM and all interferograms to the same area using the hyp3lib [cutGeotiffs.py](https://github.com/ASFHyP3/hyp3-lib/blob/develop/hyp3lib/cutGeotiffs.py) script.
 
-$DATA_DIR/TongariroSen
+
 ```
-$DATA_DIR/SanFranSenDT42
+$DATA_DIR/TongariroSen
 ├── DEM
 │   ├── ...
 ├── S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85
