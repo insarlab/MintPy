@@ -27,7 +27,7 @@ from mintpy import subset
 
 
 #################################################################
-PROCESSOR_LIST = ['isce', 'aria', 'snap', 'gamma', 'roipac']
+PROCESSOR_LIST = ['isce', 'aria', 'snap', 'gamma', 'roipac', 'hyp3']
 
 datasetName2templateKey = {
     'unwrapPhase'     : 'mintpy.load.unwFile',
@@ -469,15 +469,18 @@ def read_inps_dict2ifgram_stack_dict_object(iDict):
 
 def read_inps_dict2geometry_dict_object(iDict):
 
-    # eliminate dsName by processor
+    # eliminate lookup table dsName for input files in radar-coordinates
     if iDict['processor'] in ['isce', 'doris']:
+        # for processors with lookup table in radar-coordinates, remove azimuth/rangeCoord
         iDict['ds_name2key'].pop('azimuthCoord')
         iDict['ds_name2key'].pop('rangeCoord')
     elif iDict['processor'] in ['roipac', 'gamma']:
+        # for processors with lookup table in geo-coordinates, remove latitude/longitude
         iDict['ds_name2key'].pop('latitude')
         iDict['ds_name2key'].pop('longitude')
-    elif iDict['processor'] in ['snap']:
-        #check again when there is a SNAP product in radar coordiantes
+    elif iDict['processor'] in ['snap', 'aria', 'hyp3']:
+        # for processors with geocoded products support only, do nothing for now.
+        # check again when adding products support in radar-coordiantes
         pass
     else:
         print('Un-recognized InSAR processor: {}'.format(iDict['processor']))
@@ -594,10 +597,12 @@ def prepare_metadata(iDict):
     print('-'*50)
     print('prepare metadata files for {} products'.format(processor))
 
-    if processor in ['gamma', 'roipac', 'snap']:
+    if processor in ['gamma', 'hyp3', 'roipac', 'snap']:
         # import prep_module
         if processor == 'gamma':
             from mintpy import prep_gamma as prep_module
+        elif processor == 'hyp3':
+            from mintpy import prep_hyp3 as prep_module
         elif processor == 'roipac':
             from mintpy import prep_roipac as prep_module
         elif processor == 'snap':
