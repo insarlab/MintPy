@@ -6,8 +6,9 @@ If using ROI_PAC as the InSAR processor, both **baseline parameter RSC** file (i
 
 +  LENGTH = number of rows.  
 +  WIDTH = number of columns.  
-+  X/Y_STEP = (for geocoded product) Ground resolution in degree in Longitude/latitude direction.   
-+  X/Y_FIRST = (for geocoded product) Longitude/latitude in degree of the upper left corner of the first pixel.
++  X/Y_FIRST = (for geocoded product) Longitude/easting/X and latitude/northing/Y coordinate in degrees/meters of the upper left corner of the first pixel.
++  X/Y_STEP = (for geocoded product) Ground resolution in degrees/meters in X/Y direction.   
++  X/Y_UNIT = (for geocoded product) Coordinate unit in X/Y direction: degrees or meters.    
 +  LAT/LON_REF1/2/3/4 = Latitude/longitude at corner 1/2/3/4 (degree), used in save_unavco, PyAPS (DEM file in radar coord), not accurate; number named in order of first line near/far range, last line near/far range.   
 +  WAVELENGTH = Radar wavelength in meters.    
 +  RANGE_PIXEL_SIZE = Slant range pixel size (search for pixel_ratio to convert to ground size, in m), used in dem_error, incidence_angle, multilook, transect.   
@@ -46,6 +47,7 @@ The following attributes vary for each interferogram:
 +  SUBSET_XMIN/XMAX/YMIN/YMAX = start/end column/row number of subset in the original coverage
 +  MODIFICATION_TIME = dataset modification time, exists in ifgramStack.h5 file for 3D dataset, used for --update option of unwrap error corrections.
 +  NCORRLOOKS = number of independent looks, as explained in [SNAPHU](https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/snaphu.conf.full)
++  UTM_ZONE = UTM zone, e.g. 60S, for geocoded file with UTM projection only.
 
 ### Reference ###
 

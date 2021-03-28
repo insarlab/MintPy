@@ -1522,49 +1522,68 @@ def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lal
     return ax
 
 
-def draw_scalebar(ax, geo_box, loc=[0.2, 0.2, 0.1], labelpad=0.05, font_size=12, color='k'):
+def draw_scalebar(ax, geo_box, unit='degrees', loc=[0.2, 0.2, 0.1], labelpad=0.05, font_size=12, color='k'):
     """draw a simple map scale from x1,y to x2,y in map projection coordinates, label it with actual distance
     ref_link: http://matplotlib.1069221.n5.nabble.com/basemap-scalebar-td14133.html
     Parameters: ax       : matplotlib.pyplot.axes object
-                geo_box  : tuple of 4 float in (x0, y0, x1, y1) for (W, N, E, S) in degrees
-                loc      : list of 3 float, distance, lat/lon of scale bar center in ratio of width, relative coord
+                geo_box  : tuple of 4 float in (x0, y0, x1, y1) for (W, N, E, S) in degrees / meters
+                unit     : str, coordinate unit - degrees or meters
+                loc      : list of 3 float in (length, lat, lon) of scale bar center in ratio of width, relative coord
                 labelpad : float
     Returns:    ax
     Example:    from mintpy.utils import plot as pp
                 pp.draw_scale_bar(ax, geo_box)
     """
+    geod = pyproj.Geod(ellps='WGS84')
     if not ax:
         ax = plt.gca()
 
-    geod = pyproj.Geod(ellps='WGS84')
-
-    # length in meter
-    scene_width = geod.inv(geo_box[0], geo_box[3], geo_box[2], geo_box[3])[2]
-    distance = ut0.round_to_1(scene_width * loc[0])
+    ## location - center
     lon_c = geo_box[0] + loc[1] * (geo_box[2] - geo_box[0])
     lat_c = geo_box[3] + loc[2] * (geo_box[1] - geo_box[3])
 
-    # plot scale bar
-    if distance > 1000.0:
-        distance = np.rint(distance/1000.0)*1000.0
-    lon_c2, lat_c2 = geod.fwd(lon_c, lat_c, 90, distance)[0:2]
-    length = np.abs(lon_c - lon_c2)
-    lon0 = lon_c - length/2.0
-    lon1 = lon_c + length/2.0
+    ## length
+    # 1. calc scene width in meters
+    if unit.startswith('deg'):
+        scene_width = geod.inv(geo_box[0], geo_box[3],
+                               geo_box[2], geo_box[3])[2]
+    elif unit.startswith('meter'):
+        scene_width = geo_box[2] - geo_box[0]
 
+    # 2. convert length ratio to length in meters
+    length_meter = ut0.round_to_1(scene_width * loc[0])
+    if length_meter > 1000.0:
+        # round to the nearest km
+        length_meter = np.rint(length_meter/1000.0)*1000.0
+
+    # 3. convert length in meters to length in display coord unit
+    if unit.startswith('deg'):
+        lon_c2 = geod.fwd(lon_c, lat_c, 90, length_meter)[0]
+        length_disp = np.abs(lon_c - lon_c2)
+    elif unit.startswith('meter'):
+        length_disp = length_meter
+
+    ## starting/ending longitude
+    lon0 = lon_c - length_disp / 2.0
+    lon1 = lon_c + length_disp / 2.0
+
+    ## plot scale bar
     ax.plot([lon0, lon1], [lat_c, lat_c], color=color)
-    ax.plot([lon0, lon0], [lat_c, lat_c + 0.1*length], color=color)
-    ax.plot([lon1, lon1], [lat_c, lat_c + 0.1*length], color=color)
+    ax.plot([lon0, lon0], [lat_c, lat_c + 0.1*length_disp], color=color)
+    ax.plot([lon1, lon1], [lat_c, lat_c + 0.1*length_disp], color=color)
 
-    # plot scale bar label
+    ## plot scale bar label
     unit = 'm'
-    if distance >= 1000.0:
+    if length_meter >= 1000.0:
         unit = 'km'
-        distance *= 0.001
-    label = '{:.0f} {}'.format(distance, unit)
+        length_meter *= 0.001
+    label = '{:.0f} {}'.format(length_meter, unit)
     txt_offset = (geo_box[1] - geo_box[3]) * labelpad
 
-    ax.text(lon0+0.5*length, lat_c+txt_offset, label,
+    ax.text(lon0 + length_disp / 2.0,
+            lat_c + txt_offset,
+            label,
             verticalalignment='center', horizontalalignment='center',
             fontsize=font_size, color=color)
+
     return ax
