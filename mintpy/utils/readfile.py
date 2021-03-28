@@ -1224,12 +1224,12 @@ def read_envi_hdr(fname):
         #unit = map_info[-1].replace('}','').split('=')[1].lower()
 
         if abs(x_step) < 1. and abs(x_step) > 1e-7:
-            atr['X_FIRST'] = str(float(map_info[3]) - x_step / 2.)
-            atr['Y_FIRST'] = str(float(map_info[4]) - y_step / 2.)
-            atr['X_STEP'] = str(x_step)
-            atr['Y_STEP'] = str(y_step)
             atr['X_UNIT'] = 'degrees'
             atr['Y_UNIT'] = 'degrees'
+            atr['X_STEP'] = str(x_step)
+            atr['Y_STEP'] = str(y_step)
+            atr['X_FIRST'] = str(float(map_info[3]) - x_step / 2.)
+            atr['Y_FIRST'] = str(float(map_info[4]) - y_step / 2.)
 
     atr = standardize_metadata(atr)
 
@@ -1242,9 +1242,9 @@ def read_gdal_vrt(fname):
     Modified from $ISCE_HOME/applications/gdal2isce_xml.gdal2isce_xml() written by David Bekaert.
     """
     try:
-        from osgeo import gdal
+        from osgeo import gdal, osr
     except ImportError:
-        raise ImportError('Cannot import gdal!')
+        raise ImportError('Cannot import gdal and osr!')
 
     # read dataset using gdal
     ds = gdal.Open(fname, gdal.GA_ReadOnly)
@@ -1270,11 +1270,22 @@ def read_gdal_vrt(fname):
     x_step = abs(transform[1])
     y_step = abs(transform[5]) * -1.
 
-    if abs(x_step) < 1. and abs(x_step) > 1e-7:
-        atr['X_STEP'] = x_step
-        atr['Y_STEP'] = y_step
-        atr['X_FIRST'] = x0 - x_step / 2.
-        atr['Y_FIRST'] = y0 - y_step / 2.
+    atr['X_STEP'] = x_step
+    atr['Y_STEP'] = y_step
+    atr['X_FIRST'] = x0 - x_step / 2.
+    atr['Y_FIRST'] = y0 - y_step / 2.
+
+    # projection / coordinate unit
+    srs = osr.SpatialReference(wkt=ds.GetProjection())
+    srs_name = srs.GetName()
+    if 'UTM' in srs_name:
+        atr['UTM_ZONE'] = srs_name.split('UTM zone')[-1].strip()
+        atr['X_UNIT'] = 'meters'
+        atr['Y_UNIT'] = 'meters'
+
+    elif abs(x_step) < 1. and abs(x_step) > 1e-7:
+        atr['X_UNIT'] = 'degrees'
+        atr['Y_UNIT'] = 'degrees'
         # constrain longitude within (-180, 180]
         if atr['X_FIRST'] > 180.:
             atr['X_FIRST'] -= 360.

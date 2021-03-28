@@ -216,7 +216,7 @@ def prepare_geometry(geom_files, meta, update_mode=True):
         raise FileNotFoundError('NO geometry file found!')
 
     # write .rsc file for each geometry file
-    for i, geom_file in enumerate(geom_files):
+    for geom_file in geom_files:
         # copy over the common metadata
         geom_meta = {}
         for key, value in meta.items():

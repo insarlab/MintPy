@@ -10,17 +10,13 @@ import os
 import sys
 import argparse
 from datetime import datetime
-
-try:
-    from osgeo import gdal
-except ImportError:
-    raise ImportError('Can not import gdal!')
-
 from mintpy.objects import sensor
-from mintpy.utils import writefile, utils as ut
+from mintpy.utils import readfile, writefile, utils as ut
 
 
 SPEED_OF_LIGHT = 299792458  # m/s
+EARTH_RADIUS = 6371e3       # Earth radius in meters
+
 
 EXAMPLE = """example:
   prep_hyp3.py  interferograms/*/*unw_phase.tif
@@ -94,55 +90,6 @@ def cmd_line_parse(iargs=None):
 
 
 #########################################################################
-
-# extract geospatial and add to meta
-def add_geospatial_metadata(fname, meta):
-    '''Read/extract attribute data from HyP3 gdal geotiff metadata and add to metadata dictionary
-    Inputs:
-        *unw_phase.tif, *corr.tif file name or *dem.tif file name, e.g.
-            S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase.tif
-            S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr.tif
-            dem.tif
-        Metadata dictionary (meta)
-    Output:
-        Metadata dictionary (meta)
-    '''
-
-    # geospatial Data
-    ds = gdal.Open(fname, gdal.GA_ReadOnly)
-    transform = ds.GetGeoTransform()
-
-    x_step = abs(transform[1])
-    y_step = abs(transform[5]) * -1.
-
-    W = transform[0] - x_step / 2.
-    N = transform[3] - y_step / 2.
-    E = W + x_step * ds.RasterXSize
-    S = N + y_step * ds.RasterYSize
-
-    meta['FILE_LENGTH'] = ds.RasterYSize
-    meta['LENGTH'] = ds.RasterYSize
-    meta['WIDTH'] = ds.RasterXSize
-
-    meta['NORTH'] = N
-    meta['SOUTH'] = S
-    meta['EAST'] = E
-    meta['WEST'] = W
-
-    meta['X_FIRST'] = W
-    meta['Y_FIRST'] = N
-    meta['X_STEP'] = x_step
-    meta['Y_STEP'] = y_step
-    meta['X_UNIT'] = 'meters'
-    meta['Y_UNIT'] = 'meters'
-
-    # Earth radius probably won't be used anywhere for the geocoded data
-    meta['EARTH_RADIUS'] = 6337286.638938101
-
-    del ds
-
-    return(meta)
-
 # extract data from HyP3 interferogram metadata
 def add_hyp3_metadata(fname,meta,is_ifg=True):
     '''Read/extract attribute data from HyP3 metadata file and add to metadata dictionary
@@ -200,6 +147,7 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
 
     return(meta)
 
+
 # add sentinel-1 metadata and remove unnessecary metadata
 def add_sentinel1_metadata(meta):
     '''Add Sentinel-1 attribute data to metadata dictionary
@@ -217,30 +165,34 @@ def add_sentinel1_metadata(meta):
     meta['ANTENNA_SIDE'] = -1
     meta['WAVELENGTH'] = SPEED_OF_LIGHT / sensor.SEN['carrier_frequency']
     meta['HEIGHT'] = 693000.0 # nominal altitude of Sentinel1 orbit
+    meta['EARTH_RADIUS'] = EARTH_RADIUS
 
     # add LAT/LON_REF1/2/3/4 based on whether satellite ascending or descending
     meta['ORBIT_DIRECTION'] = 'ASCENDING' if float(meta['HEADING']) > -90 else 'DESCENDING'
+    N = float(meta['Y_FIRST'])
+    W = float(meta['X_FIRST'])
+    S = N + float(meta['Y_STEP']) * int(meta['LENGTH'])
+    E = W + float(meta['X_STEP']) * int(meta['WIDTH'])
 
+    # NOTE by ZY, 27-03-2021: this should be converted from meters to degrees for pyaps to use it properly.
     if meta['ORBIT_DIRECTION'] == 'ASCENDING':
-        meta['LAT_REF1'] = str(meta['SOUTH'])
-        meta['LAT_REF2'] = str(meta['SOUTH'])
-        meta['LAT_REF3'] = str(meta['NORTH'])
-        meta['LAT_REF4'] = str(meta['NORTH'])
-        meta['LON_REF1'] = str(meta['WEST'])
-        meta['LON_REF2'] = str(meta['EAST'])
-        meta['LON_REF3'] = str(meta['WEST'])
-        meta['LON_REF4'] = str(meta['EAST'])
+        meta['LAT_REF1'] = str(S)
+        meta['LAT_REF2'] = str(S)
+        meta['LAT_REF3'] = str(N)
+        meta['LAT_REF4'] = str(N)
+        meta['LON_REF1'] = str(W)
+        meta['LON_REF2'] = str(E)
+        meta['LON_REF3'] = str(W)
+        meta['LON_REF4'] = str(E)
     else:
-        meta['LAT_REF1'] = str(meta['NORTH'])
-        meta['LAT_REF2'] = str(meta['NORTH'])
-        meta['LAT_REF3'] = str(meta['SOUTH'])
-        meta['LAT_REF4'] = str(meta['SOUTH'])
-        meta['LON_REF1'] = str(meta['EAST'])
-        meta['LON_REF2'] = str(meta['WEST'])
-        meta['LON_REF3'] = str(meta['EAST'])
-        meta['LON_REF4'] = str(meta['WEST'])
-
-    del meta['NORTH'], meta['SOUTH'], meta['EAST'], meta['WEST']
+        meta['LAT_REF1'] = str(N)
+        meta['LAT_REF2'] = str(N)
+        meta['LAT_REF3'] = str(S)
+        meta['LAT_REF4'] = str(S)
+        meta['LON_REF1'] = str(E)
+        meta['LON_REF2'] = str(W)
+        meta['LON_REF3'] = str(E)
+        meta['LON_REF4'] = str(W)
 
     return(meta)
 
@@ -253,8 +205,7 @@ def main(iargs=None):
 
     # for each filename, generate metadata rsc file
     for fname in inps.file:
-        meta = {}
-        meta = add_geospatial_metadata(fname,meta)
+        meta = readfile.read_gdal_vrt(fname)
 
         if any([x in fname for x in ['unw_phase','corr']]):
             meta = add_hyp3_metadata(fname, meta, is_ifg=True)

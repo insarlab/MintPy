@@ -151,7 +151,7 @@ def add_figure_argument(parser):
                      help='disable automatic tight layout for multiple subplots')
 
     fig.add_argument('--coord', dest='fig_coord', choices=['radar', 'geo'], default='geo',
-                     help='Display in radar/geo coordination system, for geocoded file only (default: %(default)s).')
+                     help='Display in radar/geo coordination system (for geocoded file only; default: %(default)s).')
     fig.add_argument('--animation', action='store_true',
                      help='enable animation mode')
 
@@ -207,10 +207,11 @@ def add_map_argument(parser):
                       metavar=('left', 'right', 'top', 'bottom'),
                       help='Draw lalo label in [left, right, top, bottom] (default: %(default)s).')
 
-    mapg.add_argument('--projection', dest='map_projection', metavar='NAME', default='PlateCarree',
-                      choices={'PlateCarree', 'LambertConformal'},
-                      help='map projection when plotting in geo-coordinate (default: %(default)s).\n'
-                           'https://scitools.org.uk/cartopy/docs/latest/crs/projections.html\n\n')
+    #mapg.add_argument('--proj', '--projection', '--map-proj', dest='map_projection', metavar='NAME',
+    #                  help='map projection when plotting in geo-coordinate.\n'
+    #                       'Default: PlateCarree / UTM for units in degrees / meters.\n'
+    #                       'Check the link below for the full list of supported projections:\n'
+    #                       'https://scitools.org.uk/cartopy/docs/latest/crs/projections.html\n\n')
 
     # scale bar
     mapg.add_argument('--scalebar', nargs=3, metavar=('LEN', 'X', 'Y'), type=float,
