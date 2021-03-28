@@ -217,6 +217,10 @@ def save2mat(inps):
     mdict['Height'] = inps.height[inps.mask].reshape(-1,1)
     mdict['Mask'] = inps.mask
     mdict['Metadata'] = inps.metadata
+    mdict['Phase'][mdict['Phase']==0] = np.nan
+    dataList = ['Lon', 'Lat', 'Inc', 'Heading','Height','Phase']
+    for listFile in dataList:
+        mdict[listFile] = mdict[listFile][~np.isnan(mdict['Phase'])].reshape(-1,1)
     # save to mat file
     sio.savemat(inps.outfile, mdict, long_field_names=True)
     print('save to file: {}'.format(os.path.abspath(inps.outfile)))
