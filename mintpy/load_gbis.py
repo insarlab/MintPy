@@ -103,7 +103,8 @@ def gbis_mat2hdf5(inv_mat_file, display=True):
         print('-'*30)
         print('read mask from file: {}'.format(insar_mat_file))
 
-        # read mask
+        # read 1D height and 2D mask
+        hgt1 = sio.loadmat(insar_mat_file, struct_as_record=False, squeeze_me=True)['Height']
         mask = sio.loadmat(insar_mat_file, struct_as_record=False, squeeze_me=True)['Mask']
         length, width = mask.shape
 
@@ -112,9 +113,11 @@ def gbis_mat2hdf5(inv_mat_file, display=True):
         out_file = os.path.join(out_dir, '{}.h5'.format(insarPlot.name))
         out_files.append(out_file)
 
+        hgt2 = np.zeros((length, width), dtype=np.float32) * np.nan
         data = np.zeros((length, width), dtype=np.float32) * np.nan
         model = np.zeros((length, width), dtype=np.float32) * np.nan
         residual = np.zeros((length, width), dtype=np.float32) * np.nan
+        hgt2[mask!=0] = hgt1
         data[mask!=0] = insarPlot.data
         model[mask!=0] = insarPlot.model
         residual[mask!=0] = insarPlot.residual
@@ -131,6 +134,7 @@ def gbis_mat2hdf5(inv_mat_file, display=True):
 
         # write to HDF5 file
         dsDict = {}
+        dsDict['hgt'] = hgt2
         dsDict['data'] = data
         dsDict['model'] = model
         dsDict['residual'] = residual
