@@ -218,12 +218,16 @@ def save2mat(inps):
     mdict['Mask'] = inps.mask
     mdict['Metadata'] = inps.metadata
     mdict['Phase'][mdict['Phase']==0] = np.nan
+    placeholderRef = np.where((mdict['Lat'] == inps.metadata['REF_LAT']) & (mdict['Lon']==inps.metadata['REF_LON']))
+    mdict['Phase'][placeholderRef] = 0
     dataList = ['Lon', 'Lat', 'Inc', 'Heading','Height','Phase']
     for listFile in dataList:
         mdict[listFile] = mdict[listFile][~np.isnan(mdict['Phase'])].reshape(-1,1)
+    print('remaining pixels are {}' .format(mdict['Phase'].size))
     # save to mat file
     sio.savemat(inps.outfile, mdict, long_field_names=True)
     print('save to file: {}'.format(os.path.abspath(inps.outfile)))
+    
     return
 
 
