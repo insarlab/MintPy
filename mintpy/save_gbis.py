@@ -227,7 +227,6 @@ def save2mat(inps):
     # save to mat file
     sio.savemat(inps.outfile, mdict, long_field_names=True)
     print('save to file: {}'.format(os.path.abspath(inps.outfile)))
-    
     return
 
 
