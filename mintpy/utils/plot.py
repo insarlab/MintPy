@@ -451,6 +451,7 @@ def auto_adjust_yaxis(ax, dataList, fontsize=12, ymin=None, ymax=None):
 def plot_coherence_history(ax, date12List, cohList, p_dict={}):
     """Plot min/max Coherence of all interferograms for each date"""
     # Figure Setting
+    if 'ds_name'     not in p_dict.keys():   p_dict['ds_name']     = 'Coherence'
     if 'fontsize'    not in p_dict.keys():   p_dict['fontsize']    = 12
     if 'linewidth'   not in p_dict.keys():   p_dict['linewidth']   = 2
     if 'markercolor' not in p_dict.keys():   p_dict['markercolor'] = 'orange'
@@ -471,18 +472,18 @@ def plot_coherence_history(ax, date12List, cohList, p_dict={}):
 
     coh_mat = pnet.coherence_matrix(date12List, cohList)
 
-    ax.bar(x_list, np.nanmax(coh_mat, axis=0), bar_width.days, label='Max Coherence')
-    ax.bar(x_list, np.nanmin(coh_mat, axis=0), bar_width.days, label='Min Coherence')
+    ax.bar(x_list, np.nanmax(coh_mat, axis=0), bar_width.days, label='Max {}'.format(p_dict['ds_name']))
+    ax.bar(x_list, np.nanmin(coh_mat, axis=0), bar_width.days, label='Min {}'.format(p_dict['ds_name']))
 
     if p_dict['disp_title']:
-        ax.set_title('Coherence History of All Related Interferograms')
+        ax.set_title('{} History of All Related Pairs'.format(p_dict['ds_name']))
 
     ax = auto_adjust_xaxis_date(ax, datevector, fontsize=p_dict['fontsize'],
                                 every_year=p_dict['every_year'])[0]
     ax.set_ylim([p_dict['vlim'][0], p_dict['vlim'][1]])
 
     ax.set_xlabel('Time [years]', fontsize=p_dict['fontsize'])
-    ax.set_ylabel('Coherence', fontsize=p_dict['fontsize'])
+    ax.set_ylabel(p_dict['ds_name'], fontsize=p_dict['fontsize'])
     ax.legend(loc='lower right')
 
     return ax
@@ -654,8 +655,8 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
 
     # Legend
     if p_dict['disp_drop'] and p_dict['disp_legend']:
-        solid_line = mlines.Line2D([], [], color='k', ls='solid',  label='Ifg used')
-        dash_line  = mlines.Line2D([], [], color='k', ls='dashed', label='Ifg dropped')
+        solid_line = mlines.Line2D([], [], color='k', ls='solid',  label='Ifgram used')
+        dash_line  = mlines.Line2D([], [], color='k', ls='dashed', label='Ifgram dropped')
         ax.legend(handles=[solid_line, dash_line])
 
     return ax
@@ -793,14 +794,15 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
                 im : mappable
     """
     # Figure Setting
+    if 'ds_name'     not in p_dict.keys():   p_dict['ds_name']     = 'Coherence'
     if 'fontsize'    not in p_dict.keys():   p_dict['fontsize']    = 12
     if 'linewidth'   not in p_dict.keys():   p_dict['linewidth']   = 2
     if 'markercolor' not in p_dict.keys():   p_dict['markercolor'] = 'orange'
     if 'markersize'  not in p_dict.keys():   p_dict['markersize']  = 16
     if 'disp_title'  not in p_dict.keys():   p_dict['disp_title']  = True
-    if 'fig_title'   not in p_dict.keys():   p_dict['fig_title']   = 'Coherence Matrix'
+    if 'fig_title'   not in p_dict.keys():   p_dict['fig_title']   = '{} Matrix'.format(p_dict['ds_name'])
     if 'colormap'    not in p_dict.keys():   p_dict['colormap']    = 'jet'
-    if 'cbar_label'  not in p_dict.keys():   p_dict['cbar_label']  = 'Coherence'
+    if 'cbar_label'  not in p_dict.keys():   p_dict['cbar_label']  = p_dict['ds_name']
     if 'vlim'        not in p_dict.keys():   p_dict['vlim']        = (0.2, 1.0)
     if 'disp_cbar'   not in p_dict.keys():   p_dict['disp_cbar']   = True
     if 'legend_loc'  not in p_dict.keys():   p_dict['legend_loc']  = 'best'
@@ -1042,10 +1044,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     from mintpy.objects.gps import search_gps, GPS
     marker_size = 7
     vmin, vmax = inps.vlim
-    if isinstance(inps.colormap, str):
-        cmap = ColormapExt(inps.colormap).colormap
-    else:
-        cmap = inps.colormap
+    cmap = ColormapExt(inps.colormap).colormap if isinstance(inps.colormap, str) else inps.colormap
 
     atr = dict(metadata)
     atr['UNIT'] = 'm'
