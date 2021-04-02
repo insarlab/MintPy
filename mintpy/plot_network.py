@@ -40,7 +40,7 @@ EXAMPLE = """example:
   plot_network.py coherenceSpatialAvg.txt
 
   # offsetSNR
-  plot_network.py inputs/ifgramStack.h5 -d offsetSNR -v 0 20
+  plot_network.py inputs/ifgramStack.h5 -d offsetSNR -v 0 20 --cmap-vlist 0 0.2 1
 """
 
 TEMPLATE = """
@@ -131,30 +131,6 @@ def cmd_line_parse(iargs=None):
     if not os.path.isfile(inps.maskFile):
         inps.maskFile = None
 
-    inps = read_network_info(inps)
-
-    # colormap
-    # adjust color jump if no --cmap-vlist is input
-    if inps.cohList is not None and '--cmap-vlist' not in sys.argv:
-        # use template value
-        key = 'mintpy.network.minCoherence'
-        if key in inps.template.keys():
-            inps.cmap_vlist[1] = max(0.01, float(inps.template[key]))
-
-        # calculate from dropped interferograms, if there is any
-        elif len(inps.date12List_drop) > 0:
-            idx_drop = [inps.date12List.index(i) for i in inps.date12List_drop]
-            coh_drop = [inps.cohList[i] for i in idx_drop]
-            inps.cmap_vlist[1] = max(coh_drop)
-            print('max coherence of excluded interferograms: {}'.format(max(coh_drop)))
-
-        # update default cmap_vlist[0] value if the manually input cmap_vlist[1] is too small
-        if inps.cmap_vlist[1] <= inps.cmap_vlist[0]:
-            inps.cmap_vlist[0] = min(0, inps.cmap_vlist[1])
-
-    # in case the manually input list is not in order
-    inps.cmap_vlist = sorted(inps.cmap_vlist)
-    inps.colormap = pp.ColormapExt(inps.cmap_name, vlist=inps.cmap_vlist).colormap
     return inps
 
 
@@ -231,13 +207,49 @@ def read_network_info(inps):
     return inps
 
 
+def check_colormap(inps):
+    """Check input colormaps."""
+    # adjust color jump if no --cmap-vlist is input
+    if inps.cohList is not None and '--cmap-vlist' not in sys.argv:
+        # use template value
+        key = 'mintpy.network.minCoherence'
+        if key in inps.template.keys():
+            inps.cmap_vlist[1] = max(0.01, float(inps.template[key]))
+
+        # calculate from dropped interferograms, if there is any
+        elif len(inps.date12List_drop) > 0:
+            idx_drop = [inps.date12List.index(i) for i in inps.date12List_drop]
+            coh_drop = [inps.cohList[i] for i in idx_drop]
+            inps.cmap_vlist[1] = max(coh_drop)
+            print('max coherence of excluded interferograms: {}'.format(max(coh_drop)))
+
+        # update default cmap_vlist[0] value if the manually input cmap_vlist[1] is too small
+        if inps.cmap_vlist[1] <= inps.cmap_vlist[0]:
+            inps.cmap_vlist[0] = min(0, inps.cmap_vlist[1])
+
+    # in case the manually input list is not in order
+    inps.cmap_vlist = sorted(inps.cmap_vlist)
+    inps.colormap = pp.ColormapExt(inps.cmap_name, vlist=inps.cmap_vlist).colormap
+
+    return inps
+
+
 ##########################  Main Function  ##############################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    # Plot
-    inps.cbar_label = 'Average Spatial Coherence'
-    figNames = [i+'.pdf' for i in ['bperpHistory', 'coherenceMatrix', 'coherenceHistory', 'network']]
+    # read / calculate
+    inps = read_network_info(inps)
+
+    # Plot settings
+    inps = check_colormap(inps)
+    if inps.dsetName == 'coherence':
+        inps.ds_name = 'Coherence'
+        figNames = [i+'.pdf' for i in ['bperpHistory', 'coherenceMatrix', 'coherenceHistory', 'network']]
+    elif inps.dsetName == 'offsetSNR':
+        inps.ds_name = 'SNR'
+        figNames = [i+'.pdf' for i in ['bperpHistory', 'SNRMatrix', 'SNRHistory', 'network']]
+    inps.cbar_label = 'Average Spatial {}'.format(inps.ds_name)
 
     # Fig 1 - Baseline History
     fig, ax = plt.subplots(figsize=inps.fig_size)
