@@ -23,10 +23,12 @@ from mintpy.utils import readfile, writefile
 ################################################################################################
 EXAMPLE = """example:
   spatial_filter.py  velocity.h5
-  spatial_filter.py  timeseries.h5  lowpass_avg        5
-  spatial_filter.py  velocity.h5    lowpass_avg        5
-  spatial_filter.py  velocity.h5    highpass_gaussian  3
-  spatial_filter.py  velocity.h5    sobel
+  spatial_filter.py  timeseries.h5 -f lowpass_avg       -p 5
+  spatial_filter.py  velocity.h5   -f lowpass_avg       -p 5
+  spatial_filter.py  velocity.h5   -f highpass_gaussian -p 3
+  spatial_filter.py  velocity.h5   -f sobel
+  spatial_filter.py  ifgramStack.h5 unwrapPhase
+  spatial_filter.py  ifgramStack.h5 unwrapPhase -f lowpass_avg -p 5
 """
 
 
@@ -36,14 +38,16 @@ def create_parser():
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', help='File to be filtered')
-    parser.add_argument('filter_type', nargs='?', default='lowpass_gaussian',
+    parser.add_argument('dset', type=str, nargs='*', default=[],
+                        help='optional - dataset(s) to filter (default: %(default)s).')
+    parser.add_argument('-f', '--filter_type', dest='filter_type', nargs='?', default='lowpass_gaussian',
                         choices=['lowpass_gaussian', 'highpass_gaussian',
                                  'lowpass_avg', 'highpass_avg',
                                  'sobel', 'roberts', 'canny'],
                         help='Type of filter. Default: lowpass_gaussian.\n' +
                              'For more filters, check the link below:\n' +
                              'http://scikit-image.org/docs/dev/api/skimage.filters.html')
-    parser.add_argument('filter_par', nargs='?', type=float,
+    parser.add_argument('-p', '--filter_par', dest='filter_par', nargs='?', type=float,
                         help='Filter parameter for low/high pass filter. Default=\n' +
                              'Sigma       for low/high pass gaussian filter, default: 3.0\n' +
                              'Kernel Size for low/high pass average filter, default: 5')
@@ -101,7 +105,7 @@ def filter_data(data, filter_type, filter_par=None):
 
 
 ############################################################
-def filter_file(fname, filter_type, filter_par=None, fname_out=None):
+def filter_file(fname, dset, filter_type, filter_par=None, fname_out=None):
     """Filter 2D matrix with selected filter
     Inputs:
         fname       : string, name/path of file to be filtered
@@ -134,21 +138,23 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
 
     # filtering file
     dsNames = readfile.get_dataset_list(fname)
+    dset = dsNames if not dset else dset #set dset to dsNames if dset == []
     maxDigit = max([len(i) for i in dsNames])
     dsDict = dict()
     for dsName in dsNames:
-        msg = 'filtering {d:<{w}} from {f} '.format(
-            d=dsName, w=maxDigit, f=os.path.basename(fname))
         data = readfile.read(fname, datasetName=dsName, print_msg=False)[0]
-        if len(data.shape) == 3:
-            num_loop = data.shape[0]
-            for i in range(num_loop):
-                data[i, :, :] = filter_data(data[i, :, :], filter_type, filter_par)
-                sys.stdout.write('\r{} {}/{} ...'.format(msg, i+1, num_loop))
-                sys.stdout.flush()
-            print('')
-        else:
-            data = filter_data(data, filter_type, filter_par)
+        if dsName in dset:
+            msg = 'filtering {d:<{w}} from {f} '.format(
+                d=dsName, w=maxDigit, f=os.path.basename(fname))
+            if len(data.shape) == 3:
+                num_loop = data.shape[0]
+                for i in range(num_loop):
+                    data[i, :, :] = filter_data(data[i, :, :], filter_type, filter_par)
+                    sys.stdout.write('\r{} {}/{} ...'.format(msg, i+1, num_loop))
+                    sys.stdout.flush()
+                print('')
+            else:
+                data = filter_data(data, filter_type, filter_par)
         dsDict[dsName] = data
     writefile.write(dsDict, out_file=fname_out, metadata=atr, ref_file=fname)
     return fname_out
@@ -159,6 +165,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     inps.outfile = filter_file(inps.file,
+                               dset = inps.dset,
                                filter_type=inps.filter_type,
                                filter_par=inps.filter_par,
                                fname_out=inps.outfile)
