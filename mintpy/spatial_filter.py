@@ -105,10 +105,11 @@ def filter_data(data, filter_type, filter_par=None):
 
 
 ############################################################
-def filter_file(fname, dset, filter_type, filter_par=None, fname_out=None):
+def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par=None, fname_out=None):
     """Filter 2D matrix with selected filter
     Inputs:
         fname       : string, name/path of file to be filtered
+        ds_names    : list of string, datasets of interest
         filter_type : string, filter type
         filter_par  : string, optional, parameter for low/high pass filter
                       for low/highpass_avg, it's kernel size in int
@@ -137,25 +138,24 @@ def filter_file(fname, dset, filter_type, filter_par=None, fname_out=None):
                                      os.path.splitext(fname)[1])
 
     # filtering file
-    dsNames = readfile.get_dataset_list(fname)
-    dset = dsNames if not dset else dset #set dset to dsNames if dset == []
-    maxDigit = max([len(i) for i in dsNames])
+    if not ds_names:
+        ds_names = readfile.get_dataset_list(fname)
+    maxDigit = max([len(i) for i in ds_names])
     dsDict = dict()
-    for dsName in dsNames:
-        data = readfile.read(fname, datasetName=dsName, print_msg=False)[0]
-        if dsName in dset:
-            msg = 'filtering {d:<{w}} from {f} '.format(
-                d=dsName, w=maxDigit, f=os.path.basename(fname))
-            if len(data.shape) == 3:
-                num_loop = data.shape[0]
-                for i in range(num_loop):
-                    data[i, :, :] = filter_data(data[i, :, :], filter_type, filter_par)
-                    sys.stdout.write('\r{} {}/{} ...'.format(msg, i+1, num_loop))
-                    sys.stdout.flush()
-                print('')
-            else:
-                data = filter_data(data, filter_type, filter_par)
-        dsDict[dsName] = data
+    for ds_name in ds_names:
+        data = readfile.read(fname, datasetName=ds_name, print_msg=False)[0]
+        msg = 'filtering {d:<{w}} from {f} '.format(
+            d=ds_name, w=maxDigit, f=os.path.basename(fname))
+        if len(data.shape) == 3:
+            num_loop = data.shape[0]
+            for i in range(num_loop):
+                data[i, :, :] = filter_data(data[i, :, :], filter_type, filter_par)
+                sys.stdout.write('\r{} {}/{} ...'.format(msg, i+1, num_loop))
+                sys.stdout.flush()
+            print('')
+        else:
+            data = filter_data(data, filter_type, filter_par)
+        dsDict[ds_name] = data
     writefile.write(dsDict, out_file=fname_out, metadata=atr, ref_file=fname)
     return fname_out
 
@@ -165,7 +165,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     inps.outfile = filter_file(inps.file,
-                               dset = inps.dset,
+                               ds_names=inps.dset,
                                filter_type=inps.filter_type,
                                filter_par=inps.filter_par,
                                fname_out=inps.outfile)
