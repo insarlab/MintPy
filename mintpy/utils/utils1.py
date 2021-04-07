@@ -505,6 +505,7 @@ def update_template_file(template_file, extra_dict, delimiter='='):
         if not line.startswith(('%', '#')) and len(c) > 1:
             key = c[0]
             value = str.replace(c[1], '\n', '').split("#")[0].strip()
+            value = value.replace('*', '\*')  # interpret * as character
             if key in extra_dict.keys() and extra_dict[key] != value:
                 # use "= {OLD_VALUE}" for search/replace to be more robust
                 # against the scenario when key name contains {OLD_VALUE}

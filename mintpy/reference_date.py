@@ -38,6 +38,7 @@ def create_parser():
     parser.add_argument('-r', '--ref-date', dest='refDate', default='minRMS',
                         help='reference date or method, default: auto. e.g.\n' +
                              '20101120\n' +
+                             'time-series HDF5 file with REF_DATE in its attributes\n' +
                              'reference_date.txt - text file with date in YYYYMMDD format in it\n' +
                              'minRMS             - choose date with min residual standard deviation')
     parser.add_argument('-t', '--template', dest='template_file',
@@ -90,10 +91,15 @@ def read_ref_date(inps):
     elif inps.refDate.isdigit():
         pass
     else:
-        # txt file
         if os.path.isfile(inps.refDate):
             print('read reference date from file: ' + inps.refDate)
-            inps.refDate = ptime.read_date_txt(inps.refDate)[0]
+            if inps.refDate.endswith('.h5'):
+                # HDF5 file
+                atr = readfile.read_attribute(inps.refDate)
+                inps.refDate = atr['REF_DATE']
+            else:
+                # txt file
+                inps.refDate = ptime.read_date_txt(inps.refDate)[0]
         else:
             print('input file {} does not exist, skip this step'.format(inps.refDate))
             return None
