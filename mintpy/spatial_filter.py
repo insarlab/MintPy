@@ -143,9 +143,10 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
     maxDigit = max([len(i) for i in ds_names])
     dsDict = dict()
     for ds_name in ds_names:
+        msg = 'filtering {d:<{w}} from {f} '.format(d=ds_name, w=maxDigit, f=os.path.basename(fname))
+        # read
         data = readfile.read(fname, datasetName=ds_name, print_msg=False)[0]
-        msg = 'filtering {d:<{w}} from {f} '.format(
-            d=ds_name, w=maxDigit, f=os.path.basename(fname))
+        # filter
         if len(data.shape) == 3:
             num_loop = data.shape[0]
             for i in range(num_loop):
@@ -155,6 +156,7 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
             print('')
         else:
             data = filter_data(data, filter_type, filter_par)
+        # write
         dsDict[ds_name] = data
     writefile.write(dsDict, out_file=fname_out, metadata=atr, ref_file=fname)
     return fname_out
