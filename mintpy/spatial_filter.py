@@ -162,10 +162,17 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
                                      os.path.splitext(fname)[1])
 
     # filtering file
+    ds_all = readfile.get_dataset_list(fname)
     if not ds_names:
-        ds_names = readfile.get_dataset_list(fname)
+        ds_names = ds_all
+    ds_skips = set(ds_all)-set(ds_names)
+
     maxDigit = max([len(i) for i in ds_names])
     dsDict = dict()
+
+    for ds_name in ds_skips:
+        dsDict[ds_name] = readfile.read(fname, datasetName=ds_name, print_msg=False)[0]
+
     for ds_name in ds_names:
         msg = 'filtering {d:<{w}} from {f} '.format(d=ds_name, w=maxDigit, f=os.path.basename(fname))
         # read
