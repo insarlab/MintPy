@@ -11,7 +11,7 @@ import sys
 import argparse
 
 try:
-    from skimage import filters, feature
+    from skimage import filters, feature, morphology
 except ImportError:
     raise ImportError('Could not import skimage!')
 
@@ -29,6 +29,7 @@ EXAMPLE = """example:
   spatial_filter.py  velocity.h5   -f sobel
   spatial_filter.py  ifgramStack.h5 unwrapPhase
   spatial_filter.py  ifgramStack.h5 unwrapPhase -f lowpass_avg -p 5
+  spatial_filter.py  ifgramStack.h5 unwrapPhase -f double_difference -p 1 10
 """
 
 
@@ -43,14 +44,15 @@ def create_parser():
     parser.add_argument('-f', '--filter_type', dest='filter_type', nargs='?', default='lowpass_gaussian',
                         choices=['lowpass_gaussian', 'highpass_gaussian',
                                  'lowpass_avg', 'highpass_avg',
-                                 'sobel', 'roberts', 'canny'],
+                                 'sobel', 'roberts', 'canny', 'double_difference'],
                         help='Type of filter. Default: lowpass_gaussian.\n' +
                              'For more filters, check the link below:\n' +
                              'http://scikit-image.org/docs/dev/api/skimage.filters.html')
-    parser.add_argument('-p', '--filter_par', dest='filter_par', nargs='?', type=float,
-                        help='Filter parameter for low/high pass filter. Default=\n' +
+    parser.add_argument('-p', '--filter_par', dest='filter_par', nargs='*', type=float,
+                        help='Filter parameters for filters. Default=\n' +
                              'Sigma       for low/high pass gaussian filter, default: 3.0\n' +
-                             'Kernel Size for low/high pass average filter, default: 5')
+                             'Kernel Size for low/high pass average filter, default: 5\n' +
+                             'Kernel Radius for double difference local and regional filters, default: 1 10\n')
     parser.add_argument('-o', '--outfile',default=None, help='Output file name.')
     return parser
 
@@ -97,6 +99,18 @@ def filter_data(data, filter_type, filter_par=None):
     elif filter_type == "highpass_gaussian":
         lp_data = filters.gaussian(data, sigma=filter_par)
         data_filt = data - lp_data
+    
+    elif filter_type == "double_difference":
+
+        kernel = morphology.disk(filter_par[0], np.float32)
+        kernel = kernel / kernel.flatten().sum()
+        local_filt = ndimage.convolve(data, kernel)
+
+        kernel = morphology.disk(filter_par[1], np.float32)
+        kernel = kernel / kernel.flatten().sum()
+        regional_filt = ndimage.convolve(data, kernel)
+
+        data_filt = regional_filt - local_filt
 
     else:
         raise Exception('Un-recognized filter type: '+filter_type)
@@ -114,6 +128,7 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
         filter_par  : string, optional, parameter for low/high pass filter
                       for low/highpass_avg, it's kernel size in int
                       for low/highpass_gaussain, it's sigma in float
+                      for double_difference, it's local and regional kernel sizes in int
     Output:
         fname_out   : string, optional, output file name/path
     """
@@ -125,11 +140,20 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
     if filter_type.endswith('avg'):
         if not filter_par:
             filter_par = 5
+        else:
+            filter_par = filter_par[0]
         msg += ' with kernel size of {}'.format(filter_par)
     elif filter_type.endswith('gaussian'):
         if not filter_par:
             filter_par = 3.0
+        else:
+            filter_par = filter_par[0]
         msg += ' with sigma of {:.1f}'.format(filter_par)
+    elif filter_type == 'double_difference':
+        if not filter_par:
+            filter_par = [1,10]
+        local, regional = filter_par
+        msg += ' with local/regional kernel sizes of {}/{}'.format(local, regional)
     print(msg)
 
     # output filename
