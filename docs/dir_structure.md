@@ -620,7 +620,7 @@ mintpy.load.lookupYFile    = $DATA_DIR/GalapagosAlosAT133/PROCESS/GEO/geo_100610
 mintpy.load.lookupXFile    = $DATA_DIR/GalapagosAlosAT133/PROCESS/GEO/geo_100610-100910/geomap_*rlks.trans
 ```
 
-### [ASF HyP3](https://hyp3.asf.alaska.edu/)
+### [ASF HyP3](https://hyp3-docs.asf.alaska.edu/)
 
 1. Request and download GUNW products using [hyp3_sdk](https://nbviewer.jupyter.org/github/ASFHyP3/hyp3-sdk/blob/main/docs/sdk_example.ipynb).
 2. Download the corresponding DEM used in processing using the [hyp3lib](https://github.com/ASFHyP3/hyp3-lib) [getDEMfor.getDemFile()](https://github.com/ASFHyP3/hyp3-lib/blob/develop/hyp3lib/getDemFor.py#L16) function.
