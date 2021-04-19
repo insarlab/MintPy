@@ -1399,6 +1399,9 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
                                     box=box,
                                     datasetName=dsName,
                                     print_msg=print_msg)[0]
+                # set NaN to zero
+                msk[np.isnan(msk)] = False
+
                 if print_msg:
                     print('read mask from file:', os.path.basename(mask_file))
 
