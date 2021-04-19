@@ -1183,8 +1183,14 @@ def plot_figure(j, inps, metadata):
     vprint(fig_title)
 
     # Open a new figure object
-    fig = plt.figure(j, figsize=inps.fig_size)
-    fig.canvas.set_window_title(fig_title)
+    fig, axs = plt.subplots(num=j,
+                            figsize=inps.fig_size,
+                            nrows=inps.fig_row_num,
+                            ncols=inps.fig_col_num,
+                            sharex=True,
+                            sharey=True)
+    fig.canvas.manager.set_window_title(fig_title)
+    axs = axs.flatten()
 
     # Read all data for the current figure into 3D np.array
     i_start = (j - 1) * inps.fig_row_num * inps.fig_col_num
@@ -1201,18 +1207,21 @@ def plot_figure(j, inps, metadata):
     prog_bar = ptime.progressBar(maxValue=i_end-i_start, print_msg=inps.print_msg)
     for i in range(i_start, i_end):
         idx = i - i_start
-        ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, idx + 1)
-        im = plot_subplot4figure(i, inps, ax=ax,
+        im = plot_subplot4figure(i, inps, ax=axs[idx],
                                  data=data[idx, :, :],
                                  metadata=metadata)
 
         # colorbar for each subplot
         if inps.disp_cbar and not inps.vlim:
-            fig.colorbar(im, ax=ax, pad=0.03, shrink=0.5, aspect=30, orientation='vertical')
+            fig.colorbar(im, ax=axs[idx], pad=0.03, shrink=0.5, aspect=30, orientation='vertical')
 
         prog_bar.update(idx+1, suffix=inps.dset[i].split('/')[-1])
     prog_bar.close()
     del data
+
+    # delete empty axes
+    for i in range(i_end-i_start, len(axs)):
+        fig.delaxes(axs[i])
 
     # Tune the subplot layout
     fig.subplots_adjust(left=0.02, right=0.98, bottom=0.02, top=0.98,

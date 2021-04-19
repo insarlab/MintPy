@@ -12,11 +12,6 @@ import datetime as dt
 import numpy as np
 from mintpy.utils import ptime, readfile
 
-try:
-    from kite.scene import Scene, SceneConfig
-except ImportError:
-    raise ImportError('Can not import kite / pyrocko!')
-
 
 d2r = np.pi / 180.
 r2d = 180. / np.pi
@@ -80,6 +75,10 @@ def mintpy2kite(ifg, attr, date1, date2, inc_angle, az_angle, out_file):
                 out_file  - str, path of the output file name of the KITE container
     Returns:    scene     - kite.scene.Scene object
     """
+    try:
+        from kite.scene import Scene, SceneConfig
+    except ImportError:
+        raise ImportError('Can not import kite / pyrocko!')
 
     print('\n---------------PREPARING KITE CONTAINER-----------')
     # fill the Kite container

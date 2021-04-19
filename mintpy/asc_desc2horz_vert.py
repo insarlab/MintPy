@@ -90,8 +90,8 @@ def cmd_line_parse(iargs=None):
 
     # check spatial resolution
     if any(atr1[i] != atr2[i] for i in ['X_STEP','Y_STEP']):
-        msg  = '\tfile1: {}, Y/X_STEP: {} / {} m\n'.format(inps.file[0], atr1['Y_STEP'], atr1['X_STEP'])
-        msg += '\tfile2: {}, Y/X_STEP: {} / {} m\n'.format(inps.file[1], atr2['Y_STEP'], atr2['X_STEP'])
+        msg  = '\tfile1: {}, Y/X_STEP: {} / {} {}\n'.format(inps.file[0], atr1['Y_STEP'], atr1['X_STEP'], atr1.get('X_UNIT', 'degrees'))
+        msg += '\tfile2: {}, Y/X_STEP: {} / {} {}\n'.format(inps.file[1], atr2['Y_STEP'], atr2['X_STEP'], atr2.get('X_UNIT', 'degrees'))
         msg += '\tRe-run geocode.py --lat-step --lon-step to make them consistent.'
         raise ValueError('input files do NOT have the same spatial resolution\n{}'.format(msg))
 

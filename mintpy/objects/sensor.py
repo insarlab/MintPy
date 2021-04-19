@@ -167,6 +167,9 @@ def get_unavco_mission_name(meta_dict):
 
 ###########################  Hardwired parameters  #############################
 ## References:
+# Giudici, D., A. Monti Guarnieri, and J. P. Cuesta Gonzalez (2017), Pre-Flight
+#   SAOCOM-1A SAR Performance Assessment by Outdoor Campaign, Remote Sensing, 9(7),
+#   729, doi:10.3390/rs9070729.
 # Guarnieri, A. M. (2013), Introduction to RADAR, Politecnico di Milano Dipartimento
 #   di Elettronica e Informazione, Milano.
 # Kim, Y., and R. L. Jordan (2006), Spaceborne SAR Antennas for Earth Science,
@@ -344,6 +347,15 @@ ALOS2 = {
     'ground_range_pixel_size'    : 2.4,       # m
 }
 
+# SAOCOM-1A/B stripmap
+# from Giudici et al. (2017) and
+# https://directory.eoportal.org/web/eoportal/satellite-missions/s/saocom
+SAOCOM = {
+    'carrrier_frequency'         : 1.27414e9, # Hz
+    'antenna_length'             : 10,        # m
+    'pulse_repetition_frequency' : 4545,      # Hz
+    'sampling_frequency'         : 50.0e6,    # Hz
+}
 
 SENSOR_DICT = {
     # X-band
