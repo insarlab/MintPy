@@ -91,7 +91,6 @@ def mintpy2kite(ifg,attr,date1,date2,inc,azi):
     	phi = np.flipud(azi*d2r)+np.pi/2,
     	displacement = np.flipud(ifg),
     	config = config)
-
     
     print('Kite Scene info:')
     print('Scene title: {}'.format(config.meta.scene_title))
@@ -132,7 +131,7 @@ def main(iargs=None):
     
     #Mask data
     if inps.mask is not None:
-        mask = readfile.read(inps.mask)[0] 
+        mask = readfile.read(inps.mask)[0]
         print('Masking data')
         array[mask==0] = np.nan
         
