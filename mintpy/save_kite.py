@@ -4,20 +4,16 @@ Created on Mon Mar 22 11:13:48 2021
 
 @author: Marin Govorcin
 """
-import os
 import sys
 import argparse
 import numpy as np
-from mintpy.utils import readfile, plot as pp
-import pdb
-from datetime import datetime, timedelta
+from mintpy.utils import readfile
+from datetime import datetime
 
 try:
     from kite.scene import Scene, SceneConfig
 except ImportError:
     raise Exception('Kite and pyrocko are missing.')
-
-#pdb.set_trace()
 
 EXAMPLE = """example:
   with Velocity [use step to export coseismic displacement]:
@@ -60,9 +56,7 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-
-    atr = readfile.read_attribute(inps.file)
-
+    
     return inps
 
 #########################################################################################################
@@ -79,7 +73,7 @@ def mintpy2kite(ifg,attr,date1,date2,inc,azi):
 
     config.meta.scene_title = attr['PROJECT_NAME']
     config.meta.scene_id = attr['trackNumber']
- 
+
     if date1 is not None:
         config.meta.time_master = datetime.strptime(date1 + ' ' +attr['stopUTC'].split(' ')[1],'%Y%m%d %H:%M:%S.%f')
         config.meta.time_slave =  datetime.strptime(date2 + ' ' + attr['stopUTC'].split(' ')[1],'%Y%m%d %H:%M:%S.%f')
@@ -139,32 +133,25 @@ def main(iargs=None):
     
     #Mask data
     if inps.mask is not None:
-        
         mask = readfile.read(inps.mask)[0] 
         print('Masking data')
         array[mask==0] = np.nan
-    
+        
     if inps.ref_date is not None: 
        print('\nFirst  InSAR date: {}'.format(inps.ref_date))
        print('Second InSAR date: {}'.format(inps.dset))
 
     # output filename
     if not inps.outfile:
-    #    fbase = pp.auto_figure_title(inps.file,
-    #                                 datasetNames=inps.dset,
-    #                                 inps_dict=vars(inps))
         inps.outfile = attr['PROJECT_NAME']
-    #else:
-    #    inps.outfile = os.path.abspath(inps.outfile)
     
     # read geometry Inc, Heading
     print('\nIncidence angle read data from file: {}'.format(inps.geom))
-    inc, Iattr = readfile.read(inps.geom, datasetName='incidenceAngle')
+    inc = readfile.read(inps.geom, datasetName='incidenceAngle')[0]
     print('Mean satellite incidence angle; {0:.2f}°'.format(np.nanmean(inc)))
     print('Azimuth angle read data from file: {}'.format(inps.geom))
-    azi, Aattr = readfile.read(inps.geom, datasetName='azimuthAngle')
+    azi = readfile.read(inps.geom, datasetName='azimuthAngle')[0]
     print('Mean satellite heading angle; {0:.2f}°'.format(90+np.nanmean(azi)*-1))
-
 
     # prepare kite container
     scene = mintpy2kite(array,attr,inps.ref_date,inps.dset,inc,azi)
