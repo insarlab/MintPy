@@ -56,7 +56,6 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-    
     return inps
 
 #########################################################################################################
@@ -137,7 +136,7 @@ def main(iargs=None):
         print('Masking data')
         array[mask==0] = np.nan
         
-    if inps.ref_date is not None: 
+    if inps.ref_date is not None:
        print('\nFirst  InSAR date: {}'.format(inps.ref_date))
        print('Second InSAR date: {}'.format(inps.dset))
 
