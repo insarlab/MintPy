@@ -29,12 +29,10 @@ EXAMPLE = """example:
   
   IMPORT TO kite
   spool outfile_name              % /do quadtree,covariance/aps and than File>Save Scene and it is ready for GROND or BEAT
-  
 """
 
 d2r = np.pi/180.
 r2d = 180/np.pi
-
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Generate KITE npz and yaml from MintPy h5 file.',
@@ -52,10 +50,10 @@ def create_parser():
                         help='output filename')
     return parser
 
-
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
     return inps
 
 #########################################################################################################
@@ -77,7 +75,6 @@ def mintpy2kite(ifg,attr,date1,date2,inc,azi):
         config.meta.time_master = datetime.strptime(date1 + ' ' +attr['stopUTC'].split(' ')[1],'%Y%m%d %H:%M:%S.%f')
         config.meta.time_slave =  datetime.strptime(date2 + ' ' + attr['stopUTC'].split(' ')[1],'%Y%m%d %H:%M:%S.%f')
 
-
     if attr['ORBIT_DIRECTION'] == 'ASCENDING':
         config.meta.orbital_node =  'Ascending'
     else:
@@ -91,6 +88,7 @@ def mintpy2kite(ifg,attr,date1,date2,inc,azi):
     	phi = np.flipud(azi*d2r)+np.pi/2,
     	displacement = np.flipud(ifg),
     	config = config)
+
     print('Kite Scene info:')
     print('Scene title: {}'.format(config.meta.scene_title))
     print('Scene id: {}'.format(config.meta.scene_id))
@@ -126,14 +124,13 @@ def main(iargs=None):
     array, attr = readfile.read(inps.file, datasetName=inps.dset)
     if attr['FILE_TYPE'] == 'timeseries' and inps.ref_date:
         array -= readfile.read(inps.file, datasetName=inps.ref_date)[0]
-    
-    
+
     #Mask data
     if inps.mask is not None:
         mask = readfile.read(inps.mask)[0]
         print('Masking data')
         array[mask==0] = np.nan
-        
+
     if inps.ref_date is not None:
        print('\nFirst  InSAR date: {}'.format(inps.ref_date))
        print('Second InSAR date: {}'.format(inps.dset))
@@ -141,7 +138,7 @@ def main(iargs=None):
     # output filename
     if not inps.outfile:
         inps.outfile = attr['PROJECT_NAME']
-    
+
     # read geometry Inc, Heading
     print('\nIncidence angle read data from file: {}'.format(inps.geom))
     inc = readfile.read(inps.geom, datasetName='incidenceAngle')[0]
@@ -160,11 +157,6 @@ def main(iargs=None):
 
     # Create kite container
     return
-    
+
 if __name__ == "__main__":
     main(sys.argv[1:])
-
-    
-
-
-
