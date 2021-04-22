@@ -91,7 +91,6 @@ def mintpy2kite(ifg,attr,date1,date2,inc,azi):
     	phi = np.flipud(azi*d2r)+np.pi/2,
     	displacement = np.flipud(ifg),
     	config = config)
-    
     print('Kite Scene info:')
     print('Scene title: {}'.format(config.meta.scene_title))
     print('Scene id: {}'.format(config.meta.scene_id))
