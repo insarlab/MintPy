@@ -399,63 +399,71 @@ def threshold_perp_baseline(date12_list, date_list, pbase_list, pbase_max, pbase
     """
     if not date12_list:
         return []
-    # Get date6_list
+
+    # Get date_list
+    delimiter = [i for i in ['-', '_'] if i in date12_list[0]][0]
     if not date_list:
-        m_dates = [date12.split('-')[0] for date12 in date12_list]
-        s_dates = [date12.split('-')[1] for date12 in date12_list]
-        date_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
-        if not len(date_list) == len(pbase_list):
-            print('ERROR: number of existing dates is not equal to number of perp baseline!')
-            print('date list is needed for threshold filtering!')
-            print('skip filtering.')
-            return date12_list
-    date6_list = ptime.yymmdd(date_list)
+        m_dates = [date12.split(delimiter)[0] for date12 in date12_list]
+        s_dates = [date12.split(delimiter)[1] for date12 in date12_list]
+        date_list = sorted(list(set(m_dates + s_dates)))
+
+    if not len(date_list) == len(pbase_list):
+        print('ERROR: number of existing dates is not equal to number of perp baseline!')
+        print('date list is needed for threshold filtering!')
+        print('skip filtering.')
+        return date12_list
 
     # Threshold
     date12_list_out = []
     for date12 in date12_list:
-        date1, date2 = date12.split('-')
-        idx1 = date6_list.index(date1)
-        idx2 = date6_list.index(date2)
-        pbase = abs(pbase_list[idx1] - pbase_list[idx2])
+        date1, date2 = date12.split(delimiter)
+        pbase1 = pbase_list[date_list.index(date1)]
+        pbase2 = pbase_list[date_list.index(date2)]
+        pbase = abs(pbase2 - pbase1)
+
         if pbase_min <= pbase <= pbase_max:
             date12_list_out.append(date12)
+
     return date12_list_out
 
 
 def threshold_temporal_baseline(date12_list, btemp_max, keep_seasonal=True, btemp_min=0.0):
     """Remove pairs/interferograms out of min/max/seasonal temporal baseline limits
     Inputs:
-        date12_list : list of string for date12 in YYMMDD-YYMMDD format
+        date12_list : list of string for date12 in YYMMDD-YYMMDD or YYYYMMDD_YYYYMMDD format
         btemp_max   : float, maximum temporal baseline
         btemp_min   : float, minimum temporal baseline
         keep_seasonal : keep interferograms with seasonal temporal baseline
     Output:
-        date12_list_out : list of string for date12 in YYMMDD-YYMMDD format
+        date12_list_out : list of string for date12
     Example:
         date12_list = threshold_temporal_baseline(date12_list, 200)
         date12_list = threshold_temporal_baseline(date12_list, 200, False)
     """
     if not date12_list:
         return []
+
     # Get date list and tbase list
-    m_dates = [date12.split('-')[0] for date12 in date12_list]
-    s_dates = [date12.split('-')[1] for date12 in date12_list]
-    date8_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
-    date6_list = ptime.yymmdd(date8_list)
-    tbase_list = ptime.date_list2tbase(date8_list)[0]
+    delimiter = [i for i in ['-', '_'] if i in date12_list[0]][0]
+    m_dates = [date12.split(delimiter)[0] for date12 in date12_list]
+    s_dates = [date12.split(delimiter)[1] for date12 in date12_list]
+    date_list = sorted(list(set(m_dates + s_dates)))
+    tbase_list = ptime.date_list2tbase(date_list)[0]
 
     # Threshold
     date12_list_out = []
     for date12 in date12_list:
-        date1, date2 = date12.split('-')
-        idx1 = date6_list.index(date1)
-        idx2 = date6_list.index(date2)
-        tbase = int(abs(tbase_list[idx1] - tbase_list[idx2]))
+        date1, date2 = date12.split(delimiter)
+        tbase1 = tbase_list[date_list.index(date1)]
+        tbase2 = tbase_list[date_list.index(date2)]
+        tbase = int(abs(tbase2 - tbase1))
+
         if btemp_min <= tbase <= btemp_max:
             date12_list_out.append(date12)
+
         elif keep_seasonal and tbase/30 in [11, 12]:
             date12_list_out.append(date12)
+
     return date12_list_out
 
 

@@ -248,7 +248,7 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
     step = int(np.rint(length / num_loop / 10) * 10)
     num_loop = int(np.ceil(length / step))
     num_nonzero_closure = np.zeros((length, width), dtype=np.float32)
-    msg = 'calcualting the number of triplets with non-zero integer ambiguity of closure phase ...'
+    msg = 'calculating the number of triplets with non-zero integer ambiguity of closure phase ...'
     msg += '\n    block by block with size up to {}, {} blocks in total'.format((step, width), num_loop)
     print(msg)
 

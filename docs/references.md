@@ -36,6 +36,10 @@
 
 + Werner, C., U. Wegmüller, T. Strozzi, and A. Wiesmann (2000), Gamma SAR and interferometric processing software, paper presented at _Proceedings of the ERS-Envisat symposium_, Gothenburg, Sweden.
 
++ Yu, C., Z. Li, and N. T. Penna (2018), Interferometric synthetic aperture radar atmospheric correction using a GPS-based iterative tropospheric decomposition model, Remote Sensing of Environment, 204, 109-121, doi:10.1016/j.rse.2017.10.038.
+
++ Yu, C., Z. Li, N. T. Penna, and P. Crippa (2018), Generic Atmospheric Correction Model for Interferometric Synthetic Aperture Radar Observations, Journal of Geophysical Research: Solid Earth, 123(10), 9202-9222, doi:10.1029/2017JB015305.
+
 + Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis: Unwrapping error correction and noise reduction, _Computers & Geosciences, 133_, 104331, doi:10.1016/j.cageo.2019.104331.
 
 + Zebker, H. A., P. A. Rosen, and S. Hensley (1997), Atmospheric effects in interferometric synthetic aperture radar surface deformation and topographic maps, _Journal of Geophysical Research: Solid Earth, 102_(B4), 7547-7563, doi:10.1029/96JB03804.

@@ -150,7 +150,7 @@ def cmd_line_parse(iargs=None):
     print(msg)
 
     ## weather_dir
-    # expand path for ~ and environmental variables in the path
+    # expand path for ~ and environment variables in the path
     inps.weather_dir = os.path.expanduser(inps.weather_dir)
     inps.weather_dir = os.path.expandvars(inps.weather_dir)
     # fallback value if WEATHER_DIR is not defined as environmental variable
@@ -163,7 +163,7 @@ def cmd_line_parse(iargs=None):
     for key in ['dis_file', 'geom_file']:
         fname = vars(inps)[key]
         if fname and not os.path.isfile(fname):
-            raise FileExistsError('input file not exist: {}'.format(fname))
+            raise FileNotFoundError('input file not exist: {}'.format(fname))
 
     ## required options (for date/time): --file OR --date-list
     if (not inps.dis_file 
@@ -263,7 +263,7 @@ def get_grib_info(inps):
 
     # area extent for ERA5 grib data download
     if inps.atr:
-        inps.snwe = get_snwe(inps.atr)
+        inps.snwe = get_snwe(inps.atr, geom_file=inps.geom_file)
     else:
         inps.snwe = None
 
@@ -339,7 +339,7 @@ def safe2date_time(safe_file, tropo_model):
             for second in seconds:
                 secondsOut.append(second)
         else:
-            print('\nUn-recognized CENTER_LINE_ UTC input!')
+            print('\nUn-recognized CENTER_LINE_UTC input!')
             return None
 
         return secondsOut
@@ -388,9 +388,9 @@ def floor2multiple(x, step=10):
     return x - x % step
 
 
-def get_snwe(meta, min_buffer=2, step=10):
+def get_snwe(meta, geom_file=None, min_buffer=2, step=10):
     # get bounding box
-    lat0, lat1, lon0, lon1 = get_bounding_box(meta)
+    lat0, lat1, lon0, lon1 = get_bounding_box(meta, geom_file=geom_file)
 
     # lat/lon0/1 --> SNWE
     S = np.floor(min(lat0, lat1) - min_buffer).astype(int)
@@ -437,7 +437,7 @@ def snwe2str(snwe):
     return area
 
 
-def get_bounding_box(meta):
+def get_bounding_box(meta, geom_file=None):
     """Get lat/lon range (roughly), in the same order of data file
     lat0/lon0 - starting latitude/longitude (first row/column)
     lat1/lon1 - ending latitude/longitude (last row/column)
@@ -451,14 +451,32 @@ def get_bounding_box(meta):
         lon_step = float(meta['X_STEP'])
         lat1 = lat0 + lat_step * (length - 1)
         lon1 = lon0 + lon_step * (width - 1)
+
     else:
         # radar coordinates
-        lats = [float(meta['LAT_REF{}'.format(i)]) for i in [1,2,3,4]]
-        lons = [float(meta['LON_REF{}'.format(i)]) for i in [1,2,3,4]]
-        lat0 = np.mean(lats[0:2])
-        lat1 = np.mean(lats[2:4])
-        lon0 = np.mean(lons[0:3:2])
-        lon1 = np.mean(lons[1:4:2])
+        if geom_file and os.path.isfile(geom_file):
+            geom_dset_list = readfile.get_dataset_list(geom_file)
+        else:
+            geom_dset_list = []
+
+        if 'latitude' in geom_dset_list:
+            lats = readfile.read(geom_file, datasetName='latitude')[0]
+            lons = readfile.read(geom_file, datasetName='longitude')[0]
+            lats[lats == 0] = np.nan
+            lons[lons == 0] = np.nan
+            lat0 = np.nanmin(lats)
+            lat1 = np.nanmax(lats)
+            lon0 = np.nanmin(lons)
+            lon1 = np.nanmax(lons)
+
+        else:
+            lats = [float(meta['LAT_REF{}'.format(i)]) for i in [1,2,3,4]]
+            lons = [float(meta['LON_REF{}'.format(i)]) for i in [1,2,3,4]]
+            lat0 = np.mean(lats[0:2])
+            lat1 = np.mean(lats[2:4])
+            lon0 = np.mean(lons[0:3:2])
+            lon1 = np.mean(lons[1:4:2])
+
     return lat0, lat1, lon0, lon1
 
 
@@ -547,7 +565,7 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
     return grib_files
 
 
-def get_delay(grib_file, tropo_model, delay_type, dem, inc, lat, lon, verbose):
+def get_delay(grib_file, tropo_model, delay_type, dem, inc, lat, lon, mask=None, verbose=False):
     """Get delay matrix using PyAPS for one acquisition
     Parameters: grib_file       - str, grib file path
                 tropo_model     - str, GAM model
@@ -568,6 +586,7 @@ def get_delay(grib_file, tropo_model, delay_type, dem, inc, lat, lon, verbose):
                        inc=inc,
                        lat=lat,
                        lon=lon,
+                       mask=mask,
                        verb=verbose)
 
     # estimate delay
@@ -651,6 +670,8 @@ def calc_delay_timeseries(inps):
         # for lookup table in geo-coded (gamma, roipac) and obs. in radar-coord
         inps.lat, inps.lon = ut.get_lat_lon_rdc(inps.atr)
 
+    # mask of valid pixels
+    mask = np.multiply(inps.inc != 0, ~np.isnan(inps.inc))
 
     ## 2. prepare output file
     # metadata
@@ -678,7 +699,7 @@ def calc_delay_timeseries(inps):
 
     ## 3. calculate phase delay
     print('\n------------------------------------------------------------------------------')
-    print('calcualting absolute delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
+    print('calculating absolute delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
     print('number of grib files used: {}'.format(num_date))
 
     prog_bar = ptime.progressBar(maxValue=num_date, print_msg=~inps.verbose)
@@ -693,6 +714,7 @@ def calc_delay_timeseries(inps):
                                inc=inps.inc,
                                lat=inps.lat,
                                lon=inps.lon,
+                               mask=mask,
                                verbose=inps.verbose)
 
         # write tropo delay to file

@@ -55,8 +55,8 @@ def create_parser():
     opts = parser.add_argument_group('Display options', 'configurations for the display')
     opts.add_argument('--steps', type=int, nargs=3, default=[20, 5, 2],
                       help='list of steps for output pixel. Default: 20 5 2')
-    opts.add_argument('--level-of-details','--lods', dest='lods', type=int, nargs=3, default=[1500, 4000, -1],
-                      help='list of level of details to determine the visible range while browering. Default: 1500, 4000, -1.\n'+
+    opts.add_argument('--level-of-details','--lods', dest='lods', type=int, nargs=4, default=[0, 1500, 4000, -1],
+                      help='list of level of details to determine the visible range while browering. Default: 0, 1500, 4000, -1.\n'+
                            'Ref: https://developers.google.com/kml/documentation/kml_21tutorial')
     opts.add_argument('--vlim','-v', dest='vlim', nargs=2, metavar=('VMIN', 'VMAX'), type=float,
                       help='min/max range in cm/yr for color coding.')
@@ -552,7 +552,11 @@ def generate_network_link(inps, ts_obj, step, lod):
     """Generate the KML.NetworkLink element for one level of details, defined by step and lod"""
     net_link_file = os.path.join(inps.kml_data_dir, "{0}by{0}.kml".format(step))
 
-    if step < 5:
+    if step <= 0:
+        print('skip step = {}'.format(step))
+        return None
+
+    elif step == inps.steps[-1]:
         box_list = get_boxes4deforming_area(inps.vel_file, inps.mask_file,
                                             step=inps.steps[-1],
                                             min_percentage=inps.min_percentage,
@@ -619,15 +623,13 @@ def main(iargs=None):
     kml_root_doc.append(ref_folder)
 
     # 3 Create data folder to contain actual data elements
-    net_link1 = generate_network_link(inps, ts_obj, step=inps.steps[0], lod=(0, inps.lods[0]))
-    net_link2 = generate_network_link(inps, ts_obj, step=inps.steps[1], lod=(inps.lods[0], inps.lods[1]))
-    net_link3 = generate_network_link(inps, ts_obj, step=inps.steps[2], lod=(inps.lods[1], inps.lods[2]))
-
-    # 3.3 Append network links to data folder
     data_folder = KML.Folder(KML.name("Data"))
-    data_folder.append(net_link1)
-    data_folder.append(net_link2)
-    data_folder.append(net_link3)
+    for i, step in enumerate(inps.steps):
+        net_link = generate_network_link(inps, ts_obj,
+                                         step=step,
+                                         lod=(inps.lods[i], inps.lods[i+1]))
+        if net_link is not None:
+            data_folder.append(net_link)
     kml_root_doc.append(data_folder)
 
 

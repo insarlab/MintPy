@@ -82,7 +82,7 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     if not os.path.isfile(inps.file):
-        raise FileExistsError(inps.file)
+        raise FileNotFoundError(inps.file)
 
     inps.max_meta_num = 200
     if inps.compact:

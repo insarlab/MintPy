@@ -79,8 +79,8 @@ def add_file(fnames, out_file=None):
         print('adding {} ...'.format(dsName))
         data = readfile.read(fnames[0], datasetName=dsName2read)[0]
         for i in range(1, len(fnames)):
-            d = readfile.read(fnames[i], datasetName=dsName2read)[0]
-            data = add_matrix(data, d)
+            data2 = readfile.read(fnames[i], datasetName=dsName2read)[0]
+            data = add_matrix(data, data2)
         dsDict[dsName] = data
 
     # output

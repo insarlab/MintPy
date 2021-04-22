@@ -19,16 +19,19 @@ RAMP_LIST = [
 ]
 
 
-def deramp(data, mask_in, ramp_type='linear', metadata=None, max_num_sample=1e6):
+def deramp(data, mask_in=None, ramp_type='linear', metadata=None, max_num_sample=1e6, coeff_file=None):
     '''Remove ramp from input data matrix based on pixel marked by mask
     Ignore data with nan or zero value.
-    Parameters: data      : 2D / 3D np.ndarray, data to be derampped
-                            If 3D, it's in size of (num_date, length, width)
-                mask_in   : 2D np.ndarray, mask of pixels used for ramp estimation
-                ramp_type : str, name of ramp to be estimated.
-                metadata  : dict, containing reference pixel info, REF_Y/X
-    Returns:    data_out  : 2D / 3D np.ndarray, data after deramping
-                ramp      : 2D / 3D np.ndarray, estimated ramp
+    Parameters: data       : 2D / 3D np.ndarray, data to be derampped
+                             If 3D, it's in size of (num_date, length, width)
+                mask_in    : 2D np.ndarray, mask of pixels used for ramp estimation
+                ramp_type  : str, name of ramp to be estimated.
+                metadata   : dict, containing reference pixel info, REF_Y/X
+                max_num_sample : float, max number of pixel sample, 
+                             above which the uniform sampling is applied to reduce sample size
+                coeff_file : str, path to the text file to save the estimated ramp coefficients
+    Returns:    data_out   : 2D / 3D np.ndarray, data after deramping
+                ramp       : 2D / 3D np.ndarray, estimated ramp
     '''
     dshape = data.shape
     length, width = dshape[-2:]
@@ -90,7 +93,13 @@ def deramp(data, mask_in, ramp_type='linear', metadata=None, max_num_sample=1e6)
     X = np.dot(np.linalg.pinv(G[mask, :], rcond=1e-15), data[mask, :])
     ramp = np.dot(G, X)
     ramp = np.array(ramp, dtype=data.dtype)
-    del X
+
+    # write estimated coefficient to text file
+    if coeff_file is not None:
+        with open(coeff_file, 'a') as f:
+            for i in range(X.T.shape[0]):
+                coeff_str = '    '.join(['{:16.6e}'.format(float(c)) for c in X.T[i,:]])
+                f.write('{}\n'.format(coeff_str))
 
     # reference in space if metadata
     if metadata and all(key in metadata.keys() for key in ['REF_X','REF_Y']):

@@ -233,8 +233,11 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
     if inps_dict.get('wrap', False):
         fig_title += '_wrap'
         wrap_range = inps_dict.get('wrap_range', [-1.*np.pi, np.pi])
-        if (wrap_range[1] - wrap_range[0]) != 2*np.pi:
-            fig_title += str(wrap_range[1] - wrap_range[0])
+        wrap_range = wrap_range[1] - wrap_range[0]
+        if wrap_range != 2*np.pi:
+            if wrap_range == int(wrap_range):
+                wrap_range = int(wrap_range)
+            fig_title += str(wrap_range)
 
     return fig_title
 
@@ -448,6 +451,7 @@ def auto_adjust_yaxis(ax, dataList, fontsize=12, ymin=None, ymax=None):
 def plot_coherence_history(ax, date12List, cohList, p_dict={}):
     """Plot min/max Coherence of all interferograms for each date"""
     # Figure Setting
+    if 'ds_name'     not in p_dict.keys():   p_dict['ds_name']     = 'Coherence'
     if 'fontsize'    not in p_dict.keys():   p_dict['fontsize']    = 12
     if 'linewidth'   not in p_dict.keys():   p_dict['linewidth']   = 2
     if 'markercolor' not in p_dict.keys():   p_dict['markercolor'] = 'orange'
@@ -468,18 +472,18 @@ def plot_coherence_history(ax, date12List, cohList, p_dict={}):
 
     coh_mat = pnet.coherence_matrix(date12List, cohList)
 
-    ax.bar(x_list, np.nanmax(coh_mat, axis=0), bar_width.days, label='Max Coherence')
-    ax.bar(x_list, np.nanmin(coh_mat, axis=0), bar_width.days, label='Min Coherence')
+    ax.bar(x_list, np.nanmax(coh_mat, axis=0), bar_width.days, label='Max {}'.format(p_dict['ds_name']))
+    ax.bar(x_list, np.nanmin(coh_mat, axis=0), bar_width.days, label='Min {}'.format(p_dict['ds_name']))
 
     if p_dict['disp_title']:
-        ax.set_title('Coherence History of All Related Interferograms')
+        ax.set_title('{} History of All Related Pairs'.format(p_dict['ds_name']))
 
     ax = auto_adjust_xaxis_date(ax, datevector, fontsize=p_dict['fontsize'],
                                 every_year=p_dict['every_year'])[0]
     ax.set_ylim([p_dict['vlim'][0], p_dict['vlim'][1]])
 
     ax.set_xlabel('Time [years]', fontsize=p_dict['fontsize'])
-    ax.set_ylabel('Coherence', fontsize=p_dict['fontsize'])
+    ax.set_ylabel(p_dict['ds_name'], fontsize=p_dict['fontsize'])
     ax.legend(loc='lower right')
 
     return ax
@@ -651,8 +655,8 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
 
     # Legend
     if p_dict['disp_drop'] and p_dict['disp_legend']:
-        solid_line = mlines.Line2D([], [], color='k', ls='solid',  label='Ifg used')
-        dash_line  = mlines.Line2D([], [], color='k', ls='dashed', label='Ifg dropped')
+        solid_line = mlines.Line2D([], [], color='k', ls='solid',  label='Ifgram used')
+        dash_line  = mlines.Line2D([], [], color='k', ls='dashed', label='Ifgram dropped')
         ax.legend(handles=[solid_line, dash_line])
 
     return ax
@@ -790,14 +794,15 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
                 im : mappable
     """
     # Figure Setting
+    if 'ds_name'     not in p_dict.keys():   p_dict['ds_name']     = 'Coherence'
     if 'fontsize'    not in p_dict.keys():   p_dict['fontsize']    = 12
     if 'linewidth'   not in p_dict.keys():   p_dict['linewidth']   = 2
     if 'markercolor' not in p_dict.keys():   p_dict['markercolor'] = 'orange'
     if 'markersize'  not in p_dict.keys():   p_dict['markersize']  = 16
     if 'disp_title'  not in p_dict.keys():   p_dict['disp_title']  = True
-    if 'fig_title'   not in p_dict.keys():   p_dict['fig_title']   = 'Coherence Matrix'
+    if 'fig_title'   not in p_dict.keys():   p_dict['fig_title']   = '{} Matrix'.format(p_dict['ds_name'])
     if 'colormap'    not in p_dict.keys():   p_dict['colormap']    = 'jet'
-    if 'cbar_label'  not in p_dict.keys():   p_dict['cbar_label']  = 'Coherence'
+    if 'cbar_label'  not in p_dict.keys():   p_dict['cbar_label']  = p_dict['ds_name']
     if 'vlim'        not in p_dict.keys():   p_dict['vlim']        = (0.2, 1.0)
     if 'disp_cbar'   not in p_dict.keys():   p_dict['disp_cbar']   = True
     if 'legend_loc'  not in p_dict.keys():   p_dict['legend_loc']  = 'best'
@@ -1000,30 +1005,38 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
 
     # plot shaded relief
     if dem_shade is not None:
+        # config
+        kwargs = dict(interpolation='spline16', zorder=0, origin='upper')
+
         # geo coordinates
         if geo_box is not None:
-            ax.imshow(dem_shade, interpolation='spline16', extent=geo_extent, zorder=0, origin='upper')
+            ax.imshow(dem_shade, extent=geo_extent, **kwargs)
 
         # radar coordinates
         elif isinstance(ax, plt.Axes):
-            ax.imshow(dem_shade, interpolation='spline16', extent=rdr_extent, zorder=0, origin='upper')
+            ax.imshow(dem_shade, extent=rdr_extent, **kwargs)
 
     # plot topo contour
     if dem_contour is not None and dem_contour_seq is not None:
+        # config
+        kwargs = dict(origin='upper', colors='black',
+                      linewidths=inps.dem_contour_linewidth,
+                      alpha=0.5, zorder=1)
+        # plot contour line above data (zorder=1) if no DEM shade
+        if dem_shade is None:
+            kwargs['zorder'] = 2
+
         # geo coordinates
         if geo_box is not None:
             yy, xx = np.mgrid[geo_box[1]:geo_box[3]:dem_contour.shape[0]*1j,
                               geo_box[0]:geo_box[2]:dem_contour.shape[1]*1j]
 
-            ax.contour(xx, yy, dem_contour, dem_contour_seq, extent=geo_extent,
-                       origin='upper', linewidths=inps.dem_contour_linewidth,
-                       colors='black', alpha=0.5, zorder=1)
+            ax.contour(xx, yy, dem_contour, dem_contour_seq, extent=geo_extent, **kwargs)
 
         # radar coordinates
         elif isinstance(ax, plt.Axes):
-            ax.contour(dem_contour, dem_contour_seq, extent=rdr_extent,
-                       origin='upper', linewidths=inps.dem_contour_linewidth,
-                       colors='black', alpha=0.5, zorder=1)
+            ax.contour(dem_contour, dem_contour_seq, extent=rdr_extent, **kwargs)
+
     return ax
 
 
@@ -1031,10 +1044,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     from mintpy.objects.gps import search_gps, GPS
     marker_size = 7
     vmin, vmax = inps.vlim
-    if isinstance(inps.colormap, str):
-        cmap = ColormapExt(inps.colormap).colormap
-    else:
-        cmap = inps.colormap
+    cmap = ColormapExt(inps.colormap).colormap if isinstance(inps.colormap, str) else inps.colormap
 
     atr = dict(metadata)
     atr['UNIT'] = 'm'
@@ -1352,23 +1362,25 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
 
-    # default mask file:
+    # default mask file
     if (not mask_file
             and k in ['velocity', 'timeseries']
-            and 'masked' not in fname):
+            and 'msk' not in fname):
 
-        mask_file = 'maskTempCoh.h5'
-        if 'PhaseVelocity' in fname:
-            mask_file = None #'maskSpatialCoh.h5'
+        for mask_file in ['maskTempCoh.h5', 'maskResInv.h5']:
+            if 'PhaseVelocity' in fname:
+                mask_file = None #'maskSpatialCoh.h5'
 
-        # check coordinate
-        if os.path.basename(fname).startswith('geo_'):
-            mask_file = 'geo_{}'.format(mask_file)
+            # check coordinate
+            if os.path.basename(fname).startswith('geo_'):
+                mask_file = 'geo_{}'.format(mask_file)
 
-        # absolute path and file existence
-        mask_file = os.path.join(os.path.dirname(fname), str(mask_file))
-        if not os.path.isfile(mask_file):
-            mask_file = None
+            # absolute path and file existence
+            mask_file = os.path.join(os.path.dirname(fname), str(mask_file))
+            if os.path.isfile(mask_file):
+                break
+            else:
+                mask_file = None
 
     # Read mask file if inputed
     msk = None
@@ -1510,49 +1522,68 @@ def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lal
     return ax
 
 
-def draw_scalebar(ax, geo_box, loc=[0.2, 0.2, 0.1], labelpad=0.05, font_size=12, color='k'):
+def draw_scalebar(ax, geo_box, unit='degrees', loc=[0.2, 0.2, 0.1], labelpad=0.05, font_size=12, color='k'):
     """draw a simple map scale from x1,y to x2,y in map projection coordinates, label it with actual distance
     ref_link: http://matplotlib.1069221.n5.nabble.com/basemap-scalebar-td14133.html
     Parameters: ax       : matplotlib.pyplot.axes object
-                geo_box  : tuple of 4 float in (x0, y0, x1, y1) for (W, N, E, S) in degrees
-                loc      : list of 3 float, distance, lat/lon of scale bar center in ratio of width, relative coord
+                geo_box  : tuple of 4 float in (x0, y0, x1, y1) for (W, N, E, S) in degrees / meters
+                unit     : str, coordinate unit - degrees or meters
+                loc      : list of 3 float in (length, lat, lon) of scale bar center in ratio of width, relative coord
                 labelpad : float
     Returns:    ax
     Example:    from mintpy.utils import plot as pp
                 pp.draw_scale_bar(ax, geo_box)
     """
+    geod = pyproj.Geod(ellps='WGS84')
     if not ax:
         ax = plt.gca()
 
-    geod = pyproj.Geod(ellps='WGS84')
-
-    # length in meter
-    scene_width = geod.inv(geo_box[0], geo_box[3], geo_box[2], geo_box[3])[2]
-    distance = ut0.round_to_1(scene_width * loc[0])
+    ## location - center
     lon_c = geo_box[0] + loc[1] * (geo_box[2] - geo_box[0])
     lat_c = geo_box[3] + loc[2] * (geo_box[1] - geo_box[3])
 
-    # plot scale bar
-    if distance > 1000.0:
-        distance = np.rint(distance/1000.0)*1000.0
-    lon_c2, lat_c2 = geod.fwd(lon_c, lat_c, 90, distance)[0:2]
-    length = np.abs(lon_c - lon_c2)
-    lon0 = lon_c - length/2.0
-    lon1 = lon_c + length/2.0
+    ## length
+    # 1. calc scene width in meters
+    if unit.startswith('deg'):
+        scene_width = geod.inv(geo_box[0], geo_box[3],
+                               geo_box[2], geo_box[3])[2]
+    elif unit.startswith('meter'):
+        scene_width = geo_box[2] - geo_box[0]
 
+    # 2. convert length ratio to length in meters
+    length_meter = ut0.round_to_1(scene_width * loc[0])
+    if length_meter > 1000.0:
+        # round to the nearest km
+        length_meter = np.rint(length_meter/1000.0)*1000.0
+
+    # 3. convert length in meters to length in display coord unit
+    if unit.startswith('deg'):
+        lon_c2 = geod.fwd(lon_c, lat_c, 90, length_meter)[0]
+        length_disp = np.abs(lon_c - lon_c2)
+    elif unit.startswith('meter'):
+        length_disp = length_meter
+
+    ## starting/ending longitude
+    lon0 = lon_c - length_disp / 2.0
+    lon1 = lon_c + length_disp / 2.0
+
+    ## plot scale bar
     ax.plot([lon0, lon1], [lat_c, lat_c], color=color)
-    ax.plot([lon0, lon0], [lat_c, lat_c + 0.1*length], color=color)
-    ax.plot([lon1, lon1], [lat_c, lat_c + 0.1*length], color=color)
+    ax.plot([lon0, lon0], [lat_c, lat_c + 0.1*length_disp], color=color)
+    ax.plot([lon1, lon1], [lat_c, lat_c + 0.1*length_disp], color=color)
 
-    # plot scale bar label
+    ## plot scale bar label
     unit = 'm'
-    if distance >= 1000.0:
+    if length_meter >= 1000.0:
         unit = 'km'
-        distance *= 0.001
-    label = '{:.0f} {}'.format(distance, unit)
+        length_meter *= 0.001
+    label = '{:.0f} {}'.format(length_meter, unit)
     txt_offset = (geo_box[1] - geo_box[3]) * labelpad
 
-    ax.text(lon0+0.5*length, lat_c+txt_offset, label,
+    ax.text(lon0 + length_disp / 2.0,
+            lat_c + txt_offset,
+            label,
             verticalalignment='center', horizontalalignment='center',
             fontsize=font_size, color=color)
+
     return ax

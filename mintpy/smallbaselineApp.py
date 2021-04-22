@@ -9,13 +9,12 @@
 
 
 import os
-import re
 import sys
+import glob
 import time
 import datetime
 import shutil
 import argparse
-import subprocess
 import numpy as np
 
 import mintpy
@@ -44,6 +43,7 @@ EXAMPLE = """example:
   smallbaselineApp.py -H                      #print    default template options
   smallbaselineApp.py -g                      #generate default template if it does not exist
   smallbaselineApp.py -g <custom_template>    #generate/update default template based on custom template
+  smallbaselineApp.py --plot                  #plot results without run
 
   # Run with --start/stop/dostep options
   smallbaselineApp.py GalapagosSenDT128.template --dostep velocity  #run at step 'velocity' only
@@ -74,8 +74,8 @@ def create_parser():
                         help='print the default template file and exit.')
     parser.add_argument('-v','--version', action='store_true', help='print software version and exit')
 
-    parser.add_argument('--noplot', dest='plot', action='store_false',
-                        help='do not plot results at the end of the processing.')
+    parser.add_argument('--plot', dest='plot', action='store_true',
+                        help='plot results [only] without running smallbaselineApp.')
 
     step = parser.add_argument_group('steps processing (start/end/dostep)', STEP_HELP)
     step.add_argument('--start', dest='startStep', metavar='STEP', default=STEP_LIST[0],
@@ -104,7 +104,7 @@ def cmd_line_parse(iargs=None):
             from rich.syntax import Syntax
             console = Console()
             console.print(Syntax(lines, "cfg", background_color='default'))
-        except:
+        except ImportError:
             print(lines)
         sys.exit(0)
 
@@ -121,7 +121,7 @@ def cmd_line_parse(iargs=None):
         print(EXAMPLE)
         msg = "no template file found! It requires:"
         msg += "\n  1) input a custom template file, OR"
-        msg += "\n  2) there is a default template 'smallbaselineApp.cfg' in current directory." 
+        msg += "\n  2) there is a default template 'smallbaselineApp.cfg' in current directory."
         raise SystemExit('ERROR: '+msg)
 
     # check custom input template file
@@ -134,17 +134,21 @@ def cmd_line_parse(iargs=None):
         if os.path.basename(inps.customTemplateFile) == os.path.basename(template_file):
             inps.customTemplateFile = None
 
+    # check --plot
+    if iargs == ['--plot']:
+        plot_only = True
+        print('plot smallbaselineApp results without run.')
+    else:
+        plot_only = False
+
     # check input --start/end/dostep
-    inps.runSteps = read_inps2run_steps(inps)
-    # skip plotting if --dostep is specified
-    if inps.doStep:
-        inps.plot = False
+    inps.runSteps = read_inps2run_steps(inps, step_list=STEP_LIST, plot_only=plot_only)
 
     return inps
 
 
-def read_inps2run_steps(inps, step_list=STEP_LIST):
-    """read/get run_steps from """
+def read_inps2run_steps(inps, step_list, plot_only=False):
+    """read/get run_steps from input arguments."""
     # check inputs
     for key in ['startStep', 'endStep', 'doStep']:
         value = vars(inps)[key]
@@ -166,8 +170,10 @@ def read_inps2run_steps(inps, step_list=STEP_LIST):
         raise ValueError(msg)
     run_steps = step_list[idx0:idx1+1]
 
-    # empty the step list for -g option
-    if inps.generate_template:
+    # empty the step list
+    # if -g
+    # OR if iargs == ['--plot']
+    if inps.generate_template or plot_only:
         run_steps = []
 
     # mssage - processing steps
@@ -219,12 +225,11 @@ class TimeSeriesAnalysis:
         self.cwd = os.path.abspath(os.getcwd())
         return
 
-    def startup(self):
-        """The starting point of the workflow. It runs everytime. 
+    def open(self):
+        """The starting point of the workflow. It runs everytime.
         It 1) grab project name if given
            2) go to work directory
            3) get and read template(s) options
-           4) get plot shell script to work directory
         """
 
         #1. Get projectName
@@ -242,32 +247,6 @@ class TimeSeriesAnalysis:
         self.templateFile = get_the_latest_default_template_file(self.workDir)
         self._read_template()
 
-        # 4. Copy the plot shell file
-        sh_file = os.path.join(os.path.dirname(mintpy.__file__), 'sh/plot_smallbaselineApp.sh')
-
-        def grab_latest_update_date(fname, prefix='# Latest update:'):
-            try:
-                lines = open(fname, 'r').readlines()
-                line = [i for i in lines if prefix in i][0]
-                t = re.findall('\d{4}-\d{2}-\d{2}', line)[0]
-                t = datetime.datetime.strptime(t, '%Y-%m-%d')
-            except:
-                t = datetime.datetime.strptime('2010-01-01', '%Y-%m-%d') #a arbitrary old date
-            return t
-
-        # 1) copy to work directory (if not existed yet).
-        if not os.path.isfile(os.path.basename(sh_file)):
-            print('copy {} to work directory: {}'.format(sh_file, self.workDir))
-            shutil.copy2(sh_file, self.workDir)
-
-        # 2) copy to work directory (if obsolete file detected) and rename the existing one
-        elif grab_latest_update_date(os.path.basename(sh_file)) < grab_latest_update_date(sh_file):
-            shutil.move(os.path.basename(sh_file), os.path.basename(sh_file)+'_obsolete')
-            print('obsolete shell file detected, renamed it to: {}_obsolete'.format(os.path.basename(sh_file)))
-            print('copy {} to work directory: {}'.format(sh_file, self.workDir))
-            shutil.copy2(sh_file, self.workDir)
-
-        self.plot_sh_cmd = './'+os.path.basename(sh_file)
         return
 
 
@@ -321,8 +300,8 @@ class TimeSeriesAnalysis:
                                              check_readable=False,
                                              print_msg=False) == 'run':
                     shutil.copy2(tfile, backup_dir)
-                    print('copy {} to {} directory for backup.'.format(os.path.basename(tfile),
-                                                                       os.path.basename(backup_dir)))
+                    print('copy {} to {:<8} directory for backup.'.format(os.path.basename(tfile),
+                                                                          os.path.basename(backup_dir)))
 
         # 3) read default template file
         print('read default template file:', self.templateFile)
@@ -382,40 +361,28 @@ class TimeSeriesAnalysis:
 
         # 5) if not load_complete, plot and raise exception
         if not load_complete:
-            # plot result if error occured
-            self.plot_result(print_aux=False, plot=plot)
-
-            # go back to original directory
-            print('Go back to directory:', self.cwd)
-            os.chdir(self.cwd)
-
-            # raise error
-            msg = 'step {}: NOT all required dataset found, exit.'.format(step_name)
-            raise RuntimeError(msg)
+            self.plot_result(print_aux=False)
+            self.close(normal_end=False)
+            raise RuntimeError('step {}: NOT all required dataset found, exit.'.format(step_name))
         return
 
 
     def _copy_aux_file(self):
-        if not self.projectName:
-            return
-
         # for Univ of Miami
-        flist = ['PROCESS/unavco_attributes.txt',
-                 'PROCESS/bl_list.txt',
-                 'SLC/summary*slc.jpg']
-        try:
+        if os.getenv('SCRATCHDIR') and self.projectName:
             proj_dir = os.path.join(os.getenv('SCRATCHDIR'), self.projectName)
+            flist = ['PROCESS/unavco_attributes.txt',
+                     'PROCESS/bl_list.txt',
+                     'SLC/summary*slc.jpg']
             flist = ut.get_file_list([os.path.join(proj_dir, i) for i in flist], abspath=True)
             for fname in flist:
                 if ut.run_or_skip(out_file=os.path.basename(fname), in_file=fname, check_readable=False) == 'run':
                     shutil.copy2(fname, self.workDir)
                     print('copy {} to work directory'.format(os.path.basename(fname)))
-        except:
-            pass
         return
 
 
-    def run_network_modification(self, step_name, plot=True):
+    def run_network_modification(self, step_name):
         """Modify network of interferograms before the network inversion."""
         # check the existence of ifgramStack.h5
         stack_file, geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1:3]
@@ -459,7 +426,7 @@ class TimeSeriesAnalysis:
         print('\nplot_network.py', ' '.join(iargs))
 
         # run
-        if self.template['mintpy.plot'] and plot:
+        if self.template['mintpy.plot']:
             if ut.run_or_skip(out_file=net_fig,
                               in_file=[stack_file, coh_txt, self.templateFile],
                               check_readable=False) == 'run':
@@ -503,7 +470,7 @@ class TimeSeriesAnalysis:
         self.generate_ifgram_aux_file()
 
         # 3) add REF_X/Y(/LAT/LON) of the reference point
-        stack_file, geom_file, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1:4]
+        stack_file, _, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1:4]
         coh_file = os.path.join(self.workDir, 'avgSpatialCoh.h5')
 
         iargs = [stack_file, '-t', self.templateFile, '-c', coh_file]
@@ -602,7 +569,7 @@ class TimeSeriesAnalysis:
         # compose list of arguments
         iargs = [tcoh_file, '-m', tcoh_min, '-o', mask_file]
         # exclude pixels in shadow if shadowMask dataset is available
-        if (self.template['mintpy.networkInversion.shadowMask'] is True 
+        if (self.template['mintpy.networkInversion.shadowMask'] is True
                 and 'shadowMask' in readfile.get_dataset_list(geom_file)):
             iargs += ['--base', geom_file, '--base-dataset', 'shadowMask', '--base-value', '1']
         print('\ngenerate_mask.py', ' '.join(iargs))
@@ -620,7 +587,7 @@ class TimeSeriesAnalysis:
             atr = readfile.read_attribute(mask_file)
             if any(str(self.template[i]) != atr.get(i, 'False') for i in config_keys):
                 flag = 'run'
-                print('2) NOT all key configration parameters are the same: {}'.format(config_keys))
+                print('2) NOT all key configuration parameters are the same: {}'.format(config_keys))
             else:
                 print('2) all key configuration parameters are the same: {}'.format(config_keys))
         print('run or skip: {}'.format(flag))
@@ -788,7 +755,7 @@ class TimeSeriesAnalysis:
         out_file = fnames['output']
         if in_file != out_file:
             poly_order  = self.template['mintpy.troposphericDelay.polyOrder']
-            tropo_model = self.template['mintpy.troposphericDelay.weatherModel']
+            tropo_model = self.template['mintpy.troposphericDelay.weatherModel'].upper()
             weather_dir = self.template['mintpy.troposphericDelay.weatherDir']
             method      = self.template['mintpy.troposphericDelay.method']
 
@@ -800,12 +767,12 @@ class TimeSeriesAnalysis:
             if method == 'height_correlation':
                 tropo_look = self.template['mintpy.troposphericDelay.looks']
                 tropo_min_cor = self.template['mintpy.troposphericDelay.minCorrelation']
-                iargs = [in_file, 
+                iargs = [in_file,
                          '-g', geom_file,
                          '-p', poly_order,
                          '-m', mask_file,
                          '-o', out_file,
-                         '-l', tropo_look, 
+                         '-l', tropo_look,
                          '-t', tropo_min_cor]
                 print('tropospheric delay correction with height-correlation approach')
                 print('\ntropo_phase_elevation.py', ' '.join(iargs))
@@ -841,16 +808,9 @@ class TimeSeriesAnalysis:
                             print('\ntropo_pyaps3.py', ' '.join(iargs))
                             tropo_pyaps3.main(iargs)
                         else:
-                            # opt 1 - using tropo_pyaps as python module and call its main function
-                            # prefered, disabled for now to make it compatible with python2-pyaps
-                            #print('tropo_pyaps.py', ' '.join(iargs))
-                            #from mintpy import tropo_pyaps
-                            #tropo_pyaps.main(iargs)
-                            # opt 2 - using tropo_pyaps as executable script
-                            # will be deprecated after python3-pyaps is fully funcational
-                            cmd = 'tropo_pyaps.py '+' '.join(iargs)
-                            print(cmd)
-                            status = subprocess.Popen(cmd, shell=True).wait()
+                            from mintpy import tropo_pyaps
+                            print('\ntropo_pyaps.py', ' '.join(iargs))
+                            tropo_pyaps.main(iargs)
 
         else:
             print('No tropospheric delay correction.')
@@ -932,7 +892,7 @@ class TimeSeriesAnalysis:
         mintpy.timeseries2velocity.main(iargs)
 
         # Velocity from estimated tropospheric delays
-        tropo_model = self.template['mintpy.troposphericDelay.weatherModel']
+        tropo_model = self.template['mintpy.troposphericDelay.weatherModel'].upper()
         tropo_file = os.path.join(self.workDir, 'inputs/{}.h5'.format(tropo_model))
         if os.path.isfile(tropo_file):
             suffix = os.path.splitext(os.path.basename(tropo_file))[0]
@@ -960,9 +920,7 @@ class TimeSeriesAnalysis:
 
                 geom_file, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2:4]
                 in_files = [geom_file, 'temporalCoherence.h5', 'avgSpatialCoh.h5', ts_file, 'velocity.h5']
-                iargs = ['-l', lookup_file, '-t', self.templateFile, '--outdir', out_dir, '--update']
-                for in_file in in_files:
-                    iargs += [in_file]
+                iargs = in_files + ['-l', lookup_file, '-t', self.templateFile, '--outdir', out_dir, '--update']
                 print('\ngeocode.py', ' '.join(iargs))
                 mintpy.geocode.main(iargs)
 
@@ -1004,14 +962,16 @@ class TimeSeriesAnalysis:
             print('\nsave_kmz.py', ' '.join(iargs))
 
             # update mode
-            try:
-                fbase = os.path.basename(kmz_file)
-                kmz_file = [i for i in [fbase, './geo/{}'.format(fbase), './pic/{}'.format(fbase)] 
-                            if os.path.isfile(i)][0]
-            except:
-                kmz_file = None
+            fbase = os.path.basename(kmz_file)
+            kmz_files = [i for i in [fbase,
+                                     './geo/{}'.format(fbase),
+                                     './pic/{}'.format(fbase)]
+                         if os.path.isfile(i)]
+            kmz_file = kmz_files[0] if len(kmz_files) > 0 else None
+
             if ut.run_or_skip(out_file=kmz_file, in_file=vel_file, check_readable=False) == 'run':
                 mintpy.save_kmz.main(iargs)
+
         else:
             print('save velocity to Google Earth format is OFF.')
         return
@@ -1040,57 +1000,28 @@ class TimeSeriesAnalysis:
             print('--------------------------------------------')
             iargs = [ts_file,
                      '--tc', tcoh_file,
-                     '--asc', scoh_file, 
+                     '--asc', scoh_file,
                      '-m', mask_file,
-                     '-g', geom_file, 
+                     '-g', geom_file,
                      '-t', self.templateFile]
             print('\nsave_hdfeos5.py', ' '.join(iargs))
 
             # output (check existing file)
             atr = readfile.read_attribute(ts_file)
             SAT = sensor.get_unavco_mission_name(atr)
-            try:
-                hdfeos5_file = ut.get_file_list('{}_*.he5'.format(SAT))[0]
-            except:
-                hdfeos5_file = None
+            hdfeos5_files = ut.get_file_list('{}_*.he5'.format(SAT))
+            hdfeos5_file = hdfeos5_files[0] if len(hdfeos5_files) > 0 else None
+
             if ut.run_or_skip(out_file=hdfeos5_file, in_file=[ts_file, tcoh_file, scoh_file, mask_file, geom_file]) == 'run':
                 mintpy.save_hdfeos5.main(iargs)
+
         else:
             print('save time-series to HDF-EOS5 format is OFF.')
         return
 
 
-    def plot_result(self, print_aux=True, plot=True):
-        """Plot data files and save to figures in pic folder"""
-        start_time = time.time()
-        if self.template['mintpy.plot'] and plot:
-            print('\n******************** plot & save to pic ********************')
-            print(self.plot_sh_cmd)
-            subprocess.Popen(self.plot_sh_cmd, shell=True).wait()
-
-            # time info
-            m, s = divmod(time.time()-start_time, 60)
-            print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
-
-        # message for more visualization scripts
-        msg = """Explore more info & visualization options with the following scripts:
-        info.py                    #check HDF5 file structure and metadata
-        view.py                    #2D map view
-        tsview.py                  #1D point time-series (interactive)   
-        transect.py                #1D profile (interactive)
-        plot_coherence_matrix.py   #plot coherence matrix for one pixel (interactive)
-        plot_network.py            #plot network configuration of the dataset    
-        plot_transection.py        #plot 1D profile along a line of a 2D matrix (interactive)
-        save_kmz.py                #generate Google Earth KMZ file in raster image
-        save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
-        """
-        if print_aux:
-            print(msg)
-        return
-
-
-    def run(self, steps=STEP_LIST, plot=True):
-        # run the chosen steps
+    def run(self, steps):
+        """run the chosen steps."""
         for sname in steps:
             print('\n\n******************** step - {} ********************'.format(sname))
 
@@ -1098,7 +1029,7 @@ class TimeSeriesAnalysis:
                 self.run_load_data(sname)
 
             elif sname == 'modify_network':
-                self.run_network_modification(sname, plot=plot)
+                self.run_network_modification(sname)
 
             elif sname == 'reference_point':
                 self.run_reference_point(sname)
@@ -1144,20 +1075,155 @@ class TimeSeriesAnalysis:
 
             elif sname == 'hdfeos5':
                 self.run_save2hdfeos5(sname)
+        return
 
-        # plot result (show aux visualization message for multiple steps processing)
-        print_aux = len(steps) > 1
-        self.plot_result(print_aux=print_aux, plot=plot)
 
+    def plot_result(self, print_aux=True):
+        """Plot data files and save to figures in pic folder"""
+
+        print('\n******************** plot & save to pic ********************')
+
+        tropo_model = self.template['mintpy.troposphericDelay.weatherModel'].upper()
+        stack_file, geom_file, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1:]
+        mask_file = os.path.join(self.workDir, 'maskTempCoh.h5')
+        geo_dir = os.path.join(self.workDir, 'geo')
+        pic_dir = os.path.join(self.workDir, 'pic')
+
+        # use relative path for shorter and cleaner printout view command
+        stack_file  = os.path.relpath(stack_file)  if stack_file  else stack_file
+        geom_file   = os.path.relpath(geom_file)   if geom_file   else geom_file
+        lookup_file = os.path.relpath(lookup_file) if lookup_file else lookup_file
+        mask_file   = os.path.relpath(mask_file)   if mask_file   else mask_file
+        geo_dir     = os.path.relpath(geo_dir)     if geo_dir     else geo_dir
+
+        # view options
+        # for each element list:
+        # the 1st item is the data file
+        # the 2nd item is the dataset if applicable
+        opt4ts = ['--mask', mask_file, '--noaxis', '-u', 'cm', '--wrap-range', '-10', '10']
+        iargs_list0 = [
+            # key files
+            ['velocity.h5',          '--dem', geom_file, '--mask', mask_file, '-u', 'cm'],
+            ['temporalCoherence.h5', '-c', 'gray', '-v', '0', '1'],
+            ['maskTempCoh.h5',       '-c', 'gray', '-v', '0', '1'],
+
+            # geometry
+            [geom_file],
+            [lookup_file],
+
+            # ifgramStack
+            [stack_file, 'unwrapPhase-',      '--zero-mask', '--wrap', '-c', 'cmy'],
+            [stack_file, 'unwrapPhase-',      '--zero-mask'],
+            [stack_file, 'coherence-',        '--mask', 'no', '-v', '0', '1'],
+            [stack_file, 'connectComponent-', '--mask', 'no'],
+
+            # ifgramStack - unwrapping error correction
+            [stack_file, 'unwrapPhase_bridging-',              '--zero-mask'],
+            [stack_file, 'unwrapPhase_phaseClosure-',          '--zero-mask'],
+            [stack_file, 'unwrapPhase_bridging_phaseClosure-', '--zero-mask'],
+
+            # ifgramStack - auxliary files
+            ['avgPhaseVelocity.h5'] ,
+            ['avgSpatialCoh.h5', '-c', 'gray', '-v', '0', '1'],
+            ['maskConnComp.h5',  '-c', 'gray', '-v', '0', '1'],
+
+            # time-series
+            ['timeseries.h5'] + opt4ts,
+            ['timeseries_*.h5'] + opt4ts,
+
+            # files from geocoding
+            [os.path.join(geo_dir, 'geo_maskTempCoh.h5'),       '-c', 'gray'],
+            [os.path.join(geo_dir, 'geo_temporalCoherence.h5'), '-c', 'gray'],
+            [os.path.join(geo_dir, 'geo_velocity.h5'),          'velocity'],
+            [os.path.join(geo_dir, 'geo_timeseries*.h5')] + opt4ts,
+
+            # all the other files
+            [f'velocity{tropo_model}.h5', '--mask', 'no'],
+            ['numInvIfgram.h5',           '--mask', 'no'],
+        ]
+
+        # translate element list whose file path has *
+        iargs_list = []
+        for iargs in iargs_list0:
+            fname, args = iargs[0], iargs[1:]
+            if not fname:
+                continue
+
+            if '*' in fname:
+                fnames = sorted(glob.glob(fname))
+                if len(fnames) > 0:
+                    for fname in fnames:
+                        iargs_list.append([fname] + args)
+
+            elif iargs not in iargs_list:
+                iargs_list.append(iargs)
+
+        # remove element list - file does not exists
+        iargs_list = [iargs for iargs in iargs_list if os.path.isfile(iargs[0])]
+
+        # remote element list - file is ifgramStack and the dataset of interest does not exist
+        stack_dset_list = readfile.get_dataset_list(stack_file)
+        iargs_list = [iargs for iargs in iargs_list
+                      if (iargs[0] != stack_file
+                          or (iargs[0] == stack_file
+                              and iargs[1] in stack_dset_list))]
+
+        # add the following common options to all element lists
+        opt_common = ['--dpi', '150', '--noverbose', '--nodisplay', '--update']
+        iargs_list = [opt_common + iargs for iargs in iargs_list]
+
+        # run view
+        start_time = time.time()
+        for iargs in iargs_list:
+            print('view.py', ' '.join(iargs))
+            mintpy.view.main(iargs)
+
+        # copy text files to pic
+        print('copy *.txt files into ./pic directory.')
+        tfiles = glob.glob('*.txt')
+        for tfile in tfiles:
+            shutil.copy2(tfile, pic_dir)
+
+        # move picture files to pic
+        print('move *.png/pdf/kmz files to ./pic directory.')
+        pfiles  = glob.glob('*.png')
+        pfiles += glob.glob('*.pdf')
+        pfiles += glob.glob('*.kmz')
+        pfiles += glob.glob(os.path.join(geo_dir, '*.kmz'))
+        for pfile in pfiles:
+            shutil.move(pfile, os.path.join(pic_dir, os.path.basename(pfile)))
+
+        # time info
+        m, s = divmod(time.time()-start_time, 60)
+        print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+
+        # message for more visualization scripts
+        msg = """Explore more info & visualization options with the following scripts:
+        info.py                    #check HDF5 file structure and metadata
+        view.py                    #2D map view
+        tsview.py                  #1D point time-series (interactive)   
+        transect.py                #1D profile (interactive)
+        plot_coherence_matrix.py   #plot coherence matrix for one pixel (interactive)
+        plot_network.py            #plot network configuration of the dataset    
+        plot_transection.py        #plot 1D profile along a line of a 2D matrix (interactive)
+        save_kmz.py                #generate Google Earth KMZ file in raster image
+        save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
+        """
+        if print_aux:
+            print(msg)
+        return
+
+
+    def close(self, normal_end=True):
         # go back to original directory
         print('Go back to directory:', self.cwd)
         os.chdir(self.cwd)
-
         # message
-        msg  = '\n################################################'
-        msg += '\n   Normal end of smallbaselineApp processing!'
-        msg += '\n################################################'
-        print(msg)
+        if normal_end:
+            msg  = '\n################################################'
+            msg += '\n   Normal end of smallbaselineApp processing!'
+            msg += '\n################################################'
+            print(msg)
         return
 
 
@@ -1167,9 +1233,16 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     app = TimeSeriesAnalysis(inps.customTemplateFile, inps.workDir)
-    app.startup()
-    if len(inps.runSteps) > 0:
-        app.run(steps=inps.runSteps, plot=inps.plot)
+    app.open()
+    app.run(steps=inps.runSteps)
+
+    # plot if:
+    # a. --plot in command line
+    # OR b. template['mintpy.plot'] = yes AND runSteps > 1
+    if inps.plot or (app.template['mintpy.plot'] and len(inps.runSteps) > 1):
+        app.plot_result()
+
+    app.close()
 
     # Timing
     m, s = divmod(time.time()-start_time, 60)

@@ -232,83 +232,6 @@ def touch(fname_list, times=None):
 
 
 #################################### Geometry ##########################################
-
-def vtec2range_delay(vtec, inc_angle_iono, freq):
-    """Calculate/predict the range delay in SAR from TEC in zenith direction
-
-    L-band: 1.2575 GHz (ALOS2, NISAR-L)
-    S-band: 3.2 GHz    (NISAR-S)
-    C-band: 5.405 GHz  (Sentinel-1)
-
-    Parameters: vtec           - float, zenith TEC in TECU
-                inc_angle_iono - float/np.ndarray, incidence angle at the ionospheric shell in deg
-                freq           - float, radar carrier frequency in Hz.
-    Returns:    rg_delay       - float/np.ndarray, predicted range delay in meters
-    """
-    # ignore no-data value in inc_angle
-    if type(inc_angle_iono) is np.ndarray:
-        inc_angle_iono[inc_angle_iono == 0] = np.nan
-
-    # convert to TEC in LOS based on equation (3) in Chen and Zebker (2012)
-    tec = vtec / np.cos(inc_angle_iono * np.pi / 180.0)
-
-    # calculate range delay based on equation (1) in Chen and Zebker (2012)
-    range_delay = (tec * 1e16 * K / (freq**2)).astype(np.float32)
-
-    return range_delay
-
-
-def lalo_ground2iono_shell_along_los(lat, lon, inc_angle=30, head_angle=-168, iono_height=450e3):
-    """Convert the lat/lon of a point on the ground to the ionosphere thin-shell 
-    along the line-of-sight (LOS) direction.
-
-    Reference: Jingyi, C., and H. A. Zebker (2012), Ionospheric Artifacts in Simultaneous
-        L-Band InSAR and GPS Observations, Geoscience and Remote Sensing, IEEE Transactions on,
-        50(4), 1227-1239, doi:10.1109/TGRS.2011.2164805.
-
-    Parameters: lat/lon     - float, latitude/longitude of the point on the ground in degrees
-                inc_angle   - float, incidence angle of the line-of-sight on the ground in degrees
-                head_angle  - float, heading angle of the satellite orbit in degrees
-                              from the north direction with positive in clockwise direction
-                iono_height - float, height of the ionosphere thin-shell in meters
-    """
-    # degrees to radians
-    inc_angle /= 180 / np.pi
-    head_angle /= 180 / np.pi
-
-    # offset angle from equation (25) in Chen and Zebker (2012)
-    off_iono = inc_angle - np.arcsin(EARTH_RADIUS / (EARTH_RADIUS + iono_height) * np.sin(np.pi - inc_angle))
-
-    # update lat/lon
-    lat += off_iono * np.cos(head_angle) * 180 / np.pi
-    lon += off_iono * np.sin(head_angle) * 180 / np.pi
-    return lat, lon
-
-
-def incidence_angle_ground2iono_shell_along_los(inc_angle, iono_height=450e3):
-    """Calibrate the incidence angle of LOS vector on the ground surface to the ionosphere shell
-    based on equation (6) in Chen ang Zebker (2012, TGRS)
-
-    Reference: Jingyi, C., and H. A. Zebker (2012), Ionospheric Artifacts in Simultaneous
-        L-Band InSAR and GPS Observations, Geoscience and Remote Sensing, IEEE Transactions on,
-        50(4), 1227-1239, doi:10.1109/TGRS.2011.2164805.
-
-    Parameters: inc_angle      - float/np.ndarray, incidence angle on the ground in degrees
-                iono_height    - float, effective ionosphere height in meters
-                                 under the thin-shell assumption
-    Returns:    inc_angle_iono - float/np.ndarray, incidence angle on the iono shell in degrees
-    """
-    # ignore nodata in inc_angle
-    if type(inc_angle) is np.ndarray:
-        inc_angle[inc_angle == 0] = np.nan
-    inc_angle *= np.pi / 180.
-
-    # calculation
-    cos_inc_angle_iono = np.sqrt(1 - (EARTH_RADIUS * np.sin(inc_angle) / (EARTH_RADIUS + iono_height))**2)
-    inc_angle_iono = np.arccos(cos_inc_angle_iono) / np.pi * 180.0
-    return inc_angle_iono
-
-
 def get_lat_lon(meta, geom_file=None, box=None, dimension=2):
     """Extract precise pixel-wise lat/lon.
 
@@ -372,8 +295,10 @@ def get_lat_lon(meta, geom_file=None, box=None, dimension=2):
 
 
 def get_lat_lon_rdc(meta):
-    """Get 2D array of lat and lon.
-    For metadata dict in radar-coord
+    """Get 2D array of lat and lon for metadata dict in radar-coord.
+
+    WARNING: This is a rough lat/lon value, NOT accurate!
+
     Parameters: meta : dict, including LENGTH, WIDTH and LAT/LON_REF1/2/3/4
     Returns:    lats : 2D np.array for latitude  in size of (length, width)
                 lons : 2D np.array for longitude in size of (length, width)
@@ -616,6 +541,23 @@ def interpolate_data(inData, outShape, interpMethod='linear'):
     return outData
 
 
+def polygon2mask(polygon, shape):
+    """Create a 2D mask (numpy array in binary) from a polygon.
+
+    Link: https://stackoverflow.com/questions/3654289/scipy-create-2d-polygon-mask
+    Parameters: polygon - list of tuples of 2 int, e.g. [(x1, y1), (x2, y2), ...]
+                shape   - list/tuple of 2 int, for length and width
+    Returns:    mask    - 2D np.ndarray in bool in size of (length, width)
+    """
+    from PIL import Image, ImageDraw
+    length, width = shape
+
+    img = Image.new('L', (width, length), 0)
+    ImageDraw.Draw(img).polygon(polygon, outline=1, fill=1)
+    mask = np.array(img, dtype=np.bool_)
+
+    return mask
+
 
 
 #################################### User Interaction #####################################
@@ -711,6 +653,14 @@ def median_abs_deviation(data, center=None, scale=0.67449):
         statsmodels.robust.mad() in statsmodels
             https://www.statsmodels.org/dev/generated/statsmodels.robust.scale.mad.html
 
+    The differences are:
+        1. scipy: out = out / scale while mintpy: out = out * scale
+        2. scipy propagates nan by default, while mintpy omit nan by default.
+
+    The following two are equivalent for a 2D np.ndarray X:
+        mintpy.utils.utils0.median_abs_deviation(X)
+        scipy.stats.median_abs_deviation(X, axis=-1, center=np.nanmedian, scale=1./0.67449, nan_policy='omit')
+
     Parameters: data   - 1/2D np.ndarray, input array
                 center - 0/1D np.ndarray or None
                 scale  - float, the normalization constant
@@ -743,6 +693,22 @@ def median_abs_deviation_threshold(data, center=None, cutoff=3.):
     mad = median_abs_deviation(data, center=center)
     threshold = center + cutoff * mad
     return threshold
+
+
+def root_mean_sq_error(x, y=None):
+    """Calculate the root-mean-square error between x and y."""
+    # make a copy & ensure 1D numpy array format
+    x = np.array(x).flatten()
+    if y is not None:
+        y = np.array(y).flatten()
+        if x.size != y.size:
+            raise ValueError('Input x & y have different size: {} vs. {}!'.format(x.size, y.size))
+        x -= y
+
+    # omit NaN values
+    x = x[~np.isnan(x)]
+    rmse = np.sqrt(np.sum(x**2) / (x.size - 1))
+    return rmse
 
 
 def ceil_to_1(x):

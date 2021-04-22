@@ -5,11 +5,18 @@
 ############################################################
 # 2020-07: Talib Oliver-Cabrera, add UAVSAR support w/in stripmapStack
 # 2020-10: Cunren Liang, add alosStack support
+# Group contents:
+#     metadata
+#     geometry
+#     baseline
+#     multilook
+#     miscellaneous
 # Recommend import:
 #   from mintpy.utils import isce_utils
 
 
 import os
+import re
 import glob
 import shelve
 import datetime
@@ -57,138 +64,6 @@ def get_processor(meta_file):
     else:
         raise ValueError('Un-recognized ISCE processor for metadata file: {}'.format(meta_file))
     return processor
-
-
-def get_IPF(proj_dir, ts_file):
-    """Grab the IPF version number of each sub-swatch for Sentinel-1 time-series
-
-    Parameters: proj_dir    - str, path of the project directory
-                              E.g.: ~/data/AtacamaSenDT149
-                ts_file     - str, path of HDF5 file for time-series
-    Returns:    date_list   - list of str, dates in YYYYMMDD format
-                IFP_IW1/2/3 - list of str, IFP version number
-    """
-    from mintpy.objects import timeseries
-
-    s_dir = os.path.join(proj_dir, 'secondarys')
-    m_dir = os.path.join(proj_dir, 'reference')
-
-    # date list
-    date_list = timeseries(ts_file).get_date_list()
-    num_date = len(date_list)
-    # reference date
-    m_date = [i for i in date_list if not os.path.isdir(os.path.join(s_dir, i))][0]
-
-    # grab IPF numver
-    IPF_IW1, IPF_IW2, IPF_IW3 = [], [], []
-    prog_bar = ptime.progressBar(maxValue=num_date)
-    for i in range(num_date):
-        date_str = date_list[i]
-
-        # get xml_dir
-        if date_str == m_date:
-            xml_dir = m_dir
-        else:
-            xml_dir = os.path.join(s_dir, date_str)
-
-        # grab IPF version number
-        for j, IPF_IW in enumerate([IPF_IW1, IPF_IW2, IPF_IW3]):
-            xml_file = os.path.join(xml_dir, 'IW{}.xml'.format(j+1))
-            IPFv = load_product(xml_file).processingSoftwareVersion
-            IPF_IW.append('{:.02f}'.format(float(IPFv)))
-
-        prog_bar.update(i+1, suffix='{} IW1/2/3'.format(date_str))
-    prog_bar.close()
-    return date_list, IPF_IW1, IPF_IW2, IPF_IW3
-
-
-
-#####################################  multilook  #######################################
-
-def multilook_number2resolution(meta_file, az_looks, rg_looks):
-    # get full resolution info
-    az_pixel_size, az_spacing, rg_pixel_size, rg_spacing = get_full_resolution(meta_file)
-
-    # print out message
-    print('Azimuth     pixel size : {:.1f}'.format(az_pixel_size))
-    print('Azimuth ground spacing : {:.1f}'.format(az_spacing))
-    print('Azimuth ground spacing : {:.1f} after multilooking by {}'.format(az_spacing*az_looks, az_looks))
-
-    print('Range       pixel size : {:.1f}'.format(rg_pixel_size))
-    print('Range   ground spacing : {:.1f}'.format(rg_spacing))
-    print('Range   ground spacing : {:.1f} after multilooking by {}'.format(rg_spacing*rg_looks, rg_looks))
-    return
-
-
-def resolution2multilook_number(meta_file, resolution):
-    """
-    Calculate multilook number for InSAR processing given a disired output resolution on the ground
-
-    Parameters: meta_file   : str, path of ISCE metadata file, i.e. IW1.xml, data.dat
-                resolution  : float, target output resolution on the ground in meters
-    Returns:    az/rg_looks : int, number of looks in azimuth / range direction
-    """
-    # get full resolution info
-    az_pixel_size, az_spacing, rg_pixel_size, rg_spacing = get_full_resolution(meta_file)
-
-    # calculate number of looks
-    # 1. adjust the final resolution in one direction closest to the input resolution
-    az_looks = resolution / az_spacing
-    rg_looks = resolution / rg_spacing
-    az_round_frac = abs(az_looks - np.rint(az_looks))
-    rg_round_frac = abs(rg_looks - np.rint(rg_looks))
-    if az_round_frac < rg_round_frac:
-        resolution = np.rint(az_looks) * az_spacing
-    else:
-        resolution = np.rint(rg_looks) * rg_spacing
-
-    # 2. calculate the multilook number based on the adjusted resolution
-    az_looks = np.rint(resolution / az_spacing).astype(int)
-    rg_looks = np.rint(resolution / rg_spacing).astype(int)
-
-    # print out message
-    print('Azimuth     pixel size : {:.1f}'.format(az_pixel_size))
-    print('Azimuth ground spacing : {:.1f}'.format(az_spacing))
-    print('Azimuth ground spacing : {:.1f} after multilooking by {}'.format(az_spacing*az_looks, az_looks))
-
-    print('Range       pixel size : {:.1f}'.format(rg_pixel_size))
-    print('Range   ground spacing : {:.1f}'.format(rg_spacing))
-    print('Range   ground spacing : {:.1f} after multilooking by {}'.format(rg_spacing*rg_looks, rg_looks))
-
-    return az_looks, rg_looks
-
-
-def get_full_resolution(meta_file):
-    """
-    Grab the full resolution in terms of pixel_size and ground spacing
-    """
-    # check metadata file extension: only ISCE format is supported.
-    fext = os.path.splitext(meta_file)[1]
-    if fext not in ['.xml', '.dat']:
-        raise ValueError('input ISCE metadata file extension "{}" not in [.xml, .dat]'.format(fext))
-
-    # get middle sub-swath xml file for Sentinel-1 data
-    if meta_file.endswith('.xml'):
-        meta_files = glob.glob(meta_file)
-        mid_idx = int(len(meta_files) / 2)
-        meta_file = meta_files[mid_idx]
-
-    # extract metadata
-    meta, frame = extract_isce_metadata(meta_file, update_mode=False)
-    meta['WIDTH'] = frame.numberOfSamples
-
-    # calculate the full azimuth/range ground resolution
-    az_pixel_size = float(meta['AZIMUTH_PIXEL_SIZE'])  #azimuth pixel size on the orbit
-    rg_pixel_size = float(meta['RANGE_PIXEL_SIZE'])    #range   pixel size in LOS direction
-
-    height = float(meta['HEIGHT'])
-    inc_angle = ut.incidence_angle(meta, dimension=0)
-
-    az_spacing = az_pixel_size * EARTH_RADIUS / (EARTH_RADIUS + height)  #azimuth pixel size on the ground
-    rg_spacing = rg_pixel_size / np.sin(inc_angle / 180. * np.pi)        #range   pixel size on the ground
-
-    return az_pixel_size, az_spacing, rg_pixel_size, rg_spacing
-
 
 
 #####################################  metadata  #######################################
@@ -665,6 +540,7 @@ def extract_geometry_metadata(geom_dir, meta=dict(), box=None, fbase_list=['hgt'
     return meta
 
 
+
 #####################################  baseline  #######################################
 def read_tops_baseline(baseline_file):
     """Read baseline file generated by ISCE/topsStack processor.
@@ -733,8 +609,8 @@ def read_baseline_timeseries(baseline_dir, processor='tops', ref_date=None):
                     }
     """
 
-    print('read perp baseline time-series from {}'.format(baseline_dir))
     # grab all existed baseline files
+    print('read perp baseline time-series from {}'.format(baseline_dir))
     if processor == 'tops':
         bFiles = sorted(glob.glob(os.path.join(baseline_dir, '*/*.txt')))
     elif processor == 'stripmap':
@@ -753,8 +629,11 @@ def read_baseline_timeseries(baseline_dir, processor='tops', ref_date=None):
         # ignore files with different date1
         # when re-run with different reference date
         date1s = [os.path.basename(i).split('_')[0] for i in bFiles]
-        date1 = ut.most_common(date1s)
-        bFiles = [i for i in bFiles if os.path.basename(i).split('_')[0] == date1]
+        date1c = ut.most_common(date1s)
+        bFiles = [i for i in bFiles if os.path.basename(i).split('_')[0] == date1c]
+
+        # ignore empty files
+        bFiles = [i for i in bFiles if os.path.getsize(i) > 0]
 
         # read files into dict
         bDict = {}
@@ -784,3 +663,255 @@ def read_baseline_timeseries(baseline_dir, processor='tops', ref_date=None):
             bDict[key][1] -= ref_bperp[1]
 
     return bDict
+
+
+
+#####################################  multilook  #######################################
+
+def multilook_number2resolution(meta_file, az_looks, rg_looks):
+    # get full resolution info
+    az_pixel_size, az_spacing, rg_pixel_size, rg_spacing = get_full_resolution(meta_file)
+
+    # print out message
+    print('Azimuth     pixel size : {:.1f}'.format(az_pixel_size))
+    print('Azimuth ground spacing : {:.1f}'.format(az_spacing))
+    print('Azimuth ground spacing : {:.1f} after multilooking by {}'.format(az_spacing*az_looks, az_looks))
+
+    print('Range       pixel size : {:.1f}'.format(rg_pixel_size))
+    print('Range   ground spacing : {:.1f}'.format(rg_spacing))
+    print('Range   ground spacing : {:.1f} after multilooking by {}'.format(rg_spacing*rg_looks, rg_looks))
+    return
+
+
+def resolution2multilook_number(meta_file, resolution):
+    """
+    Calculate multilook number for InSAR processing given a disired output resolution on the ground
+
+    Parameters: meta_file   : str, path of ISCE metadata file, i.e. IW1.xml, data.dat
+                resolution  : float, target output resolution on the ground in meters
+    Returns:    az/rg_looks : int, number of looks in azimuth / range direction
+    """
+    # get full resolution info
+    az_pixel_size, az_spacing, rg_pixel_size, rg_spacing = get_full_resolution(meta_file)
+
+    # calculate number of looks
+    # 1. adjust the final resolution in one direction closest to the input resolution
+    az_looks = resolution / az_spacing
+    rg_looks = resolution / rg_spacing
+    az_round_frac = abs(az_looks - np.rint(az_looks))
+    rg_round_frac = abs(rg_looks - np.rint(rg_looks))
+    if az_round_frac < rg_round_frac:
+        resolution = np.rint(az_looks) * az_spacing
+    else:
+        resolution = np.rint(rg_looks) * rg_spacing
+
+    # 2. calculate the multilook number based on the adjusted resolution
+    az_looks = np.rint(resolution / az_spacing).astype(int)
+    rg_looks = np.rint(resolution / rg_spacing).astype(int)
+
+    # print out message
+    print('Azimuth     pixel size : {:.1f}'.format(az_pixel_size))
+    print('Azimuth ground spacing : {:.1f}'.format(az_spacing))
+    print('Azimuth ground spacing : {:.1f} after multilooking by {}'.format(az_spacing*az_looks, az_looks))
+
+    print('Range       pixel size : {:.1f}'.format(rg_pixel_size))
+    print('Range   ground spacing : {:.1f}'.format(rg_spacing))
+    print('Range   ground spacing : {:.1f} after multilooking by {}'.format(rg_spacing*rg_looks, rg_looks))
+
+    return az_looks, rg_looks
+
+
+def get_full_resolution(meta_file):
+    """
+    Grab the full resolution in terms of pixel_size and ground spacing
+    """
+    # check metadata file extension: only ISCE format is supported.
+    fext = os.path.splitext(meta_file)[1]
+    if fext not in ['.xml', '.dat']:
+        raise ValueError('input ISCE metadata file extension "{}" not in [.xml, .dat]'.format(fext))
+
+    # get middle sub-swath xml file for Sentinel-1 data
+    if meta_file.endswith('.xml'):
+        meta_files = glob.glob(meta_file)
+        mid_idx = int(len(meta_files) / 2)
+        meta_file = meta_files[mid_idx]
+
+    # extract metadata
+    meta, frame = extract_isce_metadata(meta_file, update_mode=False)
+    meta['WIDTH'] = frame.numberOfSamples
+
+    # calculate the full azimuth/range ground resolution
+    az_pixel_size = float(meta['AZIMUTH_PIXEL_SIZE'])  #azimuth pixel size on the orbit
+    rg_pixel_size = float(meta['RANGE_PIXEL_SIZE'])    #range   pixel size in LOS direction
+
+    height = float(meta['HEIGHT'])
+    inc_angle = ut.incidence_angle(meta, dimension=0)
+
+    az_spacing = az_pixel_size * EARTH_RADIUS / (EARTH_RADIUS + height)  #azimuth pixel size on the ground
+    rg_spacing = rg_pixel_size / np.sin(inc_angle / 180. * np.pi)        #range   pixel size on the ground
+
+    return az_pixel_size, az_spacing, rg_pixel_size, rg_spacing
+
+
+
+#####################################  miscellaneous  #######################################
+
+def get_IPF(proj_dir, ts_file):
+    """Grab the IPF version number of each sub-swatch for Sentinel-1 time-series
+
+    Parameters: proj_dir    - str, path of the project directory
+                              E.g.: ~/data/AtacamaSenDT149
+                ts_file     - str, path of HDF5 file for time-series
+    Returns:    date_list   - list of str, dates in YYYYMMDD format
+                IFP_IW1/2/3 - list of str, IFP version number
+    """
+    from mintpy.objects import timeseries
+
+    s_dir = os.path.join(proj_dir, 'secondarys')
+    m_dir = os.path.join(proj_dir, 'reference')
+
+    # date list
+    date_list = timeseries(ts_file).get_date_list()
+    num_date = len(date_list)
+    # reference date
+    m_date = [i for i in date_list if not os.path.isdir(os.path.join(s_dir, i))][0]
+
+    # grab IPF numver
+    IPF_IW1, IPF_IW2, IPF_IW3 = [], [], []
+    prog_bar = ptime.progressBar(maxValue=num_date)
+    for i in range(num_date):
+        date_str = date_list[i]
+
+        # get xml_dir
+        if date_str == m_date:
+            xml_dir = m_dir
+        else:
+            xml_dir = os.path.join(s_dir, date_str)
+
+        # grab IPF version number
+        for j, IPF_IW in enumerate([IPF_IW1, IPF_IW2, IPF_IW3]):
+            xml_file = os.path.join(xml_dir, 'IW{}.xml'.format(j+1))
+            IPFv = load_product(xml_file).processingSoftwareVersion
+            IPF_IW.append('{:.02f}'.format(float(IPFv)))
+
+        prog_bar.update(i+1, suffix='{} IW1/2/3'.format(date_str))
+    prog_bar.close()
+    return date_list, IPF_IW1, IPF_IW2, IPF_IW3
+
+
+def safe_list_file2sensor_list(safe_list_file, date_list=None, print_msg=True):
+    """Get list of Sentinel-1 sensor names from txt file with SAFE file names.
+
+    Parameters: safe_list_file - str, path of the text file with Sentinel-1 SAFE file path
+                                 E.g. SAFE_files.txt
+                date_list      - list of str in YYYYMMDD format, reference list of dates
+    Returns:    sensor_list    - list of str in S1A or S1B
+                date_list      - list of str in YYYYMMDD format
+    Example:
+        date_list = timeseries('timeseries.h5').get_date_list()
+        sensor_list = safe_list_file2sensor_list('../SAFE_files.txt',
+                                                 date_list=date_list,
+                                                 print_msg=False)[0]
+        s1b_dates = [i for i, j in zip(date_list, sensor_list) if j == 'S1B']
+        np.savetxt('S1B_date.txt', np.array(s1b_dates).reshape(-1,1), fmt='%s')
+    """
+    # read txt file
+    fc = np.loadtxt(safe_list_file, dtype=str).astype(str).tolist()
+    safe_fnames = [os.path.basename(i) for i in fc]
+
+    # get date_list
+    date_list_out = [re.findall('_\d{8}T', i)[0][1:-1] for i in safe_fnames]
+    date_list_out = sorted(list(set(date_list_out)))
+
+    # get sensor_list
+    sensor_list = []
+    for d in date_list_out:
+        safe_fname = [i for i in safe_fnames if d in i][0]
+        sensor = safe_fname.split('_')[0]
+        sensor_list.append(sensor)
+
+    # update against date_list_ref
+    if date_list is not None:
+        # check possible missing dates
+        dates_missing = [i for i in date_list if i not in date_list_out]
+        if dates_missing:
+            raise ValueError('The following dates are missing:\n{}'.format(dates_missing))
+
+        # prune dates not-needed
+        flag = np.array([i in date_list for i in date_list_out], dtype=np.bool_)
+        if np.sum(flag) > 0:
+            sensor_list = np.array(sensor_list)[flag].tolist()
+            dates_removed = np.array(date_list_out)[~flag].tolist()
+            date_list_out = np.array(date_list_out)[flag].tolist()
+            if print_msg:
+                print('The following dates are not needed and removed:\n{}'.format(dates_removed))
+
+    return sensor_list, date_list
+
+
+def get_sensing_datetime_list(proj_dir, date_list=None):
+    """Get the sensing datetime objects from ISCE stack results.
+    It assumes the default directory structure from topsStack, as below:
+    /proj_dir
+        /reference/IW*.xml
+        /secondarys
+            /20150521/IW*.xml
+            /20150614/IW*.xml
+            ...
+            /20210113/IW*.xml
+
+    Parameters: proj_dir     - str, path to the root directory of stack processing
+    Returns:    sensingMid   - list of datetime.datetime.obj
+                sensingStart - list of datetime.datetime.obj
+                sensingStop  - list of datetime.datetime.obj
+    """
+    # determine xml file basename
+    ref_fname = glob.glob(os.path.join(proj_dir, 'reference', 'IW*.xml'))[0]
+    fbase = os.path.basename(ref_fname)
+
+    # get xml files for all acquisitions
+    sec_fnames = sorted(glob.glob(os.path.join(proj_dir, 'secondarys', '*', fbase)))
+    fnames = [ref_fname] + sec_fnames
+    num_file = len(fnames)
+
+    # loop to read file one by one
+    sensingStart = []
+    sensingStop = []
+    for i, fname in enumerate(fnames):
+        print('[{}/{}] read {}'.format(i+1, num_file, fname))
+        obj = load_product(fname)
+        sensingStart.append(obj.bursts[0].sensingStart)
+        sensingStop.append(obj.bursts[-1].sensingStop)
+
+    sensingStart = sorted(sensingStart)
+    sensingStop  = sorted(sensingStop)
+
+    # sensingStart/Stop --> sensingMid
+    sensingMid = [i + (j - i)/2 for i, j in zip(sensingStart, sensingStop)]
+
+    # round to the nearest second
+    print('round sensingStart/Stop/Mid to the nearest second.')
+    sensingStart = [ptime.round_seconds(i) for i in sensingStart]
+    sensingStop  = [ptime.round_seconds(i) for i in sensingStop]
+    sensingMid   = [ptime.round_seconds(i) for i in sensingMid]
+
+    if date_list is not None:
+        date_str_format = ptime.get_date_str_format(date_list[0])
+        date_list_out = [i.strftime(date_str_format) for i in sensingMid]
+
+        # check possible missing dates
+        dates_missing = [i for i in date_list if i not in date_list_out]
+        if dates_missing:
+            raise ValueError('The following dates are missing:\n{}'.format(dates_missing))
+
+        # prune dates not-needed
+        flag = np.array([i in date_list for i in date_list_out], dtype=np.bool_)
+        if np.sum(flag) > 0:
+            sensingMid    = np.array(sensingMid)[flag].tolist()
+            sensingStart  = np.array(sensingStart)[flag].tolist()
+            sensingStop   = np.array(sensingStop)[flag].tolist()
+            dates_removed = np.array(date_list_out)[~flag].tolist()
+            print('The following dates are not needed and removed:\n{}'.format(dates_removed))
+
+    return sensingMid, sensingStart, sensingStop
+

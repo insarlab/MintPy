@@ -103,8 +103,6 @@ def read_data(inps):
 
         # update mask to exclude pixel with NaN value
         inps.mask *= ~np.isnan(inps.phase)
-        # set all masked out pixel to NaN
-        inps.phase[inps.mask==0] = np.nan
     else:
         raise ValueError("input file not support yet: {}".format(k))
     print('number of pixels: {}'.format(np.sum(inps.mask)))
@@ -121,6 +119,13 @@ def read_data(inps):
         inps.metadata['REF_LON'] = ref_lon
         inps.metadata['REF_Y'] = ref_y
         inps.metadata['REF_X'] = ref_x
+
+    # mask out pixels with zero phase value
+    ref_y = int(inps.metadata['REF_Y'])
+    ref_x = int(inps.metadata['REF_X'])
+    inps.mask *= inps.phase != 0
+    inps.mask[ref_y, ref_x] = 1
+    print('number of pixels after excluding zero phase value: {}'.format(np.sum(inps.mask)))
 
     # read geometry
     inps.lat, inps.lon = ut.get_lat_lon(inps.metadata)
@@ -148,6 +153,8 @@ def read_data(inps):
         msg += '\n\tby subtracting a constant offset of {:.2f} m'.format(h_offset)
         print(msg)
 
+    # masking
+    inps.phase[inps.mask==0] = np.nan
     inps.lat[inps.mask==0] = np.nan
     inps.lon[inps.mask==0] = np.nan
     inps.inc_angle[inps.mask==0] = np.nan
@@ -176,7 +183,7 @@ def plot_data(inps):
     defo = inps.phase / inps.range2phase * 100. #convert to deformation in cm
     dmin, dmax = np.nanmin(defo), np.nanmax(defo)
     dlim = max(abs(dmin), abs(dmax))
-    im = axs[0].imshow(defo, vmin=-dlim, vmax=dlim, cmap='jet');
+    im = axs[0].imshow(defo, vmin=-dlim, vmax=dlim, cmap='jet', interpolation='nearest')
     # reference point
     axs[0].plot(int(inps.metadata['REF_X']),
                 int(inps.metadata['REF_Y']), 'ks', ms=6)
@@ -189,7 +196,7 @@ def plot_data(inps):
     for ax, data, title in zip(axs[1:],
                                [inps.lat, inps.lon, inps.inc_angle, inps.head_angle, inps.height],
                                ['Latitude', 'Longitude', 'Incidence Angle', 'Head Angle', 'Height']):
-        im = ax.imshow(data, cmap='jet')
+        im = ax.imshow(data, cmap='jet', interpolation='nearest')
         ax.set_title(title)
         cbar = fig.colorbar(im, ax=ax)
         if title == 'Height':

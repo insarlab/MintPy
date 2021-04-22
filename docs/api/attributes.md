@@ -4,10 +4,11 @@ MintPy mainly uses attribute names from [ROI_PAC](http://www.geo.cornell.edu/eas
 
 If using ROI_PAC as the InSAR processor, both **baseline parameter RSC** file (i.e. *100416-100901_baseline.rsc*) and **basic metadata file** (i.e. *filt_100416-100901-sim_HDR_4rlks_c10.unw.rsc*) will be imported into MintPy. The following attributes for each interferogram are required in order to run MintPy:
 
-+  FILE_LENGTH = number of rows.  
++  LENGTH = number of rows.  
 +  WIDTH = number of columns.  
-+  X/Y_STEP = (for geocoded product) Ground resolution in degree in Longitude/latitude direction.   
-+  X/Y_FIRST = (for geocoded product) Longitude/latitude in degree of the upper left corner of the first pixel.
++  X/Y_FIRST = (for geocoded product) Longitude/easting/X and latitude/northing/Y coordinate in degrees/meters of the upper left corner of the first pixel.
++  X/Y_STEP = (for geocoded product) Ground resolution in degrees/meters in X/Y direction.   
++  X/Y_UNIT = (for geocoded product) Coordinate unit in X/Y direction: degrees or meters.    
 +  LAT/LON_REF1/2/3/4 = Latitude/longitude at corner 1/2/3/4 (degree), used in save_unavco, PyAPS (DEM file in radar coord), not accurate; number named in order of first line near/far range, last line near/far range.   
 +  WAVELENGTH = Radar wavelength in meters.    
 +  RANGE_PIXEL_SIZE = Slant range pixel size (search for pixel_ratio to convert to ground size, in m), used in dem_error, incidence_angle, multilook, transect.   
@@ -38,7 +39,6 @@ The following attributes vary for each interferogram:
     - for HDF5 files, it's the root level dataset name, such as `velocity, timeseries, ifgramStack, temporalCoherence, mask, HDFEOS, dem, coherence, etc.`;`
     - for binary files, it's the file extension name, such as `.unw, .cor, .int, .amp, .mli, .dem, .hgt, .unw.conncomp, .UTM_TO_RDC, .trans, etc.`, except for ISCE geometry files, which is the file base name such as `hgt, lat, lon, los, shadowMask, incLocal`.  
 +  FILE_PATH = absolute file path   
-+  LENGTH = row number, equivalent to FILE_LENGTH
 +  PROCESSOR = processing software, i.e. isce, aria, snap, gamma, roipac etc.
 +  DATA_TYPE = data type, i.e. float32, int16, etc., for isce product read using GDAL
 +  UNIT = data unit, i.e. m, m/yr, radian, and 1 for file without unit, such as coherence [[source]](https://github.com/insarlab/MintPy/blob/main/mintpy/objects/stack.py#L75)
@@ -47,6 +47,7 @@ The following attributes vary for each interferogram:
 +  SUBSET_XMIN/XMAX/YMIN/YMAX = start/end column/row number of subset in the original coverage
 +  MODIFICATION_TIME = dataset modification time, exists in ifgramStack.h5 file for 3D dataset, used for --update option of unwrap error corrections.
 +  NCORRLOOKS = number of independent looks, as explained in [SNAPHU](https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/snaphu.conf.full)
++  UTM_ZONE = UTM zone, e.g. 60S, for geocoded file with UTM projection only.
 
 ### Reference ###
 

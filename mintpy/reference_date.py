@@ -38,11 +38,14 @@ def create_parser():
     parser.add_argument('-r', '--ref-date', dest='refDate', default='minRMS',
                         help='reference date or method, default: auto. e.g.\n' +
                              '20101120\n' +
+                             'time-series HDF5 file with REF_DATE in its attributes\n' +
                              'reference_date.txt - text file with date in YYYYMMDD format in it\n' +
                              'minRMS             - choose date with min residual standard deviation')
     parser.add_argument('-t', '--template', dest='template_file',
                         help='template file with options')
     parser.add_argument('-o', '--outfile', help='Output file name.')
+    parser.add_argument('--force', action='store_true',
+                        help='Force updating the data matrix.')
 
     # computing
     parser = arg_group.add_memory_argument(parser)
@@ -88,10 +91,15 @@ def read_ref_date(inps):
     elif inps.refDate.isdigit():
         pass
     else:
-        # txt file
         if os.path.isfile(inps.refDate):
             print('read reference date from file: ' + inps.refDate)
-            inps.refDate = ptime.read_date_txt(inps.refDate)[0]
+            if inps.refDate.endswith('.h5'):
+                # HDF5 file
+                atr = readfile.read_attribute(inps.refDate)
+                inps.refDate = atr['REF_DATE']
+            else:
+                # txt file
+                inps.refDate = ptime.read_date_txt(inps.refDate)[0]
         else:
             print('input file {} does not exist, skip this step'.format(inps.refDate))
             return None
@@ -108,7 +116,7 @@ def read_ref_date(inps):
 
 
 ##################################################################
-def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0):
+def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0, force=False):
     """Change input file reference date to a different one.
     Parameters: ts_file : str, timeseries file to be changed
                 ref_date : str, date in YYYYMMDD format
@@ -125,9 +133,9 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0):
     atr = readfile.read_attribute(ts_file)
     dsName = atr['FILE_TYPE']
 
-    # if input same reference is the same as the existing one.
-    if ref_date == atr['REF_DATE']:
-        print('same reference date chosen as existing reference date.')
+    # if the input reference date is the same as the existing one.
+    if ref_date == atr.get('REF_DATE', None) and not force:
+        print('input refDate is the same as the existing REF_DATE.')
         if outfile == ts_file:
             print('Nothing to be done.')
             return ts_file
@@ -154,7 +162,6 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0):
     # updating existing file or write new file
     if outfile == ts_file:
         mode = 'r+'
-
     else:
         mode = 'a'
         # instantiate output file
@@ -174,10 +181,11 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0):
         ts_data = readfile.read(ts_file, box=box)[0]
 
         print('referencing in time ...')
-        ts_data -= np.tile(ts_data[ref_idx, :, :].reshape(1, ts_data.shape[1], ts_data.shape[2]), (ts_data.shape[0], 1, 1))
+        dshape = ts_data.shape
+        ts_data -= np.tile(ts_data[ref_idx, :, :].reshape(1, dshape[1], dshape[2]), (dshape[0], 1, 1))
 
         # writing
-        block = (0, 0, box[1], box[3], box[0], box[2])
+        block = (0, num_date, box[1], box[3], box[0], box[2])
         writefile.write_hdf5_block(outfile,
                                    data=ts_data,
                                    datasetName=dsName,
@@ -186,8 +194,9 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0):
 
     # update metadata
     print('update "REF_DATE" attribute value to {}'.format(ref_date))
-    with h5py.File(ts_file, 'r+') as f:
+    with h5py.File(outfile, 'r+') as f:
         f.attrs['REF_DATE'] = ref_date
+        f.attrs['FILE_PATH'] = outfile
 
     return outfile
 
@@ -209,7 +218,8 @@ def main(iargs=None):
             change_timeseries_ref_date(ts_file,
                                        ref_date=inps.refDate,
                                        outfile=inps.outfile,
-                                       max_memory=inps.maxMemory)
+                                       max_memory=inps.maxMemory,
+                                       force=inps.force)
 
             #to distinguish the modification time of input files
             time.sleep(1)

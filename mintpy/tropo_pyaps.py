@@ -131,7 +131,7 @@ def cmd_line_parse(iargs=None):
     # weather_dir
     inps.weather_dir = os.path.expanduser(inps.weather_dir)
     inps.weather_dir = os.path.expandvars(inps.weather_dir)
-    # Fallback value if WEATHER_DIR is not defined as environmental variable
+    # Fallback value if WEATHER_DIR is not defined as environment variable
     if inps.weather_dir == '${WEATHER_DIR}':
         inps.weather_dir = './'
     print('weather data directory: '+inps.weather_dir)
@@ -441,7 +441,7 @@ def get_delay_timeseries(inps, atr):
         date_list = [str(re.findall('\d{8}', i)[0]) for i in inps.grib_file_list]
         trop_data = np.zeros((num_date, length, width), np.float32)
 
-        print('calcualting delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
+        print('calculating delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
         print('number of grib files used: {}'.format(num_date))
         prog_bar = ptime.progressBar(maxValue=num_date)
         for i in range(num_date):

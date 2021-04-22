@@ -187,8 +187,27 @@ def get_design_matrix(atr1, atr2, az_angle=90):
     return A
 
 
-def asc_desc2horz_vert(fname1, fname2, dsname=None):
-    """Decompose asc / desc LOS data into horz / vert data.
+def asc_desc2horz_vert(data_asc, data_desc, atr_asc, atr_desc):
+    """Decompose asc / desc LOS data into horz / vert data."""
+    length, width = data_asc.shape
+    # prepare LOS data
+    data_los = np.vstack((data_asc.flatten(), data_desc.flatten()))
+
+    # get design matrix
+    print('get design matrix')
+    A = get_design_matrix(atr_asc, atr_desc)
+
+    # decompose
+    print('project asc/desc into horz/vert direction')
+    data_vh = np.dot(np.linalg.pinv(A), data_los).astype(np.float32)
+    data_v = np.reshape(data_vh[0, :], (length, width))
+    data_h = np.reshape(data_vh[1, :], (length, width))
+
+    return data_h, data_v
+
+
+def asc_desc_files2horz_vert(fname1, fname2, dsname=None):
+    """Decompose asc / desc LOS files into horz / vert data.
     Parameters: fname1/2 : str, LOS data
     Returns:    dH/dV    : 2D matrix
                 atr      : dict, metadata with updated size and resolution.
@@ -210,7 +229,7 @@ def asc_desc2horz_vert(fname1, fname2, dsname=None):
     print('common area in SNWE: {}'.format((south, north, west, east)))
 
     # 2. Read data in common AOI: LOS displacement, heading angle, incident angle
-    dLOS = np.zeros((2, width*length), dtype=np.float32)
+    dLOS_list = []
     for i in range(len(fnames)):
         fname = fnames[i]
         atr = readfile.read_attribute(fname, datasetName=dsname)
@@ -221,7 +240,8 @@ def asc_desc2horz_vert(fname1, fname2, dsname=None):
         [y0, y1] = coord.lalo2yx([north, south], coord_type='lat')
         box = (x0, y0, x0 + width, y0 + length)
 
-        dLOS[i, :] = readfile.read(fname, box=box, datasetName=dsname)[0].flatten()
+        # read
+        dLOS_list.append(readfile.read(fname, box=box, datasetName=dsname)[0])
 
         # msg
         msg = 'read '
@@ -232,24 +252,19 @@ def asc_desc2horz_vert(fname1, fname2, dsname=None):
 
     # 3. Project displacement from LOS to Horizontal and Vertical components
     print('---------------------')
-    print('get design matrix')
-    A = get_design_matrix(atr_list[0], atr_list[1])
-    print('project asc/desc into horz/vert direction')
-    dVH = np.dot(np.linalg.pinv(A), dLOS).astype(np.float32)
-    dV = np.reshape(dVH[0, :], (length, width))
-    dH = np.reshape(dVH[1, :], (length, width))
+    dH, dV = asc_desc2horz_vert(dLOS_list[0], dLOS_list[1], atr_list[0], atr_list[1])
 
     # 4. Update Attributes
     atr = atr_list[0].copy()
     if dsname:
         atr['FILE_TYPE'] = dsname
 
-    atr['WIDTH'] = str(width)
+    atr['WIDTH']  = str(width)
     atr['LENGTH'] = str(length)
-    atr['X_FIRST'] = str(west)
-    atr['Y_FIRST'] = str(north)
     atr['X_STEP'] = str(lon_step)
     atr['Y_STEP'] = str(lat_step)
+    atr['X_FIRST'] = str(west)
+    atr['Y_FIRST'] = str(north)
 
     # update REF_X/Y
     ref_lat, ref_lon = float(atr['REF_LAT']), float(atr['REF_LON'])
@@ -258,10 +273,10 @@ def asc_desc2horz_vert(fname1, fname2, dsname=None):
     atr['REF_Y'] = int(ref_y)
     atr['REF_X'] = int(ref_x)
 
-    return dH, dV, atr, dLOS, atr_list
+    return dH, dV, atr, dLOS_list, atr_list
 
 
-def write_to_one_file(outfile, dH, dV, atr, dLOS, atr_list, ref_file=None):
+def write_to_one_file(outfile, dH, dV, atr, dLOS_list, atr_list, ref_file=None):
     """Write all datasets into one HDF5 file"""
     from mintpy.objects import sensor
 
@@ -280,7 +295,7 @@ def write_to_one_file(outfile, dH, dV, atr, dLOS, atr_list, ref_file=None):
             dsName += 'T{}'.format(atr['trackNumber'])
         dsName += '_{}'.format(atr['DATE12'])
 
-        dsDict[dsName] = dLOS[i,:].reshape(length, width)
+        dsDict[dsName] = dLOS_list[i]
     dsDict['vertical'] = dV
     dsDict['horizontal'] = dH
 
@@ -292,11 +307,17 @@ def write_to_one_file(outfile, dH, dV, atr, dLOS, atr_list, ref_file=None):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    dH, dV, atr, dLOS, atr_list = asc_desc2horz_vert(inps.file[0], inps.file[1], dsname=inps.dsname)
+    (dH, dV, atr,
+     dLOS_list, atr_list) = asc_desc_files2horz_vert(inps.file[0],
+                                                     inps.file[1],
+                                                     dsname=inps.dsname)
 
     print('---------------------')
     if inps.one_outfile:
-        write_to_one_file(inps.one_outfile, dH, dV, atr, dLOS, atr_list, ref_file=inps.ref_file)
+        write_to_one_file(inps.one_outfile,
+                          dH, dV, atr,
+                          dLOS_list, atr_list,
+                          ref_file=inps.ref_file)
 
     else:
         print('writing horizontal component to file: '+inps.outfile[0])

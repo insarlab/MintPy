@@ -1,14 +1,14 @@
 [![Language](https://img.shields.io/badge/python-3.6%2B-blue.svg)](https://www.python.org/)
 [![Docs Status](https://readthedocs.org/projects/mintpy/badge/?version=latest)](https://mintpy.readthedocs.io/?badge=latest)
 [![CircleCI](https://img.shields.io/circleci/build/github/insarlab/MintPy.svg?color=green&logo=circleci)](https://circleci.com/gh/insarlab/MintPy)
-[![Version](https://img.shields.io/badge/version-v1.2.3-yellowgreen.svg)](https://github.com/insarlab/MintPy/releases)
+[![Version](https://img.shields.io/badge/version-v1.3.0-yellowgreen.svg)](https://github.com/insarlab/MintPy/releases)
 [![License](https://img.shields.io/badge/license-GPLv3-yellow.svg)](https://github.com/insarlab/MintPy/blob/main/LICENSE)
 [![Forum](https://img.shields.io/badge/forum-Google%20Groups-orange.svg)](https://groups.google.com/g/mintpy)
 [![Citation](https://img.shields.io/badge/doi-10.1016%2Fj.cageo.2019.104331-blue)](https://doi.org/10.1016/j.cageo.2019.104331)
 
 ## MintPy ##
 
-The Miami INsar Time-series software in PYthon (MintPy as /mɪnt paɪ/) is an open-source package for Interferometric Synthetic Aperture Radar (InSAR) time series analysis. It reads the stack of interferograms (coregistered and unwrapped) in [ISCE](https://github.com/isce-framework/isce2), [ARIA](https://github.com/aria-tools/ARIA-tools), [FRInGE](https://github.com/isce-framework/fringe), [SNAP](http://step.esa.int/), [GAMMA](https://www.gamma-rs.ch/no_cache/software.html) or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground surface displacement in line-of-sight direction. It includes a routine time series analysis (`smallbaselineApp.py`) and some independent toolbox.
+The Miami INsar Time-series software in PYthon (MintPy as /mɪnt paɪ/) is an open-source package for Interferometric Synthetic Aperture Radar (InSAR) time series analysis. It reads the stack of interferograms (coregistered and unwrapped) in [ISCE](https://github.com/isce-framework/isce2), [ARIA](https://github.com/aria-tools/ARIA-tools), [FRInGE](https://github.com/isce-framework/fringe), [GMTSAR](https://github.com/gmtsar/gmtsar), [SNAP](http://step.esa.int/), [GAMMA](https://www.gamma-rs.ch/no_cache/software.html), [HyP3](https://hyp3-docs.asf.alaska.edu/) or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground surface displacement in line-of-sight direction. It includes a routine time series analysis (`smallbaselineApp.py`) and some independent toolbox.
 
 This package was called PySAR before version 1.1.1. For version 1.1.2 and onward, we use MintPy instead.
 

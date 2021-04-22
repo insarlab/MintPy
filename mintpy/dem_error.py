@@ -158,7 +158,7 @@ def run_or_skip(inps):
         meta = readfile.read_attribute(inps.outfile)
         if any(str(vars(inps)[key]) != meta.get(key_prefix+key, 'None') for key in configKeys):
             flag = 'run'
-            print('3) NOT all key configration parameters are the same:{}'.format(configKeys))
+            print('3) NOT all key configuration parameters are the same:{}'.format(configKeys))
         else:
             print('3) all key configuration parameters are the same:{}'.format(configKeys))
 

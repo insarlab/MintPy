@@ -78,7 +78,7 @@ def correct_local_oscilator_drift(fname, rg_dist_file=None, out_file=None):
 
     # output file name
     if not out_file:
-        out_file = '{}_LODcor{}'.format(os.path.splitext(fname)[0], os.path.splitext(fname)[1])
+        out_file = '{}_LOD{}'.format(os.path.splitext(fname)[0], os.path.splitext(fname)[1])
 
     # Get LOD ramp rate from empirical model
     if not rg_dist_file:

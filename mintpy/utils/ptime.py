@@ -56,6 +56,16 @@ def get_date_str_format(date_str):
     return date_str_format
 
 
+def round_seconds(datetime_obj):
+    """Round datetime object to the nearest second.
+    Link: https://stackoverflow.com/questions/47792242/rounding-time-off-to-the-nearest-second-python
+    """
+    datetime_obj_out = datetime_obj
+    if datetime_obj_out.microsecond >= 5e5:
+        datetime_obj_out += timedelta(seconds=1)
+    return datetime_obj_out.replace(microsecond=0)
+
+
 def yyyymmdd2season(date_str):
     """Determine the season of input date in YYYYMMDD format
 
@@ -167,9 +177,9 @@ def yy2yyyy(year):
 
 
 def yyyymmdd(dates):
-    """Convert date str from (YY)YYMMDD to YYYYMMDD format"""
+    """Convert date str from (YY)YYMMDD(THHMM) to YYYYMMDD(THHMM) format"""
     if isinstance(dates, str):
-        if len(dates) == 6:
+        if len(dates.split('T')[0]) == 6:
             datesOut = yymmdd2yyyymmdd(dates)
         else:
             datesOut = dates
@@ -177,7 +187,7 @@ def yyyymmdd(dates):
     elif isinstance(dates, list):
         datesOut = []
         for date in dates:
-            if len(date) == 6:
+            if len(date.split('T')[0]) == 6:
                 date = yymmdd2yyyymmdd(date)
             datesOut.append(date)
 

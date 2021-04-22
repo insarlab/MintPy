@@ -209,7 +209,7 @@ def run_or_skip(inps):
         atr = readfile.read_attribute(inps.outfile)
         if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in configKeys):
             flag = 'run'
-            print('3) NOT all key configration parameters are the same: {}.'.format(configKeys))
+            print('3) NOT all key configuration parameters are the same: {}.'.format(configKeys))
         else:
             print('3) all key configuration parameters are the same: {}.'.format(configKeys))
 
@@ -267,6 +267,17 @@ def read_date_info(inps):
         tsobj = HDFEOS(inps.timeseries_file)
     tsobj.open()
     inps.excludeDate = read_exclude_date(inps, tsobj.dateList)
+
+    # exclude dates without obs data [for offset time-series only for now]
+    if os.path.basename(inps.timeseries_file).startswith('timeseriesRg'):
+        date_list = timeseries(inps.timeseries_file).get_date_list()
+        data, atr = readfile.read(inps.timeseries_file)
+        flag = np.nansum(data, axis=(1,2)) == 0
+        flag[date_list.index(atr['REF_DATE'])] = 0
+        if np.sum(flag) > 0:
+            print('number of empty dates to exclude: {}'.format(np.sum(flag)))
+            inps.excludeDate += np.array(date_list)[flag].tolist()
+            inps.excludeDate = sorted(list(set(inps.excludeDate)))
 
     # Date used for estimation inps.dateList
     inps.dateList = [i for i in tsobj.dateList if i not in inps.excludeDate]
@@ -346,7 +357,7 @@ def estimate_time_func(date_list, dis_ts, model):
     # Opt. 1: m = np.linalg.pinv(G).dot(dis_ts)
     # Opt. 2: m = scipy.linalg.lstsq(G, dis_ts, cond=1e-15)[0]
     # Numpy is not used because it can not handle NaN value in dis_ts
-    m, e2 = linalg.lstsq(G, dis_ts)[:2]
+    m, e2 = linalg.lstsq(G, dis_ts, cond=None)[:2]
 
     return G, m, e2
 
