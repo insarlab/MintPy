@@ -142,16 +142,27 @@ def get_design_matrix(atr1, atr2, az_angle=90):
     """Get the design matrix A to convert asc/desc to hz/up.
     Only asc + desc -> hz + up is implemented for now.
 
-    Project displacement from LOS to Horizontal and Vertical components
-        math for 3D: cos(theta)*Uz - cos(alpha)*sin(theta)*Ux + sin(alpha)*sin(theta)*Uy = Ulos
-        math for 2D: cos(theta)*Uv - sin(alpha-az)*sin(theta)*Uh = Ulos   #Uh_perp = 0.0
+    Project displacement from LOS to Horizontal and Vertical components:
+    Math for 3D:
+        Ulos =   sin(inc_angle) * cos(head_angle) * Ux * -1
+               + sin(inc_angle) * sin(head_angle) * Uy
+               + cos(inc_angle) * Uz
+    Math for 2D:
+        Ulos =   sin(inc_angle) * sin(head_angle - az) * Uhorz * -1
+               + cos(inc_angle) * Uvert
+        with Uhorz_perp = 0.0
     This could be easily modified to support multiple view geometry
         (e.g. two adjcent tracks from asc & desc) to resolve 3D
 
-    Parameters: atr1/2 : dict, metadata of input LOS files
-    Returns:    A : 2D matrix in size of (2,2)
+    Parameters: atr1/2   : dict, metadata of input LOS files
+                az_angle : float, azimuth angle for the horizontal direction of interest in degrees.
+                           Default is 90 (for east-west direction)
+    Returns:    A        : 2D matrix in size of (2, 2)
 
     """
+    # degree to radian
+    az_angle *= np.pi / 180.
+
     atr_list = [atr1, atr2]
     A = np.zeros((2, 2))
     for i in range(len(atr_list)):
@@ -160,18 +171,19 @@ def get_design_matrix(atr1, atr2, az_angle=90):
         # incidence angle
         inc_angle = float(ut.incidence_angle(atr, dimension=0, print_msg=False))
         print('incidence angle: '+str(inc_angle))
-        inc_angle *= np.pi/180.
+        inc_angle *= np.pi / 180.
 
         # heading angle
         head_angle = float(atr['HEADING'])
         if head_angle < 0.:
             head_angle += 360.
         print('heading angle: '+str(head_angle))
-        head_angle *= np.pi/180.
+        head_angle *= np.pi / 180.
 
         # construct design matrix
         A[i, 0] = np.cos(inc_angle)
-        A[i, 1] = np.sin(inc_angle) * np.sin(head_angle - az_angle*np.pi/180)
+        A[i, 1] = np.sin(inc_angle) * np.sin(head_angle - az_angle)
+
     return A
 
 
