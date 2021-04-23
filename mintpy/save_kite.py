@@ -94,7 +94,7 @@ def mintpy2kite(ifg, attr, date1, date2, inc_angle, az_angle, out_file):
     config.meta.scene_id = attr['trackNumber']
 
     if date1 is not None:
-        utc_sec = dt.timedelta(seconds=float(atr['CENTER_LINE_UTC']))
+        utc_sec = dt.timedelta(seconds=float(attr['CENTER_LINE_UTC']))
         config.meta.time_master = dt.datetime.strptime(date1, '%Y%m%d') + utc_sec
         config.meta.time_slave =  dt.datetime.strptime(date2, '%Y%m%d') + utc_sec
 
@@ -156,12 +156,12 @@ def main(iargs=None):
         date1, date2 = inps.dset.split('_')
         inps.dset = date2
 
-    elif attrs['FILE_TYPE'] == 'ifgramStack':
+    elif attr['FILE_TYPE'] == 'ifgramStack':
         date1, date2 = inps.dset.split('-')[1].split('_')
 
     else:
         # velocity and *.unw files
-        date1, date2 = ptime.yyyymmdd(attrs['DATE12'].split('-'))
+        date1, date2 = ptime.yyyymmdd(attr['DATE12'].split('-'))
         if inps.dset.startswith('step'):
             date1 = inps.dset.split('step')[-1]
             date2 = date1
@@ -192,7 +192,7 @@ def main(iargs=None):
     # create kite container
     scene = mintpy2kite(dis, attr, date1, date2, inc_angle, az_angle, out_file=inps.out_file)
 
-    return
+    return scene
 
 
 #########################################################################################################
