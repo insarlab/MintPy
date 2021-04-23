@@ -73,6 +73,8 @@ def create_parser():
     parser.add_argument('ifgram_file', help='interferograms file to be corrected')
     parser.add_argument('-c','--cc-mask', dest='cc_mask_file', default='maskConnComp.h5',
                         help='common connected components file, required for --action correct')
+    parser.add_argument('-n','--num-sample', dest='numSample', type=int, default=100,
+                        help='Number of randomly samples/pixels for each common connected component.')
 
     parser.add_argument('-a','--action', dest='action', type=str, default='correct',
                         choices={'correct', 'calculate'},
@@ -142,6 +144,9 @@ def read_template2inps(template_file, inps=None):
         if value:
             if key in ['waterMaskFile']:
                 inpsDict[key] = value
+            elif key in ['numSample']:
+                inpsDict[key] = int(value)
+
     return inps
 
 
@@ -544,7 +549,7 @@ def main(iargs=None):
         common_regions = get_common_region_int_ambiguity(ifgram_file=inps.ifgram_file,
                                                          cc_mask_file=inps.cc_mask_file,
                                                          water_mask_file=inps.waterMaskFile,
-                                                         num_sample=100,
+                                                         num_sample=inps.numSample,
                                                          dsNameIn=inps.datasetNameIn)
 
         # apply the integer ambiguity from common conn comp to the whole ifgram

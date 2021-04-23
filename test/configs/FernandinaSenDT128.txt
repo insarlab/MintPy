@@ -7,6 +7,7 @@ mintpy.load.autoPath   = yes
 
 mintpy.reference.lalo  = -0.30,-91.43
 mintpy.unwrapError.method                       = phase_closure
+mintpy.unwrapError.numSample                    = 20
 mintpy.networkInversion.weightFunc              = no
 mintpy.solidEarthTides                          = yes
 mintpy.troposphericDelay.weatherModel           = ERA5
