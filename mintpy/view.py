@@ -1223,21 +1223,26 @@ def plot_figure(j, inps, metadata):
     for i in range(i_end-i_start, len(axs)):
         fig.delaxes(axs[i])
 
-    # Tune the subplot layout
-    fig.subplots_adjust(left=0.02, right=0.98, bottom=0.02, top=0.98,
-                        wspace=0.05, hspace=0.05)
-    if inps.fig_wid_space or inps.fig_hei_space:
-        fig.subplots_adjust(hspace=inps.fig_hei_space,
-                            wspace=inps.fig_wid_space)
-    elif inps.fig_tight_layout:
-        fig.tight_layout()
-
     # Min and Max for this figure
     inps.dlim_all = [np.nanmin([inps.dlim_all[0], inps.dlim[0]]),
                      np.nanmax([inps.dlim_all[1], inps.dlim[1]])]
     vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
     if inps.vlim:
         vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
+
+    # NOTE: For plt.subplots(), fig.tight_layout() should be run
+    # before fig.add_axes(), which is the case of common colorbar
+    # after fig.colorbar() and fig.set_size_inches(), which is the case of individual/multiple colorbars
+    def adjust_subplots_layout(fig, inps):
+        fig.subplots_adjust(left=0.02, right=0.98,
+                            bottom=0.02, top=0.98,
+                            wspace=0.05, hspace=0.05)
+        if inps.fig_wid_space or inps.fig_hei_space:
+            fig.subplots_adjust(hspace=inps.fig_hei_space,
+                                wspace=inps.fig_wid_space)
+        elif inps.fig_tight_layout:
+            fig.tight_layout()
+        return
 
     # Colorbar
     if inps.disp_cbar:
@@ -1246,7 +1251,11 @@ def plot_figure(j, inps, metadata):
             vprint('Adjust figsize for the colorbar of each subplot.')
             fig.set_size_inches(inps.fig_size[0] * 1.1,
                                 inps.fig_size[1])
+
+            adjust_subplots_layout(fig, inps)
         else:
+            adjust_subplots_layout(fig, inps)
+
             cbar_length = 0.4
             if inps.fig_size[1] > 8.0:
                 cbar_length /= 2
@@ -1255,11 +1264,13 @@ def plot_figure(j, inps, metadata):
             cax = fig.add_axes([0.94, (1.0-cbar_length)/2, 0.005, cbar_length])
             inps, cbar = pp.plot_colorbar(inps, im, cax)
 
+    else:
+        adjust_subplots_layout(fig, inps)
+
     # Save Figure
     if inps.save_fig:
         vprint('save figure to {} with dpi={}'.format(os.path.abspath(inps.outfile[j-1]), inps.fig_dpi))
-        fig.savefig(inps.outfile[j-1], bbox_inches='tight',
-                    transparent=True, dpi=inps.fig_dpi)
+        fig.savefig(inps.outfile[j-1], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
         if not inps.disp_fig:
             fig.clf()
     return
