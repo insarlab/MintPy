@@ -148,20 +148,25 @@ def read_subset_template2box(template_file):
     Return None if not specified.
     """
     tmpl = readfile.read_template(template_file)
+
+    # subset.lalo -> geo_box
     try:
-        sub = [i.strip() for i in tmpl['mintpy.subset.lalo'].split(',')]
-        sub_lat = sorted([float(i.strip()) for i in sub[0].split(':')])
-        sub_lon = sorted([float(i.strip()) for i in sub[1].split(':')])
-        geo_box = (sub_lon[0], sub_lat[1], sub_lon[1], sub_lat[0])
+        opts = [i.strip().replace('[','').replace(']','') for i in tmpl['mintpy.subset.lalo'].split(',')]
+        lat0, lat1 = sorted([float(i.strip()) for i in opts[0].split(':')])
+        lon0, lon1 = sorted([float(i.strip()) for i in opts[1].split(':')])
+        geo_box = (lon0, lat1, lon1, lat0)
     except:
         geo_box = None
+
+    # subset.yx -> pix_box
     try:
-        sub = [i.strip() for i in tmpl['mintpy.subset.yx'].split(',')]
-        sub_y = sorted([int(i.strip()) for i in sub[0].split(':')])
-        sub_x = sorted([int(i.strip()) for i in sub[1].split(':')])
-        pix_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
+        opts = [i.strip().replace('[','').replace(']','') for i in tmpl['mintpy.subset.yx'].split(',')]
+        y0, y1 = sorted([int(i.strip()) for i in opts[0].split(':')])
+        x0, x1 = sorted([int(i.strip()) for i in opts[1].split(':')])
+        pix_box = (x0, y0, x1, y1)
     except:
         pix_box = None
+
     return pix_box, geo_box
 
 
