@@ -175,7 +175,8 @@ def read_template2inps(template_file, inps=None):
             if key in ['startDate', 'endDate']:
                 iDict[key] = ptime.yyyymmdd(value)
             elif key in ['excludeDate']:
-                iDict[key] = ptime.yyyymmdd(value.replace(',', ' ').split())
+                value = value.replace('[','').replace(']','').replace(',', ' ')
+                iDict[key] = ptime.yyyymmdd(value.split())
             elif key in ['bootstrapCount']:
                 iDict[key] = int(value)
 

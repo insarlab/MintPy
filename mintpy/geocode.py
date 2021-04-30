@@ -172,7 +172,8 @@ def read_template2inps(template_file, inps):
         value = template[prefix + key]
         if value:
             if key in ['SNWE', 'laloStep']:
-                inps_dict[key] = [float(i) for i in value.split(',')]
+                value = value.replace('[','').replace(']','').replace(',',' ')
+                inps_dict[key] = [float(i) for i in value.split()]
             elif key in ['interpMethod']:
                 inps_dict[key] = value
             elif key == 'fillValue':

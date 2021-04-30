@@ -81,18 +81,18 @@ def create_parser():
     cohBased = parser.add_argument_group('Coherence-based Network',
                                          'Drop/modify network based on spatial coherence')
     cohBased.add_argument('--coherence-based', dest='coherenceBased', action='store_true',
-                          help='Enable coherence-based network modification')
+                          help='Enable coherence-based network modification (default: %(default)s).')
     cohBased.add_argument('--no-mst', dest='keepMinSpanTree', action='store_false',
                           help='Do not keep interferograms in Min Span Tree network based on inversed mean coherene')
     cohBased.add_argument('--mask', dest='maskFile', default='waterMask.h5',
-                          help='Mask file used to calculate the spatial coherence\n'
-                               'Default: waterMask.h5 or None')
-    cohBased.add_argument('--aoi-yx', dest='aoiYX', type=str,
-                          help='AOI in y0:y1,x0:x1 for coherence calculation')
-    cohBased.add_argument('--aoi-lalo', dest='aoiLALO', type=str,
-                          help='AOI in lat0:lat1,lon0:lon1 for coherence calculation')
+                          help='Mask file used to calculate the spatial coherence '
+                               '(default: waterMask.h5 or None)')
+    cohBased.add_argument('--aoi-yx', dest='aoi_pix_box', type=int, nargs=4, metavar=('X0', 'Y0', 'X1', 'Y1'), default=None,
+                          help='AOI in row/column range for coherence calculation (default: %(default)s).')
+    cohBased.add_argument('--aoi-lalo', dest='aoi_geo_box', type=float, nargs=4, metavar=('W', 'S', 'E', 'N'), default=None,
+                          help='AOI in lat/lon range for coherence calculation (default: %(default)s).')
     cohBased.add_argument('--min-coherence', dest='minCoherence', type=float, default=0.7,
-                          help='Minimum coherence value')
+                          help='Minimum coherence value (default: %(default)s).')
     cohBased.add_argument('--lookup', dest='lookupFile',
                           help='Lookup table/mapping transformation file for geo/radar coordinate conversion.\n' +
                                'Needed for mask AOI in lalo')
@@ -108,8 +108,6 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    inps.aoi_geo_box = None
-    inps.aoi_pix_box = None
     if not inps.lookupFile:
         inps.lookupFile = ut.get_lookup_file()
 
@@ -179,12 +177,12 @@ def read_template2inps(template_file, inps=None):
             elif key in ['maskFile', 'referenceFile']:
                 inpsDict[key] = value
             elif key == 'aoiYX':
-                tmp = [i.strip() for i in value.split(',')]
+                tmp = [i.replace('[','').replace(']','').strip() for i in value.split(',')]
                 sub_y = sorted([int(i.strip()) for i in tmp[0].split(':')])
                 sub_x = sorted([int(i.strip()) for i in tmp[1].split(':')])
                 inps.aoi_pix_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
             elif key == 'aoiLALO':
-                tmp = [i.strip() for i in value.split(',')]
+                tmp = [i.replace('[','').replace(']','').strip() for i in value.split(',')]
                 sub_lat = sorted([float(i.strip()) for i in tmp[0].split(':')])
                 sub_lon = sorted([float(i.strip()) for i in tmp[1].split(':')])
                 inps.aoi_geo_box = (sub_lon[0], sub_lat[1], sub_lon[1], sub_lat[0])
@@ -196,10 +194,12 @@ def read_template2inps(template_file, inps=None):
             elif key in ['startDate', 'endDate']:
                 inpsDict[key] = ptime.yyyymmdd(value)
             elif key == 'excludeDate':
-                inpsDict[key] = ptime.yyyymmdd(value.replace(',', ' ').split())
+                value = value.replace('[','').replace(']','').replace(',', ' ')
+                inpsDict[key] = ptime.yyyymmdd(value.split())
             elif key == 'excludeIfgIndex':
-                inpsDict[key] += value.replace(',', ' ').split()
-                inps.excludeIfgIndex = read_input_index_list(inps.excludeIfgIndex, stackFile=inps.file)
+                value = value.replace('[','').replace(']','').replace(',', ' ')
+                inpsDict[key] += value.split()
+                inpsDict[key] = read_input_index_list(inpsDict[key], stackFile=inps.file)
 
     # Turn reset on if 1) no input options found to drop ifgram AND 2) there is template input
     if all(not i for i in [inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax, inps.connNumMax,
