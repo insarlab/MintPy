@@ -21,6 +21,12 @@ from mintpy.utils import readfile, writefile
 
 
 ################################################################################################
+REFERENCE = """references:
+  Bekaert, David PS, et al. "InSAR-based detection method for mapping and monitoring slow-moving
+  landslides in remote regions with steep and mountainous terrain: An application to Nepal."
+  Remote Sensing of Environment 249 (2020), doi:10.1016/j.rse.2020.111983.
+"""
+
 EXAMPLE = """example:
   spatial_filter.py  velocity.h5
   spatial_filter.py  timeseries.h5 -f lowpass_avg       -p 5
@@ -36,7 +42,7 @@ EXAMPLE = """example:
 def create_parser():
     parser = argparse.ArgumentParser(description='Spatial filtering of 2D image.',
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+                                     epilog=REFERENCE+'\n'+EXAMPLE)
 
     parser.add_argument('file', help='File to be filtered')
     parser.add_argument('dset', type=str, nargs='*', default=[],
@@ -73,6 +79,7 @@ def filter_data(data, filter_type, filter_par=None):
         filter_par  : string, optional, parameter for low/high pass filter
                       for low/highpass_avg, it's kernel size in int
                       for low/highpass_gaussain, it's sigma in float
+                      for double_difference, it's local and regional kernel sizes in int
     Output:
         data_filt   : 2D np.array, matrix after filtering.
     """
@@ -99,8 +106,18 @@ def filter_data(data, filter_type, filter_par=None):
     elif filter_type == "highpass_gaussian":
         lp_data = filters.gaussian(data, sigma=filter_par)
         data_filt = data - lp_data
-    
+
     elif filter_type == "double_difference":
+        """Amplifies the local deformation signal by reducing the influence
+        of regional deformation trends from atmospheric artifacts, tectonic
+        deformation, and other sources. Intend use is to identify landslide-related
+        deformation. Filter has the form:
+
+            result =  regional mean of data - local mean of data
+
+        where both the regional and local kernel size can be set using the
+        filter_par argument.
+        """
 
         kernel = morphology.disk(filter_par[0], np.float32)
         kernel = kernel / kernel.flatten().sum()
