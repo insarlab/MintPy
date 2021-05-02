@@ -62,7 +62,7 @@ is a great starting point if you are new to version control.
 
 #### 4. Review process: ####
 
-We follow the [git pull request (PR) workflow](https://www.asmeurer.com/git-workflow/) to make changes to our codebase. Every change made goes through a PR, even our own, so that our [continuous integration](https://en.wikipedia.org/wiki/Continuous_integration) services have a change to check that the code is up to standards. GitHub will show the status of the these checks on the PR. Try to get them all passsing (green). If you have any trouble, leave a comment in the PR.
+We follow the [git pull request (PR) workflow](https://www.asmeurer.com/git-workflow/) to make changes to our codebase. Every change made goes through a PR, even our own, so that our [continuous integration](https://en.wikipedia.org/wiki/Continuous_integration) services have a chance to check that the code is up to standards. GitHub will show the status of the these checks on the PR. Try to get them all passsing (green). If you have any trouble, leave a comment in the PR.
 
 + Reviewers (the other developers and interested community members) will write inline and/or general comments on your PR to help you improve its implementation, documentation and style. We don't want to break the shared codebase, so care must be taken not to introduce bugs. Please don’t let the review discourage you from contributing: its only aim is to improve the quality of project, not to criticize (we are, after all, very grateful for the time you’re donating!).
 
@@ -98,7 +98,7 @@ It's a good idea to test any changes or bugs you have fixed, in the feature bran
 ${MINTPY_HOME}/test/test_smallbaselineApp.py
 ```
 
-It takes about 10 mins to finish.
+It takes about 15 mins to finish.
 
 
 ## Things you should NOT do ##
