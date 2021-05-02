@@ -184,7 +184,7 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
     ds_all = readfile.get_dataset_list(fname)
     if not ds_names:
         ds_names = ds_all
-    ds_skips = set(ds_all)-set(ds_names)
+    ds_skips = list(set(ds_all) - set(ds_names))
 
     maxDigit = max([len(i) for i in ds_names])
     dsDict = dict()
