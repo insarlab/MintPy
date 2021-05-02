@@ -4,6 +4,7 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Heresh Fattahi, Zhang Yunjun, 2013               #
 ############################################################
+# Add "double_difference" filter, Forrest Williams, May 2021
 
 
 import os
@@ -11,7 +12,7 @@ import sys
 import argparse
 
 try:
-    from skimage import filters, feature
+    from skimage import filters, feature, morphology
 except ImportError:
     raise ImportError('Could not import skimage!')
 
@@ -21,6 +22,12 @@ from mintpy.utils import readfile, writefile
 
 
 ################################################################################################
+REFERENCE = """references:
+  Bekaert, David PS, et al. "InSAR-based detection method for mapping and monitoring slow-moving
+  landslides in remote regions with steep and mountainous terrain: An application to Nepal."
+  Remote Sensing of Environment 249 (2020), doi:10.1016/j.rse.2020.111983.
+"""
+
 EXAMPLE = """example:
   spatial_filter.py  velocity.h5
   spatial_filter.py  timeseries.h5 -f lowpass_avg       -p 5
@@ -29,28 +36,31 @@ EXAMPLE = """example:
   spatial_filter.py  velocity.h5   -f sobel
   spatial_filter.py  ifgramStack.h5 unwrapPhase
   spatial_filter.py  ifgramStack.h5 unwrapPhase -f lowpass_avg -p 5
+  spatial_filter.py  ifgramStack.h5 unwrapPhase -f double_difference -p 1 10
 """
 
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Spatial filtering of 2D image.',
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+                                     epilog=REFERENCE+'\n'+EXAMPLE)
 
     parser.add_argument('file', help='File to be filtered')
     parser.add_argument('dset', type=str, nargs='*', default=[],
                         help='optional - dataset(s) to filter (default: %(default)s).')
-    parser.add_argument('-f', '--filter_type', dest='filter_type', nargs='?', default='lowpass_gaussian',
+    parser.add_argument('-f', dest='filter_type', default='lowpass_gaussian',
                         choices=['lowpass_gaussian', 'highpass_gaussian',
                                  'lowpass_avg', 'highpass_avg',
-                                 'sobel', 'roberts', 'canny'],
-                        help='Type of filter. Default: lowpass_gaussian.\n' +
-                             'For more filters, check the link below:\n' +
-                             'http://scikit-image.org/docs/dev/api/skimage.filters.html')
-    parser.add_argument('-p', '--filter_par', dest='filter_par', nargs='?', type=float,
-                        help='Filter parameter for low/high pass filter. Default=\n' +
-                             'Sigma       for low/high pass gaussian filter, default: 3.0\n' +
-                             'Kernel Size for low/high pass average filter, default: 5')
+                                 'sobel', 'roberts', 'canny', 'double_difference'],
+                        help='Filter type (default: %(default)s).\n' +
+                             'Check Bekaert et al. (2020) for double_difference;\n' +
+                             'Check scikit-image as below for the other filters:\n' +
+                             '    http://scikit-image.org/docs/dev/api/skimage.filters.html')
+    parser.add_argument('-p', '--filter_par', dest='filter_par', nargs='*', type=float,
+                        help='Filter parameters for filters. Default:\n' +
+                             '    Sigma         for low/high pass gaussian filter, default: 3.0\n' +
+                             '    Kernel Size   for low/high pass average  filter, default: 5\n' +
+                             '    Kernel Radius for double difference local and regional filters, default: 1 10\n')
     parser.add_argument('-o', '--outfile',default=None, help='Output file name.')
     return parser
 
@@ -71,6 +81,7 @@ def filter_data(data, filter_type, filter_par=None):
         filter_par  : string, optional, parameter for low/high pass filter
                       for low/highpass_avg, it's kernel size in int
                       for low/highpass_gaussain, it's sigma in float
+                      for double_difference, it's local and regional kernel sizes in int
     Output:
         data_filt   : 2D np.array, matrix after filtering.
     """
@@ -98,6 +109,28 @@ def filter_data(data, filter_type, filter_par=None):
         lp_data = filters.gaussian(data, sigma=filter_par)
         data_filt = data - lp_data
 
+    elif filter_type == "double_difference":
+        """Amplifies the local deformation signal by reducing the influence
+        of regional deformation trends from atmospheric artifacts, tectonic
+        deformation, and other sources. Intend use is to identify landslide-related
+        deformation. Filter has the form:
+
+            result =  regional mean of data - local mean of data
+
+        where both the regional and local kernel size can be set using the
+        filter_par argument.
+        """
+
+        kernel = morphology.disk(filter_par[0], np.float32)
+        kernel = kernel / kernel.flatten().sum()
+        local_filt = ndimage.convolve(data, kernel)
+
+        kernel = morphology.disk(filter_par[1], np.float32)
+        kernel = kernel / kernel.flatten().sum()
+        regional_filt = ndimage.convolve(data, kernel)
+
+        data_filt = regional_filt - local_filt
+
     else:
         raise Exception('Un-recognized filter type: '+filter_type)
 
@@ -114,6 +147,7 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
         filter_par  : string, optional, parameter for low/high pass filter
                       for low/highpass_avg, it's kernel size in int
                       for low/highpass_gaussain, it's sigma in float
+                      for double_difference, it's local and regional kernel sizes in int
     Output:
         fname_out   : string, optional, output file name/path
     """
@@ -125,11 +159,20 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
     if filter_type.endswith('avg'):
         if not filter_par:
             filter_par = 5
+        else:
+            filter_par = filter_par[0]
         msg += ' with kernel size of {}'.format(filter_par)
     elif filter_type.endswith('gaussian'):
         if not filter_par:
             filter_par = 3.0
+        else:
+            filter_par = filter_par[0]
         msg += ' with sigma of {:.1f}'.format(filter_par)
+    elif filter_type == 'double_difference':
+        if not filter_par:
+            filter_par = [1,10]
+        local, regional = filter_par
+        msg += ' with local/regional kernel sizes of {}/{}'.format(local, regional)
     print(msg)
 
     # output filename
@@ -138,10 +181,17 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
                                      os.path.splitext(fname)[1])
 
     # filtering file
+    ds_all = readfile.get_dataset_list(fname)
     if not ds_names:
-        ds_names = readfile.get_dataset_list(fname)
+        ds_names = ds_all
+    ds_skips = list(set(ds_all) - set(ds_names))
+
     maxDigit = max([len(i) for i in ds_names])
     dsDict = dict()
+
+    for ds_name in ds_skips:
+        dsDict[ds_name] = readfile.read(fname, datasetName=ds_name, print_msg=False)[0]
+
     for ds_name in ds_names:
         msg = 'filtering {d:<{w}} from {f} '.format(d=ds_name, w=maxDigit, f=os.path.basename(fname))
         # read
