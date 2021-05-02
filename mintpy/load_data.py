@@ -546,14 +546,17 @@ def read_inps_dict2geometry_dict_object(iDict):
         print('WARNING: No reqired {} data files found!'.format(dsName0))
 
     # metadata
-    ifgramRadarMetadata = None
+    ifgramMetaGeo = None
+    ifgramMetaRadar = None
     ifgramKey = iDict['ds_name2key']['unwrapPhase']
     if ifgramKey in iDict.keys():
         ifgramFiles = glob.glob(str(iDict[ifgramKey]))
         if len(ifgramFiles) > 0:
             atr = readfile.read_attribute(ifgramFiles[0])
-            if 'Y_FIRST' not in atr.keys():
-                ifgramRadarMetadata = atr.copy()
+            if 'Y_FIRST' in atr.keys():
+                ifgramMetaGeo = atr.copy()
+            else:
+                ifgramMetaRadar = atr.copy()
 
     # dsPathDict --> dsGeoPathDict + dsRadarPathDict
     dsNameList = list(dsPathDict.keys())
@@ -574,11 +577,11 @@ def read_inps_dict2geometry_dict_object(iDict):
     if len(dsRadarPathDict) > 0:
         geomRadarObj = geometryDict(processor=iDict['processor'],
                                     datasetDict=dsRadarPathDict,
-                                    extraMetadata=ifgramRadarMetadata)
+                                    extraMetadata=ifgramMetaRadar)
     if len(dsGeoPathDict) > 0:
         geomGeoObj = geometryDict(processor=iDict['processor'],
                                   datasetDict=dsGeoPathDict,
-                                  extraMetadata=None)
+                                  extraMetadata=ifgramMetaGeo)
     return geomRadarObj, geomGeoObj
 
 
@@ -678,12 +681,20 @@ def prepare_metadata(iDict):
             obs_dir = None
             obs_file = None
 
+        # geometry
+        geom_names = ['dem', 'lookupY', 'lookupX', 'incAngle', 'azAngle', 'shadowMask', 'waterMask']
+        geom_keys = ['mintpy.load.{}File'.format(i) for i in geom_names]
+        geom_files = [os.path.basename(iDict[key]) for key in geom_keys
+                      if (iDict[key] and iDict[key].lower() != 'auto')]
+
         # compose list of input arguments
         iargs = ['-m', meta_file, '-g', geom_dir]
         if baseline_dir:
             iargs += ['-b', baseline_dir]
         if obs_dir is not None:
             iargs += ['-d', obs_dir, '-f', obs_file]
+        if geom_files:
+            iargs += ['--geom-files'] + geom_files
 
         # run module
         print('prep_isce.py', ' '.join(iargs))

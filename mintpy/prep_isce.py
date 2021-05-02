@@ -19,6 +19,9 @@ from mintpy.utils import (
 )
 
 
+#########################################################################
+GEOMETRY_PREFIXS = ['hgt', 'lat', 'lon', 'los', 'shadowMask', 'waterMask', 'incLocal']
+
 EXAMPLE = """example:
   # interferogram stack
   prep_isce.py -d ./merged/interferograms -m ./reference/IW1.xml -b ./baselines -g ./merged/geom_reference      #for topsStack
@@ -35,23 +38,33 @@ def create_parser():
     parser = argparse.ArgumentParser(description='Prepare ISCE metadata files.',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
+    # interferograms
     parser.add_argument('-d', '--ds-dir', '--dset-dir', dest='dsetDir', type=str, default=None, required=True,
                         help='The directory which contains all pairs\n'
                              'e.g.: $PROJECT_DIR/merged/interferograms OR \n'
                              '      $PROJECT_DIR/pairs/*-*/insar OR \n'
                              '      $PROJECT_DIR/merged/offsets')
     parser.add_argument('-f', '--file-pattern', nargs = '+', dest='dsetFiles', type=str, default=['filt_*.unw'],
-                        help='List of observation files, e.g.: filt_fine.unw OR filtAz*.off')
+                        help='List of observation file basenames, e.g.: filt_fine.unw OR filtAz*.off')
+
+    # metadata
     parser.add_argument('-m', '--meta-file', dest='metaFile', type=str, default=None, required=True,
                         help='Metadata file to extract common metada for the stack:\n'
                              'e.g.: for ISCE/topsStack    : reference/IW3.xml;\n'
                              '      for ISCE/stripmapStack: referenceShelve/data.dat;\n'
                              '      for ISCE/alosStack    : pairs/150408-150701/150408.track.xml\n'
                              '          where 150408 is the reference date of stack processing')
+
+    # geometry
     parser.add_argument('-b', '--baseline-dir', dest='baselineDir', type=str, default=None,
-                        help=' directory with baselines ')
+                        help='Directory with baselines ')
     parser.add_argument('-g', '--geometry-dir', dest='geometryDir', type=str, default=None, required=True,
-                        help=' directory with geometry files ')
+                        help='Directory with geometry files ')
+    parser.add_argument('--geom-files', dest='geometryFiles', type=str, nargs='*',
+                        default=['{}.rdr'.format(i) for i in GEOMETRY_PREFIXS],
+                        help='List of geometry file basenames. Default: %(default)s.\n'
+                             'All geometry files need to be in the same directory.')
+
     parser.add_argument('--force', dest='update_mode', action='store_false',
                         help='Force to overwrite all .rsc metadata files.')
     return parser
@@ -97,44 +110,51 @@ def add_ifgram_metadata(metadata_in, dates=[], baseline_dict={}):
     return metadata
 
 
-def prepare_geometry(geom_dir, metadata=dict(), processor='tops', update_mode=True):
+def prepare_geometry(geom_dir, geom_files=[], metadata=dict(), processor='tops', update_mode=True):
     """Prepare and extract metadata from geometry files"""
 
-    print('prepare .rsc file for geometry files')
+    print('preparing RSC file for geometry files')
     geom_dir = os.path.abspath(geom_dir)
 
-    # grab all existed files
-    if processor in ['tops', 'stripmap']:
-        fbases = ['hgt', 'lat', 'lon', 'los', 'shadowMask', 'incLocal']
-        isce_files = [os.path.join(geom_dir, '{}.rdr'.format(i)) for i in fbases]
-        isce_files = [i for i in isce_files if os.path.isfile(i)]
-        if len(isce_files) == 0:
-            isce_files = [os.path.join(geom_dir, '{}.rdr.full'.format(i)) for i in fbases]
-            isce_files = [i for i in isce_files if os.path.isfile(i)]
+    # default file basenames
+    if not geom_files:
+        if processor in ['tops', 'stripmap']:
+            geom_files = ['{}.rdr'.format(i) for i in GEOMETRY_PREFIXS]
 
-    elif processor in ['alosStack']:
-        alooks = metadata['ALOOKS']
-        rlooks = metadata['RLOOKS']
-        isce_files = glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.hgt'.format(rlooks, alooks)))+\
-                     glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.lat'.format(rlooks, alooks)))+\
-                     glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.lon'.format(rlooks, alooks)))+\
-                     glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.los'.format(rlooks, alooks)))+\
-                     glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.wbd'.format(rlooks, alooks)))
+        elif processor in ['alosStack']:
+            alooks = metadata['ALOOKS']
+            rlooks = metadata['RLOOKS']
+            fexts = ['.hgt', '.lat', '.lon', '.los', '.wbd']
+            geom_files = ['*_{}rlks_{}alks{}'.format(rlooks, alooks, fext) for fext in fexts]
 
-    else:
-        raise Exception('unknown processor: {}'.format(processor))
+        else:
+            raise Exception('unknown processor: {}'.format(processor))
+
+    # get absolute file paths
+    geom_files = [os.path.join(geom_dir, i) for i in geom_files]
+
+    # check the full resolution version if no multilooked version exists
+    if all(not os.path.isfile(i) for i in geom_files):
+        geom_files = [i+'.full' for i in geom_files]
+
+    # get existed files
+    geom_files = [i for i in geom_files if os.path.isfile(i)]
+    # remove duplicates while preserving order
+    seen = set()
+    seen_add = seen.add
+    geom_files = [i for i in geom_files if not (i in seen or seen_add(i))]
 
     # write rsc file for each file
-    for isce_file in isce_files:
+    for geom_file in geom_files:
         # prepare metadata for current file
-        if os.path.isfile(isce_file+'.xml'):
-            geom_metadata = readfile.read_attribute(isce_file, metafile_ext='.xml')
+        if os.path.isfile(geom_file+'.xml'):
+            geom_metadata = readfile.read_attribute(geom_file, metafile_ext='.xml')
         else:
-            geom_metadata = readfile.read_attribute(isce_file)
+            geom_metadata = readfile.read_attribute(geom_file)
         geom_metadata.update(metadata)
 
         # write .rsc file
-        rsc_file = isce_file+'.rsc'
+        rsc_file = geom_file+'.rsc'
         writefile.write_roipac_rsc(geom_metadata, rsc_file,
                                    update_mode=update_mode,
                                    print_msg=True)
@@ -142,7 +162,7 @@ def prepare_geometry(geom_dir, metadata=dict(), processor='tops', update_mode=Tr
 
 
 def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), processor='tops', update_mode=True):
-    print('prepare .rsc file for ', filePattern)
+    print('preparing RSC file for ', filePattern)
     if processor in ['tops', 'stripmap']:
         isce_files = sorted(glob.glob(os.path.join(os.path.abspath(inputDir), '*', filePattern)))
     elif processor == 'alosStack':
@@ -198,6 +218,7 @@ def main(iargs=None):
     # prepare metadata for geometry file
     if inps.geometryDir:
         prepare_geometry(inps.geometryDir,
+                         geom_files=inps.geometryFiles,
                          metadata=metadata,
                          processor=inps.processor,
                          update_mode=inps.update_mode)
