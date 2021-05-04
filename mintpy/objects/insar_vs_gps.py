@@ -142,7 +142,9 @@ class insar_vs_gps:
         ts_obj.open(print_msg=False)
         self.metadata = dict(ts_obj.metadata)
         self.num_date = ts_obj.numDate
-        self.insar_datetime = ts_obj.times
+        # remove time info from insar_datetime to be consistent with gps_datetime
+        self.insar_datetime = np.array([i.replace(hour=0, minute=0, second=0, microsecond=0)
+                                        for i in ts_obj.times])
 
         # default start/end
         if self.start_date is None:

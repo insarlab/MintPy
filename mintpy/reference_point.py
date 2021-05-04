@@ -148,12 +148,14 @@ def read_template_file2inps(template_file, inps=None):
     if key in template.keys():
         value = template[key]
         if value:
+            value = value.replace('[','').replace(']','')
             inps.ref_y, inps.ref_x = [int(i) for i in value.split(',')]
 
     key = prefix+'lalo'
     if key in template.keys():
         value = template[key]
         if value:
+            value = value.replace('[','').replace(']','')
             inps.ref_lat, inps.ref_lon = [float(i) for i in value.split(',')]
 
     return inps

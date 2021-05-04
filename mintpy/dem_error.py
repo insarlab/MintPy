@@ -187,7 +187,8 @@ def read_template2inps(template_file, inps=None):
             if key in ['polyOrder']:
                 iDict[key] = int(value)
             elif key in ['excludeDate','stepFuncDate']:
-                iDict[key] = ptime.yyyymmdd(value.replace(',', ' ').split())
+                value = value.replace('[','').replace(']','').replace(',', ' ')
+                iDict[key] = ptime.yyyymmdd(value.split())
 
     # computing configurations
     dask_key_prefix = 'mintpy.compute.'

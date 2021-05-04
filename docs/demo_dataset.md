@@ -76,10 +76,10 @@ cd WCapeSenAT29
 smallbaselineApp.py ${MINTPY_HOME}/mintpy/data/input_files/WCapeSenAT29.txt
 ```
 
-#### ALOS-1 on Kuju with ROI_PAC ####
+#### ALOS on Kuju with ROI_PAC ####
 
 Area: Kuju volcano at Kyushu island, SW Japan     
-Data: ALOS-1 PALSAR ascending track 422 during January 2007 - January 2011 (24 acquisitions; [Zenodo](https://zenodo.org/record/3952917))     
+Data: ALOS PALSAR ascending track 422 during January 2007 - January 2011 (24 acquisitions; [Zenodo](https://zenodo.org/record/3952917))     
 Size: ~240 MB
 
 ```bash
