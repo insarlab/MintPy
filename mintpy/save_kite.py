@@ -10,7 +10,7 @@ import sys
 import argparse
 import datetime as dt
 import numpy as np
-from mintpy.utils import ptime, readfile
+from mintpy.utils import ptime, readfile, arg_group, attribute
 
 
 d2r = np.pi / 180.
@@ -54,6 +54,7 @@ def create_parser():
                         help='mask file, or run mask.py to mask the input file beforehand.')
     parser.add_argument('-o', '--output', dest='outfile', type=str,
                         help='output filename')
+    parser = arg_group.add_subset_argument(parser)
     return parser
 
 
@@ -145,6 +146,9 @@ def main(iargs=None):
     print('\n-------------------READ INPUTS -------------------')
     print('Read metadata from file: {}'.format(inps.file))
     attr = readfile.read_attribute(inps.file)
+    
+    #Extract subset if defined
+    inps.pix_box, inps.geo_box = subset.subset_input_dict2box(vars(inps), attr)
 
     # output filename
     if not inps.outfile:
@@ -169,24 +173,27 @@ def main(iargs=None):
 
     # read data
     print('Read {} from file: {}'.format(inps.dset, inps.file))
-    dis, attr = readfile.read(inps.file, datasetName=inps.dset)
+    dis, attr = readfile.read(inps.file, datasetName=inps.dset,box=inps.pix_box))
 
     if attr['FILE_TYPE'] == 'timeseries':
         print('Read {} from file: {}'.format(date1, inps.file))
-        dis -= readfile.read(inps.file, datasetName=date1)[0]
+        dis -= readfile.read(inps.file, datasetName=date1,box=inps.pix_box))[0]
 
     # mask data
     if inps.mask_file is not None:
-        mask = readfile.read(inps.mask_file)[0]
+        mask = readfile.read(inps.mask_file,box=inps.pix_box)[0]
         print('Set data to NaN for pixels with zero value in file: {}'.format(inps.mask_file))
         dis[mask==0] = np.nan
 
     # read geometry incidence / azimuth angle
     print('\nread incidence / azimuth angle from file: {}'.format(inps.geom_file))
-    inc_angle = readfile.read(inps.geom_file, datasetName='incidenceAngle')[0]
-    az_angle = readfile.read(inps.geom_file, datasetName='azimuthAngle')[0]
+    inc_angle = readfile.read(inps.geom_file, datasetName='incidenceAngle',box=inps.pix_box)[0]
+    az_angle = readfile.read(inps.geom_file, datasetName='azimuthAngle',box=inps.pix_box)[0]
     print('Mean satellite incidence angle; {0:.2f}°'.format(np.nanmean(inc_angle)))
     print('Mean satellite heading angle: {0:.2f}°'.format(90 - np.nanmean(az_angle)))
+    
+    # Update attributes
+    attr=attribute.update_attribute4subset(attr, inps.pix_box)
 
     # create kite container
     scene = mintpy2kite(dis, attr, date1, date2, inc_angle, az_angle, out_file=inps.out_file)
