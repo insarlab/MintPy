@@ -173,11 +173,11 @@ def main(iargs=None):
 
     # read data
     print('Read {} from file: {}'.format(inps.dset, inps.file))
-    dis, attr = readfile.read(inps.file, datasetName=inps.dset,box=inps.pix_box))
+    dis, attr = readfile.read(inps.file, datasetName=inps.dset,box=inps.pix_box)
 
     if attr['FILE_TYPE'] == 'timeseries':
         print('Read {} from file: {}'.format(date1, inps.file))
-        dis -= readfile.read(inps.file, datasetName=date1,box=inps.pix_box))[0]
+        dis -= readfile.read(inps.file, datasetName=date1,box=inps.pix_box)[0]
 
     # mask data
     if inps.mask_file is not None:
