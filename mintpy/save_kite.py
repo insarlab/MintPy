@@ -109,7 +109,7 @@ def mintpy2kite(ifg, attr, date1, date2, inc_angle, az_angle, out_file):
         displacement = np.flipud(ifg),
         config = config,
     )
-    
+
     #Save kite container
     scene.save(out_file)
 
