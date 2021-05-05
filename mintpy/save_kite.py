@@ -178,7 +178,7 @@ def main(iargs=None):
 
     # mask data
     if inps.mask_file is not None:
-        mask = readfile.read(inps.mask_file,box=inps.pix_box)[0]
+        mask = readfile.read(inps.mask_file, box=inps.pix_box)[0]
         print('Set data to NaN for pixels with zero value in file: {}'.format(inps.mask_file))
         dis[mask==0] = np.nan
 
