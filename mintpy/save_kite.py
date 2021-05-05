@@ -161,7 +161,7 @@ def main(iargs=None):
 
     else:
         # velocity and *.unw files
-        date1, date2 = ptime.yyyymmdd(attr['DATE12'].split('_'))
+        date1, date2 = ptime.yyyymmdd(attr['DATE12'].replace('_','-').split('-'))
         if inps.dset.startswith('step'):
             date1 = inps.dset.split('step')[-1]
             date2 = date1
