@@ -10,12 +10,11 @@ import sys
 import argparse
 import datetime as dt
 import numpy as np
-from mintpy.utils import ptime, readfile
-
+from mintpy.utils import ptime, readfile, arg_group, attribute
+from mintpy import subset
 
 d2r = np.pi / 180.
 r2d = 180. / np.pi
-
 
 EXAMPLE = """example:
   ## displacement [event-type inversion]
@@ -36,7 +35,6 @@ EXAMPLE = """example:
 
 KITE_URL = 'https://github.com/pyrocko/kite'
 
-
 def create_parser():
     parser = argparse.ArgumentParser(description=f'Generate KITE ({KITE_URL}) npz and yaml from MintPy HDF5 file.',
                                      formatter_class=argparse.RawTextHelpFormatter,
@@ -54,15 +52,14 @@ def create_parser():
                         help='mask file, or run mask.py to mask the input file beforehand.')
     parser.add_argument('-o', '--output', dest='outfile', type=str,
                         help='output filename')
+    parser = arg_group.add_subset_argument(parser)
     return parser
-
 
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
     return inps
-
 
 #########################################################################################################
 def mintpy2kite(ifg, attr, date1, date2, inc_angle, az_angle, out_file):
@@ -108,14 +105,13 @@ def mintpy2kite(ifg, attr, date1, date2, inc_angle, az_angle, out_file):
         config = config,
     )
 
-    print('\n---------------SAVING KITE CONTAINER-----------')
-    print('Save KITE data in file: {}'.format(out_file))
+    #Save kite container
     scene.save(out_file)
 
     # print out msg
     urLat = config.frame.llLat + config.frame.dN * float(attr['LENGTH'])
     urLon = config.frame.llLon + config.frame.dE * float(attr['WIDTH'])
-    print('Kite Scene info:')
+    print('\nKite Scene info:')
     print('Scene title: {}'.format(config.meta.scene_title))
     print('Scene id: {}'.format(config.meta.scene_id))
     print('Scene orbit: {}'.format(config.meta.orbital_node))
@@ -134,9 +130,11 @@ def mintpy2kite(ifg, attr, date1, date2, inc_angle, az_angle, out_file):
     print('Scene min / mean / max azimuth angle   : {0:.2f} / {1:.2f} / {2:.2f} °'.format(np.nanmin(scene.phi)*r2d,
                                                                                           np.nanmean(scene.phi)*r2d,
                                                                                           np.nanmax(scene.phi)*r2d))
+    print('\n---------------SAVING KITE CONTAINER-----------')
+    print('Save KITE data in file: {0}.npz {0}.yaml'.format(out_file))
+    print('Import to KITE: spool {}'.format(out_file))
 
     return scene
-
 
 #########################################################################################################
 def main(iargs=None):
@@ -145,6 +143,9 @@ def main(iargs=None):
     print('\n-------------------READ INPUTS -------------------')
     print('Read metadata from file: {}'.format(inps.file))
     attr = readfile.read_attribute(inps.file)
+
+    #Extract subset if defined
+    inps.pix_box, inps.geo_box = subset.subset_input_dict2box(vars(inps), attr)
 
     # output filename
     if not inps.outfile:
@@ -160,7 +161,7 @@ def main(iargs=None):
 
     else:
         # velocity and *.unw files
-        date1, date2 = ptime.yyyymmdd(attr['DATE12'].split('-'))
+        date1, date2 = ptime.yyyymmdd(attr['DATE12'].replace('_','-').split('-'))
         if inps.dset.startswith('step'):
             date1 = inps.dset.split('step')[-1]
             date2 = date1
@@ -169,30 +170,33 @@ def main(iargs=None):
 
     # read data
     print('Read {} from file: {}'.format(inps.dset, inps.file))
-    dis, attr = readfile.read(inps.file, datasetName=inps.dset)
+    dis, attr = readfile.read(inps.file, datasetName=inps.dset, box=inps.pix_box)
 
     if attr['FILE_TYPE'] == 'timeseries':
         print('Read {} from file: {}'.format(date1, inps.file))
-        dis -= readfile.read(inps.file, datasetName=date1)[0]
+        dis -= readfile.read(inps.file, datasetName=date1, box=inps.pix_box)[0]
 
     # mask data
     if inps.mask_file is not None:
-        mask = readfile.read(inps.mask_file)[0]
+        mask = readfile.read(inps.mask_file, box=inps.pix_box)[0]
         print('Set data to NaN for pixels with zero value in file: {}'.format(inps.mask_file))
         dis[mask==0] = np.nan
 
     # read geometry incidence / azimuth angle
     print('\nread incidence / azimuth angle from file: {}'.format(inps.geom_file))
-    inc_angle = readfile.read(inps.geom_file, datasetName='incidenceAngle')[0]
-    az_angle = readfile.read(inps.geom_file, datasetName='azimuthAngle')[0]
-    print('Mean satellite incidence angle; {0:.2f}°'.format(np.nanmean(inc_angle)))
-    print('Mean satellite heading angle: {0:.2f}°'.format(90 - np.nanmean(az_angle)))
+    inc_angle = readfile.read(inps.geom_file, datasetName='incidenceAngle', box=inps.pix_box)[0]
+    az_angle = readfile.read(inps.geom_file, datasetName='azimuthAngle', box=inps.pix_box)[0]
+    print('Mean satellite incidence angle: {0:.2f}°'.format(np.nanmean(inc_angle)))
+    print('Mean satellite heading   angle: {0:.2f}°\n'.format(90 - np.nanmean(az_angle)))
+
+    # Update attributes
+    if inps.subset_lat != None or inps.subset_x != None:
+        attr = attribute.update_attribute4subset(attr, inps.pix_box)
 
     # create kite container
-    scene = mintpy2kite(dis, attr, date1, date2, inc_angle, az_angle, out_file=inps.out_file)
+    scene = mintpy2kite(dis, attr, date1, date2, inc_angle, az_angle, out_file=inps.outfile)
 
     return scene
-
 
 #########################################################################################################
 if __name__ == "__main__":
