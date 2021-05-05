@@ -110,14 +110,12 @@ def mintpy2kite(ifg, attr, date1, date2, inc_angle, az_angle, out_file):
         config = config,
     )
 
-    print('\n---------------SAVING KITE CONTAINER-----------')
-    print('Save KITE data in file: {}'.format(out_file))
     scene.save(out_file)
 
     # print out msg
     urLat = config.frame.llLat + config.frame.dN * float(attr['LENGTH'])
     urLon = config.frame.llLon + config.frame.dE * float(attr['WIDTH'])
-    print('Kite Scene info:')
+    print('\nKite Scene info:')
     print('Scene title: {}'.format(config.meta.scene_title))
     print('Scene id: {}'.format(config.meta.scene_id))
     print('Scene orbit: {}'.format(config.meta.orbital_node))
@@ -136,6 +134,8 @@ def mintpy2kite(ifg, attr, date1, date2, inc_angle, az_angle, out_file):
     print('Scene min / mean / max azimuth angle   : {0:.2f} / {1:.2f} / {2:.2f} °'.format(np.nanmin(scene.phi)*r2d,
                                                                                           np.nanmean(scene.phi)*r2d,
                                                                                           np.nanmax(scene.phi)*r2d))
+    print('\n---------------SAVING KITE CONTAINER-----------')
+    print('Save KITE data in file: {0}.npz {0}.yaml'.format(out_file))
 
     return scene
 
@@ -165,7 +165,7 @@ def main(iargs=None):
 
     else:
         # velocity and *.unw files
-        date1, date2 = ptime.yyyymmdd(attr['DATE12'].split('-'))
+        date1, date2 = ptime.yyyymmdd(attr['DATE12'].split('_'))
         if inps.dset.startswith('step'):
             date1 = inps.dset.split('step')[-1]
             date2 = date1
@@ -191,13 +191,14 @@ def main(iargs=None):
     inc_angle = readfile.read(inps.geom_file, datasetName='incidenceAngle',box=inps.pix_box)[0]
     az_angle = readfile.read(inps.geom_file, datasetName='azimuthAngle',box=inps.pix_box)[0]
     print('Mean satellite incidence angle; {0:.2f}°'.format(np.nanmean(inc_angle)))
-    print('Mean satellite heading angle: {0:.2f}°'.format(90 - np.nanmean(az_angle)))
+    print('Mean satellite heading angle: {0:.2f}°\n'.format(90 - np.nanmean(az_angle)))
     
     # Update attributes
-    attr=attribute.update_attribute4subset(attr, inps.pix_box)
-
+    if inps.subset_lat != None or inps.subset_x != None:
+        attr=attribute.update_attribute4subset(attr, inps.pix_box)
+        
     # create kite container
-    scene = mintpy2kite(dis, attr, date1, date2, inc_angle, az_angle, out_file=inps.out_file)
+    scene = mintpy2kite(dis, attr, date1, date2, inc_angle, az_angle, out_file=inps.outfile)
 
     return scene
 
