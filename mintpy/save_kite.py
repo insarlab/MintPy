@@ -137,6 +137,7 @@ def mintpy2kite(ifg, attr, date1, date2, inc_angle, az_angle, out_file):
                                                                                           np.nanmax(scene.phi)*r2d))
     print('\n---------------SAVING KITE CONTAINER-----------')
     print('Save KITE data in file: {0}.npz {0}.yaml'.format(out_file))
+    print('Import to KITE: spool {}'.format(out_file))
 
     return scene
 
