@@ -13,10 +13,8 @@ import numpy as np
 from mintpy.utils import ptime, readfile, arg_group, attribute
 from mintpy import subset
 
-
 d2r = np.pi / 180.
 r2d = 180. / np.pi
-
 
 EXAMPLE = """example:
   ## displacement [event-type inversion]
@@ -36,7 +34,6 @@ EXAMPLE = """example:
 """
 
 KITE_URL = 'https://github.com/pyrocko/kite'
-
 
 def create_parser():
     parser = argparse.ArgumentParser(description=f'Generate KITE ({KITE_URL}) npz and yaml from MintPy HDF5 file.',
@@ -58,13 +55,11 @@ def create_parser():
     parser = arg_group.add_subset_argument(parser)
     return parser
 
-
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
     return inps
-
 
 #########################################################################################################
 def mintpy2kite(ifg, attr, date1, date2, inc_angle, az_angle, out_file):
@@ -141,7 +136,6 @@ def mintpy2kite(ifg, attr, date1, date2, inc_angle, az_angle, out_file):
 
     return scene
 
-
 #########################################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
@@ -149,7 +143,7 @@ def main(iargs=None):
     print('\n-------------------READ INPUTS -------------------')
     print('Read metadata from file: {}'.format(inps.file))
     attr = readfile.read_attribute(inps.file)
-    
+
     #Extract subset if defined
     inps.pix_box, inps.geo_box = subset.subset_input_dict2box(vars(inps), attr)
 
@@ -194,16 +188,15 @@ def main(iargs=None):
     az_angle = readfile.read(inps.geom_file, datasetName='azimuthAngle',box=inps.pix_box)[0]
     print('Mean satellite incidence angle; {0:.2f}°'.format(np.nanmean(inc_angle)))
     print('Mean satellite heading angle: {0:.2f}°\n'.format(90 - np.nanmean(az_angle)))
-    
+
     # Update attributes
     if inps.subset_lat != None or inps.subset_x != None:
         attr=attribute.update_attribute4subset(attr, inps.pix_box)
-        
+
     # create kite container
     scene = mintpy2kite(dis, attr, date1, date2, inc_angle, az_angle, out_file=inps.outfile)
 
     return scene
-
 
 #########################################################################################################
 if __name__ == "__main__":
