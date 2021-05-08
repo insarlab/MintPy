@@ -824,9 +824,12 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             fname + '.aux.xml',
         ]
         metafiles = [i for i in metafiles if os.path.isfile(i)]
-        # force to use the specified metadata file
+
+        # use metadata files with the specified extension if requested
         if metafile_ext:
-            metafiles = [i for i in metafiles if i.endswith(metafile_ext)]        
+            metafiles = [i for i in metafiles if i.endswith(metafile_ext)]
+
+        # use the GDAL supported data file is no metadata file found
         if len(metafiles) == 0:
             # for .tif/.grd files, extract metadata from the file itself
             if fext in GDAL_FILE_EXTS:

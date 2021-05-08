@@ -377,7 +377,7 @@ class geometryDict:
                 print('geocoded input, use incidenceAngle from file {}'.format(self.datasetDict[ds_name]))
                 inc_angle = self.read(family=ds_name)[0].astype(np.float32)
                 data = ut.incidence_angle2slant_range_distance(self.extraMetadata, inc_angle)
-            elif key in self.extraMetadata.keys():            
+            elif key in self.extraMetadata.keys():
                 print('geocoded input, use contant value from metadata {}'.format(key))
                 length = int(self.extraMetadata['LENGTH'])
                 width = int(self.extraMetadata['WIDTH'])
