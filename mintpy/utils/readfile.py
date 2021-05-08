@@ -403,7 +403,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
         elif k in ['slc']:
             cpx_band = 'magnitude'
 
-        elif k in ['los'] and datasetName and datasetName.startswith(('band2','az','head')):
+        elif k.startswith('los') and datasetName and datasetName.startswith(('band2','az','head')):
             band = min(2, num_band)
 
         elif k in ['incLocal']:
@@ -824,6 +824,9 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             fname + '.aux.xml',
         ]
         metafiles = [i for i in metafiles if os.path.isfile(i)]
+        # force to use the specified metadata file
+        if metafile_ext:
+            metafiles = [i for i in metafiles if i.endswith(metafile_ext)]        
         if len(metafiles) == 0:
             # for .tif/.grd files, extract metadata from the file itself
             if fext in GDAL_FILE_EXTS:
