@@ -30,7 +30,7 @@ The following attributes vary for each interferogram:
 
 +  ANTENNA_SIDE = -1 for right looking radar, used in save_unavco
 +  AZIMUTH_PIXEL_SIZE = Azimuth pixel size at orbital altitude (multiply by Re/(Re+h) for ground size (m), where Re is the local earth radius), used in baseline_error/trop and multilook.   
-+  HEADING = Spacecraft heading at peg point (degree), used in asc_desc, los2enu   
++  HEADING = Spacecraft heading at peg point (degree), measured from the north with clock-wise as positive, used in asc_desc
 +  PRF = Pulse repetition frequency (Hz), used in save_unavco   
 
 ### Self-generated attributes ###

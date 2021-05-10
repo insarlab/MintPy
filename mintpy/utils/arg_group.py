@@ -167,6 +167,8 @@ def add_gps_argument(parser):
                      help='Show GPS site name')
     gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los'},
                      help='Plot GPS in color indicating deformation velocity direction')
+    gps.add_argument('--gps-redo', dest='gps_redo', action='store_true',
+                     help='Re-calculate GPS observations in LOS direction, instead of read from existing CSV file.')
     gps.add_argument('--ref-gps', dest='ref_gps_site', type=str, help='Reference GPS site')
 
     gps.add_argument('--gps-start-date', dest='gps_start_date', type=str, metavar='YYYYMMDD',

@@ -64,7 +64,7 @@ EXAMPLE = """example:
   view.py ifgramStack.h5 unwrapPhase-20070927_20100217 --mask ifgramStack.h5  #mask using connected components
 
   # GPS (for one subplot in geo-coordinates only)
-  view.py geo_velocity_msk.h5 velocity --show-gps       #show locations of available GPS
+  view.py geo_velocity_msk.h5 velocity --show-gps --gps-label   #show locations of available GPS
   view.py geo_velocity_msk.h5 velocity --show-gps --gps-comp enu2los --ref-gps GV01
   view.py geo_timeseries_ERA5_ramp_demErr.h5 20180619 --ref-date 20141213 --show-gps --gps-comp enu2los --ref-gps GV01
 
@@ -520,6 +520,8 @@ def plot_slice(ax, data, metadata, inps=None):
             data -= data[y, x]
             vprint(('referencing InSAR data to the pixel nearest to '
                     'GPS station: {} at {}').format(inps.ref_gps_site, ref_site_lalo))
+            # do not show the original InSAR reference point
+            inps.disp_ref_pixel = False
 
         extent = (inps.geo_box[0], inps.geo_box[2],
                   inps.geo_box[3], inps.geo_box[1])  # (W, E, S, N)
@@ -569,7 +571,6 @@ def plot_slice(ax, data, metadata, inps=None):
             SNWE = (inps.geo_box[3], inps.geo_box[1],
                     inps.geo_box[0], inps.geo_box[2])
             ax = pp.plot_gps(ax, SNWE, inps, metadata, print_msg=inps.print_msg)
-            vprint('displaying GPS stations')
 
         # Status bar
         if inps.dem_file:
