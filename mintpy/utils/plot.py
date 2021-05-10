@@ -8,7 +8,6 @@
 
 
 import os
-import csv
 import argparse
 import warnings
 import datetime
@@ -39,7 +38,6 @@ from mintpy.utils import (
     readfile,
     network as pnet,
     utils0 as ut0,
-    utils1 as ut1,
 )
 
 
@@ -1048,7 +1046,9 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
 
 
 def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
-    from mintpy.objects.gps import search_gps, GPS
+    from mintpy.objects import gps
+    vprint = print if print_msg else lambda *args, **kwargs: None
+
     marker_size = 7
     vmin, vmax = inps.vlim
     cmap = ColormapExt(inps.colormap).colormap if isinstance(inps.colormap, str) else inps.colormap
@@ -1063,82 +1063,57 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     if not inps.gps_end_date:
         inps.gps_end_date = metadata.get('END_DATE', None)
 
-    site_names, site_lats, site_lons = search_gps(SNWE, inps.gps_start_date, inps.gps_end_date)
-    num_site = len(site_names)
+    site_names, site_lats, site_lons = gps.search_gps(SNWE, inps.gps_start_date, inps.gps_end_date)
+    if inps.ref_gps_site and inps.ref_gps_site not in site_names:
+        raise ValueError('input reference GPS site "{}" not available!'.format(inps.ref_gps_site))
 
     k = metadata['FILE_TYPE']
     if inps.gps_component and k not in ['velocity', 'timeseries']:
         inps.gps_component = None
-        print('--gps-comp is not implemented for {} file yet, set --gps-comp = None and continue'.format(k))
+        vprint('WARNING: --gps-comp is not implemented for {} file yet, set --gps-comp = None and continue'.format(k))
 
     if inps.gps_component:
-        if print_msg:
-            print('-'*30)
-            msg = 'calculating GPS '
-            if k == 'velocity':
-                msg += 'velocity'
-            elif k == 'timeseries':
-                msg += 'displacement'
-            msg += ' with respect to {} in {} direction ...'.format(inps.ref_gps_site, inps.gps_component)
-            print(msg)
-            print('number of available GPS stations: {}'.format(num_site))
-            print('start date: {}'.format(inps.gps_start_date))
-            print('end   date: {}'.format(inps.gps_end_date))
-            prog_bar = ptime.progressBar(maxValue=num_site)
+        # plot GPS velocity/displacement along LOS direction
+        vprint('-'*30)
+        msg = 'plotting GPS '
+        msg += 'velocity' if k == 'velocity' else 'displacement'
+        msg += ' in LOS direction'
+        vprint(msg)
+        vprint('number of available GPS stations: {}'.format(len(site_names)))
+        vprint('start date: {}'.format(inps.gps_start_date))
+        vprint('end   date: {}'.format(inps.gps_end_date))
+        vprint('components projection: {}'.format(inps.gps_component))
 
-        # get insar_obj (meta / geom_file)
-        geom_file = ut1.get_geometry_file(['incidenceAngle','azimuthAngle'],
-                                          work_dir=os.path.dirname(inps.file),
-                                          coord='geo')
-        if geom_file:
-            geom_obj = geom_file
-            print('use incidenceAngle/azimuthAngle from file: {}'.format(os.path.basename(geom_file)))
-        else:
-            geom_obj = metadata
-            print('use incidenceAngle/azimuthAngle calculated from metadata')
+        # get GPS LOS observations
+        site_obs = gps.get_gps_los_obs(
+            insar_file=inps.file,
+            site_names=site_names,
+            start_date=inps.gps_start_date,
+            end_date=inps.gps_end_date,
+            gps_comp=inps.gps_component,
+            print_msg=print_msg,
+            redo=inps.gps_redo,
+        )
 
-        gps_data_list = []
-        for i in range(num_site):
-            if print_msg:
-                prog_bar.update(i+1, suffix=site_names[i])
+        # reference GPS
+        if inps.ref_gps_site:
+            vprint('referencing all GPS LOS observations to site: {}'.format(inps.ref_gps_site))
+            ref_ind = site_names.tolist().index(inps.ref_gps_site)
+            ref_val = site_obs[ref_ind]
+            if not np.isnan(ref_val):
+                site_obs -= ref_val
 
-            # calculate gps data value
-            obj = GPS(site_names[i])
-            if k == 'velocity':
-                gps_data = obj.get_gps_los_velocity(geom_obj,
-                                                    start_date=inps.gps_start_date,
-                                                    end_date=inps.gps_end_date,
-                                                    ref_site=inps.ref_gps_site,
-                                                    gps_comp=inps.gps_component) * unit_fac
-            elif k == 'timeseries':
-                dis = obj.read_gps_los_displacement(geom_obj,
-                                                    start_date=inps.gps_start_date,
-                                                    end_date=inps.gps_end_date,
-                                                    ref_site=inps.ref_gps_site,
-                                                    gps_comp=inps.gps_component)[1] * unit_fac
-                gps_data = dis[-1] - dis[0]
+        # scale to the same unit as InSAR
+        site_obs *= unit_fac
 
-            # save calculated GPS velocities to CSV file
-            csv_file = "GPSSitesVel.csv"
-            csv_columns = ['SiteID', 'Lon', 'Lat', 'LOS velocity [{}]'.format(inps.disp_unit)]
-            if not np.isnan(gps_data):
-                gps_data_list.append([site_names[i], site_lons[i], site_lats[i], gps_data])
-                with open(csv_file, 'w') as fc:
-                    fcw = csv.writer(fc)
-                    fcw.writerow(csv_columns)
-                    fcw.writerows(gps_data_list)
+        # plot
+        for lat, lon, obs in zip(site_lats, site_lons, site_obs):
+            color = cmap( (obs - vmin) / (vmax - vmin) ) if obs else 'none'
+            ax.scatter(lon, lat, color=color, s=marker_size**2, edgecolors='k', zorder=10)
 
-            # plot
-            if not gps_data:
-                color = 'none'
-            else:
-                cm_idx = (gps_data - vmin) / (vmax - vmin)
-                color = cmap(cm_idx)
-            ax.scatter(site_lons[i], site_lats[i], color=color,
-                       s=marker_size**2, edgecolors='k', zorder=10)
-        if print_msg:
-            prog_bar.close()
     else:
+        # plot GPS locations only
+        vprint('showing GPS locations')
         ax.scatter(site_lons, site_lats, s=marker_size**2, color='w', edgecolors='k', zorder=10)
 
     # plot GPS label
@@ -1146,6 +1121,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         for i in range(len(site_names)):
             ax.annotate(site_names[i], xy=(site_lons[i], site_lats[i]),
                         fontsize=inps.font_size)
+
     return ax
 
 
