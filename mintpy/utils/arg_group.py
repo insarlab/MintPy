@@ -306,7 +306,7 @@ def add_save_argument(parser):
                       help='save and do not display the figure')
     save.add_argument('--update', dest='update_mode', action='store_true',
                       help='enable update mode for save figure: skip running if\n'+
-                           '\t1) output file already exists\n'+
+                           '\t1) output file already exists AND\n'+
                            '\t2) output file is newer than input file.')
     return parser
 
