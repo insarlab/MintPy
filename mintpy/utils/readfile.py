@@ -416,6 +416,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
                 band = 2
             elif datasetName.lower() == 'band3':
                 band = 3
+
             elif datasetName.startswith(('mag', 'amp')):
                 cpx_band = 'magnitude'
             elif datasetName in ['phase', 'angle']:
@@ -424,8 +425,14 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
                 cpx_band = 'real'
             elif datasetName.lower().startswith('imag'):
                 cpx_band = 'imag'
-            elif datasetName .startswith(('cpx', 'complex')):
+            elif datasetName.startswith(('cpx', 'complex')):
                 cpx_band = 'complex'
+
+            else:
+                # flexible band list
+                ds_list = get_slice_list(fname)
+                if datasetName in ds_list:
+                    band = ds_list.index(datasetName) + 1
 
         band = min(band, num_band)
 
@@ -612,13 +619,14 @@ def get_slice_list(fname):
             # mag / pha / cpx reading like "multiple bands"
             slice_list = ['magnitude', 'phase']
 
-        elif (os.path.basename(fname).startswith('offset')
-                and fext in ['.bip']
-                and num_band == 2):
+        elif fbase.startswith('offset') and fext in ['.bip'] and num_band == 2:
             slice_list = ['azimuthOffset', 'rangeOffset']
 
+        elif fbase.startswith('offset') and fname.endswith('cov.bip') and num_band == 3:
+            slice_list = ['azimuthOffsetVar', 'rangeOffsetVar', 'offsetCovar']
+
         else:
-            slice_list = ['band{}'.format(i) for i in range(1,num_band+1)]
+            slice_list = ['band{}'.format(i+1) for i in range(num_band)]
 
     return slice_list
 
@@ -628,8 +636,7 @@ def get_dataset_list(fname, datasetName=None):
     if datasetName:
         return [datasetName]
 
-    fbase, fext = os.path.splitext(os.path.basename(fname))
-    fext = fext.lower()
+    fext = os.path.splitext(fname)[1].lower()
 
     global ds_list
     if fext in ['.h5', '.he5']:
@@ -644,12 +651,9 @@ def get_dataset_list(fname, datasetName=None):
         with h5py.File(fname, 'r') as f:
             f.visititems(get_hdf5_dataset)
 
-    elif fext in ['.trans', '.utm_to_rdc']:
-        ds_list = ['rangeCoord', 'azimuthCoord']
-    elif fbase.startswith('los'):
-        ds_list = ['incidenceAngle', 'azimuthAngle']
     else:
-        ds_list = [os.path.splitext(fbase)[0]]
+        ds_list = get_slice_list(fname)
+
     return ds_list
 
 

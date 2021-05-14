@@ -192,7 +192,7 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
         else:
             fig_title = datasetNames[0].split('-')[0]
 
-    elif len(datasetNames) == 1 and k in timeseriesKeyNames:
+    elif k in timeseriesKeyNames and len(datasetNames) == 1:
         if 'ref_date' in inps_dict.keys():
             ref_date = inps_dict['ref_date']
         elif 'REF_DATE' in atr.keys():
@@ -205,6 +205,7 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
         else:
             fig_title = '{}_{}'.format(ref_date, datasetNames[0])
 
+        # grab info of applied phase corrections from filename
         try:
             processMark = os.path.basename(fname).split('timeseries')[1].split(fext)[0]
             fig_title += processMark
@@ -224,12 +225,18 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
 
     else:
         fig_title = os.path.basename(fname)
+        # show dataset name for multi-band binry files
+        num_band = int(atr.get('number_bands', '1'))
+        if num_band > 1 and len(datasetNames) == 1:
+            fig_title += ' - {}'.format(datasetNames[0])
 
+    # suffix for subset
     if inps_dict.get('pix_box', None):
         box = inps_dict['pix_box']
         if (box[2] - box[0]) * (box[3] - box[1]) < num_pixel:
             fig_title += '_sub'
 
+    # suffix for re-wrapping
     if inps_dict.get('wrap', False):
         fig_title += '_wrap'
         wrap_range = inps_dict.get('wrap_range', [-1.*np.pi, np.pi])

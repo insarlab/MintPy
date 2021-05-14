@@ -1449,6 +1449,11 @@ class viewer():
         inps, self.atr = read_input_file_info(inps)
         inps = update_inps_with_file_metadata(inps, self.atr)
 
+        # --update option
+        self.flag = 'run'
+        if inps.update_mode and not inps.disp_fig and run_or_skip(inps) == 'skip':
+            self.flag = 'skip'
+
         # copy inps to self object
         for key, value in inps.__dict__.items():
             setattr(self, key, value)
@@ -1459,7 +1464,7 @@ class viewer():
                                                 datasetName=self.dset[0],
                                                 box=self.pix_box,
                                                 print_msg=self.print_msg)
-        return
+        return self.flag
 
 
     def plot(self):
@@ -1513,9 +1518,11 @@ class viewer():
             if self.save_fig:
                 vprint('save figure to {} with dpi={}'.format(os.path.abspath(self.outfile[0]), self.fig_dpi))
                 if not self.disp_whitespace:
-                    plt.savefig(self.outfile[0], transparent=True, dpi=self.fig_dpi, pad_inches=0.0)
+                    fig.savefig(self.outfile[0], transparent=True, dpi=self.fig_dpi, pad_inches=0.0)
                 else:
-                    plt.savefig(self.outfile[0], transparent=True, dpi=self.fig_dpi, bbox_inches='tight')
+                    fig.savefig(self.outfile[0], transparent=True, dpi=self.fig_dpi, bbox_inches='tight')
+                if not self.disp_fig:
+                    fig.clf()
 
         # Multiple Subplots
         else:
@@ -1545,7 +1552,8 @@ class viewer():
 def main(iargs=None):
     obj = viewer(iargs=iargs)
     obj.configure()
-    obj.plot()
+    if obj.flag == 'run':
+        obj.plot()
     return
 
 
