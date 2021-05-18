@@ -68,8 +68,10 @@ ifgramDatasetNames = [
     'wrapPhase',
     'ionoPhase',
     'magnitude',
-    'rangeOffset',
     'azimuthOffset',
+    'azimuthOffsetStd',
+    'rangeOffset',
+    'rangeOffsetStd',
     'offsetSNR',
     'refPhase',
 ]
@@ -84,9 +86,11 @@ datasetUnitDict = {
     'magnitude'        : '1',
 
     # offset
-    'azimuthOffset' : 'pixel',
-    'rangeOffset'   : 'pixel',
-    'offsetSNR'     : '1',
+    'azimuthOffset'    : 'pixel',
+    'azimuthOffsetStd' : 'pixel',
+    'rangeOffset'      : 'pixel',
+    'rangeOffsetStd'   : 'pixel',
+    'offsetSNR'        : '1',
 
     # geometry
     'height'             : 'm',

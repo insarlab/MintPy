@@ -43,7 +43,9 @@ datasetName2templateKey = {
     'magnitude'       : 'mintpy.load.magFile',
 
     'azimuthOffset'   : 'mintpy.load.azOffFile',
+    'azimuthOffsetStd': 'mintpy.load.azOffStdFile',
     'rangeOffset'     : 'mintpy.load.rgOffFile',
+    'rangeOffsetStd'  : 'mintpy.load.rgOffStdFile',
     'offsetSNR'       : 'mintpy.load.offSnrFile',
 
     'height'          : 'mintpy.load.demFile',
