@@ -190,7 +190,12 @@ def reference_file(inps):
     # Check 1 - stack and its non-nan mask pixel coverage
     # outFile=False --> no avgPhaseVelocity file is generated due to the lack of reference point info.
     # did not use maskConnComp.h5 because not all input dataset has connectComponent info
-    stack = ut.temporal_average(inps.file, datasetName='unwrapPhase', updateMode=True, outFile=False)[0]
+    if atr['FILE_TYPE'] == 'ifgramStack':
+        ds_names = readfile.get_dataset_list(inps.file)
+        ds_name = [i for i in ds_names if i in ['unwrapPhase', 'rangeOffset', 'azimuthOffset']][0]
+    else:
+        ds_name = None
+    stack = ut.temporal_average(inps.file, datasetName=ds_name, updateMode=True, outFile=False)[0]
     mask = np.multiply(~np.isnan(stack), stack != 0.)
     if np.nansum(mask) == 0.0:
         raise ValueError('no pixel found with valid phase value in all datasets.')

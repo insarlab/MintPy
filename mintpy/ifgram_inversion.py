@@ -175,7 +175,9 @@ def cmd_line_parse(iargs=None):
             raise ValueError(msg)
 
     # --skip-ref option
-    if 'offset' in inps.obsDatasetName.lower():
+    if ('offset' in inps.obsDatasetName.lower()
+            and 'REF_X' not in atr.keys()
+            and 'REF_Y' not in atr.keys()):
         inps.skip_ref = True
 
     # --output option
@@ -606,13 +608,12 @@ def read_unwrap_phase(stack_obj, box, ref_phase, obs_ds_name='unwrapPhase', drop
                               box=box,
                               dropIfgram=dropIfgram,
                               print_msg=False).reshape(num_ifgram, -1)
-    pha_data[np.isnan(pha_data)] = 0.
 
     # read ref_phase
     if ref_phase is not None:
         # use input ref_phase array
         if print_msg:
-            print('use input reference phase')
+            print('use input reference value')
 
     elif 'refPhase' in stack_obj.datasetNames:
         # read refPhase from file itself
@@ -622,7 +623,7 @@ def read_unwrap_phase(stack_obj, box, ref_phase, obs_ds_name='unwrapPhase', drop
             ref_phase = f['refPhase'][:]
 
     else:
-        raise Exception('No reference phase input/found on file!'+
+        raise Exception('No reference value input/found on file!'+
                         ' unwrapped phase is not referenced!')
 
     # reference unwrapPhase
@@ -649,15 +650,22 @@ def mask_unwrap_phase(pha_data, stack_obj, box, mask_ds_name=None, mask_threshol
         # set all NaN values in coherence, connectComponent, offsetSNR to zero
         # to avoid RuntimeWarning msg during math operation
         msk_data[np.isnan(msk_data)] = 0
+        if mask_ds_name in ['connectComponent']:
+            if print_msg:
+                print('mask out pixels with {} == 0 by setting them to NaN'.format(mask_ds_name))
 
-        if mask_ds_name in ['coherence', 'offsetSNR']:
+        elif mask_ds_name in ['coherence', 'offsetSNR']:
             msk_data = msk_data >= mask_threshold
             if print_msg:
                 print('mask out pixels with {} < {} by setting them to NaN'.format(mask_ds_name, mask_threshold))
 
-        elif mask_ds_name in ['connectComponent']:
+        elif mask_ds_name.endswith('OffsetStd'):
+            msk_data = msk_data <= mask_threshold
             if print_msg:
-                print('mask out pixels with {} == 0 by setting them to NaN'.format(mask_ds_name))
+                print('mask out pixels with {} > {} by setting them to NaN'.format(mask_ds_name, mask_threshold))
+
+        else:
+            raise ValueError('Un-recognized mask dataset name: {}'.format(mask_ds_name))
 
         # set values of mask-out pixels to NaN
         pha_data[msk_data == 0.] = np.nan
@@ -755,9 +763,10 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
 
-    # debug
-    #y, x = 258, 454
+    ## debug on a specific pixel
+    #y, x = 555, 612
     #box = (x, y, x+1, y+1)
+
 
     ## 1. input info
 
@@ -1039,10 +1048,14 @@ def ifgram_inversion(inps=None):
     msg += 'weight function: {}\n'.format(inps.weightFunc)
 
     if inps.maskDataset:
-        if inps.maskDataset in ['coherence', 'offsetSNR']:
-            suffix = '{} < {}'.format(inps.maskDataset, inps.maskThreshold)
-        else:
+        if inps.maskDataset in ['connectComponent']:
             suffix = '{} == 0'.format(inps.maskDataset)
+        elif inps.maskDataset in ['coherence', 'offsetSNR']:
+            suffix = '{} < {}'.format(inps.maskDataset, inps.maskThreshold)
+        elif inps.maskDataset.endswith('OffsetStd'):
+            suffix = '{} > {}'.format(inps.maskDataset, inps.maskThreshold)
+        else:
+            raise ValueError('Un-recognized mask dataset name: {}'.format(inps.maskDataset))
         msg += 'mask out pixels with: {}\n'.format(suffix)
     else:
         msg += 'mask: no\n'
@@ -1084,9 +1097,11 @@ def ifgram_inversion(inps=None):
     if 'residual' in os.path.basename(inps.invQualityFile).lower():
         inv_quality_name = 'residual'
         meta['UNIT'] = 'pixel'
+        ref_point_inv_quality = 0
     else:
         inv_quality_name = 'temporalCoherence'
         meta['UNIT'] = '1'
+        ref_point_inv_quality = 1
     meta['FILE_TYPE'] = inv_quality_name
     meta.pop('REF_DATE')
     ds_name_dict = {meta['FILE_TYPE'] : [np.float32, (length, width)]}
@@ -1190,9 +1205,9 @@ def ifgram_inversion(inps=None):
         print('-'*50)
         print('update values on the reference pixel: ({}, {})'.format(ref_y, ref_x))
 
-        print('set {} on the reference pixel to 1.'.format(inv_quality_name))
+        print('set {} on the reference pixel to {}.'.format(inv_quality_name, ref_point_inv_quality))
         with h5py.File(inps.invQualityFile, 'r+') as f:
-            f['temporalCoherence'][ref_y, ref_x] = 1.
+            f[inv_quality_name][ref_y, ref_x] = ref_point_inv_quality
 
         print('set  # of observations on the reference pixel as {}'.format(num_ifgram))
         with h5py.File(inps.numInvFile, 'r+') as f:
