@@ -348,12 +348,17 @@ def read_date_info(inps):
 
     # output file name
     if not inps.outfile:
+        fbase = os.path.splitext(os.path.basename(inps.timeseries_file))[0]
         outname = 'velocity'
         if inps.key == 'giantTimeseries':
             prefix = os.path.basename(inps.timeseries_file).split('PARAMS')[0]
             outname = prefix + outname
+        elif fbase in ['timeseriesRg', 'timeseriesAz']:
+            suffix = fbase.split('timeseries')[-1]
+            outname = outname + suffix
         outname += '.h5'
         inps.outfile = outname
+
     return inps
 
 
