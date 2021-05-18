@@ -141,6 +141,13 @@ class ifgramStackDict:
                                       chunks=True,
                                       compression=dsCompression)
 
+                # set no-data value - printout msg
+                if dsName.endswith('OffsetVar'):
+                    print('set no-data value for {} from 99 to NaN.'.format(dsName))
+                    dsFile = self.pairsDict[self.pairs[0]].datasetDict[dsName]
+                    if dsFile.endswith('cov.bip'):
+                        print('convert variance to standard deviation.')
+
                 prog_bar = ptime.progressBar(maxValue=self.numIfgram)
                 for i in range(self.numIfgram):
                     # read
@@ -149,6 +156,17 @@ class ifgramStackDict:
                                           box=box,
                                           xstep=xstep,
                                           ystep=ystep)[0]
+
+                    # special handling to offset covariance file
+                    if dsName.endswith('OffsetStd'):
+                        # set no-data value to np.nan
+                        data[data == 99.] = np.nan
+
+                        # convert variance to std. dev.
+                        dsFile = ifgramObj.datasetDict[dsName]
+                        if dsFile.endswith('cov.bip'):
+                            data = np.sqrt(data)
+
                     # write
                     ds[i, :, :] = data
                     prog_bar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],
