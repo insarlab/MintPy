@@ -62,9 +62,9 @@ REFERENCE = """reference:
   2324-2341, doi:10.1002/2013JB010588.
 
   # ERA-5
-  Copernicus Climate Change Service (2017): ERA5: Fifth generation of ECMWF atmospheric reanalyses of 
-  the global climate. Copernicus Climate Change Service Climate Data Store, 
-  date of access: {your_date_of_access}. https://cds.climate.copernicus.eu/cdsapp#!/hom
+  Hersbach, H., Bell, B., Berrisford, P., Hirahara, S., Horányi, A., Muñoz-Sabater, J., et al. (2020). 
+  The ERA5 global reanalysis. Quarterly Journal of the Royal Meteorological Society, 146(730), 1999–2049.
+  https://doi.org/10.1002/qj.3803
 """
 
 DATA_INFO = """Global Atmospheric Models:

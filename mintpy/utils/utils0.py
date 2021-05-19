@@ -634,6 +634,7 @@ def which(program):
 
 def check_parallel(file_num=1, print_msg=True, maxParallelNum=8):
     """Check parallel option based file num and installed module
+    Link: https://joblib.readthedocs.io/en/latest/parallel.html
     Examples:
         num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(file_list))
         Parallel(n_jobs=num_cores)(delayed(subset_file)(file, vars(inps)) for file in file_list)

@@ -523,8 +523,10 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
 
     # For colorful display of coherence
     if 'cohList'     not in p_dict.keys():  p_dict['cohList']     = None
+    if 'xlabel'      not in p_dict.keys():  p_dict['xlabel']      = 'Time [years]'
     if 'ylabel'      not in p_dict.keys():  p_dict['ylabel']      = 'Perp Baseline [m]'
     if 'cbar_label'  not in p_dict.keys():  p_dict['cbar_label']  = 'Average Spatial Coherence'
+    if 'cbar_size'   not in p_dict.keys():  p_dict['cbar_size']   = '3%'
     if 'disp_cbar'   not in p_dict.keys():  p_dict['disp_cbar']   = True
     if 'colormap'    not in p_dict.keys():  p_dict['colormap']    = 'RdBu'
     if 'vlim'        not in p_dict.keys():  p_dict['vlim']        = [0.2, 1.0]
@@ -592,7 +594,7 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
             print('display range: {}'.format(p_dict['vlim']))
 
         if p_dict['disp_cbar']:
-            cax = make_axes_locatable(ax).append_axes("right", "3%", pad="3%")
+            cax = make_axes_locatable(ax).append_axes("right", p_dict['cbar_size'], pad=p_dict['cbar_size'])
             norm = mpl.colors.Normalize(vmin=disp_min, vmax=disp_max)
             cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
             cbar.ax.tick_params(labelsize=p_dict['fontsize'])
@@ -649,7 +651,7 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
     ax = auto_adjust_xaxis_date(ax, datevector, fontsize=p_dict['fontsize'],
                                 every_year=p_dict['every_year'])[0]
     ax = auto_adjust_yaxis(ax, pbaseList, fontsize=p_dict['fontsize'])
-    ax.set_xlabel('Time [years]', fontsize=p_dict['fontsize'])
+    ax.set_xlabel(p_dict['xlabel'], fontsize=p_dict['fontsize'])
     ax.set_ylabel(p_dict['ylabel'], fontsize=p_dict['fontsize'])
     ax.tick_params(which='both', direction='in', labelsize=p_dict['fontsize'],
                    bottom=True, top=True, left=True, right=True)
@@ -1151,8 +1153,13 @@ def plot_colorbar(inps, im, cax):
         inps.cbar_nbins = inps.cmap_lut
 
     if inps.cbar_nbins:
-        cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
-        cbar.update_ticks()
+        if inps.cbar_nbins <= 2:
+            # manually set tick for better positions when the color step is not a common number
+            # e.g. for numInvIfgram.h5
+            cbar.set_ticks(inps.dlim)
+        else:
+            cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
+            cbar.update_ticks()
 
     cbar.ax.tick_params(which='both', direction='out', labelsize=inps.font_size, colors=inps.font_color)
 
