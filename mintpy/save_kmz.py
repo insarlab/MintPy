@@ -77,8 +77,8 @@ def create_parser():
                      default='lower left', help='Location of colorbar in the screen. Default: lower left.')
     fig.add_argument('--cbar-label', dest='cbar_label', metavar='LABEL', default='Mean LOS velocity',
                      help='Colorbar label. Default: Mean LOS velocity')
-    fig.add_argument('--cbar-bin-num', dest='cbar_bin_num', metavar='NUM', type=int, default=7,
-                     help='Colorbar bin number. Default: 7')
+    fig.add_argument('--cbar-bin-num', dest='cbar_bin_num', metavar='NUM', type=int,
+                     help='Colorbar bin number (default: %(default)s).')
 
     # Reference Pixel
     ref = parser.add_argument_group('Reference Pixel')
@@ -110,13 +110,17 @@ def cmd_line_parse(iargs=None):
 
 
 def plot_colorbar(out_file, vmin, vmax, unit='cm/year', cmap='jet', figsize=(0.18, 3.6),
-                  nbins=7, label='Mean LOS velocity'):
+                  nbins=None, label='Mean LOS velocity'):
     fig, cax = plt.subplots(figsize=figsize)
     norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
     cbar = mpl.colorbar.ColorbarBase(cax, cmap=plt.get_cmap(cmap), norm=norm, orientation='vertical')
     cbar.set_label('{} [{}]'.format(label, unit), fontsize=12)
-    cbar.locator = mpl.ticker.MaxNLocator(nbins=nbins)
-    cbar.update_ticks()
+
+    # update ticks
+    if nbins:
+        cbar.locator = mpl.ticker.MaxNLocator(nbins=nbins)
+        cbar.update_ticks()
+
     cbar.ax.tick_params(which='both', labelsize=12)
     fig.patch.set_facecolor('white')
     fig.patch.set_alpha(0.7)
@@ -126,7 +130,7 @@ def plot_colorbar(out_file, vmin, vmax, unit='cm/year', cmap='jet', figsize=(0.1
 
 
 def generate_cbar_element(cbar_file, vmin, vmax, unit='cm/year', cmap='jet', loc='lower left',
-                          nbins=7, label='Mean LOS velocity'):
+                          nbins=None, label='Mean LOS velocity'):
     # plot colobar and save as an image
     cbar_file = plot_colorbar(out_file=cbar_file,
                               vmin=vmin,

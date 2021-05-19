@@ -275,11 +275,16 @@ def update_inps_with_file_metadata(inps, metadata):
     # Reference Point
     # Convert ref_lalo if existed, to ref_yx, and use ref_yx for the following
     # ref_yx is referenced to input data coverage, not subseted area for display
-    if inps.ref_lalo and inps.geo_box:
-        inps.ref_yx = [coord.lalo2yx(inps.ref_lalo[0], coord_type='lat'),
-                       coord.lalo2yx(inps.ref_lalo[1], coord_type='lon')]
+    if inps.ref_lalo:
         vprint('input reference point in lat/lon: {}'.format(inps.ref_lalo))
-        vprint('input reference point in y  /x  : {}'.format(inps.ref_yx))
+        if not inps.geo_box and not coord.lookup_file:
+            print('WARNING: --ref-lalo is NOT supported when 1) file is radar-coded AND 2) no lookup table file found')
+            print('    --> ignore the --ref-lalo input and continue.')
+            inps.ref_lalo = []
+
+        else:
+            inps.ref_yx = coord.geo2radar(inps.ref_lalo[0], inps.ref_lalo[1])
+            vprint('input reference point in y  /x  : {}'.format(inps.ref_yx))
 
     # ref_lalo
     if inps.ref_yx and inps.geo_box:

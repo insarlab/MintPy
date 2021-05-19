@@ -36,9 +36,9 @@ jobs:
             git clone https://github.com/insarlab/PySolid.git ${HOME}/tools/PySolid
             # install dependencies
             source activate root
-            conda config --add channels conda-forge
-            conda install --yes --file $MINTPY_HOME/docs/conda.txt gdal>=3 gfortran_linux-64
-            pip install git+https://github.com/tylere/pykml.git
+            ${HOME}/tools/miniconda3/bin/conda config --add channels conda-forge
+            ${HOME}/tools/miniconda3/bin/conda install --yes --file $MINTPY_HOME/docs/conda.txt gdal>=3 gfortran_linux-64
+            ${HOME}/tools/miniconda3/bin/pip install git+https://github.com/tylere/pykml.git
             # compile pysolid Fortran code
             cd ${HOME}/tools/PySolid/pysolid
             f2py -c -m solid solid.for
