@@ -53,7 +53,7 @@ class ifgramStackDict:
     def __init__(self, name='ifgramStack', pairsDict=None, dsName0=ifgramDatasetNames[0]):
         self.name = name
         self.pairsDict = pairsDict
-        self.dsName0 = dsName0        #reference dataset name, unwrapPhase OR azimuthOffset
+        self.dsName0 = dsName0        #reference dataset name, unwrapPhase OR azimuthOffset OR rangeOffset
 
     def get_size(self, box=None, xstep=1, ystep=1):
         self.numIfgram = len(self.pairsDict)

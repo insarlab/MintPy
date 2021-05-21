@@ -754,7 +754,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
         # FILE_TYPE - k
         # pre-defined/known dataset/group names > existing FILE_TYPE > exsiting dataset/group names
         py2_mintpy_stack_files = ['interferograms', 'coherence', 'wrapped'] #obsolete mintpy format
-        if any(i in d1_list for i in ['unwrapPhase', 'azimuthOffset']):
+        if any(i in d1_list for i in ['unwrapPhase', 'rangeOffset', 'azimuthOffset']):
             k = 'ifgramStack'
         elif any(i in d1_list for i in ['height', 'latitude', 'azimuthCoord']):
             k = 'geometry'
