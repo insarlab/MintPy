@@ -49,14 +49,19 @@ def check_loaded_dataset(work_dir='./', print_msg=True, relpath=False):
     work_dir = os.path.abspath(work_dir)
 
     # 1. interferograms stack file: unwrapPhase, coherence
+    ds_list = ['unwrapPhase', 'rangeOffset', 'azimuthOffset']
     flist = [os.path.join(work_dir, 'inputs/ifgramStack.h5')]
     stack_file = is_file_exist(flist, abspath=True)
     if stack_file is not None:
         obj = ifgramStack(stack_file)
         obj.open(print_msg=False)
-        for dname in ['unwrapPhase', 'coherence']:
-            if dname not in obj.datasetNames and 'azimuthOffset' not in obj.datasetNames:
-                raise ValueError('required dataset "{}" is missing in file {}'.format(dname, stack_file))
+        if all(x not in obj.datasetNames for x in ds_list):
+            msg = 'required dataset is missing in file {}:'.format(stack_file)
+            msg += '\n' + ' OR '.join(ds_list)
+            raise ValueError(msg)
+        # check coherence for phase stack
+        if 'unwrapPhase' in obj.datasetNames and 'coherence' not in obj.datasetNames:
+            print('WARNING: "coherence" is missing in file {}'.format(stack_file))
     else:
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), './inputs/ifgramStack.h5')
 

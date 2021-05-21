@@ -397,7 +397,7 @@ def read_inps_dict2ifgram_stack_dict_object(iDict):
                                                    path=iDict[key]))
 
     # Check 1: required dataset
-    dsName0s = ['unwrapPhase', 'azimuthOffset']
+    dsName0s = ['unwrapPhase', 'rangeOffset', 'azimuthOffset']
     dsName0 = [i for i in dsName0s if i in dsPathDict.keys()]
     if len(dsName0) == 0:
         print('WARNING: No reqired {} data files found!'.format(dsName0s))
@@ -671,7 +671,7 @@ def prepare_metadata(iDict):
         geom_dir = os.path.dirname(iDict['mintpy.load.demFile'])
 
         # observation
-        obs_keys = ['mintpy.load.unwFile', 'mintpy.load.azOffFile']
+        obs_keys = ['mintpy.load.unwFile', 'mintpy.load.rgOffFile', 'mintpy.load.azOffFile']
         obs_keys = [i for i in obs_keys if i in iDict.keys()]
         obs_paths = [iDict[key] for key in obs_keys if iDict[key].lower() != 'auto']
         if len(obs_paths) > 0:

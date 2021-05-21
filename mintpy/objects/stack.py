@@ -910,7 +910,7 @@ class ifgramStack:
         with h5py.File(self.file, 'r') as f:
             # get default datasetName
             if datasetName is None:
-                datasetName = [i for i in ['unwrapPhase', 'azimuthOffset'] if i in f.keys()][0]
+                datasetName = [i for i in ['unwrapPhase', 'rangeOffset', 'azimuthOffset'] if i in f.keys()][0]
 
             # get 3D size
             self.numIfgram, self.length, self.width = f[datasetName].shape
