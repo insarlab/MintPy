@@ -26,11 +26,11 @@ from mintpy.utils import (
 
 ###############################  Usage  ################################
 REFERENCE = """reference:
-  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis:
+  Yunjun, Z., Fattahi, H. and Amelung, F. (2019), Small baseline InSAR time series analysis:
   Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
   doi:10.1016/j.cageo.2019.104331.
 
-  Chaussard, E., R. Bürgmann, H. Fattahi, R. M. Nadeau, T. Taira, C. W. Johnson, and I. Johanson
+  Chaussard, E., Bürgmann, R., Fattahi, H., Nadeau, R. M., Taira, T., Johnson, C. W. and Johanson, I.
   (2015), Potential for larger earthquakes in the East San Francisco Bay Area due to the direct
   connection between the Hayward and Calaveras Faults, Geophysical Research Letters, 42(8),
   2734-2741, doi:10.1002/2015GL063575.
