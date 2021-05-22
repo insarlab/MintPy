@@ -58,7 +58,7 @@ def create_parser():
                         help='Do not update auxilary files, e.g.\n' +
                              'maskConnComp.h5 or avgSpatialCoh.h5 from ifgramStack.h5')
 
-    # 1
+    # 1. temp/perp baseline, num of conn., dates, pair index, etc.
     parser.add_argument('--max-tbase', dest='tempBaseMax',
                         type=float, help='max temporal baseline in days')
     parser.add_argument('--max-pbase', dest='perpBaseMax',
@@ -77,7 +77,7 @@ def create_parser():
     parser.add_argument('--end-date', '--max-date', dest='endDate',
                         help='remove/drop interferograms with date later than end-date in YYMMDD or YYYYMMDD format')
 
-    # 2. Coherence-based network
+    # 2. coherence-based network
     cohBased = parser.add_argument_group('Coherence-based Network',
                                          'Drop/modify network based on spatial coherence')
     cohBased.add_argument('--coherence-based', dest='coherenceBased', action='store_true',
@@ -97,7 +97,7 @@ def create_parser():
                           help='Lookup table/mapping transformation file for geo/radar coordinate conversion.\n' +
                                'Needed for mask AOI in lalo')
 
-    # 3 Manually select network
+    # 3. manual selection
     manual = parser.add_argument_group('Manual Network', 'Manually select/drop/modify network')
     manual.add_argument('--manual', action='store_true',
                         help='display network to manually choose line/interferogram to remove')
@@ -404,7 +404,7 @@ def get_date12_to_drop(inps):
                                      saveList=True)[0]
 
         # get coherence-based network
-        coh_date12_list = list(np.array(coh_date_list)[np.array(cohList) >= inps.minCoherence])
+        coh_date12_list = list(np.array(date12ListAll)[np.array(cohList) >= inps.minCoherence])
 
         # get MST network
         if inps.keepMinSpanTree:
