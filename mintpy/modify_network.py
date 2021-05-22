@@ -26,12 +26,12 @@ from mintpy.utils import (
 
 ###############################  Usage  ################################
 REFERENCE = """reference:
-  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis: 
+  Yunjun, Z., Fattahi, H. and Amelung, F. (2019), Small baseline InSAR time series analysis:
   Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
   doi:10.1016/j.cageo.2019.104331.
 
-  Chaussard, E., R. Bürgmann, H. Fattahi, R. M. Nadeau, T. Taira, C. W. Johnson, and I. Johanson
-  (2015), Potential for larger earthquakes in the East San Francisco Bay Area due to the direct 
+  Chaussard, E., Bürgmann, R., Fattahi, H., Nadeau, R. M., Taira, T., Johnson, C. W. and Johanson, I.
+  (2015), Potential for larger earthquakes in the East San Francisco Bay Area due to the direct
   connection between the Hayward and Calaveras Faults, Geophysical Research Letters, 42(8),
   2734-2741, doi:10.1002/2015GL063575.
 """
@@ -58,7 +58,7 @@ def create_parser():
                         help='Do not update auxilary files, e.g.\n' +
                              'maskConnComp.h5 or avgSpatialCoh.h5 from ifgramStack.h5')
 
-    # 1
+    # 1. temp/perp baseline, num of conn., dates, pair index, etc.
     parser.add_argument('--max-tbase', dest='tempBaseMax',
                         type=float, help='max temporal baseline in days')
     parser.add_argument('--max-pbase', dest='perpBaseMax',
@@ -77,7 +77,7 @@ def create_parser():
     parser.add_argument('--end-date', '--max-date', dest='endDate',
                         help='remove/drop interferograms with date later than end-date in YYMMDD or YYYYMMDD format')
 
-    # 2. Coherence-based network
+    # 2. coherence-based network
     cohBased = parser.add_argument_group('Coherence-based Network',
                                          'Drop/modify network based on spatial coherence')
     cohBased.add_argument('--coherence-based', dest='coherenceBased', action='store_true',
@@ -97,7 +97,7 @@ def create_parser():
                           help='Lookup table/mapping transformation file for geo/radar coordinate conversion.\n' +
                                'Needed for mask AOI in lalo')
 
-    # 3 Manually select network
+    # 3. manual selection
     manual = parser.add_argument_group('Manual Network', 'Manually select/drop/modify network')
     manual.add_argument('--manual', action='store_true',
                         help='display network to manually choose line/interferogram to remove')
@@ -315,45 +315,6 @@ def get_date12_to_drop(inps):
         date12_to_drop += tempList
         print('date12 not in reference file: ({})\n{}'.format(len(tempList), tempList))
 
-    # coherence file
-    if inps.coherenceBased:
-        print('--------------------------------------------------')
-        print('use coherence-based network modification')
-        coord = ut.coordinate(obj.metadata, lookup_file=inps.lookupFile)
-        if inps.aoi_geo_box and inps.lookupFile:
-            print('input AOI in (lon0, lat1, lon1, lat0): {}'.format(inps.aoi_geo_box))
-            inps.aoi_pix_box = coord.bbox_geo2radar(inps.aoi_geo_box)
-        if inps.aoi_pix_box:
-            inps.aoi_pix_box = coord.check_box_within_data_coverage(inps.aoi_pix_box)
-            print('input AOI in (x0,y0,x1,y1): {}'.format(inps.aoi_pix_box))
-
-        # Calculate spatial average coherence
-        cohList = ut.spatial_average(inps.file,
-                                     datasetName='coherence',
-                                     maskFile=inps.maskFile,
-                                     box=inps.aoi_pix_box,
-                                     saveList=True)[0]
-        coh_date12_list = list(np.array(date12ListAll)[np.array(cohList) >= inps.minCoherence])
-
-        # MST network
-        if inps.keepMinSpanTree:
-            print('Get minimum spanning tree (MST) of interferograms with inverse of coherence.')
-            msg = ('Drop ifgrams with '
-                   '1) average coherence < {} AND '
-                   '2) not in MST network: '.format(inps.minCoherence))
-            mst_date12_list = pnet.threshold_coherence_based_mst(date12ListAll, cohList)
-            mst_date12_list = ptime.yyyymmdd_date12(mst_date12_list)
-        else:
-            msg = 'Drop ifgrams with average coherence < {}: '.format(inps.minCoherence)
-            mst_date12_list = []
-
-        tempList = sorted(list(set(date12ListAll) - set(coh_date12_list + mst_date12_list)))
-        date12_to_drop += tempList
-        msg += '({})'.format(len(tempList))
-        if len(tempList) <= 200:
-            msg += '\n{}'.format(tempList)
-        print(msg)
-
     # temp baseline threshold
     if inps.tempBaseMax:
         tempIndex = np.abs(obj.tbaseIfgram) > inps.tempBaseMax
@@ -391,9 +352,8 @@ def get_date12_to_drop(inps):
         date12_to_drop += tempList
         print('--------------------------------------------------')
         print('Drop ifgrams with the following index number: {}'.format(len(tempList)))
-        for i in range(len(tempList)):
-            print('{} : {}'.format(i, tempList[i]))
-            #len(tempList), zip(inps.excludeIfgIndex, tempList)))
+        for i, date12 in enumerate(tempList):
+            print('{} : {}'.format(i, date12))
 
     # excludeDate
     if inps.excludeDate:
@@ -421,6 +381,59 @@ def get_date12_to_drop(inps):
         print('Drop ifgrams with date later than: {} ({})\n{}'.format(
             inps.endDate, len(tempList), tempList))
 
+    # coherence file
+    if inps.coherenceBased:
+        print('--------------------------------------------------')
+        print('use coherence-based network modification')
+
+        # get area of interest for coherence calculation
+        coord = ut.coordinate(obj.metadata, lookup_file=inps.lookupFile)
+        if inps.aoi_geo_box and inps.lookupFile:
+            print('input AOI in (lon0, lat1, lon1, lat0): {}'.format(inps.aoi_geo_box))
+            inps.aoi_pix_box = coord.bbox_geo2radar(inps.aoi_geo_box)
+        if inps.aoi_pix_box:
+            inps.aoi_pix_box = coord.check_box_within_data_coverage(inps.aoi_pix_box)
+            print('input AOI in (x0,y0,x1,y1): {}'.format(inps.aoi_pix_box))
+
+        # calculate spatial average coherence
+        cohList = ut.spatial_average(inps.file,
+                                     datasetName='coherence',
+                                     maskFile=inps.maskFile,
+                                     box=inps.aoi_pix_box,
+                                     saveList=True)[0]
+
+        # get coherence-based network
+        coh_date12_list = list(np.array(date12ListAll)[np.array(cohList) >= inps.minCoherence])
+
+        # get MST network
+        if inps.keepMinSpanTree:
+            print('Get minimum spanning tree (MST) of interferograms with inverse of coherence.')
+            msg = ('Drop ifgrams with '
+                   '1) average coherence < {} AND '
+                   '2) not in MST network: '.format(inps.minCoherence))
+
+            # get the current remaining network (after all the above criteria and before coherence-based)
+            date12_to_keep = list(set(date12ListAll) - set(date12_to_drop))
+            coh_to_keep = [coh for coh, date12 in zip(cohList, date12ListAll)
+                           if date12 in date12_to_keep]
+
+            # get MST from the current remaining network
+            mst_date12_list = pnet.threshold_coherence_based_mst(date12_to_keep, coh_to_keep)
+            mst_date12_list = ptime.yyyymmdd_date12(mst_date12_list)
+
+        else:
+            msg = 'Drop ifgrams with average coherence < {}: '.format(inps.minCoherence)
+            mst_date12_list = []
+
+        # drop all dates (below coh thresh AND not in MST)
+        tempList = sorted(list(set(date12ListAll) - set(coh_date12_list + mst_date12_list)))
+        date12_to_drop += tempList
+
+        msg += '({})'.format(len(tempList))
+        if len(tempList) <= 200:
+            msg += '\n{}'.format(tempList)
+        print(msg)
+
     # Manually drop pairs
     if inps.manual:
         tempList = manual_select_pairs_to_remove(inps.file)
@@ -430,6 +443,7 @@ def get_date12_to_drop(inps):
         print('date12 selected to remove: ({})\n{}'.format(len(tempList), tempList))
         date12_to_drop += tempList
 
+    ## summary
     # drop duplicate date12 and sort in order
     date12_to_drop = sorted(list(set(date12_to_drop)))
     date12_to_keep = sorted(list(set(date12ListAll) - set(date12_to_drop)))
@@ -437,12 +451,16 @@ def get_date12_to_drop(inps):
     print('number of interferograms to remove: {}'.format(len(date12_to_drop)))
     print('number of interferograms to keep  : {}'.format(len(date12_to_keep)))
 
+    # print list of date to drop
     date_to_keep = [d for date12 in date12_to_keep for d in date12.split('_')]
     date_to_keep = sorted(list(set(date_to_keep)))
     date_to_drop = sorted(list(set(dateList) - set(date_to_keep)))
     if len(date_to_drop) > 0:
         print('number of acquisitions to remove: {}\n{}'.format(len(date_to_drop), date_to_drop))
 
+    # checking:
+    # 1) no new date12 to drop against existing file
+    # 2) no date12 left after dropping
     date12ListKept = obj.get_date12_list(dropIfgram=True)
     date12ListDropped = sorted(list(set(date12ListAll) - set(date12ListKept)))
     if date12_to_drop == date12ListDropped:
@@ -450,6 +468,7 @@ def get_date12_to_drop(inps):
         date12_to_drop = None
     elif date12_to_drop == date12ListAll:
         raise Exception('Zero interferogram left! Please adjust your setting and try again.')
+
     return date12_to_drop
 
 
