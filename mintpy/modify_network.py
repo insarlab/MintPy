@@ -386,6 +386,8 @@ def get_date12_to_drop(inps):
     if inps.coherenceBased:
         print('--------------------------------------------------')
         print('use coherence-based network modification')
+
+        # get area of interest for coherence calculation
         coord = ut.coordinate(obj.metadata, lookup_file=inps.lookupFile)
         if inps.aoi_geo_box and inps.lookupFile:
             print('input AOI in (lon0, lat1, lon1, lat0): {}'.format(inps.aoi_geo_box))
@@ -394,45 +396,44 @@ def get_date12_to_drop(inps):
             inps.aoi_pix_box = coord.check_box_within_data_coverage(inps.aoi_pix_box)
             print('input AOI in (x0,y0,x1,y1): {}'.format(inps.aoi_pix_box))
 
-        # Calculate spatial average coherence
-        cohList_temp, coh_date_list_temp = ut.spatial_average(inps.file,
+        # calculate spatial average coherence
+        cohList = ut.spatial_average(inps.file,
                                      datasetName='coherence',
                                      maskFile=inps.maskFile,
                                      box=inps.aoi_pix_box,
-                                     saveList=True)
+                                     saveList=True)[0]
 
-        date12_to_keep_temp = list(set(date12ListAll) - set(date12_to_drop))
-        cohList, coh_date_list = [], []
-        ## check if date for coh is in the current list
-        for coh, coh_date in zip(cohList_temp, coh_date_list_temp):
-            if coh_date in date12_to_keep_temp:
-                cohList.append(coh)
-                coh_date_list.append(coh_date)
-
+        # get coherence-based network
         coh_date12_list = list(np.array(coh_date_list)[np.array(cohList) >= inps.minCoherence])
 
-        # MST network
+        # get MST network
         if inps.keepMinSpanTree:
             print('Get minimum spanning tree (MST) of interferograms with inverse of coherence.')
             msg = ('Drop ifgrams with '
                    '1) average coherence < {} AND '
                    '2) not in MST network: '.format(inps.minCoherence))
-            # MST from just dates that havent been previously dropped
-            mst_date12_list = pnet.threshold_coherence_based_mst(coh_date_list, cohList)
+
+            # get the current remaining network (after all the above criteria and before coherence-based)
+            date12_to_keep = list(set(date12ListAll) - set(date12_to_drop))
+            coh_to_keep = [coh for coh, date12 in zip(cohList, date12ListAll)
+                           if date12 in date12_to_keep]
+
+            # get MST from the current remaining network
+            mst_date12_list = pnet.threshold_coherence_based_mst(date12_to_keep, coh_to_keep)
             mst_date12_list = ptime.yyyymmdd_date12(mst_date12_list)
+
         else:
             msg = 'Drop ifgrams with average coherence < {}: '.format(inps.minCoherence)
             mst_date12_list = []
 
-        # will now drop all dates not (above coh thresh or in MST)
-        tempList = sorted(list(set(date12_to_keep_temp) - set(coh_date12_list + mst_date12_list)))
+        # drop all dates (below coh thresh AND not in MST)
+        tempList = sorted(list(set(date12ListAll) - set(coh_date12_list + mst_date12_list)))
         date12_to_drop += tempList
-
 
         msg += '({})'.format(len(tempList))
         if len(tempList) <= 200:
             msg += '\n{}'.format(tempList)
-
+        print(msg)
 
     # Manually drop pairs
     if inps.manual:
@@ -443,6 +444,7 @@ def get_date12_to_drop(inps):
         print('date12 selected to remove: ({})\n{}'.format(len(tempList), tempList))
         date12_to_drop += tempList
 
+    ## summary
     # drop duplicate date12 and sort in order
     date12_to_drop = sorted(list(set(date12_to_drop)))
     date12_to_keep = sorted(list(set(date12ListAll) - set(date12_to_drop)))
@@ -450,12 +452,16 @@ def get_date12_to_drop(inps):
     print('number of interferograms to remove: {}'.format(len(date12_to_drop)))
     print('number of interferograms to keep  : {}'.format(len(date12_to_keep)))
 
+    # print list of date to drop
     date_to_keep = [d for date12 in date12_to_keep for d in date12.split('_')]
     date_to_keep = sorted(list(set(date_to_keep)))
     date_to_drop = sorted(list(set(dateList) - set(date_to_keep)))
     if len(date_to_drop) > 0:
         print('number of acquisitions to remove: {}\n{}'.format(len(date_to_drop), date_to_drop))
 
+    # checking:
+    # 1) no new date12 to drop against existing file
+    # 2) no date12 left after dropping
     date12ListKept = obj.get_date12_list(dropIfgram=True)
     date12ListDropped = sorted(list(set(date12ListAll) - set(date12ListKept)))
     if date12_to_drop == date12ListDropped:
@@ -463,6 +469,7 @@ def get_date12_to_drop(inps):
         date12_to_drop = None
     elif date12_to_drop == date12ListAll:
         raise Exception('Zero interferogram left! Please adjust your setting and try again.')
+
     return date12_to_drop
 
 
