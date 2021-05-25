@@ -267,12 +267,12 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
         box = (0, r0, stack_obj.width, r1)
 
         # read data
-        unw = ifginv.read_unwrap_phase(stack_obj,
-                                       box=box,
-                                       ref_phase=ref_phase,
-                                       obs_ds_name=dsName,
-                                       dropIfgram=True,
-                                       print_msg=False).reshape(num_ifgram, -1)
+        unw = ifginv.read_stack_obs(stack_obj,
+                                    box=box,
+                                    ref_phase=ref_phase,
+                                    obs_ds_name=dsName,
+                                    dropIfgram=True,
+                                    print_msg=False).reshape(num_ifgram, -1)
 
         # calculate based on equation (8-9) and T_int equation inline.
         closure_pha = np.dot(C, unw)
@@ -423,12 +423,12 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
             for j in range(num_sample):
                 # read unwrap phase
                 y, x = common_reg.sample_coords[j, :]
-                unw = ifginv.read_unwrap_phase(stack_obj,
-                                               box=(x, y, x+1, y+1),
-                                               ref_phase=ref_phase,
-                                               obs_ds_name=dsNameIn,
-                                               dropIfgram=True,
-                                               print_msg=False).reshape(num_ifgram, -1)
+                unw = ifginv.read_stack_obs(stack_obj,
+                                            box=(x, y, x+1, y+1),
+                                            ref_phase=ref_phase,
+                                            obs_ds_name=dsNameIn,
+                                            dropIfgram=True,
+                                            print_msg=False).reshape(num_ifgram, -1)
 
                 # calculate closure_int
                 closure_pha = np.dot(C, unw)
