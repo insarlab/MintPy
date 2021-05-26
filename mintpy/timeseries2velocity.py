@@ -87,6 +87,9 @@ def create_parser():
                              'and newer than input file\n' +
                              '2) all configuration parameters are the same.')
 
+    parser.add_argument('--ts-std-file', dest='ts_std_file',
+                        help='Time-series STD file for velocity STD calculation.')
+
     # reference in time and space
     # for input file without reference info, e.g. ERA5.h5
     parser.add_argument('--ref-yx', dest='ref_yx', metavar=('Y', 'X'), type=int, nargs=2,
@@ -418,7 +421,7 @@ def read_inps2model(inps):
 
 
 ############################################################################
-def estimate_time_func(date_list, dis_ts, model):
+def estimate_time_func(model, date_list, dis_ts, dis_ts_std=None):
     """
     Deformation model estimator, using a suite of linear, periodic, step, exponential, and logarithmic function(s).
 
@@ -535,14 +538,30 @@ def run_timeseries2time_func(inps):
         if atr['UNIT'] == 'mm':
             ts_data *= 1./1000.
 
+        ts_std = None
+        if inps.ts_std_file:
+            ts_std = readfile.read(inps.ts_std_file, box=box)[0]
+            ts_std = ts_std[inps.dropDate, :, :].reshape(inps.numDate, -1)
+            # set zero value to a fixed small value to avoid divide by zero
+
+            epsilon = 1e-5
+            ts_std[ts_std<epsilon] = epsilon
+
         # mask invalid pixels
         print('skip pixels with zero/nan value in all acquisitions')
         ts_stack = np.nanmean(ts_data, axis=0)
         mask = np.multiply(~np.isnan(ts_stack), ts_stack!=0.)
         del ts_stack
 
+        if ts_std is not None:
+            print('skip pxiels with nan STD value in any acquisition')
+            num_std_nan = np.sum(np.isnan(ts_std), axis=0)
+            mask *= num_std_nan == 0
+            del num_std_nan
+
         ts_data = ts_data[:, mask]
         num_pixel2inv = int(np.sum(mask))
+        idx_pixel2inv = np.where(mask)[0]
         print('number of pixels to invert: {} out of {} ({:.1f}%)'.format(
             num_pixel2inv, num_pixel, num_pixel2inv/num_pixel*100))
 
@@ -580,9 +599,9 @@ def run_timeseries2time_func(inps):
                 boot_ind.sort()
 
                 # estimation
-                m_boot[i] = estimate_time_func(dates[boot_ind].tolist(),
-                                               ts_data[boot_ind],
-                                               model)[1]
+                m_boot[i] = estimate_time_func(model=model,
+                                               date_list=dates[boot_ind].tolist(),
+                                               dis_ts=ts_data[boot_ind])[1]
 
                 prog_bar.update(i+1, suffix='iteration {} / {}'.format(i+1, inps.bootstrapCount))
             prog_bar.close()
@@ -599,28 +618,48 @@ def run_timeseries2time_func(inps):
             ## option 2 - least squares with uncertainty propagation
 
             print('estimate time functions via linalg.lstsq ...')
-            G, m[:, mask], e2 = estimate_time_func(inps.dateList,
-                                                   ts_data,
-                                                   model)
+            G, m[:, mask], e2 = estimate_time_func(model=model,
+                                                   date_list=inps.dateList,
+                                                   dis_ts=ts_data,
+                                                   dis_ts_std=ts_std)
             del ts_data
 
             ## Compute the covariance matrix for model parameters: Gm = d
-            # C_m_hat = (G.T * C_d^-1, * G)^-1  # the most generic form
-            #         = sigma^2 * (G.T * G)^-1  # assuming the obs error is normally distributed in time.
+            # C_m_hat = (G.T * C_d^-1, * G)^-1  # linear propagation from the TS covariance matrix. (option 2.1)
+            #         = sigma^2 * (G.T * G)^-1  # assuming obs errors are normally dist. in time.   (option 2.2a)
             # Based on the law of integrated expectation, we estimate the obs sigma^2 using
             # the OLS estimation residual e_hat_i = d_i - d_hat_i
-            # sigma^2 = sigma_hat^2 * N / (N - P)
+            # sigma^2 = sigma_hat^2 * N / (N - P)                                                   (option 2.2b)
             #         = (e_hat.T * e_hat) / (N - P)  # sigma_hat^2 = (e_hat.T * e_hat) / N
 
-            G_inv = linalg.inv(np.dot(G.T, G))
-            m_var = e2.reshape(1, -1) / (num_date - num_param)
-            m_std[:, mask] = np.sqrt(np.dot(np.diag(G_inv).reshape(-1, 1), m_var))
+            if ts_std is not None:
+                # option 2.1 - linear propagation from time-series covariance matrix
+                print('estimating time function STD from time-series STD pixel-by-pixel ...')
+                prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
+                for i in range(num_pixel2inv):
+                    idx = idx_pixel2inv[i]
 
-            ## for linear velocity, the STD can also be calculated 
-            # using Eq. (10) from Fattahi and Amelung (2015, JGR)
-            # ts_diff = ts_data - np.dot(G, m)
-            # t_diff = G[:, 1] - np.mean(G[:, 1])
-            # vel_std = np.sqrt(np.sum(ts_diff ** 2, axis=0) / np.sum(t_diff ** 2)  / (num_date - 2))
+                    try:
+                        C_ts_inv = np.diag(1. / np.square(ts_std[:, idx].flatten()))
+                        m_var = np.diag(linalg.inv(G.T.dot(C_ts_inv).dot(G))).astype(np.float32)
+                        m_std[:, idx] = np.sqrt(m_var)
+                    except linalg.LinAlgError:
+                        m_std[:, idx] = np.nan
+
+                    prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, num_pixel2inv))
+                prog_bar.close()
+
+            else:
+                # option 2.2a - assume obs errors following normal dist. in time
+                G_inv = linalg.inv(np.dot(G.T, G))
+                m_var = e2.reshape(1, -1) / (num_date - num_param)
+                m_std[:, mask] = np.sqrt(np.dot(np.diag(G_inv).reshape(-1, 1), m_var))
+
+                # option 2.2b - simplified form for linear velocity (without matrix linear algebra)
+                # The STD can also be calculated using Eq. (10) from Fattahi and Amelung (2015, JGR)
+                # ts_diff = ts_data - np.dot(G, m)
+                # t_diff = G[:, 1] - np.mean(G[:, 1])
+                # vel_std = np.sqrt(np.sum(ts_diff ** 2, axis=0) / np.sum(t_diff ** 2)  / (num_date - 2))
 
         # write
         block = [box[1], box[3], box[0], box[2]]
