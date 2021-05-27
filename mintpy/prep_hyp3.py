@@ -207,7 +207,8 @@ def main(iargs=None):
     for fname in inps.file:
         meta = readfile.read_gdal_vrt(fname)
 
-        if any([x in fname for x in ['unw_phase','corr']]):
+        #if any([x in fname for x in ['unw_phase','corr']]):
+        if any([x in fname for x in ['unw_phase','corr','inc_map']]):
             meta = add_hyp3_metadata(fname, meta, is_ifg=True)
         else:
             meta = add_hyp3_metadata(fname, meta, is_ifg=False)

@@ -15,7 +15,8 @@ import h5py
 import numpy as np
 from mintpy.objects import timeseries, geometry
 from mintpy.utils import ptime, readfile, writefile, utils as ut
-
+#from mintpy.asfutils.convert2degree import snwe_in_degree
+from hyp3mintpy.convert2degree import snwe_in_degree
 try:
     import pyaps3 as pa
 except ImportError:
@@ -541,6 +542,12 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
             i += 1
             try:
                 if tropo_model in ['ERA5', 'ERAINT']:
+
+                    #if snwe is meter, change them into degree
+
+                    #convert2degree(
+                    #snwe = convert2degree(snwe)
+                    
                     pa.ECMWFdload(date_list2dload, hour, grib_dir,
                                   model=tropo_model,
                                   snwe=snwe,
@@ -772,10 +779,27 @@ def main(iargs=None):
     # get corresponding grib files info
     get_grib_info(inps)
 
-    # download
-    inps.grib_files = dload_grib_files(inps.grib_files, 
+    # if snwe is in meter, create snwe_degree
+
+    snwe =inps.snwe
+
+    if  inps.atr['UNIT'] != "degree":
+
+        ref_file = inps.atr['OG_FILE_PATH']
+    
+        snwe_degree = snwe_in_degree(ref_file, snwe) 
+
+        # download
+
+        inps.grib_files = dload_grib_files(inps.grib_files, 
                                        tropo_model=inps.tropo_model,
-                                       snwe=inps.snwe)
+                                       snwe=snwe_degree)
+    else:
+        # download
+
+        inps.grib_files = dload_grib_files(inps.grib_files,
+                                       tropo_model=inps.tropo_model,
+                                       snwe=snwe)        
 
     # calculate tropo delay and save to h5 file
     if inps.geom_file:
