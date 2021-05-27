@@ -110,6 +110,14 @@ def create_parser():
     parser.add_argument('--noverbose', dest='print_msg', action='store_false',
                         help='Disable the verbose message printing (default: %(default)s).')
 
+    parser.add_argument('--math', dest='math_operation', choices={'square','sqrt','reverse','inverse'},
+                        help='Apply the math operation before displaying [for single subplot ONLY].\n'
+                             'E.g. plot the std. dev. of the variance file.\n'
+                             '  square  = x^2\n'
+                             '  sqrt    = x^1/2\n'
+                             '  reverse = x * -1\n'
+                             '  inverse = 1 / x')
+
     parser = arg_group.add_data_disp_argument(parser)
     parser = arg_group.add_dem_argument(parser)
     parser = arg_group.add_figure_argument(parser)
@@ -1482,6 +1490,7 @@ class viewer():
                                            datasetName=self.dset[0],
                                            box=self.pix_box,
                                            print_msg=False)
+
             # reference in time
             if self.ref_date:
                 data -= readfile.read(self.file,
@@ -1499,6 +1508,18 @@ class viewer():
                                          box=(ref_x, ref_y, ref_x+1, ref_y+1),
                                          print_msg=False)[0]
                 data[data != 0.] -= ref_data
+
+            # math operation
+            if self.math_operation:
+                vprint('Apply math operation: {}'.format(self.math_operation))
+                if self.math_operation == 'square':
+                    data = np.square(data)
+                elif self.math_operation == 'sqrt':
+                    data = np.sqrt(data)
+                elif self.math_operation == 'reverse':
+                    data *= -1
+                elif self.math_operation == 'inverse':
+                    data = 1. / data
 
             # masking
             if self.zero_mask:
