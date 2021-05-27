@@ -59,6 +59,7 @@ EXAMPLE = """example:
 
   # complex time functions
   timeseries2velocity.py timeseries_ERA5_ramp_demErr.h5 --poly 3 --period 1 0.5 --step 20170910
+  timeseries2velocity.py timeseries_SET_ERA5_ramp_demErr.h5 --poly 1 --period 1 0.5 --step 20170910 --exp 20170910 90 --log 20171014 60.4 20171026 200.7
 """
 
 DROP_DATE_TXT = """exclude_date.txt:
@@ -105,17 +106,27 @@ def create_parser():
     model = parser.add_argument_group('deformation model', 'a suite of time functions')
     model.add_argument('--polynomial', '--poly', '--poly-order', dest='polynomial', type=int, default=1,
                       help='a polynomial function with the input degree (default: %(default)s). E.g.:\n' +
-                           '--polynomial 1            # linear\n' +
-                           '--polynomial 2            # quadratic\n' + 
-                           '--polynomial 3            # cubic\n')
+                           '--polynomial 1                      # linear\n' +
+                           '--polynomial 2                      # quadratic\n' + 
+                           '--polynomial 3                      # cubic\n')
     model.add_argument('--periodic', '--peri', dest='periodic', type=float, nargs='+', default=[],
                       help='periodic function(s) with period in decimal years (default: %(default)s). E.g.:\n' +
-                           '--periodic 1.0            # an annual cycle\n' +
-                           '--periodic 1.0 0.5        # an annual cycle plus a semi-annual cycle\n')
+                           '--periodic 1.0                      # an annual cycle\n' +
+                           '--periodic 1.0 0.5                  # an annual cycle plus a semi-annual cycle\n')
     model.add_argument('--step', dest='step', type=str, nargs='+', default=[],
                       help='step function(s) at YYYYMMDD (default: %(default)s). E.g.:\n' +
-                           '--step 20061014           # coseismic step  at 2006-10-14\n' +
-                           '--step 20110311 20120928  # coseismic steps at 2011-03-11 and 2012-09-28\n')
+                           '--step 20061014                     # coseismic step  at 2006-10-14\n' +
+                           '--step 20110311 20120928            # coseismic steps at 2011-03-11 and 2012-09-28\n')
+    model.add_argument('--exp', dest='exp', type=str, nargs='+', default=[],
+                      help='\nexponential function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
+                           '--exp  20181026 60                  # exp onset at 2006-10-14 with tau=60 days\n' +
+                           '--exp  20161231 80.5 20190125 200   # first exp onset at 2011-03-11 with tau=80.5 days and\n' + 
+                           '                                    # second exp onset at 2012-09-28 with tau=200 days\n')
+    model.add_argument('--log', dest='log', type=str, nargs='+', default=[],
+                      help='\nlogarithmic function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
+                           '--log  20181016 90.4                # log onset at 2006-10-14 with tau=90.4 days\n' +
+                           '--log  20161231 60 20190125 180.2   # first log onset at 2011-03-11 with tau=60 days and\n' + 
+                           '                                    # second log onset at 2012-09-28 with tau=180.2 days\n')
 
     # bootstrap
     bootstrap = parser.add_argument_group('bootstrapping', 'estimating the mean / STD of the velocity estimator')
@@ -146,7 +157,7 @@ def cmd_line_parse(iargs=None):
 
     if inps.bootstrap:
         print('bootstrapping is turned ON.')
-        if (inps.polynomial != 1 or inps.periodic or inps.step):
+        if (inps.polynomial != 1 or inps.periodic or inps.step or inps.exp or inps.log):
             raise ValueError('bootstrapping currently support polynomial ONLY and ONLY with the order of 1!')
 
     if inps.template_file:
@@ -313,8 +324,10 @@ def read_inps2model(inps):
 
     model = dict()
     model['polynomial'] = inps.polynomial
-    model['periodic'] = inps.periodic
-    model['step'] = inps.step
+    model['periodic']   = inps.periodic
+    model['step']       = inps.step
+    model['exp']        = inps.exp
+    model['log']        = inps.log
 
     # msg
     print('estimate deformation model with the following assumed time functions:')
@@ -324,10 +337,29 @@ def read_inps2model(inps):
     if 'polynomial' not in model.keys():
         raise ValueError('linear/polynomial model is NOT included! Are you sure?!')
 
+    if len(model['exp']) % 2 != 0:
+        raise ValueError('num of exponential model inputs is odd! Specify each exp func with first a onset date AND followed by a char time.\n'+
+                        '\tE.g., --exp  20181026 60 \n' +
+                        '\t   or --exp  201601231 80.5 20190125 200  (append as many exps as you like)')
+    else:
+        tmp_arr = np.reshape(model['exp'], (int(len(model['exp'])/2), 2))
+        model['exp'] = [list(tmp_arr[:,0]), list(tmp_arr[:,1].astype(float))]
+
+    if len(model['log']) % 2 != 0:
+        raise ValueError('num of logarithmic model inputs is odd! Specify each log func with first a onset date AND followed by a char time.\n'+
+                        '\tE.g., --log  20181026 60 \n' +
+                        '\t   or --log  20161231 80.5 20190125 200  (append as many logs as you like)')
+    else:
+        tmp_arr = np.reshape(model['log'], (int(len(model['log'])/2), 2))
+        model['log'] = [list(tmp_arr[:,0]), list(tmp_arr[:,1].astype(float))]
+
     # number of parameters
     num_param = (model['polynomial'] + 1
                  + len(model['periodic']) * 2 
-                 + len(model['step']))
+                 + len(model['step'])
+                 + len(model['exp'][0])
+                 + len(model['log'][0])
+                 )
 
     return model, num_param
 
@@ -335,16 +367,18 @@ def read_inps2model(inps):
 ############################################################################
 def estimate_time_func(date_list, dis_ts, model):
     """
-    Deformation model estimator, using a suite of linear, periodic, step function(s).
+    Deformation model estimator, using a suite of linear, periodic, step, exponential, and logarithmic function(s).
 
     Gm = d
 
     Parameters: date_list - list of str, dates in YYYYMMDD format
                 dis_ts    - 2D np.ndarray, displacement observation in size of (num_date, num_pixel)
                 model     - dict of time functions, e.g.:
-                    {'polynomial' : 2,            # int, polynomial with 1 (linear), 2 (quadratic), 3 (cubic), etc.
-                     'periodic'   : [1.0, 0.5],   # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
-                     'step'       : ['20061014'], # list of str, date(s) in YYYYMMDD.
+                    {'polynomial' : 2,                                      # int, polynomial degree with 1 (linear), 2 (quadratic), 3 (cubic), etc.
+                     'periodic'   : [1.0, 0.5],                             # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
+                     'step'       : ['20061014'],                           # list of str, date(s) in YYYYMMDD.
+                     'exp'        : [['20181026'],[60]],                    # list of str, date(s) in YYYYMMDD; list of floats, taus (days).
+                     'log'        : [['20161231','20190125'],[80.5, 200]],  # list of str, date(s) in YYYYMMDD; list of floats, taus (days).
                      ...
                      }
     Returns:    G         - 2D np.ndarray, design matrix           in size of (num_date, num_par)
@@ -545,9 +579,11 @@ def layout_hdf5(out_file, atr, model):
     """
 
     # deformation model info
-    poly_deg = model['polynomial']
+    poly_deg   = model['polynomial']
     num_period = len(model['periodic'])
-    num_step = len(model['step'])
+    num_step   = len(model['step'])
+    num_exp    = len(model['exp'][0])
+    num_log    = len(model['log'][0])    
 
     # size info
     length = int(atr['LENGTH'])
@@ -601,6 +637,28 @@ def layout_hdf5(out_file, atr, model):
         ds_name_dict[dsName+'Std'] = [dataType, (length, width), None]
         ds_unit_dict[dsName+'Std'] = 'm'
 
+    # time func 4 - exp
+    for i in range(num_exp):
+        # dataset name
+        dsName = 'exp{}'.format(model['exp'][0][i])
+
+        # update ds_name/unit_dict
+        ds_name_dict[dsName] = [dataType, (length, width), None]
+        ds_unit_dict[dsName] = 'm'
+        ds_name_dict[dsName+'Std'] = [dataType, (length, width), None]
+        ds_unit_dict[dsName+'Std'] = 'm'
+
+    # time func 5 - log
+    for i in range(num_log):
+        # dataset name
+        dsName = 'log{}'.format(model['log'][0][i])
+
+        # update ds_name/unit_dict
+        ds_name_dict[dsName] = [dataType, (length, width), None]
+        ds_unit_dict[dsName] = 'm'
+        ds_name_dict[dsName+'Std'] = [dataType, (length, width), None]
+        ds_unit_dict[dsName+'Std'] = 'm'
+
     # layout hdf5
     writefile.layout_hdf5(out_file, ds_name_dict, metadata=atr)
 
@@ -621,11 +679,15 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
 
     Parameters: out_file - str, path of output time func file
                 model    - dict, dict of time functions, e.g.:
-                    {'polynomial' : 2,            # int, polynomial with
+                    {'polynomial' : 2,            # int, polynomial degree with
                                                   # e.g.: 1 (linear), 2 (quad), 3 (cubic), etc.
                      'periodic'   : [1.0, 0.5],   # list of float, period(s) in years.
                                                   # e.g.: 1.0 (annual), 0.5 (semiannual), etc.
                      'step'       : ['20061014'], # list of str, date(s) in YYYYMMDD.
+                     'exp'        : [['20181026'],[60]],
+                                                  # list of str, date(s) in YYYYMMDD; list of floats, taus (days).
+                     'log'        : [['20161231','20190125'],[80.5, 200]],  
+                                                  # list of str, date(s) in YYYYMMDD; list of floats, taus (days).
                      ...
                      }
                 m/m_std  - 2D np.ndarray in float32 in size of (num_param, length*width), time func param. (Std. Dev.)
@@ -640,9 +702,11 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
                                                     block[3] - block[2])
 
     # deformation model info
-    poly_deg = model['polynomial']
+    poly_deg   = model['polynomial']
     num_period = len(model['periodic'])
-    num_step = len(model['step'])
+    num_step   = len(model['step'])
+    num_exp    = len(model['exp'][0])
+    num_log    = len(model['log'][0])
 
     length = block[1] - block[0]
     width = block[3] - block[2]
@@ -708,6 +772,38 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
         for i in range(num_step):
             # dataset name
             dsName = 'step{}'.format(model['step'][i])
+
+            # write
+            write_dataset_block(f,
+                                dsName=dsName,
+                                data=m[p0+i, :],
+                                block=block)
+            write_dataset_block(f,
+                                dsName=dsName+'Std',
+                                data=m_std[p0+i, :],
+                                block=block)
+
+        # 4. exp
+        p0 = (poly_deg + 1) + (2 * num_period) + (num_step)
+        for i in range(num_exp):
+            # dataset name
+            dsName = 'exp{}'.format(model['exp'][0][i])
+
+            # write
+            write_dataset_block(f,
+                                dsName=dsName,
+                                data=m[p0+i, :],
+                                block=block)
+            write_dataset_block(f,
+                                dsName=dsName+'Std',
+                                data=m_std[p0+i, :],
+                                block=block)
+
+        # 5. log
+        p0 = (poly_deg + 1) + (2 * num_period) + (num_step) + (num_exp)
+        for i in range(num_log):
+            # dataset name
+            dsName = 'log{}'.format(model['log'][0][i])
 
             # write
             write_dataset_block(f,

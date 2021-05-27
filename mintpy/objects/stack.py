@@ -444,13 +444,15 @@ class timeseries:
         """design matrix/function model of linear velocity estimation
         Parameters: date_list : list of str in YYYYMMDD format, size=num_date
                     model     : dict of time functions, e.g.:
-                                {'polynomial' : 2,            # int, polynomial with 1 (linear), 2 (quadratic), 3 (cubic), etc.
-                                 'periodic'   : [1.0, 0.5],   # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
-                                 'step'       : ['20061014'], # list of str, date(s) in YYYYMMDD.
+                                {'polynomial' : 2,                                      # int, polynomial degree with 1 (linear), 2 (quadratic), 3 (cubic), etc.
+                                 'periodic'   : [1.0, 0.5],                             # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
+                                 'step'       : ['20061014'],                           # list of str, date(s) in YYYYMMDD.
+                                 'exp'        : [['20181026'],[60]],                    # list of str, date(s) in YYYYMMDD; list of floats, taus (days).
+                                 'log'        : [['20161231','20190125'],[80.5, 200]],  # list of str, date(s) in YYYYMMDD; list of floats, taus (days).
                                  ...
                                  }
         Returns:    A         : 2D array of design matrix in size of (num_date, num_param)
-                                num_param = (poly_deg + 1) + 2*len(periodic) + len(steps)
+                                num_param = (poly_deg + 1) + 2*len(periodic) + len(steps) + len(exps[0]) + len(logs[0])
         """
 
         def get_design_matrix4polynomial_func(yr_diff, degree):
@@ -475,7 +477,7 @@ class timeseries:
             """design matrix/function model of periodic velocity estimation
             Parameters: yr_diff : 1D array of time difference from refDate in decimal years
                         periods : list of period in years: 1=annual, 0.5=semiannual, etc.
-            Returns:    A       : 2D array of periodic sine & cosine coeff. in size of (num_date, 2)
+            Returns:    A       : 2D array of periodic sine & cosine coeff. in size of (num_date, 2*num_period)
             """
             num_date = len(yr_diff)
             num_period = len(periods)
@@ -506,6 +508,48 @@ class timeseries:
 
             return A
 
+
+        def get_design_matrix4exp_func(date_list, exp_list):
+            """design matrix/function model of exponential postseismic relaxation estimation
+            Parameters: date_list      : list of dates in YYYYMMDD format
+                        exp_list[0]    : Exp func(s) onset time(s) with date in YYYYMMDD
+                        exp_list[1]    : tau(s), characteristic time(s) in decimal days
+            Returns:    A              : 2D array of zeros & ones in size of (num_date, num_exp)
+            """
+            num_date = len(date_list)
+            num_exp  = len(exp_list[0])
+            A = np.zeros((num_date, num_exp), dtype=np.float32)
+
+            t = np.array(ptime.yyyymmdd2years(date_list))
+            t_exps = ptime.yyyymmdd2years(exp_list[0])
+            tau_exps = np.array(exp_list[1]) / 365.25
+            for i, (t_exp, tau_exp) in enumerate(zip(t_exps, tau_exps)):
+                A[:, i] = np.array(t > t_exp).flatten() * (1-np.exp(-(t-t_exp)/(tau_exp)))
+
+            return A            
+
+
+        def get_design_matrix4log_func(date_list, log_list):
+            """design matrix/function model of logarithmic postseismic relaxation estimation
+            Parameters: date_list      : list of dates in YYYYMMDD format
+                        log_list[0]    : Log func(s) onset time(s) with date in YYYYMMDD
+                        log_list[1]    : tau(s), characteristic time(s) in decimal days
+            Returns:    A              : 2D array of zeros & ones in size of (num_date, num_log)
+            """
+            num_date = len(date_list)
+            num_log  = len(log_list[0])
+            A = np.zeros((num_date, num_log), dtype=np.float32)
+
+            t = np.array(ptime.yyyymmdd2years(date_list))
+            t_logs = ptime.yyyymmdd2years(log_list[0])
+            tau_logs = np.array(log_list[1]) / 365.25
+            for i, (t_log, tau_log) in enumerate(zip(t_logs, tau_logs)):
+                olderr = np.seterr(invalid='ignore', divide='ignore')
+                A[:, i] = np.array(t > t_log).flatten() * np.nan_to_num(np.log(1+(t-t_log)/(tau_log)), nan=0, neginf=0)
+                np.seterr(**olderr)
+            return A  
+
+
         ## prepare time info
         # convert list of date into array of years in float
         yr_diff = np.array(ptime.yyyymmdd2years(date_list))
@@ -521,13 +565,17 @@ class timeseries:
             model = {'polynomial' : 1}
 
         # read the models
-        poly_deg = model.get('polynomial', 0)
-        periods  = model.get('periodic', [])
-        steps    = model.get('step', [])
+        poly_deg   = model.get('polynomial', 0)
+        periods    = model.get('periodic', [])
+        steps      = model.get('step', [])
+        exps       = model.get('exp', [[],[]])
+        logs       = model.get('log', [[],[]])        
         num_period = len(periods)
-        num_step = len(steps)
+        num_step   = len(steps)
+        num_exp    = len(exps[0])
+        num_log    = len(logs[0])
 
-        num_param = (poly_deg + 1) + (2 * num_period) + num_step
+        num_param = (poly_deg + 1) + (2 * num_period) + num_step + num_exp + num_log
         if num_param <= 1:
             raise ValueError('NO time functions specified!')
 
@@ -552,6 +600,18 @@ class timeseries:
         if num_step > 0:
             c1 = c0 + num_step
             A[:, c0:c1] = get_design_matrix4step_func(date_list, steps)
+            c0 = c1
+
+        # update exponential term(s)
+        if num_exp > 0:
+            c1 = c0 + num_exp
+            A[:, c0:c1] = get_design_matrix4exp_func(date_list, exps)
+            c0 = c1
+
+        # update logarithmic term(s)
+        if num_log > 0:
+            c1 = c0 + num_log
+            A[:, c0:c1] = get_design_matrix4log_func(date_list, logs)
             c0 = c1
 
         return A
