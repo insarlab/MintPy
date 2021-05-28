@@ -16,7 +16,7 @@ import numpy as np
 from mintpy.objects import timeseries, geometry
 from mintpy.utils import ptime, readfile, writefile, utils as ut
 from mintpy.asfutils.convert2degree import convert2degree, snwe_in_degree
-#from hyp3mintpy.convert2degree import snwe_in_degree
+
 try:
     import pyaps3 as pa
 except ImportError:
