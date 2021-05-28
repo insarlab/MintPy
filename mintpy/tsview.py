@@ -231,8 +231,10 @@ def read_init_info(inps):
         inps.ref_lalo = (float(atr['REF_LAT']), float(atr['REF_LON']))
     if inps.ref_lalo:
         # set longitude to [-180, 180)
-        if inps.ref_lalo[1] >= 180.:
-            inps.ref_lalo[1] -= 360.
+        if inps.coord_unit in "degrees" and inps.ref_lalo[1] >= 180.:
+            tmp_lo = inps.ref_lalo[1]-360.
+            inps.ref_lalo = (inps.ref_lalo[0], tmp_lo)
+            #inps.ref_lalo[1] -= 360.
         # ref_lalo --> ref_yx if not set in cmd
         if not inps.ref_yx:
             inps.ref_yx = inps.coord.geo2radar(inps.ref_lalo[0],

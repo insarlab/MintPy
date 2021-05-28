@@ -15,8 +15,8 @@ import h5py
 import numpy as np
 from mintpy.objects import timeseries, geometry
 from mintpy.utils import ptime, readfile, writefile, utils as ut
-#from mintpy.asfutils.convert2degree import snwe_in_degree
-from hyp3mintpy.convert2degree import snwe_in_degree
+from mintpy.asfutils.convert2degree import convert2degree, snwe_in_degree
+#from hyp3mintpy.convert2degree import snwe_in_degree
 try:
     import pyaps3 as pa
 except ImportError:
@@ -708,21 +708,27 @@ def calc_delay_timeseries(inps):
     print('\n------------------------------------------------------------------------------')
     print('calculating absolute delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
     print('number of grib files used: {}'.format(num_date))
+    # get_delay function only works with lat/lon in degree, so convert lat/lon in meter to degree if necassary
+    if  inps.atr['UNIT'].lower() not in  "degree":
+        ref_file = inps.atr['OG_FILE_PATH']
+        lon_deg, lat_deg = convert2degree(ref_file, inps.lon, inps.lat)
+    else:
+        lon_deg = inps.lon
+        lat_deg = inps.lat
 
     prog_bar = ptime.progressBar(maxValue=num_date, print_msg=~inps.verbose)
     for i in range(num_date):
         grib_file = inps.grib_files[i]
-
         # calc tropo delay
         tropo_data = get_delay(grib_file,
-                               tropo_model=inps.tropo_model,
-                               delay_type=inps.delay_type,
-                               dem=inps.dem,
-                               inc=inps.inc,
-                               lat=inps.lat,
-                               lon=inps.lon,
-                               mask=mask,
-                               verbose=inps.verbose)
+                            tropo_model=inps.tropo_model,
+                            delay_type=inps.delay_type,
+                            dem=inps.dem,
+                            inc=inps.inc,
+                            lat=lat_deg,
+                            lon=lon_deg,
+                            mask=mask,
+                            verbose=inps.verbose)
 
         # write tropo delay to file
         block = [i, i+1, 0, length, 0, width]
@@ -783,23 +789,19 @@ def main(iargs=None):
 
     snwe =inps.snwe
 
-    if  inps.atr['UNIT'] != "degree":
+    if  inps.atr['UNIT'].lower() not in  "degrees":
 
         ref_file = inps.atr['OG_FILE_PATH']
     
-        snwe_degree = snwe_in_degree(ref_file, snwe) 
+        snwe_degree = snwe_in_degree(ref_file, snwe)
+    else: 
+        snwe_degree = snwe
 
-        # download
+    # download
 
-        inps.grib_files = dload_grib_files(inps.grib_files, 
-                                       tropo_model=inps.tropo_model,
-                                       snwe=snwe_degree)
-    else:
-        # download
-
-        inps.grib_files = dload_grib_files(inps.grib_files,
-                                       tropo_model=inps.tropo_model,
-                                       snwe=snwe)        
+    inps.grib_files = dload_grib_files(inps.grib_files, 
+                                    tropo_model=inps.tropo_model,
+                                    snwe=snwe_degree)
 
     # calculate tropo delay and save to h5 file
     if inps.geom_file:

@@ -2,34 +2,31 @@ from osgeo import gdal
 from pyproj import Proj, Transformer
 import argparse
 import os
-def convert2degree(infile, points):
+def convert2degree(infile, x, y):
     '''
     convert points in the projection coordinates of the file to lon/lat in degree/
     inputs: infile -- gtiff file
-            points -- 'x1,y1', 'x2,y2',... for example points '3886250, 605750'
-    pay attention, lat, lon = transformer.transform(x,y)
+            x1,y1 --scale value, for example x=605750, y=3886250, x, y can be 1/2D numpy array
+    pay attention, Transform.from_proj(p1,p2, always_xy=True) make the x,y <-> lon, lat 
     '''
     ds = gdal.Open(infile)
 
     srs = ds.GetSpatialRef()
 
     if (not srs.IsProjected()) and (srs.GetAttrValue('unit') == 'degree'):
-        return points
+        return x, y 
     
     p_in = Proj(ds.GetProjection())
     p_out = Proj('epsg:4326')
-    transformer = Transformer.from_proj(p_in, p_out)
-    points_out = []
-    for point in points:   
-        lat, lon = transformer.transform(point[0], point[1])  
-        points_out.append((lon,lat)) 
-    del ds
-    return points_out
+    transformer = Transformer.from_proj(p_in, p_out, always_xy=True)   
+    return transformer.transform(x, y)
 
 def snwe_in_degree(infile, snwe):
-    points = [(snwe[2], snwe[0]), (snwe[3], snwe[1])]
-    points_out = convert2degree(infile, points)   
-    snwe_degree=(points_out[0][1], points_out[1][1], points_out[0][0], points_out[1][0] )
+
+    lon, lat = convert2degree(infile, [snwe[2], snwe[3]], [snwe[0], snwe[1]])
+    
+    snwe_degree=(lat[0], lat[1], lon[0], lon[1] )
+
     return snwe_degree
 
 
@@ -45,29 +42,26 @@ def main():
     )
 
     parser.add_argument(
-        "--points", required=True, nargs ="*", 
-        help="'x1,y1','x2,y2',..."
+        "--x", required=True, 
+        help="x-coordinate"
+    )
+
+    parser.add_argument(
+        "--y", required=True, 
+        help="y-coordinate"
     )
 
     args = parser.parse_args()
 
     file = args.infile
 
-    points = args.points
+    x = args.x
 
-    points_list =[]
+    y = args.y
 
-    for point in points:
+    lon, lat = convert2degree(file, x, y)
 
-        plist = point.split(",")
-        ptuple = tuple(map(float, plist))
-        points_list.append(ptuple)
-
-
-
-    points_out = convert2degree(file, points_list)
-
-    print("points in degree: {}".format(points_out))
+    print("lon {}, lat {} in degree:".format(lon, lat))
 
 if __name__ == "__main__":
 
