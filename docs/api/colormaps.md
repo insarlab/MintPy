@@ -40,6 +40,7 @@ The following colormaps is included by default:
 
 + BlueWhiteOrangeRed
 + DEM_print
++ differences
 + GMT_haxby
 + GMT_no_green
 + seminf-haxby
