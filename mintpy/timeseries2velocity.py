@@ -59,7 +59,7 @@ EXAMPLE = """example:
 
   # complex time functions
   timeseries2velocity.py timeseries_ERA5_ramp_demErr.h5 --poly 3 --period 1 0.5 --step 20170910
-  timeseries2velocity.py timeseries_SET_ERA5_ramp_demErr.h5 --poly 1 --period 1 0.5 --step 20170910 --exp 20170910 90 --log 20171014 60.4 20171026 200.7
+  timeseries2velocity.py timeseries.h5 --poly 1 --period 1 0.5 --step 20170910 --exp 20170910 90 300 --log 20171014 60.4 200 --log 20171026 200.7
 """
 
 DROP_DATE_TXT = """exclude_date.txt:
@@ -117,16 +117,18 @@ def create_parser():
                       help='step function(s) at YYYYMMDD (default: %(default)s). E.g.:\n' +
                            '--step 20061014                     # coseismic step  at 2006-10-14\n' +
                            '--step 20110311 20120928            # coseismic steps at 2011-03-11 and 2012-09-28\n')
-    model.add_argument('--exp', dest='exp', type=str, nargs='+', default=[],
+    model.add_argument('--exp', dest='exp', type=str, nargs='+', action='append', default=[],
                       help='\nexponential function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
                            '--exp  20181026 60                  # exp onset at 2006-10-14 with tau=60 days\n' +
-                           '--exp  20161231 80.5 20190125 200   # first exp onset at 2011-03-11 with tau=80.5 days and\n' + 
-                           '                                    # second exp onset at 2012-09-28 with tau=200 days\n')
-    model.add_argument('--log', dest='log', type=str, nargs='+', default=[],
+                           '--exp  20181026 60 120              # exp onset at 2006-10-14 with tau=60 days overlayed by a tau=145 days\n' +
+                           '--exp  20161231 80.5 --exp 20190125 100 200   # first exp onset at 2011-03-11 with tau=80.5 days and\n' +
+                           '                                              # second exp onset at 2012-09-28 with tau=100 days overlayed by a tau=200 days\n')
+    model.add_argument('--log', dest='log', type=str, nargs='+', action='append', default=[],
                       help='\nlogarithmic function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
                            '--log  20181016 90.4                # log onset at 2006-10-14 with tau=90.4 days\n' +
-                           '--log  20161231 60 20190125 180.2   # first log onset at 2011-03-11 with tau=60 days and\n' + 
-                           '                                    # second log onset at 2012-09-28 with tau=180.2 days\n')
+                           '--log  20181016 90.4 240            # log onset at 2006-10-14 with tau=90.4 days overlayed by a tau=240 days\n' +
+                           '--log  20161231 60 150 --log 20190125 180.2   # first log onset at 2011-03-11 with tau=60 days overlayed by a tau=150 days and\n' +
+                           '                                              # second log onset at 2012-09-28 with tau=180.2 days\n')
 
     # bootstrap
     bootstrap = parser.add_argument_group('bootstrapping', 'estimating the mean / STD of the velocity estimator')
@@ -162,6 +164,32 @@ def cmd_line_parse(iargs=None):
 
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
+
+    inps.expDic = dict()
+    if inps.exp:
+        for i in range(len(inps.exp)):
+            if len(inps.exp[i][0]) == 8:
+                if len(inps.exp[i]) <= 1:
+                    raise ValueError('{}, specify each exp func with a onset date FOLLOWED BY one or more char_time(s).\n'.format(inps.exp[i][0])+
+                                    '\tE.g., --exp  20181026 60 \n' +
+                                    '\t   or --exp  20161231 80.5 200  (append as many char_times as you like)')
+                else:
+                    inps.expDic[inps.exp[i][0]] = list(np.array(inps.exp[i][1:]).astype('float'))
+            else:
+                raise ValueError('{}, specify each exp func with a onset date in YYYYMMDD format (8 characters)'.format(inps.exp[i][0]))
+
+    inps.logDic = dict()
+    if inps.log:
+        for i in range(len(inps.log)):
+            if len(inps.log[i][0]) == 8:
+                if len(inps.log[i]) <= 1:
+                    raise ValueError('{}, specify each log func with a onset date FOLLOWED BY one or more char_time(s).\n'.format(inps.log[i][0])+
+                                    '\tE.g., --log  20181026 60 \n' +
+                                    '\t   or --log  20161231 80.5 200  (append as many char_times as you like)')
+                else:
+                    inps.logDic[inps.log[i][0]] = list(np.array(inps.log[i][1:]).astype('float'))
+            else:
+                raise ValueError('{}, specify each log func with a onset date in YYYYMMDD format (8 characters)'.format(inps.log[i][0]))
 
     return inps
 
@@ -326,8 +354,8 @@ def read_inps2model(inps):
     model['polynomial'] = inps.polynomial
     model['periodic']   = inps.periodic
     model['step']       = inps.step
-    model['exp']        = inps.exp
-    model['log']        = inps.log
+    model['exp']        = inps.expDic
+    model['log']        = inps.logDic
 
     # msg
     print('estimate deformation model with the following assumed time functions:')
@@ -337,28 +365,12 @@ def read_inps2model(inps):
     if 'polynomial' not in model.keys():
         raise ValueError('linear/polynomial model is NOT included! Are you sure?!')
 
-    if len(model['exp']) % 2 != 0:
-        raise ValueError('num of exponential model inputs is odd! Specify each exp func with first a onset date AND followed by a char time.\n'+
-                        '\tE.g., --exp  20181026 60 \n' +
-                        '\t   or --exp  201601231 80.5 20190125 200  (append as many exps as you like)')
-    else:
-        tmp_arr = np.reshape(model['exp'], (int(len(model['exp'])/2), 2))
-        model['exp'] = [list(tmp_arr[:,0]), list(tmp_arr[:,1].astype(float))]
-
-    if len(model['log']) % 2 != 0:
-        raise ValueError('num of logarithmic model inputs is odd! Specify each log func with first a onset date AND followed by a char time.\n'+
-                        '\tE.g., --log  20181026 60 \n' +
-                        '\t   or --log  20161231 80.5 20190125 200  (append as many logs as you like)')
-    else:
-        tmp_arr = np.reshape(model['log'], (int(len(model['log'])/2), 2))
-        model['log'] = [list(tmp_arr[:,0]), list(tmp_arr[:,1].astype(float))]
-
     # number of parameters
     num_param = (model['polynomial'] + 1
                  + len(model['periodic']) * 2 
                  + len(model['step'])
-                 + len(model['exp'][0])
-                 + len(model['log'][0])
+                 + sum([len(model['exp'][x]) for x in model['exp']])
+                 + sum([len(model['log'][x]) for x in model['log']])
                  )
 
     return model, num_param
@@ -374,11 +386,11 @@ def estimate_time_func(date_list, dis_ts, model):
     Parameters: date_list - list of str, dates in YYYYMMDD format
                 dis_ts    - 2D np.ndarray, displacement observation in size of (num_date, num_pixel)
                 model     - dict of time functions, e.g.:
-                    {'polynomial' : 2,                                      # int, polynomial degree with 1 (linear), 2 (quadratic), 3 (cubic), etc.
-                     'periodic'   : [1.0, 0.5],                             # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
-                     'step'       : ['20061014'],                           # list of str, date(s) in YYYYMMDD.
-                     'exp'        : [['20181026'],[60]],                    # list of str, date(s) in YYYYMMDD; list of floats, taus (days).
-                     'log'        : [['20161231','20190125'],[80.5, 200]],  # list of str, date(s) in YYYYMMDD; list of floats, taus (days).
+                    {'polynomial' : 2,                                   # int, polynomial degree with 1 (linear), 2 (quadratic), 3 (cubic), etc.
+                     'periodic'   : [1.0, 0.5],                          # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
+                     'step'       : ['20061014'],                        # list of str, date(s) in YYYYMMDD.
+                     'exp'        : {'20181026': [60]},                         # dict, date(s) in YYYYMMDD; list of floats, taus (days).
+                     'log'        : {'20161231': [80.5], 20190125: [100, 200]}, # dict, date(s) in YYYYMMDD; list of floats, taus (days).
                      ...
                      }
     Returns:    G         - 2D np.ndarray, design matrix           in size of (num_date, num_par)
@@ -582,8 +594,8 @@ def layout_hdf5(out_file, atr, model):
     poly_deg   = model['polynomial']
     num_period = len(model['periodic'])
     num_step   = len(model['step'])
-    num_exp    = len(model['exp'][0])
-    num_log    = len(model['log'][0])    
+    #num_exp    = sum([len(model['exp'][x]) for x in model['exp']])
+    #num_log    = sum([len(model['log'][x]) for x in model['log']])
 
     # size info
     length = int(atr['LENGTH'])
@@ -638,26 +650,28 @@ def layout_hdf5(out_file, atr, model):
         ds_unit_dict[dsName+'Std'] = 'm'
 
     # time func 4 - exp
-    for i in range(num_exp):
-        # dataset name
-        dsName = 'exp{}'.format(model['exp'][0][i])
+    for exp_onset in model['exp']:
+        for exp_tau in model['exp'][exp_onset]:
+            # dataset name
+            dsName = 'exp{}Tau{}'.format(exp_onset, exp_tau)
 
-        # update ds_name/unit_dict
-        ds_name_dict[dsName] = [dataType, (length, width), None]
-        ds_unit_dict[dsName] = 'm'
-        ds_name_dict[dsName+'Std'] = [dataType, (length, width), None]
-        ds_unit_dict[dsName+'Std'] = 'm'
+            # update ds_name/unit_dict
+            ds_name_dict[dsName] = [dataType, (length, width), None]
+            ds_unit_dict[dsName] = 'm'
+            ds_name_dict[dsName+'Std'] = [dataType, (length, width), None]
+            ds_unit_dict[dsName+'Std'] = 'm'
 
     # time func 5 - log
-    for i in range(num_log):
-        # dataset name
-        dsName = 'log{}'.format(model['log'][0][i])
+    for log_onset in model['log']:
+        for log_tau in model['log'][log_onset]:
+            # dataset name
+            dsName = 'log{}Tau{}'.format(log_onset, log_tau)
 
-        # update ds_name/unit_dict
-        ds_name_dict[dsName] = [dataType, (length, width), None]
-        ds_unit_dict[dsName] = 'm'
-        ds_name_dict[dsName+'Std'] = [dataType, (length, width), None]
-        ds_unit_dict[dsName+'Std'] = 'm'
+            # update ds_name/unit_dict
+            ds_name_dict[dsName] = [dataType, (length, width), None]
+            ds_unit_dict[dsName] = 'm'
+            ds_name_dict[dsName+'Std'] = [dataType, (length, width), None]
+            ds_unit_dict[dsName+'Std'] = 'm'
 
     # layout hdf5
     writefile.layout_hdf5(out_file, ds_name_dict, metadata=atr)
@@ -683,11 +697,9 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
                                                   # e.g.: 1 (linear), 2 (quad), 3 (cubic), etc.
                      'periodic'   : [1.0, 0.5],   # list of float, period(s) in years.
                                                   # e.g.: 1.0 (annual), 0.5 (semiannual), etc.
-                     'step'       : ['20061014'], # list of str, date(s) in YYYYMMDD.
-                     'exp'        : [['20181026'],[60]],
-                                                  # list of str, date(s) in YYYYMMDD; list of floats, taus (days).
-                     'log'        : [['20161231','20190125'],[80.5, 200]],  
-                                                  # list of str, date(s) in YYYYMMDD; list of floats, taus (days).
+                     'step'       : ['20061014'],                               # list of str, date(s) in YYYYMMDD.
+                     'exp'        : {'20181026': [60]},                         # dict, date(s) in YYYYMMDD; list of floats, taus (days).
+                     'log'        : {'20161231': [80.5], 20190125: [100, 200]}, # dict, date(s) in YYYYMMDD; list of floats, taus (days).
                      ...
                      }
                 m/m_std  - 2D np.ndarray in float32 in size of (num_param, length*width), time func param. (Std. Dev.)
@@ -705,8 +717,8 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
     poly_deg   = model['polynomial']
     num_period = len(model['periodic'])
     num_step   = len(model['step'])
-    num_exp    = len(model['exp'][0])
-    num_log    = len(model['log'][0])
+    num_exp    = sum([len(model['exp'][x]) for x in model['exp']])
+    num_log    = sum([len(model['log'][x]) for x in model['log']])
 
     length = block[1] - block[0]
     width = block[3] - block[2]
@@ -767,7 +779,7 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
             #    to avoid messy scaling together with dataset in m
             # 2. add code for the error propagation for the periodic amp/pha
 
-        # 3. step
+        # time func 3 - step
         p0 = (poly_deg + 1) + (2 * num_period)
         for i in range(num_step):
             # dataset name
@@ -783,37 +795,43 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
                                 data=m_std[p0+i, :],
                                 block=block)
 
-        # 4. exp
+        # time func 4 - exponential
         p0 = (poly_deg + 1) + (2 * num_period) + (num_step)
-        for i in range(num_exp):
-            # dataset name
-            dsName = 'exp{}'.format(model['exp'][0][i])
+        i=0
+        for exp_onset in model['exp']:
+            for exp_tau in model['exp'][exp_onset]:          
+                # dataset name
+                dsName = 'exp{}Tau{}'.format(exp_onset, exp_tau)
 
-            # write
-            write_dataset_block(f,
-                                dsName=dsName,
-                                data=m[p0+i, :],
-                                block=block)
-            write_dataset_block(f,
-                                dsName=dsName+'Std',
-                                data=m_std[p0+i, :],
-                                block=block)
+                # write
+                write_dataset_block(f,
+                                    dsName=dsName,
+                                    data=m[p0+i, :],
+                                    block=block)
+                write_dataset_block(f,
+                                    dsName=dsName+'Std',
+                                    data=m_std[p0+i, :],
+                                    block=block)
+                i+=1
 
-        # 5. log
+        # time func 5 - logarithmic
         p0 = (poly_deg + 1) + (2 * num_period) + (num_step) + (num_exp)
-        for i in range(num_log):
-            # dataset name
-            dsName = 'log{}'.format(model['log'][0][i])
+        i=0
+        for log_onset in model['log']:
+            for log_tau in model['log'][log_onset]:          
+                # dataset name
+                dsName = 'log{}Tau{}'.format(log_onset, log_tau)
 
-            # write
-            write_dataset_block(f,
-                                dsName=dsName,
-                                data=m[p0+i, :],
-                                block=block)
-            write_dataset_block(f,
-                                dsName=dsName+'Std',
-                                data=m_std[p0+i, :],
-                                block=block)
+                # write
+                write_dataset_block(f,
+                                    dsName=dsName,
+                                    data=m[p0+i, :],
+                                    block=block)
+                write_dataset_block(f,
+                                    dsName=dsName+'Std',
+                                    data=m_std[p0+i, :],
+                                    block=block)
+                i+=1
 
     print('close HDF5 file {}'.format(out_file))
     return out_file

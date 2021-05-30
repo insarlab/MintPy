@@ -444,15 +444,15 @@ class timeseries:
         """design matrix/function model of linear velocity estimation
         Parameters: date_list : list of str in YYYYMMDD format, size=num_date
                     model     : dict of time functions, e.g.:
-                                {'polynomial' : 2,                                      # int, polynomial degree with 1 (linear), 2 (quadratic), 3 (cubic), etc.
-                                 'periodic'   : [1.0, 0.5],                             # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
-                                 'step'       : ['20061014'],                           # list of str, date(s) in YYYYMMDD.
-                                 'exp'        : [['20181026'],[60]],                    # list of str, date(s) in YYYYMMDD; list of floats, taus (days).
-                                 'log'        : [['20161231','20190125'],[80.5, 200]],  # list of str, date(s) in YYYYMMDD; list of floats, taus (days).
+                                {'polynomial' : 2,                  # int, polynomial degree with 1 (linear), 2 (quadratic), 3 (cubic), etc.
+                                 'periodic'   : [1.0, 0.5],         # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
+                                 'step'       : ['20061014'],                        # list of str, date(s) in YYYYMMDD.
+                                 'exp'        : {'20181026': [60]},                         # dict, date(s) in YYYYMMDD; list of floats, taus (days).
+                                 'log'        : {'20161231': [80.5], 20190125: [100, 200]}, # dict, date(s) in YYYYMMDD; list of floats, taus (days).
                                  ...
                                  }
         Returns:    A         : 2D array of design matrix in size of (num_date, num_param)
-                                num_param = (poly_deg + 1) + 2*len(periodic) + len(steps) + len(exps[0]) + len(logs[0])
+                                num_param = (poly_deg + 1) + 2*len(periodic) + len(steps) + len(exp_taus) + len(log_taus)
         """
 
         def get_design_matrix4polynomial_func(yr_diff, degree):
@@ -509,45 +509,68 @@ class timeseries:
             return A
 
 
-        def get_design_matrix4exp_func(date_list, exp_list):
+        def get_design_matrix4exp_func(date_list, exp_dict):
             """design matrix/function model of exponential postseismic relaxation estimation
             Parameters: date_list      : list of dates in YYYYMMDD format
-                        exp_list[0]    : Exp func(s) onset time(s) with date in YYYYMMDD
-                        exp_list[1]    : tau(s), characteristic time(s) in decimal days
+                        exp_dict       : dict of exp func(s) onset time(s) with date in YYYYMMDD;
+                                         list of exp_char_time(s) in decimal days
             Returns:    A              : 2D array of zeros & ones in size of (num_date, num_exp)
             """
+            ## Exponential equation for relaxation processes
+            # using Eq. (5) from Hetland et. al. (2012, JGR)
+            # typo in the paper: it should be e^(-(t_T_i)/tau_i) in Eq. (5).
+            # F(t) = Sum_i{ a_i * H(t-Ti) * [1 - e^(-(t-T_i)/tau_i)] }
+            #   a_i         amplitude      of i-th exp term
+            #   T_i         onset time     of i-th exp term
+            #   tau_i       char time      of i-th exp term (relaxation time)
+            #   H(t-T_i)    Heaviside func of i-th exp term (ensuring the exp func is one-sided)
             num_date = len(date_list)
-            num_exp  = len(exp_list[0])
+            num_exp  = sum([len(exp_dict[x]) for x in exp_dict])
             A = np.zeros((num_date, num_exp), dtype=np.float32)
 
             t = np.array(ptime.yyyymmdd2years(date_list))
-            t_exps = ptime.yyyymmdd2years(exp_list[0])
-            tau_exps = np.array(exp_list[1]) / 365.25
-            for i, (t_exp, tau_exp) in enumerate(zip(t_exps, tau_exps)):
-                A[:, i] = np.array(t > t_exp).flatten() * (1-np.exp(-(t-t_exp)/(tau_exp)))
+            i=0
+            for exp_onset in model['exp']:
+                for exp_tau in model['exp'][exp_onset]:
+                    exp_t = ptime.yyyymmdd2years(exp_onset)
+                    exp_tau = exp_tau / 365.25
+                    A[:, i] = np.array(t > exp_t).flatten() * (1-np.exp(-(t-exp_t)/(exp_tau)))
+                    i+=1
 
-            return A            
+            return A
 
 
-        def get_design_matrix4log_func(date_list, log_list):
+        def get_design_matrix4log_func(date_list, log_dict):
             """design matrix/function model of logarithmic postseismic relaxation estimation
             Parameters: date_list      : list of dates in YYYYMMDD format
-                        log_list[0]    : Log func(s) onset time(s) with date in YYYYMMDD
-                        log_list[1]    : tau(s), characteristic time(s) in decimal days
+                        log_dict       : dict of log func(s) onset time(s) with date in YYYYMMDD;
+                                         list of log_char_time(s) in decimal days
             Returns:    A              : 2D array of zeros & ones in size of (num_date, num_log)
             """
+            ## Logarithmic equation for relaxation processes
+            # using Eq. (4) from Hetland et. al. (2012, JGR)
+            # typo in the paper: it should be log((t_T_i)/tau_i) in Eq. (4).
+            # F(t) = Sum_i{ a_i * H(t-Ti) * [1 + log((t-T_i)/tau_i)] }
+            #   a_i         amplitude      of i-th log term
+            #   T_i         onset time     of i-th log term
+            #   tau_i       char time      of i-th log term (relaxation time)
+            #   H(t-T_i)    Heaviside func of i-th log term (ensuring the log func is one-sided)
             num_date = len(date_list)
-            num_log  = len(log_list[0])
+            num_log  = sum([len(log_dict[x]) for x in log_dict])
             A = np.zeros((num_date, num_log), dtype=np.float32)
 
             t = np.array(ptime.yyyymmdd2years(date_list))
-            t_logs = ptime.yyyymmdd2years(log_list[0])
-            tau_logs = np.array(log_list[1]) / 365.25
-            for i, (t_log, tau_log) in enumerate(zip(t_logs, tau_logs)):
-                olderr = np.seterr(invalid='ignore', divide='ignore')
-                A[:, i] = np.array(t > t_log).flatten() * np.nan_to_num(np.log(1+(t-t_log)/(tau_log)), nan=0, neginf=0)
-                np.seterr(**olderr)
-            return A  
+            i=0
+            for log_onset in model['log']:
+                for log_tau in model['log'][log_onset]:
+                    log_t = ptime.yyyymmdd2years(log_onset)
+                    log_tau = log_tau / 365.25
+                    olderr = np.seterr(invalid='ignore', divide='ignore')
+                    A[:, i] = np.array(t > log_t).flatten() * np.nan_to_num(np.log(1+(t-log_t)/(log_tau)), nan=0, neginf=0)
+                    np.seterr(**olderr)
+                    i+=1
+
+            return A
 
 
         ## prepare time info
@@ -568,12 +591,12 @@ class timeseries:
         poly_deg   = model.get('polynomial', 0)
         periods    = model.get('periodic', [])
         steps      = model.get('step', [])
-        exps       = model.get('exp', [[],[]])
-        logs       = model.get('log', [[],[]])        
+        exps       = model.get('exp', dict())
+        logs       = model.get('log', dict())
         num_period = len(periods)
         num_step   = len(steps)
-        num_exp    = len(exps[0])
-        num_log    = len(logs[0])
+        num_exp    = sum([len(exps[x]) for x in exps])
+        num_log    = sum([len(logs[x]) for x in logs])
 
         num_param = (poly_deg + 1) + (2 * num_period) + num_step + num_exp + num_log
         if num_param <= 1:
