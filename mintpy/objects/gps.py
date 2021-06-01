@@ -449,6 +449,9 @@ class GPS:
             atr = readfile.read_attribute(geom_obj)
             coord = coordinate(atr, lookup_file=geom_obj)
             y, x = coord.geo2radar(lat, lon, print_msg=print_msg)[0:2]
+            # check against image boundary
+            y = max(0, y);  y = min(int(atr['LENGTH'])-1, y)
+            x = max(0, x);  x = min(int(atr['WIDTH'])-1, x)
             box = (x, y, x+1, y+1)
             inc_angle = readfile.read(geom_obj, datasetName='incidenceAngle', box=box, print_msg=print_msg)[0][0,0]
             az_angle  = readfile.read(geom_obj, datasetName='azimuthAngle', box=box, print_msg=print_msg)[0][0,0]

@@ -1101,6 +1101,10 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         if inps.ref_gps_site:
             vprint('referencing all GPS LOS observations to site: {}'.format(inps.ref_gps_site))
             ref_ind = site_names.tolist().index(inps.ref_gps_site)
+            # plot label of the reference site
+            ax.annotate(site_names[ref_ind], xy=(site_lons[ref_ind], site_lats[ref_ind]),
+                        fontsize=inps.font_size)
+            # update value
             ref_val = site_obs[ref_ind]
             if not np.isnan(ref_val):
                 site_obs -= ref_val
