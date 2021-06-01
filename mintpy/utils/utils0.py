@@ -20,7 +20,8 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import ndimage
-
+from osgeo import gdal
+from pyproj import Proj, Transformer
 
 # global variables
 SPEED_OF_LIGHT = 299792458 # m/s
@@ -229,9 +230,27 @@ def touch(fname_list, times=None):
         fname_list = fname_list[0]
     return fname_list
 
-
-
 #################################### Geometry ##########################################
+def to_latlon(infile, x, y):
+    """
+    convert x, y in the projection coordinates of the file to lon/lat in degree.
+    Inputs/Output
+        infile -- gtiff file
+        x -- x-direction coordinate value in the projection coordinates. can be scale, 1D or 2D arrary.
+        y -- y-direction coordinate value in the projection coordinates. can be scale, 1D or 2D array.
+    pay attention, Transform.from_proj(p1,p2, always_xy=True) convert the x,y to lon, lat 
+    """
+    ds = gdal.Open(infile)
+    srs = ds.GetSpatialRef()
+    if (not srs.IsProjected()) and (srs.GetAttrValue('unit') == 'degree'):
+        return x, y 
+    
+    p_in = Proj(ds.GetProjection())
+    p_out = Proj('epsg:4326')
+    transformer = Transformer.from_proj(p_in, p_out)   
+    return transformer.transform(x, y)
+
+
 def get_lat_lon(meta, geom_file=None, box=None, dimension=2):
     """Extract precise pixel-wise lat/lon.
 
