@@ -367,6 +367,28 @@ def read_date_info(inps):
 
 def read_inps2model(inps):
     """get model info from inps"""
+    # check model date limits
+    dmin, dmax = inps.dateList[0], inps.dateList[-1]
+    ymin = ptime.yyyymmdd2years(dmin)
+    ymax = ptime.yyyymmdd2years(dmax)
+
+    if inps.step:
+        for d_step in inps.step:
+            y_step = ptime.yyyymmdd2years(d_step)
+            if not (ymin < y_step < ymax):
+                raise ValueError('input step date "{}" exceed date list min/max: {}, {}'.format(d_step, dmin, dmax))
+
+    if inps.expDict:
+        for d_onset in inps.expDict.keys():
+            y_onset = ptime.yyyymmdd2years(d_onset)
+            if not (ymin < y_onset < ymax):
+                raise ValueError('input exp onset date "{}" exceed date list min/max: {}, {}'.format(d_onset, dmin, dmax))
+
+    if inps.logDict:
+        for d_onset in inps.logDict.keys():
+            y_onset = ptime.yyyymmdd2years(d_onset)
+            if not (ymin < y_onset < ymax):
+                raise ValueError('input log onset date "{}" exceed date list min/max: {}, {}'.format(d_onset, dmin, dmax))
 
     model = dict()
     model['polynomial'] = inps.polynomial
@@ -803,7 +825,8 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
 
         # time func 4 - exponential
         p0 = (poly_deg + 1) + (2 * num_period) + (num_step)
-        for i, exp_onset in enumerate(model['exp'].keys()):
+        i = 0
+        for exp_onset in model['exp'].keys():
             for exp_tau in model['exp'][exp_onset]:
                 # dataset name
                 dsName = 'exp{}Tau{}'.format(exp_onset, exp_tau)
@@ -811,10 +834,12 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
                 # write
                 for ds_name, ds in zip([dsName, dsName+'Std'], [m, m_std]):
                     write_dataset_block(f, ds_name, ds[p0+i, :], block)
+                i += 1
 
         # time func 5 - logarithmic
         p0 = (poly_deg + 1) + (2 * num_period) + (num_step) + (num_exp)
-        for i, log_onset in enumerate(model['log'].keys()):
+        i = 0
+        for log_onset in model['log'].keys():
             for log_tau in model['log'][log_onset]:
                 # dataset name
                 dsName = 'log{}Tau{}'.format(log_onset, log_tau)
@@ -822,6 +847,7 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
                 # write
                 for ds_name, ds in zip([dsName, dsName+'Std'], [m, m_std]):
                     write_dataset_block(f, ds_name, ds[p0+i, :], block)
+                i += 1
 
     print('close HDF5 file {}'.format(out_file))
     return out_file

@@ -545,7 +545,8 @@ class timeseries:
 
             t = np.array(ptime.yyyymmdd2years(date_list))
             # loop for onset time(s)
-            for i, exp_onset in enumerate(exp_dict.keys()):
+            i = 0
+            for exp_onset in exp_dict.keys():
                 # convert string to float in years
                 exp_T = ptime.yyyymmdd2years(exp_onset)
 
@@ -553,7 +554,8 @@ class timeseries:
                 for exp_tau in exp_dict[exp_onset]:
                     # convert time from days to years
                     exp_tau /= 36.525
-                    A[:, i] = np.array(t > exp_T) * (1 - np.exp(-1 * (t - exp_T) / exp_tau))
+                    A[:, i] = np.array(t > exp_T).flatten() * (1 - np.exp(-1 * (t - exp_T) / exp_tau))
+                    i += 1
 
             return A
 
@@ -588,7 +590,8 @@ class timeseries:
 
             t = np.array(ptime.yyyymmdd2years(date_list))
             # loop for onset time(s)
-            for i, log_onset in enumerate(log_dict.keys()):
+            i = 0
+            for log_onset in log_dict.keys():
                 # convert string to float in years
                 log_T = ptime.yyyymmdd2years(log_onset)
 
@@ -598,8 +601,9 @@ class timeseries:
                     log_tau /= 365.25
 
                     olderr = np.seterr(invalid='ignore', divide='ignore')
-                    A[:, i] = np.array(t > log_T) * np.nan_to_num(np.log(1 + (t - log_T) / log_tau), nan=0, neginf=0)
+                    A[:, i] = np.array(t > log_T).flatten() * np.nan_to_num(np.log(1 + (t - log_T) / log_tau), nan=0, neginf=0)
                     np.seterr(**olderr)
+                    i += 1
 
             return A
 
