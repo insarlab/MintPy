@@ -553,7 +553,7 @@ class timeseries:
                 # loop for charateristic time(s)
                 for exp_tau in exp_dict[exp_onset]:
                     # convert time from days to years
-                    exp_tau /= 36.525
+                    exp_tau /= 365.25
                     A[:, i] = np.array(t > exp_T).flatten() * (1 - np.exp(-1 * (t - exp_T) / exp_tau))
                     i += 1
 
