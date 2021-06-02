@@ -60,8 +60,9 @@ EXAMPLE = """example:
 
   # complex time functions
   timeseries2velocity.py timeseries_ERA5_ramp_demErr.h5 --poly 3 --period 1 0.5 --step 20170910
-  timeseries2velocity.py timeseries_ERA5_demErr.py      --poly 1 --exp 20170910 90 300
-  timeseries2velocity.py timeseries_ERA5_demErr.py      --poly 1 --log 20171014 60.4 200 --log 20171026 200.7
+  timeseries2velocity.py timeseries_ERA5_demErr.h5      --poly 1 --exp 20170910 90
+  timeseries2velocity.py timeseries_ERA5_demErr.h5      --poly 1 --log 20170910 60.4
+  timeseries2velocity.py timeseries_ERA5_demErr.h5      --poly 1 --log 20170910 60.4 200 --log 20171026 200.7
 """
 
 DROP_DATE_TXT = """exclude_date.txt:
