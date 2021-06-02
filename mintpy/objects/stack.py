@@ -473,6 +473,7 @@ class timeseries:
 
             return A
 
+
         def get_design_matrix4periodic_func(yr_diff, periods):
             """design matrix/function model of periodic velocity estimation
             Parameters: yr_diff : 1D array of time difference from refDate in decimal years
@@ -511,19 +512,23 @@ class timeseries:
 
         def get_design_matrix4exp_func(date_list, exp_dict):
             """design matrix/function model of exponential postseismic relaxation estimation
+
+            Reference: Eq. (5) in Hetland et al. (2012, JGR).
+            Note that there is a typo in the paper for this equation, based on the MInTS code, it should be:
+                Sum_i{ a_i * H(t-Ti) * [1 - e^(-(t-T_i)/tau_i)] }
+            instead of the one below shown in the paper:
+                Sum_i{ a_i * H(t-Ti) * [1 - e^(-(t)/tau_i)] }
+            where:
+                a_i         amplitude      of i-th exp term
+                T_i         onset time     of i-th exp term
+                tau_i       char time      of i-th exp term (relaxation time)
+                H(t-T_i)    Heaviside func of i-th exp term (ensuring the exp func is one-sided)
+
             Parameters: date_list      : list of dates in YYYYMMDD format
                         exp_dict       : dict of exp func(s) onset time(s) with date in YYYYMMDD;
                                          list of exp_char_time(s) in decimal days
             Returns:    A              : 2D array of zeros & ones in size of (num_date, num_exp)
             """
-            ## Exponential equation for relaxation processes
-            # using Eq. (5) from Hetland et. al. (2012, JGR)
-            # typo in the paper: it should be e^(-(t_T_i)/tau_i) in Eq. (5).
-            # F(t) = Sum_i{ a_i * H(t-Ti) * [1 - e^(-(t-T_i)/tau_i)] }
-            #   a_i         amplitude      of i-th exp term
-            #   T_i         onset time     of i-th exp term
-            #   tau_i       char time      of i-th exp term (relaxation time)
-            #   H(t-T_i)    Heaviside func of i-th exp term (ensuring the exp func is one-sided)
             num_date = len(date_list)
             num_exp  = sum([len(exp_dict[x]) for x in exp_dict])
             A = np.zeros((num_date, num_exp), dtype=np.float32)
@@ -542,19 +547,23 @@ class timeseries:
 
         def get_design_matrix4log_func(date_list, log_dict):
             """design matrix/function model of logarithmic postseismic relaxation estimation
+
+            Reference: Eq. (4) in Hetland et al. (2012, JGR)
+            Note that there is a typo in the paper for this equation, based on the MInTS code, it should be:
+                Sum_i{ a_i * H(t-Ti) * [1 + log((t-T_i)/tau_i)] }
+            instead of the one below shown in the paper:
+                Sum_i{ a_i * H(t-Ti) * [1 + log((t)/tau_i)] }
+            where:
+                a_i         amplitude      of i-th log term
+                T_i         onset time     of i-th log term
+                tau_i       char time      of i-th log term (relaxation time)
+                H(t-T_i)    Heaviside func of i-th log term (ensuring the log func is one-sided)
+
             Parameters: date_list      : list of dates in YYYYMMDD format
                         log_dict       : dict of log func(s) onset time(s) with date in YYYYMMDD;
                                          list of log_char_time(s) in decimal days
             Returns:    A              : 2D array of zeros & ones in size of (num_date, num_log)
             """
-            ## Logarithmic equation for relaxation processes
-            # using Eq. (4) from Hetland et. al. (2012, JGR)
-            # typo in the paper: it should be log((t_T_i)/tau_i) in Eq. (4).
-            # F(t) = Sum_i{ a_i * H(t-Ti) * [1 + log((t-T_i)/tau_i)] }
-            #   a_i         amplitude      of i-th log term
-            #   T_i         onset time     of i-th log term
-            #   tau_i       char time      of i-th log term (relaxation time)
-            #   H(t-T_i)    Heaviside func of i-th log term (ensuring the log func is one-sided)
             num_date = len(date_list)
             num_log  = sum([len(log_dict[x]) for x in log_dict])
             A = np.zeros((num_date, num_log), dtype=np.float32)
