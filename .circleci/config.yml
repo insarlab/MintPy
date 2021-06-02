@@ -27,6 +27,7 @@ jobs:
       - run:
           name: Installing MintPy, PyAPS and PySolid
           command: |
+            export PYTHONUNBUFFERED=1
             # setup environment variable
             export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${HOME}/tools/PyAPS:${HOME}/tools/PySolid
             export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
