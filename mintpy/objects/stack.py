@@ -444,11 +444,16 @@ class timeseries:
         """design matrix/function model of linear velocity estimation
         Parameters: date_list : list of str in YYYYMMDD format, size=num_date
                     model     : dict of time functions, e.g.:
-                                {'polynomial' : 2,                  # int, polynomial degree with 1 (linear), 2 (quadratic), 3 (cubic), etc.
-                                 'periodic'   : [1.0, 0.5],         # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
-                                 'step'       : ['20061014'],                        # list of str, date(s) in YYYYMMDD.
-                                 'exp'        : {'20181026': [60]},                         # dict, date(s) in YYYYMMDD; list of floats, taus (days).
-                                 'log'        : {'20161231': [80.5], 20190125: [100, 200]}, # dict, date(s) in YYYYMMDD; list of floats, taus (days).
+                                {'polynomial' : 2,                    # int, polynomial degree with 1 (linear), 2 (quadratic), 3 (cubic), etc.
+                                 'periodic'   : [1.0, 0.5],           # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
+                                 'step'       : ['20061014'],         # list of str, date(s) in YYYYMMDD.
+                                 'exp'        : {'20181026': [60],    # dict, key for onset time in YYYYMMDD and value for char. times in days.
+                                                 ...
+                                                 },
+                                 'log'        : {'20161231': [80.5],  # dict, key for onset time in YYYYMMDD and value for char. times in days.
+                                                 '20190125': [100, 200],
+                                                 ...
+                                                 },
                                  ...
                                  }
         Returns:    A         : 2D array of design matrix in size of (num_date, num_param)
@@ -525,22 +530,30 @@ class timeseries:
                 H(t-T_i)    Heaviside func of i-th exp term (ensuring the exp func is one-sided)
 
             Parameters: date_list      : list of dates in YYYYMMDD format
-                        exp_dict       : dict of exp func(s) onset time(s) with date in YYYYMMDD;
-                                         list of exp_char_time(s) in decimal days
+                        exp_dict       : dict of exp func(s) info as:
+                                         {{onset_time1} : [{char_time11,...,char_time1N}],
+                                          {onset_time2} : [{char_time21,...,char_time2N}],
+                                          ...
+                                          }
+                                         where onset_time is string  in YYYYMMDD format and
+                                               char_time  is float32 in decimal days
             Returns:    A              : 2D array of zeros & ones in size of (num_date, num_exp)
             """
             num_date = len(date_list)
-            num_exp  = sum([len(exp_dict[x]) for x in exp_dict])
+            num_exp  = sum([len(val) for key, val in exp_dict.items()])
             A = np.zeros((num_date, num_exp), dtype=np.float32)
 
             t = np.array(ptime.yyyymmdd2years(date_list))
-            i=0
-            for exp_onset in model['exp']:
-                for exp_tau in model['exp'][exp_onset]:
-                    exp_t = ptime.yyyymmdd2years(exp_onset)
-                    exp_tau = exp_tau / 365.25
-                    A[:, i] = np.array(t > exp_t).flatten() * (1-np.exp(-(t-exp_t)/(exp_tau)))
-                    i+=1
+            # loop for onset time(s)
+            for i, exp_onset in enumerate(exp_dict.keys()):
+                # convert string to float in years
+                exp_T = ptime.yyyymmdd2years(exp_onset)
+
+                # loop for charateristic time(s)
+                for exp_tau in exp_dict[exp_onset]:
+                    # convert time from days to years
+                    exp_tau /= 36.525
+                    A[:, i] = np.array(t > exp_T) * (1 - np.exp(-1 * (t - exp_T) / exp_tau))
 
             return A
 
@@ -560,8 +573,13 @@ class timeseries:
                 H(t-T_i)    Heaviside func of i-th log term (ensuring the log func is one-sided)
 
             Parameters: date_list      : list of dates in YYYYMMDD format
-                        log_dict       : dict of log func(s) onset time(s) with date in YYYYMMDD;
-                                         list of log_char_time(s) in decimal days
+                        log_dict       : dict of log func(s) info as:
+                                         {{onset_time1} : [{char_time11,...,char_time1N}],
+                                          {onset_time2} : [{char_time21,...,char_time2N}],
+                                          ...
+                                          }
+                                         where onset_time is string  in YYYYMMDD format and
+                                               char_time  is float32 in decimal days
             Returns:    A              : 2D array of zeros & ones in size of (num_date, num_log)
             """
             num_date = len(date_list)
@@ -569,15 +587,19 @@ class timeseries:
             A = np.zeros((num_date, num_log), dtype=np.float32)
 
             t = np.array(ptime.yyyymmdd2years(date_list))
-            i=0
-            for log_onset in model['log']:
-                for log_tau in model['log'][log_onset]:
-                    log_t = ptime.yyyymmdd2years(log_onset)
-                    log_tau = log_tau / 365.25
+            # loop for onset time(s)
+            for i, log_onset in enumerate(log_dict.keys()):
+                # convert string to float in years
+                log_T = ptime.yyyymmdd2years(log_onset)
+
+                # loop for charateristic time(s)
+                for log_tau in log_dict[log_onset]:
+                    # convert time from days to years
+                    log_tau /= 365.25
+
                     olderr = np.seterr(invalid='ignore', divide='ignore')
-                    A[:, i] = np.array(t > log_t).flatten() * np.nan_to_num(np.log(1+(t-log_t)/(log_tau)), nan=0, neginf=0)
+                    A[:, i] = np.array(t > log_T) * np.nan_to_num(np.log(1 + (t - log_T) / log_tau), nan=0, neginf=0)
                     np.seterr(**olderr)
-                    i+=1
 
             return A
 
@@ -604,8 +626,8 @@ class timeseries:
         logs       = model.get('log', dict())
         num_period = len(periods)
         num_step   = len(steps)
-        num_exp    = sum([len(exps[x]) for x in exps])
-        num_log    = sum([len(logs[x]) for x in logs])
+        num_exp    = sum([len(val) for key, val in exps.items()])
+        num_log    = sum([len(val) for key, val in logs.items()])
 
         num_param = (poly_deg + 1) + (2 * num_period) + num_step + num_exp + num_log
         if num_param <= 1:
