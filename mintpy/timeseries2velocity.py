@@ -5,7 +5,8 @@
 # Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 ############################################################
 # Add bootstrap method for std. dev. estimation, Emre Havazli, May 2020.
-# Add poly / periodic / step func., Yuan-Kai Liu, Aug 2020.
+# Add poly, periodic and step func., Yuan-Kai Liu, Aug 2020.
+# Add exp and log func., Yuan-Kai Liu, Jun 2021.
 
 
 import os
@@ -59,7 +60,8 @@ EXAMPLE = """example:
 
   # complex time functions
   timeseries2velocity.py timeseries_ERA5_ramp_demErr.h5 --poly 3 --period 1 0.5 --step 20170910
-  timeseries2velocity.py timeseries.h5 --poly 1 --period 1 0.5 --step 20170910 --exp 20170910 90 300 --log 20171014 60.4 200 --log 20171026 200.7
+  timeseries2velocity.py timeseries_ERA5_demErr.py      --poly 1 --exp 20170910 90 300
+  timeseries2velocity.py timeseries_ERA5_demErr.py      --poly 1 --log 20171014 60.4 200 --log 20171026 200.7
 """
 
 DROP_DATE_TXT = """exclude_date.txt:
@@ -108,7 +110,7 @@ def create_parser():
     model.add_argument('--poly', '--polynomial', '--poly-order', dest='polynomial', type=int, default=1,
                       help='a polynomial function with the input degree (default: %(default)s). E.g.:\n' +
                            '--poly 1                            # linear\n' +
-                           '--poly 2                            # quadratic\n' + 
+                           '--poly 2                            # quadratic\n' +
                            '--poly 3                            # cubic\n')
 
     model.add_argument('--periodic', '--period', '--peri', dest='periodic', type=float, nargs='+', default=[],
@@ -177,7 +179,7 @@ def cmd_line_parse(iargs=None):
             onset_time, char_times = exp_list[0], exp_list[1:]
             if len(onset_time) == 8:
                 if len(char_times) > 0:
-                    inps.expDict[onset_time] = np.array(char_times, dtype=np.float32).tolist()
+                    inps.expDict[onset_time] = np.array(char_times).astype(float).tolist()
 
                 else:
                     msg = 'NO characteristic time found: {}\n'.format(char_times)
@@ -195,7 +197,7 @@ def cmd_line_parse(iargs=None):
             onset_time, char_times = log_list[0], log_list[1:]
             if len(onset_time) == 8:
                 if len(char_times) > 0:
-                    inps.logDict[onset_time] = np.array(char_times, dtype=np.float32).tolist()
+                    inps.logDict[onset_time] = np.array(char_times).astype(float).tolist()
 
                 else:
                     msg = 'NO characteristic time found: {}\n'.format(char_times)
@@ -383,10 +385,10 @@ def read_inps2model(inps):
     # number of parameters
     num_param = (
         model['polynomial'] + 1
-        + len(model['periodic']) * 2 
+        + len(model['periodic']) * 2
         + len(model['step'])
         + sum([len(val) for key, val in model['exp'].items()])
-        + sum([len(val) for key, val in model['log'].items()])             
+        + sum([len(val) for key, val in model['log'].items()])
     )
 
     return model, num_param
@@ -727,7 +729,7 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
     """
 
     def write_dataset_block(f, dsName, data, block):
-        print('write dataset /{:<20} block: {}'.format(dsName, block))
+        print('write dataset /{:<25} block: {}'.format(dsName, block))
         f[dsName][block[0]:block[1], 
                   block[2]:block[3]] = data.reshape(block[1] - block[0],
                                                     block[3] - block[2])
@@ -737,7 +739,6 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
     num_period = len(model['periodic'])
     num_step   = len(model['step'])
     num_exp    = sum([len(val) for key, val in model['exp'].items()])
-    num_log    = sum([len(val) for key, val in model['log'].items()])
 
     length = block[1] - block[0]
     width = block[3] - block[2]
@@ -758,14 +759,8 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
                 dsName = 'poly{}'.format(i)
 
             # write
-            write_dataset_block(f, 
-                                dsName=dsName,
-                                data=m[i, :],
-                                block=block)
-            write_dataset_block(f, 
-                                dsName=dsName+'Std',
-                                data=m_std[i, :],
-                                block=block)
+            for ds_name, ds in zip([dsName, dsName+'Std'], [m, m_std]):
+                write_dataset_block(f, ds_name, ds[i, :], block)
 
         # time func 2 - periodic
         p0 = poly_deg + 1
@@ -788,10 +783,7 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
                 dsName = 'periodY{}Amp'.format(period)
 
             # write
-            write_dataset_block(f, 
-                                dsName=dsName,
-                                data=period_amp,
-                                block=block)
+            write_dataset_block(f, dsName, period_amp, block)
 
             # 1. figure out a proper way to save the phase data in radians
             #    and keeping smart display in view.py 
@@ -805,48 +797,30 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
             dsName = 'step{}'.format(model['step'][i])
 
             # write
-            write_dataset_block(f,
-                                dsName=dsName,
-                                data=m[p0+i, :],
-                                block=block)
-            write_dataset_block(f,
-                                dsName=dsName+'Std',
-                                data=m_std[p0+i, :],
-                                block=block)
+            for ds_name, ds in zip([dsName, dsName+'Std'], [m, m_std]):
+                write_dataset_block(f, ds_name, ds[p0+i, :], block)
 
         # time func 4 - exponential
         p0 = (poly_deg + 1) + (2 * num_period) + (num_step)
         for i, exp_onset in enumerate(model['exp'].keys()):
-            for exp_tau in model['exp'][exp_onset]:          
+            for exp_tau in model['exp'][exp_onset]:
                 # dataset name
                 dsName = 'exp{}Tau{}'.format(exp_onset, exp_tau)
 
                 # write
-                write_dataset_block(f,
-                                    dsName=dsName,
-                                    data=m[p0+i, :],
-                                    block=block)
-                write_dataset_block(f,
-                                    dsName=dsName+'Std',
-                                    data=m_std[p0+i, :],
-                                    block=block)
+                for ds_name, ds in zip([dsName, dsName+'Std'], [m, m_std]):
+                    write_dataset_block(f, ds_name, ds[p0+i, :], block)
 
         # time func 5 - logarithmic
         p0 = (poly_deg + 1) + (2 * num_period) + (num_step) + (num_exp)
         for i, log_onset in enumerate(model['log'].keys()):
-            for log_tau in model['log'][log_onset]:          
+            for log_tau in model['log'][log_onset]:
                 # dataset name
                 dsName = 'log{}Tau{}'.format(log_onset, log_tau)
 
                 # write
-                write_dataset_block(f,
-                                    dsName=dsName,
-                                    data=m[p0+i, :],
-                                    block=block)
-                write_dataset_block(f,
-                                    dsName=dsName+'Std',
-                                    data=m_std[p0+i, :],
-                                    block=block)
+                for ds_name, ds in zip([dsName, dsName+'Std'], [m, m_std]):
+                    write_dataset_block(f, ds_name, ds[p0+i, :], block)
 
     print('close HDF5 file {}'.format(out_file))
     return out_file
