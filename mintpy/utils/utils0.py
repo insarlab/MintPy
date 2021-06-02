@@ -20,7 +20,6 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import ndimage
-from osgeo import gdal
 from pyproj import Proj, Transformer
 
 # global variables
@@ -230,25 +229,36 @@ def touch(fname_list, times=None):
         fname_list = fname_list[0]
     return fname_list
 
+
+
 #################################### Geometry ##########################################
 def to_latlon(infile, x, y):
+    """Convert x, y in the projection coordinates of the file to lon/lat in degree.
+
+    Similar functionality also exists in utm.to_latlon() at:
+        https://github.com/Turbo87/utm#utm-to-latitudelongitude
+
+    Parameters: infile - str, GDAL supported file path
+                x/y    - scalar or 1/2D np.ndarray, coordiantes in x and y direction
+    Returns:    y/x    - scalar or 1/2D np.ndarray, coordinates in latitutde and longitude
     """
-    convert x, y in the projection coordinates of the file to lon/lat in degree.
-    Inputs/Output
-        infile -- gtiff file
-        x -- x-direction coordinate value in the projection coordinates. can be scale, 1D or 2D arrary.
-        y -- y-direction coordinate value in the projection coordinates. can be scale, 1D or 2D array.
-    pay attention, Transform.from_proj(p1,p2, always_xy=True) convert the x,y to lon, lat 
-    """
+    from osgeo import gdal
+
+    # read projection info using gdal
     ds = gdal.Open(infile)
     srs = ds.GetSpatialRef()
+
+    # if input file is already in lat/lon, do nothing and return
     if (not srs.IsProjected()) and (srs.GetAttrValue('unit') == 'degree'):
-        return x, y 
-    
+        return y, x
+
+    # convert coordiantes using pyproj
+    # note that Transform.from_proj(x, y, always_xy=True) convert the x, y to lon, lat
     p_in = Proj(ds.GetProjection())
     p_out = Proj('epsg:4326')
-    transformer = Transformer.from_proj(p_in, p_out)   
-    return transformer.transform(x, y)
+    transformer = Transformer.from_proj(p_in, p_out)
+    y, x = transformer.transform(x, y)
+    return y, x
 
 
 def get_lat_lon(meta, geom_file=None, box=None, dimension=2):

@@ -451,10 +451,13 @@ def get_bounding_box(meta, geom_file=None):
         lon_step = float(meta['X_STEP'])
         lat1 = lat0 + lat_step * (length - 1)
         lon1 = lon0 + lon_step * (width - 1)
+
         # 'Y_FIRST' not in 'degree'
-        if meta['Y_UNIT'].lower() not in 'degrees':
+        # e.g. meters for UTM projection from ASF HyP3
+        if not meta['Y_UNIT'].lower().startswith('deg'):
             lat0, lon0 = ut.to_latlon(meta['OG_FILE_PATH'], lon0, lat0)
             lat1, lon1 = ut.to_latlon(meta['OG_FILE_PATH'], lon1, lat1)
+
     else:
         # radar coordinates
         if geom_file and os.path.isfile(geom_file):
@@ -544,12 +547,6 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
             i += 1
             try:
                 if tropo_model in ['ERA5', 'ERAINT']:
-
-                    #if snwe is meter, change them into degree
-
-                    #convert2degree(
-                    #snwe = convert2degree(snwe)
-                    
                     pa.ECMWFdload(date_list2dload, hour, grib_dir,
                                   model=tropo_model,
                                   snwe=snwe,
@@ -674,8 +671,11 @@ def calc_delay_timeseries(inps):
     elif 'Y_FIRST' in geom_obj.metadata:
         # for lookup table in geo-coded (gamma, roipac) and obs. in geo-coord
         inps.lat, inps.lon = ut.get_lat_lon(geom_obj.metadata)
-        if geom_obj.metadata['Y_UNIT'] not in "degrees":
+
+        # convert coordinates to lat/lon, e.g. from UTM for ASF HyPP3
+        if not geom_obj.metadata['Y_UNIT'].startswith('deg'):
             inps.lat, inps.lon = ut.to_latlon(inps.atr['OG_FILE_PATH'], inps.lon, inps.lat)
+
     else:
         # for lookup table in geo-coded (gamma, roipac) and obs. in radar-coord
         inps.lat, inps.lon = ut.get_lat_lon_rdc(inps.atr)
@@ -711,19 +711,21 @@ def calc_delay_timeseries(inps):
     print('\n------------------------------------------------------------------------------')
     print('calculating absolute delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
     print('number of grib files used: {}'.format(num_date))
+
     prog_bar = ptime.progressBar(maxValue=num_date, print_msg=~inps.verbose)
     for i in range(num_date):
         grib_file = inps.grib_files[i]
+
         # calc tropo delay
         tropo_data = get_delay(grib_file,
-                            tropo_model=inps.tropo_model,
-                            delay_type=inps.delay_type,
-                            dem=inps.dem,
-                            inc=inps.inc,
-                            lat=inps.lat,
-                            lon=inps.lon,
-                            mask=mask,
-                            verbose=inps.verbose)
+                               tropo_model=inps.tropo_model,
+                               delay_type=inps.delay_type,
+                               dem=inps.dem,
+                               inc=inps.inc,
+                               lat=inps.lat,
+                               lon=inps.lon,
+                               mask=mask,
+                               verbose=inps.verbose)
 
         # write tropo delay to file
         block = [i, i+1, 0, length, 0, width]
@@ -781,10 +783,9 @@ def main(iargs=None):
     get_grib_info(inps)
 
     # download
-
     inps.grib_files = dload_grib_files(inps.grib_files, 
-                                    tropo_model=inps.tropo_model,
-                                    snwe=inps.snwe)
+                                       tropo_model=inps.tropo_model,
+                                       snwe=inps.snwe)
 
     # calculate tropo delay and save to h5 file
     if inps.geom_file:
