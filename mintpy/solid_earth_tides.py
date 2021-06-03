@@ -122,7 +122,7 @@ def prepare_los_geometry(geom_file):
     """
 
     print('read/prepare LOS geometry from file: {}'.format(geom_file))
-    atr = readfile.read_attribute(geom_file)
+    atr = readfile.read_attribute(ts_file)
 
     print('read incidence / azimuth angle')
     inc_angle = readfile.read(geom_file, datasetName='incidenceAngle')[0]
