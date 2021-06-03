@@ -231,7 +231,7 @@ def read_init_info(inps):
         inps.ref_lalo = (float(atr['REF_LAT']), float(atr['REF_LON']))
     if inps.ref_lalo:
         # set longitude to [-180, 180)
-        if inps.ref_lalo[1] >= 180.:
+        if inps.coord_unit.lower().startswith('deg') and inps.ref_lalo[1] >= 180.:
             inps.ref_lalo[1] -= 360.
         # ref_lalo --> ref_yx if not set in cmd
         if not inps.ref_yx:
