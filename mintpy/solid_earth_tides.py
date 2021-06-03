@@ -122,7 +122,7 @@ def prepare_los_geometry(geom_file):
     """
 
     print('read/prepare LOS geometry from file: {}'.format(geom_file))
-    atr = readfile.read_attribute(ts_file)
+    atr = readfile.read_attribute(geom_file)
 
     print('read incidence / azimuth angle')
     inc_angle = readfile.read(geom_file, datasetName='incidenceAngle')[0]
@@ -286,7 +286,7 @@ def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_file, date_wise_ac
     prog_bar.close()
 
     # radar-coding if input in radar-coordinates
-    atr = readfile.read_attribute(geom_file)
+    atr = readfile.read_attribute(ts_file)
     if 'Y_FIRST' not in atr.keys():
         print('radar-coding the LOS tides time-series ...')
         res_obj = resample(lut_file=geom_file)
