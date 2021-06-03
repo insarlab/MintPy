@@ -286,6 +286,7 @@ def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_file, date_wise_ac
     prog_bar.close()
 
     # radar-coding if input in radar-coordinates
+    # use ts_file to avoid potential missing CENTER_LINE_UTC attributes in geom_file from alosStack
     atr = readfile.read_attribute(ts_file)
     if 'Y_FIRST' not in atr.keys():
         print('radar-coding the LOS tides time-series ...')
