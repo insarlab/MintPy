@@ -532,7 +532,7 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
     # Get date list to download (skip already downloaded files)
     grib_files_exist = check_exist_grib_file(grib_files, print_msg=True)
     grib_files2dload = sorted(list(set(grib_files) - set(grib_files_exist)))
-    date_list2dload = [str(re.findall('\d{8}', i)[0]) for i in grib_files2dload]
+    date_list2dload = [str(re.findall('\d{8}', os.path.basename(i))[0]) for i in grib_files2dload]
     print('number of grib files to download: %d' % len(date_list2dload))
     print('------------------------------------------------------------------------------\n')
 
