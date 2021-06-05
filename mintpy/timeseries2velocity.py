@@ -17,8 +17,8 @@ import h5py
 import numpy as np
 from scipy import linalg
 
-from mintpy.objects import timeseries, giantTimeseries, HDFEOS, cluster
 from mintpy.defaults.template import get_template_content
+from mintpy.objects import timeseries, giantTimeseries, HDFEOS, cluster
 from mintpy.utils import arg_group, readfile, writefile, ptime, utils as ut
 
 
@@ -73,7 +73,7 @@ DROP_DATE_TXT = """exclude_date.txt:
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Inverse velocity from time-series.',
+    parser = argparse.ArgumentParser(description='Estimate velocity / time functions from time-series.',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=TEMPLATE+'\n'+REFERENCE+'\n'+EXAMPLE)
 
@@ -125,18 +125,18 @@ def create_parser():
                            '--step 20110311 20120928            # coseismic steps at 2011-03-11 and 2012-09-28\n')
 
     model.add_argument('--exp', '--exponential', dest='exp', type=str, nargs='+', action='append', default=[],
-                      help='\nexponential function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
+                      help='exponential function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
                            '--exp  20181026 60                  # exp onset at 2006-10-14 with tau=60 days\n' +
                            '--exp  20181026 60 120              # exp onset at 2006-10-14 with tau=60 days overlayed by a tau=145 days\n' +
-                           '--exp  20161231 80.5 --exp 20190125 100 200   # 1st exp onset at 2011-03-11 with tau=80.5 days and\n' +
-                           '                                              # 2nd exp onset at 2012-09-28 with tau=100  days overlayed by a tau=200 days\n')
+                           '--exp  20161231 80.5 --exp 20190125 100   # 1st exp onset at 2011-03-11 with tau=80.5 days and\n' +
+                           '                                          # 2nd exp onset at 2012-09-28 with tau=100  days')
 
     model.add_argument('--log', '--logarithmic', dest='log', type=str, nargs='+', action='append', default=[],
-                      help='\nlogarithmic function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
+                      help='logarithmic function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
                            '--log  20181016 90.4                # log onset at 2006-10-14 with tau=90.4 days\n' +
                            '--log  20181016 90.4 240            # log onset at 2006-10-14 with tau=90.4 days overlayed by a tau=240 days\n' +
-                           '--log  20161231 60 150 --log 20190125 180.2   # 1st log onset at 2011-03-11 with tau=60 days overlayed by a tau=150 days and\n' +
-                           '                                              # 2nd log onset at 2012-09-28 with tau=180.2 days\n')
+                           '--log  20161231 60 --log 20190125 180.2   # 1st log onset at 2011-03-11 with tau=60 days and\n' +
+                           '                                          # 2nd log onset at 2012-09-28 with tau=180.2 days\n')
 
     # bootstrap
     bootstrap = parser.add_argument_group('bootstrapping', 'estimating the mean / STD of the velocity estimator')
@@ -376,19 +376,19 @@ def read_inps2model(inps):
         for d_step in inps.step:
             y_step = ptime.yyyymmdd2years(d_step)
             if not (ymin < y_step < ymax):
-                raise ValueError('input step date "{}" exceed date list min/max: {}, {}'.format(d_step, dmin, dmax))
+                raise ValueError(f'input step date "{d_step}" exceed date list min/max: {dmin}, {dmax}')
 
     if inps.expDict:
         for d_onset in inps.expDict.keys():
             y_onset = ptime.yyyymmdd2years(d_onset)
             if not (ymin < y_onset < ymax):
-                raise ValueError('input exp onset date "{}" exceed date list min/max: {}, {}'.format(d_onset, dmin, dmax))
+                raise ValueError(f'input exp onset date "{d_onset}" exceed date list min/max: {dmin}, {dmax}')
 
     if inps.logDict:
         for d_onset in inps.logDict.keys():
             y_onset = ptime.yyyymmdd2years(d_onset)
             if not (ymin < y_onset < ymax):
-                raise ValueError('input log onset date "{}" exceed date list min/max: {}, {}'.format(d_onset, dmin, dmax))
+                raise ValueError(f'input log onset date "{d_onset}" exceed date list min/max: {dmin}, {dmax}')
 
     model = dict()
     model['polynomial'] = inps.polynomial
@@ -671,16 +671,19 @@ def layout_hdf5(out_file, atr, model):
     for i in range(num_period):
         # dataset name
         period = model['periodic'][i]
+        dsNameSuffixes = ['Amplitude', 'Phase']
         if period == 1:
-            dsName = 'annualAmp'
+            dsNames = [f'annual{x}' for x in dsNameSuffixes]
         elif period == 0.5:
-            dsName = 'semiAnnualAmp'
+            dsNames = [f'semiAnnual{x}' for x in dsNameSuffixes]
         else:
-            dsName = 'periodY{}Amp'.format(period)
+            dsNames = [f'periodY{period}{x}' for x in dsNameSuffixes]
 
         # update ds_name/unit_dict
-        ds_name_dict[dsName] = [dataType, (length, width), None]
-        ds_unit_dict[dsName] = 'm'
+        ds_name_dict[dsNames[0]] = [dataType, (length, width), None]
+        ds_unit_dict[dsNames[0]] = 'm'
+        ds_name_dict[dsNames[1]] = [dataType, (length, width), None]
+        ds_unit_dict[dsNames[1]] = 'radian'
 
     # time func 3 - step
     for i in range(num_step):
@@ -741,9 +744,12 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
                                                   # e.g.: 1 (linear), 2 (quad), 3 (cubic), etc.
                      'periodic'   : [1.0, 0.5],   # list of float, period(s) in years.
                                                   # e.g.: 1.0 (annual), 0.5 (semiannual), etc.
-                     'step'       : ['20061014'],                               # list of str, date(s) in YYYYMMDD.
-                     'exp'        : {'20181026': [60]},                         # dict, date(s) in YYYYMMDD; list of floats, taus (days).
-                     'log'        : {'20161231': [80.5], 20190125: [100, 200]}, # dict, date(s) in YYYYMMDD; list of floats, taus (days).
+                     'step'       : ['20061014'],         # list of str, date(s) in YYYYMMDD.
+                     'exp'        : {'20181026': [60]},   # dict, date(s) in YYYYMMDD; list of floats, taus (days).
+                     'log'        : {'20161231': [80.5],  # dict, date(s) in YYYYMMDD; list of floats, taus (days).
+                                     '20190125': [100, 200],
+                                     ...
+                                     },
                      ...
                      }
                 m/m_std  - 2D np.ndarray in float32 in size of (num_param, length*width), time func param. (Std. Dev.)
@@ -798,20 +804,19 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
 
             # dataset name
             period = model['periodic'][i]
+            dsNameSuffixes = ['Amplitude', 'Phase']
             if period == 1:
-                dsName = 'annualAmp'
+                dsNames = [f'annual{x}' for x in dsNameSuffixes]
             elif period == 0.5:
-                dsName = 'semiAnnualAmp'
+                dsNames = [f'semiAnnual{x}' for x in dsNameSuffixes]
             else:
-                dsName = 'periodY{}Amp'.format(period)
+                dsNames = [f'periodY{period}{x}' for x in dsNameSuffixes]
 
             # write
-            write_dataset_block(f, dsName, period_amp, block)
+            for ds_name, data in zip(dsNames, [period_amp, period_pha]):
+                write_dataset_block(f, ds_name, data, block)
 
-            # 1. figure out a proper way to save the phase data in radians
-            #    and keeping smart display in view.py 
-            #    to avoid messy scaling together with dataset in m
-            # 2. add code for the error propagation for the periodic amp/pha
+            # To-do list: add code for the error propagation for the periodic amp/pha
 
         # time func 3 - step
         p0 = (poly_deg + 1) + (2 * num_period)
