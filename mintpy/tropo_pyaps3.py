@@ -538,7 +538,7 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
 
     # Download grib file using PyAPS
     if len(date_list2dload) > 0:
-        hour = re.findall('\d{8}[-_]\d{2}', grib_files2dload[0])[0].replace('-', '_').split('_')[1]
+        hour = re.findall('\d{8}[-_]\d{2}', os.path.basename(grib_files2dload[0]))[0].replace('-', '_').split('_')[1]
         grib_dir = os.path.dirname(grib_files2dload[0])
 
         # try 3 times to download, then use whatever downloaded to calculate delay
@@ -628,7 +628,7 @@ def calc_delay_timeseries(inps):
             print('1) output file exists and is newer than all GRIB files.')
 
             # check dataset size in space / time
-            date_list = [str(re.findall('\d{8}', i)[0]) for i in grib_files]
+            date_list = [str(re.findall('\d{8}', os.path.basename(i))[0]) for i in grib_files]
             if (get_dataset_size(tropo_file) != get_dataset_size(geom_file) 
                     or any(i not in timeseries(tropo_file).get_date_list() for i in date_list)):
                 flag = 'run'
@@ -698,7 +698,7 @@ def calc_delay_timeseries(inps):
     # instantiate time-series
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
     num_date = len(inps.grib_files)
-    date_list = [str(re.findall('\d{8}', i)[0]) for i in inps.grib_files]
+    date_list = [str(re.findall('\d{8}', os.path.basename(i))[0]) for i in inps.grib_files]
     dates = np.array(date_list, dtype=np.string_)
     ds_name_dict = {
         "date"       : [dates.dtype, (num_date,), dates],

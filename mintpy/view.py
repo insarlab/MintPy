@@ -1040,7 +1040,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
     # 4) data/model output from load_gbis.py OR
     # 5) binary files with multiple undefined datasets, as band1, band2, etc.
     if (len(inps.dsetFamilyList) == 1
-            or inps.key in ['velocity', 'timeseries', 'inversion']
+            or inps.key in ['timeseries', 'inversion']
             or all(d in inps.dsetFamilyList for d in ['horizontal', 'vertical'])
             or inps.dsetFamilyList == ['data','model','residual']
             or inps.dsetFamilyList == ['band{}'.format(i+1) for i in range(len(inps.dsetFamilyList))]):
@@ -1051,6 +1051,10 @@ def read_data4figure(i_start, i_end, inps, metadata):
     # adjust data due to spatial referencing and unit related scaling
     if same_unit4all_subplots:
         data, inps = update_data_with_plot_inps(data, metadata, inps)
+    else:
+        if any(x in inps.iargs for x in ['-u', '--unit']):
+            print('WARNING: -u/--unit option is disabled for multi-subplots with different units! Ignore it and continue')
+        inps.disp_unit = None
 
     # mask
     if inps.msk is not None:
@@ -1135,7 +1139,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
 
         else:
             title_str = inps.dset[i]
-            if len(inps.dsetFamilyList) == 1:
+            if len(inps.dsetFamilyList) == 1 and '-' in title_str:
                 title_str = title_str.split('-')[1]
 
             num_subplot = inps.fig_row_num * inps.fig_col_num
@@ -1227,7 +1231,12 @@ def plot_figure(j, inps, metadata):
 
         # colorbar for each subplot
         if inps.disp_cbar and not inps.vlim:
-            fig.colorbar(im, ax=axs[idx], pad=0.03, shrink=0.5, aspect=30, orientation='vertical')
+            cbar = fig.colorbar(im, ax=axs[idx], pad=0.03, shrink=0.5, aspect=30, orientation='vertical')
+
+            # display unit as colorbar label
+            data_unit = readfile.read_attribute(inps.file, datasetName=inps.dset[i]).get('UNIT', None)
+            if data_unit:
+                cbar.set_label(data_unit)
 
         prog_bar.update(idx+1, suffix=inps.dset[i].split('/')[-1])
     prog_bar.close()
@@ -1297,7 +1306,8 @@ def prepare4multi_subplots(inps, metadata):
     3) read dropIfgram info
     4) read and prepare DEM for background
     """
-    inps.dsetFamilyList = sorted(list(set(i.split('-')[0] for i in inps.dset)))
+    inps.dsetFamilyList = sorted(list(set(x.split('-')[0] for x in inps.dset)))
+    inps.dsetFamilyList = sorted(list(set(x.replace('Std','') for x in inps.dsetFamilyList)))
 
     # Update multilook parameters with new num and col number
     if inps.multilook and inps.multilook_num == 1:

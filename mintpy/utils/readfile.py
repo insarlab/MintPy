@@ -726,9 +726,15 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             atr = giantTimeseries(fname).get_metadata()
         elif k == 'giantIfgramStack':
             atr = giantIfgramStack(fname).get_metadata()
+
         elif len(atr) > 0 and 'WIDTH' in atr.keys():
-            # use the attribute at root level
-            pass
+            # use the attribute at root level, which is already read from the begining
+
+            # grab attribute of dataset if specified, e.g. UNIT, no-data value, etc.
+            if datasetName and datasetName in d1_list:
+                with h5py.File(fname, 'r') as f:
+                    atr.update(dict(f[datasetName].attrs))
+
         else:
             # otherwise, grab the list of attrs in HDF5 file
             # and use the attrs with most items
