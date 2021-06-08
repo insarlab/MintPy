@@ -444,13 +444,20 @@ class timeseries:
         """design matrix/function model of linear velocity estimation
         Parameters: date_list : list of str in YYYYMMDD format, size=num_date
                     model     : dict of time functions, e.g.:
-                                {'polynomial' : 2,            # int, polynomial with 1 (linear), 2 (quadratic), 3 (cubic), etc.
-                                 'periodic'   : [1.0, 0.5],   # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
-                                 'step'       : ['20061014'], # list of str, date(s) in YYYYMMDD.
+                                {'polynomial' : 2,                    # int, polynomial degree with 1 (linear), 2 (quadratic), 3 (cubic), etc.
+                                 'periodic'   : [1.0, 0.5],           # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
+                                 'step'       : ['20061014'],         # list of str, date(s) in YYYYMMDD.
+                                 'exp'        : {'20181026': [60],    # dict, key for onset time in YYYYMMDD and value for char. times in days.
+                                                 ...
+                                                 },
+                                 'log'        : {'20161231': [80.5],  # dict, key for onset time in YYYYMMDD and value for char. times in days.
+                                                 '20190125': [100, 200],
+                                                 ...
+                                                 },
                                  ...
                                  }
         Returns:    A         : 2D array of design matrix in size of (num_date, num_param)
-                                num_param = (poly_deg + 1) + 2*len(periodic) + len(steps)
+                                num_param = (poly_deg + 1) + 2*len(periodic) + len(steps) + len(exp_taus) + len(log_taus)
         """
 
         def get_design_matrix4polynomial_func(yr_diff, degree):
@@ -471,11 +478,12 @@ class timeseries:
 
             return A
 
+
         def get_design_matrix4periodic_func(yr_diff, periods):
             """design matrix/function model of periodic velocity estimation
             Parameters: yr_diff : 1D array of time difference from refDate in decimal years
                         periods : list of period in years: 1=annual, 0.5=semiannual, etc.
-            Returns:    A       : 2D array of periodic sine & cosine coeff. in size of (num_date, 2)
+            Returns:    A       : 2D array of periodic sine & cosine coeff. in size of (num_date, 2*num_period)
             """
             num_date = len(yr_diff)
             num_period = len(periods)
@@ -506,6 +514,100 @@ class timeseries:
 
             return A
 
+
+        def get_design_matrix4exp_func(date_list, exp_dict):
+            """design matrix/function model of exponential postseismic relaxation estimation
+
+            Reference: Eq. (5) in Hetland et al. (2012, JGR).
+            Note that there is a typo in the paper for this equation, based on the MInTS code, it should be:
+                Sum_i{ a_i * H(t-Ti) * [1 - e^(-(t-T_i)/tau_i)] }
+            instead of the one below shown in the paper:
+                Sum_i{ a_i * H(t-Ti) * [1 - e^(-(t)/tau_i)] }
+            where:
+                a_i         amplitude      of i-th exp term
+                T_i         onset time     of i-th exp term
+                tau_i       char time      of i-th exp term (relaxation time)
+                H(t-T_i)    Heaviside func of i-th exp term (ensuring the exp func is one-sided)
+
+            Parameters: date_list      : list of dates in YYYYMMDD format
+                        exp_dict       : dict of exp func(s) info as:
+                                         {{onset_time1} : [{char_time11,...,char_time1N}],
+                                          {onset_time2} : [{char_time21,...,char_time2N}],
+                                          ...
+                                          }
+                                         where onset_time is string  in YYYYMMDD format and
+                                               char_time  is float32 in decimal days
+            Returns:    A              : 2D array of zeros & ones in size of (num_date, num_exp)
+            """
+            num_date = len(date_list)
+            num_exp  = sum([len(val) for key, val in exp_dict.items()])
+            A = np.zeros((num_date, num_exp), dtype=np.float32)
+
+            t = np.array(ptime.yyyymmdd2years(date_list))
+            # loop for onset time(s)
+            i = 0
+            for exp_onset in exp_dict.keys():
+                # convert string to float in years
+                exp_T = ptime.yyyymmdd2years(exp_onset)
+
+                # loop for charateristic time(s)
+                for exp_tau in exp_dict[exp_onset]:
+                    # convert time from days to years
+                    exp_tau /= 365.25
+                    A[:, i] = np.array(t > exp_T).flatten() * (1 - np.exp(-1 * (t - exp_T) / exp_tau))
+                    i += 1
+
+            return A
+
+
+        def get_design_matrix4log_func(date_list, log_dict):
+            """design matrix/function model of logarithmic postseismic relaxation estimation
+
+            Reference: Eq. (4) in Hetland et al. (2012, JGR)
+            Note that there is a typo in the paper for this equation, based on the MInTS code, it should be:
+                Sum_i{ a_i * H(t-Ti) * [1 + log((t-T_i)/tau_i)] }
+            instead of the one below shown in the paper:
+                Sum_i{ a_i * H(t-Ti) * [1 + log((t)/tau_i)] }
+            where:
+                a_i         amplitude      of i-th log term
+                T_i         onset time     of i-th log term
+                tau_i       char time      of i-th log term (relaxation time)
+                H(t-T_i)    Heaviside func of i-th log term (ensuring the log func is one-sided)
+
+            Parameters: date_list      : list of dates in YYYYMMDD format
+                        log_dict       : dict of log func(s) info as:
+                                         {{onset_time1} : [{char_time11,...,char_time1N}],
+                                          {onset_time2} : [{char_time21,...,char_time2N}],
+                                          ...
+                                          }
+                                         where onset_time is string  in YYYYMMDD format and
+                                               char_time  is float32 in decimal days
+            Returns:    A              : 2D array of zeros & ones in size of (num_date, num_log)
+            """
+            num_date = len(date_list)
+            num_log  = sum([len(log_dict[x]) for x in log_dict])
+            A = np.zeros((num_date, num_log), dtype=np.float32)
+
+            t = np.array(ptime.yyyymmdd2years(date_list))
+            # loop for onset time(s)
+            i = 0
+            for log_onset in log_dict.keys():
+                # convert string to float in years
+                log_T = ptime.yyyymmdd2years(log_onset)
+
+                # loop for charateristic time(s)
+                for log_tau in log_dict[log_onset]:
+                    # convert time from days to years
+                    log_tau /= 365.25
+
+                    olderr = np.seterr(invalid='ignore', divide='ignore')
+                    A[:, i] = np.array(t > log_T).flatten() * np.nan_to_num(np.log(1 + (t - log_T) / log_tau), nan=0, neginf=0)
+                    np.seterr(**olderr)
+                    i += 1
+
+            return A
+
+
         ## prepare time info
         # convert list of date into array of years in float
         yr_diff = np.array(ptime.yyyymmdd2years(date_list))
@@ -521,13 +623,17 @@ class timeseries:
             model = {'polynomial' : 1}
 
         # read the models
-        poly_deg = model.get('polynomial', 0)
-        periods  = model.get('periodic', [])
-        steps    = model.get('step', [])
+        poly_deg   = model.get('polynomial', 0)
+        periods    = model.get('periodic', [])
+        steps      = model.get('step', [])
+        exps       = model.get('exp', dict())
+        logs       = model.get('log', dict())
         num_period = len(periods)
-        num_step = len(steps)
+        num_step   = len(steps)
+        num_exp    = sum([len(val) for key, val in exps.items()])
+        num_log    = sum([len(val) for key, val in logs.items()])
 
-        num_param = (poly_deg + 1) + (2 * num_period) + num_step
+        num_param = (poly_deg + 1) + (2 * num_period) + num_step + num_exp + num_log
         if num_param <= 1:
             raise ValueError('NO time functions specified!')
 
@@ -552,6 +658,18 @@ class timeseries:
         if num_step > 0:
             c1 = c0 + num_step
             A[:, c0:c1] = get_design_matrix4step_func(date_list, steps)
+            c0 = c1
+
+        # update exponential term(s)
+        if num_exp > 0:
+            c1 = c0 + num_exp
+            A[:, c0:c1] = get_design_matrix4exp_func(date_list, exps)
+            c0 = c1
+
+        # update logarithmic term(s)
+        if num_log > 0:
+            c1 = c0 + num_log
+            A[:, c0:c1] = get_design_matrix4log_func(date_list, logs)
             c0 = c1
 
         return A
