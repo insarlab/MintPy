@@ -17,14 +17,13 @@ from mintpy.utils import readfile, writefile, utils as ut
 SPEED_OF_LIGHT = 299792458  # m/s
 
 
+#########################################################################
 EXAMPLE = """example:
-  prep_hyp3.py  interferograms/*/*unw_phase.tif
-  prep_hyp3.py  interferograms/*/*corr.tif
   prep_hyp3.py  interferograms/*/*unw_phase_clip.tif
   prep_hyp3.py  interferograms/*/*corr_clip.tif
+  prep_hyp3.py  interferograms/*/*dem_clip.tif
+  prep_hyp3.py  interferograms/*/*inc_map_clip.tif
   prep_hyp3.py  interferograms/*/*clip.tif
-  prep_hyp3.py  interferograms/*/*dem.tif
-  prep_hyp3.py  interferograms/*/*inc_map.tif
 """
 
 DESCRIPTION = """
@@ -46,25 +45,25 @@ DESCRIPTION = """
 
   Before loading:
       For each interferogram, 3 files are needed:
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase.tif
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr.tif
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase_clip.tif
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr_clip.tif
           S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2.txt
       For the geometry file 2 file are recommended:
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem.tif (a required DEM)
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_inc_map.tif (an optional incidence angle)
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem_clip.tif     (required)
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_inc_map_clip.tif (optional but recommended)
 
   After running prep_hyp3.py:
       For each interferogram:
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase.tif
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase.tif.rsc
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr.tif
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr.tif.rsc
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase_clip.tif
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase_clip.tif.rsc
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr_clip.tif
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr_clip.tif.rsc
           S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2.txt
       For the input geometry files:
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem.tif
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem.tif.rsc
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_inc_map.tif
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_inc_map.tif.rsc
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem_clip.tif
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem_clip.tif.rsc
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_inc_map_clip.tif
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_inc_map_clip.tif.rsc
 
   Notes:
     HyP3 currently only supports generation of Sentinel-1 interferograms, so
@@ -72,9 +71,7 @@ DESCRIPTION = """
     from other satellites, changes will be needed. 
 """
 
-#########################################################################
 
-# CMD parsing
 def create_parser():
     parser = argparse.ArgumentParser(description='Prepare attributes file for HyP3 InSAR product.\n'+
                                      DESCRIPTION,
@@ -93,16 +90,12 @@ def cmd_line_parse(iargs=None):
 
 
 #########################################################################
-# extract data from HyP3 interferogram metadata
 def add_hyp3_metadata(fname,meta,is_ifg=True):
     '''Read/extract attribute data from HyP3 metadata file and add to metadata dictionary
     Inputs:
-        *unw_phase.tif, *corr.tif file name, *dem.tif, *inc_map.cfg e.g.
-            S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase.tif
+        *unw_phase.tif, *corr.tif file name, *dem.tif, *inc_map.tif, e.g.
             S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase_clip.tif
-            S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr.tif
             S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr_clip.tif
-            S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem.tif
             S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem_clip.tif
         Metadata dictionary (meta)
     Output:
@@ -145,7 +138,6 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
     return(meta)
 
 
-# add sentinel-1 metadata and remove unnessecary metadata
 def add_sentinel1_metadata(meta):
     '''Add Sentinel-1 attribute data to metadata dictionary
     Inputs:
@@ -167,7 +159,6 @@ def add_sentinel1_metadata(meta):
     S = N + float(meta['Y_STEP']) * int(meta['LENGTH'])
     E = W + float(meta['X_STEP']) * int(meta['WIDTH'])
 
-    # NOTE by ZY, 27-03-2021: this should be converted from meters to degrees for pyaps to use it properly.
     if meta['ORBIT_DIRECTION'] == 'ASCENDING':
         meta['LAT_REF1'] = str(S)
         meta['LAT_REF2'] = str(S)
@@ -191,20 +182,18 @@ def add_sentinel1_metadata(meta):
 
 
 #########################################################################
-
 def main(iargs=None):
     # read in arguments
     inps = cmd_line_parse(iargs)
 
     # for each filename, generate metadata rsc file
     for fname in inps.file:
-        meta = readfile.read_gdal_vrt(fname)
-
         is_ifg = any([x in fname for x in ['unw_phase','corr']])
-
+        meta = readfile.read_gdal_vrt(fname)
         meta = add_hyp3_metadata(fname, meta, is_ifg=is_ifg)
         meta = add_sentinel1_metadata(meta)
 
+        # write
         rsc_file = fname+'.rsc'
         writefile.write_roipac_rsc(meta, out_file=rsc_file)
 
