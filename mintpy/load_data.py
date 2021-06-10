@@ -32,7 +32,7 @@ from mintpy import subset
 
 
 #################################################################
-PROCESSOR_LIST = ['isce', 'aria', 'gmtsar', 'snap', 'gamma', 'hyp3', 'roipac']
+PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac']
 
 datasetName2templateKey = {
     'unwrapPhase'     : 'mintpy.load.unwFile',
@@ -505,7 +505,7 @@ def read_inps_dict2geometry_dict_object(iDict):
         # for processors with lookup table in geo-coordinates, remove latitude/longitude
         iDict['ds_name2key'].pop('latitude')
         iDict['ds_name2key'].pop('longitude')
-    elif iDict['processor'] in ['aria', 'gmtsar', 'snap', 'hyp3']:
+    elif iDict['processor'] in ['aria', 'gmtsar', 'hyp3', 'snap']:
         # for processors with geocoded products support only, do nothing for now.
         # check again when adding products support in radar-coordiantes
         pass

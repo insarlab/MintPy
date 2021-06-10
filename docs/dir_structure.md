@@ -378,6 +378,41 @@ mintpy.load.azAngleFile      = $DATA_DIR/SanFranSenDT42/azimuthAngle/*.vrt
 mintpy.load.waterMaskFile    = $DATA_DIR/SanFranSenDT42/mask/watermask.msk
 ```
 
+### [ASF HyP3](https://hyp3-docs.asf.alaska.edu/)
+
+1. Request and download GUNW products using [hyp3_sdk](https://nbviewer.jupyter.org/github/ASFHyP3/hyp3-sdk/blob/main/docs/sdk_example.ipynb).
+2. Download the corresponding DEM used in processing using [hyp3lib](https://github.com/ASFHyP3/hyp3-lib)/[getDEMfor.getDemFile()](https://github.com/ASFHyP3/hyp3-lib/blob/develop/hyp3lib/getDemFor.py#L16) function.
+3. Paste HyP3 interferogram metadata file (e.g. S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85.txt) into the same directory as your dem and give it the same name as your dem (e.g. dem.txt)
+4. Clip DEM and all interferograms to the same area using hyp3lib/[cutGeotiffs.py](https://github.com/ASFHyP3/hyp3-lib/blob/develop/hyp3lib/cutGeotiffs.py) script.
+
+```
+$DATA_DIR/TongariroSen
+├── DEM
+│   ├── dem.tif
+│   ├── dem_clip.tif
+│   └── dem_clip.txt
+├── S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85
+│   ├── S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85_unw_phase_clip.tif
+│   ├── S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85_corr_clip.tif
+│   ├── S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85.txt
+│   └── ...
+├── S1BB_20170428T070618_20170522T070619_VVP024_INT80_G_ueF_0CE0
+├── ...
+└── mintpy
+    └── TongariroSen.txt
+```
+
+The corresponding template options for `load_data`:
+
+```cfg
+mintpy.load.processor        = hyp3
+##---------interferogram datasets:
+mintpy.load.unwFile          = $DATA_DIR/TongariroSen/*/*unw_phase_clip.tif
+mintpy.load.corFile          = $DATA_DIR/TongariroSen/*/*corr_clip.tif
+##---------geometry datasets:
+mintpy.load.demFile          = $DATA_DIR/TongariroSen/dem_clip.tif
+```
+
 ### [GMTSAR](https://github.com/gmtsar/gmtsar) ###
 
 Below is a recipe to prepare a stack of interferograms from Sentinel-1:
@@ -502,41 +537,6 @@ mintpy.load.unwFile          = $DATA_DIR/WCapeSenAT29/interferograms/*/*/Unw_*.i
 mintpy.load.corFile          = $DATA_DIR/WCapeSenAT29/interferograms/*/*/coh_*.img
 ##---------geometry datasets:
 mintpy.load.demFile          = $DATA_DIR/WCapeSenAT29/dem_tc.data/dem*.img
-```
-
-### [ASF HyP3](https://hyp3-docs.asf.alaska.edu/)
-
-1. Request and download GUNW products using [hyp3_sdk](https://nbviewer.jupyter.org/github/ASFHyP3/hyp3-sdk/blob/main/docs/sdk_example.ipynb).
-2. Download the corresponding DEM used in processing using [hyp3lib](https://github.com/ASFHyP3/hyp3-lib)/[getDEMfor.getDemFile()](https://github.com/ASFHyP3/hyp3-lib/blob/develop/hyp3lib/getDemFor.py#L16) function.
-3. Paste HyP3 interferogram metadata file (e.g. S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85.txt) into the same directory as your dem and give it the same name as your dem (e.g. dem.txt)
-4. Clip DEM and all interferograms to the same area using hyp3lib/[cutGeotiffs.py](https://github.com/ASFHyP3/hyp3-lib/blob/develop/hyp3lib/cutGeotiffs.py) script.
-
-```
-$DATA_DIR/TongariroSen
-├── DEM
-│   ├── dem.tif
-│   ├── dem_clip.tif
-│   └── dem_clip.txt
-├── S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85
-│   ├── S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85_unw_phase_clip.tif
-│   ├── S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85_corr_clip.tif
-│   ├── S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85.txt
-│   └── ...
-├── S1BB_20170428T070618_20170522T070619_VVP024_INT80_G_ueF_0CE0
-├── ...
-└── mintpy
-    └── TongariroSen.txt
-```
-
-The corresponding template options for `load_data`:
-
-```cfg
-mintpy.load.processor        = hyp3
-##---------interferogram datasets:
-mintpy.load.unwFile          = $DATA_DIR/TongariroSen/*/*unw_phase_clip.tif
-mintpy.load.corFile          = $DATA_DIR/TongariroSen/*/*corr_clip.tif
-##---------geometry datasets:
-mintpy.load.demFile          = $DATA_DIR/TongariroSen/dem_clip.tif
 ```
 
 ### ROI_PAC (rsmas version) ###
