@@ -386,20 +386,22 @@ mintpy.load.waterMaskFile    = $DATA_DIR/SanFranSenDT42/mask/watermask.msk
 3. Clip DEM and all interferograms to the same area using hyp3lib/[cutGeotiffs.py](https://github.com/ASFHyP3/hyp3-lib/blob/develop/hyp3lib/cutGeotiffs.py) script.
 
 ```
-$DATA_DIR/TongariroSen
-├── S1BA_20161229T070618_20170116T070658_VVP018_INT80_G_ueF_8108
-│   ├── S1BA_20161229T070618_20170116T070658_VVP018_INT80_G_ueF_8108_unw_phase_clip.tif
-│   ├── S1BA_20161229T070618_20170116T070658_VVP018_INT80_G_ueF_8108_corr_clip.tif
-│   ├── S1BA_20161229T070618_20170116T070658_VVP018_INT80_G_ueF_8108_dem_clip.tif
-│   ├── S1BA_20161229T070618_20170116T070658_VVP018_INT80_G_ueF_8108.txt
+$DATA_DIR/TongariroSenA
+├── hyp3
+|   ├── S1BA_20161229T070618_20170116T070658_VVP018_INT80_G_ueF_8108
+│   │   ├── S1BA_20161229T070618_20170116T070658_VVP018_INT80_G_ueF_8108_unw_phase_clip.tif
+│   │   ├── S1BA_20161229T070618_20170116T070658_VVP018_INT80_G_ueF_8108_corr_clip.tif
+│   │   ├── S1BA_20161229T070618_20170116T070658_VVP018_INT80_G_ueF_8108_dem_clip.tif
+│   │   ├── S1BA_20161229T070618_20170116T070658_VVP018_INT80_G_ueF_8108.txt
+│   │   └── ...
+│   ├── S1AB_20170116T070658_20170122T070616_VVP006_INT80_G_ueF_0209
+│   │   ├── S1AB_20170116T070658_20170122T070616_VVP006_INT80_G_ueF_0209_unw_phase_clip.tif
+│   │   ├── S1AB_20170116T070658_20170122T070616_VVP006_INT80_G_ueF_0209_corr_clip.tif
+│   │   ├── S1AB_20170116T070658_20170122T070616_VVP006_INT80_G_ueF_0209.txt
+│   │   └── ...
 │   └── ...
-├── S1AB_20170116T070658_20170122T070616_VVP006_INT80_G_ueF_0209
-│   ├── S1AB_20170116T070658_20170122T070616_VVP006_INT80_G_ueF_0209_unw_phase_clip.tif
-│   ├── S1AB_20170116T070658_20170122T070616_VVP006_INT80_G_ueF_0209_corr_clip.tif
-│   ├── S1AB_20170116T070658_20170122T070616_VVP006_INT80_G_ueF_0209.txt
-│   └── ...
-├── ...
-└── hyp3.cfg
+└── mintpy
+    └── TongariroSenA.txt
 ```
 
 The corresponding template options for `load_data`:
@@ -407,10 +409,10 @@ The corresponding template options for `load_data`:
 ```cfg
 mintpy.load.processor        = hyp3
 ##---------interferogram datasets:
-mintpy.load.unwFile          = $DATA_DIR/TongariroSen/*/*unw_phase_clip.tif
-mintpy.load.corFile          = $DATA_DIR/TongariroSen/*/*corr_clip.tif
+mintpy.load.unwFile          = $DATA_DIR/TongariroSenA/hyp3/*/*unw_phase_clip.tif
+mintpy.load.corFile          = $DATA_DIR/TongariroSenA/hyp3/*/*corr_clip.tif
 ##---------geometry datasets:
-mintpy.load.demFile          = $DATA_DIR/TongariroSen/*/S1BA_20161229T070618_20170116T070658_VVP018_INT80_G_ueF_8108_dem_clip.tif
+mintpy.load.demFile          = $DATA_DIR/TongariroSenA/hyp3/*/*dem_clip.tif
 ```
 
 ### [GMTSAR](https://github.com/gmtsar/gmtsar) ###
