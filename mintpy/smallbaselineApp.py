@@ -1163,6 +1163,7 @@ class TimeSeriesAnalysis:
 
         # remote element list - file is ifgramStack and the dataset of interest does not exist
         stack_dset_list = readfile.get_dataset_list(stack_file)
+        stack_dset_list += [f'{x}-' for x in stack_dset_list]
         iargs_list = [iargs for iargs in iargs_list
                       if (iargs[0] != stack_file
                           or (iargs[0] == stack_file
