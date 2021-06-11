@@ -125,33 +125,6 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
     meta['EARTH_RADIUS'] = hyp3_meta['Earth radius at nadir']
     meta['HEIGHT'] = hyp3_meta['Spacecraft height']
 
-    # add metadata that is only relevant to interferogram files
-    if is_ifg:
-        date1 = datetime.strptime(date1_string,'%Y%m%dT%H%M%S')
-        date2 = datetime.strptime(date2_string,'%Y%m%dT%H%M%S')
-        date_avg = date1 + (date2 - date1) / 2
-        date_avg_seconds = (date_avg - date_avg.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
-
-        meta['CENTER_LINE_UTC'] = date_avg_seconds
-        meta['DATE12'] = f'{date1.strftime("%y%m%d")}-{date2.strftime("%y%m%d")}'
-
-    return(meta)
-
-
-def add_sentinel1_metadata(meta):
-    '''Add Sentinel-1 attribute data to metadata dictionary
-    Inputs:
-        Metadata dictionary (meta)
-    Output:
-        Metadata dictionary (meta)
-    '''
-
-    # note: HyP3 currently only supports Sentinel-1 data, so Sentinel-1
-    #       configuration is hard-coded.
-    meta['PLATFORM'] = 'Sen'
-    meta['ANTENNA_SIDE'] = -1
-    meta['WAVELENGTH'] = SPEED_OF_LIGHT / sensor.SEN['carrier_frequency']
-
     # add LAT/LON_REF1/2/3/4 based on whether satellite ascending or descending
     meta['ORBIT_DIRECTION'] = 'ASCENDING' if float(meta['HEADING']) > -90 else 'DESCENDING'
     N = float(meta['Y_FIRST'])
@@ -178,6 +151,22 @@ def add_sentinel1_metadata(meta):
         meta['LON_REF3'] = str(E)
         meta['LON_REF4'] = str(W)
 
+    # note: HyP3 currently only supports Sentinel-1 data, so Sentinel-1
+    #       configuration is hard-coded.
+    meta['PLATFORM'] = 'Sen'
+    meta['ANTENNA_SIDE'] = -1
+    meta['WAVELENGTH'] = SPEED_OF_LIGHT / sensor.SEN['carrier_frequency']
+
+    # add metadata that is only relevant to interferogram files
+    if is_ifg:
+        date1 = datetime.strptime(date1_string,'%Y%m%dT%H%M%S')
+        date2 = datetime.strptime(date2_string,'%Y%m%dT%H%M%S')
+        date_avg = date1 + (date2 - date1) / 2
+        date_avg_seconds = (date_avg - date_avg.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
+
+        meta['CENTER_LINE_UTC'] = date_avg_seconds
+        meta['DATE12'] = f'{date1.strftime("%y%m%d")}-{date2.strftime("%y%m%d")}'
+
     return(meta)
 
 
@@ -191,7 +180,6 @@ def main(iargs=None):
         is_ifg = any([x in fname for x in ['unw_phase','corr']])
         meta = readfile.read_gdal_vrt(fname)
         meta = add_hyp3_metadata(fname, meta, is_ifg=is_ifg)
-        meta = add_sentinel1_metadata(meta)
 
         # write
         rsc_file = fname+'.rsc'
