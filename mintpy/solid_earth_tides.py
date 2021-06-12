@@ -121,31 +121,36 @@ def prepare_los_geometry(geom_file):
                 atr        - dict, metadata in geo-coordinate
     """
 
-    print('read/prepare LOS geometry from file: {}'.format(geom_file))
+    print('prepare LOS geometry in geo-coordinates from file: {}'.format(geom_file))
     atr = readfile.read_attribute(geom_file)
 
-    print('read incidence / azimuth angle')
+    print('read incidenceAngle from file: {}'.format(geom_file))
     inc_angle = readfile.read(geom_file, datasetName='incidenceAngle')[0]
-    az_angle  = readfile.read(geom_file, datasetName='azimuthAngle')[0]
+
+    if 'azimuthAngle' in readfile.get_dataset_list(geom_file):
+        print('read azimuthAngle   from file: {}'.format(geom_file))
+        print('convert azimuth angle to heading angle')
+        az_angle  = readfile.read(geom_file, datasetName='azimuthAngle')[0]
+        head_angle = ut.azimuth2heading_angle(az_angle)
+    else:
+        print('use the HEADING attribute as the mean heading angle')
+        head_angle = np.ones(inc_angle.shape, dtype=np.float32) * float(atr['HEADING'])
 
     # geocode inc/az angle data if in radar-coord
     if 'Y_FIRST' not in atr.keys():
         print('-'*50)
-        print('geocoding the incidence / azimuth angle ...')
+        print('geocoding the incidence / heading angles ...')
         res_obj = resample(lut_file=geom_file, src_file=geom_file)
         res_obj.open()
         res_obj.prepare()
 
         # resample data
         box = res_obj.src_box_list[0]
-        inc_angle = res_obj.run_resample(src_data=inc_angle[box[1]:box[3], box[0]:box[2]])
-        az_angle  = res_obj.run_resample(src_data=az_angle[box[1]:box[3], box[0]:box[2]])
+        inc_angle  = res_obj.run_resample(src_data=inc_angle[box[1]:box[3], box[0]:box[2]])
+        head_angle = res_obj.run_resample(src_data=head_angle[box[1]:box[3], box[0]:box[2]])
 
         # update attribute
         atr = attr.update_attribute4radar2geo(atr, res_obj=res_obj)
-
-    # azimuth angle --> heading angle
-    head_angle = ut.azimuth2heading_angle(az_angle)
 
     # unit: degree to radian
     inc_angle *= np.pi / 180.
@@ -338,17 +343,19 @@ def main(iargs=None):
     start_time = time.time()
 
     # calc SET
-    calc_solid_earth_tides_timeseries(ts_file=inps.dis_file,
-                                      geom_file=inps.geom_file,
-                                      set_file=inps.set_file,
-                                      date_wise_acq_time=inps.date_wise_acq_time,
-                                      update_mode=inps.update_mode,
-                                      verbose=inps.verbose)
+    calc_solid_earth_tides_timeseries(
+        ts_file=inps.dis_file,
+        geom_file=inps.geom_file,
+        set_file=inps.set_file,
+        date_wise_acq_time=inps.date_wise_acq_time,
+        update_mode=inps.update_mode,
+        verbose=inps.verbose)
 
     # correct SET
-    correct_timeseries(dis_file=inps.dis_file,
-                       set_file=inps.set_file,
-                       cor_dis_file=inps.cor_dis_file)
+    correct_timeseries(
+        dis_file=inps.dis_file,
+        set_file=inps.set_file,
+        cor_dis_file=inps.cor_dis_file)
 
     m, s = divmod(time.time() - start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
