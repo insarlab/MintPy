@@ -658,7 +658,6 @@ def calc_delay_timeseries(inps):
     inps.inc = geom_obj.read(datasetName='incidenceAngle')
     inps.dem = geom_obj.read(datasetName='height')
 
-    
     #Inc angle of HyP3 is in radians
     #Converts degree to radians
     if 'hyp3' in geom_obj.metadata['PROCESSOR']:
