@@ -143,7 +143,6 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
     meta['X_UNIT'] ='degrees'
     meta['Y_UNIT'] = 'degrees'
     meta['UTM_ZONE'] = 'none'
-    
     if meta['ORBIT_DIRECTION'] == 'ASCENDING':
         meta['LAT_REF1'] = str(S)
         meta['LAT_REF2'] = str(S)
