@@ -140,24 +140,7 @@ def prepare_los_geometry(geom_file):
     #Converts degree to radians
     if atr['PROCESSOR'] == 'hyp3':
         inc_angle *=180 / np.pi
-    # 'Y_FIRST' not in 'degree'
-    # e.g. meters for UTM projection from ASF HyP3
-    if not atr['Y_UNIT'].lower().startswith('deg'):
-        length, width = int(atr['LENGTH']), int(atr['WIDTH'])
-        lat0 = float(atr['Y_FIRST'])
-        lon0 = float(atr['X_FIRST'])
-        lat_step = float(atr['Y_STEP'])
-        lon_step = float(atr['X_STEP'])
-        lat1 = lat0 + lat_step * (length - 1)
-        lon1 = lon0 + lon_step * (width - 1)
-        lat0, lon0 = ut.to_latlon(atr['OG_FILE_PATH'], lon0, lat0)
-        lat1, lon1 = ut.to_latlon(atr['OG_FILE_PATH'], lon1, lat1)
-        lat_step = (lat1 -lat0) / (length - 1)
-        lon_step = (lon1 -lon0) / (width - 1)
-        atr['Y_FIRST'] = lat0
-        atr['X_FIRST'] = lon0
-        atr['Y_STEP'] = lat_step
-        atr['X_STEP'] = lon_step
+        
     # geocode inc/az angle data if in radar-coord
     if 'Y_FIRST' not in atr.keys():
         print('-'*50)
