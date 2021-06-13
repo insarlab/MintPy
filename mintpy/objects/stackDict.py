@@ -613,7 +613,10 @@ class geometryDict:
                     elif dsName == 'azimuthCoord' and ystep != 1:
                         print('    scale value of {:<15} by 1/{} due to multilooking'.format(dsName, ystep))
                         data /= ystep
-
+                    if dsName == 'incidenceAngle':
+                        self.get_metadata()
+                        if self.metadata['PROCESSOR'] == 'hyp3': 
+                            data *= 180/np.pi
                     # write
                     ds = f.create_dataset(dsName,
                                           data=data,
