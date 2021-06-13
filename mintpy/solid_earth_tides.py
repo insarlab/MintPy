@@ -135,10 +135,6 @@ def prepare_los_geometry(geom_file):
     else:
         print('use the HEADING attribute as the mean heading angle')
         head_angle = np.ones(inc_angle.shape, dtype=np.float32) * float(atr['HEADING'])
-    #Inc angle of HyP3 is in radians
-    #Converts degree to radians
-    if atr['PROCESSOR'] == 'hyp3':
-        inc_angle *=180 / np.pi
         
     # geocode inc/az angle data if in radar-coord
     if 'Y_FIRST' not in atr.keys():
