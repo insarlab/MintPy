@@ -125,8 +125,8 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
     meta['EARTH_RADIUS'] = hyp3_meta['Earth radius at nadir']
     meta['HEIGHT'] = hyp3_meta['Spacecraft height']
     meta['FILE_PATH'] = os.path.abspath(fname)
-     if fname.endswith("inc_map_clip.tif"):
-         meta['UNIT'] = 'radian'
+    if fname.endswith("inc_map_clip.tif"):
+      meta['UNIT'] = 'radian'
 
     # add LAT/LON_REF1/2/3/4 based on whether satellite ascending or descending
     meta['ORBIT_DIRECTION'] = 'ASCENDING' if float(meta['HEADING']) > -90 else 'DESCENDING'
