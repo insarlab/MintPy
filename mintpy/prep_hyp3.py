@@ -125,8 +125,8 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
     meta['EARTH_RADIUS'] = hyp3_meta['Earth radius at nadir']
     meta['HEIGHT'] = hyp3_meta['Spacecraft height']
     meta['FILE_PATH'] = os.path.abspath(fname)
-    if fname.endswith("inc_map_clip.tif"):
-        meta['UNIT'] = 'radian'
+     if fname.endswith("inc_map_clip.tif"):
+         meta['UNIT'] = 'radian'
 
     # add LAT/LON_REF1/2/3/4 based on whether satellite ascending or descending
     meta['ORBIT_DIRECTION'] = 'ASCENDING' if float(meta['HEADING']) > -90 else 'DESCENDING'
@@ -135,16 +135,6 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
     S = N + float(meta['Y_STEP']) * int(meta['LENGTH'])
     E = W + float(meta['X_STEP']) * int(meta['WIDTH'])
 
-    #Convert meters to degrees
-    N, W = ut.to_latlon(meta['FILE_PATH'], W, N)
-    S, E = ut.to_latlon(meta['FILE_PATH'], E, S)
-    meta['X_STEP'] = (E - W) / int(meta['WIDTH'])
-    meta['Y_STEP'] = (S - N) / int(meta['LENGTH'])
-    meta['X_FIRST'] = W
-    meta['Y_FIRST'] = N
-    meta['X_UNIT'] ='degrees'
-    meta['Y_UNIT'] = 'degrees'
-    meta['UTM_ZONE'] = 'none'
     if meta['ORBIT_DIRECTION'] == 'ASCENDING':
         meta['LAT_REF1'] = str(S)
         meta['LAT_REF2'] = str(S)
