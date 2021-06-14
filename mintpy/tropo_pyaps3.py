@@ -62,7 +62,7 @@ REFERENCE = """reference:
   2324-2341, doi:10.1002/2013JB010588.
 
   # ERA-5
-  Hersbach, H., Bell, B., Berrisford, P., Hirahara, S., Horányi, A., Muñoz-Sabater, J., et al. (2020). 
+  Hersbach, H., Bell, B., Berrisford, P., Hirahara, S., Horányi, A., Muñoz-Sabater, J., et al. (2020). 
   The ERA5 global reanalysis. Quarterly Journal of the Royal Meteorological Society, 146(730), 1999–2049.
   https://doi.org/10.1002/qj.3803
 """
@@ -682,6 +682,7 @@ def calc_delay_timeseries(inps):
 
     # mask of valid pixels
     mask = np.multiply(inps.inc != 0, ~np.isnan(inps.inc))
+
 
     ## 2. prepare output file
     # metadata

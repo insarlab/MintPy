@@ -614,6 +614,13 @@ class geometryDict:
                         print('    scale value of {:<15} by 1/{} due to multilooking'.format(dsName, ystep))
                         data /= ystep
 
+                    elif dsName == 'incidenceAngle':
+                        atr = readfile.read_attribute(self.file)
+                        if (atr.get('PROCESSOR', 'isce') == 'hyp3'
+                                and atr.get('UNIT', 'degrees').startswith('rad')):
+                            print('    convert the unit of {:<15} from radian to degree'.format(dsName))
+                            data *= 180. / np.pi
+
                     # write
                     ds = f.create_dataset(dsName,
                                           data=data,

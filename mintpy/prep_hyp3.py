@@ -157,6 +157,11 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
     meta['ANTENNA_SIDE'] = -1
     meta['WAVELENGTH'] = SPEED_OF_LIGHT / sensor.SEN['carrier_frequency']
 
+    # note: HyP3 (incidence) angle datasets are in the unit of radian
+    # which is different from the isce-2 convention of degree
+    if 'inc_map' in os.path.basename(fname):
+        meta['UNIT'] = 'radian'
+
     # add metadata that is only relevant to interferogram files
     if is_ifg:
         date1 = datetime.strptime(date1_string,'%Y%m%dT%H%M%S')
