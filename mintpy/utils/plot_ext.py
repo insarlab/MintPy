@@ -80,7 +80,7 @@ class SelectFromCollection(object):
         self.canvas.draw_idle()
 
 ## Utility script
-def get_poly_mask(fname, datasetName, print_msg=True):
+def get_poly_mask(fname, datasetName, print_msg=True, view_cmd=''):
     """Get mask of pixels within polygon from interactive selection
     Parameters: data : 2D np.array in size of (length, width)
     Returns:    mask : 2D np.arrat in size of (length, width) in np.bool_ format
@@ -89,9 +89,8 @@ def get_poly_mask(fname, datasetName, print_msg=True):
     cmd = 'view.py {} '.format(fname)
     if datasetName:
         cmd += ' {} '.format(datasetName)
-    ## Customized setting for plotting (temporarily for advanced users)
-    #cmd += ' --dem ./inputs/geometryGeo.h5 --contour-step 100 --contour-smooth 0.0 '
-    #cmd += ' -u cm -v -6 6 '
+    if view_cmd:
+        cmd += view_cmd
 
     d_v, atr ,inps = view.prep_slice(cmd)
     ax = plt.subplots(figsize=inps.fig_size)[1]

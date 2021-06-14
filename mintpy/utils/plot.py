@@ -331,7 +331,7 @@ def auto_shared_lalo_location(axs, loc=(1,0,0,1), flatten=False):
 
 
 def auto_colormap_name(metadata, cmap_name=None, datasetName=None, print_msg=True):
-    gray_dataset_key_words = ['coherence', 'temporal_coherence',
+    gray_dataset_key_words = ['coherence', 'temporalCoherence',
                               '.cor', '.mli', '.slc', '.amp', '.ramp']
     if not cmap_name:
         if any(i in gray_dataset_key_words for i in [metadata['FILE_TYPE'],
@@ -460,7 +460,7 @@ def plot_coherence_history(ax, date12List, cohList, p_dict={}):
     if 'fontsize'    not in p_dict.keys():   p_dict['fontsize']    = 12
     if 'linewidth'   not in p_dict.keys():   p_dict['linewidth']   = 2
     if 'markercolor' not in p_dict.keys():   p_dict['markercolor'] = 'orange'
-    if 'markersize'  not in p_dict.keys():   p_dict['markersize']  = 16
+    if 'markersize'  not in p_dict.keys():   p_dict['markersize']  = 12
     if 'disp_title'  not in p_dict.keys():   p_dict['disp_title']  = True
     if 'every_year'  not in p_dict.keys():   p_dict['every_year']  = 1
     if 'vlim'        not in p_dict.keys():   p_dict['vlim']        = [0.2, 1.0]
@@ -519,7 +519,7 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
     if 'fontsize'    not in p_dict.keys():  p_dict['fontsize']    = 12
     if 'linewidth'   not in p_dict.keys():  p_dict['linewidth']   = 2
     if 'markercolor' not in p_dict.keys():  p_dict['markercolor'] = 'orange'
-    if 'markersize'  not in p_dict.keys():  p_dict['markersize']  = 16
+    if 'markersize'  not in p_dict.keys():  p_dict['markersize']  = 12
 
     # For colorful display of coherence
     if 'cohList'     not in p_dict.keys():  p_dict['cohList']     = None
@@ -691,7 +691,7 @@ def plot_perp_baseline_hist(ax, dateList, pbaseList, p_dict={}, dateList_drop=[]
     if 'fontsize'    not in p_dict.keys():   p_dict['fontsize']    = 12
     if 'linewidth'   not in p_dict.keys():   p_dict['linewidth']   = 2
     if 'markercolor' not in p_dict.keys():   p_dict['markercolor'] = 'orange'
-    if 'markersize'  not in p_dict.keys():   p_dict['markersize']  = 16
+    if 'markersize'  not in p_dict.keys():   p_dict['markersize']  = 12
     if 'disp_title'  not in p_dict.keys():   p_dict['disp_title']  = True
     if 'every_year'  not in p_dict.keys():   p_dict['every_year']  = 1
     transparency = 0.7
@@ -805,7 +805,7 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
     if 'fontsize'    not in p_dict.keys():   p_dict['fontsize']    = 12
     if 'linewidth'   not in p_dict.keys():   p_dict['linewidth']   = 2
     if 'markercolor' not in p_dict.keys():   p_dict['markercolor'] = 'orange'
-    if 'markersize'  not in p_dict.keys():   p_dict['markersize']  = 16
+    if 'markersize'  not in p_dict.keys():   p_dict['markersize']  = 12
     if 'disp_title'  not in p_dict.keys():   p_dict['disp_title']  = True
     if 'fig_title'   not in p_dict.keys():   p_dict['fig_title']   = '{} Matrix'.format(p_dict['ds_name'])
     if 'colormap'    not in p_dict.keys():   p_dict['colormap']    = 'jet'
