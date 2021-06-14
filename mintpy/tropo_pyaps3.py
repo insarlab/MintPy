@@ -651,7 +651,7 @@ def calc_delay_timeseries(inps):
     if run_or_skip(inps.grib_files, inps.tropo_file, inps.geom_file) == 'skip':
         return
 
-
+    # for testing
     ## 1. prepare geometry data
     geom_obj = geometry(inps.geom_file)
     geom_obj.open()
