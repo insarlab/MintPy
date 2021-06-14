@@ -135,25 +135,6 @@ def prepare_los_geometry(geom_file):
     else:
         print('use the HEADING attribute as the mean heading angle')
         head_angle = np.ones(inc_angle.shape, dtype=np.float32) * float(atr['HEADING'])
-    
-    # 'Y_FIRST' not in 'degree'
-    # e.g. meters for UTM projection from ASF HyP3
-    if not atr['Y_UNIT'].lower().startswith('deg'):
-        length, width = int(atr['LENGTH']), int(atr['WIDTH'])
-        lat0 = float(atr['Y_FIRST'])
-        lon0 = float(atr['X_FIRST'])
-        lat_step = float(atr['Y_STEP'])
-        lon_step = float(atr['X_STEP'])
-        lat1 = lat0 + lat_step * (length - 1)
-        lon1 = lon0 + lon_step * (width - 1)
-        lat0, lon0 = ut.to_latlon(atr['OG_FILE_PATH'], lon0, lat0)
-        lat1, lon1 = ut.to_latlon(atr['OG_FILE_PATH'], lon1, lat1)
-        lat_step = (lat1 -lat0) / (length - 1)
-        lon_step = (lon1 -lon0) / (width - 1)
-        atr['Y_FIRST'] = lat0
-        atr['X_FIRST'] = lon0
-        atr['Y_STEP'] = lat_step
-        atr['X_STEP'] = lon_step
 
     # geocode inc/az angle data if in radar-coord
     if 'Y_FIRST' not in atr.keys():
@@ -170,6 +151,32 @@ def prepare_los_geometry(geom_file):
 
         # update attribute
         atr = attr.update_attribute4radar2geo(atr, res_obj=res_obj)
+
+    # for 'Y_FIRST' not in 'degree'
+    # e.g. meters for UTM projection from ASF HyP3
+    if not atr['Y_UNIT'].lower().startswith('deg'):
+        # get SNWE in meter
+        length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+        N = float(atr['Y_FIRST'])
+        W = float(atr['X_FIRST'])
+        y_step = float(atr['Y_STEP'])
+        x_step = float(atr['X_STEP'])
+        S = N + y_step * length
+        E = W + x_step * width
+
+        # SNWE in meter --> degree
+        lat0, lon0 = ut.to_latlon(atr['OG_FILE_PATH'], W, N)
+        lat1, lon1 = ut.to_latlon(atr['OG_FILE_PATH'], E, S)
+        lat_step = (lat1 - lat0) / length
+        lon_step = (lon1 - lon0) / width
+
+        # update Y/X_FIRST/STEP/UNIT
+        atr['Y_FIRST'] = lat0
+        atr['X_FIRST'] = lon0
+        atr['Y_STEP'] = lat_step
+        atr['X_STEP'] = lon_step
+        atr['Y_UNIT'] = 'degrees'
+        atr['X_UNIT'] = 'degrees'
 
     # unit: degree to radian
     inc_angle *= np.pi / 180.

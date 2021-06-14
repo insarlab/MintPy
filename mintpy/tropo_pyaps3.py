@@ -656,6 +656,7 @@ def calc_delay_timeseries(inps):
     geom_obj.open()
     inps.inc = geom_obj.read(datasetName='incidenceAngle')
     inps.dem = geom_obj.read(datasetName='height')
+
     # for testing
     if inps.custom_height:
         print('use input custom height of {} m for vertical integration'.format(inps.custom_height))
@@ -680,6 +681,7 @@ def calc_delay_timeseries(inps):
 
     # mask of valid pixels
     mask = np.multiply(inps.inc != 0, ~np.isnan(inps.inc))
+
 
     ## 2. prepare output file
     # metadata

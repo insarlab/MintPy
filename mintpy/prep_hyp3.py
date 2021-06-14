@@ -124,9 +124,6 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
     meta['P_BASELINE_BOTTOM_HDR'] = hyp3_meta['Baseline']
     meta['EARTH_RADIUS'] = hyp3_meta['Earth radius at nadir']
     meta['HEIGHT'] = hyp3_meta['Spacecraft height']
-    meta['FILE_PATH'] = os.path.abspath(fname)
-    if fname.endswith("inc_map_clip.tif"):
-      meta['UNIT'] = 'radian'
 
     # add LAT/LON_REF1/2/3/4 based on whether satellite ascending or descending
     meta['ORBIT_DIRECTION'] = 'ASCENDING' if float(meta['HEADING']) > -90 else 'DESCENDING'
@@ -159,6 +156,11 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
     meta['PLATFORM'] = 'Sen'
     meta['ANTENNA_SIDE'] = -1
     meta['WAVELENGTH'] = SPEED_OF_LIGHT / sensor.SEN['carrier_frequency']
+
+    # note: HyP3 (incidence) angle datasets are in the unit of radian
+    # which is different from the isce-2 convention of degree
+    if 'inc_map' in os.path.basename(fname):
+        meta['UNIT'] = 'radian'
 
     # add metadata that is only relevant to interferogram files
     if is_ifg:
