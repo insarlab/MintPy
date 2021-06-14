@@ -505,39 +505,102 @@ mintpy.load.demFile          = $DATA_DIR/WCapeSenAT29/dem_tc.data/dem*.img
 ```
 
 ### [ASF HyP3](https://hyp3-docs.asf.alaska.edu/)
+please refer the notebook and the example granule.dat in docs/asf-docs
+1. Get granule name list via ASF Vertex (https://search.asf.alaska.edu). For example, granule.dat. 
+2. Request and download GUNW products using [hyp3_sdk](check the jupyter notebook in the docs).
+3. Prepare the downloaded data for process with MintPy. Clip the geotiff data, copy the metadata file (for example S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB.txt) to DEM and rename it into dem_clip.txt. copy dem.tif (for example S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_dem_clip.tif) to DEM and rename it as dem_clip.tif (see the notebook).
+4. Edit the corresponding template options for `load_data` in the custom cfg file (for example, case4.cfg):
 
-1. Request and download GUNW products using [hyp3_sdk](https://nbviewer.jupyter.org/github/ASFHyP3/hyp3-sdk/blob/main/docs/sdk_example.ipynb).
-2. Download the corresponding DEM used in processing using [hyp3lib](https://github.com/ASFHyP3/hyp3-lib)/[getDEMfor.getDemFile()](https://github.com/ASFHyP3/hyp3-lib/blob/develop/hyp3lib/getDemFor.py#L16) function.
-3. Paste HyP3 interferogram metadata file (e.g. S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85.txt) into the same directory as your dem and give it the same name as your dem (e.g. dem.txt)
-4. Clip DEM and all interferograms to the same area using hyp3lib/[cutGeotiffs.py](https://github.com/ASFHyP3/hyp3-lib/blob/develop/hyp3lib/cutGeotiffs.py) script.
-
-```
-$DATA_DIR/TongariroSen
-├── DEM
-│   ├── dem.tif
-│   ├── dem_clip.tif
-│   └── dem_clip.txt
-├── S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85
-│   ├── S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85_unw_phase_clip.tif
-│   ├── S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85_corr_clip.tif
-│   ├── S1BB_20170510T070618_20170522T070619_VVP012_INT80_G_ueF_FF85.txt
-│   └── ...
-├── S1BB_20170428T070618_20170522T070619_VVP024_INT80_G_ueF_0CE0
-├── ...
-└── mintpy
-    └── TongariroSen.txt
-```
-
-The corresponding template options for `load_data`:
-
-```cfg
-mintpy.load.processor        = hyp3
+```case4.cfg
+intpy.load.processor        = hyp3
 ##---------interferogram datasets:
-mintpy.load.unwFile          = $DATA_DIR/TongariroSen/*/*unw_phase_clip.tif
-mintpy.load.corFile          = $DATA_DIR/TongariroSen/*/*corr_clip.tif
+mintpy.load.unwFile          = $DATA_DIR/case4/*/*unw_phase_clip.tif
+mintpy.load.corFile          = $DATA_DIR/case4/*/*corr_clip.tif
 ##---------geometry datasets:
-mintpy.load.demFile          = $DATA_DIR/TongariroSen/dem_clip.tif
+mintpy.load.demFile          = $DATA_DIR/case4/DEM/dem_clip.tif
+##---------incAngleFile:
+mintpy.load.incAngleFile    =  $DATA_DIR/*/*inc_map_clip.tif
+'''
+
+The completed directory structure and files ready for process via MintPy are: 
 ```
+$DATA_DIR/case4
+├── case4.cfg
+├── DEM
+│   ├── dem_clip.tif
+│   ├── dem_clip.tif.rsc
+│   └── dem_clip.txt
+├── granule.dat
+├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_amp_clip.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_amp.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_color_phase.kmz
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_color_phase.png
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_color_phase.png.aux.xml
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_corr_clip.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_corr_clip.tif.rsc
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_corr.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_dem_clip.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_dem.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_inc_map_clip.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_inc_map_clip.tif.rsc
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_inc_map.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_los_disp_clip.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_los_disp.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_lv_phi_clip.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_lv_phi.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_lv_theta_clip.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_lv_theta.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684.README.md.txt
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684.txt
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_unw_phase_clip.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_unw_phase_clip.tif.rsc
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_unw_phase.kmz
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_unw_phase.png
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_unw_phase.png.aux.xml
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_unw_phase.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_vert_disp_clip.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_vert_disp.tif
+│   ├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_wrapped_phase_clip.tif
+│   └── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684_wrapped_phase.tif
+├── S1AA_20160205T205112_20160628T205108_VVP144_INT80_G_ueF_B684.zip
+...
+├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_amp_clip.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_amp.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_color_phase.kmz
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_color_phase.png
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_color_phase.png.aux.xml
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_corr_clip.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_corr_clip.tif.rsc
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_corr.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_dem_clip.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_dem.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_inc_map_clip.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_inc_map_clip.tif.rsc
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_inc_map.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_los_disp_clip.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_los_disp.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_lv_phi_clip.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_lv_phi.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_lv_theta_clip.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_lv_theta.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB.README.md.txt
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB.txt
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_unw_phase_clip.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_unw_phase_clip.tif.rsc
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_unw_phase.kmz
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_unw_phase.png
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_unw_phase.png.aux.xml
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_unw_phase.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_vert_disp_clip.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_vert_disp.tif
+│   ├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_wrapped_phase_clip.tif
+│   └── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB_wrapped_phase.tif
+├── S1AA_20160604T205107_20160628T205108_VVP024_INT80_G_ueF_D2BB.zip
+
+'''
+
 
 ### ROI_PAC (rsmas version) ###
 

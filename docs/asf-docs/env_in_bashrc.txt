@@ -1,0 +1,17 @@
+#edit ~/.bashrc, add following lines in the ~/.bashrc
+
+## ---------------- hyp3-mintpy --------------##
+
+export HYP3MINTPY_BASE=>The base directory of hyp3-mintpy>
+
+export HYP3MINTPY_HOME=${HYP3MINTPY_BASE}/hyp3-mintpy
+
+export MINTPY_HOME=${HYP3MINTPY_HOME}/MintPy
+
+export PYAPS_HOME=${HYP3MINTPY_HOME}/PyAPS
+
+export WEATHER_DIR=<The directory to store weather data>
+
+export PATH=${PATH}:${MINTPY_HOME}/mintpy
+
+export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
