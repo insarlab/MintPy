@@ -35,8 +35,12 @@ class resample:
         from mintpy.utils import readfile, attribute as attr
 
         ##### opt 1 - entire matrix (by not changing max_memory=0)
-        src_file = 'velocity.h5'
-        res_obj = resample(lut_file='./inputs/geometryRadar.h5', src_file=src_file)
+        res_obj = resample(lut_file='./inputs/geometryRadar.h5', src_file='velocity.h5')
+        # OR use ISCE-2 lookup table files instead of MintPy geometry file in HDF5 format
+        res_obj = resample(lut_file='../merged/geom_reference/lat.rdr', src_file='velocity.h5',
+                           lat_file='../merged/geom_reference/lat.rdr',
+                           lon_file='../merged/geom_reference/lon.rdr')
+
         res_obj.open()
         res_obj.prepare()
 
@@ -49,8 +53,7 @@ class resample:
         atr = attr.update_attribute4radar2geo(atr, res_obj=res_obj)
 
         ##### opt 2 - block-by-block IO (by setting max_memory=4)
-        src_file = 'timeseries.h5'
-        res_obj = resample(lut_file='./inputs/geometryRadar.h5', src_file=src_file, max_memory=4)
+        res_obj = resample(lut_file='./inputs/geometryRadar.h5', src_file='timeseries.h5', max_memory=4)
         res_obj.open()
         res_obj.prepare()
 
@@ -78,7 +81,7 @@ class resample:
     """
 
     def __init__(self, lut_file, src_file=None, SNWE=None, lalo_step=None, interp_method='nearest', fill_value=np.nan,
-                 nprocs=1, max_memory=0, software='pyresample', print_msg=True):
+                 nprocs=1, max_memory=0, software='pyresample', print_msg=True, lat_file=None, lon_file=None):
         """
         Parameters: lut_file      - str, path of lookup table file, containing datasets:
                                     latitude / longitude      for lut_file in radar-coord
@@ -94,9 +97,16 @@ class resample:
                     max_memory    - float, maximum memory to use
                                     set to 0 or negative value to disable block-by-block IO (default)
                     software      - str, interpolation software, pyresample / scipy
+                    lat/lon_file  - str, path of the ISCE-2 lat/lon.rdr file
+                                    To geocode file with ISCE-2 lookup table files directly,
+                                    without using/loading geometry files in HDF5/MintPy format.
         """
         # input variables
         self.lut_file = lut_file
+        # use isce lat/lon.rdr file, as an alternative to lut_file with mintpy geometry HDF5 file
+        self.lat_file = lat_file
+        self.lon_file = lon_file
+
         self.src_file = src_file
         self.SNWE = SNWE
         self.lalo_step = lalo_step
@@ -311,8 +321,10 @@ class resample:
         # src  for radar2geo
         # dest for geo2radar
         print('read latitude / longitude from lookup table file: {}'.format(self.lut_file))
-        lut_lat = readfile.read(self.lut_file, datasetName='latitude')[0]
-        lut_lon = readfile.read(self.lut_file, datasetName='longitude')[0]
+        lat_file = self.lat_file if self.lat_file else self.lut_file
+        lon_file = self.lon_file if self.lon_file else self.lut_file
+        lut_lat = readfile.read(lat_file, datasetName='latitude')[0]
+        lut_lon = readfile.read(lon_file, datasetName='longitude')[0]
         lut_lat, lut_lon, mask = mark_lat_lon_anomoly(lut_lat, lut_lon)
 
         # radar2geo (with block-by-block support)

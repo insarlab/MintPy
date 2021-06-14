@@ -19,7 +19,8 @@ RAMP_LIST = [
 ]
 
 
-def deramp(data, mask_in=None, ramp_type='linear', metadata=None, max_num_sample=1e6, coeff_file=None):
+def deramp(data, mask_in=None, ramp_type='linear', metadata=None, max_num_sample=1e6, coeff_file=None,
+           ignore_zero_value=True):
     '''Remove ramp from input data matrix based on pixel marked by mask
     Ignore data with nan or zero value.
     Parameters: data       : 2D / 3D np.ndarray, data to be derampped
@@ -30,6 +31,8 @@ def deramp(data, mask_in=None, ramp_type='linear', metadata=None, max_num_sample
                 max_num_sample : float, max number of pixel sample, 
                              above which the uniform sampling is applied to reduce sample size
                 coeff_file : str, path to the text file to save the estimated ramp coefficients
+                ignore_zero_value : bool, ignore pixels with zero values, default is True
+                             Recommend: True for phase data and False for offset data
     Returns:    data_out   : 2D / 3D np.ndarray, data after deramping
                 ramp       : 2D / 3D np.ndarray, estimated ramp
     '''
@@ -54,8 +57,10 @@ def deramp(data, mask_in=None, ramp_type='linear', metadata=None, max_num_sample
     mask = (mask_in != 0).flatten()
     del mask_in
 
-    # 2. ignore pixels with NaN or zero data value
-    mask *= np.multiply(~np.isnan(dmean), dmean != 0.)
+    # 2. ignore pixels with NaN and/or zero data value
+    mask *= ~np.isnan(dmean)
+    if ignore_zero_value:
+        mask *= dmean != 0.
     del dmean
 
     # 3. for big dataset: uniformally sample the data for ramp estimation
@@ -108,7 +113,8 @@ def deramp(data, mask_in=None, ramp_type='linear', metadata=None, max_num_sample
         ramp -= ramp[ref_idx, :]
 
     # do not change pixel with original zero value
-    ramp[data == 0] = 0
+    if ignore_zero_value:
+        ramp[data == 0] = 0
 
     data_out = data - ramp
     if len(dshape) == 3:

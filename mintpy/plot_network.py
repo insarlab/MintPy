@@ -85,7 +85,7 @@ def create_parser():
     fig.add_argument('--mc', '--markercolor', dest='markercolor',
                      default='orange', help='marker color')
     fig.add_argument('--ms', '--markersize', dest='markersize',
-                     type=int, default=16, help='marker size in points')
+                     type=int, default=12, help='marker size in points')
     fig.add_argument('--every-year', dest='every_year', type=int,
                      default=1, help='number of years per major tick on x-axis')
 

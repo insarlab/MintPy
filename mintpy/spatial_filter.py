@@ -78,7 +78,7 @@ def filter_data(data, filter_type, filter_par=None):
     Inputs:
         data        : 2D np.array, matrix to be filtered
         filter_type : string, filter type
-        filter_par  : string, optional, parameter for low/high pass filter
+        filter_par  : (list of) int/float, optional, parameter for low/high pass filter
                       for low/highpass_avg, it's kernel size in int
                       for low/highpass_gaussain, it's sigma in float
                       for double_difference, it's local and regional kernel sizes in int
@@ -88,8 +88,10 @@ def filter_data(data, filter_type, filter_par=None):
 
     if filter_type == "sobel":
         data_filt = filters.sobel(data)
+
     elif filter_type == "roberts":
         data_filt = filters.roberts(data)
+
     elif filter_type == "canny":
         data_filt = feature.canny(data)
 
@@ -97,6 +99,7 @@ def filter_data(data, filter_type, filter_par=None):
         p = int(filter_par)
         kernel = np.ones((p, p), np.float32)/(p*p)
         data_filt = ndimage.convolve(data, kernel)
+
     elif filter_type == "highpass_avg":
         p = int(filter_par)
         kernel = np.ones((p, p), np.float32)/(p*p)
@@ -105,6 +108,7 @@ def filter_data(data, filter_type, filter_par=None):
 
     elif filter_type == "lowpass_gaussian":
         data_filt = filters.gaussian(data, sigma=filter_par)
+
     elif filter_type == "highpass_gaussian":
         lp_data = filters.gaussian(data, sigma=filter_par)
         data_filt = data - lp_data
@@ -144,7 +148,7 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
         fname       : string, name/path of file to be filtered
         ds_names    : list of string, datasets of interest
         filter_type : string, filter type
-        filter_par  : string, optional, parameter for low/high pass filter
+        filter_par  : (list of) int/float, optional, parameter for low/high pass filter
                       for low/highpass_avg, it's kernel size in int
                       for low/highpass_gaussain, it's sigma in float
                       for double_difference, it's local and regional kernel sizes in int
@@ -156,22 +160,27 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
     msg = 'filtering {} file: {} using {} filter'.format(k, fname, filter_type)
+
     if filter_type.endswith('avg'):
         if not filter_par:
             filter_par = 5
-        else:
+        elif isinstance(filter_par, list):
             filter_par = filter_par[0]
+        filter_par = int(filter_par)
         msg += ' with kernel size of {}'.format(filter_par)
+
     elif filter_type.endswith('gaussian'):
         if not filter_par:
             filter_par = 3.0
-        else:
+        elif isinstance(filter_par, list):
             filter_par = filter_par[0]
+        filter_par = float(filter_par)
         msg += ' with sigma of {:.1f}'.format(filter_par)
+
     elif filter_type == 'double_difference':
         if not filter_par:
-            filter_par = [1,10]
-        local, regional = filter_par
+            filter_par = [1, 10]
+        local, regional = int(filter_par[0]), int(filter_par[1])
         msg += ' with local/regional kernel sizes of {}/{}'.format(local, regional)
     print(msg)
 

@@ -41,6 +41,8 @@ EXAMPLE = """example:
   # interative polygon selection of region of interest
   # useful for custom mask generation in unwrap error correction with bridging
   generate_mask.py  waterMask.h5 -m 0.5 --roipoly
+  generate_mask.py  azOff.h5 --roipoly --view-cmd "-v -0.1 0.1"
+  generate_mask.py  velocity.h5 --roipoly --view-cmd "--dem ./inputs/geometryGeo.h5 --contour-step 100 --contour-smooth 0.0"
 """
 
 
@@ -73,6 +75,7 @@ def create_parser():
                      help='exclude area defined by an circle (x, y, radius) in pixel number')
     aoi.add_argument('--in-circle', dest='in_circle', nargs=3, type=int, metavar=('X', 'Y', 'RADIUS'),
                      help='include area defined by an circle (x, y, radius) in pixel number')
+
     # AOI defined by file
     aoi.add_argument('--base', dest='base_file', type=str,
                      help='exclude pixels == base_value\n'
@@ -82,9 +85,13 @@ def create_parser():
                           'i.e.: --base inputs/geometryRadar.h5 --base-dset shadow --base-value 1')
     aoi.add_argument('--base-value', dest='base_value', type=float, default=0,
                      help='value of pixels in base_file to be excluded.\nDefault: 0')
+
     # AOI manual selected
     aoi.add_argument('--roipoly', action='store_true',
                      help='Interactive polygonal region of interest (ROI) selection.')
+    aoi.add_argument('--view-cmd', dest='view_cmd', type=str,
+                     help='view.py command to facilitate the AOI selection.'
+                          'E.g. "-v -0.1 0.1"')
 
     # special type of mask
     parser.add_argument('--nonzero', dest='nonzero', action='store_true',
@@ -204,7 +211,7 @@ def create_threshold_mask(inps):
     # interactively select polygonal region of interest (ROI)
     if inps.roipoly:
         from mintpy.utils import plot_ext
-        poly_mask = plot_ext.get_poly_mask(inps.file, datasetName=inps.dset)
+        poly_mask = plot_ext.get_poly_mask(inps.file, datasetName=inps.dset, view_cmd=inps.view_cmd)
         if poly_mask is not None:
             mask *= poly_mask
 
