@@ -277,7 +277,7 @@ def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_file, date_wise_ac
 
     # prepare LOS geometry: geocoding if in radar-coordinates
     inc_angle, head_angle, atr_geo = prepare_los_geometry(geom_file)
-    
+
     # get LOS unit vector
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)

@@ -616,7 +616,8 @@ class geometryDict:
 
                     elif dsName == 'incidenceAngle':
                         atr = readfile.read_attribute(self.file)
-                        if atr.get('PROCESSOR', 'isce') == 'hyp3' and atr.get('UNIT', 'degrees').startswith('rad'):
+                        if (atr.get('PROCESSOR', 'isce') == 'hyp3'
+                                and atr.get('UNIT', 'degrees').startswith('rad')):
                             print('    convert the unit of {:<15} from radian to degree'.format(dsName))
                             data *= 180. / np.pi
 
