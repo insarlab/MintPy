@@ -651,12 +651,13 @@ def calc_delay_timeseries(inps):
     if run_or_skip(inps.grib_files, inps.tropo_file, inps.geom_file) == 'skip':
         return
 
-    # for testing
     ## 1. prepare geometry data
     geom_obj = geometry(inps.geom_file)
     geom_obj.open()
     inps.inc = geom_obj.read(datasetName='incidenceAngle')
     inps.dem = geom_obj.read(datasetName='height')
+    
+    # for testing
     if inps.custom_height:
         print('use input custom height of {} m for vertical integration'.format(inps.custom_height))
         inps.dem[:] = inps.custom_height
