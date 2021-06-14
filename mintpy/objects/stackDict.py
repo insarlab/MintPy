@@ -615,7 +615,7 @@ class geometryDict:
                         data /= ystep
                     if dsName == 'incidenceAngle':
                         self.get_metadata()
-                        if self.metadata['PROCESSOR'] == 'hyp3': 
+                        if self.metadata['PROCESSOR'] == 'hyp3':
                             data *= 180/np.pi
                     # write
                     ds = f.create_dataset(dsName,
