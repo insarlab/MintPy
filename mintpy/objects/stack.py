@@ -410,13 +410,16 @@ class timeseries:
         print('save timeseries RMS to text file: {}'.format(outFile))
         return outFile
 
-    def spatial_average(self, maskFile=None, box=None):
+    def spatial_average(self, maskFile=None, box=None, invertMask=False, threshold=None):
         self.open(print_msg=False)
         data = self.read(box=box)
         if maskFile and os.path.isfile(maskFile):
             print('read mask from file: '+maskFile)
             mask = singleDataset(maskFile).read(box=box)
-            data[:, mask == 0] = np.nan
+            data[mask == int(invertMask)] = np.nan
+        if threshold != None:
+            data[data > threshold] = 1
+            data[data <= threshold] = 0
         dmean = np.nanmean(data, axis=(1, 2))
         return dmean, self.dateList
 
@@ -995,7 +998,7 @@ class ifgramStack:
                 data = np.squeeze(data)
         return data
 
-    def spatial_average(self, datasetName='coherence', maskFile=None, box=None, useMedian=False):
+    def spatial_average(self, datasetName='coherence', maskFile=None, box=None, useMedian=False, invertMask=False, threshold=None):
         """ Calculate the spatial average."""
         if datasetName is None:
             datasetName = 'coherence'
@@ -1025,11 +1028,16 @@ class ifgramStack:
                 # read
                 data = dset[i, box[1]:box[3], box[0]:box[2]]
                 if maskFile:
-                    data[mask == 0] = np.nan
+                    data[mask == int(invertMask)] = np.nan
 
                 # ignore ZERO value for coherence
                 if datasetName == 'coherence':
                     data[data == 0] = np.nan
+                
+                # calculate proportional area above threshold instead of spatial averave
+                if threshold != None:
+                    data[data > threshold] = 1
+                    data[data <= threshold] = 0
 
                 if useMedian:
                     dmean[i] = np.nanmedian(data)
