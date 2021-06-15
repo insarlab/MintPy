@@ -34,6 +34,10 @@ REFERENCE = """reference:
   (2015), Potential for larger earthquakes in the East San Francisco Bay Area due to the direct
   connection between the Hayward and Calaveras Faults, Geophysical Research Letters, 42(8),
   2734-2741, doi:10.1002/2015GL063575.
+
+ Kang, Y., Lu, Z., Zhao, C., Xu, Y., Kim, J. W., & Gallegos, A. J. (2021).InSAR monitoring
+ of creeping landslides in mountainous regions: A case study in Eldorado National Forest,
+ California. Remote Sensing of Environment, 258, 112400. doi:10.1016/j.rse.2021.112400
 """
 
 TEMPLATE = get_template_content('modify_network')
@@ -82,6 +86,8 @@ def create_parser():
                                          'Drop/modify network based on spatial coherence')
     cohBased.add_argument('--coherence-based', dest='coherenceBased', action='store_true',
                           help='Enable coherence-based network modification (default: %(default)s).')
+    cohBased.add_argument('--area-based', dest='areaBased', action='store_true',
+                          help='Enable area-based network modification (default: %(default)s).')
     cohBased.add_argument('--no-mst', dest='keepMinSpanTree', action='store_false',
                           help='Do not keep interferograms in Min Span Tree network based on inversed mean coherene')
     cohBased.add_argument('--mask', dest='maskFile', default='waterMask.h5',
@@ -93,6 +99,8 @@ def create_parser():
                           help='AOI in lat/lon range for coherence calculation (default: %(default)s).')
     cohBased.add_argument('--min-coherence', dest='minCoherence', type=float, default=0.7,
                           help='Minimum coherence value (default: %(default)s).')
+    cohBased.add_argument('--min-area', dest='minArea', type=float, default=0.75,
+                          help='Minimum area value (default: %(default)s).')
     cohBased.add_argument('--lookup', dest='lookupFile',
                           help='Lookup table/mapping transformation file for geo/radar coordinate conversion.\n' +
                                'Needed for mask AOI in lalo')
@@ -121,7 +129,7 @@ def cmd_line_parse(iargs=None):
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
     elif all(not i for i in [inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax, inps.connNumMax,
-                             inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased,
+                             inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased, inps.areaBased,
                              inps.startDate, inps.endDate, inps.reset, inps.manual]):
         msg = 'No input option found to remove interferogram, exit.\n'
         msg += 'To manually modify network, please use --manual option '
@@ -167,10 +175,10 @@ def read_template2inps(template_file, inps=None):
     keyList = [i for i in list(inpsDict.keys()) if prefix+i in template.keys()]
     for key in keyList:
         value = template[prefix+key]
-        if key in ['coherenceBased', 'keepMinSpanTree']:
+        if key in ['coherenceBased', 'areaBased', 'keepMinSpanTree']:
             inpsDict[key] = value
         elif value:
-            if key in ['minCoherence', 'tempBaseMax', 'perpBaseMax']:
+            if key in ['minCoherence', 'minArea', 'tempBaseMax', 'perpBaseMax']:
                 inpsDict[key] = float(value)
             elif key in ['connNumMax']:
                 inpsDict[key] = int(value)
@@ -203,7 +211,7 @@ def read_template2inps(template_file, inps=None):
 
     # Turn reset on if 1) no input options found to drop ifgram AND 2) there is template input
     if all(not i for i in [inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax, inps.connNumMax,
-                           inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased,
+                           inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased, inps.areaBased,
                            inps.startDate, inps.endDate, inps.reset, inps.manual]):
         print('No input option found to remove interferogram')
         print('Keep all interferograms by enable --reset option')
