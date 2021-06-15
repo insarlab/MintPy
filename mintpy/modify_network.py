@@ -405,6 +405,41 @@ def get_date12_to_drop(inps):
         # get coherence-based network
         coh_date12_list = list(np.array(date12ListAll)[np.array(cohList) >= inps.minCoherence])
 
+    # proportional area file
+    if inps.areaBased:
+        print('--------------------------------------------------')
+        print('use area-based network modification')
+
+        # get area of interest for coherence calculation
+        coord = ut.coordinate(obj.metadata, lookup_file=inps.lookupFile)
+        if inps.aoi_geo_box and inps.lookupFile:
+            print('input AOI in (lon0, lat1, lon1, lat0): {}'.format(inps.aoi_geo_box))
+            inps.aoi_pix_box = coord.bbox_geo2radar(inps.aoi_geo_box)
+        if inps.aoi_pix_box:
+            inps.aoi_pix_box = coord.check_box_within_data_coverage(inps.aoi_pix_box)
+            print('input AOI in (x0,y0,x1,y1): {}'.format(inps.aoi_pix_box))
+
+        # calculate average coherence in masked areas
+        maskCoherences = ut.spatial_average(inps.file,
+                                     datasetName='coherence',
+                                     maskFile=inps.maskFile,
+                                     saveList=True,
+                                     invertMask=True)[0]
+        maskCoherence = np.nanmean(maskCoherences)
+        print(f'Average coherence of {inps.maskFile} is {maskCoherence:.2f}')
+
+        # calculate proportional area of cells greater than maskCoherence
+        cohList = ut.spatial_average(inps.file,
+                                     datasetName='coherence',
+                                     maskFile=inps.maskFile,
+                                     box=inps.aoi_pix_box,
+                                     saveList=True,
+                                     checkAoi=True,
+                                     threshold=maskCoherence)[0]
+
+        # get coherence-based network
+        coh_date12_list = list(np.array(date12ListAll)[np.array(cohList) >= inps.minCoherence]) #make minArea
+
         # get MST network
         if inps.keepMinSpanTree:
             print('Get minimum spanning tree (MST) of interferograms with inverse of coherence.')
