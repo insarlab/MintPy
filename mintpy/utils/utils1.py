@@ -169,6 +169,8 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
                 maskFile : string, path of mask file, e.g. maskTempCoh.h5
                 box      : 4-tuple defining the left, upper, right, and lower pixel coordinate
                 saveList : bool, save (list of) mean value into text file
+                invertMask : perform analysis within masked regions instead of outside of them
+                threshold : calculate proprotional area above threshold instead of spatial average
     Returns:    meanList : list for float, average value in space for each epoch of input file
                 dateList : list of string for date info
                     date12_list, e.g. 101120-110220, for interferograms/coherence
@@ -372,50 +374,6 @@ def temporal_average(File, datasetName='coherence', updateMode=False, outFile=No
         writefile.write(dataMean, out_file=outFile, metadata=atr)
     return dataMean, outFile
 
-def proportional_area(File, datasetName='coherence', threshold=0, maskFile=None, box=None):
-    """Calculate proportional area greater than a threshold for ifgramStack input file.
-
-        Only non-nan pixel is considered.
-    Parameters: File : string, path of input file - ifgramStack only
-                datasetName : string, dataset to be read from input file
-                    e.g.: coherence, unwrapPhase
-                threshold : threshold above which pixels will contribute to proportional area
-                maskFile : string, path of mask file, e.g. waterMask.h5
-                box      : 4-tuple defining the left, upper, right, and lower pixel coordinate
-    Returns:    meanList : list for float, average value in space for each epoch of input file
-                dateList : list of string for date info
-                    date12_list, e.g. 101120-110220, for interferograms/coherence
-                    date8_list, e.g. 20101120, for timeseries
-                    file name, e.g. velocity.h5, for all the other file types
-    Example:    meanList = proportional_area('inputs/ifgramStack.h5')[0]
-                meanList, date12_list = proportional_area('inputs/ifgramStack.h5',
-                                                        maskFile='waterMask.h5')
-    """
-
-    # Baic File Info
-    atr = readfile.read_attribute(File)
-    k = atr['FILE_TYPE']
-    
-    if not box:
-        box = (0, 0, int(atr['WIDTH']), int(atr['LENGTH']))
-
-    # Calculate proportional area list
-    if k == 'ifgramStack':
-        obj = ifgramStack(File)
-        obj.open(print_msg=False)
-        meanList, dateList = obj.proportional_area(datasetName=datasetName,
-                                                   threshold=threshold,
-                                                   maskFile=maskFile,
-                                                   box=box)
-        obj.close()
-    else:
-        print('Only ifgramStack file is supported for now, input is '+k)
-        return None
-
-    if len(meanList) == 1:
-        meanList = meanList[0]
-        dateList = dateList[0]
-    return meanList, dateList
 
 #################################### File IO ##########################################
 def get_file_list(file_list, abspath=False, coord=None):
