@@ -652,12 +652,12 @@ The corresponding template options for `load_data` in the custom cfg file (for e
 ```case6.cfg
 intpy.load.processor        = hyp3
 ##---------interferogram datasets:
-mintpy.load.unwFile          = $DATA_DIR/case4/*/*unw_phase_clip.tif
-mintpy.load.corFile          = $DATA_DIR/case4/*/*corr_clip.tif
+mintpy.load.unwFile          = $DATA_DIR/case6/*/*unw_phase_clip.tif
+mintpy.load.corFile          = $DATA_DIR/case6/*/*corr_clip.tif
 ##---------geometry datasets:
-mintpy.load.demFile          = $DATA_DIR/case4/DEM/dem_clip.tif
+mintpy.load.demFile          = $DATA_DIR/case6/DEM/dem_clip.tif
 ##---------incAngleFile:
-mintpy.load.incAngleFile    =  $DATA_DIR/*/*inc_map_clip.tif
+mintpy.load.incAngleFile    =  $DATA_DIR/case6/*/*inc_map_clip.tif
 '''
 
 
