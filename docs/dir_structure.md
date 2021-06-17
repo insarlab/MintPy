@@ -413,8 +413,10 @@ mintpy.load.processor        = hyp3
 mintpy.load.unwFile          = $DATA_DIR/TongariroSenA/hyp3/*/*unw_phase_clip.tif
 mintpy.load.corFile          = $DATA_DIR/TongariroSenA/hyp3/*/*corr_clip.tif
 ##---------geometry datasets:
-mintpy.load.demFile          = $DATA_DIR/TongariroSenA/hyp3/*/*dem_clip.tif
-```
+mintpy.load.demFile          = $DATA_DIR/case6/*/*dem_clip.tif
+mintpy.load.incAngleFile     = $DATA_DIR/case6/*/*inc_map_clip.tif
+'''
+
 
 ### [GMTSAR](https://github.com/gmtsar/gmtsar) ###
 
