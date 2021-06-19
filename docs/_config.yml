@@ -2,7 +2,7 @@ title: MintPy
 description: Miami InSAR time-series software in Python
 show_downloads: true
 google_analytics: UA-104225904-1
-theme: jekyll-theme-cayman
+theme: jekyll-theme-minimal
 author:
   name: Zhang Yunjun, Heresh Fattahi
   url: https://yunjunzhang.wordpress.com
