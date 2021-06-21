@@ -64,19 +64,24 @@ chmod +x Miniconda3-latest-MacOSX-x86_64.sh
 ~/tools/miniconda3/bin/conda init bash
 ```
 
-Run the following in your terminal to install the dependencies to a new environment _**mintpy**_ (recommended):
+Run the following in your terminal to install the dependencies to your conda environment (recommended). The default is _**base**_; a new custom environment is recommended.
+
+```
+# To create a new conda environment, e.g. named "insar", run "conda create --name insar; conda activate insar"
+
+# Add "gdal>=3" below to install extra dependencies if you use ARIA, FRInGE, HyP3 or GMTSAR
+# Add "isce2"   below to install extra dependencies if you use ISCE-2
+conda install --yes -c conda-forge --file ~/tools/MintPy/docs/conda.txt
+
+$CONDA_PREFIX/bin/pip install git+https://github.com/insarlab/PySolid.git
+$CONDA_PREFIX/bin/pip install git+https://github.com/tylere/pykml.git
+```
+
+Or run the following in your terminal to install the dependencies to a new environment _**mintpy**_:
 
 ```
 conda env create -f $MINTPY_HOME/docs/conda_env.yml
 conda activate mintpy
-```
-
-Or run the following in your terminal to install the dependencies to your custom environment, the default is _**base**_:
-
-```
-conda install --yes -c conda-forge --file ~/tools/MintPy/docs/conda.txt
-$CONDA_PREFIX/bin/pip install git+https://github.com/insarlab/PySolid.git
-$CONDA_PREFIX/bin/pip install git+https://github.com/tylere/pykml.git
 ```
 
 #### b. via MacPorts ####

@@ -25,16 +25,17 @@ dependencies:
   - pip:
     - git+https://github.com/insarlab/PySolid.git
     - git+https://github.com/tylere/pykml.git
-  # pyaps dependencies
+  # for ARIA, FRInGE, HyP3, GMTSAR
+  - gdal>=3
+  # for PyAPS
   - cdsapi
   - ecCodes
   - netcdf4
   - pygrib
   - pyhdf
-  # pyresample dependencies
+  # for pyresample
   - pyresample
   - openmp
   - pykdtree
   - xarray
   - zarr
-
