@@ -166,6 +166,7 @@ def extract_tops_metadata(xml_file):
 
     # Sentinel-1 TOPS pixel spacing
     Vs = np.linalg.norm(peg.getVelocity())   #satellite speed
+    meta['satelliteSpeed'] = Vs
     meta['azimuthPixelSize'] = Vs * burst.azimuthTimeInterval
     meta['rangePixelSize'] = burst.rangePixelSize
 
@@ -244,6 +245,7 @@ def extract_stripmap_metadata(meta_file):
     peg = orbit.interpolateOrbit(frame.sensingMid, method='hermite')
 
     Vs = np.linalg.norm(peg.getVelocity())  #satellite speed
+    meta['satelliteSpeed'] = Vs
     meta['azimuthResolution'] = frame.platform.antennaLength / 2.0
     meta['azimuthPixelSize'] = Vs / frame.PRF
 
@@ -309,6 +311,7 @@ def extract_alosStack_metadata(meta_file, geom_dir):
 
     peg = track.orbit.interpolateOrbit(sensingMid, method='hermite')
     Vs = np.linalg.norm(peg.getVelocity())
+    meta['satelliteSpeed'] = Vs
     meta['azimuthPixelSize'] = Vs * track.azimuthLineInterval
     meta['rangePixelSize'] = track.rangePixelSize
 
