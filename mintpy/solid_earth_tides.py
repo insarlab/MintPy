@@ -305,12 +305,13 @@ def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_file, date_wise_ac
         (tide_e,
          tide_n,
          tide_u) = pysolid.calc_solid_earth_tides_grid(dt_obj, atr_geo,
+                                                       step_size=3e3,
                                                        display=False,
                                                        verbose=verbose)
 
         # convert ENU to LOS direction
         # sign convention: positive for motion towards satellite
-        ts_tide[i,:,:] = (tide_e * unit_vec[0]
+        ts_tide[i,:,:] = (  tide_e * unit_vec[0]
                           + tide_n * unit_vec[1]
                           + tide_u * unit_vec[2])
 
