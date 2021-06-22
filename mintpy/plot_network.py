@@ -204,6 +204,8 @@ def read_network_info(inps):
         print('number of acquisitions marked as drop: {}'.format(len(inps.dateList_drop)))
         if len(inps.dateList_drop) > 0:
             print(inps.dateList_drop)
+    print('Shift the pbase to zero mean', np.mean(inps.pbaseList))
+    inps.pbaseList -= np.mean(inps.pbaseList)
     return inps
 
 
