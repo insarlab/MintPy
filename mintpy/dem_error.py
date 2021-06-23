@@ -65,19 +65,19 @@ def create_parser():
     parser.add_argument('-o', '--outfile',
                         help='Output file name for corrected time-series')
 
-    # temporal functions
-    parser.add_argument('-t', '--template', dest='template_file',
-                        help='template file with the options')
-    parser.add_argument('--ex', '--exclude', dest='excludeDate', nargs='*', default=[],
-                        help='Exclude date(s) for DEM error estimation.\n' +
-                             'All dates will be corrected for DEM residual phase still.')
-    parser.add_argument('-p', '--poly-order', dest='polyOrder', type=int, default=2,
-                        help='polynomial order number of temporal deformation model, default = %(default)s)')
-    parser.add_argument('-s', '--step-date', dest='stepFuncDate', nargs='*', default=[],
-                        help='Date of step jump for temporal deformation model, default = %(default)s)'+
-                             ' i.e. date of earthquake/volcanic eruption')
-    parser.add_argument('--periodic', '--period', '--peri', dest='periodic', type=float, nargs='+', default=[],
-                        help='periodic functinos of temporal deformation model, default = %(default)s)')
+    defo_model = parser.add_argument_group('temporal deformation model')
+    defo_model.add_argument('-t', '--template', dest='template_file',
+                            help='template file with the options')
+    defo_model.add_argument('--ex', '--exclude', dest='excludeDate', nargs='*', default=[],
+                            help='Exclude date(s) for DEM error estimation.\n' +
+                                 'All dates will be corrected for DEM residual phase still.')
+    defo_model.add_argument('-p', '--poly-order', dest='polyOrder', type=int, default=2,
+                            help='polynomial order number of temporal deformation model (default: %(default)s).')
+    defo_model.add_argument('-s', '--step-date', dest='stepFuncDate', nargs='*', default=[],
+                            help='Date of step jump for temporal deformation model (default: %(default)s).'+
+                                 ' i.e. date of earthquake/volcanic eruption')
+    defo_model.add_argument('--periodic', '--period', '--peri', dest='periodic', type=float, nargs='+', default=[],
+                            help='periodic functinos of temporal deformation model (default: %(default)s).')
 
     parser.add_argument('--phase-velocity', dest='phaseVelocity', action='store_true',
                         help='Use phase velocity instead of phase for inversion constrain.')
