@@ -187,6 +187,9 @@ def read_network_info(inps):
     print('number of acquisitions: {}'.format(len(inps.dateList)))
     print('number of interferograms: {}'.format(len(inps.date12List)))
 
+    print('shift all perp baseline by {} to zero mean for plotting'.format(np.mean(inps.pbaseList)))
+    inps.pbaseList -= np.mean(inps.pbaseList)
+
     # Optional: Read dropped date12 / date
     inps.dateList_drop = []
     inps.date12List_drop = []
@@ -204,6 +207,7 @@ def read_network_info(inps):
         print('number of acquisitions marked as drop: {}'.format(len(inps.dateList_drop)))
         if len(inps.dateList_drop) > 0:
             print(inps.dateList_drop)
+
     return inps
 
 

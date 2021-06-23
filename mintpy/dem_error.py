@@ -65,17 +65,19 @@ def create_parser():
     parser.add_argument('-o', '--outfile',
                         help='Output file name for corrected time-series')
 
-    # temporal functions
-    parser.add_argument('-t', '--template', dest='template_file',
-                        help='template file with the options')
-    parser.add_argument('--ex', '--exclude', dest='excludeDate', nargs='*', default=[],
-                        help='Exclude date(s) for DEM error estimation.\n' +
-                             'All dates will be corrected for DEM residual phase still.')
-    parser.add_argument('-p', '--poly-order', dest='polyOrder', type=int, default=2,
-                        help='polynomial order number of temporal deformation model, default = 2')
-    parser.add_argument('-s', '--step-date', dest='stepFuncDate', nargs='*', default=[],
-                        help='Date of step jump for temporal deformation model,'+
-                             ' i.e. date of earthquake/volcanic eruption')
+    defo_model = parser.add_argument_group('temporal deformation model')
+    defo_model.add_argument('-t', '--template', dest='template_file',
+                            help='template file with the options')
+    defo_model.add_argument('--ex', '--exclude', dest='excludeDate', nargs='*', default=[],
+                            help='Exclude date(s) for DEM error estimation.\n' +
+                                 'All dates will be corrected for DEM residual phase still.')
+    defo_model.add_argument('-p', '--poly-order', dest='polyOrder', type=int, default=2,
+                            help='polynomial order number of temporal deformation model (default: %(default)s).')
+    defo_model.add_argument('-s', '--step-date', dest='stepFuncDate', nargs='*', default=[],
+                            help='Date of step jump for temporal deformation model (default: %(default)s).'+
+                                 ' i.e. date of earthquake/volcanic eruption')
+    defo_model.add_argument('--periodic', '--period', '--peri', dest='periodic', type=float, nargs='+', default=[],
+                            help='periodic functinos of temporal deformation model (default: %(default)s).')
 
     parser.add_argument('--phase-velocity', dest='phaseVelocity', action='store_true',
                         help='Use phase velocity instead of phase for inversion constrain.')
@@ -240,6 +242,8 @@ def get_design_matrix4defo(inps):
     msg += "\ntemporal deformation model: polynomial order = {}".format(inps.polyOrder)
     if inps.stepFuncDate:
         msg += "\ntemporal deformation model: step functions at {}".format(inps.stepFuncDate)
+    if inps.periodic:
+        msg += "\ntemporal deformation model: periodic functions of {} yr".format(inps.periodic)
     msg += '\n'+'-'*80
     print(msg)
 
@@ -247,6 +251,7 @@ def get_design_matrix4defo(inps):
     model = dict()
     model['polynomial'] = inps.polyOrder
     model['step'] = inps.stepFuncDate
+    model['periodic'] = inps.periodic
     date_list = timeseries(inps.timeseries_file).get_date_list()
     G_defo = timeseries.get_design_matrix4time_func(date_list, model)
 
