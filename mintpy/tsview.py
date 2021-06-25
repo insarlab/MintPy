@@ -10,6 +10,8 @@ import os
 import sys
 import argparse
 import numpy as np
+from scipy import linalg
+from datetime import datetime
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
@@ -18,7 +20,7 @@ from matplotlib.widgets import Slider
 from mintpy.objects import timeseries, giantTimeseries, HDFEOS
 from mintpy.utils import arg_group, readfile, ptime, plot as pp, utils as ut
 from mintpy.multilook import multilook_data
-from mintpy import subset, view
+from mintpy import subset, view, timeseries2velocity as ts2vel
 
 
 ###########################################################################################
@@ -70,6 +72,7 @@ def create_parser():
     parser.add_argument('--off','--offset', dest='offset', type=float, help='Offset for each timeseries file.')
 
     parser.add_argument('--noverbose', dest='print_msg', action='store_false', help='Disable the verbose message printing.')
+    parser.add_argument('--savetxt','--txt', dest='savetxt', type=str, default=False, help='Filename of a text file to save timeseries (and model params) (default: %(default)s).')
 
     parser = arg_group.add_data_disp_argument(parser)
     parser = arg_group.add_dem_argument(parser)
@@ -80,6 +83,21 @@ def create_parser():
     parser = arg_group.add_reference_argument(parser)
     parser = arg_group.add_save_argument(parser)
     parser = arg_group.add_subset_argument(parser)
+
+    # temporal model fitting
+    model = parser.add_argument_group('deformation model', 'a suite of time functions')
+    model.add_argument('--model', dest='model_bool', type=bool, default=False,
+                      help='whether to view the ts2vel model fit (default: %(default)s).')
+    model.add_argument('--poly', '--polynomial', '--poly-order', dest='polynomial', type=int, default=1,
+                      help='a polynomial function with the input degree (default: %(default)s).')
+    model.add_argument('--periodic', '--period', '--peri', dest='periodic', type=float, nargs='+', default=[],
+                      help='periodic function(s) with period in decimal years (default: %(default)s).')
+    model.add_argument('--step', dest='step', type=str, nargs='+', default=[],
+                      help='step function(s) at YYYYMMDD (default: %(default)s).')
+    model.add_argument('--exp', '--exponential', dest='exp', type=str, nargs='+', action='append', default=[],
+                      help='exponential function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s).')
+    model.add_argument('--log', '--logarithmic', dest='log', type=str, nargs='+', action='append', default=[],
+                      help='logarithmic function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s).')
 
     return parser
 
@@ -110,6 +128,42 @@ def cmd_line_parse(iargs=None):
         inps.colormap = 'jet'
     if not inps.fig_size:
         inps.fig_size = [8.0, 4.5]
+
+    # temporal model fitting
+    if inps.model_bool:
+        # --exp option: convert cmd inputs into dict format
+        inps.expDict = dict()
+        if inps.exp:
+            for exp_list in inps.exp:
+                onset_time, char_times = exp_list[0], exp_list[1:]
+                if len(onset_time) == 8:
+                    if len(char_times) > 0:
+                        inps.expDict[onset_time] = np.array(char_times).astype(float).tolist()
+                    else:
+                        msg = 'NO characteristic time found: {}\n'.format(char_times)
+                        msg += 'one or more characteristic time(s) are required for each onset date for the exp function, e.g.:\n'
+                        msg += '--exp 20181026 60 OR\n'
+                        msg += '--exp 20161231 80.5 200  # append as many char_times as you like!'
+                        raise ValueError(msg)
+                else:
+                    raise ValueError('input onset time is NOT in YYYYMMDD format: {}'.format(onset_time))
+
+        # --log option: convert cmd inputs into dict format
+        inps.logDict = dict()
+        if inps.log:
+            for log_list in inps.log:
+                onset_time, char_times = log_list[0], log_list[1:]
+                if len(onset_time) == 8:
+                    if len(char_times) > 0:
+                        inps.logDict[onset_time] = np.array(char_times).astype(float).tolist()
+                    else:
+                        msg = 'NO characteristic time found: {}\n'.format(char_times)
+                        msg += 'one or more characteristic time(s) are required for each onset date for the log function, e.g.:\n'
+                        msg += '--exp 20181026 60 OR\n'
+                        msg += '--exp 20161231 80.5 200  # append as many char_times as you like!'
+                        raise ValueError(msg)
+                else:
+                    raise ValueError('input onset time is NOT in YYYYMMDD format: {}'.format(onset_time))
 
     # verbose print using --noverbose option
     global vprint
@@ -292,6 +346,11 @@ def read_init_info(inps):
             inps.disp_unit_img = 'radian'
         inps.vlim = inps.wrap_range
     inps.cbar_label = 'Displacement [{}]'.format(inps.disp_unit_img)
+
+    # whether to fit a velocity model to the time series
+    if inps.model_bool:
+        inps.dateList = inps.date_list
+        inps.model, inps.num_param = ts2vel.read_inps2model(inps)
     return inps, atr
 
 
@@ -442,6 +501,23 @@ def plot_ts_scatter(ax, dis_ts, inps, ppar):
     ax.plot(dates, d_ts, color=ppar.mfc, label=ppar.label, lw=inps.linewidth, ms=ppar.ms, marker=inps.marker)
     return ax
 
+def plot_ts_pred_curve(ax, dis_ts, inps, ppar):
+    # make a local copy
+    dates = np.array(inps.dates)
+    dates_str = []
+    for dt in dates:
+        dates_str.append(dt.strftime("%Y%m%d"))
+    dates_str = ptime.date2arange(dates_str[0], dates_str[-1])
+    dates = [datetime.strptime(dd, '%Y%m%d') for dd in dates_str]
+    d_ts = dis_ts[:]
+
+    # plot the model prediction curve in a fine date_lists
+    ax.plot(dates, d_ts, color=ppar.color, label=ppar.label, lw=ppar.linewidth, alpha=0.6)
+
+    # print model parameters on the plot
+    msg = '\n'.join(inps.model_table)
+    ax.text(0.04, 0.88, msg, size=10, ha='left', va='center', transform=ax.transAxes)
+    return ax
 
 def _adjust_ts_axis(ax, inps):
     ax.tick_params(which='both', direction='in', labelsize=inps.font_size, bottom=True, top=True, left=True, right=True)
@@ -585,6 +661,21 @@ class timeseriesViewer():
         # read 3D time-series
         self.ts_data, self.mask = read_timeseries_data(self)[0:2]
 
+        # fit a velocity model to time series
+        if self.model_bool:
+            if self.yx:
+                y = self.yx[0] - self.pix_box[1]
+                x = self.yx[1] - self.pix_box[0]
+                self.m, self.m_std, self.ts_pred, self.ts_fit = self.fit2model(self.dates, self.ts_data[0][:,y,x],
+                                                                    self.model, self.num_param)
+                self.model_table = self.model_param_table(self.model, self.m, self.m_std)
+
+        # save plotted data to text file
+        if self.savetxt:
+            f = open(self.savetxt,'w')
+            print('open a txt file: {}'.format(self.savetxt))
+            f.close()
+
         # Figure 1 - Cumulative Displacement Map
         self.figsize_img = pp.auto_figure_size(ds_shape=self.ts_data[0].shape[-2:],
                                                disp_cbar=True,
@@ -723,8 +814,14 @@ class timeseriesViewer():
         for i in range(num_file-1, -1, -1):
             # get displacement data
             d_tsi = self.ts_data[i][:, y, x]
-            if self.zero_first:
-                d_tsi -= d_tsi[self.zero_idx]
+            # plot fitting
+            if self.model_bool:
+                d_tsi_p = self.ts_pred
+                d_tsi_f = self.ts_fit
+                if self.zero_first:
+                    d_tsi -= d_tsi[self.zero_idx]
+                    d_tsi_p -= d_tsi_p[self.zero_idx]
+                    d_tsi_f -= d_tsi_f[self.zero_idx]
             d_ts.append(d_tsi)
 
             # get plot parameter - namespace ppar
@@ -736,10 +833,25 @@ class timeseriesViewer():
                 ppar.mfc = 'gray'
             if self.offset:
                 d_tsi += self.offset * (num_file - 1 - i)
+                # offset the model prediction
+                if self.model_bool:
+                    d_tsi_p += self.offset * (num_file - 1 - i)
+                    d_tsi_f += self.offset * (num_file - 1 - i)
 
             # plot
             if not np.all(np.isnan(d_tsi)):
                 self.ax_pts = self.ts_plot_func(self.ax_pts, d_tsi, self, ppar)
+                # plot model prediction
+                if self.model_bool:
+                    import copy
+                    ppar_p     = copy.deepcopy(ppar)
+                    ppar_p.mfc = 'lightgrey'
+                    ppar_p.ms  = ppar.ms * 0.7
+                    ppar_f     = copy.deepcopy(ppar)
+                    ppar_f.linewidth  = 2
+                    ppar_f.color      = 'lightgrey'
+                    plot_ts_pred_curve(self.ax_pts, d_tsi_f, self, ppar_f)
+                    self.ts_plot_func(self.ax_pts, d_tsi_p, self, ppar_p)
 
         # axis format
         self.ax_pts = _adjust_ts_axis(self.ax_pts, self)
@@ -773,6 +885,15 @@ class timeseriesViewer():
 
             # update figure
             self.fig_pts.canvas.draw()
+
+            # print model parameters
+            if self.model_bool:
+                for table_row in self.model_table: print(table_row)
+
+            # write output to a txt file
+            if self.savetxt is not False:
+                print('write outputs to file: {}'.format(self.savetxt))
+                self.write_file(title_ts, d_ts)
         return d_ts
 
 
@@ -784,6 +905,12 @@ class timeseriesViewer():
                 y, x = self.coord.geo2radar(event.ydata, event.xdata, print_msg=False)[0:2]
             else:
                 y, x = int(event.ydata+0.5), int(event.xdata+0.5)
+
+            # model fitting
+            if self.model_bool:
+                self.m, self.m_std, self.ts_pred, self.ts_fit = self.fit2model(self.dates, self.ts_data[0][:,y,x],
+                                                                    self.model, self.num_param)
+                self.model_table = self.model_param_table(self.model, self.m, self.m_std)
 
             # plot time-series displacement
             self.plot_point_timeseries((y, x))
@@ -821,6 +948,156 @@ class timeseriesViewer():
         return
 
 
+    def fit2model(self, disp_dts, ts_data, model, num_param):
+        """Fir a temporal model to the time series"""
+        # convert datetime obj to str YYYYMMDD
+        disp_dates = []
+        for dt in disp_dts:
+            disp_dates.append(dt.strftime("%Y%m%d"))
+        num_date = len(disp_dates)
+
+        # initiate output
+        m = np.zeros(num_param, dtype=np.float32)
+        m_std = np.zeros(num_param, dtype=np.float32)
+
+        ## only option 2 - least squares with uncertainty propagation
+        print('\nestimate time functions via linalg.lstsq ...')
+        G, m, e2 = ts2vel.estimate_time_func(model=model,
+                                            date_list=disp_dates,
+                                            dis_ts=ts_data)
+
+        # reconstruction of predicted time series
+        ts_pred = np.matmul(G,m)
+
+        # reconstruct the fine resolution function
+        disp_dates_fine = ptime.date2arange(disp_dates[0], disp_dates[-1])
+        G_fine = timeseries.get_design_matrix4time_func(date_list=disp_dates_fine, model=model)
+        ts_fit = np.matmul(G_fine,m)
+
+        ## Compute the covariance matrix for model parameters: Gm = d
+        # C_m_hat = (G.T * C_d^-1, * G)^-1  # linear propagation from the TS covariance matrix. (option 2.1)
+        #         = sigma^2 * (G.T * G)^-1  # assuming obs errors are normally dist. in time.   (option 2.2a)
+        # Based on the law of integrated expectation, we estimate the obs sigma^2 using
+        # the OLS estimation residual e_hat_i = d_i - d_hat_i
+        # option 2.2a - assume obs errors following normal dist. in time
+        G_inv = linalg.inv(np.dot(G.T, G))
+        m_var = e2.flatten() / (num_date - num_param)
+        m_std = np.sqrt(np.dot(np.diag(G_inv).reshape(-1, 1), m_var))
+        return m, m_std, ts_pred, ts_fit
+
+    
+    def model_param_table(self, model, m, m_std):
+        """Make a table of the estimated model parameters"""
+        model_table = ['Complex model param'+' '*15+'Value'+' '*8+'Std']
+
+        str_fmt = '{:s} {:10.3f} {:10.3f}'
+        str_lj  = 28
+
+        # deformation model info
+        poly_deg   = model['polynomial']
+        num_period = len(model['periodic'])
+        num_step   = len(model['step'])
+        num_exp    = sum([len(val) for key, val in model['exp'].items()])
+
+        # time func 1 - polynomial
+        for i in range(1, poly_deg+1):
+            # dataset name
+            if i == 1:
+                dsName = 'velocity'
+            elif i == 2:
+                dsName = 'acceleration'
+            else:
+                dsName = 'poly{}'.format(i)
+            # write
+            model_table.append(str_fmt.format(dsName.ljust(str_lj), m[i], m_std[i]))
+
+        # time func 2 - periodic
+        p0 = poly_deg + 1
+        for i in range(num_period):
+            # calculate the amplitude and phase of the periodic signal
+            # following equation (9-10) in Minchew et al. (2017, JGR)
+            coef_cos = m[p0 + 2*i]
+            coef_sin = m[p0 + 2*i + 1]
+            period_amp = np.sqrt(coef_cos**2 + coef_sin**2)
+
+            # dataset name
+            period = model['periodic'][i]
+            dsNameSuffixes = ['Amplitude', 'Phase']
+            if period == 1:
+                dsNames = [f'annual{x}' for x in dsNameSuffixes]
+            elif period == 0.5:
+                dsNames = [f'semiAnnual{x}' for x in dsNameSuffixes]
+            else:
+                dsNames = [f'periodY{period}{x}' for x in dsNameSuffixes]
+            # write
+            for dsName in dsNames:
+                model_table.append(str_fmt.format(dsName.ljust(str_lj), period_amp, np.nan))
+
+        # time func 3 - step
+        p0 = (poly_deg + 1) + (2 * num_period)
+        for i in range(num_step):
+            # dataset name
+            dsName = 'step{}'.format(model['step'][i])
+            # write
+            model_table.append(str_fmt.format(dsName.ljust(str_lj), m[p0+i], m_std[p0+i]))
+
+        # time func 4 - exponential
+        p0 = (poly_deg + 1) + (2 * num_period) + (num_step)
+        i = 0
+        for exp_onset in model['exp'].keys():
+            for exp_tau in model['exp'][exp_onset]:
+                # dataset name
+                dsName = 'exp{}Tau{}'.format(exp_onset, exp_tau)
+                # write
+                model_table.append(str_fmt.format(dsName.ljust(str_lj), m[p0+i], m_std[p0+i]))
+                i += 1
+
+        # time func 5 - logarithmic
+        p0 = (poly_deg + 1) + (2 * num_period) + (num_step) + (num_exp)
+        i = 0
+        for log_onset in model['log'].keys():
+            for log_tau in model['log'][log_onset]:
+                # dataset name
+                dsName = 'log{}Tau{}'.format(log_onset, log_tau)
+                # write
+                model_table.append(str_fmt.format(dsName.ljust(str_lj), m[p0+i], m_std[p0+i]))
+                i += 1
+        return model_table
+
+
+    def write_file(self, title_ts, d_ts):
+        # get dates string
+        dates = []
+        for dt in self.dates:
+            dates.append(dt.strftime("%Y%m%d"))
+
+        # get a table of ts for output
+        float_formatter = lambda x: [float('{:.3f}'.format(i)) for i in x]
+        obs = list(map(str, float_formatter(d_ts[0])))
+        if self.model_bool:
+            preds    = list(map(str, float_formatter(self.ts_pred)))
+            ts_table = list(zip(dates, obs, preds))
+        else:
+            ts_table = list(zip(dates, obs))
+
+        # write to file
+        with open(self.savetxt,'a') as f:
+            f.write('# '+title_ts)
+            if not self.model_bool:
+                f.write('\n')
+                f.write('# Date\t\tObs\n')
+                for line in ts_table:
+                    f.write('{}\t{}\n'.format(line[0],line[1]))
+            else:
+                f.write('\n')
+                for table_row in self.model_table:
+                    f.write('# '+table_row+'\n')
+                f.write('# Date\t\tObs\tPred\n')
+                for line in ts_table:
+                    f.write('{}\t{}\t{}\n'.format(line[0],line[1],line[2]))
+            f.write('\n')
+        return
+        
 ###########################################################################################
 def main(iargs=None):
     obj = timeseriesViewer(iargs=iargs)

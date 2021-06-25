@@ -328,3 +328,17 @@ def date_list2vector(date_list):
 
     return dates, datevector
 
+
+################################################################
+def date2arange(dmin, dmax):
+    """Make a list of dates with one-day interval
+    Values are generated within the half-open interval [start, stop)
+    Parameters: dmin          : str in YYYYMMDD format
+                dmax          : str in YYYYMMDD format
+    Returns:    date_list_out : list of str in YYYYMMDD format
+    """
+    t1 = '{}-{}-{}'.format(dmin[:4], dmin[4:6], dmin[6:])
+    t2 = '{}-{}-{}'.format(dmax[:4], dmax[4:6], dmax[6:])
+    date_obj = np.arange(t1, t2, dtype='datetime64[D]').astype('M8[D]').astype('O')
+    date_list_out = [obj.strftime('%Y%m%d') for obj in date_obj]
+    return date_list_out

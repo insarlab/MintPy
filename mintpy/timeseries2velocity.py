@@ -385,13 +385,15 @@ def read_inps2model(inps):
         for d_onset in inps.expDict.keys():
             y_onset = ptime.yyyymmdd2years(d_onset)
             if not (ymin < y_onset < ymax):
-                raise ValueError(f'input exp onset date "{d_onset}" exceed date list min/max: {dmin}, {dmax}')
+                print(f'input exp onset date "{d_onset}" exceed date list min/max: {dmin}, {dmax}')
+                # raise ValueError(f'input exp onset date "{d_onset}" exceed date list min/max: {dmin}, {dmax}')
 
     if inps.logDict:
         for d_onset in inps.logDict.keys():
             y_onset = ptime.yyyymmdd2years(d_onset)
             if not (ymin < y_onset < ymax):
-                raise ValueError(f'input log onset date "{d_onset}" exceed date list min/max: {dmin}, {dmax}')
+                print(f'input log onset date "{d_onset}" exceed date list min/max: {dmin}, {dmax}')
+                # raise ValueError(f'input log onset date "{d_onset}" exceed date list min/max: {dmin}, {dmax}')
 
     model = dict()
     model['polynomial'] = inps.polynomial
@@ -454,6 +456,21 @@ def estimate_time_func(model, date_list, dis_ts, dis_ts_std=None):
     # Opt. 2: m = scipy.linalg.lstsq(G, dis_ts, cond=1e-15)[0]
     # Numpy is not used because it can not handle NaN value in dis_ts
     m, e2 = linalg.lstsq(G, dis_ts, cond=None)[:2]
+
+    # check e2 and G
+    if isinstance(e2, (np.ndarray, list)) is False:
+        e2_check = np.array([e2])
+    else:
+        e2_check = np.array(e2)
+    if len(e2_check) == 0:
+        print('\nWarning: empty e2 residues array due to a redundant or rank-deficient G matrix. This can cause sigularities.')
+        print('Please check: https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.lstsq.html#scipy.linalg.lstsq')
+        print('The issue may be due to:')
+        print('\t1) very small char time(s), tau, of the exp and/or log function(s)')
+        print('\t2) the onset time(s) of exp and/or log are far earlier than the minimum date of the time series.')
+        print('Try a different char time, onset time.')
+        print('Your G matrix of the temporal model: \n', G)
+        raise ValueError('G matrix is redundant or rank-deficient!')
 
     return G, m, e2
 
