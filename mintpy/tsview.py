@@ -85,19 +85,8 @@ def create_parser():
     parser = arg_group.add_subset_argument(parser)
 
     # temporal model fitting
-    model = parser.add_argument_group('deformation model', 'a suite of time functions')
-    model.add_argument('--model', dest='model_bool', type=bool, default=False,
-                      help='whether to view the ts2vel model fit (default: %(default)s).')
-    model.add_argument('--poly', '--polynomial', '--poly-order', dest='polynomial', type=int, default=1,
-                      help='a polynomial function with the input degree (default: %(default)s).')
-    model.add_argument('--periodic', '--period', '--peri', dest='periodic', type=float, nargs='+', default=[],
-                      help='periodic function(s) with period in decimal years (default: %(default)s).')
-    model.add_argument('--step', dest='step', type=str, nargs='+', default=[],
-                      help='step function(s) at YYYYMMDD (default: %(default)s).')
-    model.add_argument('--exp', '--exponential', dest='exp', type=str, nargs='+', action='append', default=[],
-                      help='exponential function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s).')
-    model.add_argument('--log', '--logarithmic', dest='log', type=str, nargs='+', action='append', default=[],
-                      help='logarithmic function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s).')
+    parser.add_argument('--show-model', '--model', dest='show_model', action='store_true', help='Show the ts2vel model fitting.')
+    parser = arg_group.add_timefunc_argument(parser)
 
     return parser
 
@@ -130,7 +119,7 @@ def cmd_line_parse(iargs=None):
         inps.fig_size = [8.0, 4.5]
 
     # temporal model fitting
-    if inps.model_bool:
+    if inps.show_model:
         # --exp option: convert cmd inputs into dict format
         inps.expDict = dict()
         if inps.exp:
@@ -348,7 +337,7 @@ def read_init_info(inps):
     inps.cbar_label = 'Displacement [{}]'.format(inps.disp_unit_img)
 
     # whether to fit a velocity model to the time series
-    if inps.model_bool:
+    if inps.show_model:
         inps.dateList = inps.date_list
         inps.model, inps.num_param = ts2vel.read_inps2model(inps)
     return inps, atr
@@ -662,7 +651,7 @@ class timeseriesViewer():
         self.ts_data, self.mask = read_timeseries_data(self)[0:2]
 
         # fit a velocity model to time series
-        if self.model_bool:
+        if self.show_model:
             if self.yx:
                 y = self.yx[0] - self.pix_box[1]
                 x = self.yx[1] - self.pix_box[0]
@@ -815,7 +804,7 @@ class timeseriesViewer():
             # get displacement data
             d_tsi = self.ts_data[i][:, y, x]
             # plot fitting
-            if self.model_bool:
+            if self.show_model:
                 d_tsi_p = self.ts_pred
                 d_tsi_f = self.ts_fit
                 if self.zero_first:
@@ -834,7 +823,7 @@ class timeseriesViewer():
             if self.offset:
                 d_tsi += self.offset * (num_file - 1 - i)
                 # offset the model prediction
-                if self.model_bool:
+                if self.show_model:
                     d_tsi_p += self.offset * (num_file - 1 - i)
                     d_tsi_f += self.offset * (num_file - 1 - i)
 
@@ -842,7 +831,7 @@ class timeseriesViewer():
             if not np.all(np.isnan(d_tsi)):
                 self.ax_pts = self.ts_plot_func(self.ax_pts, d_tsi, self, ppar)
                 # plot model prediction
-                if self.model_bool:
+                if self.show_model:
                     import copy
                     ppar_p     = copy.deepcopy(ppar)
                     ppar_p.mfc = 'lightgrey'
@@ -887,7 +876,7 @@ class timeseriesViewer():
             self.fig_pts.canvas.draw()
 
             # print model parameters
-            if self.model_bool:
+            if self.show_model:
                 for table_row in self.model_table: print(table_row)
 
             # write output to a txt file
@@ -907,10 +896,9 @@ class timeseriesViewer():
                 y, x = int(event.ydata+0.5), int(event.xdata+0.5)
 
             # model fitting
-            if self.model_bool:
-                self.m, self.m_std, self.ts_pred, self.ts_fit = self.fit2model(self.dates, self.ts_data[0][:,y,x],
-                                                                    self.model, self.num_param)
-                self.model_table = self.model_param_table(self.model, self.m, self.m_std)
+            if self.show_model:
+                self.m, self.m_std, self.ts_pred, self.ts_fit = self.fit2model(self.ts_data[0][:,y,x])
+                self.model_table = self.model_param_table()
 
             # plot time-series displacement
             self.plot_point_timeseries((y, x))
@@ -948,30 +936,28 @@ class timeseriesViewer():
         return
 
 
-    def fit2model(self, disp_dts, ts_data, model, num_param):
+    def fit2model(self, d_ts):
         """Fir a temporal model to the time series"""
         # convert datetime obj to str YYYYMMDD
         disp_dates = []
-        for dt in disp_dts:
+        for dt in self.dates:
             disp_dates.append(dt.strftime("%Y%m%d"))
         num_date = len(disp_dates)
 
         # initiate output
-        m = np.zeros(num_param, dtype=np.float32)
-        m_std = np.zeros(num_param, dtype=np.float32)
+        m = np.zeros(self.num_param, dtype=np.float32)
+        m_std = np.zeros(self.num_param, dtype=np.float32)
 
         ## only option 2 - least squares with uncertainty propagation
         print('\nestimate time functions via linalg.lstsq ...')
-        G, m, e2 = ts2vel.estimate_time_func(model=model,
-                                            date_list=disp_dates,
-                                            dis_ts=ts_data)
+        G, m, e2 = ts2vel.estimate_time_func(model=self.model, date_list=disp_dates, dis_ts=d_ts)
 
         # reconstruction of predicted time series
         ts_pred = np.matmul(G,m)
 
         # reconstruct the fine resolution function
         disp_dates_fine = ptime.date2arange(disp_dates[0], disp_dates[-1])
-        G_fine = timeseries.get_design_matrix4time_func(date_list=disp_dates_fine, model=model)
+        G_fine = timeseries.get_design_matrix4time_func(date_list=disp_dates_fine, model=self.model)
         ts_fit = np.matmul(G_fine,m)
 
         ## Compute the covariance matrix for model parameters: Gm = d
@@ -981,12 +967,12 @@ class timeseriesViewer():
         # the OLS estimation residual e_hat_i = d_i - d_hat_i
         # option 2.2a - assume obs errors following normal dist. in time
         G_inv = linalg.inv(np.dot(G.T, G))
-        m_var = e2.flatten() / (num_date - num_param)
+        m_var = e2.flatten() / (num_date - self.num_param)
         m_std = np.sqrt(np.dot(np.diag(G_inv).reshape(-1, 1), m_var))
         return m, m_std, ts_pred, ts_fit
 
-    
-    def model_param_table(self, model, m, m_std):
+
+    def model_param_table(self):
         """Make a table of the estimated model parameters"""
         model_table = ['Complex model param'+' '*15+'Value'+' '*8+'Std']
 
@@ -994,10 +980,10 @@ class timeseriesViewer():
         str_lj  = 28
 
         # deformation model info
-        poly_deg   = model['polynomial']
-        num_period = len(model['periodic'])
-        num_step   = len(model['step'])
-        num_exp    = sum([len(val) for key, val in model['exp'].items()])
+        poly_deg   = self.model['polynomial']
+        num_period = len(self.model['periodic'])
+        num_step   = len(self.model['step'])
+        num_exp    = sum([len(val) for key, val in self.model['exp'].items()])
 
         # time func 1 - polynomial
         for i in range(1, poly_deg+1):
@@ -1009,19 +995,19 @@ class timeseriesViewer():
             else:
                 dsName = 'poly{}'.format(i)
             # write
-            model_table.append(str_fmt.format(dsName.ljust(str_lj), m[i], m_std[i]))
+            model_table.append(str_fmt.format(dsName.ljust(str_lj), self.m[i], self.m_std[i]))
 
         # time func 2 - periodic
         p0 = poly_deg + 1
         for i in range(num_period):
             # calculate the amplitude and phase of the periodic signal
             # following equation (9-10) in Minchew et al. (2017, JGR)
-            coef_cos = m[p0 + 2*i]
-            coef_sin = m[p0 + 2*i + 1]
+            coef_cos = self.m[p0 + 2*i]
+            coef_sin = self.m[p0 + 2*i + 1]
             period_amp = np.sqrt(coef_cos**2 + coef_sin**2)
 
             # dataset name
-            period = model['periodic'][i]
+            period = self.model['periodic'][i]
             dsNameSuffixes = ['Amplitude', 'Phase']
             if period == 1:
                 dsNames = [f'annual{x}' for x in dsNameSuffixes]
@@ -1037,30 +1023,30 @@ class timeseriesViewer():
         p0 = (poly_deg + 1) + (2 * num_period)
         for i in range(num_step):
             # dataset name
-            dsName = 'step{}'.format(model['step'][i])
+            dsName = 'step{}'.format(self.model['step'][i])
             # write
-            model_table.append(str_fmt.format(dsName.ljust(str_lj), m[p0+i], m_std[p0+i]))
+            model_table.append(str_fmt.format(dsName.ljust(str_lj), self.m[p0+i], self.m_std[p0+i]))
 
         # time func 4 - exponential
         p0 = (poly_deg + 1) + (2 * num_period) + (num_step)
         i = 0
-        for exp_onset in model['exp'].keys():
-            for exp_tau in model['exp'][exp_onset]:
+        for exp_onset in self.model['exp'].keys():
+            for exp_tau in self.model['exp'][exp_onset]:
                 # dataset name
                 dsName = 'exp{}Tau{}'.format(exp_onset, exp_tau)
                 # write
-                model_table.append(str_fmt.format(dsName.ljust(str_lj), m[p0+i], m_std[p0+i]))
+                model_table.append(str_fmt.format(dsName.ljust(str_lj), self.m[p0+i], self.m_std[p0+i]))
                 i += 1
 
         # time func 5 - logarithmic
         p0 = (poly_deg + 1) + (2 * num_period) + (num_step) + (num_exp)
         i = 0
-        for log_onset in model['log'].keys():
-            for log_tau in model['log'][log_onset]:
+        for log_onset in self.model['log'].keys():
+            for log_tau in self.model['log'][log_onset]:
                 # dataset name
                 dsName = 'log{}Tau{}'.format(log_onset, log_tau)
                 # write
-                model_table.append(str_fmt.format(dsName.ljust(str_lj), m[p0+i], m_std[p0+i]))
+                model_table.append(str_fmt.format(dsName.ljust(str_lj), self.m[p0+i], self.m_std[p0+i]))
                 i += 1
         return model_table
 
@@ -1074,7 +1060,7 @@ class timeseriesViewer():
         # get a table of ts for output
         float_formatter = lambda x: [float('{:.3f}'.format(i)) for i in x]
         obs = list(map(str, float_formatter(d_ts[0])))
-        if self.model_bool:
+        if self.show_model:
             preds    = list(map(str, float_formatter(self.ts_pred)))
             ts_table = list(zip(dates, obs, preds))
         else:
@@ -1083,7 +1069,7 @@ class timeseriesViewer():
         # write to file
         with open(self.savetxt,'a') as f:
             f.write('# '+title_ts)
-            if not self.model_bool:
+            if not self.show_model:
                 f.write('\n')
                 f.write('# Date\t\tObs\n')
                 for line in ts_table:
