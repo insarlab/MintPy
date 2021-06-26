@@ -119,7 +119,7 @@ def cmd_line_parse(iargs=None):
         inps.fig_size = [8.0, 4.5]
 
     # temporal model fitting, initialize the dicts of exp and log funcs
-    inps = ts2vel.init_explog_dicts(inps)
+    inps = ts2vel.init_exp_log_dicts(inps)
 
     # verbose print using --noverbose option
     global vprint
