@@ -118,41 +118,8 @@ def cmd_line_parse(iargs=None):
     if not inps.fig_size:
         inps.fig_size = [8.0, 4.5]
 
-    # temporal model fitting
-    if inps.show_model:
-        # --exp option: convert cmd inputs into dict format
-        inps.expDict = dict()
-        if inps.exp:
-            for exp_list in inps.exp:
-                onset_time, char_times = exp_list[0], exp_list[1:]
-                if len(onset_time) == 8:
-                    if len(char_times) > 0:
-                        inps.expDict[onset_time] = np.array(char_times).astype(float).tolist()
-                    else:
-                        msg = 'NO characteristic time found: {}\n'.format(char_times)
-                        msg += 'one or more characteristic time(s) are required for each onset date for the exp function, e.g.:\n'
-                        msg += '--exp 20181026 60 OR\n'
-                        msg += '--exp 20161231 80.5 200  # append as many char_times as you like!'
-                        raise ValueError(msg)
-                else:
-                    raise ValueError('input onset time is NOT in YYYYMMDD format: {}'.format(onset_time))
-
-        # --log option: convert cmd inputs into dict format
-        inps.logDict = dict()
-        if inps.log:
-            for log_list in inps.log:
-                onset_time, char_times = log_list[0], log_list[1:]
-                if len(onset_time) == 8:
-                    if len(char_times) > 0:
-                        inps.logDict[onset_time] = np.array(char_times).astype(float).tolist()
-                    else:
-                        msg = 'NO characteristic time found: {}\n'.format(char_times)
-                        msg += 'one or more characteristic time(s) are required for each onset date for the log function, e.g.:\n'
-                        msg += '--exp 20181026 60 OR\n'
-                        msg += '--exp 20161231 80.5 200  # append as many char_times as you like!'
-                        raise ValueError(msg)
-                else:
-                    raise ValueError('input onset time is NOT in YYYYMMDD format: {}'.format(onset_time))
+    # temporal model fitting, initialize the dicts of exp and log funcs
+    inps = ts2vel.init_explog_dicts(inps)
 
     # verbose print using --noverbose option
     global vprint
@@ -655,9 +622,8 @@ class timeseriesViewer():
             if self.yx:
                 y = self.yx[0] - self.pix_box[1]
                 x = self.yx[1] - self.pix_box[0]
-                self.m, self.m_std, self.ts_pred, self.ts_fit = self.fit2model(self.dates, self.ts_data[0][:,y,x],
-                                                                    self.model, self.num_param)
-                self.model_table = self.model_param_table(self.model, self.m, self.m_std)
+                self.m, self.m_std, self.ts_pred, self.ts_fit = self.fit2model(self.ts_data[0][:,y,x])
+                self.model_table = self.model_param_table()
 
         # save plotted data to text file
         if self.savetxt:
@@ -1083,7 +1049,7 @@ class timeseriesViewer():
                     f.write('{}\t{}\t{}\n'.format(line[0],line[1],line[2]))
             f.write('\n')
         return
-        
+
 ###########################################################################################
 def main(iargs=None):
     obj = timeseriesViewer(iargs=iargs)

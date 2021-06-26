@@ -245,7 +245,7 @@ def add_parallel_argument(parser):
     from mintpy.objects.cluster import CLUSTER_LIST
 
     par = parser.add_argument_group('parallel', 'parallel processing using dask')
-    par.add_argument('-c', '--cluster', '--cluster-type', dest='cluster', type=str, 
+    par.add_argument('-c', '--cluster', '--cluster-type', dest='cluster', type=str,
                      choices=CLUSTER_LIST,
                      help='Cluster to use for parallel computing (default: %(default)s to turn OFF).')
     par.add_argument('--num-worker', dest='numWorker', type=str, default='4',

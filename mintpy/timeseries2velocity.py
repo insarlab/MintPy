@@ -146,6 +146,14 @@ def cmd_line_parse(iargs=None):
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 
+    # Initialize the dictionaries of exp and log funcs
+    inps = init_explog_dicts(inps)
+
+    return inps
+
+
+def init_explog_dicts(inps):
+    """Initialize the dictionaries of exp and log funcs"""
     # --exp option: convert cmd inputs into dict format
     inps.expDict = dict()
     if inps.exp:
@@ -483,7 +491,7 @@ def run_timeseries2time_func(inps):
     ## estimation
 
     # calc number of box based on memory limit
-    memoryAll = (num_date + num_param * 2 + 2) * length * width * 4 
+    memoryAll = (num_date + num_param * 2 + 2) * length * width * 4
     if inps.bootstrap:
         memoryAll += inps.bootstrapCount * num_param * length * width * 4
     num_box = int(np.ceil(memoryAll * 3 / (inps.maxMemory * 1024**3)))
@@ -573,7 +581,7 @@ def run_timeseries2time_func(inps):
                 from sklearn.utils import resample
             except ImportError:
                 raise ImportError('can not import scikit-learn!')
-            print('using bootstrap resampling {} times ...'.format(inps.bootstrapCount)) 
+            print('using bootstrap resampling {} times ...'.format(inps.bootstrapCount))
 
             # calc model of all bootstrap sampling
             m_boot = np.zeros((inps.bootstrapCount, num_param, num_pixel2inv), dtype=dataType)
@@ -785,7 +793,7 @@ def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
 
     def write_dataset_block(f, dsName, data, block):
         print('write dataset /{:<25} block: {}'.format(dsName, block))
-        f[dsName][block[0]:block[1], 
+        f[dsName][block[0]:block[1],
                   block[2]:block[3]] = data.reshape(block[1] - block[0],
                                                     block[3] - block[2])
 
