@@ -582,7 +582,7 @@ def save_ts_data_and_plot(yx, d_ts, m_strs, inps):
 
     # TXT - point time-series and time func param
     outName = '{}_ts.txt'.format(inps.outfile_base)
-    header = 'time-series file={}\n'.format(inps.file)
+    header = 'time-series file = {}\n'.format(inps.file[0])
     header += '{}\n'.format(get_ts_title(y, x, inps.coord))
     header += 'reference pixel: y={}, x={}\n'.format(inps.ref_yx[0], inps.ref_yx[1]) if inps.ref_yx else ''
     header += 'reference date: {}\n'.format(inps.date_list[inps.ref_idx]) if inps.ref_idx else ''
@@ -844,7 +844,7 @@ class timeseriesViewer():
 
         # axis format
         ax.tick_params(which='both', direction='in', labelsize=self.font_size, bottom=True, top=True, left=True, right=True)
-        pp.auto_adjust_xaxis_date(ax, self.yearList, fontsize=self.font_size)[0]
+        pp.auto_adjust_xaxis_date(ax, self.yearList, fontsize=self.font_size)
         ax.set_ylabel('Displacement [{}]'.format(self.disp_unit), fontsize=self.font_size)
         ax.set_ylim(self.ylim)
         if self.tick_right:

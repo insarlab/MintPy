@@ -353,8 +353,9 @@ def read_inps2model(inps, date_list=None):
     # check model date limits
     if not date_list:
         date_list = inps.dateList
-    ymin = ptime.yyyymmdd2years(date_list[0])
-    ymax = ptime.yyyymmdd2years(date_list[-1])
+    dmin, dmax = date_list[0], date_list[-1]
+    ymin = ptime.yyyymmdd2years(dmin)
+    ymax = ptime.yyyymmdd2years(dmax)
 
     if inps.step:
         for d_step in inps.step:
