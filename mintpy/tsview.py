@@ -26,9 +26,6 @@ EXAMPLE = """example:
   tsview.py timeseries.h5  --yx 300 400 --zero-first  --nodisplay
   tsview.py geo_timeseries.h5  --lalo 33.250 131.665  --nodisplay
 
-  # show temporal model fitting
-  tsview.py timeseries.h5 --show-model
-
   # press left / right key to slide images
 
   # multiple time-series files
