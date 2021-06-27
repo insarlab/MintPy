@@ -199,7 +199,7 @@ def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None
     meta["FILE_TYPE"] = "timeseries"
     meta["UNIT"] = "m"
     meta['REF_DATE'] = ref_date
-    writefile.layout_hdf5(outfile, ds_name_dict, meta)
+    writefile.layout_hdf5(outfile, ds_name_dict, metadata=meta)
 
     # writing data to HDF5 file
     print('writing data to HDF5 file {} with a mode ...'.format(outfile))

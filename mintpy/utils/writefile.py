@@ -210,7 +210,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
 
 #########################################################################
 
-def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, compression=None, print_msg=True):
+def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_file=None, compression=None, print_msg=True):
     """Create HDF5 file with defined metadata and (empty) dataset structure
 
     Parameters: fname        - str, HDF5 file path
@@ -221,6 +221,11 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, compress
                                 ...
                                }
                 metadata     - dict, metadata
+                ds_unit_dict - dict, dataset unit definition
+                               {dname : dunit,
+                                dname : dunit,
+                                ...
+                               }
                 ref_file     - str, reference file for the data structure
                 compression  - str, HDF5 compression type
     Returns:    fname        - str, HDF5 file path
@@ -342,9 +347,16 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ref_file=None, compress
             if len(ds_name_dict[key]) > 2 and ds_name_dict[key][2] is not None:
                 ds[:] = np.array(ds_name_dict[key][2])
 
-        # write attributes
+        # write attributes in root level
         for key, value in meta.items():
             f.attrs[key] = str(value)
+
+        # write attributes in dataset level
+        if ds_unit_dict is not None:
+            for key, value in ds_unit_dict.items():
+                if value is not None:
+                    f[key].attrs['UNIT'] = value
+                    print(f'add /{key:<{max_digit}} attribute: UNIT = {value}')
 
     if print_msg:
         print('close  HDF5 file: {}'.format(fname))

@@ -639,7 +639,8 @@ def main(iargs=None):
     if run_or_skip(inps, dsNameDict, out_file=inps.outfile[0]) == 'run':
         # initiate h5 file with defined structure
         meta['FILE_TYPE'] = 'ifgramStack'
-        writefile.layout_hdf5(inps.outfile[0], dsNameDict, meta,
+        writefile.layout_hdf5(inps.outfile[0], dsNameDict,
+                              metadata=meta,
                               compression=inps.compression)
 
         # write data to h5 file in disk
@@ -667,7 +668,8 @@ def main(iargs=None):
     if run_or_skip(inps, dsNameDict, out_file=inps.outfile[1]) == 'run':
         # initiate h5 file with defined structure
         meta['FILE_TYPE'] = 'geometry'
-        writefile.layout_hdf5(inps.outfile[1], dsNameDict, meta,
+        writefile.layout_hdf5(inps.outfile[1], dsNameDict,
+                              metadata=meta,
                               compression=inps.compression)
 
         # write data to disk

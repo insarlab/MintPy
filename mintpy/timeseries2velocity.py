@@ -348,12 +348,13 @@ def read_date_info(inps):
     return inps
 
 
-def read_inps2model(inps):
+def read_inps2model(inps, date_list=None):
     """get model info from inps"""
     # check model date limits
-    dmin, dmax = inps.dateList[0], inps.dateList[-1]
-    ymin = ptime.yyyymmdd2years(dmin)
-    ymax = ptime.yyyymmdd2years(dmax)
+    if not date_list:
+        date_list = inps.dateList
+    ymin = ptime.yyyymmdd2years(date_list[0])
+    ymax = ptime.yyyymmdd2years(date_list[-1])
 
     if inps.step:
         for d_step in inps.step:
@@ -383,7 +384,7 @@ def read_inps2model(inps):
     # msg
     print('estimate deformation model with the following assumed time functions:')
     for key, value in model.items():
-        print('{:<10} : {}'.format(key, value))
+        print('    {:<10} : {}'.format(key, value))
 
     if 'polynomial' not in model.keys():
         raise ValueError('linear/polynomial model is NOT included! Are you sure?!')
@@ -401,7 +402,7 @@ def read_inps2model(inps):
 
 
 ############################################################################
-def estimate_time_func(model, date_list, dis_ts, dis_ts_std=None):
+def estimate_time_func(model, date_list, dis_ts):
     """
     Deformation model estimator, using a suite of linear, periodic, step, exponential, and logarithmic function(s).
 
@@ -482,8 +483,11 @@ def run_timeseries2time_func(inps):
         atr[key_prefix+key] = str(vars(inps)[key])
 
     # instantiate output file
-    layout_hdf5(inps.outfile, atr, model)
-
+    ds_name_dict, ds_unit_dict = model2hdf5_structure(model, ds_shape=(length, width))
+    writefile.layout_hdf5(inps.outfile,
+                          metadata=atr,
+                          ds_name_dict=ds_name_dict,
+                          ds_unit_dict=ds_unit_dict)
 
     ## estimation
 
@@ -514,12 +518,14 @@ def run_timeseries2time_func(inps):
         # read input
         print('reading data from file {} ...'.format(inps.timeseries_file))
         ts_data = readfile.read(inps.timeseries_file, box=box)[0]
+
         # referencing in time and space
         # for file w/o reference info. e.g. ERA5.h5
         if inps.ref_date:
             print('referecing to date: {}'.format(inps.ref_date))
             ref_ind = inps.dateList.index(inps.ref_date)
             ts_data -= np.tile(ts_data[ref_ind, :, :], (ts_data.shape[0], 1, 1))
+
         if inps.ref_yx:
             print('referencing to point (y, x): ({}, {})'.format(inps.ref_yx[0], inps.ref_yx[1]))
             ref_box = (inps.ref_yx[1], inps.ref_yx[0], inps.ref_yx[1]+1, inps.ref_yx[0]+1)
@@ -612,8 +618,7 @@ def run_timeseries2time_func(inps):
             print('estimate time functions via linalg.lstsq ...')
             G, m[:, mask], e2 = estimate_time_func(model=model,
                                                    date_list=inps.dateList,
-                                                   dis_ts=ts_data,
-                                                   dis_ts_std=ts_std)
+                                                   dis_ts=ts_data)
             del ts_data
 
             ## Compute the covariance matrix for model parameters: Gm = d
@@ -655,27 +660,29 @@ def run_timeseries2time_func(inps):
 
         # write
         block = [box[1], box[3], box[0], box[2]]
-        write_hdf5_block(inps.outfile, model, m, m_std,
-                         mask=mask,
-                         block=block)
+        ds_dict = model2hdf5_dataset(model, m, m_std, mask=mask)
+        for ds_name, data in ds_dict.items():
+            writefile.write_hdf5_block(inps.outfile,
+                                       data=data.reshape(box_length, box_width),
+                                       datasetName=ds_name,
+                                       block=block)
 
     return inps.outfile
 
 
-def layout_hdf5(out_file, atr, model):
-    """create HDF5 file for estimated time functions
-    with defined metadata and (empty) dataset structure
+def model2hdf5_structure(model, ds_shape=None):
+    """Get the dataset name/structure for writefile.layout_hdf5().
+    Parameters: model - dict, dictionary of time functions, check estimate_time_func() for details.
+                shape - tuple of 2 int in (length, width)
+    Returns:    ds_name_dict - dict, dictionary for the structure of an HDF5 file
+                ds_unit_dict - dict, dictionary for the dataset unit
     """
-
     # deformation model info
     poly_deg   = model['polynomial']
     num_period = len(model['periodic'])
     num_step   = len(model['step'])
 
-    # size info
-    length = int(atr['LENGTH'])
-    width = int(atr['WIDTH'])
-
+    # init output
     ds_name_dict = {}
     ds_unit_dict = {}
 
@@ -693,9 +700,9 @@ def layout_hdf5(out_file, atr, model):
             unit = 'm/year^{}'.format(i)
 
         # update ds_name/unit_dict
-        ds_name_dict[dsName] = [dataType, (length, width), None]
+        ds_name_dict[dsName] = [dataType, ds_shape, None]
         ds_unit_dict[dsName] = unit
-        ds_name_dict[dsName+'Std'] = [dataType, (length, width), None]
+        ds_name_dict[dsName+'Std'] = [dataType, ds_shape, None]
         ds_unit_dict[dsName+'Std'] = unit
 
     # time func 2 - periodic
@@ -711,9 +718,9 @@ def layout_hdf5(out_file, atr, model):
             dsNames = [f'periodY{period}{x}' for x in dsNameSuffixes]
 
         # update ds_name/unit_dict
-        ds_name_dict[dsNames[0]] = [dataType, (length, width), None]
+        ds_name_dict[dsNames[0]] = [dataType, ds_shape, None]
         ds_unit_dict[dsNames[0]] = 'm'
-        ds_name_dict[dsNames[1]] = [dataType, (length, width), None]
+        ds_name_dict[dsNames[1]] = [dataType, ds_shape, None]
         ds_unit_dict[dsNames[1]] = 'radian'
 
     # time func 3 - step
@@ -722,9 +729,9 @@ def layout_hdf5(out_file, atr, model):
         dsName = 'step{}'.format(model['step'][i])
 
         # update ds_name/unit_dict
-        ds_name_dict[dsName] = [dataType, (length, width), None]
+        ds_name_dict[dsName] = [dataType, ds_shape, None]
         ds_unit_dict[dsName] = 'm'
-        ds_name_dict[dsName+'Std'] = [dataType, (length, width), None]
+        ds_name_dict[dsName+'Std'] = [dataType, ds_shape, None]
         ds_unit_dict[dsName+'Std'] = 'm'
 
     # time func 4 - exp
@@ -734,9 +741,9 @@ def layout_hdf5(out_file, atr, model):
             dsName = 'exp{}Tau{}'.format(exp_onset, exp_tau)
 
             # update ds_name/unit_dict
-            ds_name_dict[dsName] = [dataType, (length, width), None]
+            ds_name_dict[dsName] = [dataType, ds_shape, None]
             ds_unit_dict[dsName] = 'm'
-            ds_name_dict[dsName+'Std'] = [dataType, (length, width), None]
+            ds_name_dict[dsName+'Std'] = [dataType, ds_shape, None]
             ds_unit_dict[dsName+'Std'] = 'm'
 
     # time func 5 - log
@@ -746,147 +753,111 @@ def layout_hdf5(out_file, atr, model):
             dsName = 'log{}Tau{}'.format(log_onset, log_tau)
 
             # update ds_name/unit_dict
-            ds_name_dict[dsName] = [dataType, (length, width), None]
+            ds_name_dict[dsName] = [dataType, ds_shape, None]
             ds_unit_dict[dsName] = 'm'
-            ds_name_dict[dsName+'Std'] = [dataType, (length, width), None]
+            ds_name_dict[dsName+'Std'] = [dataType, ds_shape, None]
             ds_unit_dict[dsName+'Std'] = 'm'
 
-    # layout hdf5
-    writefile.layout_hdf5(out_file, ds_name_dict, metadata=atr)
-
-    # add metadata to HDF5 dataset
-    max_digit = max([len(i) for i in ds_unit_dict.keys()])
-    with h5py.File(out_file, 'r+') as f:
-        for key, value in ds_unit_dict.items():
-            f[key].attrs['UNIT'] = value
-            print('add /{d:<{w}} attribute: UNIT = {u}'.format(d=key,
-                                                               w=max_digit,
-                                                               u=value))
-
-    return out_file
+    return ds_name_dict, ds_unit_dict
 
 
-def write_hdf5_block(out_file, model, m, m_std, mask=None, block=None):
-    """write the estimated time function parameters to file
-
-    Parameters: out_file - str, path of output time func file
-                model    - dict, dict of time functions, e.g.:
-                    {'polynomial' : 2,            # int, polynomial degree with
-                                                  # e.g.: 1 (linear), 2 (quad), 3 (cubic), etc.
-                     'periodic'   : [1.0, 0.5],   # list of float, period(s) in years.
-                                                  # e.g.: 1.0 (annual), 0.5 (semiannual), etc.
-                     'step'       : ['20061014'],         # list of str, date(s) in YYYYMMDD.
-                     'exp'        : {'20181026': [60]},   # dict, date(s) in YYYYMMDD; list of floats, taus (days).
-                     'log'        : {'20161231': [80.5],  # dict, date(s) in YYYYMMDD; list of floats, taus (days).
-                                     '20190125': [100, 200],
-                                     ...
-                                     },
-                     ...
-                     }
-                m/m_std  - 2D np.ndarray in float32 in size of (num_param, length*width), time func param. (Std. Dev.)
-                mask     - 1D np.ndarray in float32 in size of (length*width), mask of valid pixels
-                block    - list of 4 int, for [yStart, yEnd, xStart, xEnd]
+def model2hdf5_dataset(model, m, m_std, mask=None):
+    """Prepare the estimated model parameters into a dict of matrices ready HDF5 dataset writing.
+    Parameters: model - dict,
+                m     - 2D np.ndarray
+                m_std - 2D np.ndarray
+    Returns:    ds_dict - dict, dictionary of dataset in {{ds_name} : {ds_value}}
     """
-
-    def write_dataset_block(f, dsName, data, block):
-        print('write dataset /{:<25} block: {}'.format(dsName, block))
-        f[dsName][block[0]:block[1],
-                  block[2]:block[3]] = data.reshape(block[1] - block[0],
-                                                    block[3] - block[2])
-
     # deformation model info
     poly_deg   = model['polynomial']
     num_period = len(model['periodic'])
     num_step   = len(model['step'])
     num_exp    = sum([len(val) for key, val in model['exp'].items()])
 
-    length = block[1] - block[0]
-    width = block[3] - block[2]
+    # init output
+    ds_dict = {}
+
+    num_pixel = m.shape[1] if m.ndim > 1 else 1
+    m = m.reshape(-1, num_pixel)
+    m_std = m_std.reshape(-1, num_pixel)
+
+    # default mask
     if mask is None:
-        mask = np.ones(length*width, dtype=np.bool_)
+        mask = np.ones(num_pixel, dtype=np.bool_)
+    else:
+        mask = mask.flatten()
 
-    print('open file: {} with "a" mode'.format(out_file))
-    with h5py.File(out_file, 'a') as f:
+    # time func 1 - polynomial
+    for i in range(1, poly_deg+1):
+        # dataset name
+        if i == 1:
+            dsName = 'velocity'
+        elif i == 2:
+            dsName = 'acceleration'
+        else:
+            dsName = 'poly{}'.format(i)
 
-        # time func 1 - polynomial
-        for i in range(1, poly_deg+1):
+        ds_dict[dsName] = m[i, :]
+        ds_dict[dsName+'Std'] = m_std[i, :]
+
+    # time func 2 - periodic
+    p0 = poly_deg + 1
+    for i in range(num_period):
+        # dataset name
+        period = model['periodic'][i]
+        dsNameSuffixes = ['Amplitude', 'Phase']
+        if period == 1:
+            dsNames = [f'annual{x}' for x in dsNameSuffixes]
+        elif period == 0.5:
+            dsNames = [f'semiAnnual{x}' for x in dsNameSuffixes]
+        else:
+            dsNames = [f'periodY{period}{x}' for x in dsNameSuffixes]
+
+        # calculate the amplitude and phase of the periodic signal
+        # following equation (9-10) in Minchew et al. (2017, JGR)
+        coef_cos = m[p0 + 2*i, :]
+        coef_sin = m[p0 + 2*i + 1, :]
+        period_amp = np.sqrt(coef_cos**2 + coef_sin**2)
+        period_pha = np.zeros(num_pixel, dtype=dataType)
+        period_pha[mask] = np.arctan(coef_cos[mask] / coef_sin[mask])
+
+        for dsName, data in zip(dsNames, [period_amp, period_pha]):
+            ds_dict[dsName] = data
+
+    # time func 3 - step
+    p0 = (poly_deg + 1) + (2 * num_period)
+    for i in range(num_step):
+        # dataset name
+        dsName = 'step{}'.format(model['step'][i])
+
+        ds_dict[dsName] = m[p0+i, :]
+        ds_dict[dsName+'Std'] = m_std[p0+i, :]
+
+    # time func 4 - exponential
+    p0 = (poly_deg + 1) + (2 * num_period) + (num_step)
+    i = 0
+    for exp_onset in model['exp'].keys():
+        for exp_tau in model['exp'][exp_onset]:
             # dataset name
-            if i == 1:
-                dsName = 'velocity'
-            elif i == 2:
-                dsName = 'acceleration'
-            else:
-                dsName = 'poly{}'.format(i)
+            dsName = 'exp{}Tau{}'.format(exp_onset, exp_tau)
 
-            # write
-            for ds_name, ds in zip([dsName, dsName+'Std'], [m, m_std]):
-                write_dataset_block(f, ds_name, ds[i, :], block)
+            ds_dict[dsName] = m[p0+i, :]
+            ds_dict[dsName+'Std'] = m_std[p0+i, :]
+            i += 1
 
-        # time func 2 - periodic
-        p0 = poly_deg + 1
-        for i in range(num_period):
-            # calculate the amplitude and phase of the periodic signal
-            # following equation (9-10) in Minchew et al. (2017, JGR)
-            coef_cos = m[p0 + 2*i, :]
-            coef_sin = m[p0 + 2*i + 1, :]
-            period_amp = np.sqrt(coef_cos**2 + coef_sin**2)
-            period_pha = np.zeros(length*width, dtype=dataType)
-            period_pha[mask] = np.arctan(coef_cos[mask] / coef_sin[mask])
-
+    # time func 5 - logarithmic
+    p0 = (poly_deg + 1) + (2 * num_period) + (num_step) + (num_exp)
+    i = 0
+    for log_onset in model['log'].keys():
+        for log_tau in model['log'][log_onset]:
             # dataset name
-            period = model['periodic'][i]
-            dsNameSuffixes = ['Amplitude', 'Phase']
-            if period == 1:
-                dsNames = [f'annual{x}' for x in dsNameSuffixes]
-            elif period == 0.5:
-                dsNames = [f'semiAnnual{x}' for x in dsNameSuffixes]
-            else:
-                dsNames = [f'periodY{period}{x}' for x in dsNameSuffixes]
+            dsName = 'log{}Tau{}'.format(log_onset, log_tau)
 
-            # write
-            for ds_name, data in zip(dsNames, [period_amp, period_pha]):
-                write_dataset_block(f, ds_name, data, block)
+            ds_dict[dsName] = m[p0+i, :]
+            ds_dict[dsName+'Std'] = m_std[p0+i, :]
+            i += 1
 
-            # To-do list: add code for the error propagation for the periodic amp/pha
-
-        # time func 3 - step
-        p0 = (poly_deg + 1) + (2 * num_period)
-        for i in range(num_step):
-            # dataset name
-            dsName = 'step{}'.format(model['step'][i])
-
-            # write
-            for ds_name, ds in zip([dsName, dsName+'Std'], [m, m_std]):
-                write_dataset_block(f, ds_name, ds[p0+i, :], block)
-
-        # time func 4 - exponential
-        p0 = (poly_deg + 1) + (2 * num_period) + (num_step)
-        i = 0
-        for exp_onset in model['exp'].keys():
-            for exp_tau in model['exp'][exp_onset]:
-                # dataset name
-                dsName = 'exp{}Tau{}'.format(exp_onset, exp_tau)
-
-                # write
-                for ds_name, ds in zip([dsName, dsName+'Std'], [m, m_std]):
-                    write_dataset_block(f, ds_name, ds[p0+i, :], block)
-                i += 1
-
-        # time func 5 - logarithmic
-        p0 = (poly_deg + 1) + (2 * num_period) + (num_step) + (num_exp)
-        i = 0
-        for log_onset in model['log'].keys():
-            for log_tau in model['log'][log_onset]:
-                # dataset name
-                dsName = 'log{}Tau{}'.format(log_onset, log_tau)
-
-                # write
-                for ds_name, ds in zip([dsName, dsName+'Std'], [m, m_std]):
-                    write_dataset_block(f, ds_name, ds[p0+i, :], block)
-                i += 1
-
-    print('close HDF5 file {}'.format(out_file))
-    return out_file
+    return ds_dict
 
 
 ############################################################################

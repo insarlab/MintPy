@@ -665,6 +665,7 @@ def plot_slice(ax, data, metadata, inps=None):
                 msg = 'WARNING: no latitude / longitude found in file: {}'.format(os.path.basename(geom_file))
                 msg += ', skip showing lat/lon in the status bar.'
                 vprint(msg)
+                geom_file = None
         else:
             geom_file = None
 

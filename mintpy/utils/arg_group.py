@@ -329,7 +329,7 @@ def add_subset_argument(parser):
 
 def add_timefunc_argument(parser):
     """Argument group parser for time functions"""
-    model = parser.add_argument_group('deformation model', 'a suite of time functions')
+    model = parser.add_argument_group('Deformation Model', 'A suite of time functions')
     model.add_argument('--poly', '--polynomial', '--poly-order', dest='polynomial', type=int, default=1,
                       help='a polynomial function with the input degree (default: %(default)s). E.g.:\n' +
                            '--poly 1                                  # linear\n' +
