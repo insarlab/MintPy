@@ -8,6 +8,7 @@
 
 import os
 import sys
+import re
 import argparse
 import numpy as np
 from scipy import linalg
@@ -470,6 +471,8 @@ def plot_ts_fit(ax, ts_fit, inps, ppar, labels=None):
     # link for auto text loc:
     #   https://stackoverflow.com/questions/7045729/automatically-position-text-box-in-matplotlib
     if labels:
+        # remove multiple spaces for better display since matplotlib does not give good alignment as in the terminal
+        labels = [re.sub(' +', ' ', x) for x in labels]
         handles = [patches.Rectangle((0, 0), 1, 1, fc="white", ec="white", lw=0, alpha=0)] * len(labels)
         ax.legend(handles, labels, loc='best', fontsize=ppar.fontsize,
                   handlelength=0, handletextpad=0, borderaxespad=1.0)
