@@ -245,7 +245,7 @@ def add_parallel_argument(parser):
     from mintpy.objects.cluster import CLUSTER_LIST
 
     par = parser.add_argument_group('parallel', 'parallel processing using dask')
-    par.add_argument('-c', '--cluster', '--cluster-type', dest='cluster', type=str, 
+    par.add_argument('-c', '--cluster', '--cluster-type', dest='cluster', type=str,
                      choices=CLUSTER_LIST,
                      help='Cluster to use for parallel computing (default: %(default)s to turn OFF).')
     par.add_argument('--num-worker', dest='numWorker', type=str, default='4',
@@ -326,3 +326,33 @@ def add_subset_argument(parser):
                      help='subset display in longitude')
     return parser
 
+
+def add_timefunc_argument(parser):
+    """Argument group parser for time functions"""
+    model = parser.add_argument_group('Deformation Model', 'A suite of time functions')
+    model.add_argument('--poly', '--polynomial', '--poly-order', dest='polynomial', type=int, default=1,
+                      help='a polynomial function with the input degree (default: %(default)s). E.g.:\n' +
+                           '--poly 1                                  # linear\n' +
+                           '--poly 2                                  # quadratic\n' +
+                           '--poly 3                                  # cubic\n')
+    model.add_argument('--periodic', '--period', '--peri', dest='periodic', type=float, nargs='+', default=[],
+                      help='periodic function(s) with period in decimal years (default: %(default)s). E.g.:\n' +
+                           '--periodic 1.0                            # an annual cycle\n' +
+                           '--periodic 1.0 0.5                        # an annual cycle plus a semi-annual cycle\n')
+    model.add_argument('--step', dest='step', type=str, nargs='+', default=[],
+                      help='step function(s) at YYYYMMDD (default: %(default)s). E.g.:\n' +
+                           '--step 20061014                           # coseismic step  at 2006-10-14\n' +
+                           '--step 20110311 20120928                  # coseismic steps at 2011-03-11 and 2012-09-28\n')
+    model.add_argument('--exp', '--exponential', dest='exp', type=str, nargs='+', action='append', default=[],
+                      help='exponential function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
+                           '--exp  20181026 60                        # exp onset at 2006-10-14 with tau=60 days\n' +
+                           '--exp  20181026 60 120                    # exp onset at 2006-10-14 with tau=60 days overlayed by a tau=145 days\n' +
+                           '--exp  20161231 80.5 --exp 20190125 100   # 1st exp onset at 2011-03-11 with tau=80.5 days and\n' +
+                           '                                          # 2nd exp onset at 2012-09-28 with tau=100  days')
+    model.add_argument('--log', '--logarithmic', dest='log', type=str, nargs='+', action='append', default=[],
+                      help='logarithmic function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
+                           '--log  20181016 90.4                      # log onset at 2006-10-14 with tau=90.4 days\n' +
+                           '--log  20181016 90.4 240                  # log onset at 2006-10-14 with tau=90.4 days overlayed by a tau=240 days\n' +
+                           '--log  20161231 60 --log 20190125 180.2   # 1st log onset at 2011-03-11 with tau=60 days and\n' +
+                           '                                          # 2nd log onset at 2012-09-28 with tau=180.2 days\n')
+    return parser

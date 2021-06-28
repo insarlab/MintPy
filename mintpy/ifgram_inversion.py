@@ -1058,7 +1058,7 @@ def ifgram_inversion(inps=None):
         "bperp"      : [np.float32,  (num_date,), pbase],
         "timeseries" : [np.float32,  (num_date, length, width), None],
     }
-    writefile.layout_hdf5(inps.tsFile, ds_name_dict, meta)
+    writefile.layout_hdf5(inps.tsFile, ds_name_dict, metadata=meta)
 
     # 2.3 instantiate invQualifyFile: temporalCoherence / residualInv
     if 'residual' in os.path.basename(inps.invQualityFile).lower():

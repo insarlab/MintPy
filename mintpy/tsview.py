@@ -8,17 +8,16 @@
 
 import os
 import sys
+import re
 import argparse
 import numpy as np
-import scipy.stats as stats
-import matplotlib.pyplot as plt
-from matplotlib.ticker import MultipleLocator
-from matplotlib.widgets import Slider
+from scipy import linalg
+from matplotlib import pyplot as plt, ticker, widgets, patches
 
 from mintpy.objects import timeseries, giantTimeseries, HDFEOS
 from mintpy.utils import arg_group, readfile, ptime, plot as pp, utils as ut
 from mintpy.multilook import multilook_data
-from mintpy import subset, view
+from mintpy import subset, view, timeseries2velocity as ts2vel
 
 
 ###########################################################################################
@@ -27,7 +26,6 @@ EXAMPLE = """example:
   tsview.py timeseries.h5  --wrap
   tsview.py timeseries.h5  --yx 300 400 --zero-first  --nodisplay
   tsview.py geo_timeseries.h5  --lalo 33.250 131.665  --nodisplay
-  tsview.py timeseries_ERA5_ramp_demErr.h5  --sub-x 900 1400 --sub-y 0 500
 
   # press left / right key to slide images
 
@@ -51,6 +49,23 @@ def create_parser():
     parser.add_argument('--tick-right', dest='tick_right', action='store_true', help='set tick and tick label to the right')
     parser.add_argument('-l','--lookup', dest='lookup_file', type=str, help='lookup table file')
 
+    parser.add_argument('-n', dest='idx', metavar='NUM', type=int, help='Epoch/slice number for initial display.')
+    parser.add_argument('--error', dest='error_file', help='txt file with error for each date.')
+
+    # time info
+    parser.add_argument('--start-date', dest='start_date', type=str, help='start date of displacement to display')
+    parser.add_argument('--end-date', dest='end_date', type=str, help='end date of displacement to display')
+    parser.add_argument('--exclude', '--ex', dest='ex_date_list', nargs='*', default=['exclude_date.txt'], help='Exclude date shown as gray.')
+    parser.add_argument('--zf', '--zero-first', dest='zero_first', action='store_true', help='Set displacement at first acquisition to zero.')
+    parser.add_argument('--off','--offset', dest='offset', type=float, help='Offset for each timeseries file.')
+
+    parser.add_argument('--noverbose', dest='print_msg', action='store_false', help='Disable the verbose message printing.')
+
+    # temporal model fitting
+    parser.add_argument('--nomodel', '--nofit', dest='show_model', action='store_false', help='Do not show the time function (deformation model) fitting.')
+    parser = arg_group.add_timefunc_argument(parser)
+
+    # pixel of interest
     pixel = parser.add_argument_group('Pixel Input')
     pixel.add_argument('--yx', type=int, metavar=('Y', 'X'), nargs=2, help='initial pixel to plot in Y/X coord')
     pixel.add_argument('--lalo', type=float, metavar=('LAT', 'LON'), nargs=2, help='initial pixel to plot in lat/lon coord')
@@ -60,17 +75,7 @@ def create_parser():
     pixel.add_argument('--lw', '--linewidth', dest='linewidth', type=float, default=0, help='line width (default: %(default)s).')
     pixel.add_argument('--ew', '--edgewidth', dest='edge_width', type=float, default=1.0, help='Edge width for the error bar (default: %(default)s)')
 
-    parser.add_argument('-n', dest='idx', metavar='NUM', type=int, help='Epoch/slice number for initial display.')
-    parser.add_argument('--error', dest='error_file', help='txt file with error for each date.')
-
-    parser.add_argument('--start-date', dest='start_date', type=str, help='start date of displacement to display')
-    parser.add_argument('--end-date', dest='end_date', type=str, help='end date of displacement to display')
-    parser.add_argument('--exclude', '--ex', dest='ex_date_list', nargs='*', default=['exclude_date.txt'], help='Exclude date shown as gray.')
-    parser.add_argument('--zf', '--zero-first', dest='zero_first', action='store_true', help='Set displacement at first acquisition to zero.')
-    parser.add_argument('--off','--offset', dest='offset', type=float, help='Offset for each timeseries file.')
-
-    parser.add_argument('--noverbose', dest='print_msg', action='store_false', help='Disable the verbose message printing.')
-
+    # other groups
     parser = arg_group.add_data_disp_argument(parser)
     parser = arg_group.add_dem_argument(parser)
     parser = arg_group.add_figure_argument(parser)
@@ -110,6 +115,9 @@ def cmd_line_parse(iargs=None):
         inps.colormap = 'jet'
     if not inps.fig_size:
         inps.fig_size = [8.0, 4.5]
+
+    # temporal model fitting, initialize the dicts of exp and log funcs
+    inps = ts2vel.init_exp_log_dicts(inps)
 
     # verbose print using --noverbose option
     global vprint
@@ -164,6 +172,7 @@ def read_init_info(inps):
         inps.date_list = [i for i in inps.date_list if int(i) <= int(inps.end_date)]
     inps.num_date = len(inps.date_list)
     inps.dates, inps.yearList = ptime.date_list2vector(inps.date_list)
+
     (inps.ex_date_list,
      inps.ex_dates,
      inps.ex_flag) = read_exclude_date(inps.ex_date_list, inps.date_list)
@@ -292,6 +301,17 @@ def read_init_info(inps):
             inps.disp_unit_img = 'radian'
         inps.vlim = inps.wrap_range
     inps.cbar_label = 'Displacement [{}]'.format(inps.disp_unit_img)
+
+    # fit a suite of time func to the time series
+    if inps.show_model:
+        inps.model, inps.num_param = ts2vel.read_inps2model(inps, date_list=inps.date_list)
+        inps.m_unit = ts2vel.model2hdf5_structure(inps.model)[1]
+
+        # dense TS for plotting
+        inps.date_list_fit = ptime.get_date_range(inps.date_list[0], inps.date_list[-1])
+        inps.dates_fit = ptime.date_list2vector(inps.date_list_fit)[0]
+        inps.G_fit = timeseries.get_design_matrix4time_func(date_list=inps.date_list_fit, model=inps.model)
+
     return inps, atr
 
 
@@ -443,43 +463,114 @@ def plot_ts_scatter(ax, dis_ts, inps, ppar):
     return ax
 
 
-def _adjust_ts_axis(ax, inps):
-    ax.tick_params(which='both', direction='in', labelsize=inps.font_size, bottom=True, top=True, left=True, right=True)
-    ax = pp.auto_adjust_xaxis_date(ax, inps.yearList, fontsize=inps.font_size)[0]
-    #ax.set_xlabel('Time [years]', fontsize=inps.font_size)
-    ax.set_ylabel('Displacement [{}]'.format(inps.disp_unit), fontsize=inps.font_size)
-    ax.set_ylim(inps.ylim)
+def plot_ts_fit(ax, ts_fit, inps, ppar, labels=None):
+    # plot the model prediction curve in a fine date_lists
+    ax.plot(inps.dates_fit, ts_fit, color=ppar.color, lw=ppar.linewidth, alpha=0.8)
+
+    # print model parameters on the plot
+    # link for auto text loc:
+    #   https://stackoverflow.com/questions/7045729/automatically-position-text-box-in-matplotlib
+    if labels:
+        # remove multiple spaces for better display since matplotlib does not give good alignment as in the terminal
+        labels = [re.sub(' +', ' ', x) for x in labels]
+        handles = [patches.Rectangle((0, 0), 1, 1, fc="white", ec="white", lw=0, alpha=0)] * len(labels)
+        ax.legend(handles, labels, loc='best', fontsize=ppar.fontsize,
+                  handlelength=0, handletextpad=0, borderaxespad=1.0)
     return ax
 
 
-def _get_ts_title(y, x, coord):
+def get_model_param_str(model, ds_dict, unit_fac=100):
+    """Summary model parameters in a str paragraph.
+    Parameters: model    - dict, model dictionary
+                ds_dict  - dict, est. time func. param
+                unit_fac - float, unit scaling factor, to determine the unit
+    Returns:    ds_strs  - list of strings, each to summary the result of one time func
+    """
+
+    # dataset unit dict
+    ds_unit_dict = ts2vel.model2hdf5_structure(model)[1]
+
+    # update unit based on unit_fac
+    for ds_name, ds_unit in ds_unit_dict.items():
+        units = ds_unit.split('/')
+        if units[0] == 'm':
+            if   unit_fac == 1000 : units[0] = 'mm'
+            elif unit_fac == 100  : units[0] = 'cm'
+            elif unit_fac == 10   : units[0] = 'dm'
+            elif unit_fac == 1    : units[0] = 'm'
+            elif unit_fac == 0.001: units[0] = 'km'
+            ds_unit_dict[ds_name] = '/'.join(units)
+
+    # list of dataset names
+    ds_names = [x for x in ds_dict.keys() if not x.endswith('Std')]
+    w_key = max([len(x) for x in ds_names])
+    w_val = max([len('{:.2f}'.format(x[0])) for x in ds_dict.values()])
+
+    ds_strs = []
+    for ds_name in ds_names:
+        # get param info
+        ds_value = ds_dict[ds_name]
+        ds_unit = ds_unit_dict[ds_name]
+        ds_std_value = ds_dict.get(ds_name+'Std', None)
+
+        # compose string
+        ds_str = f'{ds_name:<{w_key}}: {ds_value[0]:>{w_val}.2f}'
+        ds_str += f' +/- {ds_std_value[0]:>{w_val}.2f}' if ds_std_value is not None else ''
+        ds_str += f' {ds_unit}'
+        ds_strs.append(ds_str)
+
+    return ds_strs
+
+
+def fit_time_func(model, date_list, ts_dis, unit_fac=100, G_fit=None):
+    """Fit a suite of fime functions to the time series.
+    Equations: Gm = d
+    Parameters: ts_dis - 1D np.ndarray, displacement time series
+    Returns:    m_dict - dict, dictionary in {ds_name: ds_value}
+                ts_fit - 1D np.ndarray, dense time series fit for plotting
+    """
+
+    # 1.1 estimate time func parameter via least squares (OLS)
+    G, m, e2 = ts2vel.estimate_time_func(model=model,
+                                         date_list=date_list,
+                                         dis_ts=ts_dis)
+
+    # 1.2 estimate time func parameter uncertainty
+    # using the OLS estimation residues e2 = sum((d - Gm) ** 2)
+    # assuming obs errors following normal distribution in time
+    num_obs = len(date_list)
+    num_param = G.shape[1]
+    G_inv = linalg.inv(np.dot(G.T, G))
+    m_var = e2.flatten() / (num_obs - num_param)
+    m_std = np.sqrt(np.dot(np.diag(G_inv).reshape(-1, 1), m_var))
+
+    # 1.3 translate estimation result into HDF5 ready datasets
+    m_dict = ts2vel.model2hdf5_dataset(model, m, m_std)
+
+    # 1.4 compose list of strings for printout
+    m_strs = get_model_param_str(model, m_dict, unit_fac=unit_fac)
+
+    # 2. reconstruct the fine resolution function
+    ts_fit = np.matmul(G_fit, m) if G_fit is not None else None
+
+    return ts_fit, m_strs
+
+
+def get_ts_title(y, x, coord_obj):
     title = 'Y/X = {}, {}'.format(y, x)
     try:
-        lat, lon = coord.radar2geo(y, x, print_msg=False)[0:2]
+        lat, lon = coord_obj.radar2geo(y, x, print_msg=False)[0:2]
         title += ', lat/lon = {:.4f}, {:.4f}'.format(lat, lon)
     except:
         pass
     return title
 
 
-def estimate_slope(d_ts, year_list, ex_flag=None, disp_unit='cm'):
-    """Estimate linear velocity / STD of the crrent displacement time-series"""
-    d_ts = np.array(d_ts)
-    years = np.array(year_list)
-    if ex_flag is not None:
-        d_ts = d_ts[ex_flag == 1]
-        years = years[ex_flag == 1]
+def save_ts_data_and_plot(yx, d_ts, m_strs, inps):
+    """Save TS data and plots into files."""
+    y, x = yx
+    vprint('save info on pixel ({}, {})'.format(y, x))
 
-    d_fit = stats.linregress(years, d_ts)
-    vel = d_fit[0]
-    std = d_fit[4]
-
-    vprint('linear velocity: {v:.2f} +/- {s:.2f} [{u}/yr]'.format(v=vel, s=std, u=disp_unit))
-    return vel, std
-
-
-def save_ts_plot(yx, fig_img, fig_pts, d_ts, inps):
-    vprint('save info on pixel ({}, {})'.format(yx[0], yx[1]))
     # output file name
     if inps.outfile:
         inps.outfile_base, ext = os.path.splitext(inps.outfile[0])
@@ -487,46 +578,35 @@ def save_ts_plot(yx, fig_img, fig_pts, d_ts, inps):
             vprint(('Output file extension is fixed to .pdf,'
                     ' input extension {} is ignored.').format(ext))
     else:
-        inps.outfile_base = 'y{}x{}'.format(yx[0], yx[1])
+        inps.outfile_base = 'y{}x{}'.format(y, x)
 
-    # get aux info
-    vel, std = estimate_slope(d_ts[0], inps.yearList,
-                              ex_flag=inps.ex_flag,
-                              disp_unit=inps.disp_unit)
-
-    # TXT - point time-series
+    # TXT - point time-series and time func param
     outName = '{}_ts.txt'.format(inps.outfile_base)
-    header_info = 'time-series file={}\n'.format(inps.file)
-    header_info += '{}\n'.format(_get_ts_title(yx[0], yx[1], inps.coord))
-    try:
-        header_info += 'reference pixel: y={}, x={}\n'.format(inps.ref_yx[0], inps.ref_yx[1])
-        header_info += 'reference date: {}\n'.format(inps.date_list[inps.ref_idx])
-    except:
-        pass
-    header_info += 'unit: {}\n'.format(inps.disp_unit)
-    header_info += 'slope: {:.2f} +/- {:.2f} [{}/yr]'.format(vel, std, inps.disp_unit)
+    header = 'time-series file = {}\n'.format(inps.file[0])
+    header += '{}\n'.format(get_ts_title(y, x, inps.coord))
+    header += 'reference pixel: y={}, x={}\n'.format(inps.ref_yx[0], inps.ref_yx[1]) if inps.ref_yx else ''
+    header += 'reference date: {}\n'.format(inps.date_list[inps.ref_idx]) if inps.ref_idx else ''
+    header += 'estimated time function parameters:\n'
+    for m_str in m_strs:
+        header += f'    {m_str}\n'
+    header += 'unit: {}'.format(inps.disp_unit)
 
     # prepare data
-    data = np.array(inps.date_list).reshape(-1, 1)
-    for i in range(len(d_ts)):
-        data = np.hstack((data, d_ts[i].reshape(-1, 1)))
+    data = np.hstack((np.array(inps.date_list).reshape(-1, 1), d_ts.reshape(-1, 1)))
+
     # write
-    np.savetxt(outName,
-               data,
-               fmt='%s',
-               delimiter='\t',
-               header=header_info)
-    vprint('save displacement time-series in meter to '+outName)
+    np.savetxt(outName, data, fmt='%s', delimiter='\t', header=header)
+    vprint('save displacement time-series to file: '+outName)
 
     # Figure - point time-series
     outName = '{}_ts.pdf'.format(inps.outfile_base)
-    fig_pts.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-    vprint('save time-series plot to '+outName)
+    inps.fig_pts.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+    vprint('save time-series plot to file: '+outName)
 
     # Figure - map
     outName = '{}_{}.png'.format(inps.outfile_base, inps.date_list[inps.idx])
-    fig_img.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-    vprint('save map plot to '+outName)
+    inps.fig_img.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+    vprint('save map plot to file: '+outName)
     return
 
 
@@ -606,11 +686,11 @@ class timeseriesViewer():
         # Figure 2 - Time Series Displacement - Point
         self.fig_pts, self.ax_pts = plt.subplots(num=self.figname_pts, figsize=self.figsize_pts)
         if self.yx:
-            d_ts = self.plot_point_timeseries(self.yx)
+            d_ts, m_strs = self.plot_point_timeseries(self.yx)
 
-        # Output
-        if self.save_fig:
-            save_ts_plot(self.yx, self.fig_img, self.fig_pts, d_ts, self)
+            # save figures and data to files
+            if self.save_fig:
+                save_ts_data_and_plot(self.yx, d_ts, m_strs, self)
 
         # Final linking of the canvas to the plots.
         self.fig_img.canvas.mpl_connect('button_press_event', self.update_plot_timeseries)
@@ -656,11 +736,14 @@ class timeseriesViewer():
         val_min = self.yearList[0]
         val_max = self.yearList[-1]
 
-        self.tslider = Slider(self.ax_tslider, label='Time',
-                              valinit=self.yearList[init_idx],
-                              valmin=val_min,
-                              valmax=val_max,
-                              valstep=val_step)
+        self.tslider = widgets.Slider(
+            self.ax_tslider,
+            label='Time',
+            valinit=self.yearList[init_idx],
+            valmin=val_min,
+            valmax=val_max,
+            valstep=val_step,
+        )
 
         bar_width = val_step / 4.
         datex = np.array(self.yearList) - bar_width / 2.
@@ -674,7 +757,7 @@ class timeseriesViewer():
         else:
             digit = 1.
         self.tslider.ax.set_xticks(np.round(np.linspace(val_min, val_max, num=5) * digit) / digit)
-        self.tslider.ax.xaxis.set_minor_locator(MultipleLocator(1./12.))
+        self.tslider.ax.xaxis.set_minor_locator(ticker.MultipleLocator(1./12.))
         self.tslider.ax.set_xlim([val_min, val_max])
         self.tslider.ax.set_yticks([])
         self.tslider.valtext.set_visible(False)   #hide slider values
@@ -705,10 +788,12 @@ class timeseriesViewer():
 
     def plot_point_timeseries(self, yx):
         """Plot point displacement time-series at pixel [y, x]
-        Parameters: yx : list of 2 int
-        Returns:    d_ts : 2D np.array in size of (num_date, num_file)
+        Parameters: yx     : list of 2 int
+        Returns:    ts_dis : 1D np.array in size of (num_date,) for the 1st file
+                    m_strs : list of strings for the est. time func. param. for the 1st file
         """
-        self.ax_pts.cla()
+        ax = self.ax_pts
+        ax.cla()
 
         # plot scatter in different size for different files
         num_file = len(self.ts_data)
@@ -717,63 +802,84 @@ class timeseriesViewer():
         elif num_file == 4: ms_step = 2
         elif num_file >= 5: ms_step = 1
 
-        d_ts = []
         y = yx[0] - self.pix_box[1]
         x = yx[1] - self.pix_box[0]
         for i in range(num_file-1, -1, -1):
             # get displacement data
-            d_tsi = self.ts_data[i][:, y, x]
-            if self.zero_first:
-                d_tsi -= d_tsi[self.zero_idx]
-            d_ts.append(d_tsi)
+            ts_dis = self.ts_data[i][:, y, x]
 
-            # get plot parameter - namespace ppar
-            ppar = argparse.Namespace()
-            ppar.label = self.file_label[i]
-            ppar.ms = self.marker_size - ms_step * (num_file - 1 - i)
-            ppar.mfc = pp.mplColors[num_file - 1 - i]
-            if self.mask[y, x] == 0:
-                ppar.mfc = 'gray'
+            # fit time func
+            ts_fit, m_strs = fit_time_func(
+                model=self.model,
+                date_list=self.date_list,
+                ts_dis=ts_dis,
+                unit_fac=self.unit_fac,
+                G_fit=self.G_fit,
+            )
+
+            if self.zero_first:
+                off = ts_dis[self.zero_idx]
+                ts_dis -= off
+                ts_fit -= off
+
             if self.offset:
-                d_tsi += self.offset * (num_file - 1 - i)
+                ts_dis += self.offset * (num_file - 1 - i)
+                ts_fit += self.offset * (num_file - 1 - i)
 
             # plot
-            if not np.all(np.isnan(d_tsi)):
-                self.ax_pts = self.ts_plot_func(self.ax_pts, d_tsi, self, ppar)
+            if not np.all(np.isnan(ts_dis)):
+                ppar = argparse.Namespace()
+                ppar.label = self.file_label[i]
+                ppar.ms = self.marker_size - ms_step * (num_file - 1 - i)
+                ppar.mfc = pp.mplColors[num_file - 1 - i] if self.mask[y, x] != 0 else 'gray'
+                self.ts_plot_func(ax, ts_dis, self, ppar)
+
+                # plot model prediction
+                if self.show_model:
+                    fpar = argparse.Namespace()
+                    fpar.linewidth = 3
+                    fpar.color = 'C1' if num_file == 1 else ppar.mfc
+                    fpar.fontsize = self.font_size
+                    plot_ts_fit(ax, ts_fit, self, fpar, labels=m_strs)
 
         # axis format
-        self.ax_pts = _adjust_ts_axis(self.ax_pts, self)
-        title_ts = _get_ts_title(yx[0], yx[1], self.coord)
-        if self.mask[y, x] == 0:
-            title_ts += ' (masked out)'
-        if self.disp_title:
-            self.ax_pts.set_title(title_ts, fontsize=self.font_size)
+        ax.tick_params(which='both', direction='in', labelsize=self.font_size, bottom=True, top=True, left=True, right=True)
+        pp.auto_adjust_xaxis_date(ax, self.yearList, fontsize=self.font_size)
+        ax.set_ylabel('Displacement [{}]'.format(self.disp_unit), fontsize=self.font_size)
+        ax.set_ylim(self.ylim)
         if self.tick_right:
-            self.ax_pts.yaxis.tick_right()
-            self.ax_pts.yaxis.set_label_position("right")
+            ax.yaxis.tick_right()
+            ax.yaxis.set_label_position("right")
+
+        # title
+        title = get_ts_title(yx[0], yx[1], self.coord)
+        title += ' (masked out)' if self.mask[y, x] == 0 else ''
+        if self.disp_title:
+            ax.set_title(title, fontsize=self.font_size)
 
         # legend
         if len(self.ts_data) > 1:
-            self.ax_pts.legend()
+            ax.legend()
 
         # Print to terminal
         vprint('\n---------------------------------------')
-        vprint(title_ts)
+        vprint(title)
         float_formatter = lambda x: [float('{:.2f}'.format(i)) for i in x]
-        vprint(float_formatter(d_ts[0]))
+        vprint(float_formatter(ts_dis))
 
-        if not np.all(np.isnan(d_ts[0])):
-            # stat info
-            vprint('time-series range: [{:.2f}, {:.2f}] {}'.format(np.nanmin(d_ts[0]),
-                                                                   np.nanmax(d_ts[0]),
-                                                                   self.disp_unit))
+        if not np.all(np.isnan(ts_dis)):
+            # min/max displacement
+            vprint('time-series range: [{:.2f}, {:.2f}] {}'.format(np.nanmin(ts_dis), np.nanmax(ts_dis), self.disp_unit))
 
-            # estimate (print) slope
-            estimate_slope(d_ts[0], self.yearList, ex_flag=self.ex_flag, disp_unit=self.disp_unit)
+            # time func param
+            vprint('time function parameters:')
+            for m_str in m_strs:
+                vprint(f'    {m_str}')
 
             # update figure
             self.fig_pts.canvas.draw()
-        return d_ts
+
+        return ts_dis, m_strs
 
 
     def update_plot_timeseries(self, event):
