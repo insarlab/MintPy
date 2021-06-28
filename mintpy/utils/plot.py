@@ -10,28 +10,21 @@
 import os
 import argparse
 import warnings
-import datetime
+import datetime as dt
 import h5py
 import numpy as np
 
 import matplotlib as mpl
-from matplotlib import (
-    dates as mdates,
-    lines as mlines,
-    pyplot as plt,
-    ticker,
-    transforms,
-)
-from matplotlib.colors import LinearSegmentedColormap
+from matplotlib import pyplot as plt, ticker, dates as mdates
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import pyproj
 from cartopy import crs as ccrs
 from cartopy.mpl import geoaxes, ticker as cticker
 
-from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
-from mintpy.objects.colors import ColormapExt
 from mintpy.objects.coord import coordinate
+from mintpy.objects.colors import ColormapExt
+from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
 from mintpy.utils import (
     arg_group,
     ptime,
@@ -275,6 +268,31 @@ def auto_flip_direction(metadata, ax=None, print_msg=True):
     return flip_lr, flip_ud
 
 
+def auto_multilook_num(box, num_time, print_msg=True):
+    """Calcualte the default/auto multilook number based on the input 3D shape.
+    Parameters: box           - tuple of 4 int in (x0, y0, x1, y1) for the spatial bounding box
+                num_time      - int, the 3rd / time dimension size
+    Returns:    multilook_num - int, multilook number
+    """
+    # calc total number of pixels
+    num_pixel = (box[2] - box[0]) * (box[3] - box[1]) * num_time
+
+    # calc auto multilook_num
+    if   num_pixel > (64e6*320):  multilook_num = 32;      # 16k * 4k image with 320 subplots
+    elif num_pixel > (32e6*160):  multilook_num = 16;      #  8k * 4k image with 160 subplots
+    elif num_pixel > ( 8e6*160):  multilook_num = 8;       #  4k * 2k image with 160 subplots
+    elif num_pixel > ( 4e6*80) :  multilook_num = 4;       #  2k * 2k image with 80  subplots
+    elif num_pixel > ( 4e6*20) :  multilook_num = 2;       #  2k * 2k image with 20  subplots
+    else:                         multilook_num = 1;
+
+    # print out msg
+    if multilook_num > 1 and print_msg:
+        print('total number of pixels: {:.1E}'.format(num_pixel))
+        print('* multilook {0} by {0} with nearest interpolation for display to save memory'.format(multilook_num))
+
+    return multilook_num
+
+
 def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
     """Get optimal row and column number given figure size number of subplots
     Parameters: subplot_num : int, total number of subplots
@@ -396,7 +414,7 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1, buffer_yea
         dee - datetime.datetime object, xmax
     """
     # convert datetime.datetime format into date in years
-    if isinstance(datevector[0], datetime.datetime):
+    if isinstance(datevector[0], dt.datetime):
         datevector = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in datevector]
 
     # Min/Max
@@ -407,8 +425,8 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1, buffer_yea
         if me > 12:   ye = ye + 1;   me = 1
         if ms < 1:    ys = ys - 1;   ms = 12
         if me < 1:    ye = ye - 1;   me = 12
-        dss = datetime.datetime(ys, ms, 1, 0, 0)
-        dee = datetime.datetime(ye, me, 1, 0, 0)
+        dss = dt.datetime(ys, ms, 1, 0, 0)
+        dee = dt.datetime(ye, me, 1, 0, 0)
     else:
         (dss, dee) = ax.get_xlim()
     ax.set_xlim(dss, dee)
@@ -539,7 +557,7 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
     # support input colormap: string for colormap name, or colormap object directly
     if isinstance(p_dict['colormap'], str):
         cmap = ColormapExt(p_dict['colormap']).colormap
-    elif isinstance(p_dict['colormap'], LinearSegmentedColormap):
+    elif isinstance(p_dict['colormap'], mpl.colors.LinearSegmentedColormap):
         cmap = p_dict['colormap']
     else:
         raise ValueError('unrecognized colormap input: {}'.format(p_dict['colormap']))
@@ -662,8 +680,8 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
 
     # Legend
     if p_dict['disp_drop'] and p_dict['disp_legend']:
-        solid_line = mlines.Line2D([], [], color='k', ls='solid',  label='Ifgram used')
-        dash_line  = mlines.Line2D([], [], color='k', ls='dashed', label='Ifgram dropped')
+        solid_line = mpl.lines.Line2D([], [], color='k', ls='solid',  label='Ifgram used')
+        dash_line  = mpl.lines.Line2D([], [], color='k', ls='dashed', label='Ifgram dropped')
         ax.legend(handles=[solid_line, dash_line])
 
     return ax
@@ -744,7 +762,7 @@ def plot_rotate_diag_coherence_matrix(ax, coh_list, date12_list, date12_list_dro
     # support input colormap: string for colormap name, or colormap object directly
     if isinstance(cmap, str):
         cmap = ColormapExt(cmap).colormap
-    elif isinstance(cmap, LinearSegmentedColormap):
+    elif isinstance(cmap, mpl.colors.LinearSegmentedColormap):
         pass
     else:
         raise ValueError('unrecognized colormap input: {}'.format(cmap))
@@ -769,10 +787,10 @@ def plot_rotate_diag_coherence_matrix(ax, coh_list, date12_list, date12_list_dro
     diag_mat = np.diag(np.ones(num_img))
     diag_mat[diag_mat == 0.] = np.nan
     im = ax.imshow(diag_mat, cmap='gray_r', vmin=0.0, vmax=1.0)
-    im.set_transform(transforms.Affine2D().rotate_deg(rotate_deg) + ax.transData)
+    im.set_transform(mpl.transforms.Affine2D().rotate_deg(rotate_deg) + ax.transData)
 
     im = ax.imshow(coh_mat, vmin=disp_min, vmax=1, cmap=cmap)
-    im.set_transform(transforms.Affine2D().rotate_deg(rotate_deg) + ax.transData)
+    im.set_transform(mpl.transforms.Affine2D().rotate_deg(rotate_deg) + ax.transData)
 
     #axis format
     ymax = np.sqrt(num_conn**2 / 2.) + 0.9
@@ -818,7 +836,7 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
     # support input colormap: string for colormap name, or colormap object directly
     if isinstance(p_dict['colormap'], str):
         cmap = ColormapExt(p_dict['colormap']).colormap
-    elif isinstance(p_dict['colormap'], LinearSegmentedColormap):
+    elif isinstance(p_dict['colormap'], mpl.colors.LinearSegmentedColormap):
         cmap = p_dict['colormap']
     else:
         raise ValueError('unrecognized colormap input: {}'.format(p_dict['colormap']))
@@ -1344,15 +1362,16 @@ def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False, 
     return data, disp_unit, disp_scale, wrap
 
 
-def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True):
+def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=1, print_msg=True):
     """Find and read mask for input data file fname
     Parameters: fname       : string, data file name/path
                 mask_file   : string, optional, mask file name
                 datasetName : string, optional, dataset name for HDFEOS file type
                 box         : tuple of 4 int, for reading part of data
-    Returns:    msk         : 2D np.array, mask data
+    Returns:    mask        : 2D np.ndarray in bool, mask data
                 mask_file   : string, file name of mask data
     """
+    vprint = print if print_msg else lambda *args, **kwargs: None
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
 
@@ -1377,57 +1396,65 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
                 mask_file = None
 
     # Read mask file if inputed
-    msk = None
+    mask = None
     if os.path.isfile(str(mask_file)):
         try:
-            atrMsk = readfile.read_attribute(mask_file)
-            if all(int(atrMsk[key]) == int(atr[key]) for key in ['LENGTH','WIDTH']):
+            atr_msk = readfile.read_attribute(mask_file)
+            if all(int(atr_msk[key]) == int(atr[key]) for key in ['LENGTH','WIDTH']):
                 # grab dsname for conn comp mask [None for the others]
                 dsName=None
-                if all(meta['FILE_TYPE'] == 'ifgramStack' for meta in [atr, atrMsk]):
+                if all(meta['FILE_TYPE'] == 'ifgramStack' for meta in [atr, atr_msk]):
                     date12 = datasetName.split('-')[1]
                     dsName = 'connectComponent-{}'.format(date12)
 
                 # read mask data
-                msk = readfile.read(mask_file,
-                                    box=box,
-                                    datasetName=dsName,
-                                    print_msg=print_msg)[0]
-                # set NaN to zero
-                msk[np.isnan(msk)] = False
-
-                if print_msg:
-                    print('read mask from file:', os.path.basename(mask_file))
+                mask = readfile.read(mask_file,
+                                     box=box,
+                                     datasetName=dsName,
+                                     print_msg=print_msg)[0]
+                vprint('read mask from file:', os.path.basename(mask_file))
 
             else:
                 mask_file = None
-                if print_msg:
-                    msg = 'WARNING: input file has different size from mask file: {}'.format(mask_file)
-                    msg += '\n    data file {} row/column number: {} / {}'.format(fname, atr['LENGTH'], atr['WIDTH'])
-                    msg += '\n    mask file {} row/column number: {} / {}'.format(mask_file, atrMsk['LENGTH'], atrMsk['WIDTH'])
-                    msg += '\n    Continue without mask.'
-                    print(msg)
+                msg = 'WARNING: input file has different size from mask file: {}'.format(mask_file)
+                msg += '\n    data file {} row/column number: {} / {}'.format(fname, atr['LENGTH'], atr['WIDTH'])
+                msg += '\n    mask file {} row/column number: {} / {}'.format(mask_file, atr_msk['LENGTH'], atr_msk['WIDTH'])
+                msg += '\n    Continue without mask.'
+                vprint(msg)
 
         except:
             mask_file = None
-            if print_msg:
-                print('Can not open mask file:', mask_file)
+            vprint('Can not open mask file:', mask_file)
 
     elif k in ['HDFEOS']:
         if datasetName.split('-')[0] in timeseriesDatasetNames:
             mask_file = fname
-            msk = readfile.read(fname, datasetName='mask', print_msg=print_msg)[0]
-            if print_msg:
-                print('read {} contained mask dataset.'.format(k))
+            mask = readfile.read(fname, datasetName='mask', print_msg=print_msg)[0]
+            vprint('read {} contained mask dataset.'.format(k))
 
     elif fname.endswith('PARAMS.h5'):
         mask_file = fname
-        h5msk = h5py.File(fname, 'r')
-        msk = h5msk['cmask'][:] == 1.
-        h5msk.close()
-        if print_msg:
-            print('read {} contained cmask dataset'.format(os.path.basename(fname)))
-    return msk, mask_file
+        with h5py.File(fname, 'r') as f:
+            mask = f['cmask'][:] == 1.
+        vprint('read {} contained cmask dataset'.format(os.path.basename(fname)))
+
+    # multilook
+    if mask is not None and xstep * ystep > 1:
+        # output size if x/ystep > 1
+        xsize = int(mask.shape[1] / xstep)
+        ysize = int(mask.shape[0] / ystep)
+
+        # sampling
+        mask = mask[int(ystep/2)::ystep,
+                    int(xstep/2)::xstep]
+        mask = mask[:ysize, :xsize]
+
+    # set to bool type
+    if mask is not None:
+        mask[np.isnan(mask)] = 0
+        mask = mask != 0
+
+    return mask, mask_file
 
 
 

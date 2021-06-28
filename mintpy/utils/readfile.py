@@ -8,6 +8,7 @@
 
 
 import os
+import sys
 import re
 import warnings
 import defusedxml.ElementTree as ET
@@ -223,7 +224,8 @@ def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1):
                               datasetName=datasetName,
                               box=box,
                               xstep=xstep,
-                              ystep=ystep)
+                              ystep=ystep,
+                              print_msg=print_msg)
 
     else:
         data, atr = read_binary_file(fname,
@@ -235,7 +237,7 @@ def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1):
 
 
 #########################################################################
-def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
+def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_msg=True):
     """
     Parameters: fname       : str, name of HDF5 file to read
                 datasetName : str or list of str, dataset name in root level with/without date info
@@ -338,12 +340,21 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
 
                 inds = np.where(slice_flag)[0]
                 for i in range(num_slice):
+                    # print out msg
+                    if print_msg:
+                        sys.stdout.write('\r' + f'reading slice {i+1}/{num_slice}...')
+                        sys.stdout.flush()
+
+                    # read and index
                     d2 = ds[inds[i],
                             box[1]:box[3],
                             box[0]:box[2]]
                     d2 = d2[int(ystep/2)::ystep,
                             int(xstep/2)::xstep]
                     data[i, :, :] = d2[:ysize, :xsize]
+
+                if print_msg:
+                    print('')
 
             if any(i == 1 for i in data.shape):
                 data = np.squeeze(data)

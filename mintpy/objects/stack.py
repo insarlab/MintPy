@@ -445,7 +445,8 @@ class timeseries:
                 f.write('{}\t{}\n'.format(d, pbase))
         return out_file
 
-    # Functions for Unwrap error correction
+
+    #####---------- time functions
     @staticmethod
     def get_design_matrix4time_func(date_list, model=None, refDate=None):
         """design matrix/function model of linear velocity estimation
