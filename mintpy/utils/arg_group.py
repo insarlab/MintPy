@@ -38,7 +38,7 @@ def add_data_disp_argument(parser):
                       help='multilook data in X and Y direction with a factor for display (default: %(default)s).')
     data.add_argument('--nomultilook', '--no-multilook', dest='multilook', action='store_false',
                       help='do not multilook, for high quality display. \n'
-                           'If multilook and multilook_num=1, multilook_num will be estimated automatically.\n'
+                           'If multilook is True and multilook_num=1, multilook_num will be estimated automatically.\n'
                            'Useful when displaying big datasets.')
     data.add_argument('--alpha', dest='transparency', type=float,
                       help='Data transparency. \n'

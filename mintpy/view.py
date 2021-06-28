@@ -204,28 +204,6 @@ def run_or_skip(inps):
 
 
 ##################################################################################################
-def check_multilook_input(pixel_box, row_num, col_num):
-    # Estimate multilook_num
-    box_size = (pixel_box[2] - pixel_box[0]) * (pixel_box[3] - pixel_box[1])
-    pixel_num_per_figure = box_size * row_num * col_num
-    if   pixel_num_per_figure > (64e6*320):  multilook_num = 32;      # 16k * 4k image with 320 subplots
-    elif pixel_num_per_figure > (32e6*160):  multilook_num = 16;      #  8k * 4k image with 160 subplots
-    elif pixel_num_per_figure > ( 8e6*160):  multilook_num = 8;       #  4k * 2k image with 160 subplots
-    elif pixel_num_per_figure > ( 4e6*80) :  multilook_num = 4;       #  2k * 2k image with 80  subplots
-    elif pixel_num_per_figure > ( 4e6*20) :  multilook_num = 2;       #  2k * 2k image with 20  subplots
-    else:                                    multilook_num = 1;
-
-    # Update multilook based on multilook_num
-    if multilook_num > 1:
-        multilook = True
-        vprint('original number of data points per figures: {:.1E}'.format(pixel_num_per_figure))
-        vprint('* multilook {0} by {0} for display to save memory'.format(multilook_num))
-    else:
-        multilook = False
-    return multilook, multilook_num
-
-
-##################################################################################################
 def update_inps_with_display_setting_file(inps, disp_set_file):
     """Update inps using values from display setting file"""
     disp_set_dict = readfile.read_template(disp_set_file)
@@ -399,7 +377,7 @@ def update_data_with_plot_inps(data, metadata, inps):
         except:
             pass
 
-        # update ref_y/x to multilooking
+        # update ref_y/x for multilooking
         if inps.multilook_num > 1:
             ref_y = int((ref_y - int(inps.multilook_num / 2)) / inps.multilook_num)
             ref_x = int((ref_x - int(inps.multilook_num / 2)) / inps.multilook_num)
@@ -423,7 +401,7 @@ def update_data_with_plot_inps(data, metadata, inps):
             elif inps.key == 'timeseries':
                 ref_box = [inps.ref_yx[1],     inps.ref_yx[0],
                            inps.ref_yx[1] + 1, inps.ref_yx[0] + 1]
-                ref_val = readfile.read(inps.file, datasetName=inps.dset, box=ref_box)[0]
+                ref_val = readfile.read(inps.file, datasetName=inps.dset, box=ref_box, print_msg=False)[0]
             else:
                 raise ValueError('input reference point {} is out of data coverage!'.format(inps.ref_yx))
 
@@ -659,8 +637,8 @@ def plot_slice(ax, data, metadata, inps=None):
         geom_file = os.path.join(os.path.dirname(metadata['FILE_PATH']), 'inputs/geometryRadar.h5')
         if os.path.isfile(geom_file):
             try:
-                lats = readfile.read(geom_file, datasetName='latitude',  box=inps.pix_box)[0]
-                lons = readfile.read(geom_file, datasetName='longitude', box=inps.pix_box)[0]
+                lats = readfile.read(geom_file, datasetName='latitude',  box=inps.pix_box, print_msg=False)[0]
+                lons = readfile.read(geom_file, datasetName='longitude', box=inps.pix_box, print_msg=False)[0]
             except:
                 msg = 'WARNING: no latitude / longitude found in file: {}'.format(os.path.basename(geom_file))
                 msg += ', skip showing lat/lon in the status bar.'
@@ -993,7 +971,8 @@ def read_data4figure(i_start, i_end, inps, metadata):
                                 datasetName=dset_list,
                                 box=inps.pix_box,
                                 xstep=inps.multilook_num,
-                                ystep=inps.multilook_num)[0]
+                                ystep=inps.multilook_num,
+                                print_msg=inps.print_msg)[0]
 
         if inps.key == 'ifgramStack':
             # reference pixel info in unwrapPhase
@@ -1016,9 +995,9 @@ def read_data4figure(i_start, i_end, inps, metadata):
             d = readfile.read(inps.file,
                               datasetName=inps.dset[i],
                               box=inps.pix_box,
-                              print_msg=False,
                               xstep=inps.multilook_num,
-                              ystep=inps.multilook_num)[0]
+                              ystep=inps.multilook_num,
+                              print_msg=False)[0]
             data[i - i_start, :, :] = d
             prog_bar.update(i - i_start + 1, suffix=inps.dset[i].split('/')[-1])
         prog_bar.close()
@@ -1029,9 +1008,9 @@ def read_data4figure(i_start, i_end, inps, metadata):
         ref_data = readfile.read(inps.file,
                                  datasetName=inps.ref_date,
                                  box=inps.pix_box,
-                                 print_msg=False,
                                  xstep=inps.multilook_num,
-                                 ystep=inps.multilook_num)[0]
+                                 ystep=inps.multilook_num,
+                                 print_msg=False)[0]
         data -= ref_data
 
     # check if all subplots share the same data unit, they could have/be:
@@ -1310,26 +1289,23 @@ def prepare4multi_subplots(inps, metadata):
     inps.dsetFamilyList = sorted(list(set(x.split('-')[0] for x in inps.dset)))
     inps.dsetFamilyList = sorted(list(set(x.replace('Std','') for x in inps.dsetFamilyList)))
 
-    # Update multilook parameters with new num and col number
+    ## calculate multilook_num
+    # ONLY IF:
+    #   inps.multilook is True (no --nomultilook input) AND
+    #   inps.multilook_num ==1 (no --multilook-num input)
+    # inps.multilook is used for this check ONLY
     if inps.multilook and inps.multilook_num == 1:
-        # Do not auto multilook mask and lookup table file
-        auto_multilook = True
-        for dsFamily in inps.dsetFamilyList:
-            if any(i in dsFamily.lower() for i in ['mask', 'coord']):
-                auto_multilook = False
+        inps.multilook_num = pp.auto_multilook_num(inps.pix_box, inps.fig_row_num * inps.fig_col_num,
+                                                   print_msg=inps.print_msg)
 
-        if auto_multilook:
-            inps.multilook, inps.multilook_num = check_multilook_input(inps.pix_box,
-                                                                       inps.fig_row_num,
-                                                                       inps.fig_col_num)
-        if inps.msk is not None:
-            inps.msk = multilook_data(inps.msk,
-                                      inps.multilook_num,
-                                      inps.multilook_num,
-                                      method='nearest')
+    # multilook mask
+    if inps.msk is not None and inps.multilook_num > 1:
+        inps.msk = multilook_data(inps.msk,
+                                  inps.multilook_num,
+                                  inps.multilook_num,
+                                  method='nearest')
 
     # Reference pixel for timeseries and ifgramStack
-    #metadata = readfile.read_attribute(inps.file)
     inps.file_ref_yx = None
     if inps.key in ['ifgramStack'] and 'REF_Y' in metadata.keys():
         ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
@@ -1342,8 +1318,6 @@ def prepare4multi_subplots(inps, metadata):
         inps.ref_marker_size /= 10.
     elif inps.dsetNum > 100:
         inps.ref_marker_size /= 20.
-        #inps.disp_ref_pixel = False
-        #vprint('turn off reference pixel plot for more than 10 datasets to display')
 
     # Check dropped interferograms
     inps.dropDatasetList = []
@@ -1363,9 +1337,9 @@ def prepare4multi_subplots(inps, metadata):
             dem = readfile.read(inps.dem_file,
                                 datasetName='height',
                                 box=inps.pix_box,
-                                print_msg=False,
                                 xstep=inps.multilook_num,
-                                ystep=inps.multilook_num)[0]
+                                ystep=inps.multilook_num,
+                                print_msg=False)[0]
             (inps.dem_shade,
              inps.dem_contour,
              inps.dem_contour_seq) = pp.prepare_dem_background(dem=dem,

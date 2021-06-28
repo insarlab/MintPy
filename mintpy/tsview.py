@@ -62,7 +62,8 @@ def create_parser():
     parser.add_argument('--noverbose', dest='print_msg', action='store_false', help='Disable the verbose message printing.')
 
     # temporal model fitting
-    parser.add_argument('--nomodel', '--nofit', dest='show_model', action='store_false', help='Do not show the time function (deformation model) fitting.')
+    parser.add_argument('--nomodel', '--nofit', dest='show_model', action='store_false',
+                        help='Do not show the time function (deformation model) fitting.')
     parser = arg_group.add_timefunc_argument(parser)
 
     # pixel of interest
@@ -132,21 +133,19 @@ def cmd_line_parse(iargs=None):
 ###########################################################################################
 def read_init_info(inps):
     # Time Series Info
-    ts_file0 = inps.file[0]
-    atr = readfile.read_attribute(ts_file0)
+    atr = readfile.read_attribute(inps.file[0])
     inps.key = atr['FILE_TYPE']
     if inps.key == 'timeseries':
-        obj = timeseries(ts_file0)
+        obj = timeseries(inps.file[0])
     elif inps.key == 'giantTimeseries':
-        obj = giantTimeseries(ts_file0)
+        obj = giantTimeseries(inps.file[0])
     elif inps.key == 'HDFEOS':
-        obj = HDFEOS(ts_file0)
+        obj = HDFEOS(inps.file[0])
     else:
         raise ValueError('input file is {}, not timeseries.'.format(inps.key))
     obj.open(print_msg=inps.print_msg)
 
     if not inps.file_label:
-        #inps.file_label = [str(i) for i in list(range(len(inps.file)))]
         inps.file_label = []
         for fname in inps.file:
             fbase = os.path.splitext(os.path.basename(fname))[0]
@@ -154,8 +153,8 @@ def read_init_info(inps):
             inps.file_label.append(fbase)
 
     # default mask file
-    if not inps.mask_file and 'masked' not in ts_file0:
-        dir_name = os.path.dirname(ts_file0)
+    if not inps.mask_file and 'msk' not in inps.file[0]:
+        dir_name = os.path.dirname(inps.file[0])
         if 'Y_FIRST' in atr.keys():
             inps.mask_file = os.path.join(dir_name, 'geo_maskTempCoh.h5')
         else:
@@ -163,7 +162,7 @@ def read_init_info(inps):
         if not os.path.isfile(inps.mask_file):
             inps.mask_file = None
 
-    # date info
+    ## date info
     inps.date_list = obj.dateList
     inps.num_date = len(inps.date_list)
     if inps.start_date:
@@ -206,9 +205,11 @@ def read_init_info(inps):
     if inps.error_file:
         # assign plot function
         inps.ts_plot_func = plot_ts_errorbar
+
         # read error file
         error_fc = np.loadtxt(inps.error_file, dtype=bytes).astype(str)
         inps.error_ts = error_fc[:, 1].astype(np.float)*inps.unit_fac
+
         # update error file with exlcude date
         if inps.ex_date_list:
             e_ts = inps.error_ts[:]
@@ -219,12 +220,12 @@ def read_init_info(inps):
     if inps.zero_first:
         inps.zero_idx = min(0, np.min(np.where(inps.ex_flag)[0]))
 
-    # default lookup table file
+    # default lookup table file and coordinate object
     if not inps.lookup_file:
         inps.lookup_file = ut.get_lookup_file('./inputs/geometryRadar.h5')
     inps.coord = ut.coordinate(atr, inps.lookup_file)
 
-    # size and lalo info
+    ## size and lalo info
     inps.pix_box, inps.geo_box = subset.subset_input_dict2box(vars(inps), atr)
     inps.pix_box = inps.coord.check_box_within_data_coverage(inps.pix_box)
     inps.geo_box = inps.coord.box_pixel2geo(inps.pix_box)
@@ -235,7 +236,18 @@ def read_init_info(inps):
     vprint('subset coverage in lat/lon: '+str(inps.geo_box))
     vprint('------------------------------------------------------------------------')
 
-    # reference pixel
+    # calculate multilook_num
+    # ONLY IF:
+    #   inps.multilook is True (no --nomultilook input) AND
+    #   inps.multilook_num ==1 (no --multilook-num input)
+    # Note: inps.multilook is used for this check ONLY
+    # Note: multilooking is only applied to the 3D data cubes and their related operations:
+    # e.g. spatial indexing, referencing, etc. All the other variables are in the original grid
+    # so that users get the same result as the non-multilooked version.
+    if inps.multilook and inps.multilook_num == 1:
+        inps.multilook_num = pp.auto_multilook_num(inps.pix_box, inps.num_date, print_msg=inps.print_msg)
+
+    ## reference pixel
     if not inps.ref_lalo and 'REF_LAT' in atr.keys():
         inps.ref_lalo = (float(atr['REF_LAT']), float(atr['REF_LON']))
     if inps.ref_lalo:
@@ -247,11 +259,13 @@ def read_init_info(inps):
             inps.ref_yx = inps.coord.geo2radar(inps.ref_lalo[0],
                                                inps.ref_lalo[1],
                                                print_msg=False)[0:2]
+
     # use REF_Y/X if ref_yx not set in cmd
     if not inps.ref_yx and 'REF_Y' in atr.keys():
         inps.ref_yx = (int(atr['REF_Y']), int(atr['REF_X']))
 
     # ref_yx --> ref_lalo if in geo-coord
+    # for plotting purpose only
     if inps.ref_yx and 'Y_FIRST' in atr.keys():
         inps.ref_lalo = inps.coord.radar2geo(inps.ref_yx[0],
                                              inps.ref_yx[1],
@@ -260,12 +274,12 @@ def read_init_info(inps):
     # do not plot native reference point if it's out of the coverage due to subset
     if (inps.ref_yx and 'Y_FIRST' in atr.keys()
         and inps.ref_yx == (int(atr['REF_Y']), int(atr['REF_X']))
-        and not (inps.pix_box[0] <= inps.ref_yx[1] < inps.pix_box[2]
+        and not (    inps.pix_box[0] <= inps.ref_yx[1] < inps.pix_box[2]
                  and inps.pix_box[1] <= inps.ref_yx[0] < inps.pix_box[3])):
         inps.disp_ref_pixel = False
         print('the native REF_Y/X is out of subset box, thus do not display')
 
-    # Initial Pixel Coord
+    ## initial pixel coord
     if inps.lalo:
         inps.yx = inps.coord.geo2radar(inps.lalo[0], inps.lalo[1], print_msg=False)[0:2]
     try:
@@ -273,6 +287,7 @@ def read_init_info(inps):
     except:
         inps.lalo = None
 
+    ## figure settings
     # Flip up-down / left-right
     if inps.auto_flip:
         inps.flip_lr, inps.flip_ud = pp.auto_flip_direction(atr, print_msg=inps.print_msg)
@@ -285,7 +300,7 @@ def read_init_info(inps):
         else:
             inps.transparency = 1.0
 
-    # display unit ans wrap
+    ## display unit ans wrap
     # if wrap_step == 2*np.pi (default value), set disp_unit_img = radian;
     # otherwise set disp_unit_img = disp_unit
     inps.disp_unit_img = inps.disp_unit
@@ -303,16 +318,27 @@ def read_init_info(inps):
     inps.cbar_label = 'Displacement [{}]'.format(inps.disp_unit_img)
 
     # fit a suite of time func to the time series
-    if inps.show_model:
-        inps.model, inps.num_param = ts2vel.read_inps2model(inps, date_list=inps.date_list)
-        inps.m_unit = ts2vel.model2hdf5_structure(inps.model)[1]
+    inps.model, inps.num_param = ts2vel.read_inps2model(inps, date_list=inps.date_list)
+    inps.m_unit = ts2vel.model2hdf5_structure(inps.model)[1]
 
-        # dense TS for plotting
-        inps.date_list_fit = ptime.get_date_range(inps.date_list[0], inps.date_list[-1])
-        inps.dates_fit = ptime.date_list2vector(inps.date_list_fit)[0]
-        inps.G_fit = timeseries.get_design_matrix4time_func(date_list=inps.date_list_fit, model=inps.model)
+    # dense TS for plotting
+    inps.date_list_fit = ptime.get_date_range(inps.date_list[0], inps.date_list[-1])
+    inps.dates_fit = ptime.date_list2vector(inps.date_list_fit)[0]
+    inps.G_fit = timeseries.get_design_matrix4time_func(date_list=inps.date_list_fit, model=inps.model)
 
     return inps, atr
+
+
+def subset_and_multilook_yx(yx, pix_box=None, multilook_num=1):
+    """Update row/col number of one pixel due to subset and multilooking."""
+    y, x = yx
+    if pix_box is not None:
+        y -= pix_box[1]
+        x -= pix_box[0]
+    if multilook_num > 1:
+        y = int((y - int(multilook_num / 2)) / multilook_num)
+        x = int((x - int(multilook_num / 2)) / multilook_num)
+    return (y, x)
 
 
 def read_exclude_date(input_ex_date, dateListAll):
@@ -345,15 +371,24 @@ def read_timeseries_data(inps):
                 mask : 2D np.array in size of (length, width)
                 inps : Namespace of input arguments
     """
-    # read list of 3D time-series
+    ## read list of 3D time-series
     ts_data = []
     for fname in inps.file:
-        vprint('reading timeseries from file {} ...'.format(fname))
-        data, atr = readfile.read(fname, datasetName=inps.date_list, box=inps.pix_box)
+        msg = f'reading timeseries from file {fname}'
+        msg += f' with step of {inps.multilook_num} by {inps.multilook_num}' if inps.multilook_num > 1 else ''
+        vprint(msg)
+        data, atr = readfile.read(fname,
+                                  datasetName=inps.date_list,
+                                  box=inps.pix_box,
+                                  xstep=inps.multilook_num,
+                                  ystep=inps.multilook_num)
+
         if inps.ref_yx and inps.ref_yx != (int(atr.get('REF_Y', -1)), int(atr.get('REF_X', -1))):
-            ref_phase = data[:, inps.ref_yx[0]-inps.pix_box[1], inps.ref_yx[1]-inps.pix_box[0]]
+            (ry, rx) = subset_and_multilook_yx(inps.ref_yx, inps.pix_box, inps.multilook_num)
+            ref_phase = data[:, ry, rx]
             data -= np.tile(ref_phase.reshape(-1, 1, 1), (1, data.shape[-2], data.shape[-1]))
             vprint('reference to pixel: {}'.format(inps.ref_yx))
+
         if inps.ref_idx is not None:
             vprint('reference to date: {}'.format(inps.date_list[inps.ref_idx]))
             data -= np.tile(data[inps.ref_idx, :, :], (inps.num_date, 1, 1))
@@ -366,15 +401,16 @@ def read_timeseries_data(inps):
                                                   disp_unit=inps.disp_unit)
         ts_data.append(data)
 
-    # Mask file: input mask file + non-zero ts pixels - ref_point
-    mask = np.ones(ts_data[0].shape[-2:], np.bool_)
-    msk = pp.read_mask(inps.file[0],
-                       mask_file=inps.mask_file,
-                       datasetName='displacement',
-                       box=inps.pix_box,
-                       print_msg=inps.print_msg)[0]
-    mask[msk == 0.] = False
-    del msk
+    ## mask file: input mask file + non-zero ts pixels - ref_point
+    mask = pp.read_mask(inps.file[0],
+                        mask_file=inps.mask_file,
+                        datasetName='displacement',
+                        box=inps.pix_box,
+                        xstep=inps.multilook_num,
+                        ystep=inps.multilook_num,
+                        print_msg=inps.print_msg)[0]
+    if mask is None:
+        mask = np.ones(ts_data[0].shape[-2:], np.bool_)
 
     ts_stack = np.nansum(ts_data[0], axis=0)
     mask[np.isnan(ts_stack)] = False
@@ -383,14 +419,12 @@ def read_timeseries_data(inps):
         mask[ts_stack == 0.] = False
     del ts_stack
 
-    #do not mask the reference point
-    try:
-        mask[inps.ref_yx[0]-inps.pix_box[1],
-             inps.ref_yx[1]-inps.pix_box[0]] = True
-    except:
-        pass
+    # do not mask the reference point
+    if inps.ref_yx and inps.ref_yx != (int(atr.get('REF_Y', -1)), int(atr.get('REF_X', -1))):
+        (ry, rx) = subset_and_multilook_yx(inps.ref_yx, inps.pix_box, inps.multilook_num)
+        mask[ry, rx] = True
 
-    # default vlim
+    ## default vlim
     inps.dlim = [np.nanmin(ts_data[0]), np.nanmax(ts_data[0])]
     if not inps.vlim:
         inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(ts_data[0],
@@ -399,7 +433,7 @@ def read_timeseries_data(inps):
     vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
     vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
 
-    # default ylim
+    ## default ylim
     num_file = len(inps.file)
     if not inps.ylim:
         ts_data_mli = multilook_data(np.squeeze(ts_data[-1]), 4, 4)
@@ -529,6 +563,10 @@ def fit_time_func(model, date_list, ts_dis, unit_fac=100, G_fit=None):
     Returns:    m_dict - dict, dictionary in {ds_name: ds_value}
                 ts_fit - 1D np.ndarray, dense time series fit for plotting
     """
+    ts_fit = np.zeros(ts_dis.shape, dtype=np.float32) * np.nan
+    m_strs = []
+    if np.all(np.isnan(ts_dis)):
+        return ts_fit, m_strs
 
     # 1.1 estimate time func parameter via least squares (OLS)
     G, m, e2 = ts2vel.estimate_time_func(model=model,
@@ -674,7 +712,7 @@ class timeseriesViewer():
 
         # Figure 1 - Axes 1 - Displacement Map
         self.ax_img = self.fig_img.add_axes([0.125, 0.25, 0.75, 0.65])
-        img_data = np.array(self.ts_data[0][self.idx, :, :])  ####################
+        img_data = np.array(self.ts_data[0][self.idx, :, :])
         img_data[self.mask == 0] = np.nan
         self.plot_init_image(img_data)
 
@@ -802,8 +840,9 @@ class timeseriesViewer():
         elif num_file == 4: ms_step = 2
         elif num_file >= 5: ms_step = 1
 
-        y = yx[0] - self.pix_box[1]
-        x = yx[1] - self.pix_box[0]
+        # get local Y/X coord for the subsetted and multilooked 3D data cube
+        (y, x) = subset_and_multilook_yx(yx, self.pix_box, self.multilook_num)
+
         for i in range(num_file-1, -1, -1):
             # get displacement data
             ts_dis = self.ts_data[i][:, y, x]
