@@ -156,7 +156,7 @@ def nonzero_mask(File, out_file='maskConnComp.h5', datasetName=None):
 
 
 def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
-                    saveList=False, checkAoi=True, invertMask=False, threshold=None):
+                    saveList=False, checkAoi=True, reverseMask=False, threshold=None):
     """Read/Calculate Spatial Average of input file.
 
     If input file is text file, read it directly;
@@ -169,8 +169,8 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
                 maskFile : string, path of mask file, e.g. maskTempCoh.h5
                 box      : 4-tuple defining the left, upper, right, and lower pixel coordinate
                 saveList : bool, save (list of) mean value into text file
-                invertMask : perform analysis within masked regions instead of outside of them
-                threshold : calculate proprotional area above threshold instead of spatial average
+                reverseMask : perform analysis within masked regions instead of outside of them
+                threshold : calculate area ratio above threshold instead of spatial average
     Returns:    meanList : list for float, average value in space for each epoch of input file
                 dateList : list of string for date info
                     date12_list, e.g. 101120-110220, for interferograms/coherence
@@ -199,13 +199,13 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
     else:
         prefix = os.path.splitext(os.path.basename(File))[0]
 
-    if invertMask:
+    if reverseMask:
         mask = 'Mask'
     else:
         mask = ''
 
     if threshold != None:
-        suffix = 'ProportionalArea.txt'
+        suffix = 'AreaRatio.txt'
     else:
         suffix = 'SpatialAvg.txt'
 
@@ -256,7 +256,7 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
     else:
         useMedian = False
 
-    # Calculate mean coherence or proportional area list
+    # Calculate mean coherence or area ratio list
     if k == 'ifgramStack':
         obj = ifgramStack(File)
         obj.open(print_msg=False)
@@ -264,7 +264,7 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
                                                  maskFile=maskFile,
                                                  box=box,
                                                  useMedian=useMedian,
-                                                 invertMask=invertMask,
+                                                 reverseMask=reverseMask,
                                                  threshold=threshold)
         pbase = obj.pbaseIfgram
         tbase = obj.tbaseIfgram
@@ -272,14 +272,14 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
     elif k == 'timeseries':
         meanList, dateList = timeseries(File).spatial_average(maskFile=maskFile,
                                                               box=box,
-                                                              invertMask=invertMask,
+                                                              reverseMask=reverseMask,
                                                               threshold=threshold)
     else:
         data = readfile.read(File, box=box)[0]
         if maskFile and os.path.isfile(maskFile):
             print('mask from file: '+maskFile)
             mask = readfile.read(maskFile, datasetName='mask', box=box)[0]
-            data[mask == int(invertMask)] = np.nan
+            data[mask == int(reverseMask)] = np.nan
         if threshold != None:
             data[data > threshold] = 1
             data[data <= threshold] = 0

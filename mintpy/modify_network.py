@@ -86,8 +86,8 @@ def create_parser():
                                          'Drop/modify network based on spatial coherence')
     cohBased.add_argument('--coherence-based', dest='coherenceBased', action='store_true',
                           help='Enable coherence-based network modification (default: %(default)s).')
-    cohBased.add_argument('--area-based', dest='areaBased', action='store_true',
-                          help='Enable area-based network modification (default: %(default)s).')
+    cohBased.add_argument('--area-ratio-based', dest='areaRatioBased', action='store_true',
+                          help='Enable area ratio-based network modification (default: %(default)s).')
     cohBased.add_argument('--no-mst', dest='keepMinSpanTree', action='store_false',
                           help='Do not keep interferograms in Min Span Tree network based on inversed mean coherene')
     cohBased.add_argument('--mask', dest='maskFile', default='waterMask.h5',
@@ -99,8 +99,8 @@ def create_parser():
                           help='AOI in lat/lon range for coherence calculation (default: %(default)s).')
     cohBased.add_argument('--min-coherence', dest='minCoherence', type=float, default=0.7,
                           help='Minimum coherence value (default: %(default)s).')
-    cohBased.add_argument('--min-area', dest='minArea', type=float, default=0.75,
-                          help='Minimum area value (default: %(default)s).')
+    cohBased.add_argument('--min-area-ratio', dest='minAreaRatio', type=float, default=0.75,
+                          help='Minimum area ratio value (default: %(default)s).')
     cohBased.add_argument('--lookup', dest='lookupFile',
                           help='Lookup table/mapping transformation file for geo/radar coordinate conversion.\n' +
                                'Needed for mask AOI in lalo')
@@ -129,7 +129,7 @@ def cmd_line_parse(iargs=None):
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
     elif all(not i for i in [inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax, inps.connNumMax,
-                             inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased, inps.areaBased,
+                             inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased, inps.areaRatioBased,
                              inps.startDate, inps.endDate, inps.reset, inps.manual]):
         msg = 'No input option found to remove interferogram, exit.\n'
         msg += 'To manually modify network, please use --manual option '
@@ -175,10 +175,10 @@ def read_template2inps(template_file, inps=None):
     keyList = [i for i in list(inpsDict.keys()) if prefix+i in template.keys()]
     for key in keyList:
         value = template[prefix+key]
-        if key in ['coherenceBased', 'areaBased', 'keepMinSpanTree']:
+        if key in ['coherenceBased', 'areaRatioBased', 'keepMinSpanTree']:
             inpsDict[key] = value
         elif value:
-            if key in ['minCoherence', 'minArea', 'tempBaseMax', 'perpBaseMax']:
+            if key in ['minCoherence', 'minAreaRatio', 'tempBaseMax', 'perpBaseMax']:
                 inpsDict[key] = float(value)
             elif key in ['connNumMax']:
                 inpsDict[key] = int(value)
@@ -211,7 +211,7 @@ def read_template2inps(template_file, inps=None):
 
     # Turn reset on if 1) no input options found to drop ifgram AND 2) there is template input
     if all(not i for i in [inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax, inps.connNumMax,
-                           inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased, inps.areaBased,
+                           inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased, inps.areaRatioBased,
                            inps.startDate, inps.endDate, inps.reset, inps.manual]):
         print('No input option found to remove interferogram')
         print('Keep all interferograms by enable --reset option')
@@ -414,7 +414,7 @@ def get_date12_to_drop(inps):
         coh_date12_list = list(np.array(date12ListAll)[np.array(cohList) >= inps.minCoherence])
 
     # proportional area file
-    if inps.areaBased:
+    if inps.areaRatioBased:
         print('--------------------------------------------------')
         print('use area-based network modification')
 
@@ -432,7 +432,7 @@ def get_date12_to_drop(inps):
                                      datasetName='coherence',
                                      maskFile=inps.maskFile,
                                      saveList=True,
-                                     invertMask=True)[0]
+                                     reverseMask=True)[0]
         maskCoherence = np.nanmean(maskCoherences)
         print(f'Average coherence of {inps.maskFile} is {maskCoherence:.2f}')
 
@@ -446,7 +446,7 @@ def get_date12_to_drop(inps):
                                      threshold=maskCoherence)[0]
 
         # get coherence-based network
-        coh_date12_list = list(np.array(date12ListAll)[np.array(cohList) >= inps.minCoherence]) #make minArea
+        coh_date12_list = list(np.array(date12ListAll)[np.array(cohList) >= inps.minCoherence])
 
         # get MST network
         if inps.keepMinSpanTree:
