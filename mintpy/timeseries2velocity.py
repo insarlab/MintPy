@@ -403,7 +403,7 @@ def read_inps2model(inps, date_list=None):
 
 
 ############################################################################
-def estimate_time_func(model, date_list, dis_ts):
+def estimate_time_func(model, date_list, dis_ts, ref_date=None):
     """
     Deformation model estimator, using a suite of linear, periodic, step, exponential, and logarithmic function(s).
 
@@ -429,7 +429,7 @@ def estimate_time_func(model, date_list, dis_ts):
                 e2        - 1D np.ndarray, sum of squared residual in size of (num_pixel,)
     """
 
-    G = timeseries.get_design_matrix4time_func(date_list, model)
+    G = timeseries.get_design_matrix4time_func(date_list, model, refDate=ref_date)
 
     # least squares solver
     # Opt. 1: m = np.linalg.pinv(G).dot(dis_ts)
