@@ -11,7 +11,7 @@ import sys
 import re
 import argparse
 import numpy as np
-from scipy import linalg
+from scipy import linalg, stats
 from matplotlib import pyplot as plt, ticker, widgets, patches
 
 from mintpy.objects import timeseries, giantTimeseries, HDFEOS
@@ -62,8 +62,13 @@ def create_parser():
     parser.add_argument('--noverbose', dest='print_msg', action='store_false', help='Disable the verbose message printing.')
 
     # temporal model fitting
-    parser.add_argument('--nomodel', '--nofit', dest='show_model', action='store_false',
-                        help='Do not show the time function (deformation model) fitting.')
+    parser.add_argument('--nomodel', '--nofit', dest='plot_model', action='store_false',
+                        help='Do not plot the prediction of the time function (deformation model) fitting.')
+    parser.add_argument('--plot-model-conf-int', '--plot-fit-conf-int', dest='plot_model_conf_int', action='store_true',
+                        help='Plot the time function prediction confidence intervals.\n'
+                             '[!-- Preliminary feature alert! --!]\n'
+                             '[!-- This feature is NOT throughly checked. Read the code before use. Interpret at your own risk! --!]')
+
     parser = arg_group.add_timefunc_argument(parser)
 
     # pixel of interest
@@ -317,15 +322,16 @@ def read_init_info(inps):
         inps.vlim = inps.wrap_range
     inps.cbar_label = 'Displacement [{}]'.format(inps.disp_unit_img)
 
-    # fit a suite of time func to the time series
+    ## fit a suite of time func to the time series
     inps.model, inps.num_param = ts2vel.read_inps2model(inps, date_list=inps.date_list)
     inps.m_unit = ts2vel.model2hdf5_structure(inps.model)[1]
 
     # dense TS for plotting
     inps.date_list_fit = ptime.get_date_range(inps.date_list[0], inps.date_list[-1])
     inps.dates_fit = ptime.date_list2vector(inps.date_list_fit)[0]
-    inps.G_fit = timeseries.get_design_matrix4time_func(date_list=inps.date_list_fit, model=inps.model)
-
+    inps.G_fit = timeseries.get_design_matrix4time_func(date_list=inps.date_list_fit,
+                                                        model=inps.model,
+                                                        refDate=inps.ref_date)
     return inps, atr
 
 
@@ -497,19 +503,39 @@ def plot_ts_scatter(ax, dis_ts, inps, ppar):
     return ax
 
 
-def plot_ts_fit(ax, ts_fit, inps, ppar, labels=None):
+def plot_ts_fit(ax, ts_fit, inps, ppar, m_strs=None, ts_fit_lim=None):
+    """Plot time series fitting results."""
+    # plot the model prediction uncertainty boundaries
+    h0 = None
+    if ts_fit_lim is not None:
+        h0 = ax.fill_between(inps.dates_fit, ts_fit_lim[0], ts_fit_lim[1], fc=ppar.color, ec='none', alpha=0.2)
+
     # plot the model prediction curve in a fine date_lists
-    ax.plot(inps.dates_fit, ts_fit, color=ppar.color, lw=ppar.linewidth, alpha=0.8)
+    h1, = ax.plot(inps.dates_fit, ts_fit, color=ppar.color, lw=ppar.linewidth, alpha=0.8)
+
+    # legend
+    handles = []
+    labels = []
+    kwargs = dict(loc='best', fontsize=ppar.fontsize)
+    if h0 is not None:
+        handles.append((h0, h1))
+        labels.append('time func. pred. (w. 95% conf. interval.)')
 
     # print model parameters on the plot
-    # link for auto text loc:
-    #   https://stackoverflow.com/questions/7045729/automatically-position-text-box-in-matplotlib
-    if labels:
+    # link for auto text loc: https://stackoverflow.com/questions/7045729
+    if m_strs:
+        if len(labels) == 0:
+            kwargs['handlelength'] = 0
+            kwargs['handletextpad'] = 0
+            kwargs['borderaxespad'] = 1.0
+
         # remove multiple spaces for better display since matplotlib does not give good alignment as in the terminal
-        labels = [re.sub(' +', ' ', x) for x in labels]
-        handles = [patches.Rectangle((0, 0), 1, 1, fc="white", ec="white", lw=0, alpha=0)] * len(labels)
-        ax.legend(handles, labels, loc='best', fontsize=ppar.fontsize,
-                  handlelength=0, handletextpad=0, borderaxespad=1.0)
+        handles += [patches.Rectangle((0, 0), 1, 1, fc="white", ec="white", lw=0, alpha=0)] * len(m_strs)
+        labels += [re.sub(' +', ' ', x) for x in m_strs]
+
+    if len(labels) > 0:
+        ax.legend(handles, labels, **kwargs)
+
     return ax
 
 
@@ -556,42 +582,61 @@ def get_model_param_str(model, ds_dict, unit_fac=100):
     return ds_strs
 
 
-def fit_time_func(model, date_list, ts_dis, unit_fac=100, G_fit=None):
+def fit_time_func(model, date_list, ts_dis, unit_fac=100, G_fit=None, ref_date=None,
+                  conf_level=0.95):
     """Fit a suite of fime functions to the time series.
     Equations: Gm = d
-    Parameters: ts_dis - 1D np.ndarray, displacement time series
-    Returns:    m_dict - dict, dictionary in {ds_name: ds_value}
-                ts_fit - 1D np.ndarray, dense time series fit for plotting
+    Parameters: ts_dis     - 1D np.ndarray, displacement time series
+    Returns:    m_strs     - dict, dictionary in {ds_name: ds_value}
+                ts_fit     - 1D np.ndarray, dense time series fit for plotting
+                ts_fit_lim - list of 1D np.ndarray, the lower and upper
+                             boundaries of dense time series fit for plotting
     """
-    ts_fit = np.zeros(ts_dis.shape, dtype=np.float32) * np.nan
+    # init output
     m_strs = []
+    ts_fit = None
+    ts_fit_lim = None
+
     if np.all(np.isnan(ts_dis)):
-        return ts_fit, m_strs
+        return m_strs, ts_fit, ts_fit_lim
 
     # 1.1 estimate time func parameter via least squares (OLS)
     G, m, e2 = ts2vel.estimate_time_func(model=model,
                                          date_list=date_list,
-                                         dis_ts=ts_dis)
+                                         dis_ts=ts_dis,
+                                         ref_date=ref_date)
 
-    # 1.2 estimate time func parameter uncertainty
+    # 1.2 calc the precision of time func parameters
     # using the OLS estimation residues e2 = sum((d - Gm) ** 2)
     # assuming obs errors following normal distribution in time
     num_obs = len(date_list)
     num_param = G.shape[1]
     G_inv = linalg.inv(np.dot(G.T, G))
-    m_var = e2.flatten() / (num_obs - num_param)
-    m_std = np.sqrt(np.dot(np.diag(G_inv).reshape(-1, 1), m_var))
+    m_var_sum = e2.flatten() / (num_obs - num_param)
+    m_std = np.sqrt(np.dot(np.diag(G_inv).reshape(-1, 1), m_var_sum))
 
     # 1.3 translate estimation result into HDF5 ready datasets
+    # AND compose list of strings for printout
     m_dict = ts2vel.model2hdf5_dataset(model, m, m_std)
-
-    # 1.4 compose list of strings for printout
     m_strs = get_model_param_str(model, m_dict, unit_fac=unit_fac)
 
     # 2. reconstruct the fine resolution function
-    ts_fit = np.matmul(G_fit, m) if G_fit is not None else None
+    if G_fit is not None:
+        ts_fit = np.matmul(G_fit, m)
+        ts_fit_std = np.sqrt(np.diag(G_fit.dot(np.diag(m_std**2)).dot(G_fit.T)))
 
-    return ts_fit, m_strs
+        # calc confidence interval
+        # references:
+        # 1. Exercise 6.4 OMT: Interpretation from Hanssen et al. (2017) EdX online course.
+        #    Hanssen, R., Verhagen, S. and Samiei-Esfahany, S., (2017) Observation Theory: Estimating the Unknown,
+        #    Available at: https://www.edx.org/course/observation-theory-estimating-the-unknown
+        # 2. https://stackoverflow.com/questions/20626994
+        alpha = 1 - conf_level                                # level of significance
+        conf_int_scale = stats.norm.ppf(1 - alpha / 2)        # scaling factor for confidence interval
+        ts_fit_lim = [ts_fit - conf_int_scale * ts_fit_std,
+                      ts_fit + conf_int_scale * ts_fit_std]
+
+    return m_strs, ts_fit, ts_fit_lim
 
 
 def get_ts_title(y, x, coord_obj):
@@ -848,12 +893,13 @@ class timeseriesViewer():
             ts_dis = self.ts_data[i][:, y, x]
 
             # fit time func
-            ts_fit, m_strs = fit_time_func(
+            m_strs, ts_fit, ts_fit_lim = fit_time_func(
                 model=self.model,
                 date_list=self.date_list,
                 ts_dis=ts_dis,
                 unit_fac=self.unit_fac,
                 G_fit=self.G_fit,
+                ref_date=self.ref_date,
             )
 
             if self.zero_first:
@@ -874,12 +920,18 @@ class timeseriesViewer():
                 self.ts_plot_func(ax, ts_dis, self, ppar)
 
                 # plot model prediction
-                if self.show_model:
+                if self.plot_model:
                     fpar = argparse.Namespace()
                     fpar.linewidth = 3
                     fpar.color = 'C1' if num_file == 1 else ppar.mfc
                     fpar.fontsize = self.font_size
-                    plot_ts_fit(ax, ts_fit, self, fpar, labels=m_strs)
+
+                    if not self.plot_model_conf_int:
+                        ts_fit_lim = None
+
+                    plot_ts_fit(ax, ts_fit, self, fpar,
+                                m_strs=m_strs,
+                                ts_fit_lim=ts_fit_lim)
 
         # axis format
         ax.tick_params(which='both', direction='in', labelsize=self.font_size, bottom=True, top=True, left=True, right=True)
