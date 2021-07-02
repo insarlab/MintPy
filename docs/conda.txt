@@ -17,7 +17,7 @@ cdsapi
 ecCodes
 netcdf4
 pygrib
-pyhdf
+# pyhdf  # required for MERRA, which is currently not supported in python3 version of pyaps
 # pyresample dependencies
 pyresample
 openmp
