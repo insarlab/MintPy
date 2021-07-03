@@ -809,12 +809,13 @@ class timeseriesViewer():
             ts_dis = self.ts_data[i][:, y, x]
 
             # fit time func
-            ts_fit, m_strs = fit_time_func(
-                model=self.model,
-                date_list=self.date_list,
-                ts_dis=ts_dis,
-                unit_fac=self.unit_fac,
-                G_fit=self.G_fit,
+            if self.show_model:
+                ts_fit, m_strs = fit_time_func(
+                    model=self.model,
+                    date_list=self.date_list,
+                    ts_dis=ts_dis,
+                    unit_fac=self.unit_fac,
+                    G_fit=self.G_fit,
             )
 
             if self.zero_first:
@@ -870,13 +871,14 @@ class timeseriesViewer():
         if not np.all(np.isnan(ts_dis)):
             # min/max displacement
             vprint('time-series range: [{:.2f}, {:.2f}] {}'.format(np.nanmin(ts_dis), np.nanmax(ts_dis), self.disp_unit))
-
-            # time func param
-            vprint('time function parameters:')
-            for m_str in m_strs:
-                vprint(f'    {m_str}')
-
-            # update figure
+            if self.show_model:
+                # time func param
+                vprint('time function parameters:')
+                for m_str in m_strs:
+                    vprint(f'    {m_str}')
+            else:
+                m_strs=yx
+             # update figure
             self.fig_pts.canvas.draw()
 
         return ts_dis, m_strs
