@@ -14,8 +14,7 @@ from zipfile import ZipFile
 import shutil
 import numpy as np
 import matplotlib as mpl
-import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
+from matplotlib import pyplot as plt, patches
 
 try:
     from pykml.factory import KML_ElementMaker as KML
@@ -25,7 +24,7 @@ except ImportError:
 import mintpy
 from mintpy.objects import timeseries, deramp
 from mintpy.utils import readfile, plot, utils as ut
-from mintpy.save_kmz import generate_cbar_element
+from mintpy import save_kmz
 
 
 ############################################################
@@ -72,6 +71,10 @@ def create_parser():
                       help='choose points with velocity >= cutoff * MAD. Default: 3.')
     defo.add_argument('--min-percentage','--min-perc', dest='min_percentage', type=float, default=0.2,
                       help='choose boxes with >= min percentage of pixels are deforming. Default: 0.2.')
+
+    parser.add_argument('--kk','--keep-kml','--keep-kml-file', dest='keep_kml_file', action='store_true',
+                        help='Do not remove KML and data/resource files after compressing into KMZ file.')
+
     return parser
 
 
@@ -212,10 +215,10 @@ def get_boxes4deforming_area(vel_file, mask_file, step=2, num_pixel=30**2, min_p
         axs[1].imshow(mask_aoi, cmap='gray_r')
         for box in box_list:
             for ax in axs:
-                rect = Rectangle((box[0],box[1]),
-                                 width=(box[2]-box[0]),
-                                 height=(box[3]-box[1]),
-                                 linewidth=2, edgecolor='r', fill=False)
+                rect = patches.Rectangle((box[0], box[1]),
+                                         width=(box[2]-box[0]),
+                                         height=(box[3]-box[1]),
+                                         linewidth=2, edgecolor='r', fill=False)
                 ax.add_patch(rect)
         fig.tight_layout()
         out_fig = os.path.join(os.path.dirname(vel_file), 'defo_area.png')
@@ -236,7 +239,7 @@ def create_reference_point_element(inps, lats, lons, ts_obj):
     ref_point = KML.Placemark(
         KML.Style(
             KML.IconStyle(
-                KML.color(get_hex_color(0.0, colormap, norm)),
+                KML.color(save_kmz.get_hex_color(0.0, colormap, norm)),
                 KML.scale(1.),
                 KML.Icon(
                     KML.href("{}".format(os.path.basename(inps.star_file)))
@@ -252,18 +255,6 @@ def create_reference_point_element(inps, lats, lons, ts_obj):
     )
 
     return ref_point
-
-
-def get_hex_color(v, colormap, norm):
-    """Get color name in hex format.
-    Parameters: v        : float, number of interest
-                colormap : matplotlib.colors.Colormap instance
-                norm     : matplotlib.colors.Normalize instance
-    Returns:    c_hex    : color name in hex format
-    """
-    rgba = colormap(norm(v))  # get rgba color components for point velocity
-    c_hex = mpl.colors.to_hex([rgba[3], rgba[2], rgba[1], rgba[0]], keep_alpha=True)[1:]
-    return c_hex
 
 
 def get_description_string(coords, yx, v, vstd, disp, tcoh=None, font_size=4):
@@ -401,7 +392,7 @@ def create_kml_region_document(inps, box_list, ts_obj, step):
 
 
         ## 2. Create KML Document
-        kml_document = KML.Document()
+        kml_doc = KML.Document()
 
         # 2.1 Set and normalize colormap to defined vlim
         colormap = mpl.cm.get_cmap(inps.colormap)
@@ -431,7 +422,7 @@ def create_kml_region_document(inps, box_list, ts_obj, step):
                     # 2.3.1 Create KML icon style element
                     style = KML.Style(
                         KML.IconStyle(
-                            KML.color(get_hex_color(vc, colormap, norm)),
+                            KML.color(save_kmz.get_hex_color(vc, colormap, norm)),
                             KML.scale(0.5),
                             KML.Icon(KML.href("{}".format(dot_file)))
                         )
@@ -453,10 +444,10 @@ def create_kml_region_document(inps, box_list, ts_obj, step):
                     data_folder.append(placemark)
 
         # 2.4 Append data folder to KML document
-        kml_document.append(data_folder)
+        kml_doc.append(data_folder)
 
         # 2.5 Append KML document to list of regionalized documents
-        region_docs.append(kml_document)
+        region_docs.append(kml_doc)
 
     return region_docs
 
@@ -472,7 +463,7 @@ def write_network_link_file(region_docs, ts_obj, box_list, lod, net_link_file):
 
     ## 2. Create root KML element and KML Document element
     kml = KML.kml()
-    kml_document = KML.Document()
+    kml_doc = KML.Document()
 
     ## 3. Generate a new network link element for each region
     for num, (region_doc, box) in enumerate(zip(region_docs, box_list)):
@@ -510,8 +501,8 @@ def write_network_link_file(region_docs, ts_obj, box_list, lod, net_link_file):
         )
 
         ## 3.4 Append new NetworkLink to KML document
-        kml_document.append(network_link)
-    kml.append(kml_document)
+        kml_doc.append(network_link)
+    kml.append(kml_doc)
 
     ## 4. Write the full KML document to the output file and move it to the proper directory
     with open(net_link_file, 'w') as f:
@@ -609,10 +600,12 @@ def main(iargs=None):
     kml_root_doc = KML.Document()
 
     # 1 Create Overlay element for colorbar
-    cbar_overlay = generate_cbar_element(cbar_file=inps.cbar_file,
-                                         vmin=inps.vlim[0],
-                                         vmax=inps.vlim[1],
-                                         cmap=inps.colormap)
+    cbar_overlay = save_kmz.generate_cbar_element(
+        cbar_file=inps.cbar_file,
+        vmin=inps.vlim[0],
+        vmax=inps.vlim[1],
+        cmap=inps.colormap,
+    )
     kml_root_doc.append(cbar_overlay)
 
     # 2 Generate the placemark for the Reference Pixel
@@ -652,6 +645,7 @@ def main(iargs=None):
     # 1) go to the directory of kmz file
     run_dir = os.path.abspath(os.getcwd())
     os.chdir(inps.work_dir)
+
     # 2) zip all data files
     with ZipFile(kmz_file, 'w') as fz:
         kml_data_files = get_all_file_paths(inps.kml_data_dir)
@@ -661,8 +655,11 @@ def main(iargs=None):
                       inps.dot_file,
                       inps.star_file] + kml_data_files:
             fz.write(os.path.relpath(fname))
-            os.remove(fname)
-        shutil.rmtree(inps.kml_data_dir)
+            if not inps.keep_kml_file:
+                os.remove(fname)
+        if not inps.keep_kml_file:
+            shutil.rmtree(inps.kml_data_dir)
+
     # 3) go back to the running directory
     os.chdir(run_dir)
     print('merged all files to {}'.format(kmz_file))
