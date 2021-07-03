@@ -183,6 +183,11 @@ def add_mask_argument(parser):
     mask = parser.add_argument_group('Mask', 'Mask file/options')
     mask.add_argument('-m','--mask', dest='mask_file', metavar='FILE',
                       help='mask file for display. "no" to turn OFF masking.')
+    mask.add_argument('--mask-vmin', dest='mask_vmin', type=float,
+                      help='hide pixels with mask value < vmin (default: %(default)s).')
+    mask.add_argument('--mask-vmax', dest='mask_vmax', type=float,
+                      help='hide pixels with mask value > vmax (default: %(default)s).')
+
     mask.add_argument('--zm','--zero-mask', dest='zero_mask', action='store_true',
                       help='mask pixels with zero value.')
     return parser
@@ -316,14 +321,14 @@ def add_save_argument(parser):
 def add_subset_argument(parser, geo=True):
     """Argument group parser for subset options"""
     sub = parser.add_argument_group('Subset', 'Display dataset in subset range')
-    sub.add_argument('--sub-x','--subx', dest='subset_x', type=int, nargs=2, metavar=('XMIN', 'XMAX'),
+    sub.add_argument('--sub-x','--subx','--subset-x', dest='subset_x', type=int, nargs=2, metavar=('XMIN', 'XMAX'),
                      help='subset display in x/cross-track/range direction')
-    sub.add_argument('--sub-y','--suby', dest='subset_y', type=int, nargs=2, metavar=('YMIN', 'YMAX'),
+    sub.add_argument('--sub-y','--suby','--subset-y', dest='subset_y', type=int, nargs=2, metavar=('YMIN', 'YMAX'),
                      help='subset display in y/along-track/azimuth direction')
     if geo:
-        sub.add_argument('--sub-lat','--sublat', dest='subset_lat', type=float, nargs=2, metavar=('LATMIN', 'LATMAX'),
+        sub.add_argument('--sub-lat','--sublat','--subset-lat', dest='subset_lat', type=float, nargs=2, metavar=('LATMIN', 'LATMAX'),
                          help='subset display in latitude')
-        sub.add_argument('--sub-lon','--sublon', dest='subset_lon', type=float, nargs=2, metavar=('LONMIN', 'LONMAX'),
+        sub.add_argument('--sub-lon','--sublon','--subset-lon', dest='subset_lon', type=float, nargs=2, metavar=('LONMIN', 'LONMAX'),
                          help='subset display in longitude')
     return parser
 

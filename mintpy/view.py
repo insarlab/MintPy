@@ -628,6 +628,19 @@ def plot_slice(ax, data, metadata, inps=None):
                     mec='black', mew=1.)
             vprint('plot points of interest')
 
+        # temporary test code
+        temp_test = False
+        if temp_test:
+            # Champlain Towers South AOI
+            pts_yx = np.array([
+                [929,1456],
+                [933,1457],
+                [933,1436],
+                [930,1431],
+                [929,1456],
+            ])
+            ax.plot(pts_yx[:, 1], pts_yx[:, 0], '-', ms=inps.ref_marker_size, mec='black', mew=1.)
+
         ax.set_xlim(extent[0:2])
         ax.set_ylim(extent[2:4])
 
@@ -1381,6 +1394,8 @@ def prep_slice(cmd, auto_fig=False):
                                             mask_file=inps.mask_file,
                                             datasetName=inps.dset[0],
                                             box=inps.pix_box,
+                                            vmin=inps.mask_vmin,
+                                            vmax=inps.mask_vmax,
                                             print_msg=inps.print_msg)
 
     # read data
@@ -1462,6 +1477,8 @@ class viewer():
                                                 mask_file=self.mask_file,
                                                 datasetName=self.dset[0],
                                                 box=self.pix_box,
+                                                vmin=self.mask_vmin,
+                                                vmax=self.mask_vmax,
                                                 print_msg=self.print_msg)
         return self.flag
 
