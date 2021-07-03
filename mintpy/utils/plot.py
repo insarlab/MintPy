@@ -1362,7 +1362,8 @@ def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False, 
     return data, disp_unit, disp_scale, wrap
 
 
-def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=1, print_msg=True):
+def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=1,
+              vmin=None, vmax=None, print_msg=True):
     """Find and read mask for input data file fname
     Parameters: fname       : string, data file name/path
                 mask_file   : string, optional, mask file name
@@ -1452,6 +1453,15 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
     # set to bool type
     if mask is not None:
         mask[np.isnan(mask)] = 0
+
+        # vmin/max
+        if vmin is not None:
+            mask[mask < vmin] = 0
+            vprint(f'hide pixels with mask value < {vmin}')
+        if vmax is not None:
+            mask[mask > vmax] = 0
+            vprint(f'hide pixels with mask value > {vmax}')
+
         mask = mask != 0
 
     return mask, mask_file

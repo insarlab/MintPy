@@ -434,7 +434,7 @@ def read_reference_input(inps):
             raise ValueError('input reference point is OUT of data coverage!')
 
         # Do not use ref_y/x in masked out area
-        if inps.maskFile:
+        if inps.maskFile and os.path.isfile(inps.maskFile):
             print('mask: '+inps.maskFile)
             mask = readfile.read(inps.maskFile, datasetName='mask')[0]
             if mask[inps.ref_y, inps.ref_x] == 0:
