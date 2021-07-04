@@ -35,9 +35,9 @@ REFERENCE = """reference:
   connection between the Hayward and Calaveras Faults, Geophysical Research Letters, 42(8),
   2734-2741, doi:10.1002/2015GL063575.
 
- Kang, Y., Lu, Z., Zhao, C., Xu, Y., Kim, J. W., & Gallegos, A. J. (2021).InSAR monitoring
- of creeping landslides in mountainous regions: A case study in Eldorado National Forest,
- California. Remote Sensing of Environment, 258, 112400. doi:10.1016/j.rse.2021.112400
+  Kang, Y., Lu, Z., Zhao, C., Xu, Y., Kim, J. W., & Gallegos, A. J. (2021).InSAR monitoring
+  of creeping landslides in mountainous regions: A case study in Eldorado National Forest,
+  California. Remote Sensing of Environment, 258, 112400. doi:10.1016/j.rse.2021.112400
 """
 
 TEMPLATE = get_template_content('modify_network')
@@ -82,12 +82,18 @@ def create_parser():
                         help='remove/drop interferograms with date later than end-date in YYMMDD or YYYYMMDD format')
 
     # 2. coherence-based network
-    cohBased = parser.add_argument_group('Coherence-based Network',
-                                         'Drop/modify network based on spatial coherence')
+    cohBased = parser.add_argument_group('Data-driven network modification', 'Drop/modify network based on data')
+    # 2.1 coherence-based
     cohBased.add_argument('--coherence-based', dest='coherenceBased', action='store_true',
                           help='Enable coherence-based network modification (default: %(default)s).')
+    cohBased.add_argument('--min-coherence', dest='minCoherence', type=float, default=0.7,
+                          help='Minimum coherence value (default: %(default)s).')
+    # 2.2 area-ratio-based
     cohBased.add_argument('--area-ratio-based', dest='areaRatioBased', action='store_true',
                           help='Enable area ratio-based network modification (default: %(default)s).')
+    cohBased.add_argument('--min-area-ratio', dest='minAreaRatio', type=float, default=0.75,
+                          help='Minimum area ratio value (default: %(default)s).')
+    # common parameters
     cohBased.add_argument('--no-mst', dest='keepMinSpanTree', action='store_false',
                           help='Do not keep interferograms in Min Span Tree network based on inversed mean coherene')
     cohBased.add_argument('--mask', dest='maskFile', default='waterMask.h5',
@@ -97,10 +103,6 @@ def create_parser():
                           help='AOI in row/column range for coherence calculation (default: %(default)s).')
     cohBased.add_argument('--aoi-lalo', dest='aoi_geo_box', type=float, nargs=4, metavar=('W', 'S', 'E', 'N'), default=None,
                           help='AOI in lat/lon range for coherence calculation (default: %(default)s).')
-    cohBased.add_argument('--min-coherence', dest='minCoherence', type=float, default=0.7,
-                          help='Minimum coherence value (default: %(default)s).')
-    cohBased.add_argument('--min-area-ratio', dest='minAreaRatio', type=float, default=0.75,
-                          help='Minimum area ratio value (default: %(default)s).')
     cohBased.add_argument('--lookup', dest='lookupFile',
                           help='Lookup table/mapping transformation file for geo/radar coordinate conversion.\n' +
                                'Needed for mask AOI in lalo')
@@ -413,10 +415,10 @@ def get_date12_to_drop(inps):
         # get coherence-based network
         coh_date12_list = list(np.array(date12ListAll)[np.array(cohList) >= inps.minCoherence])
 
-    # proportional area file
+    # area ratio file
     if inps.areaRatioBased:
         print('--------------------------------------------------')
-        print('use area-based network modification')
+        print('use area-ratio-based network modification')
 
         # get area of interest for coherence calculation
         coord = ut.coordinate(obj.metadata, lookup_file=inps.lookupFile)
@@ -427,26 +429,26 @@ def get_date12_to_drop(inps):
             inps.aoi_pix_box = coord.check_box_within_data_coverage(inps.aoi_pix_box)
             print('input AOI in (x0,y0,x1,y1): {}'.format(inps.aoi_pix_box))
 
-        # calculate average coherence in masked areas
-        maskCoherences = ut.spatial_average(inps.file,
-                                     datasetName='coherence',
-                                     maskFile=inps.maskFile,
-                                     saveList=True,
-                                     reverseMask=True)[0]
-        maskCoherence = np.nanmean(maskCoherences)
-        print(f'Average coherence of {inps.maskFile} is {maskCoherence:.2f}')
+        # calculate average coherence in masked out areas
+        maskCohList = ut.spatial_average(inps.file,
+                                         datasetName='coherence',
+                                         maskFile=inps.maskFile,
+                                         saveList=True,
+                                         reverseMask=True)[0]
+        meanMaskCoh = np.nanmean(maskCohList)
+        print(f'Average coherence of {inps.maskFile} reverse is {meanMaskCoh:.2f}')
 
-        # calculate proportional area of cells greater than maskCoherence
-        cohList = ut.spatial_average(inps.file,
-                                     datasetName='coherence',
-                                     maskFile=inps.maskFile,
-                                     box=inps.aoi_pix_box,
-                                     saveList=True,
-                                     checkAoi=True,
-                                     threshold=maskCoherence)[0]
+        # calculate area-ratio with pixels greater than meanMaskCoh
+        areaRatioList = ut.spatial_average(inps.file,
+                                           datasetName='coherence',
+                                           maskFile=inps.maskFile,
+                                           box=inps.aoi_pix_box,
+                                           saveList=True,
+                                           checkAoi=True,
+                                           threshold=meanMaskCoh)[0]
 
-        # get coherence-based network
-        coh_date12_list = list(np.array(date12ListAll)[np.array(cohList) >= inps.minCoherence])
+        # get area-ratio-based network
+        area_date12_list = list(np.array(date12ListAll)[np.array(areaRatioList) >= inps.minAreaRatio])
 
         # get MST network
         if inps.keepMinSpanTree:
@@ -457,19 +459,19 @@ def get_date12_to_drop(inps):
 
             # get the current remaining network (after all the above criteria and before coherence-based)
             date12_to_keep = list(set(date12ListAll) - set(date12_to_drop))
-            coh_to_keep = [coh for coh, date12 in zip(cohList, date12ListAll)
-                           if date12 in date12_to_keep]
+            area_ratio_to_keep = [area_ratio for area_ratio, date12 in zip(areaRatioList, date12ListAll)
+                                  if date12 in date12_to_keep]
 
             # get MST from the current remaining network
-            mst_date12_list = pnet.threshold_coherence_based_mst(date12_to_keep, coh_to_keep)
+            mst_date12_list = pnet.threshold_coherence_based_mst(date12_to_keep, area_ratio_to_keep)
             mst_date12_list = ptime.yyyymmdd_date12(mst_date12_list)
 
         else:
             msg = 'Drop ifgrams with average coherence < {}: '.format(inps.minCoherence)
             mst_date12_list = []
 
-        # drop all dates (below coh thresh AND not in MST)
-        tempList = sorted(list(set(date12ListAll) - set(coh_date12_list + mst_date12_list)))
+        # drop all dates (below area-ratio thresh AND not in MST)
+        tempList = sorted(list(set(date12ListAll) - set(area_date12_list + mst_date12_list)))
         date12_to_drop += tempList
 
         msg += '({})'.format(len(tempList))

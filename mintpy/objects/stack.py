@@ -1002,7 +1002,8 @@ class ifgramStack:
                 data = np.squeeze(data)
         return data
 
-    def spatial_average(self, datasetName='coherence', maskFile=None, box=None, useMedian=False, reverseMask=False, threshold=None):
+    def spatial_average(self, datasetName='coherence', maskFile=None, box=None, useMedian=False,
+                        reverseMask=False, threshold=None):
         """ Calculate the spatial average."""
         if datasetName is None:
             datasetName = 'coherence'
