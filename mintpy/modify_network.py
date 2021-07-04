@@ -339,7 +339,7 @@ def get_mst_date12(keep_mst, par_list_all, date12_list_all, date12_to_drop, min_
         msg = 'Drop ifgrams with {} < {}: '.format(par_name, min_par)
         mst_date12_list = []
 
-    return mst_date12_list
+    return mst_date12_list, msg
 
 
 def get_date12_to_drop(inps):
@@ -451,9 +451,9 @@ def get_date12_to_drop(inps):
         coh_date12_list = list(np.array(date12ListAll)[np.array(cohList) >= inps.minCoherence])
 
         # get MST network
-        mst_date12_list = get_mst_date12(inps.keepMinSpanTree, cohList, date12ListAll, date12_to_drop,
-                                         min_par=inps.minCoherence,
-                                         par_name='average coherence')
+        mst_date12_list, msg = get_mst_date12(inps.keepMinSpanTree, cohList, date12ListAll, date12_to_drop,
+                                              min_par=inps.minCoherence,
+                                              par_name='average coherence')
 
         # drop all dates (below cohh thresh AND not in MST)
         tempList = sorted(list(set(date12ListAll) - set(coh_date12_list + mst_date12_list)))
@@ -493,9 +493,9 @@ def get_date12_to_drop(inps):
         area_ratio_date12_list = list(np.array(date12ListAll)[np.array(areaRatioList) >= inps.minAreaRatio])
 
         # get MST network
-        mst_date12_list = get_mst_date12(inps.keepMinSpanTree, areaRatioList, date12ListAll, date12_to_drop,
-                                         min_par=inps.minAreaRatio,
-                                         par_name='coherent area ratio')
+        mst_date12_list, msg = get_mst_date12(inps.keepMinSpanTree, areaRatioList, date12ListAll, date12_to_drop,
+                                              min_par=inps.minAreaRatio,
+                                              par_name='coherent area ratio')
 
         # drop all dates (below area-ratio thresh AND not in MST)
         tempList = sorted(list(set(date12ListAll) - set(area_ratio_date12_list + mst_date12_list)))
