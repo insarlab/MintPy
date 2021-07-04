@@ -318,8 +318,9 @@ def get_aoi_pix_box(meta, lookup_file, pix_box, geo_box):
     return pix_box
 
 
-def get_mst_date12(par_list_all, date12_list_all, date12_to_drop, min_par, par_name='average coherence'):
-    if inps.keepMinSpanTree:
+def get_mst_date12(keep_mst, par_list_all, date12_list_all, date12_to_drop, min_par, par_name='average coherence'):
+    """Get the date12_list of the MST network for the given parameter."""
+    if keep_mst:
         print(f'Get minimum spanning tree (MST) of interferograms with inverse of {par_name}.')
         msg = ('Drop ifgrams with '
                '1) {} < {} AND '
@@ -450,7 +451,7 @@ def get_date12_to_drop(inps):
         coh_date12_list = list(np.array(date12ListAll)[np.array(cohList) >= inps.minCoherence])
 
         # get MST network
-        mst_date12_list = get_mst_date12(cohList, date12ListAll, date12_to_drop,
+        mst_date12_list = get_mst_date12(inps.keepMinSpanTree, cohList, date12ListAll, date12_to_drop,
                                          min_par=inps.minCoherence,
                                          par_name='average coherence')
 
@@ -492,7 +493,7 @@ def get_date12_to_drop(inps):
         area_ratio_date12_list = list(np.array(date12ListAll)[np.array(areaRatioList) >= inps.minAreaRatio])
 
         # get MST network
-        mst_date12_list = get_mst_date12(areaRatioList, date12ListAll, date12_to_drop,
+        mst_date12_list = get_mst_date12(inps.keepMinSpanTree, areaRatioList, date12ListAll, date12_to_drop,
                                          min_par=inps.minAreaRatio,
                                          par_name='coherent area ratio')
 
