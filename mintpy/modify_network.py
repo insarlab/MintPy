@@ -448,7 +448,7 @@ def get_date12_to_drop(inps):
                                            threshold=meanMaskCoh)[0]
 
         # get area-ratio-based network
-        area_date12_list = list(np.array(date12ListAll)[np.array(areaRatioList) >= inps.minAreaRatio])
+        area_ratio_date12_list = list(np.array(date12ListAll)[np.array(areaRatioList) >= inps.minAreaRatio])
 
         # get MST network
         if inps.keepMinSpanTree:
@@ -471,7 +471,7 @@ def get_date12_to_drop(inps):
             mst_date12_list = []
 
         # drop all dates (below area-ratio thresh AND not in MST)
-        tempList = sorted(list(set(date12ListAll) - set(area_date12_list + mst_date12_list)))
+        tempList = sorted(list(set(date12ListAll) - set(area_ratio_date12_list + mst_date12_list)))
         date12_to_drop += tempList
 
         msg += '({})'.format(len(tempList))
