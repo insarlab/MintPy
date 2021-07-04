@@ -195,9 +195,9 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
 
     # default output filename
     prefix = datasetName if k == 'ifgramStack' else os.path.splitext(os.path.basename(File))[0]
-    suffix = 'Mask' if reverseMask else ''
-    suffix += 'SpatialAvg.txt' if threshold is None else 'AreaRatio.txt'
-    txtFile = prefix + mask + suffix
+    suffix = 'SpatialAvg' if threshold is None else 'AreaRatio'
+    suffix += 'RevMsk' if reverseMask else ''
+    txtFile = prefix + suffix + '.txt'
 
     # If input is text file
     if File.endswith(suffix):
