@@ -82,7 +82,7 @@ def create_parser():
 
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file name\n' +
-                             'add prefix "subset_" if input/output files are in the same directory;\n' +
+                             'add prefix "sub_" if input/output files are in the same directory;\n' +
                              'same filename otherwise.')
 
     dset_group = parser.add_argument_group('Datasets',
@@ -261,14 +261,14 @@ def subset_input_dict2box(subset_dict, meta_dict):
 
     # Use subset_lat/lon input if existed,  priority: lat/lon > y/x > len/wid
     coord = ut.coordinate(meta_dict)
-    if subset_dict['subset_lat']:
+    if subset_dict.get('subset_lat', None):
         sub_y = coord.lalo2yx(subset_dict['subset_lat'], coord_type='latitude')
     elif subset_dict['subset_y']:
         sub_y = subset_dict['subset_y']
     else:
         sub_y = [0, length]
 
-    if subset_dict['subset_lon']:
+    if subset_dict.get('subset_lon', None):
         sub_x = coord.lalo2yx(subset_dict['subset_lon'], coord_type='longitude')
     elif subset_dict['subset_x']:
         sub_x = subset_dict['subset_x']
@@ -385,7 +385,7 @@ def subset_file(fname, subset_dict_input, out_file=None):
                 out_file = '{}_tight{}'.format(os.path.splitext(fname)[0],
                                                os.path.splitext(fname)[1])
             else:
-                out_file = 'subset_'+os.path.basename(fname)
+                out_file = 'sub_'+os.path.basename(fname)
         else:
             out_file = os.path.basename(fname)
     print('writing >>> '+out_file)
@@ -460,7 +460,7 @@ def subset_file(fname, subset_dict_input, out_file=None):
 
                         prog_bar.update(i+1, suffix='{}/{}'.format(i+1, ds_shape[0]))
                     prog_bar.close()
-                    print('finished writing to file: {}'.format(fname))
+                    print('finished writing to file: {}'.format(out_file))
 
     else:
         # IO for binary files
