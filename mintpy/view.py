@@ -103,6 +103,8 @@ def create_parser():
                         help='Disable glob search for input dset.')
     infile.add_argument('--ex', '--exclude', dest='exDsetList', metavar='Dset', nargs='*', default=[],
                         help='dates will not be displayed (default: %(default)s).')
+    parser.add_argument('--show-kept','--show-kept-ifgram', dest='plot_drop_ifgram', action='store_false',
+                        help='display kept interferograms only, without dropped interferograms')
 
     parser.add_argument('--plot-setting', dest='disp_setting_file',
                         help='Template file with plot setting.\n'+PLOT_TEMPLATE)
@@ -839,8 +841,21 @@ def read_dataset_input(inps):
                                                                [],
                                                                inps.search_dset)
 
+    # read inps.plot_drop_ifgram
+    drop_num_list = []
+    atr = readfile.read_attribute(inps.file)
+    if not inps.plot_drop_ifgram:
+        if atr['FILE_TYPE'] == 'ifgramStack':
+            vprint('do not show the dropped interferograms')
+            date12_drop_list = ifgramStack(inps.file).get_drop_date12_list()
+            drop_slice_list = [x for x in inps.sliceList if x.split('-')[1] in date12_drop_list]
+            drop_num_list = [inps.sliceList.index(x) for x in drop_slice_list]
+        else:
+            vprint('--show-kept option does not apply to file type: {}, ignore and continue.'.format(atr['FILE_TYPE']))
+            inps.plot_drop_ifgram = True
+
     # get inps.dset
-    inps.dsetNumList = sorted(list(set(inps.dsetNumList) - set(inps.exDsetNumList)))
+    inps.dsetNumList = sorted(list(set(inps.dsetNumList) - set(inps.exDsetNumList) - set(drop_num_list)))
     inps.dset = [inps.sliceList[i] for i in inps.dsetNumList]
     inps.dsetNum = len(inps.dset)
 
@@ -1131,19 +1146,27 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
                 subplot_title = str(inps.dset[i])
 
         else:
+            # dset info - name & index
             title_str = inps.dset[i]
+            title_ind = inps.sliceList.index(title_str)
+
+            # ignore dataset family info if there is only one type
             if len(inps.dsetFamilyList) == 1 and '-' in title_str:
                 title_str = title_str.split('-')[1]
+                # for ifgramStack, show index in the date12 list to facilitate the network modfication
+                if inps.atr['FILE_TYPE'] == 'ifgramStack':
+                    title_ind = inps.date12List.index(title_str)
 
+            # title style depending on the number of subplots
             num_subplot = inps.fig_row_num * inps.fig_col_num
             if num_subplot <= 6:
                 subplot_title = title_str
             elif 6 < num_subplot <= 20:
-                subplot_title = '{}\n{}'.format(i, title_str)
+                subplot_title = '{}\n{}'.format(title_ind, title_str)
             elif 20 < num_subplot <= 50:
                 subplot_title = title_str.replace('_','\n').replace('-','\n')
             else:
-                subplot_title = '{}'.format(i)
+                subplot_title = '{}'.format(title_ind)
 
         # plot title
         if subplot_title:
@@ -1301,6 +1324,8 @@ def prepare4multi_subplots(inps, metadata):
     """
     inps.dsetFamilyList = sorted(list(set(x.split('-')[0] for x in inps.dset)))
     inps.dsetFamilyList = sorted(list(set(x.replace('Std','') for x in inps.dsetFamilyList)))
+    if len(inps.dsetFamilyList) == 1 and inps.atr['FILE_TYPE'] == 'ifgramStack':
+        inps.date12List = sorted(list(set(x.split('-')[1] for x in inps.sliceList)))
 
     ## calculate multilook_num
     # ONLY IF:
