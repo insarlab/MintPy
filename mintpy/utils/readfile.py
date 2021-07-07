@@ -1225,6 +1225,7 @@ def read_isce_xml(fname):
             if abs(v_step) < 1. and abs(v_step) > 1e-7:
                 xmlDict['{}_STEP'.format(prefix)] = v_step
                 xmlDict['{}_FIRST'.format(prefix)] = v_first - v_step / 2.
+                xmlDict['{}_UNIT'.format(prefix)] = 'degrees'
 
     # PAMDataset, e.g. hgt.rdr.aux.xml
     elif root.tag == 'PAMDataset':
