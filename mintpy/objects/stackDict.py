@@ -596,7 +596,7 @@ class geometryDict:
                     # water mask:  0 for water and 1 for land
                     fname = os.path.basename(self.datasetDict[dsName])
                     if fname.startswith('waterBody') or fname.endswith('.wbd'):
-                        data = data > -0.5
+                        data = ~data
                         print(('    input file "{}" is water body (-1/0 for water/land), '
                                'convert to water mask (0/1 for water/land).'.format(fname)))
 
