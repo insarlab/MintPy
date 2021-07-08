@@ -592,13 +592,13 @@ class geometryDict:
                                               xstep=xstep,
                                               ystep=ystep)[0], dtype=dsDataType)
 
-                    # water body: -1 for water and 0 for land
-                    # water mask:  0 for water and 1 for land
+                    # water body: -1/True  for water and 0/False for land
+                    # water mask:  0/False for water and 1/True  for land
                     fname = os.path.basename(self.datasetDict[dsName])
                     if fname.startswith('waterBody') or fname.endswith('.wbd'):
-                        data = data > -0.5
-                        print(('    input file "{}" is water body (-1/0 for water/land), '
-                               'convert to water mask (0/1 for water/land).'.format(fname)))
+                        data = ~data
+                        print(('    input file "{}" is water body (True/False for water/land), '
+                               'convert to water mask (False/True for water/land).'.format(fname)))
 
                     elif dsName == 'height':
                         noDataValueDEM = -32768
