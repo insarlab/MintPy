@@ -71,7 +71,7 @@ Run the following in your terminal to install the dependencies to your conda env
 
 # Add "gdal>=3" below to install extra dependencies if you use ARIA, FRInGE, HyP3 or GMTSAR
 # Add "isce2"   below to install extra dependencies if you use ISCE-2
-conda install --yes -c conda-forge --file ~/tools/MintPy/docs/conda.txt
+conda install --yes -c conda-forge --file ~/tools/MintPy/docs/requirements.txt
 
 $CONDA_PREFIX/bin/pip install git+https://github.com/insarlab/PySolid.git
 $CONDA_PREFIX/bin/pip install git+https://github.com/tylere/pykml.git
@@ -80,7 +80,7 @@ $CONDA_PREFIX/bin/pip install git+https://github.com/tylere/pykml.git
 Or run the following in your terminal to install the dependencies to a new environment _**mintpy**_:
 
 ```
-conda env create -f $MINTPY_HOME/docs/conda_env.yml
+conda env create -f $MINTPY_HOME/docs/environment.yml
 conda activate mintpy
 ```
 

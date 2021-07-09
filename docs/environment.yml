@@ -1,5 +1,5 @@
-# create environment : conda env create -f conda_env.yml
-# update dependencies: conda env update -f conda_env.yml
+# create environment : conda env create -f environment.yml
+# update dependencies: conda env update -f environment.yml
 # remove environment : conda env remove -n mintpy
 # enter  environment : conda activate mintpy
 # exit   environment : conda deactivate
@@ -32,7 +32,7 @@ dependencies:
   - ecCodes
   - netcdf4
   - pygrib
-  - pyhdf
+  # - pyhdf   # required by MERRA, which is currently not supported in pyaps3
   # for pyresample
   - pyresample
   - openmp

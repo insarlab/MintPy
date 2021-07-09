@@ -1,17 +1,32 @@
-# requirements.txt for readthedocs, which uses pip and could not handle python>=3.6
-# conda.txt        for actual installation via conda
-# conda_env.yml    for actual installation via conda create environment
-# ports.txt        for actual installation via mac-ports
-# setup.py         for actual installation via pip [not finished yet]
+# requirements4rtd.txt for readthedocs, which uses pip with limited memory usage
+# requirements.txt     for actual installation via conda
+# environment.yml      for actual installation via conda create environment
+# ports.txt            for actual installation via mac-ports
+# setup.py             for actual installation via pip [not finished yet]
+python>=3.6,<3.9
+cartopy
 cvxopt
 dask>=1.0
 dask-jobqueue>=0.3
 defusedxml
-h5py
+h5py<3
 lxml
 matplotlib
 numpy
+pip
 pyproj
-pyresample
 scikit-image
 scipy
+# pyaps dependencies
+cdsapi
+ecCodes
+netcdf4
+pygrib
+# pyhdf  # required by MERRA, which is currently not supported in pyaps3
+# pyresample dependencies
+pyresample
+openmp
+pykdtree
+xarray
+zarr
+
