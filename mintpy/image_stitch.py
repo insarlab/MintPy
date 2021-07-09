@@ -217,7 +217,7 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     return mat, atr, mat11, mat22, mat_diff
 
 
-def plot_stitch(mat11, mat22, mat, mat_diff, out_fig=None):
+def plot_stitch(mat11, mat22, mat, mat_diff, out_fig=None, disp_fig=False):
     """plot stitching result"""
 
     fig = plt.figure(figsize=[15.0, 8.0])
@@ -275,7 +275,7 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
         if apply_offset:
             print('plot stitching & shifting result ...')
             suffix = '_{}{}'.format(i, i+1)
-            out_fig = '{}_{}.png'.format(os.path.splitext(out_file)[0], sufffix)
+            out_fig = '{}_{}.png'.format(os.path.splitext(out_file)[0], suffix)
             plot_stitch(mat11, mat22, mat, mat_diff,
                         out_fig=out_fig,
                         disp_fig=disp_fig)
