@@ -55,7 +55,7 @@ RUN wget https://repo.continuum.io/miniconda/Miniconda3-4.5.4-Linux-x86_64.sh &&
 
 # Install dependencies
 RUN ${PYTHON3DIR}/bin/conda config --add channels conda-forge && \
-    ${PYTHON3DIR}/bin/conda install --yes --file ${MINTPY_HOME}/docs/conda.txt
+    ${PYTHON3DIR}/bin/conda install --yes --file ${MINTPY_HOME}/docs/requirements.txt
 
 # Install pykml
 RUN ${PYTHON3DIR}/bin/pip install git+https://github.com/yunjunz/pykml.git

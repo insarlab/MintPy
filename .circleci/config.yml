@@ -39,7 +39,7 @@ jobs:
             git clone https://github.com/insarlab/PySolid.git ${HOME}/tools/PySolid
             # install dependencies
             source activate root
-            mamba install --verbose --yes --file ${MINTPY_HOME}/docs/conda.txt gdal>=3 fortran-compiler
+            mamba install --verbose --yes --file ${MINTPY_HOME}/docs/requirements.txt gdal>=3 fortran-compiler
             pip install git+https://github.com/tylere/pykml.git
             # compile pysolid Fortran code
             cd ${HOME}/tools/PySolid/pysolid
