@@ -424,8 +424,8 @@ def estimate_time_func(model, date_list, dis_ts, ref_date=None):
                                             },
                              ...
                              }
-    Returns:    G         - 2D np.ndarray, design matrix           in size of (num_date, num_par)
-                m         - 2D np.ndarray, parameter solution      in size of (num_par, num_pixel)
+    Returns:    G         - 2D np.ndarray, design matrix           in size of (num_date, num_param)
+                m         - 2D np.ndarray, parameter solution      in size of (num_param, num_pixel)
                 e2        - 1D np.ndarray, sum of squared residual in size of (num_pixel,)
     """
 
@@ -484,7 +484,7 @@ def run_timeseries2time_func(inps):
         atr[key_prefix+key] = str(vars(inps)[key])
 
     # instantiate output file
-    ds_name_dict, ds_unit_dict = model2hdf5_structure(model, ds_shape=(length, width))
+    ds_name_dict, ds_unit_dict = model2hdf5_dataset(model, ds_shape=(length, width))[1:]
     writefile.layout_hdf5(inps.outfile,
                           metadata=atr,
                           ds_name_dict=ds_name_dict,
@@ -661,7 +661,7 @@ def run_timeseries2time_func(inps):
 
         # write
         block = [box[1], box[3], box[0], box[2]]
-        ds_dict = model2hdf5_dataset(model, m, m_std, mask=mask)
+        ds_dict = model2hdf5_dataset(model, m, m_std, mask=mask)[0]
         for ds_name, data in ds_dict.items():
             writefile.write_hdf5_block(inps.outfile,
                                        data=data.reshape(box_length, box_width),
@@ -671,24 +671,50 @@ def run_timeseries2time_func(inps):
     return inps.outfile
 
 
-def model2hdf5_structure(model, ds_shape=None):
-    """Get the dataset name/structure for writefile.layout_hdf5().
-    Parameters: model - dict, dictionary of time functions, check estimate_time_func() for details.
-                shape - tuple of 2 int in (length, width)
-    Returns:    ds_name_dict - dict, dictionary for the structure of an HDF5 file
-                ds_unit_dict - dict, dictionary for the dataset unit
+def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None):
+    """Prepare the estimated model parameters into a list of dicts for HDF5 dataset writing.
+    Parameters: model        - dict,
+                m            - 2D np.ndarray in (num_param, num_pixel) where num_pixel = 1 or length * width
+                m_std        - 2D np.ndarray in (num_param, num_pixel) where num_pixel = 1 or length * width
+                mask         - 1D np.ndarray in (num_pixel), mask of valid pixels
+                ds_shape     - tuple of 2 int in (length, width)
+    Returns:    ds_dict      - dict, dictionary of dataset values,     input for writefile.write_hdf5_block()
+                ds_name_dict - dict, dictionary of dataset initiation, input for writefile.layout_hdf5()
+                ds_unit_dict - dict, dictionary of dataset unit,       input for writefile.layout_hdf5()
+    Examples:   # read input model parameters into dict
+                model = read_inps2model(inps, date_list=inps.date_list)
+                # for time series cube
+                ds_name_dict, ds_name_dict = model2hdf5_dataset(model, ds_shape=(200,300))[1:]
+                ds_dict = model2hdf5_dataset(model, m, m_std, mask=mask)[0]
+                # for time series point
+                ds_unit_dict = model2hdf5_dataset(model)[2]
+                ds_dict = model2hdf5_dataset(model, m, m_std)[0]
     """
     # deformation model info
     poly_deg   = model['polynomial']
     num_period = len(model['periodic'])
     num_step   = len(model['step'])
+    num_exp    = sum([len(val) for key, val in model['exp'].items()])
 
     # init output
+    ds_dict = {}
     ds_name_dict = {}
     ds_unit_dict = {}
 
+    # assign ds_dict ONLY IF m is not None
+    if m is not None:
+        num_pixel = m.shape[1] if m.ndim > 1 else 1
+        m = m.reshape(-1, num_pixel)
+        m_std = m_std.reshape(-1, num_pixel)
+
+        # default mask
+        if mask is None:
+            mask = np.ones(num_pixel, dtype=np.bool_)
+        else:
+            mask = mask.flatten()
+
     # time func 1 - polynomial
-    for i in range(1, poly_deg + 1):
+    for i in range(1, poly_deg+1):
         # dataset name
         if i == 1:
             dsName = 'velocity'
@@ -700,106 +726,16 @@ def model2hdf5_structure(model, ds_shape=None):
             dsName = 'poly{}'.format(i)
             unit = 'm/year^{}'.format(i)
 
-        # update ds_name/unit_dict
+        # assign ds_dict
+        if m is not None:
+            ds_dict[dsName] = m[i, :]
+            ds_dict[dsName+'Std'] = m_std[i, :]
+
+        # assign ds_name/unit_dict
         ds_name_dict[dsName] = [dataType, ds_shape, None]
         ds_unit_dict[dsName] = unit
         ds_name_dict[dsName+'Std'] = [dataType, ds_shape, None]
         ds_unit_dict[dsName+'Std'] = unit
-
-    # time func 2 - periodic
-    for i in range(num_period):
-        # dataset name
-        period = model['periodic'][i]
-        dsNameSuffixes = ['Amplitude', 'Phase']
-        if period == 1:
-            dsNames = [f'annual{x}' for x in dsNameSuffixes]
-        elif period == 0.5:
-            dsNames = [f'semiAnnual{x}' for x in dsNameSuffixes]
-        else:
-            dsNames = [f'periodY{period}{x}' for x in dsNameSuffixes]
-
-        # update ds_name/unit_dict
-        ds_name_dict[dsNames[0]] = [dataType, ds_shape, None]
-        ds_unit_dict[dsNames[0]] = 'm'
-        ds_name_dict[dsNames[1]] = [dataType, ds_shape, None]
-        ds_unit_dict[dsNames[1]] = 'radian'
-
-    # time func 3 - step
-    for i in range(num_step):
-        # dataset name
-        dsName = 'step{}'.format(model['step'][i])
-
-        # update ds_name/unit_dict
-        ds_name_dict[dsName] = [dataType, ds_shape, None]
-        ds_unit_dict[dsName] = 'm'
-        ds_name_dict[dsName+'Std'] = [dataType, ds_shape, None]
-        ds_unit_dict[dsName+'Std'] = 'm'
-
-    # time func 4 - exp
-    for exp_onset in model['exp'].keys():
-        for exp_tau in model['exp'][exp_onset]:
-            # dataset name
-            dsName = 'exp{}Tau{}'.format(exp_onset, exp_tau)
-
-            # update ds_name/unit_dict
-            ds_name_dict[dsName] = [dataType, ds_shape, None]
-            ds_unit_dict[dsName] = 'm'
-            ds_name_dict[dsName+'Std'] = [dataType, ds_shape, None]
-            ds_unit_dict[dsName+'Std'] = 'm'
-
-    # time func 5 - log
-    for log_onset in model['log'].keys():
-        for log_tau in model['log'][log_onset]:
-            # dataset name
-            dsName = 'log{}Tau{}'.format(log_onset, log_tau)
-
-            # update ds_name/unit_dict
-            ds_name_dict[dsName] = [dataType, ds_shape, None]
-            ds_unit_dict[dsName] = 'm'
-            ds_name_dict[dsName+'Std'] = [dataType, ds_shape, None]
-            ds_unit_dict[dsName+'Std'] = 'm'
-
-    return ds_name_dict, ds_unit_dict
-
-
-def model2hdf5_dataset(model, m, m_std, mask=None):
-    """Prepare the estimated model parameters into a dict of matrices ready HDF5 dataset writing.
-    Parameters: model - dict,
-                m     - 2D np.ndarray
-                m_std - 2D np.ndarray
-    Returns:    ds_dict - dict, dictionary of dataset in {{ds_name} : {ds_value}}
-    """
-    # deformation model info
-    poly_deg   = model['polynomial']
-    num_period = len(model['periodic'])
-    num_step   = len(model['step'])
-    num_exp    = sum([len(val) for key, val in model['exp'].items()])
-
-    # init output
-    ds_dict = {}
-
-    num_pixel = m.shape[1] if m.ndim > 1 else 1
-    m = m.reshape(-1, num_pixel)
-    m_std = m_std.reshape(-1, num_pixel)
-
-    # default mask
-    if mask is None:
-        mask = np.ones(num_pixel, dtype=np.bool_)
-    else:
-        mask = mask.flatten()
-
-    # time func 1 - polynomial
-    for i in range(1, poly_deg+1):
-        # dataset name
-        if i == 1:
-            dsName = 'velocity'
-        elif i == 2:
-            dsName = 'acceleration'
-        else:
-            dsName = 'poly{}'.format(i)
-
-        ds_dict[dsName] = m[i, :]
-        ds_dict[dsName+'Std'] = m_std[i, :]
 
     # time func 2 - periodic
     p0 = poly_deg + 1
@@ -816,14 +752,24 @@ def model2hdf5_dataset(model, m, m_std, mask=None):
 
         # calculate the amplitude and phase of the periodic signal
         # following equation (9-10) in Minchew et al. (2017, JGR)
-        coef_cos = m[p0 + 2*i, :]
-        coef_sin = m[p0 + 2*i + 1, :]
-        period_amp = np.sqrt(coef_cos**2 + coef_sin**2)
-        period_pha = np.zeros(num_pixel, dtype=dataType)
-        period_pha[mask] = np.arctan(coef_cos[mask] / coef_sin[mask])
+        if m is not None:
+            coef_cos = m[p0 + 2*i, :]
+            coef_sin = m[p0 + 2*i + 1, :]
+            period_amp = np.sqrt(coef_cos**2 + coef_sin**2)
+            period_pha = np.zeros(num_pixel, dtype=dataType)
+            # avoid divided by zero warning
+            if not np.all(coef_sin[mask] == 0):
+                period_pha[mask] = np.arctan(coef_cos[mask] / coef_sin[mask])
 
-        for dsName, data in zip(dsNames, [period_amp, period_pha]):
-            ds_dict[dsName] = data
+            # assign ds_dict
+            for dsName, data in zip(dsNames, [period_amp, period_pha]):
+                ds_dict[dsName] = data
+
+        # update ds_name/unit_dict
+        ds_name_dict[dsNames[0]] = [dataType, ds_shape, None]
+        ds_unit_dict[dsNames[0]] = 'm'
+        ds_name_dict[dsNames[1]] = [dataType, ds_shape, None]
+        ds_unit_dict[dsNames[1]] = 'radian'
 
     # time func 3 - step
     p0 = (poly_deg + 1) + (2 * num_period)
@@ -831,8 +777,16 @@ def model2hdf5_dataset(model, m, m_std, mask=None):
         # dataset name
         dsName = 'step{}'.format(model['step'][i])
 
-        ds_dict[dsName] = m[p0+i, :]
-        ds_dict[dsName+'Std'] = m_std[p0+i, :]
+        # assign ds_dict
+        if m is not None:
+            ds_dict[dsName] = m[p0+i, :]
+            ds_dict[dsName+'Std'] = m_std[p0+i, :]
+
+        # assign ds_name/unit_dict
+        ds_name_dict[dsName] = [dataType, ds_shape, None]
+        ds_unit_dict[dsName] = 'm'
+        ds_name_dict[dsName+'Std'] = [dataType, ds_shape, None]
+        ds_unit_dict[dsName+'Std'] = 'm'
 
     # time func 4 - exponential
     p0 = (poly_deg + 1) + (2 * num_period) + (num_step)
@@ -842,8 +796,18 @@ def model2hdf5_dataset(model, m, m_std, mask=None):
             # dataset name
             dsName = 'exp{}Tau{}'.format(exp_onset, exp_tau)
 
-            ds_dict[dsName] = m[p0+i, :]
-            ds_dict[dsName+'Std'] = m_std[p0+i, :]
+            # assign ds_dict
+            if m is not None:
+                ds_dict[dsName] = m[p0+i, :]
+                ds_dict[dsName+'Std'] = m_std[p0+i, :]
+
+            # assign ds_name/unit_dict
+            ds_name_dict[dsName] = [dataType, ds_shape, None]
+            ds_unit_dict[dsName] = 'm'
+            ds_name_dict[dsName+'Std'] = [dataType, ds_shape, None]
+            ds_unit_dict[dsName+'Std'] = 'm'
+
+            # loop because each onset_time could have multiple char_time
             i += 1
 
     # time func 5 - logarithmic
@@ -854,11 +818,21 @@ def model2hdf5_dataset(model, m, m_std, mask=None):
             # dataset name
             dsName = 'log{}Tau{}'.format(log_onset, log_tau)
 
-            ds_dict[dsName] = m[p0+i, :]
-            ds_dict[dsName+'Std'] = m_std[p0+i, :]
+            # assign ds_dict
+            if m is not None:
+                ds_dict[dsName] = m[p0+i, :]
+                ds_dict[dsName+'Std'] = m_std[p0+i, :]
+
+            # assign ds_name/unit_dict
+            ds_name_dict[dsName] = [dataType, ds_shape, None]
+            ds_unit_dict[dsName] = 'm'
+            ds_name_dict[dsName+'Std'] = [dataType, ds_shape, None]
+            ds_unit_dict[dsName+'Std'] = 'm'
+
+            # loop because each onset_time could have multiple char_time
             i += 1
 
-    return ds_dict
+    return ds_dict, ds_name_dict, ds_unit_dict
 
 
 ############################################################################

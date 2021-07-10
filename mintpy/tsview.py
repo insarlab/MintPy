@@ -324,14 +324,12 @@ def read_init_info(inps):
 
     ## fit a suite of time func to the time series
     inps.model, inps.num_param = ts2vel.read_inps2model(inps, date_list=inps.date_list)
-    inps.m_unit = ts2vel.model2hdf5_structure(inps.model)[1]
 
     # dense TS for plotting
     inps.date_list_fit = ptime.get_date_range(inps.date_list[0], inps.date_list[-1])
     inps.dates_fit = ptime.date_list2vector(inps.date_list_fit)[0]
     inps.G_fit = timeseries.get_design_matrix4time_func(date_list=inps.date_list_fit,
-                                                        model=inps.model,
-                                                        refDate=inps.ref_date)
+                                                        model=inps.model)
     return inps, atr
 
 
@@ -348,7 +346,7 @@ def subset_and_multilook_yx(yx, pix_box=None, multilook_num=1):
 
 
 def read_exclude_date(input_ex_date, dateListAll):
-    """
+    """Read exlcude list of dates
     Parameters: input_ex_date : list of string in YYYYMMDD or filenames for excluded dates
                 dateListAll   : list of string in YYYYMMDD for all dates
     Returns:    ex_date_list  : list of string in YYYYMMDD for excluded dates
@@ -548,7 +546,7 @@ def get_model_param_str(model, ds_dict, unit_fac=100):
     """
 
     # dataset unit dict
-    ds_unit_dict = ts2vel.model2hdf5_structure(model)[1]
+    ds_unit_dict = ts2vel.model2hdf5_dataset(model)[2]
 
     # update unit based on unit_fac
     for ds_name, ds_unit in ds_unit_dict.items():
@@ -582,11 +580,15 @@ def get_model_param_str(model, ds_dict, unit_fac=100):
     return ds_strs
 
 
-def fit_time_func(model, date_list, ts_dis, unit_fac=100, G_fit=None, ref_date=None,
-                  conf_level=0.95):
+def fit_time_func(model, date_list, ts_dis, unit_fac=100, G_fit=None, conf_level=0.95):
     """Fit a suite of fime functions to the time series.
-    Equations: Gm = d
-    Parameters: ts_dis     - 1D np.ndarray, displacement time series
+    Equations:  Gm = d
+    Parameters: model      - dict of time functions, check timeseries2velocity.estimate_time_func() for details.
+                date_list  - list of dates in YYYYMMDD format
+                ts_dis     - 1D np.ndarray, displacement time series
+                unit_fac   - float, scaling factor due to different data and display units
+                G_fit      - 2D np.ndarray, design matrix for the dense time series prediction plot
+                conf_level - float in [0,1], confidence level of the plotted confidence intervals
     Returns:    m_strs     - dict, dictionary in {ds_name: ds_value}
                 ts_fit     - 1D np.ndarray, dense time series fit for plotting
                 ts_fit_lim - list of 1D np.ndarray, the lower and upper
@@ -603,8 +605,7 @@ def fit_time_func(model, date_list, ts_dis, unit_fac=100, G_fit=None, ref_date=N
     # 1.1 estimate time func parameter via least squares (OLS)
     G, m, e2 = ts2vel.estimate_time_func(model=model,
                                          date_list=date_list,
-                                         dis_ts=ts_dis,
-                                         ref_date=ref_date)
+                                         dis_ts=ts_dis)
 
     # 1.2 calc the precision of time func parameters
     # using the OLS estimation residues e2 = sum((d - Gm) ** 2)
@@ -617,7 +618,7 @@ def fit_time_func(model, date_list, ts_dis, unit_fac=100, G_fit=None, ref_date=N
 
     # 1.3 translate estimation result into HDF5 ready datasets
     # AND compose list of strings for printout
-    m_dict = ts2vel.model2hdf5_dataset(model, m, m_std)
+    m_dict = ts2vel.model2hdf5_dataset(model, m, m_std)[0]
     m_strs = get_model_param_str(model, m_dict, unit_fac=unit_fac)
 
     # 2. reconstruct the fine resolution function
@@ -899,7 +900,6 @@ class timeseriesViewer():
                 ts_dis=ts_dis,
                 unit_fac=self.unit_fac,
                 G_fit=self.G_fit,
-                ref_date=self.ref_date,
             )
 
             if self.zero_first:
