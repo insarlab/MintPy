@@ -64,6 +64,8 @@ def create_parser():
                         help='minimum value for selected pixels')
     parser.add_argument('-M', '--max', dest='vmax', type=float,
                         help='maximum value for selected pixels')
+    parser.add_argument('-c', '--clustersize', dest='csize', type=int,
+                        help='minimum cluster size when using velocity dataset clustering')
 
     aoi = parser.add_argument_group('AOI', 'define secondary area of interest')
     # AOI defined by parameters in command line
@@ -179,6 +181,16 @@ def create_threshold_mask(inps):
     if inps.vmax is not None:
         mask[nanmask] *= ~(data[nanmask] > inps.vmax)
         print('exclude pixels with value > %s' % str(inps.vmax))
+    
+    if inps.csize is not None:
+        from scipy import ndimage
+        data_regions = data.copy()
+        data_regions[~nanmask] = 1
+
+        data_labeled, num_features = ndimage.label(data)
+        index = np.arange(num_features+1)
+        sums = ndimage.sum(data_regions, labels=data_labeled, index=index)
+        # subset
 
     # subset in Y
     if inps.subset_y is not None:
