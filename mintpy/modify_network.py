@@ -327,7 +327,7 @@ def get_mst_date12(keep_mst, par_list_all, date12_list_all, date12_to_drop, min_
                '2) not in MST network: '.format(par_name, min_par))
 
         # get the current remaining network (after all the above criteria and before data-driven)
-        date12_to_keep = list(set(date12_list_all) - set(date12_to_drop))
+        date12_to_keep = sorted(list(set(date12_list_all) - set(date12_to_drop)))
         par_to_keep = [par for par, date12 in zip(par_list_all, date12_list_all)
                        if date12 in date12_to_keep]
 
@@ -446,6 +446,7 @@ def get_date12_to_drop(inps):
                                      maskFile=inps.maskFile,
                                      box=pix_box,
                                      saveList=True)[0]
+
 
         # get coherence-based network
         coh_date12_list = list(np.array(date12ListAll)[np.array(cohList) >= inps.minCoherence])
