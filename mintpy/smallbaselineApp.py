@@ -1173,11 +1173,20 @@ class TimeSeriesAnalysis:
         opt_common = ['--dpi', '150', '--noverbose', '--nodisplay', '--update']
         iargs_list = [opt_common + iargs for iargs in iargs_list]
 
-        # run view
-        start_time = time.time()
-        for iargs in iargs_list:
+        def _run_view(iargs):
             print('view.py', ' '.join(iargs))
             mintpy.view.main(iargs)
+
+        # run view
+        start_time = time.time()
+        
+        num_cores, enable_parallel, Parallel, delayed = ut.check_parallel(len(iargs_list))
+        #enable_parallel=False
+        if enable_parallel:
+            Parallel(n_jobs=num_cores)(delayed(_run_view)(iargs) for iargs in iargs_list)
+        else:
+            for iargs in iargs_list:
+               _run_view(iargs)
 
         # copy text files to pic
         print('copy *.txt files into ./pic directory.')
