@@ -184,7 +184,7 @@ def create_threshold_mask(inps):
     if inps.vmax is not None:
         mask[nanmask] *= ~(data[nanmask] > inps.vmax)
         print('exclude pixels with value > %s' % str(inps.vmax))
-    
+
     if inps.minpixels is not None:
         from scipy import ndimage
         data_regions = data.copy()
@@ -199,7 +199,7 @@ def create_threshold_mask(inps):
             if val < inps.minpixels:
                 subset = data_labeled[loc].view()
                 subset[subset==i] = 0.
-        
+
         mask[nanmask] *= ~(data_labeled[nanmask] != 0.)
         print('exclude all pixel clusters with less than %s pixels' % str(inps.minpixels))
 
