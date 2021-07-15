@@ -447,7 +447,6 @@ def get_date12_to_drop(inps):
                                      box=pix_box,
                                      saveList=True)[0]
 
-
         # get coherence-based network
         coh_date12_list = list(np.array(date12ListAll)[np.array(cohList) >= inps.minCoherence])
 
