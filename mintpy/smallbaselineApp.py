@@ -84,6 +84,7 @@ def create_parser():
                       help='end processing at the named step (default: %(default)s)')
     step.add_argument('--dostep', dest='doStep', metavar='STEP',
                       help='run processing at the named step only')
+
     return parser
 
 
@@ -135,7 +136,7 @@ def cmd_line_parse(iargs=None):
             inps.customTemplateFile = None
 
     # check --plot
-    if iargs == ['--plot']:
+    if '--plot' in iargs:
         plot_only = True
         print('plot smallbaselineApp results without run.')
     else:
@@ -1179,12 +1180,15 @@ class TimeSeriesAnalysis:
 
         # run view
         start_time = time.time()
+
+        max_workers = self.template['mintpy.compute.numWorker']
+        num_cores, enable_parallel, Parallel, delayed = ut.check_parallel(len(iargs_list), print_msg=False, maxParallelNum=int(max_workers))
         
-        num_cores, enable_parallel, Parallel, delayed = ut.check_parallel(len(iargs_list))
-        #enable_parallel=False
-        if enable_parallel:
+        if enable_parallel and self.template['mintpy.compute.cluster']:
+            print("parallel processing using {} cores ...".format(num_cores))
             Parallel(n_jobs=num_cores)(delayed(_run_view)(iargs) for iargs in iargs_list)
         else:
+            print("serial processing ...")
             for iargs in iargs_list:
                _run_view(iargs)
 
