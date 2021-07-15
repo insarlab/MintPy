@@ -25,6 +25,9 @@ EXAMPLE = """example:
   # exlcude area by min/max value and/or subset in row/col direction
   generate_mask.py  081018_090118.unw -m 3 -M 8 -y 100 700 -x 200 800 -o mask_1.h5
 
+  # exlcude pixel cluster based on minimum number of pixels
+  generate_mask.py  maskTempCoh.h5 -p 10 mask_1.h5
+
   # exclude / include an circular area
   generate_mask.py  maskTempCoh.h5 -m 0.5 --ex-circle 230 283 100 -o maskTempCoh_nonDef.h5
   generate_mask.py  maskTempCoh.h5 -m 0.5 --in-circle 230 283 100 -o maskTempCoh_Def.h5
