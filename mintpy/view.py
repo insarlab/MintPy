@@ -167,6 +167,9 @@ def cmd_line_parse(iargs=None):
     # verbose print using --noverbose option
     global vprint
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
+    # print view.py command line if --noverbose (used in smallbaselineApp.py)
+    if not inps.print_msg:
+        print('view.py', ' '.join(iargs))
 
     if inps.disp_setting_file:
         inps = update_inps_with_display_setting_file(inps, inps.disp_setting_file)

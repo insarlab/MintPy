@@ -84,6 +84,7 @@ def create_parser():
                       help='end processing at the named step (default: %(default)s)')
     step.add_argument('--dostep', dest='doStep', metavar='STEP',
                       help='run processing at the named step only')
+
     return parser
 
 
@@ -1175,9 +1176,20 @@ class TimeSeriesAnalysis:
 
         # run view
         start_time = time.time()
-        for iargs in iargs_list:
-            print('view.py', ' '.join(iargs))
-            mintpy.view.main(iargs)
+        run_parallel = False
+        if self.template['mintpy.compute.cluster']:
+            num_workers = int(self.template['mintpy.compute.numWorker'])
+            num_cores, run_parallel, Parallel, delayed = ut.check_parallel(
+                len(iargs_list),
+                print_msg=False,
+                maxParallelNum=num_workers)
+
+        if run_parallel:
+            print("parallel processing using {} cores ...".format(num_cores))
+            Parallel(n_jobs=num_cores)(delayed(mintpy.view.main)(iargs) for iargs in iargs_list)
+        else:
+            for iargs in iargs_list:
+                mintpy.view.main(iargs)
 
         # copy text files to pic
         print('copy *.txt files into ./pic directory.')
