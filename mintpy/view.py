@@ -168,6 +168,9 @@ def cmd_line_parse(iargs=None):
     global vprint
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
+    if not inps.print_msg:
+        print('view.py', ' '.join(iargs))
+
     if inps.disp_setting_file:
         inps = update_inps_with_display_setting_file(inps, inps.disp_setting_file)
 

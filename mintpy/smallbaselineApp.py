@@ -136,7 +136,7 @@ def cmd_line_parse(iargs=None):
             inps.customTemplateFile = None
 
     # check --plot
-    if '--plot' in iargs:
+    if iargs == ['--plot']:
         plot_only = True
         print('plot smallbaselineApp results without run.')
     else:
@@ -1174,23 +1174,22 @@ class TimeSeriesAnalysis:
         opt_common = ['--dpi', '150', '--noverbose', '--nodisplay', '--update']
         iargs_list = [opt_common + iargs for iargs in iargs_list]
 
-        def _run_view(iargs):
-            print('view.py', ' '.join(iargs))
-            mintpy.view.main(iargs)
-
         # run view
         start_time = time.time()
+        run_parallel = False
+        if self.template['mintpy.compute.cluster']:
+            num_workers = int(self.template['mintpy.compute.numWorker'])
+            num_cores, run_parallel, Parallel, delayed = ut.check_parallel(
+                len(iargs_list),
+                print_msg=False,
+                maxParallelNum=num_workers)
 
-        max_workers = self.template['mintpy.compute.numWorker']
-        num_cores, enable_parallel, Parallel, delayed = ut.check_parallel(len(iargs_list), print_msg=False, maxParallelNum=int(max_workers))
-        
-        if enable_parallel and self.template['mintpy.compute.cluster']:
+        if run_parallel:
             print("parallel processing using {} cores ...".format(num_cores))
-            Parallel(n_jobs=num_cores)(delayed(_run_view)(iargs) for iargs in iargs_list)
+            Parallel(n_jobs=num_cores)(delayed(mintpy.view.main)(iargs) for iargs in iargs_list)
         else:
-            print("serial processing ...")
             for iargs in iargs_list:
-               _run_view(iargs)
+                mintpy.view.main(iargs)
 
         # copy text files to pic
         print('copy *.txt files into ./pic directory.')
