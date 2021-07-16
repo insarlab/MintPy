@@ -128,14 +128,18 @@ def check_loaded_dataset(work_dir='./', print_msg=True, relpath=False):
 
 #################################################################################
 def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_lon=None,
-                         win_size=1, unit='m', print_msg=True):
+                         win_size=1, unit='m', method='mean', print_msg=True):
     """ Read time-series of one pixel with input lat/lon
-    Parameters: lat/lon     : float, latitude/longitude
-                ts_file     : string, filename of time-series HDF5 file
-                lookup_file : string, filename of lookup table file
-                ref_lat/lon : float, latitude/longitude of reference pixel
-    Returns:    dates : 1D np.array of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
-                dis   : 1D np.array of float in meter
+    Parameters: lat/lon     - float, latitude/longitude
+                ts_file     - string, filename of time-series HDF5 file
+                lookup_file - string, filename of lookup table file
+                ref_lat/lon - float, latitude/longitude of reference pixel
+                win_size    - int, windows size centered at point of interest
+                unit        - str, output displacement unit
+                method      - str, method to calculate the output displacement and its dispersity
+    Returns:    dates       - 1D np.ndarray of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
+                dis         - 1D np.ndarray of float32, displacement
+                dis_std     - 1D np.ndarray of float32, displacement dispersity
     """
     atr = readfile.read_attribute(ts_file)
     coord = coordinate(atr, lookup_file=lookup_file)
@@ -150,24 +154,29 @@ def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_
         ref_y, ref_x = coord.geo2radar(ref_lat, ref_lon)[0:2]
 
     # call read_timeseries_yx()
-    dates, dis = read_timeseries_yx(y, x, ts_file,
-                                    ref_y=ref_y,
-                                    ref_x=ref_x,
-                                    win_size=win_size,
-                                    unit=unit,
-                                    print_msg=False)
-    return dates, dis
+    dates, dis, dis_std = read_timeseries_yx(y, x, ts_file,
+                                             ref_y=ref_y,
+                                             ref_x=ref_x,
+                                             win_size=win_size,
+                                             unit=unit,
+                                             method=method,
+                                             print_msg=False)
+    return dates, dis, dis_std
 
 
 #################################################################################
 def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None,
-                       win_size=1, unit='m', print_msg=True):
+                       win_size=1, unit='m', method='mean', print_msg=True):
     """ Read time-series of one pixel with input y/x
-    Parameters: y/x         : int, row/column number of interest
-                ts_file     : string, filename of time-series HDF5 file
-                ref_y/x     : int, row/column number of reference pixel
-    Returns:    dates : 1D np.array of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
-                dis   : 1D np.array of float in meter
+    Parameters: y/x      - int, row/column number of interest
+                ts_file  - string, filename of time-series HDF5 file
+                ref_y/x  - int, row/column number of reference pixel
+                win_size - int, windows size centered at point of interest
+                unit     - str, output displacement unit
+                method   - str, method to calculate the output displacement and its dispersity
+    Returns:    dates    - 1D np.ndarray of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
+                dis      - 1D np.ndarray of float32, displacement
+                dis_std  - 1D np.ndarray of float32, displacement dispersity
     """
     # read date
     obj = timeseries(ts_file)
@@ -180,11 +189,23 @@ def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None,
         print('input y / x: {} / {}'.format(y, x))
     box = (x, y, x+1, y+1)
     dis = readfile.read(ts_file, box=box)[0]
+    dis_std = None
+
     if win_size != 1:
         buf = int(win_size / 2)
         box_win = (x-buf, y-buf, x+buf+1, y+buf+1)
-        dis_win = readfile.read(ts_file, box=box_win)[0]
-        dis = np.nanmean(dis_win.reshape((obj.numDate, -1)), axis=1)
+        dis_win = readfile.read(ts_file, box=box_win)[0].reshape(obj.numDate, -1)
+
+        if method == 'mean':
+            dis = np.nanmean(dis_win, axis=1)
+            dis_std = np.nanstd(dis_win, axis=1)
+
+        elif method == 'median':
+            dis = np.nanmedian(dis_win, axis=1)
+            dis_std = median_abs_deviation(dis_win)
+
+        else:
+            raise ValueError('un-recognized method: {}'.format(method))
 
     # reference pixel
     if ref_y is not None:
@@ -199,12 +220,14 @@ def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None,
         pass
     elif unit == 'cm':
         dis *= 100.
+        dis_std *= 100.
     elif unit == 'mm':
         dis *= 1000.
+        dis_std *= 1000.
     else:
         raise ValueError('un-supported output unit: {}'.format(unit))
 
-    return dates, dis
+    return dates, dis, dis_std
 
 
 #####################################################################
