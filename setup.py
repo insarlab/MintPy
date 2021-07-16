@@ -68,6 +68,7 @@ def do_setup():
             "dask-jobqueue>=0.3",
             "defusedxml",
             "h5py",
+            "joblib",
             "lxml",
             "matplotlib",
             "numpy",
