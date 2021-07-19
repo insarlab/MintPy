@@ -67,8 +67,8 @@ def create_parser():
                         help='minimum value for selected pixels')
     parser.add_argument('-M', '--max', dest='vmax', type=float,
                         help='maximum value for selected pixels')
-    parser.add_argument('-p', '--minpixels', dest='minpixels', type=int,
-                        help='minimum cluster size in pixels')
+    parser.add_argument('-p','--mp','--minpixels', dest='minpixels', type=int,
+                        help='minimum cluster size in pixels, to remove small pixel clusters.')
 
     aoi = parser.add_argument_group('AOI', 'define secondary area of interest')
     # AOI defined by parameters in command line
@@ -185,11 +185,12 @@ def create_threshold_mask(inps):
         mask[nanmask] *= ~(data[nanmask] > inps.vmax)
         print('exclude pixels with value > %s' % str(inps.vmax))
 
+    # remove small pixel clusters
     if inps.minpixels is not None:
         from skimage.morphology import remove_small_objects
-        removed = remove_small_objects(data.astype(bool), inps.minpixels, connectivity=1)
-        mask[nanmask] *= removed[nanmask]
-        print('exclude all pixel clusters with less than %s pixels' % str(inps.minpixels))
+        num_pixel = np.sum(mask)
+        mask = remove_small_objects(mask, inps.minpixels, connectivity=1)
+        print('exclude pixel clusters with size < %d pixels: remove %d pixels' % (inps.minpixels, num_pixel-np.sum(mask)))
 
     # subset in Y
     if inps.subset_y is not None:
