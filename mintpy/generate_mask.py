@@ -186,21 +186,9 @@ def create_threshold_mask(inps):
         print('exclude pixels with value > %s' % str(inps.vmax))
 
     if inps.minpixels is not None:
-        from scipy import ndimage
-        data_regions = data.copy()
-        data_regions[~nanmask] = 1.
-
-        data_labeled, num_features = ndimage.label(data_regions)
-        index = np.arange(1,num_features+1)
-        locs = ndimage.find_objects(data_labeled)
-        sums = ndimage.sum(data_regions, labels=data_labeled, index=index)
-
-        for i, loc, val in zip(index, locs, sums):
-            if val < inps.minpixels:
-                subset = data_labeled[loc].view()
-                subset[subset==i] = 0.
-
-        mask[nanmask] *= ~(data_labeled[nanmask] != 0.)
+        from skimage.morphology import remove_small_objects
+        removed = remove_small_objects(data.astype(bool), inps.minpixels, connectivity=1)
+        mask[nanmask] *= removed[nanmask]
         print('exclude all pixel clusters with less than %s pixels' % str(inps.minpixels))
 
     # subset in Y
