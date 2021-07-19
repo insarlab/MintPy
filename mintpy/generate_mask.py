@@ -25,6 +25,9 @@ EXAMPLE = """example:
   # exlcude area by min/max value and/or subset in row/col direction
   generate_mask.py  081018_090118.unw -m 3 -M 8 -y 100 700 -x 200 800 -o mask_1.h5
 
+  # exlcude pixel cluster based on minimum number of pixels
+  generate_mask.py  maskTempCoh.h5 -p 10 mask_1.h5
+
   # exclude / include an circular area
   generate_mask.py  maskTempCoh.h5 -m 0.5 --ex-circle 230 283 100 -o maskTempCoh_nonDef.h5
   generate_mask.py  maskTempCoh.h5 -m 0.5 --in-circle 230 283 100 -o maskTempCoh_Def.h5
@@ -64,6 +67,8 @@ def create_parser():
                         help='minimum value for selected pixels')
     parser.add_argument('-M', '--max', dest='vmax', type=float,
                         help='maximum value for selected pixels')
+    parser.add_argument('-p','--mp','--minpixels', dest='minpixels', type=int,
+                        help='minimum cluster size in pixels, to remove small pixel clusters.')
 
     aoi = parser.add_argument_group('AOI', 'define secondary area of interest')
     # AOI defined by parameters in command line
@@ -179,6 +184,13 @@ def create_threshold_mask(inps):
     if inps.vmax is not None:
         mask[nanmask] *= ~(data[nanmask] > inps.vmax)
         print('exclude pixels with value > %s' % str(inps.vmax))
+
+    # remove small pixel clusters
+    if inps.minpixels is not None:
+        from skimage.morphology import remove_small_objects
+        num_pixel = np.sum(mask)
+        mask = remove_small_objects(mask, inps.minpixels, connectivity=1)
+        print('exclude pixel clusters with size < %d pixels: remove %d pixels' % (inps.minpixels, num_pixel-np.sum(mask)))
 
     # subset in Y
     if inps.subset_y is not None:
