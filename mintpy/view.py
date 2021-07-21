@@ -761,6 +761,9 @@ def read_input_file_info(inps):
 
 def search_dataset_input(allList, inList=[], inNumList=[], search_dset=True):
     """Get dataset(es) from input dataset / dataset_num"""
+    # make a copy to avoid weird variable behavior
+    inNumList = [x for x in inNumList]
+
     # inList --> inNumList --> outNumList --> outList
     if inList:
         if isinstance(inList, str):
