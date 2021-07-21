@@ -1,8 +1,9 @@
 # vim: set filetype=cfg:
-mintpy.load.processor       = aria  #[isce, aria, snap, gamma, roipac], auto for isce
-mintpy.load.autoPath        = yes
-mintpy.load.xstep           = 2
-mintpy.load.ystep           = 2
+mintpy.compute.cluster  = local
+mintpy.load.processor   = aria  #[isce, aria, snap, gamma, roipac], auto for isce
+mintpy.load.autoPath    = yes
+mintpy.load.xstep       = 2
+mintpy.load.ystep       = 2
 
 mintpy.reference.lalo       = 37.69, -122.07
 mintpy.unwrapError.method   = bridging
