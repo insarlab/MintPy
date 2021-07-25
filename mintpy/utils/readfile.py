@@ -709,7 +709,9 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
 
         # FILE_TYPE - k
         py2_mintpy_stack_files = ['interferograms', 'coherence', 'wrapped'] #obsolete mintpy format
-        if any(i in d1_list for i in ['unwrapPhase', 'azimuthOffset']):
+        if 'FILE_TYPE' in atr:
+            k = atr['FILE_TYPE']
+        elif any(i in d1_list for i in ['unwrapPhase', 'azimuthOffset']):
             k = 'ifgramStack'
         elif any(i in d1_list for i in ['height', 'latitude', 'azimuthCoord']):
             k = 'geometry'
