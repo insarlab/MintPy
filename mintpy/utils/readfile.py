@@ -1311,7 +1311,7 @@ def read_gdal_vrt(fname):
     # projection / coordinate unit
     srs = osr.SpatialReference(wkt=ds.GetProjection())
     srs_name = srs.GetName()
-    if 'UTM' in srs_name:
+    if srs_name and 'UTM' in srs_name:
         atr['UTM_ZONE'] = srs_name.split('UTM zone')[-1].strip()
         atr['X_UNIT'] = 'meters'
         atr['Y_UNIT'] = 'meters'

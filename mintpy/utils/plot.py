@@ -350,6 +350,7 @@ def auto_shared_lalo_location(axs, loc=(1,0,0,1), flatten=False):
 
 def auto_colormap_name(metadata, cmap_name=None, datasetName=None, print_msg=True):
     gray_dataset_key_words = ['coherence', 'temporalCoherence',
+                              'waterMask', 'shadowMask',
                               '.cor', '.mli', '.slc', '.amp', '.ramp']
     if not cmap_name:
         if any(i in gray_dataset_key_words for i in [metadata['FILE_TYPE'],
