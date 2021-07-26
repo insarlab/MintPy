@@ -239,6 +239,8 @@ def extract_snap_metadata(fname):
     transform = [str(float(i)) for i in transform]
     atr["X_STEP"], atr["Y_STEP"] = transform[0], transform[3]
     atr["X_FIRST"], atr["Y_FIRST"] = transform[4], transform[5]
+    atr["X_UNIT"] = "degrees"
+    atr["Y_UNIT"] = "degrees"
 
     # convert all key value in string format to ensure the --update checking in write_rsc()
     for key, value in atr.items():
