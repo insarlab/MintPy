@@ -2,7 +2,7 @@
 
 MintPy support the following colormaps:
 
-+ [Matplotlib colormaps](https://matplotlib.org/3.1.0/tutorials/colors/colormaps.html)
++ [Matplotlib colormaps](https://matplotlib.org/stable/tutorials/colors/colormaps.html)
 + Custom colormaps: `cmy`, `dismph`, and `romanian`
 + Custom colormaps in **.cpt** (color palette tables) format. To add your own colormap, drop the corresponding .cpt file in `$MINTPY/mintpy/data/colormaps`.
 
