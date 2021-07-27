@@ -28,9 +28,9 @@ EXAMPLE = """example:
   # exlcude pixel cluster based on minimum number of pixels
   generate_mask.py  maskTempCoh.h5 -p 10 mask_1.h5
 
-  # exclude pixels in velocity dataset that don't satisfy |velocity|>a*velocityStd
-  generate_mask.py  velocity.h5 --vstd (uses default value of 2 for a)
-  generate_mask.py  velocity.h5 --vstd --vstd-num 3 (sets a to 3)
+  # exclude pixels with large velocity STD: |velocity| > cutoff (2 by default) * velocityStd
+  generate_mask.py  velocity.h5 --vstd
+  generate_mask.py  velocity.h5 --vstd --vstd-num 3
 
   # exclude / include an circular area
   generate_mask.py  maskTempCoh.h5 -m 0.5 --ex-circle 230 283 100 -o maskTempCoh_nonDef.h5
