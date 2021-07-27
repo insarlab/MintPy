@@ -28,8 +28,9 @@ EXAMPLE = """example:
   # exlcude pixel cluster based on minimum number of pixels
   generate_mask.py  maskTempCoh.h5 -p 10 mask_1.h5
 
-  # exclude pixels in velocity dataset that don't satisfy |velocity|>2*velocityStd
-  generate_mask.py  velocity.h5 --vstd
+  # exclude pixels in velocity dataset that don't satisfy |velocity|>a*velocityStd
+  generate_mask.py  velocity.h5 --vstd (uses default value of 2 for a)
+  generate_mask.py  velocity.h5 --vstd --vstd-num 3 (sets a to 3)
 
   # exclude / include an circular area
   generate_mask.py  maskTempCoh.h5 -m 0.5 --ex-circle 230 283 100 -o maskTempCoh_nonDef.h5
@@ -72,8 +73,12 @@ def create_parser():
                         help='maximum value for selected pixels')
     parser.add_argument('-p','--mp','--minpixels', dest='minpixels', type=int,
                         help='minimum cluster size in pixels, to remove small pixel clusters.')
+    
+    # velocity masking by velocityStd 
     parser.add_argument('--vstd', action='store_true',
-                        help='mask according to the formula: |velocity|>2*velocityStd')
+                        help='mask according to the formula: |velocity|>a*velocityStd')
+    parser.add_argument('--vstd-num', dest='vstdnum', type=int, default=2,
+                        help='multiple of velocityStd (a) to use for cutoff')
 
     aoi = parser.add_argument_group('AOI', 'define secondary area of interest')
     # AOI defined by parameters in command line
@@ -201,7 +206,7 @@ def create_threshold_mask(inps):
         if atr['FILE_TYPE'] != 'velocity':
             raise Exception('Input file MUST be a velocity file when using the --vstd option!')
         data_std, _ = readfile.read(inps.file, datasetName='velocityStd')
-        mask[nanmask] *= (np.abs(data[nanmask]) > (2*data_std[nanmask]))
+        mask[nanmask] *= (np.abs(data[nanmask]) > (inps.vstdnum*data_std[nanmask]))
         print('exclude pixels according to the formula: |velocity|>2*velocityStd')
 
     # subset in Y
