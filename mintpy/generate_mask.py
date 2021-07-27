@@ -73,11 +73,11 @@ def create_parser():
                         help='maximum value for selected pixels')
     parser.add_argument('-p','--mp','--minpixels', dest='minpixels', type=int,
                         help='minimum cluster size in pixels, to remove small pixel clusters.')
-    
-    # velocity masking by velocityStd 
+
+    # velocity masking by velocityStd
     parser.add_argument('--vstd', action='store_true',
-                        help='mask according to the formula: |velocity|>a*velocityStd')
-    parser.add_argument('--vstd-num', dest='vstdnum', type=int, default=2,
+                        help='mask according to the formula: |velocity| > a * velocityStd')
+    parser.add_argument('--vstd-num', dest='vstd_num', type=int, default=2,
                         help='multiple of velocityStd (a) to use for cutoff')
 
     aoi = parser.add_argument_group('AOI', 'define secondary area of interest')
@@ -202,12 +202,13 @@ def create_threshold_mask(inps):
         mask = remove_small_objects(mask, inps.minpixels, connectivity=1)
         print('exclude pixel clusters with size < %d pixels: remove %d pixels' % (inps.minpixels, num_pixel-np.sum(mask)))
 
+    # remove pixels with large velocity STD
     if inps.vstd:
         if atr['FILE_TYPE'] != 'velocity':
-            raise Exception('Input file MUST be a velocity file when using the --vstd option!')
-        data_std, _ = readfile.read(inps.file, datasetName='velocityStd')
-        mask[nanmask] *= (np.abs(data[nanmask]) > (inps.vstdnum*data_std[nanmask]))
-        print('exclude pixels according to the formula: |velocity|>2*velocityStd')
+            raise ValueError('Input file MUST be a velocity file when using the --vstd option!')
+        data_std = readfile.read(inps.file, datasetName='velocityStd')[0]
+        mask[nanmask] *= (np.abs(data[nanmask]) > (inps.vstd_num * data_std[nanmask]))
+        print('exclude pixels according to the formula: |velocity| > {} * velocityStd'.format(inps.vstd_num))
 
     # subset in Y
     if inps.subset_y is not None:
