@@ -67,6 +67,52 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
     return sub_boxes
 
 
+def set_num_threads(num_threads=None, print_msg=True):
+    """limit/set the number of threads for all environmental variables to the given value
+    and save/return the original value for backup purpose.
+    Link: https://stackoverflow.com/questions/30791550
+
+    Parameters: num_threads      - str, number of threads
+                                   Set to None to return without changing env variables
+    Returns:    num_threads_dict - dict, dictionary of the original number of threads
+    """
+
+    # grab the original number of threads
+    key_list = [
+        'OMP_NUM_THREADS',         # openmp
+        'OPENBLAS_NUM_THREADS',    # openblas
+        'MKL_NUM_THREADS',         # mkl
+        'VECLIB_MAXIMUM_THREADS',  # accelerate
+        'NUMEXPR_NUM_THREADS',     # numexpr
+    ]
+    key_list = [x for x in key_list if x in os.environ.keys()]
+    if print_msg:
+        print('save the original value of {}'.format(key_list))
+
+    num_threads_dict = {}
+    for key in key_list:
+        num_threads_dict[key] = os.environ[key]
+
+    # change the env variables
+    if num_threads:
+        num_threads = str(num_threads)
+        for key in key_list:
+            os.environ[key] = num_threads
+            if print_msg:
+                print('set {} = {}'.format(key, num_threads))
+
+    return num_threads_dict
+
+
+def roll_back_num_threads(num_threads_dict, print_msg=True):
+    """Set back the number of threads for all environmental variables."""
+    for key, value in num_threads_dict.items():
+        os.environ[key] = value
+        if print_msg:
+            print('set {} = {}'.format(key, value))
+    return
+
+
 
 ############################## Beginning of DaskCluster class ##############################
 

@@ -990,6 +990,26 @@ def ifgram_inversion(inps=None):
         inps = cmd_line_parse()
     start_time = time.time()
 
+    ## limit the number of threads in numpy/scipy to 1
+    #   and save the original value for roll back afterwards
+    #   becuase it does not increase the speed much but does increase the CPU usage significantly
+    #   as shown in the test note below.
+    # Dataset: SanFranSenDT42 version 1.x, patch 1 (505 x 510 x 1021) only
+    # Machine 1: Mac (6 Intel i7 CPUs/cores in 2.6 GHz)
+    # | dask (worker) | OMP_NUM_THREADS | Time used (sec) | CPU usage |
+    # |   no   (0)    |        4        |      850        | 1 x 300%  |
+    # |   no   (0)    |        1        |      930        | 1 x 100%  |
+    # | local  (4)    |        4        |      580        | 4 x 250%  |
+    # | local  (4)    |        1        |      420        | 4 x 100%  |
+    # Machine 2: Linux local cluster (16 Intel E5 CPUs/cores in 2.4 GHz)
+    # | dask (worker) | OMP_NUM_THREADS | Time used (sec) | CPU usage |
+    # |   no   (0)    |        4        |     1400        | 1 x 400%  |
+    # |   no   (0)    |        1        |     1250        | 1 x 100%  |
+    # | local  (4)    |        4        |      750        | 4 x 320%  |
+    # | local  (4)    |        1        |      500        | 4 x 100%  |
+    num_threads_dict = cluster.set_num_threads("1")
+
+
     ## 1. input info
 
     stack_obj = ifgramStack(inps.ifgramStackFile)
@@ -1177,6 +1197,9 @@ def ifgram_inversion(inps=None):
         print('set  # of observations on the reference pixel as {}'.format(num_ifgram))
         with h5py.File(inps.numInvFile, 'r+') as f:
             f['mask'][ref_y, ref_x] = num_ifgram
+
+    # roll back to the original number of threads
+    cluster.roll_back_num_threads(num_threads_dict)
 
     m, s = divmod(time.time() - start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
