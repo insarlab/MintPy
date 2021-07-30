@@ -17,6 +17,13 @@ import numpy as np
 
 # supported / tested clusters
 CLUSTER_LIST = ['lsf', 'pbs', 'slurm', 'local']
+NUM_THREADS_ENV_LIST = [
+    'OMP_NUM_THREADS',         # openmp
+    'OPENBLAS_NUM_THREADS',    # openblas
+    'MKL_NUM_THREADS',         # mkl
+    'NUMEXPR_NUM_THREADS',     # numexpr
+    'VECLIB_MAXIMUM_THREADS',  # accelerate
+]
 
 
 ############################## Utilities functions #########################################
@@ -78,25 +85,16 @@ def set_num_threads(num_threads=None, print_msg=True):
     """
 
     # grab the original number of threads
-    key_list = [
-        'OMP_NUM_THREADS',         # openmp
-        'OPENBLAS_NUM_THREADS',    # openblas
-        'MKL_NUM_THREADS',         # mkl
-        'VECLIB_MAXIMUM_THREADS',  # accelerate
-        'NUMEXPR_NUM_THREADS',     # numexpr
-    ]
-    key_list = [x for x in key_list if x in os.environ.keys()]
     if print_msg:
-        print('save the original value of {}'.format(key_list))
-
+        print('save the original settings of {}'.format(NUM_THREADS_ENV_LIST))
     num_threads_dict = {}
-    for key in key_list:
-        num_threads_dict[key] = os.environ[key]
+    for key in NUM_THREADS_ENV_LIST:
+        num_threads_dict[key] = os.environ.get(key, None)
 
     # change the env variables
     if num_threads:
         num_threads = str(num_threads)
-        for key in key_list:
+        for key in NUM_THREADS_ENV_LIST:
             os.environ[key] = num_threads
             if print_msg:
                 print('set {} = {}'.format(key, num_threads))
@@ -106,10 +104,18 @@ def set_num_threads(num_threads=None, print_msg=True):
 
 def roll_back_num_threads(num_threads_dict, print_msg=True):
     """Set back the number of threads for all environmental variables."""
+    if print_msg:
+        print('roll back to the original settings of {}'.format(NUM_THREADS_ENV_LIST))
     for key, value in num_threads_dict.items():
-        os.environ[key] = value
-        if print_msg:
-            print('set {} = {}'.format(key, value))
+        if key in os.environ.keys():
+            if value is None:
+                os.environ.pop(key)
+                if print_msg:
+                    print('remove env variable {}'.format(key))
+            else:
+                os.environ[key] = value
+                if print_msg:
+                    print('set {} = {}'.format(key, value))
     return
 
 
