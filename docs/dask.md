@@ -40,10 +40,9 @@ smallbaselineApp.py smallbaselineApp.cfg
 
 #### 1.3 Testing using example data ####
 
-Download and run the FernandinaSenDT128 example data; then run with and without local clasuter:
+Download and run the FernandinaSenDT128 example data; then run with and without local cluster:
 
 ```bash
-export OMP_NUM_THREADS=1
 cd FernandinaSenDT128/mintpy
 ifgram_inversion.py inputs/ifgramStack.h5 -w no --cluster no 
 ifgram_inversion.py inputs/ifgramStack.h5 -w no --cluster local --num-worker 8
