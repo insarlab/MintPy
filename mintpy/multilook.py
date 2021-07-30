@@ -310,6 +310,28 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=
 
     if ext not in ['.h5', '.he5']:
         writefile.write(dsDict, out_file=outfile, metadata=atr, ref_file=infile)
+
+        # write extra metadata files for ISCE data files
+        if os.path.isfile(infile+'.xml') or os.path.isfile(infile+'.aux.xml'):
+            # write ISCE XML file
+            dtype_gdal = readfile.NUMPY2GDAL_DATATYPE[atr['DATA_TYPE']]
+            dtype_isce = readfile.GDAL2ISCE_DATATYPE[dtype_gdal]
+            writefile.write_isce_xml(
+                outfile,
+                width=int(atr['WIDTH']),
+                length=int(atr['LENGTH']),
+                bands=len(dsDict.keys()),
+                data_type=dtype_isce,
+                scheme=atr['scheme'])
+            print(f'write file: {outfile}.xml')
+
+            # write GDAL VRT file
+            if os.path.isfile(infile+'.vrt'):
+                from isceobj.Util.ImageUtil import ImageLib as IML
+                img = IML.loadImage(outfile)[0]
+                img.renderVRT()
+                print(f'write file: {outfile}.vrt')
+
     return outfile
 
 

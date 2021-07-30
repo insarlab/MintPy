@@ -32,10 +32,10 @@ EXAMPLE = """example:
   prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i ../incidenceAngle/*.vrt
   prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i ../incidenceAngle/*.vrt -a ../azimuthAngle/*.vrt -w ../mask/watermask.msk
 
-  # before above, one should run ARIA-tools to download / extract / prepare inteferograms stack.
+  # download / extract / prepare inteferograms stack from ARIA using ARIA-tools:
   # reference: https://github.com/aria-tools/ARIA-tools
   ariaDownload.py -b '37.25 38.1 -122.6 -121.75' --track 42
-  ariaTSsetup.py -f 'products/*.nc' -b '37.25 38.1 -122.6 -121.75' --mask Download
+  ariaTSsetup.py -f 'products/*.nc' -b '37.25 38.1 -122.6 -121.75' --mask Download --num_threads 4 --verbose
 """
 
 TEMPLATE = """template options:
