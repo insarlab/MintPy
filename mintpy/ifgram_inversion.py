@@ -963,13 +963,13 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
         ts *= phase2range
         print('converting LOS phase unit from radian to meter')
 
-    elif obs_ds_name == 'azimuthOffset':
+    elif (obs_ds_name == 'azimuthOffset') & (stack_obj.metadata['PROCESSOR'] != 'cosicorr'):
         az_pixel_size = ut.azimuth_ground_resolution(stack_obj.metadata)
         az_pixel_size /= float(stack_obj.metadata['ALOOKS'])
         ts *= az_pixel_size
         print('converting azimuth offset unit from pixel ({:.2f} m) to meter'.format(az_pixel_size))
 
-    elif obs_ds_name == 'rangeOffset':
+    elif (obs_ds_name == 'rangeOffset') & (stack_obj.metadata['PROCESSOR'] != 'cosicorr'):
         rg_pixel_size = float(stack_obj.metadata['RANGE_PIXEL_SIZE'])
         rg_pixel_size /= float(stack_obj.metadata['RLOOKS'])
         ts *= -1 * rg_pixel_size

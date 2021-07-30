@@ -32,7 +32,7 @@ from mintpy import subset
 
 
 #################################################################
-PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac']
+PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac', 'cosicorr']
 
 datasetName2templateKey = {
     'unwrapPhase'     : 'mintpy.load.unwFile',
@@ -627,8 +627,10 @@ def prepare_metadata(iDict):
     print('-'*50)
     print('prepare metadata files for {} products'.format(processor))
 
-    if processor in ['gamma', 'hyp3', 'roipac', 'snap']:
+    if processor in ['cosicorr', 'gamma', 'hyp3', 'roipac', 'snap']:
         # import prep_module
+        if processor == 'cosicorr':
+            from mintpy import prep_cosicorr as prep_module
         if processor == 'gamma':
             from mintpy import prep_gamma as prep_module
         elif processor == 'hyp3':
@@ -639,13 +641,15 @@ def prepare_metadata(iDict):
             from mintpy import prep_snap as prep_module
 
         # run prep_{processor} module
-        for key in [i for i in iDict.keys() if (i.startswith('mintpy.load.') and i.endswith('File'))]:
+        for key in [i for i in iDict.keys() if (i.startswith('mintpy.load.') and i.endswith('File')) and (i != 'mintpy.load.metaFile')]:
             if len(glob.glob(str(iDict[key]))) > 0:
                 # print command line
                 script_name = '{}.py'.format(os.path.basename(prep_module.__name__).split('.')[-1])
                 iargs = [iDict[key]]
                 if processor == 'gamma' and iDict['PLATFORM']:
                     iargs += ['--sensor', iDict['PLATFORM'].lower()]
+                if processor == 'cosicorr':
+                    iargs += ['--metadata', iDict['mintpy.load.metaFile']]
                 print(script_name, ' '.join(iargs))
                 # run
                 prep_module.main(iargs)
