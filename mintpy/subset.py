@@ -477,6 +477,28 @@ def subset_file(fname, subset_dict_input, out_file=None):
                         metadata=atr,
                         ref_file=fname)
 
+
+        # write extra metadata files for ISCE data files
+        if os.path.isfile(fname+'.xml') or os.path.isfile(fname+'.aux.xml'):
+            # write ISCE XML file
+            dtype_gdal = readfile.NUMPY2GDAL_DATATYPE[atr['DATA_TYPE']]
+            dtype_isce = readfile.GDAL2ISCE_DATATYPE[dtype_gdal]
+            writefile.write_isce_xml(
+                out_file,
+                width=int(atr['WIDTH']),
+                length=int(atr['LENGTH']),
+                bands=len(dsDict.keys()),
+                data_type=dtype_isce,
+                scheme=atr['scheme'])
+            print(f'write file: {out_file}.xml')
+
+            # write GDAL VRT file
+            if os.path.isfile(fname+'.vrt'):
+                from isceobj.Util.ImageUtil import ImageLib as IML
+                img = IML.loadImage(out_file)[0]
+                img.renderVRT()
+                print(f'write file: {out_file}.vrt')
+
     return out_file
 
 
