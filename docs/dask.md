@@ -1,6 +1,6 @@
 # Configure dask for parallel processing #
 
-Most computations in MintPy are operated in either a pixel-by-pixel or a epoch-by-epoch basis. This implementation strategy allows processing different blocks (in space or in time) in parallel. For this purpose, we use the [`Dask`](https://docs.dask.org/en/latest/) library for its danymic task scheduling and data collection. Dask support is currently implemented in `ifgram_inversion.py` and `dem_error.py` only (expansions to other modules are welcomed) through a thin wrapper in [`mintpy.objects.cluster`](../mintpy/objects/cluster.py). We have tested two types of clusters:
+Most computations in MintPy are operated in either a pixel-by-pixel or a epoch-by-epoch basis. This implementation strategy allows processing different blocks (in space or in time) in parallel. For this purpose, we use the [`Dask`](https://docs.dask.org/en/latest/) library for its dynamic task scheduling and data collection. Dask support is currently implemented in `ifgram_inversion.py` and `dem_error.py` only (expansions to other modules are welcomed) through a thin wrapper in [`mintpy.objects.cluster`](../mintpy/objects/cluster.py). We have tested two types of clusters:
 
 + **local cluster:** on a single machine (laptop or computing node) with multiple CPU cores, suitable for laptops, local cluster/stations and distributed High Performance Cluster (HPC). No job scheduler is required.
 + **non-local cluster:** on a distributed HPC with job scheduler installed, including PBS, LSF and SLURM.
@@ -40,10 +40,9 @@ smallbaselineApp.py smallbaselineApp.cfg
 
 #### 1.3 Testing using example data ####
 
-Download and run the FernandinaSenDT128 example data; then run with and without local clasuter:
+Download and run the FernandinaSenDT128 example data; then run with and without local cluster:
 
 ```bash
-export OMP_NUM_THREADS=1
 cd FernandinaSenDT128/mintpy
 ifgram_inversion.py inputs/ifgramStack.h5 -w no --cluster no 
 ifgram_inversion.py inputs/ifgramStack.h5 -w no --cluster local --num-worker 8
