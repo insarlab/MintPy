@@ -142,7 +142,10 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
         print('write {}'.format(out_file))
         # determined by fext
         if fext in ['.unw']:
-            write_float32(data_list[0], out_file)
+            if key_list == ['magnitude', 'phase']:
+                write_float32(data_list[0], data_list[1], out_file)
+            else:
+                write_float32(data_list[0], out_file)
             meta['DATA_TYPE'] = 'float32'
 
         elif fext in ['.cor', '.hgt']:
@@ -173,7 +176,11 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             write_complex_int16(data_list[0], out_file)
 
         elif fext == '.int':
-            write_complex64(data_list[0], out_file)
+            if key_list == ['magnitude', 'phase']:
+                data = data_list[0] * np.exp(1j * data_list[1])
+                write_complex_float32(data, out_file)
+            else:
+                write_complex64(data_list[0], out_file)
 
         elif fext == '.msk':
             write_byte(data_list[0], out_file)
@@ -605,6 +612,13 @@ def write_float32(*args):
 
     data = np.hstack((amp, pha)).flatten()
     data = np.array(data, dtype=np.float32)
+    data.tofile(out_file)
+    return out_file
+
+
+def write_complex_float32(data, out_file):
+    """write complex float32 data into file"""
+    data = np.array(data, dtype=np.complex64)
     data.tofile(out_file)
     return out_file
 
