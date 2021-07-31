@@ -249,17 +249,18 @@ class resample:
         """
         num_box = 1
 
-        # auto split into list of boxes ONLY IF:
-        # 1. source file is in HDF5 format AND
-        # 2. max_memory > 0
-        if (src_file and os.path.isfile(src_file)
-                and os.path.splitext(src_file)[1] in ['.h5', '.he5'] 
-                and max_memory > 0):
+        # auto split into list of boxes if max_memory > 0
+        if src_file and os.path.isfile(src_file) and max_memory > 0:
             # get max dataset shape
-            with h5py.File(src_file, 'r') as f:
-                ds_shapes = [f[i].shape for i in f.keys()
-                             if isinstance(f[i], h5py.Dataset)]
-                max_ds_size = max([np.prod(i) for i in ds_shapes])
+            fext = os.path.splitext(src_file)[1]
+            if fext in ['.h5', '.he5']:
+                with h5py.File(src_file, 'r') as f:
+                    ds_shapes = [f[i].shape for i in f.keys()
+                                 if isinstance(f[i], h5py.Dataset)]
+                    max_ds_size = max([np.prod(i) for i in ds_shapes])
+            else:
+                atr = readfile.read_attribute(src_file)
+                max_ds_size = int(atr['LENGTH']) * int(atr['WIDTH'])
 
             # calc num_box
             num_box = int(np.ceil((max_ds_size * 4 * 4) / (max_memory * 1024**3)))
@@ -323,8 +324,8 @@ class resample:
         print('read latitude / longitude from lookup table file: {}'.format(self.lut_file))
         lat_file = self.lat_file if self.lat_file else self.lut_file
         lon_file = self.lon_file if self.lon_file else self.lut_file
-        lut_lat = readfile.read(lat_file, datasetName='latitude')[0]
-        lut_lon = readfile.read(lon_file, datasetName='longitude')[0]
+        lut_lat = readfile.read(lat_file, datasetName='latitude')[0].astype(np.float32)
+        lut_lon = readfile.read(lon_file, datasetName='longitude')[0].astype(np.float32)
         lut_lat, lut_lon, mask = mark_lat_lon_anomoly(lut_lat, lut_lon)
 
         # radar2geo (with block-by-block support)
