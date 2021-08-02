@@ -566,10 +566,6 @@ def run_timeseries2time_func(inps):
 
         # go to next if no valid pixel found
         if num_pixel2inv == 0:
-            block = [box[1], box[3], box[0], box[2]]
-            writefile.write_hdf5_block(inps.outfile, model, m, m_std,
-                             mask=mask,
-                             block=block)
             continue
 
 
