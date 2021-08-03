@@ -10,14 +10,8 @@ import os
 import sys
 import argparse
 from datetime import datetime
-from mintpy.objects import sensor
 import numpy as np
 from mintpy.utils import readfile, writefile, utils as ut
-
-try:
-    from osgeo import gdal
-except ImportError:
-    raise ImportError('Can not import gdal [version>=3.0]!')
 
 
 #########################################################################
@@ -71,7 +65,7 @@ def add_cosicorr_metadata(fname, cosicorr_dates, meta):
     date_avg = date1 + (date2 - date1) / 2
     date_avg_seconds = (date_avg - date_avg.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
     meta['CENTER_LINE_UTC'] = date_avg_seconds
-    
+
     # add LAT/LON_REF1/2/3/4
     N = float(meta['Y_FIRST'])
     W = float(meta['X_FIRST'])
