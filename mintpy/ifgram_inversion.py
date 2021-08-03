@@ -134,7 +134,7 @@ def cmd_line_parse(iargs=None):
 
     # check input file type
     atr = readfile.read_attribute(inps.ifgramStackFile)
-    if atr['FILE_TYPE'] not in ['ifgramStack']: #fw checks if ifgramStack
+    if atr['FILE_TYPE'] not in ['ifgramStack']:
         raise ValueError('input is {} file, support ifgramStack file only.'.format(atr['FILE_TYPE']))
 
     if inps.templateFile:
@@ -175,7 +175,7 @@ def cmd_line_parse(iargs=None):
             raise ValueError(msg)
 
     # --skip-ref option
-    if 'offset' in inps.obsDatasetName.lower(): #fw skip reference if offset file
+    if 'offset' in inps.obsDatasetName.lower():
         inps.skip_ref = True
 
     # --output option
@@ -485,7 +485,7 @@ def calc_inv_quality(ifgram, G, X, inv_quality_name='temporalCoherence'):
 
 
 ###################################### File IO ############################################
-def write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg=None, #fw instantiate ifgramStack to get datelist, bperp
+def write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg=None,
                     suffix='', inps=None):
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
@@ -530,7 +530,7 @@ def write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg=None, #fw i
     return
 
 
-def split2boxes(ifgram_file, max_memory=4, print_msg=True):#fw use length,width, numIfgram, numDate properties
+def split2boxes(ifgram_file, max_memory=4, print_msg=True):
     """Split into chunks in rows to reduce memory usage
     Parameters: dataset_shape - tuple of 3 int
                 max_memory    - float, max memory to use in GB
@@ -565,7 +565,7 @@ def split2boxes(ifgram_file, max_memory=4, print_msg=True):#fw use length,width,
     return box_list, num_box
 
 
-def check_design_matrix(ifgram_file, weight_func='var'): #fw uses method get_design_matrix4timeseries
+def check_design_matrix(ifgram_file, weight_func='var'):
     """
     Check Rank of Design matrix for weighted inversion
     """
