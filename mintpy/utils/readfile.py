@@ -101,6 +101,19 @@ GDAL2NUMPY_DATATYPE = {
     11: 'complex128',
 }
 
+NUMPY2GDAL_DATATYPE = {
+  "uint8"     : 1,
+  "int8"      : 1,
+  "uint16"    : 2,
+  "int16"     : 3,
+  "uint32"    : 4,
+  "int32"     : 5,
+  "float32"   : 6,
+  "float64"   : 7,
+  "complex64" : 10,
+  "complex128": 11,
+}
+
 # single file (data + attributes) supported by GDAL
 GDAL_FILE_EXTS = ['.tif', '.grd']
 
@@ -1311,7 +1324,7 @@ def read_gdal_vrt(fname):
     # projection / coordinate unit
     srs = osr.SpatialReference(wkt=ds.GetProjection())
     srs_name = srs.GetName()
-    if 'UTM' in srs_name:
+    if srs_name and 'UTM' in srs_name:
         atr['UTM_ZONE'] = srs_name.split('UTM zone')[-1].strip()
         atr['X_UNIT'] = 'meters'
         atr['Y_UNIT'] = 'meters'

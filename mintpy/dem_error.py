@@ -517,6 +517,10 @@ def correct_dem_error(inps):
 
     start_time = time.time()
 
+    # limit the number of threads to 1
+    # for slight speedup and big CPU usage save
+    num_threads_dict = cluster.set_num_threads("1")
+
     ## 1. input info
 
     # 1.1 read date info
@@ -652,6 +656,9 @@ def correct_dem_error(inps):
                                    data=ts_res,
                                    datasetName='timeseries',
                                    block=block)
+
+    # roll back to the origial number of threads
+    cluster.roll_back_num_threads(num_threads_dict)
 
     # time info
     m, s = divmod(time.time()-start_time, 60)

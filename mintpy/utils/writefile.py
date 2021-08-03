@@ -142,7 +142,10 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
         print('write {}'.format(out_file))
         # determined by fext
         if fext in ['.unw']:
-            write_float32(data_list[0], out_file)
+            if key_list == ['magnitude', 'phase']:
+                write_float32(data_list[0], data_list[1], out_file)
+            else:
+                write_float32(data_list[0], out_file)
             meta['DATA_TYPE'] = 'float32'
 
         elif fext in ['.cor', '.hgt']:
@@ -173,7 +176,11 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             write_complex_int16(data_list[0], out_file)
 
         elif fext == '.int':
-            write_complex64(data_list[0], out_file)
+            if key_list == ['magnitude', 'phase']:
+                data = data_list[0] * np.exp(1j * data_list[1])
+                write_complex_float32(data, out_file)
+            else:
+                write_complex64(data_list[0], out_file)
 
         elif fext == '.msk':
             write_byte(data_list[0], out_file)
@@ -514,6 +521,78 @@ def write_roipac_rsc(metadata, out_file, update_mode=False, print_msg=False):
     return out_file
 
 
+def write_gdal_vrt(meta, out_file):
+    """Write GDAL VRT file.
+
+    !!! This function is NOT RIGHT. DO NOT USE IT. Keep here as a placeholder ONLY. !!!
+    It needs more work.
+
+    Parameters: meta     - dict, dictionary of metadata
+                out_file - str, VRT file name to which attributes are written
+    """
+    # data type: mintpy to gdal
+    dtype_dict = {
+        'int8'      : 'Byte',
+        'int16'     : 'Int16',
+        'float32'   : 'Float32',
+        'float64'   : 'Float64',
+        'complex64' : 'CFloat32',
+        'complex128': 'CFloat64',
+    }
+
+    # pixel / line / image offset
+    pixel_offset_dict = {
+        'int8'      : '2',
+        'int16'     : '4',
+        'float32'   : '8',
+        'float64'   : '16',
+        'complex64' : '16',
+        'complex128': '32',
+    }
+    pixel_offset = int(pixel_offset_dict[meta['DATA_TYPE']])
+    length, width = int(meta['LENGTH']), int(meta['WIDTH'])
+    num_band = int(meta['number_bands'])
+
+    if meta['scheme'] == 'BIP':
+        line_offset  = pixel_offset * num_band * width
+        image_offset = pixel_offset
+    elif meta['scheme'] == 'BIL':
+        line_offset  = pixel_offset * width * num_band
+        image_offset = pixel_offset * width
+    elif meta['scheme'] == 'BSQ':
+        line_offset  = pixel_offset * width
+        image_offset = pixel_offset * width * length
+    else:
+        raise ValueError('un-recognized scheme / interleave: {}'.format(meta['scheme']))
+
+    # compose VRT file string
+    ds_str = '<VRTDataset rasterXSize="{w}" rasterYSize="{l}">\n'.format(w=meta['WIDTH'], l=meta['LENGTH'])
+    for band in range(num_band):
+        band_str = '''<VRTRasterBand dataType="{d}" band="{b}" subClass="VRTRawRasterBand">
+        <SourceFilename relativeToVRT="1">{f}</SourceFilename>
+        <ByteOrder>LSB</ByteOrder>
+        <ImageOffset>{io}</ImageOffset>
+        <PixelOffset>{po}</PixelOffset>
+        <LineOffset>{lo}</LineOffset>
+    </VRTRasterBand>
+        '''.format(
+            d=dtype_dict[meta['DATA_TYPE']],
+            b=band+1,
+            f=os.path.basename(out_file[:-4]),
+            io=image_offset * band,
+            po=pixel_offset,
+            lo=line_offset,
+        )
+        ds_str += band_str
+    ds_str += '</VRTDataset>\n'
+
+    # write VRT file
+    with open(out_file, 'w') as f:
+        f.write(ds_str)
+
+    return out_file
+
+
 def write_isce_xml(fname, width, length, bands=1, data_type='FLOAT', scheme='BIP'):
     """Write XML metadata file in ISCE-2 format
 
@@ -605,6 +684,13 @@ def write_float32(*args):
 
     data = np.hstack((amp, pha)).flatten()
     data = np.array(data, dtype=np.float32)
+    data.tofile(out_file)
+    return out_file
+
+
+def write_complex_float32(data, out_file):
+    """write complex float32 data into file"""
+    data = np.array(data, dtype=np.complex64)
     data.tofile(out_file)
     return out_file
 

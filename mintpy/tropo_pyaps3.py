@@ -454,7 +454,8 @@ def get_bounding_box(meta, geom_file=None):
 
         # 'Y_FIRST' not in 'degree'
         # e.g. meters for UTM projection from ASF HyP3
-        if not meta['Y_UNIT'].lower().startswith('deg'):
+        y_unit = meta.get('Y_UNIT', 'degrees').lower()
+        if not y_unit.startswith('deg'):
             lat0, lon0 = ut.to_latlon(meta['OG_FILE_PATH'], lon0, lat0)
             lat1, lon1 = ut.to_latlon(meta['OG_FILE_PATH'], lon1, lat1)
 

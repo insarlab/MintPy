@@ -1,21 +1,20 @@
 # vim: set filetype=cfg:
 mintpy.load.processor       = aria  #[isce, aria, snap, gamma, roipac], auto for isce
 ##---------interferogram datasets:
-mintpy.load.unwFile        = ../stack/unwrapStack.vrt
-mintpy.load.corFile        = ../stack/cohStack.vrt
-mintpy.load.connCompFile   = ../stack/connCompStack.vrt
+mintpy.load.unwFile         = ../stack/unwrapStack.vrt
+mintpy.load.corFile         = ../stack/cohStack.vrt
+mintpy.load.connCompFile    = ../stack/connCompStack.vrt
 ##---------geometry datasets:
-mintpy.load.demFile        = ../DEM/*.dem
-mintpy.load.incAngleFile   = ../incidenceAngle/*.vrt
-mintpy.load.azAngleFile    = ../azimuthAngle/*.vrt
-mintpy.load.waterMaskFile  = ../mask/watermask.msk
+mintpy.load.demFile         = ../DEM/*.dem
+mintpy.load.incAngleFile    = ../incidenceAngle/*.vrt
+mintpy.load.azAngleFile     = ../azimuthAngle/*.vrt
+mintpy.load.waterMaskFile   = ../mask/watermask.msk
 
-mintpy.network.excludeIfgIndex  = auto #25, 30, 34, 40, 46, 52, 56, 57, 61, 62, 67, 70, 74, 80
-mintpy.reference.lalo           = 37.69, -122.07
-mintpy.unwrapError.method       = bridging
-mintpy.deramp                   = no
+mintpy.reference.lalo       = 37.69, -122.07
+mintpy.unwrapError.method   = bridging
+mintpy.deramp               = no
 
 ## options to speedup the processing (fast but not the best)
-mintpy.networkInversion.weightFunc           = no
-mintpy.topographicResidual.pixelwiseGeometry = no
+mintpy.networkInversion.weightFunc              = no
+mintpy.topographicResidual.pixelwiseGeometry    = no
 

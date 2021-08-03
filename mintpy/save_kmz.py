@@ -44,7 +44,7 @@ EXAMPLE = """example:
   save_kmz.py geo/geo_timeseries_ERA5_demErr.h5 20200505_20200517
 
   save_kmz.py geo/geo_ifgramStack.h5 20101120_20110220
-  save_kmz.py geo/geo_geometryRadar.h5 --cbar-label Elevation
+  save_kmz.py geo/geo_geometryRadar.h5 height --cbar-label Elevation
 
   # save full resolution velocity in radar-coordinates
   # for ISCE products (with lookup table in radar coordinates) ONLY
