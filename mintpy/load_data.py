@@ -627,10 +627,8 @@ def prepare_metadata(iDict):
     print('-'*50)
     print('prepare metadata files for {} products'.format(processor))
 
-    if processor in ['cosicorr', 'gamma', 'hyp3', 'roipac', 'snap']:
+    if processor in ['gamma', 'hyp3', 'roipac', 'snap', 'cosicorr']:
         # import prep_module
-        if processor == 'cosicorr':
-            from mintpy import prep_cosicorr as prep_module
         if processor == 'gamma':
             from mintpy import prep_gamma as prep_module
         elif processor == 'hyp3':
@@ -639,6 +637,8 @@ def prepare_metadata(iDict):
             from mintpy import prep_roipac as prep_module
         elif processor == 'snap':
             from mintpy import prep_snap as prep_module
+        elif processor == 'cosicorr':
+            from mintpy import prep_cosicorr as prep_module
 
         # run prep_{processor} module
         for key in [i for i in iDict.keys() if (i.startswith('mintpy.load.') and i.endswith('File')) and (i != 'mintpy.load.metaFile')]:
