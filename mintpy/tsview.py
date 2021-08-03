@@ -750,10 +750,11 @@ class timeseriesViewer():
         self.ts_data, self.mask = read_timeseries_data(self)[0:2]
 
         # Figure 1 - Cumulative Displacement Map
-        self.figsize_img = pp.auto_figure_size(ds_shape=self.ts_data[0].shape[-2:],
-                                               disp_cbar=True,
-                                               disp_slider=True,
-                                               print_msg=self.print_msg)
+        if not self.figsize_img:
+            self.figsize_img = pp.auto_figure_size(ds_shape=self.ts_data[0].shape[-2:],
+                                                   disp_cbar=True,
+                                                   disp_slider=True,
+                                                   print_msg=self.print_msg)
         self.fig_img = plt.figure(self.figname_img, figsize=self.figsize_img)
 
         # Figure 1 - Axes 1 - Displacement Map
