@@ -23,15 +23,11 @@ except ImportError:
 #########################################################################
 EXAMPLE = """example:
   prep_cosicorr.py  offsets/*offset.tif -m metadata.txt
-"""
-
-DESCRIPTION = """
- This is still experimental
+  prep_cosicorr.py  snr/*snr.tif -m metadata.txt
 """
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Prepare attributes file for cosicorr pixel offset product.\n'+
-                                     DESCRIPTION,
+    parser = argparse.ArgumentParser(description='Prepare attributes file for cosicorr pixel offset product.\n',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
@@ -51,7 +47,8 @@ def cmd_line_parse(iargs=None):
 def add_cosicorr_metadata(fname, cosicorr_dates, meta):
     '''Read/extract attribute data from cosicorr metadata file and add to metadata dictionary
     Inputs:
-        metadata.txt
+        Offset or SNR file name (fname)
+        dictionary of file name and date12 pairs (cosicorr_dates)
         Metadata dictionary (meta)
     Output:
         Metadata dictionary (meta)
