@@ -18,6 +18,13 @@ from mintpy.utils import readfile, writefile, utils as ut
 EXAMPLE = """example:
   prep_cosicorr.py  offsets/*offset.tif -m metadata.txt
   prep_cosicorr.py  snr/*snr.tif -m metadata.txt
+
+example metadata file contents:
+  offsetNS1.tif date1 date2
+  offsetEW2.tif date1 date2
+  offsetSNR.tif date1 date2
+  ...           ...   ...
+  ...           ...   ...
 """
 
 def create_parser():
