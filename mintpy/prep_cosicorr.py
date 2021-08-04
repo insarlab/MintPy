@@ -16,25 +16,29 @@ from mintpy.utils import readfile, writefile, utils as ut
 
 #########################################################################
 EXAMPLE = """example:
-  prep_cosicorr.py  offsets/*offset.tif -m metadata.txt
-  prep_cosicorr.py  snr/*snr.tif -m metadata.txt
-
-example metadata file contents:
-  offsetNS1.tif date1 date2
-  offsetEW2.tif date1 date2
-  offsetSNR.tif date1 date2
-  ...           ...   ...
-  ...           ...   ...
+  prep_cosicorr.py offsets/*offset.tif -m metadata.txt
+  prep_cosicorr.py snr/*snr.tif        -m metadata.txt
 """
 
+EXAMPLE_META_FILE = """
+offset1NS.tif  20160206 20161122
+offset1EW.tif  20160206 20161122
+offset1SNR.tif 20160206 20161122
+offset2NS.tif  20160206 20170225
+offset2EW.tif  20160206 20170225
+offset2SNR.tif 20160206 20170225
+...            ...   ...
+"""
+
+
 def create_parser():
-    parser = argparse.ArgumentParser(description='Prepare attributes file for cosicorr pixel offset product.\n',
+    parser = argparse.ArgumentParser(description='Prepare attributes file for COSI-Corr pixel offset product.\n',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', nargs='+', help='cosicorr file(s)')
-    parser.add_argument('-m', '--metadata', type=str,
-                        dest='meta_file', help='metadata file with date info.')
+    parser.add_argument('-m', '--metadata', type=str, dest='meta_file',
+                        help='metadata file with date info. E.g.:'+EXAMPLE_META_FILE)
     return parser
 
 
@@ -43,6 +47,7 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
     inps.file = ut.get_file_list(inps.file, abspath=True)
     return inps
+
 
 #########################################################################
 def add_cosicorr_metadata(fname, cosicorr_dates, meta):
@@ -113,6 +118,6 @@ def main(iargs=None):
     return
 
 
-###################################################################################################
+#########################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
