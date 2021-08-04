@@ -532,14 +532,14 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
             byte_order = 'little-endian'
 
     # GDAL / GMTSAR / ASF HyP3
-    elif processor in ['gdal', 'gmtsar', 'hyp3']:
+    elif processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr']:
         pass
 
     else:
         print('Unknown InSAR processor: {}'.format(processor))
 
     # reading
-    if processor in ['gdal', 'gmtsar', 'hyp3']:
+    if processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr']:
         data = read_gdal(
             fname,
             box=box,
