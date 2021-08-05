@@ -577,20 +577,14 @@ def run_timeseries2time_func(inps):
             # of an estimator. The method relies on independently sampling the data set with
             # replacement.
 
-            try:
-                from sklearn.utils import resample
-            except ImportError:
-                raise ImportError('can not import scikit-learn!')
-            print('using bootstrap resampling {} times ...'.format(inps.bootstrapCount))
-
             # calc model of all bootstrap sampling
             m_boot = np.zeros((inps.bootstrapCount, num_param, num_pixel2inv), dtype=dataType)
             prog_bar = ptime.progressBar(maxValue=inps.bootstrapCount)
             for i in range(inps.bootstrapCount):
                 # bootstrap resampling
-                boot_ind = resample(np.arange(inps.numDate),
-                                    replace=True,
-                                    n_samples=inps.numDate)
+                boot_ind = np.random.choice(np.arange(inps.numDate),
+                                            size=inps.numDate,
+                                            replace=True)
                 boot_ind.sort()
 
                 # estimation
