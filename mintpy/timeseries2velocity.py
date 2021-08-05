@@ -570,27 +570,22 @@ def run_timeseries2time_func(inps):
 
 
         ### estimation / solve Gm = d
+        print('estimating time functions via linalg.lstsq ...')
 
         if inps.bootstrap:
             ## option 1 - least squares with bootstrapping
             # Bootstrapping is a resampling method which can be used to estimate properties
             # of an estimator. The method relies on independently sampling the data set with
             # replacement.
-
-            try:
-                from sklearn.utils import resample
-            except ImportError:
-                raise ImportError('can not import scikit-learn!')
-            print('using bootstrap resampling {} times ...'.format(inps.bootstrapCount))
+            print('estimating time function STD with bootstrap resampling ({} times) ...'.format(inps.bootstrapCount))
 
             # calc model of all bootstrap sampling
+            rng = np.random.default_rng()
             m_boot = np.zeros((inps.bootstrapCount, num_param, num_pixel2inv), dtype=dataType)
             prog_bar = ptime.progressBar(maxValue=inps.bootstrapCount)
             for i in range(inps.bootstrapCount):
                 # bootstrap resampling
-                boot_ind = resample(np.arange(inps.numDate),
-                                    replace=True,
-                                    n_samples=inps.numDate)
+                boot_ind = rng.choice(inps.numDate, size=inps.numDate, replace=True)
                 boot_ind.sort()
 
                 # estimation
@@ -603,7 +598,6 @@ def run_timeseries2time_func(inps):
             del ts_data
 
             # get mean/std among all bootstrap sampling
-            print('calculate mean and standard deviation of bootstrap estimations')
             m[:, mask] = m_boot.mean(axis=0).reshape(num_param, -1)
             m_std[:, mask] = m_boot.std(axis=0).reshape(num_param, -1)
             del m_boot
@@ -611,8 +605,6 @@ def run_timeseries2time_func(inps):
 
         else:
             ## option 2 - least squares with uncertainty propagation
-
-            print('estimate time functions via linalg.lstsq ...')
             G, m[:, mask], e2 = estimate_time_func(model=model,
                                                    date_list=inps.dateList,
                                                    dis_ts=ts_data)
@@ -645,6 +637,7 @@ def run_timeseries2time_func(inps):
 
             else:
                 # option 2.2a - assume obs errors following normal dist. in time
+                print('estimating time function STD from time-series fitting residual ...')
                 G_inv = linalg.inv(np.dot(G.T, G))
                 m_var = e2.reshape(1, -1) / (num_date - num_param)
                 m_std[:, mask] = np.sqrt(np.dot(np.diag(G_inv).reshape(-1, 1), m_var))
