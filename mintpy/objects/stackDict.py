@@ -619,7 +619,7 @@ class geometryDict:
                         if (atr.get('PROCESSOR', 'isce') == 'hyp3'
                                 and atr.get('UNIT', 'degrees').startswith('rad')):
                             print('    convert the unit of {:<15} from radian to degree'.format(dsName))
-                            data *= 180. / np.pi
+                            data = (np.pi/2 -data)*180. / np.pi
 
                     # write
                     ds = f.create_dataset(dsName,
