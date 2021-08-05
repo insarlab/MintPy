@@ -330,15 +330,19 @@ def date_list2vector(date_list):
 
 
 ################################################################
-def get_date_range(dmin, dmax):
-    """Make a list of dates with one-day interval [dmin, dmax]
+def get_date_range(dmin, dmax, dstep=1):
+    """Make a list of dates with one-day (or given days) interval for [dmin, dmax]
     Parameters: dmin      : str in YYYYMMDD format
                 dmax      : str in YYYYMMDD format
+                dstep     : int, interval in number of days
     Returns:    date_list : list of str in YYYYMMDD format
     """
+    # read inputs
     t1 = '{}-{}-{}'.format(dmin[:4], dmin[4:6], dmin[6:])
     t2 = '{}-{}-{}'.format(dmax[:4], dmax[4:6], dmax[6:])
-    date_objs = np.arange(t1, t2, dtype='datetime64[D]').astype('M8[D]').astype('O')
+    dt = np.timedelta64(dstep, 'D')
+    # prepare date range
+    date_objs = np.arange(t1, t2, dt, dtype='datetime64[D]').astype('M8[D]').astype('O')
     date_list = [obj.strftime('%Y%m%d') for obj in date_objs] + [dmax]
     return date_list
 

@@ -435,7 +435,19 @@ def update_data_with_plot_inps(data, metadata, inps):
     if inps.wrap:
         inps.vlim = inps.wrap_range
 
-    # 3. update display min/max
+    # math operation
+    if inps.math_operation:
+        vprint('Apply math operation: {}'.format(inps.math_operation))
+        if inps.math_operation == 'square':
+            data = np.square(data)
+        elif inps.math_operation == 'sqrt':
+            data = np.sqrt(data)
+        elif inps.math_operation == 'reverse':
+            data *= -1
+        elif inps.math_operation == 'inverse':
+            data = 1. / data
+
+    # 4. update display min/max
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
     if not inps.vlim: # and data.ndim < 3:
         inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(data, print_msg=inps.print_msg)
@@ -1546,18 +1558,6 @@ class viewer():
                                          box=(ref_x, ref_y, ref_x+1, ref_y+1),
                                          print_msg=False)[0]
                 data[data != 0.] -= ref_data
-
-            # math operation
-            if self.math_operation:
-                vprint('Apply math operation: {}'.format(self.math_operation))
-                if self.math_operation == 'square':
-                    data = np.square(data)
-                elif self.math_operation == 'sqrt':
-                    data = np.sqrt(data)
-                elif self.math_operation == 'reverse':
-                    data *= -1
-                elif self.math_operation == 'inverse':
-                    data = 1. / data
 
             # masking
             if self.zero_mask:
