@@ -84,7 +84,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     # Read residual std text file
     print('read timeseries RMS from file: '+std_file)
     fc = np.loadtxt(std_file, dtype=bytes).astype(str)
-    std_list = fc[:, 1].astype(np.float).tolist()
+    std_list = fc[:, 1].astype(np.float32).tolist()
     date_list = list(fc[:, 0])
     return std_list, date_list
 
@@ -135,7 +135,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     # Read residual RMS text file
     print('read timeseries residual RMS from file: '+rms_file)
     fc = np.loadtxt(rms_file, dtype=bytes).astype(str)
-    rms_list = fc[:, 1].astype(np.float).tolist()
+    rms_list = fc[:, 1].astype(np.float32).tolist()
     date_list = list(fc[:, 0])
     return rms_list, date_list, rms_file
 

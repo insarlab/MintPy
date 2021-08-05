@@ -715,6 +715,10 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
 
     # HDF5 files
     if fext in ['.h5', '.he5']:
+        if datasetName:
+            # get rid of potential date info
+            datasetName = datasetName.split('-')[0]
+
         with h5py.File(fname, 'r') as f:
             atr = dict(f.attrs)
             g1_list = [i for i in f.keys() if isinstance(f[i], h5py.Group)]

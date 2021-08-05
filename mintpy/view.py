@@ -330,8 +330,8 @@ def update_inps_with_file_metadata(inps, metadata):
                     raise ValueError('--lalo-label is NOT supported for projection: UTM')
 
             else:
-                vprint('WARNING: Un-recognized coordinate unit: {}'.format(inps.coord_unit))
-                vprint('    Switch to the native Y/X and continue to plot')
+                print('WARNING: Un-recognized coordinate unit: {}'.format(inps.coord_unit))
+                print('    Switch to the native Y/X and continue to plot')
                 inps.fig_coord = 'radar'
 
 
@@ -396,7 +396,7 @@ def update_data_with_plot_inps(data, metadata, inps):
             else:
                 msg = 'WARNING: input reference pixel ({}, {}) has either masked or NaN value!'.format(ref_y, ref_x)
                 msg += ' -> skip re-referencing.'
-                vprint(msg)
+                print(msg)
                 inps.ref_yx = None
 
         elif len(data.shape) == 3:
@@ -417,7 +417,7 @@ def update_data_with_plot_inps(data, metadata, inps):
             else:
                 msg = 'WARNING: input reference pixel ({}, {}) has either masked or NaN value!'.format(ref_y, ref_x)
                 msg += ' -> skip re-referencing.'
-                vprint(msg)
+                print(msg)
                 inps.ref_yx = None
     else:
         inps.ref_yx = None
@@ -658,8 +658,8 @@ def plot_slice(ax, data, metadata, inps=None):
                 lats = readfile.read(geom_file, datasetName='latitude',  box=inps.pix_box, print_msg=False)[0]
                 lons = readfile.read(geom_file, datasetName='longitude', box=inps.pix_box, print_msg=False)[0]
             except:
-                msg = 'WARNING: no latitude / longitude found in file: {}'.format(os.path.basename(geom_file))
-                msg += ', skip showing lat/lon in the status bar.'
+                msg = 'WARNING: no latitude / longitude found in file: {}, '.format(os.path.basename(geom_file))
+                msg += 'skip showing lat/lon in the status bar.'
                 vprint(msg)
                 geom_file = None
         else:
@@ -875,8 +875,7 @@ def read_dataset_input(inps):
                                         inps.search_dset)[0][0]
 
         if not ref_date:
-            vprint('WARNING: input reference date is not included in input file!')
-            vprint('input reference date: '+inps.ref_date)
+            print('WARNING: input reference date {} is not included in input file! Ignore it and continue'.format(inps.ref_date))
             inps.ref_date = None
         else:
             inps.ref_date = ref_date
@@ -1395,7 +1394,10 @@ def prepare4multi_subplots(inps, metadata):
         else:
             inps.dem_file = None
             inps.transparency = 1.0
-            vprint('Input DEM file has different size than data file, ignore it.')
+            msg = 'WARNING: DEM file has a different size from the data file. '
+            msg += 'This feature is only supported for single subplot, and not for multi-subplots.'
+            msg += '\n    --> Ignore it and continue.'
+            print(msg)
     return inps
 
 

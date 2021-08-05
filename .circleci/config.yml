@@ -20,8 +20,7 @@ jobs:
             mkdir -p ${HOME}/tools
             cd ${HOME}/tools
             wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-            chmod +x Miniconda3-latest-Linux-x86_64.sh
-            ./Miniconda3-latest-Linux-x86_64.sh -b -p ${HOME}/tools/miniconda3
+            bash Miniconda3-latest-Linux-x86_64.sh -b -p ${HOME}/tools/miniconda3
             ${HOME}/tools/miniconda3/bin/conda init bash
             ${HOME}/tools/miniconda3/bin/conda config --add channels conda-forge
             ${HOME}/tools/miniconda3/bin/conda install -c conda-forge --yes mamba

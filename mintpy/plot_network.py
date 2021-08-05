@@ -303,6 +303,10 @@ def main(iargs=None):
     if inps.disp_fig:
         print('showing ...')
         plt.show()
+    else:
+        plt.close()
+
+    return
 
 
 ############################################################
