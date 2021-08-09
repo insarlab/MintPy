@@ -98,9 +98,3 @@ Relevant literature:
 + Nakaboh, M., H. Ono, M. Sako, Y. Sudo, T. Hashimoto, and A. W. Hurst (2003), Continuing deflation by fumaroles at Kuju Volcano, Japan, _Geophysical Research Letters_, 30(7), doi:10.1029/2002gl016047.
 + Ishitsuka, K., T. Tsuji, T. Matsuoka, J. Nishijima, and Y. Fujimitsu (2016), Heterogeneous surface displacement pattern at the Hatchobaru geothermal field inferred from SAR interferometry time-series, _International Journal of Applied Earth Observation and Geoinformation_, 44, 95-103, doi:10.1016/j.jag.2015.07.006.
 
-<br><br>
-Check the auto plotted figures in **mintpy/pic** folder, and modify the plotting parameters to adjust your plotting, and re-run the plotting script to update your plotting result:   
-
-```
-./plot_smallbaselineApp.sh
-```

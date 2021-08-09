@@ -13,8 +13,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from mintpy.defaults.plot import *
-from mintpy.objects import timeseries, sensor
-from mintpy.utils import ptime, network as pnet
+from mintpy.objects import sensor
+from mintpy.utils import ptime, time_func, network as pnet
 
 # load all modules in this sub-directory for easy import
 from mintpy.simulation.decorrelation import *
@@ -222,7 +222,7 @@ def estimate_coherence(ifgram, L=20, win_size=25):
 
 def timeseries2velocity(date_list, defo_list):
     # date_list --> design_matrix
-    A = timeseries.get_design_matrix4time_func(date_list)
+    A = time_func.get_design_matrix4time_func(date_list)
     A_inv = np.linalg.pinv(A)
 
     # least square inversion

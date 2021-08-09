@@ -10,15 +10,13 @@
 
 import os
 import csv
-import codecs
 from datetime import datetime as dt
 import numpy as np
 from pyproj import Geod
 from urllib.request import urlretrieve
 
-from mintpy.objects import timeseries
 from mintpy.objects.coord import coordinate
-from mintpy.utils import ptime, readfile, utils1 as ut
+from mintpy.utils import ptime, time_func, readfile, utils1 as ut
 
 
 unr_site_list_file = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
@@ -203,6 +201,7 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date,
 
 #################################### Beginning of GPS-GSI utility functions ########################
 def read_pos_file(fname):
+    import codecs
     fcp = codecs.open(fname, encoding = 'cp1252')
     fc = np.loadtxt(fcp, skiprows=20, dtype=str, comments=('*','-DATA'))
 
@@ -274,7 +273,7 @@ class GPS:
 
     def __init__(self, site, data_dir='./GPS', version='IGS14'):
         self.site = site
-        self.data_dir = data_dir
+        self.data_dir = os.path.abspath(data_dir)
         self.version = version
         self.source = 'Nevada Geodetic Lab'
 
@@ -304,7 +303,12 @@ class GPS:
         self.plot_file_url = os.path.join(url_prefix, 'TimeSeries/{}.png'.format(site))
 
         # list of stations from Nevada Geodetic Lab
-        self.site_list_file = os.path.join(data_dir, 'DataHoldings.txt')
+        self.site_list_file = os.path.join(os.path.dirname(data_dir), 'DataHoldings.txt')
+        if not os.path.isfile(self.site_list_file):
+            dload_site_list()
+        site_names = np.loadtxt(self.site_list_file, dtype=bytes, skiprows=1, usecols=(0)).astype(str)
+        if site not in site_names:
+            raise ValueError('Site {} NOT found in file: {}'.format(site, unr_site_list_file))
 
         # directories for data files and plot files
         for fdir in [data_dir, os.path.dirname(self.plot_file)]:
@@ -525,7 +529,7 @@ class GPS:
         # displacement -> velocity
         date_list = [dt.strftime(i, '%Y%m%d') for i in dates]
         if len(date_list) > 2:
-            A = timeseries.get_design_matrix4time_func(date_list)
+            A = time_func.get_design_matrix4time_func(date_list)
             self.velocity = np.dot(np.linalg.pinv(A), dis)[1]
         else:
             self.velocity = np.nan
