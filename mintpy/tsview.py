@@ -15,7 +15,7 @@ from scipy import linalg, stats
 from matplotlib import pyplot as plt, ticker, widgets, patches
 
 from mintpy.objects import timeseries, giantTimeseries, HDFEOS
-from mintpy.utils import arg_group, readfile, ptime, plot as pp, utils as ut
+from mintpy.utils import arg_group, ptime, time_func, readfile, utils as ut, plot as pp
 from mintpy.multilook import multilook_data
 from mintpy import subset, view, timeseries2velocity as ts2vel
 
@@ -331,8 +331,7 @@ def read_init_info(inps):
     # dense TS for plotting
     inps.date_list_fit = ptime.get_date_range(inps.date_list[0], inps.date_list[-1])
     inps.dates_fit = ptime.date_list2vector(inps.date_list_fit)[0]
-    inps.G_fit = timeseries.get_design_matrix4time_func(date_list=inps.date_list_fit,
-                                                        model=inps.model)
+    inps.G_fit = time_func.get_design_matrix4time_func(inps.date_list_fit, inps.model)
     return inps, atr
 
 
@@ -586,7 +585,7 @@ def get_model_param_str(model, ds_dict, unit_fac=100):
 def fit_time_func(model, date_list, ts_dis, unit_fac=100, G_fit=None, conf_level=0.95):
     """Fit a suite of fime functions to the time series.
     Equations:  Gm = d
-    Parameters: model      - dict of time functions, check timeseries2velocity.estimate_time_func() for details.
+    Parameters: model      - dict of time functions, check utils.time_func.estimate_time_func() for details.
                 date_list  - list of dates in YYYYMMDD format
                 ts_dis     - 1D np.ndarray, displacement time series
                 unit_fac   - float, scaling factor due to different data and display units
@@ -606,9 +605,10 @@ def fit_time_func(model, date_list, ts_dis, unit_fac=100, G_fit=None, conf_level
         return m_strs, ts_fit, ts_fit_lim
 
     # 1.1 estimate time func parameter via least squares (OLS)
-    G, m, e2 = ts2vel.estimate_time_func(model=model,
-                                         date_list=date_list,
-                                         dis_ts=ts_dis)
+    G, m, e2 = time_func.estimate_time_func(
+        model=model,
+        date_list=date_list,
+        dis_ts=ts_dis)
 
     # 1.2 calc the precision of time func parameters
     # using the OLS estimation residues e2 = sum((d - Gm) ** 2)

@@ -19,7 +19,7 @@ from scipy import linalg
 
 from mintpy.defaults.template import get_template_content
 from mintpy.objects import timeseries, giantTimeseries, HDFEOS, cluster
-from mintpy.utils import arg_group, readfile, writefile, ptime, utils as ut
+from mintpy.utils import arg_group, ptime, time_func, readfile, writefile, utils as ut
 
 
 dataType = np.float32
@@ -417,55 +417,6 @@ def read_inps2model(inps, date_list=None):
 
 
 ############################################################################
-def estimate_time_func(model, date_list, dis_ts, ref_date=None):
-    """
-    Deformation model estimator, using a suite of linear, periodic, step, exponential, and logarithmic function(s).
-
-    Gm = d
-
-    Parameters: date_list - list of str, dates in YYYYMMDD format
-                dis_ts    - 2D np.ndarray, displacement observation in size of (num_date, num_pixel)
-                model     - dict of time functions, e.g.:
-                            {'polynomial' : 2,                    # int, polynomial degree with 1 (linear), 2 (quadratic), 3 (cubic), etc.
-                             'periodic'   : [1.0, 0.5],           # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
-                             'step'       : ['20061014'],         # list of str, date(s) in YYYYMMDD.
-                             'exp'        : {'20181026': [60],    # dict, key for onset time in YYYYMMDD and value for char. times in days.
-                                             ...
-                                            },
-                             'log'        : {'20161231': [80.5],  # dict, key for onset time in YYYYMMDD and value for char. times in days.
-                                             '20190125': [100, 200],
-                                             ...
-                                            },
-                             ...
-                             }
-    Returns:    G         - 2D np.ndarray, design matrix           in size of (num_date, num_param)
-                m         - 2D np.ndarray, parameter solution      in size of (num_param, num_pixel)
-                e2        - 1D np.ndarray, sum of squared residual in size of (num_pixel,)
-    """
-
-    G = timeseries.get_design_matrix4time_func(date_list, model, refDate=ref_date)
-
-    # least squares solver
-    # Opt. 1: m = np.linalg.pinv(G).dot(dis_ts)
-    # Opt. 2: m = scipy.linalg.lstsq(G, dis_ts, cond=1e-15)[0]
-    # Numpy is not used because it can not handle NaN value in dis_ts
-    m, e2 = linalg.lstsq(G, dis_ts, cond=None)[:2]
-
-    # check empty e2 due to the rank-deficient G matrix for sigularities.
-    e2 = np.array(e2)
-    if e2.size == 0:
-        print('\nWarning: empty e2 residues array due to a redundant or rank-deficient G matrix. This can cause sigularities.')
-        print('Please check: https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.lstsq.html#scipy.linalg.lstsq')
-        print('The issue may be due to:')
-        print('\t1) very small char time(s), tau, of the exp/log function(s)')
-        print('\t2) the onset time(s) of exp/log are far earlier than the minimum date of the time series.')
-        print('Try a different char time, onset time.')
-        print('Your G matrix of the temporal model: \n', G)
-        raise ValueError('G matrix is redundant/rank-deficient!')
-
-    return G, m, e2
-
-
 def run_timeseries2time_func(inps):
 
     # basic info
@@ -619,9 +570,10 @@ def run_timeseries2time_func(inps):
                 boot_ind.sort()
 
                 # estimation
-                m_boot[i] = estimate_time_func(model=model,
-                                               date_list=dates[boot_ind].tolist(),
-                                               dis_ts=ts_data[boot_ind])[1]
+                m_boot[i] = time_func.estimate_time_func(
+                    model=model,
+                    date_list=dates[boot_ind].tolist(),
+                    dis_ts=ts_data[boot_ind])[1]
 
                 prog_bar.update(i+1, suffix='iteration {} / {}'.format(i+1, inps.bootstrapCount))
             prog_bar.close()
@@ -635,9 +587,10 @@ def run_timeseries2time_func(inps):
 
         else:
             ## option 2 - least squares with uncertainty propagation
-            G, m[:, mask], e2 = estimate_time_func(model=model,
-                                                   date_list=inps.dateList,
-                                                   dis_ts=ts_data)
+            G, m[:, mask], e2 = time_func.estimate_time_func(
+                model=model,
+                date_list=inps.dateList,
+                dis_ts=ts_data)
             #del ts_data
 
             ## Compute the covariance matrix for model parameters: Gm = d

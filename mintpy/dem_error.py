@@ -15,7 +15,7 @@ import numpy as np
 from scipy import linalg
 from mintpy.objects import timeseries, geometry, cluster
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import arg_group, ptime, readfile, writefile, utils as ut
+from mintpy.utils import arg_group, ptime, time_func, readfile, writefile, utils as ut
 
 
 # key configuration parameter name
@@ -253,7 +253,7 @@ def get_design_matrix4defo(inps):
     model['step'] = inps.stepFuncDate
     model['periodic'] = inps.periodic
     date_list = timeseries(inps.timeseries_file).get_date_list()
-    G_defo = timeseries.get_design_matrix4time_func(date_list, model)
+    G_defo = time_func.get_design_matrix4time_func(date_list, model)
 
     return G_defo
 
