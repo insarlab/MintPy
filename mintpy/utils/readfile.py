@@ -643,10 +643,10 @@ def get_slice_list(fname):
             # mag / pha / cpx reading like "multiple bands"
             slice_list = ['magnitude', 'phase']
 
-        elif fbase.startswith('offset') and fext in ['.bip'] and num_band == 2:
+        elif fbase.startswith('off') and fext in ['.bip'] and num_band == 2:
             slice_list = ['azimuthOffset', 'rangeOffset']
 
-        elif fbase.startswith('offset') and fname.endswith('cov.bip') and num_band == 3:
+        elif fbase.startswith('off') and fname.endswith('cov.bip') and num_band == 3:
             slice_list = ['azimuthOffsetVar', 'rangeOffsetVar', 'offsetCovar']
 
         else:

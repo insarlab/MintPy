@@ -1135,6 +1135,7 @@ class TimeSeriesAnalysis:
             # files from geocoding
             [os.path.join(geo_dir, 'geo_maskTempCoh.h5'),       '-c', 'gray'],
             [os.path.join(geo_dir, 'geo_temporalCoherence.h5'), '-c', 'gray'],
+            [os.path.join(geo_dir, 'geo_avgSpatialCoh.h5'),     '-c', 'gray'],
             [os.path.join(geo_dir, 'geo_velocity.h5'),          'velocity'],
             [os.path.join(geo_dir, 'geo_timeseries*.h5')] + opt4ts,
 
