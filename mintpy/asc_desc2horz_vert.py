@@ -78,10 +78,6 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # check input azimuth angle
-    if inps.azimuth < 0.:
-        inps.azimuth += 360.
-
     atr1 = readfile.read_attribute(inps.file[0])
     atr2 = readfile.read_attribute(inps.file[1])
 
@@ -123,10 +119,8 @@ def cmd_line_parse(iargs=None):
 ################################################################################
 def get_overlap_lalo(atr1, atr2):
     """Find overlap area in lat/lon of two geocoded files
-    Inputs:
-        atr1/2 - dict, attribute dictionary of two input files in geo coord
-    Outputs:
-        W/E/S/N - float, West/East/South/North in deg
+    Parameters: atr1/2  - dict, attribute dictionary of two input files in geo coord
+    Returns:    W/E/S/N - float, West/East/South/North in deg
     """
     W1, E1, S1, N1 = ut.four_corners(atr1)
     W2, E2, S2, N2 = ut.four_corners(atr2)
@@ -139,7 +133,7 @@ def get_overlap_lalo(atr1, atr2):
     return west, east, south, north
 
 
-def get_design_matrix(atr1, atr2, azimuth=90):
+def get_design_matrix(atr1, atr2, azimuth=-90):
     """Get the design matrix A to convert asc/desc to hz/up.
     Only asc + desc -> hz + up is implemented for now.
 
@@ -155,10 +149,10 @@ def get_design_matrix(atr1, atr2, azimuth=90):
     This could be easily modified to support multiple view geometry
         (e.g. two adjcent tracks from asc & desc) to resolve 3D
 
-    Parameters: atr1/2   : dict, metadata of input LOS files
-                azimuth  : float, azimuth angle for the horizontal direction of interest in degrees.
-                           Default is 90 (for east-west direction)
-    Returns:    A        : 2D matrix in size of (2, 2)
+    Parameters: atr1/2   - dict, metadata of input LOS files
+                azimuth  - float, azimuth angle for the horizontal direction of interest in degrees.
+                           Measured from the north with anti-clockwise direction as positive.
+    Returns:    A        - 2D matrix in size of (2, 2)
 
     """
     # degree to radian
@@ -186,11 +180,12 @@ def get_design_matrix(atr1, atr2, azimuth=90):
     return A
 
 
-def asc_desc2horz_vert(data_asc, data_desc, atr_asc, atr_desc, azimuth=90):
+def asc_desc2horz_vert(data_asc, data_desc, atr_asc, atr_desc, azimuth=-90):
     """Decompose asc / desc LOS data into horz / vert data.
     Parameters: data_asc/desc - 2D np.ndarray, displacement in LOS
                 atr_asc/desc  - dict, metadata
-                azimuth       - float, azimuth angle in degrees
+                azimuth       - float, azimuth angle for the horizontal direction of interest in degrees.
+                                Measured from the north with anti-clockwise direction as positive.
     Returns:    data_h/v      - 2D np.ndarray, displacement in horizontal / vertical
     """
     length, width = data_asc.shape
@@ -210,11 +205,12 @@ def asc_desc2horz_vert(data_asc, data_desc, atr_asc, atr_desc, azimuth=90):
     return data_h, data_v
 
 
-def asc_desc_files2horz_vert(fname1, fname2, dsname=None, azimuth=90):
+def asc_desc_files2horz_vert(fname1, fname2, dsname=None, azimuth=-90):
     """Decompose asc / desc LOS files into horz / vert data.
     Parameters: fname1/2  - str, LOS data
                 dsname    - str, dataset name
-                azimuth   - float, azimuth angle in degrees
+                azimuth   - float, azimuth angle for the horizontal direction of interest in degrees.
+                            Measured from the north with anti-clockwise direction as positive.
     Returns:    dH/dV     - 2D matrix
                 atr       - dict, metadata with updated size and resolution.
                 dLOS_list - list of 2D matrices
