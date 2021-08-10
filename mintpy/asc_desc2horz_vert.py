@@ -9,6 +9,7 @@
 import sys
 import argparse
 import numpy as np
+from mintpy.objects import sensor
 from mintpy.utils import readfile, writefile, utils as ut
 
 
@@ -79,7 +80,6 @@ def cmd_line_parse(iargs=None):
     # check input azimuth angle
     if inps.azimuth < 0.:
         inps.azimuth += 360.
-    #inps.azimuth *= np.pi/180.
 
     atr1 = readfile.read_attribute(inps.file[0])
     atr2 = readfile.read_attribute(inps.file[1])
@@ -188,7 +188,12 @@ def get_design_matrix(atr1, atr2, az_angle=90):
 
 
 def asc_desc2horz_vert(data_asc, data_desc, atr_asc, atr_desc, azimuth=90):
-    """Decompose asc / desc LOS data into horz / vert data."""
+    """Decompose asc / desc LOS data into horz / vert data.
+    Parameters: data_asc/desc - 2D np.ndarray, displacement in LOS
+                atr_asc/desc  - dict, metadata
+                azimuth       - float, azimuth angle in degrees
+    Returns:    data_h/v      - 2D np.ndarray, displacement in horizontal / vertical
+    """
     length, width = data_asc.shape
     # prepare LOS data
     data_los = np.vstack((data_asc.flatten(), data_desc.flatten()))
@@ -208,9 +213,13 @@ def asc_desc2horz_vert(data_asc, data_desc, atr_asc, atr_desc, azimuth=90):
 
 def asc_desc_files2horz_vert(fname1, fname2, dsname=None, azimuth=90):
     """Decompose asc / desc LOS files into horz / vert data.
-    Parameters: fname1/2 : str, LOS data
-    Returns:    dH/dV    : 2D matrix
-                atr      : dict, metadata with updated size and resolution.
+    Parameters: fname1/2  - str, LOS data
+                dsname    - str, dataset name
+                azimuth   - float, azimuth angle in degrees
+    Returns:    dH/dV     - 2D matrix
+                atr       - dict, metadata with updated size and resolution.
+                dLOS_list - list of 2D matrices
+                atr_list  - list of dict
     """
     print('---------------------')
     fnames = [fname1, fname2]
@@ -252,7 +261,11 @@ def asc_desc_files2horz_vert(fname1, fname2, dsname=None, azimuth=90):
 
     # 3. Project displacement from LOS to Horizontal and Vertical components
     print('---------------------')
-    dH, dV = asc_desc2horz_vert(dLOS_list[0], dLOS_list[1], atr_list[0], atr_list[1], azimuth)
+    dH, dV = asc_desc2horz_vert(dLOS_list[0],
+                                dLOS_list[1],
+                                atr_list[0],
+                                atr_list[1],
+                                azimuth=azimuth)
 
     # 4. Update Attributes
     atr = atr_list[0].copy()
@@ -278,7 +291,6 @@ def asc_desc_files2horz_vert(fname1, fname2, dsname=None, azimuth=90):
 
 def write_to_one_file(outfile, dH, dV, atr, dLOS_list, atr_list, ref_file=None):
     """Write all datasets into one HDF5 file"""
-    from mintpy.objects import sensor
 
     print('write all datasets into {}'.format(outfile))
     length, width = dH.shape
