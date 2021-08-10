@@ -285,15 +285,15 @@ def write_to_one_file(outfile, dH, dV, atr, dLOS_list, atr_list, ref_file=None):
     dsDict = {}
     for i in range(len(atr_list)):
         # auto dataset name
-        atr = atr_list[i]
-        dsName = sensor.project_name2sensor_name(atr['PROJECT_NAME'])[0]
+        atr_i = atr_list[i]
+        dsName = sensor.project_name2sensor_name(atr_i['PROJECT_NAME'])[0]
         if atr['ORBIT_DIRECTION'].lower().startswith('asc'):
             dsName += 'A'
         else:
             dsName += 'D'
-        if 'trackNumber' in atr.keys():
-            dsName += 'T{}'.format(atr['trackNumber'])
-        dsName += '_{}'.format(atr['DATE12'])
+        if 'trackNumber' in atr_i.keys():
+            dsName += 'T{}'.format(atr_i['trackNumber'])
+        dsName += '_{}'.format(atr_i['DATE12'])
 
         dsDict[dsName] = dLOS_list[i]
     dsDict['vertical'] = dV
