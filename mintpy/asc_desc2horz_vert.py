@@ -286,7 +286,7 @@ def write_to_one_file(outfile, dH, dV, atr, dLOS_list, atr_list, ref_file=None):
     for i in range(len(atr_list)):
         # auto dataset name
         atr = atr_list[i]
-        dsName = sensor.project_name2sensor_name(atr['FILE_PATH'])[0]
+        dsName = sensor.project_name2sensor_name(atr['PROJECT_NAME'])[0]
         if atr['ORBIT_DIRECTION'].lower().startswith('asc'):
             dsName += 'A'
         else:
