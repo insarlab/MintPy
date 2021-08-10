@@ -48,18 +48,19 @@ def create_parser():
                                      epilog=REFERENCE+'\n'+EXAMPLE)
 
     parser.add_argument('file', nargs=2,
-                        help='ascending and descending files\n' +
+                        help='Ascending and descending files\n'
                              'Both files need to be geocoded in the same spatial resolution.')
     parser.add_argument('-d', '--dset', dest='dsname', type=str, help='dataset to use, default: 1st dataset')
-    parser.add_argument('--azimuth', '--az', dest='azimuth', type=float, default=90.0,
-                        help='azimuth angle in degree (clockwise) of the direction of the horizontal movement\n' +
-                             'default is 90.0 for E-W component, assuming no N-S displacement.\n' +
-                             'i.e. azimuth angle of strike-slip fault\n\n' +
-                             'Note:\n' +
-                             'a. This assumes no deformation in its perpendicular direction\n' +
-                             'b. Near north direction can not be well resolved due to the lack of\n' +
-                             '   diversity in viewing geometry. Check exact dilution of precision for \n' +
-                             '   each component in Wright et al., 2004, GRL')
+    parser.add_argument('--azimuth', '--az', dest='azimuth', type=float, default=-90.0,
+                        help='Azimuth angle in degrees (anti-clockwise) of the direction of the horizontal movement (default: %(default)s).\n'
+                             'E.g.: -90 for East direction\n'
+                             '      0   for North direction\n'
+                             'Set to the azimuth angle of the strike-slip fault to measure the fault-parallel displacement.\n'
+                             'Note:\n'
+                             'a. This assumes no deformation in its perpendicular direction\n'
+                             'b. Near north direction can not be well resolved due to the lack of\n'
+                             '   diversity in viewing geometry. Check exact dilution of precision for \n'
+                             '   each component in Wright et al. (2004, GRL)')
     parser.add_argument('--max-ref-yx-diff', dest='max_ref_yx_diff', type=int, default=3,
                         help='Maximum difference between REF_Y/X (derived from REF_LAT/LON) of input files '+
                              '(default: %(default)s).')
@@ -138,51 +139,49 @@ def get_overlap_lalo(atr1, atr2):
     return west, east, south, north
 
 
-def get_design_matrix(atr1, atr2, az_angle=90):
+def get_design_matrix(atr1, atr2, azimuth=90):
     """Get the design matrix A to convert asc/desc to hz/up.
     Only asc + desc -> hz + up is implemented for now.
 
     Project displacement from LOS to Horizontal and Vertical components:
     Math for 3D:
-        Ulos =   sin(inc_angle) * cos(head_angle) * Ux * -1
-               + sin(inc_angle) * sin(head_angle) * Uy
-               + cos(inc_angle) * Uz
+        dLOS =   dE * sin(inc_angle) * sin(az_angle) * -1
+               + dN * sin(inc_angle) * cos(az_angle)
+               + dU * cos(inc_angle)
     Math for 2D:
-        Ulos =   sin(inc_angle) * sin(head_angle - az) * Uhorz * -1
-               + cos(inc_angle) * Uvert
-        with Uhorz_perp = 0.0
+        dLOS =   dH * sin(inc_angle) * cos(az_angle - az)
+               + dV * cos(inc_angle)
+        with dH_perp = 0.0
     This could be easily modified to support multiple view geometry
         (e.g. two adjcent tracks from asc & desc) to resolve 3D
 
     Parameters: atr1/2   : dict, metadata of input LOS files
-                az_angle : float, azimuth angle for the horizontal direction of interest in degrees.
+                azimuth  : float, azimuth angle for the horizontal direction of interest in degrees.
                            Default is 90 (for east-west direction)
     Returns:    A        : 2D matrix in size of (2, 2)
 
     """
     # degree to radian
-    az_angle *= np.pi / 180.
+    azimuth *= np.pi / 180.
 
     atr_list = [atr1, atr2]
     A = np.zeros((2, 2))
     for i in range(len(atr_list)):
         atr = atr_list[i]
 
-        # incidence angle
-        inc_angle = float(ut.incidence_angle(atr, dimension=0, print_msg=False))
-        print('incidence angle: '+str(inc_angle))
-        inc_angle *= np.pi / 180.
+        # LOS incidence angle
+        los_inc_angle = float(ut.incidence_angle(atr, dimension=0, print_msg=False))
+        print('LOS incidence angle: {} deg'.format(los_inc_angle))
+        los_inc_angle *= np.pi / 180.
 
-        # heading angle
-        head_angle = float(atr['HEADING'])
-        if head_angle < 0.:
-            head_angle += 360.
-        print('heading angle: '+str(head_angle))
-        head_angle *= np.pi / 180.
+        # LOS azimuth angle
+        los_az_angle = ut.heading2azimuth_angle(float(atr['HEADING']))
+        print('LOS azimuth angle: {} deg'.format(los_az_angle))
+        los_az_angle *= np.pi / 180.
 
         # construct design matrix
-        A[i, 0] = np.cos(inc_angle)
-        A[i, 1] = np.sin(inc_angle) * np.sin(head_angle - az_angle)
+        A[i, 0] = np.cos(los_inc_angle)
+        A[i, 1] = np.sin(los_inc_angle) * np.cos(los_az_angle - azimuth)
 
     return A
 
@@ -200,7 +199,7 @@ def asc_desc2horz_vert(data_asc, data_desc, atr_asc, atr_desc, azimuth=90):
 
     # get design matrix
     print('get design matrix')
-    A = get_design_matrix(atr_asc, atr_desc, az_angle=azimuth)
+    A = get_design_matrix(atr_asc, atr_desc, azimuth=azimuth)
 
     # decompose
     print('project asc/desc into horz/vert direction')
@@ -237,7 +236,7 @@ def asc_desc_files2horz_vert(fname1, fname2, dsname=None, azimuth=90):
     length = int(round((south - north) / lat_step))
     print('common area in SNWE: {}'.format((south, north, west, east)))
 
-    # 2. Read data in common AOI: LOS displacement, heading angle, incident angle
+    # 2. Read LOS data in common AOI
     dLOS_list = []
     for i in range(len(fnames)):
         fname = fnames[i]
@@ -245,7 +244,7 @@ def asc_desc_files2horz_vert(fname1, fname2, dsname=None, azimuth=90):
 
         # get box2read for the current file
         coord = ut.coordinate(atr)
-        [x0, x1] = coord.lalo2yx([west, east], coord_type='lon')
+        [x0, x1] = coord.lalo2yx([west,  east],  coord_type='lon')
         [y0, y1] = coord.lalo2yx([north, south], coord_type='lat')
         box = (x0, y0, x0 + width, y0 + length)
 
