@@ -197,12 +197,13 @@ ENVI_BYTE_ORDER = {
 
 
 #########################################################################
-def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1):
+def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1, data_type=None):
     """Read one dataset and its attributes from input file.
     Parameters: fname       : str, path of file to read
                 datasetName : str or list of str, slice names
                 box         : 4-tuple of int area to read, defined in (x0, y0, x1, y1) in pixel coordinate
                 x/ystep     : int, number of pixels to pick/multilook for each output pixel
+                data_type   : numpy data type, e.g. np.float32, np.bool_, etc.
     Returns:    data        : 2/3-D matrix in numpy.array format, return None if failed
                 atr         : dictionary, attributes of data, return None if failed
     Examples:
@@ -246,6 +247,11 @@ def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1):
                                      box=box,
                                      xstep=xstep,
                                      ystep=ystep)
+
+    # customized output data type
+    if data_type:
+        data = np.array(data, dtype=data_type)
+
     return data, atr
 
 
