@@ -6,10 +6,10 @@
 ############################################################
 
 
-from configparser import ConfigParser
 import os
 import sys
 import re
+from configparser import ConfigParser
 import subprocess
 import argparse
 import h5py
@@ -538,7 +538,7 @@ def check_pyaps_account_config(tropo_model):
     }
     SECTION_OPTS = {
         'CDS'  : ['key'],
-        'ECMWF': ['email', 'key']',
+        'ECMWF': ['email', 'key'],
         'MERRA': ['user', 'password'],
     }
 
