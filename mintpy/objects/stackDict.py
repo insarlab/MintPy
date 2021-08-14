@@ -367,6 +367,7 @@ class geometryDict:
         if not self.extraMetadata:
             return None
 
+        print('prepare slantRangeDistance ...')
         if 'Y_FIRST' in self.extraMetadata.keys():
             # for dataset in geo-coordinates, use:
             # 1) incidenceAngle matrix if available OR
@@ -374,9 +375,15 @@ class geometryDict:
             ds_name = 'incidenceAngle'
             key = 'SLANT_RANGE_DISTANCE'
             if ds_name in self.dsNames:
-                print('geocoded input, use incidenceAngle from file {}'.format(self.datasetDict[ds_name]))
+                print('    geocoded input, use incidenceAngle from file: {}'.format(os.path.basename(self.datasetDict[ds_name])))
                 inc_angle = self.read(family=ds_name)[0].astype(np.float32)
+                atr = readfile.read_attribute(self.file)
+                if atr.get('PROCESSOR', 'isce') == 'hyp3' and atr.get('UNIT', 'degrees').startswith('rad'):
+                    print('    convert incidence angle from Gamma to MintPy convention.')
+                    inc_angle = 90. - (inc_angle * 180. / np.pi)
+                # inc angle -> slant range distance
                 data = ut.incidence_angle2slant_range_distance(self.extraMetadata, inc_angle)
+
             elif key in self.extraMetadata.keys():
                 print('geocoded input, use contant value from metadata {}'.format(key))
                 length = int(self.extraMetadata['LENGTH'])
@@ -615,11 +622,13 @@ class geometryDict:
                         data /= ystep
 
                     elif dsName == 'incidenceAngle':
+                        # HyP3 (Gamma) incidence angle file 'theta' is measure from horizontal in radians
                         atr = readfile.read_attribute(self.file)
                         if (atr.get('PROCESSOR', 'isce') == 'hyp3'
                                 and atr.get('UNIT', 'degrees').startswith('rad')):
-                            print('    convert the unit of {:<15} from radian to degree'.format(dsName))
-                            data *= 180. / np.pi
+                            print(('    convert {:<15} from Gamma (from horizontal in radian) to '
+                                  'MintPy (from vertical in degree) convention.').format(dsName))
+                            data = 90. - (data * 180. / np.pi)
 
                     # write
                     ds = f.create_dataset(dsName,
