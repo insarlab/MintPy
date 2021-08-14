@@ -523,18 +523,23 @@ def check_exist_grib_file(gfile_list, print_msg=True):
     return gfile_exist
 
 
-def check_pyaps_config(tropo_model):
-    """Check for input in PyAPS config file. If they are default values or are empty then raise error
-    Parameters: tropo_model : String of tropo model being used to calculate tropospheric delay
+def check_pyaps_account_config(tropo_model):
+    """Check for input in PyAPS config file. If they are default values or are empty, then raise error.
+    Parameters: tropo_model - str, tropo model being used to calculate tropospheric delay
     Returns:    None
     """
-    # Convert MintPy tropo model name to PyAPS name
+    # Convert MintPy tropo model name to data archive center name
     # NARR model included for completeness but no key required
-    pyaps_models = {
-        'ERAI': 'ECMWF',
-        'ERA5': 'CDS',
+    MODEL2ARCHIVE_NAME = {
+        'ERA5' : 'CDS',
+        'ERAI' : 'ECMWF',
         'MERRA': 'MERRA',
-        'NARR': 'NARR'
+        'NARR' : 'NARR',
+    }
+    SECTION_OPTS = {
+        'CDS'  : ['key'],
+        'ECMWF': ['email', 'key']',
+        'MERRA': ['user', 'password'],
     }
 
     # Default values in cfg file
@@ -544,27 +549,21 @@ def check_pyaps_config(tropo_model):
                       'the-email-adress-used-as-login@ucar-website.org',
                       'your-uid:your-api-key']
 
-    # Load API keys
-    cfg_path = os.path.join(os.path.dirname(pa.__file__), 'model.cfg')
-    cfg = ConfigParser()
-    cfg.read(cfg_path)
+    # check account info for the following models
+    if tropo_model in ['ERA5', 'ERAI', 'MERRA']:
+        section = MODEL2ARCHIVE_NAME[tropo_model]
 
-    if tropo_model == 'ERA5':
-        key = cfg.get(pyaps_models[tropo_model], 'key')
-        if key in default_values or not key:
-            raise ValueError('pyaps config for CDS not detected!')
+        # Read model.cfg file
+        cfg_file = os.path.join(os.path.dirname(pa.__file__), 'model.cfg')
+        cfg = ConfigParser()
+        cfg.read(cfg_file)
 
-    elif tropo_model == 'ERAI':
-        user = cfg.get(pyaps_models[tropo_model], 'email')
-        key = cfg.get(pyaps_models[tropo_model], 'key')
-        if (user in default_values or not user) or (key in default_values or not key):
-            raise ValueError('pyaps config for ECMWF not detected!')
+        # check all required option values
+        for opt in SECTION_OPTS[section]:
+            val = cfg.get[section, opt]
+            if not val or val in default_values:
+                raise ValueError('PYAPS: No account info found for {} in {} section in file: {}'.format(tropo_model, section, cfg_file))
 
-    elif tropo_model == 'MERRA':
-        user = cfg.get(pyaps_models[tropo_model], 'user')
-        key = cfg.get(pyaps_models[tropo_model], 'password')
-        if (user in default_values or not user) or (key in default_values or not key):
-            raise ValueError('pyaps config for MERRA not detected!')
     return
 
 
@@ -588,8 +587,8 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
         hour = re.findall('\d{8}[-_]\d{2}', os.path.basename(grib_files2dload[0]))[0].replace('-', '_').split('_')[1]
         grib_dir = os.path.dirname(grib_files2dload[0])
 
-        # Check for non-empty PyAPS config
-        check_pyaps_config(tropo_model)
+        # Check for non-empty account info in PyAPS config file
+        check_pyaps_account_config(tropo_model)
 
         # try 3 times to download, then use whatever downloaded to calculate delay
         i = 0
