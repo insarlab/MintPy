@@ -523,6 +523,37 @@ def check_exist_grib_file(gfile_list, print_msg=True):
     return gfile_exist
 
 
+def check_pyaps_config(tropo_model):
+    """Check for input in PyAPS config file. If there is no input an error will be raised.
+    Parameters: tropo_model : String of tropo model being used to calculate tropospheric delay
+    Returns:    None
+    """
+    # Convert MintPy tropo model name to PyAPS name
+    # NARR model included for completeness but no key required
+    pyaps_models = {
+        'ERAI': 'ECMWF',
+        'ERA5': 'CDS',
+        'MERRA': 'MERRA',
+        'NARR': 'NARR'
+    }
+
+    # Load API keys
+    cfg_path = os.path.join(os.path.dirname(pa.__file__), 'model.cfg')
+    cfg = ConfigParser()
+    cfg.read(cfg_path)
+
+    if tropo_model == 'ERA5':
+        key = cfg.get(pyaps_models[tropo_model], 'key')
+        if not key:
+            raise ValueError('pyaps config for CDS not detected!')
+
+    elif tropo_model in ['MERRA', 'ERAI']:
+        user = cfg.get(pyaps_models[tropo_model], 'email')
+        key = cfg.get(pyaps_models[tropo_model], 'key')
+        if not user or not key:
+            raise ValueError('pyaps config for {} not detected!'.format(pyaps_models[tropo_model]))
+    return
+
 def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
     """Download weather re-analysis grib files using PyAPS
     Parameters: grib_files : list of string of grib files
@@ -543,28 +574,8 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
         hour = re.findall('\d{8}[-_]\d{2}', os.path.basename(grib_files2dload[0]))[0].replace('-', '_').split('_')[1]
         grib_dir = os.path.dirname(grib_files2dload[0])
 
-        # Load API keys
-        cfg_path = os.path.join(os.path.dirname(pa.__file__), 'model.cfg')
-        cfg = ConfigParser()
-        cfg.read(cfg_path)
-        if tropo_model in ['ECMWF', 'ERA', 'ECMWF_old']:
-            username = cfg.get(tropo_model, 'email')
-            key = cfg.get(tropo_model, 'key')
-        elif tropo_model == 'MERRA':
-            username = cfg.get(tropo_model, 'user')
-            key = cfg.get(tropo_model, 'password')
-        else:
-            # ERA5
-            key = cfg.get('CDS', 'key')
-
-        # Check if API config is missing
-        if tropo_model in ['ECMWF', 'ERA', 'ECMWF_old', 'MERRA']:
-            if not username or not key:
-                raise ValueError('Missing API config in PyAPS cfg file')
-        else:
-            # ERA5
-            if not key:
-                raise ValueError('Missing API config in PyAPS cfg file')
+        # Check for non-empty PyAPS config
+        check_pyaps_config(tropo_model)
 
         # try 3 times to download, then use whatever downloaded to calculate delay
         i = 0
