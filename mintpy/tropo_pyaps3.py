@@ -524,7 +524,7 @@ def check_exist_grib_file(gfile_list, print_msg=True):
 
 
 def check_pyaps_config(tropo_model):
-    """Check for input in PyAPS config file. If there is no input an error will be raised.
+    """Check for input in PyAPS config file. If they are default values or are empty then raise error
     Parameters: tropo_model : String of tropo model being used to calculate tropospheric delay
     Returns:    None
     """
@@ -537,6 +537,13 @@ def check_pyaps_config(tropo_model):
         'NARR': 'NARR'
     }
 
+    # Default values in cfg file
+    default_values = ['the-email-address-used-as-login@ecmwf-website.org',
+                      'the-user-name-used-as-login@earthdata.nasa.gov',
+                      'the-password-used-as-login@earthdata.nasa.gov',
+                      'the-email-adress-used-as-login@ucar-website.org',
+                      'your-uid:your-api-key']
+
     # Load API keys
     cfg_path = os.path.join(os.path.dirname(pa.__file__), 'model.cfg')
     cfg = ConfigParser()
@@ -544,15 +551,22 @@ def check_pyaps_config(tropo_model):
 
     if tropo_model == 'ERA5':
         key = cfg.get(pyaps_models[tropo_model], 'key')
-        if not key:
+        if key in default_values or not key:
             raise ValueError('pyaps config for CDS not detected!')
 
-    elif tropo_model in ['MERRA', 'ERAI']:
+    elif tropo_model == 'ERAI':
         user = cfg.get(pyaps_models[tropo_model], 'email')
         key = cfg.get(pyaps_models[tropo_model], 'key')
-        if not user or not key:
-            raise ValueError('pyaps config for {} not detected!'.format(pyaps_models[tropo_model]))
+        if (user in default_values or not user) or (key in default_values or not key):
+            raise ValueError('pyaps config for ECMWF not detected!')
+
+    elif tropo_model == 'MERRA':
+        user = cfg.get(pyaps_models[tropo_model], 'user')
+        key = cfg.get(pyaps_models[tropo_model], 'password')
+        if (user in default_values or not user) or (key in default_values or not key):
+            raise ValueError('pyaps config for MERRA not detected!')
     return
+
 
 def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
     """Download weather re-analysis grib files using PyAPS
