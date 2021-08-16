@@ -34,7 +34,7 @@ def add_data_disp_argument(parser):
     data.add_argument('--noflip', dest='auto_flip', action='store_false',
                       help='turn off auto flip for radar coordinate file')
 
-    data.add_argument('--multilook-num', dest='multilook_num', type=int, default=1, metavar='NUM',
+    data.add_argument('--nmli','--num-multilook','--multilook-num', dest='multilook_num', type=int, default=1, metavar='NUM',
                       help='multilook data in X and Y direction with a factor for display (default: %(default)s).')
     data.add_argument('--nomultilook', '--no-multilook', dest='multilook', action='store_false',
                       help='do not multilook, for high quality display. \n'

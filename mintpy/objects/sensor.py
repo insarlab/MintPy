@@ -199,7 +199,7 @@ def get_unavco_mission_name(meta_dict):
 TSX = {
     'carrier_frequency'          : 9.65e9,    # Hz
     'antenna_length'             : 4.8,       # m
-    'dopper_bandwidth'           : 2770,      # Hz
+    'doppler_bandwidth'          : 2770,      # Hz
     'pulse_repetition_frequency' : 3800,      # Hz
     'chirp_bandwidth'            : 100e6,     # Hz
     'sampling_frequency'         : 109.89e6,  # Hz
@@ -212,7 +212,7 @@ TSX = {
 CSK = {
     'carrier_frequency'          : 9.6e9,     # Hz
     'antenna_length'             : 5.7,       # m
-    'dopper_bandwidth'           : 2670,      # Hz
+    'doppler_bandwidth'          : 2670,      # Hz
     'pulse_repetition_frequency' : 3000,      # Hz
     'chirp_bandwidth'            : 117e6,     # Hz
     'sampling_frequency'         : 146.25e6,  # Hz
@@ -225,7 +225,7 @@ CSK = {
 KSAT5 = {
     'carrier_frequency'          : 9.66e9,    # Hz
     'antenna_length'             : 4.48,      # m
-    'dopper_bandwidth'           : 3110,      # Hz
+    'doppler_bandwidth'          : 3110,      # Hz
     'pulse_repetition_frequency' : 3530,      # Hz
     'chirp_bandwidth'            : 73.24e6,   # Hz
     'sampling_frequency'         : 88.125e6,  # Hz
@@ -241,7 +241,7 @@ KSAT5 = {
 ERS = {
     'carrier_frequency'          : 5.300e9,   # Hz
     'antenna_length'             : 10.0,      # m
-    'dopper_bandwidth'           : 1500,      # Hz
+    'doppler_bandwidth'          : 1500,      # Hz
     'pulse_repetition_frequency' : 1680,      # Hz
     'chirp_bandwidth'            : 15.55e6,   # Hz
     'sampling_frequency'         : 18.96e6,   # Hz
@@ -254,7 +254,7 @@ ERS = {
 ENV = {
     'carrier_frequency'          : 5.331e9,   # Hz
     'antenna_length'             : 10.0,      # m
-    'dopper_bandwidth'           : 1500,      # Hz
+    'doppler_bandwidth'          : 1500,      # Hz
     'pulse_repetition_frequency' : 1650,      # Hz
     'chirp_bandwidth'            : 16.00e6,   # Hz
     'sampling_frequency'         : 18.00e6,   # Hz
@@ -272,7 +272,7 @@ ENV = {
 SEN = {
     'carrier_frequency'          : 5.405e9,   # Hz
     'antenna_length'             : 45.0,      # m
-    'dopper_bandwidth'           : 380,       # Hz
+    'doppler_bandwidth'          : 380,       # Hz
     'pulse_repetition_frequency' : 522,       # Hz
     'chirp_bandwidth'            : 56.50e6,   # Hz
     'sampling_frequency'         : 64.35e6,   # Hz
@@ -289,7 +289,7 @@ SEN = {
 RSAT2 = {
     'carrier_frequency'          : 5.405e9,   # Hz
     'antenna_length'             : 6.55,      # m
-    'dopper_bandwidth'           : 2308,      # Hz
+    'doppler_bandwidth'          : 2308,      # Hz
     'pulse_repetition_frequency' : 3637,      # Hz
     'chirp_bandwidth'            : 78.16e6,   # Hz
     'sampling_frequency'         : 112.68e6,  # Hz
@@ -313,7 +313,7 @@ SEASAT = {
 JERS = {
     'carrier_frequency'          : 1.275e9,   # Hz
     'antenna_length'             : 11.92,     # m
-    'dopper_bandwidth'           : 1157,      # Hz
+    'doppler_bandwidth'          : 1157,      # Hz
     'pulse_repetition_frequency' : 1600,      # Hz
     'chirp_bandwidth'            : 15.00e6,   # Hz
     'sampling_frequency'         : 17.10e6,   # Hz
@@ -326,7 +326,7 @@ JERS = {
 ALOS = {
     'carrier_frequency'          : 1.270e9,   # Hz
     'antenna_length'             : 8.9,       # m
-    'dopper_bandwidth'           : 1700,      # Hz
+    'doppler_bandwidth'          : 1700,      # Hz
     'pulse_repetition_frequency' : 2160,      # Hz
     'chirp_bandwidth'            : 28.00e6,   # Hz
     'sampling_frequency'         : 32.00e6,   # Hz
@@ -339,7 +339,7 @@ ALOS = {
 ALOS2 = {
     'carrier_frequency'          : 1.258e9,   # Hz
     'antenna_length'             : 9.9,       # m
-    'dopper_bandwidth'           : 1515,      # Hz
+    'doppler_bandwidth'          : 1515,      # Hz
     'pulse_repetition_frequency' : 2000,      # Hz
     'chirp_bandwidth'            : 84.0e6,    # Hz
     'sampling_frequency'         : 100.0e6,   # Hz
