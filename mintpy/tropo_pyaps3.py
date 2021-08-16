@@ -560,7 +560,7 @@ def check_pyaps_account_config(tropo_model):
 
         # check all required option values
         for opt in SECTION_OPTS[section]:
-            val = cfg.get[section, opt]
+            val = cfg.get(section, opt)
             if not val or val in default_values:
                 raise ValueError('PYAPS: No account info found for {} in {} section in file: {}'.format(tropo_model, section, cfg_file))
 
