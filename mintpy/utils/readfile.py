@@ -431,7 +431,15 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
                 band = 1
 
         elif k in ['slc']:
-            cpx_band = 'magnitude'
+            if datasetName:
+                if datasetName in ['amplitude','magnitude','intensity']:
+                    cpx_band = 'magnitude'
+                elif datasetName in ['band2','phase']:
+                    cpx_band = 'phase'
+                else:
+                    cpx_band = 'complex'
+            else:
+                cpx_band = 'complex'
 
         elif k.startswith('los') and datasetName and datasetName.startswith(('band2','az','head')):
             band = min(2, num_band)
@@ -575,10 +583,16 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
 
 
 #########################################################################
-def get_slice_list(fname):
+def get_slice_list(fname, no_complex=False):
     """Get list of 2D slice existed in file (for display)"""
     fbase, fext = os.path.splitext(os.path.basename(fname))
     fext = fext.lower()
+    # ignore certain meaningless file extensions
+    while fext in ['.geo', '.rdr', '.full', '.wgs84', '.grd']:
+        fbase, fext = os.path.splitext(fbase)
+    if not fext:
+        fext = fbase
+
     atr = read_attribute(fname)
     k = atr['FILE_TYPE']
 
@@ -644,10 +658,14 @@ def get_slice_list(fname):
             # isce los file
             slice_list = ['incidenceAngle', 'azimuthAngle']
 
-        elif fext in ['.int', '.unw']:
-            # do not check the actual num_band in order to support
-            # mag / pha / cpx reading like "multiple bands"
+        elif fext in ['.unw']:
             slice_list = ['magnitude', 'phase']
+
+        elif fext in ['.int', '.slc']:
+            if no_complex:
+                slice_list = ['magnitude', 'phase']
+            else:
+                slice_list = ['complex']
 
         elif fbase.startswith('off') and fext in ['.bip'] and num_band == 2:
             slice_list = ['azimuthOffset', 'rangeOffset']

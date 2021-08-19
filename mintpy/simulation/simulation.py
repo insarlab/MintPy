@@ -13,13 +13,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from mintpy.defaults.plot import *
-from mintpy.objects import timeseries
+from mintpy.objects import timeseries, sensor
 from mintpy.utils import ptime, network as pnet
 
 # load all modules in this sub-directory for easy import
 from mintpy.simulation.decorrelation import *
 from mintpy.simulation.defo_model import *
 from mintpy.simulation.fractal import *
+
+
+SPEED_OF_LIGHT = 299792458   # m/s
+
 
 
 ############################ Deformation Time-series ############################
@@ -177,11 +181,12 @@ def simulate_network(ts_sim, date12_list, decor_day, coh_resid, L=75, num_repeat
     m_dates = [i.split('_')[0] for i in date12_list]
     s_dates = [i.split('_')[1] for i in date12_list]
     date_list = sorted(list(set(m_dates + s_dates)))
-    ifgram_sim = timeseries2ifgram(ts_sim, date_list, date12_list, display=False)
+    wvl = SPEED_OF_LIGHT / sensor.SENSOR_DICT[sensor_name.lower()]['carrier_frequency']
+    ifgram_sim = timeseries2ifgram(ts_sim, date_list, date12_list, wvl=wvl, display=False)
 
     # simulated (true) coherence
     coh_sim = pnet.simulate_coherence(date12_list,
-                                      baseline_file='bl_list.txt',
+                                      baseline_file=baseline_file,
                                       sensor_name=sensor_name,
                                       inc_angle=inc_angle,
                                       decor_time=decor_day,

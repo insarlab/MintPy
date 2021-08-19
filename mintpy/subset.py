@@ -53,13 +53,13 @@ def create_parser():
                                      epilog=TEMPLATE+'\n'+EXAMPLE)
     parser.add_argument('file', nargs='+', help='File(s) to subset/crop')
 
-    parser.add_argument('-x', dest='subset_x', type=int, nargs=2,
+    parser.add_argument('-x','--sub-x','--subset-x', dest='subset_x', type=int, nargs=2,
                         help='subset range in x/cross-track/column direction')
-    parser.add_argument('-y', dest='subset_y', type=int, nargs=2,
+    parser.add_argument('-y','--sub-y','--subset-y', dest='subset_y', type=int, nargs=2,
                         help='subset range in y/along-track/row direction')
-    parser.add_argument('-l', '--lat', dest='subset_lat',
+    parser.add_argument('-l', '--lat', '--sub-lat', '--subset-lat', dest='subset_lat',
                         type=float, nargs=2, help='subset range in latitude')
-    parser.add_argument('-L', '--lon', dest='subset_lon',
+    parser.add_argument('-L', '--lon', '--sub-lon', '--subset-lon', dest='subset_lon',
                         type=float, nargs=2, help='subset range in column\n\n')
 
     parser.add_argument('-t', '--template', dest='template_file',
@@ -489,7 +489,8 @@ def subset_file(fname, subset_dict_input, out_file=None):
                 length=int(atr['LENGTH']),
                 bands=len(dsDict.keys()),
                 data_type=dtype_isce,
-                scheme=atr['scheme'])
+                scheme=atr['scheme'],
+                image_type=atr['FILE_TYPE'])
             print(f'write file: {out_file}.xml')
 
             # write GDAL VRT file

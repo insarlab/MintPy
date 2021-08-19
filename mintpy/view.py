@@ -763,7 +763,7 @@ def read_input_file_info(inps):
     vprint('file size in y/x: {}'.format((inps.length, inps.width)))
 
     # File dataset List
-    inps.sliceList = readfile.get_slice_list(inps.file)
+    inps.sliceList = readfile.get_slice_list(inps.file, no_complex=True)
 
     # Read input list of dataset to display
     inps, atr = read_dataset_input(inps)

@@ -322,7 +322,8 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=
                 length=int(atr['LENGTH']),
                 bands=len(dsDict.keys()),
                 data_type=dtype_isce,
-                scheme=atr['scheme'])
+                scheme=atr['scheme'],
+                image_type=atr['FILE_TYPE'])
             print(f'write file: {outfile}.xml')
 
             # write GDAL VRT file

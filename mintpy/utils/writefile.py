@@ -173,14 +173,15 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             write_real_float32(data_list[0], out_file)
 
         elif fext == '.slc':
-            write_complex_int16(data_list[0], out_file)
+            if data_type == 'complex64':
+                write_complex_float32(data_list[0], out_file)
+            else:
+                write_complex_int16(data_list[0], out_file)
 
         elif fext == '.int':
             if key_list == ['magnitude', 'phase']:
-                data = data_list[0] * np.exp(1j * data_list[1])
-                write_complex_float32(data, out_file)
-            else:
-                write_complex64(data_list[0], out_file)
+                data_list[0] = data_list[0] * np.exp(1j * data_list[1])
+            write_complex_float32(data_list[0], out_file)
 
         elif fext == '.msk':
             write_byte(data_list[0], out_file)
@@ -593,22 +594,33 @@ def write_gdal_vrt(meta, out_file):
     return out_file
 
 
-def write_isce_xml(fname, width, length, bands=1, data_type='FLOAT', scheme='BIP'):
+def write_isce_xml(fname, width, length, bands=1, data_type='FLOAT', scheme='BIP', image_type=None):
     """Write XML metadata file in ISCE-2 format
 
-    Parameters: fname     - str, path of data file
-                width     - int, number of columns
-                length    - int, number of rows
-                bands     - int, number of band
-                data_type - str, data type name in ISCE convention
-                            readfile.GDAL2ISCE_DATATYPE
-                scheme    - str, band interleave, BIP, BIL, BSQ
+    Parameters: fname      - str, path of data file
+                width      - int, number of columns
+                length     - int, number of rows
+                bands      - int, number of band
+                data_type  - str, data type name in ISCE convention
+                             readfile.GDAL2ISCE_DATATYPE
+                scheme     - str, band interleave, BIP, BIL, BSQ
+                image_type - str, FILE_TYPE
     Examples:   write_isce_xml(out_file='filt_fine.cor', width=400, length=500)
     """
     import isce
     import isceobj
 
-    img = isceobj.Image.createImage()
+    if not image_type:
+        img = isceobj.Image.createImage()
+    elif image_type == '.slc':
+        img = isceobj.Image.createSlcImage()
+    elif image_type == '.unw':
+        img = isceobj.Image.createUnwImage()
+    elif image_type == '.int':
+        img = isceobj.Image.createIntImage()
+    else:
+        img = isceobj.Image.createImage()
+
     img.setFilename(fname)
     img.setWidth(width)
     img.setLength(length)
@@ -644,13 +656,16 @@ def write_isce_file(data, out_file, file_type='isce_unw'):
 
     if file_type == 'isce_unw':
         width = int(width / 2)
-        write_isce_xml(out_file, width, length, bands=2, data_type='FLOAT', scheme='BIL')
+        write_isce_xml(out_file, width, length, bands=2, data_type='FLOAT',  scheme='BIL', image_type='.unw')
 
     elif file_type == 'isce_int':
-        write_isce_xml(out_file, width, length, bands=1, data_type='CFLOAT', scheme='BIL')
+        write_isce_xml(out_file, width, length, bands=1, data_type='CFLOAT', scheme='BIL', image_type='.int')
 
     elif file_type == 'isce_cor':
-        write_isce_xml(out_file, width, length, bands=1, data_type='FLOAT', scheme='BIL')
+        write_isce_xml(out_file, width, length, bands=1, data_type='FLOAT',  scheme='BIL', image_type='.cor')
+
+    elif file_type == 'isce_slc':
+        write_isce_xml(out_file, width, length, bands=1, data_type='CFLOAT', scheme='BIP', image_type='.slc')
 
     else:
         raise ValueError('un-recognized ISCE file type: {}'.format(file_type))
@@ -695,22 +710,23 @@ def write_complex_float32(data, out_file):
     return out_file
 
 
-def write_complex64(data, out_file):
-    """Writes roi_pac .int data"""
-    num_pixel = data.size
-    F = np.zeros([2 * num_pixel, 1], np.float32)
-    id1 = list(range(0, 2 * num_pixel, 2))
-    id2 = list(range(1, 2 * num_pixel, 2))
-    F[id1] = np.reshape(np.cos(data), (num_pixel, 1))
-    F[id2] = np.reshape(np.sin(data), (num_pixel, 1))
-    F.tofile(out_file)
-    return out_file
+#def write_complex_float32(data, out_file):
+#    """Writes roi_pac .int data"""
+#    num_pixel = data.size
+#    F = np.zeros([2 * num_pixel, 1], np.float32)
+#    id1 = list(range(0, 2 * num_pixel, 2))
+#    id2 = list(range(1, 2 * num_pixel, 2))
+#    F[id1] = np.reshape(np.cos(data), (num_pixel, 1))
+#    F[id2] = np.reshape(np.sin(data), (num_pixel, 1))
+#    F.tofile(out_file)
+#    return out_file
 
 
 def write_complex_int16(data, out_file):
     """Write gamma scomplex data, i.e. .slc file.
         data is complex 2-D matrix
         real, imagery, real, ...
+    Write in this way, because numpy does not have complex int16 directly.
     """
     num_pixel = data.size
     id1 = list(range(0, 2 * num_pixel, 2))
