@@ -1351,6 +1351,7 @@ def read_gdal_vrt(fname):
 
     # projection / coordinate unit
     srs = osr.SpatialReference(wkt=ds.GetProjection())
+    atr['EPSG'] = srs.GetAttrValue('AUTHORITY', 1)
     srs_name = srs.GetName()
     if srs_name and 'UTM' in srs_name:
         atr['UTM_ZONE'] = srs_name.split('UTM zone')[-1].strip()

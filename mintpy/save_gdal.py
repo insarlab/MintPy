@@ -62,7 +62,7 @@ def cmd_line_parse(iargs=None):
 
 
 ##############################################################################
-def array2raster(array, rasterName, rasterFormat, rasterOrigin, xStep, yStep):
+def array2raster(array, rasterName, rasterFormat, rasterOrigin, xStep, yStep, epsg=4326):
 
     # transform info
     cols = array.shape[1]
@@ -85,9 +85,9 @@ def array2raster(array, rasterName, rasterFormat, rasterOrigin, xStep, yStep):
     outband = outRaster.GetRasterBand(1)
     outband.WriteArray(array)
 
-    print('set projectection as: EPSG 4326')
+    print('set projection as: EPSG {}'.format(epsg))
     outRasterSRS = osr.SpatialReference()
-    outRasterSRS.ImportFromEPSG(4326)
+    outRasterSRS.ImportFromEPSG(epsg)
     outRaster.SetProjection(outRasterSRS.ExportToWkt())
     outband.FlushCache()
     print('finished writing to {}'.format(rasterName))
@@ -123,12 +123,13 @@ def main(iargs=None):
         inps.outfile = os.path.abspath(inps.outfile)
 
     # coordinate info
+    epsg = int(attr['EPSG'])
     rasterOrigin = (float(attr['X_FIRST']),float(attr['Y_FIRST']))
     xStep = float(attr['X_STEP'])
     yStep = float(attr['Y_STEP'])
 
     # convert array to raster
-    array2raster(array, inps.outfile, inps.out_format, rasterOrigin, xStep, yStep)
+    array2raster(array, inps.outfile, inps.out_format, rasterOrigin, xStep, yStep, epsg)
 
     return
 
