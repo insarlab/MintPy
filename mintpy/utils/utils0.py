@@ -20,7 +20,7 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import ndimage
-from pyproj import Proj, Transformer
+from pyproj import CRS, Proj, Transformer
 
 # global variables
 SPEED_OF_LIGHT = 299792458 # m/s
@@ -232,6 +232,20 @@ def touch(fname_list, times=None):
 
 
 #################################### Geometry ##########################################
+def utm_zone2epsg_code(utm_zone):
+    """Convert UTM Zone string to EPSG code.
+    Parameters: utm_zone - str, atr['UTM_ZONE']
+    Returns:    epsg     - str, EPSG code
+    Examples:   epsg = utm_zone2epsg_code('11N')
+    """
+    crs = CRS.from_dict({'proj': 'utm',
+                         'zone': int(utm_zone[:-1]),
+                         'south': utm_zone[-1] == 'S',
+                        })
+    epsg = crs.to_authority()[1]
+    return epsg
+
+
 def to_latlon(infile, x, y):
     """Convert x, y in the projection coordinates of the file to lon/lat in degree.
 

@@ -11,7 +11,7 @@ import sys
 import argparse
 import numpy as np
 from osgeo import gdal, ogr, osr
-from mintpy.utils import readfile, plot as pp
+from mintpy.utils import readfile, utils0 as ut, plot as pp
 
 
 # link: https://gdal.org/drivers/raster/index.html
@@ -123,13 +123,19 @@ def main(iargs=None):
         inps.outfile = os.path.abspath(inps.outfile)
 
     # coordinate info
-    epsg = int(attr['EPSG'])
     rasterOrigin = (float(attr['X_FIRST']),float(attr['Y_FIRST']))
     xStep = float(attr['X_STEP'])
     yStep = float(attr['Y_STEP'])
+    kwargs = dict(xStep=xStep, yStep=yStep)
+
+    epsg = attr.get('EPSG', None)
+    if not epsg and 'UTM_ZONE' in attr.keys():
+        epsg = ut.utm_zone2epsg_code(attr['UTM_ZONE'])
+    if epsg:
+        kwargs['epsg'] = int(epsg)
 
     # convert array to raster
-    array2raster(array, inps.outfile, inps.out_format, rasterOrigin, xStep, yStep, epsg)
+    array2raster(array, inps.outfile, inps.out_format, rasterOrigin, **kwargs)
 
     return
 
