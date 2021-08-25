@@ -68,8 +68,8 @@ Run the following in your terminal to install the dependencies to your conda env
 ```
 # To create a new conda environment, e.g. named "insar", run "conda create --name insar; conda activate insar"
 
-# Add "gdal>=3" below to install extra dependencies if you use ARIA, FRInGE, HyP3 or GMTSAR
-# Add "isce2"   below to install extra dependencies if you use ISCE-2
+# Add "gdal'>=3'" below to install extra dependencies if you use ARIA, FRInGE, HyP3 or GMTSAR
+# Add "isce2"     below to install extra dependencies if you use ISCE-2
 conda install --yes -c conda-forge --file ~/tools/MintPy/docs/requirements.txt
 
 $CONDA_PREFIX/bin/pip install git+https://github.com/insarlab/PySolid.git

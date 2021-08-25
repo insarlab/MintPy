@@ -126,6 +126,7 @@ def create_parser():
     parser = arg_group.add_gps_argument(parser)
     parser = arg_group.add_mask_argument(parser)
     parser = arg_group.add_map_argument(parser)
+    parser = arg_group.add_memory_argument(parser)
     parser = arg_group.add_point_argument(parser)
     parser = arg_group.add_reference_argument(parser)
     parser = arg_group.add_save_argument(parser)
@@ -1354,6 +1355,7 @@ def prepare4multi_subplots(inps, metadata):
         #   inps.multilook_num ==1 (no --multilook-num input)
         # inps.multilook is used for this check ONLY
         inps.multilook_num = pp.auto_multilook_num(inps.pix_box, inps.fig_row_num * inps.fig_col_num,
+                                                   max_memory=inps.maxMemory,
                                                    print_msg=inps.print_msg)
 
     # multilook mask

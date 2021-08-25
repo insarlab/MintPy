@@ -268,10 +268,11 @@ def auto_flip_direction(metadata, ax=None, print_msg=True):
     return flip_lr, flip_ud
 
 
-def auto_multilook_num(box, num_time, print_msg=True):
+def auto_multilook_num(box, num_time, max_memory=4.0, print_msg=True):
     """Calcualte the default/auto multilook number based on the input 3D shape.
     Parameters: box           - tuple of 4 int in (x0, y0, x1, y1) for the spatial bounding box
                 num_time      - int, the 3rd / time dimension size
+                max_memory    - float, max memory in GB
     Returns:    multilook_num - int, multilook number
     """
     # calc total number of pixels
@@ -279,11 +280,28 @@ def auto_multilook_num(box, num_time, print_msg=True):
 
     # calc auto multilook_num
     if   num_pixel > (64e6*320):  multilook_num = 32;      # 16k * 4k image with 320 subplots
+    elif num_pixel > (50e6*160):  multilook_num = 20;      # 10k * 5k image with 160 subplots
     elif num_pixel > (32e6*160):  multilook_num = 16;      #  8k * 4k image with 160 subplots
+    elif num_pixel > (18e6*160):  multilook_num = 12;      #  9k * 2k image with 160 subplots
     elif num_pixel > ( 8e6*160):  multilook_num = 8;       #  4k * 2k image with 160 subplots
+    elif num_pixel > ( 4e6*180):  multilook_num = 6;       #  2k * 2k image with 180 subplots
     elif num_pixel > ( 4e6*80) :  multilook_num = 4;       #  2k * 2k image with 80  subplots
+    elif num_pixel > ( 4e6*45) :  multilook_num = 3;       #  2k * 2k image with 45  subplots
     elif num_pixel > ( 4e6*20) :  multilook_num = 2;       #  2k * 2k image with 20  subplots
     else:                         multilook_num = 1;
+
+    ## scale based on memory
+    # The auto calculation above uses ~1.5 GB in reserved memory and ~700 MB in actual memory.
+    if max_memory < 2.0:
+        # With a lower  max memory from manual input, we increase the multilook_num (lower resolution)
+        multilook_num *= np.sqrt(4.0 / max_memory)
+    elif max_memory <= 4.0:
+        # Do nothing if input max memory is between 2.0-4.0 GB.
+        pass
+    else:
+        # With a larger max memory from manual input, we decrease the multilook_num (higher resolution)
+        multilook_num /= np.sqrt(max_memory / 4.0)
+    multilook_num = int(np.ceil(multilook_num))
 
     # print out msg
     if multilook_num > 1 and print_msg:
