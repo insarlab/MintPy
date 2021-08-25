@@ -1180,12 +1180,19 @@ class TimeSeriesAnalysis:
         run_parallel = False
         if self.template['mintpy.compute.cluster']:
             num_workers = int(self.template['mintpy.compute.numWorker'])
+
+            # limit number of parallel processes based on available CPU
             num_cores, run_parallel, Parallel, delayed = ut.check_parallel(
                 len(iargs_list),
                 print_msg=False,
                 maxParallelNum=num_workers)
 
-        if run_parallel:
+            # limit number of parallel processes based on memory limit
+            # default view.py call could use up to 1.5 GB reserved memory (~700 MB actual memory)
+            max_memory = float(self.template['mintpy.compute.maxMemory'])
+            num_cores = min(num_cores, np.rint(max_memory / 1.5).astype(int))
+
+        if run_parallel and num_cores > 1:
             print("parallel processing using {} cores ...".format(num_cores))
             Parallel(n_jobs=num_cores)(delayed(mintpy.view.main)(iargs) for iargs in iargs_list)
         else:

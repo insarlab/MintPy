@@ -45,9 +45,10 @@ The following attributes vary for each interferogram:
 +  REF_DATE = reference date
 +  REF_X/Y/LAT/LON = column/row/latitude/longitude of reference point
 +  SUBSET_XMIN/XMAX/YMIN/YMAX = start/end column/row number of subset in the original coverage
-+  MODIFICATION_TIME = dataset modification time, exists in ifgramStack.h5 file for 3D dataset, used for --update option of unwrap error corrections.
++  MODIFICATION_TIME = dataset modification time, exists in ifgramStack.h5 file for 3D dataset, used for "--update" option of unwrap error corrections.
 +  NCORRLOOKS = number of independent looks, as explained in [SNAPHU](https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/snaphu.conf.full)
 +  UTM_ZONE = UTM zone, e.g. 60S, for geocoded file with UTM projection only.
++  EPSG = EPSG code for coordinate systems, for geocoded files only.
 
 ### Reference ###
 
