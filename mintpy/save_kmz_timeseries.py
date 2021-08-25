@@ -53,7 +53,8 @@ def create_parser():
 
     opts = parser.add_argument_group('Display options', 'configurations for the display')
     opts.add_argument('--steps', type=int, nargs=3, default=[20, 5, 2],
-                      help='list of steps for output pixel. Default: 20 5 2')
+                      help='list of steps for output pixel (default: %(default)s).\n'
+                           'Set to [20, 5, 0] to skip the 3rd high-resolution level to reduce file size.')
     opts.add_argument('--level-of-details','--lods', dest='lods', type=int, nargs=4, default=[0, 1500, 4000, -1],
                       help='list of level of details to determine the visible range while browering. Default: 0, 1500, 4000, -1.\n'+
                            'Ref: https://developers.google.com/kml/documentation/kml_21tutorial')
