@@ -81,7 +81,7 @@ def do_setup():
             "ecCodes",
             "netcdf4",
             "pygrib",
-            "pyhdf",
+            # "pyhdf", # required by MERRA, which is currently not supported in pyaps3
             # pyresample dependencies
             "pyresample",
             #"openmp",

@@ -1,6 +1,6 @@
 ## Install MintPy
 
-Tested on macOS and Linux, not sure about Windows.
+Tested on macOS and Linux, MintPy is installable on Windows, but may have bugs
 
 ### Notes for Mac users ###
 
@@ -148,3 +148,26 @@ f2py -c -m solid solid.for
 directory, MintPy applications will download the GAM files into the indicated directory. Also MintPy
 application will look for the GAM files in the directory before downloading a new one to prevent downloading
 multiple copies if you work with different dataset that cover the same date/time.
+
+
+### Windows Installation via Conda ###
+
+
+```batch
+mkdir mintpy
+cd mintpy
+git clone git@github.com:insarlab/MintPy.git
+git clone git@github.com:yunjunz/PyAPS.git
+
+conda env create -f MintPy/docs/environment.yml
+conda activate mintpy
+
+pip install -e ./MintPy
+pip install -e ./PyAps
+
+conda env config vars set MINTPY_HOME=/home/asjohnston/src/MintPy/
+conda env config vars set PyAPS_HOME=/home/asjohnston/src/PyAPS/
+
+conda deactivate
+conda activate MintPy
+```

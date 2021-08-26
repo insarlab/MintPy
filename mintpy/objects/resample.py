@@ -184,7 +184,7 @@ class resample:
         """
         # adjust fill_value for each source data / block
         fill_value = self.fill_value
-        float_types = [np.float32, np.float64, np.float128, np.complex64, np.complex128]
+        float_types = [np.single, np.double, np.longdouble, np.csingle, np.cdouble, np.clongdouble]
         if src_data.dtype == np.bool_:
             fill_value = False
             if print_msg:
