@@ -168,5 +168,5 @@ pip install -e ./PyAps
 conda env config vars set PATH=%PATH%;%cd%/MintPy/
 
 conda deactivate
-conda activate MintPy
+conda activate mintpy
 ```
