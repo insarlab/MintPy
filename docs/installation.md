@@ -165,8 +165,7 @@ conda activate mintpy
 pip install -e ./MintPy
 pip install -e ./PyAps
 
-conda env config vars set MINTPY_HOME=/home/asjohnston/src/MintPy/
-conda env config vars set PyAPS_HOME=/home/asjohnston/src/PyAPS/
+conda env config vars set %cd%/MintPy/
 
 conda deactivate
 conda activate MintPy
