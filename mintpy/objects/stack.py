@@ -12,6 +12,7 @@ import os
 import sys
 import re
 import time
+import itertools
 from datetime import datetime as dt, timedelta
 import h5py
 import numpy as np
@@ -1220,47 +1221,44 @@ class ifgramStack:
         """
         # Date info
         date12_list = list(date12_list)
+        # Use tuples of the dates, which are hashable for the lookup dict
+        date12_tuples = [tuple(d.split('_')) for d in date12_list]
 
-        # calculate triangle_idx
-        triangle_idx = []
-        for ifgram1 in date12_list:
-            # ifgram1 (date1, date2)
-            date1, date2 = ifgram1.split('_')
+        # Create an inverse map from tuple(date1, date1) -> index in ifg list
+        ifg_to_idx = {ifg: idx for idx, ifg in enumerate(date12_tuples)}
 
-            # ifgram2 candidates (date1, date3)
-            date3_list = []
-            for ifgram2 in date12_list:
-                if date1 == ifgram2.split('_')[0] and ifgram2 != ifgram1:
-                    date3_list.append(ifgram2.split('_')[1])
+        # Get the unique SAR dates present in the interferogram list
+        sar_date_list = sorted(set(itertools.chain.from_iterable(date12_tuples)))
 
-            # ifgram2/3
-            if len(date3_list) > 0:
-                for date3 in date3_list:
-                    ifgram3 = '{}_{}'.format(date2, date3)
-                    if ifgram3 in date12_list:
-                        ifgram1 = '{}_{}'.format(date1, date2)
-                        ifgram2 = '{}_{}'.format(date1, date3)
-                        ifgram3 = '{}_{}'.format(date2, date3)
-                        triangle_idx.append([date12_list.index(ifgram1),
-                                             date12_list.index(ifgram2),
-                                             date12_list.index(ifgram3)])
+        # Start with all possible triplets, narrow down based on ifgs present
+        closure_list = itertools.combinations(sar_date_list, 3)
 
-        if len(triangle_idx) == 0:
+        M = len(date12_tuples)  # Number of igrams, number of rows
+        C_list = []
+        for day1, day2, day3 in closure_list:
+            ifg12 = (day1, day2)
+            ifg23 = (day2, day3)
+            ifg13 = (day1, day3)
+            # Check if any ifg is not available in the current triple. Skip if so
+            try:
+                idx12 = ifg_to_idx[ifg12]
+                ifg23 = ifg_to_idx[ifg23]
+                idx13 = ifg_to_idx[ifg13]
+            except KeyError:
+                continue
+
+            # Add the +/-1 row of the matrix to our list
+            row = np.zeros(M, dtype=np.int8)
+            row[idx12] = 1
+            row[ifg23] = 1
+            row[idx13] = -1
+            C_list.append(row)
+
+        if len(C_list) == 0:
             print('\nWARNING: No triangles found from input date12_list:\n{}!\n'.format(date12_list))
             return None
 
-        triangle_idx = np.array(triangle_idx, np.int16)
-        triangle_idx = np.unique(triangle_idx, axis=0)
-
-        # triangle_idx to C
-        num_triangle = triangle_idx.shape[0]
-        C = np.zeros((num_triangle, len(date12_list)), np.float32)
-        for i in range(num_triangle):
-            C[i, triangle_idx[i, 0]] = 1
-            C[i, triangle_idx[i, 1]] = -1
-            C[i, triangle_idx[i, 2]] = 1
-        return C
-
+        return np.stack(C_list).astype(np.float32)
 
     # Functions for Network Inversion
     @staticmethod
