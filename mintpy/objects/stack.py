@@ -1228,21 +1228,21 @@ class ifgramStack:
         ifg_to_idx = {ifg: idx for idx, ifg in enumerate(date12_tuples)}
 
         # Get the unique SAR dates present in the interferogram list
-        sar_date_list = sorted(set(itertools.chain.from_iterable(date12_tuples)))
+        date_list = sorted(set(itertools.chain.from_iterable(date12_tuples)))
 
         # Start with all possible triplets, narrow down based on ifgs present
-        closure_list = itertools.combinations(sar_date_list, 3)
+        closure_list = itertools.combinations(date_list, 3)
 
         M = len(date12_tuples)  # Number of igrams, number of rows
         C_list = []
-        for day1, day2, day3 in closure_list:
-            ifg12 = (day1, day2)
-            ifg23 = (day2, day3)
-            ifg13 = (day1, day3)
+        for date1, date2, date3 in closure_list:
+            ifg12 = (date1, date2)
+            ifg23 = (date2, date3)
+            ifg13 = (date1, date3)
             # Check if any ifg is not available in the current triple. Skip if so
             try:
                 idx12 = ifg_to_idx[ifg12]
-                ifg23 = ifg_to_idx[ifg23]
+                idx23 = ifg_to_idx[ifg23]
                 idx13 = ifg_to_idx[ifg13]
             except KeyError:
                 continue
@@ -1250,7 +1250,7 @@ class ifgramStack:
             # Add the +/-1 row of the matrix to our list
             row = np.zeros(M, dtype=np.int8)
             row[idx12] = 1
-            row[ifg23] = 1
+            row[idx23] = 1
             row[idx13] = -1
             C_list.append(row)
 
