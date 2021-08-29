@@ -330,21 +330,23 @@ def date_list2vector(date_list):
 
 
 ################################################################
-def get_date_range(dmin, dmax, dstep=1):
+def get_date_range(dmin, dmax, dstep=1, dunit='D', out_fmt='%Y%m%d'):
     """Make a list of dates with one-day (or given days) interval for [dmin, dmax]
-    Parameters: dmin      : str in YYYYMMDD format
-                dmax      : str in YYYYMMDD format
-                dstep     : int, interval in number of days
-    Returns:    date_list : list of str in YYYYMMDD format
+    Parameters: dmin    - str in YYYYMMDD format
+                dmax    - str in YYYYMMDD format
+                dstep   - int, interval in number of dunit
+                dunit   - str, unit of interval, e.g. Y, M, W, D, h, m, s
+                out_fmt - str, output datetime string format
+    Returns:    dt_list - list of str in YYYYMMDD format
     """
     # read inputs
-    t1 = '{}-{}-{}'.format(dmin[:4], dmin[4:6], dmin[6:])
-    t2 = '{}-{}-{}'.format(dmax[:4], dmax[4:6], dmax[6:])
-    dt = np.timedelta64(dstep, 'D')
+    t1 = np.datetime64('{}-{}-{}'.format(dmin[:4], dmin[4:6], dmin[6:]))
+    t2 = np.datetime64('{}-{}-{}'.format(dmax[:4], dmax[4:6], dmax[6:]))
+    dt = np.timedelta64(dstep, dunit)
     # prepare date range
-    date_objs = np.arange(t1, t2, dt, dtype='datetime64[D]').astype('M8[D]').astype('O')
-    date_list = [obj.strftime('%Y%m%d') for obj in date_objs] + [dmax]
-    return date_list
+    dt_objs = np.arange(t1, t2+dt, dt, dtype='datetime64').astype('O')
+    dt_list = [obj.strftime(out_fmt) for obj in dt_objs]
+    return dt_list
 
 
 def utc2solar_time(utc_time, longitude):

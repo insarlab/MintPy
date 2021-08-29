@@ -65,7 +65,7 @@ bash Miniconda3-latest-MacOSX-x86_64.sh -b -p ~/tools/miniconda3
 
 Run the following in your terminal to install the dependencies to your conda environment (recommended). The default is _**base**_; a new custom environment is recommended.
 
-```
+```bash
 # To create a new conda environment, e.g. named "insar", run "conda create --name insar; conda activate insar"
 
 # Add "gdal'>=3'" below to install extra dependencies if you use ARIA, FRInGE, HyP3 or GMTSAR
@@ -152,7 +152,7 @@ multiple copies if you work with different dataset that cover the same date/time
 
 ### For Windows via Conda ###
 
-```batch
+```bash
 # 1. download source code
 cd ~/tools
 git clone https://github.com/insarlab/MintPy.git

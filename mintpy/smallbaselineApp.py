@@ -1189,8 +1189,8 @@ class TimeSeriesAnalysis:
 
             # limit number of parallel processes based on memory limit
             # default view.py call could use up to 1.5 GB reserved memory (~700 MB actual memory)
-            max_memory = float(self.template['mintpy.compute.maxMemory'])
-            num_cores = min(num_cores, np.rint(max_memory / 1.5).astype(int))
+            max_memory = abs(float(self.template['mintpy.compute.maxMemory']))
+            num_cores = min(num_cores, max(int(max_memory / 1.5), 1))
 
         if run_parallel and num_cores > 1:
             print("parallel processing using {} cores ...".format(num_cores))

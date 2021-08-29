@@ -245,7 +245,8 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
         print(msg)
         return None
     else:
-        print('get design matrix for the interferogram triplets in size of {}'.format(C.shape))
+        print('number of interferograms: {}'.format(C.shape[1]))
+        print('number of triplets: {}'.format(C.shape[0]))
 
     # calculate number of nonzero closure phase
     ds_size = (C.shape[0] * 2 + C.shape[1]) * length * width * 4
@@ -382,11 +383,13 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
     print('calculating the integer ambiguity for the common regions defined in', cc_mask_file)
     # stack info
     stack_obj = ifgramStack(ifgram_file)
-    stack_obj.open()
+    stack_obj.open(print_msg=False)
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
     num_ifgram = len(date12_list)
     C = matrix(ifgramStack.get_design_matrix4triplet(date12_list).astype(float))
     ref_phase = stack_obj.get_reference_phase(unwDatasetName=dsNameIn, dropIfgram=True).reshape(num_ifgram, -1)
+    print('number of interferograms: {}'.format(num_ifgram))
+    print('number of triplets: {}'.format(int(len(C)/num_ifgram)))
 
     # prepare common label
     print('read common mask from', cc_mask_file)
