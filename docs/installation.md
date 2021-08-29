@@ -1,6 +1,6 @@
 ## Install MintPy
 
-Tested on macOS and Linux, MintPy is installable on Windows, but may have bugs
+The installation note below is tested on Linxu and macOS. It is still experimental on Windows, so it may have bugs.
 
 ### Notes for Mac users ###
 
@@ -150,23 +150,28 @@ application will look for the GAM files in the directory before downloading a ne
 multiple copies if you work with different dataset that cover the same date/time.
 
 
-### Windows Installation via Conda ###
-
+### For Windows via Conda ###
 
 ```batch
-mkdir mintpy
-cd mintpy
-git clone git@github.com:insarlab/MintPy.git
-git clone git@github.com:yunjunz/PyAPS.git
+# 1. download source code
+cd ~/tools
+git clone https://github.com/insarlab/MintPy.git
+git clone https://github.com/yunjunz/PyAPS.git
 
+# 2. install dependencies
+# option 1 - install dependencies to an existing conda environment
+# Add "gdal'>=3'" below to install extra dependencies if you use ARIA, FRInGE, HyP3 or GMTSAR
+# Add "isce2"     below to install extra dependencies if you use ISCE-2
+conda install --yes -c conda-forge --file ~/tools/MintPy/docs/requirements.txt
+$CONDA_PREFIX/bin/pip install git+https://github.com/insarlab/PySolid.git
+$CONDA_PREFIX/bin/pip install git+https://github.com/tylere/pykml.git
+
+# option 2 - install dependencies to a new environment named `mintpy`
 conda env create -f MintPy/docs/environment.yml
 conda activate mintpy
 
+# 3. install source code and setup path
 pip install -e ./MintPy
-pip install -e ./PyAps
-
+pip install -e ./PyAPS
 conda env config vars set PATH=%PATH%;%cd%/MintPy/
-
-conda deactivate
-conda activate mintpy
 ```
