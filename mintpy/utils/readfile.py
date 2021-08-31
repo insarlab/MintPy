@@ -292,13 +292,16 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
     elif isinstance(datasetName, str):
         datasetName = [datasetName]
 
-    # if datasetName is all numerical (or include only T), add dsFamily as prefix
-    if all(i.replace('T','').isdigit() for i in datasetName):
-        datasetName = ['{}-{}'.format(ds_3d_list[0], i) for i in datasetName]
+    # if datasetName is all date info, add dsFamily as prefix
+    # a) if all digit, e.g. YYYYMMDD
+    # b) if in isoformat(), YYYY-MM-DDTHH:MM, etc.
+    if all(x.isdigit() or x[:4].isdigit() for x in datasetName):
+        datasetName = ['{}-{}'.format(ds_3d_list[0], x) for x in datasetName]
 
     # Input Argument: decompose slice list into dsFamily and inputDateList
     dsFamily = datasetName[0].split('-')[0]
-    inputDateList = [i.replace(dsFamily,'').replace('-','') for i in datasetName]
+    inputDateList = [x.replace(dsFamily,'') for x in datasetName]
+    inputDateList = [x[1:] for x in inputDateList if x.startswith('-')]
 
     # read hdf5
     with h5py.File(fname, 'r') as f:
@@ -336,7 +339,7 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
             if not inputDateList or inputDateList == ['']:
                 slice_flag[:] = True
             else:
-                date_list = [i.split('-')[1] for i in
+                date_list = [i.split('-', 1)[1] for i in
                              [j for j in slice_list if j.startswith(dsFamily)]]
                 for d in inputDateList:
                     slice_flag[date_list.index(d)] = True
