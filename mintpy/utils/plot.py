@@ -1321,6 +1321,7 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
                 print('Un-scalable display unit:', disp_unit[0])
     else:
         print('Un-scalable data unit:', data_unit)
+        disp_unit = [metadata['UNIT']]
 
     # Calculate scaling factor  - 2
     if len(data_unit) == 2:
@@ -1598,8 +1599,13 @@ def draw_scalebar(ax, geo_box, unit='degrees', loc=[0.2, 0.2, 0.1], labelpad=0.0
     ## length
     # 1. calc scene width in meters
     if unit.startswith('deg'):
-        scene_width = geod.inv(geo_box[0], geo_box[3],
-                               geo_box[2], geo_box[3])[2]
+        if (geo_box[2] - geo_box[0]) > 30:
+            # do not plot scalebar if the longitude span > 30 deg
+            scene_width = None
+            return ax
+        else:
+            scene_width = geod.inv(geo_box[0], geo_box[3],
+                                   geo_box[2], geo_box[3])[2]
     elif unit.startswith('meter'):
         scene_width = geo_box[2] - geo_box[0]
 

@@ -540,6 +540,10 @@ def plot_slice(ax, data, metadata, inps=None):
                        alpha=inps.transparency, animated=inps.animation, zorder=1)
 
         # Scale Bar
+        if inps.coord_unit.startswith('deg') and (inps.geo_box[2] - inps.geo_box[0]) > 30:
+            # do not plot scalebar if the longitude span > 30 deg
+            inps.disp_scalebar = False
+
         if inps.disp_scalebar:
             vprint('plot scale bar: {}'.format(inps.scalebar))
             pp.draw_scalebar(ax,

@@ -7,8 +7,8 @@
 
 
 import os
-import sys
 import re
+import sys
 import argparse
 import numpy as np
 from scipy import linalg, stats
