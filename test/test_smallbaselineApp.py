@@ -15,8 +15,6 @@ import shutil
 import argparse
 import subprocess
 import tarfile
-
-import mintpy
 from mintpy import view
 
 
@@ -34,7 +32,8 @@ URL_LIST = [
     'https://zenodo.org/record/3952917/files/KujuAlosAT422F650.tar.xz',
 ]
 
-PROJ_NAME_LIST = [os.path.basename(url).split('.tar.xz')[0] for url in URL_LIST]
+PROJ_NAMES = [os.path.basename(url).split('.tar.xz')[0] for url in URL_LIST]
+TEMPLATE_FILES = [Path(__file__).resolve().parent / 'configs' / f'{proj_name}.txt' for proj_name in PROJ_NAMES]
 
 
 #####################################################################################
@@ -47,10 +46,10 @@ DSET_INFO = """
 """
 
 EXAMPLE = """example:
-  $MINTPY_HOME/test/test_smallbaselineApp.py
-  $MINTPY_HOME/test/test_smallbaselineApp.py  --dir ~/test
-  $MINTPY_HOME/test/test_smallbaselineApp.py  --dset KujuAlosAT422F650
-  $MINTPY_HOME/test/test_smallbaselineApp.py  --nofresh
+  test_smallbaselineApp.py
+  test_smallbaselineApp.py  --dir ~/test
+  test_smallbaselineApp.py  --dset KujuAlosAT422F650
+  test_smallbaselineApp.py  --nofresh
 """
 
 def create_parser():
@@ -58,9 +57,9 @@ def create_parser():
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
-    parser.add_argument('--dset', dest='dset_name', nargs='+', metavar='DSET', choices=PROJ_NAME_LIST, default=PROJ_NAME_LIST,
+    parser.add_argument('--dset', dest='dset_name', nargs='+', metavar='DSET', choices=PROJ_NAMES, default=PROJ_NAMES,
                         help='name(s) of datasets to be tested.\n'+
-                             'Available datasets: {}\n'.format(PROJ_NAME_LIST) +
+                             'Available datasets: {}\n'.format(PROJ_NAMES) +
                              '(default: all)')
 
     parser.add_argument('--test-pyaps', dest='test_pyaps', action='store_true',
@@ -95,10 +94,9 @@ def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False, test_i
     print('Go to test directory:', test_dir)
     os.chdir(test_dir)
 
-    dset_idx = PROJ_NAME_LIST.index(dset_name)
+    dset_idx = PROJ_NAMES.index(dset_name)
     dset_url = URL_LIST[dset_idx]
-    mintpy_dir = os.path.dirname(mintpy.__file__)
-    template_file = os.path.join(Path(mintpy_dir).parent, 'test/configs/{}.txt'.format(dset_name))
+    template_file = TEMPLATE_FILES[dset_idx]
 
     # download tar file
     tar_file = os.path.basename(dset_url)
@@ -159,7 +157,6 @@ def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False, test_i
     iargs = [vel_file, 'velocity', '--nodisplay', '--noverbose', '-o', png_file]
     if dset_name in CMAP_DICT.keys():
         iargs += ['-c', CMAP_DICT[dset_name]]
-    print('view.py', ' '.join(iargs))
     view.main(iargs)
 
     # open final velocity map if on mac
@@ -194,7 +191,7 @@ def main(iargs=None):
         print('#'*100+'\n'*3)
 
     # print message
-    if num_dset == len(PROJ_NAME_LIST):
+    if num_dset == len(PROJ_NAMES):
         m, s = divmod(time.time()-start_time, 60)
         msg  = '#'*50
         msg += '\n    PASS ALL testings without running errors.\n'
