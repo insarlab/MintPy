@@ -14,9 +14,3 @@ sys.path.insert(1, os.path.join(mintpy_path, 'defaults'))
 sys.path.insert(1, os.path.join(mintpy_path, 'objects'))
 sys.path.insert(1, os.path.join(mintpy_path, 'simulation'))
 sys.path.insert(1, os.path.join(mintpy_path, 'utils'))
-
-try:
-    os.environ['MINTPY_HOME']
-except KeyError:
-    print('Using default MintPy Path: %s' % (mintpy_path))
-    os.environ['MINTPY_HOME'] = mintpy_path
