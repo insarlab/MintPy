@@ -77,18 +77,20 @@ def create_parser():
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=TEMPLATE+'\n'+REFERENCE+'\n'+EXAMPLE)
 
+    # inputs
     parser.add_argument('timeseries_file',
                         help='Time series file for velocity inversion.')
     parser.add_argument('--template', '-t', dest='template_file', help='template file with options')
+    parser.add_argument('--ts-std-file', dest='ts_std_file',
+                        help='Time-series STD file for velocity STD calculation.')
+
+    # outputs
     parser.add_argument('-o', '--output', dest='outfile', help='output file name')
     parser.add_argument('--update', dest='update_mode', action='store_true',
                         help='Enable update mode, and skip estimation if:\n'+
                              '1) output velocity file already exists, readable '+
                              'and newer than input file\n' +
                              '2) all configuration parameters are the same.')
-
-    parser.add_argument('--ts-std-file', dest='ts_std_file',
-                        help='Time-series STD file for velocity STD calculation.')
 
     # reference in time and space
     # for input file without reference info, e.g. ERA5.h5
@@ -117,6 +119,13 @@ def create_parser():
 
     # time functions
     parser = arg_group.add_timefunc_argument(parser)
+
+    # residual file
+    resid = parser.add_argument_group('Residual file', 'Save residual displacement time-series to HDF5 file.')
+    resid.add_argument('--save-res', '--save_residual', dest='save_res', action='store_true',
+                       help='Save the residual displacement time-series to HDF5 file.')
+    resid.add_argument('--res-file', '--residual-file', dest='res_file', default='timeseriesResidual.h5',
+                       help='Output file name for the residual time-series file (default: %(default)s).')
 
     # computing
     parser = arg_group.add_memory_argument(parser)
@@ -460,35 +469,51 @@ def run_timeseries2time_func(inps):
     num_date = inps.numDate
     dates = np.array(inps.dateList)
 
+    # use the 1st date as reference if not found, e.g. timeseriesResidual.h5 file
+    if "REF_DATE" not in atr.keys() and not inps.ref_date:
+        inps.ref_date = inps.dateList[0]
+        print('WARNING: No REF_DATE found in time-series file or input in command line.')
+        print('  Set "--ref-date {}" and continue.'.format(inps.dateList[0]))
+
     # get deformation model from parsers
     model, num_param = read_inps2model(inps)
 
 
     ## output preparation
 
-    # attributes
-    atr['FILE_TYPE'] = 'velocity'
-    atr['UNIT'] = 'm/year'
-    atr['START_DATE'] = inps.dateList[0]
-    atr['END_DATE'] = inps.dateList[-1]
-    atr['DATE12'] = '{}_{}'.format(inps.dateList[0], inps.dateList[-1])
+    # time_func_param: attributes
+    atrV = dict(atr)
+    atrV['FILE_TYPE'] = 'velocity'
+    atrV['UNIT'] = 'm/year'
+    atrV['START_DATE'] = inps.dateList[0]
+    atrV['END_DATE'] = inps.dateList[-1]
+    atrV['DATE12'] = '{}_{}'.format(inps.dateList[0], inps.dateList[-1])
     if inps.ref_yx:
-        atr['REF_Y'] = inps.ref_yx[0]
-        atr['REF_X'] = inps.ref_yx[1]
+        atrV['REF_Y'] = inps.ref_yx[0]
+        atrV['REF_X'] = inps.ref_yx[1]
     if inps.ref_date:
-        atr['REF_DATE'] = inps.ref_date
+        atrV['REF_DATE'] = inps.ref_date
 
-    # config parameter
+    # time_func_param: config parameter
     print('add/update the following configuration metadata:\n{}'.format(configKeys))
     for key in configKeys:
-        atr[key_prefix+key] = str(vars(inps)[key])
+        atrV[key_prefix+key] = str(vars(inps)[key])
 
-    # instantiate output file
+    # time_func_param: instantiate output file
     ds_name_dict, ds_unit_dict = model2hdf5_dataset(model, ds_shape=(length, width))[1:]
     writefile.layout_hdf5(inps.outfile,
-                          metadata=atr,
+                          metadata=atrV,
                           ds_name_dict=ds_name_dict,
                           ds_unit_dict=ds_unit_dict)
+
+    # timeseries_res: attributes + instantiate output file
+    if inps.save_res:
+        atrR = dict(atr)
+        for key in ['REF_DATE']:
+            if key in atrR.keys():
+                atrR.pop(key)
+        writefile.layout_hdf5(inps.res_file, metadata=atrR, ref_file=inps.timeseries_file)
+
 
     ## estimation
 
@@ -504,13 +529,13 @@ def run_timeseries2time_func(inps):
 
     # loop for block-by-block IO
     for i, box in enumerate(box_list):
-        box_width  = box[2] - box[0]
-        box_length = box[3] - box[1]
-        num_pixel = box_length * box_width
+        box_wid  = box[2] - box[0]
+        box_len = box[3] - box[1]
+        num_pixel = box_len * box_wid
         if num_box > 1:
             print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
-            print('box width:  {}'.format(box_width))
-            print('box length: {}'.format(box_length))
+            print('box width:  {}'.format(box_wid))
+            print('box length: {}'.format(box_len))
 
         # initiate output
         m = np.zeros((num_param, num_pixel), dtype=dataType)
@@ -534,7 +559,7 @@ def run_timeseries2time_func(inps):
             ts_data -= np.tile(ref_val.reshape(ts_data.shape[0], 1, 1), (1, ts_data.shape[1], ts_data.shape[2]))
 
         ts_data = ts_data[inps.dropDate, :, :].reshape(inps.numDate, -1)
-        if atr['UNIT'] == 'mm':
+        if atrV['UNIT'] == 'mm':
             ts_data *= 1./1000.
 
         ts_std = None
@@ -595,7 +620,7 @@ def run_timeseries2time_func(inps):
 
                 prog_bar.update(i+1, suffix='iteration {} / {}'.format(i+1, inps.bootstrapCount))
             prog_bar.close()
-            del ts_data
+            #del ts_data
 
             # get mean/std among all bootstrap sampling
             m[:, mask] = m_boot.mean(axis=0).reshape(num_param, -1)
@@ -608,7 +633,7 @@ def run_timeseries2time_func(inps):
             G, m[:, mask], e2 = estimate_time_func(model=model,
                                                    date_list=inps.dateList,
                                                    dis_ts=ts_data)
-            del ts_data
+            #del ts_data
 
             ## Compute the covariance matrix for model parameters: Gm = d
             # C_m_hat = (G.T * C_d^-1, * G)^-1  # linear propagation from the TS covariance matrix. (option 2.1)
@@ -648,13 +673,23 @@ def run_timeseries2time_func(inps):
                 # t_diff = G[:, 1] - np.mean(G[:, 1])
                 # vel_std = np.sqrt(np.sum(ts_diff ** 2, axis=0) / np.sum(t_diff ** 2)  / (num_date - 2))
 
-        # write
+        # write - time func params
         block = [box[1], box[3], box[0], box[2]]
         ds_dict = model2hdf5_dataset(model, m, m_std, mask=mask)[0]
         for ds_name, data in ds_dict.items():
             writefile.write_hdf5_block(inps.outfile,
-                                       data=data.reshape(box_length, box_width),
+                                       data=data.reshape(box_len, box_wid),
                                        datasetName=ds_name,
+                                       block=block)
+
+        # write - residual file
+        if inps.save_res:
+            block = [0, num_date, box[1], box[3], box[0], box[2]]
+            ts_res = np.ones((num_date, box_len*box_wid), dtype=np.float32) * np.nan
+            ts_res[:, mask] = ts_data - np.dot(G, m)[:, mask]
+            writefile.write_hdf5_block(inps.res_file,
+                                       data=ts_res.reshape(num_date, box_len, box_wid),
+                                       datasetName='timeseries',
                                        block=block)
 
     return inps.outfile
