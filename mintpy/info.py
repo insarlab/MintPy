@@ -164,7 +164,7 @@ def print_timseries_date_stat(dateList):
     datevector = ptime.date_list2vector(dateList)[1]
     print('Start Date: {}'.format(dateList[0]))
     print('End   Date: {}'.format(dateList[-1]))
-    print('Number of date   : {}'.format(len(dateList)))
+    print('Number of dates  : {}'.format(len(dateList)))
     print('STD of datetimes : {:.2f} years'.format(np.std(datevector)))
     #print('----------------------')
     #print('List of dates:\n{}'.format(dateList))

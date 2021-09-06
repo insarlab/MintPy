@@ -10,7 +10,6 @@ import os
 import sys
 import re
 from configparser import ConfigParser
-import subprocess
 import argparse
 import h5py
 import numpy as np

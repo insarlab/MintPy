@@ -73,7 +73,6 @@ Run the following in your terminal to install the dependencies to your conda env
 conda install --yes -c conda-forge --file ~/tools/MintPy/docs/requirements.txt
 
 $CONDA_PREFIX/bin/pip install git+https://github.com/insarlab/PySolid.git
-$CONDA_PREFIX/bin/pip install git+https://github.com/tylere/pykml.git
 ```
 
 Or run the following in your terminal to install the dependencies to a new environment _**mintpy**_:
@@ -164,7 +163,6 @@ git clone https://github.com/yunjunz/PyAPS.git
 # Add "isce2"     below to install extra dependencies if you use ISCE-2
 conda install --yes -c conda-forge --file ~/tools/MintPy/docs/requirements.txt
 $CONDA_PREFIX/bin/pip install git+https://github.com/insarlab/PySolid.git
-$CONDA_PREFIX/bin/pip install git+https://github.com/tylere/pykml.git
 
 # option 2 - install dependencies to a new environment named `mintpy`
 conda env create -f MintPy/docs/environment.yml
