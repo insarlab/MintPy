@@ -15,6 +15,7 @@ lxml
 matplotlib
 numpy
 pip
+pykml
 pyproj
 scikit-image
 scipy

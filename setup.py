@@ -72,6 +72,7 @@ def do_setup():
             "lxml",
             "matplotlib",
             "numpy",
+            "pykml",
             "pyproj",
             "setuptools",
             "scikit-image",
@@ -91,7 +92,6 @@ def do_setup():
         ],
         dependency_links=[
             "git+https://github.com/insarlab/PySolid.git",
-            "git+https://github.com/tylere/pykml.git",
         ],
 
         # data files
