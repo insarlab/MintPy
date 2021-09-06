@@ -20,7 +20,7 @@ dependencies:
   - matplotlib
   - numpy
   - pip
-  - pykml
+  - pykml>=0.2
   - pyproj
   - scikit-image
   - scipy

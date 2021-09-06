@@ -39,7 +39,6 @@ jobs:
             # install dependencies
             source activate root
             mamba install --verbose --yes --file ${MINTPY_HOME}/docs/requirements.txt gdal">=3" fortran-compiler
-            ${CONDA_PREFIX}/bin/pip install git+https://github.com/tylere/pykml.git
             # compile pysolid Fortran code
             cd ${HOME}/tools/PySolid/pysolid
             f2py -c -m solid solid.for

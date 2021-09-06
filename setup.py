@@ -72,7 +72,7 @@ def do_setup():
             "lxml",
             "matplotlib",
             "numpy",
-            "pykml",
+            "pykml>=0.2",
             "pyproj",
             "setuptools",
             "scikit-image",
