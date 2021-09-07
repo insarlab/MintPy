@@ -95,7 +95,7 @@ Some things that will increase the chance that your pull request is accepted qui
 It's a good idea to test any changes or bugs you have fixed, in the feature branch locally, before issuing/submitting the pull request. We realize that we don't have a complete testing system in place yet (maybe you can contribute this!), except for an overall testing script `test_smallbaselineApp.py`:
 
 ```
-${MINTPY_HOME}/test/test_smallbaselineApp.py
+${MINTPY_HOME}/tests/test_smallbaselineApp.py
 ```
 
 It takes about 15 mins to finish.
