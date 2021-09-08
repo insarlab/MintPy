@@ -292,7 +292,7 @@ def auto_multilook_num(box, num_time, max_memory=4.0, print_msg=True):
 
     ## scale based on memory
     # The auto calculation above uses ~1.5 GB in reserved memory and ~700 MB in actual memory.
-    if max_memory < 2.0:
+    if max_memory <= 2.0:
         # With a lower  max memory from manual input, we increase the multilook_num (lower resolution)
         multilook_num *= np.sqrt(4.0 / max_memory)
     elif max_memory <= 4.0:

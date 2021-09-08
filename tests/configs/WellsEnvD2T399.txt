@@ -20,7 +20,7 @@ mintpy.load.xstep          = 2
 mintpy.load.ystep          = 2
 mintpy.subset.lalo         = 41.02:41.32, -115.10:-114.65
 
-mintpy.reference.lalo      = 41.03, -114.70
+mintpy.reference.lalo             = 41.03, -114.70
 mintpy.network.coherenceBased     = yes       #[yes / no], auto for yes, exclude interferograms with coherence < minCoherence
 mintpy.network.keepMinSpanTree    = no
 mintpy.network.excludeDate        = 20071231, 20080204, 20080310
@@ -28,7 +28,8 @@ mintpy.networkInversion.weightFunc              = no
 mintpy.troposphericDelay.method                 = no
 mintpy.topographicResidual.stepFuncDate         = 20080221
 mintpy.topographicResidual.pixelwiseGeometry    = no
-mintpy.save.hdfEos5         = yes
+mintpy.save.hdfEos5    = yes
+mintpy.plot.maxMemory  = 2
 
 ##------------------------  HDF-EOS5 --------------------------------##
 mission             = Env                 # ERS,ENV,S1,RS1,RS2,CSK,TSX,JERS,ALOS,ALOS2
