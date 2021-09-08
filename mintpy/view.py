@@ -164,6 +164,15 @@ def cmd_line_parse(iargs=None):
         inps.disp_cbar = False
     if not inps.disp_axis:
         inps.disp_tick = False
+    if inps.flip_lr or inps.flip_ud:
+        inps.auto_flip = False
+
+    # check geo-only options for files in radar-coordinates
+    geo_opt_names = ['--coord', '--show-gps', '--coastline', '--lalo-label', '--lalo-step', '--scalebar']
+    geo_opt_names = list(set(geo_opt_names) & set(iargs))
+    if geo_opt_names and 'Y_FIRST' not in readfile.read_attribute(inps.file).keys():
+        for opt_name in geo_opt_names:
+            print('WARNING: {} is NOT supported for files in radar-coordinate, ignore it and continue.'.format(opt_name))
 
     # verbose print using --noverbose option
     global vprint
@@ -178,9 +187,6 @@ def cmd_line_parse(iargs=None):
     # Backend setting
     if not inps.disp_fig:
         plt.switch_backend('Agg')
-
-    if inps.flip_lr or inps.flip_ud:
-        inps.auto_flip = False
 
     return inps
 
@@ -1597,6 +1603,13 @@ class viewer():
 
         # Multiple Subplots
         else:
+            # warn single-subplot options
+            opt_names = ['--show-gps', '--coastline', '--lalo-label', '--lalo-step', '--scalebar',
+                         '--pts-yx', '--pts-lalo', '--pts-file']
+            opt_names = list(set(opt_names) & set(self.iargs))
+            for opt_name in opt_names:
+                print('WARNING: {} is NOT supported for multi-subplots, ignore it and continue.'.format(opt_name))
+
             # prepare
             self = prepare4multi_subplots(self, metadata=self.atr)
 

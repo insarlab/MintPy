@@ -162,25 +162,29 @@ class coordinate:
         mask_y = np.multiply(self.lut_y >= ymin, self.lut_y <= ymax)
         mask_x = np.multiply(self.lut_x >= xmin, self.lut_x <= xmax)
         mask_yx = np.multiply(mask_y, mask_x)
-        row, col = np.nanmean(np.where(mask_yx), axis=1)
 
         # for debugging only
         if debug_mode:
             print('Debug mode is ON.\nShow the row/col number searching result.')
             import matplotlib.pyplot as plt
             fig, axs = plt.subplots(nrows=1, ncols=3, figsize=[12, 5])
-            axs[0].imshow(mask_y);  axs[0].set_title('Buffer in Y direction')
-            axs[1].imshow(mask_x);  axs[1].set_title('Buffer in X direction')
-            axs[2].imshow(mask_yx); axs[2].set_title('Y & X overlap (zoom in)')
+            kwargs = dict(cmap='gray', interpolation='nearest')
+            axs[0].imshow(mask_y, **kwargs);  axs[0].set_title('Buffer in Y direction')
+            axs[1].imshow(mask_x, **kwargs);  axs[1].set_title('Buffer in X direction')
+            axs[2].imshow(mask_yx, **kwargs); axs[2].set_title('Y & X overlap (zoom in)')
 
-            idx = np.where(np.sum(mask_yx, axis=0))[0]
-            idy = np.where(np.sum(mask_yx, axis=1))[0]
-            axs[2].set_xlim(idx[0], idx[-1])
-            axs[2].set_ylim(idy[0], idy[-1])
+            try:
+                idx = np.where(np.sum(mask_yx, axis=0))[0]
+                idy = np.where(np.sum(mask_yx, axis=1))[0]
+                axs[2].set_xlim(idx[0], idx[-1])
+                axs[2].set_ylim(idy[0], idy[-1])
+            except:
+                pass
             axs[1].set_yticklabels([])
+            fig.tight_layout()
             plt.show()
 
-        # Error message
+        row, col = np.nanmean(np.where(mask_yx), axis=1)
         if any(np.isnan(i) for i in [row, col]):
             raise RuntimeError('No coresponding coordinate found for y/x: {}/{}'.format(y, x))
 
