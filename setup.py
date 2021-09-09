@@ -79,7 +79,7 @@ def do_setup():
                 'mask.py = mintpy.mask:main',
                 'modify_network.py = mintpy.modify_network:main',
                 'multilook.py = mintpy.multilook:main',
-                # FIXME: 'multi_transect.py = mintpy.multi_transect:main',
+                'multi_transect.py = mintpy.multi_transect:main',
                 'plot_coherence_matrix.py = mintpy.plot_coherence_matrix:main',
                 'plot_network.py = mintpy.plot_network:main',
                 'plot_transection.py = mintpy.plot_transection:main',

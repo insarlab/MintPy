@@ -393,7 +393,7 @@ def read_fault_coords(Fault_coord_file, Dp):
 
 
 #####################################################################
-def main(argv):
+def main(argv=None):
     ntrans = 1
     save_to_mat = 'off'
     flip_profile = 'no'
@@ -1051,10 +1051,10 @@ def main(argv):
         # ax.yaxis.set_major_locator(majorLocator)
         # minorLocator   = MultipleLocator(1)
         # ax.yaxis.set_minor_locator(minorLocator)
-        
+
         # plt.tick_params(which='major', length=15,width=2)
         # plt.tick_params(which='minor', length=6,width=2)
-        
+
         # try:
         #    for tick in ax.xaxis.get_major_ticks():
         #             tick.label.set_fontsize(26)
