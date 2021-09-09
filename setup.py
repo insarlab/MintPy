@@ -59,7 +59,7 @@ def do_setup():
         packages=find_packages(),
         entry_points={
             'console_scripts': [
-                # FIXME: 'add_attribute.py = mintpy.add_attribute:main',
+                'add_attribute.py = mintpy.add_attribute:main',
                 'add.py = mintpy.add:main',
                 'asc_desc2horz_vert.py = mintpy.asc_desc2horz_vert:main',
                 'dem_error.py = mintpy.dem_error:main',
