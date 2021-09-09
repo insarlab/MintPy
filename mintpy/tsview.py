@@ -711,7 +711,7 @@ class timeseriesViewer():
         if cmd:
             iargs = cmd.split()[1:]
         self.cmd = cmd
-        self.iargs = iargs
+        self.iargs = cmd_line_parse(iargs)
         # print command line
         cmd = '{} '.format(os.path.basename(__file__))
         cmd += ' '.join(iargs)
@@ -736,8 +736,7 @@ class timeseriesViewer():
 
 
     def configure(self):
-        inps = cmd_line_parse(self.iargs)
-        inps, self.atr = read_init_info(inps)
+        inps, self.atr = read_init_info(self.iargs)
         # copy inps to self object
         for key, value in inps.__dict__.items():
             setattr(self, key, value)

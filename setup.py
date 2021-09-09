@@ -120,7 +120,7 @@ def do_setup():
                 'tropo_phase_elevation.py = mintpy.tropo_phase_elevation:main',
                 'tropo_pyaps3.py = mintpy.tropo_pyaps3:main',
                 # 'tropo_pyaps.py = mintpy.tropo_pyaps:main',
-                # FIXME: 'tsview.py = mintpy.tsview:main',
+                'tsview.py = mintpy.tsview:main',
                 'unwrap_error_bridging.py = mintpy.unwrap_error_bridging:main',
                 'unwrap_error_phase_closure.py = mintpy.unwrap_error_phase_closure:main',
                 'view.py = mintpy.view:main',
