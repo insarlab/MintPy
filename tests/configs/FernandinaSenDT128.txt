@@ -15,4 +15,4 @@ mintpy.topographicResidual.pixelwiseGeometry    = no
 mintpy.topographicResidual.stepFuncDate         = 20170910,20180613  #eruption dates
 mintpy.deramp          = linear
 mintpy.save.hdfEos5    = yes
-
+mintpy.plot.maxMemory  = 2

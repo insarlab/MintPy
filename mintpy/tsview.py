@@ -88,6 +88,7 @@ def create_parser():
     parser = arg_group.add_gps_argument(parser)
     parser = arg_group.add_mask_argument(parser)
     parser = arg_group.add_map_argument(parser)
+    parser = arg_group.add_memory_argument(parser)
     parser = arg_group.add_reference_argument(parser)
     parser = arg_group.add_save_argument(parser)
     parser = arg_group.add_subset_argument(parser)
@@ -250,7 +251,9 @@ def read_init_info(inps):
     # e.g. spatial indexing, referencing, etc. All the other variables are in the original grid
     # so that users get the same result as the non-multilooked version.
     if inps.multilook and inps.multilook_num == 1:
-        inps.multilook_num = pp.auto_multilook_num(inps.pix_box, inps.num_date, print_msg=inps.print_msg)
+        inps.multilook_num = pp.auto_multilook_num(inps.pix_box, inps.num_date,
+                                                   max_memory=inps.maxMemory,
+                                                   print_msg=inps.print_msg)
 
     ## reference pixel
     if not inps.ref_lalo and 'REF_LAT' in atr.keys():
