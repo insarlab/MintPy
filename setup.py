@@ -97,7 +97,7 @@ def do_setup():
                 'reference_point.py = mintpy.reference_point:main',
                 'remove_hdf5_dataset.py = mintpy.remove_hdf5_dataset:main',
                 'remove_ramp.py = mintpy.remove_ramp:main',
-                # FIXME: 'save_gbis.py = mintpy.save_gbis:main',
+                'save_gbis.py = mintpy.save_gbis:main',
                 'save_gdal.py = mintpy.save_gdal:main',
                 'save_gmt.py = mintpy.save_gmt:main',
                 'save_hdfeos5.py = mintpy.save_hdfeos5:main',
