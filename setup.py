@@ -36,9 +36,17 @@ def do_setup():
         description=description,
         long_description=long_description,
         long_description_content_type="text/markdown",
-        url=website,
+
         author="Zhang Yunjun, Heresh Fattahi",
         author_email="yunjunzgeo@gmail.com",
+
+        url=website,
+        project_urls={
+            "Bug Reports": "https://github.com/insarlab/mintpy/issues",
+            "Documentation": "https://mintpy.readthedocs.io/",
+            "Source": "https://github.com/insarlab/mintpy",
+        },
+        download_url=("https://github.com/insarlab/MintPy/archive/v{}.tar.gz".format(version)),
 
         classifiers=[
             "Development Status :: 4 - Beta",
@@ -52,8 +60,39 @@ def do_setup():
             "Programming Language :: Python :: 3.7",
             "Programming Language :: Python :: 3.8",
         ],
-        download_url=("https://github.com/insarlab/MintPy/archive/v{}.tar.gz".format(version)),
         keywords="InSAR, deformation, time-series, volcano, earthquake, tectonics, geodesy, geophysics, remote-sensing",
+
+        # dependencies
+        python_requires=">=3.6",
+        install_requires=[
+            "cartopy",
+            "cvxopt",
+            "dask>=1.0",
+            "dask-jobqueue>=0.3",
+            "defusedxml",
+            "h5py",
+            "joblib",
+            "lxml",
+            "matplotlib",
+            "numpy",
+            "pykml>=0.2",
+            "pyproj",
+            "setuptools",
+            "scikit-image",
+            "scipy",
+            # pyaps dependencies
+            "cdsapi",
+            "ecCodes",
+            "netcdf4",
+            "pygrib",
+            # "pyhdf", # required by MERRA, which is currently not supported in pyaps3
+            # pyresample dependencies
+            "pyresample",
+            # "openmp",
+            "pykdtree",
+            "xarray",
+            "zarr",
+        ],
 
         # package discovery
         packages=find_packages(),
@@ -127,41 +166,6 @@ def do_setup():
             ]
         },
 
-        # dependencies
-        python_requires=">=3.6",
-        install_requires=[
-            "cartopy",
-            "cvxopt",
-            "dask>=1.0",
-            "dask-jobqueue>=0.3",
-            "defusedxml",
-            "h5py",
-            "joblib",
-            "lxml",
-            "matplotlib",
-            "numpy",
-            "pykml>=0.2",
-            "pyproj",
-            "setuptools",
-            "scikit-image",
-            "scipy",
-            # pyaps dependencies
-            "cdsapi",
-            "ecCodes",
-            "netcdf4",
-            "pygrib",
-            # "pyhdf", # required by MERRA, which is currently not supported in pyaps3
-            # pyresample dependencies
-            "pyresample",
-            #"openmp",
-            "pykdtree",
-            "xarray",
-            "zarr",
-        ],
-        dependency_links=[
-            "git+https://github.com/insarlab/PySolid.git",
-        ],
-
         # data files
         include_package_data=True,
         package_data={
@@ -177,12 +181,7 @@ def do_setup():
                 "sh/*.sh",
             ],
         },
-
-        project_urls={
-            "Bug Reports": "https://github.com/insarlab/mintpy/issues",
-            "Documentation": "https://mintpy.readthedocs.io/",
-            "Source": "https://github.com/insarlab/mintpy",
-        },
+        zip_safe=False,
     )
 
 
