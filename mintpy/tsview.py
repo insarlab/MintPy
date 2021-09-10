@@ -714,7 +714,8 @@ class timeseriesViewer():
         self.iargs = iargs
         # print command line
         cmd = '{} '.format(os.path.basename(__file__))
-        cmd += ' '.join(iargs)
+        if iargs is not None:
+            cmd += ' '.join(iargs)
         print(cmd)
 
         # figure variables
