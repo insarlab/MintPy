@@ -74,7 +74,7 @@ def update_file_attribute(fname, atr_new):
     return fname
 
 
-def main(argv):
+def main(argv=None):
     # Check Inputs
     if not argv or argv[0] in ['-h', '--help']:
         usage()

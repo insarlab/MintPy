@@ -713,9 +713,8 @@ class timeseriesViewer():
         self.cmd = cmd
         self.iargs = iargs
         # print command line
-        cmd = '{} '.format(os.path.basename(__file__))
-        cmd += ' '.join(iargs)
-        print(cmd)
+        if iargs is not None:
+            print(f'{os.path.basename(__file__)} ' + ' '.join(iargs))
 
         # figure variables
         self.figname_img = 'Cumulative Displacement Map'

@@ -62,9 +62,9 @@ def create_parser():
 
 
 def cmd_line_parse(iargs=None):
-    print('{} {}'.format(os.path.basename(__file__), ' '.join(iargs)))
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+    print('{} {}'.format(os.path.basename(__file__), ' '.join(iargs)))
     inps.file = os.path.abspath(inps.file)
 
     # Backend setting
