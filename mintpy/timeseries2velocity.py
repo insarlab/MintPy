@@ -424,6 +424,7 @@ def run_timeseries2time_func(inps):
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
     num_date = inps.numDate
     dates = np.array(inps.dateList)
+    seconds = atr.get('CENTER_LINE_UTC', 0)
 
     # use the 1st date as reference if not found, e.g. timeseriesResidual.h5 file
     if "REF_DATE" not in atr.keys() and not inps.ref_date:
@@ -573,7 +574,8 @@ def run_timeseries2time_func(inps):
                 m_boot[i] = time_func.estimate_time_func(
                     model=model,
                     date_list=dates[boot_ind].tolist(),
-                    dis_ts=ts_data[boot_ind])[1]
+                    dis_ts=ts_data[boot_ind],
+                    seconds=seconds)[1]
 
                 prog_bar.update(i+1, suffix='iteration {} / {}'.format(i+1, inps.bootstrapCount))
             prog_bar.close()
@@ -590,7 +592,8 @@ def run_timeseries2time_func(inps):
             G, m[:, mask], e2 = time_func.estimate_time_func(
                 model=model,
                 date_list=inps.dateList,
-                dis_ts=ts_data)
+                dis_ts=ts_data,
+                seconds=seconds)
             #del ts_data
 
             ## Compute the covariance matrix for model parameters: Gm = d
