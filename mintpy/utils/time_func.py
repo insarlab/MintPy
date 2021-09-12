@@ -12,15 +12,13 @@ from scipy import linalg
 from mintpy.utils import ptime
 
 
-def estimate_time_func(model, date_list, dis_ts, ref_date=None):
+def estimate_time_func(model, date_list, dis_ts, ref_date=None, seconds=0):
     """Deformation model estimator, using a suite of linear, periodic, step, exponential, and logarithmic function(s).
 
     Problem setup:
         Gm = d
 
-    Parameters: date_list - list of str, dates in YYYYMMDD format
-                dis_ts    - 2D np.ndarray, displacement observation in size of (num_date, num_pixel)
-                model     - dict of time functions, e.g.:
+    Parameters: model     - dict of time functions, e.g.:
                             {'polynomial' : 2,                    # int, polynomial degree with 1 (linear), 2 (quadratic), 3 (cubic), etc.
                              'periodic'   : [1.0, 0.5],           # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
                              'step'       : ['20061014'],         # list of str, date(s) in YYYYMMDD.
@@ -33,12 +31,16 @@ def estimate_time_func(model, date_list, dis_ts, ref_date=None):
                                             },
                              ...
                              }
+                date_list - list of str, dates in YYYYMMDD format
+                dis_ts    - 2D np.ndarray, displacement observation in size of (num_date, num_pixel)
+                ref_date  - reference date from date_list
+                seconds   - float or str, acquisition time of the day info in seconds.
     Returns:    G         - 2D np.ndarray, design matrix           in size of (num_date, num_param)
                 m         - 2D np.ndarray, parameter solution      in size of (num_param, num_pixel)
                 e2        - 1D np.ndarray, sum of squared residual in size of (num_pixel,)
     """
 
-    G = get_design_matrix4time_func(date_list, model, ref_date=ref_date)
+    G = get_design_matrix4time_func(date_list, model, ref_date=ref_date, seconds=seconds)
 
     # least squares solver
     # Opt. 1: m = np.linalg.pinv(G).dot(dis_ts)
@@ -64,10 +66,10 @@ def estimate_time_func(model, date_list, dis_ts, ref_date=None):
 
 #################################### Design Matrices ##########################################
 
-def get_design_matrix4time_func(date_list, model=None, ref_date=None):
+def get_design_matrix4time_func(date_list, model=None, ref_date=None, seconds=0):
     """Design matrix (function model) for time functions parameter estimation.
-    Parameters: date_list : list of str in YYYYMMDD format, size=num_date
-                model     : dict of time functions, e.g.:
+    Parameters: date_list - list of str in YYYYMMDD format, size=num_date
+                model     - dict of time functions, e.g.:
                             {'polynomial' : 2,                    # int, polynomial degree with 1 (linear), 2 (quadratic), 3 (cubic), etc.
                              'periodic'   : [1.0, 0.5],           # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
                              'step'       : ['20061014'],         # list of str, date(s) in YYYYMMDD.
@@ -80,13 +82,15 @@ def get_design_matrix4time_func(date_list, model=None, ref_date=None):
                                              },
                              ...
                              }
-    Returns:    A         : 2D array of design matrix in size of (num_date, num_param)
+                ref_date  - reference date from date_list
+                seconds   - float or str, acquisition time of the day info in seconds.
+    Returns:    A         - 2D array of design matrix in size of (num_date, num_param)
                             num_param = (poly_deg + 1) + 2*len(periodic) + len(steps) + len(exp_taus) + len(log_taus)
     """
 
     ## prepare time info
     # convert list of date into array of years in float
-    yr_diff = np.array(ptime.yyyymmdd2years(date_list))
+    yr_diff = np.array(ptime.yyyymmdd2years(date_list, seconds=seconds))
 
     # reference date
     if ref_date is None:
@@ -133,19 +137,19 @@ def get_design_matrix4time_func(date_list, model=None, ref_date=None):
     # update coseismic/step term(s)
     if num_step > 0:
         c1 = c0 + num_step
-        A[:, c0:c1] = get_design_matrix4step_func(date_list, steps)
+        A[:, c0:c1] = get_design_matrix4step_func(date_list, steps, seconds=seconds)
         c0 = c1
 
     # update exponential term(s)
     if num_exp > 0:
         c1 = c0 + num_exp
-        A[:, c0:c1] = get_design_matrix4exp_func(date_list, exps)
+        A[:, c0:c1] = get_design_matrix4exp_func(date_list, exps, seconds=seconds)
         c0 = c1
 
     # update logarithmic term(s)
     if num_log > 0:
         c1 = c0 + num_log
-        A[:, c0:c1] = get_design_matrix4log_func(date_list, logs)
+        A[:, c0:c1] = get_design_matrix4log_func(date_list, logs, seconds=seconds)
         c0 = c1
 
     return A
@@ -189,7 +193,7 @@ def get_design_matrix4periodic_func(yr_diff, periods):
     return A
 
 
-def get_design_matrix4step_func(date_list, step_date_list):
+def get_design_matrix4step_func(date_list, step_date_list, seconds=0):
     """design matrix/function model of coseismic velocity estimation
     Parameters: date_list      : list of dates in YYYYMMDD format
                 step_date_list : Heaviside step function(s) with date in YYYYMMDD
@@ -199,7 +203,7 @@ def get_design_matrix4step_func(date_list, step_date_list):
     num_step = len(step_date_list)
     A = np.zeros((num_date, num_step), dtype=np.float32)
 
-    t = np.array(ptime.yyyymmdd2years(date_list))
+    t = np.array(ptime.yyyymmdd2years(date_list, seconds=seconds))
     t_steps = ptime.yyyymmdd2years(step_date_list)
     for i, t_step in enumerate(t_steps):
         A[:, i] = np.array(t > t_step).flatten()
@@ -207,7 +211,7 @@ def get_design_matrix4step_func(date_list, step_date_list):
     return A
 
 
-def get_design_matrix4exp_func(date_list, exp_dict):
+def get_design_matrix4exp_func(date_list, exp_dict, seconds=0):
     """design matrix/function model of exponential postseismic relaxation estimation
 
     Reference: Eq. (5) in Hetland et al. (2012, JGR).
@@ -235,7 +239,7 @@ def get_design_matrix4exp_func(date_list, exp_dict):
     num_exp  = sum([len(val) for key, val in exp_dict.items()])
     A = np.zeros((num_date, num_exp), dtype=np.float32)
 
-    t = np.array(ptime.yyyymmdd2years(date_list))
+    t = np.array(ptime.yyyymmdd2years(date_list, seconds=seconds))
     # loop for onset time(s)
     i = 0
     for exp_onset in exp_dict.keys():
@@ -252,7 +256,7 @@ def get_design_matrix4exp_func(date_list, exp_dict):
     return A
 
 
-def get_design_matrix4log_func(date_list, log_dict):
+def get_design_matrix4log_func(date_list, log_dict, seconds=0):
     """design matrix/function model of logarithmic postseismic relaxation estimation
 
     Reference: Eq. (4) in Hetland et al. (2012, JGR)
@@ -280,7 +284,7 @@ def get_design_matrix4log_func(date_list, log_dict):
     num_log  = sum([len(log_dict[x]) for x in log_dict])
     A = np.zeros((num_date, num_log), dtype=np.float32)
 
-    t = np.array(ptime.yyyymmdd2years(date_list))
+    t = np.array(ptime.yyyymmdd2years(date_list, seconds=seconds))
     # loop for onset time(s)
     i = 0
     for log_onset in log_dict.keys():

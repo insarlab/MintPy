@@ -247,13 +247,19 @@ def get_design_matrix4defo(inps):
     msg += '\n'+'-'*80
     print(msg)
 
-    # get design matrix for temporal deformation model
+    # prepare temporal deformation model
     model = dict()
     model['polynomial'] = inps.polyOrder
     model['step'] = inps.stepFuncDate
     model['periodic'] = inps.periodic
-    date_list = timeseries(inps.timeseries_file).get_date_list()
-    G_defo = time_func.get_design_matrix4time_func(date_list, model)
+
+    # prepare SAR info
+    ts_obj = timeseries(inps.timeseries_file)
+    date_list = ts_obj.get_date_list()
+    seconds = ts_obj.get_metadata().get('CENTER_LINE_UTC', 0)
+
+    # compose design matrix
+    G_defo = time_func.get_design_matrix4time_func(date_list, model, seconds=seconds)
 
     return G_defo
 

@@ -347,18 +347,18 @@ def add_timefunc_argument(parser):
                            '--periodic 1.0 0.5                        # an annual cycle plus a semi-annual cycle\n')
     model.add_argument('--step', dest='step', type=str, nargs='+', default=[],
                       help='step function(s) at YYYYMMDD (default: %(default)s). E.g.:\n' +
-                           '--step 20061014                           # coseismic step  at 2006-10-14\n' +
-                           '--step 20110311 20120928                  # coseismic steps at 2011-03-11 and 2012-09-28\n')
+                           '--step 20061014                           # coseismic step  at 2006-10-14T00:00\n' +
+                           '--step 20110311 20120928T1733             # coseismic steps at 2011-03-11T00:00 and 2012-09-28T17:33\n')
     model.add_argument('--exp', '--exponential', dest='exp', type=str, nargs='+', action='append', default=[],
                       help='exponential function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
-                           '--exp  20181026 60                        # exp onset at 2006-10-14 with tau=60 days\n' +
-                           '--exp  20181026 60 120                    # exp onset at 2006-10-14 with tau=60 days overlayed by a tau=145 days\n' +
+                           '--exp  20181026 60                        # exp onset at 2006-10-14T00:00 with tau=60 days\n' +
+                           '--exp  20181026T1355 60 120               # exp onset at 2006-10-14T13:55 with tau=60 days overlayed by a tau=145 days\n' +
                            '--exp  20161231 80.5 --exp 20190125 100   # 1st exp onset at 2011-03-11 with tau=80.5 days and\n' +
                            '                                          # 2nd exp onset at 2012-09-28 with tau=100  days')
     model.add_argument('--log', '--logarithmic', dest='log', type=str, nargs='+', action='append', default=[],
                       help='logarithmic function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
-                           '--log  20181016 90.4                      # log onset at 2006-10-14 with tau=90.4 days\n' +
-                           '--log  20181016 90.4 240                  # log onset at 2006-10-14 with tau=90.4 days overlayed by a tau=240 days\n' +
+                           '--log  20181016 90.4                      # log onset at 2006-10-14T00:00 with tau=90.4 days\n' +
+                           '--log  20181016T1733 90.4 240             # log onset at 2006-10-14T17:33 with tau=90.4 days overlayed by a tau=240 days\n' +
                            '--log  20161231 60 --log 20190125 180.2   # 1st log onset at 2011-03-11 with tau=60 days and\n' +
                            '                                          # 2nd log onset at 2012-09-28 with tau=180.2 days\n')
     return parser

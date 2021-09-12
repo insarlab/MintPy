@@ -139,11 +139,11 @@ def decimal_year2datetime(years):
     return years_dt
 
 
-def yyyymmdd2years(dates):
+def yyyymmdd2years(dates, seconds=0):
     """Convert date(s) string into float number in the unit of year
-
-    Parameters: dates - (list of) str, date in YYYYMMDD format
-    Returns:    years - (list of) float, years including the date and time info
+    Parameters: dates   - (list of) str, date in YYYYMMDD format
+                seconds - float or str, time of the day info in seconds
+    Returns:    years   - (list of) float, years including the date and time info
     """
 
     # make a copy in list of input arg
@@ -161,6 +161,13 @@ def yyyymmdd2years(dates):
              d.hour / (365.25 * 24) +
              d.minute / (365.25 * 24 * 60) +
              d.second / (365.25 * 24 * 60 * 60))
+
+        # add time of the day info if:
+        # 1) seconds arg is valid AND
+        # 2) no time info from dates arg
+        if seconds and 'T' not in date_format:
+            y += float(seconds) / (365.25 * 24 * 60 * 60)
+
         years.append(y)
 
     if isinstance(dates, str):
