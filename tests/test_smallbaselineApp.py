@@ -28,6 +28,7 @@ URL_LIST = [
     'https://zenodo.org/record/5498198/files/FernandinaSenDT128.tar.xz',
     'https://zenodo.org/record/4320005/files/SanFranSenDT42.tar.xz',
     'https://zenodo.org/record/3952950/files/WellsEnvD2T399.tar.xz',
+    'https://zenodo.org/record/5502403/files/RidgecrestSenDT71.tar.xz',
     'https://zenodo.org/record/4318134/files/WCapeSenAT29.tar.xz',
     'https://zenodo.org/record/3952917/files/KujuAlosAT422F650.tar.xz',
 ]
@@ -41,6 +42,7 @@ DSET_INFO = """
   FernandinaSenDT128 for ISCE/topsStack
   SanFranSenDT42     for ARIA
   WellsEnvD2T399     for GAMMA
+  RidgecrestSenDT71  for HyP3
   WCapeSenAT29       for SNAP
   KujuAlosAT422F650  for ROI_PAC
 """

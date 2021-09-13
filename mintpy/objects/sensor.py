@@ -262,6 +262,19 @@ ENV = {
     'ground_range_pixel_size'    : 21.3,      # m
 }
 
+# Radarsat-2 stripmap ultra-fine mode
+# from Table 2 in Jung et al. (2014)
+RSAT2 = {
+    'carrier_frequency'          : 5.405e9,   # Hz
+    'antenna_length'             : 6.55,      # m
+    'doppler_bandwidth'          : 2308,      # Hz
+    'pulse_repetition_frequency' : 3637,      # Hz
+    'chirp_bandwidth'            : 78.16e6,   # Hz
+    'sampling_frequency'         : 112.68e6,  # Hz
+    'azimuth_pixel_size'         : 2.2,       # m
+    'ground_range_pixel_size'    : 2.1,       # m
+}
+
 # Sentinel-1 Interferometric Wide (IW / TOPS) swath mode
 # Typical value:
 # azfact = azResolution / azPixelSize = 1.46
@@ -282,19 +295,6 @@ SEN = {
     'IW1' : {'range_resolution' : 2.7, 'azimuth_resolution': 22.5},
     'IW2' : {'range_resolution' : 3.1, 'azimuth_resolution': 22.7},
     'IW3' : {'range_resolution' : 3.5, 'azimuth_resolution': 22.6},
-}
-
-# Radarsat-2 stripmap ultra-fine mode
-# from Table 2 in Jung et al. (2014)
-RSAT2 = {
-    'carrier_frequency'          : 5.405e9,   # Hz
-    'antenna_length'             : 6.55,      # m
-    'doppler_bandwidth'          : 2308,      # Hz
-    'pulse_repetition_frequency' : 3637,      # Hz
-    'chirp_bandwidth'            : 78.16e6,   # Hz
-    'sampling_frequency'         : 112.68e6,  # Hz
-    'azimuth_pixel_size'         : 2.2,       # m
-    'ground_range_pixel_size'    : 2.1,       # m
 }
 
 

@@ -212,7 +212,10 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
             fig_title = fbase
 
     elif fext in ['.h5','.he5']:
-        fig_title = fbase
+        if len(datasetNames) == 1:
+            fig_title = datasetNames[0]
+        else:
+            fig_title = fbase
 
     else:
         fig_title = os.path.basename(fname)
