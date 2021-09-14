@@ -62,7 +62,7 @@ REFERENCE = """reference:
   2324-2341, doi:10.1002/2013JB010588.
 
   # ERA-5
-  Hersbach, H., Bell, B., Berrisford, P., Hirahara, S., Horányi, A., Muñoz-Sabater, J., et al. (2020). 
+  Hersbach, H., Bell, B., Berrisford, P., Hirahara, S., Horányi, A., Muñoz-Sabater, J., et al. (2020).
   The ERA5 global reanalysis. Quarterly Journal of the Royal Meteorological Society, 146(730), 1999–2049.
   https://doi.org/10.1002/qj.3803
 """
@@ -166,7 +166,7 @@ def cmd_line_parse(iargs=None):
             raise FileNotFoundError('input file not exist: {}'.format(fname))
 
     ## required options (for date/time): --file OR --date-list
-    if (not inps.dis_file 
+    if (not inps.dis_file
             and any(vars(inps)[key] is None for key in ['date_list'])):
         raise SystemExit('ERROR: --file OR --date-list is required.\n\n'+EXAMPLE)
 
@@ -677,7 +677,7 @@ def calc_delay_timeseries(inps):
 
             # check dataset size in space / time
             date_list = [str(re.findall('\d{8}', os.path.basename(i))[0]) for i in grib_files]
-            if (get_dataset_size(tropo_file) != get_dataset_size(geom_file) 
+            if (get_dataset_size(tropo_file) != get_dataset_size(geom_file)
                     or any(i not in timeseries(tropo_file).get_date_list() for i in date_list)):
                 flag = 'run'
                 print('2) output file does NOT have the same len/wid as the geometry file {} or does NOT contain all dates'.format(geom_file))
@@ -832,7 +832,7 @@ def main(iargs=None):
     get_grib_info(inps)
 
     # download
-    inps.grib_files = dload_grib_files(inps.grib_files, 
+    inps.grib_files = dload_grib_files(inps.grib_files,
                                        tropo_model=inps.tropo_model,
                                        snwe=inps.snwe)
 
@@ -861,7 +861,7 @@ def main(iargs=None):
     else:
         print('No input displacement file, skip correcting tropospheric delays.')
 
-    
+
     return
 
 ###############################################################
