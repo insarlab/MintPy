@@ -126,7 +126,7 @@ def decimal_year2datetime(years):
             raise ValueError('wrong format: ',x)
         return xt
 
-    if isinstance(years, (float, str)):
+    if isinstance(years, (float, np.float32, np.float64, str)):
         years_dt = decimal_year2datetime1(years)
 
     elif isinstance(years, list):
