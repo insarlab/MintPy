@@ -345,6 +345,11 @@ ALOS2 = {
     'sampling_frequency'         : 100.0e6,   # Hz
     'azimuth_pixel_size'         : 3.8,       # m
     'ground_range_pixel_size'    : 2.4,       # m
+    'range_pixel_size' : {
+        'stripmap_ultrafine'     : 1.43,      # m
+        'stripmap_highsensitive' : 2.86,      # m
+        'scansar_normal'         : 8.58,      # m
+    }
 }
 
 # SAOCOM-1A/B stripmap

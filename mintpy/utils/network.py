@@ -286,7 +286,7 @@ def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor_name='En
     date12_list = ptime.yyyymmdd_date12(date12_list)
     ifgram_num = len(date12_list)
 
-    if isinstance(decor_time, (int, float)):
+    if isinstance(decor_time, (int, np.int16, np.int32, float, np.float32, np.float64)):
         pixel_num = 1
         decor_time = float(decor_time)
     else:

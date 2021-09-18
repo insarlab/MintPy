@@ -1087,6 +1087,8 @@ class TimeSeriesAnalysis:
         tropo_model = self.template['mintpy.troposphericDelay.weatherModel'].upper()
         max_plot_memory = abs(float(self.template['mintpy.plot.maxMemory']))
         max_memory = abs(float(self.template['mintpy.compute.maxMemory']))
+        fig_dpi = int(self.template['mintpy.plot.dpi'])
+
         stack_file, geom_file, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1:]
         mask_file = os.path.join(self.workDir, 'maskTempCoh.h5')
         geo_dir = os.path.join(self.workDir, 'geo')
@@ -1174,7 +1176,7 @@ class TimeSeriesAnalysis:
                               and iargs[1] in stack_dset_list))]
 
         # add the following common options to all element lists
-        opt_common = ['--dpi', '150', '--noverbose', '--nodisplay', '--update', '--memory', str(max_plot_memory)]
+        opt_common = ['--dpi', str(fig_dpi), '--noverbose', '--nodisplay', '--update', '--memory', str(max_plot_memory)]
         iargs_list = [opt_common + iargs for iargs in iargs_list]
 
         # run view
