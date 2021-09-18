@@ -16,7 +16,7 @@ from pyproj import Geod
 from urllib.request import urlretrieve
 
 from mintpy.objects.coord import coordinate
-from mintpy.utils import ptime, time_func, readfile, utils1 as ut
+from mintpy.utils import ptime, time_func, readfile, utils1 as ut, utils as ut0
 
 
 unr_site_list_file = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
@@ -101,8 +101,9 @@ def get_baseline_change(dates1, pos_x1, pos_y1, pos_z1,
     return dates, bases
 
 
-def get_gps_los_obs(insar_file, site_names, start_date, end_date,
-                    gps_comp='enu2los', print_msg=True, redo=False):
+def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
+                    geo_box, metadata, gps_comp='enu2los', print_msg=True, redo=False,
+                    ref_site=None, az_angle=0.):
     """Get the GPS LOS observations given the query info.
 
     Parameters: insar_file - str, InSAR LOS file, e.g. velocity or timeseries
@@ -115,6 +116,7 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date,
                 redo       - bool, ignore existing CSV file and re-calculate
     Returns:    site_obs   - 1D np.ndarray(), GPS LOS velocity or displacement in m or m/yr
     """
+    from mintpy.utils.utils import get_plot_extent
 
     vprint = print if print_msg else lambda *args, **kwargs: None
     num_site = len(site_names)
@@ -142,13 +144,15 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date,
 
     if not redo and os.path.isfile(csv_file) and num_row >= num_site:
         # read from existing CSV file
-        vprint('read GPS LOS observatioin from file: {}'.format(csv_file))
+        vprint('read GPS LOS observations from file: {}'.format(csv_file))
         fc = np.genfromtxt(csv_file, dtype=col_types, delimiter=',', names=True)
         site_obs = fc[col_names[-1]]
 
     else:
-        # calculate and save to CSV file
-        data_list = []
+        # pass all stations to plot
+        data_list_toplot = []
+        # calculate and save only valid stations to CSV file
+        data_list_tocsv = []
         vprint('calculating GPS LOS observation ...')
 
         # get geom_obj (meta / geom_file)
@@ -159,6 +163,8 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date,
         else:
             geom_obj = meta
             vprint('use incidence / azimuth angle from metadata')
+        cropped_metadata = get_plot_extent(metadata, msk, geo_box)
+        coord = ut0.coordinate(cropped_metadata)
 
         # loop for calculation
         prog_bar = ptime.progressBar(maxValue=num_site, print_msg=print_msg)
@@ -168,31 +174,39 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date,
             # calculate gps data value
             obj = GPS(site_name)
 
-            if obs_type == 'velocity':
+            if obs_type == 'velocity' or obs_type == 'SenD':
                 vel, dis_ts = obj.get_gps_los_velocity(geom_obj,
                                                        start_date=start_date,
                                                        end_date=end_date,
-                                                       gps_comp=gps_comp)
+                                                       ref_site=ref_site,
+                                                       gps_comp=gps_comp,
+                                                       az_angle=az_angle)
                 data = [dis_ts[-1] - dis_ts[0], vel] if dis_ts.size > 2 else [np.nan, np.nan]
 
             elif obs_type == 'timeseries':
                 dis_ts = obj.read_gps_los_displacement(geom_obj,
                                                        start_date=start_date,
                                                        end_date=end_date,
+                                                       ref_site=ref_site,
                                                        gps_comp=gps_comp)[1]
                 data = [dis_ts[-1] - dis_ts[0]] if dis_ts.size > 2 else [np.nan]
 
-            # save data to list
-            data_list.append([obj.site, obj.site_lon, obj.site_lat] + data)
+            data_list_toplot.append([obj.site, obj.site_lon, obj.site_lat] + data)
+            # Only pass/plot GPS station if coincident with valid InSAR data
+            msky, mskx = coord.geo2radar(obj.site_lat, obj.site_lon)[0:2]
+            msk_point = msk[msky, mskx]
+            if not np.isnan(data[0]) and msk_point!=0:
+                # save data to list
+                data_list_tocsv.append([obj.site, obj.site_lon, obj.site_lat] + data)
         prog_bar.close()
-        site_obs = np.array([x[-1] for x in data_list])
+        site_obs = np.array([x[-1] for x in data_list_toplot])
 
         # write to CSV file
         vprint('write GPS LOS observations to file: {}'.format(csv_file))
         with open(csv_file, 'w') as fc:
             fcw = csv.writer(fc)
             fcw.writerow(col_names)
-            fcw.writerows(data_list)
+            fcw.writerows(data_list_tocsv)
 
     return site_obs
 
@@ -405,16 +419,18 @@ class GPS:
 
 
     #####################################  Utility Functions ###################################
-    def displacement_enu2los(self, inc_angle:float, head_angle:float, gps_comp='enu2los'):
+    def displacement_enu2los(self, inc_angle:float, head_angle:float, gps_comp='enu2los', az_angle=0.):
         """Convert displacement in ENU to LOS direction
         Parameters: inc_angle  : float, local incidence angle in degree
                     head_angle : float, satellite orbit heading direction in degree
                         from the north, defined as positive in clock-wise direction
                     gps_comp   : string, GPS components used to convert to LOS direction
+                    az_angle   : float, fault azimuth angle used to convert horizontal to fault-parallel
         Returns:    dis_los : 1D np.array for displacement in LOS direction
                     std_los : 1D np.array for displacement standard deviation in LOS direction
         """
         # get LOS unit vector
+        fault_parallel = 1.
         inc_angle *= np.pi/180.
         head_angle *= np.pi/180.
         unit_vec = [np.sin(inc_angle) * np.cos(head_angle) * -1,
@@ -429,18 +445,35 @@ class GPS:
         elif gps_comp in ['u2los', 'up2los']:
             unit_vec[0] = 0.
             unit_vec[1] = 0.
+        elif gps_comp in ['horizontal']:
+            unit_vec[0] = 1.
+            unit_vec[1] = 1.
+            unit_vec[2] = 0.
+            fault_parallel = np.cos(az_angle*np.pi/180.)
+        elif gps_comp in ['vertical']:
+            unit_vec[0] = 0.
+            unit_vec[1] = 0.
+            unit_vec[2] = 1.
         else:
             raise ValueError('Un-known input gps components:'+str(gps_comp))
 
-        # convert ENU to LOS direction
-        self.dis_los = (self.dis_e * unit_vec[0]
-                        + self.dis_n * unit_vec[1]
-                        + self.dis_u * unit_vec[2])
+        if gps_comp in ['horizontal']:
+            # convert to fault-parallel direction
+            self.dis_los = ((self.dis_e * unit_vec[0])**2
+                            + (self.dis_n * unit_vec[1])**2)**0.5 * fault_parallel
 
-        # assuming ENU component are independent with each other
-        self.std_los = ((self.std_e * unit_vec[0])**2
-                         + (self.std_n * unit_vec[1])**2
-                         + (self.std_u * unit_vec[2])**2)**0.5
+            self.std_los = ((self.std_e * unit_vec[0])**2
+                             + (self.std_n * unit_vec[1])**2)**0.5 * fault_parallel
+        else:
+            # convert ENU to LOS direction
+            self.dis_los = (self.dis_e * unit_vec[0]
+                            + self.dis_n * unit_vec[1]
+                            + self.dis_u * unit_vec[2])
+
+            # assuming ENU component are independent with each other
+            self.std_los = ((self.std_e * unit_vec[0])**2
+                             + (self.std_n * unit_vec[1])**2
+                             + (self.std_u * unit_vec[2])**2)**0.5
         return self.dis_los, self.std_los
 
 
@@ -476,13 +509,14 @@ class GPS:
 
 
     def read_gps_los_displacement(self, geom_obj, start_date=None, end_date=None, ref_site=None,
-                                  gps_comp:str='enu2los', print_msg=False):
+                                  gps_comp:str='enu2los', print_msg=False, az_angle=0.):
         """Read GPS displacement in LOS direction
         Parameters: geom_obj : dict / str, metadata of InSAR file, or geometry file path
                     start_date : string in YYYYMMDD format
                     end_date   : string in YYYYMMDD format
                     ref_site   : string, reference GPS site
                     gps_comp   : string, GPS components used to convert to LOS direction
+                    az_angle   : float, fault azimuth angle used to convert horizontal to fault-parallel
         Returns:    dates : 1D np.array of datetime.datetime object
                     dis   : 1D np.array of displacement in meters
                     std   : 1D np.array of displacement uncertainty in meters
@@ -490,17 +524,24 @@ class GPS:
                     ref_site_lalo : tuple of 2 float, lat/lon of reference GPS site
         """
         # read GPS object
-        inc_angle, head_angle = self.get_los_geometry(geom_obj)
+        if gps_comp=='vertical' or gps_comp=='horizontal':
+            inc_angle = 1. ; head_angle = 1.
+        else:
+            inc_angle, head_angle = self.get_los_geometry(geom_obj)
         dates = self.read_displacement(start_date, end_date, print_msg=print_msg)[0]
-        dis, std = self.displacement_enu2los(inc_angle, head_angle, gps_comp=gps_comp)
+        dis, std = self.displacement_enu2los(inc_angle, head_angle, gps_comp=gps_comp, az_angle=az_angle)
         site_lalo = self.get_stat_lat_lon(print_msg=print_msg)
 
         # get LOS displacement relative to another GPS site
         if ref_site:
             ref_obj = GPS(site=ref_site, data_dir=self.data_dir)
             ref_obj.read_displacement(start_date, end_date, print_msg=print_msg)
-            inc_angle, head_angle = ref_obj.get_los_geometry(geom_obj)
-            ref_obj.displacement_enu2los(inc_angle, head_angle, gps_comp=gps_comp)
+            # Handle decomposed fields properly, if passed
+            if gps_comp=='vertical' or gps_comp=='horizontal':
+                inc_angle = 1. ; head_angle = 1.
+            else:
+                inc_angle, head_angle = ref_obj.get_los_geometry(geom_obj)
+            ref_obj.displacement_enu2los(inc_angle, head_angle, gps_comp=gps_comp, az_angle=az_angle)
             ref_site_lalo = ref_obj.get_stat_lat_lon(print_msg=print_msg)
 
             # get relative LOS displacement on common dates
@@ -519,21 +560,28 @@ class GPS:
 
 
     def get_gps_los_velocity(self, geom_obj, start_date=None, end_date=None, ref_site=None,
-                             gps_comp='enu2los'):
-        dates, dis = self.read_gps_los_displacement(geom_obj,
-                                                    start_date=start_date,
-                                                    end_date=end_date,
-                                                    ref_site=ref_site,
-                                                    gps_comp=gps_comp)[:2]
+                             gps_comp='enu2los', az_angle=0.):
 
-        # displacement -> velocity
-        date_list = [dt.strftime(i, '%Y%m%d') for i in dates]
-        if len(date_list) > 2:
-            A = time_func.get_design_matrix4time_func(date_list)
-            self.velocity = np.dot(np.linalg.pinv(A), dis)[1]
-        else:
+        try:
+            dates, dis = self.read_gps_los_displacement(geom_obj,
+                                                        start_date=start_date,
+                                                        end_date=end_date,
+                                                        ref_site=ref_site,
+                                                        gps_comp=gps_comp,
+                                                        az_angle=az_angle)[:2]
+
+            # displacement -> velocity
+            date_list = [dt.strftime(i, '%Y%m%d') for i in dates]
+            if len(date_list) >= 2:
+                A = time_func.get_design_matrix4time_func(date_list)
+                self.velocity = np.dot(np.linalg.pinv(A), dis)[1]
+            else:
+                self.velocity = np.nan
+        except:
             self.velocity = np.nan
+            dis = np.nan
 
         return self.velocity, dis
 
 #################################### End of GPS-UNR class ####################################
+

@@ -165,16 +165,24 @@ def add_gps_argument(parser):
                      help='Show UNR GPS location within the coverage.')
     gps.add_argument('--gps-label', dest='disp_gps_label', action='store_true',
                      help='Show GPS site name')
-    gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los'},
+    gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los', 'horizontal', 'vertical'},
                      help='Plot GPS in color indicating deformation velocity direction')
     gps.add_argument('--gps-redo', dest='gps_redo', action='store_true',
                      help='Re-calculate GPS observations in LOS direction, instead of read from existing CSV file.')
     gps.add_argument('--ref-gps', dest='ref_gps_site', type=str, help='Reference GPS site')
 
     gps.add_argument('--gps-start-date', dest='gps_start_date', type=str, metavar='YYYYMMDD',
-                     help='start date of GPS data, default is date of the 1st SAR acquisiton')
+                     help='start date of GPS data, default is date of the 1st SAR acquisition')
     gps.add_argument('--gps-end-date', dest='gps_end_date', type=str, metavar='YYYYMMDD',
-                     help='start date of GPS data, default is date of the last SAR acquisiton')
+                     help='start date of GPS data, default is date of the last SAR acquisition')
+    gps.add_argument('--azimuth', '--az', dest='az_angle', type=float, default=0.,
+                     help='azimuth angle in degree (clockwise) of the direction of the horizontal movement\n' +
+                             'default is 0., assuming no projection needed and magnitude of horizontal vectors passed.\n' +
+                             'i.e. azimuth angle of strike-slip fault\n\n' +
+                             'Note:\n' +
+                             'a. Near north direction can not be well resolved due to the lack of\n' +
+                             '   diversity in viewing geometry. Check exact dilution of precision for \n' +
+                             '   each component in Wright et al., 2004, GRL')
     return parser
 
 

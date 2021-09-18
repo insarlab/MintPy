@@ -247,10 +247,10 @@ def update_inps_with_file_metadata(inps, metadata):
     inps.pix_box = coord.check_box_within_data_coverage(inps.pix_box)
     inps.geo_box = coord.box_pixel2geo(inps.pix_box)
     # Out message
-    data_box = (0, 0, inps.width, inps.length)
-    vprint('data   coverage in y/x: '+str(data_box))
+    inps.data_box = (0, 0, inps.width, inps.length)
+    vprint('data   coverage in y/x: '+str(inps.data_box))
     vprint('subset coverage in y/x: '+str(inps.pix_box))
-    vprint('data   coverage in lat/lon: '+str(coord.box_pixel2geo(data_box)))
+    vprint('data   coverage in lat/lon: '+str(coord.box_pixel2geo(inps.data_box)))
     vprint('subset coverage in lat/lon: '+str(inps.geo_box))
     vprint('------------------------------------------------------------------------')
 
@@ -501,7 +501,8 @@ def plot_slice(ax, data, metadata, inps=None):
         dem, dem_metadata, dem_pix_box = pp.read_dem(inps.dem_file,
                                                      pix_box=inps.pix_box,
                                                      geo_box=inps.geo_box,
-                                                     print_msg=inps.print_msg)
+                                                     print_msg=inps.print_msg,
+                                                     multilook_num=inps.multilook_num)
 
     vprint('display data in transparency: '+str(inps.transparency))
 
@@ -520,18 +521,21 @@ def plot_slice(ax, data, metadata, inps=None):
         # Plot DEM
         if inps.dem_file:
             vprint('plotting DEM background ...')
+            # Mask DEM of nodata values
+            dem = np.ma.masked_where(inps.msk == 0., dem[0])
             pp.plot_dem_background(ax=ax, geo_box=inps.geo_box,
                                    dem=dem, inps=inps,
                                    print_msg=inps.print_msg)
 
-        # Plot Data
-        coord = ut.coordinate(metadata)
+        # Plot Data with user-defined bounds (if specified)
+        cropped_metadata = ut.get_plot_extent(metadata,data,inps.geo_box)
+        coord = ut.coordinate(cropped_metadata)
         vprint('plotting image ...')
         if inps.disp_gps and inps.gps_component and inps.ref_gps_site:
             ref_site_lalo = GPS(site=inps.ref_gps_site).get_stat_lat_lon(print_msg=False)
             y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
-            y -= inps.pix_box[1]
-            x -= inps.pix_box[0]
+            #y -= inps.pix_box[1]
+            #x -= inps.pix_box[0]
             data -= data[y, x]
             vprint(('referencing InSAR data to the pixel nearest to '
                     'GPS station: {} at {}').format(inps.ref_gps_site, ref_site_lalo))
@@ -753,7 +757,7 @@ def plot_slice(ax, data, metadata, inps=None):
 
 
 def read_input_file_info(inps):
-    # File Baic Info
+    # File Basic Info
     atr = readfile.read_attribute(inps.file)
     msg = 'input file is '
     if not inps.file.endswith(('.h5', '.he5')):
@@ -1038,6 +1042,8 @@ def read_data4figure(i_start, i_end, inps, metadata):
                 ref_data = readfile.read(inps.file,
                                          datasetName=dset_list,
                                          box=ref_box,
+                                         xstep=inps.multilook_num,
+                                         ystep=inps.multilook_num,
                                          print_msg=False)[0]
                 for i in range(data.shape[0]):
                     mask = data[i, :, :] != 0.
@@ -1097,6 +1103,10 @@ def read_data4figure(i_start, i_end, inps, metadata):
         vprint('masking data')
         msk = np.tile(inps.msk, (data.shape[0], 1, 1))
         data = np.ma.masked_where(msk == 0., data)
+
+    ###SSS check!!!!!!!
+    if inps.msk is None:
+        inps.msk = np.tile(np.ones(data.shape, dtype=np.int8), (data.shape[0], 1, 1))
 
     if inps.zero_mask:
         vprint('masking pixels with zero value')
@@ -1410,6 +1420,10 @@ def prepare4multi_subplots(inps, metadata):
                                 xstep=inps.multilook_num,
                                 ystep=inps.multilook_num,
                                 print_msg=False)[0]
+            # adjust DEM bounds
+            dem, inps.offsetarr = pp.extendbox(dem, inps.pix_box,
+                                       xstep=inps.multilook_num,
+                                       ystep=inps.multilook_num)
             (inps.dem_shade,
              inps.dem_contour,
              inps.dem_contour_seq) = pp.prepare_dem_background(dem=dem,
@@ -1536,7 +1550,7 @@ class viewer():
         self.msk, self.mask_file = pp.read_mask(self.file,
                                                 mask_file=self.mask_file,
                                                 datasetName=self.dset[0],
-                                                box=self.pix_box,
+                                                box=self.data_box,
                                                 vmin=self.mask_vmin,
                                                 vmax=self.mask_vmax,
                                                 print_msg=self.print_msg)
@@ -1550,7 +1564,7 @@ class viewer():
             # read data
             data, self.atr = readfile.read(self.file,
                                            datasetName=self.dset[0],
-                                           box=self.pix_box,
+                                           box=self.data_box,
                                            print_msg=False)
 
             # reference in time
@@ -1572,15 +1586,29 @@ class viewer():
                 data[data != 0.] -= ref_data
 
             # masking
-            if self.zero_mask:
-                vprint('masking pixels with zero value')
-                data = np.ma.masked_where(data == 0., data)
             if self.msk is not None:
                 vprint('masking data')
                 data = np.ma.masked_where(self.msk == 0., data)
+            if self.msk is None:
+                self.msk = np.ones(data.shape, dtype=np.int8)
+            if self.zero_mask:
+                vprint('masking pixels with zero value')
+                self.msk = np.ma.masked_array(self.msk, mask=np.isnan(data))
+                np.ma.set_fill_value(self.msk, 0)
+                self.msk=self.msk.filled()
+                data = np.ma.masked_where(self.msk == 0., data)
 
-            # update data
+            # update data, and pass original pixel coordinates
+            self.OGpix_box = self.pix_box[:]
+            self.pix_box = (0,0,0,0)
             data, self = update_data_with_plot_inps(data, self.atr, self)
+            self.pix_box = self.OGpix_box[:]
+            self.msk, self.offsetarr = pp.extendbox(self.msk, self.pix_box,
+                                       xstep=self.multilook_num,
+                                       ystep=self.multilook_num)
+            data, self.offsetarr = pp.extendbox(data, self.pix_box,
+                                       xstep=self.multilook_num,
+                                       ystep=self.multilook_num)
 
             # prepare figure
             subplot_kw = dict(projection=self.map_proj_obj) if self.map_proj_obj is not None else {}
@@ -1644,3 +1672,4 @@ def main(iargs=None):
 ##################################################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
+

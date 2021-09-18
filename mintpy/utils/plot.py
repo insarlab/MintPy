@@ -109,6 +109,65 @@ def read_pts2inps(inps, coord_obj):
 
 
 ############################################ Plot Utilities #############################################
+def extendbox(data, pix_box, xstep=1, ystep=1):
+    """Adjust bbox to reflect user-specified plotting extents"""
+
+    #if multilooking, adjust pix_box
+    if xstep * ystep > 1:
+        # adjust X-dim
+        pix_box[0] /= xstep
+        pix_box[2] /= xstep
+        # adjust Y-dim
+        pix_box[1] /= ystep
+        pix_box[3] /= ystep
+
+    orig_datashape = data.shape
+    orig_datatype = data.dtype
+    offsetarr = [0, 0, 0, 0]
+    ###extend
+    # Check Y/Azimuth/Latitude subset range
+    if pix_box[1] < 0:
+        delta = int(abs(pix_box[1]))
+        offsetarr[1] = int(pix_box[1])
+        append_arr = np.ma.masked_values(np.zeros((delta,data.shape[1])),0)
+        data = np.ma.append(append_arr, data, axis=0)
+    if pix_box[3] > orig_datashape[0]:
+        delta = int(pix_box[3] - orig_datashape[0])
+        offsetarr[3] = delta
+        append_arr = np.ma.masked_values(np.zeros((delta,data.shape[1])),0)
+        data = np.ma.append(data, append_arr, axis=0)
+    if pix_box[3] < orig_datashape[0]:
+        delta = int(orig_datashape[0] - pix_box[3])
+        offsetarr[3] = delta
+        data = data[:-1*delta]
+    # Check X/Range/Longitude subset range
+    if pix_box[0] < 0:
+        delta = int(abs(pix_box[0]))
+        offsetarr[0] = int(pix_box[0])
+        append_arr = np.ma.masked_values(np.zeros((data.shape[0],delta)),0)
+        data = np.ma.append(append_arr, data, axis=1)
+    if pix_box[2] > orig_datashape[1]:
+        delta = int(pix_box[2] - orig_datashape[1])
+        offsetarr[2] = delta
+        append_arr = np.ma.masked_values(np.zeros((data.shape[0],delta)),0)
+        data = np.ma.append(data, append_arr, axis=1)
+    if pix_box[2] < orig_datashape[1]:
+        delta = int(orig_datashape[1] - pix_box[2])
+        offsetarr[2] = delta
+        data = data[:, :-1*delta]
+
+    ###crop
+    # Check Y/Azimuth/Latitude subset range
+    if pix_box[1] > 0:
+        data = data[pix_box[1]:]
+    # Check X/Range/Longitude subset range
+    if pix_box[0] > 0:
+        data = data[:, pix_box[0]:]
+
+    data = data.astype(str(orig_datatype))
+    return data, offsetarr
+
+
 def add_inner_title(ax, title, loc, prop=None, **kwargs):
     from matplotlib.offsetbox import AnchoredText
     from matplotlib.patheffects import withStroke
@@ -917,7 +976,7 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
     return ax, coh_mat, im
 
 
-def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
+def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True, multilook_num=1):
     if print_msg:
         print('reading DEM: {} ...'.format(os.path.basename(dem_file)))
 
@@ -942,7 +1001,7 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
 
     dem, dem_metadata = readfile.read(dem_file,
                                       datasetName=dsName,
-                                      box=box2read,
+                                      box=(0, 0, int(dem_metadata['WIDTH']), int(dem_metadata['LENGTH'])),
                                       print_msg=print_msg)
 
     # if input DEM does not cover the entire AOI, fill with NaN
@@ -954,6 +1013,14 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
         dem_tmp[box2read[1]-dem_pix_box[1]:box2read[3]-dem_pix_box[1],
                 box2read[0]-dem_pix_box[0]:box2read[2]-dem_pix_box[0]] = dem
         dem = np.array(dem_tmp)
+
+    # adjust DEM bounds according to user input
+    dem = extendbox(dem, pix_box, xstep=multilook_num, ystep=multilook_num)
+    np.ma.set_fill_value(dem, np.nan)
+    try:
+        dem = dem.filled()
+    except:
+        pass
     return dem, dem_metadata, dem_pix_box
 
 
@@ -1110,16 +1177,21 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         raise ValueError('input reference GPS site "{}" not available!'.format(inps.ref_gps_site))
 
     k = metadata['FILE_TYPE']
-    if inps.gps_component and k not in ['velocity', 'timeseries']:
+    print('inps.gps_component,k!!!',inps.gps_component,k)
+    if inps.gps_component and k not in ['velocity', 'timeseries', 'SenD']:
         inps.gps_component = None
         vprint('WARNING: --gps-comp is not implemented for {} file yet, set --gps-comp = None and continue'.format(k))
 
     if inps.gps_component:
+        # check input azimuth angle
+        if inps.az_angle < 0.:
+            inps.az_angle += 360.
         # plot GPS velocity/displacement along LOS direction
         vprint('-'*30)
         msg = 'plotting GPS '
         msg += 'velocity' if k == 'velocity' else 'displacement'
-        msg += ' in LOS direction'
+        msg += ' with respect to {} in {} direction ...'.format(
+            inps.ref_gps_site, inps.gps_component)
         vprint(msg)
         vprint('number of available GPS stations: {}'.format(len(site_names)))
         vprint('start date: {}'.format(inps.gps_start_date))
@@ -1132,9 +1204,14 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             site_names=site_names,
             start_date=inps.gps_start_date,
             end_date=inps.gps_end_date,
+            msk=inps.msk,
+            geo_box=inps.geo_box,
+            metadata=metadata,
             gps_comp=inps.gps_component,
             print_msg=print_msg,
             redo=inps.gps_redo,
+            ref_site=inps.ref_gps_site,
+            az_angle=inps.az_angle
         )
 
         # reference GPS
@@ -1155,7 +1232,9 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         # plot
         for lat, lon, obs in zip(site_lats, site_lons, site_obs):
             color = cmap( (obs - vmin) / (vmax - vmin) ) if obs else 'none'
-            ax.scatter(lon, lat, color=color, s=marker_size**2, edgecolors='k', zorder=10)
+            # only plot valid GNSS stations
+            if color != 'none':
+                ax.scatter(lon, lat, color=color, s=marker_size**2, edgecolors='k', zorder=10)
 
     else:
         # plot GPS locations only
@@ -1279,6 +1358,9 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
         elif disp_unit[0] == 'dm': scale *= 10.0
         elif disp_unit[0] == 'm' : scale *= 1.0
         elif disp_unit[0] == 'km': scale *= 1/1000.0
+        elif disp_unit[0] == 'in': scale *= 39.3701
+        elif disp_unit[0] == 'ft': scale *= 3.28084
+        elif disp_unit[0] == 'mi': scale *= 0.000621371
         elif disp_unit[0] in ['radians','radian','rad','r']:
             range2phase = -(4*np.pi) / float(metadata['WAVELENGTH'])
             scale *= range2phase
@@ -1290,6 +1372,9 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
         elif data_unit[0] == 'cm': scale *= 0.01
         elif data_unit[0] == 'dm': scale *= 0.1
         elif data_unit[0] == 'km': scale *= 1000.
+        elif disp_unit[0] == 'in': scale *= 0.025399986284007407
+        elif disp_unit[0] == 'ft': scale *= 0.3047999902464003
+        elif disp_unit[0] == 'mi': scale *= 1609.3444978925634
 
     elif data_unit[0] == 'radian':
         phase2range = -float(metadata['WAVELENGTH']) / (4*np.pi)
@@ -1298,6 +1383,9 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
         elif disp_unit[0] == 'dm': scale *= phase2range * 10.0
         elif disp_unit[0] == 'm' : scale *= phase2range * 1.0
         elif disp_unit[0] == 'km': scale *= phase2range * 1/1000.0
+        elif disp_unit[0] == 'in': scale *= phase2range * 39.3701
+        elif disp_unit[0] == 'ft': scale *= phase2range * 3.28084
+        elif disp_unit[0] == 'mi': scale *= phase2range * 0.000621371
         elif disp_unit[0] in ['radians','radian','rad','r']:
             pass
         else:
@@ -1635,10 +1723,18 @@ def draw_scalebar(ax, geo_box, unit='degrees', loc=[0.2, 0.2, 0.1], labelpad=0.0
     ax.plot([lon1, lon1], [lat_c, lat_c + 0.1*length_disp], color=color)
 
     ## plot scale bar label
-    unit = 'm'
-    if length_meter >= 1000.0:
-        unit = 'km'
-        length_meter *= 0.001
+    if unit.split('/')[0]=='in' or unit.split('/')[0]=='ft' or unit.split('/')[0]=='mi':
+        unit = 'ft'
+        if length_meter >= 1000.0:
+            unit = 'mi'
+            length_meter *= 0.000621371
+        else:
+            length_meter *= 3.28084
+    else:
+        unit = 'm'
+        if length_meter >= 1000.0:
+            unit = 'km'
+            length_meter *= 0.001
     label = '{:.0f} {}'.format(length_meter, unit)
     txt_offset = (geo_box[1] - geo_box[3]) * labelpad
 
@@ -1649,3 +1745,4 @@ def draw_scalebar(ax, geo_box, unit='degrees', loc=[0.2, 0.2, 0.1], labelpad=0.0
             fontsize=font_size, color=color)
 
     return ax
+
