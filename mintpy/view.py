@@ -1044,8 +1044,6 @@ def read_data4figure(i_start, i_end, inps, metadata):
                 ref_data = readfile.read(inps.file,
                                          datasetName=dset_list,
                                          box=ref_box,
-                                         xstep=inps.multilook_num,
-                                         ystep=inps.multilook_num,
                                          print_msg=False)[0]
                 for i in range(data.shape[0]):
                     mask = data[i, :, :] != 0.
@@ -1678,4 +1676,3 @@ def main(iargs=None):
 ##################################################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
-
