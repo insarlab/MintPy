@@ -113,6 +113,7 @@ def extendbox(data, pix_box, xstep=1, ystep=1):
     """Adjust bbox to reflect user-specified plotting extents"""
 
     #if multilooking, adjust pix_box
+    pix_box = list(pix_box)
     if xstep * ystep > 1:
         # adjust X-dim
         pix_box[0] /= xstep
