@@ -16,7 +16,7 @@ from pyproj import Geod
 from urllib.request import urlretrieve
 
 from mintpy.objects.coord import coordinate
-from mintpy.utils import ptime, time_func, readfile, utils1 as ut, utils as ut0
+from mintpy.utils import ptime, time_func, readfile, utils1 as ut
 
 
 unr_site_list_file = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
@@ -164,7 +164,7 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
             geom_obj = meta
             vprint('use incidence / azimuth angle from metadata')
         cropped_metadata = get_plot_extent(metadata, msk, geo_box)
-        coord = ut0.coordinate(cropped_metadata)
+        coord = coordinate(cropped_metadata)
 
         # loop for calculation
         prog_bar = ptime.progressBar(maxValue=num_site, print_msg=print_msg)
@@ -209,8 +209,6 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
             fcw.writerows(data_list_tocsv)
 
     return site_obs
-
-
 
 
 #################################### Beginning of GPS-GSI utility functions ########################
@@ -562,24 +560,20 @@ class GPS:
     def get_gps_los_velocity(self, geom_obj, start_date=None, end_date=None, ref_site=None,
                              gps_comp='enu2los', az_angle=0.):
 
-        try:
-            dates, dis = self.read_gps_los_displacement(geom_obj,
-                                                        start_date=start_date,
-                                                        end_date=end_date,
-                                                        ref_site=ref_site,
-                                                        gps_comp=gps_comp,
-                                                        az_angle=az_angle)[:2]
+        dates, dis = self.read_gps_los_displacement(geom_obj,
+                                                    start_date=start_date,
+                                                    end_date=end_date,
+                                                    ref_site=ref_site,
+                                                    gps_comp=gps_comp,
+                                                    az_angle=az_angle)[:2]
 
-            # displacement -> velocity
-            date_list = [dt.strftime(i, '%Y%m%d') for i in dates]
-            if len(date_list) >= 2:
-                A = time_func.get_design_matrix4time_func(date_list)
-                self.velocity = np.dot(np.linalg.pinv(A), dis)[1]
-            else:
-                self.velocity = np.nan
-        except:
+        # displacement -> velocity
+        date_list = [dt.strftime(i, '%Y%m%d') for i in dates]
+        if len(date_list) >= 2:
+            A = time_func.get_design_matrix4time_func(date_list)
+            self.velocity = np.dot(np.linalg.pinv(A), dis)[1]
+        else:
             self.velocity = np.nan
-            dis = np.nan
 
         return self.velocity, dis
 

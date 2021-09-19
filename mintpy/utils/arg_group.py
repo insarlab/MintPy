@@ -51,6 +51,8 @@ def add_dem_argument(parser):
     dem = parser.add_argument_group('DEM', 'display topography in the background')
     dem.add_argument('-d', '--dem', dest='dem_file', metavar='DEM_FILE',
                      help='DEM file to show topography as background')
+    dem.add_argument('--dem-mask', dest='dem_mask', action='store_true',
+                     help='Mask all DEM values not coincident with valid data pixels')
     dem.add_argument('--dem-noshade', dest='disp_dem_shade', action='store_false',
                      help='do not show DEM shaded relief')
     dem.add_argument('--dem-nocontour', dest='disp_dem_contour', action='store_false',
@@ -163,6 +165,8 @@ def add_gps_argument(parser):
     gps = parser.add_argument_group('GPS', 'GPS data to display')
     gps.add_argument('--show-gps', dest='disp_gps', action='store_true',
                      help='Show UNR GPS location within the coverage.')
+    gps.add_argument('--gps-mask', dest='gps_mask', action='store_true',
+                     help='Mask all GPS stations not coincident with valid data pixels')
     gps.add_argument('--gps-label', dest='disp_gps_label', action='store_true',
                      help='Show GPS site name')
     gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los', 'horizontal', 'vertical'},
@@ -176,7 +180,8 @@ def add_gps_argument(parser):
     gps.add_argument('--gps-end-date', dest='gps_end_date', type=str, metavar='YYYYMMDD',
                      help='start date of GPS data, default is date of the last SAR acquisition')
     gps.add_argument('--azimuth', '--az', dest='az_angle', type=float, default=0.,
-                     help='azimuth angle in degree (clockwise) of the direction of the horizontal movement\n' +
+                     help='azimuth angle in degrees in the direction of the horizontal movement\n'
+                             'with anti-clockwise direction as positive\n' +
                              'default is 0., assuming no projection needed and magnitude of horizontal vectors passed.\n' +
                              'i.e. azimuth angle of strike-slip fault\n\n' +
                              'Note:\n' +

@@ -11,6 +11,7 @@
 import os
 import sys
 import re
+import copy
 import argparse
 import datetime as dt
 import numpy as np
@@ -244,7 +245,6 @@ def update_inps_with_file_metadata(inps, metadata):
     # geo_box = None if atr is not geocoded.
     coord = ut.coordinate(metadata)
     inps.pix_box, inps.geo_box = subset.subset_input_dict2box(vars(inps), metadata)
-    inps.pix_box = coord.check_box_within_data_coverage(inps.pix_box)
     inps.geo_box = coord.box_pixel2geo(inps.pix_box)
     # Out message
     inps.data_box = (0, 0, inps.width, inps.length)
@@ -521,8 +521,10 @@ def plot_slice(ax, data, metadata, inps=None):
         # Plot DEM
         if inps.dem_file:
             vprint('plotting DEM background ...')
+            dem = dem[0]
             # Mask DEM of nodata values
-            dem = np.ma.masked_where(inps.msk == 0., dem[0])
+            if inps.dem_mask:
+                dem = np.ma.masked_where(inps.msk == 0., dem)
             pp.plot_dem_background(ax=ax, geo_box=inps.geo_box,
                                    dem=dem, inps=inps,
                                    print_msg=inps.print_msg)
@@ -1598,11 +1600,15 @@ class viewer():
                 self.msk=self.msk.filled()
                 data = np.ma.masked_where(self.msk == 0., data)
 
-            # update data, and pass original pixel coordinates
-            self.OGpix_box = self.pix_box[:]
+            # update data
+            # pass original pixel coordinates to properly handle bounds
+            selfcopy = copy.deepcopy(self)
             self.pix_box = (0,0,0,0)
             data, self = update_data_with_plot_inps(data, self.atr, self)
-            self.pix_box = self.OGpix_box[:]
+            self.pix_box = selfcopy.pix_box[:]
+            del selfcopy
+
+            # shift mask and data, if necesary
             self.msk, self.offsetarr = pp.extendbox(self.msk, self.pix_box,
                                        xstep=self.multilook_num,
                                        ystep=self.multilook_num)

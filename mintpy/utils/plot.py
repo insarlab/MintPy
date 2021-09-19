@@ -1177,15 +1177,11 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         raise ValueError('input reference GPS site "{}" not available!'.format(inps.ref_gps_site))
 
     k = metadata['FILE_TYPE']
-    print('inps.gps_component,k!!!',inps.gps_component,k)
     if inps.gps_component and k not in ['velocity', 'timeseries', 'SenD']:
         inps.gps_component = None
         vprint('WARNING: --gps-comp is not implemented for {} file yet, set --gps-comp = None and continue'.format(k))
 
     if inps.gps_component:
-        # check input azimuth angle
-        if inps.az_angle < 0.:
-            inps.az_angle += 360.
         # plot GPS velocity/displacement along LOS direction
         vprint('-'*30)
         msg = 'plotting GPS '
@@ -1231,10 +1227,16 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
 
         # plot
         for lat, lon, obs in zip(site_lats, site_lons, site_obs):
-            color = cmap( (obs - vmin) / (vmax - vmin) ) if obs else 'none'
-            # only plot valid GNSS stations
-            if color != 'none':
-                ax.scatter(lon, lat, color=color, s=marker_size**2, edgecolors='k', zorder=10)
+            color = cmap( (obs - vmin) / (vmax - vmin) ) \
+                    if not np.isnan(obs) else 'none'
+            # Mask GNSS stations if outside of data range
+            if inps.gps_mask:
+                if not np.isnan(obs):
+                    ax.scatter(lon, lat, color=color, s=marker_size**2,
+                               edgecolors='k', zorder=10)
+            else:
+                ax.scatter(lon, lat, color=color, s=marker_size**2,
+                               edgecolors='k', zorder=10)
 
     else:
         # plot GPS locations only
