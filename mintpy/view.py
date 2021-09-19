@@ -1603,9 +1603,9 @@ class viewer():
             # update data
             # pass original pixel coordinates to properly handle bounds
             selfcopy = copy.deepcopy(self)
-            self.pix_box = (0,0,0,0)
+            self.pix_box = [0,0,0,0]
             data, self = update_data_with_plot_inps(data, self.atr, self)
-            self.pix_box = selfcopy.pix_box[:]
+            self.pix_box = selfcopy.pix_box
             del selfcopy
 
             # shift mask and data, if necesary
