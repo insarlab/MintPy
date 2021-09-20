@@ -450,6 +450,26 @@ class coordinate:
             msg += '\tsubset range in (W, N, E, S): {}\n'.format(self.box_pixel2geo(pixel_box))
             raise ValueError(msg)
 
+        # Check Y/Azimuth/Latitude subset range
+        if sub_y[0] < 0:
+            sub_y[0] = 0
+            if print_msg:
+                print('WARNING: input y < min (0)! Set it to min.')
+        if sub_y[1] > length:
+            sub_y[1] = length
+            if print_msg:
+                print('WARNING: input y > max ({})! Set it to max.'.format(length))
+
+        # Check X/Range/Longitude subset range
+        if sub_x[0] < 0:
+            sub_x[0] = 0
+            if print_msg:
+                print('WARNING: input x < min (0)! Set it to min.')
+        if sub_x[1] > width:
+            sub_x[1] = width
+            if print_msg:
+                print('WARNING: input x > max ({})! Set it to max.'.format(width))
+
         out_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
         return out_box
 

@@ -1010,10 +1010,15 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True, multilook_num
         if print_msg:
             print('align DEM to the input data file')
         dem_tmp = np.zeros((dem_pix_box[3] - dem_pix_box[1],
-                            dem_pix_box[2] - dem_pix_box[0]), dtype=dem.dtype) * np.nan
-        dem_tmp[box2read[1]-dem_pix_box[1]:box2read[3]-dem_pix_box[1],
-                box2read[0]-dem_pix_box[0]:box2read[2]-dem_pix_box[0]] = dem
-        dem = np.array(dem_tmp)
+                            dem_pix_box[2] - dem_pix_box[0]),
+                            dtype=dem.dtype) * np.nan
+        # Only file if bounds have already not been expanded
+        if dem_tmp[box2read[1]-dem_pix_box[1]:box2read[3]-dem_pix_box[1],
+                box2read[0]-dem_pix_box[0]:box2read[2]-dem_pix_box[0]].shape \
+                == dem.shape:
+            dem_tmp[box2read[1]-dem_pix_box[1]:box2read[3]-dem_pix_box[1],
+                    box2read[0]-dem_pix_box[0]:box2read[2]-dem_pix_box[0]] = dem
+            dem = np.array(dem_tmp)
 
     # adjust DEM bounds according to user input
     dem = extendbox(dem, pix_box, xstep=multilook_num, ystep=multilook_num)
