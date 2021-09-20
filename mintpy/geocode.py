@@ -296,7 +296,8 @@ def run_geocode(inps):
         # instantiate output file
         file_is_hdf5 = os.path.splitext(infile)[1] in ['.h5', '.he5']
         if file_is_hdf5:
-            writefile.layout_hdf5(outfile, metadata=atr, ref_file=infile)
+            compression = readfile.get_hdf5_compression(infile)
+            writefile.layout_hdf5(outfile, metadata=atr, ref_file=infile, compression=compression)
         else:
             dsDict = dict()
 

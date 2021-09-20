@@ -487,7 +487,7 @@ class geometry:
             self.geocoded = True
 
         with h5py.File(self.file, 'r') as f:
-            self.datasetNames = [i for i in geometryDatasetNames if i in f.keys()]
+            self.datasetNames = [i for i in f.keys() if isinstance(f[i], h5py.Dataset)]
             self.sliceList = list(self.datasetNames)
             if 'bperp' in f.keys():
                 self.dateList = [i.decode('utf8') for i in f['date'][:]]

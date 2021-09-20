@@ -843,10 +843,7 @@ def read_dataset_input(inps):
                                                 inps.search_dset)[1]
     else:
         # default dataset to display for certain type of files
-        if inps.key == 'geometry':
-            inps.dset = list(geometryDatasetNames)
-            inps.dset.remove('bperp')
-        elif inps.key == 'ifgramStack':
+        if inps.key == 'ifgramStack':
             inps.dset = ['unwrapPhase']
         elif inps.key == 'HDFEOS':
             inps.dset = ['displacement']
@@ -858,6 +855,9 @@ def read_dataset_input(inps):
             inps.dset = [obj.sliceList[0].split('-')[0]]
         else:
             inps.dset = inps.sliceList
+            # do not plot 3D-bperp by default
+            if inps.key == 'geometry':
+                inps.dset = [x for x in inps.dset if not x.startswith('bperp')]
 
         inps.dsetNumList = search_dataset_input(inps.sliceList,
                                                 inps.dset,

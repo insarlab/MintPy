@@ -15,18 +15,23 @@ from mintpy.objects import timeseries
 from mintpy.utils import readfile
 
 
-def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None):
+def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None, ds_unit_dict=None):
     """ Write one file.
-    Parameters: datasetDict : dict of dataset, with key = datasetName and value = 2D/3D array, e.g.:
+    Parameters: datasetDict  - dict of dataset, with key = datasetName and value = 2D/3D array, e.g.:
                     {'height'        : np.ones((   200,300), dtype=np.int16),
                      'incidenceAngle': np.ones((   200,300), dtype=np.float32),
                      'bperp'         : np.ones((80,200,300), dtype=np.float32),
                      ...}
-                out_file : str, output file name
-                metadata : dict of attributes
-                ref_file : str, reference file to get auxliary info
-                compression : str, compression while writing to HDF5 file, None, "lzf", "gzip"
-    Returns:    out_file : str
+                out_file     - str, output file name
+                metadata     - dict of attributes
+                ref_file     - str, reference file to get auxliary info
+                compression  - str, compression while writing to HDF5 file, None, "lzf", "gzip"
+                ds_unit_dict - dict, dataset unit definition
+                    {dname : dunit,
+                     dname : dunit,
+                     ...
+                    }
+    Returns:    out_file     - strs
     Examples:   dsDict = dict()
                 dsDict['velocity'] = np.ones((200,300), dtype=np.float32)
                 write(datasetDict=dsDict, out_file='velocity.h5', metadata=atr)
@@ -122,6 +127,14 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                     f.attrs[key] = str(value)
                 except:
                     f.attrs[key] = str(value.encode('utf-8'))
+
+            # write attributes in dataset level
+            if ds_unit_dict is not None:
+                for key, value in ds_unit_dict.items():
+                    if value is not None:
+                        f[key].attrs['UNIT'] = value
+                        print(f'add /{key:<{maxDigit}} attribute: UNIT = {value}')
+
         print('finished writing to {}'.format(out_file))
 
     # ISCE / ROI_PAC GAMMA / Image product
