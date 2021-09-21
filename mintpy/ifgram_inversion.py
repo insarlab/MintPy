@@ -191,7 +191,7 @@ def cmd_line_parse(iargs=None):
             inps.outfile = ['timeseriesRg.h5', 'residualInvRg.h5', 'numInvOffset.h5']
 
         elif inps.obsDatasetName.startswith('ion'):
-            inps.outfile = ['timeseriesIon.h5', 'temporalCoherenceIon.h5', 'numInvIon.h5']
+            inps.outfile = ['Ion.h5', 'temporalCoherenceIon.h5', 'numInvIon.h5']
 
         else:
             raise ValueError('un-recognized input observation dataset name: {}'.format(inps.obsDatasetName))
@@ -853,7 +853,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     weight_sqrt = None
     stack_std = None
 
-    if obs_ds_name.startswith('unwrapPhase'):
+    if obs_ds_name.startswith(('unwrapPhase', 'ion')):
         # calculate weight
         if weight_func not in ['no', 'sbas']:
             weight_sqrt = calc_weight_sqrt(stack_obj, box,
@@ -1093,7 +1093,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     num_inv_obs = num_inv_obs.reshape(num_row, num_col)
 
     # 3.2 convert displacement unit to meter
-    if obs_ds_name.startswith('unwrapPhase'):
+    if obs_ds_name.startswith(('unwrapPhase','ion')):
         phase2range = -1 * float(stack_obj.metadata['WAVELENGTH']) / (4.*np.pi)
         ts *= phase2range
         ts_std *= np.abs(phase2range)
