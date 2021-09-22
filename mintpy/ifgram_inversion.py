@@ -191,7 +191,7 @@ def cmd_line_parse(iargs=None):
             inps.outfile = ['timeseriesRg.h5', 'residualInvRg.h5', 'numInvOffset.h5']
 
         elif inps.obsDatasetName.startswith('ion'):
-            inps.outfile = ['Ion.h5', 'temporalCoherenceIon.h5', 'numInvIon.h5']
+            inps.outfile = ['timeseriesIon.h5', 'temporalCoherenceIon.h5', 'numInvIon.h5']
 
         else:
             raise ValueError('un-recognized input observation dataset name: {}'.format(inps.obsDatasetName))
