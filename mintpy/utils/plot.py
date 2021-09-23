@@ -942,7 +942,7 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True, multilook_num
 
     dem, dem_metadata = readfile.read(dem_file,
                                       datasetName=dsName,
-                                      box=(0, 0, int(dem_metadata['WIDTH']), int(dem_metadata['LENGTH'])),
+                                      box=box2read,
                                       print_msg=print_msg)
 
     # if input DEM does not cover the entire AOI, fill with NaN

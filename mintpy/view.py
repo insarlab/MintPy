@@ -244,6 +244,7 @@ def update_inps_with_file_metadata(inps, metadata):
     # geo_box = None if atr is not geocoded.
     coord = ut.coordinate(metadata)
     inps.pix_box, inps.geo_box = subset.subset_input_dict2box(vars(inps), metadata)
+    inps.pix_box = coord.check_box_within_data_coverage(inps.pix_box)
     inps.geo_box = coord.box_pixel2geo(inps.pix_box)
     # Out message
     inps.data_box = (0, 0, inps.width, inps.length)
@@ -520,7 +521,6 @@ def plot_slice(ax, data, metadata, inps=None):
         # Plot DEM
         if inps.dem_file:
             vprint('plotting DEM background ...')
-            dem = dem[0]
             # Mask DEM of nodata values
             if inps.dem_mask:
                 dem = np.ma.masked_where(inps.msk == 0., dem)
@@ -534,8 +534,8 @@ def plot_slice(ax, data, metadata, inps=None):
         if inps.disp_gps and inps.gps_component and inps.ref_gps_site:
             ref_site_lalo = GPS(site=inps.ref_gps_site).get_stat_lat_lon(print_msg=False)
             y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
-            #y -= inps.pix_box[1]
-            #x -= inps.pix_box[0]
+            y -= inps.pix_box[1]
+            x -= inps.pix_box[0]
             data -= data[y, x]
             vprint(('referencing InSAR data to the pixel nearest to '
                     'GPS station: {} at {}').format(inps.ref_gps_site, ref_site_lalo))
@@ -1544,7 +1544,7 @@ class viewer():
         self.msk, self.mask_file = pp.read_mask(self.file,
                                                 mask_file=self.mask_file,
                                                 datasetName=self.dset[0],
-                                                box=self.data_box,
+                                                box=self.pix_box,
                                                 vmin=self.mask_vmin,
                                                 vmax=self.mask_vmax,
                                                 print_msg=self.print_msg)
@@ -1558,7 +1558,7 @@ class viewer():
             # read data
             data, self.atr = readfile.read(self.file,
                                            datasetName=self.dset[0],
-                                           box=self.data_box,
+                                           box=self.pix_box,
                                            print_msg=False)
 
             # reference in time
