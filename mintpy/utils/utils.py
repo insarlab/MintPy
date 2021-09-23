@@ -378,6 +378,23 @@ def transect_lines(z, atr, lines):
     return transect
 
 
+def get_plot_extent(cropped_metadata, data, geo_box):
+    """Adjust metadata to reflect user-specified plotting extents"""
+
+    cropped_metadata['WIDTH'] = data.shape[1]
+    cropped_metadata['LENGTH'] = data.shape[0]
+    cropped_metadata['X_FIRST'] = min(geo_box[::2])
+    cropped_metadata['Y_FIRST'] = max(geo_box[1::2])
+    cropped_metadata['LON_REF1'] = min(geo_box[::2])
+    cropped_metadata['LON_REF2'] = max(geo_box[::2])
+    cropped_metadata['LON_REF3'] = min(geo_box[::2])
+    cropped_metadata['LON_REF4'] = max(geo_box[::2])
+    cropped_metadata['LAT_REF1'] = max(geo_box[1::2])
+    cropped_metadata['LAT_REF2'] = max(geo_box[1::2])
+    cropped_metadata['LAT_REF3'] = min(geo_box[1::2])
+    cropped_metadata['LAT_REF4'] = min(geo_box[1::2])
+
+    return cropped_metadata
+
 
 #################################################################################
-
