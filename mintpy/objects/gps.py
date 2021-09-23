@@ -116,7 +116,6 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
                 redo       - bool, ignore existing CSV file and re-calculate
     Returns:    site_obs   - 1D np.ndarray(), GPS LOS velocity or displacement in m or m/yr
     """
-    from mintpy.utils.utils import get_plot_extent
 
     vprint = print if print_msg else lambda *args, **kwargs: None
     num_site = len(site_names)
@@ -163,6 +162,7 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
         else:
             geom_obj = meta
             vprint('use incidence / azimuth angle from metadata')
+        coord = coordinate(metadata)
 
         # loop for calculation
         prog_bar = ptime.progressBar(maxValue=num_site, print_msg=print_msg)

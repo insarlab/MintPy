@@ -11,7 +11,6 @@
 import os
 import sys
 import re
-import copy
 import argparse
 import datetime as dt
 import numpy as np
@@ -1594,7 +1593,7 @@ class viewer():
                 data = np.ma.masked_where(self.msk == 0., data)
 
             # update data
-            ata, self = update_data_with_plot_inps(data, self.atr, self)
+            data, self = update_data_with_plot_inps(data, self.atr, self)
 
             # prepare figure
             subplot_kw = dict(projection=self.map_proj_obj) if self.map_proj_obj is not None else {}
