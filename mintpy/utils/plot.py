@@ -1159,7 +1159,9 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         site_obs *= unit_fac
 
         # plot
-        for lat, lon, obs in zip(site_lats, site_lons, site_obs):
+        # Mask GNSS stations if outside of data range (resulting in NaN values)
+        flag = ~np.isnan(site_obs) if inps.gps_mask else np.ones(site_obs.shape, dtype=np.bool_)
+        for lat, lon, obs in zip(site_lats[flag], site_lons[flag], site_obs[flag]):
             color = cmap( (obs - vmin) / (vmax - vmin) ) \
                     if not np.isnan(obs) else 'none'
             # Mask GNSS stations if outside of data range
