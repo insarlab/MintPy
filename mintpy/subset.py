@@ -128,7 +128,7 @@ def get_coverage_box(atr):
         lr_lat = ul_lat + lat_step*length
         lr_lon = ul_lon + lon_step*width
         geo_box = (ul_lon, ul_lat, lr_lon, lr_lat)
-    except:
+    except ValueError:
         geo_box = None
 
     # Get pixel box
@@ -137,7 +137,7 @@ def get_coverage_box(atr):
                    int(atr['SUBSET_YMIN']),
                    int(atr['SUBSET_XMAX']),
                    int(atr['SUBSET_YMAX']))
-    except:
+    except ValueError:
         pix_box = None
 
     return pix_box, geo_box
@@ -290,13 +290,8 @@ def subset_input_dict2box(subset_dict, meta_dict):
 def subset_dataset(fname, dsName, pix_box, pix_box4data, pix_box4subset, fill_value=np.nan):
 
     # read data
-    print('reading {d} in {b} from {f} ...'.format(d=dsName,
-                                                   b=pix_box4data,
-                                                   f=os.path.basename(fname)))
-    data, atr = readfile.read(fname,
-                              datasetName=dsName,
-                              box=pix_box4data,
-                              print_msg=False)
+    print(f'reading {dsName} in {pix_box4data} from {os.path.basename(fname)} ...')
+    data = readfile.read(fname, datasetName=dsName, box=pix_box4data, print_msg=False)[0]
     ds_shape = data.shape
     ds_ndim = len(ds_shape)
 
@@ -323,21 +318,19 @@ def subset_dataset(fname, dsName, pix_box, pix_box4data, pix_box4subset, fill_va
 
 def subset_file(fname, subset_dict_input, out_file=None):
     """Subset file with
-    Inputs:
-        fname        : str, path/name of file
-        out_file     : str, path/name of output file
-        subset_dict : dict, subsut parameter, including the following items:
-                      subset_x   : list of 2 int,   subset in x direction,   default=None
-                      subset_y   : list of 2 int,   subset in y direction,   default=None
-                      subset_lat : list of 2 float, subset in lat direction, default=None
-                      subset_lon : list of 2 float, subset in lon direction, default=None
-                      fill_value : float, optional. filled value for area outside of data coverage. default=None
-                                   None/not-existed to subset within data coverage only.
-                      tight  : bool, tight subset or not, for lookup table file, i.e. geomap*.trans
-    Outputs:
-        out_file :  str, path/name of output file; 
-                   out_file = 'subset_'+fname, if fname is in current directory;
-                   out_file = fname, if fname is not in the current directory.
+    Parameters: fname       : str, path/name of file
+                subset_dict : dict, subsut parameter, including the following items:
+                    subset_x   : list of 2 int,   subset in x direction,   default=None
+                    subset_y   : list of 2 int,   subset in y direction,   default=None
+                    subset_lat : list of 2 float, subset in lat direction, default=None
+                    subset_lon : list of 2 float, subset in lon direction, default=None
+                    fill_value : float, optional. filled value for area outside of data coverage. default=None
+                                 None/not-existed to subset within data coverage only.
+                    tight   : bool, tight subset or not, for lookup table file, i.e. geomap*.trans
+                out_file    : str, path/name of output file
+    Outputs:    out_file    : str, path/name of output file
+                    out_file = 'sub_'+fname, if fname is in current directory;
+                    out_file = fname, if fname is not in the current directory.
     """
 
     # Input File Info
@@ -395,7 +388,6 @@ def subset_file(fname, subset_dict_input, out_file=None):
 
     # subset datasets one by one
     dsNames = readfile.get_dataset_list(fname)
-    maxDigit = max([len(i) for i in dsNames])
 
     ext = os.path.splitext(out_file)[1]
     if ext in ['.h5', '.he5']:
@@ -472,33 +464,13 @@ def subset_file(fname, subset_dict_input, out_file=None):
                                             pix_box4data,
                                             pix_box4subset,
                                             fill_value=subset_dict['fill_value'])
-        writefile.write(dsDict,
-                        out_file=out_file,
-                        metadata=atr,
-                        ref_file=fname)
 
+        atr['BANDS'] = len(dsDict.keys())
+        writefile.write(dsDict, out_file=out_file, metadata=atr, ref_file=fname)
 
         # write extra metadata files for ISCE data files
         if os.path.isfile(fname+'.xml') or os.path.isfile(fname+'.aux.xml'):
-            # write ISCE XML file
-            dtype_gdal = readfile.NUMPY2GDAL_DATATYPE[atr['DATA_TYPE']]
-            dtype_isce = readfile.GDAL2ISCE_DATATYPE[dtype_gdal]
-            writefile.write_isce_xml(
-                out_file,
-                width=int(atr['WIDTH']),
-                length=int(atr['LENGTH']),
-                bands=len(dsDict.keys()),
-                data_type=dtype_isce,
-                scheme=atr['scheme'],
-                image_type=atr['FILE_TYPE'])
-            print(f'write file: {out_file}.xml')
-
-            # write GDAL VRT file
-            if os.path.isfile(fname+'.vrt'):
-                from isceobj.Util.ImageUtil import ImageLib as IML
-                img = IML.loadImage(out_file)[0]
-                img.renderVRT()
-                print(f'write file: {out_file}.vrt')
+            writefile.write_isce_xml(atr, out_file)
 
     return out_file
 

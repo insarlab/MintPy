@@ -102,7 +102,7 @@ def read_pts2inps(inps, coord_obj):
                                                 inps.pts_yx[:, 1],
                                                 print_msg=False)[:2]
             inps.pts_lalo = np.array(inps.pts_lalo).T.reshape(-1, 2)
-        except:
+        except ValueError:
             pass
 
     return inps
@@ -212,15 +212,22 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
             fig_title = fbase
 
     elif fext in ['.h5','.he5']:
-        if len(datasetNames) == 1:
-            fig_title = datasetNames[0]
+        # for generic HDF5 file, e.g. velocity, masks, horz/vert decomposed file, etc.
+        num_dset = len(readfile.get_dataset_list(fname))
+        if num_dset > 1 and len(datasetNames) == 1:
+            # for single subplot from a multi-dataset file
+            # keep meaningful suffix, e.g. geo_, sub_, etc.
+            fparts = os.path.basename(fname).rsplit('_', 1)
+            suffix = fparts[0] + '_' if len(fparts) > 1 else ''
+            fig_title = suffix + datasetNames[0]
         else:
+            # for single subplot from a single-dataset file OR multi-subplots
             fig_title = fbase
 
     else:
         fig_title = os.path.basename(fname)
         # show dataset name for multi-band binry files
-        num_band = int(atr.get('number_bands', '1'))
+        num_band = int(atr.get('BANDS', '1'))
         if num_band > 1 and len(datasetNames) == 1:
             fig_title += ' - {}'.format(datasetNames[0])
 
@@ -609,8 +616,6 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
 
     ## Keep/Drop - date12
     date12List_keep = sorted(list(set(date12List) - set(date12List_drop)))
-    idx_date12_keep = [date12List.index(i) for i in date12List_keep]
-    idx_date12_drop = [date12List.index(i) for i in date12List_drop]
     if not date12List_drop:
         p_dict['disp_drop'] = False
 
@@ -1192,8 +1197,8 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
 
     # plot GPS label
     if inps.disp_gps_label:
-        for i in range(len(site_names)):
-            ax.annotate(site_names[i], xy=(site_lons[i], site_lats[i]), fontsize=inps.font_size)
+        for site_name, lat, lon in zip(site_names, site_lats, site_lons):
+            ax.annotate(site_name, xy=(lon, lat), fontsize=inps.font_size)
 
     return ax
 
@@ -1315,7 +1320,6 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
             scale *= range2phase
         else:
             print('Unrecognized display phase/length unit:', disp_unit[0])
-            pass
 
         # if stored data unit is not meter
         if   data_unit[0] == 'mm':  scale *= 0.001
@@ -1365,7 +1369,6 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
     # Calculate scaling factor  - 2
     if len(data_unit) == 2:
         try:
-            disp_unit[1]
             if   disp_unit[1] in ['y','yr','year'  ]: disp_unit[1] = 'year'
             elif disp_unit[1] in ['m','mon','month']: disp_unit[1] = 'mon'; scale *= 12.0
             elif disp_unit[1] in ['d','day'        ]: disp_unit[1] = 'day'; scale *= 365.25

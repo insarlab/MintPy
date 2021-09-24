@@ -303,35 +303,18 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=
     # for binary file with 2 bands, always use BIL scheme
     if (len(dsDict.keys()) == 2
             and os.path.splitext(infile)[1] not in ['.h5','.he5']
-            and atr.get('scheme', 'BIL').upper() != 'BIL'):
-        print('the input binary file has 2 bands with band interleave as: {}'.format(atr['scheme']))
+            and atr.get('INTERLEAVE', 'BIL').upper() != 'BIL'):
+        print('the input binary file has 2 bands with band interleave as: {}'.format(atr['INTERLEAVE']))
         print('for the output binary file, change the band interleave to BIL as default.')
-        atr['scheme'] = 'BIL'
+        atr['INTERLEAVE'] = 'BIL'
 
     if ext not in ['.h5', '.he5']:
+        atr['BANDS'] = len(dsDict.keys())
         writefile.write(dsDict, out_file=outfile, metadata=atr, ref_file=infile)
 
         # write extra metadata files for ISCE data files
         if os.path.isfile(infile+'.xml') or os.path.isfile(infile+'.aux.xml'):
-            # write ISCE XML file
-            dtype_gdal = readfile.NUMPY2GDAL_DATATYPE[atr['DATA_TYPE']]
-            dtype_isce = readfile.GDAL2ISCE_DATATYPE[dtype_gdal]
-            writefile.write_isce_xml(
-                outfile,
-                width=int(atr['WIDTH']),
-                length=int(atr['LENGTH']),
-                bands=len(dsDict.keys()),
-                data_type=dtype_isce,
-                scheme=atr['scheme'],
-                image_type=atr['FILE_TYPE'])
-            print(f'write file: {outfile}.xml')
-
-            # write GDAL VRT file
-            if os.path.isfile(infile+'.vrt'):
-                from isceobj.Util.ImageUtil import ImageLib as IML
-                img = IML.loadImage(outfile)[0]
-                img.renderVRT()
-                print(f'write file: {outfile}.vrt')
+            writefile.write_isce_xml(atr, outfile)
 
     return outfile
 
