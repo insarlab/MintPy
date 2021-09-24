@@ -1658,7 +1658,7 @@ def draw_scalebar(ax, geo_box, unit='degrees', loc=[0.2, 0.2, 0.1], labelpad=0.0
     ax.plot([lon1, lon1], [lat_c, lat_c + 0.1*length_disp], color=color)
 
     ## plot scale bar label
-    if unit.split('/')[0]=='in' or unit.split('/')[0]=='ft' or unit.split('/')[0]=='mi':
+    if unit.split('/')[0] in ['in', 'ft', 'mi']:
         unit = 'ft'
         if length_meter >= 1000.0:
             unit = 'mi'
