@@ -180,13 +180,13 @@ def add_gps_argument(parser):
     gps.add_argument('--gps-end-date', dest='gps_end_date', type=str, metavar='YYYYMMDD',
                      help='start date of GPS data, default is date of the last SAR acquisition')
     gps.add_argument('--azimuth', '--az', dest='az_angle', type=float, default=0.,
-                     help='azimuth angle in degrees in the direction of the horizontal movement\n'
-                             'with anti-clockwise direction as positive\n' +
-                             'default is 0., assuming no projection needed and magnitude of horizontal vectors passed.\n' +
-                             'i.e. azimuth angle of strike-slip fault\n\n' +
-                             'Note:\n' +
-                             'a. Near north direction can not be well resolved due to the lack of\n' +
-                             '   diversity in viewing geometry. Check exact dilution of precision for \n' +
+                     help='azimuth angle of the horizontal movement in degrees\n'
+                             'measured from the north with anti-clockwise direction as positive\n'
+                             'default is 0., assuming no projection needed and magnitude of horizontal vectors passed.\n'
+                             'i.e. azimuth angle of strike-slip fault\n\n'
+                             'Note:\n'
+                             'a. Near north direction can not be well resolved due to the lack of\n'
+                             '   diversity in viewing geometry. Check exact dilution of precision for \n'
                              '   each component in Wright et al., 2004, GRL')
     return parser
 
