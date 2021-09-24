@@ -11,7 +11,6 @@ import os
 import shutil
 import h5py
 import numpy as np
-from mintpy.objects import timeseries
 from mintpy.utils import readfile
 
 
@@ -49,6 +48,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
         data = np.array(datasetDict, datasetDict.dtype)
         datasetDict = dict()
         datasetDict[meta['FILE_TYPE']] = data
+    meta['BANDS'] = len(datasetDict.keys())
 
     # output file info
     fbase, fext = os.path.splitext(out_file)
@@ -208,7 +208,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
             if len(data_list) == 1:
                 write_real_float32(data_list[0], out_file)
 
-            elif len(data_list) == 2 and meta['scheme'] == 'BIL':
+            elif len(data_list) == 2 and meta['INTERLEAVE'] == 'BIL':
                 write_float32(data_list[0], data_list[1], out_file)
 
         elif data_type in ['int16', 'short']:
@@ -565,19 +565,20 @@ def write_gdal_vrt(meta, out_file):
     }
     pixel_offset = int(pixel_offset_dict[meta['DATA_TYPE']])
     length, width = int(meta['LENGTH']), int(meta['WIDTH'])
-    num_band = int(meta['number_bands'])
+    num_band = int(meta['BANDS'])
 
-    if meta['scheme'] == 'BIP':
+    interleave = meta['INTERLEAVE']
+    if interleave == 'BIP':
         line_offset  = pixel_offset * num_band * width
         image_offset = pixel_offset
-    elif meta['scheme'] == 'BIL':
+    elif interleave == 'BIL':
         line_offset  = pixel_offset * width * num_band
         image_offset = pixel_offset * width
-    elif meta['scheme'] == 'BSQ':
+    elif interleave == 'BSQ':
         line_offset  = pixel_offset * width
         image_offset = pixel_offset * width * length
     else:
-        raise ValueError('un-recognized scheme / interleave: {}'.format(meta['scheme']))
+        raise ValueError('un-recognized band interleave type: {}'.format(interleave))
 
     # compose VRT file string
     ds_str = '<VRTDataset rasterXSize="{w}" rasterYSize="{l}">\n'.format(w=meta['WIDTH'], l=meta['LENGTH'])
@@ -607,42 +608,43 @@ def write_gdal_vrt(meta, out_file):
     return out_file
 
 
-def write_isce_xml(fname, width, length, bands=1, data_type='FLOAT', scheme='BIP', image_type=None):
+def write_isce_xml(meta, fname, print_msg=True):
     """Write XML metadata file in ISCE-2 format
 
-    Parameters: fname      - str, path of data file
-                width      - int, number of columns
-                length     - int, number of rows
-                bands      - int, number of band
-                data_type  - str, data type name in ISCE convention
-                             readfile.GDAL2ISCE_DATATYPE
-                scheme     - str, band interleave, BIP, BIL, BSQ
-                image_type - str, FILE_TYPE
-    Examples:   write_isce_xml(out_file='filt_fine.cor', width=400, length=500)
+    Parameters: meta      - dict, attributes dictionary
+                fname     - str, path of data file, not the metadata file
+                print_msg - bool, print out message
+    Examples:   write_isce_xml(atr, fname='filt_fine.cor')
     """
+
     import isce
     import isceobj
+    from isceobj.Util.ImageUtil import ImageLib as IML
 
-    if not image_type:
-        img = isceobj.Image.createImage()
-    elif image_type == '.slc':
-        img = isceobj.Image.createSlcImage()
-    elif image_type == '.unw':
-        img = isceobj.Image.createUnwImage()
-    elif image_type == '.int':
-        img = isceobj.Image.createIntImage()
-    else:
-        img = isceobj.Image.createImage()
+    # data type
+    dtype_gdal = readfile.NUMPY2GDAL_DATATYPE[meta['DATA_TYPE']]
+    dtype_isce = readfile.GDAL2ISCE_DATATYPE[dtype_gdal]
+
+    # write ISCE XML and GDAL VRT files
+    image_type = meta['FILE_TYPE']
+    if not image_type:          img = isceobj.Image.createImage()
+    elif image_type == '.slc':  img = isceobj.Image.createSlcImage()
+    elif image_type == '.unw':  img = isceobj.Image.createUnwImage()
+    elif image_type == '.int':  img = isceobj.Image.createIntImage()
+    else:                       img = isceobj.Image.createImage()
 
     img.setFilename(fname)
-    img.setWidth(width)
-    img.setLength(length)
+    img.setWidth(int(meta['WIDTH']))
+    img.setLength(int(meta['LENGTH']))
     img.setAccessMode('READ')
-    img.bands = bands
-    img.dataType = data_type
-    img.scheme = scheme
+    img.bands = int(meta.get('BANDS', '1'))
+    img.dataType = dtype_isce
+    img.scheme = meta.get('INTERLEAVE', 'BIL')
     img.renderHdr()
     img.renderVRT()
+    if print_msg:
+        print(f'write file: {fname}.xml')
+        print(f'write file: {fname}.vrt')
 
     return
 
@@ -655,9 +657,6 @@ def write_isce_file(data, out_file, file_type='isce_unw'):
                 file_type - str, file type
     Returns:    out_file  - str, path of output binary data file
     """
-    import isce
-    import isceobj
-
     # fix potential typo
     file_type = file_type.replace('-', '_')
 
@@ -666,22 +665,40 @@ def write_isce_file(data, out_file, file_type='isce_unw'):
 
     # write isce xml metadata file
     length, width = data.shape
+    meta = {
+        'LENGTH' : length,
+        'WIDTH'  : width,
+    }
 
     if file_type == 'isce_unw':
-        width = int(width / 2)
-        write_isce_xml(out_file, width, length, bands=2, data_type='FLOAT',  scheme='BIL', image_type='.unw')
+        meta['FILE_TYPE'] = '.unw'
+        meta['WIDTH'] = int(width / 2)
+        meta['BANDS'] = 2
+        meta['DATA_TYPE'] = 'float32'
+        meta['INTERLEAVE'] = 'BIL'
 
     elif file_type == 'isce_int':
-        write_isce_xml(out_file, width, length, bands=1, data_type='CFLOAT', scheme='BIL', image_type='.int')
+        meta['FILE_TYPE'] = '.int'
+        meta['BANDS'] = 1
+        meta['DATA_TYPE'] = 'complex64'
+        meta['INTERLEAVE'] = 'BIL'
 
     elif file_type == 'isce_cor':
-        write_isce_xml(out_file, width, length, bands=1, data_type='FLOAT',  scheme='BIL', image_type='.cor')
+        meta['FILE_TYPE'] = '.cor'
+        meta['BANDS'] = 1
+        meta['DATA_TYPE'] = 'float32'
+        meta['INTERLEAVE'] = 'BIL'
 
     elif file_type == 'isce_slc':
-        write_isce_xml(out_file, width, length, bands=1, data_type='CFLOAT', scheme='BIP', image_type='.slc')
+        meta['FILE_TYPE'] = '.slc'
+        meta['BANDS'] = 1
+        meta['DATA_TYPE'] = 'complex64'
+        meta['INTERLEAVE'] = 'BIP'
 
     else:
         raise ValueError('un-recognized ISCE file type: {}'.format(file_type))
+
+    write_isce_xml(meta, out_file, bands)
 
     return out_file
 

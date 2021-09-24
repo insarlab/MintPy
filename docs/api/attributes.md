@@ -41,6 +41,8 @@ The following attributes vary for each interferogram:
 +  FILE_PATH = absolute file path   
 +  PROCESSOR = processing software, i.e. isce, aria, snap, gamma, roipac etc.
 +  DATA_TYPE = data type, i.e. float32, int16, etc., for isce product read using GDAL
++  BANDS = number of bands, for binary file I/O.
++  INTERLEAVE = band interleave type, i.e. BSQ, BIL, BIP for binary file I/O.
 +  UNIT = data unit, i.e. m, m/yr, radian, and 1 for file without unit, such as coherence [[source]](https://github.com/insarlab/MintPy/blob/main/mintpy/objects/stack.py#L75)
 +  REF_DATE = reference date
 +  REF_X/Y/LAT/LON = column/row/latitude/longitude of reference point

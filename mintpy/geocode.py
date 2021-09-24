@@ -10,7 +10,6 @@ import os
 import sys
 import time
 import argparse
-import warnings
 import numpy as np
 
 from mintpy.objects.resample import resample
@@ -92,7 +91,7 @@ def create_parser():
     interp.add_argument('--fill', dest='fillValue', type=float, default=np.nan,
                         help='Fill value for extrapolation (default: %(default)s).')
     interp.add_argument('-n','--nprocs', dest='nprocs', type=int, default=1,
-                        help='number of processors to be used for calculation (default: %(default)s).\n' + 
+                        help='number of processors to be used for calculation (default: %(default)s).\n'
                              'Note: Do not use more processes than available processor cores.')
     interp.add_argument('--software', dest='software', default='pyresample', choices={'pyresample', 'scipy'},
                         help='software/module used for interpolation (default: %(default)s)\n'
@@ -276,7 +275,6 @@ def run_geocode(inps):
     # resample input files one by one
     for infile in inps.file:
         print('-' * 50+'\nresampling file: {}'.format(infile))
-        ext = os.path.splitext(infile)[1]
         atr = readfile.read_attribute(infile, datasetName=inps.dset)
         outfile = auto_output_filename(infile, inps)
 
@@ -294,7 +292,7 @@ def run_geocode(inps):
             atr = attr.update_attribute4geo2radar(atr, res_obj=res_obj)
 
         # instantiate output file
-        file_is_hdf5 = os.path.splitext(infile)[1] in ['.h5', '.he5']
+        file_is_hdf5 = os.path.splitext(outfile)[1] in ['.h5', '.he5']
         if file_is_hdf5:
             compression = readfile.get_hdf5_compression(infile)
             writefile.layout_hdf5(outfile, metadata=atr, ref_file=infile, compression=compression)
@@ -352,7 +350,12 @@ def run_geocode(inps):
 
         # write binary file
         if not file_is_hdf5:
+            atr['BANDS'] = len(dsDict.keys())
             writefile.write(dsDict, out_file=outfile, metadata=atr, ref_file=infile)
+
+            # create ISCE XML and GDAL VRT file if using ISCE lookup table file
+            if inps.latFile and inps.lonFile:
+                writefile.write_isce_xml(atr, fname=outfile)
 
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))

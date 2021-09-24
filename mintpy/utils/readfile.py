@@ -23,7 +23,6 @@ from mintpy.objects import (
     giantIfgramStack,
     giantTimeseries,
     ifgramStack,
-    timeseriesDatasetNames,
     timeseries,
     HDFEOS
 )
@@ -42,7 +41,10 @@ standardMetadataKeys = {
     'EARTH_RADIUS'       : ['earthRadius', 'earth_radius_below_sensor', 'earth_radius'],
     'HEADING'            : ['HEADING_DEG', 'heading'],
     'HEIGHT'             : ['altitude', 'SC_height'],
-    'LENGTH'             : ['length', 'FILE_LENGTH', 'lines', 'azimuth_lines', 'nlines', 'az_samp', 'interferogram_azimuth_lines'],
+    'BANDS'              : ['number_bands', 'bands'],
+    'INTERLEAVE'         : ['scheme', 'interleave'],
+    'LENGTH'             : ['length', 'FILE_LENGTH', 'lines', 'azimuth_lines', 'nlines', 'az_samp',
+                            'interferogram_azimuth_lines'],
     'ORBIT_DIRECTION'    : ['passDirection'],
     'PLATFORM'           : ['spacecraftName', 'sensor'],
     'POLARIZATION'       : ['polarization'],
@@ -71,10 +73,6 @@ standardMetadataKeys = {
     'first_frame'    : ['firstFrameNumber'],
     'last_frame'     : ['lastFrameNumber'],
     'relative_orbit' : ['trackNumber'],
-
-    # ISCE attributes
-    'number_bands' : ['bands'],
-    'scheme'       : ['interleave'],
 }
 
 GDAL2ISCE_DATATYPE = {
@@ -408,8 +406,8 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     # default data structure
     data_type = atr.get('DATA_TYPE', 'float32').lower()
     byte_order = atr.get('BYTE_ORDER', 'little-endian').lower()
-    num_band = int(atr.get('number_bands', '1'))
-    band_interleave = atr.get('scheme', 'BIL').upper()
+    num_band = int(atr.get('BANDS', '1'))
+    band_interleave = atr.get('INTERLEAVE', 'BIL').upper()
 
     # default data to read
     band = 1
@@ -541,7 +539,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     # https://www.brockmann-consult.de/beam/doc/help/general/BeamDimapFormat.html
     elif processor == 'snap':
         # data structure - auto
-        band_interleave = atr.get('scheme', 'BSQ').upper()
+        band_interleave = atr.get('INTERLEAVE', 'BSQ').upper()
 
         # byte order
         byte_order = atr.get('BYTE_ORDER', 'big-endian')
@@ -652,7 +650,7 @@ def get_slice_list(fname, no_complex=False):
 
     # Binary Files
     else:
-        num_band = int(atr.get('number_bands', '1'))
+        num_band = int(atr.get('BANDS', '1'))
         if fext in ['.trans', '.utm_to_rdc'] and num_band == 2:
             # roipac / gamma lookup table
             slice_list = ['rangeCoord', 'azimuthCoord']
@@ -1333,15 +1331,15 @@ def read_gdal_vrt(fname):
     atr = {}
     atr['WIDTH']  = ds.RasterXSize
     atr['LENGTH'] = ds.RasterYSize
-    atr['number_bands'] = ds.RasterCount
+    atr['BANDS'] = ds.RasterCount
 
     # data type
     data_type = ds.GetRasterBand(1).DataType
     atr['DATA_TYPE'] = GDAL2ISCE_DATATYPE[data_type]
 
     # interleave
-    scheme = ds.GetMetadata('IMAGE_STRUCTURE').get('INTERLEAVE', 'PIXEL')
-    atr['scheme'] = ENVI_BAND_INTERLEAVE[scheme]
+    interleave = ds.GetMetadata('IMAGE_STRUCTURE').get('INTERLEAVE', 'PIXEL')
+    atr['INTERLEAVE'] = ENVI_BAND_INTERLEAVE[interleave]
 
     # transformation contains gridcorners
     # (lines/pixels or lonlat and the spacing 1/-1 or deltalon/deltalat)
@@ -1458,10 +1456,7 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
                     complex64, complex128
                 byte_order      : str, little/big-endian
                 num_band        : int, number of bands
-                band_interleave : str, band interleaving scheme, e.g.:
-                    BIP
-                    BIL
-                    BSQ
+                band_interleave : str, band interleav type, e.g.: BIP, BIL, BSQ
                 band     : int, band of interest, between 1 and num_band.
                 cpx_band : str, e.g.:
                     real,
