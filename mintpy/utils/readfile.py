@@ -758,7 +758,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             k = 'ifgramStack'
         elif any(i in d1_list for i in ['height', 'latitude', 'azimuthCoord']):
             k = 'geometry'
-        elif any(i in g1_list+d1_list for i in ['timeseries', 'displacement']):
+        elif any(i in g1_list+d1_list for i in ['timeseries']):
             k = 'timeseries'
         elif any(i in d1_list for i in ['velocity']):
             k = 'velocity'
@@ -989,6 +989,10 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             atr['DATA_TYPE'] = dataTypeDict[data_type]
 
     # UNIT
+    if datasetName:
+        # ignore Std because it shares the same unit as base parameter
+        # e.g. velocityStd and velocity
+        datasetName = datasetName.replace('Std','')
     k = atr['FILE_TYPE'].replace('.', '')
     if k == 'ifgramStack':
         if datasetName and datasetName in datasetUnitDict.keys():
