@@ -407,7 +407,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     data_type = atr.get('DATA_TYPE', 'float32').lower()
     byte_order = atr.get('BYTE_ORDER', 'little-endian').lower()
     num_band = int(atr.get('BANDS', '1'))
-    band_interleave = atr.get('INTERLEAVE', 'BIL').upper()
+    interleave = atr.get('INTERLEAVE', 'BIL').upper()
 
     # default data to read
     band = 1
@@ -478,7 +478,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     # ROI_PAC
     elif processor in ['roipac']:
         # data structure - auto
-        band_interleave = 'BIL'
+        interleave = 'BIL'
         byte_order = 'little-endian'
 
         # data structure - file specific based on file extension
@@ -510,7 +510,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     # Gamma
     elif processor == 'gamma':
         # data structure - auto
-        band_interleave = 'BIL'
+        interleave = 'BIL'
         byte_order = atr.get('BYTE_ORDER', 'big-endian')
 
         data_type = 'float32'
@@ -521,11 +521,11 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
             data_type = 'complex64'
 
         elif fext in ['.utm_to_rdc']:
-            data_type = 'complex64'
+            data_type = 'float32'
+            interleave = 'BIP'
+            num_band = 2
             if datasetName and datasetName.startswith(('az', 'azimuth')):
-                cpx_band = 'imag'
-            else:
-                cpx_band = 'real'
+                band = 2
 
         elif fext == '.slc':
             data_type = 'complex32'
@@ -539,7 +539,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     # https://www.brockmann-consult.de/beam/doc/help/general/BeamDimapFormat.html
     elif processor == 'snap':
         # data structure - auto
-        band_interleave = atr.get('INTERLEAVE', 'BSQ').upper()
+        interleave = atr.get('INTERLEAVE', 'BSQ').upper()
 
         # byte order
         byte_order = atr.get('BYTE_ORDER', 'big-endian')
@@ -571,7 +571,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
             data_type=data_type,
             byte_order=byte_order,
             num_band=num_band,
-            band_interleave=band_interleave,
+            interleave=interleave,
             band=band,
             cpx_band=cpx_band,
             xstep=xstep,
@@ -651,7 +651,7 @@ def get_slice_list(fname, no_complex=False):
     # Binary Files
     else:
         num_band = int(atr.get('BANDS', '1'))
-        if fext in ['.trans', '.utm_to_rdc'] and num_band == 2:
+        if fext in ['.trans', '.utm_to_rdc']:
             # roipac / gamma lookup table
             slice_list = ['rangeCoord', 'azimuthCoord']
 
@@ -1442,7 +1442,7 @@ def attribute_gmtsar2roipac(prm_dict_in):
 
 #########################################################################
 def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
-                num_band=1, band_interleave='BIL', band=1, cpx_band='phase',
+                num_band=1, interleave='BIL', band=1, cpx_band='phase',
                 xstep=1, ystep=1):
     """Read binary file using np.fromfile.
 
@@ -1456,7 +1456,7 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
                     complex64, complex128
                 byte_order      : str, little/big-endian
                 num_band        : int, number of bands
-                band_interleave : str, band interleav type, e.g.: BIP, BIL, BSQ
+                interleave : str, band interleav type, e.g.: BIP, BIL, BSQ
                 band     : int, band of interest, between 1 and num_band.
                 cpx_band : str, e.g.:
                     real,
@@ -1488,44 +1488,38 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
         data_type = '>{}{}'.format(letter, digit)
 
     # read data
-    band_interleave = band_interleave.upper()
-    if band_interleave == 'BIL':
+    interleave = interleave.upper()
+    if interleave == 'BIL':
         data = np.fromfile(fname,
                            dtype=data_type,
                            count=box[3]*width*num_band).reshape(-1, width*num_band)
         data = data[box[1]:box[3],
                     width*(band-1)+box[0]:width*(band-1)+box[2]]
 
-    elif band_interleave == 'BIP':
+    elif interleave == 'BIP':
         data = np.fromfile(fname,
                            dtype=data_type,
                            count=box[3]*width*num_band).reshape(-1, width*num_band)
         data = data[box[1]:box[3],
                     np.arange(box[0], box[2])*num_band+band-1]
 
-    elif band_interleave == 'BSQ':
+    elif interleave == 'BSQ':
         data = np.fromfile(fname,
                            dtype=data_type,
                            count=(box[3]+length*(band-1))*width).reshape(-1, width)
         data = data[length*(band-1)+box[1]:length*(band-1)+box[3],
                     box[0]:box[2]]
     else:
-        raise ValueError('unrecognized band interleaving:', band_interleave)
+        raise ValueError('unrecognized band interleaving:', interleave)
 
     # adjust output band for complex data
     if data_type.replace('>', '').startswith('c'):
-        if cpx_band.startswith('real'):
-            data = data.real
-        elif cpx_band.startswith('imag'):
-            data = data.imag
-        elif cpx_band.startswith('pha'):
-            data = np.angle(data)
-        elif cpx_band.startswith('mag'):
-            data = np.absolute(data)
-        elif cpx_band.startswith(('cpx', 'complex')):
-            pass
-        else:
-            raise ValueError('unrecognized complex band:', cpx_band)
+        if   cpx_band.startswith('real'):  data = data.real
+        elif cpx_band.startswith('imag'):  data = data.imag
+        elif cpx_band.startswith('pha'):   data = np.angle(data)
+        elif cpx_band.startswith('mag'):   data = np.absolute(data)
+        elif cpx_band.startswith('c'):     pass
+        else:  raise ValueError('unrecognized complex band:', cpx_band)
 
     # skipping/multilooking
     if xstep * ystep > 1:
