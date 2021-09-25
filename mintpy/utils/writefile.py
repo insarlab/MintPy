@@ -14,7 +14,7 @@ import numpy as np
 from mintpy.utils import readfile
 
 
-def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None, ds_unit_dict=None):
+def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None, ds_unit_dict=None, print_msg=True):
     """ Write one file.
     Parameters: datasetDict  - dict of dataset, with key = datasetName and value = 2D/3D array, e.g.:
                     {'height'        : np.ones((   200,300), dtype=np.int16),
@@ -35,6 +35,8 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
                 dsDict['velocity'] = np.ones((200,300), dtype=np.float32)
                 write(datasetDict=dsDict, out_file='velocity.h5', metadata=atr)
     """
+    vprint = print if print_msg else lambda *args, **kwargs: None
+
     # copy metadata to meta
     if metadata:
         meta = {key: value for key, value in metadata.items()}
@@ -48,15 +50,21 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
         data = np.array(datasetDict, datasetDict.dtype)
         datasetDict = dict()
         datasetDict[meta['FILE_TYPE']] = data
-    meta['BANDS'] = len(datasetDict.keys())
+
+    # file extension
+    fbase, fext = os.path.splitext(out_file)
+    # ignore certain meaningless file extensions
+    while fext in ['.geo', '.rdr', '.full', '.wgs84']:
+        fbase, fext = os.path.splitext(fbase)
+    if not fext:
+        fext = fbase
+    fext = fext.lower()
 
     # output file info
-    fbase, fext = os.path.splitext(out_file)
-    fext = fext.lower()
     out_dir = os.path.dirname(os.path.abspath(out_file))
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
-        print('create directory: {}'.format(out_dir))
+        vprint('create directory: {}'.format(out_dir))
 
     # HDF5 File
     if fext in ['.h5', '.he5']:
@@ -84,8 +92,8 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
 
         # remove existing file
         if os.path.isfile(out_file):
-            print('delete exsited file: {}'.format(out_file))
             os.remove(out_file)
+            vprint('delete exsited file: {}'.format(out_file))
 
         # writing
         print('create HDF5 file: {} with w mode'.format(out_file))
@@ -94,12 +102,12 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
             # 1. write input datasets
             for dsName in datasetDict.keys():
                 data = datasetDict[dsName]
-                print(('create dataset /{d:<{w}} of {t:<10} in size of {s:<20} '
-                       'with compression={c}').format(d=dsName,
-                                                      w=maxDigit,
-                                                      t=str(data.dtype),
-                                                      s=str(data.shape),
-                                                      c=compression))
+                vprint(('create dataset /{d:<{w}} of {t:<10} in size of {s:<20} '
+                        'with compression={c}').format(d=dsName,
+                                                       w=maxDigit,
+                                                       t=str(data.dtype),
+                                                       s=str(data.shape),
+                                                       c=compression))
                 ds = f.create_dataset(dsName,
                                       data=data,
                                       chunks=True,
@@ -110,12 +118,12 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
                 with h5py.File(ref_file, 'r') as fr:
                     for dsName in auxDsNames:
                         ds = fr[dsName]
-                        print(('create dataset /{d:<{w}} of {t:<10} in size of {s:<10} '
-                               'with compression={c}').format(d=dsName,
-                                                              w=maxDigit,
-                                                              t=str(ds.dtype),
-                                                              s=str(ds.shape),
-                                                              c=compression))
+                        vprint(('create dataset /{d:<{w}} of {t:<10} in size of {s:<10} '
+                                'with compression={c}').format(d=dsName,
+                                                               w=maxDigit,
+                                                               t=str(ds.dtype),
+                                                               s=str(ds.shape),
+                                                               c=compression))
                         f.create_dataset(dsName,
                                          data=ds[:],
                                          chunks=True,
@@ -133,99 +141,82 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
                 for key, value in ds_unit_dict.items():
                     if value is not None:
                         f[key].attrs['UNIT'] = value
-                        print(f'add /{key:<{maxDigit}} attribute: UNIT = {value}')
+                        vprint(f'add /{key:<{maxDigit}} attribute: UNIT = {value}')
 
-        print('finished writing to {}'.format(out_file))
+        vprint('finished writing to {}'.format(out_file))
 
     # ISCE / ROI_PAC GAMMA / Image product
     else:
+        # basic info
         key_list = list(datasetDict.keys())
-        data_list = []
-        for key in key_list:
-            data_list.append(datasetDict[key])
-        data_type = meta.get('DATA_TYPE', str(data_list[0].dtype)).lower()
+        data_list = list(datasetDict.values())
+        meta['BANDS'] = len(key_list)
+        meta['INTERLEAVE'] = meta.get('INTERLEAVE', 'BIL').upper()
+        # data type
+        meta['DATA_TYPE'] = meta.get('DATA_TYPE', 'float32').lower()
+        DATA_TYPE_DICT = {'float' : 'float32',
+                          'short' : 'int16',
+                          'byte'  : 'int8'}
+        if meta['DATA_TYPE'] in DATA_TYPE_DICT.keys():
+            meta['DATA_TYPE'] = DATA_TYPE_DICT[meta['DATA_TYPE']]
 
-        # ignore certain meaningless file extensions
-        while fext in ['.geo', '.rdr', '.full', '.wgs84']:
-            fbase, fext = os.path.splitext(fbase)
-        if not fext:
-            fext = fbase
-
-        # Write Data File
-        print('write {}'.format(out_file))
-        # determined by fext
+        # adjust for pre-defined files determined by fext
         if fext in ['.unw']:
-            if key_list == ['magnitude', 'phase']:
-                write_float32(data_list[0], data_list[1], out_file)
-            else:
-                write_float32(data_list[0], out_file)
             meta['DATA_TYPE'] = 'float32'
+            meta['INTERLEAVE'] = 'BIL'
+            if key_list != ['magnitude', 'phase']:
+                data_list = [data_list[0], data_list[0]]
 
         elif fext in ['.cor', '.hgt']:
-            if meta.get('PROCESSOR', 'isce') == 'roipac':
-                write_float32(data_list[0], out_file)
-            else:
-                write_real_float32(data_list[0], out_file)
             meta['DATA_TYPE'] = 'float32'
+            meta['INTERLEAVE'] = 'BIL'
+            if meta.get('PROCESSOR', 'isce') == 'roipac':
+                data_list = [data_list[0], data_list[0]]
 
         elif fext == '.dem':
-            write_real_int16(data_list[0], out_file)
             meta['DATA_TYPE'] = 'int16'
 
         elif fext in ['.trans']:
-            write_float32(data_list[0], data_list[1], out_file)
+            # ROI_PAC lookup table
             meta['DATA_TYPE'] = 'float32'
+            meta['INTERLEAVE'] = 'BIL'
 
-        elif fext in ['.utm_to_rdc', '.UTM_TO_RDC']:
-            data = np.zeros(data_list[0].shape, dtype=np.complex64)
-            data.real = datasetDict['rangeCoord']
-            data.imag = datasetDict['azimuthCoord']
-            data.astype('>c8').tofile(out_file)
+        elif fext in ['.utm_to_rdc']:
+            # Gamma lookup table
+            meta['BANDS'] = 2
+            meta['DATA_TYPE'] = 'float32'
+            meta['INTERLEAVE'] = 'BIP'
 
         elif fext in ['.mli', '.flt']:
-            write_real_float32(data_list[0], out_file)
+            meta['DATA_TYPE'] = 'float32'
 
         elif fext == '.slc':
-            if data_type == 'complex64':
-                write_complex_float32(data_list[0], out_file)
-            else:
-                write_complex_int16(data_list[0], out_file)
+            # SLC: complex 64 or 32
+            meta['BANDS'] = 1
 
         elif fext == '.int':
+            # wrapped interferogram: complex 64
+            meta['BANDS'] = 1
+            meta['DATA_TYPE'] = 'complex64'
             if key_list == ['magnitude', 'phase']:
                 data_list[0] = data_list[0] * np.exp(1j * data_list[1])
-            write_complex_float32(data_list[0], out_file)
 
         elif fext == '.msk':
-            write_byte(data_list[0], out_file)
-            meta['DATA_TYPE'] = 'byte'
+            meta['DATA_TYPE'] = 'int8'
 
-        # determined by DATA_TYPE
-        elif data_type in ['float64']:
-            write_real_float64(data_list[0], out_file)
+        data_types = ['bool', 'int8', 'int16', 'float32', 'float64', 'complex32', 'complex64', 'complex128']
+        if meta['DATA_TYPE'] not in data_types:
+            msg = 'Un-supported file type "{}" with data type "{}"!'.format(fext, meta['DATA_TYPE'])
+            msg += '\nSupported data type list: {}'.format(data_types)
+            raise ValueError(msg)
 
-        elif data_type in ['float32', 'float']:
-            if len(data_list) == 1:
-                write_real_float32(data_list[0], out_file)
-
-            elif len(data_list) == 2 and meta['INTERLEAVE'] == 'BIL':
-                write_float32(data_list[0], data_list[1], out_file)
-
-        elif data_type in ['int16', 'short']:
-            write_real_int16(data_list[0], out_file)
-
-        elif data_type in ['int8', 'byte']:
-            write_byte(data_list[0], out_file)
-
-        elif data_type in ['bool']:
-            write_bool(data_list[0], out_file)
-
-        else:
-            print('Un-supported file type:', fext)
-            return 0
+        # write binary file
+        write_binary(data_list, out_file, data_type=meta['DATA_TYPE'], interleave=meta['INTERLEAVE'])
+        vprint('write file: {}'.format(out_file))
 
         # write metadata file
-        write_roipac_rsc(meta, out_file+'.rsc', print_msg=True)
+        write_roipac_rsc(meta, out_file+'.rsc', print_msg=print_msg)
+
     return out_file
 
 
@@ -525,7 +516,7 @@ def write_roipac_rsc(metadata, out_file, update_mode=False, print_msg=False):
 
         # writing .rsc file
         if print_msg:
-            print('write', out_file)
+            print('write file: {}'.format(out_file))
         maxDigit = max([len(key) for key in metadata.keys()]+[2])
         with open(out_file, 'w') as f:
             for key in sorted(metadata.keys()):
@@ -619,7 +610,6 @@ def write_isce_xml(meta, fname, print_msg=True):
 
     import isce
     import isceobj
-    from isceobj.Util.ImageUtil import ImageLib as IML
 
     # data type
     dtype_gdal = readfile.NUMPY2GDAL_DATATYPE[meta['DATA_TYPE']]
@@ -672,10 +662,10 @@ def write_isce_file(data, out_file, file_type='isce_unw'):
 
     if file_type == 'isce_unw':
         meta['FILE_TYPE'] = '.unw'
-        meta['WIDTH'] = int(width / 2)
         meta['BANDS'] = 2
         meta['DATA_TYPE'] = 'float32'
         meta['INTERLEAVE'] = 'BIL'
+        meta['WIDTH'] = int(width / 2)
 
     elif file_type == 'isce_int':
         meta['FILE_TYPE'] = '.int'
@@ -698,13 +688,48 @@ def write_isce_file(data, out_file, file_type='isce_unw'):
     else:
         raise ValueError('un-recognized ISCE file type: {}'.format(file_type))
 
-    write_isce_xml(meta, out_file, bands)
+    write_isce_xml(meta, out_file)
 
     return out_file
 
 
 
 #########################################################################
+
+def write_binary(data_list, out_file, data_type=None, interleave='BIL'):
+    """Write binary file.
+    Parameters: data_list  - list of 2D np.ndarray matrices
+                out_file   - str, path of the output binary file
+                data_type  - str/np.dtype, numpy data type object
+                interleave - str, band interleave type, BSQ, BIL, BIP
+    Returns:    out_file   - str, path of the output binary file
+    """
+    # data type
+    if data_type:
+        data_type = data_type.lower()
+        if data_type != data_list[0].dtype:
+            data_list = [np.array(x, dtype=data_type) for x in data_list]
+
+    # stack multi-band - reshape
+    interleave = interleave.upper()
+    if interleave == 'BIP':
+        data_list = [x.reshape(-1,1) for x in data_list]
+    elif interleave == 'BSQ':
+        data_list = [x.reshape(1,-1) for x in data_list]
+
+    # stack multi-band - stack
+    data = data_list[0]
+    for datai in data_list[1:]:
+        data = np.hstack((data, datai))
+
+    # write to file
+    data.tofile(out_file)
+
+    return out_file
+
+
+
+######################## Obsolete functions #############################
 
 def write_float32(*args):
     """Write ROI_PAC rmg format with float32 precision (BIL)
@@ -799,3 +824,5 @@ def write_bool(data, out_file):
     data = np.array(data, dtype=np.bool_)
     data.tofile(out_file)
     return out_file
+
+#########################################################################
