@@ -504,8 +504,13 @@ def plot_slice(ax, data, metadata, inps=None):
         dem, dem_metadata, dem_pix_box = pp.read_dem(inps.dem_file,
                                                      pix_box=inps.pix_box,
                                                      geo_box=inps.geo_box,
-                                                     print_msg=inps.print_msg,
-                                                     multilook_num=inps.multilook_num)
+                                                     print_msg=inps.print_msg)
+        if inps.mask_dem:
+            if dem.shape == data.shape:
+                vprint('mask out DEM pixels to be consistent with data pixels')
+                dem[inps.msk == 0] = np.nan
+            else:
+                print('WARNING: DEM has different size than the data, ignore --mask-dem and continue.')
 
     vprint('display data in transparency: '+str(inps.transparency))
 
@@ -524,9 +529,6 @@ def plot_slice(ax, data, metadata, inps=None):
         # Plot DEM
         if inps.dem_file:
             vprint('plotting DEM background ...')
-            # Mask DEM of nodata values
-            if inps.dem_mask:
-                dem = np.ma.masked_where(inps.msk == 0., dem)
             pp.plot_dem_background(ax=ax, geo_box=inps.geo_box,
                                    dem=dem, inps=inps,
                                    print_msg=inps.print_msg)
@@ -618,7 +620,8 @@ def plot_slice(ax, data, metadata, inps=None):
                     dem_row = coord_dem.lalo2yx(y, coord_type='lat') - dem_pix_box[1]
                     if 0 <= dem_col < dem_wid and 0 <= dem_row < dem_len:
                         h = dem[dem_row, dem_col]
-                        msg += ', h={:.0f}'.format(h)
+                        if not np.isnan(h):
+                            msg += ', h={:.0f}'.format(h)
                 # x/y
                 msg += ', x={:.0f}, y={:.0f}'.format(col+inps.pix_box[0],
                                                      row+inps.pix_box[1])
@@ -708,7 +711,8 @@ def plot_slice(ax, data, metadata, inps=None):
                 # DEM
                 if inps.dem_file:
                     h = dem[row, col]
-                    msg += ', h={:.0f} m'.format(h)
+                    if not np.isnan(h):
+                        msg += ', h={:.0f} m'.format(h)
                 # lat/lon
                 if geom_file:
                     msg += ', lat={:.4f}, lon={:.4f}'.format(lats[row, col], lons[row, col])
@@ -1416,6 +1420,10 @@ def prepare4multi_subplots(inps, metadata):
                                 xstep=inps.multilook_num,
                                 ystep=inps.multilook_num,
                                 print_msg=False)[0]
+            if inps.mask_dem:
+                vprint('mask out DEM pixels to be consistent data pixels')
+                dem[inps.msk == 0] = np.nan
+
             (inps.dem_shade,
              inps.dem_contour,
              inps.dem_contour_seq) = pp.prepare_dem_background(dem=dem,

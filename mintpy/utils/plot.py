@@ -917,7 +917,7 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
     return ax, coh_mat, im
 
 
-def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True, multilook_num=1):
+def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
     if print_msg:
         print('reading DEM: {} ...'.format(os.path.basename(dem_file)))
 

@@ -51,8 +51,8 @@ def add_dem_argument(parser):
     dem = parser.add_argument_group('DEM', 'display topography in the background')
     dem.add_argument('-d', '--dem', dest='dem_file', metavar='DEM_FILE',
                      help='DEM file to show topography as background')
-    dem.add_argument('--dem-mask', dest='dem_mask', action='store_true',
-                     help='Mask all DEM values not coincident with valid data pixels')
+    dem.add_argument('--mask-dem', dest='mask_dem', action='store_true',
+                     help='Mask out DEM pixels not coincident with valid data pixels')
     dem.add_argument('--dem-noshade', dest='disp_dem_shade', action='store_false',
                      help='do not show DEM shaded relief')
     dem.add_argument('--dem-nocontour', dest='disp_dem_contour', action='store_false',
