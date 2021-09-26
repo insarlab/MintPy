@@ -163,7 +163,7 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
 
         # loop for calculation
         prog_bar = ptime.progressBar(maxValue=num_site, print_msg=print_msg)
-        for i, site_name in enumerate(site_names):
+        for site_name in site_names:
             prog_bar.update(i+1, suffix='{}/{} {}'.format(i+1, num_site, site_name))
 
             # calculate gps data value
@@ -194,10 +194,10 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
             ref_ind = site_names.tolist().index(ref_site)
             # update value
             ref_arr = data_list[ref_ind][3:]
-            for i in enumerate(ref_arr):
-                if not np.isnan(ref_val):
+            for i, ref_val in enumerate(ref_arr):
+                if not np.isnan(i):
                     for j in enumerate(data_list):
-                        data_list[j[0]][3+i[0]] -= ref_val
+                        data_list[j[0]][3+i] -= ref_val
         site_obs = np.array([x[-1] for x in data_list])
 
         # write to CSV file
