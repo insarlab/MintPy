@@ -1100,7 +1100,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
     if inps.msk is not None:
         vprint('masking data')
         inps.msk = np.tile(inps.msk, (data.shape[0], 1, 1))
-        data = np.ma.masked_where(msk == 0., data)
+        data = np.ma.masked_where(inps.msk == 0., data)
     if inps.msk is None:
         inps.msk = np.tile(np.ones(data.shape, dtype=np.int8), (data.shape[0], 1, 1))
     if inps.zero_mask:
