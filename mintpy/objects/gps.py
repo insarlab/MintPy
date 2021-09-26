@@ -196,7 +196,7 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
             ref_arr = data_list[ref_ind][3:]
             for i, ref_val in enumerate(ref_arr):
                 if not np.isnan(ref_val):
-                    for j in data_list :
+                    for j in range(len(data_list)):
                         data_list[j][3+i] -= ref_val
         site_obs = np.array([x[-1] for x in data_list])
 
