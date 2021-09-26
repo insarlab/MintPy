@@ -101,8 +101,8 @@ def get_baseline_change(dates1, pos_x1, pos_y1, pos_z1,
     return dates, bases
 
 
-def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
-                    geo_box, metadata, gps_comp='enu2los', print_msg=True, redo=False,
+def get_gps_los_obs(insar_file, site_names, start_date, end_date,
+                    gps_comp='enu2los', print_msg=True, redo=False,
                     ref_site=None, az_angle=0.):
     """Get the GPS LOS observations given the query info.
 
@@ -148,7 +148,7 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
         site_obs = fc[col_names[-1]]
 
     else:
-        # pass all stations to plot
+        # calculate and save to CSV file
         data_list = []
         vprint('calculating GPS LOS observation ...')
 
@@ -168,21 +168,12 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
 
             # calculate gps data value
             obj = GPS(site_name)
-
-            if obs_type == 'velocity' or obs_type == 'displacement':
-                vel, dis_ts = obj.get_gps_los_velocity(geom_obj,
-                                                       start_date=start_date,
-                                                       end_date=end_date,
-                                                       gps_comp=gps_comp,
-                                                       az_angle=az_angle)
-                data = [dis_ts[-1] - dis_ts[0], vel] if dis_ts.size > 2 else [np.nan, np.nan]
-
-            elif obs_type == 'timeseries':
-                dis_ts = obj.read_gps_los_displacement(geom_obj,
-                                                       start_date=start_date,
-                                                       end_date=end_date,
-                                                       gps_comp=gps_comp)[1]
-                data = [dis_ts[-1] - dis_ts[0]] if dis_ts.size > 2 else [np.nan]
+            vel, dis_ts = obj.get_gps_los_velocity(geom_obj,
+                                                   start_date=start_date,
+                                                   end_date=end_date,
+                                                   gps_comp=gps_comp,
+                                                   az_angle=az_angle)
+            data = [dis_ts[-1] - dis_ts[0], vel] if dis_ts.size > 2 else [np.nan, np.nan]
 
             # save data to list
             data_list.append([obj.site, obj.site_lon, obj.site_lat] + data)
@@ -193,12 +184,17 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
             vprint('referencing all GPS LOS observations to site: {}'.format(ref_site))
             ref_ind = site_names.tolist().index(ref_site)
             # update value
-            ref_arr = data_list[ref_ind][3:]
-            for i, ref_val in enumerate(ref_arr):
-                if not np.isnan(i):
-                    for j in enumerate(data_list):
-                        data_list[j[0]][3+i] -= ref_val
-        site_obs = np.array([x[-1] for x in data_list])
+            ref_vals = data_list[ref_ind][3:]
+            for i, ref_val in enumerate(ref_vals):
+                if not np.isnan(ref_val):
+                    for j in range(num_site):
+                        data_list[j][3+i] -= ref_val
+
+        # prepare output
+        if obs_type in ['velocity']:
+            site_obs = np.array([x[-1] for x in data_list])
+        elif obs_type in ['displacement', 'timeseries']:
+            site_obs = np.array([x[-2] for x in data_list])
 
         # write to CSV file
         vprint('write GPS LOS observations to file: {}'.format(csv_file))
