@@ -1674,7 +1674,7 @@ def draw_scalebar(ax, geo_box, unit='degrees', loc=[0.2, 0.2, 0.1], labelpad=0.0
     unit = 'm'
     if length_meter >= 1000.0:
         unit = 'km'
-        length_meter *= 0.001s
+        length_meter *= 0.001
     label = '{:.0f} {}'.format(length_meter, unit)
     txt_offset = (geo_box[1] - geo_box[3]) * labelpad
 
@@ -1685,4 +1685,3 @@ def draw_scalebar(ax, geo_box, unit='degrees', loc=[0.2, 0.2, 0.1], labelpad=0.0
             fontsize=font_size, color=color)
 
     return ax
-
