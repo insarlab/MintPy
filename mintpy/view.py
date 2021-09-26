@@ -175,7 +175,7 @@ def cmd_line_parse(iargs=None):
     geo_opt_names = list(set(geo_opt_names) & set(iargs))
     if geo_opt_names and 'Y_FIRST' not in readfile.read_attribute(inps.file).keys():
         for opt_name in geo_opt_names:
-            print('WARNING: {} is NOT supported for files in radar-coordinate, ignore it and continue.'.format(opt_name))
+            print(f'WARNING: {opt_name} is NOT supported for files in radar-coordinate, ignore it and continue.')
 
     # verbose print using --noverbose option
     global vprint
@@ -505,12 +505,6 @@ def plot_slice(ax, data, metadata, inps=None):
                                                      pix_box=inps.pix_box,
                                                      geo_box=inps.geo_box,
                                                      print_msg=inps.print_msg)
-        if inps.mask_dem:
-            if dem.shape == data.shape:
-                vprint('mask out DEM pixels to be consistent with data pixels')
-                dem[inps.msk == 0] = np.nan
-            else:
-                print('WARNING: DEM has different size than the data, ignore --mask-dem and continue.')
 
     vprint('display data in transparency: '+str(inps.transparency))
 
@@ -1420,9 +1414,6 @@ def prepare4multi_subplots(inps, metadata):
                                 xstep=inps.multilook_num,
                                 ystep=inps.multilook_num,
                                 print_msg=False)[0]
-            if inps.mask_dem:
-                vprint('mask out DEM pixels to be consistent data pixels')
-                dem[inps.msk == 0] = np.nan
 
             (inps.dem_shade,
              inps.dem_contour,
