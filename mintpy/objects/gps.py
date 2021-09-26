@@ -173,7 +173,7 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date,
                                                    end_date=end_date,
                                                    gps_comp=gps_comp,
                                                    az_angle=az_angle)
-            data = [dis_ts[-1] - dis_ts[0], vel] if dis_ts.size > 2 else [np.nan, np.nan]
+            data = [dis_ts[-1] - dis_ts[0], vel] if dis_ts.size >= 2 else [np.nan, np.nan]
 
             # save data to list
             data_list.append([obj.site, obj.site_lon, obj.site_lat] + data)
@@ -204,6 +204,8 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date,
             fcw.writerows(data_list)
 
     return site_obs
+
+
 
 
 #################################### Beginning of GPS-GSI utility functions ########################
