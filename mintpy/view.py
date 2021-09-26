@@ -1099,16 +1099,16 @@ def read_data4figure(i_start, i_end, inps, metadata):
     # mask
     if inps.msk is not None:
         vprint('masking data')
-        msk = np.tile(inps.msk, (data.shape[0], 1, 1))
+        inps.msk = np.tile(inps.msk, (data.shape[0], 1, 1))
         data = np.ma.masked_where(msk == 0., data)
-
-    ###SSS check!!!!!!!
     if inps.msk is None:
         inps.msk = np.tile(np.ones(data.shape, dtype=np.int8), (data.shape[0], 1, 1))
-
     if inps.zero_mask:
         vprint('masking pixels with zero value')
-        data = np.ma.masked_where(data == 0., data)
+        inps.msk = np.ma.masked_array(inps.msk, mask=np.isnan(data))
+        np.ma.set_fill_value(inps.msk, 0)
+        inps.msk = inps.msk.filled()
+        data = np.ma.masked_where(inps.msk == 0., data)
 
     # update display min/max
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
@@ -1589,7 +1589,7 @@ class viewer():
                 vprint('masking pixels with zero value')
                 self.msk = np.ma.masked_array(self.msk, mask=np.isnan(data))
                 np.ma.set_fill_value(self.msk, 0)
-                self.msk=self.msk.filled()
+                self.msk = self.msk.filled()
                 data = np.ma.masked_where(self.msk == 0., data)
 
             # update data

@@ -149,9 +149,7 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
 
     else:
         # pass all stations to plot
-        data_list_toplot = []
-        # calculate and save only valid stations to CSV file
-        data_list_tocsv = []
+        data_list = []
         vprint('calculating GPS LOS observation ...')
 
         # get geom_obj (meta / geom_file)
@@ -162,7 +160,6 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
         else:
             geom_obj = meta
             vprint('use incidence / azimuth angle from metadata')
-        coord = coordinate(metadata)
 
         # loop for calculation
         prog_bar = ptime.progressBar(maxValue=num_site, print_msg=print_msg)
@@ -172,11 +169,10 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
             # calculate gps data value
             obj = GPS(site_name)
 
-            if obs_type == 'velocity' or obs_type == 'SenD':
+            if obs_type == 'velocity' or obs_type == 'displacement':
                 vel, dis_ts = obj.get_gps_los_velocity(geom_obj,
                                                        start_date=start_date,
                                                        end_date=end_date,
-                                                       ref_site=ref_site,
                                                        gps_comp=gps_comp,
                                                        az_angle=az_angle)
                 data = [dis_ts[-1] - dis_ts[0], vel] if dis_ts.size > 2 else [np.nan, np.nan]
@@ -185,26 +181,31 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
                 dis_ts = obj.read_gps_los_displacement(geom_obj,
                                                        start_date=start_date,
                                                        end_date=end_date,
-                                                       ref_site=ref_site,
                                                        gps_comp=gps_comp)[1]
                 data = [dis_ts[-1] - dis_ts[0]] if dis_ts.size > 2 else [np.nan]
 
-            data_list_toplot.append([obj.site, obj.site_lon, obj.site_lat] + data)
-            # Only pass/plot GPS station if coincident with valid InSAR data
-            msky, mskx = coord.geo2radar(obj.site_lat, obj.site_lon)[0:2]
-            msk_point = msk[msky, mskx]
-            if not np.isnan(data[0]) and msk_point!=0:
-                # save data to list
-                data_list_tocsv.append([obj.site, obj.site_lon, obj.site_lat] + data)
+            # save data to list
+            data_list.append([obj.site, obj.site_lon, obj.site_lat] + data)
         prog_bar.close()
-        site_obs = np.array([x[-1] for x in data_list_toplot])
+
+        # reference GPS
+        if ref_site:
+            vprint('referencing all GPS LOS observations to site: {}'.format(ref_site))
+            ref_ind = site_names.index(ref_site)
+            # update value
+            ref_arr = data_list[ref_ind][3:]
+            for i, ref_val in enumerate(ref_arr):
+                if not np.isnan(ref_val):
+                    for j in data_list :
+                        data_list[j][3+i] -= ref_val
+        site_obs = np.array([x[-1] for x in data_list])
 
         # write to CSV file
         vprint('write GPS LOS observations to file: {}'.format(csv_file))
         with open(csv_file, 'w') as fc:
             fcw = csv.writer(fc)
             fcw.writerow(col_names)
-            fcw.writerows(data_list_tocsv)
+            fcw.writerows(data_list)
 
     return site_obs
 

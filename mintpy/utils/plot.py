@@ -1105,12 +1105,33 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     if not inps.gps_end_date:
         inps.gps_end_date = metadata.get('END_DATE', None)
 
+    # query for GNSS stations
     site_names, site_lats, site_lons = gps.search_gps(SNWE, inps.gps_start_date, inps.gps_end_date)
+
+    # If specified, only pass/plot GPS station if coincident with valid InSAR data
+    # If reference mask is 3D array, collapse it
+    if len(inps.msk.shape) == 3:
+        msk = np.prod(inps.msk, axis=2)
+    else:
+        msk = inps.msk
+    if inps.gps_mask:
+        coord = coordinate(metadata)
+        maskarr = np.full(site_names.shape, True, dtype=bool)
+        for i, site_name in enumerate(site_names):
+            # Only pass/plot GPS station if coincident with valid InSAR data
+            msky, mskx = coord.geo2radar(site_lats[i], site_lons[i])[0:2]
+            msk_point = msk[msky, mskx]
+            if msk_point == 0:
+                maskarr[i] = False
+        # Discard stations
+        site_names = site_names[maskarr]
+        site_lats = site_lats[maskarr]
+        site_lons = site_lons[maskarr]
     if inps.ref_gps_site and inps.ref_gps_site not in site_names:
         raise ValueError('input reference GPS site "{}" not available!'.format(inps.ref_gps_site))
 
     k = metadata['FILE_TYPE']
-    if inps.gps_component and k not in ['velocity', 'timeseries', 'SenD']:
+    if inps.gps_component and k not in ['velocity', 'timeseries', 'displacement']:
         inps.gps_component = None
         vprint('WARNING: --gps-comp is not implemented for {} file yet, set --gps-comp = None and continue'.format(k))
 
@@ -1159,9 +1180,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         site_obs *= unit_fac
 
         # plot
-        # Mask GNSS stations if outside of data range (resulting in NaN values)
-        flag = ~np.isnan(site_obs) if inps.gps_mask else np.ones(site_obs.shape, dtype=np.bool_)
-        for lat, lon, obs in zip(site_lats[flag], site_lons[flag], site_obs[flag]):
+        for lat, lon, obs in zip(site_lats, site_lons, site_obs):
             color = cmap( (obs - vmin) / (vmax - vmin) ) if not np.isnan(obs) else 'none'
             ax.scatter(lon, lat, color=color, s=marker_size**2, edgecolors='k', zorder=10)
 
