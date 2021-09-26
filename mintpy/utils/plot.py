@@ -1163,10 +1163,9 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             start_date=start_date,
             end_date=end_date,
             gps_comp=inps.gps_component,
+            horz_az_angle=inps.horz_az_angle,
             print_msg=print_msg,
-            redo=inps.gps_redo,
-            az_angle=inps.az_angle
-        )
+            redo=inps.gps_redo)
 
         # reference GPS
         if inps.ref_gps_site:

@@ -169,7 +169,7 @@ def add_gps_argument(parser):
                      help='Mask out GPS stations not coincident with valid data pixels')
     gps.add_argument('--gps-label', dest='disp_gps_label', action='store_true',
                      help='Show GPS site name')
-    gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los', 'horizontal', 'vertical'},
+    gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los', 'horz', 'vert'},
                      help='Plot GPS in color indicating deformation velocity direction')
     gps.add_argument('--gps-redo', dest='gps_redo', action='store_true',
                      help='Re-calculate GPS observations in LOS direction, instead of read from existing CSV file.')
@@ -179,15 +179,11 @@ def add_gps_argument(parser):
                      help='start date of GPS data, default is date of the 1st SAR acquisition')
     gps.add_argument('--gps-end-date', dest='gps_end_date', type=str, metavar='YYYYMMDD',
                      help='start date of GPS data, default is date of the last SAR acquisition')
-    gps.add_argument('--azimuth', '--az', dest='az_angle', type=float, default=0.,
-                     help='azimuth angle of the horizontal movement in degrees\n'
-                             'measured from the north with anti-clockwise direction as positive\n'
-                             'default is 0., assuming no projection needed and magnitude of horizontal vectors passed.\n'
-                             'i.e. azimuth angle of strike-slip fault\n\n'
-                             'Note:\n'
-                             'a. Near north direction can not be well resolved due to the lack of\n'
-                             '   diversity in viewing geometry. Check exact dilution of precision for \n'
-                             '   each component in Wright et al., 2004, GRL')
+    gps.add_argument('--azimuth', '--az', dest='horz_az_angle', type=float, default=-90.,
+                     help='Azimuth angle (anti-clockwise from the north) of the horizontal movement in degrees\n'
+                             'E.g.: -90. for east  direction [default]\n'
+                             '       0.  for north direction\n'
+                             'Set to the azimuth angle of the strike-slip fault to show the fault-parallel displacement.')
     return parser
 
 
