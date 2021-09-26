@@ -179,7 +179,7 @@ def add_gps_argument(parser):
                      help='start date of GPS data, default is date of the 1st SAR acquisition')
     gps.add_argument('--gps-end-date', dest='gps_end_date', type=str, metavar='YYYYMMDD',
                      help='start date of GPS data, default is date of the last SAR acquisition')
-    gps.add_argument('--azimuth', '--az', dest='horz_az_angle', type=float, default=-90.,
+    gps.add_argument('--horz-az','--hz-az', dest='horz_az_angle', type=float, default=-90.,
                      help='Azimuth angle (anti-clockwise from the north) of the horizontal movement in degrees\n'
                              'E.g.: -90. for east  direction [default]\n'
                              '       0.  for north direction\n'
