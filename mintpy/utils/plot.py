@@ -1301,39 +1301,39 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
     # Calculate scaling factor  - 1
     # phase unit - length / angle
     if data_unit[0].endswith('m'):
-        if   disp_unit[0] == 'mm': scale *= 1000.0
-        elif disp_unit[0] == 'cm': scale *= 100.0
-        elif disp_unit[0] == 'dm': scale *= 10.0
-        elif disp_unit[0] == 'm' : scale *= 1.0
-        elif disp_unit[0] == 'km': scale *= 1/1000.0
-        elif disp_unit[0] == 'in': scale *= 39.3701
-        elif disp_unit[0] == 'ft': scale *= 3.28084
-        elif disp_unit[0] == 'mi': scale *= 0.000621371
+        if   disp_unit[0] == 'mm':  scale *= 1000.0
+        elif disp_unit[0] == 'cm':  scale *= 100.0
+        elif disp_unit[0] == 'dm':  scale *= 10.0
+        elif disp_unit[0] == 'm' :  scale *= 1.0
+        elif disp_unit[0] == 'km':  scale *= 0.001
+        elif disp_unit[0] in ['in','inch']:  scale *= 39.3701
+        elif disp_unit[0] in ['ft','foot']:  scale *= 3.28084
+        elif disp_unit[0] in ['yd','yard']:  scale *= 1.09361
+        elif disp_unit[0] in ['mi','mile']:  scale *= 0.000621371
         elif disp_unit[0] in ['radians','radian','rad','r']:
-            range2phase = -(4*np.pi) / float(metadata['WAVELENGTH'])
+            range2phase = -4. * np.pi / float(metadata['WAVELENGTH'])
             scale *= range2phase
         else:
             print('Unrecognized display phase/length unit:', disp_unit[0])
             pass
 
-        if   data_unit[0] == 'mm': scale *= 0.001
-        elif data_unit[0] == 'cm': scale *= 0.01
-        elif data_unit[0] == 'dm': scale *= 0.1
-        elif data_unit[0] == 'km': scale *= 1000.
-        elif disp_unit[0] == 'in': scale *= 0.025399986284007407
-        elif disp_unit[0] == 'ft': scale *= 0.3047999902464003
-        elif disp_unit[0] == 'mi': scale *= 1609.3444978925634
+        # if stored data unit is not meter
+        if   data_unit[0] == 'mm':  scale *= 0.001
+        elif data_unit[0] == 'cm':  scale *= 0.01
+        elif data_unit[0] == 'dm':  scale *= 0.1
+        elif data_unit[0] == 'km':  scale *= 1000.
 
     elif data_unit[0] == 'radian':
         phase2range = -float(metadata['WAVELENGTH']) / (4*np.pi)
-        if   disp_unit[0] == 'mm': scale *= phase2range * 1000.0
-        elif disp_unit[0] == 'cm': scale *= phase2range * 100.0
-        elif disp_unit[0] == 'dm': scale *= phase2range * 10.0
-        elif disp_unit[0] == 'm' : scale *= phase2range * 1.0
-        elif disp_unit[0] == 'km': scale *= phase2range * 1/1000.0
-        elif disp_unit[0] == 'in': scale *= phase2range * 39.3701
-        elif disp_unit[0] == 'ft': scale *= phase2range * 3.28084
-        elif disp_unit[0] == 'mi': scale *= phase2range * 0.000621371
+        if   disp_unit[0] == 'mm':  scale *= phase2range * 1000.0
+        elif disp_unit[0] == 'cm':  scale *= phase2range * 100.0
+        elif disp_unit[0] == 'dm':  scale *= phase2range * 10.0
+        elif disp_unit[0] == 'm' :  scale *= phase2range * 1.0
+        elif disp_unit[0] == 'km':  scale *= phase2range * 1/1000.0
+        elif disp_unit[0] in ['in','inch']:  scale *= phase2range * 39.3701
+        elif disp_unit[0] in ['ft','foot']:  scale *= phase2range * 3.28084
+        elif disp_unit[0] in ['yd','yard']:  scale *= phase2range * 1.09361
+        elif disp_unit[0] in ['mi','mile']:  scale *= phase2range * 0.000621371
         elif disp_unit[0] in ['radians','radian','rad','r']:
             pass
         else:
