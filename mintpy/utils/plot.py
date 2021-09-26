@@ -1099,34 +1099,23 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     atr['UNIT'] = 'm'
     unit_fac = scale_data2disp_unit(metadata=atr, disp_unit=inps.disp_unit)[2]
 
-    if not inps.gps_start_date:
-        inps.gps_start_date = metadata.get('START_DATE', None)
-
-    if not inps.gps_end_date:
-        inps.gps_end_date = metadata.get('END_DATE', None)
+    inps.gps_start_date = inps.gps_start_date if inps.gps_start_date else metadata.get('START_DATE', None)
+    inps.gps_end_date = inps.gps_end_date if inps.gps_end_date else metadata.get('END_DATE', None)
 
     # query for GNSS stations
     site_names, site_lats, site_lons = gps.search_gps(SNWE, inps.gps_start_date, inps.gps_end_date)
 
-    # If specified, only pass/plot GPS station if coincident with valid InSAR data
-    # If reference mask is 3D array, collapse it
-    if len(inps.msk.shape) == 3:
-        msk = np.prod(inps.msk, axis=2)
-    else:
-        msk = inps.msk
+    # mask out stations not coincident with InSAR data
     if inps.gps_mask:
+        msk = inps.msk if inps.msk.ndim == 2 else np.prod(inps.msk, axis=-1)
         coord = coordinate(metadata)
-        maskarr = np.full(site_names.shape, True, dtype=bool)
-        for i in enumerate(site_names):
-            # Only pass/plot GPS station if coincident with valid InSAR data
-            msky, mskx = coord.geo2radar(site_lats[i[0]], site_lons[i[0]])[0:2]
-            msk_point = msk[msky, mskx]
-            if msk_point == 0:
-                maskarr[i[0]] = False
-        # Discard stations
-        site_names = site_names[maskarr]
-        site_lats = site_lats[maskarr]
-        site_lons = site_lons[maskarr]
+        site_ys, site_xs = coord.geo2radar(site_lats, site_lons)[0:2]
+        flag = msk[site_yx, site_xs] ~= 0
+        # update station list
+        site_names = site_names[flag]
+        site_lats = site_lats[flag]
+        site_lons = site_lons[flag]
+
     if inps.ref_gps_site and inps.ref_gps_site not in site_names:
         raise ValueError('input reference GPS site "{}" not available!'.format(inps.ref_gps_site))
 
@@ -1140,8 +1129,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         vprint('-'*30)
         msg = 'plotting GPS '
         msg += 'velocity' if k == 'velocity' else 'displacement'
-        msg += ' with respect to {} in {} direction ...'.format(
-            inps.ref_gps_site, inps.gps_component)
+        msg += ' with respect to {} in {} direction ...'.format(inps.ref_gps_site, inps.gps_component)
         vprint(msg)
         vprint('number of available GPS stations: {}'.format(len(site_names)))
         vprint('start date: {}'.format(inps.gps_start_date))
@@ -1154,9 +1142,6 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             site_names=site_names,
             start_date=inps.gps_start_date,
             end_date=inps.gps_end_date,
-            msk=inps.msk,
-            geo_box=inps.geo_box,
-            metadata=metadata,
             gps_comp=inps.gps_component,
             print_msg=print_msg,
             redo=inps.gps_redo,
@@ -1164,17 +1149,10 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             az_angle=inps.az_angle
         )
 
-        # reference GPS
+        # reference GPS - plot label
         if inps.ref_gps_site:
-            vprint('referencing all GPS LOS observations to site: {}'.format(inps.ref_gps_site))
             ref_ind = site_names.tolist().index(inps.ref_gps_site)
-            # plot label of the reference site
-            ax.annotate(site_names[ref_ind], xy=(site_lons[ref_ind], site_lats[ref_ind]),
-                        fontsize=inps.font_size)
-            # update value
-            ref_val = site_obs[ref_ind]
-            if not np.isnan(ref_val):
-                site_obs -= ref_val
+            ax.annotate(site_names[ref_ind], xy=(site_lons[ref_ind], site_lats[ref_ind]), fontsize=inps.font_size)
 
         # scale to the same unit as InSAR
         site_obs *= unit_fac
@@ -1192,8 +1170,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     # plot GPS label
     if inps.disp_gps_label:
         for i in range(len(site_names)):
-            ax.annotate(site_names[i], xy=(site_lons[i], site_lats[i]),
-                        fontsize=inps.font_size)
+            ax.annotate(site_names[i], xy=(site_lons[i], site_lats[i]), fontsize=inps.font_size)
 
     return ax
 
