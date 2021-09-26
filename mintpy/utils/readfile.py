@@ -772,10 +772,6 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             k = list(set(g1_list) & set(py2_mintpy_stack_files))[0]
         elif 'FILE_TYPE' in atr:
             k = atr['FILE_TYPE']
-            # catech exception for horizontal and vertical decomposition
-            if (k == 'None') and ('SenD' in d1_list or 'horizontal' \
-                in d1_list or 'vertical' in d1_list):
-                k = 'SenD'
         elif len(d1_list) > 0:
             k = d1_list[0]
         elif len(g1_list) > 0:

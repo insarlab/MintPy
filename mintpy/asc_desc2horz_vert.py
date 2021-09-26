@@ -264,8 +264,8 @@ def asc_desc_files2horz_vert(fname1, fname2, dsname=None, azimuth=-90):
 
     # 4. Update Attributes
     atr = atr_list[0].copy()
-    if dsname:
-        atr['FILE_TYPE'] = dsname
+    if dsname and atr['FILE_TYPE'] in ['ifgramStack', 'timeseries', 'HDFEOS']:
+        atr['FILE_TYPE'] = 'displacement'
 
     atr['WIDTH']  = str(width)
     atr['LENGTH'] = str(length)
