@@ -1099,14 +1099,16 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     atr['UNIT'] = 'm'
     unit_fac = scale_data2disp_unit(metadata=atr, disp_unit=inps.disp_unit)[2]
 
-    inps.gps_start_date = inps.gps_start_date if inps.gps_start_date else metadata.get('START_DATE', None)
-    inps.gps_end_date = inps.gps_end_date if inps.gps_end_date else metadata.get('END_DATE', None)
+    start_date = inps.gps_start_date if inps.gps_start_date else metadata.get('START_DATE', None)
+    end_date = inps.gps_end_date if inps.gps_end_date else metadata.get('END_DATE', None)
 
     # query for GNSS stations
-    site_names, site_lats, site_lons = gps.search_gps(SNWE, inps.gps_start_date, inps.gps_end_date)
+    site_names, site_lats, site_lons = gps.search_gps(SNWE, start_date, end_date)
+    if site_names.size == 0:
+        raise ValueError('No GNSS found within {} during {} - {}!'.format(SNWE, start_date, end_date))
 
     # mask out stations not coincident with InSAR data
-    if inps.mask_gps:
+    if inps.mask_gps and inps.msk is not None:
         msk = inps.msk if inps.msk.ndim == 2 else np.prod(inps.msk, axis=-1)
         coord = coordinate(metadata)
         site_ys, site_xs = coord.geo2radar(site_lats, site_lons)[0:2]
@@ -1115,6 +1117,9 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         site_names = site_names[flag]
         site_lats = site_lats[flag]
         site_lons = site_lons[flag]
+        # check
+        if site_names.size == 0:
+            raise ValueError('No GNSS left after --mask-gps!')
 
     if inps.ref_gps_site and inps.ref_gps_site not in site_names:
         raise ValueError('input reference GPS site "{}" not available!'.format(inps.ref_gps_site))
@@ -1129,30 +1134,37 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         vprint('-'*30)
         msg = 'plotting GPS '
         msg += 'velocity' if k == 'velocity' else 'displacement'
-        msg += ' with respect to {} in {} direction ...'.format(inps.ref_gps_site, inps.gps_component)
+        msg += ' in {} direction'.format(inps.gps_component)
+        msg += ' with respect to {} ...'.format(inps.ref_gps_site) if inps.ref_gps_site else ' ...'
         vprint(msg)
         vprint('number of available GPS stations: {}'.format(len(site_names)))
-        vprint('start date: {}'.format(inps.gps_start_date))
-        vprint('end   date: {}'.format(inps.gps_end_date))
+        vprint('start date: {}'.format(start_date))
+        vprint('end   date: {}'.format(start_date))
         vprint('components projection: {}'.format(inps.gps_component))
 
         # get GPS LOS observations
+        # save absolute value to support both spatially relative and absolute comparison
+        # without compromising the re-usability of the CSV file
         site_obs = gps.get_gps_los_obs(
             insar_file=inps.file,
             site_names=site_names,
-            start_date=inps.gps_start_date,
-            end_date=inps.gps_end_date,
+            start_date=start_date,
+            end_date=end_date,
             gps_comp=inps.gps_component,
             print_msg=print_msg,
             redo=inps.gps_redo,
-            ref_site=inps.ref_gps_site,
             az_angle=inps.az_angle
         )
 
-        # reference GPS - plot label
+        # reference GPS
         if inps.ref_gps_site:
             ref_ind = site_names.tolist().index(inps.ref_gps_site)
+            # plot label of the reference site
             ax.annotate(site_names[ref_ind], xy=(site_lons[ref_ind], site_lats[ref_ind]), fontsize=inps.font_size)
+            # update value
+            ref_val = site_obs[ref_ind]
+            if not os.path.isnan(ref_val):
+                site_obs -= ref_val
 
         # scale to the same unit as InSAR
         site_obs *= unit_fac

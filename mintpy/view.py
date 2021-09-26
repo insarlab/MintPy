@@ -156,7 +156,10 @@ def cmd_line_parse(iargs=None):
     if inps.lalo_step:
         inps.lalo_label = True
     if inps.zero_mask:
-        inps.mask_file = 'no'
+        # turn OFF default mask file detection for --zero-mask
+        # extra manual mask file is still supported
+        if not inps.mask_file:
+            inps.mask_file = 'no'
 
     if not inps.disp_whitespace:
         inps.disp_axis = False
@@ -1097,15 +1100,13 @@ def read_data4figure(i_start, i_end, inps, metadata):
         inps.disp_unit = None
 
     # mask
+    if inps.zero_mask:
+        vprint('masking pixels with zero value')
+        data = np.ma.masked_where(data == 0., data)
     if inps.msk is not None:
         vprint('masking data')
         msk = np.tile(inps.msk, (data.shape[0], 1, 1))
         data = np.ma.masked_where(msk == 0., data)
-    if inps.msk is None:
-        inps.msk = np.tile(np.ones(data.shape, dtype=np.int8), (data.shape[0], 1, 1))
-    if inps.zero_mask:
-        vprint('masking pixels with zero value')
-        data = np.ma.masked_where(data == 0., data)
 
     # update display min/max
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
@@ -1577,17 +1578,20 @@ class viewer():
                 data[data != 0.] -= ref_data
 
             # masking
+            if self.zero_mask:
+                vprint('masking pixels with zero value')
+                data = np.ma.masked_where(data == 0., data)
             if self.msk is not None:
                 vprint('masking data')
                 data = np.ma.masked_where(self.msk == 0., data)
-            if self.msk is None:
-                self.msk = np.ones(data.shape, dtype=np.int8)
-            if self.zero_mask:
-                vprint('masking pixels with zero value')
-                self.msk = np.ma.masked_array(self.msk, mask=np.isnan(data))
-                np.ma.set_fill_value(self.msk, 0)
-                self.msk = self.msk.filled()
-                data = np.ma.masked_where(self.msk == 0., data)
+            else:
+                self.msk = np.ones(data.shape, dtype=np.bool_)
+            # update/save mask info
+            if np.ma.is_masked(data):
+                self.msk *= ~data.mask
+                self.msk *= ~np.isnan(data.data)
+            else:
+                self.msk *= ~np.isnan(data)
 
             # update data
             data, self = update_data_with_plot_inps(data, self.atr, self)

@@ -101,9 +101,8 @@ def get_baseline_change(dates1, pos_x1, pos_y1, pos_z1,
     return dates, bases
 
 
-def get_gps_los_obs(insar_file, site_names, start_date, end_date,
-                    gps_comp='enu2los', print_msg=True, redo=False,
-                    ref_site=None, az_angle=0.):
+def get_gps_los_obs(insar_file, site_names, start_date, end_date, gps_comp='enu2los',
+                    az_angle=None, print_msg=True, redo=False):
     """Get the GPS LOS observations given the query info.
 
     Parameters: insar_file - str, InSAR LOS file, e.g. velocity or timeseries
@@ -112,6 +111,8 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date,
                 end_date   - str, date in YYYYMMDD format
                 gps_comp   - str, flag of projecting 2/3D GPS into LOS
                              e.g. enu2los, hz2los, up2los
+                az_angle   - float, azimuth angle in degree [for gps_comp == 'horizontal' only]
+                             measured from the north with anti-clockwise as positive
                 print_msg  - bool, print verbose info
                 redo       - bool, ignore existing CSV file and re-calculate
     Returns:    site_obs   - 1D np.ndarray(), GPS LOS velocity or displacement in m or m/yr
@@ -124,13 +125,12 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date,
     fdir = os.path.dirname(insar_file)
     meta = readfile.read_attribute(insar_file)
     obs_type = meta['FILE_TYPE']
+    obs_ind = 4 if obs_type in ['velocity'] else 3
 
     # GPS CSV file info
-    csv_file = os.path.join(fdir, 'gps_{}.csv'.format(gps_comp))
-    col_names = ['Site', 'Lon', 'Lat', 'LOS_displacement']
-    col_names += ['LOS_velocity'] if obs_type == 'velocity' else []
-    num_col = len(col_names)
-    col_types = ['U10'] + ['f8'] * (num_col - 1)
+    csv_file = os.path.join(fdir, f'gps_{gps_comp}.csv')
+    col_names = ['Site', 'Lon', 'Lat', 'Displacement', 'Velocity']
+    col_types = ['U10'] + ['f8'] * (len(col_names) - 1)
 
     # skip re-calculate GPS if:
     #    redo is False AND
@@ -143,14 +143,14 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date,
 
     if not redo and os.path.isfile(csv_file) and num_row >= num_site:
         # read from existing CSV file
-        vprint('read GPS LOS observations from file: {}'.format(csv_file))
+        vprint('read GPS observations from file: {}'.format(csv_file))
         fc = np.genfromtxt(csv_file, dtype=col_types, delimiter=',', names=True)
-        site_obs = fc[col_names[-1]]
+        site_obs = fc[col_names[obs_ind]]
 
     else:
         # calculate and save to CSV file
         data_list = []
-        vprint('calculating GPS LOS observation ...')
+        vprint('calculating GPS observation ...')
 
         # get geom_obj (meta / geom_file)
         geom_file = ut.get_geometry_file(['incidenceAngle','azimuthAngle'], work_dir=fdir, coord='geo')
@@ -173,31 +173,18 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date,
                                                    end_date=end_date,
                                                    gps_comp=gps_comp,
                                                    az_angle=az_angle)
-            data = [dis_ts[-1] - dis_ts[0], vel] if dis_ts.size >= 2 else [np.nan, np.nan]
+            # ignore time-series <= 2, to be consistent with vel
+            dis = dis_ts[-1] - dis_ts[0] if dis_ts.size > 2 else np.nan
 
             # save data to list
-            data_list.append([obj.site, obj.site_lon, obj.site_lat] + data)
+            data_list.append([obj.site, obj.site_lon, obj.site_lat, dis, vel])
         prog_bar.close()
 
-        # reference GPS
-        if ref_site:
-            vprint('referencing all GPS LOS observations to site: {}'.format(ref_site))
-            ref_ind = site_names.tolist().index(ref_site)
-            # update value
-            ref_vals = data_list[ref_ind][3:]
-            for i, ref_val in enumerate(ref_vals):
-                if not np.isnan(ref_val):
-                    for j in range(num_site):
-                        data_list[j][3+i] -= ref_val
-
         # prepare output
-        if obs_type in ['velocity']:
-            site_obs = np.array([x[-1] for x in data_list])
-        elif obs_type in ['displacement', 'timeseries']:
-            site_obs = np.array([x[-2] for x in data_list])
+        site_obs = np.array([x[obs_ind] for x in data_list])
 
         # write to CSV file
-        vprint('write GPS LOS observations to file: {}'.format(csv_file))
+        vprint('write GPS observations to file: {}'.format(csv_file))
         with open(csv_file, 'w') as fc:
             fcw = csv.writer(fc)
             fcw.writerow(col_names)
@@ -566,7 +553,7 @@ class GPS:
 
         # displacement -> velocity
         date_list = [dt.strftime(i, '%Y%m%d') for i in dates]
-        if len(date_list) >= 2:
+        if len(date_list) > 2:
             A = time_func.get_design_matrix4time_func(date_list)
             self.velocity = np.dot(np.linalg.pinv(A), dis)[1]
         else:
