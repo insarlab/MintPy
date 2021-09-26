@@ -1163,7 +1163,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             ax.annotate(site_names[ref_ind], xy=(site_lons[ref_ind], site_lats[ref_ind]), fontsize=inps.font_size)
             # update value
             ref_val = site_obs[ref_ind]
-            if not os.path.isnan(ref_val):
+            if not os.isnan(ref_val):
                 site_obs -= ref_val
 
         # scale to the same unit as InSAR
