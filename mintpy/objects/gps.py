@@ -191,7 +191,7 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
         # reference GPS
         if ref_site:
             vprint('referencing all GPS LOS observations to site: {}'.format(ref_site))
-            ref_ind = site_names.index(ref_site)
+            ref_ind = site_names.tolist().index(ref_site)
             # update value
             ref_arr = data_list[ref_ind][3:]
             for i, ref_val in enumerate(ref_arr):
