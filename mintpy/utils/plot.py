@@ -1671,18 +1671,10 @@ def draw_scalebar(ax, geo_box, unit='degrees', loc=[0.2, 0.2, 0.1], labelpad=0.0
     ax.plot([lon1, lon1], [lat_c, lat_c + 0.1*length_disp], color=color)
 
     ## plot scale bar label
-    if unit.split('/')[0] in ['in', 'ft', 'mi']:
-        unit = 'ft'
-        if length_meter >= 1000.0:
-            unit = 'mi'
-            length_meter *= 0.000621371
-        else:
-            length_meter *= 3.28084
-    else:
-        unit = 'm'
-        if length_meter >= 1000.0:
-            unit = 'km'
-            length_meter *= 0.001
+    unit = 'm'
+    if length_meter >= 1000.0:
+        unit = 'km'
+        length_meter *= 0.001s
     label = '{:.0f} {}'.format(length_meter, unit)
     txt_offset = (geo_box[1] - geo_box[3]) * labelpad
 
