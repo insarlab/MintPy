@@ -165,8 +165,8 @@ def add_gps_argument(parser):
     gps = parser.add_argument_group('GPS', 'GPS data to display')
     gps.add_argument('--show-gps', dest='disp_gps', action='store_true',
                      help='Show UNR GPS location within the coverage.')
-    gps.add_argument('--gps-mask', dest='gps_mask', action='store_true',
-                     help='Mask all GPS stations not coincident with valid data pixels')
+    gps.add_argument('--mask-gps', dest='mask_gps', action='store_true',
+                     help='Mask out GPS stations not coincident with valid data pixels')
     gps.add_argument('--gps-label', dest='disp_gps_label', action='store_true',
                      help='Show GPS site name')
     gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los', 'horizontal', 'vertical'},

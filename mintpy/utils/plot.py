@@ -1106,11 +1106,11 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     site_names, site_lats, site_lons = gps.search_gps(SNWE, inps.gps_start_date, inps.gps_end_date)
 
     # mask out stations not coincident with InSAR data
-    if inps.gps_mask:
+    if inps.mask_gps:
         msk = inps.msk if inps.msk.ndim == 2 else np.prod(inps.msk, axis=-1)
         coord = coordinate(metadata)
         site_ys, site_xs = coord.geo2radar(site_lats, site_lons)[0:2]
-        flag = msk[site_yx, site_xs] != 0
+        flag = msk[site_ys, site_xs] != 0
         # update station list
         site_names = site_names[flag]
         site_lats = site_lats[flag]
