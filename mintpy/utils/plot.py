@@ -1117,12 +1117,12 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     if inps.gps_mask:
         coord = coordinate(metadata)
         maskarr = np.full(site_names.shape, True, dtype=bool)
-        for i, site_name in enumerate(site_names):
+        for i in enumerate(site_names):
             # Only pass/plot GPS station if coincident with valid InSAR data
-            msky, mskx = coord.geo2radar(site_lats[i], site_lons[i])[0:2]
+            msky, mskx = coord.geo2radar(site_lats[i[0]], site_lons[i[0]])[0:2]
             msk_point = msk[msky, mskx]
             if msk_point == 0:
-                maskarr[i] = False
+                maskarr[i[0]] = False
         # Discard stations
         site_names = site_names[maskarr]
         site_lats = site_lats[maskarr]

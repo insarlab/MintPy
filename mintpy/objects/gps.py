@@ -163,7 +163,7 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, msk,
 
         # loop for calculation
         prog_bar = ptime.progressBar(maxValue=num_site, print_msg=print_msg)
-        for site_name in site_names:
+        for i, site_name in enumerate(site_names):
             prog_bar.update(i+1, suffix='{}/{} {}'.format(i+1, num_site, site_name))
 
             # calculate gps data value
