@@ -51,6 +51,8 @@ def add_dem_argument(parser):
     dem = parser.add_argument_group('DEM', 'display topography in the background')
     dem.add_argument('-d', '--dem', dest='dem_file', metavar='DEM_FILE',
                      help='DEM file to show topography as background')
+    dem.add_argument('--mask-dem', dest='mask_dem', action='store_true',
+                     help='Mask out DEM pixels not coincident with valid data pixels')
     dem.add_argument('--dem-noshade', dest='disp_dem_shade', action='store_false',
                      help='do not show DEM shaded relief')
     dem.add_argument('--dem-nocontour', dest='disp_dem_contour', action='store_false',
@@ -163,18 +165,25 @@ def add_gps_argument(parser):
     gps = parser.add_argument_group('GPS', 'GPS data to display')
     gps.add_argument('--show-gps', dest='disp_gps', action='store_true',
                      help='Show UNR GPS location within the coverage.')
+    gps.add_argument('--mask-gps', dest='mask_gps', action='store_true',
+                     help='Mask out GPS stations not coincident with valid data pixels')
     gps.add_argument('--gps-label', dest='disp_gps_label', action='store_true',
                      help='Show GPS site name')
-    gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los'},
+    gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los', 'horz', 'vert'},
                      help='Plot GPS in color indicating deformation velocity direction')
     gps.add_argument('--gps-redo', dest='gps_redo', action='store_true',
                      help='Re-calculate GPS observations in LOS direction, instead of read from existing CSV file.')
     gps.add_argument('--ref-gps', dest='ref_gps_site', type=str, help='Reference GPS site')
 
     gps.add_argument('--gps-start-date', dest='gps_start_date', type=str, metavar='YYYYMMDD',
-                     help='start date of GPS data, default is date of the 1st SAR acquisiton')
+                     help='start date of GPS data, default is date of the 1st SAR acquisition')
     gps.add_argument('--gps-end-date', dest='gps_end_date', type=str, metavar='YYYYMMDD',
-                     help='start date of GPS data, default is date of the last SAR acquisiton')
+                     help='start date of GPS data, default is date of the last SAR acquisition')
+    gps.add_argument('--horz-az','--hz-az', dest='horz_az_angle', type=float, default=-90.,
+                     help='Azimuth angle (anti-clockwise from the north) of the horizontal movement in degrees\n'
+                             'E.g.: -90. for east  direction [default]\n'
+                             '       0.  for north direction\n'
+                             'Set to the azimuth angle of the strike-slip fault to show the fault-parallel displacement.')
     return parser
 
 

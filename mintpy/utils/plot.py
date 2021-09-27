@@ -1005,6 +1005,18 @@ def prepare_dem_background(dem, inps=None, print_msg=True):
             print(('show contour in step of {} m '
                    'with smoothing factor of {}').format(inps.dem_contour_step,
                                                          inps.dem_contour_smooth))
+    # masking
+    if inps and inps.mask_dem:
+        if inps.msk.shape == dem_contour.shape:
+            if print_msg:
+                print('mask DEM to be consistent with valid data coverage')
+            if dem_shade is not None:
+                dem_shade[inps.msk == 0] = np.nan
+            if dem_contour is not None:
+                dem_contour[inps.msk == 0] = np.nan
+        else:
+            print('WARNING: DEM has different size than mask, ignore --mask-dem and continue.')
+
     return dem_shade, dem_contour, dem_contour_sequence
 
 
@@ -1099,18 +1111,33 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     atr['UNIT'] = 'm'
     unit_fac = scale_data2disp_unit(metadata=atr, disp_unit=inps.disp_unit)[2]
 
-    if not inps.gps_start_date:
-        inps.gps_start_date = metadata.get('START_DATE', None)
+    start_date = inps.gps_start_date if inps.gps_start_date else metadata.get('START_DATE', None)
+    end_date = inps.gps_end_date if inps.gps_end_date else metadata.get('END_DATE', None)
 
-    if not inps.gps_end_date:
-        inps.gps_end_date = metadata.get('END_DATE', None)
+    # query for GNSS stations
+    site_names, site_lats, site_lons = gps.search_gps(SNWE, start_date, end_date)
+    if site_names.size == 0:
+        raise ValueError('No GNSS found within {} during {} - {}!'.format(SNWE, start_date, end_date))
 
-    site_names, site_lats, site_lons = gps.search_gps(SNWE, inps.gps_start_date, inps.gps_end_date)
+    # mask out stations not coincident with InSAR data
+    if inps.mask_gps and inps.msk is not None:
+        msk = inps.msk if inps.msk.ndim == 2 else np.prod(inps.msk, axis=-1)
+        coord = coordinate(metadata)
+        site_ys, site_xs = coord.geo2radar(site_lats, site_lons)[0:2]
+        flag = msk[site_ys, site_xs] != 0
+        # update station list
+        site_names = site_names[flag]
+        site_lats = site_lats[flag]
+        site_lons = site_lons[flag]
+        # check
+        if site_names.size == 0:
+            raise ValueError('No GNSS left after --mask-gps!')
+
     if inps.ref_gps_site and inps.ref_gps_site not in site_names:
         raise ValueError('input reference GPS site "{}" not available!'.format(inps.ref_gps_site))
 
     k = metadata['FILE_TYPE']
-    if inps.gps_component and k not in ['velocity', 'timeseries']:
+    if inps.gps_component and k not in ['velocity', 'timeseries', 'displacement']:
         inps.gps_component = None
         vprint('WARNING: --gps-comp is not implemented for {} file yet, set --gps-comp = None and continue'.format(k))
 
@@ -1119,31 +1146,32 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         vprint('-'*30)
         msg = 'plotting GPS '
         msg += 'velocity' if k == 'velocity' else 'displacement'
-        msg += ' in LOS direction'
+        msg += ' in {} direction'.format(inps.gps_component)
+        msg += ' with respect to {} ...'.format(inps.ref_gps_site) if inps.ref_gps_site else ' ...'
         vprint(msg)
         vprint('number of available GPS stations: {}'.format(len(site_names)))
-        vprint('start date: {}'.format(inps.gps_start_date))
-        vprint('end   date: {}'.format(inps.gps_end_date))
+        vprint('start date: {}'.format(start_date))
+        vprint('end   date: {}'.format(start_date))
         vprint('components projection: {}'.format(inps.gps_component))
 
         # get GPS LOS observations
+        # save absolute value to support both spatially relative and absolute comparison
+        # without compromising the re-usability of the CSV file
         site_obs = gps.get_gps_los_obs(
             insar_file=inps.file,
             site_names=site_names,
-            start_date=inps.gps_start_date,
-            end_date=inps.gps_end_date,
+            start_date=start_date,
+            end_date=end_date,
             gps_comp=inps.gps_component,
+            horz_az_angle=inps.horz_az_angle,
             print_msg=print_msg,
-            redo=inps.gps_redo,
-        )
+            redo=inps.gps_redo)
 
         # reference GPS
         if inps.ref_gps_site:
-            vprint('referencing all GPS LOS observations to site: {}'.format(inps.ref_gps_site))
             ref_ind = site_names.tolist().index(inps.ref_gps_site)
             # plot label of the reference site
-            ax.annotate(site_names[ref_ind], xy=(site_lons[ref_ind], site_lats[ref_ind]),
-                        fontsize=inps.font_size)
+            ax.annotate(site_names[ref_ind], xy=(site_lons[ref_ind], site_lats[ref_ind]), fontsize=inps.font_size)
             # update value
             ref_val = site_obs[ref_ind]
             if not np.isnan(ref_val):
@@ -1154,7 +1182,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
 
         # plot
         for lat, lon, obs in zip(site_lats, site_lons, site_obs):
-            color = cmap( (obs - vmin) / (vmax - vmin) ) if obs else 'none'
+            color = cmap( (obs - vmin) / (vmax - vmin) ) if not np.isnan(obs) else 'none'
             ax.scatter(lon, lat, color=color, s=marker_size**2, edgecolors='k', zorder=10)
 
     else:
@@ -1165,8 +1193,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     # plot GPS label
     if inps.disp_gps_label:
         for i in range(len(site_names)):
-            ax.annotate(site_names[i], xy=(site_lons[i], site_lats[i]),
-                        fontsize=inps.font_size)
+            ax.annotate(site_names[i], xy=(site_lons[i], site_lats[i]), fontsize=inps.font_size)
 
     return ax
 
@@ -1274,30 +1301,39 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
     # Calculate scaling factor  - 1
     # phase unit - length / angle
     if data_unit[0].endswith('m'):
-        if   disp_unit[0] == 'mm': scale *= 1000.0
-        elif disp_unit[0] == 'cm': scale *= 100.0
-        elif disp_unit[0] == 'dm': scale *= 10.0
-        elif disp_unit[0] == 'm' : scale *= 1.0
-        elif disp_unit[0] == 'km': scale *= 1/1000.0
+        if   disp_unit[0] == 'mm':  scale *= 1000.0
+        elif disp_unit[0] == 'cm':  scale *= 100.0
+        elif disp_unit[0] == 'dm':  scale *= 10.0
+        elif disp_unit[0] == 'm' :  scale *= 1.0
+        elif disp_unit[0] == 'km':  scale *= 0.001
+        elif disp_unit[0] in ['in','inch']:  scale *= 39.3701
+        elif disp_unit[0] in ['ft','foot']:  scale *= 3.28084
+        elif disp_unit[0] in ['yd','yard']:  scale *= 1.09361
+        elif disp_unit[0] in ['mi','mile']:  scale *= 0.000621371
         elif disp_unit[0] in ['radians','radian','rad','r']:
-            range2phase = -(4*np.pi) / float(metadata['WAVELENGTH'])
+            range2phase = -4. * np.pi / float(metadata['WAVELENGTH'])
             scale *= range2phase
         else:
             print('Unrecognized display phase/length unit:', disp_unit[0])
             pass
 
-        if   data_unit[0] == 'mm': scale *= 0.001
-        elif data_unit[0] == 'cm': scale *= 0.01
-        elif data_unit[0] == 'dm': scale *= 0.1
-        elif data_unit[0] == 'km': scale *= 1000.
+        # if stored data unit is not meter
+        if   data_unit[0] == 'mm':  scale *= 0.001
+        elif data_unit[0] == 'cm':  scale *= 0.01
+        elif data_unit[0] == 'dm':  scale *= 0.1
+        elif data_unit[0] == 'km':  scale *= 1000.
 
     elif data_unit[0] == 'radian':
         phase2range = -float(metadata['WAVELENGTH']) / (4*np.pi)
-        if   disp_unit[0] == 'mm': scale *= phase2range * 1000.0
-        elif disp_unit[0] == 'cm': scale *= phase2range * 100.0
-        elif disp_unit[0] == 'dm': scale *= phase2range * 10.0
-        elif disp_unit[0] == 'm' : scale *= phase2range * 1.0
-        elif disp_unit[0] == 'km': scale *= phase2range * 1/1000.0
+        if   disp_unit[0] == 'mm':  scale *= phase2range * 1000.0
+        elif disp_unit[0] == 'cm':  scale *= phase2range * 100.0
+        elif disp_unit[0] == 'dm':  scale *= phase2range * 10.0
+        elif disp_unit[0] == 'm' :  scale *= phase2range * 1.0
+        elif disp_unit[0] == 'km':  scale *= phase2range * 1/1000.0
+        elif disp_unit[0] in ['in','inch']:  scale *= phase2range * 39.3701
+        elif disp_unit[0] in ['ft','foot']:  scale *= phase2range * 3.28084
+        elif disp_unit[0] in ['yd','yard']:  scale *= phase2range * 1.09361
+        elif disp_unit[0] in ['mi','mile']:  scale *= phase2range * 0.000621371
         elif disp_unit[0] in ['radians','radian','rad','r']:
             pass
         else:

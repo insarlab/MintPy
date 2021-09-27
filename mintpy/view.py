@@ -156,7 +156,10 @@ def cmd_line_parse(iargs=None):
     if inps.lalo_step:
         inps.lalo_label = True
     if inps.zero_mask:
-        inps.mask_file = 'no'
+        # turn OFF default mask file detection for --zero-mask
+        # extra manual mask file is still supported
+        if not inps.mask_file:
+            inps.mask_file = 'no'
 
     if not inps.disp_whitespace:
         inps.disp_axis = False
@@ -172,7 +175,7 @@ def cmd_line_parse(iargs=None):
     geo_opt_names = list(set(geo_opt_names) & set(iargs))
     if geo_opt_names and 'Y_FIRST' not in readfile.read_attribute(inps.file).keys():
         for opt_name in geo_opt_names:
-            print('WARNING: {} is NOT supported for files in radar-coordinate, ignore it and continue.'.format(opt_name))
+            print(f'WARNING: {opt_name} is NOT supported for files in radar-coordinate, ignore it and continue.')
 
     # verbose print using --noverbose option
     global vprint
@@ -247,10 +250,10 @@ def update_inps_with_file_metadata(inps, metadata):
     inps.pix_box = coord.check_box_within_data_coverage(inps.pix_box)
     inps.geo_box = coord.box_pixel2geo(inps.pix_box)
     # Out message
-    data_box = (0, 0, inps.width, inps.length)
-    vprint('data   coverage in y/x: '+str(data_box))
+    inps.data_box = (0, 0, inps.width, inps.length)
+    vprint('data   coverage in y/x: '+str(inps.data_box))
     vprint('subset coverage in y/x: '+str(inps.pix_box))
-    vprint('data   coverage in lat/lon: '+str(coord.box_pixel2geo(data_box)))
+    vprint('data   coverage in lat/lon: '+str(coord.box_pixel2geo(inps.data_box)))
     vprint('subset coverage in lat/lon: '+str(inps.geo_box))
     vprint('------------------------------------------------------------------------')
 
@@ -611,7 +614,8 @@ def plot_slice(ax, data, metadata, inps=None):
                     dem_row = coord_dem.lalo2yx(y, coord_type='lat') - dem_pix_box[1]
                     if 0 <= dem_col < dem_wid and 0 <= dem_row < dem_len:
                         h = dem[dem_row, dem_col]
-                        msg += ', h={:.0f}'.format(h)
+                        if not np.isnan(h):
+                            msg += ', h={:.0f}'.format(h)
                 # x/y
                 msg += ', x={:.0f}, y={:.0f}'.format(col+inps.pix_box[0],
                                                      row+inps.pix_box[1])
@@ -701,7 +705,8 @@ def plot_slice(ax, data, metadata, inps=None):
                 # DEM
                 if inps.dem_file:
                     h = dem[row, col]
-                    msg += ', h={:.0f} m'.format(h)
+                    if not np.isnan(h):
+                        msg += ', h={:.0f} m'.format(h)
                 # lat/lon
                 if geom_file:
                     msg += ', lat={:.4f}, lon={:.4f}'.format(lats[row, col], lons[row, col])
@@ -753,7 +758,7 @@ def plot_slice(ax, data, metadata, inps=None):
 
 
 def read_input_file_info(inps):
-    # File Baic Info
+    # File Basic Info
     atr = readfile.read_attribute(inps.file)
     msg = 'input file is '
     if not inps.file.endswith(('.h5', '.he5')):
@@ -1093,14 +1098,13 @@ def read_data4figure(i_start, i_end, inps, metadata):
         inps.disp_unit = None
 
     # mask
+    if inps.zero_mask:
+        vprint('masking pixels with zero value')
+        data = np.ma.masked_where(data == 0., data)
     if inps.msk is not None:
         vprint('masking data')
         msk = np.tile(inps.msk, (data.shape[0], 1, 1))
         data = np.ma.masked_where(msk == 0., data)
-
-    if inps.zero_mask:
-        vprint('masking pixels with zero value')
-        data = np.ma.masked_where(data == 0., data)
 
     # update display min/max
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
@@ -1410,6 +1414,7 @@ def prepare4multi_subplots(inps, metadata):
                                 xstep=inps.multilook_num,
                                 ystep=inps.multilook_num,
                                 print_msg=False)[0]
+
             (inps.dem_shade,
              inps.dem_contour,
              inps.dem_contour_seq) = pp.prepare_dem_background(dem=dem,
@@ -1578,6 +1583,14 @@ class viewer():
             if self.msk is not None:
                 vprint('masking data')
                 data = np.ma.masked_where(self.msk == 0., data)
+            else:
+                self.msk = np.ones(data.shape, dtype=np.bool_)
+            # update/save mask info
+            if np.ma.is_masked(data):
+                self.msk *= ~data.mask
+                self.msk *= ~np.isnan(data.data)
+            else:
+                self.msk *= ~np.isnan(data)
 
             # update data
             data, self = update_data_with_plot_inps(data, self.atr, self)
