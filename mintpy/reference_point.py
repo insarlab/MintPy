@@ -111,7 +111,6 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    
     atr = readfile.read_attribute(inps.file)
     if atr['FILE_TYPE'] != 'ifgramStack':
         # turn ON wirte_data for non-ifgramStack file by default
@@ -307,12 +306,12 @@ def reference_point_attribute(atr, y, x):
 
 ###############################################################
 def manual_select_reference_yx(data, inps, mask=None):
+    """Manually select reference point in row/column number.
+    Parameters: data : 2D np.ndarray, stack of input file
+                inps : namespace, with key 'REF_X' and 'REF_Y', which will be updated
+                mask : 2D np.ndarray
     """
-    Input: 
-        data4display : 2D np.array, stack of input file
-        inps    : namespace, with key 'REF_X' and 'REF_Y', which will be updated
-    """
-    import matplotlib.pyplot as plt
+    from matplotlib import pyplot as plt
     print('\nManual select reference point ...')
     print('Click on a pixel that you want to choose as the refernce ')
     print('    pixel in the time-series analysis;')

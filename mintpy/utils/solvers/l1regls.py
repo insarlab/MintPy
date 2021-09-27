@@ -13,7 +13,7 @@
 
 
 from cvxopt import matrix, spdiag, mul, div, sqrt, normal, setseed
-from cvxopt import blas, lapack, solvers 
+from cvxopt import blas, lapack, solvers
 import math
 
 
@@ -164,5 +164,5 @@ def test():
     A = normal(m,n)
     b = normal(m)
     x = l1regls(A, b)
-    return
+    return x
 

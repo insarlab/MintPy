@@ -138,7 +138,6 @@ def read_template2inps(template_file, inps=None):
     """Read input template options into Namespace inps"""
     if not inps:
         inps = cmd_line_parse()
-    inpsDict = vars(inps)
     print('read options from template file: '+os.path.basename(template_file))
     inps.template = readfile.read_template(inps.template_file)
     inps.template = ut.check_template_auto_value(inps.template)

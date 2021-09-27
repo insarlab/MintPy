@@ -9,8 +9,6 @@
 
 
 import os
-import sys
-import re
 import time
 import itertools
 import datetime as dt

@@ -326,7 +326,7 @@ class insar_vs_gps:
             insar_date = site['insar_datetime']
             comm_dates = np.array(sorted(list(set(gps_date) & set(insar_date))))
             num_comm_date = len(comm_dates)
-        
+
             # get displacement at common dates
             comm_dis_insar = np.zeros(num_comm_date, np.float32)
             comm_dis_gps   = np.zeros(num_comm_date, np.float32)

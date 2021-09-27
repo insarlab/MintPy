@@ -14,10 +14,10 @@ import numpy as np
 
 from mintpy.utils import readfile, ptime
 from mintpy.objects import (
-    giantIfgramStack, 
-    giantTimeseries, 
-    ifgramStack, 
-    timeseries, 
+    giantIfgramStack,
+    giantTimeseries,
+    ifgramStack,
+    timeseries,
     HDFEOS,
 )
 
@@ -226,11 +226,8 @@ def print_slice_list(fname, disp_num=False, print_msg=False):
     """Print slice info of file"""
     slice_list = readfile.get_slice_list(fname)
     if print_msg:
-        for i in range(len(slice_list)):
-            if disp_num:
-                print('{}\t{}'.format(slice_list[i], i))
-            else:
-                print(slice_list[i])
+        for i, slice_name in range(len(slice_list)):
+            print(f'{slice_name}\t{i}' if disp_num else slice_name)
     return slice_list
 
 

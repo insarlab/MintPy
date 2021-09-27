@@ -10,13 +10,8 @@ import os
 import sys
 import glob
 import argparse
-import numpy as np
-from mintpy.utils import (
-    ptime,
-    readfile,
-    writefile,
-    isce_utils,
-)
+from mintpy.utils import ptime, readfile, writefile, isce_utils
+
 
 
 #########################################################################

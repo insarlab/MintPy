@@ -473,7 +473,7 @@ def get_delay_timeseries(inps, atr):
         temp_files =[fname for fname in [inps.dem_file,
                                          inps.inc_angle_file,
                                          inps.lat_file,
-                                         inps.lon_file] 
+                                         inps.lon_file]
                      if (fname is not None and 'pyaps' in fname)]
         if temp_files:
             print('delete temporary geometry files: {}'.format(temp_files))

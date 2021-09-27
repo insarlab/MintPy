@@ -276,14 +276,6 @@ def read_geometry(ts_file, geom_file=None, box=None):
     ts_obj = timeseries(ts_file)
     ts_obj.open(print_msg=False)
 
-    # size
-    if box:
-        num_row = box[3] - box[1]
-        num_col = box[2] - box[0]
-    else:
-        num_row = ts_obj.length
-        num_col = ts_obj.width
-
     # 0/2/3D geometry
     if geom_file:
         geom_obj = geometry(geom_file)

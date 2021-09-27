@@ -780,8 +780,8 @@ class platformTrack:
                 width.append(self.pairs[pair].width)
                 length.append(self.pairs[pair].length)
 
-        length = median(length)
-        width = median(width)
+        length = np.median(length)
+        width = np.median(width)
         return pairs2, length, width
 
     def getSize(self):

@@ -12,7 +12,6 @@ import getopt
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
 
 def usage():
@@ -97,7 +96,6 @@ def check_st_in_box(x, y, x0, y0, x1, y1, X0, Y0, X1, Y1):
     xx = [xx3, xx4]
     xx.sort()
     if y >= yy[0] and y <= yy[1] and x >= xx[0] and x <= xx[1]:
-
         Check_result = 'True'
     else:
         Check_result = 'False'
@@ -122,7 +120,6 @@ def check_st_in_box2(x, y, x0, y0, x1, y1, X0, Y0, X1, Y1):
     d4 = dist_point_from_line(m4, c4, x, y, 1, 1)
 
     if np.round(d1+d2) == np.round(D2) and np.round(d3+d4) == np.round(D1):
-
         Check_result = 'True'
     else:
         Check_result = 'False'
@@ -279,8 +276,6 @@ def get_lat_lon(h5file):
     ullat = float(h5file[k[0]].attrs['Y_FIRST'])
     lon_step = float(h5file[k[0]].attrs['X_STEP'])
     lat_step = float(h5file[k[0]].attrs['Y_STEP'])
-    lon_unit = h5file[k[0]].attrs['Y_UNIT']
-    lat_unit = h5file[k[0]].attrs['X_UNIT']
 
     #Length,Width = np.shape(insarData)
 
@@ -708,23 +703,7 @@ def main(argv=None):
         if os.path.isfile(gpsFile):
             insarData = z
             del z
-            fileName, fileExtension = os.path.splitext(gpsFile)
-            #print fileExtension
-            #if fileExtension =='.cmm4':
-            #    print 'reading cmm4 velocities'
-            #    Stations, gpsData = redGPSfile_cmm4(gpsFile)
-            #    idxRef=Stations.index(refStation)
-            #    Lon,Lat,Ve,Vn,Se,Sn,Corr,Hrate,H12=gpsData[idxRef,:]
-            #    Lon=Lon-360.0
-            #    Lat,Lon,Ve,Se,Vn,Sn,Corr,NumEpochs,timeSpan,AvgEpochTimes = gpsData[idxRef,:]
-            #    Vu=0
-            #else:
-            #    Stations, gpsData = redGPSfile(gpsFile)
-            #    idxRef=Stations.index(refStation)
-            #    Lat,Lon,Vn,Ve,Sn,Se,Corr,Vu,Su = gpsData[idxRef,:]
-
-            Stations, Lat, Lon, Ve, Se, Vn, Sn = readGPSfile(
-                gpsFile, gps_source)
+            Stations, Lat, Lon, Ve, Se, Vn, Sn = readGPSfile(gpsFile, gps_source)
             idxRef = Stations.index(refStation)
             Length, Width = np.shape(insarData)
             lat, lon, lat_step, lon_step = get_lat_lon(h5file)
@@ -738,7 +717,6 @@ def main(argv=None):
                     insarData = insarData - insarData[IDYref][IDXref]
 
                 else:
-
                     print(""" 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       
@@ -855,8 +833,7 @@ def main(argv=None):
                         gx, gy, x0, y0, x1, y1, X0, Y0, X1, Y1)
 
                 if check_result == 'True':
-                    check_result2 = check_st_in_box2(
-                        gx, gy, x0, y0, x1, y1, X0, Y0, X1, Y1)
+                    check_st_in_box2(gx, gy, x0, y0, x1, y1, X0, Y0, X1, Y1)
                     GPS_in_bound_st.append(GPS_station[i])
                     GPS_in_bound.append(GPS[i])
                     GPSxx.append(GPSx[i])

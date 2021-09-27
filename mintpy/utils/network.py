@@ -13,7 +13,7 @@ import itertools
 import h5py
 import numpy as np
 from scipy import sparse
-from matplotlib import dates as mdates, pyplot as plt
+from matplotlib import pyplot as plt
 from matplotlib.tri import Triangulation
 from mintpy.objects import ifgramStack, sensor
 from mintpy.utils import ptime, readfile
@@ -363,11 +363,6 @@ def threshold_doppler_overlap(date12_list, date_list, dop_list, bandwidth_az, do
         m_dates = [date12.split('-')[0] for date12 in date12_list]
         s_dates = [date12.split('-')[1] for date12 in date12_list]
         date_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
-        if not len(date_list) == len(pbase_list):
-            print('ERROR: number of existing dates is not equal to number of perp baseline!')
-            print('date list is needed for threshold filtering!')
-            print('skip filtering.')
-            return date12_list
     date6_list = ptime.yymmdd(date_list)
 
     # Threshold
@@ -587,7 +582,7 @@ def select_pairs_sequential(date_list, num_conn=2, date_format=None):
     Parameters: date_list   - list of str for date
                 num_conn    - int, number of sequential connections
                 date_format - str / None, output date format
-    Returns:    date12_list - list of str for date12 
+    Returns:    date12_list - list of str for date12
     """
 
     date_list = sorted(date_list)

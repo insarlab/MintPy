@@ -98,8 +98,8 @@ def manual_offset_estimate(mat1, mat2):
 
     # Calculate the Offset - Difference
     # offset=V2[y00:y11,x00:x11]-V2[y0:y1,x0:x1]
-    offset = (np.nansum(V2[y00:y11, x00:x11]) / np.sum(np.isfinite(V2[y00:y11, x00:x11])) 
-              - np.nansum(V1[y0:y1, x0:x1]) / np.sum(np.isfinite(V1[y0:y1, x0:x1])))
+    offset = (  np.nansum(mat2[y00:y11, x00:x11]) / np.sum(np.isfinite(mat2[y00:y11, x00:x11])) 
+              - np.nansum(mat1[y0:y1, x0:x1]) / np.sum(np.isfinite(mat1[y0:y1, x0:x1])))
 
     return offset
 
@@ -228,7 +228,7 @@ def plot_stitch(mat11, mat22, mat, mat_diff, out_fig=None, disp_fig=False):
     plt.tight_layout()
 
     # output
-    plt.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=150)
+    fig.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=150)
     print('save figure to file: {}'.format(out_fig))
 
     if disp_fig:

@@ -13,7 +13,6 @@ import os
 import sys
 import time
 import argparse
-import h5py
 import numpy as np
 from scipy import linalg
 

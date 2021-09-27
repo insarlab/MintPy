@@ -188,9 +188,7 @@ def get_unavco_mission_name(meta_dict):
 # Envisat    : SNR = 19.5 dB from Table 3.3 in Guarnieri (2013)
 # Sentinel-1 : NESZ = -22 dB from Table 1 in https://sentinels.copernicus.eu/web/sentinel/
 #     user-guides/sentinel-1-sar/acquisition-modes/interferometric-wide-swath
-# JERS       : SNR = 14 dB from https://directory.eoportal.org/web/eoportal/satellite-missions/j/jers-1 
-# 
-#
+# JERS       : SNR = 14 dB from https://directory.eoportal.org/web/eoportal/satellite-missions/j/jers-1
 
 
 ##--------------------  X-band  --------------------##

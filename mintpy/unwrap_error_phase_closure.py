@@ -568,7 +568,10 @@ def main(iargs=None):
                                                                    dsName=inps.datasetNameIn,
                                                                    update_mode=inps.update_mode)
         # for debug
-        #plot_num_triplet_with_nonzero_integer_ambiguity(out_file)
+        debug_mode = False
+        if debug_mode:
+            plot_num_triplet_with_nonzero_integer_ambiguity(out_file)
+
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
     return

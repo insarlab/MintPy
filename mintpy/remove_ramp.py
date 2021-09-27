@@ -35,22 +35,22 @@ def create_parser():
 
     parser.add_argument('file', help='File for ramp removal')
     parser.add_argument('-m', '--mask', dest='mask_file', default='maskTempCoh.h5',
-                        help='mask for pixels used in ramp estimation\n' +
-                             'default - maskTempCoh.h5\n' +
+                        help='mask for pixels used in ramp estimation\n'
+                             'default - maskTempCoh.h5\n'
                              'no - use the whole area')
     parser.add_argument('-s', dest='surface_type', default='linear', choices=RAMP_LIST,
                         help='type of surface/ramp to remove, linear by default')
-    parser.add_argument('-d','--dset', dest='dset', 
-                        help='dataset name to be derampped in ifgramStack file\n' + 
-                             'e.g.: unwrapPhase\n' +
+    parser.add_argument('-d','--dset', dest='dset',
+                        help='dataset name to be derampped in ifgramStack file\n'
+                             'e.g.: unwrapPhase\n'
                              '      unwrapPhase_bridging')
     parser.add_argument('-o', '--outfile', help='Output file name.')
     parser.add_argument('--save-ramp-coeff', dest='save_ramp_coeff', action='store_true',
                         help='Save the estimated ramp coefficients into text file.')
     parser.add_argument('--update', dest='update_mode', action='store_true',
-                        help='Enable update mode, and skip inversion if:\n'+
-                             '1) output file already exists, readable '+
-                             'and newer than input file\n' +
+                        help='Enable update mode, and skip inversion if:\n'
+                             '1) output file already exists, readable '
+                             'and newer than input file\n'
                              '2) all configuration parameters are the same.')
     return parser
 

@@ -17,7 +17,7 @@ from mintpy import view
 ################################# SelectFromCollection class begin ########################################
 class SelectFromCollection(object):
     """Select indices from a matplotlib collection using `PolygonSelector`.
-    
+
     Selected pixels within the polygon is marked as True and saved in the 
     member variable self.mask, in the same size as input AxesImage object
     with all the other pixels marked as False.
@@ -34,7 +34,7 @@ class SelectFromCollection(object):
     --------
     import matplotlib.pyplot as plt
     from mintpy.utils import readfile, plot as pp
-    
+
     fig, ax = plt.subplots()
     data = readfile.read('velocity.h5', datasetName='velocity')[0]
     im = ax.imshow(data)
@@ -42,7 +42,7 @@ class SelectFromCollection(object):
     selector = pp.SelectFromCollection(ax, im)
     plt.show()
     selector.disconnect()
-    
+
     plt.figure()
     plt.imshow(selector.mask)
     plt.show()

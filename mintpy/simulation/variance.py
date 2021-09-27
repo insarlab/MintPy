@@ -49,7 +49,7 @@ def get_distance(lat, lon, i):
     return dist
 
 
-def structure_function(data, lat, lon, step=5e3, min_pair_num=100e3, print_msg=True):    
+def structure_function(data, lat, lon, step=5e3, min_pair_num=100e3, print_msg=True):
     num_sample = len(data)
     distance = np.zeros((num_sample**2))
     variance = np.zeros((num_sample**2))
