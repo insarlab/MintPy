@@ -1487,6 +1487,10 @@ def prep_slice(cmd, auto_fig=False):
     # masking
     if inps.zero_mask:
         data = np.ma.masked_where(data == 0., data)
+        # update or initiate mask
+        if inps.msk is None:
+            inps.msk = np.ones(data.shape, dtype=np.int8)
+        inps.msk[~np.isnan(data)] = 0
     if inps.msk is not None:
         data = np.ma.masked_where(inps.msk == 0., data)
 
