@@ -94,8 +94,9 @@ class coordinate:
         coord_type = coord_type.lower()
         coord_out = []
         for i in range(len(coord_in)):
+            # plus 0.01 to be more robust in practice
             if coord_type.startswith('lat'):
-                coord = int(np.floor((coord_in[i] - self.lat0) / self.lat_step + 0.01)) #plus 0.01 to be more robust in practice
+                coord = int(np.floor((coord_in[i] - self.lat0) / self.lat_step + 0.01))
             elif coord_type.startswith('lon'):
                 coord = int(np.floor((coord_in[i] - self.lon0) / self.lon_step + 0.01))
             else:

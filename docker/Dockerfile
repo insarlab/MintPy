@@ -5,7 +5,7 @@ FROM debian:stretch
 LABEL \
     "Description"="Container for open source time series InSAR processing with Mintpy" \
     "Github Source"="https://github.com/insarlab/MintPy/" \
-    "Installation"="https://github.com/insarlab/MintPy/blob/master/docs/installation.md" \
+    "Installation"="https://github.com/insarlab/MintPy/blob/main/docs/installation.md" \
     "Dockerfile Author"="Andre Theron" \
     "Email"="andretheronsa@gmail.com"
 
@@ -22,7 +22,7 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Change default shell from dash to bash permanently
-RUN ln -sf bash /bin/sh
+SHELL ["/bin/bash", "-c"]
 
 # Prepare build time environment for conda and mintpy
 ARG MINTPY_HOME=/home/python/MintPy
@@ -34,7 +34,7 @@ ARG WORK_DIR=/home/work/
 ENV MINTPY_HOME=${MINTPY_HOME}
 ENV PYTHON3DIR=${PYTHON3DIR}
 ENV PYAPS_HOME=${PYAPS_HOME}
-ENV PATH=${MINTPY_HOME}/mintpy:${MINTPY_HOME}/sh:${PYTHON3DIR}/bin:${PATH}
+ENV PATH=${MINTPY_HOME}/mintpy:${PYTHON3DIR}/bin:${PATH}
 ENV PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
 ENV PROJ_LIB=${PYTHON3DIR}/share/proj
 
@@ -45,7 +45,7 @@ WORKDIR /home/python
 RUN git clone https://github.com/insarlab/MintPy.git
 
 # Pull and config PyAPS
-RUN git clone https://github.com/yunjunz/pyaps3.git PyAPS
+RUN git clone https://github.com/yunjunz/PyAPS.git
 
 # Install miniconda
 RUN wget https://repo.continuum.io/miniconda/Miniconda3-4.5.4-Linux-x86_64.sh && \
@@ -59,10 +59,6 @@ RUN ${PYTHON3DIR}/bin/conda config --add channels conda-forge && \
 
 # Install pykml
 RUN ${PYTHON3DIR}/bin/pip install git+https://github.com/yunjunz/pykml.git
-
-# Install DASK - not tested yet
-#RUN mkdir -p /home/.config/dask && \
-#    cp ${MINTPY_HOME}/mintpy/defaults/dask_mintpy.yaml /home/.config/dask/dask_mintpy.yaml
 
 # Set working directory ENV - map a host data volume to this using "docker build . -t mintpy && docker run mintpy -v /host/path/to/data:/home/work/"
 RUN mkdir -p ${WORK_DIR}

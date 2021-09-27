@@ -151,7 +151,7 @@ class connectComponent:
         self.length, self.width = self.conncomp.shape
 
 
-    def label(self, min_area=2.5e3, erosion_size=5, print_msg=False): 
+    def label(self, min_area=2.5e3, erosion_size=5, print_msg=False):
         """ Label the connected components
         Returns: self.labelImg   - 2D np.ndarray in int64 to mask areas to be corrected
                  self.labelBound - 2D np.ndarray in uint8 for label boundaries to find bridges
@@ -358,7 +358,7 @@ class connectComponent:
 
     def plot_bridge(self, ax, cmap='jet', radius=50):
         # label background
-        im = ax.imshow(self.labelImg, cmap=cmap, interpolation='nearest')
+        ax.imshow(self.labelImg, cmap=cmap, interpolation='nearest')
         # bridges
         for bridge in self.bridges:
             ax.plot([bridge['x0'], bridge['x1']],

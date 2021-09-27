@@ -7,7 +7,6 @@
 
 
 import os
-import re
 import sys
 import argparse
 import datetime as dt
@@ -172,7 +171,6 @@ def metadata_mintpy2unavco(meta_in, dateList):
     unavco_meta['beam_swath'] = int(meta.get('beam_swath', '0'))
 
     # relative_orbit, or track number
-    #atr_dict['relative_orbit'] = int(re.match(r'(\w+)T([0-9+])',atr['PROJECT_NAME']).groups()[1])
     unavco_meta['relative_orbit'] = int(meta['relative_orbit'])
 
     # processing info

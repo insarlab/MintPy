@@ -240,8 +240,8 @@ def asc_desc_files2horz_vert(fname1, fname2, dsname=None, azimuth=-90):
 
         # get box2read for the current file
         coord = ut.coordinate(atr)
-        [x0, x1] = coord.lalo2yx([west,  east],  coord_type='lon')
-        [y0, y1] = coord.lalo2yx([north, south], coord_type='lat')
+        x0 = coord.lalo2yx(west, coord_type='lon')
+        y0 = coord.lalo2yx(north, coord_type='lat')
         box = (x0, y0, x0 + width, y0 + length)
 
         # read
@@ -288,7 +288,6 @@ def write_to_one_file(outfile, dH, dV, atr, dLOS_list, atr_list, ref_file=None):
     """Write all datasets into one HDF5 file"""
 
     print('write all datasets into {}'.format(outfile))
-    length, width = dH.shape
     dsDict = {}
     for i in range(len(atr_list)):
         # auto dataset name

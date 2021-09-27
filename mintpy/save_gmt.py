@@ -46,7 +46,7 @@ def cmd_line_parse(iargs=None):
         raise Exception('ERROR: input file is not geocoded.')
 
     if not inps.dset and atr['FILE_TYPE'] in ['timeseries', 'ifgramStack']:
-        raise Exception("No dataset input, it's required for {} file".format(k))
+        raise Exception("No dataset input, it's required for {} file".format(atr['FILE_TYPE']))
     return inps
 
 

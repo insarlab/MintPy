@@ -10,7 +10,7 @@ import os
 import sys
 import argparse
 import numpy as np
-from osgeo import gdal, ogr, osr
+from osgeo import gdal, osr
 from mintpy.utils import readfile, utils0 as ut, plot as pp
 
 

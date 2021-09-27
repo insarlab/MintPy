@@ -103,16 +103,16 @@ def get_ellpsoid_local_radius(xyz):
 
 
 def extract_snap_metadata(fname):
-    ''' read and extract attributes from a SNAP .dim file
+    '''read and extract attributes from a SNAP .dim file
     Parameters: fname - str, path of SNAP .dim file
     Returns:    atr   - dict, metadata
     '''
 
-    # Read XML and extract required vals - using basic file reader 
-    # xmltree or minidom might be better but this works    
+    # Read XML and extract required vals - using basic file reader
+    # xmltree or minidom might be better but this works
     with open(fname, 'r') as f:
         lines = f.readlines()
-        # use lists so that elements where there are more than one, only the first mention can be extracted - 
+        # use lists so that elements where there are more than one, only the first mention can be extracted
         # Usually the first mention (list item 0) is the final subsetted/geocoded product metadata
         bp, azimuth_looks, range_looks, az_pixel, rg_pixel, dates, x, y, z = [], [], [], [], [], [], [], [], []
         for line in lines:
@@ -156,7 +156,7 @@ def extract_snap_metadata(fname):
             if "last_far_long" in line:
                 last_far_long = line.split(">")[1].split("<")[0]
             if "ASCENDING or DESCENDING" in line:
-                direction = line.split(">")[1].split("<")[0]            
+                direction = line.split(">")[1].split("<")[0]
             if "azimuth_looks" in line:
                 azimuth_looks.append(line.split(">")[1].split("<")[0])
             if "range_looks" in line:

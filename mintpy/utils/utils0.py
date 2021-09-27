@@ -366,7 +366,7 @@ def get_lat_lon_rdc(meta):
 def azimuth2heading_angle(az_angle):
     """Convert azimuth angle from ISCE los.rdr band2 into satellite orbit heading angle
 
-    ISCE-2 los.* file band2 is azimuth angle of LOS vector from ground target to the satellite 
+    ISCE-2 los.* file band2 is azimuth angle of LOS vector from ground target to the satellite
         measured from the north in anti-clockwise as positive
 
     Below are typical values in deg for satellites with near-polar orbit:
@@ -537,7 +537,7 @@ def get_largest_conn_component(mask_in, min_num_pixel=1e4, display=False):
     Returns:    mask_out : 2D np.array in np.bool_ format
     """
     mask_out = np.zeros(mask_in.shape, np.bool_)
-    labels, n_features = ndimage.label(mask_in)
+    labels = ndimage.label(mask_in)[0]
     num_pixel = np.max(np.bincount(labels.flatten())[1:])
     if num_pixel < min_num_pixel:
         return mask_out
@@ -651,8 +651,7 @@ def which(program):
     def is_exe(fpath):
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
-    fpath, fname = os.path.split(program)
-    if fpath:
+    if os.path.split(program)[0]:
         if is_exe(program):
             return program
     else:

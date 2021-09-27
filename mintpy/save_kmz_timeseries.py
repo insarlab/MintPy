@@ -100,7 +100,7 @@ def get_all_file_paths(directory):
     file_paths = []
 
     # crawling through directory and subdirectories
-    for root, directories, files in os.walk(directory):
+    for root, _, files in os.walk(directory):
         for filename in files:
             # join the two strings in order to form the full filepath.
             filepath = os.path.join(root, filename)

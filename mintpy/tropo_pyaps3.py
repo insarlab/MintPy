@@ -677,7 +677,7 @@ def calc_delay_timeseries(inps):
 
             # check dataset size in space / time
             date_list = [str(re.findall('\d{8}', os.path.basename(i))[0]) for i in grib_files]
-            if (get_dataset_size(tropo_file) != get_dataset_size(geom_file) 
+            if (get_dataset_size(tropo_file) != get_dataset_size(geom_file)
                     or any(i not in timeseries(tropo_file).get_date_list() for i in date_list)):
                 flag = 'run'
                 print('2) output file does NOT have the same len/wid as the geometry file {} or does NOT contain all dates'.format(geom_file))

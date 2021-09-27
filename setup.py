@@ -7,7 +7,6 @@
 
 
 # Always prefer setuptools over distutils
-import os
 from setuptools import setup, find_packages
 
 

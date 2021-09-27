@@ -10,7 +10,8 @@
 
 import os
 import csv
-from datetime import datetime as dt
+import glob
+import datetime as dt
 import numpy as np
 from pyproj import Geod
 from urllib.request import urlretrieve
@@ -56,8 +57,8 @@ def search_gps(SNWE, start_date=None, end_date=None, site_list_file=None, min_nu
     site_names = txt_data[:, 0]
     site_lats, site_lons = txt_data[:, 1:3].astype(np.float32).T
     site_lons -= np.round(site_lons / (360.)) * 360.
-    t_start = np.array([dt.strptime(i, "%Y-%m-%d") for i in txt_data[:, 7].astype(str)])
-    t_end   = np.array([dt.strptime(i, "%Y-%m-%d") for i in txt_data[:, 8].astype(str)])
+    t_start = np.array([dt.datetime.strptime(i, "%Y-%m-%d") for i in txt_data[:, 7].astype(str)])
+    t_end   = np.array([dt.datetime.strptime(i, "%Y-%m-%d") for i in txt_data[:, 8].astype(str)])
     num_solution = txt_data[:, 10].astype(np.int16)
 
     # limit on space
@@ -202,9 +203,11 @@ def read_pos_file(fname):
     fcp = codecs.open(fname, encoding = 'cp1252')
     fc = np.loadtxt(fcp, skiprows=20, dtype=str, comments=('*','-DATA'))
 
-    dates = [dt(year=y, month=m, day=d) for y,m,d in zip(fc[:,0].astype(int),
-                                                         fc[:,1].astype(int),
-                                                         fc[:,2].astype(int))]
+    ys = fc[:,0].astype(int)
+    ms = fc[:,1].astype(int)
+    ds = fc[:,2].astype(int)
+    dates = [dt.datetime(year=y, month=m, day=d) for y,m,d in zip(ys, ms, ds)]
+
     X = fc[:,4].astype(np.float64).tolist()
     Y = fc[:,5].astype(np.float64).tolist()
     Z = fc[:,6].astype(np.float64).tolist()
@@ -237,8 +240,8 @@ def read_GSI_F3(gps_dir, site, start_date=None, end_date=None):
     Y = np.array(Y)
     Z = np.array(Z)
 
-    date0 = dt.strptime(start_date, "%Y%m%d")
-    date1 = dt.strptime(end_date, "%Y%m%d")
+    date0 = dt.datetime.strptime(start_date, "%Y%m%d")
+    date1 = dt.datetime.strptime(end_date, "%Y%m%d")
     flag = np.ones(X.shape, dtype=np.bool_)
     flag[dates < date0] = False
     flag[dates > date1] = False
@@ -362,7 +365,7 @@ class GPS:
             print('reading time and displacement in east/north/vertical direction')
         data = np.loadtxt(self.file, dtype=bytes, skiprows=1).astype(str)
 
-        self.dates = np.array([dt.strptime(i, "%y%b%d") for i in data[:, 1]])
+        self.dates = np.array([dt.datetime.strptime(i, "%y%b%d") for i in data[:, 1]])
         #self.dates = np.array([ptime.decimal_year2datetime(i) for i in data[:, 2]])
 
         (self.dis_e,
@@ -536,7 +539,7 @@ class GPS:
             horz_az_angle=horz_az_angle)[:2]
 
         # displacement -> velocity
-        date_list = [dt.strftime(i, '%Y%m%d') for i in dates]
+        date_list = [dt.datetime.strftime(i, '%Y%m%d') for i in dates]
         if len(date_list) > 2:
             A = time_func.get_design_matrix4time_func(date_list)
             self.velocity = np.dot(np.linalg.pinv(A), dis)[1]

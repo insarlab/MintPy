@@ -364,7 +364,7 @@ class DaskCluster:
             num_worker = int(num_worker)
 
             # if num_worker > num_core,
-            # then we assume that the user is not aware of the available resources 
+            # then we assume that the user is not aware of the available resources
             # and use max(num_core/2, 1) instead to be conservative.
             if num_worker > num_core:
                 print('\nWARNING: input number of worker: {} > available cores: {}'.format(num_worker, num_core))
