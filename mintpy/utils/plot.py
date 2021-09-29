@@ -1013,7 +1013,7 @@ def prepare_dem_background(dem, inps=None, print_msg=True):
 
     # masking
     if inps and inps.mask_dem and (dem_shade is not None or dem_contour is not None):
-        dem_shape = [x.shape[:2] for x in [dem_shade, dem_contour] if x is not None]
+        dem_shape = [x.shape[:2] for x in [dem_shade, dem_contour] if x is not None][0]
         if inps.msk.shape == dem_shape:
             if print_msg:
                 print('mask DEM to be consistent with valid data coverage')
