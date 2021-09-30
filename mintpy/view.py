@@ -1172,10 +1172,12 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
         # get title
         subplot_title = None
         if inps.key in timeseriesKeyNames or inps.dset[0].startswith('bperp'):
+            # support / for py2-mintpy
+            date_str = inps.dset[i].replace('/','-').split('-')[1]
             try:
-                subplot_title = dt.datetime.strptime(inps.dset[i].split('-')[1], '%Y%m%d').isoformat()[0:10]
+                subplot_title = dt.datetime.strptime(date_str, '%Y%m%d').isoformat()[0:10]
             except:
-                subplot_title = str(inps.dset[i])
+                subplot_title = date_str
 
         else:
             # dset info - name & index
