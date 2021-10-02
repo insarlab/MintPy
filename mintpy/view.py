@@ -1474,6 +1474,7 @@ def prep_slice(cmd, auto_fig=False):
                               datasetName=inps.ref_date,
                               box=inps.pix_box,
                               print_msg=False)[0]
+
     # reference in space for unwrapPhase
     if (inps.key in ['ifgramStack']
             and inps.dset[0].split('-')[0].startswith('unwrapPhase')
@@ -1484,11 +1485,20 @@ def prep_slice(cmd, auto_fig=False):
                                  box=(ref_x, ref_y, ref_x+1, ref_y+1),
                                  print_msg=False)[0]
         data[data != 0.] -= ref_data
+
     # masking
     if inps.zero_mask:
         data = np.ma.masked_where(data == 0., data)
     if inps.msk is not None:
         data = np.ma.masked_where(inps.msk == 0., data)
+    else:
+        inps.msk = np.ones(data.shape, dtype=np.bool_)
+    # update/save mask info
+    if np.ma.is_masked(data):
+        inps.msk *= ~data.mask
+        inps.msk *= ~np.isnan(data.data)
+    else:
+        inps.msk *= ~np.isnan(data)
 
     data, inps = update_data_with_plot_inps(data, atr, inps)
 

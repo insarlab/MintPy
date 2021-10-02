@@ -1010,9 +1010,11 @@ def prepare_dem_background(dem, inps=None, print_msg=True):
             print(('show contour in step of {} m '
                    'with smoothing factor of {}').format(inps.dem_contour_step,
                                                          inps.dem_contour_smooth))
+
     # masking
-    if inps and inps.mask_dem:
-        if inps.msk.shape == dem_contour.shape:
+    if inps and inps.mask_dem and (dem_shade is not None or dem_contour is not None):
+        dem_shape = [x.shape[:2] for x in [dem_shade, dem_contour] if x is not None][0]
+        if inps.msk.shape == dem_shape:
             if print_msg:
                 print('mask DEM to be consistent with valid data coverage')
             if dem_shade is not None:
