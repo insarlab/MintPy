@@ -577,7 +577,12 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
     if 'cbar_size'   not in p_dict.keys():  p_dict['cbar_size']   = '3%'
     if 'disp_cbar'   not in p_dict.keys():  p_dict['disp_cbar']   = True
     if 'colormap'    not in p_dict.keys():  p_dict['colormap']    = 'RdBu'
+    if 'colormap2'   not in p_dict.keys():  p_dict['colormap2']   = 'RdYlBu'
     if 'vlim'        not in p_dict.keys():  p_dict['vlim']        = [0.2, 1.0]
+    if 'tbColor'     not in p_dict.keys():  p_dict['tbColor']     = False
+    if 'pbColor'     not in p_dict.keys():  p_dict['pbColor']     = False
+    if 'tbvlim'      not in p_dict.keys():  p_dict['tbvlim']      = [0.0, 365.25]
+    if 'pbvlim'      not in p_dict.keys():  p_dict['pbvlim']      = [0.0, 180.0]
     if 'disp_title'  not in p_dict.keys():  p_dict['disp_title']  = True
     if 'disp_drop'   not in p_dict.keys():  p_dict['disp_drop']   = True
     if 'disp_legend' not in p_dict.keys():  p_dict['disp_legend'] = True
@@ -587,8 +592,12 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
     # support input colormap: string for colormap name, or colormap object directly
     if isinstance(p_dict['colormap'], str):
         cmap = ColormapExt(p_dict['colormap']).colormap
+        if p_dict['tbColor'] or p_dict['pbColor']:
+            cmap = ColormapExt(p_dict['colormap2']).colormap
     elif isinstance(p_dict['colormap'], mpl.colors.LinearSegmentedColormap):
         cmap = p_dict['colormap']
+        if p_dict['tbColor'] or p_dict['pbColor']:
+            cmap = p_dict['colormap2']
     else:
         raise ValueError('unrecognized colormap input: {}'.format(p_dict['colormap']))
 
@@ -634,6 +643,12 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
         data_max = max(cohList)
         disp_min = p_dict['vlim'][0]
         disp_max = p_dict['vlim'][1]
+        if p_dict['tbColor']:
+            disp_min, disp_max = p_dict['tbvlim']
+            p_dict['cbar_label'] = 'Temporal baseline [day]'
+        elif p_dict['pbColor']:
+            disp_min, disp_max = p_dict['pbvlim']
+            p_dict['cbar_label'] = 'Spatial baseline [m]'
         if print_msg:
             print('showing coherence')
             print('data range: {}'.format([data_min, data_max]))
@@ -670,9 +685,15 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
             x = np.array([dates[idx1], dates[idx2]])
             y = np.array([pbaseList[idx1], pbaseList[idx2]])
             if cohList is not None:
-                coh = cohList[date12List.index(date12)]
-                coh_norm = (coh - disp_min) / (disp_max - disp_min)
-                ax.plot(x, y, '--', lw=p_dict['linewidth'], alpha=transparency, c=cmap(coh_norm))
+                val = cohList[date12List.index(date12)]
+                if p_dict['tbColor']:
+                    val = tbase12[date12List.index(date12)]
+                    disp_min, disp_max = p_dict['tbvlim']
+                elif p_dict['pbColor']:
+                    val = pbase12[date12List.index(date12)]
+                    disp_min, disp_max = p_dict['pbvlim']
+                val_norm = (val - disp_min) / (disp_max - disp_min)
+                ax.plot(x, y, '-', lw=p_dict['linewidth'], alpha=transparency, c=cmap(val_norm))
             else:
                 ax.plot(x, y, '--', lw=p_dict['linewidth'], alpha=transparency, c='k')
 
@@ -684,9 +705,15 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
         x = np.array([dates[idx1], dates[idx2]])
         y = np.array([pbaseList[idx1], pbaseList[idx2]])
         if cohList is not None:
-            coh = cohList[date12List.index(date12)]
-            coh_norm = (coh - disp_min) / (disp_max - disp_min)
-            ax.plot(x, y, '-', lw=p_dict['linewidth'], alpha=transparency, c=cmap(coh_norm))
+            val = cohList[date12List.index(date12)]
+            if p_dict['tbColor']:
+                val = tbase12[date12List.index(date12)]
+                disp_min, disp_max = p_dict['tbvlim']
+            elif p_dict['pbColor']:
+                val = pbase12[date12List.index(date12)]
+                disp_min, disp_max = p_dict['pbvlim']
+            val_norm = (val - disp_min) / (disp_max - disp_min)
+            ax.plot(x, y, '-', lw=p_dict['linewidth'], alpha=transparency, c=cmap(val_norm))
         else:
             ax.plot(x, y, '-', lw=p_dict['linewidth'], alpha=transparency, c='k')
 

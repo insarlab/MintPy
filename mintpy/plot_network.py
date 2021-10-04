@@ -37,6 +37,7 @@ EXAMPLE = """example:
   plot_network.py inputs/ifgramStack.h5
   plot_network.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg --nodisplay   #Save figures to files without display
   plot_network.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg --show-kept   #Do not plot dropped ifgrams
+  plot_network.py inputs/ifgramStack.h5  --tb --tbv 0 365.25 -c2 RdYlBu_r  #Color lines by temporal baseline with -c2 cmap
   plot_network.py coherenceSpatialAvg.txt
 
   # offsetSNR
@@ -75,6 +76,19 @@ def create_parser():
 
     coh.add_argument('-v', '--vlim', nargs=2, type=float, default=(0.2, 1.0),
                      help='display range')
+
+    # Display baseline in the network plot
+    coh = parser.add_argument_group('Display Baseline', 'Color lines in the network plot with baseline instead of coherence')
+    coh.add_argument('--tb', '--tbase', dest='tbColor', action='store_true',
+                     help='color using temporal baseline')
+    coh.add_argument('--pb', '--pbase', dest='pbColor', action='store_true',
+                     help='color using perpendicular baseline')
+    coh.add_argument('--tbv', '--tbvlim', dest='tbvlim', nargs=2, type=float, default=(0, 365.25),
+                     help='display color range for temporal baseline [day]. (default: %(default)s)')
+    coh.add_argument('--pbv', '--pbvlim', dest='pbvlim', nargs=2, type=float, default=(0, 180.0),
+                     help='display color range for perpendicular baseline [meter]. (default: %(default)s)')
+    coh.add_argument('-c2', '--colormap2', dest='cmap_name2', default='RdYlBu_r',
+                     help='colormap name for the network display (baseline coloring). Default: %(default)s')
 
     # Figure  Setting
     fig = parser.add_argument_group('Figure', 'Figure settings for display')
@@ -233,6 +247,7 @@ def check_colormap(inps):
     # in case the manually input list is not in order
     inps.cmap_vlist = sorted(inps.cmap_vlist)
     inps.colormap = pp.ColormapExt(inps.cmap_name, vlist=inps.cmap_vlist).colormap
+    inps.colormap2 = pp.ColormapExt(inps.cmap_name2, vlist=inps.cmap_vlist).colormap
 
     return inps
 

@@ -20,7 +20,7 @@ from mintpy.utils import readfile, ptime, utils as ut, plot as pp
 TEMPLATE = get_template_content('residual_RMS')
 
 EXAMPLE = """example:
-  timeseries_rms.py  timeseriesResidual.h5 
+  timeseries_rms.py  timeseriesResidual.h5
   timeseries_rms.py  timeseriesResidual.h5  --template smallbaselineApp.cfg
   timeseries_rms.py  timeseriesResidual.h5  -m maskTempCoh.h5  --cutoff 3
 """
@@ -132,7 +132,7 @@ def analyze_rms(date_list, rms_list, inps):
     return inps
 
 
-def plot_rms_bar(ax, date_list, rms, cutoff=3., font_size=12, 
+def plot_rms_bar(ax, date_list, rms, cutoff=3., font_size=12,
                  tick_year_num=1, legend_loc='best',
                  disp_legend=True, disp_side_plot=True, disp_thres_text=False,
                  ylabel='Residual phase RMS [mm]'):
@@ -222,8 +222,8 @@ def main(iargs=None):
     (inps.rms_list,
      inps.date_list,
      inps.rms_file) = ut.get_residual_rms(inps.timeseries_file,
-                                          mask_file=inps.maskFile,
-                                          ramp_type=inps.deramp)
+                                         mask_file=inps.maskFile,
+                                         ramp_type=inps.deramp)
 
     analyze_rms(inps.date_list, inps.rms_list, inps)
     return
