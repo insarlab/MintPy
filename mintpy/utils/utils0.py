@@ -812,4 +812,17 @@ def most_common(L, k=1):
     return item_mm
 
 
+def is_number(string):
+    """Check string is a number.
+    Not using str.isnumeric() because it can not handle floating point nor negative sign.
+    Link: https://elearning.wsldp.com/python3/python-check-string-is-a-number/
+    Parameters: string - str, a string
+    Returns:    True/False
+    """
+    try:
+        float(string)
+        return True
+    except ValueError:
+        return False
+
 

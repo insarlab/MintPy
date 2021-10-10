@@ -721,7 +721,7 @@ def calc_delay_timeseries(inps):
         inps.lat, inps.lon = ut.get_lat_lon(geom_obj.metadata)
 
         # convert coordinates to lat/lon, e.g. from UTM for ASF HyPP3
-        if not geom_obj.metadata['Y_UNIT'].startswith('deg'):
+        if not geom_obj.metadata.get('Y_UNIT', 'degrees').startswith('deg'):
             inps.lat, inps.lon = ut.to_latlon(inps.atr['OG_FILE_PATH'], inps.lon, inps.lat)
 
     else:
