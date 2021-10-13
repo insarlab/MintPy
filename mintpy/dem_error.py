@@ -459,7 +459,7 @@ def correct_dem_error(inps, A_def):
     writefile.write(ts_cor, out_file=inps.outfile, metadata=atr, ref_file=ts_obj.file)
 
     # 3. Time-series of inversion residual
-    ts_ref_file = os.path.join(os.path.dirname(inps.outfile), 'timeseriesResidual.h5')
+    ts_ref_file = os.path.join(os.path.dirname(inps.outfile),'{}_Residual.h5'.format(os.path.splitext(inps.timeseries_file)[0]))
     writefile.write(ts_res, out_file=ts_ref_file, metadata=atr, ref_file=ts_obj.file)
 
     # 4. Time-series of estimated Step Model
