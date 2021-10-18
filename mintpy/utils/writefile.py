@@ -270,8 +270,8 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
         "timeseries" : [np.float32,     (num_date, length, width)],
     }
     """
-
-    print('-'*50)
+    vprint = print if print_msg else lambda *args, **kwargs: None
+    vprint('-'*50)
 
     # get meta from metadata and ref_file
     if metadata:
@@ -279,49 +279,57 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
     elif ref_file:
         with h5py.File(ref_file, 'r') as fr:
             meta = {key: value for key, value in fr.attrs.items()}
-        if print_msg:
-            print('grab metadata from ref_file: {}'.format(ref_file))
+        vprint('grab metadata from ref_file: {}'.format(ref_file))
     else:
         raise ValueError('No metadata or ref_file found.')
 
     # check ds_name_dict
     if ds_name_dict is None:
-        ds_name_dict = {}
+        if not ref_file or not os.path.isfile(ref_file):
+            raise FileNotFoundError('No ds_name_dict or ref_file found!')
+        else:
+            vprint('grab dataset structure from ref_file: {}'.format(ref_file))
 
-        if ref_file and os.path.splitext(ref_file)[1] in ['.h5', '.he5']:
+        ds_name_dict = {}
+        fext = os.path.splitext(ref_file)[1]
+        shape2d = (int(meta['LENGTH']), int(meta['WIDTH']))
+
+        if fext in ['.h5', '.he5']:
+            # copy dset structure from HDF5 file
             with h5py.File(ref_file, 'r') as fr:
-                shape2d = (int(fr.attrs['LENGTH']), int(fr.attrs['WIDTH']))
-                shape2d_out = (int(meta['LENGTH']), int(meta['WIDTH']))
+                # in case output mat size is different from the input ref file mat size
+                shape2d_orig = (int(fr.attrs['LENGTH']), int(fr.attrs['WIDTH']))
 
                 for key in fr.keys():
                     ds = fr[key]
                     if isinstance(ds, h5py.Dataset):
 
                         # auxliary dataset
-                        if ds.shape[-2:] != shape2d:
+                        if ds.shape[-2:] != shape2d_orig:
                             ds_name_dict[key] = [ds.dtype, ds.shape, ds[:]]
 
                         # dataset
                         else:
                             ds_shape = list(ds.shape)
-                            ds_shape[-2:] = shape2d_out
+                            ds_shape[-2:] = shape2d
                             ds_name_dict[key] = [ds.dtype, tuple(ds_shape), None]
 
-            if print_msg:
-                print('grab dataset structure from ref_file: {}'.format(ref_file))
         else:
-            raise ValueError('No ds_name_dict or ref_file found.')
+            # construct dset structure from binary file
+            ds_names = readfile.get_slice_list(ref_file)
+            ds_dtype = meta['DATA_TYPE']
+            for ds_name in ds_names:
+                ds_name_dict[ds_name] = [ds_dtype, tuple(shape2d), None]
 
     # directory
     fdir = os.path.dirname(os.path.abspath(fname))
     if not os.path.isdir(fdir):
         os.makedirs(fdir)
-        print('crerate directory: {}'.format(fdir))
+        vprint('crerate directory: {}'.format(fdir))
 
     # create file
     with h5py.File(fname, "w") as f:
-        if print_msg:
-            print('create HDF5 file: {} with w mode'.format(fname))
+        vprint('create HDF5 file: {} with w mode'.format(fname))
 
         # initiate dataset
         max_digit = max([len(i) for i in ds_name_dict.keys()])
@@ -341,13 +349,12 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
                 max_shape = data_shape
 
             # create empty dataset
-            if print_msg:
-                print(("create dataset  : {d:<{w}} of {t:<25} in size of {s:<20} with "
-                       "compression = {c}").format(d=key,
-                                                   w=max_digit,
-                                                   t=str(data_type),
-                                                   s=str(data_shape),
-                                                   c=ds_comp))
+            vprint(("create dataset  : {d:<{w}} of {t:<25} in size of {s:<20} with "
+                    "compression = {c}").format(d=key,
+                                                w=max_digit,
+                                                t=str(data_type),
+                                                s=str(data_shape),
+                                                c=ds_comp))
             ds = f.create_dataset(key,
                                   shape=data_shape,
                                   maxshape=max_shape,
@@ -368,10 +375,9 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
             for key, value in ds_unit_dict.items():
                 if value is not None:
                     f[key].attrs['UNIT'] = value
-                    print(f'add /{key:<{max_digit}} attribute: UNIT = {value}')
+                    vprint(f'add /{key:<{max_digit}} attribute: UNIT = {value}')
 
-    if print_msg:
-        print('close  HDF5 file: {}'.format(fname))
+    vprint('close  HDF5 file: {}'.format(fname))
 
     return fname
 
