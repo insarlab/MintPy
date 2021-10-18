@@ -312,6 +312,7 @@ SEASAT = {
     'carrier_frequency'          : 1.275e9,   # Hz
     'altitude'                   : 787e3,     # m, mean value
     'antenna_length'             : 10.74,     # m
+    'pulse_repetition_frequency' : 1555,      # Hz, 1463-1647
     'chirp_bandwidth'            : 19e6,      # Hz
 }
 
@@ -322,7 +323,7 @@ JERS = {
     'altitude'                   : 568e3,     # m, mean value
     'antenna_length'             : 11.92,     # m
     'doppler_bandwidth'          : 1157,      # Hz
-    'pulse_repetition_frequency' : 1600,      # Hz
+    'pulse_repetition_frequency' : 1600,      # Hz, 1505-1606
     'chirp_bandwidth'            : 15.00e6,   # Hz
     'sampling_frequency'         : 17.10e6,   # Hz
     'azimuth_pixel_size'         : 4.3,       # m
@@ -385,6 +386,11 @@ NISAR_L = {
     'antenna_length'             : 12,        # m
     'pulse_repetition_frequency' : 1650,      # Hz
     'chirp_bandwidth'            : 80.0e6,    # Hz
+    'range_pixel_size' : {
+        '24MHz'                  : 6.25,      # m
+        '44MHz'                  : 3.41,      # m
+        '80MHz'                  : 1.87,      # m
+    }
 }
 
 
@@ -402,5 +408,6 @@ SENSOR_DICT = {
     'jers'  : JERS,
     'alos'  : ALOS,
     'alos2' : ALOS2,
+    'ni'    : NISAR_L,
 }
 

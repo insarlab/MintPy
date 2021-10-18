@@ -216,10 +216,10 @@ def extract_snap_metadata(fname):
     atr["P_BASELINE_TOP_HDR"] = bp[1]
     atr["P_BASELINE_BOTTOM_HDR"] = bp[1]
     atr["ANTENNA_SIDE"] = antenna_side
-    atr["LAT_REF1"], atr["LONG_REF1"] = first_near_lat, first_near_long
-    atr["LAT_REF2"], atr["LONG_REF2"] = first_far_lat, first_far_long
-    atr["LAT_REF3"], atr["LONG_REF3"] = last_near_lat, last_near_long
-    atr["LAT_REF4"], atr["LONG_REF4"] = last_far_lat, last_far_long
+    atr["LAT_REF1"], atr["LON_REF1"] = first_near_lat, first_near_long
+    atr["LAT_REF2"], atr["LON_REF2"] = first_far_lat, first_far_long
+    atr["LAT_REF3"], atr["LON_REF3"] = last_near_lat, last_near_long
+    atr["LAT_REF4"], atr["LON_REF4"] = last_far_lat, last_far_long
     atr["ORBIT_DIRECTION"] = direction
     atr["ALOOKS"] = int(float(azimuth_looks[0]))
     atr["RLOOKS"] = int(float(range_looks[0]))

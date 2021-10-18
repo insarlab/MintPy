@@ -803,15 +803,20 @@ class TimeSeriesAnalysis:
                         print('Use existed tropospheric delay file: {}'.format(tropo_file))
                         print('\ndiff.py', ' '.join(iargs))
                         mintpy.diff.main(iargs)
+
                     else:
                         if tropo_model in ['ERA5']:
                             from mintpy import tropo_pyaps3
                             print('\ntropo_pyaps3.py', ' '.join(iargs))
                             tropo_pyaps3.main(iargs)
-                        else:
+
+                        elif tropo_model in ['MERRA', 'NARR']:
                             from mintpy import tropo_pyaps
                             print('\ntropo_pyaps.py', ' '.join(iargs))
                             tropo_pyaps.main(iargs)
+
+                        else:
+                            raise ValueError(f'un-recognized dataset name: {tropo_model}.')
 
         else:
             print('No tropospheric delay correction.')
