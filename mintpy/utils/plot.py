@@ -534,7 +534,7 @@ def plot_coherence_history(ax, date12List, cohList, p_dict={}):
                                 every_year=p_dict['every_year'])[0]
     ax.set_ylim([p_dict['vlim'][0], p_dict['vlim'][1]])
 
-    ax.set_xlabel('Time [years]', fontsize=p_dict['fontsize'])
+    #ax.set_xlabel('Time [years]', fontsize=p_dict['fontsize'])
     ax.set_ylabel(p_dict['ds_name'], fontsize=p_dict['fontsize'])
     ax.legend(loc='lower right')
 
@@ -570,7 +570,7 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
 
     # For colorful display of coherence
     if 'cohList'     not in p_dict.keys():  p_dict['cohList']     = None
-    if 'xlabel'      not in p_dict.keys():  p_dict['xlabel']      = 'Time [years]'
+    if 'xlabel'      not in p_dict.keys():  p_dict['xlabel']      = None #'Time [years]'
     if 'ylabel'      not in p_dict.keys():  p_dict['ylabel']      = 'Perp Baseline [m]'
     if 'cbar_label'  not in p_dict.keys():  p_dict['cbar_label']  = 'Average Spatial Coherence'
     if 'cbar_size'   not in p_dict.keys():  p_dict['cbar_size']   = '3%'
@@ -778,7 +778,7 @@ def plot_perp_baseline_hist(ax, dateList, pbaseList, p_dict={}, dateList_drop=[]
     ax = auto_adjust_xaxis_date(ax, datevector, fontsize=p_dict['fontsize'],
                                 every_year=p_dict['every_year'])[0]
     ax = auto_adjust_yaxis(ax, pbaseList, fontsize=p_dict['fontsize'])
-    ax.set_xlabel('Time [years]', fontsize=p_dict['fontsize'])
+    #ax.set_xlabel('Time [years]', fontsize=p_dict['fontsize'])
     ax.set_ylabel('Perpendicular Baseline [m]', fontsize=p_dict['fontsize'])
 
     return ax

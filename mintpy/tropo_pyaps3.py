@@ -61,7 +61,7 @@ REFERENCE = """reference:
   InSAR geodesy using global atmospheric models, Journal of Geophysical Research: Solid Earth, 119(3),
   2324-2341, doi:10.1002/2013JB010588.
 
-  # ERA-5
+  # ERA5
   Hersbach, H., Bell, B., Berrisford, P., Hirahara, S., Horányi, A., Muñoz-Sabater, J., et al. (2020). 
   The ERA5 global reanalysis. Quarterly Journal of the Royal Meteorological Society, 146(730), 1999–2049.
   https://doi.org/10.1002/qj.3803
@@ -70,7 +70,7 @@ REFERENCE = """reference:
 DATA_INFO = """Global Atmospheric Models:
   re-analysis_dataset      coverage  temp_resolution  spatial_resolution       latency       assimilation
   --------------------------------------------------------------------------------------------------------
-  ERA-5(T) (ECMWF)          global       hourly        0.25 deg (~31 km)   3 months (5 days)    4D-Var
+  ERA5(T)  (ECMWF)          global       hourly        0.25 deg (~31 km)   3 months (5 days)    4D-Var
   ERA-Int  (ECMWF)          global       6-hourly      0.75 deg (~79 km)        2 months        4D-Var
   MERRA(2) (NASA Goddard)   global       6-hourly     0.5*0.625 (~50 km)       2-3 weeks        3D-Var
   NARR     (NOAA, working from Jan 1979 to Oct 2014)
@@ -78,7 +78,7 @@ DATA_INFO = """Global Atmospheric Models:
 Notes for data access:
   For MERRA2, you need an Earthdata account, and pre-authorize the "NASA GESDISC DATA ARCHIVE" application
       following https://disc.gsfc.nasa.gov/earthdata-login.
-  For ERA-5 from CDS, you need to agree to the Terms of Use of every datasets that you intend to download.
+  For ERA5 from CDS, you need to agree to the Terms of Use of every datasets that you intend to download.
 """
 
 WEATHER_DIR_DEMO = """--weather-dir ~/data/aux
