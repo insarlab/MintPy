@@ -1,6 +1,6 @@
 # Use mambaforge as the base image
 # Builds in ~9.5 min and is ~ 2.5 GB on a windows laptop
-FROM mambaorg/micromamba
+FROM mambaorg/micromamba:0.15.3
 
 # Label image
 LABEL \
@@ -17,6 +17,7 @@ ARG user=micromamba
 USER root
 RUN apt-get update && \
     apt-get install -y git vim && \
+    rm /var/lib/apt/lists/* && \
     mkdir /home/micromamba/tools && \
     git clone https://github.com/insarlab/MintPy.git /home/micromamba/tools/MintPy && \
     git clone https://github.com/yunjunz/PyAPS.git /home/micromamba/tools/PyAPS
