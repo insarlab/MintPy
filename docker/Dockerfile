@@ -1,72 +1,46 @@
-# use debian as base image
-FROM debian:stretch
+# Use mambaforge as the base image
+# Builds in ~9.5 min and is ~ 2.5 GB on a windows laptop
+FROM mambaorg/micromamba
 
 # Label image
 LABEL \
     "Description"="Container for open source time series InSAR processing with Mintpy" \
     "Github Source"="https://github.com/insarlab/MintPy/" \
     "Installation"="https://github.com/insarlab/MintPy/blob/main/docs/installation.md" \
-    "Dockerfile Author"="Andre Theron" \
-    "Email"="andretheronsa@gmail.com"
+    "Dockerfile Author"="Forrest Williams" \
+    "Email"="forrestfwilliams@icloud.com"
 
-# Install useful programs
+# Set user name (the micromamba image comes with the micromamba user)
+ARG user=micromamba
+
+# Clone MintPy and PyAPS repositories
+USER root
 RUN apt-get update && \
-    apt-get install -y \
-    git \
-    python3 \
-    python3-pip \
-    wget \ 
-    vim \
-    zip \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    apt-get install -y git vim && \
+    mkdir /home/micromamba/tools && \
+    git clone https://github.com/insarlab/MintPy.git /home/micromamba/tools/MintPy && \
+    git clone https://github.com/yunjunz/PyAPS.git /home/micromamba/tools/PyAPS
 
-# Change default shell from dash to bash permanently
-SHELL ["/bin/bash", "-c"]
+# Prepare environment for MintPy
+ARG MINTPY_HOME=/home/$user/tools/MintPy
+ARG PYAPS_HOME=/home/$user/tools/PyAPS
+ARG PYTHON3DIR=/opt/conda
 
-# Prepare build time environment for conda and mintpy
-ARG MINTPY_HOME=/home/python/MintPy
-ARG PYTHON3DIR=/home/python/miniconda3
-ARG PYAPS_HOME=/home/python/PyAPS
-ARG WORK_DIR=/home/work/
-
-# Prepare container environment
 ENV MINTPY_HOME=${MINTPY_HOME}
-ENV PYTHON3DIR=${PYTHON3DIR}
 ENV PYAPS_HOME=${PYAPS_HOME}
 ENV PATH=${MINTPY_HOME}/mintpy:${PYTHON3DIR}/bin:${PATH}
-ENV PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${PYAPS_HOME}
-ENV PROJ_LIB=${PYTHON3DIR}/share/proj
+ENV PYTHONPATH=${MINTPY_HOME}:${PYAPS_HOME}
 
-# Set workdir
-WORKDIR /home/python
+# # # Optionally add Jupyter Lab to environment file
+# # RUN echo "  - jupyterlab\n  - ipympl" >> ${MINTPY_HOME}/docs/environment.yml
 
-# Pull and config mintpy
-RUN git clone https://github.com/insarlab/MintPy.git
+# ADD mintpy.yml /tmp
+RUN micromamba install -y -n base -f ${MINTPY_HOME}/docs/environment.yml python=3.6 && \
+    micromamba clean --all --yes
 
-# Pull and config PyAPS
-RUN git clone https://github.com/yunjunz/PyAPS.git
+# Create user and set work directory
+USER $user
+WORKDIR /home/$user
 
-# Install miniconda
-RUN wget https://repo.continuum.io/miniconda/Miniconda3-4.5.4-Linux-x86_64.sh && \
-    chmod +x ./Miniconda3-4.5.4-Linux-x86_64.sh  && \
-    ./Miniconda3-4.5.4-Linux-x86_64.sh -b -p ${PYTHON3DIR} && \
-    rm ./Miniconda3-4.5.4-Linux-x86_64.sh
-
-# Install dependencies
-RUN ${PYTHON3DIR}/bin/conda config --add channels conda-forge && \
-    ${PYTHON3DIR}/bin/conda install --yes --file ${MINTPY_HOME}/docs/requirements.txt
-
-# Install pykml
-RUN ${PYTHON3DIR}/bin/pip install git+https://github.com/yunjunz/pykml.git
-
-# Set working directory ENV - map a host data volume to this using "docker build . -t mintpy && docker run mintpy -v /host/path/to/data:/home/work/"
-RUN mkdir -p ${WORK_DIR}
-ENV WORK_DIR=${WORK_DIR}
-WORKDIR ${WORK_DIR}
-
-# Copy custom app scripts to app folder - not required
-COPY ["./", "/home/app/"]
-
-# Run entrypoint script - not required
-CMD ["python3", "/home/app/app.py"]
+# # Have the container start with a Jupyter Lab instance
+# CMD ["jupyter", "lab", "--port=8888", "--no-browser", "--ip=0.0.0.0","--NotebookApp.token=mintpy"]
