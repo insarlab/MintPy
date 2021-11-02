@@ -22,7 +22,7 @@ EXAMPLE = """example:
   prep_hyp3.py  interferograms/*/*unw_phase_clip.tif
   prep_hyp3.py  interferograms/*/*corr_clip.tif
   prep_hyp3.py  interferograms/*/*dem_clip.tif
-  prep_hyp3.py  interferograms/*/*inc_map_clip.tif
+  prep_hyp3.py  interferograms/*/*lv_theta_clip.tif
   prep_hyp3.py  interferograms/*/*clip.tif
 """
 
@@ -34,7 +34,7 @@ DESCRIPTION = """
 
   A DEM filename is needed and a incidence angle filename is recommended  e.g.:
   1) S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem.tif
-  2) S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_inc_map.tif
+  2) S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_lv_theta.tif
 
   This script will read these files, read the geospatial metadata from GDAL,
   find the corresponding HyP3 metadata file (for interferograms and coherence),
@@ -50,7 +50,7 @@ DESCRIPTION = """
           S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2.txt
       For the geometry file 2 file are recommended:
           S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem_clip.tif     (required)
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_inc_map_clip.tif (optional but recommended)
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_lv_theta_clip.tif (optional but recommended)
 
   After running prep_hyp3.py:
       For each interferogram:
@@ -62,8 +62,8 @@ DESCRIPTION = """
       For the input geometry files:
           S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem_clip.tif
           S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem_clip.tif.rsc
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_inc_map_clip.tif
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_inc_map_clip.tif.rsc
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_lv_theta_clip.tif
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_lv_theta_clip.tif.rsc
 
   Notes:
     HyP3 currently only supports generation of Sentinel-1 interferograms, so

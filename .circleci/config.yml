@@ -8,6 +8,7 @@ jobs:
           MINTPY_HOME: /root/tools/MintPy
         user: root
     working_directory: /root/tools/MintPy
+    resource_class: medium
     steps:
       - checkout
       - run:
