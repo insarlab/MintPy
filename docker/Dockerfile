@@ -1,5 +1,5 @@
 # Use mambaforge as the base image
-# Builds in ~9.5 min and is ~ 2.5 GB on a windows laptop
+# Builds in ~ 4.25 min and is ~ 2.6 GB on a windows laptop
 FROM mambaorg/micromamba:0.15.3
 
 # Label image
@@ -10,17 +10,17 @@ LABEL \
     "Dockerfile Author"="Forrest Williams" \
     "Email"="forrestfwilliams@icloud.com"
 
-# Set user name (the micromamba image comes with the micromamba user)
-ARG user=micromamba
-
-# Clone MintPy and PyAPS repositories
+# Install git and vim
 USER root
 RUN apt-get update && \
     apt-get install -y git vim && \
-    rm -rf /var/lib/apt/lists/* && \
-    mkdir /home/micromamba/tools && \
-    git clone https://github.com/insarlab/MintPy.git /home/micromamba/tools/MintPy && \
-    git clone https://github.com/yunjunz/PyAPS.git /home/micromamba/tools/PyAPS
+    rm -rf /var/lib/apt/lists/*
+
+# Clone MintPy and PyAPS repositories
+USER $user
+RUN mkdir /home/$user/tools && \
+    git clone https://github.com/insarlab/MintPy.git /home/$user/tools/MintPy && \
+    git clone https://github.com/yunjunz/PyAPS.git /home/$user/tools/PyAPS
 
 # Prepare environment for MintPy
 ARG MINTPY_HOME=/home/$user/tools/MintPy
@@ -39,8 +39,7 @@ ENV PYTHONPATH=${MINTPY_HOME}:${PYAPS_HOME}
 RUN micromamba install -y -n base -f ${MINTPY_HOME}/docs/environment.yml python=3.6 && \
     micromamba clean --all --yes
 
-# Create user and set work directory
-USER $user
+# Set work directory
 WORKDIR /home/$user
 
 # # Have the container start with a Jupyter Lab instance
