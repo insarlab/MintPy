@@ -240,16 +240,19 @@ KSAT5 = {
 
 # ERS-1/2
 # from Table 2 in Jung et al. (2014)
+# from Imaging Radar class by Howard Zebker, 2021.
 ERS = {
-    'carrier_frequency'          : 5.300e9,   # Hz
-    'altitude'                   : 783e3,     # m, mean value
-    'antenna_length'             : 10.0,      # m
-    'doppler_bandwidth'          : 1500,      # Hz
-    'pulse_repetition_frequency' : 1680,      # Hz
-    'chirp_bandwidth'            : 15.55e6,   # Hz
-    'sampling_frequency'         : 18.96e6,   # Hz
-    'azimuth_pixel_size'         : 4.2,       # m
-    'ground_range_pixel_size'    : 20.2,      # m
+    'carrier_frequency'          : 5.300e9,     # Hz
+    'altitude'                   : 783e3,       # m, mean value
+    'antenna_length'             : 10.0,        # m
+    'doppler_bandwidth'          : 1500,        # Hz
+    'pulse_repetition_frequency' : 1679.9,      # Hz
+    'pulse_length'               : 37.12e-6,    # s
+    'chirp_bandwidth'            : 15.55e6,     # Hz
+    'chirp_slope'                : 4.189166e11, # Hz
+    'sampling_frequency'         : 18.96e6,     # Hz
+    'azimuth_pixel_size'         : 4.2,         # m
+    'ground_range_pixel_size'    : 20.2,        # m
 }
 
 # Envisat
