@@ -17,7 +17,7 @@ ARG user=micromamba
 USER root
 RUN apt-get update && \
     apt-get install -y git vim && \
-    rm /var/lib/apt/lists/* && \
+    rm -rf /var/lib/apt/lists/* && \
     mkdir /home/micromamba/tools && \
     git clone https://github.com/insarlab/MintPy.git /home/micromamba/tools/MintPy && \
     git clone https://github.com/yunjunz/PyAPS.git /home/micromamba/tools/PyAPS
