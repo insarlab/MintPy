@@ -22,7 +22,7 @@ sudo xcodebuild -license
 Docker allows one to run MintPy in a dedicated container (essentially an efficient virtual machine) and to be independent of platform OS. After installing [docker](https://docs.docker.com/install/), run the following to pull the [MintPy container from DockerHub](https://hub.docker.com/r/forrestwilliams/mintpy) to your local machine, check more details at [here](docker.md).
 
 ```
-docker pull andretheronsa/mintpy:latest
+docker pull forrestwilliams/mintpy:1.3.1
 ```
 
 ### 1. Download and Setup ###
