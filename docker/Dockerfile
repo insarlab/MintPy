@@ -13,7 +13,8 @@ LABEL \
 # Install command line tools: git, vim and wget
 USER root
 RUN apt-get update && \
-    apt-get install -y git vim wget && \
+    apt-get install -y --no-install-recommends git vim wget && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 # Setup path / environment for MintPy
