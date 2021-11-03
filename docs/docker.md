@@ -5,25 +5,25 @@ Thanks to Andre Theron for putting together an [MintPy container on DockerHub](h
 To pull the MintPy container from Dockerhub to your local machine: 
 
 ```
-docker pull andretheronsa/mintpy:latest
+docker pull forrestwilliams/mintpy:latest
 ```
 
 To start an interactive shell session in the container from the terminal, with bash for example: 
 
 ```
-docker run -it andretheronsa/mintpy:latest bash
+docker run -it forrestwilliams/mintpy:latest bash
 ```
 
 To map data on the host (local) machine to the container use [volumes](https://docs.docker.com/storage/volumes/):
 
 ```
-docker run -it -v /path/to/data/dir:/home/work/ andretheronsa/mintpy:latest bash
+docker run -it -v /path/to/data/dir:/home/work/ forrestwilliams/mintpy:latest bash
 ```
 
 Background processing is possible using something like:  
 
 ```
-docker run -it -v /path/to/data/dir:/home/work/ andretheronsa/mintpy:latest python /home/python/MintPy/mintpy/smallbaselineApp.py /home/work/smallbaselineApp.cfg
+docker run -it -v /path/to/data/dir:/home/work/ forrestwilliams/mintpy:latest python /home/python/MintPy/mintpy/smallbaselineApp.py /home/work/smallbaselineApp.cfg
 ```
 
 ### Notes ###
