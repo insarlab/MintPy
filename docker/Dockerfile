@@ -17,14 +17,16 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Clone MintPy and PyAPS repositories
-USER $user
-RUN mkdir /home/$user/tools && \
-    git clone https://github.com/insarlab/MintPy.git /home/$user/tools/MintPy && \
-    git clone https://github.com/yunjunz/PyAPS.git /home/$user/tools/PyAPS
+USER micromamba
+WORKDIR /home/micromamba
+
+RUN mkdir /home/micromamba/tools && \
+    git clone https://github.com/insarlab/MintPy.git /home/micromamba/tools/MintPy && \
+    git clone https://github.com/yunjunz/PyAPS.git /home/micromamba/tools/PyAPS
 
 # Prepare environment for MintPy
-ARG MINTPY_HOME=/home/$user/tools/MintPy
-ARG PYAPS_HOME=/home/$user/tools/PyAPS
+ARG MINTPY_HOME=/home/micromamba/tools/MintPy
+ARG PYAPS_HOME=/home/micromamba/tools/PyAPS
 ARG PYTHON3DIR=/opt/conda
 
 ENV MINTPY_HOME=${MINTPY_HOME}
@@ -38,9 +40,6 @@ ENV PYTHONPATH=${MINTPY_HOME}:${PYAPS_HOME}
 # ADD mintpy.yml /tmp
 RUN micromamba install -y -n base -f ${MINTPY_HOME}/docs/environment.yml python=3.6 && \
     micromamba clean --all --yes
-
-# Set work directory
-WORKDIR /home/$user
 
 # # Have the container start with a Jupyter Lab instance
 # CMD ["jupyter", "lab", "--port=8888", "--no-browser", "--ip=0.0.0.0","--NotebookApp.token=mintpy"]
