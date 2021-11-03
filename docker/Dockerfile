@@ -27,7 +27,7 @@ ENV PATH=${MINTPY_HOME}/mintpy:/opt/conda/bin:${PATH}
 ENV PYTHONPATH=${MINTPY_HOME}:${PYAPS_HOME}
 
 # Download source code
-RUN mkdir /home/micromamba/tools && \
+RUN mkdir -p ${MINTPY_HOME} ${PYAPS_HOME} && \
     git clone https://github.com/insarlab/MintPy.git ${MINTPY_HOME} && \
     git clone https://github.com/yunjunz/PyAPS.git ${PYAPS_HOME}
 
