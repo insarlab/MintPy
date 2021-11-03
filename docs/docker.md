@@ -1,6 +1,6 @@
 ## Running as Docker container
 
-Thanks to Andre Theron for putting together an [MintPy container on DockerHub](https://hub.docker.com/r/andretheronsa/mintpy). [Docker](https://docs.docker.com/get-started/) allows you to run MintPy in a dedicated container (essentially an efficient virtual machine). [Here](https://docs.docker.com/install/) is the instruction to install docker.
+Thanks to Andre Theron for putting together an [MintPy container on DockerHub](https://hub.docker.com/r/forrestwilliams/mintpy). [Docker](https://docs.docker.com/get-started/) allows you to run MintPy in a dedicated container (essentially an efficient virtual machine). [Here](https://docs.docker.com/install/) is the instruction to install docker.
 
 To pull the MintPy container from Dockerhub to your local machine: 
 

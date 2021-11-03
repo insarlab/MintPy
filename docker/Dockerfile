@@ -13,7 +13,7 @@ LABEL \
 # Install git and vim
 USER root
 RUN apt-get update && \
-    apt-get install -y git vim && \
+    apt-get install -y git vim wget && \
     rm -rf /var/lib/apt/lists/*
 
 # Clone MintPy and PyAPS repositories
@@ -25,20 +25,14 @@ RUN mkdir /home/micromamba/tools && \
     git clone https://github.com/yunjunz/PyAPS.git /home/micromamba/tools/PyAPS
 
 # Prepare environment for MintPy
-ARG MINTPY_HOME=/home/micromamba/tools/MintPy
-ARG PYAPS_HOME=/home/micromamba/tools/PyAPS
-ARG PYTHON3DIR=/opt/conda
-
-ENV MINTPY_HOME=${MINTPY_HOME}
-ENV PYAPS_HOME=${PYAPS_HOME}
-ENV PATH=${MINTPY_HOME}/mintpy:${PYTHON3DIR}/bin:${PATH}
-ENV PYTHONPATH=${MINTPY_HOME}:${PYAPS_HOME}
+ENV PATH=/home/micromamba/tools/MintPy/mintpy:/opt/conda/bin:${PATH}
+ENV PYTHONPATH=/home/micromamba/tools/MintPy:/home/micromamba/tools/PyAPS
 
 # # # Optionally add Jupyter Lab to environment file
-# # RUN echo "  - jupyterlab\n  - ipympl" >> ${MINTPY_HOME}/docs/environment.yml
+# # RUN echo "  - jupyterlab\n  - ipympl" >> /home/micromamba/tools/MintPy/docs/environment.yml
 
 # ADD mintpy.yml /tmp
-RUN micromamba install -y -n base -f ${MINTPY_HOME}/docs/environment.yml python=3.6 && \
+RUN micromamba install -y -n base -f /home/micromamba/tools/MintPy/docs/environment.yml python=3.6 && \
     micromamba clean --all --yes
 
 # # Have the container start with a Jupyter Lab instance
