@@ -116,13 +116,16 @@ def filter_data(data, filter_type, filter_par=None):
     elif filter_type == "double_difference":
         """Amplifies the local deformation signal by reducing the influence
         of regional deformation trends from atmospheric artifacts, tectonic
-        deformation, and other sources. Intend use is to identify landslide-related
+        deformation, and other sources. Intended use is to identify landslide-related
         deformation. Filter has the form:
 
             result =  regional mean of data - local mean of data
 
         where both the regional and local kernel size can be set using the
-        filter_par argument.
+        filter_par argument. The regional kernel has a doughnut shape 
+        because the pixels used to calculate the local mean are not
+        included in the regional mean. This ensures that the local mean
+        and regional mean results are separate.
         """
 
         local_kernel = morphology.disk(filter_par[0], np.float32)
