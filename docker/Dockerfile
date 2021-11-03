@@ -10,29 +10,33 @@ LABEL \
     "Dockerfile Author"="Forrest Williams" \
     "Email"="forrestfwilliams@icloud.com"
 
-# Install git and vim
+# Install command line tools: git, vim and wget
 USER root
 RUN apt-get update && \
     apt-get install -y git vim wget && \
     rm -rf /var/lib/apt/lists/*
 
-# Clone MintPy and PyAPS repositories
+# Setup path / environment for MintPy
 USER micromamba
 WORKDIR /home/micromamba
 
+ARG MINTPY_HOME=/home/micromamba/tools/MintPy
+ARG PYAPS_HOME=/home/micromamba/tools/PyAPS
+
+ENV PATH=${MINTPY_HOME}/mintpy:/opt/conda/bin:${PATH}
+ENV PYTHONPATH=${MINTPY_HOME}:${PYAPS_HOME}
+
+# Download source code
 RUN mkdir /home/micromamba/tools && \
-    git clone https://github.com/insarlab/MintPy.git /home/micromamba/tools/MintPy && \
-    git clone https://github.com/yunjunz/PyAPS.git /home/micromamba/tools/PyAPS
+    git clone https://github.com/insarlab/MintPy.git ${MINTPY_HOME} && \
+    git clone https://github.com/yunjunz/PyAPS.git ${PYAPS_HOME}
 
-# Prepare environment for MintPy
-ENV PATH=/home/micromamba/tools/MintPy/mintpy:/opt/conda/bin:${PATH}
-ENV PYTHONPATH=/home/micromamba/tools/MintPy:/home/micromamba/tools/PyAPS
-
+# Install dependencies
 # # # Optionally add Jupyter Lab to environment file
-# # RUN echo "  - jupyterlab\n  - ipympl" >> /home/micromamba/tools/MintPy/docs/environment.yml
+# # RUN echo "  - jupyterlab\n  - ipympl" >> ${MINTPY_HOME}/docs/environment.yml
 
 # ADD mintpy.yml /tmp
-RUN micromamba install -y -n base -f /home/micromamba/tools/MintPy/docs/environment.yml python=3.6 && \
+RUN micromamba install -y -n base -f ${MINTPY_HOME}/docs/environment.yml python=3.6 && \
     micromamba clean --all --yes
 
 # # Have the container start with a Jupyter Lab instance
