@@ -116,24 +116,30 @@ def filter_data(data, filter_type, filter_par=None):
     elif filter_type == "double_difference":
         """Amplifies the local deformation signal by reducing the influence
         of regional deformation trends from atmospheric artifacts, tectonic
-        deformation, and other sources. Intend use is to identify landslide-related
+        deformation, and other sources. Intended use is to identify landslide-related
         deformation. Filter has the form:
 
             result =  regional mean of data - local mean of data
 
         where both the regional and local kernel size can be set using the
-        filter_par argument.
+        filter_par argument. The regional kernel has a doughnut shape 
+        because the pixels used to calculate the local mean are not
+        included in the regional mean. This ensures that the local mean
+        and regional mean results are separate.
         """
 
-        kernel = morphology.disk(filter_par[0], np.float32)
-        kernel = kernel / kernel.flatten().sum()
-        local_filt = ndimage.convolve(data, kernel)
+        local_kernel = morphology.disk(filter_par[0], np.float32)
+        local_kernel = np.pad(local_kernel,filter_par[1] - filter_par[0],mode='constant')
 
-        kernel = morphology.disk(filter_par[1], np.float32)
-        kernel = kernel / kernel.flatten().sum()
-        regional_filt = ndimage.convolve(data, kernel)
+        regional_kernel = morphology.disk(filter_par[1], np.float32)
+        regional_kernel[local_kernel == 1] = 0
 
-        data_filt = regional_filt - local_filt
+        local_kernel /= local_kernel.sum(axis=(0,1))
+        regional_kernel /= regional_kernel.sum(axis=(0,1))
+        
+        combined_kernel = regional_kernel - local_kernel
+
+        data_filt = ndimage.convolve(data, combined_kernel)
 
     else:
         raise Exception('Un-recognized filter type: '+filter_type)
