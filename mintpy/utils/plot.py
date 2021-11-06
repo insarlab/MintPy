@@ -1271,7 +1271,7 @@ def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False, wrap_range=[-
 
     if wrap:
         # wrap is supported for displacement file types only
-        if disp_unit.split('/')[0] not in ['radian', 'm', 'cm', 'mm', '1']:
+        if disp_unit.split('/')[0] not in ['radian', 'm', 'cm', 'mm', '1', 'pixel']:
             wrap = False
             print('WARNING: re-wrap is disabled for disp_unit = {}'.format(disp_unit))
         elif disp_unit.split('/')[0] != 'radian' and (wrap_range[1] - wrap_range[0]) == 2.*np.pi:
