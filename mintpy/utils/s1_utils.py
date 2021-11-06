@@ -42,7 +42,7 @@ def estimate_S1AB_bias(mintpy_dir, dates, ts_dis):
     mB = time_func.estimate_time_func(model, date_listB, ts_dis[flagB, :], ref_date=date_listB[0])[1]
 
     # grab bias/offset from the fitting time-series
-    date_list_fit = ptime.get_date_range(min_date, date_list[-1], dstep=10)
+    date_list_fit = ptime.get_date_range(min_date, date_list[-1], dstep=1)
     dates_fit = ptime.date_list2vector(date_list_fit)[0]
     GA_fit = time_func.get_design_matrix4time_func(date_list_fit, model, ref_date=date_listA[0])
     GB_fit = time_func.get_design_matrix4time_func(date_list_fit, model, ref_date=date_listB[0])
