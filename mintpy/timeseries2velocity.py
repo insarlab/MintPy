@@ -93,6 +93,8 @@ def create_parser():
 
     # reference in time and space
     # for input file without reference info, e.g. ERA5.h5
+    parser.add_argument('--ref-lalo', dest='ref_lalo', metavar=('LAT', 'LON'), type=float, nargs=2,
+                        help='Change referene point LAT LON for estimation.')
     parser.add_argument('--ref-yx', dest='ref_yx', metavar=('Y', 'X'), type=int, nargs=2,
                         help='Change referene point Y X for estimation.')
     parser.add_argument('--ref-date', dest='ref_date', metavar='DATE',
@@ -156,6 +158,16 @@ def cmd_line_parse(iargs=None):
 
     # Initialize the dictionaries of exp and log funcs
     inps = init_exp_log_dicts(inps)
+
+    # --ref-lalo option
+    if inps.ref_lalo:
+        atr = readfile.read_attribute(inps.timeseries_file)
+        coord = ut.coordinate(atr)
+        ref_y, ref_x = coord.geo2radar(inps.ref_lalo[0], inps.ref_lalo[1])[:2]
+        if ref_y is not None and ref_x is not None:
+            inps.ref_yx = [ref_y, ref_x]
+            print('input reference point in (lat, lon): ({}, {})'.format(inps.ref_lalo[0], inps.ref_lalo[1]))
+            print('corresponding   point in (y, x): ({}, {})'.format(inps.ref_yx[0], inps.ref_yx[1]))
 
     return inps
 
