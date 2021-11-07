@@ -117,7 +117,12 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
 
     # add universal hyp3 metadata
     meta['PROCESSOR'] = 'hyp3'
-    meta['CENTER_LINE_UTC'] = hyp3_meta['UTCtime']
+
+    try:
+        meta['CENTER_LINE_UTC'] = hyp3_meta['UTC time']
+    except KeyError:
+        meta['CENTER_LINE_UTC'] = hyp3_meta['UTCtime']
+
     meta['ALOOKS'] = hyp3_meta['Azimuth looks']
     meta['RLOOKS'] = hyp3_meta['Range looks']
     meta['EARTH_RADIUS'] = hyp3_meta['Earth radius at nadir']
