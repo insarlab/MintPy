@@ -57,21 +57,21 @@ def search_gps(SNWE, start_date=None, end_date=None, site_list_file=None, min_nu
     site_names = txt_data[:, 0]
     site_lats, site_lons = txt_data[:, 1:3].astype(np.float32).T
     site_lons -= np.round(site_lons / (360.)) * 360.
-    t_start = np.array([dt.datetime.strptime(i, "%Y-%m-%d") for i in txt_data[:, 7].astype(str)])
-    t_end   = np.array([dt.datetime.strptime(i, "%Y-%m-%d") for i in txt_data[:, 8].astype(str)])
+    t0s = np.array([dt.datetime.strptime(i, "%Y-%m-%d") for i in txt_data[:, 7].astype(str)])
+    t1s = np.array([dt.datetime.strptime(i, "%Y-%m-%d") for i in txt_data[:, 8].astype(str)])
     num_solution = txt_data[:, 10].astype(np.int16)
 
-    # limit on space
+    # limit in space
     idx = ((site_lats >= SNWE[0]) * (site_lats <= SNWE[1]) *
            (site_lons >= SNWE[2]) * (site_lons <= SNWE[3]))
 
-    # limit on time
+    # limit in time
+    t0 = ptime.date_list2vector([start_date])[0][0] if start_date else None
+    t1 = ptime.date_list2vector([end_date])[0][0] if end_date else None
     if start_date:
-        t0 = ptime.date_list2vector([start_date])[0][0]
-        idx *= t_end >= t0
+        idx *= t1s >= t0
     if end_date:
-        t1 = ptime.date_list2vector([end_date])[0][0]
-        idx *= t_start <= t1
+        idx *= t0s <= t1
 
     # limit on number of solutions
     if min_num_solution is not None:
@@ -175,15 +175,19 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, gps_comp='enu2
                 end_date=end_date,
                 gps_comp=gps_comp,
                 horz_az_angle=horz_az_angle)
-            # ignore time-series <= 2, to be consistent with vel
-            dis = dis_ts[-1] - dis_ts[0] if dis_ts.size > 2 else np.nan
+
+            # ignore time-series if the estimated velocity is nan
+            dis = np.nan if np.isnan(vel) else dis_ts[-1] - dis_ts[0]
 
             # save data to list
             data_list.append([obj.site, obj.site_lon, obj.site_lat, dis, vel])
         prog_bar.close()
 
-        # prepare output
-        site_obs = np.array([x[obs_ind] for x in data_list])
+        # # discard invalid sites
+        # flag = np.isnan([x[-1] for x in data_list])
+        # vprint('discard extra {} stations due to limited overlap/observations in time:'.format(np.sum(flag)))
+        # vprint('  {}'.format(np.array(data_list)[flag][:,0].tolist()))
+        # data_list = [x for x in data_list if not np.isnan(x[-1])]
 
         # write to CSV file
         vprint('write GPS observations to file: {}'.format(csv_file))
@@ -191,6 +195,9 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, gps_comp='enu2
             fcw = csv.writer(fc)
             fcw.writerow(col_names)
             fcw.writerows(data_list)
+
+        # prepare API output
+        site_obs = np.array([x[obs_ind] for x in data_list])
 
     return site_obs
 
@@ -539,10 +546,21 @@ class GPS:
             horz_az_angle=horz_az_angle)[:2]
 
         # displacement -> velocity
-        date_list = [dt.datetime.strftime(i, '%Y%m%d') for i in dates]
-        if len(date_list) > 2:
+        # skip if:
+        # 1. num of observations <= 2 OR
+        # 2. time overlap < 1/4
+        flag_overlap = True
+        if start_date and end_date:
+            t0 = ptime.date_list2vector([start_date])[0][0]
+            t1 = ptime.date_list2vector([end_date])[0][0]
+            if dates[-1] - dates[0] < (t1 - t0) / 4:
+                flag_overlap = False
+
+        if len(dates) > 2 and flag_overlap:
+            date_list = [dt.datetime.strftime(i, '%Y%m%d') for i in dates]
             A = time_func.get_design_matrix4time_func(date_list)
             self.velocity = np.dot(np.linalg.pinv(A), dis)[1]
+
         else:
             self.velocity = np.nan
 

@@ -1110,7 +1110,6 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     from mintpy.objects import gps
     vprint = print if print_msg else lambda *args, **kwargs: None
 
-    marker_size = 7
     vmin, vmax = inps.vlim
     cmap = ColormapExt(inps.colormap).colormap if isinstance(inps.colormap, str) else inps.colormap
 
@@ -1178,7 +1177,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         if inps.ref_gps_site:
             ref_ind = site_names.tolist().index(inps.ref_gps_site)
             # plot label of the reference site
-            ax.annotate(site_names[ref_ind], xy=(site_lons[ref_ind], site_lats[ref_ind]), fontsize=inps.font_size)
+            #ax.annotate(site_names[ref_ind], xy=(site_lons[ref_ind], site_lats[ref_ind]), fontsize=inps.font_size)
             # update value
             ref_val = site_obs[ref_ind]
             if not np.isnan(ref_val):
@@ -1187,15 +1186,31 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         # scale to the same unit as InSAR
         site_obs *= unit_fac
 
+        # exclude sites
+        if inps.ex_gps_sites:
+            ex_flag = np.array([x in inps.ex_gps_sites for x in site_names], dtype=np.bool_)
+            if np.sum(ex_flag) > 0:
+                vprint('ignore the following specified stations:\n  {}'.format(site_names[ex_flag]))
+                site_names = site_names[~ex_flag]
+                site_lats = site_lats[~ex_flag]
+                site_lons = site_lons[~ex_flag]
+                site_obs = site_obs[~ex_flag]
+
+        nan_flag = np.isnan(site_obs)
+        if np.sum(nan_flag) > 0:
+            vprint('ignore the following {} stations due to limited overlap/observations in time'.format(np.sum(nan_flag)))
+            vprint('  {}'.format(site_names[nan_flag]))
+
         # plot
         for lat, lon, obs in zip(site_lats, site_lons, site_obs):
-            color = cmap( (obs - vmin) / (vmax - vmin) ) if not np.isnan(obs) else 'none'
-            ax.scatter(lon, lat, color=color, s=marker_size**2, edgecolors='k', zorder=10)
+            if not np.isnan(obs):
+                color = cmap( (obs - vmin) / (vmax - vmin) )
+                ax.scatter(lon, lat, color=color, s=inps.gps_marker_size**2, edgecolors='k', lw=0.5, zorder=10)
 
     else:
         # plot GPS locations only
         vprint('showing GPS locations')
-        ax.scatter(site_lons, site_lats, s=marker_size**2, color='w', edgecolors='k', zorder=10)
+        ax.scatter(site_lons, site_lats, s=inps.gps_marker_size**2, color='w', edgecolors='k', lw=0.5, zorder=10)
 
     # plot GPS label
     if inps.disp_gps_label:
