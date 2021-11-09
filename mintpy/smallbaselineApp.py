@@ -18,7 +18,7 @@ import argparse
 import numpy as np
 
 import mintpy
-from mintpy.objects import sensor, RAMP_LIST
+from mintpy.objects import sensor, cluster, RAMP_LIST
 from mintpy.utils import readfile, writefile, utils as ut
 from mintpy.defaults.template import STEP_LIST
 import mintpy.workflow   # dynamic import of modules for smallbaselineApp
@@ -1187,8 +1187,10 @@ class TimeSeriesAnalysis:
         # run view
         start_time = time.time()
         run_parallel = False
-        if self.template['mintpy.compute.cluster']:
-            num_workers = int(self.template['mintpy.compute.numWorker'])
+        cluster_type = self.template['mintpy.compute.cluster']
+        if cluster_type:
+            num_workers = self.template['mintpy.compute.numWorker']
+            num_workers = cluster.DaskCluster.format_num_worker(cluster_type, num_workers)
 
             # limit number of parallel processes based on available CPU
             num_cores, run_parallel, Parallel, delayed = ut.check_parallel(

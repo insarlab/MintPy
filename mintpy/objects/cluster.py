@@ -12,7 +12,9 @@ import os
 import time
 import glob
 import shutil
+import subprocess
 import numpy as np
+from mintpy.utils import utils0 as ut0
 
 
 # supported / tested clusters
@@ -358,6 +360,18 @@ class DaskCluster:
 
             # all --> num_core
             if num_worker == 'all':
+                # divide by the number of threads per core [for Linux only]
+                # as it works better on HPC, check https://github.com/insarlab/MintPy/issues/518
+                if ut0.which('lscpu') is not None:
+                    # get the number of threads per core
+                    # link: https://stackoverflow.com/questions/62652951
+                    ps = subprocess.run(['lscpu'], capture_output=True, text=True).stdout.split('\n')
+                    ns = [p.split(':')[1].strip() for p in ps if p.startswith('Thread(s) per core:')]
+                    if len(ns) > 0:
+                        num_thread = int(ns[0])
+                        num_core = int(num_core / num_thread)
+
+                # set num_worker to the number of cores
                 num_worker = str(num_core)
 
             # str --> int
