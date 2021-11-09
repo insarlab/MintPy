@@ -7,7 +7,6 @@ Hierarchy of sub-modules within MintPy. Level _N_ modules depends on level _N-1_
         auto_path
         template
     /objects
-        cluster
         colors
         giant
         ramp
@@ -24,6 +23,7 @@ Hierarchy of sub-modules within MintPy. Level _N_ modules depends on level _N-1_
         fractal
 ------------------ level 1 --------------------
     /objects
+        cluster       (utils/utils0)
         conncomp      (objects/ramp)
         stack         (utils/ptime)
     /utils
