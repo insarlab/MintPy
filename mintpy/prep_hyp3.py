@@ -112,7 +112,7 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
     hyp3_meta = {}
     with open(meta_file, 'r') as f:
         for line in f:
-            key, value = line.strip().replace(' ','').split(':')
+            key, value = line.strip().replace(' ','').split(':')[:2]
             hyp3_meta[key] = value
 
     # add universal hyp3 metadata
