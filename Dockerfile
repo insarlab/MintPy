@@ -1,44 +1,40 @@
-# Use mambaforge as the base image
-# Builds in ~ 4.25 min and is ~ 2.6 GB on a windows laptop
+# Builds in ~ 5 min and is ~ 2.8 GB on a linux laptop
 FROM mambaorg/micromamba:0.15.3
 
-# Label image
-LABEL \
-    "Description"="Container for open source time series InSAR processing with Mintpy" \
-    "Github Source"="https://github.com/insarlab/MintPy/" \
-    "Installation"="https://github.com/insarlab/MintPy/blob/main/docs/installation.md" \
-    "Dockerfile Author"="Forrest Williams" \
-    "Email"="forrestfwilliams@icloud.com"
+# Label image following opencontainers image-spec annotations recommendation:
+# https://github.com/opencontainers/image-spec/blob/main/annotations.md
+LABEL org.opencontainers.image.description="Container for open source time series InSAR processing with Mintpy"
+LABEL org.opencontainers.image.authors="Forrest Williams <forrestfwilliams@icloud.com>, Joseph H Kennedy <me@jhkennedy.org>, Andre Theron <andretheronsa@gmail.com>"
+LABEL org.opencontainers.image.url="https://github.com/insarlab/MintPy"
+LABEL org.opencontainers.image.source="https://github.com/insarlab/MintPy"
+LABEL org.opencontainers.image.documentation="https://mintpy.readthedocs.io/en/latest/"
+LABEL org.opencontainers.image.licenses="GPL-3.0-or-later"
 
-# Install command line tools: git, vim and wget
+# Dynamic lables to define at build time via `docker build --label`
+# LABEL org.opencontainers.image.created=""
+# LABEL org.opencontainers.image.version=""
+# LABEL org.opencontainers.image.revision=""
+
 USER root
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV PYTHONDONTWRITEBYTECODE=true
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends git vim wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Setup path / environment for MintPy
 USER micromamba
 WORKDIR /home/micromamba
 
+ENV PATH=/opt/conda/bin:${PATH}
+
 ARG MINTPY_HOME=/home/micromamba/tools/MintPy
-ARG PYAPS_HOME=/home/micromamba/tools/PyAPS
+COPY --chown=micromamba:micromamba . ${MINTPY_HOME}/
 
-ENV PATH=${MINTPY_HOME}/mintpy:/opt/conda/bin:${PATH}
-ENV PYTHONPATH=${MINTPY_HOME}:${PYAPS_HOME}
-
-# Download source code
-RUN mkdir -p ${MINTPY_HOME} ${PYAPS_HOME} && \
-    git clone https://github.com/insarlab/MintPy.git ${MINTPY_HOME} && \
-    git clone https://github.com/yunjunz/PyAPS.git ${PYAPS_HOME}
-
-# Install dependencies
-# # # Optionally add Jupyter Lab to environment file
-# # RUN echo "  - jupyterlab\n  - ipympl" >> ${MINTPY_HOME}/docs/environment.yml
-
-# ADD mintpy.yml /tmp
-RUN micromamba install -y -n base -f ${MINTPY_HOME}/docs/environment.yml python=3.6 && \
+ARG PYTHON_VERSION="3.8"
+RUN micromamba install -y -n base -c conda-forge python=${PYTHON_VERSION}  \
+      jupyterlab ipympl -f ${MINTPY_HOME}/docs/requirements.txt && \
+    python -m pip install --no-cache-dir ${MINTPY_HOME} && \
     micromamba clean --all --yes
-
-# # Have the container start with a Jupyter Lab instance
-# CMD ["jupyter", "lab", "--port=8888", "--no-browser", "--ip=0.0.0.0","--NotebookApp.token=mintpy"]
