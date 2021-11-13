@@ -12,9 +12,7 @@ import os
 import time
 import glob
 import shutil
-import subprocess
 import numpy as np
-from mintpy.utils import utils0 as ut0
 
 
 # supported / tested clusters
@@ -53,6 +51,8 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
     else:
         dim_size = width
     step = int(np.ceil(dim_size / num_split))
+    step = max(step, 10)                       # constain the min step size
+    num_split = int(np.ceil(dim_size / step))  # trim the final number of boxes
 
     # get list of boxes
     sub_boxes = []
@@ -174,7 +174,7 @@ class DaskCluster:
 
 
     def open(self):
-        """Initiate and scale the cluster"""
+        """Initiate the cluster"""
 
         # initiate the cluster object
         # Look at the ~/.config/dask/mintpy.yaml file for changing the Dask configuration defaults
@@ -213,12 +213,6 @@ class DaskCluster:
                 with open('dask_command_run_from_python.txt', 'w') as f:
                     f.write(self.cluster.job_script() + '\n')
 
-        # This line submits num_worker jobs to the cluster to start a bunch of workers
-        # In tests on Pegasus `general` queue in Jan 2019, no more than 40 workers could RUN
-        # at once (other user's jobs gained higher priority in the general at that point)
-        print('scale the cluster to {} workers'.format(self.num_worker))
-        self.cluster.scale(self.num_worker)
-
 
     def run(self, func, func_data, results):
         """Wrapper function encapsulating submit_workers and compile_workers.
@@ -235,21 +229,27 @@ class DaskCluster:
         """
         from dask.distributed import Client
 
-        # This line needs to be in a function or in a `if __name__ == "__main__":` block. If it is in no function
-        # or "main" block, each worker will try to create its own client (which is bad) when loading the module
+        # split the primary box into sub boxes for workers AND
+        # update the number of workers based on split result
+        box = func_data["box"]
+        sub_boxes = split_box2sub_boxes(box, num_split=self.num_worker, dimension='x', print_msg=False)
+        self.num_worker = len(sub_boxes)
+        print('split patch into {} sub boxes in x direction for workers to process'.format(self.num_worker))
+
+        # start a bunch of workers from the cluster
+        print('scale Dask cluster to {} workers'.format(self.num_worker))
+        self.cluster.scale(self.num_worker)
+
         print('initiate Dask client')
         self.client = Client(self.cluster)
-
-        # split the primary box into sub boxes for each worker
-        box = func_data["box"]
-        sub_boxes = split_box2sub_boxes(box, num_split=self.num_worker, dimension='x')
-        print('split patch into {} sub boxes in x direction for workers to process'.format(len(sub_boxes)))
 
         # submit job for each worker
         futures, submission_time = self.submit_job(func, func_data, sub_boxes)
 
         # assemble results from all workers
-        return self.collect_result(futures, results, box, submission_time)
+        results = self.collect_result(futures, results, box, submission_time)
+
+        return results
 
 
     def submit_job(self, func, func_data, sub_boxes):
@@ -358,21 +358,30 @@ class DaskCluster:
         if cluster_type == 'local':
             num_core = os.cpu_count()
 
-            # all --> num_core
+            # all / percentage --> num_core
+            msg = f'numWorker = {num_worker}'
             if num_worker == 'all':
-                # divide by the number of threads per core [for Linux only]
-                # as it works better on HPC, check https://github.com/insarlab/MintPy/issues/518
-                if ut0.which('lscpu') is not None:
-                    # get the number of threads per core
-                    # link: https://stackoverflow.com/questions/62652951
-                    ps = subprocess.run(['lscpu'], capture_output=True, text=True).stdout.split('\n')
-                    ns = [p.split(':')[1].strip() for p in ps if p.startswith('Thread(s) per core:')]
-                    if len(ns) > 0:
-                        num_thread = int(ns[0])
-                        num_core = int(num_core / num_thread)
+                ## divide by the number of threads per core [for Linux only]
+                #import subprocess
+                #from mintpy.utils import utils0 as ut0
+                #if ut0.which('lscpu') is not None:
+                #    # get the number of threads per core
+                #    # link: https://stackoverflow.com/questions/62652951
+                #    ps = subprocess.run(['lscpu'], capture_output=True, text=True).stdout.split('\n')
+                #    ns = [p.split(':')[1].strip() for p in ps if p.startswith('Thread(s) per core:')]
+                #    if len(ns) > 0:
+                #        num_thread = int(ns[0])
+                #        num_core = int(num_core / num_thread)
 
                 # set num_worker to the number of cores
                 num_worker = str(num_core)
+                print('translate {} to {}'.format(msg, num_worker))
+
+            elif num_worker.endswith('%'):
+                num_worker = int(num_core * float(num_worker[:-1]) / 100)
+                print('translate {} to {}'.format(msg, num_worker))
+                if num_worker < 1 or num_worker >= num_core:
+                    raise ValueError('Invalid numWorker percentage!')
 
             # str --> int
             num_worker = int(num_worker)
