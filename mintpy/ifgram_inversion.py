@@ -575,7 +575,7 @@ def split2boxes(ifgram_file, max_memory=4, print_msg=True):
     ds_size = (ifg_obj.numIfgram * 2 + ifg_obj.numDate + 5) * length * width * 4
 
     num_box = int(np.ceil(ds_size * 1.5 / (max_memory * 1024**3)))
-    y_step = int(np.rint((length / num_box) / 10) * 10)
+    y_step = int(np.ceil((length / num_box) / 10) * 10)
     num_box = int(np.ceil(length / y_step))
     if print_msg and num_box > 1:
         print('maximum memory size: %.1E GB' % max_memory)
