@@ -112,17 +112,17 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
     hyp3_meta = {}
     with open(meta_file, 'r') as f:
         for line in f:
-            key, value = line.strip().split(': ')
+            key, value = line.strip().replace(' ','').split(':')[:2]
             hyp3_meta[key] = value
 
     # add universal hyp3 metadata
     meta['PROCESSOR'] = 'hyp3'
     meta['CENTER_LINE_UTC'] = hyp3_meta['UTCtime']
-    meta['ALOOKS'] = hyp3_meta['Azimuth looks']
-    meta['RLOOKS'] = hyp3_meta['Range looks']
-    meta['EARTH_RADIUS'] = hyp3_meta['Earth radius at nadir']
-    meta['HEIGHT'] = hyp3_meta['Spacecraft height']
-    meta['STARTING_RANGE'] = hyp3_meta['Slant range near']
+    meta['ALOOKS'] = hyp3_meta['Azimuthlooks']
+    meta['RLOOKS'] = hyp3_meta['Rangelooks']
+    meta['EARTH_RADIUS'] = hyp3_meta['Earthradiusatnadir']
+    meta['HEIGHT'] = hyp3_meta['Spacecraftheight']
+    meta['STARTING_RANGE'] = hyp3_meta['Slantrangenear']
     # ensure negative value for the heading angle
     meta['HEADING'] = float(hyp3_meta['Heading']) % 360. - 360.
 
@@ -154,7 +154,7 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
 
     # note: HyP3 currently only supports Sentinel-1 data, so Sentinel-1
     #       configuration is hard-coded.
-    if hyp3_meta['Reference Granule'].startswith('S1'):
+    if hyp3_meta['ReferenceGranule'].startswith('S1'):
         meta['PLATFORM'] = 'Sen'
         meta['ANTENNA_SIDE'] = -1
         meta['WAVELENGTH'] = SPEED_OF_LIGHT / sensor.SEN['carrier_frequency']
