@@ -1,0 +1,61 @@
+name: Build a docker image for MintPy
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  dockerize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set environment variables for docker build
+        run: |
+          # Lowercase repo for Github Container Registry
+          echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+          # Short commit SHA for tagging
+          echo "GITHUB_SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
+          # Version number from tag
+          echo "MINTPY_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
+      - name: Build, tag, and push image to Github Container Registry
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ghcr.io/${{ env.REPO }}:${{ env.GITHUB_SHA_SHORT }}
+          labels: |
+            org.opencontainers.image.created=${{ env.CI_JOB_TIMESTAMP }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Add latest tag
+        if: github.ref == 'refs/heads/main'
+        uses: akhilerm/tag-push-action@v1.0.0
+        with:
+          src: ghcr.io/${{ env.REPO }}:${{ env.GITHUB_SHA_SHORT }}
+          dst: ghcr.io/${{ env.REPO }}:latest
+
+      - name: Add release tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: akhilerm/tag-push-action@v1.0.0
+        with:
+          src: ghcr.io/${{ env.REPO }}:${{ env.GITHUB_SHA_SHORT }}
+          dst: ghcr.io/${{ env.REPO }}:${{ env.MINTPY_VERSION }}
