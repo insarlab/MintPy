@@ -411,29 +411,14 @@ def snwe2str(snwe):
     """Get area extent in string"""
     if not snwe:
         return None
-
-    area = ''
     s, n, w, e = snwe
 
-    if s < 0:
-        area += '_S{}'.format(abs(s))
-    else:
-        area += '_N{}'.format(abs(s))
+    area = ''
+    area += '_S{}'.format(abs(s)) if s < 0 else '_N{}'.format(abs(s))
+    area += '_S{}'.format(abs(n)) if n < 0 else '_N{}'.format(abs(n))
+    area += '_W{}'.format(abs(w)) if w < 0 else '_E{}'.format(abs(w))
+    area += '_W{}'.format(abs(e)) if e < 0 else '_E{}'.format(abs(e))
 
-    if n < 0:
-        area += '_S{}'.format(abs(n))
-    else:
-        area += '_N{}'.format(abs(n))
-
-    if w < 0:
-        area += '_W{}'.format(abs(w))
-    else:
-        area += '_E{}'.format(abs(w))
-
-    if e < 0:
-        area += '_W{}'.format(abs(e))
-    else:
-        area += '_E{}'.format(abs(e))
     return area
 
 

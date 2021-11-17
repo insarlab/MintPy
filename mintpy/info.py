@@ -226,7 +226,7 @@ def print_slice_list(fname, disp_num=False, print_msg=False):
     """Print slice info of file"""
     slice_list = readfile.get_slice_list(fname)
     if print_msg:
-        for i, slice_name in range(len(slice_list)):
+        for i, slice_name in enumerate(slice_list):
             print(f'{slice_name}\t{i}' if disp_num else slice_name)
     return slice_list
 
