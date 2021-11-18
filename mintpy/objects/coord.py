@@ -86,7 +86,7 @@ class coordinate:
         # input format
         if isinstance(coord_in, np.ndarray):
             coord_in = coord_in.tolist()
-        if isinstance(coord_in, (float, np.float16, np.float32, np.float64, np.float128)):
+        if isinstance(coord_in, (float, np.float16, np.float32, np.float64, np.longdouble)):
             coord_in = [coord_in]
         coord_in = list(coord_in)
 
