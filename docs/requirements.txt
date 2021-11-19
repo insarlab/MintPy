@@ -14,21 +14,18 @@ joblib
 lxml
 matplotlib
 numpy
-pip
 pykml>=0.2
 pyproj
 scikit-image
 scipy
-# pyaps dependencies
-cdsapi
-ecCodes
-netcdf4
-pygrib
-# pyhdf  # required by MERRA, which is currently not supported in pyaps3
-# pyresample dependencies
+pysolid
+pyaps3
+# for ARIA, FRInGE, HyP3, GMTSAR
+gdal>=3
+# - pyhdf   # required by MERRA, which is currently not supported in pyaps3
+# for pyresample
 pyresample
 openmp
 pykdtree
 xarray
 zarr
-

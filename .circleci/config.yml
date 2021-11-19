@@ -32,17 +32,12 @@ jobs:
           command: |
             export PYTHONUNBUFFERED=1
             # setup environment variable
-            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${HOME}/tools/PyAPS:${HOME}/tools/PySolid
-            export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
+            export PATH=${CONDA_PREFIX}/bin:${PATH}
             # download source code
-            git clone https://github.com/yunjunz/PyAPS.git ${HOME}/tools/PyAPS
-            git clone https://github.com/insarlab/PySolid.git ${HOME}/tools/PySolid
             # install dependencies
             source activate root
-            mamba install --verbose --yes --file ${MINTPY_HOME}/docs/requirements.txt gdal">=3" fortran-compiler
-            # compile pysolid Fortran code
-            cd ${HOME}/tools/PySolid/pysolid
-            f2py -c -m solid solid.for
+            mamba install --verbose --yes --file ${MINTPY_HOME}/docs/requirements.txt
+            python -m pip install ${MINTPY_HOME}
             # test installation
             smallbaselineApp.py -v
             tropo_pyaps3.py -h
@@ -51,8 +46,7 @@ jobs:
       - run:
           name: Testing MintPy on Example Dataset 1/4 - FernandinaSenDT128 (ISCE/topsStack)
           command: |
-            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${HOME}/tools/PyAPS:${HOME}/tools/PySolid
-            export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
+            export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
             cd ${HOME}/data
             ${MINTPY_HOME}/tests/test_smallbaselineApp.py --dir ${HOME}/data --dset FernandinaSenDT128
@@ -60,8 +54,7 @@ jobs:
       - run:
           name: Testing MintPy on Example Dataset 2/4 - SanFranSenDT42 (ARIA)
           command: |
-            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${HOME}/tools/PyAPS:${HOME}/tools/PySolid
-            export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
+            export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
             cd ${HOME}/data
             ${MINTPY_HOME}/tests/test_smallbaselineApp.py --dir ${HOME}/data --dset SanFranSenDT42
@@ -69,8 +62,7 @@ jobs:
       - run:
           name: Testing MintPy on Example Dataset 3/4 - WellsEnvD2T399 (Gamma)
           command: |
-            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${HOME}/tools/PyAPS:${HOME}/tools/PySolid
-            export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
+            export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
             cd ${HOME}/data
             ${MINTPY_HOME}/tests/test_smallbaselineApp.py --dir ${HOME}/data --dset WellsEnvD2T399
@@ -78,8 +70,7 @@ jobs:
       - run:
           name: Testing MintPy on Example Dataset 4/4 - WCapeSenAT29 (SNAP)
           command: |
-            export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:${HOME}/tools/PyAPS:${HOME}/tools/PySolid
-            export PATH=${MINTPY_HOME}/mintpy:${CONDA_PREFIX}/bin:${PATH}
+            export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
             cd ${HOME}/data
             ${MINTPY_HOME}/tests/test_smallbaselineApp.py --dir ${HOME}/data --dset WCapeSenAT29
@@ -89,4 +80,3 @@ workflows:
   test:
     jobs:
       - test
-
