@@ -36,7 +36,7 @@ jobs:
             # download source code
             # install dependencies
             source activate root
-            mamba install --verbose --yes --file gdal>=3 ${MINTPY_HOME}/docs/requirements.txt
+            mamba install --verbose --yes 'gdal>=3' --file ${MINTPY_HOME}/docs/requirements.txt
             python -m pip install ${MINTPY_HOME}
             # test installation
             smallbaselineApp.py -v
