@@ -4,6 +4,7 @@
 # ports.txt            for actual installation via mac-ports
 # setup.py             for actual installation via pip [not finished yet]
 python>=3.6,<3.9
+pip
 cartopy
 cvxopt
 dask>=1.0
