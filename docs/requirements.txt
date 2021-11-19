@@ -22,7 +22,7 @@ scipy
 pysolid
 pyaps3
 # for ARIA, FRInGE, HyP3, GMTSAR
-gdal>=3
+# gdal>=3
 # for pyresample
 pyresample
 openmp
