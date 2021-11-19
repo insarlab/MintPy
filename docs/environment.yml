@@ -28,7 +28,6 @@ dependencies:
   - pyaps3
   # for ARIA, FRInGE, HyP3, GMTSAR
   - gdal>=3
-  # - pyhdf   # required by MERRA, which is currently not supported in pyaps3
   # for pyresample
   - pyresample
   - openmp
