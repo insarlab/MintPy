@@ -527,14 +527,24 @@ def check_pyaps_account_config(tropo_model):
     }
 
     # Default values in cfg file
-    default_values = ['the-email-address-used-as-login@ecmwf-website.org',
-                      'the-user-name-used-as-login@earthdata.nasa.gov',
-                      'the-password-used-as-login@earthdata.nasa.gov',
-                      'the-email-adress-used-as-login@ucar-website.org',
-                      'your-uid:your-api-key']
+    default_values = [
+        'the-email-address-used-as-login@ecmwf-website.org',
+        'the-user-name-used-as-login@earthdata.nasa.gov',
+        'the-password-used-as-login@earthdata.nasa.gov',
+        'the-email-adress-used-as-login@ucar-website.org',
+        'your-uid:your-api-key',
+    ]
+
+    # account file for pyaps3 < and >= 0.3.0
+    cfg_file = os.path.join(os.path.dirname(pa.__file__), 'model.cfg')
+    rc_file = os.path.expanduser('~/.cdsapirc')
+
+    # for ERA5: ~/.cdsapirc
+    if tropo_model == 'ERA5' and os.path.isfile(rc_file):
+        pass
 
     # check account info for the following models
-    if tropo_model in ['ERA5', 'ERAI', 'MERRA']:
+    elif tropo_model in ['ERA5', 'ERAI', 'MERRA']:
         section = MODEL2ARCHIVE_NAME[tropo_model]
 
         # Read model.cfg file
