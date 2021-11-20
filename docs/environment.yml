@@ -20,12 +20,12 @@ dependencies:
   - lxml
   - matplotlib
   - numpy
+  - pyaps3
   - pykml>=0.2
   - pyproj
+  - pysolid
   - scikit-image
   - scipy
-  - pysolid
-  - pyaps3
   # for ARIA, FRInGE, HyP3, GMTSAR
   - gdal>=3
   # for pyresample

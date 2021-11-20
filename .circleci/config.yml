@@ -33,10 +33,9 @@ jobs:
             export PYTHONUNBUFFERED=1
             # setup environment variable
             export PATH=${CONDA_PREFIX}/bin:${PATH}
-            # download source code
-            # install dependencies
+            # install dependencies and source code
             source activate root
-            mamba install --verbose --yes 'gdal>=3' --file ${MINTPY_HOME}/docs/requirements.txt
+            mamba install --verbose --yes gdal">=3" --file ${MINTPY_HOME}/docs/requirements.txt
             python -m pip install ${MINTPY_HOME}
             # test installation
             smallbaselineApp.py -v

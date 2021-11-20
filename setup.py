@@ -74,17 +74,12 @@ def do_setup():
             "lxml",
             "matplotlib",
             "numpy",
+            "pyaps3",
             "pykml>=0.2",
             "pyproj",
             "setuptools",
             "scikit-image",
             "scipy",
-            # pyaps dependencies
-            "cdsapi",
-            "ecCodes",
-            "netcdf4",
-            "pygrib",
-            # "pyhdf", # required by MERRA, which is currently not supported in pyaps3
             # pyresample dependencies
             "pyresample",
             # "openmp",
