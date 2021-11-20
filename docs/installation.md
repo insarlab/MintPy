@@ -1,20 +1,14 @@
 ## Install MintPy
 
-Mintpy is available on [conda-forge](https://anaconda.org/conda-forge/mintpy) and [PyPI](https://pypi.org/project/mintpy/). The latest release can be installed via conda as:
+### Install the released version via conda
+
+Mintpy is available on the [conda-forge](https://anaconda.org/conda-forge/mintpy) channel. The latest released version can be installed via `conda` as:
 
 ```bash
 conda install -c conda-forge mintpy
 ```
 
-or via `pip` as:
-
-```bash
-python -m pip install mintpy
-```
-
-MinPy is tested on Linux and macOS. Installation is still experimental on Windows, so it may have bugs.
-
-### Notes for Docker users ###
+### Install the released version via docker
 
 Docker allows one to run MintPy in a dedicated container (essentially an efficient virtual machine) and to be independent of platform OS. After installing [docker](https://docs.docker.com/install/), run the following to pull the [MintPy container from DockerHub](https://hub.docker.com/r/forrestwilliams/mintpy) to your local machine, check more details at [here](docker.md).
 
@@ -22,8 +16,13 @@ Docker allows one to run MintPy in a dedicated container (essentially an efficie
 docker pull forrestwilliams/mintpy:1.3.1
 ```
 
+### Install the development version
 
-## Install the Development Version of MintPy
+The installation note below is tested on Linux and macOS, and is still experimental on Windows (may has bugs).
+
+MintPy is written in Python 3 and relies on several Python modules, check the [requirements.txt](https://github.com/insarlab/MintPy/blob/main/docs/requirements.txt) file for details. We recommend using [conda](https://docs.conda.io/en/latest/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient management and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree). You can control the number of threads used by setting the _environment variables_, e.g. `OMP_NUM_THREADS`.
+
+
 
 ### Notes for Mac users ###
 
@@ -51,7 +50,6 @@ git clone https://github.com/insarlab/MintPy.git
 
 ### 2. Install dependencies and MintPy ###
 
-MintPy is written in Python 3 and relies on several Python modules, check the [requirements.txt](https://github.com/insarlab/MintPy/blob/main/docs/requirements.txt) file for details. We recommend using [conda](https://docs.conda.io/en/latest/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient management and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree). You can control the number of threads used by setting the _environment variables_, e.g. `OMP_NUM_THREADS`.
 
 #### a. via conda ####
 
