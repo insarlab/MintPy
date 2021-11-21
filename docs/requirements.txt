@@ -1,9 +1,10 @@
 # requirements4rtd.txt for readthedocs, which uses pip with limited memory usage
-# requirements.txt     for actual installation via conda
-# environment.yml      for actual installation via conda create environment
-# ports.txt            for actual installation via mac-ports
-# setup.py             for actual installation via pip [not finished yet]
+# requirements.txt     for dependency installation via conda
+# environment.yml      for dependency installation via conda and create a new environment
+# ports.txt            for dependency installation via mac-ports
+# setup.py             for mintpy     installation via pip after the dependency installation above
 python>=3.6,<3.9
+pip
 cartopy
 cvxopt
 dask>=1.0
@@ -14,21 +15,17 @@ joblib
 lxml
 matplotlib
 numpy
-pip
+pyaps3
 pykml>=0.2
 pyproj
+pysolid
 scikit-image
 scipy
-# pyaps dependencies
-cdsapi
-ecCodes
-netcdf4
-pygrib
-# pyhdf  # required by MERRA, which is currently not supported in pyaps3
-# pyresample dependencies
+# for ARIA, FRInGE, HyP3, GMTSAR
+# gdal>=3
+# for pyresample
 pyresample
 openmp
 pykdtree
 xarray
 zarr
-

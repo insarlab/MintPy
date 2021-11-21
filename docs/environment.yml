@@ -9,6 +9,7 @@ channels:
   - defaults
 dependencies:
   - python>=3.6,<3.9
+  - pip
   - cartopy
   - cvxopt
   - dask>=1.0
@@ -19,21 +20,14 @@ dependencies:
   - lxml
   - matplotlib
   - numpy
-  - pip
+  - pyaps3
   - pykml>=0.2
   - pyproj
+  - pysolid
   - scikit-image
   - scipy
-  - pip:
-    - git+https://github.com/insarlab/PySolid.git
   # for ARIA, FRInGE, HyP3, GMTSAR
   - gdal>=3
-  # for PyAPS
-  - cdsapi
-  - ecCodes
-  - netcdf4
-  - pygrib
-  # - pyhdf   # required by MERRA, which is currently not supported in pyaps3
   # for pyresample
   - pyresample
   - openmp

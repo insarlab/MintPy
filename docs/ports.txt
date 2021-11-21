@@ -26,8 +26,6 @@ wget +ssl
 freetype
 tiff
 openmotif
-subversion
-python27
 python37
 fftw +gcc7
 fftw-single +gcc7
@@ -55,7 +53,6 @@ h5utils
 netcdf +gcc7
 netcdf-cxx
 netcdf-fortran
-ecCodes +gcc7
 postgresql95
 postgresql95-server
 proj
@@ -92,7 +89,6 @@ py37-sphinx
 py37-pip
 py37-cvxopt +accelerate +dsdp +fftw +glpk +gsl
 py37-joblib
-gmt5
 kealib
 pandoc
 zmq
