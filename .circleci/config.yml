@@ -12,7 +12,7 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Setting Environment with Miniconda
+          name: Setting Up Environment with Miniconda
           command: |
             apt update
             apt-get update --yes && apt-get upgrade --yes
@@ -27,7 +27,7 @@ jobs:
             ${HOME}/tools/miniconda3/bin/conda install -c conda-forge --yes mamba
 
       - run:
-          name: Installing MintPy, PyAPS and PySolid
+          name: Installing MintPy
           no_output_timeout: 30m
           command: |
             export PYTHONUNBUFFERED=1
