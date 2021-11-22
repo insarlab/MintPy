@@ -111,7 +111,7 @@ def cmd_line_parse(iargs=None):
 
     # -v (print software version)
     if inps.version:
-        print(mintpy.version.release_description)
+        print(mintpy.version.version_description)
         sys.exit(0)
 
     # check all input template files
@@ -181,7 +181,7 @@ def read_inps2run_steps(inps, step_list, plot_only=False):
     if len(run_steps) > 0:
         # for single step - compact version info
         if len(run_steps) == 1:
-            print(mintpy.version.release_description)
+            print(mintpy.version.version_description)
         else:
             print(mintpy.version.logo)
 

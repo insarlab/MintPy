@@ -4,11 +4,35 @@
 
 import os
 import subprocess
+import collections
 
 
 ###########################################################################
+Tag = collections.namedtuple('Tag', 'version date')
+release_history = (
+    Tag('1.3.2', '2021-11-21'),
+    Tag('1.3.1', '2021-08-02'),
+    Tag('1.3.0', '2021-03-06'),
+    Tag('1.2.3', '2020-07-14'),
+    Tag('1.2.2', '2020-04-27'),
+    Tag('1.2.1', '2020-03-30'),
+    Tag('1.2.0', '2020-01-03'),
+    Tag('1.2beta', '2019-08-08'),
+    Tag('1.2alpha', '2019-07-28'),
+    Tag('1.1.2', '2019-05-14'),
+    Tag('1.1.1', '2019-05-08'),
+    Tag('1.1.0', '2019-04-24'),
+    Tag('1.0.0', '2018-11-07'),
+    Tag('0.4.0', '2018-03-11'),
+    Tag('0.3.0', '2017-06-03'),
+    Tag('0.2.1', '2017-03-11'),
+    Tag('0.2.0', '2016-07-14'),
+    Tag('0.1.0', '2015-11-23'),
+)
+release_version = release_history[0].version
+release_date = release_history[0].date
 
-def get_release_info(version='v1.3.1', date='2021-08-02'):
+def get_version_info(version='v{}'.format(release_version), date=release_date):
     """Grab version and date of the latest commit from a git repository"""
     # go to the repository directory
     dir_orig = os.getcwd()
@@ -38,10 +62,10 @@ def get_release_info(version='v1.3.1', date='2021-08-02'):
 
 ###########################################################################
 
-release_version, release_date = get_release_info()
-release_description = """MintPy release version {v}, release date {d}""".format(
-    v=release_version,
-    d=release_date,
+version_num, version_date = get_version_info()
+version_description = """MintPy version {v}, date {d}""".format(
+    v=version_num,
+    d=version_date,
 )
 
 # generate_from: http://patorjk.com/software/taag/
@@ -61,7 +85,7 @@ ___________________________________________________________
    Miami InSAR Time-series software in Python    \______/ 
           MintPy {v}, {d}
 ___________________________________________________________
-""".format(v=release_version, d=release_date)
+""".format(v=version_num, d=version_date)
 
 website = 'https://github.com/insarlab/MintPy'
 
