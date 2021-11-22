@@ -18,8 +18,8 @@ with open("docs/README.md", "r") as f:
 with open("mintpy/version.py", "r") as f:
     lines = f.readlines()
     # version
-    line = [line for line in lines if line.startswith("def get_release_info")][0].strip()
-    version = line.replace("'",'"').split('"')[1].split('v')[1]
+    line = [line for line in lines if line.strip().startswith("Tag(")][0].strip()
+    version = line.replace("'",'"').split('"')[1]
     # description
     line = [line for line in lines if line.startswith("description")][0].strip()
     description = line.replace("'",'"').split('"')[1]
