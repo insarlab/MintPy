@@ -18,7 +18,7 @@ dependencies:
   - h5py<3
   - joblib
   - lxml
-  - matplotlib
+  - matplotlib<3.5
   - numpy
   - pyaps3
   - pykml>=0.2

@@ -72,7 +72,7 @@ def do_setup():
             "h5py",
             "joblib",
             "lxml",
-            "matplotlib",
+            "matplotlib<3.5",
             "numpy",
             "pyaps3",
             "pykml>=0.2",
