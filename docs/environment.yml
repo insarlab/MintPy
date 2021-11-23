@@ -31,6 +31,3 @@ dependencies:
   # for pyresample
   - pyresample
   - openmp
-  - pykdtree
-  - xarray
-  - zarr

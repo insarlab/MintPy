@@ -80,12 +80,9 @@ def do_setup():
             "setuptools",
             "scikit-image",
             "scipy",
-            # pyresample dependencies
+            # for pyresample
             "pyresample",
             # "openmp",
-            "pykdtree",
-            "xarray",
-            "zarr",
         ],
 
         # package discovery
