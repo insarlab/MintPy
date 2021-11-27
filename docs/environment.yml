@@ -18,7 +18,7 @@ dependencies:
   - h5py<3
   - joblib
   - lxml
-  - matplotlib<3.5
+  - matplotlib
   - numpy
   - pyaps3
   - pykml>=0.2
@@ -31,6 +31,3 @@ dependencies:
   # for pyresample
   - pyresample
   - openmp
-  - pykdtree
-  - xarray
-  - zarr

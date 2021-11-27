@@ -72,7 +72,7 @@ def do_setup():
             "h5py",
             "joblib",
             "lxml",
-            "matplotlib<3.5",
+            "matplotlib",
             "numpy",
             "pyaps3",
             "pykml>=0.2",
@@ -80,12 +80,9 @@ def do_setup():
             "setuptools",
             "scikit-image",
             "scipy",
-            # pyresample dependencies
+            # for pyresample
             "pyresample",
             # "openmp",
-            "pykdtree",
-            "xarray",
-            "zarr",
         ],
 
         # package discovery
