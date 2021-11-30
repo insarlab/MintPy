@@ -231,6 +231,12 @@ class coordinate:
         Returns:    az/rg     - np.array / int, range/azimuth pixel number
                     az/rg_res - float, residul/uncertainty of coordinate conversion
         """
+        # ensure longitude is within (-180, 180]
+        if np.isscalar(lon):
+            lon = lon - 360. if lon > 180. else lon
+        else:
+            lon[lon > 180.] -= 360
+
         self.open()
         if self.geocoded:
             az = self.lalo2yx(lat, coord_type='lat')
