@@ -114,6 +114,11 @@ def create_parser():
                       help='threshold to generate mask when mask is coherence (default: %(default)s).')
     mask.add_argument('--min-redun','--min-redundancy','--mr', dest='minRedundancy', metavar='NUM', type=float, default=1.0,
                       help='minimum redundancy of interferograms for every SAR acquisition. (default: %(default)s).')
+    # for offset ONLY
+    #mask.add_argument('--mask-min-snr', dest='maskMinSNR', type=float, default=10.0,
+    #                  help='minimum SNR to diable/ignore the threshold-based masking [for offset only].')
+    #mask.add_argument('--mask-min-area-size', dest='maskMinAreaSize', type=float, default=16.0,
+    #                  help='minimum area size to diable/ignore the threshold-based masking [for offset only]')
 
     # computing
     parser = arg_group.add_memory_argument(parser)
@@ -676,28 +681,45 @@ def mask_stack_obs(stack_obs, stack_obj, box, mask_ds_name=None, mask_threshold=
         # set all NaN values in coherence, connectComponent, offsetSNR to zero
         # to avoid RuntimeWarning msg during math operation
         msk_data[np.isnan(msk_data)] = 0
+        msk = np.ones(msk_data.shape, dtype=np.bool_)
+
         if mask_ds_name in ['connectComponent']:
+            msk *= msk_data != 0
             if print_msg:
                 print('mask out pixels with {} == 0 by setting them to NaN'.format(mask_ds_name))
 
         elif mask_ds_name in ['coherence', 'offsetSNR']:
-            msk_data = msk_data >= mask_threshold
+            msk *= msk_data >= mask_threshold
             if print_msg:
                 print('mask out pixels with {} < {} by setting them to NaN'.format(mask_ds_name, mask_threshold))
 
         elif mask_ds_name.endswith('OffsetStd'):
-            msk_data = msk_data <= mask_threshold
+            msk *= msk_data <= mask_threshold
             if print_msg:
                 print('mask out pixels with {} > {} by setting them to NaN'.format(mask_ds_name, mask_threshold))
+
+            # keep regions (ignore threshold-based masking) if:
+            # 1. high SNR AND
+            # 2. relaxed min STD AND
+            # despite the above criteria, which is designed for small signals
+            min_snr = 10
+            obs_med = np.zeros((stack_obs.shape[0],1), dtype=np.float32)
+            for i in range(stack_obs.shape[0]):
+                obs_med[i] = np.nanmedian(stack_obs[i][msk[i]])
+            obs_snr = np.abs(stack_obs - np.tile(obs_med, (1, stack_obs.shape[1]))) / (msk_data + 1e-5)
+            msk_snr = np.multiply(msk_data <= mask_threshold * 5, obs_snr >= min_snr)
+            msk[msk_snr] = 1
+            if print_msg:
+                print('keep pixels with {} <= {} and SNR >= {}'.format(mask_ds_name, mask_threshold*5, min_snr))            
 
         else:
             raise ValueError('Un-recognized mask dataset name: {}'.format(mask_ds_name))
 
         # set values of mask-out pixels to NaN
-        stack_obs[msk_data == 0.] = np.nan
+        stack_obs[msk == 0.] = np.nan
         if stack_std is not None:
-            stack_std[msk_data == 0.] = np.nan
-        del msk_data
+            stack_std[msk == 0.] = np.nan
+        del msk_data, msk
 
     return stack_obs, stack_std
 
