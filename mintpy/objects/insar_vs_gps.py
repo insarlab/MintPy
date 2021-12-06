@@ -24,7 +24,7 @@ from mintpy.defaults.plot import *
 
 ############################## utilities functions ##########################################
 
-def plot_insar_vs_gps_scatter(vel_file, ref_gps_site, csv_file='gps_enu2los.csv', msk_file=None,
+def plot_insar_vs_gps_scatter(vel_file, csv_file='gps_enu2los.csv', msk_file=None, ref_gps_site=None,
                               xname='InSAR', vlim=None, ex_gps_sites=[], display=True):
     """Scatter plot to compare the velocities between SAR/InSAR and GPS.
 
@@ -71,31 +71,32 @@ def plot_insar_vs_gps_scatter(vel_file, ref_gps_site, csv_file='gps_enu2los.csv'
     # read InSAR velocity
     print('read InSAR velocity from file: {}'.format(vel_file))
     atr = readfile.read_attribute(vel_file)
+    length, width = int(atr['LENGTH']), int(atr['WIDTH'])
     coord = ut.coordinate(atr)
     ys, xs = coord.geo2radar(lats, lons)[:2]
 
-    if msk_file:
-        msk = readfile.read(msk_file)[0]
+    msk = readfile.read(msk_file)[0] if msk_file else np.ones((length, width), dtype=np.bool_)
 
     num_site = sites.size
     insar_obs = np.zeros(num_site, dtype=np.float32) * np.nan
     prog_bar = ptime.progressBar(maxValue=num_site)
     for i in range(num_site):
         x, y = xs[i], ys[i]
-        box = (x, y, x+1, y+1)
-        if msk_file and not msk[y, x]:
-            box = None
-
-        if box:
+        if (0 <= x < width) and (0 <= y < length) and msk[y, x]:
+            box = (x, y, x+1, y+1)
             insar_obs[i] = readfile.read(vel_file, datasetName='velocity', box=box)[0] * unit_fac
-
         prog_bar.update(i+1, suffix='{}/{} {}'.format(i+1, num_site, sites[i]))
     prog_bar.close()
 
+    off_med = np.nanmedian(insar_obs - gps_obs)
+    print(f'median offset between InSAR and GPS [before common referencing]: {off_med:.2f} cm/year')
+
     # reference site
-    ref_ind = sites.tolist().index(ref_gps_site)
-    gps_obs -= gps_obs[ref_ind]
-    insar_obs -= insar_obs[ref_ind]
+    if ref_gps_site:
+        print(f'referencing both InSAR and GPS data to site: {ref_gps_site}')
+        ref_ind = sites.tolist().index(ref_gps_site)
+        gps_obs -= gps_obs[ref_ind]
+        insar_obs -= insar_obs[ref_ind]
 
     # remove NaN value
     print('removing sites with NaN values in GPS or {}'.format(xname))

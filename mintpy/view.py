@@ -544,11 +544,11 @@ def plot_slice(ax, data, metadata, inps=None):
         if inps.disp_gps and inps.gps_component and inps.ref_gps_site:
             ref_site_lalo = GPS(site=inps.ref_gps_site).get_stat_lat_lon(print_msg=False)
             y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
-            y -= inps.pix_box[1]
-            x -= inps.pix_box[0]
-            data -= data[y, x]
+            ref_data = data[y - inps.pix_box[1], x - inps.pix_box[0]]
+            data -= ref_data
             vprint(('referencing InSAR data to the pixel nearest to '
-                    'GPS station: {} at {}').format(inps.ref_gps_site, ref_site_lalo))
+                    f'GPS station: {inps.ref_gps_site} at {ref_site_lalo} '
+                    f'by substrating {ref_data:.3f} {inps.disp_unit}'))
             # do not show the original InSAR reference point
             inps.disp_ref_pixel = False
 
