@@ -318,7 +318,10 @@ class DaskCluster:
             for i, sub_result in enumerate(sub_results[:-1]):
                 num_dim = sub_result.ndim
 
-                if num_dim == 3:
+                if num_dim == 4:
+                    results[i][:, :, y0:y1, x0:x1] = sub_result
+
+                elif num_dim == 3:
                     results[i][:, y0:y1, x0:x1] = sub_result
 
                 elif num_dim == 2:
@@ -326,7 +329,7 @@ class DaskCluster:
 
                 else:
                     msg = "worker result has unexpected dimension: {}".format(num_dim)
-                    msg += '\nit should be either 2 or 3!'
+                    msg += '\nit should be either 2 or 3 or 4!'
                     raise Exception(msg)
 
         return results

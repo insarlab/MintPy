@@ -219,7 +219,7 @@ class timeseries:
 
     def get_size(self):
         with h5py.File(self.file, 'r') as f:
-            self.numDate, self.length, self.width = f[self.name].shape
+            self.numDate, self.length, self.width = f[self.name].shape[-3:]
         return self.numDate, self.length, self.width
 
     def get_date_list(self):

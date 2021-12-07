@@ -80,8 +80,8 @@ def create_parser():
     parser.add_argument('timeseries_file',
                         help='Time series file for velocity inversion.')
     parser.add_argument('--template', '-t', dest='template_file', help='template file with options')
-    parser.add_argument('--ts-std-file', dest='ts_std_file',
-                        help='Time-series STD file for velocity STD calculation.')
+    parser.add_argument('--ts-cov-file', dest='ts_cov_file',
+                        help='Time-series (co)variance file for velocity STD calculation')
 
     # outputs
     parser.add_argument('-o', '--output', dest='outfile', help='output file name')
@@ -187,7 +187,8 @@ def init_exp_log_dicts(inps):
 
                 else:
                     msg = 'NO characteristic time found: {}\n'.format(char_times)
-                    msg += 'one or more characteristic time(s) are required for each onset date for the exp function, e.g.:\n'
+                    msg += 'one or more characteristic time(s) are required for each onset date'
+                    msg += ' for the exp function, e.g.:\n'
                     msg += '--exp 20181026 60 OR\n'
                     msg += '--exp 20161231 80.5 200  # append as many char_times as you like!'
                     raise ValueError(msg)
@@ -205,7 +206,8 @@ def init_exp_log_dicts(inps):
 
                 else:
                     msg = 'NO characteristic time found: {}\n'.format(char_times)
-                    msg += 'one or more characteristic time(s) are required for each onset date for the log function, e.g.:\n'
+                    msg += 'one or more characteristic time(s) are required for each onset date'
+                    msg += ' for the log function, e.g.:\n'
                     msg += '--exp 20181026 60 OR\n'
                     msg += '--exp 20161231 80.5 200  # append as many char_times as you like!'
                     raise ValueError(msg)
@@ -524,20 +526,33 @@ def run_timeseries2time_func(inps):
             print('referencing to point (y, x): ({}, {})'.format(inps.ref_yx[0], inps.ref_yx[1]))
             ref_box = (inps.ref_yx[1], inps.ref_yx[0], inps.ref_yx[1]+1, inps.ref_yx[0]+1)
             ref_val = readfile.read(inps.timeseries_file, box=ref_box)[0]
-            ts_data -= np.tile(ref_val.reshape(ts_data.shape[0], 1, 1), (1, ts_data.shape[1], ts_data.shape[2]))
+            ts_data -= np.tile(ref_val.reshape(ts_data.shape[0], 1, 1),
+                               (1, ts_data.shape[1], ts_data.shape[2]))
 
         ts_data = ts_data[inps.dropDate, :, :].reshape(inps.numDate, -1)
         if atrV['UNIT'] == 'mm':
             ts_data *= 1./1000.
 
-        ts_std = None
-        if inps.ts_std_file:
-            ts_std = readfile.read(inps.ts_std_file, box=box)[0]
-            ts_std = ts_std[inps.dropDate, :, :].reshape(inps.numDate, -1)
-            # set zero value to a fixed small value to avoid divide by zero
+        ts_cov = None
+        if inps.ts_cov_file:
+            print(f'reading time-series covariance matrix from file {inps.ts_cov_file} ...')
+            ts_cov = readfile.read(inps.ts_cov_file, box=box)[0]
+            if len(ts_cov.shape) == 4:
+                # full covariance matrix in 4D --> 3D
+                if inps.numDate < ts_cov.shape[0]:
+                    ts_cov = ts_cov[inps.dropDate, :, :, :]
+                    ts_cov = ts_cov[:, inps.dropDate, :, :]
+                ts_cov = ts_cov.reshape(inps.numDate, inps.numDate, -1)
 
-            epsilon = 1e-5
-            ts_std[ts_std<epsilon] = epsilon
+            elif len(ts_cov.shape) == 3:
+                # diaginal variance matrix in 3D --> 2D
+                if inps.numDate < ts_cov.shape[0]:
+                    ts_cov = ts_cov[inps.dropDate, :, :]
+                ts_cov = ts_cov.reshape(inps.numDate, -1)
+
+            ## set zero value to a fixed small value to avoid divide by zero
+            #epsilon = 1e-5
+            #ts_cov[ts_cov<epsilon] = epsilon
 
         # mask invalid pixels
         print('skip pixels with zero/nan value in all acquisitions')
@@ -545,11 +560,11 @@ def run_timeseries2time_func(inps):
         mask = np.multiply(~np.isnan(ts_stack), ts_stack!=0.)
         del ts_stack
 
-        if ts_std is not None:
-            print('skip pxiels with nan STD value in any acquisition')
-            num_std_nan = np.sum(np.isnan(ts_std), axis=0)
-            mask *= num_std_nan == 0
-            del num_std_nan
+        #if ts_cov is not None:
+        #    print('skip pxiels with nan STD value in any acquisition')
+        #    num_std_nan = np.sum(np.isnan(ts_cov), axis=0)
+        #    mask *= num_std_nan == 0
+        #    del num_std_nan
 
         ts_data = ts_data[:, mask]
         num_pixel2inv = int(np.sum(mask))
@@ -570,7 +585,8 @@ def run_timeseries2time_func(inps):
             # Bootstrapping is a resampling method which can be used to estimate properties
             # of an estimator. The method relies on independently sampling the data set with
             # replacement.
-            print('estimating time function STD with bootstrap resampling ({} times) ...'.format(inps.bootstrapCount))
+            print('estimating time function STD with bootstrap resampling ({} times) ...'.format(
+                inps.bootstrapCount))
 
             # calc model of all bootstrap sampling
             rng = np.random.default_rng()
@@ -607,39 +623,64 @@ def run_timeseries2time_func(inps):
                 seconds=seconds)
             #del ts_data
 
-            ## Compute the covariance matrix for model parameters: Gm = d
-            # C_m_hat = (G.T * C_d^-1, * G)^-1  # linear propagation from the TS covariance matrix. (option 2.1)
-            #         = sigma^2 * (G.T * G)^-1  # assuming obs errors are normally dist. in time.   (option 2.2a)
+            ## Compute the covariance matrix for model parameters:
+            #       G * m = d
+            #     C_m_hat = G+ * C_d * G+.T
+            #
+            # For ordinary least squares estimation:
+            #     G+ = (G.T * G)^-1 * G.T                       (option 2.1)
+            #
+            # For weighted least squares estimation:
+            #          G+ = (G.T * C_d^-1 * G)^-1 * G.T * C_d^-1
+            # =>  C_m_hat = (G.T * C_d^-1 * G)^-1               (option 2.2)
+            #
+            # Assuming normality of the observation errors (in the time domain) with a variance of sigma^2
+            # we have C_d = sigma^2 * I, then the above equation is simplfied into:
+            #     C_m_hat = sigma^2 * (G.T * G)^-1              (option 2.3)
+            #
             # Based on the law of integrated expectation, we estimate the obs sigma^2 using
-            # the OLS estimation residual e_hat_i = d_i - d_hat_i
-            # sigma^2 = sigma_hat^2 * N / (N - P)                                                   (option 2.2b)
-            #         = (e_hat.T * e_hat) / (N - P)  # sigma_hat^2 = (e_hat.T * e_hat) / N
+            # the OLS estimation residual as:
+            #           e_hat = d - d_hat
+            # =>  sigma_hat^2 = (e_hat.T * e_hat) / N
+            # =>      sigma^2 = sigma_hat^2 * N / (N - P)       (option 2.4)
+            #                 = (e_hat.T * e_hat) / (N - P)
+            # which is the equation (10) from Fattahi and Amelung (2015, JGR)
 
-            if ts_std is not None:
-                # option 2.1 - linear propagation from time-series covariance matrix
-                print('estimating time function STD from time-series STD pixel-by-pixel ...')
+            if ts_cov is not None:
+                # option 2.1 - linear propagation from time-series (co)variance matrix
+                # TO DO: save the full covariance matrix of the time function parameters
+                # only the STD is saved right now
+                covar_flag = True if len(ts_cov.shape) == 3 else False
+                msg = 'estimating time function STD from time-serries '
+                msg += 'covariance pixel-by-pixel ...' if covar_flag else 'variance pixel-by-pixel ...'
+                print(msg)
+
+                # calc the common pseudo-inverse matrix
+                Gplus = linalg.pinv(G)
+
+                # loop over each pixel
+                # or use multidimension matrix multiplication
+                # m_cov = Gplus @ ts_cov @ Gplus.T
                 prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
                 for i in range(num_pixel2inv):
                     idx = idx_pixel2inv[i]
 
-                    try:
-                        C_ts_inv = np.diag(1. / np.square(ts_std[:, idx].flatten()))
-                        m_var = np.diag(linalg.inv(G.T.dot(C_ts_inv).dot(G))).astype(np.float32)
-                        m_std[:, idx] = np.sqrt(m_var)
-                    except linalg.LinAlgError:
-                        m_std[:, idx] = np.nan
+                    # cov: time-series -> time func
+                    ts_covi = ts_cov[:, :, idx] if covar_flag else np.diag(ts_cov[:, idx])
+                    m_cov = np.linalg.multi_dot([Gplus, ts_covi, Gplus.T])
+                    m_std[:, idx] = np.sqrt(np.diag(m_cov))
 
                     prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, num_pixel2inv))
                 prog_bar.close()
 
             else:
-                # option 2.2a - assume obs errors following normal dist. in time
+                # option 2.3 - assume obs errors following normal dist. in time
                 print('estimating time function STD from time-series fitting residual ...')
                 G_inv = linalg.inv(np.dot(G.T, G))
                 m_var = e2.reshape(1, -1) / (num_date - num_param)
                 m_std[:, mask] = np.sqrt(np.dot(np.diag(G_inv).reshape(-1, 1), m_var))
 
-                # option 2.2b - simplified form for linear velocity (without matrix linear algebra)
+                # option 2.4 - simplified form for linear velocity (without matrix linear algebra)
                 # The STD can also be calculated using Eq. (10) from Fattahi and Amelung (2015, JGR)
                 # ts_diff = ts_data - np.dot(G, m)
                 # t_diff = G[:, 1] - np.mean(G[:, 1])
