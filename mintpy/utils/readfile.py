@@ -202,7 +202,7 @@ def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1, da
                 box         : 4-tuple of int area to read, defined in (x0, y0, x1, y1) in pixel coordinate
                 x/ystep     : int, number of pixels to pick/multilook for each output pixel
                 data_type   : numpy data type, e.g. np.float32, np.bool_, etc.
-    Returns:    data        : 2/3-D matrix in numpy.array format, return None if failed
+    Returns:    data        : 2/3/4D matrix in numpy.array format, return None if failed
                 atr         : dictionary, attributes of data, return None if failed
     Examples:
         from mintpy.utils import readfile
@@ -272,7 +272,7 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
                     ...
                 box         : 4-tuple of int area to read, defined in (x0, y0, x1, y1) in pixel coordinate
                 x/ystep     : int, number of pixels to pick/multilook for each output pixel
-    Returns:    data        : 2D/3D array
+    Returns:    data        : 2/3/4D array
                 atr         : dict, metadata
     """
     # File Info: list of slice / dataset / dataset2d / dataset3d
@@ -305,13 +305,18 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
     with h5py.File(fname, 'r') as f:
         # get dataset object
         dsNames = [i for i in [datasetName[0], dsFamily] if i in f.keys()]
-        dsNamesOld = [i for i in slice_list if '/{}'.format(datasetName[0]) in i] # support for old mintpy files
+        # support for old mintpy-v0.x files
+        dsNamesOld = [i for i in slice_list if '/{}'.format(datasetName[0]) in i]
         if len(dsNames) > 0:
             ds = f[dsNames[0]]
         elif len(dsNamesOld) > 0:
             ds = f[dsNamesOld[0]]
         else:
             raise ValueError('input dataset {} not found in file {}'.format(datasetName, fname))
+
+        # output size for >=2D dataset if x/ystep > 1
+        xsize = int((box[2] - box[0]) / xstep)
+        ysize = int((box[3] - box[1]) / ystep)
 
         # 2D dataset
         if ds.ndim == 2:
@@ -321,11 +326,6 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
 
             # sampling / nearest interplation in y/xstep
             if xstep * ystep > 1:
-                # output size if x/ystep > 1
-                xsize = int((box[2] - box[0]) / xstep)
-                ysize = int((box[3] - box[1]) / ystep)
-
-                # sampling
                 data = data[int(ystep/2)::ystep,
                             int(xstep/2)::xstep]
                 data = data[:ysize, :xsize]
@@ -349,10 +349,6 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
                           box[0]:box[2]]
 
             else:
-                # output size if x/ystep > 1
-                xsize = int((box[2] - box[0]) / xstep)
-                ysize = int((box[3] - box[1]) / ystep)
-
                 # sampling / nearest interplation in y/xstep
                 # use for loop to save memory
                 num_slice = np.sum(slice_flag)
@@ -362,7 +358,7 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
                 for i in range(num_slice):
                     # print out msg
                     if print_msg:
-                        sys.stdout.write('\r' + f'reading slice {i+1}/{num_slice}...')
+                        sys.stdout.write('\r' + f'reading 2D slices {i+1}/{num_slice}...')
                         sys.stdout.flush()
 
                     # read and index
@@ -375,6 +371,42 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
 
                 if print_msg:
                     print('')
+
+            if any(i == 1 for i in data.shape):
+                data = np.squeeze(data)
+
+        # 4D dataset
+        elif ds.ndim == 4:
+            # custom flag for the time domain is ignore for now
+            # a.k.a. read the entire first 2 dimensions
+
+            num1, num2 = ds.shape[0], ds.shape[1]
+            shape = (num1, num2, ysize, xsize)
+            if print_msg:
+                ram_size = num1 * num2 * ysize * xsize * ds.dtype.itemsize / 1024**3
+                print(f'initiate a 4D matrix in size of {shape} in {ds.dtype} in the memory ({ram_size:.1f} GB) ...')
+            data = np.zeros(shape, ds.dtype) * np.nan
+
+            # loop over the 1st dimension [for more verbose print out msg]
+            for i in range(num1):
+                if print_msg:
+                    sys.stdout.write('\r' + f'reading 3D cubes {i+1}/{num1}...')
+                    sys.stdout.flush()
+
+                d3 = ds[i, :,
+                        box[1]:box[3],
+                        box[0]:box[2]]
+
+                # sampling / nearest interpolation in y/xstep
+                if xstep * ystep > 1:
+                    d3 = d3[:,
+                            int(ystep/2)::ystep,
+                            int(xstep/2)::xstep]
+
+                data[i, :, :, :] = d3[:, :ysize, :xsize]
+
+            if print_msg:
+                print('')
 
             if any(i == 1 for i in data.shape):
                 data = np.squeeze(data)
