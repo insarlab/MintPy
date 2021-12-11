@@ -100,7 +100,7 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    if '--gps-comp' in iargs:
+    if inps.gps_component:
         msg = '--gps-comp is not supported for {}'.format(os.path.basename(__file__))
         raise NotImplementedError(msg)
 
