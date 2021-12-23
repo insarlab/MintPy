@@ -790,6 +790,14 @@ def round_to_1(x):
     return round(x, -digit)
 
 
+def round_up_to_odd(x):
+    """Round a float up to the next odd integer .
+    Link: https://stackoverflow.com/questions/31648729
+    """
+    y = np.ceil(x) // 2 * 2 + 1
+    return y.astype(np.int16)
+
+
 def highest_power_of_2(x):
     """Given a number x, find the highest power of 2 that <= x"""
     res = np.power(2, np.floor(np.log2(x)))

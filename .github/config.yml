@@ -4,9 +4,9 @@
 
 # Comment to be posted to on first time issues
 newIssueWelcomeComment: >
-  👋  Thanks for opening your first issue here! Please make sure you filled out the template with as much detail as possible. We appreciate that you took the time to contribute!
+  👋  Thanks for opening your first issue here! Please filled out the template with as much details as possible. We appreciate that you took the time to contribute!
 
-  Make sure you read our [contributing guidelines](https://github.com/insarlab/MintPy/blob/master/docs/CONTRIBUTING.md)
+  Make sure you read our [contributing guidelines](https://github.com/insarlab/MintPy/blob/master/docs/CONTRIBUTING.md).
 
 # Configuration for new-pr-welcome - https://github.com/behaviorbot/new-pr-welcome
 

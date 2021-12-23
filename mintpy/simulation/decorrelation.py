@@ -24,7 +24,7 @@ def phase_pdf_ds(L, coherence=None, phi_num=1000, coh_step=0.005):
     Parameters: L         - int, number of independent looks
                 coherence - 1D np.array for the range of coherence, with value < 1.0 for valid operation
                 phi_num   - int, number of phase sample for the numerical calculation
-                coh_step  - float, incremental step of coherence
+                coh_step  - float, incremental step of coherence, used only if coherence is None.
     Returns:    pdf       - 2D np.array, phase PDF in size of (phi_num, len(coherence))
                 coherence - 1D np.array for the range of coherence
     Example:

@@ -112,7 +112,7 @@ def create_parser():
     parser.add_argument('--noverbose', dest='print_msg', action='store_false',
                         help='Disable the verbose message printing (default: %(default)s).')
 
-    parser.add_argument('--math', dest='math_operation', choices={'square','sqrt','reverse','inverse'},
+    parser.add_argument('--math', dest='math_operation', choices={'square','sqrt','reverse','inverse','rad2deg','deg2rad'},
                         help='Apply the math operation before displaying [for single subplot ONLY].\n'
                              'E.g. plot the std. dev. of the variance file.\n'
                              '  square  = x^2\n'
@@ -139,6 +139,11 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # save argv (to check the manually specified arguments)
+    # use iargs        for python call
+    # use sys.argv[1:] for command line call
+    inps.argv = iargs if iargs else sys.argv[1:]
 
     # check invalid file inputs
     for key in ['file','dem_file','mask_file','pts_file']:
@@ -172,7 +177,7 @@ def cmd_line_parse(iargs=None):
 
     # check geo-only options for files in radar-coordinates
     geo_opt_names = ['--coord', '--show-gps', '--coastline', '--lalo-label', '--lalo-step', '--scalebar']
-    geo_opt_names = list(set(geo_opt_names) & set(iargs))
+    geo_opt_names = list(set(geo_opt_names) & set(inps.argv))
     if geo_opt_names and 'Y_FIRST' not in readfile.read_attribute(inps.file).keys():
         for opt_name in geo_opt_names:
             print(f'WARNING: {opt_name} is NOT supported for files in radar-coordinate, ignore it and continue.')
@@ -182,7 +187,7 @@ def cmd_line_parse(iargs=None):
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
     # print view.py command line if --noverbose (used in smallbaselineApp.py)
     if not inps.print_msg:
-        print('view.py', ' '.join(iargs))
+        print('view.py', ' '.join(inps.argv))
 
     if inps.disp_setting_file:
         inps = update_inps_with_display_setting_file(inps, inps.disp_setting_file)
@@ -453,9 +458,15 @@ def update_data_with_plot_inps(data, metadata, inps):
         elif inps.math_operation == 'sqrt':
             data = np.sqrt(data)
         elif inps.math_operation == 'reverse':
-            data *= -1
+            data *= -1.
         elif inps.math_operation == 'inverse':
             data = 1. / data
+        elif inps.math_operation == 'rad2deg':
+            data *= 180. / np.pi
+        elif inps.math_operation == 'deg2rad':
+            data *= np.pi / 180.
+        else:
+            raise ValueError('un-recognized math operation: {}'.format(inps.math_operation))
 
     # 4. update display min/max
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
@@ -1093,7 +1104,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
     if same_unit4all_subplots:
         data, inps = update_data_with_plot_inps(data, metadata, inps)
     else:
-        if any(x in inps.iargs for x in ['-u', '--unit']):
+        if any(x in inps.argv for x in ['-u', '--unit']):
             print('WARNING: -u/--unit option is disabled for multi-subplots with different units! Ignore it and continue')
         inps.disp_unit = None
 
@@ -1452,7 +1463,6 @@ def prep_slice(cmd, auto_fig=False):
         plt.show()
     """
     inps = cmd_line_parse(cmd.split()[1:])
-    inps.argv = cmd.split()[1:]
     vprint(cmd)
     inps, atr = read_input_file_info(inps)
     inps = update_inps_with_file_metadata(inps, atr)
@@ -1530,13 +1540,12 @@ class viewer():
         if cmd:
             iargs = cmd.split()[1:]
         self.cmd = cmd
-        self.iargs =iargs
+        self.iargs = iargs
         return
 
 
     def configure(self):
         inps = cmd_line_parse(self.iargs)
-        inps.argv = list(self.iargs)
         inps, self.atr = read_input_file_info(inps)
         inps = update_inps_with_file_metadata(inps, self.atr)
 
@@ -1631,7 +1640,7 @@ class viewer():
             # warn single-subplot options
             opt_names = ['--show-gps', '--coastline', '--lalo-label', '--lalo-step', '--scalebar',
                          '--pts-yx', '--pts-lalo', '--pts-file']
-            opt_names = list(set(opt_names) & set(self.iargs))
+            opt_names = list(set(opt_names) & set(self.argv))
             for opt_name in opt_names:
                 print('WARNING: {} is NOT supported for multi-subplots, ignore it and continue.'.format(opt_name))
 
