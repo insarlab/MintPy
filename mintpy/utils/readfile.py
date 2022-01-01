@@ -382,9 +382,17 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
 
             # read data
             if xstep * ystep == 1:
-                data = ds[slice_flag,
-                          box[1]:box[3],
-                          box[0]:box[2]]
+                try:
+                    data = ds[slice_flag,
+                              box[1]:box[3],
+                              box[0]:box[2]]
+                except:
+                    # for some reason, fails to slice with an array of bools
+                    idx = np.array(list(range(len(slice_flag))))
+                    slice_flag1 = idx[slice_flag]
+                    data = ds[slice_flag1,
+                              box[1]:box[3],
+                              box[0]:box[2]]
 
             else:
                 # sampling / nearest interplation in y/xstep
