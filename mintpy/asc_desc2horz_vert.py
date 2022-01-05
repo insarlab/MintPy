@@ -15,8 +15,12 @@ from mintpy.utils import readfile, writefile, utils as ut
 
 ################################################################################
 REFERENCE = """reference:
+  Fialko, Y., Simons, M., & Agnew, D. (2001). The complete (3-D) surface displacement
+    field in the epicentral area of the 1999 MW7.1 Hector Mine Earthquake, California,
+    from space geodetic observations. Geophysical Research Letters, 28(16), 3063-3066.
+    doi:10.1029/2001GL013174
   Wright, T. J., B. E. Parsons, and Z. Lu (2004), Toward mapping surface deformation
-    in three dimensions using InSAR, Geophysical Research Letters, 31(1), n/a-n/a,
+    in three dimensions using InSAR, Geophysical Research Letters, 31(1), L01607,
     doi:10.1029/2003GL018827.
 """
 

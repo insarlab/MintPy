@@ -129,9 +129,12 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, gps_comp='enu2
     obs_ind = 4 if obs_type in ['velocity'] else 3
 
     # GPS CSV file info
-    csv_file = os.path.join(fdir, f'gps_{gps_comp}.csv')
+    csv_file = os.path.join(fdir, f'gps_{gps_comp}')
+    csv_file += f'{horz_az_angle:.0f}' if gps_comp == 'horz' else ''
+    csv_file += '.csv'
     col_names = ['Site', 'Lon', 'Lat', 'Displacement', 'Velocity']
     col_types = ['U10'] + ['f8'] * (len(col_names) - 1)
+    vprint(f'default GPS observation file name: {csv_file}')
 
     # skip re-calculate GPS if:
     # 1. redo is False AND
