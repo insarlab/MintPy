@@ -39,6 +39,9 @@ def do_setup():
         author="Zhang Yunjun, Heresh Fattahi",
         author_email="yunjunzgeo@gmail.com",
 
+        license='GPL-3.0-or-later',
+        license_files=('LICENSE',),
+
         url=website,
         project_urls={
             "Bug Reports": "https://github.com/insarlab/mintpy/issues",
