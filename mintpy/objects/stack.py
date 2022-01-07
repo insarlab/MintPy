@@ -270,9 +270,17 @@ class timeseries:
                 box = [0, 0, self.width, self.length]
 
             # read
-            data = ds[dateFlag,
-                      box[1]:box[3],
-                      box[0]:box[2]]
+            try:
+                data = ds[dateFlag,
+                          box[1]:box[3],
+                          box[0]:box[2]]
+            except:
+                # for some reason, fails to slice with an array of bools
+                idx = np.array(list(range(len(dateFlag))))
+                dateFlag1 = idx[dateFlag]
+                data = ds[dateFlag1,
+                          box[1]:box[3],
+                          box[0]:box[2]]
 
             if squeeze and any(i == 1 for i in data.shape):
                 data = np.squeeze(data)
