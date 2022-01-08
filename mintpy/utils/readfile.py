@@ -10,6 +10,7 @@
 import os
 import sys
 import re
+import glob
 import warnings
 import defusedxml.ElementTree as ET
 
@@ -579,8 +580,12 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
             byte_order = 'little-endian'
 
     # GDAL / GMTSAR / ASF HyP3
-    elif processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr']:
-        pass
+    elif processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr', 'uavsar']:
+        # try to recognize custom dataset names if specified and recognized.
+        if datasetName:
+            slice_list = get_slice_list(fname)
+            if datasetName in slice_list:
+                band = slice_list.index(datasetName) + 1
 
     else:
         print('Unknown InSAR processor: {}'.format(processor))
@@ -706,10 +711,18 @@ def get_slice_list(fname, no_complex=False):
                 slice_list = ['complex']
 
         elif fbase.startswith('off') and fext in ['.bip'] and num_band == 2:
+            # ampcor offset file
             slice_list = ['azimuthOffset', 'rangeOffset']
 
         elif fbase.startswith('off') and fname.endswith('cov.bip') and num_band == 3:
+            # ampcor offset covariance file
             slice_list = ['azimuthOffsetVar', 'rangeOffsetVar', 'offsetCovar']
+
+        elif fext in ['.lkv']:
+            slice_list = ['east', 'north', 'up']
+
+        elif fext in ['.llh']:
+            slice_list = ['latitude', 'longitude', 'height']
 
         else:
             slice_list = ['band{}'.format(i+1) for i in range(num_band)]
@@ -768,6 +781,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
                          ...
     Returns:    atr : dict, attributes dictionary
     """
+    fdir = os.path.dirname(fname)
     fbase, fext = os.path.splitext(os.path.basename(fname))
     fext = fext.lower()
     if not os.path.isfile(fname):
@@ -913,6 +927,45 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             msg = 'input DEHM file size do NOT match with the pre-defined 10m DEHM: '
             msg += '{} * {} in {}!'.format(atr['LENGTH'], atr['WIDTH'], atr['DATA_TYPE'])
             raise ValueError(msg)
+
+    elif fext in ['.lkv', '.llh']:
+        # UAVSAR geometry file
+        # link: https://uavsar.jpl.nasa.gov/science/documents/stack-format.html
+        site, line, version, bcorr = fbase.split('_')[:4]
+        ann_files = glob.glob(os.path.join(fdir, f'{site}_{line}_*_{version}_{bcorr}.ann'))
+        if len(ann_files) > 0:
+            ann = read_uavsar_ann(ann_files[0])
+            atr = {}
+
+            # data size
+            seg, mli = fbase.split('_')[-2:]
+            if seg.startswith('s'):
+                # single segment file
+                atr['LENGTH'] = ann[f'slc_{seg[1:]}_{mli} Rows']
+                atr['WIDTH']  = ann[f'slc_{seg[1:]}_{mli} Columns']
+
+            else:
+                # merged/concatenated file
+                num_seg = int(ann['Number of Segments'])
+                length, width = 0, 0
+                for i in range(1, num_seg+1):
+                    length += int(ann[f'slc_{i}_{mli} Rows'])
+                    width = int(ann[f'slc_{i}_{mli} Columns'])
+                atr['LENGTH'] = str(length)
+                atr['WIDTH'] = str(width)
+
+            atr['ANTENNA_SIDE'] = '1' if ann['Look Direction'].lower() == 'left' else '-1'
+            atr['PROCESSOR'] = 'uavsar'
+            atr['PLATFORM'] = 'uavsar'
+            atr['FILE_TYPE'] = fext
+            atr['DATA_TYPE'] = 'float32'
+            atr['RLOOKS'] = mli.split('x')[0]
+            atr['ALOOKS'] = mli.split('x')[1]
+            atr['BANDS'] = '3'
+            atr['INTERLEAVE'] = 'BIP'
+
+        else:
+            raise FileNotFoundError('No UAVSAR *.ann file found!')
 
     else:
         # grab all existed potential metadata file given the data file in prefered order/priority
@@ -1410,6 +1463,27 @@ def read_gdal_vrt(fname):
     atr = standardize_metadata(atr)
 
     return atr
+
+
+def read_uavsar_ann(fname, comment=';', delimiter='='):
+    """Read the UAVSAR annotation file into dictionary.
+    """
+    # read the entirer text file into list of strings
+    lines = None
+    with open(fname, 'r') as f:
+        lines = f.readlines()
+
+    # convert the list of strings into a dict object
+    meta = {}
+    for line in lines:
+        line = line.strip()
+        c = [x.strip() for x in line.split(delimiter, 1)]
+        if len(c) >= 2 and not line.startswith(comment):
+            key = c[0].split('(')[0].strip()
+            value = str.replace(c[1], '\n', '').split(comment)[0].strip()
+            meta[key] = value
+
+    return meta
 
 
 def read_gmtsar_prm(fname, delimiter='='):

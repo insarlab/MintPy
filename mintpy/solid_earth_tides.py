@@ -216,7 +216,7 @@ def get_datetime_list(ts_file, date_wise_acq_time=False):
         sensingMid = [dt.datetime.strptime(i, date_str_format) for i in sensingMidStr]
 
     elif date_wise_acq_time and all(os.path.isdir(i) for i in xml_dirs):
-        # opt 2. read sensingMid in xml files
+        # opt 2. read sensingMid in xml files [for Sentinel-1 with topsStack]
         print('read exact datetime info in XML files from ISCE-2/topsStack results in directory:', proj_dir)
         from mintpy.utils import isce_utils
         sensingMid = isce_utils.get_sensing_datetime_list(proj_dir, date_list=date_list)[0]
@@ -224,14 +224,22 @@ def get_datetime_list(ts_file, date_wise_acq_time=False):
         # plot
         plot_sensingMid_variation(sensingMid)
 
+    elif "T" in date_list[0]:
+        # opt 3. use the time info in the `date` dataset [as provided by UAVSAR stack]
+        date_format = ptime.get_date_str_format(date_list[0])
+        sensingMid = [dt.datetime.strptime(i, date_format) for i in date_list]
+
     else:
-        # opt 3. use constant time of the day for all acquisitions
-        msg =  'Use the same time of the day for all acquisitions from CENTER_LINE_UTC\n'
-        msg += 'With <= 1 min variation for Sentinel-1A/B for example, this simplication has negligible impact on SET calculation.'
-        print(msg)
+        # opt 4. use constant time of the day for all acquisitions
         atr = readfile.read_attribute(ts_file)
         utc_sec = dt.timedelta(seconds=float(atr['CENTER_LINE_UTC']))
         sensingMid = [dt.datetime.strptime(i, '%Y%m%d') + utc_sec for i in date_list]
+
+        msg =  'Use the same time of the day for all acquisitions from CENTER_LINE_UTC\n'
+        if atr.get('PLATFORM', 'Unknow').lower().startswith('sen'):
+            msg += 'With <= 1 min variation for Sentinel-1A/B for example, this simplication has negligible impact on SET calculation.'
+        print(msg)
+
 
     return sensingMid
 
