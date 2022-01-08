@@ -10,6 +10,7 @@ import os
 import sys
 import glob
 import argparse
+import numpy as np
 from mintpy.utils import ptime, readfile, writefile, isce_utils
 
 
@@ -24,8 +25,9 @@ EXAMPLE = """example:
   prep_isce.py -m 20120507_slc_crop.xml -g ./geometry                                                           #for stripmapApp
   prep_isce.py -d "pairs/*-*/insar" -m "pairs/*-*/150408.track.xml" -b baseline -g dates_resampled/150408/insar #for alosStack with 150408 as ref date
 
-  # offset stack from topsStack
-  prep_isce.py -d ./merged/offsets -f filtAz*.off -m ./reference/IW1.xml -b ./baselines -g ./merged/offsets/geom_reference
+  # offset stack
+  prep_isce.py -d ./offsets -f *Off*.bip -m ./../reference/IW1.xml -b ./../baselines -g ./offsets/geom_reference  #for topsStack
+  prep_isce.py -d ./offsets -f *Off*.bip -m ./SLC/*/data.dat       -b random         -g ./geometry                #for UAVSAR coregStack
 """
 
 def create_parser():
@@ -52,7 +54,9 @@ def create_parser():
 
     # geometry
     parser.add_argument('-b', '--baseline-dir', dest='baselineDir', type=str, default=None,
-                        help='Directory with baselines ')
+                        help='Directory with baselines.'
+                             'Set "random" to generate baseline with random value from [-10,10].'
+                             'Set "random-100" to generate baseline with random value from [-100,100].')
     parser.add_argument('-g', '--geometry-dir', dest='geometryDir', type=str, default=None, required=True,
                         help='Directory with geometry files ')
     parser.add_argument('--geom-files', dest='geometryFiles', type=str, nargs='*',
@@ -76,6 +80,10 @@ def cmd_line_parse(iargs = None):
             inps.metaFile = fnames[0]
         else:
             raise FileNotFoundError(inps.metaFile)
+
+    # random baseline input checking
+    if inps.baselineDir.lower().startswith('rand'):
+        inps.baselineDir = inps.baselineDir.lower().replace('_','-')
 
     return inps
 
@@ -156,6 +164,27 @@ def prepare_geometry(geom_dir, geom_files=[], metadata=dict(), processor='tops',
     return
 
 
+def gen_random_baseline_timeseries(dset_dir, dset_file, max_bperp=10):
+    """Generate a baseline time series with random values.
+    """
+    # list of dates
+    fnames = glob.glob(os.path.join(dset_dir, '*', dset_file))
+    date12s = sorted([os.path.basename(os.path.dirname(x)) for x in fnames])
+    date1s = [x.split('_')[0] for x in date12s]
+    date2s = [x.split('_')[1] for x in date12s]
+    date_list = sorted(list(set(date1s + date2s)))
+
+    # list of bperp
+    bperp_list = [0] + np.random.randint(-max_bperp, max_bperp, len(date_list)-1).tolist()
+
+    # prepare output
+    bDict = {}
+    for date_str, bperp in zip(date_list, bperp_list):
+        bDict[date_str] = [bperp, bperp]
+
+    return bDict
+
+
 def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), processor='tops', update_mode=True):
     print('preparing RSC file for ', filePattern)
     if processor in ['tops', 'stripmap']:
@@ -221,8 +250,18 @@ def main(iargs=None):
     # read baseline info
     baseline_dict = {}
     if inps.baselineDir:
-        baseline_dict = isce_utils.read_baseline_timeseries(inps.baselineDir,
-                                                            processor=inps.processor)
+        if inps.baselineDir.startswith('rand') and inps.dsetDir and inps.dsetFiles:
+            if '-' in inps.baselineDir:
+                max_bperp = float(inps.baselineDir.split('-')[1])
+            else:
+                max_bperp = 10
+            baseline_dict = gen_random_baseline_timeseries(dset_dir=inps.dsetDir,
+                                                           dset_file=inps.dsetFiles[0],
+                                                           max_bperp=max_bperp)
+
+        else:
+            baseline_dict = isce_utils.read_baseline_timeseries(inps.baselineDir,
+                                                                processor=inps.processor)
 
     # prepare metadata for ifgram file
     if inps.dsetDir and inps.dsetFiles:
