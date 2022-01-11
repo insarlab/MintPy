@@ -15,7 +15,7 @@ import numpy as np
 from scipy import linalg
 from mintpy.objects import timeseries, geometry, cluster
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import arg_group, ptime, readfile, writefile, utils as ut
+from mintpy.utils import arg_group, ptime, time_func, readfile, writefile, utils as ut
 
 
 # key configuration parameter name
@@ -247,13 +247,19 @@ def get_design_matrix4defo(inps):
     msg += '\n'+'-'*80
     print(msg)
 
-    # get design matrix for temporal deformation model
+    # prepare temporal deformation model
     model = dict()
     model['polynomial'] = inps.polyOrder
     model['step'] = inps.stepFuncDate
     model['periodic'] = inps.periodic
-    date_list = timeseries(inps.timeseries_file).get_date_list()
-    G_defo = timeseries.get_design_matrix4time_func(date_list, model)
+
+    # prepare SAR info
+    ts_obj = timeseries(inps.timeseries_file)
+    date_list = ts_obj.get_date_list()
+    seconds = ts_obj.get_metadata().get('CENTER_LINE_UTC', 0)
+
+    # compose design matrix
+    G_defo = time_func.get_design_matrix4time_func(date_list, model, seconds=seconds)
 
     return G_defo
 
@@ -269,14 +275,6 @@ def read_geometry(ts_file, geom_file=None, box=None):
     """
     ts_obj = timeseries(ts_file)
     ts_obj.open(print_msg=False)
-
-    # size
-    if box:
-        num_row = box[3] - box[1]
-        num_col = box[2] - box[0]
-    else:
-        num_row = ts_obj.length
-        num_col = ts_obj.width
 
     # 0/2/3D geometry
     if geom_file:
@@ -517,6 +515,10 @@ def correct_dem_error(inps):
 
     start_time = time.time()
 
+    # limit the number of threads to 1
+    # for slight speedup and big CPU usage save
+    num_threads_dict = cluster.set_num_threads("1")
+
     ## 1. input info
 
     # 1.1 read date info
@@ -652,6 +654,9 @@ def correct_dem_error(inps):
                                    data=ts_res,
                                    datasetName='timeseries',
                                    block=block)
+
+    # roll back to the origial number of threads
+    cluster.roll_back_num_threads(num_threads_dict)
 
     # time info
     m, s = divmod(time.time()-start_time, 60)

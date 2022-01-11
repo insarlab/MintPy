@@ -19,12 +19,13 @@ mintpy.load.shadowMaskFile = None                               #[path2shadow_fi
 mintpy.load.waterMaskFile  = None                               #[path2water_mask_file]
 
 ##————————————————————————————— PROCESSING Options ——-----————————————————————##
-mintpy.reference.lalo                           = 33.0655, 131.2076
+mintpy.reference.lalo  = 33.0655, 131.2076
 mintpy.networkInversion.weightFunc              = no
 mintpy.troposphericDelay.weatherModel           = ERA5
 mintpy.topographicResidual.pixelwiseGeometry    = no
-mintpy.deramp                                   = linear
-mintpy.save.hdfEos5                             = yes
+mintpy.deramp          = linear
+mintpy.save.hdfEos5    = yes
+mintpy.plot.maxMemory  = 2
 
 ##————————————————————————————— HDF-EOS5 Attributes -—————————————————————————##
 beam_mode           = SM

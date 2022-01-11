@@ -303,13 +303,19 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=
     # for binary file with 2 bands, always use BIL scheme
     if (len(dsDict.keys()) == 2
             and os.path.splitext(infile)[1] not in ['.h5','.he5']
-            and atr.get('scheme', 'BIL').upper() != 'BIL'):
-        print('the input binary file has 2 bands with band interleave as: {}'.format(atr['scheme']))
+            and atr.get('INTERLEAVE', 'BIL').upper() != 'BIL'):
+        print('the input binary file has 2 bands with band interleave as: {}'.format(atr['INTERLEAVE']))
         print('for the output binary file, change the band interleave to BIL as default.')
-        atr['scheme'] = 'BIL'
+        atr['INTERLEAVE'] = 'BIL'
 
     if ext not in ['.h5', '.he5']:
+        atr['BANDS'] = len(dsDict.keys())
         writefile.write(dsDict, out_file=outfile, metadata=atr, ref_file=infile)
+
+        # write extra metadata files for ISCE data files
+        if os.path.isfile(infile+'.xml') or os.path.isfile(infile+'.aux.xml'):
+            writefile.write_isce_xml(atr, outfile)
+
     return outfile
 
 

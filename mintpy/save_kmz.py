@@ -44,21 +44,23 @@ EXAMPLE = """example:
   save_kmz.py geo/geo_timeseries_ERA5_demErr.h5 20200505_20200517
 
   save_kmz.py geo/geo_ifgramStack.h5 20101120_20110220
-  save_kmz.py geo/geo_geometryRadar.h5 --cbar-label Elevation
+  save_kmz.py geo/geo_geometryRadar.h5 height --cbar-label Elevation
 
-  # save full resolution velocity in radar-coordinates
-  # for ISCE products (with lookup table in radar coordinates) ONLY
-  # use --sub-x/y to reduce file size for a smooth Google Earth experience
+  # to generate placemarks for the file in radar coordinates, the corresponding
+  # geometry file with latitude & longitude in radar coordinates are required,
+  # such as provided by ISCE + MintPy workflow
   save_kmz.py velocity.h5 --sub-x 300 800 --sub-y 1000 1500 --step 1
 """
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Generate Google Earth KMZ file with raster image.',
+    parser = argparse.ArgumentParser(description='Generate Google Earth KMZ file (overlay / placemarks for files in geo / radar coordinates).',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
-    parser.add_argument('file', help='file to be converted, in geo coordinate.')
+    parser.add_argument('file', help='file to be converted, in geo or radar coordinate.\n'
+                        'Note: for files in radar-coordinate, the corresponding lookup table\n'
+                        'in radar-coordinate (as provided by ISCE) is required.')
     parser.add_argument('dset', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-m','--mask', dest='mask_file', metavar='FILE', help='mask file for display')
     parser.add_argument('--zero-mask', dest='zero_mask', action='store_true', help='Mask pixels with zero value.')
@@ -70,7 +72,8 @@ def create_parser():
     parser.add_argument('-g','--geom', dest='geom_file', metavar='FILE',
                         help='geometry file with lat/lon. [required for file in radar coordinates]')
     parser.add_argument('--step', dest='step', type=int, default=5,
-                        help='output one point per {step} pixels, to reduce file size (default: %(default)s).')
+                        help='output one point per {step} pixels, to reduce file size (default: %(default)s).\n'
+                             'For file in radar-coordinate ONLY.')
 
     # Data
     parser.add_argument('-v','--vlim', dest='vlim', nargs=2, metavar=('MIN', 'MAX'), type=float, help='Y/value limits for plotting.')
@@ -571,7 +574,7 @@ def main(iargs=None):
     # disp min/max and colormap
     cmap_lut = 256
     if not inps.vlim:
-        cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(data)        
+        cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(data)
     inps.colormap = pp.auto_colormap_name(atr, inps.colormap)
     inps.colormap = pp.ColormapExt(inps.colormap, cmap_lut).colormap
     inps.norm = colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])

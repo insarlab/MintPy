@@ -13,6 +13,6 @@ mintpy.reference.lalo   = -33, 18.05
 
 mintpy.networkInversion.weightFunc  = no
 mintpy.troposphericDelay.method     = no
-mintpy.deramp                       = linear
 mintpy.topographicResidual.pixelwiseGeometry    = no
-
+mintpy.deramp           = linear
+mintpy.plot.maxMemory   = 2

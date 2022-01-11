@@ -26,6 +26,8 @@ Hierarchy of sub-modules within MintPy. Level _N_ modules depends on level _N-1_
     /objects
         conncomp      (objects/ramp)
         stack         (utils/ptime)
+    /utils
+        time_func     (utils/ptime)
     /simulation
         decorrelation (utils/ptime)
         defo_model    (utils/utils0)
@@ -33,12 +35,13 @@ Hierarchy of sub-modules within MintPy. Level _N_ modules depends on level _N-1_
 ------------------ level 2 --------------------
     /utils
         readfile      (objects/{stack, giant})
+        s1_utils      (utils/{ptime, time_func})
 ------------------ level 3 --------------------
     /objects
         resample      (utils/{readfile, utils0, ptime})
         coord         (utils/{readfile, utils0, utils1})
     /utils
-        writefile     (objects/{stack},         utils/{readfile})
+        writefile     (utils/{readfile})
         network       (objects/{stack, sensor}, utils/{readfile})
 ------------------ level 4 --------------------
     /objects

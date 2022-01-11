@@ -11,26 +11,32 @@ import os
 import shutil
 import h5py
 import numpy as np
-from mintpy.objects import timeseries
 from mintpy.utils import readfile
 
 
-def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None):
+def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None, ds_unit_dict=None, print_msg=True):
     """ Write one file.
-    Parameters: datasetDict : dict of dataset, with key = datasetName and value = 2D/3D array, e.g.:
+    Parameters: datasetDict  - dict of dataset, with key = datasetName and value = 2D/3D array, e.g.:
                     {'height'        : np.ones((   200,300), dtype=np.int16),
                      'incidenceAngle': np.ones((   200,300), dtype=np.float32),
                      'bperp'         : np.ones((80,200,300), dtype=np.float32),
                      ...}
-                out_file : str, output file name
-                metadata : dict of attributes
-                ref_file : str, reference file to get auxliary info
-                compression : str, compression while writing to HDF5 file, None, "lzf", "gzip"
-    Returns:    out_file : str
+                out_file     - str, output file name
+                metadata     - dict of attributes
+                ref_file     - str, reference file to get auxliary info
+                compression  - str, compression while writing to HDF5 file, None, "lzf", "gzip"
+                ds_unit_dict - dict, dataset unit definition
+                    {dname : dunit,
+                     dname : dunit,
+                     ...
+                    }
+    Returns:    out_file     - strs
     Examples:   dsDict = dict()
                 dsDict['velocity'] = np.ones((200,300), dtype=np.float32)
                 write(datasetDict=dsDict, out_file='velocity.h5', metadata=atr)
     """
+    vprint = print if print_msg else lambda *args, **kwargs: None
+
     # copy metadata to meta
     if metadata:
         meta = {key: value for key, value in metadata.items()}
@@ -45,13 +51,20 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
         datasetDict = dict()
         datasetDict[meta['FILE_TYPE']] = data
 
-    # output file info
+    # file extension
     fbase, fext = os.path.splitext(out_file)
+    # ignore certain meaningless file extensions
+    while fext in ['.geo', '.rdr', '.full', '.wgs84']:
+        fbase, fext = os.path.splitext(fbase)
+    if not fext:
+        fext = fbase
     fext = fext.lower()
+
+    # output file info
     out_dir = os.path.dirname(os.path.abspath(out_file))
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
-        print('create directory: {}'.format(out_dir))
+        vprint('create directory: {}'.format(out_dir))
 
     # HDF5 File
     if fext in ['.h5', '.he5']:
@@ -79,8 +92,8 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
 
         # remove existing file
         if os.path.isfile(out_file):
-            print('delete exsited file: {}'.format(out_file))
             os.remove(out_file)
+            vprint('delete exsited file: {}'.format(out_file))
 
         # writing
         print('create HDF5 file: {} with w mode'.format(out_file))
@@ -89,12 +102,12 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             # 1. write input datasets
             for dsName in datasetDict.keys():
                 data = datasetDict[dsName]
-                print(('create dataset /{d:<{w}} of {t:<10} in size of {s:<20} '
-                       'with compression={c}').format(d=dsName,
-                                                      w=maxDigit,
-                                                      t=str(data.dtype),
-                                                      s=str(data.shape),
-                                                      c=compression))
+                vprint(('create dataset /{d:<{w}} of {t:<10} in size of {s:<20} '
+                        'with compression={c}').format(d=dsName,
+                                                       w=maxDigit,
+                                                       t=str(data.dtype),
+                                                       s=str(data.shape),
+                                                       c=compression))
                 ds = f.create_dataset(dsName,
                                       data=data,
                                       chunks=True,
@@ -105,12 +118,12 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                 with h5py.File(ref_file, 'r') as fr:
                     for dsName in auxDsNames:
                         ds = fr[dsName]
-                        print(('create dataset /{d:<{w}} of {t:<10} in size of {s:<10} '
-                               'with compression={c}').format(d=dsName,
-                                                              w=maxDigit,
-                                                              t=str(ds.dtype),
-                                                              s=str(ds.shape),
-                                                              c=compression))
+                        vprint(('create dataset /{d:<{w}} of {t:<10} in size of {s:<10} '
+                                'with compression={c}').format(d=dsName,
+                                                               w=maxDigit,
+                                                               t=str(ds.dtype),
+                                                               s=str(ds.shape),
+                                                               c=compression))
                         f.create_dataset(dsName,
                                          data=ds[:],
                                          chunks=True,
@@ -122,89 +135,88 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                     f.attrs[key] = str(value)
                 except:
                     f.attrs[key] = str(value.encode('utf-8'))
-        print('finished writing to {}'.format(out_file))
+
+            # write attributes in dataset level
+            if ds_unit_dict is not None:
+                for key, value in ds_unit_dict.items():
+                    if value is not None:
+                        f[key].attrs['UNIT'] = value
+                        vprint(f'add /{key:<{maxDigit}} attribute: UNIT = {value}')
+
+        vprint('finished writing to {}'.format(out_file))
 
     # ISCE / ROI_PAC GAMMA / Image product
     else:
+        # basic info
         key_list = list(datasetDict.keys())
-        data_list = []
-        for key in key_list:
-            data_list.append(datasetDict[key])
-        data_type = meta.get('DATA_TYPE', str(data_list[0].dtype)).lower()
+        data_list = list(datasetDict.values())
+        meta['BANDS'] = len(key_list)
+        meta['INTERLEAVE'] = meta.get('INTERLEAVE', 'BIL').upper()
+        # data type
+        meta['DATA_TYPE'] = meta.get('DATA_TYPE', 'float32').lower()
+        DATA_TYPE_DICT = {'float' : 'float32',
+                          'short' : 'int16',
+                          'byte'  : 'int8'}
+        if meta['DATA_TYPE'] in DATA_TYPE_DICT.keys():
+            meta['DATA_TYPE'] = DATA_TYPE_DICT[meta['DATA_TYPE']]
 
-        # ignore certain meaningless file extensions
-        while fext in ['.geo', '.rdr', '.full', '.wgs84']:
-            fbase, fext = os.path.splitext(fbase)
-        if not fext:
-            fext = fbase
-
-        # Write Data File
-        print('write {}'.format(out_file))
-        # determined by fext
+        # adjust for pre-defined files determined by fext
         if fext in ['.unw']:
-            write_float32(data_list[0], out_file)
             meta['DATA_TYPE'] = 'float32'
+            meta['INTERLEAVE'] = 'BIL'
+            if key_list != ['magnitude', 'phase']:
+                data_list = [data_list[0], data_list[0]]
 
         elif fext in ['.cor', '.hgt']:
-            if meta.get('PROCESSOR', 'isce') == 'roipac':
-                write_float32(data_list[0], out_file)
-            else:
-                write_real_float32(data_list[0], out_file)
             meta['DATA_TYPE'] = 'float32'
+            meta['INTERLEAVE'] = 'BIL'
+            if meta.get('PROCESSOR', 'isce') == 'roipac':
+                data_list = [data_list[0], data_list[0]]
 
         elif fext == '.dem':
-            write_real_int16(data_list[0], out_file)
             meta['DATA_TYPE'] = 'int16'
 
         elif fext in ['.trans']:
-            write_float32(data_list[0], data_list[1], out_file)
+            # ROI_PAC lookup table
             meta['DATA_TYPE'] = 'float32'
+            meta['INTERLEAVE'] = 'BIL'
 
-        elif fext in ['.utm_to_rdc', '.UTM_TO_RDC']:
-            data = np.zeros(data_list[0].shape, dtype=np.complex64)
-            data.real = datasetDict['rangeCoord']
-            data.imag = datasetDict['azimuthCoord']
-            data.astype('>c8').tofile(out_file)
+        elif fext in ['.utm_to_rdc']:
+            # Gamma lookup table
+            meta['BANDS'] = 2
+            meta['DATA_TYPE'] = 'float32'
+            meta['INTERLEAVE'] = 'BIP'
 
         elif fext in ['.mli', '.flt']:
-            write_real_float32(data_list[0], out_file)
+            meta['DATA_TYPE'] = 'float32'
 
         elif fext == '.slc':
-            write_complex_int16(data_list[0], out_file)
+            # SLC: complex 64 or 32
+            meta['BANDS'] = 1
 
         elif fext == '.int':
-            write_complex64(data_list[0], out_file)
+            # wrapped interferogram: complex 64
+            meta['BANDS'] = 1
+            meta['DATA_TYPE'] = 'complex64'
+            if key_list == ['magnitude', 'phase']:
+                data_list[0] = data_list[0] * np.exp(1j * data_list[1])
 
         elif fext == '.msk':
-            write_byte(data_list[0], out_file)
-            meta['DATA_TYPE'] = 'byte'
+            meta['DATA_TYPE'] = 'int8'
 
-        # determined by DATA_TYPE
-        elif data_type in ['float64']:
-            write_real_float64(data_list[0], out_file)
+        data_types = ['bool', 'int8', 'int16', 'float32', 'float64', 'complex32', 'complex64', 'complex128']
+        if meta['DATA_TYPE'] not in data_types:
+            msg = 'Un-supported file type "{}" with data type "{}"!'.format(fext, meta['DATA_TYPE'])
+            msg += '\nSupported data type list: {}'.format(data_types)
+            raise ValueError(msg)
 
-        elif data_type in ['float32', 'float']:
-            if len(data_list) == 1:
-                write_real_float32(data_list[0], out_file)
-
-            elif len(data_list) == 2 and meta['scheme'] == 'BIL':
-                write_float32(data_list[0], data_list[1], out_file)
-
-        elif data_type in ['int16', 'short']:
-            write_real_int16(data_list[0], out_file)
-
-        elif data_type in ['int8', 'byte']:
-            write_byte(data_list[0], out_file)
-
-        elif data_type in ['bool']:
-            write_bool(data_list[0], out_file)
-
-        else:
-            print('Un-supported file type:', fext)
-            return 0
+        # write binary file
+        write_binary(data_list, out_file, data_type=meta['DATA_TYPE'], interleave=meta['INTERLEAVE'])
+        vprint('write file: {}'.format(out_file))
 
         # write metadata file
-        write_roipac_rsc(meta, out_file+'.rsc', print_msg=True)
+        write_roipac_rsc(meta, out_file+'.rsc', print_msg=print_msg)
+
     return out_file
 
 
@@ -258,8 +270,8 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
         "timeseries" : [np.float32,     (num_date, length, width)],
     }
     """
-
-    print('-'*50)
+    vprint = print if print_msg else lambda *args, **kwargs: None
+    vprint('-'*50)
 
     # get meta from metadata and ref_file
     if metadata:
@@ -267,49 +279,57 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
     elif ref_file:
         with h5py.File(ref_file, 'r') as fr:
             meta = {key: value for key, value in fr.attrs.items()}
-        if print_msg:
-            print('grab metadata from ref_file: {}'.format(ref_file))
+        vprint('grab metadata from ref_file: {}'.format(ref_file))
     else:
         raise ValueError('No metadata or ref_file found.')
 
     # check ds_name_dict
     if ds_name_dict is None:
-        ds_name_dict = {}
+        if not ref_file or not os.path.isfile(ref_file):
+            raise FileNotFoundError('No ds_name_dict or ref_file found!')
+        else:
+            vprint('grab dataset structure from ref_file: {}'.format(ref_file))
 
-        if ref_file and os.path.splitext(ref_file)[1] in ['.h5', '.he5']:
+        ds_name_dict = {}
+        fext = os.path.splitext(ref_file)[1]
+        shape2d = (int(meta['LENGTH']), int(meta['WIDTH']))
+
+        if fext in ['.h5', '.he5']:
+            # copy dset structure from HDF5 file
             with h5py.File(ref_file, 'r') as fr:
-                shape2d = (int(fr.attrs['LENGTH']), int(fr.attrs['WIDTH']))
-                shape2d_out = (int(meta['LENGTH']), int(meta['WIDTH']))
+                # in case output mat size is different from the input ref file mat size
+                shape2d_orig = (int(fr.attrs['LENGTH']), int(fr.attrs['WIDTH']))
 
                 for key in fr.keys():
                     ds = fr[key]
                     if isinstance(ds, h5py.Dataset):
 
                         # auxliary dataset
-                        if ds.shape[-2:] != shape2d:
+                        if ds.shape[-2:] != shape2d_orig:
                             ds_name_dict[key] = [ds.dtype, ds.shape, ds[:]]
 
                         # dataset
                         else:
                             ds_shape = list(ds.shape)
-                            ds_shape[-2:] = shape2d_out
+                            ds_shape[-2:] = shape2d
                             ds_name_dict[key] = [ds.dtype, tuple(ds_shape), None]
 
-            if print_msg:
-                print('grab dataset structure from ref_file: {}'.format(ref_file))
         else:
-            raise ValueError('No ds_name_dict or ref_file found.')
+            # construct dset structure from binary file
+            ds_names = readfile.get_slice_list(ref_file)
+            ds_dtype = meta['DATA_TYPE']
+            for ds_name in ds_names:
+                ds_name_dict[ds_name] = [ds_dtype, tuple(shape2d), None]
 
     # directory
     fdir = os.path.dirname(os.path.abspath(fname))
     if not os.path.isdir(fdir):
         os.makedirs(fdir)
-        print('crerate directory: {}'.format(fdir))
+        vprint('crerate directory: {}'.format(fdir))
 
     # create file
     with h5py.File(fname, "w") as f:
-        if print_msg:
-            print('create HDF5 file: {} with w mode'.format(fname))
+        vprint('create HDF5 file: {} with w mode'.format(fname))
 
         # initiate dataset
         max_digit = max([len(i) for i in ds_name_dict.keys()])
@@ -329,13 +349,12 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
                 max_shape = data_shape
 
             # create empty dataset
-            if print_msg:
-                print(("create dataset  : {d:<{w}} of {t:<25} in size of {s:<20} with "
-                       "compression = {c}").format(d=key,
-                                                   w=max_digit,
-                                                   t=str(data_type),
-                                                   s=str(data_shape),
-                                                   c=ds_comp))
+            vprint(("create dataset  : {d:<{w}} of {t:<25} in size of {s:<20} with "
+                    "compression = {c}").format(d=key,
+                                                w=max_digit,
+                                                t=str(data_type),
+                                                s=str(data_shape),
+                                                c=ds_comp))
             ds = f.create_dataset(key,
                                   shape=data_shape,
                                   maxshape=max_shape,
@@ -356,10 +375,9 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
             for key, value in ds_unit_dict.items():
                 if value is not None:
                     f[key].attrs['UNIT'] = value
-                    print(f'add /{key:<{max_digit}} attribute: UNIT = {value}')
+                    vprint(f'add /{key:<{max_digit}} attribute: UNIT = {value}')
 
-    if print_msg:
-        print('close  HDF5 file: {}'.format(fname))
+    vprint('close  HDF5 file: {}'.format(fname))
 
     return fname
 
@@ -504,7 +522,7 @@ def write_roipac_rsc(metadata, out_file, update_mode=False, print_msg=False):
 
         # writing .rsc file
         if print_msg:
-            print('write', out_file)
+            print('write file: {}'.format(out_file))
         maxDigit = max([len(key) for key in metadata.keys()]+[2])
         with open(out_file, 'w') as f:
             for key in sorted(metadata.keys()):
@@ -514,31 +532,115 @@ def write_roipac_rsc(metadata, out_file, update_mode=False, print_msg=False):
     return out_file
 
 
-def write_isce_xml(fname, width, length, bands=1, data_type='FLOAT', scheme='BIP'):
+def write_gdal_vrt(meta, out_file):
+    """Write GDAL VRT file.
+
+    !!! This function is NOT RIGHT. DO NOT USE IT. Keep here as a placeholder ONLY. !!!
+    It needs more work.
+
+    Parameters: meta     - dict, dictionary of metadata
+                out_file - str, VRT file name to which attributes are written
+    """
+    # data type: mintpy to gdal
+    dtype_dict = {
+        'int8'      : 'Byte',
+        'int16'     : 'Int16',
+        'float32'   : 'Float32',
+        'float64'   : 'Float64',
+        'complex64' : 'CFloat32',
+        'complex128': 'CFloat64',
+    }
+
+    # pixel / line / image offset
+    pixel_offset_dict = {
+        'int8'      : '2',
+        'int16'     : '4',
+        'float32'   : '8',
+        'float64'   : '16',
+        'complex64' : '16',
+        'complex128': '32',
+    }
+    pixel_offset = int(pixel_offset_dict[meta['DATA_TYPE']])
+    length, width = int(meta['LENGTH']), int(meta['WIDTH'])
+    num_band = int(meta['BANDS'])
+
+    interleave = meta['INTERLEAVE']
+    if interleave == 'BIP':
+        line_offset  = pixel_offset * num_band * width
+        image_offset = pixel_offset
+    elif interleave == 'BIL':
+        line_offset  = pixel_offset * width * num_band
+        image_offset = pixel_offset * width
+    elif interleave == 'BSQ':
+        line_offset  = pixel_offset * width
+        image_offset = pixel_offset * width * length
+    else:
+        raise ValueError('un-recognized band interleave type: {}'.format(interleave))
+
+    # compose VRT file string
+    ds_str = '<VRTDataset rasterXSize="{w}" rasterYSize="{l}">\n'.format(w=meta['WIDTH'], l=meta['LENGTH'])
+    for band in range(num_band):
+        band_str = '''<VRTRasterBand dataType="{d}" band="{b}" subClass="VRTRawRasterBand">
+        <SourceFilename relativeToVRT="1">{f}</SourceFilename>
+        <ByteOrder>LSB</ByteOrder>
+        <ImageOffset>{io}</ImageOffset>
+        <PixelOffset>{po}</PixelOffset>
+        <LineOffset>{lo}</LineOffset>
+    </VRTRasterBand>
+        '''.format(
+            d=dtype_dict[meta['DATA_TYPE']],
+            b=band+1,
+            f=os.path.basename(out_file[:-4]),
+            io=image_offset * band,
+            po=pixel_offset,
+            lo=line_offset,
+        )
+        ds_str += band_str
+    ds_str += '</VRTDataset>\n'
+
+    # write VRT file
+    with open(out_file, 'w') as f:
+        f.write(ds_str)
+
+    return out_file
+
+
+def write_isce_xml(meta, fname, print_msg=True):
     """Write XML metadata file in ISCE-2 format
 
-    Parameters: fname     - str, path of data file
-                width     - int, number of columns
-                length    - int, number of rows
-                bands     - int, number of band
-                data_type - str, data type name in ISCE convention
-                            readfile.GDAL2ISCE_DATATYPE
-                scheme    - str, band interleave, BIP, BIL, BSQ
-    Examples:   write_isce_xml(out_file='filt_fine.cor', width=400, length=500)
+    Parameters: meta      - dict, attributes dictionary
+                fname     - str, path of data file, not the metadata file
+                print_msg - bool, print out message
+    Examples:   write_isce_xml(atr, fname='filt_fine.cor')
     """
+
     import isce
     import isceobj
 
-    img = isceobj.Image.createImage()
+    # data type
+    dtype_gdal = readfile.NUMPY2GDAL_DATATYPE[meta['DATA_TYPE']]
+    dtype_isce = readfile.GDAL2ISCE_DATATYPE[dtype_gdal]
+
+    # write ISCE XML and GDAL VRT files
+    image_type = meta['FILE_TYPE']
+    if not image_type:          img = isceobj.Image.createImage()
+    elif image_type == '.slc':  img = isceobj.Image.createSlcImage()
+    elif image_type == '.unw':  img = isceobj.Image.createUnwImage()
+    elif image_type == '.int':  img = isceobj.Image.createIntImage()
+    else:                       img = isceobj.Image.createImage()
+
     img.setFilename(fname)
-    img.setWidth(width)
-    img.setLength(length)
+    img.setWidth(int(meta['WIDTH']))
+    img.setLength(int(meta['LENGTH']))
     img.setAccessMode('READ')
-    img.bands = bands
-    img.dataType = data_type
-    img.scheme = scheme
+    img.bands = int(meta.get('BANDS', '1'))
+    img.dataType = dtype_isce
+    img.scheme = meta.get('INTERLEAVE', 'BIL')
     img.renderHdr()
     img.renderVRT()
+    if print_msg:
+        print(f'write file: {fname}.xml')
+        print(f'write file: {fname}.vrt')
 
     return
 
@@ -551,9 +653,6 @@ def write_isce_file(data, out_file, file_type='isce_unw'):
                 file_type - str, file type
     Returns:    out_file  - str, path of output binary data file
     """
-    import isce
-    import isceobj
-
     # fix potential typo
     file_type = file_type.replace('-', '_')
 
@@ -562,25 +661,81 @@ def write_isce_file(data, out_file, file_type='isce_unw'):
 
     # write isce xml metadata file
     length, width = data.shape
+    meta = {
+        'LENGTH' : length,
+        'WIDTH'  : width,
+    }
 
     if file_type == 'isce_unw':
-        width = int(width / 2)
-        write_isce_xml(out_file, width, length, bands=2, data_type='FLOAT', scheme='BIL')
+        meta['FILE_TYPE'] = '.unw'
+        meta['BANDS'] = 2
+        meta['DATA_TYPE'] = 'float32'
+        meta['INTERLEAVE'] = 'BIL'
+        meta['WIDTH'] = int(width / 2)
 
     elif file_type == 'isce_int':
-        write_isce_xml(out_file, width, length, bands=1, data_type='CFLOAT', scheme='BIL')
+        meta['FILE_TYPE'] = '.int'
+        meta['BANDS'] = 1
+        meta['DATA_TYPE'] = 'complex64'
+        meta['INTERLEAVE'] = 'BIL'
 
     elif file_type == 'isce_cor':
-        write_isce_xml(out_file, width, length, bands=1, data_type='FLOAT', scheme='BIL')
+        meta['FILE_TYPE'] = '.cor'
+        meta['BANDS'] = 1
+        meta['DATA_TYPE'] = 'float32'
+        meta['INTERLEAVE'] = 'BIL'
+
+    elif file_type == 'isce_slc':
+        meta['FILE_TYPE'] = '.slc'
+        meta['BANDS'] = 1
+        meta['DATA_TYPE'] = 'complex64'
+        meta['INTERLEAVE'] = 'BIP'
 
     else:
         raise ValueError('un-recognized ISCE file type: {}'.format(file_type))
+
+    write_isce_xml(meta, out_file)
 
     return out_file
 
 
 
 #########################################################################
+
+def write_binary(data_list, out_file, data_type=None, interleave='BIL'):
+    """Write binary file.
+    Parameters: data_list  - list of 2D np.ndarray matrices
+                out_file   - str, path of the output binary file
+                data_type  - str/np.dtype, numpy data type object
+                interleave - str, band interleave type, BSQ, BIL, BIP
+    Returns:    out_file   - str, path of the output binary file
+    """
+    # data type
+    if data_type:
+        data_type = data_type.lower()
+        if data_type != data_list[0].dtype:
+            data_list = [np.array(x, dtype=data_type) for x in data_list]
+
+    # stack multi-band - reshape
+    interleave = interleave.upper()
+    if interleave == 'BIP':
+        data_list = [x.reshape(-1,1) for x in data_list]
+    elif interleave == 'BSQ':
+        data_list = [x.reshape(1,-1) for x in data_list]
+
+    # stack multi-band - stack
+    data = data_list[0]
+    for datai in data_list[1:]:
+        data = np.hstack((data, datai))
+
+    # write to file
+    data.tofile(out_file)
+
+    return out_file
+
+
+
+######################## Obsolete functions #############################
 
 def write_float32(*args):
     """Write ROI_PAC rmg format with float32 precision (BIL)
@@ -609,22 +764,30 @@ def write_float32(*args):
     return out_file
 
 
-def write_complex64(data, out_file):
-    """Writes roi_pac .int data"""
-    num_pixel = data.size
-    F = np.zeros([2 * num_pixel, 1], np.float32)
-    id1 = list(range(0, 2 * num_pixel, 2))
-    id2 = list(range(1, 2 * num_pixel, 2))
-    F[id1] = np.reshape(np.cos(data), (num_pixel, 1))
-    F[id2] = np.reshape(np.sin(data), (num_pixel, 1))
-    F.tofile(out_file)
+def write_complex_float32(data, out_file):
+    """write complex float32 data into file"""
+    data = np.array(data, dtype=np.complex64)
+    data.tofile(out_file)
     return out_file
+
+
+#def write_complex_float32(data, out_file):
+#    """Writes roi_pac .int data"""
+#    num_pixel = data.size
+#    F = np.zeros([2 * num_pixel, 1], np.float32)
+#    id1 = list(range(0, 2 * num_pixel, 2))
+#    id2 = list(range(1, 2 * num_pixel, 2))
+#    F[id1] = np.reshape(np.cos(data), (num_pixel, 1))
+#    F[id2] = np.reshape(np.sin(data), (num_pixel, 1))
+#    F.tofile(out_file)
+#    return out_file
 
 
 def write_complex_int16(data, out_file):
     """Write gamma scomplex data, i.e. .slc file.
         data is complex 2-D matrix
         real, imagery, real, ...
+    Write in this way, because numpy does not have complex int16 directly.
     """
     num_pixel = data.size
     id1 = list(range(0, 2 * num_pixel, 2))
@@ -667,3 +830,5 @@ def write_bool(data, out_file):
     data = np.array(data, dtype=np.bool_)
     data.tofile(out_file)
     return out_file
+
+#########################################################################

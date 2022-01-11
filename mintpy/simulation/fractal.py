@@ -34,9 +34,9 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., freq0=1e-3,
     [-5/3, -8/3, -2/3] power law.
 
     E.g. equation (4.7.28) from Hanssen (2001):
-    P_phi(f) =  P_I(f/f0)   ^ -5/3    for 1.5  <= f0/f <= 50   km       regime[1]-regime[0]
-                P_0(f/f0)   ^ -8/3    for 0.25 <= f0/f <= 1.5  km       regime[0]
-                P_III(f/f0) ^ -2/3    for 0.02 <= f0/f <= 0.25 km       regime[2]-regime[1]
+    P_phi(f) =  P2(f/f0) ^ -5/3    for 1.5  <= f0/f <= 50   km       regime[1]-regime[0]
+                P1(f/f0) ^ -8/3    for 0.25 <= f0/f <= 1.5  km       regime[0]
+                P3(f/f0) ^ -2/3    for 0.02 <= f0/f <= 0.25 km       regime[2]-regime[1]
 
     regime=[0.001, 0.999, 1.0] for larger scale turbulence
     regime=[0.980, 0.990, 1.0] for middle scale turbulence

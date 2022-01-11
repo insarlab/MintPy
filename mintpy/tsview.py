@@ -7,15 +7,15 @@
 
 
 import os
-import sys
 import re
+import sys
 import argparse
 import numpy as np
 from scipy import linalg, stats
 from matplotlib import pyplot as plt, ticker, widgets, patches
 
 from mintpy.objects import timeseries, giantTimeseries, HDFEOS
-from mintpy.utils import arg_group, readfile, ptime, plot as pp, utils as ut
+from mintpy.utils import arg_group, ptime, time_func, readfile, utils as ut, plot as pp
 from mintpy.multilook import multilook_data
 from mintpy import subset, view, timeseries2velocity as ts2vel
 
@@ -88,6 +88,7 @@ def create_parser():
     parser = arg_group.add_gps_argument(parser)
     parser = arg_group.add_mask_argument(parser)
     parser = arg_group.add_map_argument(parser)
+    parser = arg_group.add_memory_argument(parser)
     parser = arg_group.add_reference_argument(parser)
     parser = arg_group.add_save_argument(parser)
     parser = arg_group.add_subset_argument(parser)
@@ -99,7 +100,7 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    if '--gps-comp' in iargs:
+    if inps.gps_component:
         msg = '--gps-comp is not supported for {}'.format(os.path.basename(__file__))
         raise NotImplementedError(msg)
 
@@ -149,6 +150,7 @@ def read_init_info(inps):
     else:
         raise ValueError('input file is {}, not timeseries.'.format(inps.key))
     obj.open(print_msg=inps.print_msg)
+    inps.seconds = atr.get('CENTER_LINE_UTC', 0)
 
     if not inps.file_label:
         inps.file_label = []
@@ -250,7 +252,9 @@ def read_init_info(inps):
     # e.g. spatial indexing, referencing, etc. All the other variables are in the original grid
     # so that users get the same result as the non-multilooked version.
     if inps.multilook and inps.multilook_num == 1:
-        inps.multilook_num = pp.auto_multilook_num(inps.pix_box, inps.num_date, print_msg=inps.print_msg)
+        inps.multilook_num = pp.auto_multilook_num(inps.pix_box, inps.num_date,
+                                                   max_memory=inps.maxMemory,
+                                                   print_msg=inps.print_msg)
 
     ## reference pixel
     if not inps.ref_lalo and 'REF_LAT' in atr.keys():
@@ -261,9 +265,7 @@ def read_init_info(inps):
             inps.ref_lalo[1] -= 360.
         # ref_lalo --> ref_yx if not set in cmd
         if not inps.ref_yx:
-            inps.ref_yx = inps.coord.geo2radar(inps.ref_lalo[0],
-                                               inps.ref_lalo[1],
-                                               print_msg=False)[0:2]
+            inps.ref_yx = inps.coord.geo2radar(inps.ref_lalo[0], inps.ref_lalo[1], print_msg=False)[0:2]
 
     # use REF_Y/X if ref_yx not set in cmd
     if not inps.ref_yx and 'REF_Y' in atr.keys():
@@ -272,13 +274,11 @@ def read_init_info(inps):
     # ref_yx --> ref_lalo if in geo-coord
     # for plotting purpose only
     if inps.ref_yx and 'Y_FIRST' in atr.keys():
-        inps.ref_lalo = inps.coord.radar2geo(inps.ref_yx[0],
-                                             inps.ref_yx[1],
-                                             print_msg=False)[0:2]
+        inps.ref_lalo = inps.coord.radar2geo(inps.ref_yx[0], inps.ref_yx[1], print_msg=False)[0:2]
 
     # do not plot native reference point if it's out of the coverage due to subset
     if (inps.ref_yx and 'Y_FIRST' in atr.keys()
-        and inps.ref_yx == (int(atr['REF_Y']), int(atr['REF_X']))
+        and inps.ref_yx == (int(atr.get('REF_Y',-999)), int(atr.get('REF_X',-999)))
         and not (    inps.pix_box[0] <= inps.ref_yx[1] < inps.pix_box[2]
                  and inps.pix_box[1] <= inps.ref_yx[0] < inps.pix_box[3])):
         inps.disp_ref_pixel = False
@@ -328,8 +328,11 @@ def read_init_info(inps):
     # dense TS for plotting
     inps.date_list_fit = ptime.get_date_range(inps.date_list[0], inps.date_list[-1])
     inps.dates_fit = ptime.date_list2vector(inps.date_list_fit)[0]
-    inps.G_fit = timeseries.get_design_matrix4time_func(date_list=inps.date_list_fit,
-                                                        model=inps.model)
+    inps.G_fit = time_func.get_design_matrix4time_func(
+        date_list=inps.date_list_fit,
+        model=inps.model,
+        seconds=inps.seconds)
+
     return inps, atr
 
 
@@ -580,10 +583,10 @@ def get_model_param_str(model, ds_dict, unit_fac=100):
     return ds_strs
 
 
-def fit_time_func(model, date_list, ts_dis, unit_fac=100, G_fit=None, conf_level=0.95):
+def fit_time_func(model, date_list, ts_dis, unit_fac=100, G_fit=None, conf_level=0.95, seconds=0):
     """Fit a suite of fime functions to the time series.
     Equations:  Gm = d
-    Parameters: model      - dict of time functions, check timeseries2velocity.estimate_time_func() for details.
+    Parameters: model      - dict of time functions, check utils.time_func.estimate_time_func() for details.
                 date_list  - list of dates in YYYYMMDD format
                 ts_dis     - 1D np.ndarray, displacement time series
                 unit_fac   - float, scaling factor due to different data and display units
@@ -603,9 +606,11 @@ def fit_time_func(model, date_list, ts_dis, unit_fac=100, G_fit=None, conf_level
         return m_strs, ts_fit, ts_fit_lim
 
     # 1.1 estimate time func parameter via least squares (OLS)
-    G, m, e2 = ts2vel.estimate_time_func(model=model,
-                                         date_list=date_list,
-                                         dis_ts=ts_dis)
+    G, m, e2 = time_func.estimate_time_func(
+        model=model,
+        date_list=date_list,
+        dis_ts=ts_dis,
+        seconds=seconds)
 
     # 1.2 calc the precision of time func parameters
     # using the OLS estimation residues e2 = sum((d - Gm) ** 2)
@@ -710,9 +715,8 @@ class timeseriesViewer():
         self.cmd = cmd
         self.iargs = iargs
         # print command line
-        cmd = '{} '.format(os.path.basename(__file__))
-        cmd += ' '.join(iargs)
-        print(cmd)
+        if iargs is not None:
+            print(f'{os.path.basename(__file__)} ' + ' '.join(iargs))
 
         # figure variables
         self.figname_img = 'Cumulative Displacement Map'
@@ -750,10 +754,12 @@ class timeseriesViewer():
         self.ts_data, self.mask = read_timeseries_data(self)[0:2]
 
         # Figure 1 - Cumulative Displacement Map
-        self.figsize_img = pp.auto_figure_size(ds_shape=self.ts_data[0].shape[-2:],
-                                               disp_cbar=True,
-                                               disp_slider=True,
-                                               print_msg=self.print_msg)
+        if not self.figsize_img:
+            self.figsize_img = pp.auto_figure_size(
+                ds_shape=self.ts_data[0].shape[-2:],
+                disp_cbar=True,
+                disp_slider=True,
+                print_msg=self.print_msg)
         self.fig_img = plt.figure(self.figname_img, figsize=self.figsize_img)
 
         # Figure 1 - Axes 1 - Displacement Map
@@ -826,8 +832,7 @@ class timeseriesViewer():
             valinit=self.yearList[init_idx],
             valmin=val_min,
             valmax=val_max,
-            valstep=val_step,
-        )
+            valstep=val_step)
 
         bar_width = val_step / 4.
         datex = np.array(self.yearList) - bar_width / 2.
@@ -900,7 +905,7 @@ class timeseriesViewer():
                 ts_dis=ts_dis,
                 unit_fac=self.unit_fac,
                 G_fit=self.G_fit,
-            )
+                seconds=self.seconds)
 
             if self.zero_first:
                 off = ts_dis[self.zero_idx]

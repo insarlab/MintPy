@@ -20,7 +20,7 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import ndimage
-from pyproj import Proj, Transformer
+from pyproj import CRS, Proj, Transformer
 
 # global variables
 SPEED_OF_LIGHT = 299792458 # m/s
@@ -232,6 +232,20 @@ def touch(fname_list, times=None):
 
 
 #################################### Geometry ##########################################
+def utm_zone2epsg_code(utm_zone):
+    """Convert UTM Zone string to EPSG code.
+    Parameters: utm_zone - str, atr['UTM_ZONE']
+    Returns:    epsg     - str, EPSG code
+    Examples:   epsg = utm_zone2epsg_code('11N')
+    """
+    crs = CRS.from_dict({'proj': 'utm',
+                         'zone': int(utm_zone[:-1]),
+                         'south': utm_zone[-1] == 'S',
+                        })
+    epsg = crs.to_authority()[1]
+    return epsg
+
+
 def to_latlon(infile, x, y):
     """Convert x, y in the projection coordinates of the file to lon/lat in degree.
 
@@ -352,7 +366,7 @@ def get_lat_lon_rdc(meta):
 def azimuth2heading_angle(az_angle):
     """Convert azimuth angle from ISCE los.rdr band2 into satellite orbit heading angle
 
-    ISCE-2 los.* file band2 is azimuth angle of LOS vector from ground target to the satellite 
+    ISCE-2 los.* file band2 is azimuth angle of LOS vector from ground target to the satellite
         measured from the north in anti-clockwise as positive
 
     Below are typical values in deg for satellites with near-polar orbit:
@@ -523,7 +537,7 @@ def get_largest_conn_component(mask_in, min_num_pixel=1e4, display=False):
     Returns:    mask_out : 2D np.array in np.bool_ format
     """
     mask_out = np.zeros(mask_in.shape, np.bool_)
-    labels, n_features = ndimage.label(mask_in)
+    labels = ndimage.label(mask_in)[0]
     num_pixel = np.max(np.bincount(labels.flatten())[1:])
     if num_pixel < min_num_pixel:
         return mask_out
@@ -637,8 +651,7 @@ def which(program):
     def is_exe(fpath):
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
-    fpath, fname = os.path.split(program)
-    if fpath:
+    if os.path.split(program)[0]:
         if is_exe(program):
             return program
     else:
@@ -777,6 +790,14 @@ def round_to_1(x):
     return round(x, -digit)
 
 
+def round_up_to_odd(x):
+    """Round a float up to the next odd integer .
+    Link: https://stackoverflow.com/questions/31648729
+    """
+    y = np.ceil(x) // 2 * 2 + 1
+    return y.astype(np.int16)
+
+
 def highest_power_of_2(x):
     """Given a number x, find the highest power of 2 that <= x"""
     res = np.power(2, np.floor(np.log2(x)))
@@ -798,5 +819,18 @@ def most_common(L, k=1):
         item_mm = item_mm[0]
     return item_mm
 
+
+def is_number(string):
+    """Check string is a number.
+    Not using str.isnumeric() because it can not handle floating point nor negative sign.
+    Link: https://elearning.wsldp.com/python3/python-check-string-is-a-number/
+    Parameters: string - str, a string
+    Returns:    True/False
+    """
+    try:
+        float(string)
+        return True
+    except ValueError:
+        return False
 
 

@@ -53,7 +53,7 @@ class ifgramStackDict:
     def __init__(self, name='ifgramStack', pairsDict=None, dsName0=ifgramDatasetNames[0]):
         self.name = name
         self.pairsDict = pairsDict
-        self.dsName0 = dsName0        #reference dataset name, unwrapPhase OR azimuthOffset
+        self.dsName0 = dsName0        #reference dataset name, unwrapPhase OR azimuthOffset OR rangeOffset
 
     def get_size(self, box=None, xstep=1, ystep=1):
         self.numIfgram = len(self.pairsDict)
@@ -141,6 +141,13 @@ class ifgramStackDict:
                                       chunks=True,
                                       compression=dsCompression)
 
+                # set no-data value - printout msg
+                if dsName.endswith('OffsetVar'):
+                    print('set no-data value for {} from 99 to NaN.'.format(dsName))
+                    dsFile = self.pairsDict[self.pairs[0]].datasetDict[dsName]
+                    if dsFile.endswith('cov.bip'):
+                        print('convert variance to standard deviation.')
+
                 prog_bar = ptime.progressBar(maxValue=self.numIfgram)
                 for i in range(self.numIfgram):
                     # read
@@ -149,6 +156,17 @@ class ifgramStackDict:
                                           box=box,
                                           xstep=xstep,
                                           ystep=ystep)[0]
+
+                    # special handling to offset covariance file
+                    if dsName.endswith('OffsetStd'):
+                        # set no-data value to np.nan
+                        data[data == 99.] = np.nan
+
+                        # convert variance to std. dev.
+                        dsFile = ifgramObj.datasetDict[dsName]
+                        if dsFile.endswith('cov.bip'):
+                            data = np.sqrt(data)
+
                     # write
                     ds[i, :, :] = data
                     prog_bar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],
@@ -367,6 +385,7 @@ class geometryDict:
         if not self.extraMetadata:
             return None
 
+        print('prepare slantRangeDistance ...')
         if 'Y_FIRST' in self.extraMetadata.keys():
             # for dataset in geo-coordinates, use:
             # 1) incidenceAngle matrix if available OR
@@ -374,9 +393,15 @@ class geometryDict:
             ds_name = 'incidenceAngle'
             key = 'SLANT_RANGE_DISTANCE'
             if ds_name in self.dsNames:
-                print('geocoded input, use incidenceAngle from file {}'.format(self.datasetDict[ds_name]))
+                print('    geocoded input, use incidenceAngle from file: {}'.format(os.path.basename(self.datasetDict[ds_name])))
                 inc_angle = self.read(family=ds_name)[0].astype(np.float32)
+                atr = readfile.read_attribute(self.file)
+                if atr.get('PROCESSOR', 'isce') == 'hyp3' and atr.get('UNIT', 'degrees').startswith('rad'):
+                    print('    convert incidence angle from Gamma to MintPy convention.')
+                    inc_angle = 90. - (inc_angle * 180. / np.pi)
+                # inc angle -> slant range distance
                 data = ut.incidence_angle2slant_range_distance(self.extraMetadata, inc_angle)
+
             elif key in self.extraMetadata.keys():
                 print('geocoded input, use contant value from metadata {}'.format(key))
                 length = int(self.extraMetadata['LENGTH'])
@@ -615,11 +640,13 @@ class geometryDict:
                         data /= ystep
 
                     elif dsName == 'incidenceAngle':
+                        # HyP3 (Gamma) incidence angle file 'theta' is measure from horizontal in radians
                         atr = readfile.read_attribute(self.file)
                         if (atr.get('PROCESSOR', 'isce') == 'hyp3'
                                 and atr.get('UNIT', 'degrees').startswith('rad')):
-                            print('    convert the unit of {:<15} from radian to degree'.format(dsName))
-                            data *= 180. / np.pi
+                            print(('    convert {:<15} from Gamma (from horizontal in radian) to '
+                                  'MintPy (from vertical in degree) convention.').format(dsName))
+                            data = 90. - (data * 180. / np.pi)
 
                     # write
                     ds = f.create_dataset(dsName,
@@ -753,8 +780,8 @@ class platformTrack:
                 width.append(self.pairs[pair].width)
                 length.append(self.pairs[pair].length)
 
-        length = median(length)
-        width = median(width)
+        length = np.median(length)
+        width = np.median(width)
         return pairs2, length, width
 
     def getSize(self):

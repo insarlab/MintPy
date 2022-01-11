@@ -34,7 +34,7 @@ def add_data_disp_argument(parser):
     data.add_argument('--noflip', dest='auto_flip', action='store_false',
                       help='turn off auto flip for radar coordinate file')
 
-    data.add_argument('--multilook-num', dest='multilook_num', type=int, default=1, metavar='NUM',
+    data.add_argument('--nmli','--num-multilook','--multilook-num', dest='multilook_num', type=int, default=1, metavar='NUM',
                       help='multilook data in X and Y direction with a factor for display (default: %(default)s).')
     data.add_argument('--nomultilook', '--no-multilook', dest='multilook', action='store_false',
                       help='do not multilook, for high quality display. \n'
@@ -51,6 +51,8 @@ def add_dem_argument(parser):
     dem = parser.add_argument_group('DEM', 'display topography in the background')
     dem.add_argument('-d', '--dem', dest='dem_file', metavar='DEM_FILE',
                      help='DEM file to show topography as background')
+    dem.add_argument('--mask-dem', dest='mask_dem', action='store_true',
+                     help='Mask out DEM pixels not coincident with valid data pixels')
     dem.add_argument('--dem-noshade', dest='disp_dem_shade', action='store_false',
                      help='do not show DEM shaded relief')
     dem.add_argument('--dem-nocontour', dest='disp_dem_contour', action='store_false',
@@ -163,18 +165,28 @@ def add_gps_argument(parser):
     gps = parser.add_argument_group('GPS', 'GPS data to display')
     gps.add_argument('--show-gps', dest='disp_gps', action='store_true',
                      help='Show UNR GPS location within the coverage.')
+    gps.add_argument('--mask-gps', dest='mask_gps', action='store_true',
+                     help='Mask out GPS stations not coincident with valid data pixels')
     gps.add_argument('--gps-label', dest='disp_gps_label', action='store_true',
                      help='Show GPS site name')
-    gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los'},
+    gps.add_argument('--gps-ms', dest='gps_marker_size', type=float, default=6,
+                     help='Plot GPS value as scatter in size of ms**2 (default: %(default)s).')
+    gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los', 'horz', 'vert'},
                      help='Plot GPS in color indicating deformation velocity direction')
     gps.add_argument('--gps-redo', dest='gps_redo', action='store_true',
                      help='Re-calculate GPS observations in LOS direction, instead of read from existing CSV file.')
     gps.add_argument('--ref-gps', dest='ref_gps_site', type=str, help='Reference GPS site')
+    gps.add_argument('--ex-gps', dest='ex_gps_sites', type=str, nargs='*', help='Exclude GPS sites, require --gps-comp.')
 
     gps.add_argument('--gps-start-date', dest='gps_start_date', type=str, metavar='YYYYMMDD',
-                     help='start date of GPS data, default is date of the 1st SAR acquisiton')
+                     help='start date of GPS data, default is date of the 1st SAR acquisition')
     gps.add_argument('--gps-end-date', dest='gps_end_date', type=str, metavar='YYYYMMDD',
-                     help='start date of GPS data, default is date of the last SAR acquisiton')
+                     help='start date of GPS data, default is date of the last SAR acquisition')
+    gps.add_argument('--horz-az','--hz-az', dest='horz_az_angle', type=float, default=-90.,
+                     help='Azimuth angle (anti-clockwise from the north) of the horizontal movement in degrees\n'
+                             'E.g.: -90. for east  direction [default]\n'
+                             '       0.  for north direction\n'
+                             'Set to the azimuth angle of the strike-slip fault to show the fault-parallel displacement.')
     return parser
 
 
@@ -347,18 +359,18 @@ def add_timefunc_argument(parser):
                            '--periodic 1.0 0.5                        # an annual cycle plus a semi-annual cycle\n')
     model.add_argument('--step', dest='step', type=str, nargs='+', default=[],
                       help='step function(s) at YYYYMMDD (default: %(default)s). E.g.:\n' +
-                           '--step 20061014                           # coseismic step  at 2006-10-14\n' +
-                           '--step 20110311 20120928                  # coseismic steps at 2011-03-11 and 2012-09-28\n')
+                           '--step 20061014                           # coseismic step  at 2006-10-14T00:00\n' +
+                           '--step 20110311 20120928T1733             # coseismic steps at 2011-03-11T00:00 and 2012-09-28T17:33\n')
     model.add_argument('--exp', '--exponential', dest='exp', type=str, nargs='+', action='append', default=[],
                       help='exponential function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
-                           '--exp  20181026 60                        # exp onset at 2006-10-14 with tau=60 days\n' +
-                           '--exp  20181026 60 120                    # exp onset at 2006-10-14 with tau=60 days overlayed by a tau=145 days\n' +
+                           '--exp  20181026 60                        # exp onset at 2006-10-14T00:00 with tau=60 days\n' +
+                           '--exp  20181026T1355 60 120               # exp onset at 2006-10-14T13:55 with tau=60 days overlayed by a tau=145 days\n' +
                            '--exp  20161231 80.5 --exp 20190125 100   # 1st exp onset at 2011-03-11 with tau=80.5 days and\n' +
                            '                                          # 2nd exp onset at 2012-09-28 with tau=100  days')
     model.add_argument('--log', '--logarithmic', dest='log', type=str, nargs='+', action='append', default=[],
                       help='logarithmic function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
-                           '--log  20181016 90.4                      # log onset at 2006-10-14 with tau=90.4 days\n' +
-                           '--log  20181016 90.4 240                  # log onset at 2006-10-14 with tau=90.4 days overlayed by a tau=240 days\n' +
+                           '--log  20181016 90.4                      # log onset at 2006-10-14T00:00 with tau=90.4 days\n' +
+                           '--log  20181016T1733 90.4 240             # log onset at 2006-10-14T17:33 with tau=90.4 days overlayed by a tau=240 days\n' +
                            '--log  20161231 60 --log 20190125 180.2   # 1st log onset at 2011-03-11 with tau=60 days and\n' +
                            '                                          # 2nd log onset at 2012-09-28 with tau=180.2 days\n')
     return parser

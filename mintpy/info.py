@@ -14,10 +14,10 @@ import numpy as np
 
 from mintpy.utils import readfile, ptime
 from mintpy.objects import (
-    giantIfgramStack, 
-    giantTimeseries, 
-    ifgramStack, 
-    timeseries, 
+    giantIfgramStack,
+    giantTimeseries,
+    ifgramStack,
+    timeseries,
     HDFEOS,
 )
 
@@ -164,12 +164,12 @@ def print_timseries_date_stat(dateList):
     datevector = ptime.date_list2vector(dateList)[1]
     print('Start Date: {}'.format(dateList[0]))
     print('End   Date: {}'.format(dateList[-1]))
-    print('Number of acquisitions    : {}'.format(len(dateList)))
-    print('Std. of acquisition times : {:.2f} yeras'.format(np.std(datevector)))
-    print('----------------------')
-    print('List of dates:\n{}'.format(dateList))
-    print('----------------------')
-    print('List of dates in years:\n{}'.format(datevector))
+    print('Number of dates  : {}'.format(len(dateList)))
+    print('STD of datetimes : {:.2f} years'.format(np.std(datevector)))
+    #print('----------------------')
+    #print('List of dates:\n{}'.format(dateList))
+    #print('----------------------')
+    #print('List of dates in years:\n{}'.format(datevector))
     return
 
 
@@ -226,11 +226,8 @@ def print_slice_list(fname, disp_num=False, print_msg=False):
     """Print slice info of file"""
     slice_list = readfile.get_slice_list(fname)
     if print_msg:
-        for i in range(len(slice_list)):
-            if disp_num:
-                print('{}\t{}'.format(slice_list[i], i))
-            else:
-                print(slice_list[i])
+        for i, slice_name in enumerate(slice_list):
+            print(f'{slice_name}\t{i}' if disp_num else slice_name)
     return slice_list
 
 

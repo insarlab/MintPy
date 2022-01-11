@@ -62,20 +62,23 @@ def cmd_line_parse(iargs=None):
 
 
 #####################################################################################
-def _check_reference(atr1, atr2):
+def check_reference(atr1, atr2):
     """Check reference date and point
     Parameters: atr1/2   - dict, metadata of file1/2
     Returns:    ref_date - str, None for re-referencing in time  is NOT needed
                 ref_y/x  - int, None for re-referencing in space is NOT needed
     """
-    # reference date
+    # 1. reference date
+    # if same, do nothing
+    # if different, use the 1st one as the reference
     if atr1['REF_DATE'] == atr2.get('REF_DATE', None):
         ref_date = None
     else:
         ref_date = atr1['REF_DATE']
-        #print('consider different reference date')
 
-    # reference point
+    # 2. reference point
+    # if same, do nothing
+    # if different, use the 1st one as the reference
     ref_y = atr1.get('REF_Y', None)
     ref_x = atr1.get('REF_X', None)
     if ref_x == atr2.get('REF_X', None) or ref_y == atr2.get('REF_Y', None):
@@ -84,7 +87,6 @@ def _check_reference(atr1, atr2):
     else:
         ref_y = ref_y
         ref_x = ref_x
-        #print('consider different reference pixel')
 
     if ref_y is not None:
         ref_y = int(ref_y)
@@ -136,7 +138,7 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
             unit_fac = 0.001
 
         # check reference point
-        ref_date, ref_y, ref_x = _check_reference(atr1, atr2)
+        ref_date, ref_y, ref_x = check_reference(atr1, atr2)
 
         # check dates shared by two timeseries files
         dateListShared = [i for i in dateList1 if i in dateList2]
@@ -144,10 +146,10 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
         if dateListShared != dateList1:
             print('WARNING: {} does not contain all dates in {}'.format(file2, file1))
             if force:
-                dateExcluded = list(set(dateList1) - set(dateListShared))
+                dateListEx = list(set(dateList1) - set(dateListShared))
                 print('Continue and enforce the differencing for their shared dates only.')
-                print('\twith following dates are ignored for differencing:\n{}'.format(dateExcluded))
-                dateShared[np.array([dateList1.index(i) for i in dateExcluded])] = 0
+                print('\twith following dates are ignored for differencing:\n{}'.format(dateListEx))
+                dateShared[np.array([dateList1.index(i) for i in dateListEx])] = 0
             else:
                 raise Exception('To enforce the differencing anyway, use --force option.')
 

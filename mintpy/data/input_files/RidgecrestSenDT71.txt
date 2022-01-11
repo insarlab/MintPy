@@ -1,0 +1,18 @@
+# vim: set filetype=cfg:
+mintpy.compute.cluster      = local
+mintpy.load.processor       = hyp3
+##---------interferogram datasets:
+mintpy.load.unwFile         = ../hyp3/*/*unw_phase_clip.tif
+mintpy.load.corFile         = ../hyp3/*/*corr_clip.tif
+##---------geometry datasets:
+mintpy.load.demFile         = ../hyp3/*/*dem_clip.tif
+mintpy.load.incAngleFile    = ../hyp3/*/*lv_theta_clip.tif
+mintpy.load.waterMaskFile   = ../hyp3/*/*water_mask_clip.tif
+
+mintpy.reference.lalo       = 391.5e4,45e4
+mintpy.networkInversion.weightFunc  = var
+mintpy.troposphericDelay.method     = pyaps
+mintpy.topographicResidual          = yes
+mintpy.topographicResidual.stepFuncDate         = 20190706T0320
+mintpy.topographicResidual.pixelwiseGeometry    = yes
+

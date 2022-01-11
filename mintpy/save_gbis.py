@@ -62,9 +62,12 @@ def create_parser():
 
 
 def cmd_line_parse(iargs=None):
-    print('{} {}'.format(os.path.basename(__file__), ' '.join(iargs)))
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    inps.argv = iargs if iargs else sys.argv[1:]
+    print('{} {}'.format(os.path.basename(__file__), ' '.join(inps.argv)))
+
     inps.file = os.path.abspath(inps.file)
 
     # Backend setting
@@ -128,7 +131,7 @@ def read_data(inps):
     print('number of pixels after excluding zero phase value: {}'.format(np.sum(inps.mask)))
 
     # read geometry
-    inps.lat, inps.lon = ut.get_lat_lon(inps.metadata)
+    inps.lat, inps.lon = ut.get_lat_lon(inps.metadata, geom_file=inps.geom_file)
     inps.inc_angle = readfile.read(inps.geom_file, datasetName='incidenceAngle')[0]
     inps.head_angle = np.ones(inps.inc_angle.shape, dtype=np.float32) * float(inps.metadata['HEADING'])
     inps.height = readfile.read(inps.geom_file, datasetName='height')[0]

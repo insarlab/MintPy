@@ -22,7 +22,7 @@ EXAMPLE = """example:
   prep_hyp3.py  interferograms/*/*unw_phase_clip.tif
   prep_hyp3.py  interferograms/*/*corr_clip.tif
   prep_hyp3.py  interferograms/*/*dem_clip.tif
-  prep_hyp3.py  interferograms/*/*inc_map_clip.tif
+  prep_hyp3.py  interferograms/*/*lv_theta_clip.tif
   prep_hyp3.py  interferograms/*/*clip.tif
 """
 
@@ -34,7 +34,7 @@ DESCRIPTION = """
 
   A DEM filename is needed and a incidence angle filename is recommended  e.g.:
   1) S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem.tif
-  2) S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_inc_map.tif
+  2) S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_lv_theta.tif
 
   This script will read these files, read the geospatial metadata from GDAL,
   find the corresponding HyP3 metadata file (for interferograms and coherence),
@@ -50,7 +50,7 @@ DESCRIPTION = """
           S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2.txt
       For the geometry file 2 file are recommended:
           S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem_clip.tif     (required)
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_inc_map_clip.tif (optional but recommended)
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_lv_theta_clip.tif (optional but recommended)
 
   After running prep_hyp3.py:
       For each interferogram:
@@ -62,8 +62,8 @@ DESCRIPTION = """
       For the input geometry files:
           S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem_clip.tif
           S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem_clip.tif.rsc
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_inc_map_clip.tif
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_inc_map_clip.tif.rsc
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_lv_theta_clip.tif
+          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_lv_theta_clip.tif.rsc
 
   Notes:
     HyP3 currently only supports generation of Sentinel-1 interferograms, so
@@ -103,8 +103,8 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
     '''
 
     # determine interferogram pair info and hyp3 metadata file name
-    sat, date1_string, date2_string, pol, res, soft, proc, ids, *_ = os.path.basename(fname).split('_')
-    job_id = '_'.join([sat, date1_string, date2_string, pol, res, soft, proc, ids])
+    sat, date1_str, date2_str, pol, res, soft, proc, ids, *_ = os.path.basename(fname).split('_')
+    job_id = '_'.join([sat, date1_str, date2_str, pol, res, soft, proc, ids])
     directory = os.path.dirname(fname)
     meta_file = f'{os.path.join(directory,job_id)}.txt'
 
@@ -112,21 +112,22 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
     hyp3_meta = {}
     with open(meta_file, 'r') as f:
         for line in f:
-            key, value = line.strip().split(': ')
+            key, value = line.strip().replace(' ','').split(':')[:2]
             hyp3_meta[key] = value
 
     # add universal hyp3 metadata
     meta['PROCESSOR'] = 'hyp3'
-    meta['HEADING'] = hyp3_meta['Heading']
-    meta['ALOOKS'] = hyp3_meta['Azimuth looks']
-    meta['RLOOKS'] = hyp3_meta['Range looks']
-    meta['P_BASELINE_TOP_HDR'] = hyp3_meta['Baseline']
-    meta['P_BASELINE_BOTTOM_HDR'] = hyp3_meta['Baseline']
-    meta['EARTH_RADIUS'] = hyp3_meta['Earth radius at nadir']
-    meta['HEIGHT'] = hyp3_meta['Spacecraft height']
+    meta['CENTER_LINE_UTC'] = hyp3_meta['UTCtime']
+    meta['ALOOKS'] = hyp3_meta['Azimuthlooks']
+    meta['RLOOKS'] = hyp3_meta['Rangelooks']
+    meta['EARTH_RADIUS'] = hyp3_meta['Earthradiusatnadir']
+    meta['HEIGHT'] = hyp3_meta['Spacecraftheight']
+    meta['STARTING_RANGE'] = hyp3_meta['Slantrangenear']
+    # ensure negative value for the heading angle
+    meta['HEADING'] = float(hyp3_meta['Heading']) % 360. - 360.
 
     # add LAT/LON_REF1/2/3/4 based on whether satellite ascending or descending
-    meta['ORBIT_DIRECTION'] = 'ASCENDING' if float(meta['HEADING']) > -90 else 'DESCENDING'
+    meta['ORBIT_DIRECTION'] = 'ASCENDING' if abs(meta['HEADING']) > 90 else 'DESCENDING'
     N = float(meta['Y_FIRST'])
     W = float(meta['X_FIRST'])
     S = N + float(meta['Y_STEP']) * int(meta['LENGTH'])
@@ -153,24 +154,28 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
 
     # note: HyP3 currently only supports Sentinel-1 data, so Sentinel-1
     #       configuration is hard-coded.
-    meta['PLATFORM'] = 'Sen'
-    meta['ANTENNA_SIDE'] = -1
-    meta['WAVELENGTH'] = SPEED_OF_LIGHT / sensor.SEN['carrier_frequency']
+    if hyp3_meta['ReferenceGranule'].startswith('S1'):
+        meta['PLATFORM'] = 'Sen'
+        meta['ANTENNA_SIDE'] = -1
+        meta['WAVELENGTH'] = SPEED_OF_LIGHT / sensor.SEN['carrier_frequency']
+        meta['RANGE_PIXEL_SIZE'] = sensor.SEN['range_pixel_size'] * int(meta['RLOOKS'])
+        meta['AZIMUTH_PIXEL_SIZE'] = sensor.SEN['azimuth_pixel_size'] * int(meta['ALOOKS'])
 
     # note: HyP3 (incidence) angle datasets are in the unit of radian
     # which is different from the isce-2 convention of degree
-    if 'inc_map' in os.path.basename(fname):
+    if 'lv_theta' in os.path.basename(fname):
         meta['UNIT'] = 'radian'
 
     # add metadata that is only relevant to interferogram files
     if is_ifg:
-        date1 = datetime.strptime(date1_string,'%Y%m%dT%H%M%S')
-        date2 = datetime.strptime(date2_string,'%Y%m%dT%H%M%S')
-        date_avg = date1 + (date2 - date1) / 2
-        date_avg_seconds = (date_avg - date_avg.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
-
-        meta['CENTER_LINE_UTC'] = date_avg_seconds
+        date1 = datetime.strptime(date1_str,'%Y%m%dT%H%M%S')
+        date2 = datetime.strptime(date2_str,'%Y%m%dT%H%M%S')
+        #date_avg = date1 + (date2 - date1) / 2
+        #date_avg_seconds = (date_avg - date_avg.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
+        #meta['CENTER_LINE_UTC'] = date_avg_seconds
         meta['DATE12'] = f'{date1.strftime("%y%m%d")}-{date2.strftime("%y%m%d")}'
+        meta['P_BASELINE_TOP_HDR'] = hyp3_meta['Baseline']
+        meta['P_BASELINE_BOTTOM_HDR'] = hyp3_meta['Baseline']
 
     return(meta)
 

@@ -104,13 +104,11 @@ def update_mask_with_inps(mask, inps=None, print_msg=True):
 
 def mask_file(fname, mask_file, out_file, inps=None):
     """ Mask input fname with mask_file
-    Inputs:
-        fname/mask_file - string, 
-        inps_dict - dictionary including the following options:
-                    subset_x/y - list of 2 ints, subset in x/y direction
-                    threshold - float, threshold/minValue to generate mask
-    Output:
-        out_file - string
+    Parameters: fname     - str, file to be masked
+                mask_file - str, mask file
+                out_file  - str, output file name
+                inps      - namespace object, from cmd_line_parse()
+    Returns:    out_file  - str, output file name
     """
     if not inps:
         inps = cmd_line_parse()
@@ -120,7 +118,6 @@ def mask_file(fname, mask_file, out_file, inps=None):
     mask = update_mask_with_inps(mask, inps)
 
     # masking input file
-    atr = readfile.read_attribute(fname)
     dsNames = readfile.get_dataset_list(fname)
     maxDigit = max([len(i) for i in dsNames])
     dsDict = {}
@@ -141,7 +138,7 @@ def mask_file(fname, mask_file, out_file, inps=None):
 
 def mask_isce_file(in_file, mask_file, out_file=None):
     if not in_file:
-        return    
+        return
 
     # read mask_file
     print('read mask from {}'.format(mask_file))
@@ -150,8 +147,8 @@ def mask_isce_file(in_file, mask_file, out_file=None):
     # mask isce file
     atr = readfile.read_attribute(in_file)
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
-    interleave = atr['scheme'].upper()
-    num_band = int(atr['number_bands'])
+    interleave = atr['INTERLEAVE'].upper()
+    num_band = int(atr['BANDS'])
 
     # default short name for data type from ISCE
     dataTypeDict = {
@@ -169,9 +166,9 @@ def mask_isce_file(in_file, mask_file, out_file=None):
     fbase, ext = os.path.splitext(in_file)
     if ext == '.unw':
         amp = readfile.read_binary(in_file, (length, width), data_type=data_type,
-                                   num_band=num_band, band_interleave=interleave, band=1)
+                                   num_band=num_band, interleave=interleave, band=1)
         pha = readfile.read_binary(in_file, (length, width), data_type=data_type,
-                                   num_band=num_band, band_interleave=interleave, band=2)
+                                   num_band=num_band, interleave=interleave, band=2)
         pha[mask == 0] = 0
         data = np.hstack((amp, pha)).flatten()
     elif ext == '.int':

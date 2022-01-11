@@ -10,8 +10,8 @@ import os
 import sys
 import argparse
 import numpy as np
-from osgeo import gdal, ogr, osr
-from mintpy.utils import readfile, plot as pp
+from osgeo import gdal, osr
+from mintpy.utils import readfile, utils0 as ut, plot as pp
 
 
 # link: https://gdal.org/drivers/raster/index.html
@@ -62,7 +62,7 @@ def cmd_line_parse(iargs=None):
 
 
 ##############################################################################
-def array2raster(array, rasterName, rasterFormat, rasterOrigin, xStep, yStep):
+def array2raster(array, rasterName, rasterFormat, rasterOrigin, xStep, yStep, epsg=4326):
 
     # transform info
     cols = array.shape[1]
@@ -78,16 +78,16 @@ def array2raster(array, rasterName, rasterFormat, rasterOrigin, xStep, yStep):
     print('create raster band')
     print('raster row / column number: {}, {}'.format(rows, cols))
     print('raster transform info: {}'.format(transform))
-    outRaster = driver.Create(rasterName, cols, rows, 1, gdal.GDT_Float64)
+    outRaster = driver.Create(rasterName, cols, rows, 1, gdal.GDT_Float32)
     outRaster.SetGeoTransform(transform)
 
     print('write data to raster band')
     outband = outRaster.GetRasterBand(1)
     outband.WriteArray(array)
 
-    print('set projectection as: EPSG 4326')
+    print('set projection as: EPSG {}'.format(epsg))
     outRasterSRS = osr.SpatialReference()
-    outRasterSRS.ImportFromEPSG(4326)
+    outRasterSRS.ImportFromEPSG(epsg)
     outRaster.SetProjection(outRasterSRS.ExportToWkt())
     outband.FlushCache()
     print('finished writing to {}'.format(rasterName))
@@ -126,9 +126,16 @@ def main(iargs=None):
     rasterOrigin = (float(attr['X_FIRST']),float(attr['Y_FIRST']))
     xStep = float(attr['X_STEP'])
     yStep = float(attr['Y_STEP'])
+    kwargs = dict(xStep=xStep, yStep=yStep)
+
+    epsg = attr.get('EPSG', None)
+    if not epsg and 'UTM_ZONE' in attr.keys():
+        epsg = ut.utm_zone2epsg_code(attr['UTM_ZONE'])
+    if epsg:
+        kwargs['epsg'] = int(epsg)
 
     # convert array to raster
-    array2raster(array, inps.outfile, inps.out_format, rasterOrigin, xStep, yStep)
+    array2raster(array, inps.outfile, inps.out_format, rasterOrigin, **kwargs)
 
     return
 

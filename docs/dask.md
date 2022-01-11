@@ -1,6 +1,6 @@
 # Configure dask for parallel processing #
 
-Most computations in MintPy are operated in either a pixel-by-pixel or a epoch-by-epoch basis. This implementation strategy allows processing different blocks (in space or in time) in parallel. For this purpose, we use the [`Dask`](https://docs.dask.org/en/latest/) library for its danymic task scheduling and data collection. Dask support is currently implemented in `ifgram_inversion.py` and `dem_error.py` only (expansions to other modules are welcomed) through a thin wrapper in [`mintpy.objects.cluster`](../mintpy/objects/cluster.py). We have tested two types of clusters:
+Most computations in MintPy are operated in either a pixel-by-pixel or a epoch-by-epoch basis. This implementation strategy allows processing different blocks (in space or in time) in parallel. For this purpose, we use the [`Dask`](https://docs.dask.org/en/latest/) library for its dynamic task scheduling and data collection. Dask support is currently implemented in `ifgram_inversion.py` and `dem_error.py` only (expansions to other modules are welcomed) through a thin wrapper in [`mintpy.objects.cluster`](../mintpy/objects/cluster.py). We have tested two types of clusters:
 
 + **local cluster:** on a single machine (laptop or computing node) with multiple CPU cores, suitable for laptops, local cluster/stations and distributed High Performance Cluster (HPC). No job scheduler is required.
 + **non-local cluster:** on a distributed HPC with job scheduler installed, including PBS, LSF and SLURM.
@@ -26,7 +26,7 @@ Adjust options in the template file:
 
 ```cfg
 mintpy.compute.cluster    = local
-mintpy.compute.numWorkers = auto   #auto for 4 (local) or 40 (non-local), set to "all" to use all available cores.
+mintpy.compute.numWorkers = 4     #[int > 1 / all], auto for 4 (local) or 40 (slurm / pbs / lsf), set to "all" to use all available cores.
 ```
 
 and feed the template file to the script:
@@ -40,10 +40,9 @@ smallbaselineApp.py smallbaselineApp.cfg
 
 #### 1.3 Testing using example data ####
 
-Download and run the FernandinaSenDT128 example data; then run with and without local clasuter:
+Download and run the FernandinaSenDT128 example data; then run with and without local cluster:
 
 ```bash
-export OMP_NUM_THREADS=1
 cd FernandinaSenDT128/mintpy
 ifgram_inversion.py inputs/ifgramStack.h5 -w no --cluster no 
 ifgram_inversion.py inputs/ifgramStack.h5 -w no --cluster local --num-worker 8
@@ -61,7 +60,7 @@ To show the run time improvement, we test three datasets (South Isabela, Fernand
 
 As of Jun 2020, we have tried on one HPC system where local cluster worked on the head node but not on compute nodes. We attribute this to HPC configuration but don't know what exactly is the cause.
 
-## 2. non-local cluster on HPC - work in progress ##
+## 2. non-local cluster on HPC [work in progress] ##
 
 **Note:** This has not been tested much. SlurmCluster works for us using a shared queue (on XSEDE's comet at SDSC) but not LSFCluster (on Miami's pegasus). We believe this is caused by the HPC configuration, but we don't know by what. Please tell us if you have an idea.   
 
@@ -93,9 +92,9 @@ ifgram_inversion.py inputs/ifgramStack.h5 --cluster lsf   --config lsf   --num-w
 Adjust options in the template file as below
 
 ```cfg
-mintpy.compute.cluster   = auto #[local / lsf / pbs / slurm / no], auto for no, job scheduler in your HPC system
-mintpy.compute.numWorker = auto #[int > 1], number of worker to submit and run, auto for 4 (local) or 40 (non-local)
-mintpy.compute.config    = auto #[name / no], name of the configuration section in YAML file, auto for no (to use the same name as the cluster type specified above)
+mintpy.compute.cluster   = slurm #[local / lsf / pbs / slurm / none], auto for none, job scheduler in your HPC system
+mintpy.compute.numWorker = 40    #[int > 1], auto for 4 (local) or 40 (slurm / pbs / lsf), number of workers to use
+mintpy.compute.config    = auto  #[name / no], auto for none (to use the same name as the cluster type specified above), name of the configuration section in YAML file
 ```
 
 and feed the template file to the script:

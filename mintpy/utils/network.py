@@ -13,7 +13,7 @@ import itertools
 import h5py
 import numpy as np
 from scipy import sparse
-from matplotlib import dates as mdates, pyplot as plt
+from matplotlib import pyplot as plt
 from matplotlib.tri import Triangulation
 from mintpy.objects import ifgramStack, sensor
 from mintpy.utils import ptime, readfile
@@ -241,6 +241,57 @@ def calculate_doppler_overlap(dop_a, dop_b, bandwidth_az):
     return dop_overlap
 
 
+def simulate_coherence_v2(date12_list, decor_time=200.0, coh_resid=0.2, inc_angle=40, sensor_name='Sen',
+                          display=False):
+    """Simulate coherence version 2 (without using bl_list.txt file).
+    Parameters: date12_list - list of string in YYYYMMDD_YYYYMMDD format, indicating pairs configuration
+                decor_time  - float, decorrelation rate in days, time for coherence to drop to 1/e of its initial value
+                coh_resid   - float, long-term coherence, minimum attainable coherence value
+                inc_angle   - float, incidence angle in degrees
+                sensor_name - string, SAR sensor name
+                display     - bool, display result as matrix or not
+    Returns:    coh         - 2D np.array in size of (ifgram_num)
+    """
+    num_pair = len(date12_list)
+    date1s = [x.split('_')[0] for x in date12_list]
+    date2s = [x.split('_')[1] for x in date12_list]
+    date_list = sorted(list(set(date1s + date2s)))
+    tbase_list = ptime.date_list2tbase(date_list)[0]
+
+    SNR = 22  # NESZ = -22 dB from Table 1 in https://sentinels.copernicus.eu/web/sentinel/
+    coh_thermal = 1. / (1. + 1./SNR)
+
+    # bperp
+    rng = np.random.default_rng(2)
+    pbase_list = rng.normal(0, 50, num_pair).tolist()
+    pbase_c = critical_perp_baseline(sensor_name, inc_angle)
+
+    coh = np.zeros(num_pair, dtype=np.float32)
+    for i in range(num_pair):
+        date1, date2 = date12_list[i].split('_')
+        ind1, ind2 = date_list.index(date1), date_list.index(date2)
+        tbase = tbase_list[ind2] - tbase_list[ind1]
+        pbase = pbase_list[ind2] - pbase_list[ind1]
+
+        coh_geom = (pbase_c - abs(pbase)) / pbase_c
+        coh_temp = np.multiply((coh_thermal - coh_resid), np.exp(-1*abs(tbase)/decor_time)) + coh_resid
+        coh[i] = coh_geom * coh_temp
+
+    if display:
+        print(('critical perp baseline: %.f m' % pbase_c))
+        coh_mat = coherence_matrix(date12_list, coh)
+        plt.figure()
+        plt.imshow(coh_mat, vmin=0.0, vmax=1.0, cmap='jet')
+        plt.xlabel('Image number')
+        plt.ylabel('Image number')
+        cbar = plt.colorbar()
+        cbar.set_label('Coherence')
+        plt.title('Coherence matrix')
+        plt.show()
+
+    return coh
+
+
 def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor_name='Env', inc_angle=22.8,
                        decor_time=200.0, coh_resid=0.2, display=False):
     """Simulate coherence for a given set of interferograms
@@ -286,7 +337,7 @@ def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor_name='En
     date12_list = ptime.yyyymmdd_date12(date12_list)
     ifgram_num = len(date12_list)
 
-    if isinstance(decor_time, (int, float)):
+    if isinstance(decor_time, (int, np.int16, np.int32, float, np.float32, np.float64)):
         pixel_num = 1
         decor_time = float(decor_time)
     else:
@@ -363,11 +414,6 @@ def threshold_doppler_overlap(date12_list, date_list, dop_list, bandwidth_az, do
         m_dates = [date12.split('-')[0] for date12 in date12_list]
         s_dates = [date12.split('-')[1] for date12 in date12_list]
         date_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
-        if not len(date_list) == len(pbase_list):
-            print('ERROR: number of existing dates is not equal to number of perp baseline!')
-            print('date list is needed for threshold filtering!')
-            print('skip filtering.')
-            return date12_list
     date6_list = ptime.yymmdd(date_list)
 
     # Threshold
@@ -587,7 +633,7 @@ def select_pairs_sequential(date_list, num_conn=2, date_format=None):
     Parameters: date_list   - list of str for date
                 num_conn    - int, number of sequential connections
                 date_format - str / None, output date format
-    Returns:    date12_list - list of str for date12 
+    Returns:    date12_list - list of str for date12
     """
 
     date_list = sorted(date_list)

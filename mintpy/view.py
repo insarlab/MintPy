@@ -22,8 +22,8 @@ warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 import cartopy.crs as ccrs
 
 from mintpy.objects import (
+    giantIfgramStack,
     geometryDatasetNames,
-    geometry,
     ifgramDatasetNames,
     ifgramStack,
     timeseriesKeyNames,
@@ -112,7 +112,7 @@ def create_parser():
     parser.add_argument('--noverbose', dest='print_msg', action='store_false',
                         help='Disable the verbose message printing (default: %(default)s).')
 
-    parser.add_argument('--math', dest='math_operation', choices={'square','sqrt','reverse','inverse'},
+    parser.add_argument('--math', dest='math_operation', choices={'square','sqrt','reverse','inverse','rad2deg','deg2rad'},
                         help='Apply the math operation before displaying [for single subplot ONLY].\n'
                              'E.g. plot the std. dev. of the variance file.\n'
                              '  square  = x^2\n'
@@ -126,6 +126,7 @@ def create_parser():
     parser = arg_group.add_gps_argument(parser)
     parser = arg_group.add_mask_argument(parser)
     parser = arg_group.add_map_argument(parser)
+    parser = arg_group.add_memory_argument(parser)
     parser = arg_group.add_point_argument(parser)
     parser = arg_group.add_reference_argument(parser)
     parser = arg_group.add_save_argument(parser)
@@ -138,6 +139,11 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # save argv (to check the manually specified arguments)
+    # use iargs        for python call
+    # use sys.argv[1:] for command line call
+    inps.argv = iargs if iargs else sys.argv[1:]
 
     # check invalid file inputs
     for key in ['file','dem_file','mask_file','pts_file']:
@@ -155,7 +161,10 @@ def cmd_line_parse(iargs=None):
     if inps.lalo_step:
         inps.lalo_label = True
     if inps.zero_mask:
-        inps.mask_file = 'no'
+        # turn OFF default mask file detection for --zero-mask
+        # extra manual mask file is still supported
+        if not inps.mask_file:
+            inps.mask_file = 'no'
 
     if not inps.disp_whitespace:
         inps.disp_axis = False
@@ -163,13 +172,22 @@ def cmd_line_parse(iargs=None):
         inps.disp_cbar = False
     if not inps.disp_axis:
         inps.disp_tick = False
+    if inps.flip_lr or inps.flip_ud:
+        inps.auto_flip = False
+
+    # check geo-only options for files in radar-coordinates
+    geo_opt_names = ['--coord', '--show-gps', '--coastline', '--lalo-label', '--lalo-step', '--scalebar']
+    geo_opt_names = list(set(geo_opt_names) & set(inps.argv))
+    if geo_opt_names and 'Y_FIRST' not in readfile.read_attribute(inps.file).keys():
+        for opt_name in geo_opt_names:
+            print(f'WARNING: {opt_name} is NOT supported for files in radar-coordinate, ignore it and continue.')
 
     # verbose print using --noverbose option
     global vprint
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
     # print view.py command line if --noverbose (used in smallbaselineApp.py)
     if not inps.print_msg:
-        print('view.py', ' '.join(iargs))
+        print('view.py', ' '.join(inps.argv))
 
     if inps.disp_setting_file:
         inps = update_inps_with_display_setting_file(inps, inps.disp_setting_file)
@@ -177,9 +195,6 @@ def cmd_line_parse(iargs=None):
     # Backend setting
     if not inps.disp_fig:
         plt.switch_backend('Agg')
-
-    if inps.flip_lr or inps.flip_ud:
-        inps.auto_flip = False
 
     return inps
 
@@ -240,10 +255,10 @@ def update_inps_with_file_metadata(inps, metadata):
     inps.pix_box = coord.check_box_within_data_coverage(inps.pix_box)
     inps.geo_box = coord.box_pixel2geo(inps.pix_box)
     # Out message
-    data_box = (0, 0, inps.width, inps.length)
-    vprint('data   coverage in y/x: '+str(data_box))
+    inps.data_box = (0, 0, inps.width, inps.length)
+    vprint('data   coverage in y/x: '+str(inps.data_box))
     vprint('subset coverage in y/x: '+str(inps.pix_box))
-    vprint('data   coverage in lat/lon: '+str(coord.box_pixel2geo(data_box)))
+    vprint('data   coverage in lat/lon: '+str(coord.box_pixel2geo(inps.data_box)))
     vprint('subset coverage in lat/lon: '+str(inps.geo_box))
     vprint('------------------------------------------------------------------------')
 
@@ -330,8 +345,8 @@ def update_inps_with_file_metadata(inps, metadata):
                     raise ValueError('--lalo-label is NOT supported for projection: UTM')
 
             else:
-                vprint('WARNING: Un-recognized coordinate unit: {}'.format(inps.coord_unit))
-                vprint('    Switch to the native Y/X and continue to plot')
+                print('WARNING: Un-recognized coordinate unit: {}'.format(inps.coord_unit))
+                print('    Switch to the native Y/X and continue to plot')
                 inps.fig_coord = 'radar'
 
 
@@ -396,7 +411,7 @@ def update_data_with_plot_inps(data, metadata, inps):
             else:
                 msg = 'WARNING: input reference pixel ({}, {}) has either masked or NaN value!'.format(ref_y, ref_x)
                 msg += ' -> skip re-referencing.'
-                vprint(msg)
+                print(msg)
                 inps.ref_yx = None
 
         elif len(data.shape) == 3:
@@ -417,7 +432,7 @@ def update_data_with_plot_inps(data, metadata, inps):
             else:
                 msg = 'WARNING: input reference pixel ({}, {}) has either masked or NaN value!'.format(ref_y, ref_x)
                 msg += ' -> skip re-referencing.'
-                vprint(msg)
+                print(msg)
                 inps.ref_yx = None
     else:
         inps.ref_yx = None
@@ -435,7 +450,25 @@ def update_data_with_plot_inps(data, metadata, inps):
     if inps.wrap:
         inps.vlim = inps.wrap_range
 
-    # 3. update display min/max
+    # math operation
+    if inps.math_operation:
+        vprint('Apply math operation: {}'.format(inps.math_operation))
+        if inps.math_operation == 'square':
+            data = np.square(data)
+        elif inps.math_operation == 'sqrt':
+            data = np.sqrt(data)
+        elif inps.math_operation == 'reverse':
+            data *= -1.
+        elif inps.math_operation == 'inverse':
+            data = 1. / data
+        elif inps.math_operation == 'rad2deg':
+            data *= 180. / np.pi
+        elif inps.math_operation == 'deg2rad':
+            data *= np.pi / 180.
+        else:
+            raise ValueError('un-recognized math operation: {}'.format(inps.math_operation))
+
+    # 4. update display min/max
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
     if not inps.vlim: # and data.ndim < 3:
         inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(data, print_msg=inps.print_msg)
@@ -511,11 +544,11 @@ def plot_slice(ax, data, metadata, inps=None):
         if inps.disp_gps and inps.gps_component and inps.ref_gps_site:
             ref_site_lalo = GPS(site=inps.ref_gps_site).get_stat_lat_lon(print_msg=False)
             y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
-            y -= inps.pix_box[1]
-            x -= inps.pix_box[0]
-            data -= data[y, x]
+            ref_data = data[y - inps.pix_box[1], x - inps.pix_box[0]]
+            data -= ref_data
             vprint(('referencing InSAR data to the pixel nearest to '
-                    'GPS station: {} at {}').format(inps.ref_gps_site, ref_site_lalo))
+                    f'GPS station: {inps.ref_gps_site} at {ref_site_lalo} '
+                    f'by substrating {ref_data:.3f} {inps.disp_unit}'))
             # do not show the original InSAR reference point
             inps.disp_ref_pixel = False
 
@@ -527,6 +560,10 @@ def plot_slice(ax, data, metadata, inps=None):
                        alpha=inps.transparency, animated=inps.animation, zorder=1)
 
         # Scale Bar
+        if inps.coord_unit.startswith('deg') and (inps.geo_box[2] - inps.geo_box[0]) > 30:
+            # do not plot scalebar if the longitude span > 30 deg
+            inps.disp_scalebar = False
+
         if inps.disp_scalebar:
             vprint('plot scale bar: {}'.format(inps.scalebar))
             pp.draw_scalebar(ax,
@@ -588,7 +625,8 @@ def plot_slice(ax, data, metadata, inps=None):
                     dem_row = coord_dem.lalo2yx(y, coord_type='lat') - dem_pix_box[1]
                     if 0 <= dem_col < dem_wid and 0 <= dem_row < dem_len:
                         h = dem[dem_row, dem_col]
-                        msg += ', h={:.0f}'.format(h)
+                        if not np.isnan(h):
+                            msg += ', h={:.0f}'.format(h)
                 # x/y
                 msg += ', x={:.0f}, y={:.0f}'.format(col+inps.pix_box[0],
                                                      row+inps.pix_box[1])
@@ -658,8 +696,8 @@ def plot_slice(ax, data, metadata, inps=None):
                 lats = readfile.read(geom_file, datasetName='latitude',  box=inps.pix_box, print_msg=False)[0]
                 lons = readfile.read(geom_file, datasetName='longitude', box=inps.pix_box, print_msg=False)[0]
             except:
-                msg = 'WARNING: no latitude / longitude found in file: {}'.format(os.path.basename(geom_file))
-                msg += ', skip showing lat/lon in the status bar.'
+                msg = 'WARNING: no latitude / longitude found in file: {}, '.format(os.path.basename(geom_file))
+                msg += 'skip showing lat/lon in the status bar.'
                 vprint(msg)
                 geom_file = None
         else:
@@ -678,7 +716,8 @@ def plot_slice(ax, data, metadata, inps=None):
                 # DEM
                 if inps.dem_file:
                     h = dem[row, col]
-                    msg += ', h={:.0f} m'.format(h)
+                    if not np.isnan(h):
+                        msg += ', h={:.0f} m'.format(h)
                 # lat/lon
                 if geom_file:
                     msg += ', lat={:.4f}, lon={:.4f}'.format(lats[row, col], lons[row, col])
@@ -730,7 +769,7 @@ def plot_slice(ax, data, metadata, inps=None):
 
 
 def read_input_file_info(inps):
-    # File Baic Info
+    # File Basic Info
     atr = readfile.read_attribute(inps.file)
     msg = 'input file is '
     if not inps.file.endswith(('.h5', '.he5')):
@@ -739,7 +778,7 @@ def read_input_file_info(inps):
     if 'DATA_TYPE' in atr.keys():
         msg += ' in {} format'.format(atr['DATA_TYPE'])
 
-    vprint('run {} in {}'.format(os.path.basename(__file__), version.release_description))
+    vprint('run {} in {}'.format(os.path.basename(__file__), version.version_description))
     vprint(msg)
 
     ## size and name
@@ -751,7 +790,7 @@ def read_input_file_info(inps):
     vprint('file size in y/x: {}'.format((inps.length, inps.width)))
 
     # File dataset List
-    inps.sliceList = readfile.get_slice_list(inps.file)
+    inps.sliceList = readfile.get_slice_list(inps.file, no_complex=True)
 
     # Read input list of dataset to display
     inps, atr = read_dataset_input(inps)
@@ -820,10 +859,7 @@ def read_dataset_input(inps):
                                                 inps.search_dset)[1]
     else:
         # default dataset to display for certain type of files
-        if inps.key == 'geometry':
-            inps.dset = list(geometryDatasetNames)
-            inps.dset.remove('bperp')
-        elif inps.key == 'ifgramStack':
+        if inps.key == 'ifgramStack':
             inps.dset = ['unwrapPhase']
         elif inps.key == 'HDFEOS':
             inps.dset = ['displacement']
@@ -835,6 +871,9 @@ def read_dataset_input(inps):
             inps.dset = [obj.sliceList[0].split('-')[0]]
         else:
             inps.dset = inps.sliceList
+            # do not plot 3D-bperp by default
+            if inps.key == 'geometry':
+                inps.dset = [x for x in inps.dset if not x.startswith('bperp')]
 
         inps.dsetNumList = search_dataset_input(inps.sliceList,
                                                 inps.dset,
@@ -875,8 +914,7 @@ def read_dataset_input(inps):
                                         inps.search_dset)[0][0]
 
         if not ref_date:
-            vprint('WARNING: input reference date is not included in input file!')
-            vprint('input reference date: '+inps.ref_date)
+            print('WARNING: input reference date {} is not included in input file! Ignore it and continue'.format(inps.ref_date))
             inps.ref_date = None
         else:
             inps.ref_date = ref_date
@@ -1066,19 +1104,18 @@ def read_data4figure(i_start, i_end, inps, metadata):
     if same_unit4all_subplots:
         data, inps = update_data_with_plot_inps(data, metadata, inps)
     else:
-        if any(x in inps.iargs for x in ['-u', '--unit']):
+        if any(x in inps.argv for x in ['-u', '--unit']):
             print('WARNING: -u/--unit option is disabled for multi-subplots with different units! Ignore it and continue')
         inps.disp_unit = None
 
     # mask
+    if inps.zero_mask:
+        vprint('masking pixels with zero value')
+        data = np.ma.masked_where(data == 0., data)
     if inps.msk is not None:
         vprint('masking data')
         msk = np.tile(inps.msk, (data.shape[0], 1, 1))
         data = np.ma.masked_where(msk == 0., data)
-
-    if inps.zero_mask:
-        vprint('masking pixels with zero value')
-        data = np.ma.masked_where(data == 0., data)
 
     # update display min/max
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
@@ -1146,10 +1183,12 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
         # get title
         subplot_title = None
         if inps.key in timeseriesKeyNames or inps.dset[0].startswith('bperp'):
+            # support / for py2-mintpy
+            date_str = inps.dset[i].replace('/','-').split('-')[1]
             try:
-                subplot_title = dt.datetime.strptime(inps.dset[i].split('-')[1], '%Y%m%d').isoformat()[0:10]
+                subplot_title = dt.datetime.strptime(date_str, '%Y%m%d').isoformat()[0:10]
             except:
-                subplot_title = str(inps.dset[i])
+                subplot_title = date_str
 
         else:
             # dset info - name & index
@@ -1333,13 +1372,17 @@ def prepare4multi_subplots(inps, metadata):
     if len(inps.dsetFamilyList) == 1 and inps.atr['FILE_TYPE'] == 'ifgramStack':
         inps.date12List = sorted(list(set(x.split('-')[1] for x in inps.sliceList)))
 
-    ## calculate multilook_num
-    # ONLY IF:
-    #   inps.multilook is True (no --nomultilook input) AND
-    #   inps.multilook_num ==1 (no --multilook-num input)
-    # inps.multilook is used for this check ONLY
-    if inps.multilook and inps.multilook_num == 1:
+    if inps.multilook_num > 1 and inps.print_msg:
+        print('multilook {0} by {0} with nearest interpolation'.format(inps.multilook_num))
+
+    elif inps.multilook and inps.multilook_num == 1:
+        ## calculate multilook_num
+        # ONLY IF:
+        #   inps.multilook is True (no --nomultilook input) AND
+        #   inps.multilook_num ==1 (no --multilook-num input)
+        # inps.multilook is used for this check ONLY
         inps.multilook_num = pp.auto_multilook_num(inps.pix_box, inps.fig_row_num * inps.fig_col_num,
+                                                   max_memory=inps.maxMemory,
                                                    print_msg=inps.print_msg)
 
     # multilook mask
@@ -1384,6 +1427,7 @@ def prepare4multi_subplots(inps, metadata):
                                 xstep=inps.multilook_num,
                                 ystep=inps.multilook_num,
                                 print_msg=False)[0]
+
             (inps.dem_shade,
              inps.dem_contour,
              inps.dem_contour_seq) = pp.prepare_dem_background(dem=dem,
@@ -1392,28 +1436,30 @@ def prepare4multi_subplots(inps, metadata):
         else:
             inps.dem_file = None
             inps.transparency = 1.0
-            vprint('Input DEM file has different size than data file, ignore it.')
+            msg = 'WARNING: DEM file has a different size from the data file. '
+            msg += 'This feature is only supported for single subplot, and not for multi-subplots.'
+            msg += '\n    --> Ignore it and continue.'
+            print(msg)
     return inps
 
 
 ##################################################################################################
 def prep_slice(cmd, auto_fig=False):
     """Prepare data from command line as input, for easy call plot_slice() externally
-    Parameters: cmd : string, command to be run in terminal
-    Returns:    data : 2D np.ndarray, data to be plotted
-                atr  : dict, metadata
-                inps : namespace, input argument for plot setup
+    Parameters: cmd  - string, command to be run in terminal
+    Returns:    data - 2D np.ndarray, data to be plotted
+                atr  - dict, metadata
+                inps - namespace, input argument for plot setup
     Example:
         subplot_kw = dict(projection=ccrs.PlateCarree())
         fig, ax = plt.subplots(figsize=[4, 3], subplot_kw=subplot_kw)
-        geo_box = (-91.670, -0.255, -91.370, -0.515)    # W, N, E, S
-        cmd = 'view.py geo_velocity.h5 velocity --mask geo_maskTempCoh.h5 '
-        cmd += '--sub-lon {w} {e} --sub-lat {s} {n} '.format(w=geo_box[0], n=geo_box[1], e=geo_box[2], s=geo_box[3])
-        cmd += '-c jet -v -3 10 --cbar-loc bottom --cbar-nbins 3 --cbar-ext both --cbar-size 5% '
-        cmd += '--dem srtm1.dem --dem-nocontour '
-        cmd += '--lalo-step 0.2 --lalo-loc 1 0 1 0 --scalebar 0.3 0.80 0.05 --notitle --fontsize 12 '
-        d_v, atr ,inps = view.prep_slice(cmd)
-        ax, inps, im, cbar = view.plot_slice(ax, d_v, atr, inps)
+        W, N, E, S = (-91.670, -0.255, -91.370, -0.515)    # geo_box
+        cmd = 'view.py geo_velocity.h5 velocity --mask geo_maskTempCoh.h5 --dem srtm1.dem --dem-nocontour '
+        cmd += f'--sub-lon {W} {E} --sub-lat {S} {N} -c jet -v -3 10 '
+        cmd += '--cbar-loc bottom --cbar-nbins 3 --cbar-ext both --cbar-size 5% '
+        cmd += '--lalo-step 0.2 --lalo-loc 1 0 1 0 --scalebar 0.3 0.80 0.05 --notitle'
+        data, atr ,inps = view.prep_slice(cmd)
+        ax, inps, im, cbar = view.plot_slice(ax, data, atr, inps)
         plt.show()
     """
     inps = cmd_line_parse(cmd.split()[1:])
@@ -1440,6 +1486,7 @@ def prep_slice(cmd, auto_fig=False):
                               datasetName=inps.ref_date,
                               box=inps.pix_box,
                               print_msg=False)[0]
+
     # reference in space for unwrapPhase
     if (inps.key in ['ifgramStack']
             and inps.dset[0].split('-')[0].startswith('unwrapPhase')
@@ -1450,11 +1497,20 @@ def prep_slice(cmd, auto_fig=False):
                                  box=(ref_x, ref_y, ref_x+1, ref_y+1),
                                  print_msg=False)[0]
         data[data != 0.] -= ref_data
+
     # masking
     if inps.zero_mask:
         data = np.ma.masked_where(data == 0., data)
     if inps.msk is not None:
         data = np.ma.masked_where(inps.msk == 0., data)
+    else:
+        inps.msk = np.ones(data.shape, dtype=np.bool_)
+    # update/save mask info
+    if np.ma.is_masked(data):
+        inps.msk *= ~data.mask
+        inps.msk *= ~np.isnan(data.data)
+    else:
+        inps.msk *= ~np.isnan(data)
 
     data, inps = update_data_with_plot_inps(data, atr, inps)
 
@@ -1484,13 +1540,12 @@ class viewer():
         if cmd:
             iargs = cmd.split()[1:]
         self.cmd = cmd
-        self.iargs =iargs
+        self.iargs = iargs
         return
 
 
     def configure(self):
         inps = cmd_line_parse(self.iargs)
-        inps.argv = list(self.iargs)
         inps, self.atr = read_input_file_info(inps)
         inps = update_inps_with_file_metadata(inps, self.atr)
 
@@ -1542,18 +1597,6 @@ class viewer():
                                          print_msg=False)[0]
                 data[data != 0.] -= ref_data
 
-            # math operation
-            if self.math_operation:
-                vprint('Apply math operation: {}'.format(self.math_operation))
-                if self.math_operation == 'square':
-                    data = np.square(data)
-                elif self.math_operation == 'sqrt':
-                    data = np.sqrt(data)
-                elif self.math_operation == 'reverse':
-                    data *= -1
-                elif self.math_operation == 'inverse':
-                    data = 1. / data
-
             # masking
             if self.zero_mask:
                 vprint('masking pixels with zero value')
@@ -1561,6 +1604,14 @@ class viewer():
             if self.msk is not None:
                 vprint('masking data')
                 data = np.ma.masked_where(self.msk == 0., data)
+            else:
+                self.msk = np.ones(data.shape, dtype=np.bool_)
+            # update/save mask info
+            if np.ma.is_masked(data):
+                self.msk *= ~data.mask
+                self.msk *= ~np.isnan(data.data)
+            else:
+                self.msk *= ~np.isnan(data)
 
             # update data
             data, self = update_data_with_plot_inps(data, self.atr, self)
@@ -1572,7 +1623,7 @@ class viewer():
                 fig.subplots_adjust(left=0,right=1,bottom=0,top=1)
 
             # plot
-            ax, self, im, cbar = plot_slice(ax, data, self.atr, self)
+            self = plot_slice(ax, data, self.atr, self)[1]
 
             # Save figure
             if self.save_fig:
@@ -1586,6 +1637,13 @@ class viewer():
 
         # Multiple Subplots
         else:
+            # warn single-subplot options
+            opt_names = ['--show-gps', '--coastline', '--lalo-label', '--lalo-step', '--scalebar',
+                         '--pts-yx', '--pts-lalo', '--pts-file']
+            opt_names = list(set(opt_names) & set(self.argv))
+            for opt_name in opt_names:
+                print('WARNING: {} is NOT supported for multi-subplots, ignore it and continue.'.format(opt_name))
+
             # prepare
             self = prepare4multi_subplots(self, metadata=self.atr)
 

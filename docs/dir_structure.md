@@ -380,33 +380,33 @@ mintpy.load.waterMaskFile    = $DATA_DIR/SanFranSenDT42/mask/watermask.msk
 
 ### [ASF HyP3](https://hyp3-docs.asf.alaska.edu/)
 
-**WARNING: The current incidence angle file offered by HyP3 is not compatible with MintPy and should not be used!**
-
 1. Search, request and download GUNW products using [hyp3_sdk](https://nbviewer.jupyter.org/github/ASFHyP3/hyp3-sdk/blob/main/docs/sdk_example.ipynb).
 
     + For at least one GUNW product, download the accompanying DEM.
 
 2. Clip DEM and all interferograms to the same area using hyp3lib/[cutGeotiffs.py](https://github.com/ASFHyP3/hyp3-lib/blob/develop/hyp3lib/cutGeotiffs.py) script.
 
-Here is an example workflow: [prep_TS_hyp3](https://nbviewer.jupyter.org/github/insarlab/MintPy-tutorial/blob/main/prep_TS_hyp3.ipynb).
+Here is an example workflow: [smallbaselineApp_hyp3](https://nbviewer.jupyter.org/github/insarlab/MintPy-tutorial/blob/main/smallbaselineApp_hyp3.ipynb).
 
 ```
-$DATA_DIR/TongariroSenA
+$DATA_DIR/RidgecrestSenDT71
 ├── hyp3
-|   ├── S1BA_20161229T070618_20170116T070658_VVP018_INT80_G_ueF_8108
-│   │   ├── S1BA_20161229T070618_20170116T070658_VVP018_INT80_G_ueF_8108_unw_phase_clip.tif
-│   │   ├── S1BA_20161229T070618_20170116T070658_VVP018_INT80_G_ueF_8108_corr_clip.tif
-│   │   ├── S1BA_20161229T070618_20170116T070658_VVP018_INT80_G_ueF_8108_dem_clip.tif
-│   │   ├── S1BA_20161229T070618_20170116T070658_VVP018_INT80_G_ueF_8108.txt
+│   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43
+│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_corr_clip.tif
+│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_dem_clip.tif
+│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_lv_theta_clip.tif
+│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_unw_phase_clip.tif
+│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_water_mask_clip.tif
+│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43.txt
 │   │   └── ...
-│   ├── S1AB_20170116T070658_20170122T070616_VVP006_INT80_G_ueF_0209
-│   │   ├── S1AB_20170116T070658_20170122T070616_VVP006_INT80_G_ueF_0209_unw_phase_clip.tif
-│   │   ├── S1AB_20170116T070658_20170122T070616_VVP006_INT80_G_ueF_0209_corr_clip.tif
-│   │   ├── S1AB_20170116T070658_20170122T070616_VVP006_INT80_G_ueF_0209.txt
+│   ├── S1AA_20190622T135157_20190716T135159_VVP024_INT80_G_ueF_BA28
+│   │   ├── S1AA_20190622T135157_20190716T135159_VVP024_INT80_G_ueF_BA28_corr_clip.tif
+│   │   ├── S1AA_20190622T135157_20190716T135159_VVP024_INT80_G_ueF_BA28_unw_phase_clip.tif
+│   │   ├── S1AA_20190622T135157_20190716T135159_VVP024_INT80_G_ueF_BA28.txt
 │   │   └── ...
 │   └── ...
 └── mintpy
-    └── TongariroSenA.txt
+    └── RidgecrestSenDT71.txt
 ```
 
 The corresponding template options for `load_data`:
@@ -414,10 +414,12 @@ The corresponding template options for `load_data`:
 ```cfg
 mintpy.load.processor        = hyp3
 ##---------interferogram datasets:
-mintpy.load.unwFile          = $DATA_DIR/TongariroSenA/hyp3/*/*unw_phase_clip.tif
-mintpy.load.corFile          = $DATA_DIR/TongariroSenA/hyp3/*/*corr_clip.tif
+mintpy.load.unwFile          = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*unw_phase_clip.tif
+mintpy.load.corFile          = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*corr_clip.tif
 ##---------geometry datasets:
-mintpy.load.demFile          = $DATA_DIR/TongariroSenA/hyp3/*/*dem_clip.tif
+mintpy.load.demFile          = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*dem_clip.tif
+mintpy.load.incAngleFile     = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*lv_theta_clip.tif
+mintpy.load.waterMaskFile    = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*water_mask_clip.tif
 ```
 
 ### [GMTSAR](https://github.com/gmtsar/gmtsar) ###

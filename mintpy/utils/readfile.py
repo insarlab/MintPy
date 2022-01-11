@@ -23,7 +23,6 @@ from mintpy.objects import (
     giantIfgramStack,
     giantTimeseries,
     ifgramStack,
-    timeseriesDatasetNames,
     timeseries,
     HDFEOS
 )
@@ -42,7 +41,10 @@ standardMetadataKeys = {
     'EARTH_RADIUS'       : ['earthRadius', 'earth_radius_below_sensor', 'earth_radius'],
     'HEADING'            : ['HEADING_DEG', 'heading'],
     'HEIGHT'             : ['altitude', 'SC_height'],
-    'LENGTH'             : ['length', 'FILE_LENGTH', 'lines', 'azimuth_lines', 'nlines', 'az_samp', 'interferogram_azimuth_lines'],
+    'BANDS'              : ['number_bands', 'bands'],
+    'INTERLEAVE'         : ['scheme', 'interleave'],
+    'LENGTH'             : ['length', 'FILE_LENGTH', 'lines', 'azimuth_lines', 'nlines', 'az_samp',
+                            'interferogram_azimuth_lines'],
     'ORBIT_DIRECTION'    : ['passDirection'],
     'PLATFORM'           : ['spacecraftName', 'sensor'],
     'POLARIZATION'       : ['polarization'],
@@ -71,10 +73,6 @@ standardMetadataKeys = {
     'first_frame'    : ['firstFrameNumber'],
     'last_frame'     : ['lastFrameNumber'],
     'relative_orbit' : ['trackNumber'],
-
-    # ISCE attributes
-    'number_bands' : ['bands'],
-    'scheme'       : ['interleave'],
 }
 
 GDAL2ISCE_DATATYPE = {
@@ -99,6 +97,19 @@ GDAL2NUMPY_DATATYPE = {
     7 : 'float64',
     10: 'complex64',
     11: 'complex128',
+}
+
+NUMPY2GDAL_DATATYPE = {
+  "uint8"     : 1,
+  "int8"      : 1,
+  "uint16"    : 2,
+  "int16"     : 3,
+  "uint32"    : 4,
+  "int32"     : 5,
+  "float32"   : 6,
+  "float64"   : 7,
+  "complex64" : 10,
+  "complex128": 11,
 }
 
 # single file (data + attributes) supported by GDAL
@@ -184,12 +195,13 @@ ENVI_BYTE_ORDER = {
 
 
 #########################################################################
-def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1):
+def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1, data_type=None):
     """Read one dataset and its attributes from input file.
     Parameters: fname       : str, path of file to read
                 datasetName : str or list of str, slice names
                 box         : 4-tuple of int area to read, defined in (x0, y0, x1, y1) in pixel coordinate
                 x/ystep     : int, number of pixels to pick/multilook for each output pixel
+                data_type   : numpy data type, e.g. np.float32, np.bool_, etc.
     Returns:    data        : 2/3-D matrix in numpy.array format, return None if failed
                 atr         : dictionary, attributes of data, return None if failed
     Examples:
@@ -233,6 +245,11 @@ def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1):
                                      box=box,
                                      xstep=xstep,
                                      ystep=ystep)
+
+    # customized output data type
+    if data_type:
+        data = np.array(data, dtype=data_type)
+
     return data, atr
 
 
@@ -273,13 +290,16 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
     elif isinstance(datasetName, str):
         datasetName = [datasetName]
 
-    # if datasetName is all numerical (or include only T), add dsFamily as prefix
-    if all(i.replace('T','').isdigit() for i in datasetName):
-        datasetName = ['{}-{}'.format(ds_3d_list[0], i) for i in datasetName]
+    # if datasetName is all date info, add dsFamily as prefix
+    # a) if all digit, e.g. YYYYMMDD
+    # b) if in isoformat(), YYYY-MM-DDTHH:MM, etc.
+    if all(x.isdigit() or x[:4].isdigit() for x in datasetName):
+        datasetName = ['{}-{}'.format(ds_3d_list[0], x) for x in datasetName]
 
     # Input Argument: decompose slice list into dsFamily and inputDateList
     dsFamily = datasetName[0].split('-')[0]
-    inputDateList = [i.replace(dsFamily,'').replace('-','') for i in datasetName]
+    inputDateList = [x.replace(dsFamily,'') for x in datasetName]
+    inputDateList = [x[1:] for x in inputDateList if x.startswith('-')]
 
     # read hdf5
     with h5py.File(fname, 'r') as f:
@@ -317,7 +337,7 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
             if not inputDateList or inputDateList == ['']:
                 slice_flag[:] = True
             else:
-                date_list = [i.split('-')[1] for i in
+                date_list = [i.split('-', 1)[1] for i in
                              [j for j in slice_list if j.startswith(dsFamily)]]
                 for d in inputDateList:
                     slice_flag[date_list.index(d)] = True
@@ -386,8 +406,8 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     # default data structure
     data_type = atr.get('DATA_TYPE', 'float32').lower()
     byte_order = atr.get('BYTE_ORDER', 'little-endian').lower()
-    num_band = int(atr.get('number_bands', '1'))
-    band_interleave = atr.get('scheme', 'BIL').upper()
+    num_band = int(atr.get('BANDS', '1'))
+    interleave = atr.get('INTERLEAVE', 'BIL').upper()
 
     # default data to read
     band = 1
@@ -412,7 +432,15 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
                 band = 1
 
         elif k in ['slc']:
-            cpx_band = 'magnitude'
+            if datasetName:
+                if datasetName in ['amplitude','magnitude','intensity']:
+                    cpx_band = 'magnitude'
+                elif datasetName in ['band2','phase']:
+                    cpx_band = 'phase'
+                else:
+                    cpx_band = 'complex'
+            else:
+                cpx_band = 'complex'
 
         elif k.startswith('los') and datasetName and datasetName.startswith(('band2','az','head')):
             band = min(2, num_band)
@@ -450,7 +478,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     # ROI_PAC
     elif processor in ['roipac']:
         # data structure - auto
-        band_interleave = 'BIL'
+        interleave = 'BIL'
         byte_order = 'little-endian'
 
         # data structure - file specific based on file extension
@@ -482,7 +510,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     # Gamma
     elif processor == 'gamma':
         # data structure - auto
-        band_interleave = 'BIL'
+        interleave = 'BIL'
         byte_order = atr.get('BYTE_ORDER', 'big-endian')
 
         data_type = 'float32'
@@ -493,11 +521,11 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
             data_type = 'complex64'
 
         elif fext in ['.utm_to_rdc']:
-            data_type = 'complex64'
+            data_type = 'float32'
+            interleave = 'BIP'
+            num_band = 2
             if datasetName and datasetName.startswith(('az', 'azimuth')):
-                cpx_band = 'imag'
-            else:
-                cpx_band = 'real'
+                band = 2
 
         elif fext == '.slc':
             data_type = 'complex32'
@@ -511,7 +539,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     # https://www.brockmann-consult.de/beam/doc/help/general/BeamDimapFormat.html
     elif processor == 'snap':
         # data structure - auto
-        band_interleave = atr.get('scheme', 'BSQ').upper()
+        interleave = atr.get('INTERLEAVE', 'BSQ').upper()
 
         # byte order
         byte_order = atr.get('BYTE_ORDER', 'big-endian')
@@ -519,14 +547,14 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
             byte_order = 'little-endian'
 
     # GDAL / GMTSAR / ASF HyP3
-    elif processor in ['gdal', 'gmtsar', 'hyp3']:
+    elif processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr']:
         pass
 
     else:
         print('Unknown InSAR processor: {}'.format(processor))
 
     # reading
-    if processor in ['gdal', 'gmtsar', 'hyp3']:
+    if processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr']:
         data = read_gdal(
             fname,
             box=box,
@@ -543,7 +571,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
             data_type=data_type,
             byte_order=byte_order,
             num_band=num_band,
-            band_interleave=band_interleave,
+            interleave=interleave,
             band=band,
             cpx_band=cpx_band,
             xstep=xstep,
@@ -556,10 +584,16 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
 
 
 #########################################################################
-def get_slice_list(fname):
+def get_slice_list(fname, no_complex=False):
     """Get list of 2D slice existed in file (for display)"""
     fbase, fext = os.path.splitext(os.path.basename(fname))
     fext = fext.lower()
+    # ignore certain meaningless file extensions
+    while fext in ['.geo', '.rdr', '.full', '.wgs84', '.grd']:
+        fbase, fext = os.path.splitext(fbase)
+    if not fext:
+        fext = fbase
+
     atr = read_attribute(fname)
     k = atr['FILE_TYPE']
 
@@ -616,8 +650,8 @@ def get_slice_list(fname):
 
     # Binary Files
     else:
-        num_band = int(atr.get('number_bands', '1'))
-        if fext in ['.trans', '.utm_to_rdc'] and num_band == 2:
+        num_band = int(atr.get('BANDS', '1'))
+        if fext in ['.trans', '.utm_to_rdc']:
             # roipac / gamma lookup table
             slice_list = ['rangeCoord', 'azimuthCoord']
 
@@ -625,15 +659,19 @@ def get_slice_list(fname):
             # isce los file
             slice_list = ['incidenceAngle', 'azimuthAngle']
 
-        elif fext in ['.int', '.unw']:
-            # do not check the actual num_band in order to support
-            # mag / pha / cpx reading like "multiple bands"
+        elif fext in ['.unw']:
             slice_list = ['magnitude', 'phase']
 
-        elif fbase.startswith('offset') and fext in ['.bip'] and num_band == 2:
+        elif fext in ['.int', '.slc']:
+            if no_complex:
+                slice_list = ['magnitude', 'phase']
+            else:
+                slice_list = ['complex']
+
+        elif fbase.startswith('off') and fext in ['.bip'] and num_band == 2:
             slice_list = ['azimuthOffset', 'rangeOffset']
 
-        elif fbase.startswith('offset') and fname.endswith('cov.bip') and num_band == 3:
+        elif fbase.startswith('off') and fname.endswith('cov.bip') and num_band == 3:
             slice_list = ['azimuthOffsetVar', 'rangeOffsetVar', 'offsetCovar']
 
         else:
@@ -702,18 +740,23 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
 
     # HDF5 files
     if fext in ['.h5', '.he5']:
+        if datasetName:
+            # get rid of potential date info
+            datasetName = datasetName.split('-')[0]
+
         with h5py.File(fname, 'r') as f:
             atr = dict(f.attrs)
             g1_list = [i for i in f.keys() if isinstance(f[i], h5py.Group)]
             d1_list = [i for i in f.keys() if isinstance(f[i], h5py.Dataset) and f[i].ndim >= 2]
 
         # FILE_TYPE - k
+        # pre-defined/known dataset/group names > existing FILE_TYPE > exsiting dataset/group names
         py2_mintpy_stack_files = ['interferograms', 'coherence', 'wrapped'] #obsolete mintpy format
-        if any(i in d1_list for i in ['unwrapPhase', 'azimuthOffset']):
+        if any(i in d1_list for i in ['unwrapPhase', 'rangeOffset', 'azimuthOffset']):
             k = 'ifgramStack'
         elif any(i in d1_list for i in ['height', 'latitude', 'azimuthCoord']):
             k = 'geometry'
-        elif any(i in g1_list+d1_list for i in ['timeseries', 'displacement']):
+        elif any(i in g1_list+d1_list for i in ['timeseries']):
             k = 'timeseries'
         elif any(i in d1_list for i in ['velocity']):
             k = 'velocity'
@@ -725,6 +768,8 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             k = 'giantIfgramStack'
         elif any(i in g1_list for i in py2_mintpy_stack_files):
             k = list(set(g1_list) & set(py2_mintpy_stack_files))[0]
+        elif 'FILE_TYPE' in atr:
+            k = atr['FILE_TYPE']
         elif len(d1_list) > 0:
             k = d1_list[0]
         elif len(g1_list) > 0:
@@ -942,6 +987,10 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             atr['DATA_TYPE'] = dataTypeDict[data_type]
 
     # UNIT
+    if datasetName:
+        # ignore Std because it shares the same unit as base parameter
+        # e.g. velocityStd and velocity
+        datasetName = datasetName.replace('Std','')
     k = atr['FILE_TYPE'].replace('.', '')
     if k == 'ifgramStack':
         if datasetName and datasetName in datasetUnitDict.keys():
@@ -1282,15 +1331,15 @@ def read_gdal_vrt(fname):
     atr = {}
     atr['WIDTH']  = ds.RasterXSize
     atr['LENGTH'] = ds.RasterYSize
-    atr['number_bands'] = ds.RasterCount
+    atr['BANDS'] = ds.RasterCount
 
     # data type
     data_type = ds.GetRasterBand(1).DataType
     atr['DATA_TYPE'] = GDAL2ISCE_DATATYPE[data_type]
 
     # interleave
-    scheme = ds.GetMetadata('IMAGE_STRUCTURE').get('INTERLEAVE', 'PIXEL')
-    atr['scheme'] = ENVI_BAND_INTERLEAVE[scheme]
+    interleave = ds.GetMetadata('IMAGE_STRUCTURE').get('INTERLEAVE', 'PIXEL')
+    atr['INTERLEAVE'] = ENVI_BAND_INTERLEAVE[interleave]
 
     # transformation contains gridcorners
     # (lines/pixels or lonlat and the spacing 1/-1 or deltalon/deltalat)
@@ -1307,8 +1356,9 @@ def read_gdal_vrt(fname):
 
     # projection / coordinate unit
     srs = osr.SpatialReference(wkt=ds.GetProjection())
+    atr['EPSG'] = srs.GetAttrValue('AUTHORITY', 1)
     srs_name = srs.GetName()
-    if 'UTM' in srs_name:
+    if srs_name and 'UTM' in srs_name:
         atr['UTM_ZONE'] = srs_name.split('UTM zone')[-1].strip()
         atr['X_UNIT'] = 'meters'
         atr['Y_UNIT'] = 'meters'
@@ -1392,7 +1442,7 @@ def attribute_gmtsar2roipac(prm_dict_in):
 
 #########################################################################
 def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
-                num_band=1, band_interleave='BIL', band=1, cpx_band='phase',
+                num_band=1, interleave='BIL', band=1, cpx_band='phase',
                 xstep=1, ystep=1):
     """Read binary file using np.fromfile.
 
@@ -1406,10 +1456,7 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
                     complex64, complex128
                 byte_order      : str, little/big-endian
                 num_band        : int, number of bands
-                band_interleave : str, band interleaving scheme, e.g.:
-                    BIP
-                    BIL
-                    BSQ
+                interleave : str, band interleav type, e.g.: BIP, BIL, BSQ
                 band     : int, band of interest, between 1 and num_band.
                 cpx_band : str, e.g.:
                     real,
@@ -1441,44 +1488,38 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
         data_type = '>{}{}'.format(letter, digit)
 
     # read data
-    band_interleave = band_interleave.upper()
-    if band_interleave == 'BIL':
+    interleave = interleave.upper()
+    if interleave == 'BIL':
         data = np.fromfile(fname,
                            dtype=data_type,
                            count=box[3]*width*num_band).reshape(-1, width*num_band)
         data = data[box[1]:box[3],
                     width*(band-1)+box[0]:width*(band-1)+box[2]]
 
-    elif band_interleave == 'BIP':
+    elif interleave == 'BIP':
         data = np.fromfile(fname,
                            dtype=data_type,
                            count=box[3]*width*num_band).reshape(-1, width*num_band)
         data = data[box[1]:box[3],
                     np.arange(box[0], box[2])*num_band+band-1]
 
-    elif band_interleave == 'BSQ':
+    elif interleave == 'BSQ':
         data = np.fromfile(fname,
                            dtype=data_type,
                            count=(box[3]+length*(band-1))*width).reshape(-1, width)
         data = data[length*(band-1)+box[1]:length*(band-1)+box[3],
                     box[0]:box[2]]
     else:
-        raise ValueError('unrecognized band interleaving:', band_interleave)
+        raise ValueError('unrecognized band interleaving:', interleave)
 
     # adjust output band for complex data
     if data_type.replace('>', '').startswith('c'):
-        if cpx_band.startswith('real'):
-            data = data.real
-        elif cpx_band.startswith('imag'):
-            data = data.imag
-        elif cpx_band.startswith('pha'):
-            data = np.angle(data)
-        elif cpx_band.startswith('mag'):
-            data = np.absolute(data)
-        elif cpx_band.startswith(('cpx', 'complex')):
-            pass
-        else:
-            raise ValueError('unrecognized complex band:', cpx_band)
+        if   cpx_band.startswith('real'):  data = data.real
+        elif cpx_band.startswith('imag'):  data = data.imag
+        elif cpx_band.startswith('pha'):   data = np.angle(data)
+        elif cpx_band.startswith('mag'):   data = np.absolute(data)
+        elif cpx_band.startswith('c'):     pass
+        else:  raise ValueError('unrecognized complex band:', cpx_band)
 
     # skipping/multilooking
     if xstep * ystep > 1:
@@ -1518,12 +1559,12 @@ def read_gdal(fname, box=None, band=1, cpx_band='phase', xstep=1, ystep=1):
         box = (0, 0, ds.RasterXSize, ds.RasterYSize)
 
     # read
-    # link: https://gdal.org/python/osgeo.gdal.Band-class.html#ReadAsArray
-    kwargs = dict(xoff=box[0],
-                  yoff=box[1],
-                  win_xsize=box[2]-box[0],
-                  win_ysize=box[3]-box[1])
-    data = bnd.ReadAsArray(**kwargs)
+    # Note: do not use gdal python kwargs because of error: 'BandRasterIONumPy', argument 3 of type 'double'
+    # Recommendation: use rasterio instead of gdal pytho
+    # Link: https://gdal.org/python/osgeo.gdal.Band-class.html#ReadAsArray
+    #kwargs = dict(xoff=box[0], win_xsize=box[2]-box[0],
+    #              yoff=box[1], win_ysize=box[3]-box[1])
+    data = bnd.ReadAsArray()[box[1]:box[3], box[0]:box[2]]
 
     # adjust output band for complex data
     data_type = GDAL2ISCE_DATATYPE[bnd.DataType]

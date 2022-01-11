@@ -217,7 +217,7 @@ class ColormapExt(ScalarMappable):
             rgbs[255,0] = 0
             rgbs[255,1] = 255
             rgbs[255,2] = 255
-            
+
             rgbs = np.roll(rgbs, int(256/2-214), axis=0)  #shift green to the center
             rgbs = np.flipud(rgbs)   #flip up-down so that orange is in the later half (positive)
 

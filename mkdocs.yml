@@ -23,6 +23,7 @@ markdown_extensions:
 nav:
     - Home: README.md
     - User Guide:
+        - Installation: installation.md
         - Example datasets: demo_dataset.md
         - Example directory structure: dir_structure.md
         - Example template files: https://github.com/insarlab/MintPy/tree/main/mintpy/data/input_files

@@ -9,7 +9,7 @@
 import os
 import sys
 import re
-import subprocess
+from configparser import ConfigParser
 import argparse
 import h5py
 import numpy as np
@@ -61,7 +61,7 @@ REFERENCE = """reference:
   InSAR geodesy using global atmospheric models, Journal of Geophysical Research: Solid Earth, 119(3),
   2324-2341, doi:10.1002/2013JB010588.
 
-  # ERA-5
+  # ERA5
   Hersbach, H., Bell, B., Berrisford, P., Hirahara, S., Horányi, A., Muñoz-Sabater, J., et al. (2020). 
   The ERA5 global reanalysis. Quarterly Journal of the Royal Meteorological Society, 146(730), 1999–2049.
   https://doi.org/10.1002/qj.3803
@@ -70,7 +70,7 @@ REFERENCE = """reference:
 DATA_INFO = """Global Atmospheric Models:
   re-analysis_dataset      coverage  temp_resolution  spatial_resolution       latency       assimilation
   --------------------------------------------------------------------------------------------------------
-  ERA-5(T) (ECMWF)          global       hourly        0.25 deg (~31 km)   3 months (5 days)    4D-Var
+  ERA5(T)  (ECMWF)          global       hourly        0.25 deg (~31 km)   3 months (5 days)    4D-Var
   ERA-Int  (ECMWF)          global       6-hourly      0.75 deg (~79 km)        2 months        4D-Var
   MERRA(2) (NASA Goddard)   global       6-hourly     0.5*0.625 (~50 km)       2-3 weeks        3D-Var
   NARR     (NOAA, working from Jan 1979 to Oct 2014)
@@ -78,7 +78,7 @@ DATA_INFO = """Global Atmospheric Models:
 Notes for data access:
   For MERRA2, you need an Earthdata account, and pre-authorize the "NASA GESDISC DATA ARCHIVE" application
       following https://disc.gsfc.nasa.gov/earthdata-login.
-  For ERA-5 from CDS, you need to agree to the Terms of Use of every datasets that you intend to download.
+  For ERA5 from CDS, you need to agree to the Terms of Use of every datasets that you intend to download.
 """
 
 WEATHER_DIR_DEMO = """--weather-dir ~/data/aux
@@ -411,29 +411,14 @@ def snwe2str(snwe):
     """Get area extent in string"""
     if not snwe:
         return None
-
-    area = ''
     s, n, w, e = snwe
 
-    if s < 0:
-        area += '_S{}'.format(abs(s))
-    else:
-        area += '_N{}'.format(abs(s))
+    area = ''
+    area += '_S{}'.format(abs(s)) if s < 0 else '_N{}'.format(abs(s))
+    area += '_S{}'.format(abs(n)) if n < 0 else '_N{}'.format(abs(n))
+    area += '_W{}'.format(abs(w)) if w < 0 else '_E{}'.format(abs(w))
+    area += '_W{}'.format(abs(e)) if e < 0 else '_E{}'.format(abs(e))
 
-    if n < 0:
-        area += '_S{}'.format(abs(n))
-    else:
-        area += '_N{}'.format(abs(n))
-
-    if w < 0:
-        area += '_W{}'.format(abs(w))
-    else:
-        area += '_E{}'.format(abs(w))
-
-    if e < 0:
-        area += '_W{}'.format(abs(e))
-    else:
-        area += '_E{}'.format(abs(e))
     return area
 
 
@@ -454,7 +439,8 @@ def get_bounding_box(meta, geom_file=None):
 
         # 'Y_FIRST' not in 'degree'
         # e.g. meters for UTM projection from ASF HyP3
-        if not meta['Y_UNIT'].lower().startswith('deg'):
+        y_unit = meta.get('Y_UNIT', 'degrees').lower()
+        if not y_unit.startswith('deg'):
             lat0, lon0 = ut.to_latlon(meta['OG_FILE_PATH'], lon0, lat0)
             lat1, lon1 = ut.to_latlon(meta['OG_FILE_PATH'], lon1, lat1)
 
@@ -521,6 +507,60 @@ def check_exist_grib_file(gfile_list, print_msg=True):
     return gfile_exist
 
 
+def check_pyaps_account_config(tropo_model):
+    """Check for input in PyAPS config file. If they are default values or are empty, then raise error.
+    Parameters: tropo_model - str, tropo model being used to calculate tropospheric delay
+    Returns:    None
+    """
+    # Convert MintPy tropo model name to data archive center name
+    # NARR model included for completeness but no key required
+    MODEL2ARCHIVE_NAME = {
+        'ERA5' : 'CDS',
+        'ERAI' : 'ECMWF',
+        'MERRA': 'MERRA',
+        'NARR' : 'NARR',
+    }
+    SECTION_OPTS = {
+        'CDS'  : ['key'],
+        'ECMWF': ['email', 'key'],
+        'MERRA': ['user', 'password'],
+    }
+
+    # Default values in cfg file
+    default_values = [
+        'the-email-address-used-as-login@ecmwf-website.org',
+        'the-user-name-used-as-login@earthdata.nasa.gov',
+        'the-password-used-as-login@earthdata.nasa.gov',
+        'the-email-adress-used-as-login@ucar-website.org',
+        'your-uid:your-api-key',
+    ]
+
+    # account file for pyaps3 < and >= 0.3.0
+    cfg_file = os.path.join(os.path.dirname(pa.__file__), 'model.cfg')
+    rc_file = os.path.expanduser('~/.cdsapirc')
+
+    # for ERA5: ~/.cdsapirc
+    if tropo_model == 'ERA5' and os.path.isfile(rc_file):
+        pass
+
+    # check account info for the following models
+    elif tropo_model in ['ERA5', 'ERAI', 'MERRA']:
+        section = MODEL2ARCHIVE_NAME[tropo_model]
+
+        # Read model.cfg file
+        cfg_file = os.path.join(os.path.dirname(pa.__file__), 'model.cfg')
+        cfg = ConfigParser()
+        cfg.read(cfg_file)
+
+        # check all required option values
+        for opt in SECTION_OPTS[section]:
+            val = cfg.get(section, opt)
+            if not val or val in default_values:
+                raise ValueError('PYAPS: No account info found for {} in {} section in file: {}'.format(tropo_model, section, cfg_file))
+
+    return
+
+
 def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
     """Download weather re-analysis grib files using PyAPS
     Parameters: grib_files : list of string of grib files
@@ -540,6 +580,9 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
     if len(date_list2dload) > 0:
         hour = re.findall('\d{8}[-_]\d{2}', os.path.basename(grib_files2dload[0]))[0].replace('-', '_').split('_')[1]
         grib_dir = os.path.dirname(grib_files2dload[0])
+
+        # Check for non-empty account info in PyAPS config file
+        check_pyaps_account_config(tropo_model)
 
         # try 3 times to download, then use whatever downloaded to calculate delay
         i = 0
@@ -629,7 +672,7 @@ def calc_delay_timeseries(inps):
 
             # check dataset size in space / time
             date_list = [str(re.findall('\d{8}', os.path.basename(i))[0]) for i in grib_files]
-            if (get_dataset_size(tropo_file) != get_dataset_size(geom_file) 
+            if (get_dataset_size(tropo_file) != get_dataset_size(geom_file)
                     or any(i not in timeseries(tropo_file).get_date_list() for i in date_list)):
                 flag = 'run'
                 print('2) output file does NOT have the same len/wid as the geometry file {} or does NOT contain all dates'.format(geom_file))
@@ -673,7 +716,7 @@ def calc_delay_timeseries(inps):
         inps.lat, inps.lon = ut.get_lat_lon(geom_obj.metadata)
 
         # convert coordinates to lat/lon, e.g. from UTM for ASF HyPP3
-        if not geom_obj.metadata['Y_UNIT'].startswith('deg'):
+        if not geom_obj.metadata.get('Y_UNIT', 'degrees').startswith('deg'):
             inps.lat, inps.lon = ut.to_latlon(inps.atr['OG_FILE_PATH'], inps.lon, inps.lat)
 
     else:

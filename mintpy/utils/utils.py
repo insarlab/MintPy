@@ -8,7 +8,6 @@
 
 
 import os
-import glob
 import errno
 import numpy as np
 from scipy.ndimage import map_coordinates
@@ -49,14 +48,19 @@ def check_loaded_dataset(work_dir='./', print_msg=True, relpath=False):
     work_dir = os.path.abspath(work_dir)
 
     # 1. interferograms stack file: unwrapPhase, coherence
+    ds_list = ['unwrapPhase', 'rangeOffset', 'azimuthOffset']
     flist = [os.path.join(work_dir, 'inputs/ifgramStack.h5')]
     stack_file = is_file_exist(flist, abspath=True)
     if stack_file is not None:
         obj = ifgramStack(stack_file)
         obj.open(print_msg=False)
-        for dname in ['unwrapPhase', 'coherence']:
-            if dname not in obj.datasetNames and 'azimuthOffset' not in obj.datasetNames:
-                raise ValueError('required dataset "{}" is missing in file {}'.format(dname, stack_file))
+        if all(x not in obj.datasetNames for x in ds_list):
+            msg = 'required dataset is missing in file {}:'.format(stack_file)
+            msg += '\n' + ' OR '.join(ds_list)
+            raise ValueError(msg)
+        # check coherence for phase stack
+        if 'unwrapPhase' in obj.datasetNames and 'coherence' not in obj.datasetNames:
+            print('WARNING: "coherence" is missing in file {}'.format(stack_file))
     else:
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), './inputs/ifgramStack.h5')
 
@@ -128,12 +132,13 @@ def check_loaded_dataset(work_dir='./', print_msg=True, relpath=False):
 
 #################################################################################
 def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_lon=None,
-                         win_size=1, unit='m', method='mean', print_msg=True):
+                         zero_first=True, win_size=1, unit='m', method='mean', print_msg=True):
     """ Read time-series of one pixel with input lat/lon
     Parameters: lat/lon     - float, latitude/longitude
                 ts_file     - string, filename of time-series HDF5 file
                 lookup_file - string, filename of lookup table file
                 ref_lat/lon - float, latitude/longitude of reference pixel
+                zero_first  - bool, shift the time-series so that it starts from zero
                 win_size    - int, windows size centered at point of interest
                 unit        - str, output displacement unit
                 method      - str, method to calculate the output displacement and its dispersity
@@ -157,6 +162,7 @@ def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_
     dates, dis, dis_std = read_timeseries_yx(y, x, ts_file,
                                              ref_y=ref_y,
                                              ref_x=ref_x,
+                                             zero_first=zero_first,
                                              win_size=win_size,
                                              unit=unit,
                                              method=method,
@@ -165,18 +171,19 @@ def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_
 
 
 #################################################################################
-def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None,
+def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None, zero_first=True,
                        win_size=1, unit='m', method='mean', print_msg=True):
     """ Read time-series of one pixel with input y/x
-    Parameters: y/x      - int, row/column number of interest
-                ts_file  - string, filename of time-series HDF5 file
-                ref_y/x  - int, row/column number of reference pixel
-                win_size - int, windows size centered at point of interest
-                unit     - str, output displacement unit
-                method   - str, method to calculate the output displacement and its dispersity
-    Returns:    dates    - 1D np.ndarray of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
-                dis      - 1D np.ndarray of float32, displacement
-                dis_std  - 1D np.ndarray of float32, displacement dispersity
+    Parameters: y/x        - int, row/column number of interest
+                ts_file    - string, filename of time-series HDF5 file
+                ref_y/x    - int, row/column number of reference pixel
+                zero_first - bool, shift the time-series so that it starts from zero
+                win_size   - int, windows size centered at point of interest
+                unit       - str, output displacement unit
+                method     - str, method to calculate the output displacement and its dispersity
+    Returns:    dates      - 1D np.ndarray of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
+                dis        - 1D np.ndarray of float32, displacement
+                dis_std    - 1D np.ndarray of float32, displacement dispersity
     """
     # read date
     obj = timeseries(ts_file)
@@ -213,7 +220,8 @@ def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None,
         dis -= readfile.read(ts_file, box=ref_box)[0]
 
     #start at zero
-    dis -= dis[0]
+    if zero_first:
+        dis -= dis[0]
 
     # custom output unit
     if unit == 'm':

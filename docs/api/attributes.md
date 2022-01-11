@@ -41,13 +41,16 @@ The following attributes vary for each interferogram:
 +  FILE_PATH = absolute file path   
 +  PROCESSOR = processing software, i.e. isce, aria, snap, gamma, roipac etc.
 +  DATA_TYPE = data type, i.e. float32, int16, etc., for isce product read using GDAL
++  BANDS = number of bands, for binary file I/O.
++  INTERLEAVE = band interleave type, i.e. BSQ, BIL, BIP for binary file I/O.
 +  UNIT = data unit, i.e. m, m/yr, radian, and 1 for file without unit, such as coherence [[source]](https://github.com/insarlab/MintPy/blob/main/mintpy/objects/stack.py#L75)
 +  REF_DATE = reference date
 +  REF_X/Y/LAT/LON = column/row/latitude/longitude of reference point
 +  SUBSET_XMIN/XMAX/YMIN/YMAX = start/end column/row number of subset in the original coverage
-+  MODIFICATION_TIME = dataset modification time, exists in ifgramStack.h5 file for 3D dataset, used for --update option of unwrap error corrections.
++  MODIFICATION_TIME = dataset modification time, exists in ifgramStack.h5 file for 3D dataset, used for "--update" option of unwrap error corrections.
 +  NCORRLOOKS = number of independent looks, as explained in [SNAPHU](https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/snaphu.conf.full)
 +  UTM_ZONE = UTM zone, e.g. 60S, for geocoded file with UTM projection only.
++  EPSG = EPSG code for coordinate systems, for geocoded files only.
 
 ### Reference ###
 

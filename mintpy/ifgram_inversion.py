@@ -7,24 +7,16 @@
 ############################################################
 # Recommend import:
 #     from mintpy import ifgram_inversion as ifginv
-#
-# Offset inversion considerations (different from phases):
-#   1. spatial referencing is turned off because offset is spatially absolute measure
-#   2. zero value is valid for offset
-#   3. unit is the single look pixel size in range/azimuth directions
-#   4. add Az/Rg suffix in all output files to distinguish azimuth/range
-#   5. use residual instead of temporal coherence as quality measure
 
 
 import os
 import sys
 import time
 import argparse
-import warnings
 import h5py
 import numpy as np
 from scipy import linalg   # more effieint than numpy.linalg
-from mintpy.objects import ifgramStack, timeseries, cluster
+from mintpy.objects import ifgramStack, cluster
 from mintpy.simulation import decorrelation as decor
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, writefile, ptime, utils as ut, arg_group
@@ -57,16 +49,18 @@ REFERENCE = """references:
   Berardino, P., Fornaro, G., Lanari, R., & Sansosti, E. (2002). A new algorithm for surface
     deformation monitoring based on small baseline differential SAR interferograms. IEEE TGRS,
     40(11), 2375-2383. doi:10.1109/TGRS.2002.803792
-  Pepe, A., and R. Lanari (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
+  Pepe, A., and Lanari, R. (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
     of multitemporal differential SAR interferograms, IEEE-TGRS, 44(9), 2374-2383.
-  Perissin, D., and T. Wang (2012), Repeat-pass SAR interferometry with partially coherent targets, IEEE TGRS,
+  Perissin, D., and Wang, T. (2012), Repeat-pass SAR interferometry with partially coherent targets, IEEE TGRS,
     50(1), 271-280, doi:10.1109/tgrs.2011.2160644.
-  Samiei-Esfahany, S., J. E. Martins, F. v. Leijen, and R. F. Hanssen (2016), Phase Estimation for Distributed
+  Samiei-Esfahany, S., Martins, J. E., Van Leijen, F., and Hanssen, R. F. (2016), Phase Estimation for Distributed
     Scatterers in InSAR Stacks Using Integer Least Squares Estimation, IEEE TGRS, 54(10), 5671-5687.
-  Seymour, M. S., and I. G. Cumming (1994), Maximum likelihood estimation for SAR interferometry, 1994.
+  Seymour, M. S., and Cumming, I. G. (1994), Maximum likelihood estimation for SAR interferometry, 1994.
     IGARSS '94., 8-12 Aug 1994.
-  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis: Unwrapping error
+  Yunjun, Z., Fattahi, H., and Amelung, F. (2019), Small baseline InSAR time series analysis: Unwrapping error
     correction and noise reduction, Computers & Geosciences, 133, 104331, doi:10.1016/j.cageo.2019.104331.
+  Yunjun, Z., Fattahi, H., Brancato, V., Rosen, P., Simons, M. (2021), Oral: Tectonic displacement mapping from SAR
+    offset time series: noise reduction and uncertainty quantification, ID 590, FRINGE 2021, 31 May – 4 Jun, 2021, Virtual.
 """
 
 
@@ -106,6 +100,11 @@ def create_parser():
                               ' instead of the default minimum-norm deformation velocity.'))
     solver.add_argument('--norm', dest='residualNorm', default='L2', choices=['L1', 'L2'],
                         help='Optimization mehtod, L1 or L2 norm. (default: %(default)s).')
+
+    # uncertainty propagation
+    parser.add_argument('--std','--calc-std', dest='calcStd', action='store_true',
+                        help='Calculate time-series STD via linear propagation '
+                             'from the network of interferograms or offset pairs.')
 
     # mask
     mask = parser.add_argument_group('mask', 'mask observation data before inversion')
@@ -175,7 +174,9 @@ def cmd_line_parse(iargs=None):
             raise ValueError(msg)
 
     # --skip-ref option
-    if 'offset' in inps.obsDatasetName.lower():
+    if ('offset' in inps.obsDatasetName.lower()
+            and 'REF_X' not in atr.keys()
+            and 'REF_Y' not in atr.keys()):
         inps.skip_ref = True
 
     # --output option
@@ -293,15 +294,17 @@ def run_or_skip(inps):
 
 
 ################################# Time-series Estimator ###################################
-def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_velocity=True,
-                        rcond=1e-5, min_redundancy=1., inv_quality_name='temporalCoherence'):
+def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity=True,
+                        rcond=1e-5, min_redundancy=1., inv_quality_name='temporalCoherence',
+                        print_msg=True):
     """Estimate time-series from a stack/network of interferograms with
     Least Square minimization on deformation phase / velocity.
 
-    opt 1: X = np.dot(np.dot(numpy.linalg.inv(np.dot(B.T, B)), B.T), ifgram)
-    opt 2: X = np.dot(numpy.linalg.pinv(B), ifgram)
-    opt 3: X = np.dot(scipy.linalg.pinv(B), ifgram)
-    opt 4: X = scipy.linalg.lstsq(B, ifgram)[0] [recommend and used]
+    Problem: A X = y
+    opt 1: X = np.dot(np.dot(numpy.linalg.inv(np.dot(A.T, A)), A.T), y)
+    opt 2: X = np.dot(numpy.linalg.pinv(A), y)
+    opt 3: X = np.dot(scipy.linalg.pinv(A), y)
+    opt 4: X = scipy.linalg.lstsq(A, y)[0] [recommend and used]
 
     opt 4 supports weight.
     scipy.linalg provides more advanced and slighted faster performance than numpy.linalg.
@@ -320,32 +323,33 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
         min_norm_velocity=True
         weight_sqrt=None
 
-    Parameters: A                 - 2D np.array in size of (num_ifgram, num_date-1)
-                B                 - 2D np.array in size of (num_ifgram, num_date-1),
+    Parameters: A                 - 2D np.ndarray in size of (num_pair, num_date-1)
+                B                 - 2D np.ndarray in size of (num_pair, num_date-1),
                                     design matrix B, each row represents differential temporal
                                     baseline history between reference and secondary date of one interferogram
-                tbase_diff        - 2D np.array in size of (num_date-1, 1),
+                y                 - 2D np.ndarray in size of (num_pair, num_pixel),
+                                    phase/offset of all interferograms with no-data value: NaN.
+                tbase_diff        - 2D np.ndarray in size of (num_date-1, 1),
                                     differential temporal baseline history
-                ifgram            - 2D np.array in size of (num_ifgram, num_pixel),
-                                    phase/offset of all interferograms.
-                                    no-data value: NaN.
-                weight_sqrt       - 2D np.array in size of (num_ifgram, num_pixel),
+                weight_sqrt       - 2D np.ndarray in size of (num_pair, num_pixel),
                                     square root of weight of all interferograms
                 min_norm_velocity - bool, assume minimum-norm deformation velocity, or not
                 rcond             - cut-off ratio of small singular values of A or B, to maintain robustness.
                                     It's recommend to >= 1e-5 by experience, to generate reasonable result.
-                min_redundancy    - float, min redundancy defined as min num_ifgram for every SAR acquisition
+                min_redundancy    - float, min redundancy defined as min num_pair for every SAR acquisition
                 inv_quality_name  - str, inversion quality type/name
-    Returns:    ts                - 2D np.array in size of (num_date, num_pixel), phase time-series
-                inv_quality       - 1D np.array in size of (num_pixel), temporal coherence (for phase) or residual (for offset)
-                num_inv_obs       - 1D np.array in size of (num_pixel), number of observations (ifgrams / offsets)
+                                    temporalCoherence for phase
+                                    residual          for offset
+    Returns:    ts                - 2D np.ndarray in size of (num_date, num_pixel), phase time-series
+                inv_quality       - 1D np.ndarray in size of (num_pixel), temporal coherence (for phase) or residual (for offset)
+                num_inv_obs       - 1D np.ndarray in size of (num_pixel), number of observations (ifgrams / offsets)
                                     used during the inversion
     """
-    ifgram = ifgram.reshape(A.shape[0], -1)
+    y = y.reshape(A.shape[0], -1)
     if weight_sqrt is not None:
         weight_sqrt = weight_sqrt.reshape(A.shape[0], -1)
     num_date = A.shape[1] + 1
-    num_pixel = ifgram.shape[1]
+    num_pixel = y.shape[1]
 
     # initial output value
     ts = np.zeros((num_date, num_pixel), dtype=np.float32)
@@ -355,72 +359,55 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
         inv_quality = 0.
     num_inv_obs = 0
 
-    # skip nan phase/offset value
-    # apply to the pixel-wised inversion only
-    # since the region-wised inversion has valid obs in all pairs
-    if np.any(np.isnan(ifgram)):
-        flag = (~np.isnan(ifgram[:, 0])).flatten()
-        A = A[flag, :]
-        B = B[flag, :]
+    ##### skip invalid phase/offset value [NaN]
+    y, [A, B, weight_sqrt] = skip_invalid_obs(y, mat_list=[A, B, weight_sqrt])
 
-        # skip the pixel if its redundancy < threshold
-        if np.min(np.sum(A != 0., axis=0)) < min_redundancy:
+    # check 1 - network redundancy: skip inversion if < threshold
+    if np.min(np.sum(A != 0., axis=0)) < min_redundancy:
+        return ts, inv_quality, num_inv_obs
+
+    # check 2 - matrix invertability (for WLS only because OLS contains it already)
+    if weight_sqrt is not None:
+        try:
+            linalg.inv(np.dot(B.T, B))
+        except linalg.LinAlgError:
             return ts, inv_quality, num_inv_obs
 
-        # check matrix invertability
-        # for WLS only because OLS contains it already
-        if weight_sqrt is not None:
-            try:
-                linalg.inv(np.dot(B.T, B))
-            except linalg.LinAlgError:
-                return ts, inv_quality, num_inv_obs
-
-        ifgram = ifgram[flag, :]
-        if weight_sqrt is not None:
-            weight_sqrt = weight_sqrt[flag, :]
-
-    # update number of observations used for inversion
-    num_inv_obs = A.shape[0]
-
-    # invert time-series
+    ##### invert time-series
     try:
-        # assume minimum-norm deformation velocity
         if min_norm_velocity:
+            ##### min-norm velocity
             if weight_sqrt is not None:
                 X, e2 = linalg.lstsq(np.multiply(B, weight_sqrt),
-                                     np.multiply(ifgram, weight_sqrt),
+                                     np.multiply(y, weight_sqrt),
                                      cond=rcond)[:2]
             else:
-                X, e2 = linalg.lstsq(B, ifgram, cond=rcond)[:2]
+                X, e2 = linalg.lstsq(B, y, cond=rcond)[:2]
 
             # calc inversion quality
-            if inv_quality_name == 'residual':
-                inv_quality = np.sqrt(e2)
-                if inv_quality.size == 0:
-                    inv_quality = np.nan
-            else:
-                inv_quality = calc_inv_quality(ifgram, B, X)
+            inv_quality = calc_inv_quality(B, X, y, e2,
+                                           inv_quality_name=inv_quality_name,
+                                           weight_sqrt=weight_sqrt,
+                                           print_msg=print_msg)
 
             # assemble time-series
             ts_diff = X * np.tile(tbase_diff, (1, num_pixel))
             ts[1:, :] = np.cumsum(ts_diff, axis=0)
 
-        # assume minimum-norm deformation phase
         else:
+            ##### min-norm displacement
             if weight_sqrt is not None:
                 X, e2 = linalg.lstsq(np.multiply(A, weight_sqrt),
-                                     np.multiply(ifgram, weight_sqrt),
+                                     np.multiply(y, weight_sqrt),
                                      cond=rcond)[:2]
             else:
-                X, e2 = linalg.lstsq(A, ifgram, cond=rcond)[:2]
+                X, e2 = linalg.lstsq(A, y, cond=rcond)[:2]
 
             # calc inversion quality
-            if inv_quality_name == 'residual':
-                inv_quality = np.sqrt(e2)
-                if inv_quality.size == 0:
-                    inv_quality = np.nan
-            else:
-                inv_quality = calc_inv_quality(ifgram, A, X)
+            inv_quality = calc_inv_quality(A, X, y, e2,
+                                           inv_quality_name=inv_quality_name,
+                                           weight_sqrt=weight_sqrt,
+                                           print_msg=print_msg)
 
             # assemble time-series
             ts[1: ,:] = X
@@ -428,108 +415,149 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
     except linalg.LinAlgError:
         pass
 
+    # number of observations used for inversion
+    num_inv_obs = A.shape[0]
+
     return ts, inv_quality, num_inv_obs
 
 
-def calc_inv_quality(ifgram, G, X, inv_quality_name='temporalCoherence'):
-    """Calculate the temporal coherence from the network inversion results
+def estimate_timeseries_std(G, y, y_std, rcond=1e-5, min_redundancy=1.0):
+    """Estimate the time-series STD from network of STD via linear propagation.
+    Pixel by pixel only.
 
-    Parameters: ifgram      - 2D np.array in size of (num_ifgram, num_pixel), phase or offset
-                G           - 2D np.array in size of (num_ifgram, num_date-1), design matrix A or B
-                X           - 2D np.array in size of (num_date-1, num_pixel), solution
-    Returns:    inv_quality - 1D np.array in size of (num_pixel), temporal coherence
+    For a system of linear equations: A X = y, propagate the STD from y to X.
+
+    Parameters: G      - 2D np.ndarray in size of (num_pair, num_date-1), design matrix
+                y      - 2D np.ndarray in size of (num_pair, 1), stack of obs
+                y_std  - 2D np.ndarray in size of (num_pair, 1), stack of obs std. dev.
+    Returns:    ts_std - 2D np.ndarray in size of (num_date, 1), time-series obs std. dev.
+    """
+    y = y.reshape(G.shape[0], -1)
+    y_std = y_std.reshape(G.shape[0], -1)
+
+    # initial output value
+    ts_std = np.zeros((G.shape[1], 1), dtype=np.float32) * np.nan
+
+    # skip invalid phase/offset value [NaN]
+    y, [G, y_std] = skip_invalid_obs(y, mat_list=[G, y_std])
+
+    # check network redundancy: skip calculation if < threshold
+    if np.min(np.sum(G != 0., axis=0)) < min_redundancy:
+        return ts_std
+
+    # std. dev. --> covariance matrix
+    stack_cov_inv = np.diag(1.0 / np.square(y_std).flatten())
+
+    # linear propagation: network covar. mat. --> TS covar. mat. --> TS var.
+    ts_var = np.diag(linalg.inv(G.T.dot(stack_cov_inv).dot(G))).astype(np.float32)
+    ts_var[ts_var < rcond] = rcond
+
+    # TS var. --> TS std. dev.
+    ts_std = np.sqrt(ts_var)
+
+    return ts_std
+
+
+def skip_invalid_obs(obs, mat_list):
+    """Skip invalid observations in the stack of phase/offset and update corresponding matrices.
+    This applies to the pixel-wised inversion only, because the region-wised inversion has valid obs in all pairs.
+    Parameters: obs      - 2D np.ndarray in size of (num_pair, num_pixel),
+                           observations (phase / offset) of all interferograms with no-data value: NaN.
+                mat_list - list of 2D np.ndarray in size of (num_pair, *) or None
+    Returns:    obs / mat_list
+    """
+    if np.any(np.isnan(obs)):
+        # get flag matrix
+        flag = (~np.isnan(obs[:, 0])).flatten()
+
+        # update obs
+        obs = obs[flag, :]
+
+        # update list of matrice
+        for i, mat in enumerate(mat_list):
+            if mat is not None:
+                mat_list[i] = mat[flag, :]
+
+    return obs, mat_list
+
+
+def calc_inv_quality(G, X, y, e2, inv_quality_name='temporalCoherence', weight_sqrt=None, print_msg=True):
+    """Calculate the inversion quality of the time series estimation.
+
+    Parameters: G                - 2D np.ndarray in size of (num_pair, num_date-1), design matrix A or B
+                X                - 2D np.ndarray in size of (num_date-1, num_pixel), solution
+                y                - 2D np.ndarray in size of (num_pair, num_pixel), phase or offset
+                e2               - 1D np.ndarray in size of (num_pixel,), square of the sum of the 2-norm residual
+                inv_quality_name - str, name of the inversion quality parameter
+                                   temporalCoherence for phase
+                                   residual          for offset
+                weight_sqrt      - 2D np.ndarray in size of (num_pair, num_pixel),
+                                   weight square root, None for un-weighted estimation.
+    Returns:    inv_quality      - 1D np.ndarray in size of (num_pixel), temporalCoherence / residual
     """
 
-    num_ifgram, num_pixel = ifgram.shape
+    num_pair, num_pixel = y.shape
     inv_quality = np.zeros(num_pixel, dtype=np.float32)
 
     # chunk_size as the number of pixels
-    chunk_size = int(ut.round_to_1(2e5 / num_ifgram))
+    chunk_size = int(ut.round_to_1(2e5 / num_pair))
     if num_pixel > chunk_size:
         num_chunk = int(np.ceil(num_pixel / chunk_size))
-        num_chunk_step = max(1, int(ut.round_to_1(num_chunk / 5)))
-        print('calculating {} in chunks of {} pixels: {} chunks in total ...'.format(
-            inv_quality_name, chunk_size, num_chunk))
+        if print_msg:
+            print('calculating {} in chunks of {} pixels: {} chunks in total ...'.format(
+                inv_quality_name, chunk_size, num_chunk))
 
+        # loop over each chunk
         for i in range(num_chunk):
             c0 = i * chunk_size
             c1 = min((i + 1) * chunk_size, num_pixel)
 
-            # calc residual
-            ifgram_diff = ifgram[:, c0:c1] - np.dot(G, X[:, c0:c1])
+            if inv_quality_name == 'temporalCoherence':
+                #for phase
+                e = y[:, c0:c1] - np.dot(G, X[:, c0:c1])
+                inv_quality[c0:c1] = np.abs(np.sum(np.exp(1j*e), axis=0)) / num_pair
 
-            # calc inv quality
-            if inv_quality_name == 'residual':
-                # square root of the L-2 norm residual
-                inv_quality[c0:c1] = np.sqrt(np.sum(np.abs(ifgram_diff) ** 2, axis=0))
-            else:
-                inv_quality[c0:c1] = np.abs(np.sum(np.exp(1j*ifgram_diff), axis=0)) / num_ifgram
+            elif inv_quality_name == 'residual':
+                #for offset
+                if weight_sqrt is not None:
+                    # calculate the un-weighted residual for the weighted inversion
+                    e = y[:, c0:c1] - np.dot(G, X[:, c0:c1])
+                    inv_quality[c0:c1] = np.sqrt(np.sum(np.abs(e) ** 2, axis=0))
+
+                else:
+                    # use the un-weighted residual directly
+                    inv_quality[c0:c1] = np.sqrt(e2[c0:c1]) if e2[c0:c1].size > 0 else np.nan
 
             # print out message
-            if (i+1) % num_chunk_step == 0:
+            chunk_step = max(1, int(ut.round_to_1(num_chunk / 5)))
+            if print_msg and (i+1) % chunk_step == 0:
                 print('chunk {} / {}'.format(i+1, num_chunk))
 
     else:
-        # calc residual
-        ifgram_diff = ifgram - np.dot(G, X)
+        if inv_quality_name == 'temporalCoherence':
+            #for phase
+            e = y - np.dot(G, X)
+            inv_quality = np.abs(np.sum(np.exp(1j*e), axis=0)) / num_pair
 
-        # calc inv quality
-        if inv_quality_name == 'residual':
-            # square root of the L-2 norm residual
-            inv_quality = np.sqrt(np.sum(np.abs(ifgram_diff) ** 2, axis=0))
+        elif inv_quality_name == 'residual':
+            #for offset
+            if weight_sqrt is not None:
+                # calculate the un-weighted residual for the weighted inversion
+                e = y - G.dot(X)
+                inv_quality = np.sqrt(np.sum(np.abs(e) ** 2, axis=0))
+
+            else:
+                # use the un-weighted residual directly
+                inv_quality = np.sqrt(e2) if e2.size > 0 else np.nan
+
         else:
-            inv_quality = np.abs(np.sum(np.exp(1j*ifgram_diff), axis=0)) / num_ifgram
+            raise ValueError(f'un-recognized inversion quality name: {inv_quality_name}')
 
     return inv_quality
 
 
 
 ###################################### File IO ############################################
-def write2hdf5_file(ifgram_file, metadata, ts, temp_coh, num_inv_ifg=None,
-                    suffix='', inps=None):
-    stack_obj = ifgramStack(ifgram_file)
-    stack_obj.open(print_msg=False)
-    date_list = stack_obj.get_date_list(dropIfgram=True)
-
-    # File 1 - timeseries.h5
-    ts_file = '{}{}.h5'.format(suffix, os.path.splitext(inps.outfile[0])[0])
-    metadata['REF_DATE'] = date_list[0]
-    metadata['FILE_TYPE'] = 'timeseries'
-    metadata['UNIT'] = 'm'
-
-    print('-'*50)
-    print('calculating perpendicular baseline timeseries')
-    pbase = stack_obj.get_perp_baseline_timeseries(dropIfgram=True)
-
-    ts_obj = timeseries(ts_file)
-    ts_obj.write2hdf5(data=ts, dates=date_list, bperp=pbase, metadata=metadata)
-
-    # File 2 - temporalCoherence.h5
-    out_file = '{}{}.h5'.format(suffix, os.path.splitext(inps.outfile[1])[0])
-    metadata['FILE_TYPE'] = 'temporalCoherence'
-    metadata['UNIT'] = '1'
-    print('-'*50)
-    writefile.write(temp_coh, out_file=out_file, metadata=metadata)
-
-    ## File 3 - timeseriesDecorStd.h5
-    #if not np.all(ts_std == 0.):
-    #    out_file = 'timeseriesDecorStd{}.h5'.format(suffix)
-    #    metadata['FILE_TYPE'] = 'timeseries'
-    #    metadata['UNIT'] = 'm'
-    #    phase2range = -1*float(stack_obj.metadata['WAVELENGTH'])/(4.*np.pi)
-    #    ts_std *= abs(phase2range)
-    #    print('-'*50)
-    #    writefile.write(ts_std, out_file=out_file, metadata=metadata, ref_file=ts_file)
-
-    # File 3 - numInvIfgram.h5
-    out_file = 'numInvIfgram{}.h5'.format(suffix)
-    metadata['FILE_TYPE'] = 'mask'
-    metadata['UNIT'] = '1'
-    print('-'*50)
-    writefile.write(num_inv_ifg, out_file=out_file, metadata=metadata)
-    return
-
-
 def split2boxes(ifgram_file, max_memory=4, print_msg=True):
     """Split into chunks in rows to reduce memory usage
     Parameters: dataset_shape - tuple of 3 int
@@ -547,7 +575,7 @@ def split2boxes(ifgram_file, max_memory=4, print_msg=True):
     ds_size = (ifg_obj.numIfgram * 2 + ifg_obj.numDate + 5) * length * width * 4
 
     num_box = int(np.ceil(ds_size * 1.5 / (max_memory * 1024**3)))
-    y_step = int(np.rint((length / num_box) / 10) * 10)
+    y_step = int(np.ceil((length / num_box) / 10) * 10)
     num_box = int(np.ceil(length / y_step))
     if print_msg and num_box > 1:
         print('maximum memory size: %.1E GB' % max_memory)
@@ -589,30 +617,29 @@ def check_design_matrix(ifgram_file, weight_func='var'):
     return A
 
 
-def read_unwrap_phase(stack_obj, box, ref_phase, obs_ds_name='unwrapPhase', dropIfgram=True,
-                      print_msg=True):
-    """Read unwrapPhase from ifgramStack file
+def read_stack_obs(stack_obj, box, ref_phase, obs_ds_name='unwrapPhase', dropIfgram=True,
+                   print_msg=True):
+    """Read unwrapPhase / azimuthOffset / rangeOffset from ifgramStack file
 
     Parameters: stack_obj - ifgramStack object
                 box       - tuple of 4 int
                 ref_phase - 1D array or None
-    Returns:    pha_data  - 2D array of unwrapPhase in size of (num_ifgram, num_pixel)
+    Returns:    stack_obs - 2D array of unwrapPhase in size of (num_pair, num_pixel)
     """
     # Read unwrapPhase
-    num_ifgram = stack_obj.get_size(dropIfgram=dropIfgram)[0]
+    num_pair = stack_obj.get_size(dropIfgram=dropIfgram)[0]
     if print_msg:
-        print('reading {} in {} * {} ...'.format(obs_ds_name, box, num_ifgram))
-    pha_data = stack_obj.read(datasetName=obs_ds_name,
-                              box=box,
-                              dropIfgram=dropIfgram,
-                              print_msg=False).reshape(num_ifgram, -1)
-    pha_data[np.isnan(pha_data)] = 0.
+        print('reading {} in {} * {} ...'.format(obs_ds_name, box, num_pair))
+    stack_obs = stack_obj.read(datasetName=obs_ds_name,
+                               box=box,
+                               dropIfgram=dropIfgram,
+                               print_msg=False).reshape(num_pair, -1)
 
     # read ref_phase
     if ref_phase is not None:
         # use input ref_phase array
         if print_msg:
-            print('use input reference phase')
+            print('use input reference value')
 
     elif 'refPhase' in stack_obj.datasetNames:
         # read refPhase from file itself
@@ -622,48 +649,57 @@ def read_unwrap_phase(stack_obj, box, ref_phase, obs_ds_name='unwrapPhase', drop
             ref_phase = f['refPhase'][:]
 
     else:
-        raise Exception('No reference phase input/found on file!'+
+        raise Exception('No reference value input/found on file!'+
                         ' unwrapped phase is not referenced!')
 
     # reference unwrapPhase
-    for i in range(num_ifgram):
-        mask = pha_data[i, :] != 0.
-        pha_data[i, :][mask] -= ref_phase[i]
-    return pha_data
+    for i in range(num_pair):
+        mask = stack_obs[i, :] != 0.
+        stack_obs[i, :][mask] -= ref_phase[i]
+    return stack_obs
 
 
-def mask_unwrap_phase(pha_data, stack_obj, box, mask_ds_name=None, mask_threshold=0.4,
-                      dropIfgram=True, print_msg=True):
+def mask_stack_obs(stack_obs, stack_obj, box, mask_ds_name=None, mask_threshold=0.4,
+                   stack_std=None, dropIfgram=True, print_msg=True):
     """Mask input unwrapped phase by setting them to np.nan."""
 
     # Read/Generate Mask
-    num_ifgram = stack_obj.get_size(dropIfgram=dropIfgram)[0]
+    num_pair = stack_obj.get_size(dropIfgram=dropIfgram)[0]
     if mask_ds_name and mask_ds_name in stack_obj.datasetNames:
         if print_msg:
-            print('reading {} in {} * {} ...'.format(mask_ds_name, box, num_ifgram))
+            print('reading {} in {} * {} ...'.format(mask_ds_name, box, num_pair))
 
         msk_data = stack_obj.read(datasetName=mask_ds_name,
                                   box=box,
                                   dropIfgram=dropIfgram,
-                                  print_msg=False).reshape(num_ifgram, -1)
+                                  print_msg=False).reshape(num_pair, -1)
         # set all NaN values in coherence, connectComponent, offsetSNR to zero
         # to avoid RuntimeWarning msg during math operation
         msk_data[np.isnan(msk_data)] = 0
+        if mask_ds_name in ['connectComponent']:
+            if print_msg:
+                print('mask out pixels with {} == 0 by setting them to NaN'.format(mask_ds_name))
 
-        if mask_ds_name in ['coherence', 'offsetSNR']:
+        elif mask_ds_name in ['coherence', 'offsetSNR']:
             msk_data = msk_data >= mask_threshold
             if print_msg:
                 print('mask out pixels with {} < {} by setting them to NaN'.format(mask_ds_name, mask_threshold))
 
-        elif mask_ds_name in ['connectComponent']:
+        elif mask_ds_name.endswith('OffsetStd'):
+            msk_data = msk_data <= mask_threshold
             if print_msg:
-                print('mask out pixels with {} == 0 by setting them to NaN'.format(mask_ds_name))
+                print('mask out pixels with {} > {} by setting them to NaN'.format(mask_ds_name, mask_threshold))
+
+        else:
+            raise ValueError('Un-recognized mask dataset name: {}'.format(mask_ds_name))
 
         # set values of mask-out pixels to NaN
-        pha_data[msk_data == 0.] = np.nan
+        stack_obs[msk_data == 0.] = np.nan
+        if stack_std is not None:
+            stack_std[msk_data == 0.] = np.nan
         del msk_data
 
-    return pha_data
+    return stack_obs, stack_std
 
 
 def read_coherence(stack_obj, box, dropIfgram=True, print_msg=True):
@@ -671,19 +707,19 @@ def read_coherence(stack_obj, box, dropIfgram=True, print_msg=True):
     Read spatial coherence
     """
 
-    num_ifgram = stack_obj.get_size(dropIfgram=dropIfgram)[0]
+    num_pair = stack_obj.get_size(dropIfgram=dropIfgram)[0]
     if print_msg:
-        print('reading coherence in {} * {} ...'.format(box, num_ifgram))
+        print('reading coherence in {} * {} ...'.format(box, num_pair))
     coh_data = stack_obj.read(datasetName='coherence',
                               box=box,
                               dropIfgram=dropIfgram,
-                              print_msg=False).reshape(num_ifgram, -1)
+                              print_msg=False).reshape(num_pair, -1)
     coh_data[np.isnan(coh_data)] = 0.
     return coh_data
 
 
-def calc_weight(stack_obj, box, weight_func='var', dropIfgram=True, chunk_size=100000):
-    """Read coherence and calculate weight from it, chunk by chunk to save memory
+def calc_weight_sqrt(stack_obj, box, weight_func='var', dropIfgram=True, chunk_size=100000):
+    """Read coherence and calculate weight_sqrt from it, chunk by chunk to save memory
     """
 
     print('calculating weight from spatial coherence ...')
@@ -729,15 +765,47 @@ def calc_weight(stack_obj, box, weight_func='var', dropIfgram=True, chunk_size=1
     return weight
 
 
+def get_design_matrix4std(stack_obj):
+    """Get the design matrix for time-series STD calculation."""
+
+    # get ref_date from template file
+    mintpy_dir = os.path.dirname(os.path.dirname(stack_obj.file))
+    cfg_file = os.path.join(mintpy_dir, 'smallbaselineApp.cfg')
+    ref_date = readfile.read_template(cfg_file)['mintpy.reference.date']
+
+    #for reference_date.txt file
+    if ref_date == 'auto':
+        ref_date = os.path.join(mintpy_dir, 'reference_date.txt')
+        if not os.path.isfile(ref_date):
+            ref_date = None
+
+    if ref_date and os.path.isfile(ref_date):
+        ref_date = str(np.loadtxt(ref_date, dtype=bytes).astype(str))
+
+    # check
+    if not ref_date:
+        msg = 'reference date is required for time-series STD calculation,'
+        msg += 'but NOT found in mintpy.reference.date!'
+        raise ValueError(msg)
+
+    date12_list = stack_obj.get_date12_list(dropIfgram=True)
+    date_list = stack_obj.get_date_list(dropIfgram=True)
+    A_std = stack_obj.get_design_matrix4timeseries(date12_list, refDate=ref_date)[0]
+    flag_std = np.array(date_list) != ref_date
+
+    return A_std, flag_std, ref_date
+
+
+
 def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='unwrapPhase',
                            weight_func='var', water_mask_file=None, min_norm_velocity=True,
-                           mask_ds_name=None, mask_threshold=0.4, min_redundancy=1.0):
+                           mask_ds_name=None, mask_threshold=0.4, min_redundancy=1.0, calc_std=False):
     """Invert one patch of an ifgram stack into timeseries.
 
     Parameters: box               - tuple of 4 int, indicating (x0, y0, x1, y1) of the area of interest
                                     or None for the whole image
                 ifgram_file       - str, interferograms stack HDF5 file, e.g. ./inputs/ifgramStack.h5
-                ref_phase         - 1D array in size of (num_ifgram), or None
+                ref_phase         - 1D array in size of (num_pair), or None
                 obs_ds_name       - str, dataset to feed the inversion.
                 weight_func       - str, weight function, choose in ['no', 'fim', 'var', 'coh']
                 water_mask_file   - str, water mask filename if available, to skip inversion on water
@@ -745,9 +813,9 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
                 mask_ds_name      - str, dataset name in ifgram_file used to mask unwrapPhase pixelwisely
                 mask_threshold    - float, min coherence of pixels if mask_dataset_name='coherence'
                 min_redundancy    - float, the min number of ifgrams for every acquisition.
-    Returns:    ts                - 3D array in size of (num_date, num_row, num_col)
+    Returns:    ts/ts_std         - 3D array in size of (num_date, num_row, num_col)
                 inv_quality       - 2D array in size of (num_row, num_col)
-                num_inv_ifg       - 2D array in size of (num_row, num_col)
+                num_inv_obs       - 2D array in size of (num_row, num_col)
                 box               - tuple of 4 int
     Example:    ifgram_inversion_patch('ifgramStack.h5', box=(0,200,1316,400))
     """
@@ -755,9 +823,10 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
 
-    # debug
-    #y, x = 258, 454
+    ## debug on a specific pixel
+    #y, x = 555, 612
     #box = (x, y, x+1, y+1)
+
 
     ## 1. input info
 
@@ -780,45 +849,76 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
     A, B = stack_obj.get_design_matrix4timeseries(date12_list=date12_list)[0:2]
 
-    # prep for decor std time-series
-    #if os.path.isfile('reference_date.txt'):
-    #    ref_date = str(np.loadtxt('reference_date.txt', dtype=bytes).astype(str))
-    #else:
-    #    ref_date = date_list[0]
-    #Astd = stack_obj.get_design_matrix4timeseries(date12_list=date12_list, refDate=ref_date)[0]
-    #ref_idx = date_list.index(ref_date)
-    #time_idx = [i for i in range(num_date)]
-    #time_idx.remove(ref_idx)
+    # 1.1 read / calculate weight and stack STD
+    weight_sqrt = None
+    stack_std = None
 
-    # 1.1 read / calculate weight
-    if weight_func in ['no', 'sbas']:
-        weight = None
+    if obs_ds_name.startswith(('unwrapPhase', 'ion')):
+        # calculate weight
+        if weight_func not in ['no', 'sbas']:
+            weight_sqrt = calc_weight_sqrt(stack_obj, box,
+                                           weight_func=weight_func,
+                                           dropIfgram=True,
+                                           chunk_size=100000)
+
+        # calculate stack STD
+        if calc_std:
+            A_std, flag_std = get_design_matrix4std(stack_obj)[:2]
+            if weight_func == 'var':
+                stack_std = 1. / weight_sqrt
+            else:
+                stack_std = 1. / calc_weight_sqrt(stack_obj, box,
+                                                  weight_func='var',
+                                                  dropIfgram=True,
+                                                  chunk_size=100000)
+
+    elif 'offset' in obs_ds_name.lower():
+        if calc_std or weight_func == 'var':
+            # calculate weight for offset
+            print('reading {} in {} * {} ...'.format(obs_ds_name+'Std', box, len(date12_list)))
+            weight_sqrt = stack_obj.read(datasetName=obs_ds_name+'Std',
+                                         box=box,
+                                         dropIfgram=True,
+                                         print_msg=False).reshape(len(date12_list), -1)
+            # handle anomalies
+            weight_sqrt[np.isnan(weight_sqrt)] = 100.
+            weight_sqrt[weight_sqrt < 0.005] = 0.005
+
+            print('convert std. dev. to the inverse of variance')
+            weight_sqrt = 1. / weight_sqrt  # use squre root of weight, to faciliate WLS, same as for phase.
+
+            # prepare for Std time-series
+            if calc_std:
+                A_std, flag_std = get_design_matrix4std(stack_obj)[:2]
+                stack_std = 1. / weight_sqrt
+
+            # reset weight_sqrt to None if no weighting is applied
+            if weight_func in ['no', 'sbas']:
+                weight_sqrt = None
+            elif weight_func == 'var':
+                pass
+            else:
+                raise ValueError(f'un-supported weight_func = {weight_func} for {obs_ds_name}!')
     else:
-        weight = calc_weight(stack_obj,
-                             box,
-                             weight_func=weight_func,
-                             dropIfgram=True,
-                             chunk_size=100000)
+        raise ValueError(f'un-recognized observation dataset name: {obs_ds_name}')
 
-    # 1.2 read / mask unwrapPhase / offset
-    pha_data = read_unwrap_phase(stack_obj,
-                                 box,
-                                 ref_phase,
-                                 obs_ds_name=obs_ds_name,
-                                 dropIfgram=True)
+    # 1.2 read / mask unwrapPhase and offset
+    stack_obs = read_stack_obs(stack_obj, box, ref_phase,
+                               obs_ds_name=obs_ds_name,
+                               dropIfgram=True)
 
     # translate zero phase value to nan (no-data value)
     # becuase it's the common filled value used in phase masking
     if 'phase' in obs_ds_name.lower():
-        pha_data[pha_data == 0.] = np.nan
+        stack_obs[stack_obs == 0.] = np.nan
         print('convert zero value in {} to NaN (no-data value)'.format(obs_ds_name))
 
-    pha_data = mask_unwrap_phase(pha_data,
-                                 stack_obj,
-                                 box,
-                                 dropIfgram=True,
+    (stack_obs,
+     stack_std) = mask_stack_obs(stack_obs, stack_obj, box,
+                                 stack_std=stack_std,
                                  mask_ds_name=mask_ds_name,
-                                 mask_threshold=mask_threshold)
+                                 mask_threshold=mask_threshold,
+                                 dropIfgram=True)
 
     # 1.3 mask of pixels to invert
     mask = np.ones(num_pixel, np.bool_)
@@ -839,19 +939,19 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
     # 1.3.2 - Mask for NaN value in ALL ifgrams
     print('skip pixels with {} = NaN in all interferograms'.format(obs_ds_name))
-    mask *= ~np.all(np.isnan(pha_data), axis=0)
+    mask *= ~np.all(np.isnan(stack_obs), axis=0)
 
     # 1.3.3 Mask for zero quality measure (average spatial coherence/SNR)
     # usually due to lack of data in the processing
-    quality_file = os.path.join(os.path.dirname(ifgram_file), '../avgSpatialCoh.h5')
+    stack_quality_file = os.path.join(os.path.dirname(ifgram_file), '../avgSpatialCoh.h5')
     inv_quality_name = 'temporalCoherence'
     if 'offset' in obs_ds_name.lower():
-        quality_file = os.path.join(os.path.dirname(ifgram_file), '../avgSpatialSNR.h5')
+        stack_quality_file = os.path.join(os.path.dirname(ifgram_file), '../avgSpatialSNR.h5')
         inv_quality_name = 'residual'
 
-    if quality_file and os.path.isfile(quality_file):
-        print('skip pixels with zero value in file: {}'.format(os.path.basename(quality_file)))
-        quality = readfile.read(quality_file, box=box)[0].flatten()
+    if stack_quality_file and os.path.isfile(stack_quality_file):
+        print('skip pixels with zero value in file: {}'.format(os.path.basename(stack_quality_file)))
+        quality = readfile.read(stack_quality_file, box=box)[0].flatten()
         mask *= quality != 0.
         del quality
 
@@ -861,121 +961,159 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     print('number of pixels to invert: {} out of {} ({:.1f}%)'.format(
         num_pixel2inv, num_pixel, num_pixel2inv/num_pixel*100))
 
+
     ## 2. inversion
 
     # 2.1 initiale the output matrices
     ts = np.zeros((num_date, num_pixel), np.float32)
-    #ts_std = np.zeros((num_date, num_pixel), np.float32)
+    ts_std = np.zeros((num_date, num_pixel), np.float32)
     inv_quality = np.zeros(num_pixel, np.float32)
     if 'offset' in obs_ds_name.lower():
         inv_quality *= np.nan
-    num_inv_ifg = np.zeros(num_pixel, np.int16)
+    num_inv_obs = np.zeros(num_pixel, np.int16)
 
     # return directly if there is nothing to invert
     if num_pixel2inv < 1:
         ts = ts.reshape(num_date, num_row, num_col)
-        #ts_std = ts_std.reshape(num_date, num_row, num_col)
+        ts_std = ts_std.reshape(num_date, num_row, num_col)
         inv_quality = inv_quality.reshape(num_row, num_col)
-        num_inv_ifg = num_inv_ifg.reshape(num_row, num_col)
-        return ts, inv_quality, num_inv_ifg, box
+        num_inv_obs = num_inv_obs.reshape(num_row, num_col)
+        return ts, ts_std, inv_quality, num_inv_obs, box
 
     # 2.2 un-weighted inversion (classic SBAS)
-    if weight_func in ['no', 'sbas']:
+    if weight_sqrt is None:
 
         # a. split mask into mask_all/part_net
         # mask for valid (~NaN) observations in ALL ifgrams (share one B in sbas inversion)
-        mask_all_net = np.all(~np.isnan(pha_data), axis=0)
+        mask_all_net = np.all(~np.isnan(stack_obs), axis=0)
         mask_all_net *= mask
         mask_part_net = mask ^ mask_all_net
         del mask
 
         # b. invert once for all pixels with obs in all ifgrams
         if np.sum(mask_all_net) > 0:
-            print(('inverting pixels with valid {} in all  ifgrams'
+            print(('estimating time-series for pixels with valid {} in all  ifgrams'
                    ' ({:.0f} pixels; {:.1f}%) ...').format(obs_ds_name,
                                                            np.sum(mask_all_net),
                                                            np.sum(mask_all_net)/num_pixel2inv*100))
-            tsi, inv_quali, num_ifgi = estimate_timeseries(A, B, tbase_diff,
-                                                           ifgram=pha_data[:, mask_all_net],
-                                                           weight_sqrt=None,
-                                                           min_norm_velocity=min_norm_velocity,
-                                                           min_redundancy=min_redundancy,
-                                                           inv_quality_name=inv_quality_name)
+            (tsi,
+             inv_quali,
+             num_obsi) = estimate_timeseries(A, B,
+                                             y=stack_obs[:, mask_all_net],
+                                             tbase_diff=tbase_diff,
+                                             weight_sqrt=None,
+                                             min_norm_velocity=min_norm_velocity,
+                                             min_redundancy=min_redundancy,
+                                             inv_quality_name=inv_quality_name)
+
+            # save result to output matrices
             ts[:, mask_all_net] = tsi
             inv_quality[mask_all_net] = inv_quali
-            num_inv_ifg[mask_all_net] = num_ifgi
+            num_inv_obs[mask_all_net] = num_obsi
 
         # c. pixel-by-pixel for pixels with obs not in all ifgrams
         if np.sum(mask_part_net) > 0:
-            print(('inverting pixels with valid {} in some ifgrams'
+            print(('estimating time-series for pixels with valid {} in some ifgrams'
                    ' ({:.0f} pixels; {:.1f}%) ...').format(obs_ds_name,
                                                            np.sum(mask_part_net),
                                                            np.sum(mask_all_net)/num_pixel2inv*100))
-            num_pixel2inv = int(np.sum(mask_part_net))
-            idx_pixel2inv = np.where(mask_part_net)[0]
-            prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
-            for i in range(num_pixel2inv):
-                idx = idx_pixel2inv[i]
-                tsi, inv_quali, num_ifgi = estimate_timeseries(A, B, tbase_diff,
-                                                               ifgram=pha_data[:, idx],
-                                                               weight_sqrt=None,
-                                                               min_norm_velocity=min_norm_velocity,
-                                                               min_redundancy=min_redundancy,
-                                                               inv_quality_name=inv_quality_name)
+            num_pixel2inv_part = int(np.sum(mask_part_net))
+            idx_pixel2inv_part = np.where(mask_part_net)[0]
+            prog_bar = ptime.progressBar(maxValue=num_pixel2inv_part)
+            for i in range(num_pixel2inv_part):
+                idx = idx_pixel2inv_part[i]
+                (tsi,
+                 inv_quali,
+                 num_obsi) = estimate_timeseries(A, B,
+                                                 y=stack_obs[:, idx],
+                                                 tbase_diff=tbase_diff,
+                                                 weight_sqrt=None,
+                                                 min_norm_velocity=min_norm_velocity,
+                                                 min_redundancy=min_redundancy,
+                                                 inv_quality_name=inv_quality_name)
+
+                # save result to output matrices
                 ts[:, idx] = tsi.flatten()
                 inv_quality[idx] = inv_quali
-                num_inv_ifg[idx] = num_ifgi
-                prog_bar.update(i+1, every=2000, suffix='{}/{} pixels'.format(i+1, num_pixel2inv))
+                num_inv_obs[idx] = num_obsi
+                prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, num_pixel2inv_part))
             prog_bar.close()
 
     # 2.3 weighted inversion - pixel-by-pixel
     else:
-        print('inverting network of interferograms into time-series ...')
+        print('estimating time-series via WLS pixel-by-pixel ...')
         prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
         for i in range(num_pixel2inv):
             idx = idx_pixel2inv[i]
-            tsi, inv_quali, num_ifgi = estimate_timeseries(A, B, tbase_diff,
-                                                           ifgram=pha_data[:, idx],
-                                                           weight_sqrt=weight[:, idx],
-                                                           min_norm_velocity=min_norm_velocity,
-                                                           min_redundancy=min_redundancy,
-                                                           inv_quality_name=inv_quality_name)
+            (tsi,
+             inv_quali,
+             num_obsi) = estimate_timeseries(A, B,
+                                             y=stack_obs[:, idx],
+                                             tbase_diff=tbase_diff,
+                                             weight_sqrt=weight_sqrt[:, idx],
+                                             min_norm_velocity=min_norm_velocity,
+                                             min_redundancy=min_redundancy,
+                                             inv_quality_name=inv_quality_name)
+
+            # save result to output matrices
             ts[:, idx] = tsi.flatten()
             inv_quality[idx] = inv_quali
-            num_inv_ifg[idx] = num_ifgi
+            num_inv_obs[idx] = num_obsi
 
-            prog_bar.update(i+1, every=2000, suffix='{}/{} pixels'.format(i+1, num_pixel2inv))
+            prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, num_pixel2inv))
         prog_bar.close()
-        del weight
-    del pha_data
+    del weight_sqrt
+
+    # 2.4 time-series std. dev. - pixel-by-pixel
+    if calc_std:
+        print('propagating std. dev. from network of interferograms to time-series (Yunjun et al., 2021, FRINGE) ...')
+        prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
+        for i in range(num_pixel2inv):
+            idx = idx_pixel2inv[i]
+            ts_stdi = estimate_timeseries_std(A_std,
+                                              y=stack_obs[:, idx],
+                                              y_std=stack_std[:, idx],
+                                              min_redundancy=min_redundancy)
+
+            # savee result to output matrix
+            ts_std[flag_std, idx] = ts_stdi.flatten()
+
+            prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, num_pixel2inv))
+        prog_bar.close()
+    del stack_obs
+    del stack_std
+
 
     ## 3. prepare output
 
     # 3.1 reshape
     ts = ts.reshape(num_date, num_row, num_col)
-    #ts_std = ts_std.reshape(num_date, num_row, num_col)
+    ts_std = ts_std.reshape(num_date, num_row, num_col)
     inv_quality = inv_quality.reshape(num_row, num_col)
-    num_inv_ifg = num_inv_ifg.reshape(num_row, num_col)
+    num_inv_obs = num_inv_obs.reshape(num_row, num_col)
 
     # 3.2 convert displacement unit to meter
-    if obs_ds_name.startswith('unwrapPhase'):
+    if obs_ds_name.startswith(('unwrapPhase','ion')):
         phase2range = -1 * float(stack_obj.metadata['WAVELENGTH']) / (4.*np.pi)
         ts *= phase2range
+        ts_std *= np.abs(phase2range)
         print('converting LOS phase unit from radian to meter')
 
-    elif obs_ds_name == 'azimuthOffset':
+    elif (obs_ds_name == 'azimuthOffset') & (stack_obj.metadata['PROCESSOR'] != 'cosicorr'):
         az_pixel_size = ut.azimuth_ground_resolution(stack_obj.metadata)
         az_pixel_size /= float(stack_obj.metadata['ALOOKS'])
         ts *= az_pixel_size
+        ts_std *= az_pixel_size
         print('converting azimuth offset unit from pixel ({:.2f} m) to meter'.format(az_pixel_size))
 
-    elif obs_ds_name == 'rangeOffset':
+    elif (obs_ds_name == 'rangeOffset') & (stack_obj.metadata['PROCESSOR'] != 'cosicorr'):
         rg_pixel_size = float(stack_obj.metadata['RANGE_PIXEL_SIZE'])
         rg_pixel_size /= float(stack_obj.metadata['RLOOKS'])
         ts *= -1 * rg_pixel_size
+        ts_std *= rg_pixel_size
         print('converting range offset unit from pixel ({:.2f} m) to meter'.format(rg_pixel_size))
 
-    return ts, inv_quality, num_inv_ifg, box
+    return ts, ts_std, inv_quality, num_inv_obs, box
 
 
 def ifgram_inversion(inps=None):
@@ -989,6 +1127,26 @@ def ifgram_inversion(inps=None):
     if not inps:
         inps = cmd_line_parse()
     start_time = time.time()
+
+    ## limit the number of threads in numpy/scipy to 1
+    #   and save the original value for roll back afterwards
+    #   becuase it does not increase the speed much but does increase the CPU usage significantly
+    #   as shown in the test note below.
+    # Dataset: SanFranSenDT42 version 1.x, patch 1 (505 x 510 x 1021) only
+    # Machine 1: Mac (6 Intel i7 CPUs/cores in 2.6 GHz)
+    # | dask (worker) | OMP_NUM_THREADS | Time used (sec) | CPU usage |
+    # |   no   (0)    |        4        |      850        | 1 x 300%  |
+    # |   no   (0)    |        1        |      930        | 1 x 100%  |
+    # | local  (4)    |        4        |      580        | 4 x 250%  |
+    # | local  (4)    |        1        |      420        | 4 x 100%  |
+    # Machine 2: Linux local cluster (16 Intel E5 CPUs/cores in 2.4 GHz)
+    # | dask (worker) | OMP_NUM_THREADS | Time used (sec) | CPU usage |
+    # |   no   (0)    |        4        |     1400        | 1 x 400%  |
+    # |   no   (0)    |        1        |     1250        | 1 x 100%  |
+    # | local  (4)    |        4        |      750        | 4 x 320%  |
+    # | local  (4)    |        1        |      500        | 4 x 100%  |
+    num_threads_dict = cluster.set_num_threads("1")
+
 
     ## 1. input info
 
@@ -1005,8 +1163,14 @@ def ifgram_inversion(inps=None):
 
     # 1.2 design matrix
     A = stack_obj.get_design_matrix4timeseries(date12_list)[0]
-    num_ifgram, num_date = A.shape[0], A.shape[1]+1
-    inps.numIfgram = num_ifgram
+    num_pair, num_date = A.shape[0], A.shape[1]+1
+    inps.numIfgram = num_pair
+
+    if inps.calcStd:
+        ref_date4std = get_design_matrix4std(stack_obj)[2]
+        ref_msg = f' with REF_DATE = {ref_date4std}'
+    else:
+        ref_msg = ''
 
     # 1.3 print key setup info
     msg = '-------------------------------------------------------------------------------\n'
@@ -1017,12 +1181,17 @@ def ifgram_inversion(inps=None):
     msg += 'least-squares solution with L2 min-norm on: {}\n'.format(suffix)
     msg += 'minimum redundancy: {}\n'.format(inps.minRedundancy)
     msg += 'weight function: {}\n'.format(inps.weightFunc)
+    msg += 'calculate STD: {} {}\n'.format(inps.calcStd, ref_msg)
 
     if inps.maskDataset:
-        if inps.maskDataset in ['coherence', 'offsetSNR']:
-            suffix = '{} < {}'.format(inps.maskDataset, inps.maskThreshold)
-        else:
+        if inps.maskDataset in ['connectComponent']:
             suffix = '{} == 0'.format(inps.maskDataset)
+        elif inps.maskDataset in ['coherence', 'offsetSNR']:
+            suffix = '{} < {}'.format(inps.maskDataset, inps.maskThreshold)
+        elif inps.maskDataset.endswith('OffsetStd'):
+            suffix = '{} > {}'.format(inps.maskDataset, inps.maskThreshold)
+        else:
+            raise ValueError('Un-recognized mask dataset name: {}'.format(inps.maskDataset))
         msg += 'mask out pixels with: {}\n'.format(suffix)
     else:
         msg += 'mask: no\n'
@@ -1034,7 +1203,7 @@ def ifgram_inversion(inps=None):
     msg += '-------------------------------------------------------------------------------'
     print(msg)
 
-    print('number of interferograms: {}'.format(num_ifgram))
+    print('number of interferograms: {}'.format(num_pair))
     print('number of acquisitions  : {}'.format(num_date))
     print('number of lines   : {}'.format(length))
     print('number of columns : {}'.format(width))
@@ -1059,6 +1228,14 @@ def ifgram_inversion(inps=None):
         "timeseries" : [np.float32,  (num_date, length, width), None],
     }
     writefile.layout_hdf5(inps.tsFile, ds_name_dict, metadata=meta)
+
+    if inps.calcStd:
+        fbase = os.path.splitext(inps.tsFile)[0]
+        if inps.obsDatasetName.startswith('unwrapPhase'):
+            fbase += 'Decor'
+        tsStdFile = f'{fbase}Std.h5'
+        meta['REF_DATE'] = ref_date4std
+        writefile.layout_hdf5(tsStdFile, ds_name_dict, meta)
 
     # 2.3 instantiate invQualifyFile: temporalCoherence / residualInv
     if 'residual' in os.path.basename(inps.invQualityFile).lower():
@@ -1093,7 +1270,8 @@ def ifgram_inversion(inps=None):
         "water_mask_file"   : inps.waterMaskFile,
         "mask_ds_name"      : inps.maskDataset,
         "mask_threshold"    : inps.maskThreshold,
-        "min_redundancy"    : inps.minRedundancy
+        "min_redundancy"    : inps.minRedundancy,
+        "calc_std"          : inps.calcStd,
     }
 
     # 3.3 invert / write block-by-block
@@ -1110,7 +1288,7 @@ def ifgram_inversion(inps=None):
 
         if not inps.cluster:
             # non-parallel
-            ts, inv_quality, num_inv_ifg = ifgram_inversion_patch(**data_kwargs)[:-1]
+            ts, ts_std, inv_quality, num_inv_obs = ifgram_inversion_patch(**data_kwargs)[:-1]
 
         else:
             # parallel
@@ -1118,17 +1296,19 @@ def ifgram_inversion(inps=None):
 
             # initiate the output data
             ts = np.zeros((num_date, box_len, box_wid), np.float32)
+            ts_std = np.zeros((num_date, box_len, box_wid), np.float32)
             inv_quality = np.zeros((box_len, box_wid), np.float32)
-            num_inv_ifg  = np.zeros((box_len, box_wid), np.float32)
+            num_inv_obs  = np.zeros((box_len, box_wid), np.float32)
 
             # initiate dask cluster and client
             cluster_obj = cluster.DaskCluster(inps.cluster, inps.numWorker, config_name=inps.config)
             cluster_obj.open()
 
             # run dask
-            ts, inv_quality, num_inv_ifg = cluster_obj.run(func=ifgram_inversion_patch,
-                                                           func_data=data_kwargs,
-                                                           results=[ts, inv_quality, num_inv_ifg])
+            ts, ts_std, inv_quality, num_inv_obs = cluster_obj.run(
+                func=ifgram_inversion_patch,
+                func_data=data_kwargs,
+                results=[ts, ts_std, inv_quality, num_inv_obs])
 
             # close dask cluster and client
             cluster_obj.close()
@@ -1145,6 +1325,12 @@ def ifgram_inversion(inps=None):
                                    datasetName='timeseries',
                                    block=block)
 
+        if inps.calcStd:
+            writefile.write_hdf5_block(tsStdFile,
+                                       data=ts_std,
+                                       datasetName='timeseries',
+                                       block=block)
+
         # temporal coherence - 2D
         block = [box[1], box[3], box[0], box[2]]
         writefile.write_hdf5_block(inps.invQualityFile,
@@ -1154,7 +1340,7 @@ def ifgram_inversion(inps=None):
 
         # number of inverted obs - 2D
         writefile.write_hdf5_block(inps.numInvFile,
-                                   data=num_inv_ifg,
+                                   data=num_inv_obs,
                                    datasetName='mask',
                                    block=block)
 
@@ -1170,13 +1356,17 @@ def ifgram_inversion(inps=None):
         print('-'*50)
         print('update values on the reference pixel: ({}, {})'.format(ref_y, ref_x))
 
-        print('set {} on the reference pixel to 1.'.format(inv_quality_name))
+        ref_val = 0 if inv_quality_name == 'residual' else 1
+        print('set {} on the reference pixel to {}.'.format(inv_quality_name, ref_val))
         with h5py.File(inps.invQualityFile, 'r+') as f:
-            f['temporalCoherence'][ref_y, ref_x] = 1.
+            f[inv_quality_name][ref_y, ref_x] = ref_val
 
-        print('set  # of observations on the reference pixel as {}'.format(num_ifgram))
+        print('set  # of observations on the reference pixel as {}'.format(num_pair))
         with h5py.File(inps.numInvFile, 'r+') as f:
-            f['mask'][ref_y, ref_x] = num_ifgram
+            f['mask'][ref_y, ref_x] = num_pair
+
+    # roll back to the original number of threads
+    cluster.roll_back_num_threads(num_threads_dict)
 
     m, s = divmod(time.time() - start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
