@@ -75,7 +75,7 @@ def create_parser():
                         help='common connected components file, required for --action correct')
     parser.add_argument('-n','--num-sample', dest='numSample', type=int, default=100,
                         help='Number of randomly samples/pixels for each common connected component.')
-    parser.add_argument('-m', '--min-area', dest='ConnCompMinArea', type=float, default=2.5e3,
+    parser.add_argument('-m', '--min-area', dest='connCompMinArea', type=float, default=2.5e3,
                         help='minimum region/area size of a single connComponent.')
 
     parser.add_argument('-a','--action', dest='action', type=str, default='correct',
@@ -148,7 +148,7 @@ def read_template2inps(template_file, inps=None):
                 inpsDict[key] = value
             elif key in ['numSample']:
                 inpsDict[key] = int(value)
-            elif key in ['ConnCompMinArea']:
+            elif key in ['connCompMinArea']:
                 inpsDict[key] = float(value)
 
     return inps
@@ -371,14 +371,14 @@ def plot_num_triplet_with_nonzero_integer_ambiguity(fname, display=False, font_s
 
 ##########################################################################################
 def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=None, num_sample=100,
-                                    dsNameIn='unwrapPhase', conncomp_min_area=2.5e3):
+                                    dsNameIn='unwrapPhase', cc_min_area=2.5e3):
     """Solve the phase unwrapping integer ambiguity for the common regions among all interferograms
     Parameters: ifgram_file     : str, path of interferogram stack file
                 cc_mask_file    : str, path of common connected components file
                 water_mask_file : str, path of water mask file
                 num_sample      : int, number of pixel sampled for each region
                 dsNameIn        : str, dataset name of the unwrap phase to be corrected
-                conncomp_min_area : float: minimum region/area size
+                cc_min_area     : float, minimum region/area size
     Returns:    common_regions  : list of skimage.measure._regionprops._RegionProperties object
                     modified by adding two more variables:
                     sample_coords : 2D np.ndarray in size of (num_sample, 2) in int64 format
@@ -404,12 +404,14 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
         print('refine common mask based on water mask file', water_mask_file)
         cc_mask[water_mask == 0] = 0
 
-    label_img, num_label = conncomp.label_conn_comp(cc_mask, min_area=conncomp_min_area, print_msg=True)
+    label_img, num_label = conncomp.label_conn_comp(cc_mask, min_area=cc_min_area, print_msg=True)
     common_regions = measure.regionprops(label_img)
     print('number of common regions:', num_label)
     if num_label == 0:
-        print('WARNING: min area size ({}) is large, '
-              'try using a smaller value in template for mintpy.unwrapError.ConnCompMinArea'.format(conncomp_min_area))
+        msg = 'WARNING: NO common region found! '
+        msg += 'Try a smaller value for the mintpy.unwrapError.connCompMinArea ({}) option.'.format(cc_min_area)
+        print(msg)
+
     else:
         # add sample_coords / int_ambiguity
         print('number of samples per region:', num_sample)
@@ -562,7 +564,7 @@ def main(iargs=None):
                                                          water_mask_file=inps.waterMaskFile,
                                                          num_sample=inps.numSample,
                                                          dsNameIn=inps.datasetNameIn,
-                                                         conncomp_min_area=inps.ConnCompMinArea)
+                                                         cc_min_area=inps.connCompMinArea)
 
         # apply the integer ambiguity from common conn comp to the whole ifgram
         if len(common_regions) == 0:
