@@ -557,7 +557,7 @@ def main(iargs=None):
         # update mode
         if inps.update_mode and run_or_skip(inps) == 'skip':
             return inps.ifgram_file
-        print(inps)
+        
         # solve integer ambiguity for common connected components
         common_regions = get_common_region_int_ambiguity(ifgram_file=inps.ifgram_file,
                                                          cc_mask_file=inps.cc_mask_file,
