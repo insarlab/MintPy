@@ -295,7 +295,9 @@ def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_file, date_wise_ac
     length = int(atr_geo['LENGTH'])
     width = int(atr_geo['WIDTH'])
     ts_tide = np.zeros((num_date, length, width), dtype=np.float32)
-    step_size = ut.round_to_1(abs(float(atr_geo['Y_STEP'])))/0.0001*300
+    # default step size in meter: ~30 pixels
+    step_size = ut.round_to_1(abs(float(atr_geo['Y_STEP'])) * 108e3 * 30)
+
     # loop for calc
     print('\n'+'-'*50)
     print('calculating solid Earth tides using solid.for (D. Milbert, 2018) ...')
