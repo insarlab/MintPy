@@ -632,6 +632,11 @@ def get_slice_list(fname, no_complex=False):
             obj.open(print_msg=False)
             slice_list = obj.sliceList
 
+        elif k == 'timeseries' and 'slc' in d1_list:
+            with h5py.File(fname, 'r') as f:
+                dates = f['date'][:]
+            slice_list = ['slc-{}'.format(i.decode('UTF-8')) for i in dates]
+
         else:
             ## Find slice by walking through the file structure
             length, width = int(atr['LENGTH']), int(atr['WIDTH'])

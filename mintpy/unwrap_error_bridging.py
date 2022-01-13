@@ -23,9 +23,12 @@ from mintpy.utils import (ptime,
 
 # key configuration parameter name
 key_prefix = 'mintpy.unwrapError.'
-configKeys = ['ramp',
-              'waterMaskFile',
-              'bridgePtsRadius']
+configKeys = [
+    'waterMaskFile',
+    'connCompMinArea',
+    'ramp',
+    'bridgePtsRadius',
+]
 
 
 ####################################################################################################
@@ -61,6 +64,8 @@ def create_parser():
     parser.add_argument('--ramp', dest='ramp', choices=['linear', 'quadratic'],
                           help='type of phase ramp to be removed before correction.')
     parser.add_argument('--water-mask','--wm', dest='waterMaskFile', type=str, help='path of water mask file.')
+    parser.add_argument('-m', '--min-area', dest='connCompMinArea', type=float, default=2.5e3,
+                        help='minimum region/area size of a single connComponent.')
 
     parser.add_argument('-t', '--template', dest='template_file', type=str,
                           help='template file with bonding point info, e.g.\n' +
@@ -117,6 +122,8 @@ def read_template2inps(template_file, inps=None):
                 inpsDict[key] = value
             elif key in ['bridgePtsRadius']:
                 inpsDict[key] = int(value)
+            elif key in ['connCompMinArea']:
+                inpsDict[key] = float(value)
     return inps
 
 
@@ -169,13 +176,14 @@ def run_or_skip(inps):
 
 
 ##########################################################################################
-def run_unwrap_error_bridge(ifgram_file, water_mask_file, ramp_type=None, radius=50, 
+def run_unwrap_error_bridge(ifgram_file, water_mask_file, ramp_type=None, radius=50, cc_min_area=2.5e3,
                             ccName='connectComponent', dsNameIn='unwrapPhase',
                             dsNameOut='unwrapPhase_bridging'):
     """Run unwrapping error correction with bridging
     Parameters: ifgram_file     : str, path of ifgram stack file
                 water_mask_file : str, path of water mask file
                 ramp_type       : str, name of phase ramp to be removed during the phase jump estimation
+                cc_min_area     : float, minimum region/area size
                 ccName          : str, dataset name of connected components
                 dsNameIn        : str, dataset name of unwrap phase to be corrected
                 dsNameOut       : str, dataset name of unwrap phase to be saved after correction
@@ -239,7 +247,7 @@ def run_unwrap_error_bridge(ifgram_file, water_mask_file, ramp_type=None, radius
 
                     # bridging
                     cc_obj = connectComponent(conncomp=cc, metadata=atr)
-                    cc_obj.label()
+                    cc_obj.label(min_area=cc_min_area)
                     cc_obj.find_mst_bridge()
                     unw_cor = cc_obj.unwrap_conn_comp(unw, radius=radius, ramp_type=ramp_type)
 
@@ -265,7 +273,7 @@ def run_unwrap_error_bridge(ifgram_file, water_mask_file, ramp_type=None, radius
 
         # bridging
         cc_obj = connectComponent(conncomp=cc, metadata=atr)
-        cc_obj.label()
+        cc_obj.label(min_area=cc_min_area)
         cc_obj.find_mst_bridge()
         unw_cor = cc_obj.unwrap_conn_comp(unw, ramp_type=ramp_type)
 
@@ -293,6 +301,7 @@ def main(iargs=None):
                             water_mask_file=inps.waterMaskFile,
                             ramp_type=inps.ramp,
                             radius=inps.bridgePtsRadius,
+                            cc_min_area=inps.connCompMinArea,
                             dsNameIn=inps.datasetNameIn,
                             dsNameOut=inps.datasetNameOut)
 

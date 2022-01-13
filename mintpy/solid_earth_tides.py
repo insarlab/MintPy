@@ -295,6 +295,8 @@ def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_file, date_wise_ac
     length = int(atr_geo['LENGTH'])
     width = int(atr_geo['WIDTH'])
     ts_tide = np.zeros((num_date, length, width), dtype=np.float32)
+    # default step size in meter: ~30 pixels
+    step_size = ut.round_to_1(abs(float(atr_geo['Y_STEP'])) * 108e3 * 30)
 
     # loop for calc
     print('\n'+'-'*50)
@@ -305,7 +307,7 @@ def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_file, date_wise_ac
         (tide_e,
          tide_n,
          tide_u) = pysolid.calc_solid_earth_tides_grid(dt_obj, atr_geo,
-                                                       step_size=3e3,
+                                                       step_size=step_size,
                                                        display=False,
                                                        verbose=verbose)
 
