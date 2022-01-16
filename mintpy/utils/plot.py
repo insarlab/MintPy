@@ -1446,7 +1446,9 @@ def prepare_dem_background(dem, inps=None, print_msg=True):
                                  vmax=inps.shade_max)
         dem_shade[np.isnan(dem_shade[:, :, 0])] = np.nan
         if print_msg:
-            print('show shaded relief DEM')
+            msg = f'show shaded relief DEM [min/max: {inps.shade_min}/{inps.shade_max} m; '
+            msg += f'exag: {inps.shade_exag}; az/alt deg: {inps.shade_azdeg}/{inps.shade_altdeg}]'
+            print(msg)
 
     # prepare contour
     if inps.disp_dem_contour:

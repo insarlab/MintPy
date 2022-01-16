@@ -190,10 +190,10 @@ def cmd_line_parse(iargs=None):
             inps.outfile = ['timeseries.h5', 'temporalCoherence.h5', 'numInvIfgram.h5']
 
         elif inps.obsDatasetName.startswith('azimuthOffset'):
-            inps.outfile = ['timeseriesAz.h5', 'residualInvAz.h5', 'numInvOffset.h5']
+            inps.outfile = ['timeseriesAz.h5', 'residualInvAz.h5', 'numInvOffAz.h5']
 
         elif inps.obsDatasetName.startswith('rangeOffset'):
-            inps.outfile = ['timeseriesRg.h5', 'residualInvRg.h5', 'numInvOffset.h5']
+            inps.outfile = ['timeseriesRg.h5', 'residualInvRg.h5', 'numInvOffRg.h5']
 
         elif inps.obsDatasetName.startswith('ion'):
             inps.outfile = ['timeseriesIon.h5', 'temporalCoherenceIon.h5', 'numInvIon.h5']
@@ -711,7 +711,7 @@ def mask_stack_obs(stack_obs, stack_obj, box, mask_ds_name=None, mask_threshold=
             msk_snr = np.multiply(msk_data <= mask_threshold * 5, obs_snr >= min_snr)
             msk[msk_snr] = 1
             if print_msg:
-                print('keep pixels with {} <= {} and SNR >= {}'.format(mask_ds_name, mask_threshold*5, min_snr))            
+                print('keep pixels with {} <= {} and SNR >= {}'.format(mask_ds_name, mask_threshold*5, min_snr))
 
         else:
             raise ValueError('Un-recognized mask dataset name: {}'.format(mask_ds_name))

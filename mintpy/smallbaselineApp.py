@@ -443,7 +443,7 @@ class TimeSeriesAnalysis:
         dsNames = readfile.get_dataset_list(stack_file)
         mask_file = os.path.join(self.workDir, 'maskConnComp.h5')
         coh_file = os.path.join(self.workDir, 'avgSpatialCoh.h5')
-        snr_file = os.path.join(self.workDir, 'avgSpatialSnr.h5')
+        snr_file = os.path.join(self.workDir, 'avgSpatialSNR.h5')
 
         # 1) generate mask file from the common connected components
         if any('phase' in i.lower() for i in dsNames):
