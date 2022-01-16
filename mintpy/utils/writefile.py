@@ -630,8 +630,7 @@ def write_isce_xml(meta, fname, print_msg=True):
     import isceobj
 
     # data type
-    dtype_gdal = readfile.NUMPY2GDAL_DATATYPE[meta['DATA_TYPE']]
-    dtype_isce = readfile.GDAL2ISCE_DATATYPE[dtype_gdal]
+    dtype = readfile.DATA_TYPE_NUMPY2ISCE[meta['DATA_TYPE']]
 
     # write ISCE XML and GDAL VRT files
     image_type = meta['FILE_TYPE']
@@ -646,7 +645,7 @@ def write_isce_xml(meta, fname, print_msg=True):
     img.setLength(int(meta['LENGTH']))
     img.setAccessMode('READ')
     img.bands = int(meta.get('BANDS', '1'))
-    img.dataType = dtype_isce
+    img.dataType = dtype
     img.scheme = meta.get('INTERLEAVE', 'BIL')
     img.renderHdr()
     img.renderVRT()

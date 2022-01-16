@@ -76,48 +76,10 @@ standardMetadataKeys = {
     'relative_orbit' : ['trackNumber'],
 }
 
-GDAL2ISCE_DATATYPE = {
-    1 : 'BYTE',
-    2 : 'uint16',
-    3 : 'SHORT',
-    4 : 'uint32',
-    5 : 'INT',
-    6 : 'FLOAT',
-    7 : 'DOUBLE',
-    10: 'CFLOAT',
-    11: 'complex128',
-}
-
-GDAL2NUMPY_DATATYPE = {
-    1 : 'uint8',
-    2 : 'uint16',
-    3 : 'int16',
-    4 : 'uint32',
-    5 : 'int32',
-    6 : 'float32',
-    7 : 'float64',
-    10: 'complex64',
-    11: 'complex128',
-}
-
-NUMPY2GDAL_DATATYPE = {
-  "uint8"     : 1,
-  "int8"      : 1,
-  "uint16"    : 2,
-  "int16"     : 3,
-  "uint32"    : 4,
-  "int32"     : 5,
-  "float32"   : 6,
-  "float64"   : 7,
-  "complex64" : 10,
-  "complex128": 11,
-}
-
-# single file (data + attributes) supported by GDAL
-GDAL_FILE_EXTS = ['.tif', '.grd']
-
+## data type conventions [use numpy as reference]
+# 1 - ENVI
 # reference: https://subversion.renater.fr/efidir/trunk/efidir_soft/doc/Programming_C_EFIDIR/header_envi.pdf
-ENVI2NUMPY_DATATYPE = {
+DATA_TYPE_ENVI2NUMPY = {
     '1' : 'uint8',
     '2' : 'int16',
     '3' : 'int32',
@@ -130,6 +92,69 @@ ENVI2NUMPY_DATATYPE = {
     '14': 'int64',
     '15': 'uint64',
 }
+
+DATA_TYPE_NUMPY2ENVI = {
+    'uint8'     : '1',
+    'int16'     : '2',
+    'int32'     : '3',
+    'float32'   : '4',
+    'float64'   : '5',
+    'complex64' : '6',
+    'complex128': '9',
+    'uint16'    : '12',
+    'uint32'    : '13',
+    'int64'     : '14',
+    'uint64'    : '15',
+}
+
+# 2 - GDAL
+DATA_TYPE_GDAL2NUMPY = {
+    1 : 'uint8',
+    2 : 'uint16',
+    3 : 'int16',
+    4 : 'uint32',
+    5 : 'int32',
+    6 : 'float32',
+    7 : 'float64',
+    10: 'complex64',
+    11: 'complex128',
+}
+
+DATA_TYPE_NUMPY2GDAL = {
+    "uint8"     : 1,
+    "int8"      : 1,
+    "uint16"    : 2,
+    "int16"     : 3,
+    "uint32"    : 4,
+    "int32"     : 5,
+    "float32"   : 6,
+    "float64"   : 7,
+    "complex64" : 10,
+    "complex128": 11,
+}
+
+# 3 - ISCE
+DATA_TYPE_ISCE2NUMPY = {
+    'byte'  : 'uint8',
+    'short' : 'int16',
+    'int'   : 'int32',
+    'float' : 'float32',
+    'double': 'float64',
+    'cfloat': 'complex64',
+}
+
+DATA_TYPE_NUMPY2ISCE = {
+    'uint8'    : 'BYTE',
+    'int16'    : 'SHORT',
+    'int32'    : 'INT',
+    'float32'  : 'FLOAT',
+    'float64'  : 'DOUBLE',
+    'complex64': 'CFLOAT',
+}
+
+
+# single file (data + attributes) supported by GDAL
+GDAL_FILE_EXTS = ['.tif', '.grd']
 
 ENVI_BAND_INTERLEAVE = {
     'BAND' : 'BSQ',
@@ -1366,6 +1391,9 @@ def read_isce_xml(fname):
                 xmlDict['{}_FIRST'.format(prefix)] = v_first - v_step / 2.
                 xmlDict['{}_UNIT'.format(prefix)] = 'degrees'
 
+        # data_type
+        xmlDict['data_type'] = DATA_TYPE_ISCE2NUMPY[xmlDict['data_type'].lower()]
+
     # PAMDataset, e.g. hgt.rdr.aux.xml
     elif root.tag == 'PAMDataset':
         meta = root.find("./Metadata[@domain='ENVI']")
@@ -1373,8 +1401,11 @@ def read_isce_xml(fname):
             key = child.get('key')
             value = child.text
             xmlDict[key] = value
-        xmlDict['data_type'] = ENVI2NUMPY_DATATYPE[xmlDict['data_type']]
 
+        # data_type
+        xmlDict['data_type'] = DATA_TYPE_ENVI2NUMPY[xmlDict['data_type']]
+
+    # standardize metadata keys
     xmlDict = standardize_metadata(xmlDict)
 
     return xmlDict
@@ -1383,7 +1414,7 @@ def read_isce_xml(fname):
 def read_envi_hdr(fname):
     """Read ENVI .hdr file into a python dict structure"""
     atr = read_template(fname, delimiter='=')
-    atr['DATA_TYPE'] = ENVI2NUMPY_DATATYPE[atr.get('data type', '4')]
+    atr['DATA_TYPE'] = DATA_TYPE_ENVI2NUMPY[atr.get('data type', '4')]
     atr['BYTE_ORDER'] = ENVI_BYTE_ORDER[atr.get('byte order', '1')]
 
     if 'map info' in atr.keys():
@@ -1424,8 +1455,7 @@ def read_gdal_vrt(fname):
     atr['BANDS'] = ds.RasterCount
 
     # data type
-    data_type = ds.GetRasterBand(1).DataType
-    atr['DATA_TYPE'] = GDAL2ISCE_DATATYPE[data_type]
+    atr['DATA_TYPE'] = DATA_TYPE_GDAL2NUMPY[ds.GetRasterBand(1).DataType]
 
     # interleave
     interleave = ds.GetMetadata('IMAGE_STRUCTURE').get('INTERLEAVE', 'PIXEL')
@@ -1678,7 +1708,7 @@ def read_gdal(fname, box=None, band=1, cpx_band='phase', xstep=1, ystep=1):
     data = bnd.ReadAsArray()[box[1]:box[3], box[0]:box[2]]
 
     # adjust output band for complex data
-    data_type = GDAL2ISCE_DATATYPE[bnd.DataType]
+    data_type = DATA_TYPE_GDAL2NUMPY[bnd.DataType]
     if data_type.replace('>', '').startswith('c'):
         if cpx_band.startswith('real'):
             data = data.real
