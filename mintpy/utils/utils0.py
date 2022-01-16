@@ -203,6 +203,47 @@ def azimuth_ground_resolution(atr):
     return az_step
 
 
+def auto_lat_lon_step_size(atr, lat_c=None):
+    """Get the default lat/lon step size for geocoding.
+
+    Treat the pixel in radar coordinates as an rotated rectangle. Use the bounding box 
+    of the rotated rectangle for the ratio between lat and lon steps. Then scale the 
+    lat and lon step size to ensure the same area between the pixels in radar and geo
+    coordinates.
+
+    Link: https://math.stackexchange.com/questions/4001034
+
+    Parameters: atr      - dict, standard mintpy metadata
+                lat_c    - float, central latitude in degree
+    Returns:    lat_step - float, latitude  step size in degree
+                lon_step - float, longitude step size in degree
+    """
+    # azimuth angle (rotation angle) in radian
+    az_angle = np.deg2rad(abs(heading2azimuth_angle(float(atr['HEADING']))))
+
+    # radar pixel size in meter
+    az_step = azimuth_ground_resolution(atr)
+    rg_step = range_ground_resolution(atr)
+
+    # geo pixel size in meter
+    x_step = rg_step * abs(np.cos(az_angle)) + az_step * abs(np.sin(az_angle))
+    y_step = rg_step * abs(np.sin(az_angle)) + az_step * abs(np.cos(az_angle))
+    scale_factor = np.sqrt((rg_step * az_step) / (x_step * y_step))
+    x_step *= scale_factor
+    y_step *= scale_factor
+
+    # geo pixel size in degree
+    if lat_c is None:
+        if 'LAT_REF1' in atr.keys():
+            lat_c = (float(atr['LAT_REF1']) + float(atr['LAT_REF3'])) / 2.
+        else:
+            lat_c = 0
+    lon_step = np.rad2deg(x_step / (EARTH_RADIUS * np.cos(np.deg2rad(lat_c))))
+    lat_step = np.rad2deg(y_step / EARTH_RADIUS) * -1.
+
+    return lat_step, lon_step
+
+
 
 #################################### File Operation ##########################################
 def touch(fname_list, times=None):
