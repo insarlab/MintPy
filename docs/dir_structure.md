@@ -380,8 +380,8 @@ mintpy.load.waterMaskFile    = $DATA_DIR/SanFranSenDT42/mask/watermask.msk
 
 ### [ASF HyP3](https://hyp3-docs.asf.alaska.edu/)
 
-1. Search, request and download GUNW products using [hyp3_sdk](https://nbviewer.jupyter.org/github/ASFHyP3/hyp3-sdk/blob/main/docs/sdk_example.ipynb) or the [ASF Vertex website](https://search.asf.alaska.edu/) following the [story map](https://storymaps.arcgis.com/stories/68a8a3253900411185ae9eb6bb5283d3).
-    + For at least one GUNW product, download the accompanying DEM.
+1. Search, request and download interferograms using [hyp3_sdk](https://nbviewer.jupyter.org/github/ASFHyP3/hyp3-sdk/blob/main/docs/sdk_example.ipynb) or the [ASF Vertex website](https://search.asf.alaska.edu/) following the [story map](https://storymaps.arcgis.com/stories/68a8a3253900411185ae9eb6bb5283d3).
+    + For at least one interferogram, download the accompanying DEM.
     + Unzip the downloaded files. E.g., `for f in *.zip; do unzip $f; done` in bash.
 
 2. Clip DEM and all interferograms to the same area using hyp3lib/[cutGeotiffs.py](https://github.com/ASFHyP3/hyp3-lib/blob/develop/hyp3lib/cutGeotiffs.py) script.
