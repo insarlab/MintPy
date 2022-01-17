@@ -116,12 +116,9 @@ def cmd_line_parse(iargs=None):
         inps.mask_file = 'no'
 
     # default value
-    if not inps.disp_unit:
-        inps.disp_unit = 'cm'
-    if not inps.colormap:
-        inps.colormap = 'jet'
-    if not inps.fig_size:
-        inps.fig_size = [8.0, 4.5]
+    inps.disp_unit = inps.disp_unit if inps.disp_unit else 'cm'
+    inps.colormap = inps.colormap if inps.colormap else 'jet'
+    inps.fig_size = inps.fig_size if inps.fig_size else [8.0, 4.5]
 
     # temporal model fitting, initialize the dicts of exp and log funcs
     inps = ts2vel.init_exp_log_dicts(inps)
