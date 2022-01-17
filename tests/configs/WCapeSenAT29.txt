@@ -15,4 +15,4 @@ mintpy.networkInversion.weightFunc  = no
 mintpy.troposphericDelay.method     = no
 mintpy.topographicResidual.pixelwiseGeometry    = no
 mintpy.deramp           = linear
-mintpy.plot.maxMemory   = 2
+mintpy.plot.maxMemory   = 4
