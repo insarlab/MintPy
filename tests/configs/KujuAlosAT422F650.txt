@@ -25,7 +25,7 @@ mintpy.troposphericDelay.weatherModel           = ERA5
 mintpy.topographicResidual.pixelwiseGeometry    = no
 mintpy.deramp          = linear
 mintpy.save.hdfEos5    = yes
-mintpy.plot.maxMemory  = 2
+mintpy.plot.maxMemory  = 4
 
 ##————————————————————————————— HDF-EOS5 Attributes -—————————————————————————##
 beam_mode           = SM

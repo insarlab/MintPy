@@ -12,4 +12,4 @@ mintpy.networkInversion.weightFunc              = no
 mintpy.topographicResidual.pixelwiseGeometry    = no
 mintpy.solidEarthTides = yes
 mintpy.deramp          = no
-mintpy.plot.maxMemory  = 2
+mintpy.plot.maxMemory  = 4

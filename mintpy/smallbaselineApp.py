@@ -93,6 +93,11 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # save argv (to check the manually specified arguments)
+    # use iargs        for python call
+    # use sys.argv[1:] for command line call
+    inps.argv = iargs if iargs else sys.argv[1:]
+
     template_file = os.path.join(os.path.dirname(mintpy.__file__), 'defaults/smallbaselineApp.cfg')
 
     # -H (print default template)
@@ -136,7 +141,7 @@ def cmd_line_parse(iargs=None):
             inps.customTemplateFile = None
 
     # check --plot
-    if iargs == ['--plot']:
+    if inps.argv == ['--plot']:
         plot_only = True
         print('plot smallbaselineApp results without run.')
     else:
