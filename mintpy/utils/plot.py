@@ -3,7 +3,7 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, 2018                               #
 ############################################################
-# 
+#
 # Recommend import:
 #     from mintpy.utils import plot as pp
 
@@ -577,7 +577,6 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
     if 'cbar_size'   not in p_dict.keys():  p_dict['cbar_size']   = '3%'
     if 'disp_cbar'   not in p_dict.keys():  p_dict['disp_cbar']   = True
     if 'colormap'    not in p_dict.keys():  p_dict['colormap']    = 'RdBu'
-    if 'colormap2'   not in p_dict.keys():  p_dict['colormap2']   = 'RdYlBu'
     if 'vlim'        not in p_dict.keys():  p_dict['vlim']        = [0.2, 1.0]
     if 'tbColor'     not in p_dict.keys():  p_dict['tbColor']     = False
     if 'pbColor'     not in p_dict.keys():  p_dict['pbColor']     = False
@@ -592,12 +591,8 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
     # support input colormap: string for colormap name, or colormap object directly
     if isinstance(p_dict['colormap'], str):
         cmap = ColormapExt(p_dict['colormap']).colormap
-        if p_dict['tbColor'] or p_dict['pbColor']:
-            cmap = ColormapExt(p_dict['colormap2']).colormap
     elif isinstance(p_dict['colormap'], mpl.colors.LinearSegmentedColormap):
         cmap = p_dict['colormap']
-        if p_dict['tbColor'] or p_dict['pbColor']:
-            cmap = p_dict['colormap2']
     else:
         raise ValueError('unrecognized colormap input: {}'.format(p_dict['colormap']))
 
@@ -1774,7 +1769,7 @@ def read_gmt_lonlat_file(ll_file, SNWE=None, min_dist=10):
         prog_bar.close()
         ax.set_xlim(inps.geo_box[0], inps.geo_box[2])
         ax.set_ylim(inps.geo_box[3], inps.geo_box[1])
-                
+
     """
     # read text file
     lines = None
@@ -1786,7 +1781,7 @@ def read_gmt_lonlat_file(ll_file, SNWE=None, min_dist=10):
         lines = lines[:1000]
 
     # loop to extract/organize the data into list of arrays
-    num_line = len(lines)    
+    num_line = len(lines)
     faults = []
     fault = []
     prog_bar = ptime.progressBar(maxValue=num_line)

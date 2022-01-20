@@ -222,8 +222,8 @@ def main(iargs=None):
     (inps.rms_list,
      inps.date_list,
      inps.rms_file) = ut.get_residual_rms(inps.timeseries_file,
-                                         mask_file=inps.maskFile,
-                                         ramp_type=inps.deramp)
+                                          mask_file=inps.maskFile,
+                                          ramp_type=inps.deramp)
 
     analyze_rms(inps.date_list, inps.rms_list, inps)
     return

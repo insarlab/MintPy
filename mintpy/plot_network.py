@@ -87,8 +87,6 @@ def create_parser():
                      help='display color range for temporal baseline [day]. (default: %(default)s)')
     coh.add_argument('--pbv', '--pbvlim', dest='pbvlim', nargs=2, type=float, default=(0, 180.0),
                      help='display color range for perpendicular baseline [meter]. (default: %(default)s)')
-    coh.add_argument('-c2', '--colormap2', dest='cmap_name2', default='RdYlBu_r',
-                     help='colormap name for the network display (baseline coloring). Default: %(default)s')
 
     # Figure  Setting
     fig = parser.add_argument_group('Figure', 'Figure settings for display')
@@ -247,7 +245,6 @@ def check_colormap(inps):
     # in case the manually input list is not in order
     inps.cmap_vlist = sorted(inps.cmap_vlist)
     inps.colormap = pp.ColormapExt(inps.cmap_name, vlist=inps.cmap_vlist).colormap
-    inps.colormap2 = pp.ColormapExt(inps.cmap_name2, vlist=inps.cmap_vlist).colormap
 
     return inps
 
