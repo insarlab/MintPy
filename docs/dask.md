@@ -26,7 +26,7 @@ Adjust options in the template file:
 
 ```cfg
 mintpy.compute.cluster    = local
-mintpy.compute.numWorkers = 4     #[int > 1 / all], auto for 4 (local) or 40 (slurm / pbs / lsf), set to "all" to use all available cores.
+mintpy.compute.numWorker = 4     #[int > 1 / all], auto for 4 (local) or 40 (slurm / pbs / lsf), set to "all" to use all available cores.
 ```
 
 and feed the template file to the script:
