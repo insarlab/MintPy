@@ -529,7 +529,7 @@ def plot_coherence_history(ax, date12List, cohList, p_dict={}):
     ax.bar(x_list, np.nanmin(coh_mat, axis=0), bar_width.days, label='Min {}'.format(p_dict['ds_name']))
 
     if p_dict['disp_title']:
-        ax.set_title('{} History of All Related Pairs'.format(p_dict['ds_name']))
+        ax.set_title('{} History: Min/Max of All Related Pairs'.format(p_dict['ds_name']))
 
     ax = auto_adjust_xaxis_date(ax, datevector, fontsize=p_dict['fontsize'],
                                 every_year=p_dict['every_year'])[0]
@@ -537,7 +537,7 @@ def plot_coherence_history(ax, date12List, cohList, p_dict={}):
 
     #ax.set_xlabel('Time [years]', fontsize=p_dict['fontsize'])
     ax.set_ylabel(p_dict['ds_name'], fontsize=p_dict['fontsize'])
-    ax.legend(loc='lower right')
+    ax.legend(loc='best')
 
     return ax
 
@@ -578,10 +578,6 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
     if 'disp_cbar'   not in p_dict.keys():  p_dict['disp_cbar']   = True
     if 'colormap'    not in p_dict.keys():  p_dict['colormap']    = 'RdBu'
     if 'vlim'        not in p_dict.keys():  p_dict['vlim']        = [0.2, 1.0]
-    if 'tbColor'     not in p_dict.keys():  p_dict['tbColor']     = False
-    if 'pbColor'     not in p_dict.keys():  p_dict['pbColor']     = False
-    if 'tbvlim'      not in p_dict.keys():  p_dict['tbvlim']      = [0.0, 365.25]
-    if 'pbvlim'      not in p_dict.keys():  p_dict['pbvlim']      = [0.0, 180.0]
     if 'disp_title'  not in p_dict.keys():  p_dict['disp_title']  = True
     if 'disp_drop'   not in p_dict.keys():  p_dict['disp_drop']   = True
     if 'disp_legend' not in p_dict.keys():  p_dict['disp_legend'] = True
@@ -638,12 +634,6 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
         data_max = max(cohList)
         disp_min = p_dict['vlim'][0]
         disp_max = p_dict['vlim'][1]
-        if p_dict['tbColor']:
-            disp_min, disp_max = p_dict['tbvlim']
-            p_dict['cbar_label'] = 'Temporal baseline [day]'
-        elif p_dict['pbColor']:
-            disp_min, disp_max = p_dict['pbvlim']
-            p_dict['cbar_label'] = 'Spatial baseline [m]'
         if print_msg:
             print('showing coherence')
             print('data range: {}'.format([data_min, data_max]))
@@ -681,14 +671,8 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
             y = np.array([pbaseList[idx1], pbaseList[idx2]])
             if cohList is not None:
                 val = cohList[date12List.index(date12)]
-                if p_dict['tbColor']:
-                    val = tbase12[date12List.index(date12)]
-                    disp_min, disp_max = p_dict['tbvlim']
-                elif p_dict['pbColor']:
-                    val = pbase12[date12List.index(date12)]
-                    disp_min, disp_max = p_dict['pbvlim']
                 val_norm = (val - disp_min) / (disp_max - disp_min)
-                ax.plot(x, y, '-', lw=p_dict['linewidth'], alpha=transparency, c=cmap(val_norm))
+                ax.plot(x, y, '--', lw=p_dict['linewidth'], alpha=transparency, c=cmap(val_norm))
             else:
                 ax.plot(x, y, '--', lw=p_dict['linewidth'], alpha=transparency, c='k')
 
@@ -701,12 +685,6 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
         y = np.array([pbaseList[idx1], pbaseList[idx2]])
         if cohList is not None:
             val = cohList[date12List.index(date12)]
-            if p_dict['tbColor']:
-                val = tbase12[date12List.index(date12)]
-                disp_min, disp_max = p_dict['tbvlim']
-            elif p_dict['pbColor']:
-                val = pbase12[date12List.index(date12)]
-                disp_min, disp_max = p_dict['pbvlim']
             val_norm = (val - disp_min) / (disp_max - disp_min)
             ax.plot(x, y, '-', lw=p_dict['linewidth'], alpha=transparency, c=cmap(val_norm))
         else:
