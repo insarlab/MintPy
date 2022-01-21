@@ -16,7 +16,7 @@ Docker allows one to run MintPy in a dedicated container (essentially an efficie
 docker pull forrestwilliams/mintpy:1.3.1
 ```
 
-Then setup the account for ERA5 for tropospheric delay correction as described in [insarlab/PyAPS](https://github.com/insarlab/pyaps#2-account-setup-for-era5).
+Then complete the [post-installation setup](#3-post-installation-setup).
 
 ## 2. Install the development version ##
 
@@ -95,13 +95,9 @@ export PATH=${PATH}:${MINTPY_HOME}/mintpy
 export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}
 ```
 
-#### d. Setup account for global atmospheric model ####
-
-Setup the account for ERA5 for tropospheric delay correction as described in [insarlab/PyAPS](https://github.com/insarlab/pyaps#2-account-setup-for-era5).
+#### d. [Post-Installation Setup](#3-post-installation-setup) ####
 
 ### 2.2 Install on macOS ###
-
-#### a. Install Xcode and command line tools ####
 
 Install Xcode with command line tools, if you have not already done so.
 
@@ -116,11 +112,11 @@ Install Xcode with command line tools, if you have not already done so.
 
 + Install [XQuartz](https://www.xquartz.org), then restart the terminal.
 
-#### b. Install MintPy via conda ####
+#### a. Install MintPy via conda ####
 
 Same as the [instruction for Linux](#21-install-on-linux).
 
-#### c. Install MintPy via MacPorts ####
+#### b. Install MintPy via MacPorts ####
 
 Same as the [instruction for Linux](#21-install-on-linux), except for the dependencies installation, which is as below.
 
@@ -159,6 +155,18 @@ sudo -H /opt/local/bin/pip install git+https://github.com/ecmwf/cdsapi.git
 
 Same as the [instruction for Linux](#21-install-on-linux), except for the "c. Install MintPy" section, only the `pip install` approaches are recommended, as the "setup environment variable" approach is not tested.
 
-## 3. Optional setup
+## 3. Post-Installation Setup
 
-+ `WEATHER_DIR`: If you defined an environment variable named `WEATHER_DIR` to contain the path to a directory, MintPy applications will download the GAM files into the indicated directory. Also, MintPy application will look for the GAM files in the directory before downloading a new one to prevent downloading multiple copies if you work with different dataset that cover the same date/time.
+#### a. Dask for parallel processing ####
+
+We recommend setting the `temporary-directory` in your [Dask configuration file](https://docs.dask.org/en/stable/configuration.html), e.g. `~/.config/dask/dask.yaml`, by adding the following line, to avoid potential [workspace lock issue](https://github.com/insarlab/MintPy/issues/725) during [parallel processing with Dask](./dask.md).
+
+```yaml
+temporary-directory: /tmp/{replace_this_with_your_user_name}  # Directory for local disk like /tmp, /scratch, or /local
+```
+
+#### b. ERA5 for tropospheric correction ####
+
+Setup account for ERA5 to download weather re-analysis datasets for tropospheric delay correction as described in [insarlab/PyAPS](https://github.com/insarlab/pyaps#2-account-setup-for-era5).
+
+`WEATHER_DIR`: Optionally, if you defined an environment variable named `WEATHER_DIR` to contain the path to a directory, MintPy applications will download the GAM files into the indicated directory. Also, MintPy application will look for the GAM files in the directory before downloading a new one to prevent downloading multiple copies if you work with different dataset that cover the same date/time.
