@@ -12,7 +12,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from mintpy.objects import ifgramStack
-from mintpy.utils import ptime, readfile, utils as ut, plot as pp
+from mintpy.utils import readfile, utils as ut, plot as pp
 # suppress UserWarning from matplotlib
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
