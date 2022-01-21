@@ -56,7 +56,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 std_file  - string, text file with std and date info.
     Example:    import mintpy.utils.utils as ut
                 std_list, date_list = ut.get_residual_std('timeseries_ERA5_demErrInvResid.h5',
-                                                          'maskTempCoh.h5')
+                                                          'maskTempCoh.h5')[:2]
     """
     # Intermediate files name
     if ramp_type == 'no':
