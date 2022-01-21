@@ -3,7 +3,7 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, 2018                               #
 ############################################################
-# 
+#
 # Recommend import:
 #     from mintpy.utils import plot as pp
 
@@ -529,7 +529,7 @@ def plot_coherence_history(ax, date12List, cohList, p_dict={}):
     ax.bar(x_list, np.nanmin(coh_mat, axis=0), bar_width.days, label='Min {}'.format(p_dict['ds_name']))
 
     if p_dict['disp_title']:
-        ax.set_title('{} History of All Related Pairs'.format(p_dict['ds_name']))
+        ax.set_title('{} History: Min/Max of All Related Pairs'.format(p_dict['ds_name']))
 
     ax = auto_adjust_xaxis_date(ax, datevector, fontsize=p_dict['fontsize'],
                                 every_year=p_dict['every_year'])[0]
@@ -537,7 +537,7 @@ def plot_coherence_history(ax, date12List, cohList, p_dict={}):
 
     #ax.set_xlabel('Time [years]', fontsize=p_dict['fontsize'])
     ax.set_ylabel(p_dict['ds_name'], fontsize=p_dict['fontsize'])
-    ax.legend(loc='lower right')
+    ax.legend(loc='best')
 
     return ax
 
@@ -670,9 +670,9 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
             x = np.array([dates[idx1], dates[idx2]])
             y = np.array([pbaseList[idx1], pbaseList[idx2]])
             if cohList is not None:
-                coh = cohList[date12List.index(date12)]
-                coh_norm = (coh - disp_min) / (disp_max - disp_min)
-                ax.plot(x, y, '--', lw=p_dict['linewidth'], alpha=transparency, c=cmap(coh_norm))
+                val = cohList[date12List.index(date12)]
+                val_norm = (val - disp_min) / (disp_max - disp_min)
+                ax.plot(x, y, '--', lw=p_dict['linewidth'], alpha=transparency, c=cmap(val_norm))
             else:
                 ax.plot(x, y, '--', lw=p_dict['linewidth'], alpha=transparency, c='k')
 
@@ -684,9 +684,9 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
         x = np.array([dates[idx1], dates[idx2]])
         y = np.array([pbaseList[idx1], pbaseList[idx2]])
         if cohList is not None:
-            coh = cohList[date12List.index(date12)]
-            coh_norm = (coh - disp_min) / (disp_max - disp_min)
-            ax.plot(x, y, '-', lw=p_dict['linewidth'], alpha=transparency, c=cmap(coh_norm))
+            val = cohList[date12List.index(date12)]
+            val_norm = (val - disp_min) / (disp_max - disp_min)
+            ax.plot(x, y, '-', lw=p_dict['linewidth'], alpha=transparency, c=cmap(val_norm))
         else:
             ax.plot(x, y, '-', lw=p_dict['linewidth'], alpha=transparency, c='k')
 
@@ -1747,7 +1747,7 @@ def read_gmt_lonlat_file(ll_file, SNWE=None, min_dist=10):
         prog_bar.close()
         ax.set_xlim(inps.geo_box[0], inps.geo_box[2])
         ax.set_ylim(inps.geo_box[3], inps.geo_box[1])
-                
+
     """
     # read text file
     lines = None
@@ -1759,7 +1759,7 @@ def read_gmt_lonlat_file(ll_file, SNWE=None, min_dist=10):
         lines = lines[:1000]
 
     # loop to extract/organize the data into list of arrays
-    num_line = len(lines)    
+    num_line = len(lines)
     faults = []
     fault = []
     prog_bar = ptime.progressBar(maxValue=num_line)

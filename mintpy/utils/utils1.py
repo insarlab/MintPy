@@ -53,9 +53,10 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 ramp_type - string, ramp type, e.g. linear, quadratic, no for do not remove ramp
     Returns:    std_list  - list of float, standard deviation of deramped input timeseries file
                 date_list - list of string in YYYYMMDD format, corresponding dates
+                std_file  - string, text file with std and date info.
     Example:    import mintpy.utils.utils as ut
                 std_list, date_list = ut.get_residual_std('timeseries_ERA5_demErrInvResid.h5',
-                                                          'maskTempCoh.h5')
+                                                          'maskTempCoh.h5')[:2]
     """
     # Intermediate files name
     if ramp_type == 'no':
@@ -86,7 +87,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     fc = np.loadtxt(std_file, dtype=bytes).astype(str)
     std_list = fc[:, 1].astype(np.float32).tolist()
     date_list = list(fc[:, 0])
-    return std_list, date_list
+    return std_list, date_list, std_file
 
 
 def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_type='quadratic'):
