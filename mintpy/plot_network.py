@@ -301,7 +301,7 @@ def main(iargs=None):
                                        inps.cohList,
                                        p_dict=vars(inps))
         if inps.save_fig:
-            fig.savefig(fig_names[2], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+            fig.savefig(fig_names[1], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
             print('save figure to {}'.format(fig_names[2]))
 
         # Fig 3 - Coherence Matrix
@@ -312,7 +312,7 @@ def main(iargs=None):
                                       inps.date12List_drop,
                                       p_dict=vars(inps))[0]
         if inps.save_fig:
-            fig.savefig(fig_names[1], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+            fig.savefig(fig_names[2], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
             print('save figure to {}'.format(fig_names[1]))
 
     # Fig 4 - Interferogram Network
