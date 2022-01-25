@@ -421,6 +421,11 @@ def read_reference_input(inps):
         print('reading reference info from reference: '+inps.reference_file)
         inps = read_reference_file2inps(inps.reference_file, inps)
 
+    if inps.ref_lat and np.abs(inps.ref_lat) > 90 and 'UTM_ZONE' not in atr.keys():
+        msg = f'input reference latitude ({inps.ref_lat}) > 90 deg in magnitude!'
+        msg += ' This does not make sense, double check your inputs!'
+        raise ValueError(msg)
+
     # Convert ref_lat/lon to ref_y/x
     coord = ut.coordinate(atr, lookup_file=inps.lookup_file)
     if inps.ref_lat and inps.ref_lon:
