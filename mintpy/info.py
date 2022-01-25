@@ -34,10 +34,10 @@ EXAMPLE = """example:
 
   # Time / Date Info
   info.py ifgramStack.h5 --date                 #print date1_date2 info for all  interferograms
+  info.py timeseries.h5  --num                  #print date list of timeseries with its number
   info.py ifgramStack.h5 --date --show kept     #print date1_date2 info for kept interferograms
   info.py ifgramStack.h5 --date --show dropped  #print date1_date2 info for dropped/excluded interferograms
-  info.py timeseries.h5  --date --num           # print date list of timeseries with its number
-  info.py LS-PARAMS.h5   --date > date_list.txt # print date list of timeseries and save it to txt file.
+  info.py LS-PARAMS.h5   --date > date_list.txt #print date list of timeseries and save it to txt file.
   info.py S1_IW12_128_0593_0597_20141213_20180619.h5 --date
 
   # save date1_date2 info of interferograms to a text file
@@ -45,7 +45,6 @@ EXAMPLE = """example:
 
   # Slice / Dataset Info
   info.py timeseries.h5                              --slice
-  info.py timeseries.h5                              --slice  --num
   info.py inputs/ifgramStack.h5                      --slice
   info.py S1_IW12_128_0593_0597_20141213_20180619.h5 --slice
   info.py LS-PARAMS.h5                               --slice
@@ -66,10 +65,10 @@ def create_parser():
     par_list = parser.add_argument_group('List','list date/slice info')
     par_list.add_argument('--date', dest='disp_date', action='store_true',
                           help='Show date/date12 info of input file')
+    par_list.add_argument('--num', dest='disp_num', action='store_true',
+                          help='Show date/date12 info with numbers')
     par_list.add_argument('--slice', dest='disp_slice', action='store_true',
                           help='Show slice list of the file')
-    par_list.add_argument('--num', dest='disp_num', action='store_true',
-                          help='Show date/date12/slice number')
     par_list.add_argument('--show','--show-ifgram', dest='disp_ifgram',
                           choices={'all','kept','dropped'}, default='all',
                           help='Show all / kept / dropped interferograms only. Default: all.')
@@ -222,12 +221,12 @@ def print_date_list(fname, disp_ifgram='all', disp_num=False, print_msg=False):
     return dateList
 
 
-def print_slice_list(fname, disp_num=False, print_msg=False):
+def print_slice_list(fname, print_msg=False):
     """Print slice info of file"""
     slice_list = readfile.get_slice_list(fname)
     if print_msg:
-        for i, slice_name in enumerate(slice_list):
-            print(f'{slice_name}\t{i}' if disp_num else slice_name)
+        for slice_name in slice_list:
+            print(slice_name)
     return slice_list
 
 
@@ -285,8 +284,8 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
     ext = os.path.splitext(inps.file)[1].lower()
 
-    # --date option
-    if inps.disp_date:
+    # --date/--num option
+    if inps.disp_date or inps.disp_num:
         print_date_list(inps.file,
                         disp_ifgram=inps.disp_ifgram,
                         disp_num=inps.disp_num,
@@ -297,9 +296,7 @@ def main(iargs=None):
     if inps.disp_slice:
         if inps.disp_ifgram != 'all':
             raise ValueError('--show-ifgram option is not applicable to --slice.')
-        print_slice_list(inps.file,
-                         disp_num=inps.disp_num,
-                         print_msg=True)
+        print_slice_list(inps.file, print_msg=True)
         return
 
     # --dset option
