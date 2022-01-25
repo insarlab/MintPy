@@ -157,16 +157,19 @@ Same as the [instruction for Linux](#21-install-on-linux), except for the "c. In
 
 ## 3. Post-Installation Setup
 
-#### a. Dask for parallel processing ####
+#### a. ERA5 for tropospheric correction ####
 
-We recommend setting the `temporary-directory` in your [Dask configuration file](https://docs.dask.org/en/stable/configuration.html), e.g. `~/.config/dask/dask.yaml`, by adding the following line, to avoid potential [workspace lock issue](https://github.com/insarlab/MintPy/issues/725) during [parallel processing with Dask](./dask.md).
-
-```yaml
-temporary-directory: /tmp/{replace_this_with_your_user_name}  # Directory for local disk like /tmp, /scratch, or /local
-```
-
-#### b. ERA5 for tropospheric correction ####
-
-Setup account for ERA5 to download weather re-analysis datasets for tropospheric delay correction as described in [insarlab/PyAPS](https://github.com/insarlab/pyaps#2-account-setup-for-era5).
+Setup an account for ERA5 to download weather re-analysis datasets for tropospheric delay correction as described in [insarlab/PyAPS](https://github.com/insarlab/pyaps#2-account-setup-for-era5).
 
 `WEATHER_DIR`: Optionally, if you defined an environment variable named `WEATHER_DIR` to contain the path to a directory, MintPy applications will download the GAM files into the indicated directory. Also, MintPy application will look for the GAM files in the directory before downloading a new one to prevent downloading multiple copies if you work with different dataset that cover the same date/time.
+
+#### b. Dask for parallel processing ####
+
+We recommend setting the `temporary-directory` in your [Dask configuration file](https://docs.dask.org/en/stable/configuration.html), e.g. `~/.config/dask/dask.yaml`, by adding the following line, to avoid potential [workspace lock issue](https://github.com/insarlab/MintPy/issues/725). Check more details on parallel processing with Dask [here](./dask.md).
+
+```yaml
+temporary-directory: /tmp  # Directory for local disk like /tmp, /scratch, or /local
+
+## If you are sharing the same machine with others, use the following instead to avoid permission issues with others.
+# temporary-directory: /tmp/{replace_this_with_your_user_name}  # Directory for local disk like /tmp, /scratch, or /local
+```
