@@ -221,10 +221,10 @@ def plot_stitch(mat11, mat22, mat, mat_diff, out_fig=None, disp_fig=False):
     """plot stitching result"""
 
     fig = plt.figure(figsize=[15.0, 8.0])
-    fig = plt.subplot(2,2,1);  plt.imshow(mat11);     plt.title('input file 1');    plt.colorbar()
-    fig = plt.subplot(2,2,2);  plt.imshow(mat22);     plt.title('input file 2');    plt.colorbar()
-    fig = plt.subplot(2,2,3);  plt.imshow(mat);       plt.title('merged');          plt.colorbar()
-    fig = plt.subplot(2,2,4);  plt.imshow(mat_diff);  plt.title('input file diff'); plt.colorbar()
+    plt.subplot(2,2,1);  plt.imshow(mat11);     plt.title('input file 1');    plt.colorbar()
+    plt.subplot(2,2,2);  plt.imshow(mat22);     plt.title('input file 2');    plt.colorbar()
+    plt.subplot(2,2,3);  plt.imshow(mat);       plt.title('merged');          plt.colorbar()
+    plt.subplot(2,2,4);  plt.imshow(mat_diff);  plt.title('input file diff'); plt.colorbar()
     plt.tight_layout()
 
     # output
