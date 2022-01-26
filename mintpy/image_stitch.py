@@ -241,7 +241,7 @@ def plot_stitch(mat11, mat22, mat, mat_diff, out_fig=None, disp_fig=False):
     # colorbar
     fig.subplots_adjust(right=0.9)
     cax = fig.add_axes([0.901, 0.3, 0.01, 0.4])
-    cbar = plt.colorbar(im, cax=cax)
+    plt.colorbar(im, cax=cax)
 
     # output
     fig.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=150)
