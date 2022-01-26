@@ -1114,6 +1114,9 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
 
     elif datasetName and datasetName in datasetUnitDict.keys():
         atr['UNIT'] = datasetUnitDict[datasetName]
+        # SLC stack
+        if datasetName == 'timeseries' and atr.get('DATA_TYPE', 'float32').startswith('complex'):
+            atr['UNIT'] = '1'
 
     elif 'UNIT' not in atr.keys():
         if k in datasetUnitDict.keys():

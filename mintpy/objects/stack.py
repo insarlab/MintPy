@@ -187,8 +187,9 @@ class timeseries:
         self.times = np.array([dt.datetime.strptime(i, self.dateFormat) for i in self.dateList])
         # add hh/mm/ss info to the datetime objects
         if 'T' not in self.dateFormat or all(i.hour==0 and i.minute==0 for i in self.times):
-            utc_sec = float(self.metadata['CENTER_LINE_UTC'])
-            self.times = np.array([i + dt.timedelta(seconds=utc_sec) for i in self.times])
+            if 'CENTER_LINE_UTC' in self.metadata.keys():
+                utc_sec = float(self.metadata['CENTER_LINE_UTC'])
+                self.times = np.array([i + dt.timedelta(seconds=utc_sec) for i in self.times])
         self.tbase = np.array([(i.days + i.seconds / (24 * 60 * 60))
                                for i in (self.times - self.times[self.refIndex])],
                               dtype=np.float32)
