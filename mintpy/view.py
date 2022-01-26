@@ -313,42 +313,7 @@ def update_inps_with_file_metadata(inps, metadata):
                                                             print_msg=inps.print_msg)
 
     # Map Projection via cartopy
-    # cartopy requires that:
-    #   1. file is geocoded AND
-    #   2. file coordinates are in the unit of degrees / meters AND
-    #   3. set to display in geo-coordinates
-    # use cartopy (by initiating inps.map_proj_obj) ONLY IF:
-    #   1. show fancy lat/lon label via --lalo-label OR
-    #   2. show coastline via --coastline
-    inps.map_proj_obj = None
-    inps.coord_unit = metadata.get('Y_UNIT', 'degrees').lower()
-    if (inps.geo_box
-            and inps.coord_unit.startswith(('deg', 'meter'))
-            and inps.fig_coord == 'geo'
-            and (inps.lalo_label or inps.coastline)):
-
-        # get projection name from the data coord unit
-        # https://scitools.org.uk/cartopy/docs/latest/crs/projections.html
-        msg = 'initiate cartopy map projection: '
-        if inps.coord_unit.startswith('deg'):
-            inps.map_proj_obj = ccrs.PlateCarree()
-            vprint(msg + 'PlateCarree')
-
-        elif inps.coord_unit.startswith('meter'):
-            if 'UTM_ZONE' in metadata.keys():
-                utm_zone = metadata['UTM_ZONE']
-                inps.map_proj_obj = ccrs.UTM(utm_zone)
-                vprint(msg + f'UTM zone {utm_zone}')
-
-                # check --lalo-label (works for PlateCarree only)
-                if inps.lalo_label:
-                    raise ValueError('--lalo-label is NOT supported for projection: UTM')
-
-            else:
-                print('WARNING: Un-recognized coordinate unit: {}'.format(inps.coord_unit))
-                print('    Switch to the native Y/X and continue to plot')
-                inps.fig_coord = 'radar'
-
+    inps = check_map_projection(inps, metadata, print_msg=inps.print_msg)
 
     # Min / Max - Display
     if not inps.vlim:
@@ -383,6 +348,58 @@ def update_inps_with_file_metadata(inps, metadata):
         inps.outfile = ['{}{}'.format(inps.fig_title, inps.fig_ext)]
 
     inps = update_figure_setting(inps)
+    return inps
+
+
+def check_map_projection(inps, metadata, print_msg=True):
+    """Check/initiate the map projection object via cartopy based on inps and metadata.
+
+    Cartopy requires that:
+      1. file is geocoded AND
+      2. file coordinates are in the unit of degrees / meters AND
+      3. set to display in geo-coordinates
+
+    Use cartopy (by initiating inps.map_proj_obj) ONLY IF:
+      1. show fancy lat/lon label via --lalo-label OR
+      2. show coastline via --coastline
+
+    This function will update the following variables:
+        inps.map_proj_obj  # cartopy.crs.* object or None
+        inps.coord_unit    # degree or meter
+        inps.fig_coord     # geo or radar
+    """
+
+    inps.map_proj_obj = None
+    inps.coord_unit = metadata.get('Y_UNIT', 'degrees').lower()
+    if (inps.geo_box
+            and inps.coord_unit.startswith(('deg', 'meter'))
+            and inps.fig_coord == 'geo'
+            and (inps.lalo_label or inps.coastline)):
+
+        # get projection name from the data coord unit
+        # https://scitools.org.uk/cartopy/docs/latest/crs/projections.html
+        msg = 'initiate cartopy map projection: '
+        if inps.coord_unit.startswith('deg'):
+            inps.map_proj_obj = ccrs.PlateCarree()
+            if print_msg:
+                print(msg + 'PlateCarree')
+
+        elif inps.coord_unit.startswith('meter'):
+            if 'UTM_ZONE' in metadata.keys():
+                utm_zone = metadata['UTM_ZONE']
+                inps.map_proj_obj = ccrs.UTM(utm_zone)
+                if print_msg:
+                    print(msg + f'UTM zone {utm_zone}')
+
+                # check --lalo-label (works for PlateCarree only)
+                if inps.lalo_label:
+                    raise ValueError('--lalo-label is NOT supported for projection: UTM')
+
+            else:
+                print('WARNING: Un-recognized coordinate unit: {}'.format(inps.coord_unit))
+                print('    Switch to the native Y/X and continue to plot')
+                inps.fig_coord = 'radar'
+
     return inps
 
 
@@ -1039,12 +1056,18 @@ def read_data4figure(i_start, i_end, inps, metadata):
 
         vprint('reading data as a 3D matrix ...')
         dset_list = [inps.dset[i] for i in range(i_start, i_end)]
-        data[:] = readfile.read(inps.file,
-                                datasetName=dset_list,
-                                box=inps.pix_box,
-                                xstep=inps.multilook_num,
-                                ystep=inps.multilook_num,
-                                print_msg=inps.print_msg)[0]
+        kwargs = dict(datasetName=dset_list,
+                      box=inps.pix_box,
+                      xstep=inps.multilook_num,
+                      ystep=inps.multilook_num,
+                      print_msg=inps.print_msg)
+
+        if not metadata.get('DATA_TYPE', 'float32').startswith('complex'):
+            data[:] = readfile.read(inps.file, **kwargs)[0]
+        else:
+            # calculate amplitude time series in dB
+            vprint('input data is complex, calculate its amplitude and continue')
+            data[:] = np.abs(readfile.read(inps.file, **kwargs)[0])
 
         if inps.key == 'ifgramStack':
             # reference pixel info in unwrapPhase

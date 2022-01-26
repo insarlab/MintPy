@@ -378,15 +378,19 @@ def auto_shared_lalo_location(axs, loc=(1,0,0,1), flatten=False):
 
 
 def auto_colormap_name(metadata, cmap_name=None, datasetName=None, print_msg=True):
-    gray_dataset_key_words = ['coherence', 'temporalCoherence',
-                              'waterMask', 'shadowMask',
-                              '.cor', '.mli', '.slc', '.amp', '.ramp']
+    """Get auto/default colormap name based on input metadata."""
+
     if not cmap_name:
-        if any(i in gray_dataset_key_words for i in [metadata['FILE_TYPE'],
-                                                     str(datasetName).split('-')[0]]):
-            cmap_name = 'gray'
-        else:
-            cmap_name = 'jet'
+        ds_names = [metadata['FILE_TYPE'], str(datasetName).split('-')[0]]
+        # SLC stack
+        if metadata['FILE_TYPE'] == 'timeseries' and metadata['DATA_TYPE'].startswith('complex'):
+            ds_names += ['.slc']
+
+        gray_ds_names = ['coherence', 'temporalCoherence', 'waterMask', 'shadowMask',
+                         '.cor', '.mli', '.slc', '.amp', '.ramp']
+
+        cmap_name = 'gray' if any(i in gray_ds_names for i in ds_names) else 'jet'
+
     if print_msg:
         print('colormap:', cmap_name)
 
@@ -429,7 +433,8 @@ def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_
     return cmap_lut, vlim
 
 
-def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1, buffer_year=0.2):
+def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=None, buffer_year=0.2,
+                           every_month=None):
     """Adjust X axis
     Input:
         ax          - matplotlib figure axes object
@@ -461,11 +466,22 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1, buffer_yea
         (dss, dee) = ax.get_xlim()
     ax.set_xlim(dss, dee)
 
+    # auto param
+    if not every_year:
+        every_year = max(1, np.rint((dee - dss).days / 365.25 / 5).astype(int))
+
+    if not every_month:
+        if   every_year <= 3:  every_month = 1
+        elif every_year <= 6:  every_month = 3
+        elif every_year <= 12: every_month = 6
+        else:                  every_month = None
+
     # Label/Tick format
     ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M:%S')
     ax.xaxis.set_major_locator(mdates.YearLocator(every_year))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
-    ax.xaxis.set_minor_locator(mdates.MonthLocator())
+    if every_month:
+        ax.xaxis.set_minor_locator(mdates.MonthLocator(range(1,13,every_month)))
 
     # Label font size
     ax.tick_params(labelsize=fontsize)
@@ -1095,13 +1111,16 @@ def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False, wrap_range=[-
     """
     # default display unit if not given
     if not disp_unit:
-        k = metadata['FILE_TYPE']
-        k = k.replace('.','')
+        ftype = metadata['FILE_TYPE'].replace('.','')
+        dtype = metadata.get('DATA_TYPE', 'float32')
         disp_unit = metadata['UNIT'].lower()
-        if (k in ['timeseries', 'giantTimeseries', 'velocity', 'HDFEOS']
-                and disp_unit.split('/')[0].endswith('m')):
+
+        if (ftype in ['timeseries', 'giantTimeseries', 'velocity', 'HDFEOS']
+                and disp_unit.split('/')[0].endswith('m')
+                and not dtype.startswith('complex')):
             disp_unit = 'cm'
-        elif k in ['mli', 'slc', 'amp']:
+
+        elif ftype in ['mli', 'slc', 'amp']:
             disp_unit = 'dB'
 
     if wrap:
