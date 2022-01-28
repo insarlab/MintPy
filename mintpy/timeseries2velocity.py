@@ -316,11 +316,9 @@ def read_exclude_date(inps, dateListAll):
 
 
 def read_date_info(inps):
-    """Get inps.excludeDate full list
-    Inputs:
-        inps          - Namespace,
-    Output:
-        inps.excludeDate  - list of string for exclude date in YYYYMMDD format
+    """Read dates used in the estimation and its related info.
+    Parameters: inps - Namespace
+    Returns:    inps - Namespace
     """
     if inps.key == 'timeseries':
         tsobj = timeseries(inps.timeseries_file)
@@ -612,6 +610,9 @@ def run_timeseries2time_func(inps):
             m[:, mask] = m_boot.mean(axis=0).reshape(num_param, -1)
             m_std[:, mask] = m_boot.std(axis=0).reshape(num_param, -1)
             del m_boot
+
+            # get design matrix to calculate the residual time series
+            G = time_func.get_design_matrix4time_func(inps.dateList, model=model, ref_date=inps.ref_date, seconds=seconds)
 
 
         else:
