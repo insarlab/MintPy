@@ -612,6 +612,9 @@ def run_timeseries2time_func(inps):
             m[:, mask] = m_boot.mean(axis=0).reshape(num_param, -1)
             m_std[:, mask] = m_boot.std(axis=0).reshape(num_param, -1)
             del m_boot
+            
+            # Get design matrix for full time series
+            G = time_func.get_design_matrix4time_func(inps.dateList,model=model, ref_date=inps.ref_date, seconds=seconds)
 
 
         else:
