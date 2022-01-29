@@ -27,6 +27,7 @@ from mintpy.objects import (
     timeseries,
     HDFEOS
 )
+from mintpy.utils import utils0 as ut
 
 
 SPEED_OF_LIGHT = 299792458.0   # meter/second
@@ -47,6 +48,7 @@ standardMetadataKeys = {
     'LENGTH'             : ['length', 'FILE_LENGTH', 'lines', 'azimuth_lines', 'nlines', 'az_samp',
                             'interferogram_azimuth_lines'],
     'ORBIT_DIRECTION'    : ['passDirection'],
+    'NO_DATA_VALUE'      : ['NoDataValue'],
     'PLATFORM'           : ['spacecraftName', 'sensor'],
     'POLARIZATION'       : ['polarization'],
     'PRF'                : ['prf'],
@@ -165,6 +167,16 @@ ENVI_BAND_INTERLEAVE = {
 ENVI_BYTE_ORDER = {
     '0': 'little-endian',
     '1': 'big-endian',
+}
+
+
+SPECIAL_STR2NUM = {
+    'yes'   : True,
+    'true'  : True,
+    'no'    : False,
+    'false' : False,
+    'none'  : None,
+    'nan'   : np.nan,
 }
 
 
@@ -794,6 +806,20 @@ def get_hdf5_compression(fname):
     return compression
 
 
+def get_no_data_value(fname):
+    """Grab the NO_DATA_VALUE of the input file."""
+    val = read_attribute(fname).get('NO_DATA_VALUE', None)
+    val = str(val).lower()
+
+    if ut.is_number(val):
+        val = float(val)
+    elif val in SPECIAL_STR2NUM.keys():
+        val = SPECIAL_STR2NUM[val]
+    else:
+        raise ValueError(f'Un-recognized no-data-value type: {val}')
+    return val
+
+
 #########################################################################
 def read_attribute(fname, datasetName=None, metafile_ext=None):
     """Read attributes of input file into a dictionary
@@ -1124,6 +1150,10 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
         else:
             atr['UNIT'] = '1'
 
+    # NO_DATA_VALUE
+    no_data_value = atr.get('NO_DATA_VALUE', None)
+    atr['NO_DATA_VALUE'] = str(no_data_value).lower()
+
     # FILE_PATH
     if 'FILE_PATH' in atr.keys() and 'OG_FILE_PATH' not in atr.keys():
         # need to check original source file to successfully subset legacy-sensor products
@@ -1407,6 +1437,11 @@ def read_isce_xml(fname):
         # data_type
         xmlDict['data_type'] = DATA_TYPE_ENVI2NUMPY[xmlDict['data_type']]
 
+        # NoDataValue
+        meta = root.find("./PAMRasterBand/NoDataValue")
+        if meta is not None:
+            xmlDict['NoDataValue'] = meta.text
+
     # standardize metadata keys
     xmlDict = standardize_metadata(xmlDict)
 
@@ -1491,6 +1526,9 @@ def read_gdal_vrt(fname):
         # constrain longitude within (-180, 180]
         if atr['X_FIRST'] > 180.:
             atr['X_FIRST'] -= 360.
+
+    # no data value
+    atr['NoDataValue'] = ds.GetRasterBand(1).GetNoDataValue()
 
     atr = standardize_metadata(atr)
 
