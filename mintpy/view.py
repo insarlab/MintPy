@@ -1620,7 +1620,7 @@ class viewer():
                                          print_msg=False)[0]
                 data[data != 0.] -= ref_data
 
-            # masking
+            # masking - input options
             if self.zero_mask:
                 vprint('masking pixels with zero value')
                 data = np.ma.masked_where(data == 0., data)
@@ -1629,6 +1629,13 @@ class viewer():
                 data = np.ma.masked_where(self.msk == 0., data)
             else:
                 self.msk = np.ones(data.shape, dtype=np.bool_)
+
+            # masking - NO_DATA_VALUE
+            no_data_val = readfile.get_no_data_value(self.file)
+            if no_data_val is not None and not np.isnan(no_data_val):
+                vprint(f'masking pixels with NO_DATA_VALUE of {no_data_val}')
+                data = np.ma.masked_where(data == no_data_val, data)
+
             # update/save mask info
             if np.ma.is_masked(data):
                 self.msk *= ~data.mask
