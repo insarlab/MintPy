@@ -10,7 +10,7 @@ import sys
 import argparse
 import numpy as np
 from mintpy.objects import sensor
-from mintpy.utils import readfile, writefile, utils as ut
+from mintpy.utils import ptime, readfile, writefile, utils as ut
 
 
 ################################################################################
@@ -41,8 +41,11 @@ EXAMPLE = """example:
   asc_desc2horz_vert.py AlosAT424/mintpy/velocity_msk.h5 AlosDT73/mintpy/velocity_msk.h5  --dset step20200107
 
   # write all asc/desc/horz/vert datasets into one file
-  asc_desc2horz_vert.py Alos2AT131/mintpy/20171219_20190702.unw Alos2DT23/mintpy/20171211_20190819.unw --output-one Kirishima2017post.h5
+  asc_desc2horz_vert.py Alos2AT131/mintpy/20171219_20190702.unw Alos2DT23/mintpy/20171211_20190819.unw --oo Kirishima2017post.h5
   view.py Kirishima2017post.h5 -u cm --wrap --wrap-range -5 5  #check deformation signal with multiple viewing geometries.
+
+  # pixel-wise decomposition [for large area analysis]
+  asc_desc2horz_vert.py asc_velocity.h5 desc_velocity.h5 -g asc_geometry.h5 desc_geometry.h5
 """
 
 
@@ -50,13 +53,22 @@ def create_parser():
     parser = argparse.ArgumentParser(description='Project Asc and Desc LOS displacement to Horizontal and Vertical direction',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=REFERENCE+'\n'+EXAMPLE)
-
+    # input files
     parser.add_argument('file', nargs=2,
                         help='Ascending and descending files\n'
                              'Both files need to be geocoded in the same spatial resolution.')
-    parser.add_argument('-d', '--dset', dest='dsname', type=str, help='dataset to use, default: 1st dataset')
-    parser.add_argument('--azimuth', '--az', dest='azimuth', type=float, default=-90.0,
-                        help='Azimuth angle in degrees (anti-clockwise) of the direction of the horizontal movement (default: %(default)s).\n'
+    parser.add_argument('-d', '--dset', dest='ds_name', type=str, help='dataset to use, default: 1st dataset')
+    parser.add_argument('-g','--geom-file', dest='geom_file', nargs=2, help='Geometry files for the input data files.')
+
+    # inputs - checking
+    parser.add_argument('--max-ref-yx-diff', dest='max_ref_yx_diff', type=int, default=3,
+                        help='Maximum difference between REF_Y/X (derived from REF_LAT/LON) of input files '+
+                             '(default: %(default)s).')
+
+    # outputs - horizontal direction of interest
+    parser.add_argument('--az','--horz-az-angle', dest='horz_az_angle', type=float, default=-90.0,
+                        help='Azimuth angle in degrees of the interested horizontal direction (default: %(default)s).\n'
+                             'Measured from the north with positive for anti-clockwise direction.\n'
                              'E.g.: -90 for East direction\n'
                              '      0   for North direction\n'
                              'Set to the azimuth angle of the strike-slip fault to measure the fault-parallel displacement.\n'
@@ -65,14 +77,11 @@ def create_parser():
                              'b. Near north direction can not be well resolved due to the lack of\n'
                              '   diversity in viewing geometry. Check exact dilution of precision for \n'
                              '   each component in Wright et al. (2004, GRL)')
-    parser.add_argument('--max-ref-yx-diff', dest='max_ref_yx_diff', type=int, default=3,
-                        help='Maximum difference between REF_Y/X (derived from REF_LAT/LON) of input files '+
-                             '(default: %(default)s).')
 
-    # output
+    # output - data files
     parser.add_argument('-o', '--output', dest='outfile', nargs=2, metavar=('HZ_FILE','UP_FILE'), default=['hz.h5', 'up.h5'],
                         help='output file name for vertical and horizontal components')
-    parser.add_argument('--one-output','--oo', dest='one_outfile',
+    parser.add_argument('--oo','--one-output', dest='one_outfile',
                         help='Stack the input/output files into one HDF5 file.\n' +
                              'This will disable the HZ/UP_FILE output option.')
     return parser
@@ -85,59 +94,53 @@ def cmd_line_parse(iargs=None):
     atr1 = readfile.read_attribute(inps.file[0])
     atr2 = readfile.read_attribute(inps.file[1])
 
-    # check coordinates
+    # check 1 - geo-coordinates
     if any('X_FIRST' not in i for i in [atr1, atr2]):
         raise Exception('Not all input files are geocoded.')
 
-    # check spatial resolution
+    # check 2 - spatial resolution
     if any(atr1[i] != atr2[i] for i in ['X_STEP','Y_STEP']):
         msg  = '\tfile1: {}, Y/X_STEP: {} / {} {}\n'.format(inps.file[0], atr1['Y_STEP'], atr1['X_STEP'], atr1.get('X_UNIT', 'degrees'))
         msg += '\tfile2: {}, Y/X_STEP: {} / {} {}\n'.format(inps.file[1], atr2['Y_STEP'], atr2['X_STEP'], atr2.get('X_UNIT', 'degrees'))
         msg += '\tRe-run geocode.py --lat-step --lon-step to make them consistent.'
         raise ValueError('input files do NOT have the same spatial resolution\n{}'.format(msg))
 
-    # check reference point
-    coord1 = ut.coordinate(atr1)
-    coord2 = ut.coordinate(atr2)
-    ref_lalo1 = [float(atr1[i]) for i in ['REF_LAT', 'REF_LON']]
-    ref_lalo2 = [float(atr2[i]) for i in ['REF_LAT', 'REF_LON']]
-    ref_yx1 = coord1.geo2radar(ref_lalo1[0], ref_lalo1[1])[:2]
-    ref_yx2 = coord2.geo2radar(ref_lalo2[0], ref_lalo2[1])[:2]
-
-    if any(abs(i1 - i2) > inps.max_ref_yx_diff for i1,i2 in zip(ref_yx1, ref_yx2)):
+    # check 3 - reference point
+    ref_lat1, ref_lon1 = [float(atr1[i]) for i in ['REF_LAT', 'REF_LON']]
+    ref_lat2, ref_lon2 = [float(atr2[i]) for i in ['REF_LAT', 'REF_LON']]
+    ref_y_diff = abs((ref_lat1 - ref_lat2) / float(atr1['Y_STEP']))
+    ref_x_diff = abs((ref_lon1 - ref_lon2) / float(atr1['X_STEP']))
+    if any(ref_diff > inps.max_ref_yx_diff for ref_diff in [ref_y_diff, ref_x_diff]):
         msg = 'REF_Y/X difference between input files > {}!\n'.format(inps.max_ref_yx_diff)
         for fname, ref_lalo, ref_yx in zip(inps.file, [ref_lalo1, ref_lalo2], [ref_yx1, ref_yx2]):
             msg += 'file1: {}\n'.format(fname)
             msg += '\tREF_LAT/LON: {}\n'.format(ref_lalo)
-            msg += '\tREF_Y/X: {}\n'.format(ref_yx)
         raise ValueError(msg)
 
-    # use ref_file for time-series file writing
-    if atr1['FILE_TYPE'] == 'timeseries':
-        inps.ref_file = inps.file[0]
-    else:
-        inps.ref_file = None
     return inps
 
 
 ################################################################################
-def get_overlap_lalo(atr1, atr2):
-    """Find overlap area in lat/lon of two geocoded files
-    Parameters: atr1/2  - dict, attribute dictionary of two input files in geo coord
-    Returns:    W/E/S/N - float, West/East/South/North in deg
+def get_overlap_lalo(atr_list):
+    """Find overlap area in lat/lon of geocoded files based on their metadata.
+    Parameters: atr_list - list of dict, attribute dictionary of two input files in geo coord
+    Returns:    W/E/S/N  - float, West/East/South/North in deg
     """
-    W1, E1, S1, N1 = ut.four_corners(atr1)
-    W2, E2, S2, N2 = ut.four_corners(atr2)
+    W, E, S, N = None, None, None, None
+    for i, atr in enumerate(atr_list):
+        Wi, Ei, Si, Ni = ut.four_corners(atr)
+        if i == 0:
+            W, E, S, N = Wi, Ei, Si, Ni
+        else:
+            W = max(Wi, W)
+            E = min(Ei, E)
+            S = max(Si, S)
+            N = min(Ni, N)
 
-    west = max(W1, W2)
-    east = min(E1, E2)
-    north = min(N1, N2)
-    south = max(S1, S2)
-
-    return west, east, south, north
+    return W, E, S, N
 
 
-def get_design_matrix(atr1, atr2, azimuth=-90):
+def get_design_matrix(los_inc_angle, los_az_angle, horz_az_angle=-90):
     """Get the design matrix A to convert asc/desc to hz/up.
     Only asc + desc -> hz + up is implemented for now.
 
@@ -153,192 +156,182 @@ def get_design_matrix(atr1, atr2, azimuth=-90):
     This could be easily modified to support multiple view geometry
         (e.g. two adjcent tracks from asc & desc) to resolve 3D
 
-    Parameters: atr1/2   - dict, metadata of input LOS files
-                azimuth  - float, azimuth angle for the horizontal direction of interest in degrees.
-                           Measured from the north with anti-clockwise direction as positive.
-    Returns:    A        - 2D matrix in size of (2, 2)
+    Parameters: los_inc_angle - 1D np.ndarray in size of (num_file), LOS incidence angle in radians.
+                los_az_angle  - 1D np.ndarray in size of (num_file), LOS azimuth   angle in radians.
+                horz_az_angle - float, azimuth angle for the horizontal direction of interest in degrees.
+                                Measured from the north with anti-clockwise direction as positive.
+    Returns:    A             - 2D matrix in size of (num_file, 2)
 
     """
-    # degree to radian
-    azimuth *= np.pi / 180.
-
-    atr_list = [atr1, atr2]
-    A = np.zeros((2, 2))
-    for i in range(len(atr_list)):
-        atr = atr_list[i]
-
-        # LOS incidence angle
-        los_inc_angle = float(ut.incidence_angle(atr, dimension=0, print_msg=False))
-        print('LOS incidence angle: {} deg'.format(los_inc_angle))
-        los_inc_angle *= np.pi / 180.
-
-        # LOS azimuth angle
-        los_az_angle = ut.heading2azimuth_angle(float(atr['HEADING']))
-        print('LOS azimuth angle: {} deg'.format(los_az_angle))
-        los_az_angle *= np.pi / 180.
-
-        # construct design matrix
-        A[i, 0] = np.cos(los_inc_angle)
-        A[i, 1] = np.sin(los_inc_angle) * np.cos(los_az_angle - azimuth)
+    num_file = los_inc_angle.shape[0]
+    A = np.zeros((num_file, 2))
+    for i in range(num_file):
+        A[i, 0] = np.sin(los_inc_angle[i]) * np.cos(los_az_angle[i] - horz_az_angle)
+        A[i, 1] = np.cos(los_inc_angle[i])
 
     return A
 
 
-def asc_desc2horz_vert(data_asc, data_desc, atr_asc, atr_desc, azimuth=-90):
+def asc_desc2horz_vert(dlos, los_inc_angle, los_az_angle, horz_az_angle=-90):
     """Decompose asc / desc LOS data into horz / vert data.
-    Parameters: data_asc/desc - 2D np.ndarray, displacement in LOS
-                atr_asc/desc  - dict, metadata
-                azimuth       - float, azimuth angle for the horizontal direction of interest in degrees.
-                                Measured from the north with anti-clockwise direction as positive.
-    Returns:    data_h/v      - 2D np.ndarray, displacement in horizontal / vertical
+    Parameters: dlos          - 2D np.ndarray in size of (num_file, num_pixel), LOS displacement in meters.
+                los_inc_angle - 1/2D np.ndarray in size of (num_file), num_pixel), LOS incidence angle in radians.
+                los_az_angle  - 1/2D np.ndarray in size of (num_file), num_pixel), LOS azimuth   angle in radians.
+                horz_az_angle - float, horizontal azimuth angle of interest in radians.
+    Returns:    dhorz         - 1D np.ndarray in size of (num_pixel), horizontal displacement in meters.
+                dvert         - 1D np.ndarray in size of (num_pixel), vertical   displacement in meters.
     """
-    length, width = data_asc.shape
-    # prepare LOS data
-    data_los = np.vstack((data_asc.flatten(), data_desc.flatten()))
+    # initiate output
+    num_pixel = dlos.shape[1]
+    dhorz = np.zeros(num_pixel, dtype=np.float32) * np.nan
+    dvert = np.zeros(num_pixel, dtype=np.float32) * np.nan
 
-    # get design matrix
-    print('get design matrix')
-    A = get_design_matrix(atr_asc, atr_desc, azimuth=azimuth)
+    # 0D (constant) incidence / azimuth angle --> invert once for all pixels
+    if los_inc_angle.ndim == 1:
+        A = get_design_matrix(los_inc_angle, los_az_angle, horz_az_angle)
+        print('decomposing asc/desc into horz/vert direction ...')
+        dhv = np.dot(np.linalg.pinv(A), dlos).astype(np.float32)
+        dhorz = dhv[0, :]
+        dvert = dhv[1, :]
 
-    # decompose
-    print('project asc/desc into horz/vert direction')
-    data_vh = np.dot(np.linalg.pinv(A), data_los).astype(np.float32)
-    data_v = np.reshape(data_vh[0, :], (length, width))
-    data_h = np.reshape(data_vh[1, :], (length, width))
+    # 2D incidence / azimuth angle --> invert pixel-by-pixel
+    elif los_inc_angle.ndim == 2:
+        mask = np.sum(np.isnan(dlos), axis=0) > 0
+        num_pixel2inv = int(np.sum(mask))
+        idx_pixel2inv = np.where(mask)[0]
+        print('number of valid pixels to decompose: {} out of {} ({:.1f}%)'.format(
+            num_pixel2inv, num_pixel, num_pixel2inv/num_pixel*100))
 
-    return data_h, data_v
+        print('decomposing asc/desc into horz/vert direction pixel-by-pixel ...')
+        prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
+        for i, idx in enumerate(idx_pixel2inv):
+            A = get_design_matrix(los_inc_angle[:, idx], los_az_angle[:, idx], horz_az_angle)
+            dhv = np.dot(np.linalg.pinv(A), dlos[:, idx]).astype(np.float32)
+            dhorz[idx] = dhv[0]
+            dvert[idx] = dhv[1]
+            prog_bar.update(i+1, every=1000, suffix=f'{i+1}/{num_pixel2inv} pixels')
+        prog_bar.close()
+
+    return dhorz, dvert
 
 
-def asc_desc_files2horz_vert(fname1, fname2, dsname=None, azimuth=-90):
-    """Decompose asc / desc LOS files into horz / vert data.
-    Parameters: fname1/2  - str, LOS data
-                dsname    - str, dataset name
-                azimuth   - float, azimuth angle for the horizontal direction of interest in degrees.
-                            Measured from the north with anti-clockwise direction as positive.
-    Returns:    dH/dV     - 2D matrix
-                atr       - dict, metadata with updated size and resolution.
-                dLOS_list - list of 2D matrices
-                atr_list  - list of dict
+def run_asc_desc2horz_vert(inps):
+    """Decompose asc / desc LOS files into horz / vert file(s).
+    Parameters: inps         - namespace, input parameters
+    Returns:    inps.outfile - str(s) output file(s)
     """
-    print('---------------------')
-    fnames = [fname1, fname2]
-    # 1. Extract the common area of two input files
-    # Basic info
-    atr_list = []
-    for fname in fnames:
-        atr_list.append(readfile.read_attribute(fname, datasetName=dsname))
 
-    # Common AOI in lalo
-    west, east, south, north = get_overlap_lalo(atr_list[0], atr_list[1])
+    ## 1. calculate the overlaping area in lat/lon
+    atr_list = [readfile.read_attribute(fname, datasetName=inps.ds_name) for fname in inps.file]
+    W, E, S, N = get_overlap_lalo(atr_list)
     lon_step = float(atr_list[0]['X_STEP'])
     lat_step = float(atr_list[0]['Y_STEP'])
-    width = int(round((east - west) / lon_step))
-    length = int(round((south - north) / lat_step))
-    print('common area in SNWE: {}'.format((south, north, west, east)))
+    width  = int(round((E - W) / lon_step))
+    length = int(round((S - N) / lat_step))
+    print('overlaping area in SNWE: {}'.format((S, N, W, E)))
 
-    # 2. Read LOS data in common AOI
-    dLOS_list = []
-    for i in range(len(fnames)):
-        fname = fnames[i]
-        atr = readfile.read_attribute(fname, datasetName=dsname)
 
-        # get box2read for the current file
+    ## 2. read LOS data and geometry
+    num_file = len(inps.file)
+    num_pixel = length * width
+    dlos = np.zeros((num_file, num_pixel), dtype=np.float32)
+    if inps.geom_file:
+        los_inc_angle = np.zeros((num_file, num_pixel), dtype=np.float32)
+        los_az_angle  = np.zeros((num_file, num_pixel), dtype=np.float32)
+    else:
+        los_inc_angle = np.zeros(num_file, dtype=np.float32)
+        los_az_angle  = np.zeros(num_file, dtype=np.float32)
+
+    for i, (atr, fname) in enumerate(zip(atr_list, inps.file)):
+        # overlap SNWE --> box to read for each specific file
         coord = ut.coordinate(atr)
-        x0 = coord.lalo2yx(west, coord_type='lon')
-        y0 = coord.lalo2yx(north, coord_type='lat')
+        x0 = coord.lalo2yx(W, coord_type='lon')
+        y0 = coord.lalo2yx(N, coord_type='lat')
         box = (x0, y0, x0 + width, y0 + length)
 
-        # read
-        dLOS_list.append(readfile.read(fname, box=box, datasetName=dsname)[0])
+        # read data
+        dlos[i, :] = readfile.read(fname, box=box, datasetName=inps.ds_name)[0].flatten()
+        msg = f'{inps.ds_name} ' if inps.ds_name else ''
+        print(f'read {msg} from file: {fname}')
 
-        # msg
-        msg = 'read '
-        if dsname:
-            msg += '{} '.format(dsname)
-        msg += 'from file: {}'.format(fname)
-        print(msg)
+        # read geometry
+        if inps.geom_file:
+            los_inc_angle[i, :] = readfile.read(inps.geom_file[i], box=box, datasetName='incidenceAngle')[0].flatten()
+            los_az_angle[i, :]  = readfile.read(inps.geom_file[i], box=box, datasetName='azimuthAngle')[0].flatten()
+            print(f'read 2D LOS incidence / azimuth angles from file: {inps.geom_file[i]}')
+        else:
+            los_inc_angle[i] = ut.incidence_angle(atr, dimension=0, print_msg=False)
+            los_az_angle[i] = ut.heading2azimuth_angle(float(atr['HEADING']))
+            print('calculate the constant LOS incidence / azimuth angles from metadata as:')
+            print(f'LOS incidence angle: {los_inc_angle[i]:.1f} deg')
+            print(f'LOS azimuth   angle: {los_az_angle[i]:.1f} deg')
+        los_inc_angle *= np.pi / 180.
+        los_az_angle *= np.pi / 180.
 
-    # 3. Project displacement from LOS to Horizontal and Vertical components
+
+    ## 3. decompose LOS displacements into horizontal / Vertical displacements
     print('---------------------')
-    dH, dV = asc_desc2horz_vert(dLOS_list[0],
-                                dLOS_list[1],
-                                atr_list[0],
-                                atr_list[1],
-                                azimuth=azimuth)
+    dhorz, dvert = asc_desc2horz_vert(dlos, los_inc_angle, los_az_angle, np.deg2rad(inps.horz_az_angle))
+    dhorz = np.reshape(dhorz, (length, width))
+    dvert = np.reshape(dvert, (length, width))
+    dlos = np.reshape(dlos, (num_file, length, width))
 
-    # 4. Update Attributes
+
+    ## 4. write outputs
+    print('---------------------')
+    # Update attributes
     atr = atr_list[0].copy()
-    if dsname and atr['FILE_TYPE'] in ['ifgramStack', 'timeseries', 'HDFEOS']:
+    if inps.ds_name and atr['FILE_TYPE'] in ['ifgramStack', 'timeseries', 'HDFEOS']:
         atr['FILE_TYPE'] = 'displacement'
 
     atr['WIDTH']  = str(width)
     atr['LENGTH'] = str(length)
     atr['X_STEP'] = str(lon_step)
     atr['Y_STEP'] = str(lat_step)
-    atr['X_FIRST'] = str(west)
-    atr['Y_FIRST'] = str(north)
+    atr['X_FIRST'] = str(W)
+    atr['Y_FIRST'] = str(N)
 
     # update REF_X/Y
     ref_lat, ref_lon = float(atr['REF_LAT']), float(atr['REF_LON'])
-    coord = ut.coordinate(atr)
-    [ref_y, ref_x] = coord.geo2radar(ref_lat, ref_lon)[0:2]
+    [ref_y, ref_x] = ut.coordinate(atr).geo2radar(ref_lat, ref_lon)[0:2]
     atr['REF_Y'] = int(ref_y)
     atr['REF_X'] = int(ref_x)
 
-    return dH, dV, atr, dLOS_list, atr_list
+    # use ref_file for time-series file writing
+    ref_file = inps.file[0] if atr_list[0]['FILE_TYPE'] == 'timeseries' else None
 
+    if inps.one_outfile:
+        print('write asc/desc/horz/vert datasets into {}'.format(inps.one_outfile))
+        dsDict = {}
+        for i, atr in enumerate(atr_list):
+            # dataset name for LOS data
+            track_num = atr.get('trackNumber', None)
+            ds_name = sensor.project_name2sensor_name(atr['PROJECT_NAME'])[0]
+            ds_name += 'A' if atr['ORBIT_DIRECTION'].lower().startswith('asc') else 'D'
+            ds_name += f'T{track_num}' if track_num else ''
+            ds_name += '_{}'.format(atr['DATE12'])
+            # assign dataset value
+            dsDict[ds_name] = dlos[i]
+        dsDict['horizontal'] = dhorz
+        dsDict['vertical'] = dvert
+        writefile.write(dsDict, out_file=inps.one_outfile, metadata=meta, ref_file=ref_file)
 
-def write_to_one_file(outfile, dH, dV, atr, dLOS_list, atr_list, ref_file=None):
-    """Write all datasets into one HDF5 file"""
+    else:
+        print('writing horizontal component to file: '+inps.outfile[0])
+        writefile.write(dhorz, out_file=inps.outfile[0], metadata=atr, ref_file=ref_file)
+        print('writing vertical   component to file: '+inps.outfile[1])
+        writefile.write(dvert, out_file=inps.outfile[1], metadata=atr, ref_file=ref_file)
 
-    print('write all datasets into {}'.format(outfile))
-    dsDict = {}
-    for i in range(len(atr_list)):
-        # auto dataset name
-        atr_i = atr_list[i]
-        dsName = sensor.project_name2sensor_name(atr_i['PROJECT_NAME'])[0]
-        if atr['ORBIT_DIRECTION'].lower().startswith('asc'):
-            dsName += 'A'
-        else:
-            dsName += 'D'
-        if 'trackNumber' in atr_i.keys():
-            dsName += 'T{}'.format(atr_i['trackNumber'])
-        dsName += '_{}'.format(atr_i['DATE12'])
-
-        dsDict[dsName] = dLOS_list[i]
-    dsDict['vertical'] = dV
-    dsDict['horizontal'] = dH
-
-    writefile.write(dsDict, out_file=outfile, metadata=atr, ref_file=ref_file)
-    return outfile
+    return inps.outfile
 
 
 ################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    (dH, dV, atr,
-     dLOS_list, atr_list) = asc_desc_files2horz_vert(inps.file[0],
-                                                     inps.file[1],
-                                                     dsname=inps.dsname,
-                                                     azimuth=inps.azimuth)
+    run_asc_desc2horz_vert(inps)
 
-    print('---------------------')
-    if inps.one_outfile:
-        write_to_one_file(inps.one_outfile,
-                          dH, dV, atr,
-                          dLOS_list, atr_list,
-                          ref_file=inps.ref_file)
-
-    else:
-        print('writing horizontal component to file: '+inps.outfile[0])
-        writefile.write(dH, out_file=inps.outfile[0], metadata=atr, ref_file=inps.ref_file)
-
-        print('writing   vertical component to file: '+inps.outfile[1])
-        writefile.write(dV, out_file=inps.outfile[1], metadata=atr, ref_file=inps.ref_file)
-
-    print('Done.')
-    return inps.outfile
+    return
 
 
 ################################################################################
