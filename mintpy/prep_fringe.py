@@ -326,6 +326,102 @@ def prepare_geometry(outfile, geom_dir, box, metadata):
     return outfile
 
 
+def prepare_stack(outfile, unw_file, corr_file, metadata, processor, baseline_dir=None, box=None):
+    print('-'*50)
+    print('preparing ifgramStack file: {}'.format(outfile))
+    # copy metadata to meta
+    meta = {key : value for key, value in metadata.items()}
+
+    # grab date list from the filename
+    unw_files = sorted(glob.glob(unw_file))
+
+    # get the dates from the file names
+    lst_dates12  = []
+    sec_dates    = []
+    for unw_file in unw_files:
+        date12 = os.path.splitext(os.path.basename(unw_file))[0]
+        d12    = date12.split('_')[:2]
+        sec_dates.append(str(d12[1])) # for bperp
+        lst_dates12.append([d12[0].encode('utf-8'), d12[1].encode("utf-8")])
+
+    arr_dates12 = np.array(lst_dates12)
+    ref_date = arr_dates12[0, 0].decode('utf-8')
+    num_pair = arr_dates12.shape[0]
+    print('number of interferograms:', num_pair)
+
+    # get connected component files
+    cc_file  = f'{os.path.splitext(unw_file)[0]}.conncomp'
+    cc_files = sorted(glob.glob(cc_file))
+    if not cc_files:
+        print (f'Could not find any connected component files matching {cc_file}')
+        print ('Skipping ifgramStack creation')
+        return
+
+
+    # baseline info
+    if baseline_dir is not None:
+        # read baseline data
+        baseline_dict = isce_utils.read_baseline_timeseries(baseline_dir,
+                                                            processor=processor,
+                                                            ref_date=ref_date)
+        pbase = np.array([baseline_dict[sec][0] for sec in sec_dates],
+                                                            dtype=np.float32)
+
+    # size info
+    if not box:
+        box = (0, 0, int(meta['WIDTH']), int(meta['LENGTH']))
+
+    kwargs = dict(xoff=box[0],
+                  yoff=box[1],
+                  win_xsize=box[2]-box[0],
+                  win_ysize=box[3]-box[1])
+
+    # get correlation
+    ds   = gdal.Open(corr_file, gdal.GA_ReadOnly)
+    corr = np.array(ds.GetRasterBand(1).ReadAsArray(**kwargs), dtype=np.float32)
+    del ds
+
+    # define (and fill out some) dataset structure
+    dropIfgram = np.ones(arr_dates12.shape[0], dtype=bool)
+    ds_name_dict = {
+        "date"       : [np.dtype('S8'), (num_pair, 2), arr_dates12],
+
+        "bperp"      : [np.float32,  (num_pair,), pbase],
+        "dropIfgram" : [np.bool_,    (num_pair,), dropIfgram],
+
+        "coherence"  : [np.float32,  (box[3]-box[1], box[2]-box[0]), corr],
+        "unwrappedPhase" : [np.float32,  (num_pair, box[3]-box[1], box[2]-box[0]), None],
+        "connectComponent" : [np.float32,  (num_pair, box[3]-box[1], box[2]-box[0]), None],
+    }
+
+    # initiate HDF5 file
+    meta["FILE_TYPE"] = "ifgramStack"
+    print ('OUTFILE', outfile)
+    writefile.layout_hdf5(outfile, ds_name_dict, metadata=meta)
+
+    # writing data to HDF5 file
+    print('writing data to HDF5 file {} with a mode ...'.format(outfile))
+    with h5py.File(outfile, "a") as f:
+        prog_bar = ptime.progressBar(maxValue=num_pair)
+        for i, (unw_file, cc_file) in enumerate(zip(unw_files, cc_files)):
+            # read data using gdal
+            ds   = gdal.Open(unw_file, gdal.GA_ReadOnly)
+            data = np.array(ds.GetRasterBand(2).ReadAsArray(**kwargs), dtype=np.float32)
+
+            f["unwrappedPhase"][i+1] = data
+
+            ds   = gdal.Open(cc_file, gdal.GA_ReadOnly)
+            data = np.array(ds.GetRasterBand(1).ReadAsArray(**kwargs), dtype=np.float32)
+
+            f["connectComponent"][i+1] = data
+
+
+            prog_bar.update(i+1, suffix=sec_dates[i])
+        prog_bar.close()
+
+    print('finished writing to HDF5 file: {}'.format(outfile))
+    return outfile
+
 ####################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
@@ -336,7 +432,7 @@ def main(iargs=None):
 
     # metadata
     meta = prepare_metadata(inps.metaFile, geom_src_dir, box=src_box)
-    
+
     # optionally apply user multilooking
     meta['AZIMUTH_PIXEL_SIZE'] = str(float(meta['AZIMUTH_PIXEL_SIZE']) * inps.lks_y)
     meta['RANGE_PIXEL_SIZE'] = str(float(meta['RANGE_PIXEL_SIZE']) * inps.lks_x)
@@ -404,6 +500,17 @@ def main(iargs=None):
         infile=inps.psMaskFile,
         metadata=meta,
         box=pix_box)
+
+    ## 4 - prepare and ifgstack with connected components
+    prepare_stack(
+        outfile=stack_file,
+        unw_file=inps.unwFile,
+        corr_file=tcoh_file,
+        metadata=meta,
+        processor=processor,
+        baseline_dir=inps.baselineDir,
+        box=pix_box)
+
 
     return ts_file, tcoh_file, ps_mask_file, geom_file
 
