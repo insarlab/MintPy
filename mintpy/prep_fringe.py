@@ -356,7 +356,17 @@ def main(iargs=None):
     else:
         geom_file = os.path.join(inps.outDir, 'inputs/geometryRadar.h5')
 
-    ## 1 - time-series (from fringe)
+    ## 1 - geometry (from SLC stacks before fringe, e.g. ISCE2)
+    prepare_geometry(
+        outfile=geom_file,
+        geom_dir=geom_src_dir,
+        box=src_box,
+        metadata=meta)
+        
+    if inps.geom_only:
+        return ts_file, tcoh_file, ps_mask_file, geom_file
+
+    ## 2 - time-series (from fringe)
     prepare_timeseries(
         outfile=ts_file,
         unw_file=inps.unwFile,
@@ -365,7 +375,7 @@ def main(iargs=None):
         baseline_dir=inps.baselineDir,
         box=pix_box)
 
-    ## 2 - temporal coherence and mask for PS (from fringe)
+    ## 3 - temporal coherence and mask for PS (from fringe)
     prepare_temporal_coherence(
         outfile=tcoh_file,
         infile=inps.cohFile,
@@ -377,13 +387,6 @@ def main(iargs=None):
         infile=inps.psMaskFile,
         metadata=meta,
         box=pix_box)
-
-    ## 3 - geometry (from SLC stacks before fringe, e.g. ISCE2)
-    prepare_geometry(
-        outfile=geom_file,
-        geom_dir=geom_src_dir,
-        box=src_box,
-        metadata=meta)
 
     return ts_file, tcoh_file, ps_mask_file, geom_file
 
