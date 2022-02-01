@@ -408,7 +408,7 @@ def prepare_stack(outfile, unw_file, corr_file, metadata, processor, baseline_di
             ds   = gdal.Open(unw_file, gdal.GA_ReadOnly)
             data = np.array(ds.GetRasterBand(2).ReadAsArray(**kwargs), dtype=np.float32)
 
-            f["unwrappedPhase"][i+1] = data
+            f["unwrapPhase"][i+1] = data
 
             ds   = gdal.Open(cc_file, gdal.GA_ReadOnly)
             data = np.array(ds.GetRasterBand(1).ReadAsArray(**kwargs), dtype=np.float32)
@@ -464,6 +464,7 @@ def main(iargs=None):
     ts_file   = os.path.join(inps.outDir, 'timeseries.h5')
     tcoh_file = os.path.join(inps.outDir, 'temporalCoherence.h5')
     ps_mask_file = os.path.join(inps.outDir, 'maskPS.h5')
+    stack_file   = os.path.join(inps.outDir, 'inputs/ifgramStack.h5')
     if 'Y_FIRST' in meta.keys():
         geom_file = os.path.join(inps.outDir, 'inputs/geometryGeo.h5')
     else:
