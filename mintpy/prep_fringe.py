@@ -349,14 +349,17 @@ def prepare_stack(outfile, unw_file, corr_file, metadata, processor, baseline_di
     num_pair = arr_dates12.shape[0]
     print('number of interferograms:', num_pair)
 
-    # get connected component files
-    cc_file  = f'{os.path.splitext(unw_file)[0]}.conncomp'
+    # get connected component file extension from last ifg
+    cc_file  = f'{os.path.splitext(unw_file)[0]}.conncomp'.replace(
+                                        f'{ref_date}_{sec_dates[-1]}', '*')
+
     cc_files = sorted(glob.glob(cc_file))
     if not cc_files:
         print (f'Could not find any connected component files matching {cc_file}')
         print ('Skipping ifgramStack creation')
         return
 
+    print('number of associated connected components:', len(cc_files))
 
     # baseline info
     if baseline_dir is not None:
@@ -408,12 +411,12 @@ def prepare_stack(outfile, unw_file, corr_file, metadata, processor, baseline_di
             ds   = gdal.Open(unw_file, gdal.GA_ReadOnly)
             data = np.array(ds.GetRasterBand(2).ReadAsArray(**kwargs), dtype=np.float32)
 
-            f["unwrapPhase"][i+1] = data
+            f["unwrapPhase"][i] = data
 
             ds   = gdal.Open(cc_file, gdal.GA_ReadOnly)
             data = np.array(ds.GetRasterBand(1).ReadAsArray(**kwargs), dtype=np.float32)
 
-            f["connectComponent"][i+1] = data
+            f["connectComponent"][i] = data
 
 
             prog_bar.update(i+1, suffix=sec_dates[i])
