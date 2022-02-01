@@ -75,6 +75,14 @@ def create_parser():
     parser.add_argument('-o', '--out-dir', dest='outDir', type=str, default='./mintpy',
                         help='output directory (default: %(default)s).')
 
+    parser.add_argument('-r','--range','-x', dest='lks_x', type=int, default=1,
+                        help='number of multilooking in range  /x direction (default: %(default)s).')
+    parser.add_argument('-a','--azimuth','-y', dest='lks_y', type=int, default=1,
+                        help='number of multilooking in azimuth/y direction (default: %(default)s).')
+
+    parser.add_argument('--geom-only', action='store_true',
+                        help='Only create the geometry file (useful for geocoding a watermask).')
+
     parser = arg_group.add_subset_argument(parser, geo=False)
 
     return parser
@@ -328,6 +336,15 @@ def main(iargs=None):
 
     # metadata
     meta = prepare_metadata(inps.metaFile, geom_src_dir, box=src_box)
+    
+    # optionally apply user multilooking
+    meta['AZIMUTH_PIXEL_SIZE'] = str(float(meta['AZIMUTH_PIXEL_SIZE']) * inps.lks_y)
+    meta['RANGE_PIXEL_SIZE'] = str(float(meta['RANGE_PIXEL_SIZE']) * inps.lks_x)
+    meta['azimuthPixelSize'] = meta['AZIMUTH_PIXEL_SIZE']
+    meta['rangePixelSize']   = meta['RANGE_PIXEL_SIZE']
+
+    meta['ALOOKS'] = str(float(meta['ALOOKS']) * inps.lks_y)
+    meta['RLOOKS'] = str(float(meta['RLOOKS']) * inps.lks_x)
 
     # subset - read pix_box for fringe file
     pix_box = subset.subset_input_dict2box(vars(inps), meta)[0]
@@ -362,7 +379,7 @@ def main(iargs=None):
         geom_dir=geom_src_dir,
         box=src_box,
         metadata=meta)
-        
+
     if inps.geom_only:
         return ts_file, tcoh_file, ps_mask_file, geom_file
 
