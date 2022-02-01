@@ -390,7 +390,7 @@ def prepare_stack(outfile, unw_file, corr_file, metadata, processor, baseline_di
         "dropIfgram" : [np.bool_,    (num_pair,), dropIfgram],
 
         "coherence"  : [np.float32,  (box[3]-box[1], box[2]-box[0]), corr],
-        "unwrappedPhase" : [np.float32,  (num_pair, box[3]-box[1], box[2]-box[0]), None],
+        "unwrapPhase" : [np.float32,  (num_pair, box[3]-box[1], box[2]-box[0]), None],
         "connectComponent" : [np.float32,  (num_pair, box[3]-box[1], box[2]-box[0]), None],
     }
 
