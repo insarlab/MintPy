@@ -135,6 +135,9 @@ def read_vrt_info(vrt_file):
     # source dir
     type_tag = root.find(prefix + '/SourceFilename')
     src_dir = os.path.dirname(type_tag.text)
+    if src_dir is None:
+        src_dir = os.path.dirname(vrt_file)
+    
 
     return src_box, src_dir
 
