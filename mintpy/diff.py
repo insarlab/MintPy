@@ -244,12 +244,14 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
         dsDict[dsName] = data
         writefile.write(dsDict, out_file=out_file, ref_file=file1)
 
-    # Sing dataset file
+    # Single dataset file
     else:
-        data1 = readfile.read(file1)[0]
+        dsName = 'velocity' if k1 == 'velocity' else None
+        data1 = readfile.read(file1, datasetName=dsName)[0]
         data = np.array(data1, data1.dtype)
         for fname in file2:
-            data2 = readfile.read(fname)[0]
+            dsName = 'velocity' if k2 == 'velocity' else None
+            data2 = readfile.read(fname, datasetName=dsName)[0]
             data = np.array(data, dtype=np.float32) - np.array(data2, dtype=np.float32)
             data = np.array(data, data1.dtype)
         print('writing >>> '+out_file)

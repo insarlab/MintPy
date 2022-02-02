@@ -78,12 +78,15 @@ def add_file(fnames, out_file=None, force=False):
             out_file += '_plus_' + os.path.splitext(os.path.basename(fnames[i]))[0]
         out_file += ext
 
-    atr1 = readfile.read_attribute(fnames[0])
-    atr2 = readfile.read_attribute(fnames[1])
+    # Read filenames, attributes, and FILE_TYPE
+    file1, file2 = fnames[0], fnames[1]
+    atr1 = readfile.read_attribute(file1)
+    k1 = atr1['FILE_TYPE']
+    atr2 = readfile.read_attribute(file2)
+    k2 = atr2['FILE_TYPE']
+    print('input files are: {} and {}'.format(k1, k2))
 
-    if atr1['FILE_TYPE'] == 'timeseries':
-        file1, file2 = fnames[0], fnames[1]
-
+    if k1 == 'timeseries':
         # check dates shared by two timeseries files
         dateList1 = timeseries(file1).get_date_list()
         dateList2 = timeseries(file2).get_date_list()
@@ -134,6 +137,8 @@ def add_file(fnames, out_file=None, force=False):
         dsDict = {}
         dsNames = readfile.get_dataset_list(fnames[0])
         for dsName in dsNames:
+            if not dsName and all(k1 and k2 == 'velocity'):
+                dsName = 'velocity'
             # ignore dsName if input file has single dataset
             dsName2read = None if len(dsNames) == 1 else dsName
 
