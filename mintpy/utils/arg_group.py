@@ -20,6 +20,8 @@ def add_data_disp_argument(parser):
                       help='Display limits for matrix plotting.')
     data.add_argument('-u', '--unit', dest='disp_unit', metavar='UNIT',
                       help='unit for display.  Its priority > wrap')
+    data.add_argument('--nd','--no-data-val','--no-data-value', dest='no_data_value', type=float,
+                      help='Specify the no-data-value to be ignored and masked.')
 
     data.add_argument('--wrap', action='store_true',
                       help='re-wrap data to display data in fringes.')

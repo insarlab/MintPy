@@ -1059,9 +1059,14 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
 def plot_colorbar(inps, im, cax):
     # extend
     if not inps.cbar_ext:
-        if   inps.vlim[0] <= inps.dlim[0] and inps.vlim[1] >= inps.dlim[1]: inps.cbar_ext='neither'
-        elif inps.vlim[0] >  inps.dlim[0] and inps.vlim[1] >= inps.dlim[1]: inps.cbar_ext='min'
-        elif inps.vlim[0] <= inps.dlim[0] and inps.vlim[1] <  inps.dlim[1]: inps.cbar_ext='max'
+        # expand vlim by 0.1% to account for potential numerical precision leak
+        # e.g. wrapped phase
+        epsilon = (inps.vlim[1] - inps.vlim[0]) * 0.001
+        vmin = inps.vlim[0] - epsilon
+        vmax = inps.vlim[1] + epsilon
+        if   vmin <= inps.dlim[0] and vmax >= inps.dlim[1]: inps.cbar_ext='neither'
+        elif vmin >  inps.dlim[0] and vmax >= inps.dlim[1]: inps.cbar_ext='min'
+        elif vmin <= inps.dlim[0] and vmax <  inps.dlim[1]: inps.cbar_ext='max'
         else:  inps.cbar_ext='both'
 
     # orientation
