@@ -134,7 +134,7 @@ def add_file(fnames, out_file=None, force=False):
 
     else:
         # get common dataset list
-        ds_names_list = [readfile.get_dataset_list(x) for x in [file1] + file2]
+        ds_names_list = [readfile.get_dataset_list(x) for x in fnames]
         ds_names = list(set.intersection(*map(set, ds_names_list)))
         # if all files have one dataset, ignore dataset name variation and take the 1st one as reference
         if all(len(x) == 1 for x in ds_names_list):
