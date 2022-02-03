@@ -153,7 +153,7 @@ def add_file(fnames, out_file=None, force=False):
                 # ignore ds_name if input file has single dataset
                 ds_name2read = None if len(ds_names_list[i+1]) == 1 else ds_name
                 # read
-                data2 = readfile.read(fnames[i], datasetName=ds_name2read)[0]
+                data2 = readfile.read(fname, datasetName=ds_name2read)[0]
                 # apply operation
                 data = add_matrix(data, data2)
             dsDict[ds_name] = data
