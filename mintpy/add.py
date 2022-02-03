@@ -134,24 +134,29 @@ def add_file(fnames, out_file=None, force=False):
 
     else:
         # get common dataset list
-        dsNames = []
-        for fname in fnames:
-            dsNames.append(readfile.get_dataset_list(fname))
-        dsNames = list(set.intersection(*map(set, dsNames)))
-        print('List of common datasets across files: ', dsNames)
+        ds_names_list = [readfile.get_dataset_list(x) for x in [file1] + file2]
+        ds_names = list(set.intersection(*map(set, ds_names_list)))
+        # if all files have one dataset, ignore dataset name variation and take the 1st one as reference
+        if all(len(x) == 1 for x in ds_names_list):
+            ds_names = ds_names_list[0]
+        print('List of common datasets across files: ', ds_names)
+        if len(ds_names) < 1:
+            raise ValueError('No common datasets found among files:\n{}'.format([file1] + file2))
 
         # loop over each file
         dsDict = {}
-        for dsName in dsNames:
-            # ignore dsName if input file has single dataset
-            dsName2read = None if len(dsNames) == 1 else dsName
+        for ds_name in ds_names:
+            print('adding {} ...'.format(ds_name))
+            data, atr = readfile.read(fnames[0], datasetName=ds_name)
 
-            print('adding {} ...'.format(dsName))
-            data, atr = readfile.read(fnames[0], datasetName=dsName2read)
-            for i in range(1, len(fnames)):
-                data2 = readfile.read(fnames[i], datasetName=dsName2read)[0]
+            for i, fname in enumerate(fnames[1:]):
+                # ignore ds_name if input file has single dataset
+                ds_name2read = None if len(ds_names_list[i+1]) == 1 else ds_name
+                # read
+                data2 = readfile.read(fnames[i], datasetName=ds_name2read)[0]
+                # apply operation
                 data = add_matrix(data, data2)
-            dsDict[dsName] = data
+            dsDict[ds_name] = data
 
         # output
         print('use metadata from the 1st file: {}'.format(fnames[0]))
