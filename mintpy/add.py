@@ -141,7 +141,7 @@ def add_file(fnames, out_file=None, force=False):
             ds_names = ds_names_list[0]
         print('List of common datasets across files: ', ds_names)
         if len(ds_names) < 1:
-            raise ValueError('No common datasets found among files:\n{}'.format([file1] + file2))
+            raise ValueError('No common datasets found among files:\n{}'.format(fnames))
 
         # loop over each file
         dsDict = {}
