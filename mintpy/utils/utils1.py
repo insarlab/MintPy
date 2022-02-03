@@ -837,7 +837,9 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
             with open(coeff_file, 'a') as f:
                 f.write('{}    '.format(atr['FILE_TYPE']))
         # read
-        data = readfile.read(fname)[0]
+        if not datasetName and k == 'velocity':
+            datasetName = 'velocity'
+        data = readfile.read(fname, datasetName=datasetName)[0]
         # deramp
         data = deramp(data, mask,
                       ramp_type=ramp_type,
