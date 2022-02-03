@@ -78,16 +78,15 @@ def add_file(fnames, out_file=None, force=False):
             out_file += '_plus_' + os.path.splitext(os.path.basename(fnames[i]))[0]
         out_file += ext
 
-    # Read filenames, attributes, and FILE_TYPE
-    file1, file2 = fnames[0], fnames[1]
-    atr1 = readfile.read_attribute(file1)
-    k1 = atr1['FILE_TYPE']
-    atr2 = readfile.read_attribute(file2)
-    k2 = atr2['FILE_TYPE']
-    print('input files are: {} and {}'.format(k1, k2))
+    # read FILE_TYPE
+    ftypes = [readfile.read_attribute(x)['FILE_TYPE'] for x in fnames]
+    print(f'input file types: {ftypes}')
 
-    if k1 == 'timeseries':
+    if ftypes[0] == 'timeseries':
         # check dates shared by two timeseries files
+        file1, file2 = fnames[0], fnames[1]
+        atr1 = readfile.read_attribute(file1)
+        atr2 = readfile.read_attribute(file2)
         dateList1 = timeseries(file1).get_date_list()
         dateList2 = timeseries(file2).get_date_list()
         dateListShared = [i for i in dateList1 if i in dateList2]
@@ -134,19 +133,21 @@ def add_file(fnames, out_file=None, force=False):
         writefile.write(data, out_file=out_file, metadata=atr1, ref_file=file1)
 
     else:
-        dsDict = {}
+        # get common dataset list
         dsNames = []
         for fname in fnames:
             dsNames.append(readfile.get_dataset_list(fname))
         dsNames = list(set.intersection(*map(set, dsNames)))
         print('List of common datasets across files: ', dsNames)
 
+        # loop over each file
+        dsDict = {}
         for dsName in dsNames:
             # ignore dsName if input file has single dataset
             dsName2read = None if len(dsNames) == 1 else dsName
 
             print('adding {} ...'.format(dsName))
-            data = readfile.read(fnames[0], datasetName=dsName2read)[0]
+            data, atr = readfile.read(fnames[0], datasetName=dsName2read)
             for i in range(1, len(fnames)):
                 data2 = readfile.read(fnames[i], datasetName=dsName2read)[0]
                 data = add_matrix(data, data2)
@@ -154,7 +155,7 @@ def add_file(fnames, out_file=None, force=False):
 
         # output
         print('use metadata from the 1st file: {}'.format(fnames[0]))
-        writefile.write(dsDict, out_file=out_file, metadata=atr1, ref_file=fnames[0])
+        writefile.write(dsDict, out_file=out_file, metadata=atr, ref_file=fnames[0])
 
     return out_file
 

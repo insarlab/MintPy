@@ -98,10 +98,10 @@ def check_reference(atr1, atr2):
 def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
     """calculate/write file1 - file2
 
-    Parameters: file1   - str, path of file1
-                file2   - list of str, path of file2(s)
+    Parameters: file1    - str, path of file1
+                file2    - list of str, path of file2(s)
                 out_file - str, path of output file
-                force   - bool, overwrite existing output file
+                force    - bool, overwrite existing output file
                 max_num_pixel - float, maximum number of pixels for each block
     """
     start_time = time.time()
@@ -115,17 +115,14 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
 
     # Read basic info
     atr1 = readfile.read_attribute(file1)
-    k1 = atr1['FILE_TYPE']
     atr2 = readfile.read_attribute(file2[0])
+    k1 = atr1['FILE_TYPE']
     k2 = atr2['FILE_TYPE']
     print('input files are: {} and {}'.format(k1, k2))
 
     if k1 == 'timeseries':
         if k2 not in ['timeseries', 'giantTimeseries']:
             raise Exception('Input multiple dataset files are not the same file type!')
-        if len(file2) > 1:
-            raise Exception(('Only 2 files substraction is supported for time-series file,'
-                             ' {} input.'.format(len(file2)+1)))
 
         atr1 = readfile.read_attribute(file1)
         atr2 = readfile.read_attribute(file2[0])
@@ -245,24 +242,31 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
         writefile.write(dsDict, out_file=out_file, ref_file=file1)
 
     else:
-        dsDict = {}
+        # get common dataset list
         dsNames = []
-        fnames = [file1] + file2
-        for fname in fnames:
+        for fname in [file1] + file2:
             dsNames.append(readfile.get_dataset_list(fname))
         dsNames = list(set.intersection(*map(set, dsNames)))
         print('List of common datasets across files: ', dsNames)
 
+        # loop over each file
+        dsDict = {}
         for dsName in dsNames:
             # ignore dsName if input file has single dataset
             dsName2read = None if len(dsNames) == 1 else dsName
 
             print('adding {} ...'.format(dsName))
-            data = readfile.read(fnames[0], datasetName=dsName2read)[0]
+            data = readfile.read(file1, datasetName=dsName2read)[0]
+            dtype = data.dtype
             for fname in file2:
                 data2 = readfile.read(fname, datasetName=dsName)[0]
+
+                # convert to float32 to apply the operation because some types, e.g. bool, do not support it.
+                # then convert back to the original data type
                 data = np.array(data, dtype=np.float32) - np.array(data2, dtype=np.float32)
-            dsDict[dsName] = data
+
+            # save data in the same type as the 1st file
+            dsDict[dsName] = np.array(data, dtype=dtype)
 
         # output
         print('use metadata from the 1st file: {}'.format(file1))
