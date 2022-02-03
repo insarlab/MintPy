@@ -135,10 +135,13 @@ def add_file(fnames, out_file=None, force=False):
 
     else:
         dsDict = {}
-        dsNames = readfile.get_dataset_list(fnames[0])
+        dsNames = []
+        for fname in fnames:
+            dsNames.append(readfile.get_dataset_list(fname))
+        dsNames = list(set.intersection(*map(set, dsNames)))
+        print('List of common datasets across files: ', dsNames)
+
         for dsName in dsNames:
-            if not dsName and all(k1 and k2 == 'velocity'):
-                dsName = 'velocity'
             # ignore dsName if input file has single dataset
             dsName2read = None if len(dsNames) == 1 else dsName
 

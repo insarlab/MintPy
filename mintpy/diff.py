@@ -244,18 +244,29 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
         dsDict[dsName] = data
         writefile.write(dsDict, out_file=out_file, ref_file=file1)
 
-    # Single dataset file
     else:
-        dsName = 'velocity' if k1 == 'velocity' else None
-        data1 = readfile.read(file1, datasetName=dsName)[0]
-        data = np.array(data1, data1.dtype)
-        for fname in file2:
-            dsName = 'velocity' if k2 == 'velocity' else None
-            data2 = readfile.read(fname, datasetName=dsName)[0]
-            data = np.array(data, dtype=np.float32) - np.array(data2, dtype=np.float32)
-            data = np.array(data, data1.dtype)
-        print('writing >>> '+out_file)
-        writefile.write(data, out_file=out_file, metadata=atr1)
+        dsDict = {}
+        dsNames = []
+        fnames = [file1] + file2
+        for fname in fnames:
+            dsNames.append(readfile.get_dataset_list(fname))
+        dsNames = list(set.intersection(*map(set, dsNames)))
+        print('List of common datasets across files: ', dsNames)
+
+        for dsName in dsNames:
+            # ignore dsName if input file has single dataset
+            dsName2read = None if len(dsNames) == 1 else dsName
+
+            print('adding {} ...'.format(dsName))
+            data = readfile.read(fnames[0], datasetName=dsName2read)[0]
+            for fname in file2:
+                data2 = readfile.read(fname, datasetName=dsName)[0]
+                data = np.array(data, dtype=np.float32) - np.array(data2, dtype=np.float32)
+            dsDict[dsName] = data
+
+        # output
+        print('use metadata from the 1st file: {}'.format(file1))
+        writefile.write(dsDict, out_file=out_file, metadata=atr1, ref_file=file1)
 
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))
