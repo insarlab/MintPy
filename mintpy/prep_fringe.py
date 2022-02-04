@@ -76,10 +76,10 @@ def create_parser():
                         help='output directory (default: %(default)s).')
 
     parser.add_argument('-r','--range', dest='lks_x', type=int, default=1,
-                        help='number of multilooking in range direction. '
+                        help='number of looks in range direction, for multilooking applied after fringe processing.\n'
                              'Only impacts metadata. (default: %(default)s).')
     parser.add_argument('-a','--azimuth', dest='lks_y', type=int, default=1,
-                        help='number of multilooking in azimuth direction. '
+                        help='number of looks in azimuth direction, for multilooking applied after fringe processing.\n'
                              'Only impacts metadata. (default: %(default)s).')
 
     parser.add_argument('--geom-only', action='store_true',
@@ -150,7 +150,6 @@ def prepare_metadata(meta_file, geom_src_dir, box=None, nlks_x=1, nlks_y=1):
 
     # extract metadata from ISCE to MintPy (ROIPAC) format
     meta = isce_utils.extract_isce_metadata(meta_file, update_mode=False)[0]
-    breakpoint()
 
     if 'Y_FIRST' in meta.keys():
         geom_ext = '.geo.full'
@@ -173,11 +172,13 @@ def prepare_metadata(meta_file, geom_src_dir, box=None, nlks_x=1, nlks_y=1):
     meta = attr.update_attribute4subset(meta, box)
 
     # apply optional user multilooking
-    meta['AZIMUTH_PIXEL_SIZE'] = str(float(meta['AZIMUTH_PIXEL_SIZE']) * nlks_y)
-    meta['RANGE_PIXEL_SIZE'] = str(float(meta['RANGE_PIXEL_SIZE']) * nlks_x)
+    if nlks_x > 1:
+        meta['RANGE_PIXEL_SIZE'] = str(float(meta['RANGE_PIXEL_SIZE']) * nlks_x)
+        meta['RLOOKS'] = str(float(meta['RLOOKS']) * nlks_x)
 
-    meta['ALOOKS'] = str(float(meta['ALOOKS']) * nlks_y)
-    meta['RLOOKS'] = str(float(meta['RLOOKS']) * nlks_x)
+    if nlks_y > 1:
+        meta['AZIMUTH_PIXEL_SIZE'] = str(float(meta['AZIMUTH_PIXEL_SIZE']) * nlks_y)
+        meta['ALOOKS'] = str(float(meta['ALOOKS']) * nlks_y)
 
     return meta
 
@@ -369,8 +370,8 @@ def prepare_stack(outfile, unw_file, corr_file, metadata, processor, baseline_di
 
     cc_files = sorted(glob.glob(cc_file))
     if not cc_files:
-        print (f'Could not find any connected component files matching {cc_file}')
-        print ('Skipping ifgramStack creation')
+        print(f'Could not find any connected component files matching {cc_file}')
+        print('Skipping ifgramStack creation')
         return
 
     print('number of associated connected components:', len(cc_files))
@@ -413,7 +414,7 @@ def prepare_stack(outfile, unw_file, corr_file, metadata, processor, baseline_di
 
     # initiate HDF5 file
     meta["FILE_TYPE"] = "ifgramStack"
-    print ('OUTFILE', outfile)
+    print('OUTFILE', outfile)
     writefile.layout_hdf5(outfile, ds_name_dict, metadata=meta)
 
     # writing data to HDF5 file
@@ -448,7 +449,7 @@ def main(iargs=None):
     src_box, geom_src_dir = read_vrt_info(os.path.join(inps.geomDir, 'lat.vrt'))
 
     # metadata
-    meta = prepare_metadata(inps.metaFile, geom_src_dir, src_box, inps.lks_x, inps.lks_y)
+    meta = prepare_metadata(inps.metaFile, geom_src_dir, src_box, nlks_x=inps.lks_x, nlks_y=inps.lks_y)
 
 
     # subset - read pix_box for fringe file
