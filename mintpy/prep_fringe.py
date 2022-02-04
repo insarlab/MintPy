@@ -76,9 +76,11 @@ def create_parser():
                         help='output directory (default: %(default)s).')
 
     parser.add_argument('-r','--range', dest='lks_x', type=int, default=1,
-                        help='number of multilooking in range  /x direction (default: %(default)s).')
+                        help='number of multilooking in range direction. '
+                             'Only impacts metadata. (default: %(default)s).')
     parser.add_argument('-a','--azimuth', dest='lks_y', type=int, default=1,
-                        help='number of multilooking in azimuth/y direction (default: %(default)s).')
+                        help='number of multilooking in azimuth direction. '
+                             'Only impacts metadata. (default: %(default)s).')
 
     parser.add_argument('--geom-only', action='store_true',
                         help='Only create the geometry file (useful for geocoding a watermask).')
@@ -446,7 +448,7 @@ def main(iargs=None):
     src_box, geom_src_dir = read_vrt_info(os.path.join(inps.geomDir, 'lat.vrt'))
 
     # metadata
-    meta = prepare_metadata(inps.metaFile, geom_src_dir, box=src_box, inps.lks_x, inps.lks_y)
+    meta = prepare_metadata(inps.metaFile, geom_src_dir, src_box, inps.lks_x, inps.lks_y)
 
 
     # subset - read pix_box for fringe file
