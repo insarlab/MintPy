@@ -97,14 +97,14 @@ def rm_coh(coh,thresh, pmsg = None):
     
     idx = []
     nidx =[]
-    for i,j in enumerate(coh):
-        avg_coh = np.nanmean(coh[i,:,:])
+    for i in enumerate(coh):
+        avg_coh = np.nanmean(coh[i[0],:,:])
         if pmsg:
-            print('{}: mean coh. {:.2f}'.format(i+1,avg_coh))
+            print('{}: mean coh. {:.2f}'.format(i[0]+1,avg_coh))
         if avg_coh > float(thresh):
-            idx.append(i)
+            idx.append(i[0])
         else:
-            nidx.append(i+1)
+            nidx.append(i[0]+1)
     print('Removed coherence data: {}'.format(nidx))
     print('#####################################\n')
     coh = coh[idx]
