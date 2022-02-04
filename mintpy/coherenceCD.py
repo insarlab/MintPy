@@ -34,8 +34,9 @@ EXAMPLE = """example:
 """
 
 def create_parser():
-    parser = argparse.ArgumentParser(description=f'Generate Coherence Change Detection map from Mintpy ifgram.h5 .',
-                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(description='Generate Coherence Change Detection map from Mintpy ifgram.h5.',
+                                     formatter_class=argparse.RawTextHelpFormatter,
+                                     epilog=EXAMPLE)
 
     parser.add_argument('file', type=str, help='stack of coherences, e.g. ifgramStack.h5')
     parser.add_argument('-e', '--event', dest='event', type=str, required=True,
@@ -75,10 +76,10 @@ def getCoherence(ifgram, event, sdate=None, ibox=None):
     pre_eventIdx = []
     co_eventIdx = []
     
-    for i in range(len(date12List)):
-        if date12List[i].split('_')[0] < event and date12List[i].split('_')[0] > sdate and date12List[i].split('_')[1] < event:
+    for i,date12 in enumerate(date12List):
+        if date12.split('_')[0] < event and date12.split('_')[0] > sdate and date12.split('_')[1] < event:
             pre_eventIdx.append(i)
-        elif date12List[i].split('_')[0] < event and date12List[i].split('_')[1] > event:
+        elif date12.split('_')[0] < event and date12.split('_')[1] > event:
             co_eventIdx.append(i)
   
     #read coherence from the stack
@@ -96,7 +97,7 @@ def rm_coh(coh,thresh, pmsg = None):
     
     idx = []
     nidx =[]
-    for i in range(len(coh)):
+    for i,j in enumerate(coh):
         avg_coh = np.nanmean(coh[i,:,:])
         if pmsg:
             print('{}: mean coh. {:.2f}'.format(i+1,avg_coh))
@@ -184,9 +185,11 @@ def main(iargs=None):
     if inps.outfile is None:
         inps.outfile = 'ccd.h5'
 
-     
+    
     print('Write CCD in the file {}'.format(inps.outfile))
     writefile.write(dsDict,out_file=inps.outfile,metadata=attr)
+
+    return dsDict
 
 #########################################################################################################
 if __name__ == "__main__":
