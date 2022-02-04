@@ -188,8 +188,6 @@ def main(iargs=None):
     print('Write CCD in the file {}'.format(inps.outfile))
     writefile.write(dsDict,out_file=inps.outfile,metadata=attr)
 
-    return dsDict
-
 #########################################################################################################
 if __name__ == "__main__":
     main(sys.argv[1:])
