@@ -75,9 +75,9 @@ def create_parser():
     parser.add_argument('-o', '--out-dir', dest='outDir', type=str, default='./mintpy',
                         help='output directory (default: %(default)s).')
 
-    parser.add_argument('-r','--range','-x', dest='lks_x', type=int, default=1,
+    parser.add_argument('-r','--range', dest='lks_x', type=int, default=1,
                         help='number of multilooking in range  /x direction (default: %(default)s).')
-    parser.add_argument('-a','--azimuth','-y', dest='lks_y', type=int, default=1,
+    parser.add_argument('-a','--azimuth', dest='lks_y', type=int, default=1,
                         help='number of multilooking in azimuth/y direction (default: %(default)s).')
 
     parser.add_argument('--geom-only', action='store_true',
@@ -135,17 +135,20 @@ def read_vrt_info(vrt_file):
     # source dir
     type_tag = root.find(prefix + '/SourceFilename')
     src_dir = os.path.dirname(type_tag.text)
+
+    # in case of a (usually multilooked) vrt file missing SourceFilename field
     if not src_dir:
         src_dir = os.path.dirname(vrt_file)
     
     return src_box, src_dir
 
 
-def prepare_metadata(meta_file, geom_src_dir, box=None):
+def prepare_metadata(meta_file, geom_src_dir, box=None, nlks_x=1, nlks_y=1):
     print('-'*50)
 
     # extract metadata from ISCE to MintPy (ROIPAC) format
     meta = isce_utils.extract_isce_metadata(meta_file, update_mode=False)[0]
+    breakpoint()
 
     if 'Y_FIRST' in meta.keys():
         geom_ext = '.geo.full'
@@ -166,6 +169,13 @@ def prepare_metadata(meta_file, geom_src_dir, box=None):
     ## update metadata due to subset
     print('update metadata due to subset with bounding box')
     meta = attr.update_attribute4subset(meta, box)
+
+    # apply optional user multilooking
+    meta['AZIMUTH_PIXEL_SIZE'] = str(float(meta['AZIMUTH_PIXEL_SIZE']) * nlks_y)
+    meta['RANGE_PIXEL_SIZE'] = str(float(meta['RANGE_PIXEL_SIZE']) * nlks_x)
+
+    meta['ALOOKS'] = str(float(meta['ALOOKS']) * nlks_y)
+    meta['RLOOKS'] = str(float(meta['RLOOKS']) * nlks_x)
 
     return meta
 
@@ -436,16 +446,8 @@ def main(iargs=None):
     src_box, geom_src_dir = read_vrt_info(os.path.join(inps.geomDir, 'lat.vrt'))
 
     # metadata
-    meta = prepare_metadata(inps.metaFile, geom_src_dir, box=src_box)
+    meta = prepare_metadata(inps.metaFile, geom_src_dir, box=src_box, inps.lks_x, inps.lks_y)
 
-    # optionally apply user multilooking
-    meta['AZIMUTH_PIXEL_SIZE'] = str(float(meta['AZIMUTH_PIXEL_SIZE']) * inps.lks_y)
-    meta['RANGE_PIXEL_SIZE'] = str(float(meta['RANGE_PIXEL_SIZE']) * inps.lks_x)
-    meta['azimuthPixelSize'] = meta['AZIMUTH_PIXEL_SIZE']
-    meta['rangePixelSize']   = meta['RANGE_PIXEL_SIZE']
-
-    meta['ALOOKS'] = str(float(meta['ALOOKS']) * inps.lks_y)
-    meta['RLOOKS'] = str(float(meta['RLOOKS']) * inps.lks_x)
 
     # subset - read pix_box for fringe file
     pix_box = subset.subset_input_dict2box(vars(inps), meta)[0]
