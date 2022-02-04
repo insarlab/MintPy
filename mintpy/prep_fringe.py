@@ -394,11 +394,6 @@ def prepare_stack(outfile, unw_file, corr_file, metadata, processor, baseline_di
                   win_xsize=box[2]-box[0],
                   win_ysize=box[3]-box[1])
 
-    # get correlation
-    ds   = gdal.Open(corr_file, gdal.GA_ReadOnly)
-    corr = np.array(ds.GetRasterBand(1).ReadAsArray(**kwargs), dtype=np.float32)
-    del ds
-
     # define (and fill out some) dataset structure
     dropIfgram = np.ones(arr_dates12.shape[0], dtype=bool)
     ds_name_dict = {
@@ -407,7 +402,6 @@ def prepare_stack(outfile, unw_file, corr_file, metadata, processor, baseline_di
         "bperp"      : [np.float32,  (num_pair,), pbase],
         "dropIfgram" : [np.bool_,    (num_pair,), dropIfgram],
 
-        "coherence"  : [np.float32,  (box[3]-box[1], box[2]-box[0]), corr],
         "unwrapPhase" : [np.float32,  (num_pair, box[3]-box[1], box[2]-box[0]), None],
         "connectComponent" : [np.float32,  (num_pair, box[3]-box[1], box[2]-box[0]), None],
     }
