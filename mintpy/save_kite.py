@@ -158,9 +158,12 @@ def main(iargs=None):
 
     elif attr['FILE_TYPE'] == 'ifgramStack':
         date1, date2 = inps.dset.split('-')[1].split('_')
-
+        
+    elif attr['FILE_TYPE'] == '.unw':
+        date1, date2 = ptime.yyyymmdd(attr['DATE12'].split('-'))
+        
     else:
-        # velocity and *.unw files
+        # velocity 
         date1, date2 = ptime.yyyymmdd(attr['DATE12'].replace('_','-').split('-'))
         if inps.dset.startswith('step'):
             date1 = inps.dset.split('step')[-1]
@@ -175,7 +178,11 @@ def main(iargs=None):
     if attr['FILE_TYPE'] == 'timeseries':
         print('Read {} from file: {}'.format(date1, inps.file))
         dis -= readfile.read(inps.file, datasetName=date1, box=inps.pix_box)[0]
-
+        
+    # convert radians to meters
+    if attr['UNIT'] == 'radian':
+        dis *= (float(attr['WAVELENGTH']) / (-4*np.pi))
+        
     # mask data
     if inps.mask_file is not None:
         mask = readfile.read(inps.mask_file, box=inps.pix_box)[0]
