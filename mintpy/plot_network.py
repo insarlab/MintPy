@@ -12,9 +12,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from mintpy.objects import ifgramStack
-from mintpy.utils import (readfile,
-                          utils as ut,
-                          plot as pp)
+from mintpy.utils import readfile, utils as ut, plot as pp
 # suppress UserWarning from matplotlib
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
@@ -37,6 +35,8 @@ EXAMPLE = """example:
   plot_network.py inputs/ifgramStack.h5
   plot_network.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg --nodisplay   #Save figures to files without display
   plot_network.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg --show-kept   #Do not plot dropped ifgrams
+  plot_network.py inputs/ifgramStack.h5 -d tbase -v 0 365.25 -c RdYlBu_r      #Color-code lines by temporal      baseline
+  plot_network.py inputs/ifgramStack.h5 -d pbase -v 0 180    -c RdYlBu_r      #Color-code lines by perpendicular baseline
   plot_network.py coherenceSpatialAvg.txt
 
   # offsetSNR
@@ -55,26 +55,27 @@ def create_parser():
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
-    parser.add_argument('file',
-                        help='file with network information, ifgramStack.h5 or coherenceSpatialAvg.txt')
+    parser.add_argument('file', help='file with network information, ifgramStack.h5 or coherenceSpatialAvg.txt')
     parser.add_argument('--show-kept', dest='disp_drop', action='store_false',
                         help='display kept interferograms only, without dropped interferograms')
-    parser.add_argument('-d', '--dset', type=str, dest='dsetName', default='coherence',
-                        help='dataset used to calculate the mean')
 
-    # Display coherence
-    coh = parser.add_argument_group('Display Coherence', 'Show coherence of each interferogram pair with color')
-    coh.add_argument('-t', '--template', dest='template_file',
-                     help='template file with options below:\n'+TEMPLATE)
-    coh.add_argument('-c', '--colormap', dest='cmap_name', default='RdBu_truncate',
-                     help='colormap name for the network display. Default: RdBu_truncate')
-    coh.add_argument('--cmap-vlist', dest='cmap_vlist', type=float, nargs=3, default=[0.2, 0.4, 1.0],
-                     help='normalized start/jump/end value for truncated colormap. Default: 0.2 0.4 1.0')
-    coh.add_argument('--mask', dest='maskFile', default='waterMask.h5',
-                     help='mask file used to calculate the coherence. Default: waterMask.h5 or None.')
+    # Color-code coherence/baseline in the network/matrix plot
+    color = parser.add_argument_group('Color-code network/matrix plot',
+                                      'color-code phase/offset pairs with coherence/baseline in network/matrix plot')
+    color.add_argument('-d', '--dset', type=str, dest='dsetName', default='coherence',
+                       choices={'coherence','offsetSNR','pbase','tbase'},
+                       help='dataset used to calculate the mean. (default: %(default)s)')
+    color.add_argument('-v', '--vlim', nargs=2, type=float, default=(0.2, 1.0), help='display range')
 
-    coh.add_argument('-v', '--vlim', nargs=2, type=float, default=(0.2, 1.0),
-                     help='display range')
+    color.add_argument('-t', '--template', dest='template_file',
+                       help='template file with options below:\n'+TEMPLATE)
+    color.add_argument('--mask', dest='maskFile', default='waterMask.h5',
+                       help='mask file used to calculate the coherence. Default: waterMask.h5 or None.')
+
+    color.add_argument('-c', '--colormap', dest='cmap_name', default='RdBu_truncate',
+                       help='colormap name for the network display. Default: RdBu_truncate')
+    color.add_argument('--cmap-vlist', dest='cmap_vlist', type=float, nargs=3, default=[0.2, 0.4, 1.0],
+                       help='normalized start/jump/end value for truncated colormap. Default: 0.2 0.4 1.0')
 
     # Figure  Setting
     fig = parser.add_argument_group('Figure', 'Figure settings for display')
@@ -85,7 +86,7 @@ def create_parser():
     fig.add_argument('--mc', '--markercolor', dest='markercolor',
                      default='orange', help='marker color')
     fig.add_argument('--ms', '--markersize', dest='markersize',
-                     type=int, default=16, help='marker size in points')
+                     type=int, default=12, help='marker size in points')
     fig.add_argument('--every-year', dest='every_year', type=int,
                      default=1, help='number of years per major tick on x-axis')
 
@@ -110,6 +111,11 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # save argv (to check the manually specified arguments)
+    # use iargs        for python call
+    # use sys.argv[1:] for command line call
+    inps.argv = iargs if iargs else sys.argv[1:]
 
     # check input file type
     if inps.file.endswith(('.h5','.he5')):
@@ -138,7 +144,6 @@ def read_template2inps(template_file, inps=None):
     """Read input template options into Namespace inps"""
     if not inps:
         inps = cmd_line_parse()
-    inpsDict = vars(inps)
     print('read options from template file: '+os.path.basename(template_file))
     inps.template = readfile.read_template(inps.template_file)
     inps.template = ut.check_template_auto_value(inps.template)
@@ -158,14 +163,27 @@ def read_network_info(inps):
 
     ## 1. Read date, pbase, date12 and coherence
     if ext == '.h5':
-        inps.date12List = ifgramStack(inps.file).get_date12_list(dropIfgram=False)
-        inps.dateList = ifgramStack(inps.file).get_date_list(dropIfgram=False)
-        inps.pbaseList = ifgramStack(inps.file).get_perp_baseline_timeseries(dropIfgram=False)
-        inps.cohList = ut.spatial_average(inps.file,
-                                          datasetName=inps.dsetName,
-                                          maskFile=inps.maskFile,
-                                          saveList=True,
-                                          checkAoi=False)[0]
+        stack_obj = ifgramStack(inps.file)
+        stack_obj.open()
+        inps.date12List = stack_obj.get_date12_list(dropIfgram=False)
+        inps.dateList = stack_obj.get_date_list(dropIfgram=False)
+        inps.pbaseList = stack_obj.get_perp_baseline_timeseries(dropIfgram=False)
+
+        if inps.dsetName in readfile.get_dataset_list(inps.file):
+            inps.cohList = ut.spatial_average(inps.file,
+                                              datasetName=inps.dsetName,
+                                              maskFile=inps.maskFile,
+                                              saveList=True,
+                                              checkAoi=False)[0]
+        elif inps.dsetName == 'pbase':
+            inps.cohList = np.abs(stack_obj.pbaseIfgram).tolist()
+
+        elif inps.dsetName == 'tbase':
+            inps.cohList = stack_obj.tbaseIfgram.tolist()
+
+        else:
+            raise ValueError(f'{inps.dsetName} NOT found in file: {inps.file}!')
+
     elif ext == '.txt':
         inps.date12List = np.loadtxt(inps.file, dtype=bytes).astype(str)[:,0].tolist()
 
@@ -187,6 +205,9 @@ def read_network_info(inps):
     print('number of acquisitions: {}'.format(len(inps.dateList)))
     print('number of interferograms: {}'.format(len(inps.date12List)))
 
+    print('shift all perp baseline by {} to zero mean for plotting'.format(np.mean(inps.pbaseList)))
+    inps.pbaseList -= np.mean(inps.pbaseList)
+
     # Optional: Read dropped date12 / date
     inps.dateList_drop = []
     inps.date12List_drop = []
@@ -204,13 +225,14 @@ def read_network_info(inps):
         print('number of acquisitions marked as drop: {}'.format(len(inps.dateList_drop)))
         if len(inps.dateList_drop) > 0:
             print(inps.dateList_drop)
+
     return inps
 
 
 def check_colormap(inps):
     """Check input colormaps."""
     # adjust color jump if no --cmap-vlist is input
-    if inps.cohList is not None and '--cmap-vlist' not in sys.argv:
+    if inps.cohList is not None and '--cmap-vlist' not in inps.argv:
         # use template value
         key = 'mintpy.network.minCoherence'
         if key in inps.template.keys():
@@ -244,12 +266,21 @@ def main(iargs=None):
     # Plot settings
     inps = check_colormap(inps)
     if inps.dsetName == 'coherence':
+        fig_names = [i+'.pdf' for i in ['pbaseHistory', 'coherenceHistory', 'coherenceMatrix', 'network']]
         inps.ds_name = 'Coherence'
-        figNames = [i+'.pdf' for i in ['bperpHistory', 'coherenceMatrix', 'coherenceHistory', 'network']]
+        inps.cbar_label = 'Average Spatial Coherence'
     elif inps.dsetName == 'offsetSNR':
+        fig_names = [i+'.pdf' for i in ['pbaseHistory', 'SNRHistory', 'SNRMatrix', 'network']]
         inps.ds_name = 'SNR'
-        figNames = [i+'.pdf' for i in ['bperpHistory', 'SNRMatrix', 'SNRHistory', 'network']]
-    inps.cbar_label = 'Average Spatial {}'.format(inps.ds_name)
+        inps.cbar_label = 'Average Spatial SNR'
+    elif inps.dsetName == 'tbase':
+        fig_names = [i+'.pdf' for i in ['pbaseHistory', 'tbaseHistory', 'tbaseMatrix', 'network']]
+        inps.ds_name = 'Temporal Baseline'
+        inps.cbar_label = 'Temporal Baseline [day]'
+    elif inps.dsetName == 'pbase':
+        fig_names = [i+'.pdf' for i in ['pbaseHistory', 'pbaseRangeHistory', 'pbaseMatrix', 'network']]
+        inps.ds_name = 'Perp Baseline'
+        inps.cbar_label = 'Perp Baseline [m]'
 
     # Fig 1 - Baseline History
     fig, ax = plt.subplots(figsize=inps.fig_size)
@@ -259,11 +290,21 @@ def main(iargs=None):
                                     vars(inps),
                                     inps.dateList_drop)
     if inps.save_fig:
-        fig.savefig(figNames[0], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-        print('save figure to {}'.format(figNames[0]))
+        fig.savefig(fig_names[0], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+        print('save figure to {}'.format(fig_names[0]))
 
     if inps.cohList is not None:
-        # Fig 2 - Coherence Matrix
+        # Fig 2 - Min/Max Coherence History
+        fig, ax = plt.subplots(figsize=inps.fig_size)
+        ax = pp.plot_coherence_history(ax,
+                                       inps.date12List,
+                                       inps.cohList,
+                                       p_dict=vars(inps))
+        if inps.save_fig:
+            fig.savefig(fig_names[1], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+            print('save figure to {}'.format(fig_names[2]))
+
+        # Fig 3 - Coherence Matrix
         fig, ax = plt.subplots(figsize=inps.fig_size)
         ax = pp.plot_coherence_matrix(ax,
                                       inps.date12List,
@@ -271,18 +312,8 @@ def main(iargs=None):
                                       inps.date12List_drop,
                                       p_dict=vars(inps))[0]
         if inps.save_fig:
-            fig.savefig(figNames[1], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-            print('save figure to {}'.format(figNames[1]))
-
-        # Fig 3 - Min/Max Coherence History
-        fig, ax = plt.subplots(figsize=inps.fig_size)
-        ax = pp.plot_coherence_history(ax,
-                                       inps.date12List,
-                                       inps.cohList,
-                                       p_dict=vars(inps))
-        if inps.save_fig:
-            fig.savefig(figNames[2], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-            print('save figure to {}'.format(figNames[2]))
+            fig.savefig(fig_names[2], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+            print('save figure to {}'.format(fig_names[1]))
 
     # Fig 4 - Interferogram Network
     fig, ax = plt.subplots(figsize=inps.fig_size)
@@ -293,12 +324,16 @@ def main(iargs=None):
                          vars(inps),
                          inps.date12List_drop)
     if inps.save_fig:
-        fig.savefig(figNames[3], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-        print('save figure to {}'.format(figNames[3]))
+        fig.savefig(fig_names[3], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+        print('save figure to {}'.format(fig_names[3]))
 
     if inps.disp_fig:
         print('showing ...')
         plt.show()
+    else:
+        plt.close()
+
+    return
 
 
 ############################################################

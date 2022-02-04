@@ -16,7 +16,9 @@ try:
     from skimage.transform import rescale
 except ImportError:
     raise ImportError('Could not import skimage!')
-from mintpy.utils import readfile, writefile
+
+from mintpy.utils import readfile, writefile, plot as pp
+from mintpy.multilook import multilook_data
 
 
 #############################################################################################
@@ -37,12 +39,13 @@ def create_parser():
     parser.add_argument('-o', '--output', dest='outfile', required=True,
                         help='output file name')
 
-    #parser.add_argument('--manual', dest='manual_match', action='store_true',
-    #                    help='manually select lines to estimate offset for matching.')
+    # stitch option
     parser.add_argument('--no-offset', dest='apply_offset', action='store_false',
                         help='Do not apply offset if data sets are merely to be stitched '
                              'and no adjustment of values needs to be made '
                              '(i.e., for two coherence maps), use this flag')
+
+    # plot options
     parser.add_argument('--nodisplay', dest='disp_fig', action='store_false',
                         help='do not display the result ploting.')
     return parser
@@ -98,8 +101,8 @@ def manual_offset_estimate(mat1, mat2):
 
     # Calculate the Offset - Difference
     # offset=V2[y00:y11,x00:x11]-V2[y0:y1,x0:x1]
-    offset = (np.nansum(V2[y00:y11, x00:x11]) / np.sum(np.isfinite(V2[y00:y11, x00:x11])) 
-              - np.nansum(V1[y0:y1, x0:x1]) / np.sum(np.isfinite(V1[y0:y1, x0:x1])))
+    offset = (  np.nansum(mat2[y00:y11, x00:x11]) / np.sum(np.isfinite(mat2[y00:y11, x00:x11])) 
+              - np.nansum(mat1[y0:y1, x0:x1]) / np.sum(np.isfinite(mat1[y0:y1, x0:x1])))
 
     return offset
 
@@ -217,18 +220,31 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     return mat, atr, mat11, mat22, mat_diff
 
 
-def plot_stitch(mat11, mat22, mat, mat_diff, out_fig=None):
+def plot_stitch(mat11, mat22, mat, mat_diff, out_fig=None, disp_fig=False):
     """plot stitching result"""
 
-    fig = plt.figure(figsize=[15.0, 8.0])
-    fig = plt.subplot(2,2,1);  plt.imshow(mat11);     plt.title('input file 1');    plt.colorbar()
-    fig = plt.subplot(2,2,2);  plt.imshow(mat22);     plt.title('input file 2');    plt.colorbar()
-    fig = plt.subplot(2,2,3);  plt.imshow(mat);       plt.title('merged');          plt.colorbar()
-    fig = plt.subplot(2,2,4);  plt.imshow(mat_diff);  plt.title('input file diff'); plt.colorbar()
-    plt.tight_layout()
+    # plot settings
+    titles = ['file 1', 'file 2', 'stitched', 'difference']
+    mat_mli = multilook_data(mat, 20, 20, method='mean')
+    vmin = np.nanmin(mat_mli)
+    vmax = np.nanmax(mat_mli)
+    fig_size = pp.auto_figure_size(ds_shape=mat.shape, scale=1.4, disp_cbar=True, print_msg=True)
+
+    # plot
+    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=fig_size, sharex=True, sharey=True)
+    for ax, data, title in zip(axs.flatten(), [mat11, mat22, mat, mat_diff], titles):
+        im = ax.imshow(data, vmin=vmin, vmax=vmax, interpolation='nearest')
+        ax.set_title(title, fontsize=12)
+        ax.tick_params(which='both', direction='in', labelsize=12, left=True, right=True, top=True, bottom=True)
+    fig.tight_layout()
+
+    # colorbar
+    fig.subplots_adjust(right=0.9)
+    cax = fig.add_axes([0.901, 0.3, 0.01, 0.4])
+    plt.colorbar(im, cax=cax)
 
     # output
-    plt.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=150)
+    fig.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=150)
     print('save figure to file: {}'.format(out_fig))
 
     if disp_fig:
@@ -275,7 +291,7 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
         if apply_offset:
             print('plot stitching & shifting result ...')
             suffix = '_{}{}'.format(i, i+1)
-            out_fig = '{}_{}.png'.format(os.path.splitext(out_file)[0], sufffix)
+            out_fig = '{}_{}.png'.format(os.path.splitext(out_file)[0], suffix)
             plot_stitch(mat11, mat22, mat, mat_diff,
                         out_fig=out_fig,
                         disp_fig=disp_fig)

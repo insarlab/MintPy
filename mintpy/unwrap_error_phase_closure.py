@@ -75,6 +75,8 @@ def create_parser():
                         help='common connected components file, required for --action correct')
     parser.add_argument('-n','--num-sample', dest='numSample', type=int, default=100,
                         help='Number of randomly samples/pixels for each common connected component.')
+    parser.add_argument('-m', '--min-area', dest='connCompMinArea', type=float, default=2.5e3,
+                        help='minimum region/area size of a single connComponent.')
 
     parser.add_argument('-a','--action', dest='action', type=str, default='correct',
                         choices={'correct', 'calculate'},
@@ -146,6 +148,8 @@ def read_template2inps(template_file, inps=None):
                 inpsDict[key] = value
             elif key in ['numSample']:
                 inpsDict[key] = int(value)
+            elif key in ['connCompMinArea']:
+                inpsDict[key] = float(value)
 
     return inps
 
@@ -245,7 +249,8 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
         print(msg)
         return None
     else:
-        print('get design matrix for the interferogram triplets in size of {}'.format(C.shape))
+        print('number of interferograms: {}'.format(C.shape[1]))
+        print('number of triplets: {}'.format(C.shape[0]))
 
     # calculate number of nonzero closure phase
     ds_size = (C.shape[0] * 2 + C.shape[1]) * length * width * 4
@@ -266,12 +271,12 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
         box = (0, r0, stack_obj.width, r1)
 
         # read data
-        unw = ifginv.read_unwrap_phase(stack_obj,
-                                       box=box,
-                                       ref_phase=ref_phase,
-                                       obs_ds_name=dsName,
-                                       dropIfgram=True,
-                                       print_msg=False).reshape(num_ifgram, -1)
+        unw = ifginv.read_stack_obs(stack_obj,
+                                    box=box,
+                                    ref_phase=ref_phase,
+                                    obs_ds_name=dsName,
+                                    dropIfgram=True,
+                                    print_msg=False).reshape(num_ifgram, -1)
 
         # calculate based on equation (8-9) and T_int equation inline.
         closure_pha = np.dot(C, unw)
@@ -366,13 +371,14 @@ def plot_num_triplet_with_nonzero_integer_ambiguity(fname, display=False, font_s
 
 ##########################################################################################
 def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=None, num_sample=100,
-                                    dsNameIn='unwrapPhase'):
+                                    dsNameIn='unwrapPhase', cc_min_area=2.5e3):
     """Solve the phase unwrapping integer ambiguity for the common regions among all interferograms
     Parameters: ifgram_file     : str, path of interferogram stack file
                 cc_mask_file    : str, path of common connected components file
                 water_mask_file : str, path of water mask file
                 num_sample      : int, number of pixel sampled for each region
                 dsNameIn        : str, dataset name of the unwrap phase to be corrected
+                cc_min_area     : float, minimum region/area size
     Returns:    common_regions  : list of skimage.measure._regionprops._RegionProperties object
                     modified by adding two more variables:
                     sample_coords : 2D np.ndarray in size of (num_sample, 2) in int64 format
@@ -382,11 +388,13 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
     print('calculating the integer ambiguity for the common regions defined in', cc_mask_file)
     # stack info
     stack_obj = ifgramStack(ifgram_file)
-    stack_obj.open()
+    stack_obj.open(print_msg=False)
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
     num_ifgram = len(date12_list)
     C = matrix(ifgramStack.get_design_matrix4triplet(date12_list).astype(float))
     ref_phase = stack_obj.get_reference_phase(unwDatasetName=dsNameIn, dropIfgram=True).reshape(num_ifgram, -1)
+    print('number of interferograms: {}'.format(num_ifgram))
+    print('number of triplets: {}'.format(int(len(C)/num_ifgram)))
 
     # prepare common label
     print('read common mask from', cc_mask_file)
@@ -396,64 +404,69 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
         print('refine common mask based on water mask file', water_mask_file)
         cc_mask[water_mask == 0] = 0
 
-    label_img, num_label = conncomp.label_conn_comp(cc_mask, min_area=2.5e3, print_msg=True)
+    label_img, num_label = conncomp.label_conn_comp(cc_mask, min_area=cc_min_area, print_msg=True)
     common_regions = measure.regionprops(label_img)
     print('number of common regions:', num_label)
+    if num_label == 0:
+        msg = 'WARNING: NO common region found! '
+        msg += 'Try a smaller value for the mintpy.unwrapError.connCompMinArea ({}) option.'.format(cc_min_area)
+        print(msg)
 
-    # add sample_coords / int_ambiguity
-    print('number of samples per region:', num_sample)
-    print('solving the phase-unwrapping integer ambiguity for {}'.format(dsNameIn))
-    print('\tbased on the closure phase of interferograms triplets (Yunjun et al., 2019)')
-    print('\tusing the L1-norm regularzed least squares approximation (LASSO) ...')
-    for i in range(num_label):
-        common_reg = common_regions[i]
-        # sample_coords
-        idx = sorted(np.random.choice(common_reg.area, num_sample, replace=False))
-        common_reg.sample_coords = common_reg.coords[idx, :].astype(int)
+    else:
+        # add sample_coords / int_ambiguity
+        print('number of samples per region:', num_sample)
+        print('solving the phase-unwrapping integer ambiguity for {}'.format(dsNameIn))
+        print('\tbased on the closure phase of interferograms triplets (Yunjun et al., 2019)')
+        print('\tusing the L1-norm regularzed least squares approximation (LASSO) ...')
+        for i in range(num_label):
+            common_reg = common_regions[i]
+            # sample_coords
+            idx = sorted(np.random.choice(common_reg.area, num_sample, replace=False))
+            common_reg.sample_coords = common_reg.coords[idx, :].astype(int)
 
-        # solve for int_ambiguity
-        U = np.zeros((num_ifgram, num_sample))
-        if common_reg.label == label_img[stack_obj.refY, stack_obj.refX]:
-            print('{}/{} skip calculation for the reference region'.format(i+1, num_label))
-        else:
-            prog_bar = ptime.progressBar(maxValue=num_sample, prefix='{}/{}'.format(i+1, num_label))
-            for j in range(num_sample):
-                # read unwrap phase
-                y, x = common_reg.sample_coords[j, :]
-                unw = ifginv.read_unwrap_phase(stack_obj,
-                                               box=(x, y, x+1, y+1),
-                                               ref_phase=ref_phase,
-                                               obs_ds_name=dsNameIn,
-                                               dropIfgram=True,
-                                               print_msg=False).reshape(num_ifgram, -1)
+            # solve for int_ambiguity
+            U = np.zeros((num_ifgram, num_sample))
+            if common_reg.label == label_img[stack_obj.refY, stack_obj.refX]:
+                print('{}/{} skip calculation for the reference region'.format(i+1, num_label))
+            else:
+                prog_bar = ptime.progressBar(maxValue=num_sample, prefix='{}/{}'.format(i+1, num_label))
+                for j in range(num_sample):
+                    # read unwrap phase
+                    y, x = common_reg.sample_coords[j, :]
+                    unw = ifginv.read_stack_obs(stack_obj,
+                                                box=(x, y, x+1, y+1),
+                                                ref_phase=ref_phase,
+                                                obs_ds_name=dsNameIn,
+                                                dropIfgram=True,
+                                                print_msg=False).reshape(num_ifgram, -1)
 
-                # calculate closure_int
-                closure_pha = np.dot(C, unw)
-                closure_int = matrix(np.round((closure_pha - ut.wrap(closure_pha)) / (2.*np.pi)))
+                    # calculate closure_int
+                    closure_pha = np.dot(C, unw)
+                    closure_int = matrix(np.round((closure_pha - ut.wrap(closure_pha)) / (2.*np.pi)))
 
-                # solve for U
-                U[:,j] = np.round(l1regls(-C, closure_int, alpha=1e-2, show_progress=0)).flatten()
-                prog_bar.update(j+1, every=5)
-            prog_bar.close()
-        # add int_ambiguity
-        common_reg.int_ambiguity = np.median(U, axis=1)
-        common_reg.date12_list = date12_list
+                    # solve for U
+                    U[:,j] = np.round(l1regls(-C, closure_int, alpha=1e-2, show_progress=0)).flatten()
+                    prog_bar.update(j+1, every=5)
+                prog_bar.close()
+            # add int_ambiguity
+            common_reg.int_ambiguity = np.median(U, axis=1)
+            common_reg.date12_list = date12_list
 
-    #sort regions by size to facilitate the region matching later
-    common_regions.sort(key=lambda x: x.area, reverse=True)
+        #sort regions by size to facilitate the region matching later
+        common_regions.sort(key=lambda x: x.area, reverse=True)
 
-    # plot sample result
-    fig_size = pp.auto_figure_size(label_img.shape, disp_cbar=False)
-    fig, ax = plt.subplots(figsize=fig_size)
-    ax.imshow(label_img, cmap='jet')
-    for common_reg in common_regions:
-        ax.plot(common_reg.sample_coords[:,1],
-                common_reg.sample_coords[:,0], 'k.', ms=2)
-    pp.auto_flip_direction(stack_obj.metadata, ax, print_msg=False)
-    out_img = 'common_region_sample.png'
-    fig.savefig(out_img, bbox_inches='tight', transparent=True, dpi=300)
-    print('saved common regions and sample pixels to file', out_img)
-    plt.close(fig)
+        # plot sample result
+        fig_size = pp.auto_figure_size(label_img.shape, disp_cbar=False)
+        fig, ax = plt.subplots(figsize=fig_size)
+        ax.imshow(label_img, cmap='jet')
+        for common_reg in common_regions:
+            ax.plot(common_reg.sample_coords[:,1],
+                    common_reg.sample_coords[:,0], 'k.', ms=2)
+        pp.auto_flip_direction(stack_obj.metadata, ax, print_msg=False)
+        out_img = 'common_region_sample.png'
+        fig.savefig(out_img, bbox_inches='tight', transparent=True, dpi=300)
+        print('saved common regions and sample pixels to file', out_img)
+        plt.close(fig)
 
     return common_regions
 
@@ -550,13 +563,17 @@ def main(iargs=None):
                                                          cc_mask_file=inps.cc_mask_file,
                                                          water_mask_file=inps.waterMaskFile,
                                                          num_sample=inps.numSample,
-                                                         dsNameIn=inps.datasetNameIn)
+                                                         dsNameIn=inps.datasetNameIn,
+                                                         cc_min_area=inps.connCompMinArea)
 
         # apply the integer ambiguity from common conn comp to the whole ifgram
-        run_unwrap_error_phase_closure(inps.ifgram_file, common_regions,
-                                       water_mask_file=inps.waterMaskFile,
-                                       dsNameIn=inps.datasetNameIn,
-                                       dsNameOut=inps.datasetNameOut)
+        if len(common_regions) == 0:
+            print('skip phase closure correction ...')
+        else:
+            run_unwrap_error_phase_closure(inps.ifgram_file, common_regions,
+                                           water_mask_file=inps.waterMaskFile,
+                                           dsNameIn=inps.datasetNameIn,
+                                           dsNameOut=inps.datasetNameOut)
 
     else:
         # calculate the number of triplets with non-zero integer ambiguity
@@ -565,7 +582,10 @@ def main(iargs=None):
                                                                    dsName=inps.datasetNameIn,
                                                                    update_mode=inps.update_mode)
         # for debug
-        #plot_num_triplet_with_nonzero_integer_ambiguity(out_file)
+        debug_mode = False
+        if debug_mode:
+            plot_num_triplet_with_nonzero_integer_ambiguity(out_file)
+
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
     return

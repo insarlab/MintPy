@@ -78,7 +78,7 @@ def filter_data(data, filter_type, filter_par=None):
     Inputs:
         data        : 2D np.array, matrix to be filtered
         filter_type : string, filter type
-        filter_par  : string, optional, parameter for low/high pass filter
+        filter_par  : (list of) int/float, optional, parameter for low/high pass filter
                       for low/highpass_avg, it's kernel size in int
                       for low/highpass_gaussain, it's sigma in float
                       for double_difference, it's local and regional kernel sizes in int
@@ -88,8 +88,10 @@ def filter_data(data, filter_type, filter_par=None):
 
     if filter_type == "sobel":
         data_filt = filters.sobel(data)
+
     elif filter_type == "roberts":
         data_filt = filters.roberts(data)
+
     elif filter_type == "canny":
         data_filt = feature.canny(data)
 
@@ -97,6 +99,7 @@ def filter_data(data, filter_type, filter_par=None):
         p = int(filter_par)
         kernel = np.ones((p, p), np.float32)/(p*p)
         data_filt = ndimage.convolve(data, kernel)
+
     elif filter_type == "highpass_avg":
         p = int(filter_par)
         kernel = np.ones((p, p), np.float32)/(p*p)
@@ -105,6 +108,7 @@ def filter_data(data, filter_type, filter_par=None):
 
     elif filter_type == "lowpass_gaussian":
         data_filt = filters.gaussian(data, sigma=filter_par)
+
     elif filter_type == "highpass_gaussian":
         lp_data = filters.gaussian(data, sigma=filter_par)
         data_filt = data - lp_data
@@ -112,24 +116,30 @@ def filter_data(data, filter_type, filter_par=None):
     elif filter_type == "double_difference":
         """Amplifies the local deformation signal by reducing the influence
         of regional deformation trends from atmospheric artifacts, tectonic
-        deformation, and other sources. Intend use is to identify landslide-related
+        deformation, and other sources. Intended use is to identify landslide-related
         deformation. Filter has the form:
 
             result =  regional mean of data - local mean of data
 
         where both the regional and local kernel size can be set using the
-        filter_par argument.
+        filter_par argument. The regional kernel has a doughnut shape 
+        because the pixels used to calculate the local mean are not
+        included in the regional mean. This ensures that the local mean
+        and regional mean results are separate.
         """
 
-        kernel = morphology.disk(filter_par[0], np.float32)
-        kernel = kernel / kernel.flatten().sum()
-        local_filt = ndimage.convolve(data, kernel)
+        local_kernel = morphology.disk(filter_par[0], np.float32)
+        local_kernel = np.pad(local_kernel,filter_par[1] - filter_par[0],mode='constant')
 
-        kernel = morphology.disk(filter_par[1], np.float32)
-        kernel = kernel / kernel.flatten().sum()
-        regional_filt = ndimage.convolve(data, kernel)
+        regional_kernel = morphology.disk(filter_par[1], np.float32)
+        regional_kernel[local_kernel == 1] = 0
 
-        data_filt = regional_filt - local_filt
+        local_kernel /= local_kernel.sum(axis=(0,1))
+        regional_kernel /= regional_kernel.sum(axis=(0,1))
+        
+        combined_kernel = regional_kernel - local_kernel
+
+        data_filt = ndimage.convolve(data, combined_kernel)
 
     else:
         raise Exception('Un-recognized filter type: '+filter_type)
@@ -144,7 +154,7 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
         fname       : string, name/path of file to be filtered
         ds_names    : list of string, datasets of interest
         filter_type : string, filter type
-        filter_par  : string, optional, parameter for low/high pass filter
+        filter_par  : (list of) int/float, optional, parameter for low/high pass filter
                       for low/highpass_avg, it's kernel size in int
                       for low/highpass_gaussain, it's sigma in float
                       for double_difference, it's local and regional kernel sizes in int
@@ -156,22 +166,27 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
     msg = 'filtering {} file: {} using {} filter'.format(k, fname, filter_type)
+
     if filter_type.endswith('avg'):
         if not filter_par:
             filter_par = 5
-        else:
+        elif isinstance(filter_par, list):
             filter_par = filter_par[0]
+        filter_par = int(filter_par)
         msg += ' with kernel size of {}'.format(filter_par)
+
     elif filter_type.endswith('gaussian'):
         if not filter_par:
             filter_par = 3.0
-        else:
+        elif isinstance(filter_par, list):
             filter_par = filter_par[0]
+        filter_par = float(filter_par)
         msg += ' with sigma of {:.1f}'.format(filter_par)
+
     elif filter_type == 'double_difference':
         if not filter_par:
-            filter_par = [1,10]
-        local, regional = filter_par
+            filter_par = [1, 10]
+        local, regional = int(filter_par[0]), int(filter_par[1])
         msg += ' with local/regional kernel sizes of {}/{}'.format(local, regional)
     print(msg)
 

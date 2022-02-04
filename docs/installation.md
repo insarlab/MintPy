@@ -1,97 +1,132 @@
-## Install MintPy
+## 1. Install the released version ##
 
-Tested on macOS and Linux, not sure about Windows.
+#### a. via conda ####
 
-### Notes for Mac users ###
+MintPy is available on the [conda-forge](https://anaconda.org/conda-forge/mintpy) channel. The latest released version can be installed via `conda` as:
 
-Install Xcode with command line tools, if you have not already done so.
-
-+   Install `Xcode` from App store
-
-+   Install `command line tools` within XCode and agree to the terms of license.
-
-```
-xcode-select --install -s /Applications/Xcode.app/Contents/Developer/
-sudo xcodebuild -license
+```bash
+conda install -c conda-forge mintpy
 ```
 
-+   Install [XQuartz](https://www.xquartz.org), then restart the terminal.
+#### b. via docker ####
 
-### Notes for Docker users ###
+Docker allows one to run MintPy in a dedicated container (essentially an efficient virtual machine) and to be independent of platform OS. After installing [docker](https://docs.docker.com/install/), run the following to pull the [MintPy container from DockerHub](https://hub.docker.com/r/forrestwilliams/mintpy) to your local machine, check more details at [here](docker.md).
 
-Docker allows one to run MintPy in a dedicated container (essentially an efficient virtual machine) and to be independent of platform OS. After installing [docker](https://docs.docker.com/install/), run the following to pull the [MintPy container from DockerHub](https://hub.docker.com/r/andretheronsa/mintpy) to your local machine, check more details at [here](docker.md).
-
-```
-docker pull andretheronsa/mintpy:latest
+```bash
+docker pull forrestwilliams/mintpy:1.3.1
 ```
 
-### 1. Download and Setup ###
+Then complete the [post-installation setup](#3-post-installation-setup).
 
-Run the following in your terminal to download the development version of MintPy and PyAPS:
+## 2. Install the development version ##
+
+Note: The installation note below is tested on Linux and macOS, and is still experimental on Windows (may has bugs).
+
+MintPy is written in Python 3 and relies on several Python modules, check the [requirements.txt](https://github.com/insarlab/MintPy/blob/main/docs/requirements.txt) file for details. We recommend using [conda](https://docs.conda.io/en/latest/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient management and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
+
+Quick links:
+
++ [Install on Linux](#21-install-on-linux)
++ [Install on macOS](#22-install-on-macos)
++ [Install on Windows](#23-install-on-windows)
+
+### 2.1 Install on Linux ###
+
+#### a. Download source code ####
+
+Run the following in your terminal to download the development version of MintPy:
 
 ```bash
 cd ~/tools
 git clone https://github.com/insarlab/MintPy.git
-git clone https://github.com/yunjunz/PyAPS.git
 ```
 
-Set the following environment variables in your source file (e.g. **_~/.bash_profile_** for _bash_ users or **_~/.cshrc_** for _csh/tcsh_ users).
+#### b. Install dependencies via conda ####
 
-```bash
-if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
-
-##--------- MintPy ------------------##
-export MINTPY_HOME=~/tools/MintPy
-export PATH=${PATH}:${MINTPY_HOME}/mintpy
-export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}:~/tools/PyAPS
-```
-
-### 2. Install dependencies ###
-
-MintPy is written in Python3 and relies on several Python modules, check the [requirements.txt](https://github.com/insarlab/MintPy/blob/main/docs/requirements.txt) file for details. We recommend using [conda](https://docs.conda.io/en/latest/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree). You can control the number of threads used by setting the _environment variables_, e.g. `OMP_NUM_THREADS`.
-
-#### a. via conda ####
-
-Install [miniconda](https://docs.conda.io/en/latest/miniconda.html) if you have not already done so. You may need to close and restart the shell for changes to take effect.
+Install [miniconda](https://docs.conda.io/en/latest/miniconda.html) if you have not already done so. You may need to close and restart the shell for changes to take effect. 
 
 ```bash
 # download and install miniconda
-# use wget or curl to download in command line or click from the web brower
-# curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o Miniconda3-latest-MacOSX-x86_64.sh
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
-chmod +x Miniconda3-latest-MacOSX-x86_64.sh
-./Miniconda3-latest-MacOSX-x86_64.sh -b -p ~/tools/miniconda3
+# use wget or curl to download in command line or click from the web browser
+# for macOS, use Miniconda3-latest-MacOSX-x86_64.sh instead.
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh -b -p ~/tools/miniconda3
 ~/tools/miniconda3/bin/conda init bash
 ```
 
-Run the following in your terminal to install the dependencies to a new environment _**mintpy**_ (recommended):
+Install the dependencies into an custom existing environment [recommended] by running:
 
+```bash
+# To create a new custom environment, e.g. named "insar", run "conda create --name insar; conda activate insar"
+# To speedup conda install, try "conda install mamba", then use "mamba install" to replace "conda install"
+
+# Add "gdal'>=3'" below to install extra dependencies if you use ARIA, FRInGE, HyP3 or GMTSAR
+# Add "isce2"     below to install extra dependencies if you use ISCE-2
+conda install -c conda-forge --file ~/tools/MintPy/docs/requirements.txt
 ```
-conda env create -f $MINTPY_HOME/docs/conda_env.yml
+
+Or install the dependencies to a new environment named "mintpy" by running:
+
+```bash
+conda env create -f MintPy/docs/environment.yml
 conda activate mintpy
 ```
 
-Or run the following in your terminal to install the dependencies to your custom environment, the default is _**base**_:
+#### c. Install MintPy ####
 
+Install MintPy into the current environment with pip by running:
+
+```bash
+python -m pip install MintPy
 ```
-conda install --yes -c conda-forge --file ~/tools/MintPy/docs/conda.txt
-$CONDA_PREFIX/bin/pip install git+https://github.com/insarlab/PySolid.git
-$CONDA_PREFIX/bin/pip install git+https://github.com/tylere/pykml.git
+
+Or install MintPy with pip in development mode as below. The development mode allows one to install the package without copying files to your interpreter directory (e.g. the `site-packages` directory), thus, one could "edit" the source code and have changes take effect immediately without having to rebuild and reinstall.
+
+```bash
+python -m pip install -e MintPy
 ```
 
-#### b. via MacPorts ####
+Or simply setup the environment variables as below in your source file (e.g. `~/.bash_profile` for _bash_ users or `~/.cshrc` for _csh/tcsh_ users), because MintPy is written in pure Python:
 
-Install [macports](https://www.macports.org/install.php) if you have not done so. Add the following at the bottom of your **_~/.bash_profile_** file:
+```bash
+if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
+export MINTPY_HOME=~/tools/MintPy
+export PATH=${PATH}:${MINTPY_HOME}/mintpy
+export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}
+```
+
+#### d. [Post-Installation Setup](#3-post-installation-setup) ####
+
+### 2.2 Install on macOS ###
+
+Install Xcode with command line tools, if you have not already done so.
+
++ Install `Xcode` from App store
+
++ Install `command line tools` within XCode and agree to the terms of license.
+
+  ```bash
+  xcode-select --install -s /Applications/Xcode.app/Contents/Developer/
+  sudo xcodebuild -license
+  ```
+
++ Install [XQuartz](https://www.xquartz.org), then restart the terminal.
+
+#### a. Install MintPy via conda ####
+
+Same as the [instruction for Linux](#21-install-on-linux).
+
+#### b. Install MintPy via MacPorts ####
+
+Same as the [instruction for Linux](#21-install-on-linux), except for the dependencies installation, which is as below.
+
+Install [macports](https://www.macports.org/install.php) if you have not done so. Add the following at the bottom of your `~/.bash_profile` file:
 
 ```bash
 # MacPorts Installer addition on 2017-09-02_at_01:27:12: adding an appropriate PATH variable for use with MacPorts.
 export PATH=/opt/local/bin:/opt/local/sbin:${PATH}
 export MANPATH=/opt/local/share/man:${MANPATH}
 # Finished adapting your PATH environment variable for use with MacPorts.
-
-#For py36-pyhdf in macports
-export INCLUDE_DIRS=/opt/local/include
-export LIBRARY_DIRS=/opt/local/lib
 ```
 
 Update the port tree with the following command. If your network prevent the use of rsync or svn via http of port tree, try [Portfile Sync via a Snapshot Tarball](https://trac.macports.org/wiki/howto/PortTreeTarball).
@@ -100,47 +135,41 @@ Update the port tree with the following command. If your network prevent the use
 sudo port selfupdate
 ```
 
-Run the following in your terminal in _bash_ to install the dependencies:
+Install the dependencies by running:
 
 ```bash
 # install dependencies with macports
 # use "port -N install" to use the safe default for prompt questions
-sudo port install $(cat $MINTPY_HOME/docs/ports.txt)
+sudo port install $(cat MintPy/docs/ports.txt)
 
-# install dependencies not available on macports: pysolid, pykml, pykdtree, pyresample, cdsapi, pyhdf
+# install dependencies not available on macports: pysolid, pykml, pykdtree, pyresample, cdsapi
 sudo -H /opt/local/bin/pip install git+https://github.com/insarlab/PySolid.git
+sudo -H /opt/local/bin/pip install git+https://github.com/insarlab/PyAPS.git
 sudo -H /opt/local/bin/pip install git+https://github.com/tylere/pykml.git
 sudo -H /opt/local/bin/pip install git+https://github.com/storpipfugl/pykdtree.git
 sudo -H /opt/local/bin/pip install git+https://github.com/pytroll/pyresample.git
 sudo -H /opt/local/bin/pip install git+https://github.com/ecmwf/cdsapi.git
-sudo -H /opt/local/bin/pip install git+https://github.com/fhs/pyhdf.git
 ```
 
-### Notes on [PySolid](https://github.com/insarlab/PySolid) ###
+### 2.3 Install on Windows ###
 
-We use PySolid for solid Earth tides correction. If the pre-compiled version install from above does not work, run the following to compile from source:
+Same as the [instruction for Linux](#21-install-on-linux), except for the "c. Install MintPy" section, only the `pip install` approaches are recommended, as the "setup environment variable" approach is not tested.
 
-```bash
-# install Fortran compiler via conda
-conda install -c conda-forge fortran-compiler
+## 3. Post-Installation Setup
 
-# compile Fortran code into a Python interface using f2py
-cd ~/tools/PySolid/pysolid
-f2py -c -m solid solid.for
+#### a. ERA5 for tropospheric correction ####
+
+Setup an account for ERA5 to download weather re-analysis datasets for tropospheric delay correction as described in [insarlab/PyAPS](https://github.com/insarlab/pyaps#2-account-setup-for-era5).
+
+`WEATHER_DIR`: Optionally, if you defined an environment variable named `WEATHER_DIR` to contain the path to a directory, MintPy applications will download the GAM files into the indicated directory. Also, MintPy application will look for the GAM files in the directory before downloading a new one to prevent downloading multiple copies if you work with different dataset that cover the same date/time.
+
+#### b. Dask for parallel processing ####
+
+We recommend setting the `temporary-directory` in your [Dask configuration file](https://docs.dask.org/en/stable/configuration.html), e.g. `~/.config/dask/dask.yaml`, by adding the following line, to avoid potential [workspace lock issue](https://github.com/insarlab/MintPy/issues/725). Check more details on parallel processing with Dask [here](./dask.md).
+
+```yaml
+temporary-directory: /tmp  # Directory for local disk like /tmp, /scratch, or /local
+
+## If you are sharing the same machine with others, use the following instead to avoid permission issues with others.
+# temporary-directory: /tmp/{replace_this_with_your_user_name}  # Directory for local disk like /tmp, /scratch, or /local
 ```
-
-### Notes on [PyAPS](https://github.com/yunjunz/PyAPS) ###
-
-+   We use PyAPS (Jolivet et al., 2011; 2014) for tropospheric delay correction calculated from Global Atmospheric Models (GAMs) such as ERA-5, ERA-Interim, HRES-ECMWF, MERRA and NARR.
-
-+   Check [Earthdef/PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main#) for accounts setup information for ERA-Interim and MERRA.
-
-+   Check [GitHub/PyAPS](https://github.com/yunjunz/PyAPS) for account setup for ERA-5. **Make sure that you:**
-
-    -   accept the data license in the Terms of use on ECMWF website and 
-    -   run `examples/TestECMWF.ipynb` to test the data downloading and running.
-
-+   If you defined an environment variable named `WEATHER_DIR` to contain the path to a
-directory, MintPy applications will download the GAM files into the indicated directory. Also MintPy
-application will look for the GAM files in the directory before downloading a new one to prevent downloading
-multiple copies if you work with different dataset that cover the same date/time.

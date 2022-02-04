@@ -7,10 +7,9 @@
 #   from mintpy.utils import ptime
 
 import os
-import sys
 import re
 import time
-from datetime import datetime as dt, timedelta
+import datetime as dt
 import numpy as np
 from mintpy.objects.progress import progressBar
 
@@ -35,7 +34,19 @@ def get_date_str_format(date_str):
         pass
 
     date_str_format = None
-    if len(re.findall('\d{8}T\d{6}', date_str)) > 0:
+    if len(re.findall('\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', date_str)) > 0:
+        date_str_format = '%Y-%m-%dT%H:%M:%S'
+
+    elif len(re.findall('\d{4}-\d{2}-\d{2}T\d{2}:\d{2}', date_str)) > 0:
+        date_str_format = '%Y-%m-%dT%H:%M'
+
+    elif len(re.findall('\d{4}-\d{2}-\d{2}T\d{2}', date_str)) > 0:
+        date_str_format = '%Y-%m-%dT%H'
+
+    elif len(re.findall('\d{4}-\d{2}-\d{2}T', date_str)) > 0:
+        date_str_format = '%Y-%m-%d'
+
+    elif len(re.findall('\d{8}T\d{6}', date_str)) > 0:
         date_str_format = '%Y%m%dT%H%M%S'
 
     elif len(re.findall('\d{8}T\d{4}', date_str)) > 0:
@@ -62,7 +73,7 @@ def round_seconds(datetime_obj):
     """
     datetime_obj_out = datetime_obj
     if datetime_obj_out.microsecond >= 5e5:
-        datetime_obj_out += timedelta(seconds=1)
+        datetime_obj_out += dt.timedelta(seconds=1)
     return datetime_obj_out.replace(microsecond=0)
 
 
@@ -74,7 +85,7 @@ def yyyymmdd2season(date_str):
     """
     # get day of the year
     date_str = yyyymmdd(date_str)
-    yday = dt.strptime(date_str, "%Y%m%d").timetuple().tm_yday
+    yday = dt.datetime.strptime(date_str, "%Y%m%d").timetuple().tm_yday
 
     # determine the season
     season = None
@@ -94,9 +105,9 @@ def datenum2datetime(datenum):
     Parameters: datenum : Date in datenum format, i.e. 731763.5
     Returns:    datetime: Date in datetime.datetime format, datetime.datetime(2003, 7, 1, 12, 0)
     """
-    return dt.fromordinal(int(datenum)) \
-           + timedelta(days=datenum % 1) \
-           - timedelta(days=366)
+    return dt.datetime.fromordinal(int(datenum)) \
+           + dt.timedelta(days=datenum % 1) \
+           - dt.timedelta(days=366)
 
 
 def decimal_year2datetime(years):
@@ -110,12 +121,12 @@ def decimal_year2datetime(years):
         yday = np.floor((x - year) * 365.25).astype(int) + 1
         x2 = '{:d}-{:d}'.format(year, yday)
         try:
-            xt = dt.strptime(x2, "%Y-%j")
+            xt = dt.datetime.strptime(x2, "%Y-%j")
         except:
             raise ValueError('wrong format: ',x)
         return xt
 
-    if isinstance(years, (float, str)):
+    if isinstance(years, (float, np.float32, np.float64, str)):
         years_dt = decimal_year2datetime1(years)
 
     elif isinstance(years, list):
@@ -128,11 +139,11 @@ def decimal_year2datetime(years):
     return years_dt
 
 
-def yyyymmdd2years(dates):
+def yyyymmdd2years(dates, seconds=0):
     """Convert date(s) string into float number in the unit of year
-
-    Parameters: dates - (list of) str, date in YYYYMMDD format
-    Returns:    years - (list of) float, years including the date and time info
+    Parameters: dates   - (list of) str, date in YYYYMMDD format
+                seconds - float or str, time of the day info in seconds
+    Returns:    years   - (list of) float, years including the date and time info
     """
 
     # make a copy in list of input arg
@@ -145,11 +156,18 @@ def yyyymmdd2years(dates):
 
     years = []
     for date_str in date_list:
-        d = dt.strptime(date_str, date_format)
-        y = (d.year + (d.timetuple().tm_yday - 1) / 365.25 + 
-             d.hour / (365.25 * 24) + 
-             d.minute / (365.25 * 24 * 60) + 
+        d = dt.datetime.strptime(date_str, date_format)
+        y = (d.year + (d.timetuple().tm_yday - 1) / 365.25 +
+             d.hour / (365.25 * 24) +
+             d.minute / (365.25 * 24 * 60) +
              d.second / (365.25 * 24 * 60 * 60))
+
+        # add time of the day info if:
+        # 1) seconds arg is valid AND
+        # 2) no time info from dates arg
+        if seconds and 'T' not in date_format:
+            y += float(seconds) / (365.25 * 24 * 60 * 60)
+
         years.append(y)
 
     if isinstance(dates, str):
@@ -173,7 +191,7 @@ def yy2yyyy(year):
         year = '19'+year
     else:
         year = '20'+year
-    return datyeare
+    return year
 
 
 def yyyymmdd(dates):
@@ -290,7 +308,7 @@ def date_list2tbase(date_list):
     # date str to dt object
     date_list = yyyymmdd(date_list)
     date_format = get_date_str_format(str(date_list))
-    dates = [dt.strptime(i, date_format) for i in date_list]
+    dates = [dt.datetime.strptime(i, date_format) for i in date_list]
 
     # dt object to time difference in days
     tbase = []
@@ -301,8 +319,8 @@ def date_list2tbase(date_list):
 
     # Dictionary: key - date, value - temporal baseline
     dateDict = {}
-    for i in range(len(date_list)):
-        dateDict[date_list[i]] = tbase[i]
+    for i, date_str in enumerate(date_list):
+        dateDict[date_str] = tbase[i]
     return tbase, dateDict
 
 
@@ -315,16 +333,70 @@ def date_list2vector(date_list):
     """
     date_list = yyyymmdd(date_list)
     date_format = get_date_str_format(str(date_list))
-    dates = [dt.strptime(i, date_format) for i in date_list]
+    dates = [dt.datetime.strptime(i, date_format) for i in date_list]
 
     # date in year - float format
     datevector = []
     for d in dates:
-        date_vec = (d.year + (d.timetuple().tm_yday - 1) / 365.25 + 
-                    d.hour / (365.25 * 24) + 
-                    d.minute / (365.25 * 24 * 60) + 
+        date_vec = (d.year + (d.timetuple().tm_yday - 1) / 365.25 +
+                    d.hour / (365.25 * 24) +
+                    d.minute / (365.25 * 24 * 60) +
                     d.second / (365.25 * 24 * 60 * 60))
         datevector.append(date_vec)
 
     return dates, datevector
+
+
+################################################################
+def get_date_range(dmin, dmax, dstep=1, dunit='D', out_fmt='%Y%m%d'):
+    """Make a list of dates with one-day (or given days) interval for [dmin, dmax]
+    Parameters: dmin    - str in format supported by get_date_str_format()
+                dmax    - str in format supported by get_date_str_format()
+                dstep   - int, interval in number of dunit
+                dunit   - str, unit of interval, e.g. Y, M, W, D, h, m, s
+                out_fmt - str, output datetime string format
+    Returns:    dt_list - list of str in YYYYMMDD format
+    """
+    # read inputs
+    date_str_format = get_date_str_format(dmin)
+    t1 = np.datetime64(dt.datetime.strptime(dmin, date_str_format).isoformat())
+    t2 = np.datetime64(dt.datetime.strptime(dmax, date_str_format).isoformat())
+    tstep = np.timedelta64(dstep, dunit)
+
+    # prepare date range
+    dt_objs = np.arange(t1, t2+tstep, tstep, dtype='datetime64').astype('O')
+    dt_list = [obj.strftime(out_fmt) for obj in dt_objs]
+
+    return dt_list
+
+
+def utc2solar_time(utc_time, longitude):
+    """Convert UTC time to solar local time.
+    Solar time: https://en.wikipedia.org/wiki/Solar_time
+    Link: https://stackoverflow.com/questions/13314626
+
+    Parameters: utc_time   - datetime.datetime object for the UTC time
+                longitude  - float, longitude of the observer in degrees
+    Returns:    solar_time - datetime.datetime object for the local solar time
+    Example:    utc_time = dt.datetime(2015, 2, 9, 3, 18, 48)
+                solar_time = ptime.utc2solar_time(utc_time, 130.7)
+    """
+    from math import pi, cos, sin
+    # use 366 for leap years
+    if utc_time.year % 4 == 0 and utc_time.year % 100 != 0 and utc_time.year % 400 != 0:
+        year_len = 366
+    else:
+        year_len = 365
+
+    gamma = 2 * pi / year_len * (utc_time.timetuple().tm_yday - 1 + float(utc_time.hour - 12) / 24)
+    eqtime = 229.18 * (0.000075 + 0.001868 * cos(gamma) - 0.032077 * sin(gamma) \
+             - 0.014615 * cos(2 * gamma) - 0.040849 * sin(2 * gamma))
+    #decl = 0.006918 - 0.399912 * cos(gamma) + 0.070257 * sin(gamma) \
+    #       - 0.006758 * cos(2 * gamma) + 0.000907 * sin(2 * gamma) \
+    #       - 0.002697 * cos(3 * gamma) + 0.00148 * sin(3 * gamma)
+    time_offset = eqtime + 4 * longitude
+    tst = utc_time.hour * 60 + utc_time.minute + utc_time.second / 60 + time_offset
+    solar_time = dt.datetime.combine(utc_time.date(), dt.time(0)) + dt.timedelta(minutes=tst)
+
+    return solar_time
 

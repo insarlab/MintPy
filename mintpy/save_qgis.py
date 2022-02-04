@@ -12,7 +12,7 @@ import errno
 import argparse
 import h5py
 import numpy as np
-from osgeo import ogr, gdal
+from osgeo import ogr
 from mintpy.objects import timeseries
 from mintpy.utils import ptime, readfile, utils as ut
 
@@ -105,7 +105,7 @@ def read_bounding_box(pix_box, geo_box, geom_file):
 
     if geo_box is not None:
         S, N, W, E = geo_box
-        pix_box = coord.bbox_geo2radar((W, N, E, S))        
+        pix_box = coord.bbox_geo2radar((W, N, E, S))
         print('input bounding box in (S, N, W, E): {}'.format(geo_box))
 
     if pix_box is not None:

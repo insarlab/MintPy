@@ -8,7 +8,6 @@
 #   from mintpy.utils.ptime import progressBar
 
 
-import os
 import sys
 import time
 import numpy as np

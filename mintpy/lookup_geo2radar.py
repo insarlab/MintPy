@@ -32,7 +32,7 @@ EXAMPLE = '''examples:
 '''
 
 def write_h5(datasetDict, out_file, metadata=None, ref_file=None, compression=None):
-    
+
     if os.path.isfile(out_file):
         print('delete exsited file: {}'.format(out_file))
         os.remove(out_file)
@@ -46,7 +46,7 @@ def write_h5(datasetDict, out_file, metadata=None, ref_file=None, compression=No
             f.attrs[key] = str(value)
             #print(key + ': ' +  value)
     print('finished writing to {}'.format(out_file))
-        
+
     return out_file  
 
 
@@ -59,8 +59,7 @@ def get_dataNames(FILE):
 
 
 def parallel_process(array, function, n_jobs=16, use_kwargs=False, front_num=1):
-    """
-        A parallel version of the map function with a progress bar. 
+    """A parallel version of the map function with a progress bar. 
 
         Args:
             array (array-like): An array to iterate over.
@@ -97,7 +96,7 @@ def parallel_process(array, function, n_jobs=16, use_kwargs=False, front_num=1):
             del f
             #pass
     out = []
-    #Get the results from the futures. 
+    #Get the results from the futures.
     for i, future in tqdm(enumerate(futures)):
         del i
         try:
@@ -106,6 +105,7 @@ def parallel_process(array, function, n_jobs=16, use_kwargs=False, front_num=1):
             out.append(e)
     return front + out
 
+
 def split_range(N, M):
     #list0 = np.arange(0,N)
     dx = round(N/M)
@@ -113,40 +113,39 @@ def split_range(N, M):
     for i in range(M):
         a0 = i*dx
         b0 = (i+1)*dx
-        
-        if b0 > N: 
+
+        if b0 > N:
             b0 = N
-            
+
         l0 = np.arange(a0,b0)
         list00.append(l0)
-        
+
     return list00
-    
+
 
 def split_box(data,row_sample,col_sample):
     data_split= []
     row,col = data.shape
     list_row = split_range(row, row_sample)
     list_col = split_range(col, col_sample)
-    
+
     for i in range(row_sample):
         for j in range(col_sample):
             y0 = min(list_row[i])
             y1 = max(list_row[i])
-            
             x0 = min(list_col[j])
             x1 = max(list_col[j])
-            
+
             data0 = data[y0:y1+1,x0:x1+1]
             data_split.append(data0)
-            
+
     return data_split
-            
+
+
 def function(data0):
     points, zz1, zz2, grid_x0, grid_y0 = data0
     grid_lat0 = griddata(points, zz1, (grid_x0, grid_y0), method='nearest')
     grid_lon0 = griddata(points, zz2, (grid_x0, grid_y0), method='nearest')
-
     return grid_lat0, grid_lon0
 
 
@@ -168,7 +167,7 @@ def cmd_line_parse(iargs=None):
 
 ################################################################################        
 def main(iargs=None):
-    
+
     inps = cmd_line_parse(iargs) 
     geom = inps.geometryGeo
     rangeCoord = readfile.read(geom,datasetName = 'rangeCoord')[0]
@@ -177,13 +176,13 @@ def main(iargs=None):
     azimuthCoord = azimuthCoord.astype(np.float64)
     #CPX_lt =complex(rangeCoord + '+' + azimuthCoord+'j')
     #CPX_lt = rangeCoord  + 1j *azimuthCoord
-    
+
     meta_geo = readfile.read_attribute(geom)
     post_Lat = meta_geo['Y_STEP']
     post_Lon = meta_geo['X_STEP']
     Corner_LAT = meta_geo['Y_FIRST']
     Corner_LON = meta_geo['X_FIRST']
-            
+
     if inps.write:
         meta = readfile.read_attribute(inps.write)
     elif inps.reference:
@@ -191,102 +190,79 @@ def main(iargs=None):
     else:
         print('write_file or the reference_file should be provided at least one.')
         sys.exit(1)
-    
+
     WIDTH_geo  = int(meta_geo['WIDTH'])
     LENGTH_geo  = int(meta_geo['LENGTH'])
-    
+
     x = np.arange(0,WIDTH_geo)
     y = np.arange(0,LENGTH_geo)
     xv, yv = np.meshgrid(x, y)
-    
+
     LAT = float(Corner_LAT) + yv*float(post_Lat)
     LON = float(Corner_LON) + xv*float(post_Lon)
     LAT = LAT.flatten()
     LON = LON.flatten() 
-        
+
     WIDTH  = int(meta['WIDTH'])
     LENGTH  = int(meta['LENGTH'])
-    
-    
+
     xx0 = rangeCoord.flatten()
     yy0 = azimuthCoord.flatten()
-    
+
     zz01 = LAT.flatten()
     zz02 = LON.flatten()
-    
+
     xx = xx0[xx0!=0]
     yy = yy0[xx0!=0]
     zz1 = zz01[xx0!=0] #lat 
     zz2 = zz02[xx0!=0] # lon
-    
+
     #points = (xx,yy)
     #points = np.zeros((len(xx),2))
     #points[:,0] = xx
     #points[:,1] = yy
-    
+
     x = np.arange(0,WIDTH)
     y = np.arange(0,LENGTH)
     grid_x, grid_y = np.meshgrid(x, y)
-    
+
     row_sample = 10
     col_sample = 10
-    
+
     list_row = split_range(LENGTH, row_sample)
     list_col = split_range(WIDTH, col_sample)
-    
-    split_grid_y= split_box(grid_y,row_sample,col_sample)
+
+    split_grid_y = split_box(grid_y,row_sample,col_sample)
     split_grid_x = split_box(grid_x,row_sample,col_sample)
-    
+
     data_parallel = []
-    for i in range(len(split_grid_y)):
-        #print(str(i))
-        ax = split_grid_x[i]
-        ay = split_grid_y[i]
-        
+    for i, (ay, ax) in enumerate(zip(split_grid_y, split_grid_x)):
         # extend the search area by 5 pixels
         max_ax = max(ax.flatten()) + 5 
         min_ax = min(ax.flatten()) - 5
-        
         max_ay = max(ay.flatten()) + 5
         min_ay = min(ay.flatten()) - 5
-        
+
         f0 = np.where((min_ax < xx) & (xx < max_ax) & (min_ay < yy) & (yy < max_ay))
         xx0 = xx[f0]
         yy0 = yy[f0]
         zz10 = zz1[f0]
         zz20 = zz2[f0]
-        
+
         points0 = np.zeros((len(xx0),2))
         points0[:,0] = xx0
         points0[:,1] = yy0
-        
         #print(split_grid_x[i].shape)
-        
-        data0 = (points0, zz10, zz20, split_grid_x[i],split_grid_y[i])
+
+        data0 = (points0, zz10, zz20, ax, ay)
         data_parallel.append(data0)
-    
+
     #grid_lat_all = []
     #grid_lon_all = []
-    
-    #print(grid_x.shape)
-    #prog_bar = ptime.progressBar(maxValue=100)
-    #for i in range(len(split_grid_y)):
-    #    #grid_x0 = split_grid_x[i]
-    #    #grid_y0 = split_grid_y[i]
-    #    #print(grid_x0.shape)
-    #    points0, zz10,zz20,grid_x0, grid_y0 = data_parallel[i]
-        
-    #    grid_lat0 = griddata(points0, zz10, (grid_x0, grid_y0), method='linear')
-    #    grid_lat_all.append(grid_lat0)
-        
-    #    grid_lon0 = griddata(points0, zz20, (grid_x0, grid_y0), method='linear')
-    #    grid_lon_all.append(grid_lon0)
-    #    prog_bar.update(i+1, every=1, suffix='{}/{} boxes'.format(i+1, 100))
-    #prog_bar.close() 
-    
-    grid_lat = np.zeros((LENGTH,WIDTH),dtype = np.float32)
-    grid_lon = np.zeros((LENGTH,WIDTH),dtype = np.float32)
-    
+
+    grid_lat = np.zeros((LENGTH,WIDTH), dtype=np.float32)
+    grid_lon = np.zeros((LENGTH,WIDTH), dtype=np.float32)
+
     proNumb = inps.parallelNumb
     future = np.zeros((len(data_parallel),))
     future = list(future)
@@ -297,31 +273,28 @@ def main(iargs=None):
             k0 = i*col_sample + j
             kk = future[k0]
             y0 = min(list_row[i])
-            y1 = max(list_row[i])  
+            y1 = max(list_row[i])
             x0 = min(list_col[j])
             x1 = max(list_col[j])
             #print(kk)
             try:
                 lat0 = kk[0]
                 lon0 = kk[1]
-        
                 grid_lat[y0:y1+1,x0:x1+1] = lat0
                 grid_lon[y0:y1+1,x0:x1+1] = lon0
             except Exception as e:
                 del e
-            
+
     #grid_lat = griddata(points, zz1, (grid_x, grid_y), method='nearest')
     #grid_lon = griddata(points, zz2, (grid_x, grid_y), method='nearest')
 
-    
     dataNames = get_dataNames(inps.write)
     datasetDict = dict()
     meta = readfile.read_attribute(inps.write)
-    
     for k0 in dataNames:
         datasetDict[k0] = readfile.read(inps.write,datasetName = k0)[0]
-     
-    DEM  = readfile.read(inps.write,datasetName = 'height')[0]
+
+    DEM = readfile.read(inps.write,datasetName = 'height')[0]
     grid_lat[DEM==0] = 0
     grid_lon[DEM==0] = 0
     grid_lat[grid_lat==0] = 'nan'
@@ -329,9 +302,8 @@ def main(iargs=None):
     datasetDict['latitude'] = grid_lat
     datasetDict['longitude'] = grid_lon
     write_h5(datasetDict, inps.write, metadata=meta, ref_file=None, compression=None)
-    
     print('done.')
-    
+
     return
 
 

@@ -2,8 +2,8 @@
 
 MintPy support the following colormaps:
 
-+ [Matplotlib colormaps](https://matplotlib.org/3.1.0/tutorials/colors/colormaps.html)
-+ Custom colormaps: `cmy` and `dismph`
++ [Matplotlib colormaps](https://matplotlib.org/stable/tutorials/colors/colormaps.html)
++ Custom colormaps: `cmy`, `dismph`, and `romanian`
 + Custom colormaps in **.cpt** (color palette tables) format. To add your own colormap, drop the corresponding .cpt file in `$MINTPY/mintpy/data/colormaps`.
 
 We recommend to use cyclic colormap `cmy` for wrapped phase/displacement measurement.
@@ -40,6 +40,7 @@ The following colormaps is included by default:
 
 + BlueWhiteOrangeRed
 + DEM_print
++ differences
 + GMT_haxby
 + GMT_no_green
 + seminf-haxby
@@ -66,3 +67,10 @@ The following colormaps is included by default:
   <img src="https://yunjunzhang.files.wordpress.com/2021/01/scientificcolourmaps_fabiocrameri.png">
 </p>
 
+### Interactive [web tool](https://jdherman.github.io/colormap/) to generate custom colormaps by Jon Herman ###
+
+This web tool creates a custom colormap (for Matplotlib/Matlab) by dragging points on the RGB intensity curves.
+
++ Choose output as *plaintext* style and *RGB* format.
++ Copy and save the RGB table to a text file
++ Use this script [rgb2cpt.py](https://github.com/yuankailiu/utils/blob/main/trivia/rgb2cpt.py) to convert the RGB table to 8-column CPT file with heading, overrule background, foreground, and NaN colors.

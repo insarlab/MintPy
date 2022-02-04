@@ -34,11 +34,11 @@ def add_data_disp_argument(parser):
     data.add_argument('--noflip', dest='auto_flip', action='store_false',
                       help='turn off auto flip for radar coordinate file')
 
-    data.add_argument('--multilook-num', dest='multilook_num', type=int, default=1, metavar='NUM',
+    data.add_argument('--nmli','--num-multilook','--multilook-num', dest='multilook_num', type=int, default=1, metavar='NUM',
                       help='multilook data in X and Y direction with a factor for display (default: %(default)s).')
     data.add_argument('--nomultilook', '--no-multilook', dest='multilook', action='store_false',
                       help='do not multilook, for high quality display. \n'
-                           'If multilook and multilook_num=1, multilook_num will be estimated automatically.\n'
+                           'If multilook is True and multilook_num=1, multilook_num will be estimated automatically.\n'
                            'Useful when displaying big datasets.')
     data.add_argument('--alpha', dest='transparency', type=float,
                       help='Data transparency. \n'
@@ -51,6 +51,8 @@ def add_dem_argument(parser):
     dem = parser.add_argument_group('DEM', 'display topography in the background')
     dem.add_argument('-d', '--dem', dest='dem_file', metavar='DEM_FILE',
                      help='DEM file to show topography as background')
+    dem.add_argument('--mask-dem', dest='mask_dem', action='store_true',
+                     help='Mask out DEM pixels not coincident with valid data pixels')
     dem.add_argument('--dem-noshade', dest='disp_dem_shade', action='store_false',
                      help='do not show DEM shaded relief')
     dem.add_argument('--dem-nocontour', dest='disp_dem_contour', action='store_false',
@@ -163,16 +165,28 @@ def add_gps_argument(parser):
     gps = parser.add_argument_group('GPS', 'GPS data to display')
     gps.add_argument('--show-gps', dest='disp_gps', action='store_true',
                      help='Show UNR GPS location within the coverage.')
+    gps.add_argument('--mask-gps', dest='mask_gps', action='store_true',
+                     help='Mask out GPS stations not coincident with valid data pixels')
     gps.add_argument('--gps-label', dest='disp_gps_label', action='store_true',
                      help='Show GPS site name')
-    gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los'},
+    gps.add_argument('--gps-ms', dest='gps_marker_size', type=float, default=6,
+                     help='Plot GPS value as scatter in size of ms**2 (default: %(default)s).')
+    gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los', 'horz', 'vert'},
                      help='Plot GPS in color indicating deformation velocity direction')
+    gps.add_argument('--gps-redo', dest='gps_redo', action='store_true',
+                     help='Re-calculate GPS observations in LOS direction, instead of read from existing CSV file.')
     gps.add_argument('--ref-gps', dest='ref_gps_site', type=str, help='Reference GPS site')
+    gps.add_argument('--ex-gps', dest='ex_gps_sites', type=str, nargs='*', help='Exclude GPS sites, require --gps-comp.')
 
     gps.add_argument('--gps-start-date', dest='gps_start_date', type=str, metavar='YYYYMMDD',
-                     help='start date of GPS data, default is date of the 1st SAR acquisiton')
+                     help='start date of GPS data, default is date of the 1st SAR acquisition')
     gps.add_argument('--gps-end-date', dest='gps_end_date', type=str, metavar='YYYYMMDD',
-                     help='start date of GPS data, default is date of the last SAR acquisiton')
+                     help='start date of GPS data, default is date of the last SAR acquisition')
+    gps.add_argument('--horz-az','--hz-az', dest='horz_az_angle', type=float, default=-90.,
+                     help='Azimuth angle (anti-clockwise from the north) of the horizontal movement in degrees\n'
+                             'E.g.: -90. for east  direction [default]\n'
+                             '       0.  for north direction\n'
+                             'Set to the azimuth angle of the strike-slip fault to show the fault-parallel displacement.')
     return parser
 
 
@@ -181,6 +195,11 @@ def add_mask_argument(parser):
     mask = parser.add_argument_group('Mask', 'Mask file/options')
     mask.add_argument('-m','--mask', dest='mask_file', metavar='FILE',
                       help='mask file for display. "no" to turn OFF masking.')
+    mask.add_argument('--mask-vmin', dest='mask_vmin', type=float,
+                      help='hide pixels with mask value < vmin (default: %(default)s).')
+    mask.add_argument('--mask-vmax', dest='mask_vmax', type=float,
+                      help='hide pixels with mask value > vmax (default: %(default)s).')
+
     mask.add_argument('--zm','--zero-mask', dest='zero_mask', action='store_true',
                       help='mask pixels with zero value.')
     return parser
@@ -243,7 +262,7 @@ def add_parallel_argument(parser):
     from mintpy.objects.cluster import CLUSTER_LIST
 
     par = parser.add_argument_group('parallel', 'parallel processing using dask')
-    par.add_argument('-c', '--cluster', '--cluster-type', dest='cluster', type=str, 
+    par.add_argument('-c', '--cluster', '--cluster-type', dest='cluster', type=str,
                      choices=CLUSTER_LIST,
                      help='Cluster to use for parallel computing (default: %(default)s to turn OFF).')
     par.add_argument('--num-worker', dest='numWorker', type=str, default='4',
@@ -306,21 +325,52 @@ def add_save_argument(parser):
                       help='save and do not display the figure')
     save.add_argument('--update', dest='update_mode', action='store_true',
                       help='enable update mode for save figure: skip running if\n'+
-                           '\t1) output file already exists\n'+
+                           '\t1) output file already exists AND\n'+
                            '\t2) output file is newer than input file.')
     return parser
 
 
-def add_subset_argument(parser):
+def add_subset_argument(parser, geo=True):
     """Argument group parser for subset options"""
     sub = parser.add_argument_group('Subset', 'Display dataset in subset range')
-    sub.add_argument('--sub-x','--subx', dest='subset_x', type=int, nargs=2, metavar=('XMIN', 'XMAX'),
+    sub.add_argument('--sub-x','--subx','--subset-x', dest='subset_x', type=int, nargs=2, metavar=('XMIN', 'XMAX'),
                      help='subset display in x/cross-track/range direction')
-    sub.add_argument('--sub-y','--suby', dest='subset_y', type=int, nargs=2, metavar=('YMIN', 'YMAX'),
+    sub.add_argument('--sub-y','--suby','--subset-y', dest='subset_y', type=int, nargs=2, metavar=('YMIN', 'YMAX'),
                      help='subset display in y/along-track/azimuth direction')
-    sub.add_argument('--sub-lat','--sublat', dest='subset_lat', type=float, nargs=2, metavar=('LATMIN', 'LATMAX'),
-                     help='subset display in latitude')
-    sub.add_argument('--sub-lon','--sublon', dest='subset_lon', type=float, nargs=2, metavar=('LONMIN', 'LONMAX'),
-                     help='subset display in longitude')
+    if geo:
+        sub.add_argument('--sub-lat','--sublat','--subset-lat', dest='subset_lat', type=float, nargs=2, metavar=('LATMIN', 'LATMAX'),
+                         help='subset display in latitude')
+        sub.add_argument('--sub-lon','--sublon','--subset-lon', dest='subset_lon', type=float, nargs=2, metavar=('LONMIN', 'LONMAX'),
+                         help='subset display in longitude')
     return parser
 
+
+def add_timefunc_argument(parser):
+    """Argument group parser for time functions"""
+    model = parser.add_argument_group('Deformation Model', 'A suite of time functions')
+    model.add_argument('--poly', '--polynomial', '--poly-order', dest='polynomial', type=int, default=1,
+                      help='a polynomial function with the input degree (default: %(default)s). E.g.:\n' +
+                           '--poly 1                                  # linear\n' +
+                           '--poly 2                                  # quadratic\n' +
+                           '--poly 3                                  # cubic\n')
+    model.add_argument('--periodic', '--period', '--peri', dest='periodic', type=float, nargs='+', default=[],
+                      help='periodic function(s) with period in decimal years (default: %(default)s). E.g.:\n' +
+                           '--periodic 1.0                            # an annual cycle\n' +
+                           '--periodic 1.0 0.5                        # an annual cycle plus a semi-annual cycle\n')
+    model.add_argument('--step', dest='step', type=str, nargs='+', default=[],
+                      help='step function(s) at YYYYMMDD (default: %(default)s). E.g.:\n' +
+                           '--step 20061014                           # coseismic step  at 2006-10-14T00:00\n' +
+                           '--step 20110311 20120928T1733             # coseismic steps at 2011-03-11T00:00 and 2012-09-28T17:33\n')
+    model.add_argument('--exp', '--exponential', dest='exp', type=str, nargs='+', action='append', default=[],
+                      help='exponential function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
+                           '--exp  20181026 60                        # exp onset at 2006-10-14T00:00 with tau=60 days\n' +
+                           '--exp  20181026T1355 60 120               # exp onset at 2006-10-14T13:55 with tau=60 days overlayed by a tau=145 days\n' +
+                           '--exp  20161231 80.5 --exp 20190125 100   # 1st exp onset at 2011-03-11 with tau=80.5 days and\n' +
+                           '                                          # 2nd exp onset at 2012-09-28 with tau=100  days')
+    model.add_argument('--log', '--logarithmic', dest='log', type=str, nargs='+', action='append', default=[],
+                      help='logarithmic function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
+                           '--log  20181016 90.4                      # log onset at 2006-10-14T00:00 with tau=90.4 days\n' +
+                           '--log  20181016T1733 90.4 240             # log onset at 2006-10-14T17:33 with tau=90.4 days overlayed by a tau=240 days\n' +
+                           '--log  20161231 60 --log 20190125 180.2   # 1st log onset at 2011-03-11 with tau=60 days and\n' +
+                           '                                          # 2nd log onset at 2012-09-28 with tau=180.2 days\n')
+    return parser

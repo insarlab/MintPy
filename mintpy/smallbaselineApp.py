@@ -18,7 +18,7 @@ import argparse
 import numpy as np
 
 import mintpy
-from mintpy.objects import sensor, RAMP_LIST
+from mintpy.objects import sensor, cluster, RAMP_LIST
 from mintpy.utils import readfile, writefile, utils as ut
 from mintpy.defaults.template import STEP_LIST
 import mintpy.workflow   # dynamic import of modules for smallbaselineApp
@@ -84,6 +84,7 @@ def create_parser():
                       help='end processing at the named step (default: %(default)s)')
     step.add_argument('--dostep', dest='doStep', metavar='STEP',
                       help='run processing at the named step only')
+
     return parser
 
 
@@ -91,6 +92,11 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # save argv (to check the manually specified arguments)
+    # use iargs        for python call
+    # use sys.argv[1:] for command line call
+    inps.argv = iargs if iargs else sys.argv[1:]
 
     template_file = os.path.join(os.path.dirname(mintpy.__file__), 'defaults/smallbaselineApp.cfg')
 
@@ -110,7 +116,7 @@ def cmd_line_parse(iargs=None):
 
     # -v (print software version)
     if inps.version:
-        print(mintpy.version.release_description)
+        print(mintpy.version.version_description)
         sys.exit(0)
 
     # check all input template files
@@ -135,7 +141,7 @@ def cmd_line_parse(iargs=None):
             inps.customTemplateFile = None
 
     # check --plot
-    if iargs == ['--plot']:
+    if inps.argv == ['--plot']:
         plot_only = True
         print('plot smallbaselineApp results without run.')
     else:
@@ -180,7 +186,7 @@ def read_inps2run_steps(inps, step_list, plot_only=False):
     if len(run_steps) > 0:
         # for single step - compact version info
         if len(run_steps) == 1:
-            print(mintpy.version.release_description)
+            print(mintpy.version.version_description)
         else:
             print(mintpy.version.logo)
 
@@ -442,7 +448,7 @@ class TimeSeriesAnalysis:
         dsNames = readfile.get_dataset_list(stack_file)
         mask_file = os.path.join(self.workDir, 'maskConnComp.h5')
         coh_file = os.path.join(self.workDir, 'avgSpatialCoh.h5')
-        snr_file = os.path.join(self.workDir, 'avgSpatialSnr.h5')
+        snr_file = os.path.join(self.workDir, 'avgSpatialSNR.h5')
 
         # 1) generate mask file from the common connected components
         if any('phase' in i.lower() for i in dsNames):
@@ -802,15 +808,20 @@ class TimeSeriesAnalysis:
                         print('Use existed tropospheric delay file: {}'.format(tropo_file))
                         print('\ndiff.py', ' '.join(iargs))
                         mintpy.diff.main(iargs)
+
                     else:
                         if tropo_model in ['ERA5']:
                             from mintpy import tropo_pyaps3
                             print('\ntropo_pyaps3.py', ' '.join(iargs))
                             tropo_pyaps3.main(iargs)
-                        else:
+
+                        elif tropo_model in ['MERRA', 'NARR']:
                             from mintpy import tropo_pyaps
                             print('\ntropo_pyaps.py', ' '.join(iargs))
                             tropo_pyaps.main(iargs)
+
+                        else:
+                            raise ValueError(f'un-recognized dataset name: {tropo_model}.')
 
         else:
             print('No tropospheric delay correction.')
@@ -1084,6 +1095,10 @@ class TimeSeriesAnalysis:
         print('\n******************** plot & save to pic ********************')
 
         tropo_model = self.template['mintpy.troposphericDelay.weatherModel'].upper()
+        max_plot_memory = abs(float(self.template['mintpy.plot.maxMemory']))
+        max_memory = abs(float(self.template['mintpy.compute.maxMemory']))
+        fig_dpi = int(self.template['mintpy.plot.dpi'])
+
         stack_file, geom_file, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1:]
         mask_file = os.path.join(self.workDir, 'maskTempCoh.h5')
         geo_dir = os.path.join(self.workDir, 'geo')
@@ -1100,7 +1115,7 @@ class TimeSeriesAnalysis:
         # for each element list:
         # the 1st item is the data file
         # the 2nd item is the dataset if applicable
-        opt4ts = ['--mask', mask_file, '--noaxis', '-u', 'cm', '--wrap-range', '-10', '10']
+        opt4ts = ['--noaxis', '-u', 'cm', '--wrap', '--wrap-range', '-5', '5']
         iargs_list0 = [
             # key files
             ['velocity.h5',          '--dem', geom_file, '--mask', mask_file, '-u', 'cm'],
@@ -1134,6 +1149,7 @@ class TimeSeriesAnalysis:
             # files from geocoding
             [os.path.join(geo_dir, 'geo_maskTempCoh.h5'),       '-c', 'gray'],
             [os.path.join(geo_dir, 'geo_temporalCoherence.h5'), '-c', 'gray'],
+            [os.path.join(geo_dir, 'geo_avgSpatialCoh.h5'),     '-c', 'gray'],
             [os.path.join(geo_dir, 'geo_velocity.h5'),          'velocity'],
             [os.path.join(geo_dir, 'geo_timeseries*.h5')] + opt4ts,
 
@@ -1163,20 +1179,42 @@ class TimeSeriesAnalysis:
 
         # remote element list - file is ifgramStack and the dataset of interest does not exist
         stack_dset_list = readfile.get_dataset_list(stack_file)
+        stack_dset_list += [f'{x}-' for x in stack_dset_list]
         iargs_list = [iargs for iargs in iargs_list
                       if (iargs[0] != stack_file
                           or (iargs[0] == stack_file
                               and iargs[1] in stack_dset_list))]
 
         # add the following common options to all element lists
-        opt_common = ['--dpi', '150', '--noverbose', '--nodisplay', '--update']
+        opt_common = ['--dpi', str(fig_dpi), '--noverbose', '--nodisplay', '--update', '--memory', str(max_plot_memory)]
         iargs_list = [opt_common + iargs for iargs in iargs_list]
 
         # run view
         start_time = time.time()
-        for iargs in iargs_list:
-            print('view.py', ' '.join(iargs))
-            mintpy.view.main(iargs)
+        run_parallel = False
+        cluster_type = self.template['mintpy.compute.cluster']
+        if cluster_type:
+            num_workers = self.template['mintpy.compute.numWorker']
+            num_workers = cluster.DaskCluster.format_num_worker(cluster_type, num_workers)
+
+            # limit number of parallel processes based on available CPU
+            num_cores, run_parallel, Parallel, delayed = ut.check_parallel(
+                len(iargs_list),
+                print_msg=False,
+                maxParallelNum=num_workers)
+
+            # limit number of parallel processes based on memory limit
+            # default view.py call could use up to 1.5 GB reserved memory (~700 MB actual memory)
+            # scale based on utils.plot.auto_multilook_num()
+            plot_memory = 1.5 if 2.0 < max_plot_memory <= 4.0 else 1.5 * (max_plot_memory / 4.0)
+            num_cores = min(num_cores, max(int(max_memory / plot_memory), 1))
+
+        if run_parallel and num_cores > 1:
+            print("parallel processing using {} cores ...".format(num_cores))
+            Parallel(n_jobs=num_cores)(delayed(mintpy.view.main)(iargs) for iargs in iargs_list)
+        else:
+            for iargs in iargs_list:
+                mintpy.view.main(iargs)
 
         # copy text files to pic
         print('copy *.txt files into ./pic directory.')

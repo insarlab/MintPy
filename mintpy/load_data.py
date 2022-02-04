@@ -32,7 +32,7 @@ from mintpy import subset
 
 
 #################################################################
-PROCESSOR_LIST = ['isce', 'aria', 'gmtsar', 'snap', 'gamma', 'hyp3', 'roipac']
+PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac', 'cosicorr']
 
 datasetName2templateKey = {
     'unwrapPhase'     : 'mintpy.load.unwFile',
@@ -43,7 +43,9 @@ datasetName2templateKey = {
     'magnitude'       : 'mintpy.load.magFile',
 
     'azimuthOffset'   : 'mintpy.load.azOffFile',
+    'azimuthOffsetStd': 'mintpy.load.azOffStdFile',
     'rangeOffset'     : 'mintpy.load.rgOffFile',
+    'rangeOffsetStd'  : 'mintpy.load.rgOffStdFile',
     'offsetSNR'       : 'mintpy.load.offSnrFile',
 
     'height'          : 'mintpy.load.demFile',
@@ -397,7 +399,7 @@ def read_inps_dict2ifgram_stack_dict_object(iDict):
                                                    path=iDict[key]))
 
     # Check 1: required dataset
-    dsName0s = ['unwrapPhase', 'azimuthOffset']
+    dsName0s = ['unwrapPhase', 'rangeOffset', 'azimuthOffset']
     dsName0 = [i for i in dsName0s if i in dsPathDict.keys()]
     if len(dsName0) == 0:
         print('WARNING: No reqired {} data files found!'.format(dsName0s))
@@ -505,7 +507,7 @@ def read_inps_dict2geometry_dict_object(iDict):
         # for processors with lookup table in geo-coordinates, remove latitude/longitude
         iDict['ds_name2key'].pop('latitude')
         iDict['ds_name2key'].pop('longitude')
-    elif iDict['processor'] in ['aria', 'gmtsar', 'snap', 'hyp3']:
+    elif iDict['processor'] in ['aria', 'gmtsar', 'hyp3', 'snap', 'cosicorr']:
         # for processors with geocoded products support only, do nothing for now.
         # check again when adding products support in radar-coordiantes
         pass
@@ -546,14 +548,17 @@ def read_inps_dict2geometry_dict_object(iDict):
         print('WARNING: No reqired {} data files found!'.format(dsName0))
 
     # metadata
-    ifgramRadarMetadata = None
+    ifgramMetaGeo = None
+    ifgramMetaRadar = None
     ifgramKey = iDict['ds_name2key']['unwrapPhase']
     if ifgramKey in iDict.keys():
         ifgramFiles = glob.glob(str(iDict[ifgramKey]))
         if len(ifgramFiles) > 0:
             atr = readfile.read_attribute(ifgramFiles[0])
-            if 'Y_FIRST' not in atr.keys():
-                ifgramRadarMetadata = atr.copy()
+            if 'Y_FIRST' in atr.keys():
+                ifgramMetaGeo = atr.copy()
+            else:
+                ifgramMetaRadar = atr.copy()
 
     # dsPathDict --> dsGeoPathDict + dsRadarPathDict
     dsNameList = list(dsPathDict.keys())
@@ -574,11 +579,11 @@ def read_inps_dict2geometry_dict_object(iDict):
     if len(dsRadarPathDict) > 0:
         geomRadarObj = geometryDict(processor=iDict['processor'],
                                     datasetDict=dsRadarPathDict,
-                                    extraMetadata=ifgramRadarMetadata)
+                                    extraMetadata=ifgramMetaRadar)
     if len(dsGeoPathDict) > 0:
         geomGeoObj = geometryDict(processor=iDict['processor'],
                                   datasetDict=dsGeoPathDict,
-                                  extraMetadata=None)
+                                  extraMetadata=ifgramMetaGeo)
     return geomRadarObj, geomGeoObj
 
 
@@ -624,7 +629,7 @@ def prepare_metadata(iDict):
     print('-'*50)
     print('prepare metadata files for {} products'.format(processor))
 
-    if processor in ['gamma', 'hyp3', 'roipac', 'snap']:
+    if processor in ['gamma', 'hyp3', 'roipac', 'snap', 'cosicorr']:
         # import prep_module
         if processor == 'gamma':
             from mintpy import prep_gamma as prep_module
@@ -634,15 +639,19 @@ def prepare_metadata(iDict):
             from mintpy import prep_roipac as prep_module
         elif processor == 'snap':
             from mintpy import prep_snap as prep_module
+        elif processor == 'cosicorr':
+            from mintpy import prep_cosicorr as prep_module
 
         # run prep_{processor} module
-        for key in [i for i in iDict.keys() if (i.startswith('mintpy.load.') and i.endswith('File'))]:
+        for key in [i for i in iDict.keys() if (i.startswith('mintpy.load.') and i.endswith('File') and i != 'mintpy.load.metaFile')]:
             if len(glob.glob(str(iDict[key]))) > 0:
                 # print command line
                 script_name = '{}.py'.format(os.path.basename(prep_module.__name__).split('.')[-1])
                 iargs = [iDict[key]]
                 if processor == 'gamma' and iDict['PLATFORM']:
                     iargs += ['--sensor', iDict['PLATFORM'].lower()]
+                elif processor == 'cosicorr':
+                    iargs += ['--metadata', iDict['mintpy.load.metaFile']]
                 print(script_name, ' '.join(iargs))
                 # run
                 prep_module.main(iargs)
@@ -664,11 +673,11 @@ def prepare_metadata(iDict):
         geom_dir = os.path.dirname(iDict['mintpy.load.demFile'])
 
         # observation
-        obs_keys = ['mintpy.load.unwFile', 'mintpy.load.azOffFile']
+        obs_keys = ['mintpy.load.unwFile', 'mintpy.load.rgOffFile', 'mintpy.load.azOffFile']
         obs_keys = [i for i in obs_keys if i in iDict.keys()]
         obs_paths = [iDict[key] for key in obs_keys if iDict[key].lower() != 'auto']
         if len(obs_paths) > 0:
-            processor = get_processor(meta_file)
+            processor = get_processor(meta_file) if os.path.isfile(meta_file) else 'topsStack'
             if processor == 'alosStack':
                 obs_dir = os.path.dirname(obs_paths[0])
             else:
@@ -678,12 +687,20 @@ def prepare_metadata(iDict):
             obs_dir = None
             obs_file = None
 
+        # geometry
+        geom_names = ['dem', 'lookupY', 'lookupX', 'incAngle', 'azAngle', 'shadowMask', 'waterMask']
+        geom_keys = ['mintpy.load.{}File'.format(i) for i in geom_names]
+        geom_files = [os.path.basename(iDict[key]) for key in geom_keys
+                      if (iDict[key] and iDict[key].lower() != 'auto')]
+
         # compose list of input arguments
         iargs = ['-m', meta_file, '-g', geom_dir]
         if baseline_dir:
             iargs += ['-b', baseline_dir]
         if obs_dir is not None:
             iargs += ['-d', obs_dir, '-f', obs_file]
+        if geom_files:
+            iargs += ['--geom-files'] + geom_files
 
         # run module
         print('prep_isce.py', ' '.join(iargs))

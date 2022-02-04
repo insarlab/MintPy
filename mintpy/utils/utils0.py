@@ -20,7 +20,7 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import ndimage
-
+from pyproj import CRS, Proj, Transformer
 
 # global variables
 SPEED_OF_LIGHT = 299792458 # m/s
@@ -203,6 +203,47 @@ def azimuth_ground_resolution(atr):
     return az_step
 
 
+def auto_lat_lon_step_size(atr, lat_c=None):
+    """Get the default lat/lon step size for geocoding.
+
+    Treat the pixel in radar coordinates as an rotated rectangle. Use the bounding box 
+    of the rotated rectangle for the ratio between lat and lon steps. Then scale the 
+    lat and lon step size to ensure the same area between the pixels in radar and geo
+    coordinates.
+
+    Link: https://math.stackexchange.com/questions/4001034
+
+    Parameters: atr      - dict, standard mintpy metadata
+                lat_c    - float, central latitude in degree
+    Returns:    lat_step - float, latitude  step size in degree
+                lon_step - float, longitude step size in degree
+    """
+    # azimuth angle (rotation angle) in radian
+    az_angle = np.deg2rad(abs(heading2azimuth_angle(float(atr['HEADING']))))
+
+    # radar pixel size in meter
+    az_step = azimuth_ground_resolution(atr)
+    rg_step = range_ground_resolution(atr)
+
+    # geo pixel size in meter
+    x_step = rg_step * abs(np.cos(az_angle)) + az_step * abs(np.sin(az_angle))
+    y_step = rg_step * abs(np.sin(az_angle)) + az_step * abs(np.cos(az_angle))
+    scale_factor = np.sqrt((rg_step * az_step) / (x_step * y_step))
+    x_step *= scale_factor
+    y_step *= scale_factor
+
+    # geo pixel size in degree
+    if lat_c is None:
+        if 'LAT_REF1' in atr.keys():
+            lat_c = (float(atr['LAT_REF1']) + float(atr['LAT_REF3'])) / 2.
+        else:
+            lat_c = 0
+    lon_step = np.rad2deg(x_step / (EARTH_RADIUS * np.cos(np.deg2rad(lat_c))))
+    lat_step = np.rad2deg(y_step / EARTH_RADIUS) * -1.
+
+    return lat_step, lon_step
+
+
 
 #################################### File Operation ##########################################
 def touch(fname_list, times=None):
@@ -232,6 +273,49 @@ def touch(fname_list, times=None):
 
 
 #################################### Geometry ##########################################
+def utm_zone2epsg_code(utm_zone):
+    """Convert UTM Zone string to EPSG code.
+    Parameters: utm_zone - str, atr['UTM_ZONE']
+    Returns:    epsg     - str, EPSG code
+    Examples:   epsg = utm_zone2epsg_code('11N')
+    """
+    crs = CRS.from_dict({'proj': 'utm',
+                         'zone': int(utm_zone[:-1]),
+                         'south': utm_zone[-1] == 'S',
+                        })
+    epsg = crs.to_authority()[1]
+    return epsg
+
+
+def to_latlon(infile, x, y):
+    """Convert x, y in the projection coordinates of the file to lon/lat in degree.
+
+    Similar functionality also exists in utm.to_latlon() at:
+        https://github.com/Turbo87/utm#utm-to-latitudelongitude
+
+    Parameters: infile - str, GDAL supported file path
+                x/y    - scalar or 1/2D np.ndarray, coordiantes in x and y direction
+    Returns:    y/x    - scalar or 1/2D np.ndarray, coordinates in latitutde and longitude
+    """
+    from osgeo import gdal
+
+    # read projection info using gdal
+    ds = gdal.Open(infile)
+    srs = ds.GetSpatialRef()
+
+    # if input file is already in lat/lon, do nothing and return
+    if (not srs.IsProjected()) and (srs.GetAttrValue('unit') == 'degree'):
+        return y, x
+
+    # convert coordiantes using pyproj
+    # note that Transform.from_proj(x, y, always_xy=True) convert the x, y to lon, lat
+    p_in = Proj(ds.GetProjection())
+    p_out = Proj('epsg:4326')
+    transformer = Transformer.from_proj(p_in, p_out)
+    y, x = transformer.transform(x, y)
+    return y, x
+
+
 def get_lat_lon(meta, geom_file=None, box=None, dimension=2):
     """Extract precise pixel-wise lat/lon.
 
@@ -323,43 +407,61 @@ def get_lat_lon_rdc(meta):
 def azimuth2heading_angle(az_angle):
     """Convert azimuth angle from ISCE los.rdr band2 into satellite orbit heading angle
 
-    ISCE-2 los.* file band2 is azimuth angle of LOS vector from ground target to the satellite 
+    ISCE-2 los.* file band2 is azimuth angle of LOS vector from ground target to the satellite
         measured from the north in anti-clockwise as positive
 
     Below are typical values in deg for satellites with near-polar orbit:
         ascending  orbit: heading angle of -12  and azimuth angle of 102
         descending orbit: heading angle of -168 and azimuth angle of -102
     """
-
-    head_angle = -1 * (180 + az_angle + 90)
+    head_angle = 90 - az_angle
     head_angle -= np.round(head_angle / 360.) * 360.
     return head_angle
 
 
-def enu2los(e, n, u, inc_angle=34., head_angle=-168.):
+def heading2azimuth_angle(head_angle):
+    """Convert satellite orbit heading angle into azimuth angle as defined in ISCE-2."""
+    az_angle = 90 - head_angle
+    az_angle -= np.round(az_angle / 360.) * 360.
+    return az_angle
+
+
+def enu2los(e, n, u, inc_angle, head_angle=None, az_angle=None):
     """
-    Parameters: e          - np.array or float, displacement in east-west direction, east as positive
-                n          - np.array or float, displacement in north-south direction, north as positive
-                u          - np.array or float, displacement in vertical direction, up as positive
-                inc_angle  - np.array or float, local incidence angle from vertical
-                head_angle - np.array or float, satellite orbit from the north in clock-wise direction as positive
-    Returns:    v_los      - np.array or float, displacement in line-of-sight direction, moving toward satellite as positive
+    Parameters: e          - np.ndarray or float, displacement in east-west direction, east as positive
+                n          - np.ndarray or float, displacement in north-south direction, north as positive
+                u          - np.ndarray or float, displacement in vertical direction, up as positive
+                inc_angle  - np.ndarray or float, local incidence angle from vertical
+                head_angle - np.ndarray or float, azimuth angle of the SAR platform along track direction
+                             measured from the north with clockwise direction as positive in the unit of degrees
+                az_angle   - np.ndarray or float, azimuth angle of the LOS vector from the ground to the SAR platform
+                             measured from the north with anti-clockwise direction as positive in the unit of degrees
+                             head_angle = 90 - az_angle
+    Returns:    v_los      - np.ndarray or float, displacement in line-of-sight direction, moving toward satellite as positive
 
     Typical values in deg for satellites with near-polar orbit:
         For AlosA: inc_angle = 34, head_angle = -12.9,  az_angle = 102.9
-        For AlosD: inc_angle = 34, head_angle = -167.2, az_angle = -12.8
-        For  SenD: inc_angle = 34, head_angle = -168.0, az_angle = -102
+        For AlosD: inc_angle = 34, head_angle = -167.2, az_angle = -102.8
+        For  SenD: inc_angle = 34, head_angle = -168.0, az_angle = -102.0
     """
-    # if input angle is azimuth angle
-    if np.abs(np.abs(head_angle) - 90) < 30:
-        head_angle = azimuth2heading_angle(head_angle)
+    ## if input angle is azimuth angle
+    #if np.abs(np.abs(head_angle) - 90) < 30:
+    #    head_angle = azimuth2heading_angle(head_angle)
+    if az_angle is None:
+        # head_angle -> az_angle
+        if head_angle is not None:
+            az_angle = heading2azimuth_angle(head_angle)
+    if az_angle is None:
+        raise ValueError('az_angle can not be None!')
 
     inc_angle *= np.pi/180.
-    head_angle *= np.pi/180.
-    v_los = (  e * np.sin(inc_angle) * np.cos(head_angle) * -1
-             + n * np.sin(inc_angle) * np.sin(head_angle) 
+    az_angle *= np.pi/180.
+    v_los = (  e * np.sin(inc_angle) * np.sin(az_angle) * -1
+             + n * np.sin(inc_angle) * np.cos(az_angle)
              + u * np.cos(inc_angle))
+
     return v_los
+
 
 def four_corners(atr):
     """Return 4 corners lat/lon"""
@@ -476,7 +578,7 @@ def get_largest_conn_component(mask_in, min_num_pixel=1e4, display=False):
     Returns:    mask_out : 2D np.array in np.bool_ format
     """
     mask_out = np.zeros(mask_in.shape, np.bool_)
-    labels, n_features = ndimage.label(mask_in)
+    labels = ndimage.label(mask_in)[0]
     num_pixel = np.max(np.bincount(labels.flatten())[1:])
     if num_pixel < min_num_pixel:
         return mask_out
@@ -590,8 +692,7 @@ def which(program):
     def is_exe(fpath):
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
-    fpath, fname = os.path.split(program)
-    if fpath:
+    if os.path.split(program)[0]:
         if is_exe(program):
             return program
     else:
@@ -605,6 +706,7 @@ def which(program):
 
 def check_parallel(file_num=1, print_msg=True, maxParallelNum=8):
     """Check parallel option based file num and installed module
+    Link: https://joblib.readthedocs.io/en/latest/parallel.html
     Examples:
         num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(file_list))
         Parallel(n_jobs=num_cores)(delayed(subset_file)(file, vars(inps)) for file in file_list)
@@ -729,6 +831,14 @@ def round_to_1(x):
     return round(x, -digit)
 
 
+def round_up_to_odd(x):
+    """Round a float up to the next odd integer .
+    Link: https://stackoverflow.com/questions/31648729
+    """
+    y = np.ceil(x) // 2 * 2 + 1
+    return y.astype(np.int16)
+
+
 def highest_power_of_2(x):
     """Given a number x, find the highest power of 2 that <= x"""
     res = np.power(2, np.floor(np.log2(x)))
@@ -750,5 +860,18 @@ def most_common(L, k=1):
         item_mm = item_mm[0]
     return item_mm
 
+
+def is_number(string):
+    """Check string is a number.
+    Not using str.isnumeric() because it can not handle floating point nor negative sign.
+    Link: https://elearning.wsldp.com/python3/python-check-string-is-a-number/
+    Parameters: string - str, a string
+    Returns:    True/False
+    """
+    try:
+        float(string)
+        return True
+    except ValueError:
+        return False
 
 

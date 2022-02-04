@@ -15,7 +15,7 @@ import numpy as np
 from scipy import linalg
 from mintpy.objects import timeseries, geometry, cluster
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import arg_group, ptime, readfile, writefile, utils as ut
+from mintpy.utils import arg_group, ptime, time_func, readfile, writefile, utils as ut
 
 
 # key configuration parameter name
@@ -65,17 +65,19 @@ def create_parser():
     parser.add_argument('-o', '--outfile',
                         help='Output file name for corrected time-series')
 
-    # temporal functions
-    parser.add_argument('-t', '--template', dest='template_file',
-                        help='template file with the options')
-    parser.add_argument('--ex', '--exclude', dest='excludeDate', nargs='*', default=[],
-                        help='Exclude date(s) for DEM error estimation.\n' +
-                             'All dates will be corrected for DEM residual phase still.')
-    parser.add_argument('-p', '--poly-order', dest='polyOrder', type=int, default=2,
-                        help='polynomial order number of temporal deformation model, default = 2')
-    parser.add_argument('-s', '--step-date', dest='stepFuncDate', nargs='*', default=[],
-                        help='Date of step jump for temporal deformation model,'+
-                             ' i.e. date of earthquake/volcanic eruption')
+    defo_model = parser.add_argument_group('temporal deformation model')
+    defo_model.add_argument('-t', '--template', dest='template_file',
+                            help='template file with the options')
+    defo_model.add_argument('--ex', '--exclude', dest='excludeDate', nargs='*', default=[],
+                            help='Exclude date(s) for DEM error estimation.\n' +
+                                 'All dates will be corrected for DEM residual phase still.')
+    defo_model.add_argument('-p', '--poly-order', dest='polyOrder', type=int, default=2,
+                            help='polynomial order number of temporal deformation model (default: %(default)s).')
+    defo_model.add_argument('-s', '--step-date', dest='stepFuncDate', nargs='*', default=[],
+                            help='Date of step jump for temporal deformation model (default: %(default)s).'+
+                                 ' i.e. date of earthquake/volcanic eruption')
+    defo_model.add_argument('--periodic', '--period', '--peri', dest='periodic', type=float, nargs='+', default=[],
+                            help='periodic functinos of temporal deformation model (default: %(default)s).')
 
     parser.add_argument('--phase-velocity', dest='phaseVelocity', action='store_true',
                         help='Use phase velocity instead of phase for inversion constrain.')
@@ -240,15 +242,24 @@ def get_design_matrix4defo(inps):
     msg += "\ntemporal deformation model: polynomial order = {}".format(inps.polyOrder)
     if inps.stepFuncDate:
         msg += "\ntemporal deformation model: step functions at {}".format(inps.stepFuncDate)
+    if inps.periodic:
+        msg += "\ntemporal deformation model: periodic functions of {} yr".format(inps.periodic)
     msg += '\n'+'-'*80
     print(msg)
 
-    # get design matrix for temporal deformation model
+    # prepare temporal deformation model
     model = dict()
     model['polynomial'] = inps.polyOrder
     model['step'] = inps.stepFuncDate
-    date_list = timeseries(inps.timeseries_file).get_date_list()
-    G_defo = timeseries.get_design_matrix4time_func(date_list, model)
+    model['periodic'] = inps.periodic
+
+    # prepare SAR info
+    ts_obj = timeseries(inps.timeseries_file)
+    date_list = ts_obj.get_date_list()
+    seconds = ts_obj.get_metadata().get('CENTER_LINE_UTC', 0)
+
+    # compose design matrix
+    G_defo = time_func.get_design_matrix4time_func(date_list, model, seconds=seconds)
 
     return G_defo
 
@@ -264,14 +275,6 @@ def read_geometry(ts_file, geom_file=None, box=None):
     """
     ts_obj = timeseries(ts_file)
     ts_obj.open(print_msg=False)
-
-    # size
-    if box:
-        num_row = box[3] - box[1]
-        num_col = box[2] - box[0]
-    else:
-        num_row = ts_obj.length
-        num_col = ts_obj.width
 
     # 0/2/3D geometry
     if geom_file:
@@ -512,6 +515,10 @@ def correct_dem_error(inps):
 
     start_time = time.time()
 
+    # limit the number of threads to 1
+    # for slight speedup and big CPU usage save
+    num_threads_dict = cluster.set_num_threads("1")
+
     ## 1. input info
 
     # 1.1 read date info
@@ -647,6 +654,9 @@ def correct_dem_error(inps):
                                    data=ts_res,
                                    datasetName='timeseries',
                                    block=block)
+
+    # roll back to the origial number of threads
+    cluster.roll_back_num_threads(num_threads_dict)
 
     # time info
     m, s = divmod(time.time()-start_time, 60)

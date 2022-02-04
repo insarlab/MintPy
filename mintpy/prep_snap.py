@@ -103,16 +103,16 @@ def get_ellpsoid_local_radius(xyz):
 
 
 def extract_snap_metadata(fname):
-    ''' read and extract attributes from a SNAP .dim file
+    '''read and extract attributes from a SNAP .dim file
     Parameters: fname - str, path of SNAP .dim file
     Returns:    atr   - dict, metadata
     '''
 
-    # Read XML and extract required vals - using basic file reader 
-    # xmltree or minidom might be better but this works    
+    # Read XML and extract required vals - using basic file reader
+    # xmltree or minidom might be better but this works
     with open(fname, 'r') as f:
         lines = f.readlines()
-        # use lists so that elements where there are more than one, only the first mention can be extracted - 
+        # use lists so that elements where there are more than one, only the first mention can be extracted
         # Usually the first mention (list item 0) is the final subsetted/geocoded product metadata
         bp, azimuth_looks, range_looks, az_pixel, rg_pixel, dates, x, y, z = [], [], [], [], [], [], [], [], []
         for line in lines:
@@ -156,7 +156,7 @@ def extract_snap_metadata(fname):
             if "last_far_long" in line:
                 last_far_long = line.split(">")[1].split("<")[0]
             if "ASCENDING or DESCENDING" in line:
-                direction = line.split(">")[1].split("<")[0]            
+                direction = line.split(">")[1].split("<")[0]
             if "azimuth_looks" in line:
                 azimuth_looks.append(line.split(">")[1].split("<")[0])
             if "range_looks" in line:
@@ -216,10 +216,10 @@ def extract_snap_metadata(fname):
     atr["P_BASELINE_TOP_HDR"] = bp[1]
     atr["P_BASELINE_BOTTOM_HDR"] = bp[1]
     atr["ANTENNA_SIDE"] = antenna_side
-    atr["LAT_REF1"], atr["LONG_REF1"] = first_near_lat, first_near_long
-    atr["LAT_REF2"], atr["LONG_REF2"] = first_far_lat, first_far_long
-    atr["LAT_REF3"], atr["LONG_REF3"] = last_near_lat, last_near_long
-    atr["LAT_REF4"], atr["LONG_REF4"] = last_far_lat, last_far_long
+    atr["LAT_REF1"], atr["LON_REF1"] = first_near_lat, first_near_long
+    atr["LAT_REF2"], atr["LON_REF2"] = first_far_lat, first_far_long
+    atr["LAT_REF3"], atr["LON_REF3"] = last_near_lat, last_near_long
+    atr["LAT_REF4"], atr["LON_REF4"] = last_far_lat, last_far_long
     atr["ORBIT_DIRECTION"] = direction
     atr["ALOOKS"] = int(float(azimuth_looks[0]))
     atr["RLOOKS"] = int(float(range_looks[0]))
@@ -239,6 +239,8 @@ def extract_snap_metadata(fname):
     transform = [str(float(i)) for i in transform]
     atr["X_STEP"], atr["Y_STEP"] = transform[0], transform[3]
     atr["X_FIRST"], atr["Y_FIRST"] = transform[4], transform[5]
+    atr["X_UNIT"] = "degrees"
+    atr["Y_UNIT"] = "degrees"
 
     # convert all key value in string format to ensure the --update checking in write_rsc()
     for key, value in atr.items():

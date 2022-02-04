@@ -32,8 +32,8 @@ REFERENCE = """references:
   Parameters and Uncertainties: A Bayesian Approach, Geochemistry, Geophysics, Geosystems, 19, 
   doi:10.1029/2018GC007585.
 
-  Yunjun, Z., F. Amelung, Y. Aoki, (2021), Imaging the Hydrothermal System of Kirishima Volcanic Complex, 
-  Japan from ALOS-1/2 InSAR time-series, (in prep.).
+  Yunjun, Z., Amelung, F., & Aoki, Y. (2021), Imaging the hydrothermal system of Kirishima volcanic complex 
+  with L-band InSAR time series, Geophysical Research Letters, 48(11), e2021GL092879. doi:10.1029/2021GL092879
 """
 
 def create_parser():
@@ -55,16 +55,19 @@ def create_parser():
     parser.add_argument('--out-dir', dest='outdir',
                         help='custom output directory, ONLY IF --output is not specified.')
     parser.add_argument('--ellipsoid2geoid', action='store_true',
-                        help='Convert the height of ellipsoid to geoid using geoidheight module\n'+
-                             'Download/install geoidheight as below:\n'+
-                             'https://github.com/geodesymiami/Yunjun_et_al-2019-Kirishima/GBIS')
+                        help='Convert the height of ellipsoid to geoid using "geoidheight" module\n'+
+                             'Download & install geoidheight as below:\n'+
+                             'https://github.com/geodesymiami/2021_Kirishima')
     return parser
 
 
 def cmd_line_parse(iargs=None):
-    print('{} {}'.format(os.path.basename(__file__), ' '.join(iargs)))
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    inps.argv = iargs if iargs else sys.argv[1:]
+    print('{} {}'.format(os.path.basename(__file__), ' '.join(inps.argv)))
+
     inps.file = os.path.abspath(inps.file)
 
     # Backend setting
@@ -128,7 +131,7 @@ def read_data(inps):
     print('number of pixels after excluding zero phase value: {}'.format(np.sum(inps.mask)))
 
     # read geometry
-    inps.lat, inps.lon = ut.get_lat_lon(inps.metadata)
+    inps.lat, inps.lon = ut.get_lat_lon(inps.metadata, geom_file=inps.geom_file)
     inps.inc_angle = readfile.read(inps.geom_file, datasetName='incidenceAngle')[0]
     inps.head_angle = np.ones(inps.inc_angle.shape, dtype=np.float32) * float(inps.metadata['HEADING'])
     inps.height = readfile.read(inps.geom_file, datasetName='height')[0]

@@ -24,7 +24,7 @@ def phase_pdf_ds(L, coherence=None, phi_num=1000, coh_step=0.005):
     Parameters: L         - int, number of independent looks
                 coherence - 1D np.array for the range of coherence, with value < 1.0 for valid operation
                 phi_num   - int, number of phase sample for the numerical calculation
-                coh_step  - float, incremental step of coherence
+                coh_step  - float, incremental step of coherence, used only if coherence is None.
     Returns:    pdf       - 2D np.array, phase PDF in size of (phi_num, len(coherence))
                 coherence - 1D np.array for the range of coherence
     Example:
@@ -132,6 +132,40 @@ def phase_variance_ps(L, coherence=None, epsilon=1e-3):
         coherence = np.linspace(0.9, 1.-epsilon, 1000, dtype=np.float64)
     var = (1 - coherence**2) / (2 * int(L) * coherence**2)
     return var, coherence
+
+
+def cross_correlation_std(N, coh, corr_type='intensity'):
+    """Standard deviation of cross correlation for differential shift estimation.
+
+    Reference:
+        Bamler, R., and M. Eineder (2005), Accuracy of differential shift estimation by 
+            correlation and split-bandwidth interferometry for wideband and delta-k SAR systems, 
+            Geoscience and Remote Sensing Letters, IEEE, 2(2), 151-155, doi:10.1109/LGRS.2004.843203.
+        De Zan, F. (2014), Accuracy of Incoherent Speckle Tracking for Circular Gaussian Signals, 
+            IEEE Geoscience and Remote Sensing Letters, 11(1), 264-267, doi:10.1109/LGRS.2013.2255259.
+
+    Parameters: N         - int   / 2D np.ndarray in size of (n, 1), number of independent samples (resolution ceels)
+                coh       - float / 2D np.ndarray in size of (1, c), spatial coherence
+                corr_type - str, type of image samples used for cross correlation: complex or intensity.
+    Returns:    std       - float / 2D np.ndarray in size of (n, c), standard deviation in the unit of pixel
+    """
+    if isinstance(N, np.ndarray):
+        N = N.reshape(-1, 1)
+    if isinstance(coh, np.ndarray):
+        coh = coh.reshape(1, -1)
+
+    if corr_type == 'complex':
+        # equation (1) from Bamler and Eineder (2005)
+        std = np.sqrt(3 / (2*N)) * np.sqrt(1 - coh**2) / (np.pi * coh)
+
+    elif corr_type in ['intensity', 'amplitude']:
+        # equation (13) from De Zan (2014)
+        std = np.sqrt(3 / (10*N)) * np.sqrt(2 + 5*coh**2 - 7*coh**4) / (np.pi * coh**2)
+
+    else:
+        raise ValueError('un-recognized corr_type={}'.format(corr_type))
+
+    return std
 
 
 ########################################## Simulations #########################################

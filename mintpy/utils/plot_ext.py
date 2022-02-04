@@ -17,7 +17,7 @@ from mintpy import view
 ################################# SelectFromCollection class begin ########################################
 class SelectFromCollection(object):
     """Select indices from a matplotlib collection using `PolygonSelector`.
-    
+
     Selected pixels within the polygon is marked as True and saved in the 
     member variable self.mask, in the same size as input AxesImage object
     with all the other pixels marked as False.
@@ -34,7 +34,7 @@ class SelectFromCollection(object):
     --------
     import matplotlib.pyplot as plt
     from mintpy.utils import readfile, plot as pp
-    
+
     fig, ax = plt.subplots()
     data = readfile.read('velocity.h5', datasetName='velocity')[0]
     im = ax.imshow(data)
@@ -42,7 +42,7 @@ class SelectFromCollection(object):
     selector = pp.SelectFromCollection(ax, im)
     plt.show()
     selector.disconnect()
-    
+
     plt.figure()
     plt.imshow(selector.mask)
     plt.show()
@@ -80,7 +80,7 @@ class SelectFromCollection(object):
         self.canvas.draw_idle()
 
 ## Utility script
-def get_poly_mask(fname, datasetName, print_msg=True):
+def get_poly_mask(fname, datasetName, print_msg=True, view_cmd=''):
     """Get mask of pixels within polygon from interactive selection
     Parameters: data : 2D np.array in size of (length, width)
     Returns:    mask : 2D np.arrat in size of (length, width) in np.bool_ format
@@ -89,9 +89,8 @@ def get_poly_mask(fname, datasetName, print_msg=True):
     cmd = 'view.py {} '.format(fname)
     if datasetName:
         cmd += ' {} '.format(datasetName)
-    ## Customized setting for plotting (temporarily for advanced users)
-    #cmd += ' --dem ./inputs/geometryGeo.h5 --contour-step 100 --contour-smooth 0.0 '
-    #cmd += ' -u cm -v -6 6 '
+    if view_cmd:
+        cmd += view_cmd
 
     d_v, atr ,inps = view.prep_slice(cmd)
     ax = plt.subplots(figsize=inps.fig_size)[1]

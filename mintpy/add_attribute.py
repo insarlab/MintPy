@@ -60,11 +60,8 @@ def update_file_attribute(fname, atr_new):
             print('All updated (removed) attributes already exists (do not exists) and have the same value, skip update.')
         else:
             for key, value in iter(atr_new.items()):
-                if value == 'None':
-                    try:
-                        atr.pop(key)
-                    except:
-                        pass
+                if value == 'None' and key in atr.keys():
+                    atr.pop(key)
                 else:
                     atr[key] = value
 
@@ -74,8 +71,13 @@ def update_file_attribute(fname, atr_new):
     return fname
 
 
-def main(argv):
+def main(argv=None):
     # Check Inputs
+    # save argv (to check the manually specified arguments)
+    # use argv         for python call
+    # use sys.argv[1:] for command line call
+    argv = argv if argv else sys.argv[1:]
+
     if not argv or argv[0] in ['-h', '--help']:
         usage()
         sys.exit(1)
@@ -83,8 +85,10 @@ def main(argv):
         raise Exception('\nAt lease 2 inputs are needed.\n')
     infile = argv[0]
 
+    # read input attributes
     atr_new = read_input_attribute(argv)
 
+    # add attributes to file
     update_file_attribute(fname=infile, atr_new=atr_new)
 
     return infile

@@ -111,7 +111,6 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    
     atr = readfile.read_attribute(inps.file)
     if atr['FILE_TYPE'] != 'ifgramStack':
         # turn ON wirte_data for non-ifgramStack file by default
@@ -190,7 +189,12 @@ def reference_file(inps):
     # Check 1 - stack and its non-nan mask pixel coverage
     # outFile=False --> no avgPhaseVelocity file is generated due to the lack of reference point info.
     # did not use maskConnComp.h5 because not all input dataset has connectComponent info
-    stack = ut.temporal_average(inps.file, datasetName='unwrapPhase', updateMode=True, outFile=False)[0]
+    if atr['FILE_TYPE'] == 'ifgramStack':
+        ds_names = readfile.get_dataset_list(inps.file)
+        ds_name = [i for i in ds_names if i in ['unwrapPhase', 'rangeOffset', 'azimuthOffset']][0]
+    else:
+        ds_name = None
+    stack = ut.temporal_average(inps.file, datasetName=ds_name, updateMode=True, outFile=False)[0]
     mask = np.multiply(~np.isnan(stack), stack != 0.)
     if np.nansum(mask) == 0.0:
         raise ValueError('no pixel found with valid phase value in all datasets.')
@@ -302,12 +306,12 @@ def reference_point_attribute(atr, y, x):
 
 ###############################################################
 def manual_select_reference_yx(data, inps, mask=None):
+    """Manually select reference point in row/column number.
+    Parameters: data : 2D np.ndarray, stack of input file
+                inps : namespace, with key 'REF_X' and 'REF_Y', which will be updated
+                mask : 2D np.ndarray
     """
-    Input: 
-        data4display : 2D np.array, stack of input file
-        inps    : namespace, with key 'REF_X' and 'REF_Y', which will be updated
-    """
-    import matplotlib.pyplot as plt
+    from matplotlib import pyplot as plt
     print('\nManual select reference point ...')
     print('Click on a pixel that you want to choose as the refernce ')
     print('    pixel in the time-series analysis;')
@@ -417,6 +421,11 @@ def read_reference_input(inps):
         print('reading reference info from reference: '+inps.reference_file)
         inps = read_reference_file2inps(inps.reference_file, inps)
 
+    if inps.ref_lat and np.abs(inps.ref_lat) > 90 and 'UTM_ZONE' not in atr.keys():
+        msg = f'input reference latitude ({inps.ref_lat}) > 90 deg in magnitude!'
+        msg += ' This does not make sense, double check your inputs!'
+        raise ValueError(msg)
+
     # Convert ref_lat/lon to ref_y/x
     coord = ut.coordinate(atr, lookup_file=inps.lookup_file)
     if inps.ref_lat and inps.ref_lon:
@@ -434,7 +443,7 @@ def read_reference_input(inps):
             raise ValueError('input reference point is OUT of data coverage!')
 
         # Do not use ref_y/x in masked out area
-        if inps.maskFile:
+        if inps.maskFile and os.path.isfile(inps.maskFile):
             print('mask: '+inps.maskFile)
             mask = readfile.read(inps.maskFile, datasetName='mask')[0]
             if mask[inps.ref_y, inps.ref_x] == 0:

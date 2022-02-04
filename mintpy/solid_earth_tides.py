@@ -121,31 +121,62 @@ def prepare_los_geometry(geom_file):
                 atr        - dict, metadata in geo-coordinate
     """
 
-    print('read/prepare LOS geometry from file: {}'.format(geom_file))
+    print('prepare LOS geometry in geo-coordinates from file: {}'.format(geom_file))
     atr = readfile.read_attribute(geom_file)
 
-    print('read incidence / azimuth angle')
+    print('read incidenceAngle from file: {}'.format(geom_file))
     inc_angle = readfile.read(geom_file, datasetName='incidenceAngle')[0]
-    az_angle  = readfile.read(geom_file, datasetName='azimuthAngle')[0]
+
+    if 'azimuthAngle' in readfile.get_dataset_list(geom_file):
+        print('read azimuthAngle   from file: {}'.format(geom_file))
+        print('convert azimuth angle to heading angle')
+        az_angle  = readfile.read(geom_file, datasetName='azimuthAngle')[0]
+        head_angle = ut.azimuth2heading_angle(az_angle)
+    else:
+        print('use the HEADING attribute as the mean heading angle')
+        head_angle = np.ones(inc_angle.shape, dtype=np.float32) * float(atr['HEADING'])
 
     # geocode inc/az angle data if in radar-coord
     if 'Y_FIRST' not in atr.keys():
         print('-'*50)
-        print('geocoding the incidence / azimuth angle ...')
+        print('geocoding the incidence / heading angles ...')
         res_obj = resample(lut_file=geom_file, src_file=geom_file)
         res_obj.open()
         res_obj.prepare()
 
         # resample data
         box = res_obj.src_box_list[0]
-        inc_angle = res_obj.run_resample(src_data=inc_angle[box[1]:box[3], box[0]:box[2]])
-        az_angle  = res_obj.run_resample(src_data=az_angle[box[1]:box[3], box[0]:box[2]])
+        inc_angle  = res_obj.run_resample(src_data=inc_angle[box[1]:box[3], box[0]:box[2]])
+        head_angle = res_obj.run_resample(src_data=head_angle[box[1]:box[3], box[0]:box[2]])
 
         # update attribute
         atr = attr.update_attribute4radar2geo(atr, res_obj=res_obj)
 
-    # azimuth angle --> heading angle
-    head_angle = ut.azimuth2heading_angle(az_angle)
+    # for 'Y_FIRST' not in 'degree'
+    # e.g. meters for UTM projection from ASF HyP3
+    if not atr['Y_UNIT'].lower().startswith('deg'):
+        # get SNWE in meter
+        length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+        N = float(atr['Y_FIRST'])
+        W = float(atr['X_FIRST'])
+        y_step = float(atr['Y_STEP'])
+        x_step = float(atr['X_STEP'])
+        S = N + y_step * length
+        E = W + x_step * width
+
+        # SNWE in meter --> degree
+        lat0, lon0 = ut.to_latlon(atr['OG_FILE_PATH'], W, N)
+        lat1, lon1 = ut.to_latlon(atr['OG_FILE_PATH'], E, S)
+        lat_step = (lat1 - lat0) / length
+        lon_step = (lon1 - lon0) / width
+
+        # update Y/X_FIRST/STEP/UNIT
+        atr['Y_FIRST'] = lat0
+        atr['X_FIRST'] = lon0
+        atr['Y_STEP'] = lat_step
+        atr['X_STEP'] = lon_step
+        atr['Y_UNIT'] = 'degrees'
+        atr['X_UNIT'] = 'degrees'
 
     # unit: degree to radian
     inc_angle *= np.pi / 180.
@@ -185,7 +216,7 @@ def get_datetime_list(ts_file, date_wise_acq_time=False):
         sensingMid = [dt.datetime.strptime(i, date_str_format) for i in sensingMidStr]
 
     elif date_wise_acq_time and all(os.path.isdir(i) for i in xml_dirs):
-        # opt 2. read sensingMid in xml files
+        # opt 2. read sensingMid in xml files [for Sentinel-1 with topsStack]
         print('read exact datetime info in XML files from ISCE-2/topsStack results in directory:', proj_dir)
         from mintpy.utils import isce_utils
         sensingMid = isce_utils.get_sensing_datetime_list(proj_dir, date_list=date_list)[0]
@@ -193,14 +224,22 @@ def get_datetime_list(ts_file, date_wise_acq_time=False):
         # plot
         plot_sensingMid_variation(sensingMid)
 
+    elif "T" in date_list[0]:
+        # opt 3. use the time info in the `date` dataset [as provided by UAVSAR stack]
+        date_format = ptime.get_date_str_format(date_list[0])
+        sensingMid = [dt.datetime.strptime(i, date_format) for i in date_list]
+
     else:
-        # opt 3. use constant time of the day for all acquisitions
-        msg =  'Use the same time of the day for all acquisitions from CENTER_LINE_UTC\n'
-        msg += 'With <= 1 min variation for Sentinel-1A/B for example, this simplication has negligible impact on SET calculation.'
-        print(msg)
+        # opt 4. use constant time of the day for all acquisitions
         atr = readfile.read_attribute(ts_file)
         utc_sec = dt.timedelta(seconds=float(atr['CENTER_LINE_UTC']))
         sensingMid = [dt.datetime.strptime(i, '%Y%m%d') + utc_sec for i in date_list]
+
+        msg =  'Use the same time of the day for all acquisitions from CENTER_LINE_UTC\n'
+        if atr.get('PLATFORM', 'Unknow').lower().startswith('sen'):
+            msg += 'With <= 1 min variation for Sentinel-1A/B for example, this simplication has negligible impact on SET calculation.'
+        print(msg)
+
 
     return sensingMid
 
@@ -246,6 +285,7 @@ def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_file, date_wise_ac
 
     # prepare LOS geometry: geocoding if in radar-coordinates
     inc_angle, head_angle, atr_geo = prepare_los_geometry(geom_file)
+
     # get LOS unit vector
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
@@ -263,6 +303,8 @@ def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_file, date_wise_ac
     length = int(atr_geo['LENGTH'])
     width = int(atr_geo['WIDTH'])
     ts_tide = np.zeros((num_date, length, width), dtype=np.float32)
+    # default step size in meter: ~30 pixels
+    step_size = ut.round_to_1(abs(float(atr_geo['Y_STEP'])) * 108e3 * 30)
 
     # loop for calc
     print('\n'+'-'*50)
@@ -273,12 +315,13 @@ def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_file, date_wise_ac
         (tide_e,
          tide_n,
          tide_u) = pysolid.calc_solid_earth_tides_grid(dt_obj, atr_geo,
+                                                       step_size=step_size,
                                                        display=False,
                                                        verbose=verbose)
 
         # convert ENU to LOS direction
         # sign convention: positive for motion towards satellite
-        ts_tide[i,:,:] = (tide_e * unit_vec[0]
+        ts_tide[i,:,:] = (  tide_e * unit_vec[0]
                           + tide_n * unit_vec[1]
                           + tide_u * unit_vec[2])
 
@@ -286,7 +329,8 @@ def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_file, date_wise_ac
     prog_bar.close()
 
     # radar-coding if input in radar-coordinates
-    atr = readfile.read_attribute(geom_file)
+    # use ts_file to avoid potential missing CENTER_LINE_UTC attributes in geom_file from alosStack
+    atr = readfile.read_attribute(ts_file)
     if 'Y_FIRST' not in atr.keys():
         print('radar-coding the LOS tides time-series ...')
         res_obj = resample(lut_file=geom_file)
@@ -337,17 +381,19 @@ def main(iargs=None):
     start_time = time.time()
 
     # calc SET
-    calc_solid_earth_tides_timeseries(ts_file=inps.dis_file,
-                                      geom_file=inps.geom_file,
-                                      set_file=inps.set_file,
-                                      date_wise_acq_time=inps.date_wise_acq_time,
-                                      update_mode=inps.update_mode,
-                                      verbose=inps.verbose)
+    calc_solid_earth_tides_timeseries(
+        ts_file=inps.dis_file,
+        geom_file=inps.geom_file,
+        set_file=inps.set_file,
+        date_wise_acq_time=inps.date_wise_acq_time,
+        update_mode=inps.update_mode,
+        verbose=inps.verbose)
 
     # correct SET
-    correct_timeseries(dis_file=inps.dis_file,
-                       set_file=inps.set_file,
-                       cor_dis_file=inps.cor_dis_file)
+    correct_timeseries(
+        dis_file=inps.dis_file,
+        set_file=inps.set_file,
+        cor_dis_file=inps.cor_dis_file)
 
     m, s = divmod(time.time() - start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))

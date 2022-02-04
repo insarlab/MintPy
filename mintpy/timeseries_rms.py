@@ -20,7 +20,7 @@ from mintpy.utils import readfile, ptime, utils as ut, plot as pp
 TEMPLATE = get_template_content('residual_RMS')
 
 EXAMPLE = """example:
-  timeseries_rms.py  timeseriesResidual.h5 
+  timeseries_rms.py  timeseriesResidual.h5
   timeseries_rms.py  timeseriesResidual.h5  --template smallbaselineApp.cfg
   timeseries_rms.py  timeseriesResidual.h5  -m maskTempCoh.h5  --cutoff 3
 """
@@ -132,10 +132,10 @@ def analyze_rms(date_list, rms_list, inps):
     return inps
 
 
-def plot_rms_bar(ax, date_list, rms, cutoff=3., font_size=12, 
+def plot_rms_bar(ax, date_list, rms, cutoff=3., font_size=12,
                  tick_year_num=1, legend_loc='best',
                  disp_legend=True, disp_side_plot=True, disp_thres_text=False,
-                 ylabel=r'Residual Phase $\hat \phi_{resid}$ RMS [mm]'):
+                 ylabel='Residual phase RMS [mm]'):
     """ Bar plot Phase Residual RMS
     Parameters: ax : Axes object
                 date_list : list of string in YYYYMMDD format
@@ -173,7 +173,7 @@ def plot_rms_bar(ax, date_list, rms, cutoff=3., font_size=12,
 
     # axis format
     ax = pp.auto_adjust_yaxis(ax, np.append(rms, rms_threshold), font_size, ymin=0.0)
-    ax.set_xlabel('Time [years]', fontsize=font_size)
+    #ax.set_xlabel('Time [years]', fontsize=font_size)
     ax.set_ylabel(ylabel, fontsize=font_size)
     ax.tick_params(which='both', direction='in', labelsize=font_size,
                    bottom=True, top=True, left=True, right=True)

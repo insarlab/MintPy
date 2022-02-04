@@ -34,24 +34,21 @@ def create_parser():
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=REFERENCE+'\n'+EXAMPLE)
 
-    parser.add_argument('timeseries_file',
-                        help='time-series file to be corrected')
+    parser.add_argument('timeseries_file', help='time-series file to be corrected')
     parser.add_argument('-g', '--geometry', dest='geom_file', required=True,
                         help='DEM file used for correlation calculation.')
     parser.add_argument('-m', '--mask', dest='mask_file', required=True,
                         help='mask file for pixels used for correlation calculation')
 
     parser.add_argument('-t', '--threshold', type=float, default=0.,
-                        help='correlation threshold to apply phase correction.\n' +
+                        help='correlation threshold to apply phase correction.\n'
                              'if not set, all dates will be corrected.')
-    parser.add_argument('-l', '--looks', dest='num_multilook', type=int, default=8, 
-                        help='number of looks applied to data for empirical estimation.\n'+
-                        'default: 8')
+    parser.add_argument('-l', '--looks', dest='num_multilook', type=int, default=8,
+                        help='number of looks applied to data for empirical estimation (default: %(default)s).')
 
     parser.add_argument('--poly-order', '-p', dest='poly_order', type=int, default=1, choices=[1, 2, 3],
-                        help='polynomial order of phase-height correlation. Default: 1')
-    parser.add_argument('-o', '--outfile',
-                        help='output corrected timeseries file name')
+                        help='polynomial order of phase-height correlation (default: %(default)s).')
+    parser.add_argument('-o', '--outfile', help='output corrected timeseries file name')
     return parser
 
 
@@ -120,11 +117,10 @@ def estimate_phase_elevation_ratio(dem, ts_data, inps):
     debug_mode = False
     if debug_mode:
         import matplotlib.pyplot as plt
-        #d_index = np.argmax(topo_trop_corr)
-        d_index = 47
+        d_index = 47   # np.argmax(topo_trop_corr)
         data = ts_data[d_index, :, :]
         title = inps.date_list[d_index]
-        fig = plt.figure()
+        plt.figure()
         plt.plot(dem[~np.isnan(dem)],
                  data[~np.isnan(dem)],
                  '.', label='Number of Looks = 1')
@@ -140,7 +136,7 @@ def estimate_phase_elevation_ratio(dem, ts_data, inps):
         out_file = 'phase_elevation_ratio_{}.png'.format(title)
         plt.savefig(out_file, bbox_inches='tight', transparent=True, dpi=300)
         print('save to {}'.format(out_file))
-        #plt.show()
+        plt.show()
 
     print('----------------------------------------------------------')
     print('Empirical tropospheric delay correction based on phase/elevation ratio (Doin et al., 2009)')

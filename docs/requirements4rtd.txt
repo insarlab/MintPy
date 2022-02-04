@@ -1,0 +1,8 @@
+# requirements file to build Read the Docs ONLY
+defusedxml
+h5py
+lxml
+matplotlib
+numpy
+pyproj
+scipy

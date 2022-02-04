@@ -1,5 +1,6 @@
 # vim: set filetype=cfg:
 ##-------------------------------- MintPy -----------------------------##
+mintpy.compute.cluster  = local
 ########## 1. Load Data (--load to exit after this step)
 ## load_data.py -H to check more details and example inputs.
 mintpy.load.processor   = snap
@@ -12,6 +13,6 @@ mintpy.reference.lalo   = -33, 18.05
 
 mintpy.networkInversion.weightFunc  = no
 mintpy.troposphericDelay.method     = no
-mintpy.deramp                       = linear
 mintpy.topographicResidual.pixelwiseGeometry    = no
-
+mintpy.deramp           = linear
+mintpy.plot.maxMemory   = 2

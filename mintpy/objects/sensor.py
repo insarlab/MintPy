@@ -19,9 +19,10 @@ SENSOR_NAME_VARIATION = {
     'gfen3' : ['gfen3', 'gaofen3', 'g3', 'gaofen'],
     'jers'  : ['jers', 'jers1'],
     'ksat5' : ['ksat5', 'kompsat5', 'kompsat', 'kmps5'],
-    'rsat'  : ['rsat', 'rsat1', 'radarsat', 'radarsat1'],
-    'rsat2' : ['rsat2', 'radarsat2'],
-    'rsatc' : ['rsatc', 'radarsat-constellation'],
+    'ni'    : ['ni', 'nisar'],
+    'rs1'   : ['rs1', 'rsat', 'rsat1', 'radarsat', 'radarsat1'],
+    'rs2'   : ['rs2', 'rsat2', 'radarsat2'],
+    'rcm'   : ['rcm', 'rsatc', 'radarsat-constellation', 'radarsat-constellation-mission'],
     'sen'   : ['sen', 's1', 's1a', 's1b', 'sent1', 'sentinel1', 'sentinel1a', 'sentinel1b'],
     'tsx'   : ['tsx', 'terra', 'terrasar', 'terrasarx', 'tdx', 'tandemx'],
     'uav'   : ['uav', 'uavsar'],
@@ -188,9 +189,7 @@ def get_unavco_mission_name(meta_dict):
 # Envisat    : SNR = 19.5 dB from Table 3.3 in Guarnieri (2013)
 # Sentinel-1 : NESZ = -22 dB from Table 1 in https://sentinels.copernicus.eu/web/sentinel/
 #     user-guides/sentinel-1-sar/acquisition-modes/interferometric-wide-swath
-# JERS       : SNR = 14 dB from https://directory.eoportal.org/web/eoportal/satellite-missions/j/jers-1 
-# 
-#
+# JERS       : SNR = 14 dB from https://directory.eoportal.org/web/eoportal/satellite-missions/j/jers-1
 
 
 ##--------------------  X-band  --------------------##
@@ -198,8 +197,9 @@ def get_unavco_mission_name(meta_dict):
 # from Table 1 in Jung et al. (2014)
 TSX = {
     'carrier_frequency'          : 9.65e9,    # Hz
+    'altitude'                   : 516e3,     # m, mean value
     'antenna_length'             : 4.8,       # m
-    'dopper_bandwidth'           : 2770,      # Hz
+    'doppler_bandwidth'          : 2770,      # Hz
     'pulse_repetition_frequency' : 3800,      # Hz
     'chirp_bandwidth'            : 100e6,     # Hz
     'sampling_frequency'         : 109.89e6,  # Hz
@@ -211,8 +211,9 @@ TSX = {
 # from Table 1 in Jung et al. (2014)
 CSK = {
     'carrier_frequency'          : 9.6e9,     # Hz
+    'altitude'                   : 619e3,     # m, mean value
     'antenna_length'             : 5.7,       # m
-    'dopper_bandwidth'           : 2670,      # Hz
+    'doppler_bandwidth'          : 2670,      # Hz
     'pulse_repetition_frequency' : 3000,      # Hz
     'chirp_bandwidth'            : 117e6,     # Hz
     'sampling_frequency'         : 146.25e6,  # Hz
@@ -224,8 +225,9 @@ CSK = {
 # from Table 1 in Jung et al. (2014)
 KSAT5 = {
     'carrier_frequency'          : 9.66e9,    # Hz
+    'altitude'                   : 550e3,     # m, mean value
     'antenna_length'             : 4.48,      # m
-    'dopper_bandwidth'           : 3110,      # Hz
+    'doppler_bandwidth'          : 3110,      # Hz
     'pulse_repetition_frequency' : 3530,      # Hz
     'chirp_bandwidth'            : 73.24e6,   # Hz
     'sampling_frequency'         : 88.125e6,  # Hz
@@ -238,28 +240,47 @@ KSAT5 = {
 
 # ERS-1/2
 # from Table 2 in Jung et al. (2014)
+# from Imaging Radar class by Howard Zebker, 2021.
 ERS = {
-    'carrier_frequency'          : 5.300e9,   # Hz
-    'antenna_length'             : 10.0,      # m
-    'dopper_bandwidth'           : 1500,      # Hz
-    'pulse_repetition_frequency' : 1680,      # Hz
-    'chirp_bandwidth'            : 15.55e6,   # Hz
-    'sampling_frequency'         : 18.96e6,   # Hz
-    'azimuth_pixel_size'         : 4.2,       # m
-    'ground_range_pixel_size'    : 20.2,      # m
+    'carrier_frequency'          : 5.300e9,     # Hz
+    'altitude'                   : 783e3,       # m, mean value
+    'antenna_length'             : 10.0,        # m
+    'doppler_bandwidth'          : 1500,        # Hz
+    'pulse_repetition_frequency' : 1679.9,      # Hz
+    'pulse_length'               : 37.12e-6,    # s
+    'chirp_bandwidth'            : 15.55e6,     # Hz
+    'chirp_slope'                : 4.189166e11, # Hz
+    'sampling_frequency'         : 18.96e6,     # Hz
+    'azimuth_pixel_size'         : 4.2,         # m
+    'ground_range_pixel_size'    : 20.2,        # m
 }
 
 # Envisat
 # from Table 2 in Jung et al. (2014)
 ENV = {
     'carrier_frequency'          : 5.331e9,   # Hz
+    'altitude'                   : 800e3,     # m, mean value
     'antenna_length'             : 10.0,      # m
-    'dopper_bandwidth'           : 1500,      # Hz
+    'doppler_bandwidth'          : 1500,      # Hz
     'pulse_repetition_frequency' : 1650,      # Hz
     'chirp_bandwidth'            : 16.00e6,   # Hz
     'sampling_frequency'         : 18.00e6,   # Hz
     'azimuth_pixel_size'         : 4.3,       # m
     'ground_range_pixel_size'    : 21.3,      # m
+}
+
+# Radarsat-2 stripmap ultra-fine mode
+# from Table 2 in Jung et al. (2014)
+RSAT2 = {
+    'carrier_frequency'          : 5.405e9,   # Hz
+    'altitude'                   : 798e3,     # m, mean value
+    'antenna_length'             : 6.55,      # m
+    'doppler_bandwidth'          : 2308,      # Hz
+    'pulse_repetition_frequency' : 3637,      # Hz
+    'chirp_bandwidth'            : 78.16e6,   # Hz
+    'sampling_frequency'         : 112.68e6,  # Hz
+    'azimuth_pixel_size'         : 2.2,       # m
+    'ground_range_pixel_size'    : 2.1,       # m
 }
 
 # Sentinel-1 Interferometric Wide (IW / TOPS) swath mode
@@ -271,8 +292,9 @@ ENV = {
 #   2. Table 7-5 in https://sentinel.esa.int/documents/247904/1877131/Sentinel-1-Product-Definition
 SEN = {
     'carrier_frequency'          : 5.405e9,   # Hz
+    'altitude'                   : 705e3,     # m, mean value
     'antenna_length'             : 45.0,      # m
-    'dopper_bandwidth'           : 380,       # Hz
+    'doppler_bandwidth'          : 380,       # Hz
     'pulse_repetition_frequency' : 522,       # Hz
     'chirp_bandwidth'            : 56.50e6,   # Hz
     'sampling_frequency'         : 64.35e6,   # Hz
@@ -284,19 +306,6 @@ SEN = {
     'IW3' : {'range_resolution' : 3.5, 'azimuth_resolution': 22.6},
 }
 
-# Radarsat-2 stripmap ultra-fine mode
-# from Table 2 in Jung et al. (2014)
-RSAT2 = {
-    'carrier_frequency'          : 5.405e9,   # Hz
-    'antenna_length'             : 6.55,      # m
-    'dopper_bandwidth'           : 2308,      # Hz
-    'pulse_repetition_frequency' : 3637,      # Hz
-    'chirp_bandwidth'            : 78.16e6,   # Hz
-    'sampling_frequency'         : 112.68e6,  # Hz
-    'azimuth_pixel_size'         : 2.2,       # m
-    'ground_range_pixel_size'    : 2.1,       # m
-}
-
 
 ##--------------------  L-band  --------------------##
 
@@ -304,7 +313,9 @@ RSAT2 = {
 # from Table 6-1 in Kim and Jordan (2006)
 SEASAT = {
     'carrier_frequency'          : 1.275e9,   # Hz
+    'altitude'                   : 787e3,     # m, mean value
     'antenna_length'             : 10.74,     # m
+    'pulse_repetition_frequency' : 1555,      # Hz, 1463-1647
     'chirp_bandwidth'            : 19e6,      # Hz
 }
 
@@ -312,9 +323,10 @@ SEASAT = {
 # from Table 3 in Jung et al. (2014)
 JERS = {
     'carrier_frequency'          : 1.275e9,   # Hz
+    'altitude'                   : 568e3,     # m, mean value
     'antenna_length'             : 11.92,     # m
-    'dopper_bandwidth'           : 1157,      # Hz
-    'pulse_repetition_frequency' : 1600,      # Hz
+    'doppler_bandwidth'          : 1157,      # Hz
+    'pulse_repetition_frequency' : 1600,      # Hz, 1505-1606
     'chirp_bandwidth'            : 15.00e6,   # Hz
     'sampling_frequency'         : 17.10e6,   # Hz
     'azimuth_pixel_size'         : 4.3,       # m
@@ -325,26 +337,37 @@ JERS = {
 # from Table 3 in Jung et al. (2014)
 ALOS = {
     'carrier_frequency'          : 1.270e9,   # Hz
+    'altitude'                   : 691.65e3,  # m, mean value
     'antenna_length'             : 8.9,       # m
-    'dopper_bandwidth'           : 1700,      # Hz
+    'doppler_bandwidth'          : 1700,      # Hz
     'pulse_repetition_frequency' : 2160,      # Hz
     'chirp_bandwidth'            : 28.00e6,   # Hz
     'sampling_frequency'         : 32.00e6,   # Hz
     'azimuth_pixel_size'         : 3.5,       # m
     'ground_range_pixel_size'    : 7.4,       # m
+    'range_pixel_size' : {
+        'stripmap_FBD' : 9.37,                # m
+        'stripmap_FBS' : 4.68,                # m
+    }
 }
 
 # ALOS-2 PALSAR-2 stripmap ultra-fine single polarization mode
 # from Table 3 in Jung et al. (2014)
 ALOS2 = {
     'carrier_frequency'          : 1.258e9,   # Hz
+    'altitude'                   : 628e3,     # m, mean value
     'antenna_length'             : 9.9,       # m
-    'dopper_bandwidth'           : 1515,      # Hz
+    'doppler_bandwidth'          : 1515,      # Hz
     'pulse_repetition_frequency' : 2000,      # Hz
     'chirp_bandwidth'            : 84.0e6,    # Hz
     'sampling_frequency'         : 100.0e6,   # Hz
     'azimuth_pixel_size'         : 3.8,       # m
     'ground_range_pixel_size'    : 2.4,       # m
+    'range_pixel_size' : {
+        'stripmap_ultrafine'     : 1.43,      # m
+        'stripmap_highsensitive' : 2.86,      # m
+        'scansar_normal'         : 8.58,      # m
+    }
 }
 
 # SAOCOM-1A/B stripmap
@@ -352,10 +375,27 @@ ALOS2 = {
 # https://directory.eoportal.org/web/eoportal/satellite-missions/s/saocom
 SAOCOM = {
     'carrrier_frequency'         : 1.27414e9, # Hz
+    'altitude'                   : 619.6e3,   # m, mean value
     'antenna_length'             : 10,        # m
     'pulse_repetition_frequency' : 4545,      # Hz
     'sampling_frequency'         : 50.0e6,    # Hz
 }
+
+# NISAR
+# https://nisar.jpl.nasa.gov/system/documents/files/26_NISAR_FINAL_9-6-19.pdf
+NISAR_L = {
+    'carrier_frequency'          : 1.257e9,   # Hz
+    'altitude'                   : 747e3,     # m, mean value
+    'antenna_length'             : 12,        # m
+    'pulse_repetition_frequency' : 1650,      # Hz
+    'chirp_bandwidth'            : 80.0e6,    # Hz
+    'range_pixel_size' : {
+        '24MHz'                  : 6.25,      # m
+        '44MHz'                  : 3.41,      # m
+        '80MHz'                  : 1.87,      # m
+    }
+}
+
 
 SENSOR_DICT = {
     # X-band
@@ -371,5 +411,6 @@ SENSOR_DICT = {
     'jers'  : JERS,
     'alos'  : ALOS,
     'alos2' : ALOS2,
+    'ni'    : NISAR_L,
 }
 

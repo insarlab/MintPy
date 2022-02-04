@@ -30,24 +30,14 @@ For dataset in geo-coordinates [recommended]:
 
 + for each interferogram, the unwrapped phase
 + for each interferogram, the spatial coherence
-+ [optional] for each interferogram, the connected components from phase unwrapping (produced by SNAPHU)
-+ DEM (Digital Elevation Model)
-+ [optional] LOS incidence angle
-+ [optional] LOS azimuth angle
-+ [optional] shadow mask
-+ [optional] water mask.
++ for each interferogram, the connected components from phase unwrapping (produced by SNAPHU) [optional]
++ for each stack, the DEM (Digital Elevation Model)
++ for each stack, the LOS incidence angle [optional]
++ for each stack, the LOS azimuth angle [optional]
++ for each stack, shadow mask [optional]
++ for each stack, water mask [optional]
 
-For dataset in radar-coordinates:
-
-+ for each interferogram, the unwrapped phase
-+ for each interferogram, the spatial coherence
-+ [optional] for each interferogram, the connected components from phase unwrapping (produced by SNAPHU)
-+ DEM (Digital Elevation Model)
-+ Lookup table (_e.g._ lat/lon.rdr for `ISCE-2`, sim_\*.UTM_TO_RDC for `Gamma`, geo_\*.trans for `ROI_PAC`)
-+ [optional] LOS incidence angle
-+ [optional] LOS azimuth angle
-+ [optional] shadow mask
-+ [optional] water mask.
+For dataset in radar-coordinates, the extra lookup table file(s) is required (_e.g._ lat/lon.rdr for `ISCE-2`, sim_\*.UTM_TO_RDC for `Gamma`, geo_\*.trans for `ROI_PAC`).
 
 All the files above should be in the same spatial extent and same spatial resolution (except for the lookup table in geo-coordinates from Gamma/ROI_PAC). If they are not (e.g. different row/column number, different spatial extent in terms of SNWE, different spatial resolution, etc.), the easiest way is to geocode them with the same ouput spatial extent and same output spatial resolution.
 
@@ -64,7 +54,7 @@ Note that MintPy assumes **date1_date2** convention for interferograms (date1 < 
 
 For each data file, MintPy requires some attributes/metadata in `ROI_PAC .rsc` format as described [here](https://mintpy.readthedocs.io/en/latest/api/attributes/). The optional attributes are highly recommend. The interferogram specific attributes (DATE12, P_BASELINE_TOP/BOTTOM_HDR) is not needed for geometry files (DEM, incidence angle, etc.). 
 
-For the supported InSAR software workflows, we prepare these metadata via `prep_isce.py`, `prep_gamma`, etc., to read their native metadata, convert and write them into `ROI_PAC .rsc` style for each data file.
+For the supported InSAR software workflows, we prepare these metadata via `prep_isce.py`, `prep_gamma.py`, etc., to read their native metadata, convert and write them into `ROI_PAC .rsc` style for each data file.
 
 #### Recommendations
 

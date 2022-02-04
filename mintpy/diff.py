@@ -62,20 +62,23 @@ def cmd_line_parse(iargs=None):
 
 
 #####################################################################################
-def _check_reference(atr1, atr2):
+def check_reference(atr1, atr2):
     """Check reference date and point
     Parameters: atr1/2   - dict, metadata of file1/2
     Returns:    ref_date - str, None for re-referencing in time  is NOT needed
                 ref_y/x  - int, None for re-referencing in space is NOT needed
     """
-    # reference date
+    # 1. reference date
+    # if same, do nothing
+    # if different, use the 1st one as the reference
     if atr1['REF_DATE'] == atr2.get('REF_DATE', None):
         ref_date = None
     else:
         ref_date = atr1['REF_DATE']
-        #print('consider different reference date')
 
-    # reference point
+    # 2. reference point
+    # if same, do nothing
+    # if different, use the 1st one as the reference
     ref_y = atr1.get('REF_Y', None)
     ref_x = atr1.get('REF_X', None)
     if ref_x == atr2.get('REF_X', None) or ref_y == atr2.get('REF_Y', None):
@@ -84,7 +87,6 @@ def _check_reference(atr1, atr2):
     else:
         ref_y = ref_y
         ref_x = ref_x
-        #print('consider different reference pixel')
 
     if ref_y is not None:
         ref_y = int(ref_y)
@@ -96,10 +98,10 @@ def _check_reference(atr1, atr2):
 def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
     """calculate/write file1 - file2
 
-    Parameters: file1   - str, path of file1
-                file2   - list of str, path of file2(s)
+    Parameters: file1    - str, path of file1
+                file2    - list of str, path of file2(s)
                 out_file - str, path of output file
-                force   - bool, overwrite existing output file
+                force    - bool, overwrite existing output file
                 max_num_pixel - float, maximum number of pixels for each block
     """
     start_time = time.time()
@@ -113,17 +115,14 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
 
     # Read basic info
     atr1 = readfile.read_attribute(file1)
-    k1 = atr1['FILE_TYPE']
     atr2 = readfile.read_attribute(file2[0])
+    k1 = atr1['FILE_TYPE']
     k2 = atr2['FILE_TYPE']
-    print('input files are: {} and {}'.format(k1, k2))
+    print('the 1st input file is: {}'.format(k1))
 
     if k1 == 'timeseries':
         if k2 not in ['timeseries', 'giantTimeseries']:
             raise Exception('Input multiple dataset files are not the same file type!')
-        if len(file2) > 1:
-            raise Exception(('Only 2 files substraction is supported for time-series file,'
-                             ' {} input.'.format(len(file2)+1)))
 
         atr1 = readfile.read_attribute(file1)
         atr2 = readfile.read_attribute(file2[0])
@@ -136,7 +135,7 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
             unit_fac = 0.001
 
         # check reference point
-        ref_date, ref_y, ref_x = _check_reference(atr1, atr2)
+        ref_date, ref_y, ref_x = check_reference(atr1, atr2)
 
         # check dates shared by two timeseries files
         dateListShared = [i for i in dateList1 if i in dateList2]
@@ -144,10 +143,10 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
         if dateListShared != dateList1:
             print('WARNING: {} does not contain all dates in {}'.format(file2, file1))
             if force:
-                dateExcluded = list(set(dateList1) - set(dateListShared))
+                dateListEx = list(set(dateList1) - set(dateListShared))
                 print('Continue and enforce the differencing for their shared dates only.')
-                print('\twith following dates are ignored for differencing:\n{}'.format(dateExcluded))
-                dateShared[np.array([dateList1.index(i) for i in dateExcluded])] = 0
+                print('\twith following dates are ignored for differencing:\n{}'.format(dateListEx))
+                dateShared[np.array([dateList1.index(i) for i in dateListEx])] = 0
             else:
                 raise Exception('To enforce the differencing anyway, use --force option.')
 
@@ -210,19 +209,19 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
         obj1.open()
         obj2 = ifgramStack(file2[0])
         obj2.open()
-        dsNames = list(set(obj1.datasetNames) & set(obj2.datasetNames))
-        if len(dsNames) == 0:
+        ds_names = list(set(obj1.datasetNames) & set(obj2.datasetNames))
+        if len(ds_names) == 0:
             raise ValueError('no common dataset between two files!')
-        dsName = [i for i in ifgramDatasetNames if i in dsNames][0]
+        ds_name = [i for i in ifgramDatasetNames if i in ds_names][0]
 
         # read data
-        print('reading {} from file {} ...'.format(dsName, file1))
-        data1 = readfile.read(file1, datasetName=dsName)[0]
-        print('reading {} from file {} ...'.format(dsName, file2[0]))
-        data2 = readfile.read(file2[0], datasetName=dsName)[0]
+        print('reading {} from file {} ...'.format(ds_name, file1))
+        data1 = readfile.read(file1, datasetName=ds_name)[0]
+        print('reading {} from file {} ...'.format(ds_name, file2[0]))
+        data2 = readfile.read(file2[0], datasetName=ds_name)[0]
 
         # consider reference pixel
-        if 'unwrapphase' in dsName.lower():
+        if 'unwrapphase' in ds_name.lower():
             print('referencing to pixel ({},{}) ...'.format(obj1.refY, obj1.refX))
             ref1 = data1[:, obj1.refY, obj1.refX]
             ref2 = data2[:, obj2.refY, obj2.refX]
@@ -239,19 +238,42 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
 
         # write to file
         dsDict = {}
-        dsDict[dsName] = data
+        dsDict[ds_name] = data
         writefile.write(dsDict, out_file=out_file, ref_file=file1)
 
-    # Sing dataset file
     else:
-        data1 = readfile.read(file1)[0]
-        data = np.array(data1, data1.dtype)
-        for fname in file2:
-            data2 = readfile.read(fname)[0]
-            data = np.array(data, dtype=np.float32) - np.array(data2, dtype=np.float32)
-            data = np.array(data, data1.dtype)
-        print('writing >>> '+out_file)
-        writefile.write(data, out_file=out_file, metadata=atr1)
+        # get common dataset list
+        ds_names_list = [readfile.get_dataset_list(x) for x in [file1] + file2]
+        ds_names = list(set.intersection(*map(set, ds_names_list)))
+        # if all files have one dataset, ignore dataset name variation and take the 1st one as reference
+        if all(len(x) == 1 for x in ds_names_list):
+            ds_names = ds_names_list[0]
+        print('List of common datasets across files: ', ds_names)
+        if len(ds_names) < 1:
+            raise ValueError('No common datasets found among files:\n{}'.format([file1] + file2))
+
+        # loop over each file
+        dsDict = {}
+        for ds_name in ds_names:
+            print('adding {} ...'.format(ds_name))
+            data = readfile.read(file1, datasetName=ds_name)[0]
+            dtype = data.dtype
+
+            for i, fname in enumerate(file2):
+                # ignore ds_name if input file has single dataset
+                ds_name2read = None if len(ds_names_list[i+1]) == 1 else ds_name
+                # read
+                data2 = readfile.read(fname, datasetName=ds_name2read)[0]
+                # convert to float32 to apply the operation because some types, e.g. bool, do not support it.
+                # then convert back to the original data type
+                data = np.array(data, dtype=np.float32) - np.array(data2, dtype=np.float32)
+
+            # save data in the same type as the 1st file
+            dsDict[ds_name] = np.array(data, dtype=dtype)
+
+        # output
+        print('use metadata from the 1st file: {}'.format(file1))
+        writefile.write(dsDict, out_file=out_file, metadata=atr1, ref_file=file1)
 
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))

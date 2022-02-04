@@ -7,16 +7,15 @@
 #     from mintpy.objects.resample import resample
 
 
-try:
-    import pyresample as pr
-except ImportError:
-    raise ImportError('Can not import pyresample!')
-
 import os
+import warnings
 import h5py
 import numpy as np
 from scipy import ndimage
 from scipy.interpolate import RegularGridInterpolator as RGI
+with warnings.catch_warnings():
+    warnings.simplefilter('ignore', UserWarning)
+    import pyresample as pr
 from mintpy.objects.cluster import split_box2sub_boxes
 from mintpy.utils import readfile, ptime, utils0 as ut
 
@@ -35,8 +34,12 @@ class resample:
         from mintpy.utils import readfile, attribute as attr
 
         ##### opt 1 - entire matrix (by not changing max_memory=0)
-        src_file = 'velocity.h5'
-        res_obj = resample(lut_file='./inputs/geometryRadar.h5', src_file=src_file)
+        res_obj = resample(lut_file='./inputs/geometryRadar.h5', src_file='velocity.h5')
+        # OR use ISCE-2 lookup table files instead of MintPy geometry file in HDF5 format
+        res_obj = resample(lut_file='../merged/geom_reference/lat.rdr', src_file='velocity.h5',
+                           lat_file='../merged/geom_reference/lat.rdr',
+                           lon_file='../merged/geom_reference/lon.rdr')
+
         res_obj.open()
         res_obj.prepare()
 
@@ -49,8 +52,7 @@ class resample:
         atr = attr.update_attribute4radar2geo(atr, res_obj=res_obj)
 
         ##### opt 2 - block-by-block IO (by setting max_memory=4)
-        src_file = 'timeseries.h5'
-        res_obj = resample(lut_file='./inputs/geometryRadar.h5', src_file=src_file, max_memory=4)
+        res_obj = resample(lut_file='./inputs/geometryRadar.h5', src_file='timeseries.h5', max_memory=4)
         res_obj.open()
         res_obj.prepare()
 
@@ -78,7 +80,7 @@ class resample:
     """
 
     def __init__(self, lut_file, src_file=None, SNWE=None, lalo_step=None, interp_method='nearest', fill_value=np.nan,
-                 nprocs=1, max_memory=0, software='pyresample', print_msg=True):
+                 nprocs=1, max_memory=0, software='pyresample', print_msg=True, lat_file=None, lon_file=None):
         """
         Parameters: lut_file      - str, path of lookup table file, containing datasets:
                                     latitude / longitude      for lut_file in radar-coord
@@ -94,9 +96,16 @@ class resample:
                     max_memory    - float, maximum memory to use
                                     set to 0 or negative value to disable block-by-block IO (default)
                     software      - str, interpolation software, pyresample / scipy
+                    lat/lon_file  - str, path of the ISCE-2 lat/lon.rdr file
+                                    To geocode file with ISCE-2 lookup table files directly,
+                                    without using/loading geometry files in HDF5/MintPy format.
         """
         # input variables
         self.lut_file = lut_file
+        # use isce lat/lon.rdr file, as an alternative to lut_file with mintpy geometry HDF5 file
+        self.lat_file = lat_file
+        self.lon_file = lon_file
+
         self.src_file = src_file
         self.SNWE = SNWE
         self.lalo_step = lalo_step
@@ -174,7 +183,7 @@ class resample:
         """
         # adjust fill_value for each source data / block
         fill_value = self.fill_value
-        float_types = [np.float32, np.float64, np.float128, np.complex64, np.complex128]
+        float_types = [np.single, np.double, np.longdouble, np.csingle, np.cdouble, np.clongdouble]
         if src_data.dtype == np.bool_:
             fill_value = False
             if print_msg:
@@ -239,17 +248,18 @@ class resample:
         """
         num_box = 1
 
-        # auto split into list of boxes ONLY IF:
-        # 1. source file is in HDF5 format AND
-        # 2. max_memory > 0
-        if (src_file and os.path.isfile(src_file)
-                and os.path.splitext(src_file)[1] in ['.h5', '.he5'] 
-                and max_memory > 0):
+        # auto split into list of boxes if max_memory > 0
+        if src_file and os.path.isfile(src_file) and max_memory > 0:
             # get max dataset shape
-            with h5py.File(src_file, 'r') as f:
-                ds_shapes = [f[i].shape for i in f.keys()
-                             if isinstance(f[i], h5py.Dataset)]
-                max_ds_size = max([np.prod(i) for i in ds_shapes])
+            fext = os.path.splitext(src_file)[1]
+            if fext in ['.h5', '.he5']:
+                with h5py.File(src_file, 'r') as f:
+                    ds_shapes = [f[i].shape for i in f.keys()
+                                 if isinstance(f[i], h5py.Dataset)]
+                    max_ds_size = max([np.prod(i) for i in ds_shapes])
+            else:
+                atr = readfile.read_attribute(src_file)
+                max_ds_size = int(atr['LENGTH']) * int(atr['WIDTH'])
 
             # calc num_box
             num_box = int(np.ceil((max_ds_size * 4 * 4) / (max_memory * 1024**3)))
@@ -311,8 +321,10 @@ class resample:
         # src  for radar2geo
         # dest for geo2radar
         print('read latitude / longitude from lookup table file: {}'.format(self.lut_file))
-        lut_lat = readfile.read(self.lut_file, datasetName='latitude')[0]
-        lut_lon = readfile.read(self.lut_file, datasetName='longitude')[0]
+        lat_file = self.lat_file if self.lat_file else self.lut_file
+        lon_file = self.lon_file if self.lon_file else self.lut_file
+        lut_lat = readfile.read(lat_file, datasetName='latitude')[0].astype(np.float32)
+        lut_lon = readfile.read(lon_file, datasetName='longitude')[0].astype(np.float32)
         lut_lat, lut_lon, mask = mark_lat_lon_anomoly(lut_lat, lut_lon)
 
         # radar2geo (with block-by-block support)
@@ -326,8 +338,14 @@ class resample:
 
             # parameter 1 - lalo_step (output grid)
             if self.lalo_step is None:
-                self.lalo_step = ((src_lat1 - src_lat0) / (lut_lat.shape[0] - 1),
-                                  (src_lon1 - src_lon0) / (lut_lat.shape[1] - 1))
+                try:
+                    lat_c = (src_lat0 + src_lat1) / 2.
+                    lat_step, lon_step = ut.auto_lat_lon_step_size(self.src_meta, lat_c)
+                except AttributeError:
+                    lat_step = (src_lat1 - src_lat0) / (lut_lat.shape[0] - 1)
+                    lon_step = (src_lon1 - src_lon0) / (lut_lat.shape[1] - 1)
+                self.lalo_step = (abs(lat_step) * -1., abs(lon_step))
+
             else:
                 # ensure lat/lon step sign
                 self.lalo_step = (abs(self.lalo_step[0]) * -1.,

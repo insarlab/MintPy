@@ -53,9 +53,10 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 ramp_type - string, ramp type, e.g. linear, quadratic, no for do not remove ramp
     Returns:    std_list  - list of float, standard deviation of deramped input timeseries file
                 date_list - list of string in YYYYMMDD format, corresponding dates
+                std_file  - string, text file with std and date info.
     Example:    import mintpy.utils.utils as ut
                 std_list, date_list = ut.get_residual_std('timeseries_ERA5_demErrInvResid.h5',
-                                                          'maskTempCoh.h5')
+                                                          'maskTempCoh.h5')[:2]
     """
     # Intermediate files name
     if ramp_type == 'no':
@@ -84,9 +85,9 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     # Read residual std text file
     print('read timeseries RMS from file: '+std_file)
     fc = np.loadtxt(std_file, dtype=bytes).astype(str)
-    std_list = fc[:, 1].astype(np.float).tolist()
+    std_list = fc[:, 1].astype(np.float32).tolist()
     date_list = list(fc[:, 0])
-    return std_list, date_list
+    return std_list, date_list, std_file
 
 
 def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_type='quadratic'):
@@ -135,7 +136,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     # Read residual RMS text file
     print('read timeseries residual RMS from file: '+rms_file)
     fc = np.loadtxt(rms_file, dtype=bytes).astype(str)
-    rms_list = fc[:, 1].astype(np.float).tolist()
+    rms_list = fc[:, 1].astype(np.float32).tolist()
     date_list = list(fc[:, 0])
     return rms_list, date_list, rms_file
 
@@ -156,7 +157,7 @@ def nonzero_mask(File, out_file='maskConnComp.h5', datasetName=None):
 
 
 def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
-                    saveList=False, checkAoi=True):
+                    saveList=False, checkAoi=True, reverseMask=False, threshold=None):
     """Read/Calculate Spatial Average of input file.
 
     If input file is text file, read it directly;
@@ -165,15 +166,17 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
         Otherwise, calculate it from data file.
 
         Only non-nan pixel is considered.
-    Parameters: File     : string, path of input file
-                maskFile : string, path of mask file, e.g. maskTempCoh.h5
-                box      : 4-tuple defining the left, upper, right, and lower pixel coordinate
-                saveList : bool, save (list of) mean value into text file
-    Returns:    meanList : list for float, average value in space for each epoch of input file
-                dateList : list of string for date info
-                    date12_list, e.g. 101120-110220, for interferograms/coherence
-                    date8_list, e.g. 20101120, for timeseries
-                    file name, e.g. velocity.h5, for all the other file types
+    Parameters: File        - string, path of input file
+                maskFile    - string, path of mask file, e.g. maskTempCoh.h5
+                box         - 4-tuple defining the left, upper, right, and lower pixel coordinate
+                saveList    - bool, save (list of) mean value into text file
+                reverseMask - bool, perform analysis within masked regions instead of outside of them
+                threshold   - float, calculate area ratio above threshold instead of spatial average
+    Returns:    meanList    - list for float, average value in space for each epoch of input file
+                dateList    - list of string for date info
+                              date12_list, e.g. 101120-110220, for interferograms/coherence
+                              date8_list, e.g. 20101120, for timeseries
+                              file name, e.g. velocity.h5, for all the other file types
     Example:    meanList = spatial_average('inputs/ifgramStack.h5')[0]
                 meanList, date12_list = spatial_average('inputs/ifgramStack.h5',
                                                         maskFile='maskTempCoh.h5',
@@ -192,12 +195,10 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
         box = (0, 0, int(atr['WIDTH']), int(atr['LENGTH']))
 
     # default output filename
-    if k == 'ifgramStack':
-        prefix = datasetName
-    else:
-        prefix = os.path.splitext(os.path.basename(File))[0]
-    suffix = 'SpatialAvg.txt'
-    txtFile = prefix + suffix
+    prefix = datasetName if k == 'ifgramStack' else os.path.splitext(os.path.basename(File))[0]
+    suffix = 'SpatialAvg' if threshold is None else 'AreaRatio'
+    suffix += 'RevMsk' if reverseMask else ''
+    txtFile = prefix + suffix + '.txt'
 
     # If input is text file
     if File.endswith(suffix):
@@ -206,9 +207,11 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
         return meanList, dateList
 
     # Read existing txt file only if 1) data file is older AND 2) same AOI
-    file_line = '# Data file: {}\n'.format(os.path.basename(File))
-    mask_line = '# Mask file: {}\n'.format(maskFile)
-    aoi_line  = '# AOI box: {}\n'.format(box)
+    file_line  = '# Data file: {}\n'.format(os.path.basename(File))
+    mask_line  = '# Mask file: {}\n'.format(maskFile)
+    aoi_line   = '# AOI box: {}\n'.format(box)
+    thres_line = '# Threshold: {}\n'.format(threshold)
+
     try:
         # Read AOI line from existing txt file
         fl = open(txtFile, 'r')
@@ -242,26 +245,37 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
     else:
         useMedian = False
 
-    # Calculate mean coherence list
+    # Calculate mean coherence or area ratio list
     if k == 'ifgramStack':
         obj = ifgramStack(File)
         obj.open(print_msg=False)
         meanList, dateList = obj.spatial_average(datasetName=datasetName,
                                                  maskFile=maskFile,
                                                  box=box,
-                                                 useMedian=useMedian)
+                                                 useMedian=useMedian,
+                                                 reverseMask=reverseMask,
+                                                 threshold=threshold)
         pbase = obj.pbaseIfgram
         tbase = obj.tbaseIfgram
         obj.close()
     elif k == 'timeseries':
         meanList, dateList = timeseries(File).spatial_average(maskFile=maskFile,
-                                                              box=box)
+                                                              box=box,
+                                                              reverseMask=reverseMask,
+                                                              threshold=threshold)
     else:
         data = readfile.read(File, box=box)[0]
         if maskFile and os.path.isfile(maskFile):
             print('mask from file: '+maskFile)
             mask = readfile.read(maskFile, datasetName='mask', box=box)[0]
-            data[mask == 0.] = np.nan
+            data[mask == int(reverseMask)] = np.nan
+
+        # calculate area ratio if threshold is specified
+        # percentage of pixels with value above the threshold
+        if threshold is not None:
+            data[data > threshold] = 1
+            data[data <= threshold] = 0
+
         meanList = np.nanmean(data)
         dateList = [os.path.basename(File)]
 
@@ -270,7 +284,7 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
         print('write average value in space into text file: '+txtFile)
         fl = open(txtFile, 'w')
         # Write comments
-        fl.write(file_line+mask_line+aoi_line)
+        fl.write(file_line+mask_line+aoi_line+thres_line)
         # Write data list
         numLine = len(dateList)
         if k == 'ifgramStack':
@@ -823,7 +837,9 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
             with open(coeff_file, 'a') as f:
                 f.write('{}    '.format(atr['FILE_TYPE']))
         # read
-        data = readfile.read(fname)[0]
+        if not datasetName and k == 'velocity':
+            datasetName = 'velocity'
+        data = readfile.read(fname, datasetName=datasetName)[0]
         # deramp
         data = deramp(data, mask,
                       ramp_type=ramp_type,
