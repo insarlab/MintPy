@@ -74,6 +74,15 @@ def create_parser():
     parser.add_argument('-p','--mp','--minpixels', dest='minpixels', type=int,
                         help='minimum cluster size in pixels, to remove small pixel clusters.')
 
+    # vmask
+    vmask = parser.add_argument_group('AOI for threshold', 'Define the AOI for thresholding operations.')
+    vmask.add_argument('--vx', dest='v_subset_x', nargs=2, type=int, metavar=('XMIN', 'XMAX'),
+                       help='AOI range in X for threshold operation (and keep the rest untouched.)')
+    vmask.add_argument('--vy', dest='v_subset_y', nargs=2, type=int, metavar=('YMIN', 'YMAX'),
+                       help='AOI range in Y for threshold operation (and keep the rest untouched.)')
+    vmask.add_argument('--vroipoly', action='store_true',
+                       help='AOI via interactive polygonal region of interest (ROI) selection.')
+
     # velocity masking by velocityStd
     parser.add_argument('--vstd', action='store_true',
                         help='mask according to the formula: |velocity| > a * velocityStd')
@@ -82,9 +91,9 @@ def create_parser():
 
     aoi = parser.add_argument_group('AOI', 'define secondary area of interest')
     # AOI defined by parameters in command line
-    aoi.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar=('XMIN', 'XMAX'),
+    aoi.add_argument('-x','--sub-x', dest='subset_x', type=int, nargs=2, metavar=('XMIN', 'XMAX'),
                      help='selection range in x/cross-track/range direction')
-    aoi.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar=('YMIN', 'YMAX'),
+    aoi.add_argument('-y','--sub-y', dest='subset_y', type=int, nargs=2, metavar=('YMIN', 'YMAX'),
                      help='selection range in y/along-track/azimuth direction')
     aoi.add_argument('--ex-circle', dest='ex_circle', nargs=3, type=int, metavar=('X', 'Y', 'RADIUS'),
                      help='exclude area defined by an circle (x, y, radius) in pixel number')
@@ -173,6 +182,22 @@ def create_threshold_mask(inps):
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
     nanmask = ~np.isnan(data)
 
+    # row/column range for threshold operations
+    vmask = np.ones((length, width), dtype=np.bool_)
+    if inps.v_subset_x:
+        [vx0, vx1] = sorted(inps.v_subset_x)
+        vmask[:, :vx0] = 0
+        vmask[:, vx1:] = 0
+    if inps.v_subset_y:
+        [vy0, vy1] = sorted(inps.v_subset_y)
+        vmask[:vy0, :] = 0
+        vmask[vy1:, :] = 0
+    if inps.vroipoly:
+        from mintpy.utils import plot_ext
+        poly_mask = plot_ext.get_poly_mask(inps.file, datasetName=inps.dset, view_cmd=inps.view_cmd)
+        if poly_mask is not None:
+            vmask[poly_mask == 0] = 0
+
     print('create initial mask with the same size as the input file and all = 1')
     mask = np.ones((length, width), dtype=np.bool_)
 
@@ -182,17 +207,17 @@ def create_threshold_mask(inps):
         print('all pixels with nan value = 0')
 
     if inps.nonzero:
-        mask[nanmask] *= ~(data[nanmask] == 0.)
+        mask[data == 0.] = 0
         print('exclude pixels with zero value')
 
     # min threshold
     if inps.vmin is not None:
-        mask[nanmask] *= ~(data[nanmask] < inps.vmin)
+        mask[vmask] *= ~(data[vmask] < inps.vmin)
         print('exclude pixels with value < %s' % str(inps.vmin))
 
     # max threshold
     if inps.vmax is not None:
-        mask[nanmask] *= ~(data[nanmask] > inps.vmax)
+        mask[vmask] *= ~(data[vmask] > inps.vmax)
         print('exclude pixels with value > %s' % str(inps.vmax))
 
     # remove small pixel clusters
