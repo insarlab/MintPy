@@ -339,9 +339,17 @@ class resample:
             # parameter 1 - lalo_step (output grid)
             if self.lalo_step is None:
                 dct_meta           = {**self.lut_meta, **self.src_meta}
-                lat_c              = (src_lat0 + src_lat1) / 2.
-                lat_step, lon_step = ut.auto_lat_lon_step_size(dct_meta, lat_c)
+
+                try:
+                    lat_c              = (src_lat0 + src_lat1) / 2.
+                    lat_step, lon_step = ut.auto_lat_lon_step_size(dct_meta, lat_c)
+
+                except KeyError:
+                    lat_step = (src_lat1 - src_lat0) / (lut_lat.shape[0] - 1)
+                    lon_step = (src_lon1 - src_lon0) / (lut_lat.shape[1] - 1)
+
                 self.lalo_step     = (abs(lat_step) * -1., abs(lon_step))
+
 
             else:
                 # ensure lat/lon step sign
