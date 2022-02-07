@@ -480,8 +480,13 @@ def run_timeseries2time_func(inps):
         for key in ['REF_DATE']:
             if key in atrR.keys():
                 atrR.pop(key)
-        writefile.layout_hdf5(inps.res_file, metadata=atrR, ref_file=inps.timeseries_file)
-
+        date_len = len(inps.dateList[0])
+        ds_name_dict = {
+            "date"       : [np.dtype(f'S{date_len}'), (num_date,), np.array(inps.dateList, dtype=np.string_)],
+            "timeseries" : [np.float32,               (num_date, length, width), None]
+        }
+        writefile.layout_hdf5(inps.res_file, ds_name_dict=ds_name_dict, metadata=atrR)
+    
 
     ## estimation
 
