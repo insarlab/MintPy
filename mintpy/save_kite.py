@@ -158,12 +158,9 @@ def main(iargs=None):
 
     elif attr['FILE_TYPE'] == 'ifgramStack':
         date1, date2 = inps.dset.split('-')[1].split('_')
-        
-    elif attr['FILE_TYPE'] == '.unw':
-        date1, date2 = ptime.yyyymmdd(attr['DATE12'].split('-'))
-        
+             
     else:
-        # velocity 
+        # velocity, unw
         date1, date2 = ptime.yyyymmdd(attr['DATE12'].replace('_','-').split('-'))
         if inps.dset.startswith('step'):
             date1 = inps.dset.split('step')[-1]
