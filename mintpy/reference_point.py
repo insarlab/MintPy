@@ -190,8 +190,8 @@ def reference_file(inps):
     # outFile=False --> no avgPhaseVelocity file is generated due to the lack of reference point info.
     # did not use maskConnComp.h5 because not all input dataset has connectComponent info
     if atr['FILE_TYPE'] == 'ifgramStack':
-        ds_names = readfile.get_dataset_list(inps.file)
-        ds_name = [i for i in ds_names if i in ['unwrapPhase', 'rangeOffset', 'azimuthOffset']][0]
+        ds_name = [i for i in readfile.get_dataset_list(inps.file)
+                   if i in ['unwrapPhase', 'rangeOffset', 'azimuthOffset']][0]
     else:
         ds_name = None
     stack = ut.temporal_average(inps.file, datasetName=ds_name, updateMode=True, outFile=False)[0]
@@ -283,10 +283,18 @@ def reference_file(inps):
 
         else:
             # for binary file, over-write directly
-            data = readfile.read(inps.file)[0]
-            data -= data[inps.ref_y, inps.ref_x]
+            dis_names = ['phase', 'displacement']
+            ds_names = readfile.get_dataset_list(inps.file)
+            ds_dict = {}
+            for ds_name in ds_names:
+                data = readfile.read(inps.file, datasetName=ds_name)[0]
+                if ds_name in dis_names:
+                    data -= data[inps.ref_y, inps.ref_x]
+                else:
+                    print(f"skip spatial referencing for {ds_name}, as it's not in {dis_names}")
+                ds_dict[ds_name] = data
             atr.update(atrNew)
-            writefile.write(data, out_file=inps.outfile, metadata=atr)
+            writefile.write(ds_dict, out_file=inps.outfile, metadata=atr)
 
     ut.touch([inps.coherenceFile, inps.maskFile])
     return inps.outfile

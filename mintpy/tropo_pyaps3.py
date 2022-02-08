@@ -802,17 +802,27 @@ def correct_single_ifgram(dis_file, tropo_file, cor_dis_file):
     print('\n------------------------------------------------------------------------------')
     print('correcting relative delay for input interferogram')
 
-    print('read data from {}'.format(dis_file))
+    print('read phase from {}'.format(dis_file))
     data, atr = readfile.read(dis_file, datasetName='phase')
     date1, date2 = ptime.yyyymmdd(atr['DATE12'].split('-'))
+    ref_y, ref_x = int(atr['REF_Y']), int(atr['REF_X'])
 
     print('calc tropospheric delay for {}-{} from {}'.format(date1, date2, tropo_file))
-    tropo = readfile.read(tropo_file, datasetName=date2)[0]
+    tropo  = readfile.read(tropo_file, datasetName=date2)[0]
     tropo -= readfile.read(tropo_file, datasetName=date1)[0]
     tropo *= -4. * np.pi / float(atr['WAVELENGTH'])
 
+    # apply the correction and re-referencing
+    data -= tropo
+    data -= data[ref_y, ref_x]
+
+    print('read magnitude from {}'.format(dis_file))
+    mag = readfile.read(dis_file, datasetName='magnitude')[0]
+
     print('write corrected data to {}'.format(cor_dis_file))
-    writefile.write(data-tropo, cor_dis_file, atr)
+    ds_dict = {'magnitude': mag, 'phase': data}
+    writefile.write(ds_dict, cor_dis_file, atr)
+
     return cor_dis_file
 
 
