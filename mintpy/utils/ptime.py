@@ -234,20 +234,50 @@ def yymmdd(dates):
     return datesOut
 
 
-def yyyymmdd_date12(date12_list):
-    """Convert date12 into YYYYMMDD_YYYYMMDD format"""
+def yyyymmdd_date12(date12_list_in):
+    """Convert date12 into YYYYMMDD_YYYYMMDD format
+    Parameters: date12_list_in  - (list of) str
+    Returns:    date12_list_out - (list of) str in YYYYMMDD_YYYYMMDD format
+    """
+    # endure list type input
+    if isinstance(date12_list_in, str):
+        date12_list = [date12_list_in]
+    else:
+        date12_list = list(date12_list_in)
+
+    # convert
     m_dates = yyyymmdd([i.replace('-', '_').split('_')[0] for i in date12_list])
     s_dates = yyyymmdd([i.replace('-', '_').split('_')[1] for i in date12_list])
-    date12_list = ['{}_{}'.format(m, s) for m, s in zip(m_dates, s_dates)]
-    return date12_list
+    date12_list_out = ['{}_{}'.format(m, s) for m, s in zip(m_dates, s_dates)]
+
+    # ensure same type output
+    if isinstance(date12_list_in, str):
+        date12_list_out = date12_list_out[0]
+
+    return date12_list_out
 
 
-def yymmdd_date12(date12_list):
-    """Convert date12 into YYMMDD-YYMMDD format"""
+def yymmdd_date12(date12_list_in):
+    """Convert date12 into YYMMDD-YYMMDD format
+    Parameters: date12_list_in  - (list of) str
+    Returns:    date12_list_out - (list of) str in YYMMDD-YYMMDD format
+    """
+    # ensure list type input
+    if isinstance(date12_list_in, str):
+        date12_list = [date12_list_in]
+    else:
+        date12_list = list(date12_list_in)
+
+    # convert
     m_dates = yymmdd([i.replace('-', '_').split('_')[0] for i in date12_list])
     s_dates = yymmdd([i.replace('-', '_').split('_')[1] for i in date12_list])
-    date12_list = ['{}-{}'.format(m, s) for m, s in zip(m_dates, s_dates)]
-    return date12_list
+    date12_list_out = ['{}-{}'.format(m, s) for m, s in zip(m_dates, s_dates)]
+
+    # ensure same type output
+    if isinstance(date12_list_in, str):
+        date12_list_out = date12_list_out[0]
+
+    return date12_list_out
 
 
 #################################################################
