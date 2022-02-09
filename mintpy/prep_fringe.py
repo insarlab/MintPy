@@ -382,8 +382,13 @@ def prepare_stack(outfile, unw_file, corr_file, metadata, processor, baseline_di
         baseline_dict = isce_utils.read_baseline_timeseries(baseline_dir,
                                                             processor=processor,
                                                             ref_date=ref_date)
-        pbase = np.array([baseline_dict[sec][0] for sec in sec_dates],
-                                                            dtype=np.float32)
+
+        # get diff of sec and ref top/bot baseline and store their mean
+        pbase = np.zeros(num_pair, dtype=np.float32)
+
+        for i in range(num_pair):
+            ref, sec = [lst_dates12[i][j].decode('utf-8') for j in range(2)]
+            pbase[i] = np.subtract(baseline_dict[sec], baseline_dict[ref]).mean()
 
     # size info
     if not box:
@@ -474,6 +479,7 @@ def main(iargs=None):
     else:
         geom_file = os.path.join(inps.outDir, 'inputs/geometryRadar.h5')
 
+
     ## 1 - geometry (from SLC stacks before fringe, e.g. ISCE2)
     prepare_geometry(
         outfile=geom_file,
@@ -515,6 +521,7 @@ def main(iargs=None):
         processor=processor,
         baseline_dir=inps.baselineDir,
         box=pix_box)
+
 
 
     return ts_file, tcoh_file, ps_mask_file, geom_file
