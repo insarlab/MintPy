@@ -762,7 +762,7 @@ class ifgramStack:
             if np.sum(dateFlag) < 50:
                 data = ds[:,
                           box[1]:box[3],
-                          box[0]:box[2]][date_flag]
+                          box[0]:box[2]][dateFlag]
             else:
                 data = ds[:,
                           box[1]:box[3],
