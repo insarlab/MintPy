@@ -368,6 +368,7 @@ def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box
         baseline_dict = isce_utils.read_baseline_timeseries(baseline_dir, processor=processor)
 
         # calc baseline for each pair
+        print('calc perp baseline pairs from time-series')
         pbase = np.zeros(num_pair, dtype=np.float32)
         for i, date12 in enumerate(date12_list):
             [date1, date2] = date12.split('_')
@@ -500,7 +501,8 @@ def main(iargs=None):
         baseline_dir=inps.baselineDir,
         box=pix_box)
 
-    return ts_file, tcoh_file, ps_mask_file, geom_file
+    print('Done.')
+    return
 
 
 ####################################################################################
