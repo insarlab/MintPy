@@ -10,7 +10,7 @@ cvxopt
 dask>=1.0
 dask-jobqueue>=0.3
 defusedxml
-h5py<3
+h5py
 joblib
 lxml
 matplotlib

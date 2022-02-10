@@ -270,9 +270,9 @@ class timeseries:
                 box = [0, 0, self.width, self.length]
 
             # read
-            data = ds[dateFlag,
+            data = ds[:,
                       box[1]:box[3],
-                      box[0]:box[2]]
+                      box[0]:box[2]][dateFlag]
 
             if squeeze and any(i == 1 for i in data.shape):
                 data = np.squeeze(data)
@@ -572,9 +572,9 @@ class geometry:
                         dateFlag[self.dateList.index(e)] = True
 
                 # read
-                data = ds[dateFlag,
+                data = ds[:,
                           box[1]:box[3],
-                          box[0]:box[2]]
+                          box[0]:box[2]][dateFlag]
 
                 if any(i == 1 for i in data.shape):
                     data = np.squeeze(data)
@@ -759,14 +759,9 @@ class ifgramStack:
                 box = (0, 0, self.width, self.length)
 
             # read
-            if np.sum(dateFlag) < 50:
-                data = ds[dateFlag,
-                          box[1]:box[3],
-                          box[0]:box[2]]
-            else:
-                data = ds[:,
-                          box[1]:box[3],
-                          box[0]:box[2]][dateFlag]
+            data = ds[:,
+                      box[1]:box[3],
+                      box[0]:box[2]][dateFlag]
 
             if any(i == 1 for i in data.shape):
                 data = np.squeeze(data)
@@ -931,7 +926,7 @@ class ifgramStack:
             if ('unwrapPhase' in datasetName
                    and self.refY is not None and 0 <= self.refY <= self.width
                    and self.refX is not None and 0 <= self.refX <= self.length):
-                ref_val = dset[ifgram_flag, self.refY, self.refX]
+                ref_val = dset[:, self.refY, self.refX][ifgram_flag]
 
             # get step size and number
             ds_size = np.sum(ifgram_flag, dtype=np.int64) * self.length * self.width * 4
@@ -1275,9 +1270,9 @@ class HDFEOS:
                         dateFlag[self.dateList.index(e)] = True
 
                 # read
-                data = ds[dateFlag,
+                data = ds[:,
                           box[1]:box[3],
-                          box[0]:box[2]]
+                          box[0]:box[2]][dateFlag]
 
                 # squeeze/shrink dimension whenever it is possible
                 if any(i == 1 for i in data.shape):

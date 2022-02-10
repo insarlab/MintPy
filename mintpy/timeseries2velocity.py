@@ -48,7 +48,7 @@ EXAMPLE = """example:
   timeseries2velocity.py  timeseries_ERA5_demErr.h5
   timeseries2velocity.py  timeseries_ERA5_demErr_ramp.h5  -t KyushuT73F2980_2990AlosD.template
   timeseries2velocity.py  timeseries.h5  --start-date 20080201  --end-date 20100508
-  timeseries2velocity.py  timeseries.h5  --exclude-date exclude_date.txt
+  timeseries2velocity.py  timeseries.h5  --exclude exclude_date.txt
 
   timeseries2velocity.py  LS-PARAMS.h5
   timeseries2velocity.py  NSBAS-PARAMS.h5
