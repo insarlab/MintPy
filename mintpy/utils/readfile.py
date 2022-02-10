@@ -11,6 +11,7 @@ import os
 import sys
 import re
 import glob
+import datetime as dt
 import warnings
 import defusedxml.ElementTree as ET
 
@@ -27,34 +28,44 @@ from mintpy.objects import (
     timeseries,
     HDFEOS
 )
+from mintpy.objects import sensor
 from mintpy.utils import utils0 as ut
 
+SPEED_OF_LIGHT = 299792458  # meters per second
 
-SPEED_OF_LIGHT = 299792458.0   # meter/second
 
 standardMetadataKeys = {
     # ROI_PAC/MintPy attributes
     'ALOOKS'             : ['azimuth_looks'],
     'RLOOKS'             : ['range_looks'],
-    'AZIMUTH_PIXEL_SIZE' : ['azimuthPixelSize', 'azimuth_pixel_spacing', 'az_pixel_spacing'],
-    'RANGE_PIXEL_SIZE'   : ['rangePixelSize', 'range_pixel_spacing', 'rg_pixel_spacing'],
+    'AZIMUTH_PIXEL_SIZE' : ['azimuthPixelSize', 'azimuth_pixel_spacing', 'az_pixel_spacing', 'azimuth_spacing'],
+    'RANGE_PIXEL_SIZE'   : ['rangePixelSize', 'range_pixel_spacing', 'rg_pixel_spacing', 'range_spacing'],
     'CENTER_LINE_UTC'    : ['center_time'],
     'DATA_TYPE'          : ['dataType', 'data_type'],
     'EARTH_RADIUS'       : ['earthRadius', 'earth_radius_below_sensor', 'earth_radius'],
-    'HEADING'            : ['HEADING_DEG', 'heading'],
+    'HEADING'            : ['HEADING_DEG', 'heading', 'centre_heading'],
     'HEIGHT'             : ['altitude', 'SC_height'],
     'BANDS'              : ['number_bands', 'bands'],
     'INTERLEAVE'         : ['scheme', 'interleave'],
     'LENGTH'             : ['length', 'FILE_LENGTH', 'lines', 'azimuth_lines', 'nlines', 'az_samp',
-                            'interferogram_azimuth_lines'],
-    'ORBIT_DIRECTION'    : ['passDirection'],
+                            'interferogram_azimuth_lines', 'num_output_lines'],
+    'LAT_REF1'           : ['first_near_lat'],
+    'LON_REF1'           : ['first_near_long'],
+    'LAT_REF2'           : ['first_far_lat'],
+    'LON_REF2'           : ['first_far_long'],
+    'LAT_REF3'           : ['last_near_lat'],
+    'LON_REF3'           : ['last_near_long'],
+    'LAT_REF4'           : ['last_far_lat'],
+    'LON_REF4'           : ['last_far_long'],
+    'ORBIT_DIRECTION'    : ['passDirection', 'pass'],
     'NO_DATA_VALUE'      : ['NoDataValue'],
-    'PLATFORM'           : ['spacecraftName', 'sensor'],
+    'PLATFORM'           : ['spacecraftName', 'sensor', 'mission'],
     'POLARIZATION'       : ['polarization'],
-    'PRF'                : ['prf'],
-    'STARTING_RANGE'     : ['startingRange', 'near_range_slc', 'near_range'],
+    'PRF'                : ['prf', 'pulse_repetition_frequency'],
+    'STARTING_RANGE'     : ['startingRange', 'near_range_slc', 'near_range', 'slant_range_to_first_pixel'],
+    'TRACK_NUMBER'       : ['rel_orbit'],
     'WAVELENGTH'         : ['wavelength', 'Wavelength', 'radarWavelength', 'radar_wavelength'],
-    'WIDTH'              : ['width', 'Width', 'samples', 'range_samp', 'interferogram_width'],
+    'WIDTH'              : ['width', 'Width', 'samples', 'range_samp', 'interferogram_width', 'num_samples_per_line'],
     # from PySAR [MintPy<=1.1.1]
     'REF_DATE'           : ['ref_date'],
     'REF_LAT'            : ['ref_lat'],
@@ -1408,17 +1419,18 @@ def read_isce_xml(fname):
     # imageFile, e.g. filt_fine.unw.xml
     if root.tag.startswith('image'):
         for child in root.findall('property'):
-            key = child.get('name')
+            key = child.get('name').lower()
             value = child.find('value').text
             xmlDict[key] = value
 
         # Read lat/lon info for geocoded file
         # in form: root/component coordinate*/property name/value
         for coord_name, prefix in zip(['coordinate1', 'coordinate2'], ['X', 'Y']):
-            child = root.find("./component[@name='{}']".format(coord_name))
-            v_step  = float(child.find("./property[@name='delta']").find('value').text)
-            v_first = float(child.find("./property[@name='startingvalue']").find('value').text)
-            if abs(v_step) < 1. and abs(v_step) > 1e-7:
+            e_step  = root.find(f"./component[@name='{coord_name}']/property[@name='delta']")
+            e_first = root.find(f"./component[@name='{coord_name}']/property[@name='startingvalue']")
+            v_step  = float(e_step.find('value').text)  if e_step  is not None else None
+            v_first = float(e_first.find('value').text) if e_first is not None else None
+            if v_step and v_first and abs(v_step) < 1. and abs(v_step) > 1e-7:
                 xmlDict['{}_STEP'.format(prefix)] = v_step
                 xmlDict['{}_FIRST'.format(prefix)] = v_first - v_step / 2.
                 xmlDict['{}_UNIT'.format(prefix)] = 'degrees'
@@ -1618,6 +1630,102 @@ def attribute_gmtsar2roipac(prm_dict_in):
     prm_dict['CENTER_LINE_UTC'] = str(t_center * 24. * 60. * 60.)
 
     return prm_dict
+
+
+def read_snap_dim(fname):
+    """Read SNAP *.dim file into a python dict structure.
+    Parameters: fname - str, path of the *.dim file
+    Returns:    dim_dict - dict, ditionary of keys and values
+    Examples:   from mintpy.utils import readfile
+                atr = readfile.read_snap_dim('20190303_20190408_unw_tc.dim')
+    """
+    root = ET.parse(fname).getroot()
+    ds = root.find("Dataset_Sources/MDElem[@name='metadata']/MDElem[@name='Abstracted_Metadata']")
+
+    # initial dict elements
+    dim_dict = {}
+    dim_dict['PROCESSOR'] = 'snap'
+    dim_dict['FILE_TYPE'] = os.path.basename(fname).split('_')[-2].lower()
+
+    # read abstracted_metadata into dict
+    for child in ds.findall('MDATTR'):
+        key = child.get('name').lower()
+        value = child.text
+        dim_dict[key] = value
+
+    ## 1. standardize
+    dim_dict = standardize_metadata(dim_dict)
+
+    ## 2. extra calculations
+    # antenna_side
+    dim_dict['ANTENNA_SIDE'] = '-1' if dim_dict['antenna_pointing'] == 'right' else '1'
+
+    # center_line_utc
+    start_utc = dt.datetime.strptime(dim_dict['first_line_time'], '%d-%b-%Y %H:%M:%S.%f')
+    end_utc   = dt.datetime.strptime(dim_dict['last_line_time'],  '%d-%b-%Y %H:%M:%S.%f')
+    center_utc = start_utc + ((end_utc - start_utc) / 2)
+    center_secs = (center_utc.hour * 3600.0 +
+                   center_utc.minute * 60. +
+                   center_utc.second)
+    dim_dict['CENTER_LINE_UTC'] = center_secs
+
+    # data_type / length / width
+    band = root.find("Image_Interpretation/Spectral_Band_Info")
+    dim_dict['DATA_TYPE'] = band.find("DATA_TYPE").text
+    dim_dict['LENGTH']    = band.find("BAND_RASTER_HEIGHT").text
+    dim_dict['WIDTH']     = band.find("BAND_RASTER_WIDTH").text
+
+    # earth_radius + height
+    orbit = ds.find("MDElem[@name='Orbit_State_Vectors']/MDElem[@name='orbit_vector1']")
+    x_pos = float(orbit.find("MDATTR[@name='x_pos']").text)
+    y_pos = float(orbit.find("MDATTR[@name='y_pos']").text)
+    z_pos = float(orbit.find("MDATTR[@name='z_pos']").text)
+    height, radius = ut.xyz_to_local_radius((x_pos, y_pos, z_pos))
+    dim_dict['HEIGHT'] = height
+    dim_dict['EARTH_RADIUS'] = radius
+
+    # platform
+    dim_dict['PLATFORM'] = sensor.standardize_sensor_name(dim_dict['PLATFORM'])
+
+    # wavelength
+    dim_dict['WAVELENGTH'] = SPEED_OF_LIGHT / float(dim_dict['radar_frequency'])
+
+    # x/y_first/step_unit 
+    transform = root.find("Geoposition/IMAGE_TO_MODEL_TRANSFORM").text.split(',')
+    transform = [str(float(i)) for i in transform]     # Convert 3.333e-4 to 0.0003333
+    dim_dict["X_STEP"]  = transform[0]
+    dim_dict["Y_STEP"]  = transform[3]
+    dim_dict["X_FIRST"] = transform[4]
+    dim_dict["Y_FIRST"] = transform[5]
+    dim_dict["X_UNIT"]  = "degrees"
+    dim_dict["Y_UNIT"]  = "degrees"
+
+    ## 3. geometry datasets
+    # incidence_angle
+    dim_dict['INCIDENCE_ANGLE'] = (float(dim_dict['incidence_near']) + float(dim_dict['incidence_near'])) / 2.0
+
+    # slant_range_distance
+    dim_dict['SLANT_RANGE_DISTANCE'] = ut.incidence_angle2slant_range_distance(dim_dict, dim_dict['INCIDENCE_ANGLE'])
+
+    ## 4. specific to each interferogram
+    bases = ds.find("MDElem[@name='Baselines']").findall("MDElem")[0].findall("MDElem")
+
+    # date12
+    dates = [x.get('name').split(':')[1].strip() for x in bases]
+    [date1, date2] = sorted([dt.datetime.strptime(x, '%d%b%Y').strftime('%Y%m%d') for x in dates])
+    dim_dict['DATE12'] = f'{date1[2:]}-{date2[2:]}'
+
+    # p_baseline
+    pbases = [x.find("MDATTR[@name='Perp Baseline']").text for x in bases]
+    pbase = [x for x in pbases if float(x) != 0][0]
+    dim_dict['P_BASELINE_TOP_HDR'] = pbase
+    dim_dict['P_BASELINE_BOTTOM_HDR'] = pbase
+
+    # convert all key & value in string format
+    for key, value in dim_dict.items():
+        dim_dict[key] = str(value)
+
+    return dim_dict
 
 
 

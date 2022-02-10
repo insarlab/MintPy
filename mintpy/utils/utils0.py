@@ -16,6 +16,7 @@
 
 
 import os
+import math
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
@@ -314,6 +315,55 @@ def to_latlon(infile, x, y):
     transformer = Transformer.from_proj(p_in, p_out)
     y, x = transformer.transform(x, y)
     return y, x
+
+
+def xyz_to_local_radius(xyz):
+    """Calculate satellite height and ellpsoid local radius from orbital state vector.
+
+    This is a simplified version of the following functions from ISCE-2:
+    + isce.isceobj.Planet.xyz_to_llh()
+    + isce.isceobj.Ellipsoid.localRadius()
+
+    Parameters: xyz    - tuple of 3 float, orbital state vector
+    Reference:  height - float, satellite altitude in m
+                radius - float, Earth radius in m
+    """
+
+    # paramters from isce.isceobj.Planet.AstronomicalHandbook
+    a = 6378137.000       # WGS84 semimajor
+    e2 = 0.0066943799901  # WGS84 eccentricity squared
+
+    # xyz --> llh
+    a2 = a**2
+    e4 = e2**2
+    r_llh =  [0]*3
+    d_llh = [[0]*3 for i in range(len(xyz))]
+    xy2 = xyz[0]**2 + xyz[1]**2
+    p = (xy2) / a2
+    q = (1. - e2) * xyz[2]**2 / a2
+    r = (p + q - e4) / 6.
+    s = e4 * p * q / (4. * r**3)
+    t = (1. + s + math.sqrt(s * (2. + s))) **(1. / 3.)
+    u = r * (1. + t + 1./t)
+    v = math.sqrt(u**2 + e4 * q)
+    w = e2 * (u + v - q) / (2. * v)
+    k = math.sqrt(u + v + w**2) - w
+    D = k * math.sqrt(xy2) / (k + e2)
+    r_llh[0] = math.atan2(xyz[2], D)
+    r_llh[1] = math.atan2(xyz[1], xyz[0])
+    r_llh[2] = (k + e2 - 1.) * math.sqrt(D**2 + xyz[2]**2) / k
+    d_llh[0] = math.degrees(r_llh[0])
+    d_llh[1] = math.degrees(r_llh[1])
+    d_llh[2] = r_llh[2]
+    height = r_llh[2]
+
+    # calculate local radius
+    b = a * (1.0 - e2)**0.5
+    latg = math.atan( math.tan(math.radians(d_llh[0])) * a**2 / b**2 )
+    arg = (math.cos(latg)**2 / a**2) + (math.sin(latg)**2 / b**2)
+    radius = 1.0 / math.sqrt(arg)
+
+    return height, radius
 
 
 def get_lat_lon(meta, geom_file=None, box=None, dimension=2):
