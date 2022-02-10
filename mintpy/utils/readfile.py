@@ -400,9 +400,9 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
                         sys.stdout.flush()
 
                     # read and index
-                    d2 = ds[:,
+                    d2 = ds[inds[i],
                             box[1]:box[3],
-                            box[0]:box[2]][inds[i]]
+                            box[0]:box[2]]
                     d2 = d2[int(ystep/2)::ystep,
                             int(xstep/2)::xstep]
                     data[i, :, :] = d2[:ysize, :xsize]

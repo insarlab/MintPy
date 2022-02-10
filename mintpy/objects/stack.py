@@ -759,14 +759,9 @@ class ifgramStack:
                 box = (0, 0, self.width, self.length)
 
             # read
-            if np.sum(dateFlag) < 50:
-                data = ds[:,
-                          box[1]:box[3],
-                          box[0]:box[2]][dateFlag]
-            else:
-                data = ds[:,
-                          box[1]:box[3],
-                          box[0]:box[2]][dateFlag]
+            data = ds[:,
+                      box[1]:box[3],
+                      box[0]:box[2]][dateFlag]
 
             if any(i == 1 for i in data.shape):
                 data = np.squeeze(data)
