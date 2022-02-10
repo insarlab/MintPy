@@ -215,8 +215,7 @@ def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None
             pbase[i] = (pbase_top + pbase_bottom) / 2.0
 
     # size info
-    if not box:
-        box = (0, 0, int(meta['WIDTH']), int(meta['LENGTH']))
+    box = box if box else (0, 0, int(meta['WIDTH']), int(meta['LENGTH']))
     kwargs = dict(xoff=box[0],
                   yoff=box[1],
                   win_xsize=box[2]-box[0],
@@ -266,8 +265,7 @@ def prepare_temporal_coherence(outfile, infile, metadata, box=None):
     meta["UNIT"] = "1"
 
     # size info
-    if not box:
-        box = (0, 0, int(meta['WIDTH']), int(meta['LENGTH']))
+    box = box if box else (0, 0, int(meta['WIDTH']), int(meta['LENGTH']))
     kwargs = dict(xoff=box[0],
                   yoff=box[1],
                   win_xsize=box[2]-box[0],
@@ -295,8 +293,7 @@ def prepare_ps_mask(outfile, infile, metadata, box=None):
     meta["UNIT"] = "1"
 
     # size info
-    if not box:
-        box = (0, 0, int(meta['WIDTH']), int(meta['LENGTH']))
+    box = box if box else (0, 0, int(meta['WIDTH']), int(meta['LENGTH']))
     kwargs = dict(xoff=box[0],
                   yoff=box[1],
                   win_xsize=box[2]-box[0],
@@ -341,80 +338,61 @@ def prepare_geometry(outfile, geom_dir, box, metadata):
     return outfile
 
 
-def prepare_stack(outfile, unw_file, corr_file, metadata, processor, baseline_dir=None, box=None):
+def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box=None):
     print('-'*50)
     print('preparing ifgramStack file: {}'.format(outfile))
     # copy metadata to meta
     meta = {key : value for key, value in metadata.items()}
 
-    # grab date list from the filename
+    # get list of *.unw file
     unw_files = sorted(glob.glob(unw_file))
-
-    # get the dates from the file names
-    lst_dates12  = []
-    sec_dates    = []
-    for unw_file in unw_files:
-        date12 = os.path.splitext(os.path.basename(unw_file))[0]
-        d12    = date12.split('_')[:2]
-        sec_dates.append(str(d12[1])) # for bperp
-        lst_dates12.append([d12[0].encode('utf-8'), d12[1].encode("utf-8")])
-
-    arr_dates12 = np.array(lst_dates12)
-    ref_date = arr_dates12[0, 0].decode('utf-8')
-    num_pair = arr_dates12.shape[0]
+    num_pair = len(unw_files)
     print('number of interferograms:', num_pair)
 
-    # get all connected component files using an ifg 
-    cc_file  = f'{os.path.splitext(unw_file)[0]}.conncomp'
-    cc_file  = os.path.join(os.path.dirname(cc_file), 
-                                    f'*{os.path.basename(cc_file)[17:]}')
+    # get list of *.unw.conncomp file
+    cc_files = [f'{x}.conncomp' for x in unw_files]
+    cc_files = [x for x in cc_files if os.path.isfile(x)]
+    print(f'number of connected components files: {len(cc_files)}')
 
-    cc_files = sorted(glob.glob(cc_file))
-    if not cc_files:
-        print(f'Could not find any connected component files matching {cc_file}')
-        print('Skipping ifgramStack creation')
+    if len(cc_files) != len(unw_files):
+        print('the number of *.unw and *.unw.conncomp files are NOT consistent')
+        print('skip creating ifgramStack.h5 file.')
         return
 
-    print('number of associated connected components:', len(cc_files))
+    # get date info: date12_list
+    date12_list = [os.path.basename(x).split('.')[0] for x in unw_files]
 
-    # baseline info
+    # prepare baseline info
     if baseline_dir is not None:
-        # read baseline data
-        baseline_dict = isce_utils.read_baseline_timeseries(baseline_dir,
-                                                            processor=processor,
-                                                            ref_date=ref_date)
+        # read baseline timeseries
+        baseline_dict = isce_utils.read_baseline_timeseries(baseline_dir, processor=processor)
 
-        # get diff of sec and ref top/bot baseline and store their mean
+        # calc baseline for each pair
         pbase = np.zeros(num_pair, dtype=np.float32)
-
-        for i in range(num_pair):
-            ref, sec = [lst_dates12[i][j].decode('utf-8') for j in range(2)]
-            pbase[i] = np.subtract(baseline_dict[sec], baseline_dict[ref]).mean()
+        for i, date12 in enumerate(date12_list):
+            [date1, date2] = date12.split('_')
+            pbase[i] = np.subtract(baseline_dict[date2], baseline_dict[date1]).mean()
 
     # size info
-    if not box:
-        box = (0, 0, int(meta['WIDTH']), int(meta['LENGTH']))
-
+    box = box if box else (0, 0, int(meta['WIDTH']), int(meta['LENGTH']))
     kwargs = dict(xoff=box[0],
                   yoff=box[1],
                   win_xsize=box[2]-box[0],
                   win_ysize=box[3]-box[1])
 
     # define (and fill out some) dataset structure
-    dropIfgram = np.ones(arr_dates12.shape[0], dtype=bool)
+    date12_arr = np.array([x.split('_') for x in date12_list], dtype=np.string_)
+    drop_ifgram = np.ones(num_pair, dtype=np.bool_)
     ds_name_dict = {
-        "date"       : [np.dtype('S8'), (num_pair, 2), arr_dates12],
-
-        "bperp"      : [np.float32,  (num_pair,), pbase],
-        "dropIfgram" : [np.bool_,    (num_pair,), dropIfgram],
-
-        "unwrapPhase" : [np.float32,  (num_pair, box[3]-box[1], box[2]-box[0]), None],
-        "connectComponent" : [np.float32,  (num_pair, box[3]-box[1], box[2]-box[0]), None],
+        "date"             : [date12_arry.dtype, (num_pair, 2), date12_arr],
+        "bperp"            : [np.float32,        (num_pair,),   pbase],
+        "dropIfgram"       : [np.bool_,          (num_pair,),   drop_ifgram],
+        "unwrapPhase"      : [np.float32,        (num_pair, box[3]-box[1], box[2]-box[0]), None],
+        "connectComponent" : [np.float32,        (num_pair, box[3]-box[1], box[2]-box[0]), None],
     }
 
     # initiate HDF5 file
     meta["FILE_TYPE"] = "ifgramStack"
-    print('OUTFILE', outfile)
     writefile.layout_hdf5(outfile, ds_name_dict, metadata=meta)
 
     # writing data to HDF5 file
@@ -422,23 +400,23 @@ def prepare_stack(outfile, unw_file, corr_file, metadata, processor, baseline_di
     with h5py.File(outfile, "a") as f:
         prog_bar = ptime.progressBar(maxValue=num_pair)
         for i, (unw_file, cc_file) in enumerate(zip(unw_files, cc_files)):
-            # read data using gdal
+
+            # read/write *.unw file
             ds   = gdal.Open(unw_file, gdal.GA_ReadOnly)
             data = np.array(ds.GetRasterBand(2).ReadAsArray(**kwargs), dtype=np.float32)
-
             f["unwrapPhase"][i] = data
 
+            # read/write *.unw.conncomp file
             ds   = gdal.Open(cc_file, gdal.GA_ReadOnly)
             data = np.array(ds.GetRasterBand(1).ReadAsArray(**kwargs), dtype=np.float32)
-
             f["connectComponent"][i] = data
 
-
-            prog_bar.update(i+1, suffix=sec_dates[i])
+            prog_bar.update(i+1, suffix=date12_list[i])
         prog_bar.close()
 
     print('finished writing to HDF5 file: {}'.format(outfile))
     return outfile
+
 
 ####################################################################################
 def main(iargs=None):
@@ -471,8 +449,8 @@ def main(iargs=None):
         os.makedirs(dname, exist_ok=True)
 
     ## output filename
-    ts_file   = os.path.join(inps.outDir, 'timeseries.h5')
-    tcoh_file = os.path.join(inps.outDir, 'temporalCoherence.h5')
+    ts_file      = os.path.join(inps.outDir, 'timeseries.h5')
+    tcoh_file    = os.path.join(inps.outDir, 'temporalCoherence.h5')
     ps_mask_file = os.path.join(inps.outDir, 'maskPS.h5')
     stack_file   = os.path.join(inps.outDir, 'inputs/ifgramStack.h5')
     if 'Y_FIRST' in meta.keys():
@@ -517,7 +495,6 @@ def main(iargs=None):
     prepare_stack(
         outfile=stack_file,
         unw_file=inps.unwFile,
-        corr_file=tcoh_file,
         metadata=meta,
         processor=processor,
         baseline_dir=inps.baselineDir,
