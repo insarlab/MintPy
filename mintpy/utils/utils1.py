@@ -53,10 +53,9 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 ramp_type - string, ramp type, e.g. linear, quadratic, no for do not remove ramp
     Returns:    std_list  - list of float, standard deviation of deramped input timeseries file
                 date_list - list of string in YYYYMMDD format, corresponding dates
-                std_file  - string, text file with std and date info.
     Example:    import mintpy.utils.utils as ut
                 std_list, date_list = ut.get_residual_std('timeseries_ERA5_demErrInvResid.h5',
-                                                          'maskTempCoh.h5')[:2]
+                                                          'maskTempCoh.h5')
     """
     # Intermediate files name
     if ramp_type == 'no':
@@ -87,7 +86,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     fc = np.loadtxt(std_file, dtype=bytes).astype(str)
     std_list = fc[:, 1].astype(np.float32).tolist()
     date_list = list(fc[:, 0])
-    return std_list, date_list, std_file
+    return std_list, date_list
 
 
 def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_type='quadratic'):
@@ -837,9 +836,7 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
             with open(coeff_file, 'a') as f:
                 f.write('{}    '.format(atr['FILE_TYPE']))
         # read
-        if not datasetName and k == 'velocity':
-            datasetName = 'velocity'
-        data = readfile.read(fname, datasetName=datasetName)[0]
+        data = readfile.read(fname)[0]
         # deramp
         data = deramp(data, mask,
                       ramp_type=ramp_type,

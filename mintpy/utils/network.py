@@ -241,57 +241,6 @@ def calculate_doppler_overlap(dop_a, dop_b, bandwidth_az):
     return dop_overlap
 
 
-def simulate_coherence_v2(date12_list, decor_time=200.0, coh_resid=0.2, inc_angle=40, sensor_name='Sen',
-                          display=False):
-    """Simulate coherence version 2 (without using bl_list.txt file).
-    Parameters: date12_list - list of string in YYYYMMDD_YYYYMMDD format, indicating pairs configuration
-                decor_time  - float, decorrelation rate in days, time for coherence to drop to 1/e of its initial value
-                coh_resid   - float, long-term coherence, minimum attainable coherence value
-                inc_angle   - float, incidence angle in degrees
-                sensor_name - string, SAR sensor name
-                display     - bool, display result as matrix or not
-    Returns:    coh         - 2D np.array in size of (ifgram_num)
-    """
-    num_pair = len(date12_list)
-    date1s = [x.split('_')[0] for x in date12_list]
-    date2s = [x.split('_')[1] for x in date12_list]
-    date_list = sorted(list(set(date1s + date2s)))
-    tbase_list = ptime.date_list2tbase(date_list)[0]
-
-    SNR = 22  # NESZ = -22 dB from Table 1 in https://sentinels.copernicus.eu/web/sentinel/
-    coh_thermal = 1. / (1. + 1./SNR)
-
-    # bperp
-    rng = np.random.default_rng(2)
-    pbase_list = rng.normal(0, 50, num_pair).tolist()
-    pbase_c = critical_perp_baseline(sensor_name, inc_angle)
-
-    coh = np.zeros(num_pair, dtype=np.float32)
-    for i in range(num_pair):
-        date1, date2 = date12_list[i].split('_')
-        ind1, ind2 = date_list.index(date1), date_list.index(date2)
-        tbase = tbase_list[ind2] - tbase_list[ind1]
-        pbase = pbase_list[ind2] - pbase_list[ind1]
-
-        coh_geom = (pbase_c - abs(pbase)) / pbase_c
-        coh_temp = np.multiply((coh_thermal - coh_resid), np.exp(-1*abs(tbase)/decor_time)) + coh_resid
-        coh[i] = coh_geom * coh_temp
-
-    if display:
-        print(('critical perp baseline: %.f m' % pbase_c))
-        coh_mat = coherence_matrix(date12_list, coh)
-        plt.figure()
-        plt.imshow(coh_mat, vmin=0.0, vmax=1.0, cmap='jet')
-        plt.xlabel('Image number')
-        plt.ylabel('Image number')
-        cbar = plt.colorbar()
-        cbar.set_label('Coherence')
-        plt.title('Coherence matrix')
-        plt.show()
-
-    return coh
-
-
 def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor_name='Env', inc_angle=22.8,
                        decor_time=200.0, coh_resid=0.2, display=False):
     """Simulate coherence for a given set of interferograms

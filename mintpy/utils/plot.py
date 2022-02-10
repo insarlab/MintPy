@@ -3,7 +3,6 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, 2018                               #
 ############################################################
-#
 # Recommend import:
 #     from mintpy.utils import plot as pp
 
@@ -378,19 +377,15 @@ def auto_shared_lalo_location(axs, loc=(1,0,0,1), flatten=False):
 
 
 def auto_colormap_name(metadata, cmap_name=None, datasetName=None, print_msg=True):
-    """Get auto/default colormap name based on input metadata."""
-
+    gray_dataset_key_words = ['coherence', 'temporalCoherence',
+                              'waterMask', 'shadowMask',
+                              '.cor', '.mli', '.slc', '.amp', '.ramp']
     if not cmap_name:
-        ds_names = [metadata['FILE_TYPE'], str(datasetName).split('-')[0]]
-        # SLC stack
-        if metadata['FILE_TYPE'] == 'timeseries' and metadata['DATA_TYPE'].startswith('complex'):
-            ds_names += ['.slc']
-
-        gray_ds_names = ['coherence', 'temporalCoherence', 'waterMask', 'shadowMask',
-                         '.cor', '.mli', '.slc', '.amp', '.ramp']
-
-        cmap_name = 'gray' if any(i in gray_ds_names for i in ds_names) else 'jet'
-
+        if any(i in gray_dataset_key_words for i in [metadata['FILE_TYPE'],
+                                                     str(datasetName).split('-')[0]]):
+            cmap_name = 'gray'
+        else:
+            cmap_name = 'jet'
     if print_msg:
         print('colormap:', cmap_name)
 
@@ -433,8 +428,7 @@ def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_
     return cmap_lut, vlim
 
 
-def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=None, buffer_year=0.2,
-                           every_month=None):
+def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1, buffer_year=0.2):
     """Adjust X axis
     Input:
         ax          - matplotlib figure axes object
@@ -466,22 +460,11 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=None, buffer_
         (dss, dee) = ax.get_xlim()
     ax.set_xlim(dss, dee)
 
-    # auto param
-    if not every_year:
-        every_year = max(1, np.rint((dee - dss).days / 365.25 / 5).astype(int))
-
-    if not every_month:
-        if   every_year <= 3:  every_month = 1
-        elif every_year <= 6:  every_month = 3
-        elif every_year <= 12: every_month = 6
-        else:                  every_month = None
-
     # Label/Tick format
     ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M:%S')
     ax.xaxis.set_major_locator(mdates.YearLocator(every_year))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
-    if every_month:
-        ax.xaxis.set_minor_locator(mdates.MonthLocator(range(1,13,every_month)))
+    ax.xaxis.set_minor_locator(mdates.MonthLocator())
 
     # Label font size
     ax.tick_params(labelsize=fontsize)
@@ -545,7 +528,7 @@ def plot_coherence_history(ax, date12List, cohList, p_dict={}):
     ax.bar(x_list, np.nanmin(coh_mat, axis=0), bar_width.days, label='Min {}'.format(p_dict['ds_name']))
 
     if p_dict['disp_title']:
-        ax.set_title('{} History: Min/Max of All Related Pairs'.format(p_dict['ds_name']))
+        ax.set_title('{} History of All Related Pairs'.format(p_dict['ds_name']))
 
     ax = auto_adjust_xaxis_date(ax, datevector, fontsize=p_dict['fontsize'],
                                 every_year=p_dict['every_year'])[0]
@@ -553,7 +536,7 @@ def plot_coherence_history(ax, date12List, cohList, p_dict={}):
 
     #ax.set_xlabel('Time [years]', fontsize=p_dict['fontsize'])
     ax.set_ylabel(p_dict['ds_name'], fontsize=p_dict['fontsize'])
-    ax.legend(loc='best')
+    ax.legend(loc='lower right')
 
     return ax
 
@@ -686,9 +669,9 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
             x = np.array([dates[idx1], dates[idx2]])
             y = np.array([pbaseList[idx1], pbaseList[idx2]])
             if cohList is not None:
-                val = cohList[date12List.index(date12)]
-                val_norm = (val - disp_min) / (disp_max - disp_min)
-                ax.plot(x, y, '--', lw=p_dict['linewidth'], alpha=transparency, c=cmap(val_norm))
+                coh = cohList[date12List.index(date12)]
+                coh_norm = (coh - disp_min) / (disp_max - disp_min)
+                ax.plot(x, y, '--', lw=p_dict['linewidth'], alpha=transparency, c=cmap(coh_norm))
             else:
                 ax.plot(x, y, '--', lw=p_dict['linewidth'], alpha=transparency, c='k')
 
@@ -700,9 +683,9 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
         x = np.array([dates[idx1], dates[idx2]])
         y = np.array([pbaseList[idx1], pbaseList[idx2]])
         if cohList is not None:
-            val = cohList[date12List.index(date12)]
-            val_norm = (val - disp_min) / (disp_max - disp_min)
-            ax.plot(x, y, '-', lw=p_dict['linewidth'], alpha=transparency, c=cmap(val_norm))
+            coh = cohList[date12List.index(date12)]
+            coh_norm = (coh - disp_min) / (disp_max - disp_min)
+            ax.plot(x, y, '-', lw=p_dict['linewidth'], alpha=transparency, c=cmap(coh_norm))
         else:
             ax.plot(x, y, '-', lw=p_dict['linewidth'], alpha=transparency, c='k')
 
@@ -939,12 +922,195 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
     return ax, coh_mat, im
 
 
+def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
+    if print_msg:
+        print('reading DEM: {} ...'.format(os.path.basename(dem_file)))
+
+    dem_metadata = readfile.read_attribute(dem_file)
+    # read dem data
+    if dem_metadata['FILE_TYPE'] == 'geometry':
+        dsName = 'height'
+    else:
+        dsName = None
+
+    # get dem_pix_box
+    coord = coordinate(dem_metadata)
+    if pix_box is None:
+        pix_box = (0, 0, int(dem_metadata['WIDTH']), int(dem_metadata['LENGTH']))
+
+    # Support DEM with different Resolution and Coverage
+    if geo_box:
+        dem_pix_box = coord.box_geo2pixel(geo_box)
+    else:
+        dem_pix_box = pix_box
+    box2read = coord.check_box_within_data_coverage(dem_pix_box, print_msg=False)
+
+    dem, dem_metadata = readfile.read(dem_file,
+                                      datasetName=dsName,
+                                      box=box2read,
+                                      print_msg=print_msg)
+
+    # if input DEM does not cover the entire AOI, fill with NaN
+    if pix_box is not None and box2read != dem_pix_box:
+        if print_msg:
+            print('align DEM to the input data file')
+        dem_tmp = np.zeros((dem_pix_box[3] - dem_pix_box[1],
+                            dem_pix_box[2] - dem_pix_box[0]), dtype=dem.dtype) * np.nan
+        dem_tmp[box2read[1]-dem_pix_box[1]:box2read[3]-dem_pix_box[1],
+                box2read[0]-dem_pix_box[0]:box2read[2]-dem_pix_box[0]] = dem
+        dem = np.array(dem_tmp)
+    return dem, dem_metadata, dem_pix_box
+
+
+def prepare_dem_background(dem, inps=None, print_msg=True):
+    """Prepare to plot DEM on background
+    Parameters: dem : 2D np.int16 matrix, dem data
+                inps : Namespace with the following 4 items:
+                    'disp_dem_shade'    : bool,  True/False
+                    'disp_dem_contour'  : bool,  True/False
+                    'dem_contour_step'  : float, 200.0
+                    'dem_contour_smooth': float, 3.0
+    Returns:    dem_shade : 3D np.array in size of (length, width, 4)
+                dem_contour : 2D np.array in size of (length, width)
+                dem_contour_sequence : 1D np.array
+    Examples:   dem = readfile.read('inputs/geometryRadar.h5')[0]
+                dem_shade, dem_contour, dem_contour_seq = pp.prepare_dem_background(dem=dem)
+    """
+    # default returns
+    dem_shade = None
+    dem_contour = None
+    dem_contour_sequence = None
+
+    # default inputs
+    if inps is None:
+        inps = cmd_line_parse()
+    if inps.shade_max == 999.:
+        inps.shade_max = np.nanmax(dem) + 2000
+
+    # prepare shade relief
+    if inps.disp_dem_shade:
+        from matplotlib.colors import LightSource
+        ls = LightSource(azdeg=inps.shade_azdeg, altdeg=inps.shade_altdeg)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            dem_shade = ls.shade(dem, vert_exag=inps.shade_exag,
+                                 cmap=ColormapExt('gray').colormap,
+                                 vmin=inps.shade_min,
+                                 vmax=inps.shade_max)
+        dem_shade[np.isnan(dem_shade[:, :, 0])] = np.nan
+        if print_msg:
+            print('show shaded relief DEM')
+
+    # prepare contour
+    if inps.disp_dem_contour:
+        from scipy import ndimage
+        dem_contour = ndimage.gaussian_filter(dem, sigma=inps.dem_contour_smooth, order=0)
+        dem_contour_sequence = np.arange(inps.dem_contour_step, 9000, step=inps.dem_contour_step)
+        if print_msg:
+            print(('show contour in step of {} m '
+                   'with smoothing factor of {}').format(inps.dem_contour_step,
+                                                         inps.dem_contour_smooth))
+
+    # masking
+    if inps and inps.mask_dem and (dem_shade is not None or dem_contour is not None):
+        dem_shape = [x.shape[:2] for x in [dem_shade, dem_contour] if x is not None][0]
+        if inps.msk.shape == dem_shape:
+            if print_msg:
+                print('mask DEM to be consistent with valid data coverage')
+            if dem_shade is not None:
+                dem_shade[inps.msk == 0] = np.nan
+            if dem_contour is not None:
+                dem_contour[inps.msk == 0] = np.nan
+        else:
+            print('WARNING: DEM has different size than mask, ignore --mask-dem and continue.')
+
+    return dem_shade, dem_contour, dem_contour_sequence
+
+
+def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_contour_seq=None,
+                        dem=None, inps=None, print_msg=True):
+    """Plot DEM as background.
+    Parameters: ax : matplotlib.pyplot.Axes or BasemapExt object
+                geo_box : tuple of 4 float in order of (E, N, W, S), geo bounding box
+                dem_shade : 3D np.array in size of (length, width, 4)
+                dem_contour : 2D np.array in size of (length, width)
+                dem_contour_sequence : 1D np.array
+                dem : 2D np.array of DEM data
+                inps : Namespace with the following 4 items:
+                    'disp_dem_shade'    : bool,  True/False
+                    'disp_dem_contour'  : bool,  True/False
+                    'dem_contour_step'  : float, 200.0
+                    'dem_contour_smooth': float, 3.0
+                    'pix_box'           : 4-tuple of int, (x0, y0, x1, y1)
+    Returns:    ax : matplotlib.pyplot.Axes or BasemapExt object
+    Examples:   m = pp.plot_dem_background(m, geo_box=inps.geo_box, dem=dem, inps=inps)
+                ax = pp.plot_dem_background(ax=ax, geo_box=None, dem_shade=dem_shade,
+                                            dem_contour=dem_contour, dem_contour_seq=dem_contour_seq)
+    """
+    # default inputs
+    if inps is None:
+        inps = cmd_line_parse()
+
+    if all(i is None for i in [dem_shade, dem_contour, dem_contour_seq]) and dem is not None:
+        (dem_shade,
+         dem_contour,
+         dem_contour_seq) = prepare_dem_background(dem, inps=inps, print_msg=print_msg)
+
+    # get extent - (left, right, bottom, top) in data coordinates
+    if geo_box is not None:
+        geo_extent = (geo_box[0], geo_box[2],
+                      geo_box[3], geo_box[1])
+    else:
+        if hasattr(inps, 'pix_box'):
+            pix_box = tuple(inps.pix_box)
+        else:
+            data = [i for i in [dem, dem_shade, dem_contour] if i is not None][0]
+            pix_box = (0, 0, data.shape[1], data.shape[0])
+        rdr_extent = (pix_box[0]-0.5, pix_box[2]-0.5,
+                      pix_box[3]-0.5, pix_box[1]-0.5)
+
+    # plot shaded relief
+    if dem_shade is not None:
+        # config
+        kwargs = dict(interpolation='spline16', zorder=0, origin='upper')
+
+        # geo coordinates
+        if geo_box is not None:
+            ax.imshow(dem_shade, extent=geo_extent, **kwargs)
+
+        # radar coordinates
+        elif isinstance(ax, plt.Axes):
+            ax.imshow(dem_shade, extent=rdr_extent, **kwargs)
+
+    # plot topo contour
+    if dem_contour is not None and dem_contour_seq is not None:
+        # config
+        kwargs = dict(origin='upper', colors='black',
+                      linewidths=inps.dem_contour_linewidth,
+                      alpha=0.5, zorder=1)
+        # plot contour line above data (zorder=1) if no DEM shade
+        if dem_shade is None:
+            kwargs['zorder'] = 2
+
+        # geo coordinates
+        if geo_box is not None:
+            yy, xx = np.mgrid[geo_box[1]:geo_box[3]:dem_contour.shape[0]*1j,
+                              geo_box[0]:geo_box[2]:dem_contour.shape[1]*1j]
+
+            ax.contour(xx, yy, dem_contour, dem_contour_seq, extent=geo_extent, **kwargs)
+
+        # radar coordinates
+        elif isinstance(ax, plt.Axes):
+            ax.contour(dem_contour, dem_contour_seq, extent=rdr_extent, **kwargs)
+
+    return ax
 
 
 def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     from mintpy.objects import gps
     vprint = print if print_msg else lambda *args, **kwargs: None
 
+    marker_size = 7
     vmin, vmax = inps.vlim
     cmap = ColormapExt(inps.colormap).colormap if isinstance(inps.colormap, str) else inps.colormap
 
@@ -958,8 +1124,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     # query for GNSS stations
     site_names, site_lats, site_lons = gps.search_gps(SNWE, start_date, end_date)
     if site_names.size == 0:
-        warnings.warn('No GNSS found within {} during {} - {}!'.format(SNWE, start_date, end_date))
-        print('Continue without GNSS plots.')
+        raise ValueError('No GNSS found within {} during {} - {}!'.format(SNWE, start_date, end_date))
 
     # mask out stations not coincident with InSAR data
     if inps.mask_gps and inps.msk is not None:
@@ -993,7 +1158,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         vprint(msg)
         vprint('number of available GPS stations: {}'.format(len(site_names)))
         vprint('start date: {}'.format(start_date))
-        vprint('end   date: {}'.format(end_date))
+        vprint('end   date: {}'.format(start_date))
         vprint('components projection: {}'.format(inps.gps_component))
 
         # get GPS LOS observations
@@ -1013,7 +1178,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         if inps.ref_gps_site:
             ref_ind = site_names.tolist().index(inps.ref_gps_site)
             # plot label of the reference site
-            #ax.annotate(site_names[ref_ind], xy=(site_lons[ref_ind], site_lats[ref_ind]), fontsize=inps.font_size)
+            ax.annotate(site_names[ref_ind], xy=(site_lons[ref_ind], site_lats[ref_ind]), fontsize=inps.font_size)
             # update value
             ref_val = site_obs[ref_ind]
             if not np.isnan(ref_val):
@@ -1022,31 +1187,15 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         # scale to the same unit as InSAR
         site_obs *= unit_fac
 
-        # exclude sites
-        if inps.ex_gps_sites:
-            ex_flag = np.array([x in inps.ex_gps_sites for x in site_names], dtype=np.bool_)
-            if np.sum(ex_flag) > 0:
-                vprint('ignore the following specified stations:\n  {}'.format(site_names[ex_flag]))
-                site_names = site_names[~ex_flag]
-                site_lats = site_lats[~ex_flag]
-                site_lons = site_lons[~ex_flag]
-                site_obs = site_obs[~ex_flag]
-
-        nan_flag = np.isnan(site_obs)
-        if np.sum(nan_flag) > 0:
-            vprint('ignore the following {} stations due to limited overlap/observations in time'.format(np.sum(nan_flag)))
-            vprint('  {}'.format(site_names[nan_flag]))
-
         # plot
         for lat, lon, obs in zip(site_lats, site_lons, site_obs):
-            if not np.isnan(obs):
-                color = cmap( (obs - vmin) / (vmax - vmin) )
-                ax.scatter(lon, lat, color=color, s=inps.gps_marker_size**2, edgecolors='k', lw=0.5, zorder=10)
+            color = cmap( (obs - vmin) / (vmax - vmin) ) if not np.isnan(obs) else 'none'
+            ax.scatter(lon, lat, color=color, s=marker_size**2, edgecolors='k', zorder=10)
 
     else:
         # plot GPS locations only
         vprint('showing GPS locations')
-        ax.scatter(site_lons, site_lats, s=inps.gps_marker_size**2, color='w', edgecolors='k', lw=0.5, zorder=10)
+        ax.scatter(site_lons, site_lats, s=marker_size**2, color='w', edgecolors='k', zorder=10)
 
     # plot GPS label
     if inps.disp_gps_label:
@@ -1111,21 +1260,18 @@ def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False, wrap_range=[-
     """
     # default display unit if not given
     if not disp_unit:
-        ftype = metadata['FILE_TYPE'].replace('.','')
-        dtype = metadata.get('DATA_TYPE', 'float32')
+        k = metadata['FILE_TYPE']
+        k = k.replace('.','')
         disp_unit = metadata['UNIT'].lower()
-
-        if (ftype in ['timeseries', 'giantTimeseries', 'velocity', 'HDFEOS']
-                and disp_unit.split('/')[0].endswith('m')
-                and not dtype.startswith('complex')):
+        if (k in ['timeseries', 'giantTimeseries', 'velocity', 'HDFEOS']
+                and disp_unit.split('/')[0].endswith('m')):
             disp_unit = 'cm'
-
-        elif ftype in ['mli', 'slc', 'amp']:
+        elif k in ['mli', 'slc', 'amp']:
             disp_unit = 'dB'
 
     if wrap:
         # wrap is supported for displacement file types only
-        if disp_unit.split('/')[0] not in ['radian', 'm', 'cm', 'mm', '1', 'pixel']:
+        if disp_unit.split('/')[0] not in ['radian', 'm', 'cm', 'mm', '1']:
             wrap = False
             print('WARNING: re-wrap is disabled for disp_unit = {}'.format(disp_unit))
         elif disp_unit.split('/')[0] != 'radian' and (wrap_range[1] - wrap_range[0]) == 2.*np.pi:
@@ -1386,197 +1532,7 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
 
 
 
-###############################################  DEM  ################################################
-
-def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
-    if print_msg:
-        print('reading DEM: {} ...'.format(os.path.basename(dem_file)))
-
-    dem_metadata = readfile.read_attribute(dem_file)
-    # read dem data
-    if dem_metadata['FILE_TYPE'] == 'geometry':
-        dsName = 'height'
-    else:
-        dsName = None
-
-    # get dem_pix_box
-    coord = coordinate(dem_metadata)
-    if pix_box is None:
-        pix_box = (0, 0, int(dem_metadata['WIDTH']), int(dem_metadata['LENGTH']))
-
-    # Support DEM with different Resolution and Coverage
-    if geo_box:
-        dem_pix_box = coord.box_geo2pixel(geo_box)
-    else:
-        dem_pix_box = pix_box
-    box2read = coord.check_box_within_data_coverage(dem_pix_box, print_msg=False)
-
-    dem, dem_metadata = readfile.read(dem_file,
-                                      datasetName=dsName,
-                                      box=box2read,
-                                      print_msg=print_msg)
-
-    # if input DEM does not cover the entire AOI, fill with NaN
-    if pix_box is not None and box2read != dem_pix_box:
-        if print_msg:
-            print('align DEM to the input data file')
-        dem_tmp = np.zeros((dem_pix_box[3] - dem_pix_box[1],
-                            dem_pix_box[2] - dem_pix_box[0]), dtype=dem.dtype) * np.nan
-        dem_tmp[box2read[1]-dem_pix_box[1]:box2read[3]-dem_pix_box[1],
-                box2read[0]-dem_pix_box[0]:box2read[2]-dem_pix_box[0]] = dem
-        dem = np.array(dem_tmp)
-    return dem, dem_metadata, dem_pix_box
-
-
-def prepare_dem_background(dem, inps=None, print_msg=True):
-    """Prepare to plot DEM on background
-    Parameters: dem : 2D np.int16 matrix, dem data
-                inps : Namespace with the following 4 items:
-                    'disp_dem_shade'    : bool,  True/False
-                    'disp_dem_contour'  : bool,  True/False
-                    'dem_contour_step'  : float, 200.0
-                    'dem_contour_smooth': float, 3.0
-    Returns:    dem_shade : 3D np.array in size of (length, width, 4)
-                dem_contour : 2D np.array in size of (length, width)
-                dem_contour_sequence : 1D np.array
-    Examples:   dem = readfile.read('inputs/geometryRadar.h5')[0]
-                dem_shade, dem_contour, dem_contour_seq = pp.prepare_dem_background(dem=dem)
-    """
-    # default returns
-    dem_shade = None
-    dem_contour = None
-    dem_contour_sequence = None
-
-    # default inputs
-    if inps is None:
-        inps = cmd_line_parse()
-    if inps.shade_max == 999.:
-        inps.shade_max = np.nanmax(dem) + 2000
-
-    # prepare shade relief
-    if inps.disp_dem_shade:
-        from matplotlib.colors import LightSource
-        ls = LightSource(azdeg=inps.shade_azdeg, altdeg=inps.shade_altdeg)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
-            dem_shade = ls.shade(dem, vert_exag=inps.shade_exag,
-                                 cmap=ColormapExt('gray').colormap,
-                                 vmin=inps.shade_min,
-                                 vmax=inps.shade_max)
-        dem_shade[np.isnan(dem_shade[:, :, 0])] = np.nan
-        if print_msg:
-            msg = f'show shaded relief DEM [min/max: {inps.shade_min}/{inps.shade_max} m; '
-            msg += f'exag: {inps.shade_exag}; az/alt deg: {inps.shade_azdeg}/{inps.shade_altdeg}]'
-            print(msg)
-
-    # prepare contour
-    if inps.disp_dem_contour:
-        from scipy import ndimage
-        dem_contour = ndimage.gaussian_filter(dem, sigma=inps.dem_contour_smooth, order=0)
-        dem_contour_sequence = np.arange(inps.dem_contour_step, 9000, step=inps.dem_contour_step)
-        if print_msg:
-            print(('show contour in step of {} m '
-                   'with smoothing factor of {}').format(inps.dem_contour_step,
-                                                         inps.dem_contour_smooth))
-
-    # masking
-    if inps and inps.mask_dem and (dem_shade is not None or dem_contour is not None):
-        dem_shape = [x.shape[:2] for x in [dem_shade, dem_contour] if x is not None][0]
-        if inps.msk.shape == dem_shape:
-            if print_msg:
-                print('mask DEM to be consistent with valid data coverage')
-            if dem_shade is not None:
-                dem_shade[inps.msk == 0] = np.nan
-            if dem_contour is not None:
-                dem_contour[inps.msk == 0] = np.nan
-        else:
-            print('WARNING: DEM has different size than mask, ignore --mask-dem and continue.')
-
-    return dem_shade, dem_contour, dem_contour_sequence
-
-
-def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_contour_seq=None,
-                        dem=None, inps=None, print_msg=True):
-    """Plot DEM as background.
-    Parameters: ax : matplotlib.pyplot.Axes or BasemapExt object
-                geo_box : tuple of 4 float in order of (E, N, W, S), geo bounding box
-                dem_shade : 3D np.array in size of (length, width, 4)
-                dem_contour : 2D np.array in size of (length, width)
-                dem_contour_sequence : 1D np.array
-                dem : 2D np.array of DEM data
-                inps : Namespace with the following 4 items:
-                    'disp_dem_shade'    : bool,  True/False
-                    'disp_dem_contour'  : bool,  True/False
-                    'dem_contour_step'  : float, 200.0
-                    'dem_contour_smooth': float, 3.0
-                    'pix_box'           : 4-tuple of int, (x0, y0, x1, y1)
-    Returns:    ax : matplotlib.pyplot.Axes or BasemapExt object
-    Examples:   m = pp.plot_dem_background(m, geo_box=inps.geo_box, dem=dem, inps=inps)
-                ax = pp.plot_dem_background(ax=ax, geo_box=None, dem_shade=dem_shade,
-                                            dem_contour=dem_contour, dem_contour_seq=dem_contour_seq)
-    """
-    # default inputs
-    if inps is None:
-        inps = cmd_line_parse()
-
-    if all(i is None for i in [dem_shade, dem_contour, dem_contour_seq]) and dem is not None:
-        (dem_shade,
-         dem_contour,
-         dem_contour_seq) = prepare_dem_background(dem, inps=inps, print_msg=print_msg)
-
-    # get extent - (left, right, bottom, top) in data coordinates
-    if geo_box is not None:
-        geo_extent = (geo_box[0], geo_box[2],
-                      geo_box[3], geo_box[1])
-    else:
-        if hasattr(inps, 'pix_box'):
-            pix_box = tuple(inps.pix_box)
-        else:
-            data = [i for i in [dem, dem_shade, dem_contour] if i is not None][0]
-            pix_box = (0, 0, data.shape[1], data.shape[0])
-        rdr_extent = (pix_box[0]-0.5, pix_box[2]-0.5,
-                      pix_box[3]-0.5, pix_box[1]-0.5)
-
-    # plot shaded relief
-    if dem_shade is not None:
-        # config
-        kwargs = dict(interpolation='spline16', zorder=0, origin='upper')
-
-        # geo coordinates
-        if geo_box is not None:
-            ax.imshow(dem_shade, extent=geo_extent, **kwargs)
-
-        # radar coordinates
-        elif isinstance(ax, plt.Axes):
-            ax.imshow(dem_shade, extent=rdr_extent, **kwargs)
-
-    # plot topo contour
-    if dem_contour is not None and dem_contour_seq is not None:
-        # config
-        kwargs = dict(origin='upper', colors='black',
-                      linewidths=inps.dem_contour_linewidth,
-                      alpha=0.5, zorder=1)
-        # plot contour line above data (zorder=1) if no DEM shade
-        if dem_shade is None:
-            kwargs['zorder'] = 2
-
-        # geo coordinates
-        if geo_box is not None:
-            yy, xx = np.mgrid[geo_box[1]:geo_box[3]:dem_contour.shape[0]*1j,
-                              geo_box[0]:geo_box[2]:dem_contour.shape[1]*1j]
-
-            ax.contour(xx, yy, dem_contour, dem_contour_seq, extent=geo_extent, **kwargs)
-
-        # radar coordinates
-        elif isinstance(ax, plt.Axes):
-            ax.contour(dem_contour, dem_contour_seq, extent=rdr_extent, **kwargs)
-
-    return ax
-
-
-
 ###############################################  Maps  ###############################################
-
 def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[1, 2, 3, 4, 5]):
     """Auto calculate lat/lon label sequence based on input geo_box
     Parameters: geo_box        : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
@@ -1734,83 +1690,3 @@ def draw_scalebar(ax, geo_box, unit='degrees', loc=[0.2, 0.2, 0.1], labelpad=0.0
             fontsize=font_size, color=color)
 
     return ax
-
-
-
-###############################################  Faults  #############################################
-
-def read_gmt_lonlat_file(ll_file, SNWE=None, min_dist=10):
-    """Read GMT lonlat file into list of 2D np.ndarray
-    # prepare GMT lonlat file
-    cd ~/data/aux/faults
-    gmt kml2gmt UCERF3_Fault.kml > UCERF3_Fault.lonlat
-
-    Parameters: ll_file  - str, path to the GMT lonlat file
-                SNWE     - tuple of 4 float, area of interest in lat/lon
-                min_dist - float, minimum distance in km of fault segments
-    Returns:    faults   - list of 2D np.ndarray in size of [num_point, 2] in float32
-                           with each row for one point in [lon, lat] in degrees
-    Examples:
-        # read faults data
-        ll_file = os.path.expanduser('~/data/aux/faults/UCERF3_Fault.lonlat')
-        faults = read_gmt_lonlat_file(ll_file, SNWE=(31, 36, -118, -113), min_dist=0.1)
-        # add faults to the existing plot
-        fig, ax = plt.subplots(figsize=[7, 7], subplot_kw=dict(projection=ccrs.PlateCarree()))
-        data, atr, inps = view.prep_slice(cmd)
-        ax, inps, im, cbar = view.plot_slice(ax, data, atr, inps)
-
-        prog_bar = ptime.progressBar(maxValue=len(faults))
-        for i, fault in enumerate(faults):
-            ax.plot(fault[:,0], fault[:,1], 'k-', lw=0.2)
-            prog_bar.update(i+1, every=10)
-        prog_bar.close()
-        ax.set_xlim(inps.geo_box[0], inps.geo_box[2])
-        ax.set_ylim(inps.geo_box[3], inps.geo_box[1])
-
-    """
-    # read text file
-    lines = None
-    with open(ll_file, 'r') as f:
-        lines = f.readlines()
-
-    debug_mode = False
-    if debug_mode:
-        lines = lines[:1000]
-
-    # loop to extract/organize the data into list of arrays
-    num_line = len(lines)
-    faults = []
-    fault = []
-    prog_bar = ptime.progressBar(maxValue=num_line)
-    for i, line in enumerate(lines):
-        line = line.strip().replace('\n','').replace('\t', ' ')
-        if line.startswith('>'):
-            fault = []
-        else:
-            fault.append([float(x) for x in line.split()[:2]])
-
-        # save if 1) this is the last line OR 2) the next line starts a new fault
-        if i == num_line - 1 or lines[i+1].startswith('>'):
-            fault = np.array(fault, dtype=np.float32)
-            s = np.nanmin(fault[:,1]); n = np.nanmax(fault[:,1])
-            w = np.nanmin(fault[:,0]); e = np.nanmax(fault[:,0])
-
-            if fault is not None and SNWE:
-                S, N, W, E = SNWE
-                if e < W or w > E or s > N or n < S:
-                    # check overlap of two rectangles
-                    # link: https://stackoverflow.com/questions/40795709
-                    fault = None
-
-            if fault is not None and min_dist > 0:
-                dist = abs(n - s) * 108 * abs(e - w) * 108 * np.cos((n+s)/2 * np.pi/180)
-                if dist < min_dist:
-                    fault = None
-
-            if fault is not None:
-                faults.append(fault)
-
-        prog_bar.update(i+1, every=1000, suffix='line {} / {}'.format(i+1, num_line))
-    prog_bar.close()
-    return faults
-

@@ -10,7 +10,6 @@
 import os
 import sys
 import re
-import glob
 import warnings
 import defusedxml.ElementTree as ET
 
@@ -27,7 +26,6 @@ from mintpy.objects import (
     timeseries,
     HDFEOS
 )
-from mintpy.utils import utils0 as ut
 
 
 SPEED_OF_LIGHT = 299792458.0   # meter/second
@@ -48,7 +46,6 @@ standardMetadataKeys = {
     'LENGTH'             : ['length', 'FILE_LENGTH', 'lines', 'azimuth_lines', 'nlines', 'az_samp',
                             'interferogram_azimuth_lines'],
     'ORBIT_DIRECTION'    : ['passDirection'],
-    'NO_DATA_VALUE'      : ['NoDataValue'],
     'PLATFORM'           : ['spacecraftName', 'sensor'],
     'POLARIZATION'       : ['polarization'],
     'PRF'                : ['prf'],
@@ -78,10 +75,48 @@ standardMetadataKeys = {
     'relative_orbit' : ['trackNumber'],
 }
 
-## data type conventions [use numpy as reference]
-# 1 - ENVI
+GDAL2ISCE_DATATYPE = {
+    1 : 'BYTE',
+    2 : 'uint16',
+    3 : 'SHORT',
+    4 : 'uint32',
+    5 : 'INT',
+    6 : 'FLOAT',
+    7 : 'DOUBLE',
+    10: 'CFLOAT',
+    11: 'complex128',
+}
+
+GDAL2NUMPY_DATATYPE = {
+    1 : 'uint8',
+    2 : 'uint16',
+    3 : 'int16',
+    4 : 'uint32',
+    5 : 'int32',
+    6 : 'float32',
+    7 : 'float64',
+    10: 'complex64',
+    11: 'complex128',
+}
+
+NUMPY2GDAL_DATATYPE = {
+  "uint8"     : 1,
+  "int8"      : 1,
+  "uint16"    : 2,
+  "int16"     : 3,
+  "uint32"    : 4,
+  "int32"     : 5,
+  "float32"   : 6,
+  "float64"   : 7,
+  "complex64" : 10,
+  "complex128": 11,
+}
+
+# single file (data + attributes) supported by GDAL
+GDAL_FILE_EXTS = ['.tif', '.grd']
+
 # reference: https://subversion.renater.fr/efidir/trunk/efidir_soft/doc/Programming_C_EFIDIR/header_envi.pdf
-DATA_TYPE_ENVI2NUMPY = {
+ENVI2NUMPY_DATATYPE = {
     '1' : 'uint8',
     '2' : 'int16',
     '3' : 'int32',
@@ -95,69 +130,6 @@ DATA_TYPE_ENVI2NUMPY = {
     '15': 'uint64',
 }
 
-DATA_TYPE_NUMPY2ENVI = {
-    'uint8'     : '1',
-    'int16'     : '2',
-    'int32'     : '3',
-    'float32'   : '4',
-    'float64'   : '5',
-    'complex64' : '6',
-    'complex128': '9',
-    'uint16'    : '12',
-    'uint32'    : '13',
-    'int64'     : '14',
-    'uint64'    : '15',
-}
-
-# 2 - GDAL
-DATA_TYPE_GDAL2NUMPY = {
-    1 : 'uint8',
-    2 : 'uint16',
-    3 : 'int16',
-    4 : 'uint32',
-    5 : 'int32',
-    6 : 'float32',
-    7 : 'float64',
-    10: 'complex64',
-    11: 'complex128',
-}
-
-DATA_TYPE_NUMPY2GDAL = {
-    "uint8"     : 1,
-    "int8"      : 1,
-    "uint16"    : 2,
-    "int16"     : 3,
-    "uint32"    : 4,
-    "int32"     : 5,
-    "float32"   : 6,
-    "float64"   : 7,
-    "complex64" : 10,
-    "complex128": 11,
-}
-
-# 3 - ISCE
-DATA_TYPE_ISCE2NUMPY = {
-    'byte'  : 'uint8',
-    'short' : 'int16',
-    'int'   : 'int32',
-    'float' : 'float32',
-    'double': 'float64',
-    'cfloat': 'complex64',
-}
-
-DATA_TYPE_NUMPY2ISCE = {
-    'uint8'    : 'BYTE',
-    'int16'    : 'SHORT',
-    'int32'    : 'INT',
-    'float32'  : 'FLOAT',
-    'float64'  : 'DOUBLE',
-    'complex64': 'CFLOAT',
-}
-
-
-# single file (data + attributes) supported by GDAL
-GDAL_FILE_EXTS = ['.tif', '.grd']
-
 ENVI_BAND_INTERLEAVE = {
     'BAND' : 'BSQ',
     'LINE' : 'BIL',
@@ -167,16 +139,6 @@ ENVI_BAND_INTERLEAVE = {
 ENVI_BYTE_ORDER = {
     '0': 'little-endian',
     '1': 'big-endian',
-}
-
-
-SPECIAL_STR2NUM = {
-    'yes'   : True,
-    'true'  : True,
-    'no'    : False,
-    'false' : False,
-    'none'  : None,
-    'nan'   : np.nan,
 }
 
 
@@ -240,7 +202,7 @@ def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1, da
                 box         : 4-tuple of int area to read, defined in (x0, y0, x1, y1) in pixel coordinate
                 x/ystep     : int, number of pixels to pick/multilook for each output pixel
                 data_type   : numpy data type, e.g. np.float32, np.bool_, etc.
-    Returns:    data        : 2/3/4D matrix in numpy.array format, return None if failed
+    Returns:    data        : 2/3-D matrix in numpy.array format, return None if failed
                 atr         : dictionary, attributes of data, return None if failed
     Examples:
         from mintpy.utils import readfile
@@ -310,7 +272,7 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
                     ...
                 box         : 4-tuple of int area to read, defined in (x0, y0, x1, y1) in pixel coordinate
                 x/ystep     : int, number of pixels to pick/multilook for each output pixel
-    Returns:    data        : 2/3/4D array
+    Returns:    data        : 2D/3D array
                 atr         : dict, metadata
     """
     # File Info: list of slice / dataset / dataset2d / dataset3d
@@ -343,18 +305,13 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
     with h5py.File(fname, 'r') as f:
         # get dataset object
         dsNames = [i for i in [datasetName[0], dsFamily] if i in f.keys()]
-        # support for old mintpy-v0.x files
-        dsNamesOld = [i for i in slice_list if '/{}'.format(datasetName[0]) in i]
+        dsNamesOld = [i for i in slice_list if '/{}'.format(datasetName[0]) in i] # support for old mintpy files
         if len(dsNames) > 0:
             ds = f[dsNames[0]]
         elif len(dsNamesOld) > 0:
             ds = f[dsNamesOld[0]]
         else:
             raise ValueError('input dataset {} not found in file {}'.format(datasetName, fname))
-
-        # output size for >=2D dataset if x/ystep > 1
-        xsize = int((box[2] - box[0]) / xstep)
-        ysize = int((box[3] - box[1]) / ystep)
 
         # 2D dataset
         if ds.ndim == 2:
@@ -364,6 +321,11 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
 
             # sampling / nearest interplation in y/xstep
             if xstep * ystep > 1:
+                # output size if x/ystep > 1
+                xsize = int((box[2] - box[0]) / xstep)
+                ysize = int((box[3] - box[1]) / ystep)
+
+                # sampling
                 data = data[int(ystep/2)::ystep,
                             int(xstep/2)::xstep]
                 data = data[:ysize, :xsize]
@@ -382,11 +344,15 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
 
             # read data
             if xstep * ystep == 1:
-                data = ds[slice_flag,
+                data = ds[:,
                           box[1]:box[3],
-                          box[0]:box[2]]
+                          box[0]:box[2]][slice_flag]
 
             else:
+                # output size if x/ystep > 1
+                xsize = int((box[2] - box[0]) / xstep)
+                ysize = int((box[3] - box[1]) / ystep)
+
                 # sampling / nearest interplation in y/xstep
                 # use for loop to save memory
                 num_slice = np.sum(slice_flag)
@@ -396,7 +362,7 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
                 for i in range(num_slice):
                     # print out msg
                     if print_msg:
-                        sys.stdout.write('\r' + f'reading 2D slices {i+1}/{num_slice}...')
+                        sys.stdout.write('\r' + f'reading slice {i+1}/{num_slice}...')
                         sys.stdout.flush()
 
                     # read and index
@@ -409,42 +375,6 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
 
                 if print_msg:
                     print('')
-
-            if any(i == 1 for i in data.shape):
-                data = np.squeeze(data)
-
-        # 4D dataset
-        elif ds.ndim == 4:
-            # custom flag for the time domain is ignore for now
-            # a.k.a. read the entire first 2 dimensions
-
-            num1, num2 = ds.shape[0], ds.shape[1]
-            shape = (num1, num2, ysize, xsize)
-            if print_msg:
-                ram_size = num1 * num2 * ysize * xsize * ds.dtype.itemsize / 1024**3
-                print(f'initiate a 4D matrix in size of {shape} in {ds.dtype} in the memory ({ram_size:.1f} GB) ...')
-            data = np.zeros(shape, ds.dtype) * np.nan
-
-            # loop over the 1st dimension [for more verbose print out msg]
-            for i in range(num1):
-                if print_msg:
-                    sys.stdout.write('\r' + f'reading 3D cubes {i+1}/{num1}...')
-                    sys.stdout.flush()
-
-                d3 = ds[i, :,
-                        box[1]:box[3],
-                        box[0]:box[2]]
-
-                # sampling / nearest interpolation in y/xstep
-                if xstep * ystep > 1:
-                    d3 = d3[:,
-                            int(ystep/2)::ystep,
-                            int(xstep/2)::xstep]
-
-                data[i, :, :, :] = d3[:, :ysize, :xsize]
-
-            if print_msg:
-                print('')
 
             if any(i == 1 for i in data.shape):
                 data = np.squeeze(data)
@@ -617,12 +547,8 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
             byte_order = 'little-endian'
 
     # GDAL / GMTSAR / ASF HyP3
-    elif processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr', 'uavsar']:
-        # try to recognize custom dataset names if specified and recognized.
-        if datasetName:
-            slice_list = get_slice_list(fname)
-            if datasetName in slice_list:
-                band = slice_list.index(datasetName) + 1
+    elif processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr']:
+        pass
 
     else:
         print('Unknown InSAR processor: {}'.format(processor))
@@ -706,11 +632,6 @@ def get_slice_list(fname, no_complex=False):
             obj.open(print_msg=False)
             slice_list = obj.sliceList
 
-        elif k == 'timeseries' and 'slc' in d1_list:
-            with h5py.File(fname, 'r') as f:
-                dates = f['date'][:]
-            slice_list = ['slc-{}'.format(i.decode('UTF-8')) for i in dates]
-
         else:
             ## Find slice by walking through the file structure
             length, width = int(atr['LENGTH']), int(atr['WIDTH'])
@@ -748,18 +669,10 @@ def get_slice_list(fname, no_complex=False):
                 slice_list = ['complex']
 
         elif fbase.startswith('off') and fext in ['.bip'] and num_band == 2:
-            # ampcor offset file
             slice_list = ['azimuthOffset', 'rangeOffset']
 
         elif fbase.startswith('off') and fname.endswith('cov.bip') and num_band == 3:
-            # ampcor offset covariance file
             slice_list = ['azimuthOffsetVar', 'rangeOffsetVar', 'offsetCovar']
-
-        elif fext in ['.lkv']:
-            slice_list = ['east', 'north', 'up']
-
-        elif fext in ['.llh']:
-            slice_list = ['latitude', 'longitude', 'height']
 
         else:
             slice_list = ['band{}'.format(i+1) for i in range(num_band)]
@@ -806,20 +719,6 @@ def get_hdf5_compression(fname):
     return compression
 
 
-def get_no_data_value(fname):
-    """Grab the NO_DATA_VALUE of the input file."""
-    val = read_attribute(fname).get('NO_DATA_VALUE', None)
-    val = str(val).lower()
-
-    if ut.is_number(val):
-        val = float(val)
-    elif val in SPECIAL_STR2NUM.keys():
-        val = SPECIAL_STR2NUM[val]
-    else:
-        raise ValueError(f'Un-recognized no-data-value type: {val}')
-    return val
-
-
 #########################################################################
 def read_attribute(fname, datasetName=None, metafile_ext=None):
     """Read attributes of input file into a dictionary
@@ -832,7 +731,6 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
                          ...
     Returns:    atr : dict, attributes dictionary
     """
-    fdir = os.path.dirname(fname)
     fbase, fext = os.path.splitext(os.path.basename(fname))
     fext = fext.lower()
     if not os.path.isfile(fname):
@@ -979,45 +877,6 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             msg += '{} * {} in {}!'.format(atr['LENGTH'], atr['WIDTH'], atr['DATA_TYPE'])
             raise ValueError(msg)
 
-    elif fext in ['.lkv', '.llh']:
-        # UAVSAR geometry file
-        # link: https://uavsar.jpl.nasa.gov/science/documents/stack-format.html
-        site, line, version, bcorr = fbase.split('_')[:4]
-        ann_files = glob.glob(os.path.join(fdir, f'{site}_{line}_*_{version}_{bcorr}.ann'))
-        if len(ann_files) > 0:
-            ann = read_uavsar_ann(ann_files[0])
-            atr = {}
-
-            # data size
-            seg, mli = fbase.split('_')[-2:]
-            if seg.startswith('s'):
-                # single segment file
-                atr['LENGTH'] = ann[f'slc_{seg[1:]}_{mli} Rows']
-                atr['WIDTH']  = ann[f'slc_{seg[1:]}_{mli} Columns']
-
-            else:
-                # merged/concatenated file
-                num_seg = int(ann['Number of Segments'])
-                length, width = 0, 0
-                for i in range(1, num_seg+1):
-                    length += int(ann[f'slc_{i}_{mli} Rows'])
-                    width = int(ann[f'slc_{i}_{mli} Columns'])
-                atr['LENGTH'] = str(length)
-                atr['WIDTH'] = str(width)
-
-            atr['ANTENNA_SIDE'] = '1' if ann['Look Direction'].lower() == 'left' else '-1'
-            atr['PROCESSOR'] = 'uavsar'
-            atr['PLATFORM'] = 'uavsar'
-            atr['FILE_TYPE'] = fext
-            atr['DATA_TYPE'] = 'float32'
-            atr['RLOOKS'] = mli.split('x')[0]
-            atr['ALOOKS'] = mli.split('x')[1]
-            atr['BANDS'] = '3'
-            atr['INTERLEAVE'] = 'BIP'
-
-        else:
-            raise FileNotFoundError('No UAVSAR *.ann file found!')
-
     else:
         # grab all existed potential metadata file given the data file in prefered order/priority
         # .aux.xml file does not have geo-coordinates info
@@ -1036,12 +895,13 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
         if metafile_ext:
             metafiles = [i for i in metafiles if i.endswith(metafile_ext)]
 
-        # for .tif/.grd files, priority:
-        # .rsc > file itself > .xml/.aux.xml/.hdr etc.
-        if fext in GDAL_FILE_EXTS and not os.path.isfile(fname + '.rsc'):
-            metafiles = [fname]
-        elif len(metafiles) == 0:
-            raise FileNotFoundError('No metadata file found for data file: {}'.format(fname))
+        # use the GDAL supported data file is no metadata file found
+        if len(metafiles) == 0:
+            # for .tif/.grd files, extract metadata from the file itself
+            if fext in GDAL_FILE_EXTS:
+                metafiles = [fname]
+            else:
+                raise FileNotFoundError('No metadata file found for data file: {}'.format(fname))
 
         atr = {}
         # PROCESSOR
@@ -1140,19 +1000,12 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
 
     elif datasetName and datasetName in datasetUnitDict.keys():
         atr['UNIT'] = datasetUnitDict[datasetName]
-        # SLC stack
-        if datasetName == 'timeseries' and atr.get('DATA_TYPE', 'float32').startswith('complex'):
-            atr['UNIT'] = '1'
 
     elif 'UNIT' not in atr.keys():
         if k in datasetUnitDict.keys():
             atr['UNIT'] = datasetUnitDict[k]
         else:
             atr['UNIT'] = '1'
-
-    # NO_DATA_VALUE
-    no_data_value = atr.get('NO_DATA_VALUE', None)
-    atr['NO_DATA_VALUE'] = str(no_data_value).lower()
 
     # FILE_PATH
     if 'FILE_PATH' in atr.keys() and 'OG_FILE_PATH' not in atr.keys():
@@ -1423,9 +1276,6 @@ def read_isce_xml(fname):
                 xmlDict['{}_FIRST'.format(prefix)] = v_first - v_step / 2.
                 xmlDict['{}_UNIT'.format(prefix)] = 'degrees'
 
-        # data_type
-        xmlDict['data_type'] = DATA_TYPE_ISCE2NUMPY[xmlDict['data_type'].lower()]
-
     # PAMDataset, e.g. hgt.rdr.aux.xml
     elif root.tag == 'PAMDataset':
         meta = root.find("./Metadata[@domain='ENVI']")
@@ -1433,16 +1283,8 @@ def read_isce_xml(fname):
             key = child.get('key')
             value = child.text
             xmlDict[key] = value
+        xmlDict['data_type'] = ENVI2NUMPY_DATATYPE[xmlDict['data_type']]
 
-        # data_type
-        xmlDict['data_type'] = DATA_TYPE_ENVI2NUMPY[xmlDict['data_type']]
-
-        # NoDataValue
-        meta = root.find("./PAMRasterBand/NoDataValue")
-        if meta is not None:
-            xmlDict['NoDataValue'] = meta.text
-
-    # standardize metadata keys
     xmlDict = standardize_metadata(xmlDict)
 
     return xmlDict
@@ -1451,7 +1293,7 @@ def read_isce_xml(fname):
 def read_envi_hdr(fname):
     """Read ENVI .hdr file into a python dict structure"""
     atr = read_template(fname, delimiter='=')
-    atr['DATA_TYPE'] = DATA_TYPE_ENVI2NUMPY[atr.get('data type', '4')]
+    atr['DATA_TYPE'] = ENVI2NUMPY_DATATYPE[atr.get('data type', '4')]
     atr['BYTE_ORDER'] = ENVI_BYTE_ORDER[atr.get('byte order', '1')]
 
     if 'map info' in atr.keys():
@@ -1492,7 +1334,8 @@ def read_gdal_vrt(fname):
     atr['BANDS'] = ds.RasterCount
 
     # data type
-    atr['DATA_TYPE'] = DATA_TYPE_GDAL2NUMPY[ds.GetRasterBand(1).DataType]
+    data_type = ds.GetRasterBand(1).DataType
+    atr['DATA_TYPE'] = GDAL2ISCE_DATATYPE[data_type]
 
     # interleave
     interleave = ds.GetMetadata('IMAGE_STRUCTURE').get('INTERLEAVE', 'PIXEL')
@@ -1527,33 +1370,9 @@ def read_gdal_vrt(fname):
         if atr['X_FIRST'] > 180.:
             atr['X_FIRST'] -= 360.
 
-    # no data value
-    atr['NoDataValue'] = ds.GetRasterBand(1).GetNoDataValue()
-
     atr = standardize_metadata(atr)
 
     return atr
-
-
-def read_uavsar_ann(fname, comment=';', delimiter='='):
-    """Read the UAVSAR annotation file into dictionary.
-    """
-    # read the entirer text file into list of strings
-    lines = None
-    with open(fname, 'r') as f:
-        lines = f.readlines()
-
-    # convert the list of strings into a dict object
-    meta = {}
-    for line in lines:
-        line = line.strip()
-        c = [x.strip() for x in line.split(delimiter, 1)]
-        if len(c) >= 2 and not line.startswith(comment):
-            key = c[0].split('(')[0].strip()
-            value = str.replace(c[1], '\n', '').split(comment)[0].strip()
-            meta[key] = value
-
-    return meta
 
 
 def read_gmtsar_prm(fname, delimiter='='):
@@ -1748,7 +1567,7 @@ def read_gdal(fname, box=None, band=1, cpx_band='phase', xstep=1, ystep=1):
     data = bnd.ReadAsArray()[box[1]:box[3], box[0]:box[2]]
 
     # adjust output band for complex data
-    data_type = DATA_TYPE_GDAL2NUMPY[bnd.DataType]
+    data_type = GDAL2ISCE_DATATYPE[bnd.DataType]
     if data_type.replace('>', '').startswith('c'):
         if cpx_band.startswith('real'):
             data = data.real
