@@ -384,11 +384,11 @@ def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box
     date12_arr = np.array([x.split('_') for x in date12_list], dtype=np.string_)
     drop_ifgram = np.ones(num_pair, dtype=np.bool_)
     ds_name_dict = {
-        "date"             : [date12_arry.dtype, (num_pair, 2), date12_arr],
-        "bperp"            : [np.float32,        (num_pair,),   pbase],
-        "dropIfgram"       : [np.bool_,          (num_pair,),   drop_ifgram],
-        "unwrapPhase"      : [np.float32,        (num_pair, box[3]-box[1], box[2]-box[0]), None],
-        "connectComponent" : [np.float32,        (num_pair, box[3]-box[1], box[2]-box[0]), None],
+        "date"             : [date12_arr.dtype, (num_pair, 2), date12_arr],
+        "bperp"            : [np.float32,       (num_pair,),   pbase],
+        "dropIfgram"       : [np.bool_,         (num_pair,),   drop_ifgram],
+        "unwrapPhase"      : [np.float32,       (num_pair, box[3]-box[1], box[2]-box[0]), None],
+        "connectComponent" : [np.float32,       (num_pair, box[3]-box[1], box[2]-box[0]), None],
     }
 
     # initiate HDF5 file
