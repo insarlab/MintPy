@@ -364,9 +364,10 @@ def prepare_stack(outfile, unw_file, corr_file, metadata, processor, baseline_di
     num_pair = arr_dates12.shape[0]
     print('number of interferograms:', num_pair)
 
-    # get connected component file extension from last ifg
-    cc_file  = f'{os.path.splitext(unw_file)[0]}.conncomp'.replace(
-                                        f'{ref_date}_{sec_dates[-1]}', '*')
+    # get all connected component files using an ifg 
+    cc_file  = f'{os.path.splitext(unw_file)[0]}.conncomp'
+    cc_file  = os.path.join(os.path.dirname(cc_file), 
+                                    f'*{os.path.basename(cc_file)[17:]}')
 
     cc_files = sorted(glob.glob(cc_file))
     if not cc_files:
@@ -521,8 +522,6 @@ def main(iargs=None):
         processor=processor,
         baseline_dir=inps.baselineDir,
         box=pix_box)
-
-
 
     return ts_file, tcoh_file, ps_mask_file, geom_file
 
