@@ -23,8 +23,11 @@ jobs:
             wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
             bash Miniconda3-latest-Linux-x86_64.sh -b -p ${HOME}/tools/miniconda3
             ${HOME}/tools/miniconda3/bin/conda init bash
+            # add conda-forge channel and install mamba
             ${HOME}/tools/miniconda3/bin/conda config --add channels conda-forge
-            ${HOME}/tools/miniconda3/bin/conda install -c conda-forge --yes mamba
+            ${HOME}/tools/miniconda3/bin/conda config --set channel_priority strict
+            ${HOME}/tools/miniconda3/bin/conda install --yes mamba
+            cat ${HOME}/.condarc
 
       - run:
           name: Installing MintPy
@@ -53,7 +56,6 @@ jobs:
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
-            cd ${HOME}/data
             ${MINTPY_HOME}/tests/test_smallbaselineApp.py --dir ${HOME}/data --dset FernandinaSenDT128
 
       - run:
@@ -61,7 +63,6 @@ jobs:
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
-            cd ${HOME}/data
             ${MINTPY_HOME}/tests/test_smallbaselineApp.py --dir ${HOME}/data --dset SanFranSenDT42
 
       - run:
@@ -69,7 +70,6 @@ jobs:
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
-            cd ${HOME}/data
             ${MINTPY_HOME}/tests/test_smallbaselineApp.py --dir ${HOME}/data --dset WellsEnvD2T399
 
       - run:
@@ -77,7 +77,6 @@ jobs:
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
-            cd ${HOME}/data
             ${MINTPY_HOME}/tests/test_smallbaselineApp.py --dir ${HOME}/data --dset WCapeSenAT29
 
 workflows:
