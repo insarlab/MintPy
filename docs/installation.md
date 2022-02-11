@@ -68,7 +68,7 @@ conda install -c conda-forge --file ~/tools/MintPy/docs/requirements.txt
 Or install the dependencies to a new environment named "mintpy" by running:
 
 ```bash
-conda env create -f MintPy/docs/environment.yml
+conda env create -f ~/tools/MintPy/docs/environment.yml
 conda activate mintpy
 ```
 
