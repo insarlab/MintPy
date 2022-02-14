@@ -124,20 +124,20 @@ def cmd_line_parse(iargs=None):
 def get_overlap_lalo(atr_list):
     """Find overlap area in lat/lon of geocoded files based on their metadata.
     Parameters: atr_list - list of dict, attribute dictionary of two input files in geo coord
-    Returns:    W/E/S/N  - float, West/East/South/North in deg
+    Returns:    S/N/W/E  - float, West/East/South/North in deg
     """
-    W, E, S, N = None, None, None, None
+    S, N, W, E = None, None, None, None
     for i, atr in enumerate(atr_list):
-        Wi, Ei, Si, Ni = ut.four_corners(atr)
+        Si, Ni, Wi, Ei = ut.four_corners(atr)
         if i == 0:
-            W, E, S, N = Wi, Ei, Si, Ni
+            S, N, W, E = Si, Ni, Wi, Ei
         else:
-            W = max(Wi, W)
-            E = min(Ei, E)
             S = max(Si, S)
             N = min(Ni, N)
+            W = max(Wi, W)
+            E = min(Ei, E)
 
-    return W, E, S, N
+    return S, N, W, E
 
 
 def get_design_matrix(los_inc_angle, los_az_angle, horz_az_angle=-90):
@@ -223,11 +223,11 @@ def run_asc_desc2horz_vert(inps):
 
     ## 1. calculate the overlaping area in lat/lon
     atr_list = [readfile.read_attribute(fname, datasetName=inps.ds_name) for fname in inps.file]
-    W, E, S, N = get_overlap_lalo(atr_list)
-    lon_step = float(atr_list[0]['X_STEP'])
+    S, N, W, E = get_overlap_lalo(atr_list)
     lat_step = float(atr_list[0]['Y_STEP'])
-    width  = int(round((E - W) / lon_step))
+    lon_step = float(atr_list[0]['X_STEP'])
     length = int(round((S - N) / lat_step))
+    width  = int(round((E - W) / lon_step))
     print('overlaping area in SNWE: {}'.format((S, N, W, E)))
 
 

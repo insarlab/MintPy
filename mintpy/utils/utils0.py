@@ -514,7 +514,12 @@ def enu2los(e, n, u, inc_angle, head_angle=None, az_angle=None):
 
 
 def four_corners(atr):
-    """Return 4 corners lat/lon"""
+    """Get the 4 corners coordinates from metadata dict in geo-coordinates.
+    Parameters: atr - dict
+    Returns:    south, north, west, east - float, in degrees or meters
+    Examples:   S, N, W, E = ut.four_corners(atr)
+                SNWE = ut.four_corners(atr)
+    """
     width  = int(atr['WIDTH'])
     length = int(atr['LENGTH'])
     lon_step = float(atr['X_STEP'])
@@ -523,7 +528,7 @@ def four_corners(atr):
     north = float(atr['Y_FIRST'])
     south = north + lat_step * length
     east  = west  + lon_step * width
-    return west, east, south, north
+    return south, north, west, east
 
 
 def get_circular_mask(x, y, radius, shape):

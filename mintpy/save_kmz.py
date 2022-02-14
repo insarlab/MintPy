@@ -335,7 +335,7 @@ def write_kmz_overlay(data, meta, out_file, inps):
     Returns:    kmz_file - string, output KMZ filename
     """
 
-    west, east, south, north = ut.four_corners(meta)
+    south, north, west, east = ut.four_corners(meta)
 
     # 1. Make PNG file - Data
     print('plotting data ...')
