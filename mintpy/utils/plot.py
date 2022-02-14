@@ -960,6 +960,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     if site_names.size == 0:
         warnings.warn('No GNSS found within {} during {} - {}!'.format(SNWE, start_date, end_date))
         print('Continue without GNSS plots.')
+        return ax
 
     # mask out stations not coincident with InSAR data
     if inps.mask_gps and inps.msk is not None:
@@ -999,8 +1000,10 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         # get GPS LOS observations
         # save absolute value to support both spatially relative and absolute comparison
         # without compromising the re-usability of the CSV file
+        obs_type = 'velocity' if k == 'velocity' else 'displacement'
         site_obs = gps.get_gps_los_obs(
-            insar_file=inps.file,
+            meta=metadata,
+            obs_type=obs_type,
             site_names=site_names,
             start_date=start_date,
             end_date=end_date,
