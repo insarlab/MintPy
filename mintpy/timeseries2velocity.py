@@ -477,11 +477,18 @@ def run_timeseries2time_func(inps):
     # timeseries_res: attributes + instantiate output file
     if inps.save_res:
         atrR = dict(atr)
+        # remove REF_DATE attribute
         for key in ['REF_DATE']:
             if key in atrR.keys():
                 atrR.pop(key)
-        writefile.layout_hdf5(inps.res_file, metadata=atrR, ref_file=inps.timeseries_file)
-
+        # prepare ds_name_dict manually, instead of using ref_file, to support --ex option
+        date_len = len(inps.dateList[0])
+        ds_name_dict = {
+            "date"       : [np.dtype(f'S{date_len}'), (num_date,), np.array(inps.dateList, dtype=np.string_)],
+            "timeseries" : [np.float32,               (num_date, length, width), None]
+        }
+        writefile.layout_hdf5(inps.res_file, ds_name_dict=ds_name_dict, metadata=atrR)
+    
 
     ## estimation
 
