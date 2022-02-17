@@ -3,7 +3,7 @@ FROM mambaorg/micromamba:0.15.3
 
 # Label image following opencontainers image-spec annotations recommendation:
 # https://github.com/opencontainers/image-spec/blob/main/annotations.md
-LABEL org.opencontainers.image.description="Container for open source time series InSAR processing with Mintpy"
+LABEL org.opencontainers.image.description="Container for InSAR time series analysis with MintPy"
 LABEL org.opencontainers.image.authors="Forrest Williams <forrestfwilliams@icloud.com>, Joseph H Kennedy <me@jhkennedy.org>, Andre Theron <andretheronsa@gmail.com>"
 LABEL org.opencontainers.image.url="https://github.com/insarlab/MintPy"
 LABEL org.opencontainers.image.source="https://github.com/insarlab/MintPy"
