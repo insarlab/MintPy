@@ -63,7 +63,6 @@ standardMetadataKeys = {
     'POLARIZATION'       : ['polarization'],
     'PRF'                : ['prf', 'pulse_repetition_frequency'],
     'STARTING_RANGE'     : ['startingRange', 'near_range_slc', 'near_range', 'slant_range_to_first_pixel'],
-    'TRACK_NUMBER'       : ['rel_orbit'],
     'WAVELENGTH'         : ['wavelength', 'Wavelength', 'radarWavelength', 'radar_wavelength'],
     'WIDTH'              : ['width', 'Width', 'samples', 'range_samp', 'interferogram_width', 'num_samples_per_line'],
     # from PySAR [MintPy<=1.1.1]
@@ -1724,6 +1723,11 @@ def read_snap_dim(fname):
     # convert all key & value in string format
     for key, value in dim_dict.items():
         dim_dict[key] = str(value)
+
+    # ensure int type metadata value
+    for key in ['ALOOKS', 'RLOOKS', 'LENGTH', 'WIDTH']:
+        if key in dim_dict.keys():
+            dim_dict[key] = str(int(float(dim_dict[key])))
 
     return dim_dict
 

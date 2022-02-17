@@ -17,9 +17,8 @@ from mintpy.utils import ptime
 def sample_data(lat, lon, mask=None, num_sample=500):
     ''''''
     ## Flatten input data
-    for i in [lat, lon]:
-        if len(i.shape) != 1:
-            i = i.flatten()
+    lat = lat.flatten()
+    lon = lon.flatten()
 
     ## Check number of samples and number of pixels
     num_pixel = len(lat)
@@ -29,11 +28,13 @@ def sample_data(lat, lon, mask=None, num_sample=500):
 
     # Check input mask
     if mask is None:
-        mask = np.ones((num_pixel))
+        mask = np.ones((num_pixel), dtype=np.bool_)
+    mask = mask.flatten()
 
     # Random select samples
-    idx = np.arange(num_pixel)
-    idx_sample = random.sample(idx[mask.flatten()==1.0], int(num_sample))
+    idx = np.arange(num_pixel)[mask]
+    rng = np.random.default_rng()
+    idx_sample = rng.choice(idx, size=int(num_sample))
     lat_sample = lat[idx_sample]
     lon_sample = lon[idx_sample]
     return idx_sample, lat_sample, lon_sample
