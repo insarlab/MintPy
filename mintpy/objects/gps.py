@@ -122,7 +122,7 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, gps_comp='
                 from mintpy.utils import readfile, utils as ut
                 meta = readfile.read_attribute('geo/geo_velocity.h5')
                 SNWE = ut.four_corners(meta)
-                site_names = gps.search_gps(SNWE, start_date, end_date)
+                site_names = gps.search_gps(SNWE, start_date='20150101', end_date='20190619')
                 vel = gps.get_gps_los_obs(meta, 'velocity',     site_names, start_date='20150101', end_date='20190619')
                 dis = gps.get_gps_los_obs(meta, 'displacement', site_names, start_date='20150101', end_date='20190619')
     """

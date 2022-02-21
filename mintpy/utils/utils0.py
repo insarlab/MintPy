@@ -477,15 +477,15 @@ def heading2azimuth_angle(head_angle):
 
 
 def enu2los(e, n, u, inc_angle, head_angle=None, az_angle=None):
-    """
+    """Project east/north/up motion into the line-of-sight direction defined by incidence/azimuth angle.
     Parameters: e          - np.ndarray or float, displacement in east-west direction, east as positive
                 n          - np.ndarray or float, displacement in north-south direction, north as positive
                 u          - np.ndarray or float, displacement in vertical direction, up as positive
-                inc_angle  - np.ndarray or float, local incidence angle from vertical
+                inc_angle  - np.ndarray or float, local incidence angle from vertical, in the unit of degrees
                 head_angle - np.ndarray or float, azimuth angle of the SAR platform along track direction
-                             measured from the north with clockwise direction as positive in the unit of degrees
+                             measured from the north with clockwise direction as positive, in the unit of degrees
                 az_angle   - np.ndarray or float, azimuth angle of the LOS vector from the ground to the SAR platform
-                             measured from the north with anti-clockwise direction as positive in the unit of degrees
+                             measured from the north with anti-clockwise direction as positive, in the unit of degrees
                              head_angle = 90 - az_angle
     Returns:    v_los      - np.ndarray or float, displacement in line-of-sight direction, moving toward satellite as positive
 
@@ -501,14 +501,12 @@ def enu2los(e, n, u, inc_angle, head_angle=None, az_angle=None):
         # head_angle -> az_angle
         if head_angle is not None:
             az_angle = heading2azimuth_angle(head_angle)
-    if az_angle is None:
-        raise ValueError('az_angle can not be None!')
+        else:
+            raise ValueError('az_angle can not be None!')
 
-    inc_angle *= np.pi/180.
-    az_angle *= np.pi/180.
-    v_los = (  e * np.sin(inc_angle) * np.sin(az_angle) * -1
-             + n * np.sin(inc_angle) * np.cos(az_angle)
-             + u * np.cos(inc_angle))
+    v_los = (  e * np.sin(np.deg2rad(inc_angle)) * np.sin(np.deg2rad(az_angle)) * -1
+             + n * np.sin(np.deg2rad(inc_angle)) * np.cos(np.deg2rad(az_angle))
+             + u * np.cos(np.deg2rad(inc_angle)))
 
     return v_los
 

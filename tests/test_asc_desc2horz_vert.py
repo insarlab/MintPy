@@ -34,7 +34,7 @@ def cmd_line_parse(iargs=None):
 
 ################################################################################
 def main(iargs=None):
-    
+
     inps = cmd_line_parse(iargs)
     print('-'*50)
     print(os.path.abspath(__file__))
@@ -66,12 +66,7 @@ def main(iargs=None):
 
     # asc / desc LOS --> horz / vert [estimation]
     dlos = np.vstack((dlos0.reshape(1, -1), dlos1.reshape(1, -1)))
-    estH, estV = asc_desc2horz_vert(
-        dlos,
-        los_inc_angle=np.deg2rad(los_inc_angle),
-        los_az_angle=np.deg2rad(los_az_angle),
-        horz_az_angle=np.deg2rad(horz_az_angle),
-    )
+    estH, estV = asc_desc2horz_vert(dlos, los_inc_angle, los_az_angle, horz_az_angle)
     estH = estH.reshape(length, width)
     estV = estV.reshape(length, width)
 

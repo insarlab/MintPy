@@ -436,45 +436,45 @@ def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_
 def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=None, buffer_year=0.2,
                            every_month=None):
     """Adjust X axis
-    Input:
-        ax          - matplotlib figure axes object
-        datevector  - list of float, date in years
-                         i.e. [2007.013698630137, 2007.521917808219, 2007.6463470319634]
-                      OR list of datetime.datetime objects
-        every_year  - int, number of years per major locator
-        buffer_year - float in years, None for keep the original xlim range.
-    Output:
-        ax  - matplotlib figure axes object
-        dss - datetime.datetime object, xmin
-        dee - datetime.datetime object, xmax
+    Parameters: ax          - matplotlib figure axes object
+                datevector  - list of float, date in years
+                              i.e. [2007.013698630137, 2007.521917808219, 2007.6463470319634]
+                              OR list of datetime.datetime objects
+                every_year  - int, number of years per major locator
+                buffer_year - float in years, None for keep the original xlim range.
+    Returns:    ax          - matplotlib figure axes object
+                xmin/max    - datetime.datetime object, X-axis min/max value
     """
-    # convert datetime.datetime format into date in years
+    # convert datetime.datetime format into date in years in float
     if isinstance(datevector[0], dt.datetime):
-        datevector = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in datevector]
+        datevector = [i.year + (i.timetuple().tm_yday - 1) / 365.25 for i in datevector]
 
-    # Min/Max
+    # xmin/max
     if buffer_year is not None:
-        ts = datevector[0]  - buffer_year;        ys=int(ts);  ms=int((ts - ys) * 12.0)
-        te = datevector[-1] + buffer_year + 0.1;  ye=int(te);  me=int((te - ye) * 12.0)
-        if ms > 12:   ys = ys + 1;   ms = 1
-        if me > 12:   ye = ye + 1;   me = 1
-        if ms < 1:    ys = ys - 1;   ms = 12
-        if me < 1:    ye = ye - 1;   me = 12
-        dss = dt.datetime(ys, ms, 1, 0, 0)
-        dee = dt.datetime(ye, me, 1, 0, 0)
+        # refine with buffer_year
+        t0 = datevector[0]  - buffer_year;        
+        t1 = datevector[-1] + buffer_year + 0.1;  
+        y0 = int(t0);  m0 = int((t0 - y0) * 12.0)
+        y1 = int(t1);  m1 = int((t1 - y1) * 12.0)
+        if m0 > 12:   y0 += 1;   m0 = 1
+        if m1 > 12:   y1 += 1;   m1 = 1
+        if m0 < 1 :   y0 -= 1;   m0 = 12
+        if m1 < 1 :   y1 -= 1;   m1 = 12
+        xmin = dt.datetime(y0, m0, 1, 0, 0)
+        xmax = dt.datetime(y1, m1, 1, 0, 0)
     else:
-        (dss, dee) = ax.get_xlim()
-    ax.set_xlim(dss, dee)
+        (xmin, xmax) = mdates.num2date(ax.get_xlim())
+    ax.set_xlim(xmin, xmax)
 
     # auto param
     if not every_year:
-        every_year = max(1, np.rint((dee - dss).days / 365.25 / 5).astype(int))
+        every_year = max(1, np.rint((xmax - xmin).days / 365.25 / 5).astype(int))
 
     if not every_month:
-        if   every_year <= 3:  every_month = 1
-        elif every_year <= 6:  every_month = 3
-        elif every_year <= 12: every_month = 6
-        else:                  every_month = None
+        if   every_year <= 3 :  every_month = 1
+        elif every_year <= 6 :  every_month = 3
+        elif every_year <= 12:  every_month = 6
+        else:                   every_month = None
 
     # Label/Tick format
     ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M:%S')
@@ -486,7 +486,7 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=None, buffer_
     # Label font size
     ax.tick_params(labelsize=fontsize)
     # fig2.autofmt_xdate()     #adjust x overlap by rorating, may enble again
-    return ax, dss, dee
+    return ax, xmin, xmax
 
 
 def auto_adjust_yaxis(ax, dataList, fontsize=12, ymin=None, ymax=None):
