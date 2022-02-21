@@ -43,6 +43,12 @@ jobs:
             solid_earth_tides.py -h
 
       - run:
+          name: Testing MintPy Python Modules
+          command: |
+            export PATH=${CONDA_PREFIX}/bin:${PATH}
+            ${MINTPY_HOME}/tests/test_asc_desc2horz_vert.py
+
+      - run:
           name: Testing MintPy on Example Dataset 1/4 - FernandinaSenDT128 (ISCE/topsStack)
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}

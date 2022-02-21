@@ -90,9 +90,7 @@ def cmd_line_parse(iargs=None):
 
 
 #####################################################################################
-
-
-def test_dataset(dset_name, test_dir, fresh_start=True, test_pyaps=False, test_isce=False):
+def test_smallbaselineApp(dset_name, test_dir, fresh_start=True, test_pyaps=False, test_isce=False):
     print('Go to test directory:', test_dir)
     os.chdir(test_dir)
 
@@ -182,14 +180,14 @@ def main(iargs=None):
     for i in range(num_dset):
         dset_name = inps.dset_name[i]
         print('#'*100)
-        print('Start testing smallbaselineApp workflow on exmaple dataset {}/{}: {}'.format(i+1, num_dset, dset_name))
-        test_dataset(dset_name,
-                     test_dir=inps.test_dir,
-                     fresh_start=inps.fresh_start,
-                     test_pyaps=inps.test_pyaps,
-                     test_isce=inps.test_isce)
+        print(f'Start testing smallbaselineApp workflow on exmaple dataset {i+1}/{num_dset}: {dset_name}')
+        test_smallbaselineApp(dset_name,
+                              test_dir=inps.test_dir,
+                              fresh_start=inps.fresh_start,
+                              test_pyaps=inps.test_pyaps,
+                              test_isce=inps.test_isce)
         print('#'*100)
-        print('   PASS testing of smallbaselineApp workflow on exmaple dataset {}/{}: {}'.format(i+1, num_dset, dset_name))
+        print(f'   PASS testing of smallbaselineApp workflow on exmaple dataset {i+1}/{num_dset}: {dset_name}')
         print('#'*100+'\n'*3)
 
     # print message
@@ -198,7 +196,7 @@ def main(iargs=None):
         msg  = '#'*50
         msg += '\n    PASS ALL testings without running errors.\n'
         msg += '#'*50
-        msg += '\nTotal time used: {:02.0f} mins {:02.1f} secs\n'.format(m, s)
+        msg += f'\nTotal time used: {m:02.0f} mins {s:02.1f} secs\n'
         print(msg)
 
     return
