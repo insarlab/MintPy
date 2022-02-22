@@ -203,7 +203,7 @@ class transectionViewer():
         self.ax_txn = None
 
         self.img = None
-        self.line = None
+        self.line_ann = None
         self.pts_idx = 0
         return
 
@@ -273,79 +273,8 @@ class transectionViewer():
             plt.show()
         return
 
-    def draw_line(self, start_yx, end_yx):
-        """Draw the transect line in the map axes"""
-        # erase existing line
-        if self.line is not None:
-            self.ax_img.lines.remove(self.line[0])
 
-        # convert coordinates accordingly
-        if 'Y_FIRST' in self.atr.keys():
-            ys = self.coord.yx2lalo([self.start_yx[0], self.end_yx[0]], coord_type='y')
-            xs = self.coord.yx2lalo([self.start_yx[1], self.end_yx[1]], coord_type='x')
-        else:
-            ys = [start_yx[0], end_yx[0]]
-            xs = [start_yx[1], end_yx[1]]
-
-        # plot
-        self.line = self.ax_img.plot(xs, ys, 'k--')
-        self.fig.canvas.draw()
-        return
-
-    def draw_transection(self, start_yx, end_yx, start_lalo=None, end_lalo=None):
-        """Plot the transect as dots"""
-        self.ax_txn.cla()
-
-        # loop for all input files
-        for i in range(self.num_file):
-            # get transection data
-            if start_lalo is not None:
-                # use lat/lon whenever it's possible to support files with different resolutions
-                txn = ut.transect_lalo(self.data_list[i],
-                                       self.atr_list[i],
-                                       start_lalo, end_lalo,
-                                       interpolation=self.interpolation)
-            else:
-                txn = ut.transect_yx(self.data_list[i],
-                                     self.atr_list[i],
-                                     start_yx, end_yx,
-                                     interpolation=self.interpolation)
-
-            # distance unit and scaling
-            if txn.get('distance_unit', 'm') == 'pixel':
-                dist_scale = 1.0
-                dist_unit = 'pixel'
-            else:
-                dist_scale = 0.001
-                dist_unit = 'km'
-
-            # plot
-            self.ax_txn.scatter(txn['distance'] * dist_scale,
-                                txn['value'] - self.offset[i],
-                                c=pp.mplColors[i],
-                                s=self.marker_size**2)
-
-        y0, x0, y1, x1 = start_yx + end_yx
-        self.outfile_base = f'transect_Y{y0}X{x0}_Y{y1}X{x1}'
-
-        # title
-        msg = f'y/x: ({y0}, {x0}) --> ({y1}, {x1})'
-        if 'Y_FIRST' in self.atr.keys():
-            lat0, lon0 = self.coord.radar2geo(start_yx[0], start_yx[1])[0:2]
-            lat1, lon1 = self.coord.radar2geo(end_yx[0], end_yx[1])[0:2]
-            msg += f'\nlat/lon: ({lat0:.4f}, {lon0:.4f}) --> ({lat1:.4f}, {lon1:.4f})'
-        self.ax_txn.set_title(msg, fontsize=self.font_size)
-
-        # axis format
-        self.ax_txn.tick_params(which='both', direction='in', labelsize=self.font_size,
-                                bottom=True, top=True, left=True, right=True)
-        self.ax_txn.yaxis.set_minor_locator(ticker.AutoMinorLocator(10))
-        self.ax_txn.set_ylabel(self.disp_unit, fontsize=self.font_size)
-        self.ax_txn.set_xlabel(f'Distance [{dist_unit}]', fontsize=self.font_size)
-        self.ax_txn.set_xlim(0, txn['distance'][-1] * dist_scale)
-        self.fig.canvas.draw()
-        return
-
+    ##---------- event function
     def select_point(self, event):
         """Event handling function for points selection"""
         if event.inaxes == self.ax_img:
@@ -373,6 +302,98 @@ class transectionViewer():
                 self.draw_transection(self.start_yx, self.end_yx, self.start_lalo, self.end_lalo)
                 self.pts_idx = 0
         return
+
+
+    ##---------- plot functions
+    def draw_line(self, start_yx, end_yx):
+        """Draw the transect line in the map axes"""
+        # erase existing line
+        if self.line_ann is not None:
+            self.line_ann.remove()
+
+        # convert coordinates accordingly
+        if 'Y_FIRST' in self.atr.keys():
+            ys = self.coord.yx2lalo([self.start_yx[0], self.end_yx[0]], coord_type='y')
+            xs = self.coord.yx2lalo([self.start_yx[1], self.end_yx[1]], coord_type='x')
+        else:
+            ys = [start_yx[0], end_yx[0]]
+            xs = [start_yx[1], end_yx[1]]
+
+        # plot
+        line = self.ax_img.plot(xs, ys, 'k--', alpha=0)[0]
+        self.line_ann = pp.add_arrow(line)
+
+        self.fig.canvas.draw_idle()
+        self.fig.canvas.flush_events()
+        return
+
+
+    def draw_transection(self, start_yx, end_yx, start_lalo=None, end_lalo=None):
+        """Plot the transect as dots"""
+        self.ax_txn.cla()
+
+        # loop - extract transection data
+        txn_list = []
+        min_dist = 0
+        for i in range(self.num_file):
+            # get transection data
+            if start_lalo is not None:
+                # use lat/lon whenever it's possible to support files with different resolutions
+                txn = ut.transect_lalo(self.data_list[i],
+                                       self.atr_list[i],
+                                       start_lalo, end_lalo,
+                                       interpolation=self.interpolation)
+            else:
+                txn = ut.transect_yx(self.data_list[i],
+                                     self.atr_list[i],
+                                     start_yx, end_yx,
+                                     interpolation=self.interpolation)
+
+            # save txn
+            txn_list.append(txn)
+            min_dist = max(min_dist, txn['distance'][0])
+
+        # loop - plot transection
+        for i, txn in enumerate(txn_list):
+            # distance unit and scaling
+            if txn.get('distance_unit', 'm') == 'pixel':
+                dist_scale = 1.0
+                dist_unit = 'pixel'
+            else:
+                dist_scale = 0.001
+                dist_unit = 'km'
+
+            # plot
+            # update distance values by excluding the commonly masked out pixels in the begining
+            self.ax_txn.scatter(x=(txn['distance'] - min_dist) * dist_scale,
+                                y=txn['value'] - self.offset[i],
+                                c=pp.mplColors[i],
+                                s=self.marker_size**2)
+
+        y0, x0, y1, x1 = start_yx + end_yx
+        self.outfile_base = f'transect_Y{y0}X{x0}_Y{y1}X{x1}'
+
+        # title
+        msg = f'y/x: ({y0}, {x0}) --> ({y1}, {x1})'
+        if 'Y_FIRST' in self.atr.keys():
+            lat0, lon0 = self.coord.radar2geo(start_yx[0], start_yx[1])[0:2]
+            lat1, lon1 = self.coord.radar2geo(end_yx[0], end_yx[1])[0:2]
+            msg += f'\nlat/lon: ({lat0:.4f}, {lon0:.4f}) --> ({lat1:.4f}, {lon1:.4f})'
+        self.ax_txn.set_title(msg, fontsize=self.font_size)
+
+        # axis format
+        self.ax_txn.tick_params(which='both', direction='in', labelsize=self.font_size,
+                                bottom=True, top=True, left=True, right=True)
+        self.ax_txn.yaxis.set_minor_locator(ticker.AutoMinorLocator(10))
+        self.ax_txn.set_ylabel(self.disp_unit, fontsize=self.font_size)
+        self.ax_txn.set_xlabel(f'Distance [{dist_unit}]', fontsize=self.font_size)
+        self.ax_txn.set_xlim(0, (txn['distance'][-1] - min_dist) * dist_scale)
+
+        # update figure
+        self.fig.canvas.draw_idle()
+        self.fig.canvas.flush_events()
+        return
+
 
 
 ############################ Main ###################################

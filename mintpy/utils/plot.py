@@ -1117,6 +1117,44 @@ def plot_colorbar(inps, im, cax):
     return inps, cbar
 
 
+def add_arrow(line, position=None, direction='right', size=15, color=None):
+    """Add an arrow to a line.
+
+    Link: https://stackoverflow.com/questions/34017866
+
+    Parameters: line      - Line2D object
+                position  - x-position of the arrow. If None, mean of xdata is taken
+                direction - 'left' or 'right'
+                size      - size of the arrow in fontsize points
+                color     - if None, line color is taken.
+    Returns:    ann       - matplotlib.text.Annotation object
+    """
+    if color is None:
+        color = line.get_color()
+
+    xdata = line.get_xdata()
+    ydata = line.get_ydata()
+
+    if position is None:
+        position = xdata.mean()
+
+    # find closest index
+    start_ind = np.argmin(np.absolute(xdata - position))
+    if direction == 'right':
+        end_ind = start_ind + 1
+    else:
+        end_ind = start_ind - 1
+
+    ann = line.axes.annotate('',
+        xytext=(xdata[start_ind], ydata[start_ind]),
+        xy=(xdata[end_ind], ydata[end_ind]),
+        arrowprops=dict(arrowstyle="->", color=color, linestyle='--'),
+        size=size,
+    )
+
+    return ann
+
+
 
 ##################### Data Scale based on Unit and Wrap Range ##################
 def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False, wrap_range=[-1.*np.pi, np.pi], print_msg=True):
