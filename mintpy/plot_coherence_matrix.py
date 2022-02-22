@@ -269,7 +269,9 @@ class coherenceMatrixViewer():
             msg += 'temporal coherence: {:.2f}'.format(tcoh)
         vprint(msg)
 
-        self.fig.canvas.draw()
+        # update figure
+        self.fig.canvas.draw_idle()
+        self.fig.canvas.flush_events()
         return
 
     def update_coherence_matrix(self, event):

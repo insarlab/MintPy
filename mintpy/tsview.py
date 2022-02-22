@@ -45,22 +45,34 @@ def create_parser():
                              'i.e.: timeseries_ERA5_ramp_demErr.h5 (MintPy)\n'
                              '      LS-PARAMS.h5 (GIAnT)\n'
                              '      S1_IW12_128_0593_0597_20141213_20180619.he5 (HDF-EOS5)')
-    parser.add_argument('--label', dest='file_label', nargs='*', help='labels to display for multiple input files')
-    parser.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN', 'YMAX'), type=float, help='Y limits for point plotting.')
-    parser.add_argument('--tick-right', dest='tick_right', action='store_true', help='set tick and tick label to the right')
-    parser.add_argument('-l','--lookup', dest='lookup_file', type=str, help='lookup table file')
+    parser.add_argument('--label', dest='file_label', nargs='*',
+                        help='labels to display for multiple input files')
+    parser.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN', 'YMAX'), type=float,
+                        help='Y limits for point plotting.')
+    parser.add_argument('--tick-right', dest='tick_right', action='store_true',
+                        help='set tick and tick label to the right')
+    parser.add_argument('-l','--lookup', dest='lookup_file', type=str,
+                        help='lookup table file')
 
-    parser.add_argument('-n', dest='idx', metavar='NUM', type=int, help='Epoch/slice number for initial display.')
-    parser.add_argument('--error', dest='error_file', help='txt file with error for each date.')
+    parser.add_argument('-n', dest='idx', metavar='NUM', type=int,
+                        help='Epoch/slice number for initial display.')
+    parser.add_argument('--error', dest='error_file',
+                        help='txt file with error for each date.')
 
     # time info
-    parser.add_argument('--start-date', dest='start_date', type=str, help='start date of displacement to display')
-    parser.add_argument('--end-date', dest='end_date', type=str, help='end date of displacement to display')
-    parser.add_argument('--exclude', '--ex', dest='ex_date_list', nargs='*', default=['exclude_date.txt'], help='Exclude date shown as gray.')
-    parser.add_argument('--zf', '--zero-first', dest='zero_first', action='store_true', help='Set displacement at first acquisition to zero.')
-    parser.add_argument('--off','--offset', dest='offset', type=float, help='Offset for each timeseries file.')
+    parser.add_argument('--start-date', dest='start_date', type=str,
+                        help='start date of displacement to display')
+    parser.add_argument('--end-date', dest='end_date', type=str,
+                        help='end date of displacement to display')
+    parser.add_argument('--exclude', '--ex', dest='ex_date_list', nargs='*', default=['exclude_date.txt'],
+                        help='Exclude date shown as gray.')
+    parser.add_argument('--zf', '--zero-first', dest='zero_first', action='store_true',
+                        help='Set displacement at first acquisition to zero.')
+    parser.add_argument('--off','--offset', dest='offset', type=float,
+                        help='Offset for each timeseries file.')
 
-    parser.add_argument('--noverbose', dest='print_msg', action='store_false', help='Disable the verbose message printing.')
+    parser.add_argument('--noverbose', dest='print_msg', action='store_false',
+                        help='Disable the verbose message printing.')
 
     # temporal model fitting
     parser.add_argument('--nomodel', '--nofit', dest='plot_model', action='store_false',
@@ -68,19 +80,26 @@ def create_parser():
     parser.add_argument('--plot-model-conf-int', '--plot-fit-conf-int', dest='plot_model_conf_int', action='store_true',
                         help='Plot the time function prediction confidence intervals.\n'
                              '[!-- Preliminary feature alert! --!]\n'
-                             '[!-- This feature is NOT throughly checked. Read the code before use. Interpret at your own risk! --!]')
+                             '[!-- This feature is NOT throughly checked. '
+                             'Read the code before use. Interpret at your own risk! --!]')
 
     parser = arg_group.add_timefunc_argument(parser)
 
     # pixel of interest
     pixel = parser.add_argument_group('Pixel Input')
-    pixel.add_argument('--yx', type=int, metavar=('Y', 'X'), nargs=2, help='initial pixel to plot in Y/X coord')
-    pixel.add_argument('--lalo', type=float, metavar=('LAT', 'LON'), nargs=2, help='initial pixel to plot in lat/lon coord')
+    pixel.add_argument('--yx', type=int, metavar=('Y', 'X'), nargs=2,
+                       help='initial pixel to plot in Y/X coord')
+    pixel.add_argument('--lalo', type=float, metavar=('LAT', 'LON'), nargs=2,
+                       help='initial pixel to plot in lat/lon coord')
 
-    pixel.add_argument('--marker', type=str, default='o', help='marker style (default: %(default)s).')
-    pixel.add_argument('--ms', '--markersize', dest='marker_size', type=float, default=6.0, help='marker size (default: %(default)s).')
-    pixel.add_argument('--lw', '--linewidth', dest='linewidth', type=float, default=0, help='line width (default: %(default)s).')
-    pixel.add_argument('--ew', '--edgewidth', dest='edge_width', type=float, default=1.0, help='Edge width for the error bar (default: %(default)s)')
+    pixel.add_argument('--marker', type=str, default='o',
+                       help='marker style (default: %(default)s).')
+    pixel.add_argument('--ms', '--markersize', dest='marker_size', type=float, default=6.0,
+                       help='marker size (default: %(default)s).')
+    pixel.add_argument('--lw', '--linewidth', dest='linewidth', type=float, default=0,
+                       help='line width (default: %(default)s).')
+    pixel.add_argument('--ew', '--edgewidth', dest='edge_width', type=float, default=1.0,
+                       help='Edge width for the error bar (default: %(default)s)')
 
     # other groups
     parser = arg_group.add_data_disp_argument(parser)
@@ -778,7 +797,7 @@ class timeseriesViewer():
         self.plot_init_image(img_data)
 
         # Figure 1 - Axes 2 - Time Slider
-        self.ax_tslider = self.fig_img.add_axes([0.125, 0.1, 0.75, 0.07])
+        self.ax_tslider = self.fig_img.add_axes([0.125, 0.05, 0.75, 0.15])
         self.plot_init_time_slider(init_idx=self.idx, ref_idx=self.ref_idx)
         self.tslider.on_changed(self.update_time_slider)
 
@@ -792,8 +811,8 @@ class timeseriesViewer():
                 save_ts_data_and_plot(self.yx, d_ts, m_strs, self)
 
         # Final linking of the canvas to the plots.
-        self.fig_img.canvas.mpl_connect('button_press_event', self.update_plot_timeseries)
-        self.fig_img.canvas.mpl_connect('key_press_event', self.on_key_event)
+        self.fig_img.canvas.mpl_connect('button_press_event', self.update_point_timeseries)
+        self.fig_img.canvas.mpl_connect('key_press_event', self.update_image)
         if self.disp_fig:
             vprint('showing ...')
             msg = '\n------------------------------------------------------------------------'
@@ -806,6 +825,78 @@ class timeseriesViewer():
         return
 
 
+    ##---------- event functions
+    def update_point_timeseries(self, event):
+        """Event function to get y/x from button press"""
+        if event.inaxes == self.ax_img:
+            # get row/col number
+            if self.fig_coord == 'geo':
+                y, x = self.coord.geo2radar(event.ydata, event.xdata, print_msg=False)[0:2]
+            else:
+                y, x = int(event.ydata+0.5), int(event.xdata+0.5)
+
+            # plot time-series displacement
+            self.plot_point_timeseries((y, x))
+        return
+
+
+    def update_image(self, event):
+        """Slide images with left/right key on keyboard"""
+        if event.inaxes and event.inaxes.figure == self.fig_img:
+            idx = None
+            if event.key == 'left':
+                idx = max(self.idx - 1, 0)
+            elif event.key == 'right':
+                idx = min(self.idx + 1, self.num_date - 1)
+
+            if idx is not None and idx != self.idx:
+                # update title
+                disp_date = self.dates[idx].strftime('%Y-%m-%d')
+                sub_title = 'N = {n}, Time = {t}'.format(n=idx, t=disp_date)
+                self.ax_img.set_title(sub_title, fontsize=self.font_size)
+
+                # read data
+                data_img = np.array(self.ts_data[0][idx, :, :])
+                data_img[self.mask == 0] = np.nan
+                if self.wrap:
+                    if self.disp_unit_img == 'radian':
+                        data_img *= self.range2phase
+                    data_img = ut.wrap(data_img, wrap_range=self.wrap_range)
+
+                # update
+                self.tslider.set_val(self.yearList[idx]) # update slider
+                self.img.set_data(data_img)              # update image
+                self.idx = idx
+                self.fig_img.canvas.draw_idle()
+                self.fig_img.canvas.flush_events()
+        return
+
+
+    def update_time_slider(self, val):
+        """Update Displacement Map using Slider"""
+        idx = np.argmin(np.abs(np.array(self.yearList) - self.tslider.val))
+        # update title
+        disp_date = self.dates[idx].strftime('%Y-%m-%d')
+        sub_title = 'N = {n}, Time = {t}'.format(n=idx, t=disp_date)
+        self.ax_img.set_title(sub_title, fontsize=self.font_size)
+
+        # read data
+        data_img = np.array(self.ts_data[0][idx, :, :])
+        data_img[self.mask == 0] = np.nan
+        if self.wrap:
+            if self.disp_unit_img == 'radian':
+                data_img *= self.range2phase
+            data_img = ut.wrap(data_img, wrap_range=self.wrap_range)
+
+        # update data
+        self.img.set_data(data_img)
+        self.idx = idx
+        self.fig_img.canvas.draw_idle()
+        self.fig_img.canvas.flush_events()
+        return
+
+
+    ##---------- plot functions
     def plot_init_image(self, img_data):
         # prepare data
         if self.wrap:
@@ -841,48 +932,27 @@ class timeseriesViewer():
             valinit=self.yearList[init_idx],
             valmin=val_min,
             valmax=val_max,
-            valstep=val_step)
+            valstep=np.array(self.yearList),
+        )
 
-        bar_width = val_step / 4.
-        datex = np.array(self.yearList) - bar_width / 2.
-        self.tslider.ax.bar(datex, np.ones(len(datex)), bar_width, facecolor='black', ecolor=None)
-        if ref_idx is not None:
-            self.tslider.ax.bar(datex[ref_idx], 1., bar_width*3, facecolor='crimson', ecolor=None)
+        # plot vertical lines to mark the acquisition times
+        bar_width = val_step / 6.
+        num_val = len(self.yearList)
+        if num_val <= 100:
+            ymin, ymax = 0.25, 0.5
+            kwargs = dict(bottom=ymin, ecolor=None)
+            xdate = np.array(self.yearList)
+            self.tslider.ax.bar(xdate, np.ones(num_val)*ymax, width=bar_width, facecolor='black', **kwargs)
+            if ref_idx is not None:
+                self.tslider.ax.bar(xdate[ref_idx], ymax, width=bar_width*3, facecolor='crimson', **kwargs)
 
-        # xaxis tick format
-        if np.floor(val_max) == np.floor(val_min):
-            digit = 10.
-        else:
-            digit = 1.
-        self.tslider.ax.set_xticks(np.round(np.linspace(val_min, val_max, num=5) * digit) / digit)
-        self.tslider.ax.xaxis.set_minor_locator(ticker.MultipleLocator(1./12.))
-        self.tslider.ax.set_xlim([val_min, val_max])
+        # axis format
+        self.tslider.ax.set_xlim([val_min - bar_width / 2, val_max + bar_width / 2])
+        self.tslider.ax.set_ylim([0, 1])
         self.tslider.ax.set_yticks([])
         self.tslider.valtext.set_visible(False)   #hide slider values
         return self.tslider
 
-
-    def update_time_slider(self, val):
-        """Update Displacement Map using Slider"""
-        idx = np.argmin(np.abs(np.array(self.yearList) - self.tslider.val))
-        # update title
-        disp_date = self.dates[idx].strftime('%Y-%m-%d')
-        sub_title = 'N = {n}, Time = {t}'.format(n=idx, t=disp_date)
-        self.ax_img.set_title(sub_title, fontsize=self.font_size)
-
-        # read data
-        data_img = np.array(self.ts_data[0][idx, :, :])
-        data_img[self.mask == 0] = np.nan
-        if self.wrap:
-            if self.disp_unit_img == 'radian':
-                data_img *= self.range2phase
-            data_img = ut.wrap(data_img, wrap_range=self.wrap_range)
-
-        # update data
-        self.img.set_data(data_img)
-        self.idx = idx
-        self.fig_img.canvas.draw()
-        return
 
     def plot_point_timeseries(self, yx):
         """Plot point displacement time-series at pixel [y, x]
@@ -987,54 +1057,12 @@ class timeseriesViewer():
                 vprint(f'    {m_str}')
 
             # update figure
-            self.fig_pts.canvas.draw()
+            # use fig.canvas.draw_idel() instead of fig.canvas.draw()
+            # reference: https://stackoverflow.com/questions/64789437
+            self.fig_pts.canvas.draw_idle()
+            self.fig_pts.canvas.flush_events()
 
         return ts_dis, m_strs
-
-
-    def update_plot_timeseries(self, event):
-        """Event function to get y/x from button press"""
-        if event.inaxes == self.ax_img:
-            # get row/col number
-            if self.fig_coord == 'geo':
-                y, x = self.coord.geo2radar(event.ydata, event.xdata, print_msg=False)[0:2]
-            else:
-                y, x = int(event.ydata+0.5), int(event.xdata+0.5)
-
-            # plot time-series displacement
-            self.plot_point_timeseries((y, x))
-        return
-
-
-    def on_key_event(self, event):
-        """Slide images with left/right key on keyboard"""
-        if event.inaxes and event.inaxes.figure == self.fig_img:
-            idx = None
-            if event.key == 'left':
-                idx = max(self.idx - 1, 0)
-            elif event.key == 'right':
-                idx = min(self.idx + 1, self.num_date - 1)
-
-            if idx is not None and idx != self.idx:
-                # update title
-                disp_date = self.dates[idx].strftime('%Y-%m-%d')
-                sub_title = 'N = {n}, Time = {t}'.format(n=idx, t=disp_date)
-                self.ax_img.set_title(sub_title, fontsize=self.font_size)
-
-                # read data
-                data_img = np.array(self.ts_data[0][idx, :, :])
-                data_img[self.mask == 0] = np.nan
-                if self.wrap:
-                    if self.disp_unit_img == 'radian':
-                        data_img *= self.range2phase
-                    data_img = ut.wrap(data_img, wrap_range=self.wrap_range)
-
-                # update
-                self.tslider.set_val(self.yearList[idx]) # update slider
-                self.img.set_data(data_img)              # update image
-                self.idx = idx
-                self.fig_img.canvas.draw()
-        return
 
 
 ###########################################################################################
