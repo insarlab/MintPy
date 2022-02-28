@@ -20,7 +20,7 @@ REFERENCE = """reference:
   Zheng, Y., et al., (2022) On Closure Phase and Systematic Bias in Multilooked SAR Interferometry, IEEE TGRS, under review (minor revision)
 """
 EXAMPLE = """example:
-  closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 
+  closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20
 """
 
 def create_parser():
@@ -39,15 +39,15 @@ def cmd_line_parse(iargs=None):
     return inps
 
 # Obtain sum of consecutive complex sequential closure phase of connection n
-def cum_seq_closurePhase(SLC_list, date12_list_all, ifgram_stack, ref_phase, n, box): 
+def cum_seq_closurePhase(SLC_list, date12_list_all, ifgram_stack, ref_phase, n, box):
     """
     Input parameters:
         SLC_list : list of SLC dates
         date12_list_all: date12 of all the interferograms stored in the ifgramstack file
-        ifgram_stack: stack file 
+        ifgram_stack: stack file
         refphase : reference phase
         n        : connection level of the closure phase
-        box      : bounding box for the patch 
+        box      : bounding box for the patch
     """
     cp_idx = []
     NSLC = len(SLC_list)
@@ -65,15 +65,15 @@ def cum_seq_closurePhase(SLC_list, date12_list_all, ifgram_stack, ref_phase, n, 
 
     cp_idx = np.array(cp_idx, np.int16)
     cp_idx = np.unique(cp_idx, axis = 0)
-    
+
     num_cp = len(cp_idx)
     print('Number of closure measurements expected, ', len(SLC_list)-n)
     print('Number of closure measurements found, ', num_cp)
-    
+
     if num_cp <1:
         print('No closure phase measurements found, abort')
         raise Exception("No triplets found!")
-        
+
     box_width  = box[2] - box[0]
     box_length = box[3] - box[1]
     phase = readfile.read(ifgram_stack, box=box,print_msg=False)[0]
@@ -86,7 +86,7 @@ def cum_seq_closurePhase(SLC_list, date12_list_all, ifgram_stack, ref_phase, n, 
         idx = cp_idx[i,n]
         cp0_w = cp0_w - (phase[idx,:,:]-ref_phase[idx])
         cum_cp = cum_cp + (np.exp(1j*cp0_w))
-        
+
     # cum_cp = np.angle(cum_cp)
     return cum_cp, num_cp
 
@@ -115,7 +115,7 @@ def main(iargs = None):
     print('number of SLC found : ', len(SLC_list))
     print('first SLC: ', SLC_list[0])
     print('last  SLC: ', SLC_list[-1])
-   
+
 
     # split igram_file into blocks to save memory
     box_list, num_box = ifginv.split2boxes(inps.ifgram_stack,inps.max_memory)
@@ -132,20 +132,20 @@ def main(iargs = None):
 
             closurephase[box[1]:box[3],box[0]:box[2]], numcp = cum_seq_closurePhase(SLC_list, date12_list_all, inps.ifgram_stack, ref_phase,inps.nl,box)
 
-    
-    
+
+
     # What is a good thredshold?
     # Assume that it's pure noise so that the phase is uniform distributed from -pi to pi.
     # The standard deviation of phase in each loop is pi/sqrt(3) (technically should be smaller because when forming loops there should be a reduction in phase variance)
     # The standard deviation of phase in cumulative wrapped closure phase is pi/sqrt(3)/sqrt(numcp) -- again another simplification assuming no correlation.
     # We use 3\delta as threshold -- 99.7% confidence
-    
+
     if inps.theta:
         threshold_cp = inps.theta
     else:
         threshold_cp = np.pi/np.sqrt(3)/np.sqrt(numcp)*3 # 3/sigma, 99.7% confidence
-    
-    mask = np.ones([length,width],np.float32)  
+
+    mask = np.ones([length,width],np.float32)
     mask[np.abs(np.angle(closurephase))>threshold_cp] = 0 # this masks areas with potential bias
     mask[np.abs(np.abs(closurephase)/numcp < inps.episilon)] = 1 # this unmasks areas with low correlation (where it's hard to know wheter there is bias either)
     
