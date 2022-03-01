@@ -79,6 +79,11 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     inps = create_parser().parse_args(args=iargs)
 
+    # save argv (to check the manually specified arguments)
+    # use iargs        for python call
+    # use sys.argv[1:] for command line call
+    inps.argv = iargs if iargs else sys.argv[1:]
+
     if inps.outfile or not inps.disp_fig:
         inps.save_fig = True
 
@@ -209,7 +214,7 @@ class transectionViewer():
             setattr(self, key, value)
 
         # copy inps from view.py to self object
-        view_cmd = get_view_cmd(self.iargs)
+        view_cmd = get_view_cmd(self.argv)
         self.data_img, atr, inps_view = view.prep_slice(view_cmd)
         for key, value in inps_view.__dict__.items():
             setattr(self, key, value)
@@ -253,7 +258,7 @@ class transectionViewer():
             self.draw_line(self.start_yx, self.end_yx)
             self.draw_transection(self.start_yx, self.end_yx, self.start_lalo, self.end_lalo)
 
-        self.fig.subplots_adjust(left=0.05, wspace=0.25)
+        self.fig.subplots_adjust(left=0.08, wspace=0.25, bottom=0.15)
 
         # save
         if self.save_fig:
@@ -305,29 +310,39 @@ class transectionViewer():
                                      self.atr_list[i],
                                      start_yx, end_yx,
                                      interpolation=self.interpolation)
+
+            # distance unit and scaling
+            if txn.get('distance_unit', 'm') == 'pixel':
+                dist_scale = 1.0
+                dist_unit = 'pixel'
+            else:
+                dist_scale = 0.001
+                dist_unit = 'km'
+
             # plot
-            self.ax_txn.scatter(txn['distance']/1000.0,
+            self.ax_txn.scatter(txn['distance'] * dist_scale,
                                 txn['value'] - self.offset[i],
                                 c=pp.mplColors[i],
                                 s=self.marker_size**2)
 
-        self.outfile_base = 'transect_Y{}X{}_Y{}X{}'.format(start_yx[0], start_yx[1], end_yx[0], end_yx[1])
+        y0, x0, y1, x1 = start_yx + end_yx
+        self.outfile_base = f'transect_Y{y0}X{x0}_Y{y1}X{x1}'
 
         # title
-        msg = 'y/x: ({}, {}) --> ({}, {})'.format(start_yx[0], start_yx[1], end_yx[0], end_yx[1])
+        msg = f'y/x: ({y0}, {x0}) --> ({y1}, {x1})'
         if 'Y_FIRST' in self.atr.keys():
             lat0, lon0 = self.coord.radar2geo(start_yx[0], start_yx[1])[0:2]
             lat1, lon1 = self.coord.radar2geo(end_yx[0], end_yx[1])[0:2]
-            msg += '\nlat/lon: ({:.4f}, {:.4f}) --> ({:.4f}, {:.4f})'.format(lat0, lon0, lat1, lon1)
+            msg += f'\nlat/lon: ({lat0:.4f}, {lon0:.4f}) --> ({lat1:.4f}, {lon1:.4f})'
         self.ax_txn.set_title(msg, fontsize=self.font_size)
 
         # axis format
-        self.ax_txn.yaxis.set_minor_locator(ticker.AutoMinorLocator(10))
-        self.ax_txn.set_xlabel('Distance (km)', fontsize=self.font_size)
-        self.ax_txn.set_ylabel(self.disp_unit, fontsize=self.font_size)
         self.ax_txn.tick_params(which='both', direction='in', labelsize=self.font_size,
                                 bottom=True, top=True, left=True, right=True)
-        self.ax_txn.set_xlim(0, txn['distance'][-1]/1000.0)
+        self.ax_txn.yaxis.set_minor_locator(ticker.AutoMinorLocator(10))
+        self.ax_txn.set_ylabel(self.disp_unit, fontsize=self.font_size)
+        self.ax_txn.set_xlabel(f'Distance [{dist_unit}]', fontsize=self.font_size)
+        self.ax_txn.set_xlim(0, txn['distance'][-1] * dist_scale)
         self.fig.canvas.draw()
         return
 

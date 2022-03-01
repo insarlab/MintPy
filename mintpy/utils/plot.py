@@ -3,7 +3,7 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, 2018                               #
 ############################################################
-# 
+#
 # Recommend import:
 #     from mintpy.utils import plot as pp
 
@@ -378,15 +378,19 @@ def auto_shared_lalo_location(axs, loc=(1,0,0,1), flatten=False):
 
 
 def auto_colormap_name(metadata, cmap_name=None, datasetName=None, print_msg=True):
-    gray_dataset_key_words = ['coherence', 'temporalCoherence',
-                              'waterMask', 'shadowMask',
-                              '.cor', '.mli', '.slc', '.amp', '.ramp']
+    """Get auto/default colormap name based on input metadata."""
+
     if not cmap_name:
-        if any(i in gray_dataset_key_words for i in [metadata['FILE_TYPE'],
-                                                     str(datasetName).split('-')[0]]):
-            cmap_name = 'gray'
-        else:
-            cmap_name = 'jet'
+        ds_names = [metadata['FILE_TYPE'], str(datasetName).split('-')[0]]
+        # SLC stack
+        if metadata['FILE_TYPE'] == 'timeseries' and metadata['DATA_TYPE'].startswith('complex'):
+            ds_names += ['.slc']
+
+        gray_ds_names = ['coherence', 'temporalCoherence', 'waterMask', 'shadowMask',
+                         '.cor', '.mli', '.slc', '.amp', '.ramp']
+
+        cmap_name = 'gray' if any(i in gray_ds_names for i in ds_names) else 'jet'
+
     if print_msg:
         print('colormap:', cmap_name)
 
@@ -429,7 +433,8 @@ def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_
     return cmap_lut, vlim
 
 
-def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1, buffer_year=0.2):
+def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=None, buffer_year=0.2,
+                           every_month=None):
     """Adjust X axis
     Input:
         ax          - matplotlib figure axes object
@@ -461,11 +466,22 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1, buffer_yea
         (dss, dee) = ax.get_xlim()
     ax.set_xlim(dss, dee)
 
+    # auto param
+    if not every_year:
+        every_year = max(1, np.rint((dee - dss).days / 365.25 / 5).astype(int))
+
+    if not every_month:
+        if   every_year <= 3:  every_month = 1
+        elif every_year <= 6:  every_month = 3
+        elif every_year <= 12: every_month = 6
+        else:                  every_month = None
+
     # Label/Tick format
     ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M:%S')
     ax.xaxis.set_major_locator(mdates.YearLocator(every_year))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
-    ax.xaxis.set_minor_locator(mdates.MonthLocator())
+    if every_month:
+        ax.xaxis.set_minor_locator(mdates.MonthLocator(range(1,13,every_month)))
 
     # Label font size
     ax.tick_params(labelsize=fontsize)
@@ -529,7 +545,7 @@ def plot_coherence_history(ax, date12List, cohList, p_dict={}):
     ax.bar(x_list, np.nanmin(coh_mat, axis=0), bar_width.days, label='Min {}'.format(p_dict['ds_name']))
 
     if p_dict['disp_title']:
-        ax.set_title('{} History of All Related Pairs'.format(p_dict['ds_name']))
+        ax.set_title('{} History: Min/Max of All Related Pairs'.format(p_dict['ds_name']))
 
     ax = auto_adjust_xaxis_date(ax, datevector, fontsize=p_dict['fontsize'],
                                 every_year=p_dict['every_year'])[0]
@@ -537,7 +553,7 @@ def plot_coherence_history(ax, date12List, cohList, p_dict={}):
 
     #ax.set_xlabel('Time [years]', fontsize=p_dict['fontsize'])
     ax.set_ylabel(p_dict['ds_name'], fontsize=p_dict['fontsize'])
-    ax.legend(loc='lower right')
+    ax.legend(loc='best')
 
     return ax
 
@@ -670,9 +686,9 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
             x = np.array([dates[idx1], dates[idx2]])
             y = np.array([pbaseList[idx1], pbaseList[idx2]])
             if cohList is not None:
-                coh = cohList[date12List.index(date12)]
-                coh_norm = (coh - disp_min) / (disp_max - disp_min)
-                ax.plot(x, y, '--', lw=p_dict['linewidth'], alpha=transparency, c=cmap(coh_norm))
+                val = cohList[date12List.index(date12)]
+                val_norm = (val - disp_min) / (disp_max - disp_min)
+                ax.plot(x, y, '--', lw=p_dict['linewidth'], alpha=transparency, c=cmap(val_norm))
             else:
                 ax.plot(x, y, '--', lw=p_dict['linewidth'], alpha=transparency, c='k')
 
@@ -684,9 +700,9 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
         x = np.array([dates[idx1], dates[idx2]])
         y = np.array([pbaseList[idx1], pbaseList[idx2]])
         if cohList is not None:
-            coh = cohList[date12List.index(date12)]
-            coh_norm = (coh - disp_min) / (disp_max - disp_min)
-            ax.plot(x, y, '-', lw=p_dict['linewidth'], alpha=transparency, c=cmap(coh_norm))
+            val = cohList[date12List.index(date12)]
+            val_norm = (val - disp_min) / (disp_max - disp_min)
+            ax.plot(x, y, '-', lw=p_dict['linewidth'], alpha=transparency, c=cmap(val_norm))
         else:
             ax.plot(x, y, '-', lw=p_dict['linewidth'], alpha=transparency, c='k')
 
@@ -944,6 +960,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     if site_names.size == 0:
         warnings.warn('No GNSS found within {} during {} - {}!'.format(SNWE, start_date, end_date))
         print('Continue without GNSS plots.')
+        return ax
 
     # mask out stations not coincident with InSAR data
     if inps.mask_gps and inps.msk is not None:
@@ -983,8 +1000,10 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         # get GPS LOS observations
         # save absolute value to support both spatially relative and absolute comparison
         # without compromising the re-usability of the CSV file
+        obs_type = 'velocity' if k == 'velocity' else 'displacement'
         site_obs = gps.get_gps_los_obs(
-            insar_file=inps.file,
+            meta=metadata,
+            obs_type=obs_type,
             site_names=site_names,
             start_date=start_date,
             end_date=end_date,
@@ -1043,9 +1062,14 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
 def plot_colorbar(inps, im, cax):
     # extend
     if not inps.cbar_ext:
-        if   inps.vlim[0] <= inps.dlim[0] and inps.vlim[1] >= inps.dlim[1]: inps.cbar_ext='neither'
-        elif inps.vlim[0] >  inps.dlim[0] and inps.vlim[1] >= inps.dlim[1]: inps.cbar_ext='min'
-        elif inps.vlim[0] <= inps.dlim[0] and inps.vlim[1] <  inps.dlim[1]: inps.cbar_ext='max'
+        # expand vlim by 0.1% to account for potential numerical precision leak
+        # e.g. wrapped phase
+        epsilon = (inps.vlim[1] - inps.vlim[0]) * 0.001
+        vmin = inps.vlim[0] - epsilon
+        vmax = inps.vlim[1] + epsilon
+        if   vmin <= inps.dlim[0] and vmax >= inps.dlim[1]: inps.cbar_ext='neither'
+        elif vmin >  inps.dlim[0] and vmax >= inps.dlim[1]: inps.cbar_ext='min'
+        elif vmin <= inps.dlim[0] and vmax <  inps.dlim[1]: inps.cbar_ext='max'
         else:  inps.cbar_ext='both'
 
     # orientation
@@ -1095,13 +1119,16 @@ def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False, wrap_range=[-
     """
     # default display unit if not given
     if not disp_unit:
-        k = metadata['FILE_TYPE']
-        k = k.replace('.','')
+        ftype = metadata['FILE_TYPE'].replace('.','')
+        dtype = metadata.get('DATA_TYPE', 'float32')
         disp_unit = metadata['UNIT'].lower()
-        if (k in ['timeseries', 'giantTimeseries', 'velocity', 'HDFEOS']
-                and disp_unit.split('/')[0].endswith('m')):
+
+        if (ftype in ['timeseries', 'giantTimeseries', 'velocity', 'HDFEOS']
+                and disp_unit.split('/')[0].endswith('m')
+                and not dtype.startswith('complex')):
             disp_unit = 'cm'
-        elif k in ['mli', 'slc', 'amp']:
+
+        elif ftype in ['mli', 'slc', 'amp']:
             disp_unit = 'dB'
 
     if wrap:
@@ -1446,7 +1473,9 @@ def prepare_dem_background(dem, inps=None, print_msg=True):
                                  vmax=inps.shade_max)
         dem_shade[np.isnan(dem_shade[:, :, 0])] = np.nan
         if print_msg:
-            print('show shaded relief DEM')
+            msg = f'show shaded relief DEM [min/max: {inps.shade_min}/{inps.shade_max} m; '
+            msg += f'exag: {inps.shade_exag}; az/alt deg: {inps.shade_azdeg}/{inps.shade_altdeg}]'
+            print(msg)
 
     # prepare contour
     if inps.disp_dem_contour:
@@ -1745,7 +1774,7 @@ def read_gmt_lonlat_file(ll_file, SNWE=None, min_dist=10):
         prog_bar.close()
         ax.set_xlim(inps.geo_box[0], inps.geo_box[2])
         ax.set_ylim(inps.geo_box[3], inps.geo_box[1])
-                
+
     """
     # read text file
     lines = None
@@ -1757,7 +1786,7 @@ def read_gmt_lonlat_file(ll_file, SNWE=None, min_dist=10):
         lines = lines[:1000]
 
     # loop to extract/organize the data into list of arrays
-    num_line = len(lines)    
+    num_line = len(lines)
     faults = []
     fault = []
     prog_bar = ptime.progressBar(maxValue=num_line)

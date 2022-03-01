@@ -102,11 +102,12 @@ def get_baseline_change(dates1, pos_x1, pos_y1, pos_z1,
     return dates, bases
 
 
-def get_gps_los_obs(insar_file, site_names, start_date, end_date, gps_comp='enu2los',
+def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, gps_comp='enu2los',
                     horz_az_angle=-90., print_msg=True, redo=False):
     """Get the GPS LOS observations given the query info.
 
-    Parameters: insar_file - str, InSAR LOS file, e.g. velocity or timeseries
+    Parameters: meta       - dict, dictionary of metadata of the InSAR file
+                obs_type   - str, GPS observation data type, displacement or velocity.
                 site_names - list of str, GPS sites, output of search_gps()
                 start_date - str, date in YYYYMMDD format
                 end_date   - str, date in YYYYMMDD format
@@ -117,19 +118,26 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, gps_comp='enu2
                 print_msg  - bool, print verbose info
                 redo       - bool, ignore existing CSV file and re-calculate
     Returns:    site_obs   - 1D np.ndarray(), GPS LOS velocity or displacement in m or m/yr
+    Examples:   from mintpy.objects import gps
+                from mintpy.utils import readfile, utils as ut
+                meta = readfile.read_attribute('geo/geo_velocity.h5')
+                SNWE = ut.four_corners(meta)
+                site_names = gps.search_gps(SNWE, start_date, end_date)
+                vel = gps.get_gps_los_obs(meta, 'velocity',     site_names, start_date='20150101', end_date='20190619')
+                dis = gps.get_gps_los_obs(meta, 'displacement', site_names, start_date='20150101', end_date='20190619')
     """
-
     vprint = print if print_msg else lambda *args, **kwargs: None
     num_site = len(site_names)
 
-    # basic info
-    fdir = os.path.dirname(insar_file)
-    meta = readfile.read_attribute(insar_file)
-    obs_type = meta['FILE_TYPE']
-    obs_ind = 4 if obs_type in ['velocity'] else 3
+    # obs_type --> obs_ind
+    obs_types = ['displacement', 'velocity']
+    if obs_type not in obs_types:
+        raise ValueError(f'un-supported obs_type: {obs_type}')
+    obs_ind = 3 if obs_type.lower() == 'displacement' else 4
 
     # GPS CSV file info
-    csv_file = os.path.join(fdir, f'gps_{gps_comp}')
+    file_dir = os.path.dirname(meta['FILE_PATH'])
+    csv_file = os.path.join(file_dir, f'gps_{gps_comp}')
     csv_file += f'{horz_az_angle:.0f}' if gps_comp == 'horz' else ''
     csv_file += '.csv'
     col_names = ['Site', 'Lon', 'Lat', 'Displacement', 'Velocity']
@@ -157,7 +165,7 @@ def get_gps_los_obs(insar_file, site_names, start_date, end_date, gps_comp='enu2
         vprint('calculating GPS observation ...')
 
         # get geom_obj (meta / geom_file)
-        geom_file = ut.get_geometry_file(['incidenceAngle','azimuthAngle'], work_dir=fdir, coord='geo')
+        geom_file = ut.get_geometry_file(['incidenceAngle','azimuthAngle'], work_dir=file_dir, coord='geo')
         if geom_file:
             geom_obj = geom_file
             vprint('use incidence / azimuth angle from file: {}'.format(os.path.basename(geom_file)))
@@ -549,21 +557,22 @@ class GPS:
             horz_az_angle=horz_az_angle)[:2]
 
         # displacement -> velocity
-        # skip if:
-        # 1. num of observations <= 2 OR
-        # 2. time overlap < 1/4
-        flag_overlap = True
-        if start_date and end_date:
+        # if:
+        # 1. num of observations > 2 AND
+        # 2. time overlap > 1/4
+        dis2vel = True
+        if len(dates) <= 2:
+            dis2vel = False
+        elif start_date and end_date:
             t0 = ptime.date_list2vector([start_date])[0][0]
             t1 = ptime.date_list2vector([end_date])[0][0]
-            if dates[-1] - dates[0] < (t1 - t0) / 4:
-                flag_overlap = False
+            if dates[-1] - dates[0] <= (t1 - t0) / 4:
+                dis2vel = False
 
-        if len(dates) > 2 and flag_overlap:
+        if dis2vel:
             date_list = [dt.datetime.strftime(i, '%Y%m%d') for i in dates]
             A = time_func.get_design_matrix4time_func(date_list)
             self.velocity = np.dot(np.linalg.pinv(A), dis)[1]
-
         else:
             self.velocity = np.nan
 

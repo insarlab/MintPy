@@ -677,7 +677,7 @@ def prepare_metadata(iDict):
         obs_keys = [i for i in obs_keys if i in iDict.keys()]
         obs_paths = [iDict[key] for key in obs_keys if iDict[key].lower() != 'auto']
         if len(obs_paths) > 0:
-            processor = get_processor(meta_file)
+            processor = get_processor(meta_file) if os.path.isfile(meta_file) else 'topsStack'
             if processor == 'alosStack':
                 obs_dir = os.path.dirname(obs_paths[0])
             else:

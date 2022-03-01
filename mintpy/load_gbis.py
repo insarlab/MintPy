@@ -42,7 +42,7 @@ def cmd_line_parse(iargs=None):
 
     # Backend setting
     if not inps.disp_fig:
-            plt.switch_backend('Agg')
+        plt.switch_backend('Agg')
 
     return inps
 

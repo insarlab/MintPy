@@ -26,6 +26,7 @@ EXAMPLE = """example:
   tsview.py timeseries.h5  --wrap
   tsview.py timeseries.h5  --yx 300 400 --zero-first  --nodisplay
   tsview.py geo_timeseries.h5  --lalo 33.250 131.665  --nodisplay
+  tsview.py slcStack.h5 -u dB -v 20 60 -c gray
 
   # press left / right key to slide images
 
@@ -100,6 +101,9 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    if inps.flip_lr or inps.flip_ud:
+        inps.auto_flip = False
+
     if inps.gps_component:
         msg = '--gps-comp is not supported for {}'.format(os.path.basename(__file__))
         raise NotImplementedError(msg)
@@ -116,12 +120,9 @@ def cmd_line_parse(iargs=None):
         inps.mask_file = 'no'
 
     # default value
-    if not inps.disp_unit:
-        inps.disp_unit = 'cm'
-    if not inps.colormap:
-        inps.colormap = 'jet'
-    if not inps.fig_size:
-        inps.fig_size = [8.0, 4.5]
+    inps.disp_unit = inps.disp_unit if inps.disp_unit else 'cm'
+    inps.colormap = inps.colormap if inps.colormap else 'jet'
+    inps.fig_size = inps.fig_size if inps.fig_size else [8.0, 4.5]
 
     # temporal model fitting, initialize the dicts of exp and log funcs
     inps = ts2vel.init_exp_log_dicts(inps)
@@ -140,6 +141,8 @@ def cmd_line_parse(iargs=None):
 def read_init_info(inps):
     # Time Series Info
     atr = readfile.read_attribute(inps.file[0])
+    atr['DATA_TYPE'] = atr.get('DATA_TYPE', 'float32')
+
     inps.key = atr['FILE_TYPE']
     if inps.key == 'timeseries':
         obj = timeseries(inps.file[0])
@@ -202,9 +205,6 @@ def read_init_info(inps):
     (inps.disp_unit,
      inps.unit_fac) = pp.scale_data2disp_unit(metadata=atr, disp_unit=inps.disp_unit)[1:3]
 
-    # Map info - coordinate unit
-    inps.coord_unit = atr.get('Y_UNIT', 'degrees').lower()
-
     # Read Error List
     inps.ts_plot_func = plot_ts_scatter
     inps.error_ts = None
@@ -242,6 +242,10 @@ def read_init_info(inps):
     vprint('data   coverage in lat/lon: '+str(inps.coord.box_pixel2geo(data_box)))
     vprint('subset coverage in lat/lon: '+str(inps.geo_box))
     vprint('------------------------------------------------------------------------')
+
+    # Map info - coordinate unit
+    inps.coord_unit = atr.get('Y_UNIT', 'degrees').lower()
+    inps = view.check_map_projection(inps, metadata=atr, print_msg=inps.print_msg)
 
     # calculate multilook_num
     # ONLY IF:
@@ -305,22 +309,26 @@ def read_init_info(inps):
         else:
             inps.transparency = 1.0
 
-    ## display unit ans wrap
+    ## display unit and wrap
     # if wrap_step == 2*np.pi (default value), set disp_unit_img = radian;
     # otherwise set disp_unit_img = disp_unit
     inps.disp_unit_img = inps.disp_unit
     if inps.wrap:
-        inps.range2phase = -4. * np.pi / float(atr['WAVELENGTH'])
-        if   'cm' == inps.disp_unit.split('/')[0]:   inps.range2phase /= 100.
-        elif 'mm' == inps.disp_unit.split('/')[0]:   inps.range2phase /= 1000.
-        elif 'm'  == inps.disp_unit.split('/')[0]:   inps.range2phase /= 1.
-        else:
-            raise ValueError('un-recognized display unit: {}'.format(inps.disp_unit))
+        inps.vlim = inps.wrap_range
 
         if (inps.wrap_range[1] - inps.wrap_range[0]) == 2*np.pi:
             inps.disp_unit_img = 'radian'
-        inps.vlim = inps.wrap_range
-    inps.cbar_label = 'Displacement [{}]'.format(inps.disp_unit_img)
+
+        if inps.disp_unit_img == 'radian':
+            inps.range2phase = -4. * np.pi / float(atr['WAVELENGTH'])
+            if   'cm' == inps.disp_unit.split('/')[0]:   inps.range2phase /= 100.
+            elif 'mm' == inps.disp_unit.split('/')[0]:   inps.range2phase /= 1000.
+            elif 'm'  == inps.disp_unit.split('/')[0]:   inps.range2phase /= 1.
+            else:
+                raise ValueError('un-recognized display unit: {}'.format(inps.disp_unit))
+
+    inps.cbar_label = 'Amplitude' if atr['DATA_TYPE'].startswith('complex') else 'Displacement'
+    inps.cbar_label += '[{}]'.format(inps.disp_unit_img)
 
     ## fit a suite of time func to the time series
     inps.model, inps.num_param = ts2vel.read_inps2model(inps, date_list=inps.date_list)
@@ -389,6 +397,9 @@ def read_timeseries_data(inps):
                                   box=inps.pix_box,
                                   xstep=inps.multilook_num,
                                   ystep=inps.multilook_num)
+        if atr['DATA_TYPE'].startswith('complex'):
+            vprint('input data is complex, calculate its amplitude and continue')
+            data = np.abs(data)
 
         if inps.ref_yx and inps.ref_yx != (int(atr.get('REF_Y', -1)), int(atr.get('REF_X', -1))):
             (ry, rx) = subset_and_multilook_yx(inps.ref_yx, inps.pix_box, inps.multilook_num)
@@ -540,26 +551,23 @@ def plot_ts_fit(ax, ts_fit, inps, ppar, m_strs=None, ts_fit_lim=None):
     return ax
 
 
-def get_model_param_str(model, ds_dict, unit_fac=100):
+def get_model_param_str(model, ds_dict, disp_unit='cm'):
     """Summary model parameters in a str paragraph.
-    Parameters: model    - dict, model dictionary
-                ds_dict  - dict, est. time func. param
-                unit_fac - float, unit scaling factor, to determine the unit
-    Returns:    ds_strs  - list of strings, each to summary the result of one time func
+    Parameters: model     - dict, model dictionary
+                ds_dict   - dict, est. time func. param
+                disp_unit - float, display unit for length, which can be scaled
+    Returns:    ds_strs   - list of strings, each to summary the result of one time func
     """
 
     # dataset unit dict
     ds_unit_dict = ts2vel.model2hdf5_dataset(model)[2]
+    ds_names = list(ds_unit_dict.keys())
 
-    # update unit based on unit_fac
-    for ds_name, ds_unit in ds_unit_dict.items():
-        units = ds_unit.split('/')
-        if units[0] == 'm':
-            if   unit_fac == 1000 : units[0] = 'mm'
-            elif unit_fac == 100  : units[0] = 'cm'
-            elif unit_fac == 10   : units[0] = 'dm'
-            elif unit_fac == 1    : units[0] = 'm'
-            elif unit_fac == 0.001: units[0] = 'km'
+    # update ds_unit_dict based on disp_unit
+    for ds_name in ds_names:
+        units = ds_unit_dict[ds_name].split('/')
+        if units[0] == 'm' and disp_unit != 'm':
+            units[0] = disp_unit
             ds_unit_dict[ds_name] = '/'.join(units)
 
     # list of dataset names
@@ -583,13 +591,13 @@ def get_model_param_str(model, ds_dict, unit_fac=100):
     return ds_strs
 
 
-def fit_time_func(model, date_list, ts_dis, unit_fac=100, G_fit=None, conf_level=0.95, seconds=0):
+def fit_time_func(model, date_list, ts_dis, disp_unit='cm', G_fit=None, conf_level=0.95, seconds=0):
     """Fit a suite of fime functions to the time series.
     Equations:  Gm = d
     Parameters: model      - dict of time functions, check utils.time_func.estimate_time_func() for details.
                 date_list  - list of dates in YYYYMMDD format
                 ts_dis     - 1D np.ndarray, displacement time series
-                unit_fac   - float, scaling factor due to different data and display units
+                disp_unit  - str, display unit for length, which can be scaled
                 G_fit      - 2D np.ndarray, design matrix for the dense time series prediction plot
                 conf_level - float in [0,1], confidence level of the plotted confidence intervals
     Returns:    m_strs     - dict, dictionary in {ds_name: ds_value}
@@ -624,7 +632,7 @@ def fit_time_func(model, date_list, ts_dis, unit_fac=100, G_fit=None, conf_level
     # 1.3 translate estimation result into HDF5 ready datasets
     # AND compose list of strings for printout
     m_dict = ts2vel.model2hdf5_dataset(model, m, m_std)[0]
-    m_strs = get_model_param_str(model, m_dict, unit_fac=unit_fac)
+    m_strs = get_model_param_str(model, m_dict, disp_unit=disp_unit)
 
     # 2. reconstruct the fine resolution function
     if G_fit is not None:
@@ -763,7 +771,8 @@ class timeseriesViewer():
         self.fig_img = plt.figure(self.figname_img, figsize=self.figsize_img)
 
         # Figure 1 - Axes 1 - Displacement Map
-        self.ax_img = self.fig_img.add_axes([0.125, 0.25, 0.75, 0.65])
+        axes_kw = dict(projection=self.map_proj_obj) if self.map_proj_obj is not None else {}
+        self.ax_img = self.fig_img.add_axes([0.125, 0.25, 0.75, 0.65], **axes_kw)
         img_data = np.array(self.ts_data[0][self.idx, :, :])
         img_data[self.mask == 0] = np.nan
         self.plot_init_image(img_data)
@@ -903,7 +912,7 @@ class timeseriesViewer():
                 model=self.model,
                 date_list=self.date_list,
                 ts_dis=ts_dis,
-                unit_fac=self.unit_fac,
+                disp_unit=self.disp_unit,
                 G_fit=self.G_fit,
                 seconds=self.seconds)
 
@@ -941,7 +950,8 @@ class timeseriesViewer():
         # axis format
         ax.tick_params(which='both', direction='in', labelsize=self.font_size, bottom=True, top=True, left=True, right=True)
         pp.auto_adjust_xaxis_date(ax, self.yearList, fontsize=self.font_size)
-        ax.set_ylabel('Displacement [{}]'.format(self.disp_unit), fontsize=self.font_size)
+        cbar_label = 'Amplitude' if self.atr['DATA_TYPE'].startswith('complex') else 'Displacement'
+        ax.set_ylabel(f'{cbar_label} [{self.disp_unit}]', fontsize=self.font_size)
         ax.set_ylim(self.ylim)
         if self.tick_right:
             ax.yaxis.tick_right()

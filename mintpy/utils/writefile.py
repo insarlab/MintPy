@@ -204,7 +204,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
         elif fext == '.msk':
             meta['DATA_TYPE'] = 'int8'
 
-        data_types = ['bool', 'int8', 'int16', 'float32', 'float64', 'complex32', 'complex64', 'complex128']
+        data_types = ['bool', 'int8', 'uint8', 'int16', 'float32', 'float64', 'complex32', 'complex64', 'complex128']
         if meta['DATA_TYPE'] not in data_types:
             msg = 'Un-supported file type "{}" with data type "{}"!'.format(fext, meta['DATA_TYPE'])
             msg += '\nSupported data type list: {}'.format(data_types)
@@ -229,7 +229,7 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
                 ds_name_dict - dict, dataset structure definition
                                {dname : [dtype, dshape],
                                 dname : [dtype, dshape, None],
-                                dname : [dtype, dshape, 1/2/3D np.ndarray], #for aux data
+                                dname : [dtype, dshape, 1/2/3/4D np.ndarray], #for aux data
                                 ...
                                }
                 metadata     - dict, metadata
@@ -384,10 +384,11 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
 
 def write_hdf5_block(fname, data, datasetName, block=None, mode='a', print_msg=True):
     """Write data to existing HDF5 dataset in disk block by block.
-    Parameters: data        - np.ndarray 1/2/3D matrix
+    Parameters: data        - np.ndarray 1/2/3/4D matrix
                 datasetName - str, dataset name
-                block       - list of 2/4/6 int, for
-                              [zStart, zEnd,
+                block       - list of 2/4/6/8 int, for
+                              [d1Start, d1End,
+                               d2Start, d2End,
                                yStart, yEnd,
                                xStart, xEnd]
                 mode        - str, open mode
@@ -413,6 +414,11 @@ def write_hdf5_block(fname, data, datasetName, block=None, mode='a', print_msg=T
             block = [0, shape[0],
                      0, shape[1],
                      0, shape[2]]
+        elif len(shape) == 4:
+            block = [0, shape[0],
+                     0, shape[1],
+                     0, shape[2],
+                     0, shape[3]]
 
     # write
     if print_msg:
@@ -420,7 +426,13 @@ def write_hdf5_block(fname, data, datasetName, block=None, mode='a', print_msg=T
         print('open  HDF5 file {} in {} mode'.format(fname, mode))
         print("writing dataset /{:<25} block: {}".format(datasetName, block))
     with h5py.File(fname, mode) as f:
-        if len(block) == 6:
+        if len(block) == 8:
+            f[datasetName][block[0]:block[1],
+                           block[2]:block[3],
+                           block[4]:block[5],
+                           block[6]:block[7]] = data
+
+        elif len(block) == 6:
             f[datasetName][block[0]:block[1],
                            block[2]:block[3],
                            block[4]:block[5]] = data
@@ -618,8 +630,7 @@ def write_isce_xml(meta, fname, print_msg=True):
     import isceobj
 
     # data type
-    dtype_gdal = readfile.NUMPY2GDAL_DATATYPE[meta['DATA_TYPE']]
-    dtype_isce = readfile.GDAL2ISCE_DATATYPE[dtype_gdal]
+    dtype = readfile.DATA_TYPE_NUMPY2ISCE[meta['DATA_TYPE']]
 
     # write ISCE XML and GDAL VRT files
     image_type = meta['FILE_TYPE']
@@ -634,7 +645,7 @@ def write_isce_xml(meta, fname, print_msg=True):
     img.setLength(int(meta['LENGTH']))
     img.setAccessMode('READ')
     img.bands = int(meta.get('BANDS', '1'))
-    img.dataType = dtype_isce
+    img.dataType = dtype
     img.scheme = meta.get('INTERLEAVE', 'BIL')
     img.renderHdr()
     img.renderVRT()
