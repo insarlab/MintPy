@@ -148,7 +148,7 @@ def main(iargs = None):
     mask = np.ones([length,width],np.float32)
     mask[np.abs(np.angle(closurephase))>threshold_cp] = 0 # this masks areas with potential bias
     mask[np.abs(np.abs(closurephase)/numcp < inps.episilon)] = 1 # this unmasks areas with low correlation (where it's hard to know wheter there is bias either)
-    
+
     # save mask
     meta = dict(stack_obj.metadata)
     meta['FILE_TYPE'] = 'mask'
