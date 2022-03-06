@@ -1059,13 +1059,20 @@ class ifgramStack:
             ind1, ind2 = [date_list.index(d) for d in date12_list[i].split('_')]
             A[i, ind1] = -1
             A[i, ind2] = 1
-            B[i, ind1:ind2] = tbase[ind1+1:ind2+1] - tbase[ind1:ind2]
+            if ind1 < ind2:
+                B[i, ind1:ind2] = tbase[ind1 + 1:ind2 + 1] - tbase[ind1:ind2]
+            else:
+                B[i, ind2:ind1] = tbase[ind2:ind1] - tbase[ind2 + 1:ind1 + 1]
 
         # Remove reference date as it can not be resolved
         if refDate != 'no':
             # default refDate
             if refDate is None:
-                refDate = date_list[0]
+                check_single_reference = np.all([True if i == date1s[0] else False for i in date1s])
+                if check_single_reference:
+                    refDate = date1s[0]
+                else:
+                    refDate = date_list[0]
 
             # apply refDate
             if refDate:
