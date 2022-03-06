@@ -242,6 +242,7 @@ class DaskCluster:
 
         print('initiate Dask client')
         self.client = Client(self.cluster)
+        self.client.get_versions(check=True)
 
         # submit job for each worker
         futures, submission_time = self.submit_job(func, func_data, sub_boxes)
@@ -328,9 +329,10 @@ class DaskCluster:
                     results[i][y0:y1, x0:x1] = sub_result
 
                 else:
-                    msg = "worker result has unexpected dimension: {}".format(num_dim)
-                    msg += '\nit should be either 2 or 3 or 4!'
-                    raise Exception(msg)
+                    if i != 1:
+                        msg = "worker result has unexpected dimension: {}".format(num_dim)
+                        msg += '\nit should be either 2 or 3 or 4!'
+                        raise Exception(msg)
 
         return results
 
