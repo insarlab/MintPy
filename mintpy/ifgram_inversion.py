@@ -350,6 +350,7 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
                 num_inv_obs       - 1D np.ndarray in size of (num_pixel), number of observations (ifgrams / offsets)
                                     used during the inversion
     """
+
     y = y.reshape(A.shape[0], -1)
     if weight_sqrt is not None:
         weight_sqrt = weight_sqrt.reshape(A.shape[0], -1)
@@ -372,11 +373,11 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
         return ts, inv_quality, num_inv_obs
 
     # check 2 - matrix invertability (for WLS only because OLS contains it already)
-    if weight_sqrt is not None:
-        try:
-            linalg.inv(np.dot(B.T, B))
-        except linalg.LinAlgError:
-            return ts, inv_quality, num_inv_obs
+    #if weight_sqrt is not None:
+    #    try:
+    #        linalg.inv(np.dot(B.T, B))
+    #    except linalg.LinAlgError:
+    #        return ts, inv_quality, num_inv_obs
 
     ##### invert time-series
     try:
@@ -895,7 +896,9 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
         # calculate stack STD
         if calc_cov:
-            A_std = get_design_matrix4std(stack_obj)[0]
+            #A_std = get_design_matrix4std(stack_obj)[0]
+            A_std, r0 = get_design_matrix4std(stack_obj)[:2]
+            r1 = r0 + 1
             if weight_func == 'var':
                 stack_std = 1. / weight_sqrt
             else:
@@ -999,7 +1002,10 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
     # 2.1 initiale the output matrices
     ts = np.zeros((num_date, num_pixel), np.float32)
-    ts_cov = np.zeros((num_date, num_date, num_pixel), np.float32)
+    if calc_cov:
+        ts_cov = np.zeros((num_date, num_date, num_pixel), np.float32)
+    else:
+        ts_cov = 0
     inv_quality = np.zeros(num_pixel, np.float32)
     if 'offset' in obs_ds_name.lower():
         inv_quality *= np.nan
@@ -1008,7 +1014,8 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     # return directly if there is nothing to invert
     if num_pixel2inv < 1:
         ts = ts.reshape(num_date, num_row, num_col)
-        ts_cov = ts_cov.reshape(num_date, num_date, num_row, num_col)
+        if calc_cov:
+            ts_cov = ts_cov.reshape(num_date, num_date, num_row, num_col)
         inv_quality = inv_quality.reshape(num_row, num_col)
         num_inv_obs = num_inv_obs.reshape(num_row, num_col)
         return ts, ts_cov, inv_quality, num_inv_obs, box
@@ -1125,7 +1132,8 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
     # 3.1 reshape
     ts = ts.reshape(num_date, num_row, num_col)
-    ts_cov = ts_cov.reshape(num_date, num_date, num_row, num_col)
+    if calc_cov:
+        ts_cov = ts_cov.reshape(num_date, num_date, num_row, num_col)
     inv_quality = inv_quality.reshape(num_row, num_col)
     num_inv_obs = num_inv_obs.reshape(num_row, num_col)
 
@@ -1323,7 +1331,6 @@ def ifgram_inversion(inps=None):
 
         # update box argument in the input data
         data_kwargs['box'] = box
-
         if not inps.cluster:
             # non-parallel
             ts, ts_cov, inv_quality, num_inv_obs = ifgram_inversion_patch(**data_kwargs)[:-1]
@@ -1334,7 +1341,10 @@ def ifgram_inversion(inps=None):
 
             # initiate the output data
             ts = np.zeros((num_date, box_len, box_wid), np.float32)
-            ts_cov = np.zeros((num_date, num_date, box_len, box_wid), np.float32)
+            if inps.calcCov:
+                ts_cov = np.zeros((num_date, num_date, box_len, box_wid), np.float32)
+            else:
+                ts_cov = 0
             inv_quality = np.zeros((box_len, box_wid), np.float32)
             num_inv_obs  = np.zeros((box_len, box_wid), np.float32)
 
