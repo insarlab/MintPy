@@ -1337,7 +1337,7 @@ def ifgram_inversion(inps=None):
 
             # initiate the output data
             ts = np.zeros((num_date, box_len, box_wid), np.float32)
-            ts_cov = np.zeros((num_date, num_date, box_len, box_wid), np.float32) if inps.calcCov else None
+            ts_cov = np.zeros((num_date, num_date, box_len, box_wid), np.float32) if inps.calcCov else 0
             inv_quality = np.zeros((box_len, box_wid), np.float32)
             num_inv_obs = np.zeros((box_len, box_wid), np.float32)
 
