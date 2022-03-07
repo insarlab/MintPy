@@ -846,7 +846,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
                 min_redundancy    - float, the min number of ifgrams for every acquisition.
                 calc_cov          - bool, calculate the time series covariance matrix.
     Returns:    ts                - 3D array in size of (num_date, num_row, num_col)
-                ts_cov            - 4D array in size of (num_date, num_date, num_row, num_col)
+                ts_cov            - 4D array in size of (num_date, num_date, num_row, num_col) or 0
                 inv_quality       - 2D array in size of (num_row, num_col)
                 num_inv_obs       - 2D array in size of (num_row, num_col)
                 box               - tuple of 4 int
@@ -896,7 +896,6 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
         # calculate stack STD
         if calc_cov:
-            #A_std = get_design_matrix4std(stack_obj)[0]
             A_std, r0 = get_design_matrix4std(stack_obj)[:2]
             r1 = r0 + 1
             if weight_func == 'var':
@@ -1002,10 +1001,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
     # 2.1 initiale the output matrices
     ts = np.zeros((num_date, num_pixel), np.float32)
-    if calc_cov:
-        ts_cov = np.zeros((num_date, num_date, num_pixel), np.float32)
-    else:
-        ts_cov = 0
+    ts_cov = np.zeros((num_date, num_date, num_pixel), np.float32) if calc_cov else 0
     inv_quality = np.zeros(num_pixel, np.float32)
     if 'offset' in obs_ds_name.lower():
         inv_quality *= np.nan
@@ -1341,12 +1337,9 @@ def ifgram_inversion(inps=None):
 
             # initiate the output data
             ts = np.zeros((num_date, box_len, box_wid), np.float32)
-            if inps.calcCov:
-                ts_cov = np.zeros((num_date, num_date, box_len, box_wid), np.float32)
-            else:
-                ts_cov = 0
+            ts_cov = np.zeros((num_date, num_date, box_len, box_wid), np.float32) if inps.calcCov else None
             inv_quality = np.zeros((box_len, box_wid), np.float32)
-            num_inv_obs  = np.zeros((box_len, box_wid), np.float32)
+            num_inv_obs = np.zeros((box_len, box_wid), np.float32)
 
             # initiate dask cluster and client
             cluster_obj = cluster.DaskCluster(inps.cluster, inps.numWorker, config_name=inps.config)
