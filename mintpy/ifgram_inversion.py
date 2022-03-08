@@ -373,6 +373,7 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
         return ts, inv_quality, num_inv_obs
 
     # check 2 - matrix invertability (for WLS only because OLS contains it already)
+    # Commented after correcting design matrix B for non-sequential networks
     #if weight_sqrt is not None:
     #    try:
     #        linalg.inv(np.dot(B.T, B))
