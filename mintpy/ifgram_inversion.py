@@ -350,6 +350,7 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
                 num_inv_obs       - 1D np.ndarray in size of (num_pixel), number of observations (ifgrams / offsets)
                                     used during the inversion
     """
+
     y = y.reshape(A.shape[0], -1)
     if weight_sqrt is not None:
         weight_sqrt = weight_sqrt.reshape(A.shape[0], -1)
@@ -372,11 +373,15 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
         return ts, inv_quality, num_inv_obs
 
     # check 2 - matrix invertability (for WLS only because OLS contains it already)
-    if weight_sqrt is not None:
-        try:
-            linalg.inv(np.dot(B.T, B))
-        except linalg.LinAlgError:
-            return ts, inv_quality, num_inv_obs
+    # Yunjun, Mar 2022: from my vague memory, a singular design matrix B returns error from scipy.linalg,
+    #     but somehow gives results after weighting, so I decided to not trust that result via this check
+    # Sara, Mar 2022: comment this check after correcting design matrix B for non-sequential networks
+    #     a.k.a., networks with the first date not being the earlier date
+    #if weight_sqrt is not None:
+    #    try:
+    #        linalg.inv(np.dot(B.T, B))
+    #    except linalg.LinAlgError:
+    #        return ts, inv_quality, num_inv_obs
 
     ##### invert time-series
     try:
@@ -845,7 +850,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
                 min_redundancy    - float, the min number of ifgrams for every acquisition.
                 calc_cov          - bool, calculate the time series covariance matrix.
     Returns:    ts                - 3D array in size of (num_date, num_row, num_col)
-                ts_cov            - 4D array in size of (num_date, num_date, num_row, num_col)
+                ts_cov            - 4D array in size of (num_date, num_date, num_row, num_col) or None
                 inv_quality       - 2D array in size of (num_row, num_col)
                 num_inv_obs       - 2D array in size of (num_row, num_col)
                 box               - tuple of 4 int
@@ -895,7 +900,8 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
         # calculate stack STD
         if calc_cov:
-            A_std = get_design_matrix4std(stack_obj)[0]
+            A_std, r0 = get_design_matrix4std(stack_obj)[:2]
+            r1 = r0 + 1
             if weight_func == 'var':
                 stack_std = 1. / weight_sqrt
             else:
@@ -999,7 +1005,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
     # 2.1 initiale the output matrices
     ts = np.zeros((num_date, num_pixel), np.float32)
-    ts_cov = np.zeros((num_date, num_date, num_pixel), np.float32)
+    ts_cov = np.zeros((num_date, num_date, num_pixel), np.float32) if calc_cov else None
     inv_quality = np.zeros(num_pixel, np.float32)
     if 'offset' in obs_ds_name.lower():
         inv_quality *= np.nan
@@ -1008,7 +1014,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     # return directly if there is nothing to invert
     if num_pixel2inv < 1:
         ts = ts.reshape(num_date, num_row, num_col)
-        ts_cov = ts_cov.reshape(num_date, num_date, num_row, num_col)
+        ts_cov = ts_cov.reshape(num_date, num_date, num_row, num_col) if calc_cov else ts_cov
         inv_quality = inv_quality.reshape(num_row, num_col)
         num_inv_obs = num_inv_obs.reshape(num_row, num_col)
         return ts, ts_cov, inv_quality, num_inv_obs, box
@@ -1125,7 +1131,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
     # 3.1 reshape
     ts = ts.reshape(num_date, num_row, num_col)
-    ts_cov = ts_cov.reshape(num_date, num_date, num_row, num_col)
+    ts_cov = ts_cov.reshape(num_date, num_date, num_row, num_col) if calc_cov else ts_cov
     inv_quality = inv_quality.reshape(num_row, num_col)
     num_inv_obs = num_inv_obs.reshape(num_row, num_col)
 
@@ -1133,21 +1139,21 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     if obs_ds_name.startswith(('unwrapPhase','ion')):
         phase2range = -1 * float(stack_obj.metadata['WAVELENGTH']) / (4.*np.pi)
         ts *= phase2range
-        ts_cov *= np.abs(phase2range)
+        ts_cov = ts_cov * np.abs(phase2range) if calc_cov else ts_cov
         print('converting LOS phase unit from radian to meter')
 
     elif (obs_ds_name == 'azimuthOffset') & (stack_obj.metadata['PROCESSOR'] != 'cosicorr'):
         az_pixel_size = ut.azimuth_ground_resolution(stack_obj.metadata)
         az_pixel_size /= float(stack_obj.metadata['ALOOKS'])
         ts *= az_pixel_size
-        ts_cov *= az_pixel_size
+        ts_cov = ts_cov * az_pixel_size if calc_cov else ts_cov
         print('converting azimuth offset unit from pixel ({:.2f} m) to meter'.format(az_pixel_size))
 
     elif (obs_ds_name == 'rangeOffset') & (stack_obj.metadata['PROCESSOR'] != 'cosicorr'):
         rg_pixel_size = float(stack_obj.metadata['RANGE_PIXEL_SIZE'])
         rg_pixel_size /= float(stack_obj.metadata['RLOOKS'])
         ts *= -1 * rg_pixel_size
-        ts_cov *= rg_pixel_size
+        ts_cov = ts_cov * rg_pixel_size if calc_cov else ts_cov
         print('converting range offset unit from pixel ({:.2f} m) to meter'.format(rg_pixel_size))
 
     return ts, ts_cov, inv_quality, num_inv_obs, box
@@ -1323,7 +1329,6 @@ def ifgram_inversion(inps=None):
 
         # update box argument in the input data
         data_kwargs['box'] = box
-
         if not inps.cluster:
             # non-parallel
             ts, ts_cov, inv_quality, num_inv_obs = ifgram_inversion_patch(**data_kwargs)[:-1]
@@ -1334,9 +1339,9 @@ def ifgram_inversion(inps=None):
 
             # initiate the output data
             ts = np.zeros((num_date, box_len, box_wid), np.float32)
-            ts_cov = np.zeros((num_date, num_date, box_len, box_wid), np.float32)
+            ts_cov = np.zeros((num_date, num_date, box_len, box_wid), np.float32) if inps.calcCov else None
             inv_quality = np.zeros((box_len, box_wid), np.float32)
-            num_inv_obs  = np.zeros((box_len, box_wid), np.float32)
+            num_inv_obs = np.zeros((box_len, box_wid), np.float32)
 
             # initiate dask cluster and client
             cluster_obj = cluster.DaskCluster(inps.cluster, inps.numWorker, config_name=inps.config)

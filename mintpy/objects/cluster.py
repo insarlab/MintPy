@@ -130,7 +130,7 @@ class DaskCluster:
 
     This object takes in a computing function for one block in space.
     For the computing function:
-        1. the output is always several matrices and one box.
+        1. the output is always several matrices (or None) and one box.
         2. the number of matrices may vary for different applications/functions.
         3. all matrices will be in 2D in size of (len, wid) or 3D in size of (n, len, wid),
            thus, the last two dimension (in space) will be the same.
@@ -222,10 +222,10 @@ class DaskCluster:
 
         :param func: function, a python function to run in parallel
         :param func_data: dict, a dictionary of the argument to pass to the function
-        :param results: list[numpy.nd.array], arrays of the appropriate structure representing
+        :param results: list[numpy.ndarray], arrays of the appropriate structure representing
                the final output of processed box (need to be in the same order as the function passed in
                submit_workers returns in)
-        :return: results: tuple(numpy.nd.arrays), the processed results of the box
+        :return: results: tuple(numpy.ndarray), the processed results of the box
         """
         from dask.distributed import Client
 
@@ -242,6 +242,7 @@ class DaskCluster:
 
         print('initiate Dask client')
         self.client = Client(self.cluster)
+        self.client.get_versions(check=True)
 
         # submit job for each worker
         futures, submission_time = self.submit_job(func, func_data, sub_boxes)
@@ -285,13 +286,13 @@ class DaskCluster:
         """Compile results from completed workers and recompiles their sub outputs into the output
         for the complete box being worked on.
         :param futures: list(dask.Future), list of futures representing future dask worker calculations
-        :param results: list[numpy.nd.array], arrays of the appropriate structure representing
+        :param results: list[numpy.ndarray], arrays of the appropriate structure representing
                the final output of processed box (need to be in the same order as the function passed in
                submit_workers returns in)
-        :param box: numpy.nd.array, the initial complete box being processed
+        :param box: numpy.ndarray, the initial complete box being processed
         :param submission_time: time, the time of submission of the dask workers (used to determine worker
                runtimes as a performance diagnostic)
-        :return: results: tuple(numpy.nd.arrays), the processed results of the box
+        :return: results: tuple(numpy.ndarray), the processed results of the box
         """
         from dask.distributed import as_completed
 
@@ -316,21 +317,20 @@ class DaskCluster:
             # catch result - matrices
             # and loop across all of the returned data to rebuild complete box
             for i, sub_result in enumerate(sub_results[:-1]):
-                num_dim = sub_result.ndim
-
-                if num_dim == 4:
-                    results[i][:, :, y0:y1, x0:x1] = sub_result
-
-                elif num_dim == 3:
-                    results[i][:, y0:y1, x0:x1] = sub_result
-
-                elif num_dim == 2:
-                    results[i][y0:y1, x0:x1] = sub_result
-
-                else:
-                    msg = "worker result has unexpected dimension: {}".format(num_dim)
-                    msg += '\nit should be either 2 or 3 or 4!'
-                    raise Exception(msg)
+                if sub_result is not None:
+                    num_dim = sub_result.ndim
+                    if num_dim == 4:
+                        results[i][:, :,
+                                   y0:y1, x0:x1] = sub_result
+                    elif num_dim == 3:
+                        results[i][:,
+                                   y0:y1, x0:x1] = sub_result
+                    elif num_dim == 2:
+                        results[i][y0:y1, x0:x1] = sub_result
+                    else:
+                        msg = "worker result has unexpected dimension: {}".format(num_dim)
+                        msg += '\nit should be either 2 or 3 or 4!'
+                        raise Exception(msg)
 
         return results
 

@@ -1053,19 +1053,30 @@ class ifgramStack:
         tbase = np.array(tbase, dtype=np.float32) / 365.25
 
         # calculate design matrix
+        # A for minimizing the residual of phase
+        # B for minimizing the residual of phase velocity
         A = np.zeros((num_ifgram, num_date), np.float32)
         B = np.zeros((num_ifgram, num_date), np.float32)
         for i in range(num_ifgram):
             ind1, ind2 = [date_list.index(d) for d in date12_list[i].split('_')]
             A[i, ind1] = -1
             A[i, ind2] = 1
-            B[i, ind1:ind2] = tbase[ind1+1:ind2+1] - tbase[ind1:ind2]
+            # support date12_list with the first date NOT being the earlier date
+            if ind1 < ind2:
+                B[i, ind1:ind2] = tbase[ind1 + 1:ind2 + 1] - tbase[ind1:ind2]
+            else:
+                B[i, ind2:ind1] = tbase[ind2:ind1] - tbase[ind2 + 1:ind1 + 1]
 
         # Remove reference date as it can not be resolved
         if refDate != 'no':
             # default refDate
             if refDate is None:
-                refDate = date_list[0]
+                # for single   reference network, use the same reference date
+                # for multiple reference network, use the first date
+                if len(set(date1s)) == 1:
+                    refDate = date1s[0]
+                else:
+                    refDate = date_list[0]
 
             # apply refDate
             if refDate:
