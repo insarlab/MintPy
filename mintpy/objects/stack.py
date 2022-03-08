@@ -1061,6 +1061,7 @@ class ifgramStack:
             ind1, ind2 = [date_list.index(d) for d in date12_list[i].split('_')]
             A[i, ind1] = -1
             A[i, ind2] = 1
+            # support date12_list with the first date NOT being the earlier date
             if ind1 < ind2:
                 B[i, ind1:ind2] = tbase[ind1 + 1:ind2 + 1] - tbase[ind1:ind2]
             else:
@@ -1070,8 +1071,9 @@ class ifgramStack:
         if refDate != 'no':
             # default refDate
             if refDate is None:
-                single_reference = len(set(date1s)) == 1
-                if single_reference:
+                # for single   reference network, use the same reference date
+                # for multiple reference network, use the first date
+                if len(set(date1s)) == 1:
                     refDate = date1s[0]
                 else:
                     refDate = date_list[0]

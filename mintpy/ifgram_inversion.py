@@ -373,7 +373,10 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
         return ts, inv_quality, num_inv_obs
 
     # check 2 - matrix invertability (for WLS only because OLS contains it already)
-    # Commented after correcting design matrix B for non-sequential networks
+    # Yunjun, Mar 2022: from my vague memory, a singular design matrix B returns error from scipy.linalg,
+    #     but somehow gives results after weighting, so I decided to not trust that result via this check
+    # Sara, Mar 2022: comment this check after correcting design matrix B for non-sequential networks
+    #     a.k.a., networks with the first date not being the earlier date
     #if weight_sqrt is not None:
     #    try:
     #        linalg.inv(np.dot(B.T, B))
