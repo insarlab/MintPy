@@ -1155,7 +1155,10 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
         ts_cov *= rg_pixel_size
         print('converting range offset unit from pixel ({:.2f} m) to meter'.format(rg_pixel_size))
 
-    return ts, ts_cov, inv_quality, num_inv_obs, box
+    if calc_cov:
+        return ts, ts_cov, inv_quality, num_inv_obs, box
+    else:
+        return ts, inv_quality, num_inv_obs, box
 
 
 def ifgram_inversion(inps=None):
@@ -1330,7 +1333,10 @@ def ifgram_inversion(inps=None):
         data_kwargs['box'] = box
         if not inps.cluster:
             # non-parallel
-            ts, ts_cov, inv_quality, num_inv_obs = ifgram_inversion_patch(**data_kwargs)[:-1]
+            if inps.calcCov:
+                ts, ts_cov, inv_quality, num_inv_obs = ifgram_inversion_patch(**data_kwargs)[:-1]
+            else:
+                ts, inv_quality, num_inv_obs = ifgram_inversion_patch(**data_kwargs)[:-1]
 
         else:
             # parallel
@@ -1347,10 +1353,16 @@ def ifgram_inversion(inps=None):
             cluster_obj.open()
 
             # run dask
-            ts, ts_cov, inv_quality, num_inv_obs = cluster_obj.run(
-                func=ifgram_inversion_patch,
-                func_data=data_kwargs,
-                results=[ts, ts_cov, inv_quality, num_inv_obs])
+            if inps.calcCov:
+                ts, ts_cov, inv_quality, num_inv_obs = cluster_obj.run(
+                    func=ifgram_inversion_patch,
+                    func_data=data_kwargs,
+                    results=[ts, ts_cov, inv_quality, num_inv_obs])
+            else:
+                ts, inv_quality, num_inv_obs = cluster_obj.run(
+                    func=ifgram_inversion_patch,
+                    func_data=data_kwargs,
+                    results=[ts, inv_quality, num_inv_obs])
 
             # close dask cluster and client
             cluster_obj.close()
