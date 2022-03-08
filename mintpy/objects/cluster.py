@@ -329,11 +329,9 @@ class DaskCluster:
                     results[i][y0:y1, x0:x1] = sub_result
 
                 else:
-                    # following condition is for all outputs except covariance matrix which could be 0 (no dimension if not calculated)
-                    if i != 1:
-                        msg = "worker result has unexpected dimension: {}".format(num_dim)
-                        msg += '\nit should be either 2 or 3 or 4!'
-                        raise Exception(msg)
+                    msg = "worker result has unexpected dimension: {}".format(num_dim)
+                    msg += '\nit should be either 2 or 3 or 4!'
+                    raise Exception(msg)
 
         return results
 
