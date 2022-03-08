@@ -847,7 +847,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
                 min_redundancy    - float, the min number of ifgrams for every acquisition.
                 calc_cov          - bool, calculate the time series covariance matrix.
     Returns:    ts                - 3D array in size of (num_date, num_row, num_col)
-                ts_cov            - 4D array in size of (num_date, num_date, num_row, num_col) or 0
+                ts_cov            - 4D array in size of (num_date, num_date, num_row, num_col) or None
                 inv_quality       - 2D array in size of (num_row, num_col)
                 num_inv_obs       - 2D array in size of (num_row, num_col)
                 box               - tuple of 4 int
@@ -1002,7 +1002,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
     # 2.1 initiale the output matrices
     ts = np.zeros((num_date, num_pixel), np.float32)
-    ts_cov = np.zeros((num_date, num_date, num_pixel), np.float32) if calc_cov else 0
+    ts_cov = np.zeros((num_date, num_date, num_pixel), np.float32) if calc_cov else None
     inv_quality = np.zeros(num_pixel, np.float32)
     if 'offset' in obs_ds_name.lower():
         inv_quality *= np.nan
@@ -1011,8 +1011,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     # return directly if there is nothing to invert
     if num_pixel2inv < 1:
         ts = ts.reshape(num_date, num_row, num_col)
-        if calc_cov:
-            ts_cov = ts_cov.reshape(num_date, num_date, num_row, num_col)
+        ts_cov = ts_cov.reshape(num_date, num_date, num_row, num_col) if calc_cov else ts_cov
         inv_quality = inv_quality.reshape(num_row, num_col)
         num_inv_obs = num_inv_obs.reshape(num_row, num_col)
         return ts, ts_cov, inv_quality, num_inv_obs, box
@@ -1129,8 +1128,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
     # 3.1 reshape
     ts = ts.reshape(num_date, num_row, num_col)
-    if calc_cov:
-        ts_cov = ts_cov.reshape(num_date, num_date, num_row, num_col)
+    ts_cov = ts_cov.reshape(num_date, num_date, num_row, num_col) if calc_cov else ts_cov
     inv_quality = inv_quality.reshape(num_row, num_col)
     num_inv_obs = num_inv_obs.reshape(num_row, num_col)
 
@@ -1138,21 +1136,21 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     if obs_ds_name.startswith(('unwrapPhase','ion')):
         phase2range = -1 * float(stack_obj.metadata['WAVELENGTH']) / (4.*np.pi)
         ts *= phase2range
-        ts_cov *= np.abs(phase2range)
+        ts_cov = ts_cov * np.abs(phase2range) if calc_cov else ts_cov
         print('converting LOS phase unit from radian to meter')
 
     elif (obs_ds_name == 'azimuthOffset') & (stack_obj.metadata['PROCESSOR'] != 'cosicorr'):
         az_pixel_size = ut.azimuth_ground_resolution(stack_obj.metadata)
         az_pixel_size /= float(stack_obj.metadata['ALOOKS'])
         ts *= az_pixel_size
-        ts_cov *= az_pixel_size
+        ts_cov = ts_cov * az_pixel_size if calc_cov else ts_cov
         print('converting azimuth offset unit from pixel ({:.2f} m) to meter'.format(az_pixel_size))
 
     elif (obs_ds_name == 'rangeOffset') & (stack_obj.metadata['PROCESSOR'] != 'cosicorr'):
         rg_pixel_size = float(stack_obj.metadata['RANGE_PIXEL_SIZE'])
         rg_pixel_size /= float(stack_obj.metadata['RLOOKS'])
         ts *= -1 * rg_pixel_size
-        ts_cov *= rg_pixel_size
+        ts_cov = ts_cov * rg_pixel_size if calc_cov else ts_cov
         print('converting range offset unit from pixel ({:.2f} m) to meter'.format(rg_pixel_size))
 
     return ts, ts_cov, inv_quality, num_inv_obs, box
@@ -1338,7 +1336,7 @@ def ifgram_inversion(inps=None):
 
             # initiate the output data
             ts = np.zeros((num_date, box_len, box_wid), np.float32)
-            ts_cov = np.zeros((num_date, num_date, box_len, box_wid), np.float32) if inps.calcCov else 0
+            ts_cov = np.zeros((num_date, num_date, box_len, box_wid), np.float32) if inps.calcCov else None
             inv_quality = np.zeros((box_len, box_wid), np.float32)
             num_inv_obs = np.zeros((box_len, box_wid), np.float32)
 
