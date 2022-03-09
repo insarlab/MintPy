@@ -20,15 +20,15 @@ REFERENCE = """reference:
   Zheng, Y., et al., (2022) On Closure Phase and Systematic Bias in Multilooked SAR Interferometry, IEEE TGRS, under review (minor revision)
 """
 EXAMPLE = """example:
-  closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20
+  closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --numsigma 2.5
 """
 
 def create_parser():
     parser = argparse.ArgumentParser(description = 'Create an indication map for closure phase bias.')
     parser.add_argument('-i','--ifgramstack',type = str, dest = 'ifgram_stack',help = 'interferogram stack file that contains the unwrapped phases')
     parser.add_argument('--nl', dest = 'nl', type = int, default = 20, help = 'connection level that we are correcting to (or consider as no bias)')
-    parser.add_argument('--theta',dest = 'theta', type = float, help = 'Threashold for phase (unit: radian), default to be 3 sigma')
-    parser.add_argument('--epi',dest = 'episilon', type = float, default = 0.3, help = 'Threashold for amplitude, default 0.3')
+    parser.add_argument('--numsigma',dest = 'numsigma', type = float, default = 3, help = 'Threashold for phase (number of sigmas,0-infty), default to be 3 sigma of a Gaussian distribution (assumed distribution for the cumulative closure phase) with sigma = pi/sqrt(3*num_cp)')
+    parser.add_argument('--epi',dest = 'episilon', type = float, default = 0.3, help = 'Threashold for amplitude (0-1), default 0.3')
     parser.add_argument('--maxMemory', dest = 'max_memory', type = float, default = 8, help = 'max memory to use in GB')
     parser.add_argument('-o', dest = 'outdir', type = str, default = '.', help = 'output file directory')
     return parser
@@ -137,11 +137,11 @@ def main(iargs = None):
     # What is a good thredshold?
     # Assume that it's pure noise so that the phase is uniform distributed from -pi to pi.
     # The standard deviation of phase in each loop is pi/sqrt(3) (technically should be smaller because when forming loops there should be a reduction in phase variance)
-    # The standard deviation of phase in cumulative wrapped closure phase is pi/sqrt(3)/sqrt(numcp) -- again another simplification assuming no correlation.
-    # We use 3\delta as threshold -- 99.7% confidence
+    # The standard deviation of phase in cumulative wrapped closure phase is pi/sqrt(3)/sqrt(num_cp) -- again another simplification assuming no correlation.
+    # We use 3\delta as default threshold -- 99.7% confidence
 
-    if inps.theta:
-        threshold_cp = inps.theta
+    if inps.numsigma:
+        threshold_cp = np.pi/np.sqrt(3)/np.sqrt(numcp)*inps.numsigma
     else:
         threshold_cp = np.pi/np.sqrt(3)/np.sqrt(numcp)*3 # 3/sigma, 99.7% confidence
 
