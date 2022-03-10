@@ -6,12 +6,15 @@
 ############################################################
 # Compute average con-nl closure phase and output mask identifying areas suseptible to closure phase errors.
 
-import os, sys
-from mintpy.objects import ifgramStack
+import os
+import sys
+import argparse
 import numpy as np
+
+from mintpy.objects import ifgramStack
 from mintpy.utils import readfile, writefile
 from mintpy import ifgram_inversion as ifginv
-import argparse
+
 
 ################################################################################
 REFERENCE = """reference:
