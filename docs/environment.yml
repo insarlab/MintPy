@@ -8,14 +8,14 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python>=3.6,<3.9
+  - python>=3.6
   - pip
   - cartopy
   - cvxopt
   - dask>=1.0
   - dask-jobqueue>=0.3
   - defusedxml
-  - h5py<3
+  - h5py
   - joblib
   - lxml
   - matplotlib

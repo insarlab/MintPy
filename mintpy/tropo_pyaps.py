@@ -20,9 +20,10 @@ import numpy as np
 from mintpy.objects import timeseries, geometry
 from mintpy.utils import readfile, writefile, ptime, utils as ut
 
-standardWeatherModelNames = {'ERAI': 'ECMWF', 'ERAINT': 'ECMWF', 'ERAINTERIM': 'ECMWF',
-                             'MERRA2': 'MERRA'
-                             }
+standardWeatherModelNames = {
+    'ERAI': 'ECMWF', 'ERAINT': 'ECMWF', 'ERAINTERIM': 'ECMWF',
+    'MERRA2': 'MERRA',
+}
 
 
 ###############################################################

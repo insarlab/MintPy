@@ -16,6 +16,7 @@
 
 
 import os
+import math
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
@@ -203,6 +204,47 @@ def azimuth_ground_resolution(atr):
     return az_step
 
 
+def auto_lat_lon_step_size(atr, lat_c=None):
+    """Get the default lat/lon step size for geocoding.
+
+    Treat the pixel in radar coordinates as an rotated rectangle. Use the bounding box 
+    of the rotated rectangle for the ratio between lat and lon steps. Then scale the 
+    lat and lon step size to ensure the same area between the pixels in radar and geo
+    coordinates.
+
+    Link: https://math.stackexchange.com/questions/4001034
+
+    Parameters: atr      - dict, standard mintpy metadata
+                lat_c    - float, central latitude in degree
+    Returns:    lat_step - float, latitude  step size in degree
+                lon_step - float, longitude step size in degree
+    """
+    # azimuth angle (rotation angle) in radian
+    az_angle = np.deg2rad(abs(heading2azimuth_angle(float(atr['HEADING']))))
+
+    # radar pixel size in meter
+    az_step = azimuth_ground_resolution(atr)
+    rg_step = range_ground_resolution(atr)
+
+    # geo pixel size in meter
+    x_step = rg_step * abs(np.cos(az_angle)) + az_step * abs(np.sin(az_angle))
+    y_step = rg_step * abs(np.sin(az_angle)) + az_step * abs(np.cos(az_angle))
+    scale_factor = np.sqrt((rg_step * az_step) / (x_step * y_step))
+    x_step *= scale_factor
+    y_step *= scale_factor
+
+    # geo pixel size in degree
+    if lat_c is None:
+        if 'LAT_REF1' in atr.keys():
+            lat_c = (float(atr['LAT_REF1']) + float(atr['LAT_REF3'])) / 2.
+        else:
+            lat_c = 0
+    lon_step = np.rad2deg(x_step / (EARTH_RADIUS * np.cos(np.deg2rad(lat_c))))
+    lat_step = np.rad2deg(y_step / EARTH_RADIUS) * -1.
+
+    return lat_step, lon_step
+
+
 
 #################################### File Operation ##########################################
 def touch(fname_list, times=None):
@@ -273,6 +315,55 @@ def to_latlon(infile, x, y):
     transformer = Transformer.from_proj(p_in, p_out)
     y, x = transformer.transform(x, y)
     return y, x
+
+
+def xyz_to_local_radius(xyz):
+    """Calculate satellite height and ellpsoid local radius from orbital state vector.
+
+    This is a simplified version of the following functions from ISCE-2:
+    + isce.isceobj.Planet.xyz_to_llh()
+    + isce.isceobj.Ellipsoid.localRadius()
+
+    Parameters: xyz    - tuple of 3 float, orbital state vector
+    Reference:  height - float, satellite altitude in m
+                radius - float, Earth radius in m
+    """
+
+    # paramters from isce.isceobj.Planet.AstronomicalHandbook
+    a = 6378137.000       # WGS84 semimajor
+    e2 = 0.0066943799901  # WGS84 eccentricity squared
+
+    # xyz --> llh
+    a2 = a**2
+    e4 = e2**2
+    r_llh =  [0]*3
+    d_llh = [[0]*3 for i in range(len(xyz))]
+    xy2 = xyz[0]**2 + xyz[1]**2
+    p = (xy2) / a2
+    q = (1. - e2) * xyz[2]**2 / a2
+    r = (p + q - e4) / 6.
+    s = e4 * p * q / (4. * r**3)
+    t = (1. + s + math.sqrt(s * (2. + s))) **(1. / 3.)
+    u = r * (1. + t + 1./t)
+    v = math.sqrt(u**2 + e4 * q)
+    w = e2 * (u + v - q) / (2. * v)
+    k = math.sqrt(u + v + w**2) - w
+    D = k * math.sqrt(xy2) / (k + e2)
+    r_llh[0] = math.atan2(xyz[2], D)
+    r_llh[1] = math.atan2(xyz[1], xyz[0])
+    r_llh[2] = (k + e2 - 1.) * math.sqrt(D**2 + xyz[2]**2) / k
+    d_llh[0] = math.degrees(r_llh[0])
+    d_llh[1] = math.degrees(r_llh[1])
+    d_llh[2] = r_llh[2]
+    height = r_llh[2]
+
+    # calculate local radius
+    b = a * (1.0 - e2)**0.5
+    latg = math.atan( math.tan(math.radians(d_llh[0])) * a**2 / b**2 )
+    arg = (math.cos(latg)**2 / a**2) + (math.sin(latg)**2 / b**2)
+    radius = 1.0 / math.sqrt(arg)
+
+    return height, radius
 
 
 def get_lat_lon(meta, geom_file=None, box=None, dimension=2):
@@ -423,7 +514,12 @@ def enu2los(e, n, u, inc_angle, head_angle=None, az_angle=None):
 
 
 def four_corners(atr):
-    """Return 4 corners lat/lon"""
+    """Get the 4 corners coordinates from metadata dict in geo-coordinates.
+    Parameters: atr - dict
+    Returns:    south, north, west, east - float, in degrees or meters
+    Examples:   S, N, W, E = ut.four_corners(atr)
+                SNWE = ut.four_corners(atr)
+    """
     width  = int(atr['WIDTH'])
     length = int(atr['LENGTH'])
     lon_step = float(atr['X_STEP'])
@@ -432,7 +528,7 @@ def four_corners(atr):
     north = float(atr['Y_FIRST'])
     south = north + lat_step * length
     east  = west  + lon_step * width
-    return west, east, south, north
+    return south, north, west, east
 
 
 def get_circular_mask(x, y, radius, shape):

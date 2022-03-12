@@ -18,6 +18,7 @@ Hierarchy of sub-modules within MintPy. Level _N_ modules depends on level _N-1_
             l1regls
             lstl1
         arg_group
+        constants
         ptime
         utils0
     /simulation
@@ -34,7 +35,7 @@ Hierarchy of sub-modules within MintPy. Level _N_ modules depends on level _N-1_
         variance      (utils/ptime)
 ------------------ level 2 --------------------
     /utils
-        readfile      (objects/{stack, giant})
+        readfile      (utils/{utils0}, objects/{stack, giant, sensor})
         s1_utils      (utils/{ptime, time_func})
 ------------------ level 3 --------------------
     /objects

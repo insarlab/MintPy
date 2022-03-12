@@ -93,6 +93,11 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # save argv (to check the manually specified arguments)
+    # use iargs        for python call
+    # use sys.argv[1:] for command line call
+    inps.argv = iargs if iargs else sys.argv[1:]
+
     template_file = os.path.join(os.path.dirname(mintpy.__file__), 'defaults/smallbaselineApp.cfg')
 
     # -H (print default template)
@@ -136,7 +141,7 @@ def cmd_line_parse(iargs=None):
             inps.customTemplateFile = None
 
     # check --plot
-    if iargs == ['--plot']:
+    if inps.argv == ['--plot']:
         plot_only = True
         print('plot smallbaselineApp results without run.')
     else:
@@ -443,7 +448,7 @@ class TimeSeriesAnalysis:
         dsNames = readfile.get_dataset_list(stack_file)
         mask_file = os.path.join(self.workDir, 'maskConnComp.h5')
         coh_file = os.path.join(self.workDir, 'avgSpatialCoh.h5')
-        snr_file = os.path.join(self.workDir, 'avgSpatialSnr.h5')
+        snr_file = os.path.join(self.workDir, 'avgSpatialSNR.h5')
 
         # 1) generate mask file from the common connected components
         if any('phase' in i.lower() for i in dsNames):

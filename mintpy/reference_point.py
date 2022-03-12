@@ -190,8 +190,8 @@ def reference_file(inps):
     # outFile=False --> no avgPhaseVelocity file is generated due to the lack of reference point info.
     # did not use maskConnComp.h5 because not all input dataset has connectComponent info
     if atr['FILE_TYPE'] == 'ifgramStack':
-        ds_names = readfile.get_dataset_list(inps.file)
-        ds_name = [i for i in ds_names if i in ['unwrapPhase', 'rangeOffset', 'azimuthOffset']][0]
+        ds_name = [i for i in readfile.get_dataset_list(inps.file)
+                   if i in ['unwrapPhase', 'rangeOffset', 'azimuthOffset']][0]
     else:
         ds_name = None
     stack = ut.temporal_average(inps.file, datasetName=ds_name, updateMode=True, outFile=False)[0]
@@ -283,10 +283,18 @@ def reference_file(inps):
 
         else:
             # for binary file, over-write directly
-            data = readfile.read(inps.file)[0]
-            data -= data[inps.ref_y, inps.ref_x]
+            dis_names = ['phase', 'displacement']
+            ds_names = readfile.get_dataset_list(inps.file)
+            ds_dict = {}
+            for ds_name in ds_names:
+                data = readfile.read(inps.file, datasetName=ds_name)[0]
+                if ds_name in dis_names:
+                    data -= data[inps.ref_y, inps.ref_x]
+                else:
+                    print(f"skip spatial referencing for {ds_name}, as it's not in {dis_names}")
+                ds_dict[ds_name] = data
             atr.update(atrNew)
-            writefile.write(data, out_file=inps.outfile, metadata=atr)
+            writefile.write(ds_dict, out_file=inps.outfile, metadata=atr)
 
     ut.touch([inps.coherenceFile, inps.maskFile])
     return inps.outfile
@@ -420,6 +428,11 @@ def read_reference_input(inps):
     if inps.reference_file:
         print('reading reference info from reference: '+inps.reference_file)
         inps = read_reference_file2inps(inps.reference_file, inps)
+
+    if inps.ref_lat and np.abs(inps.ref_lat) > 90 and 'UTM_ZONE' not in atr.keys():
+        msg = f'input reference latitude ({inps.ref_lat}) > 90 deg in magnitude!'
+        msg += ' This does not make sense, double check your inputs!'
+        raise ValueError(msg)
 
     # Convert ref_lat/lon to ref_y/x
     coord = ut.coordinate(atr, lookup_file=inps.lookup_file)

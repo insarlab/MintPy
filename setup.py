@@ -39,6 +39,9 @@ def do_setup():
         author="Zhang Yunjun, Heresh Fattahi",
         author_email="yunjunzgeo@gmail.com",
 
+        license='GPL-3.0-or-later',
+        license_files=('LICENSE',),
+
         url=website,
         project_urls={
             "Bug Reports": "https://github.com/insarlab/mintpy/issues",
@@ -55,9 +58,6 @@ def do_setup():
             "Operating System :: OS Independent",
             "Programming Language :: Python",
             "Programming Language :: Python :: 3",
-            "Programming Language :: Python :: 3.6",
-            "Programming Language :: Python :: 3.7",
-            "Programming Language :: Python :: 3.8",
         ],
         keywords="InSAR, deformation, time-series, volcano, earthquake, tectonics, geodesy, geophysics, remote-sensing",
 
@@ -92,6 +92,7 @@ def do_setup():
                 'add_attribute.py = mintpy.add_attribute:main',
                 'add.py = mintpy.add:main',
                 'asc_desc2horz_vert.py = mintpy.asc_desc2horz_vert:main',
+                'closure_phase_bias.py = mintpy.closure_phase_bias:main',
                 'dem_error.py = mintpy.dem_error:main',
                 'dem_gsi.py = mintpy.dem_gsi:main',
                 'diff.py = mintpy.diff:main',

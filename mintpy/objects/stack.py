@@ -187,8 +187,9 @@ class timeseries:
         self.times = np.array([dt.datetime.strptime(i, self.dateFormat) for i in self.dateList])
         # add hh/mm/ss info to the datetime objects
         if 'T' not in self.dateFormat or all(i.hour==0 and i.minute==0 for i in self.times):
-            utc_sec = float(self.metadata['CENTER_LINE_UTC'])
-            self.times = np.array([i + dt.timedelta(seconds=utc_sec) for i in self.times])
+            if 'CENTER_LINE_UTC' in self.metadata.keys():
+                utc_sec = float(self.metadata['CENTER_LINE_UTC'])
+                self.times = np.array([i + dt.timedelta(seconds=utc_sec) for i in self.times])
         self.tbase = np.array([(i.days + i.seconds / (24 * 60 * 60))
                                for i in (self.times - self.times[self.refIndex])],
                               dtype=np.float32)
@@ -219,7 +220,7 @@ class timeseries:
 
     def get_size(self):
         with h5py.File(self.file, 'r') as f:
-            self.numDate, self.length, self.width = f[self.name].shape
+            self.numDate, self.length, self.width = f[self.name].shape[-3:]
         return self.numDate, self.length, self.width
 
     def get_date_list(self):
@@ -269,9 +270,9 @@ class timeseries:
                 box = [0, 0, self.width, self.length]
 
             # read
-            data = ds[dateFlag,
+            data = ds[:,
                       box[1]:box[3],
-                      box[0]:box[2]]
+                      box[0]:box[2]][dateFlag]
 
             if squeeze and any(i == 1 for i in data.shape):
                 data = np.squeeze(data)
@@ -571,9 +572,9 @@ class geometry:
                         dateFlag[self.dateList.index(e)] = True
 
                 # read
-                data = ds[dateFlag,
+                data = ds[:,
                           box[1]:box[3],
-                          box[0]:box[2]]
+                          box[0]:box[2]][dateFlag]
 
                 if any(i == 1 for i in data.shape):
                     data = np.squeeze(data)
@@ -758,14 +759,9 @@ class ifgramStack:
                 box = (0, 0, self.width, self.length)
 
             # read
-            if np.sum(dateFlag) < 50:
-                data = ds[dateFlag,
-                          box[1]:box[3],
-                          box[0]:box[2]]
-            else:
-                data = ds[:,
-                          box[1]:box[3],
-                          box[0]:box[2]][dateFlag]
+            data = ds[:,
+                      box[1]:box[3],
+                      box[0]:box[2]][dateFlag]
 
             if any(i == 1 for i in data.shape):
                 data = np.squeeze(data)
@@ -930,7 +926,7 @@ class ifgramStack:
             if ('unwrapPhase' in datasetName
                    and self.refY is not None and 0 <= self.refY <= self.width
                    and self.refX is not None and 0 <= self.refX <= self.length):
-                ref_val = dset[ifgram_flag, self.refY, self.refX]
+                ref_val = dset[:, self.refY, self.refX][ifgram_flag]
 
             # get step size and number
             ds_size = np.sum(ifgram_flag, dtype=np.int64) * self.length * self.width * 4
@@ -1057,19 +1053,30 @@ class ifgramStack:
         tbase = np.array(tbase, dtype=np.float32) / 365.25
 
         # calculate design matrix
+        # A for minimizing the residual of phase
+        # B for minimizing the residual of phase velocity
         A = np.zeros((num_ifgram, num_date), np.float32)
         B = np.zeros((num_ifgram, num_date), np.float32)
         for i in range(num_ifgram):
             ind1, ind2 = [date_list.index(d) for d in date12_list[i].split('_')]
             A[i, ind1] = -1
             A[i, ind2] = 1
-            B[i, ind1:ind2] = tbase[ind1+1:ind2+1] - tbase[ind1:ind2]
+            # support date12_list with the first date NOT being the earlier date
+            if ind1 < ind2:
+                B[i, ind1:ind2] = tbase[ind1 + 1:ind2 + 1] - tbase[ind1:ind2]
+            else:
+                B[i, ind2:ind1] = tbase[ind2:ind1] - tbase[ind2 + 1:ind1 + 1]
 
         # Remove reference date as it can not be resolved
         if refDate != 'no':
             # default refDate
             if refDate is None:
-                refDate = date_list[0]
+                # for single   reference network, use the same reference date
+                # for multiple reference network, use the first date
+                if len(set(date1s)) == 1:
+                    refDate = date1s[0]
+                else:
+                    refDate = date_list[0]
 
             # apply refDate
             if refDate:
@@ -1274,9 +1281,9 @@ class HDFEOS:
                         dateFlag[self.dateList.index(e)] = True
 
                 # read
-                data = ds[dateFlag,
+                data = ds[:,
                           box[1]:box[3],
-                          box[0]:box[2]]
+                          box[0]:box[2]][dateFlag]
 
                 # squeeze/shrink dimension whenever it is possible
                 if any(i == 1 for i in data.shape):

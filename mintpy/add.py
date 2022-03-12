@@ -78,13 +78,15 @@ def add_file(fnames, out_file=None, force=False):
             out_file += '_plus_' + os.path.splitext(os.path.basename(fnames[i]))[0]
         out_file += ext
 
-    atr1 = readfile.read_attribute(fnames[0])
-    atr2 = readfile.read_attribute(fnames[1])
+    # read FILE_TYPE
+    ftypes = [readfile.read_attribute(x)['FILE_TYPE'] for x in fnames]
+    print(f'input file types: {ftypes}')
 
-    if atr1['FILE_TYPE'] == 'timeseries':
-        file1, file2 = fnames[0], fnames[1]
-
+    if ftypes[0] == 'timeseries':
         # check dates shared by two timeseries files
+        file1, file2 = fnames[0], fnames[1]
+        atr1 = readfile.read_attribute(file1)
+        atr2 = readfile.read_attribute(file2)
         dateList1 = timeseries(file1).get_date_list()
         dateList2 = timeseries(file2).get_date_list()
         dateListShared = [i for i in dateList1 if i in dateList2]
@@ -131,22 +133,34 @@ def add_file(fnames, out_file=None, force=False):
         writefile.write(data, out_file=out_file, metadata=atr1, ref_file=file1)
 
     else:
-        dsDict = {}
-        dsNames = readfile.get_dataset_list(fnames[0])
-        for dsName in dsNames:
-            # ignore dsName if input file has single dataset
-            dsName2read = None if len(dsNames) == 1 else dsName
+        # get common dataset list
+        ds_names_list = [readfile.get_dataset_list(x) for x in fnames]
+        ds_names = list(set.intersection(*map(set, ds_names_list)))
+        # if all files have one dataset, ignore dataset name variation and take the 1st one as reference
+        if all(len(x) == 1 for x in ds_names_list):
+            ds_names = ds_names_list[0]
+        print('List of common datasets across files: ', ds_names)
+        if len(ds_names) < 1:
+            raise ValueError('No common datasets found among files:\n{}'.format(fnames))
 
-            print('adding {} ...'.format(dsName))
-            data = readfile.read(fnames[0], datasetName=dsName2read)[0]
-            for i in range(1, len(fnames)):
-                data2 = readfile.read(fnames[i], datasetName=dsName2read)[0]
+        # loop over each file
+        dsDict = {}
+        for ds_name in ds_names:
+            print('adding {} ...'.format(ds_name))
+            data, atr = readfile.read(fnames[0], datasetName=ds_name)
+
+            for i, fname in enumerate(fnames[1:]):
+                # ignore ds_name if input file has single dataset
+                ds_name2read = None if len(ds_names_list[i+1]) == 1 else ds_name
+                # read
+                data2 = readfile.read(fname, datasetName=ds_name2read)[0]
+                # apply operation
                 data = add_matrix(data, data2)
-            dsDict[dsName] = data
+            dsDict[ds_name] = data
 
         # output
         print('use metadata from the 1st file: {}'.format(fnames[0]))
-        writefile.write(dsDict, out_file=out_file, metadata=atr1, ref_file=fnames[0])
+        writefile.write(dsDict, out_file=out_file, metadata=atr, ref_file=fnames[0])
 
     return out_file
 

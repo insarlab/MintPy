@@ -19,4 +19,5 @@ mintpy.troposphericDelay.method     = pyaps
 mintpy.topographicResidual          = yes
 mintpy.topographicResidual.stepFuncDate         = 20190706T0320
 mintpy.topographicResidual.pixelwiseGeometry    = no
+mintpy.plot.maxMemory       = 2
 

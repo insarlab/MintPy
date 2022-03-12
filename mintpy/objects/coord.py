@@ -231,11 +231,26 @@ class coordinate:
         Returns:    az/rg     - np.array / int, range/azimuth pixel number
                     az/rg_res - float, residul/uncertainty of coordinate conversion
         """
-        # ensure longitude is within (-180, 180]
-        if np.isscalar(lon):
-            lon = lon - 360. if lon > 180. else lon
-        else:
-            lon[lon > 180.] -= 360
+        # ensure longitude convention to be consistent with src_metadata
+        if 'X_FIRST' in self.src_metadata.keys():
+            width = int(self.src_metadata['WIDTH'])
+            lon_step = float(self.src_metadata['X_STEP'])
+            min_lon = float(self.src_metadata['X_FIRST'])
+            max_lon = min_lon + lon_step * width
+
+            # ensure longitude within [0, 360)
+            if max_lon > 180:
+                if np.isscalar(lon):
+                    lon = lon + 360 if lon < 0. else lon
+                else:
+                    lon[lon < 0.] += 360
+
+            # ensure longitude within (-180, 180]
+            else:
+                if np.isscalar(lon):
+                    lon = lon - 360. if lon > 180. else lon
+                else:
+                    lon[lon > 180.] -= 360
 
         self.open()
         if self.geocoded:

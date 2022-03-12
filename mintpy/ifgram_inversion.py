@@ -102,7 +102,7 @@ def create_parser():
                         help='Optimization mehtod, L1 or L2 norm. (default: %(default)s).')
 
     # uncertainty propagation
-    parser.add_argument('--std','--calc-std', dest='calcStd', action='store_true',
+    parser.add_argument('--calc-cov', dest='calcCov', action='store_true',
                         help='Calculate time-series STD via linear propagation '
                              'from the network of interferograms or offset pairs.')
 
@@ -114,6 +114,11 @@ def create_parser():
                       help='threshold to generate mask when mask is coherence (default: %(default)s).')
     mask.add_argument('--min-redun','--min-redundancy','--mr', dest='minRedundancy', metavar='NUM', type=float, default=1.0,
                       help='minimum redundancy of interferograms for every SAR acquisition. (default: %(default)s).')
+    # for offset ONLY
+    #mask.add_argument('--mask-min-snr', dest='maskMinSNR', type=float, default=10.0,
+    #                  help='minimum SNR to diable/ignore the threshold-based masking [for offset only].')
+    #mask.add_argument('--mask-min-area-size', dest='maskMinAreaSize', type=float, default=16.0,
+    #                  help='minimum area size to diable/ignore the threshold-based masking [for offset only]')
 
     # computing
     parser = arg_group.add_memory_argument(parser)
@@ -185,10 +190,10 @@ def cmd_line_parse(iargs=None):
             inps.outfile = ['timeseries.h5', 'temporalCoherence.h5', 'numInvIfgram.h5']
 
         elif inps.obsDatasetName.startswith('azimuthOffset'):
-            inps.outfile = ['timeseriesAz.h5', 'residualInvAz.h5', 'numInvOffset.h5']
+            inps.outfile = ['timeseriesAz.h5', 'residualInvAz.h5', 'numInvOffAz.h5']
 
         elif inps.obsDatasetName.startswith('rangeOffset'):
-            inps.outfile = ['timeseriesRg.h5', 'residualInvRg.h5', 'numInvOffset.h5']
+            inps.outfile = ['timeseriesRg.h5', 'residualInvRg.h5', 'numInvOffRg.h5']
 
         elif inps.obsDatasetName.startswith('ion'):
             inps.outfile = ['timeseriesIon.h5', 'temporalCoherenceIon.h5', 'numInvIon.h5']
@@ -345,6 +350,7 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
                 num_inv_obs       - 1D np.ndarray in size of (num_pixel), number of observations (ifgrams / offsets)
                                     used during the inversion
     """
+
     y = y.reshape(A.shape[0], -1)
     if weight_sqrt is not None:
         weight_sqrt = weight_sqrt.reshape(A.shape[0], -1)
@@ -367,11 +373,15 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
         return ts, inv_quality, num_inv_obs
 
     # check 2 - matrix invertability (for WLS only because OLS contains it already)
-    if weight_sqrt is not None:
-        try:
-            linalg.inv(np.dot(B.T, B))
-        except linalg.LinAlgError:
-            return ts, inv_quality, num_inv_obs
+    # Yunjun, Mar 2022: from my vague memory, a singular design matrix B returns error from scipy.linalg,
+    #     but somehow gives results after weighting, so I decided to not trust that result via this check
+    # Sara, Mar 2022: comment this check after correcting design matrix B for non-sequential networks
+    #     a.k.a., networks with the first date not being the earlier date
+    #if weight_sqrt is not None:
+    #    try:
+    #        linalg.inv(np.dot(B.T, B))
+    #    except linalg.LinAlgError:
+    #        return ts, inv_quality, num_inv_obs
 
     ##### invert time-series
     try:
@@ -421,8 +431,8 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
     return ts, inv_quality, num_inv_obs
 
 
-def estimate_timeseries_std(G, y, y_std, rcond=1e-5, min_redundancy=1.0):
-    """Estimate the time-series STD from network of STD via linear propagation.
+def estimate_timeseries_cov(G, y, y_std, rcond=1e-5, min_redundancy=1.0):
+    """Estimate the time-series covariance from network of STD via linear propagation.
     Pixel by pixel only.
 
     For a system of linear equations: A X = y, propagate the STD from y to X.
@@ -430,32 +440,33 @@ def estimate_timeseries_std(G, y, y_std, rcond=1e-5, min_redundancy=1.0):
     Parameters: G      - 2D np.ndarray in size of (num_pair, num_date-1), design matrix
                 y      - 2D np.ndarray in size of (num_pair, 1), stack of obs
                 y_std  - 2D np.ndarray in size of (num_pair, 1), stack of obs std. dev.
-    Returns:    ts_std - 2D np.ndarray in size of (num_date, 1), time-series obs std. dev.
+    Returns:    ts_cov - 2D np.ndarray in size of (num_date-1, num_date-1), time-series obs std. dev.
     """
     y = y.reshape(G.shape[0], -1)
     y_std = y_std.reshape(G.shape[0], -1)
 
     # initial output value
-    ts_std = np.zeros((G.shape[1], 1), dtype=np.float32) * np.nan
+    ts_cov = np.zeros((G.shape[1], G.shape[1]), dtype=np.float32)
 
     # skip invalid phase/offset value [NaN]
     y, [G, y_std] = skip_invalid_obs(y, mat_list=[G, y_std])
 
     # check network redundancy: skip calculation if < threshold
     if np.min(np.sum(G != 0., axis=0)) < min_redundancy:
-        return ts_std
+        return ts_cov
 
-    # std. dev. --> covariance matrix
-    stack_cov_inv = np.diag(1.0 / np.square(y_std).flatten())
+    ## std. dev. --> covariance matrix
+    #stack_cov_inv = np.diag(1.0 / np.square(y_std).flatten())
+    ## linear propagation: network covar. mat. --> TS covar. mat. --> TS var.
+    #ts_var = np.diag(linalg.inv(G.T.dot(stack_cov_inv).dot(G))).astype(np.float32)
+    #ts_var[ts_var < rcond] = rcond
+    ## TS var. --> TS std. dev.
+    #ts_cov = np.sqrt(ts_var)
+    Gplus = linalg.pinv(G)
+    stack_cov = np.diag(np.square(y_std.flatten()))
+    ts_cov = np.linalg.multi_dot([Gplus, stack_cov, Gplus.T])
 
-    # linear propagation: network covar. mat. --> TS covar. mat. --> TS var.
-    ts_var = np.diag(linalg.inv(G.T.dot(stack_cov_inv).dot(G))).astype(np.float32)
-    ts_var[ts_var < rcond] = rcond
-
-    # TS var. --> TS std. dev.
-    ts_std = np.sqrt(ts_var)
-
-    return ts_std
+    return ts_cov
 
 
 def skip_invalid_obs(obs, mat_list):
@@ -676,28 +687,45 @@ def mask_stack_obs(stack_obs, stack_obj, box, mask_ds_name=None, mask_threshold=
         # set all NaN values in coherence, connectComponent, offsetSNR to zero
         # to avoid RuntimeWarning msg during math operation
         msk_data[np.isnan(msk_data)] = 0
+        msk = np.ones(msk_data.shape, dtype=np.bool_)
+
         if mask_ds_name in ['connectComponent']:
+            msk *= msk_data != 0
             if print_msg:
                 print('mask out pixels with {} == 0 by setting them to NaN'.format(mask_ds_name))
 
         elif mask_ds_name in ['coherence', 'offsetSNR']:
-            msk_data = msk_data >= mask_threshold
+            msk *= msk_data >= mask_threshold
             if print_msg:
                 print('mask out pixels with {} < {} by setting them to NaN'.format(mask_ds_name, mask_threshold))
 
         elif mask_ds_name.endswith('OffsetStd'):
-            msk_data = msk_data <= mask_threshold
+            msk *= msk_data <= mask_threshold
             if print_msg:
                 print('mask out pixels with {} > {} by setting them to NaN'.format(mask_ds_name, mask_threshold))
+
+            # keep regions (ignore threshold-based masking) if:
+            # 1. high SNR AND
+            # 2. relaxed min STD AND
+            # despite the above criteria, which is designed for small signals
+            min_snr = 10
+            obs_med = np.zeros((stack_obs.shape[0],1), dtype=np.float32)
+            for i in range(stack_obs.shape[0]):
+                obs_med[i] = np.nanmedian(stack_obs[i][msk[i]])
+            obs_snr = np.abs(stack_obs - np.tile(obs_med, (1, stack_obs.shape[1]))) / (msk_data + 1e-5)
+            msk_snr = np.multiply(msk_data <= mask_threshold * 5, obs_snr >= min_snr)
+            msk[msk_snr] = 1
+            if print_msg:
+                print('keep pixels with {} <= {} and SNR >= {}'.format(mask_ds_name, mask_threshold*5, min_snr))
 
         else:
             raise ValueError('Un-recognized mask dataset name: {}'.format(mask_ds_name))
 
         # set values of mask-out pixels to NaN
-        stack_obs[msk_data == 0.] = np.nan
+        stack_obs[msk == 0.] = np.nan
         if stack_std is not None:
-            stack_std[msk_data == 0.] = np.nan
-        del msk_data
+            stack_std[msk == 0.] = np.nan
+        del msk_data, msk
 
     return stack_obs, stack_std
 
@@ -766,7 +794,13 @@ def calc_weight_sqrt(stack_obj, box, weight_func='var', dropIfgram=True, chunk_s
 
 
 def get_design_matrix4std(stack_obj):
-    """Get the design matrix for time-series STD calculation."""
+    """Get the design matrix for time-series STD calculation.
+    Parameters: stack_obj - ifgramStack object
+    Returns:    A_std     - 2D np.ndarray of float32 in size of (num_ifg, num_date-1)
+                ref_ind   - int, index of the reference date in date_list
+                ref_date  - str, reference date
+                flag_std  - 1D np.ndarray of bool in size of (num_date)
+    """
 
     # get ref_date from template file
     mintpy_dir = os.path.dirname(os.path.dirname(stack_obj.file))
@@ -792,19 +826,20 @@ def get_design_matrix4std(stack_obj):
     date_list = stack_obj.get_date_list(dropIfgram=True)
     A_std = stack_obj.get_design_matrix4timeseries(date12_list, refDate=ref_date)[0]
     flag_std = np.array(date_list) != ref_date
+    ref_ind = date_list.index(ref_date)
 
-    return A_std, flag_std, ref_date
+    return A_std, ref_ind, ref_date, flag_std
 
 
 
 def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='unwrapPhase',
                            weight_func='var', water_mask_file=None, min_norm_velocity=True,
-                           mask_ds_name=None, mask_threshold=0.4, min_redundancy=1.0, calc_std=False):
+                           mask_ds_name=None, mask_threshold=0.4, min_redundancy=1.0, calc_cov=False):
     """Invert one patch of an ifgram stack into timeseries.
 
-    Parameters: box               - tuple of 4 int, indicating (x0, y0, x1, y1) of the area of interest
-                                    or None for the whole image
-                ifgram_file       - str, interferograms stack HDF5 file, e.g. ./inputs/ifgramStack.h5
+    Parameters: ifgram_file       - str, interferograms stack HDF5 file, e.g. ./inputs/ifgramStack.h5
+                box               - tuple of 4 int, indicating (x0, y0, x1, y1) of the area of interest
+                                    Set to None for the whole image
                 ref_phase         - 1D array in size of (num_pair), or None
                 obs_ds_name       - str, dataset to feed the inversion.
                 weight_func       - str, weight function, choose in ['no', 'fim', 'var', 'coh']
@@ -813,7 +848,9 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
                 mask_ds_name      - str, dataset name in ifgram_file used to mask unwrapPhase pixelwisely
                 mask_threshold    - float, min coherence of pixels if mask_dataset_name='coherence'
                 min_redundancy    - float, the min number of ifgrams for every acquisition.
-    Returns:    ts/ts_std         - 3D array in size of (num_date, num_row, num_col)
+                calc_cov          - bool, calculate the time series covariance matrix.
+    Returns:    ts                - 3D array in size of (num_date, num_row, num_col)
+                ts_cov            - 4D array in size of (num_date, num_date, num_row, num_col) or None
                 inv_quality       - 2D array in size of (num_row, num_col)
                 num_inv_obs       - 2D array in size of (num_row, num_col)
                 box               - tuple of 4 int
@@ -862,8 +899,9 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
                                            chunk_size=100000)
 
         # calculate stack STD
-        if calc_std:
-            A_std, flag_std = get_design_matrix4std(stack_obj)[:2]
+        if calc_cov:
+            A_std, r0 = get_design_matrix4std(stack_obj)[:2]
+            r1 = r0 + 1
             if weight_func == 'var':
                 stack_std = 1. / weight_sqrt
             else:
@@ -873,7 +911,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
                                                   chunk_size=100000)
 
     elif 'offset' in obs_ds_name.lower():
-        if calc_std or weight_func == 'var':
+        if calc_cov or weight_func == 'var':
             # calculate weight for offset
             print('reading {} in {} * {} ...'.format(obs_ds_name+'Std', box, len(date12_list)))
             weight_sqrt = stack_obj.read(datasetName=obs_ds_name+'Std',
@@ -888,8 +926,9 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
             weight_sqrt = 1. / weight_sqrt  # use squre root of weight, to faciliate WLS, same as for phase.
 
             # prepare for Std time-series
-            if calc_std:
-                A_std, flag_std = get_design_matrix4std(stack_obj)[:2]
+            if calc_cov:
+                A_std, r0 = get_design_matrix4std(stack_obj)[:2]
+                r1 = r0 + 1
                 stack_std = 1. / weight_sqrt
 
             # reset weight_sqrt to None if no weighting is applied
@@ -966,7 +1005,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
     # 2.1 initiale the output matrices
     ts = np.zeros((num_date, num_pixel), np.float32)
-    ts_std = np.zeros((num_date, num_pixel), np.float32)
+    ts_cov = np.zeros((num_date, num_date, num_pixel), np.float32) if calc_cov else None
     inv_quality = np.zeros(num_pixel, np.float32)
     if 'offset' in obs_ds_name.lower():
         inv_quality *= np.nan
@@ -975,10 +1014,10 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     # return directly if there is nothing to invert
     if num_pixel2inv < 1:
         ts = ts.reshape(num_date, num_row, num_col)
-        ts_std = ts_std.reshape(num_date, num_row, num_col)
+        ts_cov = ts_cov.reshape(num_date, num_date, num_row, num_col) if calc_cov else ts_cov
         inv_quality = inv_quality.reshape(num_row, num_col)
         num_inv_obs = num_inv_obs.reshape(num_row, num_col)
-        return ts, ts_std, inv_quality, num_inv_obs, box
+        return ts, ts_cov, inv_quality, num_inv_obs, box
 
     # 2.2 un-weighted inversion (classic SBAS)
     if weight_sqrt is None:
@@ -1065,18 +1104,22 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     del weight_sqrt
 
     # 2.4 time-series std. dev. - pixel-by-pixel
-    if calc_std:
+    if calc_cov:
         print('propagating std. dev. from network of interferograms to time-series (Yunjun et al., 2021, FRINGE) ...')
         prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
         for i in range(num_pixel2inv):
             idx = idx_pixel2inv[i]
-            ts_stdi = estimate_timeseries_std(A_std,
+            ts_covi = estimate_timeseries_cov(A_std,
                                               y=stack_obs[:, idx],
                                               y_std=stack_std[:, idx],
                                               min_redundancy=min_redundancy)
 
-            # savee result to output matrix
-            ts_std[flag_std, idx] = ts_stdi.flatten()
+            # save result to output matrix
+            # fill the (N-1xN-1) matrix into the (NxN) matrix
+            ts_cov[:r0, :r0, idx] = ts_covi[:r0, :r0]
+            ts_cov[:r0, r1:, idx] = ts_covi[:r0, r0:]
+            ts_cov[r1:, :r0, idx] = ts_covi[r0:, :r0]
+            ts_cov[r1:, r1:, idx] = ts_covi[r0:, r0:]
 
             prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, num_pixel2inv))
         prog_bar.close()
@@ -1088,7 +1131,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
     # 3.1 reshape
     ts = ts.reshape(num_date, num_row, num_col)
-    ts_std = ts_std.reshape(num_date, num_row, num_col)
+    ts_cov = ts_cov.reshape(num_date, num_date, num_row, num_col) if calc_cov else ts_cov
     inv_quality = inv_quality.reshape(num_row, num_col)
     num_inv_obs = num_inv_obs.reshape(num_row, num_col)
 
@@ -1096,24 +1139,24 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     if obs_ds_name.startswith(('unwrapPhase','ion')):
         phase2range = -1 * float(stack_obj.metadata['WAVELENGTH']) / (4.*np.pi)
         ts *= phase2range
-        ts_std *= np.abs(phase2range)
+        ts_cov = ts_cov * np.abs(phase2range) if calc_cov else ts_cov
         print('converting LOS phase unit from radian to meter')
 
     elif (obs_ds_name == 'azimuthOffset') & (stack_obj.metadata['PROCESSOR'] != 'cosicorr'):
         az_pixel_size = ut.azimuth_ground_resolution(stack_obj.metadata)
         az_pixel_size /= float(stack_obj.metadata['ALOOKS'])
         ts *= az_pixel_size
-        ts_std *= az_pixel_size
+        ts_cov = ts_cov * az_pixel_size if calc_cov else ts_cov
         print('converting azimuth offset unit from pixel ({:.2f} m) to meter'.format(az_pixel_size))
 
     elif (obs_ds_name == 'rangeOffset') & (stack_obj.metadata['PROCESSOR'] != 'cosicorr'):
         rg_pixel_size = float(stack_obj.metadata['RANGE_PIXEL_SIZE'])
         rg_pixel_size /= float(stack_obj.metadata['RLOOKS'])
         ts *= -1 * rg_pixel_size
-        ts_std *= rg_pixel_size
+        ts_cov = ts_cov * rg_pixel_size if calc_cov else ts_cov
         print('converting range offset unit from pixel ({:.2f} m) to meter'.format(rg_pixel_size))
 
-    return ts, ts_std, inv_quality, num_inv_obs, box
+    return ts, ts_cov, inv_quality, num_inv_obs, box
 
 
 def ifgram_inversion(inps=None):
@@ -1166,7 +1209,7 @@ def ifgram_inversion(inps=None):
     num_pair, num_date = A.shape[0], A.shape[1]+1
     inps.numIfgram = num_pair
 
-    if inps.calcStd:
+    if inps.calcCov:
         ref_date4std = get_design_matrix4std(stack_obj)[2]
         ref_msg = f' with REF_DATE = {ref_date4std}'
     else:
@@ -1181,7 +1224,7 @@ def ifgram_inversion(inps=None):
     msg += 'least-squares solution with L2 min-norm on: {}\n'.format(suffix)
     msg += 'minimum redundancy: {}\n'.format(inps.minRedundancy)
     msg += 'weight function: {}\n'.format(inps.weightFunc)
-    msg += 'calculate STD: {} {}\n'.format(inps.calcStd, ref_msg)
+    msg += 'calculate covariance: {} {}\n'.format(inps.calcCov, ref_msg)
 
     if inps.maskDataset:
         if inps.maskDataset in ['connectComponent']:
@@ -1229,12 +1272,13 @@ def ifgram_inversion(inps=None):
     }
     writefile.layout_hdf5(inps.tsFile, ds_name_dict, metadata=meta)
 
-    if inps.calcStd:
+    if inps.calcCov:
         fbase = os.path.splitext(inps.tsFile)[0]
-        if inps.obsDatasetName.startswith('unwrapPhase'):
-            fbase += 'Decor'
-        tsStdFile = f'{fbase}Std.h5'
+        fbase += 'Decor' if inps.obsDatasetName.startswith('unwrapPhase') else ''
+        tsStdFile = f'{fbase}Cov.h5'
         meta['REF_DATE'] = ref_date4std
+        ds_name_dict = {"date"       : [dates.dtype, (num_date,), dates],
+                        "timeseries" : [np.float32,  (num_date, num_date, length, width), None]}
         writefile.layout_hdf5(tsStdFile, ds_name_dict, meta)
 
     # 2.3 instantiate invQualifyFile: temporalCoherence / residualInv
@@ -1271,7 +1315,7 @@ def ifgram_inversion(inps=None):
         "mask_ds_name"      : inps.maskDataset,
         "mask_threshold"    : inps.maskThreshold,
         "min_redundancy"    : inps.minRedundancy,
-        "calc_std"          : inps.calcStd,
+        "calc_cov"          : inps.calcCov,
     }
 
     # 3.3 invert / write block-by-block
@@ -1285,10 +1329,9 @@ def ifgram_inversion(inps=None):
 
         # update box argument in the input data
         data_kwargs['box'] = box
-
         if not inps.cluster:
             # non-parallel
-            ts, ts_std, inv_quality, num_inv_obs = ifgram_inversion_patch(**data_kwargs)[:-1]
+            ts, ts_cov, inv_quality, num_inv_obs = ifgram_inversion_patch(**data_kwargs)[:-1]
 
         else:
             # parallel
@@ -1296,19 +1339,19 @@ def ifgram_inversion(inps=None):
 
             # initiate the output data
             ts = np.zeros((num_date, box_len, box_wid), np.float32)
-            ts_std = np.zeros((num_date, box_len, box_wid), np.float32)
+            ts_cov = np.zeros((num_date, num_date, box_len, box_wid), np.float32) if inps.calcCov else None
             inv_quality = np.zeros((box_len, box_wid), np.float32)
-            num_inv_obs  = np.zeros((box_len, box_wid), np.float32)
+            num_inv_obs = np.zeros((box_len, box_wid), np.float32)
 
             # initiate dask cluster and client
             cluster_obj = cluster.DaskCluster(inps.cluster, inps.numWorker, config_name=inps.config)
             cluster_obj.open()
 
             # run dask
-            ts, ts_std, inv_quality, num_inv_obs = cluster_obj.run(
+            ts, ts_cov, inv_quality, num_inv_obs = cluster_obj.run(
                 func=ifgram_inversion_patch,
                 func_data=data_kwargs,
-                results=[ts, ts_std, inv_quality, num_inv_obs])
+                results=[ts, ts_cov, inv_quality, num_inv_obs])
 
             # close dask cluster and client
             cluster_obj.close()
@@ -1325,9 +1368,10 @@ def ifgram_inversion(inps=None):
                                    datasetName='timeseries',
                                    block=block)
 
-        if inps.calcStd:
+        if inps.calcCov:
+            block = [0, num_date, 0, num_date, box[1], box[3], box[0], box[2]]
             writefile.write_hdf5_block(tsStdFile,
-                                       data=ts_std,
+                                       data=ts_cov,
                                        datasetName='timeseries',
                                        block=block)
 
