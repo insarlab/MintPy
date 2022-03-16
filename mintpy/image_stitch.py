@@ -207,7 +207,11 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     if print_msg:
         print('create output metadata and matrix in shape of {}'.format((length, width)))
     flag2 = np.isfinite(mat2)
-    mat = np.zeros([length, width]) * np.nan
+    # If we have a mask
+    if mat1.dtype==np.bool and mat2.dtype==np.bool:
+        mat = np.full([length, width],False)
+    else:
+        mat = np.zeros([length, width]) * np.nan
     mat[y1:y1+length1, x1:x1+width1] = mat1
     mat[y2:y2+length2, x2:x2+width2][flag2] = mat2[flag2]
     mat = np.array(mat, dtype=mat1.dtype)
