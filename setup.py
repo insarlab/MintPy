@@ -103,6 +103,7 @@ def do_setup():
                 'image_math.py = mintpy.image_math:main',
                 'image_stitch.py = mintpy.image_stitch:main',
                 'info.py = mintpy.info:main',
+                'iono_tec.py = mintpy.iono_tec:main',
                 'load_data.py = mintpy.load_data:main',
                 'load_gbis.py = mintpy.load_gbis:main',
                 'local_oscilator_drift.py = mintpy.local_oscilator_drift:main',
