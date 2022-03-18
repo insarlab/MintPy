@@ -147,7 +147,7 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     Returns:    mat          - 2D np.ndarray, stitched matrix
                 atr          - dict, attributes of stitched matrix
     """
-    vprint = print if inps.print_msg else lambda *args, **kwargs: None
+    vprint = print if print_msg else lambda *args, **kwargs: None
 
     # resize the 2nd matrix, if it has different spatial resolution
     ratio_x = abs((float(atr1['X_STEP']) - float(atr2['X_STEP'])) / float(atr1['X_STEP']))
