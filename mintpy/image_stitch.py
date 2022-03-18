@@ -147,26 +147,24 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     Returns:    mat          - 2D np.ndarray, stitched matrix
                 atr          - dict, attributes of stitched matrix
     """
+    vprint = print if print_msg else lambda *args, **kwargs: None
 
     # resize the 2nd matrix, if it has different spatial resolution
     ratio_x = abs((float(atr1['X_STEP']) - float(atr2['X_STEP'])) / float(atr1['X_STEP']))
     ratio_y = abs((float(atr1['Y_STEP']) - float(atr2['Y_STEP'])) / float(atr1['Y_STEP']))
     if any(i > 1e-3 for i in [ratio_x, ratio_y]):
-        if print_msg:
-            print('file 1: X_STEP - {}, Y_STEP - {}'.format(atr1['X_STEP'], atr1['Y_STEP']))
-            print('file 2: X_STEP - {}, Y_STEP - {}'.format(atr2['X_STEP'], atr2['Y_STEP']))
-            print('rescale the 2nd matrix into the same spatial resolution as the 1st one ...')
+        vprint('file 1: X_STEP - {}, Y_STEP - {}'.format(atr1['X_STEP'], atr1['Y_STEP']))
+        vprint('file 2: X_STEP - {}, Y_STEP - {}'.format(atr2['X_STEP'], atr2['Y_STEP']))
+        vprint('rescale the 2nd matrix into the same spatial resolution as the 1st one ...')
         mat2, atr2 = rescale_data(mat2, meta=atr2, ref_meta=atr1)
 
     # input spatial extents
-    if print_msg:
-        print('grab corners of input matrices')
+    vprint('grab corners of input matrices')
     S1, N1, W1, E1, width1, length1 = get_corners(atr1)
     S2, N2, W2, E2, width2, length2 = get_corners(atr2)
 
     # output spatial extent
-    if print_msg:
-        print('calculate corners of output matrix')
+    vprint('calculate corners of output matrix')
     W, E = min(W1, W2), max(E1, E2)
     S, N = min(S1, S2), max(N1, N2)
     lon_step = float(atr1['X_STEP'])
@@ -175,8 +173,7 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     length = int(np.ceil((S - N) / lat_step))
 
     # index of input matrices in output matrix
-    if print_msg:
-        print('estimate difference in the overlaping area')
+    vprint('estimate difference in the overlaping area')
     lon_seq = np.arange(W, W + width  * lon_step, lon_step)
     lat_seq = np.arange(N, N + length * lat_step, lat_step)
     x1, y1 = np.argmin(np.square(lon_seq - W1)), np.argmin(np.square(lat_seq - N1))
@@ -193,9 +190,8 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     if apply_offset:
         offset = np.nansum(mat_diff) / np.sum(np.isfinite(mat_diff))
         if ~np.isnan(offset):
-            if print_msg:
-                print('average offset between two matrices in the common area: {}'.format(offset))
-                print('offset all pixel values in the 2nd matrix by {} '.format(offset))
+            vprint('average offset between two matrices in the common area: {}'.format(offset))
+            vprint('offset all pixel values in the 2nd matrix by {} '.format(offset))
             mat2 -= offset
         else:
             print('*'*50)
@@ -203,11 +199,14 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
             print('    continue the stitching without applying offset')
             print('*'*50)
 
-    # output matrix
-    if print_msg:
-        print('create output metadata and matrix in shape of {}'.format((length, width)))
+    # initiate output matrix
+    # with the default value of NaN for float type and 0 for the other types
+    vprint('create output metadata and matrix in shape of {}'.format((length, width)))
+    fill_value = np.nan if str(mat1.dtype).startswith('float') else 0
+    mat = np.zeros([length, width]) * fill_value
+
+    # fill the output matrix
     flag2 = np.isfinite(mat2)
-    mat = np.zeros([length, width]) * np.nan
     mat[y1:y1+length1, x1:x1+width1] = mat1
     mat[y2:y2+length2, x2:x2+width2][flag2] = mat2[flag2]
     mat = np.array(mat, dtype=mat1.dtype)
