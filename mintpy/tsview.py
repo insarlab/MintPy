@@ -929,8 +929,11 @@ class timeseriesViewer():
             if not np.all(np.isnan(ts_dis)):
                 ppar = argparse.Namespace()
                 ppar.label = self.file_label[i]
-                ppar.ms = self.marker_size - ms_step * (num_file - 1 - i)
                 ppar.mfc = pp.mplColors[num_file - 1 - i] if self.mask[y, x] != 0 else 'gray'
+                ppar.ms = self.marker_size - ms_step * (num_file - 1 - i)
+                # use smaller marker size for very long time series
+                if self.num_date > 1e3:
+                    ppar.ms /= 10
                 self.ts_plot_func(ax, ts_dis, self, ppar)
 
                 # plot model prediction
@@ -971,7 +974,8 @@ class timeseriesViewer():
         vprint('\n---------------------------------------')
         vprint(title)
         float_formatter = lambda x: [float('{:.2f}'.format(i)) for i in x]
-        vprint(float_formatter(ts_dis))
+        if self.num_date <= 1e3:
+            vprint(float_formatter(ts_dis))
 
         if not np.all(np.isnan(ts_dis)):
             # min/max displacement

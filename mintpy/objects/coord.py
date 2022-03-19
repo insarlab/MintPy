@@ -238,8 +238,13 @@ class coordinate:
             min_lon = float(self.src_metadata['X_FIRST'])
             max_lon = min_lon + lon_step * width
 
+            # skip if larger than (-180, 180)
+            # e.g. IONEX file in (-182.25, 182.25)
+            if np.all(np.abs([min_lon, max_lon]) > 180):
+                pass
+
             # ensure longitude within [0, 360)
-            if max_lon > 180:
+            elif max_lon > 180:
                 if np.isscalar(lon):
                     lon = lon + 360 if lon < 0. else lon
                 else:
