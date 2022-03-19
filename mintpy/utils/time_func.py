@@ -123,10 +123,12 @@ def get_design_matrix4time_func(date_list, model=None, ref_date=None, seconds=0)
     c0 = 0
 
     # update linear/polynomial term(s)
-    if poly_deg > 0:
-        c1 = c0 + poly_deg + 1
-        A[:, c0:c1] = get_design_matrix4polynomial_func(yr_diff, poly_deg)
-        c0 = c1
+    # poly_deg of 0 --> offset
+    # poly_deg of 1 --> velocity
+    # ...
+    c1 = c0 + poly_deg + 1
+    A[:, c0:c1] = get_design_matrix4polynomial_func(yr_diff, poly_deg)
+    c0 = c1
 
     # update periodic term(s)
     if num_period > 0:
@@ -160,12 +162,13 @@ def get_design_matrix4polynomial_func(yr_diff, degree):
     """design matrix/function model of linear/polynomial velocity estimation
 
     The k! denominator makes the estimated polynomial coefficient (c_k) physically meaningful:
+        k=0 makes c_0 the offset;
         k=1 makes c_1 the velocity;
         k=2 makes c_2 the acceleration;
         k=3 makes c_3 the acceleration rate;
 
     Parameters: yr_diff: time difference from ref_date in decimal years
-                degree : polynomial models: 1=linear, 2=quadratic, 3=cubic, etc.
+                degree : polynomial models: 0=offset, 1=linear, 2=quadratic, 3=cubic, etc.
     Returns:    A      : 2D array of poly-coeff. in size of (num_date, degree+1)
     """
     A = np.zeros([len(yr_diff), degree + 1], dtype=np.float32)
