@@ -123,10 +123,9 @@ def get_design_matrix4time_func(date_list, model=None, ref_date=None, seconds=0)
     c0 = 0
 
     # update linear/polynomial term(s)
-    if poly_deg > 0:
-        c1 = c0 + poly_deg + 1
-        A[:, c0:c1] = get_design_matrix4polynomial_func(yr_diff, poly_deg)
-        c0 = c1
+    c1 = c0 + poly_deg + 1
+    A[:, c0:c1] = get_design_matrix4polynomial_func(yr_diff, poly_deg)
+    c0 = c1
 
     # update periodic term(s)
     if num_period > 0:
