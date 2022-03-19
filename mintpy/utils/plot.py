@@ -301,6 +301,11 @@ def auto_multilook_num(box, num_time, max_memory=4.0, print_msg=True):
     elif num_pixel > ( 4e6*20) :  multilook_num = 2;       #  2k * 2k image with 20  subplots
     else:                         multilook_num = 1;
 
+    # do not apply multilooking if the spatial size <= 180 * 360
+    # corresponding to 1x1 deg for world map
+    if (box[2] - box[0]) * (box[3] - box[1]) <= 180 * 360:
+        multilook_num = 1
+
     ## scale based on memory
     # The auto calculation above uses ~1.5 GB in reserved memory and ~700 MB in actual memory.
     if max_memory <= 2.0:
