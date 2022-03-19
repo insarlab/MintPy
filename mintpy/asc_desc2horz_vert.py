@@ -156,9 +156,9 @@ def get_design_matrix(los_inc_angle, los_az_angle, horz_az_angle=-90):
     This could be easily modified to support multiple view geometry
         (e.g. two adjcent tracks from asc & desc) to resolve 3D
 
-    Parameters: los_inc_angle - 1D np.ndarray in size of (num_file), LOS incidence angle in radians.
-                los_az_angle  - 1D np.ndarray in size of (num_file), LOS azimuth   angle in radians.
-                horz_az_angle - float, azimuth angle for the horizontal direction of interest in degrees.
+    Parameters: los_inc_angle - 1D np.ndarray in size of (num_file), LOS incidence angle in degree.
+                los_az_angle  - 1D np.ndarray in size of (num_file), LOS azimuth   angle in degree.
+                horz_az_angle - float, azimuth angle for the horizontal direction of interest in degree.
                                 Measured from the north with anti-clockwise direction as positive.
     Returns:    A             - 2D matrix in size of (num_file, 2)
 
@@ -166,8 +166,8 @@ def get_design_matrix(los_inc_angle, los_az_angle, horz_az_angle=-90):
     num_file = los_inc_angle.shape[0]
     A = np.zeros((num_file, 2))
     for i in range(num_file):
-        A[i, 0] = np.sin(los_inc_angle[i]) * np.cos(los_az_angle[i] - horz_az_angle)
-        A[i, 1] = np.cos(los_inc_angle[i])
+        A[i, 0] = np.sin(np.deg2rad(los_inc_angle[i])) * np.cos(np.deg2rad(los_az_angle[i] - horz_az_angle))
+        A[i, 1] = np.cos(np.deg2rad(los_inc_angle[i]))
 
     return A
 
@@ -175,9 +175,9 @@ def get_design_matrix(los_inc_angle, los_az_angle, horz_az_angle=-90):
 def asc_desc2horz_vert(dlos, los_inc_angle, los_az_angle, horz_az_angle=-90):
     """Decompose asc / desc LOS data into horz / vert data.
     Parameters: dlos          - 2D np.ndarray in size of (num_file, num_pixel), LOS displacement in meters.
-                los_inc_angle - 1/2D np.ndarray in size of (num_file), num_pixel), LOS incidence angle in radians.
-                los_az_angle  - 1/2D np.ndarray in size of (num_file), num_pixel), LOS azimuth   angle in radians.
-                horz_az_angle - float, horizontal azimuth angle of interest in radians.
+                los_inc_angle - 1/2D np.ndarray in size of (num_file), num_pixel), LOS incidence angle in degree.
+                los_az_angle  - 1/2D np.ndarray in size of (num_file), num_pixel), LOS azimuth   angle in degree.
+                horz_az_angle - float, horizontal azimuth angle of interest in degree.
     Returns:    dhorz         - 1D np.ndarray in size of (num_pixel), horizontal displacement in meters.
                 dvert         - 1D np.ndarray in size of (num_pixel), vertical   displacement in meters.
     """
@@ -265,13 +265,11 @@ def run_asc_desc2horz_vert(inps):
             print('calculate the constant LOS incidence / azimuth angles from metadata as:')
             print(f'LOS incidence angle: {los_inc_angle[i]:.1f} deg')
             print(f'LOS azimuth   angle: {los_az_angle[i]:.1f} deg')
-        los_inc_angle *= np.pi / 180.
-        los_az_angle *= np.pi / 180.
 
 
     ## 3. decompose LOS displacements into horizontal / Vertical displacements
     print('---------------------')
-    dhorz, dvert = asc_desc2horz_vert(dlos, los_inc_angle, los_az_angle, np.deg2rad(inps.horz_az_angle))
+    dhorz, dvert = asc_desc2horz_vert(dlos, los_inc_angle, los_az_angle, inps.horz_az_angle)
     dhorz = np.reshape(dhorz, (length, width))
     dvert = np.reshape(dvert, (length, width))
     dlos = np.reshape(dlos, (num_file, length, width))

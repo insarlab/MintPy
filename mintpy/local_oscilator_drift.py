@@ -38,8 +38,7 @@ def create_parser():
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog='{}\n{}\n{}'.format(REFERENCE, TEMPLATE, EXAMPLE))
 
-    parser.add_argument(
-        dest='file', help='timeseries / interferograms file, i.e. timeseries.h5')
+    parser.add_argument(dest='file', help='timeseries / interferograms file, i.e. timeseries.h5')
     parser.add_argument(dest='range_dist_file',
                         help='Slant range distance file, i.e. inputs/geometryRadar.h5, inputs/geometryGeo.h5\n' +
                         'or use range_distance.py to generate it.')
@@ -55,11 +54,11 @@ def cmd_line_parse(iargs=None):
 
 
 #########################################################################################
-def get_relative_range_distance(metadata):
-    length, width = int(metadata['LENGTH']), int(metadata['WIDTH'])
-    range_dist_1d = float(metadata['RANGE_PIXEL_SIZE']) * np.linspace(0, width-1, width)
+def get_relative_range_distance(meta):
+    length, width = int(meta['LENGTH']), int(meta['WIDTH'])
+    range_dist_1d = float(meta['RANGE_PIXEL_SIZE']) * np.linspace(0, width-1, width)
     range_dist = np.tile(range_dist_1d, (length, 1))
-    range_dist -= range_dist[int(atr['REF_Y']), int(atr['REF_X'])]
+    range_dist -= range_dist[int(meta['REF_Y']), int(meta['REF_X'])]
     return range_dist
 
 
@@ -88,6 +87,7 @@ def correct_local_oscilator_drift(fname, rg_dist_file=None, out_file=None):
         print('read range distance from file: %s' % (rg_dist_file))
         rg_dist = readfile.read(rg_dist_file, datasetName='slantRangeDistance', print_msg=False)[0]
         rg_dist -= rg_dist[int(atr['REF_Y']), int(atr['REF_X'])]
+
     ramp_rate = np.array(rg_dist * 3.87e-7, np.float32)
 
     # Correct LOD Ramp for Input fname
