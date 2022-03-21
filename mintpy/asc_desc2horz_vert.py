@@ -140,8 +140,41 @@ def get_overlap_lalo(atr_list):
     return S, N, W, E
 
 
-def get_design_matrix(los_inc_angle, los_az_angle, horz_az_angle=-90):
-    """Get the design matrix A to convert asc/desc to hz/up.
+def get_design_matrix4east_north_up(los_inc_angle, los_az_angle, obs_direction):
+    """Design matrix G to convert multi-track range/azimuth displacement into east/north/up direction.
+    Parameters: los_inc_angle - 1D np.ndarray in size of (num_obs,) in float32, LOS incidence angle in degree
+                los_az_angle  - 1D np.ndarray in size of (num_obs,) in float32, LOS azimuth   angle in degree
+                obs_direction - 1D np.ndarray in size of (num_obs,) in str, observation direction: range or azimuth
+    Returns:    G             - 2D np.ndarray in size of (num_obs, 3) in float32, design matrix
+    """
+    num_obs = los_inc_angle.shape[0]
+    G = np.zeros((num_obs, 3), dtype=np.float32)
+
+    for i, (inc_angle, az_angle, obs_dir) in enumerate(zip(los_inc_angle, los_az_angle, obs_direction)):
+        # calculate the unit vector
+        if obs_dir == 'range':
+            # for range offset / InSAR phase [positive value for motion toward from satellite]
+            ve = np.sin(np.deg2rad(inc_angle)) * np.sin(np.deg2rad(az_angle)) * -1
+            vn = np.sin(np.deg2rad(inc_angle)) * np.cos(np.deg2rad(az_angle))
+            vu = np.cos(np.deg2rad(inc_angle))
+
+        elif obs_dir == 'azimuth':
+            # for azimuth offset [with positive value for motion same as flight]
+            ve = np.sin(np.deg2rad(az_angle - 90)) * -1
+            vn = np.cos(np.deg2rad(az_angle - 90)) * 1
+            vu = 0.
+
+        else:
+            raise ValueError(f'un-recognized observation direction: {obs_dir}')
+
+        # fill the design matrix
+        G[i, :] = [ve, vn, vu]
+
+    return G
+
+
+def get_design_matrix4horz_vert(los_inc_angle, los_az_angle, horz_az_angle=-90):
+    """Design matrix G to convert asc/desc range displacement into horz/vert direction.
     Only asc + desc -> hz + up is implemented for now.
 
     Project displacement from LOS to Horizontal and Vertical components:
@@ -160,57 +193,67 @@ def get_design_matrix(los_inc_angle, los_az_angle, horz_az_angle=-90):
                 los_az_angle  - 1D np.ndarray in size of (num_file), LOS azimuth   angle in degree.
                 horz_az_angle - float, azimuth angle for the horizontal direction of interest in degree.
                                 Measured from the north with anti-clockwise direction as positive.
-    Returns:    A             - 2D matrix in size of (num_file, 2)
-
+    Returns:    G             - 2D matrix in size of (num_file, 2)
     """
     num_file = los_inc_angle.shape[0]
-    A = np.zeros((num_file, 2))
+    G = np.zeros((num_file, 2), dtype=np.float32)
     for i in range(num_file):
-        A[i, 0] = np.sin(np.deg2rad(los_inc_angle[i])) * np.cos(np.deg2rad(los_az_angle[i] - horz_az_angle))
-        A[i, 1] = np.cos(np.deg2rad(los_inc_angle[i]))
+        G[i, 0] = np.sin(np.deg2rad(los_inc_angle[i])) * np.cos(np.deg2rad(los_az_angle[i] - horz_az_angle))
+        G[i, 1] = np.cos(np.deg2rad(los_inc_angle[i]))
 
-    return A
+    return G
 
 
-def asc_desc2horz_vert(dlos, los_inc_angle, los_az_angle, horz_az_angle=-90):
+def asc_desc2horz_vert(dlos, los_inc_angle, los_az_angle, horz_az_angle=-90, step=20):
     """Decompose asc / desc LOS data into horz / vert data.
-    Parameters: dlos          - 2D np.ndarray in size of (num_file, num_pixel), LOS displacement in meters.
-                los_inc_angle - 1/2D np.ndarray in size of (num_file), num_pixel), LOS incidence angle in degree.
-                los_az_angle  - 1/2D np.ndarray in size of (num_file), num_pixel), LOS azimuth   angle in degree.
+    Parameters: dlos          - 3D np.ndarray in size of (num_file, length, width), LOS displacement in meters.
+                los_inc_angle - 1/3D np.ndarray in size of (num_file), length, width), LOS incidence angle in degree.
+                los_az_angle  - 1/3D np.ndarray in size of (num_file), length, width), LOS azimuth   angle in degree.
                 horz_az_angle - float, horizontal azimuth angle of interest in degree.
-    Returns:    dhorz         - 1D np.ndarray in size of (num_pixel), horizontal displacement in meters.
-                dvert         - 1D np.ndarray in size of (num_pixel), vertical   displacement in meters.
+                step          - int, geometry step size
+    Returns:    dhorz         - 2D np.ndarray in size of (length, width), horizontal displacement in meters.
+                dvert         - 2D np.ndarray in size of (length, width), vertical   displacement in meters.
     """
     # initiate output
-    num_pixel = dlos.shape[1]
-    dhorz = np.zeros(num_pixel, dtype=np.float32) * np.nan
-    dvert = np.zeros(num_pixel, dtype=np.float32) * np.nan
+    (num_file, length, width) = dlos.shape
+    dhorz = np.zeros((length, width), dtype=np.float32) * np.nan
+    dvert = np.zeros((length, width), dtype=np.float32) * np.nan
 
     # 0D (constant) incidence / azimuth angle --> invert once for all pixels
     if los_inc_angle.ndim == 1:
-        A = get_design_matrix(los_inc_angle, los_az_angle, horz_az_angle)
+        G = get_design_matrix4horz_vert(los_inc_angle, los_az_angle, horz_az_angle)
         print('decomposing asc/desc into horz/vert direction ...')
-        dhv = np.dot(np.linalg.pinv(A), dlos).astype(np.float32)
-        dhorz = dhv[0, :]
-        dvert = dhv[1, :]
+        dhv = np.dot(np.linalg.pinv(G), dlos.reshape(num_file, -1)).astype(np.float32)
+        dhorz = dhv[0, :].reshape(length, width)
+        dvert = dhv[1, :].reshape(length, width)
 
-    # 2D incidence / azimuth angle --> invert pixel-by-pixel
-    elif los_inc_angle.ndim == 2:
-        mask = np.sum(np.isnan(dlos), axis=0) > 0
-        num_pixel2inv = int(np.sum(mask))
-        idx_pixel2inv = np.where(mask)[0]
-        print('number of valid pixels to decompose: {} out of {} ({:.1f}%)'.format(
-            num_pixel2inv, num_pixel, num_pixel2inv/num_pixel*100))
+    # 2D incidence / azimuth angle --> invert window-by-window
+    elif los_inc_angle.ndim == 3:
+        num_row = np.ceil(length / step).astype(int)
+        num_col = np.ceil(width / step).astype(int)
 
-        print('decomposing asc/desc into horz/vert direction pixel-by-pixel ...')
-        prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
-        for i, idx in enumerate(idx_pixel2inv):
-            A = get_design_matrix(los_inc_angle[:, idx], los_az_angle[:, idx], horz_az_angle)
-            dhv = np.dot(np.linalg.pinv(A), dlos[:, idx]).astype(np.float32)
-            dhorz[idx] = dhv[0]
-            dvert[idx] = dhv[1]
-            prog_bar.update(i+1, every=1000, suffix=f'{i+1}/{num_pixel2inv} pixels')
+        print(f'decomposing asc/desc into horz/vert direction in windows of {step}x{step} ...')
+        prog_bar = ptime.progressBar(maxValue=num_row)
+        for i in range(num_row):
+            y0, y1 = step * i, min(step * (i + 1), length)
+            for j in range(num_col):
+                x0, x1 = step * j, min(step * (j + 1), width)
+
+                # calculate the median geometry for the local window
+                med_los_inc_angle = np.nanmedian(los_inc_angle[:, y0:y1, x0:x1], axis=(1,2))
+                med_los_az_angle  = np.nanmedian( los_az_angle[:, y0:y1, x0:x1], axis=(1,2))
+                if np.all(~np.isnan(med_los_inc_angle)):
+
+                    G = get_design_matrix4horz_vert(med_los_inc_angle, med_los_az_angle, horz_az_angle)
+                    dhv = np.dot(np.linalg.pinv(G), dlos[:, y0:y1, x0:x1].reshape(num_file, -1))
+                    dhorz[y0:y1, x0:x1] = dhv[0].reshape(y1-y0, x1-x0)
+                    dvert[y0:y1, x0:x1] = dhv[1].reshape(y1-y0, x1-x0)
+
+            prog_bar.update(i+1, suffix=f'{i+1}/{num_row}')
         prog_bar.close()
+
+    else:
+        raise ValueError(f'un-supported incidence angle matrix dimension ({los_inc_angle.ndim})!')
 
     return dhorz, dvert
 
@@ -234,10 +277,10 @@ def run_asc_desc2horz_vert(inps):
     ## 2. read LOS data and geometry
     num_file = len(inps.file)
     num_pixel = length * width
-    dlos = np.zeros((num_file, num_pixel), dtype=np.float32)
+    dlos = np.zeros((num_file, length, width), dtype=np.float32)
     if inps.geom_file:
-        los_inc_angle = np.zeros((num_file, num_pixel), dtype=np.float32)
-        los_az_angle  = np.zeros((num_file, num_pixel), dtype=np.float32)
+        los_inc_angle = np.zeros((num_file, length, width), dtype=np.float32)
+        los_az_angle  = np.zeros((num_file, length, width), dtype=np.float32)
     else:
         los_inc_angle = np.zeros(num_file, dtype=np.float32)
         los_az_angle  = np.zeros(num_file, dtype=np.float32)
@@ -250,14 +293,14 @@ def run_asc_desc2horz_vert(inps):
         box = (x0, y0, x0 + width, y0 + length)
 
         # read data
-        dlos[i, :] = readfile.read(fname, box=box, datasetName=inps.ds_name)[0].flatten()
+        dlos[i, :] = readfile.read(fname, box=box, datasetName=inps.ds_name)[0]
         msg = f'{inps.ds_name} ' if inps.ds_name else ''
         print(f'read {msg} from file: {fname}')
 
         # read geometry
         if inps.geom_file:
-            los_inc_angle[i, :] = readfile.read(inps.geom_file[i], box=box, datasetName='incidenceAngle')[0].flatten()
-            los_az_angle[i, :]  = readfile.read(inps.geom_file[i], box=box, datasetName='azimuthAngle')[0].flatten()
+            los_inc_angle[i, :] = readfile.read(inps.geom_file[i], box=box, datasetName='incidenceAngle')[0]
+            los_az_angle[i, :]  = readfile.read(inps.geom_file[i], box=box, datasetName='azimuthAngle')[0]
             print(f'read 2D LOS incidence / azimuth angles from file: {inps.geom_file[i]}')
         else:
             los_inc_angle[i] = ut.incidence_angle(atr, dimension=0, print_msg=False)
@@ -270,9 +313,6 @@ def run_asc_desc2horz_vert(inps):
     ## 3. decompose LOS displacements into horizontal / Vertical displacements
     print('---------------------')
     dhorz, dvert = asc_desc2horz_vert(dlos, los_inc_angle, los_az_angle, inps.horz_az_angle)
-    dhorz = np.reshape(dhorz, (length, width))
-    dvert = np.reshape(dvert, (length, width))
-    dlos = np.reshape(dlos, (num_file, length, width))
 
 
     ## 4. write outputs
@@ -304,15 +344,21 @@ def run_asc_desc2horz_vert(inps):
         for i, atr in enumerate(atr_list):
             # dataset name for LOS data
             track_num = atr.get('trackNumber', None)
-            ds_name = sensor.project_name2sensor_name(atr['PROJECT_NAME'])[0]
+            proj_name = atr.get('PROJECT_NAME', None)
+            if proj_name in ['none', 'None', None]:
+                proj_name = atr.get('FILE_PATH', None)
+            proj_name = sensor.project_name2sensor_name(proj_name)[0]
+
+            ds_name = proj_name if proj_name else ''
             ds_name += 'A' if atr['ORBIT_DIRECTION'].lower().startswith('asc') else 'D'
             ds_name += f'T{track_num}' if track_num else ''
             ds_name += '_{}'.format(atr['DATE12'])
+
             # assign dataset value
             dsDict[ds_name] = dlos[i]
         dsDict['horizontal'] = dhorz
         dsDict['vertical'] = dvert
-        writefile.write(dsDict, out_file=inps.one_outfile, metadata=meta, ref_file=ref_file)
+        writefile.write(dsDict, out_file=inps.one_outfile, metadata=atr, ref_file=ref_file)
 
     else:
         print('writing horizontal component to file: '+inps.outfile[0])
