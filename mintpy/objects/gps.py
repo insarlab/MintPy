@@ -385,6 +385,7 @@ class GPS:
 
         self.dates = np.array([dt.datetime.strptime(i, "%y%b%d") for i in data[:, 1]])
         #self.dates = np.array([ptime.decimal_year2datetime(i) for i in data[:, 2]])
+        self.date_list = [x.strftime('%Y%m%d') for x in self.dates]
 
         (self.dis_e,
          self.dis_n,

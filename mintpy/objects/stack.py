@@ -151,8 +151,6 @@ class timeseries:
 
     File structure: https://mintpy.readthedocs.io/en/latest/api/data_structure/#timeseries
     """
-    # point get_design_matrix4time_func() to utils.time_func for backward compatibility
-    get_design_matrix4time_func = time_func.get_design_matrix4time_func
 
     def __init__(self, file=None):
         self.file = file

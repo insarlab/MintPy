@@ -65,10 +65,8 @@ def main(iargs=None):
     dlos1 = ut.enu2los(dE, dN, dU, inc_angle=los_inc_angle[1], az_angle=los_az_angle[1])
 
     # asc / desc LOS --> horz / vert [estimation]
-    dlos = np.vstack((dlos0.reshape(1, -1), dlos1.reshape(1, -1)))
+    dlos = np.vstack((dlos0.reshape(1, length, width), dlos1.reshape(1, length, width)))
     estH, estV = asc_desc2horz_vert(dlos, los_inc_angle, los_az_angle, horz_az_angle)
-    estH = estH.reshape(length, width)
-    estV = estV.reshape(length, width)
 
     # check difference between the trush and estimation
     print(f'mean difference for horz / vert: {np.nanmean(estH - simH)} / {np.nanmean(estH - simH)}')
