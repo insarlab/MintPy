@@ -18,20 +18,27 @@ from mintpy import ifgram_inversion as ifginv
 
 ################################################################################
 REFERENCE = """reference:
-  Zheng, Y., et al., (2022) On Closure Phase and Systematic Bias in Multilooked SAR Interferometry, IEEE TGRS, under review (minor revision)
+  Zheng, Y., Fattahi, H., Agram, P., Simons, M. and Rosen, P. (2022) On Closure Phase and Systematic Bias in Multilooked SAR Interferometry, IEEE TGRS, under review (minor revision)
 """
 EXAMPLE = """example:
-  closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --numsigma 2.5
+    closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --action create_mask
+    closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --numsigma 2.5 --action create_mask
 """
 
 def create_parser():
-    parser = argparse.ArgumentParser(description = 'Create an indication map for closure phase bias.')
+    parser = argparse.ArgumentParser(description = 'This script deals with phase non-closure related bias, either in terms of masking, estimation or correction.')
     parser.add_argument('-i','--ifgramstack',type = str, dest = 'ifgram_stack',help = 'interferogram stack file that contains the unwrapped phases')
     parser.add_argument('--nl', dest = 'nl', type = int, default = 20, help = 'connection level that we are correcting to (or consider as no bias)')
     parser.add_argument('--numsigma',dest = 'numsigma', type = float, default = 3, help = 'Threshold for phase (number of sigmas,0-infty), default to be 3 sigma of a Gaussian distribution (assumed distribution for the cumulative closure phase) with sigma = pi/sqrt(3*num_cp)')
     parser.add_argument('--epi',dest = 'episilon', type = float, default = 0.3, help = 'Threshold for amplitude (0-1), default 0.3')
     parser.add_argument('--maxMemory', dest = 'max_memory', type = float, default = 8, help = 'max memory to use in GB')
     parser.add_argument('-o', dest = 'outdir', type = str, default = '.', help = 'output file directory')
+    parser.add_argument('-a','--action', dest='action', type=str, default='create_mask',
+                        choices={'create_mask', 'estimate_bias','correct_bias'},
+                        help='action to take (default: %(default)s):\n'+
+                             'create_mask -  create a mask of areas susceptible to closure phase errors\n'+
+                             'estimate_bias - estimate how bias decays with time, will output sequential closure phase files\n'+
+                             'correct_bias - estimate bias velocity in the form of timeseries_bias.h5, will output sequential closure phase files')
     return parser
 
 def cmd_line_parse(iargs=None):
@@ -91,17 +98,22 @@ def cum_seq_closurePhase(SLC_list, date12_list_all, ifgram_stack, ref_phase, n, 
     # cum_cp = np.angle(cum_cp)
     return cum_cp, num_cp
 
-def main(iargs = None):
-    inps = cmd_line_parse(iargs)
-    stack_obj = ifgramStack(inps.ifgram_stack)
+def creat_cp_mask(ifgram_stack, nl, max_memory, numsigma, threshold_amp, outdir):
+    """
+    Input parameters:
+        ifgram_stack: stack file
+        nl        : maximum connection level that assumed to be bias free
+        max_memory : maxum memory for each bounding box
+        threshold_pha, threshold_amp: threshold of phase and ampliutde of the cumulative sequential closure phase
+    """
+    stack_obj = ifgramStack(ifgram_stack)
     stack_obj.open()
     length, width = stack_obj.length, stack_obj.width
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
     date12_list_all = stack_obj.get_date12_list(dropIfgram=False)
     print('scene length, width', length, width)
     ref_phase = stack_obj.get_reference_phase(unwDatasetName = 'unwrapPhase')
-    inps.length = length
-    inps.width = width
+
     # retrieve the list of SLC dates from ifgramStack.h5
     ifgram0 = date12_list[0]
     date1, date2 = ifgram0.split('_')
@@ -117,9 +129,8 @@ def main(iargs = None):
     print('first SLC: ', SLC_list[0])
     print('last  SLC: ', SLC_list[-1])
 
-
     # split igram_file into blocks to save memory
-    box_list, num_box = ifginv.split2boxes(inps.ifgram_stack,inps.max_memory)
+    box_list, num_box = ifginv.split2boxes(ifgram_stack,max_memory)
     closurephase =  np.zeros([length,width],np.complex64)
     #process block-by-block
     for i, box in enumerate(box_list):
@@ -131,35 +142,41 @@ def main(iargs = None):
                 print('box width:  {}'.format(box_width))
                 print('box length: {}'.format(box_length))
 
-            closurephase[box[1]:box[3],box[0]:box[2]], numcp = cum_seq_closurePhase(SLC_list, date12_list_all, inps.ifgram_stack, ref_phase,inps.nl,box)
-
-
-
+            closurephase[box[1]:box[3],box[0]:box[2]], numcp = cum_seq_closurePhase(SLC_list, date12_list_all, ifgram_stack, ref_phase,nl,box)
     # What is a good thredshold?
     # Assume that it's pure noise so that the phase is uniform distributed from -pi to pi.
     # The standard deviation of phase in each loop is pi/sqrt(3) (technically should be smaller because when forming loops there should be a reduction in phase variance)
-    # The standard deviation of phase in cumulative wrapped closure phase is pi/sqrt(3)/sqrt(num_cp) -- again another simplification assuming no correlation.
-    # We use 3\delta as default threshold -- 99.7% confidence
+    # The standard deviation of phase in cumulative wrapped closure phase is pi/sqrt(3)/sqrt(numcp) -- again another simplification assuming no correlation.
+    # We use 3\delta as threshold -- 99.7% confidence
 
-    if inps.numsigma:
-        threshold_cp = np.pi/np.sqrt(3)/np.sqrt(numcp)*inps.numsigma
-    else:
-        threshold_cp = np.pi/np.sqrt(3)/np.sqrt(numcp)*3 # 3/sigma, 99.7% confidence
+    threshold_pha = np.pi/np.sqrt(3)/np.sqrt(numcp)*numsigma
 
     mask = np.ones([length,width],np.float32)
-    mask[np.abs(np.angle(closurephase))>threshold_cp] = 0 # this masks areas with potential bias
-    mask[np.abs(np.abs(closurephase)/numcp < inps.episilon)] = 1 # this unmasks areas with low correlation (where it's hard to know wheter there is bias either)
+    mask[np.abs(np.angle(closurephase))>threshold_pha] = 0 # this masks areas with potential bias
+    mask[np.abs(np.abs(closurephase)/numcp < threshold_amp)] = 1 # this unmasks areas with low correlation (where it's hard to know wheter there is bias either)
 
     # save mask
     meta = dict(stack_obj.metadata)
     meta['FILE_TYPE'] = 'mask'
     ds_name_dict = {'cpmask': [np.float32, (length, width), mask],}
-    writefile.layout_hdf5(os.path.join(inps.outdir,'cpmask.h5'), ds_name_dict, meta)
+    writefile.layout_hdf5(os.path.join(outdir,'cpmask.h5'), ds_name_dict, meta)
 
     # also save the average closure phase
     ds_name_dict2 = {'phase': [np.float32, (length, width), np.angle(closurephase)],
                     'amplitude':[np.float32,(length,width),np.abs(closurephase)/numcp],}
-    writefile.layout_hdf5(os.path.join(inps.outdir,'avgwcp.h5'), ds_name_dict2, meta)
+    writefile.layout_hdf5(os.path.join(outdir,'avgwcp.h5'), ds_name_dict2, meta)
+
+    return
+
+
+def main(iargs = None):
+    inps = cmd_line_parse(iargs)
+    if inps.numsigma:
+        numsigma = inps.numsigma
+    else:
+        numsigma = 3
+    if inps.action == 'create_mask':
+        creat_cp_mask(inps.ifgram_stack, inps.nl, inps.max_memory, numsigma, inps.episilon, inps.outdir)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
