@@ -412,6 +412,7 @@ def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_
     if min_val == max_val:
         cmap_lut = 256
         vlim = [min_val, max_val]
+        unique_values = None
 
     else:
         vstep = np.min(np.abs(np.diff(unique_values))).astype(float)
@@ -434,8 +435,9 @@ def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_
 
             cmap_lut = 256
             vlim = [np.nanmin(data_mli), np.nanmax(data_mli)]
+            unique_values = None
 
-    return cmap_lut, vlim
+    return cmap_lut, vlim, unique_values
 
 
 def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=None, buffer_year=0.2,
@@ -1087,12 +1089,13 @@ def plot_colorbar(inps, im, cax):
     if inps.wrap and (inps.wrap_range[1] - inps.wrap_range[0]) == 2.*np.pi:
         cbar = plt.colorbar(im, cax=cax, orientation=orientation, ticks=[-np.pi, 0, np.pi])
         cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
+
+    elif inps.cmap_lut <=5 and getattr(inps, 'unique_values', None) is not None:
+        # show the exact tick values
+        cbar = plt.colorbar(im, cax=cax, orientation=orientation, ticks=inps.unique_values)
+
     else:
         cbar = plt.colorbar(im, cax=cax, orientation=orientation, extend=inps.cbar_ext)
-
-    # update ticks
-    if inps.cmap_lut <= 5:
-        inps.cbar_nbins = inps.cmap_lut
 
     if inps.cbar_nbins:
         if inps.cbar_nbins <= 2:
@@ -1785,6 +1788,7 @@ def read_gmt_lonlat_file(ll_file, SNWE=None, min_dist=10):
     lines = None
     with open(ll_file, 'r') as f:
         lines = f.readlines()
+    lines = [x for x in lines if not x.startswith('#')]
 
     debug_mode = False
     if debug_mode:

@@ -46,9 +46,11 @@ EXAMPLE = """example:
 """
 
 REFERENCE = """reference:
-  Milbert, D., Solid Earth Tide, http://geodesyworld.github.io/SOFTS/solid.htm, Accessd 2020 September 6.
-  Fattahi, H., Z. Yunjun, X. Pi, P. S. Agram, P. Rosen, and Y. Aoki (2020), Absolute geolocation of SAR 
-    Big-Data: The first step for operational InSAR time-series analysis, AGU Fall Meeting 2020, 1-17 Dec 2020.
+  Milbert, D. (2018), "solid: Solid Earth Tide", [Online]. Available: http://geodesyworld.github.io/
+    SOFTS/solid.htm. Accessd on: 2020-09-06.
+  Yunjun, Z., Fattahi, H., Pi, X., Rosen, P., Simons, M., Agram, P., & Aoki, Y. (2022). Range 
+    Geolocation Accuracy of C/L-band SAR and its Implications for Operational Stack Coregistration.
+    IEEE Trans. Geosci. Remote Sens., doi:10.1109/TGRS.2022.3168509.
 """
 
 def create_parser():
@@ -308,7 +310,7 @@ def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_file, date_wise_ac
 
     # loop for calc
     print('\n'+'-'*50)
-    print('calculating solid Earth tides using solid.for (D. Milbert, 2018) ...')
+    print('calculating solid Earth tides using PySolid (Milbert, 2018; Yunjun et al., 2022) ...')
     prog_bar = ptime.progressBar(maxValue=num_date, print_msg=not verbose)
     for i, dt_obj in enumerate(dt_objs):
         # calculate tide in ENU direction

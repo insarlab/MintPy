@@ -159,6 +159,16 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, gps_comp='
         fc = np.genfromtxt(csv_file, dtype=col_types, delimiter=',', names=True)
         site_obs = fc[col_names[obs_ind]]
 
+        # get obs for the input site names only
+        # in case the site_names are not consistent with the CSV file.
+        if num_row != num_site:
+            temp_names = fc[col_names[0]]
+            temp_obs = np.array(site_obs, dtype=np.float32)
+            site_obs = np.zeros(num_site, dtype=np.float32) * np.nan
+            for i, site_name in enumerate(site_names):
+                if site_name in temp_names:
+                    site_obs[i] = temp_obs[temp_names == site_name][0]
+
     else:
         # calculate and save to CSV file
         data_list = []

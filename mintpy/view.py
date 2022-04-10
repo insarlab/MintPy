@@ -488,7 +488,9 @@ def update_data_with_plot_inps(data, metadata, inps):
     # 4. update display min/max
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
     if not inps.vlim: # and data.ndim < 3:
-        inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(data, print_msg=inps.print_msg)
+        (inps.cmap_lut,
+         inps.vlim,
+         inps.unique_values) = pp.auto_adjust_colormap_lut_and_disp_limit(data, print_msg=inps.print_msg)
     vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
     vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
 
@@ -1146,9 +1148,11 @@ def read_data4figure(i_start, i_end, inps, metadata):
             and all(arg not in inps.argv for arg in ['-v', '--vlim', '--wrap'])
             and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)
             and inps.dsetFamilyList[0] not in ['bperp']):
-        inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(data,
-                                                                              num_multilook=10,
-                                                                              print_msg=False)
+        (inps.cmap_lut,
+         inps.vlim,
+         inps.unique_values) = pp.auto_adjust_colormap_lut_and_disp_limit(data,
+                                                                          num_multilook=10,
+                                                                          print_msg=False)
 
     return data
 
