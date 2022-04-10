@@ -228,10 +228,10 @@ def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None, zero_first=True,
         pass
     elif unit == 'cm':
         dis *= 100.
-        dis_std *= 100.
+        dis_std = None if dis_std is None else dis_std * 100.
     elif unit == 'mm':
         dis *= 1000.
-        dis_std *= 1000.
+        dis_std = None if dis_std is None else dis_std * 1000.
     else:
         raise ValueError('un-supported output unit: {}'.format(unit))
 

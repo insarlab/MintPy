@@ -47,8 +47,9 @@ SAR_BAND = {
 
 ######################## Ionospheric Mapping Functions #########################
 # Reference:
-#   Yunjun, Z., Fattahi, H., Pi, X., Rosen, P., Simons, M., Agram, P., & Aoki, Y. (2022). Range Geolocation Accuracy
-#     of C/L-band SAR and its Implications for Operational Stack Coregistration. IEEE Trans. Geosci. Remote Sens. 
+#   Yunjun, Z., Fattahi, H., Pi, X., Rosen, P., Simons, M., Agram, P., & Aoki, Y. (2022). Range
+#     Geolocation Accuracy of C/L-band SAR and its Implications for Operational Stack Coregistration.
+#     IEEE Trans. Geosci. Remote Sens., doi:10.1109/TGRS.2022.3168509.
 #   Schaer, S., Gurtner, W., & Feltens, J. (1998). IONEX: The ionosphere map exchange format version 1.1. 
 #     Paper presented at the Proceedings of the IGS AC workshop, Darmstadt, Germany, Darmstadt, Germany.
 

@@ -574,7 +574,7 @@ def main(iargs=None):
     # disp min/max and colormap
     cmap_lut = 256
     if not inps.vlim:
-        cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(data)
+        cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(data)[:2]
     inps.colormap = pp.auto_colormap_name(atr, inps.colormap)
     inps.colormap = pp.ColormapExt(inps.colormap, cmap_lut).colormap
     inps.norm = colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])

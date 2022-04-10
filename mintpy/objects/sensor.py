@@ -16,7 +16,7 @@ SENSOR_NAME_VARIATION = {
     'csk'   : ['csk', 'csk1', 'csk2', 'csk3', 'csk4', 'cos', 'cosmo', 'cosmoskymed'],
     'env'   : ['env', 'envisat', 'asar'],
     'ers'   : ['ers', 'ers1', 'ers2', 'ers12'],
-    'gfen3' : ['gfen3', 'gaofen3', 'g3', 'gaofen'],
+    'gf3'   : ['gfen3', 'gaofen3', 'g3', 'gaofen'],
     'jers'  : ['jers', 'jers1'],
     'ksat5' : ['ksat5', 'kompsat5', 'kompsat', 'kmps5'],
     'ni'    : ['ni', 'nisar'],
@@ -281,6 +281,15 @@ RSAT2 = {
     'sampling_frequency'         : 112.68e6,  # Hz
     'azimuth_pixel_size'         : 2.2,       # m
     'ground_range_pixel_size'    : 2.1,       # m
+}
+
+# GaoFen-3 
+# Table 2 & 6 in https://directory.eoportal.org/web/eoportal/satellite-missions/g/gaofen-3
+GF3 = {
+    'carrier_frequency'          : 5.4e9,     # Hz
+    'altitude'                   : 755e3,     # m
+    'antenna_length'             : 15,        # m
+    'sampling_frequency'         : 533.33e6,  # Hz
 }
 
 # Sentinel-1 Interferometric Wide (IW / TOPS) swath mode

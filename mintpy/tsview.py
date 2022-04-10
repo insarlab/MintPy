@@ -447,7 +447,7 @@ def read_timeseries_data(inps):
     if not inps.vlim:
         inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(ts_data[0],
                                                                               num_multilook=10,
-                                                                              print_msg=inps.print_msg)
+                                                                              print_msg=inps.print_msg)[:2]
     vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
     vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
 
