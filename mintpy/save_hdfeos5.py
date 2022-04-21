@@ -52,6 +52,7 @@ def create_parser():
                         help='Average spatial coherence file, i.e. avgSpatialCoh.h5')
     parser.add_argument('-m', '--mask', dest='mask_file', help='Mask file')
     parser.add_argument('-g', '--geometry', dest='geom_file', help='geometry file')
+    parser.add_argument('--suffix', dest='suffix', help='suffix to be appended to file name (e.g. PS).')
 
     parser.add_argument('--update', action='store_true',
                         help='Enable update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year')
@@ -242,7 +243,7 @@ def metadata_mintpy2unavco(meta_in, dateList):
     return unavco_meta
 
 
-def get_output_filename(metadata, update_mode=False, subset_mode=False):
+def get_output_filename(metadata, suffix=None, update_mode=False, subset_mode=False):
     """Get output file name of HDF-EOS5 time-series file."""
     SAT = metadata['mission']
     SW = metadata['beam_mode']
@@ -263,7 +264,10 @@ def get_output_filename(metadata, update_mode=False, subset_mode=False):
         print('Update mode is ON, put endDate as XXXXXXXX.')
         DATE2 = 'XXXXXXXX'
 
-    outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'_'+DATE2+'.he5'
+    if not suffix:
+       outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'_'+DATE2+'.he5'
+    else:
+       outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'_'+DATE2+'_'+suffix+'.he5'
 
     if subset_mode:
         print('Subset mode is enabled, put subset range info in output filename.')
@@ -463,6 +467,7 @@ def main(iargs=None):
 
     # Get output filename
     out_file = get_output_filename(metadata=meta,
+                                   suffix=inps.suffix,
                                    update_mode=inps.update,
                                    subset_mode=inps.subset)
 
