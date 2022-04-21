@@ -52,7 +52,7 @@ def create_parser():
                         help='Average spatial coherence file, i.e. avgSpatialCoh.h5')
     parser.add_argument('-m', '--mask', dest='mask_file', help='Mask file')
     parser.add_argument('-g', '--geometry', dest='geom_file', help='geometry file')
-    parser.add_argument('--suffix', dest='suffix', help='suffix to be appended to file name (e.g. PS)')
+    parser.add_argument('--suffix', dest='suffix', help='suffix to be appended to file name (e.g. PS).')
 
     parser.add_argument('--update', action='store_true',
                         help='Enable update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year')
@@ -264,7 +264,7 @@ def get_output_filename(metadata, suffix=None, update_mode=False, subset_mode=Fa
         print('Update mode is ON, put endDate as XXXXXXXX.')
         DATE2 = 'XXXXXXXX'
 
-    if suffix == None:
+    if not suffix:
        outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'_'+DATE2+'.he5'
     else:
        outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'_'+DATE2+'_'+suffix+'.he5'
