@@ -124,7 +124,7 @@ def add_inner_title(ax, title, loc, prop=None, **kwargs):
 
 
 def auto_figure_size(ds_shape, scale=1.0, disp_cbar=False, disp_slider=False,
-                     cbar_ratio=0.25, slider_ratio=0.30, print_msg=True):
+                     cbar_ratio=0.25, slider_ratio=0.15, print_msg=True):
     """Get auto figure size based on input data shape
     Adjust if display colobar on the right and/or slider on the bottom
 

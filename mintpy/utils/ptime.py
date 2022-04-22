@@ -15,6 +15,20 @@ from mintpy.objects.progress import progressBar
 
 
 ################################################################
+def get_compact_isoformat(date_str):
+    """Get the "compact-looking" isoformat of the input datetime string.
+    Parameters: date_str   - str, an example date string
+    Returns:    iso_format - str, date string in "compact" iso format
+    """
+    date_str = date_str[0] if isinstance(date_str, list) else date_str
+    iso_format = get_date_str_format(date_str)
+    iso_format = iso_format.replace('y', 'Y')
+    iso_format = iso_format.replace('%Y%m%d', '%Y-%m-%d')
+    iso_format = iso_format.replace('%H%M%S', '%H:%M:%S')
+    iso_format = iso_format.replace('%H%M',   '%H:%M')
+    return iso_format
+
+
 def get_date_str_format(date_str):
     """Get the datetime string format as defined in:
     https://docs.python.org/3.7/library/datetime.html#strftime-and-strptime-behavior
@@ -25,8 +39,7 @@ def get_date_str_format(date_str):
                             YYMMDD
     Returns:    date_str_format - str, datetime string format
     """
-    if isinstance(date_str, list):
-        date_str = date_str[0]
+    date_str = date_str[0] if isinstance(date_str, list) else date_str
 
     try:
         date_str = date_str.decode('utf8')
