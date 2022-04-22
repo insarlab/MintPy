@@ -12,7 +12,7 @@ import sys
 import argparse
 import numpy as np
 from scipy import linalg, stats
-from matplotlib import pyplot as plt, ticker, widgets, patches
+from matplotlib import pyplot as plt, widgets, patches
 
 from mintpy.objects import timeseries, giantTimeseries, HDFEOS
 from mintpy.utils import arg_group, ptime, time_func, readfile, utils as ut, plot as pp
@@ -787,17 +787,15 @@ class timeseriesViewer():
                 disp_cbar=True,
                 disp_slider=True,
                 print_msg=self.print_msg)
-        self.fig_img = plt.figure(self.figname_img, figsize=self.figsize_img)
+        subplot_kw = dict(projection=self.map_proj_obj) if self.map_proj_obj is not None else {}
+        self.fig_img, self.ax_img = plt.subplots(figsize=self.figsize_img, **subplot_kw)
 
         # Figure 1 - Axes 1 - Displacement Map
-        axes_kw = dict(projection=self.map_proj_obj) if self.map_proj_obj is not None else {}
-        self.ax_img = self.fig_img.add_axes([0.125, 0.25, 0.75, 0.65], **axes_kw)
         img_data = np.array(self.ts_data[0][self.idx, :, :])
         img_data[self.mask == 0] = np.nan
         self.plot_init_image(img_data)
 
         # Figure 1 - Axes 2 - Time Slider
-        self.ax_tslider = self.fig_img.add_axes([0.125, 0.05, 0.75, 0.15])
         self.plot_init_time_slider(init_idx=self.idx, ref_idx=self.ref_idx)
         self.tslider.on_changed(self.update_time_slider)
 
@@ -851,7 +849,7 @@ class timeseriesViewer():
 
             if idx is not None and idx != self.idx:
                 # update title
-                disp_date = self.dates[idx].strftime('%Y-%m-%d')
+                disp_date = self.dates[idx].strftime(self.disp_date_format)
                 sub_title = 'N = {n}, Time = {t}'.format(n=idx, t=disp_date)
                 self.ax_img.set_title(sub_title, fontsize=self.font_size)
 
@@ -864,8 +862,8 @@ class timeseriesViewer():
                     data_img = ut.wrap(data_img, wrap_range=self.wrap_range)
 
                 # update
-                self.tslider.set_val(self.yearList[idx]) # update slider
-                self.img.set_data(data_img)              # update image
+                self.tslider.set_val(idx)         # update slider
+                self.img.set_data(data_img)       # update image
                 self.idx = idx
                 self.fig_img.canvas.draw_idle()
                 self.fig_img.canvas.flush_events()
@@ -874,23 +872,23 @@ class timeseriesViewer():
 
     def update_time_slider(self, val):
         """Update Displacement Map using Slider"""
-        idx = np.argmin(np.abs(np.array(self.yearList) - self.tslider.val))
+        self.idx = self.tslider.val
+
         # update title
-        disp_date = self.dates[idx].strftime('%Y-%m-%d')
-        sub_title = 'N = {n}, Time = {t}'.format(n=idx, t=disp_date)
+        disp_date = self.dates[self.idx].strftime(self.disp_date_format)
+        sub_title = 'N = {n}, Time = {t}'.format(n=self.idx, t=disp_date)
         self.ax_img.set_title(sub_title, fontsize=self.font_size)
 
-        # read data
-        data_img = np.array(self.ts_data[0][idx, :, :])
+        # read/update 2D image data
+        data_img = np.array(self.ts_data[0][self.idx, :, :])
         data_img[self.mask == 0] = np.nan
         if self.wrap:
             if self.disp_unit_img == 'radian':
                 data_img *= self.range2phase
             data_img = ut.wrap(data_img, wrap_range=self.wrap_range)
-
-        # update data
         self.img.set_data(data_img)
-        self.idx = idx
+
+        # update figure
         self.fig_img.canvas.draw_idle()
         self.fig_img.canvas.flush_events()
         return
@@ -898,6 +896,7 @@ class timeseriesViewer():
 
     ##---------- plot functions
     def plot_init_image(self, img_data):
+        """Plot the initial 2D image."""
         # prepare data
         if self.wrap:
             if self.disp_unit_img == 'radian':
@@ -905,7 +904,8 @@ class timeseriesViewer():
             img_data = ut.wrap(img_data, wrap_range=self.wrap_range)
 
         # Title and Axis Label
-        disp_date = self.dates[self.idx].strftime('%Y-%m-%d')
+        self.disp_date_format = ptime.get_compact_isoformat(self.date_list[0])
+        disp_date = self.dates[self.idx].strftime(self.disp_date_format)
         self.fig_title = 'N = {}, Time = {}'.format(self.idx, disp_date)
 
         # Initial Pixel of interest
@@ -918,39 +918,31 @@ class timeseriesViewer():
 
         # call view.py to plot
         self.img, self.cbar_img = view.plot_slice(self.ax_img, img_data, self.atr, self)[2:4]
+        self.fig_img.canvas.set_window_title(self.figname_img)
+        self.fig_img.tight_layout(rect=(0,0,1,0.97))
+
         return self.img, self.cbar_img
 
 
     def plot_init_time_slider(self, init_idx=-1, ref_idx=None):
-        val_step = np.min(np.diff(self.yearList))
-        val_min = self.yearList[0]
-        val_max = self.yearList[-1]
+        """Plot the initial slider."""
+        # initiate axes
+        self.fig_img.subplots_adjust(bottom=0.16)
+        self.ax_tslider = self.fig_img.add_axes([0.125, 0.05, 0.75, 0.03])
 
+        # plot slider
         self.tslider = widgets.Slider(
-            self.ax_tslider,
-            label='Time',
-            valinit=self.yearList[init_idx],
-            valmin=val_min,
-            valmax=val_max,
-            valstep=np.array(self.yearList),
-        )
+            ax=self.ax_tslider,
+            label='Image',
+            valinit=init_idx,
+            valmin=0,
+            valmax=self.num_date-1,
+            valstep=1)
 
-        # plot vertical lines to mark the acquisition times
-        bar_width = val_step / 6.
-        num_val = len(self.yearList)
-        if num_val <= 100:
-            ymin, ymax = 0.25, 0.5
-            kwargs = dict(bottom=ymin, ecolor=None)
-            xdate = np.array(self.yearList)
-            self.tslider.ax.bar(xdate, np.ones(num_val)*ymax, width=bar_width, facecolor='black', **kwargs)
-            if ref_idx is not None:
-                self.tslider.ax.bar(xdate[ref_idx], ymax, width=bar_width*3, facecolor='crimson', **kwargs)
+        # plot reference date as a gray dot
+        if ref_idx is not None:
+            self.tslider.ax.scatter(ref_idx, 0.5, s=8**2, marker='o', color='gray', edgecolors='w')
 
-        # axis format
-        self.tslider.ax.set_xlim([val_min - bar_width / 2, val_max + bar_width / 2])
-        self.tslider.ax.set_ylim([0, 1])
-        self.tslider.ax.set_yticks([])
-        self.tslider.valtext.set_visible(False)   #hide slider values
         return self.tslider
 
 
