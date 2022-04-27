@@ -27,6 +27,8 @@ REFERENCE = """reference:
 EXAMPLE = """example:
     closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --action create_mask
     closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --numsigma 2.5 --action create_mask
+    closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --bw 10 -a quick_biasEstimate
+    closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --bw 10 -a biasEstimate
 """
 
 def create_parser():
@@ -40,7 +42,7 @@ def create_parser():
     parser.add_argument('--maxMemory', dest = 'max_memory', type = float, default = 8, help = 'max memory to use in GB')
     parser.add_argument('-o', dest = 'outdir', type = str, default = '.', help = 'output file directory')
     parser.add_argument('-a','--action', dest='action', type=str, default='create_mask',
-                        choices={'create_mask', 'quick_biasEstimate'},
+                        choices={'create_mask', 'quick_biasEstimate', 'biasEstimate'},
                         help='action to take (default: %(default)s):\n'+
                              'create_mask -  create a mask of areas susceptible to closure phase errors\n'+
                              'quick_biasEstimate - estimate how bias decays with time, will output sequential closure phase files, and gives a quick and appximate bias estimateion'
@@ -52,7 +54,6 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args = iargs)
     return inps
 
-# Obtain consecutive complex sequential closure phase of connection n
 def seq_closurePhase(SLC_list, date12_list_all, ifgram_stack, ref_phase, n, box):
     """
     Input parameters:
@@ -62,6 +63,7 @@ def seq_closurePhase(SLC_list, date12_list_all, ifgram_stack, ref_phase, n, box)
         refphase : reference phase
         n        : connection level of the closure phase
         box      : bounding box for the patch
+    Output: cp_w : stack of wrapped sequential closure phases of connection n
     """
     cp_idx = []
     NSLC = len(SLC_list)
@@ -101,10 +103,9 @@ def seq_closurePhase(SLC_list, date12_list_all, ifgram_stack, ref_phase, n, box)
         cp0_w = cp0_w - (phase[idx,:,:]-ref_phase[idx])
         cp_w[i,:,:] = np.angle(np.exp(1j*cp0_w))
 
-    # cum_cp = np.angle(cum_cp)
     return cp_w
 
-# Obtain sum of consecutive complex sequential closure phase of connection n
+
 def sum_seq_closurePhase(SLC_list, date12_list_all, ifgram_stack, ref_phase, n, box):
     """
     Input parameters:
@@ -114,6 +115,9 @@ def sum_seq_closurePhase(SLC_list, date12_list_all, ifgram_stack, ref_phase, n, 
         refphase : reference phase
         n        : connection level of the closure phase
         box      : bounding box for the patch
+    Output parameters:
+        cum_cp   : sum of consecutive complex sequential closure phase of connection n
+        num_cp   : number of closure phases in the sum
     """
     cp_idx = []
     NSLC = len(SLC_list)
@@ -307,26 +311,9 @@ def cum_seq_unwclosurePhase(n,filepath,length, width, refY, refX, SLC_list, meta
         meta['FILE_TYPE'] = 'mask'
         writefile.layout_hdf5(outmaskdir, dsDict, meta)
 
-# def findmaxcp(bw,nl,box): # find the maximum absolute cumulative sequential closure phase
-# # theoretically, for the same pixel, the cumulative equential closure phase should increase with increasing connection level, so the maximum absolute closure phase is at nl level. However, due to issues with unwrapping for long-term closure phases, this may not always be true.
-#     box_width  = box[2] - box[0]
-#     box_length = box[3] - box[1]
-#     connlist = list(np.arange(2,bw+1))
-#     connlist.append(nl)
-#     cp_conn_all = np.zeros([len(connlist),box_length, box_width],np.float32)
-#     for i in range(len(connlist)):
-#         cp_conn_i = seq2cum_closurePhase(i,outdir)[-1,:,:]
-#         cp_conn_all[i,:,:]=cp_conn_i
-#
-#     cp_avg = np.mean(cp_conn_all,0)
-#     cp_max = np.where(cp_avg>0,np.max(cp_conn_all,0),np.nan)
-#     cp_max = np.where(cp_avg<0,np.min(cp_conn_all,0),cp_max)
-#     #cp_max = cp_conn_all[-1,:,:]
-#     return cp_max
-
 def seq2cum_closurePhase(conn, outdir, box):
     # this script read in cumulative sequential closure phase from individual closure phase directory (Eq. 25) in Zheng et al., 2022
-    # output should be NSLC by box_lengh by box_width
+    # output should be a 3D matrix of size NSLC by box_lengh by box_width
     filepath = 'con'+str(conn)+'_cp'
     filename = 'con'+str(conn)+'_seqcumclosurephase.h5'
     seqcpfile = os.path.join(outdir, 'ClosurePhase', filepath, filename)
@@ -334,14 +321,17 @@ def seq2cum_closurePhase(conn, outdir, box):
     return biasts
 
 def estimate_ratioX(tbase, n, nl, wvl, box, outdir):
+    '''
     # This script estimates w(n\delta_t)/w(delta_t), Eq.(29) in Zheng et al., 2022
     # input: tbase - time in accumulated years
     # input: n - connection-level
     # input: nl - minimum connection-level that we think is bias-free
+    # input: wvl - wavelength
     # input: box - the patch that is being processed
     # input: outdir - the working directory
     # output: wratio - Eq.(29)
     # output: wratio_velocity - bias-velocity at n*delta_t temporal baseline
+    '''
     box_width  = box[2] - box[0]
     box_length = box[3] - box[1]
     cum_bias_conn_1 = seq2cum_closurePhase(nl, outdir, box)[-1,:,:]
@@ -366,7 +356,7 @@ def estimate_ratioX(tbase, n, nl, wvl, box, outdir):
     return wratio,wratio_velocity # wratio is a length by width 2D matrix
 
 def estimate_ratioX_all(bw,nl,outdir,box):
-
+    # Estimate wratio for connection-1 through connection bw
     box_width  = box[2] - box[0]
     box_length = box[3] - box[1]
     cum_bias_conn_1 = seq2cum_closurePhase(nl, outdir, box)[-1,:,:]
@@ -380,10 +370,16 @@ def estimate_ratioX_all(bw,nl,outdir,box):
     wratio[wratio<0]=0
     return wratio # wratio is a bw+1 by length by width 3D matrix, the first layer is a padding
 
-def get_design_matrix_W(M, A, box, tbase, nl, outdir):
+def get_design_matrix_W(M, A, bw, box, tbase, nl, outdir):
+    '''
     # output: W, numpix by numifgram matrix, each row stores the diagnal component of W (Eq. 16 in Zheng et al., 2022) for one pixel.
     # input: M - num_ifgram
     # input: A - M by N design matrix specifying SAR acquisitions used
+    # input: tbase - time in accumulated years
+    # input: nl - minimum connection-level that we think is bias-free
+    # input: box - the patch that is being processed
+    # input: outdir - the working directory
+    '''
     box_width  = box[2] - box[0]
     box_length = box[3] - box[1]
     numpix = box_width * box_length
@@ -449,7 +445,6 @@ def estimatetsbias_approx(nl, bw, tbase, date_ordinal, wvl, box, outdir):
     for i in range(biasts1.shape[0]):
         biasts1[i,:,:] = np.multiply(biasts1[i,:,:]/coef,ratio1)
         biasts2[i,:,:] = np.multiply(biasts2[i,:,:]/coef,wratio_p)
-#
     biasts = biasts1
     biasts[np.isnan(biasts)]=biasts2[np.isnan(biasts1)]
     return biasts
@@ -473,7 +468,7 @@ def quickbiascorrection(ifgram_stack, nl, bw, wvl, max_memory, outdir):
     tbase_diff = np.diff(tbase).reshape(-1, 1)
     date_ordinal = []
     for date_str in SLC_list:
-        format_str = '%Y%m%d' # The format
+        format_str = '%Y%m%d'
         datetime_obj = dt.strptime(date_str, format_str)
         date_ordinal.append(datetime_obj.toordinal())
 
@@ -508,7 +503,7 @@ def quickbiascorrection(ifgram_stack, nl, bw, wvl, max_memory, outdir):
                 w,wv = estimate_ratioX(tbase, conn, nl, wvl, box, outdir)
                 w_ratios[idx,:,:] = w
                 w_ratios_velocity[idx,:,:] = wv
-            #tsbias_rough = estimatetsbias_rough(inps,box)
+
             # write the block to disk
             block = [0, len(connlist)-1,box[1], box[3], box[0], box[2]]
 
@@ -539,6 +534,14 @@ def quickbiascorrection(ifgram_stack, nl, bw, wvl, max_memory, outdir):
     return
 
 def estimate_bias(ifgram_stack, nl, bw, wvl, box, outdir):
+    '''
+    # input: ifgram_stack -- the ifgramstack file that you did time-series analysis with
+    # input: nl -- the connection level that we assume bias-free
+    # input: bw -- the bandwidth of the time-series analysis, should be consistent with the network stored in ifgram_stack
+    # input: wvl -- wavelength of the SAR satellite
+    # input: box -- the patch that is processed
+    # input: outdir -- directory for output files
+    '''
     coef = -4*np.pi/wvl
     box_width  = box[2] - box[0]
     box_length = box[3] - box[1]
@@ -574,9 +577,10 @@ def estimate_bias(ifgram_stack, nl, bw, wvl, box, outdir):
     biasts_bw1_fine = biasts_bw1_fine.reshape(NSLC,-1)
     mask = mask.reshape(-1)
 
-    # Then We construct ifgram_loc, same structure with ifgram_stack
+    # Then We construct ifgram_bias (W A \Phi^X, or Wr A w(\delta_t)\Phi^X in Eq.(19) in Zheng et al., 2022) , same structure with ifgram_stack
     biasts_bwn = np.zeros((NSLC, numpix),dtype = np.float32)
-    W = get_design_matrix_W(M, A, box, tbase, nl, outdir)
+    num_ifgram = np.shape(A)[0]
+    W = get_design_matrix_W(num_ifgram, A, bw, box, tbase, nl, outdir) # this matrix is a numpix by num_ifgram matrix, each row stores the diagnal component of the Wr matrix for that pixel
     for i in range(numpix):
         if i%2000==0:
             print(i, 'out of ', numpix, 'pixels processed')
@@ -585,12 +589,12 @@ def estimate_bias(ifgram_stack, nl, bw, wvl, box, outdir):
         Dphi_rough = biasts_bw1_rough[:,i]
         Dphi_fine  = biasts_bw1_fine [:,i]
         if mask[i] == 0 :
-            Dphi_loc = np.matmul(WrA,Dphi_rough)
+            Dphi_bias = np.matmul(WrA,Dphi_rough)
         else:
-            Dphi_loc  = np.matmul(WrA,Dphi_fine)
-        B_inv  = np.linalg.pinv(B)
-        biasvel = np.matmul(B_inv,Dphi_loc)
-        biasts = np.cumsum(biasvel.reshape(-1)*tbase_diff)
+            Dphi_bias  = np.matmul(WrA,Dphi_fine)
+        B_inv  = np.linalg.pinv(B) # here we perform phase velocity inversion as per the original SBAS paper rather doing direct phase inversion.
+        biasvel = np.matmul(B_inv,Dphi_bias)
+        biasts = np.cumsum(biasvel.reshape(-1)*tbase_diff.reshape(-1))
         biasts_bwn[1:,i] = biasts/coef
     biasts_bwn = biasts_bwn.reshape(NSLC, box_length, box_width)
 
@@ -599,6 +603,7 @@ def estimate_bias(ifgram_stack, nl, bw, wvl, box, outdir):
 def biascorrection(ifgram_stack, nl, bw, wvl, max_memory, outdir):
     stack_obj = ifgramStack(ifgram_stack)
     stack_obj.open()
+    length, width = stack_obj.length, stack_obj.width
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
     date1s = [i.split('_')[0] for i in date12_list]
     date2s = [i.split('_')[1] for i in date12_list]
@@ -621,13 +626,12 @@ def biascorrection(ifgram_stack, nl, bw, wvl, max_memory, outdir):
             print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
             print('box width:  {}'.format(box_width))
             print('box length: {}'.format(box_length))
-        tsbias = estimatetsbias(ifgram_stack, nl, bw, wvl, box, outdir)
+        tsbias = estimate_bias(ifgram_stack, nl, bw, wvl, box, outdir)
         block = [0, len(SLC_list),box[1], box[3], box[0], box[2]]
         writefile.write_hdf5_block(biasfile,
                                    data=tsbias/100,
                                    datasetName='timeseries',
                                    block=block)
-
     return
 
 
