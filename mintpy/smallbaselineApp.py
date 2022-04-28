@@ -294,6 +294,10 @@ class TimeSeriesAnalysis:
             self.templateFile = ut.update_template_file(self.templateFile, self.customTemplate)
 
         # 2) backup custome/default template file in inputs/pic folder
+        flen = len(os.path.basename(self.templateFile))
+        if self.customTemplateFile:
+            flen = max(flen, len(os.path.basename(self.customTemplateFile)))
+
         for backup_dirname in ['inputs', 'pic']:
             backup_dir = os.path.join(self.workDir, backup_dirname)
             # create directory
@@ -306,8 +310,9 @@ class TimeSeriesAnalysis:
                                              check_readable=False,
                                              print_msg=False) == 'run':
                     shutil.copy2(tfile, backup_dir)
-                    print('copy {} to {:<8} directory for backup.'.format(os.path.basename(tfile),
-                                                                          os.path.basename(backup_dir)))
+                    print('copy {f:<{l}} to {d:<8} directory for backup.'.format(f=os.path.basename(tfile),
+                                                                                 l=flen,
+                                                                                 d=os.path.basename(backup_dir)))
 
         # 3) read default template file
         print('read default template file:', self.templateFile)

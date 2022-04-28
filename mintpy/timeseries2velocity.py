@@ -373,7 +373,7 @@ def read_date_info(inps):
     return inps
 
 
-def read_inps2model(inps, date_list=None):
+def read_inps2model(inps, date_list=None, print_msg=True):
     """get model info from inps"""
     # check model date limits
     if not date_list:
@@ -408,9 +408,10 @@ def read_inps2model(inps, date_list=None):
     model['log']        = inps.logDict
 
     # msg
-    print('estimate deformation model with the following assumed time functions:')
-    for key, value in model.items():
-        print('    {:<10} : {}'.format(key, value))
+    if print_msg:
+        print('estimate deformation model with the following assumed time functions:')
+        for key, value in model.items():
+            print('    {:<10} : {}'.format(key, value))
 
     if 'polynomial' not in model.keys():
         raise ValueError('linear/polynomial model is NOT included! Are you sure?!')
