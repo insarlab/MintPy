@@ -520,22 +520,23 @@ def update_template_file(template_file, extra_dict, delimiter='='):
             key = c[0]
             value = str.replace(c[1], '\n', '').split("#")[0].strip()
 
-            # prepare value to search following "re" expression syntax
-            # link: https://docs.python.org/3/library/re.html
-            # 1. interpret special symbols as characters
-            value2search = value
-            for symbol in ['*', '[', ']', '(', ')']:
-                value2search = value2search.replace(symbol, "\{}".format(symbol))
-            # 2. use "= {OLD_VALUE}" for search/replace to be more robust
-            # against the scenario when key name contains {OLD_VALUE}
-            # i.e. mintpy.load.autoPath
-            value2search = delimiter+'[\s]*'+value2search
-
             if key in extra_dict.keys() and extra_dict[key] != value:
+                # prepare value string to search & replace following "re" expression syntax
+                # link: https://docs.python.org/3/library/re.html
+                value2search = value
+                # 1. interpret special symbols as characters
+                for symbol in ['*', '[', ']', '(', ')']:
+                    value2search = value2search.replace(symbol, "\{}".format(symbol))
+                # 2. use "= {OLD_VALUE}" for search/replace to be more robust
+                # against the scenario when key name contains {OLD_VALUE}
+                # i.e. mintpy.load.autoPath
+                value2search = delimiter+'[\s]*'+value2search
+
                 old_value_str = re.findall(value2search, line)[0]
                 new_value_str = old_value_str.replace(value, extra_dict[key])
                 line = line.replace(old_value_str, new_value_str, 1)
                 print('    {}: {} --> {}'.format(key, value, extra_dict[key]))
+
         f_tmp.write(line)
     f_tmp.close()
 

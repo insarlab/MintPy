@@ -38,7 +38,7 @@ jobs:
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             # install dependencies and source code
             source activate root
-            mamba install --verbose --yes gdal">=3" --file ${MINTPY_HOME}/docs/requirements.txt
+            mamba install --verbose --yes gdal">=3" --file ${MINTPY_HOME}/requirements.txt
             python -m pip install ${MINTPY_HOME}
             # test installation
             smallbaselineApp.py -v

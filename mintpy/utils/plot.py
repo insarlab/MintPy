@@ -1674,8 +1674,8 @@ def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[
     return lats, lons, lalo_step, digit
 
 
-def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max_num=4,
-                    font_size=12, xoffset=None, yoffset=None, projection=ccrs.PlateCarree(), print_msg=True):
+def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max_num=4, font_size=12,
+                    xoffset=None, yoffset=None, projection=ccrs.PlateCarree(), print_msg=True):
     """Auto draw lat/lon label/tick based on coverage from geo_box
     Parameters: geo_box   : 4-tuple of float, (W, N, E, S) in degree
                 ax        : CartoPy axes.
@@ -1683,6 +1683,8 @@ def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lal
                 lalo_loc  : list of 4 bool, positions where the labels are drawn as in [left, right, top, bottom]
                             default: [1,0,0,1]
                 lalo_max_num : int
+                x/yoffset : float, distance in points between tick and label.
+                            Set to negative value to move the ticklabel inside the plot.
                 ...
     Example:    geo_box = (128.0, 37.0, 138.0, 30.0)
                 m.draw_lalo_label(geo_box)

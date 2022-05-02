@@ -22,7 +22,7 @@ Then complete the [post-installation setup](#3-post-installation-setup).
 
 Note: The installation note below is tested on Linux and macOS, and is still experimental on Windows (may has bugs).
 
-MintPy is written in Python 3 and relies on several Python modules, check the [requirements.txt](https://github.com/insarlab/MintPy/blob/main/docs/requirements.txt) file for details. We recommend using [conda](https://docs.conda.io/en/latest/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient management and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
+MintPy is written in Python 3 and relies on several Python modules, check the [requirements.txt](https://github.com/insarlab/MintPy/blob/main/requirements.txt) file for details. We recommend using [conda](https://docs.conda.io/en/latest/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient management and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
 
 Quick links:
 
@@ -62,7 +62,7 @@ Install the dependencies into an custom existing environment [recommended] by ru
 
 # Add "gdal'>=3'" below to install extra dependencies if you use ARIA, FRInGE, HyP3 or GMTSAR
 # Add "isce2"     below to install extra dependencies if you use ISCE-2
-conda install -c conda-forge --file ~/tools/MintPy/docs/requirements.txt
+conda install -c conda-forge --file ~/tools/MintPy/requirements.txt
 ```
 
 Or install the dependencies to a new environment named "mintpy" by running:
