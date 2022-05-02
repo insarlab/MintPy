@@ -519,12 +519,20 @@ def update_template_file(template_file, extra_dict, delimiter='='):
         if not line.startswith(('%', '#')) and len(c) > 1:
             key = c[0]
             value = str.replace(c[1], '\n', '').split("#")[0].strip()
-            value = value.replace('*', '\*')  # interpret * as character
+
+            # prepare value to search following "re" expression syntax
+            # link: https://docs.python.org/3/library/re.html
+            # 1. interpret special symbols as characters
+            value2search = value
+            for symbol in ['*', '[', ']', '(', ')']:
+                value2search = value2search.replace(symbol, "\{}".format(symbol))
+            # 2. use "= {OLD_VALUE}" for search/replace to be more robust
+            # against the scenario when key name contains {OLD_VALUE}
+            # i.e. mintpy.load.autoPath
+            value2search = delimiter+'[\s]*'+value2search
+
             if key in extra_dict.keys() and extra_dict[key] != value:
-                # use "= {OLD_VALUE}" for search/replace to be more robust
-                # against the scenario when key name contains {OLD_VALUE}
-                # i.e. mintpy.load.autoPath
-                old_value_str = re.findall(delimiter+'[\s]*'+value, line)[0]
+                old_value_str = re.findall(value2search, line)[0]
                 new_value_str = old_value_str.replace(value, extra_dict[key])
                 line = line.replace(old_value_str, new_value_str, 1)
                 print('    {}: {} --> {}'.format(key, value, extra_dict[key]))
