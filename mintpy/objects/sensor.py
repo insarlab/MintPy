@@ -297,14 +297,15 @@ GF3 = {
 # azfact = azResolution / azPixelSize = 1.46
 # rgfact = rgResolution / rgPixelSize = 1.33
 # reference:
-#   1. Table 2 and Fig. 5d in Jung et al. (2014)
-#   2. Table 7-5 in https://sentinel.esa.int/documents/247904/1877131/Sentinel-1-Product-Definition
+#   1. Table 2 & Fig. 5d in Jung et al. (2014)
+#   2. Table 3-1 & 7-5 in https://sentinel.esa.int/documents/247904/1877131/Sentinel-1-Product-Definition
 SEN = {
     'carrier_frequency'          : 5.405e9,   # Hz
     'altitude'                   : 705e3,     # m, mean value
-    'antenna_length'             : 45.0,      # m
+    'antenna_length'             : 12.3,      # m
+    'antenna_width'              : 0.82,      # m
     'doppler_bandwidth'          : 380,       # Hz
-    'pulse_repetition_frequency' : 522,       # Hz
+    'pulse_repetition_frequency' : 1717.13,   # Hz, based on real data; 1000-3000 (programmable)
     'chirp_bandwidth'            : 56.50e6,   # Hz
     'sampling_frequency'         : 64.35e6,   # Hz
     'azimuth_pixel_size'         : 14.1,      # m

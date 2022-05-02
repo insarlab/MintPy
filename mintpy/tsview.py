@@ -350,7 +350,7 @@ def read_init_info(inps):
     inps.cbar_label += '[{}]'.format(inps.disp_unit_img)
 
     ## fit a suite of time func to the time series
-    inps.model, inps.num_param = ts2vel.read_inps2model(inps, date_list=inps.date_list)
+    inps.model, inps.num_param = ts2vel.read_inps2model(inps, date_list=inps.date_list, print_msg=inps.print_msg)
 
     # dense TS for plotting
     inps.date_list_fit = ptime.get_date_range(inps.date_list[0], inps.date_list[-1])
@@ -788,7 +788,7 @@ class timeseriesViewer():
                 disp_slider=True,
                 print_msg=self.print_msg)
         subplot_kw = dict(projection=self.map_proj_obj) if self.map_proj_obj is not None else {}
-        self.fig_img, self.ax_img = plt.subplots(figsize=self.figsize_img, **subplot_kw)
+        self.fig_img, self.ax_img = plt.subplots(figsize=self.figsize_img, subplot_kw=subplot_kw)
 
         # Figure 1 - Axes 1 - Displacement Map
         img_data = np.array(self.ts_data[0][self.idx, :, :])
