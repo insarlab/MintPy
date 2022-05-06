@@ -265,7 +265,7 @@ def reference_file(inps):
                 print('writing the referenced data into file: {}'.format(inps.outfile))
 
                 # 1. read and update data value
-                data, atr = readfile.read(inps.file)
+                data, atr = readfile.read(inps.file, datasetName=k)
                 if len(data.shape) == 3:
                     # 3D matrix
                     for i in range(data.shape[0]):
