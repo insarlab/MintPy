@@ -23,10 +23,11 @@ from mintpy.utils import ptime, time_func, readfile, utils1 as ut
 unr_site_list_file = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
 
 
-def dload_site_list(print_msg=True):
+def dload_site_list(out_file=None, print_msg=True):
     """download DataHoldings.txt"""
     url = unr_site_list_file
-    out_file = os.path.basename(url)
+    if not out_file:
+        out_file = os.path.basename(url)
     if print_msg:
         print('downloading site list from UNR Geod Lab: {}'.format(url))
     urlretrieve(url, out_file)
