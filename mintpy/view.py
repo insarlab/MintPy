@@ -548,7 +548,7 @@ def plot_slice(ax, data, metadata, inps=None):
         # Draw coastline using cartopy resolution parameters
         if inps.coastline:
             vprint('draw coast line with resolution: {}'.format(inps.coastline))
-            ax.coastlines(resolution=inps.coastline)
+            ax.coastlines(resolution=inps.coastline, linewidth=inps.coastline_linewidth)
 
         # Plot DEM
         if inps.dem_file:
@@ -598,7 +598,8 @@ def plot_slice(ax, data, metadata, inps=None):
                                lalo_step=inps.lalo_step,
                                lalo_loc=inps.lalo_loc,
                                lalo_max_num=inps.lalo_max_num,
-                               font_size=inps.font_size,
+                               lalo_offset=inps.lalo_offset,
+                               font_size=inps.lalo_font_size if inps.lalo_font_size else inps.font_size,
                                projection=inps.map_proj_obj,
                                print_msg=inps.print_msg)
         else:
@@ -1485,7 +1486,7 @@ def prep_slice(cmd, auto_fig=False):
         cmd += f'--sub-lon {W} {E} --sub-lat {S} {N} -c jet -v -3 10 '
         cmd += '--cbar-loc bottom --cbar-nbins 3 --cbar-ext both --cbar-size 5% '
         cmd += '--lalo-step 0.2 --lalo-loc 1 0 1 0 --scalebar 0.3 0.80 0.05 --notitle'
-        data, atr ,inps = view.prep_slice(cmd)
+        data, atr, inps = view.prep_slice(cmd)
         ax, inps, im, cbar = view.plot_slice(ax, data, atr, inps)
         plt.show()
     """

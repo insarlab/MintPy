@@ -215,6 +215,9 @@ def add_map_argument(parser):
                            "This will enable --lalo-label option.\n"
                            "Link: https://scitools.org.uk/cartopy/docs/latest/matplotlib/geoaxes.html"
                            "#cartopy.mpl.geoaxes.GeoAxes.coastlines")
+    mapg.add_argument('--coastline-lw', '--coastline-linewidth', dest='coastline_linewidth',
+                      metavar='NUM', type=float, default=1,
+                      help='Coastline linewidth (default: %(default)s).')
 
     # lalo label
     mapg.add_argument('--lalo-label', dest='lalo_label', action='store_true',
@@ -227,6 +230,11 @@ def add_map_argument(parser):
     mapg.add_argument('--lalo-loc', dest='lalo_loc', type=int, nargs=4, default=[1, 0, 0, 1],
                       metavar=('left', 'right', 'top', 'bottom'),
                       help='Draw lalo label in [left, right, top, bottom] (default: %(default)s).')
+    mapg.add_argument('--lalo-off','--lalo-offset', dest='lalo_offset', type=float, nargs=2,
+                      help='Distance between tick and label in points (default: %(default)s).\n'
+                           'Set to negative value, e.g. -36 -18, to move the ticklabel inside the plot.')
+    mapg.add_argument('--lalo-fs','--lalo-fontsize', dest='lalo_font_size', type=float,
+                      help='Lalo label font size in points (default: %(default)s).')
 
     #mapg.add_argument('--proj', '--projection', '--map-proj', dest='map_projection', metavar='NAME',
     #                  help='map projection when plotting in geo-coordinate.\n'
