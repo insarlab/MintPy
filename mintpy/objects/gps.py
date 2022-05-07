@@ -23,10 +23,11 @@ from mintpy.utils import ptime, time_func, readfile, utils1 as ut
 unr_site_list_file = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
 
 
-def dload_site_list(print_msg=True):
+def dload_site_list(out_file=None, print_msg=True):
     """download DataHoldings.txt"""
     url = unr_site_list_file
-    out_file = os.path.basename(url)
+    if not out_file:
+        out_file = os.path.basename(url)
     if print_msg:
         print('downloading site list from UNR Geod Lab: {}'.format(url))
     urlretrieve(url, out_file)
@@ -47,8 +48,9 @@ def search_gps(SNWE, start_date=None, end_date=None, site_list_file=None, min_nu
     # download site list file if it's not found in current directory
     if site_list_file is None:
         site_list_file = os.path.basename(unr_site_list_file)
-        if not os.path.isfile(site_list_file):
-            dload_site_list(print_msg=print_msg)
+
+    if not os.path.isfile(site_list_file):
+        dload_site_list(site_list_file, print_msg=print_msg)
 
     txt_data = np.loadtxt(site_list_file,
                           dtype=bytes,
