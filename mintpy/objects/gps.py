@@ -50,7 +50,7 @@ def search_gps(SNWE, start_date=None, end_date=None, site_list_file=None, min_nu
         site_list_file = os.path.basename(unr_site_list_file)
 
     if not os.path.isfile(site_list_file):
-        dload_site_list(print_msg=print_msg)
+        dload_site_list(site_list_file, print_msg=print_msg)
 
     txt_data = np.loadtxt(site_list_file,
                           dtype=bytes,
