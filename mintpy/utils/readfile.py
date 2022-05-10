@@ -128,6 +128,8 @@ DATA_TYPE_GDAL2NUMPY = {
     5 : 'int32',
     6 : 'float32',
     7 : 'float64',
+    8 : 'cint16',       # for translation purpose only, as numpy does not support complex int
+    9 : 'cint32',       # for translation purpose only, as numpy does not support complex int
     10: 'complex64',
     11: 'complex128',
 }
@@ -141,6 +143,8 @@ DATA_TYPE_NUMPY2GDAL = {
     "int32"     : 5,
     "float32"   : 6,
     "float64"   : 7,
+    "cint16"    : 8,    # for translation purpose only, as numpy does not support complex int
+    "cint32"    : 9,    # for translation purpose only, as numpy does not support complex int
     "complex64" : 10,
     "complex128": 11,
 }
@@ -166,7 +170,7 @@ DATA_TYPE_NUMPY2ISCE = {
 
 
 # single file (data + attributes) supported by GDAL
-GDAL_FILE_EXTS = ['.tif', '.grd']
+GDAL_FILE_EXTS = ['.tiff', '.tif', '.grd']
 
 ENVI_BAND_INTERLEAVE = {
     'BAND' : 'BSQ',

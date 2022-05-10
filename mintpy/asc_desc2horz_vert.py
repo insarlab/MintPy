@@ -111,10 +111,10 @@ def cmd_line_parse(iargs=None):
     ref_y_diff = abs((ref_lat1 - ref_lat2) / float(atr1['Y_STEP']))
     ref_x_diff = abs((ref_lon1 - ref_lon2) / float(atr1['X_STEP']))
     if any(ref_diff > inps.max_ref_yx_diff for ref_diff in [ref_y_diff, ref_x_diff]):
-        msg = 'REF_Y/X difference between input files > {}!\n'.format(inps.max_ref_yx_diff)
-        for fname, ref_lalo, ref_yx in zip(inps.file, [ref_lalo1, ref_lalo2], [ref_yx1, ref_yx2]):
+        msg = 'REF_LAT/LON difference between input files > {} pixels!\n'.format(inps.max_ref_yx_diff)
+        for fname, ref_lat, ref_lon in zip(inps.file, [ref_lat1, ref_lat2], [ref_lon1, ref_lon2]):
             msg += 'file1: {}\n'.format(fname)
-            msg += '\tREF_LAT/LON: {}\n'.format(ref_lalo)
+            msg += '\tREF_LAT/LON: [{:.8f}, {:.8f}]\n'.format(ref_lat, ref_lon)
         raise ValueError(msg)
 
     return inps
@@ -341,18 +341,18 @@ def run_asc_desc2horz_vert(inps):
     if inps.one_outfile:
         print('write asc/desc/horz/vert datasets into {}'.format(inps.one_outfile))
         dsDict = {}
-        for i, atr in enumerate(atr_list):
+        for i, atr_i in enumerate(atr_list):
             # dataset name for LOS data
-            track_num = atr.get('trackNumber', None)
-            proj_name = atr.get('PROJECT_NAME', None)
+            track_num = atr_i.get('trackNumber', None)
+            proj_name = atr_i.get('PROJECT_NAME', None)
             if proj_name in ['none', 'None', None]:
-                proj_name = atr.get('FILE_PATH', None)
+                proj_name = atr_i.get('FILE_PATH', None)
             proj_name = sensor.project_name2sensor_name(proj_name)[0]
 
             ds_name = proj_name if proj_name else ''
-            ds_name += 'A' if atr['ORBIT_DIRECTION'].lower().startswith('asc') else 'D'
+            ds_name += 'A' if atr_i['ORBIT_DIRECTION'].lower().startswith('asc') else 'D'
             ds_name += f'T{track_num}' if track_num else ''
-            ds_name += '_{}'.format(atr['DATE12'])
+            ds_name += '_{}'.format(atr_i['DATE12'])
 
             # assign dataset value
             dsDict[ds_name] = dlos[i]

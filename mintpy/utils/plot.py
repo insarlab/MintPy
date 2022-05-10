@@ -1675,7 +1675,7 @@ def auto_lalo_sequence(geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[
 
 
 def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max_num=4,
-                    font_size=12, xoffset=None, yoffset=None, projection=ccrs.PlateCarree(), print_msg=True):
+                    lalo_offset=None, font_size=None, projection=ccrs.PlateCarree(), print_msg=True):
     """Auto draw lat/lon label/tick based on coverage from geo_box
     Parameters: geo_box   : 4-tuple of float, (W, N, E, S) in degree
                 ax        : CartoPy axes.
@@ -1683,6 +1683,8 @@ def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lal
                 lalo_loc  : list of 4 bool, positions where the labels are drawn as in [left, right, top, bottom]
                             default: [1,0,0,1]
                 lalo_max_num : int
+                x/yoffset : float, distance in points between tick and label.
+                            Set to negative value to move the ticklabel inside the plot.
                 ...
     Example:    geo_box = (128.0, 37.0, 138.0, 30.0)
                 m.draw_lalo_label(geo_box)
@@ -1701,10 +1703,9 @@ def draw_lalo_label(geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lal
                    left=True, right=True, top=True, bottom=True,
                    labelleft=lalo_loc[0], labelright=lalo_loc[1],
                    labeltop=lalo_loc[2], labelbottom=lalo_loc[3])
-    if xoffset is not None:
-        ax.tick_params(axis='x', which='major', pad=xoffset)
-    if yoffset is not None:
-        ax.tick_params(axis='y', which='major', pad=yoffset)
+    if lalo_offset:
+        ax.tick_params(axis='x', which='major', pad=lalo_offset[1])
+        ax.tick_params(axis='y', which='major', pad=lalo_offset[0])
 
     # ticklabel symbol style
     decimal_digit = max(0, 0-digit)
