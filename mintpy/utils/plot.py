@@ -1086,11 +1086,12 @@ def plot_colorbar(inps, im, cax):
         orientation = 'horizontal'
 
     # plot colorbar
+    unique_values = getattr(inps, 'unique_values', None)
     if inps.wrap and (inps.wrap_range[1] - inps.wrap_range[0]) == 2.*np.pi:
         cbar = plt.colorbar(im, cax=cax, orientation=orientation, ticks=[-np.pi, 0, np.pi])
         cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
 
-    elif inps.cmap_lut <=5 and getattr(inps, 'unique_values', None) is not None:
+    elif unique_values is not None and len(inps.unique_values) <= 5:
         # show the exact tick values
         cbar = plt.colorbar(im, cax=cax, orientation=orientation, ticks=inps.unique_values)
 

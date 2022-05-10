@@ -43,10 +43,9 @@ git clone https://github.com/insarlab/MintPy.git
 
 #### b. Install dependencies via conda ####
 
-Install [miniconda](https://docs.conda.io/en/latest/miniconda.html) if you have not already done so. You may need to close and restart the shell for changes to take effect. 
+Install [miniconda](https://docs.conda.io/en/latest/miniconda.html) if you have not already done so. You may need to close and restart the shell for changes to take effect.
 
 ```bash
-# download and install miniconda
 # use wget or curl to download in command line or click from the web browser
 # for macOS, use Miniconda3-latest-MacOSX-x86_64.sh instead.
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
@@ -58,7 +57,7 @@ Install the dependencies into an custom existing environment [recommended] by ru
 
 ```bash
 # To create a new custom environment, e.g. named "insar", run "conda create --name insar; conda activate insar"
-# To speedup conda install, try "conda install mamba", then use "mamba install" to replace "conda install"
+# To speedup, try "conda install mamba", then use "mamba install" to replace "conda install" below
 
 # Add "gdal'>=3'" below to install extra dependencies if you use ARIA, FRInGE, HyP3 or GMTSAR
 # Add "isce2"     below to install extra dependencies if you use ISCE-2
@@ -86,7 +85,7 @@ Or install MintPy with pip in development mode as below. The development mode al
 python -m pip install -e MintPy
 ```
 
-Or simply setup the environment variables as below in your source file (e.g. `~/.bash_profile` for _bash_ users or `~/.cshrc` for _csh/tcsh_ users), because MintPy is written in pure Python:
+Or simply setup the environment variables as below in your source file, e.g. `~/.bash_profile` for _bash_ users or `~/.cshrc` for _csh/tcsh_ users:
 
 ```bash
 if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
@@ -161,7 +160,7 @@ Same as the [instruction for Linux](#21-install-on-linux), except for the "c. In
 
 Setup an account for ERA5 to download weather re-analysis datasets for tropospheric delay correction as described in [insarlab/PyAPS](https://github.com/insarlab/pyaps#2-account-setup-for-era5).
 
-`WEATHER_DIR`: Optionally, if you defined an environment variable named `WEATHER_DIR` to contain the path to a directory, MintPy applications will download the GAM files into the indicated directory. Also, MintPy application will look for the GAM files in the directory before downloading a new one to prevent downloading multiple copies if you work with different dataset that cover the same date/time.
+`WEATHER_DIR`: Optionally, if you defined an environment variable named `WEATHER_DIR` to contain the path to a directory, MintPy will download the GAM files into the indicated directory. Also, MintPy will look for the GAM files in the directory before downloading a new one to prevent downloading multiple copies if you work with different dataset that cover the same date/time.
 
 #### b. Dask for parallel processing ####
 
@@ -170,6 +169,6 @@ We recommend setting the `temporary-directory` in your [Dask configuration file]
 ```yaml
 temporary-directory: /tmp  # Directory for local disk like /tmp, /scratch, or /local
 
-## If you are sharing the same machine with others, use the following instead to avoid permission issues with others.
-# temporary-directory: /tmp/{replace_this_with_your_user_name}  # Directory for local disk like /tmp, /scratch, or /local
+# If you are sharing the same machine with others, use the following instead to avoid permission issues with others.
+# temporary-directory: /tmp/{replace_this_with_your_user_name}
 ```
