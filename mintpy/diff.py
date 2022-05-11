@@ -71,27 +71,27 @@ def check_reference(atr1, atr2):
     # 1. reference date
     # if same, do nothing
     # if different, use the 1st one as the reference
-    if atr1['REF_DATE'] == atr2.get('REF_DATE', None):
+    ref_date1 = atr1.get('REF_DATE', None)
+    ref_date2 = atr2.get('REF_DATE', None)
+    if ref_date1 == ref_date2:
         ref_date = None
     else:
-        ref_date = atr1['REF_DATE']
+        ref_date = ref_date1
 
     # 2. reference point
     # if same, do nothing
     # if different, use the 1st one as the reference
-    ref_y = atr1.get('REF_Y', None)
-    ref_x = atr1.get('REF_X', None)
-    if ref_x == atr2.get('REF_X', None) or ref_y == atr2.get('REF_Y', None):
-        ref_y = None
-        ref_x = None
+    ref_yx1 = [atr1.get('REF_Y', None), atr1.get('REF_X', None)]
+    ref_yx2 = [atr2.get('REF_Y', None), atr2.get('REF_X', None)]
+    if ref_yx1 == ref_yx2:
+        ref_y, ref_x = None, None
     else:
-        ref_y = ref_y
-        ref_x = ref_x
+        ref_y, ref_x = ref_yx1
 
-    if ref_y is not None:
-        ref_y = int(ref_y)
-    if ref_x is not None:
-        ref_x = int(ref_x)
+    # ensure ref_y/x are integer
+    ref_y = int(ref_y) if ref_y is not None else None
+    ref_x = int(ref_x) if ref_x is not None else None
+
     return ref_date, ref_y, ref_x
 
 
