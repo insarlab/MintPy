@@ -45,7 +45,7 @@ def create_parser():
                         choices={'create_mask', 'quick_biasEstimate', 'biasEstimate'},
                         help='action to take (default: %(default)s):\n'+
                              'create_mask -  create a mask of areas susceptible to closure phase errors\n'+
-                             'quick_biasEstimate - estimate how bias decays with time, will output sequential closure phase files, and gives a quick and appximate bias estimateion'
+                             'quick_biasEstimate - estimate how bias decays with time, will output sequential closure phase files, and gives a quick and appximate bias estimation\n'
                              'biasEstimate - estimate how bias decays with time, processed for each pixel on a pixel by pixel basis, not parallized yet')
     return parser
 
@@ -229,8 +229,6 @@ def estCoherence(outfile, corfile):
     phsigImage.finalizeImage()
 
 def unwrap_snaphu(intfile,corfile,unwfile,length, width):
-    import isce
-    import isceobj
     from contrib.Snaphu.Snaphu import Snaphu
 
     altitude = 800000.0
@@ -260,7 +258,14 @@ def unwrap_snaphu(intfile,corfile,unwfile,length, width):
     write_xml(unwfile, width, length, 2 , "FLOAT",'BIL')
 
 def cum_seq_unwclosurePhase(n,filepath,length, width, refY, refX, SLC_list, meta):
-    # output cumulative con-n sequential closure phase in time-series format (Eq. 25 in Zheng et al., 2022, but divided by n)
+    '''output cumulative con-n sequential closure phase in time-series format (Eq. 25 in Zheng et al., 2022, but divided by n)
+    Input parameters: n -  connection level of closure phases
+                      filepath -- filepath of sequential closure phases of connection - n
+                      width, length -- width and length of the interferograms
+                      refY, refX -- reference point coordinates
+                      SLC_list: list of SLC
+                      meta: metadata of ifgramStack.h5
+    '''
     outfiledir = os.path.join(filepath, 'con'+str(n)+'_seqcumclosurephase.h5')
     outmaskdir = os.path.join(filepath, 'con'+str(n)+'_seqcumclosurephase_maskconcp.h5')
     print('Creating '+outfiledir)
@@ -283,7 +288,6 @@ def cum_seq_unwclosurePhase(n,filepath,length, width, refY, refX, SLC_list, meta
             concp = concp.reshape([length, width])
             cp_phase = cp[:,width:]
             cp_phase = cp_phase - cp_phase[refY,refX]
-            mask_cor = np.where(cor > 0.4, 1, np.nan)
             mask_concp = np.where(concp >= 1, 1, np.nan)
             cp_phase_all[i,:,:] = cp_phase
             mask_all[i,:,:] = mask_concp
@@ -312,8 +316,10 @@ def cum_seq_unwclosurePhase(n,filepath,length, width, refY, refX, SLC_list, meta
         writefile.layout_hdf5(outmaskdir, dsDict, meta)
 
 def seq2cum_closurePhase(conn, outdir, box):
-    # this script read in cumulative sequential closure phase from individual closure phase directory (Eq. 25) in Zheng et al., 2022
-    # output should be a 3D matrix of size NSLC by box_lengh by box_width
+    '''
+    this script read in cumulative sequential closure phase from individual closure phase directory (Eq. 25) in Zheng et al., 2022
+    output should be a 3D matrix of size NSLC by box_lengh by box_width
+    '''
     filepath = 'con'+str(conn)+'_cp'
     filename = 'con'+str(conn)+'_seqcumclosurephase.h5'
     seqcpfile = os.path.join(outdir, 'ClosurePhase', filepath, filename)
@@ -356,7 +362,9 @@ def estimate_ratioX(tbase, n, nl, wvl, box, outdir):
     return wratio,wratio_velocity # wratio is a length by width 2D matrix
 
 def estimate_ratioX_all(bw,nl,outdir,box):
-    # Estimate wratio for connection-1 through connection bw
+    '''
+    Estimate wratio for connection-1 through connection bw
+    '''
     box_width  = box[2] - box[0]
     box_length = box[3] - box[1]
     cum_bias_conn_1 = seq2cum_closurePhase(nl, outdir, box)[-1,:,:]
@@ -397,8 +405,10 @@ def get_design_matrix_W(M, A, bw, box, tbase, nl, outdir):
 
     return W
 
-# compute average temporal span (days) for interferogram subsets chosen for bw-n analysis
 def averagetemporalspan(date_ordinal,conn):
+    '''
+    compute average temporal span (days) for interferogram subsets chosen for bw-n analysis
+    '''
     avgtime = 0
     numigram = 0
     for level in range(1, conn+1):
@@ -412,8 +422,10 @@ def averagetemporalspan(date_ordinal,conn):
 
     return avgtime
 
-# compute average temporal span (days) for n-connection interferograms
 def averageconnNigrams(date_ordinal,conn):
+    '''
+    compute average temporal span (days) for n-connection interferograms
+    '''
     slcdate_firstn = date_ordinal[0:conn]
     slcdate_lastn = date_ordinal[-conn:]
     avgtime = 0
@@ -426,9 +438,17 @@ def averageconnNigrams(date_ordinal,conn):
     return avgtime
 
 def estimatetsbias_approx(nl, bw, tbase, date_ordinal, wvl, box, outdir):
+    '''
     # This script gives a quick approximate estimate of bias of a time-series of a certain bandwidth (bw)
     # This estimate is not exact, but often close enough.
     # It is good for a quick estimate to see how big the biases are.
+    Input parameters: nl - connection level that we assume bias-free
+                      bw - bandwidth of the given time-series analysis
+                      wvl - wavelength of the SAR system
+                      box - patch that we are processing
+                      outdir - directory for outputing files
+    Output parameters: biasts - bias timeseries
+    '''
     deltat_n = [averageconnNigrams(date_ordinal,n) for n in range(1,bw+1)] # average temporal span for ifgrams of connection-1 to connection-bw
     avgtimespan = averagetemporalspan(date_ordinal,bw)
     p = (np.abs(np.asarray(deltat_n) - avgtimespan)).argmin()+1 # the bias in a bandwidth-bw analysis is similar to bias in connectoin-p interferograms
@@ -436,8 +456,8 @@ def estimatetsbias_approx(nl, bw, tbase, date_ordinal, wvl, box, outdir):
     coef = -4*np.pi/wvl
     m1 = 2
     m2 = nl
-    wratio_p, wratio_p_velocity = estimate_ratioX(tbase, p, nl, wvl, box, outdir)
-    wratio_m1, wratio_m1_velocity = estimate_ratioX(tbase, m1, nl, wvl, box, outdir)
+    wratio_p = estimate_ratioX(tbase, p, nl, wvl, box, outdir)[0]
+    wratio_m1 = estimate_ratioX(tbase, m1, nl, wvl, box, outdir)[0]
     wratio_m1[abs(wratio_m1-1)<0.1] = np.nan
     ratio1 = np.divide(wratio_p,(1-wratio_m1))
     biasts1 = seq2cum_closurePhase(m1, outdir, box)
@@ -450,12 +470,20 @@ def estimatetsbias_approx(nl, bw, tbase, date_ordinal, wvl, box, outdir):
     return biasts
 
 def quickbiascorrection(ifgram_stack, nl, bw, wvl, max_memory, outdir):
-    # output Wr and a quick approximate solution to bias time-series
+    '''
+    Output Wr (eq.20 in Zheng et al., 2022) and a quick approximate solution to bias time-series
+    Input parameters:
+            ifgram_stack : ifgramStack object
+            nl: connection level at which we assume is bias-free
+            bw: bandwidth of the given time-series.
+            wvl: wavelength of the SAR System
+            max_mermory: maximum memory for each patch processed
+            outdir: directory for output files
+    '''
     stack_obj = ifgramStack(ifgram_stack)
     stack_obj.open()
     length, width = stack_obj.length, stack_obj.width
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
-    ref_phase = stack_obj.get_reference_phase(unwDatasetName = 'unwrapPhase')
 
     date1s = [i.split('_')[0] for i in date12_list]
     date2s = [i.split('_')[1] for i in date12_list]
@@ -465,7 +493,6 @@ def quickbiascorrection(ifgram_stack, nl, bw, wvl, max_memory, outdir):
     dates = np.array([dt.strptime(i, date_format) for i in SLC_list])
     tbase = [i.days + i.seconds / (24 * 60 * 60) for i in (dates - dates[0])]
     tbase = np.array(tbase, dtype=np.float32) / 365.25
-    tbase_diff = np.diff(tbase).reshape(-1, 1)
     date_ordinal = []
     for date_str in SLC_list:
         format_str = '%Y%m%d'
@@ -474,7 +501,7 @@ def quickbiascorrection(ifgram_stack, nl, bw, wvl, max_memory, outdir):
 
     meta = dict(stack_obj.metadata)
     SLC_list = np.array(SLC_list, np.string_)
-    connlist = list(np.arange(2,bw+2))
+    connlist = list(np.arange(1,bw+1))
     connlist.append(nl)
     Wr_filedir = os.path.join(outdir, 'Wratio.h5')
     meta['FILE_TYPE'] = None
@@ -535,12 +562,13 @@ def quickbiascorrection(ifgram_stack, nl, bw, wvl, max_memory, outdir):
 
 def estimate_bias(ifgram_stack, nl, bw, wvl, box, outdir):
     '''
-    # input: ifgram_stack -- the ifgramstack file that you did time-series analysis with
-    # input: nl -- the connection level that we assume bias-free
-    # input: bw -- the bandwidth of the time-series analysis, should be consistent with the network stored in ifgram_stack
-    # input: wvl -- wavelength of the SAR satellite
-    # input: box -- the patch that is processed
-    # input: outdir -- directory for output files
+    input: ifgram_stack -- the ifgramstack file that you did time-series analysis with
+    input: nl -- the connection level that we assume bias-free
+    input: bw -- the bandwidth of the time-series analysis, should be consistent with the network stored in ifgram_stack
+    input: wvl -- wavelength of the SAR satellite
+    input: box -- the patch that is processed
+    input: outdir -- directory for output files
+    outut: biasts_bwn : estimated bias timeseries of the given patch
     '''
     coef = -4*np.pi/wvl
     box_width  = box[2] - box[0]
@@ -601,6 +629,14 @@ def estimate_bias(ifgram_stack, nl, bw, wvl, box, outdir):
     return biasts_bwn
 
 def biascorrection(ifgram_stack, nl, bw, wvl, max_memory, outdir):
+    '''
+    input: ifgram_stack -- the ifgramstack file that you did time-series analysis with
+    input: nl -- the connection level that we assume bias-free
+    input: bw -- the bandwidth of the time-series analysis, should be consistent with the network stored in ifgram_stack
+    input: wvl -- wavelength of the SAR satellite
+    input: max_memory -- maximum memory of each patch
+    input: outdir -- directory for output files
+    '''
     stack_obj = ifgramStack(ifgram_stack)
     stack_obj.open()
     length, width = stack_obj.length, stack_obj.width
