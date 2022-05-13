@@ -10,15 +10,12 @@ import os
 import sys
 import argparse
 import numpy as np
-import cv2
 import glob
 from datetime import datetime as dt
 
 from mintpy.objects import ifgramStack
-from mintpy.utils import readfile, writefile, ptime
+from mintpy.utils import readfile, writefile, ptime, isce_utils
 from mintpy import ifgram_inversion as ifginv
-import isce
-import isceobj
 
 ################################################################################
 REFERENCE = """reference:
@@ -40,6 +37,7 @@ def create_parser():
     parser.add_argument('--numsigma',dest = 'numsigma', type = float, default = 3, help = 'Threashold for phase (number of sigmas,0-infty), default to be 3 sigma of a Gaussian distribution (assumed distribution for the cumulative closure phase) with sigma = pi/sqrt(3*num_cp)')
     parser.add_argument('--epi',dest = 'episilon', type = float, default = 0.3, help = 'Threashold for amplitude (0-1), default 0.3')
     parser.add_argument('--maxMemory', dest = 'max_memory', type = float, default = 8, help = 'max memory to use in GB')
+    parser.add_argument('--noupdate_CP',dest = 'update_CP', action = 'store_false', help = 'Use when no need to compute closure phases')
     parser.add_argument('-o', dest = 'outdir', type = str, default = '.', help = 'output file directory')
     parser.add_argument('-a','--action', dest='action', type=str, default='create_mask',
                         choices={'create_mask', 'quick_biasEstimate', 'biasEstimate'},
@@ -159,104 +157,6 @@ def sum_seq_closurePhase(SLC_list, date12_list_all, ifgram_stack, ref_phase, n, 
 
     return cum_cp, num_cp
 
-def gaussian_kernel(Sx, Sy, sig_x, sig_y):
-    if np.mod(Sx,2) == 0:
-        Sx = Sx + 1
-
-    if np.mod(Sy,2) ==0:
-            Sy = Sy + 1
-
-    x,y = np.meshgrid(np.arange(Sx),np.arange(Sy))
-    x = x + 1
-    y = y + 1
-    x0 = (Sx+1)/2
-    y0 = (Sy+1)/2
-    fx = ((x-x0)**2.)/(2.*sig_x**2.)
-    fy = ((y-y0)**2.)/(2.*sig_y**2.)
-    k = np.exp(-1.0*(fx+fy))
-    a = 1./np.sum(k)
-    k = a*k
-    return k
-
-def convolve(data, kernel):
-
-    R = cv2.filter2D(data.real,-1,kernel)
-    Im = cv2.filter2D(data.imag,-1,kernel)
-
-    return R + 1J*Im
-
-def write_xml(filename,width,length,bands,dataType,scheme):
-     img=isceobj.createImage()
-     img.setFilename(filename)
-     img.setWidth(width)
-     img.setLength(length)
-     img.setAccessMode('Read')
-     img.bands=bands
-     img.dataType=dataType
-     img.scheme = scheme
-     img.renderHdr()
-     img.renderVRT()
-     return None
-
-def estCoherence(outfile, corfile):
-    from mroipac.icu.Icu import Icu
-
-    #Create phase sigma correlation file here
-    filtImage = isceobj.createIntImage()
-    filtImage.load( outfile + '.xml')
-    filtImage.setAccessMode('read')
-    filtImage.createImage()
-
-    phsigImage = isceobj.createImage()
-    phsigImage.dataType='FLOAT'
-    phsigImage.bands = 1
-    phsigImage.setWidth(filtImage.getWidth())
-    phsigImage.setFilename(corfile)
-    phsigImage.setAccessMode('write')
-    phsigImage.createImage()
-
-
-    icuObj = Icu(name='sentinel_filter_icu')
-    icuObj.configure()
-    icuObj.unwrappingFlag = False
-    icuObj.useAmplitudeFlag = False
-    #icuObj.correlationType = 'NOSLOPE'
-
-    icuObj.icu(intImage = filtImage,  phsigImage=phsigImage)
-    phsigImage.renderHdr()
-
-    filtImage.finalizeImage()
-    phsigImage.finalizeImage()
-
-def unwrap_snaphu(intfile,corfile,unwfile,length, width):
-    from contrib.Snaphu.Snaphu import Snaphu
-
-    altitude = 800000.0
-    earthRadius = 6371000.0
-    wavelength = 0.056
-
-    snp = Snaphu()
-    snp.setInitOnly(False)
-    snp.setInput(intfile)
-    snp.setOutput(unwfile)
-    snp.setWidth(width)
-    snp.setCostMode('DEFO')
-    snp.setEarthRadius(earthRadius)
-    snp.setWavelength(wavelength)
-    snp.setAltitude(altitude)
-    snp.setCorrfile(corfile)
-    snp.setInitMethod('MST')
-   # snp.setCorrLooks(corrLooks)
-    snp.setMaxComponents(100)
-    snp.setDefoMaxCycles(2.0)
-    snp.setRangeLooks(80)
-    snp.setAzimuthLooks(20)
-    snp.setCorFileFormat('FLOAT_DATA')
-    snp.prepare()
-    snp.unwrap()
-
-    write_xml(unwfile, width, length, 2 , "FLOAT",'BIL')
-
 def cum_seq_unwclosurePhase(n,filepath,length, width, refY, refX, SLC_list, meta):
     '''output cumulative con-n sequential closure phase in time-series format (Eq. 25 in Zheng et al., 2022, but divided by n)
     Input parameters: n -  connection level of closure phases
@@ -347,14 +247,14 @@ def estimate_ratioX(tbase, n, nl, wvl, box, outdir):
 
     if n==1:
         wratio = np.ones([box_length, box_width])
-        wratio[abs(vel_bias_conn1)<0.1]=0 # if average velocity smaller than 1 mm/year (hardcoded here), regard as no bias
+        wratio[abs(vel_bias_conn1)<0.1]=np.nan # if average velocity smaller than 1 mm/year (hardcoded here), regard as no bias
         wratio_velocity = np.multiply(wratio,vel_bias_conn1)
 
     else:
         cum_bias_conn_n =  seq2cum_closurePhase(n, outdir,box)[-1,:,:]
         wratio = np.divide(cum_bias_conn_n,cum_bias_conn_1)
         wratio = 1-wratio
-        wratio[abs(vel_bias_conn1)<0.1]=0 # if average velocity smaller than 1 mm/year (hardcoded here), regard as no bias
+        wratio[abs(vel_bias_conn1)<0.1]=np.nan # if average velocity smaller than 1 mm/year (hardcoded here), regard as no bias
         wratio[wratio>1]=1
         wratio[wratio<0]=0
         wratio_velocity = np.multiply(wratio,vel_bias_conn1)
@@ -458,6 +358,8 @@ def estimatetsbias_approx(nl, bw, tbase, date_ordinal, wvl, box, outdir):
     m2 = nl
     wratio_p = estimate_ratioX(tbase, p, nl, wvl, box, outdir)[0]
     wratio_m1 = estimate_ratioX(tbase, m1, nl, wvl, box, outdir)[0]
+    wratio_p[np.isnan(wratio_p)] = 0
+    wratio_m1[np.isnan(wratio_m1)] = 0
     wratio_m1[abs(wratio_m1-1)<0.1] = np.nan
     ratio1 = np.divide(wratio_p,(1-wratio_m1))
     biasts1 = seq2cum_closurePhase(m1, outdir, box)
@@ -609,9 +511,8 @@ def estimate_bias(ifgram_stack, nl, bw, wvl, box, outdir):
     biasts_bwn = np.zeros((NSLC, numpix),dtype = np.float32)
     num_ifgram = np.shape(A)[0]
     W = get_design_matrix_W(num_ifgram, A, bw, box, tbase, nl, outdir) # this matrix is a numpix by num_ifgram matrix, each row stores the diagnal component of the Wr matrix for that pixel
+    prog_bar = ptime.progressBar(maxValue=numpix)
     for i in range(numpix):
-        if i%2000==0:
-            print(i, 'out of ', numpix, 'pixels processed')
         Wr = np.diag(W[i,:])
         WrA = np.matmul(Wr,A)
         Dphi_rough = biasts_bw1_rough[:,i]
@@ -624,6 +525,8 @@ def estimate_bias(ifgram_stack, nl, bw, wvl, box, outdir):
         biasvel = np.matmul(B_inv,Dphi_bias)
         biasts = np.cumsum(biasvel.reshape(-1)*tbase_diff.reshape(-1))
         biasts_bwn[1:,i] = biasts/coef
+        prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, numpix))
+    prog_bar.close()
     biasts_bwn = biasts_bwn.reshape(NSLC, box_length, box_width)
 
     return biasts_bwn
@@ -795,15 +698,15 @@ def compute_unwrap_closurephase(ifgram_stack, conn, max_memory, outdir):
 
     # filter and output
     for i in range(len(SLC_list)-conn):
-        concpname = 'conn'+str(conn)+'_filt_'+'{:03}'.format(i)+'.int'
+        concpname = 'conn'+str(conn)+'_filt_'+'{:03}'.format(i)+'.int' # some day we will need to make this 4 digits.
         concpdir = os.path.join(cpdir_conn,concpname)
         if not os.path.isfile(concpdir):
-            kernel = gaussian_kernel(5,5,1,1)
-            closurephase_filt = convolve(np.exp(1j*closurephase[i,:,:]), kernel)
+            kernel = isce_utils.gaussian_kernel(5,5,1,1)
+            closurephase_filt = isce_utils.convolve(np.exp(1j*closurephase[i,:,:]), kernel)
             fid = open(concpdir,mode = 'wb')
             closurephase_filt.tofile(fid)
             fid.close()
-            write_xml(concpdir, width, length, 1, 'CFLOAT','BIP')
+            isce_utils.write_xml(concpdir, width, length, 1, 'CFLOAT','BIP')
 
     # compute phase sigma and output
     for i in range(len(SLC_list)-conn):
@@ -812,7 +715,7 @@ def compute_unwrap_closurephase(ifgram_stack, conn, max_memory, outdir):
         concpcorname = 'conn'+str(conn)+'_filt_'+'{:03}'.format(i)+'.cor'
         concpcordir = os.path.join(cpdir_conn, concpcorname)
         if not os.path.isfile(concpcordir):
-            estCoherence(concpdir, concpcordir)
+            isce_utils.estCoherence(concpdir, concpcordir)
 
   #  unwrap
     for i in range(len(SLC_list)-conn):
@@ -823,7 +726,7 @@ def compute_unwrap_closurephase(ifgram_stack, conn, max_memory, outdir):
         concpunwname = 'conn'+str(conn)+'_filt_'+'{:03}'.format(i)+'.unw'
         concpunwdir = os.path.join(cpdir_conn, concpunwname)
         if not os.path.isfile(concpunwdir):
-            unwrap_snaphu(concpdir,concpcordir,concpunwdir,length, width)
+            isce_utils.unwrap_snaphu(concpdir,concpcordir,concpunwdir,length, width)
 
   # output accumulated unwrapped closure phase time-series
     cum_seq_unwclosurePhase(conn,cpdir_conn,length,width,refY,refX, SLC_list, meta)
@@ -839,16 +742,19 @@ def main(iargs = None):
         creat_cp_mask(inps.ifgram_stack, inps.nl, inps.max_memory, numsigma, inps.episilon, inps.outdir)
 
     if inps.action == 'quick_biasEstimate':
-        for conn in np.arange(2,inps.bw+2): # to make sure we have con-2 closure phase processed
-            compute_unwrap_closurephase(inps.ifgram_stack, conn, inps.max_memory, inps.outdir)
-        compute_unwrap_closurephase(inps.ifgram_stack, inps.nl, inps.max_memory, inps.outdir)
+        maxconn = np.maximum(2,inps.bw) # to make sure we have con-2 closure phase processed
+        if inps.update_CP:
+            for conn in np.arange(2,maxconn+1):
+                compute_unwrap_closurephase(inps.ifgram_stack, conn, inps.max_memory, inps.outdir)
+            compute_unwrap_closurephase(inps.ifgram_stack, inps.nl, inps.max_memory, inps.outdir)
         # a quick solution to bias-correction and output diagonal component of Wr (how fast the bias-inducing signal decays with temporal baseline)
         quickbiascorrection(inps.ifgram_stack, inps.nl, inps.bw, inps.wvl, inps.max_memory, inps.outdir)
 
     if inps.action == 'biasEstimate':
-        for conn in np.arange(2,inps.bw+2): # to make sure we have con-2 closure phase processed
-            compute_unwrap_closurephase(inps.ifgram_stack, conn, inps.max_memory, inps.outdir)
-        compute_unwrap_closurephase(inps.ifgram_stack, inps.nl, inps.max_memory, inps.outdir)
+        if inps.update_CP:
+            for conn in np.arange(2,inps.bw+2): # to make sure we have con-2 closure phase processed
+                compute_unwrap_closurephase(inps.ifgram_stack, conn, inps.max_memory, inps.outdir)
+            compute_unwrap_closurephase(inps.ifgram_stack, inps.nl, inps.max_memory, inps.outdir)
         # bias correction
         biascorrection(inps.ifgram_stack, inps.nl, inps.bw, inps.wvl, inps.max_memory, inps.outdir)
 
