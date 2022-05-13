@@ -1021,6 +1021,5 @@ def unwrap_snaphu(intfile,corfile,unwfile,length, width):
     snp.setCorFileFormat('FLOAT_DATA')
     snp.prepare()
     snp.unwrap()
-
-    return
     write_xml(unwfile, width, length, 2 , "FLOAT",'BIL')
+    return
