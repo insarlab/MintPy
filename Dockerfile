@@ -35,6 +35,6 @@ COPY --chown=micromamba:micromamba . ${MINTPY_HOME}/
 
 ARG PYTHON_VERSION="3.9"
 RUN micromamba install -y -n base -c conda-forge python=${PYTHON_VERSION}  \
-      jupyterlab ipympl -f ${MINTPY_HOME}/requirements.txt && \
+      jupyterlab ipympl gdal">=3" -f ${MINTPY_HOME}/requirements.txt && \
     python -m pip install --no-cache-dir ${MINTPY_HOME} && \
     micromamba clean --all --yes
