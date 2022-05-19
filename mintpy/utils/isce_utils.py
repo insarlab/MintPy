@@ -920,6 +920,11 @@ def get_sensing_datetime_list(proj_dir, date_list=None):
 ############################## Standard Processing ###########################################
 
 def gaussian_kernel(Sx, Sy, sig_x, sig_y):
+    '''
+    Generate a guassian kernal (with all elements sum to 1)
+    inputs: Sx, Sy - dimensions of kernal
+            sig_x, sig_y: standard deviation of the guassian distribution
+    '''
     if np.mod(Sx,2) == 0:
         Sx = Sx + 1
 
@@ -939,35 +944,29 @@ def gaussian_kernel(Sx, Sy, sig_x, sig_y):
     return k
 
 def convolve(data, kernel):
-    import cv2
-    R = cv2.filter2D(data.real,-1,kernel)
-    Im = cv2.filter2D(data.imag,-1,kernel)
+    '''
+    return a convolved (filtered) complex image
+    inputs: data - complex array
+            kernel - convolution kernel
+    '''
+    from scipy import ndimage
+    R = ndimage.convolve(data.real, kernel, mode='constant',cval=0.0)
+    Im =ndimage.convolve(data.imag, kernel, mode='constant',cval=0.0)
 
     return R + 1J*Im
 
-def write_xml(filename,width,length,bands,dataType,scheme):
-    import isce
-    import isceobj
-    img=isceobj.createImage()
-    img.setFilename(filename)
-    img.setWidth(width)
-    img.setLength(length)
-    img.setAccessMode('Read')
-    img.bands=bands
-    img.dataType=dataType
-    img.scheme = scheme
-    img.renderHdr()
-    img.renderVRT()
-    return
-
-def estCoherence(outfile, corfile):
+def estimate_coherence(infile, corfile):
+    '''
+    input: infile : .int file path
+            corfile: output correlation file (computed from phase sigma)
+    '''
     import isce
     import isceobj
     from mroipac.icu.Icu import Icu
 
     #Create phase sigma correlation file here
     filtImage = isceobj.createIntImage()
-    filtImage.load( outfile + '.xml')
+    filtImage.load( infile + '.xml')
     filtImage.setAccessMode('read')
     filtImage.createImage()
 
@@ -994,20 +993,32 @@ def estCoherence(outfile, corfile):
 
     return
 
-def unwrap_snaphu(intfile,corfile,unwfile,length, width):
+def unwrap_snaphu(intfile,corfile,unwfile, meta ,cost='SMOOTH'):
+    '''
+    input: intfile - wrapped phase file directory
+           corfile - correlation file directory
+           unwfile - output unwrapped file directory
+           meta - dict, attributes dictionary
+           cost - 'DEFO,'SMOOTH','TOPO'
+    '''
     import isce
     from contrib.Snaphu.Snaphu import Snaphu
+    from mintpy.utils import writefile
 
-    altitude = 800000.0
-    earthRadius = 6371000.0
-    wavelength = 0.056
+    length = int(meta['length'])
+    width = int(meta['width'])
+    wavelength = float(meta['WAVELENGTH'])
+    altitude =  float(meta['altitude'])
+    rglooks = int(meta['RLOOKS'])
+    azlooks = int(meta['ALOOKS'])
+    earthRadius = float(meta['earthRadius'])
 
     snp = Snaphu()
     snp.setInitOnly(False)
     snp.setInput(intfile)
     snp.setOutput(unwfile)
     snp.setWidth(width)
-    snp.setCostMode('DEFO')
+    snp.setCostMode(cost)
     snp.setEarthRadius(earthRadius)
     snp.setWavelength(wavelength)
     snp.setAltitude(altitude)
@@ -1016,10 +1027,15 @@ def unwrap_snaphu(intfile,corfile,unwfile,length, width):
    # snp.setCorrLooks(corrLooks)
     snp.setMaxComponents(100)
     snp.setDefoMaxCycles(2.0)
-    snp.setRangeLooks(80)
-    snp.setAzimuthLooks(20)
+    snp.setRangeLooks(rglooks)
+    snp.setAzimuthLooks(azlooks)
     snp.setCorFileFormat('FLOAT_DATA')
     snp.prepare()
     snp.unwrap()
-    write_xml(unwfile, width, length, 2 , "FLOAT",'BIL')
+
+    meta['INTERLEAVE'] = 'BIL'
+    meta['FILE_TYPE'] = '.unw'
+    meta['DATA_TYPE']='float32'
+    meta['BANDS']=2
+    writefile.write_isce_xml(meta, unwfile)
     return

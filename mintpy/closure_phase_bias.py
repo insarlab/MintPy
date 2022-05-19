@@ -13,8 +13,8 @@ import numpy as np
 import glob
 from datetime import datetime as dt
 
-from mintpy.objects import ifgramStack
-from mintpy.utils import readfile, writefile, ptime, isce_utils
+from mintpy.objects import ifgramStack, cluster
+from mintpy.utils import readfile, writefile, ptime, isce_utils, arg_group
 from mintpy import ifgram_inversion as ifginv
 
 ################################################################################
@@ -29,11 +29,12 @@ EXAMPLE = """example:
 """
 
 def create_parser():
-    parser = argparse.ArgumentParser(description = 'This script deals with phase non-closure related bias, either in terms of masking, estimation or correction.')
+    parser = argparse.ArgumentParser(description = 'This script deals with phase non-closure related bias, either in terms of masking, estimation or correction.',
+                                    formatter_class = argparse.RawTextHelpFormatter,
+                                    epilog=REFERENCE+'\n'+EXAMPLE)
     parser.add_argument('-i','--ifgramstack',type = str, dest = 'ifgram_stack',help = 'interferogram stack file that contains the unwrapped phases')
     parser.add_argument('--nl', dest = 'nl', type = int, default = 20, help = 'connection level that we are correcting to (or consider as no bias)')
     parser.add_argument('--bw', dest = 'bw', type = int, default = 10, help = 'bandwidth of time-series analysis that you want to correct')
-    parser.add_argument('--wvl',dest = 'wvl', type = float, default = 5.6, help = 'wavelength in cm of the SAR satellite, default 5.6 cm' )
     parser.add_argument('--numsigma',dest = 'numsigma', type = float, default = 3, help = 'Threashold for phase (number of sigmas,0-infty), default to be 3 sigma of a Gaussian distribution (assumed distribution for the cumulative closure phase) with sigma = pi/sqrt(3*num_cp)')
     parser.add_argument('--epi',dest = 'episilon', type = float, default = 0.3, help = 'Threashold for amplitude (0-1), default 0.3')
     parser.add_argument('--maxMemory', dest = 'max_memory', type = float, default = 8, help = 'max memory to use in GB')
@@ -44,7 +45,8 @@ def create_parser():
                         help='action to take (default: %(default)s):\n'+
                              'create_mask -  create a mask of areas susceptible to closure phase errors\n'+
                              'quick_biasEstimate - estimate how bias decays with time, will output sequential closure phase files, and gives a quick and appximate bias estimation\n'
-                             'biasEstimate - estimate how bias decays with time, processed for each pixel on a pixel by pixel basis, not parallized yet')
+                             'biasEstimate - estimate how bias decays with time, processed for each pixel on a pixel by pixel basis')
+    parser = arg_group.add_parallel_argument(parser)
     return parser
 
 def cmd_line_parse(iargs=None):
@@ -58,14 +60,14 @@ def seq_closurePhase(SLC_list, date12_list_all, ifgram_stack, ref_phase, n, box)
         SLC_list : list of SLC dates
         date12_list_all: date12 of all the interferograms stored in the ifgramstack file
         ifgram_stack: stack file
-        refphase : reference phase
+        refphase : phase timeseires of the refernce pixel
         n        : connection level of the closure phase
         box      : bounding box for the patch
     Output: cp_w : stack of wrapped sequential closure phases of connection n
     """
-    cp_idx = []
-    NSLC = len(SLC_list)
-    for i in range(NSLC-n):
+    cp_idx = [] # initiate a list storing the index of interferograms in each closure phase computation
+    nslc = len(SLC_list)
+    for i in range(nslc-n):
         ifgram = []
         flag = True
         for j in range(n):
@@ -81,10 +83,10 @@ def seq_closurePhase(SLC_list, date12_list_all, ifgram_stack, ref_phase, n, box)
     cp_idx = np.unique(cp_idx, axis = 0)
 
     num_cp = len(cp_idx)
-    print('Number of closure measurements expected, ', len(SLC_list)-n)
+    print('Number of closure measurements expected, ', nslc-n)
     print('Number of closure measurements found, ', num_cp)
 
-    if num_cp < len(SLC_list)-n:
+    if num_cp < nslc-n:
         print('Missing interferograms, abort')
         raise Exception("Some interferograms are missing")
 
@@ -118,8 +120,8 @@ def sum_seq_closurePhase(SLC_list, date12_list_all, ifgram_stack, ref_phase, n, 
         num_cp   : number of closure phases in the sum
     """
     cp_idx = []
-    NSLC = len(SLC_list)
-    for i in range(NSLC-n):
+    nslc = len(SLC_list)
+    for i in range(nslc-n):
         ifgram = []
         flag = True
         for j in range(n):
@@ -218,7 +220,7 @@ def cum_seq_unwclosurePhase(n,filepath,length, width, refY, refX, SLC_list, meta
 def seq2cum_closurePhase(conn, outdir, box):
     '''
     this script read in cumulative sequential closure phase from individual closure phase directory (Eq. 25) in Zheng et al., 2022
-    output should be a 3D matrix of size NSLC by box_lengh by box_width
+    output should be a 3D matrix of size nslc by box_lengh by box_width
     '''
     filepath = 'con'+str(conn)+'_cp'
     filename = 'con'+str(conn)+'_seqcumclosurephase.h5'
@@ -226,7 +228,7 @@ def seq2cum_closurePhase(conn, outdir, box):
     biasts = readfile.read(seqcpfile, box=box,print_msg=False)[0]
     return biasts
 
-def estimate_ratioX(tbase, n, nl, wvl, box, outdir):
+def estimate_ratioX(tbase, n, nl, wvl, box, outdir, mask=False):
     '''
     # This script estimates w(n\delta_t)/w(delta_t), Eq.(29) in Zheng et al., 2022
     # input: tbase - time in accumulated years
@@ -247,18 +249,20 @@ def estimate_ratioX(tbase, n, nl, wvl, box, outdir):
 
     if n==1:
         wratio = np.ones([box_length, box_width])
-        wratio[abs(vel_bias_conn1)<0.1]=np.nan # if average velocity smaller than 1 mm/year (hardcoded here), regard as no bias
         wratio_velocity = np.multiply(wratio,vel_bias_conn1)
-
+        if mask:
+            # if average velocity smaller than 1 mm/year (hardcoded here), mask out for better visual
+            # this option is only turned on while outputint Wratio.h5 file.
+            wratio[abs(vel_bias_conn1)<0.1]=np.nan
     else:
         cum_bias_conn_n =  seq2cum_closurePhase(n, outdir,box)[-1,:,:]
         wratio = np.divide(cum_bias_conn_n,cum_bias_conn_1)
         wratio = 1-wratio
-        wratio[abs(vel_bias_conn1)<0.1]=np.nan # if average velocity smaller than 1 mm/year (hardcoded here), regard as no bias
         wratio[wratio>1]=1
         wratio[wratio<0]=0
         wratio_velocity = np.multiply(wratio,vel_bias_conn1)
-
+        if mask:
+            wratio[abs(vel_bias_conn1)<0.1]=np.nan # if average velocity smaller than 1 mm/year (hardcoded here), mask out for better visual
     return wratio,wratio_velocity # wratio is a length by width 2D matrix
 
 def estimate_ratioX_all(bw,nl,outdir,box):
@@ -299,6 +303,8 @@ def get_design_matrix_W(M, A, bw, box, tbase, nl, outdir):
         idx1 = Aline.index(-1)
         idx2 = Aline.index(1)
         conn = idx2 - idx1
+        if conn > bw:
+            print('Interferograms with maximum connection level larger than input bandwidth exists in ifgramStack.h5, use modify_network.py to adjust the maximum connection level')
         wratio = wratioall[conn,:,:]
         wratio = wratio.reshape(-1)
         W[:,i] = wratio
@@ -371,7 +377,7 @@ def estimatetsbias_approx(nl, bw, tbase, date_ordinal, wvl, box, outdir):
     biasts[np.isnan(biasts)]=biasts2[np.isnan(biasts1)]
     return biasts
 
-def quickbiascorrection(ifgram_stack, nl, bw, wvl, max_memory, outdir):
+def quickbiascorrection(ifgram_stack, nl, bw, max_memory, outdir):
     '''
     Output Wr (eq.20 in Zheng et al., 2022) and a quick approximate solution to bias time-series
     Input parameters:
@@ -402,6 +408,7 @@ def quickbiascorrection(ifgram_stack, nl, bw, wvl, max_memory, outdir):
         date_ordinal.append(datetime_obj.toordinal())
 
     meta = dict(stack_obj.metadata)
+    wvl = float(meta['WAVELENGTH']) *100
     SLC_list = np.array(SLC_list, np.string_)
     connlist = list(np.arange(1,bw+1))
     connlist.append(nl)
@@ -429,7 +436,7 @@ def quickbiascorrection(ifgram_stack, nl, bw, wvl, max_memory, outdir):
             w_ratios_velocity = np.zeros([len(connlist)-1,box_length, box_width])
             for idx in range(len(connlist)-1):
                 conn = connlist[idx]
-                w,wv = estimate_ratioX(tbase, conn, nl, wvl, box, outdir)
+                w,wv = estimate_ratioX(tbase, conn, nl, wvl, box, outdir,mask=True)
                 w_ratios[idx,:,:] = w
                 w_ratios_velocity[idx,:,:] = wv
 
@@ -489,7 +496,7 @@ def estimate_bias(ifgram_stack, nl, bw, wvl, box, outdir):
     date1s = [i.split('_')[0] for i in date12_list]
     date2s = [i.split('_')[1] for i in date12_list]
     SLC_list = sorted(list(set(date1s + date2s)))
-    NSLC = len(SLC_list)
+    nslc = len(SLC_list)
     # tbase in the unit of years
     date_format = ptime.get_date_str_format(SLC_list[0])
     dates = np.array([dt.strptime(i, date_format) for i in SLC_list])
@@ -500,16 +507,20 @@ def estimate_bias(ifgram_stack, nl, bw, wvl, box, outdir):
     velocity_m = biasts_bw1_fine[-1,:,:]/coef/delta_T
     mask = np.where(np.abs(velocity_m)<0.1, 0,1)
 
-    for i in range(NSLC):
+    for i in range(nslc):
         biasts_bw1_fine [i,:,:]  = np.multiply(np.divide(biasts_bw1_rough[-1,:,:],biasts_bw1_fine[-1,:,:]),biasts_bw1_fine[i,:,:])
 
-    biasts_bw1_rough = biasts_bw1_rough.reshape(NSLC,-1)
-    biasts_bw1_fine = biasts_bw1_fine.reshape(NSLC,-1)
+    biasts_bw1_rough = biasts_bw1_rough.reshape(nslc,-1)
+    biasts_bw1_fine = biasts_bw1_fine.reshape(nslc,-1)
     mask = mask.reshape(-1)
 
     # Then We construct ifgram_bias (W A \Phi^X, or Wr A w(\delta_t)\Phi^X in Eq.(19) in Zheng et al., 2022) , same structure with ifgram_stack
-    biasts_bwn = np.zeros((NSLC, numpix),dtype = np.float32)
+    biasts_bwn = np.zeros((nslc, numpix),dtype = np.float32)
     num_ifgram = np.shape(A)[0]
+    if num_ifgram != int(bw*(nslc*2-bw-1)/2): # check the dimensions
+        print('Number of interferograms expected: ',int(bw*(nslc*2-bw-1)/2))
+        print('Number of interferograms found: ', num_ifgram)
+        raise Exception("Modify maximum connection in ifgramStack.h5 to be consistent with input bandwidth!")
     W = get_design_matrix_W(num_ifgram, A, bw, box, tbase, nl, outdir) # this matrix is a numpix by num_ifgram matrix, each row stores the diagnal component of the Wr matrix for that pixel
     prog_bar = ptime.progressBar(maxValue=numpix)
     for i in range(numpix):
@@ -527,11 +538,11 @@ def estimate_bias(ifgram_stack, nl, bw, wvl, box, outdir):
         biasts_bwn[1:,i] = biasts/coef
         prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, numpix))
     prog_bar.close()
-    biasts_bwn = biasts_bwn.reshape(NSLC, box_length, box_width)
+    biasts_bwn = biasts_bwn.reshape(nslc, box_length, box_width)
 
-    return biasts_bwn
+    return biasts_bwn,box
 
-def biascorrection(ifgram_stack, nl, bw, wvl, max_memory, outdir):
+def biascorrection(ifgram_stack, nl, bw, max_memory, outdir, parallel):
     '''
     input: ifgram_stack -- the ifgramstack file that you did time-series analysis with
     input: nl -- the connection level that we assume bias-free
@@ -553,10 +564,21 @@ def biascorrection(ifgram_stack, nl, bw, wvl, max_memory, outdir):
     # estimate for bias time-series
     biasfile = os.path.join(outdir, 'bias_timeseries.h5')
     meta = dict(stack_obj.metadata)
+    wvl = float(meta['WAVELENGTH']) *100 # convert to cm
     SLC_list = np.array(SLC_list, np.string_)
+    nslc = len(SLC_list)
     ds_name_dict = {'timeseries': [np.float32, (len(SLC_list), length, width), None],
             'date': [np.dtype('S8'),np.shape(SLC_list), SLC_list],}
     writefile.layout_hdf5(biasfile, ds_name_dict, meta)
+
+    data_kwargs = {
+        "ifgram_stack"      : ifgram_stack,
+        "nl"                : nl,
+        "bw"                : bw,
+        "wvl"               : wvl,
+        "outdir"            : outdir,
+    }
+    num_threads_dict = cluster.set_num_threads("1")
     for i, box in enumerate(box_list):
         box_width  = box[2] - box[0]
         box_length = box[3] - box[1]
@@ -565,7 +587,25 @@ def biascorrection(ifgram_stack, nl, bw, wvl, max_memory, outdir):
             print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
             print('box width:  {}'.format(box_width))
             print('box length: {}'.format(box_length))
-        tsbias = estimate_bias(ifgram_stack, nl, bw, wvl, box, outdir)
+        #update box argument in the input data
+        data_kwargs['box'] = box
+        if not parallel['clustertype']:
+            # non-parallel
+            tsbias = estimate_bias(ifgram_stack, nl, bw, wvl, box, outdir)[:-1]
+        else:
+            # parallel
+            print('\n\n------- start parallel processing using Dask -------')
+            # initiate the output data
+            tsbias = np.zeros((nslc, box_length, box_width), np.float32)
+            # initiate dask cluster and client
+            cluster_obj = cluster.DaskCluster(parallel['clustertype'], parallel['numWorker'], config_name=parallel['config_name'])
+            cluster_obj.open()
+            # run dask
+            tsbias, box = cluster_obj.run(func=estimate_bias, func_data = data_kwargs, results=[tsbias, box])
+            # close dask cluster and client
+            cluster_obj.close()
+            print('------- finished parallel processing -------\n\n')
+
         block = [0, len(SLC_list),box[1], box[3], box[0], box[2]]
         writefile.write_hdf5_block(biasfile,
                                    data=tsbias/100,
@@ -706,7 +746,11 @@ def compute_unwrap_closurephase(ifgram_stack, conn, max_memory, outdir):
             fid = open(concpdir,mode = 'wb')
             closurephase_filt.tofile(fid)
             fid.close()
-            isce_utils.write_xml(concpdir, width, length, 1, 'CFLOAT','BIP')
+            meta['FILE_TYPE']='.int'
+            meta['INTERLEAVE']='BIP'
+            meta['DATA_TYPE']='complex64'
+            meta['BANDS']=1
+            writefile.write_isce_xml(meta, concpdir)
 
     # compute phase sigma and output
     for i in range(len(SLC_list)-conn):
@@ -715,7 +759,7 @@ def compute_unwrap_closurephase(ifgram_stack, conn, max_memory, outdir):
         concpcorname = 'conn'+str(conn)+'_filt_'+'{:03}'.format(i)+'.cor'
         concpcordir = os.path.join(cpdir_conn, concpcorname)
         if not os.path.isfile(concpcordir):
-            isce_utils.estCoherence(concpdir, concpcordir)
+            isce_utils.estimate_coherence(concpdir, concpcordir)
 
   #  unwrap
     for i in range(len(SLC_list)-conn):
@@ -726,7 +770,7 @@ def compute_unwrap_closurephase(ifgram_stack, conn, max_memory, outdir):
         concpunwname = 'conn'+str(conn)+'_filt_'+'{:03}'.format(i)+'.unw'
         concpunwdir = os.path.join(cpdir_conn, concpunwname)
         if not os.path.isfile(concpunwdir):
-            isce_utils.unwrap_snaphu(concpdir,concpcordir,concpunwdir,length, width)
+            isce_utils.unwrap_snaphu(concpdir,concpcordir,concpunwdir,meta)
 
   # output accumulated unwrapped closure phase time-series
     cum_seq_unwclosurePhase(conn,cpdir_conn,length,width,refY,refX, SLC_list, meta)
@@ -748,7 +792,7 @@ def main(iargs = None):
                 compute_unwrap_closurephase(inps.ifgram_stack, conn, inps.max_memory, inps.outdir)
             compute_unwrap_closurephase(inps.ifgram_stack, inps.nl, inps.max_memory, inps.outdir)
         # a quick solution to bias-correction and output diagonal component of Wr (how fast the bias-inducing signal decays with temporal baseline)
-        quickbiascorrection(inps.ifgram_stack, inps.nl, inps.bw, inps.wvl, inps.max_memory, inps.outdir)
+        quickbiascorrection(inps.ifgram_stack, inps.nl, inps.bw, inps.max_memory, inps.outdir)
 
     if inps.action == 'biasEstimate':
         if inps.update_CP:
@@ -756,7 +800,12 @@ def main(iargs = None):
                 compute_unwrap_closurephase(inps.ifgram_stack, conn, inps.max_memory, inps.outdir)
             compute_unwrap_closurephase(inps.ifgram_stack, inps.nl, inps.max_memory, inps.outdir)
         # bias correction
-        biascorrection(inps.ifgram_stack, inps.nl, inps.bw, inps.wvl, inps.max_memory, inps.outdir)
+        parallel={
+        "clustertype" : inps.cluster,
+        "numWorker"   : inps.numWorker,
+        "config_name" : inps.config,
+        }
+        biascorrection(inps.ifgram_stack, inps.nl, inps.bw, inps.max_memory, inps.outdir, parallel)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
