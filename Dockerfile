@@ -33,8 +33,8 @@ ENV PATH=/opt/conda/bin:${PATH}
 ARG MINTPY_HOME=/home/micromamba/tools/MintPy
 COPY --chown=micromamba:micromamba . ${MINTPY_HOME}/
 
-ARG PYTHON_VERSION="3.8"
+ARG PYTHON_VERSION="3.9"
 RUN micromamba install -y -n base -c conda-forge python=${PYTHON_VERSION}  \
-      jupyterlab ipympl -f ${MINTPY_HOME}/docs/requirements.txt && \
+      jupyterlab ipympl -f ${MINTPY_HOME}/requirements.txt && \
     python -m pip install --no-cache-dir ${MINTPY_HOME} && \
     micromamba clean --all --yes
