@@ -1,20 +1,9 @@
 #!/usr/bin/env python3
 ############################################################
-# Written as a part of MintPy
-# YKL @ 2022-05-06
+# Program is part of MintPy                                #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Yuan-Kai Liu, May 2022                           #
 ############################################################
-# Citation:
-# Oliver L. Stephenson, Yuan-Kai Liu, Zhang Yunjun, Mark Simons, and Paul Rosen. (2022)
-# The Impact of Plate Motions on Long-Wavelength InSAR-Derived Velocity Fields. Manuscript in preparation.
-
-# Extra dependency:
-#   + platemotion (https://github.com/lcx366/PlateTectonic)
-#   + astropy
-#   How to install both:
-#      option (1) pip install platemotion
-#      option (2) git clone git@github.com:lcx366/PlateTectonic.git $TOOL_DIR/PlateTectonic
-#                 echo 'export PYTHONPATH=$PYTHONPATH:$TOOL_DIR/PlateTectonic' >> ~/.bashrc
-#                 somehow install other dependencies in setup.py using your conda
 
 # To-Do List (updated 2022.5.6 ykl):
 #   + Remove the ground range functions, no need (but now the ground resolution depend on it)
@@ -39,10 +28,21 @@ from mintpy import reference_point
 from mintpy.save_gmt import get_geo_lat_lon
 from mintpy.solid_earth_tides import prepare_los_geometry
 
-from platemotion import Plate
-from astropy import units as u
+try:
+    from platemotion import Plate
+    from astropy import units as u
+except ImportError:
+    msg = 'Can NOT import platemotion!'
+    msg += '\nCheck more details at https://github.com/lcx366/PlateTectonic.'
+    raise ImportError(msg)
+
+
 
 #########################################  Usage  ##############################################
+REFERENCE = """reference:
+  Stephenson, O. L., Liu, Y. K., Yunjun, Z., Simons, M., and Rosen, P., (2022), The Impact of Plate
+    Motions on Long-Wavelength InSAR-Derived Velocity Fields. [in preparation]
+"""
 EXAMPLE = """example:
   bulk_plate_motion.py -g inputs/geometryGeo.h5                --om_sph  59.32 234.04 0.216   -m None -o absolute_bmModel.h5
   bulk_plate_motion.py -g inputs/geometryGeo.h5 -v velocity.h5 --om_sph  54.45 259.66 0.255   -m waterMask.h5
@@ -51,38 +51,35 @@ EXAMPLE = """example:
 """
 
 def create_parser():
-    description = 'LOS bulk motion correction given bulk motion and geometry'
-
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter, epilog=EXAMPLE)
+    parser = argparse.ArgumentParser(description='Bulk plate motion (shift and rotation) correction',
+                                     formatter_class=argparse.RawTextHelpFormatter,
+                                     epilog=REFERENCE+'\n'+EXAMPLE)
+    # input files
     parser.add_argument('-g', '--geom', dest='geomfile', type=str, required=True,
-            help = 'Input geometry file, e.g., geometryGeo.h5')
+                        help = 'Input geometry file, e.g., geometryGeo.h5')
     parser.add_argument('-v', '--velo', dest='vfile', type=str, default=None,
-            help='Input velocity file, e.g., velocity.h5 (default: %(default)s).')
+                        help='Input velocity file, e.g., velocity.h5 (default: %(default)s).')
 
+    # plate motion configurations
     parser.add_argument('--enu', dest='venu', type=float, nargs=3, metavar=('VE', 'VN', 'VU'), default=None,
-            help = 'Constant bulk translation of ground [ve, vn, vu] unit: meter/year (default: %(default)s).')
+                        help = 'Constant bulk translation of ground [ve, vn, vu] unit: meter/year (default: %(default)s).')
     parser.add_argument('--om_cart', dest='omega_cart', type=float, nargs=3, metavar=('WX', 'WY', 'WZ'), default=None,
-            help = 'Cartesian form of Euler Pole rotation; [wx, wy, wz] (unit: mas/yr) (default: %(default)s).')
+                        help = 'Cartesian form of Euler Pole rotation; [wx, wy, wz] (unit: mas/yr) (default: %(default)s).')
     parser.add_argument('--om_sph', dest='omega_sph', type=float, nargs=3, metavar=('LAT', 'LON', 'W'), default=None,
-            help = 'Spherical form of Euler Pole rotation; [lat, lon, w] (unit: deg, deg, deg/Ma) (default: %(default)s).')
+                        help = 'Spherical form of Euler Pole rotation; [lat, lon, w] (unit: deg, deg, deg/Ma) (default: %(default)s).')
 
     parser.add_argument('-m', '--mask', dest='mask', type=str, default=None,
-            help = 'Mask file to apply to the inout and predicted velocity fields. \n' +
-                    '   zero: masking 0.0 values of the input velocity \n' +
-                    '   None: no mask is applied (default: %(default)s).')
+                        help = 'Mask file to apply to the inout and predicted velocity fields. \n' +
+                                '   zero: masking 0.0 values of the input velocity \n' +
+                                '   None: no mask is applied (default: %(default)s).')
     parser.add_argument('--resol', dest='resol', type=float, default=10.,
-            help = 'Ground resolution for computing Plate rotation to ENU velocity (unit: km) (default: %(default)s km grid).')
+                        help = 'Ground resolution for computing Plate rotation to ENU velocity (unit: km) (default: %(default)s km grid).')
     parser.add_argument('-o', '--out-model', dest='out_model', type=str, default=None,
-            help = 'Output filename of bulk motion model velocity (default: *_bmModel.h5)')
+                        help = 'Output filename of bulk motion model velocity (default: *_bmModel.h5)')
     parser.add_argument('-oc', '--out-corr', dest='out_corr', type=str, default=None,
-            help = 'Output filename of corrected velocity (default: *_bmCorr.h5)')
+                        help = 'Output filename of corrected velocity (default: *_bmCorr.h5)')
 
-    if len(sys.argv)<1:
-        print('')
-        parser.print_help()
-        sys.exit(1)
-    else:
-        return parser
+    return parser
 
 
 def get_filenames(vfile, out_model, out_corr):

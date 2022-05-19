@@ -92,6 +92,7 @@ def do_setup():
                 'add_attribute.py = mintpy.add_attribute:main',
                 'add.py = mintpy.add:main',
                 'asc_desc2horz_vert.py = mintpy.asc_desc2horz_vert:main',
+                'bulk_plate_motion.py = mintpy.bulk_plate_motion:main',
                 'closure_phase_bias.py = mintpy.closure_phase_bias:main',
                 'dem_error.py = mintpy.dem_error:main',
                 'dem_gsi.py = mintpy.dem_gsi:main',
