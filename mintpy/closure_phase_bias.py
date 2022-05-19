@@ -8,6 +8,7 @@
 
 import os
 import sys
+import time
 import argparse
 import numpy as np
 import glob
@@ -579,6 +580,7 @@ def biascorrection(ifgram_stack, nl, bw, max_memory, outdir, parallel):
         "outdir"            : outdir,
     }
     num_threads_dict = cluster.set_num_threads("1")
+    start_time = time.time()
     for i, box in enumerate(box_list):
         box_width  = box[2] - box[0]
         box_length = box[3] - box[1]
@@ -611,6 +613,11 @@ def biascorrection(ifgram_stack, nl, bw, max_memory, outdir, parallel):
                                    data=tsbias/100,
                                    datasetName='timeseries',
                                    block=block)
+
+    # roll back to the original number of threads
+    cluster.roll_back_num_threads(num_threads_dict)
+    m, s = divmod(time.time() - start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
     return
 
 

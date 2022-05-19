@@ -1003,9 +1003,7 @@ def unwrap_snaphu(intfile,corfile,unwfile, meta ,cost='SMOOTH'):
     '''
     import isce
     from contrib.Snaphu.Snaphu import Snaphu
-    from mintpy.utils import writefile
 
-    length = int(meta['length'])
     width = int(meta['width'])
     wavelength = float(meta['WAVELENGTH'])
     altitude =  float(meta['altitude'])
