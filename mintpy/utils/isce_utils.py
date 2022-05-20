@@ -23,7 +23,7 @@ import datetime
 import numpy as np
 from mintpy.objects import sensor
 from mintpy.utils import ptime, readfile, writefile, utils1 as ut
-
+from scipy import ndimage
 # suppress matplotlib DEBUG message
 import logging
 mpl_logger = logging.getLogger('matplotlib')
@@ -949,7 +949,6 @@ def convolve(data, kernel):
     inputs: data - complex array
             kernel - convolution kernel
     '''
-    from scipy import ndimage
     R = ndimage.convolve(data.real, kernel, mode='constant',cval=0.0)
     Im =ndimage.convolve(data.imag, kernel, mode='constant',cval=0.0)
 
@@ -1006,7 +1005,7 @@ def unwrap_snaphu(intfile,corfile,unwfile, meta ,cost='SMOOTH'):
 
     width = int(meta['width'])
     wavelength = float(meta['WAVELENGTH'])
-    altitude =  float(meta['altitude'])
+    altitude =  float(meta['HEIGHT'])
     rglooks = int(meta['RLOOKS'])
     azlooks = int(meta['ALOOKS'])
     earthRadius = float(meta['earthRadius'])

@@ -24,9 +24,9 @@ REFERENCE = """reference:
 """
 EXAMPLE = """example:
     closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --action create_mask
-    closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --numsigma 2.5 --action create_mask
-    closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --bw 10 -a quick_biasEstimate
-    closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --bw 10 -a biasEstimate
+    closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --num_sigma 2.5 --action create_mask
+    closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --bw 10 -a quick_bias_estimate
+    closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --bw 10 -a bias_estimate --noupdate_CP -c local
 """
 
 def create_parser():
@@ -36,18 +36,18 @@ def create_parser():
     parser.add_argument('-i','--ifgramstack',type = str, dest = 'ifgram_stack',help = 'interferogram stack file that contains the unwrapped phases')
     parser.add_argument('--nl', dest = 'nl', type = int, default = 20, help = 'connection level that we are correcting to (or consider as no bias)')
     parser.add_argument('--bw', dest = 'bw', type = int, default = 10, help = 'bandwidth of time-series analysis that you want to correct')
-    parser.add_argument('--numsigma',dest = 'numsigma', type = float, default = 3, help = 'Threashold for phase (number of sigmas,0-infty), default to be 3 sigma of a Gaussian distribution (assumed distribution for the cumulative closure phase) with sigma = pi/sqrt(3*num_cp)')
+    parser.add_argument('--num_sigma',dest = 'num_sigma', type = float, default = 3, help = 'Threashold for phase (number of sigmas,0-infty), default to be 3 sigma of a Gaussian distribution (assumed distribution for the cumulative closure phase) with sigma = pi/sqrt(3*num_cp)')
     parser.add_argument('--epi',dest = 'episilon', type = float, default = 0.3, help = 'Threashold for amplitude (0-1), default 0.3')
-    parser.add_argument('--maxMemory', dest = 'max_memory', type = float, default = 8, help = 'max memory to use in GB')
     parser.add_argument('--noupdate_CP',dest = 'update_CP', action = 'store_false', help = 'Use when no need to compute closure phases')
     parser.add_argument('-o', dest = 'outdir', type = str, default = '.', help = 'output file directory')
     parser.add_argument('-a','--action', dest='action', type=str, default='create_mask',
-                        choices={'create_mask', 'quick_biasEstimate', 'biasEstimate'},
+                        choices={'create_mask', 'quick_bias_estimate', 'bias_estimate'},
                         help='action to take (default: %(default)s):\n'+
                              'create_mask -  create a mask of areas susceptible to closure phase errors\n'+
-                             'quick_biasEstimate - estimate how bias decays with time, will output sequential closure phase files, and gives a quick and appximate bias estimation\n'
-                             'biasEstimate - estimate how bias decays with time, processed for each pixel on a pixel by pixel basis')
+                             'quick_bias_estimate - estimate how bias decays with time, will output sequential closure phase files, and gives a quick and appximate bias estimation\n'
+                             'bias_estimate - estimate how bias decays with time, processed for each pixel on a pixel by pixel basis')
     parser = arg_group.add_parallel_argument(parser)
+    parser = arg_group.add_memory_argument(parser)
     return parser
 
 def cmd_line_parse(iargs=None):
@@ -378,7 +378,7 @@ def estimatetsbias_approx(nl, bw, tbase, date_ordinal, wvl, box, outdir):
     biasts[np.isnan(biasts)]=biasts2[np.isnan(biasts1)]
     return biasts
 
-def quickbiascorrection(ifgram_stack, nl, bw, max_memory, outdir):
+def quickbiascorrection(ifgram_stack, nl, bw, maxMemory, outdir):
     '''
     Output Wr (eq.20 in Zheng et al., 2022) and a quick approximate solution to bias time-series
     Input parameters:
@@ -421,7 +421,7 @@ def quickbiascorrection(ifgram_stack, nl, bw, max_memory, outdir):
     writefile.layout_hdf5(Wr_filedir, ds_name_dict, meta)
 
     # split igram_file into blocks to save memory
-    box_list, num_box = ifginv.split2boxes(ifgram_stack, max_memory)
+    box_list, num_box = ifginv.split2boxes(ifgram_stack, maxMemory)
 
     #process block-by-block
     for i, box in enumerate(box_list):
@@ -543,13 +543,13 @@ def estimate_bias(ifgram_stack, nl, bw, wvl, box, outdir):
 
     return biasts_bwn,box
 
-def biascorrection(ifgram_stack, nl, bw, max_memory, outdir, parallel):
+def biascorrection(ifgram_stack, nl, bw, maxMemory, outdir, parallel):
     '''
     input: ifgram_stack -- the ifgramstack file that you did time-series analysis with
     input: nl -- the connection level that we assume bias-free
     input: bw -- the bandwidth of the time-series analysis, should be consistent with the network stored in ifgram_stack
     input: wvl -- wavelength of the SAR satellite
-    input: max_memory -- maximum memory of each patch
+    input: maxMemory -- maximum memory of each patch
     input: outdir -- directory for output files
     '''
     stack_obj = ifgramStack(ifgram_stack)
@@ -560,7 +560,7 @@ def biascorrection(ifgram_stack, nl, bw, max_memory, outdir, parallel):
     date2s = [i.split('_')[1] for i in date12_list]
     SLC_list = sorted(list(set(date1s + date2s)))
     # split igram_file into blocks to save memory
-    box_list, num_box = ifginv.split2boxes(ifgram_stack, max_memory)
+    box_list, num_box = ifginv.split2boxes(ifgram_stack, maxMemory)
 
     # estimate for bias time-series
     biasfile = os.path.join(outdir, 'bias_timeseries.h5')
@@ -621,12 +621,12 @@ def biascorrection(ifgram_stack, nl, bw, max_memory, outdir, parallel):
     return
 
 
-def creat_cp_mask(ifgram_stack, nl, max_memory, numsigma, threshold_amp, outdir):
+def creat_cp_mask(ifgram_stack, nl, maxMemory, num_sigma, threshold_amp, outdir):
     """
     Input parameters:
         ifgram_stack: stack file
         nl        : maximum connection level that assumed to be bias free
-        max_memory : maxum memory for each bounding box
+        maxMemory : maxum memory for each bounding box
         threshold_pha, threshold_amp: threshold of phase and ampliutde of the cumulative sequential closure phase
     """
     stack_obj = ifgramStack(ifgram_stack)
@@ -653,7 +653,7 @@ def creat_cp_mask(ifgram_stack, nl, max_memory, numsigma, threshold_amp, outdir)
     print('last  SLC: ', SLC_list[-1])
 
     # split igram_file into blocks to save memory
-    box_list, num_box = ifginv.split2boxes(ifgram_stack,max_memory)
+    box_list, num_box = ifginv.split2boxes(ifgram_stack,maxMemory)
     closurephase =  np.zeros([length,width],np.complex64)
     #process block-by-block
     for i, box in enumerate(box_list):
@@ -672,7 +672,7 @@ def creat_cp_mask(ifgram_stack, nl, max_memory, numsigma, threshold_amp, outdir)
     # The standard deviation of phase in cumulative wrapped closure phase is pi/sqrt(3)/sqrt(numcp) -- again another simplification assuming no correlation.
     # We use 3\delta as threshold -- 99.7% confidence
 
-    threshold_pha = np.pi/np.sqrt(3)/np.sqrt(numcp)*numsigma
+    threshold_pha = np.pi/np.sqrt(3)/np.sqrt(numcp)*num_sigma
 
     mask = np.ones([length,width],np.float32)
     mask[np.abs(np.angle(closurephase))>threshold_pha] = 0 # this masks areas with potential bias
@@ -692,7 +692,7 @@ def creat_cp_mask(ifgram_stack, nl, max_memory, numsigma, threshold_amp, outdir)
     return
 
 # ouput wrapped, and unwrapped sequential closure phases, and cumulative closure phase time-series of connection-conn
-def compute_unwrap_closurephase(ifgram_stack, conn, max_memory, outdir):
+def compute_unwrap_closurephase(ifgram_stack, conn, maxMemory, outdir):
     stack_obj = ifgramStack(ifgram_stack)
     stack_obj.open()
     length, width = stack_obj.length, stack_obj.width
@@ -719,7 +719,7 @@ def compute_unwrap_closurephase(ifgram_stack, conn, max_memory, outdir):
     print('last  SLC: ', SLC_list[-1])
 
     # split igram_file into blocks to save memory
-    box_list, num_box = ifginv.split2boxes(ifgram_stack,max_memory)
+    box_list, num_box = ifginv.split2boxes(ifgram_stack,maxMemory)
 
     closurephase =  np.zeros([len(SLC_list)-conn, length,width],np.float32)
     #process block-by-block
@@ -785,34 +785,34 @@ def compute_unwrap_closurephase(ifgram_stack, conn, max_memory, outdir):
 
 def main(iargs = None):
     inps = cmd_line_parse(iargs)
-    if inps.numsigma:
-        numsigma = inps.numsigma
+    if inps.num_sigma:
+        num_sigma = inps.num_sigma
     else:
-        numsigma = 3
+        num_sigma = 3
     if inps.action == 'create_mask':
-        creat_cp_mask(inps.ifgram_stack, inps.nl, inps.max_memory, numsigma, inps.episilon, inps.outdir)
+        creat_cp_mask(inps.ifgram_stack, inps.nl, inps.maxMemory, num_sigma, inps.episilon, inps.outdir)
 
-    if inps.action == 'quick_biasEstimate':
+    if inps.action == 'quick_bias_estimate':
         maxconn = np.maximum(2,inps.bw) # to make sure we have con-2 closure phase processed
         if inps.update_CP:
             for conn in np.arange(2,maxconn+1):
-                compute_unwrap_closurephase(inps.ifgram_stack, conn, inps.max_memory, inps.outdir)
-            compute_unwrap_closurephase(inps.ifgram_stack, inps.nl, inps.max_memory, inps.outdir)
+                compute_unwrap_closurephase(inps.ifgram_stack, conn, inps.maxMemory, inps.outdir)
+            compute_unwrap_closurephase(inps.ifgram_stack, inps.nl, inps.maxMemory, inps.outdir)
         # a quick solution to bias-correction and output diagonal component of Wr (how fast the bias-inducing signal decays with temporal baseline)
-        quickbiascorrection(inps.ifgram_stack, inps.nl, inps.bw, inps.max_memory, inps.outdir)
+        quickbiascorrection(inps.ifgram_stack, inps.nl, inps.bw, inps.maxMemory, inps.outdir)
 
-    if inps.action == 'biasEstimate':
+    if inps.action == 'bias_estimate':
         if inps.update_CP:
             for conn in np.arange(2,inps.bw+2): # to make sure we have con-2 closure phase processed
-                compute_unwrap_closurephase(inps.ifgram_stack, conn, inps.max_memory, inps.outdir)
-            compute_unwrap_closurephase(inps.ifgram_stack, inps.nl, inps.max_memory, inps.outdir)
+                compute_unwrap_closurephase(inps.ifgram_stack, conn, inps.maxMemory, inps.outdir)
+            compute_unwrap_closurephase(inps.ifgram_stack, inps.nl, inps.maxMemory, inps.outdir)
         # bias correction
         parallel={
         "clustertype" : inps.cluster,
         "numWorker"   : inps.numWorker,
         "config_name" : inps.config,
         }
-        biascorrection(inps.ifgram_stack, inps.nl, inps.bw, inps.max_memory, inps.outdir, parallel)
+        biascorrection(inps.ifgram_stack, inps.nl, inps.bw, inps.maxMemory, inps.outdir, parallel)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
