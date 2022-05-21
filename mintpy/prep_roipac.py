@@ -34,14 +34,11 @@ DESCRIPTION = """
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Prepare attributes file for ROI_PAC products.\n' +
-                                     DESCRIPTION,
+    parser = argparse.ArgumentParser(description='Prepare attributes file for ROI_PAC products.\n'+DESCRIPTION,
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', nargs='+', help='Gamma file(s)')
-    parser.add_argument('--no-parallel', dest='parallel', action='store_false', default=True,
-                        help='Disable parallel processing. Disabled auto for 1 input file.')
     return parser
 
 

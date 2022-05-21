@@ -75,7 +75,7 @@ def create_parser():
     fig.add_argument('--fs', '--fontsize', type=int,
                      default=12, help='font size in points')
     fig.add_argument('--show-fig', dest='disp_fig', action='store_true',
-                     help='display network ploting result')
+                     help='display network plotting result')
     fig.add_argument('--figext', dest='figext', default='.pdf',
                      help='file extension to be saved.')
     fig.add_argument('--dpi', dest='figdpi', type=int, default=150,

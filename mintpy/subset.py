@@ -77,8 +77,6 @@ def create_parser():
                         help="fill subset area out of data coverage with input value. i.e. \n"
                              "np.nan, 0, 1000, ... \n"
                              "By default, it's None for no-outfill.")
-    parser.add_argument('--no-parallel', dest='parallel', action='store_false', default=True,
-                        help='Disable parallel processing. Disabled auto for 1 input file.\n\n')
 
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file name\n' +
