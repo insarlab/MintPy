@@ -770,7 +770,7 @@ def check_parallel(file_num=1, print_msg=True, maxParallelNum=8):
     if file_num <= 1:
         enable_parallel = False
         if print_msg:
-            print('parallel processing is diabled for one input file')
+            print('parallel processing is disabled for one input file')
         return 1, enable_parallel, None, None
 
     # Check required python module

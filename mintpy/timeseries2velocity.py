@@ -94,9 +94,9 @@ def create_parser():
     # reference in time and space
     # for input file without reference info, e.g. ERA5.h5
     parser.add_argument('--ref-lalo', dest='ref_lalo', metavar=('LAT', 'LON'), type=float, nargs=2,
-                        help='Change referene point LAT LON for estimation.')
+                        help='Change reference point LAT LON for estimation.')
     parser.add_argument('--ref-yx', dest='ref_yx', metavar=('Y', 'X'), type=int, nargs=2,
-                        help='Change referene point Y X for estimation.')
+                        help='Change reference point Y X for estimation.')
     parser.add_argument('--ref-date', dest='ref_date', metavar='DATE',
                         help='Change reference date for estimation.')
 

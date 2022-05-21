@@ -46,7 +46,7 @@ def create_parser():
 
     # plot options
     parser.add_argument('--nodisplay', dest='disp_fig', action='store_false',
-                        help='do not display the result ploting.')
+                        help='do not display the result plotting.')
     return parser
 
 

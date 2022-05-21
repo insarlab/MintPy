@@ -58,7 +58,7 @@ mplColors = ['#1f77b4',
 
 ########################################### Parser utilities ##############################################
 def cmd_line_parse(iargs=''):
-    parser = argparse.ArgumentParser(description='Ploting Parser')
+    parser = argparse.ArgumentParser(description='Plotting Parser')
     parser = arg_group.add_data_disp_argument(parser)
     parser = arg_group.add_dem_argument(parser)
     parser = arg_group.add_figure_argument(parser)
@@ -651,7 +651,7 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
     idx_date_keep = [dateList.index(i) for i in dateList_keep]
     idx_date_drop = [dateList.index(i) for i in dateList_drop]
 
-    # Ploting
+    # Plotting
     if cohList is not None:
         data_min = min(cohList)
         data_max = max(cohList)

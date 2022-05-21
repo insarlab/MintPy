@@ -309,9 +309,9 @@ def add_reference_argument(parser):
 
     # reference pixel
     ref.add_argument('--ref-lalo', dest='ref_lalo', metavar=('LAT', 'LON'), type=float, nargs=2,
-                     help='Change referene point LAT LON for display')
+                     help='Change reference point LAT LON for display')
     ref.add_argument('--ref-yx', dest='ref_yx', metavar=('Y', 'X'), type=int, nargs=2,
-                     help='Change referene point Y X for display')
+                     help='Change reference point Y X for display')
 
     # reference pixel style
     ref.add_argument('--noreference', dest='disp_ref_pixel',

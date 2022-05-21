@@ -720,7 +720,7 @@ def main(argv=None):
                     print(""" 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       
-      WARNING: nan value for InSAR data at the refernce pixel!
+      WARNING: nan value for InSAR data at the reference pixel!
                reference station should be a pixel with valid value in InSAR data.
                                
                please select another GPS station as the reference station.
