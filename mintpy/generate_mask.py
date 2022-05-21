@@ -22,10 +22,10 @@ EXAMPLE = """example:
   generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5 --base inputs/geometryRadar.h5 --base-dset shadow --base-value 1
   generate_mask.py  avgSpatialCoh.h5     -m 0.7 --base waterMask.h5 -o maskSpatialCoh.h5
 
-  # exlcude area by min/max value and/or subset in row/col direction
+  # exclude area by min/max value and/or subset in row/col direction
   generate_mask.py  081018_090118.unw -m 3 -M 8 -y 100 700 -x 200 800 -o mask_1.h5
 
-  # exlcude pixel cluster based on minimum number of pixels
+  # exclude pixel cluster based on minimum number of pixels
   generate_mask.py  maskTempCoh.h5 -p 10 mask_1.h5
 
   # exclude pixels with large velocity STD: |velocity| > cutoff (2 by default) * velocityStd

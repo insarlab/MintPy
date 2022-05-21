@@ -23,7 +23,7 @@ DESCRIPTION = """
 
   The SNAP .dim file should contain all the required sensor / baseline metadata needed.
   The baseline metadata gets written during snap back-geocoding (co-registration).
-  prep_snap is run seperately for unw/ifg/cor files so neeeds seperate .dim/.data products
+  prep_snap is run separately for unw/ifg/cor files so needs separate .dim/.data products
   with only the relevant band in each product. Use Band Subset > save BEAM-DIMAP file.
 
   The file name should be yyyymmdd_yyyymmdd_type_tc.dim where type can be filt/unw/coh.

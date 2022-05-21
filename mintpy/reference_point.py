@@ -66,7 +66,7 @@ def create_parser():
     parser.add_argument('-m', '--mask', dest='maskFile', help='mask file')
 
     parser.add_argument('-o', '--outfile', type=str, default=None,
-                        help='output file name (default: %(default)s). This option is diabled for ifgramStack file.\n'
+                        help='output file name (default: %(default)s). This option is disabled for ifgramStack file.\n'
                              'None (default) for update data value directly without writing to a new file.\n')
 
     parser.add_argument('--write-data', dest='write_data', action='store_true',
@@ -321,7 +321,7 @@ def manual_select_reference_yx(data, inps, mask=None):
     """
     from matplotlib import pyplot as plt
     print('\nManual select reference point ...')
-    print('Click on a pixel that you want to choose as the refernce ')
+    print('Click on a pixel that you want to choose as the reference ')
     print('    pixel in the time-series analysis;')
     print('Then close the displayed window to continue.\n')
     if mask is not None:

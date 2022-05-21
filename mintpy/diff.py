@@ -40,8 +40,8 @@ def create_parser():
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
-    parser.add_argument('file1', help='file to be substracted.')
-    parser.add_argument('file2', nargs='+', help='file used to substract')
+    parser.add_argument('file1', help='file to be subtracted.')
+    parser.add_argument('file2', nargs='+', help='file used to subtract')
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file name, default is file1_diff_file2.h5')
     parser.add_argument('--force', action='store_true',

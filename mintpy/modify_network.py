@@ -59,7 +59,7 @@ def create_parser():
     parser.add_argument('--reset', action='store_true',
                         help='restore all interferograms in the file, by marking all dropIfgram=True')
     parser.add_argument('--noaux', dest='update_aux', action='store_false',
-                        help='Do not update auxilary files, e.g.\n' +
+                        help='Do not update auxiliary files, e.g.\n' +
                              'maskConnComp.h5 or avgSpatialCoh.h5 from ifgramStack.h5')
 
     # 1. temp/perp baseline, num of conn., dates, pair index, etc.

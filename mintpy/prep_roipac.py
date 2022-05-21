@@ -41,7 +41,7 @@ def create_parser():
 
     parser.add_argument('file', nargs='+', help='Gamma file(s)')
     parser.add_argument('--no-parallel', dest='parallel', action='store_false', default=True,
-                        help='Disable parallel processing. Diabled auto for 1 input file.')
+                        help='Disable parallel processing. Disabled auto for 1 input file.')
     return parser
 
 
