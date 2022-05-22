@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 # Extract input datasets in mintpy/inputs for an area of interest (AOI) from the one of the whole frame
 # Parameters: SNWE : string for the AOI
 #             step : string/number, output resolution in degree
