@@ -1136,6 +1136,7 @@ def add_arrow(line, position=None, direction='right', size=15, color=None):
     xdata = line.get_xdata()
     ydata = line.get_ydata()
 
+    # default position - middle
     if position is None:
         position = xdata.mean()
 
@@ -1143,8 +1144,16 @@ def add_arrow(line, position=None, direction='right', size=15, color=None):
     start_ind = np.argmin(np.absolute(xdata - position))
     if direction == 'right':
         end_ind = start_ind + 1
+        # special scenario: 2-point line with default position of middle
+        if end_ind >= xdata.size:
+            end_ind = xdata.size - 1
+            start_ind = end_ind - 1
     else:
         end_ind = start_ind - 1
+        # special scenario: 2-point line with default position of middle
+        if end_ind <= 0:
+            end_ind = 0
+            start_ind = end_ind + 1
 
     ann = line.axes.annotate('',
         xytext=(xdata[start_ind], ydata[start_ind]),
