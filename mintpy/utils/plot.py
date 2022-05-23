@@ -1086,11 +1086,12 @@ def plot_colorbar(inps, im, cax):
         orientation = 'horizontal'
 
     # plot colorbar
+    unique_values = getattr(inps, 'unique_values', None)
     if inps.wrap and (inps.wrap_range[1] - inps.wrap_range[0]) == 2.*np.pi:
         cbar = plt.colorbar(im, cax=cax, orientation=orientation, ticks=[-np.pi, 0, np.pi])
         cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
 
-    elif inps.cmap_lut <=5 and getattr(inps, 'unique_values', None) is not None:
+    elif unique_values is not None and len(inps.unique_values) <= 5:
         # show the exact tick values
         cbar = plt.colorbar(im, cax=cax, orientation=orientation, ticks=inps.unique_values)
 
@@ -1135,6 +1136,7 @@ def add_arrow(line, position=None, direction='right', size=15, color=None):
     xdata = line.get_xdata()
     ydata = line.get_ydata()
 
+    # default position - middle
     if position is None:
         position = xdata.mean()
 
@@ -1142,8 +1144,16 @@ def add_arrow(line, position=None, direction='right', size=15, color=None):
     start_ind = np.argmin(np.absolute(xdata - position))
     if direction == 'right':
         end_ind = start_ind + 1
+        # special scenario: 2-point line with default position of middle
+        if end_ind >= xdata.size:
+            end_ind = xdata.size - 1
+            start_ind = end_ind - 1
     else:
         end_ind = start_ind - 1
+        # special scenario: 2-point line with default position of middle
+        if end_ind <= 0:
+            end_ind = 0
+            start_ind = end_ind + 1
 
     ann = line.axes.annotate('',
         xytext=(xdata[start_ind], ydata[start_ind]),

@@ -1546,7 +1546,7 @@ def prep_slice(cmd, auto_fig=False):
     if auto_fig == True:
         figsize = [i/2.0 for i in inps.fig_size]
         subplot_kw = dict(projection=inps.map_proj_obj) if inps.map_proj_obj is not None else {}
-        fig, ax = plt.subplots(figsize=figsize, num='Figure', subplot_kw=subplot_kw)
+        fig, ax = plt.subplots(figsize=figsize, subplot_kw=subplot_kw)
         return data, atr, inps, ax
     else:
         return data, atr, inps
@@ -1656,7 +1656,7 @@ class viewer():
 
             # prepare figure
             subplot_kw = dict(projection=self.map_proj_obj) if self.map_proj_obj is not None else {}
-            fig, ax = plt.subplots(figsize=self.fig_size, num='Figure', subplot_kw=subplot_kw)
+            fig, ax = plt.subplots(figsize=self.fig_size, subplot_kw=subplot_kw)
             if not self.disp_whitespace:
                 fig.subplots_adjust(left=0,right=1,bottom=0,top=1)
 

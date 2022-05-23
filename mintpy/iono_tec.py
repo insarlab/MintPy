@@ -6,10 +6,12 @@
 ############################################################
 
 
+import argparse
+import datetime as dt
 import os
 import sys
 import time
-import argparse
+
 import h5py
 import numpy as np
 
@@ -242,9 +244,15 @@ def calc_iono_ramp_timeseries_igs(tec_dir, tec_sol, interp_method, ts_file, geom
     date_list = timeseries(ts_file).get_date_list()
     meta = readfile.read_attribute(ts_file)
     utc_sec = float(meta['CENTER_LINE_UTC'])
-    h, s = divmod(utc_sec, 3600)
-    m, s = divmod(s, 60)
-    print('UTC time: {:02.0f}:{:02.0f}:{:02.1f}'.format(h, m, s))
+    print(f'CENTER_LINE_TUC: {utc_sec}')
+
+    # UTC time & local solar time
+    # use an arbitrary date to construct the datetime object
+    lon_c = (float(meta['LON_REF1']) + float(meta['LON_REF2'])) / 2
+    utc_dt = dt.datetime(2020, 1, 1) + dt.timedelta(seconds=utc_sec)
+    local_dt = ptime.utc2solar_time(utc_dt, lon_c)
+    print('UTC time:', utc_dt.strftime("%H:%M:%S"))
+    print('Local solar time:', local_dt.strftime("%I:%M %p"))
 
     # read IGS TEC
     vtec_list = []

@@ -29,10 +29,12 @@ EXAMPLE = """example:
   plot_transection.py velocity.h5 --start-lalo 30.125 129.988 --end-lalo 30.250 130.116
   plot_transection.py velocity.h5 --line-file  transect_lonlat.xy --dem gsi10m.dem
 
-  # Multiple files
+  # multiple files
   plot_transection.py AlosA*/velocity.h5 AlosD*/velocity.h5 --off 2
   plot_transection.py Kirishima2017*.h5 Kirishima2008*.h5 --off 0 0 10 10
   plot_transection.py Kirishima2017*.h5 Kirishima2008*.h5 --off 0 0 10 10 --lalo0 31.947 130.843 --lalo1 31.947 130.860
+
+  # interactive plot: click two points to draw a profile
 """
 
 
@@ -298,9 +300,9 @@ class transectionViewer():
             # update transection for every two clicks
             self.pts_idx += 1
             if self.pts_idx >= 2:
+                self.pts_idx = 0
                 self.draw_line(self.start_yx, self.end_yx)
                 self.draw_transection(self.start_yx, self.end_yx, self.start_lalo, self.end_lalo)
-                self.pts_idx = 0
         return
 
 
@@ -313,15 +315,15 @@ class transectionViewer():
 
         # convert coordinates accordingly
         if 'Y_FIRST' in self.atr.keys():
-            ys = self.coord.yx2lalo([self.start_yx[0], self.end_yx[0]], coord_type='y')
-            xs = self.coord.yx2lalo([self.start_yx[1], self.end_yx[1]], coord_type='x')
+            ys = self.coord.yx2lalo([start_yx[0], end_yx[0]], coord_type='y')
+            xs = self.coord.yx2lalo([start_yx[1], end_yx[1]], coord_type='x')
         else:
             ys = [start_yx[0], end_yx[0]]
             xs = [start_yx[1], end_yx[1]]
 
         # plot
         line = self.ax_img.plot(xs, ys, 'k--', alpha=0)[0]
-        self.line_ann = pp.add_arrow(line)
+        self.line_ann = pp.add_arrow(line, position=xs[1])
 
         self.fig.canvas.draw_idle()
         self.fig.canvas.flush_events()
