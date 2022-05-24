@@ -62,7 +62,7 @@ def seq_closure_phase(slc_list, date12_list_all, ifgram_stack, ref_phase, n, box
         slc_list : list of SLC dates
         date12_list_all: date12 of all the interferograms stored in the ifgramstack file
         ifgram_stack: stack file
-        refphase : phase timeseires of the refernce pixel
+        ref_phase : phase timeseires of the refernce pixel
         n        : connection level of the closure phase
         box      : bounding box for the patch
     Output: cp_w : stack of wrapped sequential closure phases of connection n
@@ -240,6 +240,7 @@ def estimate_ratioX(tbase, n, nl, wvl, box, outdir, mask=False):
     # input: wvl - wavelength
     # input: box - the patch that is being processed
     # input: outdir - the working directory
+    # input: mask - whether to mask out areas with average bias velocity less than 1 mm/year
     # output: wratio - Eq.(29)
     # output: wratio_velocity - bias-velocity at n*delta_t temporal baseline
     '''
