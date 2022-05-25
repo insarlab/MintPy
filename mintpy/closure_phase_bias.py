@@ -797,29 +797,29 @@ def main(iargs = None):
     else:
         num_sigma = 3
     if inps.action == 'create_mask':
-        creat_cp_mask(inps.ifgram_stack, inps.nl, inps.max_memory, num_sigma, inps.episilon, inps.outdir)
+        creat_cp_mask(inps.ifgram_stack, inps.nl, inps.maxMemory, num_sigma, inps.episilon, inps.outdir)
 
     if inps.action == 'quick_bias_estimate':
         maxconn = np.maximum(2,inps.bw) # to make sure we have con-2 closure phase processed
         if inps.update_cp:
             for conn in np.arange(2,maxconn+1):
-                compute_unwrap_closure_phase(inps.ifgram_stack, conn, inps.max_memory, inps.outdir)
-            compute_unwrap_closure_phase(inps.ifgram_stack, inps.nl, inps.max_memory, inps.outdir)
+                compute_unwrap_closure_phase(inps.ifgram_stack, conn, inps.maxMemory, inps.outdir)
+            compute_unwrap_closure_phase(inps.ifgram_stack, inps.nl, inps.maxMemory, inps.outdir)
         # a quick solution to bias-correction and output diagonal component of Wr (how fast the bias-inducing signal decays with temporal baseline)
-        quick_bias_correction(inps.ifgram_stack, inps.nl, inps.bw, inps.max_memory, inps.outdir)
+        quick_bias_correction(inps.ifgram_stack, inps.nl, inps.bw, inps.maxMemory, inps.outdir)
 
     if inps.action == 'bias_estimate':
         if inps.update_cp:
             for conn in np.arange(2,inps.bw+2): # to make sure we have con-2 closure phase processed
-                compute_unwrap_closure_phase(inps.ifgram_stack, conn, inps.max_memory, inps.outdir)
-            compute_unwrap_closure_phase(inps.ifgram_stack, inps.nl, inps.max_memory, inps.outdir)
+                compute_unwrap_closure_phase(inps.ifgram_stack, conn, inps.maxMemory, inps.outdir)
+            compute_unwrap_closure_phase(inps.ifgram_stack, inps.nl, inps.maxMemory, inps.outdir)
         # bias correction
         parallel={
         "clustertype" : inps.cluster,
         "numWorker"   : inps.numWorker,
         "config_name" : inps.config,
         }
-        bias_correction(inps.ifgram_stack, inps.nl, inps.bw, inps.max_memory, inps.outdir, parallel)
+        bias_correction(inps.ifgram_stack, inps.nl, inps.bw, inps.maxMemory, inps.outdir, parallel)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
