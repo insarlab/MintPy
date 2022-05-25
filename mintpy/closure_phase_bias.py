@@ -698,8 +698,10 @@ def creat_cp_mask(ifgram_stack, nl, max_memory, num_sigma, threshold_amp, outdir
 
     return
 
-# ouput wrapped, and unwrapped sequential closure phases, and cumulative closure phase time-series of connection-conn
 def compute_unwrap_closure_phase(ifgram_stack, conn, max_memory, outdir):
+    '''
+    Ouput wrapped, and unwrapped sequential closure phases, and cumulative closure phase time-series of connection-conn
+    '''
     stack_obj = ifgramStack(ifgram_stack)
     stack_obj.open()
     length, width = stack_obj.length, stack_obj.width
