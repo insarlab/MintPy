@@ -62,7 +62,7 @@ def seq_closure_phase(slc_list, date12_list_all, ifgram_stack, ref_phase, n, box
         slc_list : list of SLC dates
         date12_list_all: date12 of all the interferograms stored in the ifgramstack file
         ifgram_stack: stack file
-        ref_phase : phase timeseires of the refernce pixel
+        ref_phase : unwrapped phase of the reference pixel
         n        : connection level of the closure phase
         box      : bounding box for the patch
     Output: cp_w : stack of wrapped sequential closure phases of connection n
@@ -115,7 +115,7 @@ def sum_seq_closure_phase(slc_list, date12_list_all, ifgram_stack, ref_phase, n,
         slc_list : list of SLC dates
         date12_list_all: date12 of all the interferograms stored in the ifgramstack file
         ifgram_stack: stack file
-        refphase : reference phase
+        ref_phase : reference phase
         n        : connection level of the closure phase
         box      : bounding box for the patch
     Output parameters:
