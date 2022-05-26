@@ -153,7 +153,7 @@ def get_design_matrix4east_north_up(los_inc_angle, los_az_angle, obs_direction):
     for i, (inc_angle, az_angle, obs_dir) in enumerate(zip(los_inc_angle, los_az_angle, obs_direction)):
         # calculate the unit vector
         if obs_dir == 'range':
-            # for range offset / InSAR phase [positive value for motion toward from satellite]
+            # for range offset / InSAR phase [with positive value for motion toward the satellite]
             ve = np.sin(np.deg2rad(inc_angle)) * np.sin(np.deg2rad(az_angle)) * -1
             vn = np.sin(np.deg2rad(inc_angle)) * np.cos(np.deg2rad(az_angle))
             vu = np.cos(np.deg2rad(inc_angle))
