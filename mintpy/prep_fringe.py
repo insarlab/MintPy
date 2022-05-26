@@ -492,7 +492,7 @@ def main(iargs=None):
         metadata=meta,
         box=pix_box)
 
-    ## 4 - prepare and ifgstack with connected components
+    ## 4 - ifgramStack for unwrapped phase and connected components
     prepare_stack(
         outfile=stack_file,
         unw_file=inps.unwFile,

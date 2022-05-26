@@ -289,16 +289,14 @@ def update_inps_with_file_metadata(inps, metadata):
             inps.ref_lalo = []
 
         else:
-            inps.ref_yx = coord.geo2radar(inps.ref_lalo[0], inps.ref_lalo[1])
+            inps.ref_yx = coord.geo2radar(inps.ref_lalo[0], inps.ref_lalo[1])[:2]
             vprint('input reference point in y  /x  : {}'.format(inps.ref_yx))
 
     # ref_lalo
     if inps.ref_yx and inps.geo_box:
-        inps.ref_lalo = [coord.yx2lalo(inps.ref_yx[0], coord_type='y'),
-                         coord.yx2lalo(inps.ref_yx[1], coord_type='x')]
+        inps.ref_lalo = coord.radar2geo(inps.ref_yx[0], inps.ref_yx[1])[:2]
     elif 'REF_LAT' in metadata.keys():
-        inps.ref_lalo = [float(metadata['REF_LAT']),
-                         float(metadata['REF_LON'])]
+        inps.ref_lalo = [float(metadata['REF_LAT']), float(metadata['REF_LON'])]
     else:
         inps.ref_lalo = None
 
@@ -406,7 +404,10 @@ def check_map_projection(inps, metadata, print_msg=True):
 ##################################################################################################
 def update_data_with_plot_inps(data, metadata, inps):
     # 1. spatial referencing with respect to the seed point
-    if inps.ref_yx:   # and inps.ref_yx != [int(metadata['REF_Y']), int(metadata['REF_X'])]:
+    if inps.ref_yx:
+        inps.ref_box = [inps.ref_yx[1],     inps.ref_yx[0],
+                        inps.ref_yx[1] + 1, inps.ref_yx[0] + 1]
+
         # update ref_y/x to subset
         try:
             ref_y = inps.ref_yx[0] - inps.pix_box[1]
@@ -419,9 +420,14 @@ def update_data_with_plot_inps(data, metadata, inps):
             ref_y = int((ref_y - int(inps.multilook_num / 2)) / inps.multilook_num)
             ref_x = int((ref_x - int(inps.multilook_num / 2)) / inps.multilook_num)
 
-        # applying spatial referencing
         if len(data.shape) == 2:
-            ref_val = data[ref_y, ref_x]
+            # read ref_val
+            if 0 <= ref_y < data.shape[-2] and 0 <= ref_x < data.shape[-1]:
+                ref_val = data[ref_y, ref_x]
+            else:
+                ref_val = readfile.read(inps.file, datasetName=inps.dset[0], box=inps.ref_box, print_msg=False)[0]
+
+            # applying spatial referencing
             if not np.ma.is_masked(ref_val) and not np.isnan(ref_val):
                 data -= ref_val
                 vprint('set reference pixel to: {}'.format(inps.ref_yx))
@@ -436,13 +442,11 @@ def update_data_with_plot_inps(data, metadata, inps):
             if 0 <= ref_y < data.shape[-2] and 0 <= ref_x < data.shape[-1]:
                 ref_val = np.squeeze(data[:, ref_y, ref_x])
             elif inps.key == 'timeseries':
-                ref_box = [inps.ref_yx[1],     inps.ref_yx[0],
-                           inps.ref_yx[1] + 1, inps.ref_yx[0] + 1]
-                ref_val = readfile.read(inps.file, datasetName=inps.dset, box=ref_box, print_msg=False)[0]
+                ref_val = readfile.read(inps.file, datasetName=inps.dset, box=inps.ref_box, print_msg=False)[0]
             else:
                 raise ValueError('input reference point {} is out of data coverage!'.format(inps.ref_yx))
 
-            # apply referencing
+            # apply spatial referencing
             if not np.ma.is_masked(ref_val) and np.all(~np.isnan(ref_val)):
                 data -= np.tile(ref_val.reshape(-1, 1, 1), (1, data.shape[1], data.shape[2]))
                 vprint('set reference pixel to: {}'.format(inps.ref_yx))

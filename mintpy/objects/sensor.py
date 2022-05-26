@@ -308,7 +308,7 @@ SEN = {
     'pulse_repetition_frequency' : 1717.13,   # Hz, based on real data; 1000-3000 (programmable)
     'chirp_bandwidth'            : 56.50e6,   # Hz
     'sampling_frequency'         : 64.35e6,   # Hz
-    'azimuth_pixel_size'         : 14.1,      # m
+    'azimuth_pixel_size'         : 14.1,      # m, this is the ground azimuth pixel spacing, NOT on orbits!
     'range_pixel_size'           : 2.3,       # m
     'ground_range_pixel_size'    : 4.1,       # m
     'IW1' : {'range_resolution' : 2.7, 'azimuth_resolution': 22.5},
