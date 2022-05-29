@@ -171,7 +171,6 @@ def do_setup():
                 "data/input_files/*.md",
                 "defaults/*.cfg",
                 "defaults/*.yaml",
-                "sh/*.sh",
             ],
         },
         zip_safe=False,
