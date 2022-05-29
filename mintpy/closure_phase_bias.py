@@ -681,7 +681,7 @@ def create_cp_mask(ifgram_stack, nl, max_memory, num_sigma, threshold_amp, outdi
 
     threshold_pha = np.pi/np.sqrt(3)/np.sqrt(numcp)*num_sigma
 
-    mask = np.ones([length,width],np.float32)
+    mask = np.ones([length,width],dtype=bool)
     mask[np.abs(np.angle(closurephase))>threshold_pha] = 0 # this masks areas with potential bias
     mask[np.abs(np.abs(closurephase)/numcp < threshold_amp)] = 1 # this unmasks areas with low correlation (where it's hard to know wheter there is bias either)
 
