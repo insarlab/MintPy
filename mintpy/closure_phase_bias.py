@@ -30,7 +30,7 @@ EXAMPLE = """example:
 """
 
 def create_parser():
-    parser = argparse.ArgumentParser(description = 'This script deals with phase non-closure related bias, either in terms of masking, estimation or correction.',
+    parser = argparse.ArgumentParser(description = 'Mask / estimate / correct for phase non-closure related biases.',
                                     formatter_class = argparse.RawTextHelpFormatter,
                                     epilog=REFERENCE+'\n'+EXAMPLE)
     parser.add_argument('-i','--ifgramstack',type = str, dest = 'ifgram_stack',help = 'interferogram stack file that contains the unwrapped phases')
@@ -85,8 +85,8 @@ def seq_closure_phase(slc_list, date12_list_all, ifgram_stack, ref_phase, n, box
     cp_idx = np.unique(cp_idx, axis = 0)
 
     num_cp = len(cp_idx)
-    print('Number of con-', n, ' closure measurements expected, ', nslc-n)
-    print('Number of con-', n, ' closure measurements found, ', num_cp)
+    print('Number of con-', n, 'closure measurements expected, ', nslc-n)
+    print('Number of con-', n, 'closure measurements found, ', num_cp)
 
     if num_cp < nslc-n:
         print('Missing interferograms, abort')
@@ -171,8 +171,8 @@ def cum_seq_unw_closure_phase(n,filepath,length, width, refY, refX, slc_list, me
                       slc_list: list of SLC
                       meta: metadata of ifgramStack.h5
     '''
-    outfiledir = os.path.join(filepath, 'con'+str(n)+'_seqcumclosurephase.h5')
-    outmaskdir = os.path.join(filepath, 'con'+str(n)+'_seqcumclosurephase_maskconcp.h5')
+    outfiledir = os.path.join(filepath, 'conn'+str(n)+'_seqcumclosurephase.h5')
+    outmaskdir = os.path.join(filepath, 'conn'+str(n)+'_seqcumclosurephase_maskconcp.h5')
     print('Creating '+outfiledir)
     if not os.path.isfile(outfiledir) or not os.path.isfile(outmaskdir):
         filelist = glob.glob(os.path.join(filepath, '*.unw'))
@@ -225,9 +225,9 @@ def seq2cum_closure_phase(conn, outdir, box):
     this script read in cumulative sequential closure phase from individual closure phase directory (Eq. 25) in Zheng et al., 2022
     output should be a 3D matrix of size nslc by box_lengh by box_width
     '''
-    filepath = 'con'+str(conn)+'_cp'
-    filename = 'con'+str(conn)+'_seqcumclosurephase.h5'
-    seqcpfile = os.path.join(outdir, 'ClosurePhase', filepath, filename)
+    filepath = 'conn'+str(conn)+'_cp'
+    filename = 'conn'+str(conn)+'_seqcumclosurephase.h5'
+    seqcpfile = os.path.join(outdir, 'closurePhase', filepath, filename)
     biasts = readfile.read(seqcpfile, box=box,print_msg=False)[0]
     return biasts
 
@@ -628,7 +628,7 @@ def bias_correction(ifgram_stack, nl, bw, max_memory, outdir, parallel):
     return
 
 
-def creat_cp_mask(ifgram_stack, nl, max_memory, num_sigma, threshold_amp, outdir):
+def create_cp_mask(ifgram_stack, nl, max_memory, num_sigma, threshold_amp, outdir):
     """
     Input parameters:
         ifgram_stack: stack file
@@ -688,13 +688,13 @@ def creat_cp_mask(ifgram_stack, nl, max_memory, num_sigma, threshold_amp, outdir
     # save mask
     meta = dict(stack_obj.metadata)
     meta['FILE_TYPE'] = 'mask'
-    ds_name_dict = {'cpmask': [np.float32, (length, width), mask],}
-    writefile.layout_hdf5(os.path.join(outdir,'cpmask.h5'), ds_name_dict, meta)
+    ds_name_dict = {'mask': [np.bool_, (length, width), mask],}
+    writefile.layout_hdf5(os.path.join(outdir,'maskClosurePhase.h5'), ds_name_dict, meta)
 
     # also save the average closure phase
     ds_name_dict2 = {'phase': [np.float32, (length, width), np.angle(closurephase)],
                     'amplitude':[np.float32,(length,width),np.abs(closurephase)/numcp],}
-    writefile.layout_hdf5(os.path.join(outdir,'avgwcp.h5'), ds_name_dict2, meta)
+    writefile.layout_hdf5(os.path.join(outdir,'avgCpxClosurePhase.h5'), ds_name_dict2, meta)
 
     return
 
@@ -744,11 +744,11 @@ def compute_unwrap_closure_phase(ifgram_stack, conn, max_memory, outdir):
             closurephase[:,box[1]:box[3],box[0]:box[2]] = seq_closure_phase(slc_list, date12_list_all, ifgram_stack, ref_phase, conn, box)
 
     # directory
-    cpdir = os.path.join(outdir, 'ClosurePhase')
+    cpdir = os.path.join(outdir, 'closurePhase')
     if not os.path.isdir(cpdir):
         os.mkdir(cpdir)
 
-    cpdir_conn = os.path.join(cpdir,'con'+str(conn)+'_cp')
+    cpdir_conn = os.path.join(cpdir,'conn'+str(conn)+'_cp')
     if not os.path.isdir(cpdir_conn):
         os.mkdir(cpdir_conn)
 
@@ -794,34 +794,27 @@ def compute_unwrap_closure_phase(ifgram_stack, conn, max_memory, outdir):
 
 def main(iargs = None):
     inps = cmd_line_parse(iargs)
-    if inps.num_sigma:
-        num_sigma = inps.num_sigma
-    else:
-        num_sigma = 3
     if inps.action == 'create_mask':
-        creat_cp_mask(inps.ifgram_stack, inps.nl, inps.maxMemory, num_sigma, inps.episilon, inps.outdir)
+        create_cp_mask(inps.ifgram_stack, inps.nl, inps.maxMemory, inps.num_sigma, inps.episilon, inps.outdir)
 
-    if inps.action == 'quick_bias_estimate':
+    if inps.action.endswith ('bias_estimate'):
         maxconn = np.maximum(2,inps.bw) # to make sure we have con-2 closure phase processed
         if inps.update_cp:
             for conn in np.arange(2,maxconn+1):
                 compute_unwrap_closure_phase(inps.ifgram_stack, conn, inps.maxMemory, inps.outdir)
             compute_unwrap_closure_phase(inps.ifgram_stack, inps.nl, inps.maxMemory, inps.outdir)
-        # a quick solution to bias-correction and output diagonal component of Wr (how fast the bias-inducing signal decays with temporal baseline)
-        quick_bias_correction(inps.ifgram_stack, inps.nl, inps.bw, inps.maxMemory, inps.outdir)
+        if inps.action == 'quick_bias_estimate':
+            # a quick solution to bias-correction and output diagonal component of Wr (how fast the bias-inducing signal decays with temporal baseline)
+            quick_bias_correction(inps.ifgram_stack, inps.nl, inps.bw, inps.maxMemory, inps.outdir)
 
-    if inps.action == 'bias_estimate':
-        if inps.update_cp:
-            for conn in np.arange(2,inps.bw+2): # to make sure we have con-2 closure phase processed
-                compute_unwrap_closure_phase(inps.ifgram_stack, conn, inps.maxMemory, inps.outdir)
-            compute_unwrap_closure_phase(inps.ifgram_stack, inps.nl, inps.maxMemory, inps.outdir)
-        # bias correction
-        parallel={
-        "clustertype" : inps.cluster,
-        "numWorker"   : inps.numWorker,
-        "config_name" : inps.config,
-        }
-        bias_correction(inps.ifgram_stack, inps.nl, inps.bw, inps.maxMemory, inps.outdir, parallel)
+        if inps.action == 'bias_estimate':
+            # bias correction
+            parallel={
+            "clustertype" : inps.cluster,
+            "numWorker"   : inps.numWorker,
+            "config_name" : inps.config,
+            }
+            bias_correction(inps.ifgram_stack, inps.nl, inps.bw, inps.maxMemory, inps.outdir, parallel)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
