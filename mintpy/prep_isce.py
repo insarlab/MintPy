@@ -200,9 +200,8 @@ def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), 
     # write .rsc file for each interferogram file
     num_file = len(isce_files)
     prog_bar = ptime.progressBar(maxValue=num_file)
-    for i in range(num_file):
-        # prepare metadata for current file
-        isce_file = isce_files[i]
+    for i, isce_file in enumerate(isce_files):
+        # get date1/2
         if processor in ['tops', 'stripmap']:
             dates = os.path.basename(os.path.dirname(isce_file)).split('_')  # to modify to YYYYMMDDTHHMMSS
         elif processor == 'alosStack':
@@ -210,7 +209,9 @@ def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), 
             dates = ptime.yyyymmdd(dates)
         else:
             raise ValueError('Un-recognized ISCE stack processor: {}'.format(processor))
+        prog_bar.update(i+1, suffix='{}_{}'.format(dates[0], dates[1]))
 
+        # merge metadata from: data.rsc, *.unw.xml and DATE12/P_BASELINE_TOP/BOTTOM_HDR
         ifg_metadata = readfile.read_attribute(isce_file, metafile_ext='.xml')
         ifg_metadata.update(metadata)
         ifg_metadata = add_ifgram_metadata(ifg_metadata, dates, baseline_dict)
@@ -220,7 +221,6 @@ def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), 
         writefile.write_roipac_rsc(ifg_metadata, rsc_file,
                                    update_mode=update_mode,
                                    print_msg=False)
-        prog_bar.update(i+1, suffix='{}_{}'.format(dates[0], dates[1]))
     prog_bar.close()
     return
 
