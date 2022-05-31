@@ -23,7 +23,7 @@ except ImportError:
 
 import mintpy
 from mintpy.objects import timeseries, deramp
-from mintpy.utils import readfile, plot, utils as ut
+from mintpy.utils import readfile, plot as pp, utils as ut
 from mintpy import save_kmz
 
 
@@ -62,10 +62,9 @@ def create_parser():
                       help='min/max range in cm/yr for color coding.')
     opts.add_argument('--wrap', dest='wrap', action='store_true',
                       help='re-wrap data to [VMIN, VMAX) for color coding.')
-    opts.add_argument('--colormap','-c', dest='colormap', default='jet',
+    opts.add_argument('--colormap','-c', dest='cmap_name', default='jet',
                       help='colormap used for display, i.e. jet, RdBu, hsv, jet_r, temperature, viridis,  etc.\n'
-                           'colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html\n'
-                           'colormaps in GMT - http://soliton.vm.bytemark.co.uk/pub/cpt-city/')
+                           'More details at https://mintpy.readthedocs.io/en/latest/api/colormaps/')
 
     defo = parser.add_argument_group('HD for deforming areas', 'High resolution output for deforming areas')
     defo.add_argument('--cutoff', dest='cutoff', type=int, default=3,
@@ -231,7 +230,6 @@ def get_boxes4deforming_area(vel_file, mask_file, step=2, num_pixel=30**2, min_p
 
 def create_reference_point_element(inps, lats, lons, ts_obj):
     """Create reference point element"""
-    colormap = mpl.cm.get_cmap(inps.colormap)  # set colormap
     norm = mpl.colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])
 
     ref_yx = (int(ts_obj.metadata['REF_Y']), int(ts_obj.metadata['REF_X']))
@@ -240,7 +238,7 @@ def create_reference_point_element(inps, lats, lons, ts_obj):
     ref_point = KML.Placemark(
         KML.Style(
             KML.IconStyle(
-                KML.color(save_kmz.get_hex_color(0.0, colormap, norm)),
+                KML.color(save_kmz.get_hex_color(0.0, inps.colormap, norm)),
                 KML.scale(1.),
                 KML.Icon(
                     KML.href("{}".format(os.path.basename(inps.star_file)))
@@ -395,8 +393,7 @@ def create_kml_region_document(inps, box_list, ts_obj, step):
         ## 2. Create KML Document
         kml_doc = KML.Document()
 
-        # 2.1 Set and normalize colormap to defined vlim
-        colormap = mpl.cm.get_cmap(inps.colormap)
+        # 2.1 Normalize colormap to defined vlim
         norm = mpl.colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])
 
         # 2.2 Set number of pixels to use
@@ -423,7 +420,7 @@ def create_kml_region_document(inps, box_list, ts_obj, step):
                     # 2.3.1 Create KML icon style element
                     style = KML.Style(
                         KML.IconStyle(
-                            KML.color(save_kmz.get_hex_color(vc, colormap, norm)),
+                            KML.color(save_kmz.get_hex_color(vc, inps.colormap, norm)),
                             KML.scale(0.5),
                             KML.Icon(KML.href("{}".format(dot_file)))
                         )
@@ -578,7 +575,7 @@ def main(iargs=None):
     if inps.outfile:
         inps.outfile_base = os.path.splitext(os.path.basename(inps.outfile))[0]
     else:
-        inps.outfile_base = plot.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
+        inps.outfile_base = pp.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
     kml_root_file = os.path.join(inps.work_dir, '{}_root.kml'.format(inps.outfile_base))
     kmz_file = os.path.join(inps.work_dir, '{}.kmz'.format(inps.outfile_base))
 
@@ -591,11 +588,13 @@ def main(iargs=None):
     print('input data shape in row/col: {}/{}'.format(length, width))
 
     vel = readfile.read(inps.vel_file, datasetName='velocity')[0] * 100.
-    # Set min/max velocity for colormap
+    # Set vmin/max and colormap
     if inps.vlim is None:
         inps.vlim = [np.nanmin(vel), np.nanmax(vel)]
     if inps.wrap:
         print('re-wrapping data to {} cm/year for color coding'.format(inps.vlim))
+    inps.colormap = pp.ColormapExt(inps.cmap_name).colormap
+
 
     ##--------- Create root KML file with network links to data KML files --------------##
     kml_root_doc = KML.Document()
@@ -603,9 +602,9 @@ def main(iargs=None):
     # 1 Create Overlay element for colorbar
     cbar_overlay = save_kmz.generate_cbar_element(
         cbar_file=inps.cbar_file,
+        cmap=inps.colormap,
         vmin=inps.vlim[0],
         vmax=inps.vlim[1],
-        cmap=inps.colormap,
     )
     kml_root_doc.append(cbar_overlay)
 

@@ -54,17 +54,22 @@ EXAMPLE = """example:
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Generate Google Earth KMZ file (overlay / placemarks for files in geo / radar coordinates).',
+    parser = argparse.ArgumentParser(description='Generate Google Earth KMZ file '
+                                                 '(overlay / placemarks for files in geo / radar coordinates).',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', help='file to be converted, in geo or radar coordinate.\n'
                         'Note: for files in radar-coordinate, the corresponding lookup table\n'
                         'in radar-coordinate (as provided by ISCE) is required.')
-    parser.add_argument('dset', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
-    parser.add_argument('-m','--mask', dest='mask_file', metavar='FILE', help='mask file for display')
-    parser.add_argument('--zero-mask', dest='zero_mask', action='store_true', help='Mask pixels with zero value.')
-    parser.add_argument('-o', '--output', dest='outfile', help='output file base name. Extension is fixed with .kmz')
+    parser.add_argument('dset', nargs='?',
+                        help='date of timeseries, or date12 of interferograms to be converted')
+    parser.add_argument('-m','--mask', dest='mask_file', metavar='FILE',
+                        help='mask file for display')
+    parser.add_argument('--zero-mask', dest='zero_mask', action='store_true',
+                        help='Mask pixels with zero value.')
+    parser.add_argument('-o', '--output', dest='outfile',
+                        help='output file base name. Extension is fixed with .kmz')
     parser.add_argument('--kk','--keep-kml','--keep-kml-file', dest='keep_kml_file', action='store_true',
                         help='Do not remove KML and data/resource files after compressing into KMZ file.')
 
@@ -76,11 +81,16 @@ def create_parser():
                              'For file in radar-coordinate ONLY.')
 
     # Data
-    parser.add_argument('-v','--vlim', dest='vlim', nargs=2, metavar=('MIN', 'MAX'), type=float, help='Y/value limits for plotting.')
+    parser.add_argument('-v','--vlim', dest='vlim', nargs=2, metavar=('MIN', 'MAX'), type=float,
+                        help='Y/value limits for plotting.')
     parser.add_argument('-u', dest='disp_unit', metavar='UNIT', help='unit for display.')
-    parser.add_argument('-c', '--cm', '--colormap', dest='colormap', default='jet', help='Colormap for plotting. Default: jet')
-    parser.add_argument('--wrap', action='store_true', help='re-wrap data to display data in fringes.')
-    parser.add_argument('--wrap-range', dest='wrap_range', type=float, nargs=2, default=[-1.*np.pi, np.pi], metavar=('MIN', 'MAX'),
+    parser.add_argument('-c', '--cm', '--colormap', dest='cmap_name', default='jet',
+                        help='Colormap for plotting (default: %(default)s), such as jet, RdBu, etc.\n'
+                             'More details at https://mintpy.readthedocs.io/en/latest/api/colormaps/')
+    parser.add_argument('--wrap', action='store_true',
+                        help='re-wrap data to display data in fringes.')
+    parser.add_argument('--wrap-range', dest='wrap_range', type=float, nargs=2,
+                        default=[-1.*np.pi, np.pi], metavar=('MIN', 'MAX'),
                         help='range of one cycle after wrapping, default: [-pi, pi]')
 
     # Figure
@@ -89,8 +99,9 @@ def create_parser():
                      help='Figure DPI (dots per inch). Default: 600')
     fig.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
                      help='Figure size in inches - width and length')
-    fig.add_argument('--cbar-loc', dest='cbar_loc', choices=['lower left','lower right','upper left', 'upper right'],
-                     default='lower left', help='Location of colorbar in the screen. Default: lower left.')
+    fig.add_argument('--cbar-loc', dest='cbar_loc', default='lower left',
+                     choices=['lower left','lower right','upper left', 'upper right'],
+                     help='Location of colorbar in the screen. Default: lower left.')
     fig.add_argument('--cbar-label', dest='cbar_label', metavar='LABEL', default='Mean LOS velocity',
                      help='Colorbar label. Default: Mean LOS velocity')
     fig.add_argument('--cbar-bin-num', dest='cbar_bin_num', metavar='NUM', type=int,
@@ -163,8 +174,18 @@ def plot_colorbar(out_file, vmin, vmax, unit='cm/year', cmap='jet', figsize=(0.1
     return out_file
 
 
-def generate_cbar_element(cbar_file, vmin, vmax, unit='cm/year', cmap='jet', loc='lower left',
+def generate_cbar_element(cbar_file, cmap, vmin, vmax, unit='cm/year', loc='lower left',
                           nbins=None, label='Mean LOS velocity'):
+    """Generate colorbar as an screen overlay object.
+
+    Parameters: cbar_file - str, colorbar image file path
+                cmap      - matplotlib.colors.Colormap instance
+                vmin/vmax - float, min/max value to display
+                unit      - str, display unit
+                loc       - str, location of colorbar on the screen.
+                            lower-left, lower-right, upper-left, upper-right
+    Returns:    cbar_overlay - KML.ScreenOverlay object
+    """
     # plot colobar and save as an image
     cbar_file = plot_colorbar(
         out_file=cbar_file,
@@ -173,8 +194,7 @@ def generate_cbar_element(cbar_file, vmin, vmax, unit='cm/year', cmap='jet', loc
         unit=unit,
         cmap=cmap,
         nbins=nbins,
-        label=label,
-    )
+        label=label)
 
     # colobar location
     if loc.split()[0] == 'lower':
@@ -276,7 +296,10 @@ def write_kmz_file(out_file_base, kml_doc, data_files=None, res_files=None, keep
     """Write KML and KMZ files.
     Parameters: out_file_base - str, output file name without extension
                 kml_doc       - KML.Document() object
+                data_files    - list of str, rel path of data files
                 res_files     - list of str, rel path of resource files
+                keep_kml_file - bool, do not remove KML files after zipping.
+    Returns:    kmz_file      - str, zipped KMZ file.
     """
     # default values
     data_files = [] if data_files is None else data_files
@@ -396,14 +419,13 @@ def write_kmz_overlay(data, meta, out_file, inps):
     cbar_file = '{}_cbar.png'.format(out_file_base)
     cbar_overlay = generate_cbar_element(
         cbar_file,
+        cmap=inps.colormap,
         vmin=inps.vlim[0],
         vmax=inps.vlim[1],
         unit=inps.disp_unit,
-        cmap=inps.colormap,
         loc=inps.cbar_loc,
         nbins=inps.cbar_bin_num,
-        label=inps.cbar_label,
-    )
+        label=inps.cbar_label)
     kml_doc.append(cbar_overlay)
 
     # Write KML file
@@ -411,8 +433,7 @@ def write_kmz_overlay(data, meta, out_file, inps):
         out_file_base,
         kml_doc,
         data_files=[data_png_file, cbar_file],
-        keep_kml_file=inps.keep_kml_file,
-    )
+        keep_kml_file=inps.keep_kml_file)
 
     return kmz_file
 
@@ -446,14 +467,13 @@ def write_kmz_placemark(data, meta, out_file, geom_file, inps):
     cbar_file = '{}_cbar.png'.format(out_file_base)
     cbar_overlay = generate_cbar_element(
         cbar_file,
+        cmap=inps.colormap,
         vmin=inps.vlim[0],
         vmax=inps.vlim[1],
         unit=inps.disp_unit,
-        cmap=inps.colormap,
         loc=inps.cbar_loc,
         nbins=inps.cbar_bin_num,
-        label=inps.cbar_label,
-    )
+        label=inps.cbar_label)
     kml_doc.append(cbar_overlay)
 
     # 2. reference point
@@ -472,8 +492,7 @@ def write_kmz_placemark(data, meta, out_file, geom_file, inps):
             col=rx + xmin,
             val=0.0,
             icon_file=star_file,
-            inps=inps,
-        )
+            inps=inps)
         ref_point.name = 'ReferencePoint'
         ref_point.Style.IconStyle.scale = 1.0
         kml_doc.append(ref_point)
@@ -502,8 +521,7 @@ def write_kmz_placemark(data, meta, out_file, geom_file, inps):
                     col=x + xmin,
                     val=value,
                     icon_file=dot_file,
-                    inps=inps,
-                )
+                    inps=inps)
                 data_folder.append(placemark)
 
         prog_bar.update(y+1, every=1, suffix=f'row={y+1}/{length}')
@@ -514,9 +532,9 @@ def write_kmz_placemark(data, meta, out_file, geom_file, inps):
     kmz_file = write_kmz_file(
         out_file_base,
         kml_doc,
+        data_files=[cbar_file],
         res_files=[dot_file, star_file],
-        keep_kml_file=inps.keep_kml_file,
-    )
+        keep_kml_file=inps.keep_kml_file)
 
     return kmz_file
 
@@ -547,7 +565,8 @@ def main(iargs=None):
         data -= readfile.read(inps.file, datasetName=inps.ref_date, box=inps.pix_box)[0]
 
     # mask
-    mask = pp.read_mask(inps.file, mask_file=inps.mask_file, datasetName=inps.dset, box=inps.pix_box)[0]
+    mask = pp.read_mask(inps.file, mask_file=inps.mask_file,
+                        datasetName=inps.dset, box=inps.pix_box)[0]
     if mask is not None:
         print('masking out pixels with zero value in file: {}'.format(inps.mask_file))
         data[mask == 0] = np.nan
@@ -575,8 +594,8 @@ def main(iargs=None):
     cmap_lut = 256
     if not inps.vlim:
         cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(data)[:2]
-    inps.colormap = pp.auto_colormap_name(atr, inps.colormap)
-    inps.colormap = pp.ColormapExt(inps.colormap, cmap_lut).colormap
+    inps.cmap_name = pp.auto_colormap_name(atr, inps.cmap_name)
+    inps.colormap = pp.ColormapExt(inps.cmap_name, cmap_lut).colormap
     inps.norm = colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])
 
     # Output filename
@@ -592,8 +611,7 @@ def main(iargs=None):
             data,
             meta=atr,
             out_file=inps.outfile,
-            inps=inps,
-        )
+            inps=inps)
 
     else:
         # create placemark KML for file in radar-coord
@@ -602,8 +620,7 @@ def main(iargs=None):
             meta=atr,
             out_file=inps.outfile,
             geom_file=inps.geom_file,
-            inps=inps,
-        )
+            inps=inps)
 
     return inps.outfile
 
