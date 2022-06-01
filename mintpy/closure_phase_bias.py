@@ -56,16 +56,15 @@ def cmd_line_parse(iargs=None):
     return inps
 
 def seq_closure_phase(slc_list, date12_list_all, ifgram_stack, ref_phase, n, box):
-    """
-    Computes wrapped sequential closure phases of conneciton-n
-    Input parameters:
-        slc_list : list of SLC dates
-        date12_list_all: date12 of all the interferograms stored in the ifgramstack file
-        ifgram_stack: stack file
-        ref_phase : unwrapped phase of the reference pixel
-        n        : connection level of the closure phase
-        box      : bounding box for the patch
-    Output: cp_w : stack of wrapped sequential closure phases of connection n
+    """Computes wrapped sequential closure phases of conneciton-n
+
+    Parameters : slc_list           - list of string, SLC dates
+                 date12_list_all    - list of string, date12 of all the interferograms stored in the ifgramstack file
+                 ifgram_stack       - string, file path of ifgramStack.h5
+                 ref_phase          - 1D array in size of (num_ifgram,) in float, unwrapped phase of the reference pixel
+                 n                  - integer, connection level of the closure phase (e.g., triplets are connection-2)
+                 box                - list in size of (4,) in integer, bounding box coordinates
+    Returns :    cp_w               - 3D array in size of (num_ifgram, box_length, box_width) in float,  wrapped sequential closure phases of connection n
     """
     cp_idx = [] # initiate a list storing the index of interferograms in each closure phase computation
     nslc = len(slc_list)
@@ -109,18 +108,16 @@ def seq_closure_phase(slc_list, date12_list_all, ifgram_stack, ref_phase, n, box
 
 
 def sum_seq_closure_phase(slc_list, date12_list_all, ifgram_stack, ref_phase, n, box):
-    """
-    Computes the sum of consecutive complex sequential closure phase of connection n
-    Input parameters:
-        slc_list : list of SLC dates
-        date12_list_all: date12 of all the interferograms stored in the ifgramstack file
-        ifgram_stack: stack file
-        ref_phase : reference phase
-        n        : connection level of the closure phase
-        box      : bounding box for the patch
-    Output parameters:
-        cum_cp   : sum of consecutive complex sequential closure phase of connection n
-        num_cp   : number of closure phases in the sum
+    """Computes the sum of consecutive complex sequential closure phase of connection n
+
+    Parameters: slc_list            - list of string, SLC dates
+                date12_list_all     - list of string, date12 of all the interferograms stored in the ifgramstack file
+                ifgram_stack        - string, file path of ifgramStack.h5
+                ref_phase           - 1D array in size of (num_ifgram,) in float, unwrapped phase of the reference pixel
+                n                   - integer, connection level of the closure phase
+                box                 - list in size of (4,) in integer, bounding box coordinates
+    Returns:    cum_cp              - 2D array in size of (box_length, box_width) in complex64, sum of consecutive complex sequential closure phase of connection n
+                num_cp              - integer, number of closure phases in the sum
     """
     cp_idx = []
     nslc = len(slc_list)
@@ -164,12 +161,15 @@ def sum_seq_closure_phase(slc_list, date12_list_all, ifgram_stack, ref_phase, n,
 
 def cum_seq_unw_closure_phase(n,filepath,length, width, refY, refX, slc_list, meta):
     '''output cumulative con-n sequential closure phase in time-series format (Eq. 25 in Zheng et al., 2022, but divided by n)
-    Input parameters: n -  connection level of closure phases
-                      filepath -- filepath of sequential closure phases of connection - n
-                      width, length -- width and length of the interferograms
-                      refY, refX -- reference point coordinates
-                      slc_list: list of SLC
-                      meta: metadata of ifgramStack.h5
+
+    Parameters: n               - integer, connection level of closure phases
+                filepath        - string, filepath of sequential closure phases of connection - n
+                width, length   - integer, width and length of the interferograms
+                refY, refX      - ingeger, reference point coordinates
+                slc_list        - list of string, SLC dates
+                meta            - dict, metadata of ifgramStack.h5
+    Returns:    conn_seqcumclosurephase.h5              - output hdf5 file of 3D array in size of (num_ifgram, length, width) in float, cumulative sequential closure phase
+                conn_seqcumclosurephase_maskconcp.h5    - output hdf5 file of 2D array in size of (length, width) in bool, mask based on connected component
     '''
     outfiledir = os.path.join(filepath, 'conn'+str(n)+'_seqcumclosurephase.h5')
     outmaskdir = os.path.join(filepath, 'conn'+str(n)+'_seqcumclosurephase_maskconcp.h5')
@@ -213,17 +213,20 @@ def cum_seq_unw_closure_phase(n,filepath,length, width, refY, refX, slc_list, me
         meta['FILE_TYPE'] = 'timeseries'
         writefile.layout_hdf5(outfiledir, dsDict, meta)
 
-        mask = np.where(np.isnan(np.sum(mask_all,0)), 0, 1)
+        mask = np.where(np.isnan(np.sum(mask_all,0)), False, True)
         dsDict = dict()
-        dsDict = {'mask_concp': [np.float32, (length, width),mask ],
+        dsDict = {'mask_concp': [np.bool_, (length, width),mask ],
                       'date': [np.dtype('S8'),np.shape(slc_list), slc_list],}
         meta['FILE_TYPE'] = 'mask'
         writefile.layout_hdf5(outmaskdir, dsDict, meta)
 
 def seq2cum_closure_phase(conn, outdir, box):
-    '''
-    this script read in cumulative sequential closure phase from individual closure phase directory (Eq. 25) in Zheng et al., 2022
-    output should be a 3D matrix of size nslc by box_lengh by box_width
+    ''' this script read in cumulative sequential closure phase from individual closure phase directory (Eq. 25) in Zheng et al., 2022
+
+    Parameters: conn    - integer, connection level of sequential closure phases
+                outdir  - string, directory of conn_seqcumclosurephase.h5
+                box     - list in size of (4,) in integer, coordinates of bounding box
+    Returns:    biasts  - 3D array in size of (nslc, box_lengh, box_width) in float, cumulative sequential closure phases
     '''
     filepath = 'conn'+str(conn)+'_cp'
     filename = 'conn'+str(conn)+'_seqcumclosurephase.h5'
@@ -232,17 +235,17 @@ def seq2cum_closure_phase(conn, outdir, box):
     return biasts
 
 def estimate_ratioX(tbase, n, nl, wvl, box, outdir, mask=False):
-    '''
-    # This script estimates w(n\delta_t)/w(delta_t), Eq.(29) in Zheng et al., 2022
-    # input: tbase - time in accumulated years
-    # input: n - connection-level
-    # input: nl - minimum connection-level that we think is bias-free
-    # input: wvl - wavelength
-    # input: box - the patch that is being processed
-    # input: outdir - the working directory
-    # input: mask - whether to mask out areas with average bias velocity less than 1 mm/year
-    # output: wratio - Eq.(29)
-    # output: wratio_velocity - bias-velocity at n*delta_t temporal baseline
+    ''' This script estimates w(n\delta_t)/w(delta_t), Eq.(29) in Zheng et al., 2022
+
+    Parameters: tbase           - list in size of (nslc,) in float, time in accumulated years
+                n               - integer, connection-level
+                nl              - integer, minimum connection-level that we think is bias-free
+                wvl             - float, wavelength
+                box             - list in size of (4,) in integer, coordinates of bounding box
+                outdir          - string, the working directory
+                mask            - bool, whether to mask out areas with average bias velocity less than 1 mm/year
+    Returns:    wratio          - 2D array of size (box_length, box_width) in float, w(n\delta_t)/w(delta_t), Eq.(29) in Zheng et al., 2022
+                wratio_velocity - 2D array of size (box_length, box_width) in float, bias-velocity at n*delta_t temporal baseline
     '''
     box_width  = box[2] - box[0]
     box_length = box[3] - box[1]
@@ -270,12 +273,13 @@ def estimate_ratioX(tbase, n, nl, wvl, box, outdir, mask=False):
     return wratio,wratio_velocity # wratio is a length by width 2D matrix
 
 def estimate_ratioX_all(bw,nl,outdir,box):
-    '''
-    Estimate wratio for connection-1 through connection bw
-    # input: nl - minimum connection-level that we think is bias-free
-    # input: bw - bandwidth of given time-sereis analysis
-    # input: box - the patch that is being processed
-    # input: outdir - the working directory
+    ''' Estimate w(n\delta_t)/w(delta_t) for n=1:bw
+
+    Parameters: nl              - integer, minimum connection-level that we think is bias-free
+                bw              - integer, bandwidth of given time-sereis analysis
+                box             - list in size of (4,) in integer, coordinates of bounding box
+                outdir          - string, the working directory
+    Returns:    wratio          - 3D array in size of (bw+1, length, width) in float, the first slice (w[0,:,:]) is a padding to ensure that wratio[n,:,:]=w(n\delta_t)/w(delta_t).
     '''
     box_width  = box[2] - box[0]
     box_length = box[3] - box[1]
@@ -288,17 +292,19 @@ def estimate_ratioX_all(bw,nl,outdir,box):
     wratio = 1-wratio
     wratio[wratio>1]=1
     wratio[wratio<0]=0
-    return wratio # wratio is a bw+1 by length by width 3D matrix, the first layer is a padding
+    return wratio
 
 def get_design_matrix_W(M, A, bw, box, tbase, nl, outdir):
-    '''
-    # output: W, numpix by numifgram matrix, each row stores the diagnal component of W (Eq. 16 in Zheng et al., 2022) for one pixel.
-    # input: M - num_ifgram
-    # input: A - M by N design matrix specifying SAR acquisitions used
-    # input: tbase - time in accumulated years
-    # input: nl - minimum connection-level that we think is bias-free
-    # input: box - the patch that is being processed
-    # input: outdir - the working directory
+    ''' computes the matrix W (Eq. 16 in Zheng et al., 2022) for a bounding box.
+
+    Parameters  : M         - integer, number of interferograms
+                  A         - 2D array in size of (M, nslc) in integer, design matrix specifying SAR acquisitions used
+                  bw        - integer, bandwidth of time-series analysis
+                  tbase     - list in size of (nslc,) in float, time in accumulated years
+                  nl        - integer, minimum connection-level that we think is bias-free
+                  box       - list in size of (4,) in integer, coordinates of bounding box
+                  outdir    - string, the working directory
+    Returns:      W         - 2D array in size of (numpix, M) in float, each row stores the diagnal component of W (Eq. 16 in Zheng et al., 2022) for one pixel.
     '''
     box_width  = box[2] - box[0]
     box_length = box[3] - box[1]
@@ -319,13 +325,16 @@ def get_design_matrix_W(M, A, bw, box, tbase, nl, outdir):
 
     return W
 
-def average_temporal_span(date_ordinal,conn):
-    '''
-    compute average temporal span (days) for interferogram subsets chosen for bw-n analysis
+def average_temporal_span(date_ordinal,bw):
+    '''compute average temporal span (days) for interferogram subsets chosen for limited bandwidth analysis
+
+    Parameters:     date_ordinal        - list of size (nslc,) in integer, time in days
+                    bw                  - integer, bandwidth of time-series analysis
+    Return：        avgtime             - float, average time-span in days for interferograms subsets of bandwith bw.
     '''
     avgtime = 0
     numigram = 0
-    for level in range(1, conn+1):
+    for level in range(1, bw+1):
         slcdate_firstn = date_ordinal[0:level]
         slcdate_lastn = date_ordinal[-level:]
         for i in range(level):
@@ -337,8 +346,11 @@ def average_temporal_span(date_ordinal,conn):
     return avgtime
 
 def average_connN_igrams(date_ordinal,conn):
-    '''
-    compute average temporal span (days) for connection-n interferograms
+    ''' compute average temporal span (days) for connection-n interferograms
+
+    Parameters:     date_ordinal        - list of size (nslc,) in integer, time in days
+                    conn                - integer, connection level of interferograms
+    Return：        avgtime             - float, average time-span in days for connnection conn interferograms .
     '''
     slcdate_firstn = date_ordinal[0:conn]
     slcdate_lastn = date_ordinal[-conn:]
@@ -352,16 +364,18 @@ def average_connN_igrams(date_ordinal,conn):
     return avgtime
 
 def estimate_tsbias_approx(nl, bw, tbase, date_ordinal, wvl, box, outdir):
-    '''
-    # This script gives a quick approximate estimate of bias of a time-series of a certain bandwidth (bw)
-    # This estimate is not exact, but often close enough.
-    # It is good for a quick estimate to see how big the biases are.
-    Input parameters: nl - connection level that we assume bias-free
-                      bw - bandwidth of the given time-series analysis
-                      wvl - wavelength of the SAR system
-                      box - patch that we are processing
-                      outdir - directory for outputing files
-    Output parameters: biasts - bias timeseries
+    ''' This script gives a quick approximate estimate of bias of a time-series of a certain bandwidth (bw) for a bounding box
+        This estimate is not exact, but often close enough.
+        It is good for a quick estimate to see how big the biases are.
+
+    Parameters: nl              - integer, connection level that we assume bias-free
+                bw              - integer, bandwidth of the given time-series analysis
+                tbase           - list in size of (nslc,) in float, time in accumulated years
+                date_ordinal    - list of size (nslc,) in integer, time in days
+                wvl             - float, wavelength of the SAR system
+                box             - list in size of (4,) in integer, coordinates of bounding box
+                outdir          - string, directory for outputing files
+    Returns:    biasts          - 3D array in size of (nslc, box_length, box_width) in float, bias timeseries
     '''
     deltat_n = [average_connN_igrams(date_ordinal,n) for n in range(1,bw+1)] # average temporal span for ifgrams of connection-1 to connection-bw
     avgtimespan = average_temporal_span(date_ordinal,bw)
@@ -386,15 +400,16 @@ def estimate_tsbias_approx(nl, bw, tbase, date_ordinal, wvl, box, outdir):
     return biasts
 
 def quick_bias_correction(ifgram_stack, nl, bw, max_memory, outdir):
-    '''
-    Output Wr (eq.20 in Zheng et al., 2022) and a quick approximate solution to bias time-series
-    Input parameters:
-            ifgram_stack : ifgramStack object
-            nl: connection level at which we assume is bias-free
-            bw: bandwidth of the given time-series.
-            wvl: wavelength of the SAR System
-            max_mermory: maximum memory for each patch processed
-            outdir: directory for output files
+    '''Output Wr (eq.20 in Zheng et al., 2022) and a quick approximate solution to bias time-series
+
+    Parameters: ifgram_stack                - string, path for ifgramStack.h5
+                nl                          - integer, connection level at which we assume is bias-free
+                bw                          - integer, bandwidth of the given time-series.
+                wvl                         - float, wavelength of the SAR System
+                max_mermory                 - float, maximum memory in GB for each patch processed
+                outdir                      - string, directory for output files
+    Returns:    Wratio.h5                   - output hdf5 file storing two 3D array of size (bw, length, width) of float, wratios and bias_velocity
+                bias_timeseries_approx.h5   - output hdf5 file storing a 3D array of size (nslc, length, width) of float, approximate bias time-series.
     '''
     stack_obj = ifgramStack(ifgram_stack)
     stack_obj.open()
@@ -478,14 +493,16 @@ def quick_bias_correction(ifgram_stack, nl, bw, max_memory, outdir):
     return
 
 def estimate_bias(ifgram_stack, nl, bw, wvl, box, outdir):
-    '''
-    input: ifgram_stack -- the ifgramstack file that you did time-series analysis with
-    input: nl -- the connection level that we assume bias-free
-    input: bw -- the bandwidth of the time-series analysis, should be consistent with the network stored in ifgram_stack
-    input: wvl -- wavelength of the SAR satellite
-    input: box -- the patch that is processed
-    input: outdir -- directory for output files
-    outut: biasts_bwn : estimated bias timeseries of the given patch
+    '''Output bias time-series of a certain bandwidth (bw) for a bounding box using the algorithm provided in Zheng et al., 2022
+
+    Parameters:     ifgram_stack                - string, path for ifgramStack.h5
+                    nl                          - integer, connection level at which we assume is bias-free
+                    bw                          - integer, bandwidth of the given time-series.
+                    wvl                         - float, wavelength of the SAR System
+                    box                         - list in size of (4,) in integer, coordinates of bounding box
+                    outdir                      - string, directory for output files
+    Returns:        biasts_bwn                  - 3D array of size (bw, box_length, box_width) of float, estimated bias time-series
+                    box                         - list in size of (4,) in integer, coordinates of bounding box, output for parallel computing
     '''
     coef = -4*np.pi/wvl
     box_width  = box[2] - box[0]
@@ -551,13 +568,15 @@ def estimate_bias(ifgram_stack, nl, bw, wvl, box, outdir):
     return biasts_bwn,box
 
 def bias_correction(ifgram_stack, nl, bw, max_memory, outdir, parallel):
-    '''
-    input: ifgram_stack -- the ifgramstack file that you did time-series analysis with
-    input: nl -- the connection level that we assume bias-free
-    input: bw -- the bandwidth of the time-series analysis, should be consistent with the network stored in ifgram_stack
-    input: wvl -- wavelength of the SAR satellite
-    input: max_memory -- maximum memory of each patch
-    input: outdir -- directory for output files
+    '''Output a solution to bias time-series
+
+    Parameters: ifgram_stack                - string, path for ifgramStack.h5
+                nl                          - integer, connection level at which we assume is bias-free
+                bw                          - integer, bandwidth of the given time-series.
+                max_memory                 - float, maximum memory in GB for each patch processed
+                outdir                      - string, directory for output files
+                parallel                    - dictonary containing settings of parallel computing. To turn off, set parallel['clustertype']=''
+    Returns:    bias_timeseries.h5          - output hdf5 file storing a 3D array of size (nslc, length, width) of float, estimated bias time-series.
     '''
     stack_obj = ifgramStack(ifgram_stack)
     stack_obj.open()
@@ -629,12 +648,16 @@ def bias_correction(ifgram_stack, nl, bw, max_memory, outdir, parallel):
 
 
 def create_cp_mask(ifgram_stack, nl, max_memory, num_sigma, threshold_amp, outdir):
-    """
-    Input parameters:
-        ifgram_stack: stack file
-        nl        : maximum connection level that assumed to be bias free
-        max_memory : maxum memory for each bounding box
-        threshold_pha, threshold_amp: threshold of phase and ampliutde of the cumulative sequential closure phase
+    """ create a mask identifying areas most suseptible to bias
+
+    Parameters: ifgram_stack                - string, path for ifgramStack.h5
+                nl                          - integer, connection level at which we assume is bias-free
+                max_mermory                 - float, maximum memory in GB for each patch processed
+                num_sigma                   - float, number of sigmas for computing phase threshold
+                threshold_amp               - float, threshold of ampliutde of the cumulative sequential closure phase
+                outdir                      - string, directory of output files
+    Returns:    maskClosurePhase.h5         - output hdf5 file storing a 2D array of size (length, width) of boolean, areas suseptible to bias is 0.
+                avgCpxClosurePhase.h5       - output hdf5 file storing two 2D array of size (length, width) of float, phase and amplitude of average cumulative sequential closure phase of connection-nl
     """
     stack_obj = ifgramStack(ifgram_stack)
     stack_obj.open()
@@ -699,8 +722,14 @@ def create_cp_mask(ifgram_stack, nl, max_memory, num_sigma, threshold_amp, outdi
     return
 
 def compute_unwrap_closure_phase(ifgram_stack, conn, max_memory, outdir):
-    '''
-    Ouput wrapped, and unwrapped sequential closure phases, and cumulative closure phase time-series of connection-conn
+    ''' Ouput wrapped, and unwrapped sequential closure phases, and cumulative closure phase time-series of connection-conn in directory outdir/closurePhase/conn{conn}_cp
+
+    Parameters: ifgram_stack                - string, path for ifgramStack.h5
+                conn                        - integer, connection level
+                max_mermory                 - float, maximum memory in GB for each patch processed
+                outdir                      - string, path for output files
+    Returns:    various wrapped, unwrapped and cumulative closure phase time-series 
+
     '''
     stack_obj = ifgramStack(ifgram_stack)
     stack_obj.open()
