@@ -36,7 +36,7 @@ Hierarchy of sub-modules within MintPy. Level _N_ modules depends on level _N-1_
 ------------------ level 2 --------------------
     /utils
         readfile      (utils/{utils0}, objects/{stack, giant, sensor})
-        s1_utils      (utils/{ptime, time_func})
+        s1_utils      (utils/{ptime, time_func}, objects/{stack})
 ------------------ level 3 --------------------
     /objects
         resample      (utils/{utils0, ptime,  readfile})

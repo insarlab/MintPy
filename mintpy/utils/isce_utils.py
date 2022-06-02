@@ -801,56 +801,6 @@ def get_IPF(proj_dir, ts_file):
     return date_list, IPF_IW1, IPF_IW2, IPF_IW3
 
 
-def safe_list_file2sensor_list(safe_list_file, date_list=None, print_msg=True):
-    """Get list of Sentinel-1 sensor names from txt file with SAFE file names.
-
-    Parameters: safe_list_file - str, path of the text file with Sentinel-1 SAFE file path
-                                 E.g. SAFE_files.txt
-                date_list      - list of str in YYYYMMDD format, reference list of dates
-    Returns:    sensor_list    - list of str in S1A or S1B
-                date_list      - list of str in YYYYMMDD format
-    Example:
-        date_list = timeseries('timeseries.h5').get_date_list()
-        sensor_list = safe_list_file2sensor_list('../SAFE_files.txt',
-                                                 date_list=date_list,
-                                                 print_msg=False)[0]
-        s1b_dates = [i for i, j in zip(date_list, sensor_list) if j == 'S1B']
-        np.savetxt('S1B_date.txt', np.array(s1b_dates).reshape(-1,1), fmt='%s')
-    """
-    # read txt file
-    fc = np.loadtxt(safe_list_file, dtype=str).astype(str).tolist()
-    safe_fnames = [os.path.basename(i) for i in fc]
-
-    # get date_list
-    date_list_out = [re.findall('_\d{8}T', i)[0][1:-1] for i in safe_fnames]
-    date_list_out = sorted(list(set(date_list_out)))
-
-    # get sensor_list
-    sensor_list = []
-    for d in date_list_out:
-        safe_fname = [i for i in safe_fnames if d in i][0]
-        sensor = safe_fname.split('_')[0]
-        sensor_list.append(sensor)
-
-    # update against date_list_ref
-    if date_list is not None:
-        # check possible missing dates
-        dates_missing = [i for i in date_list if i not in date_list_out]
-        if dates_missing:
-            raise ValueError('The following dates are missing:\n{}'.format(dates_missing))
-
-        # prune dates not-needed
-        flag = np.array([i in date_list for i in date_list_out], dtype=np.bool_)
-        if np.sum(flag) > 0:
-            sensor_list = np.array(sensor_list)[flag].tolist()
-            dates_removed = np.array(date_list_out)[~flag].tolist()
-            date_list_out = np.array(date_list_out)[flag].tolist()
-            if print_msg:
-                print('The following dates are not needed and removed:\n{}'.format(dates_removed))
-
-    return sensor_list, date_list
-
-
 def get_sensing_datetime_list(proj_dir, date_list=None):
     """Get the sensing datetime objects from ISCE stack results.
     It assumes the default directory structure from topsStack, as below:
