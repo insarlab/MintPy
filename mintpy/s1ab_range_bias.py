@@ -20,7 +20,7 @@ from mintpy.utils import readfile, writefile, s1_utils, plot as pp
 ####################################################################################
 EXAMPLE = """example:
   # Requires a text file named "SAFE_files.txt" containing all Sentinel-1 SAFE filenames.
-  # It is generated in ISCE-2/topsStack by default, and could be generated as low if missing:
+  # It is generated in ISCE-2/topsStack by default, and could be generated as below if missing:
   # ls ./SLC > SAFE_files.txt
 
   # 1. compute the S1A/B range bias
