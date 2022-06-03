@@ -5,7 +5,7 @@
 # Author: Zhang Yunjun, Feb 2022                           #
 ############################################################
 # Recommend usage:
-#   from mintpy.utils.constants import SPEED_OF_LIGHT
+#   from mintpy.objects.constants import SPEED_OF_LIGHT
 
 
 SPEED_OF_LIGHT = 299792458  # meters per second

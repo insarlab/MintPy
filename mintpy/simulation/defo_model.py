@@ -10,7 +10,7 @@
 
 import numpy as np
 from matplotlib import pyplot as plt
-from mintpy.utils import utils0 as ut
+from mintpy.utils import utils0 as ut0
 
 
 def mogi(geometry, xloc, nu=0.25):
@@ -81,12 +81,9 @@ def mogi_los(shape, source_geom, resolution=60., scale=1., display=True):
     dis_n = dis_map[1, :].reshape(length, width)
     dis_u = dis_map[2, :].reshape(length, width)
 
-    dis_los = ut.enu2los(dis_e,
-                         dis_n,
-                         dis_u,
-                         inc_angle=34.,
-                         head_angle=-168.)
-
+    dis_los = ut0.enu2los(dis_e, dis_n, dis_u,
+                          inc_angle=34.,
+                          head_angle=-168.)
     dis_los[mask == 0.] = np.nan
     dis_los *= scale
 
