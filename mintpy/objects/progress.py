@@ -4,8 +4,8 @@
 # Author: Zhang Yunjun, Dec 2020                           #
 ############################################################
 # Recommend import:
-#   from mintpy.objects.progress import progressBar OR
-#   from mintpy.utils.ptime import progressBar
+#    from mintpy.objects.progress import progressBar
+# OR from mintpy.utils import ptime
 
 
 import sys

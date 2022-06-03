@@ -598,7 +598,8 @@ def plot_slice(ax, data, metadata, inps=None):
 
         # Lat Lon labels
         if inps.lalo_label:
-            pp.draw_lalo_label(inps.geo_box, ax,
+            pp.draw_lalo_label(ax,
+                               geo_box=inps.geo_box,
                                lalo_step=inps.lalo_step,
                                lalo_loc=inps.lalo_loc,
                                lalo_max_num=inps.lalo_max_num,

@@ -693,6 +693,7 @@ def dload_igs_tec(d, out_dir, sol='jpl', datefmt='%Y%m%d', print_msg=False):
     doy = '{:03d}'.format(dd.timetuple().tm_yday)
     yy = str(dd.year)[2:4]
 
+    # file name and http path
     fbase = "{a}g{d}0.{y}i.Z".format(a=sol.lower(), d=doy, y=yy)
     src_dir = "https://cddis.nasa.gov/archive/gnss/products/ionex/{0}/{1}".format(dd.year, doy)
 
@@ -768,7 +769,6 @@ def read_ionex_tec(igs_file):
     tec_code = os.path.basename(igs_file)[:3]
     tec_type = igs_code_dict.get(tec_code, None)
 
-    #print(tec_type)
     ## =========================================================================
     ##
     ## The following section reads the lines of the ionex file for 1 day
@@ -890,7 +890,7 @@ def plot_tec_animation(tec_file, save=False):
     """Plot the input tec file as animation"""
     from cartopy import crs as ccrs
     from matplotlib.animation import FuncAnimation
-    from mintpy.utils import plot as pp
+    from mintpy.utils.map import draw_lalo_label
 
     def grab_date(tec_file, datefmt='%Y-%m-%d'):
         """Grab the date in YYYYMMDD format from the TEC filename"""
@@ -922,7 +922,7 @@ def plot_tec_animation(tec_file, save=False):
     # init figure
     fig, ax = plt.subplots(figsize=[9, 4], subplot_kw=dict(projection=ccrs.PlateCarree()))
     ax.coastlines()
-    pp.draw_lalo_label(geo_box, ax, projection=ccrs.PlateCarree(), print_msg=False)
+    draw_lalo_label(ax, geo_box, projection=ccrs.PlateCarree(), print_msg=False)
     # init image
     im = ax.imshow(tec_array[0,:,:,0].T, vmin=0, vmax=vmax, extent=extent,
                    origin='upper', animated=True, interpolation='nearest')
