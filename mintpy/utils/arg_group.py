@@ -97,6 +97,9 @@ def add_figure_argument(parser):
                      action='store_false', help='do not display axis')
     fig.add_argument('--notick', dest='disp_tick',
                      action='store_false', help='do not display tick in x/y axis')
+    fig.add_argument('--ylabel-rot', dest='ylabel_rot', type=float,
+                     help='Y-axis tick label rotation in degree anti-clockwisely (default: %(default)s).\n'
+                          'Set to 90 for a vertical y-axis tick labels')
 
     # colormap
     fig.add_argument('-c', '--colormap', dest='colormap',
