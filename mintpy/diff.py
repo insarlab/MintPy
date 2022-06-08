@@ -255,7 +255,7 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
         # loop over each file
         dsDict = {}
         for ds_name in ds_names:
-            print('adding {} ...'.format(ds_name))
+            print('differencing {} ...'.format(ds_name))
             data = readfile.read(file1, datasetName=ds_name)[0]
             dtype = data.dtype
 
@@ -264,6 +264,12 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
                 ds_name2read = None if len(ds_names_list[i+1]) == 1 else ds_name
                 # read
                 data2 = readfile.read(fname, datasetName=ds_name2read)[0]
+                # do the referencing for velocity files
+                if ds_name == 'velocity':
+                    ref_y, ref_x = check_reference(atr1, atr2)[1:]
+                    if ref_y and ref_x:
+                        print('* referencing data from {} to y/x: {}/{}'.format(os.path.basename(file2[0]), ref_y, ref_x))
+                        data2 -= data2[ref_y, ref_x]
                 # convert to float32 to apply the operation because some types, e.g. bool, do not support it.
                 # then convert back to the original data type
                 data = np.array(data, dtype=np.float32) - np.array(data2, dtype=np.float32)
