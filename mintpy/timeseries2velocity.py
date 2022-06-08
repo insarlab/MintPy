@@ -28,7 +28,8 @@ configKeys = [
     'startDate',
     'endDate',
     'excludeDate',
-    'bootstrap',
+    'uncertaintyQuantification',
+    'timeSeriesCovFile',
     'bootstrapCount',
 ]
 
@@ -38,10 +39,9 @@ TEMPLATE = get_template_content('velocity')
 
 REFERENCE = """references:
   Fattahi, H., and F. Amelung (2015), InSAR bias and uncertainty due to the systematic and stochastic
-  tropospheric delay, Journal of Geophysical Research: Solid Earth, 120(12), 8758-8773, doi:10.1002/2015JB012419.
-
+    tropospheric delay, J. Geophy. Res. Solid Earth, 120(12), 8758-8773, doi:10.1002/2015JB012419.
   Efron, B., and R. Tibshirani (1986), Bootstrap methods for standard errors, confidence intervals,
-  and other measures of statistical accuracy, Statistical science, 54-75, doi:10.1214/ss/1177013815.
+    and other measures of statistical accuracy, Statistical Science, 54-75, doi:10.1214/ss/1177013815.
 """
 
 EXAMPLE = """example:
@@ -50,12 +50,8 @@ EXAMPLE = """example:
   timeseries2velocity.py  timeseries.h5  --start-date 20080201  --end-date 20100508
   timeseries2velocity.py  timeseries.h5  --exclude exclude_date.txt
 
-  timeseries2velocity.py  LS-PARAMS.h5
-  timeseries2velocity.py  NSBAS-PARAMS.h5
-  timeseries2velocity.py  TS-PARAMS.h5
-
   # bootstrapping for STD calculation
-  timeseries2velocity.py timeseries_ERA5_demErr.h5 --bootstrap
+  timeseries2velocity.py timeseries_ERA5_demErr.h5 --uq bootstrap
 
   # complex time functions
   timeseries2velocity.py timeseries_ERA5_ramp_demErr.h5 --poly 3 --period 1 0.5 --step 20170910
@@ -80,8 +76,8 @@ def create_parser():
     parser.add_argument('timeseries_file',
                         help='Time series file for velocity inversion.')
     parser.add_argument('--template', '-t', dest='template_file', help='template file with options')
-    parser.add_argument('--ts-cov-file', dest='ts_cov_file',
-                        help='Time-series (co)variance file for velocity STD calculation')
+    parser.add_argument('--ts-cov','--ts-cov-file', dest='timeSeriesCovFile',
+                        help='4D time-series (co)variance file for velocity STD calculation')
 
     # outputs
     parser.add_argument('-o', '--output', dest='outfile', help='output file name')
@@ -92,13 +88,8 @@ def create_parser():
                              '2) all configuration parameters are the same.')
 
     # reference in time and space
-    # for input file without reference info, e.g. ERA5.h5
-    parser.add_argument('--ref-lalo', dest='ref_lalo', metavar=('LAT', 'LON'), type=float, nargs=2,
-                        help='Change reference point LAT LON for estimation.')
-    parser.add_argument('--ref-yx', dest='ref_yx', metavar=('Y', 'X'), type=int, nargs=2,
-                        help='Change reference point Y X for estimation.')
-    parser.add_argument('--ref-date', dest='ref_date', metavar='DATE',
-                        help='Change reference date for estimation.')
+    # useful for input file without reference info, e.g. ERA5.h5
+    parser = arg_group.add_reference_argument(parser, plot=False)
 
     # dates of interest
     date = parser.add_argument_group('dates of interest')
@@ -111,12 +102,13 @@ def create_parser():
                            '--exclude 20040502 20060708 20090103\n' +
                            '--exclude exclude_date.txt\n'+DROP_DATE_TXT)
 
-    # bootstrap
-    bootstrap = parser.add_argument_group('bootstrapping', 'estimating the mean / STD of the velocity estimator')
-    bootstrap.add_argument('--bootstrap', '--bootstrapping', dest='bootstrap', action='store_true',
-                           help='Enable bootstrapping to estimate the mean and STD of the velocity estimator.')
-    bootstrap.add_argument('--bc', '--bootstrap-count', dest='bootstrapCount', type=int, default=400,
-                           help='number of iterations for bootstrapping (default: %(default)s).')
+    # Uncertainty quantification
+    uq = parser.add_argument_group('Uncertainty quantification (UQ)', 'Estimating the time function parameters STD')
+    uq.add_argument('--uq', '--uncertainty', dest='uncertaintyQuantification', metavar='VAL',
+                    default='residue', choices={'residue', 'covariance', 'bootstrap'},
+                    help='Uncertainty quantification method (default: %(default)s).')
+    uq.add_argument('--bc', '--bootstrap-count', dest='bootstrapCount', type=int, default=400,
+                    help='number of iterations for bootstrapping (default: %(default)s).')
 
     # time functions
     parser = arg_group.add_timefunc_argument(parser)
@@ -138,26 +130,31 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # check if input file is time series
     inps.key = readfile.read_attribute(inps.timeseries_file)['FILE_TYPE']
     if inps.key not in ['timeseries', 'giantTimeseries', 'HDFEOS']:
         raise Exception('input file is {}, NOT timeseries!'.format(inps.key))
 
-    # check bootstrap count number
-    if inps.bootstrap and inps.bootstrapCount <= 1:
-        inps.bootstrap = False
-        print('bootstrap-count should be larger than 1, otherwise it does not make sense')
-        print('turn OFF bootstrapping and continue without it.')
-
-    if inps.bootstrap:
-        print('bootstrapping is turned ON.')
-        if (inps.polynomial != 1 or inps.periodic or inps.step or inps.exp or inps.log):
-            raise ValueError('bootstrapping currently support polynomial ONLY and ONLY with the order of 1!')
-
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 
-    # Initialize the dictionaries of exp and log funcs
-    inps = init_exp_log_dicts(inps)
+    # --uq
+    if inps.uncertaintyQuantification == 'bootstrap':
+        # check 1 - bootstrap count number
+        if inps.bootstrapCount <= 1:
+            inps.uncertaintyQuantification = 'residue'
+            print('WARNING: bootstrapCount should be larger than 1!')
+            print('Change the uncertainty quantification method from bootstrap to residue, and continue.')
+        # check 2 - advanced time func
+        if (inps.polynomial != 1 or inps.periodic or inps.step or inps.exp or inps.log):
+            raise ValueError('bootstrapping support polynomial with the order of 1 ONLY!')
+
+    elif inps.uncertaintyQuantification == 'covariance':
+        if not inps.timeSeriesCovFile or not os.path.isfile(inps.timeSeriesCovFile):
+            inps.uncertaintyQuantification = 'residue'
+            print('WARNING: NO time series covariance file found!')
+            print('Change the uncertainty quantification method from covariance to residue, and continue.')
 
     # --ref-lalo option
     if inps.ref_lalo:
@@ -168,6 +165,9 @@ def cmd_line_parse(iargs=None):
             inps.ref_yx = [ref_y, ref_x]
             print('input reference point in (lat, lon): ({}, {})'.format(inps.ref_lalo[0], inps.ref_lalo[1]))
             print('corresponding   point in (y, x): ({}, {})'.format(inps.ref_yx[0], inps.ref_yx[1]))
+
+    # Initialize the dictionaries of exp and log funcs
+    inps = init_exp_log_dicts(inps)
 
     return inps
 
@@ -231,14 +231,14 @@ def read_template2inps(template_file, inps=None):
     keyList = [i for i in list(iDict.keys()) if prefix+i in template.keys()]
     for key in keyList:
         value = template[prefix+key]
-        if key in ['bootstrap']:
-            iDict[key] = value
         if value:
             if key in ['startDate', 'endDate']:
                 iDict[key] = ptime.yyyymmdd(value)
             elif key in ['excludeDate']:
                 value = value.replace('[','').replace(']','').replace(',', ' ')
                 iDict[key] = ptime.yyyymmdd(value.split())
+            elif key in ['uncertaintyQuantification', 'timeSeriesCovFile']:
+                iDict[key] = value
             elif key in ['bootstrapCount']:
                 iDict[key] = int(value)
 
@@ -495,7 +495,7 @@ def run_timeseries2time_func(inps):
 
     # calc number of box based on memory limit
     memoryAll = (num_date + num_param * 2 + 2) * length * width * 4
-    if inps.bootstrap:
+    if inps.uncertaintyQuantification == 'bootstrap':
         memoryAll += inps.bootstrapCount * num_param * length * width * 4
     num_box = int(np.ceil(memoryAll * 3 / (inps.maxMemory * 1024**3)))
     box_list = cluster.split_box2sub_boxes(box=(0, 0, width, length),
@@ -540,9 +540,9 @@ def run_timeseries2time_func(inps):
             ts_data *= 1./1000.
 
         ts_cov = None
-        if inps.ts_cov_file:
-            print(f'reading time-series covariance matrix from file {inps.ts_cov_file} ...')
-            ts_cov = readfile.read(inps.ts_cov_file, box=box)[0]
+        if inps.uncertaintyQuantification == 'covariance':
+            print(f'reading time-series covariance matrix from file {inps.timeSeriesCovFile} ...')
+            ts_cov = readfile.read(inps.timeSeriesCovFile, box=box)[0]
             if len(ts_cov.shape) == 4:
                 # full covariance matrix in 4D --> 3D
                 if inps.numDate < ts_cov.shape[0]:
@@ -586,7 +586,7 @@ def run_timeseries2time_func(inps):
         ### estimation / solve Gm = d
         print('estimating time functions via linalg.lstsq ...')
 
-        if inps.bootstrap:
+        if inps.uncertaintyQuantification == 'bootstrap':
             ## option 1 - least squares with bootstrapping
             # Bootstrapping is a resampling method which can be used to estimate properties
             # of an estimator. The method relies on independently sampling the data set with
@@ -655,7 +655,7 @@ def run_timeseries2time_func(inps):
             #                 = (e_hat.T * e_hat) / (N - P)
             # which is the equation (10) from Fattahi and Amelung (2015, JGR)
 
-            if ts_cov is not None:
+            if inps.uncertaintyQuantification == 'covariance':
                 # option 2.1 - linear propagation from time-series (co)variance matrix
                 # TO DO: save the full covariance matrix of the time function parameters
                 # only the STD is saved right now
@@ -682,7 +682,7 @@ def run_timeseries2time_func(inps):
                     prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, num_pixel2inv))
                 prog_bar.close()
 
-            else:
+            elif inps.uncertaintyQuantification == 'residue':
                 # option 2.3 - assume obs errors following normal dist. in time
                 print('estimating time function STD from time-series fitting residual ...')
                 G_inv = linalg.inv(np.dot(G.T, G))

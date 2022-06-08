@@ -303,26 +303,28 @@ def add_point_argument(parser):
     return parser
 
 
-def add_reference_argument(parser):
+def add_reference_argument(parser, plot=True):
     """Argument group parser for (spatial / temporal) referencing options"""
-    ref = parser.add_argument_group('Reference', 'Show / Modify reference in time and space for display')
-    # reference date
+
+    goal = 'display' if plot else 'estimation'
+    ref = parser.add_argument_group('Reference date / point', f'Modify reference in time / space for {goal}')
+
+    # reference date / pixel
     ref.add_argument('--ref-date', dest='ref_date', metavar='DATE',
-                     help='Change reference date for display')
-
-    # reference pixel
+                     help=f'Change reference date for {goal}')
     ref.add_argument('--ref-lalo', dest='ref_lalo', metavar=('LAT', 'LON'), type=float, nargs=2,
-                     help='Change reference point LAT LON for display')
+                     help=f'Change reference point in LAT/LON for {goal}')
     ref.add_argument('--ref-yx', dest='ref_yx', metavar=('Y', 'X'), type=int, nargs=2,
-                     help='Change reference point Y X for display')
+                     help=f'Change reference point in Y/X for {goal}')
 
-    # reference pixel style
-    ref.add_argument('--noreference', dest='disp_ref_pixel',
-                     action='store_false', help='do not show reference point')
-    ref.add_argument('--ref-marker', dest='ref_marker', default='ks',
-                     help='marker of reference pixel (default: %(default)s).')
-    ref.add_argument('--ref-size', dest='ref_marker_size', metavar='NUM', type=int, default=6,
-                     help='marker size of reference point (default: %(default)s).')
+    # reference pixel - plotting style
+    if plot:
+        ref.add_argument('--noreference', dest='disp_ref_pixel',
+                         action='store_false', help='do not show reference point')
+        ref.add_argument('--ref-marker', dest='ref_marker', default='ks',
+                         help='marker of reference pixel (default: %(default)s).')
+        ref.add_argument('--ref-size', dest='ref_marker_size', metavar='NUM', type=int, default=6,
+                         help='marker size of reference point (default: %(default)s).')
     return parser
 
 
