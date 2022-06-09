@@ -39,7 +39,9 @@ datasetName2templateKey = {
     'coherence'       : 'mintpy.load.corFile',
     'connectComponent': 'mintpy.load.connCompFile',
     'wrapPhase'       : 'mintpy.load.intFile',
-    'ionoPhase'       : 'mintpy.load.ionoFile',
+    'ionUnwrapPhase'  : 'mintpy.load.ionUnwFile',
+    'ionCoherence'    : 'mintpy.load.ionCorFile',
+    'ionConnectComponent': 'mintpy.load.ionConnCompFile',
     'magnitude'       : 'mintpy.load.magFile',
 
     'azimuthOffset'   : 'mintpy.load.azOffFile',
@@ -103,6 +105,11 @@ def create_parser():
                         help='project name of dataset for INSARMAPS Web Viewer')
     parser.add_argument('--processor', type=str, dest='processor', choices=PROCESSOR_LIST,
                         help='InSAR processor/software of the file', default='isce')
+    parser.add_argument('--geom', dest='geom', action='store_true',
+                        help='Only write the geometry files')
+    parser.add_argument('--ionstack', dest='ionstack', action='store_true',
+                        help='Switch to load the ionospheric pairs into an independent stack\n'+
+                             '(define paths in the template file)')
     parser.add_argument('--enforce', '-f', dest='updateMode', action='store_false',
                         help='Disable the update mode, or skip checking dataset already loaded.')
     parser.add_argument('--compression', choices={'gzip', 'lzf', None}, default=None,
@@ -139,6 +146,9 @@ def cmd_line_parse(iargs=None):
     inps.outfile = [os.path.abspath(i) for i in inps.outfile]
     inps.outdir = os.path.dirname(inps.outfile[0])
 
+    if (inps.ionstack) and (os.path.basename(inps.outfile[0])=='ifgramStack.h5'):
+        inps.outfile[0] = os.path.join(inps.outdir, 'ionStack.h5')
+        print('Default file names: {}'.format(inps.outfile))
     return inps
 
 
@@ -412,7 +422,19 @@ def read_inps_dict2ifgram_stack_dict_object(iDict):
                                                    pix_box=iDict['box'],
                                                    dsName=dsName0)
 
-    # Check 3: number of files for all dataset types
+    # Check 3: whether or not handling the iono datasets
+    dsNames     = ['unwrapPhase', 'coherence', 'connectComponent']
+    dsNames_ion = ['ionUnwrapPhase', 'ionCoherence', 'ionConnectComponent']
+    if iDict['ionstack']:
+        print('create an independent ionosphere stack: {}'.format(iDict['outfile'][0]))
+        dsPathDict = {k: dsPathDict[ki] for k, ki in zip(dsNames, dsNames_ion) if ki in dsPathDict.keys()}
+    else:
+        for k in dsNames_ion:
+            if k in dsPathDict: print(' skip loading {} into {}'.format(k, iDict['outfile'][0]))
+        print(' (USAGE: `load_data.py --ionstack` to load ionosphere into an independent stack)')
+        dsPathDict = {k: dsPathDict[k] for k in list(set(dsPathDict.keys())-set(dsNames_ion))}
+
+    # Check 4: number of files for all dataset types
     # dsPathDict --> dsNumDict
     dsNumDict = {}
     for key in dsPathDict.keys():
@@ -444,7 +466,15 @@ def read_inps_dict2ifgram_stack_dict_object(iDict):
         # YYYYDDD       for gmtsar [modern Julian date]
         # YYYYMMDDTHHMM for uavsar
         # YYYYMMDD      for all the others
-        date6s = readfile.read_attribute(dsPath0)['DATE12'].replace('_','-').split('-')
+        dsPath0_Dict = readfile.read_attribute(dsPath0)
+        if 'DATE12' in dsPath0_Dict:
+            date6s = readfile.read_attribute(dsPath0)['DATE12'].replace('_','-').split('-')
+        else:
+            if dsPath0_Dict['FILE_TYPE'] == '.ion':
+                # retrieve DATE12 from topsStack iono file paths (ion/YYYYMMDD_YYYYMMDD/ion_cal/filt.ion)
+                date6s = dsPath0_Dict['FILE_PATH'].split('/')[-3].replace('_','-').split('-')
+                date6s[0] = date6s[0][2:]
+                date6s[1] = date6s[1][2:]
         if iDict['processor'] == 'gmtsar':
             date12MJD = os.path.basename(os.path.dirname(dsPath0))
         else:
@@ -465,7 +495,10 @@ def read_inps_dict2ifgram_stack_dict_object(iDict):
         for dsName in dsNameList:
             # search the matching data file for the given date12
             # 1st guess: file in the same order as the one for dsName0
-            dsPath1 = dsPathDict[dsName][i]
+            try:
+                dsPath1 = dsPathDict[dsName][i]
+            except:
+                dsPath1 = 'none'
             if (all(d6 in dsPath1 for d6 in date6s)
                     or (date12MJD and date12MJD in dsPath1)):
                 ifgramPathDict[dsName] = dsPath1
@@ -693,6 +726,12 @@ def prepare_metadata(iDict):
         geom_files = [os.path.basename(iDict[key]) for key in geom_keys
                       if (iDict[key] and iDict[key].lower() != 'auto')]
 
+        # prepare iono pairs metadata
+        if iDict['ionstack']:
+            print('prepare metadata for the ionospheric pairs')
+            obs_dir  = iDict['mintpy.load.ionUnwFile'].split('*_*/')[0]
+            obs_file = iDict['mintpy.load.ionUnwFile'].split('*_*/')[1]
+
         # compose list of input arguments
         iargs = ['-m', meta_file, '-g', geom_dir]
         if baseline_dir:
@@ -838,6 +877,31 @@ def main(iargs=None):
     stackObj = read_inps_dict2ifgram_stack_dict_object(iDict)
     geomRadarObj, geomGeoObj = read_inps_dict2geometry_dict_object(iDict)
 
+    # write ion stack obj
+    if iDict['ionstack']:
+        # original ionosphere pairs and regular InSAR pairs may have different looks
+            # factor    = (lks_ionIfgram)/(lks_ifgram) = [10,10] (products of topsStack)
+            # xstep_ion = (xstep/factor[1])
+            # ystep_ion = (ystep/factor[0])
+        if geomRadarObj:
+            ifg_dim = geomRadarObj.get_size()
+        if geomGeoObj:
+            ifg_dim = geomGeoObj.get_size()
+        ion_dim = stackObj.get_size()[1:]
+        factor = int(ifg_dim[0]/ion_dim[0]), int(ifg_dim[1]/ion_dim[1])
+        xstep = iDict['xstep']/factor[1]
+        ystep = iDict['ystep']/factor[0]
+        if xstep < 1: xstep = 1
+        if ystep < 1: ystep = 1
+        geomRadarObj = None
+        geomGeoObj   = None
+    else:
+        xstep, ystep = iDict['xstep'], iDict['ystep']
+
+    # only write geom obj
+    if inps.geom:
+        stackObj = None
+
     # prepare write
     updateMode, comp, box, boxGeo = print_write_setting(iDict)
     if any([stackObj, geomRadarObj, geomGeoObj]) and not os.path.isdir(inps.outdir):
@@ -847,40 +911,40 @@ def main(iargs=None):
     # write
     if stackObj and update_object(inps.outfile[0], stackObj, box,
                                   updateMode=updateMode,
-                                  xstep=iDict['xstep'],
-                                  ystep=iDict['ystep']):
+                                  xstep=xstep,
+                                  ystep=ystep):
         print('-'*50)
         stackObj.write2hdf5(outputFile=inps.outfile[0],
                             access_mode='w',
                             box=box,
-                            xstep=iDict['xstep'],
-                            ystep=iDict['ystep'],
+                            xstep=xstep,
+                            ystep=ystep,
                             compression=comp,
                             extra_metadata=extraDict)
 
     if geomRadarObj and update_object(inps.outfile[1], geomRadarObj, box,
                                       updateMode=updateMode,
-                                      xstep=iDict['xstep'],
-                                      ystep=iDict['ystep']):
+                                      xstep=xstep,
+                                      ystep=ystep):
         print('-'*50)
         geomRadarObj.write2hdf5(outputFile=inps.outfile[1],
                                 access_mode='w',
                                 box=box,
-                                xstep=iDict['xstep'],
-                                ystep=iDict['ystep'],
+                                xstep=xstep,
+                                ystep=ystep,
                                 compression='lzf',
                                 extra_metadata=extraDict)
 
     if geomGeoObj and update_object(inps.outfile[2], geomGeoObj, boxGeo,
                                     updateMode=updateMode,
-                                    xstep=iDict['xstep'],
-                                    ystep=iDict['ystep']):
+                                    xstep=xstep,
+                                    ystep=ystep):
         print('-'*50)
         geomGeoObj.write2hdf5(outputFile=inps.outfile[2],
                               access_mode='w',
                               box=boxGeo,
-                              xstep=iDict['xstep'],
-                              ystep=iDict['ystep'],
+                              xstep=xstep,
+                              ystep=ystep,
                               compression='lzf')
 
     # time info

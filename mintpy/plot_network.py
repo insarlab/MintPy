@@ -182,7 +182,9 @@ def read_network_info(inps):
             inps.cohList = stack_obj.tbaseIfgram.tolist()
 
         else:
-            raise ValueError(f'{inps.dsetName} NOT found in file: {inps.file}!')
+            inps.cohList = [0.7] * stack_obj.get_size()[0]
+            print(f'{inps.dsetName} NOT found in file: {inps.file}! Fill 0.7 as dummy!')
+            #raise ValueError(f'{inps.dsetName} NOT found in file: {inps.file}!')
 
     elif ext == '.txt':
         inps.date12List = np.loadtxt(inps.file, dtype=bytes).astype(str)[:,0].tolist()
@@ -265,20 +267,24 @@ def main(iargs=None):
 
     # Plot settings
     inps = check_colormap(inps)
+    if os.path.basename(inps.file).startswith('ion'):
+        ext = '_ion.pdf'
+    else:
+        ext = '.pdf'
     if inps.dsetName == 'coherence':
-        fig_names = [i+'.pdf' for i in ['pbaseHistory', 'coherenceHistory', 'coherenceMatrix', 'network']]
+        fig_names = [i+ext for i in ['pbaseHistory', 'coherenceHistory', 'coherenceMatrix', 'network']]
         inps.ds_name = 'Coherence'
         inps.cbar_label = 'Average Spatial Coherence'
     elif inps.dsetName == 'offsetSNR':
-        fig_names = [i+'.pdf' for i in ['pbaseHistory', 'SNRHistory', 'SNRMatrix', 'network']]
+        fig_names = [i+ext for i in ['pbaseHistory', 'SNRHistory', 'SNRMatrix', 'network']]
         inps.ds_name = 'SNR'
         inps.cbar_label = 'Average Spatial SNR'
     elif inps.dsetName == 'tbase':
-        fig_names = [i+'.pdf' for i in ['pbaseHistory', 'tbaseHistory', 'tbaseMatrix', 'network']]
+        fig_names = [i+ext for i in ['pbaseHistory', 'tbaseHistory', 'tbaseMatrix', 'network']]
         inps.ds_name = 'Temporal Baseline'
         inps.cbar_label = 'Temporal Baseline [day]'
     elif inps.dsetName == 'pbase':
-        fig_names = [i+'.pdf' for i in ['pbaseHistory', 'pbaseRangeHistory', 'pbaseMatrix', 'network']]
+        fig_names = [i+ext for i in ['pbaseHistory', 'pbaseRangeHistory', 'pbaseMatrix', 'network']]
         inps.ds_name = 'Perp Baseline'
         inps.cbar_label = 'Perp Baseline [m]'
 

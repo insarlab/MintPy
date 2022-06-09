@@ -64,7 +64,9 @@ ifgramDatasetNames = [
     'coherence',
     'connectComponent',
     'wrapPhase',
-    'ionoPhase',
+    'ionUnwrapPhase',
+    'ionCoherence',
+    'ionConnectComponent',
     'magnitude',
     'azimuthOffset',
     'azimuthOffsetStd',
@@ -80,7 +82,9 @@ datasetUnitDict = {
     'coherence'        : '1',
     'connectComponent' : '1',
     'wrapPhase'        : 'radian',
-    'ionoPhase'        : 'radian',
+    'ionUnwrapPhase'   : 'radian',
+    'ionCoherence'     : '1',
+    'ionConnectComponent' : '1',
     'magnitude'        : '1',
 
     # offset

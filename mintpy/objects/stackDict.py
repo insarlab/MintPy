@@ -792,8 +792,8 @@ class platformTrack:
         for pair in pairs:
             length.append(self.pairs[pair].length)
             width.append(self.pairs[pair].width)
-        self.length = median(length)
-        self.width = median(width)
+        self.length = np.median(length)
+        self.width = np.median(width)
 
     def getDatasetNames(self):
         # extract the name of the datasets which are actually the keys of

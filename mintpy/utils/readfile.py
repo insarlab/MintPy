@@ -510,7 +510,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
             data_type = dataTypeDict[data_type]
 
         k = atr['FILE_TYPE'].lower().replace('.', '')
-        if k in ['unw', 'cor']:
+        if k in ['unw', 'cor', 'ion']:
             band = min(2, num_band)
             if datasetName and datasetName in ['band1','intensity','magnitude']:
                 band = 1
@@ -1694,7 +1694,7 @@ def read_snap_dim(fname):
     # radar_frequency is in the unit of MHz
     dim_dict['WAVELENGTH'] = SPEED_OF_LIGHT / (float(dim_dict['radar_frequency']) * 1e6)
 
-    # x/y_first/step_unit 
+    # x/y_first/step_unit
     transform = root.find("Geoposition/IMAGE_TO_MODEL_TRANSFORM").text.split(',')
     transform = [str(float(i)) for i in transform]     # Convert 3.333e-4 to 0.0003333
     dim_dict["X_STEP"]  = transform[0]

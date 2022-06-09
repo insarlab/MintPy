@@ -25,6 +25,9 @@ EXAMPLE = """example:
   prep_isce.py -m 20120507_slc_crop.xml -g ./geometry                                                           #for stripmapApp
   prep_isce.py -d "pairs/*-*/insar" -m "pairs/*-*/150408.track.xml" -b baseline -g dates_resampled/150408/insar #for alosStack with 150408 as ref date
 
+  # ionosphere stack
+  prep_isce.py -d ./ion -m ./reference/IW1.xml -b ./baselines -g ./merged/geom_reference -f ion_cal/filt.ion    #for topsStack ionospheric files
+
   # offset stack
   prep_isce.py -d ./offsets -f *Off*.bip -m ./../reference/IW1.xml -b ./../baselines -g ./offsets/geom_reference  #for topsStack
   prep_isce.py -d ./offsets -f *Off*.bip -m ./SLC/*/data.dat       -b random         -g ./geometry                #for UAVSAR coregStack
@@ -203,7 +206,11 @@ def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), 
     for i, isce_file in enumerate(isce_files):
         # get date1/2
         if processor in ['tops', 'stripmap']:
-            dates = os.path.basename(os.path.dirname(isce_file)).split('_')  # to modify to YYYYMMDDTHHMMSS
+            if filePattern.startswith('ion_cal'):
+                # handel topsStack iono file path patterns
+                dates = os.path.basename(os.path.dirname(os.path.dirname(isce_file))).split('_')  # to modify to YYYYMMDDTHHMMSS
+            else:
+                dates = os.path.basename(os.path.dirname(isce_file)).split('_')  # to modify to YYYYMMDDTHHMMSS
         elif processor == 'alosStack':
             dates = os.path.basename(os.path.dirname(os.path.dirname(isce_file))).split('-')  # to modify to YYYYMMDDTHHMMSS
             dates = ptime.yyyymmdd(dates)
