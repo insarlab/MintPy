@@ -2,11 +2,8 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Zhang Yunjun, Heresh Fattahi, 2013               #
+# Author: Zhang Yunjun, Heresh Fattahi, Yuan-Kai Liu, 2013 #
 ############################################################
-# Add bootstrap method for std. dev. estimation, Emre Havazli, May 2020.
-# Add poly, periodic and step func., Yuan-Kai Liu, Aug 2020.
-# Add exp and log func., Yuan-Kai Liu, Jun 2021.
 
 
 import os
@@ -23,11 +20,19 @@ from mintpy.utils import arg_group, ptime, time_func, readfile, writefile, utils
 
 dataType = np.float32
 # key configuration parameter name
-key_prefix = 'mintpy.velocity.'
+key_prefix = 'mintpy.timeFunc.'
 configKeys = [
+    # date
     'startDate',
     'endDate',
     'excludeDate',
+    # time functions
+    'polynomial',
+    'periodic',
+    'step',
+    'exp',
+    'log',
+    # uncertainty quantification
     'uncertaintyQuantification',
     'timeSeriesCovFile',
     'bootstrapCount',
@@ -45,19 +50,19 @@ REFERENCE = """references:
 """
 
 EXAMPLE = """example:
-  timeseries2velocity.py  timeseries_ERA5_demErr.h5
-  timeseries2velocity.py  timeseries_ERA5_demErr_ramp.h5  -t KyushuT73F2980_2990AlosD.template
-  timeseries2velocity.py  timeseries.h5  --start-date 20080201  --end-date 20100508
-  timeseries2velocity.py  timeseries.h5  --exclude exclude_date.txt
+  timeseries2velocity.py timeseries_ERA5_demErr.h5
+  timeseries2velocity.py timeseries_ERA5_demErr_ramp.h5 -t KyushuAlosDT73.txt
+  timeseries2velocity.py timeseries.h5  --start-date 20080201  --end-date 20100508
+  timeseries2velocity.py timeseries.h5  --ex exclude_date.txt
 
   # bootstrapping for STD calculation
   timeseries2velocity.py timeseries_ERA5_demErr.h5 --uq bootstrap
 
   # complex time functions
-  timeseries2velocity.py timeseries_ERA5_ramp_demErr.h5 --poly 3 --period 1 0.5 --step 20170910
-  timeseries2velocity.py timeseries_ERA5_demErr.h5      --poly 1 --exp 20170910 90
-  timeseries2velocity.py timeseries_ERA5_demErr.h5      --poly 1 --log 20170910 60.4
-  timeseries2velocity.py timeseries_ERA5_demErr.h5      --poly 1 --log 20170910 60.4 200 --log 20171026 200.7
+  timeseries2velocity.py timeseries_ERA5_demErr.h5 --poly 3 --period 1 0.5 --step 20170910
+  timeseries2velocity.py timeseries_ERA5_demErr.h5 --poly 1 --exp 20170910 90
+  timeseries2velocity.py timeseries_ERA5_demErr.h5 --poly 1 --log 20170910 60.4
+  timeseries2velocity.py timeseries_ERA5_demErr.h5 --poly 1 --log 20170910 60.4 200 --log 20171026 200.7
 """
 
 DROP_DATE_TXT = """exclude_date.txt:
@@ -73,17 +78,16 @@ def create_parser():
                                      epilog=TEMPLATE+'\n'+REFERENCE+'\n'+EXAMPLE)
 
     # inputs
-    parser.add_argument('timeseries_file',
-                        help='Time series file for velocity inversion.')
+    parser.add_argument('timeseries_file', help='Time series file for time function estimation.')
     parser.add_argument('--template', '-t', dest='template_file', help='template file with options')
     parser.add_argument('--ts-cov','--ts-cov-file', dest='timeSeriesCovFile',
-                        help='4D time-series (co)variance file for velocity STD calculation')
+                        help='4D time-series (co)variance file for time function STD calculation')
 
     # outputs
     parser.add_argument('-o', '--output', dest='outfile', help='output file name')
     parser.add_argument('--update', dest='update_mode', action='store_true',
                         help='Enable update mode, and skip estimation if:\n'+
-                             '1) output velocity file already exists, readable '+
+                             '1) output file already exists, readable '+
                              'and newer than input file\n' +
                              '2) all configuration parameters are the same.')
 
@@ -92,13 +96,13 @@ def create_parser():
     parser = arg_group.add_reference_argument(parser, plot=False)
 
     # dates of interest
-    date = parser.add_argument_group('dates of interest')
-    date.add_argument('--start-date','-s', dest='startDate',
-                      help='start date for velocity estimation')
-    date.add_argument('--end-date','-e', dest='endDate',
-                      help='end date for velocity estimation')
-    date.add_argument('--exclude', '--ex', dest='excludeDate', nargs='+', default=[],
-                      help='date(s) not included in velocity estimation, i.e.:\n' +
+    date = parser.add_argument_group('Dates of interest')
+    date.add_argument('-s','--start-date', dest='startDate',
+                      help='start date for time function estimation')
+    date.add_argument('-e','--end-date', dest='endDate',
+                      help='end date for time function estimation')
+    date.add_argument('--ex','--ex-date', dest='excludeDate', nargs='+', default=[],
+                      help='date(s) not included in time function estimation, i.e.:\n' +
                            '--exclude 20040502 20060708 20090103\n' +
                            '--exclude exclude_date.txt\n'+DROP_DATE_TXT)
 
@@ -132,9 +136,9 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # check if input file is time series
-    inps.key = readfile.read_attribute(inps.timeseries_file)['FILE_TYPE']
-    if inps.key not in ['timeseries', 'giantTimeseries', 'HDFEOS']:
-        raise Exception('input file is {}, NOT timeseries!'.format(inps.key))
+    inps.file_type = readfile.read_attribute(inps.timeseries_file)['FILE_TYPE']
+    if inps.file_type not in ['timeseries', 'giantTimeseries', 'HDFEOS']:
+        raise Exception('input file is {}, NOT timeseries!'.format(inps.file_type))
 
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
@@ -166,53 +170,16 @@ def cmd_line_parse(iargs=None):
             print('input reference point in (lat, lon): ({}, {})'.format(inps.ref_lalo[0], inps.ref_lalo[1]))
             print('corresponding   point in (y, x): ({}, {})'.format(inps.ref_yx[0], inps.ref_yx[1]))
 
-    # Initialize the dictionaries of exp and log funcs
-    inps = init_exp_log_dicts(inps)
-
-    return inps
-
-
-def init_exp_log_dicts(inps):
-    """Initialize the dictionaries of exp and log funcs
-    By trarnslating inps.exp/log into inps.expDict/logDict.
-    """
-    # --exp option: convert cmd inputs into dict format
-    inps.expDict = dict()
-    if inps.exp:
-        for exp_list in inps.exp:
-            onset_time, char_times = exp_list[0], exp_list[1:]
-            if len(onset_time) == 8:
-                if len(char_times) > 0:
-                    inps.expDict[onset_time] = np.array(char_times).astype(float).tolist()
-
-                else:
-                    msg = 'NO characteristic time found: {}\n'.format(char_times)
-                    msg += 'one or more characteristic time(s) are required for each onset date'
-                    msg += ' for the exp function, e.g.:\n'
-                    msg += '--exp 20181026 60 OR\n'
-                    msg += '--exp 20161231 80.5 200  # append as many char_times as you like!'
-                    raise ValueError(msg)
-            else:
-                raise ValueError('input onset time is NOT in YYYYMMDD format: {}'.format(onset_time))
-
-    # --log option: convert cmd inputs into dict format
-    inps.logDict = dict()
-    if inps.log:
-        for log_list in inps.log:
-            onset_time, char_times = log_list[0], log_list[1:]
-            if len(onset_time) == 8:
-                if len(char_times) > 0:
-                    inps.logDict[onset_time] = np.array(char_times).astype(float).tolist()
-
-                else:
-                    msg = 'NO characteristic time found: {}\n'.format(char_times)
-                    msg += 'one or more characteristic time(s) are required for each onset date'
-                    msg += ' for the log function, e.g.:\n'
-                    msg += '--exp 20181026 60 OR\n'
-                    msg += '--exp 20161231 80.5 200  # append as many char_times as you like!'
-                    raise ValueError(msg)
-            else:
-                raise ValueError('input onset time is NOT in YYYYMMDD format: {}'.format(onset_time))
+    # --output
+    if not inps.outfile:
+        # get suffix
+        ts_file_base = os.path.splitext(os.path.basename(inps.timeseries_file))[0]
+        if ts_file_base in ['timeseriesRg', 'timeseriesAz']:
+            suffix = ts_file_base.split('timeseries')[-1]
+        else:
+            suffix = ''
+        # compose default output filename
+        inps.outfile = f'velocity{suffix}.h5'
 
     return inps
 
@@ -223,23 +190,35 @@ def read_template2inps(template_file, inps=None):
         inps = cmd_line_parse()
     iDict = vars(inps)
     print('read options from template file: '+os.path.basename(template_file))
-    template = readfile.read_template(inps.template_file)
+    template = readfile.read_template(inps.template_file, skip_chars=['[', ']'])
     template = ut.check_template_auto_value(template)
 
     # Read template option
-    prefix = 'mintpy.velocity.'
+    prefix = 'mintpy.timeFunc.'
     keyList = [i for i in list(iDict.keys()) if prefix+i in template.keys()]
     for key in keyList:
         value = template[prefix+key]
         if value:
             if key in ['startDate', 'endDate']:
                 iDict[key] = ptime.yyyymmdd(value)
+
             elif key in ['excludeDate']:
-                value = value.replace('[','').replace(']','').replace(',', ' ')
-                iDict[key] = ptime.yyyymmdd(value.split())
+                iDict[key] = ptime.yyyymmdd(value.split(','))
+
+            elif key in ['periodic']:
+                iDict[key] = [float(x) for x in value.replace(';',',').split(',')]
+
+            elif key in ['step']:
+                iDict[key] = value.replace(';',',').split(',')
+
+            elif key in ['exp', 'log']:
+                value = value.replace('/',';').replace('|',';')
+                iDict[key] = [x.split(',') for x in value.split(';')]
+
             elif key in ['uncertaintyQuantification', 'timeSeriesCovFile']:
                 iDict[key] = value
-            elif key in ['bootstrapCount']:
+
+            elif key in ['polynomial', 'bootstrapCount']:
                 iDict[key] = int(value)
 
     key = 'mintpy.compute.maxMemory'
@@ -282,181 +261,93 @@ def run_or_skip(inps):
 
 
 ############################################################################
-def read_exclude_date(inps, dateListAll):
-    # Merge ex_date/startDate/endDate into ex_date
-    yy_list_all = ptime.yyyymmdd2years(dateListAll)
-    exDateList = []
-
-    # ex_date
-    exDateList += ptime.read_date_list(list(inps.excludeDate), date_list_all=dateListAll)
-    if exDateList:
-        print('exclude date:'+str(exDateList))
-
-    # startDate
-    if inps.startDate:
-        print('start date: '+inps.startDate)
-        yy_min = ptime.yyyymmdd2years(ptime.yyyymmdd(inps.startDate))
-        for i in range(len(dateListAll)):
-            date = dateListAll[i]
-            if yy_list_all[i] < yy_min and date not in exDateList:
-                print('  remove date: '+date)
-                exDateList.append(date)
-
-    # endDate
-    if inps.endDate:
-        print('end date: '+inps.endDate)
-        yy_max = ptime.yyyymmdd2years(ptime.yyyymmdd(inps.endDate))
-        for i in range(len(dateListAll)):
-            date = dateListAll[i]
-            if yy_list_all[i] > yy_max and date not in exDateList:
-                print('  remove date: '+date)
-                exDateList.append(date)
-    exDateList = sorted(list(set(exDateList)))
-    return exDateList
-
-
 def read_date_info(inps):
     """Read dates used in the estimation and its related info.
-    Parameters: inps - Namespace
-    Returns:    inps - Namespace
-    """
-    if inps.key == 'timeseries':
-        tsobj = timeseries(inps.timeseries_file)
-    elif inps.key == 'giantTimeseries':
-        tsobj = giantTimeseries(inps.timeseries_file)
-    elif inps.key == 'HDFEOS':
-        tsobj = HDFEOS(inps.timeseries_file)
-    tsobj.open()
-    inps.excludeDate = read_exclude_date(inps, tsobj.dateList)
 
-    # exclude dates without obs data [for offset time-series only for now]
+    Parameters: inps - Namespace
+    Returns:    inps - Namespace, adding the following new fields:
+                       dateList  - list of str, dates used for estimation
+                       dropDate  - 1D np.ndarray in bool in size of all available dates
+    """
+    if inps.file_type == 'timeseries':
+        ts_obj = timeseries(inps.timeseries_file)
+    elif inps.file_type == 'giantTimeseries':
+        ts_obj = giantTimeseries(inps.timeseries_file)
+    elif inps.file_type == 'HDFEOS':
+        ts_obj = HDFEOS(inps.timeseries_file)
+    else:
+        raise ValueError('Un-recognized time series ')
+    ts_obj.open()
+
+    # exclude dates - user inputs
+    ex_date_list = ptime.get_exclude_date_list(
+        date_list=ts_obj.dateList,
+        start_date=inps.startDate,
+        end_date=inps.endDate,
+        exclude_date=inps.excludeDate)
+
+    # exclude dates - no obs data [for offset time-series only for now]
     if os.path.basename(inps.timeseries_file).startswith('timeseriesRg'):
-        date_list = timeseries(inps.timeseries_file).get_date_list()
         data, atr = readfile.read(inps.timeseries_file)
         flag = np.nansum(data, axis=(1,2)) == 0
-        flag[date_list.index(atr['REF_DATE'])] = 0
+        flag[ts_obj.dateList.index(atr['REF_DATE'])] = 0
         if np.sum(flag) > 0:
             print('number of empty dates to exclude: {}'.format(np.sum(flag)))
-            inps.excludeDate += np.array(date_list)[flag].tolist()
-            inps.excludeDate = sorted(list(set(inps.excludeDate)))
+            ex_date_list += np.array(date_list)[flag].tolist()
+            ex_date_list = sorted(list(set(ex_date_list)))
 
-    # Date used for estimation inps.dateList
-    inps.dateList = [i for i in tsobj.dateList if i not in inps.excludeDate]
-    inps.numDate = len(inps.dateList)
-    inps.startDate = inps.dateList[0]
-    inps.endDate = inps.dateList[-1]
-    print('-'*50)
-    print('dates from input file: {}\n{}'.format(tsobj.numDate, tsobj.dateList))
-    print('-'*50)
-    if len(inps.dateList) == len(tsobj.dateList):
-        print('using all dates to calculate the velocity')
-    else:
-        print('dates used to estimate the velocity: {}\n{}'.format(inps.numDate, inps.dateList))
-    print('-'*50)
+    # dates used for estimation - inps.date_list
+    inps.date_list = [i for i in ts_obj.dateList if i not in ex_date_list]
 
     # flag array for ts data reading
-    inps.dropDate = np.array([i not in inps.excludeDate for i in tsobj.dateList], dtype=np.bool_)
+    inps.dropDate = np.array([i not in ex_date_list for i in ts_obj.dateList], dtype=np.bool_)
 
-    # output file name
-    if not inps.outfile:
-        fbase = os.path.splitext(os.path.basename(inps.timeseries_file))[0]
-        outname = 'velocity'
-        if inps.key == 'giantTimeseries':
-            prefix = os.path.basename(inps.timeseries_file).split('PARAMS')[0]
-            outname = prefix + outname
-        elif fbase in ['timeseriesRg', 'timeseriesAz']:
-            suffix = fbase.split('timeseries')[-1]
-            outname = outname + suffix
-        outname += '.h5'
-        inps.outfile = outname
+    # print out msg
+    print('-'*50)
+    print('dates from input file: {}\n{}'.format(ts_obj.numDate, ts_obj.dateList))
+    print('-'*50)
+    if len(inps.date_list) == len(ts_obj.dateList):
+        print('using all dates to calculate the time function')
+    else:
+        print(f'dates used to estimate the time function: {len(inps.date_list)}\n{inps.date_list}')
+    print('-'*50)
 
     return inps
 
 
-def read_inps2model(inps, date_list=None, print_msg=True):
-    """get model info from inps"""
-    # check model date limits
-    if not date_list:
-        date_list = inps.dateList
-    dmin, dmax = date_list[0], date_list[-1]
-    ymin = ptime.yyyymmdd2years(dmin)
-    ymax = ptime.yyyymmdd2years(dmax)
-
-    if inps.step:
-        for d_step in inps.step:
-            y_step = ptime.yyyymmdd2years(d_step)
-            if not (ymin < y_step < ymax):
-                raise ValueError(f'input step date "{d_step}" exceed date list min/max: {dmin}, {dmax}')
-
-    if inps.expDict:
-        for d_onset in inps.expDict.keys():
-            y_onset = ptime.yyyymmdd2years(d_onset)
-            if y_onset >= ymax:
-                raise ValueError(f'input exp onset date "{d_onset}" >= the last date: {dmax}')
-
-    if inps.logDict:
-        for d_onset in inps.logDict.keys():
-            y_onset = ptime.yyyymmdd2years(d_onset)
-            if y_onset >= ymax:
-                raise ValueError(f'input log onset date "{d_onset}" >= the last date: {dmax}')
-
-    model = dict()
-    model['polynomial'] = inps.polynomial
-    model['periodic']   = inps.periodic
-    model['step']       = inps.step
-    model['exp']        = inps.expDict
-    model['log']        = inps.logDict
-
-    # msg
-    if print_msg:
-        print('estimate deformation model with the following assumed time functions:')
-        for key, value in model.items():
-            print('    {:<10} : {}'.format(key, value))
-
-    if 'polynomial' not in model.keys():
-        raise ValueError('linear/polynomial model is NOT included! Are you sure?!')
-
-    # number of parameters
-    num_param = (
-        model['polynomial'] + 1
-        + len(model['periodic']) * 2
-        + len(model['step'])
-        + sum([len(val) for key, val in model['exp'].items()])
-        + sum([len(val) for key, val in model['log'].items()])
-    )
-
-    return model, num_param
-
-
-############################################################################
 def run_timeseries2time_func(inps):
 
-    # basic info
+    # basic file info
     atr = readfile.read_attribute(inps.timeseries_file)
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
-    num_date = inps.numDate
-    dates = np.array(inps.dateList)
+
+    # read date info
+    inps = read_date_info(inps)
+    num_date = len(inps.date_list)
+    dates = np.array(inps.date_list)
     seconds = atr.get('CENTER_LINE_UTC', 0)
 
     # use the 1st date as reference if not found, e.g. timeseriesResidual.h5 file
     if "REF_DATE" not in atr.keys() and not inps.ref_date:
-        inps.ref_date = inps.dateList[0]
+        inps.ref_date = inps.date_list[0]
         print('WARNING: No REF_DATE found in time-series file or input in command line.')
-        print('  Set "--ref-date {}" and continue.'.format(inps.dateList[0]))
+        print('  Set "--ref-date {}" and continue.'.format(inps.date_list[0]))
 
-    # get deformation model from parsers
-    model, num_param = read_inps2model(inps)
+    # get deformation model from inputs
+    model = time_func.inps2model(inps, date_list=inps.date_list)
+    num_param = time_func.get_num_param(model)
 
 
     ## output preparation
 
     # time_func_param: attributes
+    date0, date1 = inps.date_list[0], inps.date_list[-1]
     atrV = dict(atr)
     atrV['FILE_TYPE'] = 'velocity'
     atrV['UNIT'] = 'm/year'
-    atrV['START_DATE'] = inps.dateList[0]
-    atrV['END_DATE'] = inps.dateList[-1]
-    atrV['DATE12'] = '{}_{}'.format(inps.dateList[0], inps.dateList[-1])
+    atrV['START_DATE'] = date0
+    atrV['END_DATE'] = date1
+    atrV['DATE12'] = f'{date0}_{date1}'
     if inps.ref_yx:
         atrV['REF_Y'] = inps.ref_yx[0]
         atrV['REF_X'] = inps.ref_yx[1]
@@ -483,13 +374,13 @@ def run_timeseries2time_func(inps):
             if key in atrR.keys():
                 atrR.pop(key)
         # prepare ds_name_dict manually, instead of using ref_file, to support --ex option
-        date_len = len(inps.dateList[0])
+        date_digit = len(inps.date_list[0])
         ds_name_dict = {
-            "date"       : [np.dtype(f'S{date_len}'), (num_date,), np.array(inps.dateList, dtype=np.string_)],
-            "timeseries" : [np.float32,               (num_date, length, width), None]
+            "date" : [np.dtype(f'S{date_digit}'), (num_date,), np.array(inps.date_list, np.string_)],
+            "timeseries" : [np.float32, (num_date, length, width), None]
         }
         writefile.layout_hdf5(inps.res_file, ds_name_dict=ds_name_dict, metadata=atrR)
-    
+
 
     ## estimation
 
@@ -525,7 +416,7 @@ def run_timeseries2time_func(inps):
         # for file w/o reference info. e.g. ERA5.h5
         if inps.ref_date:
             print('referecing to date: {}'.format(inps.ref_date))
-            ref_ind = inps.dateList.index(inps.ref_date)
+            ref_ind = inps.date_list.index(inps.ref_date)
             ts_data -= np.tile(ts_data[ref_ind, :, :], (ts_data.shape[0], 1, 1))
 
         if inps.ref_yx:
@@ -535,7 +426,7 @@ def run_timeseries2time_func(inps):
             ts_data -= np.tile(ref_val.reshape(ts_data.shape[0], 1, 1),
                                (1, ts_data.shape[1], ts_data.shape[2]))
 
-        ts_data = ts_data[inps.dropDate, :, :].reshape(inps.numDate, -1)
+        ts_data = ts_data[inps.dropDate, :, :].reshape(num_date, -1)
         if atrV['UNIT'] == 'mm':
             ts_data *= 1./1000.
 
@@ -545,16 +436,16 @@ def run_timeseries2time_func(inps):
             ts_cov = readfile.read(inps.timeSeriesCovFile, box=box)[0]
             if len(ts_cov.shape) == 4:
                 # full covariance matrix in 4D --> 3D
-                if inps.numDate < ts_cov.shape[0]:
+                if num_date < ts_cov.shape[0]:
                     ts_cov = ts_cov[inps.dropDate, :, :, :]
                     ts_cov = ts_cov[:, inps.dropDate, :, :]
-                ts_cov = ts_cov.reshape(inps.numDate, inps.numDate, -1)
+                ts_cov = ts_cov.reshape(num_date, num_date, -1)
 
             elif len(ts_cov.shape) == 3:
                 # diaginal variance matrix in 3D --> 2D
-                if inps.numDate < ts_cov.shape[0]:
+                if num_date < ts_cov.shape[0]:
                     ts_cov = ts_cov[inps.dropDate, :, :]
-                ts_cov = ts_cov.reshape(inps.numDate, -1)
+                ts_cov = ts_cov.reshape(num_date, -1)
 
             ## set zero value to a fixed small value to avoid divide by zero
             #epsilon = 1e-5
@@ -600,7 +491,7 @@ def run_timeseries2time_func(inps):
             prog_bar = ptime.progressBar(maxValue=inps.bootstrapCount)
             for i in range(inps.bootstrapCount):
                 # bootstrap resampling
-                boot_ind = rng.choice(inps.numDate, size=inps.numDate, replace=True)
+                boot_ind = rng.choice(num_date, size=num_date, replace=True)
                 boot_ind.sort()
 
                 # estimation
@@ -620,14 +511,14 @@ def run_timeseries2time_func(inps):
             del m_boot
 
             # get design matrix to calculate the residual time series
-            G = time_func.get_design_matrix4time_func(inps.dateList, model=model, ref_date=inps.ref_date, seconds=seconds)
+            G = time_func.get_design_matrix4time_func(inps.date_list, model=model, ref_date=inps.ref_date, seconds=seconds)
 
 
         else:
             ## option 2 - least squares with uncertainty propagation
             G, m[:, mask], e2 = time_func.estimate_time_func(
                 model=model,
-                date_list=inps.dateList,
+                date_list=inps.date_list,
                 dis_ts=ts_data,
                 seconds=seconds)
             #del ts_data
@@ -794,7 +685,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None):
         elif period == 0.5:
             dsNames = [f'semiAnnual{x}' for x in dsNameSuffixes]
         else:
-            dsNames = [f'periodY{period}{x}' for x in dsNameSuffixes]
+            dsNames = [f'period{period}Y{x}' for x in dsNameSuffixes]
 
         # calculate the amplitude and phase of the periodic signal
         # following equation (9-10) in Minchew et al. (2017, JGR)
@@ -840,7 +731,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None):
     for exp_onset in model['exp'].keys():
         for exp_tau in model['exp'][exp_onset]:
             # dataset name
-            dsName = 'exp{}Tau{}'.format(exp_onset, exp_tau)
+            dsName = 'exp{}Tau{}D'.format(exp_onset, exp_tau)
 
             # assign ds_dict
             if m is not None:
@@ -862,7 +753,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None):
     for log_onset in model['log'].keys():
         for log_tau in model['log'][log_onset]:
             # dataset name
-            dsName = 'log{}Tau{}'.format(log_onset, log_tau)
+            dsName = 'log{}Tau{}D'.format(log_onset, log_tau)
 
             # assign ds_dict
             if m is not None:
@@ -886,19 +777,17 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
     start_time = time.time()
 
-    inps = read_date_info(inps)
-
     # --update option
     if inps.update_mode and run_or_skip(inps) == 'skip':
         return inps.outfile
 
+    # run
     run_timeseries2time_func(inps)
 
     # time info
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
-
-    return inps.outfile
+    return
 
 
 ############################################################################

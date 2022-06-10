@@ -169,7 +169,7 @@ def read_template2inps(template_file, inps=None):
         inps = cmd_line_parse()
     inpsDict = vars(inps)
     print('read options from template file: '+os.path.basename(template_file))
-    template = readfile.read_template(inps.template_file)
+    template = readfile.read_template(inps.template_file, skip_chars=['[', ']'])
     template = ut.check_template_auto_value(template)
 
     # Update inps if key existed in template file
@@ -187,12 +187,12 @@ def read_template2inps(template_file, inps=None):
             elif key in ['maskFile', 'referenceFile']:
                 inpsDict[key] = value
             elif key == 'aoiYX':
-                tmp = [i.replace('[','').replace(']','').strip() for i in value.split(',')]
+                tmp = [i.strip() for i in value.split(',')]
                 sub_y = sorted([int(i.strip()) for i in tmp[0].split(':')])
                 sub_x = sorted([int(i.strip()) for i in tmp[1].split(':')])
                 inps.aoi_pix_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
             elif key == 'aoiLALO':
-                tmp = [i.replace('[','').replace(']','').strip() for i in value.split(',')]
+                tmp = [i.strip() for i in value.split(',')]
                 sub_lat = sorted([float(i.strip()) for i in tmp[0].split(':')])
                 sub_lon = sorted([float(i.strip()) for i in tmp[1].split(':')])
                 inps.aoi_geo_box = (sub_lon[0], sub_lat[1], sub_lon[1], sub_lat[0])
@@ -204,11 +204,9 @@ def read_template2inps(template_file, inps=None):
             elif key in ['startDate', 'endDate']:
                 inpsDict[key] = ptime.yyyymmdd(value)
             elif key == 'excludeDate':
-                value = value.replace('[','').replace(']','').replace(',', ' ')
-                inpsDict[key] = ptime.yyyymmdd(value.split())
+                inpsDict[key] = ptime.yyyymmdd(value.split(','))
             elif key == 'excludeIfgIndex':
-                value = value.replace('[','').replace(']','').replace(',', ' ')
-                inpsDict[key] += value.split()
+                inpsDict[key] += value.split(',')
                 inpsDict[key] = read_input_index_list(inpsDict[key], stackFile=inps.file)
 
     # Turn reset on if 1) no input options found to drop ifgram AND 2) there is template input

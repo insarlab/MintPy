@@ -177,7 +177,7 @@ def read_template2inps(template_file, inps):
     if not inps:
         inps = cmd_line_parse()
     inps_dict = vars(inps)
-    template = readfile.read_template(template_file)
+    template = readfile.read_template(template_file, skip_chars=['[', ']'])
     template = ut.check_template_auto_value(template)
 
     prefix = 'mintpy.geocode.'
@@ -186,8 +186,7 @@ def read_template2inps(template_file, inps):
         value = template[prefix + key]
         if value:
             if key in ['SNWE', 'laloStep']:
-                value = value.replace('[','').replace(']','').replace(',',' ')
-                inps_dict[key] = [float(i) for i in value.split()]
+                inps_dict[key] = [float(i) for i in value.split(',')]
             elif key in ['interpMethod']:
                 inps_dict[key] = value
             elif key == 'fillValue':
