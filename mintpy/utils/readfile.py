@@ -752,7 +752,7 @@ def get_slice_list(fname, no_complex=False):
             # isce los file
             slice_list = ['incidenceAngle', 'azimuthAngle']
 
-        elif fext in ['.unw']:
+        elif fext in ['.unw', '.ion']:
             slice_list = ['magnitude', 'phase']
 
         elif fext in ['.int', '.slc']:
