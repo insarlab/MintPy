@@ -79,6 +79,11 @@ class ifgramStackDict:
         self.date12List = ['{}_{}'.format(i[0], i[1]) for i in pairs]
         return self.date12List
 
+    def get_dataset_list(self):
+        ifgramObj = [x for x in self.pairsDict.values()][0]
+        dsetList = [x for x in ifgramObj.datasetDict.keys()]
+        return dsetList
+
     def get_metadata(self):
         ifgramObj = [v for v in self.pairsDict.values()][0]
         self.metadata = ifgramObj.get_metadata(family=self.dsName0)

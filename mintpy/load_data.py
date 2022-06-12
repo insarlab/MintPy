@@ -642,13 +642,14 @@ def read_inps_dict2geometry_dict_object(iDict):
     return geomRadarObj, geomGeoObj
 
 
+#################################################################
 def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1):
     """Check if re-writing is necessary.
 
-    Do not write h5 file if all the following meet:
-        1) h5 exists and readable,
-        2) it contains all date12   for ifgramStackDict
-                       all datasets for geometryDict
+    Do not write HDF5 file if ALL the following meet:
+        1. HDF5 file exists and is readable,
+        2. HDF5 file constains all the datasets and in the same size
+        3. For ifgramStackDict, HDF5 file contains all date12.
 
     Parameters: outFile    - str, path to the output HDF5 file
                 inObj      - ifgramStackDict or geometryDict, object to write
@@ -662,13 +663,18 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1):
     if updateMode and ut.run_or_skip(outFile, check_readable=True) == 'skip':
         if inObj.name == 'ifgramStack':
             in_size = inObj.get_size(box=box, xstep=xstep, ystep=ystep)[1:]
+            in_dset_list = inObj.get_dataset_list()
             in_date12_list = inObj.get_date12_list()
 
             outObj = ifgramStack(outFile)
-            out_size = outObj.get_size()[1:]
-            out_date12_list = outObj.get_date12_list(dropIfgram=False)
+            outObj.open(print_msg=False)
+            out_size = [outObj.length, outObj.width]
+            out_dset_list = outObj.datasetNames
+            out_date12_list = outObj.date12List
 
-            if out_size == in_size and set(in_date12_list).issubset(set(out_date12_list)):
+            if (out_size == in_size
+                    and set(in_dset_list).issubset(set(out_dset_list))
+                    and set(in_date12_list).issubset(set(out_date12_list))):
                 print(('All date12   exists in file {} with same size as required,'
                        ' no need to re-load.'.format(os.path.basename(outFile))))
                 flag = 'skip'
@@ -679,10 +685,11 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1):
 
             outObj = geometry(outFile)
             outObj.open(print_msg=False)
-            out_size = outObj.get_size()
+            out_size = [outObj.length, outObj.width]
             out_dset_list = outObj.datasetNames
 
-            if out_size == in_size and set(in_dset_list).issubset(set(out_dset_list)):
+            if (out_size == in_size
+                    and set(in_dset_list).issubset(set(out_dset_list))):
                 print(('All datasets exists in file {} with same size as required,'
                        ' no need to re-load.'.format(os.path.basename(outFile))))
                 flag = 'skip'
@@ -910,11 +917,13 @@ def main(iargs=None):
 
     # read input options
     iDict = read_inps2dict(inps)
-    iDict = read_subset_box(iDict)
 
     # prepare metadata
     prepare_metadata(iDict)
     extraDict = get_extra_metadata(iDict)
+
+    # prepare for subset [need the metadata from above]
+    iDict = read_subset_box(iDict)
 
     # skip data writing for aria as it is included in prep_aria
     if iDict['processor'] == 'aria':

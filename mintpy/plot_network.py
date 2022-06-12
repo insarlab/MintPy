@@ -182,9 +182,10 @@ def read_network_info(inps):
             inps.cohList = stack_obj.tbaseIfgram.tolist()
 
         else:
-            inps.cohList = [0.7] * stack_obj.get_size()[0]
-            print(f'{inps.dsetName} NOT found in file: {inps.file}! Fill 0.7 as dummy!')
-            #raise ValueError(f'{inps.dsetName} NOT found in file: {inps.file}!')
+            inps.cohList = None
+            msg = f'{inps.dsetName} NOT found in file: {inps.file}! '
+            msg += 'Disable the color coding and continue'
+            print(msg)
 
     elif ext == '.txt':
         inps.date12List = np.loadtxt(inps.file, dtype=bytes).astype(str)[:,0].tolist()
@@ -267,22 +268,26 @@ def main(iargs=None):
 
     # Plot settings
     inps = check_colormap(inps)
+    ext = '.pdf'
     if os.path.basename(inps.file).startswith('ion'):
-        ext = '_ion.pdf'
-    else:
-        ext = '.pdf'
+        ext = f'_ion{ext}'
+    kwargs = dict(bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+
     if inps.dsetName == 'coherence':
         fig_names = [i+ext for i in ['pbaseHistory', 'coherenceHistory', 'coherenceMatrix', 'network']]
         inps.ds_name = 'Coherence'
         inps.cbar_label = 'Average Spatial Coherence'
+
     elif inps.dsetName == 'offsetSNR':
         fig_names = [i+ext for i in ['pbaseHistory', 'SNRHistory', 'SNRMatrix', 'network']]
         inps.ds_name = 'SNR'
         inps.cbar_label = 'Average Spatial SNR'
+
     elif inps.dsetName == 'tbase':
         fig_names = [i+ext for i in ['pbaseHistory', 'tbaseHistory', 'tbaseMatrix', 'network']]
         inps.ds_name = 'Temporal Baseline'
         inps.cbar_label = 'Temporal Baseline [day]'
+
     elif inps.dsetName == 'pbase':
         fig_names = [i+ext for i in ['pbaseHistory', 'pbaseRangeHistory', 'pbaseMatrix', 'network']]
         inps.ds_name = 'Perp Baseline'
@@ -296,7 +301,7 @@ def main(iargs=None):
                                     vars(inps),
                                     inps.dateList_drop)
     if inps.save_fig:
-        fig.savefig(fig_names[0], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+        fig.savefig(fig_names[0], **kwargs)
         print('save figure to {}'.format(fig_names[0]))
 
     if inps.cohList is not None:
@@ -307,7 +312,7 @@ def main(iargs=None):
                                        inps.cohList,
                                        p_dict=vars(inps))
         if inps.save_fig:
-            fig.savefig(fig_names[1], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+            fig.savefig(fig_names[1], **kwargs)
             print('save figure to {}'.format(fig_names[2]))
 
         # Fig 3 - Coherence Matrix
@@ -318,7 +323,7 @@ def main(iargs=None):
                                       inps.date12List_drop,
                                       p_dict=vars(inps))[0]
         if inps.save_fig:
-            fig.savefig(fig_names[2], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+            fig.savefig(fig_names[2], **kwargs)
             print('save figure to {}'.format(fig_names[1]))
 
     # Fig 4 - Interferogram Network
@@ -330,7 +335,7 @@ def main(iargs=None):
                          vars(inps),
                          inps.date12List_drop)
     if inps.save_fig:
-        fig.savefig(fig_names[3], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+        fig.savefig(fig_names[3], **kwargs)
         print('save figure to {}'.format(fig_names[3]))
 
     if inps.disp_fig:
