@@ -26,11 +26,11 @@ EXAMPLE = """example:
   prep_isce.py -d "pairs/*-*/insar" -m "pairs/*-*/150408.track.xml" -b baseline -g dates_resampled/150408/insar  #for alosStack w/ 150408 as ref date
 
   # ionosphere stack
-  prep_isce.py -d ./ion -f ion_cal/filt.ion -m ./reference/IW1.xml -b ./baselines -g ./merged/geom_reference      #for topsStack ionospheric files
+  prep_isce.py -d ./ion -f ion_cal/filt.ion -m ./reference/IW1.xml -b ./baselines -g ./merged/geom_reference     #for topsStack ionospheric files
 
   # offset stack
-  prep_isce.py -d ./offsets -f *Off*.bip -m ./../reference/IW1.xml -b ./../baselines -g ./offsets/geom_reference  #for topsStack
-  prep_isce.py -d ./offsets -f *Off*.bip -m ./SLC/*/data.dat       -b random         -g ./geometry                #for UAVSAR coregStack
+  prep_isce.py -d ./offsets -f *Off*.bip -m ./../reference/IW1.xml -b ./../baselines -g ./offsets/geom_reference #for topsStack
+  prep_isce.py -d ./offsets -f *Off*.bip -m ./SLC/*/data.dat       -b random         -g ./geometry               #for UAVSAR coregStack
 """
 
 def create_parser():
