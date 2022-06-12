@@ -240,7 +240,7 @@ class ifgramStackDict:
 class ifgramDict:
     """
     Ifgram object for a single InSAR pair of interferogram. It includes dataset name (family) of:
-        'unwrapPhase','coherence','connectComponent','wrapPhase','ionoPhase','rangeOffset','azimuthOffset', etc.
+        'unwrapPhase','coherence','connectComponent','wrapPhase','rangeOffset','azimuthOffset', etc.
 
     Example:
         from mintpy.objects.insarobj import ifgramDict
@@ -248,7 +248,6 @@ class ifgramDict:
                        'coherence'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.cor',
                        'connectComponent':'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.unw.conncomp',
                        'wrapPhase'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.int',
-                       'ionoPhase'       :'$PROJECT_DIR/merged/ionosphere/20151220_20160206/iono.bil.unwCor.filt',
                        'magnitude'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.unw',
                        ...
                       }
