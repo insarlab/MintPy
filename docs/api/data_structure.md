@@ -75,7 +75,6 @@ Attributes         Dictionary for metadata
 /unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
 /coherence         3D array of float32 in size of (m, l, w).
 /connectComponent  3D array of int16   in size of (m, l, w).
-/ionoPhase         3D array of float32 in size of (m, l, w) in radian.
 /wrapPhase         3D array of float32 in size of (m, l, w) in radian.
 /azimuthOffset     3D array of float32 in size of (m, l, w) in pixel number.
 /azimuthOffsetStd  3D array of float32 in size of (m, l, w) in pixel number.

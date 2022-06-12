@@ -57,6 +57,7 @@ geometryDatasetNames = [
 ]
 
 ifgramDatasetNames = [
+    # interferogram
     'unwrapPhase',
     'unwrapPhase_bridging_phaseClosure',
     'unwrapPhase_bridging',
@@ -64,8 +65,8 @@ ifgramDatasetNames = [
     'coherence',
     'connectComponent',
     'wrapPhase',
-    'ionoPhase',
     'magnitude',
+    # offset
     'azimuthOffset',
     'azimuthOffsetStd',
     'rangeOffset',
@@ -80,7 +81,6 @@ datasetUnitDict = {
     'coherence'        : '1',
     'connectComponent' : '1',
     'wrapPhase'        : 'radian',
-    'ionoPhase'        : 'radian',
     'magnitude'        : '1',
 
     # offset

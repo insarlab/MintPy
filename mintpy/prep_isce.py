@@ -20,14 +20,17 @@ GEOMETRY_PREFIXS = ['hgt', 'lat', 'lon', 'los', 'shadowMask', 'waterMask', 'incL
 
 EXAMPLE = """example:
   # interferogram stack
-  prep_isce.py -d ./merged/interferograms -m ./reference/IW1.xml -b ./baselines -g ./merged/geom_reference      #for topsStack
-  prep_isce.py -d ./Igrams -m ./referenceShelve/data.dat -b ./baselines -g ./geom_reference                     #for stripmapStack
-  prep_isce.py -m 20120507_slc_crop.xml -g ./geometry                                                           #for stripmapApp
-  prep_isce.py -d "pairs/*-*/insar" -m "pairs/*-*/150408.track.xml" -b baseline -g dates_resampled/150408/insar #for alosStack with 150408 as ref date
+  prep_isce.py -d ./merged/interferograms -m ./reference/IW1.xml -b ./baselines -g ./merged/geom_reference       #for topsStack
+  prep_isce.py -d ./Igrams -m ./referenceShelve/data.dat -b ./baselines -g ./geom_reference                      #for stripmapStack
+  prep_isce.py -m 20120507_slc_crop.xml -g ./geometry                                                            #for stripmapApp
+  prep_isce.py -d "pairs/*-*/insar" -m "pairs/*-*/150408.track.xml" -b baseline -g dates_resampled/150408/insar  #for alosStack w/ 150408 as ref date
+
+  # ionosphere stack
+  prep_isce.py -d ./ion -f ion_cal/filt.ion -m ./reference/IW1.xml -b ./baselines -g ./merged/geom_reference     #for topsStack ionospheric files
 
   # offset stack
-  prep_isce.py -d ./offsets -f *Off*.bip -m ./../reference/IW1.xml -b ./../baselines -g ./offsets/geom_reference  #for topsStack
-  prep_isce.py -d ./offsets -f *Off*.bip -m ./SLC/*/data.dat       -b random         -g ./geometry                #for UAVSAR coregStack
+  prep_isce.py -d ./offsets -f *Off*.bip -m ./../reference/IW1.xml -b ./../baselines -g ./offsets/geom_reference #for topsStack
+  prep_isce.py -d ./offsets -f *Off*.bip -m ./SLC/*/data.dat       -b random         -g ./geometry               #for UAVSAR coregStack
 """
 
 def create_parser():
@@ -202,13 +205,8 @@ def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), 
     prog_bar = ptime.progressBar(maxValue=num_file)
     for i, isce_file in enumerate(isce_files):
         # get date1/2
-        if processor in ['tops', 'stripmap']:
-            dates = os.path.basename(os.path.dirname(isce_file)).split('_')  # to modify to YYYYMMDDTHHMMSS
-        elif processor == 'alosStack':
-            dates = os.path.basename(os.path.dirname(os.path.dirname(isce_file))).split('-')  # to modify to YYYYMMDDTHHMMSS
-            dates = ptime.yyyymmdd(dates)
-        else:
-            raise ValueError('Un-recognized ISCE stack processor: {}'.format(processor))
+        date12 = ptime.get_date12_from_path(isce_file)
+        dates = ptime.yyyymmdd(date12.replace('-','_').split('_'))
         prog_bar.update(i+1, suffix='{}_{}'.format(dates[0], dates[1]))
 
         # merge metadata from: data.rsc, *.unw.xml and DATE12/P_BASELINE_TOP/BOTTOM_HDR

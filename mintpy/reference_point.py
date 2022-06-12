@@ -23,7 +23,7 @@ TEMPLATE = get_template_content('reference_point')
 NOTE = """note: Reference value cannot be nan, thus, all selected reference point must be:
   a. non zero in mask, if mask is given
   b. non nan  in data (stack)
-  
+
   Priority:
       input reference_lat/lon
       input reference_y/x
@@ -180,8 +180,8 @@ def reference_file(inps):
     atr = readfile.read_attribute(inps.file)
 
     # update_mode
-    if (not inps.force 
-            and inps.ref_y is not None and inps.ref_y == int(atr.get('REF_Y', -999)) 
+    if (not inps.force
+            and inps.ref_y is not None and inps.ref_y == int(atr.get('REF_Y', -999))
             and inps.ref_x is not None and inps.ref_x == int(atr.get('REF_X', -999))):
         print('SAME reference pixel is already selected/saved in file, skip updating.')
         return inps.file
@@ -464,9 +464,9 @@ def read_reference_input(inps):
         print('no input reference y/x.')
         if not inps.method:
             # Use existing REF_Y/X if 1) no ref_y/x input and 2) no method input and 3) ref_yx is in coverage
-            if (not inps.force 
+            if (not inps.force
                     and 'REF_X' in atr.keys()
-                    and 0 <= float(atr['REF_Y']) <= length 
+                    and 0 <= float(atr['REF_Y']) <= length
                     and 0 <= float(atr['REF_X']) <= width):
                 print('REF_Y/X exists in input file, skip updating.')
                 print('REF_Y: '+atr['REF_Y'])

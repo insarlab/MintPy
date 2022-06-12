@@ -79,6 +79,11 @@ class ifgramStackDict:
         self.date12List = ['{}_{}'.format(i[0], i[1]) for i in pairs]
         return self.date12List
 
+    def get_dataset_list(self):
+        ifgramObj = [x for x in self.pairsDict.values()][0]
+        dsetList = [x for x in ifgramObj.datasetDict.keys()]
+        return dsetList
+
     def get_metadata(self):
         ifgramObj = [v for v in self.pairsDict.values()][0]
         self.metadata = ifgramObj.get_metadata(family=self.dsName0)
@@ -240,7 +245,7 @@ class ifgramStackDict:
 class ifgramDict:
     """
     Ifgram object for a single InSAR pair of interferogram. It includes dataset name (family) of:
-        'unwrapPhase','coherence','connectComponent','wrapPhase','ionoPhase','rangeOffset','azimuthOffset', etc.
+        'unwrapPhase','coherence','connectComponent','wrapPhase','rangeOffset','azimuthOffset', etc.
 
     Example:
         from mintpy.objects.insarobj import ifgramDict
@@ -248,7 +253,6 @@ class ifgramDict:
                        'coherence'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.cor',
                        'connectComponent':'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.unw.conncomp',
                        'wrapPhase'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.int',
-                       'ionoPhase'       :'$PROJECT_DIR/merged/ionosphere/20151220_20160206/iono.bil.unwCor.filt',
                        'magnitude'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.unw',
                        ...
                       }
@@ -792,8 +796,8 @@ class platformTrack:
         for pair in pairs:
             length.append(self.pairs[pair].length)
             width.append(self.pairs[pair].width)
-        self.length = median(length)
-        self.width = median(width)
+        self.length = np.median(length)
+        self.width = np.median(width)
 
     def getDatasetNames(self):
         # extract the name of the datasets which are actually the keys of

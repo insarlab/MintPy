@@ -187,16 +187,16 @@ def cmd_line_parse(iargs=None):
     # --output option
     if not inps.outfile:
         if inps.obsDatasetName.startswith('unwrapPhase'):
-            inps.outfile = ['timeseries.h5', 'temporalCoherence.h5', 'numInvIfgram.h5']
+            if os.path.basename(inps.ifgramStackFile).startswith('ion'):
+                inps.outfile = ['timeseriesIon.h5', 'temporalCoherenceIon.h5', 'numInvIon.h5']
+            else:
+                inps.outfile = ['timeseries.h5', 'temporalCoherence.h5', 'numInvIfgram.h5']
 
         elif inps.obsDatasetName.startswith('azimuthOffset'):
             inps.outfile = ['timeseriesAz.h5', 'residualInvAz.h5', 'numInvOffAz.h5']
 
         elif inps.obsDatasetName.startswith('rangeOffset'):
             inps.outfile = ['timeseriesRg.h5', 'residualInvRg.h5', 'numInvOffRg.h5']
-
-        elif inps.obsDatasetName.startswith('ion'):
-            inps.outfile = ['timeseriesIon.h5', 'temporalCoherenceIon.h5', 'numInvIon.h5']
 
         else:
             raise ValueError('un-recognized input observation dataset name: {}'.format(inps.obsDatasetName))
