@@ -188,9 +188,7 @@ def cmd_line_parse(iargs=None):
     if not inps.outfile:
         if inps.obsDatasetName.startswith('unwrapPhase'):
             if os.path.basename(inps.ifgramStackFile).startswith('ion'):
-                inps.outfile = ['ion.h5', 'temporalCoherence_ion.h5', 'numInv_ion.h5']
-                for i in range(len(inps.outfile)):
-                    inps.outfile[i] = os.path.join(os.path.dirname(inps.ifgramStackFile), inps.outfile[i])
+                inps.outfile = ['timeseriesIon.h5', 'temporalCoherenceIon.h5', 'numInvIon.h5']
             else:
                 inps.outfile = ['timeseries.h5', 'temporalCoherence.h5', 'numInvIfgram.h5']
 
