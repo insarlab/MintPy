@@ -14,6 +14,7 @@ import numpy as np
 from mintpy.objects.progress import progressBar
 
 
+
 ################################################################
 def get_compact_isoformat(date_str):
     """Get the "compact-looking" isoformat of the input datetime string.
@@ -56,7 +57,7 @@ def get_date_str_format(date_str):
     elif len(re.findall('\d{4}-\d{2}-\d{2}T\d{2}', date_str)) > 0:
         date_str_format = '%Y-%m-%dT%H'
 
-    elif len(re.findall('\d{4}-\d{2}-\d{2}T', date_str)) > 0:
+    elif len(re.findall('\d{4}-\d{2}-\d{2}', date_str)) > 0:
         date_str_format = '%Y-%m-%d'
 
     elif len(re.findall('\d{8}T\d{6}', date_str)) > 0:
@@ -78,6 +79,39 @@ def get_date_str_format(date_str):
         raise ValueError('un-recognized date string format for "{}"!'.format(date_str))
 
     return date_str_format
+
+
+def get_date12_from_path(file_path):
+    """Get date12 str from a given file path.
+
+    Parameters: file_path  - str, path to a file that contains date1/2 info
+    Returns:    date12_str - str, date12 in (YY)YYMMDD(THHMM)[-_](YY)YYMMDD(THHMM) format
+    """
+
+    # support date string format
+    date12_fmts = [
+        '\d{8}T\d{4}[-_]\d{8}T\d{4}',   # %Y%m%dT%H%M
+        '\d{8}[-_]\d{8}',               # %Y%m%d
+        '\d{6}[-_]\d{6}',               # %y%m%d
+    ]
+
+    # search date12 pattern part by part in the file path
+    date12_str = None
+    parts = file_path.split(os.sep)[::-1]
+    for part in parts:
+        for date12_fmt in date12_fmts:
+            if len(re.findall(date12_fmt, part)) > 0:
+                date12_str = re.findall(date12_fmt, part)[0]
+                break
+
+        # exit remaining parts searching
+        if date12_str:
+            break
+
+    if not date12_str:
+        raise ValueError(f'NO date12 str found in path: {file_path}!')
+
+    return date12_str
 
 
 def round_seconds(datetime_obj):
@@ -340,7 +374,6 @@ def read_date_list(date_list_in, date_list_all=None):
     return date_list_out
 
 
-################################################################
 def date_list2tbase(date_list):
     """Get temporal Baseline in days with respect to the 1st date
     Parameters: date_list - list of string, date in YYYYMMDD or YYMMDD format
@@ -367,7 +400,6 @@ def date_list2tbase(date_list):
     return tbase, dateDict
 
 
-################################################################
 def date_list2vector(date_list):
     """Get time in datetime format: datetime.datetime(2006, 5, 26, 0, 0)
     Parameters: date_list  - list of string, date in YYYYMMDD or YYMMDD format
