@@ -239,15 +239,14 @@ def read_inps2dict(inps):
 
     # copy dset_name2template_key info into iDict
     if inps.only_load_ionosphere:
-        dset_name2template_key = ION_DSET_NAME2TEMPLATE_KEY
+        iDict['dset_name2template_key'] = {
+            **ION_DSET_NAME2TEMPLATE_KEY,
+            **GEOMETRY_DSET_NAME2TEMPLATE_KEY}
     else:
-        dset_name2template_key = IFGRAM_DSET_NAME2TEMPLATE_KEY
-    dset_name2template_key = {
-        **dset_name2template_key,
-        **OFFSET_DSET_NAME2TEMPLATE_KEY,
-        **GEOMETRY_DSET_NAME2TEMPLATE_KEY,
-    }
-    iDict['dset_name2template_key'] = dset_name2template_key
+        iDict['dset_name2template_key'] = {
+            **IFGRAM_DSET_NAME2TEMPLATE_KEY,
+            **OFFSET_DSET_NAME2TEMPLATE_KEY,
+            **GEOMETRY_DSET_NAME2TEMPLATE_KEY}
 
     return iDict
 
@@ -746,10 +745,9 @@ def prepare_metadata(iDict):
         geom_dir = os.path.dirname(iDict['mintpy.load.demFile'])
 
         # --dset-dir / --file-pattern
-        obs_keys = ['mintpy.load.unwFile', 'mintpy.load.rgOffFile', 'mintpy.load.azOffFile']
-        if iDict['only_load_ionosphere']:
-            obs_keys = ['mintpy.load.ionUnwFile']
-        obs_keys = [i for i in obs_keys if i in iDict.keys()]
+        obs_keys = ['mintpy.load.unwFile', 'mintpy.load.ionUnwFile',
+                    'mintpy.load.rgOffFile', 'mintpy.load.azOffFile']
+        obs_keys = [i for i in obs_keys if i in iDict['dset_name2template_key'].values()]
         obs_paths = [iDict[key] for key in obs_keys if iDict[key].lower() != 'auto']
         if len(obs_paths) > 0:
 
