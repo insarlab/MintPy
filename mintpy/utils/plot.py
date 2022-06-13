@@ -183,6 +183,9 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
                 fig_title += '_unwCor'
         else:
             fig_title = datasetNames[0].split('-')[0]
+            # for ionStack.h5 file
+            if fbase.lower().startswith('ion'):
+                fig_title += '_ion'
 
     elif k in timeseriesKeyNames and len(datasetNames) == 1:
         if 'ref_date' in inps_dict.keys():
