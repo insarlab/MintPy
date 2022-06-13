@@ -5,12 +5,13 @@
 # Author: Yuan-Kai Liu, May 2022                           #
 ############################################################
 
-# Citation:
+# 1. Citation:
 # Oliver L. Stephenson, Yuan-Kai Liu, Zhang Yunjun, Mark Simons, and Paul Rosen. (2022)
-# The Impact of Plate Motions on Long-Wavelength InSAR-Derived Velocity Fields. Manuscript in preparation.
+# The Impact of Plate Motions on Long-Wavelength InSAR-Derived Velocity Fields. Manuscript submitted to Geophysical Research Letters.
+# preprint available: 10.1002/essoar.10511538.1
 
-# Extra dependency:
-#   + platemotion (https://github.com/lcx366/PlateTectonic)
+# 2. Extra dependency:
+#   + platemotion: https://github.com/lcx366/PlateTectonic
 #   + astropy
 #   How to install both:
 #      option (1) pip install platemotion
@@ -18,7 +19,7 @@
 #                 echo 'export PYTHONPATH=$PYTHONPATH:$TOOL_DIR/PlateTectonic' >> ~/.bashrc
 #                 somehow install other dependencies in setup.py using your conda
 
-# To-Do List (updated 2022.5.30 Yuan-Kai Liu):
+# 3. To-Do List (updated 2022.5.30 Yuan-Kai Liu):
 #   + Replace scipy.interpolate with alternatives for efficiency. E.g.:
 #       skimage.resize https://scikit-image.org/docs/stable/auto_examples/transform/plot_rescale.html
 #       check mintpy usage https://github.com/insarlab/MintPy/blob/7adb3a11f875b832488a0c8e44c174d98b1df254/mintpy/tropo_gacos.py#L129
@@ -52,34 +53,49 @@ except ImportError:
 
 #########################################  Usage  ##############################################
 REFERENCE = """reference:
-  Stephenson, O. L., Liu, Y. K., Yunjun, Z., Simons, M., and Rosen, P., (2022), The Impact of Plate
-    Motions on Long-Wavelength InSAR-Derived Velocity Fields. [in preparation]
+  Stephenson, O. L., Liu, Y. K., Yunjun, Z., Simons, M., and Rosen, P., (2022),
+  The Impact of Plate Motions on Long-Wavelength InSAR-Derived Velocity Fields, submitted to GRL.
+    preprint: https://www.essoar.org/action/showAuthorDashboard?state=submitted
 """
 EXAMPLE = """example:
-  bulk_plate_motion.py -g inputs/geometryGeo.h5                --om_sph  59.32 234.04 0.216   -m None
-  bulk_plate_motion.py -g inputs/geometryGeo.h5 -v velocity.h5 --om_sph  54.45 259.66 0.255   -m waterMask.h5
-  bulk_plate_motion.py -g inputs/geometryGeo.h5 -v velocity.h5 --om_cart 1.154 -0.136 1.444   -m maskTempCoh.h5
+  bulk_plate_motion.py -g inputs/geometryGeo.h5                --om_sph  50.6  -74.0   0.30   -m None
+  \testimating for NNR-NUVEL1A PMM of the Africa plate\n\t(Table 2 of Argus & Gordon, GRL 1991; doi: 10.1029/91GL01532)\n
+  bulk_plate_motion.py -g inputs/geometryGeo.h5 -v velocity.h5 --om_sph  48.85 -106.50 0.223  -m waterMask.h5
+  \testimating/correcting for NNR-MORVEL56 PMM of the Eurasia plate\n\t(Table 1 of Argus, Gordon, and DeMets, GGG 2011; doi: 10.1029/2011GC003751)\n
+  bulk_plate_motion.py -g inputs/geometryGeo.h5 -v velocity.h5 --om_cart 1.154 -0.136  1.444  -m maskTempCoh.h5
+  \testimating/correcting for NNR-ITRF14 PMM of the Arabia plate\n\t(Table 1 of Altamimi et al., GJI 2017; doi: 10.1093/gji/ggx136)\n
   bulk_plate_motion.py -g inputs/geometryGeo.h5 -v velocity.h5 --enu     25.0 30.5 0.0        -m zero
+  \testimating/correcting for a simple constant local ENU translating field based on one GNSS vector
+  \t(e.g., https://www.unavco.org/software/visualization/GPS-Velocity-Viewer/GPS-Velocity-Viewer.html)
+  \tyou can: 1. select `GNSS Data source` as `World, IGS08/NNR, GEM GSRM` (referenced to ITRF2008, NNR PMM)
+  \t         2. check box `Station labels and data download` and click `Draw Map`
+  \t         3. Navigate to the region of interest and click on a representative station.
+  \t            You get the `Speed components` in mm/yr.
 """
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Bulk plate motion (shift and rotation) correction',
+    parser = argparse.ArgumentParser(description='Bulk plate motion correction. Removing the effect of bulk traslation and rotation in velocity field based on a given plate motion model (PMM).'+
+                                                 ' Sentinel-1 orbit is measured with respect to ITRF2014 (page 25 of Peter, 2021: https://sentinel.esa.int/documents/247904/4599719/Copernicus-POD-Product-Handbook.pdf),'
+                                                 ' an Earth-centered, Earth-fixed reference frame in which there is no net rotation (NNR) of the Earth surface.',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=REFERENCE+'\n'+EXAMPLE)
     # input files
     parser.add_argument('-g', '--geom', dest='geomfile', type=str, required=True,
-                        help = 'Input geometry file, e.g., geometryGeo.h5')
+                        help = 'Input geometry file (required), e.g., geometryGeo.h5')
     parser.add_argument('-v', '--velo', dest='vfile', type=str, default=None,
-                        help='Input velocity file, e.g., velocity.h5 (default: %(default)s).')
+                        help='Input velocity file (optional), e.g., velocity.h5 (default: %(default)s).')
 
-    # plate motion configurations
-    parser.add_argument('--enu', dest='venu', type=float, nargs=3, metavar=('VE', 'VN', 'VU'), default=None,
-                        help = 'Constant bulk translation of ground [ve, vn, vu] unit: meter/year (default: %(default)s).')
-    parser.add_argument('--om_cart', dest='omega_cart', type=float, nargs=3, metavar=('WX', 'WY', 'WZ'), default=None,
+    # plate motion configurations (use ONE AND ONLY ONE of the below; --om_sph overwrites --om_cart overwrites --enu)
+    pmms = parser.add_argument_group('pmms', 'Plate motion models (required); Use ONE AND ONLY ONE of the below; '+
+                                     '\nIf more than one are given, --om_sph overwrites --om_cart overwrites --enu')
+    pmms.add_argument('--enu', dest='venu', type=float, nargs=3, metavar=('VE', 'VN', 'VU'), default=None,
+                        help = 'Simple constant local ENU translation of ground [ve, vn, vu] unit: meter/year (default: %(default)s).')
+    pmms.add_argument('--om_cart', dest='omega_cart', type=float, nargs=3, metavar=('WX', 'WY', 'WZ'), default=None,
                         help = 'Cartesian form of Euler Pole rotation; [wx, wy, wz] (unit: mas/yr) (default: %(default)s).')
-    parser.add_argument('--om_sph', dest='omega_sph', type=float, nargs=3, metavar=('LAT', 'LON', 'W'), default=None,
+    pmms.add_argument('--om_sph', dest='omega_sph', type=float, nargs=3, metavar=('LAT', 'LON', 'W'), default=None,
                         help = 'Spherical form of Euler Pole rotation; [lat, lon, w] (unit: deg, deg, deg/Ma) (default: %(default)s).')
 
+    # others
     parser.add_argument('-m', '--mask', dest='mask', type=str, default=None,
                         help = 'Mask file to apply to the inout and predicted velocity fields. \n' +
                                 '   zero: masking 0.0 values of the input velocity \n' +
@@ -105,6 +121,10 @@ def get_filenames(geomfile, vfile):
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+    if (inps.venu is None) and (inps.omega_cart is None) and (inps.omega_sph is None):
+        print('Error: Please specify either the Plate Rotation or a Single Translation Vector; See -h option')
+        print('Need to give at least ONE of [--enu, --om_cart, --om_sph]')
+        sys.exit(1)
     inps.BPM3d, inps.BPMlos, inps.vout = get_filenames(inps.geomfile, inps.vfile)
     return inps
 
@@ -298,6 +318,7 @@ def estimate_bulkMotion(geomfile, vfile, venu=None, omega_cart=None, omega_sph=N
 
     else:
         print('Error: Please specify either the Plate Rotation or a Single Translation Vector; See -h option')
+        print('Need to give at least ONE of [--enu, --om_cart, --om_sph]')
         sys.exit(1)
 
     # Project model to LOS velocity
