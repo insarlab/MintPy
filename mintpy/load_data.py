@@ -668,7 +668,7 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1):
 
             outObj = ifgramStack(outFile)
             outObj.open(print_msg=False)
-            out_size = [outObj.length, outObj.width]
+            out_size = (outObj.length, outObj.width)
             out_dset_list = outObj.datasetNames
             out_date12_list = outObj.date12List
 
@@ -685,7 +685,7 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1):
 
             outObj = geometry(outFile)
             outObj.open(print_msg=False)
-            out_size = [outObj.length, outObj.width]
+            out_size = (outObj.length, outObj.width)
             out_dset_list = outObj.datasetNames
 
             if (out_size == in_size

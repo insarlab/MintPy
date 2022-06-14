@@ -338,11 +338,13 @@ class DaskCluster:
     def close(self):
         """Close connections to dask client and cluster and moves dask output/error files. """
 
-        self.cluster.close()
-        print('close dask cluster')
-
+        # close client before cluster -> less likely to have the CancelledError
+        # https://github.com/dask/distributed/issues/2273
         self.client.close()
         print('close dask client')
+
+        self.cluster.close()
+        print('close dask cluster')
 
         # move *.o/.e files produced by dask in stdout/stderr
         self.move_dask_stdout_stderr_files()
