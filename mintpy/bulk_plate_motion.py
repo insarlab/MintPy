@@ -81,9 +81,9 @@ def create_parser():
                                      epilog=REFERENCE+'\n'+EXAMPLE)
     # input files
     parser.add_argument('-g', '--geom', dest='geomfile', type=str, required=True,
-                        help = 'Input geometry file (required), e.g., geometryGeo.h5')
+                        help = 'Input geometry file (required; file should be geocoded), e.g., geometryGeo.h5')
     parser.add_argument('-v', '--velo', dest='vfile', type=str, default=None,
-                        help='Input velocity file (optional), e.g., velocity.h5 (default: %(default)s).')
+                        help='Input velocity file (optional; file should be geocoded), e.g., velocity.h5 (default: %(default)s).')
 
     # plate motion configurations (use ONE AND ONLY ONE of the below; --om_sph overwrites --om_cart overwrites --enu)
     pmms = parser.add_argument_group('pmms', 'Plate motion models (required); Use ONE AND ONLY ONE of the below; '+
