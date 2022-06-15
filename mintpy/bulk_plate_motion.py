@@ -6,7 +6,7 @@
 ############################################################
 
 # 1. Citation:
-# Oliver L. Stephenson, Yuan-Kai Liu, Zhang Yunjun, Mark Simons, and Paul Rosen. (2022)
+# Oliver L Stephenson, Yuan-Kai Liu, Zhang Yunjun, Mark Simons, Paul A Rosen, and Xiaohua Xu (2022),
 # The Impact of Plate Motions on Long-Wavelength InSAR-Derived Velocity Fields. Manuscript submitted to Geophysical Research Letters.
 # preprint available: https://www.essoar.org/doi/abs/10.1002/essoar.10511538.2
 
@@ -53,7 +53,7 @@ except ImportError:
 
 #########################################  Usage  ##############################################
 REFERENCE = """reference:
-  Stephenson, O. L., Liu, Y. K., Yunjun, Z., Simons, M., and Rosen, P., (2022),
+  Stephenson, O. L., Liu, Y. K., Yunjun, Z., Simons, M., Rosen, P., and Xu X. (2022),
   The Impact of Plate Motions on Long-Wavelength InSAR-Derived Velocity Fields, submitted to GRL.
     preprint: https://www.essoar.org/doi/abs/10.1002/essoar.10511538.2
 """
