@@ -189,7 +189,7 @@ def gen_random_baseline_timeseries(dset_dir, dset_file, max_bperp=10):
 
 
 def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), processor='tops', update_mode=True):
-    print('preparing RSC file for ', filePattern)
+    print(f'preparing RSC file for: {filePattern}')
     if processor in ['tops', 'stripmap']:
         isce_files = sorted(glob.glob(os.path.join(os.path.abspath(inputDir), '*', filePattern)))
     elif processor == 'alosStack':
@@ -200,6 +200,29 @@ def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), 
     if len(isce_files) == 0:
         raise FileNotFoundError('no file found in pattern: {}'.format(filePattern))
 
+    # make a copy
+    meta = {**metadata}
+
+    # update A/RLOOKS, RANGE/AZIMUTH_PIXEL_SIZE, NCORRLOOKS
+    # for low resolution ionosphere from isce2/topsStack
+    yscale, xscale = 1., 1.
+    atr = readfile.read_attribute(isce_files[0], metafile_ext='.xml')
+    if 'LENGTH' in meta.keys() and meta['LENGTH'] != atr['LENGTH']:
+        print('different LENGTH detected, update ALOOKS, AZIMUTH_PIXEL_SIZE accordingly')
+        yscale = float(meta['LENGTH']) / float(atr['LENGTH'])
+        meta['ALOOKS'] = np.rint(int(meta['ALOOKS']) * yscale).astype(int)
+        meta['AZIMUTH_PIXEL_SIZE'] = float(meta['AZIMUTH_PIXEL_SIZE']) * yscale
+
+    if 'WIDTH' in meta.keys() and meta['WIDTH'] != atr['WIDTH']:
+        print('different WIDTH detected, update RLOOKS, RANGE_PIXEL_SIZE accordingly')
+        xscale = float(meta['WIDTH']) / float(atr['WIDTH'])
+        meta['RLOOKS'] = np.rint(int(meta['RLOOKS']) * xscale).astype(int)
+        meta['RANGE_PIXEL_SIZE'] = float(meta['RANGE_PIXEL_SIZE']) * xscale
+
+    if yscale * xscale != 1.:
+        print('update NCORRLOOKS')
+        meta['NCORRLOOKS'] = float(meta['NCORRLOOKS']) * yscale * xscale
+
     # write .rsc file for each interferogram file
     num_file = len(isce_files)
     prog_bar = ptime.progressBar(maxValue=num_file)
@@ -207,16 +230,16 @@ def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), 
         # get date1/2
         date12 = ptime.get_date12_from_path(isce_file)
         dates = ptime.yyyymmdd(date12.replace('-','_').split('_'))
-        prog_bar.update(i+1, suffix='{}_{}'.format(dates[0], dates[1]))
+        prog_bar.update(i+1, suffix=f'{dates[0]}_{dates[1]} {i+1}/{num_file}')
 
         # merge metadata from: data.rsc, *.unw.xml and DATE12/P_BASELINE_TOP/BOTTOM_HDR
-        ifg_metadata = readfile.read_attribute(isce_file, metafile_ext='.xml')
-        ifg_metadata.update(metadata)
-        ifg_metadata = add_ifgram_metadata(ifg_metadata, dates, baseline_dict)
+        ifg_meta = {**meta}
+        ifg_meta.update(readfile.read_attribute(isce_file, metafile_ext='.xml'))
+        ifg_meta = add_ifgram_metadata(ifg_meta, dates, baseline_dict)
 
         # write .rsc file
         rsc_file = isce_file+'.rsc'
-        writefile.write_roipac_rsc(ifg_metadata, rsc_file,
+        writefile.write_roipac_rsc(ifg_meta, rsc_file,
                                    update_mode=update_mode,
                                    print_msg=False)
     prog_bar.close()
