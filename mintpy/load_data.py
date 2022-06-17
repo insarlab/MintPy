@@ -737,7 +737,7 @@ def prepare_metadata(iDict):
 
     elif processor == 'isce':
         from mintpy import prep_isce
-        from mintpy.utils.isce_utils import get_processor
+        from mintpy.utils import s1_utils, isce_utils
 
         # --meta-file
         meta_files = sorted(glob.glob(iDict['mintpy.load.metaFile']))
@@ -756,11 +756,9 @@ def prepare_metadata(iDict):
                     'mintpy.load.rgOffFile', 'mintpy.load.azOffFile']
         obs_keys = [i for i in obs_keys if i in iDict['dset_name2template_key'].values()]
         obs_paths = [iDict[key] for key in obs_keys if iDict[key].lower() != 'auto']
+        stack_processor = isce_utils.get_processor(meta_file) if os.path.isfile(meta_file) else 'topsStack'
         if len(obs_paths) > 0:
-
-            # ifgramStack
-            processor = get_processor(meta_file) if os.path.isfile(meta_file) else 'topsStack'
-            if processor == 'alosStack':
+            if stack_processor == 'alosStack':
                 obs_dir = os.path.dirname(obs_paths[0])
             else:
                 obs_dir = os.path.dirname(os.path.dirname(obs_paths[0]))
@@ -797,6 +795,15 @@ def prepare_metadata(iDict):
             prep_isce.main(iargs)
         except:
             warnings.warn('prep_isce.py failed. Assuming its result exists and continue...')
+
+        # [optional] for topsStack: SAFE_files.txt --> S1A/B_date.txt
+        if stack_processor == 'topsStack':
+            safe_list_file = os.path.join(os.path.dirname(os.path.dirname(meta_file)), 'SAFE_files.txt')
+            if os.path.isfile(safe_list_file):
+                mintpy_dir = os.path.dirname(os.path.dirname(iDict['outfile'][0]))
+                s1_utils.get_s1ab_date_list_file(mintpy_dir=mintpy_dir,
+                                                 safe_list_file=safe_list_file,
+                                                 print_msg=True)
 
     elif processor == 'aria':
         from mintpy import prep_aria

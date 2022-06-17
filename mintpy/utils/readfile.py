@@ -1204,91 +1204,50 @@ def standardize_metadata(metaDictIn, standardKeys=None):
 
 
 #########################################################################
-def read_template(fname, delimiter='=', print_msg=True):
-    """Reads the template file into a python dictionary structure.
-    Parameters: fname : str
-                    full path to the template file
-                delimiter : str
-                    string to separate the key and value
-                print_msg : bool
-                    print message or not
-    Returns:    template_dict : dict
-                    file content
-    Examples:
-        tmpl = read_template(KyushuT424F610_640AlosA.template)
-        tmpl = read_template(R1_54014_ST5_L0_F898.000.pi, ':')
+def read_template(fname, delimiter='=', skip_chars=None):
+    """Read the template file into a dictionary structure.
+
+    Parameters: fname      - str, full path to the template file
+                delimiter  - str, string to separate the key and value
+                skip_chars - list of str, skip certain charaters in values
+    Returns:    template   - dict, file content
+    Examples:   template = read_template('KyushuAlosAT424.txt')
+                template = read_template('smallbaselineApp.cfg')
     """
-    template_dict = {}
 
-    # insarmaps: the below logic for plotattributes object can be made much more simple
-    # if we assume that any plot attribute coming after a > belongs to the
-    # same object. Must Ask Falk and Yunjun if we can assume this to eliminate
-    # all these conditionals
-    plotAttributeDict = {}
-    insidePlotObject = False
-    plotAttributes = []
+    if skip_chars and isinstance(skip_chars, str):
+        skip_chars = [skip_chars]
 
-    def is_plot_attribute(attribute):
-        tokens = attribute.split(".")
-        if tokens is None:
-            return False
-        return tokens[0] == "plot" and len(tokens) > 1
-
-    # read input text file or string
-    lines = None
+    # read input text file / string
     if os.path.isfile(fname):
         with open(fname, 'r') as f:
             lines = f.readlines()
     elif isinstance(fname, str):
         lines = fname.split('\n')
+    lines = [x.strip() for x in lines]
 
-    # loop to parser/read each line
+    # parse line by line
+    template = {}
     for line in lines:
-        line = line.strip()
         # split on the 1st occurrence of delimiter
         c = [i.strip() for i in line.split(delimiter, 1)]
 
         # ignore commented lines or those without variables
-        if len(c) < 2 or line.startswith(('%', '#', '!')):
-            # next
-
-            # insarmaps:
-            if line.startswith(">"):
-                plotAttributeDict = {}
-                insidePlotObject = True
-            # otherwise, if previously inside attributes object, we are now outside
-            # unless the line is a comment
-            elif insidePlotObject and not line.startswith('%') and not line.startswith('#'):
-                # just came from being inside plot object, but now we are outside
-                insidePlotObject = False
-                plotAttributes.append(plotAttributeDict)
-
-        else:
+        if len(c) >= 2 and not line.startswith(('%', '#', '!')):
             key = c[0]
             value = str.replace(c[1], '\n', '').split("#")[0].strip()
             value = os.path.expanduser(value)  # translate ~ symbol
             value = os.path.expandvars(value)  # translate env variables
 
+            # skip certain characters by replacing them with empty str
+            if skip_chars:
+                for skip_char in skip_chars:
+                    value.replace(skip_char, '')
+
             if value != '':
-                template_dict[key] = value
+                template[key] = value
 
-            # insarmaps:
-            if insidePlotObject:
-                if is_plot_attribute(key):
-                    plotAttributeDict[key] = value
-                else:
-                    # just came from being inside plot object, but now we are outside
-                    insidePlotObject = False
-                    plotAttributes.append(plotAttributeDict)
-                    template_dict[key] = value
-
-    # insarmaps: what if no \n at end of file? write out last plot attributes dict
-    if insidePlotObject:
-        plotAttributes.append(plotAttributeDict)
-    if len(plotAttributes) > 0:
-        template_dict["plotAttributes"] = json.dumps(plotAttributes)
-
-    return template_dict
+    return template
 
 
 def read_roipac_rsc(fname, delimiter=' '):
