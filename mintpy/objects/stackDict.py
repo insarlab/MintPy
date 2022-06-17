@@ -132,7 +132,7 @@ class ifgramStackDict:
             in_size = self.get_size()[1:]
             geom_size = geom_obj.get_size()
             if in_size != geom_size:
-                msg = f'lower resolution ionosphere file detected'
+                msg = 'lower resolution ionosphere file detected'
                 msg += f' --> resize from {in_size} to {geom_size} via skimage.transform.resize ...'
                 print(msg)
                 resize2shape = geom_size

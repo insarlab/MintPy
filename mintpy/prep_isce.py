@@ -181,12 +181,12 @@ def prepare_geometry(geom_dir, geom_files=[], metadata=dict(), processor='tops',
     return
 
 
-def gen_random_baseline_timeseries(dset_files, max_bperp=10):
+def gen_random_baseline_timeseries(obs_file, max_bperp=10):
     """Generate a baseline time series with random values
-    with date12 values grabbed from the directory names of the given dset_files.
+    with date12 values grabbed from the directory names of the given path pattern from obs_file.
     """
     # list of dates
-    date12s = sorted([os.path.basename(os.path.dirname(x)) for x in glob.glob(obs_files[0])])
+    date12s = sorted([os.path.basename(os.path.dirname(x)) for x in glob.glob(obs_file)])
     date1s = [x.split('_')[0] for x in date12s]
     date2s = [x.split('_')[1] for x in date12s]
     date_list = sorted(list(set(date1s + date2s)))
@@ -289,7 +289,7 @@ def main(iargs=None):
     baseline_dict = {}
     if inps.baseline_dir:
         if inps.baseline_dir.startswith('rand') and inps.obs_files:
-            baseline_dict = gen_random_baseline_timeseries(inps.obs_files)
+            baseline_dict = gen_random_baseline_timeseries(inps.obs_files[0])
         else:
             baseline_dict = isce_utils.read_baseline_timeseries(
                 inps.baseline_dir,
