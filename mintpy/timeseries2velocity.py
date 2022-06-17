@@ -55,14 +55,16 @@ EXAMPLE = """example:
   timeseries2velocity.py timeseries.h5  --start-date 20080201  --end-date 20100508
   timeseries2velocity.py timeseries.h5  --ex exclude_date.txt
 
-  # bootstrapping for STD calculation
-  timeseries2velocity.py timeseries_ERA5_demErr.h5 --uq bootstrap
-
   # complex time functions
   timeseries2velocity.py timeseries_ERA5_demErr.h5 --poly 3 --period 1 0.5 --step 20170910
   timeseries2velocity.py timeseries_ERA5_demErr.h5 --poly 1 --exp 20170910 90
   timeseries2velocity.py timeseries_ERA5_demErr.h5 --poly 1 --log 20170910 60.4
   timeseries2velocity.py timeseries_ERA5_demErr.h5 --poly 1 --log 20170910 60.4 200 --log 20171026 200.7
+
+  # uncertainty quantification of the estimated time functions
+  timeseries2velocity.py timeseries_ERA5_demErr.h5 --uq residue
+  timeseries2velocity.py timeseries_ERA5_demErr.h5 --uq covariance --ts-cov timeseriesCov.h5
+  timeseries2velocity.py timeseries_ERA5_demErr.h5 --uq bootstrap
 """
 
 DROP_DATE_TXT = """exclude_date.txt:
@@ -80,8 +82,6 @@ def create_parser():
     # inputs
     parser.add_argument('timeseries_file', help='Time series file for time function estimation.')
     parser.add_argument('--template', '-t', dest='template_file', help='template file with options')
-    parser.add_argument('--ts-cov','--ts-cov-file', dest='timeSeriesCovFile',
-                        help='4D time-series (co)variance file for time function STD calculation')
 
     # outputs
     parser.add_argument('-o', '--output', dest='outfile', help='output file name')
@@ -111,6 +111,8 @@ def create_parser():
     uq.add_argument('--uq', '--uncertainty', dest='uncertaintyQuantification', metavar='VAL',
                     default='residue', choices={'residue', 'covariance', 'bootstrap'},
                     help='Uncertainty quantification method (default: %(default)s).')
+    uq.add_argument('--ts-cov','--ts-cov-file', dest='timeSeriesCovFile',
+                    help='4D time-series (co)variance file for time function STD calculation')
     uq.add_argument('--bc', '--bootstrap-count', dest='bootstrapCount', type=int, default=400,
                     help='number of iterations for bootstrapping (default: %(default)s).')
 
