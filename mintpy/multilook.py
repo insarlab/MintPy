@@ -48,7 +48,7 @@ def create_parser():
                         help='number of multilooking in azimuth/y direction (default: %(default)s).')
     parser.add_argument('-o', '--outfile',
                         help='Output file name. Disabled when more than 1 input files')
-    parser.add_argument('-m','--method', dest='method', type=str, default='average', choices=['average', 'nearest'],
+    parser.add_argument('-m','--method', dest='method', type=str, default='mean', choices=['mean', 'median', 'nearest'],
                         help='downsampling method (default: %(default)s) \n'
                              'e.g. nearest for geometry, average for observations')
     parser.add_argument('--margin', dest='margin', type=int, nargs=4, metavar=('TOP','BOTTOM','LEFT','RIGHT'),
@@ -186,7 +186,7 @@ def multilook_data(data, lks_y=1, lks_x=1, method='mean'):
     return coarse_data
 
 
-def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=[0,0,0,0], max_memory=4):
+def multilook_file(infile, lks_y, lks_x, outfile=None, method='mean', margin=[0,0,0,0], max_memory=4):
     """ Multilook input file
     Parameters: infile - str, path of input file to be multilooked.
                 lks_y  - int, number of looks in y / row direction.
@@ -279,7 +279,7 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='average', margin=
                                      box=box_i,
                                      print_msg=False)[0]
 
-                data = multilook_data(data, lks_y, lks_x)
+                data = multilook_data(data, lks_y, lks_x, method=method)
 
             # output block
             if data.ndim == 3:

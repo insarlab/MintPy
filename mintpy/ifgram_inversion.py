@@ -187,16 +187,16 @@ def cmd_line_parse(iargs=None):
     # --output option
     if not inps.outfile:
         if inps.obsDatasetName.startswith('unwrapPhase'):
-            inps.outfile = ['timeseries.h5', 'temporalCoherence.h5', 'numInvIfgram.h5']
+            if os.path.basename(inps.ifgramStackFile).startswith('ion'):
+                inps.outfile = ['timeseriesIon.h5', 'temporalCoherenceIon.h5', 'numInvIon.h5']
+            else:
+                inps.outfile = ['timeseries.h5', 'temporalCoherence.h5', 'numInvIfgram.h5']
 
         elif inps.obsDatasetName.startswith('azimuthOffset'):
             inps.outfile = ['timeseriesAz.h5', 'residualInvAz.h5', 'numInvOffAz.h5']
 
         elif inps.obsDatasetName.startswith('rangeOffset'):
             inps.outfile = ['timeseriesRg.h5', 'residualInvRg.h5', 'numInvOffRg.h5']
-
-        elif inps.obsDatasetName.startswith('ion'):
-            inps.outfile = ['timeseriesIon.h5', 'temporalCoherenceIon.h5', 'numInvIon.h5']
 
         else:
             raise ValueError('un-recognized input observation dataset name: {}'.format(inps.obsDatasetName))
@@ -859,6 +859,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
+    stack_dir, stack_base = os.path.split(ifgram_file)
 
     ## debug on a specific pixel
     #y, x = 555, 612
@@ -982,17 +983,26 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
     # 1.3.3 Mask for zero quality measure (average spatial coherence/SNR)
     # usually due to lack of data in the processing
-    stack_quality_file = os.path.join(os.path.dirname(ifgram_file), '../avgSpatialCoh.h5')
-    inv_quality_name = 'temporalCoherence'
     if 'offset' in obs_ds_name.lower():
-        stack_quality_file = os.path.join(os.path.dirname(ifgram_file), '../avgSpatialSNR.h5')
         inv_quality_name = 'residual'
+        stack_quality_file = os.path.join(stack_dir, '../avgSpatialSNR.h5')
 
-    if stack_quality_file and os.path.isfile(stack_quality_file):
-        print('skip pixels with zero value in file: {}'.format(os.path.basename(stack_quality_file)))
-        quality = readfile.read(stack_quality_file, box=box)[0].flatten()
-        mask *= quality != 0.
-        del quality
+    elif stack_base.startswith('ion'):
+        inv_quality_name = 'temporalCoherence'
+        stack_quality_file = os.path.join(stack_dir, '../avgSpatialCohIon.h5')
+
+    else:
+        inv_quality_name = 'temporalCoherence'
+        stack_quality_file = os.path.join(stack_dir, '../avgSpatialCoh.h5')
+
+    if os.path.isfile(stack_quality_file):
+        atr_stack = readfile.read_attribute(stack_quality_file)
+        len_stack, wid_stack = int(atr_stack['LENGTH']), int(atr_stack['WIDTH'])
+        if (len_stack, wid_stack) == (stack_obj.length, stack_obj.width):
+            print('skip pixels with zero value in file: {}'.format(os.path.basename(stack_quality_file)))
+            quality = readfile.read(stack_quality_file, box=box)[0].flatten()
+            mask *= quality != 0.
+            del quality
 
     # invert pixels on mask 1+2
     num_pixel2inv = int(np.sum(mask))
@@ -1433,7 +1443,7 @@ def main(iargs=None):
         raise NotImplementedError('L1 norm minimization is not fully tested.')
         #ut.timeseries_inversion_L1(inps.ifgramStackFile, inps.tsFile)
 
-    return inps.outfile
+    return
 
 
 ################################################################################################

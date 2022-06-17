@@ -21,17 +21,22 @@ import glob
 import shelve
 import datetime
 import numpy as np
-from mintpy.objects import sensor
-from mintpy.utils import ptime, readfile, writefile, utils1 as ut
 from scipy import ndimage
+
+from mintpy.objects.constants import SPEED_OF_LIGHT, EARTH_RADIUS
+from mintpy.objects import sensor
+from mintpy.utils import (
+    ptime,
+    readfile,
+    writefile,
+    attribute as attr,
+    utils1 as ut,
+)
+
 # suppress matplotlib DEBUG message
 import logging
 mpl_logger = logging.getLogger('matplotlib')
 mpl_logger.setLevel(logging.WARNING)
-
-
-SPEED_OF_LIGHT = 299792458  # m/s
-EARTH_RADIUS = 6378122.65   # m
 
 
 
@@ -360,16 +365,16 @@ def extract_alosStack_metadata(meta_file, geom_dir):
     width = img.width
     length = img.length
     data = np.memmap(lat_file, dtype='float64', mode='r', shape=(length, width))
-    meta['LAT_REF1'] = str(data[0+edge, 0+edge])
-    meta['LAT_REF2'] = str(data[0+edge, -1-edge])
-    meta['LAT_REF3'] = str(data[-1-edge, 0+edge])
+    meta['LAT_REF1'] = str(data[ 0+edge,  0+edge])
+    meta['LAT_REF2'] = str(data[ 0+edge, -1-edge])
+    meta['LAT_REF3'] = str(data[-1-edge,  0+edge])
     meta['LAT_REF4'] = str(data[-1-edge, -1-edge])
 
     lon_file = glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.lon'.format(rlooks, alooks)))[0]
     data = np.memmap(lon_file, dtype='float64', mode='r', shape=(length, width))
-    meta['LON_REF1'] = str(data[0+edge, 0+edge])
-    meta['LON_REF2'] = str(data[0+edge, -1-edge])
-    meta['LON_REF3'] = str(data[-1-edge, 0+edge])
+    meta['LON_REF1'] = str(data[ 0+edge,  0+edge])
+    meta['LON_REF2'] = str(data[ 0+edge, -1-edge])
+    meta['LON_REF3'] = str(data[-1-edge,  0+edge])
     meta['LON_REF4'] = str(data[-1-edge, -1-edge])
 
     los_file = glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.los'.format(rlooks, alooks)))[0]
@@ -477,6 +482,9 @@ def extract_geometry_metadata(geom_dir, meta=dict(), box=None, fbase_list=['hgt'
 
     extract A/RLOOKS by comparing hgt.xml and hgt.full.xml file
     update azimuthPixelSize / rangePixelSize based on A/RLOOKS
+
+    extract LENGTH/WIDTH from the first geom file
+    update corresponding metadata if box is not None
     """
 
     def get_nonzero_row_number(data, buffer=2):
@@ -515,6 +523,15 @@ def extract_geometry_metadata(geom_dir, meta=dict(), box=None, fbase_list=['hgt'
     # update pixel_size for multilooked data
     meta['rangePixelSize'] *= meta['RLOOKS']
     meta['azimuthPixelSize'] *= meta['ALOOKS']
+
+    # get LENGTH/WIDTH
+    atr = readfile.read_attribute(geom_files[0])
+    meta['LENGTH'] = atr['LENGTH']
+    meta['WIDTH'] = atr['WIDTH']
+
+    # update due to subset
+    if box:
+        meta = attr.update_attribute4subset(meta, box)
 
     # get LAT/LON_REF1/2/3/4 into metadata
     for geom_file in geom_files:
@@ -799,56 +816,6 @@ def get_IPF(proj_dir, ts_file):
         prog_bar.update(i+1, suffix='{} IW1/2/3'.format(date_str))
     prog_bar.close()
     return date_list, IPF_IW1, IPF_IW2, IPF_IW3
-
-
-def safe_list_file2sensor_list(safe_list_file, date_list=None, print_msg=True):
-    """Get list of Sentinel-1 sensor names from txt file with SAFE file names.
-
-    Parameters: safe_list_file - str, path of the text file with Sentinel-1 SAFE file path
-                                 E.g. SAFE_files.txt
-                date_list      - list of str in YYYYMMDD format, reference list of dates
-    Returns:    sensor_list    - list of str in S1A or S1B
-                date_list      - list of str in YYYYMMDD format
-    Example:
-        date_list = timeseries('timeseries.h5').get_date_list()
-        sensor_list = safe_list_file2sensor_list('../SAFE_files.txt',
-                                                 date_list=date_list,
-                                                 print_msg=False)[0]
-        s1b_dates = [i for i, j in zip(date_list, sensor_list) if j == 'S1B']
-        np.savetxt('S1B_date.txt', np.array(s1b_dates).reshape(-1,1), fmt='%s')
-    """
-    # read txt file
-    fc = np.loadtxt(safe_list_file, dtype=str).astype(str).tolist()
-    safe_fnames = [os.path.basename(i) for i in fc]
-
-    # get date_list
-    date_list_out = [re.findall('_\d{8}T', i)[0][1:-1] for i in safe_fnames]
-    date_list_out = sorted(list(set(date_list_out)))
-
-    # get sensor_list
-    sensor_list = []
-    for d in date_list_out:
-        safe_fname = [i for i in safe_fnames if d in i][0]
-        sensor = safe_fname.split('_')[0]
-        sensor_list.append(sensor)
-
-    # update against date_list_ref
-    if date_list is not None:
-        # check possible missing dates
-        dates_missing = [i for i in date_list if i not in date_list_out]
-        if dates_missing:
-            raise ValueError('The following dates are missing:\n{}'.format(dates_missing))
-
-        # prune dates not-needed
-        flag = np.array([i in date_list for i in date_list_out], dtype=np.bool_)
-        if np.sum(flag) > 0:
-            sensor_list = np.array(sensor_list)[flag].tolist()
-            dates_removed = np.array(date_list_out)[~flag].tolist()
-            date_list_out = np.array(date_list_out)[flag].tolist()
-            if print_msg:
-                print('The following dates are not needed and removed:\n{}'.format(dates_removed))
-
-    return sensor_list, date_list
 
 
 def get_sensing_datetime_list(proj_dir, date_list=None):

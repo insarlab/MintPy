@@ -36,11 +36,14 @@ def add_data_disp_argument(parser):
     data.add_argument('--noflip', dest='auto_flip', action='store_false',
                       help='turn off auto flip for radar coordinate file')
 
-    data.add_argument('--nmli','--num-multilook','--multilook-num', dest='multilook_num', type=int, default=1, metavar='NUM',
-                      help='multilook data in X and Y direction with a factor for display (default: %(default)s).')
+    data.add_argument('--nmli','--num-multilook','--multilook-num', dest='multilook_num',
+                      type=int, default=1, metavar='NUM',
+                      help='multilook data in X and Y direction with a factor for display '
+                           '(default: %(default)s).')
     data.add_argument('--nomultilook', '--no-multilook', dest='multilook', action='store_false',
                       help='do not multilook, for high quality display. \n'
-                           'If multilook is True and multilook_num=1, multilook_num will be estimated automatically.\n'
+                           'If multilook is True and multilook_num=1, '
+                           'multilook_num will be estimated automatically.\n'
                            'Useful when displaying big datasets.')
     data.add_argument('--alpha', dest='transparency', type=float,
                       help='Data transparency. \n'
@@ -65,13 +68,16 @@ def add_dem_argument(parser):
                           'Set to 0.0 for no smoothing; (default: %(default)s).')
     dem.add_argument('--contour-step', dest='dem_contour_step', metavar='NUM', type=float, default=200.0,
                      help='Background topography contour step in meters (default: %(default)s).')
-    dem.add_argument('--contour-linewidth', dest='dem_contour_linewidth', metavar='NUM', type=float, default=0.5,
+    dem.add_argument('--contour-lw','--contour-linewidth', dest='dem_contour_linewidth',
+                     metavar='NUM', type=float, default=0.5,
                      help='Background topography contour linewidth (default: %(default)s).')
 
     dem.add_argument('--shade-az', dest='shade_azdeg', type=float, default=315., metavar='DEG',
-                     help='The azimuth (0-360, degrees clockwise from North) of the light source (default: %(default)s).')
+                     help='The azimuth (0-360, degrees clockwise from North) of the light source '
+                          '(default: %(default)s).')
     dem.add_argument('--shade-alt', dest='shade_altdeg', type=float, default=45., metavar='DEG',
-                     help='The altitude (0-90, degrees up from horizontal) of the light source (default: %(default)s).')
+                     help='The altitude (0-90, degrees up from horizontal) of the light source '
+                          '(default: %(default)s).')
 
     dem.add_argument('--shade-min', dest='shade_min', type=float, default=-4000., metavar='MIN',
                      help='The min height in m of colormap of shaded relief topography (default: %(default)s).')
@@ -97,10 +103,13 @@ def add_figure_argument(parser):
                      action='store_false', help='do not display axis')
     fig.add_argument('--notick', dest='disp_tick',
                      action='store_false', help='do not display tick in x/y axis')
+    fig.add_argument('--ylabel-rot', dest='ylabel_rot', type=float,
+                     help='Y-axis tick label rotation in degree anti-clockwisely (default: %(default)s).\n'
+                          'Set to 90 for a vertical y-axis tick labels')
 
     # colormap
     fig.add_argument('-c', '--colormap', dest='colormap',
-                     help='colormap used for display, i.e. jet, cmy, RdBu, hsv, jet_r, temperature, viridis, etc.\n'
+                     help='colormap used for display, i.e. jet, cmy, RdBu, hsv, jet_r, viridis, etc.\n'
                           'More at https://mintpy.readthedocs.io/en/latest/api/colormaps/')
     fig.add_argument('--cm-lut','--cmap-lut', dest='cmap_lut', type=int, default=256, metavar='NUM',
                      help='number of increment of colormap lookup table (default: %(default)s).')
@@ -155,7 +164,8 @@ def add_figure_argument(parser):
                      help='disable automatic tight layout for multiple subplots')
 
     fig.add_argument('--coord', dest='fig_coord', choices=['radar', 'geo'], default='geo',
-                     help='Display in radar/geo coordination system (for geocoded file only; default: %(default)s).')
+                     help='Display in radar/geo coordination system '
+                          '(for geocoded file only; default: %(default)s).')
     fig.add_argument('--animation', action='store_true',
                      help='enable animation mode')
 
@@ -173,12 +183,15 @@ def add_gps_argument(parser):
                      help='Show GPS site name')
     gps.add_argument('--gps-ms', dest='gps_marker_size', type=float, default=6,
                      help='Plot GPS value as scatter in size of ms**2 (default: %(default)s).')
-    gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los', 'horz', 'vert'},
+    gps.add_argument('--gps-comp', dest='gps_component',
+                     choices={'enu2los', 'hz2los', 'up2los', 'horz', 'vert'},
                      help='Plot GPS in color indicating deformation velocity direction')
     gps.add_argument('--gps-redo', dest='gps_redo', action='store_true',
-                     help='Re-calculate GPS observations in LOS direction, instead of read from existing CSV file.')
+                     help='Re-calculate GPS observations in LOS direction, '
+                          'instead of read from existing CSV file.')
     gps.add_argument('--ref-gps', dest='ref_gps_site', type=str, help='Reference GPS site')
-    gps.add_argument('--ex-gps', dest='ex_gps_sites', type=str, nargs='*', help='Exclude GPS sites, require --gps-comp.')
+    gps.add_argument('--ex-gps', dest='ex_gps_sites', type=str, nargs='*',
+                     help='Exclude GPS sites, require --gps-comp.')
 
     gps.add_argument('--gps-start-date', dest='gps_start_date', type=str, metavar='YYYYMMDD',
                      help='start date of GPS data, default is date of the 1st SAR acquisition')
@@ -186,9 +199,10 @@ def add_gps_argument(parser):
                      help='start date of GPS data, default is date of the last SAR acquisition')
     gps.add_argument('--horz-az','--hz-az', dest='horz_az_angle', type=float, default=-90.,
                      help='Azimuth angle (anti-clockwise from the north) of the horizontal movement in degrees\n'
-                             'E.g.: -90. for east  direction [default]\n'
-                             '       0.  for north direction\n'
-                             'Set to the azimuth angle of the strike-slip fault to show the fault-parallel displacement.')
+                          'E.g.: -90. for east  direction [default]\n'
+                          '       0.  for north direction\n'
+                          'Set to the azimuth angle of the strike-slip fault to '
+                          'show the fault-parallel displacement.')
     return parser
 
 
@@ -254,8 +268,8 @@ def add_map_argument(parser):
                            '--scalebar 0.2 0.8 0.8  #for upper right corner\n')
     mapg.add_argument('--noscalebar', '--nosbar', dest='disp_scalebar',
                       action='store_false', help='do not display scale bar.')
-    mapg.add_argument('--scalebar-pad','--sbar-pad', dest='scalebar_pad', type=float,
-                      default=0.05, help='scale bar label pad in ratio of scalebar width (default: %(default)s).')
+    mapg.add_argument('--scalebar-pad','--sbar-pad', dest='scalebar_pad', type=float, default=0.05,
+                      help='scale bar label pad in ratio of scalebar width (default: %(default)s).')
     return parser
 
 
@@ -300,26 +314,29 @@ def add_point_argument(parser):
     return parser
 
 
-def add_reference_argument(parser):
+def add_reference_argument(parser, plot=True):
     """Argument group parser for (spatial / temporal) referencing options"""
-    ref = parser.add_argument_group('Reference', 'Show / Modify reference in time and space for display')
-    # reference date
+
+    goal = 'display' if plot else 'estimation'
+    ref = parser.add_argument_group('Reference date / point',
+                                    f'Modify reference in time / space for {goal}')
+
+    # reference date / pixel
     ref.add_argument('--ref-date', dest='ref_date', metavar='DATE',
-                     help='Change reference date for display')
-
-    # reference pixel
+                     help=f'Change reference date for {goal}')
     ref.add_argument('--ref-lalo', dest='ref_lalo', metavar=('LAT', 'LON'), type=float, nargs=2,
-                     help='Change reference point LAT LON for display')
+                     help=f'Change reference point in LAT/LON for {goal}')
     ref.add_argument('--ref-yx', dest='ref_yx', metavar=('Y', 'X'), type=int, nargs=2,
-                     help='Change reference point Y X for display')
+                     help=f'Change reference point in Y/X for {goal}')
 
-    # reference pixel style
-    ref.add_argument('--noreference', dest='disp_ref_pixel',
-                     action='store_false', help='do not show reference point')
-    ref.add_argument('--ref-marker', dest='ref_marker', default='ks',
-                     help='marker of reference pixel (default: %(default)s).')
-    ref.add_argument('--ref-size', dest='ref_marker_size', metavar='NUM', type=int, default=6,
-                     help='marker size of reference point (default: %(default)s).')
+    # reference pixel - plotting style
+    if plot:
+        ref.add_argument('--noreference', dest='disp_ref_pixel',
+                         action='store_false', help='do not show reference point')
+        ref.add_argument('--ref-marker', dest='ref_marker', default='ks',
+                         help='marker of reference pixel (default: %(default)s).')
+        ref.add_argument('--ref-size', dest='ref_marker_size', metavar='NUM', type=int, default=6,
+                         help='marker size of reference point (default: %(default)s).')
     return parser
 
 
@@ -343,44 +360,53 @@ def add_save_argument(parser):
 def add_subset_argument(parser, geo=True):
     """Argument group parser for subset options"""
     sub = parser.add_argument_group('Subset', 'Display dataset in subset range')
-    sub.add_argument('--sub-x','--subx','--subset-x', dest='subset_x', type=int, nargs=2, metavar=('XMIN', 'XMAX'),
-                     help='subset display in x/cross-track/range direction')
-    sub.add_argument('--sub-y','--suby','--subset-y', dest='subset_y', type=int, nargs=2, metavar=('YMIN', 'YMAX'),
-                     help='subset display in y/along-track/azimuth direction')
+    sub.add_argument('--sub-x','--subx','--subset-x', dest='subset_x', type=int, nargs=2,
+                     metavar=('XMIN', 'XMAX'), help='subset display in x/cross-track/range direction')
+    sub.add_argument('--sub-y','--suby','--subset-y', dest='subset_y', type=int, nargs=2,
+                     metavar=('YMIN', 'YMAX'), help='subset display in y/along-track/azimuth direction')
     if geo:
-        sub.add_argument('--sub-lat','--sublat','--subset-lat', dest='subset_lat', type=float, nargs=2, metavar=('LATMIN', 'LATMAX'),
-                         help='subset display in latitude')
-        sub.add_argument('--sub-lon','--sublon','--subset-lon', dest='subset_lon', type=float, nargs=2, metavar=('LONMIN', 'LONMAX'),
-                         help='subset display in longitude')
+        sub.add_argument('--sub-lat','--sublat','--subset-lat', dest='subset_lat', type=float, nargs=2,
+                         metavar=('LATMIN', 'LATMAX'), help='subset display in latitude')
+        sub.add_argument('--sub-lon','--sublon','--subset-lon', dest='subset_lon', type=float, nargs=2,
+                         metavar=('LONMIN', 'LONMAX'), help='subset display in longitude')
     return parser
 
 
 def add_timefunc_argument(parser):
     """Argument group parser for time functions"""
     model = parser.add_argument_group('Deformation Model', 'A suite of time functions')
+
     model.add_argument('--poly', '--polynomial', '--poly-order', dest='polynomial', type=int, default=1,
-                      help='a polynomial function with the input degree (default: %(default)s). E.g.:\n' +
-                           '--poly 1                                  # linear\n' +
-                           '--poly 2                                  # quadratic\n' +
-                           '--poly 3                                  # cubic\n')
+                       help='a polynomial function with the input degree (default: %(default)s). E.g.:\n'
+                            '--poly 1                               # linear\n'
+                            '--poly 2                               # quadratic\n'
+                            '--poly 3                               # cubic\n')
+
     model.add_argument('--periodic', '--period', '--peri', dest='periodic', type=float, nargs='+', default=[],
-                      help='periodic function(s) with period in decimal years (default: %(default)s). E.g.:\n' +
-                           '--periodic 1.0                            # an annual cycle\n' +
-                           '--periodic 1.0 0.5                        # an annual cycle plus a semi-annual cycle\n')
+                       help='periodic function(s) with period in decimal years (default: %(default)s). E.g.:\n'
+                            '--periodic 1.0                         # an annual cycle\n'
+                            '--periodic 1.0 0.5                     # an annual cycle plus a semi-annual cycle\n')
+
     model.add_argument('--step', dest='step', type=str, nargs='+', default=[],
-                      help='step function(s) at YYYYMMDD (default: %(default)s). E.g.:\n' +
-                           '--step 20061014                           # coseismic step  at 2006-10-14T00:00\n' +
-                           '--step 20110311 20120928T1733             # coseismic steps at 2011-03-11T00:00 and 2012-09-28T17:33\n')
+                       help='step function(s) at YYYYMMDD (default: %(default)s). E.g.:\n'
+                            '--step 20061014                        # coseismic step  at 2006-10-14T00:00\n'
+                            '--step 20110311 20120928T1733          # coseismic steps at 2011-03-11T00:00 and 2012-09-28T17:33\n')
+
     model.add_argument('--exp', '--exponential', dest='exp', type=str, nargs='+', action='append', default=[],
-                      help='exponential function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
-                           '--exp  20181026 60                        # exp onset at 2006-10-14T00:00 with tau=60 days\n' +
-                           '--exp  20181026T1355 60 120               # exp onset at 2006-10-14T13:55 with tau=60 days overlayed by a tau=145 days\n' +
-                           '--exp  20161231 80.5 --exp 20190125 100   # 1st exp onset at 2011-03-11 with tau=80.5 days and\n' +
-                           '                                          # 2nd exp onset at 2012-09-28 with tau=100  days')
+                       help='exponential function(s) defined by onset time(s) and characteristic time(s) tau in days (default: %(default)s). E.g.:\n'
+                            '--exp  20181026 60                     # one exp w/ onset at 2018-10-26       w/ tau=60  days\n'
+                            '--exp  20181026T1355 60 120            # 1st exp w/ onset at 2018-10-26T13:55 w/ tau=60  days\n'
+                            '                                       # 2nd exp w/ onset at 2018-10-26T13:55 w/ tau=120 days\n'
+                            '--exp  20161231 80 --exp 20190125 100  # 1st exp w/ onset at 2016-12-31       w/ tau=80  days\n'
+                            '                                       # 2nd exp w/ onset at 2019-01-25       w/ tau=100 days')
+
     model.add_argument('--log', '--logarithmic', dest='log', type=str, nargs='+', action='append', default=[],
-                      help='logarithmic function(s) at YYYYMMDD with characteristic time(s) tau in decimal days (default: %(default)s). E.g.:\n' +
-                           '--log  20181016 90.4                      # log onset at 2006-10-14T00:00 with tau=90.4 days\n' +
-                           '--log  20181016T1733 90.4 240             # log onset at 2006-10-14T17:33 with tau=90.4 days overlayed by a tau=240 days\n' +
-                           '--log  20161231 60 --log 20190125 180.2   # 1st log onset at 2011-03-11 with tau=60 days and\n' +
-                           '                                          # 2nd log onset at 2012-09-28 with tau=180.2 days\n')
+                       help='logarithmic function(s) defined by onset time(s) and characteristic time(s) tau in days (default: %(default)s). E.g.:\n'
+                            '--log  20181016 90                     # one log w/ onset at 2018-10-16       w/ tau=90  days\n'
+                            '--log  20181016T1733 90 240            # 1st log w/ onset at 2018-10-16T17:33 w/ tau=90  days\n'
+                            '                                       # 2nd log w/ onset at 2018-10-16T17:33 w/ tau=240 days\n'
+                            '--log  20161231 60 --log 20190125 180  # 1st log w/ onset at 2016-12-31       w/ tau=60  days\n'
+                            '                                       # 2nd log w/ onset at 2019-01-25       w/ tau=180 days\n')
+
     return parser
+

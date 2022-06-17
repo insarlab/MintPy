@@ -162,15 +162,6 @@ def prepare_metadata(meta_file, geom_src_dir, box=None, nlks_x=1, nlks_y=1):
                                                 box=box,
                                                 fext_list=[geom_ext])
 
-    # add LENGTH / WIDTH
-    atr = readfile.read_attribute(os.path.join(geom_src_dir, 'lat{}'.format(geom_ext)))
-    meta['LENGTH'] = atr['LENGTH']
-    meta['WIDTH'] = atr['WIDTH']
-
-    ## update metadata due to subset
-    print('update metadata due to subset with bounding box')
-    meta = attr.update_attribute4subset(meta, box)
-
     # apply optional user multilooking
     if nlks_x > 1:
         meta['RANGE_PIXEL_SIZE'] = str(float(meta['RANGE_PIXEL_SIZE']) * nlks_x)

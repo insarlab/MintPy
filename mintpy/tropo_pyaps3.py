@@ -95,8 +95,7 @@ atmosphere/
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Tropospheric correction using weather models\n' +
-                                     '  PyAPS is used to download and calculate the delay for each acquisition.',
+    parser = argparse.ArgumentParser(description='Tropospheric correction using weather models via PyAPS',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=REFERENCE+'\n'+DATA_INFO+'\n'+EXAMPLE)
 
@@ -556,7 +555,7 @@ def check_pyaps_account_config(tropo_model):
         for opt in SECTION_OPTS[section]:
             val = cfg.get(section, opt)
             if not val or val in default_values:
-                raise ValueError('PYAPS: No account info found for {} in {} section in file: {}'.format(tropo_model, section, cfg_file))
+                raise ValueError(f'PYAPS: No account info found for {tropo_model} in {section} section in file: {cfg_file}')
 
     return
 
