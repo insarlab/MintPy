@@ -191,7 +191,7 @@ def read_inps2dict(inps):
     key_list = [i.split(prefix)[1] for i in template.keys() if i.startswith(prefix)]
     for key in key_list:
         value = template[prefix+key]
-        if key in ['processor', 'autoPath', 'updateMode', 'compression']:
+        if key in ['processor', 'autoPath', 'updateMode', 'compression', 'stepMethod']:
             iDict[key] = template[prefix+key]
         elif key in ['xstep', 'ystep']:
             iDict[key] = int(template[prefix+key])
@@ -204,6 +204,7 @@ def read_inps2dict(inps):
 
     iDict['xstep'] = iDict.get('xstep', 1)
     iDict['ystep'] = iDict.get('ystep', 1)
+    iDict['stepMethod'] = iDict.get('stepMethod', 'nearest')
 
     # PROJECT_NAME --> PLATFORM
     if not iDict['PROJECT_NAME']:
@@ -895,13 +896,13 @@ def main(iargs=None):
     print('-'*50)
     print('updateMode : {}'.format(iDict['updateMode']))
     print('compression: {}'.format(iDict['compression']))
-    print('x/ystep: {}/{}'.format(iDict['xstep'], iDict['ystep']))
+    print('x/ystep: {}/{};  multilook method: {}'.format(iDict['xstep'], iDict['ystep'], iDict['stepMethod']))
     kwargs = dict(updateMode=iDict['updateMode'], xstep=iDict['xstep'], ystep=iDict['ystep'])
 
     # read subset info [need the metadata from above]
     iDict = read_subset_box(iDict)
 
-    # geometry in geo / radar coordinates 
+    # geometry in geo / radar coordinates
     geom_dset_name2template_key = {
         **GEOM_DSET_NAME2TEMPLATE_KEY,
         **IFG_DSET_NAME2TEMPLATE_KEY,
@@ -957,6 +958,7 @@ def main(iargs=None):
                 box=iDict['box'],
                 xstep=iDict['xstep'],
                 ystep=iDict['ystep'],
+                ystep=iDict['stepMethod'],
                 compression=iDict['compression'],
                 extra_metadata=extraDict,
                 geom_obj=geom_obj)

@@ -28,7 +28,7 @@ from mintpy.utils import (
     utils0 as ut,
     attribute as attr,
 )
-
+from mintpy import multilook as mlk
 
 ########################################################################################
 class ifgramStackDict:
@@ -97,7 +97,7 @@ class ifgramStackDict:
         dataType = dataTypeDict[metadata.get('DATA_TYPE', 'float32').lower()]
         return dataType
 
-    def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, xstep=1, ystep=1,
+    def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, xstep=1, ystep=1, method='nearest',
                    compression=None, extra_metadata=None, geom_obj=None):
         """Save/write an ifgramStackDict object into an HDF5 file with the structure defined in:
 
@@ -151,6 +151,9 @@ class ifgramStackDict:
                 if dsName in ['connectComponent']:
                     dsDataType = np.int16
                     dsCompression = 'lzf'
+                    stepMethod = 'nearest'
+                else:
+                    stepMethod = str(method)
 
                 print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
                        ' with compression = {c}').format(d=dsName,
@@ -180,6 +183,7 @@ class ifgramStackDict:
                                           box=box,
                                           xstep=xstep,
                                           ystep=ystep,
+                                          method=stepMethod,
                                           resize2shape=resize2shape)[0]
 
                     # special handling for offset covariance file
@@ -292,13 +296,14 @@ class ifgramDict:
             for key, value in metadata.items():
                 setattr(self, key, value)
 
-    def read(self, family, box=None, xstep=1, ystep=1, resize2shape=None):
+    def read(self, family, box=None, xstep=1, ystep=1, method='nearest', resize2shape=None):
         """Read data for the given dataset name.
 
         Parameters: self         - ifgramDict object
                     family       - str, dataset name
                     box          -  tuple of 4 int, in (x0, y0, x1, y1) with respect to the full resolution
                     x/ystep      - int, number of pixels to skip, with respect to the full resolution
+                    method       - str, ['nearest', 'mean', 'median']. Interpolation method. Default is 'nearest' - skipping rows/lines
                     resize2shape - tuple of 2 int, resize the native matrix to the given shape
                                    Set to None for not resizing
         Returns:    data         - 2D np.ndarray
@@ -329,16 +334,20 @@ class ifgramDict:
                 data = data[box[1]:box[3],
                             box[0]:box[2]]
 
-        # multilook - nearest resampling
-        if xstep * ystep > 1:
-            # output data size
-            xsize = int(data.shape[1] / xstep)
-            ysize = int(data.shape[0] / ystep)
-            # sampling
-            data = data[int(ystep/2)::ystep,
-                        int(xstep/2)::xstep]
-            data = data[:ysize, :xsize]
-
+        if method == 'nearest':
+            # multilook - nearest resampling
+            if xstep * ystep > 1:
+                # output data size
+                xsize = int(data.shape[1] / xstep)
+                ysize = int(data.shape[0] / ystep)
+                # sampling
+                data = data[int(ystep/2)::ystep,
+                            int(xstep/2)::xstep]
+                data = data[:ysize, :xsize]
+        else:
+            # multilook - mean or median resampling
+            if xstep * ystep > 1:
+                data = mlk.multilook_data(data, lks_y=ystep, lks_x=xstep, method=method)
         return data, meta
 
     def get_size(self, family=ifgramDatasetNames[0]):
