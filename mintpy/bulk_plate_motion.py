@@ -269,10 +269,14 @@ def estimate_bulkMotion(geomfile, vfile, venu=None, omega_cart=None, omega_sph=N
     # Read attributes / reference file
     if vfile:
         vel_in = readfile.read(vfile, datasetName='velocity')[0]
-        atr    = readfile.read(vfile)[1]
+        atr    = readfile.read_attribute(vfile)
     else:
-        atr = readfile.read(geomfile)[1]
+        atr = readfile.read_attribute(geomfile)
         atr['FILE_TYPE'] = 'velocity'
+
+    if 'Y_FIRST' not in atr.keys():
+        print('Input file(s) is radar-coding. They should be geo-coding!')
+        sys.exit(1)
 
     width, length = int(atr['WIDTH']), int(atr['LENGTH'])
 
