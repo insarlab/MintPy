@@ -266,7 +266,7 @@ def read_date_info(inps):
 
     Parameters: inps - Namespace
     Returns:    inps - Namespace, adding the following new fields:
-                       dateList  - list of str, dates used for estimation
+                       date_list - list of str, dates used for estimation
                        dropDate  - 1D np.ndarray in bool in size of all available dates
     """
     if inps.file_type == 'timeseries':
@@ -293,7 +293,7 @@ def read_date_info(inps):
         flag[ts_obj.dateList.index(atr['REF_DATE'])] = 0
         if np.sum(flag) > 0:
             print('number of empty dates to exclude: {}'.format(np.sum(flag)))
-            ex_date_list += np.array(date_list)[flag].tolist()
+            ex_date_list += np.array(ts_obj.dateList)[flag].tolist()
             ex_date_list = sorted(list(set(ex_date_list)))
 
     # dates used for estimation - inps.date_list

@@ -130,7 +130,7 @@ def inps2model(inps, date_list=None, print_msg=True):
 
                 # check 3 - char_time - input format
                 if len(char_times) == 0:
-                    msg = 'NO characteristic time found!\n'.format(char_times)
+                    msg = 'NO characteristic time inputs found!\n'
                     msg += '1+ characteristic time(s) are required for each onset date'
                     msg += f' for the {func_name} function, e.g.:\n'
                     msg += f'--{func_name} 20181026 60 OR\n'
