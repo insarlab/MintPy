@@ -61,7 +61,7 @@ Hierarchy of sub-modules within MintPy. Level _N_ modules depends on level _N-1_
     /utils
         plot          (objects/{stack, coord, colors}, utils/{ptime, utils0, readfile, network, map})
         utils         (objects/{stack, coord}, utils/{ptime, utils1, readfile})
-        isce_utils    (utils/{ptime, readfile, writefile, utils1})
+        isce_utils    (objects/{constants}, utils/{ptime, readfile, writefile, attribute, utils1})
 ------------------ level 6 --------------------
     /objects
         insar_vs_gps  (objects/{stack, giant}, utils/{readfile, gps, plot, utils})

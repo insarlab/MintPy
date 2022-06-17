@@ -34,6 +34,9 @@ from mintpy import subset
 #################################################################
 PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac', 'cosicorr']
 
+# primary observation dataset names
+OBS_DSET_NAMES = ['unwrapPhase', 'rangeOffset', 'azimuthOffset']
+
 IFGRAM_DSET_NAME2TEMPLATE_KEY = {
     'unwrapPhase'     : 'mintpy.load.unwFile',
     'coherence'       : 'mintpy.load.corFile',
@@ -69,7 +72,6 @@ GEOMETRY_DSET_NAME2TEMPLATE_KEY = {
     'bperp'           : 'mintpy.load.bperpFile',
 }
 
-
 DEFAULT_TEMPLATE = """template:
 ########## 1. Load Data (--load to exit after this step)
 {}\n
@@ -89,15 +91,19 @@ NOTE = """NOTE:
 """
 
 EXAMPLE = """example:
+  # MUST run in the mintpy working directory!
+
   # show example template file for ISCE/ROI_PAC/GAMMA products
   load_data.py -H
 
+  # load & write the following HDF5 files:
+  # ./inputs/ifgramStack.h5   for interferogram        stack
+  # ./inputs/ionStack.h5      for ionosphere           stack
+  # ./inputs/offsetStack.h5   for range/azimuth offset stack
+  # ./inputs/geometryRadar.h5 for geometry in radar coordinates
+  # ./inputs/geometryGeo.h5   for geometry in geo   coordinates
   load_data.py -t smallbaselineApp.cfg
   load_data.py -t smallbaselineApp.cfg GalapagosSenDT128.txt --project GalapagosSenDT128
-
-  # load ionosphere stack
-  smallbaselineApp.py SaltonSeaSenDT173.txt -g
-  load_data.py -t smallbaselineApp.cfg --ion
 
   # load geometry ONLY
   smallbaselineApp.py SaltonSeaSenDT173.txt -g
@@ -107,19 +113,14 @@ EXAMPLE = """example:
 
 def create_parser():
     """Create command line parser."""
-    parser = argparse.ArgumentParser(description='Saving a stack of Interferograms to an HDF5 file',
+    parser = argparse.ArgumentParser(description='Loading stacks of interferograms to HDF5 files',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=TEMPLATE+'\n'+NOTE+'\n'+EXAMPLE)
     parser.add_argument('-H', dest='print_example_template', action='store_true',
                         help='Print/Show the example template file for loading.')
     parser.add_argument('-t', '--template', dest='template_file', type=str, nargs='+',
                         help='template file(s) with path info.')
-
-    # write single file
-    single = parser.add_mutually_exclusive_group(required=False)
-    single.add_argument('--ion','--ionosphere', dest='only_load_ionosphere', action='store_true',
-                        help='Switch to load the ionospheric pairs into ionStack.h5 file.')
-    single.add_argument('--geom','--geometry', dest='only_load_geometry', action='store_true',
+    parser.add_argument('--geom','--geometry', dest='only_load_geometry', action='store_true',
                         help='Load the geometry file(s) ONLY.')
 
     # options from template file name & content
@@ -132,12 +133,6 @@ def create_parser():
     parser.add_argument('--compression', choices={'gzip', 'lzf', None}, default=None,
                         help='compress loaded geometry while writing HDF5 file, default: None.')
 
-    # output
-    parser.add_argument('-o', '--output', type=str, nargs=3, dest='outfile',
-                        default=['./inputs/ifgramStack.h5',
-                                 './inputs/geometryRadar.h5',
-                                 './inputs/geometryGeo.h5'],
-                        help='output HDF5 file')
     return parser
 
 
@@ -161,12 +156,6 @@ def cmd_line_parse(iargs=None):
         print('{} -H to show the example template file'.format(os.path.basename(__file__)))
         sys.exit(1)
 
-    inps.outfile = [os.path.abspath(i) for i in inps.outfile]
-    inps.outdir = os.path.dirname(inps.outfile[0])
-
-    if inps.only_load_ionosphere and os.path.basename(inps.outfile[0]) == 'ifgramStack.h5':
-        inps.outfile[0] = os.path.join(inps.outdir, 'ionStack.h5')
-        print(f'load ionosphere only --> set the default output file name to: {inps.outfile[0]}.')
     return inps
 
 
@@ -234,57 +223,47 @@ def read_inps2dict(inps):
     if iDict.get('autoPath', False):
         print('use auto path defined in mintpy.defaults.auto_path for options in auto')
         iDict = auto_path.get_auto_path(processor=iDict['processor'],
-                                        work_dir=os.path.dirname(iDict['outdir']),
+                                        work_dir=os.getcwd(),
                                         template=iDict)
-
-    # copy dset_name2template_key info into iDict
-    if inps.only_load_ionosphere:
-        iDict['dset_name2template_key'] = {
-            **ION_DSET_NAME2TEMPLATE_KEY,
-            **GEOMETRY_DSET_NAME2TEMPLATE_KEY}
-    else:
-        iDict['dset_name2template_key'] = {
-            **IFGRAM_DSET_NAME2TEMPLATE_KEY,
-            **OFFSET_DSET_NAME2TEMPLATE_KEY,
-            **GEOMETRY_DSET_NAME2TEMPLATE_KEY}
 
     return iDict
 
 
 def read_subset_box(iDict):
     """read the following items:
-    geocoded
-    box
-    box4geo_lut
+    geocoded - bool, if the stack of observations geocoded or not
+    box      - tuple of 4 int, pixel box for stackObj and geomRadarObj, for obs in geo & radar coordinates
+    box4geo  - tuple of 4 int, pixel box for geomGeoObj, box4geo is the same as box, except for:
+               obs in radar coordinate with lookup table [for gamma and roipac], where box4geo is
+               the geo bounding box of the box above.
     """
     # Read subset info from template
     iDict['box'] = None
-    iDict['box4geo_lut'] = None
+    iDict['box4geo'] = None
     pix_box, geo_box = subset.read_subset_template2box(iDict['template_file'][0])
 
     # Grab required info to read input geo_box into pix_box
-    try:
-        lookupFile = [glob.glob(str(iDict['mintpy.load.lookupYFile']))[0],
-                      glob.glob(str(iDict['mintpy.load.lookupXFile']))[0]]
-    except:
-        lookupFile = None
+    lookup_y_files = glob.glob(str(iDict['mintpy.load.lookupYFile']))
+    lookup_x_files = glob.glob(str(iDict['mintpy.load.lookupXFile']))
+    if len(lookup_y_files) > 0 and len(lookup_x_files) > 0:
+        lookup_file = [lookup_y_files[0], lookup_x_files[0]]
+    else:
+        lookup_file = None
 
-    try:
-        pathKey = [i for i in iDict['dset_name2template_key'].values()
-                   if i in iDict.keys()][0]
-        file = glob.glob(str(iDict[pathKey]))[0]
-        atr = readfile.read_attribute(file)
-    except:
+    # use DEM file attribute as reference, because
+    # 1) it is required AND
+    # 2) it is in the same coordinate type as observation files
+    dem_files = glob.glob(iDict['mintpy.load.demFile'])
+    if len(dem_files) > 0:
+        atr = readfile.read_attribute(dem_files[0])
+    else:
         atr = dict()
 
-    geocoded = None
-    if 'Y_FIRST' in atr.keys():
-        geocoded = True
-    else:
-        geocoded = False
+    geocoded = True if 'Y_FIRST' in atr.keys() else False
+    iDict['geocoded'] = geocoded
 
     # Check conflict
-    if geo_box and not geocoded and lookupFile is None:
+    if geo_box and not geocoded and lookup_file is None:
         geo_box = None
         print(('WARNING: mintpy.subset.lalo is not supported'
                ' if 1) no lookup file AND'
@@ -303,7 +282,7 @@ def read_subset_box(iDict):
             return iDict
 
     # geo_box --> pix_box
-    coord = ut.coordinate(atr, lookup_file=lookupFile)
+    coord = ut.coordinate(atr, lookup_file=lookup_file)
     if geo_box is not None:
         pix_box = coord.bbox_geo2radar(geo_box)
         pix_box = coord.check_box_within_data_coverage(pix_box)
@@ -312,16 +291,15 @@ def read_subset_box(iDict):
 
     # Get box for geocoded lookup table (for gamma/roipac)
     box4geo_lut = None
-    if lookupFile is not None:
-        atrLut = readfile.read_attribute(lookupFile[0])
+    if lookup_file is not None:
+        atrLut = readfile.read_attribute(lookup_file[0])
         if not geocoded and 'Y_FIRST' in atrLut.keys():
             geo_box = coord.bbox_radar2geo(pix_box)
             box4geo_lut = ut.coordinate(atrLut).bbox_geo2radar(geo_box)
             print('box to read for geocoded lookup file in y/x: {}'.format(box4geo_lut))
 
-    iDict['geocoded'] = geocoded
     iDict['box'] = pix_box
-    iDict['box4geo_lut'] = box4geo_lut
+    iDict['box4geo'] = box4geo_lut if box4geo_lut else pix_box
     return iDict
 
 
@@ -417,49 +395,51 @@ def skip_files_with_inconsistent_size(dsPathDict, pix_box=None, dsName='unwrapPh
     return dsPathDict
 
 
-def read_inps_dict2ifgram_stack_dict_object(iDict):
+def read_inps_dict2ifgram_stack_dict_object(iDict, ds_name2template_key):
     """Read input arguments into ifgramStackDict object.
 
-    Parameters: iDict    - dict, input arguments from command line & template file
-    Returns:    stackObj - ifgramStackDict object or None
+    Parameters: iDict                - dict, input arguments from command line & template file
+                ds_name2template_key - dict, to relate the HDF5 dataset name to the template key
+    Returns:    stackObj             - ifgramStackDict object or None
     """
     if iDict['only_load_geometry']:
         return None
-    elif iDict['only_load_ionosphere']:
-        ds_type = 'ionospheric'
-    else:
-        ds_type = 'interferometric'
+
+    if 'mintpy.load.unwFile' in ds_name2template_key.values():
+        obs_type = 'interferogram'
+    elif 'mintpy.load.ionUnwFile' in ds_name2template_key.values():
+        obs_type = 'ionosphere'
+    elif 'mintpy.load.azOffFile' in ds_name2template_key.values():
+        obs_type = 'offset'
 
     # iDict --> dsPathDict
     print('-'*50)
-    print(f'searching {ds_type} pairs info')
+    print(f'searching {obs_type} pairs info')
     print('input data files:')
-    maxDigit = max([len(i) for i in list(iDict['dset_name2template_key'].keys())])
+    max_digit = max([len(i) for i in list(ds_name2template_key.keys())])
     dsPathDict = {}
-    for dsName in [i for i in ifgramDatasetNames
-                   if i in iDict['dset_name2template_key'].keys()]:
-        key = iDict['dset_name2template_key'][dsName]
+    for dsName in [i for i in ifgramDatasetNames if i in ds_name2template_key.keys()]:
+        key = ds_name2template_key[dsName]
         if key in iDict.keys():
             files = sorted(glob.glob(str(iDict[key])))
             if len(files) > 0:
                 dsPathDict[dsName] = files
-                print('{:<{width}}: {path}'.format(dsName,
-                                                   width=maxDigit,
-                                                   path=iDict[key]))
+                print(f'{dsName:<{max_digit}}: {iDict[key]}')
 
     # Check 1: required dataset
-    dsName0s = ['unwrapPhase', 'rangeOffset', 'azimuthOffset']
+    dsName0s = [x for x in OBS_DSET_NAMES if x in ds_name2template_key.keys()]
     dsName0 = [i for i in dsName0s if i in dsPathDict.keys()]
     if len(dsName0) == 0:
-        print('WARNING: No reqired {} data files found!'.format(dsName0s))
+        print(f'WARNING: No data files found for the required dataset: {dsName0s}! Skip loading for {obs_type} stack.')
         return None
     else:
         dsName0 = dsName0[0]
 
     # Check 2: data dimension for unwrapPhase files
-    dsPathDict = skip_files_with_inconsistent_size(dsPathDict,
-                                                   pix_box=iDict['box'],
-                                                   dsName=dsName0)
+    dsPathDict = skip_files_with_inconsistent_size(
+        dsPathDict=dsPathDict,
+        pix_box=iDict['box'],
+        dsName=dsName0)
 
     # Check 3: number of files for all dataset types
     # dsPathDict --> dsNumDict
@@ -467,7 +447,7 @@ def read_inps_dict2ifgram_stack_dict_object(iDict):
     for key in dsPathDict.keys():
         num_file = len(dsPathDict[key])
         dsNumDict[key] = num_file
-        print('number of {:<{width}}: {num}'.format(key, width=maxDigit, num=num_file))
+        print(f'number of {key:<{max_digit}}: {num_file}')
 
     dsNumList = list(dsNumDict.values())
     if any(i != dsNumList[0] for i in dsNumList):
@@ -543,25 +523,23 @@ def read_inps_dict2ifgram_stack_dict_object(iDict):
     return stackObj
 
 
-def read_inps_dict2geometry_dict_object(iDict):
+def read_inps_dict2geometry_dict_object(iDict, dset_name2template_key):
     """Read input arguments into geometryDict object(s).
 
     Parameters: iDict        - dict, input arguments from command line & template file
-    Returns:    geomRadarObj - geometryDict object in radar coordinates or None
-                geomGeoObj   - geometryDict object in geo   coordinates or None
+    Returns:    geomGeoObj   - geometryDict object in geo   coordinates or None
+                geomRadarObj - geometryDict object in radar coordinates or None
     """
-    if iDict['only_load_ionosphere']:
-        return None, None
 
     # eliminate lookup table dsName for input files in radar-coordinates
     if iDict['processor'] in ['isce', 'doris']:
         # for processors with lookup table in radar-coordinates, remove azimuth/rangeCoord
-        iDict['dset_name2template_key'].pop('azimuthCoord')
-        iDict['dset_name2template_key'].pop('rangeCoord')
+        dset_name2template_key.pop('azimuthCoord')
+        dset_name2template_key.pop('rangeCoord')
     elif iDict['processor'] in ['roipac', 'gamma']:
         # for processors with lookup table in geo-coordinates, remove latitude/longitude
-        iDict['dset_name2template_key'].pop('latitude')
-        iDict['dset_name2template_key'].pop('longitude')
+        dset_name2template_key.pop('latitude')
+        dset_name2template_key.pop('longitude')
     elif iDict['processor'] in ['aria', 'gmtsar', 'hyp3', 'snap', 'cosicorr']:
         # for processors with geocoded products support only, do nothing for now.
         # check again when adding products support in radar-coordiantes
@@ -573,11 +551,10 @@ def read_inps_dict2geometry_dict_object(iDict):
     print('-'*50)
     print('searching geometry files info')
     print('input data files:')
-    maxDigit = max([len(i) for i in list(iDict['dset_name2template_key'].keys())])
+    max_digit = max([len(i) for i in list(dset_name2template_key.keys())])
     dsPathDict = {}
-    for dsName in [i for i in geometryDatasetNames
-                   if i in iDict['dset_name2template_key'].keys()]:
-        key = iDict['dset_name2template_key'][dsName]
+    for dsName in [i for i in geometryDatasetNames if i in dset_name2template_key.keys()]:
+        key = dset_name2template_key[dsName]
         if key in iDict.keys():
             files = sorted(glob.glob(str(iDict[key])))
             if len(files) > 0:
@@ -587,33 +564,30 @@ def read_inps_dict2geometry_dict_object(iDict):
                         date = ptime.yyyymmdd(os.path.basename(os.path.dirname(file)))
                         bperpDict[date] = file
                     dsPathDict[dsName] = bperpDict
-                    print('{:<{width}}: {path}'.format(dsName,
-                                                       width=maxDigit,
-                                                       path=iDict[key]))
-                    print('number of bperp files: {}'.format(len(list(bperpDict.keys()))))
+                    print(f'{dsName:<{max_digit}}: {iDict[key]}')
+                    print(f'number of bperp files: {len(list(bperpDict.keys()))}')
                 else:
                     dsPathDict[dsName] = files[0]
-                    print('{:<{width}}: {path}'.format(dsName,
-                                                       width=maxDigit,
-                                                       path=files[0]))
+                    print(f'{dsName:<{max_digit}}: {files[0]}')
 
     # Check required dataset
     dsName0 = geometryDatasetNames[0]
     if dsName0 not in dsPathDict.keys():
         print('WARNING: No reqired {} data files found!'.format(dsName0))
 
-    # metadata
-    ifgramMetaGeo = None
-    ifgramMetaRadar = None
-    ifgramKey = iDict['dset_name2template_key']['unwrapPhase']
-    if ifgramKey in iDict.keys():
-        ifgramFiles = glob.glob(str(iDict[ifgramKey]))
-        if len(ifgramFiles) > 0:
-            atr = readfile.read_attribute(ifgramFiles[0])
+    # extra metadata from observations
+    # e.g. EARTH_RADIUS, HEIGHT, etc.
+    obsMetaGeo = None
+    obsMetaRadar = None
+    for obsName in OBS_DSET_NAMES:
+        obsFiles = sorted(glob.glob(iDict[dset_name2template_key[obsName]]))
+        if len(obsFiles) > 0:
+            atr = readfile.read_attribute(obsFiles[0])
             if 'Y_FIRST' in atr.keys():
-                ifgramMetaGeo = atr.copy()
+                obsMetaGeo = atr.copy()
             else:
-                ifgramMetaRadar = atr.copy()
+                obsMetaRadar = atr.copy()
+            break
 
     # dsPathDict --> dsGeoPathDict + dsRadarPathDict
     dsNameList = list(dsPathDict.keys())
@@ -629,21 +603,24 @@ def read_inps_dict2geometry_dict_object(iDict):
         else:
             dsRadarPathDict[dsName] = dsPathDict[dsName]
 
-    geomRadarObj = None
     geomGeoObj = None
-    if len(dsRadarPathDict) > 0:
-        geomRadarObj = geometryDict(processor=iDict['processor'],
-                                    datasetDict=dsRadarPathDict,
-                                    extraMetadata=ifgramMetaRadar)
+    geomRadarObj = None
     if len(dsGeoPathDict) > 0:
-        geomGeoObj = geometryDict(processor=iDict['processor'],
-                                  datasetDict=dsGeoPathDict,
-                                  extraMetadata=ifgramMetaGeo)
-    return geomRadarObj, geomGeoObj
+        geomGeoObj = geometryDict(
+            processor=iDict['processor'],
+            datasetDict=dsGeoPathDict,
+            extraMetadata=obsMetaGeo)
+    if len(dsRadarPathDict) > 0:
+        geomRadarObj = geometryDict(
+            processor=iDict['processor'],
+            datasetDict=dsRadarPathDict,
+            extraMetadata=obsMetaRadar)
+
+    return geomGeoObj, geomRadarObj
 
 
 #################################################################
-def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1):
+def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1, geom_obj=None):
     """Check if re-writing is necessary.
 
     Do not write HDF5 file if ALL the following meet:
@@ -656,13 +633,26 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1):
                 box        - tuple of int, bounding box in (x0, y0, x1, y1)
                 updateMode - bool
                 x/ystep    - int
+                geom_obj   - geometryDict object or None, for ionosphere only
     Returns:    flag       - str, run or skip
     """
 
     flag = 'run'
-    if updateMode and ut.run_or_skip(outFile, check_readable=True) == 'skip':
+
+    # skip if there is no dict object to write
+    if not inObj:
+        flag = 'skip'
+        return flag
+
+    # run if not in update mode
+    if not updateMode:
+        return flag
+
+    if ut.run_or_skip(outFile, check_readable=True) == 'skip':
+        kwargs = dict(box=box, xstep=xstep, ystep=ystep)
+
         if inObj.name == 'ifgramStack':
-            in_size = inObj.get_size(box=box, xstep=xstep, ystep=ystep)[1:]
+            in_size = inObj.get_size(geom_obj=geom_obj, **kwargs)[1:]
             in_dset_list = inObj.get_dataset_list()
             in_date12_list = inObj.get_date12_list()
 
@@ -680,7 +670,7 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1):
                 flag = 'skip'
 
         elif inObj.name == 'geometry':
-            in_size = inObj.get_size(box=box, xstep=xstep, ystep=ystep)
+            in_size = inObj.get_size(**kwargs)
             in_dset_list = inObj.get_dataset_list()
 
             outObj = geometry(outFile)
@@ -752,40 +742,27 @@ def prepare_metadata(iDict):
         geom_dir = os.path.dirname(iDict['mintpy.load.demFile'])
 
         # --dset-dir / --file-pattern
-        obs_keys = ['mintpy.load.unwFile', 'mintpy.load.ionUnwFile',
-                    'mintpy.load.rgOffFile', 'mintpy.load.azOffFile']
-        obs_keys = [i for i in obs_keys if i in iDict['dset_name2template_key'].values()]
+        obs_keys = [
+            'mintpy.load.unwFile',
+            'mintpy.load.ionUnwFile',
+            'mintpy.load.rgOffFile',
+            'mintpy.load.azOffFile',
+        ]
         obs_paths = [iDict[key] for key in obs_keys if iDict[key].lower() != 'auto']
-        stack_processor = isce_utils.get_processor(meta_file) if os.path.isfile(meta_file) else 'topsStack'
-        if len(obs_paths) > 0:
-            if stack_processor == 'alosStack':
-                obs_dir = os.path.dirname(obs_paths[0])
-            else:
-                obs_dir = os.path.dirname(os.path.dirname(obs_paths[0]))
-            obs_file = os.path.basename(obs_paths[0])
+        obs_paths = [x for x in obs_paths if len(glob.glob(x)) > 0]
 
-            # ionStack
-            if 'mintpy.ionUnwFile' in obs_keys:
-                parts = obs_paths[0].rsplit(os.sep, 3)
-                obs_dir = parts[0]
-                obs_file = os.path.join(parts[-2], parts[-1])
-
-        else:
-            obs_dir = None
-            obs_file = None
-
-        # --geom-files
+        # --geom-files for the basenames only
         geom_names = ['dem', 'lookupY', 'lookupX', 'incAngle', 'azAngle', 'shadowMask', 'waterMask']
         geom_keys = ['mintpy.load.{}File'.format(i) for i in geom_names]
         geom_files = [os.path.basename(iDict[key]) for key in geom_keys
-                      if (iDict[key] and iDict[key].lower() != 'auto')]
+                      if (iDict.get(key, 'auto') != 'auto')]
 
         # compose list of input arguments
         iargs = ['-m', meta_file, '-g', geom_dir]
         if baseline_dir:
             iargs += ['-b', baseline_dir]
-        if obs_dir is not None:
-            iargs += ['-d', obs_dir, '-f', obs_file]
+        if len(obs_paths) > 0:
+            iargs += ['-f'] + obs_paths
         if geom_files:
             iargs += ['--geom-files'] + geom_files
 
@@ -797,13 +774,13 @@ def prepare_metadata(iDict):
             warnings.warn('prep_isce.py failed. Assuming its result exists and continue...')
 
         # [optional] for topsStack: SAFE_files.txt --> S1A/B_date.txt
-        if stack_processor == 'topsStack':
+        if os.path.isfile(meta_file) and isce_utils.get_processor(meta_file) == 'topsStack':
             safe_list_file = os.path.join(os.path.dirname(os.path.dirname(meta_file)), 'SAFE_files.txt')
             if os.path.isfile(safe_list_file):
-                mintpy_dir = os.path.dirname(os.path.dirname(iDict['outfile'][0]))
-                s1_utils.get_s1ab_date_list_file(mintpy_dir=mintpy_dir,
-                                                 safe_list_file=safe_list_file,
-                                                 print_msg=True)
+                s1_utils.get_s1ab_date_list_file(
+                    mintpy_dir=os.getcwd(),
+                    safe_list_file=safe_list_file,
+                    print_msg=True)
 
     elif processor == 'aria':
         from mintpy import prep_aria
@@ -863,7 +840,7 @@ def prepare_metadata(iDict):
             raise FileExistsError('Custom template file NOT found and is required for GMTSAR!')
 
         # run prep_*.py
-        iargs = [custom_temp_files[0], '--mintpy-dir', os.path.dirname(iDict['outdir'])]
+        iargs = [custom_temp_files[0]]
         print('prep_gmtsar.py', ' '.join(iargs))
         try:
             prep_gmtsar.main(iargs)
@@ -876,25 +853,6 @@ def prepare_metadata(iDict):
         raise ValueError(msg)
 
     return
-
-
-def print_write_setting(iDict):
-    updateMode = iDict['updateMode']
-    comp = iDict['compression']
-    print('-'*50)
-    print('updateMode : {}'.format(updateMode))
-    print('compression: {}'.format(comp))
-    print('x/ystep: {}/{}'.format(iDict['xstep'], iDict['ystep']))
-
-    # box
-    box = iDict['box']
-    # box for geometry file in geo-coordinates
-    if not iDict.get('geocoded', False):
-        boxGeo = iDict['box4geo_lut']
-    else:
-        boxGeo = box
-
-    return updateMode, comp, box, boxGeo
 
 
 def get_extra_metadata(iDict):
@@ -925,65 +883,83 @@ def main(iargs=None):
     # read input options
     iDict = read_inps2dict(inps)
 
-    # prepare metadata
+    ## prepare metadata
     prepare_metadata(iDict)
     extraDict = get_extra_metadata(iDict)
-
-    # prepare for subset [need the metadata from above]
-    iDict = read_subset_box(iDict)
 
     # skip data writing for aria as it is included in prep_aria
     if iDict['processor'] == 'aria':
         return
 
-    # initiate objects
-    stackObj = read_inps_dict2ifgram_stack_dict_object(iDict)
-    geomRadarObj, geomGeoObj = read_inps_dict2geometry_dict_object(iDict)
+    ## search & write data files
+    print('-'*50)
+    print('updateMode : {}'.format(iDict['updateMode']))
+    print('compression: {}'.format(iDict['compression']))
+    print('x/ystep: {}/{}'.format(iDict['xstep'], iDict['ystep']))
+    kwargs = dict(updateMode=iDict['updateMode'], xstep=iDict['xstep'], ystep=iDict['ystep'])
 
-    # prepare write
-    updateMode, comp, box, boxGeo = print_write_setting(iDict)
-    if any([stackObj, geomRadarObj, geomGeoObj]) and not os.path.isdir(inps.outdir):
-        os.makedirs(inps.outdir)
-        print('create directory: {}'.format(inps.outdir))
+    # read subset info [need the metadata from above]
+    iDict = read_subset_box(iDict)
 
-    # write
-    if stackObj and run_or_skip(inps.outfile[0], stackObj, box,
-                                updateMode=updateMode,
-                                xstep=iDict['xstep'],
-                                ystep=iDict['ystep']) == 'run':
-        print('-'*50)
-        stackObj.write2hdf5(outputFile=inps.outfile[0],
-                            access_mode='w',
-                            box=box,
-                            xstep=iDict['xstep'],
-                            ystep=iDict['ystep'],
-                            compression=comp,
-                            extra_metadata=extraDict)
+    # geometry in geo / radar coordinates 
+    geom_dset_name2template_key = {
+        **GEOMETRY_DSET_NAME2TEMPLATE_KEY,
+        **IFGRAM_DSET_NAME2TEMPLATE_KEY,
+        **OFFSET_DSET_NAME2TEMPLATE_KEY,
+    }
+    geom_geo_obj, geom_radar_obj = read_inps_dict2geometry_dict_object(iDict, geom_dset_name2template_key)
+    geom_geo_file = os.path.abspath('./inputs/geometryGeo.h5')
+    geom_radar_file = os.path.abspath('./inputs/geometryRadar.h5')
 
-    if geomRadarObj and run_or_skip(inps.outfile[1], geomRadarObj, box,
-                                    updateMode=updateMode,
-                                    xstep=iDict['xstep'],
-                                    ystep=iDict['ystep']) == 'run':
-        print('-'*50)
-        geomRadarObj.write2hdf5(outputFile=inps.outfile[1],
-                                access_mode='w',
-                                box=box,
-                                xstep=iDict['xstep'],
-                                ystep=iDict['ystep'],
-                                compression='lzf',
-                                extra_metadata=extraDict)
+    if run_or_skip(geom_geo_file, geom_geo_obj, iDict['box4geo'], **kwargs) == 'run':
+        geom_geo_obj.write2hdf5(
+            outputFile=geom_geo_file,
+            access_mode='w',
+            box=iDict['box4geo'],
+            xstep=iDict['xstep'],
+            ystep=iDict['ystep'],
+            compression='lzf')
 
-    if geomGeoObj and run_or_skip(inps.outfile[2], geomGeoObj, boxGeo,
-                                  updateMode=updateMode,
-                                  xstep=iDict['xstep'],
-                                  ystep=iDict['ystep']) == 'run':
-        print('-'*50)
-        geomGeoObj.write2hdf5(outputFile=inps.outfile[2],
-                              access_mode='w',
-                              box=boxGeo,
-                              xstep=iDict['xstep'],
-                              ystep=iDict['ystep'],
-                              compression='lzf')
+    if run_or_skip(geom_radar_file, geom_radar_obj, iDict['box'], **kwargs) == 'run':
+        geom_radar_obj.write2hdf5(
+            outputFile=geom_radar_file,
+            access_mode='w',
+            box=iDict['box'],
+            xstep=iDict['xstep'],
+            ystep=iDict['ystep'],
+            compression='lzf',
+            extra_metadata=extraDict)
+
+    # observations: ifgram, ion or offset
+    # loop over obs stacks
+    stack_ds_name2tmpl_key_list = [
+        IFGRAM_DSET_NAME2TEMPLATE_KEY,
+        ION_DSET_NAME2TEMPLATE_KEY,
+        OFFSET_DSET_NAME2TEMPLATE_KEY,
+    ]
+    stack_files = ['ifgramStack.h5', 'ionStack.h5', 'offsetStack.h5']
+    stack_files = [os.path.abspath(os.path.join('./inputs', x)) for x in stack_files]
+    for ds_name2tmpl_opt, stack_file in zip(stack_ds_name2tmpl_key_list, stack_files):
+
+        # initiate dict objects
+        stack_obj = read_inps_dict2ifgram_stack_dict_object(iDict, ds_name2tmpl_opt)
+
+        # use geom_obj as size reference while loading ionosphere
+        geom_obj = None
+        if os.path.basename(stack_file).startswith('ion'):
+            geom_obj = geom_geo_obj if iDict['geocoded'] else geom_radar_obj
+
+        # write dict objects to HDF5 files
+        if run_or_skip(stack_file, stack_obj, iDict['box'], geom_obj=geom_obj, **kwargs) == 'run':
+            stack_obj.write2hdf5(
+                outputFile=stack_file,
+                access_mode='w',
+                box=iDict['box'],
+                xstep=iDict['xstep'],
+                ystep=iDict['ystep'],
+                compression=iDict['compression'],
+                extra_metadata=extraDict,
+                geom_obj=geom_obj)
 
     # time info
     m, s = divmod(time.time()-start_time, 60)
