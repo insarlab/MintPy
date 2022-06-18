@@ -37,7 +37,7 @@ PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac', '
 # primary observation dataset names
 OBS_DSET_NAMES = ['unwrapPhase', 'rangeOffset', 'azimuthOffset']
 
-IFGRAM_DSET_NAME2TEMPLATE_KEY = {
+IFG_DSET_NAME2TEMPLATE_KEY = {
     'unwrapPhase'     : 'mintpy.load.unwFile',
     'coherence'       : 'mintpy.load.corFile',
     'connectComponent': 'mintpy.load.connCompFile',
@@ -51,7 +51,7 @@ ION_DSET_NAME2TEMPLATE_KEY = {
     'connectComponent': 'mintpy.load.ionConnCompFile',
 }
 
-OFFSET_DSET_NAME2TEMPLATE_KEY = {
+OFF_DSET_NAME2TEMPLATE_KEY = {
     'azimuthOffset'   : 'mintpy.load.azOffFile',
     'azimuthOffsetStd': 'mintpy.load.azOffStdFile',
     'rangeOffset'     : 'mintpy.load.rgOffFile',
@@ -59,7 +59,7 @@ OFFSET_DSET_NAME2TEMPLATE_KEY = {
     'offsetSNR'       : 'mintpy.load.offSnrFile',
 }
 
-GEOMETRY_DSET_NAME2TEMPLATE_KEY = {
+GEOM_DSET_NAME2TEMPLATE_KEY = {
     'height'          : 'mintpy.load.demFile',
     'latitude'        : 'mintpy.load.lookupYFile',
     'longitude'       : 'mintpy.load.lookupXFile',
@@ -903,9 +903,9 @@ def main(iargs=None):
 
     # geometry in geo / radar coordinates 
     geom_dset_name2template_key = {
-        **GEOMETRY_DSET_NAME2TEMPLATE_KEY,
-        **IFGRAM_DSET_NAME2TEMPLATE_KEY,
-        **OFFSET_DSET_NAME2TEMPLATE_KEY,
+        **GEOM_DSET_NAME2TEMPLATE_KEY,
+        **IFG_DSET_NAME2TEMPLATE_KEY,
+        **OFF_DSET_NAME2TEMPLATE_KEY,
     }
     geom_geo_obj, geom_radar_obj = read_inps_dict2geometry_dict_object(iDict, geom_dset_name2template_key)
     geom_geo_file = os.path.abspath('./inputs/geometryGeo.h5')
@@ -933,9 +933,9 @@ def main(iargs=None):
     # observations: ifgram, ion or offset
     # loop over obs stacks
     stack_ds_name2tmpl_key_list = [
-        IFGRAM_DSET_NAME2TEMPLATE_KEY,
+        IFG_DSET_NAME2TEMPLATE_KEY,
         ION_DSET_NAME2TEMPLATE_KEY,
-        OFFSET_DSET_NAME2TEMPLATE_KEY,
+        OFF_DSET_NAME2TEMPLATE_KEY,
     ]
     stack_files = ['ifgramStack.h5', 'ionStack.h5', 'offsetStack.h5']
     stack_files = [os.path.abspath(os.path.join('./inputs', x)) for x in stack_files]
