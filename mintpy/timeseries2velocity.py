@@ -4,6 +4,8 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, Heresh Fattahi, Yuan-Kai Liu, 2013 #
 ############################################################
+# Recommend import:
+#   from mintpy import timeseries2velocity as ts2vel
 
 
 import os

@@ -143,9 +143,6 @@ def cmd_line_parse(iargs=None):
     inps.colormap = inps.colormap if inps.colormap else 'jet'
     inps.fig_size = inps.fig_size if inps.fig_size else [8.0, 4.5]
 
-    # temporal model fitting, initialize the dicts of exp and log funcs
-    inps = ts2vel.init_exp_log_dicts(inps)
-
     # verbose print using --noverbose option
     global vprint
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
@@ -350,7 +347,7 @@ def read_init_info(inps):
     inps.cbar_label += '[{}]'.format(inps.disp_unit_img)
 
     ## fit a suite of time func to the time series
-    inps.model, inps.num_param = ts2vel.read_inps2model(inps, date_list=inps.date_list, print_msg=inps.print_msg)
+    inps.model = time_func.inps2model(inps, date_list=inps.date_list, print_msg=inps.print_msg)
 
     # dense TS for plotting
     inps.date_list_fit = ptime.get_date_range(inps.date_list[0], inps.date_list[-1])
@@ -880,7 +877,7 @@ class timeseriesViewer():
         self.ax_img.set_title(sub_title, fontsize=self.font_size)
 
         # read/update 2D image data
-        data_img = np.array(self.ts_data[0][self.idx, :, :])
+        data_img = self.ts_data[0][self.idx, :, :]
         data_img[self.mask == 0] = np.nan
         if self.wrap:
             if self.disp_unit_img == 'radian':
