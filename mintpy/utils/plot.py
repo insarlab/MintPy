@@ -1511,19 +1511,26 @@ def prepare_dem_background(dem, inps=None, print_msg=True):
                                  vmax=inps.shade_max)
         dem_shade[np.isnan(dem_shade[:, :, 0])] = np.nan
         if print_msg:
-            msg = f'show shaded relief DEM [min/max: {inps.shade_min}/{inps.shade_max} m; '
-            msg += f'exag: {inps.shade_exag}; az/alt deg: {inps.shade_azdeg}/{inps.shade_altdeg}]'
+            msg = f'show shaded relief DEM (min/max={inps.shade_min:.0f}/{inps.shade_max:.0f} m; '
+            msg += f'exag={inps.shade_exag}; az/alt={inps.shade_azdeg}/{inps.shade_altdeg} deg)'
             print(msg)
 
     # prepare contour
     if inps.disp_dem_contour:
-        from scipy import ndimage
-        dem_contour = ndimage.gaussian_filter(dem, sigma=inps.dem_contour_smooth, order=0)
-        dem_contour_sequence = np.arange(inps.dem_contour_step, 9000, step=inps.dem_contour_step)
-        if print_msg:
-            print(('show contour in step of {} m '
-                   'with smoothing factor of {}').format(inps.dem_contour_step,
-                                                         inps.dem_contour_smooth))
+        if (np.nanmax(dem) - np.nanmin(dem)) < inps.dem_contour_step * 2:
+            msg = f'WARNING: elevation range ({np.nanmin(dem):.1f}-{np.nanmax(dem):.1f} m)'
+            msg += f' < 2 contour levels ({inps.dem_contour_step*2:.1f} m)'
+            msg += ' --> skip plotting DEM contour and continue'
+            print(msg)
+
+        else:
+            from scipy import ndimage
+            dem_contour = ndimage.gaussian_filter(dem, sigma=inps.dem_contour_smooth, order=0)
+            dem_contour_sequence = np.arange(inps.dem_contour_step, 9000, step=inps.dem_contour_step)
+            if print_msg:
+                msg = f'show contour in step of {inps.dem_contour_step} m '
+                msg += f'with a smoothing factor of {inps.dem_contour_smooth}'
+                print(msg)
 
     # masking
     if inps and inps.mask_dem and (dem_shade is not None or dem_contour is not None):
