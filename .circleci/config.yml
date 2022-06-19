@@ -54,7 +54,6 @@ jobs:
 
       - run:
           name: Testing MintPy on Example Dataset 1/4 - FernandinaSenDT128 (ISCE/topsStack)
-          no_output_timeout: 30m
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
@@ -62,7 +61,6 @@ jobs:
 
       - run:
           name: Testing MintPy on Example Dataset 2/4 - SanFranSenDT42 (ARIA)
-          no_output_timeout: 30m
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
@@ -70,7 +68,6 @@ jobs:
 
       - run:
           name: Testing MintPy on Example Dataset 3/4 - WellsEnvD2T399 (Gamma)
-          no_output_timeout: 30m
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
@@ -78,7 +75,6 @@ jobs:
 
       - run:
           name: Testing MintPy on Example Dataset 4/4 - WCapeSenAT29 (SNAP)
-          no_output_timeout: 30m
           command: |
             export PATH=${CONDA_PREFIX}/bin:${PATH}
             mkdir -p ${HOME}/data
