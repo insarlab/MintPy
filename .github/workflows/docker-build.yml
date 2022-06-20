@@ -49,8 +49,15 @@ jobs:
             org.opencontainers.image.version=${{ env.MINTPY_VERSION }}
             org.opencontainers.image.revision=${{ github.sha }}
 
-      - name: Add latest tag
+      - name: Add develop tag
         if: github.ref == 'refs/heads/main'
+        uses: akhilerm/tag-push-action@v1.0.0
+        with:
+          src: ghcr.io/${{ env.REPO }}:${{ env.MINTPY_VERSION }}
+          dst: ghcr.io/${{ env.REPO }}:develop
+
+      - name: Add latest tag
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: akhilerm/tag-push-action@v1.0.0
         with:
           src: ghcr.io/${{ env.REPO }}:${{ env.MINTPY_VERSION }}
