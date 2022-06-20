@@ -1,35 +1,56 @@
-## Running as Docker container
+## The MintPy Docker container
 
-Thanks to Andre Theron for putting together an [MintPy container on DockerHub](https://hub.docker.com/r/forrestwilliams/mintpy). [Docker](https://docs.docker.com/get-started/) allows you to run MintPy in a dedicated container (essentially an efficient virtual machine). [Here](https://docs.docker.com/install/) is the instruction to install docker.
+[Docker](https://docs.docker.com/get-started/) allows you to run MintPy in a dedicated container (essentially an efficient virtual machine). [Here](https://docs.docker.com/install/) is the instruction to install docker.
 
-To pull the MintPy container from Dockerhub to your local machine: 
+### Pulling Mintpy container images
 
+MintPy publishes Docker container images to the [Insarlab/MintPy Github Container Registery](https://github.com/insarlab/MintPy/pkgs/container/mintpy). To pull a MintPy container to your local machine with the latest stable MintPy release, run:
+
+```shell
+docker pull docker pull ghcr.io/insarlab/mintpy:latest
 ```
-docker pull forrestwilliams/mintpy:latest
+
+You can also pull a specific MintPy version (>=1.3.3) using the version tag:
+```shell
+docker pull docker pull ghcr.io/insarlab/mintpy:v1.3.3
 ```
 
-To start an interactive shell session in the container from the terminal, with bash for example: 
-
+Or the latest development version, which is the current HEAD of the main branch, with the `develop` tag:
+```shell
+docker pull docker pull ghcr.io/insarlab/mintpy:develop
 ```
-docker run -it forrestwilliams/mintpy:latest bash
+
+*Note:* `latest` and `develop` are *rolling* tags, meaning they change as MintPy is developed. It's a good idea to use a specific version of MintPy in production systems as `docker pull` will always pull the most current version of those tags.
+
+### Running the Mintpy container
+
+To start an interactive shell session in the container, run:
+
+```shell
+docker run -it docker pull ghcr.io/insarlab/mintpy:latest
+```
+
+You can also run MintPy executables directly like:
+```shell
+docker run -it ghcr.io/insarlab/mintpy:latest smallbaselineApp.py --help
 ```
 
 To map data on the host (local) machine to the container use [volumes](https://docs.docker.com/storage/volumes/):
 
-```
-docker run -it -v /path/to/data/dir:/home/work/ forrestwilliams/mintpy:latest bash
+```shell
+docker run -it -v </path/to/data/dir>:/home/mambauser/work ghcr.io/insarlab/mintpy:latest
+# Now inside the container
+cd work
 ```
 
-Background processing is possible using something like:  
+Which would allow you to process the mapped data like:
 
 ```
-docker run -it -v /path/to/data/dir:/home/work/ forrestwilliams/mintpy:latest python /home/python/MintPy/mintpy/smallbaselineApp.py /home/work/smallbaselineApp.cfg
+docker run -it -v </path/to/data/dir>:/home/mambauser/work ghcr.io/insarlab/mintpy:latest smallbaselineApp.py /home/mambauser/work/smallbaselineApp.cfg
 ```
 
 ### Notes ###
 
-+ The container may have strong permissions for directories you map to it.   
++ The container image is built using the [mambaorg/micromamba](https://hub.docker.com/r/mambaorg/micromamba) as a base. To manage conda environments inside the container use the `micromamba` command. For more information on micromamba, see: https://github.com/mamba-org/mamba#micromamba
 
-+ Container was built on `insarlab/main` - should be updated with new releases.  
-
-+ Needs further testing and improvement - can be made smaller (use Alpine instead of Debian...)  
++ Docker tightly maps user/group ids (uid/gid) inside and outside the container. By default, a `mambauser` with `uid=1000` and `gid=1000` will run inside the container and write files as that user. If you mount in a volume, files written to that volume will be own by the *user on your local machine* with `uid=1000` and `gid=1000`. On linux and mac these are the default uid/gid values, but on a shared or managed system, these may not be *your* uid/gid values. You can override the users running inside the container with the `--user` argument to `docker run`, see: https://docs.docker.com/engine/reference/run/#user

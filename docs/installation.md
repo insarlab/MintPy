@@ -10,17 +10,17 @@ conda install -c conda-forge mintpy
 
 #### b. via docker ####
 
-Docker allows one to run MintPy in a dedicated container (essentially an efficient virtual machine) and to be independent of platform OS. After installing [docker](https://docs.docker.com/install/), run the following to pull the [MintPy container from DockerHub](https://hub.docker.com/r/forrestwilliams/mintpy) to your local machine, check more details at [here](docker.md).
+Docker allows one to run MintPy in a dedicated container (essentially an efficient virtual machine) and to be independent of platform OS. After installing [docker](https://docs.docker.com/install/), run the following to pull the container with the latest stable release of [MintPy from the GitHub Container Registry](https://github.com/insarlab/MintPy/pkgs/container/mintpy) to your local machine:
 
 ```bash
-docker pull forrestwilliams/mintpy:1.3.1
+docker pull ghcr.io/insarlab/mintpy:latest
 ```
 
-Then complete the [post-installation setup](#3-post-installation-setup).
+Then complete the [post-installation setup](#3-post-installation-setup). More details about docker are [here](docker.md), including how to pull different versions of MintPy.
 
 ## 2. Install the development version ##
 
-Note: The installation note below is tested on Linux and macOS, and is still experimental on Windows (may has bugs).
+Note: The installation note below is tested on Linux and macOS, and is still experimental on Windows (may have bugs).
 
 MintPy is written in Python 3 and relies on several Python modules, check the [requirements.txt](https://github.com/insarlab/MintPy/blob/main/requirements.txt) file for details. We recommend using [conda](https://docs.conda.io/en/latest/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient management and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
 
