@@ -4,7 +4,7 @@
 
 ### Pulling Mintpy container images
 
-MintPy publishes Docker container images to the [Insarlab/MintPy Github Container Registery](https://github.com/insarlab/MintPy/pkgs/container/mintpy). To pull a MintPy container to your local machine with the latest stable MintPy release, run:
+MintPy publishes Docker container images to [ghcr.io/insarlab/MintPy](https://github.com/insarlab/MintPy/pkgs/container/mintpy) in the [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry). To pull a MintPy container to your local machine with the latest stable MintPy release, run:
 
 ```shell
 docker pull docker pull ghcr.io/insarlab/mintpy:latest
@@ -53,4 +53,4 @@ docker run -it -v </path/to/data/dir>:/home/mambauser/work ghcr.io/insarlab/mint
 
 + The container image is built using the [mambaorg/micromamba](https://hub.docker.com/r/mambaorg/micromamba) as a base. To manage conda environments inside the container use the `micromamba` command. For more information on micromamba, see: https://github.com/mamba-org/mamba#micromamba
 
-+ Docker tightly maps user/group ids (uid/gid) inside and outside the container. By default, a `mambauser` with `uid=1000` and `gid=1000` will run inside the container and write files as that user. If you mount in a volume, files written to that volume will be own by the *user on your local machine* with `uid=1000` and `gid=1000`. On linux and mac these are the default uid/gid values, but on a shared or managed system, these may not be *your* uid/gid values. You can override the users running inside the container with the `--user` argument to `docker run`, see: https://docs.docker.com/engine/reference/run/#user
++ Docker tightly maps user/group ids (uid/gid) inside and outside the container. By default, a `mambauser` with `uid=1000` and `gid=1000` will run inside the container and write files as that user. If you mount in a volume, files written to that volume will be owned by the *user on your local machine* with `uid=1000` and `gid=1000`. On linux and mac these are the default uid/gid values, but on a shared or managed system, these may not be *your* uid/gid values. You can override the users running inside the container with the `--user` argument to `docker run`, see: https://docs.docker.com/engine/reference/run/#user

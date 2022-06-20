@@ -53,7 +53,7 @@ bash Miniconda3-latest-Linux-x86_64.sh -b -p ~/tools/miniconda3
 ~/tools/miniconda3/bin/conda init bash
 ```
 
-Install the dependencies into an custom existing environment [recommended] by running:
+Install the dependencies into a custom existing environment [recommended] by running:
 
 ```bash
 # To create a new custom environment, e.g. named "insar", run "conda create --name insar; conda activate insar"
@@ -85,7 +85,7 @@ Or install MintPy with pip in development mode as below. The development mode al
 python -m pip install -e MintPy
 ```
 
-Or simply setup the environment variables as below in your source file, e.g. `~/.bash_profile` for _bash_ users or `~/.cshrc` for _csh/tcsh_ users:
+Or simply set up the environment variables as below in your source file, e.g. `~/.bash_profile` for _bash_ users or `~/.cshrc` for _csh/tcsh_ users:
 
 ```bash
 if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
@@ -117,7 +117,7 @@ Same as the [instruction for Linux](#21-install-on-linux).
 
 #### b. Install MintPy via MacPorts ####
 
-Same as the [instruction for Linux](#21-install-on-linux), except for the dependencies installation, which is as below.
+Same as the [instruction for Linux](#21-install-on-linux), except for the dependencies' installation, which is as below.
 
 Install [macports](https://www.macports.org/install.php) if you have not done so. Add the following at the bottom of your `~/.bash_profile` file:
 
@@ -158,7 +158,7 @@ Same as the [instruction for Linux](#21-install-on-linux), except for the "c. In
 
 #### a. ERA5 for tropospheric correction ####
 
-Setup an account for ERA5 to download weather re-analysis datasets for tropospheric delay correction as described in [insarlab/PyAPS](https://github.com/insarlab/pyaps#2-account-setup-for-era5).
+Set up an account for ERA5 to download weather re-analysis datasets for tropospheric delay correction as described in [insarlab/PyAPS](https://github.com/insarlab/pyaps#2-account-setup-for-era5).
 
 `WEATHER_DIR`: Optionally, if you defined an environment variable named `WEATHER_DIR` to contain the path to a directory, MintPy will download the GAM files into the indicated directory. Also, MintPy will look for the GAM files in the directory before downloading a new one to prevent downloading multiple copies if you work with different dataset that cover the same date/time.
 

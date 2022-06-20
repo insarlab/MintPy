@@ -1,4 +1,4 @@
-# Builds in ~ 5 min and is ~ 2.8 GB on a linux laptop
+# Builds in ~ 5 min and is ~ 3 GB on a linux laptop
 FROM mambaorg/micromamba:0.24.0
 
 # Label image following opencontainers image-spec annotations recommendation:
