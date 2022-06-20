@@ -25,13 +25,13 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-USER micromamba
-WORKDIR /home/micromamba
+USER mambauser
+WORKDIR /home/mambauser
 
 ENV PATH=/opt/conda/bin:${PATH}
 
-ARG MINTPY_HOME=/home/micromamba/tools/MintPy
-COPY --chown=micromamba:micromamba . ${MINTPY_HOME}/
+ARG MINTPY_HOME=/home/mambauser/tools/MintPy
+COPY --chown=mambauser:mambauser . ${MINTPY_HOME}/
 
 ARG PYTHON_VERSION="3.9"
 RUN micromamba install -y -n base -c conda-forge python=${PYTHON_VERSION}  \
