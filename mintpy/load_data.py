@@ -191,10 +191,8 @@ def read_inps2dict(inps):
     key_list = [i.split(prefix)[1] for i in template.keys() if i.startswith(prefix)]
     for key in key_list:
         value = template[prefix+key]
-        if key in ['processor', 'autoPath', 'updateMode', 'compression', 'stepMethod']:
+        if key in ['processor', 'autoPath', 'updateMode', 'compression']:
             iDict[key] = template[prefix+key]
-        elif key in ['xstep', 'ystep']:
-            iDict[key] = int(template[prefix+key])
         elif value:
             iDict[prefix+key] = template[prefix+key]
     print('processor : {}'.format(iDict['processor']))
@@ -202,9 +200,16 @@ def read_inps2dict(inps):
     if iDict['compression'] == False:
         iDict['compression'] = None
 
-    iDict['xstep'] = iDict.get('xstep', 1)
-    iDict['ystep'] = iDict.get('ystep', 1)
-    iDict['stepMethod'] = iDict.get('stepMethod', 'nearest')
+    prefix = 'mintpy.multilook.'
+    key_list = [i.split(prefix)[1] for i in template.keys() if i.startswith(prefix)]
+    for key in key_list:
+        value = template[prefix+key]
+        if key in ['xstep', 'ystep', 'method']:
+            iDict[key] = template[prefix+key]
+
+    iDict['xstep']  = int(iDict.get('xstep', 1))
+    iDict['ystep']  = int(iDict.get('ystep', 1))
+    iDict['method'] = str(iDict.get('method', 'nearest'))
 
     # PROJECT_NAME --> PLATFORM
     if not iDict['PROJECT_NAME']:
@@ -896,7 +901,7 @@ def main(iargs=None):
     print('-'*50)
     print('updateMode : {}'.format(iDict['updateMode']))
     print('compression: {}'.format(iDict['compression']))
-    print('x/ystep: {}/{};  multilook method: {}'.format(iDict['xstep'], iDict['ystep'], iDict['stepMethod']))
+    print('x/ystep: {}/{};  multilook method: {}'.format(iDict['xstep'], iDict['ystep'], iDict['method']))
     kwargs = dict(updateMode=iDict['updateMode'], xstep=iDict['xstep'], ystep=iDict['ystep'])
 
     # read subset info [need the metadata from above]
@@ -958,7 +963,7 @@ def main(iargs=None):
                 box=iDict['box'],
                 xstep=iDict['xstep'],
                 ystep=iDict['ystep'],
-                ystep=iDict['stepMethod'],
+                method=iDict['method'],
                 compression=iDict['compression'],
                 extra_metadata=extraDict,
                 geom_obj=geom_obj)

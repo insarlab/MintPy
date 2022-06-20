@@ -136,7 +136,7 @@ class ifgramStackDict:
                 msg += f' --> resize from {in_size} to {geom_size} via skimage.transform.resize ...'
                 print(msg)
                 resize2shape = geom_size
-                length, width = geom_size
+                length, width = geom_size[0]/ystep, geom_size[1]/xstep,
 
         self.outputFile = outputFile
         with h5py.File(self.outputFile, access_mode) as f:
@@ -151,9 +151,9 @@ class ifgramStackDict:
                 if dsName in ['connectComponent']:
                     dsDataType = np.int16
                     dsCompression = 'lzf'
-                    stepMethod = 'nearest'
+                    mlk_method = 'nearest'
                 else:
-                    stepMethod = str(method)
+                    mlk_method = str(method)
 
                 print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
                        ' with compression = {c}').format(d=dsName,
@@ -183,7 +183,7 @@ class ifgramStackDict:
                                           box=box,
                                           xstep=xstep,
                                           ystep=ystep,
-                                          method=stepMethod,
+                                          method=mlk_method,
                                           resize2shape=resize2shape)[0]
 
                     # special handling for offset covariance file
