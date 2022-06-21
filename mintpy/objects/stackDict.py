@@ -28,7 +28,7 @@ from mintpy.utils import (
     utils0 as ut,
     attribute as attr,
 )
-from mintpy import multilook as mlk
+from mintpy.multilook import multilook_data as mlk
 
 ########################################################################################
 class ifgramStackDict:
@@ -97,17 +97,21 @@ class ifgramStackDict:
         dataType = dataTypeDict[metadata.get('DATA_TYPE', 'float32').lower()]
         return dataType
 
-    def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, xstep=1, ystep=1, method='nearest',
+    def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, xstep=1, ystep=1, mli_method='nearest',
                    compression=None, extra_metadata=None, geom_obj=None):
         """Save/write an ifgramStackDict object into an HDF5 file with the structure defined in:
 
         https://mintpy.readthedocs.io/en/latest/api/data_structure/#ifgramstack
 
-        Parameters: outputFile : str, Name of the HDF5 file for the InSAR stack
-                    access_mode : str, access mode of output File, e.g. w, r+
-                    box : tuple, subset range in (x0, y0, x1, y1)
-                    extra_metadata : dict, extra metadata to be added into output file
-        Returns:    outputFile
+        Parameters: outputFile     - str, Name of the HDF5 file for the InSAR stack
+                    access_mode    - str, access mode of output File, e.g. w, r+
+                    box            - tuple, subset range in (x0, y0, x1, y1)
+                    x/ystep        - int, multilook number in x/y direction
+                    mli_method     - str, multilook method, nearest, mean or median
+                    compression    - str, HDF5 dataset compression method, None, lzf or gzip
+                    extra_metadata - dict, extra metadata to be added into output file
+                    geom_obj       - geometryDict object, size reference to determine the resizing operation.
+        Returns:    outputFile     - str, Name of the HDF5 file for the InSAR stack
         """
         print('-'*50)
 
@@ -129,14 +133,18 @@ class ifgramStackDict:
         # check if resize is needed for a lower resolution stack, e.g. ionosphere from isce2/topsStack
         resize2shape = None
         if geom_obj and os.path.basename(outputFile).startswith('ion'):
-            in_size = self.get_size()[1:]
+            # compare the original data size between ionosphere and geometry w/o subset/multilook
+            ion_size = self.get_size()[1:]
             geom_size = geom_obj.get_size()
-            if in_size != geom_size:
+            if ion_size != geom_size:
                 msg = 'lower resolution ionosphere file detected'
-                msg += f' --> resize from {in_size} to {geom_size} via skimage.transform.resize ...'
+                msg += f' --> resize from {ion_size} to {geom_size} via skimage.transform.resize ...'
                 print(msg)
                 resize2shape = geom_size
-                length, width = geom_size[0]/ystep, geom_size[1]/xstep,
+                length, width = self.get_size(box=box,
+                                              xstep=xstep,
+                                              ystep=ystep,
+                                              geom_obj=geom_obj)[1:]
 
         self.outputFile = outputFile
         with h5py.File(self.outputFile, access_mode) as f:
@@ -151,9 +159,7 @@ class ifgramStackDict:
                 if dsName in ['connectComponent']:
                     dsDataType = np.int16
                     dsCompression = 'lzf'
-                    mlk_method = 'nearest'
-                else:
-                    mlk_method = str(method)
+                    mli_method = 'nearest'
 
                 print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
                        ' with compression = {c}').format(d=dsName,
@@ -175,6 +181,10 @@ class ifgramStackDict:
                     if dsFile.endswith('cov.bip'):
                         print('convert variance to standard deviation.')
 
+                # msg
+                if xstep * ystep > 1:
+                    print(f'apply {ystep} x {xstep} multilooking via {mli_method} ...')
+
                 prog_bar = ptime.progressBar(maxValue=numIfgram)
                 for i in range(numIfgram):
                     # read and/or resize
@@ -183,7 +193,7 @@ class ifgramStackDict:
                                           box=box,
                                           xstep=xstep,
                                           ystep=ystep,
-                                          method=mlk_method,
+                                          mli_method=mli_method,
                                           resize2shape=resize2shape)[0]
 
                     # special handling for offset covariance file
@@ -296,14 +306,14 @@ class ifgramDict:
             for key, value in metadata.items():
                 setattr(self, key, value)
 
-    def read(self, family, box=None, xstep=1, ystep=1, method='nearest', resize2shape=None):
+    def read(self, family, box=None, xstep=1, ystep=1, mli_method='nearest', resize2shape=None):
         """Read data for the given dataset name.
 
         Parameters: self         - ifgramDict object
                     family       - str, dataset name
                     box          -  tuple of 4 int, in (x0, y0, x1, y1) with respect to the full resolution
                     x/ystep      - int, number of pixels to skip, with respect to the full resolution
-                    method       - str, ['nearest', 'mean', 'median']. Interpolation method. Default is 'nearest' - skipping rows/lines
+                    mli_method   - str, interpolation method, nearest, mean, median
                     resize2shape - tuple of 2 int, resize the native matrix to the given shape
                                    Set to None for not resizing
         Returns:    data         - 2D np.ndarray
@@ -312,14 +322,14 @@ class ifgramDict:
         self.file = self.datasetDict[family]
         box2read = None if resize2shape else box
 
-        # read input file
+        # 1. read input file
         data, meta = readfile.read(self.file,
                                    datasetName=family,
                                    box=box2read,
                                    xstep=1,
                                    ystep=1)
 
-        # resize
+        # 2. resize
         if resize2shape:
             # link: https://scikit-image.org/docs/dev/api/skimage.transform.html#skimage.transform.resize
             data = resize(data,
@@ -329,14 +339,15 @@ class ifgramDict:
                           anti_aliasing=True,
                           preserve_range=True)
 
-            # subset by box
+            # 3. subset by box
             if box:
                 data = data[box[1]:box[3],
                             box[0]:box[2]]
 
-        if method == 'nearest':
-            # multilook - nearest resampling
-            if xstep * ystep > 1:
+        # 4. multilook
+        if xstep * ystep > 1:
+            if mli_method == 'nearest':
+                # multilook - nearest resampling
                 # output data size
                 xsize = int(data.shape[1] / xstep)
                 ysize = int(data.shape[0] / ystep)
@@ -344,10 +355,14 @@ class ifgramDict:
                 data = data[int(ystep/2)::ystep,
                             int(xstep/2)::xstep]
                 data = data[:ysize, :xsize]
-        else:
-            # multilook - mean or median resampling
-            if xstep * ystep > 1:
-                data = mlk.multilook_data(data, lks_y=ystep, lks_x=xstep, method=method)
+
+            else:
+                # multilook - mean or median resampling
+                data = multilook_data(data,
+                                      lks_y=ystep,
+                                      lks_x=xstep,
+                                      method=mli_method)
+
         return data, meta
 
     def get_size(self, family=ifgramDatasetNames[0]):

@@ -187,6 +187,7 @@ def read_inps2dict(inps):
     if 'processor' in template.keys():
         template['mintpy.load.processor'] = template['processor']
 
+    # group - load
     prefix = 'mintpy.load.'
     key_list = [i.split(prefix)[1] for i in template.keys() if i.startswith(prefix)]
     for key in key_list:
@@ -200,6 +201,7 @@ def read_inps2dict(inps):
     if iDict['compression'] == False:
         iDict['compression'] = None
 
+    # group - multilook
     prefix = 'mintpy.multilook.'
     key_list = [i.split(prefix)[1] for i in template.keys() if i.startswith(prefix)]
     for key in key_list:
@@ -901,7 +903,8 @@ def main(iargs=None):
     print('-'*50)
     print('updateMode : {}'.format(iDict['updateMode']))
     print('compression: {}'.format(iDict['compression']))
-    print('x/ystep: {}/{};  multilook method: {}'.format(iDict['xstep'], iDict['ystep'], iDict['method']))
+    print('multilook x/ystep: {}/{}'.format(iDict['xstep'], iDict['ystep']))
+    print('multilook method : {}'.format(iDict['method']))
     kwargs = dict(updateMode=iDict['updateMode'], xstep=iDict['xstep'], ystep=iDict['ystep'])
 
     # read subset info [need the metadata from above]
@@ -963,7 +966,7 @@ def main(iargs=None):
                 box=iDict['box'],
                 xstep=iDict['xstep'],
                 ystep=iDict['ystep'],
-                method=iDict['method'],
+                mli_method=iDict['method'],
                 compression=iDict['compression'],
                 extra_metadata=extraDict,
                 geom_obj=geom_obj)
