@@ -670,7 +670,8 @@ def main(iargs=None):
                            ampStack=inps.magFile,
                            box=box,
                            xstep=inps.xstep,
-                           ystep=inps.ystep)
+                           ystep=inps.ystep,
+                           mli_method=inps.method)
 
     ########## output file 2 - geometryGeo
     # define dataset structure for geometry
