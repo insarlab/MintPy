@@ -25,12 +25,12 @@ CMAP_DICT = {
 }
 
 URL_LIST = [
-    'https://zenodo.org/record/5498198/files/FernandinaSenDT128.tar.xz',
-    'https://zenodo.org/record/4320005/files/SanFranSenDT42.tar.xz',
-    'https://zenodo.org/record/3952950/files/WellsEnvD2T399.tar.xz',
-    'https://zenodo.org/record/5502403/files/RidgecrestSenDT71.tar.xz',
-    'https://zenodo.org/record/4318134/files/WCapeSenAT29.tar.xz',
-    'https://zenodo.org/record/3952917/files/KujuAlosAT422F650.tar.xz',
+    'https://zenodo.org/record/5498198/files/FernandinaSenDT128.tar.xz',   # 280 MB
+    'https://zenodo.org/record/6662079/files/SanFranSenDT42.tar.xz',       # 280 MB
+    'https://zenodo.org/record/3952950/files/WellsEnvD2T399.tar.xz',       # 280 MB
+    'https://zenodo.org/record/5502403/files/RidgecrestSenDT71.tar.xz',    # 480 MB
+    'https://zenodo.org/record/6661536/files/WCapeSenAT29.tar.xz',         # 240 MB
+    'https://zenodo.org/record/3952917/files/KujuAlosAT422F650.tar.xz',    # 230 MB
 ]
 
 PROJ_NAMES = [os.path.basename(url).split('.tar.xz')[0] for url in URL_LIST]
@@ -48,10 +48,10 @@ DSET_INFO = """
 """
 
 EXAMPLE = """example:
-  test_smallbaselineApp.py
-  test_smallbaselineApp.py  --dir ~/test
-  test_smallbaselineApp.py  --dset KujuAlosAT422F650
-  test_smallbaselineApp.py  --nofresh
+  $MINTPY_HOME/tests/smallbaselineApp.py
+  $MINTPY_HOME/tests/smallbaselineApp.py  --dir ~/test
+  $MINTPY_HOME/tests/smallbaselineApp.py  --dset KujuAlosAT422F650
+  $MINTPY_HOME/tests/smallbaselineApp.py  --nofresh
 """
 
 def create_parser():
