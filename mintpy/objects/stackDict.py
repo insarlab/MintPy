@@ -140,11 +140,15 @@ class ifgramStackDict:
                 msg = 'lower resolution ionosphere file detected'
                 msg += f' --> resize from {ion_size} to {geom_size} via skimage.transform.resize ...'
                 print(msg)
+
+                # matrix shape for the original geometry size w/o subset/multilook
                 resize2shape = geom_size
-                length, width = self.get_size(box=box,
-                                              xstep=xstep,
-                                              ystep=ystep,
-                                              geom_obj=geom_obj)[1:]
+                # data size of the output HDF5 file w/ resize/subset/multilook
+                length, width = self.get_size(
+                    box=box,
+                    xstep=xstep,
+                    ystep=ystep,
+                    geom_obj=geom_obj)[1:]
 
         self.outputFile = outputFile
         with h5py.File(self.outputFile, access_mode) as f:
