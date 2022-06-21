@@ -49,6 +49,24 @@ Which would allow you to process the mapped data like:
 docker run -it -v </path/to/data/dir>:/home/mambauser/work ghcr.io/insarlab/mintpy:latest smallbaselineApp.py /home/mambauser/work/smallbaselineApp.cfg
 ```
 
+### Launching Jupyter Server
+
+The MintPy container includes a Jupyter Server with both the Jupyter Lab frontend and the classic Jupyter Notebook frontend. To launch Jupyter Lab, run:
+```shell
+ docker run -p 8888:8888 -it ghcr.io/insarlab/mintpy:latest jupyter lab
+```
+You can connect to the Jupyter Lab server at the `http://127.0.0.1:8888...` link printed to stdout in your terminal.
+
+If you'd prefer to specify custom startup options to Jupyter, or prefer to use the Jupyter Notebook frontend instead of Jupyter Lab, you can specify them as part of the docker run command like:
+
+```shell
+docker run -p 8888:8888 -it ghcr.io/insarlab/mintpy:latest jupyter {lab,notebook} [JUPYTER_OPTIONS]
+```
+To see all the custom startup options, run:
+```shell
+docker run -p 8888:8888 -it ghcr.io/insarlab/mintpy:latest jupyter {lab,notebook} --help-all
+```
+
 ### Notes ###
 
 + The container image is built using the [mambaorg/micromamba](https://hub.docker.com/r/mambaorg/micromamba) as a base. To manage conda environments inside the container use the `micromamba` command. For more information on micromamba, see: https://github.com/mamba-org/mamba#micromamba

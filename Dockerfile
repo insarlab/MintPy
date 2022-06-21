@@ -38,3 +38,7 @@ RUN micromamba install -y -n base -c conda-forge python=${PYTHON_VERSION}  \
       jupyterlab ipympl gdal">=3" isce2 -f ${MINTPY_HOME}/requirements.txt && \
     python -m pip install --no-cache-dir ${MINTPY_HOME} && \
     micromamba clean --all --yes
+
+# Jupyter setup
+COPY --chown=mambauser:mambauser scripts/jupyter_notebook_config.py /home/mambauser/.jupyter/
+EXPOSE 8888
