@@ -187,7 +187,7 @@ class ifgramStackDict:
 
                 # msg
                 if xstep * ystep > 1:
-                    print(f'apply {ystep} x {xstep} multilooking via {mli_method} ...')
+                    print(f'apply {xstep} x {ystep} multilooking/downsampling via {mli_method} ...')
 
                 prog_bar = ptime.progressBar(maxValue=numIfgram)
                 for i in range(numIfgram):
