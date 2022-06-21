@@ -28,7 +28,7 @@ from mintpy.utils import (
     utils0 as ut,
     attribute as attr,
 )
-from mintpy.multilook import multilook_data as mlk
+from mintpy.multilook import multilook_data
 
 ########################################################################################
 class ifgramStackDict:
