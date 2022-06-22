@@ -228,7 +228,7 @@ def prepare_stack(obs_file, metadata=dict(), baseline_dict=dict(), update_mode=T
     keys = ['LENGTH', 'WIDTH']
     if all(x in meta.keys() for x in keys):
         atr = readfile.read_attribute(isce_files[0], metafile_ext='.xml')
-        if any(meta[x] != atr[x] for x in keys):
+        if any(int(meta[x]) != int(atr[x]) for x in keys):
             resize2shape = (int(atr['LENGTH']), int(atr['WIDTH']))
             meta = attr.update_attribute4resize(meta, resize2shape)
 
