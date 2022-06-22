@@ -11,7 +11,13 @@ import sys
 import glob
 import argparse
 import numpy as np
-from mintpy.utils import ptime, readfile, writefile, isce_utils
+from mintpy.utils import (
+    attribute as attr,
+    isce_utils,
+    ptime,
+    readfile,
+    writefile,
+)
 
 
 
@@ -219,23 +225,14 @@ def prepare_stack(obs_file, metadata=dict(), baseline_dict=dict(), update_mode=T
 
     # update A/RLOOKS, RANGE/AZIMUTH_PIXEL_SIZE, NCORRLOOKS
     # for low resolution ionosphere from isce2/topsStack
-    yscale, xscale = 1., 1.
-    atr = readfile.read_attribute(isce_files[0], metafile_ext='.xml')
-    if 'LENGTH' in meta.keys() and meta['LENGTH'] != atr['LENGTH']:
-        print('different LENGTH detected, update ALOOKS, AZIMUTH_PIXEL_SIZE accordingly')
-        yscale = float(meta['LENGTH']) / float(atr['LENGTH'])
-        meta['ALOOKS'] = np.rint(int(meta['ALOOKS']) * yscale).astype(int)
-        meta['AZIMUTH_PIXEL_SIZE'] = float(meta['AZIMUTH_PIXEL_SIZE']) * yscale
-
-    if 'WIDTH' in meta.keys() and meta['WIDTH'] != atr['WIDTH']:
-        print('different WIDTH detected, update RLOOKS, RANGE_PIXEL_SIZE accordingly')
-        xscale = float(meta['WIDTH']) / float(atr['WIDTH'])
-        meta['RLOOKS'] = np.rint(int(meta['RLOOKS']) * xscale).astype(int)
-        meta['RANGE_PIXEL_SIZE'] = float(meta['RANGE_PIXEL_SIZE']) * xscale
-
-    if yscale * xscale != 1.:
-        print('update NCORRLOOKS')
-        meta['NCORRLOOKS'] = float(meta['NCORRLOOKS']) * yscale * xscale
+    keys = ['LENGTH', 'WIDTH']
+    if all(x in meta.keys() for x in keys):
+        atr = readfile.read_attribute(isce_files[0], metafile_ext='.xml')
+        yscale = int(meta['LENGTH']) / int(atr['LENGTH'])
+        xscale = int(meta['WIDTH']) / int(atr['WIDTH'])
+        if yscale != 1 or xscale != 1:
+            resize2shape = (int(atr['LENGTH']), int(atr['WIDTH']))
+            meta = attr.update_attribute4resize(meta, resize2shape)
 
     # write .rsc file for each interferogram file
     num_file = len(isce_files)

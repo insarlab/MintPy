@@ -15,6 +15,42 @@ from mintpy.utils import readfile
 
 
 
+def update_attribute4resize(atr_in, resize2shape, print_msg=True):
+    """update input dictionary of attributes due to resizing
+
+    Parameters: atr_in       - dict, input dictionary of attributes
+                resize2shape - tuple of 2 int, for the resized shape
+    Returns:    atr          - dict, updated dictionary of attributes
+    """
+    vprint = print if print_msg else lambda *args, **kwargs: None
+    # make a copy of original meta dict
+    atr = {**atr_in}
+
+    yscale = int(atr['LENGTH']) / resize2shape[0]
+    xscale = int(atr['WIDTH']) / resize2shape[1]
+    vprint('output data in size: {}, {}'.format(resize2shape[0], resize2shape[1]))
+
+    atr['LENGTH'] = resize2shape[0]
+    atr['WIDTH'] = resize2shape[1]
+    atr['ALOOKS'] = np.rint(int(atr.get('ALOOKS', 1)) * yscale).astype(int)
+    atr['RLOOKS'] = np.rint(int(atr.get('RLOOKS', 1)) * xscale).astype(int)
+    vprint('update LENGTH, WIDTH, Y/XMIN/MAX, A/RLOOKS')
+
+    if 'AZIMUTH_PIXEL_SIZE' in atr.keys():
+        atr['AZIMUTH_PIXEL_SIZE'] = float(atr['AZIMUTH_PIXEL_SIZE']) * yscale
+        vprint('update AZIMUTH_PIXEL_SIZE')
+
+    if 'RANGE_PIXEL_SIZE' in atr.keys():
+        atr['RANGE_PIXEL_SIZE'] = float(atr['RANGE_PIXEL_SIZE']) * xscale
+        vprint('update RANGE_PIXEL_SIZE')
+
+    if 'NCORRLOOKS' in atr.keys():
+        atr['NCORRLOOKS'] = float(atr['NCORRLOOKS']) * yscale * xscale
+        vprint('update NCORRLOOKS')
+
+    return atr
+
+
 def update_attribute4multilook(atr_in, lks_y, lks_x, box=None, print_msg=True):
     """update input dictionary of attributes due to multilooking
 
@@ -28,9 +64,7 @@ def update_attribute4multilook(atr_in, lks_y, lks_x, box=None, print_msg=True):
     vprint = print if print_msg else lambda *args, **kwargs: None
 
     # make a copy of original meta dict
-    atr = dict()
-    for key, value in iter(atr_in.items()):
-        atr[key] = str(value)
+    atr = {**atr_in}
 
     if box is None:
         box = (0, 0, int(atr['WIDTH']), int(atr['LENGTH']))
@@ -89,7 +123,7 @@ def update_attribute4geo2radar(atr_in, shape2d=None, res_obj=None, print_msg=Tru
     Returns:    atr     - dict, updated dictionary of attributes
     """
     # make a copy of original meta dict
-    atr = dict(atr_in)
+    atr = {**atr_in}
 
     # grab info from res_obj
     if res_obj is not None:
@@ -123,7 +157,7 @@ def update_attribute4radar2geo(atr_in, shape2d=None, lalo_step=None, SNWE=None, 
     Returns:    atr     - dict, updated dictionary of attributes
     """
     # make a copy of original meta dict
-    atr = dict(atr_in)
+    atr = {**atr_in}
 
     # grab info from res_obj
     if res_obj is not None:
@@ -189,7 +223,7 @@ def update_attribute4subset(atr_in, subset_box, print_msg=True):
     sub_y = [subset_box[1], subset_box[3]]
 
     # Update attribute variable
-    atr = dict(atr_in)
+    atr = {**atr_in}
     atr['LENGTH'] = str(sub_y[1]-sub_y[0])
     atr['WIDTH'] = str(sub_x[1]-sub_x[0])
     atr['YMAX'] = str(sub_y[1]-sub_y[0] - 1)

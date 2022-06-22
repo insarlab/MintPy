@@ -150,9 +150,9 @@ class ifgramStackDict:
                     ystep=ystep,
                     geom_obj=geom_obj)[1:]
 
-        self.outputFile = outputFile
-        with h5py.File(self.outputFile, access_mode) as f:
-            print('create HDF5 file {} with {} mode'.format(self.outputFile, access_mode))
+        # write HDF5 file
+        with h5py.File(outputFile, access_mode) as f:
+            print('create HDF5 file {} with {} mode'.format(outputFile, access_mode))
 
             ###############################
             # 3D datasets containing unwrapPhase, magnitude, coherence, connectComponent, wrapPhase, etc.
@@ -260,23 +260,35 @@ class ifgramStackDict:
 
             ###############################
             # Attributes
-            self.get_metadata()
+            # read metadata from original data file w/o resize/subset/multilook
+            meta = self.get_metadata()
             if extra_metadata:
-                self.metadata.update(extra_metadata)
+                meta.update(extra_metadata)
                 print('add extra metadata: {}'.format(extra_metadata))
 
+            # update metadata due to resize
+            # for low resolution ionosphere from isce2/topsStack
+            if resize2shape:
+                print('update metadata due to resize')
+                meta = attr.update_attribute4resize(meta, resize2shape)
+
             # update metadata due to subset
-            self.metadata = attr.update_attribute4subset(self.metadata, box)
+            if box:
+                print('update metadata due to subset')
+                meta = attr.update_attribute4subset(meta, box)
+
             # update metadata due to multilook
             if xstep * ystep > 1:
-                self.metadata = attr.update_attribute4multilook(self.metadata, ystep, xstep)
+                print('update metadata due to multilook')
+                meta = attr.update_attribute4multilook(meta, ystep, xstep)
 
-            self.metadata['FILE_TYPE'] = self.name
-            for key, value in self.metadata.items():
+            # write metadata to HDF5 file at the root level
+            meta['FILE_TYPE'] = self.name
+            for key, value in meta.items():
                 f.attrs[key] = value
 
-        print('Finished writing to {}'.format(self.outputFile))
-        return self.outputFile
+        print('Finished writing to {}'.format(outputFile))
+        return outputFile
 
 
 ########################################################################################
