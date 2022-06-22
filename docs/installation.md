@@ -10,13 +10,15 @@ conda install -c conda-forge mintpy
 
 #### b. via docker ####
 
-Docker allows one to run MintPy in a dedicated container (essentially an efficient virtual machine) and to be independent of platform OS. After installing [docker](https://docs.docker.com/install/), run the following to pull the container with the latest stable release of [MintPy from the GitHub Container Registry](https://github.com/insarlab/MintPy/pkgs/container/mintpy) to your local machine:
+Docker allows one to run MintPy in a dedicated container, which is essentially an efficient virtual machine, and to be independent of platform OS. First, install [docker](https://docs.docker.com/install/) if you have not already done so. Then run the following to pull the latest stable released constainer image version from [MintPy GitHub Container Registry](https://github.com/insarlab/MintPy/pkgs/container/mintpy) to your local machine:
 
 ```bash
 docker pull ghcr.io/insarlab/mintpy:latest
 ```
 
-Then complete the [post-installation setup](#3-post-installation-setup). More details about docker are [here](docker.md), including how to pull different versions of MintPy.
+Check [here](docker.md) for more details on Docker container image usage, e.g. pulling development version and running in shell or Jupyter server.
+
+#### c. [Post-Installation Setup](#3-post-installation-setup) ####
 
 ## 2. Install the development version ##
 
