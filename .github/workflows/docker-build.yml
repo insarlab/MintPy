@@ -1,4 +1,4 @@
-name: Build a docker image for MintPy
+name: build docker image
 
 on:
   push:
