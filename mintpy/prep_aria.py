@@ -56,14 +56,17 @@ TEMPLATE = """template options:
   mintpy.load.incAngleFile   = ../incidenceAngle/*.vrt
   mintpy.load.azAngleFile    = ../azimuthAngle/*.vrt
   mintpy.load.waterMaskFile  = ../mask/watermask.msk
-  ##---------multilook (optional):
-  ## multilook while loading data with nearest interpolation, to reduce dataset size
-  mintpy.load.ystep          = auto    #[int >= 1], auto for 1 - no multilooking
-  mintpy.load.xstep          = auto    #[int >= 1], auto for 1 - no multilooking
   ##---------subset (optional):
   ## if both yx and lalo are specified, use lalo option
   mintpy.subset.yx           = auto    #[y0:y1,x0:x1 / no], auto for no
   mintpy.subset.lalo         = auto    #[lat0:lat1,lon0:lon1 / no], auto for no
+  ##---------multilook (optional):
+  ## multilook while loading data with the specified method, to reduce dataset size
+  ## nearest, mean and median methods are applicable to interferogram/ionosphere/offset stack(s), except for:
+  ## connected components and all geometry datasets, for which nearest is hardwired.
+  mintpy.multilook.method    = auto    #[nearest, mean, median], auto for nearest - lines/rows skipping approach
+  mintpy.multilook.ystep     = auto    #[int >= 1], auto for 1 - no multilooking
+  mintpy.multilook.xstep     = auto    #[int >= 1], auto for 1 - no multilooking
 """
 
 
@@ -189,18 +192,29 @@ def read_template2inps(template_file, inps=None):
             template.pop(key)
 
     # pass options from template to inps
+    # group - load
     key_prefix = 'mintpy.load.'
     keys = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
     for key in keys:
         value = template[key_prefix+key]
         if key in ['updateMode', 'compression']:
             iDict[key] = value
-        elif key in ['xstep', 'ystep']:
-            iDict[key] = int(value)
         elif key in ['unwFile']:
             iDict['stackDir'] = os.path.dirname(value)
         elif value:
             iDict[key] = str(value)
+
+    # group - multilook
+    prefix = 'mintpy.multilook.'
+    key_list = [i.split(prefix)[1] for i in template.keys() if i.startswith(prefix)]
+    for key in key_list:
+        value = template[prefix+key]
+        if key in ['xstep', 'ystep', 'method']:
+            iDict[key] = template[prefix+key]
+
+    iDict['xstep']  = int(iDict.get('xstep', 1))
+    iDict['ystep']  = int(iDict.get('ystep', 1))
+    iDict['method'] = str(iDict.get('method', 'nearest'))
 
     return inps
 
@@ -481,7 +495,7 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
 
 
 def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, ampStack=None,
-                       box=None, xstep=1, ystep=1):
+                       box=None, xstep=1, ystep=1, mli_method='nearest'):
     """Write ifgramStack HDF5 file from stack VRT files
     """
 
@@ -542,6 +556,11 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, ampStack=None
     else:
         kwargs = dict()
 
+    if xstep * ystep > 1:
+        msg = f'apply {xstep} x {ystep} multilooking/downsampling via {mli_method} to: unwrapPhase, coherence'
+        msg += ', magnitude' if dsAmp is not None else ''
+        msg += f'\napply {xstep} x {ystep} multilooking/downsampling via nearest to: connectComponent'
+        print(msg)
     print('writing data to HDF5 file {} with a mode ...'.format(outfile))
     with h5py.File(outfile, "a") as f:
 
@@ -557,7 +576,7 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, ampStack=None
 
             bnd = dsUnw.GetRasterBand(bndIdx)
             data = bnd.ReadAsArray(**kwargs)
-            data = multilook_data(data, ystep, xstep, method='nearest')
+            data = multilook_data(data, ystep, xstep, method=mli_method)
             data[data == noDataValueUnw] = 0      #assign pixel with no-data to 0
             data *= -1.0                          #date2_date1 -> date1_date2
             f["unwrapPhase"][ii,:,:] = data
@@ -568,7 +587,7 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, ampStack=None
 
             bnd = dsCoh.GetRasterBand(bndIdx)
             data = bnd.ReadAsArray(**kwargs)
-            data = multilook_data(data, ystep, xstep, method='nearest')
+            data = multilook_data(data, ystep, xstep, method=mli_method)
             data[data == noDataValueCoh] = 0      #assign pixel with no-data to 0
             f["coherence"][ii,:,:] = data
 
@@ -581,7 +600,7 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, ampStack=None
             if dsAmp is not None:
                 bnd = dsAmp.GetRasterBand(bndIdx)
                 data = bnd.ReadAsArray(**kwargs)
-                data = multilook_data(data, ystep, xstep, method='nearest')
+                data = multilook_data(data, ystep, xstep, method=mli_method)
                 data[data == noDataValueAmp] = 0  #assign pixel with no-data to 0
                 f["magnitude"][ii,:,:] = data
 
@@ -651,7 +670,8 @@ def main(iargs=None):
                            ampStack=inps.magFile,
                            box=box,
                            xstep=inps.xstep,
-                           ystep=inps.ystep)
+                           ystep=inps.ystep,
+                           mli_method=inps.method)
 
     ########## output file 2 - geometryGeo
     # define dataset structure for geometry
