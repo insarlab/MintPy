@@ -80,67 +80,105 @@ def create_parser():
 
 def cmd_line_parse(iargs=None):
     parser = create_parser()
-    inps = parser.parse_args(args = iargs)
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
-#################################  Mask  #######################################
-def sum_seq_closure_phase(stack_obj, box, conn_level, normalize=False):
-    """Computes the sum of consecutive complex sequential closure phase of connection {conn_level}
+#############################  Closure Phase  ##################################
+def seq_closure_phase(stack_obj, box, conn_level):
+    """Computes wrapped sequential closure phases for a given conneciton level.
+
+    For conn_level=5, closure_phase = p12 + p23 + p34 + p45 + p56 - p16.
 
     Parameters: stack_obj  - ifgramStack object
                 box        - tuple of 4 int, bounding box in (x0, y0, x1, y1)
                 conn_level - int, connection level of the closure phase
                 normalize  - bool, normalize the output complex magnitude by num_cp
-    Returns:    cum_cp     - 2D np.ndarray in complex64, sum of consecutive
-                             sequential closure phase of connection {conn_level}
+    Returns:    cp_w       - 3D np.ndarray in float32 in size of (num_cp, box_len, box_wid)
+                             wrapped sequential closure phases for the given connection level.
+    """
+    # basic info
+    num_date = len(stack_obj.get_date_list(dropIfgram=True))
+    box_wid = box[2] - box[0]
+    box_len = box[3] - box[1]
+
+    ## get the closure index
+    cp_idx = stack_obj.get_closure_phase_index(conn_level=conn_level, dropIfgram=True)
+    num_cp = cp_idx.shape[0]
+    print(f'Number of closure measurements expected: {num_date - conn_level}')
+    print(f'Number of closure measurements found   : {num_cp}')
+    if num_cp < num_date-n:
+        msg = f"num_cp ({num_cp}) < num_date-conn_level ({num_date-conn_level})'
+        msg += ' --> some interferograms are missing!"
+        raise Exception(msg)
+
+    ## read data
+    phase = readfile.read(stack_obj.file, box=box, print_msg=False)[0]
+    ref_phase = stack_obj.get_reference_phase(dropIfgram=False)
+    for i in range(phase.shape[0]):
+        mask = phase[i] != 0.
+        phase[i][mask] -= ref_phase[i]
+
+    ## calculate cum seq closure phase
+    cp_w = np.zeros((num_cp, box_len, box_wid), dtype=np.float32)
+    for i in range(num_cp):
+
+        # calculate closure phase - cp0_w
+        idx_plus, idx_minor = cp_idx[i, :-1], cp_idx[i, -1]
+        cp0_w = np.sum(phase[idx_plus])
+        cp0_w -= phase[idx_minor]
+
+        # get the wrapped closure phase
+        cp_w[i] = np.angle(np.exp(1j * cp0_w))
+
+    return cp_w
+
+
+def sum_seq_closure_phase(stack_obj, box, conn_level, normalize=False):
+    """Computes the sum of complex sequential closure phase for a given connection level.
+
+    For conn_level=5, closure_phase = p12 + p23 + p34 + p45 + p56 - p16.
+
+    Parameters: stack_obj  - ifgramStack object
+                box        - tuple of 4 int, bounding box in (x0, y0, x1, y1)
+                conn_level - int, connection level of the closure phase
+                normalize  - bool, normalize the output complex magnitude by num_cp
+    Returns:    cum_cp     - 2D np.ndarray in complex64 in (box_len, box_wid)
+                             sum of sequential closure phase for the given connection level
                 num_cp     - integer, number of closure phases used in the sum
     """
 
     # basic info
-    date_list = stack_obj.get_date_list(dropIfgram=True)
-    date12_list_all = stack_obj.get_date12_list(dropIfgram=False)
-    ref_phase = stack_obj.get_reference_phase(unwDatasetName='unwrapPhase')
+    num_date = len(stack_obj.get_date_list(dropIfgram=True))
+    box_wid = box[2] - box[0]
+    box_len = box[3] - box[1]
 
-    # get the closure index
-    cp_idx = []
-    num_date = len(date_list)
-    for i in range(num_date-conn_level):
-        # compose the connection-n pairs
-        date12_list = []
-        for j in range(conn_level):
-            date12_list.append('{}_{}'.format(date_list[i+j], date_list[i+j+1]))
-        date12_list.append('{}_{}'.format(date_list[i], date_list[i+conn_level]))
-
-        # add to cp_idx, ONLY IF all pairs exist
-        if all(x in date12_list_all for x in date12_list):
-            cp_idx.append([date12_list_all.index(x) for x in date12_list])
-
-    cp_idx = np.array(cp_idx, dtype=np.int16)
-    cp_idx = np.unique(cp_idx, axis=0)
-
-    num_cp = len(cp_idx)
-    print(f'Number of closure measurements expected: {len(date_list)-conn_level}')
+    ## get the closure index
+    cp_idx = stack_obj.get_closure_phase_index(conn_level=conn_level, dropIfgram=True)
+    num_cp = cp_idx.shape[0]
+    print(f'Number of closure measurements expected: {num_date - conn_level}')
     print(f'Number of closure measurements found   : {num_cp}')
     if num_cp < 1:
         raise Exception(f"No triplets found at connection level: {conn_level}!")
 
-    # read data
+    ## read data
     phase = readfile.read(stack_obj.file, box=box, print_msg=False)[0]
+    ref_phase = stack_obj.get_reference_phase(dropIfgram=False)
+    for i in range(phase.shape[0]):
+        mask = phase[i] != 0.
+        phase[i][mask] -= ref_phase[i]
 
-    # calculate cum seq closure phase
-    box_width  = box[2] - box[0]
-    box_length = box[3] - box[1]
-    cum_cp = np.zeros((box_length, box_width), np.complex64)
+    ## calculate cum seq closure phase
+    cum_cp = np.zeros((box_len, box_wid), dtype=np.complex64)
     for i in range(num_cp):
-        cp0_w = np.zeros((box_length, box_width), np.float32)
-        for j in range(conn_level):
-            idx = cp_idx[i,j]
-            cp0_w += phase[idx,:,:] - ref_phase[idx]
 
-        idx = cp_idx[i,conn_level]
-        cp0_w -= phase[idx,:,:] - ref_phase[idx]
-        cum_cp = cum_cp + (np.exp(1j*cp0_w))
+        # calculate closure phase - cp0_w
+        idx_plus, idx_minor = cp_idx[i, :-1], cp_idx[i, -1]
+        cp0_w = np.sum(phase[idx_plus])
+        cp0_w -= phase[idx_minor]
+
+        # cumulative
+        cum_cp = cum_cp + np.exp(1j * cp0_w)
 
     # normalize
     if normalize:
@@ -149,12 +187,10 @@ def sum_seq_closure_phase(stack_obj, box, conn_level, normalize=False):
     return cum_cp, num_cp
 
 
+
+#################################  Mask  #######################################
 def calc_closure_phase_mask(stack_file, nl, num_sigma=3, threshold_amp=0.3, outdir='./', max_memory=4.0):
     """Calculate a mask for areas most suseptible to biases.
-
-    Write the following two HDF5 files:
-    1. maskClosurePhase.h5   - for areas suseptible to biases
-    2. avgCpxClosurePhase.h5 - for the average complex sum seq closure phase
 
     Parameters: stack_file        - str, path for ifgramStack.h5 file
                 nl                - int, connection level at which we assume is bias-free
@@ -163,7 +199,9 @@ def calc_closure_phase_mask(stack_file, nl, num_sigma=3, threshold_amp=0.3, outd
                 outdir            - str, directory of output files
                 max_mermory       - float, maximum memory in GB for each patch processed
     Returns:    mask              - 2D np.ndarray of size (length, width) in boolean, 0 for areas suseptible to biases.
+                                    Saved to file: maskClosurePhase.h5
                 avg_closure_phase - 2D np.ndarray of size (length, width) in complex64, average cum. seq. closure phase
+                                    Saved to file: avgCpxClosurePhase.h5
     """
 
     # basic info
@@ -234,62 +272,6 @@ def calc_closure_phase_mask(stack_file, nl, num_sigma=3, threshold_amp=0.3, outd
 
 
 ################################################################################
-def seq_closure_phase(date_list, date12_list_all, stack_file, ref_phase, n, box):
-    """Computes wrapped sequential closure phases of conneciton-n
-
-    Parameters: date_list        - list(str), SLC dates
-                date12_list_all - list(str), date12 of all the interferograms stored in the ifgramstack file
-                stack_file    - str, file path of ifgramStack.h5
-                ref_phase       - 1D array in size of (num_ifgram,) in float, unwrapped phase of the reference pixel
-                n               - int, connection level of the closure phase (e.g., triplets are connection-2)
-                box             - list(int) in size of (4,), bounding box coordinates
-    Returns:    cp_w            - 3D array in size of (num_ifgram, box_length, box_width) in float
-                                  wrapped sequential closure phases of connection n
-    """
-    # initiate a list storing the index of interferograms in each closure phase computation
-    cp_idx = []
-    num_date = len(date_list)
-    for i in range(num_date-n):
-        ifgram = []
-        flag = True
-        for j in range(n):
-            ifgram.append('{}_{}'.format(date_list[i+j],date_list[i+j+1]))
-        ifgram.append('{}_{}'.format(date_list[i],date_list[i+n]))
-        for ifgram_name in ifgram:
-            # if missing an interferogram, we won't make the corresponding closure phase
-            if ifgram_name not in date12_list_all:
-                flag = False
-        if flag:
-            cp_idx.append([date12_list_all.index(ifgram[j]) for j in range(n+1)])
-
-    cp_idx = np.array(cp_idx, np.int16)
-    cp_idx = np.unique(cp_idx, axis = 0)
-
-    num_cp = len(cp_idx)
-    print(f'Number of conn-{n} closure measurements expected: {num_date-n}')
-    print(f'Number of conn-{n} closure measurements found   : {num_cp}')
-
-    if num_cp < num_date-n:
-        print('Missing interferograms, abort')
-        raise Exception("Some interferograms are missing")
-
-    box_width  = box[2] - box[0]
-    box_length = box[3] - box[1]
-    phase = readfile.read(stack_file, box=box,print_msg=False)[0]
-    cp_w = np.zeros((num_cp, box_length, box_width), np.float32)
-    for i in range(num_cp):
-        cp0_w = np.zeros ((box_length, box_width), np.float32)
-        for j in range(n):
-                    idx = cp_idx[i,j]
-                    cp0_w = cp0_w + phase[idx,:,:] - ref_phase[idx]
-        idx = cp_idx[i,n]
-        cp0_w = cp0_w - (phase[idx,:,:]-ref_phase[idx])
-        cp_w[i,:,:] = np.angle(np.exp(1j*cp0_w))
-
-    return cp_w
-
-
-
 
 def cum_seq_unw_closure_phase(n,filepath,length, width, refY, refX, date_list, meta):
     '''Putput cumulative con-n sequential closure phase in time-series format.
@@ -882,12 +864,7 @@ def compute_unwrap_closure_phase(stack_file, conn, max_memory, outdir):
                 print('box width:  {}'.format(box_width))
                 print('box length: {}'.format(box_length))
 
-            cp_i = seq_closure_phase(date_list,
-                                     date12_list_all,
-                                     stack_file,
-                                     ref_phase,
-                                     conn,
-                                     box)
+            cp_i = seq_closure_phase(stack_obj, box=box, conn_level=conn)
             closurephase[:, box[1]:box[3], box[0]:box[2]] = cp_i
 
     # directory

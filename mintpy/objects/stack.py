@@ -966,10 +966,45 @@ class ifgramStack:
             num_conn[i] = np.where(Ai == 1)[0] - np.where(Ai == -1)[0]
         return np.max(num_conn)
 
-    # Functions for Unwrap error correction
+
+    # Functions for closure phase bias
+    def get_closure_phase_index(self, conn_level, dropIfgram=True):
+        """Get the indices of interferograms that forms the given connection level closure loop.
+
+        Parameters: conn_level - int, connection level
+                    dropIfgram - bool, exclude the dropped interferograms.
+        Returns:    cp_idx     - 2D np.ndarray in int16 in size of (num_cp, conn_level+1)
+                                 Each row for the indices of interferograms for one closure loop
+        """
+        date12_list_all = self.get_date12_list(dropIfgram=False)
+        date_list = self.get_date_list(dropIfgram=dropIfgram)
+        num_date = len(date_list)
+
+        # get the closure index
+        cp_idx = []
+        for i in range(num_date-conn_level):
+            # compose the connection-n pairs
+            date12_list = []
+            for j in range(conn_level):
+                date12_list.append('{}_{}'.format(date_list[i+j], date_list[i+j+1]))
+            date12_list.append('{}_{}'.format(date_list[i], date_list[i+conn_level]))
+    
+            # add to cp_idx, ONLY IF all pairs exist for this closure loop
+            if all(x in date12_list_all for x in date12_list):
+                cp_idx.append([date12_list_all.index(x) for x in date12_list])
+
+        # list to array
+        cp_idx = np.array(cp_idx, dtype=np.int16)
+        cp_idx = np.unique(cp_idx, axis=0)
+
+        return cp_idx
+
+
+    # Functions for unwrapping error correction
     @staticmethod
     def get_design_matrix4triplet(date12_list):
         """Generate the design matrix of ifgram triangle for unwrap error correction using phase closure
+
         Parameters: date12_list : list of string in YYYYMMDD_YYYYMMDD format
         Returns:    C : 2D np.array in size of (num_tri, num_ifgram) consisting 0, 1, -1
                         for 3 SAR acquisition in t1, t2 and t3 in time order,
@@ -1021,10 +1056,12 @@ class ifgramStack:
 
         return np.stack(C_list).astype(np.float32)
 
-    # Functions for Network Inversion
+
+    # Functions for network inversion / time series estimation
     @staticmethod
     def get_design_matrix4timeseries(date12_list, refDate=None):
         """Return design matrix of the input ifgramStack for timeseries estimation
+
         Parameters: date12_list - list of string in YYYYMMDD_YYYYMMDD format
                     refDate     - str, date in YYYYMMDD format
                                   set to None for the 1st date
