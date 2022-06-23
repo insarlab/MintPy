@@ -108,7 +108,7 @@ def seq_closure_phase(stack_obj, box, conn_level):
     num_cp = cp_idx.shape[0]
     print(f'Number of closure measurements expected: {num_date - conn_level}')
     print(f'Number of closure measurements found   : {num_cp}')
-    if num_cp < num_date-n:
+    if num_cp < num_date - conn_level:
         msg = f'num_cp ({num_cp}) < num_date-conn_level ({num_date-conn_level})'
         msg += ' --> some interferograms are missing!'
         raise Exception(msg)
@@ -398,7 +398,7 @@ def compute_unwrap_closure_phase(stack_file, conn_level, max_memory, outdir):
     ## filter the closure phase and re-unwrap
 
     # output directory
-    conn_dir = os.path.join(cpdir, f'closurePhase/conn{conn_level}_cp')
+    conn_dir = os.path.join(outdir, f'closurePhase/conn{conn_level}_cp')
     os.makedirs(conn_dir, exist_ok=True)
 
     kernel = isce_utils.gaussian_kernel(5, 5, 1, 1)
@@ -429,7 +429,7 @@ def compute_unwrap_closure_phase(stack_file, conn_level, max_memory, outdir):
             isce_utils.estimate_coherence(int_file, cor_file)
 
         if not os.path.isfile(unw_file):
-            isce.unwrap_snaphu(int_file, cor_file, unw_file, meta)
+            isce_utils.unwrap_snaphu(int_file, cor_file, unw_file, meta)
 
 
     ## output accumulated unwrapped closure phase time-series
