@@ -44,8 +44,9 @@ def create_parser():
 
     parser.add_argument('-i','--ifgramstack', type=str, dest='stack_file',
                         help='interferogram stack file that contains the unwrapped phases')
-    parser.add_argument('--nl', dest='nl', type=int, default=20,
-                        help='connection level that we are correcting to (or consider as no bias)')
+    parser.add_argument('--nl','--conn-level', dest='nl', type=int, default=20,
+                        help='connection level that we are correcting to (or consider as no bias)\n'
+                             '(default: %(default)s)')
     parser.add_argument('--bw', dest='bw', type=int, default=10,
                         help='bandwidth of time-series analysis that you want to correct')
     parser.add_argument('-a','--action', dest='action', type=str, default='mask',
@@ -108,8 +109,8 @@ def seq_closure_phase(stack_obj, box, conn_level):
     print(f'Number of closure measurements expected: {num_date - conn_level}')
     print(f'Number of closure measurements found   : {num_cp}')
     if num_cp < num_date-n:
-        msg = f"num_cp ({num_cp}) < num_date-conn_level ({num_date-conn_level})'
-        msg += ' --> some interferograms are missing!"
+        msg = f'num_cp ({num_cp}) < num_date-conn_level ({num_date-conn_level})'
+        msg += ' --> some interferograms are missing!'
         raise Exception(msg)
 
     ## read data
@@ -272,77 +273,172 @@ def calc_closure_phase_mask(stack_file, nl, num_sigma=3, threshold_amp=0.3, outd
 
 
 ################################################################################
+def cum_seq_unw_closure_phase(conn_level, conn_dir, date_list, meta):
+    '''Outpu cumulative con-n sequential closure phase in time-series format.
 
-def cum_seq_unw_closure_phase(n,filepath,length, width, refY, refX, date_list, meta):
-    '''Putput cumulative con-n sequential closure phase in time-series format.
+    Reference: Eq. 25 in Zheng et al., 2022, but divided by conn_level.
 
-    Reference: Eq. 25 in Zheng et al., 2022, but divided by n.
-
-    Parameters: n               - integer, connection level of closure phases
-                filepath        - string, filepath of sequential closure phases of connection - n
-                width, length   - integer, width and length of the interferograms
-                refY, refX      - ingeger, reference point coordinates
-                date_list        - list of string, SLC dates
-                meta            - dict, metadata of ifgramStack.h5
-    Returns:    conn_seqcumclosurephase.h5           - 3D array in size of (num_ifgram, length, width) in float, cumulative sequential closure phase
-                conn_seqcumclosurephase_maskconcp.h5 - 2D array in size of (length, width) in bool, mask based on connected component
+    Parameters: conn_level  - int, connection level of closure phases
+                conn_dir    - str, path of sequential closure phases file for connection - n
+                date_list   - list of str, SLC dates
+                meta        - dict, metadata of ifgramStack.h5
+    Returns:    bias_ts     - 3D np.ndarray in size of (num_ifgram, length, width) in float32,
+                              cumulative sequential closure phase time series,
+                              saved to file: conn{conn_level}_cumSeqClosurePhase.h5
+                common_mask - 2D np.ndarray in size of (length, width) in bool,
+                              mask based on common connected components,
+                              saved to file: conn{conn_level}_maskConnComp.h5
     '''
-    outfiledir = os.path.join(filepath, 'conn'+str(n)+'_seqcumclosurephase.h5')
-    outmaskdir = os.path.join(filepath, 'conn'+str(n)+'_seqcumclosurephase_maskconcp.h5')
-    print('Creating '+outfiledir)
-    if not os.path.isfile(outfiledir) or not os.path.isfile(outmaskdir):
-        filelist = glob.glob(os.path.join(filepath, '*.unw'))
-        numfile = len(filelist)
-        filelist_st = sorted(filelist)
-        cp_phase_all = np.zeros((numfile, length, width),np.float32)
-        mask_all = np.zeros((numfile, length, width),np.float32)
 
-        for i in range(numfile):
-            file = filelist_st[i]
-            concpfile = file.replace('.unw','.unw.conncomp')
-            corfile = file.replace('.unw','.cor')
-            cp =np.fromfile(file, dtype='float32')
-            cp = cp.reshape([length,width*2])
-            cor = np.fromfile(corfile, dtype = 'float32')
-            concp = np.fromfile(concpfile, dtype = 'byte')
-            cor = cor.reshape([length, width])
-            concp = concp.reshape([length, width])
-            cp_phase = cp[:,width:]
-            cp_phase = cp_phase - cp_phase[refY,refX]
-            mask_concp = np.where(concp >= 1, 1, np.nan)
-            cp_phase_all[i,:,:] = cp_phase
-            mask_all[i,:,:] = mask_concp
+    # output file
+    cum_cp_file = os.path.join(conn_dir, f'conn{conn_level}_cumSeqClosurePhase.h5')
+    mask_file = os.path.join(conn_dir, f'conn{conn_level}_maskConnComp.h5')
 
-        # compute sequential closure phase
-        N = len(date_list)
-        biasts = np.zeros([N,length, width], np.float32)
-        biasts[0,:,:] = 0
-        biasts[1:N-n+1,:,:]= np.cumsum(cp_phase_all,0)
-        for i in range(N-n+1,N):
-            biasts[i,:,:] = (i-N+n)*cp_phase_all[-1,:,:]+biasts[N-n,:,:]
+    if os.path.isfile(cum_cp_file) and os.path.isfile(mask_file):
+        msg = 'Cumulative seq closure phase time series file (& its mask file) exist as below, skip re-generating.'
+        msg += f'\n{cum_cp_file}\n{mask_file}'
+        print(msg)
+        return
 
-        date_list = np.array(date_list, np.string_)
-        dsDict = dict()
-        dsDict = {
-            'seqcum_closurephase' : [np.float32,     (N, length, width),  biasts/n],
-            'date'                : [np.dtype('S8'), np.shape(date_list), date_list],
-        }
+    # basic info
+    length, width = int(meta['LENGTH']), int(meta['WIDTH'])
+    ref_y, ref_x = meta['REF_Y'], meta['REF_X']
 
-        meta['FILE_TYPE'] = 'timeseries'
-        writefile.layout_hdf5(outfiledir, dsDict, meta)
+    unw_files = sorted(glob.glob(os.path.join(conn_dir, '*.unw')))
+    num_file = len(unw_files)
 
-        mask = np.where(np.isnan(np.sum(mask_all,0)), False, True)
-        dsDict = dict()
-        dsDict = {
-            'mask_concp' : [np.bool_,       (length, width),     mask ],
-            'date'       : [np.dtype('S8'), np.shape(date_list), date_list],
-        }
-        meta['FILE_TYPE'] = 'mask'
-        writefile.layout_hdf5(outmaskdir, dsDict, meta)
+    print('calculate the cumulative seq closure phase time series ...')
+    cp_phase = np.zeros((num_file, length, width), dtype=np.float32)
+    mask = np.zeros((num_file, length, width), dtype=np.float32)
+
+    prog_bar = ptime.progressBar(maxValue=num_file)
+    for i, unw_file in enumerate(unw_files):
+        prog_bar.update(i+1, suffix=os.path.basename(unw_file))
+
+        unw = readfile.read(unw_file, datasetName='phase')[0]
+        unw -= unw[ref_y, ref_x]
+        cp_phase[i] = unw
+
+        conn_comp_file = unw_file + '.conncomp'
+        conn_comp = readfile.read(conn_comp_file)[0]
+        mask[i] = np.where(conn_comp >= 1, 1, np.nan)
+
+    prog_bar.close()
+
+    # compute sequential closure phase
+    num_date = len(date_list)
+    bias_ts = np.zeros((num_date, length, width), dtype=np.float32)
+    bias_ts[1:num_date-conn_level+1, :, :] = np.cumsum(cp_phase, 0)
+    for i in range(num_date-conn_level+1, num_date):
+        bias_ts[i] = (i - num_date + conn_level) * cp_phase[-1] + bias_ts[num_date - conn_level]
+    bias_ts /= conn_level
+
+    # write bias time series to HDF5 file
+    ds_dict = {
+        'timeseries' : [np.float32,     (num_date, length, width), bias_ts],
+        'date'       : [np.dtype('S8'), (num_date), np.array(date_list, np.string_)],
+    }
+    meta['FILE_TYPE'] = 'timeseries'
+    writefile.layout_hdf5(cum_cp_file, ds_dict, metadata=meta)
+
+    # write mask to HDF5 file
+    common_mask = np.where(np.isnan(np.sum(mask,0)), False, True)
+    meta['FILE_TYPE'] = 'mask'
+    writefile.write(common_mask, out_file=mask_file, metadata=meta)
+
+    return bias_ts, common_mask
+
+
+def compute_unwrap_closure_phase(stack_file, conn_level, max_memory, outdir):
+    '''Output the following phase time-sseries of connection-conn:
+
+    + wrapped
+    + unwrapped sequential closure phases
+    + cumulative closure phase
+    Output directory: outdir/closurePhase/conn{conn_level}_cp
+
+    Parameters: stack_file  - str, path for ifgramStack.h5
+                conn_level  - int, connection level
+                max_mermory - float, maximum memory in GB for each patch processed
+                outdir      - str, path for output files
+    Returns:    various wrapped, unwrapped and cumulative closure phase time-series
+
+    '''
+    # basic info
+    stack_obj = ifgramStack(stack_file)
+    stack_obj.open()
+    length, width = stack_obj.length, stack_obj.width
+    meta = dict(stack_obj.metadata)
+    print(f'scene length x width: {length} x {width}')
+
+    date_list = stack_obj.get_date_list(dropIfgram=False)
+    num_date = len(date_list)
+    print(f'number of acquisitions found: {num_date}')
+    print(f'start / end date: {date_list[0]} / {date_list[-1]}')
+    # number of expected closure phase
+    num_cp = num_date - conn_level
+
+    # process block-by-block
+    # split igram_file into blocks to save memory
+    box_list, num_box = ifginv.split2boxes(stack_file,max_memory)
+    closure_phase = np.zeros([num_cp, length, width],np.float32)
+    for i, box in enumerate(box_list):
+        print(box)
+        if num_box > 1:
+            print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
+            print('box length: {}'.format(box[3] - box[1]))
+            print('box width : {}'.format(box[2] - box[0]))
+
+        closure_phase[:, box[1]:box[3], box[0]:box[2]] = seq_closure_phase(
+            stack_obj,
+            box=box,
+            conn_level=conn_level)
+
+
+    ## filter the closure phase and re-unwrap
+
+    # output directory
+    conn_dir = os.path.join(cpdir, f'closurePhase/conn{conn_level}_cp')
+    os.makedirs(conn_dir, exist_ok=True)
+
+    kernel = isce_utils.gaussian_kernel(5, 5, 1, 1)
+    for i in range(num_cp):
+        # some day we will need to make this 4 digits.
+        int_file = os.path.join(conn_dir, f'conn{conn_level}_filt_{i:03}.int')
+        cor_file = os.path.join(conn_dir, f'conn{conn_level}_filt_{i:03}.cor')
+        unw_file = os.path.join(conn_dir, f'conn{conn_level}_filt_{i:03}.unw')
+
+        if not os.path.isfile(int_file):
+            # filter the closure phase interferogram
+            closure_phase_filt = isce_utils.convolve(
+                data=np.exp(1j*closure_phase[i]),
+                kernel=kernel)
+
+            # write to binary file in isce2 format
+            with open(int_file, mode='wb') as fid:
+                closure_phase_filt.tofile(fid)
+
+            # write metadata in isce2 format
+            meta['FILE_TYPE']='.int'
+            meta['INTERLEAVE']='BIP'
+            meta['DATA_TYPE']='complex64'
+            meta['BANDS']=1
+            writefile.write_isce_xml(meta, int_file)
+
+        if not os.path.isfile(cor_file):
+            isce_utils.estimate_coherence(int_file, cor_file)
+
+        if not os.path.isfile(unw_file):
+            isce.unwrap_snaphu(int_file, cor_file, unw_file, meta)
+
+
+    ## output accumulated unwrapped closure phase time-series
+    cum_seq_unw_closure_phase(conn_level, conn_dir, date_list, meta)
 
     return
 
 
+################################################################################
 def seq2cum_closure_phase(conn, outdir, box):
     '''Read cumulative sequential closure phase from individual closure phase directory.
 
@@ -354,11 +450,11 @@ def seq2cum_closure_phase(conn, outdir, box):
     Returns:    biasts  - 3D array in size of (num_date, box_lengh, box_width) in float,
                           cumulative sequential closure phases
     '''
-    filepath = f'conn{conn}_cp'
-    filename = f'conn{conn}_seqcumclosurephase.h5'
-    seqcpfile = os.path.join(outdir, 'closurePhase', filepath, filename)
-    biasts = readfile.read(seqcpfile, box=box,print_msg=False)[0]
-    return biasts
+    dname = f'conn{conn}_cp'
+    fname = f'conn{conn}_seqcumclosurephase.h5'
+    seq_cp_file = os.path.join(outdir, 'closurePhase', dname, fname)
+    bias_ts = readfile.read(seq_cp_file, box=box, print_msg=False)[0]
+    return bias_ts
 
 
 def estimate_ratioX(tbase, n, nl, wvl, box, outdir, mask=False):
@@ -811,107 +907,6 @@ def bias_correction(stack_file, nl, bw, max_memory, outdir, parallel):
 
 
 
-def compute_unwrap_closure_phase(stack_file, conn, max_memory, outdir):
-    '''Output the following phase time-sseries of connection-conn:
-
-    + wrapped
-    + unwrapped sequential closure phases
-    + cumulative closure phase
-    Output directory: outdir/closurePhase/conn{conn}_cp
-
-    Parameters: stack_file                - string, path for ifgramStack.h5
-                conn                        - integer, connection level
-                max_mermory                 - float, maximum memory in GB for each patch processed
-                outdir                      - string, path for output files
-    Returns:    various wrapped, unwrapped and cumulative closure phase time-series
-
-    '''
-    stack_obj = ifgramStack(stack_file)
-    stack_obj.open()
-    length, width = stack_obj.length, stack_obj.width
-    meta = dict(stack_obj.metadata)
-    date12_list = stack_obj.get_date12_list(dropIfgram=True)
-    date12_list_all = stack_obj.get_date12_list(dropIfgram=False)
-    print('scene length, width', length, width)
-    ref_phase = stack_obj.get_reference_phase(unwDatasetName='unwrapPhase')
-    refX = stack_obj.refX
-    refY = stack_obj.refY
-    # retrieve the list of SLC dates from ifgramStack.h5
-    ifgram0 = date12_list[0]
-    date1, date2 = ifgram0.split('_')
-    date_list = [date1, date2]
-    for ifgram in date12_list:
-        date1, date2 = ifgram.split('_')
-        if date1 not in date_list:
-            date_list.append(date1)
-        if date2 not in date_list:
-            date_list.append(date2)
-    date_list.sort()
-    print(f'number of acquisitions found: {len(date_list)}')
-    print(f'start / end date: {date_list[0]} / {date_list[-1]}')
-
-    # split igram_file into blocks to save memory
-    box_list, num_box = ifginv.split2boxes(stack_file,max_memory)
-
-    closurephase =  np.zeros([len(date_list)-conn, length,width],np.float32)
-    #process block-by-block
-    for i, box in enumerate(box_list):
-            box_width  = box[2] - box[0]
-            box_length = box[3] - box[1]
-            print(box)
-            if num_box > 1:
-                print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
-                print('box width:  {}'.format(box_width))
-                print('box length: {}'.format(box_length))
-
-            cp_i = seq_closure_phase(stack_obj, box=box, conn_level=conn)
-            closurephase[:, box[1]:box[3], box[0]:box[2]] = cp_i
-
-    # directory
-    cpdir = os.path.join(outdir, 'closurePhase')
-    if not os.path.isdir(cpdir):
-        os.mkdir(cpdir)
-
-    cpdir_conn = os.path.join(cpdir,'conn'+str(conn)+'_cp')
-    if not os.path.isdir(cpdir_conn):
-        os.mkdir(cpdir_conn)
-
-    # filter and output
-    for i in range(len(date_list)-conn):
-        # some day we will need to make this 4 digits.
-        concpname = 'conn'+str(conn)+'_filt_'+'{:03}'.format(i)+'.int'
-        concpdir = os.path.join(cpdir_conn,concpname)
-        if not os.path.isfile(concpdir):
-            kernel = isce_utils.gaussian_kernel(5,5,1,1)
-            closurephase_filt = isce_utils.convolve(np.exp(1j*closurephase[i,:,:]), kernel)
-            fid = open(concpdir,mode = 'wb')
-            closurephase_filt.tofile(fid)
-            fid.close()
-            meta['FILE_TYPE']='.int'
-            meta['INTERLEAVE']='BIP'
-            meta['DATA_TYPE']='complex64'
-            meta['BANDS']=1
-            writefile.write_isce_xml(meta, concpdir)
-
-    # compute phase sigma and output
-    for i in range(len(date_list)-conn):
-        concpdir    = os.path.join(cpdir_conn, f'conn{conn}_filt_{i:03}.int')
-        concpcordir = os.path.join(cpdir_conn, f'conn{conn}_filt_{i:03}.cor')
-        if not os.path.isfile(concpcordir):
-            isce_utils.estimate_coherence(concpdir, concpcordir)
-
-    # unwrap
-    for i in range(len(date_list)-conn):
-        concpdir    = os.path.join(cpdir_conn, f'conn{conn}_filt_{i:03}.int')
-        concpcordir = os.path.join(cpdir_conn, f'conn{conn}_filt_{i:03}.cor')
-        concpunwdir = os.path.join(cpdir_conn, f'conn{conn}_filt_{i:03}.unw')
-        if not os.path.isfile(concpunwdir):
-            isce_utils.unwrap_snaphu(concpdir,concpcordir,concpunwdir,meta)
-
-    # output accumulated unwrapped closure phase time-series
-    cum_seq_unw_closure_phase(conn,cpdir_conn,length,width,refY,refX, date_list, meta)
-
-    return
 
 
 ################################################################################
@@ -929,11 +924,10 @@ def main(iargs=None):
 
     elif inps.action.endswith ('estimate'):
         # to make sure we have con-2 closure phase processed
-        maxconn = np.maximum(2, inps.bw)
-
+        max_conn_level = np.maximum(2, inps.bw)
         if inps.update_closure_phase:
-            for conn in np.arange(2, maxconn+1):
-                compute_unwrap_closure_phase(inps.stack_file, conn, inps.maxMemory, inps.outdir)
+            for conn_level in np.arange(2, max_conn_level+1):
+                compute_unwrap_closure_phase(inps.stack_file, conn_level, inps.maxMemory, inps.outdir)
             compute_unwrap_closure_phase(inps.stack_file, inps.nl, inps.maxMemory, inps.outdir)
 
         if inps.action == 'quick_estimate':

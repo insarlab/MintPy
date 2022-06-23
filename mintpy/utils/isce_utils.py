@@ -959,24 +959,26 @@ def estimate_coherence(infile, corfile):
 
     return
 
-def unwrap_snaphu(intfile,corfile,unwfile, meta ,cost='SMOOTH'):
-    '''
-    input: intfile - wrapped phase file directory
-           corfile - correlation file directory
-           unwfile - output unwrapped file directory
-           meta - dict, attributes dictionary
-           cost - 'DEFO,'SMOOTH','TOPO'
+def unwrap_snaphu(intfile, corfile, unwfile, meta, cost='SMOOTH'):
+    '''Unwrap interferograms using SNAPHU via isce2.
+
+    Parameters: intfile - wrapped phase file directory
+                corfile - correlation file directory
+                unwfile - output unwrapped file directory
+                meta    - dict, attributes dictionary
+                cost    - cost mode: 'DEFO, 'SMOOTH', 'TOPO'
     '''
     import isce
     from contrib.Snaphu.Snaphu import Snaphu
 
     width = int(meta['width'])
     wavelength = float(meta['WAVELENGTH'])
-    altitude =  float(meta['HEIGHT'])
+    altitude = float(meta['HEIGHT'])
     rglooks = int(meta['RLOOKS'])
     azlooks = int(meta['ALOOKS'])
     earthRadius = float(meta['earthRadius'])
 
+    # setup SNAPHU
     snp = Snaphu()
     snp.setInitOnly(False)
     snp.setInput(intfile)
@@ -988,18 +990,22 @@ def unwrap_snaphu(intfile,corfile,unwfile, meta ,cost='SMOOTH'):
     snp.setAltitude(altitude)
     snp.setCorrfile(corfile)
     snp.setInitMethod('MST')
-   # snp.setCorrLooks(corrLooks)
+    # snp.setCorrLooks(corrLooks)
     snp.setMaxComponents(100)
     snp.setDefoMaxCycles(2.0)
     snp.setRangeLooks(rglooks)
     snp.setAzimuthLooks(azlooks)
     snp.setCorFileFormat('FLOAT_DATA')
     snp.prepare()
+
+    # run SNAPHU
     snp.unwrap()
 
+    # write metadata file
     meta['INTERLEAVE'] = 'BIL'
     meta['FILE_TYPE'] = '.unw'
-    meta['DATA_TYPE']='float32'
-    meta['BANDS']=2
+    meta['DATA_TYPE'] = 'float32'
+    meta['BANDS'] = 2
     writefile.write_isce_xml(meta, unwfile)
+
     return
