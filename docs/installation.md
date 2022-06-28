@@ -10,17 +10,19 @@ conda install -c conda-forge mintpy
 
 #### b. via docker ####
 
-Docker allows one to run MintPy in a dedicated container (essentially an efficient virtual machine) and to be independent of platform OS. After installing [docker](https://docs.docker.com/install/), run the following to pull the [MintPy container from DockerHub](https://hub.docker.com/r/forrestwilliams/mintpy) to your local machine, check more details at [here](docker.md).
+Docker allows one to run MintPy in a dedicated container, which is essentially an efficient virtual machine, and to be independent of platform OS. First, install [docker](https://docs.docker.com/install/) if you have not already done so. Then run the following to pull the latest stable released constainer image version from [MintPy GitHub Container Registry](https://github.com/insarlab/MintPy/pkgs/container/mintpy) to your local machine:
 
 ```bash
-docker pull forrestwilliams/mintpy:1.3.1
+docker pull ghcr.io/insarlab/mintpy:latest
 ```
 
-Then complete the [post-installation setup](#3-post-installation-setup).
+Check [here](docker.md) for more details on Docker container image usage, e.g. pulling development version and running in shell or Jupyter server.
+
+#### c. [Post-Installation Setup](#3-post-installation-setup) ####
 
 ## 2. Install the development version ##
 
-Note: The installation note below is tested on Linux and macOS, and is still experimental on Windows (may has bugs).
+Note: The installation note below is tested on Linux and macOS, and is still experimental on Windows (may have bugs).
 
 MintPy is written in Python 3 and relies on several Python modules, check the [requirements.txt](https://github.com/insarlab/MintPy/blob/main/requirements.txt) file for details. We recommend using [conda](https://docs.conda.io/en/latest/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient management and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://pyresample.readthedocs.io/en/latest/installation.html#using-pykdtree).
 
@@ -53,7 +55,7 @@ bash Miniconda3-latest-Linux-x86_64.sh -b -p ~/tools/miniconda3
 ~/tools/miniconda3/bin/conda init bash
 ```
 
-Install the dependencies into an custom existing environment [recommended] by running:
+Install the dependencies into a custom existing environment [recommended] by running:
 
 ```bash
 # To create a new custom environment, e.g. named "insar", run "conda create --name insar; conda activate insar"
@@ -85,7 +87,7 @@ Or install MintPy with pip in development mode as below. The development mode al
 python -m pip install -e MintPy
 ```
 
-Or simply setup the environment variables as below in your source file, e.g. `~/.bash_profile` for _bash_ users or `~/.cshrc` for _csh/tcsh_ users:
+Or simply set up the environment variables as below in your source file, e.g. `~/.bash_profile` for _bash_ users or `~/.cshrc` for _csh/tcsh_ users:
 
 ```bash
 if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
@@ -117,7 +119,7 @@ Same as the [instruction for Linux](#21-install-on-linux).
 
 #### b. Install MintPy via MacPorts ####
 
-Same as the [instruction for Linux](#21-install-on-linux), except for the dependencies installation, which is as below.
+Same as the [instruction for Linux](#21-install-on-linux), except for the dependencies' installation, which is as below.
 
 Install [macports](https://www.macports.org/install.php) if you have not done so. Add the following at the bottom of your `~/.bash_profile` file:
 
@@ -158,7 +160,7 @@ Same as the [instruction for Linux](#21-install-on-linux), except for the "c. In
 
 #### a. ERA5 for tropospheric correction ####
 
-Setup an account for ERA5 to download weather re-analysis datasets for tropospheric delay correction as described in [insarlab/PyAPS](https://github.com/insarlab/pyaps#2-account-setup-for-era5).
+Set up an account for ERA5 to download weather re-analysis datasets for tropospheric delay correction as described in [insarlab/PyAPS](https://github.com/insarlab/pyaps#2-account-setup-for-era5).
 
 `WEATHER_DIR`: Optionally, if you defined an environment variable named `WEATHER_DIR` to contain the path to a directory, MintPy will download the GAM files into the indicated directory. Also, MintPy will look for the GAM files in the directory before downloading a new one to prevent downloading multiple copies if you work with different dataset that cover the same date/time.
 

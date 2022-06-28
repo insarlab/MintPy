@@ -74,7 +74,7 @@ def do_setup():
             "lxml",
             "matplotlib",
             "numpy",
-            "pyaps3",
+            "pyaps3>=0.3",
             "pykml>=0.2",
             "pyproj",
             "setuptools",
