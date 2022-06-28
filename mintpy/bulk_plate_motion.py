@@ -4,13 +4,8 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Yuan-Kai Liu, May 2022                           #
 ############################################################
-
-# 1. Citation:
-# Oliver L Stephenson, Yuan-Kai Liu, Zhang Yunjun, Mark Simons, Paul A Rosen, and Xiaohua Xu (2022),
-# The Impact of Plate Motions on Long-Wavelength InSAR-Derived Velocity Fields. Manuscript submitted to Geophysical Research Letters.
-# preprint available: https://www.essoar.org/doi/abs/10.1002/essoar.10511538.2
-
-# 2. Extra dependency:
+#
+# Extra dependency:
 #   + platemotion: https://github.com/lcx366/PlateTectonic
 #   + astropy
 #   How to install both:
@@ -18,8 +13,8 @@
 #      option (2) git clone git@github.com:lcx366/PlateTectonic.git $TOOL_DIR/PlateTectonic
 #                 echo 'export PYTHONPATH=$PYTHONPATH:$TOOL_DIR/PlateTectonic' >> ~/.bashrc
 #                 somehow install other dependencies in setup.py using your conda
-
-# 3. To-Do List (updated 2022.5.30 Yuan-Kai Liu):
+#
+# To-Do List (updated 2022.5.30 Yuan-Kai Liu):
 #   + Replace scipy.interpolate with alternatives for efficiency. E.g.:
 #       skimage.resize https://scikit-image.org/docs/stable/auto_examples/transform/plot_rescale.html
 #       check mintpy usage https://github.com/insarlab/MintPy/blob/7adb3a11f875b832488a0c8e44c174d98b1df254/mintpy/tropo_gacos.py#L129
@@ -53,47 +48,57 @@ except ImportError:
 
 #########################################  Usage  ##############################################
 REFERENCE = """reference:
-  Stephenson, O. L., Liu, Y. K., Yunjun, Z., Simons, M., Rosen, P., and Xu X. (2022),
-  The Impact of Plate Motions on Long-Wavelength InSAR-Derived Velocity Fields, submitted to GRL.
-    preprint: https://www.essoar.org/doi/abs/10.1002/essoar.10511538.2
+  Stephenson, O. L., Liu, Y. K., Yunjun, Z., Simons, M., Rosen, P. and Xu, X., (2022), The Impact of
+    Plate Motions on Long-Wavelength InSAR-Derived Velocity Fields, Geophys. Res. Lett. (under review)
+    doi:10.1002/essoar.10511538.2
+  Peter, H., Fernández, M., Aguilar, J., & Fernández, J. (2021). Copernicus POD Product Handbook: 
+    Copernicus Sentinel-1, -2 and -3 Precise orbit Determination Serivice (CPOD) (GMV-CPOD-TN-0009). 
+    https://sentinels.copernicus.eu/documents/247904/3372484/Sentinels-POD-Product-Handbook-1.19.pdf
 """
+
 EXAMPLE = """example:
+  # Spherical form of Euler Pole rotation in [lat, lon, w] in unit of deg, deg, deg/Ma
+  #   Africa  plate (NNR-NUVEL1A)  - Table 2 in Argus & Gordon (1991, GRL), doi:10.1029/91GL01532
+  #   Eurasia plate (NNR-MORVEL56) - Table 1 in Argus, Gordon & DeMets (2011, G3), doi:10.1029/2011GC003751
   bulk_plate_motion.py -g inputs/geometryGeo.h5                --om_sph  50.6  -74.0   0.30   -m None
-  \testimating for NNR-NUVEL1A PMM of the Africa plate\n\t(Table 2 of Argus & Gordon, GRL 1991; doi: 10.1029/91GL01532)\n
   bulk_plate_motion.py -g inputs/geometryGeo.h5 -v velocity.h5 --om_sph  48.85 -106.50 0.223  -m waterMask.h5
-  \testimating/correcting for NNR-MORVEL56 PMM of the Eurasia plate\n\t(Table 1 of Argus, Gordon, and DeMets, GGG 2011; doi: 10.1029/2011GC003751)\n
+
+  # Cartesian form of Euler Pole rotation in [wx, wy, wz] in unit of mas/year
+  #   Arabia plate (NNR-ITRF14) - Table 1 in Altamimi et al.. (2017, GJI), doi:10.1093/gji/ggx136
   bulk_plate_motion.py -g inputs/geometryGeo.h5 -v velocity.h5 --om_cart 1.154 -0.136  1.444  -m maskTempCoh.h5
-  \testimating/correcting for NNR-ITRF14 PMM of the Arabia plate\n\t(Table 1 of Altamimi et al., GJI 2017; doi: 10.1093/gji/ggx136)\n
+
+  # Simple constant local ENU translation (based on one GNSS vector) in [ve, vn, vu] in unit of meter/year
+  #   E.g., https://www.unavco.org/software/visualization/GPS-Velocity-Viewer/GPS-Velocity-Viewer.html
+  #   Step 1: select `GNSS Data source` as `World, IGS08/NNR, GEM GSRM` (referenced to ITRF2008, NNR PMM)
+  #   Step 2: check box `Station labels and data download` and click `Draw Map`
+  #   Step 3: Navigate to the region of interest, click on a representative station, get the "Speed components" in mm/yr.
   bulk_plate_motion.py -g inputs/geometryGeo.h5 -v velocity.h5 --enu     25.0 30.5 0.0        -m zero
-  \testimating/correcting for a simple constant local ENU translating field based on one GNSS vector
-  \t(e.g., https://www.unavco.org/software/visualization/GPS-Velocity-Viewer/GPS-Velocity-Viewer.html)
-  \tyou can: 1. select `GNSS Data source` as `World, IGS08/NNR, GEM GSRM` (referenced to ITRF2008, NNR PMM)
-  \t         2. check box `Station labels and data download` and click `Draw Map`
-  \t         3. Navigate to the region of interest and click on a representative station.
-  \t            You get the `Speed components` in mm/yr.
 """
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Bulk plate motion correction. Removing the effect of bulk traslation and rotation in velocity field based on a given plate motion model (PMM).'+
-                                                 ' Sentinel-1 orbit is measured with respect to ITRF2014 (page 25 of Peter, 2021: https://sentinel.esa.int/documents/247904/4599719/Copernicus-POD-Product-Handbook.pdf),'
-                                                 ' an Earth-centered, Earth-fixed reference frame in which there is no net rotation (NNR) of the Earth surface.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+EXAMPLE)
+    parser = argparse.ArgumentParser(
+        description='Bulk Plate Motion Correction.\n'
+                    '  Removing the effect of bulk traslation and rotation in velocity field based on a given plate motion model (PMM).\n'
+                    '  E.g., Sentinel-1 orbit is measured with respect to ITRF2014 (Table 3-2 of Peter et al., 2021), which is an\n'
+                    '  Earth-centered, Earth-fixed reference frame in which there is no net rotation (NNR) of the Earth surface.',
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog=REFERENCE+'\n'+EXAMPLE,
+    )
+
     # input files
-    parser.add_argument('-g', '--geom', dest='geomfile', type=str, required=True,
+    parser.add_argument('-g', '--geom', dest='geom_file', type=str, required=True,
                         help = 'Input geometry file (required; file should be geocoded), e.g., geometryGeo.h5')
-    parser.add_argument('-v', '--velo', dest='vfile', type=str, default=None,
+    parser.add_argument('-v', '--velo', dest='vel_file', type=str, default=None,
                         help='Input velocity file (optional; file should be geocoded), e.g., velocity.h5 (default: %(default)s).')
 
-    # plate motion configurations (use ONE AND ONLY ONE of the below; --om_sph overwrites --om_cart overwrites --enu)
-    pmms = parser.add_argument_group('pmms', 'Plate motion models (required); Use ONE AND ONLY ONE of the below; '+
-                                     '\nIf more than one are given, --om_sph overwrites --om_cart overwrites --enu')
-    pmms.add_argument('--enu', dest='venu', type=float, nargs=3, metavar=('VE', 'VN', 'VU'), default=None,
-                        help = 'Simple constant local ENU translation of ground [ve, vn, vu] unit: meter/year (default: %(default)s).')
-    pmms.add_argument('--om_cart', dest='omega_cart', type=float, nargs=3, metavar=('WX', 'WY', 'WZ'), default=None,
-                        help = 'Cartesian form of Euler Pole rotation; [wx, wy, wz] (unit: mas/yr) (default: %(default)s).')
+    # plate motion configurations
+    pmms = parser.add_mutually_exclusive_group(required=True)
     pmms.add_argument('--om_sph', dest='omega_sph', type=float, nargs=3, metavar=('LAT', 'LON', 'W'), default=None,
-                        help = 'Spherical form of Euler Pole rotation; [lat, lon, w] (unit: deg, deg, deg/Ma) (default: %(default)s).')
+                      help = 'Spherical form of Euler Pole rotation; [lat, lon, w] (unit: deg, deg, deg/Ma) (default: %(default)s).')
+    pmms.add_argument('--om_cart', dest='omega_cart', type=float, nargs=3, metavar=('WX', 'WY', 'WZ'), default=None,
+                      help = 'Cartesian form of Euler Pole rotation; [wx, wy, wz] (unit: mas/yr) (default: %(default)s).')
+    pmms.add_argument('--enu', dest='venu', type=float, nargs=3, metavar=('VE', 'VN', 'VU'), default=None,
+                      help = 'Simple constant local ENU translation of ground [ve, vn, vu] unit: meter/year (default: %(default)s).')
 
     # others
     parser.add_argument('-m', '--mask', dest='mask', type=str, default=None,
@@ -101,17 +106,17 @@ def create_parser():
                                 '   zero: masking 0.0 values of the input velocity \n' +
                                 '   None: no mask is applied (default: %(default)s).')
     parser.add_argument('--resol', dest='resol', type=float, default=10.,
-            help = 'Ground resolution for computing Plate rotation to ENU velocity (unit: km) (default: %(default)s km grid).')
+                        help = 'Ground resolution for computing Plate rotation to ENU velocity (unit: km) (default: %(default)s).')
 
     return parser
 
 
-def get_filenames(geomfile, vfile):
-    inputsDir = os.path.dirname(geomfile)
+def get_filenames(geom_file, vel_file):
+    inputsDir = os.path.dirname(geom_file)
     BPM3d     = os.path.join(inputsDir, 'BulkPlateMotion3D.h5')
     BPMlos    = os.path.join(inputsDir, 'BulkPlateMotion.h5')
-    if vfile:
-        vbase = os.path.abspath(vfile).split('.')[0]
+    if vel_file:
+        vbase = os.path.abspath(vel_file).split('.')[0]
         vout  = os.path.abspath('{}_BPM.h5'.format(vbase))
     else:
         vout  = None
@@ -125,12 +130,13 @@ def cmd_line_parse(iargs=None):
         print('Error: Please specify either the Plate Rotation or a Single Translation Vector; See -h option')
         print('Need to give at least ONE of [--enu, --om_cart, --om_sph]')
         sys.exit(1)
-    inps.BPM3d, inps.BPMlos, inps.vout = get_filenames(inps.geomfile, inps.vfile)
+    inps.BPM3d, inps.BPMlos, inps.vout = get_filenames(inps.geom_file, inps.vel_file)
     return inps
+
 
 ########################################## Sub Functions #############################################
 
-def build_PMM(omega_cart=None, omega_sph=None):
+def build_plate_motion_model(omega_cart=None, omega_sph=None):
     """
     Build a plate motion model by giving a Euler roation vector
     omega_cart      list or np.array;   Cartesian representation [wx, wy, wz]  (mas/yr)
@@ -253,11 +259,11 @@ def get_geobox_width_length(geo_box):
 
 ####################################### Higher-level Sub Functions ##########################################
 
-def estimate_bulkMotion(geomfile, vfile, venu=None, omega_cart=None, omega_sph=None, mask=None, pmmResol=5., BPM3d=None, BPMlos=None):
+def estimate_bulk_motion(geom_file, vel_file, venu=None, omega_cart=None, omega_sph=None, mask=None, pmmResol=5., BPM3d=None, BPMlos=None):
     """
     Estimate LOS motion due to pure bulk tranlation or due to plate rotation
-    geomfile        str:                path to the input geometry file
-    vfile           str;                path to the input velocity file
+    geom_file        str:                path to the input geometry file
+    vel_file           str;                path to the input velocity file
     venu            list or 1D array;   a single-vector [ve, vn, vu] (meter/year) simulating the bulk translation of the ground (e.g., from GNSS)
     omega_cart      list or 1D array;   Cartesian representation of plate rotation [wx, wy, wz]  (mas/yr)
     omega_sph       list or 1D array;   Spherical representation of plate rotation [lat, lon, w] (deg, deg, deg/Ma)
@@ -267,11 +273,11 @@ def estimate_bulkMotion(geomfile, vfile, venu=None, omega_cart=None, omega_sph=N
     BPMlos          str;                path to the output BPM (bulk plate motion) LOS velocity field
     """
     # Read attributes / reference file
-    if vfile:
-        vel_in = readfile.read(vfile, datasetName='velocity')[0]
-        atr    = readfile.read_attribute(vfile)
+    if vel_file:
+        vel_in = readfile.read(vel_file, datasetName='velocity')[0]
+        atr    = readfile.read_attribute(vel_file)
     else:
-        atr = readfile.read_attribute(geomfile)
+        atr = readfile.read_attribute(geom_file)
         atr['FILE_TYPE'] = 'velocity'
 
     if 'Y_FIRST' not in atr.keys():
@@ -281,7 +287,7 @@ def estimate_bulkMotion(geomfile, vfile, venu=None, omega_cart=None, omega_sph=N
     width, length = int(atr['WIDTH']), int(atr['LENGTH'])
 
     # Get LOS geometry
-    inc_rad, head_rad, atr_geo = prepare_los_geometry(geomfile)
+    inc_rad, head_rad, atr_geo = prepare_los_geometry(geom_file)
     lats, lons                 = get_geo_lat_lon(atr_geo)
     width_km, length_km        = get_geobox_width_length((np.min(lons), np.max(lats), np.max(lons), np.min(lats)))
     inc_deg, head_deg          = np.rad2deg(inc_rad), np.rad2deg(head_rad)
@@ -297,9 +303,9 @@ def estimate_bulkMotion(geomfile, vfile, venu=None, omega_cart=None, omega_sph=N
     if any([omega for omega in [omega_cart, omega_sph]]):
         print('estimate bulk motion by building a plate motion model (e.g., ITRF2014 MORVEL)')
         if omega_cart is not None:
-            plate = build_PMM(omega_cart=omega_cart)
+            plate = build_plate_motion_model(omega_cart=omega_cart)
         elif omega_sph is None:
-            plate = build_PMM(omega_sph=omega_sph)
+            plate = build_plate_motion_model(omega_sph=omega_sph)
 
         # Use the Euler rotation to compute the ENU for each pixel in the geometry
         skx, sky = int(width*pmmResol/width_km), int(length*pmmResol/length_km)
@@ -357,11 +363,11 @@ def estimate_bulkMotion(geomfile, vfile, venu=None, omega_cart=None, omega_sph=N
     return
 
 
-def remove_bulkMotion(vfile, mfile, ofile):
+def remove_bulk_motion(vel_file, mfile, ofile):
     """
     Apply the bulk motion correction from files
     """
-    file1 = vfile       # input uncorrected LOS velocity file
+    file1 = vel_file       # input uncorrected LOS velocity file
     file2 = [mfile]     # BPM model LOS velocity file
     diff_file(file1, file2, ofile)
     return
@@ -373,15 +379,15 @@ def main(iargs=None):
     print('\n-----------------------------------')
     print('Evaluate bulk motion')
     print('-----------------------------------\n')
-    estimate_bulkMotion(inps.geomfile, inps.vfile,
-                        inps.venu, inps.omega_cart, inps.omega_sph,
-                        inps.mask, inps.resol, inps.BPM3d, inps.BPMlos)
+    estimate_bulk_motion(inps.geom_file, inps.vel_file,
+                         inps.venu, inps.omega_cart, inps.omega_sph,
+                         inps.mask, inps.resol, inps.BPM3d, inps.BPMlos)
 
-    if inps.vfile and inps.BPMlos and inps.vout:
+    if inps.vel_file and inps.BPMlos and inps.vout:
         print('\n-----------------------------------')
         print('Remove bulk motion')
         print('-----------------------------------\n')
-        remove_bulkMotion(inps.vfile, inps.BPMlos, inps.vout)
+        remove_bulk_motion(inps.vel_file, inps.BPMlos, inps.vout)
         print('The BPM corrected velocity           : {}'.format(inps.vout))
 
     print('The absolute BPM velocity model (3D) : {}'.format(inps.BPM3d))
