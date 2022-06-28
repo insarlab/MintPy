@@ -361,7 +361,10 @@ class TimeSeriesAnalysis:
 
         # 4) add custom metadata (optional)
         if self.customTemplateFile:
-            flist = ', '.join(filter(None, [os.path.basename(stack_file), os.path.basename(ionStack_file), os.path.basename(geom_file)]))
+            if ionStack_file:
+                flist = ', '.join([os.path.basename(stack_file), os.path.basename(ionStack_file), os.path.basename(geom_file)])
+            else:
+                flist = ', '.join([os.path.basename(stack_file), os.path.basename(geom_file)])
             print('updating {} metadata based on custom template file: {}'.format(flist, os.path.basename(self.customTemplateFile)))
             # use ut.add_attribute() instead of add_attribute.py because of
             # better control of special metadata, such as SUBSET_X/YMIN
