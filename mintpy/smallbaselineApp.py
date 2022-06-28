@@ -51,7 +51,7 @@ EXAMPLE = """example:
 """
 
 REFERENCE = """reference:
-  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis: 
+  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis:
   Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
   doi:10.1016/j.cageo.2019.104331.
 """
@@ -357,18 +357,16 @@ class TimeSeriesAnalysis:
         os.chdir(self.workDir)
 
         # 3) check loading result
-        load_complete, stack_file, geom_file = ut.check_loaded_dataset(self.workDir, print_msg=True)[0:3]
+        load_complete, stack_file, geom_file, ionStack_file = ut.check_loaded_dataset(self.workDir, print_msg=True)[0:4]
 
         # 4) add custom metadata (optional)
         if self.customTemplateFile:
-            print('updating {}, {} metadata based on custom template file: {}'.format(
-                os.path.basename(stack_file),
-                os.path.basename(geom_file),
-                os.path.basename(self.customTemplateFile)))
+            flist = ', '.join(filter(None, [os.path.basename(stack_file), os.path.basename(ionStack_file), os.path.basename(geom_file)]))
+            print('updating {} metadata based on custom template file: {}'.format(flist, os.path.basename(self.customTemplateFile)))
             # use ut.add_attribute() instead of add_attribute.py because of
             # better control of special metadata, such as SUBSET_X/YMIN
-            ut.add_attribute(stack_file, self.customTemplate)
-            ut.add_attribute(geom_file, self.customTemplate)
+            for file in [stack_file, ionStack_file, geom_file]:
+                if file: ut.add_attribute(file, self.customTemplate)
 
         # 5) if not load_complete, plot and raise exception
         if not load_complete:
@@ -948,7 +946,7 @@ class TimeSeriesAnalysis:
 
                 iargs = [tcoh_file, '-m', tcoh_min, '-o', mask_file]
                 # exclude pixels in shadow if shadowMask dataset is available
-                if (self.template['mintpy.networkInversion.shadowMask'] is True 
+                if (self.template['mintpy.networkInversion.shadowMask'] is True
                         and 'shadowMask' in readfile.get_dataset_list(geom_file)):
                     iargs += ['--base', geom_file, '--base-dataset', 'shadowMask', '--base-value', '1']
                 print('\ngenerate_mask.py', ' '.join(iargs))
@@ -1244,10 +1242,10 @@ class TimeSeriesAnalysis:
         msg = """Explore more info & visualization options with the following scripts:
         info.py                    #check HDF5 file structure and metadata
         view.py                    #2D map view
-        tsview.py                  #1D point time-series (interactive)   
+        tsview.py                  #1D point time-series (interactive)
         transect.py                #1D profile (interactive)
         plot_coherence_matrix.py   #plot coherence matrix for one pixel (interactive)
-        plot_network.py            #plot network configuration of the dataset    
+        plot_network.py            #plot network configuration of the dataset
         plot_transection.py        #plot 1D profile along a line of a 2D matrix (interactive)
         save_kmz.py                #generate Google Earth KMZ file in raster image
         save_kmz_timeseries.py     #generate Google Earth KMZ file in points for time-series (interactive)

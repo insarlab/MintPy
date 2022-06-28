@@ -106,10 +106,26 @@ def check_loaded_dataset(work_dir='./', print_msg=True, relpath=False):
     else:
         print("Input data seems to be geocoded. Lookup file not needed.")
 
+    # 4. ionosphere interferograms stack file: unwrapPhase, coherence
+    ds_list = ['unwrapPhase']
+    flist = [os.path.join(work_dir, 'inputs/ionStack.h5')]
+    ionStack_file = is_file_exist(flist, abspath=True)
+    if ionStack_file is not None:
+        obj = ifgramStack(ionStack_file)
+        obj.open(print_msg=False)
+        if all(x not in obj.datasetNames for x in ds_list):
+            msg = 'required dataset is missing in file {}:'.format(ionStack_file)
+            msg += '\n' + ' OR '.join(ds_list)
+            raise ValueError(msg)
+        # check coherence for phase stack
+        if 'unwrapPhase' in obj.datasetNames and 'coherence' not in obj.datasetNames:
+            print('WARNING: "coherence" is missing in file {}'.format(ionStack_file))
+
     if relpath:
-        stack_file  = os.path.relpath(stack_file)  if stack_file  else stack_file
-        geom_file   = os.path.relpath(geom_file)   if geom_file   else geom_file
-        lookup_file = os.path.relpath(lookup_file) if lookup_file else lookup_file
+        stack_file     = os.path.relpath(stack_file)     if stack_file     else stack_file
+        geom_file      = os.path.relpath(geom_file)      if geom_file      else geom_file
+        lookup_file    = os.path.relpath(lookup_file)    if lookup_file    else lookup_file
+        ionStack_file  = os.path.relpath(ionStack_file)  if ionStack_file  else ionStack_file
 
     # print message
     if print_msg:
@@ -122,12 +138,14 @@ def check_loaded_dataset(work_dir='./', print_msg=True, relpath=False):
         print('Interferograms Stack: {}'.format(stack_file))
         print('Geometry File       : {}'.format(geom_file))
         print('Lookup Table File   : {}'.format(lookup_file))
+        if ionStack_file:
+            print('Ionospheric Interferograms Stack: {}'.format(ionStack_file))
         if load_complete:
             print('-'*50)
             print('All data needed found/loaded/copied. Processed 2-pass InSAR data can be removed.')
         print('-'*50)
 
-    return load_complete, stack_file, geom_file, lookup_file
+    return load_complete, stack_file, geom_file, ionStack_file, lookup_file
 
 
 #################################################################################
