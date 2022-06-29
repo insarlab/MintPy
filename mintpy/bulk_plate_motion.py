@@ -30,12 +30,11 @@ import argparse
 import numpy as np
 
 from mintpy.utils import readfile, writefile, utils as ut
-from mintpy.mask import mask_matrix
 from mintpy.diff import diff_file
-from mintpy import reference_point
 from mintpy.save_gmt import get_geo_lat_lon
 from mintpy.solid_earth_tides import prepare_los_geometry
 
+# https://docs.astropy.org/en/stable/units/index.html
 try:
     from platemotion import Plate
     from astropy import units as u
@@ -60,19 +59,19 @@ EXAMPLE = """example:
   # Spherical form of Euler Pole rotation in [lat, lon, w] in unit of deg, deg, deg/Ma
   #   Africa  plate (NNR-NUVEL1A)  - Table 2 in Argus & Gordon (1991, GRL), doi:10.1029/91GL01532
   #   Eurasia plate (NNR-MORVEL56) - Table 1 in Argus, Gordon & DeMets (2011, G3), doi:10.1029/2011GC003751
-  bulk_plate_motion.py -g inputs/geometryGeo.h5                --om_sph  50.6  -74.0   0.30   -m None
-  bulk_plate_motion.py -g inputs/geometryGeo.h5 -v velocity.h5 --om_sph  48.85 -106.50 0.223  -m waterMask.h5
+  bulk_plate_motion.py -g inputs/geometryGeo.h5 --om-sph  50.6  -74.0   0.30
+  bulk_plate_motion.py -g inputs/geometryGeo.h5 --om-sph  48.85 -106.50 0.223 -v velocity.h5 
 
-  # Cartesian form of Euler Pole rotation in [wx, wy, wz] in unit of mas/year
-  #   Arabia plate (NNR-ITRF14) - Table 1 in Altamimi et al.. (2017, GJI), doi:10.1093/gji/ggx136
-  bulk_plate_motion.py -g inputs/geometryGeo.h5 -v velocity.h5 --om_cart 1.154 -0.136  1.444  -m maskTempCoh.h5
+  # Cartesian form of Euler Pole rotation in [wx, wy, wz] in unit of mas/year [milli arc second per year]
+  #   Arabia plate (NNR-ITRF14) - Table 1 in Altamimi et al. (2017, GJI), doi:10.1093/gji/ggx136
+  bulk_plate_motion.py -g inputs/geometryGeo.h5 --om-cart 1.154 -0.136  1.444 -v velocity.h5
 
   # Simple constant local ENU translation (based on one GNSS vector) in [ve, vn, vu] in unit of meter/year
   #   E.g., https://www.unavco.org/software/visualization/GPS-Velocity-Viewer/GPS-Velocity-Viewer.html
   #   Step 1: select `GNSS Data source` as `World, IGS08/NNR, GEM GSRM` (referenced to ITRF2008, NNR PMM)
   #   Step 2: check box `Station labels and data download` and click `Draw Map`
   #   Step 3: Navigate to the region of interest, click on a representative station, get the "Speed components" in mm/yr.
-  bulk_plate_motion.py -g inputs/geometryGeo.h5 -v velocity.h5 --enu     25.0 30.5 0.0        -m zero
+  bulk_plate_motion.py -g inputs/geometryGeo.h5 --enu 25.0 30.5 0.0 -v velocity.h5
 """
 
 def create_parser():
@@ -87,60 +86,49 @@ def create_parser():
 
     # input files
     parser.add_argument('-g', '--geom', dest='geom_file', type=str, required=True,
-                        help = 'Input geometry file (required; file should be geocoded), e.g., geometryGeo.h5')
-    parser.add_argument('-v', '--velo', dest='vel_file', type=str, default=None,
-                        help='Input velocity file (optional; file should be geocoded), e.g., velocity.h5 (default: %(default)s).')
+                        help='Input geometry file in geo-coordinates, e.g., geometryGeo.h5')
+    parser.add_argument('-v', '--velo', dest='vel_file', type=str,
+                        help='Input velocity file to be corrected.')
+    parser.add_argument('-o', '--output', dest='cor_vel_file', type=str,
+                        help='Output velocity file after the correction, default: add "_BPM" suffix.')
 
     # plate motion configurations
     pmms = parser.add_mutually_exclusive_group(required=True)
-    pmms.add_argument('--om_sph', dest='omega_sph', type=float, nargs=3, metavar=('LAT', 'LON', 'W'), default=None,
-                      help = 'Spherical form of Euler Pole rotation; [lat, lon, w] (unit: deg, deg, deg/Ma) (default: %(default)s).')
-    pmms.add_argument('--om_cart', dest='omega_cart', type=float, nargs=3, metavar=('WX', 'WY', 'WZ'), default=None,
-                      help = 'Cartesian form of Euler Pole rotation; [wx, wy, wz] (unit: mas/yr) (default: %(default)s).')
-    pmms.add_argument('--enu', dest='venu', type=float, nargs=3, metavar=('VE', 'VN', 'VU'), default=None,
-                      help = 'Simple constant local ENU translation of ground [ve, vn, vu] unit: meter/year (default: %(default)s).')
+    pmms.add_argument('--om-sph', dest='omega_sph', type=float, nargs=3, metavar=('LAT', 'LON', 'W'), default=None,
+                      help='Spherical form of Euler Pole rotation; [lat, lon, w] (unit: deg, deg, deg/Ma) (default: %(default)s).')
+    pmms.add_argument('--om-cart', dest='omega_cart', type=float, nargs=3, metavar=('WX', 'WY', 'WZ'), default=None,
+                      help='Cartesian form of Euler Pole rotation; [wx, wy, wz] (unit: mas/yr) (default: %(default)s).')
+    pmms.add_argument('--enu', dest='const_vel_enu', type=float, nargs=3, metavar=('VE', 'VN', 'VU'), default=None,
+                      help='Simple constant local ENU translation of ground [ve, vn, vu] unit: meter/year (default: %(default)s).')
 
-    # others
-    parser.add_argument('-m', '--mask', dest='mask', type=str, default=None,
-                        help = 'Mask file to apply to the inout and predicted velocity fields. \n' +
-                                '   zero: masking 0.0 values of the input velocity \n' +
-                                '   None: no mask is applied (default: %(default)s).')
-    parser.add_argument('--resol', dest='resol', type=float, default=10.,
-                        help = 'Ground resolution for computing Plate rotation to ENU velocity (unit: km) (default: %(default)s).')
+    parser.add_argument('--reso','--pmm-reso', dest='pmm_reso', type=float, default=10.,
+                        help='Ground resolution for computing Plate rotation to ENU velocity (unit: km) (default: %(default)s).')
 
     return parser
-
-
-def get_filenames(geom_file, vel_file):
-    inputsDir = os.path.dirname(geom_file)
-    BPM3d     = os.path.join(inputsDir, 'BulkPlateMotion3D.h5')
-    BPMlos    = os.path.join(inputsDir, 'BulkPlateMotion.h5')
-    if vel_file:
-        vbase = os.path.abspath(vel_file).split('.')[0]
-        vout  = os.path.abspath('{}_BPM.h5'.format(vbase))
-    else:
-        vout  = None
-    return BPM3d, BPMlos, vout
 
 
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-    if (inps.venu is None) and (inps.omega_cart is None) and (inps.omega_sph is None):
-        print('Error: Please specify either the Plate Rotation or a Single Translation Vector; See -h option')
-        print('Need to give at least ONE of [--enu, --om_cart, --om_sph]')
-        sys.exit(1)
-    inps.BPM3d, inps.BPMlos, inps.vout = get_filenames(inps.geom_file, inps.vel_file)
+
+    # default output filenames
+    inps.bpm_enu_file = os.path.join(os.path.dirname(inps.geom_file), 'BulkPlateMotion3D.h5')
+    inps.bpm_los_file = os.path.join(os.path.dirname(inps.geom_file), 'BulkPlateMotion.h5')
+
+    if inps.vel_file and not inps.cor_vel_file:
+        vbase = os.path.splitext(vel_file)[0]
+        inps.cor_vel_file  = os.path.abspath(f'{vbase}_BPM.h5')
+
     return inps
 
 
 ########################################## Sub Functions #############################################
 
-def build_plate_motion_model(omega_cart=None, omega_sph=None):
-    """
-    Build a plate motion model by giving a Euler roation vector
-    omega_cart      list or np.array;   Cartesian representation [wx, wy, wz]  (mas/yr)
-    omega_sph       list or np.array;   Spherical representation [lat, lon, w] (deg, deg, deg/Ma)
+def build_plate_motion_model(omega_sph=None, omega_cart=None):
+    """Build a plate motion model based on the given Euler roation vector
+    Parameters: omega_sph  - list or np.array, Spherical representation [lat, lon, w] (deg, deg, deg/Ma)
+                omega_cart - list or np.array, Cartesian representation [wx, wy, wz] (mas/yr)
+    Returns:    plate      - platemotion.Plate object
     """
 
     # Set a NaN moment of inertia (to get class Plate running)
@@ -151,17 +139,18 @@ def build_plate_motion_model(omega_cart=None, omega_sph=None):
 
     # Check input variables
     if (omega_cart is None) and (omega_sph is None):
-        print('Need to give either omega_cartesian (wxyz) or omega_spherical (Euler Pole)!')
-        sys.exit(1)
+        raise ValueError('Neither omega_cart (wxyz) nor omega_sph (Euler Pole) are given! At least one is required.')
 
     elif omega_cart is not None:
         print('your input: omega_cartesian; [wx, wy, wz] (mas/yr)')
         omega = np.array(omega_cart) * u.mas/u.yr
-        plate.set_omega(omega,'cartesian')
+        plate.set_omega(omega, 'cartesian')
 
     else:
         print('your input: omega_spherical; Euler pole; [lat, lon, w] (deg, deg, deg/Ma)')
-        omega = [omega_sph[0]*u.deg, omega_sph[1]*u.deg, omega_sph[2]*u.deg/u.Ma]
+        omega = [omega_sph[0]*u.deg,
+                 omega_sph[1]*u.deg,
+                 omega_sph[2]*u.deg/u.Ma]
         plate.set_omega(omega,'spherical')
 
     print('--- Euler Pole and rotation vector ---')
@@ -178,8 +167,7 @@ def build_plate_motion_model(omega_cart=None, omega_sph=None):
 
 
 def interp_2d3l(data, X, Y, nx, ny, kind):
-    """
-    Interpolate 3-layer 2D arrays individually
+    """Interpolate 3-layer 2D arrays individually
     can be very slow
     skimage.resize: https://scikit-image.org/docs/stable/auto_examples/transform/plot_rescale.html
     check mintpy: https://github.com/insarlab/MintPy/blob/7adb3a11f875b832488a0c8e44c174d98b1df254/mintpy/tropo_gacos.py#L129
@@ -247,8 +235,7 @@ def pmm2enu_at(pmm, Lats, Lons):
 
 
 def get_geobox_width_length(geo_box):
-    """
-    Get width and length of the geo box in km
+    """Get width and length of the geo box in km
     geo_box     tuple of 4 floats (lon_min, lat_max, lon_max, lat_min) in decimal degrees
     """
     geod = pyproj.Geod(ellps='WGS84')
@@ -259,32 +246,24 @@ def get_geobox_width_length(geo_box):
 
 ####################################### Higher-level Sub Functions ##########################################
 
-def estimate_bulk_motion(geom_file, vel_file, venu=None, omega_cart=None, omega_sph=None, mask=None, pmmResol=5., BPM3d=None, BPMlos=None):
+def estimate_bulk_motion(geom_file, omega_sph=None, omega_cart=None, const_vel_enu=None,
+                         bpm_enu_file=None, bpm_los_file=None, pmm_reso=5.):
+    """Estimate LOS motion due to pure bulk tranlation or due to plate rotation
+    Parameters: geom_file     - str, path to the input geometry file
+                omega_sph     - list or 1D array, Spherical representation of plate rotation [lat, lon, w] (deg, deg, deg/Ma)
+                omega_cart    - list or 1D array, Cartesian representation of plate rotation [wx, wy, wz]  (mas/yr)
+                const_vel_enu - list or 1D array, a single-vector [ve, vn, vu] (meter/year) 
+                                simulating the bulk translation of the ground (e.g., from GNSS)
+                bpm_enu_file  - str, path to the output BPM (bulk plate motion) east, north, up velocity field
+                bpm_los_file  - str, path to the output BPM (bulk plate motion) LOS velocity field
+                pmm_reso      - float, ground resolution for computing Plate rotation to ENU velocity (km)
+    Returns:    ve/vn/vu/vlos - 2D np.ndarray, bulk plate motion in east / north / up / line-of-sight direction
     """
-    Estimate LOS motion due to pure bulk tranlation or due to plate rotation
-    geom_file        str:                path to the input geometry file
-    vel_file           str;                path to the input velocity file
-    venu            list or 1D array;   a single-vector [ve, vn, vu] (meter/year) simulating the bulk translation of the ground (e.g., from GNSS)
-    omega_cart      list or 1D array;   Cartesian representation of plate rotation [wx, wy, wz]  (mas/yr)
-    omega_sph       list or 1D array;   Spherical representation of plate rotation [lat, lon, w] (deg, deg, deg/Ma)
-    mask            str;                a mask file for the bulk motion. Can use 'zero' for masking 0.0; or None for no masking
-    pmmResol        float;              ground resolution for computing Plate rotation to ENU velocity (km); default is at 5.0 km grid
-    BPM3d           str;                path to the output BPM (bulk plate motion) east, north, up velocity field
-    BPMlos          str;                path to the output BPM (bulk plate motion) LOS velocity field
-    """
-    # Read attributes / reference file
-    if vel_file:
-        vel_in = readfile.read(vel_file, datasetName='velocity')[0]
-        atr    = readfile.read_attribute(vel_file)
-    else:
-        atr = readfile.read_attribute(geom_file)
-        atr['FILE_TYPE'] = 'velocity'
-
-    if 'Y_FIRST' not in atr.keys():
-        print('Input file(s) is radar-coding. They should be geo-coding!')
-        sys.exit(1)
-
+    # Read attributes
+    atr = readfile.read_attribute(geom_file)
     width, length = int(atr['WIDTH']), int(atr['LENGTH'])
+    if 'Y_FIRST' not in atr.keys():
+        raise ValueError('Input geometry file is NOT in geo-coordinates!')
 
     # Get LOS geometry
     inc_rad, head_rad, atr_geo = prepare_los_geometry(geom_file)
@@ -308,23 +287,23 @@ def estimate_bulk_motion(geom_file, vel_file, venu=None, omega_cart=None, omega_
             plate = build_plate_motion_model(omega_sph=omega_sph)
 
         # Use the Euler rotation to compute the ENU for each pixel in the geometry
-        skx, sky = int(width*pmmResol/width_km), int(length*pmmResol/length_km)
+        skx, sky = int(width*pmm_reso/width_km), int(length*pmm_reso/length_km)
         Lats = np.meshgrid(lons, lats)[1][::sky, ::skx]
         Lons = np.meshgrid(lons, lats)[0][::sky, ::skx]
-        print('Compute ENU from PMM with a ~{} km ground resolution'.format(pmmResol))
+        print('Compute ENU from PMM with a ~{} km ground resolution'.format(pmm_reso))
         print('low resolution / original grid dimension: ({}, {}) / ({}, {})'.format(Lats.shape[0], Lats.shape[1], length, width))
 
         # transform PMM to ENU velocity on a coarse grid
         # to-do: multi-pixel rotation is slow; change the `platemotion` code to Big Array operation rather than For Loops
-        V_enu_low = pmm2enu_at(plate, Lats, Lons)
+        v_enu_low = pmm2enu_at(plate, Lats, Lons)
 
         # interpolate back to the initial grid
         print('interpolate back to the original grid')
-        V_enu = interp_2d3l(V_enu_low, Lons, Lats, width, length, 'linear')
+        v_enu = interp_2d3l(v_enu_low, Lons, Lats, width, length, 'linear')
 
-    elif venu:
-        print('estimate bulk motion by assuming a single pure translation vector: {}'.format(venu))
-        V_enu = venu * np.ones([length, width, 3])
+    elif const_vel_enu:
+        print('estimate bulk motion by assuming a single pure translation vector: {}'.format(const_vel_enu))
+        v_enu = const_vel_enu * np.ones([length, width, 3])
 
     else:
         print('Error: Please specify either the Plate Rotation or a Single Translation Vector; See -h option')
@@ -333,34 +312,24 @@ def estimate_bulk_motion(geom_file, vel_file, venu=None, omega_cart=None, omega_
 
     # Project model to LOS velocity
     print('Project the bulk motion ENU onto radar LOS velocity')
-    ve, vn, vu = np.array((V_enu[:,:,0])), np.array((V_enu[:,:,1])), np.array((V_enu[:,:,2]))
+    ve = np.array(v_enu[:,:,0], dtype=np.float32)
+    vn = np.array(v_enu[:,:,1], dtype=np.float32)
+    vu = np.array(v_enu[:,:,2], dtype=np.float32)
     vlos = ut.enu2los(ve, vn, vu, inc_angle=inc_deg, head_angle=head_deg)
 
-    ## Masking the bulk motion?
-    if mask:
-        if mask == 'zero':
-            if vel_in:
-                print('Maksing zeros based on the input reference velocity file')
-                msk_bool = 1*(vel_in!=0.0)
-                msk_bool[int(atr['REF_Y']), int(atr['REF_X'])] = 1
-            else:
-                msk_bool = 1*(vlos!=0.0)
-        else:
-            print('Masking with the given mask file: {}'.format(mask))
-            msk_bool = readfile.read(mask)[0]
-        vlos = mask_matrix(vlos, msk_bool, fill_value=np.nan)
+    # Save the bulk motion model velocity into HDF5 files
+    atr['FILE_TYPE'] = 'velocity'
+    atr['DATA_TYPE'] = 'float32'
+    atr['UNIT'] = 'm/year'
+    dsDict = {
+        'east'  : ve,
+        'north' : vn,
+        'up'    : vu,
+    }
+    writefile.write(dsDict, out_file=bpm_enu_file, metadata=atr)
+    writefile.write(vlos,   out_file=bpm_los_file, metadata=atr)
 
-    # Save the bulk motion model velocity into two files
-    dsDict = {'east': ve, 'north': vn, 'up': vu}        # 3D velocity
-    writefile.write(dsDict, out_file=BPM3d, metadata=atr)
-    dsDict = {'velocity': vlos}                         # LOS velocity
-    writefile.write(dsDict, out_file=BPMlos, metadata=atr)
-
-    # Reset the reference point for both files; they are absolute velocity models
-    for file in [BPM3d, BPMlos]:
-        iargs = [file, '--reset']
-        reference_point.main(iargs)
-    return
+    return ve, vn, vu, vlos
 
 
 def remove_bulk_motion(vel_file, mfile, ofile):
@@ -368,7 +337,7 @@ def remove_bulk_motion(vel_file, mfile, ofile):
     Apply the bulk motion correction from files
     """
     file1 = vel_file       # input uncorrected LOS velocity file
-    file2 = [mfile]     # BPM model LOS velocity file
+    file2 = [mfile]        # BPM model LOS velocity file
     diff_file(file1, file2, ofile)
     return
 
@@ -379,20 +348,23 @@ def main(iargs=None):
     print('\n-----------------------------------')
     print('Evaluate bulk motion')
     print('-----------------------------------\n')
-    estimate_bulk_motion(inps.geom_file, inps.vel_file,
-                         inps.venu, inps.omega_cart, inps.omega_sph,
-                         inps.mask, inps.resol, inps.BPM3d, inps.BPMlos)
+    estimate_bulk_motion(
+        geom_file=inps.geom_file,
+        omega_sph=inps.omega_sph,
+        omega_cart=inps.omega_cart,
+        const_vel_enu=inps.const_vel_enu,
+        bpm_enu_file=inps.bpm_enu_file,
+        bpm_los_file=inps.bpm_los_file,
+        pmm_reso=inps.pmm_reso,
+    )
 
-    if inps.vel_file and inps.BPMlos and inps.vout:
+    if inps.vel_file and inps.bpm_los_file and inps.cor_vel_file:
         print('\n-----------------------------------')
         print('Remove bulk motion')
         print('-----------------------------------\n')
-        remove_bulk_motion(inps.vel_file, inps.BPMlos, inps.vout)
-        print('The BPM corrected velocity           : {}'.format(inps.vout))
+        remove_bulk_motion(inps.vel_file, inps.bpm_los_file, inps.cor_vel_file)
+        print('The BPM corrected velocity : {}'.format(inps.cor_vel_file))
 
-    print('The absolute BPM velocity model (3D) : {}'.format(inps.BPM3d))
-    print('The absolute BPM velocity model (LOS): {}'.format(inps.BPMlos))
-    print('Normal complete')
     return
 
 ################################################################################################
