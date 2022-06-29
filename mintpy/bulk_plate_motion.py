@@ -15,11 +15,15 @@
 #                 somehow install other dependencies in setup.py using your conda
 #
 # To-Do List (updated 2022.5.30 Yuan-Kai Liu):
+#   + Potentially, we can make built-in PMM tables/dictionaries for easier user string input of the plate name
 #   + Replace scipy.interpolate with alternatives for efficiency. E.g.:
-#       skimage.resize https://scikit-image.org/docs/stable/auto_examples/transform/plot_rescale.html
-#       check mintpy usage https://github.com/insarlab/MintPy/blob/7adb3a11f875b832488a0c8e44c174d98b1df254/mintpy/tropo_gacos.py#L129
+#       skimage.resize
+#           https://scikit-image.org/docs/stable/auto_examples/transform/plot_rescale.html
+#       check mintpy usage
+#           https://github.com/insarlab/MintPy/blob/7adb3a11f875b832488a0c8e44c174d98b1df254/mintpy/tropo_gacos.py#L129
 #   + Calculate Euler rotation to multi-points ENU motion is slow (called by pmm2enu_at() here)
-#       In `platemotion` package, use array operation rather than for loops (at https://github.com/lcx366/PlateTectonic/blob/main/platemotion/classes/plate.py#L153)
+#       In `platemotion` package, use array operation rather than for loops
+#           https://github.com/lcx366/PlateTectonic/blob/main/platemotion/classes/plate.py#L153
 #   + Replace platemotion package by equations of Euler trasnformation to relax this dependency at all?
 
 import os
@@ -50,20 +54,34 @@ REFERENCE = """reference:
   Stephenson, O. L., Liu, Y. K., Yunjun, Z., Simons, M., Rosen, P. and Xu, X., (2022), The Impact of
     Plate Motions on Long-Wavelength InSAR-Derived Velocity Fields, Geophys. Res. Lett. (under review)
     doi:10.1002/essoar.10511538.2
-  Peter, H., Fernández, M., Aguilar, J., & Fernández, J. (2021). Copernicus POD Product Handbook: 
-    Copernicus Sentinel-1, -2 and -3 Precise orbit Determination Serivice (CPOD) (GMV-CPOD-TN-0009). 
+  Peter, H., Fernández, M., Aguilar, J., & Fernández, J. (2021). Copernicus POD Product Handbook:
+    Copernicus Sentinel-1, -2 and -3 Precise orbit Determination Serivice (CPOD) (GMV-CPOD-TN-0009).
     https://sentinels.copernicus.eu/documents/247904/3372484/Sentinels-POD-Product-Handbook-1.19.pdf
+
+  No-net-rotation plate motion models (NNR-PMMs):
+  [NNR-NUVEL1A] 14 plates; geological motion
+   Argus, D. F., & Gordon, R. G. (1991). No-net-rotation model of current plate velocities
+    incorporating plate motion model NUVEL-1. Geophysical research letters, 18(11), 2039-2042.
+    doi:10.1029/91GL01532
+  [NNR-MORVEL56] 25 plates; geological and GPS geodetic motion
+   Argus, D. F., Gordon, R. G., & DeMets, C. (2011). Geologically current motion of 56
+    plates relative to the no-net-rotation reference frame. Geochemistry, Geophysics, Geosystems, 12(11).
+    doi:10.1029/2011GC003751
+  [NNR-ITRF14] 11 plates; geodetic motions (GPS, VLBI, SLR, and DORIS); based on ITRF2014, the reference frame of Sentinel-1
+   Altamimi, Z., Métivier, L., Rebischung, P., Rouby, H., & Collilieux, X. (2017).
+    ITRF2014 plate motion model. Geophysical Journal International, 209(3), 1906-1912.
+    doi:10.1093/gji/ggx136
 """
 
 EXAMPLE = """example:
   # Spherical form of Euler Pole rotation in [lat, lon, w] in unit of deg, deg, deg/Ma
-  #   Africa  plate (NNR-NUVEL1A)  - Table 2 in Argus & Gordon (1991, GRL), doi:10.1029/91GL01532
-  #   Eurasia plate (NNR-MORVEL56) - Table 1 in Argus, Gordon & DeMets (2011, G3), doi:10.1029/2011GC003751
+  #   Africa  plate (NNR-NUVEL1A)  - excerpt from Table 2 in Argus & Gordon (1991, GRL)
   bulk_plate_motion.py -g inputs/geometryGeo.h5 --om-sph  50.6  -74.0   0.30
-  bulk_plate_motion.py -g inputs/geometryGeo.h5 --om-sph  48.85 -106.50 0.223 -v velocity.h5 
+  #   Eurasia plate (NNR-MORVEL56) - excerpt from Table 1 in Argus, Gordon, and DeMets (2011, G3)
+  bulk_plate_motion.py -g inputs/geometryGeo.h5 --om-sph  48.85 -106.50 0.223 -v velocity.h5
 
   # Cartesian form of Euler Pole rotation in [wx, wy, wz] in unit of mas/year [milli arc second per year]
-  #   Arabia plate (NNR-ITRF14) - Table 1 in Altamimi et al. (2017, GJI), doi:10.1093/gji/ggx136
+  #   Arabia plate (NNR-ITRF14) - excerpt from Table 1 in Altamimi et al. (2017, GJI)
   bulk_plate_motion.py -g inputs/geometryGeo.h5 --om-cart 1.154 -0.136  1.444 -v velocity.h5
 
   # Simple constant local ENU translation (based on one GNSS vector) in [ve, vn, vu] in unit of meter/year
@@ -253,7 +271,7 @@ def estimate_bulk_motion(geom_file, omega_sph=None, omega_cart=None, const_vel_e
     Parameters: geom_file     - str, path to the input geometry file
                 omega_sph     - list or 1D array, Spherical representation of plate rotation [lat, lon, w] (deg, deg, deg/Ma)
                 omega_cart    - list or 1D array, Cartesian representation of plate rotation [wx, wy, wz]  (mas/yr)
-                const_vel_enu - list or 1D array, a single-vector [ve, vn, vu] (meter/year) 
+                const_vel_enu - list or 1D array, a single-vector [ve, vn, vu] (meter/year)
                                 simulating the bulk translation of the ground (e.g., from GNSS)
                 bpm_enu_file  - str, path to the output BPM (bulk plate motion) east, north, up velocity field
                 bpm_los_file  - str, path to the output BPM (bulk plate motion) LOS velocity field
