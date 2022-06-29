@@ -112,12 +112,13 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # default output filenames
-    inps.bpm_enu_file = os.path.join(os.path.dirname(inps.geom_file), 'BulkPlateMotion3D.h5')
-    inps.bpm_los_file = os.path.join(os.path.dirname(inps.geom_file), 'BulkPlateMotion.h5')
+    geom_dir = os.path.dirname(inps.geom_file)
+    inps.bpm_enu_file = os.path.join(geom_dir, 'BulkPlateMotion3D.h5')
+    inps.bpm_los_file = os.path.join(geom_dir, 'BulkPlateMotion.h5')
 
     if inps.vel_file and not inps.cor_vel_file:
-        vbase = os.path.splitext(vel_file)[0]
-        inps.cor_vel_file  = os.path.abspath(f'{vbase}_BPM.h5')
+        vbase = os.path.splitext(inps.vel_file)[0]
+        inps.cor_vel_file = os.path.abspath(f'{vbase}_BPM.h5')
 
     return inps
 
