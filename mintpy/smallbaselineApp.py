@@ -357,25 +357,18 @@ class TimeSeriesAnalysis:
         os.chdir(self.workDir)
 
         # 3) check loading result
-        load_complete, stack_file, geom_file, ionStack_file = ut.check_loaded_dataset(self.workDir, print_msg=True)[0:4]
+        stack_file, geom_file, _, ion_file = ut.check_loaded_dataset(self.workDir, print_msg=True)[:4]
 
         # 4) add custom metadata (optional)
         if self.customTemplateFile:
-            if ionStack_file:
-                flist = ', '.join([os.path.basename(stack_file), os.path.basename(ionStack_file), os.path.basename(geom_file)])
-            else:
-                flist = ', '.join([os.path.basename(stack_file), os.path.basename(geom_file)])
-            print('updating {} metadata based on custom template file: {}'.format(flist, os.path.basename(self.customTemplateFile)))
             # use ut.add_attribute() instead of add_attribute.py because of
             # better control of special metadata, such as SUBSET_X/YMIN
-            for file in [stack_file, ionStack_file, geom_file]:
-                if file: ut.add_attribute(file, self.customTemplate)
+            msg = f'updating metadata based on custom template file {os.path.basename(self.customTemplateFile)}'
+            for fname in [stack_file, ion_file, geom_file]:
+                if fname:
+                    print(f'{msg} for file: {os.path.basename(fname)}')
+                    ut.add_attribute(file, self.customTemplate)
 
-        # 5) if not load_complete, plot and raise exception
-        if not load_complete:
-            self.plot_result(print_aux=False)
-            self.close(normal_end=False)
-            raise RuntimeError('step {}: NOT all required dataset found, exit.'.format(step_name))
         return
 
 
@@ -397,7 +390,7 @@ class TimeSeriesAnalysis:
     def run_network_modification(self, step_name):
         """Modify network of interferograms before the network inversion."""
         # check the existence of ifgramStack.h5
-        stack_file, geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1:3]
+        stack_file, geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[:2]
         coh_txt = os.path.join(self.workDir, 'coherenceSpatialAvg.txt')
         net_fig = [os.path.join(self.workDir, i, 'network.pdf') for i in ['', 'pic']]
         try:
@@ -450,7 +443,7 @@ class TimeSeriesAnalysis:
 
     def generate_ifgram_aux_file(self):
         """Generate auxiliary files from ifgramStack file"""
-        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[0]
         dsNames = readfile.get_dataset_list(stack_file)
         mask_file = os.path.join(self.workDir, 'maskConnComp.h5')
         coh_file = os.path.join(self.workDir, 'avgSpatialCoh.h5')
@@ -482,7 +475,7 @@ class TimeSeriesAnalysis:
         self.generate_ifgram_aux_file()
 
         # 3) add REF_X/Y(/LAT/LON) of the reference point
-        stack_file, _, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1:4]
+        stack_file, _, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[:3]
         coh_file = os.path.join(self.workDir, 'avgSpatialCoh.h5')
 
         iargs = [stack_file, '-t', self.templateFile, '-c', coh_file]
@@ -499,7 +492,7 @@ class TimeSeriesAnalysis:
             2) numTriNonzeroIntAmbiguity.h5: phase unwrapping errors through the integer ambiguity of phase closure
         """
         # check the existence of ifgramStack.h5
-        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[0]
 
         # 1) stack interferograms
         pha_vel_file = os.path.join(self.workDir, 'avgPhaseVelocity.h5')
@@ -523,7 +516,7 @@ class TimeSeriesAnalysis:
             return
 
         # check required input files
-        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[0]
         mask_file = os.path.join(self.workDir, 'maskConnComp.h5')
 
         iargs_bridge = [stack_file, '--template', self.templateFile, '--update']
@@ -559,7 +552,7 @@ class TimeSeriesAnalysis:
         2) temporalCoherence.h5 --> maskTempCoh.h5
         """
         # check the existence of ifgramStack.h5
-        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
+        stack_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[0]
 
         # 1) invert ifgramStack for time-series
         iargs = [stack_file, '-t', self.templateFile, '--update']
@@ -573,7 +566,7 @@ class TimeSeriesAnalysis:
 
     def generate_temporal_coherence_mask(self):
         """Generate reliable pixel mask from temporal coherence"""
-        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
+        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
         tcoh_file = os.path.join(self.workDir, 'temporalCoherence.h5')
         mask_file = os.path.join(self.workDir, 'maskTempCoh.h5')
         tcoh_min = self.template['mintpy.networkInversion.minTempCoh']
@@ -723,7 +716,7 @@ class TimeSeriesAnalysis:
         Automatically applied for Envisat data.
         Automatically skipped for all the other data.
         """
-        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
+        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
         fnames = self.get_timeseries_filename(self.template, self.workDir)[step_name]
         in_file = fnames['input']
         out_file = fnames['output']
@@ -741,7 +734,7 @@ class TimeSeriesAnalysis:
 
     def run_solid_earth_tides_correction(self, step_name):
         """Correct solid Earth tides (SET)."""
-        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
+        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
         fnames = self.get_timeseries_filename(self.template, self.workDir)[step_name]
         in_file = fnames['input']
         out_file = fnames['output']
@@ -759,7 +752,7 @@ class TimeSeriesAnalysis:
 
     def run_tropospheric_delay_correction(self, step_name):
         """Correct tropospheric delays."""
-        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
+        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
         mask_file = os.path.join(self.workDir, 'maskTempCoh.h5')
 
         fnames = self.get_timeseries_filename(self.template, self.workDir)[step_name]
@@ -856,7 +849,7 @@ class TimeSeriesAnalysis:
         """step - correct_topography
         Topographic residual (DEM error) correction (optional).
         """
-        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
+        geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
         fnames = self.get_timeseries_filename(self.template, self.workDir)[step_name]
         in_file = fnames['input']
         out_file = fnames['output']
@@ -935,7 +928,7 @@ class TimeSeriesAnalysis:
                 out_dir = os.path.join(self.workDir, 'geo')
                 os.makedirs(out_dir, exist_ok=True)
 
-                geom_file, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2:4]
+                geom_file, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1:3]
                 in_files = [geom_file, 'temporalCoherence.h5', 'avgSpatialCoh.h5', ts_file, 'velocity.h5']
                 iargs = in_files + ['-l', lookup_file, '-t', self.templateFile, '--outdir', out_dir, '--update']
                 print('\ngeocode.py', ' '.join(iargs))
@@ -1006,7 +999,7 @@ class TimeSeriesAnalysis:
             tcoh_file = os.path.join(self.workDir, 'temporalCoherence.h5')
             scoh_file = os.path.join(self.workDir, 'avgSpatialCoh.h5')
             mask_file = os.path.join(self.workDir, 'maskTempCoh.h5')
-            geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[2]
+            geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1]
             if 'geo' in ts_file:
                 tcoh_file = os.path.join(self.workDir, 'geo/geo_temporalCoherence.h5')
                 scoh_file = os.path.join(self.workDir, 'geo/geo_avgSpatialCoh.h5')
@@ -1105,7 +1098,10 @@ class TimeSeriesAnalysis:
         max_memory = abs(float(self.template['mintpy.compute.maxMemory']))
         fig_dpi = int(self.template['mintpy.plot.dpi'])
 
-        stack_file, geom_file, lookup_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[1:]
+        (stack_file,
+         geom_file,
+         lookup_file,
+         ion_file) = ut.check_loaded_dataset(self.workDir, print_msg=False)[:4]
         mask_file = os.path.join(self.workDir, 'maskTempCoh.h5')
         geo_dir = os.path.join(self.workDir, 'geo')
         pic_dir = os.path.join(self.workDir, 'pic')
@@ -1163,6 +1159,12 @@ class TimeSeriesAnalysis:
             [f'velocity{tropo_model}.h5', '--mask', 'no'],
             ['numInvIfgram.h5',           '--mask', 'no'],
         ]
+
+        if ion_file:
+            iargs_list0 += [
+                [ion_file, 'unwrapPhase-', '--zero-mask'],
+                [ion_file, 'coherence-',   '--mask', 'no', '-v', '0', '1'],
+            ]
 
         # translate element list whose file path has *
         iargs_list = []

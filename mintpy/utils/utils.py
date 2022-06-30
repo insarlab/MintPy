@@ -27,125 +27,120 @@ from mintpy.objects.coord import coordinate
 
 #################################################################################
 def check_loaded_dataset(work_dir='./', print_msg=True, relpath=False):
-    """Check the result of loading data for the following two rules:
+    """Check the loaded input files, following two rules:
         1. file existance
         2. file attribute readability
 
-    Parameters: work_dir  : string, MintPy working directory
-                print_msg : bool, print out message
-    Returns:    True, if all required files and dataset exist; otherwise, ERROR
-                    If True, PROCESS, SLC folder could be removed.
-                stack_file  :
-                geom_file   :
-                lookup_file :
+    Parameters: work_dir    - str, MintPy working directory
+                print_msg   - bool, print out message
+    Returns:    stack_file  - str, path to the interferogram stack file
+                geom_file   - str, path to the geometry file
+                lookup_file - str, path to the look up table file
+                              Only for dataset in radar coordinates.
+                ion_file    - str, path to the ionosphere stack file
     Example:    work_dir = os.path.expandvars('./FernandinaSenDT128/mintpy')
-                ut.check_loaded_dataset(work_dir)
+                stack_file, geom_file, lookup_file = ut.check_loaded_dataset(work_dir)[:3]
     """
-    load_complete = True
-
     if not work_dir:
         work_dir = os.getcwd()
     work_dir = os.path.abspath(work_dir)
 
-    # 1. interferograms stack file: unwrapPhase, coherence
-    ds_list = ['unwrapPhase', 'rangeOffset', 'azimuthOffset']
-    flist = [os.path.join(work_dir, 'inputs/ifgramStack.h5')]
-    stack_file = is_file_exist(flist, abspath=True)
-    if stack_file is not None:
+    # 1. [required] interferograms stack file: unwrapPhase, coherence
+    stack_file = os.path.join(work_dir, 'inputs/ifgramStack.h5')
+    dnames = ['unwrapPhase', 'rangeOffset', 'azimuthOffset']
+
+    if is_file_exist(stack_file, abspath=True):
         obj = ifgramStack(stack_file)
         obj.open(print_msg=False)
-        if all(x not in obj.datasetNames for x in ds_list):
-            msg = 'required dataset is missing in file {}:'.format(stack_file)
-            msg += '\n' + ' OR '.join(ds_list)
+
+        if all(x not in obj.datasetNames for x in dnames):
+            msg = f'required dataset is missing in file {stack_file}:\n'
+            msg += ' OR '.join(dnames)
             raise ValueError(msg)
+
         # check coherence for phase stack
         if 'unwrapPhase' in obj.datasetNames and 'coherence' not in obj.datasetNames:
-            print('WARNING: "coherence" is missing in file {}'.format(stack_file))
+            print(f'WARNING: "coherence" is missing in file {stack_file}')
     else:
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), './inputs/ifgramStack.h5')
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), stack_file)
 
+    # get coordinate type of the loaded dataset
     atr = readfile.read_attribute(stack_file)
+    coord_type = 'GEO' if 'Y_FIRST' in atr.keys() else 'RADAR'
+    processor = atr['PROCESSOR']
 
-    # 2. geom_file: height
-    if 'X_FIRST' in atr.keys():
-        flist = [os.path.join(work_dir, 'inputs/geometryGeo.h5')]
-    else:
-        flist = [os.path.join(work_dir, 'inputs/geometryRadar.h5')]
-    geom_file = is_file_exist(flist, abspath=True)
-    if geom_file is not None:
+    # 2. [required] geom_file: height
+    geom_file = os.path.join(work_dir, 'inputs', f'geometry{coord_type.capitalize()}.h5')
+    dname = geometryDatasetNames[0]
+
+    if is_file_exist(geom_file, abspath=True):
         obj = geometry(geom_file)
         obj.open(print_msg=False)
-        dname = geometryDatasetNames[0]
         if dname not in obj.datasetNames:
-            raise ValueError('required dataset "{}" is missing in file {}'.format(dname, geom_file))
+            raise ValueError(f'required dataset "{dname}" is missing in file {geom_file}')
     else:
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), './inputs/geometry*.h5')
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), geom_file)
 
-    # 3. lookup_file: latitude,longitude or rangeCoord,azimuthCoord
+    # 3. [required for radar-coord] lookup_file: latitude,longitude or rangeCoord,azimuthCoord
     # could be different than geometry file in case of roipac and gamma
-    flist = [os.path.join(work_dir, 'inputs/geometry*.h5')]
-    lookup_file = get_lookup_file(flist, abspath=True, print_msg=print_msg)
-    if 'X_FIRST' not in atr.keys():
+    lookup_file = os.path.join(work_dir, 'inputs/geometry*.h5')
+    lookup_file = get_lookup_file(lookup_file, abspath=True, print_msg=print_msg)
+    if coord_type == 'RADAR':
         if lookup_file is not None:
             obj = geometry(lookup_file)
             obj.open(print_msg=False)
 
-            if atr['PROCESSOR'] in ['isce', 'doris']:
+            # get the proper lookup table dataset names
+            if processor in ['isce', 'doris']:
                 dnames = geometryDatasetNames[1:3]
-            elif atr['PROCESSOR'] in ['gamma', 'roipac']:
+            elif processor in ['gamma', 'roipac']:
                 dnames = geometryDatasetNames[3:5]
             else:
-                raise AttributeError('InSAR processor: {}'.format(atr['PROCESSOR']))
+                msg = f'Unknown InSAR processor: {processor} to locate look up table!'
+                raise AttributeError(msg)
 
             for dname in dnames:
                 if dname not in obj.datasetNames:
-                    load_complete = False
-                    raise Exception('required dataset "{}" is missing in file {}'.format(dname, lookup_file))
+                    raise Exception(f'required dataset "{dname}" is missing in file {lookup_file}')
         else:
-            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), './inputs/geometry*.h5')
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), lookup_file)
     else:
         print("Input data seems to be geocoded. Lookup file not needed.")
 
-    # 4. ionosphere interferograms stack file: unwrapPhase, coherence
-    ds_list = ['unwrapPhase']
-    flist = [os.path.join(work_dir, 'inputs/ionStack.h5')]
-    ionStack_file = is_file_exist(flist, abspath=True)
-    if ionStack_file is not None:
-        obj = ifgramStack(ionStack_file)
+    # 4. [optional] ionosphere stack file: unwrapPhase, coherence
+    ion_file = os.path.join(work_dir, 'inputs/ionStack.h5')
+    dname = 'unwrapPhase'
+
+    if is_file_exist(ion_file, abspath=True):
+        obj = ifgramStack(ion_file)
         obj.open(print_msg=False)
-        if all(x not in obj.datasetNames for x in ds_list):
-            msg = 'required dataset is missing in file {}:'.format(ionStack_file)
-            msg += '\n' + ' OR '.join(ds_list)
-            raise ValueError(msg)
+        if dname not in obj.datasetNames:
+            raise ValueError(f'required dataset "{dname}" is missing in file {ion_file}')
+
         # check coherence for phase stack
         if 'unwrapPhase' in obj.datasetNames and 'coherence' not in obj.datasetNames:
-            print('WARNING: "coherence" is missing in file {}'.format(ionStack_file))
+            print(f'WARNING: "coherence" is missing in file {ion_file}')
+    else:
+        ion_file = None
 
     if relpath:
-        stack_file     = os.path.relpath(stack_file)     if stack_file     else stack_file
-        geom_file      = os.path.relpath(geom_file)      if geom_file      else geom_file
-        lookup_file    = os.path.relpath(lookup_file)    if lookup_file    else lookup_file
-        ionStack_file  = os.path.relpath(ionStack_file)  if ionStack_file  else ionStack_file
+        stack_file  = os.path.relpath(stack_file)  if stack_file  else stack_file
+        geom_file   = os.path.relpath(geom_file)   if geom_file   else geom_file
+        lookup_file = os.path.relpath(lookup_file) if lookup_file else lookup_file
+        ion_file    = os.path.relpath(ion_file)    if ion_file    else ion_file
 
     # print message
     if print_msg:
-        print(('Loaded dataset are processed by '
-               'InSAR software: {}'.format(atr['PROCESSOR'])))
-        if 'X_FIRST' in atr.keys():
-            print('Loaded dataset is in GEO coordinates')
-        else:
-            print('Loaded dataset is in RADAR coordinates')
-        print('Interferograms Stack: {}'.format(stack_file))
-        print('Geometry File       : {}'.format(geom_file))
-        print('Lookup Table File   : {}'.format(lookup_file))
-        if ionStack_file:
-            print('Ionospheric Interferograms Stack: {}'.format(ionStack_file))
-        if load_complete:
-            print('-'*50)
-            print('All data needed found/loaded/copied. Processed 2-pass InSAR data can be removed.')
-        print('-'*50)
+        msg  = f'Loaded dataset are processed by InSAR software: {processor}'
+        msg += f'\nLoaded dataset are in {coord_type} coordinates'
+        msg += f'\nInterferogram Stack: {stack_file}'
+        msg += f'\nIonosphere    Stack: {ion_file}' if ion_file else ''
+        msg += f'\nGeometry      File : {geom_file}'
+        msg += f'\nLookup Table  File : {lookup_file}'
+        msg += '\n' + '-' * 50
+        print(msg)
 
-    return load_complete, stack_file, geom_file, ionStack_file, lookup_file
+    return stack_file, geom_file, lookup_file, ion_file
 
 
 #################################################################################
