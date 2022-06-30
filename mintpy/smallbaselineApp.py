@@ -367,7 +367,7 @@ class TimeSeriesAnalysis:
             for fname in [stack_file, ion_file, geom_file]:
                 if fname:
                     print(f'{msg} for file: {os.path.basename(fname)}')
-                    ut.add_attribute(file, self.customTemplate)
+                    ut.add_attribute(fname, self.customTemplate)
 
         return
 
