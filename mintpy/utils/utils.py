@@ -35,8 +35,7 @@ def check_loaded_dataset(work_dir='./', print_msg=True, relpath=False):
                 print_msg   - bool, print out message
     Returns:    stack_file  - str, path to the interferogram stack file
                 geom_file   - str, path to the geometry file
-                lookup_file - str, path to the look up table file
-                              Only for dataset in radar coordinates.
+                lookup_file - str, path to the look up table file, for radar-coord dataset only.
                 ion_file    - str, path to the ionosphere stack file
     Example:    work_dir = os.path.expandvars('./FernandinaSenDT128/mintpy')
                 stack_file, geom_file, lookup_file = ut.check_loaded_dataset(work_dir)[:3]
