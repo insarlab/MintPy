@@ -671,7 +671,7 @@ def main(iargs=None):
                            box=box,
                            xstep=inps.xstep,
                            ystep=inps.ystep,
-                           mli_method=inps.method)
+                           mli_method='nearest')
 
     ########## output file 2 - geometryGeo
     # define dataset structure for geometry
