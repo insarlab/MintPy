@@ -21,17 +21,20 @@ import glob
 import shelve
 import datetime
 import numpy as np
+from mintpy.objects.constants import SPEED_OF_LIGHT, EARTH_RADIUS
 from mintpy.objects import sensor
-from mintpy.utils import ptime, readfile, writefile, utils1 as ut
+from mintpy.utils import (
+    ptime,
+    readfile,
+    writefile,
+    attribute as attr,
+    utils1 as ut,
+)
 
 # suppress matplotlib DEBUG message
 import logging
 mpl_logger = logging.getLogger('matplotlib')
 mpl_logger.setLevel(logging.WARNING)
-
-
-SPEED_OF_LIGHT = 299792458  # m/s
-EARTH_RADIUS = 6378122.65   # m
 
 
 
@@ -360,16 +363,16 @@ def extract_alosStack_metadata(meta_file, geom_dir):
     width = img.width
     length = img.length
     data = np.memmap(lat_file, dtype='float64', mode='r', shape=(length, width))
-    meta['LAT_REF1'] = str(data[0+edge, 0+edge])
-    meta['LAT_REF2'] = str(data[0+edge, -1-edge])
-    meta['LAT_REF3'] = str(data[-1-edge, 0+edge])
+    meta['LAT_REF1'] = str(data[ 0+edge,  0+edge])
+    meta['LAT_REF2'] = str(data[ 0+edge, -1-edge])
+    meta['LAT_REF3'] = str(data[-1-edge,  0+edge])
     meta['LAT_REF4'] = str(data[-1-edge, -1-edge])
 
     lon_file = glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.lon'.format(rlooks, alooks)))[0]
     data = np.memmap(lon_file, dtype='float64', mode='r', shape=(length, width))
-    meta['LON_REF1'] = str(data[0+edge, 0+edge])
-    meta['LON_REF2'] = str(data[0+edge, -1-edge])
-    meta['LON_REF3'] = str(data[-1-edge, 0+edge])
+    meta['LON_REF1'] = str(data[ 0+edge,  0+edge])
+    meta['LON_REF2'] = str(data[ 0+edge, -1-edge])
+    meta['LON_REF3'] = str(data[-1-edge,  0+edge])
     meta['LON_REF4'] = str(data[-1-edge, -1-edge])
 
     los_file = glob.glob(os.path.join(geom_dir, '*_{}rlks_{}alks.los'.format(rlooks, alooks)))[0]
@@ -477,6 +480,9 @@ def extract_geometry_metadata(geom_dir, meta=dict(), box=None, fbase_list=['hgt'
 
     extract A/RLOOKS by comparing hgt.xml and hgt.full.xml file
     update azimuthPixelSize / rangePixelSize based on A/RLOOKS
+
+    extract LENGTH/WIDTH from the first geom file
+    update corresponding metadata if box is not None
     """
 
     def get_nonzero_row_number(data, buffer=2):
@@ -515,6 +521,15 @@ def extract_geometry_metadata(geom_dir, meta=dict(), box=None, fbase_list=['hgt'
     # update pixel_size for multilooked data
     meta['rangePixelSize'] *= meta['RLOOKS']
     meta['azimuthPixelSize'] *= meta['ALOOKS']
+
+    # get LENGTH/WIDTH
+    atr = readfile.read_attribute(geom_files[0])
+    meta['LENGTH'] = atr['LENGTH']
+    meta['WIDTH'] = atr['WIDTH']
+
+    # update due to subset
+    if box:
+        meta = attr.update_attribute4subset(meta, box)
 
     # get LAT/LON_REF1/2/3/4 into metadata
     for geom_file in geom_files:

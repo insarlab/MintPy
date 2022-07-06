@@ -42,9 +42,9 @@ def create_parser():
 
     parser.add_argument('file1', help='file to be subtracted.')
     parser.add_argument('file2', nargs='+', help='file used to subtract')
-    parser.add_argument('-o', '--output', dest='outfile',
+    parser.add_argument('-o', '--output', dest='out_file',
                         help='output file name, default is file1_diff_file2.h5')
-    parser.add_argument('--force', action='store_true',
+    parser.add_argument('--force','--force-diff', dest='force_diff', action='store_true',
                         help='Enforce the differencing for the shared dates only for time-series files')
     return parser
 
@@ -53,11 +53,20 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # for timeseries and ifgramStack, only two files differencing is supported
-    atr = readfile.read_attribute(inps.file1)
-    if atr['FILE_TYPE'] in ['timeseries', 'ifgramStack']:
+    # ONLY TWO files differencing is supported for timeseries and ifgramStack types
+    ftype = readfile.read_attribute(inps.file1)['FILE_TYPE']
+    if ftype in ['timeseries', 'ifgramStack']:
         if len(inps.file2) > 1:
-            raise SystemExit('ERROR: only one file2 is inputed for {} type'.format(atr['FILE_TYPE']))
+            raise SystemExit(f'ERROR: ONLY ONE file2 is inputed for {ftype} type!')
+
+    # --output
+    if not inps.out_file:
+        if len(inps.file2) > 1:
+            raise ValueError('--output is required for >=2 files!')
+        fbase1, fext = os.path.splitext(inps.file1)
+        fbase2 = os.path.splitext(os.path.basename(inps.file2[0]))[0]
+        inps.out_file = f'{fbase1}_diff_{fbase2}{fext}'
+
     return inps
 
 
@@ -95,22 +104,15 @@ def check_reference(atr1, atr2):
     return ref_date, ref_y, ref_x
 
 
-def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
+def diff_file(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
     """calculate/write file1 - file2
 
-    Parameters: file1    - str, path of file1
-                file2    - list of str, path of file2(s)
-                out_file - str, path of output file
-                force    - bool, overwrite existing output file
+    Parameters: file1         - str, path of file1
+                file2         - list(str), path of file2(s)
+                out_file      - str, path of output file
+                force_diff    - bool, overwrite existing output file
                 max_num_pixel - float, maximum number of pixels for each block
     """
-    start_time = time.time()
-
-    if not out_file:
-        fbase, fext = os.path.splitext(file1)
-        if len(file2) > 1:
-            raise ValueError('Output file name is needed for more than 2 files input.')
-        out_file = '{}_diff_{}{}'.format(fbase, os.path.splitext(os.path.basename(file2[0]))[0], fext)
     print('{} - {} --> {}'.format(file1, file2, out_file))
 
     # Read basic info
@@ -142,7 +144,7 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
         dateShared = np.ones((len(dateList1)), dtype=np.bool_)
         if dateListShared != dateList1:
             print('WARNING: {} does not contain all dates in {}'.format(file2, file1))
-            if force:
+            if force_diff:
                 dateListEx = list(set(dateList1) - set(dateListShared))
                 print('Continue and enforce the differencing for their shared dates only.')
                 print('\twith following dates are ignored for differencing:\n{}'.format(dateListEx))
@@ -255,7 +257,7 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
         # loop over each file
         dsDict = {}
         for ds_name in ds_names:
-            print('adding {} ...'.format(ds_name))
+            print('differencing {} ...'.format(ds_name))
             data = readfile.read(file1, datasetName=ds_name)[0]
             dtype = data.dtype
 
@@ -264,6 +266,12 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
                 ds_name2read = None if len(ds_names_list[i+1]) == 1 else ds_name
                 # read
                 data2 = readfile.read(fname, datasetName=ds_name2read)[0]
+                # do the referencing for velocity files
+                if ds_name == 'velocity':
+                    ref_y, ref_x = check_reference(atr1, atr2)[1:]
+                    if ref_y and ref_x:
+                        print('* referencing data from {} to y/x: {}/{}'.format(os.path.basename(file2[0]), ref_y, ref_x))
+                        data2 -= data2[ref_y, ref_x]
                 # convert to float32 to apply the operation because some types, e.g. bool, do not support it.
                 # then convert back to the original data type
                 data = np.array(data, dtype=np.float32) - np.array(data2, dtype=np.float32)
@@ -275,18 +283,23 @@ def diff_file(file1, file2, out_file=None, force=False, max_num_pixel=2e8):
         print('use metadata from the 1st file: {}'.format(file1))
         writefile.write(dsDict, out_file=out_file, metadata=atr1, ref_file=file1)
 
-    m, s = divmod(time.time()-start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))
-
     return out_file
 
 
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
+    start_time = time.time()
 
-    inps.outfile = diff_file(inps.file1, inps.file2, inps.outfile, force=inps.force)
+    diff_file(file1=inps.file1,
+              file2=inps.file2,
+              out_file=inps.out_file,
+              force_diff=inps.force_diff)
 
-    return inps.outfile
+    # used time
+    m, s = divmod(time.time()-start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))
+
+    return
 
 
 #####################################################################################

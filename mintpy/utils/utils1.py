@@ -625,7 +625,7 @@ def check_file_size(fname_list, mode_width=None, mode_length=None):
 #################################### Interaction ##########################################
 def is_file_exist(file_list, abspath=True):
     """Check if any file in the file list 1) exists and 2) readable
-    Parameters: file_list : list of string, file name with/without wildcards
+    Parameters: file_list : str or list(str), file name with/without wildcards
                 abspath   : bool, return absolute file name/path or not
     Returns:    file_path : string, found file name/path; None if not.
     """

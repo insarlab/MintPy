@@ -11,7 +11,13 @@ import sys
 import glob
 import argparse
 import numpy as np
-from mintpy.utils import ptime, readfile, writefile, isce_utils
+from mintpy.utils import (
+    attribute as attr,
+    isce_utils,
+    ptime,
+    readfile,
+    writefile,
+)
 
 
 
@@ -19,18 +25,30 @@ from mintpy.utils import ptime, readfile, writefile, isce_utils
 GEOMETRY_PREFIXS = ['hgt', 'lat', 'lon', 'los', 'shadowMask', 'waterMask', 'incLocal']
 
 EXAMPLE = """example:
-  # interferogram stack
-  prep_isce.py -d ./merged/interferograms -m ./reference/IW1.xml -b ./baselines -g ./merged/geom_reference       #for topsStack
-  prep_isce.py -d ./Igrams -m ./referenceShelve/data.dat -b ./baselines -g ./geom_reference                      #for stripmapStack
-  prep_isce.py -m 20120507_slc_crop.xml -g ./geometry                                                            #for stripmapApp
-  prep_isce.py -d "pairs/*-*/insar" -m "pairs/*-*/150408.track.xml" -b baseline -g dates_resampled/150408/insar  #for alosStack w/ 150408 as ref date
+  ## topsStack
+  prep_isce.py -f "./merged/interferograms/*/filt_*.unw" -m ./reference/IW1.xml -b ./baselines/ -g ./merged/geom_reference/
 
-  # ionosphere stack
-  prep_isce.py -d ./ion -f ion_cal/filt.ion -m ./reference/IW1.xml -b ./baselines -g ./merged/geom_reference     #for topsStack ionospheric files
+  # topsStack with ionosphere
+  prep_isce.py -f "./merged/interferograms/*/filt_*.unw" "./ion/*/ion_cal/filt.ion" -m ./reference/IW1.xml -b ./baselines/ -g ./merged/geom_reference/
 
-  # offset stack
-  prep_isce.py -d ./offsets -f *Off*.bip -m ./../reference/IW1.xml -b ./../baselines -g ./offsets/geom_reference #for topsStack
-  prep_isce.py -d ./offsets -f *Off*.bip -m ./SLC/*/data.dat       -b random         -g ./geometry               #for UAVSAR coregStack
+  # topsStack for offset
+  prep_isce.py -f "./merged/offsets/*/*Off*.bip" -m ./reference/IW1.xml -b ./baselines/ -g ./merged/geom_reference/
+
+  ## stripmapStack
+  prep_isce.py -f "./Igrams/*/filt_*.unw" -m ./referenceShelve/data.dat -b ./baselines/ -g ./geom_reference/
+
+  # stripmapApp
+  prep_isce.py -m 20120507_slc_crop.xml -g ./geometry 
+
+  ## alosStack
+  # where 150408 is the reference date
+  prep_isce.py -f "./pairs/*/insar/filt_*.unw" -m "pairs/150408-*/150408.track.xml" -b ./baselines/ -g ./dates_resampled/150408/insar/
+
+  ## UAVSAR
+  prep_isce.py -f "./Igrams/*/filt_*.unw" -m ./referenceShelve/data.dat -b ./baselines/ -g ./geometry/
+
+  # UAVSAR for offset
+  prep_isce.py -f "./offsets/*/*Off*.bip" -m "SLC/*/data.dat" -b random -g ./geometry/
 """
 
 def create_parser():
@@ -38,31 +56,31 @@ def create_parser():
     parser = argparse.ArgumentParser(description='Prepare ISCE metadata files.',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
-    # interferograms
-    parser.add_argument('-d', '--ds-dir', '--dset-dir', dest='dsetDir', type=str, default=None, required=True,
-                        help='The directory which contains all pairs\n'
-                             'e.g.: $PROJECT_DIR/merged/interferograms OR \n'
-                             '      $PROJECT_DIR/pairs/*-*/insar OR \n'
-                             '      $PROJECT_DIR/merged/offsets')
-    parser.add_argument('-f', '--file-pattern', nargs = '+', dest='dsetFiles', type=str, default=['filt_*.unw'],
-                        help='List of observation file basenames, e.g.: filt_fine.unw OR filtAz*.off')
+    # observations
+    parser.add_argument('-f', dest='obs_files', type=str, nargs='+', default='./merged/interferograms/*/filt_*.unw',
+                        help='Wildcard path pattern for the primary observation files.\n'
+                             'E.g.: topsStack          : {dset_dir}/merged/interferograms/*/filt_*.unw\n'
+                             '      topsStack / iono   : {dset_dir}/ion/*/ion_cal/filt.ion\n'
+                             '      topsStack / offset : {dset_dir}/merged/offsets/*/*Off*.bip\n'
+                             '      stripmapStack      : {dset_dir}/Igrams/*_*/filt_*.unw\n'
+                             '      alosStack          : {dset_dir}/pairs/*/insar/filt_*.unw\n'
+                             '      UAVSAR / offset    : {dset_dir}/offsets/*/*Off*.bip')
 
     # metadata
-    parser.add_argument('-m', '--meta-file', dest='metaFile', type=str, default=None, required=True,
-                        help='Metadata file to extract common metada for the stack:\n'
-                             'e.g.: for ISCE/topsStack    : reference/IW3.xml;\n'
-                             '      for ISCE/stripmapStack: referenceShelve/data.dat;\n'
-                             '      for ISCE/alosStack    : pairs/150408-150701/150408.track.xml\n'
-                             '          where 150408 is the reference date of stack processing')
+    parser.add_argument('-m', '--meta-file', dest='meta_file', type=str, default=None, required=True,
+                        help='Metadata file to extract common metada for the stack.\n'
+                             'E.g.: topsStack     : reference/IW3.xml\n'
+                             '      stripmapStack : referenceShelve/data.dat\n'
+                             '      alosStack     : pairs/{ref_date}-*/{ref_date}.track.xml\n'
+                             '      UAVSAR        : SLC/*/data.dat')
 
     # geometry
-    parser.add_argument('-b', '--baseline-dir', dest='baselineDir', type=str, default=None,
-                        help='Directory with baselines.'
-                             'Set "random" to generate baseline with random value from [-10,10].'
-                             'Set "random-100" to generate baseline with random value from [-100,100].')
-    parser.add_argument('-g', '--geometry-dir', dest='geometryDir', type=str, default=None, required=True,
+    parser.add_argument('-b', '--baseline-dir', dest='baseline_dir', type=str, default=None,
+                        help='Directory with baselines. '
+                             'Set "random" to generate baseline with random value from [-10,10].')
+    parser.add_argument('-g', '--geometry-dir', dest='geom_dir', type=str, default=None, required=True,
                         help='Directory with geometry files ')
-    parser.add_argument('--geom-files', dest='geometryFiles', type=str, nargs='*',
+    parser.add_argument('--geom-files', dest='geom_files', type=str, nargs='*',
                         default=['{}.rdr'.format(i) for i in GEOMETRY_PREFIXS],
                         help='List of geometry file basenames. Default: %(default)s.\n'
                              'All geometry files need to be in the same directory.')
@@ -76,17 +94,13 @@ def cmd_line_parse(iargs = None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # translate wildcard in metaFile
-    if "*" in inps.metaFile:
-        fnames = glob.glob(inps.metaFile)
+    # translate wildcard in meta_file
+    if "*" in inps.meta_file:
+        fnames = glob.glob(inps.meta_file)
         if len(fnames) > 0:
-            inps.metaFile = fnames[0]
+            inps.meta_file = fnames[0]
         else:
-            raise FileNotFoundError(inps.metaFile)
-
-    # random baseline input checking
-    if inps.baselineDir.lower().startswith('rand'):
-        inps.baselineDir = inps.baselineDir.lower().replace('_','-')
+            raise FileNotFoundError(inps.meta_file)
 
     return inps
 
@@ -117,7 +131,13 @@ def add_ifgram_metadata(metadata_in, dates=[], baseline_dict={}):
 
 
 def prepare_geometry(geom_dir, geom_files=[], metadata=dict(), processor='tops', update_mode=True):
-    """Prepare and extract metadata from geometry files"""
+    """Prepare and extract metadata from geometry files.
+
+    Parameters: geom_dir   - str, path to the directorry for the geometry data files
+                geom_files - list(str), basenames of geometry data files
+                metadata   - dict, common metadata for the stack
+                processor  - str, isce-2 stack processor
+    """
 
     print('preparing RSC file for geometry files')
     geom_dir = os.path.abspath(geom_dir)
@@ -153,26 +173,26 @@ def prepare_geometry(geom_dir, geom_files=[], metadata=dict(), processor='tops',
     # write rsc file for each file
     for geom_file in geom_files:
         # prepare metadata for current file
+        geom_meta = {**metadata}
         if os.path.isfile(geom_file+'.xml'):
-            geom_metadata = readfile.read_attribute(geom_file, metafile_ext='.xml')
+            geom_meta.update(readfile.read_attribute(geom_file, metafile_ext='.xml'))
         else:
-            geom_metadata = readfile.read_attribute(geom_file)
-        geom_metadata.update(metadata)
+            geom_meta.update(readfile.read_attribute(geom_file))
 
         # write .rsc file
         rsc_file = geom_file+'.rsc'
-        writefile.write_roipac_rsc(geom_metadata, rsc_file,
+        writefile.write_roipac_rsc(geom_meta, rsc_file,
                                    update_mode=update_mode,
                                    print_msg=True)
     return
 
 
-def gen_random_baseline_timeseries(dset_dir, dset_file, max_bperp=10):
-    """Generate a baseline time series with random values.
+def gen_random_baseline_timeseries(obs_file, max_bperp=10):
+    """Generate a baseline time series with random values
+    with date12 values grabbed from the directory names of the given path pattern from obs_file.
     """
     # list of dates
-    fnames = glob.glob(os.path.join(dset_dir, '*', dset_file))
-    date12s = sorted([os.path.basename(os.path.dirname(x)) for x in fnames])
+    date12s = sorted([os.path.basename(os.path.dirname(x)) for x in glob.glob(obs_file)])
     date1s = [x.split('_')[0] for x in date12s]
     date2s = [x.split('_')[1] for x in date12s]
     date_list = sorted(list(set(date1s + date2s)))
@@ -188,35 +208,48 @@ def gen_random_baseline_timeseries(dset_dir, dset_file, max_bperp=10):
     return bDict
 
 
-def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), processor='tops', update_mode=True):
-    print('preparing RSC file for ', filePattern)
-    if processor in ['tops', 'stripmap']:
-        isce_files = sorted(glob.glob(os.path.join(os.path.abspath(inputDir), '*', filePattern)))
-    elif processor == 'alosStack':
-        isce_files = sorted(glob.glob(os.path.join(os.path.abspath(inputDir), filePattern)))
-    else:
-        raise ValueError('Un-recognized ISCE stack processor: {}'.format(processor))
+def prepare_stack(obs_file, metadata=dict(), baseline_dict=dict(), update_mode=True):
+    """Prepare metadata for a stack of observation data files.
 
+    Parameters: obs_file     : path pattern with wildcards for the primary observation files, e.g. *.unw file.
+                metadata     : dict, common metadata for the stack
+                baseline_dir : dict, baseline time series
+    """
+    print(f'preparing RSC file for: {obs_file}')
+    isce_files = sorted(glob.glob(obs_file))
     if len(isce_files) == 0:
-        raise FileNotFoundError('no file found in pattern: {}'.format(filePattern))
+        raise FileNotFoundError('NO file found with path pattern: {}'.format(obs_file))
+
+    # make a copy
+    meta = {**metadata}
+
+    # update A/RLOOKS, RANGE/AZIMUTH_PIXEL_SIZE, NCORRLOOKS
+    # for low resolution ionosphere from isce2/topsStack
+    keys = ['LENGTH', 'WIDTH']
+    if all(x in meta.keys() for x in keys):
+        atr = readfile.read_attribute(isce_files[0], metafile_ext='.xml')
+        if any(int(meta[x]) != int(atr[x]) for x in keys):
+            resize2shape = (int(atr['LENGTH']), int(atr['WIDTH']))
+            meta = attr.update_attribute4resize(meta, resize2shape)
 
     # write .rsc file for each interferogram file
     num_file = len(isce_files)
-    prog_bar = ptime.progressBar(maxValue=num_file)
+    print_msg = True if num_file > 5 else False   # do not print progress bar for <=5 files
+    prog_bar = ptime.progressBar(maxValue=num_file, print_msg=print_msg)
     for i, isce_file in enumerate(isce_files):
         # get date1/2
         date12 = ptime.get_date12_from_path(isce_file)
         dates = ptime.yyyymmdd(date12.replace('-','_').split('_'))
-        prog_bar.update(i+1, suffix='{}_{}'.format(dates[0], dates[1]))
+        prog_bar.update(i+1, suffix=f'{dates[0]}_{dates[1]} {i+1}/{num_file}')
 
         # merge metadata from: data.rsc, *.unw.xml and DATE12/P_BASELINE_TOP/BOTTOM_HDR
-        ifg_metadata = readfile.read_attribute(isce_file, metafile_ext='.xml')
-        ifg_metadata.update(metadata)
-        ifg_metadata = add_ifgram_metadata(ifg_metadata, dates, baseline_dict)
+        ifg_meta = {**meta}
+        ifg_meta.update(readfile.read_attribute(isce_file, metafile_ext='.xml'))
+        ifg_meta = add_ifgram_metadata(ifg_meta, dates, baseline_dict)
 
         # write .rsc file
         rsc_file = isce_file+'.rsc'
-        writefile.write_roipac_rsc(ifg_metadata, rsc_file,
+        writefile.write_roipac_rsc(ifg_meta, rsc_file,
                                    update_mode=update_mode,
                                    print_msg=False)
     prog_bar.close()
@@ -226,50 +259,46 @@ def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), 
 #########################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    inps.processor = isce_utils.get_processor(inps.metaFile)
+    inps.processor = isce_utils.get_processor(inps.meta_file)
 
     # read common metadata
     metadata = {}
-    if inps.metaFile:
-        rsc_file = os.path.join(os.path.dirname(inps.metaFile), 'data.rsc')
-        metadata = isce_utils.extract_isce_metadata(inps.metaFile,
-                                                    geom_dir=inps.geometryDir,
-                                                    rsc_file=rsc_file,
-                                                    update_mode=inps.update_mode)[0]
+    if inps.meta_file:
+        rsc_file = os.path.join(os.path.dirname(inps.meta_file), 'data.rsc')
+        metadata = isce_utils.extract_isce_metadata(
+            inps.meta_file,
+            geom_dir=inps.geom_dir,
+            rsc_file=rsc_file,
+            update_mode=inps.update_mode)[0]
 
     # prepare metadata for geometry file
-    if inps.geometryDir:
-        prepare_geometry(inps.geometryDir,
-                         geom_files=inps.geometryFiles,
-                         metadata=metadata,
-                         processor=inps.processor,
-                         update_mode=inps.update_mode)
+    if inps.geom_dir:
+        prepare_geometry(
+            inps.geom_dir,
+            geom_files=inps.geom_files,
+            metadata=metadata,
+            processor=inps.processor,
+            update_mode=inps.update_mode)
 
     # read baseline info
     baseline_dict = {}
-    if inps.baselineDir:
-        if inps.baselineDir.startswith('rand') and inps.dsetDir and inps.dsetFiles:
-            if '-' in inps.baselineDir:
-                max_bperp = float(inps.baselineDir.split('-')[1])
-            else:
-                max_bperp = 10
-            baseline_dict = gen_random_baseline_timeseries(dset_dir=inps.dsetDir,
-                                                           dset_file=inps.dsetFiles[0],
-                                                           max_bperp=max_bperp)
-
+    if inps.baseline_dir:
+        if inps.baseline_dir.startswith('rand') and inps.obs_files:
+            baseline_dict = gen_random_baseline_timeseries(inps.obs_files[0])
         else:
-            baseline_dict = isce_utils.read_baseline_timeseries(inps.baselineDir,
-                                                                processor=inps.processor)
+            baseline_dict = isce_utils.read_baseline_timeseries(
+                inps.baseline_dir,
+                processor=inps.processor)
 
     # prepare metadata for ifgram file
-    if inps.dsetDir and inps.dsetFiles:
-        for namePattern in inps.dsetFiles:
-            prepare_stack(inps.dsetDir,
-                          namePattern,
-                          metadata=metadata,
-                          baseline_dict=baseline_dict,
-                          processor=inps.processor,
-                          update_mode=inps.update_mode)
+    if inps.obs_files:
+        for obs_file in inps.obs_files:
+            prepare_stack(
+                obs_file,
+                metadata=metadata,
+                baseline_dict=baseline_dict,
+                update_mode=inps.update_mode)
+
     print('Done.')
     return
 

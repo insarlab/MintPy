@@ -29,7 +29,7 @@ from mintpy.objects import (
     HDFEOS
 )
 from mintpy.objects import sensor
-from mintpy.utils import utils0 as ut
+from mintpy.utils import ptime, utils0 as ut
 
 SPEED_OF_LIGHT = 299792458  # meters per second
 
@@ -1204,91 +1204,50 @@ def standardize_metadata(metaDictIn, standardKeys=None):
 
 
 #########################################################################
-def read_template(fname, delimiter='=', print_msg=True):
-    """Reads the template file into a python dictionary structure.
-    Parameters: fname : str
-                    full path to the template file
-                delimiter : str
-                    string to separate the key and value
-                print_msg : bool
-                    print message or not
-    Returns:    template_dict : dict
-                    file content
-    Examples:
-        tmpl = read_template(KyushuT424F610_640AlosA.template)
-        tmpl = read_template(R1_54014_ST5_L0_F898.000.pi, ':')
+def read_template(fname, delimiter='=', skip_chars=None):
+    """Read the template file into a dictionary structure.
+
+    Parameters: fname      - str, full path to the template file
+                delimiter  - str, string to separate the key and value
+                skip_chars - list of str, skip certain charaters in values
+    Returns:    template   - dict, file content
+    Examples:   template = read_template('KyushuAlosAT424.txt')
+                template = read_template('smallbaselineApp.cfg')
     """
-    template_dict = {}
 
-    # insarmaps: the below logic for plotattributes object can be made much more simple
-    # if we assume that any plot attribute coming after a > belongs to the
-    # same object. Must Ask Falk and Yunjun if we can assume this to eliminate
-    # all these conditionals
-    plotAttributeDict = {}
-    insidePlotObject = False
-    plotAttributes = []
+    if skip_chars and isinstance(skip_chars, str):
+        skip_chars = [skip_chars]
 
-    def is_plot_attribute(attribute):
-        tokens = attribute.split(".")
-        if tokens is None:
-            return False
-        return tokens[0] == "plot" and len(tokens) > 1
-
-    # read input text file or string
-    lines = None
+    # read input text file / string
     if os.path.isfile(fname):
         with open(fname, 'r') as f:
             lines = f.readlines()
     elif isinstance(fname, str):
         lines = fname.split('\n')
+    lines = [x.strip() for x in lines]
 
-    # loop to parser/read each line
+    # parse line by line
+    template = {}
     for line in lines:
-        line = line.strip()
         # split on the 1st occurrence of delimiter
         c = [i.strip() for i in line.split(delimiter, 1)]
 
         # ignore commented lines or those without variables
-        if len(c) < 2 or line.startswith(('%', '#', '!')):
-            # next
-
-            # insarmaps:
-            if line.startswith(">"):
-                plotAttributeDict = {}
-                insidePlotObject = True
-            # otherwise, if previously inside attributes object, we are now outside
-            # unless the line is a comment
-            elif insidePlotObject and not line.startswith('%') and not line.startswith('#'):
-                # just came from being inside plot object, but now we are outside
-                insidePlotObject = False
-                plotAttributes.append(plotAttributeDict)
-
-        else:
+        if len(c) >= 2 and not line.startswith(('%', '#', '!')):
             key = c[0]
             value = str.replace(c[1], '\n', '').split("#")[0].strip()
             value = os.path.expanduser(value)  # translate ~ symbol
             value = os.path.expandvars(value)  # translate env variables
 
+            # skip certain characters by replacing them with empty str
+            if skip_chars:
+                for skip_char in skip_chars:
+                    value.replace(skip_char, '')
+
             if value != '':
-                template_dict[key] = value
+                template[key] = value
 
-            # insarmaps:
-            if insidePlotObject:
-                if is_plot_attribute(key):
-                    plotAttributeDict[key] = value
-                else:
-                    # just came from being inside plot object, but now we are outside
-                    insidePlotObject = False
-                    plotAttributes.append(plotAttributeDict)
-                    template_dict[key] = value
-
-    # insarmaps: what if no \n at end of file? write out last plot attributes dict
-    if insidePlotObject:
-        plotAttributes.append(plotAttributeDict)
-    if len(plotAttributes) > 0:
-        template_dict["plotAttributes"] = json.dumps(plotAttributes)
-
-    return template_dict
+    return template
 
 
 def read_roipac_rsc(fname, delimiter=' '):
@@ -1894,6 +1853,89 @@ def read_gdal(fname, box=None, band=1, cpx_band='phase', xstep=1, ystep=1):
     return data
 
 
+
+############################  Read GMT Faults  ################################
+
+def read_gmt_lonlat_file(ll_file, SNWE=None, min_dist=10):
+    """Read GMT lonlat file into list of 2D np.ndarray.
+
+    Parameters: ll_file  - str, path to the GMT lonlat file
+                SNWE     - tuple of 4 float, area of interest in lat/lon
+                min_dist - float, minimum distance in km of fault segments
+    Returns:    faults   - list of 2D np.ndarray in size of [num_point, 2] in float32
+                           with each row for one point in [lon, lat] in degrees
+    Examples:
+        # prepare GMT lonlat file
+        cd ~/data/aux/faults
+        gmt kml2gmt UCERF3_Fault.kml > UCERF3_Fault.lonlat
+
+        # read faults data
+        ll_file = os.path.expanduser('~/data/aux/faults/UCERF3_Fault.lonlat')
+        faults = read_gmt_lonlat_file(ll_file, SNWE=(31, 36, -118, -113), min_dist=0.1)
+
+        # add faults to the existing plot
+        fig, ax = plt.subplots(figsize=[7, 7], subplot_kw=dict(projection=ccrs.PlateCarree()))
+        data, atr, inps = view.prep_slice(cmd)
+        ax, inps, im, cbar = view.plot_slice(ax, data, atr, inps)
+
+        prog_bar = ptime.progressBar(maxValue=len(faults))
+        for i, fault in enumerate(faults):
+            ax.plot(fault[:,0], fault[:,1], 'k-', lw=0.2)
+            prog_bar.update(i+1, every=10)
+        prog_bar.close()
+        ax.set_xlim(inps.geo_box[0], inps.geo_box[2])
+        ax.set_ylim(inps.geo_box[3], inps.geo_box[1])
+
+    """
+    # read text file
+    lines = None
+    with open(ll_file, 'r') as f:
+        lines = f.readlines()
+    lines = [x for x in lines if not x.startswith('#')]
+
+    debug_mode = False
+    if debug_mode:
+        lines = lines[:1000]
+
+    # loop to extract/organize the data into list of arrays
+    num_line = len(lines)
+    faults = []
+    fault = []
+    prog_bar = ptime.progressBar(maxValue=num_line)
+    for i, line in enumerate(lines):
+        line = line.strip().replace('\n','').replace('\t', ' ')
+        if line.startswith('>'):
+            fault = []
+        else:
+            fault.append([float(x) for x in line.split()[:2]])
+
+        # save if 1) this is the last line OR 2) the next line starts a new fault
+        if i == num_line - 1 or lines[i+1].startswith('>'):
+            fault = np.array(fault, dtype=np.float32)
+            s = np.nanmin(fault[:,1]); n = np.nanmax(fault[:,1])
+            w = np.nanmin(fault[:,0]); e = np.nanmax(fault[:,0])
+
+            if fault is not None and SNWE:
+                S, N, W, E = SNWE
+                if e < W or w > E or s > N or n < S:
+                    # check overlap of two rectangles
+                    # link: https://stackoverflow.com/questions/40795709
+                    fault = None
+
+            if fault is not None and min_dist > 0:
+                dist = abs(n - s) * 108 * abs(e - w) * 108 * np.cos((n+s)/2 * np.pi/180)
+                if dist < min_dist:
+                    fault = None
+
+            if fault is not None:
+                faults.append(fault)
+
+        prog_bar.update(i+1, every=1000, suffix=f'line {i+1} / {num_line}')
+    prog_bar.close()
+    return faults
+
+
+
 ############################ Obsolete Functions ###############################
 def read_float32(fname, box=None, byte_order='l'):
     """Reads roi_pac data (RMG format, interleaved line by line).
@@ -2155,6 +2197,5 @@ def read_GPS_USGS(fname):
     up = np.array(data[:, 3])
 
     return east, north, up, dates, YYYYMMDD
-
 
 #########################################################################

@@ -598,7 +598,8 @@ def plot_slice(ax, data, metadata, inps=None):
 
         # Lat Lon labels
         if inps.lalo_label:
-            pp.draw_lalo_label(inps.geo_box, ax,
+            pp.draw_lalo_label(ax,
+                               geo_box=inps.geo_box,
                                lalo_step=inps.lalo_step,
                                lalo_loc=inps.lalo_loc,
                                lalo_max_num=inps.lalo_max_num,
@@ -760,8 +761,7 @@ def plot_slice(ax, data, metadata, inps=None):
 
     # 3.2 Title
     if inps.disp_title:
-        ax.set_title(inps.fig_title, fontsize=inps.font_size,
-                     color=inps.font_color)
+        ax.set_title(inps.fig_title, fontsize=inps.font_size, color=inps.font_color)
 
     # 3.3 Flip Left-Right / Up-Down
     if inps.flip_lr:
@@ -777,17 +777,26 @@ def plot_slice(ax, data, metadata, inps=None):
         ax.axis('off')
         vprint('turn off axis display')
 
-    # 3.5 Turn off tick label
+    # 3.5 Tick labels
     if inps.disp_tick:
         # manually turn ON to enable tick labels for UTM with cartopy
         # link: https://github.com/SciTools/cartopy/issues/491
         ax.xaxis.set_visible(True)
         ax.yaxis.set_visible(True)
     else:
-        # ax.set_xticklabels([])
-        # ax.set_yticklabels([])
+        # turn off tick labels
         ax.get_xaxis().set_ticks([])
         ax.get_yaxis().set_ticks([])
+
+    # rotate Y-axis tick labels
+    # link: https://stackoverflow.com/questions/10998621
+    if inps.ylabel_rot:
+        kwargs = dict(rotation=inps.ylabel_rot)
+        # center the vertical alignment for vertical tick labels
+        if inps.ylabel_rot % 90 == 0:
+            kwargs['va'] = 'center'
+        plt.setp(ax.get_yticklabels(), **kwargs)
+        vprint(f'rotate Y-axis tick labels by {inps.ylabel_rot} deg')
 
     return ax, inps, im, cbar
 

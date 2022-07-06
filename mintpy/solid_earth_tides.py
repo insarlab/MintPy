@@ -54,7 +54,7 @@ REFERENCE = """reference:
 """
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Solid Earth tides (SET) correction',
+    parser = argparse.ArgumentParser(description='Solid Earth tides (SET) correction via PySolid',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog='{}\n{}\n{}'.format(REFERENCE, TEMPLATE, EXAMPLE))
 

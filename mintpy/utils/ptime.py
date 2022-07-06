@@ -374,6 +374,49 @@ def read_date_list(date_list_in, date_list_all=None):
     return date_list_out
 
 
+def get_exclude_date_list(date_list, start_date=None, end_date=None, exclude_date=None):
+    """Get exclude date list from input options (start/end/ex_date).
+
+    Parameters: date_list    - list of str, all dates in YYYYMMDD(THHMM) format
+                start_date   - str, starting date
+                end_date     - str, ending date
+                exclude_date - list of str, exclude date in YYYYMMDD or text file
+    Returns:    ex_date_list - list of str, exclude date
+    """
+
+    year_list = yyyymmdd2years(date_list)
+    ex_date_list = []
+
+    # exclude_date
+    if exclude_date:
+        ex_date_list += read_date_list(list(exclude_date), date_list_all=date_list)
+        print(f'exclude date: {ex_date_list}')
+
+    # start_date
+    if start_date:
+        print(f'start   date: {start_date}')
+        year_min = yyyymmdd2years(yyyymmdd(start_date))
+        for year, date_str in zip(year_list, date_list):
+            if year < year_min and date_str not in ex_date_list:
+                print(f'  remove date: {date_str}')
+                ex_date_list.append(date_str)
+
+    # end_date
+    if end_date:
+        print(f'end     date: {end_date}')
+        year_max = yyyymmdd2years(yyyymmdd(end_date))
+        for year, date_str in zip(year_list, date_list):
+            if year > year_max and date_str not in ex_date_list:
+                print(f'  remove date: {date_str}')
+                ex_date_list.append(date_str)
+
+    ex_date_list = sorted(list(set(ex_date_list)))
+
+    return ex_date_list
+
+
+
+################################################################
 def date_list2tbase(date_list):
     """Get temporal Baseline in days with respect to the 1st date
     Parameters: date_list - list of string, date in YYYYMMDD or YYMMDD format
@@ -474,4 +517,3 @@ def utc2solar_time(utc_time, longitude):
     solar_time = dt.datetime.combine(utc_time.date(), dt.time(0)) + dt.timedelta(minutes=tst)
 
     return solar_time
-

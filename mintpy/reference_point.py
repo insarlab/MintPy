@@ -129,7 +129,7 @@ def read_template_file2inps(template_file, inps=None):
     if not inps:
         inps = cmd_line_parse([''])
     inps_dict = vars(inps)
-    template = readfile.read_template(template_file)
+    template = readfile.read_template(template_file, skip_chars=['[', ']'])
     template = ut.check_template_auto_value(template)
 
     prefix = 'mintpy.reference.'
@@ -147,14 +147,12 @@ def read_template_file2inps(template_file, inps=None):
     if key in template.keys():
         value = template[key]
         if value:
-            value = value.replace('[','').replace(']','')
             inps.ref_y, inps.ref_x = [int(i) for i in value.split(',')]
 
     key = prefix+'lalo'
     if key in template.keys():
         value = template[key]
         if value:
-            value = value.replace('[','').replace(']','')
             inps.ref_lat, inps.ref_lon = [float(i) for i in value.split(',')]
 
     return inps
@@ -265,7 +263,7 @@ def reference_file(inps):
                 print('writing the referenced data into file: {}'.format(inps.outfile))
 
                 # 1. read and update data value
-                data, atr = readfile.read(inps.file)
+                data, atr = readfile.read(inps.file, datasetName=k)
                 if len(data.shape) == 3:
                     # 3D matrix
                     for i in range(data.shape[0]):
