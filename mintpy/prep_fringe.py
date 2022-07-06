@@ -341,7 +341,7 @@ def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box
     print('number of interferograms:', num_pair)
 
     # get list of *.unw.conncomp file
-    cc_files = [x.replace('.unw', '.conncomp') for x in unw_files]
+    cc_files = [f'{x}.conncomp' for x in unw_files]
     cc_files = [x for x in cc_files if os.path.isfile(x)]
     print(f'number of connected components files: {len(cc_files)}')
 
