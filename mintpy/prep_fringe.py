@@ -341,7 +341,7 @@ def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box
     print('number of interferograms:', num_pair)
 
     # get list of *.unw.conncomp file
-    cc_files = [f'{x}.conncomp' for x in unw_files]
+    cc_files = [x.replace('.unw', '.conncomp') for x in unw_files]
     cc_files = [x for x in cc_files if os.path.isfile(x)]
     print(f'number of connected components files: {len(cc_files)}')
 
@@ -351,7 +351,7 @@ def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box
         return
 
     # get date info: date12_list
-    date12_list = [os.path.basename(x).split('.')[0] for x in unw_files]
+    date12_list = ['_'.join(os.path.basename(x).split('_')[:2]) for x in unw_files]
 
     # prepare baseline info
     if baseline_dir is not None:
