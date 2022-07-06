@@ -125,15 +125,17 @@ def cmd_line_parse(iargs = None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # default x/ystep
+    # default multilook options
     iDict = vars(inps)
-    iDict['xstep'] = iDict.get('xstep', 1)
-    iDict['ystep'] = iDict.get('ystep', 1)
+    iDict['xstep'] = int(iDict.get('xstep', 1))
+    iDict['ystep'] = int(iDict.get('ystep', 1))
+    iDict['method'] = str(iDict.get('method', 'nearest'))
 
     # --template
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
-    print('x/ystep: {}/{}'.format(iDict['xstep'], iDict['ystep']))
+    print('multilook x/ystep: {}/{}'.format(iDict['xstep'], iDict['ystep']))
+    print('multilook method : {}'.format(iDict['method']))
 
     # --stack-dir
     if inps.stackDir is not None:
@@ -211,10 +213,6 @@ def read_template2inps(template_file, inps=None):
         value = template[prefix+key]
         if key in ['xstep', 'ystep', 'method']:
             iDict[key] = template[prefix+key]
-
-    iDict['xstep']  = int(iDict.get('xstep', 1))
-    iDict['ystep']  = int(iDict.get('ystep', 1))
-    iDict['method'] = str(iDict.get('method', 'nearest'))
 
     return inps
 
@@ -671,7 +669,7 @@ def main(iargs=None):
                            box=box,
                            xstep=inps.xstep,
                            ystep=inps.ystep,
-                           mli_method='nearest')
+                           mli_method=inps.method)
 
     ########## output file 2 - geometryGeo
     # define dataset structure for geometry
