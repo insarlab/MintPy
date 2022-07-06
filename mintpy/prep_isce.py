@@ -42,7 +42,7 @@ EXAMPLE = """example:
 
   ## alosStack
   # where 150408 is the reference date
-  prep_isce.py -f "./pairs/*/insar/filt_*.unw" -m "pairs/150408-*/150408.track.xml" -b ./baselines/ -g ./dates_resampled/150408/insar/
+  prep_isce.py -f "./pairs/*/insar/filt_*.unw" -m "pairs/150408-*/150408.track.xml" -b ./baseline/ -g ./dates_resampled/150408/insar/
 
   ## UAVSAR
   prep_isce.py -f "./Igrams/*/filt_*.unw" -m ./referenceShelve/data.dat -b ./baselines/ -g ./geometry/
