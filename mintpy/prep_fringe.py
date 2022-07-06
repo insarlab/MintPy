@@ -351,7 +351,7 @@ def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box
         return
 
     # get date info: date12_list
-    date12_list = [os.path.basename(x).split('.')[0] for x in unw_files]
+    date12_list = ptime.yyyymmdd_date12([os.path.basename(x).split('.')[0] for x in unw_files])
 
     # prepare baseline info
     if baseline_dir is not None:
