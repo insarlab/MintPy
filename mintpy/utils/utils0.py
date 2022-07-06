@@ -127,7 +127,7 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
         # consider the local variable due to topography
         if dem is not None:
             range_dist = range_distance(atr, dimension=2, print_msg=False)
-            inc_angle = (np.pi - np.arccos(((r+dem)**2 + range_dist**2 - (r+H)**2) / 
+            inc_angle = (np.pi - np.arccos(((r+dem)**2 + range_dist**2 - (r+H)**2) /
                                            (2*(r+dem)*range_dist))) * 180.0/np.pi
         else:
             inc_angle = np.tile(np.linspace(inc_angle_n, inc_angle_f, num=width,
@@ -207,8 +207,8 @@ def azimuth_ground_resolution(atr):
 def auto_lat_lon_step_size(atr, lat_c=None):
     """Get the default lat/lon step size for geocoding.
 
-    Treat the pixel in radar coordinates as an rotated rectangle. Use the bounding box 
-    of the rotated rectangle for the ratio between lat and lon steps. Then scale the 
+    Treat the pixel in radar coordinates as an rotated rectangle. Use the bounding box
+    of the rotated rectangle for the ratio between lat and lon steps. Then scale the
     lat and lon step size to ensure the same area between the pixels in radar and geo
     coordinates.
 
@@ -726,7 +726,7 @@ def yes_or_no(question):
     else:
         return yes_or_no("Uhhhh... please enter ")
 
-    
+
 def update_attribute_or_not(atr_new, atr_orig):
     """Compare new attributes with exsiting ones"""
     update = False
@@ -796,6 +796,24 @@ def check_parallel(file_num=1, print_msg=True, maxParallelNum=8):
     except:
         return num_cores, enable_parallel, None, None
 
+
+def print_command_line(script_name, args):
+    """print the command line with "" for arguments containing *.
+
+    Parameters: script_name - str, e.g. prep_isce.py
+                args        - list(str), list of input arguments
+    """
+    cmd = script_name
+    for arg in args:
+        # for option values containing *, add "" in the print out msg
+        # so that it can be copied and pasted to run directly.
+        if not arg.startswith('-') and '*' in arg:
+            cmd += f' "{arg}"'
+        else:
+            cmd += f' {arg}'
+
+    print(cmd)
+    return
 
 
 #################################### Math / Statistics ###################################
@@ -926,5 +944,3 @@ def is_number(string):
         return True
     except ValueError:
         return False
-
-

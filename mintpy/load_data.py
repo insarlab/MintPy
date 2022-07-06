@@ -729,7 +729,7 @@ def prepare_metadata(iDict):
                     iargs += ['--sensor', iDict['PLATFORM'].lower()]
                 elif processor == 'cosicorr':
                     iargs += ['--metadata', iDict['mintpy.load.metaFile']]
-                print(script_name, ' '.join(iargs))
+                ut.print_command_line(script_name, iargs)
                 # run
                 prep_module.main(iargs)
 
@@ -775,7 +775,7 @@ def prepare_metadata(iDict):
             iargs += ['--geom-files'] + geom_files
 
         # run module
-        print('prep_isce.py', ' '.join(iargs))
+        ut.print_command_line(script_name, iargs)
         try:
             prep_isce.main(iargs)
         except:
@@ -832,7 +832,7 @@ def prepare_metadata(iDict):
             iargs += ['--update']
 
         ## run
-        print('prep_aria.py', ' '.join(iargs))
+        ut.print_command_line(script_name, iargs)
         try:
             prep_aria.main(iargs)
         except:
@@ -849,7 +849,7 @@ def prepare_metadata(iDict):
 
         # run prep_*.py
         iargs = [custom_temp_files[0]]
-        print('prep_gmtsar.py', ' '.join(iargs))
+        ut.print_command_line(script_name, iargs)
         try:
             prep_gmtsar.main(iargs)
         except:

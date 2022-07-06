@@ -211,7 +211,9 @@ def read_template2inps(template_file, inps=None):
     key_list = [i.split(prefix)[1] for i in template.keys() if i.startswith(prefix)]
     for key in key_list:
         value = template[prefix+key]
-        if key in ['xstep', 'ystep', 'method']:
+        if key in ['xstep', 'ystep']:
+            iDict[key] = int(template[prefix+key])
+        elif key in ['method']:
             iDict[key] = template[prefix+key]
 
     return inps
