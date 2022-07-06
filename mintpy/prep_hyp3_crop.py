@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 ############################################################
+# Program is part of VEG-tools                             #
 # Copyright (c) 2021,         VEG                          #
 # Author: Xie Lei, Wang Jiageng,  Jun 2022                 #
 # A special thank to Benjy Marks                           #
+# The environment needs to install hyp3lib                 #
 ############################################################
 import argparse
 import os
@@ -65,81 +67,65 @@ def read_img(filename):
     return im_proj, im_geotrans, im_data, im_extent
 
 
-def hyp3_reprojection(UTM_path, latlon_path):
+def hyp3_reprojection(utm_path, latlon_path):
     gdal.AllRegister()
-    src_data = gdal.Open(UTM_path)
-    srcSRS_wkt = src_data.GetProjection()
-    srcSRS = osr.SpatialReference()
-    srcSRS.ImportFromWkt(srcSRS_wkt)
+    src_data = gdal.Open(utm_path)
+    src_srs_wkt = src_data.GetProjection()
+    src_srs = osr.SpatialReference()
+    src_srs.ImportFromWkt(src_srs_wkt)
     src_width = src_data.RasterXSize
     src_height = src_data.RasterYSize
-    src_count = src_data.RasterCount
     src_trans = src_data.GetGeoTransform()
-    OriginLX_src = src_trans[0]
-    OriginTY_src = src_trans[3]
+    origin_lx_src = src_trans[0]
+    origin_ty_src = src_trans[3]
     pixl_w_src = src_trans[1]
     pixl_h_src = src_trans[5]
-    OriginRX_src = OriginLX_src + pixl_w_src * src_width
-    OriginBY_src = OriginTY_src + pixl_h_src * src_height
+    origin_rx_src = origin_lx_src + pixl_w_src * src_width
+    origin_by_src = origin_ty_src + pixl_h_src * src_height
     driver = gdal.GetDriverByName("GTiff")
     driver.Register()
     dst_data = driver.Create(latlon_path, src_width, src_height, 1, gdal.GDT_Float32)
-    dstSRS = osr.SpatialReference()
-    dstSRS.ImportFromEPSG(4326)
-    dstSRS.ImportFromProj4("proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
-    ct = osr.CoordinateTransformation(srcSRS, dstSRS)
-    OriginLX_dst, OriginTY_dst, temp = ct.TransformPoint(OriginLX_src, OriginTY_src)
-    OriginRX_dst, OriginBY_dst, temp1 = ct.TransformPoint(OriginRX_src, OriginBY_src)
-    pixl_w_dst = (OriginRX_dst - OriginLX_dst) / src_width
-    pixl_h_dst = (OriginBY_dst - OriginTY_dst) / src_height
-    dst_trans = [OriginLX_dst, pixl_w_dst, 0, OriginTY_dst, 0, pixl_h_dst]
+    dst_srs = osr.SpatialReference()
+    dst_srs.ImportFromEPSG(4326)
+    dst_srs.ImportFromProj4("proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
+    ct = osr.CoordinateTransformation(src_srs, dst_srs)
+    origin_lx_dst, origin_ty_dst, temp = ct.TransformPoint(origin_lx_src, origin_ty_src)
+    origin_rx_dst, origin_by_dst, temp1 = ct.TransformPoint(origin_rx_src, origin_by_src)
+    pixl_w_dst = (origin_rx_dst - origin_lx_dst) / src_width
+    pixl_h_dst = (origin_by_dst - origin_ty_dst) / src_height
+    dst_trans = [origin_lx_dst, pixl_w_dst, 0, origin_ty_dst, 0, pixl_h_dst]
 
-    dstSRS_wkt = dstSRS.ExportToWkt()
+    dst_srs_wkt = dst_srs.ExportToWkt()
     dst_data.SetGeoTransform(dst_trans)
-    dst_data.SetProjection(dstSRS_wkt)
+    dst_data.SetProjection(dst_srs_wkt)
     data = src_data.GetRasterBand(1).ReadAsArray()
     dst_data.WriteArray(data)
     dst_data.FlushCache()
 
 
-def unzip_crop(wk_dir: str, geo_box):
+def unzip_crop(workdir: str, geo_box, target_dir):
     #
     # lower left
     lonlat_ll = [geo_box[2], geo_box[1]]
     # up right
     lonlat_ur = [geo_box[3], geo_box[0]]
 
-    os.chdir(wk_dir)
+    os.chdir(workdir)
     file_list = glob.glob('*_*')
     file_list.sort()
-    target_dir = os.path.join(pathlib.Path(os.path.abspath(
-        wk_dir)).parent, pathlib.Path(os.path.abspath(wk_dir)).stem + '_clip')
+    if os.path.isdir(target_dir) and target_dir != '':
+        shutil.rmtree(target_dir)
+    ################
+    else:
+        target_dir = os.path.join(pathlib.Path(os.path.abspath(
+            workdir)).parent, pathlib.Path(os.path.abspath(workdir)).stem + '_clip')
 
     if os.path.isdir(target_dir):
         shutil.rmtree(target_dir)
     os.mkdir(target_dir)
     target_extent = (lonlat_ll[0], lonlat_ll[1], lonlat_ur[0], lonlat_ur[1])
-    # Format of target_extent S,W,N,E
-    # Preview of the target area
-    # preview_img_path = glob.glob('%s/*.tif' % file_list[0])[0]
-    # _, _, im_data, im_extent = read_img(preview_img_path)
 
     print(" Wait")
-    # plot but blocked. can be gedited
-    # used by Jupyter-Notebook to show the cut region
-    """
-    fig, ax = plt.subplots(figsize=[7, 7])
-    ax.tick_params(direction='in', labelsize=10, length=7)
-    ax.ticklabel_format(style='plain')
-    ax.add_patch(Rectangle((target_extent[0:2]),
-                           np.abs(target_extent[2] - target_extent[0]),
-                           np.abs(target_extent[3] - target_extent[1]),
-                           fill=False,
-                           edgecolor='indianred',
-                           lw=3))
-
-    ax.imshow(im_data, cmap='gist_earth', extent=im_extent)
-    """
     # conduct the clip operation
     for i in range(len(file_list)):
         tmp_tif_file_list = glob.glob('%s/*.tif' % file_list[i])
@@ -169,19 +155,19 @@ def unzip_crop(wk_dir: str, geo_box):
         # copy the txt file into
         txt_name = file_list[i] + '/' + file_list[i] + '.txt'
         txt_name1 = file_list[i] + '.txt'
-        txt_path0 = os.path.join(wk_dir, txt_name)
+        txt_path0 = os.path.join(workdir, txt_name)
         txt_path1 = os.path.join(tmp_target_dir, txt_name1)
         shutil.copy(txt_path0, txt_path1)
         print(':: [%s] Transferd and Clipped files in: %s' % (i + 1, os.path.abspath(file_list[i])))
 
-    # do the clip for transformed but uncliped via hyp3lib.cutFiles
+    # do the clip for transformed but clipped via hyp3lib.cutFiles
     files = []
-    wk1_dir = wk_dir + '_clip'
+    wk1_dir = workdir + '_clip'
 
-    print("current path:  " + wk_dir)
+    print("current path:  " + workdir)
     if os.path.exists(wk1_dir):
         filetypes = ['unw_phase', 'corr', 'dem', 'lv_theta', 'water_mask']
-        for root, dir, file_list in os.walk(wk1_dir):
+        for root, _, file_list in os.walk(wk1_dir):
             for file in file_list:
                 for f in filetypes:
                     if f + '_latlon.tif' in file and f + '_latlon.tif.xml' not in file:
@@ -195,8 +181,7 @@ def unzip_crop(wk_dir: str, geo_box):
         if target_extent == (-181, -91, 181, 91):
             mintpy.prep_hyp3.main(files)
         else:
-            clip_files = ['']
-            clip_files.append(i[:-4] + '_clip.tif')
+            clip_files = ['', i[:-4] + '_clip.tif']
             mintpy.prep_hyp3.main(clip_files)
 
 
@@ -225,7 +210,7 @@ def unzip_files(work_dir, target_postfix_list):
         os.mkdir(current_target_path)
         # unzip target files
         with ZipFile(file_list[i], 'r') as zipObject:
-            post_idx = 0  # index for postfix
+            # post_idx = 0  # index for postfix
             zip_file_list = zipObject.namelist()
             for tmp_file in zip_file_list:
                 if tmp_file.endswith(tuple(target_postfix_list)):
@@ -244,6 +229,11 @@ def unzip_files(work_dir, target_postfix_list):
                     source_path = glob.glob('%s/S1*/*%s' %
                                             (target_dir, tmp_post))[0]
                     shutil.copy(source_path, copy_path)
+
+                # add a judgement of .txt and not .md.txt
+                # copy the renamed.txt into a correct area
+                if tmp_file.endswith('.txt') and not tmp_file.endswith('README.md.txt'):
+                    print("Have not done yet")
 
             # delete tmp file
             tmp_unzip_path = glob.glob('%s/S1*' % target_dir)[0]
@@ -264,14 +254,7 @@ def crop_region_banpick(geobox, imgbox):
     return region
 
 
-def ASF_crop(work_dir, zip_state, geobox, crop_state):
-    # directory for zip file
-    # example: wkdir = '/media/lei/disk1/hyp3'
-    # example:wkdir = '/media/lei/disk1/unzip'
-    # target directory
-    # example: target_dir = '../unzip'
-
-    # target file to be extracted, another options,
+def asf_crop(work_dir, geobox, crop_state, out_path):
     # geobox represent the n,s,w,e
     # e.g., wrapped_phase.tif, inc_map.tif, water_mask.tif,
     if geobox[:] == [91, -91, -181, 181] and crop_state == 1:
@@ -279,38 +262,36 @@ def ASF_crop(work_dir, zip_state, geobox, crop_state):
         exit()
     elif crop_state == 0:
         geobox = [91, -91, -181, 181]
-    # adjusted geobox before, the bounding should no need to be adjusted after.
+    # adjusted geobox before, the bounding should not need to be adjusted after.
     target_postfix_list = ['corr.tif', 'unw_phase.tif', 'dem.tif', 'lv_theta.tif', 'water_mask.tif']
+    target_path = out_path
 
-    if zip_state == 1:
-        work_dir = unzip_files(work_dir, target_postfix_list)
-        unzip_crop(wk_dir=work_dir, geo_box=geobox)
-    elif zip_state == 0:
-        unzip_crop(wk_dir=work_dir, geo_box=geobox)
-    else:
-        exit()
+    unzip_crop(workdir=work_dir, geo_box=geobox, target_dir=target_path)
 
     return 0
 
 
 def main():
     str_h = """Example usage: 
-    ASF_crop.py --i /Examples/asf_zip/ --o /Examples/asf_unzip/ --z 0 
-    ASF_crop.py --i /Examples/asf_zip/ --o /Examples/asf_unzip/ --c 1 --e -91.5  --n 1.5 
-    ASF_crop.py --i /Examples/asf_zip/ --o /Examples/asf_unzip/ --c 1 --e -91.5 --w -90 --n 1.5 --s -0.75  
+    asf_crop.py --i /Examples/asf_hyp3_unzip/ --o /Examples/asf_utm_hyp3/
+    asf_crop.py --i /Examples/asf_hyp3_unzip/ --o /Examples/asf_utm_hyp3/ --c 1 --e -91.5  --n 1.5 
+    asf_crop.py --i /Examples/asf_hyp3_unzip/ --o /Examples/asf_utm_hyp3/ --c 1 --e -91.5 --w -90 --n 1.5 --s -0.75  
     
-    # rely on asf-hyp3-lib
+    # rely on asf-hyp3-lib, please install it at here 
+    
+    # we plan to add a new script to 
     # add a filter for --sd start-date
     # add a filter for --ed end-date
     # add a filter for area co-coverage, although this may be covered by frame and path.
-    # add a if-else function for invaild area recognise.
+    # add a if-else function for invalid area recognise.
     # to avoid some edge set by 0.0, we use impossible value for N,S,W,E. This may be improved soon.
+    
+    # need to use the unzipped folder to run the script.
     
     """
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, description=str_h)
-    parser.add_argument('--i', type=str, help="The input folder path that contains all the zipped or unzipped datas")
-    parser.add_argument('--o', type=str, default='', help="The output folder path that contains all the croped files")
-    parser.add_argument('--z', type=int, default=1, help="0 = unzipped, 1 = zipped")
+    parser.add_argument('--i', type=str, help="The input folder path that contains all unzipped datas")
+    parser.add_argument('--o', type=str, default='', help="The output folder path that contains all the cropped files")
     parser.add_argument('--c', type=int, default=0, help="0 = do not crop, 1 = do the crop")
     parser.add_argument('--n', type=float, default=91, help="north latitude")
     parser.add_argument('--s', type=float, default=-91, help="south latitude")
@@ -321,9 +302,12 @@ def main():
     # edge = n,s,w,e
 
     try:
-        ASF_crop(work_dir=args.i, zip_state=args.z, geobox=[args.n, args.s, args.w, args.e], crop_state=args.c)
-    except:
+        asf_crop(work_dir=args.i, geobox=[args.n, args.s, args.w, args.e], crop_state=args.c, output_path=args.o)
+    except Exception as e:
         print("Something wrong")
+        print(e)
+    finally:
+        print("Crop process has finished")
     return 0
 
 
