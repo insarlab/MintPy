@@ -58,37 +58,33 @@ REFERENCE = """reference:
     Copernicus Sentinel-1, -2 and -3 Precise orbit Determination Serivice (CPOD) (GMV-CPOD-TN-0009).
     https://sentinels.copernicus.eu/documents/247904/3372484/Sentinels-POD-Product-Handbook-1.19.pdf
 
-  No-net-rotation plate motion models (NNR-PMMs):
-  [NNR-NUVEL1A] 14 plates; geological motion
-   Argus, D. F., & Gordon, R. G. (1991). No-net-rotation model of current plate velocities
-    incorporating plate motion model NUVEL-1. Geophysical research letters, 18(11), 2039-2042.
-    doi:10.1029/91GL01532
-  [NNR-MORVEL56] 25 plates; geological and GPS geodetic motion
-   Argus, D. F., Gordon, R. G., & DeMets, C. (2011). Geologically current motion of 56
-    plates relative to the no-net-rotation reference frame. Geochemistry, Geophysics, Geosystems, 12(11).
-    doi:10.1029/2011GC003751
-  [NNR-ITRF14] 11 plates; geodetic motions (GPS, VLBI, SLR, and DORIS); based on ITRF2014, the reference frame of Sentinel-1
-   Altamimi, Z., Métivier, L., Rebischung, P., Rouby, H., & Collilieux, X. (2017).
+  # list of no-net-rotation (NNR) plate motion models (PMMs):
+  ITRF2014-PMM - Table 1 of Altamimi et al. (2017) - 11 plates
+    Altamimi, Z., Métivier, L., Rebischung, P., Rouby, H., & Collilieux, X. (2017).
     ITRF2014 plate motion model. Geophysical Journal International, 209(3), 1906-1912.
     doi:10.1093/gji/ggx136
+  NNR-MORVEL56 - Table 1 of Argus et al. (2011) - 56 plates
+    Argus, D. F., Gordon, R. G., & DeMets, C. (2011). Geologically current motion of 56
+    plates relative to the no-net-rotation reference frame. Geochemistry, Geophysics, Geosystems, 12(11).
+    doi:10.1029/2011GC003751
 """
 
 EXAMPLE = """example:
-  # Spherical form of Euler Pole rotation in [lat, lon, w] in unit of deg, deg, deg/Ma
-  #   Africa  plate (NNR-NUVEL1A)  - excerpt from Table 2 in Argus & Gordon (1991, GRL)
-  bulk_plate_motion.py -g inputs/geometryGeo.h5 --om-sph  50.6  -74.0   0.30
-  #   Eurasia plate (NNR-MORVEL56) - excerpt from Table 1 in Argus, Gordon, and DeMets (2011, G3)
-  bulk_plate_motion.py -g inputs/geometryGeo.h5 --om-sph  48.85 -106.50 0.223 -v velocity.h5
-
-  # Cartesian form of Euler Pole rotation in [wx, wy, wz] in unit of mas/year [milli arc second per year]
-  #   Arabia plate (NNR-ITRF14) - excerpt from Table 1 in Altamimi et al. (2017, GJI)
+  # Cartesian form of Euler pole rotation in [wx, wy, wz] in unit of mas/year [milli arc second per year]
+  # e.g., Arabia plate in ITRF14-PMM (Table 1 in Altamimi et al., 2017)
   bulk_plate_motion.py -g inputs/geometryGeo.h5 --om-cart 1.154 -0.136  1.444 -v velocity.h5
 
-  # Simple constant local ENU translation (based on one GNSS vector) in [ve, vn, vu] in unit of meter/year
+  # Spherical form of Euler pole rotation in [lat, lon, w] in unit of deg, deg, deg/Ma
+  # e.g., Eurasia plate in NNR-MORVEL56 (Table 1 in Argus et al., 2011)
+  bulk_plate_motion.py -g inputs/geometryGeo.h5 --om-sph  48.85 -106.50 0.223 -v velocity.h5
+
+  # Simple constant local ENU translation (based on one GNSS vector) in [ve, vn, vu] in unit of m/year
   #   E.g., https://www.unavco.org/software/visualization/GPS-Velocity-Viewer/GPS-Velocity-Viewer.html
-  #   Step 1: select `GNSS Data source` as `World, IGS08/NNR, GEM GSRM` (referenced to ITRF2008, NNR PMM)
-  #   Step 2: check box `Station labels and data download` and click `Draw Map`
-  #   Step 3: Navigate to the region of interest, click on a representative station, get the "Speed components" in mm/yr.
+  #   -> select 'GNSS Data source' as 'World, IGS08/NNR, GEM GSRM' (referenced to ITRF2008, NNR PMM)
+  #   -> check box `Station labels and data download` and click `Draw Map`
+  #   -> navigate to the region of interest,
+  #   -> click on a representative station,
+  #   -> get the "Speed components" in mm/yr.
   bulk_plate_motion.py -g inputs/geometryGeo.h5 --enu 25.0 30.5 0.0 -v velocity.h5
 """
 
@@ -111,13 +107,13 @@ def create_parser():
                         help='Output velocity file after the correction, default: add "_BPM" suffix.')
 
     # plate motion configurations
-    pmms = parser.add_mutually_exclusive_group(required=True)
-    pmms.add_argument('--om-sph', dest='omega_sph', type=float, nargs=3, metavar=('LAT', 'LON', 'W'), default=None,
-                      help='Spherical form of Euler Pole rotation; [lat, lon, w] (unit: deg, deg, deg/Ma) (default: %(default)s).')
-    pmms.add_argument('--om-cart', dest='omega_cart', type=float, nargs=3, metavar=('WX', 'WY', 'WZ'), default=None,
-                      help='Cartesian form of Euler Pole rotation; [wx, wy, wz] (unit: mas/yr) (default: %(default)s).')
-    pmms.add_argument('--enu', dest='const_vel_enu', type=float, nargs=3, metavar=('VE', 'VN', 'VU'), default=None,
-                      help='Simple constant local ENU translation of ground [ve, vn, vu] unit: meter/year (default: %(default)s).')
+    pmm = parser.add_mutually_exclusive_group(required=True)
+    pmm.add_argument('--om-cart', dest='omega_cart', type=float, nargs=3, metavar=('WX', 'WY', 'WZ'), default=None,
+                     help='Cartesian form of Euler Pole rotation; [wx, wy, wz] (unit: mas/yr) (default: %(default)s).')
+    pmm.add_argument('--om-sph', dest='omega_sph', type=float, nargs=3, metavar=('LAT', 'LON', 'W'), default=None,
+                     help='Spherical form of Euler Pole rotation; [lat, lon, w] (unit: deg, deg, deg/Ma) (default: %(default)s).')
+    pmm.add_argument('--enu', dest='const_vel_enu', type=float, nargs=3, metavar=('VE', 'VN', 'VU'), default=None,
+                     help='Simple constant local ENU translation of ground [ve, vn, vu] unit: meter/year (default: %(default)s).')
 
     parser.add_argument('--reso','--pmm-reso', dest='pmm_reso', type=float, default=10.,
                         help='Ground resolution for computing Plate rotation to ENU velocity (unit: km) (default: %(default)s).')
@@ -143,7 +139,7 @@ def cmd_line_parse(iargs=None):
 
 ########################################## Sub Functions #############################################
 
-def build_plate_motion_model(omega_sph=None, omega_cart=None):
+def build_plate_motion_model(omega_cart=None, omega_sph=None):
     """Build a plate motion model based on the given Euler roation vector
     Parameters: omega_sph  - list or np.array, Spherical representation [lat, lon, w] (deg, deg, deg/Ma)
                 omega_cart - list or np.array, Cartesian representation [wx, wy, wz] (mas/yr)
@@ -265,12 +261,12 @@ def get_geobox_width_length(geo_box):
 
 ####################################### Higher-level Sub Functions ##########################################
 
-def estimate_bulk_motion(geom_file, omega_sph=None, omega_cart=None, const_vel_enu=None,
+def estimate_bulk_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=None,
                          bpm_enu_file=None, bpm_los_file=None, pmm_reso=5.):
     """Estimate LOS motion due to pure bulk tranlation or due to plate rotation
     Parameters: geom_file     - str, path to the input geometry file
-                omega_sph     - list or 1D array, Spherical representation of plate rotation [lat, lon, w] (deg, deg, deg/Ma)
                 omega_cart    - list or 1D array, Cartesian representation of plate rotation [wx, wy, wz]  (mas/yr)
+                omega_sph     - list or 1D array, Spherical representation of plate rotation [lat, lon, w] (deg, deg, deg/Ma)
                 const_vel_enu - list or 1D array, a single-vector [ve, vn, vu] (meter/year)
                                 simulating the bulk translation of the ground (e.g., from GNSS)
                 bpm_enu_file  - str, path to the output BPM (bulk plate motion) east, north, up velocity field
@@ -369,8 +365,8 @@ def main(iargs=None):
     print('-----------------------------------\n')
     estimate_bulk_motion(
         geom_file=inps.geom_file,
-        omega_sph=inps.omega_sph,
         omega_cart=inps.omega_cart,
+        omega_sph=inps.omega_sph,
         const_vel_enu=inps.const_vel_enu,
         bpm_enu_file=inps.bpm_enu_file,
         bpm_los_file=inps.bpm_los_file,

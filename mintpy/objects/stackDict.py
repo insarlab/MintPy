@@ -190,9 +190,11 @@ class ifgramStackDict:
                     print(f'apply {xstep} x {ystep} multilooking/downsampling via {mli_method} ...')
 
                 prog_bar = ptime.progressBar(maxValue=numIfgram)
-                for i in range(numIfgram):
+                for i, pair in enumerate(self.pairs):
+                    prog_bar.update(i+1, suffix=f'{pair[0]}_{pair[1]}')
+
                     # read and/or resize
-                    ifgramObj = self.pairsDict[self.pairs[i]]
+                    ifgramObj = self.pairsDict[pair]
                     data = ifgramObj.read(dsName,
                                           box=box,
                                           xstep=xstep,
@@ -212,10 +214,9 @@ class ifgramStackDict:
 
                     # write
                     ds[i, :, :] = data
-                    prog_bar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],
-                                                               self.pairs[i][1]))
-                prog_bar.close()
+
                 ds.attrs['MODIFICATION_TIME'] = str(time.time())
+                prog_bar.close()
 
             ###############################
             # 2D dataset containing reference and secondary dates of all pairs
@@ -653,15 +654,19 @@ class geometryDict:
 
                     print('read coarse grid baseline files and linear interpolate into full resolution ...')
                     prog_bar = ptime.progressBar(maxValue=self.numDate)
-                    for i in range(self.numDate):
-                        fname = self.datasetDict[dsName][self.dateList[i]]
+                    for i, date_str in enumerate(self.dateList):
+                        prog_bar.update(i+1, suffix=date_str)
+
+                        # read and resize
+                        fname = self.datasetDict[dsName][date_str]
                         data = read_isce_bperp_file(fname=fname,
                                                     full_shape=self.get_size(),
                                                     box=box,
                                                     xstep=xstep,
                                                     ystep=ystep)
+                        # write
                         ds[i, :, :] = data
-                        prog_bar.update(i+1, suffix=self.dateList[i])
+
                     prog_bar.close()
 
                     # Write 1D dataset date accompnay the 3D bperp
