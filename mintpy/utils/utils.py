@@ -19,10 +19,11 @@ from mintpy.objects import (
     timeseries,
 )
 
-from mintpy.utils import ptime, readfile
+from mintpy.utils import ptime, readfile, attribute as attr
 from mintpy.utils.utils0 import *
 from mintpy.utils.utils1 import *
 from mintpy.objects.coord import coordinate
+from mintpy.objects.resample import resample
 
 
 #################################################################################
@@ -182,7 +183,6 @@ def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_
     return dates, dis, dis_std
 
 
-#################################################################################
 def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None, zero_first=True,
                        win_size=1, unit='m', method='mean', print_msg=True):
     """ Read time-series of one pixel with input y/x
@@ -400,3 +400,80 @@ def transect_lines(z, atr, lines):
 
 #################################################################################
 
+def prepare_geo_los_geometry(geom_file, unit='rad'):
+    """Prepare LOS geometry data/info in geo-coordinates.
+
+    Parameters: geom_file  - str, path of geometry file
+                unit       - str, rad or deg, output angle unit
+    Returns:    inc_angle  - 2D np.ndarray, incidence angle in radians / degrees
+                head_angle - 2D np.ndarray, heading   angle in radians / degrees
+                atr        - dict, metadata in geo-coordinate
+    """
+
+    print('prepare LOS geometry in geo-coordinates from file: {}'.format(geom_file))
+    atr = readfile.read_attribute(geom_file)
+
+    print('read incidenceAngle from file: {}'.format(geom_file))
+    inc_angle = readfile.read(geom_file, datasetName='incidenceAngle')[0]
+
+    if 'azimuthAngle' in readfile.get_dataset_list(geom_file):
+        print('read azimuthAngle   from file: {}'.format(geom_file))
+        print('convert azimuth angle to heading angle')
+        az_angle  = readfile.read(geom_file, datasetName='azimuthAngle')[0]
+        head_angle = azimuth2heading_angle(az_angle)
+    else:
+        print('use the HEADING attribute as the mean heading angle')
+        head_angle = np.ones(inc_angle.shape, dtype=np.float32) * float(atr['HEADING'])
+
+    # geocode inc/az angle data if in radar-coord
+    if 'Y_FIRST' not in atr.keys():
+        print('-'*50)
+        print('geocoding the incidence / heading angles ...')
+        res_obj = resample(lut_file=geom_file, src_file=geom_file)
+        res_obj.open()
+        res_obj.prepare()
+
+        # resample data
+        box = res_obj.src_box_list[0]
+        inc_angle  = res_obj.run_resample(src_data=inc_angle[box[1]:box[3], box[0]:box[2]])
+        head_angle = res_obj.run_resample(src_data=head_angle[box[1]:box[3], box[0]:box[2]])
+
+        # update attribute
+        atr = attr.update_attribute4radar2geo(atr, res_obj=res_obj)
+
+    # for 'Y_FIRST' not in 'degree'
+    # e.g. meters for UTM projection from ASF HyP3
+    if not atr['Y_UNIT'].lower().startswith('deg'):
+        # get SNWE in meter
+        length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+        N = float(atr['Y_FIRST'])
+        W = float(atr['X_FIRST'])
+        y_step = float(atr['Y_STEP'])
+        x_step = float(atr['X_STEP'])
+        S = N + y_step * length
+        E = W + x_step * width
+
+        # SNWE in meter --> degree
+        lat0, lon0 = to_latlon(atr['OG_FILE_PATH'], W, N)
+        lat1, lon1 = to_latlon(atr['OG_FILE_PATH'], E, S)
+        lat_step = (lat1 - lat0) / length
+        lon_step = (lon1 - lon0) / width
+
+        # update Y/X_FIRST/STEP/UNIT
+        atr['Y_FIRST'] = lat0
+        atr['X_FIRST'] = lon0
+        atr['Y_STEP'] = lat_step
+        atr['X_STEP'] = lon_step
+        atr['Y_UNIT'] = 'degrees'
+        atr['X_UNIT'] = 'degrees'
+
+    # set invalid values to nan
+    inc_angle[inc_angle == 0] = np.nan
+    head_angle[head_angle == 90] = np.nan
+
+    # unit: degree to radian
+    if unit.startswith('rad'):
+        inc_angle *= np.pi / 180.
+        head_angle *= np.pi / 180.
+
+    return inc_angle, head_angle, atr

@@ -60,7 +60,7 @@ Hierarchy of sub-modules within MintPy. Level _N_ modules depends on level _N-1_
 ------------------ level 5 --------------------
     /utils
         plot          (objects/{stack, coord, colors}, utils/{ptime, utils0, readfile, network, map})
-        utils         (objects/{stack, coord}, utils/{ptime, utils1, readfile})
+        utils         (objects/{stack, coord, resample}, utils/{ptime, attribute, utils1, readfile})
         isce_utils    (objects/{constants}, utils/{ptime, readfile, writefile, attribute, utils1})
 ------------------ level 6 --------------------
     /objects
