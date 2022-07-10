@@ -32,7 +32,6 @@ from mintpy.utils import (
     readfile,
     writefile,
     utils as ut,
-    attribute as attr,
 )
 
 

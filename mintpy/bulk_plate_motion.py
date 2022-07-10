@@ -24,7 +24,6 @@
 
 import os
 import sys
-import scipy
 import argparse
 import numpy as np
 from skimage.transform import resize
