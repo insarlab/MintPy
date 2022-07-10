@@ -366,17 +366,19 @@ def xyz_to_local_radius(xyz):
     return height, radius
 
 
-def get_lat_lon(meta, geom_file=None, box=None, dimension=2):
+def get_lat_lon(meta, geom_file=None, box=None, dimension=2, ystep=1, xstep=1):
     """Extract precise pixel-wise lat/lon.
 
     For meta dict in geo-coordinates OR geom_file with latitude/longitude dataset
 
     Returned lat/lon are corresponds to the pixel center
 
-    Parameters: meta : dict, including LENGTH, WIDTH and Y/X_FIRST/STEP
-                box  : 4-tuple of int for (x0, y0, x1, y1)
-    Returns:    lats : 2D np.array for latitude  in size of (length, width)
-                lons : 2D np.array for longitude in size of (length, width)
+    Parameters: meta      - dict, including LENGTH, WIDTH and Y/X_FIRST/STEP
+                box       - 4-tuple of int for (x0, y0, x1, y1)
+                dimension - int, output lat/lon matrix dimension, 1 or 2
+                y/xstep   - int, number of pixels to skip for each output pixel
+    Returns:    lats      - 1/2D np.array for latitude  in size of (length, _width_)
+                lons      - 1/2D np.array for longitude in size of (_length_, width)
     """
     length, width = int(meta['LENGTH']), int(meta['WIDTH'])
     if box is None:
@@ -425,6 +427,16 @@ def get_lat_lon(meta, geom_file=None, box=None, dimension=2):
 
     lats = np.array(lats, dtype=np.float32)
     lons = np.array(lons, dtype=np.float32)
+
+    # y/xstep
+    if ystep * xstep > 1:
+        if lats.ndim == 1:
+            lats = lats[::ystep]
+            lons = lons[::xstep]
+        elif lats.ndim == 2:
+            lats = lats[::ystep, ::xstep]
+            lons = lons[::ystep, ::xstep]
+
     return lats, lons
 
 
