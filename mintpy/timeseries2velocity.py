@@ -528,30 +528,33 @@ def run_timeseries2time_func(inps):
             #del ts_data
 
             ## Compute the covariance matrix for model parameters:
-            #       G * m = d
-            #     C_m_hat = G+ * C_d * G+.T
+            #       G * m = d                                       (1)
+            #       m_hat = G+ * d                                  (2)
+            #     C_m_hat = G+ * C_d * G+.T                         (3)
             #
-            # For ordinary least squares estimation:
-            #     G+ = (G.T * G)^-1 * G.T                       (option 2.1)
+            # [option 2.1] For weighted least squares estimation:
+            #          G+ = (G.T * C_d^-1 * G)^-1 * G.T * C_d^-1    (4)
+            # =>  C_m_hat = (G.T * C_d^-1 * G)^-1                   (5)
             #
-            # For weighted least squares estimation:
-            #          G+ = (G.T * C_d^-1 * G)^-1 * G.T * C_d^-1
-            # =>  C_m_hat = (G.T * C_d^-1 * G)^-1               (option 2.2)
+            # [option 2.2] For ordinary least squares estimation:
+            #          G+ = (G.T * G)^-1 * G.T                      (6)
+            #     C_m_hat = G+ * C_d * G+.T                         (7)
             #
-            # Assuming normality of the observation errors (in the time domain) with a variance of sigma^2
-            # we have C_d = sigma^2 * I, then the above equation is simplfied into:
-            #     C_m_hat = sigma^2 * (G.T * G)^-1              (option 2.3)
+            # [option 2.3] Assuming normality of the observation errors (in the time domain) with
+            # the variance of sigma^2, we have C_d = sigma^2 * I, then eq. (3) is simplfied into:
+            #     C_m_hat = sigma^2 * (G.T * G)^-1                  (8)
             #
-            # Based on the law of integrated expectation, we estimate the obs sigma^2 using
+            # Using the law of integrated expectation, we estimate the obs sigma^2 using
             # the OLS estimation residual as:
-            #           e_hat = d - d_hat
-            # =>  sigma_hat^2 = (e_hat.T * e_hat) / N
-            # =>      sigma^2 = sigma_hat^2 * N / (N - P)       (option 2.4)
-            #                 = (e_hat.T * e_hat) / (N - P)
-            # which is the equation (10) from Fattahi and Amelung (2015, JGR)
+            #           e_hat = d - d_hat                           (9)
+            # =>  sigma_hat^2 = (e_hat.T * e_hat) / N               (10)
+            # =>      sigma^2 = sigma_hat^2 * N / (N - P)           (11)
+            #                 = (e_hat.T * e_hat) / (N - P)         (12)
+            # 
+            # Eq. (10) in Fattahi & Amelung (2015, JGR) is a simplified form of eq. (12) for linear velocity.
 
             if inps.uncertaintyQuantification == 'covariance':
-                # option 2.1 - linear propagation from time-series (co)variance matrix
+                # option 2.2 - linear propagation from time-series (co)variance matrix
                 # TO DO: save the full covariance matrix of the time function parameters
                 # only the STD is saved right now
                 covar_flag = True if len(ts_cov.shape) == 3 else False
@@ -584,8 +587,8 @@ def run_timeseries2time_func(inps):
                 m_var = e2.reshape(1, -1) / (num_date - num_param)
                 m_std[:, mask] = np.sqrt(np.dot(np.diag(G_inv).reshape(-1, 1), m_var))
 
-                # option 2.4 - simplified form for linear velocity (without matrix linear algebra)
-                # The STD can also be calculated using Eq. (10) from Fattahi and Amelung (2015, JGR)
+                # simplified form for linear velocity (without matrix linear algebra)
+                # equation (10) in Fattahi & Amelung (2015, JGR)
                 # ts_diff = ts_data - np.dot(G, m)
                 # t_diff = G[:, 1] - np.mean(G[:, 1])
                 # vel_std = np.sqrt(np.sum(ts_diff ** 2, axis=0) / np.sum(t_diff ** 2)  / (num_date - 2))
