@@ -189,7 +189,7 @@ def pmm2enu_at(pmm_obj, lats, lons):
         vn = v.en[1]
         vu = 0
 
-    elif len(lats.shape) == 1:
+    elif lats.ndim in [1, 2]:
         # prepare locations as array in size of (3, num_pts)
         elev = np.zeros_like(lats)
         locs = np.vstack((
@@ -199,27 +199,12 @@ def pmm2enu_at(pmm_obj, lats, lons):
         ))
         # run PMM
         v = pmm_obj.velocity_at(locs, 'geodetic')
-        ve = v.en[:, 0]
-        vn = v.en[:, 1]
-        vu = np.zeros(ve.shape, dtype=np.float32)
-
-    elif len(lats.shape) > 1:
-        # prepare locations as array in size of (3, num_pts)
-        length, width = lats.shape
-        elev = np.zeros_like(lats)
-        locs = np.vstack((
-            lats.flatten(),
-            lons.flatten(),
-            elev.flatten(),
-        ))
-        # run PMM
-        v = pmm_obj.velocity_at(locs, 'geodetic')
-        ve = v.en[:, 0].reshape(length, width)
-        vn = v.en[:, 1].reshape(length, width)
-        vu = np.zeros(ve.shape, dtype=np.float32)
+        ve = v.en[:, 0].reshape(lats.shape)
+        vn = v.en[:, 1].reshape(lats.shape)
+        vu = np.zeros(lats.shape, dtype=np.float32)
 
     else:
-        raise ValueError('Weird lat lon grid input')
+        raise ValueError(f'Un-recognized lat/lon grid dimension: {lats.ndim}!')
 
     # convert from mm/year to meter/year
     #     and from astropy.units.quantity.Quantity to np.ndarray
@@ -249,8 +234,8 @@ def calc_bulk_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel
     """
 
     # Get LOS geometry
-    inc_angle, head_angle, atr_geo = ut.prepare_geo_los_geometry(geom_file, unit='deg')
-    shape_geo = inc_angle.shape
+    atr_geo = ut.prepare_geo_los_geometry(geom_file, unit='deg')[2]
+    shape_geo = [int(atr_geo['LENGTH']), int(atr_geo['WIDTH'])]
 
     ## Bulk motion model in the region
     print('-'*50)
@@ -270,7 +255,7 @@ def calc_bulk_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel
 
         # transform PMM to ENU velocity on a coarse grid
         # to-do: multi-pixel rotation is slow; change the `platemotion` code to Big Array operation rather than For Loops
-        print(f'compute PMM via platemotion.Plate: grid_size = ~{pmm_step} km, grid_shape = {lats.shape} ...')
+        print(f'compute PMM via platemotion.Plate: grid_size = {pmm_step} km, grid_shape = {lats.shape} ...')
         ve_low, vn_low, vu_low = pmm2enu_at(pmm_obj, lats, lons)
 
         # interpolate back to the initial grid
