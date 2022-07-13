@@ -463,11 +463,11 @@ class GPS:
         elif gps_comp in ['u2los', 'up2los']:
             unit_vec[0] = 0.
             unit_vec[1] = 0.
-        elif gps_comp in ['horz']:
+        elif gps_comp in ['horz','horizontal']:
             unit_vec[0] = np.sin(horz_az_angle) * -1
             unit_vec[1] = np.cos(horz_az_angle)
             unit_vec[2] = 0.
-        elif gps_comp in ['vertical']:
+        elif gps_comp in ['vert','vertical']:
             unit_vec[0] = 0.
             unit_vec[1] = 0.
             unit_vec[2] = 1.
