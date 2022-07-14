@@ -18,7 +18,18 @@ docker pull ghcr.io/insarlab/mintpy:latest
 
 Check [here](docker.md) for more details on Docker container image usage, e.g. pulling development version and running in shell or Jupyter server.
 
-#### c. [Post-Installation Setup](#3-post-installation-setup) ####
+#### c. via apt (Linux Debian) ####
+
+MintPy is available in the main archive of the [Debian](https://www.debian.org) GNU/Linux OS. It can be installed by using your favourite package manager or running the following command:
+
+```bash
+apt install mintpy
+```
+
+The same procedure, in priciple, can be used in [Ubuntu](https://ubuntu.com) and all [Debian derivatives](https://wiki.debian.org/Derivatives/Census).
+
+
+#### d. [Post-Installation Setup](#3-post-installation-setup) ####
 
 ## 2. Install the development version ##
 
