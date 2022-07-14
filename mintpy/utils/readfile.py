@@ -1458,6 +1458,8 @@ def read_gdal_vrt(fname):
         raise ImportError('Cannot import gdal and osr!')
 
     # read dataset using gdal
+    # Using os.fspath to convert Path objects to str, recommended by
+    # https://github.com/OSGeo/gdal/issues/1613#issuecomment-824703596
     ds = gdal.Open(os.fspath(fname), gdal.GA_ReadOnly)
 
     atr = {}
@@ -1808,6 +1810,8 @@ def read_gdal(fname, box=None, band=1, cpx_band='phase', xstep=1, ystep=1):
         raise ImportError('Cannot import gdal!')
 
     # open data file
+    # Using os.fspath to convert Path objects to str, recommended by
+    # https://github.com/OSGeo/gdal/issues/1613#issuecomment-824703596
     ds = gdal.Open(os.fspath(fname), gdal.GA_ReadOnly)
     bnd = ds.GetRasterBand(band)
 
