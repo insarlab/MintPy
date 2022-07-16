@@ -292,8 +292,8 @@ def cum_seq_unw_closure_phase(conn, conn_dir, date_list, meta):
     '''
 
     # output file
-    cum_cp_file = os.path.join(conn_dir, f'cumSeqClosurePhase.h5')
-    mask_file   = os.path.join(conn_dir, f'maskConnComp.h5')
+    cum_cp_file = os.path.join(conn_dir, 'cumSeqClosurePhase.h5')
+    mask_file = os.path.join(conn_dir, 'maskConnComp.h5')
 
     if os.path.isfile(cum_cp_file) and os.path.isfile(mask_file):
         msg = 'Cumulative seq closure phase time series file (& its mask file) exist as below, skip re-generating.'
@@ -656,7 +656,7 @@ def estimate_bias_timeseries_approx(bias_free_conn, bw, tbase, date_ordinal, wvl
     return bias_ts
 
 
-def quick_bias_correction(stack_file, bias_free_conn, bw, outdir, max_memory=4.0):
+def quick_bias_estimation(stack_file, bias_free_conn, bw, outdir, max_memory=4.0):
     '''Quick & approximate estimation of the bias time series and Wr.
 
     Reference: Eq. (20) in Zheng et al. (2022, TGRS).
@@ -677,7 +677,6 @@ def quick_bias_correction(stack_file, bias_free_conn, bw, outdir, max_memory=4.0
     wvl = float(meta['WAVELENGTH'])
 
     # time info
-    date12_list = stack_obj.get_date12_list(dropIfgram=True)
     date_list = stack_obj.get_date_list(dropIfgram=True)
     num_date = len(date_list)
 
