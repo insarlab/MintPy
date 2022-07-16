@@ -2,7 +2,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Yujie Zheng, Feb 2022                            #
+# Author: Yujie Zheng, Zhang Yunjun, Feb 2022              #
 ############################################################
 
 
@@ -86,17 +86,17 @@ def cmd_line_parse(iargs=None):
 
 
 #############################  Closure Phase  ##################################
-def seq_closure_phase(stack_obj, box, conn_level):
+def seq_closure_phase(stack_obj, box, conn):
     """Computes wrapped sequential closure phases for a given conneciton level.
 
-    For conn_level=5, closure_phase = p12 + p23 + p34 + p45 + p56 - p16.
+    For conn = 5, seq_closure_phase = p12 + p23 + p34 + p45 + p56 - p16.
 
-    Parameters: stack_obj  - ifgramStack object
-                box        - tuple of 4 int, bounding box in (x0, y0, x1, y1)
-                conn_level - int, connection level of the closure phase
-                normalize  - bool, normalize the output complex magnitude by num_cp
-    Returns:    cp_w       - 3D np.ndarray in float32 in size of (num_cp, box_len, box_wid)
-                             wrapped sequential closure phases for the given connection level.
+    Parameters: stack_obj - ifgramStack object
+                box       - tuple of 4 int, bounding box in (x0, y0, x1, y1)
+                conn      - int, connection level of the closure phase
+                normalize - bool, normalize the output complex magnitude by num_cp
+    Returns:    cp_w      - 3D np.ndarray in float32 in size of (num_cp, box_len, box_wid)
+                            wrapped sequential closure phases for the given connection level.
     """
     # basic info
     num_date = len(stack_obj.get_date_list(dropIfgram=True))
@@ -104,12 +104,12 @@ def seq_closure_phase(stack_obj, box, conn_level):
     box_len = box[3] - box[1]
 
     ## get the closure index
-    cp_idx = stack_obj.get_closure_phase_index(conn_level=conn_level, dropIfgram=True)
+    cp_idx = stack_obj.get_closure_phase_index(conn=conn, dropIfgram=True)
     num_cp = cp_idx.shape[0]
-    print(f'Number of closure measurements expected: {num_date - conn_level}')
+    print(f'Number of closure measurements expected: {num_date - conn}')
     print(f'Number of closure measurements found   : {num_cp}')
-    if num_cp < num_date - conn_level:
-        msg = f'num_cp ({num_cp}) < num_date-conn_level ({num_date-conn_level})'
+    if num_cp < num_date - conn:
+        msg = f'num_cp ({num_cp}) < num_date - conn ({num_date - conn})'
         msg += ' --> some interferograms are missing!'
         raise Exception(msg)
 
@@ -135,14 +135,14 @@ def seq_closure_phase(stack_obj, box, conn_level):
     return cp_w
 
 
-def sum_seq_closure_phase(stack_obj, box, conn_level, normalize=False):
+def sum_seq_closure_phase(stack_obj, box, conn, normalize=False):
     """Computes the sum of complex sequential closure phase for a given connection level.
 
-    For conn_level=5, closure_phase = p12 + p23 + p34 + p45 + p56 - p16.
+    For conn = 5, seq_closure_phase = p12 + p23 + p34 + p45 + p56 - p16.
 
     Parameters: stack_obj  - ifgramStack object
                 box        - tuple of 4 int, bounding box in (x0, y0, x1, y1)
-                conn_level - int, connection level of the closure phase
+                conn       - int, connection level of the closure phase
                 normalize  - bool, normalize the output complex magnitude by num_cp
     Returns:    cum_cp     - 2D np.ndarray in complex64 in (box_len, box_wid)
                              sum of sequential closure phase for the given connection level
@@ -155,12 +155,12 @@ def sum_seq_closure_phase(stack_obj, box, conn_level, normalize=False):
     box_len = box[3] - box[1]
 
     ## get the closure index
-    cp_idx = stack_obj.get_closure_phase_index(conn_level=conn_level, dropIfgram=True)
+    cp_idx = stack_obj.get_closure_phase_index(conn=conn, dropIfgram=True)
     num_cp = cp_idx.shape[0]
-    print(f'Number of closure measurements expected: {num_date - conn_level}')
+    print(f'Number of closure measurements expected: {num_date - conn}')
     print(f'Number of closure measurements found   : {num_cp}')
     if num_cp < 1:
-        raise Exception(f"No triplets found at connection level: {conn_level}!")
+        raise Exception(f"No triplets found at connection level: {conn}!")
 
     ## read data
     phase = readfile.read(stack_obj.file, box=box, print_msg=False)[0]
@@ -190,11 +190,12 @@ def sum_seq_closure_phase(stack_obj, box, conn_level, normalize=False):
 
 
 #################################  Mask  #######################################
-def calc_closure_phase_mask(stack_file, nl, num_sigma=3, threshold_amp=0.3, outdir='./', max_memory=4.0):
+def calc_closure_phase_mask(stack_file, bias_free_conn, num_sigma=3, threshold_amp=0.3,
+                            outdir='./', max_memory=4.0):
     """Calculate a mask for areas most suseptible to biases.
 
     Parameters: stack_file        - str, path for ifgramStack.h5 file
-                nl                - int, connection level at which we assume is bias-free
+                bias_free_conn    - int, connection level at which we assume is bias-free
                 num_sigma         - float, number of sigmas for computing phase threshold
                 threshold_amp     - float, threshold of ampliutde of the cumulative sequential closure phase
                 outdir            - str, directory of output files
@@ -216,7 +217,7 @@ def calc_closure_phase_mask(stack_file, nl, num_sigma=3, threshold_amp=0.3, outd
 
     # calculate the average complex closure phase
     # process block-by-block to save memory
-    box_list, num_box = ifginv.split2boxes(stack_file, max_memory)
+    box_list, num_box = ifginv.split2boxes(stack_file, max_memory=max_memory*1.3)
     avg_closure_phase = np.zeros([length,width], dtype=np.complex64)
     for i, box in enumerate(box_list):
         if num_box > 1:
@@ -229,7 +230,7 @@ def calc_closure_phase_mask(stack_file, nl, num_sigma=3, threshold_amp=0.3, outd
          num_cp) = sum_seq_closure_phase(
             stack_obj=stack_obj,
             box=box,
-            conn_level=nl,
+            conn=bias_free_conn,
             normalize=True)
 
     # create mask
@@ -273,26 +274,26 @@ def calc_closure_phase_mask(stack_file, nl, num_sigma=3, threshold_amp=0.3, outd
 
 
 ################################################################################
-def cum_seq_unw_closure_phase(conn_level, conn_dir, date_list, meta):
-    '''Outpu cumulative con-n sequential closure phase in time-series format.
+def cum_seq_unw_closure_phase(conn, conn_dir, date_list, meta):
+    '''Outpu cumulative conn-n sequential closure phase in time-series format.
 
-    Reference: Eq. 25 in Zheng et al., 2022, but divided by conn_level.
+    Reference: Eq. 25 in Zheng et al., 2022, but divided by conn.
 
-    Parameters: conn_level  - int, connection level of closure phases
+    Parameters: conn        - int, connection level of closure phases
                 conn_dir    - str, path of sequential closure phases file for connection - n
                 date_list   - list of str, SLC dates
                 meta        - dict, metadata of ifgramStack.h5
     Returns:    bias_ts     - 3D np.ndarray in size of (num_ifgram, length, width) in float32,
                               cumulative sequential closure phase time series,
-                              saved to file: conn{conn_level}_cumSeqClosurePhase.h5
+                              saved to file: cumSeqClosurePhase.h5
                 common_mask - 2D np.ndarray in size of (length, width) in bool,
                               mask based on common connected components,
-                              saved to file: conn{conn_level}_maskConnComp.h5
+                              saved to file: maskConnComp.h5
     '''
 
     # output file
-    cum_cp_file = os.path.join(conn_dir, f'conn{conn_level}_cumSeqClosurePhase.h5')
-    mask_file = os.path.join(conn_dir, f'conn{conn_level}_maskConnComp.h5')
+    cum_cp_file = os.path.join(conn_dir, f'cumSeqClosurePhase.h5')
+    mask_file   = os.path.join(conn_dir, f'maskConnComp.h5')
 
     if os.path.isfile(cum_cp_file) and os.path.isfile(mask_file):
         msg = 'Cumulative seq closure phase time series file (& its mask file) exist as below, skip re-generating.'
@@ -328,10 +329,10 @@ def cum_seq_unw_closure_phase(conn_level, conn_dir, date_list, meta):
     # compute sequential closure phase
     num_date = len(date_list)
     bias_ts = np.zeros((num_date, length, width), dtype=np.float32)
-    bias_ts[1:num_date-conn_level+1, :, :] = np.cumsum(cp_phase, 0)
-    for i in range(num_date-conn_level+1, num_date):
-        bias_ts[i] = (i - num_date + conn_level) * cp_phase[-1] + bias_ts[num_date - conn_level]
-    bias_ts /= conn_level
+    bias_ts[1:num_date-conn+1, :, :] = np.cumsum(cp_phase, 0)
+    for i in range(num_date-conn+1, num_date):
+        bias_ts[i] = (i - num_date + conn) * cp_phase[-1] + bias_ts[num_date - conn]
+    bias_ts /= conn
 
     # write bias time series to HDF5 file
     ds_dict = {
@@ -349,16 +350,16 @@ def cum_seq_unw_closure_phase(conn_level, conn_dir, date_list, meta):
     return bias_ts, common_mask
 
 
-def compute_unwrap_closure_phase(stack_file, conn_level, max_memory, outdir):
+def compute_unwrap_closure_phase(stack_file, conn, outdir, max_memory=4.0):
     '''Output the following phase time-sseries of connection-conn:
 
     + wrapped
     + unwrapped sequential closure phases
     + cumulative closure phase
-    Output directory: outdir/closurePhase/conn{conn_level}_cp
+    Output directory: outdir/closurePhase/conn{conn}
 
     Parameters: stack_file  - str, path for ifgramStack.h5
-                conn_level  - int, connection level
+                conn        - int, connection level
                 max_mermory - float, maximum memory in GB for each patch processed
                 outdir      - str, path for output files
     Returns:    various wrapped, unwrapped and cumulative closure phase time-series
@@ -376,7 +377,7 @@ def compute_unwrap_closure_phase(stack_file, conn_level, max_memory, outdir):
     print(f'number of acquisitions found: {num_date}')
     print(f'start / end date: {date_list[0]} / {date_list[-1]}')
     # number of expected closure phase
-    num_cp = num_date - conn_level
+    num_cp = num_date - conn
 
     # process block-by-block
     # split igram_file into blocks to save memory
@@ -389,24 +390,23 @@ def compute_unwrap_closure_phase(stack_file, conn_level, max_memory, outdir):
             print('box length: {}'.format(box[3] - box[1]))
             print('box width : {}'.format(box[2] - box[0]))
 
-        closure_phase[:, box[1]:box[3], box[0]:box[2]] = seq_closure_phase(
-            stack_obj,
-            box=box,
-            conn_level=conn_level)
+        closure_phase[:,
+                      box[1]:box[3],
+                      box[0]:box[2]] = seq_closure_phase(stack_obj, box=box, conn=conn)
 
 
     ## filter the closure phase and re-unwrap
 
     # output directory
-    conn_dir = os.path.join(outdir, f'closurePhase/conn{conn_level}_cp')
+    conn_dir = os.path.join(outdir, f'closurePhase/conn{conn}')
     os.makedirs(conn_dir, exist_ok=True)
 
     kernel = isce_utils.gaussian_kernel(5, 5, 1, 1)
     for i in range(num_cp):
-        # some day we will need to make this 4 digits.
-        int_file = os.path.join(conn_dir, f'conn{conn_level}_filt_{i:03}.int')
-        cor_file = os.path.join(conn_dir, f'conn{conn_level}_filt_{i:03}.cor')
-        unw_file = os.path.join(conn_dir, f'conn{conn_level}_filt_{i:03}.unw')
+        # some day we will need to make this 5 digits.
+        int_file = os.path.join(conn_dir, f'filt_{i:04}.int')
+        cor_file = os.path.join(conn_dir, f'filt_{i:04}.cor')
+        unw_file = os.path.join(conn_dir, f'filt_{i:04}.unw')
 
         if not os.path.isfile(int_file):
             # filter the closure phase interferogram
@@ -433,307 +433,344 @@ def compute_unwrap_closure_phase(stack_file, conn_level, max_memory, outdir):
 
 
     ## output accumulated unwrapped closure phase time-series
-    cum_seq_unw_closure_phase(conn_level, conn_dir, date_list, meta)
+    cum_seq_unw_closure_phase(conn, conn_dir, date_list, meta)
 
     return
 
 
 ################################################################################
-def seq2cum_closure_phase(conn, outdir, box):
+def read_cum_seq_closure_phase4conn(conn, outdir, box):
     '''Read cumulative sequential closure phase from individual closure phase directory.
 
     Reference: Eq. (25) in Zheng et al. (2022).
 
     Parameters: conn    - integer, connection level of sequential closure phases
-                outdir  - string, directory of conn_seqcumclosurephase.h5
+                outdir  - string, directory of conn{n}_cumSeqClosurePhase.h5
                 box     - list in size of (4,) in integer, coordinates of bounding box
-    Returns:    biasts  - 3D array in size of (num_date, box_lengh, box_width) in float,
+    Returns:    biasts  - 3D array in size of (num_date, box_lengh, box_wid) in float,
                           cumulative sequential closure phases
     '''
-    dname = f'conn{conn}_cp'
-    fname = f'conn{conn}_seqcumclosurephase.h5'
-    seq_cp_file = os.path.join(outdir, 'closurePhase', dname, fname)
+    seq_cp_file = os.path.join(outdir, f'closurePhase/conn{conn}/cumSeqClosurePhase.h5')
     bias_ts = readfile.read(seq_cp_file, box=box, print_msg=False)[0]
     return bias_ts
 
 
-def estimate_ratioX(tbase, n, nl, wvl, box, outdir, mask=False):
-    ''' This script estimates w(n\delta_t)/w(delta_t), Eq.(29) in Zheng et al., 2022
+def estimate_wratio(tbase, conn, bias_free_conn, wvl, box, outdir='./', mask=False):
+    '''Estimate w(n\delta_t)/w(delta_t) - Eq.(29) in Zheng et al., 2022.
 
-    Parameters: tbase           - list in size of (num_date,) in float, time in accumulated years
-                n               - integer, connection-level
-                nl              - integer, minimum connection-level that we think is bias-free
-                wvl             - float, wavelength
-                box             - list in size of (4,) in integer, coordinates of bounding box
-                outdir          - string, the working directory
-                mask            - bool, whether to mask out areas with average bias velocity less than 1 mm/year
-    Returns:    wratio          - 2D array of size (box_length, box_width) in float, w(n\delta_t)/w(delta_t), Eq.(29) in Zheng et al., 2022
-                wratio_velocity - 2D array of size (box_length, box_width) in float, bias-velocity at n*delta_t temporal baseline
+    Parameters: tbase          - list in size of (num_date,) in float, time in accumulated years
+                conn           - integer, connection-level
+                bias_free_conn - integer, minimum connection-level that we think is bias-free
+                wvl            - float, wavelength
+                box            - list in size of (4,) in integer, coordinates of bounding box
+                outdir         - str, the working directory
+                mask           - bool, whether to mask out areas with average bias velocity less than 1 mm/year
+    Returns:    wratio         - 2D array of size (box_len, box_wid) in float, w(n\delta_t)/w(delta_t)
+                wratio_vel     - 2D array of size (box_len, box_wid) in float,
+                                 bias-velocity at n*delta_t temporal baseline
     '''
-    box_width  = box[2] - box[0]
-    box_length = box[3] - box[1]
-    cum_bias_conn_1 = seq2cum_closure_phase(nl, outdir, box)[-1,:,:]
-    coef = -4*np.pi/wvl
-    delta_T = tbase[-1]-tbase[0]
-    vel_bias_conn1 = cum_bias_conn_1/coef/delta_T
+    delta_t = tbase[-1] - tbase[0]
+    phase2range = -1 * wvl / (4 * np.pi)
 
-    if n==1:
-        wratio = np.ones([box_length, box_width])
-        wratio_velocity = np.multiply(wratio,vel_bias_conn1)
-        if mask:
-            # if average velocity smaller than 1 mm/year (hardcoded here), mask out for better visual
-            # this option is only turned on while outputint Wratio.h5 file.
-            wratio[abs(vel_bias_conn1)<0.1]=np.nan
+    cum_bias_conn1 = read_cum_seq_closure_phase4conn(bias_free_conn, outdir, box)[-1,:,:]
+    vel_bias_conn1 = cum_bias_conn1 / delta_t * phase2range
+
+    # calc wratio
+    if conn > 1:
+        cum_bias_connN = read_cum_seq_closure_phase4conn(conn, outdir, box)[-1,:,:]
+        wratio = np.divide(cum_bias_connN, cum_bias_conn1)
+        wratio = 1 - wratio
+        # bound within [0, 1]
+        wratio[wratio>1] = 1
+        wratio[wratio<0] = 0
+
     else:
-        cum_bias_conn_n =  seq2cum_closure_phase(n, outdir,box)[-1,:,:]
-        wratio = np.divide(cum_bias_conn_n,cum_bias_conn_1)
-        wratio = 1-wratio
-        wratio[wratio>1]=1
-        wratio[wratio<0]=0
-        wratio_velocity = np.multiply(wratio,vel_bias_conn1)
-        if mask:
-            # if average velocity smaller than 1 mm/year (hardcoded here), mask out for better visual
-            wratio[abs(vel_bias_conn1) < 0.1] = np.nan
+        # for conn == 1
+        box_wid = box[2] - box[0]
+        box_len = box[3] - box[1]
+        wratio = np.ones([box_len, box_wid], dtype=np.float32)
 
-    return wratio,wratio_velocity # wratio is a length by width 2D matrix
+    # wratio --> wratio_vel
+    wratio_vel = np.multiply(wratio, vel_bias_conn1)
+    if mask:
+        # if average velocity smaller than 1 mm/year (hardcoded here), mask out for better visual
+        # this option is only turned on while outputing Wratio.h5 file.
+        wratio[abs(vel_bias_conn1) < 0.1] = np.nan
+
+    return wratio, wratio_vel
 
 
-def estimate_ratioX_all(bw,nl,outdir,box):
+def estimate_wratio_all(bw, bias_free_conn, outdir, box):
     ''' Estimate w(n\delta_t)/w(delta_t) for n=1:bw
 
-    Parameters: nl     - integer, minimum connection-level that we think is bias-free
-                bw     - integer, bandwidth of given time-sereis analysis
-                box    - list in size of (4,) in integer, coordinates of bounding box
-                outdir - string, the working directory
-    Returns:    wratio - 3D array in size of (bw+1, length, width) in float, 
-                         the first slice (w[0,:,:]) is a padding 
-                         to ensure that wratio[n,:,:]=w(n\delta_t)/w(delta_t).
+    Parameters: bias_free_conn - integer, minimum connection-level that we think is bias-free
+                bw             - integer, bandwidth of given time-sereis analysis
+                box            - list in size of (4,) in integer, coordinates of bounding box
+                outdir         - string, the working directory
+    Returns:    wratio         - 3D array in size of (bw+1, length, width) in float32,
+                                 the first slice (w[0,:,:]) is a padding 
+                                 to ensure that wratio[n,:,:] = w(n\delta_t)/w(delta_t).
     '''
-    box_width  = box[2] - box[0]
-    box_length = box[3] - box[1]
-    cum_bias_conn_1 = seq2cum_closure_phase(nl, outdir, box)[-1,:,:]
-    wratio = np.zeros([bw+1,box_length, box_width], dtype = np.float32)
-    for n in np.arange(2,bw+1):
-        cum_bias_conn_n =  seq2cum_closure_phase(n, outdir, box)[-1,:,:]
-        wratio[n,:,:] = np.divide(cum_bias_conn_n,cum_bias_conn_1)
+    box_wid = box[2] - box[0]
+    box_len = box[3] - box[1]
+    cum_bias_conn1 = read_cum_seq_closure_phase4conn(
+        bias_free_conn,
+        outdir,
+        box)[-1,:,:]
 
-    wratio = 1-wratio
-    wratio[wratio>1]=1
-    wratio[wratio<0]=0
+    wratio = np.zeros([bw+1, box_len, box_wid], dtype=np.float32)
+    for n in np.arange(2, bw+1):
+        cum_bias_connN = read_cum_seq_closure_phase4conn(n, outdir, box)[-1,:,:]
+        wratio[n,:,:] = np.divide(cum_bias_connN, cum_bias_conn1)
+
+    wratio = 1 - wratio
+    wratio[wratio>1] = 1
+    wratio[wratio<0] = 0
     return wratio
 
 
-def get_design_matrix_W(M, A, bw, box, tbase, nl, outdir):
-    ''' computes the matrix W (Eq. 16 in Zheng et al., 2022) for a bounding box.
+def get_design_matrix_W(num_ifgram, A, bw, box, tbase, bias_free_conn, outdir):
+    '''Computes the matrix W for a given bounding box. (Eq. 16 in Zheng et al., 2022).
 
-    Parameters: M      - integer, number of interferograms
-                A      - 2D array in size of (M, num_date) in integer, design matrix specifying SAR acquisitions used
-                bw     - integer, bandwidth of time-series analysis
-                tbase  - list in size of (num_date,) in float, time in accumulated years
-                nl     - integer, minimum connection-level that we think is bias-free
-                box    - list in size of (4,) in integer, coordinates of bounding box
-                outdir - string, the working directory
-    Returns:    W      - 2D array in size of (numpix, M) in float, 
-                         each row stores the diagnal component of W (Eq. 16 in Zheng et al., 2022) for one pixel.
+    Parameters: num_ifgram     - integer, number of interferograms
+                A              - 2D array in size of (num_ifgram, num_date) in int, design matrix specifying SAR acquisitions used
+                bw             - integer, bandwidth of time-series analysis
+                tbase          - list in size of (num_date,) in float, time in accumulated years
+                bias_free_conn - integer, minimum connection-level that we think is bias-free
+                box            - list in size of (4,) in integer, coordinates of bounding box
+                outdir         - string, the working directory
+    Returns:    W              - 2D array in size of (num_pix, num_ifgram) in float, 
+                                 each row stores the diagnal component of W (Eq. 16 in Zheng et al., 2022) for one pixel.
     '''
-    box_width  = box[2] - box[0]
-    box_length = box[3] - box[1]
-    numpix = box_width * box_length
+    wratio_all = estimate_wratio_all(bw, bias_free_conn, outdir, box)
+
     # intial output value
-    W = np.zeros((numpix,M),dtype = np.float32)
-    wratioall = estimate_ratioX_all(bw, nl, outdir, box)
-    for i in range(M):
+    num_pix = (box[2] - box[0]) * (box[3] - box[1])
+    W = np.zeros((num_pix, num_ifgram),dtype = np.float32)
+    for i in range(num_ifgram):
         Aline = list(A[i,:])
         idx1 = Aline.index(-1)
         idx2 = Aline.index(1)
         conn = idx2 - idx1
         if conn > bw:
-            print('Interferograms with maximum connection level larger than input bandwidth exists in ifgramStack.h5, '
-                  'use modify_network.py to adjust the maximum connection level')
-        wratio = wratioall[conn,:,:]
-        wratio = wratio.reshape(-1)
+            print('Existing max-conn-level > the input bandwidth, '
+                  'use modify_network.py inputs/ifgramStack.h5 to adjust the max-conn-level.')
+        wratio = wratio_all[conn,:,:].reshape(-1)
         W[:,i] = wratio
 
     return W
 
 
-def average_temporal_span(date_ordinal,bw):
-    '''compute average temporal span (days) for interferogram subsets chosen for limited bandwidth analysis
+def get_avg_time_span_within_bandwidth(date_ordinal, bw):
+    '''Compute average temporal span (days) for all interferogram within the given bandwidth
 
-    Parameters:     date_ordinal        - list of size (num_date,) in integer, time in days
-                    bw                  - integer, bandwidth of time-series analysis
-    Return：        avgtime             - float, average time-span in days for interferograms subsets of bandwith bw.
+    Parameters: date_ordinal - list of size (num_date,) in integer, time in days
+                bw           - integer, bandwidth of time-series analysis
+    Return:     avg_time     - float, average time-span in days
     '''
-    avgtime = 0
-    numigram = 0
+    avg_time = 0
+    num_ifgram = 0
     for level in range(1, bw+1):
-        slcdate_firstn = date_ordinal[0:level]
-        slcdate_lastn = date_ordinal[-level:]
+        slc_date_firstN = date_ordinal[0:level]
+        slc_date_lastN  = date_ordinal[-level:]
         for i in range(level):
-            avgtime = avgtime + slcdate_lastn[i] - slcdate_firstn[i]
-        numigram = numigram + len(date_ordinal)-level
+            avg_time += slc_date_lastN[i] - slc_date_firstN[i]
+        num_ifgram += len(date_ordinal) - level
 
-    avgtime = avgtime/numigram
+    avg_time /= num_ifgram
 
-    return avgtime
+    return avg_time
 
 
-def average_connN_igrams(date_ordinal,conn):
-    ''' compute average temporal span (days) for connection-n interferograms
+def get_avg_time_span4conn(date_ordinal, conn):
+    '''Compute the average temporal span (days) for connection-n interferograms
 
-    Parameters:     date_ordinal        - list of size (num_date,) in integer, time in days
-                    conn                - integer, connection level of interferograms
-    Return：        avgtime             - float, average time-span in days for connnection conn interferograms .
+    Parameters: date_ordinal - list of size (num_date,) in integer, time in days
+                conn         - int, connection level of interferograms
+    Return:     avg_time     - float, average time-span in days
     '''
-    slcdate_firstn = date_ordinal[0:conn]
-    slcdate_lastn = date_ordinal[-conn:]
-    avgtime = 0
+    slc_date_firstN = date_ordinal[0:conn]
+    slc_date_lastN = date_ordinal[-conn:]
+    avg_time = 0
     for i in range(conn):
-        avgtime = avgtime + slcdate_lastn[i] - slcdate_firstn[i]
+        avg_time += slc_date_lastN[i] - slc_date_firstN[i]
 
-    numigram = len(date_ordinal)-conn
-    avgtime = avgtime/numigram
+    num_ifgram = len(date_ordinal) - conn
+    avg_time /= num_ifgram
 
-    return avgtime
+    return avg_time
 
 
-def estimate_tsbias_approx(nl, bw, tbase, date_ordinal, wvl, box, outdir):
-    ''' This script gives a quick approximate estimate of bias of a time-series of a certain bandwidth (bw) for a bounding box
-        This estimate is not exact, but often close enough.
-        It is good for a quick estimate to see how big the biases are.
+def estimate_bias_timeseries_approx(bias_free_conn, bw, tbase, date_ordinal, wvl, box, outdir):
+    '''Quick and approximate estimate of the bias time-series of a certain bandwidth (bw) for a bounding box
 
-    Parameters: nl              - integer, connection level that we assume bias-free
-                bw              - integer, bandwidth of the given time-series analysis
-                tbase           - list in size of (num_date,) in float, time in accumulated years
-                date_ordinal    - list of size (num_date,) in integer, time in days
-                wvl             - float, wavelength of the SAR system
-                box             - list in size of (4,) in integer, coordinates of bounding box
-                outdir          - string, directory for outputing files
-    Returns:    biasts          - 3D array in size of (num_date, box_length, box_width) in float, bias timeseries
+    Note: This estimate is not exact, but often close enough.
+      It is good for a quick estimate to see how big the biases are.
+
+    Parameters: bias_free_conn - integer, connection level that we assume bias-free
+                bw             - integer, bandwidth of the given time-series analysis
+                tbase          - list in size of (num_date,) in float, time in accumulated years
+                date_ordinal   - list of size (num_date,) in integer, time in days
+                wvl            - float, wavelength of the SAR system
+                box            - list in size of (4,) in integer, coordinates of bounding box
+                outdir         - string, directory for outputing files
+    Returns:    bias_ts        - 3D array in size of (num_date, box_len, box_wid) in float, bias timeseries
     '''
+    # basic info
+    phase2range = -1 * wvl / (4 * np.pi)
+    num_date = len(tbase)
+
     # average temporal span for ifgrams of connection-1 to connection-bw
-    deltat_n = [average_connN_igrams(date_ordinal,n) for n in range(1,bw+1)]
-    avgtimespan = average_temporal_span(date_ordinal,bw)
+    deltat_n = np.asarray([get_avg_time_span4conn(date_ordinal, n) for n in range(1, bw+1)])
+    avg_time_span = get_avg_time_span_within_bandwidth(date_ordinal, bw)
+
     # the bias in a bandwidth-bw analysis is similar to bias in connectoin-p interferograms
-    p = (np.abs(np.asarray(deltat_n) - avgtimespan)).argmin()+1
-    print('p = ',p)
-    coef = -4*np.pi/wvl
-    m1 = 2
-    m2 = nl
-    wratio_p = estimate_ratioX(tbase, p, nl, wvl, box, outdir)[0]
-    wratio_m1 = estimate_ratioX(tbase, m1, nl, wvl, box, outdir)[0]
+    p = (np.abs(deltat_n - avg_time_span)).argmin() + 1
+    print(f'average connection level within this bandwidth of {bw}: {p}')
+
+    # get wratio
+    kwargs = dict(
+        bias_free_conn=bias_free_conn,
+        wvl=wvl,
+        box=box,
+        outdir=outdir,
+    )
+    wratio_p = estimate_wratio(tbase, conn=p, **kwargs)[0]
+    wratio_2 = estimate_wratio(tbase, conn=2, **kwargs)[0]
     wratio_p[np.isnan(wratio_p)] = 0
-    wratio_m1[np.isnan(wratio_m1)] = 0
-    wratio_m1[abs(wratio_m1-1)<0.1] = np.nan
-    ratio1 = np.divide(wratio_p,(1-wratio_m1))
-    biasts1 = seq2cum_closure_phase(m1, outdir, box)
-    biasts2 = seq2cum_closure_phase(m2, outdir, box)
-    for i in range(biasts1.shape[0]):
-        biasts1[i,:,:] = np.multiply(biasts1[i,:,:]/coef,ratio1)
-        biasts2[i,:,:] = np.multiply(biasts2[i,:,:]/coef,wratio_p)
-    biasts = biasts1
-    biasts[np.isnan(biasts)]=biasts2[np.isnan(biasts1)]
-    return biasts
+    wratio_2[np.isnan(wratio_2)] = 0
+
+    wratio_2[abs(wratio_2 - 1) < 0.1] = np.nan
+    ratio_p2 = np.divide(wratio_p, (1 - wratio_2))
+
+    # get bias_ts
+    bias_ts = read_cum_seq_closure_phase4conn(2, outdir, box) * phase2range
+    bias_ts_bf = read_cum_seq_closure_phase4conn(bias_free_conn, outdir, box) * phase2range
+    for i in range(num_date):
+        bias_ts[i,:,:] *= ratio_p2
+        bias_ts_bf[i,:,:] *= wratio_p
+
+    flag = np.isnan(bias_ts)
+    bias_ts[flag] = bias_ts_bf[flag]
+
+    return bias_ts
 
 
-def quick_bias_correction(stack_file, nl, bw, max_memory, outdir):
-    '''Output Wr (eq.20 in Zheng et al., 2022) and a quick approximate solution to bias time-series
+def quick_bias_correction(stack_file, bias_free_conn, bw, outdir, max_memory=4.0):
+    '''Quick & approximate estimation of the bias time series and Wr.
 
-    Parameters: stack_file                - string, path for ifgramStack.h5
-                nl                          - integer, connection level at which we assume is bias-free
-                bw                          - integer, bandwidth of the given time-series.
-                wvl                         - float, wavelength of the SAR System
-                max_mermory                 - float, maximum memory in GB for each patch processed
-                outdir                      - string, directory for output files
-    Returns:    Wratio.h5                   - output hdf5 file storing two 3D array of size (bw, length, width) of float, wratios and bias_velocity
-                bias_timeseries_approx.h5   - output hdf5 file storing a 3D array of size (num_date, length, width) of float, approximate bias time-series.
+    Reference: Eq. (20) in Zheng et al. (2022, TGRS).
+
+    Parameters: stack_file     - string, path for ifgramStack.h5
+                bias_free_conn - integer, connection level at which we assume is bias-free
+                bw             - integer, bandwidth of the given time-series.
+                wvl            - float, wavelength of the SAR System
+                outdir         - str, directory for output files
+                max_mermory    - float, maximum memory in GB for each patch processed
+    Returns:    bias_ts_file   - str, path to the HDF5 file for the approximate bias time series in (num_date, length, width)
+                wratio_file    - str, path to the HDF5 file for the wratio and bias velocity in (bw, length, width)
     '''
     stack_obj = ifgramStack(stack_file)
     stack_obj.open()
     length, width = stack_obj.length, stack_obj.width
-    date12_list = stack_obj.get_date12_list(dropIfgram=True)
-
-    date1s = [i.split('_')[0] for i in date12_list]
-    date2s = [i.split('_')[1] for i in date12_list]
-    date_list = sorted(list(set(date1s + date2s)))
-    # tbase in the unit of years
-    date_format = ptime.get_date_str_format(date_list[0])
-    dates = np.array([dt.strptime(i, date_format) for i in date_list])
-    tbase = [i.days + i.seconds / (24 * 60 * 60) for i in (dates - dates[0])]
-    tbase = np.array(tbase, dtype=np.float32) / 365.25
-    date_ordinal = []
-    for date_str in date_list:
-        format_str = '%Y%m%d'
-        datetime_obj = dt.strptime(date_str, format_str)
-        date_ordinal.append(datetime_obj.toordinal())
-
     meta = dict(stack_obj.metadata)
-    wvl = float(meta['WAVELENGTH']) *100
-    date_list = np.array(date_list, np.string_)
-    connlist = list(np.arange(1,bw+1))
-    connlist.append(nl)
-    Wr_filedir = os.path.join(outdir, 'Wratio.h5')
-    meta['FILE_TYPE'] = None
-    ds_name_dict = {
-        'wratio'        : [np.float32,     (len(connlist)-1, length, width), None],
-        'bias_velocity' : [np.float32,     (len(connlist)-1, length, width), None],
-        'date'          : [np.dtype('S8'), np.shape(date_list),              date_list],}
-    writefile.layout_hdf5(Wr_filedir, ds_name_dict, meta)
+    wvl = float(meta['WAVELENGTH'])
+
+    # time info
+    date12_list = stack_obj.get_date12_list(dropIfgram=True)
+    date_list = stack_obj.get_date_list(dropIfgram=True)
+    num_date = len(date_list)
+
+    tbase = ptime.date_list2tbase(date_list)[0] / 365.25   # tbase in years
+    date_str_fmt = ptime.get_date_str_format(date_list[0])
+    date_ordinal = [dt.strptime(x, date_str_fmt).toordinal() for x in date_list]
 
     # split igram_file into blocks to save memory
     box_list, num_box = ifginv.split2boxes(stack_file, max_memory)
 
-    #process block-by-block
-    for i, box in enumerate(box_list):
-            box_width  = box[2] - box[0]
-            box_length = box[3] - box[1]
-            print(box)
-            if num_box > 1:
-                print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
-                print('box width:  {}'.format(box_width))
-                print('box length: {}'.format(box_length))
 
-            w_ratios = np.zeros([len(connlist)-1,box_length,box_width])
-            w_ratios_velocity = np.zeros([len(connlist)-1,box_length, box_width])
-            for idx in range(len(connlist)-1):
-                conn = connlist[idx]
-                w,wv = estimate_ratioX(tbase, conn, nl, wvl, box, outdir,mask=True)
-                w_ratios[idx,:,:] = w
-                w_ratios_velocity[idx,:,:] = wv
-
-            # write the block to disk
-            block = [0, len(connlist)-1,box[1], box[3], box[0], box[2]]
-
-            writefile.write_hdf5_block(Wr_filedir,
-                                       data=w_ratios,
-                                       datasetName='wratio',
-                                       block=block)
-
-            writefile.write_hdf5_block(Wr_filedir,
-                                       data=w_ratios_velocity,
-                                       datasetName='bias_velocity',
-                                       block=block)
-
-    # a quick/approximate estimate for bias time-series
-    biasfile = os.path.join(outdir, 'bias_timeseries_approx.h5')
-    meta = dict(stack_obj.metadata)
+    # initiate output files
+    # 1 - wratio file
+    wratio_file = os.path.join(outdir, 'Wratio.h5')
+    meta['FILE_TYPE'] = 'wratio'
+    meta['DATA_TYPE'] = 'float32'
+    meta['UNIT'] = '1'
     ds_name_dict = {
-        'timeseries' : [np.float32,     (len(date_list), length, width), None],
-        'date'       : [np.dtype('S8'), np.shape(date_list),             date_list],
+        'wratio'   : [np.float32,     (bw, length, width), None],
+        'velocity' : [np.float32,     (bw, length, width), None],
+        'date'     : [np.dtype('S8'), (num_date,),  np.array(date_list, np.string_)],
     }
-    writefile.layout_hdf5(biasfile, ds_name_dict, meta)
+    writefile.layout_hdf5(wratio_file, ds_name_dict, meta)
+
+    # 2 - time series file
+    bias_ts_file = os.path.join(outdir, 'timeseriesBiasApprox.h5')
+    meta['FILE_TYPE'] = 'timeseries'
+    meta['UNIT'] = 'm'
+    ds_name_dict = {
+        'timeseries' : [np.float32,     (num_date, length, width), None],
+        'date'       : [np.dtype('S8'), (num_date,),  np.array(date_list, np.string_)],
+    }
+    writefile.layout_hdf5(bias_ts_file, ds_name_dict, meta)
+
+    # process block-by-block
     for i, box in enumerate(box_list):
-        tsbias = estimate_tsbias_approx(nl, bw, tbase, date_ordinal, wvl, box, outdir)
-        block = [0, len(date_list),box[1], box[3], box[0], box[2]]
-        writefile.write_hdf5_block(biasfile,
-                                   data=tsbias/100,
+        box_wid = box[2] - box[0]
+        box_len = box[3] - box[1]
+        print(box)
+        if num_box > 1:
+            print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
+            print('box width:  {}'.format(box_wid))
+            print('box length: {}'.format(box_len))
+
+        # 1 - estimate the wratio(_velocity)
+        wratio = np.zeros([bw, box_len, box_wid], dtype=np.float32)
+        wratio_vel = np.zeros([bw, box_len, box_wid], dtype=np.float32)
+        for j in range(bw):
+            wratio[j], wratio_vel[j] = estimate_wratio(
+                tbase,
+                conn=j+1,
+                bias_free_conn=bias_free_conn,
+                wvl=wvl,
+                box=box,
+                outdir=outdir,
+                mask=True)
+
+        # write the block to disk
+        block = [0, bw, box[1], box[3], box[0], box[2]]
+
+        writefile.write_hdf5_block(wratio_file,
+                                   data=wratio,
+                                   datasetName='wratio',
+                                   block=block)
+
+        writefile.write_hdf5_block(wratio_file,
+                                   data=wratio_vel,
+                                   datasetName='velocity',
+                                   block=block)
+
+        # 2 - estimate the bias time series
+        bias_ts = estimate_bias_timeseries_approx(
+            bias_free_conn=bias_free_conn,
+            bw=bw,
+            tbase=tbase,
+            date_ordinal=date_ordinal,
+            wvl=wvl,
+            box=box,
+            outdir=outdir)
+
+        # write the block to disk
+        block = [0, len(date_list), box[1], box[3], box[0], box[2]]
+        writefile.write_hdf5_block(bias_ts_file,
+                                   data=bias_ts,
                                    datasetName='timeseries',
                                    block=block)
 
-    return
+    return bias_ts_file, wratio_file
 
 
-def estimate_bias(stack_file, nl, bw, wvl, box, outdir):
+
+################################################################################
+def estimate_bias_timeseries(stack_file, nl, bw, wvl, box, outdir):
     '''Output bias time-series of a certain bandwidth (bw) for a bounding box using the algorithm provided in Zheng et al., 2022
 
     Parameters: stack_file - string, path for ifgramStack.h5
@@ -742,13 +779,13 @@ def estimate_bias(stack_file, nl, bw, wvl, box, outdir):
                 wvl          - float, wavelength of the SAR System
                 box          - list in size of (4,) in integer, coordinates of bounding box
                 outdir       - string, directory for output files
-    Returns:    biasts_bwn   - 3D array of size (bw, box_length, box_width) of float, estimated bias time-series
+    Returns:    biasts_bwn   - 3D array of size (bw, box_len, box_wid) of float, estimated bias time-series
                 box          - list in size of (4,) in integer, coordinates of bounding box, output for parallel computing
     '''
-    coef = -4*np.pi/wvl
-    box_width  = box[2] - box[0]
-    box_length = box[3] - box[1]
-    numpix = box_width * box_length
+    phase2range = -1 * wvl / (4 * np.pi)
+    box_wid  = box[2] - box[0]
+    box_len = box[3] - box[1]
+    num_pix = box_wid * box_len
     stack_obj = ifgramStack(stack_file)
     stack_obj.open()
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
@@ -756,9 +793,9 @@ def estimate_bias(stack_file, nl, bw, wvl, box, outdir):
     B = B[:,:-1]
 
     # We first need to have the bias time-series for bw-1 analysis
-    biasts_bw1_rough = seq2cum_closure_phase(nl, outdir, box)
+    biasts_bw1_rough = read_cum_seq_closure_phase4conn(nl, outdir, box)
     m = 2
-    biasts_bw1_fine  = seq2cum_closure_phase(m, outdir, box)
+    biasts_bw1_fine  = read_cum_seq_closure_phase4conn(m, outdir, box)
     date1s = [i.split('_')[0] for i in date12_list]
     date2s = [i.split('_')[1] for i in date12_list]
     date_list = sorted(list(set(date1s + date2s)))
@@ -770,7 +807,7 @@ def estimate_bias(stack_file, nl, bw, wvl, box, outdir):
     tbase = np.array(tbase, dtype=np.float32) / 365.25
     tbase_diff = np.diff(tbase).reshape(-1, 1)
     delta_T = tbase[-1]-tbase[0]
-    velocity_m = biasts_bw1_fine[-1,:,:]/coef/delta_T
+    velocity_m = biasts_bw1_fine[-1,:,:] / delta_T * phase2range
     mask = np.where(np.abs(velocity_m)<0.1, 0,1)
 
     for i in range(num_date):
@@ -784,17 +821,17 @@ def estimate_bias(stack_file, nl, bw, wvl, box, outdir):
 
     # Then We construct ifgram_bias (W A \Phi^X, or Wr A w(\delta_t)\Phi^X
     # Eq.(19) in Zheng et al., 2022), same structure with stack_file
-    biasts_bwn = np.zeros((num_date, numpix),dtype = np.float32)
+    biasts_bwn = np.zeros((num_date, num_pix),dtype = np.float32)
     num_ifgram = np.shape(A)[0]
     if num_ifgram != int(bw*(num_date*2-bw-1)/2): # check the dimensions
         print('Number of interferograms expected: ',int(bw*(num_date*2-bw-1)/2))
         print('Number of interferograms found: ', num_ifgram)
         raise Exception("Modify maximum connection in ifgramStack.h5 to be consistent with input bandwidth!")
 
-    # this matrix is a numpix by num_ifgram matrix, each row stores the diagnal component of the Wr matrix for that pixel
+    # this matrix is a num_pix by num_ifgram matrix, each row stores the diagnal component of the Wr matrix for that pixel
     W = get_design_matrix_W(num_ifgram, A, bw, box, tbase, nl, outdir)
-    prog_bar = ptime.progressBar(maxValue=numpix)
-    for i in range(numpix):
+    prog_bar = ptime.progressBar(maxValue=num_pix)
+    for i in range(num_pix):
         Wr = np.diag(W[i,:])
         WrA = np.matmul(Wr,A)
         Dphi_rough = biasts_bw1_rough[:,i]
@@ -808,15 +845,15 @@ def estimate_bias(stack_file, nl, bw, wvl, box, outdir):
         B_inv  = np.linalg.pinv(B)
         biasvel = np.matmul(B_inv,Dphi_bias)
         biasts = np.cumsum(biasvel.reshape(-1)*tbase_diff.reshape(-1))
-        biasts_bwn[1:,i] = biasts/coef
-        prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, numpix))
+        biasts_bwn[1:,i] = biasts * phase2range
+        prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, num_pix))
     prog_bar.close()
-    biasts_bwn = biasts_bwn.reshape(num_date, box_length, box_width)
+    biasts_bwn = biasts_bwn.reshape(num_date, box_len, box_wid)
 
     return biasts_bwn,box
 
 
-def bias_correction(stack_file, nl, bw, max_memory, outdir, parallel):
+def bias_estimation(stack_file, nl, bw, parallel, outdir, max_memory=4.0):
     '''Output a solution to bias time-series
 
     Parameters: stack_file       - string, path for ifgramStack.h5
@@ -858,23 +895,23 @@ def bias_correction(stack_file, nl, bw, max_memory, outdir, parallel):
     num_threads_dict = cluster.set_num_threads("1")
     start_time = time.time()
     for i, box in enumerate(box_list):
-        box_width  = box[2] - box[0]
-        box_length = box[3] - box[1]
+        box_wid  = box[2] - box[0]
+        box_len = box[3] - box[1]
         print(box)
         if num_box > 1:
             print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
-            print('box width:  {}'.format(box_width))
-            print('box length: {}'.format(box_length))
+            print('box width:  {}'.format(box_wid))
+            print('box length: {}'.format(box_len))
         #update box argument in the input data
         data_kwargs['box'] = box
         if not parallel['clustertype']:
             # non-parallel
-            tsbias = estimate_bias(stack_file, nl, bw, wvl, box, outdir)[:-1]
+            tsbias = estimate_bias_timeseries(stack_file, nl, bw, wvl, box, outdir)[:-1]
         else:
             # parallel
             print('\n\n------- start parallel processing using Dask -------')
             # initiate the output data
-            tsbias = np.zeros((num_date, box_length, box_width), np.float32)
+            tsbias = np.zeros((num_date, box_len, box_wid), np.float32)
             # initiate dask cluster and client
             cluster_obj = cluster.DaskCluster(
                 cluster_type=parallel['clustertype'],
@@ -884,7 +921,7 @@ def bias_correction(stack_file, nl, bw, max_memory, outdir, parallel):
             cluster_obj.open()
             # run dask
             tsbias, box = cluster_obj.run(
-                func=estimate_bias,
+                func=estimate_bias_timeseries,
                 func_data=data_kwargs,
                 results=[tsbias, box],
             )
@@ -912,28 +949,35 @@ def bias_correction(stack_file, nl, bw, max_memory, outdir, parallel):
 ################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
+    start_time = time.time()
+
+    # common inputs
+    kwargs = dict(outdir=inps.outdir, max_memory=inps.maxMemory)    
 
     if inps.action == 'mask':
         calc_closure_phase_mask(
             stack_file=inps.stack_file,
-            nl=inps.nl,
+            bias_free_conn=inps.nl,
             num_sigma=inps.num_sigma,
             threshold_amp=inps.epsilon,
-            outdir=inps.outdir,
-            max_memory=inps.maxMemory)
+            **kwargs)
 
     elif inps.action.endswith ('estimate'):
-        # to make sure we have con-2 closure phase processed
-        max_conn_level = np.maximum(2, inps.bw)
         if inps.update_closure_phase:
-            for conn_level in np.arange(2, max_conn_level+1):
-                compute_unwrap_closure_phase(inps.stack_file, conn_level, inps.maxMemory, inps.outdir)
-            compute_unwrap_closure_phase(inps.stack_file, inps.nl, inps.maxMemory, inps.outdir)
+            # to make sure we have conn-2 closure phase processed
+            max_conn = np.maximum(2, inps.bw)
+            for conn in np.arange(2, max_conn + 1):
+                compute_unwrap_closure_phase(inps.stack_file, conn, **kwargs)
+            compute_unwrap_closure_phase(inps.stack_file, inps.nl, **kwargs)
 
         if inps.action == 'quick_estimate':
             # a quick solution to bias-correction
             # output diagonal component of Wr (how fast the bias-inducing signal decays with temporal baseline)
-            quick_bias_correction(inps.stack_file, inps.nl, inps.bw, inps.maxMemory, inps.outdir)
+            quick_bias_estimation(
+                stack_file=inps.stack_file,
+                bias_free_conn=inps.nl,
+                bw=inps.bw,
+                **kwargs)
 
         elif inps.action == 'estimate':
             # bias correction
@@ -942,7 +986,11 @@ def main(iargs=None):
                 "numWorker"   : inps.numWorker,
                 "config_name" : inps.config,
             }
-            bias_correction(inps.stack_file, inps.nl, inps.bw, inps.maxMemory, inps.outdir, parallel)
+            bias_estimation(inps.stack_file, inps.nl, inps.bw, parallel, **kwargs)
+
+    # used time
+    m, s = divmod(time.time() - start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
 
     return
 

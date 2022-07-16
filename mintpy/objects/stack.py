@@ -968,12 +968,12 @@ class ifgramStack:
 
 
     # Functions for closure phase bias
-    def get_closure_phase_index(self, conn_level, dropIfgram=True):
+    def get_closure_phase_index(self, conn, dropIfgram=True):
         """Get the indices of interferograms that forms the given connection level closure loop.
 
-        Parameters: conn_level - int, connection level
+        Parameters: conn       - int, connection level
                     dropIfgram - bool, exclude the dropped interferograms.
-        Returns:    cp_idx     - 2D np.ndarray in int16 in size of (num_cp, conn_level+1)
+        Returns:    cp_idx     - 2D np.ndarray in int16 in size of (num_cp, conn + 1)
                                  Each row for the indices of interferograms for one closure loop
         """
         date12_list_all = self.get_date12_list(dropIfgram=False)
@@ -982,12 +982,12 @@ class ifgramStack:
 
         # get the closure index
         cp_idx = []
-        for i in range(num_date-conn_level):
+        for i in range(num_date - conn):
             # compose the connection-n pairs
             date12_list = []
-            for j in range(conn_level):
+            for j in range(conn):
                 date12_list.append('{}_{}'.format(date_list[i+j], date_list[i+j+1]))
-            date12_list.append('{}_{}'.format(date_list[i], date_list[i+conn_level]))
+            date12_list.append('{}_{}'.format(date_list[i], date_list[i+conn]))
     
             # add to cp_idx, ONLY IF all pairs exist for this closure loop
             if all(x in date12_list_all for x in date12_list):
