@@ -106,8 +106,8 @@ def seq_closure_phase(stack_obj, box, conn):
     ## get the closure index
     cp_idx = stack_obj.get_closure_phase_index(conn=conn, dropIfgram=True)
     num_cp = cp_idx.shape[0]
-    print(f'Number of closure measurements expected: {num_date - conn}')
-    print(f'Number of closure measurements found   : {num_cp}')
+    print(f'number of closure measurements expected: {num_date - conn}')
+    print(f'number of closure measurements found   : {num_cp}')
     if num_cp < num_date - conn:
         msg = f'num_cp ({num_cp}) < num_date - conn ({num_date - conn})'
         msg += ' --> some interferograms are missing!'
@@ -126,8 +126,7 @@ def seq_closure_phase(stack_obj, box, conn):
 
         # calculate closure phase - cp0_w
         idx_plus, idx_minor = cp_idx[i, :-1], cp_idx[i, -1]
-        cp0_w = np.sum(phase[idx_plus])
-        cp0_w -= phase[idx_minor]
+        cp0_w = np.sum(phase[idx_plus], axis=0) - phase[idx_minor]
 
         # get the wrapped closure phase
         cp_w[i] = np.angle(np.exp(1j * cp0_w))
@@ -276,7 +275,7 @@ def calc_closure_phase_mask(stack_file, bias_free_conn, num_sigma=3, threshold_a
 
 
 ################################################################################
-def cum_seq_unw_closure_phase(conn, conn_dir, date_list, meta):
+def cum_seq_unw_closure_phase_timeseries(conn, conn_dir, date_list, meta):
     '''Outpu cumulative conn-n sequential closure phase in time-series format.
 
     Reference: Eq. 25 in Zheng et al., 2022, but divided by conn.
@@ -359,12 +358,12 @@ def cum_seq_unw_closure_phase(conn, conn_dir, date_list, meta):
 
 
 def compute_unwrap_closure_phase(stack_file, conn, outdir, max_memory=4.0):
-    '''Output the following phase time-sseries of connection-conn:
+    '''Compute the following phase time-series of connection-conn:
 
-    + wrapped
-    + unwrapped sequential closure phases
-    + cumulative closure phase
-    Output directory: outdir/closurePhase/conn{conn}
+    +   wrapped sequential closure phase
+    + unwrapped sequential closure phase
+    + cumulative unwrapped sequential closure phase
+    at directory: outdir/closurePhase/conn{conn}
 
     Parameters: stack_file  - str, path for ifgramStack.h5
                 conn        - int, connection level
@@ -373,66 +372,84 @@ def compute_unwrap_closure_phase(stack_file, conn, outdir, max_memory=4.0):
     Returns:    various wrapped, unwrapped and cumulative closure phase time-series
 
     '''
+    print('-'*80)
+    print('step 1/3: calculate and filter the wrapped sequential closure phase stack ...')
+
     # basic info
     stack_obj = ifgramStack(stack_file)
     stack_obj.open()
     length, width = stack_obj.length, stack_obj.width
     meta = dict(stack_obj.metadata)
-    print(f'scene length x width: {length} x {width}')
+    print(f'scene size: {length} x {width}')
 
-    date_list = stack_obj.get_date_list(dropIfgram=False)
+    date_list = stack_obj.get_date_list(dropIfgram=True)
     num_date = len(date_list)
     print(f'number of acquisitions found: {num_date}')
     print(f'start / end date: {date_list[0]} / {date_list[-1]}')
     # number of expected closure phase
     num_cp = num_date - conn
+    num_digit = len(str(num_cp))
 
-    # process block-by-block
-    # split igram_file into blocks to save memory
-    box_list, num_box = stack_obj.split2boxes(max_memory=max_memory,
-                                              dim0_size=stack_obj.numIfgram+num_cp)
-    closure_phase = np.zeros([num_cp, length, width],np.float32)
-    for i, box in enumerate(box_list):
-        print(box)
-        if num_box > 1:
-            print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
-            print('box length: {}'.format(box[3] - box[1]))
-            print('box width : {}'.format(box[2] - box[0]))
-
-        closure_phase[:,
-                      box[1]:box[3],
-                      box[0]:box[2]] = seq_closure_phase(stack_obj, box=box, conn=conn)
-
-
-    ## filter the closure phase and re-unwrap
-
+    ## default binary filenames
     # output directory
     conn_dir = os.path.join(outdir, f'closurePhase/conn{conn}')
     os.makedirs(conn_dir, exist_ok=True)
+    # output file names
+    fbases = [os.path.join(conn_dir, f'filt_{x:0{num_digit}}') for x in range(num_cp)]
+    int_files = [f'{x}.int' for x in fbases]
+    cor_files = [f'{x}.cor' for x in fbases]
+    unw_files = [f'{x}.unw' for x in fbases]
 
-    kernel = isce_utils.gaussian_kernel(5, 5, 1, 1)
-    for i in range(num_cp):
-        # some day we will need to make this 5 digits.
-        int_file = os.path.join(conn_dir, f'filt_{i:04}.int')
-        cor_file = os.path.join(conn_dir, f'filt_{i:04}.cor')
-        unw_file = os.path.join(conn_dir, f'filt_{i:04}.unw')
+    if all(os.path.isfile(x) for x in int_files):
+        print('all the filtered closure phase file exist, skip re-generation.')
 
-        if not os.path.isfile(int_file):
-            # filter the closure phase interferogram
-            closure_phase_filt = isce_utils.convolve(
-                data=np.exp(1j*closure_phase[i]),
-                kernel=kernel)
+    else:
+        # process block-by-block
+        # split igram_file into blocks to save memory
+        box_list, num_box = stack_obj.split2boxes(max_memory=max_memory,
+                                                  dim0_size=stack_obj.numIfgram+num_cp*2)
+        closure_phase = np.zeros([num_cp, length, width],np.float32)
+        for i, box in enumerate(box_list):
+            print(box)
+            if num_box > 1:
+                print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
+                print('box length: {}'.format(box[3] - box[1]))
+                print('box width : {}'.format(box[2] - box[0]))
 
-            # write to binary file in isce2 format
-            with open(int_file, mode='wb') as fid:
-                closure_phase_filt.tofile(fid)
+            closure_phase[:,
+                          box[1]:box[3],
+                          box[0]:box[2]] = seq_closure_phase(stack_obj, box=box, conn=conn)
 
-            # write metadata in isce2 format
-            meta['FILE_TYPE']='.int'
-            meta['INTERLEAVE']='BIP'
-            meta['DATA_TYPE']='complex64'
-            meta['BANDS']=1
-            writefile.write_isce_xml(meta, int_file)
+        ## filter the closure phase and re-unwrap
+        print('-'*80)
+        print('filter the wrapped closure phase stack with a Gaussian kernel of 5 x 5 ...')
+        print(f'number of wrapped closure phase: {num_cp}')
+
+        kernel = isce_utils.gaussian_kernel(5, 5, 1, 1)
+        for i, int_file in enumerate(int_files):
+            if not os.path.isfile(int_file):
+                # filter the closure phase interferogram
+                closure_phase_filt = isce_utils.convolve(
+                    data=np.exp(1j*closure_phase[i]),
+                    kernel=kernel)
+
+                # write to binary file in isce2 format
+                print(f'write file: {int_file}')
+                with open(int_file, mode='wb') as fid:
+                    closure_phase_filt.tofile(fid)
+
+                # write metadata in isce2 format
+                meta['FILE_TYPE'] = '.int'
+                meta['INTERLEAVE'] = 'BIP'
+                meta['DATA_TYPE'] = 'complex64'
+                meta['BANDS'] = 1
+                writefile.write_isce_xml(meta, int_file)
+        del closure_phase
+
+    print('-'*80)
+    print('step 2/3: unwrap the filtered wrapped closure phase stack ...')
+    print(f'number of closure phase: {num_cp}')
+    for int_file, cor_file, unw_file in zip(int_files, cor_files, unw_files):
 
         if not os.path.isfile(cor_file):
             isce_utils.estimate_coherence(int_file, cor_file)
@@ -440,9 +457,10 @@ def compute_unwrap_closure_phase(stack_file, conn, outdir, max_memory=4.0):
         if not os.path.isfile(unw_file):
             isce_utils.unwrap_snaphu(int_file, cor_file, unw_file, meta)
 
-
-    ## output accumulated unwrapped closure phase time-series
-    cum_seq_unw_closure_phase(conn, conn_dir, date_list, meta)
+    ## calc the cumulativev unwrapped closure phase time-series
+    print('-'*80)
+    print('step 3/3: calculate the unwrapped cumulative sequential closure phase time-series ...')
+    cum_seq_unw_closure_phase_timeseries(conn, conn_dir, date_list, meta)
 
     return
 

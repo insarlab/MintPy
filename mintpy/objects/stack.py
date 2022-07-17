@@ -1013,7 +1013,8 @@ class ifgramStack:
         Parameters: conn       - int, connection level
                     dropIfgram - bool, exclude the dropped interferograms.
         Returns:    cp_idx     - 2D np.ndarray in int16 in size of (num_cp, conn + 1)
-                                 Each row for the indices of interferograms for one closure loop
+                                 Each row for the indices of interferograms for one closure loop.
+                                 num_cp <= num_date - conn
         """
         date12_list = self.get_date12_list(dropIfgram=False)
         date_list = self.get_date_list(dropIfgram=dropIfgram)
@@ -1027,7 +1028,7 @@ class ifgramStack:
             for j in range(conn):
                 cp_date12_list.append('{}_{}'.format(date_list[i+j], date_list[i+j+1]))
             cp_date12_list.append('{}_{}'.format(date_list[i], date_list[i+conn]))
-    
+
             # add to cp_idx, ONLY IF all pairs exist for this closure loop
             if all(x in date12_list for x in cp_date12_list):
                 cp_idx.append([date12_list.index(x) for x in cp_date12_list])
