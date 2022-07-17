@@ -4,6 +4,8 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Yujie Zheng, Zhang Yunjun, Feb 2022              #
 ############################################################
+# Recommend import:
+#   from mintpy import closure_phase_bias as cpbias
 
 
 import os
@@ -16,8 +18,6 @@ from datetime import datetime as dt
 
 from mintpy.objects import ifgramStack, cluster
 from mintpy.utils import arg_group, ptime, readfile, writefile, isce_utils
-from mintpy import ifgram_inversion as ifginv
-
 
 
 ################################################################################
@@ -29,7 +29,7 @@ REFERENCE = """reference:
 
 EXAMPLE = """example:
   # create mask for areas suseptible to biases
-  closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 -a mask
+  closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 5  -a mask
   closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 -a mask --num-sigma 2.5
 
   # estimate and correct for biases
@@ -144,7 +144,7 @@ def sum_seq_closure_phase(stack_obj, box, conn, normalize=False):
                 box        - tuple of 4 int, bounding box in (x0, y0, x1, y1)
                 conn       - int, connection level of the closure phase
                 normalize  - bool, normalize the output complex magnitude by num_cp
-    Returns:    cum_cp     - 2D np.ndarray in complex64 in (box_len, box_wid)
+    Returns:    sum_cp     - 2D np.ndarray in complex64 in (box_len, box_wid)
                              sum of sequential closure phase for the given connection level
                 num_cp     - integer, number of closure phases used in the sum
     """
@@ -162,7 +162,7 @@ def sum_seq_closure_phase(stack_obj, box, conn, normalize=False):
     if num_cp < 1:
         raise Exception(f"No triplets found at connection level: {conn}!")
 
-    ## read data
+    ## read unwrapPhase
     phase = readfile.read(stack_obj.file, box=box, print_msg=False)[0]
     ref_phase = stack_obj.get_reference_phase(dropIfgram=False)
     for i in range(phase.shape[0]):
@@ -170,22 +170,21 @@ def sum_seq_closure_phase(stack_obj, box, conn, normalize=False):
         phase[i][mask] -= ref_phase[i]
 
     ## calculate cum seq closure phase
-    cum_cp = np.zeros((box_len, box_wid), dtype=np.complex64)
+    sum_cp = np.zeros((box_len, box_wid), dtype=np.complex64)
     for i in range(num_cp):
 
         # calculate closure phase - cp0_w
         idx_plus, idx_minor = cp_idx[i, :-1], cp_idx[i, -1]
-        cp0_w = np.sum(phase[idx_plus])
-        cp0_w -= phase[idx_minor]
+        cp0_w = np.sum(phase[idx_plus], axis=0) - phase[idx_minor]
 
         # cumulative
-        cum_cp = cum_cp + np.exp(1j * cp0_w)
+        sum_cp += np.exp(1j * cp0_w)
 
     # normalize
     if normalize:
-        cum_cp /= num_cp
+        sum_cp /= num_cp
 
-    return cum_cp, num_cp
+    return sum_cp, num_cp
 
 
 
@@ -205,6 +204,7 @@ def calc_closure_phase_mask(stack_file, bias_free_conn, num_sigma=3, threshold_a
                 avg_closure_phase - 2D np.ndarray of size (length, width) in complex64, average cum. seq. closure phase
                                     Saved to file: avgCpxClosurePhase.h5
     """
+    print('calculating the mask to flag areas suseptible to non-closure-phase related biases (as zero) ...')
 
     # basic info
     stack_obj = ifgramStack(stack_file)
@@ -217,7 +217,9 @@ def calc_closure_phase_mask(stack_file, bias_free_conn, num_sigma=3, threshold_a
 
     # calculate the average complex closure phase
     # process block-by-block to save memory
-    box_list, num_box = ifginv.split2boxes(stack_file, max_memory=max_memory*1.3)
+    num_cp = stack_obj.get_closure_phase_index(bias_free_conn).shape[0]
+    box_list, num_box = stack_obj.split2boxes(max_memory=max_memory,
+                                              dim0_size=stack_obj.numIfgram+num_cp*2)
     avg_closure_phase = np.zeros([length,width], dtype=np.complex64)
     for i, box in enumerate(box_list):
         if num_box > 1:
@@ -254,21 +256,21 @@ def calc_closure_phase_mask(stack_file, bias_free_conn, num_sigma=3, threshold_a
     mask[np.abs(np.abs(avg_closure_phase) < threshold_amp)] = 1
 
     # write file 1 - mask
-    out_file = os.path.join(outdir, 'maskClosurePhase.h5')
+    mask_file = os.path.join(outdir, 'maskClosurePhase.h5')
     meta = dict(stack_obj.metadata)
     meta['FILE_TYPE'] = 'mask'
     meta['DATA_TYPE'] = 'bool'
-    ds_name_dict = {'mask': [np.bool_, (length, width), mask],}
-    writefile.layout_hdf5(out_file, ds_name_dict, meta)
+    writefile.write(mask, out_file=mask_file, metadata=meta)
 
     # write file 2 - average closure phase
-    out_file = os.path.join(outdir, 'avgCpxClosurePhase.h5')
+    avg_cp_file = os.path.join(outdir, 'avgCpxClosurePhase.h5')
+    meta['FILE_TYPE'] = 'mask'
     meta['DATA_TYPE'] = 'float32'
-    ds_name_dict2 = {
-        'phase'     : [np.float32, (length, width), np.angle(avg_closure_phase)],
+    ds_dict = {
         'amplitude' : [np.float32, (length, width), np.abs(avg_closure_phase)],
+        'phase'     : [np.float32, (length, width), np.angle(avg_closure_phase)],
     }
-    writefile.layout_hdf5(out_file, ds_name_dict2, meta)
+    writefile.layout_hdf5(avg_cp_file, ds_dict, metadata=meta)
 
     return mask, avg_closure_phase
 
@@ -295,11 +297,17 @@ def cum_seq_unw_closure_phase(conn, conn_dir, date_list, meta):
     cum_cp_file = os.path.join(conn_dir, 'cumSeqClosurePhase.h5')
     mask_file = os.path.join(conn_dir, 'maskConnComp.h5')
 
+    # update mode checking
     if os.path.isfile(cum_cp_file) and os.path.isfile(mask_file):
-        msg = 'Cumulative seq closure phase time series file (& its mask file) exist as below, skip re-generating.'
+        msg = 'Cumulative seq closure phase time series and mask files exist as below, skip re-generating.'
         msg += f'\n{cum_cp_file}\n{mask_file}'
         print(msg)
-        return
+
+        # read data
+        bias_ts = readfile.read(cum_cp_file)[0]
+        common_mask = readfile.read(mask_file)[0]
+
+        return bias_ts, common_mask
 
     # basic info
     length, width = int(meta['LENGTH']), int(meta['WIDTH'])
@@ -326,7 +334,7 @@ def cum_seq_unw_closure_phase(conn, conn_dir, date_list, meta):
 
     prog_bar.close()
 
-    # compute sequential closure phase
+    # compute cumulative sequential closure phase
     num_date = len(date_list)
     bias_ts = np.zeros((num_date, length, width), dtype=np.float32)
     bias_ts[1:num_date-conn+1, :, :] = np.cumsum(cp_phase, 0)
@@ -381,7 +389,8 @@ def compute_unwrap_closure_phase(stack_file, conn, outdir, max_memory=4.0):
 
     # process block-by-block
     # split igram_file into blocks to save memory
-    box_list, num_box = ifginv.split2boxes(stack_file,max_memory)
+    box_list, num_box = stack_obj.split2boxes(max_memory=max_memory,
+                                              dim0_size=stack_obj.numIfgram+num_cp)
     closure_phase = np.zeros([num_cp, length, width],np.float32)
     for i, box in enumerate(box_list):
         print(box)
@@ -685,8 +694,8 @@ def quick_bias_estimation(stack_file, bias_free_conn, bw, outdir, max_memory=4.0
     date_ordinal = [dt.strptime(x, date_str_fmt).toordinal() for x in date_list]
 
     # split igram_file into blocks to save memory
-    box_list, num_box = ifginv.split2boxes(stack_file, max_memory)
-
+    box_list, num_box = stack_obj.split2boxes(max_memory=max_memory,
+                                              dim0_size=num_date)
 
     # initiate output files
     # 1 - wratio file
@@ -871,7 +880,8 @@ def bias_estimation(stack_file, nl, bw, parallel, outdir, max_memory=4.0):
     date2s = [i.split('_')[1] for i in date12_list]
     date_list = sorted(list(set(date1s + date2s)))
     # split igram_file into blocks to save memory
-    box_list, num_box = ifginv.split2boxes(stack_file, max_memory)
+    box_list, num_box = stack_obj.split2boxes(max_memory=max_memory,
+                                              dim0_size=stack_obj.numIfgram*2)
 
     # estimate for bias time-series
     biasfile = os.path.join(outdir, 'bias_timeseries.h5')

@@ -569,41 +569,6 @@ def calc_inv_quality(G, X, y, e2, inv_quality_name='temporalCoherence', weight_s
 
 
 ###################################### File IO ############################################
-def split2boxes(ifgram_file, max_memory=4, print_msg=True):
-    """Split into chunks in rows to reduce memory usage
-    Parameters: dataset_shape - tuple of 3 int
-                max_memory    - float, max memory to use in GB
-                print_msg     - bool
-    Returns:    box_list      - list of tuple of 4 int
-                num_box       - int, number of boxes
-    """
-    ifg_obj = ifgramStack(ifgram_file)
-    ifg_obj.open(print_msg=False)
-
-    # dataset size: defo obs (phase / offset) + weight + time-series
-    length = ifg_obj.length
-    width = ifg_obj.width
-    ds_size = (ifg_obj.numIfgram * 2 + ifg_obj.numDate + 5) * length * width * 4
-
-    num_box = int(np.ceil(ds_size * 1.5 / (max_memory * 1024**3)))
-    y_step = int(np.ceil((length / num_box) / 10) * 10)
-    num_box = int(np.ceil(length / y_step))
-    if print_msg and num_box > 1:
-        print('maximum memory size: %.1E GB' % max_memory)
-        print('split %d lines into %d patches for processing' % (length, num_box))
-        print('    with each patch up to %d lines' % y_step)
-
-    # y_step / num_box --> box_list
-    box_list = []
-    for i in range(num_box):
-        y0 = i * y_step
-        y1 = min([length, y0 + y_step])
-        box = (0, y0, width, y1)
-        box_list.append(box)
-
-    return box_list, num_box
-
-
 def check_design_matrix(ifgram_file, weight_func='var'):
     """
     Check Rank of Design matrix for weighted inversion
@@ -1312,7 +1277,7 @@ def ifgram_inversion(inps=None):
     ## 3. run the inversion / estimation and write to disk
 
     # 3.1 split ifgram_file into blocks to save memory
-    box_list, num_box = split2boxes(inps.ifgramStackFile, max_memory=inps.maxMemory)
+    box_list, num_box = stack_obj.split2boxes(max_memory=inps.maxMemory)
 
     # 3.2 prepare the input arguments for *_patch()
     data_kwargs = {

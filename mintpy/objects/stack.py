@@ -967,6 +967,45 @@ class ifgramStack:
         return np.max(num_conn)
 
 
+    def split2boxes(self, max_memory=4, dim0_size=None, print_msg=True):
+        """Split into chunks in rows to reduce memory usage.
+
+        Parameters: max_memory - float, max memory to use in GB
+                    dim0_size  - the 1st dimension size of all used datasets
+                                 e.g., dim0_size = num_pair * 2 + num_date
+                    print_msg  - bool
+        Returns:    box_list   - list of tuple of 4 int
+                    num_box    - int, number of boxes
+        """
+        self.open(print_msg=False)
+        length = self.length
+        width = self.width
+
+        # dimension in time: phase/offset, weight, timeseries, etc.
+        if not dim0_size:
+            # for time series estimation
+            dim0_size = self.numIfgram * 2 + self.numDate
+        ds_size = dim0_size * length * width * 4
+
+        num_box = int(np.ceil(ds_size * 1.5 / (max_memory * 1024**3)))
+        y_step = int(np.ceil((length / num_box) / 10) * 10)
+        num_box = int(np.ceil(length / y_step))
+        if print_msg and num_box > 1:
+            print('maximum memory size: %.1E GB' % max_memory)
+            print('split %d lines into %d patches for processing' % (length, num_box))
+            print('    with each patch up to %d lines' % y_step)
+
+        # y_step / num_box --> box_list
+        box_list = []
+        for i in range(num_box):
+            y0 = i * y_step
+            y1 = min([length, y0 + y_step])
+            box = (0, y0, width, y1)
+            box_list.append(box)
+
+        return box_list, num_box
+
+
     # Functions for closure phase bias
     def get_closure_phase_index(self, conn, dropIfgram=True):
         """Get the indices of interferograms that forms the given connection level closure loop.
@@ -976,7 +1015,7 @@ class ifgramStack:
         Returns:    cp_idx     - 2D np.ndarray in int16 in size of (num_cp, conn + 1)
                                  Each row for the indices of interferograms for one closure loop
         """
-        date12_list_all = self.get_date12_list(dropIfgram=False)
+        date12_list = self.get_date12_list(dropIfgram=False)
         date_list = self.get_date_list(dropIfgram=dropIfgram)
         num_date = len(date_list)
 
@@ -984,16 +1023,16 @@ class ifgramStack:
         cp_idx = []
         for i in range(num_date - conn):
             # compose the connection-n pairs
-            date12_list = []
+            cp_date12_list = []
             for j in range(conn):
-                date12_list.append('{}_{}'.format(date_list[i+j], date_list[i+j+1]))
-            date12_list.append('{}_{}'.format(date_list[i], date_list[i+conn]))
+                cp_date12_list.append('{}_{}'.format(date_list[i+j], date_list[i+j+1]))
+            cp_date12_list.append('{}_{}'.format(date_list[i], date_list[i+conn]))
     
             # add to cp_idx, ONLY IF all pairs exist for this closure loop
-            if all(x in date12_list_all for x in date12_list):
-                cp_idx.append([date12_list_all.index(x) for x in date12_list])
+            if all(x in date12_list for x in cp_date12_list):
+                cp_idx.append([date12_list.index(x) for x in cp_date12_list])
 
-        # list to array
+        # list(list) to 2D array
         cp_idx = np.array(cp_idx, dtype=np.int16)
         cp_idx = np.unique(cp_idx, axis=0)
 
