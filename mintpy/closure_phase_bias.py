@@ -17,7 +17,14 @@ import glob
 from datetime import datetime as dt
 
 from mintpy.objects import ifgramStack, cluster
-from mintpy.utils import arg_group, ptime, readfile, writefile, isce_utils
+from mintpy.utils import (
+    arg_group,
+    ptime,
+    readfile,
+    writefile,
+    isce_utils,
+    utils as ut,
+)
 
 
 ################################################################################
@@ -33,7 +40,7 @@ EXAMPLE = """example:
   closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 -a mask --num-sigma 2.5
 
   # estimate and correct for biases
-  closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --bw 10 -a quick_estimate
+  closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 5  --bw 5  -a quick_estimate --num-worker 4
   closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --bw 10 -a estimate --noupdate -c local
 """
 
@@ -72,8 +79,6 @@ def create_parser():
     parser = arg_group.add_memory_argument(parser)
 
     # output
-    parser.add_argument('--noupdate', dest='update_closure_phase', action='store_false',
-                        help='Use when no need to compute closure phases')
     parser.add_argument('-o', dest='outdir', type=str, default='./', help='output file directory')
 
     return parser
@@ -275,6 +280,20 @@ def calc_closure_phase_mask(stack_file, bias_free_conn, num_sigma=3, threshold_a
 
 
 ################################################################################
+def unwrap_closure_phase(int_file, cor_file, unw_file):
+    """Unwrap the input wrapped sequential closure phase interferogram.
+    """
+    if not os.path.isfile(cor_file):
+        isce_utils.estimate_coherence(int_file, cor_file)
+
+    if not os.path.isfile(unw_file):
+        isce_utils.unwrap_snaphu(int_file, cor_file, unw_file)
+    else:
+        print(f'unwrapped interferogram file exists: {unw_file}, skip re-unwrapping.')
+
+    return unw_file
+
+
 def cum_seq_unw_closure_phase_timeseries(conn, conn_dir, date_list, meta):
     '''Outpu cumulative conn-n sequential closure phase in time-series format.
 
@@ -298,7 +317,7 @@ def cum_seq_unw_closure_phase_timeseries(conn, conn_dir, date_list, meta):
 
     # update mode checking
     if os.path.isfile(cum_cp_file) and os.path.isfile(mask_file):
-        msg = 'Cumulative seq closure phase time series and mask files exist as below, skip re-generating.'
+        msg = 'cumulative seq closure phase time series and mask files exist, skip re-generating.'
         msg += f'\n{cum_cp_file}\n{mask_file}'
         print(msg)
 
@@ -310,7 +329,7 @@ def cum_seq_unw_closure_phase_timeseries(conn, conn_dir, date_list, meta):
 
     # basic info
     length, width = int(meta['LENGTH']), int(meta['WIDTH'])
-    ref_y, ref_x = meta['REF_Y'], meta['REF_X']
+    ref_y, ref_x = int(meta['REF_Y']), int(meta['REF_X'])
 
     unw_files = sorted(glob.glob(os.path.join(conn_dir, '*.unw')))
     num_file = len(unw_files)
@@ -357,7 +376,7 @@ def cum_seq_unw_closure_phase_timeseries(conn, conn_dir, date_list, meta):
     return bias_ts, common_mask
 
 
-def compute_unwrap_closure_phase(stack_file, conn, outdir, max_memory=4.0):
+def compute_unwrap_closure_phase(stack_file, conn, outdir, max_memory=4.0, num_worker=1):
     '''Compute the following phase time-series of connection-conn:
 
     +   wrapped sequential closure phase
@@ -395,7 +414,7 @@ def compute_unwrap_closure_phase(stack_file, conn, outdir, max_memory=4.0):
     conn_dir = os.path.join(outdir, f'closurePhase/conn{conn}')
     os.makedirs(conn_dir, exist_ok=True)
     # output file names
-    fbases = [os.path.join(conn_dir, f'filt_{x:0{num_digit}}') for x in range(num_cp)]
+    fbases = [os.path.join(conn_dir, f'filt_{x+1:0{num_digit}}') for x in range(num_cp)]
     int_files = [f'{x}.int' for x in fbases]
     cor_files = [f'{x}.cor' for x in fbases]
     unw_files = [f'{x}.unw' for x in fbases]
@@ -438,6 +457,9 @@ def compute_unwrap_closure_phase(stack_file, conn, outdir, max_memory=4.0):
                 with open(int_file, mode='wb') as fid:
                     closure_phase_filt.tofile(fid)
 
+                # write metadata in roipac format
+                writefile.write_roipac_rsc(meta, int_file+'.rsc')
+
                 # write metadata in isce2 format
                 meta['FILE_TYPE'] = '.int'
                 meta['INTERLEAVE'] = 'BIP'
@@ -449,13 +471,19 @@ def compute_unwrap_closure_phase(stack_file, conn, outdir, max_memory=4.0):
     print('-'*80)
     print('step 2/3: unwrap the filtered wrapped closure phase stack ...')
     print(f'number of closure phase: {num_cp}')
-    for int_file, cor_file, unw_file in zip(int_files, cor_files, unw_files):
+    num_core, run_parallel, Parallel, delayed = ut.check_parallel(
+        num_cp,
+        print_msg=False,
+        maxParallelNum=num_worker)
 
-        if not os.path.isfile(cor_file):
-            isce_utils.estimate_coherence(int_file, cor_file)
+    if run_parallel and num_core > 1:
+        print(f'parallel processing using {num_core} cores')
+        Parallel(n_jobs=num_core)(delayed(unwrap_closure_phase)(x, y, z)
+                                  for x, y, z in zip(int_files, cor_files, unw_files))
 
-        if not os.path.isfile(unw_file):
-            isce_utils.unwrap_snaphu(int_file, cor_file, unw_file, meta)
+    else:
+        for x, y, z in zip(int_files, cor_files, unw_files):
+            unwrap_closure_phase(x, y, z)
 
     ## calc the cumulativev unwrapped closure phase time-series
     print('-'*80)
@@ -990,12 +1018,12 @@ def main(iargs=None):
             **kwargs)
 
     elif inps.action.endswith ('estimate'):
-        if inps.update_closure_phase:
-            # to make sure we have conn-2 closure phase processed
-            max_conn = np.maximum(2, inps.bw)
-            for conn in np.arange(2, max_conn + 1):
-                compute_unwrap_closure_phase(inps.stack_file, conn, **kwargs)
-            compute_unwrap_closure_phase(inps.stack_file, inps.nl, **kwargs)
+        # compute the unwrapped closure phase bias time-series
+        # to make sure we have conn-2 closure phase processed
+        max_conn = np.maximum(2, inps.bw)
+        for conn in np.arange(2, max_conn + 1):
+            compute_unwrap_closure_phase(inps.stack_file, conn, num_worker=int(inps.numWorker), **kwargs)
+        compute_unwrap_closure_phase(inps.stack_file, inps.nl, num_worker=int(inps.numWorker), **kwargs)
 
         if inps.action == 'quick_estimate':
             # a quick solution to bias-correction

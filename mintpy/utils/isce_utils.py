@@ -5,6 +5,7 @@
 ############################################################
 # 2020-07: Talib Oliver-Cabrera, add UAVSAR support w/in stripmapStack
 # 2020-10: Cunren Liang, add alosStack support
+# 2022-06: Yujie Zheng, add standard processing from isce2
 # Group contents:
 #     metadata
 #     geometry
@@ -16,10 +17,12 @@
 
 
 import os
-import re
+import datetime
 import glob
 import shelve
-import datetime
+import re
+import time
+
 import numpy as np
 from scipy import ndimage
 
@@ -884,58 +887,64 @@ def get_sensing_datetime_list(proj_dir, date_list=None):
 
     return sensingMid, sensingStart, sensingStop
 
+
+
 ############################## Standard Processing ###########################################
 
-def gaussian_kernel(Sx, Sy, sig_x, sig_y):
-    '''
-    Generate a guassian kernal (with all elements sum to 1)
-    inputs: Sx, Sy - dimensions of kernal
-            sig_x, sig_y: standard deviation of the guassian distribution
-    '''
-    if np.mod(Sx,2) == 0:
-        Sx = Sx + 1
+def gaussian_kernel(sx, sy, sig_x, sig_y):
+    '''Generate a guassian kernal (with all elements sum to 1).
 
-    if np.mod(Sy,2) ==0:
-            Sy = Sy + 1
+    Parameters: sx/y    - int, dimensions of kernal
+                sig_x/y - float, standard deviation of the guassian distribution
+    '''
+    # ensure sx/y are odd number
+    sx += 1 if np.mod(sx, 2) == 0 else 0
+    sy += 1 if np.mod(sy, 2) == 0 else 0
 
-    x,y = np.meshgrid(np.arange(Sx),np.arange(Sy))
-    x = x + 1
-    y = y + 1
-    x0 = (Sx+1)/2
-    y0 = (Sy+1)/2
-    fx = ((x-x0)**2.)/(2.*sig_x**2.)
-    fy = ((y-y0)**2.)/(2.*sig_y**2.)
-    k = np.exp(-1.0*(fx+fy))
+    x, y = np.meshgrid(np.arange(sx), np.arange(sy))
+    x += 1
+    y += 1
+
+    xc = (sx + 1) / 2
+    yc = (sy + 1) / 2
+    fx = ((x-xc)**2.) / (2.*sig_x**2.)
+    fy = ((y-yc)**2.) / (2.*sig_y**2.)
+
+    k = np.exp(-1.0 * (fx+fy))
     a = 1./np.sum(k)
-    k = a*k
+    k = a * k
+
     return k
 
+
 def convolve(data, kernel):
-    '''
-    return a convolved (filtered) complex image
-    inputs: data - complex array
-            kernel - convolution kernel
-    '''
-    R = ndimage.convolve(data.real, kernel, mode='constant',cval=0.0)
-    Im =ndimage.convolve(data.imag, kernel, mode='constant',cval=0.0)
+    '''Convolve / filter the complex data based on the given kernel.
 
-    return R + 1J*Im
-
-def estimate_coherence(infile, corfile):
+    Parameters: data   - 2D np.ndarray in complex
+                kernel - 2D np.ndarray in float, convolution kernel
     '''
-    input: infile : .int file path
-            corfile: output correlation file (computed from phase sigma)
+    R = ndimage.convolve(data.real, kernel, mode='constant', cval=0.0)
+    I = ndimage.convolve(data.imag, kernel, mode='constant', cval=0.0)
+    return R + 1J*I
+
+
+def estimate_coherence(intfile, corfile):
+    '''Estimate the spatial coherence (phase sigma) of the wrapped interferogram.
+
+    Parameters: intfile - str, path to the *.int file
+                corfile - str, path to the output correlation file
     '''
     import isce
     import isceobj
     from mroipac.icu.Icu import Icu
 
-    #Create phase sigma correlation file here
+    # create filt interferogram file object
     filtImage = isceobj.createIntImage()
-    filtImage.load( infile + '.xml')
+    filtImage.load(intfile + '.xml')
     filtImage.setAccessMode('read')
     filtImage.createImage()
 
+    # create phase sigma correlation file object
     phsigImage = isceobj.createImage()
     phsigImage.dataType='FLOAT'
     phsigImage.bands = 1
@@ -944,68 +953,146 @@ def estimate_coherence(infile, corfile):
     phsigImage.setAccessMode('write')
     phsigImage.createImage()
 
-
+    # setup Icu() object
     icuObj = Icu(name='sentinel_filter_icu')
     icuObj.configure()
     icuObj.unwrappingFlag = False
     icuObj.useAmplitudeFlag = False
     #icuObj.correlationType = 'NOSLOPE'
 
-    icuObj.icu(intImage = filtImage,  phsigImage=phsigImage)
+    # run
+    icuObj.icu(intImage=filtImage, phsigImage=phsigImage)
     phsigImage.renderHdr()
 
+    # close
     filtImage.finalizeImage()
     phsigImage.finalizeImage()
 
     return
 
-def unwrap_snaphu(intfile, corfile, unwfile, meta, cost='SMOOTH'):
+
+def unwrap_snaphu(int_file, cor_file, unw_file, defo_max=2.0, comp_max=100,
+                  init_only=True, init_method='MCF', cost_mode='SMOOTH'):
     '''Unwrap interferograms using SNAPHU via isce2.
 
-    Parameters: intfile - wrapped phase file directory
-                corfile - correlation file directory
-                unwfile - output unwrapped file directory
-                meta    - dict, attributes dictionary
-                cost    - cost mode: 'DEFO, 'SMOOTH', 'TOPO'
+    Modified from ISCE-2/topsStack/unwrap.py
+    Notes from Piyush:
+        SNAPHU is an iterative solver, starting from the initial solution. It can get
+            stuck in an infinite loop.
+        The initial solution is created using MCF or MST method. The MST initial solution
+            typically require lots of iterations and may not be a good starting point.
+        DEFO cost mode requires geometry info for the program to interpret the coherence
+            correctly and setup costs based on that. DEFO always sounds more theoretical
+            to me, but I haven not fully explored it. TOPO cost mode requires spatial baseline.
+            SMOOTH cost mode is purely data driven.
+        Amplitude of zero is a mask in all cost modes. For TOPO mode, amplitude is used to find
+            layover; for SMOOTH mode, only non-zero amplitude matters.
+
+    Default configurations in ISCE-2/topsStack:
+        init_only = True
+        init_method = 'MCF'
+        cost_mode = 'SMOOTH'
+    Default configurations in FRInGE:
+        init_only = False
+        init_method = 'MST'
+        cost_mode = 'DEFO'
+
+    Parameters: int_file    - str, path to the wrapped interferogram file
+                cor_file    - str, path to the correlation file
+                unw_file    - str, path to the output unwrapped interferogram file
+                defo_max    - float, maximum number of cycles for the deformation phase
+                comp_max    - int, maximum number of connected components
+                init_only   - bool, initlize-only mode
+                init_method - str, algo used for initialization: MCF, MST
+                cost_mode   - str, statistical-cost mode: TOPO, DEFO, SMOOTH, NOSTATCOSTS
+    Returns:    unw_file    - str, path to the output unwrapped interferogram file
     '''
     import isce
     from contrib.Snaphu.Snaphu import Snaphu
 
-    width = int(meta['width'])
-    wavelength = float(meta['WAVELENGTH'])
-    altitude = float(meta['HEIGHT'])
-    rglooks = int(meta['RLOOKS'])
-    azlooks = int(meta['ALOOKS'])
-    earthRadius = float(meta['earthRadius'])
+    start_time = time.time()
 
-    # setup SNAPHU
+    # configurations - atr
+    atr = readfile.read_attribute(int_file)
+    width = int(atr['WIDTH'])
+    length = int(atr['LENGTH'])
+    altitude = float(atr['HEIGHT'])
+    earth_radius = float(atr['EARTH_RADIUS'])
+    wavelength = float(atr['WAVELENGTH'])
+    rg_looks = int(atr['RLOOKS'])
+    az_looks = int(atr['ALOOKS'])
+    corr_looks = float(atr.get('NCORRLOOKS', rg_looks * az_looks / 1.94))
+
+    ## setup SNAPHU
+    # https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/snaphu.conf.full
+    # https://github.com/isce-framework/isce2/blob/main/contrib/Snaphu/Snaphu.py
+    print('phase unwrapping with SNAPHU ...')
+    print('SNAPHU cost mode: {}'.format(cost_mode))
+    print('SNAPHU init only: {}'.format(init_only))
+    print('SNAPHU init method: {}'.format(init_method))
+    print('SNAPHU max number of connected components: {}'.format(comp_max))
+
     snp = Snaphu()
-    snp.setInitOnly(False)
-    snp.setInput(intfile)
-    snp.setOutput(unwfile)
-    snp.setWidth(width)
-    snp.setCostMode(cost)
-    snp.setEarthRadius(earthRadius)
-    snp.setWavelength(wavelength)
-    snp.setAltitude(altitude)
-    snp.setCorrfile(corfile)
-    snp.setInitMethod('MST')
-    # snp.setCorrLooks(corrLooks)
-    snp.setMaxComponents(100)
-    snp.setDefoMaxCycles(2.0)
-    snp.setRangeLooks(rglooks)
-    snp.setAzimuthLooks(azlooks)
+
+    # file IO
+    snp.setInput(int_file)
+    snp.setOutput(unw_file)
+    snp.setCorrfile(cor_file)
     snp.setCorFileFormat('FLOAT_DATA')
+    snp.setWidth(width)
+
+    # runtime options
+    snp.setCostMode(cost_mode)
+    snp.setInitOnly(init_only)
+    snp.setInitMethod(init_method)
+
+    # geometry parameters
+    # baseline info is not used in deformation mode, but is very important in topography mode
+    snp.setAltitude(altitude)
+    snp.setEarthRadius(earth_radius)
+    snp.setWavelength(wavelength)
+    snp.setRangeLooks(rg_looks)
+    snp.setAzimuthLooks(az_looks)
+    snp.setCorrLooks(corr_looks)
+
+    # deformation mode parameters
+    snp.setDefoMaxCycles(defo_max)
+
+    # connected component control
+    # grow connectedc components if init_only is True
+    # https://github.com/isce-framework/isce2/blob/main/contrib/Snaphu/Snaphu.py#L413
+    snp.setMaxComponents(comp_max)
+
+    ## run SNAPHU
     snp.prepare()
-
-    # run SNAPHU
     snp.unwrap()
+    print('finished SNAPHU running')
 
-    # write metadata file
-    meta['INTERLEAVE'] = 'BIL'
-    meta['FILE_TYPE'] = '.unw'
-    meta['DATA_TYPE'] = 'float32'
-    meta['BANDS'] = 2
-    writefile.write_isce_xml(meta, unwfile)
+    # mask out wired values from SNAPHU
+    # based on https://github.com/isce-framework/isce2/pull/326
+    flag = np.fromfile(int_file, dtype=np.complex64).reshape(length, width)
+    data = np.memmap(unw_file, dtype='float32', mode='r+', shape=(length*2, width))
+    data[0:length*2:2, :][np.nonzero(flag == 0)] = 0
+    data[1:length*2:2, :][np.nonzero(flag == 0)] = 0
 
-    return
+    ## render metadata
+    print('write metadata file: {}.xml'.format(unw_file))
+    atr['FILE_TYPE'] = '.unw'
+    atr['DATA_TYPE'] = 'float32'
+    atr['INTERLEAVE'] = 'BIL'
+    atr['BANDS'] = '2'
+    writefile.write_isce_xml(atr, unw_file)
+
+    if snp.dumpConnectedComponents:
+        print('write metadata file: {}.conncomp.xml'.format(unw_file))
+        atr['FILE_TYPE'] = '.conncomp'
+        atr['DATA_TYPE'] = 'uint8'
+        atr['INTERLEAVE'] = 'BIP'
+        atr['BANDS'] = '1'
+        writefile.write_isce_xml(atr, f'{unw_file}.conncomp')
+
+    # time usage
+    m, s = divmod(time.time() - start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+
+    return unw_file
