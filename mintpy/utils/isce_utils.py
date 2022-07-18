@@ -971,7 +971,7 @@ def estimate_coherence(intfile, corfile):
     return
 
 
-def unwrap_snaphu(int_file, cor_file, unw_file, defo_max=2.0, comp_max=100,
+def unwrap_snaphu(int_file, cor_file, unw_file, defo_max=2.0, max_comp=32,
                   init_only=True, init_method='MCF', cost_mode='SMOOTH'):
     '''Unwrap interferograms using SNAPHU via isce2.
 
@@ -1001,7 +1001,7 @@ def unwrap_snaphu(int_file, cor_file, unw_file, defo_max=2.0, comp_max=100,
                 cor_file    - str, path to the correlation file
                 unw_file    - str, path to the output unwrapped interferogram file
                 defo_max    - float, maximum number of cycles for the deformation phase
-                comp_max    - int, maximum number of connected components
+                max_comp    - int, maximum number of connected components
                 init_only   - bool, initlize-only mode
                 init_method - str, algo used for initialization: MCF, MST
                 cost_mode   - str, statistical-cost mode: TOPO, DEFO, SMOOTH, NOSTATCOSTS
@@ -1030,7 +1030,7 @@ def unwrap_snaphu(int_file, cor_file, unw_file, defo_max=2.0, comp_max=100,
     print('SNAPHU cost mode: {}'.format(cost_mode))
     print('SNAPHU init only: {}'.format(init_only))
     print('SNAPHU init method: {}'.format(init_method))
-    print('SNAPHU max number of connected components: {}'.format(comp_max))
+    print('SNAPHU max number of connected components: {}'.format(max_comp))
 
     snp = Snaphu()
 
@@ -1061,7 +1061,7 @@ def unwrap_snaphu(int_file, cor_file, unw_file, defo_max=2.0, comp_max=100,
     # connected component control
     # grow connectedc components if init_only is True
     # https://github.com/isce-framework/isce2/blob/main/contrib/Snaphu/Snaphu.py#L413
-    snp.setMaxComponents(comp_max)
+    snp.setMaxComponents(max_comp)
 
     ## run SNAPHU
     snp.prepare()

@@ -40,7 +40,7 @@ EXAMPLE = """example:
   closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 -a mask --num-sigma 2.5
 
   # estimate and correct for biases
-  closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 5  --bw 5  -a quick_estimate --num-worker 4
+  closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 5  --bw 3  -a quick_estimate --num-worker 6
   closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --bw 10 -a estimate --noupdate -c local
 """
 
@@ -283,13 +283,12 @@ def calc_closure_phase_mask(stack_file, bias_free_conn, num_sigma=3, threshold_a
 def unwrap_closure_phase(int_file, cor_file, unw_file):
     """Unwrap the input wrapped sequential closure phase interferogram.
     """
-    if not os.path.isfile(cor_file):
-        isce_utils.estimate_coherence(int_file, cor_file)
 
-    if not os.path.isfile(unw_file):
-        isce_utils.unwrap_snaphu(int_file, cor_file, unw_file)
-    else:
+    if os.path.isfile(cor_file) and os.path.isfile(unw_file):
         print(f'unwrapped interferogram file exists: {unw_file}, skip re-unwrapping.')
+    else:
+        isce_utils.estimate_coherence(int_file, cor_file)
+        isce_utils.unwrap_snaphu(int_file, cor_file, unw_file)
 
     return unw_file
 
@@ -340,7 +339,7 @@ def cum_seq_unw_closure_phase_timeseries(conn, conn_dir, date_list, meta):
 
     prog_bar = ptime.progressBar(maxValue=num_file)
     for i, unw_file in enumerate(unw_files):
-        prog_bar.update(i+1, suffix=os.path.basename(unw_file))
+        prog_bar.update(i+1, suffix=f'{i+1}/{num_file} {os.path.basename(unw_file)}')
 
         unw = readfile.read(unw_file, datasetName='phase')[0]
         unw -= unw[ref_y, ref_x]
@@ -363,7 +362,7 @@ def cum_seq_unw_closure_phase_timeseries(conn, conn_dir, date_list, meta):
     # write bias time series to HDF5 file
     ds_dict = {
         'timeseries' : [np.float32,     (num_date, length, width), bias_ts],
-        'date'       : [np.dtype('S8'), (num_date), np.array(date_list, np.string_)],
+        'date'       : [np.dtype('S8'), (num_date,), np.array(date_list, np.string_)],
     }
     meta['FILE_TYPE'] = 'timeseries'
     writefile.layout_hdf5(cum_cp_file, ds_dict, metadata=meta)
@@ -376,7 +375,7 @@ def cum_seq_unw_closure_phase_timeseries(conn, conn_dir, date_list, meta):
     return bias_ts, common_mask
 
 
-def compute_unwrap_closure_phase(stack_file, conn, outdir, max_memory=4.0, num_worker=1):
+def compute_unwrap_closure_phase(stack_file, conn, num_worker=1, outdir='./', max_memory=4.0):
     '''Compute the following phase time-series of connection-conn:
 
     +   wrapped sequential closure phase
@@ -391,7 +390,7 @@ def compute_unwrap_closure_phase(stack_file, conn, outdir, max_memory=4.0, num_w
     Returns:    various wrapped, unwrapped and cumulative closure phase time-series
 
     '''
-    print('-'*80)
+    print('-'*60)
     print('step 1/3: calculate and filter the wrapped sequential closure phase stack ...')
 
     # basic info
@@ -420,7 +419,7 @@ def compute_unwrap_closure_phase(stack_file, conn, outdir, max_memory=4.0, num_w
     unw_files = [f'{x}.unw' for x in fbases]
 
     if all(os.path.isfile(x) for x in int_files):
-        print('all the filtered closure phase file exist, skip re-generation.')
+        print('ALL the filtered closure phase file exist, skip re-generation.')
 
     else:
         # process block-by-block
@@ -450,43 +449,46 @@ def compute_unwrap_closure_phase(stack_file, conn, outdir, max_memory=4.0, num_w
                 # filter the closure phase interferogram
                 closure_phase_filt = isce_utils.convolve(
                     data=np.exp(1j*closure_phase[i]),
-                    kernel=kernel)
+                    kernel=kernel,
+                ).astype(np.complex64)
 
                 # write to binary file in isce2 format
                 print(f'write file: {int_file}')
                 with open(int_file, mode='wb') as fid:
                     closure_phase_filt.tofile(fid)
 
-                # write metadata in roipac format
-                writefile.write_roipac_rsc(meta, int_file+'.rsc')
-
-                # write metadata in isce2 format
+                # write metadata in isce2/roipac format
                 meta['FILE_TYPE'] = '.int'
                 meta['INTERLEAVE'] = 'BIP'
                 meta['DATA_TYPE'] = 'complex64'
                 meta['BANDS'] = 1
                 writefile.write_isce_xml(meta, int_file)
+                writefile.write_roipac_rsc(meta, int_file+'.rsc')
         del closure_phase
 
-    print('-'*80)
+    print('-'*60)
     print('step 2/3: unwrap the filtered wrapped closure phase stack ...')
     print(f'number of closure phase: {num_cp}')
-    num_core, run_parallel, Parallel, delayed = ut.check_parallel(
-        num_cp,
-        print_msg=False,
-        maxParallelNum=num_worker)
-
-    if run_parallel and num_core > 1:
-        print(f'parallel processing using {num_core} cores')
-        Parallel(n_jobs=num_core)(delayed(unwrap_closure_phase)(x, y, z)
-                                  for x, y, z in zip(int_files, cor_files, unw_files))
+    if all(os.path.isfile(x) for x in unw_files):
+        print('ALL the unwrapped closure phase file exist, skip re-generation.')
 
     else:
-        for x, y, z in zip(int_files, cor_files, unw_files):
-            unwrap_closure_phase(x, y, z)
+        num_core, run_parallel, Parallel, delayed = ut.check_parallel(
+            num_cp,
+            print_msg=False,
+            maxParallelNum=num_worker)
+
+        if run_parallel and num_core > 1:
+            print(f'parallel processing using {num_core} cores')
+            Parallel(n_jobs=num_core)(delayed(unwrap_closure_phase)(x, y, z)
+                                      for x, y, z in zip(int_files, cor_files, unw_files))
+
+        else:
+            for x, y, z in zip(int_files, cor_files, unw_files):
+                unwrap_closure_phase(x, y, z)
 
     ## calc the cumulativev unwrapped closure phase time-series
-    print('-'*80)
+    print('-'*60)
     print('step 3/3: calculate the unwrapped cumulative sequential closure phase time-series ...')
     cum_seq_unw_closure_phase_timeseries(conn, conn_dir, date_list, meta)
 
@@ -513,7 +515,7 @@ def read_cum_seq_closure_phase4conn(conn, outdir, box):
 def estimate_wratio(tbase, conn, bias_free_conn, wvl, box, outdir='./', mask=False):
     '''Estimate w(n\delta_t)/w(delta_t) - Eq.(29) in Zheng et al., 2022.
 
-    Parameters: tbase          - list in size of (num_date,) in float, time in accumulated years
+    Parameters: tbase          - list(float) or array, in size of (num_date), time in accumulated years
                 conn           - integer, connection-level
                 bias_free_conn - integer, minimum connection-level that we think is bias-free
                 wvl            - float, wavelength
@@ -521,38 +523,61 @@ def estimate_wratio(tbase, conn, bias_free_conn, wvl, box, outdir='./', mask=Fal
                 outdir         - str, the working directory
                 mask           - bool, whether to mask out areas with average bias velocity less than 1 mm/year
     Returns:    wratio         - 2D array of size (box_len, box_wid) in float, w(n\delta_t)/w(delta_t)
-                wratio_vel     - 2D array of size (box_len, box_wid) in float,
+                vel_bias_connN - 2D array of size (box_len, box_wid) in float,
                                  bias-velocity at n*delta_t temporal baseline
     '''
     delta_t = tbase[-1] - tbase[0]
     phase2range = -1 * wvl / (4 * np.pi)
 
     cum_bias_conn1 = read_cum_seq_closure_phase4conn(bias_free_conn, outdir, box)[-1,:,:]
+    flag = np.multiply(~np.isnan(cum_bias_conn1), cum_bias_conn1 != 0)
     vel_bias_conn1 = cum_bias_conn1 / delta_t * phase2range
 
     # calc wratio
+    box_wid = box[2] - box[0]
+    box_len = box[3] - box[1]
+    wratio = np.ones([box_len, box_wid], dtype=np.float32)
+
     if conn > 1:
         cum_bias_connN = read_cum_seq_closure_phase4conn(conn, outdir, box)[-1,:,:]
-        wratio = np.divide(cum_bias_connN, cum_bias_conn1)
-        wratio = 1 - wratio
+        wratio[flag] = 1 - cum_bias_connN[flag] / cum_bias_conn1[flag]
+
         # bound within [0, 1]
-        wratio[wratio>1] = 1
-        wratio[wratio<0] = 0
+        wratio[wratio > 1] = 1
+        wratio[wratio < 0] = 0
 
     else:
-        # for conn == 1
-        box_wid = box[2] - box[0]
-        box_len = box[3] - box[1]
-        wratio = np.ones([box_len, box_wid], dtype=np.float32)
+        cum_bias_connN = None
 
-    # wratio --> wratio_vel
-    wratio_vel = np.multiply(wratio, vel_bias_conn1)
+    # vel_bias_connN
+    vel_bias_connN = np.multiply(wratio, vel_bias_conn1)
     if mask:
         # if average velocity smaller than 1 mm/year (hardcoded here), mask out for better visual
         # this option is only turned on while outputing Wratio.h5 file.
         wratio[abs(vel_bias_conn1) < 0.1] = np.nan
 
-    return wratio, wratio_vel
+    # debug mode
+    debug_mode = False
+    if debug_mode:
+        from matplotlib import pyplot as plt
+
+        data_list = [wratio, vel_bias_connN, cum_bias_connN,
+                     None,   vel_bias_conn1, cum_bias_conn1]
+        titles = ['w_ratio', f'bias_vel_{conn}', f'bias_{conn}',
+                  None,       'bias_vel_1',       'bias_1']
+
+        fig, axs = plt.subplots(nrows=2, ncols=3, figsize=[12, 6])
+        for ax, data, title in zip(axs.flatten(), data_list, titles):
+            if data is not None:
+                im = ax.imshow(data, cmap='jet', interpolation='nearest')
+                ax.set_title(title)
+                fig.colorbar(im, ax=ax)
+            else:
+                ax.axis('off')
+        fig.tight_layout()
+        plt.show()
+
+    return wratio, vel_bias_connN
 
 
 def estimate_wratio_all(bw, bias_free_conn, outdir, box):
@@ -573,24 +598,23 @@ def estimate_wratio_all(bw, bias_free_conn, outdir, box):
         outdir,
         box)[-1,:,:]
 
-    wratio = np.zeros([bw+1, box_len, box_wid], dtype=np.float32)
+    wratio = np.ones([bw+1, box_len, box_wid], dtype=np.float32)
     for n in np.arange(2, bw+1):
         cum_bias_connN = read_cum_seq_closure_phase4conn(n, outdir, box)[-1,:,:]
-        wratio[n,:,:] = np.divide(cum_bias_connN, cum_bias_conn1)
+        wratio[n,:,:] = 1 - cum_bias_connN / cum_bias_conn1
 
-    wratio = 1 - wratio
-    wratio[wratio>1] = 1
-    wratio[wratio<0] = 0
+    wratio[wratio > 1] = 1
+    wratio[wratio < 0] = 0
+
     return wratio
 
 
-def get_design_matrix_W(num_ifgram, A, bw, box, tbase, bias_free_conn, outdir):
+def get_design_matrix_W(num_ifgram, A, bw, box, bias_free_conn, outdir):
     '''Computes the matrix W for a given bounding box. (Eq. 16 in Zheng et al., 2022).
 
     Parameters: num_ifgram     - integer, number of interferograms
                 A              - 2D array in size of (num_ifgram, num_date) in int, design matrix specifying SAR acquisitions used
                 bw             - integer, bandwidth of time-series analysis
-                tbase          - list in size of (num_date,) in float, time in accumulated years
                 bias_free_conn - integer, minimum connection-level that we think is bias-free
                 box            - list in size of (4,) in integer, coordinates of bounding box
                 outdir         - string, the working directory
@@ -671,6 +695,8 @@ def estimate_bias_timeseries_approx(bias_free_conn, bw, tbase, date_ordinal, wvl
                 outdir         - string, directory for outputing files
     Returns:    bias_ts        - 3D array in size of (num_date, box_len, box_wid) in float, bias timeseries
     '''
+    print('\n'+'-'*60)
+    print(f'quick and approximate estimation of bias time series for bandwidth = {bw}')
     # basic info
     phase2range = -1 * wvl / (4 * np.pi)
     num_date = len(tbase)
@@ -681,7 +707,7 @@ def estimate_bias_timeseries_approx(bias_free_conn, bw, tbase, date_ordinal, wvl
 
     # the bias in a bandwidth-bw analysis is similar to bias in connectoin-p interferograms
     p = (np.abs(deltat_n - avg_time_span)).argmin() + 1
-    print(f'average connection level within this bandwidth of {bw}: {p}')
+    print(f'average connection level within the bandwidth = {p}')
 
     # get wratio
     kwargs = dict(
@@ -696,7 +722,7 @@ def estimate_bias_timeseries_approx(bias_free_conn, bw, tbase, date_ordinal, wvl
     wratio_2[np.isnan(wratio_2)] = 0
 
     wratio_2[abs(wratio_2 - 1) < 0.1] = np.nan
-    ratio_p2 = np.divide(wratio_p, (1 - wratio_2))
+    ratio_p2 = wratio_p / (1 - wratio_2)
 
     # get bias_ts
     bias_ts = read_cum_seq_closure_phase4conn(2, outdir, box) * phase2range
@@ -735,7 +761,7 @@ def quick_bias_estimation(stack_file, bias_free_conn, bw, outdir, max_memory=4.0
     date_list = stack_obj.get_date_list(dropIfgram=True)
     num_date = len(date_list)
 
-    tbase = ptime.date_list2tbase(date_list)[0] / 365.25   # tbase in years
+    tbase = [x / 365.25 for x in ptime.date_list2tbase(date_list)[0]]
     date_str_fmt = ptime.get_date_str_format(date_list[0])
     date_ordinal = [dt.strptime(x, date_str_fmt).toordinal() for x in date_list]
 
@@ -745,14 +771,14 @@ def quick_bias_estimation(stack_file, bias_free_conn, bw, outdir, max_memory=4.0
 
     # initiate output files
     # 1 - wratio file
-    wratio_file = os.path.join(outdir, 'Wratio.h5')
+    wratio_file = os.path.join(outdir, 'wratio.h5')
     meta['FILE_TYPE'] = 'wratio'
     meta['DATA_TYPE'] = 'float32'
     meta['UNIT'] = '1'
     ds_name_dict = {
-        'wratio'   : [np.float32,     (bw, length, width), None],
-        'velocity' : [np.float32,     (bw, length, width), None],
-        'date'     : [np.dtype('S8'), (num_date,),  np.array(date_list, np.string_)],
+        'wratio'       : [np.float32,     (bw, length, width), None],
+        'velocityBias' : [np.float32,     (bw, length, width), None],
+        #'date'     : [np.dtype('S8'), (num_date,),  np.array(date_list, np.string_)],
     }
     writefile.layout_hdf5(wratio_file, ds_name_dict, meta)
 
@@ -780,7 +806,8 @@ def quick_bias_estimation(stack_file, bias_free_conn, bw, outdir, max_memory=4.0
         wratio = np.zeros([bw, box_len, box_wid], dtype=np.float32)
         wratio_vel = np.zeros([bw, box_len, box_wid], dtype=np.float32)
         for j in range(bw):
-            wratio[j], wratio_vel[j] = estimate_wratio(
+            print(f'estimation W_ratio for bandwidth = {j+1}')
+            wratio[j, :, :], wratio_vel[j, :, :] = estimate_wratio(
                 tbase,
                 conn=j+1,
                 bias_free_conn=bias_free_conn,
@@ -799,7 +826,7 @@ def quick_bias_estimation(stack_file, bias_free_conn, bw, outdir, max_memory=4.0
 
         writefile.write_hdf5_block(wratio_file,
                                    data=wratio_vel,
-                                   datasetName='velocity',
+                                   datasetName='velocityBias',
                                    block=block)
 
         # 2 - estimate the bias time series
@@ -883,7 +910,7 @@ def estimate_bias_timeseries(stack_file, nl, bw, wvl, box, outdir):
         raise Exception("Modify maximum connection in ifgramStack.h5 to be consistent with input bandwidth!")
 
     # this matrix is a num_pix by num_ifgram matrix, each row stores the diagnal component of the Wr matrix for that pixel
-    W = get_design_matrix_W(num_ifgram, A, bw, box, tbase, nl, outdir)
+    W = get_design_matrix_W(num_ifgram, A, bw, box, nl, outdir)
     prog_bar = ptime.progressBar(maxValue=num_pix)
     for i in range(num_pix):
         Wr = np.diag(W[i,:])
@@ -1021,13 +1048,22 @@ def main(iargs=None):
         # compute the unwrapped closure phase bias time-series
         # to make sure we have conn-2 closure phase processed
         max_conn = np.maximum(2, inps.bw)
-        for conn in np.arange(2, max_conn + 1):
-            compute_unwrap_closure_phase(inps.stack_file, conn, num_worker=int(inps.numWorker), **kwargs)
-        compute_unwrap_closure_phase(inps.stack_file, inps.nl, num_worker=int(inps.numWorker), **kwargs)
+        conn_list = np.arange(2, max_conn + 1).tolist() + [inps.nl]
+        conn_list = sorted(list(set(conn_list)))
+        for i, conn in enumerate(conn_list):
+            print('\n'+'-'*80)
+            print(f'calculating the unwrapped closure phase for connection level = {conn} out of {conn_list} ...')
+            compute_unwrap_closure_phase(
+                stack_file=inps.stack_file,
+                conn=conn,
+                num_worker=int(inps.numWorker),
+                **kwargs)
 
         if inps.action == 'quick_estimate':
             # a quick solution to bias-correction
             # output diagonal component of Wr (how fast the bias-inducing signal decays with temporal baseline)
+            print('\n'+'-'*80)
+            print('quick estimation of the bias time-series ...')
             quick_bias_estimation(
                 stack_file=inps.stack_file,
                 bias_free_conn=inps.nl,
