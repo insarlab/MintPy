@@ -41,7 +41,7 @@ EXAMPLE = """example:
 
   # estimate and correct for biases
   closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 5  --bw 3  -a quick_estimate --num-worker 6
-  closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --bw 10 -a estimate --noupdate -c local
+  closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --bw 10 -a       estimate -c local
 """
 
 def create_parser():
@@ -804,10 +804,10 @@ def quick_bias_estimation(stack_file, bias_free_conn, bw, outdir, max_memory=4.0
 
         # 1 - estimate the wratio(_velocity)
         wratio = np.zeros([bw, box_len, box_wid], dtype=np.float32)
-        wratio_vel = np.zeros([bw, box_len, box_wid], dtype=np.float32)
+        bias_vel = np.zeros([bw, box_len, box_wid], dtype=np.float32)
         for j in range(bw):
             print(f'estimation W_ratio for bandwidth = {j+1}')
-            wratio[j, :, :], wratio_vel[j, :, :] = estimate_wratio(
+            wratio[j, :, :], bias_vel[j, :, :] = estimate_wratio(
                 tbase,
                 conn=j+1,
                 bias_free_conn=bias_free_conn,
@@ -825,7 +825,7 @@ def quick_bias_estimation(stack_file, bias_free_conn, bw, outdir, max_memory=4.0
                                    block=block)
 
         writefile.write_hdf5_block(wratio_file,
-                                   data=wratio_vel,
+                                   data=bias_vel,
                                    datasetName='velocityBias',
                                    block=block)
 
