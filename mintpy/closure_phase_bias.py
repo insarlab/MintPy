@@ -1050,7 +1050,7 @@ def main(iargs=None):
         max_conn = np.maximum(2, inps.bw)
         conn_list = np.arange(2, max_conn + 1).tolist() + [inps.nl]
         conn_list = sorted(list(set(conn_list)))
-        for i, conn in enumerate(conn_list):
+        for conn in conn_list:
             print('\n'+'-'*80)
             print(f'calculating the unwrapped closure phase for connection level = {conn} out of {conn_list} ...')
             compute_unwrap_closure_phase(
