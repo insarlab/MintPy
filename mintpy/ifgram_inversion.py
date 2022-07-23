@@ -1009,7 +1009,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
     # 2.2 un-weighted inversion (classic SBAS)
     if weight_sqrt is None:
-        msg_base = f'estimating time-series for pixels with valid {obs_ds_name} in'
+        msg = f'estimating time-series for pixels with valid {obs_ds_name} in'
 
         # a. split mask into mask_all/part_net
         # mask for valid (~NaN) observations in ALL ifgrams (share one B in sbas inversion)
