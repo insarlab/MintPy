@@ -806,7 +806,7 @@ def get_design_matrix_Wr(date12_list, bw, box, bias_free_conn, outdir='./'):
                 bias_free_conn - integer, minimum connection-level that we think is bias-free
                 box            - list in size of (4,) in integer, coordinates of bounding box
                 outdir         - string, the working directory
-    Returns:    Wr             - 2D np.ndarray in size of (num_pix, num_ifgram) in float32,
+    Returns:    Wr             - 2D np.ndarray in size of (num_ifgram, num_pix) in float32,
                                  each row stores the diagnal component of W (Eq. 16 in Zheng et al., 2022) for one pixel.
                 A              - 2D np.ndarray in size of (num_ifgram, num_date) in float32
     '''
@@ -819,7 +819,7 @@ def get_design_matrix_Wr(date12_list, bw, box, bias_free_conn, outdir='./'):
 
     # intial output value
     num_pix = (box[2] - box[0]) * (box[3] - box[1])
-    Wr = np.zeros((num_pix, num_ifgram), dtype=np.float32)
+    Wr = np.zeros((num_ifgram, num_pix), dtype=np.float32)
     for i in range(num_ifgram):
         # get the connection level
         Aline = list(A[i,:])
@@ -829,8 +829,9 @@ def get_design_matrix_Wr(date12_list, bw, box, bias_free_conn, outdir='./'):
         if conn > bw:
             print('Existing max-conn-level > the input bandwidth, '
                   'use modify_network.py inputs/ifgramStack.h5 to adjust the max-conn-level.')
+
         # assign to Wr matrix
-        Wr[:,i] = wratio_all[conn,:,:].reshape(-1)
+        Wr[i, :] = wratio_all[conn, :, :].reshape(-1)
 
     return Wr, A
 
@@ -856,6 +857,7 @@ def estimate_bias_timeseries_patch(stack_file, bias_free_conn, bw, wvl, box, wat
     stack_obj = ifgramStack(stack_file)
     stack_obj.open(print_msg=False)
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
+    num_ifgram = len(date12_list)
 
     # time info
     date_list = stack_obj.get_date_list(dropIfgram=True)
@@ -870,7 +872,7 @@ def estimate_bias_timeseries_patch(stack_file, bias_free_conn, bw, wvl, box, wat
 
     # water mask
     if water_mask_file and os.path.isfile(water_mask_file):
-        print(f'skip pixels (on the water) with zero value in file: {water_mask_file}')
+        print(f'skip pixels (on the water) with zero value in file: {os.path.basename(water_mask_file)}')
         water_mask = readfile.read(water_mask_file, box=box)[0].flatten()
         mask *= np.array(water_mask, dtype=np.bool_)
         del water_mask
@@ -883,50 +885,96 @@ def estimate_bias_timeseries_patch(stack_file, bias_free_conn, bw, wvl, box, wat
     print('number of pixels to invert: {} out of {} ({:.1f}%)'.format(
         num_pix2inv, num_pix, num_pix2inv/num_pix*100))
 
-    # We first need to have the bias time-series for bw-1 analysis
+
+    ## 1. get bias time-series for bw-1 analysis
     kwargs = dict(outdir=outdir, box=box, print_msg=True)
     bias_ts_bw1_rough = read_cum_seq_closure_phase4conn(bias_free_conn, **kwargs).reshape(num_date, -1)
     bias_ts_bw1_fine  = read_cum_seq_closure_phase4conn(2, **kwargs).reshape(num_date, -1)
 
     bias_vel_bw1 = bias_ts_bw1_fine[-1,:] * phase2range / (tbase[-1] - tbase[0])
     flag = np.where(np.abs(bias_vel_bw1) < 0.001, 0, 1).astype(np.bool_)
-    msg = 'number of pixels with bandwidth=1 velocity bias'
-    print(f'{msg} <  0.1 mm/yr: {np.sum(flag[mask])} out of {num_pix} ({np.sum(flag[mask])/num_pix*100:.1f}%)')
-    print(f'{msg} >= 0.1 mm/yr: {np.sum(~flag[mask])} out of {num_pix} ({np.sum(~flag[mask])/num_pix*100:.1f}%)')
+    num_pix_less, num_pix_more = np.sum(flag[mask]), np.sum(~flag[mask])
+    digit = len(str(num_pix))
+    msg = 'number of pixels with bandwidth=1 velocity bias '
+    msg += f'< | >= 0.1 mm/yr: {num_pix_less:{digit}d} | {num_pix_more:{digit}d} out of {num_pix} '
+    msg += f'({num_pix_less/num_pix*100:.0f}% | {num_pix_less/num_pix*100:.0f}%)'
+    print(msg)
 
+    # scale bias_ts_bw1_fine based on bias_ts_bw1_rough
+    r2f_flag = np.multiply(~np.isnan(bias_ts_bw1_fine[-1,:]), bias_ts_bw1_fine[-1,:] != 0)
+    r2f_scale = np.ones((num_pix), dtype=np.float32)
+    r2f_scale[r2f_flag] = bias_ts_bw1_rough[-1,r2f_flag] / bias_ts_bw1_fine[-1,r2f_flag]
     for i in range(num_date):
-        bias_ts_bw1_fine[i,:] *= bias_ts_bw1_rough[-1,:] / bias_ts_bw1_fine[-1,:]
+        bias_ts_bw1_fine[i,:] *= r2f_scale
+    del r2f_flag, r2f_scale
 
 
-    # Then We construct ifgram_bias (W * A * \Phi^X, or Wr * A * w(\delta_t)\Phi^X
-    # Eq.(19) in Zheng et al., 2022), same structure with stack_file
-    bias_ts = np.zeros((num_date, num_pix), dtype=np.float32)
-
+    # 2. construct bias_stack = W * A * Phi^X = Wr * A * w(delta_t) * Phi^X
+    # Equation (20) in Zheng et al. (2022, TGRS)
     # this matrix is a num_pix by num_ifgram matrix, each row stores the diagnal component of the Wr matrix for that pixel
-    print('estimating bias time-series following equation (20) in Zheng et al. (2022) ...')
+    print('estimating bias_stack = Wr * A * w(delta_t) * Phi^X (Zheng et al., 2022, TGRS) ...')
     Wr, A = get_design_matrix_Wr(date12_list, bw, box, bias_free_conn, outdir)
-    A1, B1 = stack_obj.get_design_matrix4timeseries(date12_list=date12_list)
+    wPhi_x = np.array(bias_ts_bw1_rough, dtype=np.float32)
+    wPhi_x[:, flag] = bias_ts_bw1_fine[:, flag]
 
+    bias_stack = np.zeros((num_ifgram, num_pix), dtype=np.float32)
     prog_bar = ptime.progressBar(maxValue=num_pix2inv)
     for i in range(num_pix2inv):
         idx = idx_pix2inv[i]
 
         # calculate the bias_stack = W * A * phi^x = W^r * A * w(delta_t) * phi^x
-        wPhi_x = bias_ts_bw1_rough[:,idx] if flag[idx] == 0 else bias_ts_bw1_fine[:,idx]
-        bias_stack = np.linalg.multi_dot([np.diag(Wr[idx,:]), A, wPhi_x])
+        bias_stack[:, idx] = np.linalg.multi_dot([np.diag(Wr[:, idx]), A, wPhi_x[:, idx]]).flatten()
 
-        # here we perform phase velocity inversion as per the original SBAS paper rather doing direct phase inversion.
-        # and skip pairs with zero/nan values
-        bias_ts[:, idx] = estimate_timeseries(
-            A1, B1,
-            y=bias_stack,
-            tbase_diff=tbase_diff,
-            weight_sqrt=None,
-            min_norm_velocity=True,
-        )[0].flatten()
-
-        prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, num_pix2inv))
+        prog_bar.update(i+1, every=3000, suffix='{}/{} pixels'.format(i+1, num_pix2inv))
     prog_bar.close()
+    del bias_ts_bw1_rough, bias_ts_bw1_fine, wPhi_x, Wr
+
+
+    # 3. estimate bias time-series from bias stack: bias_ts = A+ * bias_stack
+    # Equation (20) in Zheng et al. (2022, TGRS)
+    # perform phase velocity inversion as per the original SBAS paper rather doing direct phase inversion.
+    print('estimating bias time-series from bias stack via the SBAS approach ...')
+    A1, B1 = stack_obj.get_design_matrix4timeseries(date12_list=date12_list)
+    kwargs = {
+        'A'                 : A1,
+        'B'                 : B1,
+        'tbase_diff'        : tbase_diff,
+        'weight_sqrt'       : None,
+        'min_norm_velocity' : True,
+        'inv_quality_name'  : 'no',
+    }
+
+    # a. split mask into mask_all/par_net
+    # mask for valid (~NaN) observations in ALL ifgrams (share one B in sbas inversion)
+    mask_all_net = np.all(~np.isnan(bias_stack), axis=0) * np.all(bias_stack != 0, axis=0)
+    mask_all_net *= mask
+    mask_par_net = mask ^ mask_all_net
+    msg = 'estimating time-series for pixels with valid stack values'
+
+    # b. invert once for all pixels with obs in ALL ifgrams
+    bias_ts = np.zeros((num_date, num_pix), dtype=np.float32)
+    if np.sum(mask_all_net) > 0:
+        num_pix_all = int(np.sum(mask_all_net))
+        print(f'{msg} in all  ifgrams ({num_pix_all} pixels; {num_pix_all/num_pix2inv*100:.0f}%) ...')
+
+        # invert
+        bias_ts[:, mask_all_net] = estimate_timeseries(y=bias_stack[:, mask_all_net], **kwargs)[0]
+
+    # c. invert pixel-by-pixel for pixels with obs NOT in all ifgrams
+    if np.sum(mask_par_net) > 0:
+        num_pix_par = int(np.sum(mask_par_net))
+        idx_pix_par = np.where(mask_par_net)[0]
+        print(f'{msg} in some ifgrams ({num_pix_par} pixels; {num_pix_par/num_pix2inv*100:.0f}%) ...')
+
+        prog_bar = ptime.progressBar(maxValue=num_pix_par)
+        for i in range(num_pix_par):
+            idx = idx_pix_par[i]
+            # invert
+            bias_ts[:, idx] = estimate_timeseries(y=bias_stack[:, idx], **kwargs)[0].flatten()
+
+            prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, num_pix_par))
+        prog_bar.close()
+    del bias_stack
 
     bias_ts = bias_ts.reshape(num_date, box_len, box_wid) * phase2range
 
@@ -993,7 +1041,7 @@ def estimate_bias_timeseries(stack_file, bias_free_conn, bw, cluster_kwargs, wat
     }
 
     # split igram_file into blocks to save memory
-    box_list, num_box = stack_obj.split2boxes(max_memory=max_memory, dim0_size=num_date*4)
+    box_list, num_box = stack_obj.split2boxes(max_memory=max_memory, dim0_size=num_ifgram*2+num_date*3)
     num_threads_dict = cluster.set_num_threads("1")
 
     for i, box in enumerate(box_list):

@@ -345,6 +345,7 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
                 inv_quality_name  - str, inversion quality type/name
                                     temporalCoherence for phase
                                     residual          for offset
+                                    no to turn OFF the calcualtion
     Returns:    ts                - 2D np.ndarray in size of (num_date, num_pixel), phase time-series
                 inv_quality       - 1D np.ndarray in size of (num_pixel), temporal coherence (for phase) or residual (for offset)
                 num_inv_obs       - 1D np.ndarray in size of (num_pixel), number of observations (ifgrams / offsets)
@@ -395,10 +396,11 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
                 X, e2 = linalg.lstsq(B, y, cond=rcond)[:2]
 
             # calc inversion quality
-            inv_quality = calc_inv_quality(B, X, y, e2,
-                                           inv_quality_name=inv_quality_name,
-                                           weight_sqrt=weight_sqrt,
-                                           print_msg=print_msg)
+            if inv_quality_name != 'no':
+                inv_quality = calc_inv_quality(B, X, y, e2,
+                                               inv_quality_name=inv_quality_name,
+                                               weight_sqrt=weight_sqrt,
+                                               print_msg=print_msg)
 
             # assemble time-series
             ts_diff = X * np.tile(tbase_diff, (1, num_pixel))
@@ -414,10 +416,11 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
                 X, e2 = linalg.lstsq(A, y, cond=rcond)[:2]
 
             # calc inversion quality
-            inv_quality = calc_inv_quality(A, X, y, e2,
-                                           inv_quality_name=inv_quality_name,
-                                           weight_sqrt=weight_sqrt,
-                                           print_msg=print_msg)
+            if inv_quality_name != 'no':
+                inv_quality = calc_inv_quality(A, X, y, e2,
+                                               inv_quality_name=inv_quality_name,
+                                               weight_sqrt=weight_sqrt,
+                                               print_msg=print_msg)
 
             # assemble time-series
             ts[1: ,:] = X
@@ -994,8 +997,19 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
         num_inv_obs = num_inv_obs.reshape(num_row, num_col)
         return ts, ts_cov, inv_quality, num_inv_obs, box
 
+    # common inversion options
+    kwargs = {
+        'A'                 : A,
+        'B'                 : B,
+        'tbase_diff'        : tbase_diff,
+        'min_norm_velocity' : min_norm_velocity,
+        'min_redundancy'    : min_redundancy,
+        'inv_quality_name'  : inv_quality_name,
+    }
+
     # 2.2 un-weighted inversion (classic SBAS)
     if weight_sqrt is None:
+        msg_base = f'estimating time-series for pixels with valid {obs_ds_name} in'
 
         # a. split mask into mask_all/part_net
         # mask for valid (~NaN) observations in ALL ifgrams (share one B in sbas inversion)
@@ -1006,19 +1020,14 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
         # b. invert once for all pixels with obs in all ifgrams
         if np.sum(mask_all_net) > 0:
-            print(('estimating time-series for pixels with valid {} in all  ifgrams'
-                   ' ({:.0f} pixels; {:.1f}%) ...').format(obs_ds_name,
-                                                           np.sum(mask_all_net),
-                                                           np.sum(mask_all_net)/num_pixel2inv*100))
-            (tsi,
-             inv_quali,
-             num_obsi) = estimate_timeseries(A, B,
-                                             y=stack_obs[:, mask_all_net],
-                                             tbase_diff=tbase_diff,
-                                             weight_sqrt=None,
-                                             min_norm_velocity=min_norm_velocity,
-                                             min_redundancy=min_redundancy,
-                                             inv_quality_name=inv_quality_name)
+            num_pixel2inv_all = int(np.sum(mask_all_net))
+            print(f'{msg} all  ifgrams ({num_pixel2inv_all} pixels; {num_pixel2inv_all/num_pixel2inv*100:.1f}%) ...')
+
+            # run
+            tsi, inv_quali, num_obsi = estimate_timeseries(
+                y=stack_obs[:, mask_all_net],
+                weight_sqrt=None,
+                **kwargs)
 
             # save result to output matrices
             ts[:, mask_all_net] = tsi
@@ -1027,29 +1036,25 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
 
         # c. pixel-by-pixel for pixels with obs not in all ifgrams
         if np.sum(mask_part_net) > 0:
-            print(('estimating time-series for pixels with valid {} in some ifgrams'
-                   ' ({:.0f} pixels; {:.1f}%) ...').format(obs_ds_name,
-                                                           np.sum(mask_part_net),
-                                                           np.sum(mask_all_net)/num_pixel2inv*100))
             num_pixel2inv_part = int(np.sum(mask_part_net))
             idx_pixel2inv_part = np.where(mask_part_net)[0]
+            print(f'{msg} some ifgrams ({num_pixel2inv_part} pixels; {num_pixel2inv_part/num_pixel2inv*100:.1f}%) ...')
+
             prog_bar = ptime.progressBar(maxValue=num_pixel2inv_part)
             for i in range(num_pixel2inv_part):
                 idx = idx_pixel2inv_part[i]
-                (tsi,
-                 inv_quali,
-                 num_obsi) = estimate_timeseries(A, B,
-                                                 y=stack_obs[:, idx],
-                                                 tbase_diff=tbase_diff,
-                                                 weight_sqrt=None,
-                                                 min_norm_velocity=min_norm_velocity,
-                                                 min_redundancy=min_redundancy,
-                                                 inv_quality_name=inv_quality_name)
+
+                # run
+                tsi, inv_quali, num_obsi = estimate_timeseries(
+                    y=stack_obs[:, idx],
+                    weight_sqrt=None,
+                    **kwargs)
 
                 # save result to output matrices
                 ts[:, idx] = tsi.flatten()
                 inv_quality[idx] = inv_quali
                 num_inv_obs[idx] = num_obsi
+
                 prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, num_pixel2inv_part))
             prog_bar.close()
 
@@ -1059,15 +1064,12 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
         prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
         for i in range(num_pixel2inv):
             idx = idx_pixel2inv[i]
-            (tsi,
-             inv_quali,
-             num_obsi) = estimate_timeseries(A, B,
-                                             y=stack_obs[:, idx],
-                                             tbase_diff=tbase_diff,
-                                             weight_sqrt=weight_sqrt[:, idx],
-                                             min_norm_velocity=min_norm_velocity,
-                                             min_redundancy=min_redundancy,
-                                             inv_quality_name=inv_quality_name)
+
+            # run
+            tsi, inv_quali, num_obsi = estimate_timeseries(
+                y=stack_obs[:, idx],
+                weight_sqrt=weight_sqrt[:, idx],
+                **kwargs)
 
             # save result to output matrices
             ts[:, idx] = tsi.flatten()
