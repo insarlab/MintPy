@@ -42,7 +42,7 @@ EXAMPLE = """example:
   closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 5  -a mask
   closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 -a mask --num-sigma 2.5
 
-  # estimate non-closure phase bias time-series [quick]
+  # estimate non-closure phase bias time-series [quick and approximate solution]
   closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 5  --bw 3  -a quick_estimate --num-worker 6
 
   # estimate non-closure phase bias time-series
@@ -134,7 +134,6 @@ def calc_closure_phase_mask(stack_file, bias_free_conn, num_sigma=3, threshold_a
     stack_obj.open(print_msg=False)
     length, width = stack_obj.length, stack_obj.width
     date_list = stack_obj.get_date_list(dropIfgram=True)
-    num_date = len(date_list)
     num_cp = stack_obj.get_closure_phase_index(bias_free_conn).shape[0]
 
     ## What is a good thredshold?
@@ -527,7 +526,7 @@ def estimate_wratio(tbase, conn, bias_free_conn, wvl, box, outdir='./', mask=Fal
 
 
 def estimate_wratio_all(bw, bias_free_conn, outdir, box):
-    ''' Estimate w(n\delta_t)/w(delta_t) for n=1:bw
+    '''Estimate diaginal matrix W_r for all connections levels within the given bandwidth.
 
     Parameters: bias_free_conn - integer, minimum connection-level that we think is bias-free
                 bw             - integer, bandwidth of given time-sereis analysis
@@ -857,7 +856,6 @@ def estimate_bias_timeseries_patch(stack_file, bias_free_conn, bw, wvl, box, wat
     stack_obj = ifgramStack(stack_file)
     stack_obj.open(print_msg=False)
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
-    num_ifgram = len(date12_list)
 
     # time info
     date_list = stack_obj.get_date_list(dropIfgram=True)
