@@ -20,7 +20,7 @@ Check [here](docker.md) for more details on Docker container image usage, e.g. p
 
 #### c. via apt (Linux Debian) ####
 
-MintPy is available in the main archive of the [Debian](https://salsa.debian.org/debian-gis-team/mintpy) GNU/Linux OS. It can be installed by using your favourite package manager or running the following command:
+MintPy is available in the main archive of the [Debian](https://tracker.debian.org/pkg/mintpy) GNU/Linux OS. It can be installed by using your favourite package manager or running the following command:
 
 ```bash
 apt install mintpy

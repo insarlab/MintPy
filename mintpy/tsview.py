@@ -53,6 +53,10 @@ def create_parser():
                         help='set tick and tick label to the right')
     parser.add_argument('-l','--lookup', dest='lookup_file', type=str,
                         help='lookup table file')
+    parser.add_argument('--no-show-img','--not-show-image', dest='disp_fig_img', action='store_false',
+                        help='do NOT show the map figure.\n'
+                             'Useful for plotting a point time series only.\n'
+                             'This option requires --yx/lalo input.')
 
     parser.add_argument('-n', dest='idx', metavar='NUM', type=int,
                         help='Epoch/slice number for initial display.')
@@ -146,6 +150,11 @@ def cmd_line_parse(iargs=None):
     # verbose print using --noverbose option
     global vprint
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
+
+    if not inps.disp_fig_img:
+        if not inps.yx and not inps.lalo:
+            inps.disp_fig_img = True
+            print('WARNING: NO --yx/lalo input found for --no-show-img, turn it OFF and continue')
 
     if not inps.disp_fig:
         plt.switch_backend('Agg')
@@ -816,6 +825,12 @@ class timeseriesViewer():
             msg += '\n2) Press left or right arrow key (if not responding, click the image and try again).'
             msg += '\n------------------------------------------------------------------------'
             vprint(msg)
+
+            # --no-show-map option
+            # requires --yx/lalo input
+            if self.yx and not self.disp_fig_img:
+                plt.close(self.fig_img)
+
             plt.show()
         return
 
