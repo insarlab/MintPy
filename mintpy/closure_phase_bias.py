@@ -534,7 +534,7 @@ def estimate_wratio_all(bw, bias_free_conn, outdir, box):
                 outdir         - string, the working directory
     Returns:    wratio         - 3D array in size of (bw+1, length, width) in float32,
                                  the first slice (w[0,:,:]) is a padding 
-                                 to ensure that wratio[n,:,:] = w(n\delta_t)/w(delta_t).
+                                 to ensure that wratio[n,:,:] = w(n * delta_t) / w(delta_t).
     '''
     box_wid = box[2] - box[0]
     box_len = box[3] - box[1]
@@ -910,14 +910,16 @@ def estimate_bias_timeseries_patch(stack_file, bias_free_conn, bw, wvl, box, wat
     prog_bar = ptime.progressBar(maxValue=num_pix2inv)
     for i in range(num_pix2inv):
         idx = idx_pix2inv[i]
+
+        # calculate the bias_stack = W * A * phi^x = W^r * A * w(delta_t) * phi^x
         wPhi_x = bias_ts_bw1_rough[:,idx] if flag[idx] == 0 else bias_ts_bw1_fine[:,idx]
-        Phi_bias = np.linalg.multi_dot([np.diag(Wr[idx,:]), A, wPhi_x])
+        bias_stack = np.linalg.multi_dot([np.diag(Wr[idx,:]), A, wPhi_x])
 
         # here we perform phase velocity inversion as per the original SBAS paper rather doing direct phase inversion.
         # and skip pairs with zero/nan values
         bias_ts[:, idx] = estimate_timeseries(
             A1, B1,
-            y=Phi_bias,
+            y=bias_stack,
             tbase_diff=tbase_diff,
             weight_sqrt=None,
             min_norm_velocity=True,
