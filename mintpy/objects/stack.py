@@ -1040,6 +1040,79 @@ class ifgramStack:
         return cp_idx
 
 
+    def get_sequential_closure_phase(self, box, conn, post_proc=None):
+        """Computes wrapped sequential closure phases for a given conneciton level.
+
+        Reference: Equation (21) in Zheng et al. (2022, TGRS)
+        For conn = 5, seq_closure_phase = p12 + p23 + p34 + p45 + p56 - p16.
+
+        Parameters: box       - tuple of 4 int, bounding box in (x0, y0, x1, y1)
+                    conn      - int, connection level of the closure phase
+                    post_proc - str, post processing of the closure phase:
+                                None - 3D array in float32, seq closure phase
+                                sum  - 2D array in complex64, sum  in time of the complex seq closure phase
+                                mean - 2D array in complex64, mean in time of the complex seq closure phase
+        Returns:    cp_w      - 3D np.ndarray in float32 in size of (num_cp, box_len, box_wid)
+                                wrapped sequential  closure phase for the given connection level.
+                    sum_cp    - None or 2D np.ndarray in complex64 in size of (box_len, box_width)
+                                wrapped average seq closure phase for the given connection level,
+                                controlled by post_proc.
+                    num_cp    - int, number of  seq closure phase for the given connection level.
+        """
+        # basic info
+        num_date = len(self.get_date_list(dropIfgram=True))
+        box_wid = box[2] - box[0]
+        box_len = box[3] - box[1]
+
+        ## get the closure index
+        cp_idx = self.get_closure_phase_index(conn=conn, dropIfgram=True)
+        num_cp = cp_idx.shape[0]
+        print(f'number of closure measurements expected: {num_date - conn}')
+        print(f'number of closure measurements found   : {num_cp}')
+
+        if not post_proc:
+            if num_cp < num_date - conn:
+                msg = f'num_cp ({num_cp}) < num_date - conn ({num_date - conn})'
+                msg += ' --> some interferograms are missing!'
+                raise Exception(msg)
+        else:
+            if num_cp < 1:
+                raise Exception(f"No triplets found at connection level: {conn}!")
+
+        ## read data
+        phase = self.read(box=box, print_msg=False)
+        ref_phase = self.get_reference_phase(dropIfgram=False)
+        for i in range(phase.shape[0]):
+            mask = phase[i] != 0.
+            phase[i][mask] -= ref_phase[i]
+
+        ## calculate the 3D complex seq closure phase
+        cp_w = np.zeros((num_cp, box_len, box_wid), dtype=np.complex64)
+        for i in range(num_cp):
+
+            # calculate closure phase - cp0_w
+            idx_plus, idx_minor = cp_idx[i, :-1], cp_idx[i, -1]
+            cp0_w = np.sum(phase[idx_plus], axis=0) - phase[idx_minor]
+
+            # get the wrapped closure phase
+            cp_w[i] = np.exp(1j * cp0_w)
+
+        ## post-processing
+        if not post_proc:
+            sum_cp = None
+
+        elif post_proc == 'sum':
+            sum_cp = np.sum(cp_w, axis=0)
+
+        elif post_proc == 'mean':
+            sum_cp = np.mean(cp_w, axis=0)
+
+        else:
+            raise ValueError(f'un-recognized post_proc={post_proc}! Available choices: sum, mean.')
+
+        return np.angle(cp_w), sum_cp, num_cp
+
+
     # Functions for unwrapping error correction
     @staticmethod
     def get_design_matrix4triplet(date12_list):

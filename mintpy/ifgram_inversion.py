@@ -335,7 +335,7 @@ def estimate_timeseries(A, B, y, tbase_diff, weight_sqrt=None, min_norm_velocity
                 y                 - 2D np.ndarray in size of (num_pair, num_pixel),
                                     phase/offset of all interferograms with no-data value: NaN.
                 tbase_diff        - 2D np.ndarray in size of (num_date-1, 1),
-                                    differential temporal baseline history
+                                    differential temporal baseline history, in the unit of years
                 weight_sqrt       - 2D np.ndarray in size of (num_pair, num_pixel),
                                     square root of weight of all interferograms
                 min_norm_velocity - bool, assume minimum-norm deformation velocity, or not
