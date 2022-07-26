@@ -59,7 +59,7 @@ def create_parser():
                         help='interferogram stack file that contains the unwrapped phases')
     parser.add_argument('--wm','--water-mask', dest='water_mask_file',
                         help='Water mask to skip pixels on water body.\n'
-                             'Default: None or waterMask.h5 if exists.')
+                             'Default: waterMask.h5 if exists, otherwise None.')
 
     # bandwidth and bias free connection level
     parser.add_argument('--nl','--conn-level', dest='nl', type=int, default=20,
@@ -132,6 +132,7 @@ def calc_closure_phase_mask(stack_file, bias_free_conn, num_sigma=3, threshold_a
     # basic info
     stack_obj = ifgramStack(stack_file)
     stack_obj.open(print_msg=False)
+    meta = dict(stack_obj.metadata)
     length, width = stack_obj.length, stack_obj.width
     date_list = stack_obj.get_date_list(dropIfgram=True)
     num_cp = stack_obj.get_closure_phase_index(bias_free_conn).shape[0]
@@ -173,6 +174,17 @@ def calc_closure_phase_mask(stack_file, bias_free_conn, num_sigma=3, threshold_a
             post_proc='mean',
         )[1:]
 
+    # mask out no-data pixels
+    geom_file = 'geometryGeo.h5' if 'Y_FIRST' in meta.keys() else 'geometryRadar.h5'
+    geom_file = os.path.join(os.path.dirname(stack_file), geom_file)
+    if os.path.isfile(geom_file):
+        geom_ds_names = readfile.get_dataset_list(geom_file)
+        ds_names = [x for x in ['incidenceAngle', 'waterMask'] if x in geom_ds_names]
+        if len(ds_names) > 0:
+            print(f'mask out pixels with no-data-value (zero {ds_names[0]} from file: {os.path.basename(geom_file)})')
+            no_data_mask = readfile.read(geom_file, datasetName=ds_names[0])[0] == 0
+            avg_cp[no_data_mask] = np.nan
+
     # create mask
     print('\ncreate mask for areas suseptible to non-closure phase biases')
     mask = np.ones([length,width], dtype=bool)
@@ -188,7 +200,6 @@ def calc_closure_phase_mask(stack_file, bias_free_conn, num_sigma=3, threshold_a
 
     # write file 1 - mask
     mask_file = os.path.join(outdir, 'maskClosurePhase.h5')
-    meta = dict(stack_obj.metadata)
     meta['FILE_TYPE'] = 'mask'
     meta['DATA_TYPE'] = 'bool'
     writefile.write(mask, out_file=mask_file, metadata=meta)
@@ -696,9 +707,12 @@ def estimate_bias_timeseries_approx(stack_file, bias_free_conn, bw, water_mask_f
     ds_name_dict = {
         'wratio'       : [np.float32,     (bw, length, width), None],
         'velocityBias' : [np.float32,     (bw, length, width), None],
-        #'date'     : [np.dtype('S8'), (num_date,),  np.array(date_list, np.string_)],
     }
-    writefile.layout_hdf5(wratio_file, ds_name_dict, meta)
+    ds_unit_dict = {
+        'wratio'       : '1',
+        'velocityBias' : 'm/year',
+    }
+    writefile.layout_hdf5(wratio_file, ds_name_dict, metadata=meta, ds_unit_dict=ds_unit_dict)
 
     # 2 - time series file
     bias_ts_file = os.path.join(outdir, 'timeseriesBiasApprox.h5')
