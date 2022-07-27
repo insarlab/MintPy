@@ -622,7 +622,7 @@ def main(iargs=None):
             geom_file=inps.geom_file,
             inps=inps)
 
-    return inps.outfile
+    return
 
 
 #######################################################

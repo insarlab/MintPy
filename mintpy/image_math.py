@@ -100,10 +100,10 @@ def file_operation(fname, operator, operand, out_file=None):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    inps.outfile = file_operation(inps.file, inps.operator, inps.operand, inps.outfile)
+    file_operation(inps.file, inps.operator, inps.operand, inps.outfile)
 
     print('Done.')
-    return inps.outfile
+    return
 
 
 #######################################################################################

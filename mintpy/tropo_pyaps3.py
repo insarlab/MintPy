@@ -836,9 +836,10 @@ def main(iargs=None):
     get_grib_info(inps)
 
     # download
-    inps.grib_files = dload_grib_files(inps.grib_files, 
-                                       tropo_model=inps.tropo_model,
-                                       snwe=inps.snwe)
+    inps.grib_files = dload_grib_files(
+        inps.grib_files, 
+        tropo_model=inps.tropo_model,
+        snwe=inps.snwe)
 
     # calculate tropo delay and save to h5 file
     if inps.geom_file:
@@ -851,21 +852,22 @@ def main(iargs=None):
     if inps.dis_file:
         ftype = inps.atr['FILE_TYPE']
         if ftype == 'timeseries':
-            correct_timeseries(dis_file=inps.dis_file,
-                               tropo_file=inps.tropo_file,
-                               cor_dis_file=inps.cor_dis_file)
+            correct_timeseries(
+                dis_file=inps.dis_file,
+                tropo_file=inps.tropo_file,
+                cor_dis_file=inps.cor_dis_file)
 
         elif ftype == '.unw':
-            correct_single_ifgram(dis_file=inps.dis_file,
-                                  tropo_file=inps.tropo_file,
-                                  cor_dis_file=inps.cor_dis_file)
+            correct_single_ifgram(
+                dis_file=inps.dis_file,
+                tropo_file=inps.tropo_file,
+                cor_dis_file=inps.cor_dis_file)
         else:
             print('input file {} is not timeseries nor .unw, correction is not supported yet.'.format(ftype))
 
     else:
         print('No input displacement file, skip correcting tropospheric delays.')
 
-    
     return
 
 ###############################################################

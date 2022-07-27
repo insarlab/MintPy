@@ -340,11 +340,12 @@ def main(iargs=None):
         return inps.outfile
 
     ##### Mask: Threshold
-    inps.outfile = create_threshold_mask(inps)
+    create_threshold_mask(inps)
 
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
-    return inps.outfile
+
+    return
 
 
 ################################################################################################

@@ -15,9 +15,10 @@ from mintpy.utils import readfile, utils as ut
 
 
 # key configuration parameter name
-configKeys = ['mintpy.deramp',
-              'mintpy.deramp.maskFile',
-             ]
+configKeys = [
+    'mintpy.deramp',
+    'mintpy.deramp.maskFile',
+]
 
 
 ###########################################################################################
@@ -113,12 +114,13 @@ def main(iargs=None):
     if inps.update_mode and run_or_skip(inps) == 'skip':
         return inps.outfile
 
-    out_file = ut.run_deramp(inps.file,
-                             ramp_type=inps.surface_type,
-                             mask_file=inps.mask_file,
-                             out_file=inps.outfile,
-                             datasetName=inps.dset,
-                             save_ramp_coeff=inps.save_ramp_coeff)
+    out_file = ut.run_deramp(
+        inps.file,
+        ramp_type=inps.surface_type,
+        mask_file=inps.mask_file,
+        out_file=inps.outfile,
+        datasetName=inps.dset,
+        save_ramp_coeff=inps.save_ramp_coeff)
 
     # config parameter
     print('add/update the following configuration metadata to file:\n{}'.format(configKeys))
@@ -126,6 +128,7 @@ def main(iargs=None):
     atr_new['mintpy.deramp'] = inps.surface_type
     atr_new['mintpy.deramp.maskFile'] = inps.mask_file
     ut.add_attribute(out_file, atr_new)
+
     return
 
 

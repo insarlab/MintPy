@@ -46,9 +46,10 @@ def main(iargs=None):
         raise ValueError(('input dataset do not exists: {}'
                           '\navailable datasets:\n{}').format(inps.dset, dset_list))
 
-    inps.file = writefile.remove_hdf5_dataset(inps.file, inps.dset, print_msg=True)
+    writefile.remove_hdf5_dataset(inps.file, inps.dset, print_msg=True)
+
     print('Done.')
-    return inps.file
+    return
 
 
 ###########################################################################################

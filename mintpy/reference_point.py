@@ -500,6 +500,7 @@ def main(iargs=None):
 
     if inps.go_reference:
         reference_file(inps)
+
     print('Done.')
     return
 

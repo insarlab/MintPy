@@ -326,7 +326,7 @@ def main(iargs=None):
 
     m, s = divmod(time.time() - start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
-    return inps.cor_dis_file
+    return
 
 ###############################################################
 if __name__ == '__main__':

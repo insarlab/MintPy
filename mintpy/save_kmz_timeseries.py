@@ -665,6 +665,7 @@ def main(iargs=None):
     print('merged all files to {}'.format(kmz_file))
     print('Done.')
     print('Open {} in Google Earth and play!'.format(kmz_file))
+
     return
 
 

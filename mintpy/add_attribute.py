@@ -91,7 +91,7 @@ def main(argv=None):
     # add attributes to file
     update_file_attribute(fname=infile, atr_new=atr_new)
 
-    return infile
+    return
 
 
 ################################################################################

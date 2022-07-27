@@ -297,13 +297,14 @@ def main(iargs=None):
 
     start_time = time.time()
     # run bridging
-    run_unwrap_error_bridge(inps.ifgram_file,
-                            water_mask_file=inps.waterMaskFile,
-                            ramp_type=inps.ramp,
-                            radius=inps.bridgePtsRadius,
-                            cc_min_area=inps.connCompMinArea,
-                            dsNameIn=inps.datasetNameIn,
-                            dsNameOut=inps.datasetNameOut)
+    run_unwrap_error_bridge(
+        ifgram_file=inps.ifgram_file,
+        water_mask_file=inps.waterMaskFile,
+        ramp_type=inps.ramp,
+        radius=inps.bridgePtsRadius,
+        cc_min_area=inps.connCompMinArea,
+        dsNameIn=inps.datasetNameIn,
+        dsNameOut=inps.datasetNameOut)
 
     # config parameter
     if os.path.splitext(inps.ifgram_file)[1] in ['.h5', '.he5']:
@@ -315,7 +316,7 @@ def main(iargs=None):
 
     m, s = divmod(time.time()-start_time, 60)
     print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
-    return inps.ifgram_file
+    return
 
 
 ####################################################################################################

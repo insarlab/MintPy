@@ -79,7 +79,8 @@ def main(iargs=None):
         inps.outfile = '{}_tempGaussian.h5'.format(os.path.splitext(inps.timeseries_file)[0])
     obj_out = timeseries(inps.outfile)
     obj_out.write2hdf5(ts_data_filt, refFile=inps.timeseries_file)
-    return inps.outfile
+
+    return
 
 
 ############################################################

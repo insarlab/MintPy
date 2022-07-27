@@ -220,12 +220,13 @@ def main(iargs=None):
     ts_data[mask] = 0.
 
     # write time-series file
-    metadata = dict(obj.metadata)
-    metadata['mintpy.troposphericDelay.polyOrder'] = str(inps.poly_order)
+    meta = dict(obj.metadata)
+    meta['mintpy.troposphericDelay.polyOrder'] = str(inps.poly_order)
     if not inps.outfile:
         inps.outfile = '{}_tropHgt.h5'.format(os.path.splitext(inps.timeseries_file)[0])
-    writefile.write(ts_data, out_file=inps.outfile, metadata=metadata, ref_file=inps.timeseries_file)
-    return inps.outfile
+    writefile.write(ts_data, out_file=inps.outfile, metadata=meta, ref_file=inps.timeseries_file)
+
+    return
 
 
 ############################################################################

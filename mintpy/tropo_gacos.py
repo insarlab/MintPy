@@ -358,22 +358,25 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # calculate tropo delay and savee to h5 file
-    calculate_delay_timeseries(tropo_file=inps.tropo_file,
-                               dis_file=inps.dis_file,
-                               geom_file=inps.geom_file,
-                               GACOS_dir=inps.GACOS_dir)
+    calculate_delay_timeseries(
+        tropo_file=inps.tropo_file,
+        dis_file=inps.dis_file,
+        geom_file=inps.geom_file,
+        GACOS_dir=inps.GACOS_dir)
 
     # correct tropo delay from dis time-series
     ftype = readfile.read_attribute(inps.dis_file)['FILE_TYPE']
     if ftype == 'timeseries':
-        correct_timeseries(dis_file=inps.dis_file,
-                           tropo_file=inps.tropo_file,
-                           cor_dis_file=inps.cor_dis_file)
+        correct_timeseries(
+            dis_file=inps.dis_file,
+            tropo_file=inps.tropo_file,
+            cor_dis_file=inps.cor_dis_file)
 
     elif ftype == '.unw':
-        correct_single_ifgram(dis_file=inps.dis_file,
-                              tropo_file=inps.tropo_file,
-                              cor_dis_file=inps.cor_dis_file)
+        correct_single_ifgram(
+            dis_file=inps.dis_file,
+            tropo_file=inps.tropo_file,
+            cor_dis_file=inps.cor_dis_file)
     else:
         print('input file {} is not timeseries nor .unw, correction is not supported yet.'.format(ftype))
 
