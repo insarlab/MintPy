@@ -708,7 +708,7 @@ def main(iargs=None):
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
 
-    return inps.outfile
+    return
 
 
 ####################################################################################
