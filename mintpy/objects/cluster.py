@@ -302,7 +302,7 @@ class DaskCluster:
             # message
             num_future += 1
             sub_t = time.time() - submission_time
-            print("FUTURE #{} complete. Time used: {:.0f} seconds".format(num_future, sub_t))
+            print(f"\nFUTURE #{num_future} complete. Time used: {sub_t:.0f} seconds")
 
             # catch result - sub_box
             # and convert the abosulte sub_box into local col/row start/end relative to the primary box

@@ -966,10 +966,158 @@ class ifgramStack:
             num_conn[i] = np.where(Ai == 1)[0] - np.where(Ai == -1)[0]
         return np.max(num_conn)
 
-    # Functions for Unwrap error correction
+
+    def split2boxes(self, max_memory=4, dim0_size=None, print_msg=True):
+        """Split into chunks in rows to reduce memory usage.
+
+        Parameters: max_memory - float, max memory to use in GB
+                    dim0_size  - the 1st dimension size of all used datasets
+                                 e.g., dim0_size = num_pair * 2 + num_date
+                    print_msg  - bool
+        Returns:    box_list   - list of tuple of 4 int
+                    num_box    - int, number of boxes
+        """
+        self.open(print_msg=False)
+        length = self.length
+        width = self.width
+
+        # dimension in time: phase/offset, weight, timeseries, etc.
+        if not dim0_size:
+            # for time series estimation
+            dim0_size = self.numIfgram * 2 + self.numDate
+        ds_size = dim0_size * length * width * 4
+
+        num_box = int(np.ceil(ds_size * 1.5 / (max_memory * 1024**3)))
+        y_step = int(np.ceil((length / num_box) / 10) * 10)
+        num_box = int(np.ceil(length / y_step))
+        if print_msg and num_box > 1:
+            print('maximum memory size: %.1E GB' % max_memory)
+            print('split %d lines into %d patches for processing' % (length, num_box))
+            print('    with each patch up to %d lines' % y_step)
+
+        # y_step / num_box --> box_list
+        box_list = []
+        for i in range(num_box):
+            y0 = i * y_step
+            y1 = min([length, y0 + y_step])
+            box = (0, y0, width, y1)
+            box_list.append(box)
+
+        return box_list, num_box
+
+
+    # Functions for closure phase bias
+    def get_closure_phase_index(self, conn, dropIfgram=True):
+        """Get the indices of interferograms that forms the given connection level closure loop.
+
+        Parameters: conn       - int, connection level
+                    dropIfgram - bool, exclude the dropped interferograms.
+        Returns:    cp_idx     - 2D np.ndarray in int16 in size of (num_cp, conn + 1)
+                                 Each row for the indices of interferograms for one closure loop.
+                                 num_cp <= num_date - conn
+        """
+        date12_list = self.get_date12_list(dropIfgram=False)
+        date_list = self.get_date_list(dropIfgram=dropIfgram)
+        num_date = len(date_list)
+
+        # get the closure index
+        cp_idx = []
+        for i in range(num_date - conn):
+            # compose the connection-n pairs
+            cp_date12_list = []
+            for j in range(conn):
+                cp_date12_list.append('{}_{}'.format(date_list[i+j], date_list[i+j+1]))
+            cp_date12_list.append('{}_{}'.format(date_list[i], date_list[i+conn]))
+
+            # add to cp_idx, ONLY IF all pairs exist for this closure loop
+            if all(x in date12_list for x in cp_date12_list):
+                cp_idx.append([date12_list.index(x) for x in cp_date12_list])
+
+        # list(list) to 2D array
+        cp_idx = np.array(cp_idx, dtype=np.int16)
+        cp_idx = np.unique(cp_idx, axis=0)
+
+        return cp_idx
+
+
+    def get_sequential_closure_phase(self, box, conn, post_proc=None):
+        """Computes wrapped sequential closure phases for a given conneciton level.
+
+        Reference: Equation (21) in Zheng et al. (2022, TGRS)
+        For conn = 5, seq_closure_phase = p12 + p23 + p34 + p45 + p56 - p16.
+
+        Parameters: box       - tuple of 4 int, bounding box in (x0, y0, x1, y1)
+                    conn      - int, connection level of the closure phase
+                    post_proc - str, post processing of the closure phase:
+                                None - 3D array in float32, seq closure phase
+                                sum  - 2D array in complex64, sum  in time of the complex seq closure phase
+                                mean - 2D array in complex64, mean in time of the complex seq closure phase
+        Returns:    cp_w      - 3D np.ndarray in float32 in size of (num_cp, box_len, box_wid)
+                                wrapped sequential  closure phase for the given connection level.
+                    sum_cp    - None or 2D np.ndarray in complex64 in size of (box_len, box_width)
+                                wrapped average seq closure phase for the given connection level,
+                                controlled by post_proc.
+                    num_cp    - int, number of  seq closure phase for the given connection level.
+        """
+        # basic info
+        num_date = len(self.get_date_list(dropIfgram=True))
+        box_wid = box[2] - box[0]
+        box_len = box[3] - box[1]
+
+        ## get the closure index
+        cp_idx = self.get_closure_phase_index(conn=conn, dropIfgram=True)
+        num_cp = cp_idx.shape[0]
+        print(f'number of closure measurements expected: {num_date - conn}')
+        print(f'number of closure measurements found   : {num_cp}')
+
+        if not post_proc:
+            if num_cp < num_date - conn:
+                msg = f'num_cp ({num_cp}) < num_date - conn ({num_date - conn})'
+                msg += ' --> some interferograms are missing!'
+                raise Exception(msg)
+        else:
+            if num_cp < 1:
+                raise Exception(f"No triplets found at connection level: {conn}!")
+
+        ## read data
+        phase = self.read(box=box, print_msg=False)
+        ref_phase = self.get_reference_phase(dropIfgram=False)
+        for i in range(phase.shape[0]):
+            mask = phase[i] != 0.
+            phase[i][mask] -= ref_phase[i]
+
+        ## calculate the 3D complex seq closure phase
+        cp_w = np.zeros((num_cp, box_len, box_wid), dtype=np.complex64)
+        for i in range(num_cp):
+
+            # calculate closure phase - cp0_w
+            idx_plus, idx_minor = cp_idx[i, :-1], cp_idx[i, -1]
+            cp0_w = np.sum(phase[idx_plus], axis=0) - phase[idx_minor]
+
+            # get the wrapped closure phase
+            cp_w[i] = np.exp(1j * cp0_w)
+
+        ## post-processing
+        if not post_proc:
+            sum_cp = None
+
+        elif post_proc == 'sum':
+            sum_cp = np.sum(cp_w, axis=0)
+
+        elif post_proc == 'mean':
+            sum_cp = np.mean(cp_w, axis=0)
+
+        else:
+            raise ValueError(f'un-recognized post_proc={post_proc}! Available choices: sum, mean.')
+
+        return np.angle(cp_w), sum_cp, num_cp
+
+
+    # Functions for unwrapping error correction
     @staticmethod
     def get_design_matrix4triplet(date12_list):
         """Generate the design matrix of ifgram triangle for unwrap error correction using phase closure
+
         Parameters: date12_list : list of string in YYYYMMDD_YYYYMMDD format
         Returns:    C : 2D np.array in size of (num_tri, num_ifgram) consisting 0, 1, -1
                         for 3 SAR acquisition in t1, t2 and t3 in time order,
@@ -1021,10 +1169,12 @@ class ifgramStack:
 
         return np.stack(C_list).astype(np.float32)
 
-    # Functions for Network Inversion
+
+    # Functions for network inversion / time series estimation
     @staticmethod
     def get_design_matrix4timeseries(date12_list, refDate=None):
         """Return design matrix of the input ifgramStack for timeseries estimation
+
         Parameters: date12_list - list of string in YYYYMMDD_YYYYMMDD format
                     refDate     - str, date in YYYYMMDD format
                                   set to None for the 1st date
