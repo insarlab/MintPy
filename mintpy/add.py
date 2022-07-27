@@ -170,10 +170,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
     print('input files to be added: ({})\n{}'.format(len(inps.file), inps.file))
 
-    inps.outfile = add_file(inps.file, inps.outfile, force=inps.force)
+    add_file(inps.file, inps.outfile, force=inps.force)
 
     print('Done.')
-    return inps.outfile
+    return
 
 
 ################################################################################

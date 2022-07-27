@@ -246,7 +246,8 @@ def main(iargs=None):
     if inps.disp_fig:
         print('showing...')
         plt.show()
-    return inps.outfile
+
+    return
 
 
 ##############################################################################

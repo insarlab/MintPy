@@ -54,7 +54,7 @@ def main(iargs=None):
     obj_out = timeseries(inps.outfile)
     obj_out.write2hdf5(ts_data_1d, refFile=inps.file)
 
-    return inps.outfile
+    return
 
 
 ############################################################################

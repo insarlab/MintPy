@@ -355,7 +355,7 @@ def main(iargs=None):
                  apply_offset=inps.apply_offset,
                  disp_fig=inps.disp_fig)
 
-    return inps.outfile
+    return
 
 
 #############################################################################################

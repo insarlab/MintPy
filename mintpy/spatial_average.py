@@ -42,14 +42,17 @@ def cmd_line_parse(iargs=None):
 #############################  Main Function  ################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
+
     print('\n*************** Spatial Average ******************')
-    mean_list, date_list = ut.spatial_average(inps.file,
-                                              datasetName=inps.datasetName,
-                                              maskFile=inps.mask_file,
-                                              saveList=True)
+    mean_list, date_list = ut.spatial_average(
+        inps.file,
+         datasetName=inps.datasetName,
+         maskFile=inps.mask_file,
+         saveList=True,
+    )
+
     atr = readfile.read_attribute(inps.file)
-    k = atr['FILE_TYPE']
-    if inps.disp_fig and k == 'timeseries':
+    if inps.disp_fig and atr['FILE_TYPE'] == 'timeseries':
         dates, datevector = ptime.date_list2vector(date_list)
         # plot
         fig = plt.figure()
@@ -60,6 +63,7 @@ def main(iargs=None):
         ax.set_xlabel('Time [years]', fontsize=12)
         ax.set_ylabel('Mean', fontsize=12)
         plt.show()
+
     return
 
 

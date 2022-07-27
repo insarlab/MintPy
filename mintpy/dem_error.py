@@ -675,7 +675,7 @@ def main(iargs=None):
     # run
     correct_dem_error(inps)
 
-    return inps.outfile
+    return
 
 
 ################################################################################

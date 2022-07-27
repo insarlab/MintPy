@@ -336,7 +336,8 @@ def main(iargs=None):
         atr = clean_metadata4roipac(atr)
 
     writefile.write(data, out_file=out_file, metadata=atr)
-    return inps.outfile
+
+    return
 
 
 ##########################################################################

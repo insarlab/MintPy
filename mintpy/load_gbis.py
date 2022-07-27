@@ -161,9 +161,9 @@ def gbis_mat2hdf5(inv_mat_file, display=True):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    out_files = gbis_mat2hdf5(inps.file, display=inps.disp_fig)
+    gbis_mat2hdf5(inps.file, display=inps.disp_fig)
 
-    return out_files
+    return
 
 
 ##########################################################################

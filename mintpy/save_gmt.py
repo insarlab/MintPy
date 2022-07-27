@@ -169,9 +169,10 @@ def main(iargs=None):
         outbase = pp.auto_figure_title(inps.file, datasetNames=inps.dset, inps_dict=vars(inps))
         inps.outfile = '{}.grd'.format(outbase)
 
-    inps.outfile = write_grd_file(data, atr, inps.outfile)
+    write_grd_file(data, atr, inps.outfile)
+
     print('Done.')
-    return inps.outfile
+    return
 
 
 ####################################################################################

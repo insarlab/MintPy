@@ -461,25 +461,29 @@ def main(iargs=None):
     inps, template = read_template2inps(inps.template_file, inps)
 
     # Prepare Metadata
-    meta = prep_metadata(ts_file=inps.ts_file,
-                         template=template,
-                         print_msg=True)
+    meta = prep_metadata(
+        ts_file=inps.ts_file,
+        template=template,
+        print_msg=True)
 
     # Get output filename
-    out_file = get_output_filename(metadata=meta,
-                                   suffix=inps.suffix,
-                                   update_mode=inps.update,
-                                   subset_mode=inps.subset)
+    out_file = get_output_filename(
+        metadata=meta,
+        suffix=inps.suffix,
+        update_mode=inps.update,
+        subset_mode=inps.subset)
 
     # Open HDF5 File
-    write_hdf5_file(metadata=meta,
-                    out_file=out_file,
-                    ts_file=inps.ts_file,
-                    tcoh_file=inps.tcoh_file,
-                    scoh_file=inps.scoh_file,
-                    mask_file=inps.mask_file,
-                    geom_file=inps.geom_file)
-    return out_file
+    write_hdf5_file(
+        metadata=meta,
+        out_file=out_file,
+        ts_file=inps.ts_file,
+        tcoh_file=inps.tcoh_file,
+        scoh_file=inps.scoh_file,
+        mask_file=inps.mask_file,
+        geom_file=inps.geom_file)
+
+    return
 
 
 ################################################################

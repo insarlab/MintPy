@@ -24,10 +24,7 @@ EXAMPLE = """example:
   save_qgis.py timeseries_ERA5_ramp_demErr.h5 -g inputs/geometryRadar.h5 -b 200 150 400 350
 """
 
-def cmd_line_parse(iargs=None):
-    '''
-    Command line parser.
-    '''
+def create_parser():
     parser = argparse.ArgumentParser(description='Convert to QGIS compatible ps time-series',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
@@ -42,7 +39,19 @@ def cmd_line_parse(iargs=None):
     parser.add_argument('-B', '--geo-bbox', dest='geo_bbox', type=float, nargs=4, default=None,
                         metavar=('S','N','W','E'), help='bounding box in lat lon: South North West East')
 
-    return parser.parse_args(iargs)
+    return parser
+
+
+def cmd_line_parse(iargs=None):
+    '''Command line parser.'''
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
+
+    # --outshp option
+    if not inps.shp_file:
+        inps.shp_file = os.path.splitext(inps.ts_file)[0] + '.shp'
+
+    return inps
 
 
 #################################################################
@@ -252,26 +261,21 @@ def write_shape_file(fDict, shp_file, box=None):
 
 #################################################################
 def main(iargs=None):
-    '''Main driver
-    '''
-
-    #Parse command line
+    # Parse command line
     inps = cmd_line_parse(iargs)
 
-    #Read bounding box
+    # Read bounding box
     box = read_bounding_box(pix_box=inps.pix_bbox,
                             geo_box=inps.geo_bbox,
                             geom_file=inps.geom_file)
 
-    #Gather data files
+    # Gather data files
     fDict = gather_files(inps.ts_file, inps.geom_file)
 
-    #Write shape file
-    if not inps.shp_file:
-        inps.shp_file = os.path.splitext(inps.ts_file)[0]+'.shp'
+    # Write shape file
     write_shape_file(fDict, inps.shp_file, box=box)
 
-    return inps.shp_file
+    return
 
 
 #################################################################

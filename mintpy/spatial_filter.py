@@ -231,13 +231,16 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    inps.outfile = filter_file(inps.file,
-                               ds_names=inps.dset,
-                               filter_type=inps.filter_type,
-                               filter_par=inps.filter_par,
-                               fname_out=inps.outfile)
+    filter_file(
+        fname=inps.file,
+        ds_names=inps.dset,
+        filter_type=inps.filter_type,
+        filter_par=inps.filter_par,
+        fname_out=inps.outfile,
+    )
+
     print('Done.')
-    return inps.outfile
+    return
 
 
 ################################################################################################

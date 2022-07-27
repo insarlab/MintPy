@@ -13,6 +13,7 @@ import numpy as np
 from mintpy.utils import ptime, readfile, arg_group, attribute
 from mintpy import subset
 
+
 d2r = np.pi / 180.
 r2d = 180. / np.pi
 
@@ -34,6 +35,7 @@ EXAMPLE = """example:
 """
 
 KITE_URL = 'https://github.com/pyrocko/kite'
+
 
 def create_parser():
     parser = argparse.ArgumentParser(description=f'Generate KITE ({KITE_URL}) npz and yaml from MintPy HDF5 file.',
@@ -200,7 +202,7 @@ def main(iargs=None):
     # create kite container
     scene = mintpy2kite(dis, attr, date1, date2, inc_angle, az_angle, out_file=inps.outfile)
 
-    return scene
+    return
 
 #########################################################################################################
 if __name__ == "__main__":
