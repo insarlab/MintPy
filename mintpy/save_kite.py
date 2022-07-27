@@ -200,7 +200,7 @@ def main(iargs=None):
         attr = attribute.update_attribute4subset(attr, inps.pix_box)
 
     # create kite container
-    scene = mintpy2kite(dis, attr, date1, date2, inc_angle, az_angle, out_file=inps.outfile)
+    mintpy2kite(dis, attr, date1, date2, inc_angle, az_angle, out_file=inps.outfile)
 
     return
 
