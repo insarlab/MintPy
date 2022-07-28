@@ -162,7 +162,10 @@ def unzip_crop(workdir: str, geo_box, target_dir):
 
     # do the clip for transformed but clipped via hyp3lib.cutFiles
     files = []
-    wk1_dir = workdir + '_clip'
+    if target_dir == '':
+        wk1_dir = workdir + '_clip'
+    else:
+        wk1_dir = target_dir
 
     print("current path:  " + workdir)
     if os.path.exists(wk1_dir):
@@ -176,6 +179,7 @@ def unzip_crop(workdir: str, geo_box, target_dir):
         print("There are " + str(len(files)) + " satisfied files")
         # Generate
         cutFiles(files)
+        print('The crop process has finished')
     # generate _clip.tif.rsc
     for i in files:
         if target_extent == (-181, -91, 181, 91):
@@ -302,7 +306,7 @@ def main():
     # edge = n,s,w,e
 
     try:
-        asf_crop(work_dir=args.i, geobox=[args.n, args.s, args.w, args.e], crop_state=args.c, output_path=args.o)
+        asf_crop(work_dir=args.i, geobox=[args.n, args.s, args.w, args.e], crop_state=args.c, out_path=args.o)
     except Exception as e:
         print("Something wrong")
         print(e)
