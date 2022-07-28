@@ -1,8 +1,8 @@
 [![Language](https://img.shields.io/badge/python-3.6%2B-blue.svg)](https://www.python.org/)
-[![CircleCI](https://img.shields.io/circleci/build/github/insarlab/MintPy.svg?logo=circleci&label=test)](https://circleci.com/gh/insarlab/MintPy)
+[![CircleCI](https://img.shields.io/circleci/build/github/insarlab/MintPy.svg?logo=circleci&label=CI)](https://circleci.com/gh/insarlab/MintPy)
 [![Docs Status](https://readthedocs.org/projects/mintpy/badge/?color=green&version=latest)](https://mintpy.readthedocs.io/?badge=latest)
-[![Version](https://img.shields.io/github/v/release/insarlab/MintPy?color=green)](https://github.com/insarlab/MintPy/releases)
-[![License](https://img.shields.io/badge/license-GPLv3-yellow.svg)](https://github.com/insarlab/MintPy/blob/main/LICENSE)
+[![Version](https://img.shields.io/github/v/release/insarlab/MintPy?color=green&label=version)](https://github.com/insarlab/MintPy/releases)
+[![License](https://img.shields.io/badge/license-GPLv3+-yellow.svg)](https://github.com/insarlab/MintPy/blob/main/LICENSE)
 [![Forum](https://img.shields.io/badge/forum-Google%20Groups-orange.svg)](https://groups.google.com/g/mintpy)
 [![Citation](https://img.shields.io/badge/doi-10.1016%2Fj.cageo.2019.104331-blue)](https://doi.org/10.1016/j.cageo.2019.104331)
 

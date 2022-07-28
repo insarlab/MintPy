@@ -35,15 +35,15 @@ setup(
     download_url=("https://github.com/insarlab/MintPy/archive/v{}.tar.gz".format(version)),
     author="Zhang Yunjun, Heresh Fattahi",
     author_email="yunjunzgeo@gmail.com",
-    license_files=('LICENSE',),
+    license="GPL-3.0-or-later",
+    license_files=("LICENSE",),
 
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering",
-        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Operating System :: OS Independent",
-        "Programming Language :: Python",
         "Programming Language :: Python :: 3",
     ],
     keywords="InSAR, deformation, time-series, volcano, earthquake, tectonics, geodesy, geophysics, remote-sensing",

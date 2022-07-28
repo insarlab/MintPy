@@ -127,7 +127,7 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
     meta['HEADING'] = float(hyp3_meta['Heading']) % 360. - 360.
 
     # add LAT/LON_REF1/2/3/4 based on whether satellite ascending or descending
-    meta['ORBIT_DIRECTION'] = 'ASCENDING' if abs(meta['HEADING']) > 90 else 'DESCENDING'
+    meta['ORBIT_DIRECTION'] = 'ASCENDING' if abs(meta['HEADING']) < 90 else 'DESCENDING'
     N = float(meta['Y_FIRST'])
     W = float(meta['X_FIRST'])
     S = N + float(meta['Y_STEP']) * int(meta['LENGTH'])

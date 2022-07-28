@@ -14,7 +14,7 @@ import numpy as np
 import random
 from mintpy.objects import timeseries
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import readfile, writefile, utils as ut
+from mintpy.utils import ptime, readfile, writefile, utils as ut
 
 
 #########################################  Usage  ##############################################
@@ -204,9 +204,10 @@ def reference_file(inps):
     else:
         # Find reference y/x
         if inps.method == 'maxCoherence':
-            inps.ref_y, inps.ref_x = select_max_coherence_yx(coh_file=inps.coherenceFile,
-                                                             mask=mask,
-                                                             min_coh=inps.minCoherence)
+            inps.ref_y, inps.ref_x = select_max_coherence_yx(
+                coh_file=inps.coherenceFile,
+                mask=mask,
+                min_coh=inps.minCoherence)
         elif inps.method == 'random':
             inps.ref_y, inps.ref_x = random_select_reference_yx(mask)
         elif inps.method == 'manual':
@@ -232,13 +233,22 @@ def reference_file(inps):
 
         if fext == '.h5':
             if inps.outfile == inps.file:
-                print('updating data value without re-writing to a new file')
+                print('updating dataset values without re-writing to a new file')
 
                 if k == 'ifgramStack':
                     with h5py.File(inps.file, 'r+') as f:
                         ds = f['unwrapPhase']
-                        for i in range(ds.shape[0]):
-                            ds[i, :, :] -= ds[i, inps.ref_y, inps.ref_x]
+                        num_date12 = ds.shape[0]
+                        prog_bar = ptime.progressBar(maxValue=num_date12)
+                        for i in range(num_date12):
+                            prog_bar.update(i+1, suffix=f'{i+1} / {num_date12}')
+
+                            # make a copy of ds[i] because h5py allows fancy indexing for 1D arrays only.
+                            data_2d = ds[i, :, :]
+                            # apply spatial referencing (skip pixels with no-data-value)
+                            data_2d[data_2d != 0.] -= data_2d[inps.ref_y, inps.ref_x]
+                            ds[i, :, :] = data_2d
+                        prog_bar.close()
 
                         print('update metadata')
                         f.attrs.update(atrNew)
