@@ -703,7 +703,8 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None):
             period_pha = np.zeros(num_pixel, dtype=dataType)
             # avoid divided by zero warning
             if not np.all(coef_sin[mask] == 0):
-                period_pha[mask] = np.arctan(coef_cos[mask] / coef_sin[mask])
+                # use atan2, instead of atan, to get phase within [-pi, pi]
+                period_pha[mask] = np.arctan2(coef_cos[mask], coef_sin[mask])
 
             # assign ds_dict
             for dsName, data in zip(dsNames, [period_amp, period_pha]):
