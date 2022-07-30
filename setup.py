@@ -81,6 +81,7 @@ setup(
     packages=find_packages(),
     entry_points={
         'console_scripts': [
+            'mintpy=mintpy.__main__:main',
             'add_attribute.py = mintpy.add_attribute:main',
             'add.py = mintpy.add:main',
             'asc_desc2horz_vert.py = mintpy.asc_desc2horz_vert:main',

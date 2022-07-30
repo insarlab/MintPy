@@ -8,6 +8,7 @@
 ############################################################
 
 
+from logging import Formatter
 import os
 import sys
 import glob
@@ -57,10 +58,17 @@ REFERENCE = """reference:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Routine Time Series Analysis for Small Baseline InSAR Stack',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    description = 'Routine Time Series Analysis for Small Baseline InSAR Stack'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = REFERENCE + '\n' + EXAMPLE
+    if subparsers:
+        name = 'smallbaseline'
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
 
     parser.add_argument('customTemplateFile', nargs='?',
                         help='custom template with option settings.\n' +
