@@ -121,7 +121,7 @@ def get_coverage_box(atr):
     width = int(atr['WIDTH'])
 
     # Get geo box
-    try:
+    if all(x in atr.keys() for x in ['Y_STEP', 'X_STEP', 'Y_FIRST', 'X_FIRST']):
         lat_step = float(atr['Y_STEP'])
         lon_step = float(atr['X_STEP'])
         ul_lat = float(atr['Y_FIRST'])
@@ -129,16 +129,18 @@ def get_coverage_box(atr):
         lr_lat = ul_lat + lat_step*length
         lr_lon = ul_lon + lon_step*width
         geo_box = (ul_lon, ul_lat, lr_lon, lr_lat)
-    except ValueError:
+    else:
         geo_box = None
 
     # Get pixel box
-    try:
-        pix_box = (int(atr['SUBSET_XMIN']),
-                   int(atr['SUBSET_YMIN']),
-                   int(atr['SUBSET_XMAX']),
-                   int(atr['SUBSET_YMAX']))
-    except ValueError:
+    if all(f'SUBSET_{x}' in atr.keys() for x in ['YMIN', 'XMIN', 'YMAX', 'XMAX']):
+        pix_box = (
+            int(atr['SUBSET_XMIN']),
+            int(atr['SUBSET_YMIN']),
+            int(atr['SUBSET_XMAX']),
+            int(atr['SUBSET_YMAX']),
+        )
+    else:
         pix_box = None
 
     return pix_box, geo_box

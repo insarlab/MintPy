@@ -160,15 +160,26 @@ def _check_inps(inps):
     # 2. lookup table is in radar coordinates
     if inps.laloStep:
         if not inps.radar2geo:
-            print('ERROR: --lalo-step can NOT be used together with --geo2radar!')
+            print('ERROR: "--lalo-step" can NOT be used together with "--geo2radar"!')
             sys.exit(0)
         atr = readfile.read_attribute(inps.lookupFile)
         if 'Y_FIRST' in atr.keys():
-            print('ERROR: --lalo-step can NOT be used with lookup table file in geo-coordinates!')
+            print('ERROR: "--lalo-step" can NOT be used with lookup table file in geo-coordinates!')
             sys.exit(0)
 
     # check 5 - number of processors for multiprocessingg
     inps.nprocs = check_num_processor(inps.nprocs)
+
+
+    # check 6 - geo2radar
+    if not inps.radar2geo:
+        if inps.SNWE:
+            print('ERROR: "--geo2radar" can NOT be used together with "--bbox"!')
+            sys.exit(0)
+        if inps.software == 'scipy':
+            print('ERROR: "--geo2radar" is NOT supported for "--software scipy"!')
+            sys.exit(0)
+
     return inps
 
 

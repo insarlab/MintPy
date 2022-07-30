@@ -172,7 +172,7 @@ def add_figure_argument(parser):
                      action='store_false', help='do not display title')
     fig.add_argument('--title-in', dest='fig_title_in',
                      action='store_true', help='draw title in/out of axes')
-    fig.add_argument('--figtitle', dest='fig_title',
+    fig.add_argument('--title','--fig-title','--figtitle', dest='fig_title',
                      help='Title shown in the figure.')
     fig.add_argument('--title4sen','--title4sentinel1', dest='disp_title4sentinel1', action='store_true',
                      help='display Sentinel-1 A/B and IPF info in title.')
