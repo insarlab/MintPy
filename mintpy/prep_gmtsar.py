@@ -31,11 +31,19 @@ EXAMPLE = """example:
   prep_gmtsar.py StHelensEnvDT156.txt
 """
 
-def create_parser():
+def create_parser(subparsers=None):
     """Command line parser."""
-    parser = argparse.ArgumentParser(description='Prepare GMTSAR metadata files.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+    description = 'Prepare GMTSAR metadata files.'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
+
     parser.add_argument('template_file', type=str, help='MintPy template file for GMTSAR products.')
     parser.add_argument('--mintpy-dir', dest='mintpy_dir', default='./',
                         help='MintPy directory (default: %(default)s).')
