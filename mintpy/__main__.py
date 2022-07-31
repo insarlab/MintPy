@@ -259,6 +259,14 @@ def get_plot_coherence_matrix_parser(subparsers=None):
     return parser
 
 
+def get_plot_network_parser(subparsers=None):
+    from . import plot_network
+    parser = plot_network.create_parser(subparsers)
+    parser.set_defaults(func=plot_network.main)
+    return parser
+
+
+# main parser
 def get_parser():
     """Instantiate the command line argument parser."""
     parser = argparse.ArgumentParser(prog=PROG, description=__doc__)
@@ -306,6 +314,7 @@ def get_parser():
     # display
     get_info_parser(sp)
     get_plot_coherence_matrix_parser(sp)
+    get_plot_network_parser(sp)
 
     _autocomplete(parser)
 
