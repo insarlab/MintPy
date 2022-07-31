@@ -124,6 +124,13 @@ def get_prep_fringe_parser(subparsers=None):
     return parser
 
 
+def get_prep_gamma_parser(subparsers=None):
+    from . import prep_gamma
+    parser = prep_gamma.create_parser(subparsers)
+    parser.set_defaults(func=prep_gamma.main)
+    return parser
+
+
 def get_parser():
     """Instantiate the command line argument parser."""
     parser = argparse.ArgumentParser(prog=PROG, description=__doc__)
@@ -148,6 +155,7 @@ def get_parser():
     get_prep_aria_parser(sp)
     get_prep_cosicorr_parser(sp)
     get_prep_fringe_parser(sp)
+    get_prep_gamma_parser(sp)
 
     _autocomplete(parser)
 
