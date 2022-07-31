@@ -49,10 +49,18 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Project Asc and Desc LOS displacement to Horizontal and Vertical direction',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    description = 'Project Asc and Desc LOS displacement to Horizontal and Vertical direction'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = REFERENCE + '\n' + EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
+ 
     # input files
     parser.add_argument('file', nargs=2,
                         help='Ascending and descending files\n'

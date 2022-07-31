@@ -428,6 +428,70 @@ def get_unwrap_error_phase_closure_parser(subparsers=None):
     return parser
 
 
+# misc
+def get_asc_desc2horz_vert_parser(subparsers=None):
+    from . import asc_desc2horz_vert
+    parser = asc_desc2horz_vert.create_parser(subparsers)
+    parser.set_defaults(func=asc_desc2horz_vert.main)
+    return parser
+
+
+def get_ifgram_inversion_parser(subparsers=None):
+    from . import ifgram_inversion
+    parser = ifgram_inversion.create_parser(subparsers)
+    parser.set_defaults(func=ifgram_inversion.main)
+    return parser
+
+
+def get_lookup_geo2radar_parser(subparsers=None):
+    from . import lookup_geo2radar
+    parser = lookup_geo2radar.create_parser(subparsers)
+    parser.set_defaults(func=lookup_geo2radar.main)
+    return parser
+
+
+def get_modify_network_parser(subparsers=None):
+    from . import modify_network
+    parser = modify_network.create_parser(subparsers)
+    parser.set_defaults(func=modify_network.main)
+    return parser
+
+
+def get_reference_date_parser(subparsers=None):
+    from . import reference_date
+    parser = reference_date.create_parser(subparsers)
+    parser.set_defaults(func=reference_date.main)
+    return parser
+
+
+def get_reference_point_parser(subparsers=None):
+    from . import reference_point
+    parser = reference_point.create_parser(subparsers)
+    parser.set_defaults(func=reference_point.main)
+    return parser
+
+
+def get_s1ab_range_bias_parser(subparsers=None):
+    from . import s1ab_range_bias
+    parser = s1ab_range_bias.create_parser(subparsers)
+    parser.set_defaults(func=s1ab_range_bias.main)
+    return parser
+
+
+def get_timeseries_rms_parser(subparsers=None):
+    from . import timeseries_rms
+    parser = timeseries_rms.create_parser(subparsers)
+    parser.set_defaults(func=timeseries_rms.main)
+    return parser
+
+
+def get_timeseries2velocity_parser(subparsers=None):
+    from . import timeseries2velocity
+    parser = timeseries2velocity.create_parser(subparsers)
+    parser.set_defaults(func=timeseries2velocity.main)
+    return parser
+
+
 # main parser
 def get_parser():
     """Instantiate the command line argument parser."""
@@ -517,6 +581,9 @@ def get_parser():
     get_unwrap_error_bridging_parser(sp)
     get_unwrap_error_phase_closure_parser(sp)
 
+    # misc
+    get_asc_desc2horz_vert_parser(sp)
+ 
     _autocomplete(parser)
 
     return parser
