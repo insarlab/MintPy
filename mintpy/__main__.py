@@ -302,6 +302,13 @@ def get_diff_parser(subparsers=None):
     return parser
 
 
+def get_image_math_parser(subparsers=None):
+    from . import image_math
+    parser = image_math.create_parser(subparsers)
+    parser.set_defaults(func=image_math.main)
+    return parser
+
+
 # main parser
 def get_parser():
     """Instantiate the command line argument parser."""
@@ -358,6 +365,7 @@ def get_parser():
     # image operations
     get_add_parser(sp)
     get_diff_parser(sp)
+    get_image_math_parser(sp)
 
     _autocomplete(parser)
 
