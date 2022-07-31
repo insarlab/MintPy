@@ -181,6 +181,13 @@ def get_load_gbis_parser(subparsers=None):
     return parser
 
 
+def get_save_gbis_parser(subparsers=None):
+    from . import save_gbis
+    parser = save_gbis.create_parser(subparsers)
+    parser.set_defaults(func=save_gbis.main)
+    return parser
+
+
 def get_parser():
     """Instantiate the command line argument parser."""
     parser = argparse.ArgumentParser(prog=PROG, description=__doc__)
@@ -215,6 +222,7 @@ def get_parser():
     # I/O
     get_load_data_parser(sp)
     get_load_gbis_parser(sp)
+    get_save_gbis_parser(sp)
 
     _autocomplete(parser)
 

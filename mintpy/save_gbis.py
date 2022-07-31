@@ -36,10 +36,17 @@ REFERENCE = """references:
   with L-band InSAR time series, Geophysical Research Letters, 48(11), e2021GL092879. doi:10.1029/2021GL092879
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Convert MintPy product to GBIS .mat format.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    description = 'Convert MintPy product to GBIS .mat format.'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = REFERENCE + '\n' + EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
 
     parser.add_argument('file', help='deformation file.')
     parser.add_argument('dset', nargs='?',
