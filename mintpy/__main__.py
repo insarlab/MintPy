@@ -587,6 +587,7 @@ def get_parser():
     get_lookup_geo2radar_parser(sp)
     get_modify_network_parser(sp)
     get_reference_date_parser(sp)
+    get_reference_point_parser(sp)
 
     _autocomplete(parser)
 
