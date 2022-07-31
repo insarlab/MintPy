@@ -51,11 +51,19 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
+def create_parser(subparsers=None):
     """Create command line parser."""
-    parser = argparse.ArgumentParser(description='Display Metadata / Structure information of ANY File',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+    description = 'Display Metadata / Structure information of ANY File'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
+
     parser.add_argument('file', type=str, help='File to check')
     parser.add_argument('--compact', action='store_true',
                         help='show compact info by displaying only the top 20 metadata')

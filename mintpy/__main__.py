@@ -244,6 +244,14 @@ def get_save_roipac_parser(subparsers=None):
     return parser
 
 
+# display
+def get_info_parser(subparsers=None):
+    from . import info
+    parser = info.create_parser(subparsers)
+    parser.set_defaults(func=info.main)
+    return parser
+
+
 def get_parser():
     """Instantiate the command line argument parser."""
     parser = argparse.ArgumentParser(prog=PROG, description=__doc__)
@@ -287,6 +295,9 @@ def get_parser():
     get_save_kmz_parser(sp)
     get_save_qgis_parser(sp)
     get_save_roipac_parser(sp)
+
+    # display
+    get_info_parser(sp)
 
     _autocomplete(parser)
 
