@@ -152,6 +152,13 @@ def get_prep_isce_parser(subparsers=None):
     return parser
 
 
+def get_prep_roipac_parser(subparsers=None):
+    from . import prep_roipac
+    parser = prep_roipac.create_parser(subparsers)
+    parser.set_defaults(func=prep_roipac.main)
+    return parser
+
+
 def get_parser():
     """Instantiate the command line argument parser."""
     parser = argparse.ArgumentParser(prog=PROG, description=__doc__)
@@ -180,6 +187,7 @@ def get_parser():
     get_prep_gmtsar_parser(sp)
     get_prep_hyp3_parser(sp)
     get_prep_isce_parser(sp)
+    get_prep_roipac_parser(sp)
 
     _autocomplete(parser)
 
