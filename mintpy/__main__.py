@@ -209,6 +209,13 @@ def get_save_hdfeos5_parser(subparsers=None):
     return parser
 
 
+def get_save_kite_parser(subparsers=None):
+    from . import save_kite
+    parser = save_kite.create_parser(subparsers)
+    parser.set_defaults(func=save_kite.main)
+    return parser
+
+
 def get_parser():
     """Instantiate the command line argument parser."""
     parser = argparse.ArgumentParser(prog=PROG, description=__doc__)
@@ -247,6 +254,7 @@ def get_parser():
     get_save_gdal_parser(sp)
     get_save_gmt_parser(sp)
     get_save_hdfeos5_parser(sp)
+    get_save_kite_parser(sp)
 
     _autocomplete(parser)
 
