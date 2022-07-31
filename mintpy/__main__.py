@@ -332,6 +332,13 @@ def get_dem_error_parser(subparsers=None):
     return parser
 
 
+def get_dem_gsi_parser(subparsers=None):
+    from . import dem_gsi
+    parser = dem_gsi.create_parser(subparsers)
+    parser.set_defaults(func=dem_gsi.main)
+    return parser
+
+
 # main parser
 def get_parser():
     """Instantiate the command line argument parser."""
@@ -394,6 +401,7 @@ def get_parser():
 
     # DEM
     get_dem_error_parser(sp)
+    get_dem_gsi_parser(sp)
 
     _autocomplete(parser)
 
