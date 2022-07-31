@@ -24,10 +24,17 @@ EXAMPLE = """example:
   load_gbis.py invert_1_2_C.mat --nodisplay
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Load GBIS inversion result to HDF5 format.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    description = 'Load GBIS inversion result to HDF5 format.'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
 
     parser.add_argument('file', help='GBIS inversion mat file.')
     parser.add_argument('-o', '--output', dest='outfile', help='output file name.')
