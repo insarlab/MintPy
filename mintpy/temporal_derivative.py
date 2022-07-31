@@ -18,10 +18,18 @@ EXAMPLE = """example:
   temporal_derivative.py  timeseries.h5 
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Calculate the temporal derivative of time-series.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    description = 'Calculate the temporal derivative of time-series.'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
+
     parser.add_argument('file', type=str, help='time-series displacement file.')
     parser.add_argument('-o','--output', dest='outfile', type=str, help='output derivative time-series file.')
     return parser
