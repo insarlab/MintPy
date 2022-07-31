@@ -590,6 +590,7 @@ def get_parser():
     get_reference_point_parser(sp)
     get_s1ab_range_bias_parser(sp)
     get_timeseries_rms_parser(sp)
+    get_timeseries2velocity_parser(sp)
 
     _autocomplete(parser)
 
