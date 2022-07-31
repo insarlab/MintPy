@@ -52,10 +52,18 @@ NOTE = """
 TEMPLATE = get_template_content('correct_unwrap_error')
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Unwrapping Error Correction with Bridging'+NOTE,
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    help = 'Unwrapping Error Correction with Bridging'
+    description = help + NOTE
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=help)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
 
     parser.add_argument('ifgram_file', type=str, help='interferograms file to be corrected')
     parser.add_argument('-r','--radius', dest='bridgePtsRadius', type=int, default=50,

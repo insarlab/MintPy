@@ -414,6 +414,13 @@ def get_remove_ramp_parser(subparsers=None):
     return parser
 
 
+def get_unwrap_error_bridging_parser(subparsers=None):
+    from . import unwrap_error_bridging
+    parser = unwrap_error_bridging.create_parser(subparsers)
+    parser.set_defaults(func=unwrap_error_bridging.main)
+    return parser
+
+
 # main parser
 def get_parser():
     """Instantiate the command line argument parser."""
@@ -500,6 +507,7 @@ def get_parser():
     # phase
     get_closure_phase_bias_parser(sp)
     get_remove_ramp_parser(sp)
+    get_unwrap_error_bridging_parser(sp)
 
     _autocomplete(parser)
 
