@@ -287,6 +287,14 @@ def get_view_parser(subparsers=None):
     return parser
 
 
+# image operations
+def get_add_parser(subparsers=None):
+    from . import add
+    parser = add.create_parser(subparsers)
+    parser.set_defaults(func=add.main)
+    return parser
+
+
 # main parser
 def get_parser():
     """Instantiate the command line argument parser."""
@@ -339,6 +347,9 @@ def get_parser():
     get_plot_transection_parser(sp)
     get_tsview_parser(sp)
     get_view_parser(sp)
+
+    # image operations
+    get_add_parser(sp)
 
     _autocomplete(parser)
 

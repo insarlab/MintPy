@@ -24,11 +24,18 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
+def create_parser(subparsers=None):
     """ Command line parser """
-    parser = argparse.ArgumentParser(description='Generate sum of multiple input files.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+    description = 'Generate sum of multiple input files.'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
 
     parser.add_argument('file', nargs='+', help='files (2 or more) to be added')
     parser.add_argument('-o', '--output', dest='outfile', help='output file name')
