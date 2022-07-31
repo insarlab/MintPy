@@ -47,10 +47,18 @@ EXAMPLE = """example:
   subset.py geomap_4rlks.trans --tight
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Generate a subset from file/dataset',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=TEMPLATE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    description = 'Generate a subset from file/dataset'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = TEMPLATE + '\n' + EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
+
     parser.add_argument('file', nargs='+', help='File(s) to subset/crop')
 
     parser.add_argument('-x','--sub-x','--subset-x', dest='subset_x', type=int, nargs=2,

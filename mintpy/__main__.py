@@ -18,6 +18,7 @@ CORRECTNESS. Use at your own risk.
 
 # PYTHON_ARGCOMPLETE_OK
 
+from re import sub
 import sys
 import logging
 import argparse
@@ -316,6 +317,13 @@ def get_image_stitch_parser(subparsers=None):
     return parser
 
 
+def get_subset_parser(subparsers=None):
+    from . import subset
+    parser = subset.create_parser(subparsers)
+    parser.set_defaults(func=subset.main)
+    return parser
+
+
 # main parser
 def get_parser():
     """Instantiate the command line argument parser."""
@@ -374,6 +382,7 @@ def get_parser():
     get_diff_parser(sp)
     get_image_math_parser(sp)
     get_image_stitch_parser(sp)
+    get_subset_parser(sp)
 
     _autocomplete(parser)
 
