@@ -67,6 +67,13 @@ def get_multilook_parser(subparsers=None):
     return parser
 
 
+def get_spatial_average_parser(subparsers=None):
+    from . import spatial_average
+    parser = spatial_average.create_parser(subparsers)
+    parser.set_defaults(func=spatial_average.main)
+    return parser
+
+
 def get_parser():
     """Instantiate the command line argument parser."""
     parser = argparse.ArgumentParser(prog=PROG, description=__doc__)
@@ -79,6 +86,7 @@ def get_parser():
     get_smallbaseline_parser(sp)
     get_geocode_parser(sp)
     get_multilook_parser(sp)
+    get_spatial_average_parser(sp)
 
     _autocomplete(parser)
 
