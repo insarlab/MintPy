@@ -48,11 +48,18 @@ EXAMPLE = """example:
   geocode.py velocity.h5 -l inputs/geometryRadar.h5
 """
 
-def create_parser():
+def create_parser(subparsers=None):
     """Command Line Parser"""
-    parser = argparse.ArgumentParser(description="Prepare FRInGE products for MintPy",
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+    description = "Prepare FRInGE products for MintPy"
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
 
     parser.add_argument('-u', '--unw-file', dest='unwFile', type=str, default='./PS_DS/unwrap/*.unw',
                         help='path pattern of unwrapped interferograms (default: %(default)s).')
