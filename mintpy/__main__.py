@@ -53,6 +53,13 @@ def get_smallbaseline_parser(subparsers=None):
     return parser
 
 
+def get_geocode_parser(subparsers=None):
+    from . import geocode
+    parser = geocode.create_parser(subparsers)
+    parser.set_defaults(func=geocode.main)
+    return parser
+
+
 def get_parser():
     """Instantiate the command line argument parser."""
     parser = argparse.ArgumentParser(prog=PROG, description=__doc__)
@@ -63,6 +70,7 @@ def get_parser():
     # Sub-command management
     sp = parser.add_subparsers(title="sub-commands", dest='func')
     get_smallbaseline_parser(sp)
+    get_geocode_parser(sp)
 
     _autocomplete(parser)
 
