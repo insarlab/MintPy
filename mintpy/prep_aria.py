@@ -70,11 +70,18 @@ TEMPLATE = """template options:
 """
 
 
-def create_parser():
+def create_parser(subparsers=None):
     """Command line parser."""
-    parser = argparse.ArgumentParser(description='Prepare ARIA processed products for MintPy.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=TEMPLATE+'\n'+EXAMPLE)
+    description = 'Prepare ARIA processed products for MintPy.'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = TEMPLATE + '\n' + EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
 
     parser.add_argument('-t','--template', dest='template_file', type=str,
                         help='template file with the options')

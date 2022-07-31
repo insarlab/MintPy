@@ -102,6 +102,14 @@ def get_temporal_filter_parser(subparsers=None):
     return parser
 
 
+# pre-processing
+def get_prep_aria_parser(subparsers=None):
+    from . import prep_aria
+    parser = prep_aria.create_parser(subparsers)
+    parser.set_defaults(func=prep_aria.main)
+    return parser
+
+
 def get_parser():
     """Instantiate the command line argument parser."""
     parser = argparse.ArgumentParser(prog=PROG, description=__doc__)
@@ -111,6 +119,8 @@ def get_parser():
 
     # Sub-command management
     sp = parser.add_subparsers(title="sub-commands", dest='func')
+
+    # processing
     get_smallbaseline_parser(sp)
     get_geocode_parser(sp)
     get_multilook_parser(sp)
@@ -119,6 +129,9 @@ def get_parser():
     get_temporal_average_parser(sp)
     get_temporal_derivative_parser(sp)
     get_temporal_filter_parser(sp)
+
+    # pre-processing
+    get_prep_aria_parser(sp)
 
     _autocomplete(parser)
 
