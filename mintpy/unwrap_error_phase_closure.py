@@ -65,10 +65,18 @@ TEMPLATE2 = get_template_content('correct_unwrap_error')
 
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Unwrapping Error Correction based on Phase Closure'+NOTE,
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+TEMPLATE1+'\n'+TEMPLATE2+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    help = 'Unwrapping Error Correction based on Phase Closure'
+    description = help + NOTE
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = REFERENCE + '\n' + TEMPLATE1 + '\n' + TEMPLATE2 + '\n' + EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=help)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
 
     parser.add_argument('ifgram_file', help='interferograms file to be corrected')
     parser.add_argument('-c','--cc-mask', dest='cc_mask_file', default='maskConnComp.h5',
