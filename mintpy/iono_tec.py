@@ -37,11 +37,18 @@ EXAMPLE = """example:
   iono_tec.py timeseriesRg.h5 -g inputs/geometryRadar.h5 -s cod
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Calculate ionospheric ramps using Global Iono Maps'
-                                                 ' from GNSS-based TEC products.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    description = 'Calculate ionospheric ramps using Global Iono Maps  from GNSS-based TEC products.'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = REFERENCE + '\n' + EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
+
     parser.add_argument('dis_file', help='displacement time-series HDF5 file, i.e. timeseries.h5')
     parser.add_argument('-g','--geomtry', dest='geom_file', type=str, required=True,
                         help='geometry file including incidence/azimuthAngle.')

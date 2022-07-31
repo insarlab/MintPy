@@ -354,6 +354,14 @@ def get_mask_parser(subparsers=None):
     return parser
 
 
+# ionosphere
+def get_iono_tec_parser(subparsers=None):
+    from . import iono_tec
+    parser = iono_tec.create_parser(subparsers)
+    parser.set_defaults(func=iono_tec.main)
+    return parser
+
+
 # main parser
 def get_parser():
     """Instantiate the command line argument parser."""
@@ -421,6 +429,9 @@ def get_parser():
     # mask
     get_generate_mask_parser(sp)
     get_mask_parser(sp)
+
+    # ionosphere
+    get_iono_tec_parser(sp)
 
     _autocomplete(parser)
 
