@@ -64,10 +64,18 @@ REFERENCE = """references:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Invert network of interferograms into time-series.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    description = 'Invert network of interferograms into time-series.'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
+
     # input dataset
     parser.add_argument('ifgramStackFile', help='interferograms stack file to be inverted')
     parser.add_argument('-t','--template', dest='templateFile', help='template text file with options')
