@@ -138,6 +138,13 @@ def get_prep_gmtsar_parser(subparsers=None):
     return parser
 
 
+def get_prep_hyp3_parser(subparsers=None):
+    from . import prep_hyp3
+    parser = prep_hyp3.create_parser(subparsers)
+    parser.set_defaults(func=prep_hyp3.main)
+    return parser
+
+
 def get_parser():
     """Instantiate the command line argument parser."""
     parser = argparse.ArgumentParser(prog=PROG, description=__doc__)
@@ -164,6 +171,7 @@ def get_parser():
     get_prep_fringe_parser(sp)
     get_prep_gamma_parser(sp)
     get_prep_gmtsar_parser(sp)
+    get_prep_hyp3_parser(sp)
 
     _autocomplete(parser)
 
