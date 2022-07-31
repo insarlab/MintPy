@@ -324,6 +324,14 @@ def get_subset_parser(subparsers=None):
     return parser
 
 
+# DEM
+def get_dem_error_parser(subparsers=None):
+    from . import dem_error
+    parser = dem_error.create_parser(subparsers)
+    parser.set_defaults(func=dem_error.main)
+    return parser
+
+
 # main parser
 def get_parser():
     """Instantiate the command line argument parser."""
@@ -383,6 +391,9 @@ def get_parser():
     get_image_math_parser(sp)
     get_image_stitch_parser(sp)
     get_subset_parser(sp)
+
+    # DEM
+    get_dem_error_parser(sp)
 
     _autocomplete(parser)
 
