@@ -95,6 +95,13 @@ def get_temporal_derivative_parser(subparsers=None):
     return parser
 
 
+def get_temporal_filter_parser(subparsers=None):
+    from . import temporal_filter
+    parser = temporal_filter.create_parser(subparsers)
+    parser.set_defaults(func=temporal_filter.main)
+    return parser
+
+
 def get_parser():
     """Instantiate the command line argument parser."""
     parser = argparse.ArgumentParser(prog=PROG, description=__doc__)
@@ -111,6 +118,7 @@ def get_parser():
     get_spatial_filter_parser(sp)
     get_temporal_average_parser(sp)
     get_temporal_derivative_parser(sp)
+    get_temporal_filter_parser(sp)
 
     _autocomplete(parser)
 
