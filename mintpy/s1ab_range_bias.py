@@ -40,10 +40,17 @@ REFERENCE = """reference:
     IEEE Trans. Geosci. Remote Sens., 60, doi:10.1109/TGRS.2022.3168509.
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Sentinel-1 A/B range bias correction',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog='{}\n{}'.format(REFERENCE, EXAMPLE))
+def create_parser(subparsers=None):
+    description = 'Sentinel-1 A/B range bias correction'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = '{}\n{}'.format(REFERENCE, EXAMPLE)
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
 
     # input/output files
     parser.add_argument('ts_file', help='Range offset timeseries file to be corrrected, e.g. timeseriesRg_SET_ERA5.h5.')
