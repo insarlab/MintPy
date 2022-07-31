@@ -223,6 +223,13 @@ def get_save_kmz_timeseries_parser(subparsers=None):
     return parser
 
 
+def get_save_kmz_parser(subparsers=None):
+    from . import save_kmz
+    parser = save_kmz.create_parser(subparsers)
+    parser.set_defaults(func=save_kmz.main)
+    return parser
+
+
 def get_parser():
     """Instantiate the command line argument parser."""
     parser = argparse.ArgumentParser(prog=PROG, description=__doc__)
@@ -263,6 +270,7 @@ def get_parser():
     get_save_hdfeos5_parser(sp)
     get_save_kite_parser(sp)
     get_save_kmz_timeseries_parser(sp)
+    get_save_kmz_parser(sp)
 
     _autocomplete(parser)
 
