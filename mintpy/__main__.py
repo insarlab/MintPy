@@ -384,6 +384,14 @@ def get_tropo_pyaps3_parser(subparsers=None):
     return parser
 
 
+# geodesy
+def get_bulk_plate_motion_parser(subparsers=None):
+    from . import bulk_plate_motion
+    parser = bulk_plate_motion.create_parser(subparsers)
+    parser.set_defaults(func=bulk_plate_motion.main)
+    return parser
+
+
 # main parser
 def get_parser():
     """Instantiate the command line argument parser."""
@@ -459,6 +467,12 @@ def get_parser():
     get_tropo_gacos_parser(sp)
     get_tropo_phase_elevation_parser(sp)
     get_tropo_pyaps3_parser(sp)
+
+    # geodesy
+    try:
+        get_bulk_plate_motion_parser(sp)
+    except ImportError:
+        pass
 
     _autocomplete(parser)
 
