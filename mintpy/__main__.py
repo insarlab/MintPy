@@ -392,6 +392,21 @@ def get_bulk_plate_motion_parser(subparsers=None):
     return parser
 
 
+def get_solid_earth_tides_parser(subparsers=None):
+    from . import solid_earth_tides
+    parser = solid_earth_tides.create_parser(subparsers)
+    parser.set_defaults(func=solid_earth_tides.main)
+    return parser
+
+
+# phase
+def get_closure_phase_bias_parser(subparsers=None):
+    from . import closure_phase_bias
+    parser = closure_phase_bias.create_parser(subparsers)
+    parser.set_defaults(func=closure_phase_bias.main)
+    return parser
+
+
 # main parser
 def get_parser():
     """Instantiate the command line argument parser."""
@@ -473,6 +488,7 @@ def get_parser():
         get_bulk_plate_motion_parser(sp)
     except ImportError:
         pass
+    get_solid_earth_tides_parser(sp)
 
     _autocomplete(parser)
 

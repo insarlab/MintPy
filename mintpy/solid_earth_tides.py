@@ -52,10 +52,17 @@ REFERENCE = """reference:
     IEEE Trans. Geosci. Remote Sens., 60, doi:10.1109/TGRS.2022.3168509.
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Solid Earth tides (SET) correction via PySolid',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog='{}\n{}\n{}'.format(REFERENCE, TEMPLATE, EXAMPLE))
+def create_parser(subparsers=None):
+    description = 'Solid Earth tides (SET) correction via PySolid'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = '{}\n{}\n{}'.format(REFERENCE, TEMPLATE, EXAMPLE)
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
 
     parser.add_argument('dis_file', help='timeseries HDF5 file, i.e. timeseries.h5')
     parser.add_argument('-g','--geomtry', dest='geom_file', type=str, required=True,

@@ -50,10 +50,17 @@ EXAMPLE = """example:
   closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --bw 10 -a estimate --num-worker 6 -c local
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description = 'Phase non-closure related biases correction',
-                                    formatter_class = argparse.RawTextHelpFormatter,
-                                    epilog=REFERENCE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    description = 'Phase non-closure related biases correction'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = REFERENCE + '\n' + EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
 
     parser.add_argument('-i','--ifgramstack', type=str, dest='stack_file',
                         help='interferogram stack file that contains the unwrapped phases')
