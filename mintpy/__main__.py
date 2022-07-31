@@ -407,6 +407,13 @@ def get_closure_phase_bias_parser(subparsers=None):
     return parser
 
 
+def get_remove_ramp_parser(subparsers=None):
+    from . import remove_ramp
+    parser = remove_ramp.create_parser(subparsers)
+    parser.set_defaults(func=remove_ramp.main)
+    return parser
+
+
 # main parser
 def get_parser():
     """Instantiate the command line argument parser."""
@@ -489,6 +496,10 @@ def get_parser():
     except ImportError:
         pass
     get_solid_earth_tides_parser(sp)
+
+    # phase
+    get_closure_phase_bias_parser(sp)
+    get_remove_ramp_parser(sp)
 
     _autocomplete(parser)
 
