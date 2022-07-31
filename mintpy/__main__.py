@@ -362,6 +362,14 @@ def get_iono_tec_parser(subparsers=None):
     return parser
 
 
+# troposphere
+def get_tropo_gacos_parser(subparsers=None):
+    from . import tropo_gacos
+    parser = tropo_gacos.create_parser(subparsers)
+    parser.set_defaults(func=tropo_gacos.main)
+    return parser
+
+
 # main parser
 def get_parser():
     """Instantiate the command line argument parser."""
@@ -432,6 +440,9 @@ def get_parser():
 
     # ionosphere
     get_iono_tec_parser(sp)
+
+    # troposphere
+    get_tropo_gacos_parser(sp)
 
     _autocomplete(parser)
 
