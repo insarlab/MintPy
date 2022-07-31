@@ -35,12 +35,21 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Convert MintPy timeseries product into HDF-EOS5 format\n' +
-                                     '  https://earthdata.nasa.gov/esdis/eso/standards-and-references/hdf-eos5\n' +
-                                     '  https://mintpy.readthedocs.io/en/latest/hdfeos5/',
-                                     formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     epilog=TEMPALTE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    help = 'Convert MintPy timeseries product into HDF-EOS5 format'
+    description = help + (
+        '\n  https://earthdata.nasa.gov/esdis/eso/standards-and-references/hdf-eos5'
+        '\n  https://mintpy.readthedocs.io/en/latest/hdfeos5/'
+    )
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = TEMPALTE + '\n' + EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=help)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
 
     parser.add_argument('ts_file', default='timeseries.h5', help='Timeseries file')
     parser.add_argument('-t', '--template', dest='template_file',
