@@ -584,6 +584,7 @@ def get_parser():
     # misc
     get_asc_desc2horz_vert_parser(sp)
     get_ifgram_inversion_parser(sp)
+    get_lookup_geo2radar_parser(sp)
  
     _autocomplete(parser)
 

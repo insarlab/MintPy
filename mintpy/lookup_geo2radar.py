@@ -149,10 +149,17 @@ def function(data0):
     return grid_lat0, grid_lon0
 
 
-def cmd_line_parse(iargs=None):
-    parser = argparse.ArgumentParser(description='Convert lookup table from geo-coord (GAMMA, ROI_PAC) into radar-coord (ISCE)',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    description = 'Convert lookup table from geo-coord (GAMMA, ROI_PAC) into radar-coord (ISCE)'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
 
     parser.add_argument('geometryGeo',help='geometryGeo file which includes geo-coordinates based lookup-table')
     parser.add_argument('-w','--write', dest='write', metavar='FILE', default = 'geometryRadar.h5',
@@ -160,8 +167,12 @@ def cmd_line_parse(iargs=None):
     parser.add_argument('--parallel', dest='parallelNumb', type=int, metavar='NUM',default = 1,
                       help='Enable parallel processing and specify the the used processor number.[default: 1]')
 
-    inps = parser.parse_args(args=iargs)
+    return parser
 
+
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
