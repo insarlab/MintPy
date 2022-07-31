@@ -33,10 +33,17 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Generate GDAL raster from MintPy h5 file.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    description = 'Generate GDAL raster from MintPy h5 file.'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
 
     parser.add_argument('file', help='file to be converted, in geo coordinate.')
     parser.add_argument('-d', '--dset', '--dataset', dest='dset',
