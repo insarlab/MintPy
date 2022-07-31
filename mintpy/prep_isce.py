@@ -51,11 +51,19 @@ EXAMPLE = """example:
   prep_isce.py -f "./offsets/*/*Off*.bip" -m "SLC/*/data.dat" -b random -g ./geometry/
 """
 
-def create_parser():
+def create_parser(subparsers=None):
     """Command line parser."""
-    parser = argparse.ArgumentParser(description='Prepare ISCE metadata files.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+    description = 'Prepare ISCE metadata files.'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
+
     # observations
     parser.add_argument('-f', dest='obs_files', type=str, nargs='+', default='./merged/interferograms/*/filt_*.unw',
                         help='Wildcard path pattern for the primary observation files.\n'
