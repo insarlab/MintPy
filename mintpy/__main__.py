@@ -347,6 +347,13 @@ def get_generate_mask_parser(subparsers=None):
     return parser
 
 
+def get_mask_parser(subparsers=None):
+    from . import mask
+    parser = mask.create_parser(subparsers)
+    parser.set_defaults(func=mask.main)
+    return parser
+
+
 # main parser
 def get_parser():
     """Instantiate the command line argument parser."""
@@ -413,6 +420,7 @@ def get_parser():
 
     # mask
     get_generate_mask_parser(sp)
+    get_mask_parser(sp)
 
     _autocomplete(parser)
 
