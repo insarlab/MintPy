@@ -24,10 +24,18 @@ EXAMPLE = """example:
   save_qgis.py timeseries_ERA5_ramp_demErr.h5 -g inputs/geometryRadar.h5 -b 200 150 400 350
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Convert to QGIS compatible ps time-series',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    description = 'Convert to QGIS compatible ps time-series'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
+
     parser.add_argument('ts_file', type=str, help='time-series HDF5 file')
     parser.add_argument('-g', '--geom', dest='geom_file', type=str, required=True,
                         help='geometry HDF5 file')
