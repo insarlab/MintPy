@@ -339,6 +339,14 @@ def get_dem_gsi_parser(subparsers=None):
     return parser
 
 
+# mask
+def get_generate_mask_parser(subparsers=None):
+    from . import generate_mask
+    parser = generate_mask.create_parser(subparsers)
+    parser.set_defaults(func=generate_mask.main)
+    return parser
+
+
 # main parser
 def get_parser():
     """Instantiate the command line argument parser."""
@@ -402,6 +410,9 @@ def get_parser():
     # DEM
     get_dem_error_parser(sp)
     get_dem_gsi_parser(sp)
+
+    # mask
+    get_generate_mask_parser(sp)
 
     _autocomplete(parser)
 
