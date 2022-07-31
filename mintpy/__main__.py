@@ -81,6 +81,13 @@ def get_spatial_filter_parser(subparsers=None):
     return parser
 
 
+def get_temporal_average_parser(subparsers=None):
+    from . import temporal_average
+    parser = temporal_average.create_parser(subparsers)
+    parser.set_defaults(func=temporal_average.main)
+    return parser
+
+
 def get_parser():
     """Instantiate the command line argument parser."""
     parser = argparse.ArgumentParser(prog=PROG, description=__doc__)
@@ -95,6 +102,7 @@ def get_parser():
     get_multilook_parser(sp)
     get_spatial_average_parser(sp)
     get_spatial_filter_parser(sp)
+    get_temporal_average_parser(sp)
 
     _autocomplete(parser)
 
