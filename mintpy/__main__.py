@@ -195,6 +195,13 @@ def get_save_gdal_parser(subparsers=None):
     return parser
 
 
+def get_save_gmt_parser(subparsers=None):
+    from . import save_gmt
+    parser = save_gmt.create_parser(subparsers)
+    parser.set_defaults(func=save_gmt.main)
+    return parser
+
+
 def get_parser():
     """Instantiate the command line argument parser."""
     parser = argparse.ArgumentParser(prog=PROG, description=__doc__)
@@ -231,6 +238,7 @@ def get_parser():
     get_load_gbis_parser(sp)
     get_save_gbis_parser(sp)
     get_save_gdal_parser(sp)
+    get_save_gmt_parser(sp)
 
     _autocomplete(parser)
 
