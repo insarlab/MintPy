@@ -586,6 +586,7 @@ def get_parser():
     get_ifgram_inversion_parser(sp)
     get_lookup_geo2radar_parser(sp)
     get_modify_network_parser(sp)
+    get_reference_date_parser(sp)
 
     _autocomplete(parser)
 

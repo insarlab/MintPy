@@ -29,10 +29,17 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Change reference date of timeseries.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=TEMPLATE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    description = 'Change reference date of timeseries.'
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = TEMPLATE + '\n' + EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
 
     parser.add_argument('timeseries_file', nargs='+', help='timeseries file(s)')
     parser.add_argument('-r', '--ref-date', dest='refDate', default='minRMS',
