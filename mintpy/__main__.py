@@ -309,6 +309,13 @@ def get_image_math_parser(subparsers=None):
     return parser
 
 
+def get_image_stitch_parser(subparsers=None):
+    from . import image_stitch
+    parser = image_stitch.create_parser(subparsers)
+    parser.set_defaults(func=image_stitch.main)
+    return parser
+
+
 # main parser
 def get_parser():
     """Instantiate the command line argument parser."""
@@ -366,6 +373,7 @@ def get_parser():
     get_add_parser(sp)
     get_diff_parser(sp)
     get_image_math_parser(sp)
+    get_image_stitch_parser(sp)
 
     _autocomplete(parser)
 

@@ -28,12 +28,22 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Stitch >=2 geocoded datasets sharing common area into one.\n'
-                                                 '\tFunction automatically finds the common area and calculates\n'
-                                                 '\tthe average offset between the two velocity.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    help = 'Stitch >=2 geocoded datasets sharing common area into one.\n'
+    description = help + '\n' + (
+        '\tFunction automatically finds the common area and calculates\n'
+        '\tthe average offset between the two velocity.'
+    )
+    formatter_class = argparse.RawTextHelpFormatter
+    epilog = EXAMPLE
+    if subparsers:
+        name = __name__.split('.')[-1]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=help)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
+
     parser.add_argument('file1', help='file to stitch')
     parser.add_argument('file2s', nargs='+', metavar='file2', help='file(s) to stitch')
     parser.add_argument('-o', '--output', dest='outfile', required=True, help='output file name')
