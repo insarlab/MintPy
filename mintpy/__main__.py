@@ -377,6 +377,13 @@ def get_tropo_phase_elevation_parser(subparsers=None):
     return parser
 
 
+def get_tropo_pyaps3_parser(subparsers=None):
+    from . import tropo_pyaps3
+    parser = tropo_pyaps3.create_parser(subparsers)
+    parser.set_defaults(func=tropo_pyaps3.main)
+    return parser
+
+
 # main parser
 def get_parser():
     """Instantiate the command line argument parser."""
@@ -451,6 +458,7 @@ def get_parser():
     # troposphere
     get_tropo_gacos_parser(sp)
     get_tropo_phase_elevation_parser(sp)
+    get_tropo_pyaps3_parser(sp)
 
     _autocomplete(parser)
 
