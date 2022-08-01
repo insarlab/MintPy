@@ -29,8 +29,8 @@ EXAMPLE = """example:
 
 
 def create_parser(subparsers=None):
-    help = 'Stitch >=2 geocoded datasets sharing common area into one.\n'
-    description = help + '\n' + (
+    synopsys = 'Stitch >=2 geocoded datasets sharing common area into one.\n'
+    description = synopsys + '\n' + (
         '\tFunction automatically finds the common area and calculates\n'
         '\tthe average offset between the two velocity.'
     )
@@ -39,7 +39,7 @@ def create_parser(subparsers=None):
     if subparsers:
         name = __name__.split('.')[-1]
         parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=help)
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=synopsys)
     else:
         parser = argparse.ArgumentParser(
             description=description, formatter_class=formatter_class, epilog=epilog)

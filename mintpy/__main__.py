@@ -18,7 +18,6 @@ CORRECTNESS. Use at your own risk.
 
 # PYTHON_ARGCOMPLETE_OK
 
-from re import sub
 import sys
 import logging
 import argparse

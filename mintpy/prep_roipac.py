@@ -34,14 +34,14 @@ DESCRIPTION = """
 
 
 def create_parser(subparsers=None):
-    help = 'Prepare attributes file for ROI_PAC products.'
-    description = help + '\n' + DESCRIPTION
+    synopsys = 'Prepare attributes file for ROI_PAC products.'
+    description = synopsys + '\n' + DESCRIPTION
     formatter_class = argparse.RawTextHelpFormatter
     epilog = EXAMPLE
     if subparsers:
         name = __name__.split('.')[-1]
         parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=help)
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=synopsys)
     else:
         parser = argparse.ArgumentParser(
             description=description, formatter_class=formatter_class, epilog=epilog)

@@ -53,14 +53,14 @@ TEMPLATE = get_template_content('correct_unwrap_error')
 
 
 def create_parser(subparsers=None):
-    help = 'Unwrapping Error Correction with Bridging'
-    description = help + NOTE
+    synopsys = 'Unwrapping Error Correction with Bridging'
+    description = synopsys + NOTE
     formatter_class = argparse.RawTextHelpFormatter
     epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
     if subparsers:
         name = __name__.split('.')[-1]
         parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=help)
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=synopsys)
     else:
         parser = argparse.ArgumentParser(
             description=description, formatter_class=formatter_class, epilog=epilog)

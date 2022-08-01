@@ -82,8 +82,8 @@ EXAMPLE = """example:
 """
 
 def create_parser(subparsers=None):
-    help = 'Bulk Plate Motion Correction.'
-    description = help + '\n' + (
+    synopsis = 'Bulk Plate Motion Correction.'
+    description = synopsis + '\n' + (
         '  Removing the effect of bulk traslation and rotation in velocity field based on a given plate motion model (PMM).\n'
         '  E.g., Sentinel-1 orbit is measured with respect to ITRF2014 (Table 3-2 of Peter et al., 2021), which is an\n'
         '  Earth-centered, Earth-fixed reference frame in which there is no net rotation (NNR) of the Earth surface.',
@@ -93,7 +93,7 @@ def create_parser(subparsers=None):
     if subparsers:
         name = __name__.split('.')[-1]
         parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=help)
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=synopsis)
     else:
         parser = argparse.ArgumentParser(
             description=description, formatter_class=formatter_class, epilog=epilog)
