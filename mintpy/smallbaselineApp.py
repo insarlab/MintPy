@@ -8,7 +8,6 @@
 ############################################################
 
 
-from logging import Formatter
 import os
 import sys
 import glob
