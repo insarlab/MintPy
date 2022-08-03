@@ -8,10 +8,10 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 from mintpy.objects import timeseries
 from mintpy.utils import ptime
+from mintpy.utils.arg_group import create_argument_parser
 
 
 ############################################################
@@ -26,15 +26,10 @@ REFERENCE="""reference:
 
 def create_parser(subparsers=None):
     description = 'Smoothing timeseries in time domain with a moving Gaussian window'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = REFERENCE + '\n' + EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('timeseries_file',
                         help='timeseries file to be smoothed.')

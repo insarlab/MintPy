@@ -6,7 +6,6 @@
 ############################################################
 
 
-import argparse
 import datetime as dt
 import os
 import sys
@@ -19,6 +18,7 @@ import mintpy
 from mintpy.objects import timeseries, ionex
 from mintpy.objects.constants import SPEED_OF_LIGHT
 from mintpy.utils import ptime, readfile, writefile, utils as ut
+from mintpy.utils.arg_group import create_argument_parser
 from mintpy.simulation import iono
 
 
@@ -39,15 +39,10 @@ EXAMPLE = """example:
 
 def create_parser(subparsers=None):
     description = 'Calculate ionospheric ramps using Global Iono Maps  from GNSS-based TEC products.'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = REFERENCE + '\n' + EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('dis_file', help='displacement time-series HDF5 file, i.e. timeseries.h5')
     parser.add_argument('-g','--geomtry', dest='geom_file', type=str, required=True,

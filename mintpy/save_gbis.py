@@ -9,7 +9,6 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 import scipy.io as sio
 import matplotlib.pyplot as plt
@@ -19,6 +18,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 
 from mintpy.objects import sensor
 from mintpy.utils import ptime, readfile, utils as ut
+from mintpy.utils.arg_group import create_argument_parser
 
 
 EXAMPLE = """example:
@@ -38,15 +38,10 @@ REFERENCE = """references:
 
 def create_parser(subparsers=None):
     description = 'Convert MintPy product to GBIS .mat format.'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = REFERENCE + '\n' + EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='deformation file.')
     parser.add_argument('dset', nargs='?',

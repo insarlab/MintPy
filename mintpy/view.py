@@ -11,7 +11,6 @@
 import os
 import sys
 import re
-import argparse
 import datetime as dt
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,11 +22,8 @@ import cartopy.crs as ccrs
 
 from mintpy.objects import (
     giantIfgramStack,
-    geometryDatasetNames,
-    ifgramDatasetNames,
     ifgramStack,
     timeseriesKeyNames,
-    timeseries,
 )
 from mintpy.objects.gps import GPS
 from mintpy.utils import (
@@ -37,6 +33,7 @@ from mintpy.utils import (
     utils as ut,
     plot as pp,
 )
+from mintpy.utils.arg_group import create_argument_parser
 from mintpy.multilook import multilook_data
 from mintpy import subset, version
 
@@ -90,15 +87,10 @@ PLOT_TEMPLATE = """Plot Setting:
 
 def create_parser(subparsers=None):
     description = 'Plot InSAR Product in 2D'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     infile = parser.add_argument_group('Input File', 'File/Dataset to display')
     infile.add_argument('file', type=str, help='file for display')

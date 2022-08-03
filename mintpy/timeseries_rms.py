@@ -8,12 +8,12 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, ptime, utils as ut, plot as pp
+from mintpy.utils.arg_group import create_argument_parser
 
 
 ######################################################################################################
@@ -34,15 +34,10 @@ Rousseeuw, P. J., and M. Hubert (2011), Robust statistics for outlier detection,
 
 def create_parser(subparsers=None):
     description = 'Calculate Root Mean Square (RMS) of deramped residual phase time-series.'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = TEMPLATE + '\n' + EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('timeseries_file', help='Timeseries file')
     parser.add_argument('-t', '--template', dest='template_file',

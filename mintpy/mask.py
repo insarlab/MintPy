@@ -9,9 +9,9 @@
 import os
 import sys
 import shutil
-import argparse
 import numpy as np
 from mintpy.utils import readfile, writefile
+from mintpy.utils.arg_group import create_argument_parser
 
 
 ############################################################
@@ -27,15 +27,10 @@ EXAMPLE = """example:
 
 def create_parser(subparsers=None):
     description = 'Mask file'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='File to be masked')
     parser.add_argument('-m', '--mask', dest='mask_file', required=True,

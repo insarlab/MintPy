@@ -8,7 +8,6 @@
 
 import os
 import sys
-import argparse
 import warnings
 import h5py
 import numpy as np
@@ -24,6 +23,7 @@ from mintpy.utils import (
     utils1 as ut,
     attribute as attr,
 )
+from mintpy.utils.arg_group import create_argument_parser
 
 
 ##################################################################################################
@@ -38,15 +38,10 @@ EXAMPLE = """example:
 
 def create_parser(subparsers=None):
     description = 'Multilook.'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', nargs='+', help='File(s) to multilook')
     parser.add_argument('-r','--range','-x', dest='lks_x', type=int, default=1,

@@ -11,13 +11,13 @@
 import os
 import sys
 import time
-import argparse
 import numpy as np
 from scipy import linalg
 
 from mintpy.defaults.template import get_template_content
 from mintpy.objects import timeseries, giantTimeseries, HDFEOS, cluster
 from mintpy.utils import arg_group, ptime, time_func, readfile, writefile, utils as ut
+from mintpy.utils.arg_group import create_argument_parser
 
 
 dataType = np.float32
@@ -78,15 +78,10 @@ DROP_DATE_TXT = """exclude_date.txt:
 
 def create_parser(subparsers=None):
     description = 'Estimate velocity / time functions from time-series.'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = TEMPLATE + '\n' + REFERENCE + '\n' + EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     # inputs
     parser.add_argument('timeseries_file', help='Time series file for time function estimation.')

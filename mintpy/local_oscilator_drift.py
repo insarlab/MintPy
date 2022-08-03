@@ -12,11 +12,11 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 from mintpy.objects import timeseries
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, writefile, ptime
+from mintpy.utils.arg_group import create_argument_parser
 
 
 #########################################################################################
@@ -33,10 +33,12 @@ REFERENCE = """reference:
   Edinburgh, U.K.
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Local Oscilator Drift (LOD) correction of Envisat',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog='{}\n{}\n{}'.format(REFERENCE, TEMPLATE, EXAMPLE))
+def create_parser(subparsers=None):
+    description='Local Oscilator Drift (LOD) correction of Envisat'
+    epilog='{}\n{}\n{}'.format(REFERENCE, TEMPLATE, EXAMPLE)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument(dest='file', help='timeseries / interferograms file, i.e. timeseries.h5')
     parser.add_argument(dest='range_dist_file',

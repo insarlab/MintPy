@@ -24,12 +24,12 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 from skimage.transform import resize
 
 from mintpy.objects.resample import resample
 from mintpy.utils import readfile, writefile, utils as ut
+from mintpy.utils.arg_group import create_argument_parser
 from mintpy.diff import diff_file
 
 # https://docs.astropy.org/en/stable/units/index.html
@@ -88,15 +88,10 @@ def create_parser(subparsers=None):
         '  E.g., Sentinel-1 orbit is measured with respect to ITRF2014 (Table 3-2 of Peter et al., 2021), which is an\n'
         '  Earth-centered, Earth-fixed reference frame in which there is no net rotation (NNR) of the Earth surface.',
     )
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = REFERENCE + '\n' + EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=synopsis)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=description, epilog=epilog, subparsers=subparsers)
 
     # input files
     parser.add_argument('-g', '--geom', dest='geom_file', type=str, required=True,

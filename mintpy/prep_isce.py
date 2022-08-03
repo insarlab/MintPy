@@ -9,7 +9,6 @@
 import os
 import sys
 import glob
-import argparse
 import numpy as np
 from mintpy.utils import (
     attribute as attr,
@@ -18,6 +17,7 @@ from mintpy.utils import (
     readfile,
     writefile,
 )
+from mintpy.utils.arg_group import create_argument_parser
 
 
 
@@ -54,15 +54,10 @@ EXAMPLE = """example:
 def create_parser(subparsers=None):
     """Command line parser."""
     description = 'Prepare ISCE metadata files.'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     # observations
     parser.add_argument('-f', dest='obs_files', type=str, nargs='+', default='./merged/interferograms/*/filt_*.unw',

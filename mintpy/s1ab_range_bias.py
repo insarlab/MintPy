@@ -8,12 +8,12 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 from matplotlib import pyplot as plt, ticker, colors
 
 from mintpy.objects import timeseries
 from mintpy.utils import readfile, writefile, s1_utils, plot as pp
+from mintpy.utils.arg_group import create_argument_parser
 
 
 
@@ -42,15 +42,10 @@ REFERENCE = """reference:
 
 def create_parser(subparsers=None):
     description = 'Sentinel-1 A/B range bias correction'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = '{}\n{}'.format(REFERENCE, EXAMPLE)
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     # input/output files
     parser.add_argument('ts_file', help='Range offset timeseries file to be corrrected, e.g. timeseriesRg_SET_ERA5.h5.')

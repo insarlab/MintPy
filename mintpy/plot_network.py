@@ -8,11 +8,12 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from mintpy.objects import ifgramStack
 from mintpy.utils import readfile, utils as ut, plot as pp
+from mintpy.utils.arg_group import create_argument_parser
+
 # suppress UserWarning from matplotlib
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
@@ -52,15 +53,10 @@ mintpy.network.aoiLALO   = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use 
 
 def create_parser(subparsers=None):
     description = 'Display Network of Interferograms'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='file with network information, ifgramStack.h5 or coherenceSpatialAvg.txt')
     parser.add_argument('--show-kept', dest='disp_drop', action='store_false',

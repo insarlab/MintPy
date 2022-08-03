@@ -8,10 +8,10 @@
 
 import os
 import sys
-import argparse
 import warnings
 from mintpy.objects import RAMP_LIST
 from mintpy.utils import readfile, utils as ut
+from mintpy.utils.arg_group import create_argument_parser
 
 
 # key configuration parameter name
@@ -31,15 +31,10 @@ EXAMPLE = """example:
 
 def create_parser(subparsers=None):
     description = 'Remove phase ramp'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='File for ramp removal')
     parser.add_argument('-m', '--mask', dest='mask_file', default='maskTempCoh.h5',

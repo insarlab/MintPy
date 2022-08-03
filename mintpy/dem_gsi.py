@@ -12,6 +12,7 @@ import glob
 import argparse
 import numpy as np
 from mintpy.utils import writefile
+from mintpy.utils.arg_group import create_argument_parser
 
 
 # DEHM basic info
@@ -37,15 +38,10 @@ where longitude = xx + 100
 
 def create_parser(subparsers=None):
     description = 'Prepare DEM from GSI (Japan) DEHM grib files.'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('-b','--bbox', dest='SNWE', type=float, nargs=4, metavar=('S','N','W','E'), required=True,
                         help='Bounding box in latitude [-90, 90] and longitude [-180, 180].')

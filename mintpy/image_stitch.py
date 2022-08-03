@@ -9,7 +9,6 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 try:
@@ -18,6 +17,7 @@ except ImportError:
     raise ImportError('Could not import skimage!')
 
 from mintpy.utils import readfile, writefile, plot as pp
+from mintpy.utils.arg_group import create_argument_parser
 from mintpy.multilook import multilook_data
 
 
@@ -29,20 +29,15 @@ EXAMPLE = """example:
 
 
 def create_parser(subparsers=None):
-    synopsys = 'Stitch >=2 geocoded datasets sharing common area into one.\n'
-    description = synopsys + '\n' + (
+    synopsis = 'Stitch >=2 geocoded datasets sharing common area into one.\n'
+    description = synopsis + '\n' + (
         '\tFunction automatically finds the common area and calculates\n'
         '\tthe average offset between the two velocity.'
     )
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=synopsys)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file1', help='file to stitch')
     parser.add_argument('file2s', nargs='+', metavar='file2', help='file(s) to stitch')

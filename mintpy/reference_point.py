@@ -8,13 +8,13 @@
 
 import os
 import sys
-import argparse
 import h5py
 import numpy as np
 import random
 from mintpy.objects import timeseries
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import ptime, readfile, writefile, utils as ut
+from mintpy.utils.arg_group import create_argument_parser
 
 
 #########################################  Usage  ##############################################
@@ -57,15 +57,10 @@ EXAMPLE = """example:
 
 def create_parser(subparsers=None):
     description = 'Reference to the same pixel in space.'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = NOTE + '\n' + TEMPLATE + '\n' + EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', type=str, help='file to be referenced.')
     parser.add_argument('-t', '--template', dest='template_file',

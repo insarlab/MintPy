@@ -10,7 +10,6 @@ import os
 import sys
 import time
 import shutil
-import argparse
 import h5py
 import numpy as np
 
@@ -18,6 +17,7 @@ from mintpy.objects import timeseries
 from mintpy.objects.cluster import split_box2sub_boxes
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import arg_group, readfile, writefile, ptime, utils as ut
+from mintpy.utils.arg_group import create_argument_parser
 
 
 ##################################################################
@@ -31,15 +31,10 @@ EXAMPLE = """example:
 
 def create_parser(subparsers=None):
     description = 'Change reference date of timeseries.'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = TEMPLATE + '\n' + EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('timeseries_file', nargs='+', help='timeseries file(s)')
     parser.add_argument('-r', '--ref-date', dest='refDate', default='minRMS',

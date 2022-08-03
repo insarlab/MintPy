@@ -8,9 +8,9 @@
 
 import os
 import sys
-import argparse
 import h5py
 from mintpy.utils import writefile
+from mintpy.utils.arg_group import create_argument_parser
 
 
 ###########################################################################################
@@ -20,13 +20,17 @@ EXAMPLE = """Example:
   remove_hdf5_dataset.py  velocity.h5     velocityStd
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Remove an existing dataset from HDF5 file',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+
+def create_parser(subparsers=None):
+    description = 'Remove an existing dataset from HDF5 file'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', type=str, help='HDF5 file of interest')
     parser.add_argument('dset', type=str, nargs='+', help='dataset to be removed.')
+
     return parser
 
 def cmd_line_parse(iargs=None):

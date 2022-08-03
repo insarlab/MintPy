@@ -9,8 +9,8 @@
 
 import os
 import sys
-import argparse
 from mintpy.utils import readfile, writefile, utils as ut
+from mintpy.utils.arg_group import create_argument_parser
 
 
 SPEED_OF_LIGHT = 299792458  # m / s
@@ -40,17 +40,12 @@ EXAMPLE = """example:
 """
 
 def create_parser(subparsers=None):
-    synopsys = 'Prepare attributes file for SNAP products.'
-    description = synopsys + '\n' + DESCRIPTION
-    formatter_class = argparse.RawTextHelpFormatter
+    synopsis = 'Prepare attributes file for SNAP products.'
+    description = synopsis + '\n' + DESCRIPTION
     epilog = EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=synopsys)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', nargs='+', help='SNAP data file(s) in *.img format.')
     return parser

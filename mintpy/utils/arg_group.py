@@ -410,3 +410,14 @@ def add_timefunc_argument(parser):
 
     return parser
 
+
+def create_argument_parser(name=None, synopsis=None, description=None, epilog=None, 
+                           subparsers=None, formatter_class=argparse.RawTextHelpFormatter):
+    if subparsers:
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=synopsis)
+    else:
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
+
+    return parser

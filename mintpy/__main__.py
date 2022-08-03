@@ -442,6 +442,13 @@ def get_ifgram_inversion_parser(subparsers=None):
     return parser
 
 
+def get_local_oscilator_drift_parser(subparsers=None):
+    from . import local_oscilator_drift
+    parser = local_oscilator_drift.create_parser(subparsers)
+    parser.set_defaults(func=local_oscilator_drift.main)
+    return parser
+
+
 def get_lookup_geo2radar_parser(subparsers=None):
     from . import lookup_geo2radar
     parser = lookup_geo2radar.create_parser(subparsers)
@@ -469,6 +476,11 @@ def get_reference_point_parser(subparsers=None):
     parser.set_defaults(func=reference_point.main)
     return parser
 
+def get_remove_hdf5_dataset(subparsers=None):
+    from . import remove_hdf5_dataset
+    parser = remove_hdf5_dataset.create_parser(subparsers)
+    parser.set_defaults(func=remove_hdf5_dataset.main)
+    return parser
 
 def get_s1ab_range_bias_parser(subparsers=None):
     from . import s1ab_range_bias
@@ -581,12 +593,16 @@ def get_parser():
     get_unwrap_error_phase_closure_parser(sp)
 
     # misc
+    # get_add_attribute_parser(sp)
     get_asc_desc2horz_vert_parser(sp)
     get_ifgram_inversion_parser(sp)
+    get_local_oscilator_drift_parser(sp)
     get_lookup_geo2radar_parser(sp)
     get_modify_network_parser(sp)
+    # get_multi_transect_parser(sp)
     get_reference_date_parser(sp)
     get_reference_point_parser(sp)
+    get_remove_hdf5_dataset(sp)
     get_s1ab_range_bias_parser(sp)
     get_timeseries_rms_parser(sp)
     get_timeseries2velocity_parser(sp)

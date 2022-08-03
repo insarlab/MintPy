@@ -12,7 +12,6 @@
 import os
 import sys
 import time
-import argparse
 import h5py
 import numpy as np
 from scipy import linalg   # more effieint than numpy.linalg
@@ -20,6 +19,7 @@ from mintpy.objects import ifgramStack, cluster
 from mintpy.simulation import decorrelation as decor
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, writefile, ptime, utils as ut, arg_group
+from mintpy.utils.arg_group import create_argument_parser
 
 
 # key configuration parameter name
@@ -66,15 +66,10 @@ REFERENCE = """references:
 
 def create_parser(subparsers=None):
     description = 'Invert network of interferograms into time-series.'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     # input dataset
     parser.add_argument('ifgramStackFile', help='interferograms stack file to be inverted')

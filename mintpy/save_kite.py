@@ -7,10 +7,10 @@
 
 
 import sys
-import argparse
 import datetime as dt
 import numpy as np
 from mintpy.utils import ptime, readfile, arg_group, attribute
+from mintpy.utils.arg_group import create_argument_parser
 from mintpy import subset
 
 
@@ -39,15 +39,10 @@ KITE_URL = 'https://github.com/pyrocko/kite'
 
 def create_parser(subparsers=None):
     description = f'Generate KITE ({KITE_URL}) npz and yaml from MintPy HDF5 file.'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', type=str, help='file to be converted, in geo coordinate.')
     parser.add_argument('-d', '--dset', '--dataset', dest='dset', type=str, required=True,

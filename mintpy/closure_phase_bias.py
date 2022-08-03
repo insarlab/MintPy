@@ -11,7 +11,6 @@
 import os
 import sys
 import time
-import argparse
 import numpy as np
 import glob
 from datetime import datetime as dt
@@ -25,6 +24,7 @@ from mintpy.utils import (
     isce_utils,
     utils as ut,
 )
+from mintpy.utils.arg_group import create_argument_parser
 from mintpy.ifgram_inversion import estimate_timeseries
 
 
@@ -52,15 +52,10 @@ EXAMPLE = """example:
 
 def create_parser(subparsers=None):
     description = 'Phase non-closure related biases correction'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = REFERENCE + '\n' + EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('-i','--ifgramstack', type=str, dest='stack_file',
                         help='interferogram stack file that contains the unwrapped phases')

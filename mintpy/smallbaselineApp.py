@@ -14,12 +14,12 @@ import glob
 import time
 import datetime
 import shutil
-import argparse
 import numpy as np
 
 import mintpy
 from mintpy.objects import sensor, cluster, RAMP_LIST
 from mintpy.utils import readfile, writefile, utils as ut
+from mintpy.utils.arg_group import create_argument_parser
 from mintpy.defaults.template import STEP_LIST
 import mintpy.workflow   # dynamic import of modules for smallbaselineApp
 
@@ -59,15 +59,10 @@ REFERENCE = """reference:
 
 def create_parser(subparsers=None):
     description = 'Routine Time Series Analysis for Small Baseline InSAR Stack'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = REFERENCE + '\n' + EXAMPLE
-    if subparsers:
-        name = 'smallbaseline'
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = 'smallbaseline'
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('customTemplateFile', nargs='?',
                         help='custom template with option settings.\n' +

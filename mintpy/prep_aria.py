@@ -10,7 +10,6 @@ import os
 import sys
 import time
 import glob
-import argparse
 import h5py
 import numpy as np
 
@@ -21,6 +20,7 @@ except ImportError:
 
 from mintpy.objects import ifgramStack, geometry, sensor
 from mintpy.utils import ptime, readfile, writefile, utils as ut, attribute as attr
+from mintpy.utils.arg_group import create_argument_parser
 from mintpy.subset import read_subset_template2box
 from mintpy.multilook import multilook_data
 
@@ -73,15 +73,10 @@ TEMPLATE = """template options:
 def create_parser(subparsers=None):
     """Command line parser."""
     description = 'Prepare ARIA processed products for MintPy.'
-    formatter_class = argparse.RawTextHelpFormatter
     epilog = TEMPLATE + '\n' + EXAMPLE
-    if subparsers:
-        name = __name__.split('.')[-1]
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=description)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('-t','--template', dest='template_file', type=str,
                         help='template file with the options')
