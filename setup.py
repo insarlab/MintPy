@@ -76,6 +76,9 @@ setup(
         "pyresample",
         # "openmp",
     ],
+    extras_require={
+        "cli": ["argcomplete"],
+    },
 
     # package discovery
     packages=find_packages(),
