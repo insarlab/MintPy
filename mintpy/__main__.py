@@ -512,7 +512,7 @@ def get_parser():
     )
 
     # Sub-command management
-    sp = parser.add_subparsers(title="sub-commands", dest='func', required=True)
+    sp = parser.add_subparsers(title="sub-commands", dest='func', required=True, metavar='')
 
     # processing
     get_smallbaseline_parser(sp)
