@@ -78,6 +78,7 @@ setup(
     ],
     extras_require={
         "cli": ["argcomplete"],
+        'platemotion': ['platemotion', 'astropy'],
     },
 
     # package discovery
