@@ -16,7 +16,7 @@ MODEL_EXAMPLE = """time function configuration:
     model = {
         'polynomial' : 2,                    # int, polynomial degree with 1 (linear), 2 (quadratic), 3 (cubic), etc.
         'periodic'   : [1.0, 0.5],           # list of float, period(s) in years. 1.0 (annual), 0.5 (semiannual), etc.
-        'step'       : ['20061014'],         # list of str, date(s) in YYYYMMDD.
+        'stepDate'   : ['20061014'],         # list of str, date(s) in YYYYMMDD.
         'exp'        : {'20181026': [60],    # dict, key for onset time in YYYYMMDD(THHMM) and value for char times in integer days.
                         ...
                         },
@@ -76,7 +76,7 @@ def inps2model(inps, date_list=None, print_msg=True):
                                 date_list=['20141213', '20141225', ...]   # optional
                                 polynomial=1,
                                 periodic=[1.0, 0.5],
-                                step=['20110311', '20120928T1733'],
+                                stepDate=['20110311', '20120928T1733'],
                                 exp=[['20170910', '60', '200'], ['20171026', '200']],
                                 log=[['20170910', '60', '200'], ['20171026', '200']],
                             )
@@ -98,16 +98,16 @@ def inps2model(inps, date_list=None, print_msg=True):
     model = dict()
     model['polynomial'] = inps.polynomial
     model['periodic']   = inps.periodic
-    model['step']       = inps.step
+    model['stepDate']   = inps.stepDate
 
     if inps.periodic:
         # check 1 - positive value
         if any(x <= 0 for x in inps.periodic):
             raise ValueError(f'Zero or negative input period ({inps.periodic}) found!')
 
-    if inps.step:
+    if inps.stepDate:
         # check 1 - min/max limit
-        for d_step in inps.step:
+        for d_step in inps.stepDate:
             if not (ymin < ptime.yyyymmdd2years(d_step) < ymax):
                 raise ValueError(f'input step date ({d_step}) exceeds date limit: ({dmin} / {dmax})!')
 
@@ -178,7 +178,7 @@ def get_num_param(model):
     num_param = (
         model['polynomial'] + 1
         + len(model['periodic']) * 2
-        + len(model['step'])
+        + len(model['stepDate'])
         + sum([len(val) for key, val in model['exp'].items()])
         + sum([len(val) for key, val in model['log'].items()])
     )
@@ -215,7 +215,7 @@ def get_design_matrix4time_func(date_list, model=None, ref_date=None, seconds=0)
     # read the models
     poly_deg   = model.get('polynomial', 0)
     periods    = model.get('periodic', [])
-    steps      = model.get('step', [])
+    steps      = model.get('stepDate', [])
     exps       = model.get('exp', dict())
     logs       = model.get('log', dict())
     num_period = len(periods)

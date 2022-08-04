@@ -31,7 +31,7 @@ configKeys = [
     # time functions
     'polynomial',
     'periodic',
-    'step',
+    'stepDate',
     'exp',
     'log',
     # uncertainty quantification
@@ -157,7 +157,7 @@ def cmd_line_parse(iargs=None):
             print('WARNING: bootstrapCount should be larger than 1!')
             print('Change the uncertainty quantification method from bootstrap to residue, and continue.')
         # check 2 - advanced time func
-        if (inps.polynomial != 1 or inps.periodic or inps.step or inps.exp or inps.log):
+        if (inps.polynomial != 1 or inps.periodic or inps.stepDate or inps.exp or inps.log):
             raise ValueError('bootstrapping support polynomial with the order of 1 ONLY!')
 
     elif inps.uncertaintyQuantification == 'covariance':
@@ -214,7 +214,7 @@ def read_template2inps(template_file, inps=None):
             elif key in ['periodic']:
                 iDict[key] = [float(x) for x in value.replace(';',',').split(',')]
 
-            elif key in ['step']:
+            elif key in ['stepDate']:
                 iDict[key] = value.replace(';',',').split(',')
 
             elif key in ['exp', 'log']:
@@ -639,7 +639,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None):
     # deformation model info
     poly_deg   = model['polynomial']
     num_period = len(model['periodic'])
-    num_step   = len(model['step'])
+    num_step   = len(model['stepDate'])
     num_exp    = sum([len(val) for key, val in model['exp'].items()])
 
     # init output
@@ -722,7 +722,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None):
     p0 = (poly_deg + 1) + (2 * num_period)
     for i in range(num_step):
         # dataset name
-        dsName = 'step{}'.format(model['step'][i])
+        dsName = 'step{}'.format(model['stepDate'][i])
 
         # assign ds_dict
         if m is not None:

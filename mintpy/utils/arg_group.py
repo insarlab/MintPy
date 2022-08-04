@@ -423,7 +423,7 @@ def add_timefunc_argument(parser):
                             '--periodic 1.0                         # an annual cycle\n'
                             '--periodic 1.0 0.5                     # an annual cycle plus a semi-annual cycle\n')
 
-    model.add_argument('--step', dest='step', type=str, nargs='+', default=[],
+    model.add_argument('--step','--step-date', dest='stepDate', type=str, nargs='+', default=[],
                        help='step function(s) at YYYYMMDD (default: %(default)s). E.g.:\n'
                             '--step 20061014                        # coseismic step  at 2006-10-14T00:00\n'
                             '--step 20110311 20120928T1733          # coseismic steps at 2011-03-11T00:00 and 2012-09-28T17:33\n')
