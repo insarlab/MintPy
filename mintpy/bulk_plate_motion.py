@@ -24,6 +24,7 @@
 
 import os
 import sys
+import collections
 import numpy as np
 from skimage.transform import resize
 
@@ -40,6 +41,27 @@ except ImportError:
     msg = 'Can NOT import platemotion!'
     msg += '\nCheck more details at https://github.com/lcx366/PlateTectonic.'
     raise ImportError(msg)
+
+
+# ITRF2014-PMM defined in Altamimi et al. (2017)
+# units:
+#   omega_x/y/z in mas/yr (milli-second of arc per year)
+#   omega       in deg/Ma (degree per megayear or one-million-year)
+#   wrms_e/n    in mm/yr  (milli-meter per year), WRMS: weighted root mean scatter
+Tag = collections.namedtuple('Tag', 'name num_site omega_x omega_y omega_z omega wrms_e wrms_n')
+ITRF2014_PMM = {
+    'ANTA' : Tag('Antartica'  ,   7,  -0.248,  -0.324,   0.675,  0.219,  0.20,  0.16),
+    'ARAB' : Tag('Arabia'     ,   5,   1.154,  -0.136,   1.444,  0.515,  0.36,  0.43),
+    'AUST' : Tag('Australia'  ,  36,   1.510,   1.182,   1.215,  0.631,  0.24,  0.20),
+    'EURA' : Tag('Eurasia'    ,  97,  -0.085,  -0.531,   0.770,  0.261,  0.23,  0.19),
+    'INDI' : Tag('India'      ,   3,   1.154,  -0.005,   1.454,  0.516,  0.21,  0.21),
+    'NAZC' : Tag('Nazca'      ,   2,  -0.333,  -1.544,   1.623,  0.629,  0.13,  0.19),
+    'NOAM' : Tag('N. America' ,  72,   0.024,  -0.694,  -0.063,  0.194,  0.23,  0.28),
+    'NUBI' : Tag('Nubia'      ,  24,   0.099,  -0.614,   0.733,  0.267,  0.28,  0.36),
+    'PCFC' : Tag('Pacific'    ,  18,  -0.409,   1.047,  -2.169,  0.679,  0.36,  0.31),
+    'SOAM' : Tag('S. America' ,  30,  -0.270,  -0.301,  -0.140,  0.119,  0.34,  0.35),
+    'SOMA' : Tag('Somalia'    ,   3,  -0.121,  -0.794,   0.884,  0.332,  0.32,  0.30),
+}
 
 
 
