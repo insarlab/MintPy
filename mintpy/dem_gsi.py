@@ -30,18 +30,18 @@ EXAMPLE = """example:
   dem_gsi.py -b 31.1 32.8 130.1 131.9 --grid-dir ~/data/DEM/GSI_DEHM10m
 """
 
-REFERENCE = """DEHM: Digital Ellipsoidal Height Model
+NOTE = """DEHM: Digital Ellipsoidal Height Model
 yyxx.dehm with yy and xx indicating the coordinates of the upper left corner of the firt pixel.
 where longitude = xx + 100
       latitude  = (yy + 1) / 1.5
 """
 
 def create_parser(subparsers=None):
-    description = 'Prepare DEM from GSI (Japan) DEHM grib files.'
+    synopsis = 'Prepare DEM from GSI (Japan) DEHM grib files.'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('-b','--bbox', dest='SNWE', type=float, nargs=4, metavar=('S','N','W','E'), required=True,
                         help='Bounding box in latitude [-90, 90] and longitude [-180, 180].')

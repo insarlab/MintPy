@@ -12,7 +12,43 @@ import argparse
 import numpy as np
 
 
+##################################  generic parser  ####################################
+def create_argument_parser(name=None, synopsis=None, description=None, epilog=None,
+                           subparsers=None, formatter_class=argparse.RawTextHelpFormatter):
+    """Create an argument parser.
 
+    Parameters: name            - str, sub-command name, for sub-parser
+                synopsis        - str, a brief summary of the script, for sub-parser
+                description     - str, same as synopsis, plus optional note
+                epilog          - str, reference, template options and example usage
+                subparsers      - argparse._SubParsersAction
+                                  https://docs.python.org/3/library/argparse.html#sub-commands
+                formatter_class - argparse formatting class object
+                                  https://docs.python.org/3/library/argparse.html#formatter-class
+    Returns:    parser          - argparse.ArgumentParser object
+    Examples:
+        def create_parser(subparsers=None):
+            synopsis = 'Resample radar-coded files into geo-coordinates or vice versa.'
+            epilog = REFERENCE + '\n' + EXAMPLE
+            name = __name__.split('.')[-1]
+            parser = create_argument_parser(
+                name, synopsis=synopsis, description=synopsis+NOTE, epilog=epilog, subparsers=subparsers)
+    """
+    if subparsers:
+        # for mintpy sub-command [used in linux with apt install]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=synopsis)
+
+    else:
+        # for regular command usage
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
+
+    return parser
+
+
+
+##################################  argument group  ####################################
 def add_data_disp_argument(parser):
     """Argument group parser for data display options"""
     data = parser.add_argument_group('Data Display Options', 'Options to adjust the dataset display')
@@ -407,17 +443,5 @@ def add_timefunc_argument(parser):
                             '                                       # 2nd log w/ onset at 2018-10-16T17:33 w/ tau=240 days\n'
                             '--log  20161231 60 --log 20190125 180  # 1st log w/ onset at 2016-12-31       w/ tau=60  days\n'
                             '                                       # 2nd log w/ onset at 2019-01-25       w/ tau=180 days\n')
-
-    return parser
-
-
-def create_argument_parser(name=None, synopsis=None, description=None, epilog=None, 
-                           subparsers=None, formatter_class=argparse.RawTextHelpFormatter):
-    if subparsers:
-        parser = subparsers.add_parser(
-            name, description=description, formatter_class=formatter_class, epilog=epilog, help=synopsis)
-    else:
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=formatter_class, epilog=epilog)
 
     return parser

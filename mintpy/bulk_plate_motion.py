@@ -81,17 +81,18 @@ EXAMPLE = """example:
   bulk_plate_motion.py -g inputs/geometryGeo.h5 --enu 25.0 30.5 0.0 -v velocity.h5
 """
 
+NOTE = """
+  Removing the effect of bulk traslation and rotation based on a given plate motion model (PMM).
+  For Sentinel-1, its orbit is measured with respect to ITRF2014 (Table 3-2 of Peter et al., 2021), which is an
+  Earth-centered, Earth-fixed (ECEF) reference frame in which there is no net rotation (NNR) of the Earth surface.
+"""
+
 def create_parser(subparsers=None):
     synopsis = 'Bulk Plate Motion Correction.'
-    description = synopsis + '\n' + (
-        '  Removing the effect of bulk traslation and rotation in velocity field based on a given plate motion model (PMM).\n'
-        '  E.g., Sentinel-1 orbit is measured with respect to ITRF2014 (Table 3-2 of Peter et al., 2021), which is an\n'
-        '  Earth-centered, Earth-fixed reference frame in which there is no net rotation (NNR) of the Earth surface.',
-    )
     epilog = REFERENCE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=synopsis, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis+NOTE, epilog=epilog, subparsers=subparsers)
 
     # input files
     parser.add_argument('-g', '--geom', dest='geom_file', type=str, required=True,

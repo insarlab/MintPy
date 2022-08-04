@@ -33,6 +33,15 @@ from mintpy import ifgram_inversion as ifginv
 key_prefix = 'mintpy.unwrapError.'
 
 ##########################################################################################
+TEMPLATE1 = get_template_content('quick_overview')
+TEMPLATE2 = get_template_content('correct_unwrap_error')
+
+REFERENCE = """reference:
+  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis:
+  Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
+  doi:10.1016/j.cageo.2019.104331.
+"""
+
 EXAMPLE = """example:
   # correct phase unwrapping error with phase closure
   unwrap_error_phase_closure.py  ./inputs/ifgramStack.h5  --cc-mask maskConnComp.h5  -t smallbaselineApp.cfg   --update
@@ -54,24 +63,12 @@ NOTE = """
      unwrapping errors, then the minor right interferograms will turn into wrong.
 """
 
-REFERENCE = """reference:
-  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis:
-  Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
-  doi:10.1016/j.cageo.2019.104331.
-"""
-
-TEMPLATE1 = get_template_content('quick_overview')
-TEMPLATE2 = get_template_content('correct_unwrap_error')
-
-
-
 def create_parser(subparsers=None):
     synopsis = 'Unwrapping Error Correction based on Phase Closure'
-    description = synopsis + NOTE
     epilog = REFERENCE + '\n' + TEMPLATE1 + '\n' + TEMPLATE2 + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=synopsis, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis+NOTE, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('ifgram_file', help='interferograms file to be corrected')
     parser.add_argument('-c','--cc-mask', dest='cc_mask_file', default='maskConnComp.h5',

@@ -37,11 +37,11 @@ EXAMPLE = """example:
 
 
 def create_parser(subparsers=None):
-    description = 'Multilook.'
+    synopsis = 'Multilook the input file'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', nargs='+', help='File(s) to multilook')
     parser.add_argument('-r','--range','-x', dest='lks_x', type=int, default=1,

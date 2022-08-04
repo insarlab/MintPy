@@ -26,11 +26,11 @@ EXAMPLE = """example:
 
 def create_parser(subparsers=None):
     """ Command line parser """
-    description = 'Generate sum of multiple input files.'
+    synopsis = 'Generate the sum of multiple input files.'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', nargs='+', help='files (2 or more) to be added')
     parser.add_argument('-o', '--output', dest='outfile', help='output file name')

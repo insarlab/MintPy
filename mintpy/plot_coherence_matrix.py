@@ -33,11 +33,11 @@ EXAMPLE = """example:
 """
 
 def create_parser(subparsers=None):
-    description = 'Plot the coherence matrix of one pixel (interactive)'
+    synopsis = 'Plot the coherence matrix of one pixel (interactive)'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('ifgram_file', help='interferogram stack file')
     parser.add_argument('--yx', type=int, metavar=('Y', 'X'), nargs=2, 

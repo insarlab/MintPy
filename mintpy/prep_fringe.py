@@ -50,11 +50,11 @@ EXAMPLE = """example:
 
 def create_parser(subparsers=None):
     """Command Line Parser"""
-    description = "Prepare FRInGE products for MintPy"
+    synopsis = "Prepare FRInGE products for MintPy"
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('-u', '--unw-file', dest='unwFile', type=str, default='./PS_DS/unwrap/*.unw',
                         help='path pattern of unwrapped interferograms (default: %(default)s).')

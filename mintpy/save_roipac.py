@@ -48,11 +48,11 @@ EXAMPLE = """example:
 
 
 def create_parser(subparsers=None):
-    description = 'Convert MintPy HDF5 file to ROI_PAC format.'
+    synopsis = 'Convert MintPy HDF5 file to ROI_PAC format.'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='HDF5 file to be converted.')
     parser.add_argument('dset', nargs='?', help='date/date12 of timeseries, or date12 of interferograms to be converted')

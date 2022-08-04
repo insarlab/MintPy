@@ -26,18 +26,6 @@ from mintpy.multilook import multilook_data
 
 
 ####################################################################################
-EXAMPLE = """example:
-  prep_aria.py -t smallbaselineApp.cfg    # recommended
-  prep_aria.py -t SanFranSenDT42.txt
-  prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i ../incidenceAngle/*.vrt
-  prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i ../incidenceAngle/*.vrt -a ../azimuthAngle/*.vrt -w ../mask/watermask.msk
-
-  # download / extract / prepare inteferograms stack from ARIA using ARIA-tools:
-  # reference: https://github.com/aria-tools/ARIA-tools
-  ariaDownload.py -b '37.25 38.1 -122.6 -121.75' --track 42
-  ariaTSsetup.py -f 'products/*.nc' -b '37.25 38.1 -122.6 -121.75' --mask Download --num_threads 4 --verbose
-"""
-
 TEMPLATE = """template options:
   ########## 1. load_data
   ## no   - save   0% disk usage, fast [default]
@@ -69,14 +57,25 @@ TEMPLATE = """template options:
   mintpy.multilook.xstep     = auto    #[int >= 1], auto for 1 - no multilooking
 """
 
+EXAMPLE = """example:
+  prep_aria.py -t smallbaselineApp.cfg    # recommended
+  prep_aria.py -t SanFranSenDT42.txt
+  prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i ../incidenceAngle/*.vrt
+  prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i ../incidenceAngle/*.vrt -a ../azimuthAngle/*.vrt -w ../mask/watermask.msk
+
+  # download / extract / prepare inteferograms stack from ARIA using ARIA-tools:
+  # reference: https://github.com/aria-tools/ARIA-tools
+  ariaDownload.py -b '37.25 38.1 -122.6 -121.75' --track 42
+  ariaTSsetup.py -f 'products/*.nc' -b '37.25 38.1 -122.6 -121.75' --mask Download --num_threads 4 --verbose
+"""
 
 def create_parser(subparsers=None):
     """Command line parser."""
-    description = 'Prepare ARIA processed products for MintPy.'
+    synopsis = 'Prepare ARIA processed products for MintPy.'
     epilog = TEMPLATE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('-t','--template', dest='template_file', type=str,
                         help='template file with the options')

@@ -36,11 +36,11 @@ EXAMPLE = """example:
 
 
 def create_parser(subparsers=None):
-    description = 'Generates the difference of two input files.'
+    synopsis = 'Generate the difference of two input files.'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file1', help='file to be subtracted.')
     parser.add_argument('file2', nargs='+', help='file used to subtract')

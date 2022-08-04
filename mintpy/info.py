@@ -53,11 +53,11 @@ EXAMPLE = """example:
 
 def create_parser(subparsers=None):
     """Create command line parser."""
-    description = 'Display Metadata / Structure information of ANY File'
+    synopsis = 'Display Metadata / Structure information of ANY File'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', type=str, help='File to check')
     parser.add_argument('--compact', action='store_true',

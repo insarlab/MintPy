@@ -15,21 +15,21 @@ from mintpy.utils.arg_group import create_argument_parser
 
 
 ############################################################
+REFERENCE="""reference:
+  Wikipedia: https://en.wikipedia.org/wiki/Gaussian_blur
+"""
+
 EXAMPLE = """example:
  temporal_filter.py timeseries_ERA5_demErr.h5
  temporal_filter.py timeseries_ERA5_demErr.h5 -t 0.1
 """
 
-REFERENCE="""reference:
-  Wikipedia: https://en.wikipedia.org/wiki/Gaussian_blur
-"""
-
 def create_parser(subparsers=None):
-    description = 'Smoothing timeseries in time domain with a moving Gaussian window'
+    synopsis = 'Smoothing timeseries in time domain with a moving filter'
     epilog = REFERENCE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('timeseries_file',
                         help='timeseries file to be smoothed.')

@@ -6,7 +6,6 @@
 ############################################################
 
 
-
 import os
 import sys
 import numpy as np
@@ -21,12 +20,7 @@ from mintpy.utils import ptime, readfile, utils as ut
 from mintpy.utils.arg_group import create_argument_parser
 
 
-EXAMPLE = """example:
-  save_gbis.py velocity.h5 -g inputs/geometryGeo.h5 -o AlosDT73_20081012_20100302.mat
-  save_gbis.py 20150223_20161031_msk.unw -g inputs/geometryGeo.h5 -o Alos2DT23_20150223_20161031.mat
-  save_gbis.py 20150223_20161031.unw -g inputs/geometryGeo.h5 --out-data ../Model/data --ellipsoid2geoid
-"""
-
+##############################################################################
 REFERENCE = """references:
   Bagnardi, M., and A. Hooper (2018), Inversion of Surface Deformation Data for Rapid Estimates of Source 
   Parameters and Uncertainties: A Bayesian Approach, Geochemistry, Geophysics, Geosystems, 19, 
@@ -36,12 +30,18 @@ REFERENCE = """references:
   with L-band InSAR time series, Geophysical Research Letters, 48(11), e2021GL092879. doi:10.1029/2021GL092879
 """
 
+EXAMPLE = """example:
+  save_gbis.py velocity.h5 -g inputs/geometryGeo.h5 -o AlosDT73_20081012_20100302.mat
+  save_gbis.py 20150223_20161031_msk.unw -g inputs/geometryGeo.h5 -o Alos2DT23_20150223_20161031.mat
+  save_gbis.py 20150223_20161031.unw -g inputs/geometryGeo.h5 --out-data ../Model/data --ellipsoid2geoid
+"""
+
 def create_parser(subparsers=None):
-    description = 'Convert MintPy product to GBIS .mat format.'
+    synopsis = 'Convert MintPy product to GBIS .mat format.'
     epilog = REFERENCE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='deformation file.')
     parser.add_argument('dset', nargs='?',
@@ -79,6 +79,7 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
+##############################################################################
 def read_data(inps):
     """
     Returns: defo: 2D np.array with in-valid/masked-out pixel in NaN

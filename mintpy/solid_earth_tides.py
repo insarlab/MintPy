@@ -38,12 +38,6 @@ from mintpy.utils.arg_group import create_argument_parser
 ###############################################################
 TEMPLATE = get_template_content('correct_SET')
 
-EXAMPLE = """example:
-  solid_earth_tides.py timeseries.h5 -g inputs/geometryRadar.h5
-  solid_earth_tides.py timeseries.h5 -g inputs/geometryGeo.h5
-  solid_earth_tides.py geo/geo_timeseries_ERA5_demErr.h5 -g geo/geo_geometryRadar.h5
-"""
-
 REFERENCE = """reference:
   Milbert, D. (2018), "solid: Solid Earth Tide", [Online]. Available: http://geodesyworld.github.io/
     SOFTS/solid.htm. Accessd on: 2020-09-06.
@@ -52,12 +46,18 @@ REFERENCE = """reference:
     IEEE Trans. Geosci. Remote Sens., 60, doi:10.1109/TGRS.2022.3168509.
 """
 
+EXAMPLE = """example:
+  solid_earth_tides.py timeseries.h5 -g inputs/geometryRadar.h5
+  solid_earth_tides.py timeseries.h5 -g inputs/geometryGeo.h5
+  solid_earth_tides.py geo/geo_timeseries_ERA5_demErr.h5 -g geo/geo_geometryRadar.h5
+"""
+
 def create_parser(subparsers=None):
-    description = 'Solid Earth tides (SET) correction via PySolid'
-    epilog = '{}\n{}\n{}'.format(REFERENCE, TEMPLATE, EXAMPLE)
+    synopsis = 'Solid Earth tides (SET) correction via PySolid'
+    epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('dis_file', help='timeseries HDF5 file, i.e. timeseries.h5')
     parser.add_argument('-g','--geomtry', dest='geom_file', type=str, required=True,

@@ -52,11 +52,11 @@ degrees     --> meters on equator
 
 
 def create_parser(subparsers=None):
-    description = 'Resample radar coded files into geo coordinates, or reverse'
+    synopsis = 'Resample radar-coded files into geo-coordinates or vice versa'
     epilog = TEMPLATE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', nargs='+', help='File(s) to be geocoded')
     parser.add_argument('-d', '--dset', help='dataset to be geocoded, for example:\n' +

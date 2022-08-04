@@ -25,6 +25,8 @@ from mintpy.utils.arg_group import create_argument_parser
 
 
 ###############################  Usage  ################################
+TEMPLATE = get_template_content('modify_network')
+
 REFERENCE = """reference:
   Yunjun, Z., Fattahi, H. and Amelung, F. (2019), Small baseline InSAR time series analysis:
   Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
@@ -40,8 +42,6 @@ REFERENCE = """reference:
   California. Remote Sensing of Environment, 258, 112400. doi:10.1016/j.rse.2021.112400
 """
 
-TEMPLATE = get_template_content('modify_network')
-
 EXAMPLE = """example:
   modify_network.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg
   modify_network.py inputs/ifgramStack.h5 --reset
@@ -50,11 +50,11 @@ EXAMPLE = """example:
 
 
 def create_parser(subparsers=None):
-    description = 'Modify the network of interferograms'
+    synopsis = 'Modify the network of interferograms'
     epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='Files to modify/drop network, e.g. inputs/ifgramStack.h5.')
     parser.add_argument('-t', '--template', dest='template_file',

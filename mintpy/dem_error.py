@@ -32,6 +32,11 @@ configKeys = [
 ############################################################################
 TEMPLATE = get_template_content('correct_topography')
 
+REFERENCE = """reference:
+  Fattahi, H., and F. Amelung (2013), DEM Error Correction in InSAR Time Series,
+  IEEE Trans. Geosci. Remote Sens., 51(7), 4249-4259, doi:10.1109/TGRS.2012.2227761.
+"""
+
 EXAMPLE = """example:
   # correct DEM error with pixel-wise geometry parameters [slow]
   dem_error.py  timeseries_ERA5_ramp.h5 -g inputs/geometryRadar.h5 -t smallbaselineApp.cfg
@@ -45,18 +50,12 @@ EXAMPLE = """example:
   add.py demErr_msk.h5 dem.h5 -o demNew.h5
 """
 
-REFERENCE = """reference:
-  Fattahi, H., and F. Amelung (2013), DEM Error Correction in InSAR Time Series,
-  IEEE TGRS, 51(7), 4249-4259, doi:10.1109/TGRS.2012.2227761.
-"""
-
-
 def create_parser(subparsers=None):
-    description = 'DEM Error (Topographic Residual) Correction'
-    epilog = '{}\n{}\n{}'.format(REFERENCE, TEMPLATE, EXAMPLE)
+    synopsis = 'DEM Error (Topographic Residual) Correction'
+    epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('timeseries_file',
                         help='Timeseries file to be corrrected')

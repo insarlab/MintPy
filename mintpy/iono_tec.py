@@ -38,11 +38,11 @@ EXAMPLE = """example:
 """
 
 def create_parser(subparsers=None):
-    description = 'Calculate ionospheric ramps using Global Iono Maps  from GNSS-based TEC products.'
+    synopsis = 'Calculate ionospheric ramps using Global Iono Maps  from GNSS-based TEC products.'
     epilog = REFERENCE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('dis_file', help='displacement time-series HDF5 file, i.e. timeseries.h5')
     parser.add_argument('-g','--geomtry', dest='geom_file', type=str, required=True,

@@ -56,11 +56,11 @@ EXAMPLE = """example:
 
 
 def create_parser(subparsers=None):
-    description = 'Reference to the same pixel in space.'
+    synopsis = 'Reference to the same pixel in space.'
     epilog = NOTE + '\n' + TEMPLATE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', type=str, help='file to be referenced.')
     parser.add_argument('-t', '--template', dest='template_file',

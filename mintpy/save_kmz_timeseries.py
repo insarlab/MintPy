@@ -36,11 +36,11 @@ EXAMPLE = """example:
 """
 
 def create_parser(subparsers=None):
-    description = 'Generare Google Earth KMZ file for time-series file.'
+    synopsis = 'Generare Google Earth KMZ file for time-series file.'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     args = parser.add_argument_group('Input files', 'File/Dataset to display')
 

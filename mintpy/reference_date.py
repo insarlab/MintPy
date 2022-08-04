@@ -30,11 +30,11 @@ EXAMPLE = """example:
 
 
 def create_parser(subparsers=None):
-    description = 'Change reference date of timeseries.'
+    synopsis = 'Change reference date of timeseries.'
     epilog = TEMPLATE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('timeseries_file', nargs='+', help='timeseries file(s)')
     parser.add_argument('-r', '--ref-date', dest='refDate', default='minRMS',

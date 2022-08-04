@@ -113,11 +113,11 @@ EXAMPLE = """example:
 
 def create_parser(subparsers=None):
     """Create command line parser."""
-    description = 'Loading stacks of interferograms to HDF5 files'
-    epilog = TEMPLATE+'\n'+NOTE+'\n'+EXAMPLE
+    synopsis = 'Load stacks of interferograms to HDF5 files'
+    epilog = TEMPLATE + '\n' + NOTE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('-H', dest='print_example_template', action='store_true',
                         help='Print/Show the example template file for loading.')

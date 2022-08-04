@@ -17,7 +17,7 @@ from mintpy.utils.arg_group import create_argument_parser
 ####################################################################################
 EXAMPLE = """example:
   save_gmt.py  geo_velocity.h5
-  save_gmt.py  geo_timeseries.h5     20071031
+  save_gmt.py  geo_timeseries.h5  20071031
   save_gmt.py  geo_timeseries.h5
   save_gmt.py  geo_filt_100608-101024-sim_HDR_16rlks_c10.unw
   save_gmt.py  gsi10m.dem
@@ -25,11 +25,11 @@ EXAMPLE = """example:
 
 
 def create_parser(subparsers=None):
-    description = 'Export geocoded file to GMT grd file'
+    synopsis = 'Export geocoded file to GMT grd file'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='file to be converted, in geo coordinate.')
     parser.add_argument('dset', nargs='?',

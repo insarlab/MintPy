@@ -54,11 +54,11 @@ EXAMPLE = """example:
 
 
 def create_parser(subparsers=None):
-    description = 'Generate Google Earth KMZ file (overlay / placemarks for files in geo / radar coordinates).'
+    synopsis = 'Generate Google Earth KMZ file (overlay / placemarks for files in geo / radar coordinates).'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='file to be converted, in geo or radar coordinate.\n'
                         'Note: for files in radar-coordinate, the corresponding lookup table\n'

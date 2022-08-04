@@ -18,24 +18,23 @@ from mintpy.mask import mask_matrix
 
 
 ############################################################################
-EXAMPLE = """example:
-  tropo_phase_elevation.py  timeseries_demErr.h5      -g inputs/geometryRadar.h5  -m maskTempCoh.h5    
-  tropo_phase_elevation.py  geo_timeseries_demErr.h5  -g geo_geometryRadar.h5     -m geo_maskTempCoh.h5
-"""
-
 REFERENCE = """reference:
   Doin, M. P., C. Lasserre, G. Peltzer, O. Cavalie, and C. Doubre (2009), Corrections of stratified 
   tropospheric delays in SAR interferometry: Validation with global atmospheric models, J App. Geophy.,
   69(1), 35-50, doi:http://dx.doi.org/10.1016/j.jappgeo.2009.03.010.
 """
 
+EXAMPLE = """example:
+  tropo_phase_elevation.py  timeseries_demErr.h5      -g inputs/geometryRadar.h5  -m maskTempCoh.h5    
+  tropo_phase_elevation.py  geo_timeseries_demErr.h5  -g geo_geometryRadar.h5     -m geo_maskTempCoh.h5
+"""
 
 def create_parser(subparsers=None):
-    description = 'Correct Topo-correlated Stratified tropospheric delay'
+    synopsis = 'Correct Topo-correlated Stratified tropospheric delay'
     epilog = REFERENCE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('timeseries_file', help='time-series file to be corrected')
     parser.add_argument('-g', '--geometry', dest='geom_file', required=True,

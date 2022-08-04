@@ -51,11 +51,11 @@ EXAMPLE = """example:
 """
 
 def create_parser(subparsers=None):
-    description = 'Phase non-closure related biases correction'
+    synopsis = 'Phase non-closure related biases correction'
     epilog = REFERENCE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('-i','--ifgramstack', type=str, dest='stack_file',
                         help='interferogram stack file that contains the unwrapped phases')

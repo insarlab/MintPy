@@ -17,7 +17,7 @@ SPEED_OF_LIGHT = 299792458  # m / s
 
 
 ##################################################################################################
-DESCRIPTION = """
+NOTE = """
   For each interferogram, coherence or unwrapped .dim product this script will prepare.rsc 
   metadata files for for mintpy based on .dim metadata file.
 
@@ -41,11 +41,10 @@ EXAMPLE = """example:
 
 def create_parser(subparsers=None):
     synopsis = 'Prepare attributes file for SNAP products.'
-    description = synopsis + '\n' + DESCRIPTION
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=synopsis, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis+NOTE, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', nargs='+', help='SNAP data file(s) in *.img format.')
     return parser

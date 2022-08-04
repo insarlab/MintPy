@@ -54,11 +54,11 @@ EXAMPLE = """example:
 
 
 def create_parser(subparsers=None):
-    description = 'Generate mask file from input file'
+    synopsis = 'Generate mask file from input file'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='input file')
     parser.add_argument('dset', nargs='?',

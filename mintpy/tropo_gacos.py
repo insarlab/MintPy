@@ -46,11 +46,11 @@ EXAMPLE = """example:
 
 
 def create_parser(subparsers=None):
-    description = 'Tropospheric correction using GACOS (http://www.gacos.net) delays'
+    synopsis = 'Tropospheric correction using GACOS (http://www.gacos.net) delays'
     epilog = REFERENCE + '\n' + DIR_DEMO + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('-f', '--file', dest='dis_file', required=True,
                         help='timeseries HDF5 file, i.e. timeseries.h5')

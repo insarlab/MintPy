@@ -10,9 +10,10 @@ import os
 import sys
 import h5py
 import numpy as np
+from scipy.interpolate import griddata
+
 from mintpy.utils import readfile
 from mintpy.utils.arg_group import create_argument_parser
-from scipy.interpolate import griddata
 
 try:
     from tqdm import tqdm
@@ -25,19 +26,19 @@ except ImportError:
     raise ImportError('Can not import concurrent!')
 
 
+################################################################################
 EXAMPLE = '''examples:
     lookup_geo2radar.py geometryGeo.h5 
     lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5 
     lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5 --parallel 4
 '''
 
-
 def create_parser(subparsers=None):
-    description = 'Convert lookup table from geo-coord (GAMMA, ROI_PAC) into radar-coord (ISCE)'
+    synopsis = 'Convert lookup table from geo-coord (GAMMA, ROI_PAC) into radar-coord (ISCE)'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('geometryGeo',help='geometryGeo file which includes geo-coordinates based lookup-table')
     parser.add_argument('-w','--write', dest='write', metavar='FILE', default = 'geometryRadar.h5',

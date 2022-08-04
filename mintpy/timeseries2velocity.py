@@ -77,11 +77,11 @@ DROP_DATE_TXT = """exclude_date.txt:
 
 
 def create_parser(subparsers=None):
-    description = 'Estimate velocity / time functions from time-series.'
-    epilog = TEMPLATE + '\n' + REFERENCE + '\n' + EXAMPLE
+    synopsis = 'Estimate velocity / time functions from time-series.'
+    epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     # inputs
     parser.add_argument('timeseries_file', help='Time series file for time function estimation.')

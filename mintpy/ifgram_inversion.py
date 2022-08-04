@@ -34,15 +34,6 @@ configKeys = ['obsDatasetName',
 
 
 ################################################################################################
-EXAMPLE = """example:
-  ifgram_inversion.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg --update
-  ifgram_inversion.py inputs/ifgramStack.h5 -w no  # turn off weight for fast processing
-  ifgram_inversion.py inputs/ifgramStack.h5 -c no  # turn off parallel processing
-  # offset
-  ifgram_inversion.py inputs/ifgramStack.h5 -i rangeOffset   -w no -m waterMask.h5 --md offsetSNR --mt 5
-  ifgram_inversion.py inputs/ifgramStack.h5 -i azimuthOffset -w no -m waterMask.h5 --md offsetSNR --mt 5
-"""
-
 TEMPLATE = get_template_content('invert_network')
 
 REFERENCE = """references:
@@ -63,13 +54,21 @@ REFERENCE = """references:
     offset time series: noise reduction and uncertainty quantification, ID 590, FRINGE 2021, 31 May – 4 Jun, 2021, Virtual.
 """
 
+EXAMPLE = """example:
+  ifgram_inversion.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg --update
+  ifgram_inversion.py inputs/ifgramStack.h5 -w no  # turn off weight for fast processing
+  ifgram_inversion.py inputs/ifgramStack.h5 -c no  # turn off parallel processing
+  # offset
+  ifgram_inversion.py inputs/ifgramStack.h5 -i rangeOffset   -w no -m waterMask.h5 --md offsetSNR --mt 5
+  ifgram_inversion.py inputs/ifgramStack.h5 -i azimuthOffset -w no -m waterMask.h5 --md offsetSNR --mt 5
+"""
 
 def create_parser(subparsers=None):
-    description = 'Invert network of interferograms into time-series.'
+    synopsis = 'Invert network of interferograms into time-series.'
     epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     # input dataset
     parser.add_argument('ifgramStackFile', help='interferograms stack file to be inverted')

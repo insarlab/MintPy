@@ -1,3 +1,10 @@
+############################################################
+# Program is part of MintPy                                #
+# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
+# Author: Antonio Valentino, Aug 2022                      #
+############################################################
+
+
 """Command line interface for MintPy.
 
 The Miami INsar Time-series software in PYthon (MintPy as /mint pai/)
@@ -36,6 +43,8 @@ PROG = __package__
 LOGFMT = '%(asctime)s %(levelname)-8s -- %(message)s'
 
 
+
+################################################################################################
 def _autocomplete(parser):
     try:
         import argcomplete
@@ -45,11 +54,62 @@ def _autocomplete(parser):
         argcomplete.autocomplete(parser)
 
 
-# processing
-def get_smallbaseline_parser(subparsers=None):
-    from . import smallbaselineApp
-    parser = smallbaselineApp.create_parser(subparsers)
-    parser.set_defaults(func=smallbaselineApp.main)
+#######################################  Sub-Parsers  ##########################################
+# in alphabetical order
+# A-G
+def get_add_parser(subparsers=None):
+    from . import add
+    parser = add.create_parser(subparsers)
+    parser.set_defaults(func=add.main)
+    return parser
+
+
+def get_asc_desc2horz_vert_parser(subparsers=None):
+    from . import asc_desc2horz_vert
+    parser = asc_desc2horz_vert.create_parser(subparsers)
+    parser.set_defaults(func=asc_desc2horz_vert.main)
+    return parser
+
+
+def get_bulk_plate_motion_parser(subparsers=None):
+    from . import bulk_plate_motion
+    parser = bulk_plate_motion.create_parser(subparsers)
+    parser.set_defaults(func=bulk_plate_motion.main)
+    return parser
+
+
+def get_closure_phase_bias_parser(subparsers=None):
+    from . import closure_phase_bias
+    parser = closure_phase_bias.create_parser(subparsers)
+    parser.set_defaults(func=closure_phase_bias.main)
+    return parser
+
+
+def get_dem_error_parser(subparsers=None):
+    from . import dem_error
+    parser = dem_error.create_parser(subparsers)
+    parser.set_defaults(func=dem_error.main)
+    return parser
+
+
+def get_dem_gsi_parser(subparsers=None):
+    from . import dem_gsi
+    parser = dem_gsi.create_parser(subparsers)
+    parser.set_defaults(func=dem_gsi.main)
+    return parser
+
+
+def get_diff_parser(subparsers=None):
+    from . import diff
+    parser = diff.create_parser(subparsers)
+    parser.set_defaults(func=diff.main)
+    return parser
+
+
+def get_generate_mask_parser(subparsers=None):
+    from . import generate_mask
+    parser = generate_mask.create_parser(subparsers)
+    parser.set_defaults(func=generate_mask.main)
     return parser
 
 
@@ -60,6 +120,49 @@ def get_geocode_parser(subparsers=None):
     return parser
 
 
+# H-N
+def get_ifgram_inversion_parser(subparsers=None):
+    from . import ifgram_inversion
+    parser = ifgram_inversion.create_parser(subparsers)
+    parser.set_defaults(func=ifgram_inversion.main)
+    return parser
+
+
+def get_image_math_parser(subparsers=None):
+    from . import image_math
+    parser = image_math.create_parser(subparsers)
+    parser.set_defaults(func=image_math.main)
+    return parser
+
+
+def get_image_stitch_parser(subparsers=None):
+    from . import image_stitch
+    parser = image_stitch.create_parser(subparsers)
+    parser.set_defaults(func=image_stitch.main)
+    return parser
+
+
+def get_info_parser(subparsers=None):
+    from . import info
+    parser = info.create_parser(subparsers)
+    parser.set_defaults(func=info.main)
+    return parser
+
+
+def get_iono_tec_parser(subparsers=None):
+    from . import iono_tec
+    parser = iono_tec.create_parser(subparsers)
+    parser.set_defaults(func=iono_tec.main)
+    return parser
+
+
+def get_mask_parser(subparsers=None):
+    from . import mask
+    parser = mask.create_parser(subparsers)
+    parser.set_defaults(func=mask.main)
+    return parser
+
+
 def get_multilook_parser(subparsers=None):
     from . import multilook
     parser = multilook.create_parser(subparsers)
@@ -67,42 +170,63 @@ def get_multilook_parser(subparsers=None):
     return parser
 
 
-def get_spatial_average_parser(subparsers=None):
-    from . import spatial_average
-    parser = spatial_average.create_parser(subparsers)
-    parser.set_defaults(func=spatial_average.main)
+def get_load_data_parser(subparsers=None):
+    from . import load_data
+    parser = load_data.create_parser(subparsers)
+    parser.set_defaults(func=load_data.main)
     return parser
 
 
-def get_spatial_filter_parser(subparsers=None):
-    from . import spatial_filter
-    parser = spatial_filter.create_parser(subparsers)
-    parser.set_defaults(func=spatial_filter.main)
+def get_load_gbis_parser(subparsers=None):
+    from . import load_gbis
+    parser = load_gbis.create_parser(subparsers)
+    parser.set_defaults(func=load_gbis.main)
     return parser
 
 
-def get_temporal_average_parser(subparsers=None):
-    from . import temporal_average
-    parser = temporal_average.create_parser(subparsers)
-    parser.set_defaults(func=temporal_average.main)
+def get_local_oscilator_drift_parser(subparsers=None):
+    from . import local_oscilator_drift
+    parser = local_oscilator_drift.create_parser(subparsers)
+    parser.set_defaults(func=local_oscilator_drift.main)
     return parser
 
 
-def get_temporal_derivative_parser(subparsers=None):
-    from . import temporal_derivative
-    parser = temporal_derivative.create_parser(subparsers)
-    parser.set_defaults(func=temporal_derivative.main)
+def get_lookup_geo2radar_parser(subparsers=None):
+    from . import lookup_geo2radar
+    parser = lookup_geo2radar.create_parser(subparsers)
+    parser.set_defaults(func=lookup_geo2radar.main)
     return parser
 
 
-def get_temporal_filter_parser(subparsers=None):
-    from . import temporal_filter
-    parser = temporal_filter.create_parser(subparsers)
-    parser.set_defaults(func=temporal_filter.main)
+def get_modify_network_parser(subparsers=None):
+    from . import modify_network
+    parser = modify_network.create_parser(subparsers)
+    parser.set_defaults(func=modify_network.main)
     return parser
 
 
-# pre-processing
+# O-Q
+def get_plot_coherence_matrix_parser(subparsers=None):
+    from . import plot_coherence_matrix
+    parser = plot_coherence_matrix.create_parser(subparsers)
+    parser.set_defaults(func=plot_coherence_matrix.main)
+    return parser
+
+
+def get_plot_network_parser(subparsers=None):
+    from . import plot_network
+    parser = plot_network.create_parser(subparsers)
+    parser.set_defaults(func=plot_network.main)
+    return parser
+
+
+def get_plot_transection_parser(subparsers=None):
+    from . import plot_transection
+    parser = plot_transection.create_parser(subparsers)
+    parser.set_defaults(func=plot_transection.main)
+    return parser
+
+
 def get_prep_aria_parser(subparsers=None):
     from . import prep_aria
     parser = prep_aria.create_parser(subparsers)
@@ -166,18 +290,39 @@ def get_prep_snap_parser(subparsers=None):
     return parser
 
 
-# I/O
-def get_load_data_parser(subparsers=None):
-    from . import load_data
-    parser = load_data.create_parser(subparsers)
-    parser.set_defaults(func=load_data.main)
+# R-T
+def get_remove_ramp_parser(subparsers=None):
+    from . import remove_ramp
+    parser = remove_ramp.create_parser(subparsers)
+    parser.set_defaults(func=remove_ramp.main)
     return parser
 
 
-def get_load_gbis_parser(subparsers=None):
-    from . import load_gbis
-    parser = load_gbis.create_parser(subparsers)
-    parser.set_defaults(func=load_gbis.main)
+def get_reference_date_parser(subparsers=None):
+    from . import reference_date
+    parser = reference_date.create_parser(subparsers)
+    parser.set_defaults(func=reference_date.main)
+    return parser
+
+
+def get_reference_point_parser(subparsers=None):
+    from . import reference_point
+    parser = reference_point.create_parser(subparsers)
+    parser.set_defaults(func=reference_point.main)
+    return parser
+
+
+def get_remove_hdf5_dataset(subparsers=None):
+    from . import remove_hdf5_dataset
+    parser = remove_hdf5_dataset.create_parser(subparsers)
+    parser.set_defaults(func=remove_hdf5_dataset.main)
+    return parser
+
+
+def get_s1ab_range_bias_parser(subparsers=None):
+    from . import s1ab_range_bias
+    parser = s1ab_range_bias.create_parser(subparsers)
+    parser.set_defaults(func=s1ab_range_bias.main)
     return parser
 
 
@@ -244,75 +389,31 @@ def get_save_roipac_parser(subparsers=None):
     return parser
 
 
-# display
-def get_info_parser(subparsers=None):
-    from . import info
-    parser = info.create_parser(subparsers)
-    parser.set_defaults(func=info.main)
+def get_smallbaselineApp_parser(subparsers=None):
+    from . import smallbaselineApp
+    parser = smallbaselineApp.create_parser(subparsers)
+    parser.set_defaults(func=smallbaselineApp.main)
     return parser
 
 
-def get_plot_coherence_matrix_parser(subparsers=None):
-    from . import plot_coherence_matrix
-    parser = plot_coherence_matrix.create_parser(subparsers)
-    parser.set_defaults(func=plot_coherence_matrix.main)
+def get_solid_earth_tides_parser(subparsers=None):
+    from . import solid_earth_tides
+    parser = solid_earth_tides.create_parser(subparsers)
+    parser.set_defaults(func=solid_earth_tides.main)
     return parser
 
 
-def get_plot_network_parser(subparsers=None):
-    from . import plot_network
-    parser = plot_network.create_parser(subparsers)
-    parser.set_defaults(func=plot_network.main)
+def get_spatial_average_parser(subparsers=None):
+    from . import spatial_average
+    parser = spatial_average.create_parser(subparsers)
+    parser.set_defaults(func=spatial_average.main)
     return parser
 
 
-def get_plot_transection_parser(subparsers=None):
-    from . import plot_transection
-    parser = plot_transection.create_parser(subparsers)
-    parser.set_defaults(func=plot_transection.main)
-    return parser
-
-
-def get_tsview_parser(subparsers=None):
-    from . import tsview
-    parser = tsview.create_parser(subparsers)
-    parser.set_defaults(func=tsview.main)
-    return parser
-
-
-def get_view_parser(subparsers=None):
-    from . import view
-    parser = view.create_parser(subparsers)
-    parser.set_defaults(func=view.main)
-    return parser
-
-
-# image operations
-def get_add_parser(subparsers=None):
-    from . import add
-    parser = add.create_parser(subparsers)
-    parser.set_defaults(func=add.main)
-    return parser
-
-
-def get_diff_parser(subparsers=None):
-    from . import diff
-    parser = diff.create_parser(subparsers)
-    parser.set_defaults(func=diff.main)
-    return parser
-
-
-def get_image_math_parser(subparsers=None):
-    from . import image_math
-    parser = image_math.create_parser(subparsers)
-    parser.set_defaults(func=image_math.main)
-    return parser
-
-
-def get_image_stitch_parser(subparsers=None):
-    from . import image_stitch
-    parser = image_stitch.create_parser(subparsers)
-    parser.set_defaults(func=image_stitch.main)
+def get_spatial_filter_parser(subparsers=None):
+    from . import spatial_filter
+    parser = spatial_filter.create_parser(subparsers)
+    parser.set_defaults(func=spatial_filter.main)
     return parser
 
 
@@ -323,45 +424,41 @@ def get_subset_parser(subparsers=None):
     return parser
 
 
-# DEM
-def get_dem_error_parser(subparsers=None):
-    from . import dem_error
-    parser = dem_error.create_parser(subparsers)
-    parser.set_defaults(func=dem_error.main)
+def get_temporal_average_parser(subparsers=None):
+    from . import temporal_average
+    parser = temporal_average.create_parser(subparsers)
+    parser.set_defaults(func=temporal_average.main)
     return parser
 
 
-def get_dem_gsi_parser(subparsers=None):
-    from . import dem_gsi
-    parser = dem_gsi.create_parser(subparsers)
-    parser.set_defaults(func=dem_gsi.main)
+def get_temporal_derivative_parser(subparsers=None):
+    from . import temporal_derivative
+    parser = temporal_derivative.create_parser(subparsers)
+    parser.set_defaults(func=temporal_derivative.main)
     return parser
 
 
-# mask
-def get_generate_mask_parser(subparsers=None):
-    from . import generate_mask
-    parser = generate_mask.create_parser(subparsers)
-    parser.set_defaults(func=generate_mask.main)
+def get_temporal_filter_parser(subparsers=None):
+    from . import temporal_filter
+    parser = temporal_filter.create_parser(subparsers)
+    parser.set_defaults(func=temporal_filter.main)
     return parser
 
 
-def get_mask_parser(subparsers=None):
-    from . import mask
-    parser = mask.create_parser(subparsers)
-    parser.set_defaults(func=mask.main)
+def get_timeseries_rms_parser(subparsers=None):
+    from . import timeseries_rms
+    parser = timeseries_rms.create_parser(subparsers)
+    parser.set_defaults(func=timeseries_rms.main)
     return parser
 
 
-# ionosphere
-def get_iono_tec_parser(subparsers=None):
-    from . import iono_tec
-    parser = iono_tec.create_parser(subparsers)
-    parser.set_defaults(func=iono_tec.main)
+def get_timeseries2velocity_parser(subparsers=None):
+    from . import timeseries2velocity
+    parser = timeseries2velocity.create_parser(subparsers)
+    parser.set_defaults(func=timeseries2velocity.main)
     return parser
 
 
-# troposphere
 def get_tropo_gacos_parser(subparsers=None):
     from . import tropo_gacos
     parser = tropo_gacos.create_parser(subparsers)
@@ -383,36 +480,14 @@ def get_tropo_pyaps3_parser(subparsers=None):
     return parser
 
 
-# geodesy
-def get_bulk_plate_motion_parser(subparsers=None):
-    from . import bulk_plate_motion
-    parser = bulk_plate_motion.create_parser(subparsers)
-    parser.set_defaults(func=bulk_plate_motion.main)
+def get_tsview_parser(subparsers=None):
+    from . import tsview
+    parser = tsview.create_parser(subparsers)
+    parser.set_defaults(func=tsview.main)
     return parser
 
 
-def get_solid_earth_tides_parser(subparsers=None):
-    from . import solid_earth_tides
-    parser = solid_earth_tides.create_parser(subparsers)
-    parser.set_defaults(func=solid_earth_tides.main)
-    return parser
-
-
-# phase
-def get_closure_phase_bias_parser(subparsers=None):
-    from . import closure_phase_bias
-    parser = closure_phase_bias.create_parser(subparsers)
-    parser.set_defaults(func=closure_phase_bias.main)
-    return parser
-
-
-def get_remove_ramp_parser(subparsers=None):
-    from . import remove_ramp
-    parser = remove_ramp.create_parser(subparsers)
-    parser.set_defaults(func=remove_ramp.main)
-    return parser
-
-
+# U-Z
 def get_unwrap_error_bridging_parser(subparsers=None):
     from . import unwrap_error_bridging
     parser = unwrap_error_bridging.create_parser(subparsers)
@@ -427,102 +502,75 @@ def get_unwrap_error_phase_closure_parser(subparsers=None):
     return parser
 
 
-# misc
-def get_asc_desc2horz_vert_parser(subparsers=None):
-    from . import asc_desc2horz_vert
-    parser = asc_desc2horz_vert.create_parser(subparsers)
-    parser.set_defaults(func=asc_desc2horz_vert.main)
+def get_view_parser(subparsers=None):
+    from . import view
+    parser = view.create_parser(subparsers)
+    parser.set_defaults(func=view.main)
     return parser
 
 
-def get_ifgram_inversion_parser(subparsers=None):
-    from . import ifgram_inversion
-    parser = ifgram_inversion.create_parser(subparsers)
-    parser.set_defaults(func=ifgram_inversion.main)
-    return parser
-
-
-def get_local_oscilator_drift_parser(subparsers=None):
-    from . import local_oscilator_drift
-    parser = local_oscilator_drift.create_parser(subparsers)
-    parser.set_defaults(func=local_oscilator_drift.main)
-    return parser
-
-
-def get_lookup_geo2radar_parser(subparsers=None):
-    from . import lookup_geo2radar
-    parser = lookup_geo2radar.create_parser(subparsers)
-    parser.set_defaults(func=lookup_geo2radar.main)
-    return parser
-
-
-def get_modify_network_parser(subparsers=None):
-    from . import modify_network
-    parser = modify_network.create_parser(subparsers)
-    parser.set_defaults(func=modify_network.main)
-    return parser
-
-
-def get_reference_date_parser(subparsers=None):
-    from . import reference_date
-    parser = reference_date.create_parser(subparsers)
-    parser.set_defaults(func=reference_date.main)
-    return parser
-
-
-def get_reference_point_parser(subparsers=None):
-    from . import reference_point
-    parser = reference_point.create_parser(subparsers)
-    parser.set_defaults(func=reference_point.main)
-    return parser
-
-def get_remove_hdf5_dataset(subparsers=None):
-    from . import remove_hdf5_dataset
-    parser = remove_hdf5_dataset.create_parser(subparsers)
-    parser.set_defaults(func=remove_hdf5_dataset.main)
-    return parser
-
-def get_s1ab_range_bias_parser(subparsers=None):
-    from . import s1ab_range_bias
-    parser = s1ab_range_bias.create_parser(subparsers)
-    parser.set_defaults(func=s1ab_range_bias.main)
-    return parser
-
-
-def get_timeseries_rms_parser(subparsers=None):
-    from . import timeseries_rms
-    parser = timeseries_rms.create_parser(subparsers)
-    parser.set_defaults(func=timeseries_rms.main)
-    return parser
-
-
-def get_timeseries2velocity_parser(subparsers=None):
-    from . import timeseries2velocity
-    parser = timeseries2velocity.create_parser(subparsers)
-    parser.set_defaults(func=timeseries2velocity.main)
-    return parser
-
-
-# main parser
+#######################################  Main Parser  ##########################################
 def get_parser():
     """Instantiate the command line argument parser."""
     parser = argparse.ArgumentParser(prog=PROG, description=__doc__)
-    parser.add_argument(
-        "--version", action="version", version=f"%(prog)s {__version__}" 
-    )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     # Sub-command management
     sp = parser.add_subparsers(title="sub-commands", dest='func', required=True, metavar='')
 
-    # processing
-    get_smallbaseline_parser(sp)
+    # workflow
+    get_smallbaselineApp_parser(sp)
+
+    # standard processing
+    get_asc_desc2horz_vert_parser(sp)
     get_geocode_parser(sp)
+    get_ifgram_inversion_parser(sp)
+    get_mask_parser(sp)
+    get_modify_network_parser(sp)
     get_multilook_parser(sp)
+    get_reference_date_parser(sp)
+    get_reference_point_parser(sp)
     get_spatial_average_parser(sp)
     get_spatial_filter_parser(sp)
     get_temporal_average_parser(sp)
     get_temporal_derivative_parser(sp)
     get_temporal_filter_parser(sp)
+    get_timeseries_rms_parser(sp)
+    get_timeseries2velocity_parser(sp)
+
+    # image operations
+    get_add_parser(sp)
+    get_diff_parser(sp)
+    get_image_math_parser(sp)
+    get_image_stitch_parser(sp)
+    get_subset_parser(sp)
+
+    # noise reduction / error correction
+    try:
+        get_bulk_plate_motion_parser(sp)
+    except ImportError:
+        pass
+    get_closure_phase_bias_parser(sp)
+    get_dem_error_parser(sp)
+    get_iono_tec_parser(sp)
+    get_local_oscilator_drift_parser(sp)
+    get_remove_ramp_parser(sp)
+    get_s1ab_range_bias_parser(sp)
+    get_solid_earth_tides_parser(sp)
+    get_tropo_gacos_parser(sp)
+    get_tropo_phase_elevation_parser(sp)
+    get_tropo_pyaps3_parser(sp)
+    get_unwrap_error_bridging_parser(sp)
+    get_unwrap_error_phase_closure_parser(sp)
+
+    # misc
+    # get_add_attribute_parser(sp)
+    get_dem_gsi_parser(sp)
+    get_generate_mask_parser(sp)
+    try:
+        get_lookup_geo2radar_parser(sp)
+    except ImportError:
+        pass
 
     # pre-processing
     get_prep_aria_parser(sp)
@@ -538,6 +586,7 @@ def get_parser():
     # I/O
     get_load_data_parser(sp)
     get_load_gbis_parser(sp)
+    get_remove_hdf5_dataset(sp)
     get_save_gbis_parser(sp)
     get_save_gdal_parser(sp)
     get_save_gmt_parser(sp)
@@ -548,70 +597,21 @@ def get_parser():
     get_save_qgis_parser(sp)
     get_save_roipac_parser(sp)
 
-    # display
+    # visualization
     get_info_parser(sp)
+    # get_multi_transect_parser(sp)
     get_plot_coherence_matrix_parser(sp)
     get_plot_network_parser(sp)
     get_plot_transection_parser(sp)
     get_tsview_parser(sp)
     get_view_parser(sp)
 
-    # image operations
-    get_add_parser(sp)
-    get_diff_parser(sp)
-    get_image_math_parser(sp)
-    get_image_stitch_parser(sp)
-    get_subset_parser(sp)
-
-    # DEM
-    get_dem_error_parser(sp)
-    get_dem_gsi_parser(sp)
-
-    # mask
-    get_generate_mask_parser(sp)
-    get_mask_parser(sp)
-
-    # ionosphere
-    get_iono_tec_parser(sp)
-
-    # troposphere
-    get_tropo_gacos_parser(sp)
-    get_tropo_phase_elevation_parser(sp)
-    get_tropo_pyaps3_parser(sp)
-
-    # geodesy
-    try:
-        get_bulk_plate_motion_parser(sp)
-    except ImportError:
-        pass
-    get_solid_earth_tides_parser(sp)
-
-    # phase
-    get_closure_phase_bias_parser(sp)
-    get_remove_ramp_parser(sp)
-    get_unwrap_error_bridging_parser(sp)
-    get_unwrap_error_phase_closure_parser(sp)
-
-    # misc
-    # get_add_attribute_parser(sp)
-    get_asc_desc2horz_vert_parser(sp)
-    get_ifgram_inversion_parser(sp)
-    get_local_oscilator_drift_parser(sp)
-    get_lookup_geo2radar_parser(sp)
-    get_modify_network_parser(sp)
-    # get_multi_transect_parser(sp)
-    get_reference_date_parser(sp)
-    get_reference_point_parser(sp)
-    get_remove_hdf5_dataset(sp)
-    get_s1ab_range_bias_parser(sp)
-    get_timeseries_rms_parser(sp)
-    get_timeseries2velocity_parser(sp)
-
     _autocomplete(parser)
 
     return parser
 
 
+################################################################################################
 def main(*argv):
     """Main CLI interface."""
     # setup logging
@@ -641,5 +641,6 @@ def main(*argv):
     return exit_code
 
 
+################################################################################################
 if __name__ == "__main__":
     sys.exit(main())

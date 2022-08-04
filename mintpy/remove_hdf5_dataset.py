@@ -22,11 +22,11 @@ EXAMPLE = """Example:
 
 
 def create_parser(subparsers=None):
-    description = 'Remove an existing dataset from HDF5 file'
+    synopsis = 'Remove an existing dataset from HDF5 file'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', type=str, help='HDF5 file of interest')
     parser.add_argument('dset', type=str, nargs='+', help='dataset to be removed.')

@@ -86,11 +86,11 @@ PLOT_TEMPLATE = """Plot Setting:
 
 
 def create_parser(subparsers=None):
-    description = 'Plot InSAR Product in 2D'
+    synopsis = 'Plot InSAR Product in 2D'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     infile = parser.add_argument_group('Input File', 'File/Dataset to display')
     infile.add_argument('file', type=str, help='file for display')

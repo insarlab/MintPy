@@ -15,11 +15,6 @@ from mintpy.utils.arg_group import create_argument_parser
 
 
 #########################################################################
-EXAMPLE = """example:
-  prep_cosicorr.py offsets/*offset.tif -m metadata.txt
-  prep_cosicorr.py snr/*snr.tif        -m metadata.txt
-"""
-
 EXAMPLE_META_FILE = """
 offset1NS.tif  20160206 20161122
 offset1EW.tif  20160206 20161122
@@ -30,14 +25,18 @@ offset2SNR.tif 20160206 20170225
 ...            ...   ...
 """
 
+EXAMPLE = """example:
+  prep_cosicorr.py offsets/*offset.tif -m metadata.txt
+  prep_cosicorr.py snr/*snr.tif        -m metadata.txt
+"""
 
 def create_parser(subparsers=None):
     """Command line parser."""
-    description = 'Prepare attributes file for COSI-Corr pixel offset product.'
+    synopsis = 'Prepare attributes file for COSI-Corr pixel offset product.'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', nargs='+', help='cosicorr file(s)')
     parser.add_argument('-m', '--metadata', type=str, dest='meta_file',

@@ -50,11 +50,11 @@ EXAMPLE = """example:
 
 
 def create_parser(subparsers=None):
-    description = 'Project Asc and Desc LOS displacement to Horizontal and Vertical direction'
+    synopsis = 'Project Asc and Desc LOS displacement to Horizontal and Vertical direction'
     epilog = REFERENCE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
  
     # input files
     parser.add_argument('file', nargs=2,

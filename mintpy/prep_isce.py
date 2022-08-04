@@ -53,11 +53,11 @@ EXAMPLE = """example:
 
 def create_parser(subparsers=None):
     """Command line parser."""
-    description = 'Prepare ISCE metadata files.'
+    synopsis = 'Prepare ISCE metadata files.'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     # observations
     parser.add_argument('-f', dest='obs_files', type=str, nargs='+', default='./merged/interferograms/*/filt_*.unw',

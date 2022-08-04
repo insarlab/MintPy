@@ -33,11 +33,11 @@ EXAMPLE = """example:
 
 
 def create_parser(subparsers=None):
-    description = 'Generate GDAL raster from MintPy h5 file.'
+    synopsis = 'Generate GDAL raster from MintPy h5 file.'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='file to be converted, in geo coordinate.')
     parser.add_argument('-d', '--dset', '--dataset', dest='dset',

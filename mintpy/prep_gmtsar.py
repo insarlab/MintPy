@@ -32,11 +32,11 @@ EXAMPLE = """example:
 
 def create_parser(subparsers=None):
     """Command line parser."""
-    description = 'Prepare GMTSAR metadata files.'
+    synopsis = 'Prepare GMTSAR metadata files.'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('template_file', type=str, help='MintPy template file for GMTSAR products.')
     parser.add_argument('--mintpy-dir', dest='mintpy_dir', default='./',

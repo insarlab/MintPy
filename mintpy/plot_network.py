@@ -32,6 +32,12 @@ DATE12_LIST = """
 20070824_20071009
 """
 
+TEMPLATE = """
+mintpy.network.maskFile  = auto  #[file name, no], auto for waterMask.h5 or no for all pixels
+mintpy.network.aoiYX     = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
+mintpy.network.aoiLALO   = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
+"""
+
 EXAMPLE = """example:
   plot_network.py inputs/ifgramStack.h5
   plot_network.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg --nodisplay   #Save figures to files without display
@@ -44,19 +50,13 @@ EXAMPLE = """example:
   plot_network.py inputs/ifgramStack.h5 -d offsetSNR -v 0 20 --cmap-vlist 0 0.2 1
 """
 
-TEMPLATE = """
-mintpy.network.maskFile  = auto  #[file name, no], auto for waterMask.h5 or no for all pixels
-mintpy.network.aoiYX     = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
-mintpy.network.aoiLALO   = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
-"""
-
 
 def create_parser(subparsers=None):
-    description = 'Display Network of Interferograms'
+    synopsis = 'Display Network of Interferograms'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='file with network information, ifgramStack.h5 or coherenceSpatialAvg.txt')
     parser.add_argument('--show-kept', dest='disp_drop', action='store_false',

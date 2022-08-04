@@ -20,11 +20,11 @@ EXAMPLE = """example:
 
 
 def create_parser(subparsers=None):
-    description = 'Calculate average in space'
+    synopsis = 'Calculate average in space'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
-        name, synopsis=description, description=description, epilog=epilog, subparsers=subparsers)
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='File to calculate spatial average')
     parser.add_argument('-d', '--dset', '--dataset', dest='datasetName',
