@@ -17,7 +17,7 @@ except ImportError:
     raise ImportError('Could not import skimage!')
 
 from mintpy.utils import readfile, writefile, plot as pp
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 from mintpy.multilook import multilook_data
 
 

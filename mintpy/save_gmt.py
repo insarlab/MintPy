@@ -11,7 +11,7 @@ import sys
 import numpy as np
 from scipy.io import netcdf
 from mintpy.utils import readfile, plot as pp
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 ####################################################################################

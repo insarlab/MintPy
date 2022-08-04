@@ -10,9 +10,10 @@ import os
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+
 from mintpy.objects import ifgramStack
 from mintpy.utils import readfile, utils as ut, plot as pp
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 
 # suppress UserWarning from matplotlib
 import warnings

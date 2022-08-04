@@ -23,7 +23,7 @@ except ImportError:
 import mintpy
 from mintpy.objects import timeseries, deramp
 from mintpy.utils import readfile, plot as pp, utils as ut
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 from mintpy import save_kmz
 
 

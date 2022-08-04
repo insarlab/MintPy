@@ -15,7 +15,7 @@ import numpy as np
 from mintpy.objects import timeseries, geometry, sensor
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import ptime, readfile
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 from mintpy import info
 
 

@@ -13,7 +13,7 @@ import warnings
 import h5py
 import numpy as np
 from mintpy.utils import readfile, writefile, utils as ut
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 ################################################################################################

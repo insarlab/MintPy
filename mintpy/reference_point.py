@@ -11,10 +11,11 @@ import sys
 import h5py
 import numpy as np
 import random
+
 from mintpy.objects import timeseries
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import ptime, readfile, writefile, utils as ut
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 #########################################  Usage  ##############################################

@@ -16,8 +16,7 @@ import numpy as np
 from mintpy.objects import timeseries
 from mintpy.objects.cluster import split_box2sub_boxes
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import arg_group, readfile, writefile, ptime, utils as ut
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils import arg_utils, readfile, writefile, ptime, utils as ut
 
 
 ##################################################################
@@ -33,7 +32,7 @@ def create_parser(subparsers=None):
     synopsis = 'Change reference date of timeseries.'
     epilog = TEMPLATE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
-    parser = create_argument_parser(
+    parser = arg_utils.create_argument_parser(
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('timeseries_file', nargs='+', help='timeseries file(s)')
@@ -50,7 +49,7 @@ def create_parser(subparsers=None):
                         help='Force updating the data matrix.')
 
     # computing
-    parser = arg_group.add_memory_argument(parser)
+    parser = arg_utils.add_memory_argument(parser)
 
     return parser
 

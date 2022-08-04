@@ -19,7 +19,7 @@ except ImportError:
     raise ImportError("Can not import gdal!")
 
 from mintpy.utils import (
-    arg_group,
+    arg_utils,
     ptime,
     readfile,
     writefile,
@@ -27,7 +27,6 @@ from mintpy.utils import (
     utils as ut,
     attribute as attr,
 )
-from mintpy.utils.arg_group import create_argument_parser
 from mintpy import subset
 
 
@@ -53,7 +52,7 @@ def create_parser(subparsers=None):
     synopsis = "Prepare FRInGE products for MintPy"
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
-    parser = create_argument_parser(
+    parser = arg_utils.create_argument_parser(
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('-u', '--unw-file', dest='unwFile', type=str, default='./PS_DS/unwrap/*.unw',
@@ -87,7 +86,7 @@ def create_parser(subparsers=None):
     parser.add_argument('--geom-only', action='store_true',
                         help='Only create the geometry file (useful for geocoding a watermask).')
 
-    parser = arg_group.add_subset_argument(parser, geo=False)
+    parser = arg_utils.add_subset_argument(parser, geo=False)
 
     return parser
 

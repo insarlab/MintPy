@@ -16,7 +16,7 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 
 from mintpy.utils import writefile
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 ##############################################################################

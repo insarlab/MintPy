@@ -29,7 +29,7 @@ from skimage.transform import resize
 
 from mintpy.objects.resample import resample
 from mintpy.utils import readfile, writefile, utils as ut
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 from mintpy.diff import diff_file
 
 # https://docs.astropy.org/en/stable/units/index.html

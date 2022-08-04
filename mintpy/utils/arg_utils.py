@@ -5,7 +5,8 @@
 # Author: Zhang Yunjun, Nov 2020                            #
 #############################################################
 # Recommend import:
-#     from mintpy.utils import arg_group
+#     from mintpy.utils import arg_utils
+#     from mintpy.utils.arg_utils import create_argument_parser
 
 
 import argparse

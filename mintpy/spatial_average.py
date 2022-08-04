@@ -9,7 +9,7 @@
 import sys
 import matplotlib.pyplot as plt
 from mintpy.utils import readfile, ptime, utils as ut, plot as pp
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 #################################  Usage  ####################################

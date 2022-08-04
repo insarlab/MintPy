@@ -23,7 +23,6 @@ from mintpy.objects.colors import ColormapExt
 from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
 from mintpy.utils.map import draw_lalo_label, draw_scalebar
 from mintpy.utils import (
-    arg_group,
     ptime,
     readfile,
     network as pnet,

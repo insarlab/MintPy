@@ -11,7 +11,7 @@ import sys
 import warnings
 from mintpy.objects import RAMP_LIST
 from mintpy.utils import readfile, utils as ut
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 # key configuration parameter name

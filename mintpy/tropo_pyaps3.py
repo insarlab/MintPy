@@ -12,9 +12,10 @@ import re
 from configparser import ConfigParser
 import h5py
 import numpy as np
+
 from mintpy.objects import timeseries, geometry
 from mintpy.utils import ptime, readfile, writefile, utils as ut
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 
 try:
     import pyaps3 as pa

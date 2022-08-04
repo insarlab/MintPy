@@ -20,7 +20,7 @@ except ImportError:
 
 from mintpy.objects import ifgramStack, geometry, sensor
 from mintpy.utils import ptime, readfile, writefile, utils as ut, attribute as attr
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 from mintpy.subset import read_subset_template2box
 from mintpy.multilook import multilook_data
 

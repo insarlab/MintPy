@@ -13,7 +13,7 @@ import numpy as np
 from scipy.interpolate import griddata
 
 from mintpy.utils import readfile
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 
 try:
     from tqdm import tqdm

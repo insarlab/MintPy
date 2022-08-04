@@ -13,10 +13,10 @@ import argparse
 import h5py
 import numpy as np
 from scipy import linalg
+
 from mintpy.objects import timeseries, geometry, cluster
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import arg_group, ptime, time_func, readfile, writefile, utils as ut
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils import arg_utils, ptime, time_func, readfile, writefile, utils as ut
 
 
 # key configuration parameter name
@@ -54,7 +54,7 @@ def create_parser(subparsers=None):
     synopsis = 'DEM Error (Topographic Residual) Correction'
     epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
-    parser = create_argument_parser(
+    parser = arg_utils.create_argument_parser(
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('timeseries_file',
@@ -89,8 +89,8 @@ def create_parser(subparsers=None):
                              'and newer than input interferograms file\n' +
                              '2) all configuration parameters are the same.')
     # computing
-    parser = arg_group.add_memory_argument(parser)
-    parser = arg_group.add_parallel_argument(parser)
+    parser = arg_utils.add_memory_argument(parser)
+    parser = arg_utils.add_parallel_argument(parser)
 
     return parser
 

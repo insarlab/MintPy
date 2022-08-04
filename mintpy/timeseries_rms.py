@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, ptime, utils as ut, plot as pp
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 ######################################################################################################

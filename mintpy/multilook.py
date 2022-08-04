@@ -23,7 +23,7 @@ from mintpy.utils import (
     utils1 as ut,
     attribute as attr,
 )
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 ##################################################################################################

@@ -11,7 +11,7 @@ import sys
 import time
 import h5py
 from mintpy.utils import utils as ut, readfile
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 #################################  Usage  ####################################

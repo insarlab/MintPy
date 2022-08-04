@@ -16,8 +16,7 @@ from scipy import linalg
 
 from mintpy.defaults.template import get_template_content
 from mintpy.objects import timeseries, giantTimeseries, HDFEOS, cluster
-from mintpy.utils import arg_group, ptime, time_func, readfile, writefile, utils as ut
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils import arg_utils, ptime, time_func, readfile, writefile, utils as ut
 
 
 dataType = np.float32
@@ -80,7 +79,7 @@ def create_parser(subparsers=None):
     synopsis = 'Estimate velocity / time functions from time-series.'
     epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
-    parser = create_argument_parser(
+    parser = arg_utils.create_argument_parser(
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     # inputs
@@ -97,7 +96,7 @@ def create_parser(subparsers=None):
 
     # reference in time and space
     # useful for input file without reference info, e.g. ERA5.h5
-    parser = arg_group.add_reference_argument(parser, plot=False)
+    parser = arg_utils.add_reference_argument(parser, plot=False)
 
     # dates of interest
     date = parser.add_argument_group('Dates of interest')
@@ -121,7 +120,7 @@ def create_parser(subparsers=None):
                     help='number of iterations for bootstrapping (default: %(default)s).')
 
     # time functions
-    parser = arg_group.add_timefunc_argument(parser)
+    parser = arg_utils.add_timefunc_argument(parser)
 
     # residual file
     resid = parser.add_argument_group('Residual file', 'Save residual displacement time-series to HDF5 file.')
@@ -131,7 +130,7 @@ def create_parser(subparsers=None):
                        help='Output file name for the residual time-series file (default: %(default)s).')
 
     # computing
-    parser = arg_group.add_memory_argument(parser)
+    parser = arg_utils.add_memory_argument(parser)
 
     return parser
 

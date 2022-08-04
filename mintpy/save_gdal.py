@@ -10,7 +10,7 @@ import os
 import sys
 from osgeo import gdal, osr
 from mintpy.utils import readfile, utils0 as ut, plot as pp
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 # link: https://gdal.org/drivers/raster/index.html

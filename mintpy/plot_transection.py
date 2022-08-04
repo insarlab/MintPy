@@ -11,8 +11,7 @@ import argparse
 import numpy as np
 from matplotlib import pyplot as plt, ticker
 
-from mintpy.utils import arg_group, readfile, utils as ut, plot as pp
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils import arg_utils, readfile, utils as ut, plot as pp
 from mintpy import view
 
 
@@ -42,7 +41,7 @@ def create_parser(subparsers=None):
     synopsis = 'Generate transect/profile along a line'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
-    parser = create_argument_parser(
+    parser = arg_utils.create_argument_parser(
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', nargs='+',
@@ -75,8 +74,8 @@ def create_parser(subparsers=None):
     lines.add_argument('--ms', '--markersize', dest='marker_size', type=float, default=2.0,
                        help='Point marker size. Default: 2.0')
 
-    parser = arg_group.add_figure_argument(parser)
-    parser = arg_group.add_save_argument(parser)
+    parser = arg_utils.add_figure_argument(parser)
+    parser = arg_utils.add_save_argument(parser)
     return parser
 
 
@@ -167,8 +166,8 @@ def get_view_cmd(iargs):
                         help='Display limits for matrix plotting.')
     parser.add_argument('--noverbose', dest='print_msg', action='store_false',
                         help='Disable the verbose message printing.')
-    parser = arg_group.add_figure_argument(parser)
-    parser = arg_group.add_save_argument(parser)
+    parser = arg_utils.add_figure_argument(parser)
+    parser = arg_utils.add_save_argument(parser)
 
     # get args that are applicable to view.py
     unique_args = parser.parse_known_args(iargs)[1]

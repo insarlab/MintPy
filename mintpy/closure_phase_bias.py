@@ -17,14 +17,13 @@ from datetime import datetime as dt
 
 from mintpy.objects import ifgramStack, cluster
 from mintpy.utils import (
-    arg_group,
+    arg_utils,
     ptime,
     readfile,
     writefile,
     isce_utils,
     utils as ut,
 )
-from mintpy.utils.arg_group import create_argument_parser
 from mintpy.ifgram_inversion import estimate_timeseries
 
 
@@ -54,7 +53,7 @@ def create_parser(subparsers=None):
     synopsis = 'Phase non-closure related biases correction'
     epilog = REFERENCE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
-    parser = create_argument_parser(
+    parser = arg_utils.create_argument_parser(
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('-i','--ifgramstack', type=str, dest='stack_file',
@@ -89,8 +88,8 @@ def create_parser(subparsers=None):
                       help='Threashold for the normalized amplitude in [0-1] (default: %(default)s).')
 
     # compute
-    parser = arg_group.add_parallel_argument(parser)
-    parser = arg_group.add_memory_argument(parser)
+    parser = arg_utils.add_parallel_argument(parser)
+    parser = arg_utils.add_memory_argument(parser)
 
     # output
     parser.add_argument('-o', dest='outdir', type=str, default='./', help='output file directory')

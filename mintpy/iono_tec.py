@@ -18,7 +18,7 @@ import mintpy
 from mintpy.objects import timeseries, ionex
 from mintpy.objects.constants import SPEED_OF_LIGHT
 from mintpy.utils import ptime, readfile, writefile, utils as ut
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 from mintpy.simulation import iono
 
 

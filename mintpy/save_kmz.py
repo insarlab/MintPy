@@ -24,14 +24,13 @@ except ImportError:
 import mintpy
 from mintpy.objects import timeseriesKeyNames
 from mintpy.utils import (
-    arg_group,
+    arg_utils,
     attribute as attr,
     ptime,
     readfile,
     utils as ut,
     plot as pp,
 )
-from mintpy.utils.arg_group import create_argument_parser
 from mintpy import subset
 
 
@@ -57,7 +56,7 @@ def create_parser(subparsers=None):
     synopsis = 'Generate Google Earth KMZ file (overlay / placemarks for files in geo / radar coordinates).'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
-    parser = create_argument_parser(
+    parser = arg_utils.create_argument_parser(
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='file to be converted, in geo or radar coordinate.\n'
@@ -120,7 +119,7 @@ def create_parser(subparsers=None):
                      help='marker symbol of reference point')
 
     # subset
-    parser = arg_group.add_subset_argument(parser)
+    parser = arg_utils.add_subset_argument(parser)
 
     return parser
 

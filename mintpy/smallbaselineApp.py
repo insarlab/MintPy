@@ -19,7 +19,7 @@ import numpy as np
 import mintpy
 from mintpy.objects import sensor, cluster, RAMP_LIST
 from mintpy.utils import readfile, writefile, utils as ut
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils.arg_utils import create_argument_parser
 from mintpy.defaults.template import STEP_LIST
 import mintpy.workflow   # dynamic import of modules for smallbaselineApp
 

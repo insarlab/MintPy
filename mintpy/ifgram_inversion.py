@@ -18,8 +18,7 @@ from scipy import linalg   # more effieint than numpy.linalg
 from mintpy.objects import ifgramStack, cluster
 from mintpy.simulation import decorrelation as decor
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import readfile, writefile, ptime, utils as ut, arg_group
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils import readfile, writefile, ptime, utils as ut, arg_utils
 
 
 # key configuration parameter name
@@ -123,8 +122,8 @@ def create_parser(subparsers=None):
     #                  help='minimum area size to diable/ignore the threshold-based masking [for offset only]')
 
     # computing
-    parser = arg_group.add_memory_argument(parser)
-    parser = arg_group.add_parallel_argument(parser)
+    parser = arg_utils.add_memory_argument(parser)
+    parser = arg_utils.add_parallel_argument(parser)
 
     # update / skip
     parser.add_argument('--update', dest='update_mode', action='store_true',

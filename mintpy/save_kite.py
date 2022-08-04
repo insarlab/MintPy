@@ -10,8 +10,7 @@ import sys
 import datetime as dt
 import numpy as np
 
-from mintpy.utils import ptime, readfile, arg_group, attribute
-from mintpy.utils.arg_group import create_argument_parser
+from mintpy.utils import ptime, readfile, arg_utils, attribute
 from mintpy import subset
 
 
@@ -44,7 +43,7 @@ def create_parser(subparsers=None):
     synopsis = f'Generate KITE ({KITE_URL}) npz and yaml from MintPy HDF5 file.'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
-    parser = create_argument_parser(
+    parser = arg_utils.create_argument_parser(
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', type=str, help='file to be converted, in geo coordinate.')
@@ -59,7 +58,7 @@ def create_parser(subparsers=None):
                         help='mask file, or run mask.py to mask the input file beforehand.')
     parser.add_argument('-o', '--output', dest='outfile', type=str,
                         help='output filename')
-    parser = arg_group.add_subset_argument(parser)
+    parser = arg_utils.add_subset_argument(parser)
     return parser
 
 def cmd_line_parse(iargs=None):
