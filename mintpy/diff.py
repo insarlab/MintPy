@@ -9,7 +9,6 @@
 import os
 import sys
 import time
-import argparse
 import numpy as np
 
 from mintpy.objects import (
@@ -20,6 +19,7 @@ from mintpy.objects import (
     ifgramDatasetNames,
 )
 from mintpy.utils import readfile, writefile
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 #####################################################################################
@@ -35,10 +35,12 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Generates the difference of two input files.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Generate the difference of two input files.'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file1', help='file to be subtracted.')
     parser.add_argument('file2', nargs='+', help='file used to subtract')

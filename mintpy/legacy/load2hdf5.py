@@ -12,7 +12,7 @@ import argparse
 import numpy as np
 from mintpy.utils import (
     ptime,
-    arg_group,
+    arg_utils,
     readfile,
     writefile,
     utils as ut,
@@ -48,7 +48,7 @@ def create_parser():
     parser.add_argument('file', help='file to be loaded.')
     parser.add_argument('--dtype','--data-type', dest='data_type', choices=DATA_TYPE_STR2OBJ.keys(),
                         help='output data type')
-    parser = arg_group.add_subset_argument(parser, geo=False)
+    parser = arg_utils.add_subset_argument(parser, geo=False)
 
     # output
     parser.add_argument('--dname','--dset-name', dest='dset_name', help='output dataset name(s)')

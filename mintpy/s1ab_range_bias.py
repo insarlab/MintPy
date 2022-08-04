@@ -8,16 +8,22 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 from matplotlib import pyplot as plt, ticker, colors
 
 from mintpy.objects import timeseries
 from mintpy.utils import readfile, writefile, s1_utils, plot as pp
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 
 ####################################################################################
+REFERENCE = """reference:
+  Yunjun, Z., Fattahi, H., Pi, X., Rosen, P., Simons, M., Agram, P., & Aoki, Y. (2022). Range
+    Geolocation Accuracy of C-/L-band SAR and its Implications for Operational Stack Coregistration.
+    IEEE Trans. Geosci. Remote Sens., 60, doi:10.1109/TGRS.2022.3168509.
+"""
+
 EXAMPLE = """example:
   # Requires a text file named "SAFE_files.txt" containing all Sentinel-1 SAFE filenames.
   # It is generated in ISCE-2/topsStack by default, and could be generated as below if missing:
@@ -34,16 +40,12 @@ EXAMPLE = """example:
   s1ab_range_bias.py timeseriesRg.h5 -a correct
 """
 
-REFERENCE = """reference:
-  Yunjun, Z., Fattahi, H., Pi, X., Rosen, P., Simons, M., Agram, P., & Aoki, Y. (2022). Range
-    Geolocation Accuracy of C-/L-band SAR and its Implications for Operational Stack Coregistration.
-    IEEE Trans. Geosci. Remote Sens., 60, doi:10.1109/TGRS.2022.3168509.
-"""
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Sentinel-1 A/B range bias correction',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog='{}\n{}'.format(REFERENCE, EXAMPLE))
+def create_parser(subparsers=None):
+    synopsis = 'Sentinel-1 A/B range bias correction'
+    epilog = REFERENCE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     # input/output files
     parser.add_argument('ts_file', help='Range offset timeseries file to be corrrected, e.g. timeseriesRg_SET_ERA5.h5.')

@@ -11,14 +11,13 @@
 import os
 import sys
 import time
-import argparse
 import numpy as np
 import glob
 from datetime import datetime as dt
 
 from mintpy.objects import ifgramStack, cluster
 from mintpy.utils import (
-    arg_group,
+    arg_utils,
     ptime,
     readfile,
     writefile,
@@ -50,10 +49,12 @@ EXAMPLE = """example:
   closure_phase_bias.py -i inputs/ifgramStack.h5 --nl 20 --bw 10 -a estimate --num-worker 6 -c local
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description = 'Phase non-closure related biases correction',
-                                    formatter_class = argparse.RawTextHelpFormatter,
-                                    epilog=REFERENCE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Phase non-closure related biases correction'
+    epilog = REFERENCE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = arg_utils.create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('-i','--ifgramstack', type=str, dest='stack_file',
                         help='interferogram stack file that contains the unwrapped phases')
@@ -87,8 +88,8 @@ def create_parser():
                       help='Threashold for the normalized amplitude in [0-1] (default: %(default)s).')
 
     # compute
-    parser = arg_group.add_parallel_argument(parser)
-    parser = arg_group.add_memory_argument(parser)
+    parser = arg_utils.add_parallel_argument(parser)
+    parser = arg_utils.add_memory_argument(parser)
 
     # output
     parser.add_argument('-o', dest='outdir', type=str, default='./', help='output file directory')

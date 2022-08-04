@@ -9,16 +9,14 @@
 import os
 import sys
 import time
-import argparse
 import h5py
 import numpy as np
+
 from mintpy.objects import ifgramStack
 from mintpy.objects.conncomp import connectComponent
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import (ptime,
-                          readfile,
-                          writefile,
-                          utils as ut)
+from mintpy.utils import ptime, readfile, writefile, utils as ut
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 # key configuration parameter name
@@ -32,11 +30,7 @@ configKeys = [
 
 
 ####################################################################################################
-EXAMPLE = """Example:
-  unwrap_error_bridging.py  ./inputs/ifgramStack.h5  -t GalapagosSenDT128.template --update
-  unwrap_error_bridging.py  ./inputs/ifgramStack.h5  --water-mask waterMask.h5
-  unwrap_error_bridging.py  20180502_20180619.unw    --water-mask waterMask.h5
-"""
+TEMPLATE = get_template_content('correct_unwrap_error')
 
 REFERENCE = """reference:
   Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis:
@@ -44,18 +38,23 @@ REFERENCE = """reference:
   doi:10.1016/j.cageo.2019.104331.
 """
 
+EXAMPLE = """Example:
+  unwrap_error_bridging.py  ./inputs/ifgramStack.h5  -t GalapagosSenDT128.template --update
+  unwrap_error_bridging.py  ./inputs/ifgramStack.h5  --water-mask waterMask.h5
+  unwrap_error_bridging.py  20180502_20180619.unw    --water-mask waterMask.h5
+"""
+
 NOTE = """
   by connecting reliable regions with MST bridges. This method assumes the phase differences
   between neighboring regions are less than pi rad in magnitude.
 """
 
-TEMPLATE = get_template_content('correct_unwrap_error')
-
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Unwrapping Error Correction with Bridging'+NOTE,
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Unwrapping Error Correction with Bridging'
+    epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis+NOTE, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('ifgram_file', type=str, help='interferograms file to be corrected')
     parser.add_argument('-r','--radius', dest='bridgePtsRadius', type=int, default=50,

@@ -9,7 +9,6 @@
 import os
 import sys
 import glob
-import argparse
 import numpy as np
 from mintpy.utils import (
     attribute as attr,
@@ -18,6 +17,7 @@ from mintpy.utils import (
     readfile,
     writefile,
 )
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 
@@ -51,11 +51,14 @@ EXAMPLE = """example:
   prep_isce.py -f "./offsets/*/*Off*.bip" -m "SLC/*/data.dat" -b random -g ./geometry/
 """
 
-def create_parser():
+def create_parser(subparsers=None):
     """Command line parser."""
-    parser = argparse.ArgumentParser(description='Prepare ISCE metadata files.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+    synopsis = 'Prepare ISCE metadata files.'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
+
     # observations
     parser.add_argument('-f', dest='obs_files', type=str, nargs='+', default='./merged/interferograms/*/filt_*.unw',
                         help='Wildcard path pattern for the primary observation files.\n'

@@ -8,11 +8,11 @@
 
 import os
 import sys
-import argparse
 import h5py
 import numpy as np
 
 from mintpy.utils import readfile, ptime
+from mintpy.utils.arg_utils import create_argument_parser
 from mintpy.objects import (
     giantIfgramStack,
     giantTimeseries,
@@ -51,11 +51,14 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
+def create_parser(subparsers=None):
     """Create command line parser."""
-    parser = argparse.ArgumentParser(description='Display Metadata / Structure information of ANY File',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+    synopsis = 'Display Metadata / Structure information of ANY File'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
+
     parser.add_argument('file', type=str, help='File to check')
     parser.add_argument('--compact', action='store_true',
                         help='show compact info by displaying only the top 20 metadata')

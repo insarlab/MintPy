@@ -9,7 +9,6 @@
 import os
 import sys
 import re
-import argparse
 import h5py
 import numpy as np
 from skimage.transform import resize
@@ -17,7 +16,7 @@ from scipy.interpolate import RegularGridInterpolator as RGI
 
 from mintpy.objects import timeseries
 from mintpy.utils import ptime, readfile, writefile, utils as ut
-
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 ############################################################################
@@ -46,10 +45,12 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Tropospheric correction using GACOS (http://www.gacos.net) delays\n',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+DIR_DEMO+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Tropospheric correction using GACOS (http://www.gacos.net) delays'
+    epilog = REFERENCE + '\n' + DIR_DEMO + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('-f', '--file', dest='dis_file', required=True,
                         help='timeseries HDF5 file, i.e. timeseries.h5')

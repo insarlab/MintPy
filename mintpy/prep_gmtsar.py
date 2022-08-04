@@ -9,7 +9,6 @@
 import os
 import sys
 import glob
-import argparse
 import numpy as np
 
 try:
@@ -23,7 +22,7 @@ from mintpy.utils import (
     writefile,
     utils as ut,
 )
-
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 #########################################################################
@@ -31,11 +30,14 @@ EXAMPLE = """example:
   prep_gmtsar.py StHelensEnvDT156.txt
 """
 
-def create_parser():
+def create_parser(subparsers=None):
     """Command line parser."""
-    parser = argparse.ArgumentParser(description='Prepare GMTSAR metadata files.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+    synopsis = 'Prepare GMTSAR metadata files.'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
+
     parser.add_argument('template_file', type=str, help='MintPy template file for GMTSAR products.')
     parser.add_argument('--mintpy-dir', dest='mintpy_dir', default='./',
                         help='MintPy directory (default: %(default)s).')

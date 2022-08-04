@@ -11,7 +11,6 @@
 import os
 import sys
 import shutil
-import argparse
 import numpy as np
 from lxml import etree
 from zipfile import ZipFile
@@ -25,7 +24,7 @@ except ImportError:
 import mintpy
 from mintpy.objects import timeseriesKeyNames
 from mintpy.utils import (
-    arg_group,
+    arg_utils,
     attribute as attr,
     ptime,
     readfile,
@@ -53,11 +52,12 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Generate Google Earth KMZ file '
-                                                 '(overlay / placemarks for files in geo / radar coordinates).',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Generate Google Earth KMZ file (overlay / placemarks for files in geo / radar coordinates).'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = arg_utils.create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='file to be converted, in geo or radar coordinate.\n'
                         'Note: for files in radar-coordinate, the corresponding lookup table\n'
@@ -119,7 +119,7 @@ def create_parser():
                      help='marker symbol of reference point')
 
     # subset
-    parser = arg_group.add_subset_argument(parser)
+    parser = arg_utils.add_subset_argument(parser)
 
     return parser
 

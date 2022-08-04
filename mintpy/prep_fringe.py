@@ -9,7 +9,6 @@
 import os
 import sys
 import glob
-import argparse
 import h5py
 import numpy as np
 import defusedxml.ElementTree as ET
@@ -20,7 +19,7 @@ except ImportError:
     raise ImportError("Can not import gdal!")
 
 from mintpy.utils import (
-    arg_group,
+    arg_utils,
     ptime,
     readfile,
     writefile,
@@ -48,11 +47,13 @@ EXAMPLE = """example:
   geocode.py velocity.h5 -l inputs/geometryRadar.h5
 """
 
-def create_parser():
+def create_parser(subparsers=None):
     """Command Line Parser"""
-    parser = argparse.ArgumentParser(description="Prepare FRInGE products for MintPy",
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+    synopsis = "Prepare FRInGE products for MintPy"
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = arg_utils.create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('-u', '--unw-file', dest='unwFile', type=str, default='./PS_DS/unwrap/*.unw',
                         help='path pattern of unwrapped interferograms (default: %(default)s).')
@@ -85,7 +86,7 @@ def create_parser():
     parser.add_argument('--geom-only', action='store_true',
                         help='Only create the geometry file (useful for geocoding a watermask).')
 
-    parser = arg_group.add_subset_argument(parser, geo=False)
+    parser = arg_utils.add_subset_argument(parser, geo=False)
 
     return parser
 

@@ -7,9 +7,9 @@
 
 
 import sys
-import argparse
 import matplotlib.pyplot as plt
 from mintpy.utils import readfile, ptime, utils as ut, plot as pp
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 #################################  Usage  ####################################
@@ -19,10 +19,13 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Calculate average in space',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Calculate average in space'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
+
     parser.add_argument('file', help='File to calculate spatial average')
     parser.add_argument('-d', '--dset', '--dataset', dest='datasetName',
                         help='dataset used to calculate, for ifgramStack file only.')

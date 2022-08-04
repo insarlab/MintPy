@@ -8,16 +8,25 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, ptime, utils as ut, plot as pp
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 ######################################################################################################
 TEMPLATE = get_template_content('residual_RMS')
+
+REFERENCE="""reference:
+  Yunjun, Z., Fattahi, H. and Amelung, F. (2019), Small baseline InSAR time series analysis:
+    Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
+    doi:10.1016/j.cageo.2019.104331.
+  Rousseeuw, P. J., and M. Hubert (2011), Robust statistics for outlier detection,
+    Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 1(1),
+    73-79, doi:doi:10.1002/widm.2.
+"""
 
 EXAMPLE = """example:
   timeseries_rms.py  timeseriesResidual.h5
@@ -25,17 +34,13 @@ EXAMPLE = """example:
   timeseries_rms.py  timeseriesResidual.h5  -m maskTempCoh.h5  --cutoff 3
 """
 
-REFERENCE="""reference:
-Rousseeuw, P. J., and M. Hubert (2011), Robust statistics for outlier detection,
-    Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 1(1),
-    73-79, doi:doi:10.1002/widm.2.
-"""
 
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Calculate Root Mean Square (RMS) of deramped residual phase time-series.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=TEMPLATE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Calculate Root Mean Square (RMS) of deramped residual phase time-series.'
+    epilog = TEMPLATE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('timeseries_file', help='Timeseries file')
     parser.add_argument('-t', '--template', dest='template_file',

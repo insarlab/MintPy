@@ -8,11 +8,12 @@
 
 import os
 import sys
-import argparse
 import h5py
 import numpy as np
-from mintpy.utils import readfile
 from scipy.interpolate import griddata
+
+from mintpy.utils import readfile
+from mintpy.utils.arg_utils import create_argument_parser
 
 try:
     from tqdm import tqdm
@@ -25,11 +26,28 @@ except ImportError:
     raise ImportError('Can not import concurrent!')
 
 
+################################################################################
 EXAMPLE = '''examples:
     lookup_geo2radar.py geometryGeo.h5 
     lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5 
     lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5 --parallel 4
 '''
+
+def create_parser(subparsers=None):
+    synopsis = 'Convert lookup table from geo-coord (GAMMA, ROI_PAC) into radar-coord (ISCE)'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
+
+    parser.add_argument('geometryGeo',help='geometryGeo file which includes geo-coordinates based lookup-table')
+    parser.add_argument('-w','--write', dest='write', metavar='FILE', default = 'geometryRadar.h5',
+                      help='update geometryRadar.h5 file by adding the radar-coordinates based lookup-table.')
+    parser.add_argument('--parallel', dest='parallelNumb', type=int, metavar='NUM',default = 1,
+                      help='Enable parallel processing and specify the the used processor number.[default: 1]')
+
+    return parser
+
 
 def write_h5(datasetDict, out_file, metadata=None, ref_file=None, compression=None):
 
@@ -150,18 +168,8 @@ def function(data0):
 
 
 def cmd_line_parse(iargs=None):
-    parser = argparse.ArgumentParser(description='Convert lookup table from geo-coord (GAMMA, ROI_PAC) into radar-coord (ISCE)',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
-
-    parser.add_argument('geometryGeo',help='geometryGeo file which includes geo-coordinates based lookup-table')
-    parser.add_argument('-w','--write', dest='write', metavar='FILE', default = 'geometryRadar.h5',
-                      help='update geometryRadar.h5 file by adding the radar-coordinates based lookup-table.')
-    parser.add_argument('--parallel', dest='parallelNumb', type=int, metavar='NUM',default = 1,
-                      help='Enable parallel processing and specify the the used processor number.[default: 1]')
-
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
-
     return inps
 
 

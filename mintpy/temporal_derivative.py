@@ -8,9 +8,9 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 from mintpy.objects import timeseries
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 ############################################################################
@@ -18,10 +18,13 @@ EXAMPLE = """example:
   temporal_derivative.py  timeseries.h5 
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Calculate the temporal derivative of time-series.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Calculate the temporal derivative of time-series.'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
+
     parser.add_argument('file', type=str, help='time-series displacement file.')
     parser.add_argument('-o','--output', dest='outfile', type=str, help='output derivative time-series file.')
     return parser

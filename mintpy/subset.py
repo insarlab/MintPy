@@ -8,7 +8,6 @@
 
 import os
 import sys
-import argparse
 import h5py
 import numpy as np
 
@@ -19,6 +18,7 @@ from mintpy.utils import (
     utils as ut,
     attribute as attr,
 )
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 ###########################################################################################
@@ -47,10 +47,13 @@ EXAMPLE = """example:
   subset.py geomap_4rlks.trans --tight
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Generate a subset from file/dataset',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=TEMPLATE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Generate a subset from file/dataset'
+    epilog = TEMPLATE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
+
     parser.add_argument('file', nargs='+', help='File(s) to subset/crop')
 
     parser.add_argument('-x','--sub-x','--subset-x', dest='subset_x', type=int, nargs=2,

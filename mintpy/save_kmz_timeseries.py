@@ -8,7 +8,6 @@
 
 import os
 import sys
-import argparse
 from lxml import etree
 from zipfile import ZipFile
 import shutil
@@ -24,6 +23,7 @@ except ImportError:
 import mintpy
 from mintpy.objects import timeseries, deramp
 from mintpy.utils import readfile, plot as pp, utils as ut
+from mintpy.utils.arg_utils import create_argument_parser
 from mintpy import save_kmz
 
 
@@ -35,10 +35,12 @@ EXAMPLE = """example:
   save_kmz_timeseries.py timeseries_ERA5_demErr.h5 --vel velocity.h5 --tcoh temporalCoherence.h5 --mask maskTempCoh.h5
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Generare Google Earth KMZ file for time-series file.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Generare Google Earth KMZ file for time-series file.'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     args = parser.add_argument_group('Input files', 'File/Dataset to display')
 

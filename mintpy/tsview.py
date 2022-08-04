@@ -15,7 +15,7 @@ from scipy import linalg, stats
 from matplotlib import pyplot as plt, widgets, patches
 
 from mintpy.objects import timeseries, giantTimeseries, HDFEOS
-from mintpy.utils import arg_group, ptime, time_func, readfile, utils as ut, plot as pp
+from mintpy.utils import arg_utils, ptime, time_func, readfile, utils as ut, plot as pp
 from mintpy.multilook import multilook_data
 from mintpy import subset, view, timeseries2velocity as ts2vel
 
@@ -36,10 +36,13 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Interactive time-series viewer',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Interactive time-series viewer'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = arg_utils.create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
+
     parser.add_argument('file', nargs='+',
                         help='time-series file to display\n'
                              'i.e.: timeseries_ERA5_ramp_demErr.h5 (MintPy)\n'
@@ -87,7 +90,7 @@ def create_parser():
                              '[!-- This feature is NOT throughly checked. '
                              'Read the code before use. Interpret at your own risk! --!]')
 
-    parser = arg_group.add_timefunc_argument(parser)
+    parser = arg_utils.add_timefunc_argument(parser)
 
     # pixel of interest
     pixel = parser.add_argument_group('Pixel Input')
@@ -106,16 +109,16 @@ def create_parser():
                        help='Edge width for the error bar (default: %(default)s)')
 
     # other groups
-    parser = arg_group.add_data_disp_argument(parser)
-    parser = arg_group.add_dem_argument(parser)
-    parser = arg_group.add_figure_argument(parser)
-    parser = arg_group.add_gps_argument(parser)
-    parser = arg_group.add_mask_argument(parser)
-    parser = arg_group.add_map_argument(parser)
-    parser = arg_group.add_memory_argument(parser)
-    parser = arg_group.add_reference_argument(parser)
-    parser = arg_group.add_save_argument(parser)
-    parser = arg_group.add_subset_argument(parser)
+    parser = arg_utils.add_data_disp_argument(parser)
+    parser = arg_utils.add_dem_argument(parser)
+    parser = arg_utils.add_figure_argument(parser)
+    parser = arg_utils.add_gps_argument(parser)
+    parser = arg_utils.add_mask_argument(parser)
+    parser = arg_utils.add_map_argument(parser)
+    parser = arg_utils.add_memory_argument(parser)
+    parser = arg_utils.add_reference_argument(parser)
+    parser = arg_utils.add_save_argument(parser)
+    parser = arg_utils.add_subset_argument(parser)
 
     return parser
 

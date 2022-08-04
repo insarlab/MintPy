@@ -9,14 +9,16 @@
 import os
 import sys
 import errno
-import argparse
 import h5py
 import numpy as np
 from osgeo import ogr
+
 from mintpy.objects import timeseries
 from mintpy.utils import ptime, readfile, utils as ut
+from mintpy.utils.arg_utils import create_argument_parser
 
 
+#########################################################################################
 EXAMPLE = """example:
   save_qgis.py timeseries_ERA5_ramp_demErr.h5 -g inputs/geometrygeo.h5
   save_qgis.py timeseries_ERA5_ramp_demErr.h5 -g inputs/geometryRadar.h5
@@ -24,10 +26,13 @@ EXAMPLE = """example:
   save_qgis.py timeseries_ERA5_ramp_demErr.h5 -g inputs/geometryRadar.h5 -b 200 150 400 350
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Convert to QGIS compatible ps time-series',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Convert to QGIS compatible ps time-series'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
+
     parser.add_argument('ts_file', type=str, help='time-series HDF5 file')
     parser.add_argument('-g', '--geom', dest='geom_file', type=str, required=True,
                         help='geometry HDF5 file')
@@ -54,7 +59,7 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
-#################################################################
+#########################################################################################
 def add_metadata(feature, location, attrs):
     '''
     Create one point in compatible shape format.
@@ -259,7 +264,7 @@ def write_shape_file(fDict, shp_file, box=None):
     return shp_file
 
 
-#################################################################
+#########################################################################################
 def main(iargs=None):
     # Parse command line
     inps = cmd_line_parse(iargs)
@@ -278,6 +283,6 @@ def main(iargs=None):
     return
 
 
-#################################################################
+#########################################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])

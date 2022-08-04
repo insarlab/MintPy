@@ -5,14 +5,51 @@
 # Author: Zhang Yunjun, Nov 2020                            #
 #############################################################
 # Recommend import:
-#     from mintpy.utils import arg_group
+#     from mintpy.utils import arg_utils
+#     from mintpy.utils.arg_utils import create_argument_parser
 
 
 import argparse
 import numpy as np
 
 
+##################################  generic parser  ####################################
+def create_argument_parser(name=None, synopsis=None, description=None, epilog=None,
+                           subparsers=None, formatter_class=argparse.RawTextHelpFormatter):
+    """Create an argument parser.
 
+    Parameters: name            - str, sub-command name, for sub-parser
+                synopsis        - str, a brief summary of the script, for sub-parser
+                description     - str, same as synopsis, plus optional note
+                epilog          - str, reference, template options and example usage
+                subparsers      - argparse._SubParsersAction
+                                  https://docs.python.org/3/library/argparse.html#sub-commands
+                formatter_class - argparse formatting class object
+                                  https://docs.python.org/3/library/argparse.html#formatter-class
+    Returns:    parser          - argparse.ArgumentParser object
+    Examples:
+        def create_parser(subparsers=None):
+            synopsis = 'Resample radar-coded files into geo-coordinates or vice versa.'
+            epilog = REFERENCE + '\n' + EXAMPLE
+            name = __name__.split('.')[-1]
+            parser = create_argument_parser(
+                name, synopsis=synopsis, description=synopsis+NOTE, epilog=epilog, subparsers=subparsers)
+    """
+    if subparsers:
+        # for mintpy sub-command [used in linux with apt install]
+        parser = subparsers.add_parser(
+            name, description=description, formatter_class=formatter_class, epilog=epilog, help=synopsis)
+
+    else:
+        # for regular command usage
+        parser = argparse.ArgumentParser(
+            description=description, formatter_class=formatter_class, epilog=epilog)
+
+    return parser
+
+
+
+##################################  argument group  ####################################
 def add_data_disp_argument(parser):
     """Argument group parser for data display options"""
     data = parser.add_argument_group('Data Display Options', 'Options to adjust the dataset display')
@@ -387,7 +424,7 @@ def add_timefunc_argument(parser):
                             '--periodic 1.0                         # an annual cycle\n'
                             '--periodic 1.0 0.5                     # an annual cycle plus a semi-annual cycle\n')
 
-    model.add_argument('--step', dest='step', type=str, nargs='+', default=[],
+    model.add_argument('--step','--step-date', dest='stepDate', type=str, nargs='+', default=[],
                        help='step function(s) at YYYYMMDD (default: %(default)s). E.g.:\n'
                             '--step 20061014                        # coseismic step  at 2006-10-14T00:00\n'
                             '--step 20110311 20120928T1733          # coseismic steps at 2011-03-11T00:00 and 2012-09-28T17:33\n')
@@ -409,4 +446,3 @@ def add_timefunc_argument(parser):
                             '                                       # 2nd log w/ onset at 2019-01-25       w/ tau=180 days\n')
 
     return parser
-

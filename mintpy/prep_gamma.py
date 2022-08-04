@@ -9,10 +9,10 @@
 import os
 import sys
 import re
-import argparse
 import numpy as np
 from mintpy.objects import sensor
 from mintpy.utils import readfile, writefile, ptime, utils as ut
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 SPEED_OF_LIGHT = 299792458  # m/s
@@ -21,17 +21,7 @@ PAR_EXT_LIST = ['.amp.par', '.ramp.par', '.mli.par']
 
 
 ##################################################################################################
-EXAMPLE = """example:
-  prep_gamma.py  diff_filt_HDR_20130118_20130129_4rlks.unw
-  prep_gamma.py  interferograms/*/diff_*rlks.unw --sensor sen
-  prep_gamma.py  interferograms/*/filt_*rlks.cor
-  prep_gamma.py  interferograms/*/diff_*rlks.int
-  prep_gamma.py  sim_20150911_20150922.hgt_sim
-  prep_gamma.py  sim_20150911_20150922.utm.dem
-  prep_gamma.py  sim_20150911_20150922.UTM_TO_RDC
-"""
-
-DESCRIPTION = """
+NOTE = """
   For each interferogram, including unwrapped/wrapped interferograms and coherence, 3 metadata files are required:
   1) reference .par file, e.g. 130118_4rlks.amp.par
   2) secondary .par file, e.g. 130129_4rlks.amp.par
@@ -96,12 +86,23 @@ DESCRIPTION = """
          if no multilooking applied, do not add "_4rlks" in your file names.
 """
 
+EXAMPLE = """example:
+  prep_gamma.py  diff_filt_HDR_20130118_20130129_4rlks.unw
+  prep_gamma.py  interferograms/*/diff_*rlks.unw --sensor sen
+  prep_gamma.py  interferograms/*/filt_*rlks.cor
+  prep_gamma.py  interferograms/*/diff_*rlks.int
+  prep_gamma.py  sim_20150911_20150922.hgt_sim
+  prep_gamma.py  sim_20150911_20150922.utm.dem
+  prep_gamma.py  sim_20150911_20150922.UTM_TO_RDC
+"""
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Prepare attributes file for Gamma product.\n'+
-                                     DESCRIPTION,
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+
+def create_parser(subparsers=None):
+    synopsis = 'Prepare attributes file for Gamma product.'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis+NOTE, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', nargs='+', help='Gamma file(s)')
     parser.add_argument('--sensor', dest='sensor', type=str, choices=sensor.SENSOR_NAMES,

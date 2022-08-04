@@ -8,7 +8,6 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 import scipy.io as sio
 import matplotlib.pyplot as plt
@@ -17,17 +16,21 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 
 from mintpy.utils import writefile
+from mintpy.utils.arg_utils import create_argument_parser
 
 
+##############################################################################
 EXAMPLE = """example:
   load_gbis.py invert_1_2_C.mat
   load_gbis.py invert_1_2_C.mat --nodisplay
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Load GBIS inversion result to HDF5 format.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Load GBIS inversion result to HDF5 format.'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='GBIS inversion mat file.')
     parser.add_argument('-o', '--output', dest='outfile', help='output file name.')
@@ -47,6 +50,7 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
+##############################################################################
 def grab_data_paths_from_inp_file(inp_file):
     """Grab data paths from inp file."""
     data_paths = []
@@ -166,6 +170,6 @@ def main(iargs=None):
     return
 
 
-##########################################################################
+##############################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])

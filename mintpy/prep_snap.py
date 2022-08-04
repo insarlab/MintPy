@@ -9,15 +9,15 @@
 
 import os
 import sys
-import argparse
 from mintpy.utils import readfile, writefile, utils as ut
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 SPEED_OF_LIGHT = 299792458  # m / s
 
 
 ##################################################################################################
-DESCRIPTION = """
+NOTE = """
   For each interferogram, coherence or unwrapped .dim product this script will prepare.rsc 
   metadata files for for mintpy based on .dim metadata file.
 
@@ -39,10 +39,12 @@ EXAMPLE = """example:
   prep_snap.py  ../dem_tc.data/dem*.img
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Prepare attributes file for SNAP products.\n'+DESCRIPTION,
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Prepare attributes file for SNAP products.'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis+NOTE, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', nargs='+', help='SNAP data file(s) in *.img format.')
     return parser

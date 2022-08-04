@@ -10,10 +10,10 @@ import os
 import sys
 import time
 import warnings
-import argparse
 import h5py
 import numpy as np
 from mintpy.utils import readfile, writefile, utils as ut
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 ################################################################################################
@@ -53,10 +53,12 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Generate mask file from input file',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Generate mask file from input file'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='input file')
     parser.add_argument('dset', nargs='?',

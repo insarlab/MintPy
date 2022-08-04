@@ -7,10 +7,10 @@
 
 
 import sys
-import argparse
 import numpy as np
 from mintpy.objects import sensor
 from mintpy.utils import ptime, readfile, writefile, utils as ut
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 ################################################################################
@@ -49,10 +49,13 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Project Asc and Desc LOS displacement to Horizontal and Vertical direction',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Project Asc and Desc LOS displacement to Horizontal and Vertical direction'
+    epilog = REFERENCE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
+ 
     # input files
     parser.add_argument('file', nargs=2,
                         help='Ascending and descending files\n'

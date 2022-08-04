@@ -14,12 +14,12 @@ import glob
 import time
 import datetime
 import shutil
-import argparse
 import numpy as np
 
 import mintpy
 from mintpy.objects import sensor, cluster, RAMP_LIST
 from mintpy.utils import readfile, writefile, utils as ut
+from mintpy.utils.arg_utils import create_argument_parser
 from mintpy.defaults.template import STEP_LIST
 import mintpy.workflow   # dynamic import of modules for smallbaselineApp
 
@@ -36,6 +36,12 @@ previous run was done using one of the steps options to process at least
 through the step immediately preceding the starting step of the current run.
 """.format(STEP_LIST[0:5], STEP_LIST[5:11], STEP_LIST[11:])
 
+REFERENCE = """reference:
+  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis:
+  Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
+  doi:10.1016/j.cageo.2019.104331.
+"""
+
 EXAMPLE = """example:
   smallbaselineApp.py                         #run with default template 'smallbaselineApp.cfg'
   smallbaselineApp.py <custom_template>       #run with default and custom templates
@@ -50,17 +56,13 @@ EXAMPLE = """example:
   smallbaselineApp.py GalapagosSenDT128.template --end load_data    #end after step 'load_data'
 """
 
-REFERENCE = """reference:
-  Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis:
-  Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
-  doi:10.1016/j.cageo.2019.104331.
-"""
 
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Routine Time Series Analysis for Small Baseline InSAR Stack',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Routine Time Series Analysis for Small Baseline InSAR Stack'
+    epilog = REFERENCE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('customTemplateFile', nargs='?',
                         help='custom template with option settings.\n' +

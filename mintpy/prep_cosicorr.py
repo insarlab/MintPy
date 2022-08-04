@@ -8,18 +8,14 @@
 
 import os
 import sys
-import argparse
 from datetime import datetime
 import numpy as np
+
 from mintpy.utils import readfile, writefile, utils as ut
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 #########################################################################
-EXAMPLE = """example:
-  prep_cosicorr.py offsets/*offset.tif -m metadata.txt
-  prep_cosicorr.py snr/*snr.tif        -m metadata.txt
-"""
-
 EXAMPLE_META_FILE = """
 offset1NS.tif  20160206 20161122
 offset1EW.tif  20160206 20161122
@@ -30,11 +26,18 @@ offset2SNR.tif 20160206 20170225
 ...            ...   ...
 """
 
+EXAMPLE = """example:
+  prep_cosicorr.py offsets/*offset.tif -m metadata.txt
+  prep_cosicorr.py snr/*snr.tif        -m metadata.txt
+"""
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Prepare attributes file for COSI-Corr pixel offset product.\n',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    """Command line parser."""
+    synopsis = 'Prepare attributes file for COSI-Corr pixel offset product.'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', nargs='+', help='cosicorr file(s)')
     parser.add_argument('-m', '--metadata', type=str, dest='meta_file',

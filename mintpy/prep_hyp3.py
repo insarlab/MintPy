@@ -8,25 +8,17 @@
 
 import os
 import sys
-import argparse
 from datetime import datetime
 from mintpy.objects import sensor
 from mintpy.utils import readfile, writefile, utils as ut
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 SPEED_OF_LIGHT = 299792458  # m/s
 
 
 #########################################################################
-EXAMPLE = """example:
-  prep_hyp3.py  interferograms/*/*unw_phase_clip.tif
-  prep_hyp3.py  interferograms/*/*corr_clip.tif
-  prep_hyp3.py  interferograms/*/*dem_clip.tif
-  prep_hyp3.py  interferograms/*/*lv_theta_clip.tif
-  prep_hyp3.py  interferograms/*/*clip.tif
-"""
-
-DESCRIPTION = """
+NOTE = """
   For each interferogram, the unwrapped interferogram, coherence, and metadata the file name is required e.g.:
   1) S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase.tif
   2) S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr.tif
@@ -71,12 +63,21 @@ DESCRIPTION = """
     from other satellites, changes will be needed. 
 """
 
+EXAMPLE = """example:
+  prep_hyp3.py  interferograms/*/*unw_phase_clip.tif
+  prep_hyp3.py  interferograms/*/*corr_clip.tif
+  prep_hyp3.py  interferograms/*/*dem_clip.tif
+  prep_hyp3.py  interferograms/*/*lv_theta_clip.tif
+  prep_hyp3.py  interferograms/*/*clip.tif
+"""
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Prepare attributes file for HyP3 InSAR product.\n'+
-                                     DESCRIPTION,
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+
+def create_parser(subparsers=None):
+    synopsis = 'Prepare attributes file for HyP3 InSAR product.'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis+NOTE, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', nargs='+', help='HyP3 file(s)')
     return parser

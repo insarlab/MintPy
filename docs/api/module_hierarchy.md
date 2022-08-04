@@ -18,7 +18,7 @@ Hierarchy of sub-modules within MintPy. Level _N_ modules depends on level _N-1_
             l1
             l1regls
             lstl1
-        arg_group
+        arg_utils
         map
         ptime (including progress)
         utils0

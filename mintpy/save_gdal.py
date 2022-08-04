@@ -8,10 +8,9 @@
 
 import os
 import sys
-import argparse
-import numpy as np
 from osgeo import gdal, osr
 from mintpy.utils import readfile, utils0 as ut, plot as pp
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 # link: https://gdal.org/drivers/raster/index.html
@@ -33,10 +32,12 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Generate GDAL raster from MintPy h5 file.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Generate GDAL raster from MintPy h5 file.'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='file to be converted, in geo coordinate.')
     parser.add_argument('-d', '--dset', '--dataset', dest='dset',

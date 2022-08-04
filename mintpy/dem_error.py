@@ -13,9 +13,10 @@ import argparse
 import h5py
 import numpy as np
 from scipy import linalg
+
 from mintpy.objects import timeseries, geometry, cluster
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import arg_group, ptime, time_func, readfile, writefile, utils as ut
+from mintpy.utils import arg_utils, ptime, time_func, readfile, writefile, utils as ut
 
 
 # key configuration parameter name
@@ -31,6 +32,11 @@ configKeys = [
 ############################################################################
 TEMPLATE = get_template_content('correct_topography')
 
+REFERENCE = """reference:
+  Fattahi, H., and F. Amelung (2013), DEM Error Correction in InSAR Time Series,
+  IEEE Trans. Geosci. Remote Sens., 51(7), 4249-4259, doi:10.1109/TGRS.2012.2227761.
+"""
+
 EXAMPLE = """example:
   # correct DEM error with pixel-wise geometry parameters [slow]
   dem_error.py  timeseries_ERA5_ramp.h5 -g inputs/geometryRadar.h5 -t smallbaselineApp.cfg
@@ -44,16 +50,12 @@ EXAMPLE = """example:
   add.py demErr_msk.h5 dem.h5 -o demNew.h5
 """
 
-REFERENCE = """reference:
-  Fattahi, H., and F. Amelung (2013), DEM Error Correction in InSAR Time Series,
-  IEEE TGRS, 51(7), 4249-4259, doi:10.1109/TGRS.2012.2227761.
-"""
-
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='DEM Error (Topographic Residual) Correction',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog='{}\n{}\n{}'.format(REFERENCE, TEMPLATE, EXAMPLE))
+def create_parser(subparsers=None):
+    synopsis = 'DEM Error (Topographic Residual) Correction'
+    epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = arg_utils.create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('timeseries_file',
                         help='Timeseries file to be corrrected')
@@ -87,8 +89,8 @@ def create_parser():
                              'and newer than input interferograms file\n' +
                              '2) all configuration parameters are the same.')
     # computing
-    parser = arg_group.add_memory_argument(parser)
-    parser = arg_group.add_parallel_argument(parser)
+    parser = arg_utils.add_memory_argument(parser)
+    parser = arg_utils.add_parallel_argument(parser)
 
     return parser
 

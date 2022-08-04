@@ -10,14 +10,13 @@ import os
 import sys
 import time
 import shutil
-import argparse
 import h5py
 import numpy as np
 
 from mintpy.objects import timeseries
 from mintpy.objects.cluster import split_box2sub_boxes
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import arg_group, readfile, writefile, ptime, utils as ut
+from mintpy.utils import arg_utils, readfile, writefile, ptime, utils as ut
 
 
 ##################################################################
@@ -29,10 +28,12 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Change reference date of timeseries.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=TEMPLATE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Change reference date of timeseries.'
+    epilog = TEMPLATE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = arg_utils.create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('timeseries_file', nargs='+', help='timeseries file(s)')
     parser.add_argument('-r', '--ref-date', dest='refDate', default='minRMS',
@@ -48,7 +49,7 @@ def create_parser():
                         help='Force updating the data matrix.')
 
     # computing
-    parser = arg_group.add_memory_argument(parser)
+    parser = arg_utils.add_memory_argument(parser)
 
     return parser
 

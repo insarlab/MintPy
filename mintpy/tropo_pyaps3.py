@@ -10,11 +10,12 @@ import os
 import sys
 import re
 from configparser import ConfigParser
-import argparse
 import h5py
 import numpy as np
+
 from mintpy.objects import timeseries, geometry
 from mintpy.utils import ptime, readfile, writefile, utils as ut
+from mintpy.utils.arg_utils import create_argument_parser
 
 try:
     import pyaps3 as pa
@@ -30,6 +31,21 @@ WEATHER_MODEL_HOURS = {
 
 
 ###############################################################
+REFERENCE = """reference:
+  Jolivet, R., R. Grandin, C. Lasserre, M.-P. Doin and G. Peltzer (2011), Systematic InSAR tropospheric
+  phase delay corrections from global meteorological reanalysis data, Geophys. Res. Lett., 38, L17311,
+  doi:10.1029/2011GL048757
+
+  Jolivet, R., P. S. Agram, N. Y. Lin, M. Simons, M. P. Doin, G. Peltzer, and Z. Li (2014), Improving
+  InSAR geodesy using global atmospheric models, Journal of Geophysical Research: Solid Earth, 119(3),
+  2324-2341, doi:10.1002/2013JB010588.
+
+  # ERA5
+  Hersbach, H., Bell, B., Berrisford, P., Hirahara, S., Horányi, A., Muñoz-Sabater, J., et al. (2020). 
+  The ERA5 global reanalysis. Quarterly Journal of the Royal Meteorological Society, 146(730), 1999–2049.
+  https://doi.org/10.1002/qj.3803
+"""
+
 EXAMPLE = """example:
   # download datasets, calculate tropospheric delays and correct time-series file.
   tropo_pyaps3.py -f timeseries.h5 -g inputs/geometryRadar.h5
@@ -50,21 +66,6 @@ SAFE_FILE = """SAFE_files.txt:
     /data/SanAndreasSenDT42/SLC/S1B_IW_SLC__1SDV_20191117T140737_20191117T140804_018968_023C8C_82DC.zip
     /data/SanAndreasSenDT42/SLC/S1A_IW_SLC__1SDV_20191111T140819_20191111T140846_029864_036803_69CA.zip
     ...
-"""
-
-REFERENCE = """reference:
-  Jolivet, R., R. Grandin, C. Lasserre, M.-P. Doin and G. Peltzer (2011), Systematic InSAR tropospheric
-  phase delay corrections from global meteorological reanalysis data, Geophys. Res. Lett., 38, L17311,
-  doi:10.1029/2011GL048757
-
-  Jolivet, R., P. S. Agram, N. Y. Lin, M. Simons, M. P. Doin, G. Peltzer, and Z. Li (2014), Improving
-  InSAR geodesy using global atmospheric models, Journal of Geophysical Research: Solid Earth, 119(3),
-  2324-2341, doi:10.1002/2013JB010588.
-
-  # ERA5
-  Hersbach, H., Bell, B., Berrisford, P., Hirahara, S., Horányi, A., Muñoz-Sabater, J., et al. (2020). 
-  The ERA5 global reanalysis. Quarterly Journal of the Royal Meteorological Society, 146(730), 1999–2049.
-  https://doi.org/10.1002/qj.3803
 """
 
 DATA_INFO = """Global Atmospheric Models:
@@ -94,10 +95,12 @@ atmosphere/
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Tropospheric correction using weather models via PyAPS',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+DATA_INFO+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Tropospheric correction using weather models via PyAPS'
+    epilog = REFERENCE + '\n' + DATA_INFO + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('-f', '--file', dest='dis_file',
                         help='timeseries HDF5 file, i.e. timeseries.h5')

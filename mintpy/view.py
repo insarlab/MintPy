@@ -11,7 +11,6 @@
 import os
 import sys
 import re
-import argparse
 import datetime as dt
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,15 +22,12 @@ import cartopy.crs as ccrs
 
 from mintpy.objects import (
     giantIfgramStack,
-    geometryDatasetNames,
-    ifgramDatasetNames,
     ifgramStack,
     timeseriesKeyNames,
-    timeseries,
 )
 from mintpy.objects.gps import GPS
 from mintpy.utils import (
-    arg_group,
+    arg_utils,
     ptime,
     readfile,
     utils as ut,
@@ -88,10 +84,12 @@ PLOT_TEMPLATE = """Plot Setting:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Plot InSAR Product in 2D',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Plot InSAR Product in 2D'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = arg_utils.create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     infile = parser.add_argument_group('Input File', 'File/Dataset to display')
     infile.add_argument('file', type=str, help='file for display')
@@ -120,17 +118,17 @@ def create_parser():
                              '  reverse = x * -1\n'
                              '  inverse = 1 / x')
 
-    parser = arg_group.add_data_disp_argument(parser)
-    parser = arg_group.add_dem_argument(parser)
-    parser = arg_group.add_figure_argument(parser)
-    parser = arg_group.add_gps_argument(parser)
-    parser = arg_group.add_mask_argument(parser)
-    parser = arg_group.add_map_argument(parser)
-    parser = arg_group.add_memory_argument(parser)
-    parser = arg_group.add_point_argument(parser)
-    parser = arg_group.add_reference_argument(parser)
-    parser = arg_group.add_save_argument(parser)
-    parser = arg_group.add_subset_argument(parser)
+    parser = arg_utils.add_data_disp_argument(parser)
+    parser = arg_utils.add_dem_argument(parser)
+    parser = arg_utils.add_figure_argument(parser)
+    parser = arg_utils.add_gps_argument(parser)
+    parser = arg_utils.add_mask_argument(parser)
+    parser = arg_utils.add_map_argument(parser)
+    parser = arg_utils.add_memory_argument(parser)
+    parser = arg_utils.add_point_argument(parser)
+    parser = arg_utils.add_reference_argument(parser)
+    parser = arg_utils.add_save_argument(parser)
+    parser = arg_utils.add_subset_argument(parser)
 
     return parser
 

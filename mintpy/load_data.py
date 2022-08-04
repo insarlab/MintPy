@@ -10,7 +10,6 @@ import os
 import sys
 import glob
 import time
-import argparse
 import warnings
 
 from mintpy.defaults import auto_path
@@ -28,6 +27,7 @@ from mintpy.objects.stackDict import (
     ifgramDict,
 )
 from mintpy.utils import readfile, ptime, utils as ut
+from mintpy.utils.arg_utils import create_argument_parser
 from mintpy import subset
 
 
@@ -111,11 +111,14 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
+def create_parser(subparsers=None):
     """Create command line parser."""
-    parser = argparse.ArgumentParser(description='Loading stacks of interferograms to HDF5 files',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=TEMPLATE+'\n'+NOTE+'\n'+EXAMPLE)
+    synopsis = 'Load stacks of interferograms to HDF5 files'
+    epilog = TEMPLATE + '\n' + NOTE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
+
     parser.add_argument('-H', dest='print_example_template', action='store_true',
                         help='Print/Show the example template file for loading.')
     parser.add_argument('-t', '--template', dest='template_file', type=str, nargs='+',

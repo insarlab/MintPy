@@ -9,13 +9,12 @@
 import os
 import sys
 import time
-import argparse
 import numpy as np
 
 from mintpy.objects.resample import resample
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import (
-    arg_group,
+    arg_utils,
     readfile,
     writefile,
     utils as ut,
@@ -51,10 +50,12 @@ degrees     --> meters on equator
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Resample radar coded files into geo coordinates, or reverse',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=TEMPLATE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Resample radar-coded files into geo-coordinates or vice versa'
+    epilog = TEMPLATE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = arg_utils.create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', nargs='+', help='File(s) to be geocoded')
     parser.add_argument('-d', '--dset', help='dataset to be geocoded, for example:\n' +
@@ -104,7 +105,7 @@ def create_parser():
     parser.add_argument('--outdir', '--output-dir', dest='out_dir', help='output directory.')
 
     # computing
-    parser = arg_group.add_memory_argument(parser)
+    parser = arg_utils.add_memory_argument(parser)
 
     return parser
 

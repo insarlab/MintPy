@@ -8,7 +8,6 @@
 
 import os
 import sys
-import argparse
 import datetime as dt
 import h5py
 import numpy as np
@@ -16,6 +15,7 @@ import numpy as np
 from mintpy.objects import timeseries, geometry, sensor
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import ptime, readfile
+from mintpy.utils.arg_utils import create_argument_parser
 from mintpy import info
 
 
@@ -34,13 +34,17 @@ EXAMPLE = """example:
   save_hdfeos5.py timeseries_ERA5_ramp_demErr.h5 --tc temporalCoherence.h5 --asc avgSpatialCoh.h5 -m maskTempCoh.h5 -g inputs/geometryGeo.h5
 """
 
+NOTE = """
+  https://earthdata.nasa.gov/esdis/eso/standards-and-references/hdf-eos5
+  https://mintpy.readthedocs.io/en/latest/hdfeos5/
+"""
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Convert MintPy timeseries product into HDF-EOS5 format\n' +
-                                     '  https://earthdata.nasa.gov/esdis/eso/standards-and-references/hdf-eos5\n' +
-                                     '  https://mintpy.readthedocs.io/en/latest/hdfeos5/',
-                                     formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     epilog=TEMPALTE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Convert MintPy timeseries product into HDF-EOS5 format'
+    epilog = TEMPALTE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis+NOTE, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('ts_file', default='timeseries.h5', help='Timeseries file')
     parser.add_argument('-t', '--template', dest='template_file',

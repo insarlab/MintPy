@@ -12,20 +12,16 @@
 
 import os
 import sys
-import argparse
 import numpy as np
+
 from mintpy.objects import timeseries
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import readfile, writefile, ptime
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 #########################################################################################
 TEMPLATE = get_template_content('correct_LOD')
-
-EXAMPLE = """example:
-  local_oscilator_drift.py  timeseries.h5                 inputs/geometryRadar.h5
-  local_oscilator_drift.py  filt_101020_110220_4rlks.unw  inputs/geometryRadar.h5
-"""
 
 REFERENCE = """reference:
   Marinkovic, P., and Y. Larsen (2013), Consequences of long-term ASAR local oscillator 
@@ -33,10 +29,17 @@ REFERENCE = """reference:
   Edinburgh, U.K.
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Local Oscilator Drift (LOD) correction of Envisat',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog='{}\n{}\n{}'.format(REFERENCE, TEMPLATE, EXAMPLE))
+EXAMPLE = """example:
+  local_oscilator_drift.py  timeseries.h5                 inputs/geometryRadar.h5
+  local_oscilator_drift.py  filt_101020_110220_4rlks.unw  inputs/geometryRadar.h5
+"""
+
+def create_parser(subparsers=None):
+    synopsis = 'Local Oscilator Drift (LOD) correction of Envisat'
+    epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument(dest='file', help='timeseries / interferograms file, i.e. timeseries.h5')
     parser.add_argument(dest='range_dist_file',

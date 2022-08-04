@@ -9,20 +9,12 @@
 import os
 import sys
 import shutil
-import argparse
 from mintpy.utils import readfile, writefile, utils as ut
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 ##################################################################################################
-EXAMPLE = """example:
-  prep_roipac.py  filt_100901-110117-sim_HDR_4rlks_c10.unw
-  prep_roipac.py  ./interferograms/*/filt_*.unw
-  prep_roipac.py  ./interferograms/*/filt_*rlks.cor
-  prep_roipac.py  ./interferograms/*/filt_*rlks.int
-  prep_roipac.py  ./interferograms/*/filt_*_snap_connect.byt
-"""
-
-DESCRIPTION = """
+NOTE = """
   For each binary file (unwrapped/wrapped interferogram, spatial coherence file), there are 2 .rsc files:
   1) basic metadata file and 2) baseline parameter file. This script find those two rsc files based on
   input binary file name, and merge those two metadata files into one.
@@ -32,11 +24,21 @@ DESCRIPTION = """
   one file: filt_100901-110117-sim_HDR_4rlks_c10.unw.rsc
 """
 
+EXAMPLE = """example:
+  prep_roipac.py  filt_100901-110117-sim_HDR_4rlks_c10.unw
+  prep_roipac.py  ./interferograms/*/filt_*.unw
+  prep_roipac.py  ./interferograms/*/filt_*rlks.cor
+  prep_roipac.py  ./interferograms/*/filt_*rlks.int
+  prep_roipac.py  ./interferograms/*/filt_*_snap_connect.byt
+"""
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Prepare attributes file for ROI_PAC products.\n'+DESCRIPTION,
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+
+def create_parser(subparsers=None):
+    synopsis = 'Prepare attributes file for ROI_PAC products.'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis+NOTE, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', nargs='+', help='Gamma file(s)')
     return parser

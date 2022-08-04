@@ -9,16 +9,16 @@
 
 import os
 import sys
-import argparse
+import numpy as np
+from scipy import ndimage
 
 try:
     from skimage import filters, feature, morphology
 except ImportError:
     raise ImportError('Could not import skimage!')
 
-import numpy as np
-from scipy import ndimage
 from mintpy.utils import readfile, writefile
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 ################################################################################################
@@ -40,10 +40,12 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Spatial filtering of 2D image.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Spatial filtering of 2D image.'
+    epilog = REFERENCE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='File to be filtered')
     parser.add_argument('dset', type=str, nargs='*', default=[],

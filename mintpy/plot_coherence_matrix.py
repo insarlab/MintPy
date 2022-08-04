@@ -8,11 +8,12 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+
 from mintpy.objects import ifgramStack
 from mintpy.utils import readfile, plot as pp, utils as ut
+from mintpy.utils.arg_utils import create_argument_parser
 from mintpy import view
 
 
@@ -32,10 +33,12 @@ EXAMPLE = """example:
   plot_coherence_matrix.py inputs/ifgramStack.h5 --cmap-vlist 0 0.4 1
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Plot the coherence matrix of one pixel (interactive)',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Plot the coherence matrix of one pixel (interactive)'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('ifgram_file', help='interferogram stack file')
     parser.add_argument('--yx', type=int, metavar=('Y', 'X'), nargs=2, 

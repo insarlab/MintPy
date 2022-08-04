@@ -12,14 +12,13 @@
 import os
 import sys
 import time
-import argparse
 import h5py
 import numpy as np
 from scipy import linalg   # more effieint than numpy.linalg
 from mintpy.objects import ifgramStack, cluster
 from mintpy.simulation import decorrelation as decor
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import readfile, writefile, ptime, utils as ut, arg_group
+from mintpy.utils import readfile, writefile, ptime, utils as ut, arg_utils
 
 
 # key configuration parameter name
@@ -34,15 +33,6 @@ configKeys = ['obsDatasetName',
 
 
 ################################################################################################
-EXAMPLE = """example:
-  ifgram_inversion.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg --update
-  ifgram_inversion.py inputs/ifgramStack.h5 -w no  # turn off weight for fast processing
-  ifgram_inversion.py inputs/ifgramStack.h5 -c no  # turn off parallel processing
-  # offset
-  ifgram_inversion.py inputs/ifgramStack.h5 -i rangeOffset   -w no -m waterMask.h5 --md offsetSNR --mt 5
-  ifgram_inversion.py inputs/ifgramStack.h5 -i azimuthOffset -w no -m waterMask.h5 --md offsetSNR --mt 5
-"""
-
 TEMPLATE = get_template_content('invert_network')
 
 REFERENCE = """references:
@@ -63,11 +53,22 @@ REFERENCE = """references:
     offset time series: noise reduction and uncertainty quantification, ID 590, FRINGE 2021, 31 May – 4 Jun, 2021, Virtual.
 """
 
+EXAMPLE = """example:
+  ifgram_inversion.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg --update
+  ifgram_inversion.py inputs/ifgramStack.h5 -w no  # turn off weight for fast processing
+  ifgram_inversion.py inputs/ifgramStack.h5 -c no  # turn off parallel processing
+  # offset
+  ifgram_inversion.py inputs/ifgramStack.h5 -i rangeOffset   -w no -m waterMask.h5 --md offsetSNR --mt 5
+  ifgram_inversion.py inputs/ifgramStack.h5 -i azimuthOffset -w no -m waterMask.h5 --md offsetSNR --mt 5
+"""
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Invert network of interferograms into time-series.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Invert network of interferograms into time-series.'
+    epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = arg_utils.create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
+
     # input dataset
     parser.add_argument('ifgramStackFile', help='interferograms stack file to be inverted')
     parser.add_argument('-t','--template', dest='templateFile', help='template text file with options')
@@ -121,8 +122,8 @@ def create_parser():
     #                  help='minimum area size to diable/ignore the threshold-based masking [for offset only]')
 
     # computing
-    parser = arg_group.add_memory_argument(parser)
-    parser = arg_group.add_parallel_argument(parser)
+    parser = arg_utils.add_memory_argument(parser)
+    parser = arg_utils.add_parallel_argument(parser)
 
     # update / skip
     parser.add_argument('--update', dest='update_mode', action='store_true',

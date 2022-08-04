@@ -8,10 +8,10 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 from mintpy.objects import timeseries
 from mintpy.utils import readfile, writefile
+from mintpy.utils.arg_utils import create_argument_parser
 from mintpy.diff import check_reference
 
 
@@ -24,11 +24,13 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
+def create_parser(subparsers=None):
     """ Command line parser """
-    parser = argparse.ArgumentParser(description='Generate sum of multiple input files.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+    synopsis = 'Generate the sum of multiple input files.'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', nargs='+', help='files (2 or more) to be added')
     parser.add_argument('-o', '--output', dest='outfile', help='output file name')

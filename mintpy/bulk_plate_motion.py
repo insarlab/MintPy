@@ -24,12 +24,12 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 from skimage.transform import resize
 
 from mintpy.objects.resample import resample
 from mintpy.utils import readfile, writefile, utils as ut
+from mintpy.utils.arg_utils import create_argument_parser
 from mintpy.diff import diff_file
 
 # https://docs.astropy.org/en/stable/units/index.html
@@ -81,15 +81,18 @@ EXAMPLE = """example:
   bulk_plate_motion.py -g inputs/geometryGeo.h5 --enu 25.0 30.5 0.0 -v velocity.h5
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(
-        description='Bulk Plate Motion Correction.\n'
-                    '  Removing the effect of bulk traslation and rotation in velocity field based on a given plate motion model (PMM).\n'
-                    '  E.g., Sentinel-1 orbit is measured with respect to ITRF2014 (Table 3-2 of Peter et al., 2021), which is an\n'
-                    '  Earth-centered, Earth-fixed reference frame in which there is no net rotation (NNR) of the Earth surface.',
-        formatter_class=argparse.RawTextHelpFormatter,
-        epilog=REFERENCE+'\n'+EXAMPLE,
-    )
+NOTE = """
+  Removing the effect of bulk traslation and rotation based on a given plate motion model (PMM).
+  For Sentinel-1, its orbit is measured with respect to ITRF2014 (Table 3-2 of Peter et al., 2021), which is an
+  Earth-centered, Earth-fixed (ECEF) reference frame in which there is no net rotation (NNR) of the Earth surface.
+"""
+
+def create_parser(subparsers=None):
+    synopsis = 'Bulk Plate Motion Correction.'
+    epilog = REFERENCE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis+NOTE, epilog=epilog, subparsers=subparsers)
 
     # input files
     parser.add_argument('-g', '--geom', dest='geom_file', type=str, required=True,

@@ -8,26 +8,28 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 from mintpy.objects import timeseries
 from mintpy.utils import ptime
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 ############################################################
+REFERENCE="""reference:
+  Wikipedia: https://en.wikipedia.org/wiki/Gaussian_blur
+"""
+
 EXAMPLE = """example:
  temporal_filter.py timeseries_ERA5_demErr.h5
  temporal_filter.py timeseries_ERA5_demErr.h5 -t 0.1
 """
 
-REFERENCE="""reference:
-  Wikipedia: https://en.wikipedia.org/wiki/Gaussian_blur
-"""
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Smoothing timeseries in time domain with a moving Gaussian window',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Smoothing timeseries in time domain with a moving filter'
+    epilog = REFERENCE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('timeseries_file',
                         help='timeseries file to be smoothed.')

@@ -9,7 +9,6 @@
 
 import os
 import sys
-import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 try:
@@ -18,6 +17,7 @@ except ImportError:
     raise ImportError('Could not import skimage!')
 
 from mintpy.utils import readfile, writefile, plot as pp
+from mintpy.utils.arg_utils import create_argument_parser
 from mintpy.multilook import multilook_data
 
 
@@ -27,21 +27,28 @@ EXAMPLE = """example:
   image_stitch.py geom_AlosAT422.h5 geom_AlosAT423.h5 geom_AlosAT424.h5 geom_AlosAT425.h5 -o geom_AlosA.h5 --no-offset
 """
 
+NOTE = """
+  The function automatically:
+  1) finds the common area between adjacent input files
+  2) calculates the average offset between them
+  3) apply this average offset to the later file
+"""
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Stitch >=2 geocoded datasets sharing common area into one.\n'
-                                                 '\tFunction automatically finds the common area and calculates\n'
-                                                 '\tthe average offset between the two velocity.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Stitch/mosaic multiple geocoded datasets into one.'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis+NOTE, epilog=epilog, subparsers=subparsers)
+
     parser.add_argument('file1', help='file to stitch')
     parser.add_argument('file2s', nargs='+', metavar='file2', help='file(s) to stitch')
     parser.add_argument('-o', '--output', dest='outfile', required=True, help='output file name')
 
     # stitch option
     parser.add_argument('--no-offset','--no-off', dest='apply_offset', action='store_false',
-                        help='Do not apply offset if data sets are merely to be stitched '
-                             'and no adjustment of values needs to be made '
+                        help='Do not apply offset if 1) data sets are merely to be stitched '
+                             'AND 2) no adjustment of values needs to be made\n'
                              '(i.e., for two coherence maps), use this flag')
 
     # plot options

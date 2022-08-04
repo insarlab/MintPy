@@ -9,9 +9,9 @@
 import os
 import sys
 import time
-import argparse
 import h5py
 from mintpy.utils import utils as ut, readfile
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 #################################  Usage  ####################################
@@ -20,10 +20,12 @@ EXAMPLE = """example:
   temporal_average.py ./inputs/ifgramStack.h5 -d coherence   -o avgSpatialCoh.h5
 """
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Calculate temporal average (stacking) of multi-temporal datasets',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Calculate temporal average (stacking) of multi-temporal datasets'
+    epilog = EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', type=str, help='input file with multi-temporal datasets')
     parser.add_argument('-d', '--ds', '--dataset', dest='datasetName', default='coherence',

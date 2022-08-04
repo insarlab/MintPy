@@ -8,7 +8,6 @@
 
 import os
 import sys
-import argparse
 import h5py
 import numpy as np
 from matplotlib import pyplot as plt, dates as mdates
@@ -22,9 +21,12 @@ from mintpy.utils import (
     network as pnet,
     plot as pp,
 )
+from mintpy.utils.arg_utils import create_argument_parser
 
 
 ###############################  Usage  ################################
+TEMPLATE = get_template_content('modify_network')
+
 REFERENCE = """reference:
   Yunjun, Z., Fattahi, H. and Amelung, F. (2019), Small baseline InSAR time series analysis:
   Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
@@ -40,8 +42,6 @@ REFERENCE = """reference:
   California. Remote Sensing of Environment, 258, 112400. doi:10.1016/j.rse.2021.112400
 """
 
-TEMPLATE = get_template_content('modify_network')
-
 EXAMPLE = """example:
   modify_network.py inputs/ifgramStack.h5 -t smallbaselineApp.cfg
   modify_network.py inputs/ifgramStack.h5 --reset
@@ -49,10 +49,13 @@ EXAMPLE = """example:
 """
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Modify the network of interferograms',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
+def create_parser(subparsers=None):
+    synopsis = 'Modify the network of interferograms'
+    epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
+    name = __name__.split('.')[-1]
+    parser = create_argument_parser(
+        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
+
     parser.add_argument('file', help='Files to modify/drop network, e.g. inputs/ifgramStack.h5.')
     parser.add_argument('-t', '--template', dest='template_file',
                         help='Template file with input options')
