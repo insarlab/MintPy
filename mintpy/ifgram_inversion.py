@@ -66,7 +66,7 @@ def create_parser(subparsers=None):
     synopsis = 'Invert network of interferograms into time-series.'
     epilog = REFERENCE + '\n' + TEMPLATE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
-    parser = create_argument_parser(
+    parser = arg_utils.create_argument_parser(
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     # input dataset
