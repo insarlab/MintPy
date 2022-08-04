@@ -78,7 +78,7 @@ setup(
     ],
     extras_require={
         "cli": ["argcomplete"],
-        'platemotion': ['platemotion', 'astropy'],
+        'platemotion': ['platemotion', 'astropy'],  # will be removed in the coming new version of plate motion script
     },
 
     # package discovery
