@@ -18,11 +18,9 @@ numpy
 pyaps3>=0.3
 pykml>=0.2
 pyproj
+pyresample
 pysolid
 scikit-image
 scipy
-# for ARIA, FRInGE, HyP3, GMTSAR
+# for ISCE, ARIA, FRInGE, HyP3, GMTSAR
 # gdal>=3
-# for pyresample
-pyresample
-openmp

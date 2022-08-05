@@ -513,7 +513,7 @@ def get_view_parser(subparsers=None):
 def get_parser():
     """Instantiate the command line argument parser."""
     parser = argparse.ArgumentParser(prog=PROG, description=__doc__)
-    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    parser.add_argument("-v","--version", action="version", version=f"{__version__}")
 
     # Sub-command management
     sp = parser.add_subparsers(title="sub-commands", dest='func', required=True, metavar='')

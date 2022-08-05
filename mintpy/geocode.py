@@ -219,8 +219,11 @@ def read_template2inps(template_file, inps):
 def check_num_processor(nprocs):
     """Check number of processors
     Note by Yunjun, 2019-05-02:
-    1. conda install pyresample will install pykdtree and openmp, but it seems not working
+    1. conda install pyresample will install pykdtree and openmp, but it seems not working:
         geocode.py is getting slower with more processors
+            Test on a TS HDF5 file in size of (241, 2267, 2390)
+            Memory: up to 10GB
+            Run time: 2.5 mins for nproc=1, 3 mins for nproc=4
     2. macports seems to have minor speedup when more processors
     Thus, default number of processors is set to 1; although the capability of using multiple
     processors is written here.

@@ -34,19 +34,19 @@ release_history = (
 release_version = release_history[0].version
 release_date = release_history[0].date
 
-def get_version_info(version='v{}'.format(release_version), date=release_date):
+def get_version_info():
     """Grab version and date of the latest commit from a git repository"""
     # go to the repository directory
     dir_orig = os.getcwd()
     os.chdir(os.path.dirname(os.path.dirname(__file__)))
 
-    # grab git info into string
     try:
+        # grab from git cmd
         cmd = "git describe --tags"
         version = subprocess.check_output(cmd.split(), stderr=subprocess.DEVNULL)
-        version = version.decode('utf-8').strip()
+        version = version.decode('utf-8').strip()[1:]
 
-        #if there are new commits after the latest release
+        # if there are new commits after the latest release
         if '-' in version:
             version, num_commit = version.split('-')[:2]
             version += '-{}'.format(num_commit)
@@ -54,8 +54,11 @@ def get_version_info(version='v{}'.format(release_version), date=release_date):
         cmd = "git log -1 --date=short --format=%cd"
         date = subprocess.check_output(cmd.split(), stderr=subprocess.DEVNULL)
         date = date.decode('utf-8').strip()
+
     except:
-        pass
+        # use the latest release version/date
+        version = release_version
+        date = release_date
 
     # go back to the original directory
     os.chdir(dir_orig)

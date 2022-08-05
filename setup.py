@@ -70,11 +70,10 @@ setup(
         "pyaps3>=0.3",
         "pykml>=0.2",
         "pyproj",
+        "pyresample",  # pip installed version does not work
         "setuptools",
         "scikit-image",
         "scipy",
-        "pyresample",
-        # "openmp",
     ],
     extras_require={
         "cli": ["argcomplete"],
