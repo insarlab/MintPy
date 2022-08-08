@@ -116,7 +116,7 @@ def cmd_line_parse(iargs=None):
     if any(ref_diff > inps.max_ref_yx_diff for ref_diff in [ref_y_diff, ref_x_diff]):
         msg = 'REF_LAT/LON difference between input files > {} pixels!\n'.format(inps.max_ref_yx_diff)
         for fname, ref_lat, ref_lon in zip(inps.file, [ref_lat1, ref_lat2], [ref_lon1, ref_lon2]):
-            msg += 'file1: {}\n'.format(fname)
+            msg += 'file: {}\n'.format(fname)
             msg += '\tREF_LAT/LON: [{:.8f}, {:.8f}]\n'.format(ref_lat, ref_lon)
         raise ValueError(msg)
 

@@ -464,7 +464,9 @@ def read_reference_input(inps):
         # Do not use ref_y/x in masked out area
         if inps.maskFile and os.path.isfile(inps.maskFile):
             print('mask: '+inps.maskFile)
-            mask = readfile.read(inps.maskFile, datasetName='mask')[0]
+            ds_names = readfile.get_dataset_list(inps.maskFile)
+            ds_name = [x for x in ds_names if x in ['mask', 'waterMask']][0]
+            mask = readfile.read(inps.maskFile, datasetName=ds_name)[0]
             if mask[inps.ref_y, inps.ref_x] == 0:
                 inps.ref_y, inps.ref_x = None, None
                 msg = 'input reference point is in masked OUT area defined by {}!'.format(inps.maskFile)

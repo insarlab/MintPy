@@ -49,7 +49,7 @@ EXAMPLE = """example:
   smallbaselineApp.py -H                      #print    default template options
   smallbaselineApp.py -g                      #generate default template if it does not exist
   smallbaselineApp.py -g <custom_template>    #generate/update default template based on custom template
-  smallbaselineApp.py --plot                  #plot results without run
+  smallbaselineApp.py --plot                  #plot results w/o run [to populate the 'pic' folder after failed runs]
 
   # Run with --start/stop/dostep options
   smallbaselineApp.py GalapagosSenDT128.template --dostep velocity  #run at step 'velocity' only
@@ -617,6 +617,12 @@ class TimeSeriesAnalysis:
             msg += "Try the following:\n"
             msg += "1) Check the reference pixel and make sure it's not in areas with unwrapping errors\n"
             msg += "2) Check the network and make sure it's fully connected without subsets"
+            print(f'ERROR: {msg}')
+
+            # populate the pic folder to facilate the trouble shooting
+            self.plot_result(print_aux=False)
+
+            # terminate the program
             raise RuntimeError(msg)
         return
 
