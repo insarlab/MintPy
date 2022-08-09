@@ -72,21 +72,21 @@ def get_asc_desc2horz_vert_parser(subparsers=None):
 
 
 def get_bulk_plate_motion_parser(subparsers=None):
-    from . import bulk_plate_motion
+    from .cli import bulk_plate_motion
     parser = bulk_plate_motion.create_parser(subparsers)
     parser.set_defaults(func=bulk_plate_motion.main)
     return parser
 
 
 def get_closure_phase_bias_parser(subparsers=None):
-    from . import closure_phase_bias
+    from .cli import closure_phase_bias
     parser = closure_phase_bias.create_parser(subparsers)
     parser.set_defaults(func=closure_phase_bias.main)
     return parser
 
 
 def get_dem_error_parser(subparsers=None):
-    from . import dem_error
+    from .cli import dem_error
     parser = dem_error.create_parser(subparsers)
     parser.set_defaults(func=dem_error.main)
     return parser
@@ -150,7 +150,7 @@ def get_info_parser(subparsers=None):
 
 
 def get_iono_tec_parser(subparsers=None):
-    from . import iono_tec
+    from .cli import iono_tec
     parser = iono_tec.create_parser(subparsers)
     parser.set_defaults(func=iono_tec.main)
     return parser
@@ -185,7 +185,7 @@ def get_load_gbis_parser(subparsers=None):
 
 
 def get_local_oscilator_drift_parser(subparsers=None):
-    from . import local_oscilator_drift
+    from .cli import local_oscilator_drift
     parser = local_oscilator_drift.create_parser(subparsers)
     parser.set_defaults(func=local_oscilator_drift.main)
     return parser
@@ -292,7 +292,7 @@ def get_prep_snap_parser(subparsers=None):
 
 # R-T
 def get_remove_ramp_parser(subparsers=None):
-    from . import remove_ramp
+    from .cli import remove_ramp
     parser = remove_ramp.create_parser(subparsers)
     parser.set_defaults(func=remove_ramp.main)
     return parser
@@ -320,7 +320,7 @@ def get_remove_hdf5_dataset(subparsers=None):
 
 
 def get_s1ab_range_bias_parser(subparsers=None):
-    from . import s1ab_range_bias
+    from .cli import s1ab_range_bias
     parser = s1ab_range_bias.create_parser(subparsers)
     parser.set_defaults(func=s1ab_range_bias.main)
     return parser
@@ -397,7 +397,7 @@ def get_smallbaselineApp_parser(subparsers=None):
 
 
 def get_solid_earth_tides_parser(subparsers=None):
-    from . import solid_earth_tides
+    from .cli import solid_earth_tides
     parser = solid_earth_tides.create_parser(subparsers)
     parser.set_defaults(func=solid_earth_tides.main)
     return parser
@@ -460,21 +460,21 @@ def get_timeseries2velocity_parser(subparsers=None):
 
 
 def get_tropo_gacos_parser(subparsers=None):
-    from . import tropo_gacos
+    from .cli import tropo_gacos
     parser = tropo_gacos.create_parser(subparsers)
     parser.set_defaults(func=tropo_gacos.main)
     return parser
 
 
 def get_tropo_phase_elevation_parser(subparsers=None):
-    from . import tropo_phase_elevation
+    from .cli import tropo_phase_elevation
     parser = tropo_phase_elevation.create_parser(subparsers)
     parser.set_defaults(func=tropo_phase_elevation.main)
     return parser
 
 
 def get_tropo_pyaps3_parser(subparsers=None):
-    from . import tropo_pyaps3
+    from .cli import tropo_pyaps3
     parser = tropo_pyaps3.create_parser(subparsers)
     parser.set_defaults(func=tropo_pyaps3.main)
     return parser
@@ -489,14 +489,14 @@ def get_tsview_parser(subparsers=None):
 
 # U-Z
 def get_unwrap_error_bridging_parser(subparsers=None):
-    from . import unwrap_error_bridging
+    from .cli import unwrap_error_bridging
     parser = unwrap_error_bridging.create_parser(subparsers)
     parser.set_defaults(func=unwrap_error_bridging.main)
     return parser
 
 
 def get_unwrap_error_phase_closure_parser(subparsers=None):
-    from . import unwrap_error_phase_closure
+    from .cli import unwrap_error_phase_closure
     parser = unwrap_error_phase_closure.create_parser(subparsers)
     parser.set_defaults(func=unwrap_error_phase_closure.main)
     return parser
