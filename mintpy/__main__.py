@@ -58,7 +58,7 @@ def _autocomplete(parser):
 # in alphabetical order
 # A-G
 def get_add_parser(subparsers=None):
-    from . import add
+    from .cli import add
     parser = add.create_parser(subparsers)
     parser.set_defaults(func=add.main)
     return parser
@@ -100,7 +100,7 @@ def get_dem_gsi_parser(subparsers=None):
 
 
 def get_diff_parser(subparsers=None):
-    from . import diff
+    from .cli import diff
     parser = diff.create_parser(subparsers)
     parser.set_defaults(func=diff.main)
     return parser
@@ -129,14 +129,14 @@ def get_ifgram_inversion_parser(subparsers=None):
 
 
 def get_image_math_parser(subparsers=None):
-    from . import image_math
+    from .cli import image_math
     parser = image_math.create_parser(subparsers)
     parser.set_defaults(func=image_math.main)
     return parser
 
 
 def get_image_stitch_parser(subparsers=None):
-    from . import image_stitch
+    from .cli import image_stitch
     parser = image_stitch.create_parser(subparsers)
     parser.set_defaults(func=image_stitch.main)
     return parser
@@ -418,7 +418,7 @@ def get_spatial_filter_parser(subparsers=None):
 
 
 def get_subset_parser(subparsers=None):
-    from . import subset
+    from .cli import subset
     parser = subset.create_parser(subparsers)
     parser.set_defaults(func=subset.main)
     return parser
