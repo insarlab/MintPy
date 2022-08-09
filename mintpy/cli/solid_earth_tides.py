@@ -19,7 +19,7 @@ TEMPLATE = get_template_content('correct_SET')
 REFERENCE = """reference:
   Milbert, D. (2018), "solid: Solid Earth Tide", [Online]. Available: http://geodesyworld.github.io/
     SOFTS/solid.htm. Accessd on: 2020-09-06.
-  Yunjun, Z., Fattahi, H., Pi, X., Rosen, P., Simons, M., Agram, P., & Aoki, Y. (2022). Range 
+  Yunjun, Z., Fattahi, H., Pi, X., Rosen, P., Simons, M., Agram, P., & Aoki, Y. (2022). Range
     Geolocation Accuracy of C-/L-band SAR and its Implications for Operational Stack Coregistration.
     IEEE Trans. Geosci. Remote Sens., 60, doi:10.1109/TGRS.2022.3168509.
 """

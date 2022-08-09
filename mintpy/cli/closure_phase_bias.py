@@ -112,7 +112,7 @@ def main(iargs=None):
     start_time = time.time()
 
     # common inputs
-    kwargs = dict(outdir=inps.outdir, max_memory=inps.maxMemory)    
+    kwargs = dict(outdir=inps.outdir, max_memory=inps.maxMemory)
 
     if inps.action == 'mask':
         calc_closure_phase_mask(
