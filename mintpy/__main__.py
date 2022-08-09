@@ -93,7 +93,7 @@ def get_dem_error_parser(subparsers=None):
 
 
 def get_dem_gsi_parser(subparsers=None):
-    from . import dem_gsi
+    from .cli import dem_gsi
     parser = dem_gsi.create_parser(subparsers)
     parser.set_defaults(func=dem_gsi.main)
     return parser
@@ -107,7 +107,7 @@ def get_diff_parser(subparsers=None):
 
 
 def get_generate_mask_parser(subparsers=None):
-    from . import generate_mask
+    from .cli import generate_mask
     parser = generate_mask.create_parser(subparsers)
     parser.set_defaults(func=generate_mask.main)
     return parser
@@ -192,7 +192,7 @@ def get_local_oscilator_drift_parser(subparsers=None):
 
 
 def get_lookup_geo2radar_parser(subparsers=None):
-    from . import lookup_geo2radar
+    from .cli import lookup_geo2radar
     parser = lookup_geo2radar.create_parser(subparsers)
     parser.set_defaults(func=lookup_geo2radar.main)
     return parser
