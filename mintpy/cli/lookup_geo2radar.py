@@ -11,8 +11,8 @@ from mintpy.utils.arg_utils import create_argument_parser
 
 ################################################################################
 EXAMPLE = '''examples:
-    lookup_geo2radar.py geometryGeo.h5 
-    lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5 
+    lookup_geo2radar.py geometryGeo.h5
+    lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5
     lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5 --parallel 4
 '''
 
@@ -38,7 +38,7 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
-################################################################################        
+################################################################################
 def main(iargs=None):
     import numpy as np
     from ..utils import readfile
@@ -77,7 +77,7 @@ def main(iargs=None):
     LAT = float(Corner_LAT) + yv*float(post_Lat)
     LON = float(Corner_LON) + xv*float(post_Lon)
     LAT = LAT.flatten()
-    LON = LON.flatten() 
+    LON = LON.flatten()
 
     WIDTH  = int(meta['WIDTH'])
     LENGTH  = int(meta['LENGTH'])
@@ -90,7 +90,7 @@ def main(iargs=None):
 
     xx = xx0[xx0!=0]
     yy = yy0[xx0!=0]
-    zz1 = zz01[xx0!=0] #lat 
+    zz1 = zz01[xx0!=0] #lat
     zz2 = zz02[xx0!=0] # lon
 
     #points = (xx,yy)
@@ -114,7 +114,7 @@ def main(iargs=None):
     data_parallel = []
     for i, (ay, ax) in enumerate(zip(split_grid_y, split_grid_x)):
         # extend the search area by 5 pixels
-        max_ax = max(ax.flatten()) + 5 
+        max_ax = max(ax.flatten()) + 5
         min_ax = min(ax.flatten()) - 5
         max_ay = max(ay.flatten()) + 5
         min_ay = min(ay.flatten()) - 5
