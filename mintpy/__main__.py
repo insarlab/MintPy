@@ -228,63 +228,63 @@ def get_plot_transection_parser(subparsers=None):
 
 
 def get_prep_aria_parser(subparsers=None):
-    from . import prep_aria
+    from .cli import prep_aria
     parser = prep_aria.create_parser(subparsers)
     parser.set_defaults(func=prep_aria.main)
     return parser
 
 
 def get_prep_cosicorr_parser(subparsers=None):
-    from . import prep_cosicorr
+    from .cli import prep_cosicorr
     parser = prep_cosicorr.create_parser(subparsers)
     parser.set_defaults(func=prep_cosicorr.main)
     return parser
 
 
 def get_prep_fringe_parser(subparsers=None):
-    from . import prep_fringe
+    from .cli import prep_fringe
     parser = prep_fringe.create_parser(subparsers)
     parser.set_defaults(func=prep_fringe.main)
     return parser
 
 
 def get_prep_gamma_parser(subparsers=None):
-    from . import prep_gamma
+    from .cli import prep_gamma
     parser = prep_gamma.create_parser(subparsers)
     parser.set_defaults(func=prep_gamma.main)
     return parser
 
 
 def get_prep_gmtsar_parser(subparsers=None):
-    from . import prep_gmtsar
+    from .cli import prep_gmtsar
     parser = prep_gmtsar.create_parser(subparsers)
     parser.set_defaults(func=prep_gmtsar.main)
     return parser
 
 
 def get_prep_hyp3_parser(subparsers=None):
-    from . import prep_hyp3
+    from .cli import prep_hyp3
     parser = prep_hyp3.create_parser(subparsers)
     parser.set_defaults(func=prep_hyp3.main)
     return parser
 
 
 def get_prep_isce_parser(subparsers=None):
-    from . import prep_isce
+    from .cli import prep_isce
     parser = prep_isce.create_parser(subparsers)
     parser.set_defaults(func=prep_isce.main)
     return parser
 
 
 def get_prep_roipac_parser(subparsers=None):
-    from . import prep_roipac
+    from .cli import prep_roipac
     parser = prep_roipac.create_parser(subparsers)
     parser.set_defaults(func=prep_roipac.main)
     return parser
 
 
 def get_prep_snap_parser(subparsers=None):
-    from . import prep_snap
+    from .cli import prep_snap
     parser = prep_snap.create_parser(subparsers)
     parser.set_defaults(func=prep_snap.main)
     return parser
