@@ -67,9 +67,9 @@ def get_version_info():
 
 ###########################################################################
 
-version_num, version_date = get_version_info()
+version, version_date = get_version_info()
 version_description = """MintPy version {v}, date {d}""".format(
-    v=version_num,
+    v=version,
     d=version_date,
 )
 
@@ -90,7 +90,7 @@ ___________________________________________________________
    Miami InSAR Time-series software in Python    \______/ 
           MintPy {v}, {d}
 ___________________________________________________________
-""".format(v=version_num, d=version_date)
+""".format(v=version, d=version_date)
 
 website = 'https://github.com/insarlab/MintPy'
 

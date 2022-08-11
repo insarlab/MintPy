@@ -5,25 +5,19 @@
 # Author: Zhang Yunjun, Nov 2020                           #
 ############################################################
 
-
+import os
+import sys
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
 
+# Grab version and description from version.py
+# link: https://stackoverflow.com/questions/53648900
+sys.path.append(os.path.dirname(__file__))
+from mintpy.version import version, description
 
-# Grab from README file: long_description
+# Grab long_description from README.md
 with open("docs/README.md", "r") as f:
     long_description = f.read()
-
-# Grab from version.py file: version and description
-with open("mintpy/version.py", "r") as f:
-    lines = f.readlines()
-    # version
-    line = [line for line in lines if line.strip().startswith("Tag(")][0].strip()
-    version = line.replace("'",'"').split('"')[1]
-    # description
-    line = [line for line in lines if line.startswith("description")][0].strip()
-    description = line.replace("'",'"').split('"')[1]
-
 
 setup(
     name="mintpy",
