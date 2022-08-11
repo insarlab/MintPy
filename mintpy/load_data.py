@@ -766,7 +766,7 @@ def prepare_metadata(iDict):
         geom_names = ['dem', 'lookupY', 'lookupX', 'incAngle', 'azAngle', 'shadowMask', 'waterMask']
         geom_keys = ['mintpy.load.{}File'.format(i) for i in geom_names]
         geom_files = [os.path.basename(iDict[key]) for key in geom_keys
-                      if (iDict.get(key, 'auto') != 'auto')]
+                      if iDict.get(key, 'auto') not in ['auto', 'None', 'no',  None, False]]
 
         # compose list of input arguments
         iargs = ['-m', meta_file, '-g', geom_dir]
