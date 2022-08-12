@@ -51,7 +51,7 @@ def create_parser(subparsers=None):
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
- 
+
     # input files
     parser.add_argument('file', nargs=2,
                         help='Ascending and descending files\n'

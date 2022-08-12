@@ -57,7 +57,7 @@ def cmd_line_parse(iargs=None):
 ############################################################
 def main(iargs=None):
     from ..mask import mask_file
-    
+
     inps = cmd_line_parse(iargs)
 
     # ext = os.path.splitext(inps.file)[1]

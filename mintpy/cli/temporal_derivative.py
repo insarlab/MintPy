@@ -11,7 +11,7 @@ from mintpy.utils.arg_utils import create_argument_parser
 
 ############################################################################
 EXAMPLE = """example:
-  temporal_derivative.py  timeseries.h5 
+  temporal_derivative.py  timeseries.h5
 """
 
 def create_parser(subparsers=None):
