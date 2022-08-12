@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,7 +6,6 @@
 
 
 import os
-import sys
 import warnings
 import h5py
 import numpy as np
@@ -20,58 +18,8 @@ np_logger.setLevel(logging.WARNING)
 from mintpy.utils import (
     readfile,
     writefile,
-    utils1 as ut,
     attribute as attr,
 )
-from mintpy.utils.arg_utils import create_argument_parser
-
-
-##################################################################################################
-EXAMPLE = """example:
-  multilook.py  velocity.h5  -r 15 -a 15
-  multilook.py  srtm30m.dem  -r 10 -a 10  -o srtm30m_300m.dem
-
-  # Ignore / skip marginal pixels
-  multilook.py ../../geom_reference/hgt.rdr.full -r 300 -a 100 --margin 58 58 58 58 -o hgt.rdr
-"""
-
-
-def create_parser(subparsers=None):
-    synopsis = 'Multilook the input file'
-    epilog = EXAMPLE
-    name = __name__.split('.')[-1]
-    parser = create_argument_parser(
-        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
-
-    parser.add_argument('file', nargs='+', help='File(s) to multilook')
-    parser.add_argument('-r','--range','-x', dest='lks_x', type=int, default=1,
-                        help='number of multilooking in range  /x direction (default: %(default)s).')
-    parser.add_argument('-a','--azimuth','-y', dest='lks_y', type=int, default=1,
-                        help='number of multilooking in azimuth/y direction (default: %(default)s).')
-    parser.add_argument('-o', '--outfile',
-                        help='Output file name. Disabled when more than 1 input files')
-    parser.add_argument('-m','--method', dest='method', type=str, default='mean', choices=['mean', 'median', 'nearest'],
-                        help='downsampling method (default: %(default)s) \n'
-                             'e.g. nearest for geometry, average for observations')
-    parser.add_argument('--margin', dest='margin', type=int, nargs=4, metavar=('TOP','BOTTOM','LEFT','RIGHT'),
-                        default=[0,0,0,0], help='number of pixels on the margin to skip, (default: %(default)s).')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-    inps.file = ut.get_file_list(inps.file)
-
-    # check 1 - num of multilooks
-    if inps.lks_x == 1 and inps.lks_y == 1:
-        raise SystemExit('ERROR: no multilooking specified: lks_x/y=1!')
-
-    # check 2 - output file name
-    if len(inps.file) > 1 and inps.outfile:
-        inps.outfile = None
-        print('more than one file is input, disable custom output filename.')
-    return inps
 
 
 ######################################## Sub Functions ############################################
@@ -319,24 +267,3 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='mean', margin=[0,
             writefile.write_isce_xml(atr, outfile)
 
     return outfile
-
-
-##################################################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-
-    for infile in inps.file:
-        multilook_file(infile,
-                       lks_y=inps.lks_y,
-                       lks_x=inps.lks_x,
-                       outfile=inps.outfile,
-                       method=inps.method,
-                       margin=inps.margin)
-
-    print('Done.')
-    return
-
-
-###################################################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])

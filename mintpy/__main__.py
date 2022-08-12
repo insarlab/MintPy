@@ -65,7 +65,7 @@ def get_add_parser(subparsers=None):
 
 
 def get_asc_desc2horz_vert_parser(subparsers=None):
-    from . import asc_desc2horz_vert
+    from .cli import asc_desc2horz_vert
     parser = asc_desc2horz_vert.create_parser(subparsers)
     parser.set_defaults(func=asc_desc2horz_vert.main)
     return parser
@@ -114,7 +114,7 @@ def get_generate_mask_parser(subparsers=None):
 
 
 def get_geocode_parser(subparsers=None):
-    from . import geocode
+    from .cli import geocode
     parser = geocode.create_parser(subparsers)
     parser.set_defaults(func=geocode.main)
     return parser
@@ -122,7 +122,7 @@ def get_geocode_parser(subparsers=None):
 
 # H-N
 def get_ifgram_inversion_parser(subparsers=None):
-    from . import ifgram_inversion
+    from .cli import ifgram_inversion
     parser = ifgram_inversion.create_parser(subparsers)
     parser.set_defaults(func=ifgram_inversion.main)
     return parser
@@ -157,14 +157,14 @@ def get_iono_tec_parser(subparsers=None):
 
 
 def get_mask_parser(subparsers=None):
-    from . import mask
+    from .cli import mask
     parser = mask.create_parser(subparsers)
     parser.set_defaults(func=mask.main)
     return parser
 
 
 def get_multilook_parser(subparsers=None):
-    from . import multilook
+    from .cli import multilook
     parser = multilook.create_parser(subparsers)
     parser.set_defaults(func=multilook.main)
     return parser
@@ -199,7 +199,7 @@ def get_lookup_geo2radar_parser(subparsers=None):
 
 
 def get_modify_network_parser(subparsers=None):
-    from . import modify_network
+    from .cli import modify_network
     parser = modify_network.create_parser(subparsers)
     parser.set_defaults(func=modify_network.main)
     return parser
@@ -299,14 +299,14 @@ def get_remove_ramp_parser(subparsers=None):
 
 
 def get_reference_date_parser(subparsers=None):
-    from . import reference_date
+    from .cli import reference_date
     parser = reference_date.create_parser(subparsers)
     parser.set_defaults(func=reference_date.main)
     return parser
 
 
 def get_reference_point_parser(subparsers=None):
-    from . import reference_point
+    from .cli import reference_point
     parser = reference_point.create_parser(subparsers)
     parser.set_defaults(func=reference_point.main)
     return parser
@@ -390,7 +390,7 @@ def get_save_roipac_parser(subparsers=None):
 
 
 def get_smallbaselineApp_parser(subparsers=None):
-    from . import smallbaselineApp
+    from .cli import smallbaselineApp
     parser = smallbaselineApp.create_parser(subparsers)
     parser.set_defaults(func=smallbaselineApp.main)
     return parser
@@ -404,14 +404,14 @@ def get_solid_earth_tides_parser(subparsers=None):
 
 
 def get_spatial_average_parser(subparsers=None):
-    from . import spatial_average
+    from .cli import spatial_average
     parser = spatial_average.create_parser(subparsers)
     parser.set_defaults(func=spatial_average.main)
     return parser
 
 
 def get_spatial_filter_parser(subparsers=None):
-    from . import spatial_filter
+    from .cli import spatial_filter
     parser = spatial_filter.create_parser(subparsers)
     parser.set_defaults(func=spatial_filter.main)
     return parser
@@ -425,35 +425,35 @@ def get_subset_parser(subparsers=None):
 
 
 def get_temporal_average_parser(subparsers=None):
-    from . import temporal_average
+    from .cli import temporal_average
     parser = temporal_average.create_parser(subparsers)
     parser.set_defaults(func=temporal_average.main)
     return parser
 
 
 def get_temporal_derivative_parser(subparsers=None):
-    from . import temporal_derivative
+    from .cli import temporal_derivative
     parser = temporal_derivative.create_parser(subparsers)
     parser.set_defaults(func=temporal_derivative.main)
     return parser
 
 
 def get_temporal_filter_parser(subparsers=None):
-    from . import temporal_filter
+    from .cli import temporal_filter
     parser = temporal_filter.create_parser(subparsers)
     parser.set_defaults(func=temporal_filter.main)
     return parser
 
 
 def get_timeseries_rms_parser(subparsers=None):
-    from . import timeseries_rms
+    from .cli import timeseries_rms
     parser = timeseries_rms.create_parser(subparsers)
     parser.set_defaults(func=timeseries_rms.main)
     return parser
 
 
 def get_timeseries2velocity_parser(subparsers=None):
-    from . import timeseries2velocity
+    from .cli import timeseries2velocity
     parser = timeseries2velocity.create_parser(subparsers)
     parser.set_defaults(func=timeseries2velocity.main)
     return parser
