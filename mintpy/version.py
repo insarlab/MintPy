@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # grab version / date of the latest commit
 
 

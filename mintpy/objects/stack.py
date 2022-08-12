@@ -14,7 +14,7 @@ import itertools
 import datetime as dt
 import h5py
 import numpy as np
-from mintpy.utils import ptime, time_func
+from mintpy.utils import ptime
 
 
 ##------------------ Global Variables ---------------------##

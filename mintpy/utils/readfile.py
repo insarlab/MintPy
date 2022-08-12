@@ -16,7 +16,6 @@ import warnings
 import defusedxml.ElementTree as ET
 
 import h5py
-import json
 import numpy as np
 
 from mintpy.objects import (

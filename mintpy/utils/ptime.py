@@ -8,11 +8,8 @@
 
 import os
 import re
-import time
 import datetime as dt
 import numpy as np
-from mintpy.objects.progress import progressBar
-
 
 
 ################################################################

@@ -12,7 +12,6 @@ import os
 import time
 import glob
 import shutil
-import numpy as np
 
 
 # supported / tested clusters
@@ -36,7 +35,8 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
     :param dimension: str = 'y' or 'x', the dimension along which to split the boxes
     :return: sub_boxes: list(list(4 int)), the splited sub boxes
     """
-
+    import numpy as np
+    
     dimension = dimension.lower()
     if num_split <= 1:
         return [box]

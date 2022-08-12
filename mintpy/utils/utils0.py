@@ -19,9 +19,6 @@ import os
 import math
 import h5py
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy import ndimage
-from pyproj import CRS, Proj, Transformer
 
 # global variables
 SPEED_OF_LIGHT = 299792458 # m/s
@@ -44,6 +41,7 @@ def range_distance(atr, dimension=2, print_msg=True):
                     0 for center value
     Returns:    np.array (0, 1 or 2 D) : range distance between antenna and ground target in meters
     """
+    import numpy as np
     # return center value for geocoded input file
     if 'Y_FIRST' in atr.keys() and dimension > 0:
         dimension = 0
@@ -280,6 +278,7 @@ def utm_zone2epsg_code(utm_zone):
     Returns:    epsg     - str, EPSG code
     Examples:   epsg = utm_zone2epsg_code('11N')
     """
+    from pyproj import CRS
     crs = CRS.from_dict({'proj': 'utm',
                          'zone': int(utm_zone[:-1]),
                          'south': utm_zone[-1] == 'S',
@@ -298,6 +297,7 @@ def to_latlon(infile, x, y):
                 x/y    - scalar or 1/2D np.ndarray, coordiantes in x and y direction
     Returns:    y/x    - scalar or 1/2D np.ndarray, coordinates in latitutde and longitude
     """
+    from pyproj import Proj, Transformer
     from osgeo import gdal
 
     # read projection info using gdal
@@ -655,6 +655,9 @@ def get_largest_conn_component(mask_in, min_num_pixel=1e4, display=False):
                 display : bool, display the result or not.
     Returns:    mask_out : 2D np.array in np.bool_ format
     """
+    from scipy import ndimage
+    import matplotlib.pyplot as plt
+
     mask_out = np.zeros(mask_in.shape, np.bool_)
     labels = ndimage.label(mask_in)[0]
     num_pixel = np.max(np.bincount(labels.flatten())[1:])
@@ -680,6 +683,8 @@ def min_region_distance(mask1, mask2, display=False):
                 min_dist : float, min euclidean distance
     """
     from scipy.spatial import cKDTree
+    import matplotlib.pyplot as plt
+
     y, x = np.where(mask1 != 0)
     pts1 = np.hstack((x.reshape(-1, 1), y.reshape(-1, 1)))
     tree = cKDTree(pts1)
