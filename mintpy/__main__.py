@@ -143,7 +143,7 @@ def get_image_stitch_parser(subparsers=None):
 
 
 def get_info_parser(subparsers=None):
-    from . import info
+    from .cli import info
     parser = info.create_parser(subparsers)
     parser.set_defaults(func=info.main)
     return parser
@@ -207,21 +207,21 @@ def get_modify_network_parser(subparsers=None):
 
 # O-Q
 def get_plot_coherence_matrix_parser(subparsers=None):
-    from . import plot_coherence_matrix
+    from .cli import plot_coherence_matrix
     parser = plot_coherence_matrix.create_parser(subparsers)
     parser.set_defaults(func=plot_coherence_matrix.main)
     return parser
 
 
 def get_plot_network_parser(subparsers=None):
-    from . import plot_network
+    from .cli import plot_network
     parser = plot_network.create_parser(subparsers)
     parser.set_defaults(func=plot_network.main)
     return parser
 
 
 def get_plot_transection_parser(subparsers=None):
-    from . import plot_transection
+    from .cli import plot_transection
     parser = plot_transection.create_parser(subparsers)
     parser.set_defaults(func=plot_transection.main)
     return parser
@@ -481,7 +481,7 @@ def get_tropo_pyaps3_parser(subparsers=None):
 
 
 def get_tsview_parser(subparsers=None):
-    from . import tsview
+    from .cli import tsview
     parser = tsview.create_parser(subparsers)
     parser.set_defaults(func=tsview.main)
     return parser
@@ -503,7 +503,7 @@ def get_unwrap_error_phase_closure_parser(subparsers=None):
 
 
 def get_view_parser(subparsers=None):
-    from . import view
+    from .cli import view
     parser = view.create_parser(subparsers)
     parser.set_defaults(func=view.main)
     return parser
