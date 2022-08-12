@@ -45,7 +45,7 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
     x0, y0, x1, y1 = box
     length, width = y1 - y0, x1 - x0
 
-    # calc step 
+    # calc step
     if dimension == 'y':
         dim_size = length
     else:
@@ -463,4 +463,3 @@ class DaskCluster:
             shutil.move(item, stderr_folder)
 
 ############################## End of DaskCluster class ####################################
-

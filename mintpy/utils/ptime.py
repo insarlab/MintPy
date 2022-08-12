@@ -10,8 +10,6 @@ import os
 import re
 import datetime as dt
 import numpy as np
-from mintpy.objects.progress import progressBar
-
 
 ################################################################
 def get_compact_isoformat(date_str):

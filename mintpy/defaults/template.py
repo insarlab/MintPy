@@ -59,6 +59,7 @@ def get_template_content(step_name, template_file=None, indentation=2, header_fo
 
     # read template file into a list of strings
     if template_file is None:
+        import mintpy
         template_file = os.path.join(os.path.dirname(mintpy.__file__), 'defaults/smallbaselineApp.cfg')
     lines = open(template_file, 'r').readlines()
     lines = [line.strip(' ') for line in lines]

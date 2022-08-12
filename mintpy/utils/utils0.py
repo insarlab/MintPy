@@ -41,6 +41,7 @@ def range_distance(atr, dimension=2, print_msg=True):
                     0 for center value
     Returns:    np.array (0, 1 or 2 D) : range distance between antenna and ground target in meters
     """
+    import numpy as np
     # return center value for geocoded input file
     if 'Y_FIRST' in atr.keys() and dimension > 0:
         dimension = 0
