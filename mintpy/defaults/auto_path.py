@@ -11,7 +11,6 @@
 import os
 import re
 import glob
-import numpy as np
 
 
 # Default path of data files from different InSAR processors to be loaded into MintPy
@@ -204,6 +203,7 @@ def get_reference_date12(proj_dir, processor='roipac'):
     # opt 1 - reference_ifgram.txt
     m_ifg_file = os.path.join(proj_dir, 'PROCESS', 'reference_ifgram.txt')
     if os.path.isfile(m_ifg_file):
+        import numpy as np
         m_date12 = str(np.loadtxt(m_ifg_file, dtype=bytes).astype(str))
         return m_date12
 

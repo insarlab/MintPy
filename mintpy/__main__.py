@@ -171,14 +171,14 @@ def get_multilook_parser(subparsers=None):
 
 
 def get_load_data_parser(subparsers=None):
-    from . import load_data
+    from .cli import load_data
     parser = load_data.create_parser(subparsers)
     parser.set_defaults(func=load_data.main)
     return parser
 
 
 def get_load_gbis_parser(subparsers=None):
-    from . import load_gbis
+    from .cli import load_gbis
     parser = load_gbis.create_parser(subparsers)
     parser.set_defaults(func=load_gbis.main)
     return parser
@@ -313,7 +313,7 @@ def get_reference_point_parser(subparsers=None):
 
 
 def get_remove_hdf5_dataset(subparsers=None):
-    from . import remove_hdf5_dataset
+    from .cli import remove_hdf5_dataset
     parser = remove_hdf5_dataset.create_parser(subparsers)
     parser.set_defaults(func=remove_hdf5_dataset.main)
     return parser
@@ -327,63 +327,63 @@ def get_s1ab_range_bias_parser(subparsers=None):
 
 
 def get_save_gbis_parser(subparsers=None):
-    from . import save_gbis
+    from .cli import save_gbis
     parser = save_gbis.create_parser(subparsers)
     parser.set_defaults(func=save_gbis.main)
     return parser
 
 
 def get_save_gdal_parser(subparsers=None):
-    from . import save_gdal
+    from .cli import save_gdal
     parser = save_gdal.create_parser(subparsers)
     parser.set_defaults(func=save_gdal.main)
     return parser
 
 
 def get_save_gmt_parser(subparsers=None):
-    from . import save_gmt
+    from .cli import save_gmt
     parser = save_gmt.create_parser(subparsers)
     parser.set_defaults(func=save_gmt.main)
     return parser
 
 
 def get_save_hdfeos5_parser(subparsers=None):
-    from . import save_hdfeos5
+    from .cli import save_hdfeos5
     parser = save_hdfeos5.create_parser(subparsers)
     parser.set_defaults(func=save_hdfeos5.main)
     return parser
 
 
 def get_save_kite_parser(subparsers=None):
-    from . import save_kite
+    from .cli import save_kite
     parser = save_kite.create_parser(subparsers)
     parser.set_defaults(func=save_kite.main)
     return parser
 
 
 def get_save_kmz_timeseries_parser(subparsers=None):
-    from . import save_kmz_timeseries
+    from .cli import save_kmz_timeseries
     parser = save_kmz_timeseries.create_parser(subparsers)
     parser.set_defaults(func=save_kmz_timeseries.main)
     return parser
 
 
 def get_save_kmz_parser(subparsers=None):
-    from . import save_kmz
+    from .cli import save_kmz
     parser = save_kmz.create_parser(subparsers)
     parser.set_defaults(func=save_kmz.main)
     return parser
 
 
 def get_save_qgis_parser(subparsers=None):
-    from . import save_qgis
+    from .cli import save_qgis
     parser = save_qgis.create_parser(subparsers)
     parser.set_defaults(func=save_qgis.main)
     return parser
 
 
 def get_save_roipac_parser(subparsers=None):
-    from . import save_roipac
+    from .cli import save_roipac
     parser = save_roipac.create_parser(subparsers)
     parser.set_defaults(func=save_roipac.main)
     return parser
