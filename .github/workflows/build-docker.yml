@@ -12,6 +12,7 @@ on:
 
 jobs:
   dockerize:
+    name: Build Docker image and push to GitHub Container Registry
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -31,7 +32,7 @@ jobs:
       - name: Set environment variables for docker build
         run: |
           # Lowercase repo for Github Container Registry
-          echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+          echo "REPO=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
           # Ensure tags are checked out
           git fetch origin +refs/tags/*:refs/tags/*
           # Version number from tag
