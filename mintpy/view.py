@@ -1107,6 +1107,10 @@ def read_data4figure(i_start, i_end, inps, metadata):
                               xstep=inps.multilook_num,
                               ystep=inps.multilook_num,
                               print_msg=False)[0]
+            # reference pixel info in unwrapPhase
+            if inps.dset[i].startswith('unwrapPhase') and inps.file_ref_yx:
+                ref_y, ref_x = inps.file_ref_yx
+                d[d!=0] -= d[ref_y, ref_x]
             data[i - i_start, :, :] = d
             prog_bar.update(i - i_start + 1, suffix=inps.dset[i].split('/')[-1])
         prog_bar.close()

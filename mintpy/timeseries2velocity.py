@@ -487,7 +487,7 @@ def run_timeseries2time_func(inps):
             # Bootstrapping is a resampling method which can be used to estimate properties
             # of an estimator. The method relies on independently sampling the data set with
             # replacement.
-            print('estimating time function STD with bootstrap resampling ({} times) ...'.format(
+            print('estimating time functions STD with bootstrap resampling ({} times) ...'.format(
                 inps.bootstrapCount))
 
             # calc model of all bootstrap sampling
@@ -559,7 +559,7 @@ def run_timeseries2time_func(inps):
                 # TO DO: save the full covariance matrix of the time function parameters
                 # only the STD is saved right now
                 covar_flag = True if len(ts_cov.shape) == 3 else False
-                msg = 'estimating time function STD from time-serries '
+                msg = 'estimating time functions STD from time-serries '
                 msg += 'covariance pixel-by-pixel ...' if covar_flag else 'variance pixel-by-pixel ...'
                 print(msg)
 
@@ -583,7 +583,7 @@ def run_timeseries2time_func(inps):
 
             elif inps.uncertaintyQuantification == 'residue':
                 # option 2.3 - assume obs errors following normal dist. in time
-                print('estimating time function STD from time-series fitting residual ...')
+                print('estimating time functions STD from time-series fitting residual ...')
                 G_inv = linalg.inv(np.dot(G.T, G))
                 m_var = e2.reshape(1, -1) / (num_date - num_param)
                 m_std[:, mask] = np.sqrt(np.dot(np.diag(G_inv).reshape(-1, 1), m_var))

@@ -395,26 +395,35 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
                     slice_flag[date_list.index(d)] = True
 
             # read data
+            num_slice = np.sum(slice_flag)
+            inds = np.where(slice_flag)[0].tolist()
+
             if xstep * ystep == 1:
-                data = ds[:,
-                          box[1]:box[3],
-                          box[0]:box[2]][slice_flag]
+                if num_slice / slice_flag.size < 0.05:
+                    # single indexing if only a small fraction is read
+                    data = np.zeros((num_slice, ysize, xsize), dtype=ds.dtype)
+                    for i, ind in enumerate(inds):
+                        data[i] = ds[ind,
+                                     box[1]:box[3],
+                                     box[0]:box[2]]
+                else:
+                    data = ds[:,
+                              box[1]:box[3],
+                              box[0]:box[2]][slice_flag]
 
             else:
                 # sampling / nearest interplation in y/xstep
                 # use for loop to save memory
-                num_slice = np.sum(slice_flag)
                 data = np.zeros((num_slice, ysize, xsize), ds.dtype)
 
-                inds = np.where(slice_flag)[0]
-                for i in range(num_slice):
+                for i, ind in enumerate(inds):
                     # print out msg
                     if print_msg:
                         sys.stdout.write('\r' + f'reading 2D slices {i+1}/{num_slice}...')
                         sys.stdout.flush()
 
                     # read and index
-                    d2 = ds[inds[i],
+                    d2 = ds[ind,
                             box[1]:box[3],
                             box[0]:box[2]]
                     d2 = d2[int(ystep/2)::ystep,
