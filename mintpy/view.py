@@ -567,8 +567,8 @@ def plot_slice(ax, data, metadata, inps=None):
             y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
             ref_data = data[y - inps.pix_box[1], x - inps.pix_box[0]]
             data -= ref_data
-            vprint(('referencing InSAR data to the pixel nearest to '
-                    f'GPS station: {inps.ref_gps_site} at {ref_site_lalo} '
+            vprint(('referencing InSAR data to the pixel nearest to GNSS station: '
+                    f'{inps.ref_gps_site} at [{ref_site_lalo[0]:.6f}, {ref_site_lalo[1]:.6f}] '
                     f'by substrating {ref_data:.3f} {inps.disp_unit}'))
             # do not show the original InSAR reference point
             inps.disp_ref_pixel = False

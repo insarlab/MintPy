@@ -127,92 +127,7 @@ def analyze_rms(date_list, rms_list, inps):
         if os.path.isfile(ex_date_file):
             os.remove(ex_date_file)
 
-    # plot bar figure and save
-    fig_file = os.path.splitext(inps.rms_file)[0]+'.pdf'
-    fig, ax = plt.subplots(figsize=inps.fig_size)
-    print('create figure in size:', inps.fig_size)
-    ax = plot_rms_bar(ax, date_list, np.array(rms_list)*1000., cutoff=inps.cutoff)
-    fig.savefig(fig_file, bbox_inches='tight', transparent=True)
-    print('save figure to file: '+fig_file)
     return inps
-
-
-def plot_rms_bar(ax, date_list, rms, cutoff=3., font_size=12,
-                 tick_year_num=1, legend_loc='best',
-                 disp_legend=True, disp_side_plot=True, disp_thres_text=False,
-                 ylabel='Residual phase RMS [mm]'):
-    """ Bar plot Phase Residual RMS
-    Parameters: ax : Axes object
-                date_list : list of string in YYYYMMDD format
-                rms    : 1D np.array of float for RMS value in mm
-                cutoff : cutoff value of MAD outlier detection
-                tick_year_num : int, number of years per major tick
-                legend_loc : 'upper right' or (0.5, 0.5)
-    Returns:    ax : Axes object
-    """
-    dates, datevector = ptime.date_list2vector(date_list)
-    dates = np.array(dates)
-    try:
-        bar_width = min(ut.most_common(np.diff(dates).tolist(), k=2))*3/4
-    except:
-        bar_width = np.min(np.diff(dates).tolist())*3/4
-    rms = np.array(rms)
-
-    # Plot all dates
-    ax.bar(dates, rms, bar_width.days, color=pp.mplColors[0])
-
-    # Plot reference date
-    ref_idx = np.argmin(rms)
-    ax.bar(dates[ref_idx], rms[ref_idx], bar_width.days, color=pp.mplColors[1], label='Reference date')
-
-    # Plot exclude dates
-    rms_threshold = ut.median_abs_deviation_threshold(rms, center=0., cutoff=cutoff)
-    ex_idx = rms > rms_threshold
-    if not np.all(ex_idx==False):
-        ax.bar(dates[ex_idx], rms[ex_idx], bar_width.days, color='darkgray', label='Exclude date')
-
-    # Plot rms_threshold line
-    (ax, xmin, xmax) = pp.auto_adjust_xaxis_date(ax, datevector, font_size, every_year=tick_year_num)
-    ax.plot(np.array([xmin, xmax]), np.array([rms_threshold, rms_threshold]), '--k',
-            label='Median Abs Dev * {}'.format(cutoff))
-
-    # axis format
-    ax = pp.auto_adjust_yaxis(ax, np.append(rms, rms_threshold), font_size, ymin=0.0)
-    #ax.set_xlabel('Time [years]', fontsize=font_size)
-    ax.set_ylabel(ylabel, fontsize=font_size)
-    ax.tick_params(which='both', direction='in', labelsize=font_size,
-                   bottom=True, top=True, left=True, right=True)
-
-    # 2nd axes for circles
-    if disp_side_plot:
-        divider = make_axes_locatable(ax)
-        ax2 = divider.append_axes("right", "10%", pad="2%")
-        ax2.plot(np.ones(rms.shape, np.float32) * 0.5, rms, 'o', mfc='none', color=pp.mplColors[0])
-        ax2.plot(np.ones(rms.shape, np.float32)[ref_idx] * 0.5, rms[ref_idx], 'o', mfc='none', color=pp.mplColors[1])
-        if not np.all(ex_idx==False):
-            ax2.plot(np.ones(rms.shape, np.float32)[ex_idx] * 0.5, rms[ex_idx], 'o', mfc='none', color='darkgray')
-        ax2.plot(np.array([0, 1]), np.array([rms_threshold, rms_threshold]), '--k')
-
-        ax2.set_ylim(ax.get_ylim())
-        ax2.set_xlim([0, 1])
-        ax2.tick_params(which='both', direction='in', labelsize=font_size,
-                        bottom=True, top=True, left=True, right=True)
-        ax2.get_xaxis().set_ticks([])
-        ax2.get_yaxis().set_ticklabels([])
-
-    if disp_legend:
-        ax.legend(loc=legend_loc, frameon=False, fontsize=font_size)
-
-    # rms_threshold text
-    if disp_thres_text:
-        ymin, ymax = ax.get_ylim()
-        yoff = (ymax - ymin) * 0.1
-        if (rms_threshold - ymin) > 0.5 * (ymax - ymin):
-            yoff *= -1.
-        ax.annotate('Median Abs Dev * {}'.format(cutoff),
-                    xy=(xmin + (xmax-xmin)*0.05, rms_threshold + yoff ),
-                    color='k', xycoords='data', fontsize=font_size)
-    return ax
 
 
 ######################################################################################################
@@ -224,13 +139,25 @@ def main(iargs=None):
         inps = read_template2inps(inps.template_file, inps)
 
     # calculate timeseries of residual Root Mean Square
-    (inps.rms_list,
-     inps.date_list,
-     inps.rms_file) = ut.get_residual_rms(inps.timeseries_file,
-                                          mask_file=inps.maskFile,
-                                          ramp_type=inps.deramp)
+    inps.rms_list, inps.date_list, inps.rms_file = ut.get_residual_rms(
+        inps.timeseries_file,
+        mask_file=inps.maskFile,
+        ramp_type=inps.deramp,
+    )
 
+    # analyze RMS: generate reference/exclude_date.txt files
     analyze_rms(inps.date_list, inps.rms_list, inps)
+
+    # plot RMS
+    pp.plot_timeseries_rms(
+        rms_file=inps.rms_file,
+        cutoff=inps.cutoff,
+        out_fig=os.path.splitext(inps.rms_file)[0]+'.pdf',
+        disp_fig=False,
+        fig_size=inps.fig_size,
+        tick_year_num=inps.tick_year_num,
+    )
+
     return
 
 

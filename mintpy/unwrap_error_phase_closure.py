@@ -306,67 +306,9 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
     writefile.write(num_nonzero_closure, out_file, meta)
 
     # plot
-    plot_num_triplet_with_nonzero_integer_ambiguity(out_file)
+    pp.plot_num_triplet_with_nonzero_integer_ambiguity(out_file)
 
     return out_file
-
-
-def plot_num_triplet_with_nonzero_integer_ambiguity(fname, display=False, font_size=12, fig_size=[9,3]):
-    """Plot the histogram for the number of triplets with non-zero integer ambiguity
-
-    Fig. 3d-e in Yunjun et al. (2019, CAGEO).
-    """
-
-    # read data
-    data, atr = readfile.read(fname)
-    vmax = int(np.nanmax(data))
-
-    # plot
-    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=fig_size)
-
-    # subplot 1 - map
-    ax = axs[0]
-    im = ax.imshow(data, cmap='RdBu_r', interpolation='nearest')
-
-    # reference point
-    if all(key in atr.keys() for key in ['REF_Y','REF_X']):
-        ax.plot(int(atr['REF_X']), int(atr['REF_Y']), 's', color='white', ms=3)
-
-    # format
-    pp.auto_flip_direction(atr, ax=ax, print_msg=False)
-    fig.colorbar(im, ax=ax)
-    ax.set_title(r'$T_{int}$', fontsize=font_size)
-
-    # subplot 2 - histogram
-    ax = axs[1]
-    ax.hist(data[~np.isnan(data)].flatten(), range=(0, vmax), log=True, bins=vmax)
-
-    # axis format
-    ax.set_xlabel(r'# of triplets w non-zero int ambiguity $T_{int}$', fontsize=font_size)
-    ax.set_ylabel('# of pixels', fontsize=font_size)
-    ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
-    ax.yaxis.set_major_locator(ticker.LogLocator(base=10.0, numticks=15))
-    ax.yaxis.set_minor_locator(ticker.LogLocator(base=10.0, numticks=15,
-                                                 subs=(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)))
-    ax.yaxis.set_minor_formatter(ticker.NullFormatter())
-
-    for ax in axs:
-        ax.tick_params(which='both', direction='in', labelsize=font_size,
-                       bottom=True, top=True, left=True, right=True)
-
-    fig.tight_layout()
-
-    # output
-    out_fig = '{}.png'.format(os.path.splitext(fname)[0])
-    print('plot and save figure to file', out_fig)
-    fig.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=300)
-
-    if display:
-        plt.show()
-    else:
-        plt.close(fig)
-
-    return
 
 
 ##########################################################################################
@@ -584,7 +526,7 @@ def main(iargs=None):
         # for debug
         debug_mode = False
         if debug_mode:
-            plot_num_triplet_with_nonzero_integer_ambiguity(out_file)
+            pp.plot_num_triplet_with_nonzero_integer_ambiguity(out_file)
 
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
