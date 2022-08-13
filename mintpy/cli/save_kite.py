@@ -123,7 +123,7 @@ def main(iargs=None):
     print('Mean satellite heading   angle: {0:.2f}°\n'.format(90 - np.nanmean(az_angle)))
 
     # Update attributes
-    if inps.subset_lat != None or inps.subset_x != None:
+    if inps.subset_lat is not None or inps.subset_x is not None:
         attr = attribute.update_attribute4subset(attr, inps.pix_box)
 
     # create kite container

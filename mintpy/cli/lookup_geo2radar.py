@@ -42,7 +42,7 @@ def cmd_line_parse(iargs=None):
 def main(iargs=None):
     import numpy as np
     from ..utils import readfile
-    from ..lookup_geo2radar import split_range, split_box, parallel_process, get_dataNames, write_h5
+    from ..lookup_geo2radar import split_range, split_box, parallel_process, get_dataNames, write_h5, function
 
     inps = cmd_line_parse(iargs) 
     geom = inps.geometryGeo

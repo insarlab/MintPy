@@ -5,7 +5,6 @@
 ############################################################
 
 
-import os
 import sys
 import math
 from mintpy.utils.arg_utils import create_argument_parser
@@ -61,7 +60,7 @@ def main(iargs=None):
     
     inps = cmd_line_parse(iargs)
 
-    ext = os.path.splitext(inps.file)[1]
+    # ext = os.path.splitext(inps.file)[1]
     #if os.path.isfile(inps.file+'.xml') and ext in ['.unw','.int','.cor','.conncomp']:
     #    mask_isce_file(inps.file, inps.mask_file, inps.outfile)
     #else:

@@ -38,6 +38,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
     return temporal_derivative(inps.file, inps.outfile)
 
+
 ############################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])

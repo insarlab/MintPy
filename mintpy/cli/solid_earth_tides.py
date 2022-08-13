@@ -97,7 +97,7 @@ def cmd_line_parse(iargs=None):
 
 ###############################################################
 def main(iargs=None):
-    from ..s1ab_range_bias import calc_solid_earth_tides_timeseries, correct_timeseries
+    from ..solid_earth_tides import calc_solid_earth_tides_timeseries, correct_timeseries
 
     inps = cmd_line_parse(iargs)
     start_time = time.time()

@@ -250,11 +250,11 @@ def prep_slice(cmd, auto_fig=False):
     data, inps = update_data_with_plot_inps(data, atr, inps)
 
     # matplotlib.Axes
-    if auto_fig == True:
+    if auto_fig:
         import matplotlib.pyplot as plt
         figsize = [i/2.0 for i in inps.fig_size]
         subplot_kw = dict(projection=inps.map_proj_obj) if inps.map_proj_obj is not None else {}
-        fig, ax = plt.subplots(figsize=figsize, subplot_kw=subplot_kw)
+        _, ax = plt.subplots(figsize=figsize, subplot_kw=subplot_kw)
         return data, atr, inps, ax
     else:
         return data, atr, inps
