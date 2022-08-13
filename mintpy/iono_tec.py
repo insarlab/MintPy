@@ -284,9 +284,9 @@ def correct_timeseries(dis_file, iono_file, cor_dis_file):
     # between the absolute iono ramp and the double referenced time-series
     print('\n------------------------------------------------------------------------------')
     print('correcting relative delay for input time-series using diff.py')
-    from mintpy import diff
 
     iargs = [dis_file, iono_file, '-o', cor_dis_file]
     print('diff.py', ' '.join(iargs))
-    diff.main(iargs)
+    import mintpy.cli.diff
+    mintpy.cli.diff.main(iargs)
     return cor_dis_file

@@ -10,7 +10,6 @@
 
 import sys
 import time
-import numpy as np
 
 
 ###########################Simple progress bar######################
@@ -60,6 +59,8 @@ class progressBar:
         """ Update the progress bar with the new amount (with min and max
         values set at initialization; if it is over or under, it takes the
         min or max value as a default. """
+        import numpy as np
+
         newAmount = max(newAmount, self.min)
         newAmount = min(newAmount, self.max)
         self.amount = newAmount

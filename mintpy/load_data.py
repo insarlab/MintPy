@@ -578,15 +578,15 @@ def prepare_metadata(iDict):
     if processor in ['gamma', 'hyp3', 'roipac', 'snap', 'cosicorr']:
         # import prep_module
         if processor == 'gamma':
-            from mintpy import prep_gamma as prep_module
+            from mintpy.cli import prep_gamma as prep_module
         elif processor == 'hyp3':
-            from mintpy import prep_hyp3 as prep_module
+            from mintpy.cli import prep_hyp3 as prep_module
         elif processor == 'roipac':
-            from mintpy import prep_roipac as prep_module
+            from mintpy.cli import prep_roipac as prep_module
         elif processor == 'snap':
-            from mintpy import prep_snap as prep_module
+            from mintpy.cli import prep_snap as prep_module
         elif processor == 'cosicorr':
-            from mintpy import prep_cosicorr as prep_module
+            from mintpy.cli import prep_cosicorr as prep_module
 
         # run prep_{processor} module
         for key in [i for i in iDict.keys()
@@ -606,7 +606,6 @@ def prepare_metadata(iDict):
                 prep_module.main(iargs)
 
     elif processor == 'isce':
-        from mintpy import prep_isce
         from mintpy.utils import s1_utils, isce_utils
 
         # --meta-file
@@ -649,7 +648,8 @@ def prepare_metadata(iDict):
         # run module
         ut.print_command_line(script_name, iargs)
         try:
-            prep_isce.main(iargs)
+            import mintpy.cli.prep_isce
+            mintpy.cli.prep_isce.main(iargs)
         except:
             warnings.warn('prep_isce.py failed. Assuming its result exists and continue...')
 
@@ -663,8 +663,6 @@ def prepare_metadata(iDict):
                     print_msg=True)
 
     elif processor == 'aria':
-        from mintpy import prep_aria
-
         ## compose input arguments
         # use the default template file if exists & input
         default_temp_files = [fname for fname in iDict['template_file']
@@ -705,14 +703,13 @@ def prepare_metadata(iDict):
 
         ## run
         ut.print_command_line(script_name, iargs)
+        import mintpy.cli.prep_aria
         try:
-            prep_aria.main(iargs)
+            mintpy.cli.prep_aria.main(iargs)
         except:
             warnings.warn('prep_aria.py failed. Assuming its result exists and continue...')
 
     elif processor == 'gmtsar':
-        from mintpy import prep_gmtsar
-
         # use the custom template file if exists & input
         custom_temp_files = [fname for fname in iDict['template_file']
                              if not fname.endswith('smallbaselineApp.cfg')]
@@ -722,8 +719,9 @@ def prepare_metadata(iDict):
         # run prep_*.py
         iargs = [custom_temp_files[0]]
         ut.print_command_line(script_name, iargs)
+        import mintpy.cli.prep_gmtsar
         try:
-            prep_gmtsar.main(iargs)
+            mintpy.cli.prep_gmtsar.main(iargs)
         except:
             warnings.warn('prep_gmtsar.py failed. Assuming its result exists and continue...')
 

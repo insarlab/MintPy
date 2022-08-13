@@ -10,7 +10,6 @@
 import os
 import glob
 import time
-import datetime
 import shutil
 import numpy as np
 
@@ -174,7 +173,8 @@ class TimeSeriesAnalysis:
 
         # run command line
         print('\nload_data.py', ' '.join(iargs))
-        mintpy.load_data.main(iargs)
+        import mintpy.cli.load_data
+        mintpy.cli.load_data.main(iargs)
 
         # come back to working directory
         os.chdir(self.workDir)
@@ -240,7 +240,8 @@ class TimeSeriesAnalysis:
         # 2) modify network
         iargs = [stack_file, '-t', self.templateFile]
         print('\nmodify_network.py', ' '.join(iargs))
-        mintpy.modify_network.main(iargs)
+        import mintpy.cli.modify_network
+        mintpy.cli.modify_network.main(iargs)
 
         # 3) plot network
         iargs = [stack_file, '-t', self.templateFile, '--nodisplay']
@@ -258,7 +259,8 @@ class TimeSeriesAnalysis:
             if ut.run_or_skip(out_file=net_fig,
                               in_file=[stack_file, coh_txt, self.templateFile],
                               check_readable=False) == 'run':
-                mintpy.plot_network.main(iargs)
+                import mintpy.cli.plot_network
+                mintpy.cli.plot_network.main(iargs)
         else:
             print('mintpy.plot is turned OFF, skip plotting network.')
         return
@@ -276,7 +278,8 @@ class TimeSeriesAnalysis:
         if any('phase' in i.lower() for i in dsNames):
             iargs = [stack_file, '--nonzero', '-o', mask_file, '--update']
             print('\ngenerate_mask.py', ' '.join(iargs))
-            mintpy.generate_mask.main(iargs)
+            import mintpy.cli.generate_mask
+            mintpy.cli.generate_mask.main(iargs)
 
         # 2) generate average spatial coherence
         if any('phase' in i.lower() for i in dsNames):
@@ -284,8 +287,8 @@ class TimeSeriesAnalysis:
         elif any('offset' in i.lower() for i in dsNames):
             iargs = [stack_file, '--dataset', 'offsetSNR', '-o', snr_file, '--update']
         print('\ntemporal_average.py', ' '.join(iargs))
-        mintpy.temporal_average.main(iargs)
-        return
+        import mintpy.cli.temporal_average
+        mintpy.cli.temporal_average.main(iargs)
 
 
     def run_reference_point(self, step_name):
@@ -305,8 +308,8 @@ class TimeSeriesAnalysis:
         if lookup_file is not None:
             iargs += ['--lookup', lookup_file]
         print('\nreference_point.py', ' '.join(iargs))
-        mintpy.reference_point.main(iargs)
-        return
+        import mintpy.cli.reference_point
+        mintpy.cli.reference_point.main(iargs)
 
 
     def run_quick_overview(self, step_name):
@@ -321,14 +324,15 @@ class TimeSeriesAnalysis:
         pha_vel_file = os.path.join(self.workDir, 'avgPhaseVelocity.h5')
         iargs = [stack_file, '--dataset', 'unwrapPhase', '-o', pha_vel_file, '--update']
         print('\ntemporal_average.py', ' '.join(iargs))
-        mintpy.temporal_average.main(iargs)
+        import mintpy.cli.temporal_average
+        mintpy.cli.temporal_average.main(iargs)
 
         # 2) calculate the number of interferogram triplets with non-zero integer ambiguity
         water_mask_file = os.path.join(self.workDir, 'waterMask.h5')
         iargs = [stack_file, '--water-mask', water_mask_file, '--action', 'calculate', '--update']
         print('\nunwrap_error_phase_closure.py', ' '.join(iargs))
-        mintpy.unwrap_error_phase_closure.main(iargs)
-        return
+        import mintpy.cli.unwrap_error_phase_closure
+        mintpy.cli.unwrap_error_phase_closure.main(iargs)
 
 
     def run_unwrap_error_correction(self, step_name):
@@ -347,22 +351,26 @@ class TimeSeriesAnalysis:
 
         if method == 'bridging':
             print('\nunwrap_error_bridging.py', ' '.join(iargs_bridge))
-            mintpy.unwrap_error_bridging.main(iargs_bridge)
+            import mintpy.cli.unwrap_error_bridging
+            mintpy.cli.unwrap_error_bridging.main(iargs_bridge)
 
         elif method == 'phase_closure':
             print('\nunwrap_error_phase_closure.py', ' '.join(iargs_closure))
-            mintpy.unwrap_error_phase_closure.main(iargs_closure)
+            import mintpy.cli.unwrap_error_phase_closure
+            mintpy.cli.unwrap_error_phase_closure.main(iargs_closure)
 
         elif method == 'bridging+phase_closure':
             iargs_bridge += ['-i', 'unwrapPhase',
                              '-o', 'unwrapPhase_bridging']
             print('\nunwrap_error_bridging.py', ' '.join(iargs_bridge))
-            mintpy.unwrap_error_bridging.main(iargs_bridge)
+            import mintpy.cli.unwrap_error_bridging
+            mintpy.cli.unwrap_error_bridging.main(iargs_bridge)
 
             iargs_closure += ['-i', 'unwrapPhase_bridging',
                               '-o', 'unwrapPhase_bridging_phaseClosure']
             print('\nunwrap_error_phase_closure.py', ' '.join(iargs_closure))
-            mintpy.unwrap_error_phase_closure.main(iargs_closure)
+            import mintpy.cli.unwrap_error_phase_closure
+            mintpy.cli.unwrap_error_phase_closure.main(iargs_closure)
 
         else:
             raise ValueError('un-recognized method: {}'.format(method))
@@ -380,11 +388,11 @@ class TimeSeriesAnalysis:
         # 1) invert ifgramStack for time-series
         iargs = [stack_file, '-t', self.templateFile, '--update']
         print('\nifgram_inversion.py', ' '.join(iargs))
-        mintpy.ifgram_inversion.main(iargs)
+        import mintpy.cli.ifgram_inversion
+        mintpy.cli.ifgram_inversion.main(iargs)
 
         # 2) get reliable pixel mask: maskTempCoh.h5
         self.generate_temporal_coherence_mask()
-        return
 
 
     def generate_temporal_coherence_mask(self):
@@ -421,7 +429,8 @@ class TimeSeriesAnalysis:
         print('run or skip: {}'.format(flag))
 
         if flag == 'run':
-            mintpy.generate_mask.main(iargs)
+            import mintpy.cli.generate_mask
+            mintpy.cli.generate_mask.main(iargs)
             # update configKeys
             atr = {}
             for key in config_keys:
@@ -553,7 +562,8 @@ class TimeSeriesAnalysis:
             iargs = [in_file, geom_file, '-o', out_file]
             print('\nlocal_oscilator_drift.py', ' '.join(iargs))
             if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
-                mintpy.local_oscilator_drift.main(iargs)
+                import mintpy.cli.local_oscilator_drift
+                mintpy.cli.local_oscilator_drift.main(iargs)
         else:
             atr = readfile.read_attribute(in_file)
             sat = atr.get('PLATFORM', None)
@@ -572,11 +582,10 @@ class TimeSeriesAnalysis:
             iargs = [in_file, '-g', geom_file, '-o', out_file, '--update']
             print('\nsolid_earth_tides.py', ' '.join(iargs))
             if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
-                from mintpy import solid_earth_tides
-                solid_earth_tides.main(iargs)
+                import mintpy.cli.solid_earth_tides
+                mintpy.cli.solid_earth_tides.main(iargs)
         else:
             print('No solid Earth tides correction.')
-        return
 
 
     def run_tropospheric_delay_correction(self, step_name):
@@ -611,7 +620,8 @@ class TimeSeriesAnalysis:
                 print('tropospheric delay correction with height-correlation approach')
                 print('\ntropo_phase_elevation.py', ' '.join(iargs))
                 if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
-                    mintpy.tropo_phase_elevation.main(iargs)
+                    import mintpy.cli.tropo_phase_elevation
+                    mintpy.cli.tropo_phase_elevation.main(iargs)
 
             # Weather re-analysis data with iterative tropospheric decomposition (GACOS)
             # Yu et al., 2017; 2018a; 2018b
@@ -621,7 +631,8 @@ class TimeSeriesAnalysis:
                 print('tropospheric delay correction with gacos approach')
                 print('\ntropo_gacos.py', ' '.join(iargs))
                 if ut.run_or_skip(out_file=out_file, in_file=in_file) == 'run':
-                    mintpy.tropo_gacos.main(iargs)
+                    import mintpy.cli.tropo_gacos
+                    mintpy.cli.tropo_gacos.main(iargs)
 
             # Weather Re-analysis Data (Jolivet et al., 2011;2014)
             elif method == 'pyaps':
@@ -635,18 +646,19 @@ class TimeSeriesAnalysis:
                         print('--------------------------------------------')
                         print('Use existed tropospheric delay file: {}'.format(tropo_file))
                         print('\ndiff.py', ' '.join(iargs))
-                        mintpy.diff.main(iargs)
+                        import mintpy.cli.diff
+                        mintpy.cli.diff.main(iargs)
 
                     else:
                         if tropo_model in ['ERA5']:
-                            from mintpy import tropo_pyaps3
                             print('\ntropo_pyaps3.py', ' '.join(iargs))
-                            tropo_pyaps3.main(iargs)
+                            import mintpy.cli.tropo_pyaps3
+                            mintpy.cli.tropo_pyaps3.main(iargs)
 
                         elif tropo_model in ['MERRA', 'NARR']:
-                            from mintpy import tropo_pyaps
                             print('\ntropo_pyaps.py', ' '.join(iargs))
-                            tropo_pyaps.main(iargs)
+                            import mintpy.legacy.tropo_pyaps
+                            mintpy.legacy.tropo_pyaps.main(iargs)
 
                         else:
                             raise ValueError(f'un-recognized dataset name: {tropo_model}.')
@@ -668,7 +680,8 @@ class TimeSeriesAnalysis:
             print('Remove for each acquisition a phase ramp: {}'.format(method))
             iargs = [in_file, '-s', method, '-m', mask_file, '-o', out_file, '--update']
             print('\nremove_ramp.py', ' '.join(iargs))
-            mintpy.remove_ramp.main(iargs)
+            import mintpy.cli.remove_ramp
+            mintpy.cli.remove_ramp.main(iargs)
         else:
             print('No phase ramp removal.')
         return
@@ -688,7 +701,8 @@ class TimeSeriesAnalysis:
             if self.template['mintpy.topographicResidual.pixelwiseGeometry']:
                 iargs += ['-g', geom_file]
             print('\ndem_error.py', ' '.join(iargs))
-            mintpy.dem_error.main(iargs)
+            import mintpy.cli.dem_error
+            mintpy.cli.dem_error.main(iargs)
 
         else:
             print('No topographic residual correction.')
@@ -701,7 +715,8 @@ class TimeSeriesAnalysis:
         if os.path.isfile(res_file):
             iargs = [res_file, '-t', self.templateFile]
             print('\ntimeseries_rms.py', ' '.join(iargs))
-            mintpy.timeseries_rms.main(iargs)
+            import mintpy.cli.timeseries_rms
+            mintpy.cli.timeseries_rms.main(iargs)
         else:
             print('No residual phase file found! Skip residual RMS analysis.')
         return
@@ -715,7 +730,8 @@ class TimeSeriesAnalysis:
             for in_file in in_files:
                 iargs += [in_file]
             print('\nreference_date.py', ' '.join(iargs))
-            mintpy.reference_date.main(iargs)
+            import mintpy.cli.reference_date
+            mintpy.cli.reference_date.main(iargs)
         else:
             print('No reference date change.')
         return
@@ -728,7 +744,8 @@ class TimeSeriesAnalysis:
 
         iargs = [ts_file, '-t', self.templateFile, '-o', vel_file, '--update']
         print('\ntimeseries2velocity.py', ' '.join(iargs))
-        mintpy.timeseries2velocity.main(iargs)
+        import mintpy.cli.timeseries2velocity
+        mintpy.cli.timeseries2velocity.main(iargs)
 
         # Velocity from estimated tropospheric delays
         tropo_model = self.template['mintpy.troposphericDelay.weatherModel'].upper()
@@ -743,7 +760,7 @@ class TimeSeriesAnalysis:
             atr = readfile.read_attribute(vel_file)
             iargs += ['--ref-date', atr['REF_DATE'], '--ref-yx', atr['REF_Y'], atr['REF_X']]
             print('\ntimeseries2velocity.py', ' '.join(iargs))
-            mintpy.timeseries2velocity.main(iargs)
+            mintpy.cli.timeseries2velocity.main(iargs)
         return
 
 
@@ -761,7 +778,8 @@ class TimeSeriesAnalysis:
                 in_files = [geom_file, 'temporalCoherence.h5', 'avgSpatialCoh.h5', ts_file, 'velocity.h5']
                 iargs = in_files + ['-l', lookup_file, '-t', self.templateFile, '--outdir', out_dir, '--update']
                 print('\ngeocode.py', ' '.join(iargs))
-                mintpy.geocode.main(iargs)
+                import mintpy.cli.geocode
+                mintpy.cli.geocode.main(iargs)
 
                 # 2. generate reliable pixel mask in geo coordinate
                 geom_file = os.path.join(out_dir, 'geo_{}'.format(os.path.basename(geom_file)))
@@ -777,7 +795,8 @@ class TimeSeriesAnalysis:
                 print('\ngenerate_mask.py', ' '.join(iargs))
 
                 if ut.run_or_skip(out_file=mask_file, in_file=tcoh_file) == 'run':
-                    mintpy.generate_mask.main(iargs)
+                    import mintpy.cli.generate_mask
+                    mintpy.cli.generate_mask.main(iargs)
             else:
                 print('dataset is geocoded, skip geocoding and continue.')
         else:
@@ -809,7 +828,8 @@ class TimeSeriesAnalysis:
             kmz_file = kmz_files[0] if len(kmz_files) > 0 else None
 
             if ut.run_or_skip(out_file=kmz_file, in_file=vel_file, check_readable=False) == 'run':
-                mintpy.save_kmz.main(iargs)
+                import mintpy.cli.save_kmz
+                mintpy.cli.save_kmz.main(iargs)
 
         else:
             print('save velocity to Google Earth format is OFF.')
@@ -852,7 +872,8 @@ class TimeSeriesAnalysis:
             hdfeos5_file = hdfeos5_files[0] if len(hdfeos5_files) > 0 else None
 
             if ut.run_or_skip(out_file=hdfeos5_file, in_file=[ts_file, tcoh_file, scoh_file, mask_file, geom_file]) == 'run':
-                mintpy.save_hdfeos5.main(iargs)
+                import mintpy.cli.save_hdfeos5
+                mintpy.cli.save_hdfeos5.main(iargs)
 
         else:
             print('save time-series to HDF-EOS5 format is OFF.')
@@ -1048,10 +1069,12 @@ class TimeSeriesAnalysis:
 
         if run_parallel and num_cores > 1:
             print("parallel processing using {} cores ...".format(num_cores))
-            Parallel(n_jobs=num_cores)(delayed(mintpy.view.main)(iargs) for iargs in iargs_list)
+            import mintpy.cli.view
+            Parallel(n_jobs=num_cores)(delayed(mintpy.cli.view.main)(iargs) for iargs in iargs_list)
         else:
             for iargs in iargs_list:
-                mintpy.view.main(iargs)
+                import mintpy.cli.view
+                mintpy.cli.view.main(iargs)
 
         # copy text files to pic
         print('copy *.txt files into ./pic directory.')
