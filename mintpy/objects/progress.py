@@ -111,7 +111,7 @@ class progressBar:
                 self.prog_bar += '{:5d}s / {:5d}s'.format(int(elapse_time), int(remain_time))
 
     def update(self, value, every=1, suffix=''):
-        """ Updates the amount, and writes to stdout. 
+        """ Updates the amount, and writes to stdout.
         Prints a carriage return first, so it will overwrite the current line in stdout.
         """
         if value % every == 0 or value >= self.max:
@@ -127,5 +127,3 @@ class progressBar:
         if self.print_msg:
             print(' ')
 ################################End of progress bar class####################################
-
-
