@@ -71,7 +71,18 @@ setup(
     ],
     extras_require={
         "cli": ["argcomplete", "rich"],
-        'platemotion': ['platemotion', 'astropy'],  # will be removed in the coming new version of plate motion script
+        "platemotion": ["platemotion", "astropy"],  # will be removed in the coming new version of plate motion script
+        "gmtsar": ["gdal"],
+        "solidearth": ["pysolid"],
+        "gps": ["proj", "dateutil"],
+        "progress": ["tqdm"],
+        "isce": ["isce"],
+        "legacy": ["pyaps"],
+        "extra": ["gdal", "pillow"],
+        "solvers": ["mosec"],
+        "gbis": ["geoid"],
+        "kite": ["kite"],
+        "fractal": ["pyfftw"],
     },
 
     # package discovery
