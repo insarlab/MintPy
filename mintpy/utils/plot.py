@@ -1025,7 +1025,7 @@ def plot_timeseries_rms(rms_file, cutoff=3, out_fig=None, disp_fig=True,
     # Plot exclude dates
     rms_threshold = ut0.median_abs_deviation_threshold(rms, center=0., cutoff=cutoff)
     ex_idx = rms > rms_threshold
-    if not np.all(ex_idx==False):
+    if np.any(ex_idx==True):
         ax.bar(dates[ex_idx], rms[ex_idx], bar_width.days, color='darkgray', label='Exclude date')
 
     # Plot rms_threshold line
