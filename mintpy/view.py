@@ -715,7 +715,7 @@ def plot_slice(ax, data, metadata, inps=None):
             try:
                 lats = readfile.read(geom_file, datasetName='latitude',  box=inps.pix_box, print_msg=False)[0]
                 lons = readfile.read(geom_file, datasetName='longitude', box=inps.pix_box, print_msg=False)[0]
-            except FileNotFoundError:
+            except:
                 msg = 'WARNING: no latitude / longitude found in file: {}, '.format(os.path.basename(geom_file))
                 msg += 'skip showing lat/lon in the status bar.'
                 vprint(msg)
@@ -1227,7 +1227,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
             date_str = inps.dset[i].replace('/','-').split('-')[1]
             try:
                 subplot_title = dt.datetime.strptime(date_str, '%Y%m%d').isoformat()[0:10]
-            except UnicodeWarning:
+            except:
                 subplot_title = date_str
 
         else:
