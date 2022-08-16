@@ -407,11 +407,8 @@ def update_data_with_plot_inps(data, metadata, inps):
                         inps.ref_yx[1] + 1, inps.ref_yx[0] + 1]
 
         # update ref_y/x to subset
-        try:
-            ref_y = inps.ref_yx[0] - inps.pix_box[1]
-            ref_x = inps.ref_yx[1] - inps.pix_box[0]
-        except:
-            pass
+        ref_y = inps.ref_yx[0] - inps.pix_box[1]
+        ref_x = inps.ref_yx[1] - inps.pix_box[0]
 
         # update ref_y/x for multilooking
         if inps.multilook_num > 1:
@@ -567,8 +564,8 @@ def plot_slice(ax, data, metadata, inps=None):
             y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
             ref_data = data[y - inps.pix_box[1], x - inps.pix_box[0]]
             data -= ref_data
-            vprint(('referencing InSAR data to the pixel nearest to '
-                    f'GPS station: {inps.ref_gps_site} at {ref_site_lalo} '
+            vprint(('referencing InSAR data to the pixel nearest to GNSS station: '
+                    f'{inps.ref_gps_site} at [{ref_site_lalo[0]:.6f}, {ref_site_lalo[1]:.6f}] '
                     f'by substrating {ref_data:.3f} {inps.disp_unit}'))
             # do not show the original InSAR reference point
             inps.disp_ref_pixel = False
@@ -1107,6 +1104,10 @@ def read_data4figure(i_start, i_end, inps, metadata):
                               xstep=inps.multilook_num,
                               ystep=inps.multilook_num,
                               print_msg=False)[0]
+            # reference pixel info in unwrapPhase
+            if inps.dset[i].startswith('unwrapPhase') and inps.file_ref_yx:
+                ref_y, ref_x = inps.file_ref_yx
+                d[d!=0] -= d[ref_y, ref_x]
             data[i - i_start, :, :] = d
             prog_bar.update(i - i_start + 1, suffix=inps.dset[i].split('/')[-1])
         prog_bar.close()
