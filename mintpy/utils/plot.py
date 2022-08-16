@@ -1046,7 +1046,7 @@ def plot_timeseries_rms(rms_file, cutoff=3, out_fig=None, disp_fig=True,
         ax2 = divider.append_axes("right", "10%", pad="2%")
         ax2.plot(np.ones(rms.shape, np.float32) * 0.5, rms, 'o', mfc='none', color='C0')
         ax2.plot(np.ones(rms.shape, np.float32)[ref_idx] * 0.5, rms[ref_idx], 'o', mfc='none', color='C1')
-        if not np.all(ex_idx==False):
+        if np.any(ex_idx==True):
             ax2.plot(np.ones(rms.shape, np.float32)[ex_idx] * 0.5, rms[ex_idx], 'o', mfc='none', color='darkgray')
         ax2.plot(np.array([0, 1]), np.array([rms_threshold, rms_threshold]), '--k')
 

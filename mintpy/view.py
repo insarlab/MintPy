@@ -407,11 +407,8 @@ def update_data_with_plot_inps(data, metadata, inps):
                         inps.ref_yx[1] + 1, inps.ref_yx[0] + 1]
 
         # update ref_y/x to subset
-        try:
-            ref_y = inps.ref_yx[0] - inps.pix_box[1]
-            ref_x = inps.ref_yx[1] - inps.pix_box[0]
-        except:
-            pass
+        ref_y = inps.ref_yx[0] - inps.pix_box[1]
+        ref_x = inps.ref_yx[1] - inps.pix_box[0]
 
         # update ref_y/x for multilooking
         if inps.multilook_num > 1:
@@ -718,7 +715,7 @@ def plot_slice(ax, data, metadata, inps=None):
             try:
                 lats = readfile.read(geom_file, datasetName='latitude',  box=inps.pix_box, print_msg=False)[0]
                 lons = readfile.read(geom_file, datasetName='longitude', box=inps.pix_box, print_msg=False)[0]
-            except:
+            except FileNotFoundError:
                 msg = 'WARNING: no latitude / longitude found in file: {}, '.format(os.path.basename(geom_file))
                 msg += 'skip showing lat/lon in the status bar.'
                 vprint(msg)
@@ -1230,7 +1227,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
             date_str = inps.dset[i].replace('/','-').split('-')[1]
             try:
                 subplot_title = dt.datetime.strptime(date_str, '%Y%m%d').isoformat()[0:10]
-            except:
+            except UnicodeWarning:
                 subplot_title = date_str
 
         else:

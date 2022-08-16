@@ -13,10 +13,9 @@ from scipy import stats
 from scipy.interpolate import griddata
 from datetime import datetime as dt
 from dateutil.relativedelta import relativedelta
-from matplotlib import pyplot as plt
 
 from mintpy.objects import timeseries, giantTimeseries
-from mintpy.utils import ptime, readfile, plot as pp, utils as ut
+from mintpy.utils import readfile, plot as pp, utils as ut
 from mintpy.objects.gps import GPS
 from mintpy.defaults.plot import *
 

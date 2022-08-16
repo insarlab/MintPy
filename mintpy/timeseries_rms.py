@@ -9,10 +9,9 @@
 import os
 import sys
 import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import readfile, ptime, utils as ut, plot as pp
+from mintpy.utils import readfile, utils as ut, plot as pp
 from mintpy.utils.arg_utils import create_argument_parser
 
 
@@ -103,15 +102,14 @@ def analyze_rms(date_list, rms_list, inps):
         print('save date to file: '+ref_date_file)
 
     # exclude date(s) - outliers
-    try:
-        rms_threshold = ut.median_abs_deviation_threshold(rms_list, center=0., cutoff=inps.cutoff)
-    except:
-        # equivalent calculation using numpy assuming Gaussian distribution
-        rms_threshold = np.median(rms_list) / .6745 * inps.cutoff
+    # equivalent calculation using numpy assuming Gaussian distribution as:
+    # rms_threshold = np.median(rms_list) / .6745 * inps.cutoff
+    rms_threshold = ut.median_abs_deviation_threshold(rms_list, center=0., cutoff=inps.cutoff)
 
     ex_idx = [rms_list.index(i) for i in rms_list if i > rms_threshold]
-    print(('-'*50+'\ndate(s) with RMS > {} * median RMS'
-           ' ({:.4f})'.format(inps.cutoff, rms_threshold)))
+    print('-'*50)
+    print(f'date(s) with RMS > {inps.cutoff} * median RMS ({rms_threshold:.4f})')
+
     ex_date_file = 'exclude_date.txt'
     if ex_idx:
         # print
@@ -132,8 +130,8 @@ def analyze_rms(date_list, rms_list, inps):
 
 ######################################################################################################
 def main(iargs=None):
-    plt.switch_backend('Agg')  # Backend setting
 
+    # read inputs
     inps = cmd_line_parse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)

@@ -11,7 +11,7 @@ import sys
 import time
 import h5py
 import numpy as np
-from matplotlib import pyplot as plt, ticker
+from matplotlib import pyplot as plt
 
 try:
     from cvxopt import matrix
