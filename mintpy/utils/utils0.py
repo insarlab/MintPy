@@ -366,7 +366,7 @@ def xyz_to_local_radius(xyz):
     return height, radius
 
 
-def snwe_to_wkt_polygon(snwe:list(float)):
+def snwe_to_wkt_polygon(snwe):
     """Convert the input bounding box in SNWE into WKT format POLYGON.
 
     Parameters: snwe    - list of 4 float, south, north, west and east in degrees/meters
@@ -375,7 +375,7 @@ def snwe_to_wkt_polygon(snwe:list(float)):
     S, N, W, E = snwe
     lats = [N, N, S, S, N]
     lons = [W, E, E, W, W]
-    polygon = "POLYGON((" + ",".join([lon + " " + lat for lon, lat in zip(lons, lats)])  + "))"
+    polygon = "POLYGON((" + ",".join([f"{lon} {lat}" for lon, lat in zip(lons, lats)])  + "))"
     return polygon
 
 

@@ -32,6 +32,7 @@ TEMPALTE = TEMPLATE = get_template_content('hdfeos5')
 EXAMPLE = """example:
   save_hdfeos5.py geo/geo_timeseries_ERA5_ramp_demErr.h5
   save_hdfeos5.py timeseries_ERA5_ramp_demErr.h5 --tc temporalCoherence.h5 --asc avgSpatialCoh.h5 -m maskTempCoh.h5 -g inputs/geometryGeo.h5
+  save_hdfeos5.py timeseries_ERA5_ramp_demErr.h5 --tc temporalCoherence.h5 --asc avgSpatialCoh.h5 -m maskTempCoh.h5 -g inputs/geometryRadar.h5
 """
 
 NOTE = """
@@ -46,7 +47,7 @@ def create_parser(subparsers=None):
     parser = create_argument_parser(
         name, synopsis=synopsis, description=synopsis+NOTE, epilog=epilog, subparsers=subparsers)
 
-    parser.add_argument('ts_file', default='timeseries.h5', help='Timeseries file')
+    parser.add_argument('ts_file', default='timeseries.h5', help='Time-series file')
     parser.add_argument('-t', '--template', dest='template_file',
                         help='Template file for 1) arguments/options and 2) missing metadata')
 
@@ -71,6 +72,7 @@ def cmd_line_parse(iargs=None):
 
     # default filenames
     ts_dir = os.path.dirname(inps.ts_file)
+    meta = readfile.read_attribute(inps.ts_file)
     if os.path.basename(inps.ts_file).startswith('geo_'):
         tcoh_file = os.path.join(ts_dir, 'geo_temporalCoherence.h5')
         scoh_file = os.path.join(ts_dir, 'geo_avgSpatialCoh.h5')
@@ -80,7 +82,11 @@ def cmd_line_parse(iargs=None):
         tcoh_file = os.path.join(ts_dir, 'temporalCoherence.h5')
         scoh_file = os.path.join(ts_dir, 'avgSpatialCoh.h5')
         mask_file = os.path.join(ts_dir, 'maskTempCoh.h5')
-        geom_file = os.path.join(ts_dir, 'inputs/geometryGeo.h5')
+
+        if 'Y_FIRST' in meta.keys():
+            geom_file = os.path.join(ts_dir, 'inputs/geometryGeo.h5')
+        else:
+            geom_file = os.path.join(ts_dir, 'inputs/geometryRadar.h5')
 
     if not inps.tcoh_file:  inps.tcoh_file = tcoh_file
     if not inps.scoh_file:  inps.scoh_file = scoh_file
@@ -91,6 +97,10 @@ def cmd_line_parse(iargs=None):
     for fname in [inps.ts_file, inps.tcoh_file, inps.scoh_file, inps.mask_file, inps.geom_file]:
         if not os.path.isfile(fname):
             raise FileNotFoundError(fname)
+
+    # --subset mode
+    if inps.subset and 'Y_FIRST' not in meta.keys():
+        raise SystemExit('ERROR: --subset mode is NOT supported for time-series in radar-coordinates!')
 
     return inps
 
@@ -121,7 +131,7 @@ def read_template2inps(template_file, inps=None):
 
 
 ################################################################
-def prep_metadata(ts_file, template=None, geom_file=None, print_msg=True):
+def prep_metadata(ts_file, geom_file, template=None, print_msg=True):
     """Prepare metadata for HDF-EOS5 file."""
     # read metadata from ts_file
     ts_obj = timeseries(ts_file)
@@ -129,9 +139,10 @@ def prep_metadata(ts_file, template=None, geom_file=None, print_msg=True):
     meta = dict(ts_obj.metadata)
 
     # read metadata from template_file
-    for key, value in template.items():
-        if not key.startswith(('mintpy', 'isce')):
-            meta[key] = value
+    if template:
+        for key, value in template.items():
+            if not key.startswith(('mintpy', 'isce')):
+                meta[key] = value
 
     # grab unavco metadata
     unavco_meta = metadata_mintpy2unavco(meta, ts_obj.dateList, geom_file)
@@ -232,38 +243,47 @@ def metadata_mintpy2unavco(meta_in, dateList, geom_file):
     # insarmaps metadata
     #################################
     # footprint for actual data coverage in lat/lon bounding box.
-    geom_meta = readfile.read_attribute(geom_file)
-    geom_dset_list = readfile.get_dataset_list(geom_file)
-
     if 'Y_FIRST' in meta.keys():
+        # time-series in geo-coordinates
         N = float(meta['Y_FIRST'])
         W = float(meta['X_FIRST'])
         S = N + float(meta['Y_STEP']) * int(meta['LENGTH'])
         E = W + float(meta['X_STEP']) * int(meta['WIDTH'])
         unavco_meta['data_footprint'] = ut.snwe_to_wkt_polygon([S, N, W, E])
 
-    elif 'Y_FIRST' in geom_meta.keys():
-        N = float(geom_meta['Y_FIRST'])
-        W = float(geom_meta['X_FIRST'])
-        S = N + float(geom_meta['Y_STEP']) * int(geom_meta['LENGTH'])
-        E = W + float(geom_meta['X_STEP']) * int(geom_meta['WIDTH'])
-        unavco_meta['data_footprint'] = ut.snwe_to_wkt_polygon([S, N, W, E])
-
-    elif 'latitude' in geom_dset_list:
-        lat_data = readfile.read(geom_file, datasetName='latitude')[0]
-        lon_data = readfile.read(geom_file, datasetName='longitude')[0]
-
-        # set pixels with invalid value or zero to nan
-        lat_data[np.abs(lat_data) == 90] = np.nan
-        lat_data[lat_data == 0] = np.nan
-        lon_data[lon_data == 0] = np.nan
-
-        S, N = np.nanmin(lat_data), np.nanmax(lat_data)
-        W, E = np.nanmin(lon_data), np.nanmax(lon_data)
-        unavco_meta['data_footprint'] = ut.snwe_to_wkt_polygon([S, N, W, E])
-
     else:
-        print('WARNING: "data_footprint" is NOT assigned, due to the lack of X/Y_FIRST/STEP attributes and latitude/longitde datasets.')
+        # time-series in radar-coordinates
+        geom_meta = readfile.read_attribute(geom_file)
+        geom_dset_list = readfile.get_dataset_list(geom_file)
+        # potential extra geometry file (for roipac/gamma)
+        geo_geom_file = os.path.join(os.path.dirname(geom_file), 'geometryGeo.h5')
+
+        if 'Y_FIRST' not in geom_meta.keys() and 'latitude' in geom_dset_list:
+            # geometry in radar-coodinates (isce/doris)
+            lat_data = readfile.read(geom_file, datasetName='latitude')[0]
+            lon_data = readfile.read(geom_file, datasetName='longitude')[0]
+
+            # set pixels with invalid value or zero to nan
+            lat_data[np.abs(lat_data) == 90] = np.nan
+            lat_data[lat_data == 0] = np.nan
+            lon_data[lon_data == 0] = np.nan
+
+            S, N = np.nanmin(lat_data), np.nanmax(lat_data)
+            W, E = np.nanmin(lon_data), np.nanmax(lon_data)
+            unavco_meta['data_footprint'] = ut.snwe_to_wkt_polygon([S, N, W, E])
+
+        elif os.path.isfile(geo_geom_file):
+            # geometry in geo-coordinates (roipac/gamma)
+            geom_meta = readfile.read_attribute(geo_geom_file)
+
+            N = float(geom_meta['Y_FIRST'])
+            W = float(geom_meta['X_FIRST'])
+            S = N + float(geom_meta['Y_STEP']) * int(geom_meta['LENGTH'])
+            E = W + float(geom_meta['X_STEP']) * int(geom_meta['WIDTH'])
+            unavco_meta['data_footprint'] = ut.snwe_to_wkt_polygon([S, N, W, E])
+
+        else:
+            print('WARNING: "data_footprint" is NOT assigned, due to the lack of X/Y_FIRST attributes and latitude/longitde datasets.')
 
     return unavco_meta
 
@@ -289,10 +309,10 @@ def get_output_filename(metadata, suffix=None, update_mode=False, subset_mode=Fa
         print('Update mode is ON, put endDate as XXXXXXXX.')
         DATE2 = 'XXXXXXXX'
 
-    if not suffix:
-       outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'_'+DATE2+'.he5'
+    if suffix:
+        outName = f'{SAT}_{SW}_{RELORB}_{FRAME}_{DATE1}_{DATE2}_{suffix}.he5'
     else:
-       outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'_'+DATE2+'_'+suffix+'.he5'
+        outName = f'{SAT}_{SW}_{RELORB}_{FRAME}_{DATE1}_{DATE2}.he5'
 
     if subset_mode:
         print('Subset mode is enabled, put subset range info in output filename.')
@@ -488,8 +508,8 @@ def main(iargs=None):
     # Prepare Metadata
     meta = prep_metadata(
         ts_file=inps.ts_file,
-        template=template,
         geom_file=inps.geom_file,
+        template=template,
         print_msg=True)
 
     # Get output filename
