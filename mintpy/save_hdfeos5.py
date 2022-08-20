@@ -121,7 +121,7 @@ def read_template2inps(template_file, inps=None):
 
 
 ################################################################
-def prep_metadata(ts_file, template=None, print_msg=True):
+def prep_metadata(ts_file, template=None, geom_file=None, print_msg=True):
     """Prepare metadata for HDF-EOS5 file."""
     # read metadata from ts_file
     ts_obj = timeseries(ts_file)
@@ -134,7 +134,7 @@ def prep_metadata(ts_file, template=None, print_msg=True):
             meta[key] = value
 
     # grab unavco metadata
-    unavco_meta = metadata_mintpy2unavco(meta, ts_obj.dateList)
+    unavco_meta = metadata_mintpy2unavco(meta, ts_obj.dateList, geom_file)
     if print_msg:
         print('## UNAVCO Metadata:')
         print('-----------------------------------------')
@@ -148,7 +148,7 @@ def prep_metadata(ts_file, template=None, print_msg=True):
     return meta
 
 
-def metadata_mintpy2unavco(meta_in, dateList):
+def metadata_mintpy2unavco(meta_in, dateList, geom_file=None):
     """Convert metadata from mintpy format into unavco format."""
     # Extract UNAVCO format metadata from MintPy attributes dictionary and dateList
     meta = {}
@@ -241,8 +241,21 @@ def metadata_mintpy2unavco(meta_in, dateList):
         lats = [str(lat0), str(lat0), str(lat1), str(lat1), str(lat0)]
         unavco_meta['data_footprint'] = "POLYGON((" + ",".join(
             [lon+' '+lat for lon, lat in zip(lons, lats)]) + "))"
+    elif geom_file is not None:
+        geom_obj = geometry(geom_file)
+        geom_obj.open(print_msg=False)
+        raw_lats = geom_obj.read(datasetName="latitude", print_msg=False)
+        raw_lons = geom_obj.read(datasetName="longitude", print_msg=False)
+        lon0 = raw_lons[0][0]
+        lat0 = raw_lats[0][0]
+        lon1 = raw_lons[len(raw_lons) - 1][len(raw_lons[0]) - 1]
+        lat1 = raw_lats[len(raw_lats) - 1][len(raw_lats[0]) - 1]
+        lons = [str(lon0), str(lon1), str(lon1), str(lon0), str(lon0)]
+        lats = [str(lat0), str(lat0), str(lat1), str(lat1), str(lat0)]
+        unavco_meta['data_footprint'] = "POLYGON((" + ",".join(
+            [lon+' '+lat for lon, lat in zip(lons, lats)]) + "))"
     else:
-        print('Input file is not geocoded, no data_footprint without X/Y_FIRST/STEP info.')
+        print('Input file is not geocoded, no data_footprint without X/Y_FIRST/STEP info or a geometry file.')
 
     return unavco_meta
 
@@ -468,6 +481,7 @@ def main(iargs=None):
     meta = prep_metadata(
         ts_file=inps.ts_file,
         template=template,
+        geom_file=inps.geom_file,
         print_msg=True)
 
     # Get output filename
