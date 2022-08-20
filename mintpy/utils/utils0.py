@@ -366,6 +366,19 @@ def xyz_to_local_radius(xyz):
     return height, radius
 
 
+def snwe_to_wkt_polygon(snwe):
+    """Convert the input bounding box in SNWE into WKT format POLYGON.
+
+    Parameters: snwe    - list of 4 float, south, north, west and east in degrees/meters
+    Returns:    polygon - str, WKT format POLYGON
+    """
+    S, N, W, E = snwe
+    lats = [N, N, S, S, N]
+    lons = [W, E, E, W, W]
+    polygon = "POLYGON((" + ",".join([f"{lon} {lat}" for lon, lat in zip(lons, lats)])  + "))"
+    return polygon
+
+
 def get_lat_lon(meta, geom_file=None, box=None, dimension=2, ystep=1, xstep=1):
     """Extract precise pixel-wise lat/lon.
 
