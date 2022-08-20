@@ -14,7 +14,7 @@ import numpy as np
 
 from mintpy.objects import timeseries, geometry, sensor
 from mintpy.defaults.template import get_template_content
-from mintpy.utils import ptime, readfile
+from mintpy.utils import ptime, readfile, utils as ut
 from mintpy.utils.arg_utils import create_argument_parser
 from mintpy import info
 
@@ -148,7 +148,7 @@ def prep_metadata(ts_file, template=None, geom_file=None, print_msg=True):
     return meta
 
 
-def metadata_mintpy2unavco(meta_in, dateList, geom_file=None):
+def metadata_mintpy2unavco(meta_in, dateList, geom_file):
     """Convert metadata from mintpy format into unavco format."""
     # Extract UNAVCO format metadata from MintPy attributes dictionary and dateList
     meta = {}
@@ -231,31 +231,39 @@ def metadata_mintpy2unavco(meta_in, dateList, geom_file=None):
     #################################
     # insarmaps metadata
     #################################
-    # footprint for data coverage
-    if 'X_FIRST' in meta.keys():
-        lon0 = float(meta['X_FIRST'])
-        lat0 = float(meta['Y_FIRST'])
-        lon1 = lon0 + float(meta['X_STEP'])*int(meta['WIDTH'])
-        lat1 = lat0 + float(meta['Y_STEP'])*int(meta['LENGTH'])
-        lons = [str(lon0), str(lon1), str(lon1), str(lon0), str(lon0)]
-        lats = [str(lat0), str(lat0), str(lat1), str(lat1), str(lat0)]
-        unavco_meta['data_footprint'] = "POLYGON((" + ",".join(
-            [lon+' '+lat for lon, lat in zip(lons, lats)]) + "))"
-    elif geom_file is not None:
-        geom_obj = geometry(geom_file)
-        geom_obj.open(print_msg=False)
-        raw_lats = geom_obj.read(datasetName="latitude", print_msg=False)
-        raw_lons = geom_obj.read(datasetName="longitude", print_msg=False)
-        lon0 = raw_lons[0][0]
-        lat0 = raw_lats[0][0]
-        lon1 = raw_lons[len(raw_lons) - 1][len(raw_lons[0]) - 1]
-        lat1 = raw_lats[len(raw_lats) - 1][len(raw_lats[0]) - 1]
-        lons = [str(lon0), str(lon1), str(lon1), str(lon0), str(lon0)]
-        lats = [str(lat0), str(lat0), str(lat1), str(lat1), str(lat0)]
-        unavco_meta['data_footprint'] = "POLYGON((" + ",".join(
-            [lon+' '+lat for lon, lat in zip(lons, lats)]) + "))"
+    # footprint for actual data coverage in lat/lon bounding box.
+    geom_meta = readfile.read_attribute(geom_file)
+    geom_dset_list = readfile.get_dataset_list(geom_file)
+
+    if 'Y_FIRST' in meta.keys():
+        N = float(meta['Y_FIRST'])
+        W = float(meta['X_FIRST'])
+        S = N + float(meta['Y_STEP']) * int(meta['LENGTH'])
+        E = W + float(meta['X_STEP']) * int(meta['WIDTH'])
+        unavco_meta['data_footprint'] = ut.snwe_to_wkt_polygon([S, N, W, E])
+
+    elif 'Y_FIRST' in geom_meta.keys():
+        N = float(geom_meta['Y_FIRST'])
+        W = float(geom_meta['X_FIRST'])
+        S = N + float(geom_meta['Y_STEP']) * int(geom_meta['LENGTH'])
+        E = W + float(geom_meta['X_STEP']) * int(geom_meta['WIDTH'])
+        unavco_meta['data_footprint'] = ut.snwe_to_wkt_polygon([S, N, W, E])
+
+    elif 'latitude' in geom_dset_list:
+        lat_data = readfile.read(geom_file, datasetName='latitude')[0]
+        lon_data = readfile.read(geom_file, datasetName='longitude')[0]
+
+        # set pixels with invalid value or zero to nan
+        lat_data[np.abs(lat_data) == 90] = np.nan
+        lat_data[lat_data == 0] = np.nan
+        lon_data[lon_data == 0] = np.nan
+
+        S, N = np.nanmin(lat_data), np.nanmax(lat_data)
+        W, E = np.nanmin(lon_data), np.nanmax(lon_data)
+        unavco_meta['data_footprint'] = ut.snwe_to_wkt_polygon([S, N, W, E])
+
     else:
-        print('Input file is not geocoded, no data_footprint without X/Y_FIRST/STEP info or a geometry file.')
+        print('WARNING: "data_footprint" is NOT assigned, due to the lack of X/Y_FIRST/STEP attributes and latitude/longitde datasets.')
 
     return unavco_meta
 
