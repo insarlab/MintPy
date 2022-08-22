@@ -19,7 +19,7 @@ from mintpy.objects import timeseries, giantTimeseries, HDFEOS, cluster
 from mintpy.utils import arg_utils, ptime, time_func, readfile, writefile, utils as ut
 
 
-dataType = np.float32
+DATA_TYPE = np.float32
 # key configuration parameter name
 key_prefix = 'mintpy.timeFunc.'
 configKeys = [
@@ -366,6 +366,11 @@ def run_timeseries2time_func(inps):
 
     # time_func_param: instantiate output file
     ds_name_dict, ds_unit_dict = model2hdf5_dataset(model, ds_shape=(length, width))[1:]
+    # add dataset: residue
+    if inps.uncertaintyQuantification == 'residue':
+        ds_name_dict['residue'] = [np.float32, (length, width), None]
+        ds_unit_dict['residue'] = 'm'
+
     writefile.layout_hdf5(inps.outfile,
                           metadata=atrV,
                           ds_name_dict=ds_name_dict,
@@ -401,7 +406,7 @@ def run_timeseries2time_func(inps):
 
     # loop for block-by-block IO
     for i, box in enumerate(box_list):
-        box_wid  = box[2] - box[0]
+        box_wid = box[2] - box[0]
         box_len = box[3] - box[1]
         num_pixel = box_len * box_wid
         if num_box > 1:
@@ -410,8 +415,8 @@ def run_timeseries2time_func(inps):
             print('box length: {}'.format(box_len))
 
         # initiate output
-        m = np.zeros((num_param, num_pixel), dtype=dataType)
-        m_std = np.zeros((num_param, num_pixel), dtype=dataType)
+        m = np.zeros((num_param, num_pixel), dtype=DATA_TYPE)
+        m_std = np.zeros((num_param, num_pixel), dtype=DATA_TYPE)
 
         # read input
         print('reading data from file {} ...'.format(inps.timeseries_file))
@@ -492,7 +497,7 @@ def run_timeseries2time_func(inps):
 
             # calc model of all bootstrap sampling
             rng = np.random.default_rng()
-            m_boot = np.zeros((inps.bootstrapCount, num_param, num_pixel2inv), dtype=dataType)
+            m_boot = np.zeros((inps.bootstrapCount, num_param, num_pixel2inv), dtype=DATA_TYPE)
             prog_bar = ptime.progressBar(maxValue=inps.bootstrapCount)
             for i in range(inps.bootstrapCount):
                 # bootstrap resampling
@@ -597,6 +602,11 @@ def run_timeseries2time_func(inps):
         # write - time func params
         block = [box[1], box[3], box[0], box[2]]
         ds_dict = model2hdf5_dataset(model, m, m_std, mask=mask)[0]
+        # save dataset: residue
+        if inps.uncertaintyQuantification == 'residue':
+            ds_dict['residue'] = np.zeros(num_pixel, dtype=DATA_TYPE)
+            ds_dict['residue'][mask] = np.sqrt(e2)
+
         for ds_name, data in ds_dict.items():
             writefile.write_hdf5_block(inps.outfile,
                                        data=data.reshape(box_len, box_wid),
@@ -616,7 +626,7 @@ def run_timeseries2time_func(inps):
     return inps.outfile
 
 
-def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None):
+def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None, residue=None):
     """Prepare the estimated model parameters into a list of dicts for HDF5 dataset writing.
     Parameters: model        - dict,
                 m            - 2D np.ndarray in (num_param, num_pixel) where num_pixel = 1 or length * width
@@ -659,17 +669,20 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None):
             mask = mask.flatten()
 
     # time func 1 - polynomial
-    for i in range(1, poly_deg+1):
+    for i in range(poly_deg+1):
         # dataset name
-        if i == 1:
+        if i == 0:
+            dsName = 'intercept'
+            unit = 'm'
+        elif i == 1:
             dsName = 'velocity'
             unit = 'm/year'
         elif i == 2:
             dsName = 'acceleration'
             unit = 'm/year^2'
         else:
-            dsName = 'poly{}'.format(i)
-            unit = 'm/year^{}'.format(i)
+            dsName = f'poly{i}'
+            unit = f'm/year^{i}'
 
         # assign ds_dict
         if m is not None:
@@ -677,9 +690,9 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None):
             ds_dict[dsName+'Std'] = m_std[i, :]
 
         # assign ds_name/unit_dict
-        ds_name_dict[dsName] = [dataType, ds_shape, None]
+        ds_name_dict[dsName] = [DATA_TYPE, ds_shape, None]
         ds_unit_dict[dsName] = unit
-        ds_name_dict[dsName+'Std'] = [dataType, ds_shape, None]
+        ds_name_dict[dsName+'Std'] = [DATA_TYPE, ds_shape, None]
         ds_unit_dict[dsName+'Std'] = unit
 
     # time func 2 - periodic
@@ -701,7 +714,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None):
             coef_cos = m[p0 + 2*i, :]
             coef_sin = m[p0 + 2*i + 1, :]
             period_amp = np.sqrt(coef_cos**2 + coef_sin**2)
-            period_pha = np.zeros(num_pixel, dtype=dataType)
+            period_pha = np.zeros(num_pixel, dtype=DATA_TYPE)
             # avoid divided by zero warning
             if not np.all(coef_sin[mask] == 0):
                 # use atan2, instead of atan, to get phase within [-pi, pi]
@@ -712,9 +725,9 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None):
                 ds_dict[dsName] = data
 
         # update ds_name/unit_dict
-        ds_name_dict[dsNames[0]] = [dataType, ds_shape, None]
+        ds_name_dict[dsNames[0]] = [DATA_TYPE, ds_shape, None]
         ds_unit_dict[dsNames[0]] = 'm'
-        ds_name_dict[dsNames[1]] = [dataType, ds_shape, None]
+        ds_name_dict[dsNames[1]] = [DATA_TYPE, ds_shape, None]
         ds_unit_dict[dsNames[1]] = 'radian'
 
     # time func 3 - step
@@ -729,9 +742,9 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None):
             ds_dict[dsName+'Std'] = m_std[p0+i, :]
 
         # assign ds_name/unit_dict
-        ds_name_dict[dsName] = [dataType, ds_shape, None]
+        ds_name_dict[dsName] = [DATA_TYPE, ds_shape, None]
         ds_unit_dict[dsName] = 'm'
-        ds_name_dict[dsName+'Std'] = [dataType, ds_shape, None]
+        ds_name_dict[dsName+'Std'] = [DATA_TYPE, ds_shape, None]
         ds_unit_dict[dsName+'Std'] = 'm'
 
     # time func 4 - exponential
@@ -748,9 +761,9 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None):
                 ds_dict[dsName+'Std'] = m_std[p0+i, :]
 
             # assign ds_name/unit_dict
-            ds_name_dict[dsName] = [dataType, ds_shape, None]
+            ds_name_dict[dsName] = [DATA_TYPE, ds_shape, None]
             ds_unit_dict[dsName] = 'm'
-            ds_name_dict[dsName+'Std'] = [dataType, ds_shape, None]
+            ds_name_dict[dsName+'Std'] = [DATA_TYPE, ds_shape, None]
             ds_unit_dict[dsName+'Std'] = 'm'
 
             # loop because each onset_time could have multiple char_time
@@ -770,9 +783,9 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None):
                 ds_dict[dsName+'Std'] = m_std[p0+i, :]
 
             # assign ds_name/unit_dict
-            ds_name_dict[dsName] = [dataType, ds_shape, None]
+            ds_name_dict[dsName] = [DATA_TYPE, ds_shape, None]
             ds_unit_dict[dsName] = 'm'
-            ds_name_dict[dsName+'Std'] = [dataType, ds_shape, None]
+            ds_name_dict[dsName+'Std'] = [DATA_TYPE, ds_shape, None]
             ds_unit_dict[dsName+'Std'] = 'm'
 
             # loop because each onset_time could have multiple char_time

@@ -41,7 +41,7 @@ jobs:
         .
 
     - name: Publish developed version 📦 to Test PyPI
-      if: github.ref == 'refs/heads/main'
+      if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.TEST_PYPI_API_TOKEN }}
