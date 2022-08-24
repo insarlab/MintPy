@@ -1,6 +1,0 @@
-#Typical Parameters for Sentinel-1 descending track dataset
-sensor         = Sen
-incidenceAngle = 33.4
-orbitDirection = descending
-azimuthLooks   = 5
-rangeLooks     = 15

@@ -25,9 +25,10 @@ REFERENCE = """reference:
 """
 
 EXAMPLE = """example:
-  solid_earth_tides.py timeseries.h5 -g inputs/geometryRadar.h5
   solid_earth_tides.py timeseries.h5 -g inputs/geometryGeo.h5
-  solid_earth_tides.py geo/geo_timeseries_ERA5_demErr.h5 -g geo/geo_geometryRadar.h5
+  solid_earth_tides.py timeseries.h5 -g inputs/geometryRadar.h5
+  solid_earth_tides.py timeseries.h5 -g inputs/geometryRadar.h5 --comp en2az
+  solid_earth_tides.py date_list.txt -g inputs/geometryRadar.h5 --comp en2az
 """
 
 def create_parser(subparsers=None):
@@ -37,13 +38,17 @@ def create_parser(subparsers=None):
     parser = create_argument_parser(
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
-    parser.add_argument('dis_file', help='timeseries HDF5 file, i.e. timeseries.h5')
+    parser.add_argument('dis_file', type=str,
+                        help='timeseries HDF5 file, e.g., timeseries.h5.\n'
+                             'Or date list text file, e.g., info.py inputs/ERA5.py --date > date_list.txt')
     parser.add_argument('-g','--geomtry', dest='geom_file', type=str, required=True,
                         help='geometry file including incidence/azimuthAngle.')
     parser.add_argument('--date-wise-acq-time', dest='date_wise_acq_time', action='store_true',
                         help='Use the exact date-wise acquisition time instead of the common one for tides calculation.\n' +
                              'For ISCE-2/topsStack products only, and requires ../reference and ../secondarys folder.\n' +
                              'There is <1 min difference btw. S1A/B -> Negligible impact for InSAR.')
+    parser.add_argument('--comp', dest='set_comp', choices={'enu2los', 'en2az'}, default='enu2los',
+                        help='Convert the ENU components into the component of interest for radar (default: %(default)s).')
 
     parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose message.')
     parser.add_argument('--update', dest='update_mode', action='store_true', help='Enable update mode.')
@@ -65,30 +70,34 @@ def cmd_line_parse(iargs=None):
     from mintpy.utils import readfile
 
     # check
-    atr1 = readfile.read_attribute(inps.dis_file)
-    atr2 = readfile.read_attribute(inps.geom_file)
-    coord1 = 'geo' if 'Y_FIRST' in atr1.keys() else 'radar'
-    coord2 = 'geo' if 'Y_FIRST' in atr2.keys() else 'radar'
-    proc = atr1.get('PROCESSOR', 'isce')
+    if inps.dis_file.endswith('.h5'):
+        atr1 = readfile.read_attribute(inps.dis_file)
+        atr2 = readfile.read_attribute(inps.geom_file)
+        coord1 = 'geo' if 'Y_FIRST' in atr1.keys() else 'radar'
+        coord2 = 'geo' if 'Y_FIRST' in atr2.keys() else 'radar'
+        proc = atr1.get('PROCESSOR', 'isce')
 
-    # check: metadata (coordinates + processors) - radar coord is NOT supported for gamma / roipac
-    if coord1 == 'radar' and proc in ['gamma', 'roipac']:
-        msg = 'Radar-coded file from {} is NOT supported!'.format(proc)
-        msg += '\n    Try to geocode the time-series & geometry files and re-run with them instead.'
-        raise ValueError(msg)
+        # check: metadata (coordinates + processors) - radar coord is NOT supported for gamma / roipac
+        if coord1 == 'radar' and proc in ['gamma', 'roipac']:
+            msg = 'Radar-coded file from {} is NOT supported!'.format(proc)
+            msg += '\n    Try to geocode the time-series & geometry files and re-run with them instead.'
+            raise ValueError(msg)
 
-    # check: coordinates between time-series and geometry (consistency is required)
-    if coord1 != coord2:
-        n = max(len(os.path.basename(i)) for i in [inps.dis_file, inps.geom_file])
-        msg = 'Input time-series and geometry file are NOT in the same coordinate!'
-        msg += f'\n    file {os.path.basename(inps.dis_file):<{n}} coordinate: {coord1}'
-        msg += f'\n    file {os.path.basename(inps.geom_file):<{n}} coordinate: {coord2}'
-        raise ValueError(msg)
+        # check: coordinates between time-series and geometry (consistency is required)
+        if coord1 != coord2:
+            n = max(len(os.path.basename(i)) for i in [inps.dis_file, inps.geom_file])
+            msg = 'Input time-series and geometry file are NOT in the same coordinate!'
+            msg += f'\n    file {os.path.basename(inps.dis_file):<{n}} coordinate: {coord1}'
+            msg += f'\n    file {os.path.basename(inps.geom_file):<{n}} coordinate: {coord2}'
+            raise ValueError(msg)
 
     # default: output SET file name
     if not inps.set_file:
         geom_dir = os.path.dirname(inps.geom_file)
         inps.set_file = os.path.join(geom_dir, 'SET.h5')
+
+        if inps.set_comp.endswith('2az'):
+            inps.set_file = os.path.join(geom_dir, 'SETaz.h5')
 
     # default: output corrected time-series file name
     if not inps.cor_dis_file:

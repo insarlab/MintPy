@@ -27,7 +27,7 @@ REFERENCE = """reference:
     Altamimi, Z., Métivier, L., Rebischung, P., Rouby, H., & Collilieux, X. (2017).
     ITRF2014 plate motion model. Geophysical Journal International, 209(3), 1906-1912.
     doi:10.1093/gji/ggx136
-  MORVEL56 - Table 1 of Argus et al. (2011) - 56 plates
+  MORVEL - Table 1 of Argus et al. (2011) - 56 plates
     Argus, D. F., Gordon, R. G., & DeMets, C. (2011). Geologically current motion of 56
     plates relative to the no-net-rotation reference frame. Geochemistry, Geophysics, Geosystems, 12(11).
     doi:10.1029/2011GC003751
@@ -38,6 +38,7 @@ EXAMPLE = """example:
   # e.g., Arabia plate in ITRF14-PMM (Table 1 in Altamimi et al., 2017)
   bulk_plate_motion.py -g inputs/geometryGeo.h5   --om-cart 1.154 -0.136  1.444 -v velocity.h5
   bulk_plate_motion.py -g inputs/geometryRadar.h5 --om-cart 1.154 -0.136  1.444
+  bulk_plate_motion.py -g inputs/geometryRadar.h5 --om-cart 1.154 -0.136  1.444 --comp en2az
 
   # Simple constant local ENU translation (based on one GNSS vector) in [ve, vn, vu] in unit of m/year
   #   E.g., https://www.unavco.org/software/visualization/GPS-Velocity-Viewer/GPS-Velocity-Viewer.html
@@ -69,6 +70,8 @@ def create_parser(subparsers=None):
                         help='Input velocity file to be corrected.')
     parser.add_argument('-o', '--output', dest='cor_vel_file', type=str,
                         help='Output velocity file after the correction, default: add "_ITRF14" suffix.')
+    parser.add_argument('--comp', dest='pmm_comp', choices={'enu2los', 'en2az'}, default='enu2los',
+                        help='Convert the ENU components into the component of interest for radar (default: %(default)s).')
 
     # plate motion configurations
     pmm = parser.add_mutually_exclusive_group(required=True)
@@ -91,8 +94,10 @@ def cmd_line_parse(iargs=None):
 
     # default: output PMM filenames
     geom_dir = os.path.dirname(inps.geom_file)
-    inps.pmm_enu_file = os.path.join(geom_dir, 'ITRF14ENU.h5')
-    inps.pmm_los_file = os.path.join(geom_dir, 'ITRF14.h5')
+    inps.pmm_enu_file = os.path.join(geom_dir, 'ITRF14enu.h5')
+    inps.pmm_file = os.path.join(geom_dir, 'ITRF14.h5')
+    if inps.pmm_comp.endswith('2az'):
+        inps.pmm_file = os.path.join(geom_dir, 'ITRF14az.h5')
 
     # default: --output option
     if inps.vel_file and not inps.cor_vel_file:

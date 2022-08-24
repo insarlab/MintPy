@@ -60,8 +60,7 @@ ITRF2014_PMM = {
 }
 
 
-########################################## Sub Functions #############################################
-
+####################################### Sub Functions ##########################################
 def build_plate_motion_model(omega_cart=None, omega_sph=None):
     """Build a plate motion model based on the given Euler roation vector
     Parameters: omega_sph  - list or np.array, Spherical representation [lat, lon, w] (deg, deg, deg/Ma)
@@ -144,10 +143,9 @@ def pmm2enu_at(pmm_obj, lats, lons):
     return ve, vn, vu
 
 
-####################################### Higher-level Sub Functions ##########################################
-
+####################################### Sub Functions ##########################################
 def calc_bulk_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=None,
-                           pmm_enu_file=None, pmm_los_file=None, pmm_step=10.):
+                           pmm_enu_file=None, pmm_file=None, pmm_comp='enu2los', pmm_step=10.):
     """Estimate LOS motion due to pure bulk tranlation or due to plate rotation
     Parameters: geom_file     - str, path to the input geometry file
                 omega_cart    - list or 1D array, Cartesian representation of plate rotation
@@ -157,7 +155,8 @@ def calc_bulk_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel
                 const_vel_enu - list or 1D array, a single-vector [ve, vn, vu] (meter/year)
                                 simulating the bulk translation of the ground (e.g., from GNSS)
                 pmm_enu_file  - str, path to the output bulk plate motion in east, north, up direction
-                pmm_los_file  - str, path to the output bulk plate motion in LOS direction
+                pmm_file      - str, path to the output bulk plate motion in LOS direction
+                set_comp      - str, output PMM in the given component of interest
                 pmm_reso      - float, ground resolution for computing Plate rotation to ENU velocity (km)
     Returns:    ve/vn/vu/vlos - 2D np.ndarray, bulk plate motion in east / north / up / LOS direction
     """
@@ -218,23 +217,38 @@ def calc_bulk_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel
         vu = res_obj.run_resample(src_data=vu[box[1]:box[3], box[0]:box[2]])
 
 
-    # Project model to LOS velocity
-    print('project the bulk plate motion from ENU onto LOS direction')
-    inc_angle = readfile.read(geom_file, datasetName='incidenceAngle')[0]
-    az_angle = readfile.read(geom_file, datasetName='azimuthAngle')[0]
-    vlos = ut.enu2los(ve, vn, vu, inc_angle=inc_angle, az_angle=az_angle)
+    # Project model from ENU to direction of interest
+    c0, c1 = pmm_comp.split('2')
+    print(f'project the bulk plate motion from {c0.upper()} onto {c1.upper()} direction')
+    los_inc_angle = readfile.read(geom_file, datasetName='incidenceAngle')[0]
+    los_az_angle = readfile.read(geom_file, datasetName='azimuthAngle')[0]
+    unit_vec = ut.get_unit_vector4component_of_interest(los_inc_angle, los_az_angle, comp=pmm_comp)
+    vlos = (  ve * unit_vec[0]
+            + vn * unit_vec[1]
+            + vu * unit_vec[2])
 
     # Save the bulk motion model velocity into HDF5 files
+    # metadata
     atr['FILE_TYPE'] = 'velocity'
     atr['DATA_TYPE'] = 'float32'
     atr['UNIT'] = 'm/year'
-    dsDict = {
-        'east'  : ve,
-        'north' : vn,
-        'up'    : vu,
-    }
-    writefile.write(dsDict, out_file=pmm_enu_file, metadata=atr)
-    writefile.write(vlos,   out_file=pmm_los_file, metadata=atr)
+    for key in ['REF_Y', 'REF_X', 'REF_DATE']:
+        if key in atr.keys():
+            atr.pop(key)
+
+    if pmm_enu_file:
+        # dataset
+        dsDict = {
+            'east'  : ve,
+            'north' : vn,
+            'up'    : vu,
+        }
+
+        # write
+        writefile.write(dsDict, out_file=pmm_enu_file, metadata=atr)
+
+    if pmm_file:
+        writefile.write(vlos, out_file=pmm_file, metadata=atr)
 
     return ve, vn, vu, vlos
 
@@ -248,6 +262,7 @@ def correct_bulk_plate_motion(vel_file, mfile, ofile):
     return
 
 
+################################################################################################
 def run_bulk_plate_motion(inps):
     """Calculate and/or correct for bulk motion from tectonic plates."""
 
@@ -257,13 +272,14 @@ def run_bulk_plate_motion(inps):
         omega_sph=inps.omega_sph,
         const_vel_enu=inps.const_vel_enu,
         pmm_enu_file=inps.pmm_enu_file,
-        pmm_los_file=inps.pmm_los_file,
+        pmm_file=inps.pmm_file,
+        pmm_comp=inps.pmm_comp,
         pmm_step=inps.pmm_step,
     )
 
-    if inps.vel_file and inps.pmm_los_file and inps.cor_vel_file:
+    if inps.vel_file and inps.pmm_file and inps.cor_vel_file:
         print('-'*50)
         print('Correct input velocity for the bulk plate motion')
-        correct_bulk_plate_motion(inps.vel_file, inps.pmm_los_file, inps.cor_vel_file)
+        correct_bulk_plate_motion(inps.vel_file, inps.pmm_file, inps.cor_vel_file)
 
     return
