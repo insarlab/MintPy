@@ -1050,6 +1050,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             fname + '.xml',
             fname + '.par',
             os.path.splitext(fname)[0] + '.hdr',
+            fname + '.hdr',
             fname + '.vrt',
             fname + '.aux.xml',
         ]
