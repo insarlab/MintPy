@@ -1049,7 +1049,8 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             fname + '.rsc',
             fname + '.xml',
             fname + '.par',
-            os.path.splitext(fname)[0] + '.hdr',
+            fname + '.hdr',                        # created with SUFFIX=ADD     in gdal envi driver
+            os.path.splitext(fname)[0] + '.hdr',   # created with SUFFIX=REPLACE in gdal envi driver
             fname + '.vrt',
             fname + '.aux.xml',
         ]
