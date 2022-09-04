@@ -616,7 +616,9 @@ def run_timeseries2time_func(inps):
         # write - residual file
         if inps.save_res:
             block = [0, num_date, box[1], box[3], box[0], box[2]]
-            ts_res = np.ones((num_date, box_len*box_wid), dtype=np.float32) * np.nan
+            ts_res = np.full((num_date, box_len, box_wid), np.nan, dtype=np.float32)
+            ts_res[:, inps.ref_yx] = 0
+            ts_res = ts_res.reshape(num_date, -1)
             ts_res[:, mask] = ts_data - np.dot(G, m)[:, mask]
             writefile.write_hdf5_block(inps.res_file,
                                        data=ts_res.reshape(num_date, box_len, box_wid),
