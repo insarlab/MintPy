@@ -466,7 +466,8 @@ def read_timeseries_data(inps):
     del ts_stack
 
     # do not mask the reference point
-    if inps.ref_yx and inps.ref_yx != (int(atr.get('REF_Y', -1)), int(atr.get('REF_X', -1))):
+    x0, y0, x1, y1 = inps.pix_box
+    if inps.ref_yx and (x0 <= inps.ref_yx[1] < x1) and (y0 <= inps.ref_yx[0] < y1):
         (ry, rx) = subset_and_multilook_yx(inps.ref_yx, inps.pix_box, inps.multilook_num)
         mask[ry, rx] = True
 

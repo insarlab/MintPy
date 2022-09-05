@@ -466,6 +466,10 @@ def run_timeseries2time_func(inps):
         ts_stack = np.nanmean(ts_data, axis=0)
         mask = np.multiply(~np.isnan(ts_stack), ts_stack!=0.)
         del ts_stack
+        # include the reference point
+        ry, rx = int(atrV['REF_Y']) - box[1], int(atrV['REF_X']) - box[0]
+        if 0 <= rx < box_wid and 0 <= ry < box_len:
+            mask[ry * box_wid + rx] = 1
 
         #if ts_cov is not None:
         #    print('skip pxiels with nan STD value in any acquisition')
@@ -616,10 +620,10 @@ def run_timeseries2time_func(inps):
         # write - residual file
         if inps.save_res:
             block = [0, num_date, box[1], box[3], box[0], box[2]]
-            ts_res = np.full((num_date, box_len, box_wid), np.nan, dtype=np.float32)
-            ts_res[:, inps.ref_yx] = 0
-            ts_res = ts_res.reshape(num_date, -1)
+            ts_res = np.full((num_date, box_len*box_wid), np.nan, dtype=np.float32)
+            # calculate the time-series residual
             ts_res[:, mask] = ts_data - np.dot(G, m)[:, mask]
+            # write to HDF5 file
             writefile.write_hdf5_block(inps.res_file,
                                        data=ts_res.reshape(num_date, box_len, box_wid),
                                        datasetName='timeseries',
