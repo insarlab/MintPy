@@ -180,11 +180,10 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
             fig_title = '{}_{}'.format(ref_date, datasetNames[0])
 
         # grab info of applied phase corrections from filename
-        try:
-            processMark = os.path.basename(fname).split('timeseries')[1].split(fext)[0]
-            fig_title += processMark
-        except:
-            pass
+        if 'timeseries' in fname:
+            proc_suffix = os.path.basename(fname).split('timeseries')[1].split(fext)[0]
+            if proc_suffix:
+                fig_title += proc_suffix if proc_suffix.startswith('_') else f'_{proc_suffix}'
 
     elif k == 'geometry':
         if len(datasetNames) == 1:
