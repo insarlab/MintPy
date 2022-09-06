@@ -49,7 +49,7 @@ def get_processor(meta_file):
     """
     meta_dir = os.path.dirname(meta_file)
     tops_meta_file = os.path.join(meta_dir, 'IW*.xml')
-    stripmap_meta_files = [os.path.join(meta_dir, i) for i in ['data.dat', 'data']]
+    stripmap_meta_files = [os.path.join(meta_dir, i) for i in ['data.db', 'data.dat', 'data']]
     alosStack_meta_frame_files = glob.glob(os.path.join(meta_dir, 'f1_*', '*.frame.xml'))
 
     processor = None
