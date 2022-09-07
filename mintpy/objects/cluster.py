@@ -36,7 +36,7 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
     :return: sub_boxes: list(list(4 int)), the splited sub boxes
     """
     import numpy as np
-    
+
     dimension = dimension.lower()
     if num_split <= 1:
         return [box]
@@ -259,7 +259,7 @@ class DaskCluster:
 
         :param func: function, a python function to run in parallel
         :param func_data: dict, a dictionary of the argument to pass to the function
-        :param sub_boxes: list(np.nd.array), list of boxes to be computed in parallel
+        :param sub_boxes: list(np.ndarray), list of boxes to be computed in parallel
 
         :return futures: list(dask.Future), list of futures representing future dask worker calculations
         :return submission_time: time, the time of submission of the dask workers (used to determine worker

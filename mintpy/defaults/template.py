@@ -51,13 +51,14 @@ def get_template_content(step_name, template_file=None, indentation=2, header_fo
                 template_file - str, path of the template file
     Returns:    step_content  - str, comments and options of the step
     """
+    import mintpy
+
     # check
     if step_name not in STEP_LIST:
         raise ValueError('input step name "{}" not found! STEP_LIST={}'.format(step_name, STEP_LIST))
 
     # read template file into a list of strings
     if template_file is None:
-        import mintpy
         template_file = os.path.join(os.path.dirname(mintpy.__file__), 'defaults/smallbaselineApp.cfg')
     lines = open(template_file, 'r').readlines()
     lines = [line.strip(' ') for line in lines]
