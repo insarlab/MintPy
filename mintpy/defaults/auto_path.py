@@ -197,12 +197,13 @@ def get_auto_path(processor, work_dir, template):
 
 def get_reference_date12(proj_dir, processor='roipac'):
     """date12 of reference interferogram in YYMMDD-YYMMDD format"""
+    import numpy as np
+
     m_date12 = None
 
     # opt 1 - reference_ifgram.txt
     m_ifg_file = os.path.join(proj_dir, 'PROCESS', 'reference_ifgram.txt')
     if os.path.isfile(m_ifg_file):
-        import numpy as np
         m_date12 = str(np.loadtxt(m_ifg_file, dtype=bytes).astype(str))
         return m_date12
 
