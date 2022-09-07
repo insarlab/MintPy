@@ -107,7 +107,7 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # import
-    from ..utils import utils as ut
+    from ..utils import readfile, utils as ut
     from ..geocode import read_template2inps, check_num_processor
 
     # check
