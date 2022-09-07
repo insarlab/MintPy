@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -42,21 +42,27 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..utils import readfile
-
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # ONLY TWO files differencing is supported for timeseries and ifgramStack types
+    # import
+    from ..utils import readfile
+
+    # check
+    # check 1 - number of files == 2 for time-series and ifgram stack
     ftype = readfile.read_attribute(inps.file1)['FILE_TYPE']
     if ftype in ['timeseries', 'ifgramStack']:
         if len(inps.file2) > 1:
             raise SystemExit(f'ERROR: ONLY ONE file2 is inputed for {ftype} type!')
 
-    # --output
+    # check 2 - output file is required for number of files >=2
     if not inps.out_file:
         if len(inps.file2) > 1:
             raise ValueError('--output is required for >=2 files!')
+
+    # default values - output file
+    if not inps.out_file:
         fbase1, fext = os.path.splitext(inps.file1)
         fbase2 = os.path.splitext(os.path.basename(inps.file2[0]))[0]
         inps.out_file = f'{fbase1}_diff_{fbase2}{fext}'
@@ -66,15 +72,21 @@ def cmd_line_parse(iargs=None):
 
 #####################################################################################
 def main(iargs=None):
+    # parse args
+    inps = cmd_line_parse(iargs)
+
+    # import
     from ..diff import diff_file
 
-    inps = cmd_line_parse(iargs)
+    # run
     start_time = time.time()
 
-    diff_file(file1=inps.file1,
-              file2=inps.file2,
-              out_file=inps.out_file,
-              force_diff=inps.force_diff)
+    diff_file(
+        file1=inps.file1,
+        file2=inps.file2,
+        out_file=inps.out_file,
+        force_diff=inps.force_diff,
+    )
 
     # used time
     m, s = divmod(time.time()-start_time, 60)

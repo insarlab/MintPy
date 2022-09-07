@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Yujie Zheng, Aug 2022         #
 ############################################################
 
 
@@ -83,10 +83,11 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # --water-mask option
+    # check --water-mask option
     if not inps.water_mask_file and os.path.isfile('./waterMask.h5'):
         inps.water_mask_file = os.path.abspath('./waterMask.h5')
 
@@ -95,9 +96,19 @@ def cmd_line_parse(iargs=None):
 
 ################################################################################
 def main(iargs=None):
-    import numpy as np
-    from ..closure_phase_bias import calc_closure_phase_mask, compute_unwrap_closure_phase, estimate_bias_timeseries_approx, estimate_bias_timeseries
+    # parse args
     inps = cmd_line_parse(iargs)
+
+    # import
+    import numpy as np
+    from ..closure_phase_bias import (
+        calc_closure_phase_mask,
+        compute_unwrap_closure_phase,
+        estimate_bias_timeseries_approx,
+        estimate_bias_timeseries,
+    )
+
+    # run
     start_time = time.time()
 
     # common inputs
@@ -111,7 +122,7 @@ def main(iargs=None):
             threshold_amp=inps.epsilon,
             **kwargs)
 
-    elif inps.action.endswith ('estimate'):
+    elif inps.action.endswith('estimate'):
         # compute the unwrapped closure phase bias time-series
         # and re-unwrap to mitigate the impact of phase unwrapping errors
         # which can dominate the true non-closure phase.

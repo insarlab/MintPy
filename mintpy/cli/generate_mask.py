@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -126,12 +126,14 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..utils import readfile
-
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # check the optional --base and --base-dset options
+    # import
+    from ..utils import readfile
+
+    # check --base and --base-dset options
     if inps.base_file and inps.base_dataset:
         base_dataset_list = readfile.get_dataset_list(inps.base_file)
         if inps.base_dataset not in base_dataset_list:
@@ -142,53 +144,61 @@ def cmd_line_parse(iargs=None):
             inps.base_file = None
             inps.base_dataset = None
 
-    return inps
-
-
-################################################################################################
-def main(iargs=None):
-    import h5py
-    from ..utils import readfile, utils as ut
-    from ..generate_mask import run_or_skip, create_threshold_mask
-
-    start_time = time.time()
-    inps = cmd_line_parse(iargs)
-    atr = readfile.read_attribute(inps.file)
-    k = atr['FILE_TYPE']
-    print('input {} file: {}'.format(k, inps.file))
-
-    # default output filename
+    # default values - output filename
     if not inps.outfile:
         if inps.roipoly:
             inps.outfile = 'maskPoly.h5'
         elif 'temporalCoherence' in inps.file:
             suffix = inps.file.split('temporalCoherence')[1]
-            inps.outfile = 'maskTempCoh'+suffix
+            inps.outfile = 'maskTempCoh' + suffix
         else:
             inps.outfile = 'mask.h5'
+
+        # "geo_" prefix
         if inps.file.startswith('geo_'):
             inps.outfile = 'geo_'+inps.outfile
 
-    # default vmin for temporal coherence
+    # default values - vmin for temporal coherence
     if inps.vmin is None and inps.file.endswith('temporalCoherence.h5'):
         inps.vmin = 0.7
 
-    ##### Mask: Non-zero
-    if inps.nonzero and k == 'ifgramStack':
+    return inps
+
+
+################################################################################################
+def main(iargs=None):
+    # parse args
+    inps = cmd_line_parse(iargs)
+
+    # import
+    from ..utils import readfile, utils as ut
+    from ..generate_mask import run_or_skip, create_threshold_mask
+
+    # run
+    start_time = time.time()
+    ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
+    print('input {} file: {}'.format(ftype, inps.file))
+
+    # create mask using non-zero
+    if inps.nonzero and ftype == 'ifgramStack':
         # get dataset name
         if not inps.dset:
-            with h5py.File(inps.file, 'r') as f:
-                inps.dset = [i for i in ['connectComponent', 'unwrapPhase'] if i in f.keys()][0]
+            dset_list = readfile.get_dataset_list(inps.file)
+            inps.dset = [i for i in ['connectComponent', 'unwrapPhase'] if i in dset_list][0]
 
         # update mode
         if inps.update_mode and inps.outfile and run_or_skip(inps) == 'skip':
-            return inps.outfile
+            return
 
         # run
-        inps.outfile = ut.nonzero_mask(inps.file, out_file=inps.outfile, datasetName=inps.dset)
-        return inps.outfile
+        inps.outfile = ut.nonzero_mask(
+            inps.file,
+            out_file=inps.outfile,
+            datasetName=inps.dset,
+        )
+        return
 
-    ##### Mask: Threshold
+    # create mask using threshold
     create_threshold_mask(inps)
 
     m, s = divmod(time.time()-start_time, 60)

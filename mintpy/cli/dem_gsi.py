@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -41,26 +41,34 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # check --grid-dir option
     inps.grid_dir = os.path.expanduser(inps.grid_dir)
     inps.grid_dir = os.path.expandvars(inps.grid_dir)
     inps.grid_dir = os.path.abspath(inps.grid_dir)
     if len(glob.glob(os.path.join(inps.grid_dir, '*.dehm'))) == 0:
-        raise SystemExit('ERROR: no *.dehm file found in directory: {}'.format(inps.grid_dir))
+        raise SystemExit(f'ERROR: no *.dehm file found in directory: {inps.grid_dir}')
+
     return inps
 
 
 ##################################################################################################
 def main(iargs=None):
-    from ..dem_gsi import write_dem_file, write_rsc_file, write_isce_metadata
-
+    # parse args
     inps = cmd_line_parse(iargs)
 
-    meta = write_dem_file(inps.SNWE,
-                          dem_file=inps.outfile,
-                          grid_dir=inps.grid_dir)
+    # import
+    from ..dem_gsi import write_dem_file, write_rsc_file, write_isce_metadata
+
+    # run
+    meta = write_dem_file(
+        inps.SNWE,
+        dem_file=inps.outfile,
+        grid_dir=inps.grid_dir,
+    )
 
     # rsc file for roipac
     write_rsc_file(meta, inps.outfile)

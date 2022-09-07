@@ -20,67 +20,6 @@ from mintpy.utils import (
 
 
 ######################################################################################
-def _check_inps(inps):
-    # check 1 - input file(s) existence
-    inps.file = ut.get_file_list(inps.file)
-    if not inps.file:
-        raise Exception('ERROR: no input file found!')
-    elif len(inps.file) > 1:
-        inps.outfile = None
-
-    # check 2 - lookup table existence
-    if not inps.lookupFile:
-        # grab default lookup table
-        inps.lookupFile = ut.get_lookup_file(inps.lookupFile)
-
-        # use isce-2 lat/lon.rdr file
-        if not inps.lookupFile and inps.latFile:
-            inps.lookupFile = inps.latFile
-
-        # final check
-        if not inps.lookupFile:
-            raise FileNotFoundError('No lookup table found! Can not geocode without it.')
-
-    # check 3 - src file coordinate & radar2geo operatioin
-    atr = readfile.read_attribute(inps.file[0])
-    if 'Y_FIRST' in atr.keys() and inps.radar2geo:
-        print('input file is already geocoded')
-        print('to resample geocoded files into radar coordinates, use --geo2radar option')
-        print('exit without doing anything.')
-        sys.exit(0)
-    elif 'Y_FIRST' not in atr.keys() and not inps.radar2geo:
-        print('input file is already in radar coordinates, exit without doing anything')
-        sys.exit(0)
-
-    # check 4 - laloStep
-    # valid only if:
-    # 1. radar2geo = True AND
-    # 2. lookup table is in radar coordinates
-    if inps.laloStep:
-        if not inps.radar2geo:
-            print('ERROR: "--lalo-step" can NOT be used together with "--geo2radar"!')
-            sys.exit(0)
-        atr = readfile.read_attribute(inps.lookupFile)
-        if 'Y_FIRST' in atr.keys():
-            print('ERROR: "--lalo-step" can NOT be used with lookup table file in geo-coordinates!')
-            sys.exit(0)
-
-    # check 5 - number of processors for multiprocessingg
-    inps.nprocs = check_num_processor(inps.nprocs)
-
-
-    # check 6 - geo2radar
-    if not inps.radar2geo:
-        if inps.SNWE:
-            print('ERROR: "--geo2radar" can NOT be used together with "--bbox"!')
-            sys.exit(0)
-        if inps.software == 'scipy':
-            print('ERROR: "--geo2radar" is NOT supported for "--software scipy"!')
-            sys.exit(0)
-
-    return inps
-
-
 def read_template2inps(template_file, inps):
     """Read input template options into Namespace inps"""
     print('read input option from template file: ' + template_file)

@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -87,11 +87,14 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..utils import readfile
-
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # import
+    from ..utils import readfile
+
+    # check
     atr1 = readfile.read_attribute(inps.file[0])
     atr2 = readfile.read_attribute(inps.file[1])
 
@@ -123,10 +126,13 @@ def cmd_line_parse(iargs=None):
 
 ################################################################################
 def main(iargs=None):
-    from ..asc_desc2horz_vert import run_asc_desc2horz_vert
-
+    # parse args
     inps = cmd_line_parse(iargs)
 
+    # import
+    from ..asc_desc2horz_vert import run_asc_desc2horz_vert
+
+    # run
     run_asc_desc2horz_vert(inps)
 
 

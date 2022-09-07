@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Heresh Fattahi, Aug 2022      #
 ############################################################
 
 
@@ -18,7 +18,7 @@ TEMPLATE = get_template_content('correct_topography')
 
 REFERENCE = """reference:
   Fattahi, H., and F. Amelung (2013), DEM Error Correction in InSAR Time Series,
-  IEEE Trans. Geosci. Remote Sens., 51(7), 4249-4259, doi:10.1109/TGRS.2012.2227761.
+    IEEE Trans. Geosci. Remote Sens., 51(7), 4249-4259, doi:10.1109/TGRS.2012.2227761.
 """
 
 EXAMPLE = """example:
@@ -81,44 +81,53 @@ def create_parser(subparsers=None):
 
 def cmd_line_parse(iargs=None):
     """Command line parser."""
-    from ..objects import cluster
-    from ..dem_error import read_template2inps
-
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # import
+    from ..objects import cluster
+    from ..dem_error import read_template2inps
+
+    # check
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 
-    # --cluster and --num-worker option
+    # check --cluster and --num-worker option
     inps.numWorker = str(cluster.DaskCluster.format_num_worker(inps.cluster, inps.numWorker))
     if inps.cluster and inps.numWorker == '1':
         print('WARNING: number of workers is 1, turn OFF parallel processing and continue')
         inps.cluster = None
 
-    # ignore non-existed exclude_date.txt
+    # check --ex option (ignore non-existed exclude_date.txt)
     if inps.excludeDate == 'exclude_date.txt' and not os.path.isfile(inps.excludeDate):
         inps.excludeDate = []
 
+    # check --poly-order option
     if inps.polyOrder < 1:
         raise argparse.ArgumentTypeError("Minimum polynomial order is 1")
 
+    # default values - output filename
     if not inps.outfile:
-        inps.outfile = '{}_demErr.h5'.format(os.path.splitext(inps.timeseries_file)[0])
+        fbase = os.path.splitext(inps.timeseries_file)[0]
+        inps.outfile = f'{fbase}_demErr.h5'
+
     return inps
 
 
 ############################################################################
 def main(iargs=None):
-    from ..dem_error import run_or_skip, correct_dem_error
-    
+    # parse args
     inps = cmd_line_parse(iargs)
 
-    # --update option
-    if inps.update_mode and run_or_skip(inps) == 'skip':
-        return inps.outfile
+    # import
+    from ..dem_error import run_or_skip, correct_dem_error
 
     # run
+    # check --update option
+    if inps.update_mode and run_or_skip(inps) == 'skip':
+        return
+
     correct_dem_error(inps)
 
 

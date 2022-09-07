@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Yuan-Kai Liu, Aug 2022        #
 ############################################################
 
 
@@ -88,7 +88,7 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # default output filenames
+    # default values - output filenames
     geom_dir = os.path.dirname(inps.geom_file)
     inps.pmm_enu_file = os.path.join(geom_dir, 'ITRF14ENU.h5')
     inps.pmm_los_file = os.path.join(geom_dir, 'ITRF14.h5')
@@ -102,9 +102,13 @@ def cmd_line_parse(iargs=None):
 
 #######################################  Main Function  ########################################
 def main(iargs=None):
-    from ..bulk_plate_motion import calc_bulk_plate_motion, correct_bulk_plate_motion
+    # parse args
     inps = cmd_line_parse(iargs)
 
+    # import
+    from ..bulk_plate_motion import calc_bulk_plate_motion, correct_bulk_plate_motion
+
+    # run
     calc_bulk_plate_motion(
         geom_file=inps.geom_file,
         omega_cart=inps.omega_cart,

@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -34,26 +34,37 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..utils import readfile
-    
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-    if len(inps.file) < 2:
+
+    # import
+    from ..utils import readfile
+
+    # check
+    num_file = len(inps.file)
+    atr = readfile.read_attribute(inps.file[0])
+
+    # check 1 - number of files a) >= 2 and b) == 2 for time-series
+    if num_file < 2:
         parser.print_usage()
         sys.exit('ERROR: At least 2 input files needed!')
 
-    # only two input files are supported for time-series type
-    atr = readfile.read_attribute(inps.file[0])
-    if atr['FILE_TYPE'] == 'timeseries' and len(inps.file) != 2:
-        raise ValueError('Only TWO files are supported for time-series, input has {}'.format(len(inps.file)))
+    elif num_file > 2 and atr['FILE_TYPE'] == 'timeseries':
+        raise ValueError(f'Only TWO files are supported for time-series, input has {num_file}.')
 
     return inps
 
 
 ################################################################################
 def main(iargs=None):
-    from ..add import add_file
+    # parse args
     inps = cmd_line_parse(iargs)
+
+    # import
+    from ..add import add_file
+
+    # run
     print('input files to be added: ({})\n{}'.format(len(inps.file), inps.file))
     add_file(inps.file, inps.outfile, force=inps.force)
     print('Done.')
