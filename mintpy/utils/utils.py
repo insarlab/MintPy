@@ -45,6 +45,14 @@ def check_loaded_dataset(work_dir='./', print_msg=True, relpath=False):
         work_dir = os.getcwd()
     work_dir = os.path.abspath(work_dir)
 
+    # tips for prep_aria
+    template_file = os.path.join(work_dir, 'smallbaselineApp.cfg')
+    proc = readfile.read_template(template_file)['mintpy.load.processor']
+    if proc == 'aria':
+        msg_aria = '. Re-run "prep_aria.py" as printed out in "load_data" step for more information!'
+    else:
+        msg_aria = ''
+
     # 1. [required] interferograms stack file: unwrapPhase, coherence
     stack_file = os.path.join(work_dir, 'inputs/ifgramStack.h5')
     dnames = ['unwrapPhase', 'rangeOffset', 'azimuthOffset']
@@ -62,7 +70,7 @@ def check_loaded_dataset(work_dir='./', print_msg=True, relpath=False):
         if 'unwrapPhase' in obj.datasetNames and 'coherence' not in obj.datasetNames:
             print(f'WARNING: "coherence" is missing in file {stack_file}')
     else:
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), stack_file)
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), stack_file + msg_aria)
 
     # get coordinate type of the loaded dataset
     atr = readfile.read_attribute(stack_file)
@@ -79,7 +87,7 @@ def check_loaded_dataset(work_dir='./', print_msg=True, relpath=False):
         if dname not in obj.datasetNames:
             raise ValueError(f'required dataset "{dname}" is missing in file {geom_file}')
     else:
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), geom_file)
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), geom_file + msg_aria)
 
     # 3. [required for radar-coord] lookup_file: latitude,longitude or rangeCoord,azimuthCoord
     # could be different than geometry file in case of roipac and gamma

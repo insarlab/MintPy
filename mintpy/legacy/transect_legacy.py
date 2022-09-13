@@ -377,7 +377,7 @@ def main(argv):
         elif opt == '-L':   stationsList = arg.split(',')
         elif opt == '-F':   FaultCoords  = arg.split(',')
         elif opt == '-p':   flip_profile = arg
-        elif opt == '-u':   flip_updown  = arg; print flip_updown
+        elif opt == '-u':   flip_updown  = arg; print(flip_updown)
         elif opt == '-G':   which_gps =arg
         elif opt == '-S':   gps_source=arg
         elif opt == '-h':   hbound=float(arg)
@@ -633,7 +633,7 @@ def main(argv):
 
             else:
 
-                print(""" 
+                print("""
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
       WARNING: nan value for InSAR data at the refernce pixel!
@@ -641,7 +641,7 @@ def main(argv):
 
                please select another GPS station as the reference station.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                       
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                    """)
                 sys.exit(1)
         else:
@@ -974,10 +974,10 @@ def main(argv):
     #    ax.yaxis.set_major_locator(majorLocator)
     #    minorLocator   = MultipleLocator(1)
     #    ax.yaxis.set_minor_locator(minorLocator)
-    
+
     #    plt.tick_params(which='major', length=15,width=2)
     #    plt.tick_params(which='minor', length=6,width=2)
-    
+
     #    try:
     #       for tick in ax.xaxis.get_major_ticks():
     #                tick.label.set_fontsize(26)
@@ -1000,4 +1000,3 @@ def main(argv):
 #############################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
-
