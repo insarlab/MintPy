@@ -57,7 +57,10 @@ def dload_ionex(date_str, tec_dir, sol_code='jpl', date_fmt='%Y%m%d', print_msg=
     cmd = 'wget --continue --auth-no-challenge "{}"'.format(fname_src)
     if os.path.isfile(fname_dst) and os.path.getsize(fname_dst) > 1000:
         cmd += ' --timestamping'
-    cmd = cmd + ' --quiet' if not print_msg else print(cmd)
+    cmd += ' --quiet' if not print_msg else ''
+
+    if print_msg:
+        print(cmd)
 
     # downlload - run cmd in output dir
     pwd = os.getcwd()
