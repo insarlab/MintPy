@@ -216,10 +216,7 @@ class TimeSeriesAnalysis:
         stack_file, geom_file = ut.check_loaded_dataset(self.workDir, print_msg=False)[:2]
         coh_txt = os.path.join(self.workDir, 'coherenceSpatialAvg.txt')
         net_fig = [os.path.join(self.workDir, i, 'network.pdf') for i in ['', 'pic']]
-        try:
-            net_fig = [i for i in net_fig if os.path.isfile(i)][0]
-        except:
-            net_fig = None
+        net_fig = [x for x in net_fig if os.path.isfile(x)]
 
         # 1) output waterMask.h5 to simplify the detection/use of waterMask
         water_mask_file = os.path.join(self.workDir, 'waterMask.h5')

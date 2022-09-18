@@ -6,7 +6,6 @@
 
 
 import os
-from mintpy.objects import RAMP_LIST
 from mintpy.utils import readfile
 
 

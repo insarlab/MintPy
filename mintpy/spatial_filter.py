@@ -8,16 +8,12 @@
 
 import os
 import sys
+
 import numpy as np
 from scipy import ndimage
-
-try:
-    from skimage import filters, feature, morphology
-except ImportError:
-    raise ImportError('Could not import skimage!')
+from skimage import filters, feature, morphology
 
 from mintpy.utils import readfile, writefile
-from mintpy.utils.arg_utils import create_argument_parser
 
 
 ################################################################################################
