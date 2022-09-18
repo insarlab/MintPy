@@ -72,7 +72,7 @@ def cmd_line_parse(iargs=None):
 ###########################################################################################
 def main(iargs=None):
     from ..utils import utils as ut
-    from ..remove_ramp import run_or_skip, configKeys
+    from ..remove_ramp import run_or_skip, config_keys
 
     inps = cmd_line_parse(iargs)
 
@@ -89,7 +89,7 @@ def main(iargs=None):
         save_ramp_coeff=inps.save_ramp_coeff)
 
     # config parameter
-    print('add/update the following configuration metadata to file:\n{}'.format(configKeys))
+    print('add/update the following configuration metadata to file:\n{}'.format(config_keys))
     atr_new = {}
     atr_new['mintpy.deramp'] = inps.surface_type
     atr_new['mintpy.deramp.maskFile'] = inps.mask_file

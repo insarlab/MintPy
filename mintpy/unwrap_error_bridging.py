@@ -17,7 +17,7 @@ from mintpy.utils import ptime, readfile, writefile, utils as ut
 
 # key configuration parameter name
 key_prefix = 'mintpy.unwrapError.'
-configKeys = [
+config_keys = [
     'waterMaskFile',
     'connCompMinArea',
     'ramp',
@@ -81,15 +81,15 @@ def run_or_skip(inps):
         atr = readfile.read_attribute(inps.ifgram_file)
 
         # check all keys
-        changed_keys = [key for key in configKeys 
+        changed_keys = [key for key in config_keys 
                         if str(inps_dict[key]) != atr.get(key_prefix+key, 'no')]
         if len(changed_keys) > 0:
             flag = 'run'
-            print('3) NOT all key configuration parameters are the same: {}.'.format(configKeys))
+            print('3) NOT all key configuration parameters are the same: {}.'.format(config_keys))
             for key in changed_keys:
                 print('\t{}\t: {} --> {}'.format(key, atr.get(key_prefix+key, 'no'), str(inps_dict[key])))
         else:
-            print('3) all key configuration parameters are the same: {}.'.format(configKeys))
+            print('3) all key configuration parameters are the same: {}.'.format(config_keys))
 
     # result
     print('run or skip: {}.'.format(flag))

@@ -18,7 +18,7 @@ from mintpy.utils import ptime, time_func, readfile, writefile, utils as ut
 DATA_TYPE = np.float32
 # key configuration parameter name
 key_prefix = 'mintpy.timeFunc.'
-configKeys = [
+config_keys = [
     # date
     'startDate',
     'endDate',
@@ -100,11 +100,11 @@ def run_or_skip(inps):
     # check configuration
     if flag == 'skip':
         atr = readfile.read_attribute(inps.outfile)
-        if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in configKeys):
+        if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in config_keys):
             flag = 'run'
-            print('3) NOT all key configuration parameters are the same: {}.'.format(configKeys))
+            print('3) NOT all key configuration parameters are the same: {}.'.format(config_keys))
         else:
-            print('3) all key configuration parameters are the same: {}.'.format(configKeys))
+            print('3) all key configuration parameters are the same: {}.'.format(config_keys))
 
     # result
     print('run or skip: {}.'.format(flag))
@@ -206,8 +206,8 @@ def run_timeseries2time_func(inps):
         atrV['REF_DATE'] = inps.ref_date
 
     # time_func_param: config parameter
-    print('add/update the following configuration metadata:\n{}'.format(configKeys))
-    for key in configKeys:
+    print('add/update the following configuration metadata:\n{}'.format(config_keys))
+    for key in config_keys:
         atrV[key_prefix+key] = str(vars(inps)[key])
 
     # time_func_param: instantiate output file

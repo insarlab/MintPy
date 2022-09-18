@@ -91,7 +91,7 @@ def cmd_line_parse(iargs=None):
 ####################################################################################################
 def main(iargs=None):
     from ..utils import utils as ut
-    from ..unwrap_error_bridging import run_unwrap_error_bridge, run_or_skip, configKeys, key_prefix
+    from ..unwrap_error_bridging import run_unwrap_error_bridge, run_or_skip, config_keys, key_prefix
 
     # check inputs
     inps = cmd_line_parse(iargs)
@@ -115,7 +115,7 @@ def main(iargs=None):
     if os.path.splitext(inps.ifgram_file)[1] in ['.h5', '.he5']:
         print('add/update the following configuration metadata to file:')
         config_metadata = dict()
-        for key in configKeys:
+        for key in config_keys:
             config_metadata[key_prefix+key] = str(vars(inps)[key])
         ut.add_attribute(inps.ifgram_file, config_metadata, print_msg=True)
 

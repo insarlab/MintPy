@@ -17,7 +17,7 @@ from mintpy.utils import ptime, time_func, readfile, writefile, utils as ut
 
 # key configuration parameter name
 key_prefix = 'mintpy.topographicResidual.'
-configKeys = [
+config_keys = [
     'polyOrder',
     'phaseVelocity',
     'stepFuncDate',
@@ -65,11 +65,11 @@ def run_or_skip(inps):
         date_list_all = timeseries(inps.timeseries_file).get_date_list()
         inps.excludeDate = read_exclude_date(inps.excludeDate, date_list_all, print_msg=False)[1]
         meta = readfile.read_attribute(inps.outfile)
-        if any(str(vars(inps)[key]) != meta.get(key_prefix+key, 'None') for key in configKeys):
+        if any(str(vars(inps)[key]) != meta.get(key_prefix+key, 'None') for key in config_keys):
             flag = 'run'
-            print('3) NOT all key configuration parameters are the same:{}'.format(configKeys))
+            print('3) NOT all key configuration parameters are the same:{}'.format(config_keys))
         else:
-            print('3) all key configuration parameters are the same:{}'.format(configKeys))
+            print('3) all key configuration parameters are the same:{}'.format(config_keys))
 
     # result
     print('run or skip: {}.'.format(flag))
@@ -447,8 +447,8 @@ def correct_dem_error(inps):
 
     # 2.1 metadata
     meta = dict(ts_obj.metadata)
-    print('add/update the following configuration metadata to file:\n{}'.format(configKeys))
-    for key in configKeys:
+    print('add/update the following configuration metadata to file:\n{}'.format(config_keys))
+    for key in config_keys:
         meta[key_prefix+key] = str(vars(inps)[key])
 
     # 2.2 instantiate est. DEM error

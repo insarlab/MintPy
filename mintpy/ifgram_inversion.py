@@ -20,13 +20,15 @@ from mintpy.utils import readfile, writefile, ptime, utils as ut
 
 # key configuration parameter name
 key_prefix = 'mintpy.networkInversion.'
-configKeys = ['obsDatasetName',
-              'numIfgram',
-              'weightFunc',
-              'maskDataset',
-              'maskThreshold',
-              'minRedundancy',
-              'minNormVelocity']
+config_keys = [
+    'obsDatasetName',
+    'numIfgram',
+    'weightFunc',
+    'maskDataset',
+    'maskThreshold',
+    'minRedundancy',
+    'minNormVelocity',
+]
 
 
 ################################################################################################
@@ -106,14 +108,14 @@ def run_or_skip(inps):
         inps.numIfgram = len(ifgramStack(inps.ifgramStackFile).get_date12_list(dropIfgram=True))
         meta_keys = [i for i in ['REF_Y', 'REF_X'] if i in atr_ts.keys()]
 
-        if any(str(vars(inps)[key]) != atr_ts.get(key_prefix+key, 'None') for key in configKeys):
+        if any(str(vars(inps)[key]) != atr_ts.get(key_prefix+key, 'None') for key in config_keys):
             flag = 'run'
-            print('3) NOT all key configuration parameters are the same: {}'.format(configKeys))
+            print('3) NOT all key configuration parameters are the same: {}'.format(config_keys))
         elif meta_keys and any(atr_ts[key] != atr_ifg[key] for key in meta_keys):
             flag = 'run'
             print('3) NOT all the metadata are the same: {}'.format(meta_keys))
         else:
-            print('3) all key configuration parameters are the same: {}.'.format(configKeys))
+            print('3) all key configuration parameters are the same: {}.'.format(config_keys))
 
     # result
     print('run or skip: {}.'.format(flag))
@@ -1052,7 +1054,7 @@ def ifgram_inversion(inps):
 
     # 2.1 metadata
     meta = dict(stack_obj.metadata)
-    for key in configKeys:
+    for key in config_keys:
         meta[key_prefix+key] = str(vars(inps)[key])
 
     meta['FILE_TYPE'] = 'timeseries'

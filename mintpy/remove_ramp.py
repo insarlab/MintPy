@@ -11,7 +11,7 @@ from mintpy.utils import readfile
 
 
 # key configuration parameter name
-configKeys = [
+config_keys = [
     'mintpy.deramp',
     'mintpy.deramp.maskFile',
 ]
@@ -46,11 +46,11 @@ def run_or_skip(inps):
         iDict['mintpy.deramp'] = inps.surface_type
         iDict['mintpy.deramp.maskFile'] = inps.mask_file
         atr = readfile.read_attribute(inps.outfile)
-        if any(str(iDict[key]) != atr.get(key, 'None') for key in configKeys):
+        if any(str(iDict[key]) != atr.get(key, 'None') for key in config_keys):
             flag = 'run'
-            print('3) NOT all key configuration parameters are the same:{}'.format(configKeys))
+            print('3) NOT all key configuration parameters are the same:{}'.format(config_keys))
         else:
-            print('3) all key configuration parameters are the same:{}'.format(configKeys))
+            print('3) all key configuration parameters are the same:{}'.format(config_keys))
 
     # result
     print('run or skip: {}.'.format(flag))

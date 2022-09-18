@@ -11,17 +11,6 @@ from mintpy.defaults.template import get_template_content
 from mintpy.utils import arg_utils
 
 
-# key configuration parameter name
-key_prefix = 'mintpy.networkInversion.'
-configKeys = ['obsDatasetName',
-              'numIfgram',
-              'weightFunc',
-              'maskDataset',
-              'maskThreshold',
-              'minRedundancy',
-              'minNormVelocity']
-
-
 ################################################################################################
 TEMPLATE = get_template_content('invert_network')
 

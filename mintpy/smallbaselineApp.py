@@ -431,7 +431,7 @@ class TimeSeriesAnalysis:
         if flag == 'run':
             import mintpy.cli.generate_mask
             mintpy.cli.generate_mask.main(iargs)
-            # update configKeys
+            # update config_keys
             atr = {}
             for key in config_keys:
                 atr[key] = self.template[key]
