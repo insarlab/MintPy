@@ -18,8 +18,6 @@ from mintpy.multilook import multilook_data
 from mintpy import subset, view, timeseries2velocity as ts2vel
 
 
-vprint = print
-
 
 ###########################################################################################
 def read_init_info(inps):
@@ -86,8 +84,8 @@ def read_init_info(inps):
             inps.idx = 2
 
     # Display Unit
-    (inps.disp_unit,
-     inps.unit_fac) = pp.scale_data2disp_unit(metadata=atr, disp_unit=inps.disp_unit)[1:3]
+    inps.disp_unit, inps.unit_fac = pp.scale_data2disp_unit(
+        metadata=atr, disp_unit=inps.disp_unit)[1:3]
 
     # Read Error List
     inps.ts_plot_func = plot_ts_scatter
@@ -140,9 +138,11 @@ def read_init_info(inps):
     # e.g. spatial indexing, referencing, etc. All the other variables are in the original grid
     # so that users get the same result as the non-multilooked version.
     if inps.multilook and inps.multilook_num == 1:
-        inps.multilook_num = pp.auto_multilook_num(inps.pix_box, inps.num_date,
-                                                   max_memory=inps.maxMemory,
-                                                   print_msg=inps.print_msg)
+        inps.multilook_num = pp.auto_multilook_num(
+            inps.pix_box, inps.num_date,
+            max_memory=inps.maxMemory,
+            print_msg=inps.print_msg,
+        )
 
     ## reference pixel
     if not inps.ref_lalo and 'REF_LAT' in atr.keys():
@@ -212,7 +212,7 @@ def read_init_info(inps):
                 raise ValueError('un-recognized display unit: {}'.format(inps.disp_unit))
 
     inps.cbar_label = 'Amplitude' if atr['DATA_TYPE'].startswith('complex') else 'Displacement'
-    inps.cbar_label += '[{}]'.format(inps.disp_unit_img)
+    inps.cbar_label += ' [{}]'.format(inps.disp_unit_img)
 
     ## fit a suite of time func to the time series
     inps.model = time_func.inps2model(inps, date_list=inps.date_list, print_msg=inps.print_msg)
@@ -276,11 +276,14 @@ def read_timeseries_data(inps):
         msg = f'reading timeseries from file {fname}'
         msg += f' with step of {inps.multilook_num} by {inps.multilook_num}' if inps.multilook_num > 1 else ''
         vprint(msg)
-        data, atr = readfile.read(fname,
-                                  datasetName=inps.date_list,
-                                  box=inps.pix_box,
-                                  xstep=inps.multilook_num,
-                                  ystep=inps.multilook_num)
+
+        data, atr = readfile.read(
+            fname,
+            datasetName=inps.date_list,
+            box=inps.pix_box,
+            xstep=inps.multilook_num,
+            ystep=inps.multilook_num)
+
         if atr['DATA_TYPE'].startswith('complex'):
             vprint('input data is complex, calculate its amplitude and continue')
             data = np.abs(data)
@@ -296,21 +299,23 @@ def read_timeseries_data(inps):
             data -= np.tile(data[inps.ref_idx, :, :], (inps.num_date, 1, 1))
 
         # Display Unit
-        (data,
-         inps.disp_unit,
-         inps.unit_fac) = pp.scale_data2disp_unit(data,
-                                                  metadata=atr,
-                                                  disp_unit=inps.disp_unit)
+        data, inps.disp_unit, inps.unit_fac = pp.scale_data2disp_unit(
+            data,
+            metadata=atr,
+            disp_unit=inps.disp_unit)
         ts_data.append(data)
 
     ## mask file: input mask file + non-zero ts pixels - ref_point
-    mask = pp.read_mask(inps.file[0],
-                        mask_file=inps.mask_file,
-                        datasetName='displacement',
-                        box=inps.pix_box,
-                        xstep=inps.multilook_num,
-                        ystep=inps.multilook_num,
-                        print_msg=inps.print_msg)[0]
+    mask = pp.read_mask(
+        inps.file[0],
+        mask_file=inps.mask_file,
+        datasetName='displacement',
+        box=inps.pix_box,
+        xstep=inps.multilook_num,
+        ystep=inps.multilook_num,
+        print_msg=inps.print_msg,
+    )[0]
+
     if mask is None:
         mask = np.ones(ts_data[0].shape[-2:], np.bool_)
 
@@ -330,9 +335,9 @@ def read_timeseries_data(inps):
     ## default vlim
     inps.dlim = [np.nanmin(ts_data[0]), np.nanmax(ts_data[0])]
     if not inps.vlim:
-        inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(ts_data[0],
-                                                                              num_multilook=10,
-                                                                              print_msg=inps.print_msg)[:2]
+        inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(
+            ts_data[0], num_multilook=10, print_msg=inps.print_msg,
+        )[:2]
     vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
     vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
 
@@ -358,6 +363,12 @@ def plot_ts_errorbar(ax, dis_ts, inps, ppar):
     dates = np.array(inps.dates)
     d_ts = dis_ts[:]
 
+    kwargs = dict(
+        fmt='-o', ms=ppar.ms, lw=0, alpha=1,
+        elinewidth=inps.edge_width, ecolor='black',
+        capsize=ppar.ms*0.5, mew=inps.edge_width,
+    )
+
     if inps.ex_date_list:
         # Update displacement time-series
         d_ts = dis_ts[inps.ex_flag == 1]
@@ -365,19 +376,22 @@ def plot_ts_errorbar(ax, dis_ts, inps, ppar):
 
         # Plot excluded dates
         ex_d_ts = dis_ts[inps.ex_flag == 0]
-        ax.errorbar(inps.ex_dates, ex_d_ts, yerr=inps.ex_error_ts,
-                    fmt='-o', ms=ppar.ms, color='gray',
-                    lw=0, alpha=1, mfc='gray',
-                    elinewidth=inps.edge_width, ecolor='black',
-                    capsize=ppar.ms*0.5, mew=inps.edge_width)
+        ax.errorbar(
+            inps.ex_dates, ex_d_ts,
+            yerr=inps.ex_error_ts,
+            color='gray',
+            **kwargs,
+        )
 
     # Plot kept dates
-    ax.errorbar(dates, d_ts, yerr=inps.error_ts,
-                fmt='-o', ms=ppar.ms, color=ppar.mfc,
-                lw=0, alpha=1,
-                elinewidth=inps.edge_width, ecolor='black',
-                capsize=ppar.ms*0.5, mew=inps.edge_width,
-                label=ppar.label)
+    ax.errorbar(
+        dates, d_ts,
+        yerr=inps.error_ts,
+        label=ppar.label,
+        color=ppar.mfc,
+        **kwargs
+    )
+
     return ax
 
 
@@ -386,6 +400,8 @@ def plot_ts_scatter(ax, dis_ts, inps, ppar):
     dates = np.array(inps.dates)
     d_ts = dis_ts[:]
 
+    kwargs = dict(ms=ppar.ms, marker=inps.marker)
+
     if inps.ex_date_list:
         # Update displacement time-series
         d_ts = dis_ts[inps.ex_flag == 1]
@@ -393,10 +409,10 @@ def plot_ts_scatter(ax, dis_ts, inps, ppar):
 
         # Plot excluded dates
         ex_d_ts = dis_ts[inps.ex_flag == 0]
-        ax.plot(inps.ex_dates, ex_d_ts, color='gray', lw=0, ms=ppar.ms, marker=inps.marker)
+        ax.plot(inps.ex_dates, ex_d_ts, color='gray', lw=0, **kwargs)
 
     # Plot kept dates
-    ax.plot(dates, d_ts, color=ppar.mfc, label=ppar.label, lw=inps.linewidth, ms=ppar.ms, marker=inps.marker)
+    ax.plot(dates, d_ts, color=ppar.mfc, label=ppar.label, lw=inps.linewidth, **kwargs)
     return ax
 
 
@@ -405,7 +421,10 @@ def plot_ts_fit(ax, ts_fit, inps, ppar, m_strs=None, ts_fit_lim=None):
     # plot the model prediction uncertainty boundaries
     h0 = None
     if ts_fit_lim is not None:
-        h0 = ax.fill_between(inps.dates_fit, ts_fit_lim[0], ts_fit_lim[1], fc=ppar.color, ec='none', alpha=0.2)
+        h0 = ax.fill_between(
+            inps.dates_fit, ts_fit_lim[0], ts_fit_lim[1],
+            fc=ppar.color, ec='none', alpha=0.2,
+        )
 
     # plot the model prediction curve in a fine date_lists
     h1, = ax.plot(inps.dates_fit, ts_fit, color=ppar.color, lw=ppar.linewidth, alpha=0.8)
@@ -555,10 +574,11 @@ def save_ts_data_and_plot(yx, d_ts, m_strs, inps):
 
     # output file name
     if inps.outfile:
-        inps.outfile_base, ext = os.path.splitext(inps.outfile[0])
-        if ext != '.pdf':
-            vprint(('Output file extension is fixed to .pdf,'
-                    ' input extension {} is ignored.').format(ext))
+        inps.outfile_base, fext = os.path.splitext(inps.outfile[0])
+        if fext != '.pdf':
+            msg = 'Output file extension is fixed to .pdf,'
+            msg += f' input extension {fext} is ignored.'
+            vprint(msg)
     else:
         inps.outfile_base = 'y{}x{}'.format(y, x)
 
@@ -607,7 +627,6 @@ class timeseriesViewer():
             iargs = cmd.split()[1:]
         self.cmd = cmd
         self.iargs = iargs
-        self.vprint = print
         # print command line
         if iargs is not None:
             print(f'{os.path.basename(__file__)} ' + ' '.join(iargs))
@@ -629,10 +648,15 @@ class timeseriesViewer():
         self.ax_pts = None
 
     def configure(self, inps):
+        global vprint
+        vprint = print if inps.print_msg else lambda *args, **kwargs: None
+
         inps, self.atr = read_init_info(inps)
+
         # copy inps to self object
         for key, value in inps.__dict__.items():
             setattr(self, key, value)
+
         # input figsize for the point time-series plot
         self.figsize_pts = self.fig_size
         self.pts_marker = 'r^'
@@ -876,15 +900,17 @@ class timeseriesViewer():
                     if not self.plot_model_conf_int:
                         ts_fit_lim = None
 
-                    plot_ts_fit(ax, ts_fit, self, fpar,
-                                m_strs=m_strs,
-                                ts_fit_lim=ts_fit_lim)
+                    plot_ts_fit(
+                        ax, ts_fit, self, fpar,
+                        m_strs=m_strs,
+                        ts_fit_lim=ts_fit_lim,
+                    )
 
         # axis format
-        ax.tick_params(which='both', direction='in', labelsize=self.font_size, bottom=True, top=True, left=True, right=True)
+        ax.tick_params(which='both', direction='in', labelsize=self.font_size,
+                       bottom=True, top=True, left=True, right=True)
         pp.auto_adjust_xaxis_date(ax, self.yearList, fontsize=self.font_size)
-        cbar_label = 'Amplitude' if self.atr['DATA_TYPE'].startswith('complex') else 'Displacement'
-        ax.set_ylabel(f'{cbar_label} [{self.disp_unit}]', fontsize=self.font_size)
+        ax.set_ylabel(self.cbar_label, fontsize=self.font_size)
         ax.set_ylim(self.ylim)
         if self.tick_right:
             ax.yaxis.tick_right()
@@ -909,7 +935,8 @@ class timeseriesViewer():
 
         if not np.all(np.isnan(ts_dis)):
             # min/max displacement
-            vprint('time-series range: [{:.2f}, {:.2f}] {}'.format(np.nanmin(ts_dis), np.nanmax(ts_dis), self.disp_unit))
+            ts_min, ts_max = np.nanmin(ts_dis), np.nanmax(ts_dis)
+            vprint(f'time-series range: [{ts_min:.2f}, {ts_max:.2f}] {self.disp_unit}')
 
             # time func param
             vprint('time function parameters:')

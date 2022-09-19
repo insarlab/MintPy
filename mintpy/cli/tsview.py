@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -114,53 +114,64 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    if inps.flip_lr or inps.flip_ud:
-        inps.auto_flip = False
+    # import
+    from matplotlib import pyplot as plt
 
+    # check: --gps-comp option (not implemented for tsview yet)
     if inps.gps_component:
         msg = '--gps-comp is not supported for {}'.format(os.path.basename(__file__))
         raise NotImplementedError(msg)
 
+    # check: --label option (same number as input files)
     if inps.file_label:
         if len(inps.file_label) != len(inps.file):
             raise Exception('input number of labels != number of files.')
 
-    if (not inps.disp_fig or inps.outfile) and not inps.save_fig:
+    # check: coupled options
+    if not inps.save_fig and (inps.outfile or not inps.disp_fig):
         inps.save_fig = True
+
+    if inps.flip_lr or inps.flip_ud:
+        inps.auto_flip = False
+
     if inps.ylim:
         inps.ylim = sorted(inps.ylim)
+
     if inps.zero_mask:
         inps.mask_file = 'no'
-
-    # default value
-    inps.disp_unit = inps.disp_unit if inps.disp_unit else 'cm'
-    inps.colormap = inps.colormap if inps.colormap else 'jet'
-    inps.fig_size = inps.fig_size if inps.fig_size else [8.0, 4.5]
-
-    # verbose print using --noverbose option
-    from .. import tsview
-    tsview.vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
     if not inps.disp_fig_img:
         if not inps.yx and not inps.lalo:
             inps.disp_fig_img = True
-            print('WARNING: NO --yx/lalo input found for --no-show-img, turn it OFF and continue')
+            msg = 'WARNING: --yx/lalo is required for --no-show-img but NOT found! '
+            msg += 'Ignore it and continue'
+            print(msg)
 
+    # check: --nodisplay option
     if not inps.disp_fig:
-        from matplotlib import pyplot as plt
         plt.switch_backend('Agg')
+
+    # default: -u / -c / --fig-size options
+    inps.disp_unit = inps.disp_unit if inps.disp_unit else 'cm'
+    inps.colormap = inps.colormap if inps.colormap else 'jet'
+    inps.fig_size = inps.fig_size if inps.fig_size else [8.0, 4.5]
 
     return inps
 
 
 ###########################################################################################
 def main(iargs=None):
+    # parse
+    inps = cmd_line_parse(iargs)
+
+    # import
     from ..tsview import timeseriesViewer
 
-    inps = cmd_line_parse(iargs)
+    # run
     obj = timeseriesViewer(iargs=iargs)
     obj.configure(inps)
     obj.plot()
