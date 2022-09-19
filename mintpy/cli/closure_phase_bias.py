@@ -7,7 +7,6 @@
 
 import os
 import sys
-import time
 
 from mintpy.utils import arg_utils
 

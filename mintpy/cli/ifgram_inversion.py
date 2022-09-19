@@ -202,6 +202,7 @@ def read_template2inps(template_file, inps):
     print('read input option from template file:', template_file)
 
     from ..utils import readfile, utils1 as ut
+    from ..ifgram_inversion import key_prefix
 
     iDict = vars(inps)
     template = readfile.read_template(template_file)

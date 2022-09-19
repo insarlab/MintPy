@@ -6,7 +6,6 @@
 
 import os
 import sys
-import time
 
 from mintpy.defaults import auto_path
 from mintpy.defaults.template import get_template_content

@@ -152,7 +152,7 @@ def read_template2inps(template_file, inps):
     """Read input template options into Namespace inps"""
     print('read options from template file: '+os.path.basename(template_file))
 
-    from ..utils import readfile, utils as ut
+    from ..utils import ptime, readfile, utils as ut
 
     iDict = vars(inps)
     template = readfile.read_template(inps.template_file, skip_chars=['[', ']'])
@@ -205,6 +205,7 @@ def read_template2inps(template_file, inps):
 
 def read_input_index_list(idxList, stackFile=None):
     """Read ['2','3:5','10'] into ['2','3','4','5','10']"""
+    from ..objects import ifgramStack
 
     if not idxList:
         return []

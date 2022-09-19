@@ -5,7 +5,6 @@
 ############################################################
 
 
-import os
 import h5py
 import numpy as np
 from matplotlib import pyplot as plt, dates as mdates
@@ -13,7 +12,6 @@ from matplotlib import pyplot as plt, dates as mdates
 from mintpy.objects import ifgramStack
 from mintpy.utils import (
     ptime,
-    readfile,
     utils as ut,
     network as pnet,
     plot as pp,

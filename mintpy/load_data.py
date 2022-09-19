@@ -7,6 +7,7 @@
 
 import os
 import glob
+import time
 import warnings
 
 from mintpy.defaults import auto_path
@@ -106,7 +107,7 @@ def read_inps2dict(inps):
             iDict[prefix+key] = template[prefix+key]
     print('processor : {}'.format(iDict['processor']))
 
-    if iDict['compression'] == False:
+    if iDict['compression'] is False:
         iDict['compression'] = None
 
     # group - multilook

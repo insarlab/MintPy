@@ -194,7 +194,7 @@ def read_template2inps(template_file, inps):
                 iDict[key] = value
             elif key == 'fillValue':
                 if 'nan' in value.lower():
-                    iDict[key] = np.nan
+                    iDict[key] = math.nan
                 else:
                     iDict[key] = float(value)
 
