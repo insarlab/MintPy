@@ -173,6 +173,7 @@ def create_threshold_mask(inps):
 
 def create_mask(inps):
     """Create mask based on non-zero values or threshold."""
+
     start_time = time.time()
     ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
     print('input {} file: {}'.format(ftype, inps.file))

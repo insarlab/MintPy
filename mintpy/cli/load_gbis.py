@@ -34,12 +34,14 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # import
+    import matplotlib.pyplot as plt
+
     # check: input file path
     inps.file = os.path.abspath(inps.file)
 
     # check: --nodisplay (matplotlib backend setting)
     if not inps.disp_fig:
-        import matplotlib.pyplot as plt
         plt.switch_backend('Agg')
 
     return inps

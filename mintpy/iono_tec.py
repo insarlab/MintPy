@@ -281,6 +281,8 @@ def vtec2iono_ramp_timeseries(date_list, vtec_list, geom_file, iono_file, sub_te
 
 def correct_timeseries(dis_file, iono_file, cor_dis_file):
     """Correct time-series for the solid Earth tides."""
+    import mintpy.cli.diff
+
     # diff.py can handle different reference in space and time
     # between the absolute iono ramp and the double referenced time-series
     print('\n------------------------------------------------------------------------------')
@@ -288,8 +290,8 @@ def correct_timeseries(dis_file, iono_file, cor_dis_file):
 
     iargs = [dis_file, iono_file, '-o', cor_dis_file]
     print('diff.py', ' '.join(iargs))
-    import mintpy.cli.diff
     mintpy.cli.diff.main(iargs)
+
     return cor_dis_file
 
 
