@@ -608,7 +608,7 @@ class TimeSeriesAnalysis:
                     mintpy.cli.tropo_phase_elevation.main(iargs)
 
             # Weather re-analysis data with iterative tropospheric decomposition (GACOS)
-            # Yu et al., 2017; 2018a; 2018b
+            # Yu et al. (2018, JGR)
             elif method == 'gacos':
                 GACOS_dir = self.template['mintpy.troposphericDelay.gacosDir']
                 iargs = ['-f', in_file, '-g', geom_file, '-o', out_file, '--dir', GACOS_dir]
@@ -623,12 +623,17 @@ class TimeSeriesAnalysis:
                 print('Atmospheric correction using Weather Re-analysis dataset (PyAPS, Jolivet et al., 2011)')
                 print('Weather Re-analysis dataset:', tropo_model)
                 tropo_file = './inputs/{}.h5'.format(tropo_model)
+
                 if ut.run_or_skip(out_file=out_file, in_file=[in_file, tropo_file]) == 'run':
                     if os.path.isfile(tropo_file) and get_dataset_size(tropo_file) == get_dataset_size(in_file):
                         iargs = [in_file, tropo_file, '-o', out_file, '--force']
                         print('--------------------------------------------')
                         print('Use existed tropospheric delay file: {}'.format(tropo_file))
                         print('\ndiff.py', ' '.join(iargs))
+
+                        # import again to avoid the error below. reason is unclear.
+                        # UnboundLocalError: local variable 'mintpy' referenced before assignment
+                        import mintpy.cli.diff
                         mintpy.cli.diff.main(iargs)
 
                     else:

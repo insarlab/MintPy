@@ -12,10 +12,9 @@ from mintpy.utils.arg_utils import create_argument_parser
 
 ############################################################################
 REFERENCE = """references:
-  Yu, C., Li, Z., Penna, N. T., & Crippa, P. (2018). Generic atmospheric correction model for Interferometric
-    Synthetic Aperture Radar observations. Journal of Geophysical Research: Solid Earth, 123(10), 9202-9222.
-  Yu, C., Li, Z., & Penna, N. T. (2018). Interferometric synthetic aperture radar atmospheric correction
-    using a GPS-based iterative tropospheric decomposition model. Remote Sensing of Environment, 204, 109-121.
+  Yu, C., Li, Z., Penna, N. T., & Crippa, P. (2018). Generic atmospheric correction
+    model for Interferometric Synthetic Aperture Radar observations. Journal of 
+    Geophysical Research: Solid Earth, 123(10), 9202-9222, doi:10.1029/2017JB015305
 """
 
 DIR_DEMO = """--dir ./GACOS
