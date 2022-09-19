@@ -9,10 +9,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-try:
-    from skimage.transform import rescale
-except ImportError:
-    raise ImportError('Could not import skimage!')
+from skimage.transform import rescale
 
 from mintpy.utils import readfile, writefile, plot as pp
 from mintpy.multilook import multilook_data
@@ -212,12 +209,6 @@ def plot_stitch(mat11, mat22, mat, mat_diff, out_fig=None):
     fig.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=150)
     print('save figure to file: {}'.format(out_fig))
 
-    #if disp_fig:
-    #    print('showing ...')
-    #    plt.show()
-    #else:
-    #    plt.close()
-
     return
 
 
@@ -278,12 +269,10 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
                 mat2[inc_angle2 == 0] = np.nan
 
             print('stitching ...')
-            (mat, atr,
-             mat11,
-             mat22,
-             mat_diff) = stitch_two_matrices(mat, atr,
-                                             mat2, atr2,
-                                             apply_offset=apply_offset)
+            mat, atr, mat11, mat22, mat_diff = stitch_two_matrices(
+                mat, atr,
+                mat2, atr2,
+                apply_offset=apply_offset)
 
             # plot
             if apply_offset:

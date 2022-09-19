@@ -45,7 +45,7 @@ def cmd_line_parse(iargs=None):
     num_file = len(inps.file)
     atr = readfile.read_attribute(inps.file[0])
 
-    # check 1 - number of files a) >= 2 and b) == 2 for time-series
+    # check: number of files a) >= 2 and b) == 2 for time-series
     if num_file < 2:
         parser.print_usage()
         sys.exit('ERROR: At least 2 input files needed!')
@@ -58,16 +58,14 @@ def cmd_line_parse(iargs=None):
 
 ################################################################################
 def main(iargs=None):
-    # parse args
+    # parse
     inps = cmd_line_parse(iargs)
 
     # import
     from ..add import add_file
 
     # run
-    print('input files to be added: ({})\n{}'.format(len(inps.file), inps.file))
     add_file(inps.file, inps.outfile, force=inps.force)
-    print('Done.')
 
 
 ################################################################################

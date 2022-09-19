@@ -25,16 +25,19 @@ def add_matrix(data1, data2):
 
 def add_file(fnames, out_file=None, force=False):
     """Generate sum of all input files
-    Parameters: fnames : list of str, path/name of input files to be added
-                out_file : str, optional, path/name of output file
-    Returns:    out_file : str, path/name of output file
+    Parameters: fnames   - list of str, path/name of input files to be added
+                out_file - str, optional, path/name of output file
+    Returns:    out_file - str, path/name of output file
     Example:    'mask_all.h5' = add_file(['mask_1.h5','mask_2.h5','mask_3.h5'], 'mask_all.h5')
     """
+    num_file = len(fnames)
+    print('input files to be added: ({})\n{}'.format(num_file, fnames))
+
     # Default output file name
     ext = os.path.splitext(fnames[0])[1]
     if not out_file:
         out_file = os.path.splitext(fnames[0])[0]
-        for i in range(1, len(fnames)):
+        for i in range(1, num_file):
             out_file += '_plus_' + os.path.splitext(os.path.basename(fnames[i]))[0]
         out_file += ext
 

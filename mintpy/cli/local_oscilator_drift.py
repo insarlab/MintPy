@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Heresh Fattahi, Aug 2022      #
 ############################################################
 
 
@@ -15,8 +15,8 @@ TEMPLATE = get_template_content('correct_LOD')
 
 REFERENCE = """reference:
   Marinkovic, P., and Y. Larsen (2013), Consequences of long-term ASAR local oscillator 
-  frequency decay - An empirical study of 10 years of data, in Living Planet Symposium,
-  Edinburgh, U.K.
+    frequency decay - An empirical study of 10 years of data, 2013 Living Planet Symposium,
+    Edinburgh, U.K.
 """
 
 EXAMPLE = """example:
@@ -48,10 +48,18 @@ def cmd_line_parse(iargs=None):
 
 #########################################################################################
 def main(iargs=None):
-    from ..local_oscilator_drift import correct_local_oscilator_drift
+    # parse
     inps = cmd_line_parse(iargs)
-    inps.outfile = correct_local_oscilator_drift(inps.file, inps.range_dist_file, inps.outfile)
-    print('Done.')
+
+    # import
+    from ..local_oscilator_drift import correct_local_oscilator_drift
+
+    # run
+    inps.outfile = correct_local_oscilator_drift(
+        inps.file,
+        rg_dist_file=inps.range_dist_file,
+        out_file=inps.out_file,
+    )
 
 
 #########################################################################################

@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -19,7 +19,6 @@ EXAMPLE = """example:
   mask.py  filt_20060924_20090214.int -m waterMask.h5 -o filt_20060924_20090214_msk.int
   mask.py  filt_20060924_20090214.cor -m waterMask.h5 -o filt_20060924_20090214_msk.cor
 """
-
 
 def create_parser(subparsers=None):
     synopsis = 'Mask file'
@@ -56,17 +55,14 @@ def cmd_line_parse(iargs=None):
 
 ############################################################
 def main(iargs=None):
-    from ..mask import mask_file
-
+    # parse
     inps = cmd_line_parse(iargs)
 
-    # ext = os.path.splitext(inps.file)[1]
-    #if os.path.isfile(inps.file+'.xml') and ext in ['.unw','.int','.cor','.conncomp']:
-    #    mask_isce_file(inps.file, inps.mask_file, inps.outfile)
-    #else:
-    mask_file(inps.file, inps.mask_file, inps.outfile, inps)
+    # import
+    from ..mask import mask_file
 
-    print('Done.')
+    # run
+    mask_file(inps.file, inps.mask_file, inps.outfile, inps)
 
 
 ############################################################

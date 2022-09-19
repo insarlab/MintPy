@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -30,11 +30,14 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # check: input file path
     inps.file = os.path.abspath(inps.file)
 
-    # Backend setting
+    # check: --nodisplay (matplotlib backend setting)
     if not inps.disp_fig:
         import matplotlib.pyplot as plt
         plt.switch_backend('Agg')
@@ -44,8 +47,13 @@ def cmd_line_parse(iargs=None):
 
 ##############################################################################
 def main(iargs=None):
-    from ..load_gbis import gbis_mat2hdf5
+    # parse
     inps = cmd_line_parse(iargs)
+
+    # import
+    from ..load_gbis import gbis_mat2hdf5
+
+    # run
     gbis_mat2hdf5(inps.file, display=inps.disp_fig)
 
 

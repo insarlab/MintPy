@@ -1,12 +1,12 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
+
 
 import os
 import sys
-import time
 from mintpy.utils.arg_utils import create_argument_parser
 
 
@@ -70,12 +70,14 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..utils import utils as ut
-
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # --tec-dir
+    # import
+    from ..utils import utils0 as ut
+
+    # check: --tec-dir option
     inps.tec_dir = os.path.expanduser(inps.tec_dir)
     inps.tec_dir = os.path.expandvars(inps.tec_dir)
     if not os.path.isdir(inps.tec_dir):
@@ -83,7 +85,7 @@ def cmd_line_parse(iargs=None):
         inps.tec_dir = os.path.join(os.path.dirname(inps.dis_file), 'TEC')
         print(f'Use "{inps.tec_dir}" instead.')
 
-    # --ratio
+    # check: --ratio option
     if inps.sub_tec_ratio is None:
         suffix = ''
     elif ut.is_number(inps.sub_tec_ratio):
@@ -93,7 +95,7 @@ def cmd_line_parse(iargs=None):
     else:
         raise ValueError('Input is neither a number nor startswith adap!')
 
-    # input/output filenames
+    # default: input/output file paths
     inps.dis_file = os.path.abspath(inps.dis_file)
     inps.geom_file = os.path.abspath(inps.geom_file)
 
@@ -112,38 +114,14 @@ def cmd_line_parse(iargs=None):
 
 #####################################################################################
 def main(iargs=None):
-    from ..objects import timeseries
-    from ..iono_tec import download_ionex_files, run_or_skip, calc_iono_ramp_timeseries_igs
-
+    # parse
     inps = cmd_line_parse(iargs)
-    start_time = time.time()
 
-    # download
-    date_list = timeseries(inps.dis_file).get_date_list()
-    tec_files = download_ionex_files(date_list, tec_dir=inps.tec_dir, sol_code=inps.sol_code)
+    # import
+    from ..iono_tec import run_iono_tec
 
-    # calculate
-    if run_or_skip(inps.iono_file, tec_files, inps.dis_file, inps.geom_file) == 'run':
-        calc_iono_ramp_timeseries_igs(
-            tec_dir=inps.tec_dir,
-            sol_code=inps.sol_code,
-            interp_method=inps.interp_method,
-            ts_file=inps.dis_file,
-            geom_file=inps.geom_file,
-            iono_file=inps.iono_file,
-            rotate_tec_map=inps.rotate_tec_map,
-            sub_tec_ratio=inps.sub_tec_ratio,
-            update_mode=inps.update_mode,
-        )
-
-    ## correct
-    #correct_timeseries(dis_file=inps.dis_file,
-    #                   iono_file=inps.iono_file,
-    #                   cor_dis_file=inps.cor_dis_file)
-
-    m, s = divmod(time.time() - start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
-    return
+    # run
+    run_iono_tec(inps)
 
 
 #####################################################################################

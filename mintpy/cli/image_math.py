@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -37,17 +37,23 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
     return inps
 
 
 #######################################################################################
 def main(iargs=None):
-    from ..image_math import file_operation
+    # parse
     inps = cmd_line_parse(iargs)
+
+    # import
+    from ..image_math import file_operation
+
+    # run
     file_operation(inps.file, inps.operator, inps.operand, inps.outfile)
-    print('Done.')
 
 
 #######################################################################################

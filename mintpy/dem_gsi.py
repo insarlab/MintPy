@@ -205,3 +205,21 @@ def add_reference_datum(xml_file):
     root.append(ref)
     tree.write(xml_file)
     return xml_file
+
+
+def prep_gsi_dem(inps):
+    """Prepare the GSI DEM for InSAR processing."""
+
+    meta = write_dem_file(
+        inps.SNWE,
+        dem_file=inps.outfile,
+        grid_dir=inps.grid_dir,
+    )
+
+    # rsc file for roipac
+    write_rsc_file(meta, inps.outfile)
+
+    # vrt/xml file for isce
+    write_isce_metadata(meta, inps.outfile)
+
+    return inps.outfile

@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -68,57 +68,32 @@ def create_parser(subparsers=None):
 
 def cmd_line_parse(iargs=None):
     """Command line parser."""
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # check: input file existence
     if not os.path.isfile(inps.file):
         raise FileNotFoundError(inps.file)
 
+    # default: --compact option and max number of metadata to show
     inps.max_meta_num = 200
     if inps.compact:
         inps.max_meta_num = 20
+
     return inps
 
 
 ############################################################
 def main(iargs=None):
-    from ..utils import readfile
-    from ..info import print_date_list, print_slice_list, print_dataset, print_aux_info, print_hdf5_structure, print_attributes
-
+    # parse
     inps = cmd_line_parse(iargs)
-    ext = os.path.splitext(inps.file)[1].lower()
 
-    # --date/--num option
-    if inps.disp_date or inps.disp_num:
-        print_date_list(inps.file,
-                        disp_ifgram=inps.disp_ifgram,
-                        disp_num=inps.disp_num,
-                        print_msg=True)
-        return
+    # import
+    from ..info import print_info
 
-    # --slice option
-    if inps.disp_slice:
-        if inps.disp_ifgram != 'all':
-            raise ValueError('--show-ifgram option is not applicable to --slice.')
-        print_slice_list(inps.file, print_msg=True)
-        return
-
-    # --dset option
-    if inps.dset:
-        print_dataset(inps.file, dsName=inps.dset)
-        return
-
-    # Basic info
-    print_aux_info(inps.file)
-
-    # Generic Attribute/Structure of all files
-    if ext in ['.h5', '.he5']:
-        print('\n{} {:*<40}'.format('*'*20, 'HDF5 File Structure '))
-        print_hdf5_structure(inps.file, max_meta_num=inps.max_meta_num)
-    else:
-        print('\n{} {:*<40}'.format('*'*20, 'Binary File Attributes '))
-        atr = readfile.read_attribute(inps.file)
-        print_attributes(atr, max_meta_num=inps.max_meta_num)
+    # run
+    print_info(inps)
 
 
 ############################################################

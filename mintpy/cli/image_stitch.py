@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Heresh Fattahi, Aug 2022      #
 ############################################################
 
 
@@ -53,12 +53,19 @@ def cmd_line_parse(iargs=None):
 
 #############################################################################################
 def main(iargs=None):
-    from ..image_stitch import stitch_files
+    # parse
     inps = cmd_line_parse(iargs)
-    stitch_files(fnames=[inps.file1] + inps.file2s,
-                 out_file=inps.outfile,
-                 apply_offset=inps.apply_offset,
-                 disp_fig=inps.disp_fig)
+
+    # import
+    from ..image_stitch import stitch_files
+
+    # run
+    stitch_files(
+        fnames=[inps.file1] + inps.file2s,
+        out_file=inps.outfile,
+        apply_offset=inps.apply_offset,
+        disp_fig=inps.disp_fig,
+    )
 
 
 #############################################################################################

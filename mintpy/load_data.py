@@ -26,9 +26,46 @@ from mintpy.utils import readfile, ptime, utils as ut
 from mintpy import subset
 
 
+#################################################################
+PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac', 'cosicorr']
+
 # primary observation dataset names
 OBS_DSET_NAMES = ['unwrapPhase', 'rangeOffset', 'azimuthOffset']
-PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac', 'cosicorr']
+
+IFG_DSET_NAME2TEMPLATE_KEY = {
+    'unwrapPhase'     : 'mintpy.load.unwFile',
+    'coherence'       : 'mintpy.load.corFile',
+    'connectComponent': 'mintpy.load.connCompFile',
+    'wrapPhase'       : 'mintpy.load.intFile',
+    'magnitude'       : 'mintpy.load.magFile',
+}
+
+ION_DSET_NAME2TEMPLATE_KEY = {
+    'unwrapPhase'     : 'mintpy.load.ionUnwFile',
+    'coherence'       : 'mintpy.load.ionCorFile',
+    'connectComponent': 'mintpy.load.ionConnCompFile',
+}
+
+OFF_DSET_NAME2TEMPLATE_KEY = {
+    'azimuthOffset'   : 'mintpy.load.azOffFile',
+    'azimuthOffsetStd': 'mintpy.load.azOffStdFile',
+    'rangeOffset'     : 'mintpy.load.rgOffFile',
+    'rangeOffsetStd'  : 'mintpy.load.rgOffStdFile',
+    'offsetSNR'       : 'mintpy.load.offSnrFile',
+}
+
+GEOM_DSET_NAME2TEMPLATE_KEY = {
+    'height'          : 'mintpy.load.demFile',
+    'latitude'        : 'mintpy.load.lookupYFile',
+    'longitude'       : 'mintpy.load.lookupXFile',
+    'azimuthCoord'    : 'mintpy.load.lookupYFile',
+    'rangeCoord'      : 'mintpy.load.lookupXFile',
+    'incidenceAngle'  : 'mintpy.load.incAngleFile',
+    'azimuthAngle'    : 'mintpy.load.azAngleFile',
+    'shadowMask'      : 'mintpy.load.shadowMaskFile',
+    'waterMask'       : 'mintpy.load.waterMaskFile',
+    'bperp'           : 'mintpy.load.bperpFile',
+}
 
 
 #################################################################
@@ -47,6 +84,7 @@ def read_inps2dict(inps):
     # Read input info into iDict
     iDict = vars(inps)
     iDict['PLATFORM'] = None
+    iDict['processor'] = 'isce'
 
     # Read template file
     template = {}
@@ -56,8 +94,6 @@ def read_inps2dict(inps):
         template.update(temp)
     for key, value in template.items():
         iDict[key] = value
-    if 'processor' in template.keys():
-        template['mintpy.load.processor'] = template['processor']
 
     # group - load
     prefix = 'mintpy.load.'
@@ -751,3 +787,98 @@ def get_extra_metadata(iDict):
         else:
             extraDict[key] = value
     return extraDict
+
+
+#################################################################
+def run_load_data(inps):
+    """load data into HDF5 files."""
+
+    ## 0. read input
+    start_time = time.time()
+    iDict = read_inps2dict(inps)
+
+    ## 1. prepare metadata
+    prepare_metadata(iDict)
+    extraDict = get_extra_metadata(iDict)
+
+    # skip data writing for aria as it is included in prep_aria
+    if iDict['processor'] == 'aria':
+        return
+
+    ## 2. search & write data files
+    print('-'*50)
+    print('updateMode : {}'.format(iDict['updateMode']))
+    print('compression: {}'.format(iDict['compression']))
+    print('multilook x/ystep: {}/{}'.format(iDict['xstep'], iDict['ystep']))
+    print('multilook method : {}'.format(iDict['method']))
+    kwargs = dict(updateMode=iDict['updateMode'], xstep=iDict['xstep'], ystep=iDict['ystep'])
+
+    # read subset info [need the metadata from above]
+    iDict = read_subset_box(iDict)
+
+    # geometry in geo / radar coordinates
+    geom_dset_name2template_key = {
+        **GEOM_DSET_NAME2TEMPLATE_KEY,
+        **IFG_DSET_NAME2TEMPLATE_KEY,
+        **OFF_DSET_NAME2TEMPLATE_KEY,
+    }
+    geom_geo_obj, geom_radar_obj = read_inps_dict2geometry_dict_object(iDict, geom_dset_name2template_key)
+    geom_geo_file = os.path.abspath('./inputs/geometryGeo.h5')
+    geom_radar_file = os.path.abspath('./inputs/geometryRadar.h5')
+
+    if run_or_skip(geom_geo_file, geom_geo_obj, iDict['box4geo'], **kwargs) == 'run':
+        geom_geo_obj.write2hdf5(
+            outputFile=geom_geo_file,
+            access_mode='w',
+            box=iDict['box4geo'],
+            xstep=iDict['xstep'],
+            ystep=iDict['ystep'],
+            compression='lzf')
+
+    if run_or_skip(geom_radar_file, geom_radar_obj, iDict['box'], **kwargs) == 'run':
+        geom_radar_obj.write2hdf5(
+            outputFile=geom_radar_file,
+            access_mode='w',
+            box=iDict['box'],
+            xstep=iDict['xstep'],
+            ystep=iDict['ystep'],
+            compression='lzf',
+            extra_metadata=extraDict)
+
+    # observations: ifgram, ion or offset
+    # loop over obs stacks
+    stack_ds_name2tmpl_key_list = [
+        IFG_DSET_NAME2TEMPLATE_KEY,
+        ION_DSET_NAME2TEMPLATE_KEY,
+        OFF_DSET_NAME2TEMPLATE_KEY,
+    ]
+    stack_files = ['ifgramStack.h5', 'ionStack.h5', 'offsetStack.h5']
+    stack_files = [os.path.abspath(os.path.join('./inputs', x)) for x in stack_files]
+    for ds_name2tmpl_opt, stack_file in zip(stack_ds_name2tmpl_key_list, stack_files):
+
+        # initiate dict objects
+        stack_obj = read_inps_dict2ifgram_stack_dict_object(iDict, ds_name2tmpl_opt)
+
+        # use geom_obj as size reference while loading ionosphere
+        geom_obj = None
+        if os.path.basename(stack_file).startswith('ion'):
+            geom_obj = geom_geo_obj if iDict['geocoded'] else geom_radar_obj
+
+        # write dict objects to HDF5 files
+        if run_or_skip(stack_file, stack_obj, iDict['box'], geom_obj=geom_obj, **kwargs) == 'run':
+            stack_obj.write2hdf5(
+                outputFile=stack_file,
+                access_mode='w',
+                box=iDict['box'],
+                xstep=iDict['xstep'],
+                ystep=iDict['ystep'],
+                mli_method=iDict['method'],
+                compression=iDict['compression'],
+                extra_metadata=extraDict,
+                geom_obj=geom_obj)
+
+    # used time
+    m, s = divmod(time.time()-start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
+
+    return

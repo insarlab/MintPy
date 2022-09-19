@@ -20,82 +20,6 @@ from mintpy.utils import (
 )
 
 
-###############################  Usage  ################################
-def read_input_index_list(idxList, stackFile=None):
-    """Read ['2','3:5','10'] into ['2','3','4','5','10']"""
-    idxListOut = []
-    for idx in idxList:
-        c = sorted([int(i) for i in idx.split(':')])
-        if len(c) == 2:
-            idxListOut += list(range(c[0], c[1]+1))
-        elif len(c) == 1:
-            idxListOut.append(c[0])
-        else:
-            print('Unrecoganized input: '+idx)
-    idxListOut = sorted(set(idxListOut))
-
-    if stackFile:
-        obj = ifgramStack(stackFile)
-        obj.open(print_msg=False)
-        idxListOut = [i for i in idxListOut if i < obj.numIfgram]
-        obj.close(print_msg=False)
-    return idxListOut
-
-
-def read_template2inps(template_file, inps):
-    """Read input template options into Namespace inps"""
-    inpsDict = vars(inps)
-    print('read options from template file: '+os.path.basename(template_file))
-    template = readfile.read_template(inps.template_file, skip_chars=['[', ']'])
-    template = ut.check_template_auto_value(template)
-
-    # Update inps if key existed in template file
-    prefix = 'mintpy.network.'
-    keyList = [i for i in list(inpsDict.keys()) if prefix+i in template.keys()]
-    for key in keyList:
-        value = template[prefix+key]
-        if key in ['coherenceBased', 'areaRatioBased', 'keepMinSpanTree']:
-            inpsDict[key] = value
-        elif value:
-            if key in ['minCoherence', 'minAreaRatio', 'tempBaseMax', 'perpBaseMax']:
-                inpsDict[key] = float(value)
-            elif key in ['connNumMax']:
-                inpsDict[key] = int(value)
-            elif key in ['maskFile', 'referenceFile']:
-                inpsDict[key] = value
-            elif key == 'aoiYX':
-                tmp = [i.strip() for i in value.split(',')]
-                sub_y = sorted([int(i.strip()) for i in tmp[0].split(':')])
-                sub_x = sorted([int(i.strip()) for i in tmp[1].split(':')])
-                inps.aoi_pix_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
-            elif key == 'aoiLALO':
-                tmp = [i.strip() for i in value.split(',')]
-                sub_lat = sorted([float(i.strip()) for i in tmp[0].split(':')])
-                sub_lon = sorted([float(i.strip()) for i in tmp[1].split(':')])
-                inps.aoi_geo_box = (sub_lon[0], sub_lat[1], sub_lon[1], sub_lat[0])
-                # Check lookup file
-                if not inps.lookupFile:
-                    print('Warning: no lookup table file found! Can not use '+key+' option without it.')
-                    print('skip this option.')
-                    inps.aoi_pix_box = None
-            elif key in ['startDate', 'endDate']:
-                inpsDict[key] = ptime.yyyymmdd(value)
-            elif key == 'excludeDate':
-                inpsDict[key] = ptime.yyyymmdd(value.split(','))
-            elif key == 'excludeIfgIndex':
-                inpsDict[key] += value.split(',')
-                inpsDict[key] = read_input_index_list(inpsDict[key], stackFile=inps.file)
-
-    # Turn reset on if 1) no input options found to drop ifgram AND 2) there is template input
-    if all(not i for i in [inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax, inps.connNumMax,
-                           inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased, inps.areaRatioBased,
-                           inps.startDate, inps.endDate, inps.reset, inps.manual]):
-        print('No input option found to remove interferogram')
-        print('Keep all interferograms by enable --reset option')
-        inps.reset = True
-    return inps
-
-
 ###########################  Sub Function  #############################
 def reset_network(stackFile):
     """Reset/restore all pairs within the input file by set all DROP_IFGRAM=no"""
@@ -417,3 +341,24 @@ def get_date12_to_drop(inps):
         raise Exception('Zero interferogram left! Please adjust your setting and try again.')
 
     return date12_to_drop
+
+
+########################################################################
+def run_modify_network(inps):
+    """Run network modification."""
+
+    if inps.reset:
+        print('--------------------------------------------------')
+        reset_network(inps.file)
+        return
+
+    # get the list of date12 to drop/exclude
+    inps.date12_to_drop = get_date12_to_drop(inps)
+
+    # update date dataset in the ifgram stack h5 file
+    if inps.date12_to_drop is not None:
+        ifgramStack(inps.file).update_drop_ifgram(inps.date12_to_drop)
+        ut.touch('coherenceSpatialAvg.txt')
+        print('Done.')
+
+    return

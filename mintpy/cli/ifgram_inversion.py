@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -78,8 +78,8 @@ def create_parser(subparsers=None):
     solver.add_argument('--min-norm-phase', dest='minNormVelocity', action='store_false',
                         help=('Enable inversion with minimum-norm deformation phase,'
                               ' instead of the default minimum-norm deformation velocity.'))
-    solver.add_argument('--norm', dest='residualNorm', default='L2', choices=['L1', 'L2'],
-                        help='Optimization mehtod, L1 or L2 norm. (default: %(default)s).')
+    #solver.add_argument('--norm', dest='residualNorm', default='L2', choices=['L1', 'L2'],
+    #                    help='Optimization mehtod, L1 or L2 norm. (default: %(default)s).')
 
     # uncertainty propagation
     parser.add_argument('--calc-cov', dest='calcCov', action='store_true',
@@ -113,41 +113,43 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..objects import ifgramStack, cluster
-    from ..utils import readfile
-    from ..ifgram_inversion import read_template2inps
-
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # check input file type
+    # import
+    from ..objects import cluster, ifgramStack
+    from ..utils import readfile
+
+    # check
     atr = readfile.read_attribute(inps.ifgramStackFile)
+
+    # check: input file type
     if atr['FILE_TYPE'] not in ['ifgramStack']:
         raise ValueError('input is {} file, support ifgramStack file only.'.format(atr['FILE_TYPE']))
 
+    # check: template file
     if inps.templateFile:
         inps, template = read_template2inps(inps.templateFile, inps)
     else:
         template = dict()
 
-    # --cluster and --num-worker option
+    # check: --cluster and --num-worker option
     inps.numWorker = str(cluster.DaskCluster.format_num_worker(inps.cluster, inps.numWorker))
     if inps.cluster and inps.numWorker == '1':
         print('WARNING: number of workers is 1, turn OFF parallel processing and continue')
         inps.cluster = None
 
-    # --water-mask option
-    if inps.waterMaskFile and not os.path.isfile(inps.waterMaskFile):
-        inps.waterMaskFile = None
-
-    # --dset option
+    # default: --dset option
     if not inps.obsDatasetName:
         inps.obsDatasetName = 'unwrapPhase'
 
         # determine suffix based on unwrapping error correction method
-        obs_suffix_map = {'bridging'               : '_bridging',
-                          'phase_closure'          : '_phaseClosure',
-                          'bridging+phase_closure' : '_bridging_phaseClosure'}
+        obs_suffix_map = {
+            'bridging'               : '_bridging',
+            'phase_closure'          : '_phaseClosure',
+            'bridging+phase_closure' : '_bridging_phaseClosure',
+        }
         key = 'mintpy.unwrapError.method'
         if key in template.keys() and template[key]:
             unw_err_method = template[key].lower().replace(' ','')   # fix potential typo
@@ -155,24 +157,24 @@ def cmd_line_parse(iargs=None):
             print('phase unwrapping error correction "{}" is turned ON'.format(unw_err_method))
         print('use dataset "{}" by default'.format(inps.obsDatasetName))
 
-        # check if input observation dataset exists.
-        stack_obj = ifgramStack(inps.ifgramStackFile)
-        stack_obj.open(print_msg=False)
-        if inps.obsDatasetName not in stack_obj.datasetNames:
-            msg = 'input dataset name "{}" not found in file: {}'.format(inps.obsDatasetName, inps.ifgramStackFile)
-            raise ValueError(msg)
+    # check: --dset option (if input observation dataset exists)
+    stack_obj = ifgramStack(inps.ifgramStackFile)
+    stack_obj.open(print_msg=False)
+    if inps.obsDatasetName not in stack_obj.datasetNames:
+        msg = 'input dataset name "{}" not found in file: {}'.format(inps.obsDatasetName, inps.ifgramStackFile)
+        raise ValueError(msg)
 
-    # --skip-ref option
+    # default: --skip-ref option
     if ('offset' in inps.obsDatasetName.lower()
             and 'REF_X' not in atr.keys()
             and 'REF_Y' not in atr.keys()):
         inps.skip_ref = True
 
-    # --output option
+    # default: --output option
     if not inps.outfile:
         if inps.obsDatasetName.startswith('unwrapPhase'):
             if os.path.basename(inps.ifgramStackFile).startswith('ion'):
-                inps.outfile = ['timeseriesIon.h5', 'temporalCoherenceIon.h5', 'numInvIon.h5']
+                inps.outfile = ['timeseriesIon.h5', 'temporalCoherenceIon.h5', 'numInvIfgramIon.h5']
             else:
                 inps.outfile = ['timeseries.h5', 'temporalCoherence.h5', 'numInvIfgram.h5']
 
@@ -185,29 +187,72 @@ def cmd_line_parse(iargs=None):
         else:
             raise ValueError('un-recognized input observation dataset name: {}'.format(inps.obsDatasetName))
 
+    # default: --output (split for easy reference)
     inps.tsFile, inps.invQualityFile, inps.numInvFile = inps.outfile
+
+    # default: --water-mask option
+    if inps.waterMaskFile and not os.path.isfile(inps.waterMaskFile):
+        inps.waterMaskFile = None
 
     return inps
 
 
+def read_template2inps(template_file, inps):
+    """Read input template options into Namespace inps"""
+    print('read input option from template file:', template_file)
+
+    from ..utils import readfile, utils1 as ut
+
+    iDict = vars(inps)
+    template = readfile.read_template(template_file)
+    template = ut.check_template_auto_value(template)
+
+    key_list = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
+    for key in key_list:
+        value = template[key_prefix+key]
+        if key in ['weightFunc', 'maskDataset', 'minNormVelocity']:
+            iDict[key] = value
+        elif value:
+            if key in ['maskThreshold', 'minRedundancy']:
+                iDict[key] = float(value)
+            elif key in ['residualNorm', 'waterMaskFile']:
+                iDict[key] = value
+
+    # computing configurations
+    dask_key_prefix = 'mintpy.compute.'
+    key_list = [i for i in list(iDict.keys()) if dask_key_prefix+i in template.keys()]
+    for key in key_list:
+        value = template[dask_key_prefix+key]
+        if key in ['cluster', 'config']:
+            iDict[key] = value
+        elif value:
+            if key in ['numWorker']:
+                iDict[key] = str(value)
+            elif key in ['maxMemory']:
+                iDict[key] = float(value)
+
+    # False/None --> 'no'
+    for key in ['weightFunc']:
+        if not iDict[key]:
+            iDict[key] = 'no'
+
+    return inps, template
+
+
 ################################################################################################
 def main(iargs=None):
-    from ..ifgram_inversion import run_or_skip
-    from ..ifgram_inversion import ifgram_inversion
-
+    # parse
     inps = cmd_line_parse(iargs)
 
-    # --update option
+    # import
+    from ..ifgram_inversion import run_or_skip, run_ifgram_inversion
+
+    # run or skip
     if inps.update_mode and run_or_skip(inps) == 'skip':
-        return inps.outfile
+        return
 
-    # Network Inversion
-    if inps.residualNorm == 'L2':
-        ifgram_inversion(inps)
-
-    else:
-        raise NotImplementedError('L1 norm minimization is not fully tested.')
-        #ut.timeseries_inversion_L1(inps.ifgramStackFile, inps.tsFile)
+    # run
+    run_ifgram_inversion(inps)
 
 
 ################################################################################################

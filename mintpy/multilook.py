@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Heresh Fattahi, Zhang Yunjun, 2013               #
+# Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 ############################################################
 
 
@@ -170,7 +170,8 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='mean', margin=[0,
     ext = os.path.splitext(infile)[1]
     if not outfile:
         if os.getcwd() == os.path.dirname(os.path.abspath(infile)):
-            outfile = os.path.splitext(infile)[0]+'_'+str(lks_y)+'alks_'+str(lks_x)+'rlks'+ext
+            suffix = f'_{lks_y}alks_{lks_x}rlks'
+            outfile = os.path.splitext(infile)[0] + suffix + ext
         else:
             outfile = os.path.basename(infile)
 

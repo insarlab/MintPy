@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -17,17 +17,15 @@ TEMPLATE = get_template_content('modify_network')
 
 REFERENCE = """reference:
   Yunjun, Z., Fattahi, H. and Amelung, F. (2019), Small baseline InSAR time series analysis:
-  Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
-  doi:10.1016/j.cageo.2019.104331.
-
+    Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
+    doi:10.1016/j.cageo.2019.104331.
   Chaussard, E., Bürgmann, R., Fattahi, H., Nadeau, R. M., Taira, T., Johnson, C. W. and Johanson, I.
-  (2015), Potential for larger earthquakes in the East San Francisco Bay Area due to the direct
-  connection between the Hayward and Calaveras Faults, Geophysical Research Letters, 42(8),
-  2734-2741, doi:10.1002/2015GL063575.
-
+    (2015), Potential for larger earthquakes in the East San Francisco Bay Area due to the direct
+    connection between the Hayward and Calaveras Faults, Geophysical Research Letters, 42(8),
+    2734-2741, doi:10.1002/2015GL063575.
   Kang, Y., Lu, Z., Zhao, C., Xu, Y., Kim, J. W., & Gallegos, A. J. (2021).InSAR monitoring
-  of creeping landslides in mountainous regions: A case study in Eldorado National Forest,
-  California. Remote Sensing of Environment, 258, 112400. doi:10.1016/j.rse.2021.112400
+    of creeping landslides in mountainous regions: A case study in Eldorado National Forest,
+    California. Remote Sensing of Environment, 258, 112400. doi:10.1016/j.rse.2021.112400
 """
 
 EXAMPLE = """example:
@@ -106,56 +104,141 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..utils import utils as ut
-    from ..modify_network import read_template2inps, read_input_index_list
-
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    if not inps.lookupFile:
-        inps.lookupFile = ut.get_lookup_file()
+    # import
+    from ..utils import utils as ut
 
-    # Convert index : input to continous index list
-    if inps.excludeIfgIndex:
-        inps.excludeIfgIndex = read_input_index_list(inps.excludeIfgIndex, stackFile=inps.file)
-    else:
-        inps.excludeIfgIndex = []
+    # check: --mask option
+    if not os.path.isfile(inps.maskFile):
+        inps.maskFile = None
 
-    # required input arguments
+    # check: --exclude-ifg-index option (convert input index to continous index list)
+    inps.excludeIfgIndex = read_input_index_list(inps.excludeIfgIndex, stackFile=inps.file)
+
+    # check: -t / --template option
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
-    elif all(not i for i in [inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax, inps.connNumMax,
-                             inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased, inps.areaRatioBased,
-                             inps.startDate, inps.endDate, inps.reset, inps.manual]):
+
+    # check: input arguments (required at least one)
+    required_args = [
+        inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax, inps.connNumMax,
+        inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased, inps.areaRatioBased,
+        inps.startDate, inps.endDate, inps.reset, inps.manual,
+    ]
+    if all(not i for i in required_args + [inps.template_file]):
         msg = 'No input option found to remove interferogram, exit.\n'
         msg += 'To manually modify network, please use --manual option '
         raise Exception(msg)
 
-    if not os.path.isfile(inps.maskFile):
-        inps.maskFile = None
+    # default: --lookup option
+    if not inps.lookupFile:
+        inps.lookupFile = ut.get_lookup_file()
+
+    # default: turn --reset ON if:
+    # 1) no input options found to drop ifgram AND
+    # 2) there is template input
+    if inps.template_file and all(not i for i in required_args):
+        print('No input option found to remove interferogram')
+        print('Keep all interferograms by enable --reset option')
+        inps.reset = True
+
     return inps
+
+
+def read_template2inps(template_file, inps):
+    """Read input template options into Namespace inps"""
+    print('read options from template file: '+os.path.basename(template_file))
+
+    from ..utils import readfile, utils as ut
+
+    iDict = vars(inps)
+    template = readfile.read_template(inps.template_file, skip_chars=['[', ']'])
+    template = ut.check_template_auto_value(template)
+
+    # Update inps if key existed in template file
+    prefix = 'mintpy.network.'
+    key_list = [i for i in list(iDict.keys()) if prefix+i in template.keys()]
+    for key in key_list:
+        value = template[prefix+key]
+        if key in ['coherenceBased', 'areaRatioBased', 'keepMinSpanTree']:
+            iDict[key] = value
+
+        elif value:
+            if key in ['minCoherence', 'minAreaRatio', 'tempBaseMax', 'perpBaseMax']:
+                iDict[key] = float(value)
+            elif key in ['connNumMax']:
+                iDict[key] = int(value)
+            elif key in ['maskFile', 'referenceFile']:
+                iDict[key] = value
+
+            elif key == 'aoiYX':
+                tmp = [i.strip() for i in value.split(',')]
+                sub_y = sorted([int(i.strip()) for i in tmp[0].split(':')])
+                sub_x = sorted([int(i.strip()) for i in tmp[1].split(':')])
+                inps.aoi_pix_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
+
+            elif key == 'aoiLALO':
+                tmp = [i.strip() for i in value.split(',')]
+                sub_lat = sorted([float(i.strip()) for i in tmp[0].split(':')])
+                sub_lon = sorted([float(i.strip()) for i in tmp[1].split(':')])
+                inps.aoi_geo_box = (sub_lon[0], sub_lat[1], sub_lon[1], sub_lat[0])
+
+                # Check lookup file
+                if not inps.lookupFile:
+                    print(f'Warning: NO lookup table file found! Can not use {key} option without it.')
+                    print('Skip this option.')
+                    inps.aoi_pix_box = None
+
+            elif key in ['startDate', 'endDate']:
+                iDict[key] = ptime.yyyymmdd(value)
+            elif key == 'excludeDate':
+                iDict[key] = ptime.yyyymmdd(value.split(','))
+            elif key == 'excludeIfgIndex':
+                iDict[key] += value.split(',')
+                iDict[key] = read_input_index_list(iDict[key], stackFile=inps.file)
+
+    return inps
+
+
+def read_input_index_list(idxList, stackFile=None):
+    """Read ['2','3:5','10'] into ['2','3','4','5','10']"""
+
+    if not idxList:
+        return []
+
+    idxListOut = []
+    for idx in idxList:
+        c = sorted([int(i) for i in idx.split(':')])
+        if len(c) == 2:
+            idxListOut += list(range(c[0], c[1]+1))
+        elif len(c) == 1:
+            idxListOut.append(c[0])
+        else:
+            print('Unrecoganized input: '+idx)
+    idxListOut = sorted(set(idxListOut))
+
+    # remove index not existed in the input ifgram stack file
+    if stackFile:
+        obj = ifgramStack(stackFile)
+        obj.open(print_msg=False)
+        idxListOut = [i for i in idxListOut if i < obj.numIfgram]
+
+    return idxListOut
 
 
 #########################  Main Function  ##############################
 def main(iargs=None):
-    from ..modify_network import reset_network, get_date12_to_drop
-    from ..objects import ifgramStack
-    from ..utils import utils as ut
-
+    # parse
     inps = cmd_line_parse(iargs)
 
-    if inps.reset:
-        print('--------------------------------------------------')
-        reset_network(inps.file)
-        return inps.file
+    # import
+    from ..modify_network import run_modify_network
 
-    inps.date12_to_drop = get_date12_to_drop(inps)
-
-    if inps.date12_to_drop is not None:
-        ifgramStack(inps.file).update_drop_ifgram(inps.date12_to_drop)
-        ut.touch('coherenceSpatialAvg.txt')
-        print('Done.')
-    return
+    # run
+    run_modify_network(inps)
 
 
 ########################################################################

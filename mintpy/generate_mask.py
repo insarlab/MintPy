@@ -6,8 +6,11 @@
 
 
 import os
+import time
+
 import h5py
 import numpy as np
+
 from mintpy.utils import readfile, writefile, utils as ut
 
 
@@ -18,7 +21,7 @@ def run_or_skip(inps):
     flag = 'skip'
 
     # check output file vs input dataset
-    if not os.path.isfile(inps.outfile):
+    if not inps.outfile or not os.path.isfile(inps.outfile):
         flag = 'run'
         print('1) output file {} NOT exist.'.format(inps.outfile))
     else:
@@ -164,4 +167,35 @@ def create_threshold_mask(inps):
     # Write mask file
     atr['FILE_TYPE'] = 'mask'
     writefile.write(mask, out_file=inps.outfile, metadata=atr)
+
     return inps.outfile
+
+
+def create_mask():
+    """Create mask based on non-zero values or threshold."""
+    start_time = time.time()
+    ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
+    print('input {} file: {}'.format(ftype, inps.file))
+
+    # create mask using non-zero
+    if inps.nonzero and ftype == 'ifgramStack':
+        # update mode
+        if inps.update_mode and run_or_skip(inps) == 'skip':
+            return
+
+        # run
+        inps.outfile = ut.nonzero_mask(
+            inps.file,
+            out_file=inps.outfile,
+            datasetName=inps.dset,
+        )
+
+    # create mask using threshold
+    else:
+        create_threshold_mask(inps)
+
+    # used time
+    m, s = divmod(time.time()-start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+
+    return

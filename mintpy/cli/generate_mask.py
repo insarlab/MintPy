@@ -6,7 +6,6 @@
 
 
 import sys
-import time
 import warnings
 
 from mintpy.utils.arg_utils import create_argument_parser
@@ -133,7 +132,7 @@ def cmd_line_parse(iargs=None):
     # import
     from ..utils import readfile
 
-    # check --base and --base-dset options
+    # check: --base and --base-dset options
     if inps.base_file and inps.base_dataset:
         base_dataset_list = readfile.get_dataset_list(inps.base_file)
         if inps.base_dataset not in base_dataset_list:
@@ -144,65 +143,42 @@ def cmd_line_parse(iargs=None):
             inps.base_file = None
             inps.base_dataset = None
 
-    # default values - output filename
+    # default: --output
     if not inps.outfile:
         if inps.roipoly:
             inps.outfile = 'maskPoly.h5'
         elif 'temporalCoherence' in inps.file:
-            suffix = inps.file.split('temporalCoherence')[1]
-            inps.outfile = 'maskTempCoh' + suffix
+            inps.outfile = 'maskTempCoh' + inps.file.split('temporalCoherence')[1]
         else:
             inps.outfile = 'mask.h5'
 
         # "geo_" prefix
         if inps.file.startswith('geo_'):
-            inps.outfile = 'geo_'+inps.outfile
+            inps.outfile = 'geo_' + inps.outfile
 
-    # default values - vmin for temporal coherence
+    # default: --min (for temporal coherence)
     if inps.vmin is None and inps.file.endswith('temporalCoherence.h5'):
         inps.vmin = 0.7
+
+    # default: dset (dataset name for non-zero mask from ifgram stack)
+    ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
+    if not inps.dset and inps.nonzero and ftype == 'ifgramStack':
+        dset_list = readfile.get_dataset_list(inps.file)
+        inps.dset = [i for i in ['connectComponent', 'unwrapPhase'] if i in dset_list][0]
 
     return inps
 
 
 ################################################################################################
 def main(iargs=None):
-    # parse args
+    # parse
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..utils import readfile, utils as ut
-    from ..generate_mask import run_or_skip, create_threshold_mask
+    from ..generate_mask import create_mask
 
     # run
-    start_time = time.time()
-    ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
-    print('input {} file: {}'.format(ftype, inps.file))
-
-    # create mask using non-zero
-    if inps.nonzero and ftype == 'ifgramStack':
-        # get dataset name
-        if not inps.dset:
-            dset_list = readfile.get_dataset_list(inps.file)
-            inps.dset = [i for i in ['connectComponent', 'unwrapPhase'] if i in dset_list][0]
-
-        # update mode
-        if inps.update_mode and inps.outfile and run_or_skip(inps) == 'skip':
-            return
-
-        # run
-        inps.outfile = ut.nonzero_mask(
-            inps.file,
-            out_file=inps.outfile,
-            datasetName=inps.dset,
-        )
-        return
-
-    # create mask using threshold
-    create_threshold_mask(inps)
-
-    m, s = divmod(time.time()-start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+    create_mask(inps)
 
 
 ################################################################################################

@@ -59,4 +59,5 @@ def file_operation(fname, operator, operand, out_file=None):
         data = data_operation(data, operator, operand)
         dsDict[dsName] = data
     writefile.write(dsDict, out_file=out_file, metadata=atr, ref_file=fname)
+
     return out_file

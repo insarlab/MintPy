@@ -7,6 +7,7 @@
 
 import datetime as dt
 import os
+import time
 
 import h5py
 import numpy as np
@@ -290,3 +291,38 @@ def correct_timeseries(dis_file, iono_file, cor_dis_file):
     import mintpy.cli.diff
     mintpy.cli.diff.main(iargs)
     return cor_dis_file
+
+
+def run_iono_tec(inps):
+    """Calculate and/or correct for the ionospheric delay using TEC from GIM."""
+
+    start_time = time.time()
+
+    # download
+    date_list = timeseries(inps.dis_file).get_date_list()
+    tec_files = download_ionex_files(date_list, tec_dir=inps.tec_dir, sol_code=inps.sol_code)
+
+    # calculate
+    if run_or_skip(inps.iono_file, tec_files, inps.dis_file, inps.geom_file) == 'run':
+        calc_iono_ramp_timeseries_igs(
+            tec_dir=inps.tec_dir,
+            sol_code=inps.sol_code,
+            interp_method=inps.interp_method,
+            ts_file=inps.dis_file,
+            geom_file=inps.geom_file,
+            iono_file=inps.iono_file,
+            rotate_tec_map=inps.rotate_tec_map,
+            sub_tec_ratio=inps.sub_tec_ratio,
+            update_mode=inps.update_mode,
+        )
+
+    ## correct
+    #correct_timeseries(dis_file=inps.dis_file,
+    #                   iono_file=inps.iono_file,
+    #                   cor_dis_file=inps.cor_dis_file)
+
+    # used time
+    m, s = divmod(time.time() - start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
+
+    return

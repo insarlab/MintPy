@@ -18,82 +18,24 @@ from mintpy.utils import (
 )
 
 
-######################################################################################
-def read_template2inps(template_file, inps):
-    """Read input template options into Namespace inps"""
-    print('read input option from template file: ' + template_file)
-
-    inps_dict = vars(inps)
-    template = readfile.read_template(template_file, skip_chars=['[', ']'])
-    template = ut.check_template_auto_value(template)
-
-    prefix = 'mintpy.geocode.'
-    key_list = [i for i in list(inps_dict.keys()) if prefix + i in template.keys()]
-    for key in key_list:
-        value = template[prefix + key]
-        if value:
-            if key in ['SNWE', 'laloStep']:
-                inps_dict[key] = [float(i) for i in value.split(',')]
-            elif key in ['interpMethod']:
-                inps_dict[key] = value
-            elif key == 'fillValue':
-                if 'nan' in value.lower():
-                    inps_dict[key] = np.nan
-                else:
-                    inps_dict[key] = float(value)
-
-    # computing configurations
-    key = 'mintpy.compute.maxMemory'
-    if key in template.keys() and template[key]:
-        inps.maxMemory = float(template[key])
-
-    return inps
-
 
 ############################################################################################
-def check_num_processor(nprocs):
-    """Check number of processors
-    Note by Yunjun, 2019-05-02:
-    1. conda install pyresample will install pykdtree and openmp, but it seems not working:
-        geocode.py is getting slower with more processors
-            Test on a TS HDF5 file in size of (241, 2267, 2390)
-            Memory: up to 10GB
-            Run time: 2.5 mins for nproc=1, 3 mins for nproc=4
-    2. macports seems to have minor speedup when more processors
-    Thus, default number of processors is set to 1; although the capability of using multiple
-    processors is written here.
-    """
-    if not nprocs:
-        #OMP_NUM_THREADS is defined in environment variable for OpenMP
-        if 'OMP_NUM_THREADS' in os.environ:
-            nprocs = int(os.getenv('OMP_NUM_THREADS'))
-        else:
-            nprocs = int(os.cpu_count() / 2)
-    nprocs = min(os.cpu_count(), nprocs)
-    print('number of processor to be used: {}'.format(nprocs))
-    return nprocs
-
-
-def auto_output_filename(infile, inps):
+def auto_output_filename(in_file, inps):
     if len(inps.file) == 1 and inps.outfile:
         return inps.outfile
 
-    if inps.radar2geo:
-        prefix = 'geo_'
-    else:
-        prefix = 'rdr_'
-
-    if inps.dset:
-        outfile = '{}{}.h5'.format(prefix, inps.dset)
-    else:
-        outfile = '{}{}'.format(prefix, os.path.basename(infile))
+    fbase, fext = os.path.splitext(os.path.basename(in_file))
+    prefix = 'geo_' if inps.radar2geo else 'rdr_'
+    suffix = inps.dset if inps.dset else fbase
+    out_file = f'{prefix}{suffix}{fext}'
 
     if inps.out_dir:
         if not os.path.isdir(inps.out_dir):
             os.makedirs(inps.out_dir)
             print('create directory: {}'.format(inps.out_dir))
-        outfile = os.path.join(inps.out_dir, outfile)
-    return outfile
+        out_file = os.path.join(inps.out_dir, out_file)
+
+    return out_file
 
 
 def run_geocode(inps):
@@ -206,6 +148,8 @@ def run_geocode(inps):
             if inps.latFile and inps.lonFile:
                 writefile.write_isce_xml(atr, fname=outfile)
 
+    # used time
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
+
     return outfile

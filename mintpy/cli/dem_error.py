@@ -87,27 +87,26 @@ def cmd_line_parse(iargs=None):
 
     # import
     from ..objects import cluster
-    from ..dem_error import read_template2inps
 
     # check
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 
-    # check --cluster and --num-worker option
+    # check: --cluster and --num-worker option
     inps.numWorker = str(cluster.DaskCluster.format_num_worker(inps.cluster, inps.numWorker))
     if inps.cluster and inps.numWorker == '1':
         print('WARNING: number of workers is 1, turn OFF parallel processing and continue')
         inps.cluster = None
 
-    # check --ex option (ignore non-existed exclude_date.txt)
+    # check: --ex option (ignore non-existed exclude_date.txt)
     if inps.excludeDate == 'exclude_date.txt' and not os.path.isfile(inps.excludeDate):
         inps.excludeDate = []
 
-    # check --poly-order option
+    # check: --poly-order option
     if inps.polyOrder < 1:
         raise argparse.ArgumentTypeError("Minimum polynomial order is 1")
 
-    # default values - output filename
+    # default: --output
     if not inps.outfile:
         fbase = os.path.splitext(inps.timeseries_file)[0]
         inps.outfile = f'{fbase}_demErr.h5'
@@ -115,19 +114,58 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
+def read_template2inps(template_file, inps):
+    """Read input template file into inps.excludeDate"""
+    print('read options from template file:', os.path.basename(template_file))
+
+    from ..utils import ptime, readfile, utils1 as ut
+    from ..dem_error import key_prefix
+
+    iDict = vars(inps)
+    template = readfile.read_template(template_file, skip_chars=['[', ']'])
+    template = ut.check_template_auto_value(template)
+
+    # Read template option
+    key_list = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
+    for key in key_list:
+        value = template[key_prefix+key]
+        if key in ['phaseVelocity']:
+            iDict[key] = value
+        elif value:
+            if key in ['polyOrder']:
+                iDict[key] = int(value)
+            elif key in ['excludeDate','stepFuncDate']:
+                iDict[key] = ptime.yyyymmdd(value.split(','))
+
+    # computing configurations
+    dask_key_prefix = 'mintpy.compute.'
+    key_list = [i for i in list(iDict.keys()) if dask_key_prefix+i in template.keys()]
+    for key in key_list:
+        value = template[dask_key_prefix+key]
+        if key in ['cluster', 'config']:
+            iDict[key] = value
+        elif value:
+            if key in ['numWorker']:
+                iDict[key] = str(value)
+            elif key in ['maxMemory']:
+                iDict[key] = float(value)
+
+    return inps
+
+
 ############################################################################
 def main(iargs=None):
-    # parse args
+    # parse
     inps = cmd_line_parse(iargs)
 
     # import
     from ..dem_error import run_or_skip, correct_dem_error
 
-    # run
-    # check --update option
+    # run or skip
     if inps.update_mode and run_or_skip(inps) == 'skip':
         return
 
+    # run
     correct_dem_error(inps)
 
 

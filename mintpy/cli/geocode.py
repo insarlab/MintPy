@@ -5,6 +5,7 @@
 ############################################################
 
 
+import os
 import sys
 import math
 
@@ -108,20 +109,19 @@ def cmd_line_parse(iargs=None):
 
     # import
     from ..utils import readfile, utils as ut
-    from ..geocode import read_template2inps, check_num_processor
 
     # check
     if inps.templateFile:
         inps = read_template2inps(inps.templateFile, inps)
 
-    # check 1 - input file(s) existence
+    # check: input file(s) existence
     inps.file = ut.get_file_list(inps.file)
     if not inps.file:
         raise Exception('ERROR: no input file found!')
     elif len(inps.file) > 1:
         inps.outfile = None
 
-    # check 2 - lookup table existence
+    # check: --lookup (lookup table existence)
     if not inps.lookupFile:
         # grab default lookup table
         inps.lookupFile = ut.get_lookup_file(inps.lookupFile)
@@ -134,7 +134,7 @@ def cmd_line_parse(iargs=None):
         if not inps.lookupFile:
             raise FileNotFoundError('No lookup table found! Can not geocode without it.')
 
-    # check 3 - src file coordinate & radar2geo operatioin
+    # check: src file coordinate & radar2geo operatioin
     atr = readfile.read_attribute(inps.file[0])
     if 'Y_FIRST' in atr.keys() and inps.radar2geo:
         print('input file is already geocoded')
@@ -145,7 +145,7 @@ def cmd_line_parse(iargs=None):
         print('input file is already in radar coordinates, exit without doing anything')
         sys.exit(0)
 
-    # check 4 - laloStep
+    # check: --lalo-step
     # valid only if:
     # 1. radar2geo = True AND
     # 2. lookup table is in radar coordinates
@@ -158,10 +158,10 @@ def cmd_line_parse(iargs=None):
             print('ERROR: "--lalo-step" can NOT be used with lookup table file in geo-coordinates!')
             sys.exit(0)
 
-    # check 5 - number of processors for multiprocessingg
+    # check: --nprocs (number of processors for multiprocessing)
     inps.nprocs = check_num_processor(inps.nprocs)
 
-    # check 6 - geo2radar
+    # check: --geo2radar
     if not inps.radar2geo:
         if inps.SNWE:
             print('ERROR: "--geo2radar" can NOT be used together with "--bbox"!')
@@ -173,9 +173,68 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
+def read_template2inps(template_file, inps):
+    """Read input template options into Namespace inps"""
+    print('read input option from template file:', template_file)
+
+    from ..utils import readfile, utils as ut
+
+    iDict = vars(inps)
+    template = readfile.read_template(template_file, skip_chars=['[', ']'])
+    template = ut.check_template_auto_value(template)
+
+    key_prefix = 'mintpy.geocode.'
+    key_list = [i for i in list(iDict.keys()) if key_prefix + i in template.keys()]
+    for key in key_list:
+        value = template[key_prefix + key]
+        if value:
+            if key in ['SNWE', 'laloStep']:
+                iDict[key] = [float(i) for i in value.split(',')]
+            elif key in ['interpMethod']:
+                iDict[key] = value
+            elif key == 'fillValue':
+                if 'nan' in value.lower():
+                    iDict[key] = np.nan
+                else:
+                    iDict[key] = float(value)
+
+    # computing configurations
+    key = 'mintpy.compute.maxMemory'
+    if key in template.keys() and template[key]:
+        iDict['maxMemory'] = float(template[key])
+
+    return inps
+
+
+def check_num_processor(nprocs):
+    """Check number of processors
+    Note by Yunjun, 2019-05-02:
+    1. conda install pyresample will install pykdtree and openmp, but it seems not working:
+        geocode.py is getting slower with more processors
+            Test on a TS HDF5 file in size of (241, 2267, 2390)
+            Memory: up to 10GB
+            Run time: 2.5 mins for nproc=1, 3 mins for nproc=4
+    2. macports seems to have minor speedup when more processors
+    Thus, default number of processors is set to 1; although the capability of using multiple
+    processors is written here.
+    """
+
+    if not nprocs:
+        # OMP_NUM_THREADS is defined in environment variable for OpenMP
+        if 'OMP_NUM_THREADS' in os.environ:
+            nprocs = int(os.getenv('OMP_NUM_THREADS'))
+        else:
+            nprocs = int(os.cpu_count() / 2)
+
+    nprocs = min(os.cpu_count(), nprocs)
+    print('number of processor to be used: {}'.format(nprocs))
+
+    return nprocs
+
+
 ######################################################################################
 def main(iargs=None):
-    # parse args
+    # parse
     inps = cmd_line_parse(iargs)
 
     # import

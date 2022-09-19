@@ -205,3 +205,45 @@ def print_dataset(fname, dsName):
     print('dataset size: {}'.format(data.shape))
     print('dataset min / max: {} / {}'.format(np.nanmin(data), np.nanmax(data)))
     print('number of pixels in NaN: {}'.format(np.sum(np.isnan(data))))
+
+    return
+
+
+def print_info(inps):
+    """Extract and print the input file structure information."""
+
+    # --date/--num option
+    if inps.disp_date or inps.disp_num:
+        print_date_list(inps.file,
+                        disp_ifgram=inps.disp_ifgram,
+                        disp_num=inps.disp_num,
+                        print_msg=True)
+        return
+
+    # --slice option
+    if inps.disp_slice:
+        if inps.disp_ifgram != 'all':
+            raise ValueError('--show-ifgram option is not applicable to --slice.')
+        print_slice_list(inps.file, print_msg=True)
+        return
+
+    # --dset option
+    if inps.dset:
+        print_dataset(inps.file, dsName=inps.dset)
+        return
+
+    # Basic info
+    print_aux_info(inps.file)
+
+    # Generic Attribute/Structure of all files
+    fext = os.path.splitext(inps.file)[1].lower()
+    if fext in ['.h5', '.he5']:
+        print('\n{} {:*<40}'.format('*'*20, 'HDF5 File Structure '))
+        print_hdf5_structure(inps.file, max_meta_num=inps.max_meta_num)
+
+    else:
+        print('\n{} {:*<40}'.format('*'*20, 'Binary File Attributes '))
+        atr = readfile.read_attribute(inps.file)
+        print_attributes(atr, max_meta_num=inps.max_meta_num)
+
+    return

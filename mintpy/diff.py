@@ -6,6 +6,8 @@
 
 
 import os
+import time
+
 import numpy as np
 
 from mintpy.objects import (
@@ -61,6 +63,7 @@ def diff_file(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
                 force_diff    - bool, overwrite existing output file
                 max_num_pixel - float, maximum number of pixels for each block
     """
+    start_time = time.time()
     print('{} - {} --> {}'.format(file1, file2, out_file))
 
     # Read basic info
@@ -230,5 +233,9 @@ def diff_file(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
         # output
         print('use metadata from the 1st file: {}'.format(file1))
         writefile.write(dsDict, out_file=out_file, metadata=atr1, ref_file=file1)
+
+    # used time
+    m, s = divmod(time.time()-start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))
 
     return out_file

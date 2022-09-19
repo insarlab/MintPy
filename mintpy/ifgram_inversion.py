@@ -32,42 +32,6 @@ config_keys = [
 
 
 ################################################################################################
-def read_template2inps(template_file, inps):
-    """Read input template options into Namespace inps"""
-    iDict = vars(inps)
-
-    template = readfile.read_template(template_file)
-    template = ut.check_template_auto_value(template)
-    keyList = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
-    for key in keyList:
-        value = template[key_prefix+key]
-        if key in ['weightFunc', 'maskDataset', 'minNormVelocity']:
-            iDict[key] = value
-        elif value:
-            if key in ['maskThreshold', 'minRedundancy']:
-                iDict[key] = float(value)
-            elif key in ['residualNorm', 'waterMaskFile']:
-                iDict[key] = value
-
-    # computing configurations
-    dask_key_prefix = 'mintpy.compute.'
-    keyList = [i for i in list(iDict.keys()) if dask_key_prefix+i in template.keys()]
-    for key in keyList:
-        value = template[dask_key_prefix+key]
-        if key in ['cluster', 'config']:
-            iDict[key] = value
-        elif value:
-            if key in ['numWorker']:
-                iDict[key] = str(value)
-            elif key in ['maxMemory']:
-                iDict[key] = float(value)
-
-    # False/None --> 'no'
-    for key in ['weightFunc']:
-        if not iDict[key]:
-            iDict[key] = 'no'
-
-    return inps, template
 
 
 def run_or_skip(inps):
@@ -624,9 +588,9 @@ def get_design_matrix4std(stack_obj):
 
 
 
-def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='unwrapPhase',
-                           weight_func='var', water_mask_file=None, min_norm_velocity=True,
-                           mask_ds_name=None, mask_threshold=0.4, min_redundancy=1.0, calc_cov=False):
+def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='unwrapPhase',
+                               weight_func='var', water_mask_file=None, min_norm_velocity=True,
+                               mask_ds_name=None, mask_threshold=0.4, min_redundancy=1.0, calc_cov=False):
     """Invert one patch of an ifgram stack into timeseries.
 
     Parameters: ifgram_file       - str, interferograms stack HDF5 file, e.g. ./inputs/ifgramStack.h5
@@ -646,7 +610,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
                 inv_quality       - 2D array in size of (num_row, num_col)
                 num_inv_obs       - 2D array in size of (num_row, num_col)
                 box               - tuple of 4 int
-    Example:    ifgram_inversion_patch('ifgramStack.h5', box=(0,200,1316,400))
+    Example:    run_ifgram_inversion_patch('ifgramStack.h5', box=(0,200,1316,400))
     """
 
     stack_obj = ifgramStack(ifgram_file)
@@ -960,12 +924,12 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_name='u
     return ts, ts_cov, inv_quality, num_inv_obs, box
 
 
-def ifgram_inversion(inps):
+def run_ifgram_inversion(inps):
     """Phase triangulatino of small baseline interferograms
 
     Parameters: inps - namespace
     Example:    inps = cmd_line_parse()
-                ifgram_inversion(inps)
+                run_ifgram_inversion(inps)
     """
 
     start_time = time.time()
@@ -1130,7 +1094,7 @@ def ifgram_inversion(inps):
         data_kwargs['box'] = box
         if not inps.cluster:
             # non-parallel
-            ts, ts_cov, inv_quality, num_inv_obs = ifgram_inversion_patch(**data_kwargs)[:-1]
+            ts, ts_cov, inv_quality, num_inv_obs = run_ifgram_inversion_patch(**data_kwargs)[:-1]
 
         else:
             # parallel
@@ -1148,7 +1112,7 @@ def ifgram_inversion(inps):
 
             # run dask
             ts, ts_cov, inv_quality, num_inv_obs = cluster_obj.run(
-                func=ifgram_inversion_patch,
+                func=run_ifgram_inversion_patch,
                 func_data=data_kwargs,
                 results=[ts, ts_cov, inv_quality, num_inv_obs])
 

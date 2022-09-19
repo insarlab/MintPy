@@ -8,6 +8,7 @@
 import os
 import sys
 import glob
+
 from mintpy.utils.arg_utils import create_argument_parser
 
 
@@ -19,14 +20,13 @@ EXAMPLE = """example:
 """
 
 NOTE = """DEHM: Digital Ellipsoidal Height Model
-yyxx.dehm with yy and xx indicating the coordinates of the upper left corner of the firt pixel.
-where longitude = xx + 100
-      latitude  = (yy + 1) / 1.5
+  yyxx.dehm with yy and xx indicating the coordinates of the upper left corner of the firt pixel.
+  where latitude = (yy + 1) / 1.5, longitude = xx + 100
 """
 
 def create_parser(subparsers=None):
     synopsis = 'Prepare DEM from GSI (Japan) DEHM grib files.'
-    epilog = EXAMPLE
+    epilog = NOTE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
@@ -45,7 +45,7 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # check --grid-dir option
+    # check: --grid-dir option
     inps.grid_dir = os.path.expanduser(inps.grid_dir)
     inps.grid_dir = os.path.expandvars(inps.grid_dir)
     inps.grid_dir = os.path.abspath(inps.grid_dir)
@@ -57,24 +57,14 @@ def cmd_line_parse(iargs=None):
 
 ##################################################################################################
 def main(iargs=None):
-    # parse args
+    # parse
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..dem_gsi import write_dem_file, write_rsc_file, write_isce_metadata
+    from ..dem_gsi import prep_gsi_dem
 
     # run
-    meta = write_dem_file(
-        inps.SNWE,
-        dem_file=inps.outfile,
-        grid_dir=inps.grid_dir,
-    )
-
-    # rsc file for roipac
-    write_rsc_file(meta, inps.outfile)
-
-    # vrt/xml file for isce
-    write_isce_metadata(meta, inps.outfile)
+    prep_gsi_dem(inps)
 
 
 ###################################################################################################

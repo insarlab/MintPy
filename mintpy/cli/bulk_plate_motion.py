@@ -88,11 +88,12 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # default values - output filenames
+    # default: output PMM filenames
     geom_dir = os.path.dirname(inps.geom_file)
     inps.pmm_enu_file = os.path.join(geom_dir, 'ITRF14ENU.h5')
     inps.pmm_los_file = os.path.join(geom_dir, 'ITRF14.h5')
 
+    # default: --output option
     if inps.vel_file and not inps.cor_vel_file:
         vbase = os.path.splitext(inps.vel_file)[0]
         inps.cor_vel_file = os.path.abspath(f'{vbase}_ITRF14.h5')
@@ -102,27 +103,14 @@ def cmd_line_parse(iargs=None):
 
 #######################################  Main Function  ########################################
 def main(iargs=None):
-    # parse args
+    # parse
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..bulk_plate_motion import calc_bulk_plate_motion, correct_bulk_plate_motion
+    from ..bulk_plate_motion import run_bulk_plate_motion
 
     # run
-    calc_bulk_plate_motion(
-        geom_file=inps.geom_file,
-        omega_cart=inps.omega_cart,
-        omega_sph=inps.omega_sph,
-        const_vel_enu=inps.const_vel_enu,
-        pmm_enu_file=inps.pmm_enu_file,
-        pmm_los_file=inps.pmm_los_file,
-        pmm_step=inps.pmm_step,
-    )
-
-    if inps.vel_file and inps.pmm_los_file and inps.cor_vel_file:
-        print('-'*50)
-        print('Correct input velocity for the bulk plate motion')
-        correct_bulk_plate_motion(inps.vel_file, inps.pmm_los_file, inps.cor_vel_file)
+    run_bulk_plate_motion(inps)
 
 
 ################################################################################################

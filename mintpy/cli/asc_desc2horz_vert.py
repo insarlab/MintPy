@@ -98,18 +98,18 @@ def cmd_line_parse(iargs=None):
     atr1 = readfile.read_attribute(inps.file[0])
     atr2 = readfile.read_attribute(inps.file[1])
 
-    # check 1 - geo-coordinates
+    # check: if input is in geo-coordinates
     if any('X_FIRST' not in i for i in [atr1, atr2]):
         raise Exception('Not all input files are geocoded.')
 
-    # check 2 - spatial resolution
+    # check: if input spatial resolutions are consistent
     if any(atr1[i] != atr2[i] for i in ['X_STEP','Y_STEP']):
         msg  = '\tfile1: {}, Y/X_STEP: {} / {} {}\n'.format(inps.file[0], atr1['Y_STEP'], atr1['X_STEP'], atr1.get('X_UNIT', 'degrees'))
         msg += '\tfile2: {}, Y/X_STEP: {} / {} {}\n'.format(inps.file[1], atr2['Y_STEP'], atr2['X_STEP'], atr2.get('X_UNIT', 'degrees'))
         msg += '\tRe-run geocode.py --lat-step --lon-step to make them consistent.'
         raise ValueError('input files do NOT have the same spatial resolution\n{}'.format(msg))
 
-    # check 3 - reference point
+    # check: if input reference points are consistent
     ref_lat1, ref_lon1 = [float(atr1[i]) for i in ['REF_LAT', 'REF_LON']]
     ref_lat2, ref_lon2 = [float(atr2[i]) for i in ['REF_LAT', 'REF_LON']]
     ref_y_diff = abs((ref_lat1 - ref_lat2) / float(atr1['Y_STEP']))
@@ -126,7 +126,7 @@ def cmd_line_parse(iargs=None):
 
 ################################################################################
 def main(iargs=None):
-    # parse args
+    # parse
     inps = cmd_line_parse(iargs)
 
     # import

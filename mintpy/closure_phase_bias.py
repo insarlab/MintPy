@@ -8,9 +8,11 @@
 
 
 import os
-import numpy as np
 import glob
+import time
 from datetime import datetime as dt
+
+import numpy as np
 
 from mintpy.objects import ifgramStack, cluster
 from mintpy.utils import (
@@ -1022,3 +1024,64 @@ def estimate_bias_timeseries(stack_file, bias_free_conn, bw, cluster_kwargs, wat
     cluster.roll_back_num_threads(num_threads_dict)
 
     return bias_ts_file
+
+
+################################################################################
+def run_closure_phase_bias(inps):
+    """Run non-closure phase related bias masking or estimation."""
+    start_time = time.time()
+
+    # common inputs
+    kwargs = dict(outdir=inps.outdir, max_memory=inps.maxMemory)
+
+    if inps.action == 'mask':
+        calc_closure_phase_mask(
+            stack_file=inps.stack_file,
+            bias_free_conn=inps.nl,
+            num_sigma=inps.num_sigma,
+            threshold_amp=inps.epsilon,
+            **kwargs)
+
+    elif inps.action.endswith('estimate'):
+        # compute the unwrapped closure phase bias time-series
+        # and re-unwrap to mitigate the impact of phase unwrapping errors
+        # which can dominate the true non-closure phase.
+        # max(2, inps.bw) is used to ensure we have conn-2 closure phase processed
+        conn_list = np.arange(2, max(2, inps.bw) + 1).tolist() + [inps.nl]
+        conn_list = sorted(list(set(conn_list)))
+        for conn in conn_list:
+            print('\n'+'-'*80)
+            print('calculating the unwrapped closure phase for '
+                  f'connection level = {conn} out of {conn_list} ...')
+            compute_unwrap_closure_phase(
+                stack_file=inps.stack_file,
+                conn=conn,
+                num_worker=int(inps.numWorker),
+                **kwargs)
+
+        if inps.action == 'quick_estimate':
+            estimate_bias_timeseries_approx(
+                stack_file=inps.stack_file,
+                bias_free_conn=inps.nl,
+                bw=inps.bw,
+                water_mask_file=inps.water_mask_file,
+                **kwargs)
+
+        elif inps.action == 'estimate':
+            cluster_kwargs = {
+                "cluster_type" : inps.cluster,
+                "num_worker"   : inps.numWorker,
+                "config_name"  : inps.config}
+            estimate_bias_timeseries(
+                stack_file=inps.stack_file,
+                bias_free_conn=inps.nl,
+                bw=inps.bw,
+                cluster_kwargs=cluster_kwargs,
+                water_mask_file=inps.water_mask_file,
+                **kwargs)
+
+    # used time
+    m, s = divmod(time.time() - start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
+
+    return
