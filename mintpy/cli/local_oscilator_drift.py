@@ -35,7 +35,7 @@ def create_parser(subparsers=None):
     parser.add_argument(dest='range_dist_file',
                         help='Slant range distance file, i.e. inputs/geometryRadar.h5, inputs/geometryGeo.h5\n' +
                         'or use range_distance.py to generate it.')
-    parser.add_argument('-o', '--output', dest='outfile',
+    parser.add_argument('-o', '--output', dest='out_file',
                         help='Output file name for corrected file.')
     return parser
 
