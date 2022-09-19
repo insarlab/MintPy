@@ -100,7 +100,7 @@ def cmd_line_parse(iargs=None):
 
 ####################################################################################
 def main(iargs=None):
-    from ..s1ab_range_bias import estimate_s1ab_range_bias, write_s1ab_bias_file, correct_s1ab_range_bias, plot_s1ab_range_bias_est
+    from mintpy.s1ab_range_bias import estimate_s1ab_range_bias, write_s1ab_bias_file, correct_s1ab_range_bias, plot_s1ab_range_bias_est
     
     inps = cmd_line_parse(iargs)
 

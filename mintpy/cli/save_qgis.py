@@ -53,7 +53,7 @@ def cmd_line_parse(iargs=None):
 
 #########################################################################################
 def main(iargs=None):
-    from ..save_qgis import read_bounding_box, gather_files, write_shape_file
+    from mintpy.save_qgis import read_bounding_box, gather_files, write_shape_file
 
     # Parse command line
     inps = cmd_line_parse(iargs)

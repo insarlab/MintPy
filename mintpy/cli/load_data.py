@@ -110,7 +110,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..load_data import run_load_data
+    from mintpy.load_data import run_load_data
 
     # run
     run_load_data(inps)

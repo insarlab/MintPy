@@ -71,8 +71,8 @@ def cmd_line_parse(iargs=None):
 
 ###########################################################################################
 def main(iargs=None):
-    from ..utils import utils as ut
-    from ..remove_ramp import run_or_skip, config_keys
+    from mintpy.utils import utils as ut
+    from mintpy.remove_ramp import run_or_skip, config_keys
 
     inps = cmd_line_parse(iargs)
 

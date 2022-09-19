@@ -52,7 +52,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..local_oscilator_drift import correct_local_oscilator_drift
+    from mintpy.local_oscilator_drift import correct_local_oscilator_drift
 
     # run
     inps.outfile = correct_local_oscilator_drift(

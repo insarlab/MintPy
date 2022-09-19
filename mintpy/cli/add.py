@@ -39,7 +39,7 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # import
-    from ..utils import readfile
+    from mintpy.utils import readfile
 
     # check
     num_file = len(inps.file)
@@ -62,7 +62,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..add import add_file
+    from mintpy.add import add_file
 
     # run
     add_file(inps.file, inps.outfile, force=inps.force)

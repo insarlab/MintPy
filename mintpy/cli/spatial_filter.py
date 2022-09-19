@@ -64,7 +64,7 @@ def cmd_line_parse(iargs=None):
 
 ################################################################################################
 def main(iargs=None):
-    from ..spatial_filter import filter_file
+    from mintpy.spatial_filter import filter_file
 
     inps = cmd_line_parse(iargs)
 

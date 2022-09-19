@@ -110,7 +110,7 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs = None):
-    from ..prep_aria import read_template2inps
+    from mintpy.prep_aria import read_template2inps
 
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
@@ -169,8 +169,8 @@ def cmd_line_parse(iargs = None):
 ####################################################################################
 def main(iargs=None):
     import numpy as np
-    from ..utils import writefile, attribute as attr
-    from ..prep_aria import extract_metadata, read_subset_box, run_or_skip, write_ifgram_stack, write_geometry
+    from mintpy.utils import writefile, attribute as attr
+    from mintpy.prep_aria import extract_metadata, read_subset_box, run_or_skip, write_ifgram_stack, write_geometry
 
     inps = cmd_line_parse(iargs)
     start_time = time.time()

@@ -90,7 +90,7 @@ def cmd_line_parse(iargs=None):
         inps.tcoh_file = None
 
     # verbose print using --noverbose option
-    from .. import plot_coherence_matrix
+    from mintpy import plot_coherence_matrix
     plot_coherence_matrix.vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
     if not inps.disp_fig:
@@ -102,7 +102,7 @@ def cmd_line_parse(iargs=None):
 
 ##########################  Main Function  ##############################
 def main(iargs=None):
-    from ..plot_coherence_matrix import coherenceMatrixViewer
+    from mintpy.plot_coherence_matrix import coherenceMatrixViewer
     inps = cmd_line_parse(iargs)
     obj = coherenceMatrixViewer(iargs=iargs)
     obj.configure(inps)

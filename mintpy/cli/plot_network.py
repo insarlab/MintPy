@@ -103,8 +103,8 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..plot_network import read_template2inps
-    from ..utils import readfile
+    from mintpy.plot_network import read_template2inps
+    from mintpy.utils import readfile
 
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
@@ -141,8 +141,8 @@ def cmd_line_parse(iargs=None):
 ##########################  Main Function  ##############################
 def main(iargs=None):
     import matplotlib.pyplot as plt
-    from ..plot_network import read_network_info, check_colormap
-    from ..utils import plot as pp
+    from mintpy.plot_network import read_network_info, check_colormap
+    from mintpy.utils import plot as pp
 
     inps = cmd_line_parse(iargs)
 

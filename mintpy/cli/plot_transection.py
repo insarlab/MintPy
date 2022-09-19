@@ -76,8 +76,8 @@ def create_parser(subparsers=None):
 
 def cmd_line_parse(iargs=None):
     import numpy as np
-    from ..plot_transection import read_lonlat_file
-    from ..utils import readfile, utils as ut
+    from mintpy.plot_transection import read_lonlat_file
+    from mintpy.utils import readfile, utils as ut
 
     inps = create_parser().parse_args(args=iargs)
 
@@ -130,7 +130,7 @@ def cmd_line_parse(iargs=None):
         inps.end_yx = [y1, x1]
 
     # verbose print using --noverbose option
-    from .. import plot_transection
+    from mintpy import plot_transection
     plot_transection.vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
     if not inps.disp_fig:
@@ -165,7 +165,7 @@ def get_view_cmd(iargs):
 
 ############################ Main ###################################
 def main(iargs=None):
-    from ..plot_transection import transectionViewer
+    from mintpy.plot_transection import transectionViewer
     inps = cmd_line_parse(iargs)
     view_cmd = get_view_cmd(iargs)
     obj = transectionViewer(iargs=iargs)

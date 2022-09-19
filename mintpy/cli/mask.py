@@ -59,7 +59,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..mask import mask_file
+    from mintpy.mask import mask_file
 
     # run
     mask_file(inps.file, inps.mask_file, inps.outfile, inps)

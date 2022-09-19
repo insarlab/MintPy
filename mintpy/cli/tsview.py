@@ -169,7 +169,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..tsview import timeseriesViewer
+    from mintpy.tsview import timeseriesViewer
 
     # run
     obj = timeseriesViewer(iargs=iargs)

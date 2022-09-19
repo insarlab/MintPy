@@ -39,7 +39,7 @@ def cmd_line_parse(iargs=None):
 
 ###########################################################################################
 def main(iargs=None):
-    from ..remove_hdf5_dataset import remove_hdf5_dataset
+    from mintpy.remove_hdf5_dataset import remove_hdf5_dataset
     inps = cmd_line_parse(iargs)
     remove_hdf5_dataset(inps.file, inps.dset)
     print('Done.')

@@ -46,7 +46,7 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # import
-    from ..utils import readfile
+    from mintpy.utils import readfile
 
     # check
     # check: number of files == 2 for time-series and ifgram stack
@@ -75,7 +75,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..diff import diff_file
+    from mintpy.diff import diff_file
 
     # run
     diff_file(

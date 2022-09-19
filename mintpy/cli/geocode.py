@@ -108,7 +108,7 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # import
-    from ..utils import readfile, utils as ut
+    from mintpy.utils import readfile, utils as ut
 
     # check
     if inps.templateFile:
@@ -177,7 +177,7 @@ def read_template2inps(template_file, inps):
     """Read input template options into Namespace inps"""
     print('read input option from template file:', template_file)
 
-    from ..utils import readfile, utils as ut
+    from mintpy.utils import readfile, utils as ut
 
     iDict = vars(inps)
     template = readfile.read_template(template_file, skip_chars=['[', ']'])
@@ -238,7 +238,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..geocode import run_geocode
+    from mintpy.geocode import run_geocode
 
     # run
     run_geocode(inps)

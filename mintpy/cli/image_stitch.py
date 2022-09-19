@@ -57,7 +57,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..image_stitch import stitch_files
+    from mintpy.image_stitch import stitch_files
 
     # run
     stitch_files(

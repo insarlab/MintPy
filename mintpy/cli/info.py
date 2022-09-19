@@ -90,7 +90,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..info import print_info
+    from mintpy.info import print_info
 
     # run
     print_info(inps)

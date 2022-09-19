@@ -35,7 +35,7 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..utils import readfile
+    from mintpy.utils import readfile
 
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
@@ -51,8 +51,8 @@ def cmd_line_parse(iargs=None):
 
 ####################################################################################
 def main(iargs=None):
-    from ..utils import readfile, plot as pp
-    from ..save_gmt import write_grd_file
+    from mintpy.utils import readfile, plot as pp
+    from mintpy.save_gmt import write_grd_file
 
     inps = cmd_line_parse(iargs)
 

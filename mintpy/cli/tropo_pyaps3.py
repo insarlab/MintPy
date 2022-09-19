@@ -170,7 +170,7 @@ def cmd_line_parse(iargs=None):
 
 ###############################################################
 def main(iargs=None):
-    from ..tropo_pyaps3 import (
+    from mintpy.tropo_pyaps3 import (
         read_inps2date_time,
         get_grib_info,
         dload_grib_files,

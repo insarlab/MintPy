@@ -59,8 +59,8 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..objects import timeseries
-    from ..utils import readfile
+    from mintpy.objects import timeseries
+    from mintpy.utils import readfile
 
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
@@ -81,8 +81,8 @@ def cmd_line_parse(iargs=None):
 
 ##############################################################################
 def main(iargs=None):
-    from ..utils import writefile
-    from ..save_roipac import read_data, clean_metadata4roipac
+    from mintpy.utils import writefile
+    from mintpy.save_roipac import read_data, clean_metadata4roipac
 
     inps = cmd_line_parse(iargs)
 

@@ -44,7 +44,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..lookup_geo2radar import run_lookup_geo2radar
+    from mintpy.lookup_geo2radar import run_lookup_geo2radar
 
     # run
     run_lookup_geo2radar(inps)

@@ -84,9 +84,9 @@ def cmd_line_parse(iargs=None):
 
 ####################################################################################
 def main(iargs=None):
-    from .. import subset
-    from ..utils import  isce_utils, utils as ut, attribute as attr
-    from ..prep_fringe import (
+    from mintpy import subset
+    from mintpy.utils import  isce_utils, utils as ut, attribute as attr
+    from mintpy.prep_fringe import (
         read_vrt_info, prepare_metadata,
         prepare_geometry,
         prepare_timeseries,

@@ -64,8 +64,8 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..utils import readfile
-    from ..save_kmz_timeseries import get_aux_filename
+    from mintpy.utils import readfile
+    from mintpy.save_kmz_timeseries import get_aux_filename
 
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
@@ -84,7 +84,7 @@ def cmd_line_parse(iargs=None):
 
 ######################################################################################
 def main(iargs=None):
-    from ..save_kmz_timeseries import save_kml_timeseries
+    from mintpy.save_kmz_timeseries import save_kml_timeseries
 
     inps = cmd_line_parse(iargs)
     inps.work_dir = os.path.abspath(os.path.dirname(inps.ts_file))

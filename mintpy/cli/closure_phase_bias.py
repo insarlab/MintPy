@@ -99,7 +99,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..closure_phase_bias import run_closure_phase_bias
+    from mintpy.closure_phase_bias import run_closure_phase_bias
 
     # run
     run_closure_phase_bias(inps)

@@ -44,8 +44,8 @@ def cmd_line_parse(iargs = None):
 
 #########################################################################
 def main(iargs=None):
-    from ..utils import readfile
-    from ..prep_gmtsar import extract_gmtsar_metadata, prepare_geometry, prepare_stack
+    from mintpy.utils import readfile
+    from mintpy.prep_gmtsar import extract_gmtsar_metadata, prepare_geometry, prepare_stack
 
     inps = cmd_line_parse(iargs)
 

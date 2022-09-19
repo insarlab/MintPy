@@ -92,7 +92,7 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # import
-    from ..utils import readfile
+    from mintpy.utils import readfile
 
     # check
     atr1 = readfile.read_attribute(inps.file[0])
@@ -130,7 +130,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..asc_desc2horz_vert import run_asc_desc2horz_vert
+    from mintpy.asc_desc2horz_vert import run_asc_desc2horz_vert
 
     # run
     run_asc_desc2horz_vert(inps)

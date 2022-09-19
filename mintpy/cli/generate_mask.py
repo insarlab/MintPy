@@ -130,7 +130,7 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # import
-    from ..utils import readfile
+    from mintpy.utils import readfile
 
     # check: --base and --base-dset options
     if inps.base_file and inps.base_dataset:
@@ -175,7 +175,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..generate_mask import create_mask
+    from mintpy.generate_mask import create_mask
 
     # run
     create_mask(inps)

@@ -110,8 +110,8 @@ def create_parser(subparsers=None):
 
 def cmd_line_parse(iargs=None):
     """Command line parser."""
-    from ..utils import readfile, utils as ut
-    from ..timeseries2velocity import read_template2inps
+    from mintpy.utils import readfile, utils as ut
+    from mintpy.timeseries2velocity import read_template2inps
     
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
@@ -167,7 +167,7 @@ def cmd_line_parse(iargs=None):
 
 ############################################################################
 def main(iargs=None):
-    from ..timeseries2velocity import run_or_skip, run_timeseries2time_func
+    from mintpy.timeseries2velocity import run_or_skip, run_timeseries2time_func
     inps = cmd_line_parse(iargs)
     start_time = time.time()
 

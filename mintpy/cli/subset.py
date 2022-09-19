@@ -85,7 +85,7 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..utils import utils as ut
+    from mintpy.utils import utils as ut
 
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
@@ -100,7 +100,7 @@ def cmd_line_parse(iargs=None):
 
 ###########################################################################################
 def main(iargs=None):
-    from ..subset import subset_file, read_aux_subset2inps
+    from mintpy.subset import subset_file, read_aux_subset2inps
     inps = cmd_line_parse(iargs)
     inps = read_aux_subset2inps(inps)
     for fname in inps.file:

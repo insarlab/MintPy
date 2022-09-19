@@ -75,7 +75,7 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # import
-    from ..utils import utils0 as ut
+    from mintpy.utils import utils0 as ut
 
     # check: --tec-dir option
     inps.tec_dir = os.path.expanduser(inps.tec_dir)
@@ -118,7 +118,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..iono_tec import run_iono_tec
+    from mintpy.iono_tec import run_iono_tec
 
     # run
     run_iono_tec(inps)

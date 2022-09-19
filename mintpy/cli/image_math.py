@@ -50,7 +50,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..image_math import file_operation
+    from mintpy.image_math import file_operation
 
     # run
     file_operation(inps.file, inps.operator, inps.operand, inps.outfile)

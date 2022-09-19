@@ -63,9 +63,9 @@ def cmd_line_parse(iargs=None):
 #########################################################################################################
 def main(iargs=None):
     import numpy as np
-    from .. import subset
-    from ..utils import ptime, readfile, attribute
-    from ..save_kite import mintpy2kite
+    from mintpy import subset
+    from mintpy.utils import ptime, readfile, attribute
+    from mintpy.save_kite import mintpy2kite
 
     inps = cmd_line_parse(iargs)
 

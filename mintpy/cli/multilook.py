@@ -47,7 +47,7 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # import
-    from ..utils import utils1 as ut
+    from mintpy.utils import utils1 as ut
 
     # check: input file list
     inps.file = ut.get_file_list(inps.file)
@@ -70,7 +70,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..multilook import multilook_file
+    from mintpy.multilook import multilook_file
 
     # run
     for infile in inps.file:

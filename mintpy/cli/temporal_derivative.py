@@ -34,7 +34,7 @@ def cmd_line_parse(iargs=None):
 
 ############################################################################
 def main(iargs=None):
-    from ..temporal_derivative import temporal_derivative
+    from mintpy.temporal_derivative import temporal_derivative
     inps = cmd_line_parse(iargs)
     return temporal_derivative(inps.file, inps.outfile)
 

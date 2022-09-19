@@ -53,7 +53,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..load_gbis import gbis_mat2hdf5
+    from mintpy.load_gbis import gbis_mat2hdf5
 
     # run
     gbis_mat2hdf5(inps.file, display=inps.disp_fig)

@@ -42,7 +42,7 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..utils import utils as ut
+    from mintpy.utils import utils as ut
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
@@ -61,7 +61,7 @@ def cmd_line_parse(iargs=None):
 
 ##################################################################################################
 def main(iargs=None):
-    from ..prep_roipac import extract_metadata
+    from mintpy.prep_roipac import extract_metadata
 
     inps = cmd_line_parse(iargs)
 

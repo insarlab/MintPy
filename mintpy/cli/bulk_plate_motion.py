@@ -107,7 +107,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..bulk_plate_motion import run_bulk_plate_motion
+    from mintpy.bulk_plate_motion import run_bulk_plate_motion
 
     # run
     run_bulk_plate_motion(inps)

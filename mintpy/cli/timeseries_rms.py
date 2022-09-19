@@ -64,7 +64,7 @@ def cmd_line_parse(iargs=None):
 
 ######################################################################################################
 def main(iargs=None):
-    from ..timeseries_rms import timeseries_rms
+    from mintpy.timeseries_rms import timeseries_rms
     inps = cmd_line_parse(iargs)
     return timeseries_rms(inps)
 

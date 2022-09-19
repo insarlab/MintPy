@@ -100,8 +100,8 @@ def cmd_line_parse(iargs = None):
 
 #########################################################################
 def main(iargs=None):
-    from ..utils import isce_utils
-    from ..prep_isce import prepare_geometry, prepare_stack, gen_random_baseline_timeseries
+    from mintpy.utils import isce_utils
+    from mintpy.prep_isce import prepare_geometry, prepare_stack, gen_random_baseline_timeseries
 
     inps = cmd_line_parse(iargs)
     inps.processor = isce_utils.get_processor(inps.meta_file)

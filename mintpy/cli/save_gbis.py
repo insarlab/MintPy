@@ -73,7 +73,7 @@ def cmd_line_parse(iargs=None):
 ##############################################################################
 def main(iargs=None):
     import matplotlib.pyplot as plt
-    from ..save_gbis import read_data, plot_data, save2mat
+    from mintpy.save_gbis import read_data, plot_data, save2mat
 
     inps = cmd_line_parse(iargs)
 

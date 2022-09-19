@@ -45,7 +45,7 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..utils import utils as ut
+    from mintpy.utils import utils as ut
 
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
@@ -61,8 +61,8 @@ def cmd_line_parse(iargs=None):
 
 ##################################################################################################
 def main(iargs=None):
-    from ..utils import readfile
-    from ..prep_snap import write_rsc
+    from mintpy.utils import readfile
+    from mintpy.prep_snap import write_rsc
 
     inps = cmd_line_parse(iargs)
 

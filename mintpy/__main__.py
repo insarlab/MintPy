@@ -37,7 +37,7 @@ EX_FAILURE = 1
 EX_INTERRUPT = 130
 
 
-from . import __version__
+from mintpy import __version__
 
 PROG = __package__
 LOGFMT = '%(asctime)s %(levelname)-8s -- %(message)s'
@@ -58,63 +58,63 @@ def _autocomplete(parser):
 # in alphabetical order
 # A-G
 def get_add_parser(subparsers=None):
-    from .cli import add
+    from mintpy.cli import add
     parser = add.create_parser(subparsers)
     parser.set_defaults(func=add.main)
     return parser
 
 
 def get_asc_desc2horz_vert_parser(subparsers=None):
-    from .cli import asc_desc2horz_vert
+    from mintpy.cli import asc_desc2horz_vert
     parser = asc_desc2horz_vert.create_parser(subparsers)
     parser.set_defaults(func=asc_desc2horz_vert.main)
     return parser
 
 
 def get_bulk_plate_motion_parser(subparsers=None):
-    from .cli import bulk_plate_motion
+    from mintpy.cli import bulk_plate_motion
     parser = bulk_plate_motion.create_parser(subparsers)
     parser.set_defaults(func=bulk_plate_motion.main)
     return parser
 
 
 def get_closure_phase_bias_parser(subparsers=None):
-    from .cli import closure_phase_bias
+    from mintpy.cli import closure_phase_bias
     parser = closure_phase_bias.create_parser(subparsers)
     parser.set_defaults(func=closure_phase_bias.main)
     return parser
 
 
 def get_dem_error_parser(subparsers=None):
-    from .cli import dem_error
+    from mintpy.cli import dem_error
     parser = dem_error.create_parser(subparsers)
     parser.set_defaults(func=dem_error.main)
     return parser
 
 
 def get_dem_gsi_parser(subparsers=None):
-    from .cli import dem_gsi
+    from mintpy.cli import dem_gsi
     parser = dem_gsi.create_parser(subparsers)
     parser.set_defaults(func=dem_gsi.main)
     return parser
 
 
 def get_diff_parser(subparsers=None):
-    from .cli import diff
+    from mintpy.cli import diff
     parser = diff.create_parser(subparsers)
     parser.set_defaults(func=diff.main)
     return parser
 
 
 def get_generate_mask_parser(subparsers=None):
-    from .cli import generate_mask
+    from mintpy.cli import generate_mask
     parser = generate_mask.create_parser(subparsers)
     parser.set_defaults(func=generate_mask.main)
     return parser
 
 
 def get_geocode_parser(subparsers=None):
-    from .cli import geocode
+    from mintpy.cli import geocode
     parser = geocode.create_parser(subparsers)
     parser.set_defaults(func=geocode.main)
     return parser
@@ -122,84 +122,84 @@ def get_geocode_parser(subparsers=None):
 
 # H-N
 def get_ifgram_inversion_parser(subparsers=None):
-    from .cli import ifgram_inversion
+    from mintpy.cli import ifgram_inversion
     parser = ifgram_inversion.create_parser(subparsers)
     parser.set_defaults(func=ifgram_inversion.main)
     return parser
 
 
 def get_image_math_parser(subparsers=None):
-    from .cli import image_math
+    from mintpy.cli import image_math
     parser = image_math.create_parser(subparsers)
     parser.set_defaults(func=image_math.main)
     return parser
 
 
 def get_image_stitch_parser(subparsers=None):
-    from .cli import image_stitch
+    from mintpy.cli import image_stitch
     parser = image_stitch.create_parser(subparsers)
     parser.set_defaults(func=image_stitch.main)
     return parser
 
 
 def get_info_parser(subparsers=None):
-    from .cli import info
+    from mintpy.cli import info
     parser = info.create_parser(subparsers)
     parser.set_defaults(func=info.main)
     return parser
 
 
 def get_iono_tec_parser(subparsers=None):
-    from .cli import iono_tec
+    from mintpy.cli import iono_tec
     parser = iono_tec.create_parser(subparsers)
     parser.set_defaults(func=iono_tec.main)
     return parser
 
 
 def get_mask_parser(subparsers=None):
-    from .cli import mask
+    from mintpy.cli import mask
     parser = mask.create_parser(subparsers)
     parser.set_defaults(func=mask.main)
     return parser
 
 
 def get_multilook_parser(subparsers=None):
-    from .cli import multilook
+    from mintpy.cli import multilook
     parser = multilook.create_parser(subparsers)
     parser.set_defaults(func=multilook.main)
     return parser
 
 
 def get_load_data_parser(subparsers=None):
-    from .cli import load_data
+    from mintpy.cli import load_data
     parser = load_data.create_parser(subparsers)
     parser.set_defaults(func=load_data.main)
     return parser
 
 
 def get_load_gbis_parser(subparsers=None):
-    from .cli import load_gbis
+    from mintpy.cli import load_gbis
     parser = load_gbis.create_parser(subparsers)
     parser.set_defaults(func=load_gbis.main)
     return parser
 
 
 def get_local_oscilator_drift_parser(subparsers=None):
-    from .cli import local_oscilator_drift
+    from mintpy.cli import local_oscilator_drift
     parser = local_oscilator_drift.create_parser(subparsers)
     parser.set_defaults(func=local_oscilator_drift.main)
     return parser
 
 
 def get_lookup_geo2radar_parser(subparsers=None):
-    from .cli import lookup_geo2radar
+    from mintpy.cli import lookup_geo2radar
     parser = lookup_geo2radar.create_parser(subparsers)
     parser.set_defaults(func=lookup_geo2radar.main)
     return parser
 
 
 def get_modify_network_parser(subparsers=None):
-    from .cli import modify_network
+    from mintpy.cli import modify_network
     parser = modify_network.create_parser(subparsers)
     parser.set_defaults(func=modify_network.main)
     return parser
@@ -207,84 +207,84 @@ def get_modify_network_parser(subparsers=None):
 
 # O-Q
 def get_plot_coherence_matrix_parser(subparsers=None):
-    from .cli import plot_coherence_matrix
+    from mintpy.cli import plot_coherence_matrix
     parser = plot_coherence_matrix.create_parser(subparsers)
     parser.set_defaults(func=plot_coherence_matrix.main)
     return parser
 
 
 def get_plot_network_parser(subparsers=None):
-    from .cli import plot_network
+    from mintpy.cli import plot_network
     parser = plot_network.create_parser(subparsers)
     parser.set_defaults(func=plot_network.main)
     return parser
 
 
 def get_plot_transection_parser(subparsers=None):
-    from .cli import plot_transection
+    from mintpy.cli import plot_transection
     parser = plot_transection.create_parser(subparsers)
     parser.set_defaults(func=plot_transection.main)
     return parser
 
 
 def get_prep_aria_parser(subparsers=None):
-    from .cli import prep_aria
+    from mintpy.cli import prep_aria
     parser = prep_aria.create_parser(subparsers)
     parser.set_defaults(func=prep_aria.main)
     return parser
 
 
 def get_prep_cosicorr_parser(subparsers=None):
-    from .cli import prep_cosicorr
+    from mintpy.cli import prep_cosicorr
     parser = prep_cosicorr.create_parser(subparsers)
     parser.set_defaults(func=prep_cosicorr.main)
     return parser
 
 
 def get_prep_fringe_parser(subparsers=None):
-    from .cli import prep_fringe
+    from mintpy.cli import prep_fringe
     parser = prep_fringe.create_parser(subparsers)
     parser.set_defaults(func=prep_fringe.main)
     return parser
 
 
 def get_prep_gamma_parser(subparsers=None):
-    from .cli import prep_gamma
+    from mintpy.cli import prep_gamma
     parser = prep_gamma.create_parser(subparsers)
     parser.set_defaults(func=prep_gamma.main)
     return parser
 
 
 def get_prep_gmtsar_parser(subparsers=None):
-    from .cli import prep_gmtsar
+    from mintpy.cli import prep_gmtsar
     parser = prep_gmtsar.create_parser(subparsers)
     parser.set_defaults(func=prep_gmtsar.main)
     return parser
 
 
 def get_prep_hyp3_parser(subparsers=None):
-    from .cli import prep_hyp3
+    from mintpy.cli import prep_hyp3
     parser = prep_hyp3.create_parser(subparsers)
     parser.set_defaults(func=prep_hyp3.main)
     return parser
 
 
 def get_prep_isce_parser(subparsers=None):
-    from .cli import prep_isce
+    from mintpy.cli import prep_isce
     parser = prep_isce.create_parser(subparsers)
     parser.set_defaults(func=prep_isce.main)
     return parser
 
 
 def get_prep_roipac_parser(subparsers=None):
-    from .cli import prep_roipac
+    from mintpy.cli import prep_roipac
     parser = prep_roipac.create_parser(subparsers)
     parser.set_defaults(func=prep_roipac.main)
     return parser
 
 
 def get_prep_snap_parser(subparsers=None):
-    from .cli import prep_snap
+    from mintpy.cli import prep_snap
     parser = prep_snap.create_parser(subparsers)
     parser.set_defaults(func=prep_snap.main)
     return parser
@@ -292,196 +292,196 @@ def get_prep_snap_parser(subparsers=None):
 
 # R-T
 def get_remove_ramp_parser(subparsers=None):
-    from .cli import remove_ramp
+    from mintpy.cli import remove_ramp
     parser = remove_ramp.create_parser(subparsers)
     parser.set_defaults(func=remove_ramp.main)
     return parser
 
 
 def get_reference_date_parser(subparsers=None):
-    from .cli import reference_date
+    from mintpy.cli import reference_date
     parser = reference_date.create_parser(subparsers)
     parser.set_defaults(func=reference_date.main)
     return parser
 
 
 def get_reference_point_parser(subparsers=None):
-    from .cli import reference_point
+    from mintpy.cli import reference_point
     parser = reference_point.create_parser(subparsers)
     parser.set_defaults(func=reference_point.main)
     return parser
 
 
 def get_remove_hdf5_dataset(subparsers=None):
-    from .cli import remove_hdf5_dataset
+    from mintpy.cli import remove_hdf5_dataset
     parser = remove_hdf5_dataset.create_parser(subparsers)
     parser.set_defaults(func=remove_hdf5_dataset.main)
     return parser
 
 
 def get_s1ab_range_bias_parser(subparsers=None):
-    from .cli import s1ab_range_bias
+    from mintpy.cli import s1ab_range_bias
     parser = s1ab_range_bias.create_parser(subparsers)
     parser.set_defaults(func=s1ab_range_bias.main)
     return parser
 
 
 def get_save_gbis_parser(subparsers=None):
-    from .cli import save_gbis
+    from mintpy.cli import save_gbis
     parser = save_gbis.create_parser(subparsers)
     parser.set_defaults(func=save_gbis.main)
     return parser
 
 
 def get_save_gdal_parser(subparsers=None):
-    from .cli import save_gdal
+    from mintpy.cli import save_gdal
     parser = save_gdal.create_parser(subparsers)
     parser.set_defaults(func=save_gdal.main)
     return parser
 
 
 def get_save_gmt_parser(subparsers=None):
-    from .cli import save_gmt
+    from mintpy.cli import save_gmt
     parser = save_gmt.create_parser(subparsers)
     parser.set_defaults(func=save_gmt.main)
     return parser
 
 
 def get_save_hdfeos5_parser(subparsers=None):
-    from .cli import save_hdfeos5
+    from mintpy.cli import save_hdfeos5
     parser = save_hdfeos5.create_parser(subparsers)
     parser.set_defaults(func=save_hdfeos5.main)
     return parser
 
 
 def get_save_kite_parser(subparsers=None):
-    from .cli import save_kite
+    from mintpy.cli import save_kite
     parser = save_kite.create_parser(subparsers)
     parser.set_defaults(func=save_kite.main)
     return parser
 
 
 def get_save_kmz_timeseries_parser(subparsers=None):
-    from .cli import save_kmz_timeseries
+    from mintpy.cli import save_kmz_timeseries
     parser = save_kmz_timeseries.create_parser(subparsers)
     parser.set_defaults(func=save_kmz_timeseries.main)
     return parser
 
 
 def get_save_kmz_parser(subparsers=None):
-    from .cli import save_kmz
+    from mintpy.cli import save_kmz
     parser = save_kmz.create_parser(subparsers)
     parser.set_defaults(func=save_kmz.main)
     return parser
 
 
 def get_save_qgis_parser(subparsers=None):
-    from .cli import save_qgis
+    from mintpy.cli import save_qgis
     parser = save_qgis.create_parser(subparsers)
     parser.set_defaults(func=save_qgis.main)
     return parser
 
 
 def get_save_roipac_parser(subparsers=None):
-    from .cli import save_roipac
+    from mintpy.cli import save_roipac
     parser = save_roipac.create_parser(subparsers)
     parser.set_defaults(func=save_roipac.main)
     return parser
 
 
 def get_smallbaselineApp_parser(subparsers=None):
-    from .cli import smallbaselineApp
+    from mintpy.cli import smallbaselineApp
     parser = smallbaselineApp.create_parser(subparsers)
     parser.set_defaults(func=smallbaselineApp.main)
     return parser
 
 
 def get_solid_earth_tides_parser(subparsers=None):
-    from .cli import solid_earth_tides
+    from mintpy.cli import solid_earth_tides
     parser = solid_earth_tides.create_parser(subparsers)
     parser.set_defaults(func=solid_earth_tides.main)
     return parser
 
 
 def get_spatial_average_parser(subparsers=None):
-    from .cli import spatial_average
+    from mintpy.cli import spatial_average
     parser = spatial_average.create_parser(subparsers)
     parser.set_defaults(func=spatial_average.main)
     return parser
 
 
 def get_spatial_filter_parser(subparsers=None):
-    from .cli import spatial_filter
+    from mintpy.cli import spatial_filter
     parser = spatial_filter.create_parser(subparsers)
     parser.set_defaults(func=spatial_filter.main)
     return parser
 
 
 def get_subset_parser(subparsers=None):
-    from .cli import subset
+    from mintpy.cli import subset
     parser = subset.create_parser(subparsers)
     parser.set_defaults(func=subset.main)
     return parser
 
 
 def get_temporal_average_parser(subparsers=None):
-    from .cli import temporal_average
+    from mintpy.cli import temporal_average
     parser = temporal_average.create_parser(subparsers)
     parser.set_defaults(func=temporal_average.main)
     return parser
 
 
 def get_temporal_derivative_parser(subparsers=None):
-    from .cli import temporal_derivative
+    from mintpy.cli import temporal_derivative
     parser = temporal_derivative.create_parser(subparsers)
     parser.set_defaults(func=temporal_derivative.main)
     return parser
 
 
 def get_temporal_filter_parser(subparsers=None):
-    from .cli import temporal_filter
+    from mintpy.cli import temporal_filter
     parser = temporal_filter.create_parser(subparsers)
     parser.set_defaults(func=temporal_filter.main)
     return parser
 
 
 def get_timeseries_rms_parser(subparsers=None):
-    from .cli import timeseries_rms
+    from mintpy.cli import timeseries_rms
     parser = timeseries_rms.create_parser(subparsers)
     parser.set_defaults(func=timeseries_rms.main)
     return parser
 
 
 def get_timeseries2velocity_parser(subparsers=None):
-    from .cli import timeseries2velocity
+    from mintpy.cli import timeseries2velocity
     parser = timeseries2velocity.create_parser(subparsers)
     parser.set_defaults(func=timeseries2velocity.main)
     return parser
 
 
 def get_tropo_gacos_parser(subparsers=None):
-    from .cli import tropo_gacos
+    from mintpy.cli import tropo_gacos
     parser = tropo_gacos.create_parser(subparsers)
     parser.set_defaults(func=tropo_gacos.main)
     return parser
 
 
 def get_tropo_phase_elevation_parser(subparsers=None):
-    from .cli import tropo_phase_elevation
+    from mintpy.cli import tropo_phase_elevation
     parser = tropo_phase_elevation.create_parser(subparsers)
     parser.set_defaults(func=tropo_phase_elevation.main)
     return parser
 
 
 def get_tropo_pyaps3_parser(subparsers=None):
-    from .cli import tropo_pyaps3
+    from mintpy.cli import tropo_pyaps3
     parser = tropo_pyaps3.create_parser(subparsers)
     parser.set_defaults(func=tropo_pyaps3.main)
     return parser
 
 
 def get_tsview_parser(subparsers=None):
-    from .cli import tsview
+    from mintpy.cli import tsview
     parser = tsview.create_parser(subparsers)
     parser.set_defaults(func=tsview.main)
     return parser
@@ -489,21 +489,21 @@ def get_tsview_parser(subparsers=None):
 
 # U-Z
 def get_unwrap_error_bridging_parser(subparsers=None):
-    from .cli import unwrap_error_bridging
+    from mintpy.cli import unwrap_error_bridging
     parser = unwrap_error_bridging.create_parser(subparsers)
     parser.set_defaults(func=unwrap_error_bridging.main)
     return parser
 
 
 def get_unwrap_error_phase_closure_parser(subparsers=None):
-    from .cli import unwrap_error_phase_closure
+    from mintpy.cli import unwrap_error_phase_closure
     parser = unwrap_error_phase_closure.create_parser(subparsers)
     parser.set_defaults(func=unwrap_error_phase_closure.main)
     return parser
 
 
 def get_view_parser(subparsers=None):
-    from .cli import view
+    from mintpy.cli import view
     parser = view.create_parser(subparsers)
     parser.set_defaults(func=view.main)
     return parser

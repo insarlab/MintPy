@@ -43,8 +43,8 @@ def cmd_line_parse(iargs=None):
 
 #############################  Main Function  ################################
 def main(iargs=None):
-    from ..utils import utils as ut
-    from ..temporal_average import check_output_filename, run_or_skip
+    from mintpy.utils import utils as ut
+    from mintpy.temporal_average import check_output_filename, run_or_skip
 
     start_time = time.time()
     inps = cmd_line_parse(iargs)

@@ -76,7 +76,7 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..utils import utils as ut
+    from mintpy.utils import utils as ut
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     inps.file = ut.get_file_list(inps.file, abspath=True)
@@ -85,8 +85,8 @@ def cmd_line_parse(iargs=None):
 
 #########################################################################
 def main(iargs=None):
-    from ..utils import readfile, writefile
-    from ..prep_hyp3 import add_hyp3_metadata
+    from mintpy.utils import readfile, writefile
+    from mintpy.prep_hyp3 import add_hyp3_metadata
 
     # read in arguments
     inps = cmd_line_parse(iargs)

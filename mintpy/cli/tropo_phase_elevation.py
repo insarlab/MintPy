@@ -59,9 +59,9 @@ def cmd_line_parse(iargs=None):
 
 ############################################################################
 def main(iargs=None):
-    from ..objects import timeseries
-    from ..utils import writefile
-    from ..tropo_phase_elevation import read_topographic_data, estimate_phase_elevation_ratio, estimate_tropospheric_delay
+    from mintpy.objects import timeseries
+    from mintpy.utils import writefile
+    from mintpy.tropo_phase_elevation import read_topographic_data, estimate_phase_elevation_ratio, estimate_tropospheric_delay
 
     inps = cmd_line_parse(iargs)
 

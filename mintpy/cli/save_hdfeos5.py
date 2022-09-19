@@ -97,7 +97,7 @@ def cmd_line_parse(iargs=None):
 
 ################################################################
 def main(iargs=None):
-    from ..save_hdfeos5 import read_template2inps, prep_metadata, get_output_filename, write_hdf5_file
+    from mintpy.save_hdfeos5 import read_template2inps, prep_metadata, get_output_filename, write_hdf5_file
 
     inps = cmd_line_parse(iargs)
     inps, template = read_template2inps(inps.template_file, inps)

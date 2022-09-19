@@ -202,7 +202,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..smallbaselineApp import run_smallbaselineApp
+    from mintpy.smallbaselineApp import run_smallbaselineApp
 
     # run
     run_smallbaselineApp(inps)

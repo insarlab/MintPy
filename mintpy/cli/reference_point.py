@@ -124,9 +124,9 @@ def cmd_line_parse(iargs=None):
 
 #######################################  Main Function  ########################################
 def main(iargs=None):
-    from ..reference_point import reference_file
-    from ..utils import utils as ut
-    from ..reference_point import read_reference_input
+    from mintpy.reference_point import reference_file
+    from mintpy.utils import utils as ut
+    from mintpy.reference_point import read_reference_input
 
     inps = cmd_line_parse(iargs)
     inps.file = ut.get_file_list(inps.file)[0]

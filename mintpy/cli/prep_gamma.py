@@ -120,7 +120,7 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..utils import utils as ut
+    from mintpy.utils import utils as ut
 
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
@@ -139,7 +139,7 @@ def cmd_line_parse(iargs=None):
 
 ##################################################################################################
 def main(iargs=None):
-    from ..prep_gamma import extract_metadata4interferogram, extract_metadata4geometry_geo, extract_metadata4geometry_radar
+    from mintpy.prep_gamma import extract_metadata4interferogram, extract_metadata4geometry_geo, extract_metadata4geometry_radar
 
     inps = cmd_line_parse(iargs)
 

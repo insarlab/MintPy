@@ -61,7 +61,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..dem_gsi import prep_gsi_dem
+    from mintpy.dem_gsi import prep_gsi_dem
 
     # run
     prep_gsi_dem(inps)

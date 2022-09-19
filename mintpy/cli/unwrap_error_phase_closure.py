@@ -83,8 +83,8 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..utils import readfile
-    from ..unwrap_error_phase_closure import read_template2inps
+    from mintpy.utils import readfile
+    from mintpy.unwrap_error_phase_closure import read_template2inps
     from matplotlib import pyplot as plt
 
     parser = create_parser()
@@ -118,7 +118,7 @@ def cmd_line_parse(iargs=None):
 ####################################################################################################
 def main(iargs=None):
     from mintpy.utils import plot as pp
-    from ..unwrap_error_phase_closure import (
+    from mintpy.unwrap_error_phase_closure import (
         run_or_skip,
         get_common_region_int_ambiguity,
         run_unwrap_error_phase_closure,

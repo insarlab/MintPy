@@ -341,7 +341,7 @@ def prep_slice(cmd, auto_fig=False):
         plt.show()
     """
     # parse
-    from .cli.view import cmd_line_parse
+    from mintpy.cli.view import cmd_line_parse
     inps = cmd_line_parse(cmd.split()[1:])
 
     global vprint

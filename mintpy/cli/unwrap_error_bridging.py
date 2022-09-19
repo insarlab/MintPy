@@ -63,8 +63,8 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from ..utils import readfile
-    from ..unwrap_error_bridging import read_template2inps
+    from mintpy.utils import readfile
+    from mintpy.unwrap_error_bridging import read_template2inps
 
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
@@ -90,8 +90,8 @@ def cmd_line_parse(iargs=None):
 
 ####################################################################################################
 def main(iargs=None):
-    from ..utils import utils as ut
-    from ..unwrap_error_bridging import run_unwrap_error_bridge, run_or_skip, config_keys, key_prefix
+    from mintpy.utils import utils as ut
+    from mintpy.unwrap_error_bridging import run_unwrap_error_bridge, run_or_skip, config_keys, key_prefix
 
     # check inputs
     inps = cmd_line_parse(iargs)

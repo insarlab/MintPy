@@ -86,7 +86,7 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # import
-    from ..objects import cluster
+    from mintpy.objects import cluster
 
     # check
     if inps.template_file:
@@ -118,8 +118,8 @@ def read_template2inps(template_file, inps):
     """Read input template file into inps.excludeDate"""
     print('read options from template file:', os.path.basename(template_file))
 
-    from ..utils import ptime, readfile, utils1 as ut
-    from ..dem_error import key_prefix
+    from mintpy.utils import ptime, readfile, utils1 as ut
+    from mintpy.dem_error import key_prefix
 
     iDict = vars(inps)
     template = readfile.read_template(template_file, skip_chars=['[', ']'])
@@ -159,7 +159,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..dem_error import run_or_skip, correct_dem_error
+    from mintpy.dem_error import run_or_skip, correct_dem_error
 
     # run or skip
     if inps.update_mode and run_or_skip(inps) == 'skip':

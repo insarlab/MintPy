@@ -57,7 +57,7 @@ def create_parser(subparsers=None):
 
 def cmd_line_parse(iargs=None):
     """Command line parser."""
-    from ..utils import readfile
+    from mintpy.utils import readfile
 
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
@@ -97,7 +97,7 @@ def cmd_line_parse(iargs=None):
 
 ###############################################################
 def main(iargs=None):
-    from ..solid_earth_tides import calc_solid_earth_tides_timeseries, correct_timeseries
+    from mintpy.solid_earth_tides import calc_solid_earth_tides_timeseries, correct_timeseries
 
     inps = cmd_line_parse(iargs)
     start_time = time.time()

@@ -42,7 +42,7 @@ def cmd_line_parse(iargs=None):
 
 ############################################################
 def main(iargs=None):
-    from ..temporal_filter import temporal_filter
+    from mintpy.temporal_filter import temporal_filter
     inps = cmd_line_parse(iargs)
     temporal_filter(inps.timeseries_file, inps.outfile, inps.time_win)
 

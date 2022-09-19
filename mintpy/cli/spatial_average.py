@@ -41,7 +41,7 @@ def cmd_line_parse(iargs=None):
 
 #############################  Main Function  ################################
 def main(iargs=None):
-    from ..spatial_average import spatial_average
+    from mintpy.spatial_average import spatial_average
     inps = cmd_line_parse(iargs)
     return spatial_average(inps)
 

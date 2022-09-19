@@ -62,7 +62,7 @@ def cmd_line_parse(iargs=None):
 
 ##################################################################
 def main(iargs=None):
-    from ..reference_date import change_timeseries_ref_date, read_ref_date, read_template2inps
+    from mintpy.reference_date import change_timeseries_ref_date, read_ref_date, read_template2inps
 
     inps = cmd_line_parse(iargs)
     start_time = time.time()

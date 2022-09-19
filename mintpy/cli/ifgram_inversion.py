@@ -118,8 +118,8 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # import
-    from ..objects import cluster, ifgramStack
-    from ..utils import readfile
+    from mintpy.objects import cluster, ifgramStack
+    from mintpy.utils import readfile
 
     # check
     atr = readfile.read_attribute(inps.ifgramStackFile)
@@ -201,8 +201,8 @@ def read_template2inps(template_file, inps):
     """Read input template options into Namespace inps"""
     print('read input option from template file:', template_file)
 
-    from ..utils import readfile, utils1 as ut
-    from ..ifgram_inversion import key_prefix
+    from mintpy.utils import readfile, utils1 as ut
+    from mintpy.ifgram_inversion import key_prefix
 
     iDict = vars(inps)
     template = readfile.read_template(template_file)
@@ -246,7 +246,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..ifgram_inversion import run_or_skip, run_ifgram_inversion
+    from mintpy.ifgram_inversion import run_or_skip, run_ifgram_inversion
 
     # run or skip
     if inps.update_mode and run_or_skip(inps) == 'skip':

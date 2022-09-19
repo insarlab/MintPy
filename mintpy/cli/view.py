@@ -98,7 +98,7 @@ def cmd_line_parse(iargs=None):
 
     # import
     import matplotlib.pyplot as plt
-    from ..utils import ptime, readfile
+    from mintpy.utils import ptime, readfile
 
     # save argv (to check the manually specified arguments)
     # use iargs        for python call
@@ -165,7 +165,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from ..view import viewer
+    from mintpy.view import viewer
 
     # run
     obj = viewer(iargs=iargs)
