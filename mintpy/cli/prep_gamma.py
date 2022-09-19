@@ -1,32 +1,14 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
 import os
 import sys
 from mintpy.utils.arg_utils import create_argument_parser
-# from mintpy.objects.sensor import SENSOR_NAMES
-
-SENSOR_NAMES = [
-    'alos',
-    'alos2',
-    'csk',
-    'env',
-    'ers',
-    'gf3',
-    'jers',
-    'ksat5',
-    'ni',
-    'rs1',
-    'rs2',
-    'rcm',
-    'sen',
-    'tsx',
-    'uav',
-]
+from mintpy.objects.sensor import SENSOR_NAMES
 
 
 ##################################################################################################
@@ -120,42 +102,37 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from mintpy.utils import utils as ut
-
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # import
+    from mintpy.utils import utils1 as ut
+
+    # check
     inps.file = ut.get_file_list(inps.file, abspath=True)
     inps.file_ext = os.path.splitext(inps.file[0])[1]
 
-    # check input file extension
+    # check: input file extension
     ext_list = ['.unw', '.cor', '.int', '.dem', '.hgt_sim', '.UTM_TO_RDC']
     if inps.file_ext not in ext_list:
         msg = 'unsupported input file extension: {}'.format(inps.file_ext)
         msg += '\nsupported file extensions: {}'.format(ext_list)
-        raise ValueError()
+        raise ValueError(msg)
+
     return inps
 
 
 ##################################################################################################
 def main(iargs=None):
-    from mintpy.prep_gamma import extract_metadata4interferogram, extract_metadata4geometry_geo, extract_metadata4geometry_radar
-
+    # parse
     inps = cmd_line_parse(iargs)
 
-    # loop for each file
-    for fname in inps.file:
-        # interferograms
-        if inps.file_ext in ['.unw', '.cor', '.int']:
-            extract_metadata4interferogram(fname, sensor_name=inps.sensor.lower())
+    # import
+    from mintpy.prep_gamma import run_prep_gamma
 
-        # geometry - geo
-        elif inps.file_ext in ['.UTM_TO_RDC'] or fname.endswith('.utm.dem'):
-            extract_metadata4geometry_geo(fname)
-
-        # geometry - radar
-        elif fname.endswith(('.rdc.dem', '.hgt_sim')):
-            extract_metadata4geometry_radar(fname)
+    # run
+    run_prep_gamma(inps)
 
 
 ###################################################################################################

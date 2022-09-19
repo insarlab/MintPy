@@ -16,54 +16,13 @@ except ImportError:
     raise ImportError('Can not import gdal [version>=3.0]!')
 
 from mintpy.objects import ifgramStack, geometry, sensor
-from mintpy.utils import ptime, readfile, utils as ut, attribute as attr
+from mintpy.utils import ptime, writefile, utils as ut, attribute as attr
 from mintpy.subset import read_subset_template2box
 from mintpy.multilook import multilook_data
 
 
 ####################################################################################
-def read_template2inps(template_file, inps):
-    """Read input template file into inps"""
-    iDict = vars(inps)
-
-    print('read options from template file: {}'.format(os.path.basename(template_file)))
-    template = readfile.read_template(template_file)
-    template = ut.check_template_auto_value(template)
-
-    # ignore template options with default auto values
-    # so that options from input arguments have higher priority
-    # than template options with auto values
-    for key in list(template.keys()):
-        if template[key] == 'auto':
-            template.pop(key)
-
-    # pass options from template to inps
-    # group - load
-    key_prefix = 'mintpy.load.'
-    keys = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
-    for key in keys:
-        value = template[key_prefix+key]
-        if key in ['updateMode', 'compression']:
-            iDict[key] = value
-        elif key in ['unwFile']:
-            iDict['stackDir'] = os.path.dirname(value)
-        elif value:
-            iDict[key] = str(value)
-
-    # group - multilook
-    prefix = 'mintpy.multilook.'
-    key_list = [i.split(prefix)[1] for i in template.keys() if i.startswith(prefix)]
-    for key in key_list:
-        value = template[prefix+key]
-        if key in ['xstep', 'ystep']:
-            iDict[key] = int(template[prefix+key])
-        elif key in ['method']:
-            iDict[key] = template[prefix+key]
-
-    return inps
-
-
-def run_or_skip(inps, dsNameDict, out_file):
+def run_or_skip(inps, ds_name_dict, out_file):
     flag = 'run'
 
     # check 1 - update mode status
@@ -75,11 +34,11 @@ def run_or_skip(inps, dsNameDict, out_file):
         return flag
 
     # check 3 - output dataset info
-    key = [i for i in ['unwrapPhase', 'height'] if i in dsNameDict.keys()][0]
-    ds_shape = dsNameDict[key][1]
+    key = [i for i in ['unwrapPhase', 'height'] if i in ds_name_dict.keys()][0]
+    ds_shape = ds_name_dict[key][1]
     in_shape = ds_shape[-2:]
 
-    if 'unwrapPhase' in dsNameDict.keys():
+    if 'unwrapPhase' in ds_name_dict.keys():
         # compare date12 and size
         ds = gdal.Open(inps.unwFile, gdal.GA_ReadOnly)
         in_date12_list = [ds.GetRasterBand(i+1).GetMetadata("unwrappedPhase")['Dates']
@@ -99,9 +58,9 @@ def run_or_skip(inps, dsNameDict, out_file):
         except:
             pass
 
-    elif 'height' in dsNameDict.keys():
+    elif 'height' in ds_name_dict.keys():
         # compare dataset names and size
-        in_dsNames = list(dsNameDict.keys())
+        in_dsNames = list(ds_name_dict.keys())
         in_size = in_shape[0] * in_shape[1] * 4 * len(in_dsNames)
 
         out_obj = geometry(out_file)
@@ -161,6 +120,7 @@ def read_subset_box(template_file, meta):
 
 ####################################################################################
 def extract_metadata(stack):
+    """Extract ARIA metadata for MintPy."""
 
     meta = {}
     ds = gdal.Open(stack, gdal.GA_ReadOnly)
@@ -272,10 +232,11 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
     # box to gdal arguments
     # link: https://gdal.org/python/osgeo.gdal.Band-class.html#ReadAsArray
     if box is not None:
-        kwargs = dict(xoff=box[0],
-                      yoff=box[1],
-                      win_xsize=box[2]-box[0],
-                      win_ysize=box[3]-box[1])
+        kwargs = dict(
+            xoff=box[0],
+            yoff=box[1],
+            win_xsize=box[2]-box[0],
+            win_ysize=box[3]-box[1])
     else:
         kwargs = dict()
 
@@ -393,10 +354,11 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, ampStack=None
     # box to gdal arguments
     # link: https://gdal.org/python/osgeo.gdal.Band-class.html#ReadAsArray
     if box is not None:
-        kwargs = dict(xoff=box[0],
-                      yoff=box[1],
-                      win_xsize=box[2]-box[0],
-                      win_ysize=box[3]-box[1])
+        kwargs = dict(
+            xoff=box[0],
+            yoff=box[1],
+            win_xsize=box[2]-box[0],
+            win_ysize=box[3]-box[1])
     else:
         kwargs = dict()
 
@@ -412,7 +374,7 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, ampStack=None
         for ii in range(nPairs):
             d12 = d12List[ii]
             bndIdx = d12BandDict[d12]
-            prog_bar.update(ii+1, suffix='{}'.format(d12))
+            prog_bar.update(ii+1, suffix=f'{d12} {ii+1}/{nPairs}')
 
             f["date"][ii,0] = d12.split("_")[0].encode("utf-8")
             f["date"][ii,1] = d12.split("_")[1].encode("utf-8")
@@ -460,3 +422,107 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, ampStack=None
     dsComp = None
     dsAmp = None
     return outfile
+
+
+####################################################################################
+def load_aria(inps):
+    """Prepare and load ARIA data and metadata into HDF5/MintPy format."""
+
+    start_time = time.time()
+    print(f'update mode: {inps.updateMode}')
+
+    # extract metadata
+    meta = extract_metadata(inps.unwFile)
+    box, meta = read_subset_box(inps.template_file, meta)
+    if inps.xstep * inps.ystep > 1:
+        meta = attr.update_attribute4multilook(
+            meta,
+            lks_y=inps.ystep,
+            lks_x=inps.xstep,
+        )
+
+    length = int(meta["LENGTH"])
+    width = int(meta["WIDTH"])
+    num_pair = int(meta["NUMBER_OF_PAIRS"])
+
+    # prepare output directory
+    out_dir = os.path.dirname(inps.outfile[0])
+    os.makedirs(out_dir, exist_ok=True)
+
+    ########## output file 1 - ifgramStack
+    # define dataset structure for ifgramStack
+    ds_name_dict = {
+        "date"             : (np.dtype('S8'), (num_pair, 2)),
+        "dropIfgram"       : (np.bool_,       (num_pair,)),
+        "bperp"            : (np.float32,     (num_pair,)),
+        "unwrapPhase"      : (np.float32,     (num_pair, length, width)),
+        "coherence"        : (np.float32,     (num_pair, length, width)),
+        "connectComponent" : (np.int16,       (num_pair, length, width)),
+    }
+    if inps.magFile is not None:
+        ds_name_dict['magnitude'] = (np.float32, (num_pair, length, width))
+
+    if run_or_skip(inps, ds_name_dict, out_file=inps.outfile[0]) == 'run':
+        # initiate h5 file with defined structure
+        meta['FILE_TYPE'] = 'ifgramStack'
+        writefile.layout_hdf5(
+            inps.outfile[0],
+            ds_name_dict,
+            metadata=meta,
+            compression=inps.compression,
+        )
+
+        # write data to h5 file in disk
+        write_ifgram_stack(
+            inps.outfile[0],
+            unwStack=inps.unwFile,
+            cohStack=inps.corFile,
+            connCompStack=inps.connCompFile,
+            ampStack=inps.magFile,
+            box=box,
+            xstep=inps.xstep,
+            ystep=inps.ystep,
+            mli_method=inps.method,
+        )
+
+    ########## output file 2 - geometryGeo
+    # define dataset structure for geometry
+    ds_name_dict = {
+        "height"             : (np.float32, (length, width)),
+        "incidenceAngle"     : (np.float32, (length, width)),
+        "slantRangeDistance" : (np.float32, (length, width)),
+    }
+    if inps.azAngleFile is not None:
+        ds_name_dict["azimuthAngle"] = (np.float32, (length, width))
+    if inps.waterMaskFile is not None:
+        ds_name_dict["waterMask"] = (np.bool_, (length, width))
+
+    if run_or_skip(inps, ds_name_dict, out_file=inps.outfile[1]) == 'run':
+        # initiate h5 file with defined structure
+        meta['FILE_TYPE'] = 'geometry'
+        writefile.layout_hdf5(
+            inps.outfile[1],
+            ds_name_dict,
+            metadata=meta,
+            compression=inps.compression,
+        )
+
+        # write data to disk
+        write_geometry(
+            inps.outfile[1],
+            demFile=inps.demFile,
+            incAngleFile=inps.incAngleFile,
+            azAngleFile=inps.azAngleFile,
+            waterMaskFile=inps.waterMaskFile,
+            box=box,
+            xstep=inps.xstep,
+            ystep=inps.ystep,
+        )
+
+    print('-'*50)
+
+    # used time
+    m, s = divmod(time.time() - start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+
+    return

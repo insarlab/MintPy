@@ -6,19 +6,18 @@
 
 
 import os
-from datetime import datetime
+import datetime as dt
 import numpy as np
+from mintpy.utils import readfile, writefile, utils1 as ut
 
 
 #########################################################################
-def add_cosicorr_metadata(fname, cosicorr_dates, meta):
+def add_cosicorr_metadata(fname, date12_dict, meta):
     '''Read/extract attribute data from cosicorr metadata file and add to metadata dictionary
-    Inputs:
-        Offset or SNR file name (fname)
-        dictionary of file name and date12 pairs (cosicorr_dates)
-        Metadata dictionary (meta)
-    Output:
-        Metadata dictionary (meta)
+    Parameters: fname       - str, offset or SNR file name
+                date12_dict - dict, key for file name, value for date12 pairs
+                meta        - dict, metadata dictionary
+    Returns:    meta        - dict, metadata dictionary
     '''
 
     # add general attributes
@@ -31,10 +30,10 @@ def add_cosicorr_metadata(fname, cosicorr_dates, meta):
     meta['ALOOKS'] = 1
 
     # Time attributes
-    date1_string, date2_string = cosicorr_dates[os.path.basename(fname)].split('-')
-    meta['DATE12'] = f'{date1_string}-{date2_string}'
-    date1 = datetime.strptime(date1_string,'%Y%m%d')
-    date2 = datetime.strptime(date2_string,'%Y%m%d')
+    date1_str, date2_str = date12_dict[os.path.basename(fname)].split('-')
+    meta['DATE12'] = f'{date1_str}-{date2_str}'
+    date1 = dt.datetime.strptime(date1_str, '%Y%m%d')
+    date2 = dt.datetime.strptime(date2_str, '%Y%m%d')
     date_avg = date1 + (date2 - date1) / 2
     date_avg_seconds = (date_avg - date_avg.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
     meta['CENTER_LINE_UTC'] = date_avg_seconds
@@ -55,3 +54,27 @@ def add_cosicorr_metadata(fname, cosicorr_dates, meta):
     meta['LON_REF4'] = str(E)
 
     return(meta)
+
+
+def run_prep_cosicorr(inps):
+    """Prepare the COSI-Corr metadata."""
+
+    # open and read hyp3 metadata
+    date12_dict = {}
+    with open(inps.meta_file, 'r') as f:
+        for line in f:
+            name, date1, date2 = line.strip().split(' ')
+            date12_dict[name] = f'{date1}-{date2}'
+
+    # loop over each filename
+    inps.file = ut.get_file_list(inps.file, abspath=True)
+    for fname in inps.file:
+        # extra metadata
+        meta = readfile.read_gdal_vrt(fname)
+        meta = add_cosicorr_metadata(fname, date12_dict, meta)
+
+        # write metadata into RSC file
+        rsc_file = fname+'.rsc'
+        writefile.write_roipac_rsc(meta, out_file=rsc_file)
+
+    return

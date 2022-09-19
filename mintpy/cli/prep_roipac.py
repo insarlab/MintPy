@@ -1,11 +1,10 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
-import os
 import sys
 from mintpy.utils.arg_utils import create_argument_parser
 
@@ -42,33 +41,21 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from mintpy.utils import utils as ut
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-
-    inps.file = ut.get_file_list(inps.file, abspath=True)
-
-    # Check input file type
-    ext_list = ['.unw', '.cor', '.int', '.byt', '.hgt', '.dem', '.trans']
-    ext = os.path.splitext(inps.file[0])[1]
-    if ext not in ext_list:
-        msg = 'unsupported input file extension: {}'.format(ext)
-        msg += '\nsupported file extensions: {}'.format(ext_list)
-        raise ValueError(msg)
-
     return inps
 
 
 ##################################################################################################
 def main(iargs=None):
-    from mintpy.prep_roipac import extract_metadata
-
+    # parse
     inps = cmd_line_parse(iargs)
 
-    ext = os.path.splitext(inps.file[0])[1]
-    if ext in ['.unw', '.cor', '.int', '.byt']:
-        for fname in inps.file:
-            extract_metadata(fname)
+    # import
+    from mintpy.prep_roipac import run_prep_roipac
+
+    # run
+    run_prep_roipac(inps)
 
 
 ###################################################################################################

@@ -1,11 +1,10 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
-import os
 import sys
 import glob
 from mintpy.utils.arg_utils import create_argument_parser
@@ -43,7 +42,7 @@ EXAMPLE = """example:
 
 def create_parser(subparsers=None):
     """Command line parser."""
-    synopsis = 'Prepare ISCE metadata files.'
+    synopsis = 'Prepare ISCE-2 metadata files.'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
@@ -84,10 +83,11 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs = None):
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # translate wildcard in meta_file
+    # check: --meta-file option (translate wildcard)
     if "*" in inps.meta_file:
         fnames = glob.glob(inps.meta_file)
         if len(fnames) > 0:
@@ -100,51 +100,14 @@ def cmd_line_parse(iargs = None):
 
 #########################################################################
 def main(iargs=None):
-    from mintpy.utils import isce_utils
-    from mintpy.prep_isce import prepare_geometry, prepare_stack, gen_random_baseline_timeseries
-
+    # parse
     inps = cmd_line_parse(iargs)
-    inps.processor = isce_utils.get_processor(inps.meta_file)
 
-    # read common metadata
-    metadata = {}
-    if inps.meta_file:
-        rsc_file = os.path.join(os.path.dirname(inps.meta_file), 'data.rsc')
-        metadata = isce_utils.extract_isce_metadata(
-            inps.meta_file,
-            geom_dir=inps.geom_dir,
-            rsc_file=rsc_file,
-            update_mode=inps.update_mode)[0]
+    # import
+    from mintpy.prep_isce import run_prep_isce
 
-    # prepare metadata for geometry file
-    if inps.geom_dir:
-        prepare_geometry(
-            inps.geom_dir,
-            geom_files=inps.geom_files,
-            metadata=metadata,
-            processor=inps.processor,
-            update_mode=inps.update_mode)
-
-    # read baseline info
-    baseline_dict = {}
-    if inps.baseline_dir:
-        if inps.baseline_dir.startswith('rand') and inps.obs_files:
-            baseline_dict = gen_random_baseline_timeseries(inps.obs_files[0])
-        else:
-            baseline_dict = isce_utils.read_baseline_timeseries(
-                inps.baseline_dir,
-                processor=inps.processor)
-
-    # prepare metadata for ifgram file
-    if inps.obs_files:
-        for obs_file in inps.obs_files:
-            prepare_stack(
-                obs_file,
-                metadata=metadata,
-                baseline_dict=baseline_dict,
-                update_mode=inps.update_mode)
-
-    print('Done.')
+    # run
+    run_prep_isce(inps)
 
 
 #########################################################################

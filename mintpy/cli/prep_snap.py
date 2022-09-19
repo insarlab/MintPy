@@ -1,11 +1,10 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Andre Theron, Aug 2022        #
 ############################################################
 
 
-import os
 import sys
 from mintpy.utils.arg_utils import create_argument_parser
 
@@ -45,38 +44,21 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from mintpy.utils import utils as ut
-
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-
-    inps.file = ut.get_file_list(inps.file, abspath=True)
-    for fname in inps.file:
-        if not fname.endswith('.img'):
-            raise ValueError('Input data file does NOT end with .img: {}'.format(fname))
-
     return inps
-
 
 
 ##################################################################################################
 def main(iargs=None):
-    from mintpy.utils import readfile
-    from mintpy.prep_snap import write_rsc
-
+    # parse
     inps = cmd_line_parse(iargs)
 
-    for img_file in inps.file:
-        # read metadata from *.dim file
-        # the map info from *.img.hdr file is NOT right, thus, not used.
-        dim_file = os.path.dirname(img_file)[:-4] + 'dim'
-        atr = readfile.read_snap_dim(dim_file)
+    # import
+    from mintpy.prep_snap import run_prep_snap
 
-        # write metadata dict to *.rsc file
-        rsc_file = img_file + '.rsc'
-        write_rsc(atr, rsc_file)
-
-    return
+    # run
+    run_prep_snap(inps)
 
 
 ##################################################################################################

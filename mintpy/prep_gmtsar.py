@@ -14,12 +14,7 @@ try:
 except ImportError:
     raise ImportError('Can not import gdal!')
 
-from mintpy.utils import (
-    ptime,
-    readfile,
-    writefile,
-    utils as ut,
-)
+from mintpy.utils import ptime, readfile, writefile, utils as ut
 
 
 #########################################################################
@@ -109,6 +104,7 @@ def get_slant_range_distance(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasef
     return prm_dict
 
 
+#########################################################################
 def extract_gmtsar_metadata(unw_file, template_file, rsc_file=None, update_mode=True):
     """Extract metadata from GMTSAR interferogram stack."""
 
@@ -195,9 +191,12 @@ def prepare_geometry(geom_files, meta, update_mode=True):
 
         # write .rsc file
         rsc_file = geom_file+'.rsc'
-        writefile.write_roipac_rsc(geom_meta, rsc_file,
-                                   update_mode=update_mode,
-                                   print_msg=True)
+        writefile.write_roipac_rsc(
+            geom_meta,
+            rsc_file,
+            update_mode=update_mode,
+            print_msg=True,
+        )
 
     return
 
@@ -241,9 +240,47 @@ def prepare_stack(unw_files, meta, update_mode=True):
 
         # write .rsc file
         rsc_file = unw_file+'.rsc'
-        writefile.write_roipac_rsc(ifg_meta, rsc_file,
-                                   update_mode=update_mode,
-                                   print_msg=False)
+        writefile.write_roipac_rsc(
+            ifg_meta,
+            rsc_file,
+            update_mode=update_mode,
+            print_msg=False,
+        )
 
         prog_bar.update(i+1, suffix='{}_{}'.format(date1, date2))
     prog_bar.close()
+
+
+#########################################################################
+def run_prep_gmtsar(inps):
+    # read file path from template file
+    template = readfile.read_template(inps.template_file)
+    inps.unw_files = sorted(glob.glob(template['mintpy.load.unwFile']))
+    inps.cor_files = sorted(glob.glob(template['mintpy.load.corFile']))
+    inps.dem_file = glob.glob(template['mintpy.load.demFile'])[0]
+
+    # extract common metadata
+    rsc_file = os.path.join(inps.mintpy_dir, 'inputs/data.rsc')
+    meta = extract_gmtsar_metadata(
+        unw_file=inps.unw_files[0],
+        template_file=inps.template_file,
+        rsc_file=rsc_file,
+        update_mode=inps.update_mode,
+    )
+
+    # prepare metadata for geometry files
+    prepare_geometry(
+        geom_files=[inps.dem_file],
+        meta=meta,
+        update_mode=inps.update_mode,
+    )
+
+    # prepare metadata for interferogram files
+    prepare_stack(
+        unw_files=inps.unw_files,
+        meta=meta,
+        update_mode=inps.update_mode,
+    )
+
+    print('Done.')
+    return

@@ -1,11 +1,10 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
-import os
 import sys
 import glob
 from mintpy.utils import arg_utils
@@ -73,10 +72,11 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # in case meta_file is input as wildcard
+    # check: --meta-file option (if contains wildcard)
     inps.metaFile = sorted(glob.glob(inps.metaFile))[0]
 
     return inps
@@ -84,96 +84,14 @@ def cmd_line_parse(iargs=None):
 
 ####################################################################################
 def main(iargs=None):
-    from mintpy import subset
-    from mintpy.utils import  isce_utils, utils as ut, attribute as attr
-    from mintpy.prep_fringe import (
-        read_vrt_info, prepare_metadata,
-        prepare_geometry,
-        prepare_timeseries,
-        prepare_temporal_coherence,
-        prepare_ps_mask,
-        prepare_stack,
-    )
+    # parse
     inps = cmd_line_parse(iargs)
 
-    # translate input options
-    processor = isce_utils.get_processor(inps.metaFile)
-    src_box, geom_src_dir = read_vrt_info(os.path.join(inps.geomDir, 'lat.vrt'))
+    # import
+    from mintpy.prep_fringe import load_fringe
 
-    # metadata
-    meta = prepare_metadata(inps.metaFile, geom_src_dir, src_box, nlks_x=inps.lks_x, nlks_y=inps.lks_y)
-
-
-    # subset - read pix_box for fringe file
-    pix_box = subset.subset_input_dict2box(vars(inps), meta)[0]
-    pix_box = ut.coordinate(meta).check_box_within_data_coverage(pix_box)
-    print('input subset in y/x: {}'.format(pix_box))
-
-    # subset - update src_box for isce file and meta
-    src_box = (pix_box[0] + src_box[0],
-               pix_box[1] + src_box[1],
-               pix_box[2] + src_box[0],
-               pix_box[3] + src_box[1])
-    meta = attr.update_attribute4subset(meta, pix_box)
-    print('input subset in y/x with respect to the VRT file: {}'.format(src_box))
-
-
-    ## output directory
-    for dname in [inps.outDir, os.path.join(inps.outDir, 'inputs')]:
-        os.makedirs(dname, exist_ok=True)
-
-    ## output filename
-    ts_file      = os.path.join(inps.outDir, 'timeseries.h5')
-    tcoh_file    = os.path.join(inps.outDir, 'temporalCoherence.h5')
-    ps_mask_file = os.path.join(inps.outDir, 'maskPS.h5')
-    stack_file   = os.path.join(inps.outDir, 'inputs/ifgramStack.h5')
-    if 'Y_FIRST' in meta.keys():
-        geom_file = os.path.join(inps.outDir, 'inputs/geometryGeo.h5')
-    else:
-        geom_file = os.path.join(inps.outDir, 'inputs/geometryRadar.h5')
-
-    ## 1 - geometry (from SLC stacks before fringe, e.g. ISCE2)
-    prepare_geometry(
-        outfile=geom_file,
-        geom_dir=geom_src_dir,
-        box=src_box,
-        metadata=meta)
-
-    if inps.geom_only:
-        return ts_file, tcoh_file, ps_mask_file, geom_file
-
-    ## 2 - time-series (from fringe)
-    prepare_timeseries(
-        outfile=ts_file,
-        unw_file=inps.unwFile,
-        metadata=meta,
-        processor=processor,
-        baseline_dir=inps.baselineDir,
-        box=pix_box)
-
-    ## 3 - temporal coherence and mask for PS (from fringe)
-    prepare_temporal_coherence(
-        outfile=tcoh_file,
-        infile=inps.cohFile,
-        metadata=meta,
-        box=pix_box)
-
-    prepare_ps_mask(
-        outfile=ps_mask_file,
-        infile=inps.psMaskFile,
-        metadata=meta,
-        box=pix_box)
-
-    ## 4 - ifgramStack for unwrapped phase and connected components
-    prepare_stack(
-        outfile=stack_file,
-        unw_file=inps.unwFile,
-        metadata=meta,
-        processor=processor,
-        baseline_dir=inps.baselineDir,
-        box=pix_box)
-
-    print('Done.')
+    # run
+    load_fringe(inps)
 
 
 ####################################################################################

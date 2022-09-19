@@ -11,28 +11,6 @@ from mintpy.utils import readfile, utils as ut, plot as pp
 from mintpy import view
 
 
-vprint = print
-
-
-#####################################################################
-def read_lonlat_file(lonlat_file):
-    """Read Start/End lat/lon from lonlat text file in gmt format.
-    Inputs:
-        lonlat_file : text file in gmt lonlat point file
-    Outputs:
-        start/end_lalo : list of 2 float
-    """
-    fll = open(lonlat_file, 'r')
-    lines = fll.read().splitlines()
-    [lon0, lat0] = [float(i) for i in lines[1].split()]
-    [lon1, lat1] = [float(i) for i in lines[2].split()]
-    fll.close()
-
-    start_lalo = [lat0, lon0]
-    end_lalo = [lat1, lon1]
-    return start_lalo, end_lalo
-
-
 #####################################################################
 class transectionViewer():
     """class for plot_transection
@@ -62,6 +40,9 @@ class transectionViewer():
         return
 
     def configure(self, inps, view_cmd):
+        global vprint
+        vprint = print if inps.print_msg else lambda *args, **kwargs: None
+
         # copy inps to self object
         for key, value in inps.__dict__.items():
             setattr(self, key, value)
@@ -116,12 +97,12 @@ class transectionViewer():
         if self.save_fig:
             outfile = '{}.pdf'.format(self.outfile_base)
             self.fig.savefig(outfile, bbox_inches='tight', transparent=True, dpi=self.fig_dpi)
-            self.vprint('saved transect to', outfile)
+            vprint('saved transect to', outfile)
 
         self.cid = self.fig.canvas.mpl_connect('button_release_event', self.select_point)
 
         if self.disp_fig:
-            self.vprint('showing ...')
+            vprint('showing ...')
             plt.show()
         return
 
@@ -151,8 +132,19 @@ class transectionViewer():
             self.pts_idx += 1
             if self.pts_idx >= 2:
                 self.pts_idx = 0
-                self.draw_line(self.start_yx, self.end_yx)
-                self.draw_transection(self.start_yx, self.end_yx, self.start_lalo, self.end_lalo)
+
+                self.draw_line(
+                    start_yx=self.start_yx,
+                    end_yx=self.end_yx,
+                )
+
+                self.draw_transection(
+                    start_yx=self.start_yx,
+                    end_yx=self.end_yx,
+                    start_lalo=self.start_lalo,
+                    end_lalo=self.end_lalo,
+                )
+
         return
 
 
@@ -191,15 +183,17 @@ class transectionViewer():
             # get transection data
             if start_lalo is not None:
                 # use lat/lon whenever it's possible to support files with different resolutions
-                txn = ut.transect_lalo(self.data_list[i],
-                                       self.atr_list[i],
-                                       start_lalo, end_lalo,
-                                       interpolation=self.interpolation)
+                txn = ut.transect_lalo(
+                    self.data_list[i],
+                    self.atr_list[i],
+                    start_lalo, end_lalo,
+                    interpolation=self.interpolation)
             else:
-                txn = ut.transect_yx(self.data_list[i],
-                                     self.atr_list[i],
-                                     start_yx, end_yx,
-                                     interpolation=self.interpolation)
+                txn = ut.transect_yx(
+                    self.data_list[i],
+                    self.atr_list[i],
+                    start_yx, end_yx,
+                    interpolation=self.interpolation)
 
             # save txn
             txn_list.append(txn)
@@ -217,10 +211,11 @@ class transectionViewer():
 
             # plot
             # update distance values by excluding the commonly masked out pixels in the begining
-            self.ax_txn.scatter(x=(txn['distance'] - min_dist) * dist_scale,
-                                y=txn['value'] - self.offset[i],
-                                c=pp.mplColors[i],
-                                s=self.marker_size**2)
+            self.ax_txn.scatter(
+                x=(txn['distance'] - min_dist) * dist_scale,
+                y=txn['value'] - self.offset[i],
+                c=pp.mplColors[i],
+                s=self.marker_size**2)
 
         y0, x0, y1, x1 = start_yx + end_yx
         self.outfile_base = f'transect_Y{y0}X{x0}_Y{y1}X{x1}'

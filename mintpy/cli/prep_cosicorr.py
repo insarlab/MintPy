@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Forrest Williams, Aug 2022    #
 ############################################################
 
 
@@ -40,35 +40,21 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from mintpy.utils import utils as ut
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-    inps.file = ut.get_file_list(inps.file, abspath=True)
     return inps
 
 
 #########################################################################
 def main(iargs=None):
-    from mintpy.utils import readfile, writefile
-    from mintpy.prep_cosicorr import add_cosicorr_metadata
-
-    # read in arguments
+    # parse
     inps = cmd_line_parse(iargs)
 
-    # open and read hyp3 metadata
-    cosicorr_dates = {}
-    with open(inps.meta_file, 'r') as f:
-        for line in f:
-            name, date1, date2 = line.strip().split(' ')
-            cosicorr_dates[name] = f'{date1}-{date2}'
+    # import
+    from mintpy.prep_cosicorr import run_prep_cosicorr
 
-    # for each filename, generate metadata rsc file
-    for fname in inps.file:
-        meta = readfile.read_gdal_vrt(fname)
-        meta = add_cosicorr_metadata(fname, cosicorr_dates, meta)
-
-        rsc_file = fname+'.rsc'
-        writefile.write_roipac_rsc(meta, out_file=rsc_file)
+    # run
+    run_prep_cosicorr(inps)
 
 
 #########################################################################

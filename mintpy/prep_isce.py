@@ -8,8 +8,10 @@
 import os
 import glob
 import numpy as np
+
 from mintpy.utils import (
     attribute as attr,
+    isce_utils,
     ptime,
     readfile,
     writefile,
@@ -166,4 +168,54 @@ def prepare_stack(obs_file, metadata=dict(), baseline_dict=dict(), update_mode=T
         writefile.write_roipac_rsc(ifg_meta, rsc_file,
                                    update_mode=update_mode,
                                    print_msg=False)
+
     prog_bar.close()
+    return
+
+
+#########################################################################
+def run_prep_isce(inps):
+    """Prepare ISCE-2 metadata files."""
+
+    inps.processor = isce_utils.get_processor(inps.meta_file)
+
+    # read common metadata
+    metadata = {}
+    if inps.meta_file:
+        rsc_file = os.path.join(os.path.dirname(inps.meta_file), 'data.rsc')
+        metadata = isce_utils.extract_isce_metadata(
+            inps.meta_file,
+            geom_dir=inps.geom_dir,
+            rsc_file=rsc_file,
+            update_mode=inps.update_mode)[0]
+
+    # prepare metadata for geometry file
+    if inps.geom_dir:
+        prepare_geometry(
+            inps.geom_dir,
+            geom_files=inps.geom_files,
+            metadata=metadata,
+            processor=inps.processor,
+            update_mode=inps.update_mode)
+
+    # read baseline info
+    baseline_dict = {}
+    if inps.baseline_dir:
+        if inps.baseline_dir.startswith('rand') and inps.obs_files:
+            baseline_dict = gen_random_baseline_timeseries(inps.obs_files[0])
+        else:
+            baseline_dict = isce_utils.read_baseline_timeseries(
+                inps.baseline_dir,
+                processor=inps.processor)
+
+    # prepare metadata for ifgram file
+    if inps.obs_files:
+        for obs_file in inps.obs_files:
+            prepare_stack(
+                obs_file,
+                metadata=metadata,
+                baseline_dict=baseline_dict,
+                update_mode=inps.update_mode)
+
+    print('Done.')
+    return

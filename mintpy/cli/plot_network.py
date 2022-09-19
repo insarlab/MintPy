@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -10,7 +10,7 @@ import sys
 from mintpy.utils.arg_utils import create_argument_parser
 
 
-###########################  Sub Function  #############################
+###########################  Sub Function  ##############################
 BL_LIST = """
 070106     0.0   0.03  0.0000000  0.00000000000 2155.2 /scratch/SLC/070106/
 070709  2631.9   0.07  0.0000000  0.00000000000 2155.2 /scratch/SLC/070709/
@@ -103,131 +103,74 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from mintpy.plot_network import read_template2inps
-    from mintpy.utils import readfile
-
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # import
+    import matplotlib.pyplot as plt
+    from mintpy.utils import readfile
 
     # save argv (to check the manually specified arguments)
     # use iargs        for python call
     # use sys.argv[1:] for command line call
     inps.argv = iargs if iargs else sys.argv[1:]
 
-    # check input file type
+    # check: input file type
     if inps.file.endswith(('.h5','.he5')):
         k = readfile.read_attribute(inps.file)['FILE_TYPE']
         if k != 'ifgramStack':
             raise ValueError('input HDF5 file is NOT ifgramStack.')
 
+    # check: --nodisplay option
     if not inps.disp_fig:
         inps.save_fig = True
-
-    if not inps.disp_fig:
-        import matplotlib.pyplot as plt
         plt.switch_backend('Agg')
 
+    # check: -t / --template option
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
     else:
         inps.template = {}
 
+    # check: --mask option (file existence)
     if not os.path.isfile(inps.maskFile):
         inps.maskFile = None
 
     return inps
 
 
+def read_template2inps(template_file, inps):
+    """Read input template options into Namespace inps"""
+    print('read options from template file: '+os.path.basename(template_file))
+
+    from mintpy.utils import readfile, utils1 as ut
+
+    inps.template = readfile.read_template(inps.template_file)
+    inps.template = ut.check_template_auto_value(inps.template)
+
+    # coherence-based network modification
+    prefix = 'mintpy.network.'
+    key = prefix+'maskFile'
+    if key in inps.template.keys():
+        if inps.template[key]:
+            inps.maskFile = inps.template[key]
+
+    return inps
+
+
 ##########################  Main Function  ##############################
 def main(iargs=None):
-    import matplotlib.pyplot as plt
-    from mintpy.plot_network import read_network_info, check_colormap
-    from mintpy.utils import plot as pp
-
+    # parse
     inps = cmd_line_parse(iargs)
 
-    # read / calculate
-    inps = read_network_info(inps)
+    # import
+    from mintpy.plot_network import run_plot_network
 
-    # Plot settings
-    inps = check_colormap(inps)
-    ext = '.pdf'
-    if os.path.basename(inps.file).startswith('ion'):
-        ext = f'_ion{ext}'
-    kwargs = dict(bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-
-    if inps.dsetName == 'coherence':
-        fig_names = [i+ext for i in ['pbaseHistory', 'coherenceHistory', 'coherenceMatrix', 'network']]
-        inps.ds_name = 'Coherence'
-        inps.cbar_label = 'Average Spatial Coherence'
-
-    elif inps.dsetName == 'offsetSNR':
-        fig_names = [i+ext for i in ['pbaseHistory', 'SNRHistory', 'SNRMatrix', 'network']]
-        inps.ds_name = 'SNR'
-        inps.cbar_label = 'Average Spatial SNR'
-
-    elif inps.dsetName == 'tbase':
-        fig_names = [i+ext for i in ['pbaseHistory', 'tbaseHistory', 'tbaseMatrix', 'network']]
-        inps.ds_name = 'Temporal Baseline'
-        inps.cbar_label = 'Temporal Baseline [day]'
-
-    elif inps.dsetName == 'pbase':
-        fig_names = [i+ext for i in ['pbaseHistory', 'pbaseRangeHistory', 'pbaseMatrix', 'network']]
-        inps.ds_name = 'Perp Baseline'
-        inps.cbar_label = 'Perp Baseline [m]'
-
-    # Fig 1 - Baseline History
-    fig, ax = plt.subplots(figsize=inps.fig_size)
-    ax = pp.plot_perp_baseline_hist(ax,
-                                    inps.dateList,
-                                    inps.pbaseList,
-                                    vars(inps),
-                                    inps.dateList_drop)
-    if inps.save_fig:
-        fig.savefig(fig_names[0], **kwargs)
-        print('save figure to {}'.format(fig_names[0]))
-
-    if inps.cohList is not None:
-        # Fig 2 - Min/Max Coherence History
-        fig, ax = plt.subplots(figsize=inps.fig_size)
-        ax = pp.plot_coherence_history(ax,
-                                       inps.date12List,
-                                       inps.cohList,
-                                       p_dict=vars(inps))
-        if inps.save_fig:
-            fig.savefig(fig_names[1], **kwargs)
-            print('save figure to {}'.format(fig_names[2]))
-
-        # Fig 3 - Coherence Matrix
-        fig, ax = plt.subplots(figsize=inps.fig_size)
-        ax = pp.plot_coherence_matrix(ax,
-                                      inps.date12List,
-                                      inps.cohList,
-                                      inps.date12List_drop,
-                                      p_dict=vars(inps))[0]
-        if inps.save_fig:
-            fig.savefig(fig_names[2], **kwargs)
-            print('save figure to {}'.format(fig_names[1]))
-
-    # Fig 4 - Interferogram Network
-    fig, ax = plt.subplots(figsize=inps.fig_size)
-    ax = pp.plot_network(ax,
-                         inps.date12List,
-                         inps.dateList,
-                         inps.pbaseList,
-                         vars(inps),
-                         inps.date12List_drop)
-    if inps.save_fig:
-        fig.savefig(fig_names[3], **kwargs)
-        print('save figure to {}'.format(fig_names[3]))
-
-    if inps.disp_fig:
-        print('showing ...')
-        plt.show()
-    else:
-        plt.close()
+    # run
+    run_plot_network(inps)
 
 
-############################################################
+#########################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])

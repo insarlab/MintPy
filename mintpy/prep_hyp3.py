@@ -6,11 +6,11 @@
 
 
 import os
-from datetime import datetime
+import datetime as dt
+
+from mintpy.objects.constants import SPEED_OF_LIGHT
 from mintpy.objects import sensor
-
-
-SPEED_OF_LIGHT = 299792458  # m/s
+from mintpy.utils import readfile, writefile, utils1 as ut
 
 
 #########################################################################
@@ -92,8 +92,8 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
 
     # add metadata that is only relevant to interferogram files
     if is_ifg:
-        date1 = datetime.strptime(date1_str,'%Y%m%dT%H%M%S')
-        date2 = datetime.strptime(date2_str,'%Y%m%dT%H%M%S')
+        date1 = dt.datetime.strptime(date1_str,'%Y%m%dT%H%M%S')
+        date2 = dt.datetime.strptime(date2_str,'%Y%m%dT%H%M%S')
         #date_avg = date1 + (date2 - date1) / 2
         #date_avg_seconds = (date_avg - date_avg.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
         #meta['CENTER_LINE_UTC'] = date_avg_seconds
@@ -102,3 +102,22 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
         meta['P_BASELINE_BOTTOM_HDR'] = hyp3_meta['Baseline']
 
     return(meta)
+
+
+#########################################################################
+def run_prep_hyp3(inps):
+    """Prepare ASF HyP3 metadata files"""
+
+    inps.file = ut.get_file_list(inps.file, abspath=True)
+
+    # for each filename, generate metadata rsc file
+    for fname in inps.file:
+        is_ifg = any([x in fname for x in ['unw_phase','corr']])
+        meta = readfile.read_gdal_vrt(fname)
+        meta = add_hyp3_metadata(fname, meta, is_ifg=is_ifg)
+
+        # write
+        rsc_file = fname+'.rsc'
+        writefile.write_roipac_rsc(meta, out_file=rsc_file)
+
+    return

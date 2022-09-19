@@ -7,31 +7,17 @@
 
 import os
 import numpy as np
-
-from mintpy.objects import ifgramStack
-from mintpy.utils import readfile, utils as ut, plot as pp
+from matplotlib import pyplot as plt
 
 # suppress UserWarning from matplotlib
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 
+from mintpy.objects import ifgramStack
+from mintpy.utils import readfile, utils as ut, plot as pp
+
 
 ###########################  Sub Function  #############################
-def read_template2inps(template_file, inps):
-    """Read input template options into Namespace inps"""
-    print('read options from template file: '+os.path.basename(template_file))
-    inps.template = readfile.read_template(inps.template_file)
-    inps.template = ut.check_template_auto_value(inps.template)
-
-    # Coherence-based network modification
-    prefix = 'mintpy.network.'
-    key = prefix+'maskFile'
-    if key in inps.template.keys():
-        if inps.template[key]:
-            inps.maskFile = inps.template[key]
-    return inps
-
-
 def read_network_info(inps):
     ext = os.path.splitext(inps.file)[1]
     print('read temporal/spatial baseline info from file:', inps.file)
@@ -132,3 +118,99 @@ def check_colormap(inps):
     inps.colormap = pp.ColormapExt(inps.cmap_name, vlist=inps.cmap_vlist).colormap
 
     return inps
+
+
+########################################################################
+def run_plot_network(inps):
+    """Plot all the network info."""
+
+    # read / calculate
+    inps = read_network_info(inps)
+
+    # Plot settings
+    inps = check_colormap(inps)
+    ext = '.pdf'
+    if os.path.basename(inps.file).startswith('ion'):
+        ext = f'_ion{ext}'
+    kwargs = dict(bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+
+    if inps.dsetName == 'coherence':
+        fig_names = [i+ext for i in ['pbaseHistory', 'coherenceHistory', 'coherenceMatrix', 'network']]
+        inps.ds_name = 'Coherence'
+        inps.cbar_label = 'Average Spatial Coherence'
+
+    elif inps.dsetName == 'offsetSNR':
+        fig_names = [i+ext for i in ['pbaseHistory', 'SNRHistory', 'SNRMatrix', 'network']]
+        inps.ds_name = 'SNR'
+        inps.cbar_label = 'Average Spatial SNR'
+
+    elif inps.dsetName == 'tbase':
+        fig_names = [i+ext for i in ['pbaseHistory', 'tbaseHistory', 'tbaseMatrix', 'network']]
+        inps.ds_name = 'Temporal Baseline'
+        inps.cbar_label = 'Temporal Baseline [day]'
+
+    elif inps.dsetName == 'pbase':
+        fig_names = [i+ext for i in ['pbaseHistory', 'pbaseRangeHistory', 'pbaseMatrix', 'network']]
+        inps.ds_name = 'Perp Baseline'
+        inps.cbar_label = 'Perp Baseline [m]'
+
+    # Fig 1 - Baseline History
+    fig, ax = plt.subplots(figsize=inps.fig_size)
+    ax = pp.plot_perp_baseline_hist(
+        ax,
+        inps.dateList,
+        inps.pbaseList,
+        vars(inps),
+        inps.dateList_drop,
+    )
+    if inps.save_fig:
+        fig.savefig(fig_names[0], **kwargs)
+        print('save figure to {}'.format(fig_names[0]))
+
+    if inps.cohList is not None:
+        # Fig 2 - Min/Max Coherence History
+        fig, ax = plt.subplots(figsize=inps.fig_size)
+        ax = pp.plot_coherence_history(
+            ax,
+            inps.date12List,
+            inps.cohList,
+            p_dict=vars(inps),
+        )
+        if inps.save_fig:
+            fig.savefig(fig_names[1], **kwargs)
+            print('save figure to {}'.format(fig_names[2]))
+
+        # Fig 3 - Coherence Matrix
+        fig, ax = plt.subplots(figsize=inps.fig_size)
+        ax = pp.plot_coherence_matrix(
+            ax,
+            inps.date12List,
+            inps.cohList,
+            inps.date12List_drop,
+            p_dict=vars(inps),
+        )[0]
+        if inps.save_fig:
+            fig.savefig(fig_names[2], **kwargs)
+            print('save figure to {}'.format(fig_names[1]))
+
+    # Fig 4 - Interferogram Network
+    fig, ax = plt.subplots(figsize=inps.fig_size)
+    ax = pp.plot_network(
+        ax,
+        inps.date12List,
+        inps.dateList,
+        inps.pbaseList,
+        vars(inps),
+        inps.date12List_drop,
+    )
+    if inps.save_fig:
+        fig.savefig(fig_names[3], **kwargs)
+        print('save figure to {}'.format(fig_names[3]))
+
+    if inps.disp_fig:
+        print('showing ...')
+        plt.show()
+    else:
+        plt.close()
+
+    return

@@ -20,11 +20,11 @@ PAR_EXT_LIST = ['.amp.par', '.ramp.par', '.mli.par']
 ######################################## Sub Functions ############################################
 def get_perp_baseline(m_par_file, s_par_file, off_file, atr_dict={}):
     """Get perpendicular baseline info from reference/secondary par file and off file.
-    Parameters: m_par_file : str, path, reference parameter file, i.e. 130118_4rlks.amp.par
-                s_par_file : str, path, secondary parameter file, i.e. 130129_4rlks.amp.oar
-                off_file   : str, path, interferogram off file, i.e. 130118-130129_4rlks.off
-                atr_dict   : dict, optional, attributes dictionary
-    Returns:  bperp : str, perpendicular baseline for pixel at [0,0]
+    Parameters: m_par_file - str, path, reference parameter file, i.e. 130118_4rlks.amp.par
+                s_par_file - str, path, secondary parameter file, i.e. 130129_4rlks.amp.oar
+                off_file   - str, path, interferogram off file, i.e. 130118-130129_4rlks.off
+                atr_dict   - dict, optional, attributes dictionary
+    Returns:    bperp      - str, perpendicular baseline for pixel at [0,0]
     """
     # Get Path Info
     off_file = os.path.abspath(off_file)
@@ -72,9 +72,9 @@ def get_lalo_ref(m_par_file, atr_dict={}):
     If it's not existed, call Gamma script - SLC_corners - to generate it from SLC par file
         e.g. 130118_4rlks.amp.par
 
-    Parameters: m_par_file : str, path, reference date parameter file, i.e. 130118_4rlks.amp.par
-                atr_dict   : dict, optional, attributes dictionary
-    Returns:    lalo_ref
+    Parameters: m_par_file - str, path, reference date parameter file, i.e. 130118_4rlks.amp.par
+                atr_dict   - dict, optional, attributes dictionary
+    Returns:    atr_dict   - dict, attributes dictionary, contains LAT/LON_REF1/2/3/4
     """
     m_par_file = os.path.abspath(m_par_file)
     m_corner_file = os.path.splitext(m_par_file)[0]+'.corner'
@@ -105,14 +105,15 @@ def get_lalo_ref(m_par_file, atr_dict={}):
     atr_dict['LON_REF2'] = lalo_ref[1, 1]
     atr_dict['LON_REF3'] = lalo_ref[2, 1]
     atr_dict['LON_REF4'] = lalo_ref[3, 1]
+
     return atr_dict
 
 
 def extract_metadata4interferogram(fname, sensor_name=None):
     """Read/extract attributes from Gamma .unw, .cor and .int file
-    Parameters: fname : str, Gamma interferogram filename or path,
-                    i.e. /PopoSLT143TsxD/diff_filt_HDR_130118-130129_4rlks.unw
-    Returns:    atr : dict, Attributes dictionary
+    Parameters: fname - str, Gamma interferogram filename or path,
+                        i.e. /PopoSLT143TsxD/diff_filt_HDR_130118-130129_4rlks.unw
+    Returns:    atr   - dict, Attributes dictionary
     """
     file_dir = os.path.dirname(fname)
     file_basename = os.path.basename(fname)
@@ -142,18 +143,18 @@ def extract_metadata4interferogram(fname, sensor_name=None):
 
     try:
         m_par_file = ut.get_file_list(m_par_files)[0]
-    except:
+    except FileNotFoundError:
         m_par_file = None
         print('\nERROR: Can not find reference date .par file, it supposed to be like: '+m_par_files)
     try:
         s_par_file = ut.get_file_list(s_par_files)[0]
-    except:
+    except FileNotFoundError:
         s_par_file = None
         print('\nERROR: Can not find secondary date .par file, it supposed to be like: '+s_par_files)
 
     try:
         off_file = ut.get_file_list(off_files)[0]
-    except:
+    except FileNotFoundError:
         off_file = file_dir+'/'+date12+lks+'.off'
         offCmd = 'create_offset {} {} {} 1 1 1 0'.format(m_par_file, s_par_file, off_file)
         print(offCmd)
@@ -190,26 +191,30 @@ def extract_metadata4interferogram(fname, sensor_name=None):
         atr_orig = readfile.read_roipac_rsc(rsc_file)
     except:
         atr_orig = dict()
+
     if not set(atr.items()).issubset(set(atr_orig.items())):
+        print('merge {}, {} and {} into {}'.format(
+            os.path.basename(m_par_file),
+            os.path.basename(s_par_file),
+            os.path.basename(off_file),
+            os.path.basename(rsc_file),
+        ))
         atr_out = {**atr_orig, **atr}
-        print('merge %s, %s and %s into %s' % (os.path.basename(m_par_file),
-                                               os.path.basename(s_par_file),
-                                               os.path.basename(off_file),
-                                               os.path.basename(rsc_file)))
         writefile.write_roipac_rsc(atr_out, out_file=rsc_file)
+
     return rsc_file
 
 
 def extract_metadata4geometry_radar(fname):
     """Read/extract attribute for .hgt_sim file from Gamma to ROI_PAC
-    Input:
-        sim_20070813_20080310.hgt_sim
-        sim_20070813_20080310.rdc.dem
-    Search for:
-        sim_20070813_20080310.diff_par
-    Output:
-        sim_20070813_20080310.hgt_sim.rsc
-        sim_20070813_20080310.rdc.dem.rsc
+    Parameters: fname    - geometry file in radar coordinates, e.g.
+                           sim_20070813_20080310.hgt_sim
+                           sim_20070813_20080310.rdc.dem
+                           which leads to file:
+                           sim_20070813_20080310.diff_par
+    Returns:    rsc_file - str, metadata file
+                           sim_20070813_20080310.hgt_sim.rsc
+                           sim_20070813_20080310.rdc.dem.rsc
     """
     # Get/read GAMMA par file
     # for loop to get rid of multiple dot in filename
@@ -262,23 +267,25 @@ def extract_metadata4geometry_radar(fname):
         atr_orig = readfile.read_roipac_rsc(rsc_file)
     except:
         atr_orig = dict()
+
     if not set(atr.items()).issubset(set(atr_orig.items())):
-        atr_out = {**atr_orig, **atr}
         print('writing >>> '+os.path.basename(rsc_file))
+        atr_out = {**atr_orig, **atr}
         writefile.write_roipac_rsc(atr_out, out_file=rsc_file)
+
     return rsc_file
 
 
 def extract_metadata4geometry_geo(fname):
     """Read/extract attribute for *.dem / *.UTM_TO_RDC file from Gamma to ROI_PAC
-    Inputs:
-        sim_20070813_20080310.utm.dem
-        sim_20070813_20080310.UTM_TO_RDC
-    Search for:
-        sim_20070813_20080310.utm.dem.par
-    Outputs:
-        sim_20070813_20080310.utm.dem.rsc
-        sim_20070813_20080310.UTM_TO_RDC.rsc
+    Parameters: fname    - str, geometry file in geo-coordinates, e.g.
+                           sim_20070813_20080310.utm.dem
+                           sim_20070813_20080310.UTM_TO_RDC
+                           which leads to file:
+                           sim_20070813_20080310.utm.dem.par
+    Returns:    rsc_file - str, metadata file
+                           sim_20070813_20080310.utm.dem.rsc
+                           sim_20070813_20080310.UTM_TO_RDC.rsc
     """
     # Get/read GAMMA par file
     ext = os.path.splitext(fname)[1]
@@ -317,8 +324,29 @@ def extract_metadata4geometry_geo(fname):
         atr_orig = readfile.read_roipac_rsc(rsc_file)
     except:
         atr_orig = dict()
+
     if not set(atr.items()).issubset(set(atr_orig.items())):
-        atr_out = {**atr_orig, **atr}
         print('writing >>> '+os.path.basename(rsc_file))
+        atr_out = {**atr_orig, **atr}
         writefile.write_roipac_rsc(atr_out, out_file=rsc_file)
+
     return rsc_file
+
+
+def run_prep_gamma(inps):
+
+    # loop for each file
+    for fname in inps.file:
+        # interferograms
+        if inps.file_ext in ['.unw', '.cor', '.int']:
+            extract_metadata4interferogram(fname, sensor_name=inps.sensor.lower())
+
+        # geometry - geo
+        elif inps.file_ext in ['.UTM_TO_RDC'] or fname.endswith('.utm.dem'):
+            extract_metadata4geometry_geo(fname)
+
+        # geometry - radar
+        elif fname.endswith(('.rdc.dem', '.hgt_sim')):
+            extract_metadata4geometry_radar(fname)
+
+    return

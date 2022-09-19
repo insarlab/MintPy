@@ -14,18 +14,16 @@ from mintpy.utils import readfile, plot as pp, utils as ut
 from mintpy import view
 
 
-vprint = print
-
-
 ###########################  Sub Function  #############################
 def read_network_info(inps):
-    k = readfile.read_attribute(inps.ifgram_file)['FILE_TYPE']
-    if k != 'ifgramStack':
-        raise ValueError('input file {} is not ifgramStack: {}'.format(inps.ifgram_file, k))
+    """Read the network information"""
+    ftype = readfile.read_attribute(inps.ifgram_file)['FILE_TYPE']
+    if ftype != 'ifgramStack':
+        raise ValueError('input file {} is not ifgramStack: {}'.format(inps.ifgram_file, ftype))
 
     obj = ifgramStack(inps.ifgram_file)
     obj.open(print_msg=inps.print_msg)
-    inps.date12_list    = obj.get_date12_list(dropIfgram=False)
+    inps.date12_list = obj.get_date12_list(dropIfgram=False)
     date12_kept = obj.get_date12_list(dropIfgram=True)
     inps.ex_date12_list = sorted(list(set(inps.date12_list) - set(date12_kept)))
     inps.date_list = obj.get_date_list(dropIfgram=False)
@@ -71,6 +69,9 @@ class coherenceMatrixViewer():
         return
 
     def configure(self, inps):
+        global vprint
+        vprint = print if inps.print_msg else lambda *args, **kwargs: None
+
         # read network info
         inps = read_network_info(inps)
         # copy inps to self object
@@ -102,6 +103,7 @@ class coherenceMatrixViewer():
     def plot(self):
         # Figure 1
         self.fig = plt.figure(self.figname, figsize=self.fig_size)
+
         # Axes 1 - Image
         self.ax_img = self.fig.add_axes([0.05, 0.1, 0.4, 0.8])
         view_cmd = self.view_cmd.format(self.img_file)
@@ -109,10 +111,12 @@ class coherenceMatrixViewer():
         if all(i is not None for i in self.yx):
             inps_img.pts_marker = 'r^'
             inps_img.pts_yx = np.array(self.yx).reshape(-1, 2)
+
             # point yx --> lalo for geocoded product
             if 'Y_FIRST' in atr.keys():
                 coord = ut.coordinate(atr)
                 inps_img.pts_lalo = np.array(coord.radar2geo(self.yx[0], self.yx[1])[0:2]).reshape(-1,2)
+
         inps_img.print_msg = self.print_msg
         self.ax_img = view.plot_slice(self.ax_img, d_img, atr, inps_img)[0]
 
@@ -160,11 +164,12 @@ class coherenceMatrixViewer():
         plotDict['disp_legend'] = False
 
         # plot
-        coh_mat = pp.plot_coherence_matrix(self.ax_mat,
-                                           date12List=self.date12_list,
-                                           cohList=coh.tolist(),
-                                           date12List_drop=ex_date12_list,
-                                           p_dict=plotDict)[1]
+        coh_mat = pp.plot_coherence_matrix(
+            self.ax_mat,
+            date12List=self.date12_list,
+            cohList=coh.tolist(),
+            date12List_drop=ex_date12_list,
+            p_dict=plotDict)[1]
 
         self.ax_mat.annotate('ifgrams\navailable', xy=(0.05, 0.05), xycoords='axes fraction', fontsize=12)
         self.ax_mat.annotate('ifgrams\nused', ha='right', xy=(0.95, 0.85), xycoords='axes fraction', fontsize=12)

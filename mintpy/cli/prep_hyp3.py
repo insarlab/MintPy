@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Forrest Williams, Aug 2022    #
 ############################################################
 
 
@@ -76,32 +76,21 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from mintpy.utils import utils as ut
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-    inps.file = ut.get_file_list(inps.file, abspath=True)
     return inps
 
 
 #########################################################################
 def main(iargs=None):
-    from mintpy.utils import readfile, writefile
-    from mintpy.prep_hyp3 import add_hyp3_metadata
-
-    # read in arguments
+    # parse
     inps = cmd_line_parse(iargs)
 
-    # for each filename, generate metadata rsc file
-    for fname in inps.file:
-        is_ifg = any([x in fname for x in ['unw_phase','corr']])
-        meta = readfile.read_gdal_vrt(fname)
-        meta = add_hyp3_metadata(fname, meta, is_ifg=is_ifg)
+    # import
+    from mintpy.prep_hyp3 import run_prep_hyp3
 
-        # write
-        rsc_file = fname+'.rsc'
-        writefile.write_roipac_rsc(meta, out_file=rsc_file)
-
-    return
+    # run
+    run_prep_hyp3(inps)
 
 
 ###################################################################################################

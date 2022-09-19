@@ -1,13 +1,12 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
 import os
 import sys
-import glob
 from mintpy.utils.arg_utils import create_argument_parser
 
 
@@ -33,42 +32,28 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs = None):
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # check: input paths (use full path and translate user symbol)
     inps.template_file = os.path.abspath(inps.template_file)
     inps.mintpy_dir = os.path.expanduser(inps.mintpy_dir)
     inps.mintpy_dir = os.path.abspath(inps.mintpy_dir)
+
     return inps
 
 
 #########################################################################
 def main(iargs=None):
-    from mintpy.utils import readfile
-    from mintpy.prep_gmtsar import extract_gmtsar_metadata, prepare_geometry, prepare_stack
-
+    # parse
     inps = cmd_line_parse(iargs)
 
-    # read file path from template file
-    template = readfile.read_template(inps.template_file)
-    inps.unw_files = sorted(glob.glob(template['mintpy.load.unwFile']))
-    inps.cor_files = sorted(glob.glob(template['mintpy.load.corFile']))
-    inps.dem_file = glob.glob(template['mintpy.load.demFile'])[0]
+    # import
+    from mintpy.prep_gmtsar import run_prep_gmtsar
 
-    # extract common metadata
-    rsc_file = os.path.join(inps.mintpy_dir, 'inputs/data.rsc')
-    meta = extract_gmtsar_metadata(unw_file=inps.unw_files[0],
-                                   template_file=inps.template_file,
-                                   rsc_file=rsc_file,
-                                   update_mode=inps.update_mode)
-
-    # prepare metadata for geometry files
-    prepare_geometry([inps.dem_file], meta=meta, update_mode=inps.update_mode)
-
-    # prepare metadata for interferogram files
-    prepare_stack(inps.unw_files, meta=meta, update_mode=inps.update_mode)
-
-    print('Done.')
+    # run
+    run_prep_gmtsar(inps)
 
 
 #########################################################################

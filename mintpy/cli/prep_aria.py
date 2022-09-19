@@ -1,13 +1,12 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Heresh Fattahi, Aug 2022      #
 ############################################################
 
 
 import os
 import sys
-import time
 import glob
 from mintpy.utils.arg_utils import create_argument_parser
 
@@ -47,8 +46,8 @@ TEMPLATE = """template options:
 EXAMPLE = """example:
   prep_aria.py -t smallbaselineApp.cfg    # recommended
   prep_aria.py -t SanFranSenDT42.txt
-  prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i ../incidenceAngle/*.vrt
-  prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i ../incidenceAngle/*.vrt -a ../azimuthAngle/*.vrt -w ../mask/watermask.msk
+  prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt'
+  prep_aria.py -s ../stack/ -d ../DEM/SRTM_3arcsec.dem -i '../incidenceAngle/*.vrt' -a '../azimuthAngle/*.vrt' -w ../mask/watermask.msk
 
   # download / extract / prepare inteferograms stack from ARIA using ARIA-tools:
   # reference: https://github.com/aria-tools/ARIA-tools
@@ -110,46 +109,41 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs = None):
-    from mintpy.prep_aria import read_template2inps
-
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # default multilook options
+    # default: multilook options
     iDict = vars(inps)
     iDict['xstep'] = int(iDict.get('xstep', 1))
     iDict['ystep'] = int(iDict.get('ystep', 1))
     iDict['method'] = str(iDict.get('method', 'nearest'))
 
-    # --template
+    # check: --template option
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
     print('multilook x/ystep: {}/{}'.format(iDict['xstep'], iDict['ystep']))
     print('multilook method : {}'.format(iDict['method']))
 
-    # --stack-dir
+    # check: --stack-dir
     if inps.stackDir is not None:
         inps.stackDir     = os.path.abspath(inps.stackDir)
         inps.corFile      = os.path.join(inps.stackDir, os.path.basename(inps.corFile))
         inps.unwFile      = os.path.join(inps.stackDir, os.path.basename(inps.unwFile))
         inps.connCompFile = os.path.join(inps.stackDir, os.path.basename(inps.connCompFile))
 
+    # check: all options end with "File"
     # translate wildcard path input with search result
     # if not exist, raise error for required datasets
     #               set to None for the other datasets
+    print('search input data file info:')
     ds_keys = [key for key in list(iDict.keys()) if key.endswith('File')]
     required_ds_keys = ['unwFile', 'corFile', 'demFile', 'incAngleFile']
-
-    print('search input data file info:')
     max_digit = max([len(i) for i in ds_keys])
-    for key in ds_keys:
-        fname = iDict[key]
 
+    for key in ds_keys:
         # search for wildcard pattern
-        if fname:
-            fnames = glob.glob(fname)
-        else:
-            fnames = []
+        fnames = glob.glob(iDict[key]) if iDict[key] else []
 
         # user the first element if more than one exist
         if len(fnames) > 0:
@@ -166,100 +160,60 @@ def cmd_line_parse(iargs = None):
     return inps
 
 
+def read_template2inps(template_file, inps):
+    """Read input template file into inps"""
+    print('read options from template file: {}'.format(os.path.basename(template_file)))
+
+    from mintpy.utils import readfile, utils1 as ut
+
+    iDict = vars(inps)
+    template = readfile.read_template(template_file)
+    template = ut.check_template_auto_value(template)
+
+    # ignore template options with default auto values
+    # so that options from input arguments have higher priority
+    # than template options with auto values
+    for key in list(template.keys()):
+        if template[key] == 'auto':
+            template.pop(key)
+
+    # pass options from template to inps
+    # group - load
+    key_prefix = 'mintpy.load.'
+    keys = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
+    for key in keys:
+        value = template[key_prefix+key]
+        if key in ['updateMode', 'compression']:
+            iDict[key] = value
+        elif key in ['unwFile']:
+            iDict['stackDir'] = os.path.dirname(value)
+        elif value:
+            iDict[key] = str(value)
+
+    # group - multilook
+    prefix = 'mintpy.multilook.'
+    key_list = [i.split(prefix)[1] for i in template.keys() if i.startswith(prefix)]
+    for key in key_list:
+        value = template[prefix+key]
+        if key in ['xstep', 'ystep']:
+            iDict[key] = int(template[prefix+key])
+        elif key in ['method']:
+            iDict[key] = template[prefix+key]
+
+    return inps
+
+
 ####################################################################################
 def main(iargs=None):
-    import numpy as np
-    from mintpy.utils import writefile, attribute as attr
-    from mintpy.prep_aria import extract_metadata, read_subset_box, run_or_skip, write_ifgram_stack, write_geometry
-
+    # parse
     inps = cmd_line_parse(iargs)
-    start_time = time.time()
 
-    if inps.updateMode:
-        print('update mode: ON')
-    else:
-        print('update mode: OFF')
+    # import
+    from mintpy.prep_aria import load_aria
 
-    # extract metadata
-    meta = extract_metadata(inps.unwFile)
-    box, meta = read_subset_box(inps.template_file, meta)
-    if inps.xstep * inps.ystep > 1:
-        meta = attr.update_attribute4multilook(meta, lks_y=inps.ystep, lks_x=inps.xstep)
-
-    length = int(meta["LENGTH"])
-    width = int(meta["WIDTH"])
-    num_pair = int(meta["NUMBER_OF_PAIRS"])
-
-    # prepare output directory
-    out_dir = os.path.dirname(inps.outfile[0])
-    os.makedirs(out_dir, exist_ok=True)
-
-    ########## output file 1 - ifgramStack
-    # define dataset structure for ifgramStack
-    dsNameDict = {
-        "date"             : (np.dtype('S8'), (num_pair, 2)),
-        "dropIfgram"       : (np.bool_,       (num_pair,)),
-        "bperp"            : (np.float32,     (num_pair,)),
-        "unwrapPhase"      : (np.float32,     (num_pair, length, width)),
-        "coherence"        : (np.float32,     (num_pair, length, width)),
-        "connectComponent" : (np.int16,       (num_pair, length, width)),
-    }
-    if inps.magFile is not None:
-        dsNameDict['magnitude'] = (np.float32, (num_pair, length, width))
-
-    if run_or_skip(inps, dsNameDict, out_file=inps.outfile[0]) == 'run':
-        # initiate h5 file with defined structure
-        meta['FILE_TYPE'] = 'ifgramStack'
-        writefile.layout_hdf5(inps.outfile[0], dsNameDict,
-                              metadata=meta,
-                              compression=inps.compression)
-
-        # write data to h5 file in disk
-        write_ifgram_stack(inps.outfile[0],
-                           unwStack=inps.unwFile,
-                           cohStack=inps.corFile,
-                           connCompStack=inps.connCompFile,
-                           ampStack=inps.magFile,
-                           box=box,
-                           xstep=inps.xstep,
-                           ystep=inps.ystep,
-                           mli_method=inps.method)
-
-    ########## output file 2 - geometryGeo
-    # define dataset structure for geometry
-    dsNameDict = {
-        "height"             : (np.float32, (length, width)),
-        "incidenceAngle"     : (np.float32, (length, width)),
-        "slantRangeDistance" : (np.float32, (length, width)),
-    }
-    if inps.azAngleFile is not None:
-        dsNameDict["azimuthAngle"] = (np.float32, (length, width))
-    if inps.waterMaskFile is not None:
-        dsNameDict["waterMask"]    = (np.bool_,   (length, width))
-
-    if run_or_skip(inps, dsNameDict, out_file=inps.outfile[1]) == 'run':
-        # initiate h5 file with defined structure
-        meta['FILE_TYPE'] = 'geometry'
-        writefile.layout_hdf5(inps.outfile[1], dsNameDict,
-                              metadata=meta,
-                              compression=inps.compression)
-
-        # write data to disk
-        write_geometry(inps.outfile[1],
-                       demFile=inps.demFile,
-                       incAngleFile=inps.incAngleFile,
-                       azAngleFile=inps.azAngleFile,
-                       waterMaskFile=inps.waterMaskFile,
-                       box=box,
-                       xstep=inps.xstep,
-                       ystep=inps.ystep)
-
-    print('-'*50)
-
-    # time info
-    m, s = divmod(time.time()-start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
-
+    # run
+    load_aria(inps)
+    
 
 ####################################################################################
 if __name__=="__main__":

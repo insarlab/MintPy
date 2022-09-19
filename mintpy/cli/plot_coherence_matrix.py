@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -70,40 +70,45 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # default aux file:
+    # import
+    import matplotlib.pyplot as plt
+
+    # default: auxiliary file paths (velocity and template)
     mintpy_dir = os.path.dirname(os.path.dirname(inps.ifgram_file))
     if not inps.img_file:
         inps.img_file = os.path.join(mintpy_dir, 'velocity.h5')
     if not inps.template_file:
         inps.template_file = os.path.join(mintpy_dir, 'smallbaselineApp.cfg')
 
+    # check: existence of auxliary files
     if not os.path.isfile(inps.img_file):
         raise SystemExit('ERROR: input image file not found: {}'.format(inps.img_file))
-
     if not os.path.isfile(inps.tcoh_file):
         inps.tcoh_file = None
-
     if not os.path.isfile(inps.template_file):
-        inps.tcoh_file = None
+        inps.template_file = None
 
-    # verbose print using --noverbose option
-    from mintpy import plot_coherence_matrix
-    plot_coherence_matrix.vprint = print if inps.print_msg else lambda *args, **kwargs: None
-
+    # check: --nodisplay option
     if not inps.disp_fig:
-        import matplotlib.pyplot as plt
         inps.save_fig = True
         plt.switch_backend('Agg')
+
     return inps
 
 
 ##########################  Main Function  ##############################
 def main(iargs=None):
-    from mintpy.plot_coherence_matrix import coherenceMatrixViewer
+    # parse
     inps = cmd_line_parse(iargs)
+
+    # import
+    from mintpy.plot_coherence_matrix import coherenceMatrixViewer
+
+    # run
     obj = coherenceMatrixViewer(iargs=iargs)
     obj.configure(inps)
     obj.plot()

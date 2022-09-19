@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -75,21 +75,29 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    import numpy as np
-    from mintpy.plot_transection import read_lonlat_file
-    from mintpy.utils import readfile, utils as ut
+    # parse
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
 
-    inps = create_parser().parse_args(args=iargs)
+    # import
+    import numpy as np
+    from matplotlib import pyplot as plt
+    from mintpy.utils import readfile, utils as ut
 
     # save argv (to check the manually specified arguments)
     # use iargs        for python call
     # use sys.argv[1:] for command line call
     inps.argv = iargs if iargs else sys.argv[1:]
 
+    # check: coupled options
     if inps.outfile or not inps.disp_fig:
         inps.save_fig = True
 
-    # input file info
+    # check: --nodisplay option
+    if not inps.disp_fig:
+        plt.switch_backend('Agg')
+
+    # check: --offset option
     inps.file = ut.get_file_list(inps.file)
     inps.atr = readfile.read_attribute(inps.file[0])
     inps.coord = ut.coordinate(inps.atr)
@@ -115,32 +123,45 @@ def cmd_line_parse(iargs=None):
         # disable offset for single input file
         inps.offset = np.array([0], dtype=np.float32)
 
-    if not inps.dset:
-        inps.dset = readfile.get_slice_list(inps.file[0])[0]
-
-    # lola_file --> start/end_lalo
+    # check: --line-file option (lola_file --> start/end_lalo)
     if inps.lola_file:
         inps.start_lalo, inps.end_lalo = read_lonlat_file(inps.lola_file)
 
-    # start/end_lalo --> start/end_yx
+    # check: --start/end-lalo (start/end_lalo --> start/end_yx)
     if inps.start_lalo and inps.end_lalo:
         [y0, y1] = inps.coord.lalo2yx([inps.start_lalo[0], inps.end_lalo[0]], coord_type='lat')
         [x0, x1] = inps.coord.lalo2yx([inps.start_lalo[1], inps.end_lalo[1]], coord_type='lon')
         inps.start_yx = [y0, x0]
         inps.end_yx = [y1, x1]
 
-    # verbose print using --noverbose option
-    from mintpy import plot_transection
-    plot_transection.vprint = print if inps.print_msg else lambda *args, **kwargs: None
+    # default: --dset option
+    if not inps.dset:
+        inps.dset = readfile.get_slice_list(inps.file[0])[0]
 
-    if not inps.disp_fig:
-        from matplotlib import pyplot as plt
-        plt.switch_backend('Agg')
     return inps
+
+
+#####################################################################
+def read_lonlat_file(lonlat_file):
+    """Read Start/End lat/lon from lonlat text file in gmt format.
+
+    Parameters: lonlat_file    - str, text file in gmt lonlat point file
+    Returns:    start/end_lalo - list of 2 float
+    """
+    fll = open(lonlat_file, 'r')
+    lines = fll.read().splitlines()
+    [lon0, lat0] = [float(i) for i in lines[1].split()]
+    [lon1, lat1] = [float(i) for i in lines[2].split()]
+    fll.close()
+
+    start_lalo = [lat0, lon0]
+    end_lalo = [lat1, lon1]
+    return start_lalo, end_lalo
 
 
 def get_view_cmd(iargs):
     """Assemble view.py command line from input arguments"""
+
     # define ALL parsing options from create_parser() that are common to view.py
     parser = argparse.ArgumentParser(description='view.py parser')
     parser.add_argument('-v','--vlim', dest='vlim', nargs=2, metavar=('VMIN', 'VMAX'), type=float,
@@ -152,22 +173,28 @@ def get_view_cmd(iargs):
 
     # get args that are applicable to view.py
     unique_args = parser.parse_known_args(iargs)[1]
-    view_args = [i for i in iargs if i not in unique_args]
+    view_args = [i for i in iargs if i not in unique_args] if iargs else []
 
     # assemble view.py command line
     inps = cmd_line_parse(iargs)
     view_cmd = 'view.py {} '.format(inps.file[0])
-    if inps.dset:
-        view_cmd += ' {} '.format(inps.dset)
+    view_cmd += f' {inps.dset} ' if inps.dset else ''
     view_cmd += ' '.join(view_args)
+
     return view_cmd
 
 
 ############################ Main ###################################
 def main(iargs=None):
-    from mintpy.plot_transection import transectionViewer
+    # parse
     inps = cmd_line_parse(iargs)
+
+    # import
+    from mintpy.plot_transection import transectionViewer
+
+    # run
     view_cmd = get_view_cmd(iargs)
+
     obj = transectionViewer(iargs=iargs)
     obj.configure(inps, view_cmd)
     obj.plot()
