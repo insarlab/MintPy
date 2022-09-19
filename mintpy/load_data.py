@@ -7,6 +7,7 @@
 
 import os
 import glob
+import importlib
 import time
 import warnings
 
@@ -605,34 +606,29 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1, geom_obj
 
 
 def prepare_metadata(iDict):
-    """Prepare metadata via prep_{insar_processor}.py scripts."""
+    """Prepare metadata via prep_{processor}.py scripts."""
 
     processor = iDict['processor']
     script_name = 'prep_{}.py'.format(processor)
     print('-'*50)
     print('prepare metadata files for {} products'.format(processor))
 
-    if processor in ['gamma', 'hyp3', 'roipac', 'snap', 'cosicorr']:
-        # import prep_module
-        if processor == 'gamma':
-            from mintpy.cli import prep_gamma as prep_module
-        elif processor == 'hyp3':
-            from mintpy.cli import prep_hyp3 as prep_module
-        elif processor == 'roipac':
-            from mintpy.cli import prep_roipac as prep_module
-        elif processor == 'snap':
-            from mintpy.cli import prep_snap as prep_module
-        elif processor == 'cosicorr':
-            from mintpy.cli import prep_cosicorr as prep_module
+    if processor not in PROCESSOR_LIST:
+        msg = 'un-recognized InSAR processor: {}'.format(processor)
+        msg += '\nsupported processors: {}'.format(PROCESSOR_LIST)
+        raise ValueError(msg)
 
-        # run prep_{processor} module
+    # import prep_{processor}
+    prep_module = importlib.import_module(f'mintpy.cli.prep_{processor}')
+
+    if processor in ['gamma', 'hyp3', 'roipac', 'snap', 'cosicorr']:
+        # run prep_module
         for key in [i for i in iDict.keys()
                     if (i.startswith('mintpy.load.')
                         and i.endswith('File')
                         and i != 'mintpy.load.metaFile')]:
             if len(glob.glob(str(iDict[key]))) > 0:
                 # print command line
-                script_name = '{}.py'.format(os.path.basename(prep_module.__name__).split('.')[-1])
                 iargs = [iDict[key]]
                 if processor == 'gamma' and iDict['PLATFORM']:
                     iargs += ['--sensor', iDict['PLATFORM'].lower()]
@@ -685,8 +681,7 @@ def prepare_metadata(iDict):
         # run module
         ut.print_command_line(script_name, iargs)
         try:
-            import mintpy.cli.prep_isce
-            mintpy.cli.prep_isce.main(iargs)
+            prep_module.main(iargs)
         except:
             warnings.warn('prep_isce.py failed. Assuming its result exists and continue...')
 
@@ -740,9 +735,8 @@ def prepare_metadata(iDict):
 
         ## run
         ut.print_command_line(script_name, iargs)
-        import mintpy.cli.prep_aria
         try:
-            mintpy.cli.prep_aria.main(iargs)
+            prep_module.main(iargs)
         except:
             warnings.warn('prep_aria.py failed. Assuming its result exists and continue...')
 
@@ -756,16 +750,10 @@ def prepare_metadata(iDict):
         # run prep_*.py
         iargs = [custom_temp_files[0]]
         ut.print_command_line(script_name, iargs)
-        import mintpy.cli.prep_gmtsar
         try:
-            mintpy.cli.prep_gmtsar.main(iargs)
+            prep_module.main(iargs)
         except:
             warnings.warn('prep_gmtsar.py failed. Assuming its result exists and continue...')
-
-    else:
-        msg = 'un-recognized InSAR processor: {}'.format(processor)
-        msg += '\nsupported processors: {}'.format(PROCESSOR_LIST)
-        raise ValueError(msg)
 
     return
 
