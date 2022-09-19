@@ -83,6 +83,19 @@ setup(
         "gbis": ["geoid"],
         "kite": ["kite"],
         "fractal": ["pyfftw"],
+        "all": [
+            "cli",
+            "gmtsar",
+            "solidearth",
+            "gps",
+            "progress",
+            "isce",
+            "extra",
+            "solvers",
+            "gbis",
+            "kite",
+            "fractal",
+        ],
     },
 
     # package discovery
