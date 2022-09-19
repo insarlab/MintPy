@@ -67,7 +67,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     std_file = os.path.splitext(deramped_file)[0]+'_std.txt'
 
     # Get residual std text file
-    if run_or_skip(out_file=std_file, in_file=[deramped_file, mask_file], check_readable=False) == 'run':
+    if run_or_skip(out_file=std_file, in_file=[deramped_file, mask_file], readable=False) == 'run':
         if run_or_skip(out_file=deramped_file, in_file=timeseries_resid_file) == 'run':
             if not os.path.isfile(timeseries_resid_file):
                 msg = 'Can not find input timeseries residual file: '+timeseries_resid_file
@@ -117,7 +117,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                             'rms_{}.txt'.format(os.path.splitext(deramped_file)[0]))
 
     # Get residual RMS text file
-    if run_or_skip(out_file=rms_file, in_file=[deramped_file, mask_file], check_readable=False) == 'run':
+    if run_or_skip(out_file=rms_file, in_file=[deramped_file, mask_file], readable=False) == 'run':
         if run_or_skip(out_file=deramped_file, in_file=timeseries_resid_file) == 'run':
             if not os.path.isfile(timeseries_resid_file):
                 msg = 'Can not find input timeseries residual file: '+timeseries_resid_file
@@ -232,7 +232,7 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
                 and mask_line_orig == mask_line
                 and run_or_skip(out_file=txtFile,
                                 in_file=[File, maskFile],
-                                check_readable=False) == 'skip'):
+                                readable=False) == 'skip'):
             print(txtFile+' already exists, read it directly')
             meanList, dateList = read_text_file(txtFile)
             return meanList, dateList
@@ -637,28 +637,28 @@ def is_file_exist(file_list, abspath=True):
     return file
 
 
-def run_or_skip(out_file, in_file=None, check_readable=True, print_msg=True):
+def run_or_skip(out_file, in_file=None, readable=True, print_msg=True):
     """Check whether to update out_file or not.
     return run if any of the following meets:
         1. out_file is empty, e.g. None, []
         2. out_file is not existed
-        3. out_file is not readable by readfile.read_attribute() when check_readable=True
+        3. out_file is not readable by readfile.read_attribute() when readable=True
         4. out_file is older than in_file, if in_file is not None
     Otherwise, return skip.
 
     If in_file=None and out_file exists and readable, return skip
 
-    Parameters: out_file : string or list of string, output file(s)
-                in_file  : string or list of string, input file(s)
-                check_readable : bool, check if the 1st output file has attribute 'WIDTH'
-                print_msg      : bool, print message
-    Returns:    run/skip : str, whether to update output file or not
+    Parameters: out_file  - string or list of string, output file(s)
+                in_file   - string or list of string, input file(s)
+                readable  - bool, check if the 1st output file has attribute 'WIDTH'
+                print_msg - bool, print message
+    Returns:    run/skip  - str, whether to update output file or not
     Example:    if ut.run_or_skip(out_file='timeseries_ERA5_demErr.h5', in_file='timeseries_ERA5.h5'):
                 if ut.run_or_skip(out_file='exclude_date.txt',
                                   in_file=['timeseries_ERA5_demErrInvResid.h5',
                                            'maskTempCoh.h5',
                                            'smallbaselineApp.cfg'],
-                                  check_readable=False):
+                                  readable=False):
     """
     # 1 - check existance of output files
     if not out_file:
@@ -670,7 +670,7 @@ def run_or_skip(out_file, in_file=None, check_readable=True, print_msg=True):
             return 'run'
 
     # 2 - check readability of output files
-    if check_readable:
+    if readable:
         try:
             atr = readfile.read_attribute(out_file[0])
             width = atr['WIDTH']

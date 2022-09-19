@@ -71,7 +71,7 @@ def run_or_skip(inps, dsNameDict, out_file):
         return flag
 
     # check 2 - output file existance
-    if ut.run_or_skip(out_file, check_readable=True) == 'run':
+    if ut.run_or_skip(out_file, readable=True) == 'run':
         return flag
 
     # check 3 - output dataset info

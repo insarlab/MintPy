@@ -39,7 +39,7 @@ def analyze_rms(date_list, rms_list, inps):
     ref_date_file = 'reference_date.txt'
     if ut.run_or_skip(out_file=ref_date_file,
                       in_file=[inps.timeseries_file, inps.maskFile, inps.template_file],
-                      check_readable=False) == 'run':
+                      readable=False) == 'run':
         with open(ref_date_file, 'w') as f:
             f.write(date_list[ref_idx]+'\n')
         print('save date to file: '+ref_date_file)

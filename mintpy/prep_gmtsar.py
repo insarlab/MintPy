@@ -113,7 +113,7 @@ def extract_gmtsar_metadata(unw_file, template_file, rsc_file=None, update_mode=
     """Extract metadata from GMTSAR interferogram stack."""
 
     # update_mode: check existing rsc_file
-    if update_mode and ut.run_or_skip(rsc_file, in_file=unw_file, check_readable=False) == 'skip':
+    if update_mode and ut.run_or_skip(rsc_file, in_file=unw_file, readable=False) == 'skip':
         return readfile.read_roipac_rsc(rsc_file)
 
     ifg_dir = os.path.dirname(unw_file)

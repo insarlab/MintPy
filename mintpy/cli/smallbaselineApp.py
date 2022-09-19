@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 import os
@@ -28,8 +28,8 @@ through the step immediately preceding the starting step of the current run.
 
 REFERENCE = """reference:
   Yunjun, Z., H. Fattahi, and F. Amelung (2019), Small baseline InSAR time series analysis:
-  Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
-  doi:10.1016/j.cageo.2019.104331.
+    Unwrapping error correction and noise reduction, Computers & Geosciences, 133, 104331,
+    doi:10.1016/j.cageo.2019.104331.
 """
 
 EXAMPLE = """example:
@@ -82,6 +82,7 @@ def create_parser(subparsers=None):
 
 def cmd_line_parse(iargs=None):
     """Command line parser."""
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
@@ -90,9 +91,10 @@ def cmd_line_parse(iargs=None):
     # use sys.argv[1:] for command line call
     inps.argv = iargs if iargs else sys.argv[1:]
 
+    # check
     template_file = os.path.join(os.path.dirname(mintpy.__file__), 'defaults/smallbaselineApp.cfg')
 
-    # -H (print default template)
+    # check: -H option (print default template)
     if inps.print_template:
         with open(template_file, 'r') as f:
             lines = f.read()
@@ -106,40 +108,43 @@ def cmd_line_parse(iargs=None):
             print(lines)
         sys.exit(0)
 
-    # -v (print software version)
+    # check: -v option (print software version)
     if inps.version:
         print(mintpy.version.version_description)
         sys.exit(0)
 
-    # check all input template files
+    # check: existence of input template files
     if (not inps.customTemplateFile
             and not os.path.isfile(os.path.basename(template_file))
             and not inps.generate_template):
         parser.print_usage()
         print(EXAMPLE)
+
         msg = "no template file found! It requires:"
         msg += "\n  1) input a custom template file, OR"
         msg += "\n  2) there is a default template 'smallbaselineApp.cfg' in current directory."
-        raise SystemExit('ERROR: '+msg)
+        raise SystemExit(f'ERROR: {msg}')
 
-    # check custom input template file
+    # check: custom input template file
     if inps.customTemplateFile:
+        # check the existence
         if not os.path.isfile(inps.customTemplateFile):
             raise FileNotFoundError(inps.customTemplateFile)
 
         inps.customTemplateFile = os.path.abspath(inps.customTemplateFile)
-        # ignore if smallbaselineApp.cfg is input as custom template
+
+        # ignore if it is the default template file (smallbaselineApp.cfg)
         if os.path.basename(inps.customTemplateFile) == os.path.basename(template_file):
             inps.customTemplateFile = None
 
-    # check --plot
+    # check: --plot option
     if inps.argv == ['--plot']:
         plot_only = True
         print('plot smallbaselineApp results without run.')
     else:
         plot_only = False
 
-    # check input --start/end/dostep
+    # check: --start/end/dostep options
     inps.runSteps = read_inps2run_steps(inps, step_list=STEP_LIST, plot_only=plot_only)
 
     return inps
@@ -147,7 +152,7 @@ def cmd_line_parse(iargs=None):
 
 def read_inps2run_steps(inps, step_list, plot_only=False):
     """read/get run_steps from input arguments."""
-    # check inputs
+    # check: if start/end/do step input is valid
     for key in ['startStep', 'endStep', 'doStep']:
         value = vars(inps)[key]
         if value and value not in step_list:
@@ -155,7 +160,7 @@ def read_inps2run_steps(inps, step_list, plot_only=False):
             msg += '\nAvailable steps: {}'.format(step_list)
             raise ValueError(msg)
 
-    # ignore --start/end input if --dostep is specified
+    # check: ignore --start/end input if --dostep is specified
     if inps.doStep:
         inps.startStep = inps.doStep
         inps.endStep = inps.doStep
@@ -164,17 +169,17 @@ def read_inps2run_steps(inps, step_list, plot_only=False):
     idx0 = step_list.index(inps.startStep)
     idx1 = step_list.index(inps.endStep)
     if idx0 > idx1:
-        msg = 'input start step "{}" is AFTER input end step "{}"'.format(inps.startStep, inps.endStep)
+        msg = f'start step "{inps.startStep}" is CAN NOT be after the end step "{inps.endStep}"'
         raise ValueError(msg)
     run_steps = step_list[idx0:idx1+1]
 
-    # empty the step list
-    # if -g
-    # OR if iargs == ['--plot']
+    # empty the step list if:
+    # a) -g OR
+    # b) iargs == ['--plot']
     if inps.generate_template or plot_only:
         run_steps = []
 
-    # mssage - processing steps
+    # print mssage - processing steps
     if len(run_steps) > 0:
         # for single step - compact version info
         if len(run_steps) == 1:
@@ -187,32 +192,20 @@ def read_inps2run_steps(inps, step_list, plot_only=False):
         print('Run routine processing with {} on steps: {}'.format(os.path.basename(__file__), run_steps))
         print('Remaining steps: {}'.format(step_list[idx0+1:]))
     print('-'*50)
+
     return run_steps
 
 
 ##########################################################################
 def main(iargs=None):
-    from ..smallbaselineApp import TimeSeriesAnalysis
-
-    start_time = time.time()
+    # parse
     inps = cmd_line_parse(iargs)
 
-    app = TimeSeriesAnalysis(inps.customTemplateFile, inps.workDir)
-    app.open()
-    app.run(steps=inps.runSteps)
+    # import
+    from ..smallbaselineApp import run_smallbaselineApp
 
-    # plot if:
-    # a. --plot in command line
-    # OR b. template['mintpy.plot'] = yes AND runSteps > 1
-    if inps.plot or (app.template['mintpy.plot'] and len(inps.runSteps) > 1):
-        app.plot_result()
-
-    app.close()
-
-    # Timing
-    m, s = divmod(time.time()-start_time, 60)
-    print('Time used: {:02.0f} mins {:02.1f} secs\n'.format(m, s))
-    return
+    # run
+    run_smallbaselineApp(inps)
 
 
 ###########################################################################################

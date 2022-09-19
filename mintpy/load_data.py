@@ -566,7 +566,7 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1, geom_obj
     if not updateMode:
         return flag
 
-    if ut.run_or_skip(outFile, check_readable=True) == 'skip':
+    if ut.run_or_skip(outFile, readable=True) == 'skip':
         kwargs = dict(box=box, xstep=xstep, ystep=ystep)
 
         if inObj.name == 'ifgramStack':

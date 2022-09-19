@@ -31,10 +31,9 @@ __all__ = [
     'tropo_gacos',
     'unwrap_error_bridging',
     'unwrap_error_phase_closure',
-    'version',
     'view',
 ]
 
 root_module = Path(__file__).parent.parent.name   #mintpy
 for module in __all__:
-    importlib.import_module(root_module + '.' + module)
+    importlib.import_module(f'{root_module}.cli.{module}')
