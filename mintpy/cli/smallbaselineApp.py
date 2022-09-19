@@ -4,9 +4,9 @@
 # Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
+
 import os
 import sys
-import time
 import datetime
 
 import mintpy
