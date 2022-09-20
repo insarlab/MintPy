@@ -24,7 +24,7 @@ def run_spatial_average(inps):
     if inps.disp_fig and ftype == 'timeseries':
         dates = ptime.date_list2vector(date_list)[0]
         # plot
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
         ax.plot(dates, mean_list, '-o')#, lw=2, ms=16, alpha=0.7) #, mfc='crimson')
 
         # axis format
