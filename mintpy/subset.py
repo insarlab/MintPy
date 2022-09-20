@@ -10,21 +10,21 @@ import h5py
 import numpy as np
 
 from mintpy.utils import (
+    attribute as attr,
     ptime,
     readfile,
     writefile,
     utils as ut,
-    attribute as attr,
 )
 
 
 ################################################################
 def get_coverage_box(atr):
-    """Get Coverage Box of data in geo and pixel coordinates
-    Inputs: atr - dict, meta data dictionary
-    Outputs:
-        pix_box : 4-tuple of int, defining in (UL_X, UL_Y, LR_X, LR_Y)
-        geo_box : 4-tuple of float in lat/lon
+    """Get Coverage Box of data in geo and pixel coordinates.
+
+    Parameters: atr     - dict, meta data dictionary
+    Returns:    pix_box - 4-tuple of int, defining in (UL_X, UL_Y, LR_X, LR_Y)
+                geo_box - 4-tuple of float in lat/lon
     """
 
     length = int(atr['LENGTH'])
@@ -57,8 +57,10 @@ def get_coverage_box(atr):
 
 
 def read_subset_template2box(template_file):
-    """Read mintpy.subset.lalo/yx option from template file into box type
-    Return None if not specified.
+    """Read mintpy.subset.lalo/yx option from template file into box type.
+
+    Parameters: template_file - str, path to the template file
+    Returns     pix/geo_box   - tuple of 4 int or None
     """
     tmpl = readfile.read_template(template_file)
 
@@ -101,14 +103,12 @@ def subset_box2inps(inps, pix_box, geo_box):
 
 
 def get_box_overlap_index(box1, box2):
-    """Get index box overlap area of two input boxes
+    """Get index box overlap area of two input boxes.
 
-    Inputs:
-        box1/2 : 4-tuple of int, indicating coverage of box1/2
-                 defining in (x0, y0, x1, y1)
-    Outputs:
-        overlap_idx_box1/2 : 4-tuple of int, indicating index of overlap area in box1/2
-                             defining in (idx_x0, idx_y0, idx_x1, idx_y1)
+    Parameters: box1/2             - 4-tuple of int, indicating coverage of box1/2
+                                     defining in (x0, y0, x1, y1)
+    Returns:    overlap_idx_box1/2 - 4-tuple of int, indicating index of overlap area in box1/2
+                                     defining in (idx_x0, idx_y0, idx_x1, idx_y1)
     """
     # Calculate the overlap of two input boxes
     # and output the index box of the overlap in each's coord.
@@ -142,30 +142,26 @@ def get_box_overlap_index(box1, box2):
 ################################################################
 def subset_input_dict2box(subset_dict, meta_dict):
     """Convert subset inputs dict into box in radar and/or geo coord.
-    Inputs:
-        subset_dict : dict, including the following 4 objects:
-                      subset_x   : list of 2 int,   subset in x direction,   default=None
-                      subset_y   : list of 2 int,   subset in y direction,   default=None
-                      subset_lat : list of 2 float, subset in lat direction, default=None
-                      subset_lon : list of 2 float, subset in lon direction, default=None
-        meta_dict   : dict, including the following items:
-                      'WIDTH'      : int
-                      'LENGTH': int
-                      'X_FIRST'    : float, optional
-                      'Y_FIRST'    : float, optional
-                      'X_STEP'     : float, optional
-                      'Y_STEP'     : float, optional
-    Outputs:
-        # box defined by 4-tuple of number, defining (left, upper, right, lower) coordinate,
-        #                                            (UL_X, UL_Y,  LR_X,  LR_Y )
-        pixel_box   : 4-tuple of int, in pixel unit - 1
-        geo_box     : 4-tuple of float, in  lat/lon unit - degree
-                      None if file is in radar coordinate.
-    example:
+    Parameters: subset_dict - dict, including the following 4 objects:
+                              subset_x   : list of 2 int,   subset in x direction,   default=None
+                              subset_y   : list of 2 int,   subset in y direction,   default=None
+                              subset_lat : list of 2 float, subset in lat direction, default=None
+                              subset_lon : list of 2 float, subset in lon direction, default=None
+                meta_dict   - dict, including the following items:
+                              'WIDTH'      : int
+                              'LENGTH': int
+                              'X_FIRST'    : float, optional
+                              'Y_FIRST'    : float, optional
+                              'X_STEP'     : float, optional
+                              'Y_STEP'     : float, optional
+    Returns:    pix_box     - 4-tuple of int, in pixel unit of 1, in (x0, y0, x1, y1)
+                geo_box     - 4-tuple of float, in lat/lon unit (degree)
+                              None if file is in radar coordinate.
+    Examples:
         subset_dict = {'subset_x': None, 'subset_y': None, 'subset_lat': [30.5, 31.0], 'subset_lon': [130.0, 131.0]}
         subset_dict = {'subset_x': [100, 1100], 'subset_y': [2050, 2550], 'subset_lat': None, 'subset_lon': None}
-        pixel_box          = subset_input_dict2box(subset_dict, meta_dict)[0]
-        pixel_box, geo_box = subset_input_dict2box(subset_dict, meta_dict)
+        pix_box          = subset_input_dict2box(subset_dict, meta_dict)[0]
+        pix_box, geo_box = subset_input_dict2box(subset_dict, meta_dict)
     """
 
     # Data Coverage
@@ -191,12 +187,12 @@ def subset_input_dict2box(subset_dict, meta_dict):
     # Get subset box in y/x
     sub_x = sorted(sub_x)
     sub_y = sorted(sub_y)
-    pixel_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
+    pix_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
 
     # Get subset box in lat/lon from subset box in y/x
-    geo_box = coord.box_pixel2geo(pixel_box)
+    geo_box = coord.box_pixel2geo(pix_box)
 
-    return pixel_box, geo_box
+    return pix_box, geo_box
 
 
 ################################################################
@@ -231,27 +227,26 @@ def subset_dataset(fname, dsName, pix_box, pix_box4data, pix_box4subset, fill_va
 
 def subset_file(fname, subset_dict_input, out_file=None):
     """Subset file with
-    Parameters: fname       : str, path/name of file
-                subset_dict : dict, subsut parameter, including the following items:
+    Parameters: fname       - str, path/name of file
+                subset_dict - dict, subsut parameter, including the following items:
                     subset_x   : list of 2 int,   subset in x direction,   default=None
                     subset_y   : list of 2 int,   subset in y direction,   default=None
                     subset_lat : list of 2 float, subset in lat direction, default=None
                     subset_lon : list of 2 float, subset in lon direction, default=None
+                    tight      : bool, tight subset or not, for lookup table file, i.e. geomap*.trans
                     fill_value : float, optional. filled value for area outside of data coverage. default=None
                                  None/not-existed to subset within data coverage only.
-                    tight   : bool, tight subset or not, for lookup table file, i.e. geomap*.trans
-                out_file    : str, path/name of output file
-    Outputs:    out_file    : str, path/name of output file
-                    out_file = 'sub_'+fname, if fname is in current directory;
-                    out_file = fname, if fname is not in the current directory.
+                out_file    - str, path/name of output file
+    Returns:    out_file    - str, path/name of output file
+                              default: add prefix 'sub_',   if fname     in the current directory;
+                                       keep the same fname, if fname not in the current directory.
     """
 
     # Input File Info
     atr = readfile.read_attribute(fname)
     width = int(atr['WIDTH'])
     length = int(atr['LENGTH'])
-    k = atr['FILE_TYPE']
-    print('subset '+k+' file: '+fname+' ...')
+    print(f"subset {atr['FILE_TYPE']} file: {fname} ...")
 
     subset_dict = subset_dict_input.copy()
     # Read Subset Inputs into 4-tuple box in pixel and geo coord
@@ -288,8 +283,8 @@ def subset_file(fname, subset_dict_input, out_file=None):
     if not out_file:
         if os.getcwd() == os.path.dirname(os.path.abspath(fname)):
             if 'tight' in subset_dict.keys() and subset_dict['tight']:
-                out_file = '{}_tight{}'.format(os.path.splitext(fname)[0],
-                                               os.path.splitext(fname)[1])
+                fbase, fext = os.path.splitext(fname)
+                out_file = f'{fbase}_tight{fext}'
             else:
                 out_file = 'sub_'+os.path.basename(fname)
         else:
@@ -313,9 +308,10 @@ def subset_file(fname, subset_dict_input, out_file=None):
                 ds = fi[dsName]
                 ds_shape = ds.shape
                 ds_ndim = ds.ndim
-                print('cropping {d} in {b} from {f} ...'.format(d=dsName,
-                                                                b=pix_box4data,
-                                                                f=os.path.basename(fname)))
+                print('cropping {d} in {b} from {f} ...'.format(
+                    d=dsName,
+                    b=pix_box4data,
+                    f=os.path.basename(fname)))
 
                 if ds_ndim == 2:
                     # read
@@ -332,11 +328,12 @@ def subset_file(fname, subset_dict_input, out_file=None):
 
                     # write
                     block = [0, int(atr['LENGTH']), 0, int(atr['WIDTH'])]
-                    writefile.write_hdf5_block(out_file,
-                                               data=data_out,
-                                               datasetName=dsName,
-                                               block=block,
-                                               print_msg=True)
+                    writefile.write_hdf5_block(
+                        out_file,
+                        data=data_out,
+                        datasetName=dsName,
+                        block=block,
+                        print_msg=True)
 
                 if ds_ndim == 3:
                     prog_bar = ptime.progressBar(maxValue=ds_shape[0])
@@ -357,11 +354,12 @@ def subset_file(fname, subset_dict_input, out_file=None):
 
                         # write
                         block = [i, i+1, 0, int(atr['LENGTH']), 0, int(atr['WIDTH'])]
-                        writefile.write_hdf5_block(out_file,
-                                                   data=data_out,
-                                                   datasetName=dsName,
-                                                   block=block,
-                                                   print_msg=False)
+                        writefile.write_hdf5_block(
+                            out_file,
+                            data=data_out,
+                            datasetName=dsName,
+                            block=block,
+                            print_msg=False)
 
                         prog_bar.update(i+1, suffix='{}/{}'.format(i+1, ds_shape[0]))
                     prog_bar.close()
@@ -371,12 +369,14 @@ def subset_file(fname, subset_dict_input, out_file=None):
         # IO for binary files
         dsDict = dict()
         for dsName in dsNames:
-            dsDict[dsName] = subset_dataset(fname,
-                                            dsName,
-                                            pix_box,
-                                            pix_box4data,
-                                            pix_box4subset,
-                                            fill_value=subset_dict['fill_value'])
+            dsDict[dsName] = subset_dataset(
+                fname,
+                dsName,
+                pix_box,
+                pix_box4data,
+                pix_box4subset,
+                fill_value=subset_dict['fill_value'],
+            )
 
         atr['BANDS'] = len(dsDict.keys())
         writefile.write(dsDict, out_file=out_file, metadata=atr, ref_file=fname)
@@ -422,6 +422,7 @@ def read_aux_subset2inps(inps):
                            np.max(idx_col) + 10, np.max(idx_row) + 10)
                 geo_box = coord.box_pixel2geo(pix_box)
                 del rg_lut
+
             else:
                 lat = readfile.read(inps.lookup_file, datasetName='latitude')[0]
                 lon = readfile.read(inps.lookup_file, datasetName='longitude')[0]
@@ -435,3 +436,16 @@ def read_aux_subset2inps(inps):
         # Update subset_y/x/lat/lon
         inps = subset_box2inps(inps, pix_box, geo_box)
     return inps
+
+
+################################################################
+def run_subset(inps):
+    # read info
+    inps = read_aux_subset2inps(inps)
+
+    # subset
+    for fname in inps.file:
+        print('-'*30)
+        subset_file(fname, vars(inps), out_file=inps.outfile)
+
+    return

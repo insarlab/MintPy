@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Joshua Zahner, Aug 2022       #
 ############################################################
 
 
@@ -41,7 +41,8 @@ def create_parser(subparsers=None):
                       help='list of steps for output pixel (default: %(default)s).\n'
                            'Set to [20, 5, 0] to skip the 3rd high-resolution level to reduce file size.')
     opts.add_argument('--level-of-details','--lods', dest='lods', type=int, nargs=4, default=[0, 1500, 4000, -1],
-                      help='list of level of details to determine the visible range while browering. Default: 0, 1500, 4000, -1.\n'+
+                      help='list of level of details to determine the visible range while browering. '
+                           'Default: 0, 1500, 4000, -1.\n'
                            'Ref: https://developers.google.com/kml/documentation/kml_21tutorial')
     opts.add_argument('--vlim','-v', dest='vlim', nargs=2, metavar=('VMIN', 'VMAX'), type=float,
                       help='min/max range in cm/yr for color coding.')
@@ -64,37 +65,51 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from mintpy.utils import readfile
-    from mintpy.save_kmz_timeseries import get_aux_filename
-
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # check if in geo coordinates
+    # import
+    from mintpy.utils import readfile
+
+    # check: intput file coordinates system (required in geo)
     atr = readfile.read_attribute(inps.ts_file)
     if "Y_FIRST" not in atr.keys():
         raise ValueError("input file {} is NOT geocoded".format(inps.ts_file))
 
+    # default: auxliary files
     inps = get_aux_filename(inps)
+
+    # check: existence of auxliary files
     for fname in [inps.vel_file, inps.tcoh_file, inps.mask_file]:
         if not os.path.isfile(fname):
-            raise FileNotFoundError('auxliary file {} not found.'.format(fname))
+            raise FileNotFoundError(f'required auxliary file {fname} NOT found!')
+
+    return inps
+
+
+def get_aux_filename(inps):
+    """Get auxliary files' default filename."""
+    ts_dir = os.path.dirname(inps.ts_file)
+    ts_prefix = os.path.basename(inps.ts_file).split('timeseries')[0]
+
+    fbase = os.path.join(ts_dir, ts_prefix)
+    inps.vel_file  = inps.vel_file  if inps.vel_file  else f'{fbase}velocity.h5'
+    inps.tcoh_file = inps.tcoh_file if inps.tcoh_file else f'{fbase}temporalCoherence.h5'
+    inps.mask_file = inps.mask_file if inps.mask_file else f'{fbase}maskTempCoh.h5'
     return inps
 
 
 ######################################################################################
 def main(iargs=None):
-    from mintpy.save_kmz_timeseries import save_kml_timeseries
-
+    # parse
     inps = cmd_line_parse(iargs)
-    inps.work_dir = os.path.abspath(os.path.dirname(inps.ts_file))
-    inps.cbar_file = os.path.join(inps.work_dir, 'google_earth_cbar.png')
-    inps.star_file = os.path.join(inps.work_dir, "star.png")
-    inps.dot_file = os.path.join(inps.work_dir, "shaded_dot.png")
-    inps.dygraph_file = os.path.join(inps.work_dir, "dygraph-combined.js")
-    inps.kml_data_dir = os.path.join(inps.work_dir, 'kml_data')
 
-    return save_kml_timeseries(inps)
+    # import
+    from mintpy.save_kmz_timeseries import run_save_kmz_timeseries
+
+    # run
+    run_save_kmz_timeseries(inps)
 
 
 ######################################################################################

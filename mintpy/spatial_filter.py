@@ -18,16 +18,15 @@ from mintpy.utils import readfile, writefile
 
 ################################################################################################
 def filter_data(data, filter_type, filter_par=None):
-    """Filter 2D matrix with selected filter
-    Inputs:
-        data        : 2D np.array, matrix to be filtered
-        filter_type : string, filter type
-        filter_par  : (list of) int/float, optional, parameter for low/high pass filter
-                      for low/highpass_avg, it's kernel size in int
-                      for low/highpass_gaussain, it's sigma in float
-                      for double_difference, it's local and regional kernel sizes in int
-    Output:
-        data_filt   : 2D np.array, matrix after filtering.
+    """Filter 2D matrix with selected filter.
+
+    Parameters: data        - 2D np.array, matrix to be filtered
+                filter_type - string, filter type
+                filter_par  - (list of) int/float, optional, parameter for low/high pass filter
+                              for low/highpass_avg, it's kernel size in int
+                              for low/highpass_gaussain, it's sigma in float
+                              for double_difference, it's local and regional kernel sizes in int
+    Returns:    data_filt   - 2D np.array, matrix after filtering.
     """
 
     if filter_type == "sobel":
@@ -91,25 +90,24 @@ def filter_data(data, filter_type, filter_par=None):
     return data_filt
 
 
-############################################################
+################################################################################################
 def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par=None, fname_out=None):
-    """Filter 2D matrix with selected filter
-    Inputs:
-        fname       : string, name/path of file to be filtered
-        ds_names    : list of string, datasets of interest
-        filter_type : string, filter type
-        filter_par  : (list of) int/float, optional, parameter for low/high pass filter
-                      for low/highpass_avg, it's kernel size in int
-                      for low/highpass_gaussain, it's sigma in float
-                      for double_difference, it's local and regional kernel sizes in int
-    Output:
-        fname_out   : string, optional, output file name/path
+    """Filter 2D matrix with selected filter.
+
+    Parameters: fname       - string, name/path of file to be filtered
+                ds_names    - list of string, datasets of interest
+                filter_type - string, filter type
+                filter_par  - (list of) int/float, optional, parameter for low/high pass filter
+                              for low/highpass_avg, it's kernel size in int
+                              for low/highpass_gaussain, it's sigma in float
+                              for double_difference, it's local and regional kernel sizes in int
+    Returns:    fname_out   - string, optional, output file name/path
     """
+
     # Info
     filter_type = filter_type.lower()
     atr = readfile.read_attribute(fname)
-    k = atr['FILE_TYPE']
-    msg = 'filtering {} file: {} using {} filter'.format(k, fname, filter_type)
+    msg = 'filtering {} file: {} using {} filter'.format(atr['FILE_TYPE'], fname, filter_type)
 
     if filter_type.endswith('avg'):
         if not filter_par:
@@ -136,13 +134,12 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
 
     # output filename
     if not fname_out:
-        fname_out = '{}_{}{}'.format(os.path.splitext(fname)[0], filter_type,
-                                     os.path.splitext(fname)[1])
+        fbase, fext = os.path.splitext(fname)
+        fname_out = f'{fbase}_{filter_type}{fext}'
 
     # filtering file
     ds_all = readfile.get_dataset_list(fname)
-    if not ds_names:
-        ds_names = ds_all
+    ds_names = ds_names if ds_names else ds_all
     ds_skips = list(set(ds_all) - set(ds_names))
 
     maxDigit = max([len(i) for i in ds_names])
@@ -151,21 +148,36 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
     for ds_name in ds_skips:
         dsDict[ds_name] = readfile.read(fname, datasetName=ds_name, print_msg=False)[0]
 
+    # loop over each dataset
     for ds_name in ds_names:
         msg = 'filtering {d:<{w}} from {f} '.format(d=ds_name, w=maxDigit, f=os.path.basename(fname))
         # read
         data = readfile.read(fname, datasetName=ds_name, print_msg=False)[0]
+
         # filter
         if len(data.shape) == 3:
+            # 3D matrix
             num_loop = data.shape[0]
             for i in range(num_loop):
                 data[i, :, :] = filter_data(data[i, :, :], filter_type, filter_par)
                 sys.stdout.write('\r{} {}/{} ...'.format(msg, i+1, num_loop))
                 sys.stdout.flush()
             print('')
+
         else:
+            # 2D matrix
             data = filter_data(data, filter_type, filter_par)
-        # write
+
+        # save
         dsDict[ds_name] = data
-    writefile.write(dsDict, out_file=fname_out, metadata=atr, ref_file=fname)
+
+    # write to file
+    writefile.write(
+        dsDict,
+        out_file=fname_out,
+        metadata=atr,
+        ref_file=fname,
+    )
+
+    print('Done.')
     return fname_out

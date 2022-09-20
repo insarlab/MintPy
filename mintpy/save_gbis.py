@@ -6,12 +6,12 @@
 
 
 import os
+import warnings       # suppress UserWarning from matplotlib
+warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
+
 import numpy as np
 import scipy.io as sio
 import matplotlib.pyplot as plt
-# suppress UserWarning from matplotlib
-import warnings
-warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 
 from mintpy.objects import sensor
 from mintpy.utils import ptime, readfile, utils as ut
@@ -83,8 +83,8 @@ def read_data(inps):
         # import geoid module
         try:
             import geoid
-        except:
-            raise ImportError('Can not import geoidheight!')
+        except ImportError:
+            raise ImportError('Can not import geoidheight (https://github.com/vandry/geoidheight.git)! ')
 
         # calculate offset and correct height
         egm_file = os.path.join(os.path.dirname(geoid.__file__), 'geoids/egm2008-1.pgm')
@@ -171,3 +171,23 @@ def save2mat(inps):
     # save to mat file
     sio.savemat(inps.outfile, mdict, long_field_names=True)
     print('save to file: {}'.format(os.path.abspath(inps.outfile)))
+
+
+##############################################################################
+def run_save_gbis(inps):
+
+    # matplotlib backend setting
+    if not inps.disp_fig:
+        plt.switch_backend('Agg')
+
+    inps.file = os.path.abspath(inps.file)
+
+    read_data(inps)
+    plot_data(inps)
+    save2mat(inps)
+
+    if inps.disp_fig:
+        print('showing...')
+        plt.show()
+
+    return

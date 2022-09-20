@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -54,14 +54,18 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from mintpy.utils import readfile
-
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # default filenames
-    ts_dir = os.path.dirname(inps.ts_file)
+    # import
+    from mintpy.utils import readfile
+
+    # check
     meta = readfile.read_attribute(inps.ts_file)
+
+    # default: input file paths
+    ts_dir = os.path.dirname(inps.ts_file)
     if os.path.basename(inps.ts_file).startswith('geo_'):
         tcoh_file = os.path.join(ts_dir, 'geo_temporalCoherence.h5')
         scoh_file = os.path.join(ts_dir, 'geo_avgSpatialCoh.h5')
@@ -71,24 +75,20 @@ def cmd_line_parse(iargs=None):
         tcoh_file = os.path.join(ts_dir, 'temporalCoherence.h5')
         scoh_file = os.path.join(ts_dir, 'avgSpatialCoh.h5')
         mask_file = os.path.join(ts_dir, 'maskTempCoh.h5')
+        geom_file = os.path.join(ts_dir, 'inputs/geometry')
+        geom_file += 'Geo.h5' if 'Y_FIRST' in meta.keys() else 'Radar.h5'
 
-        if 'Y_FIRST' in meta.keys():
-            geom_file = os.path.join(ts_dir, 'inputs/geometryGeo.h5')
-        else:
-            geom_file = os.path.join(ts_dir, 'inputs/geometryRadar.h5')
+    inps.tcoh_file = inps.tcoh_file if inps.tcoh_file else tcoh_file
+    inps.scoh_file = inps.scoh_file if inps.scoh_file else scoh_file
+    inps.mask_file = inps.mask_file if inps.mask_file else mask_file
+    inps.geom_file = inps.geom_file if inps.geom_file else geom_file
 
-
-    if not inps.tcoh_file:  inps.tcoh_file = tcoh_file
-    if not inps.scoh_file:  inps.scoh_file = scoh_file
-    if not inps.mask_file:  inps.mask_file = mask_file
-    if not inps.geom_file:  inps.geom_file = geom_file
-
-    # check file existence
+    # check: existence of input files
     for fname in [inps.ts_file, inps.tcoh_file, inps.scoh_file, inps.mask_file, inps.geom_file]:
         if not os.path.isfile(fname):
             raise FileNotFoundError(fname)
 
-    # --subset mode
+    # check: --subset mode in conflict with input file in radar-coordinates
     if inps.subset and 'Y_FIRST' not in meta.keys():
         raise SystemExit('ERROR: --subset mode is NOT supported for time-series in radar-coordinates!')
 
@@ -97,34 +97,14 @@ def cmd_line_parse(iargs=None):
 
 ################################################################
 def main(iargs=None):
-    from mintpy.save_hdfeos5 import read_template2inps, prep_metadata, get_output_filename, write_hdf5_file
-
+    # parse
     inps = cmd_line_parse(iargs)
-    inps, template = read_template2inps(inps.template_file, inps)
 
-    # Prepare Metadata
-    meta = prep_metadata(
-        ts_file=inps.ts_file,
-        geom_file=inps.geom_file,
-        template=template,
-        print_msg=True)
+    # import
+    from mintpy.save_hdfeos5 import run_save_hdfeos5
 
-    # Get output filename
-    out_file = get_output_filename(
-        metadata=meta,
-        suffix=inps.suffix,
-        update_mode=inps.update,
-        subset_mode=inps.subset)
-
-    # Open HDF5 File
-    write_hdf5_file(
-        metadata=meta,
-        out_file=out_file,
-        ts_file=inps.ts_file,
-        tcoh_file=inps.tcoh_file,
-        scoh_file=inps.scoh_file,
-        mask_file=inps.mask_file,
-        geom_file=inps.geom_file)
+    # run
+    run_save_hdfeos5(inps)
 
 
 ################################################################

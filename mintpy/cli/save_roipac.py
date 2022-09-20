@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -49,49 +49,49 @@ def create_parser(subparsers=None):
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('file', help='HDF5 file to be converted.')
-    parser.add_argument('dset', nargs='?', help='date/date12 of timeseries, or date12 of interferograms to be converted')
+    parser.add_argument('dset', nargs='?',
+                        help='date/date12 of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-o', '--output', dest='outfile', help='output file name.')
     parser.add_argument('-m','--mask', dest='mask_file', nargs='+', help='mask file')
     parser.add_argument('--ref-yx', dest='ref_yx', type=int, nargs=2, help='custom reference pixel in y/x')
-    parser.add_argument('--ref-lalo', dest='ref_lalo', type=float, nargs=2, help='custom reference pixel in lat/lon')
-    parser.add_argument('--keep-all-metadata', dest='keepAllMetadata', action='store_true', help='Do not clean the metadata as ROIPAC format')
+    parser.add_argument('--ref-lalo', dest='ref_lalo', type=float, nargs=2,
+                        help='custom reference pixel in lat/lon')
+    parser.add_argument('--keep-all-metadata', dest='keepAllMetadata', action='store_true',
+                        help='Do not clean the metadata as ROIPAC format')
     return parser
 
 
 def cmd_line_parse(iargs=None):
-    from mintpy.objects import timeseries
-    from mintpy.utils import readfile
-
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # default dset
-    if not inps.dset:
-        atr = readfile.read_attribute(inps.file)
-        k = atr['FILE_TYPE']
-        if k in ['ifgramStack', 'HDFEOS']:
-            raise Exception("NO input dataset! It's required for {} file".format(k))
+    # import
+    from mintpy.objects import timeseries
+    from mintpy.utils import readfile
 
-        #for time-series
-        if k == 'timeseries':
+    # default: dset
+    if not inps.dset:
+        ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
+        if ftype == 'timeseries':
             inps.dset = timeseries(inps.file).get_date_list()[-1]
             print('NO date specified >>> continue with the last date: {}'.format(inps.dset))
+        elif ftype in ['ifgramStack', 'HDFEOS']:
+            raise Exception("NO input dataset! It's required for {} file".format(ftype))
+
     return inps
 
 
 ##############################################################################
 def main(iargs=None):
-    from mintpy.utils import writefile
-    from mintpy.save_roipac import read_data, clean_metadata4roipac
-
+    # parse
     inps = cmd_line_parse(iargs)
 
-    data, atr, out_file = read_data(inps)
+    # import
+    from mintpy.save_roipac import run_save_roipac
 
-    if not inps.keepAllMetadata:
-        atr = clean_metadata4roipac(atr)
-
-    writefile.write(data, out_file=out_file, metadata=atr)
+    # run
+    run_save_roipac(inps)
 
 
 ##########################################################################

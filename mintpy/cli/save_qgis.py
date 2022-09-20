@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Piyush Agram, Aug 2022        #
 ############################################################
 
 
@@ -14,8 +14,8 @@ from mintpy.utils.arg_utils import create_argument_parser
 EXAMPLE = """example:
   save_qgis.py timeseries_ERA5_ramp_demErr.h5 -g inputs/geometrygeo.h5
   save_qgis.py timeseries_ERA5_ramp_demErr.h5 -g inputs/geometryRadar.h5
-  save_qgis.py geo/geo_timeseries_ERA5_ramp_demErr.h5 -g geo/geo_geometryRadar.h5
   save_qgis.py timeseries_ERA5_ramp_demErr.h5 -g inputs/geometryRadar.h5 -b 200 150 400 350
+  save_qgis.py geo/geo_timeseries_ERA5_ramp_demErr.h5 -g geo/geo_geometryRadar.h5
 """
 
 def create_parser(subparsers=None):
@@ -44,30 +44,24 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # --outshp option
+    # default: --outshp option
     if not inps.shp_file:
-        inps.shp_file = os.path.splitext(inps.ts_file)[0] + '.shp'
+        fbase = os.path.splitext(inps.ts_file)[0]
+        inps.shp_file = fbase + '.shp'
 
     return inps
 
 
 #########################################################################################
 def main(iargs=None):
-    from mintpy.save_qgis import read_bounding_box, gather_files, write_shape_file
-
-    # Parse command line
+    # parse
     inps = cmd_line_parse(iargs)
 
-    # Read bounding box
-    box = read_bounding_box(pix_box=inps.pix_bbox,
-                            geo_box=inps.geo_bbox,
-                            geom_file=inps.geom_file)
+    # import
+    from mintpy.save_qgis import run_save_qgis
 
-    # Gather data files
-    fDict = gather_files(inps.ts_file, inps.geom_file)
-
-    # Write shape file
-    write_shape_file(fDict, inps.shp_file, box=box)
+    # run
+    run_save_qgis(inps)
 
 
 #########################################################################################

@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -12,12 +12,12 @@ from mintpy.utils.arg_utils import create_argument_parser
 
 ##############################################################################
 REFERENCE = """references:
-  Bagnardi, M., and A. Hooper (2018), Inversion of Surface Deformation Data for Rapid Estimates of Source 
-  Parameters and Uncertainties: A Bayesian Approach, Geochemistry, Geophysics, Geosystems, 19, 
-  doi:10.1029/2018GC007585.
-
-  Yunjun, Z., Amelung, F., & Aoki, Y. (2021), Imaging the hydrothermal system of Kirishima volcanic complex 
-  with L-band InSAR time series, Geophysical Research Letters, 48(11), e2021GL092879. doi:10.1029/2021GL092879
+  Bagnardi, M., and A. Hooper (2018), Inversion of Surface Deformation Data for Rapid Estimates of
+    Source Parameters and Uncertainties: A Bayesian Approach, Geochemistry, Geophysics, Geosystems,
+    19, doi:10.1029/2018GC007585.
+  Yunjun, Z., Amelung, F., & Aoki, Y. (2021), Imaging the hydrothermal system of Kirishima volcanic
+    complex with L-band InSAR time series, Geophysical Research Letters, 48(11), e2021GL092879.
+    doi:10.1029/2021GL092879
 """
 
 EXAMPLE = """example:
@@ -60,30 +60,19 @@ def cmd_line_parse(iargs=None):
     inps.argv = iargs if iargs else sys.argv[1:]
     print('{} {}'.format(os.path.basename(__file__), ' '.join(inps.argv)))
 
-    inps.file = os.path.abspath(inps.file)
-
-    # Backend setting
-    if not inps.disp_fig:
-        import matplotlib.pyplot as plt
-        plt.switch_backend('Agg')
-
     return inps
 
 
 ##############################################################################
 def main(iargs=None):
-    import matplotlib.pyplot as plt
-    from mintpy.save_gbis import read_data, plot_data, save2mat
-
+    # parse
     inps = cmd_line_parse(iargs)
 
-    read_data(inps)
-    plot_data(inps)
-    save2mat(inps)
+    # import
+    from mintpy.save_gbis import run_save_gbis
 
-    if inps.disp_fig:
-        print('showing...')
-        plt.show()
+    # run
+    run_save_gbis(inps)
 
 
 ##############################################################################

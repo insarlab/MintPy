@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -57,7 +57,7 @@ def create_parser(subparsers=None):
                         help='output one point per {step} pixels, to reduce file size (default: %(default)s).\n'
                              'For file in radar-coordinate ONLY.')
 
-    # Data
+    # data
     parser.add_argument('-v','--vlim', dest='vlim', nargs=2, metavar=('MIN', 'MAX'), type=float,
                         help='Y/value limits for plotting.')
     parser.add_argument('-u', dest='disp_unit', metavar='UNIT', help='unit for display.')
@@ -70,7 +70,7 @@ def create_parser(subparsers=None):
                         default=[-1.*math.pi, math.pi], metavar=('MIN', 'MAX'),
                         help='range of one cycle after wrapping, default: [-pi, pi]')
 
-    # Figure
+    # figure
     fig = parser.add_argument_group('Figure')
     fig.add_argument('--dpi', dest='fig_dpi', metavar='NUM', type=int, default=600,
                      help='Figure DPI (dots per inch). Default: 600')
@@ -84,7 +84,7 @@ def create_parser(subparsers=None):
     fig.add_argument('--cbar-bin-num', dest='cbar_bin_num', metavar='NUM', type=int,
                      help='Colorbar bin number (default: %(default)s).')
 
-    # Reference Pixel
+    # reference pixel
     ref = parser.add_argument_group('Reference Pixel')
     ref.add_argument('--noreference', dest='disp_ref_pixel', action='store_false',
                      help='do not show reference point')
@@ -102,43 +102,50 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
+    # parse
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
+
+    # import
     from mintpy.objects import timeseriesKeyNames
     from mintpy.utils import readfile, utils as ut
 
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
+    # check
     inps.work_dir = os.path.abspath(os.path.dirname(inps.file))
-
     atr = readfile.read_attribute(inps.file)
 
-    # Check 1: file in radar coord
+    # default + check: geom_file for file in radar coord
     if 'Y_FIRST' not in atr.keys():
         geom_ds_list = ['latitude', 'longitude']
+        # default geom_file
         if not inps.geom_file:
             inps.geom_file = ut.get_geometry_file(
                 geom_ds_list,
                 work_dir=inps.work_dir,
-                coord='radar',
-            )
+                coord='radar')
+        # check existence
         if not inps.geom_file or not os.path.isfile(inps.geom_file):
-            raise FileNotFoundError(f'No geometry file with {geom_ds_list} in radar coord found!')
+            msg = f'No geometry file with {geom_ds_list} in radar coord found!'
+            raise FileNotFoundError(msg)
 
-    # Check 2: dset is required for multi_dataset/group files
-    if not inps.dset and atr['FILE_TYPE'] in ['ifgramStack'] + timeseriesKeyNames:
-        raise Exception("No date/date12 input.\nIt's required for {} file".format(atr['FILE_TYPE']))
-
-    # Backend setting
-    from matplotlib import pyplot as plt
-    plt.switch_backend('Agg')
+    # check: dset option (required for timeseries and ifgramStack files)
+    ftype = atr['FILE_TYPE']
+    if not inps.dset and ftype in timeseriesKeyNames + ['ifgramStack']:
+        raise Exception(f'No date/date12 specified for {ftype} file!')
 
     return inps
 
 
 ############################################################
 def main(iargs=None):
-    from mintpy.save_kmz import save_kmz
+    # parse
     inps = cmd_line_parse(iargs)
-    return save_kmz(inps)
+
+    # import
+    from mintpy.save_kmz import run_save_kmz
+
+    # run
+    run_save_kmz(inps)
 
 
 #######################################################

@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -71,85 +71,48 @@ def create_parser(subparsers=None):
 
 def cmd_line_parse(iargs=None):
     """Command line parser."""
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # import
+    from matplotlib import pyplot as plt
+
+    # check
     inps.mintpy_dir = os.path.dirname(inps.ts_file)
 
-    # --geom
+    # check: --save/nodisplay options
+    if not inps.disp_fig:
+        inps.save_fig = True
+
+    if not inps.disp_fig:
+        plt.switch_backend('Agg')
+
+    # default + check: --geom option
     if not inps.geom_file:
         inps.geom_file = os.path.join(inps.mintpy_dir, 'inputs', 'geometryRadar.h5')
     if not os.path.isfile(inps.geom_file):
         raise FileNotFoundError(f'No geometry file found in: {inps.geom_file}!')
 
-    # --mask
+    # default + check: --mask option
     if not inps.mask_file:
         inps.mask_file = os.path.join(inps.mintpy_dir, 'maskResInv.h5')
     if not os.path.isfile(inps.mask_file):
         inps.mask_file = None
-
-    # --save/nodisplay
-    if not inps.disp_fig:
-        inps.save_fig = True
-    if not inps.disp_fig:
-        from matplotlib import pyplot as plt
-        plt.switch_backend('Agg')
 
     return inps
 
 
 ####################################################################################
 def main(iargs=None):
-    from mintpy.s1ab_range_bias import estimate_s1ab_range_bias, write_s1ab_bias_file, correct_s1ab_range_bias, plot_s1ab_range_bias_est
-    
+    # parse
     inps = cmd_line_parse(iargs)
 
-    # default bias file path
-    inps.bias_file = os.path.join(os.path.dirname(inps.geom_file), 'S1Bias.h5')
+    # import
+    from mintpy.s1ab_range_bias import run_s1ab_range_bias
 
-    # calculate the S1A/B range bias
-    if inps.action == 'compute':
-        if inps.bias_method == 'hardwired':
-            # option 1 - use the hardwired value from section VII-A in Yunjun et al. (2022)
-            bias_list = [0.087, 0.106, 0.123]   # m
-            print('Used hardwired S1A/B range bias values from Yunjun et al. (2022):')
-            print('IW1 : {:.3f} m'.format(bias_list[0]))
-            print('IW2 : {:.3f} m'.format(bias_list[1]))
-            print('IW3 : {:.3f} m'.format(bias_list[2]))
-
-        else:
-            # option 2 - estimate from the time series of its dataset itself
-            # estimate optimal (median) value for each subswath from SenDT156
-            bias_list, bias_est, mask_list = estimate_s1ab_range_bias(
-                ts_file=inps.ts_file,
-                mask_file=inps.mask_file,
-                safe_list_file=inps.safe_list_file)
-
-            # plot the estimation result
-            if bias_list:
-                plot_s1ab_range_bias_est(
-                    bias_list,
-                    bias_est,
-                    mask_list,
-                    out_dir=os.path.dirname(inps.ts_file),
-                    save_fig=inps.save_fig,
-                    disp_fig=inps.disp_fig)
-
-        # write S1Bias.h5 file
-        if bias_list:
-            write_s1ab_bias_file(
-                bias_file=inps.bias_file,
-                bias_list=bias_list,
-                geom_file=inps.geom_file,
-                force=inps.force)
-
-    # correct time series range offset file
-    elif inps.action == 'correct':
-        correct_s1ab_range_bias(
-            ts_file=inps.ts_file,
-            bias_file=inps.bias_file,
-            ts_cor_file=inps.ts_cor_file,
-            safe_list_file=inps.safe_list_file)
+    # run
+    run_s1ab_range_bias(inps)
 
 
 ####################################################################################

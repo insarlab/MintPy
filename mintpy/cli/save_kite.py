@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Marin Govorcin, Aug 2022      #
 ############################################################
 
 
@@ -49,6 +49,7 @@ def create_parser(subparsers=None):
                         help='mask file, or run mask.py to mask the input file beforehand.')
     parser.add_argument('-o', '--output', dest='outfile', type=str,
                         help='output filename')
+
     parser = arg_utils.add_subset_argument(parser)
     return parser
 
@@ -56,78 +57,19 @@ def create_parser(subparsers=None):
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-
     return inps
 
 
 #########################################################################################################
 def main(iargs=None):
-    import numpy as np
-    from mintpy import subset
-    from mintpy.utils import ptime, readfile, attribute
-    from mintpy.save_kite import mintpy2kite
-
+    # parse
     inps = cmd_line_parse(iargs)
 
-    print('\n-------------------READ INPUTS -------------------')
-    print('Read metadata from file: {}'.format(inps.file))
-    attr = readfile.read_attribute(inps.file)
+    # import
+    from mintpy.save_kite import run_save_kite
 
-    #Extract subset if defined
-    inps.pix_box, inps.geo_box = subset.subset_input_dict2box(vars(inps), attr)
-
-    # output filename
-    if not inps.outfile:
-        inps.outfile = attr['PROJECT_NAME']
-
-    # date1/2
-    if attr['FILE_TYPE'] in ['timeseries', 'HDFEOS']:
-        date1, date2 = inps.dset.split('_')
-        inps.dset = date2
-
-    elif attr['FILE_TYPE'] == 'ifgramStack':
-        date1, date2 = inps.dset.split('-')[1].split('_')
-
-    else:
-        # velocity, unw
-        date1, date2 = ptime.yyyymmdd(attr['DATE12'].replace('_','-').split('-'))
-        if inps.dset.startswith('step'):
-            date1 = inps.dset.split('step')[-1]
-            date2 = date1
-    print('First  InSAR date: {}'.format(date1))
-    print('Second InSAR date: {}'.format(date2))
-
-    # read data
-    print('Read {} from file: {}'.format(inps.dset, inps.file))
-    dis, attr = readfile.read(inps.file, datasetName=inps.dset, box=inps.pix_box)
-
-    if attr['FILE_TYPE'] == 'timeseries':
-        print('Read {} from file: {}'.format(date1, inps.file))
-        dis -= readfile.read(inps.file, datasetName=date1, box=inps.pix_box)[0]
-
-    # convert radians to meters
-    if attr['UNIT'] == 'radian':
-        dis *= (float(attr['WAVELENGTH']) / (-4*np.pi))
-
-    # mask data
-    if inps.mask_file is not None:
-        mask = readfile.read(inps.mask_file, box=inps.pix_box)[0]
-        print('Set data to NaN for pixels with zero value in file: {}'.format(inps.mask_file))
-        dis[mask==0] = np.nan
-
-    # read geometry incidence / azimuth angle
-    print('\nread incidence / azimuth angle from file: {}'.format(inps.geom_file))
-    inc_angle = readfile.read(inps.geom_file, datasetName='incidenceAngle', box=inps.pix_box)[0]
-    az_angle = readfile.read(inps.geom_file, datasetName='azimuthAngle', box=inps.pix_box)[0]
-    print('Mean satellite incidence angle: {0:.2f}°'.format(np.nanmean(inc_angle)))
-    print('Mean satellite heading   angle: {0:.2f}°\n'.format(90 - np.nanmean(az_angle)))
-
-    # Update attributes
-    if inps.subset_lat is not None or inps.subset_x is not None:
-        attr = attribute.update_attribute4subset(attr, inps.pix_box)
-
-    # create kite container
-    mintpy2kite(dis, attr, date1, date2, inc_angle, az_angle, out_file=inps.outfile)
+    # run
+    run_save_kite(inps)
 
 
 #########################################################################################################

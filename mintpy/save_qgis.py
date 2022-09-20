@@ -218,3 +218,22 @@ def write_shape_file(fDict, shp_file, box=None):
 
     print('finished writing to file: {}'.format(shp_file))
     return shp_file
+
+
+#########################################################################################
+def run_save_qgis(inps):
+
+    # Read bounding box
+    box = read_bounding_box(
+        pix_box=inps.pix_bbox,
+        geo_box=inps.geo_bbox,
+        geom_file=inps.geom_file,
+    )
+
+    # Gather data files
+    fDict = gather_files(inps.ts_file, inps.geom_file)
+
+    # Write shape file
+    write_shape_file(fDict, inps.shp_file, box=box)
+
+    return

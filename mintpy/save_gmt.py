@@ -6,6 +6,7 @@
 # Modified from _gmt.py, GIANT v1.0, Caltech.
 
 
+from mintpy.utils import readfile, plot as pp
 import numpy as np
 from scipy.io import netcdf
 
@@ -13,6 +14,7 @@ from scipy.io import netcdf
 ####################################################################################
 def write_gmt_simple(lons, lats, z, fname, title='default', name='z', scale=1.0, offset=0, units='meters'):
     """Writes a simple GMT grd file with one array.
+
     This is based on the gdal2grd.py script found at:
         http://http://www.vso.cape.com/~nhv/files/python/gdal/gdal2grd.py
 
@@ -72,6 +74,7 @@ def write_gmt_simple(lons, lats, z, fname, title='default', name='z', scale=1.0,
     fid.variables['dimension'][:] = z.shape[::-1]
     fid.variables['z'][:] = np.flipud(z).flatten()
     fid.close()
+
     return fname
     ############################################################
     # Program is part of GIAnT v1.0                            #
@@ -80,6 +83,7 @@ def write_gmt_simple(lons, lats, z, fname, title='default', name='z', scale=1.0,
     ############################################################
 
 
+####################################################################################
 def get_geo_lat_lon(atr):
     X_FIRST = float(atr['X_FIRST'])
     Y_FIRST = float(atr['Y_FIRST'])
@@ -87,31 +91,51 @@ def get_geo_lat_lon(atr):
     Y_STEP = float(atr['Y_STEP'])
     W = int(atr['WIDTH'])
     L = int(atr['LENGTH'])
-    Y_END = Y_FIRST + L*Y_STEP
-    X_END = X_FIRST + W*X_STEP
+    Y_END = Y_FIRST + L * Y_STEP
+    X_END = X_FIRST + W * X_STEP
 
     X = np.linspace(X_FIRST, X_END, W)
     Y = np.linspace(Y_FIRST, Y_END, L)
-    #XI,YI = np.meshgrid(X,Y)
 
     return Y, X
 
 
-def write_grd_file(data, atr, fname_out=None):
+def write_grd_file(data, atr, out_file=None):
     """Write GMT .grd file for input data matrix, using giant._gmt module.
-    Inputs:
-        data - 2D np.array in int/float, data matrix to write
-        atr  - dict, attributes of input data matrix
-        fname_out - string, output file name
-    Output:
-        fname_out - string, output file name
+    Parameters: data     - 2D np.ndarray in int/float, data matrix to write
+                atr      - dict, attributes of input data matrix
+                out_file - str, output file name
+    Returns:    out_file - str, output file name
     """
     # Get 1D array of lats and lons
     lats, lons = get_geo_lat_lon(atr)
 
     # writing
-    print('writing >>> '+fname_out)
-    write_gmt_simple(lons, np.flipud(lats), np.flipud(data), fname_out,
-                     title='default', name=atr['FILE_TYPE'],
-                     scale=1.0, offset=0, units=atr['UNIT'])
-    return fname_out
+    print('writing >>> '+out_file)
+    write_gmt_simple(
+        lons=lons,
+        lats=np.flipud(lats),
+        z=np.flipud(data),
+        fname=out_file,
+        name=atr['FILE_TYPE'],
+        units=atr['UNIT'],
+    )
+
+    return out_file
+
+
+####################################################################################
+def run_save_gmt(inps):
+    # read data
+    data, atr = readfile.read(inps.file, datasetName=inps.dset) 
+
+    # default output file name
+    if not inps.outfile:
+        outbase = pp.auto_figure_title(inps.file, inps.dset, vars(inps))
+        inps.outfile = '{}.grd'.format(outbase)
+
+    # write GMT *.grd file
+    write_grd_file(data, atr, inps.outfile)
+
+    print('Done.')
+    return

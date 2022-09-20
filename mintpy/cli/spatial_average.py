@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -14,7 +14,6 @@ EXAMPLE = """example:
   spatial_average.py inputs/ifgramStack.h5  -d coherence -m maskConnComp.h5
   spatial_average.py timeseries_ERA5_demErr.h5 -m maskTempCoh.h5
 """
-
 
 def create_parser(subparsers=None):
     synopsis = 'Calculate average in space'
@@ -41,9 +40,14 @@ def cmd_line_parse(iargs=None):
 
 #############################  Main Function  ################################
 def main(iargs=None):
-    from mintpy.spatial_average import spatial_average
+    # parse
     inps = cmd_line_parse(iargs)
-    return spatial_average(inps)
+
+    # import
+    from mintpy.spatial_average import run_spatial_average
+
+    # run
+    run_spatial_average(inps)
 
 
 ##############################################################################

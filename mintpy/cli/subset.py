@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -44,6 +44,7 @@ def create_parser(subparsers=None):
 
     parser.add_argument('file', nargs='+', help='File(s) to subset/crop')
 
+    # subset range
     parser.add_argument('-x','--sub-x','--subset-x', dest='subset_x', type=int, nargs=2,
                         help='subset range in x/cross-track/column direction')
     parser.add_argument('-y','--sub-y','--subset-y', dest='subset_y', type=int, nargs=2,
@@ -64,6 +65,7 @@ def create_parser(subparsers=None):
                              'For geocoded file(s) only'
                              'A convenient way to get rid of extra wide space due to "too large" DEM.\n\n')
 
+    # extra options
     parser.add_argument('--outfill', dest='fill_value', type=float,
                         help="fill subset area out of data coverage with input value. i.e. \n"
                              "np.nan, 0, 1000, ... \n"
@@ -85,27 +87,32 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from mintpy.utils import utils as ut
-
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # import
+    from mintpy.utils import utils1 as ut
+
+    # default: disable --output option for multiple input files
     inps.file = ut.get_file_list(inps.file)
-    #print('number of input files: ({})\n{}'.format(len(inps.file), inps.file))
-    if len(inps.file) > 1:
+    if len(inps.file) > 1 and inps.outfile:
         inps.outfile = None
+        print('WARNING: disable --output option for multiple input files.')
 
     return inps
 
 
 ###########################################################################################
 def main(iargs=None):
-    from mintpy.subset import subset_file, read_aux_subset2inps
+    # parse
     inps = cmd_line_parse(iargs)
-    inps = read_aux_subset2inps(inps)
-    for fname in inps.file:
-        print('-'*30)
-        subset_file(fname, vars(inps), out_file=inps.outfile)
+
+    # import
+    from mintpy.subset import run_subset
+
+    # run
+    run_subset(inps)
 
 
 ###########################################################################

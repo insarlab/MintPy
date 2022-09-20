@@ -6,12 +6,12 @@
 
 
 import os
+import warnings    # suppress UserWarning from matplotlib
+warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
+
 import numpy as np
 import scipy.io as sio
 import matplotlib.pyplot as plt
-# suppress UserWarning from matplotlib
-import warnings
-warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 
 from mintpy.utils import writefile
 

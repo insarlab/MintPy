@@ -6,17 +6,14 @@
 
 
 import os
-from lxml import etree
-from zipfile import ZipFile
 import shutil
+from zipfile import ZipFile
+
 import numpy as np
 import matplotlib as mpl
+from lxml import etree
 from matplotlib import pyplot as plt, patches
-
-try:
-    from pykml.factory import KML_ElementMaker as KML
-except ImportError:
-    raise ImportError('Can not import pykml!')
+from pykml.factory import KML_ElementMaker as KML
 
 import mintpy
 from mintpy.objects import timeseries, deramp
@@ -40,25 +37,9 @@ def get_all_file_paths(directory):
     return file_paths
 
 
-def get_aux_filename(inps):
-    """Get auxliary files' default filename"""
-    # path feature of time-series file
-    ts_dir = os.path.dirname(inps.ts_file)
-    ts_prefix = os.path.basename(inps.ts_file).split('timeseries')[0]
-
-    if not inps.vel_file:
-        inps.vel_file = os.path.join(ts_dir, '{}velocity.h5'.format(ts_prefix))
-    if not inps.tcoh_file:
-        inps.tcoh_file = os.path.join(ts_dir, '{}temporalCoherence.h5'.format(ts_prefix))
-    if not inps.mask_file:
-        inps.mask_file = os.path.join(ts_dir, '{}maskTempCoh.h5'.format(ts_prefix))
-    return inps
-
-
 def flatten_lat_lon(box, ts_obj, coords=None):
     if coords is None:
         lats, lons = ut.get_lat_lon(ts_obj.metadata, box=box)
-
     lats = sorted(lats.flatten())
     lons = sorted(lons.flatten())
     return lats, lons
@@ -95,17 +76,17 @@ def split_into_sub_boxes(ds_shape, step=20, num_pixel=50**2, print_msg=True):
     return box_list
 
 
-def get_boxes4deforming_area(vel_file, mask_file, step=2, num_pixel=30**2, min_percentage=0.2,
+def get_boxes4deforming_area(vel_file, mask_file, step=2, num_pixel=30**2, min_perc=0.2,
                              cutoff=3, ramp_type='quadratic', display=False):
     """Get list of boxes to cover the deforming areas.
     A pixel is identified as deforming if its velocity exceeds the MAD of the whole image.
-    Parameters: vel_file : str, path of velocity file
-                mask_file : str, path of mask file
-                win_size  : int, length and width of the output box
-                min_percentage : float between 0 and 1, minimum percentage of deforming points in the box
-                ramp_type : str, type of phase ramps to be removed while evaluating the deformation
-                display   : bool, plot the identification result or not
-    Returns:    box_list  : list of t-tuple of int, each indicating (col0, row0, col1, row1)
+    Parameters: vel_file  - str, path of velocity file
+                mask_file - str, path of mask file
+                win_size  - int, length and width of the output box
+                min_perc  - float between 0 and 1, minimum percentage of deforming points in the box
+                ramp_type - str, type of phase ramps to be removed while evaluating the deformation
+                display   - bool, plot the identification result or not
+    Returns:    box_list  - list of t-tuple of int, each indicating (col0, row0, col1, row1)
     """
     win_size = int(np.sqrt(num_pixel) * step)
     print('-'*30)
@@ -124,7 +105,7 @@ def get_boxes4deforming_area(vel_file, mask_file, step=2, num_pixel=30**2, min_p
 
     # get deforming boxes
     box_list = []
-    min_num = min_percentage * (win_size ** 2)
+    min_num = min_perc * (win_size ** 2)
     length, width = vel.shape
     num_row = np.ceil(length / win_size).astype(int)
     num_col = np.ceil(width / win_size).astype(int)
@@ -470,6 +451,7 @@ def create_network_link_element(net_link_file, ts_obj):
 
 def generate_network_link(inps, ts_obj, step, lod):
     """Generate the KML.NetworkLink element for one level of details, defined by step and lod"""
+
     net_link_file = os.path.join(inps.kml_data_dir, "{0}by{0}.kml".format(step))
 
     if step <= 0:
@@ -477,12 +459,17 @@ def generate_network_link(inps, ts_obj, step, lod):
         return None
 
     elif step == inps.steps[-1]:
-        box_list = get_boxes4deforming_area(inps.vel_file, inps.mask_file,
-                                            step=inps.steps[-1],
-                                            min_percentage=inps.min_percentage,
-                                            cutoff=inps.cutoff)
+        box_list = get_boxes4deforming_area(
+            inps.vel_file, inps.mask_file,
+            step=inps.steps[-1],
+            min_perc=inps.min_percentage,
+            cutoff=inps.cutoff,
+        )
     else:
-        box_list = split_into_sub_boxes((ts_obj.length, ts_obj.width), step=step)
+        box_list = split_into_sub_boxes(
+            ds_shape=(ts_obj.length, ts_obj.width),
+            step=step,
+        )
 
     region_docs = create_kml_region_document(inps, box_list, ts_obj, step)
 
@@ -494,9 +481,18 @@ def generate_network_link(inps, ts_obj, step, lod):
 
 
 ######################################################################################
-def save_kml_timeseries(inps):
-    kml_root_file = os.path.join(inps.work_dir, '{}_root.kml'.format(inps.outfile_base))
-    kmz_file = os.path.join(inps.work_dir, '{}.kmz'.format(inps.outfile_base))
+def run_save_kmz_timeseries(inps):
+
+    # resource file paths
+    inps.work_dir = os.path.abspath(os.path.dirname(inps.ts_file))
+    inps.cbar_file = os.path.join(inps.work_dir, "google_earth_cbar.png")
+    inps.star_file = os.path.join(inps.work_dir, "star.png")
+    inps.dot_file  = os.path.join(inps.work_dir, "shaded_dot.png")
+    inps.dygraph_file = os.path.join(inps.work_dir, "dygraph-combined.js")
+    inps.kml_data_dir = os.path.join(inps.work_dir, "kml_data")
+
+    kml_root_file = os.path.join(inps.work_dir, f"{inps.outfile_base}_root.kml")
+    kmz_file = os.path.join(inps.work_dir, f"{inps.outfile_base}.kmz")
 
     ## read data
     ts_obj = timeseries(inps.ts_file)
@@ -507,6 +503,7 @@ def save_kml_timeseries(inps):
     print('input data shape in row/col: {}/{}'.format(length, width))
 
     vel = readfile.read(inps.vel_file, datasetName='velocity')[0] * 100.
+
     # Set vmin/max and colormap
     if inps.vlim is None:
         inps.vlim = [np.nanmin(vel), np.nanmax(vel)]
@@ -584,3 +581,5 @@ def save_kml_timeseries(inps):
     print('merged all files to {}'.format(kmz_file))
     print('Done.')
     print('Open {} in Google Earth and play!'.format(kmz_file))
+
+    return

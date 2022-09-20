@@ -9,16 +9,14 @@
 
 import os
 import datetime as dt
+import time
 import warnings
+
 import h5py
 import numpy as np
+import pysolid
 from matplotlib import pyplot as plt
 plt.rcParams.update({'font.size': 12})
-
-try:
-    import pysolid
-except ImportError:
-    raise ImportError('Can not import pysolid! Check https://github.com/insarlab/PySolid.')
 
 from mintpy.objects import timeseries
 from mintpy.objects.resample import resample
@@ -214,8 +212,35 @@ def correct_timeseries(dis_file, set_file, cor_dis_file):
     print('\n------------------------------------------------------------------------------')
     print('correcting relative delay for input time-series using diff.py')
 
+    import mintpy.cli.diff
+
     iargs = [dis_file, set_file, '-o', cor_dis_file]
     print('diff.py', ' '.join(iargs))
-    import mintpy.cli.diff
     mintpy.cli.diff.main(iargs)
     return cor_dis_file
+
+
+###############################################################
+def run_solid_earth_tides(inps):
+    start_time = time.time()
+
+    # calc SET
+    calc_solid_earth_tides_timeseries(
+        ts_file=inps.dis_file,
+        geom_file=inps.geom_file,
+        set_file=inps.set_file,
+        date_wise_acq_time=inps.date_wise_acq_time,
+        update_mode=inps.update_mode,
+        verbose=inps.verbose)
+
+    # correct SET
+    correct_timeseries(
+        dis_file=inps.dis_file,
+        set_file=inps.set_file,
+        cor_dis_file=inps.cor_dis_file)
+
+    # used time
+    m, s = divmod(time.time() - start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
+
+    return

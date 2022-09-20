@@ -199,7 +199,9 @@ def metadata_mintpy2unavco(meta_in, dateList, geom_file):
             unavco_meta['data_footprint'] = ut.snwe_to_wkt_polygon([S, N, W, E])
 
         else:
-            print('WARNING: "data_footprint" is NOT assigned, due to the lack of X/Y_FIRST attributes and latitude/longitde datasets.')
+            msg = 'WARNING: "data_footprint" is NOT assigned, '
+            msg += 'due to the lack of X/Y_FIRST attributes and latitude/longitde datasets.'
+            print(msg)
 
     return unavco_meta
 
@@ -255,25 +257,33 @@ def get_output_filename(metadata, suffix=None, update_mode=False, subset_mode=Fa
 
 def create_hdf5_dataset(group, dsName, data, max_digit=55, compression=COMPRESSION):
     """Create HDF5 dataset and print out message."""
+
     msg = 'create dataset {d:<{w}}'.format(d='{}/{}'.format(group.name, dsName), w=max_digit)
     msg += ' of {t:<10} in size of {s}'.format(t=str(data.dtype), s=data.shape)
     msg += ' with compression={c}'.format(c=compression)
     print(msg)
 
     if data.ndim == 1:
-        dset = group.create_dataset(dsName,
-                                    data=data,
-                                    compression=compression)
+        dset = group.create_dataset(
+            dsName,
+            data=data,
+            compression=compression,
+        )
+
     elif data.ndim == 2:
-        dset = group.create_dataset(dsName,
-                                    data=data,
-                                    chunks=True,
-                                    compression=compression)
+        dset = group.create_dataset(
+            dsName,
+            data=data,
+            chunks=True,
+            compression=compression,
+        )
+
     return dset
 
 
 def write_hdf5_file(metadata, out_file, ts_file, tcoh_file, scoh_file, mask_file, geom_file):
     """Write HDF5 file in HDF-EOS5 format."""
+
     ts_obj = timeseries(ts_file)
     ts_obj.open(print_msg=False)
     dateList = ts_obj.dateList
@@ -372,7 +382,8 @@ def write_hdf5_file(metadata, out_file, ts_file, tcoh_file, scoh_file, mask_file
 
     ##### Group - Write Geometry
     # Required: height, incidenceAngle
-    # Optional: rangeCoord, azimuthCoord, azimuthAngle, slantRangeDistance, waterMask, shadowMask
+    # Optional: rangeCoord, azimuthCoord, azimuthAngle, slantRangeDistance,
+    #           waterMask, shadowMask
     gName = 'HDFEOS/GRIDS/timeseries/geometry'
     print('create group   /{}'.format(gName))
     group = f.create_group(gName)
@@ -413,4 +424,37 @@ def write_hdf5_file(metadata, out_file, ts_file, tcoh_file, scoh_file, mask_file
         f.attrs[key] = value
     f.close()
     print('finished writing to {}'.format(out_file))
+
     return out_file
+
+
+################################################################
+def run_save_hdfeos5(inps):
+
+    inps, template = read_template2inps(inps.template_file, inps)
+
+    # prepare metadata
+    meta = prep_metadata(
+        ts_file=inps.ts_file,
+        geom_file=inps.geom_file,
+        template=template,
+        print_msg=True)
+
+    # get output filename
+    out_file = get_output_filename(
+        metadata=meta,
+        suffix=inps.suffix,
+        update_mode=inps.update,
+        subset_mode=inps.subset)
+
+    # write HDF5 File
+    write_hdf5_file(
+        metadata=meta,
+        out_file=out_file,
+        ts_file=inps.ts_file,
+        tcoh_file=inps.tcoh_file,
+        scoh_file=inps.scoh_file,
+        mask_file=inps.mask_file,
+        geom_file=inps.geom_file)
+
+    return

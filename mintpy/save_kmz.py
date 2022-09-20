@@ -9,15 +9,12 @@
 
 import os
 import shutil
+from zipfile import ZipFile
+
 import numpy as np
 from lxml import etree
-from zipfile import ZipFile
 from matplotlib import pyplot as plt, colors, colorbar, ticker
-
-try:
-    from pykml.factory import KML_ElementMaker as KML
-except ImportError:
-    raise ImportError('Can not import pykml!')
+from pykml.factory import KML_ElementMaker as KML
 
 import mintpy
 from mintpy.utils import (
@@ -417,10 +414,14 @@ def write_kmz_placemark(data, meta, out_file, geom_file, inps):
 
 
 ############################################################
-def save_kmz(inps):
-    # 1. Read metadata and data
-    k = readfile.read_attribute(inps.file)['FILE_TYPE']
-    if k == 'timeseries' and inps.dset and '_' in inps.dset:
+def run_save_kmz(inps):
+
+    # matplotlib backend setting
+    plt.switch_backend('Agg')
+
+    ## 1. Read metadata and data
+    ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
+    if ftype == 'timeseries' and inps.dset and '_' in inps.dset:
         inps.ref_date, inps.dset = inps.dset.split('_')
     else:
         inps.ref_date = None
@@ -436,12 +437,15 @@ def save_kmz(inps):
 
     # read data
     data = readfile.read(inps.file, datasetName=inps.dset, box=inps.pix_box)[0]
-    if k == 'timeseries' and inps.ref_date:
+    if ftype == 'timeseries' and inps.ref_date:
         data -= readfile.read(inps.file, datasetName=inps.ref_date, box=inps.pix_box)[0]
 
     # mask
-    mask = pp.read_mask(inps.file, mask_file=inps.mask_file,
-                        datasetName=inps.dset, box=inps.pix_box)[0]
+    mask = pp.read_mask(
+        inps.file,
+        mask_file=inps.mask_file,
+        datasetName=inps.dset,
+        box=inps.pix_box)[0]
     if mask is not None:
         print('masking out pixels with zero value in file: {}'.format(inps.mask_file))
         data[mask == 0] = np.nan
@@ -451,20 +455,18 @@ def save_kmz(inps):
     del mask
 
     # Data Operation - Display Unit & Rewrapping
-    (data,
-     inps.disp_unit,
-     inps.disp_scale,
-     inps.wrap) = pp.scale_data4disp_unit_and_rewrap(data,
-                                                     metadata=atr,
-                                                     disp_unit=inps.disp_unit,
-                                                     wrap=inps.wrap,
-                                                     wrap_range=inps.wrap_range)
+    data, inps.disp_unit, inps.disp_scale, inps.wrap = pp.scale_data4disp_unit_and_rewrap(
+        data,
+        metadata=atr,
+        disp_unit=inps.disp_unit,
+        wrap=inps.wrap,
+        wrap_range=inps.wrap_range,
+    )
     if inps.wrap:
         inps.vlim = inps.wrap_range
 
 
-    # 2. Generate Google Earth KMZ
-    # 2.1 Common settings
+    ## 2. Generate Google Earth KMZ
     # disp min/max and colormap
     cmap_lut = 256
     if not inps.vlim:
@@ -473,13 +475,12 @@ def save_kmz(inps):
     inps.colormap = pp.ColormapExt(inps.cmap_name, cmap_lut).colormap
     inps.norm = colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])
 
-    # Output filename
-    inps.fig_title = pp.auto_figure_title(inps.file, datasetNames=inps.dset, inps_dict=vars(inps))
-    if not inps.outfile:
-        inps.outfile = '{}.kmz'.format(inps.fig_title)
+    # output filename
+    inps.fig_title = pp.auto_figure_title(inps.file, inps.dset, vars(inps))
+    inps.outfile = inps.outfile if inps.outfile else f'{inps.fig_title}.kmz'
     inps.outfile = os.path.abspath(inps.outfile)
 
-    # 2.2 Write KMZ file
+    # write KMZ file
     if 'Y_FIRST' in atr.keys():
         # create ground overlay KML for file in geo-coord
         write_kmz_overlay(
@@ -496,3 +497,5 @@ def save_kmz(inps):
             out_file=inps.outfile,
             geom_file=inps.geom_file,
             inps=inps)
+
+    return

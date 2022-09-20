@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Heresh Fattahi, Aug 2022      #
 ############################################################
 
 
@@ -11,9 +11,10 @@ from mintpy.utils.arg_utils import create_argument_parser
 
 ################################################################################################
 REFERENCE = """references:
-  Bekaert, David PS, et al. "InSAR-based detection method for mapping and monitoring slow-moving
-  landslides in remote regions with steep and mountainous terrain: An application to Nepal."
-  Remote Sensing of Environment 249 (2020), doi:10.1016/j.rse.2020.111983.
+  Bekaert, D. P. S., Handwerger, A. L., Agram, P., & Kirschbaum, D. B. (2020). InSAR-based detection
+    method for mapping and monitoring slow-moving landslides in remote regions with steep and 
+    mountainous terrain: An application to Nepal. Remote Sensing of Environment, 249, 111983.
+    doi:10.1016/j.rse.2020.111983
 """
 
 EXAMPLE = """example:
@@ -58,16 +59,18 @@ def create_parser(subparsers=None):
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-    inps.filter_type = inps.filter_type.lower()
     return inps
 
 
 ################################################################################################
 def main(iargs=None):
-    from mintpy.spatial_filter import filter_file
-
+    # parse
     inps = cmd_line_parse(iargs)
 
+    # import
+    from mintpy.spatial_filter import filter_file
+
+    # run
     filter_file(
         fname=inps.file,
         ds_names=inps.dset,
@@ -75,9 +78,6 @@ def main(iargs=None):
         filter_par=inps.filter_par,
         fname_out=inps.outfile,
     )
-
-    print('Done.')
-    return
 
 
 ################################################################################################

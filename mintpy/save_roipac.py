@@ -8,7 +8,7 @@
 import os
 import numpy as np
 from mintpy.objects import HDFEOS
-from mintpy.utils import readfile, ptime, utils as ut
+from mintpy.utils import ptime, readfile, writefile, utils as ut
 from mintpy import view
 
 
@@ -257,3 +257,17 @@ def clean_metadata4roipac(atr_in):
 
     atr['FILE_LENGTH'] = atr['LENGTH']
     return atr
+
+
+def run_save_roipac(inps):
+    # read data and metadata
+    data, atr, out_file = read_data(inps)
+
+    # remove non-roipac metadata
+    if not inps.keepAllMetadata:
+        atr = clean_metadata4roipac(atr)
+
+    # write
+    writefile.write(data, out_file=out_file, metadata=atr)
+
+    return
