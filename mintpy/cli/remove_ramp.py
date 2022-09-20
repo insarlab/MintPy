@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Zhang Yunjun, Antonio Valentino, Aug 2022        #
+# Author: Z. Yunjun, H. Fattahi, Antonio Valentino, 2013   #
 ############################################################
 
 
