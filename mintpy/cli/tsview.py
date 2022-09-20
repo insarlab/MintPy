@@ -118,9 +118,6 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # import
-    from matplotlib import pyplot as plt
-
     # check: --gps-comp option (not implemented for tsview yet)
     if inps.gps_component:
         msg = '--gps-comp is not supported for {}'.format(os.path.basename(__file__))
@@ -150,10 +147,6 @@ def cmd_line_parse(iargs=None):
             msg = 'WARNING: --yx/lalo is required for --no-show-img but NOT found! '
             msg += 'Ignore it and continue'
             print(msg)
-
-    # check: --nodisplay option
-    if not inps.disp_fig:
-        plt.switch_backend('Agg')
 
     # default: -u / -c / --fig-size options
     inps.disp_unit = inps.disp_unit if inps.disp_unit else 'cm'

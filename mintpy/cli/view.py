@@ -97,7 +97,6 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # import
-    import matplotlib.pyplot as plt
     from mintpy.utils import ptime, readfile
 
     # save argv (to check the manually specified arguments)
@@ -151,10 +150,6 @@ def cmd_line_parse(iargs=None):
     # print view.py command line if --noverbose (used in smallbaselineApp.py)
     if not inps.print_msg:
         print('view.py', ' '.join(inps.argv))
-
-    # check: --nodisplay (matplotlib backend setting)
-    if not inps.disp_fig:
-        plt.switch_backend('Agg')
 
     return inps
 

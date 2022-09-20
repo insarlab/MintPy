@@ -72,6 +72,10 @@ class coherenceMatrixViewer():
         global vprint
         vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
+        # matplotlib backend setting
+        if not inps.disp_fig:
+            plt.switch_backend('Agg')
+
         # read network info
         inps = read_network_info(inps)
         # copy inps to self object

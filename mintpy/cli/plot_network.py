@@ -108,7 +108,6 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # import
-    import matplotlib.pyplot as plt
     from mintpy.utils import readfile
 
     # save argv (to check the manually specified arguments)
@@ -125,7 +124,6 @@ def cmd_line_parse(iargs=None):
     # check: --nodisplay option
     if not inps.disp_fig:
         inps.save_fig = True
-        plt.switch_backend('Agg')
 
     # check: -t / --template option
     if inps.template_file:

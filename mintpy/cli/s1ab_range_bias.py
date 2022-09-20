@@ -75,18 +75,12 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # import
-    from matplotlib import pyplot as plt
-
     # check
     inps.mintpy_dir = os.path.dirname(inps.ts_file)
 
     # check: --save/nodisplay options
     if not inps.disp_fig:
         inps.save_fig = True
-
-    if not inps.disp_fig:
-        plt.switch_backend('Agg')
 
     # default + check: --geom option
     if not inps.geom_file:

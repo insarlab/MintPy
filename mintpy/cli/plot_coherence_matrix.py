@@ -74,9 +74,6 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # import
-    import matplotlib.pyplot as plt
-
     # default: auxiliary file paths (velocity and template)
     mintpy_dir = os.path.dirname(os.path.dirname(inps.ifgram_file))
     if not inps.img_file:
@@ -95,7 +92,6 @@ def cmd_line_parse(iargs=None):
     # check: --nodisplay option
     if not inps.disp_fig:
         inps.save_fig = True
-        plt.switch_backend('Agg')
 
     return inps
 

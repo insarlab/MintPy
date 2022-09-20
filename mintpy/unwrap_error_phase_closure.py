@@ -388,9 +388,9 @@ def correct_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_f
 ##########################################################################################
 def run_unwrap_error_phase_closure(inps):
 
-    start_time = time.time()
     # matplotlib backend setting
     plt.switch_backend('Agg')
+    start_time = time.time()
 
     if inps.action == 'correct':
         # action 1: correct for unwrapping errors

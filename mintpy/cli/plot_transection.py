@@ -81,7 +81,6 @@ def cmd_line_parse(iargs=None):
 
     # import
     import numpy as np
-    from matplotlib import pyplot as plt
     from mintpy.utils import readfile, utils as ut
 
     # save argv (to check the manually specified arguments)
@@ -92,10 +91,6 @@ def cmd_line_parse(iargs=None):
     # check: coupled options
     if inps.outfile or not inps.disp_fig:
         inps.save_fig = True
-
-    # check: --nodisplay option
-    if not inps.disp_fig:
-        plt.switch_backend('Agg')
 
     # check: --offset option
     inps.file = ut.get_file_list(inps.file)

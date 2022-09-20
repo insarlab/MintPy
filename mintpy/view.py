@@ -1466,6 +1466,10 @@ class viewer():
         global vprint
         vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
+        # matplotlib backend setting
+        if not inps.disp_fig:
+            plt.switch_backend('Agg')
+
         inps, self.atr = read_input_file_info(inps)
         inps = update_inps_with_file_metadata(inps, self.atr)
 

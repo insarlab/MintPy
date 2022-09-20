@@ -651,6 +651,10 @@ class timeseriesViewer():
         global vprint
         vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
+        # matplotlib backend setting
+        if not inps.disp_fig:
+            plt.switch_backend('Agg')
+
         inps, self.atr = read_init_info(inps)
 
         # copy inps to self object

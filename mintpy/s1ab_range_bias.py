@@ -206,6 +206,11 @@ def correct_s1ab_range_bias(ts_file, bias_file, ts_cor_file=None, safe_list_file
 
 ####################################################################################
 def run_s1ab_range_bias(inps):
+
+    # matplotlib backend setting
+    if not inps.disp_fig:
+        plt.switch_backend('Agg')
+
     # default bias file path
     inps.bias_file = os.path.join(os.path.dirname(inps.geom_file), 'S1Bias.h5')
 

@@ -124,10 +124,14 @@ def check_colormap(inps):
 def run_plot_network(inps):
     """Plot all the network info."""
 
+    # matplotlib backend setting
+    if not inps.disp_fig:
+        plt.switch_backend('Agg')
+
     # read / calculate
     inps = read_network_info(inps)
 
-    # Plot settings
+    # plot settings
     inps = check_colormap(inps)
     ext = '.pdf'
     if os.path.basename(inps.file).startswith('ion'):
