@@ -29,7 +29,7 @@ from mintpy.objects.resample import resample
 #################################################################################
 def check_loaded_dataset(work_dir='./', print_msg=True, relpath=False):
     """Check the loaded input files, following two rules:
-        1. file existance
+        1. file existence
         2. file attribute readability
 
     Parameters: work_dir    - str, MintPy working directory

@@ -5,9 +5,11 @@
 ############################################################
 
 
+import os
 import numpy as np
 
-from mintpy.utils import readfile
+from mintpy.objects import timeseries
+from mintpy.utils import readfile, writefile
 from mintpy.multilook import multilook_data
 from mintpy.mask import mask_matrix
 
@@ -28,20 +30,14 @@ def design_matrix(dem, poly_order=1):
     return A
 
 
-def read_topographic_data(geom_file, metadata):
-    print('read DEM from file: '+geom_file)
-    dem = readfile.read(geom_file,
-                        datasetName='height',
-                        print_msg=False)[0]
-
-    print('considering the incidence angle of each pixel ...')
-    inc_angle = readfile.read(geom_file,
-                              datasetName='incidenceAngle',
-                              print_msg=False)[0]
+def read_topographic_data(geom_file, meta):
+    print('read height & incidenceAngle from file: '+geom_file)
+    dem = readfile.read(geom_file, datasetName='height', print_msg=False)[0]
+    inc_angle = readfile.read(geom_file, datasetName='incidenceAngle', print_msg=False)[0]
     dem *= 1.0/np.cos(inc_angle*np.pi/180.0)
 
-    ref_y = int(metadata['REF_Y'])
-    ref_x = int(metadata['REF_X'])
+    ref_y = int(meta['REF_Y'])
+    ref_x = int(meta['REF_X'])
     dem -= dem[ref_y, ref_x]
 
     # Design matrix for elevation v.s. phase
@@ -147,3 +143,41 @@ def estimate_tropospheric_delay(dem, X, metadata):
 
     trop_data = np.reshape(trop_data, (num_date, length, width))
     return trop_data
+
+
+############################################################################
+def run_tropo_phase_elevation(inps):
+
+    # read time-series data
+    ts_obj = timeseries(inps.timeseries_file)
+    ts_obj.open()
+    ts_data = ts_obj.read()
+    inps.date_list = list(ts_obj.dateList)
+
+    # read topographic data (DEM)
+    dem = read_topographic_data(inps.geom_file, ts_obj.metadata)
+
+    # estimate tropo delay
+    X = estimate_phase_elevation_ratio(dem, ts_data, inps)
+    trop_data = estimate_tropospheric_delay(dem, X, ts_obj.metadata)
+
+    # correct for trop delay
+    mask = ts_data == 0.
+    ts_data -= trop_data
+    ts_data[mask] = 0.
+
+    # write corrected time-series file
+    meta = dict(ts_obj.metadata)
+    meta['mintpy.troposphericDelay.polyOrder'] = str(inps.poly_order)
+    if not inps.outfile:
+        fbase = os.path.splitext(inps.timeseries_file)[0]
+        inps.outfile = f'{fbase}_tropHgt.h5'
+
+    writefile.write(
+        ts_data,
+        out_file=inps.outfile,
+        metadata=meta,
+        ref_file=inps.timeseries_file,
+    )
+
+    return

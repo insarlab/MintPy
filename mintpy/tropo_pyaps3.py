@@ -8,16 +8,13 @@
 import os
 import re
 from configparser import ConfigParser
+
 import h5py
 import numpy as np
+import pyaps3 as pa
 
 from mintpy.objects import timeseries, geometry
 from mintpy.utils import ptime, readfile, writefile, utils as ut
-
-try:
-    import pyaps3 as pa
-except ImportError:
-    raise ImportError('Cannot import pyaps3!')
 
 
 WEATHER_MODEL_HOURS = {
@@ -25,6 +22,8 @@ WEATHER_MODEL_HOURS = {
     'ERAINT' : [0, 6, 12, 18],
     'MERRA'  : [0, 6, 12, 18],
 }
+
+INT_DATA_TYPES = (int, np.int16, np.int32, np.int64)
 
 
 ###############################################################
@@ -109,11 +108,13 @@ def get_grib_info(inps):
         inps.snwe = None
 
     # grib file list
-    inps.grib_files = get_grib_filenames(date_list=inps.date_list,
-                                         hour=inps.hour,
-                                         model=inps.tropo_model,
-                                         grib_dir=inps.grib_dir,
-                                         snwe=inps.snwe)
+    inps.grib_files = get_grib_filenames(
+        date_list=inps.date_list,
+        hour=inps.hour,
+        model=inps.tropo_model,
+        grib_dir=inps.grib_dir,
+        snwe=inps.snwe)
+
     return inps
 
 
@@ -149,11 +150,9 @@ def get_grib_filenames(date_list, hour, model, grib_dir, snwe=None):
 ###############################################################
 def closest_weather_model_hour(sar_acquisition_time, grib_source='ERA5'):
     """Find closest available time of weather product from SAR acquisition time
-    Inputs:
-        sar_acquisition_time - string, SAR data acquisition time in seconds
-        grib_source          - string, Grib Source of weather reanalysis product
-    Output:
-        grib_hr              - string, time of closest available weather product
+    Parameters: sar_acquisition_time - str, SAR data acquisition time in seconds
+                grib_source          - str, Grib Source of weather reanalysis product
+    Returns:    grib_hr              - str, time of closest available weather product
     Example:
         '06' = closest_weather_model_hour(atr['CENTER_LINE_UTC'])
         '12' = closest_weather_model_hour(atr['CENTER_LINE_UTC'], 'NARR')
@@ -199,7 +198,6 @@ def define_date(string):
     """extract date from *.SAFE"""
     filename = string.split(str.encode('.'))[0].split(str.encode('/'))[-1]
     date = filename.split(str.encode('_'))[5][0:8]
-
     return date
 
 
@@ -210,14 +208,13 @@ def define_second(string):
     time2 = filename.split(str.encode('_'))[6][9:15]
     time1_second = int(time1[0:2]) * 3600 + int(time1[2:4]) * 60 + int(time1[4:6])
     time2_second = int(time2[0:2]) * 3600 + int(time2[2:4]) * 60 + int(time2[4:6])
-    CENTER_LINE_UTC = (time1_second + time2_second) / 2
-
-    return CENTER_LINE_UTC
+    utc_sec = (time1_second + time2_second) / 2
+    return utc_sec
 
 
 def ceil2multiple(x, step=10):
     """Given a number x, find the smallest number in multiple of step >= x."""
-    assert isinstance(x, (int, np.int16, np.int32, np.int64)), 'input number is not int: {}'.format(type(x))
+    assert isinstance(x, INT_DATA_TYPES), 'input number is not int: {}'.format(type(x))
     if x % step == 0:
         return x
     return x + (step - x % step)
@@ -225,7 +222,7 @@ def ceil2multiple(x, step=10):
 
 def floor2multiple(x, step=10):
     """Given a number x, find the largest number in multiple of step <= x."""
-    assert isinstance(x, (int, np.int16, np.int32, np.int64)), 'input number is not int: {}'.format(type(x))
+    assert isinstance(x, INT_DATA_TYPES), 'input number is not int: {}'.format(type(x))
     return x - x % step
 
 
@@ -397,11 +394,14 @@ def check_pyaps_account_config(tropo_model):
         for opt in SECTION_OPTS[section]:
             val = cfg.get(section, opt)
             if not val or val in default_values:
-                raise ValueError(f'PYAPS: No account info found for {tropo_model} in {section} section in file: {cfg_file}')
+                msg = 'PYAPS: No account info found '
+                msg += f'for {tropo_model} in {section} section in file: {cfg_file}'
+                raise ValueError(msg)
 
     return
 
 
+###############################################################
 def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
     """Download weather re-analysis grib files using PyAPS
     Parameters: grib_files : list of string of grib files
@@ -431,10 +431,13 @@ def dload_grib_files(grib_files, tropo_model='ERA5', snwe=None):
             i += 1
             try:
                 if tropo_model in ['ERA5', 'ERAINT']:
-                    pa.ECMWFdload(date_list2dload, hour, grib_dir,
-                                  model=tropo_model,
-                                  snwe=snwe,
-                                  flist=grib_files2dload)
+                    pa.ECMWFdload(
+                        date_list2dload,
+                        hour,
+                        grib_dir,
+                        model=tropo_model,
+                        snwe=snwe,
+                        flist=grib_files2dload)
 
                 elif tropo_model == 'MERRA':
                     pa.MERRAdload(date_list2dload, hour, grib_dir)
@@ -469,15 +472,16 @@ def get_delay(grib_file, tropo_model, delay_type, dem, inc, lat, lon, mask=None,
         print('GRIB FILE: {}'.format(grib_file))
 
     # initiate pyaps object
-    aps_obj = pa.PyAPS(grib_file,
-                       grib=tropo_model,
-                       Del=delay_type,
-                       dem=dem,
-                       inc=inc,
-                       lat=lat,
-                       lon=lon,
-                       mask=mask,
-                       verb=verbose)
+    aps_obj = pa.PyAPS(
+        grib_file,
+        grib=tropo_model,
+        Del=delay_type,
+        dem=dem,
+        inc=inc,
+        lat=lat,
+        lon=lon,
+        mask=mask,
+        verb=verbose)
 
     # estimate delay
     pha = np.zeros((aps_obj.ny, aps_obj.nx), dtype=np.float32)
@@ -488,6 +492,7 @@ def get_delay(grib_file, tropo_model, delay_type, dem, inc, lat, lon, mask=None,
     return pha
 
 
+###############################################################
 def calc_delay_timeseries(inps):
     """Calculate delay time-series and write it to HDF5 file.
     Parameters: inps : namespace, all input parameters
@@ -503,7 +508,7 @@ def calc_delay_timeseries(inps):
         print('output file: {}'.format(tropo_file))
         flag = 'skip'
 
-        # check existance and modification time
+        # check existence and modification time
         if ut.run_or_skip(out_file=tropo_file, in_file=grib_files, print_msg=False) == 'run':
             flag = 'run'
             print('1) output file either do NOT exist or is NOT newer than all GRIB files.')
@@ -602,23 +607,25 @@ def calc_delay_timeseries(inps):
         grib_file = inps.grib_files[i]
 
         # calc tropo delay
-        tropo_data = get_delay(grib_file,
-                               tropo_model=inps.tropo_model,
-                               delay_type=inps.delay_type,
-                               dem=inps.dem,
-                               inc=inps.inc,
-                               lat=inps.lat,
-                               lon=inps.lon,
-                               mask=mask,
-                               verbose=inps.verbose)
+        tropo_data = get_delay(
+            grib_file,
+            tropo_model=inps.tropo_model,
+            delay_type=inps.delay_type,
+            dem=inps.dem,
+            inc=inps.inc,
+            lat=inps.lat,
+            lon=inps.lon,
+            mask=mask,
+            verbose=inps.verbose)
 
         # write tropo delay to file
         block = [i, i+1, 0, length, 0, width]
-        writefile.write_hdf5_block(inps.tropo_file,
-                                   data=tropo_data,
-                                   datasetName='timeseries',
-                                   block=block,
-                                   print_msg=False)
+        writefile.write_hdf5_block(
+            inps.tropo_file,
+            data=tropo_data,
+            datasetName='timeseries',
+            block=block,
+            print_msg=False)
 
         prog_bar.update(i+1, suffix=os.path.basename(grib_file))
     prog_bar.close()
@@ -665,3 +672,59 @@ def correct_single_ifgram(dis_file, tropo_file, cor_dis_file):
     writefile.write(ds_dict, cor_dis_file, atr)
 
     return cor_dis_file
+
+
+###############################################################
+def run_tropo_pyaps3(inps):
+
+    ## print key input info
+    delay_type2name = {
+        'dry'  : 'dry (hydrostatic)',
+        'wet'  : 'wet',
+        'comb' : 'dry (hydrostatic) and wet',
+    }
+    print(f'weather model: {inps.tropo_model} - {delay_type2name[inps.delay_type]} delay')
+    print(f'weather directory: {inps.weather_dir}')
+    print(f'output tropospheric delay     time-series file: {inps.tropo_file}')
+    print(f'output corrected displacement time-series file: {inps.cor_dis_file}')
+
+    # read dates / time info
+    read_inps2date_time(inps)
+
+    # get corresponding grib files info
+    get_grib_info(inps)
+
+    ## download
+    inps.grib_files = dload_grib_files(
+        inps.grib_files, 
+        tropo_model=inps.tropo_model,
+        snwe=inps.snwe)
+
+    ## calculate tropo delay and save to h5 file
+    if inps.geom_file:
+        calc_delay_timeseries(inps)
+    else:
+        print('No input geometry file, skip calculating and correcting tropospheric delays.')
+        return
+
+    ## correct tropo delay from displacement time-series
+    if inps.dis_file:
+        ftype = inps.atr['FILE_TYPE']
+        if ftype == 'timeseries':
+            correct_timeseries(
+                dis_file=inps.dis_file,
+                tropo_file=inps.tropo_file,
+                cor_dis_file=inps.cor_dis_file)
+
+        elif ftype == '.unw':
+            correct_single_ifgram(
+                dis_file=inps.dis_file,
+                tropo_file=inps.tropo_file,
+                cor_dis_file=inps.cor_dis_file)
+        else:
+            print(f'input file {ftype} is not timeseries nor .unw, correction is not supported yet.')
+
+    else:
+        print('No input displacement file, skip correcting tropospheric delays.')
+
+    return

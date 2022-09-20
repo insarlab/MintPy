@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -13,9 +13,9 @@ from mintpy.utils.arg_utils import create_argument_parser
 
 ############################################################################
 REFERENCE = """reference:
-  Doin, M. P., C. Lasserre, G. Peltzer, O. Cavalie, and C. Doubre (2009), Corrections of stratified 
-  tropospheric delays in SAR interferometry: Validation with global atmospheric models, J App. Geophy.,
-  69(1), 35-50, doi:http://dx.doi.org/10.1016/j.jappgeo.2009.03.010.
+  Doin, M. P., C. Lasserre, G. Peltzer, O. Cavalie, and C. Doubre (2009), Corrections of
+    stratified tropospheric delays in SAR interferometry: Validation with global atmospheric
+    models, J App. Geophy., 69(1), 35-50, doi:10.1016/j.jappgeo.2009.03.010.
 """
 
 EXAMPLE = """example:
@@ -49,46 +49,28 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # check: -t / --threshold option (must be within [0,1])
     if inps.threshold and (not 0.0 <= inps.threshold <= 1.0):
-        raise argparse.ArgumentTypeError('%r not in range [0.0, 1.0]' % inps.threshold)
+        msg = f'correction threshold {inps.threshold} is NOT within [0.0, 1.0]'
+        raise argparse.ArgumentTypeError(msg)
+
     return inps
 
 
 ############################################################################
 def main(iargs=None):
-    from mintpy.objects import timeseries
-    from mintpy.utils import writefile
-    from mintpy.tropo_phase_elevation import read_topographic_data, estimate_phase_elevation_ratio, estimate_tropospheric_delay
-
+    # parse
     inps = cmd_line_parse(iargs)
 
-    # read timeseries data
-    obj = timeseries(inps.timeseries_file)
-    obj.open()
-    ts_data = obj.read()
-    inps.date_list = list(obj.dateList)
+    # import
+    from mintpy.tropo_phase_elevation import run_tropo_phase_elevation
 
-    # read topographic data (DEM)
-    dem = read_topographic_data(inps.geom_file, obj.metadata)
-
-    # estimate phase/elevation ratio parameters
-    X = estimate_phase_elevation_ratio(dem, ts_data, inps)
-
-    # correct trop delay in timeseries
-    trop_data = estimate_tropospheric_delay(dem, X, obj.metadata)
-    mask = ts_data == 0.
-    ts_data -= trop_data
-    ts_data[mask] = 0.
-
-    # write time-series file
-    meta = dict(obj.metadata)
-    meta['mintpy.troposphericDelay.polyOrder'] = str(inps.poly_order)
-    if not inps.outfile:
-        inps.outfile = '{}_tropHgt.h5'.format(os.path.splitext(inps.timeseries_file)[0])
-    writefile.write(ts_data, out_file=inps.outfile, metadata=meta, ref_file=inps.timeseries_file)
+    # run
+    run_tropo_phase_elevation(inps)
 
 
 ############################################################################

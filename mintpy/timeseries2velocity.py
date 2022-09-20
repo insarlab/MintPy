@@ -8,6 +8,7 @@
 
 
 import os
+import time
 import numpy as np
 from scipy import linalg
 
@@ -37,48 +38,6 @@ config_keys = [
 
 
 ############################################################################
-def read_template2inps(template_file, inps):
-    """Read input template file into inps.excludeDate"""
-    iDict = vars(inps)
-    print('read options from template file: '+os.path.basename(template_file))
-    template = readfile.read_template(inps.template_file, skip_chars=['[', ']'])
-    template = ut.check_template_auto_value(template)
-
-    # Read template option
-    prefix = 'mintpy.timeFunc.'
-    keyList = [i for i in list(iDict.keys()) if prefix+i in template.keys()]
-    for key in keyList:
-        value = template[prefix+key]
-        if value:
-            if key in ['startDate', 'endDate']:
-                iDict[key] = ptime.yyyymmdd(value)
-
-            elif key in ['excludeDate']:
-                iDict[key] = ptime.yyyymmdd(value.split(','))
-
-            elif key in ['periodic']:
-                iDict[key] = [float(x) for x in value.replace(';',',').split(',')]
-
-            elif key in ['stepDate']:
-                iDict[key] = value.replace(';',',').split(',')
-
-            elif key in ['exp', 'log']:
-                value = value.replace('/',';').replace('|',';')
-                iDict[key] = [x.split(',') for x in value.split(';')]
-
-            elif key in ['uncertaintyQuantification', 'timeSeriesCovFile']:
-                iDict[key] = value
-
-            elif key in ['polynomial', 'bootstrapCount']:
-                iDict[key] = int(value)
-
-    key = 'mintpy.compute.maxMemory'
-    if key in template.keys() and template[key]:
-        inps.maxMemory = float(template[key])
-
-    return inps
-
-
 def run_or_skip(inps):
     print('update mode: ON')
     flag = 'skip'
@@ -120,14 +79,16 @@ def read_date_info(inps):
                        date_list - list of str, dates used for estimation
                        dropDate  - 1D np.ndarray in bool in size of all available dates
     """
-    if inps.file_type == 'timeseries':
+    # initiate and open time-series file object
+    ftype = readfile.read_attribute(inps.timeseries_file)['FILE_TYPE']
+    if ftype == 'timeseries':
         ts_obj = timeseries(inps.timeseries_file)
-    elif inps.file_type == 'giantTimeseries':
+    elif ftype == 'giantTimeseries':
         ts_obj = giantTimeseries(inps.timeseries_file)
-    elif inps.file_type == 'HDFEOS':
+    elif ftype == 'HDFEOS':
         ts_obj = HDFEOS(inps.timeseries_file)
     else:
-        raise ValueError('Un-recognized time series ')
+        raise ValueError(f'Un-recognized time-series type: {ftype}')
     ts_obj.open()
 
     # exclude dates - user inputs
@@ -167,6 +128,7 @@ def read_date_info(inps):
 
 
 def run_timeseries2time_func(inps):
+    start_time = time.time()
 
     # basic file info
     atr = readfile.read_attribute(inps.timeseries_file)
@@ -474,6 +436,10 @@ def run_timeseries2time_func(inps):
                                        data=ts_res.reshape(num_date, box_len, box_wid),
                                        datasetName='timeseries',
                                        block=block)
+
+    # used time
+    m, s = divmod(time.time() - start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
 
     return inps.outfile
 

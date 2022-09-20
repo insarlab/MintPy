@@ -31,7 +31,7 @@ def run_or_skip(iono_file, grib_files, dis_file, geom_file):
     print('output file: {}'.format(iono_file))
     flag = 'skip'
 
-    # check existance and modification time
+    # check existence and modification time
     if ut.run_or_skip(out_file=iono_file, in_file=grib_files, print_msg=False) == 'run':
         flag = 'run'
         print('1) output file either do NOT exist or is NOT newer than all IONEX files.')

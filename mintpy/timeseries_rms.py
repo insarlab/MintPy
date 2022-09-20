@@ -72,7 +72,8 @@ def analyze_rms(date_list, rms_list, inps):
 
 
 ######################################################################################################
-def timeseries_rms(inps):
+def run_timeseries_rms(inps):
+
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 
@@ -95,3 +96,5 @@ def timeseries_rms(inps):
         fig_size=inps.fig_size,
         tick_year_num=inps.tick_year_num,
     )
+
+    return

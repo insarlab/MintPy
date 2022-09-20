@@ -7,18 +7,12 @@
 
 import os
 import time
+
 import h5py
 import numpy as np
+from cvxopt import matrix
 from matplotlib import pyplot as plt
-
-try:
-    from cvxopt import matrix
-except ImportError:
-    raise ImportError('Cannot import cvxopt')
-try:
-    from skimage import measure
-except ImportError:
-    raise ImportError('Could not import skimage!')
+from skimage import measure
 
 from mintpy.objects import ifgramStack, conncomp
 from mintpy.utils import ptime, readfile, writefile, utils as ut, plot as pp
@@ -30,27 +24,6 @@ key_prefix = 'mintpy.unwrapError.'
 
 
 ##########################################################################################
-def read_template2inps(template_file, inps):
-    """Read input template options into Namespace inps"""
-    inpsDict = vars(inps)
-    print('read options from tempalte file: '+os.path.basename(inps.template_file))
-    template = readfile.read_template(template_file)
-    template = ut.check_template_auto_value(template)
-
-    key_list = [i for i in list(inpsDict.keys()) if key_prefix+i in template.keys()]
-    for key in key_list:
-        value = template[key_prefix+key]
-        if value:
-            if key in ['waterMaskFile']:
-                inpsDict[key] = value
-            elif key in ['numSample']:
-                inpsDict[key] = int(value)
-            elif key in ['connCompMinArea']:
-                inpsDict[key] = float(value)
-
-    return inps
-
-
 def run_or_skip(inps):
     print('-'*50)
     print('update mode: ON')
@@ -95,11 +68,9 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
     # default output file path
     out_dir = os.path.dirname(os.path.dirname(ifgram_file))
     if out_file is None:
-        if dsName == 'unwrapPhase':
-            # skip the default dsName in output filename
-            out_file = 'numTriNonzeroIntAmbiguity.h5'
-        else:
-            out_file = 'numTriNonzeroIntAmbiguity4{}.h5'.format(dsName)
+        out_file = 'numTriNonzeroIntAmbiguity'
+        out_file += f'4{dsName}' if dsName != 'unwrapPhase' else ''
+        out_file += '.h5'
         out_file = os.path.join(out_dir, out_file)
 
     # update mode
@@ -159,21 +130,27 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
     msg += '\n    block by block with size up to {}, {} blocks in total'.format((step, width), num_loop)
     print(msg)
 
-    ref_phase = stack_obj.get_reference_phase(unwDatasetName=dsName, dropIfgram=True).reshape(num_ifgram, -1)
+    ref_phase = stack_obj.get_reference_phase(
+        unwDatasetName=dsName,
+        dropIfgram=True,
+    ).reshape(num_ifgram, -1)
+
     prog_bar = ptime.progressBar(maxValue=num_loop)
     for i in range(num_loop):
         # box
         r0 = i * step
-        r1 = min((r0+step), stack_obj.length)
+        r1 = min((r0 + step), stack_obj.length)
         box = (0, r0, stack_obj.width, r1)
 
         # read data
-        unw = ifginv.read_stack_obs(stack_obj,
-                                    box=box,
-                                    ref_phase=ref_phase,
-                                    obs_ds_name=dsName,
-                                    dropIfgram=True,
-                                    print_msg=False).reshape(num_ifgram, -1)
+        unw = ifginv.read_stack_obs(
+            stack_obj,
+            box=box,
+            ref_phase=ref_phase,
+            obs_ds_name=dsName,
+            dropIfgram=True,
+            print_msg=False,
+        ).reshape(num_ifgram, -1)
 
         # calculate based on equation (8-9) and T_int equation inline.
         closure_pha = np.dot(C, unw)
@@ -200,7 +177,11 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
     meta = dict(stack_obj.metadata)
     meta['FILE_TYPE'] = 'mask'
     meta['UNIT'] = '1'
-    writefile.write(num_nonzero_closure, out_file, meta)
+    writefile.write(
+        num_nonzero_closure,
+        out_file=out_file,
+        metadata=meta,
+    )
 
     # plot
     pp.plot_num_triplet_with_nonzero_integer_ambiguity(out_file)
@@ -212,16 +193,16 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
 def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=None, num_sample=100,
                                     dsNameIn='unwrapPhase', cc_min_area=2.5e3):
     """Solve the phase unwrapping integer ambiguity for the common regions among all interferograms
-    Parameters: ifgram_file     : str, path of interferogram stack file
-                cc_mask_file    : str, path of common connected components file
-                water_mask_file : str, path of water mask file
-                num_sample      : int, number of pixel sampled for each region
-                dsNameIn        : str, dataset name of the unwrap phase to be corrected
-                cc_min_area     : float, minimum region/area size
-    Returns:    common_regions  : list of skimage.measure._regionprops._RegionProperties object
-                    modified by adding two more variables:
-                    sample_coords : 2D np.ndarray in size of (num_sample, 2) in int64 format
-                    int_ambiguity : 1D np.ndarray in size of (num_ifgram,) in int format
+    Parameters: ifgram_file     - str, path of interferogram stack file
+                cc_mask_file    - str, path of common connected components file
+                water_mask_file - str, path of water mask file
+                num_sample      - int, number of pixel sampled for each region
+                dsNameIn        - str, dataset name of the unwrap phase to be corrected
+                cc_min_area     - float, minimum region/area size
+    Returns:    common_regions  - list of skimage.measure._regionprops._RegionProperties object
+                                  modified by adding two more variables:
+                                  sample_coords : 2D np.ndarray in size of (num_sample, 2) in int64 format
+                                  int_ambiguity : 1D np.ndarray in size of (num_ifgram,) in int format
     """
     print('-'*50)
     print('calculating the integer ambiguity for the common regions defined in', cc_mask_file)
@@ -230,8 +211,12 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
     stack_obj.open(print_msg=False)
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
     num_ifgram = len(date12_list)
+
     C = matrix(ifgramStack.get_design_matrix4triplet(date12_list).astype(float))
-    ref_phase = stack_obj.get_reference_phase(unwDatasetName=dsNameIn, dropIfgram=True).reshape(num_ifgram, -1)
+    ref_phase = stack_obj.get_reference_phase(
+        unwDatasetName=dsNameIn,
+        dropIfgram=True,
+    ).reshape(num_ifgram, -1)
     print('number of interferograms: {}'.format(num_ifgram))
     print('number of triplets: {}'.format(int(len(C)/num_ifgram)))
 
@@ -267,26 +252,36 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
             U = np.zeros((num_ifgram, num_sample))
             if common_reg.label == label_img[stack_obj.refY, stack_obj.refX]:
                 print('{}/{} skip calculation for the reference region'.format(i+1, num_label))
+
             else:
                 prog_bar = ptime.progressBar(maxValue=num_sample, prefix='{}/{}'.format(i+1, num_label))
                 for j in range(num_sample):
                     # read unwrap phase
                     y, x = common_reg.sample_coords[j, :]
-                    unw = ifginv.read_stack_obs(stack_obj,
-                                                box=(x, y, x+1, y+1),
-                                                ref_phase=ref_phase,
-                                                obs_ds_name=dsNameIn,
-                                                dropIfgram=True,
-                                                print_msg=False).reshape(num_ifgram, -1)
+                    unw = ifginv.read_stack_obs(
+                        stack_obj,
+                        box=(x, y, x+1, y+1),
+                        ref_phase=ref_phase,
+                        obs_ds_name=dsNameIn,
+                        dropIfgram=True,
+                        print_msg=False,
+                    ).reshape(num_ifgram, -1)
 
                     # calculate closure_int
                     closure_pha = np.dot(C, unw)
                     closure_int = matrix(np.round((closure_pha - ut.wrap(closure_pha)) / (2.*np.pi)))
 
                     # solve for U
-                    U[:,j] = np.round(l1regls(-C, closure_int, alpha=1e-2, show_progress=0)).flatten()
+                    U[:,j] = np.round(l1regls(
+                        A=-C,
+                        y=closure_int,
+                        alpha=1e-2,
+                        show_progress=0,
+                    )).flatten()
+
                     prog_bar.update(j+1, every=5)
                 prog_bar.close()
+
             # add int_ambiguity
             common_reg.int_ambiguity = np.median(U, axis=1)
             common_reg.date12_list = date12_list
@@ -310,8 +305,9 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
     return common_regions
 
 
-def run_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_file=None, ccName='connectComponent',
-                                   dsNameIn='unwrapPhase', dsNameOut='unwrapPhase_phaseClosure'):
+def correct_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_file=None,
+                                       ccName='connectComponent', dsNameIn='unwrapPhase',
+                                       dsNameOut='unwrapPhase_phaseClosure'):
     print('-'*50)
     print('correct unwrapping error in {} with phase closure ...'.format(ifgram_file))
     stack_obj = ifgramStack(ifgram_file)
@@ -338,11 +334,12 @@ def run_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_file=
             ds = f[dsNameOut]
             print('access /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
         else:
-            ds = f.create_dataset(dsNameOut,
-                                  shape_out,
-                                  maxshape=(None, None, None),
-                                  chunks=True,
-                                  compression=None)
+            ds = f.create_dataset(
+                dsNameOut,
+                shape_out,
+                maxshape=(None, None, None),
+                chunks=True,
+                compression=None)
             print('create /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
 
         # correct unwrap error ifgram by ifgram
@@ -379,9 +376,68 @@ def run_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_file=
 
             # write to hdf5 file
             ds[i, :, :] = unw_cor
+
             prog_bar.update(i+1, suffix=date12)
         prog_bar.close()
         ds.attrs['MODIFICATION_TIME'] = str(time.time())
     print('close {} file.'.format(ifgram_file))
 
     return ifgram_file
+
+
+##########################################################################################
+def run_unwrap_error_phase_closure(inps):
+
+    start_time = time.time()
+    # matplotlib backend setting
+    plt.switch_backend('Agg')
+
+    if inps.action == 'correct':
+        # action 1: correct for unwrapping errors
+
+        # update mode
+        if inps.update_mode and run_or_skip(inps) == 'skip':
+            return
+
+        # solve integer ambiguity for common connected components
+        common_regions = get_common_region_int_ambiguity(
+            ifgram_file=inps.ifgram_file,
+            cc_mask_file=inps.cc_mask_file,
+            water_mask_file=inps.waterMaskFile,
+            num_sample=inps.numSample,
+            dsNameIn=inps.datasetNameIn,
+            cc_min_area=inps.connCompMinArea,
+        )
+
+        # apply the integer ambiguity from common conn comp to the whole ifgram
+        if len(common_regions) == 0:
+            print('skip phase closure correction ...')
+            return
+
+        correct_unwrap_error_phase_closure(
+            inps.ifgram_file, common_regions,
+            water_mask_file=inps.waterMaskFile,
+            dsNameIn=inps.datasetNameIn,
+            dsNameOut=inps.datasetNameOut,
+        )
+
+    else:
+        # action 2: quick overview
+        # calculate the number of triplets with non-zero integer ambiguity
+        out_file = calc_num_triplet_with_nonzero_integer_ambiguity(
+            inps.ifgram_file,
+            mask_file=inps.waterMaskFile,
+            dsName=inps.datasetNameIn,
+            update_mode=inps.update_mode,
+        )
+
+        # for debug
+        debug_mode = False
+        if debug_mode:
+            pp.plot_num_triplet_with_nonzero_integer_ambiguity(out_file)
+
+    # used time
+    m, s = divmod(time.time() - start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
+
+    return

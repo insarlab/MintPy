@@ -660,7 +660,7 @@ def run_or_skip(out_file, in_file=None, readable=True, print_msg=True):
                                            'smallbaselineApp.cfg'],
                                   readable=False):
     """
-    # 1 - check existance of output files
+    # 1 - check existence of output files
     if not out_file:
         return 'run'
     else:

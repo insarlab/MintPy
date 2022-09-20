@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -64,9 +64,14 @@ def cmd_line_parse(iargs=None):
 
 ######################################################################################################
 def main(iargs=None):
-    from mintpy.timeseries_rms import timeseries_rms
+    # parse
     inps = cmd_line_parse(iargs)
-    return timeseries_rms(inps)
+
+    # import
+    from mintpy.timeseries_rms import run_timeseries_rms
+
+    # run
+    run_timeseries_rms(inps)
 
 
 ######################################################################################################

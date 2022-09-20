@@ -26,28 +26,6 @@ config_keys = [
 
 
 ####################################################################################################
-def read_template2inps(template_file, inps):
-    """Read input template options into Namespace inps"""
-    inpsDict = vars(inps)
-    print('read options from template file: '+os.path.basename(template_file))
-    template = readfile.read_template(inps.template_file)
-    template = ut.check_template_auto_value(template)
-
-    key_list = [i for i in list(inpsDict.keys()) if key_prefix+i in template.keys()]
-    for key in key_list:
-        value = template[key_prefix+key]
-        if key in ['update']:
-            inpsDict[key] = value
-        elif value:
-            if key in ['waterMaskFile', 'ramp']:
-                inpsDict[key] = value
-            elif key in ['bridgePtsRadius']:
-                inpsDict[key] = int(value)
-            elif key in ['connCompMinArea']:
-                inpsDict[key] = float(value)
-    return inps
-
-
 def run_or_skip(inps):
     print('-'*50)
     print('update mode: ON')
@@ -97,9 +75,9 @@ def run_or_skip(inps):
 
 
 ##########################################################################################
-def run_unwrap_error_bridge(ifgram_file, water_mask_file, ramp_type=None, radius=50, cc_min_area=2.5e3,
-                            ccName='connectComponent', dsNameIn='unwrapPhase',
-                            dsNameOut='unwrapPhase_bridging'):
+def run_unwrap_error_bridging(ifgram_file, water_mask_file, ramp_type=None, radius=50, cc_min_area=2.5e3,
+                              ccName='connectComponent', dsNameIn='unwrapPhase',
+                              dsNameOut='unwrapPhase_bridging', inps=None):
     """Run unwrapping error correction with bridging
     Parameters: ifgram_file     : str, path of ifgram stack file
                 water_mask_file : str, path of water mask file
@@ -108,8 +86,10 @@ def run_unwrap_error_bridge(ifgram_file, water_mask_file, ramp_type=None, radius
                 ccName          : str, dataset name of connected components
                 dsNameIn        : str, dataset name of unwrap phase to be corrected
                 dsNameOut       : str, dataset name of unwrap phase to be saved after correction
+                inps            : Namespace object, optional
     Returns:    ifgram_file     : str, path of ifgram stack file
     """
+    start_time = time.time()
     print('-'*50)
     print('correct unwrapping error in {} with bridging ...'.format(ifgram_file))
     if ramp_type is not None:
@@ -123,6 +103,7 @@ def run_unwrap_error_bridge(ifgram_file, water_mask_file, ramp_type=None, radius
         water_mask = None
 
     # file info
+    fbase, fext = os.path.splitext(inps.ifgram_file)
     atr = readfile.read_attribute(ifgram_file)
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
     k = atr['FILE_TYPE']
@@ -143,11 +124,13 @@ def run_unwrap_error_bridge(ifgram_file, water_mask_file, ramp_type=None, radius
                 ds = f[dsNameOut]
                 print('access /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
             else:
-                ds = f.create_dataset(dsNameOut,
-                                      shape_out,
-                                      maxshape=(None, None, None),
-                                      chunks=True,
-                                      compression=None)
+                ds = f.create_dataset(
+                    dsNameOut,
+                    shape_out,
+                    maxshape=(None, None, None),
+                    chunks=True,
+                    compression=None,
+                )
                 print('create /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
 
             # correct unwrap error ifgram by ifgram
@@ -160,6 +143,7 @@ def run_unwrap_error_bridge(ifgram_file, water_mask_file, ramp_type=None, radius
                 # skip dropped interferograms
                 if date12 not in date12_list_kept:
                     ds[i, :, :] = unw
+
                 else:
                     # read connectComponent
                     cc = np.squeeze(f[ccName][i, :, :])
@@ -174,6 +158,7 @@ def run_unwrap_error_bridge(ifgram_file, water_mask_file, ramp_type=None, radius
 
                     # write to hdf5 file
                     ds[i, :, :] = unw_cor
+
                 prog_bar.update(i+1, suffix=date12)
             prog_bar.close()
             ds.attrs['MODIFICATION_TIME'] = str(time.time())
@@ -184,7 +169,7 @@ def run_unwrap_error_bridge(ifgram_file, water_mask_file, ramp_type=None, radius
         unw = readfile.read(ifgram_file)[0]
 
         # read connected components
-        cc_files0 = [ifgram_file+'.conncomp', os.path.splitext(ifgram_file)[0]+'_snap_connect.byt']
+        cc_files0 = [ifgram_file+'.conncomp', f'{fbase}_snap_connect.byt']
         cc_files = [i for i in cc_files0 if os.path.isfile(i)]
         if len(cc_files) == 0:
             raise FileNotFoundError(cc_files0)
@@ -199,9 +184,20 @@ def run_unwrap_error_bridge(ifgram_file, water_mask_file, ramp_type=None, radius
         unw_cor = cc_obj.unwrap_conn_comp(unw, ramp_type=ramp_type)
 
         # write to hdf5 file
-        out_file = '{}_unwCor{}'.format(os.path.splitext(ifgram_file)[0],
-                                        os.path.splitext(ifgram_file)[1])
+        out_file = f'{fbase}_unwCor{fext}'
         print('writing >>> {}'.format(out_file))
         writefile.write(unw_cor, out_file=out_file, ref_file=ifgram_file)
+
+    # update config parameter for HDF5 file
+    if fext in ['.h5', '.he5'] and inps is not None:
+        print('add/update the following configuration metadata to file:')
+        config_meta = dict()
+        for key in config_keys:
+            config_meta[key_prefix+key] = str(vars(inps)[key])
+        ut.add_attribute(inps.ifgram_file, config_meta, print_msg=True)
+
+    # used time
+    m, s = divmod(time.time() - start_time, 60)
+    print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
 
     return ifgram_file

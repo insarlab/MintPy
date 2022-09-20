@@ -29,7 +29,7 @@ def run_or_skip(inps, ds_name_dict, out_file):
     if not inps.updateMode:
         return flag
 
-    # check 2 - output file existance
+    # check 2 - output file existence
     if ut.run_or_skip(out_file, readable=True) == 'run':
         return flag
 

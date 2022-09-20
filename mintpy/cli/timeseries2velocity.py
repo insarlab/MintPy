@@ -1,13 +1,12 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
 import os
 import sys
-import time
 
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import arg_utils
@@ -110,40 +109,45 @@ def create_parser(subparsers=None):
 
 def cmd_line_parse(iargs=None):
     """Command line parser."""
-    from mintpy.utils import readfile, utils as ut
-    from mintpy.timeseries2velocity import read_template2inps
-    
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # check if input file is time series
-    inps.file_type = readfile.read_attribute(inps.timeseries_file)['FILE_TYPE']
-    if inps.file_type not in ['timeseries', 'giantTimeseries', 'HDFEOS']:
-        raise Exception('input file is {}, NOT timeseries!'.format(inps.file_type))
+    # import
+    from mintpy.utils import readfile, utils as ut
 
+    # check
+    atr = readfile.read_attribute(inps.timeseries_file)
+
+    # check: input file type (time series is required)
+    ftype = atr['FILE_TYPE']
+    if ftype not in ['timeseries', 'giantTimeseries', 'HDFEOS']:
+        raise Exception(f'input file is {ftype}, NOT timeseries!')
+
+    # check: -t / --template option
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 
-    # --uq
+    # check: --uq / --uncertainty option
     if inps.uncertaintyQuantification == 'bootstrap':
-        # check 1 - bootstrap count number
+        # 1: bootstrap count number must be larger than 1
         if inps.bootstrapCount <= 1:
             inps.uncertaintyQuantification = 'residue'
             print('WARNING: bootstrapCount should be larger than 1!')
             print('Change the uncertainty quantification method from bootstrap to residue, and continue.')
-        # check 2 - advanced time func
+        # 2: advanced time func is not supported for bootstrap
         if (inps.polynomial != 1 or inps.periodic or inps.stepDate or inps.exp or inps.log):
             raise ValueError('bootstrapping support polynomial with the order of 1 ONLY!')
 
     elif inps.uncertaintyQuantification == 'covariance':
+        # 3: --ts-cov option is required for "--uq covariance"
         if not inps.timeSeriesCovFile or not os.path.isfile(inps.timeSeriesCovFile):
             inps.uncertaintyQuantification = 'residue'
             print('WARNING: NO time series covariance file found!')
             print('Change the uncertainty quantification method from covariance to residue, and continue.')
 
-    # --ref-lalo option
+    # check: --ref-lalo option (translate to --ref-yx)
     if inps.ref_lalo:
-        atr = readfile.read_attribute(inps.timeseries_file)
         coord = ut.coordinate(atr)
         ref_y, ref_x = coord.geo2radar(inps.ref_lalo[0], inps.ref_lalo[1])[:2]
         if ref_y is not None and ref_x is not None:
@@ -151,12 +155,12 @@ def cmd_line_parse(iargs=None):
             print('input reference point in (lat, lon): ({}, {})'.format(inps.ref_lalo[0], inps.ref_lalo[1]))
             print('corresponding   point in (y, x): ({}, {})'.format(inps.ref_yx[0], inps.ref_yx[1]))
 
-    # --output
+    # default: --output option
     if not inps.outfile:
         # get suffix
-        ts_file_base = os.path.splitext(os.path.basename(inps.timeseries_file))[0]
-        if ts_file_base in ['timeseriesRg', 'timeseriesAz']:
-            suffix = ts_file_base.split('timeseries')[-1]
+        fbase = os.path.splitext(os.path.basename(inps.timeseries_file))[0]
+        if fbase in ['timeseriesRg', 'timeseriesAz']:
+            suffix = fbase.split('timeseries')[-1]
         else:
             suffix = ''
         # compose default output filename
@@ -165,23 +169,65 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
+def read_template2inps(template_file, inps):
+    """Read input template file into inps.excludeDate"""
+    print('read options from template file: '+os.path.basename(template_file))
+
+    from mintpy.utils import ptime, readfile, utils as ut
+
+    iDict = vars(inps)
+    template = readfile.read_template(inps.template_file, skip_chars=['[', ']'])
+    template = ut.check_template_auto_value(template)
+
+    # read template option
+    key_prefix = 'mintpy.timeFunc.'
+    key_list = [i for i in list(iDict.keys()) if key_prefix+i in template.keys()]
+    for key in key_list:
+        value = template[key_prefix+key]
+        if value:
+            if key in ['startDate', 'endDate']:
+                iDict[key] = ptime.yyyymmdd(value)
+
+            elif key in ['excludeDate']:
+                iDict[key] = ptime.yyyymmdd(value.split(','))
+
+            elif key in ['periodic']:
+                iDict[key] = [float(x) for x in value.replace(';',',').split(',')]
+
+            elif key in ['stepDate']:
+                iDict[key] = value.replace(';',',').split(',')
+
+            elif key in ['exp', 'log']:
+                value = value.replace('/',';').replace('|',';')
+                iDict[key] = [x.split(',') for x in value.split(';')]
+
+            elif key in ['uncertaintyQuantification', 'timeSeriesCovFile']:
+                iDict[key] = value
+
+            elif key in ['polynomial', 'bootstrapCount']:
+                iDict[key] = int(value)
+
+    key = 'mintpy.compute.maxMemory'
+    if key in template.keys() and template[key]:
+        inps.maxMemory = float(template[key])
+
+    return inps
+
+
 ############################################################################
 def main(iargs=None):
-    from mintpy.timeseries2velocity import run_or_skip, run_timeseries2time_func
+    # parse
     inps = cmd_line_parse(iargs)
-    start_time = time.time()
 
-    # --update option
+    # import
+    from mintpy.timeseries2velocity import run_or_skip, run_timeseries2time_func
+
+    # run or skip
     if inps.update_mode and run_or_skip(inps) == 'skip':
-        return inps.outfile
+        return
 
     # run
     run_timeseries2time_func(inps)
-
-    # time info
-    m, s = divmod(time.time()-start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
-    return
 
 
 ############################################################################

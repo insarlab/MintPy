@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -13,17 +13,14 @@ from mintpy.utils.arg_utils import create_argument_parser
 ###############################################################
 REFERENCE = """reference:
   Jolivet, R., R. Grandin, C. Lasserre, M.-P. Doin and G. Peltzer (2011), Systematic InSAR tropospheric
-  phase delay corrections from global meteorological reanalysis data, Geophys. Res. Lett., 38, L17311,
-  doi:10.1029/2011GL048757
-
+    phase delay corrections from global meteorological reanalysis data, Geophys. Res. Lett., 38, L17311,
+    doi:10.1029/2011GL048757
   Jolivet, R., P. S. Agram, N. Y. Lin, M. Simons, M. P. Doin, G. Peltzer, and Z. Li (2014), Improving
-  InSAR geodesy using global atmospheric models, Journal of Geophysical Research: Solid Earth, 119(3),
-  2324-2341, doi:10.1002/2013JB010588.
-
-  # ERA5
+    InSAR geodesy using global atmospheric models, Journal of Geophysical Research: Solid Earth, 119(3),
+    2324-2341, doi:10.1002/2013JB010588.
   Hersbach, H., Bell, B., Berrisford, P., Hirahara, S., Horányi, A., Muñoz-Sabater, J., et al. (2020). 
-  The ERA5 global reanalysis. Quarterly Journal of the Royal Meteorological Society, 146(730), 1999–2049.
-  https://doi.org/10.1002/qj.3803
+    The ERA5 global reanalysis. Quarterly Journal of the Royal Meteorological Society, 146(730), 
+    1999–2049, doi:10.1002/qj.3803
 """
 
 EXAMPLE = """example:
@@ -90,14 +87,13 @@ def create_parser(subparsers=None):
                              'b) a text file with the first column as list of date in YYYYMMDD or YYMMDD format OR\n'
                              'c) a text file with Sentinel-1 SAFE filenames\ne.g.: '+SAFE_FILE)
     parser.add_argument('--hour', type=str, help='time of data in HH, e.g. 12, 06')
-    parser.add_argument('-o', dest='cor_dis_file',
+    parser.add_argument('-o','--output', dest='cor_dis_file',
                         help='Output file name for trospheric corrected timeseries.')
 
     # delay calculation
     delay = parser.add_argument_group('delay calculation')
     delay.add_argument('-m', '--model', '-s', dest='tropo_model', default='ERA5',
-                       choices={'ERA5'},
-                       #choices={'ERA5', 'MERRA', 'NARR'},
+                       choices={'ERA5'}, # {'ERA5', 'MERRA', 'NARR'},
                        help='source of the atmospheric model (default: %(default)s).')
     delay.add_argument('--delay', dest='delay_type', default='comb', choices={'comb', 'dry', 'wet'},
                        help='Delay type to calculate, comb contains both wet and dry delays (default: %(default)s).')
@@ -118,107 +114,50 @@ def create_parser(subparsers=None):
 
 def cmd_line_parse(iargs=None):
     """Command line parser."""
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    ## print model info
-    msg = 'weather model: {}'.format(inps.tropo_model)
-    if inps.delay_type == 'dry':
-        msg += ' - dry (hydrostatic) delay'
-    elif inps.delay_type == 'wet':
-        msg += ' - wet delay'
-    else:
-        msg += ' - dry (hydrostatic) and wet delay'
-    print(msg)
-
-    ## weather_dir
-    # expand path for ~ and environment variables in the path
+    # check + default: -w / --weather-dir option (expand special symbols)
     inps.weather_dir = os.path.expanduser(inps.weather_dir)
     inps.weather_dir = os.path.expandvars(inps.weather_dir)
-    # fallback value if WEATHER_DIR is not defined as environmental variable
     if inps.weather_dir == '${WEATHER_DIR}':
+        # fallback to current dir if env var WEATHER_DIR is not defined
         inps.weather_dir = './'
     inps.weather_dir = os.path.abspath(inps.weather_dir)
-    print('weather directory: {}'.format(inps.weather_dir))
 
-    ## ignore invalid filename inputs
-    for key in ['dis_file', 'geom_file']:
-        fname = vars(inps)[key]
+    # check: existence of input files
+    for fname in [inps.dis_file, inps.geom_file]:
         if fname and not os.path.isfile(fname):
             raise FileNotFoundError('input file not exist: {}'.format(fname))
 
-    ## required options (for date/time): --file OR --date-list
-    if (not inps.dis_file 
-            and any(vars(inps)[key] is None for key in ['date_list'])):
+    # check: required options (for date/time): --file OR --date-list
+    if (not inps.dis_file and not inps.date_list):
         raise SystemExit('ERROR: --file OR --date-list is required.\n\n'+EXAMPLE)
 
-    ## output filename - tropo delay file
+    # default: --tropo-file option
     if inps.geom_file and not inps.tropo_file:
-        inps.tropo_file = os.path.join(os.path.dirname(inps.geom_file), '{}.h5'.format(inps.tropo_model))
-    if inps.tropo_file:
-        print('output tropospheric delay file: {}'.format(inps.tropo_file))
+        geom_dir = os.path.dirname(inps.geom_file)
+        inps.tropo_file = os.path.join(geom_dir, f'{inps.tropo_model}.h5')
 
-    ## output filename - corrected displacement file
+    # default: -o / --output option
     if inps.dis_file and not inps.cor_dis_file:
         fbase, fext = os.path.splitext(inps.dis_file)
-        inps.cor_dis_file = '{fbase}_{suffix}{fext}'.format(fbase=fbase, suffix=inps.tropo_model, fext=fext)
-    if inps.cor_dis_file:
-        print('output corrected time-series file: {}'.format(inps.cor_dis_file))
+        inps.cor_dis_file = f'{fbase}_{inps.tropo_model}{fext}'
 
     return inps
 
 
 ###############################################################
 def main(iargs=None):
-    from mintpy.tropo_pyaps3 import (
-        read_inps2date_time,
-        get_grib_info,
-        dload_grib_files,
-        calc_delay_timeseries,
-        correct_timeseries,
-        correct_single_ifgram,
-    )
-
+    # parse
     inps = cmd_line_parse(iargs)
 
-    # read dates / time info
-    read_inps2date_time(inps)
+    # import
+    from mintpy.tropo_pyaps3 import run_tropo_pyaps3
 
-    # get corresponding grib files info
-    get_grib_info(inps)
-
-    # download
-    inps.grib_files = dload_grib_files(
-        inps.grib_files, 
-        tropo_model=inps.tropo_model,
-        snwe=inps.snwe)
-
-    # calculate tropo delay and save to h5 file
-    if inps.geom_file:
-        calc_delay_timeseries(inps)
-    else:
-        print('No input geometry file, skip calculating and correcting tropospheric delays.')
-        return
-
-    # correct tropo delay from displacement time-series
-    if inps.dis_file:
-        ftype = inps.atr['FILE_TYPE']
-        if ftype == 'timeseries':
-            correct_timeseries(
-                dis_file=inps.dis_file,
-                tropo_file=inps.tropo_file,
-                cor_dis_file=inps.cor_dis_file)
-
-        elif ftype == '.unw':
-            correct_single_ifgram(
-                dis_file=inps.dis_file,
-                tropo_file=inps.tropo_file,
-                cor_dis_file=inps.cor_dis_file)
-        else:
-            print('input file {} is not timeseries nor .unw, correction is not supported yet.'.format(ftype))
-
-    else:
-        print('No input displacement file, skip correcting tropospheric delays.')
+    # run
+    run_tropo_pyaps3(inps)
 
 
 ###############################################################
