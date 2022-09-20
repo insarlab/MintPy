@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
+# Author: Zhang Yunjun, Antonio Valentino, Aug 2018        #
 ############################################################
 
 import os
@@ -29,6 +29,7 @@ def create_parser(subparsers=None):
 
     return parser
 
+
 def cmd_line_parse(iargs=None):
     # parse
     parser = create_parser()
@@ -42,12 +43,36 @@ def cmd_line_parse(iargs=None):
 
 
 ###########################################################################################
+def run_remove_hdf5_dset(fname, ds_names):
+    """Remove a dataset from the given HDF5 file.
+
+    Parameters: fname    - str, path to the HDF5 data file
+                ds_names - list(str), name of the HDF5 dataset to be removed.
+    """
+    import h5py
+    from mintpy.utils import writefile
+
+    # grab exiting dataset list
+    with h5py.File(fname, 'r') as f:
+        dset_list = list(f.keys())
+
+    # check if given dataset exists
+    if any(i not in dset_list for i in ds_names):
+        msg = f'input dataset ({ds_names}) do not exist!'
+        msg += f'\nAvailable datasets: {dset_list}'
+        raise ValueError(msg)
+
+    # update file
+    writefile.remove_hdf5_dataset(fname, ds_names, print_msg=True)
+    print('Done.')
+
+    return
+
+
+###########################################################################################
 def main(iargs=None):
     # parse
     inps = cmd_line_parse(iargs)
-
-    # import
-    from mintpy.remove_hdf5_dset import run_remove_hdf5_dset
 
     # run
     run_remove_hdf5_dset(inps.file, inps.dset)
