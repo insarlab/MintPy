@@ -129,10 +129,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.prep_gamma import run_prep_gamma
+    from mintpy.prep_gamma import prep_gamma
 
     # run
-    run_prep_gamma(inps)
+    prep_gamma(inps)
 
 
 ###################################################################################################

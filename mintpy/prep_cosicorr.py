@@ -56,7 +56,7 @@ def add_cosicorr_metadata(fname, date12_dict, meta):
     return(meta)
 
 
-def run_prep_cosicorr(inps):
+def prep_cosicorr(inps):
     """Prepare the COSI-Corr metadata."""
 
     # open and read hyp3 metadata

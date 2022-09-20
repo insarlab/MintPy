@@ -55,10 +55,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.prep_snap import run_prep_snap
+    from mintpy.prep_snap import prep_snap
 
     # run
-    run_prep_snap(inps)
+    prep_snap(inps)
 
 
 ##################################################################################################

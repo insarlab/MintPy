@@ -333,7 +333,8 @@ def extract_metadata4geometry_geo(fname):
     return rsc_file
 
 
-def run_prep_gamma(inps):
+###################################################################################################
+def prep_gamma(inps):
 
     # loop for each file
     for fname in inps.file:

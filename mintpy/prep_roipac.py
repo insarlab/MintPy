@@ -66,7 +66,7 @@ def extract_metadata(fname):
     return basic_rsc_file
 
 
-def run_prep_roipac(inps):
+def prep_roipac(inps):
 
     inps.file = ut.get_file_list(inps.file, abspath=True)
     fext = os.path.splitext(inps.file[0])[1]

@@ -779,7 +779,7 @@ def get_extra_metadata(iDict):
 
 
 #################################################################
-def run_load_data(inps):
+def load_data(inps):
     """load data into HDF5 files."""
 
     ## 0. read input

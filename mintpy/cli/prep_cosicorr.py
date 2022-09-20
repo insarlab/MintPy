@@ -51,10 +51,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.prep_cosicorr import run_prep_cosicorr
+    from mintpy.prep_cosicorr import prep_cosicorr
 
     # run
-    run_prep_cosicorr(inps)
+    prep_cosicorr(inps)
 
 
 #########################################################################

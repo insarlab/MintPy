@@ -50,10 +50,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.prep_gmtsar import run_prep_gmtsar
+    from mintpy.prep_gmtsar import prep_gmtsar
 
     # run
-    run_prep_gmtsar(inps)
+    prep_gmtsar(inps)
 
 
 #########################################################################

@@ -174,7 +174,7 @@ def prepare_stack(obs_file, metadata=dict(), baseline_dict=dict(), update_mode=T
 
 
 #########################################################################
-def run_prep_isce(inps):
+def prep_isce(inps):
     """Prepare ISCE-2 metadata files."""
 
     inps.processor = isce_utils.get_processor(inps.meta_file)

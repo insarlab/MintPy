@@ -40,7 +40,8 @@ def prep_snap_metadata(snap_file):
     return rsc_file
 
 
-def run_prep_snap(inps):
+def prep_snap(inps):
+
     # grab all input files
     inps.file = ut.get_file_list(inps.file, abspath=True)
 

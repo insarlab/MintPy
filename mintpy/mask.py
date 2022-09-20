@@ -54,18 +54,22 @@ def update_mask_with_inps(mask, inps, print_msg=True):
     return mask
 
 
-def mask_file(fname, mask_file, out_file, inps):
+def mask_file(fname, mask_file, out_file=None, fill_value=np.nan, inps=None):
     """ Mask input fname with mask_file
     Parameters: fname     - str, file to be masked
                 mask_file - str, mask file
                 out_file  - str, output file name
-                inps      - namespace object, from cmd_line_parse()
+                inps      - namespace object, including:
+                            subset_x
+                            subset_y
+                            threshold
     Returns:    out_file  - str, output file name
     """
 
     # read mask_file
     mask = readfile.read(mask_file)[0]
-    mask = update_mask_with_inps(mask, inps)
+    if inps is not None:
+        mask = update_mask_with_inps(mask, inps)
 
     # masking input file
     dsNames = readfile.get_dataset_list(fname)
@@ -74,7 +78,7 @@ def mask_file(fname, mask_file, out_file, inps):
     for dsName in dsNames:
         print('masking {d:<{w}} from {f} ...'.format(d=dsName, w=maxDigit, f=fname))
         data = readfile.read(fname, datasetName=dsName, print_msg=False)[0]
-        data = mask_matrix(data, mask, fill_value=inps.fill_value)
+        data = mask_matrix(data, mask, fill_value=fill_value)
         dsDict[dsName] = data
 
     # default output filename

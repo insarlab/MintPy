@@ -87,10 +87,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.prep_hyp3 import run_prep_hyp3
+    from mintpy.prep_hyp3 import prep_hyp3
 
     # run
-    run_prep_hyp3(inps)
+    prep_hyp3(inps)
 
 
 ###################################################################################################

@@ -104,10 +104,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.prep_isce import run_prep_isce
+    from mintpy.prep_isce import prep_isce
 
     # run
-    run_prep_isce(inps)
+    prep_isce(inps)
 
 
 #########################################################################

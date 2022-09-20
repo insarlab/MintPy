@@ -62,7 +62,13 @@ def main(iargs=None):
     from mintpy.mask import mask_file
 
     # run
-    mask_file(inps.file, inps.mask_file, inps.outfile, inps)
+    mask_file(
+        inps.file,
+        mask_file=inps.mask_file,
+        out_file=inps.outfile,
+        fill_value=inps.fill_value,
+        inps=inps,
+    )
 
 
 ############################################################

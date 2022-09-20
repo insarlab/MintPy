@@ -52,10 +52,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.prep_roipac import run_prep_roipac
+    from mintpy.prep_roipac import prep_roipac
 
     # run
-    run_prep_roipac(inps)
+    prep_roipac(inps)
 
 
 ###################################################################################################

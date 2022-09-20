@@ -105,7 +105,7 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
 
 
 #########################################################################
-def run_prep_hyp3(inps):
+def prep_hyp3(inps):
     """Prepare ASF HyP3 metadata files"""
 
     inps.file = ut.get_file_list(inps.file, abspath=True)

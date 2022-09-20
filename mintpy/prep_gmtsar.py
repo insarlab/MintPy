@@ -252,7 +252,7 @@ def prepare_stack(unw_files, meta, update_mode=True):
 
 
 #########################################################################
-def run_prep_gmtsar(inps):
+def prep_gmtsar(inps):
     # read file path from template file
     template = readfile.read_template(inps.template_file)
     inps.unw_files = sorted(glob.glob(template['mintpy.load.unwFile']))
