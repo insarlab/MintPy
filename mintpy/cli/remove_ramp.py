@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
+# Author: Zhang Yunjun, Antonio Valentino, Aug 2022        #
 ############################################################
 
 
@@ -18,6 +18,12 @@ RAMP_LIST = [
     'quadratic',
     'quadratic_range',
     'quadratic_azimuth',
+]
+
+# key configuration parameter name
+config_keys = [
+    'mintpy.deramp',
+    'mintpy.deramp.maskFile',
 ]
 
 
@@ -72,15 +78,68 @@ def cmd_line_parse(iargs=None):
 
 
 ###########################################################################################
+def run_or_skip(inps, extra_meta):
+    from mintpy.utils import readfile
+
+    print('-'*50)
+    print('update mode: ON')
+    flag = 'skip'
+
+    # check output file
+    if not os.path.isfile(inps.outfile):
+        flag = 'run'
+        print('1) output file {} NOT found.'.format(inps.outfile))
+    else:
+        print('1) output file {} already exists.'.format(inps.outfile))
+        infiles = [inps.file]
+        if inps.mask_file:
+            infiles.append(inps.mask_file)
+        ti = max(os.path.getmtime(i) for i in infiles)
+        to = os.path.getmtime(inps.outfile)
+        if ti > to:
+            flag = 'run'
+            print('2) output file is NOT newer than input file: {}.'.format(infiles))
+        else:
+            print('2) output file is newer than input file: {}.'.format(infiles))
+
+    # check configuration
+    if flag == 'skip':
+        atr = readfile.read_attribute(inps.outfile)
+        if any(str(extra_meta[key]) != atr.get(key, 'None') for key in config_keys):
+            flag = 'run'
+            print('3) NOT all key configuration parameters are the same:{}'.format(config_keys))
+        else:
+            print('3) all key configuration parameters are the same:{}'.format(config_keys))
+
+    # result
+    print('run or skip: {}.'.format(flag))
+    return flag
+
+
+###########################################################################################
 def main(iargs=None):
     # parse
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.remove_ramp import run_remove_ramp
+    from mintpy.utils import utils1 as ut
+
+    # run or skip
+    extra_meta = {'mintpy.deramp' : inps.surface_type,
+                  'mintpy.deramp.maskFile' : inps.mask_file}
+    if inps.update_mode and run_or_skip(inps, extra_meta) == 'skip':
+        return
 
     # run
-    run_remove_ramp(inps)
+    out_file = ut.run_deramp(
+        inps.file,
+        ramp_type=inps.surface_type,
+        mask_file=inps.mask_file,
+        out_file=inps.outfile,
+        datasetName=inps.dset,
+        save_ramp_coeff=inps.save_ramp_coeff,
+        extra_meta=extra_meta,
+    )
 
 
 ###########################################################################################
