@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -47,6 +47,7 @@ def create_parser(subparsers=None):
                         help='dataset name to be derampped in ifgramStack file\n'
                              'e.g.: unwrapPhase\n'
                              '      unwrapPhase_bridging')
+
     parser.add_argument('-o', '--outfile', help='Output file name.')
     parser.add_argument('--save-ramp-coeff', dest='save_ramp_coeff', action='store_true',
                         help='Save the estimated ramp coefficients into text file.')
@@ -62,38 +63,24 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # --update requires --outfile
+    # check: coupled options (--update requires --outfile)
     if inps.update_mode and not inps.outfile:
         inps.update_mode = False
-        warnings.warn('update_mode is chosen but NOT turned on because the required --outfile is missing.')
+        warnings.warn('--update is given but the required --outfile is NOT, ignore --update and continue.')
+
     return inps
 
 
 ###########################################################################################
 def main(iargs=None):
-    from mintpy.utils import utils as ut
-    from mintpy.remove_ramp import run_or_skip, config_keys
-
+    # parse
     inps = cmd_line_parse(iargs)
 
-    # --update option
-    if inps.update_mode and run_or_skip(inps) == 'skip':
-        return inps.outfile
+    # import
+    from mintpy.remove_ramp import run_remove_ramp
 
-    out_file = ut.run_deramp(
-        inps.file,
-        ramp_type=inps.surface_type,
-        mask_file=inps.mask_file,
-        out_file=inps.outfile,
-        datasetName=inps.dset,
-        save_ramp_coeff=inps.save_ramp_coeff)
-
-    # config parameter
-    print('add/update the following configuration metadata to file:\n{}'.format(config_keys))
-    atr_new = {}
-    atr_new['mintpy.deramp'] = inps.surface_type
-    atr_new['mintpy.deramp.maskFile'] = inps.mask_file
-    ut.add_attribute(out_file, atr_new)
+    # run
+    run_remove_ramp(inps)
 
 
 ###########################################################################################

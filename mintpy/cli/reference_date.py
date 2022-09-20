@@ -1,13 +1,11 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
 import sys
-import time
-
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import arg_utils
 
@@ -22,7 +20,7 @@ EXAMPLE = """example:
 
 
 def create_parser(subparsers=None):
-    synopsis = 'Change reference date of timeseries.'
+    synopsis = 'Change reference date of time-series HDF5 file.'
     epilog = TEMPLATE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = arg_utils.create_argument_parser(
@@ -48,46 +46,53 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
-    from mintpy.utils import readfile
-
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    # check input file type
-    atr = readfile.read_attribute(inps.timeseries_file[0])
-    if 'timeseries' not in atr['FILE_TYPE'].lower():
-        raise ValueError('input file type: {} is not timeseries.'.format(atr['FILE_TYPE']))
+    # import
+    from mintpy.utils import readfile
+
+    # check: input file type
+    ftype = readfile.read_attribute(inps.timeseries_file[0])['FILE_TYPE']
+    if ftype != 'timeseries':
+        raise ValueError(f'input file type ({ftype}) is NOT timeseries.')
+
+    # check: -t / --template option
+    if inps.template_file:
+        inps = read_template2inps(inps.template_file, inps)
+
+    return inps
+
+
+def read_template2inps(template_file, inps):
+    """Update inps with options from template_file"""
+    from mintpy.utils import readfile, utils1 as ut
+
+    template = readfile.read_template(template_file)
+    template = ut.check_template_auto_value(template)
+
+    key = 'mintpy.reference.date'
+    if key in template.keys() and template[key]:
+        inps.refDate = template[key]
+
+    key = 'mintpy.compute.maxMemory'
+    if key in template.keys() and template[key]:
+        inps.maxMemory = float(template[key])
+
     return inps
 
 
 ##################################################################
 def main(iargs=None):
-    from mintpy.reference_date import change_timeseries_ref_date, read_ref_date, read_template2inps
-
+    # parse
     inps = cmd_line_parse(iargs)
-    start_time = time.time()
 
-    # read reference date
-    if inps.template_file:
-        inps = read_template2inps(inps.template_file, inps)
+    # import
+    from mintpy.reference_date import run_reference_date
 
-    inps.refDate = read_ref_date(inps)
-
-    # run referencing in time
-    if inps.refDate:
-        for ts_file in inps.timeseries_file:
-            change_timeseries_ref_date(ts_file,
-                                       ref_date=inps.refDate,
-                                       outfile=inps.outfile,
-                                       max_memory=inps.maxMemory,
-                                       force=inps.force)
-
-            #to distinguish the modification time of input files
-            time.sleep(1)
-
-    # time info
-    m, s = divmod(time.time()-start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+    # run
+    run_reference_date(inps)
 
 
 ##################################################################

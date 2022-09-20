@@ -140,7 +140,7 @@ setup(
             'prep_snap.py = mintpy.cli.prep_snap:main',
             'reference_date.py = mintpy.cli.reference_date:main',
             'reference_point.py = mintpy.cli.reference_point:main',
-            'remove_hdf5_dataset.py = mintpy.cli.remove_hdf5_dataset:main',
+            'remove_hdf5_dset.py = mintpy.cli.remove_hdf5_dset:main',
             'remove_ramp.py = mintpy.cli.remove_ramp:main',
             's1ab_range_bias.py = mintpy.cli.s1ab_range_bias:main',
             'save_gbis.py = mintpy.cli.save_gbis:main',

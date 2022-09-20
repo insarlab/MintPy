@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 
@@ -73,6 +73,7 @@ def create_parser(subparsers=None):
     parser.add_argument('--force', action='store_true',
                         help='Enforce the re-selection of reference point.')
 
+    # coordinates
     coord = parser.add_argument_group('input coordinates')
     coord.add_argument('-y', '--row', dest='ref_y', type=int,
                        help='row/azimuth  number of reference pixel')
@@ -89,6 +90,7 @@ def create_parser(subparsers=None):
                        help='Lookup table file from SAR to DEM, i.e. geomap_4rlks.trans\n' +
                             'Needed for radar coord input file with --lat/lon seeding option.')
 
+    # selection method
     parser.add_argument('-c', '--coherence', dest='coherenceFile', default='averageSpatialCoherence.h5',
                         help='use input coherence file to find the pixel with max coherence for reference pixel.')
     parser.add_argument('--min-coherence', dest='minCoherence', type=float, default=0.85,
@@ -104,38 +106,39 @@ def create_parser(subparsers=None):
 
 def cmd_line_parse(iargs=None):
     """Command line parser."""
-    from mintpy.utils import readfile
-
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    atr = readfile.read_attribute(inps.file)
-    if atr['FILE_TYPE'] != 'ifgramStack':
-        # turn ON wirte_data for non-ifgramStack file by default
-        inps.write_data = True
+    # import
+    from mintpy.utils import readfile
 
-    else:
-        # disable --output option for ifgramStack file
-        if inps.outfile:
-            raise SystemExit('--outfile is disabled for "ifgramStack" input file!')
+    # check
+    ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
+
+    # check: turn OFF --output option for ifgramStack file
+    if ftype == 'ifgramStack' and inps.outfile:
+        inps.outfile = None
+        print('WARNING: --outfile is NOT supported for "ifgramStack" file! Ignore it and continue.')
+
+    # check: turn ON --write-data option for non-ifgramStack file
+    if ftype != 'ifgramStack' and not inps.write_data:
+        inps.write_data = True
+        print(f'WARNING: auto turn ON --write-data for file tpye {ftype}')
 
     return inps
 
 
 #######################################  Main Function  ########################################
 def main(iargs=None):
-    from mintpy.reference_point import reference_file
-    from mintpy.utils import utils as ut
-    from mintpy.reference_point import read_reference_input
-
+    # parse
     inps = cmd_line_parse(iargs)
-    inps.file = ut.get_file_list(inps.file)[0]
-    inps = read_reference_input(inps)
 
-    if inps.go_reference:
-        reference_file(inps)
+    # import
+    from mintpy.reference_point import run_reference_point 
 
-    print('Done.')
+    # run
+    run_reference_point(inps)
 
 
 ################################################################################################

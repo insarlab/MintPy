@@ -6,7 +6,7 @@
 
 
 import os
-from mintpy.utils import readfile
+from mintpy.utils import readfile, utils1 as ut
 
 
 # key configuration parameter name
@@ -54,3 +54,28 @@ def run_or_skip(inps):
     # result
     print('run or skip: {}.'.format(flag))
     return flag
+
+
+def run_remove_ramp(inps):
+
+    # run or skip
+    if inps.update_mode and run_or_skip(inps) == 'skip':
+        return inps.outfile
+
+    # run
+    out_file = ut.run_deramp(
+        inps.file,
+        ramp_type=inps.surface_type,
+        mask_file=inps.mask_file,
+        out_file=inps.outfile,
+        datasetName=inps.dset,
+        save_ramp_coeff=inps.save_ramp_coeff)
+
+    # config parameter
+    print('add/update the following configuration metadata to file:\n{}'.format(config_keys))
+    atr_new = {}
+    atr_new['mintpy.deramp'] = inps.surface_type
+    atr_new['mintpy.deramp.maskFile'] = inps.mask_file
+    ut.add_attribute(out_file, atr_new)
+
+    return out_file

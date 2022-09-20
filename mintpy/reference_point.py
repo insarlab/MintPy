@@ -13,40 +13,7 @@ import random
 from mintpy.utils import ptime, readfile, writefile, utils as ut
 
 
-#########################################  Usage  ##############################################
-def read_template_file2inps(template_file, inps):
-    """Read seed/reference info from template file and update input namespace"""
-    inps_dict = vars(inps)
-    template = readfile.read_template(template_file, skip_chars=['[', ']'])
-    template = ut.check_template_auto_value(template)
-
-    prefix = 'mintpy.reference.'
-    key_list = [i for i in list(inps_dict)
-                if prefix+i in template.keys()]
-    for key in key_list:
-        value = template[prefix+key]
-        if value:
-            if key in ['coherenceFile', 'maskFile']:
-                inps_dict[key] = value
-            elif key == 'minCoherence':
-                inps_dict[key] = float(value)
-
-    key = prefix+'yx'
-    if key in template.keys():
-        value = template[key]
-        if value:
-            inps.ref_y, inps.ref_x = [int(i) for i in value.split(',')]
-
-    key = prefix+'lalo'
-    if key in template.keys():
-        value = template[key]
-        if value:
-            inps.ref_lat, inps.ref_lon = [float(i) for i in value.split(',')]
-
-    return inps
-
-
-########################################## Sub Functions #############################################
+###############################################################
 def nearest(x, tbase, xstep):
     """ find nearest neighbour """
     dist = np.sqrt((tbase - x)**2)
@@ -94,14 +61,17 @@ def reference_file(inps):
                 coh_file=inps.coherenceFile,
                 mask=mask,
                 min_coh=inps.minCoherence)
+
         elif inps.method == 'random':
             inps.ref_y, inps.ref_x = random_select_reference_yx(mask)
+
         elif inps.method == 'manual':
             inps = manual_select_reference_yx(stack, inps, mask)
 
         # Check ref_y/x from auto method
         if inps.ref_y is None or inps.ref_x is None:
             raise ValueError('ERROR: no reference y/x found.')
+
 
     # Seeding file with reference y/x
     atrNew = reference_point_attribute(atr, y=inps.ref_y, x=inps.ref_x)
@@ -111,17 +81,15 @@ def reference_file(inps):
         inps.outfile = ut.add_attribute(inps.file, atrNew)
 
     else:
-        if not inps.outfile:
-            inps.outfile = inps.file
-
-        k = atr['FILE_TYPE']
+        inps.outfile = inps.outfile if inps.outfile else inps.file
+        ftype = atr['FILE_TYPE']
         fext = os.path.splitext(inps.file)[1]
 
         if fext == '.h5':
             if inps.outfile == inps.file:
                 print('updating dataset values without re-writing to a new file')
 
-                if k == 'ifgramStack':
+                if ftype == 'ifgramStack':
                     with h5py.File(inps.file, 'r+') as f:
                         ds = f['unwrapPhase']
                         num_date12 = ds.shape[0]
@@ -131,9 +99,11 @@ def reference_file(inps):
 
                             # make a copy of ds[i] because h5py allows fancy indexing for 1D arrays only.
                             data_2d = ds[i, :, :]
+
                             # apply spatial referencing (skip pixels with no-data-value)
                             data_2d[data_2d != 0.] -= data_2d[inps.ref_y, inps.ref_x]
                             ds[i, :, :] = data_2d
+
                         prog_bar.close()
 
                         print('update metadata')
@@ -141,7 +111,7 @@ def reference_file(inps):
 
                 else:
                     with h5py.File(inps.file, 'r+') as f:
-                        ds = f[k]
+                        ds = f[ftype]
                         if len(ds.shape) == 3:
                             # 3D matrix
                             for i in range(ds.shape[0]):
@@ -159,7 +129,7 @@ def reference_file(inps):
                 print('writing the referenced data into file: {}'.format(inps.outfile))
 
                 # 1. read and update data value
-                data, atr = readfile.read(inps.file, datasetName=k)
+                data, atr = readfile.read(inps.file, datasetName=ftype)
                 if len(data.shape) == 3:
                     # 3D matrix
                     for i in range(data.shape[0]):
@@ -194,7 +164,6 @@ def reference_file(inps):
     return inps.outfile
 
 
-###############################################################
 def reference_point_attribute(atr, y, x):
     atrNew = dict()
     atrNew['REF_Y'] = str(y)
@@ -286,6 +255,38 @@ def random_select_reference_yx(data_mat, print_msg=True):
 
 
 ###############################################################
+def read_template_file2inps(template_file, inps):
+    """Read seed/reference info from template file and update input namespace"""
+    inps_dict = vars(inps)
+    template = readfile.read_template(template_file, skip_chars=['[', ']'])
+    template = ut.check_template_auto_value(template)
+
+    prefix = 'mintpy.reference.'
+    key_list = [i for i in list(inps_dict)
+                if prefix+i in template.keys()]
+    for key in key_list:
+        value = template[prefix+key]
+        if value:
+            if key in ['coherenceFile', 'maskFile']:
+                inps_dict[key] = value
+            elif key == 'minCoherence':
+                inps_dict[key] = float(value)
+
+    key = prefix+'yx'
+    if key in template.keys():
+        value = template[key]
+        if value:
+            inps.ref_y, inps.ref_x = [int(i) for i in value.split(',')]
+
+    key = prefix+'lalo'
+    if key in template.keys():
+        value = template[key]
+        if value:
+            inps.ref_lat, inps.ref_lon = [float(i) for i in value.split(',')]
+
+    return inps
+
+
 def read_reference_file2inps(reference_file, inps=None):
     """Read reference info from reference file and update input namespace"""
     atrRef = readfile.read_attribute(inps.reference_file)
@@ -295,6 +296,7 @@ def read_reference_file2inps(reference_file, inps=None):
     if (inps.ref_lat is None or inps.ref_lon is None) and 'REF_LON' in atrRef.keys():
         inps.ref_lat = float(atrRef['REF_LAT'])
         inps.ref_lon = float(atrRef['REF_LON'])
+
     return inps
 
 
@@ -317,6 +319,7 @@ def read_reference_input(inps):
     if inps.template_file:
         print('reading reference info from template: '+inps.template_file)
         inps = read_template_file2inps(inps.template_file, inps)
+
     if inps.reference_file:
         print('reading reference info from reference: '+inps.reference_file)
         inps = read_reference_file2inps(inps.reference_file, inps)
@@ -388,3 +391,16 @@ def remove_reference_pixel(File):
     return File
 
 
+###############################################################
+def run_reference_point(inps):
+    """Run spatial referencing."""
+
+    inps.file = ut.get_file_list(inps.file)[0]
+
+    inps = read_reference_input(inps)
+
+    if inps.go_reference:
+        reference_file(inps)
+
+    print('Done.')
+    return

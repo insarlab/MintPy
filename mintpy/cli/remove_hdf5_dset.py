@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
 
 import os
@@ -11,9 +11,9 @@ from mintpy.utils.arg_utils import create_argument_parser
 
 ###########################################################################################
 EXAMPLE = """Example:
-  remove_hdf5_dataset.py  ifgramStack.h5  unwrapPhase_phaseClosure
-  remove_hdf5_dataset.py  ifgramStack.h5  unwrapPhase_phaseClosure  unwrapPhase_bridging
-  remove_hdf5_dataset.py  velocity.h5     velocityStd
+  remove_hdf5_dset.py  ifgramStack.h5  unwrapPhase_phaseClosure
+  remove_hdf5_dset.py  ifgramStack.h5  unwrapPhase_phaseClosure  unwrapPhase_bridging
+  remove_hdf5_dset.py  velocity.h5     velocityStd
 """
 
 
@@ -30,19 +30,27 @@ def create_parser(subparsers=None):
     return parser
 
 def cmd_line_parse(iargs=None):
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # check: input file extension
     if os.path.splitext(inps.file)[1] not in ['.h5', '.he5']:
-        raise ValueError('input file is not HDF5: {}'.format(inps.file))
+        raise ValueError('input file is NOT HDF5: {}'.format(inps.file))
+
     return inps
 
 
 ###########################################################################################
 def main(iargs=None):
-    from mintpy.remove_hdf5_dataset import remove_hdf5_dataset
+    # parse
     inps = cmd_line_parse(iargs)
-    remove_hdf5_dataset(inps.file, inps.dset)
-    print('Done.')
+
+    # import
+    from mintpy.remove_hdf5_dset import run_remove_hdf5_dset
+
+    # run
+    run_remove_hdf5_dset(inps.file, inps.dset)
 
 
 ###########################################################################################

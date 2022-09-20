@@ -291,13 +291,6 @@ def get_prep_snap_parser(subparsers=None):
 
 
 # R-T
-def get_remove_ramp_parser(subparsers=None):
-    from mintpy.cli import remove_ramp
-    parser = remove_ramp.create_parser(subparsers)
-    parser.set_defaults(func=remove_ramp.main)
-    return parser
-
-
 def get_reference_date_parser(subparsers=None):
     from mintpy.cli import reference_date
     parser = reference_date.create_parser(subparsers)
@@ -312,10 +305,17 @@ def get_reference_point_parser(subparsers=None):
     return parser
 
 
-def get_remove_hdf5_dataset(subparsers=None):
-    from mintpy.cli import remove_hdf5_dataset
-    parser = remove_hdf5_dataset.create_parser(subparsers)
-    parser.set_defaults(func=remove_hdf5_dataset.main)
+def get_remove_hdf5_dset(subparsers=None):
+    from mintpy.cli import remove_hdf5_dset
+    parser = remove_hdf5_dset.create_parser(subparsers)
+    parser.set_defaults(func=remove_hdf5_dset.main)
+    return parser
+
+
+def get_remove_ramp_parser(subparsers=None):
+    from mintpy.cli import remove_ramp
+    parser = remove_ramp.create_parser(subparsers)
+    parser.set_defaults(func=remove_ramp.main)
     return parser
 
 
@@ -586,7 +586,7 @@ def get_parser():
     # I/O
     get_load_data_parser(sp)
     get_load_gbis_parser(sp)
-    get_remove_hdf5_dataset(sp)
+    get_remove_hdf5_dset(sp)
     get_save_gbis_parser(sp)
     get_save_gdal_parser(sp)
     get_save_gmt_parser(sp)
