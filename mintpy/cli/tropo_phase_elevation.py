@@ -5,7 +5,6 @@
 ############################################################
 
 
-import os
 import sys
 import argparse
 from mintpy.utils.arg_utils import create_argument_parser

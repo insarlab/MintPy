@@ -387,7 +387,7 @@ def get_file_list(file_list, abspath=False, coord=None):
         file_list = [file_list]
 
     # Get rid of None element
-    file_list = [x for x in file_list if x != None]
+    file_list = [x for x in file_list if x is not None]
     file_list_out = []
     for i in range(len(file_list)):
         file0 = file_list[i]

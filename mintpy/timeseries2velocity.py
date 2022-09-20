@@ -13,7 +13,7 @@ import numpy as np
 from scipy import linalg
 
 from mintpy.objects import timeseries, giantTimeseries, HDFEOS, cluster
-from mintpy.utils import ptime, time_func, readfile, writefile, utils as ut
+from mintpy.utils import ptime, time_func, readfile, writefile
 
 
 DATA_TYPE = np.float32
