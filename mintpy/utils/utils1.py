@@ -240,7 +240,7 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
         pass
 
     # use median instead of mean for offset measurement
-    if 'offset' in datasetName:
+    if datasetName and 'offset' in datasetName:
         useMedian = True
     else:
         useMedian = False

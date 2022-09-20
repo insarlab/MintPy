@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Heresh Fattahi, Antonio Valentino, 2013          #
 ############################################################
 
 
@@ -34,9 +34,17 @@ def cmd_line_parse(iargs=None):
 
 ############################################################################
 def main(iargs=None):
-    from mintpy.temporal_derivative import temporal_derivative
+    # parse
     inps = cmd_line_parse(iargs)
-    return temporal_derivative(inps.file, inps.outfile)
+
+    # import
+    from mintpy.objects import timeseries
+
+    # run
+    ts_obj = timeseries(inps.file)
+    ts_obj.temporal_derivative(inps.outfile)
+
+    return
 
 
 ############################################################################

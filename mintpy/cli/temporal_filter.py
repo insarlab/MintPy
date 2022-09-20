@@ -1,7 +1,7 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Heresh Fattahi, Antonio Valentino, 2013          #
 ############################################################
 
 
@@ -42,9 +42,16 @@ def cmd_line_parse(iargs=None):
 
 ############################################################
 def main(iargs=None):
-    from mintpy.temporal_filter import temporal_filter
+    # parse
     inps = cmd_line_parse(iargs)
-    temporal_filter(inps.timeseries_file, inps.outfile, inps.time_win)
+
+    # import
+    from mintpy.objects import timeseries
+
+    # run
+    ts_obj = timeseries(inps.timeseries_file)
+    ts_obj.temporal_filter(time_win=inps.time_win, out_file=inps.outfile)
+    return
 
 
 ############################################################

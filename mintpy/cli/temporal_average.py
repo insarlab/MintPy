@@ -1,10 +1,11 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Antonio Valentino, Aug 2022                      #
+# Author: Zhang Yunjun, Antonio Valentino, Aug 2016        #
 ############################################################
 
 
+import os
 import sys
 import time
 from mintpy.utils.arg_utils import create_argument_parser
@@ -36,28 +37,99 @@ def create_parser(subparsers=None):
 
 def cmd_line_parse(iargs=None):
     """Command line parser."""
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # default:
+    if not inps.outfile:
+        inps.outfile = auto_output_filename(inps)
+
     return inps
+
+
+##############################  Sub Function  ################################
+def auto_output_filename(inps):
+    """Default output file name"""
+    from mintpy.utils import readfile
+
+    ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
+    fdir = os.path.dirname(inps.file)
+    fbase = os.path.basename(inps.file)
+
+    if ftype == 'ifgramStack':
+        if inps.datasetName == 'coherence':
+            inps.outfile = 'avgSpatialCoh.h5'
+        elif 'unwrapPhase' in inps.datasetName:
+            inps.outfile = 'avgPhaseVelocity.h5'
+        else:
+            inps.outfile = f'avg{inps.datasetName}.h5'
+
+    elif ftype == 'timeseries':
+        suffix = os.path.splitext(fbase)[0].split('timeseries')[1]
+        inps.outfile = f'avgDisp{suffix}.h5'
+
+    else:
+        inps.outfile = f'avg{fbase}'
+
+    inps.outfile = os.path.join(fdir, inps.outfile)
+    print('output file: {}'.format(inps.outfile))
+
+    return inps.outfile
+
+
+def run_or_skip(inps):
+    import h5py
+
+    print('-'*50)
+    print('update mode: ON')
+    flag = 'skip'
+
+    # check output file vs input dataset
+    if not os.path.isfile(inps.outfile):
+        flag = 'run'
+        print('1) output file {} NOT exist.'.format(inps.outfile))
+    else:
+        print('1) output file {} already exists.'.format(inps.outfile))
+        with h5py.File(inps.file, 'r') as f:
+            atr = f[inps.datasetName].attrs
+            ti = float(atr.get('MODIFICATION_TIME', os.path.getmtime(inps.file)))
+        to = os.path.getmtime(inps.outfile)
+        if ti > to:
+            flag = 'run'
+            print('2) output file is NOT newer than input dataset: {}.'.format(inps.datasetName))
+        else:
+            print('2) output file is newer than input dataset: {}.'.format(inps.datasetName))
+
+    # result
+    print('run or skip: {}.'.format(flag))
+    return flag
 
 
 #############################  Main Function  ################################
 def main(iargs=None):
-    from mintpy.utils import utils as ut
-    from mintpy.temporal_average import check_output_filename, run_or_skip
-
-    start_time = time.time()
+    # parse
     inps = cmd_line_parse(iargs)
 
-    inps.outfile = check_output_filename(inps)
+    # import
+    from mintpy.utils import utils1 as ut
 
+    # run or skip
     if inps.update_mode and run_or_skip(inps) == 'skip':
-        return inps.outfile
+        return
 
-    ut.temporal_average(inps.file, datasetName=inps.datasetName, outFile=inps.outfile)
+    # run
+    start_time = time.time()
+    ut.temporal_average(
+        inps.file,
+        datasetName=inps.datasetName,
+        outFile=inps.outfile,
+    )
 
+    # used time
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs\n'.format(m, s))
+
     return
 
 
