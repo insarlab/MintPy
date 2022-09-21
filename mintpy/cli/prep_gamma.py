@@ -9,7 +9,25 @@
 import os
 import sys
 from mintpy.utils.arg_utils import create_argument_parser
-from mintpy.objects.sensor import SENSOR_NAMES
+# from mintpy.objects.sensor import SENSOR_NAMES
+
+SENSOR_NAMES = [
+    'alos',
+    'alos2',
+    'csk',
+    'env',
+    'ers',
+    'gf3',
+    'jers',
+    'ksat5',
+    'ni',
+    'rs1',
+    'rs2',
+    'rcm',
+    'sen',
+    'tsx',
+    'uav',
+]
 
 
 ##################################################################################################
