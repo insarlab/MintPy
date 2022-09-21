@@ -28,6 +28,7 @@ SENSOR_NAME_VARIATION = {
     'uav'   : ['uav', 'uavsar'],
 }
 
+# duplicated in mintpy.cli.prep_gamma
 SENSOR_NAMES = list(SENSOR_NAME_VARIATION.keys())
 
 
