@@ -429,7 +429,7 @@ def write_hdf5_file(metadata, out_file, ts_file, tcoh_file, scoh_file, mask_file
 
 
 ################################################################
-def run_save_hdfeos5(inps):
+def save_hdfeos5(inps):
 
     inps, template = read_template2inps(inps.template_file, inps)
 

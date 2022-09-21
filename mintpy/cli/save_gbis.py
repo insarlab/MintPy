@@ -69,10 +69,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.save_gbis import run_save_gbis
+    from mintpy.save_gbis import save_gbis
 
     # run
-    run_save_gbis(inps)
+    save_gbis(inps)
 
 
 ##############################################################################

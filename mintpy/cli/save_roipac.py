@@ -88,10 +88,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.save_roipac import run_save_roipac
+    from mintpy.save_roipac import save_roipac
 
     # run
-    run_save_roipac(inps)
+    save_roipac(inps)
 
 
 ##########################################################################

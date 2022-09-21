@@ -58,10 +58,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.save_qgis import run_save_qgis
+    from mintpy.save_qgis import save_qgis
 
     # run
-    run_save_qgis(inps)
+    save_qgis(inps)
 
 
 #########################################################################################

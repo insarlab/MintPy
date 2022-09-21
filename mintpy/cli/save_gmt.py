@@ -62,10 +62,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.prep_gmt import run_prep_gmt
+    from mintpy.prep_gmt import save_gmt
 
     # run
-    run_prep_gmt(inps)
+    save_gmt(inps)
 
 
 ####################################################################################

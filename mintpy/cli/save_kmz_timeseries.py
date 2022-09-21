@@ -106,10 +106,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.save_kmz_timeseries import run_save_kmz_timeseries
+    from mintpy.save_kmz_timeseries import save_kmz_timeseries
 
     # run
-    run_save_kmz_timeseries(inps)
+    save_kmz_timeseries(inps)
 
 
 ######################################################################################

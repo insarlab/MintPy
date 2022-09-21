@@ -414,7 +414,7 @@ def write_kmz_placemark(data, meta, out_file, geom_file, inps):
 
 
 ############################################################
-def run_save_kmz(inps):
+def save_kmz(inps):
 
     # matplotlib backend setting
     plt.switch_backend('Agg')

@@ -481,7 +481,7 @@ def generate_network_link(inps, ts_obj, step, lod):
 
 
 ######################################################################################
-def run_save_kmz_timeseries(inps):
+def save_kmz_timeseries(inps):
 
     # resource file paths
     inps.work_dir = os.path.abspath(os.path.dirname(inps.ts_file))
@@ -505,8 +505,7 @@ def run_save_kmz_timeseries(inps):
     vel = readfile.read(inps.vel_file, datasetName='velocity')[0] * 100.
 
     # Set vmin/max and colormap
-    if inps.vlim is None:
-        inps.vlim = [np.nanmin(vel), np.nanmax(vel)]
+    inps.vlim = inps.vlim if inps.vlim is not None else [np.nanmin(vel), np.nanmax(vel)]
     if inps.wrap:
         print('re-wrapping data to {} cm/year for color coding'.format(inps.vlim))
     inps.colormap = pp.ColormapExt(inps.cmap_name).colormap
@@ -534,9 +533,12 @@ def run_save_kmz_timeseries(inps):
     # 3 Create data folder to contain actual data elements
     data_folder = KML.Folder(KML.name("Data"))
     for i, step in enumerate(inps.steps):
-        net_link = generate_network_link(inps, ts_obj,
-                                         step=step,
-                                         lod=(inps.lods[i], inps.lods[i+1]))
+        net_link = generate_network_link(
+            inps,
+            ts_obj,
+            step=step,
+            lod=(inps.lods[i], inps.lods[i+1]),
+        )
         if net_link is not None:
             data_folder.append(net_link)
     kml_root_doc.append(data_folder)

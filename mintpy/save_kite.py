@@ -91,7 +91,7 @@ def create_kite_container(dis, atr, date1, date2, inc_angle, az_angle, out_file)
     return scene
 
 
-def run_save_kite(inps):
+def save_kite(inps):
 
     print('\n-------------------READ INPUTS -------------------')
     print('Read metadata from file: {}'.format(inps.file))

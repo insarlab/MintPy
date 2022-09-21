@@ -221,7 +221,7 @@ def write_shape_file(fDict, shp_file, box=None):
 
 
 #########################################################################################
-def run_save_qgis(inps):
+def save_qgis(inps):
 
     # Read bounding box
     box = read_bounding_box(

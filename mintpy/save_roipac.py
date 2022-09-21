@@ -259,7 +259,9 @@ def clean_metadata4roipac(atr_in):
     return atr
 
 
-def run_save_roipac(inps):
+##############################################################################
+def save_roipac(inps):
+
     # read data and metadata
     data, atr, out_file = read_data(inps)
 

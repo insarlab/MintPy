@@ -5,6 +5,7 @@
 ############################################################
 
 
+import os
 import sys
 import warnings
 from mintpy.utils.arg_utils import create_argument_parser

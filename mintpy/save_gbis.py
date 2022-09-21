@@ -174,7 +174,7 @@ def save2mat(inps):
 
 
 ##############################################################################
-def run_save_gbis(inps):
+def save_gbis(inps):
 
     # matplotlib backend setting
     if not inps.disp_fig:

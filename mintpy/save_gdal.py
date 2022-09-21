@@ -62,7 +62,7 @@ def array2raster(array, out_file, transform, epsg, out_fmt='GTiff'):
     return out_file
 
 
-def run_save_gdal(inps):
+def save_gdal(inps):
 
     ## read data
     ftype = readfile.read_attribute(inps.file)['FILE_TYPE']

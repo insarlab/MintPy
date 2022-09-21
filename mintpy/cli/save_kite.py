@@ -66,10 +66,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.save_kite import run_save_kite
+    from mintpy.save_kite import save_kite
 
     # run
-    run_save_kite(inps)
+    save_kite(inps)
 
 
 #########################################################################################################

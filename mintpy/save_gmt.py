@@ -125,7 +125,7 @@ def write_grd_file(data, atr, out_file=None):
 
 
 ####################################################################################
-def run_save_gmt(inps):
+def save_gmt(inps):
     # read data
     data, atr = readfile.read(inps.file, datasetName=inps.dset) 
 

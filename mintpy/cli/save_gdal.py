@@ -57,10 +57,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.save_gdal import run_save_gdal
+    from mintpy.save_gdal import save_gdal
 
     # run
-    run_save_gdal(inps)
+    save_gdal(inps)
 
 
 ##############################################################################

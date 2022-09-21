@@ -101,10 +101,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.save_hdfeos5 import run_save_hdfeos5
+    from mintpy.save_hdfeos5 import save_hdfeos5
 
     # run
-    run_save_hdfeos5(inps)
+    save_hdfeos5(inps)
 
 
 ################################################################

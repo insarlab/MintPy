@@ -142,10 +142,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.save_kmz import run_save_kmz
+    from mintpy.save_kmz import save_kmz
 
     # run
-    run_save_kmz(inps)
+    save_kmz(inps)
 
 
 #######################################################
