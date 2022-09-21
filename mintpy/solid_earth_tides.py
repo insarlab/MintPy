@@ -212,11 +212,12 @@ def correct_timeseries(dis_file, set_file, cor_dis_file):
     print('\n------------------------------------------------------------------------------')
     print('correcting relative delay for input time-series using diff.py')
 
-    import mintpy.cli.diff
-
     iargs = [dis_file, set_file, '-o', cor_dis_file]
     print('diff.py', ' '.join(iargs))
+
+    import mintpy.cli.diff
     mintpy.cli.diff.main(iargs)
+
     return cor_dis_file
 
 

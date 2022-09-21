@@ -641,8 +641,10 @@ def correct_timeseries(dis_file, tropo_file, cor_dis_file):
 
     iargs = [dis_file, tropo_file, '-o', cor_dis_file, '--force']
     print('diff.py', ' '.join(iargs))
+
     import mintpy.cli.diff
     mintpy.cli.diff.main(iargs)
+
     return cor_dis_file
 
 
