@@ -54,7 +54,6 @@ class TimeSeriesAnalysis:
         self.customTemplateFile = customTemplateFile
         self.workDir = os.path.abspath(workDir)
         self.cwd = os.path.abspath(os.getcwd())
-        return
 
     def open(self):
         """The starting point of the workflow. It runs everytime.
@@ -77,8 +76,6 @@ class TimeSeriesAnalysis:
         #3. Read templates
         self.templateFile = get_the_latest_default_template_file(self.workDir)
         self._read_template()
-
-        return
 
 
     def _read_template(self):
@@ -149,7 +146,6 @@ class TimeSeriesAnalysis:
                     self.template['mintpy.geocode'] = True
                     print('Turn ON mintpy.geocode in order to run {}.'.format(key))
                     break
-        return
 
 
     def run_load_data(self, step_name):
@@ -192,8 +188,6 @@ class TimeSeriesAnalysis:
                     print(f'{msg} for file: {os.path.basename(fname)}')
                     ut.add_attribute(fname, self.customTemplate)
 
-        return
-
 
     def _copy_aux_file(self):
         # for Univ of Miami
@@ -207,7 +201,6 @@ class TimeSeriesAnalysis:
                 if ut.run_or_skip(os.path.basename(fname), in_file=fname, readable=False) == 'run':
                     shutil.copy2(fname, self.workDir)
                     print('copy {} to work directory'.format(os.path.basename(fname)))
-        return
 
 
     def run_network_modification(self, step_name):
@@ -260,7 +253,6 @@ class TimeSeriesAnalysis:
                 mintpy.cli.plot_network.main(iargs)
         else:
             print('mintpy.plot is turned OFF, skip plotting network.')
-        return
 
 
     def generate_ifgram_aux_file(self):
@@ -363,7 +355,6 @@ class TimeSeriesAnalysis:
 
         else:
             raise ValueError('un-recognized method: {}'.format(method))
-        return
 
 
     def run_network_inversion(self, step_name):
@@ -441,7 +432,6 @@ class TimeSeriesAnalysis:
 
             # terminate the program
             raise RuntimeError(msg)
-        return
 
 
     @staticmethod
@@ -554,7 +544,6 @@ class TimeSeriesAnalysis:
             atr = readfile.read_attribute(in_file)
             sat = atr.get('PLATFORM', None)
             print('No local oscillator drift correction is needed for {}.'.format(sat))
-        return
 
 
     def run_solid_earth_tides_correction(self, step_name):
@@ -651,7 +640,6 @@ class TimeSeriesAnalysis:
 
         else:
             print('No tropospheric delay correction.')
-        return
 
 
     def run_phase_deramping(self, step_name):
@@ -669,7 +657,6 @@ class TimeSeriesAnalysis:
             mintpy.cli.remove_ramp.main(iargs)
         else:
             print('No phase ramp removal.')
-        return
 
 
     def run_topographic_residual_correction(self, step_name):
@@ -690,7 +677,6 @@ class TimeSeriesAnalysis:
 
         else:
             print('No topographic residual correction.')
-        return
 
 
     def run_residual_phase_rms(self, step_name):
@@ -702,7 +688,6 @@ class TimeSeriesAnalysis:
             mintpy.cli.timeseries_rms.main(iargs)
         else:
             print('No residual phase file found! Skip residual RMS analysis.')
-        return
 
 
     def run_reference_date(self, step_name):
@@ -716,7 +701,6 @@ class TimeSeriesAnalysis:
             mintpy.cli.reference_date.main(iargs)
         else:
             print('No reference date change.')
-        return
 
 
     def run_timeseries2velocity(self, step_name):
@@ -742,7 +726,6 @@ class TimeSeriesAnalysis:
             iargs += ['--ref-date', atr['REF_DATE'], '--ref-yx', atr['REF_Y'], atr['REF_X']]
             print('\ntimeseries2velocity.py', ' '.join(iargs))
             mintpy.cli.timeseries2velocity.main(iargs)
-        return
 
 
     def run_geocode(self, step_name):
@@ -781,7 +764,6 @@ class TimeSeriesAnalysis:
                 print('dataset is geocoded, skip geocoding and continue.')
         else:
             print('geocoding is OFF')
-        return
 
 
     def run_save2google_earth(self, step_name):
@@ -810,7 +792,6 @@ class TimeSeriesAnalysis:
 
         else:
             print('save velocity to Google Earth format is OFF.')
-        return
 
 
     def run_save2hdfeos5(self, step_name):
@@ -854,7 +835,6 @@ class TimeSeriesAnalysis:
 
         else:
             print('save time-series to HDF-EOS5 format is OFF.')
-        return
 
 
     def run(self, steps):
@@ -912,7 +892,6 @@ class TimeSeriesAnalysis:
 
             elif sname == 'hdfeos5':
                 self.run_save2hdfeos5(sname)
-        return
 
 
     def plot_result(self, print_aux=True):
@@ -1084,7 +1063,6 @@ class TimeSeriesAnalysis:
         """
         if print_aux:
             print(msg)
-        return
 
 
     def close(self, normal_end=True):
@@ -1097,7 +1075,6 @@ class TimeSeriesAnalysis:
             msg += '\n   Normal end of smallbaselineApp processing!'
             msg += '\n################################################'
             print(msg)
-        return
 
 
 def run_smallbaselineApp(inps):
