@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -163,10 +164,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.plot_network import run_plot_network
+    from mintpy.plot_network import plot_network
 
     # run
-    run_plot_network(inps)
+    plot_network(inps)
 
 
 #########################################################################

@@ -121,7 +121,7 @@ def check_colormap(inps):
 
 
 ########################################################################
-def run_plot_network(inps):
+def plot_network(inps):
     """Plot all the network info."""
 
     # matplotlib backend setting
