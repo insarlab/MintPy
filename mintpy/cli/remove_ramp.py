@@ -133,7 +133,7 @@ def main(iargs=None):
         return
 
     # run
-    out_file = ut.run_deramp(
+    ut.run_deramp(
         inps.file,
         ramp_type=inps.surface_type,
         mask_file=inps.mask_file,
