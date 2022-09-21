@@ -66,12 +66,13 @@ setup(
         "pyproj",
         "pyresample",  # pip installed version does not work
         #"pysolid",    # will be available soon after the pypi project transfer is completed
+        "rich",
         "setuptools",
         "scikit-image",
         "scipy",
     ],
     extras_require={
-        "cli": ["argcomplete", "rich"],
+        "cli": ["argcomplete"],
         "extra": ["gdal"],
         "fractal": ["pyfftw"],
         "gbis": ["geoid"],                          # not available on pypi

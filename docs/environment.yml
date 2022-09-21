@@ -25,6 +25,7 @@ dependencies:
   - pyproj
   - pyresample
   - pysolid
+  - rich
   - scikit-image
   - scipy
   # for ISCE, ARIA, FRInGE, HyP3, GMTSAR
