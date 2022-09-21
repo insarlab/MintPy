@@ -435,17 +435,5 @@ def read_aux_subset2inps(inps):
 
         # Update subset_y/x/lat/lon
         inps = subset_box2inps(inps, pix_box, geo_box)
+
     return inps
-
-
-################################################################
-def run_subset(inps):
-    # read info
-    inps = read_aux_subset2inps(inps)
-
-    # subset
-    for fname in inps.file:
-        print('-'*30)
-        subset_file(fname, vars(inps), out_file=inps.outfile)
-
-    return

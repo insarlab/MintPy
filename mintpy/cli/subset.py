@@ -10,7 +10,7 @@ import sys
 from mintpy.utils.arg_utils import create_argument_parser
 
 
-###########################################################################################
+###########################################################################
 TEMPLATE = """template
 ## if both yx and lalo are specified, use lalo option unless a) no lookup file AND b) dataset is in radar coord
 mintpy.subset.yx       = auto    #[1800:2000,700:800 / no], auto for no
@@ -104,16 +104,20 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
-###########################################################################################
+###########################################################################
 def main(iargs=None):
     # parse
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.subset import run_subset
+    from mintpy.subset import read_aux_subset2inps, subset_file
 
     # run
-    run_subset(inps)
+    inps = read_aux_subset2inps(inps)
+
+    for fname in inps.file:
+        print('-'*30)
+        subset_file(fname, vars(inps), out_file=inps.outfile)
 
 
 ###########################################################################
