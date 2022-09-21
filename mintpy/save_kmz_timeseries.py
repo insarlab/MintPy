@@ -491,8 +491,12 @@ def save_kmz_timeseries(inps):
     inps.dygraph_file = os.path.join(inps.work_dir, "dygraph-combined.js")
     inps.kml_data_dir = os.path.join(inps.work_dir, "kml_data")
 
-    kml_root_file = os.path.join(inps.work_dir, f"{inps.outfile_base}_root.kml")
-    kmz_file = os.path.join(inps.work_dir, f"{inps.outfile_base}.kmz")
+    if inps.outfile:
+        fbase = os.path.splitext(os.path.basename(inps.outfile))[0]
+    else:
+        fbase = pp.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
+    root_file = os.path.join(inps.work_dir, f"{fbase}_root.kml")
+    kmz_file = os.path.join(inps.work_dir, f"{fbase}.kmz")
 
     ## read data
     ts_obj = timeseries(inps.ts_file)
@@ -546,10 +550,10 @@ def save_kmz_timeseries(inps):
 
     ##---------------------------- Write root KML file ------------------------------##
     print('-'*30)
-    print('writing ' + kml_root_file)
+    print(f'writing {root_file}')
     kml_root = KML.kml()
     kml_root.append(kml_root_doc)
-    with open(kml_root_file, 'w') as f:
+    with open(root_file, 'w') as f:
         f.write(etree.tostring(kml_root, pretty_print=True).decode('utf-8'))
 
     ## Copy auxiliary files
@@ -567,7 +571,7 @@ def save_kmz_timeseries(inps):
     # 2) zip all data files
     with ZipFile(kmz_file, 'w') as fz:
         kml_data_files = get_all_file_paths(inps.kml_data_dir)
-        for fname in [kml_root_file, 
+        for fname in [root_file, 
                       inps.cbar_file,
                       inps.dygraph_file,
                       inps.dot_file,

@@ -6,9 +6,9 @@
 # Modified from _gmt.py, GIANT v1.0, Caltech.
 
 
-from mintpy.utils import readfile, plot as pp
 import numpy as np
 from scipy.io import netcdf
+from mintpy.utils import readfile, plot as pp
 
 
 ####################################################################################
