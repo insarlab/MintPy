@@ -266,15 +266,29 @@ class timeseries:
             # Get Index in space/2_3 dimension
             if box is None:
                 box = [0, 0, self.width, self.length]
+            xsize = box[2] - box[0]
+            ysize = box[3] - box[1]
 
             # read
-            data = ds[:,
-                      box[1]:box[3],
-                      box[0]:box[2]][dateFlag]
+            num_slice = np.sum(dateFlag)
+            inds = np.where(dateFlag)[0].tolist()
+
+            if num_slice / dateFlag.size < 0.05:
+                # single indexing if only a small fraction is read
+                data = np.zeros((num_slice, ysize, xsize), dtype=ds.dtype)
+                for i, ind in enumerate(inds):
+                    data[i] = ds[ind,
+                                 box[1]:box[3],
+                                 box[0]:box[2]]
+            else:
+                data = ds[:,
+                          box[1]:box[3],
+                          box[0]:box[2]][dateFlag]
 
             if squeeze and any(i == 1 for i in data.shape):
                 data = np.squeeze(data)
         return data
+
 
     def write2hdf5(self, data, outFile=None, dates=None, bperp=None, metadata=None, refFile=None, compression=None):
         """

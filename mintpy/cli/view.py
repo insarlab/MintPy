@@ -4,6 +4,8 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Antonio Valentino, Zhang Yunjun, Aug 2022        #
 ############################################################
+# Recommend import:
+#   from mintpy.cli import view
 
 
 import os
