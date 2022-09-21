@@ -255,7 +255,7 @@ def random_select_reference_yx(data_mat, print_msg=True):
 
 
 ###############################################################
-def read_template_file2inps(template_file, inps):
+def read_template2inps(template_file, inps):
     """Read seed/reference info from template file and update input namespace"""
     inps_dict = vars(inps)
     template = readfile.read_template(template_file, skip_chars=['[', ']'])
@@ -318,7 +318,7 @@ def read_reference_input(inps):
     # priority: Direct Input > Reference File > Template File
     if inps.template_file:
         print('reading reference info from template: '+inps.template_file)
-        inps = read_template_file2inps(inps.template_file, inps)
+        inps = read_template2inps(inps.template_file, inps)
 
     if inps.reference_file:
         print('reading reference info from reference: '+inps.reference_file)
@@ -389,18 +389,3 @@ def remove_reference_pixel(File):
         atrDrop[i] = 'None'
     File = ut.add_attribute(File, atrDrop)
     return File
-
-
-###############################################################
-def run_reference_point(inps):
-    """Run spatial referencing."""
-
-    inps.file = ut.get_file_list(inps.file)[0]
-
-    inps = read_reference_input(inps)
-
-    if inps.go_reference:
-        reference_file(inps)
-
-    print('Done.')
-    return

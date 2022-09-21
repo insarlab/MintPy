@@ -136,10 +136,13 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.reference_point import run_reference_point 
+    from mintpy.reference_point import read_reference_input, reference_file
 
     # run
-    run_reference_point(inps)
+    inps = read_reference_input(inps)
+
+    if inps.go_reference:
+        reference_file(inps)
 
 
 ################################################################################################
