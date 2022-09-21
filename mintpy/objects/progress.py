@@ -10,6 +10,7 @@
 
 import sys
 import time
+
 import numpy as np
 
 
@@ -59,7 +60,9 @@ class progressBar:
     def update_amount(self, newAmount=0, suffix=''):
         """ Update the progress bar with the new amount (with min and max
         values set at initialization; if it is over or under, it takes the
-        min or max value as a default. """
+        min or max value as a default.
+        """
+
         newAmount = max(newAmount, self.min)
         newAmount = min(newAmount, self.max)
         self.amount = newAmount
@@ -108,9 +111,9 @@ class progressBar:
                 self.prog_bar += '{:5d}s / {:5d}s'.format(int(elapse_time), int(remain_time))
 
     def update(self, value, every=1, suffix=''):
-        """ Updates the amount, and writes to stdout. Prints a
-         carriage return first, so it will overwrite the current
-          line in stdout."""
+        """ Updates the amount, and writes to stdout.
+        Prints a carriage return first, so it will overwrite the current line in stdout.
+        """
         if value % every == 0 or value >= self.max:
             self.update_amount(newAmount=value, suffix=suffix)
             if self.print_msg:
@@ -119,9 +122,8 @@ class progressBar:
 
     def close(self):
         """Prints a blank space at the end to ensure proper printing
-        of future statements."""
+        of future statements.
+        """
         if self.print_msg:
             print(' ')
 ################################End of progress bar class####################################
-
-

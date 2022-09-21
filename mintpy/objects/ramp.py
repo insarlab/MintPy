@@ -9,6 +9,7 @@
 
 import numpy as np
 
+# duplicated in mintpy.cli.remove_ramp
 RAMP_LIST = [
     'linear', 
     'linear_range',

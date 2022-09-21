@@ -15,7 +15,7 @@ import shutil
 import argparse
 import subprocess
 import tarfile
-from mintpy import view
+import mintpy.cli.view
 
 
 CMAP_DICT = {
@@ -157,7 +157,7 @@ def test_smallbaselineApp(dset_name, test_dir, fresh_start=True, test_pyaps=Fals
     iargs = [vel_file, 'velocity', '--nodisplay', '--noverbose', '-o', png_file]
     if dset_name in CMAP_DICT.keys():
         iargs += ['-c', CMAP_DICT[dset_name]]
-    view.main(iargs)
+    mintpy.cli.view.main(iargs)
 
     # open final velocity map if on mac
     if sys.platform.lower().startswith('darwin'):

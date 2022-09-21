@@ -67,7 +67,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     std_file = os.path.splitext(deramped_file)[0]+'_std.txt'
 
     # Get residual std text file
-    if run_or_skip(out_file=std_file, in_file=[deramped_file, mask_file], check_readable=False) == 'run':
+    if run_or_skip(out_file=std_file, in_file=[deramped_file, mask_file], readable=False) == 'run':
         if run_or_skip(out_file=deramped_file, in_file=timeseries_resid_file) == 'run':
             if not os.path.isfile(timeseries_resid_file):
                 msg = 'Can not find input timeseries residual file: '+timeseries_resid_file
@@ -117,7 +117,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                             'rms_{}.txt'.format(os.path.splitext(deramped_file)[0]))
 
     # Get residual RMS text file
-    if run_or_skip(out_file=rms_file, in_file=[deramped_file, mask_file], check_readable=False) == 'run':
+    if run_or_skip(out_file=rms_file, in_file=[deramped_file, mask_file], readable=False) == 'run':
         if run_or_skip(out_file=deramped_file, in_file=timeseries_resid_file) == 'run':
             if not os.path.isfile(timeseries_resid_file):
                 msg = 'Can not find input timeseries residual file: '+timeseries_resid_file
@@ -232,7 +232,7 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
                 and mask_line_orig == mask_line
                 and run_or_skip(out_file=txtFile,
                                 in_file=[File, maskFile],
-                                check_readable=False) == 'skip'):
+                                readable=False) == 'skip'):
             print(txtFile+' already exists, read it directly')
             meanList, dateList = read_text_file(txtFile)
             return meanList, dateList
@@ -240,7 +240,7 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
         pass
 
     # use median instead of mean for offset measurement
-    if 'offset' in datasetName:
+    if datasetName and 'offset' in datasetName:
         useMedian = True
     else:
         useMedian = False
@@ -387,7 +387,7 @@ def get_file_list(file_list, abspath=False, coord=None):
         file_list = [file_list]
 
     # Get rid of None element
-    file_list = [x for x in file_list if x != None]
+    file_list = [x for x in file_list if x is not None]
     file_list_out = []
     for i in range(len(file_list)):
         file0 = file_list[i]
@@ -637,30 +637,30 @@ def is_file_exist(file_list, abspath=True):
     return file
 
 
-def run_or_skip(out_file, in_file=None, check_readable=True, print_msg=True):
+def run_or_skip(out_file, in_file=None, readable=True, print_msg=True):
     """Check whether to update out_file or not.
     return run if any of the following meets:
         1. out_file is empty, e.g. None, []
         2. out_file is not existed
-        3. out_file is not readable by readfile.read_attribute() when check_readable=True
+        3. out_file is not readable by readfile.read_attribute() when readable=True
         4. out_file is older than in_file, if in_file is not None
     Otherwise, return skip.
 
     If in_file=None and out_file exists and readable, return skip
 
-    Parameters: out_file : string or list of string, output file(s)
-                in_file  : string or list of string, input file(s)
-                check_readable : bool, check if the 1st output file has attribute 'WIDTH'
-                print_msg      : bool, print message
-    Returns:    run/skip : str, whether to update output file or not
+    Parameters: out_file  - string or list of string, output file(s)
+                in_file   - string or list of string, input file(s)
+                readable  - bool, check if the 1st output file has attribute 'WIDTH'
+                print_msg - bool, print message
+    Returns:    run/skip  - str, whether to update output file or not
     Example:    if ut.run_or_skip(out_file='timeseries_ERA5_demErr.h5', in_file='timeseries_ERA5.h5'):
                 if ut.run_or_skip(out_file='exclude_date.txt',
                                   in_file=['timeseries_ERA5_demErrInvResid.h5',
                                            'maskTempCoh.h5',
                                            'smallbaselineApp.cfg'],
-                                  check_readable=False):
+                                  readable=False):
     """
-    # 1 - check existance of output files
+    # 1 - check existence of output files
     if not out_file:
         return 'run'
     else:
@@ -670,7 +670,7 @@ def run_or_skip(out_file, in_file=None, check_readable=True, print_msg=True):
             return 'run'
 
     # 2 - check readability of output files
-    if check_readable:
+    if readable:
         try:
             atr = readfile.read_attribute(out_file[0])
             width = atr['WIDTH']
@@ -729,27 +729,35 @@ def check_template_auto_value(templateDict, auto_file='defaults/smallbaselineApp
     return templateDict
 
 
-def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None, save_ramp_coeff=False):
+def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None,
+               save_ramp_coeff=False, extra_meta=None):
     """ Remove ramp from each 2D matrix of input file
-    Parameters: fname     : str, data file to be derampped
-                ramp_type : str, name of ramp to be estimated.
-                mask_file : str, file of mask of pixels used for ramp estimation
-                out_file  : str, output file name
-                datasetName     : str, output dataset name, for ifgramStack file type only
-                save_ramp_coeff : bool, save the estimated ramp coefficients to text file
-    Returns:    out_file  : str, output file name
+    Parameters: fname           - str, data file to be derampped
+                ramp_type       - str, name of ramp to be estimated.
+                mask_file       - str, file of mask of pixels used for ramp estimation
+                out_file        - str, output file name
+                datasetName     - str, output dataset name, for ifgramStack file type only
+                save_ramp_coeff - bool, save the estimated ramp coefficients to text file
+                extra_meta      - dict, extra metadata to add to the output file
+    Returns:    out_file        - str, output file name
     """
+
     start_time = time.time()
+
+    # file/dir
+    fdir = os.path.dirname(fname)
+    fbase, fext = os.path.splitext(os.path.basename(fname))
+
+    # metadata
     atr = readfile.read_attribute(fname)
-    k = atr['FILE_TYPE']
+    ftype = atr['FILE_TYPE']
     length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
 
     print('remove {} ramp from file: {}'.format(ramp_type, fname))
-    if not out_file:
-        fbase, fext = os.path.splitext(fname)
-        out_file = '{}_ramp{}'.format(fbase, fext)
-    if k == 'ifgramStack':
+    out_file = out_file if out_file else os.path.join(fdir, f'{fbase}_ramp{fext}')
+    # ignore out_file for ifgramStack (write back to the same HDF5 file)
+    if ftype == 'ifgramStack':
         out_file = fname
 
     # mask
@@ -763,15 +771,14 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
     # write coefficient of specified surface function fit
     coeff_file = None
     if save_ramp_coeff:
-        fbase = os.path.splitext(os.path.basename(fname))[0]
-        coeff_file = os.path.join(os.path.dirname(fbase), 'rampCoeff_{}.txt'.format(fbase))
+        coeff_file = os.path.join(fdir, f'rampCoeff_{fbase}.txt')
         with open(coeff_file, 'w') as f:
             f.write('# input  file: {}\n'.format(fname))
             f.write('# output file: {}\n'.format(out_file))
             f.write('# ramp type: {}\n'.format(ramp_type))
 
     # deramping
-    if k == 'timeseries':
+    if ftype == 'timeseries':
         # write HDF5 file with defined metadata and (empty) dataset structure
         writefile.layout_hdf5(out_file, ref_file=fname, print_msg=True)
 
@@ -784,23 +791,33 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
                 # prepend epoch name to line of coefficients
                 with open(coeff_file, 'a') as f:
                     f.write('{}    '.format((date_list[i])))
+
             # read
             data = readfile.read(fname, datasetName=date_list[i])[0]
+
             # deramp
-            data = deramp(data, mask,
-                          ramp_type=ramp_type,
-                          metadata=atr,
-                          coeff_file=coeff_file)[0]
+            data = deramp(
+                data,
+                mask,
+                ramp_type=ramp_type,
+                metadata=atr,
+                coeff_file=coeff_file,
+            )[0]
+
             # write
-            writefile.write_hdf5_block(out_file, data,
-                                       datasetName='timeseries',
-                                       block=[i, i+1, 0, length, 0, width],
-                                       print_msg=False)
+            writefile.write_hdf5_block(
+                out_file,
+                data=data,
+                datasetName='timeseries',
+                block=[i, i+1, 0, length, 0, width],
+                print_msg=False,
+            )
+
             prog_bar.update(i+1, suffix='{}/{}'.format(i+1, num_date))
         prog_bar.close()
         print('finished writing to file: {}'.format(out_file))
 
-    elif k == 'ifgramStack':
+    elif ftype == 'ifgramStack':
         obj = ifgramStack(fname)
         obj.open(print_msg=False)
         if not datasetName:
@@ -813,11 +830,12 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
                 dsOut = f[dsNameOut]
                 print('access HDF5 dataset /{}'.format(dsNameOut))
             else:
-                dsOut = f.create_dataset(dsNameOut,
-                                         shape=(obj.numIfgram, length, width),
-                                         dtype=np.float32,
-                                         chunks=True,
-                                         compression=None)
+                dsOut = f.create_dataset(
+                    dsNameOut,
+                    shape=(obj.numIfgram, length, width),
+                    dtype=np.float32,
+                    chunks=True,
+                    compression=None)
                 print('create HDF5 dataset /{}'.format(dsNameOut))
 
             prog_bar = ptime.progressBar(maxValue=obj.numIfgram)
@@ -826,15 +844,22 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
                     # prepend IFG date12 to line of coefficients
                     with open(coeff_file, 'a') as f:
                         f.write('{}    '.format(str(obj.date12List[i])))
+
                 # read
                 data = ds[i, :, :]
+
                 # deramp
-                data = deramp(data, mask,
-                              ramp_type=ramp_type,
-                              metadata=atr,
-                              coeff_file=coeff_file)[0]
+                data = deramp(
+                    data,
+                    mask,
+                    ramp_type=ramp_type,
+                    metadata=atr,
+                    coeff_file=coeff_file,
+                )[0]
+
                 # write
                 dsOut[i, :, :] = data
+
                 prog_bar.update(i+1, suffix='{}/{}'.format(i+1, obj.numIfgram))
             prog_bar.close()
             print('finished writing to file: {}'.format(fname))
@@ -845,19 +870,32 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
             # prepend file-type to line of coefficients
             with open(coeff_file, 'a') as f:
                 f.write('{}    '.format(atr['FILE_TYPE']))
+
         # read
-        if not datasetName and k == 'velocity':
+        if not datasetName and ftype == 'velocity':
             datasetName = 'velocity'
         data = readfile.read(fname, datasetName=datasetName)[0]
+
         # deramp
-        data = deramp(data, mask,
-                      ramp_type=ramp_type,
-                      metadata=atr,
-                      coeff_file=coeff_file)[0]
+        data = deramp(
+            data,
+            mask,
+            ramp_type=ramp_type,
+            metadata=atr,
+            coeff_file=coeff_file,
+        )[0]
+
         # write
         print('writing >>> {}'.format(out_file))
         writefile.write(data, out_file=out_file, ref_file=fname)
 
+    # add extra_meta to the output file
+    if extra_meta:
+        print('add/update the following metadata to file:')
+        add_attribute(out_file, extra_meta, print_msg=True)
+
+    # used time
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+
     return out_file

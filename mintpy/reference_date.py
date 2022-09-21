@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,87 +6,24 @@
 
 
 import os
-import sys
-import time
 import shutil
+import time
+
 import h5py
 import numpy as np
 
 from mintpy.objects import timeseries
 from mintpy.objects.cluster import split_box2sub_boxes
-from mintpy.defaults.template import get_template_content
-from mintpy.utils import arg_utils, readfile, writefile, ptime, utils as ut
+from mintpy.utils import ptime, readfile, writefile
 
 
 ##################################################################
-TEMPLATE = get_template_content('reference_date')
-
-EXAMPLE = """example:
-  reference_date.py timeseries.h5 timeseries_ERA5.h5 timeseries_ERA5_demErr.h5 --template smallbaselineApp.cfg
-  reference_date.py timeseries_ERA5_demErr.h5 --ref-date 20050107
-"""
-
-
-def create_parser(subparsers=None):
-    synopsis = 'Change reference date of timeseries.'
-    epilog = TEMPLATE + '\n' + EXAMPLE
-    name = __name__.split('.')[-1]
-    parser = arg_utils.create_argument_parser(
-        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
-
-    parser.add_argument('timeseries_file', nargs='+', help='timeseries file(s)')
-    parser.add_argument('-r', '--ref-date', dest='refDate', default='minRMS',
-                        help='reference date or method, default: auto. e.g.\n' +
-                             '20101120\n' +
-                             'time-series HDF5 file with REF_DATE in its attributes\n' +
-                             'reference_date.txt - text file with date in YYYYMMDD format in it\n' +
-                             'minRMS             - choose date with min residual standard deviation')
-    parser.add_argument('-t', '--template', dest='template_file',
-                        help='template file with options')
-    parser.add_argument('-o', '--outfile', help='Output file name.')
-    parser.add_argument('--force', action='store_true',
-                        help='Force updating the data matrix.')
-
-    # computing
-    parser = arg_utils.add_memory_argument(parser)
-
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    # check input file type
-    atr = readfile.read_attribute(inps.timeseries_file[0])
-    if 'timeseries' not in atr['FILE_TYPE'].lower():
-        raise ValueError('input file type: {} is not timeseries.'.format(atr['FILE_TYPE']))
-    return inps
-
-
-def read_template2inps(templateFile, inps=None):
-    """Update inps with options from templateFile"""
-    if not inps:
-        inps = cmd_line_parse()
-    template = readfile.read_template(templateFile)
-    template = ut.check_template_auto_value(template)
-
-    key = 'mintpy.reference.date'
-    if key in template.keys() and template[key]:
-        inps.refDate = template[key]
-
-    key = 'mintpy.compute.maxMemory'
-    if key in template.keys() and template[key]:
-        inps.maxMemory = float(template[key])
-
-    return inps
-
-
 def read_ref_date(inps):
     # check input reference date
     if not inps.refDate:
         print('No reference date input, skip this step.')
         return None
+
     # string in digit
     elif inps.refDate.isdigit():
         pass
@@ -113,20 +49,20 @@ def read_ref_date(inps):
         msg = 'input reference date: {} is not found.'.format(inps.refDate)
         msg += '\nAll available dates:\n{}'.format(date_list)
         raise Exception(msg)
+
     return inps.refDate
 
 
 ##################################################################
 def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0, force=False):
     """Change input file reference date to a different one.
-    Parameters: ts_file : str, timeseries file to be changed
-                ref_date : str, date in YYYYMMDD format
-                outfile  : if str, save to a different file
+    Parameters: ts_file  - str, timeseries file to be changed
+                ref_date - str, date in YYYYMMDD format
+                outfile  - if str, save to a different file
                            if None, modify the data value in the existing input file
     """
     ts_file = os.path.abspath(ts_file)
-    if not outfile:
-        outfile = ts_file
+    outfile = outfile if outfile else ts_file
     outfile = os.path.abspath(outfile)
 
     print('-'*50)
@@ -155,10 +91,12 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0, 
 
     # get list of boxes for block-by-block IO
     num_box = int(np.ceil((num_date * length * width * 4 * 2) / (max_memory * 1024**3)))
-    box_list = split_box2sub_boxes(box=(0, 0, width, length),
-                                   num_split=num_box,
-                                   dimension='y',
-                                   print_msg=True)
+    box_list = split_box2sub_boxes(
+        box=(0, 0, width, length),
+        num_split=num_box,
+        dimension='y',
+        print_msg=True,
+    )
 
     # updating existing file or write new file
     if outfile == ts_file:
@@ -183,15 +121,18 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0, 
 
         print('referencing in time ...')
         dshape = ts_data.shape
-        ts_data -= np.tile(ts_data[ref_idx, :, :].reshape(1, dshape[1], dshape[2]), (dshape[0], 1, 1))
+        ts_data -= np.tile(ts_data[ref_idx, :, :].reshape(1, dshape[1], dshape[2]),
+                           (dshape[0], 1, 1))
 
         # writing
         block = (0, num_date, box[1], box[3], box[0], box[2])
-        writefile.write_hdf5_block(outfile,
-                                   data=ts_data,
-                                   datasetName=dsName,
-                                   block=block,
-                                   mode=mode)
+        writefile.write_hdf5_block(
+            outfile,
+            data=ts_data,
+            datasetName=dsName,
+            block=block,
+            mode=mode,
+        )
 
     # update metadata
     print('update "REF_DATE" attribute value to {}'.format(ref_date))
@@ -203,35 +144,28 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0, 
 
 
 ##################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
+def run_reference_date(inps):
     start_time = time.time()
 
     # read reference date
-    if inps.template_file:
-        inps = read_template2inps(inps.template_file, inps)
-
     inps.refDate = read_ref_date(inps)
 
-    # run referencing in time
+    # apply temporal referencing
     if inps.refDate:
         for ts_file in inps.timeseries_file:
-            change_timeseries_ref_date(ts_file,
-                                       ref_date=inps.refDate,
-                                       outfile=inps.outfile,
-                                       max_memory=inps.maxMemory,
-                                       force=inps.force)
+            change_timeseries_ref_date(
+                ts_file,
+                ref_date=inps.refDate,
+                outfile=inps.outfile,
+                max_memory=inps.maxMemory,
+                force=inps.force,
+            )
 
-            #to distinguish the modification time of input files
+            # pause to distinguish the modification time of input files
             time.sleep(1)
 
-    # time info
-    m, s = divmod(time.time()-start_time, 60)
+    # used time
+    m, s = divmod(time.time() - start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
 
     return
-
-
-##################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])

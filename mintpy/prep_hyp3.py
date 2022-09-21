@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,87 +6,11 @@
 
 
 import os
-import sys
-from datetime import datetime
+import datetime as dt
+
+from mintpy.objects.constants import SPEED_OF_LIGHT
 from mintpy.objects import sensor
-from mintpy.utils import readfile, writefile, utils as ut
-from mintpy.utils.arg_utils import create_argument_parser
-
-
-SPEED_OF_LIGHT = 299792458  # m/s
-
-
-#########################################################################
-NOTE = """
-  For each interferogram, the unwrapped interferogram, coherence, and metadata the file name is required e.g.:
-  1) S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase.tif
-  2) S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr.tif
-  3) S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2.txt
-
-  A DEM filename is needed and a incidence angle filename is recommended  e.g.:
-  1) S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem.tif
-  2) S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_lv_theta.tif
-
-  This script will read these files, read the geospatial metadata from GDAL,
-  find the corresponding HyP3 metadata file (for interferograms and coherence),
-  and write to a ROI_PAC .rsc metadata file with the same name as the input file with suffix .rsc,
-  e.g. S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase.tif.rsc
-
-  Here is an example of how your HyP3 files should look:
-
-  Before loading:
-      For each interferogram, 3 files are needed:
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase_clip.tif
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr_clip.tif
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2.txt
-      For the geometry file 2 file are recommended:
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem_clip.tif     (required)
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_lv_theta_clip.tif (optional but recommended)
-
-  After running prep_hyp3.py:
-      For each interferogram:
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase_clip.tif
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_unw_phase_clip.tif.rsc
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr_clip.tif
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_corr_clip.tif.rsc
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2.txt
-      For the input geometry files:
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem_clip.tif
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_dem_clip.tif.rsc
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_lv_theta_clip.tif
-          S1AA_20161223T070700_20170116T070658_VVP024_INT80_G_ueF_74C2_lv_theta_clip.tif.rsc
-
-  Notes:
-    HyP3 currently only supports generation of Sentinel-1 interferograms, so
-    some Sentinel-1 metadata is hard-coded. If HyP3 adds processing of interferograms
-    from other satellites, changes will be needed. 
-"""
-
-EXAMPLE = """example:
-  prep_hyp3.py  interferograms/*/*unw_phase_clip.tif
-  prep_hyp3.py  interferograms/*/*corr_clip.tif
-  prep_hyp3.py  interferograms/*/*dem_clip.tif
-  prep_hyp3.py  interferograms/*/*lv_theta_clip.tif
-  prep_hyp3.py  interferograms/*/*clip.tif
-"""
-
-
-def create_parser(subparsers=None):
-    synopsis = 'Prepare attributes file for HyP3 InSAR product.'
-    epilog = EXAMPLE
-    name = __name__.split('.')[-1]
-    parser = create_argument_parser(
-        name, synopsis=synopsis, description=synopsis+NOTE, epilog=epilog, subparsers=subparsers)
-
-    parser.add_argument('file', nargs='+', help='HyP3 file(s)')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-    inps.file = ut.get_file_list(inps.file, abspath=True)
-    return inps
+from mintpy.utils import readfile, writefile, utils1 as ut
 
 
 #########################################################################
@@ -169,8 +92,8 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
 
     # add metadata that is only relevant to interferogram files
     if is_ifg:
-        date1 = datetime.strptime(date1_str,'%Y%m%dT%H%M%S')
-        date2 = datetime.strptime(date2_str,'%Y%m%dT%H%M%S')
+        date1 = dt.datetime.strptime(date1_str,'%Y%m%dT%H%M%S')
+        date2 = dt.datetime.strptime(date2_str,'%Y%m%dT%H%M%S')
         #date_avg = date1 + (date2 - date1) / 2
         #date_avg_seconds = (date_avg - date_avg.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
         #meta['CENTER_LINE_UTC'] = date_avg_seconds
@@ -182,9 +105,10 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
 
 
 #########################################################################
-def main(iargs=None):
-    # read in arguments
-    inps = cmd_line_parse(iargs)
+def prep_hyp3(inps):
+    """Prepare ASF HyP3 metadata files"""
+
+    inps.file = ut.get_file_list(inps.file, abspath=True)
 
     # for each filename, generate metadata rsc file
     for fname in inps.file:
@@ -197,8 +121,3 @@ def main(iargs=None):
         writefile.write_roipac_rsc(meta, out_file=rsc_file)
 
     return
-
-
-###################################################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])

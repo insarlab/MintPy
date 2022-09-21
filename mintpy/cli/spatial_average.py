@@ -2,13 +2,11 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Zhang Yunjun, 2016                               #
+# Author: Zhang Yunjun, Antonio Valentino, Aug 2016        #
 ############################################################
 
 
 import sys
-import matplotlib.pyplot as plt
-from mintpy.utils import readfile, ptime, utils as ut, plot as pp
 from mintpy.utils.arg_utils import create_argument_parser
 
 
@@ -18,9 +16,8 @@ EXAMPLE = """example:
   spatial_average.py timeseries_ERA5_demErr.h5 -m maskTempCoh.h5
 """
 
-
 def create_parser(subparsers=None):
-    synopsis = 'Calculate average in space'
+    synopsis = 'Calculate the spatial average.'
     epilog = EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
@@ -42,30 +39,47 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
+##############################  Sub Function  ################################
+def plot_spatial_average_ts(date_list:list, avg_list:list):
+    """Plot the spatial average time-series."""
+    import matplotlib.pyplot as plt
+    from mintpy.utils import ptime, plot as pp
+
+    dates = ptime.date_list2vector(date_list)[0]
+
+    # plot
+    _, ax = plt.subplots()
+    ax.plot(dates, avg_list, '-o')
+
+    # axis format
+    ax = pp.auto_adjust_xaxis_date(ax, dates)[0]
+    ax.set_title('Spatial Average', fontsize=12)
+    ax.set_xlabel('Time [years]', fontsize=12)
+    ax.set_ylabel('Mean', fontsize=12)
+    plt.show()
+
+    return
+
+
 #############################  Main Function  ################################
 def main(iargs=None):
+    # parse
     inps = cmd_line_parse(iargs)
 
-    print('\n*************** Spatial Average ******************')
-    mean_list, date_list = ut.spatial_average(
+    # import
+    from mintpy.utils import readfile, utils1 as ut
+
+    # run
+    avg_list, date_list = ut.spatial_average(
         inps.file,
         datasetName=inps.datasetName,
         maskFile=inps.mask_file,
         saveList=True,
     )
 
-    atr = readfile.read_attribute(inps.file)
-    if inps.disp_fig and atr['FILE_TYPE'] == 'timeseries':
-        dates = ptime.date_list2vector(date_list)[0]
-        # plot
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(dates, mean_list, '-o')#, lw=2, ms=16, alpha=0.7) #, mfc='crimson')
-        ax.set_title('Spatial Average', fontsize=12)
-        ax = pp.auto_adjust_xaxis_date(ax, dates)[0]
-        ax.set_xlabel('Time [years]', fontsize=12)
-        ax.set_ylabel('Mean', fontsize=12)
-        plt.show()
+    ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
+    if inps.disp_fig and ftype == 'timeseries':
+        plot_spatial_average_ts(date_list, avg_list)
 
     return
 

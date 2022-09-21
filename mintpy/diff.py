@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,8 +6,8 @@
 
 
 import os
-import sys
 import time
+
 import numpy as np
 
 from mintpy.objects import (
@@ -19,57 +18,6 @@ from mintpy.objects import (
     ifgramDatasetNames,
 )
 from mintpy.utils import readfile, writefile
-from mintpy.utils.arg_utils import create_argument_parser
-
-
-#####################################################################################
-EXAMPLE = """example:
-  diff.py  velocity.h5    velocity_demErr.h5
-  diff.py  timeseries.h5  inputs/ERA5.h5  -o timeseries_ERA5.h5
-  diff.py  timeseries.h5  inputs/ERA5.h5  -o timeseries_ERA5.h5  --force
-  diff.py  timeseries_ERA5_ramp_demErr.h5  ../GIANT/Stack/LS-PARAMS.h5 -o mintpy_giant.h5
-  diff.py  reconUnwrapIfgram.h5  ./inputs/ifgramStack.h5  -o diffUnwrapIfgram.h5
-
-  # multiple files
-  diff.py  waterMask.h5  maskSantiago.h5  maskFernandina.h5  -o maskIsabela.h5
-"""
-
-
-def create_parser(subparsers=None):
-    synopsis = 'Generate the difference of two input files.'
-    epilog = EXAMPLE
-    name = __name__.split('.')[-1]
-    parser = create_argument_parser(
-        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
-
-    parser.add_argument('file1', help='file to be subtracted.')
-    parser.add_argument('file2', nargs='+', help='file used to subtract')
-    parser.add_argument('-o', '--output', dest='out_file',
-                        help='output file name, default is file1_diff_file2.h5')
-    parser.add_argument('--force','--force-diff', dest='force_diff', action='store_true',
-                        help='Enforce the differencing for the shared dates only for time-series files')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    # ONLY TWO files differencing is supported for timeseries and ifgramStack types
-    ftype = readfile.read_attribute(inps.file1)['FILE_TYPE']
-    if ftype in ['timeseries', 'ifgramStack']:
-        if len(inps.file2) > 1:
-            raise SystemExit(f'ERROR: ONLY ONE file2 is inputed for {ftype} type!')
-
-    # --output
-    if not inps.out_file:
-        if len(inps.file2) > 1:
-            raise ValueError('--output is required for >=2 files!')
-        fbase1, fext = os.path.splitext(inps.file1)
-        fbase2 = os.path.splitext(os.path.basename(inps.file2[0]))[0]
-        inps.out_file = f'{fbase1}_diff_{fbase2}{fext}'
-
-    return inps
 
 
 #####################################################################################
@@ -115,6 +63,7 @@ def diff_file(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
                 force_diff    - bool, overwrite existing output file
                 max_num_pixel - float, maximum number of pixels for each block
     """
+    start_time = time.time()
     print('{} - {} --> {}'.format(file1, file2, out_file))
 
     # Read basic info
@@ -285,25 +234,8 @@ def diff_file(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
         print('use metadata from the 1st file: {}'.format(file1))
         writefile.write(dsDict, out_file=out_file, metadata=atr1, ref_file=file1)
 
-    return out_file
-
-
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-    start_time = time.time()
-
-    diff_file(file1=inps.file1,
-              file2=inps.file2,
-              out_file=inps.out_file,
-              force_diff=inps.force_diff)
-
     # used time
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))
 
-    return
-
-
-#####################################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])
+    return out_file

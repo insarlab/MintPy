@@ -12,7 +12,6 @@ import os
 import time
 import glob
 import shutil
-import numpy as np
 
 
 # supported / tested clusters
@@ -36,6 +35,7 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
     :param dimension: str = 'y' or 'x', the dimension along which to split the boxes
     :return: sub_boxes: list(list(4 int)), the splited sub boxes
     """
+    import numpy as np
 
     dimension = dimension.lower()
     if num_split <= 1:
@@ -45,7 +45,7 @@ def split_box2sub_boxes(box, num_split, dimension='x', print_msg=False):
     x0, y0, x1, y1 = box
     length, width = y1 - y0, x1 - x0
 
-    # calc step 
+    # calc step
     if dimension == 'y':
         dim_size = length
     else:
@@ -259,7 +259,7 @@ class DaskCluster:
 
         :param func: function, a python function to run in parallel
         :param func_data: dict, a dictionary of the argument to pass to the function
-        :param sub_boxes: list(np.nd.array), list of boxes to be computed in parallel
+        :param sub_boxes: list(np.ndarray), list of boxes to be computed in parallel
 
         :return futures: list(dask.Future), list of futures representing future dask worker calculations
         :return submission_time: time, the time of submission of the dask workers (used to determine worker
@@ -463,4 +463,3 @@ class DaskCluster:
             shutil.move(item, stderr_folder)
 
 ############################## End of DaskCluster class ####################################
-

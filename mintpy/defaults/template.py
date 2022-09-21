@@ -10,7 +10,6 @@
 
 import os
 import re
-import mintpy
 
 
 STEP_LIST4OFFSET = [
@@ -52,6 +51,8 @@ def get_template_content(step_name, template_file=None, indentation=2, header_fo
                 template_file - str, path of the template file
     Returns:    step_content  - str, comments and options of the step
     """
+    import mintpy
+
     # check
     if step_name not in STEP_LIST:
         raise ValueError('input step name "{}" not found! STEP_LIST={}'.format(step_name, STEP_LIST))

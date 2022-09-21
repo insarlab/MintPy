@@ -94,7 +94,7 @@ def extract_isce_metadata(meta_file, geom_dir=None, rsc_file=None, update_mode=T
                 frame     : object, isceobj.Scene.Frame.Frame / isceobj.Scene.Burst.Burst
     """
     # check existing rsc_file
-    if update_mode and ut.run_or_skip(rsc_file, in_file=meta_file, check_readable=False) == 'skip':
+    if update_mode and ut.run_or_skip(rsc_file, in_file=meta_file, readable=False) == 'skip':
         return readfile.read_roipac_rsc(rsc_file), None
 
     # 1. read/extract metadata from XML / shelve file

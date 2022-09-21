@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,55 +6,9 @@
 
 
 import os
-import sys
 import shutil
 import numpy as np
 from mintpy.utils import readfile, writefile
-from mintpy.utils.arg_utils import create_argument_parser
-
-
-############################################################
-EXAMPLE = """example:
-  mask.py  velocity.h5     -m Mask.h5
-  mask.py  timeseries.h5   -m temporalCoherence.h5  -t 0.7
-  mask.py  ifgramStack.h5  -m 100102_101120.cor     -t 0.9  -y  200 300  -x 300 400
-
-  mask.py  filt_20060924_20090214.int -m waterMask.h5 -o filt_20060924_20090214_msk.int
-  mask.py  filt_20060924_20090214.cor -m waterMask.h5 -o filt_20060924_20090214_msk.cor
-"""
-
-
-def create_parser(subparsers=None):
-    synopsis = 'Mask file'
-    epilog = EXAMPLE
-    name = __name__.split('.')[-1]
-    parser = create_argument_parser(
-        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
-
-    parser.add_argument('file', help='File to be masked')
-    parser.add_argument('-m', '--mask', dest='mask_file', required=True,
-                        help='mask for pixels used in ramp estimation')
-    parser.add_argument('-o', '--outfile', help='Output file name.')
-
-    # modify input mask
-    parser.add_argument('-t', dest='threshold', type=float,
-                        help='threshold value used for masking.\n' +
-                        'if not specified, only pixels with mask value equal to zero is masked out.')
-    parser.add_argument('--fill', dest='fill_value', type=float, default=np.nan,
-                        help="fill masked out area with input value. i.e. \n"
-                             "np.nan (default), 0, 1000, ... \n"
-                             "If np.nan and input data matrix is not float/complex, convert matrix data type to np.float32.")
-    parser.add_argument('-x', dest='subset_x', type=int, nargs=2,
-                        help='subset range in x/cross-track/column direction')
-    parser.add_argument('-y', dest='subset_y', type=int, nargs=2,
-                        help='subset range in y/along-track/row direction')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-    return inps
 
 
 ############################################################
@@ -80,11 +33,8 @@ def mask_matrix(data, mask, fill_value=np.nan):
     return data
 
 
-def update_mask_with_inps(mask, inps=None, print_msg=True):
+def update_mask_with_inps(mask, inps, print_msg=True):
     """Update mask matrix from input options: subset_x/y and threshold"""
-    if not inps:
-        inps = cmd_line_parse()
-
     if inps.subset_x:
         mask[:, 0:inps.subset_x[0]] = 0
         mask[:, inps.subset_x[1]:] = 0
@@ -104,20 +54,22 @@ def update_mask_with_inps(mask, inps=None, print_msg=True):
     return mask
 
 
-def mask_file(fname, mask_file, out_file, inps=None):
+def mask_file(fname, mask_file, out_file=None, fill_value=np.nan, inps=None):
     """ Mask input fname with mask_file
     Parameters: fname     - str, file to be masked
                 mask_file - str, mask file
                 out_file  - str, output file name
-                inps      - namespace object, from cmd_line_parse()
+                inps      - namespace object, including:
+                            subset_x
+                            subset_y
+                            threshold
     Returns:    out_file  - str, output file name
     """
-    if not inps:
-        inps = cmd_line_parse()
 
     # read mask_file
     mask = readfile.read(mask_file)[0]
-    mask = update_mask_with_inps(mask, inps)
+    if inps is not None:
+        mask = update_mask_with_inps(mask, inps)
 
     # masking input file
     dsNames = readfile.get_dataset_list(fname)
@@ -126,7 +78,7 @@ def mask_file(fname, mask_file, out_file, inps=None):
     for dsName in dsNames:
         print('masking {d:<{w}} from {f} ...'.format(d=dsName, w=maxDigit, f=fname))
         data = readfile.read(fname, datasetName=dsName, print_msg=False)[0]
-        data = mask_matrix(data, mask, fill_value=inps.fill_value)
+        data = mask_matrix(data, mask, fill_value=fill_value)
         dsDict[dsName] = data
 
     # default output filename
@@ -215,22 +167,3 @@ def mask_isce_file(in_file, mask_file, out_file=None):
         with open(meta_file, 'w') as f:
             f.write(s)
     return out_file
-
-
-############################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-
-    ext = os.path.splitext(inps.file)[1]
-    #if os.path.isfile(inps.file+'.xml') and ext in ['.unw','.int','.cor','.conncomp']:
-    #    mask_isce_file(inps.file, inps.mask_file, inps.outfile)
-    #else:
-    mask_file(inps.file, inps.mask_file, inps.outfile, inps)
-
-    print('Done.')
-    return
-
-
-############################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])

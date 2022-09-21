@@ -2,18 +2,14 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Andre Theron, Zhang Yunjun, Jun 2019             #
+# Author: Andre Theron, Antonio Valentino, Jun 2019        #
 # Email: andretheronsa@gmail.com                           #
 ############################################################
 
 
 import os
 import sys
-from mintpy.utils import readfile, writefile, utils as ut
 from mintpy.utils.arg_utils import create_argument_parser
-
-
-SPEED_OF_LIGHT = 299792458  # m / s
 
 
 ##################################################################################################
@@ -51,10 +47,17 @@ def create_parser(subparsers=None):
 
 
 def cmd_line_parse(iargs=None):
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    # import
+    from mintpy.utils import utils1 as ut
+
+    # check: input file wildcard (search & grab all input files)
     inps.file = ut.get_file_list(inps.file, abspath=True)
+
+    # check: input file extensions
     for fname in inps.file:
         if not fname.endswith('.img'):
             raise ValueError('Input data file does NOT end with .img: {}'.format(fname))
@@ -62,8 +65,22 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
-def write_rsc(atr, rsc_file):
-    """Write to rsc file"""
+##################################################################################################
+def prep_snap_metadata(snap_file):
+    """Prepare SNAP metadata files.
+
+    Parameters: snap_file - str, SNAP data file with .img file extension.
+    Returns:    rsc_file  - str, metadata file
+    """
+    from mintpy.utils import readfile, writefile
+
+    # read metadata from *.dim file
+    # the map info from *.img.hdr file is NOT right, thus, not used.
+    dim_file = os.path.dirname(snap_file)[:-4] + 'dim'
+    atr = readfile.read_snap_dim(dim_file)
+
+    rsc_file = snap_file + '.rsc'
+
     # grab atr from existing rsc file
     if os.path.isfile(rsc_file):
         atr_orig = readfile.read_roipac_rsc(rsc_file)
@@ -81,19 +98,12 @@ def write_rsc(atr, rsc_file):
 
 ##################################################################################################
 def main(iargs=None):
+    # parse
     inps = cmd_line_parse(iargs)
 
+    # run
     for img_file in inps.file:
-        # read metadata from *.dim file
-        # the map info from *.img.hdr file is NOT right, thus, not used.
-        dim_file = os.path.dirname(img_file)[:-4] + 'dim'
-        atr = readfile.read_snap_dim(dim_file)
-
-        # write metadata dict to *.rsc file
-        rsc_file = img_file + '.rsc'
-        write_rsc(atr, rsc_file)
-
-    return
+        prep_snap_metadata(img_file)
 
 
 ##################################################################################################

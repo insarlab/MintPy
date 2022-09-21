@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -9,16 +8,15 @@
 
 
 import os
-import sys
 import re
 import datetime as dt
-import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-# suppress UserWarning from matplotlib
-import warnings
+import warnings   # suppress UserWarning from matplotlib
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
+
 import cartopy.crs as ccrs
+import matplotlib.pyplot as plt
+import numpy as np
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from mintpy.objects import (
     giantIfgramStack,
@@ -27,7 +25,6 @@ from mintpy.objects import (
 )
 from mintpy.objects.gps import GPS
 from mintpy.utils import (
-    arg_utils,
     ptime,
     readfile,
     utils as ut,
@@ -37,169 +34,16 @@ from mintpy.multilook import multilook_data
 from mintpy import subset, version
 
 
+
 ##################################################################################################
-EXAMPLE = """example:
-  view.py velocity.h5
-  view.py velocity.h5 velocity --wrap --wrap-range -2 2 -c cmy --lalo-label
-  view.py velocity.h5 --ref-yx  210 566                              #change reference pixel for display
-  view.py velocity.h5 --sub-lat 31.05 31.10 --sub-lon 130.05 130.10  #subset in lalo / yx
-
-  view.py timeseries.h5
-  view.py timeseries.h5 -m no                   #do not use auto mask
-  view.py timeseries.h5 --ref-date 20101120     #change reference date
-  view.py timeseries.h5 --ex drop_date.txt      #exclude dates to plot
-  view.py timeseries.h5 '*2017*' '*2018*'       #all acquisitions in 2017 and 2018
-  view.py timeseries.h5 20200616_20200908       #reconstruct interferogram on the fly
-
-  view.py ifgramStack.h5 coherence
-  view.py ifgramStack.h5 unwrapPhase-           #unwrapPhase only in the presence of unwrapPhase_bridging
-  view.py ifgramStack.h5 -n 6                   #the 6th slice
-  view.py ifgramStack.h5 20171010_20171115      #all data      related with 20171010_20171115
-  view.py ifgramStack.h5 'coherence*20171010*'  #all coherence related with 20171010
-  view.py ifgramStack.h5 unwrapPhase-20070927_20100217 --zero-mask --wrap     #wrapped phase
-  view.py ifgramStack.h5 unwrapPhase-20070927_20100217 --mask ifgramStack.h5  #mask using connected components
-
-  # GPS (for one subplot in geo-coordinates only)
-  view.py geo_velocity_msk.h5 velocity --show-gps --gps-label   #show locations of available GPS
-  view.py geo_velocity_msk.h5 velocity --show-gps --gps-comp enu2los --ref-gps GV01
-  view.py geo_timeseries_ERA5_ramp_demErr.h5 20180619 --ref-date 20141213 --show-gps --gps-comp enu2los --ref-gps GV01
-
-  # Save and Output
-  view.py velocity.h5 --save
-  view.py velocity.h5 --nodisplay
-  view.py geo_velocity.h5 velocity --nowhitespace
-"""
-
-PLOT_TEMPLATE = """Plot Setting:
-  plot.name          = 'Yunjun et al., 2016, AGU, Fig 4f'
-  plot.type          = LOS_VELOCITY
-  plot.startDate     =
-  plot.endDate       =
-  plot.displayUnit   = cm/yr
-  plot.displayMin    = -2
-  plot.displayMax    = 2
-  plot.colormap      = jet
-  plot.subset.lalo   = 33.05:33.15, 131.15:131.27
-  plot.seed.lalo = 33.0651, 131.2076
-"""
-
-
-def create_parser(subparsers=None):
-    synopsis = 'Plot InSAR Product in 2D'
-    epilog = EXAMPLE
-    name = __name__.split('.')[-1]
-    parser = arg_utils.create_argument_parser(
-        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
-
-    infile = parser.add_argument_group('Input File', 'File/Dataset to display')
-    infile.add_argument('file', type=str, help='file for display')
-    infile.add_argument('dset', type=str, nargs='*', default=[],
-                        help='optional - dataset(s) to display (default: %(default)s).')
-    infile.add_argument('-n', '--dset-num', dest='dsetNumList', metavar='NUM', type=int, nargs='*', default=[],
-                        help='optional - order number of date/dataset(s) to display (default: %(default)s).')
-    infile.add_argument('--nosearch', dest='search_dset', action='store_false',
-                        help='Disable glob search for input dset.')
-    infile.add_argument('--ex', '--exclude', dest='exDsetList', metavar='Dset', nargs='*', default=[],
-                        help='dates will not be displayed (default: %(default)s).')
-    parser.add_argument('--show-kept','--show-kept-ifgram', dest='plot_drop_ifgram', action='store_false',
-                        help='display kept interferograms only, without dropped interferograms')
-
-    parser.add_argument('--plot-setting', dest='disp_setting_file',
-                        help='Template file with plot setting.\n'+PLOT_TEMPLATE)
-
-    parser.add_argument('--noverbose', dest='print_msg', action='store_false',
-                        help='Disable the verbose message printing (default: %(default)s).')
-
-    parser.add_argument('--math', dest='math_operation', choices={'square','sqrt','reverse','inverse','rad2deg','deg2rad'},
-                        help='Apply the math operation before displaying [for single subplot ONLY].\n'
-                             'E.g. plot the std. dev. of the variance file.\n'
-                             '  square  = x^2\n'
-                             '  sqrt    = x^1/2\n'
-                             '  reverse = x * -1\n'
-                             '  inverse = 1 / x')
-
-    parser = arg_utils.add_data_disp_argument(parser)
-    parser = arg_utils.add_dem_argument(parser)
-    parser = arg_utils.add_figure_argument(parser)
-    parser = arg_utils.add_gps_argument(parser)
-    parser = arg_utils.add_mask_argument(parser)
-    parser = arg_utils.add_map_argument(parser)
-    parser = arg_utils.add_memory_argument(parser)
-    parser = arg_utils.add_point_argument(parser)
-    parser = arg_utils.add_reference_argument(parser)
-    parser = arg_utils.add_save_argument(parser)
-    parser = arg_utils.add_subset_argument(parser)
-
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    """Command line parser."""
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    # save argv (to check the manually specified arguments)
-    # use iargs        for python call
-    # use sys.argv[1:] for command line call
-    inps.argv = iargs if iargs else sys.argv[1:]
-
-    # check invalid file inputs
-    for key in ['file','dem_file','mask_file','pts_file']:
-        fname = vars(inps)[key]
-        if fname not in [None, 'no'] and not os.path.isfile(fname):
-            raise FileNotFoundError('input {} file {} NOT exist!'.format(key, fname))
-
-    # --exclude
-    if inps.exDsetList:
-        inps.exDsetList = ptime.read_date_list(inps.exDsetList)
-
-    # If output flie name assigned or figure shown is turned off, turn on the figure save
-    if inps.outfile or not inps.disp_fig:
-        inps.save_fig = True
-    if inps.lalo_step:
-        inps.lalo_label = True
-    if inps.zero_mask:
-        # turn OFF default mask file detection for --zero-mask
-        # extra manual mask file is still supported
-        if not inps.mask_file:
-            inps.mask_file = 'no'
-
-    if not inps.disp_whitespace:
-        inps.disp_axis = False
-        inps.disp_title = False
-        inps.disp_cbar = False
-    if not inps.disp_axis:
-        inps.disp_tick = False
-    if inps.flip_lr or inps.flip_ud:
-        inps.auto_flip = False
-
-    # check geo-only options for files in radar-coordinates
-    geo_opt_names = ['--coord', '--show-gps', '--coastline', '--lalo-label', '--lalo-step', '--scalebar']
-    geo_opt_names = list(set(geo_opt_names) & set(inps.argv))
-    if geo_opt_names and 'Y_FIRST' not in readfile.read_attribute(inps.file).keys():
-        for opt_name in geo_opt_names:
-            print(f'WARNING: {opt_name} is NOT supported for files in radar-coordinate, ignore it and continue.')
-
-    # verbose print using --noverbose option
-    global vprint
-    vprint = print if inps.print_msg else lambda *args, **kwargs: None
-    # print view.py command line if --noverbose (used in smallbaselineApp.py)
-    if not inps.print_msg:
-        print('view.py', ' '.join(inps.argv))
-
-    if inps.disp_setting_file:
-        inps = update_inps_with_display_setting_file(inps, inps.disp_setting_file)
-
-    # Backend setting
-    if not inps.disp_fig:
-        plt.switch_backend('Agg')
-
-    return inps
-
-
 def run_or_skip(inps):
     vprint('update mode: ON')
     flag = 'skip'
+
+    # run if showing figures
+    if inps.disp_fig:
+        flag = 'run'
+        return flag
 
     # get existed output file names
     outfiles = []
@@ -217,33 +61,12 @@ def run_or_skip(inps):
         if ti > to:
             flag = 'run'
         else:
-            vprint('{} exist and are newer than input file: {} --> skip.'.format(outfiles, inps.file))
+            vprint(f'{outfiles} exist and are newer than input file: {inps.file} --> skip.')
+
     return flag
 
 
 ##################################################################################################
-def update_inps_with_display_setting_file(inps, disp_set_file):
-    """Update inps using values from display setting file"""
-    disp_set_dict = readfile.read_template(disp_set_file)
-    if not inps.disp_unit and 'plot.displayUnit' in disp_set_dict.keys():
-        inps.disp_unit = disp_set_dict['plot.displayUnit']
-    if not inps.disp_min and 'plot.displayMin' in disp_set_dict.keys():
-        inps.disp_min = float(disp_set_dict['plot.displayMin'])
-    if not inps.disp_max and 'plot.displayMax' in disp_set_dict.keys():
-        inps.disp_max = float(disp_set_dict['plot.displayMax'])
-
-    if not inps.colormap and 'plot.colormap' in disp_set_dict.keys():
-        inps.colormap = disp_set_dict['plot.colormap']
-
-    if not inps.subset_lat and 'plot.subset.lalo' in disp_set_dict.keys():
-        inps.subset_lat = [float(n) for n in disp_set_dict['plot.subset.lalo'].replace(',', ' ').split()[0:2]]
-    if not inps.subset_lon and 'plot.subset.lalo' in disp_set_dict.keys():
-        inps.subset_lon = [float(n) for n in disp_set_dict['plot.subset.lalo'].replace(',', ' ').split()[2:4]]
-    if not inps.ref_lalo and 'plot.seed.lalo' in disp_set_dict.keys():
-        inps.ref_lalo = [float(n) for n in disp_set_dict['plot.referenceLalo'].replace(',', ' ').split()]
-    return inps
-
-
 def update_inps_with_file_metadata(inps, metadata):
     # Subset
     # Convert subset input into bounding box in radar / geo coordinate
@@ -497,7 +320,103 @@ def update_data_with_plot_inps(data, metadata, inps):
 
 
 ##################################################################################################
-def plot_slice(ax, data, metadata, inps=None):
+def prep_slice(cmd, auto_fig=False):
+    """Prepare data from command line as input, for easy call plot_slice() externally
+    Parameters: cmd  - string, command to be run in terminal
+    Returns:    data - 2D np.ndarray, data to be plotted
+                atr  - dict, metadata
+                inps - namespace, input argument for plot setup
+    Example:
+        subplot_kw = dict(projection=ccrs.PlateCarree())
+        fig, ax = plt.subplots(figsize=[4, 3], subplot_kw=subplot_kw)
+        W, N, E, S = (-91.670, -0.255, -91.370, -0.515)    # geo_box
+
+        cmd = 'view.py geo_velocity.h5 velocity --mask geo_maskTempCoh.h5 --dem srtm1.dem --dem-nocontour '
+        cmd += f'--sub-lon {W} {E} --sub-lat {S} {N} -c jet -v -3 10 '
+        cmd += '--cbar-loc bottom --cbar-nbins 3 --cbar-ext both --cbar-size 5% '
+        cmd += '--lalo-step 0.2 --lalo-loc 1 0 1 0 --scalebar 0.3 0.80 0.05 --notitle'
+
+        data, atr, inps = view.prep_slice(cmd)
+        ax, inps, im, cbar = view.plot_slice(ax, data, atr, inps)
+        plt.show()
+    """
+    # parse
+    from mintpy.cli.view import cmd_line_parse
+    inps = cmd_line_parse(cmd.split()[1:])
+
+    global vprint
+    vprint = print if inps.print_msg else lambda *args, **kwargs: None
+
+    # read input args
+    inps, atr = read_input_file_info(inps)
+    inps = update_inps_with_file_metadata(inps, atr)
+
+    inps.msk, inps.mask_file = pp.read_mask(
+        inps.file, 
+        mask_file=inps.mask_file,
+        datasetName=inps.dset[0],
+        box=inps.pix_box,
+        vmin=inps.mask_vmin,
+        vmax=inps.mask_vmax,
+        print_msg=inps.print_msg)
+
+    # read data
+    data, atr = readfile.read(
+        inps.file,
+        datasetName=inps.dset[0],
+        box=inps.pix_box,
+        print_msg=inps.print_msg)
+
+    # reference in time
+    if inps.ref_date:
+        data -= readfile.read(
+            inps.file,
+            datasetName=inps.ref_date,
+            box=inps.pix_box,
+            print_msg=False)[0]
+
+    # reference in space for unwrapPhase
+    if (inps.key in ['ifgramStack']
+            and inps.dset[0].split('-')[0].startswith('unwrapPhase')
+            and 'REF_Y' in atr.keys()):
+        ref_y, ref_x = int(atr['REF_Y']), int(atr['REF_X'])
+        ref_data = readfile.read(
+            inps.file,
+            datasetName=inps.dset[0],
+            box=(ref_x, ref_y, ref_x+1, ref_y+1),
+            print_msg=False)[0]
+        data[data != 0.] -= ref_data
+
+    # masking
+    if inps.zero_mask:
+        data = np.ma.masked_where(data == 0., data)
+
+    if inps.msk is not None:
+        data = np.ma.masked_where(inps.msk == 0., data)
+    else:
+        inps.msk = np.ones(data.shape, dtype=np.bool_)
+
+    # update/save mask info
+    if np.ma.is_masked(data):
+        inps.msk *= ~data.mask
+        inps.msk *= ~np.isnan(data.data)
+    else:
+        inps.msk *= ~np.isnan(data)
+
+    data, inps = update_data_with_plot_inps(data, atr, inps)
+
+    # matplotlib.Axes
+    if auto_fig:
+        figsize = [i/2.0 for i in inps.fig_size]
+        subplot_kw = dict(projection=inps.map_proj_obj) if inps.map_proj_obj is not None else {}
+        ax = plt.subplots(figsize=figsize, subplot_kw=subplot_kw)[1]
+        return data, atr, inps, ax
+    else:
+        return data, atr, inps
+
+
+##################################################################################################
+def plot_slice(ax, data, metadata, inps):
     """Plot one slice of matrix
     Parameters: ax   : matplot.pyplot axes object
                 data : 2D np.array,
@@ -520,20 +439,18 @@ def plot_slice(ax, data, metadata, inps=None):
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
     #---------------------------  Initial a inps Namespace if no inps input -----------------------#
-    if not inps:
-        inps = cmd_line_parse([''])
-        inps = update_inps_with_file_metadata(inps, metadata)
     if isinstance(inps.colormap, str):
-        inps.colormap = pp.ColormapExt(inps.colormap,
-                                       cmap_lut=inps.cmap_lut,
-                                       vlist=inps.cmap_vlist).colormap
+        inps.colormap = pp.ColormapExt(
+            inps.colormap, cmap_lut=inps.cmap_lut, vlist=inps.cmap_vlist
+        ).colormap
 
     # read DEM
     if inps.dem_file:
-        dem, dem_metadata, dem_pix_box = pp.read_dem(inps.dem_file,
-                                                     pix_box=inps.pix_box,
-                                                     geo_box=inps.geo_box,
-                                                     print_msg=inps.print_msg)
+        dem, dem_metadata, dem_pix_box = pp.read_dem(
+            inps.dem_file,
+            pix_box=inps.pix_box,
+            geo_box=inps.geo_box,
+            print_msg=inps.print_msg)
 
     vprint('display data in transparency: '+str(inps.transparency))
 
@@ -552,9 +469,10 @@ def plot_slice(ax, data, metadata, inps=None):
         # Plot DEM
         if inps.dem_file:
             vprint('plotting DEM background ...')
-            pp.plot_dem_background(ax=ax, geo_box=inps.geo_box,
-                                   dem=dem, inps=inps,
-                                   print_msg=inps.print_msg)
+            pp.plot_dem_background(
+                ax=ax, geo_box=inps.geo_box,
+                dem=dem, inps=inps,
+                print_msg=inps.print_msg)
 
         # Plot Data
         coord = ut.coordinate(metadata)
@@ -573,9 +491,10 @@ def plot_slice(ax, data, metadata, inps=None):
         extent = (inps.geo_box[0], inps.geo_box[2],
                   inps.geo_box[3], inps.geo_box[1])  # (W, E, S, N)
 
-        im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
-                       extent=extent, origin='upper', interpolation='nearest',
-                       alpha=inps.transparency, animated=inps.animation, zorder=1)
+        im = ax.imshow(
+            data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
+            extent=extent, origin='upper', interpolation='nearest',
+            alpha=inps.transparency, animated=inps.animation, zorder=1)
 
         # Scale Bar
         if inps.coord_unit.startswith('deg') and (inps.geo_box[2] - inps.geo_box[0]) > 30:
@@ -584,24 +503,26 @@ def plot_slice(ax, data, metadata, inps=None):
 
         if inps.disp_scalebar:
             vprint('plot scale bar: {}'.format(inps.scalebar))
-            pp.draw_scalebar(ax,
-                             geo_box=inps.geo_box,
-                             unit=inps.coord_unit,
-                             loc=inps.scalebar,
-                             labelpad=inps.scalebar_pad,
-                             font_size=inps.font_size)
+            pp.draw_scalebar(
+                ax,
+                geo_box=inps.geo_box,
+                unit=inps.coord_unit,
+                loc=inps.scalebar,
+                labelpad=inps.scalebar_pad,
+                font_size=inps.font_size)
 
         # Lat Lon labels
         if inps.lalo_label:
-            pp.draw_lalo_label(ax,
-                               geo_box=inps.geo_box,
-                               lalo_step=inps.lalo_step,
-                               lalo_loc=inps.lalo_loc,
-                               lalo_max_num=inps.lalo_max_num,
-                               lalo_offset=inps.lalo_offset,
-                               font_size=inps.lalo_font_size if inps.lalo_font_size else inps.font_size,
-                               projection=inps.map_proj_obj,
-                               print_msg=inps.print_msg)
+            pp.draw_lalo_label(
+                ax,
+                geo_box=inps.geo_box,
+                lalo_step=inps.lalo_step,
+                lalo_loc=inps.lalo_loc,
+                lalo_max_num=inps.lalo_max_num,
+                lalo_offset=inps.lalo_offset,
+                font_size=inps.lalo_font_size if inps.lalo_font_size else inps.font_size,
+                projection=inps.map_proj_obj,
+                print_msg=inps.print_msg)
         else:
             ax.tick_params(which='both', direction='in', labelsize=inps.font_size,
                            left=True, right=True, top=True, bottom=True)
@@ -629,8 +550,9 @@ def plot_slice(ax, data, metadata, inps=None):
         if inps.dem_file:
             coord_dem = ut.coordinate(dem_metadata)
             dem_len, dem_wid = dem.shape
+
         def format_coord(x, y):
-            msg = 'E={:.4f}, N={:.4f}'.format(x, y)
+            msg = f'E={x:.4f}, N={y:.4f}'
             col = coord.lalo2yx(x, coord_type='lon') - inps.pix_box[0]
             row = coord.lalo2yx(y, coord_type='lat') - inps.pix_box[1]
             if 0 <= col < num_col and 0 <= row < num_row:
@@ -638,7 +560,7 @@ def plot_slice(ax, data, metadata, inps=None):
                 if np.isnan(v) or np.ma.is_masked(v):
                     msg += ', v=[]'
                 else:
-                    msg += ', v={:.3f}'.format(v)
+                    msg += f', v={v:.3f}'
                 # DEM
                 if inps.dem_file:
                     dem_col = coord_dem.lalo2yx(x, coord_type='lon') - dem_pix_box[0]
@@ -646,11 +568,11 @@ def plot_slice(ax, data, metadata, inps=None):
                     if 0 <= dem_col < dem_wid and 0 <= dem_row < dem_len:
                         h = dem[dem_row, dem_col]
                         if not np.isnan(h):
-                            msg += ', h={:.0f}'.format(h)
+                            msg += f', h={h:.0f}'
                 # x/y
-                msg += ', x={:.0f}, y={:.0f}'.format(col+inps.pix_box[0],
-                                                     row+inps.pix_box[1])
+                msg += f', x={col+inps.pix_box[0]:.0f}, y={row+inps.pix_box[1]:.0f}'
             return msg
+
         ax.format_coord = format_coord
 
     #------------------------ Plot in Y/X-coordinate ------------------------------------------------#
@@ -661,8 +583,12 @@ def plot_slice(ax, data, metadata, inps=None):
         # Plot DEM
         if inps.dem_file:
             vprint('plotting DEM background ...')
-            pp.plot_dem_background(ax=ax, geo_box=None, dem=dem,
-                                   inps=inps, print_msg=inps.print_msg)
+            pp.plot_dem_background(
+                ax=ax,
+                geo_box=None,
+                dem=dem,
+                inps=inps,
+                print_msg=inps.print_msg)
 
         # Plot Data
         vprint('plotting Data ...')
@@ -796,6 +722,7 @@ def plot_slice(ax, data, metadata, inps=None):
     return ax, inps, im, cbar
 
 
+##################################################################################################
 def read_input_file_info(inps):
     # File Basic Info
     atr = readfile.read_attribute(inps.file)
@@ -826,38 +753,37 @@ def read_input_file_info(inps):
     return inps, atr
 
 
-def search_dataset_input(allList, inList=[], inNumList=[], search_dset=True):
+def search_dataset_input(all_list, in_list=[], in_num_list=[], search_dset=True):
     """Get dataset(es) from input dataset / dataset_num"""
     # make a copy to avoid weird variable behavior
-    inNumList = [x for x in inNumList]
+    in_num_list = [x for x in in_num_list]
 
-    # inList --> inNumList --> outNumList --> outList
-    if inList:
-        if isinstance(inList, str):
-            inList = [inList]
+    # in_list --> in_num_list --> outNumList --> outList
+    if in_list:
+        if isinstance(in_list, str):
+            in_list = [in_list]
 
         tempList = []
         if search_dset:
-            for ds in inList:
+            for ds in in_list:
                 # style of regular expression
                 if '*' not in ds:
                     ds = '*{}*'.format(ds)
                 ds = ds.replace('*','.*')
 
                 # search
-                tempList += [e for e in allList
-                             if re.match(ds, e) is not None]
+                tempList += [e for e in all_list if re.match(ds, e) is not None]
 
         else:
-            tempList += [i for i in inList if i in allList]
+            tempList += [i for i in in_list if i in all_list]
         tempList = sorted(list(set(tempList)))
-        inNumList += [allList.index(e) for e in tempList]
+        in_num_list += [all_list.index(e) for e in tempList]
 
-    # inNumList --> outNumList
-    outNumList = sorted(list(set(inNumList)))
+    # in_num_list --> outNumList
+    outNumList = sorted(list(set(in_num_list)))
 
     # outNumList --> outList
-    outList = [allList[i] for i in outNumList]
+    outList = [all_list[i] for i in outNumList]
 
     return outList, outNumList
 
@@ -881,10 +807,12 @@ def read_dataset_input(inps):
             inps.ref_date = date1
 
         # search
-        inps.dsetNumList = search_dataset_input(inps.sliceList,
-                                                inps.dset,
-                                                inps.dsetNumList,
-                                                inps.search_dset)[1]
+        inps.dsetNumList = search_dataset_input(
+            all_list=inps.sliceList,
+            in_list=inps.dset,
+            in_num_list=inps.dsetNumList,
+            search_dset=inps.search_dset)[1]
+
     else:
         # default dataset to display for certain type of files
         if inps.key == 'ifgramStack':
@@ -903,28 +831,31 @@ def read_dataset_input(inps):
             if inps.key == 'geometry':
                 inps.dset = [x for x in inps.dset if not x.startswith('bperp')]
 
-        inps.dsetNumList = search_dataset_input(inps.sliceList,
-                                                inps.dset,
-                                                inps.dsetNumList,
-                                                inps.search_dset)[1]
+        inps.dsetNumList = search_dataset_input(
+            all_list=inps.sliceList,
+            in_list=inps.dset,
+            in_num_list=inps.dsetNumList,
+            search_dset=inps.search_dset)[1]
 
     # read inps.exDsetList
-    inps.exDsetList, inps.exDsetNumList = search_dataset_input(inps.sliceList,
-                                                               inps.exDsetList,
-                                                               [],
-                                                               inps.search_dset)
+    inps.exDsetList, inps.exDsetNumList = search_dataset_input(
+        all_list=inps.sliceList,
+        in_list=inps.exDsetList,
+        in_num_list=[],
+        search_dset=inps.search_dset)
 
     # read inps.plot_drop_ifgram
     drop_num_list = []
-    atr = readfile.read_attribute(inps.file)
+    ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
+    
     if not inps.plot_drop_ifgram:
-        if atr['FILE_TYPE'] == 'ifgramStack':
+        if ftype == 'ifgramStack':
             vprint('do not show the dropped interferograms')
             date12_drop_list = ifgramStack(inps.file).get_drop_date12_list()
             drop_slice_list = [x for x in inps.sliceList if x.split('-')[1] in date12_drop_list]
             drop_num_list = [inps.sliceList.index(x) for x in drop_slice_list]
         else:
-            vprint('--show-kept option does not apply to file type: {}, ignore and continue.'.format(atr['FILE_TYPE']))
+            print(f'WARNING: --show-kept option does not apply to file type: {ftype}, ignore and continue.')
             inps.plot_drop_ifgram = True
 
     # get inps.dset
@@ -936,13 +867,16 @@ def read_dataset_input(inps):
         if inps.key not in timeseriesKeyNames:
             inps.ref_date = None
 
-        ref_date = search_dataset_input(inps.sliceList,
-                                        [inps.ref_date],
-                                        [],
-                                        inps.search_dset)[0][0]
+        ref_date = search_dataset_input(
+            all_list=inps.sliceList,
+            in_list=[inps.ref_date],
+            in_num_list=[],
+            search_dset=inps.search_dset)[0][0]
 
         if not ref_date:
-            print('WARNING: input reference date {} is not included in input file! Ignore it and continue'.format(inps.ref_date))
+            msg = f'WARNING: input reference date {inps.ref_date} is not included in input file!'
+            msg += 'Ignore it and continue'
+            print(msg)
             inps.ref_date = None
         else:
             inps.ref_date = ref_date
@@ -964,6 +898,7 @@ def read_dataset_input(inps):
         raise Exception(msg)
 
     atr = readfile.read_attribute(inps.file, datasetName=inps.dset[0].split('-')[0])
+
     return inps, atr
 
 
@@ -986,9 +921,10 @@ def update_figure_setting(inps):
                 length = abs(inps.geo_box[3] - inps.geo_box[1])
                 width  = abs(inps.geo_box[2] - inps.geo_box[0])
             # auto figure size
-            inps.fig_size = pp.auto_figure_size(ds_shape=(length, width),
-                                                disp_cbar=inps.disp_cbar,
-                                                print_msg=inps.print_msg)
+            inps.fig_size = pp.auto_figure_size(
+                ds_shape=(length, width),
+                disp_cbar=inps.disp_cbar,
+                print_msg=inps.print_msg)
 
     # Multiple Plots
     else:
@@ -1005,16 +941,16 @@ def update_figure_setting(inps):
         # Row/Column number
         if (inps.fig_row_num == 1 and inps.fig_col_num == 1
                 and all(i not in inps.argv for i in ['--nrows', '--ncols'])):
+
             # calculate row and col number based on input info
             data_shape = [length*1.1, width]
             fig_size4plot = [inps.fig_size[0]*0.95, inps.fig_size[1]]
-            (inps.fig_row_num,
-             inps.fig_col_num) = pp.auto_row_col_num(inps.dsetNum,
-                                                     data_shape,
-                                                     fig_size4plot,
-                                                     inps.fig_num)
-        inps.fig_num = np.ceil(float(inps.dsetNum) / float(inps.fig_row_num *
-                                                           inps.fig_col_num)).astype(int)
+            inps.fig_row_num, inps.fig_col_num = pp.auto_row_col_num(
+                inps.dsetNum,
+                data_shape,
+                fig_size4plot,
+                inps.fig_num)
+        inps.fig_num = np.ceil(float(inps.dsetNum) / float(inps.fig_row_num * inps.fig_col_num)).astype(int)
         vprint('dataset number: '+str(inps.dsetNum))
         vprint('row     number: '+str(inps.fig_row_num))
         vprint('column  number: '+str(inps.fig_col_num))
@@ -1030,6 +966,7 @@ def update_figure_setting(inps):
             inps.outdir = os.path.dirname(inps.outfile[0])
             inps.outfile_base, inps.fig_ext = os.path.splitext(os.path.basename(inps.outfile[0]))
             inps.fig_ext = inps.fig_ext.lower()
+
         else:
             inps.outdir = os.path.dirname(inps.file)
             inps.outfile_base = os.path.splitext(os.path.basename(inps.file))[0]
@@ -1044,6 +981,7 @@ def update_figure_setting(inps):
                 inps.outfile_base += '_ref'+inps.ref_date
             if inps.exDsetList:
                 inps.outfile_base += '_ex'
+
         # output file name list
         if inps.fig_num == 1:
             inps.outfile = ['{}{}'.format(inps.outfile_base, inps.fig_ext)]
@@ -1051,6 +989,7 @@ def update_figure_setting(inps):
             inps.outfile = ['{}_{}{}'.format(inps.outfile_base, str(j), inps.fig_ext)
                             for j in range(1, inps.fig_num+1)]
         inps.outfile = [os.path.join(inps.outdir, outfile) for outfile in inps.outfile]
+
     return inps
 
 
@@ -1067,11 +1006,12 @@ def read_data4figure(i_start, i_end, inps, metadata):
 
         vprint('reading data as a 3D matrix ...')
         dset_list = [inps.dset[i] for i in range(i_start, i_end)]
-        kwargs = dict(datasetName=dset_list,
-                      box=inps.pix_box,
-                      xstep=inps.multilook_num,
-                      ystep=inps.multilook_num,
-                      print_msg=inps.print_msg)
+        kwargs = dict(
+            datasetName=dset_list,
+            box=inps.pix_box,
+            xstep=inps.multilook_num,
+            ystep=inps.multilook_num,
+            print_msg=inps.print_msg)
 
         if not metadata.get('DATA_TYPE', 'float32').startswith('complex'):
             data[:] = readfile.read(inps.file, **kwargs)[0]
@@ -1083,12 +1023,16 @@ def read_data4figure(i_start, i_end, inps, metadata):
         if inps.key == 'ifgramStack':
             # reference pixel info in unwrapPhase
             if inps.dsetFamilyList[0].startswith('unwrapPhase') and inps.file_ref_yx:
+                # get reference value
                 ref_y, ref_x = inps.file_ref_yx
                 ref_box = (ref_x, ref_y, ref_x+1, ref_y+1)
-                ref_data = readfile.read(inps.file,
-                                         datasetName=dset_list,
-                                         box=ref_box,
-                                         print_msg=False)[0]
+                ref_data = readfile.read(
+                    inps.file,
+                    datasetName=dset_list,
+                    box=ref_box,
+                    print_msg=False)[0]
+
+                # apply referencing
                 for i in range(data.shape[0]):
                     mask = data[i, :, :] != 0.
                     data[i, mask] -= ref_data[i]
@@ -1098,29 +1042,35 @@ def read_data4figure(i_start, i_end, inps, metadata):
         vprint('reading data as a list of 2D matrices ...')
         prog_bar = ptime.progressBar(maxValue=i_end-i_start, print_msg=inps.print_msg)
         for i in range(i_start, i_end):
-            d = readfile.read(inps.file,
-                              datasetName=inps.dset[i],
-                              box=inps.pix_box,
-                              xstep=inps.multilook_num,
-                              ystep=inps.multilook_num,
-                              print_msg=False)[0]
+            d = readfile.read(
+                inps.file,
+                datasetName=inps.dset[i],
+                box=inps.pix_box,
+                xstep=inps.multilook_num,
+                ystep=inps.multilook_num,
+                print_msg=False)[0]
+
             # reference pixel info in unwrapPhase
             if inps.dset[i].startswith('unwrapPhase') and inps.file_ref_yx:
                 ref_y, ref_x = inps.file_ref_yx
                 d[d!=0] -= d[ref_y, ref_x]
+
+            # save the matrix
             data[i - i_start, :, :] = d
+
             prog_bar.update(i - i_start + 1, suffix=inps.dset[i].split('/')[-1])
         prog_bar.close()
 
     # ref_date for timeseries
     if inps.ref_date:
         vprint('consider input reference date: '+inps.ref_date)
-        ref_data = readfile.read(inps.file,
-                                 datasetName=inps.ref_date,
-                                 box=inps.pix_box,
-                                 xstep=inps.multilook_num,
-                                 ystep=inps.multilook_num,
-                                 print_msg=False)[0]
+        ref_data = readfile.read(
+            inps.file,
+            datasetName=inps.ref_date,
+            box=inps.pix_box,
+            xstep=inps.multilook_num,
+            ystep=inps.multilook_num,
+            print_msg=False)[0]
         data -= ref_data
 
     # check if all subplots share the same data unit, they could have/be:
@@ -1161,11 +1111,12 @@ def read_data4figure(i_start, i_end, inps, metadata):
             and all(arg not in inps.argv for arg in ['-v', '--vlim', '--wrap'])
             and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)
             and inps.dsetFamilyList[0] not in ['bperp']):
-        (inps.cmap_lut,
-         inps.vlim,
-         inps.unique_values) = pp.auto_adjust_colormap_lut_and_disp_limit(data,
-                                                                          num_multilook=10,
-                                                                          print_msg=False)
+
+        inps.cmap_lut, inps.vlim, inps.unique_values = pp.auto_adjust_colormap_lut_and_disp_limit(
+            data,
+            num_multilook=10,
+            print_msg=False,
+        )
 
     return data
 
@@ -1177,18 +1128,20 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     """
     # Plot DEM
     if inps.dem_file:
-        pp.plot_dem_background(ax=ax, geo_box=None,
-                               dem_shade=inps.dem_shade,
-                               dem_contour=inps.dem_contour,
-                               dem_contour_seq=inps.dem_contour_seq,
-                               inps=inps,
-                               print_msg=inps.print_msg)
+        pp.plot_dem_background(
+            ax=ax, geo_box=None,
+            dem_shade=inps.dem_shade,
+            dem_contour=inps.dem_contour,
+            dem_contour_seq=inps.dem_contour_seq,
+            inps=inps,
+            print_msg=inps.print_msg)
+
     # Plot Data
     vlim = inps.vlim
-    if vlim is None:
-        vlim = [np.nanmin(data), np.nanmax(data)]
+    vlim = vlim if vlim is not None else [np.nanmin(data), np.nanmax(data)]
     extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
               inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
+
     im = ax.imshow(data, cmap=inps.colormap, vmin=vlim[0], vmax=vlim[1],
                    interpolation='nearest', alpha=inps.transparency,
                    extent=extent, zorder=1)
@@ -1268,11 +1221,8 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
                     # special titles for Sentinel-1 data
                     if metadata.get('PLATFORM', None) == 'Sen' and inps.disp_title4sentinel1:
                         # display S1A/B in different colors
-                        s1_sensor = metadata['SENTINEL1_SENSOR'].split()[i]
-                        if s1_sensor == 'A':
-                            kwarg['color'] = pp.mplColors[0]
-                        else:
-                            kwarg['color'] = pp.mplColors[1]
+                        s1_sensor = metadata['SENTINEL1_SENSOR'].split()[i]                        
+                        kwarg['color'] = 'C0' if s1_sensor == 'A' else 'C1'
                         # display IPF in subplot title
                         s1_IPF = metadata['SENTINEL1_IPF'].split()[i]
                         subplot_title += ' : {}'.format(s1_IPF)
@@ -1302,12 +1252,12 @@ def plot_figure(j, inps, metadata):
     vprint(fig_title)
 
     # Open a new figure object
-    fig, axs = plt.subplots(num=j,
-                            figsize=inps.fig_size,
-                            nrows=inps.fig_row_num,
-                            ncols=inps.fig_col_num,
-                            sharex=True,
-                            sharey=True)
+    fig, axs = plt.subplots(
+        num=j, figsize=inps.fig_size,
+        nrows=inps.fig_row_num,
+        ncols=inps.fig_col_num,
+        sharex=True, sharey=True,
+    )
     fig.canvas.manager.set_window_title(fig_title)
     axs = axs.flatten()
 
@@ -1317,18 +1267,20 @@ def plot_figure(j, inps, metadata):
     data = read_data4figure(i_start, i_end, inps, metadata)
 
     if isinstance(inps.colormap, str):
-        inps.colormap = pp.ColormapExt(inps.colormap,
-                                       cmap_lut=inps.cmap_lut,
-                                       vlist=inps.cmap_vlist).colormap
+        inps.colormap = pp.ColormapExt(
+            inps.colormap, cmap_lut=inps.cmap_lut, vlist=inps.cmap_vlist,
+        ).colormap
 
     # Loop - Subplots
     vprint('plotting ...')
     prog_bar = ptime.progressBar(maxValue=i_end-i_start, print_msg=inps.print_msg)
     for i in range(i_start, i_end):
         idx = i - i_start
-        im = plot_subplot4figure(i, inps, ax=axs[idx],
-                                 data=data[idx, :, :],
-                                 metadata=metadata)
+        im = plot_subplot4figure(
+            i, inps,
+            ax=axs[idx],
+            data=data[idx, :, :],
+            metadata=metadata)
 
         # colorbar for each subplot
         if inps.disp_cbar and not inps.vlim:
@@ -1358,9 +1310,11 @@ def plot_figure(j, inps, metadata):
     # before fig.add_axes(), which is the case of common colorbar
     # after fig.colorbar() and fig.set_size_inches(), which is the case of individual/multiple colorbars
     def adjust_subplots_layout(fig, inps):
-        fig.subplots_adjust(left=0.02, right=0.98,
-                            bottom=0.02, top=0.98,
-                            wspace=0.05, hspace=0.05)
+        fig.subplots_adjust(
+            left=0.02, right=0.98,
+            bottom=0.02, top=0.98,
+            wspace=0.05, hspace=0.05,
+        )
         if inps.fig_wid_space or inps.fig_hei_space:
             fig.subplots_adjust(hspace=inps.fig_hei_space,
                                 wspace=inps.fig_wid_space)
@@ -1373,8 +1327,7 @@ def plot_figure(j, inps, metadata):
         if not inps.vlim:
             vprint('Note: different color scale for EACH subplot!')
             vprint('Adjust figsize for the colorbar of each subplot.')
-            fig.set_size_inches(inps.fig_size[0] * 1.1,
-                                inps.fig_size[1])
+            fig.set_size_inches(inps.fig_size[0] * 1.1, inps.fig_size[1])
 
             adjust_subplots_layout(fig, inps)
         else:
@@ -1421,16 +1374,20 @@ def prepare4multi_subplots(inps, metadata):
         #   inps.multilook is True (no --nomultilook input) AND
         #   inps.multilook_num ==1 (no --multilook-num input)
         # inps.multilook is used for this check ONLY
-        inps.multilook_num = pp.auto_multilook_num(inps.pix_box, inps.fig_row_num * inps.fig_col_num,
-                                                   max_memory=inps.maxMemory,
-                                                   print_msg=inps.print_msg)
+        inps.multilook_num = pp.auto_multilook_num(
+            inps.pix_box, inps.fig_row_num * inps.fig_col_num,
+            max_memory=inps.maxMemory,
+            print_msg=inps.print_msg,
+        )
 
     # multilook mask
     if inps.msk is not None and inps.multilook_num > 1:
-        inps.msk = multilook_data(inps.msk,
-                                  inps.multilook_num,
-                                  inps.multilook_num,
-                                  method='nearest')
+        inps.msk = multilook_data(
+            inps.msk,
+            inps.multilook_num,
+            inps.multilook_num,
+            method='nearest',
+        )
 
     # Reference pixel for timeseries and ifgramStack
     inps.file_ref_yx = None
@@ -1461,18 +1418,21 @@ def prepare4multi_subplots(inps, metadata):
         dem_metadata = readfile.read_attribute(inps.dem_file)
         if all(dem_metadata[i] == metadata[i] for i in ['LENGTH', 'WIDTH']):
             vprint('reading DEM: {} ... '.format(os.path.basename(inps.dem_file)))
-            dem = readfile.read(inps.dem_file,
-                                datasetName='height',
-                                box=inps.pix_box,
-                                xstep=inps.multilook_num,
-                                ystep=inps.multilook_num,
-                                print_msg=False)[0]
+            dem = readfile.read(
+                inps.dem_file,
+                datasetName='height',
+                box=inps.pix_box,
+                xstep=inps.multilook_num,
+                ystep=inps.multilook_num,
+                print_msg=False,
+            )[0]
 
-            (inps.dem_shade,
-             inps.dem_contour,
-             inps.dem_contour_seq) = pp.prepare_dem_background(dem=dem,
-                                                               inps=inps,
-                                                               print_msg=inps.print_msg)
+            inps.dem_shade, inps.dem_contour, inps.dem_contour_seq = pp.prepare_dem_background(
+                dem=dem,
+                inps=inps,
+                print_msg=inps.print_msg,
+            )
+
         else:
             inps.dem_file = None
             inps.transparency = 1.0
@@ -1484,114 +1444,38 @@ def prepare4multi_subplots(inps, metadata):
 
 
 ##################################################################################################
-def prep_slice(cmd, auto_fig=False):
-    """Prepare data from command line as input, for easy call plot_slice() externally
-    Parameters: cmd  - string, command to be run in terminal
-    Returns:    data - 2D np.ndarray, data to be plotted
-                atr  - dict, metadata
-                inps - namespace, input argument for plot setup
-    Example:
-        subplot_kw = dict(projection=ccrs.PlateCarree())
-        fig, ax = plt.subplots(figsize=[4, 3], subplot_kw=subplot_kw)
-        W, N, E, S = (-91.670, -0.255, -91.370, -0.515)    # geo_box
-        cmd = 'view.py geo_velocity.h5 velocity --mask geo_maskTempCoh.h5 --dem srtm1.dem --dem-nocontour '
-        cmd += f'--sub-lon {W} {E} --sub-lat {S} {N} -c jet -v -3 10 '
-        cmd += '--cbar-loc bottom --cbar-nbins 3 --cbar-ext both --cbar-size 5% '
-        cmd += '--lalo-step 0.2 --lalo-loc 1 0 1 0 --scalebar 0.3 0.80 0.05 --notitle'
-        data, atr, inps = view.prep_slice(cmd)
-        ax, inps, im, cbar = view.plot_slice(ax, data, atr, inps)
-        plt.show()
-    """
-    inps = cmd_line_parse(cmd.split()[1:])
-    vprint(cmd)
-    inps, atr = read_input_file_info(inps)
-    inps = update_inps_with_file_metadata(inps, atr)
-
-    inps.msk, inps.mask_file = pp.read_mask(inps.file,
-                                            mask_file=inps.mask_file,
-                                            datasetName=inps.dset[0],
-                                            box=inps.pix_box,
-                                            vmin=inps.mask_vmin,
-                                            vmax=inps.mask_vmax,
-                                            print_msg=inps.print_msg)
-
-    # read data
-    data, atr = readfile.read(inps.file,
-                              datasetName=inps.dset[0],
-                              box=inps.pix_box,
-                              print_msg=inps.print_msg)
-    # reference in time
-    if inps.ref_date:
-        data -= readfile.read(inps.file,
-                              datasetName=inps.ref_date,
-                              box=inps.pix_box,
-                              print_msg=False)[0]
-
-    # reference in space for unwrapPhase
-    if (inps.key in ['ifgramStack']
-            and inps.dset[0].split('-')[0].startswith('unwrapPhase')
-            and 'REF_Y' in atr.keys()):
-        ref_y, ref_x = int(atr['REF_Y']), int(atr['REF_X'])
-        ref_data = readfile.read(inps.file,
-                                 datasetName=inps.dset[0],
-                                 box=(ref_x, ref_y, ref_x+1, ref_y+1),
-                                 print_msg=False)[0]
-        data[data != 0.] -= ref_data
-
-    # masking
-    if inps.zero_mask:
-        data = np.ma.masked_where(data == 0., data)
-    if inps.msk is not None:
-        data = np.ma.masked_where(inps.msk == 0., data)
-    else:
-        inps.msk = np.ones(data.shape, dtype=np.bool_)
-    # update/save mask info
-    if np.ma.is_masked(data):
-        inps.msk *= ~data.mask
-        inps.msk *= ~np.isnan(data.data)
-    else:
-        inps.msk *= ~np.isnan(data)
-
-    data, inps = update_data_with_plot_inps(data, atr, inps)
-
-    # matplotlib.Axes
-    if auto_fig == True:
-        figsize = [i/2.0 for i in inps.fig_size]
-        subplot_kw = dict(projection=inps.map_proj_obj) if inps.map_proj_obj is not None else {}
-        fig, ax = plt.subplots(figsize=figsize, subplot_kw=subplot_kw)
-        return data, atr, inps, ax
-    else:
-        return data, atr, inps
-
-
-##################################################################################################
 class viewer():
-    """Class for view.py
+    """viewer class definition.
 
     Example:
-        import matplotlib.pyplot as plt
-        from mintpy.view import viewer
         cmd = 'view.py timeseries.h5'
-        obj = viewer(cmd)
-        obj.configure()
+        inps = cmd_line_parse(cmd.split()[1:])
+        from mintpy.view import viewer
+        obj = viewer()
+        obj.configure(inps)
         obj.plot()
     """
+
     def __init__(self, cmd=None, iargs=None):
         if cmd:
             iargs = cmd.split()[1:]
         self.cmd = cmd
         self.iargs = iargs
-        return
 
+    def configure(self, inps):
+        global vprint
+        vprint = print if inps.print_msg else lambda *args, **kwargs: None
 
-    def configure(self):
-        inps = cmd_line_parse(self.iargs)
+        # matplotlib backend setting
+        if not inps.disp_fig:
+            plt.switch_backend('Agg')
+
         inps, self.atr = read_input_file_info(inps)
         inps = update_inps_with_file_metadata(inps, self.atr)
 
         # --update option
         self.flag = 'run'
-        if inps.update_mode and not inps.disp_fig and run_or_skip(inps) == 'skip':
+        if inps.update_mode and run_or_skip(inps) == 'skip':
             self.flag = 'skip'
 
         # copy inps to self object
@@ -1599,13 +1483,15 @@ class viewer():
             setattr(self, key, value)
 
         # read mask
-        self.msk, self.mask_file = pp.read_mask(self.file,
-                                                mask_file=self.mask_file,
-                                                datasetName=self.dset[0],
-                                                box=self.pix_box,
-                                                vmin=self.mask_vmin,
-                                                vmax=self.mask_vmax,
-                                                print_msg=self.print_msg)
+        self.msk, self.mask_file = pp.read_mask(
+            self.file,
+            mask_file=self.mask_file,
+            datasetName=self.dset[0],
+            box=self.pix_box,
+            vmin=self.mask_vmin,
+            vmax=self.mask_vmax,
+            print_msg=self.print_msg)
+
         return self.flag
 
 
@@ -1614,27 +1500,30 @@ class viewer():
         if self.dsetNum == 1:
             vprint('reading data ...')
             # read data
-            data, self.atr = readfile.read(self.file,
-                                           datasetName=self.dset[0],
-                                           box=self.pix_box,
-                                           print_msg=False)
+            data, self.atr = readfile.read(
+                self.file,
+                datasetName=self.dset[0],
+                box=self.pix_box,
+                print_msg=False)
 
             # reference in time
             if self.ref_date:
-                data -= readfile.read(self.file,
-                                      datasetName=self.ref_date,
-                                      box=self.pix_box,
-                                      print_msg=False)[0]
+                data -= readfile.read(
+                    self.file,
+                    datasetName=self.ref_date,
+                    box=self.pix_box,
+                    print_msg=False)[0]
 
             # reference in space for unwrapPhase
             if (self.key in ['ifgramStack']
                     and self.dset[0].split('-')[0].startswith('unwrapPhase')
                     and 'REF_Y' in self.atr.keys()):
                 ref_y, ref_x = int(self.atr['REF_Y']), int(self.atr['REF_X'])
-                ref_data = readfile.read(self.file,
-                                         datasetName=self.dset[0],
-                                         box=(ref_x, ref_y, ref_x+1, ref_y+1),
-                                         print_msg=False)[0]
+                ref_data = readfile.read(
+                    self.file,
+                    datasetName=self.dset[0],
+                    box=(ref_x, ref_y, ref_x+1, ref_y+1),
+                    print_msg=False)[0]
                 data[data != 0.] -= ref_data
 
             # masking - input options
@@ -1675,9 +1564,9 @@ class viewer():
             # plot
             self = plot_slice(ax, data, self.atr, self)[1]
 
-            # Save figure
+            # save figure
             if self.save_fig:
-                vprint('save figure to {} with dpi={}'.format(os.path.abspath(self.outfile[0]), self.fig_dpi))
+                vprint(f'save figure to {os.path.abspath(self.outfile[0])} with dpi={self.fig_dpi}')
                 if not self.disp_whitespace:
                     fig.savefig(self.outfile[0], transparent=True, dpi=self.fig_dpi, pad_inches=0.0)
                 else:
@@ -1692,7 +1581,7 @@ class viewer():
                          '--pts-yx', '--pts-lalo', '--pts-file']
             opt_names = list(set(opt_names) & set(self.argv))
             for opt_name in opt_names:
-                print('WARNING: {} is NOT supported for multi-subplots, ignore it and continue.'.format(opt_name))
+                print(f'WARNING: {opt_name} is NOT supported for multi-subplots, ignore it and continue.')
 
             # prepare
             self = prepare4multi_subplots(self, metadata=self.atr)
@@ -1714,17 +1603,3 @@ class viewer():
             vprint('showing ...')
             plt.show()
         return
-
-
-#########################################  Main Function  ########################################
-def main(iargs=None):
-    obj = viewer(iargs=iargs)
-    obj.configure()
-    if obj.flag == 'run':
-        obj.plot()
-    return
-
-
-##################################################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])

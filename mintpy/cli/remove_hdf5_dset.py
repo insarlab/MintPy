@@ -2,22 +2,19 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Zhang Yunjun, 2018                               #
+# Author: Zhang Yunjun, Antonio Valentino, Aug 2018        #
 ############################################################
-
 
 import os
 import sys
-import h5py
-from mintpy.utils import writefile
 from mintpy.utils.arg_utils import create_argument_parser
 
 
 ###########################################################################################
 EXAMPLE = """Example:
-  remove_hdf5_dataset.py  ifgramStack.h5  unwrapPhase_phaseClosure
-  remove_hdf5_dataset.py  ifgramStack.h5  unwrapPhase_phaseClosure  unwrapPhase_bridging
-  remove_hdf5_dataset.py  velocity.h5     velocityStd
+  remove_hdf5_dset.py  ifgramStack.h5  unwrapPhase_phaseClosure
+  remove_hdf5_dset.py  ifgramStack.h5  unwrapPhase_phaseClosure  unwrapPhase_bridging
+  remove_hdf5_dset.py  velocity.h5     velocityStd
 """
 
 
@@ -33,27 +30,53 @@ def create_parser(subparsers=None):
 
     return parser
 
+
 def cmd_line_parse(iargs=None):
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # check: input file extension
     if os.path.splitext(inps.file)[1] not in ['.h5', '.he5']:
-        raise ValueError('input file is not HDF5: {}'.format(inps.file))
+        raise ValueError('input file is NOT HDF5: {}'.format(inps.file))
+
     return inps
 
 
 ###########################################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-    with h5py.File(inps.file, 'r') as f:
+def run_remove_hdf5_dset(fname, ds_names):
+    """Remove a dataset from the given HDF5 file.
+
+    Parameters: fname    - str, path to the HDF5 data file
+                ds_names - list(str), name of the HDF5 dataset to be removed.
+    """
+    import h5py
+    from mintpy.utils import writefile
+
+    # grab exiting dataset list
+    with h5py.File(fname, 'r') as f:
         dset_list = list(f.keys())
-    if any(i not in dset_list for i in inps.dset):
-        raise ValueError(('input dataset do not exists: {}'
-                          '\navailable datasets:\n{}').format(inps.dset, dset_list))
 
-    writefile.remove_hdf5_dataset(inps.file, inps.dset, print_msg=True)
+    # check if given dataset exists
+    if any(i not in dset_list for i in ds_names):
+        msg = f'input dataset ({ds_names}) do not exist!'
+        msg += f'\nAvailable datasets: {dset_list}'
+        raise ValueError(msg)
 
+    # update file
+    writefile.remove_hdf5_dataset(fname, ds_names, print_msg=True)
     print('Done.')
+
     return
+
+
+###########################################################################################
+def main(iargs=None):
+    # parse
+    inps = cmd_line_parse(iargs)
+
+    # run
+    run_remove_hdf5_dset(inps.file, inps.dset)
 
 
 ###########################################################################################

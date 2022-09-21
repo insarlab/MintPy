@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,15 +6,12 @@
 
 
 import os
-import sys
 import datetime as dt
 import h5py
 import numpy as np
 
 from mintpy.objects import timeseries, geometry, sensor
-from mintpy.defaults.template import get_template_content
 from mintpy.utils import ptime, readfile, utils as ut
-from mintpy.utils.arg_utils import create_argument_parser
 from mintpy import info
 
 
@@ -27,88 +23,8 @@ COMPRESSION = 'lzf'
 
 
 ################################################################
-TEMPALTE = TEMPLATE = get_template_content('hdfeos5')
-
-EXAMPLE = """example:
-  save_hdfeos5.py geo/geo_timeseries_ERA5_ramp_demErr.h5
-  save_hdfeos5.py timeseries_ERA5_ramp_demErr.h5 --tc temporalCoherence.h5 --asc avgSpatialCoh.h5 -m maskTempCoh.h5 -g inputs/geometryGeo.h5
-  save_hdfeos5.py timeseries_ERA5_ramp_demErr.h5 --tc temporalCoherence.h5 --asc avgSpatialCoh.h5 -m maskTempCoh.h5 -g inputs/geometryRadar.h5
-"""
-
-NOTE = """
-  https://earthdata.nasa.gov/esdis/eso/standards-and-references/hdf-eos5
-  https://mintpy.readthedocs.io/en/latest/hdfeos5/
-"""
-
-def create_parser(subparsers=None):
-    synopsis = 'Convert MintPy timeseries product into HDF-EOS5 format'
-    epilog = TEMPALTE + '\n' + EXAMPLE
-    name = __name__.split('.')[-1]
-    parser = create_argument_parser(
-        name, synopsis=synopsis, description=synopsis+NOTE, epilog=epilog, subparsers=subparsers)
-
-    parser.add_argument('ts_file', default='timeseries.h5', help='Time-series file')
-    parser.add_argument('-t', '--template', dest='template_file',
-                        help='Template file for 1) arguments/options and 2) missing metadata')
-
-    parser.add_argument('--tc','--temp-coh', dest='tcoh_file',
-                        help='Coherence/correlation file, i.e. temporalCoherence.h5')
-    parser.add_argument('--asc','--avg-spatial-coh', dest='scoh_file',
-                        help='Average spatial coherence file, i.e. avgSpatialCoh.h5')
-    parser.add_argument('-m', '--mask', dest='mask_file', help='Mask file')
-    parser.add_argument('-g', '--geometry', dest='geom_file', help='geometry file')
-    parser.add_argument('--suffix', dest='suffix', help='suffix to be appended to file name (e.g. PS).')
-
-    parser.add_argument('--update', action='store_true',
-                        help='Enable update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year')
-    parser.add_argument('--subset', action='store_true',
-                        help='Enable subset mode, a.k.a. put suffix _N31700_N32100_E130500_E131100')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    # default filenames
-    ts_dir = os.path.dirname(inps.ts_file)
-    meta = readfile.read_attribute(inps.ts_file)
-    if os.path.basename(inps.ts_file).startswith('geo_'):
-        tcoh_file = os.path.join(ts_dir, 'geo_temporalCoherence.h5')
-        scoh_file = os.path.join(ts_dir, 'geo_avgSpatialCoh.h5')
-        mask_file = os.path.join(ts_dir, 'geo_maskTempCoh.h5')
-        geom_file = os.path.join(ts_dir, 'geo_geometryRadar.h5')
-    else:
-        tcoh_file = os.path.join(ts_dir, 'temporalCoherence.h5')
-        scoh_file = os.path.join(ts_dir, 'avgSpatialCoh.h5')
-        mask_file = os.path.join(ts_dir, 'maskTempCoh.h5')
-
-        if 'Y_FIRST' in meta.keys():
-            geom_file = os.path.join(ts_dir, 'inputs/geometryGeo.h5')
-        else:
-            geom_file = os.path.join(ts_dir, 'inputs/geometryRadar.h5')
-
-    if not inps.tcoh_file:  inps.tcoh_file = tcoh_file
-    if not inps.scoh_file:  inps.scoh_file = scoh_file
-    if not inps.mask_file:  inps.mask_file = mask_file
-    if not inps.geom_file:  inps.geom_file = geom_file
-
-    # check file existence
-    for fname in [inps.ts_file, inps.tcoh_file, inps.scoh_file, inps.mask_file, inps.geom_file]:
-        if not os.path.isfile(fname):
-            raise FileNotFoundError(fname)
-
-    # --subset mode
-    if inps.subset and 'Y_FIRST' not in meta.keys():
-        raise SystemExit('ERROR: --subset mode is NOT supported for time-series in radar-coordinates!')
-
-    return inps
-
-
-def read_template2inps(template_file, inps=None):
+def read_template2inps(template_file, inps):
     """Read input template options into Namespace inps"""
-    if not inps:
-        inps = cmd_line_parse()
 
     if not template_file:
         return inps, None
@@ -283,7 +199,9 @@ def metadata_mintpy2unavco(meta_in, dateList, geom_file):
             unavco_meta['data_footprint'] = ut.snwe_to_wkt_polygon([S, N, W, E])
 
         else:
-            print('WARNING: "data_footprint" is NOT assigned, due to the lack of X/Y_FIRST attributes and latitude/longitde datasets.')
+            msg = 'WARNING: "data_footprint" is NOT assigned, '
+            msg += 'due to the lack of X/Y_FIRST attributes and latitude/longitde datasets.'
+            print(msg)
 
     return unavco_meta
 
@@ -339,25 +257,33 @@ def get_output_filename(metadata, suffix=None, update_mode=False, subset_mode=Fa
 
 def create_hdf5_dataset(group, dsName, data, max_digit=55, compression=COMPRESSION):
     """Create HDF5 dataset and print out message."""
+
     msg = 'create dataset {d:<{w}}'.format(d='{}/{}'.format(group.name, dsName), w=max_digit)
     msg += ' of {t:<10} in size of {s}'.format(t=str(data.dtype), s=data.shape)
     msg += ' with compression={c}'.format(c=compression)
     print(msg)
 
     if data.ndim == 1:
-        dset = group.create_dataset(dsName,
-                                    data=data,
-                                    compression=compression)
+        dset = group.create_dataset(
+            dsName,
+            data=data,
+            compression=compression,
+        )
+
     elif data.ndim == 2:
-        dset = group.create_dataset(dsName,
-                                    data=data,
-                                    chunks=True,
-                                    compression=compression)
+        dset = group.create_dataset(
+            dsName,
+            data=data,
+            chunks=True,
+            compression=compression,
+        )
+
     return dset
 
 
 def write_hdf5_file(metadata, out_file, ts_file, tcoh_file, scoh_file, mask_file, geom_file):
     """Write HDF5 file in HDF-EOS5 format."""
+
     ts_obj = timeseries(ts_file)
     ts_obj.open(print_msg=False)
     dateList = ts_obj.dateList
@@ -456,7 +382,8 @@ def write_hdf5_file(metadata, out_file, ts_file, tcoh_file, scoh_file, mask_file
 
     ##### Group - Write Geometry
     # Required: height, incidenceAngle
-    # Optional: rangeCoord, azimuthCoord, azimuthAngle, slantRangeDistance, waterMask, shadowMask
+    # Optional: rangeCoord, azimuthCoord, azimuthAngle, slantRangeDistance,
+    #           waterMask, shadowMask
     gName = 'HDFEOS/GRIDS/timeseries/geometry'
     print('create group   /{}'.format(gName))
     group = f.create_group(gName)
@@ -497,29 +424,30 @@ def write_hdf5_file(metadata, out_file, ts_file, tcoh_file, scoh_file, mask_file
         f.attrs[key] = value
     f.close()
     print('finished writing to {}'.format(out_file))
+
     return out_file
 
 
 ################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
+def save_hdfeos5(inps):
+
     inps, template = read_template2inps(inps.template_file, inps)
 
-    # Prepare Metadata
+    # prepare metadata
     meta = prep_metadata(
         ts_file=inps.ts_file,
         geom_file=inps.geom_file,
         template=template,
         print_msg=True)
 
-    # Get output filename
+    # get output filename
     out_file = get_output_filename(
         metadata=meta,
         suffix=inps.suffix,
         update_mode=inps.update,
         subset_mode=inps.subset)
 
-    # Open HDF5 File
+    # write HDF5 File
     write_hdf5_file(
         metadata=meta,
         out_file=out_file,
@@ -530,9 +458,3 @@ def main(iargs=None):
         geom_file=inps.geom_file)
 
     return
-
-
-################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])
-

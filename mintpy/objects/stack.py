@@ -14,7 +14,7 @@ import itertools
 import datetime as dt
 import h5py
 import numpy as np
-from mintpy.utils import ptime, time_func
+from mintpy.utils import ptime
 
 
 ##------------------ Global Variables ---------------------##
@@ -420,7 +420,7 @@ class timeseries:
         if maskFile and os.path.isfile(maskFile):
             print('read mask from file: '+maskFile)
             mask = singleDataset(maskFile).read(box=box)
-            data[mask == int(reverseMask)] = np.nan
+            data[:, mask == int(reverseMask)] = np.nan
 
         # calculate area ratio if threshold is specified
         # percentage of pixels with value above the threshold
@@ -437,6 +437,74 @@ class timeseries:
         data = self.read(squeeze=False)
         dmean = np.nanmean(data, axis=0)
         return dmean
+
+
+    def temporal_derivative(self, out_file):
+        print('calculating the temporal derivative of timeseries file: {}'.format(self.file))
+
+        # read
+        print('reading timeseries data')
+        self.open(print_msg=False)
+        ts_data = self.read(print_msg=False)
+
+        # calculate
+        print('calculate the 1st derivative of timeseries data')
+        ts_data_1d = np.zeros(ts_data.shape, np.float32)
+        ts_data_1d[1:, :, :] = np.diff(ts_data, n=1, axis=0)
+
+        # write
+        if not out_file:
+            fbase = os.path.splitext(self.file)[0]
+            out_file = f'{fbase}_1stDiff.h5'
+        self.write2hdf5(ts_data_1d, outFile=out_file, refFile=self.file)
+
+        return out_file
+
+
+    def temporal_filter(self, time_win=0.1, out_file=None):
+        """Filter the time-series in time with a moving window.
+
+        Parameters: time_win - float, sigma of Gaussian dist. in time in years
+                    out_file - str, output file name
+        Returns:    out_file - str, output file name
+        """
+
+        # read
+        self.open()
+        ts_data = self.read().reshape(self.numDate, -1)
+        tbase = self.tbase.reshape(-1, 1) / 365.25   # tempora baseline in years
+
+        # apply moving window in time
+        print('-'*50)
+        print('filtering in time with a Gaussian window in size of {:.1f} years'.format(time_win))
+        ts_data_filt = np.zeros(ts_data.shape, np.float32)
+
+        prog_bar = ptime.progressBar(maxValue=self.numDate)
+        for i in range(self.numDate):
+            # calc weight from Gaussian (normal) distribution in time
+            tbase_diff = tbase[i] - tbase
+            weight = np.exp(-0.5 * (tbase_diff**2) / (time_win**2))
+            weight /= np.sum(weight)
+
+            # smooth the current acquisition
+            ts_data_filt[i, :] = np.sum(ts_data * weight, axis=0)
+
+            prog_bar.update(i+1, suffix=self.dateList[i])
+        prog_bar.close()
+        del ts_data
+
+        # prepare for writing: temporal referencing + reshape
+        ts_data_filt -= ts_data_filt[self.refIndex, :]
+        ts_data_filt = np.reshape(ts_data_filt, (self.numDate, self.length, self.width))
+
+        # write
+        if not out_file:
+            fbase = os.path.splitext(self.file)[0]
+            out_file = f'{fbase}_tempGauss.h5'
+        self.write2hdf5(ts_data_filt, outFile=out_file, refFile=self.file)
+
+        return
+
 
     def save2bl_list_file(self, out_file='bl_list.txt'):
         """Generate bl_list.txt file from timeseries h5 file."""

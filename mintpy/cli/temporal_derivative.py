@@ -2,20 +2,17 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Heresh Fattahi, Zhang Yunjun, 2013               #
+# Author: Heresh Fattahi, Antonio Valentino, 2013          #
 ############################################################
 
 
-import os
 import sys
-import numpy as np
-from mintpy.objects import timeseries
 from mintpy.utils.arg_utils import create_argument_parser
 
 
 ############################################################################
 EXAMPLE = """example:
-  temporal_derivative.py  timeseries.h5 
+  temporal_derivative.py  timeseries.h5
 """
 
 def create_parser(subparsers=None):
@@ -38,24 +35,15 @@ def cmd_line_parse(iargs=None):
 
 ############################################################################
 def main(iargs=None):
+    # parse
     inps = cmd_line_parse(iargs)
 
-    # read data
-    obj = timeseries(inps.file)
-    obj.open(print_msg=False)
-    print('reading timeseries data from file: {}'.format(inps.file))
-    ts_data = obj.read(print_msg=False)
+    # import
+    from mintpy.objects import timeseries
 
-    # calculation
-    print('calculate the 1st derivative of timeseries data')
-    ts_data_1d = np.zeros(ts_data.shape, np.float32)
-    ts_data_1d[1:, :, :] = np.diff(ts_data, n=1, axis=0)
-
-    # write to file
-    if not inps.outfile:
-        inps.outfile = '{}_1stDiff.h5'.format(os.path.splitext(inps.file)[0])
-    obj_out = timeseries(inps.outfile)
-    obj_out.write2hdf5(ts_data_1d, refFile=inps.file)
+    # run
+    ts_obj = timeseries(inps.file)
+    ts_obj.temporal_derivative(inps.outfile)
 
     return
 

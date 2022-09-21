@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -8,12 +7,10 @@
 
 import os
 import sys
+
 import h5py
 import numpy as np
 from scipy.interpolate import griddata
-
-from mintpy.utils import readfile
-from mintpy.utils.arg_utils import create_argument_parser
 
 try:
     from tqdm import tqdm
@@ -25,30 +22,10 @@ try:
 except ImportError:
     raise ImportError('Can not import concurrent!')
 
+from mintpy.utils import readfile
+
 
 ################################################################################
-EXAMPLE = '''examples:
-    lookup_geo2radar.py geometryGeo.h5 
-    lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5 
-    lookup_geo2radar.py geometryGeo.h5 -w geometryRadar.h5 --parallel 4
-'''
-
-def create_parser(subparsers=None):
-    synopsis = 'Convert lookup table from geo-coord (GAMMA, ROI_PAC) into radar-coord (ISCE)'
-    epilog = EXAMPLE
-    name = __name__.split('.')[-1]
-    parser = create_argument_parser(
-        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
-
-    parser.add_argument('geometryGeo',help='geometryGeo file which includes geo-coordinates based lookup-table')
-    parser.add_argument('-w','--write', dest='write', metavar='FILE', default = 'geometryRadar.h5',
-                      help='update geometryRadar.h5 file by adding the radar-coordinates based lookup-table.')
-    parser.add_argument('--parallel', dest='parallelNumb', type=int, metavar='NUM',default = 1,
-                      help='Enable parallel processing and specify the the used processor number.[default: 1]')
-
-    return parser
-
-
 def write_h5(datasetDict, out_file, metadata=None, ref_file=None, compression=None):
 
     if os.path.isfile(out_file):
@@ -167,25 +144,15 @@ def function(data0):
     return grid_lat0, grid_lon0
 
 
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-    return inps
+def run_lookup_geo2radar(inps):
+    """Convert the lookup table in geo-coordinates (from roipac, gamma) into radar-coordinates (from isce)."""
 
-
-################################################################################        
-def main(iargs=None):
-
-    inps = cmd_line_parse(iargs) 
-    geom = inps.geometryGeo
-    rangeCoord = readfile.read(geom,datasetName = 'rangeCoord')[0]
-    azimuthCoord = readfile.read(geom,datasetName = 'azimuthCoord')[0]
-    rangeCoord = rangeCoord.astype(np.float64)
-    azimuthCoord = azimuthCoord.astype(np.float64)
-    #CPX_lt =complex(rangeCoord + '+' + azimuthCoord+'j')
+    rangeCoord = readfile.read(inps.geom_geo_file, datasetName = 'rangeCoord')[0].astype(np.float64)
+    azimuthCoord = readfile.read(inps.geom_geo_file, datasetName = 'azimuthCoord')[0].astype(np.float64)
+    #CPX_lt = complex(rangeCoord + '+' + azimuthCoord+'j')
     #CPX_lt = rangeCoord  + 1j *azimuthCoord
 
-    meta_geo = readfile.read_attribute(geom)
+    meta_geo = readfile.read_attribute(inps.geom_geo_file)
     post_Lat = meta_geo['Y_STEP']
     post_Lon = meta_geo['X_STEP']
     Corner_LAT = meta_geo['Y_FIRST']
@@ -199,8 +166,8 @@ def main(iargs=None):
         print('write_file or the reference_file should be provided at least one.')
         sys.exit(1)
 
-    WIDTH_geo  = int(meta_geo['WIDTH'])
-    LENGTH_geo  = int(meta_geo['LENGTH'])
+    WIDTH_geo = int(meta_geo['WIDTH'])
+    LENGTH_geo = int(meta_geo['LENGTH'])
 
     x = np.arange(0,WIDTH_geo)
     y = np.arange(0,LENGTH_geo)
@@ -209,7 +176,7 @@ def main(iargs=None):
     LAT = float(Corner_LAT) + yv*float(post_Lat)
     LON = float(Corner_LON) + xv*float(post_Lon)
     LAT = LAT.flatten()
-    LON = LON.flatten() 
+    LON = LON.flatten()
 
     WIDTH  = int(meta['WIDTH'])
     LENGTH  = int(meta['LENGTH'])
@@ -222,7 +189,7 @@ def main(iargs=None):
 
     xx = xx0[xx0!=0]
     yy = yy0[xx0!=0]
-    zz1 = zz01[xx0!=0] #lat 
+    zz1 = zz01[xx0!=0] #lat
     zz2 = zz02[xx0!=0] # lon
 
     #points = (xx,yy)
@@ -246,7 +213,7 @@ def main(iargs=None):
     data_parallel = []
     for i, (ay, ax) in enumerate(zip(split_grid_y, split_grid_x)):
         # extend the search area by 5 pixels
-        max_ax = max(ax.flatten()) + 5 
+        max_ax = max(ax.flatten()) + 5
         min_ax = min(ax.flatten()) - 5
         max_ay = max(ay.flatten()) + 5
         min_ay = min(ay.flatten()) - 5
@@ -313,8 +280,3 @@ def main(iargs=None):
     print('done.')
 
     return
-
-
-##############################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])

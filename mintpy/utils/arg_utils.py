@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 #############################################################
 # Program is part of MintPy                                 #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi          #
@@ -10,7 +9,7 @@
 
 
 import argparse
-import numpy as np
+import math
 
 
 ##################################  generic parser  ####################################
@@ -63,7 +62,7 @@ def add_data_disp_argument(parser):
     data.add_argument('--wrap', action='store_true',
                       help='re-wrap data to display data in fringes.')
     data.add_argument('--wrap-range', dest='wrap_range', type=float, nargs=2,
-                      default=[-1.*np.pi, np.pi], metavar=('MIN', 'MAX'),
+                      default=[-1.*math.pi, math.pi], metavar=('MIN', 'MAX'),
                       help='range of one cycle after wrapping (default: %(default)s).')
 
     data.add_argument('--flip-lr', dest='flip_lr',
@@ -320,7 +319,8 @@ def add_memory_argument(parser):
 
 def add_parallel_argument(parser):
     """Argument group parser for parallel computing options"""
-    from mintpy.objects.cluster import CLUSTER_LIST
+    # from mintpy.objects.cluster import CLUSTER_LIST
+    CLUSTER_LIST = ['lsf', 'pbs', 'slurm', 'local']
 
     par = parser.add_argument_group('parallel', 'parallel processing using dask')
     par.add_argument('-c', '--cluster', '--cluster-type', dest='cluster', type=str,

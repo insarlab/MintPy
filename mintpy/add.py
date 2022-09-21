@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,51 +6,10 @@
 
 
 import os
-import sys
 import numpy as np
 from mintpy.objects import timeseries
 from mintpy.utils import readfile, writefile
-from mintpy.utils.arg_utils import create_argument_parser
 from mintpy.diff import check_reference
-
-
-################################################################################
-EXAMPLE = """example:
-  add.py mask_1.h5 mask_2.h5 mask_3.h5        -o mask_all.h5
-  add.py 081008_100220.unw  100220_110417.unw -o 081008_110417.unw
-  add.py timeseries_ERA5.h5 inputs/ERA5.h5    -o timeseries.h5
-  add.py timeseriesRg.h5    inputs/TECsub.h5  -o timeseriesRg_TECsub.h5 --force
-"""
-
-
-def create_parser(subparsers=None):
-    """ Command line parser """
-    synopsis = 'Generate the sum of multiple input files.'
-    epilog = EXAMPLE
-    name = __name__.split('.')[-1]
-    parser = create_argument_parser(
-        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
-
-    parser.add_argument('file', nargs='+', help='files (2 or more) to be added')
-    parser.add_argument('-o', '--output', dest='outfile', help='output file name')
-    parser.add_argument('--force', action='store_true',
-                        help='Enforce the adding for the shared dates only for time-series files')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-    if len(inps.file) < 2:
-        parser.print_usage()
-        sys.exit('ERROR: At least 2 input files needed!')
-
-    # only two input files are supported for time-series type
-    atr = readfile.read_attribute(inps.file[0])
-    if atr['FILE_TYPE'] == 'timeseries' and len(inps.file) != 2:
-        raise ValueError('Only TWO files are supported for time-series, input has {}'.format(len(inps.file)))
-
-    return inps
 
 
 ################################################################################
@@ -67,16 +25,19 @@ def add_matrix(data1, data2):
 
 def add_file(fnames, out_file=None, force=False):
     """Generate sum of all input files
-    Parameters: fnames : list of str, path/name of input files to be added
-                out_file : str, optional, path/name of output file
-    Returns:    out_file : str, path/name of output file
+    Parameters: fnames   - list of str, path/name of input files to be added
+                out_file - str, optional, path/name of output file
+    Returns:    out_file - str, path/name of output file
     Example:    'mask_all.h5' = add_file(['mask_1.h5','mask_2.h5','mask_3.h5'], 'mask_all.h5')
     """
+    num_file = len(fnames)
+    print('input files to be added: ({})\n{}'.format(num_file, fnames))
+
     # Default output file name
     ext = os.path.splitext(fnames[0])[1]
     if not out_file:
         out_file = os.path.splitext(fnames[0])[0]
-        for i in range(1, len(fnames)):
+        for i in range(1, num_file):
             out_file += '_plus_' + os.path.splitext(os.path.basename(fnames[i]))[0]
         out_file += ext
 
@@ -165,19 +126,3 @@ def add_file(fnames, out_file=None, force=False):
         writefile.write(dsDict, out_file=out_file, metadata=atr, ref_file=fnames[0])
 
     return out_file
-
-
-################################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-    print('input files to be added: ({})\n{}'.format(len(inps.file), inps.file))
-
-    add_file(inps.file, inps.outfile, force=inps.force)
-
-    print('Done.')
-    return
-
-
-################################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])

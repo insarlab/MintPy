@@ -103,7 +103,7 @@ Or simply set up the environment variables as below in your source file, e.g. `~
 ```bash
 if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
 export MINTPY_HOME=~/tools/MintPy
-export PATH=${PATH}:${MINTPY_HOME}/mintpy
+export PATH=${PATH}:${MINTPY_HOME}/mintpy/cli
 export PYTHONPATH=${PYTHONPATH}:${MINTPY_HOME}
 ```
 

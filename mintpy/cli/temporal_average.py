@@ -2,15 +2,13 @@
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Zhang Yunjun, 2016                               #
+# Author: Zhang Yunjun, Antonio Valentino, Aug 2016        #
 ############################################################
 
 
 import os
 import sys
 import time
-import h5py
-from mintpy.utils import utils as ut, readfile
 from mintpy.utils.arg_utils import create_argument_parser
 
 
@@ -40,33 +38,50 @@ def create_parser(subparsers=None):
 
 def cmd_line_parse(iargs=None):
     """Command line parser."""
+    # parse
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # default:
+    if not inps.outfile:
+        inps.outfile = auto_output_filename(inps)
+
     return inps
 
 
-def check_output_filename(inps):
-    ext = os.path.splitext(inps.file)[1]
-    atr = readfile.read_attribute(inps.file)
-    k = atr['FILE_TYPE']
-    if not inps.outfile:
-        if k == 'ifgramStack':
-            if inps.datasetName == 'coherence':
-                inps.outfile = 'avgSpatialCoh.h5'
-            elif 'unwrapPhase' in inps.datasetName:
-                inps.outfile = 'avgPhaseVelocity.h5'
-            else:
-                inps.outfile = 'avg{}.h5'.format(inps.datasetName)
-        elif k == 'timeseries':
-            processMark = os.path.basename(inps.file).split('timeseries')[1].split(ext)[0]
-            inps.outfile = 'avgDisplacement{}.h5'.format(processMark)
+##############################  Sub Function  ################################
+def auto_output_filename(inps):
+    """Default output file name"""
+    from mintpy.utils import readfile
+
+    ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
+    fdir = os.path.dirname(inps.file)
+    fbase = os.path.basename(inps.file)
+
+    if ftype == 'ifgramStack':
+        if inps.datasetName == 'coherence':
+            inps.outfile = 'avgSpatialCoh.h5'
+        elif 'unwrapPhase' in inps.datasetName:
+            inps.outfile = 'avgPhaseVelocity.h5'
         else:
-            inps.outfile = 'avg{}.h5'.format(inps.file)
+            inps.outfile = f'avg{inps.datasetName}.h5'
+
+    elif ftype == 'timeseries':
+        suffix = os.path.splitext(fbase)[0].split('timeseries')[1]
+        inps.outfile = f'avgDisp{suffix}.h5'
+
+    else:
+        inps.outfile = f'avg{fbase}'
+
+    inps.outfile = os.path.join(fdir, inps.outfile)
     print('output file: {}'.format(inps.outfile))
+
     return inps.outfile
 
 
 def run_or_skip(inps):
+    import h5py
+
     print('-'*50)
     print('update mode: ON')
     flag = 'skip'
@@ -78,7 +93,8 @@ def run_or_skip(inps):
     else:
         print('1) output file {} already exists.'.format(inps.outfile))
         with h5py.File(inps.file, 'r') as f:
-            ti = float(f[inps.datasetName].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.file)))
+            atr = f[inps.datasetName].attrs
+            ti = float(atr.get('MODIFICATION_TIME', os.path.getmtime(inps.file)))
         to = os.path.getmtime(inps.outfile)
         if ti > to:
             flag = 'run'
@@ -93,18 +109,28 @@ def run_or_skip(inps):
 
 #############################  Main Function  ################################
 def main(iargs=None):
-    start_time = time.time()
+    # parse
     inps = cmd_line_parse(iargs)
 
-    inps.outfile = check_output_filename(inps)
+    # import
+    from mintpy.utils import utils1 as ut
 
+    # run or skip
     if inps.update_mode and run_or_skip(inps) == 'skip':
-        return inps.outfile
+        return
 
-    ut.temporal_average(inps.file, datasetName=inps.datasetName, outFile=inps.outfile)
+    # run
+    start_time = time.time()
+    ut.temporal_average(
+        inps.file,
+        datasetName=inps.datasetName,
+        outFile=inps.outfile,
+    )
 
+    # used time
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs\n'.format(m, s))
+
     return
 
 

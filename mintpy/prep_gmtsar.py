@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,7 +6,6 @@
 
 
 import os
-import sys
 import glob
 import numpy as np
 
@@ -16,44 +14,7 @@ try:
 except ImportError:
     raise ImportError('Can not import gdal!')
 
-from mintpy.utils import (
-    ptime,
-    readfile,
-    writefile,
-    utils as ut,
-)
-from mintpy.utils.arg_utils import create_argument_parser
-
-
-#########################################################################
-EXAMPLE = """example:
-  prep_gmtsar.py StHelensEnvDT156.txt
-"""
-
-def create_parser(subparsers=None):
-    """Command line parser."""
-    synopsis = 'Prepare GMTSAR metadata files.'
-    epilog = EXAMPLE
-    name = __name__.split('.')[-1]
-    parser = create_argument_parser(
-        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
-
-    parser.add_argument('template_file', type=str, help='MintPy template file for GMTSAR products.')
-    parser.add_argument('--mintpy-dir', dest='mintpy_dir', default='./',
-                        help='MintPy directory (default: %(default)s).')
-    parser.add_argument('--force', dest='update_mode', action='store_false',
-                        help='Force to overwrite all .rsc metadata files.')
-    return parser
-
-
-def cmd_line_parse(iargs = None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    inps.template_file = os.path.abspath(inps.template_file)
-    inps.mintpy_dir = os.path.expanduser(inps.mintpy_dir)
-    inps.mintpy_dir = os.path.abspath(inps.mintpy_dir)
-    return inps
+from mintpy.utils import ptime, readfile, writefile, utils as ut
 
 
 #########################################################################
@@ -143,11 +104,12 @@ def get_slant_range_distance(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasef
     return prm_dict
 
 
+#########################################################################
 def extract_gmtsar_metadata(unw_file, template_file, rsc_file=None, update_mode=True):
     """Extract metadata from GMTSAR interferogram stack."""
 
     # update_mode: check existing rsc_file
-    if update_mode and ut.run_or_skip(rsc_file, in_file=unw_file, check_readable=False) == 'skip':
+    if update_mode and ut.run_or_skip(rsc_file, in_file=unw_file, readable=False) == 'skip':
         return readfile.read_roipac_rsc(rsc_file)
 
     ifg_dir = os.path.dirname(unw_file)
@@ -229,9 +191,12 @@ def prepare_geometry(geom_files, meta, update_mode=True):
 
         # write .rsc file
         rsc_file = geom_file+'.rsc'
-        writefile.write_roipac_rsc(geom_meta, rsc_file,
-                                   update_mode=update_mode,
-                                   print_msg=True)
+        writefile.write_roipac_rsc(
+            geom_meta,
+            rsc_file,
+            update_mode=update_mode,
+            print_msg=True,
+        )
 
     return
 
@@ -275,19 +240,19 @@ def prepare_stack(unw_files, meta, update_mode=True):
 
         # write .rsc file
         rsc_file = unw_file+'.rsc'
-        writefile.write_roipac_rsc(ifg_meta, rsc_file,
-                                   update_mode=update_mode,
-                                   print_msg=False)
+        writefile.write_roipac_rsc(
+            ifg_meta,
+            rsc_file,
+            update_mode=update_mode,
+            print_msg=False,
+        )
 
         prog_bar.update(i+1, suffix='{}_{}'.format(date1, date2))
     prog_bar.close()
-    return
 
 
 #########################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-
+def prep_gmtsar(inps):
     # read file path from template file
     template = readfile.read_template(inps.template_file)
     inps.unw_files = sorted(glob.glob(template['mintpy.load.unwFile']))
@@ -296,21 +261,26 @@ def main(iargs=None):
 
     # extract common metadata
     rsc_file = os.path.join(inps.mintpy_dir, 'inputs/data.rsc')
-    meta = extract_gmtsar_metadata(unw_file=inps.unw_files[0],
-                                   template_file=inps.template_file,
-                                   rsc_file=rsc_file,
-                                   update_mode=inps.update_mode)
+    meta = extract_gmtsar_metadata(
+        unw_file=inps.unw_files[0],
+        template_file=inps.template_file,
+        rsc_file=rsc_file,
+        update_mode=inps.update_mode,
+    )
 
     # prepare metadata for geometry files
-    prepare_geometry([inps.dem_file], meta=meta, update_mode=inps.update_mode)
+    prepare_geometry(
+        geom_files=[inps.dem_file],
+        meta=meta,
+        update_mode=inps.update_mode,
+    )
 
     # prepare metadata for interferogram files
-    prepare_stack(inps.unw_files, meta=meta, update_mode=inps.update_mode)
+    prepare_stack(
+        unw_files=inps.unw_files,
+        meta=meta,
+        update_mode=inps.update_mode,
+    )
 
     print('Done.')
     return
-
-
-#########################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])

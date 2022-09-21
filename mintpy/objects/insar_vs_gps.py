@@ -8,11 +8,10 @@
 
 
 import sys
+import datetime as dt
 import numpy as np
 from scipy import stats
 from scipy.interpolate import griddata
-from datetime import datetime as dt
-from dateutil.relativedelta import relativedelta
 
 from mintpy.objects import timeseries, giantTimeseries
 from mintpy.utils import readfile, plot as pp, utils as ut
@@ -90,18 +89,14 @@ class insar_vs_gps:
         self.insar_datetime = np.array([i.replace(hour=0, minute=0, second=0, microsecond=0)
                                         for i in ts_obj.times])
 
-        # default start/end
-        if self.start_date is None:
-            self.start_date = (ts_obj.times[0] - relativedelta(months=1)).strftime('%Y%m%d')
-        if self.end_date is None:
-            self.end_date = (ts_obj.times[-1] + relativedelta(months=1)).strftime('%Y%m%d')
-
-        # default min_ref_date
-        if self.min_ref_date is None:
-            self.min_ref_date = ts_obj.times[5].strftime('%Y%m%d')
-        elif self.min_ref_date not in ts_obj.dateList:
-            raise ValueError('input min_ref_date {} does not exist in insar file {}'.format(
-                self.min_ref_date, self.insar_file))
+        # default start/end_date & min_ref_date
+        dt_buffer = dt.timedelta(days=30)
+        self.start_date = self.start_date if self.start_date else (ts_obj.times[0] - dt_buffer).strftime('%Y%m%d')
+        self.end_date = self.end_date if self.end_date else (ts_obj.times[-1] + dt_buffer).strftime('%Y%m%d')
+        self.min_ref_date = self.min_ref_date if self.min_ref_date else ts_obj.times[5].strftime('%Y%m%d')
+        if self.min_ref_date not in ts_obj.dateList:
+            msg = f'min_ref_date {self.min_ref_date} does NOT exist in InSAR file: {self.insar_file}'
+            raise ValueError(msg)
 
         self.read_gps()
         self.read_insar()
@@ -116,13 +111,21 @@ class insar_vs_gps:
             gps_obj.open(print_msg=False)
             site['lat'] = gps_obj.site_lat
             site['lon'] = gps_obj.site_lon
-            (site['gps_datetime'],
-             site['gps_dis'],
-             site['gps_std']) = gps_obj.read_gps_los_displacement(self.geom_file, self.start_date, self.end_date,
-                                                                  ref_site=self.ref_site,
-                                                                  gps_comp='enu2los')[0:3]
+
+            dates, dis, dis_std = gps_obj.read_gps_los_displacement(
+                self.geom_file,
+                start_date=self.start_date,
+                end_date=self.end_date,
+                ref_site=self.ref_site,
+                gps_comp='enu2los',
+            )[0:3]
+            site['gps_datetime'] = dates
+            site['gps_dis'] = dis
+            site['gps_std'] = dis_std
+
             site['reference_site'] = self.ref_site
             self.ds[sname] = site
+
             sys.stdout.write('\rreading GPS {}'.format(sname))
             sys.stdout.flush()
         print()
@@ -168,7 +171,8 @@ class insar_vs_gps:
         for i in range(self.num_site):
             site = self.ds[self.site_names[i]]
             site['insar_datetime'] = self.insar_datetime
-            site[self.insar_dis_name] = insar_dis[i,:] - insar_dis_ref # reference insar to the precise location in space
+            # reference insar to the precise location in space
+            site[self.insar_dis_name] = insar_dis[i,:] - insar_dis_ref
             site['temp_coh'] = temp_coh[i]
 
         # 2.4 reference insar and gps to a common date
@@ -179,7 +183,7 @@ class insar_vs_gps:
             insar_date = site['insar_datetime']
 
             # find common reference date
-            ref_date = dt.strptime(self.min_ref_date, "%Y%m%d")
+            ref_date = dt.datetime.strptime(self.min_ref_date, "%Y%m%d")
             ref_idx = insar_date.tolist().index(ref_date)
             while ref_idx < self.num_date:
                 if insar_date[ref_idx] not in gps_date:
@@ -187,7 +191,8 @@ class insar_vs_gps:
                 else:
                     break
             if ref_idx == self.num_date:
-                raise RuntimeError('InSAR and GPS do not share ANY date for site: {}'.format(site['name']))
+                msg = f"InSAR and GPS do not share ANY date for site: {site['name']}"
+                raise RuntimeError(msg)
             comm_date = insar_date[ref_idx]
 
             # reference insar in time
@@ -249,10 +254,12 @@ class insar_vs_gps:
         site_names = sorted(list(ds.keys()))
         for sname in site_names:
             site = ds[sname]
-            print('{}, rmse: {:.1f} cm, r_square: {:.2f}, temp_coh: {:.2f}'.format(sname,
-                                                                                   site['dis_rmse']*100.,
-                                                                                   site['r_square'],
-                                                                                   site['temp_coh']))
+            print('{}, rmse: {:.1f} cm, r_square: {:.2f}, temp_coh: {:.2f}'.format(
+                sname,
+                site['dis_rmse']*100.,
+                site['r_square'],
+                site['temp_coh'],
+            ))
         return
 
     def plot_one_site(ax, site, offset=0.):

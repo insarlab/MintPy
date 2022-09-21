@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -7,13 +6,12 @@
 
 
 import os
-import sys
 import glob
+import importlib
 import time
 import warnings
 
 from mintpy.defaults import auto_path
-from mintpy.defaults.template import get_template_content
 from mintpy.objects import (
     geometryDatasetNames,
     geometry,
@@ -27,7 +25,6 @@ from mintpy.objects.stackDict import (
     ifgramDict,
 )
 from mintpy.utils import readfile, ptime, utils as ut
-from mintpy.utils.arg_utils import create_argument_parser
 from mintpy import subset
 
 
@@ -72,95 +69,6 @@ GEOM_DSET_NAME2TEMPLATE_KEY = {
     'bperp'           : 'mintpy.load.bperpFile',
 }
 
-DEFAULT_TEMPLATE = """template:
-########## 1. Load Data (--load to exit after this step)
-{}\n
-{}\n
-{}""".format(
-    auto_path.AUTO_PATH_GAMMA,
-    auto_path.AUTO_PATH_ISCE_STRIPMAP,
-    auto_path.AUTO_PATH_ISCE_TOPS,
-)
-
-TEMPLATE = get_template_content('load_data')
-
-NOTE = """NOTE:
-  For interferogram, unwrapPhase is required, the other dataset are optional, including coherence, connectComponent, wrapPhase, etc.
-  The unwrapPhase metadata file requires DATE12 attribute in YYMMDD-YYMMDD format.
-  All path of data file must contain the reference and secondary date, either in file name or folder name.
-"""
-
-EXAMPLE = """example:
-  # MUST run in the mintpy working directory!
-
-  # show example template file for ISCE/ROI_PAC/GAMMA products
-  load_data.py -H
-
-  # load & write the following HDF5 files:
-  # ./inputs/ifgramStack.h5   for interferogram        stack
-  # ./inputs/ionStack.h5      for ionosphere           stack
-  # ./inputs/offsetStack.h5   for range/azimuth offset stack
-  # ./inputs/geometryRadar.h5 for geometry in radar coordinates
-  # ./inputs/geometryGeo.h5   for geometry in geo   coordinates
-  load_data.py -t smallbaselineApp.cfg
-  load_data.py -t smallbaselineApp.cfg GalapagosSenDT128.txt --project GalapagosSenDT128
-
-  # load geometry ONLY
-  smallbaselineApp.py SaltonSeaSenDT173.txt -g
-  load_data.py -t smallbaselineApp.cfg --geom
-"""
-
-
-def create_parser(subparsers=None):
-    """Create command line parser."""
-    synopsis = 'Load stacks of interferograms to HDF5 files'
-    epilog = TEMPLATE + '\n' + NOTE + '\n' + EXAMPLE
-    name = __name__.split('.')[-1]
-    parser = create_argument_parser(
-        name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
-
-    parser.add_argument('-H', dest='print_example_template', action='store_true',
-                        help='Print/Show the example template file for loading.')
-    parser.add_argument('-t', '--template', dest='template_file', type=str, nargs='+',
-                        help='template file(s) with path info.')
-    parser.add_argument('--geom','--geometry', dest='only_load_geometry', action='store_true',
-                        help='Load the geometry file(s) ONLY.')
-
-    # options from template file name & content
-    parser.add_argument('--project', type=str, dest='PROJECT_NAME',
-                        help='project name of dataset for INSARMAPS Web Viewer')
-    parser.add_argument('--processor', type=str, dest='processor', choices=PROCESSOR_LIST,
-                        help='InSAR processor/software of the file', default='isce')
-    parser.add_argument('--enforce', '-f', dest='updateMode', action='store_false',
-                        help='Disable the update mode, or skip checking dataset already loaded.')
-    parser.add_argument('--compression', choices={'gzip', 'lzf', None}, default=None,
-                        help='compress loaded geometry while writing HDF5 file, default: None.')
-
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    """Command line parser."""
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-
-    # check --template option
-    if inps.template_file:
-        pass
-
-    elif inps.print_example_template:
-        print(DEFAULT_TEMPLATE)
-        sys.exit(0)
-
-    else:
-        parser.print_usage()
-        print(('{}: error: one of the following arguments are required:'
-               ' -t/--template, -H'.format(os.path.basename(__file__))))
-        print('{} -H to show the example template file'.format(os.path.basename(__file__)))
-        sys.exit(1)
-
-    return inps
-
 
 #################################################################
 def read_inps2dict(inps):
@@ -178,6 +86,7 @@ def read_inps2dict(inps):
     # Read input info into iDict
     iDict = vars(inps)
     iDict['PLATFORM'] = None
+    iDict['processor'] = 'isce'
 
     # Read template file
     template = {}
@@ -187,8 +96,6 @@ def read_inps2dict(inps):
         template.update(temp)
     for key, value in template.items():
         iDict[key] = value
-    if 'processor' in template.keys():
-        template['mintpy.load.processor'] = template['processor']
 
     # group - load
     prefix = 'mintpy.load.'
@@ -201,7 +108,7 @@ def read_inps2dict(inps):
             iDict[prefix+key] = template[prefix+key]
     print('processor : {}'.format(iDict['processor']))
 
-    if iDict['compression'] == False:
+    if iDict['compression'] is False:
         iDict['compression'] = None
 
     # group - multilook
@@ -659,7 +566,7 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1, geom_obj
     if not updateMode:
         return flag
 
-    if ut.run_or_skip(outFile, check_readable=True) == 'skip':
+    if ut.run_or_skip(outFile, readable=True) == 'skip':
         kwargs = dict(box=box, xstep=xstep, ystep=ystep)
 
         if inObj.name == 'ifgramStack':
@@ -699,34 +606,29 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1, geom_obj
 
 
 def prepare_metadata(iDict):
-    """Prepare metadata via prep_{insar_processor}.py scripts."""
+    """Prepare metadata via prep_{processor}.py scripts."""
 
     processor = iDict['processor']
     script_name = 'prep_{}.py'.format(processor)
     print('-'*50)
     print('prepare metadata files for {} products'.format(processor))
 
-    if processor in ['gamma', 'hyp3', 'roipac', 'snap', 'cosicorr']:
-        # import prep_module
-        if processor == 'gamma':
-            from mintpy import prep_gamma as prep_module
-        elif processor == 'hyp3':
-            from mintpy import prep_hyp3 as prep_module
-        elif processor == 'roipac':
-            from mintpy import prep_roipac as prep_module
-        elif processor == 'snap':
-            from mintpy import prep_snap as prep_module
-        elif processor == 'cosicorr':
-            from mintpy import prep_cosicorr as prep_module
+    if processor not in PROCESSOR_LIST:
+        msg = 'un-recognized InSAR processor: {}'.format(processor)
+        msg += '\nsupported processors: {}'.format(PROCESSOR_LIST)
+        raise ValueError(msg)
 
-        # run prep_{processor} module
+    # import prep_{processor}
+    prep_module = importlib.import_module(f'mintpy.cli.prep_{processor}')
+
+    if processor in ['gamma', 'hyp3', 'roipac', 'snap', 'cosicorr']:
+        # run prep_module
         for key in [i for i in iDict.keys()
                     if (i.startswith('mintpy.load.')
                         and i.endswith('File')
                         and i != 'mintpy.load.metaFile')]:
             if len(glob.glob(str(iDict[key]))) > 0:
                 # print command line
-                script_name = '{}.py'.format(os.path.basename(prep_module.__name__).split('.')[-1])
                 iargs = [iDict[key]]
                 if processor == 'gamma' and iDict['PLATFORM']:
                     iargs += ['--sensor', iDict['PLATFORM'].lower()]
@@ -737,7 +639,6 @@ def prepare_metadata(iDict):
                 prep_module.main(iargs)
 
     elif processor == 'isce':
-        from mintpy import prep_isce
         from mintpy.utils import s1_utils, isce_utils
 
         # --meta-file
@@ -780,7 +681,7 @@ def prepare_metadata(iDict):
         # run module
         ut.print_command_line(script_name, iargs)
         try:
-            prep_isce.main(iargs)
+            prep_module.main(iargs)
         except:
             warnings.warn('prep_isce.py failed. Assuming its result exists and continue...')
 
@@ -794,8 +695,6 @@ def prepare_metadata(iDict):
                     print_msg=True)
 
     elif processor == 'aria':
-        from mintpy import prep_aria
-
         ## compose input arguments
         # use the default template file if exists & input
         default_temp_files = [fname for fname in iDict['template_file']
@@ -837,13 +736,11 @@ def prepare_metadata(iDict):
         ## run
         ut.print_command_line(script_name, iargs)
         try:
-            prep_aria.main(iargs)
+            prep_module.main(iargs)
         except:
             warnings.warn('prep_aria.py failed. Assuming its result exists and continue...')
 
     elif processor == 'gmtsar':
-        from mintpy import prep_gmtsar
-
         # use the custom template file if exists & input
         custom_temp_files = [fname for fname in iDict['template_file']
                              if not fname.endswith('smallbaselineApp.cfg')]
@@ -854,14 +751,9 @@ def prepare_metadata(iDict):
         iargs = [custom_temp_files[0]]
         ut.print_command_line(script_name, iargs)
         try:
-            prep_gmtsar.main(iargs)
+            prep_module.main(iargs)
         except:
             warnings.warn('prep_gmtsar.py failed. Assuming its result exists and continue...')
-
-    else:
-        msg = 'un-recognized InSAR processor: {}'.format(processor)
-        msg += '\nsupported processors: {}'.format(PROCESSOR_LIST)
-        raise ValueError(msg)
 
     return
 
@@ -887,14 +779,14 @@ def get_extra_metadata(iDict):
 
 
 #################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-    start_time = time.time()
+def load_data(inps):
+    """load data into HDF5 files."""
 
-    # read input options
+    ## 0. read input
+    start_time = time.time()
     iDict = read_inps2dict(inps)
 
-    ## prepare metadata
+    ## 1. prepare metadata
     prepare_metadata(iDict)
     extraDict = get_extra_metadata(iDict)
 
@@ -902,7 +794,7 @@ def main(iargs=None):
     if iDict['processor'] == 'aria':
         return
 
-    ## search & write data files
+    ## 2. search & write data files
     print('-'*50)
     print('updateMode : {}'.format(iDict['updateMode']))
     print('compression: {}'.format(iDict['compression']))
@@ -974,13 +866,8 @@ def main(iargs=None):
                 extra_metadata=extraDict,
                 geom_obj=geom_obj)
 
-    # time info
+    # used time
     m, s = divmod(time.time()-start_time, 60)
     print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
 
     return
-
-
-#################################################################
-if __name__ == '__main__':
-    main(sys.argv[1:])
