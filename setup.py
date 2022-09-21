@@ -65,6 +65,7 @@ setup(
         "pykml>=0.2",
         "pyproj",
         "pyresample",  # pip installed version does not work
+        #"pysolid",    # will be available soon after the pypi project transfer is completed
         "setuptools",
         "scikit-image",
         "scipy",
@@ -73,10 +74,8 @@ setup(
         "cli": ["argcomplete", "rich"],
         "extra": ["gdal"],
         "fractal": ["pyfftw"],
-        "gbis": ["geoid"],
-        "gmtsar": ["gdal"],
-        "gps": ["proj", "dateutil"],
-        "isce": ["isce"],
+        "gbis": ["geoid"],                          # not available on pypi
+        "isce": ["isce"],                           # not available on pypi
         "kite": ["kite"],
         "platemotion": ["platemotion", "astropy"],  # will be removed in the coming new version of plate motion script
         "all": [
@@ -84,8 +83,6 @@ setup(
             "extra",
             "fractal",
             "gbis",
-            "gmtsar",
-            "gps",
             "isce",
             "kite",
         ],
