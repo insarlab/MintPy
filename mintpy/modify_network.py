@@ -342,7 +342,7 @@ def get_date12_to_drop(inps):
 
 
 ########################################################################
-def run_modify_network(inps):
+def modify_network(inps):
     """Run network modification."""
 
     if inps.reset:

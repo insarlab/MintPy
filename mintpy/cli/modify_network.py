@@ -237,10 +237,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.modify_network import run_modify_network
+    from mintpy.modify_network import modify_network
 
     # run
-    run_modify_network(inps)
+    modify_network(inps)
 
 
 ########################################################################
