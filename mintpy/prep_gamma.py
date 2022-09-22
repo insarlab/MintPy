@@ -7,10 +7,11 @@
 
 import os
 import re
-import numpy as np
-from mintpy.objects import sensor
-from mintpy.utils import readfile, writefile, ptime, utils as ut
 
+import numpy as np
+
+from mintpy.objects import sensor
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 SPEED_OF_LIGHT = 299792458  # m/s
 # list of par file extension for SAR images
@@ -52,7 +53,7 @@ def get_perp_baseline(m_par_file, s_par_file, off_file, atr_dict={}):
     # Read bperp txt file
     bperp_list = []
 
-    f = open(base_perp_file, 'r')
+    f = open(base_perp_file)
     lines = f.readlines()
     f.close()
 
@@ -91,7 +92,7 @@ def get_lalo_ref(m_par_file, atr_dict={}):
 
         # convert *.corner_full to *.corner
         extractCmd = "awk 'NR==3,NR==6 {print $3,$6} ' "
-        extractCmd += "{} > {}".format(m_corner_full_file, m_corner_file)
+        extractCmd += f"{m_corner_full_file} > {m_corner_file}"
         print(extractCmd)
         os.system(extractCmd)
 
@@ -128,9 +129,9 @@ def extract_metadata4interferogram(fname, sensor_name=None):
 
     # Get info: date12, num of loooks
     try:
-        date12 = str(re.findall('\d{8}[-_]\d{8}', file_basename)[0])
+        date12 = str(re.findall(r'\d{8}[-_]\d{8}', file_basename)[0])
     except:
-        date12 = str(re.findall('\d{6}[-_]\d{6}', file_basename)[0])
+        date12 = str(re.findall(r'\d{6}[-_]\d{6}', file_basename)[0])
     m_date, s_date = date12.replace('-', '_').split('_')
     atr['DATE12'] = ptime.yymmdd(m_date)+'-'+ptime.yymmdd(s_date)
     lks = os.path.splitext(file_basename)[0].split(date12)[1]
@@ -156,7 +157,7 @@ def extract_metadata4interferogram(fname, sensor_name=None):
         off_file = ut.get_file_list(off_files)[0]
     except FileNotFoundError:
         off_file = file_dir+'/'+date12+lks+'.off'
-        offCmd = 'create_offset {} {} {} 1 1 1 0'.format(m_par_file, s_par_file, off_file)
+        offCmd = f'create_offset {m_par_file} {s_par_file} {off_file} 1 1 1 0'
         print(offCmd)
         os.system(offCmd)
 
@@ -228,21 +229,21 @@ def extract_metadata4geometry_radar(fname):
     msg = 'grab LAT/LON_REF1/2/3/4 from par file: '
     # get date of one acquisition
     try:
-        m_date = str(re.findall('\d{8}', fname_base)[0])
+        m_date = str(re.findall(r'\d{8}', fname_base)[0])
     except:
-        m_date = str(re.findall('\d{6}', fname_base)[0])
+        m_date = str(re.findall(r'\d{6}', fname_base)[0])
 
     ## search existing par file
     # potential directories
     geom_dir = os.path.dirname(fname)
     proj_dir = os.path.dirname(geom_dir)
     par_dirs = [geom_dir,                                              #PROJECT_DIR/geom_reference
-                os.path.join(proj_dir, '*/{}_*'.format(m_date[2:])),   #PROJECT_DIR/interferograms/{m_date}_(20)141225
-                os.path.join(proj_dir, '*/{}-*'.format(m_date[2:]))]   #PROJECT_DIR/interferograms/{m_date}-(20)141225
+                os.path.join(proj_dir, f'*/{m_date[2:]}_*'),   #PROJECT_DIR/interferograms/{m_date}_(20)141225
+                os.path.join(proj_dir, f'*/{m_date[2:]}-*')]   #PROJECT_DIR/interferograms/{m_date}-(20)141225
     # potential file patterns
     m_par_files = []
     for par_dir in par_dirs:
-        m_par_files += [os.path.join(par_dir, '*{}*{}'.format(m_date, ext)) for ext in PAR_EXT_LIST]
+        m_par_files += [os.path.join(par_dir, f'*{m_date}*{ext}') for ext in PAR_EXT_LIST]
     # search existing files that meet the file patterns
     m_par_files = ut.get_file_list(m_par_files)
 
@@ -252,7 +253,7 @@ def extract_metadata4geometry_radar(fname):
         msg += m_par_file
         par_dict = get_lalo_ref(m_par_file, par_dict)
     else:
-        msg += ' no par file found with date: {}'.format(m_date)
+        msg += f' no par file found with date: {m_date}'
     print(msg)
 
     # initiate ROIPAC dict
@@ -313,7 +314,7 @@ def extract_metadata4geometry_geo(fname):
         msg = 'un-recognized coordinates type:'
         for key, value in par_dict.items():
             if key.startswith(('corner','post')):
-                msg += '\n\t{}: {}'.format(key, value)
+                msg += f'\n\t{key}: {value}'
         raise ValueError(msg)
 
     atr.update(par_dict)

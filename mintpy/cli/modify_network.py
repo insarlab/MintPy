@@ -12,7 +12,6 @@ import sys
 from mintpy.defaults.template import get_template_content
 from mintpy.utils.arg_utils import create_argument_parser
 
-
 ###############################  Usage  ################################
 TEMPLATE = get_template_content('modify_network')
 
@@ -177,14 +176,14 @@ def read_template2inps(template_file, inps):
 
             elif key == 'aoiYX':
                 tmp = [i.strip() for i in value.split(',')]
-                sub_y = sorted([int(i.strip()) for i in tmp[0].split(':')])
-                sub_x = sorted([int(i.strip()) for i in tmp[1].split(':')])
+                sub_y = sorted(int(i.strip()) for i in tmp[0].split(':'))
+                sub_x = sorted(int(i.strip()) for i in tmp[1].split(':'))
                 inps.aoi_pix_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
 
             elif key == 'aoiLALO':
                 tmp = [i.strip() for i in value.split(',')]
-                sub_lat = sorted([float(i.strip()) for i in tmp[0].split(':')])
-                sub_lon = sorted([float(i.strip()) for i in tmp[1].split(':')])
+                sub_lat = sorted(float(i.strip()) for i in tmp[0].split(':'))
+                sub_lon = sorted(float(i.strip()) for i in tmp[1].split(':'))
                 inps.aoi_geo_box = (sub_lon[0], sub_lat[1], sub_lon[1], sub_lat[0])
 
                 # Check lookup file
@@ -213,7 +212,7 @@ def read_input_index_list(idxList, stackFile=None):
 
     idxListOut = []
     for idx in idxList:
-        c = sorted([int(i) for i in idx.split(':')])
+        c = sorted(int(i) for i in idx.split(':'))
         if len(c) == 2:
             idxListOut += list(range(c[0], c[1]+1))
         elif len(c) == 1:

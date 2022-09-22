@@ -8,17 +8,20 @@
 
 import os
 import re
-import sys
 import subprocess
+import sys
+
 try:
     import pyaps as pa
 except ImportError:
     raise ImportError('Cannot import pyaps!')
 
 import argparse
+
 import numpy as np
-from mintpy.objects import timeseries, geometry
-from mintpy.utils import readfile, writefile, ptime, utils as ut
+
+from mintpy.objects import geometry, timeseries
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 standardWeatherModelNames = {
     'ERAI': 'ECMWF', 'ERAINT': 'ECMWF', 'ERAINTERIM': 'ECMWF',
@@ -119,7 +122,7 @@ def cmd_line_parse(iargs=None):
 
     # without timeseries file
     elif any(not vars(inps)[key] for key in key_list):
-        msg = 'No input timeseries file, all the following options are required: \n{}'.format(key_list)
+        msg = f'No input timeseries file, all the following options are required: \n{key_list}'
         msg += '\n\n'+EXAMPLE
         raise ValueError(msg)
 
@@ -152,7 +155,7 @@ def check_inputs(inps):
         mintpy_dir = os.path.dirname(inps.timeseries_file)
         if not inps.outfile:
             fbase = os.path.splitext(inps.timeseries_file)[0]
-            inps.outfile = '{}_{}.h5'.format(fbase, inps.trop_model)
+            inps.outfile = f'{fbase}_{inps.trop_model}.h5'
     elif inps.geom_file:
         atr = readfile.read_attribute(inps.geom_file)
         mintpy_dir = os.path.join(os.path.dirname(inps.geom_file), '..')
@@ -160,8 +163,8 @@ def check_inputs(inps):
         mintpy_dir = os.path.abspath(os.getcwd())
 
     # trop_file
-    inps.trop_file = os.path.join(mintpy_dir, 'inputs/{}.h5'.format(inps.trop_model))
-    print('output tropospheric delay file: {}'.format(inps.trop_file))
+    inps.trop_file = os.path.join(mintpy_dir, f'inputs/{inps.trop_model}.h5')
+    print(f'output tropospheric delay file: {inps.trop_file}')
 
     # hour
     if not inps.hour:
@@ -170,17 +173,17 @@ def check_inputs(inps):
         else:
             parser.print_usage()
             raise Exception('no input for hour')
-    print('time of cloest available product: {}:00 UTC'.format(inps.hour))
+    print(f'time of cloest available product: {inps.hour}:00 UTC')
 
     # date list
     if inps.timeseries_file:
-        print('read date list from timeseries file: {}'.format(inps.timeseries_file))
+        print(f'read date list from timeseries file: {inps.timeseries_file}')
         ts_obj = timeseries(inps.timeseries_file)
         ts_obj.open(print_msg=False)
         inps.date_list = ts_obj.dateList
     elif len(inps.date_list) == 1:
         if os.path.isfile(inps.date_list[0]):
-            print('read date list from text file: {}'.format(inps.date_list[0]))
+            print(f'read date list from text file: {inps.date_list[0]}')
             inps.date_list = ptime.yyyymmdd(np.loadtxt(inps.date_list[0],
                                                        dtype=bytes,
                                                        usecols=(0,)).astype(str).tolist())
@@ -202,13 +205,13 @@ def check_inputs(inps):
 
     if 'REF_Y' in atr.keys():
         inps.ref_yx = [int(atr['REF_Y']), int(atr['REF_X'])]
-        print('reference pixel: {}'.format(inps.ref_yx))
+        print(f'reference pixel: {inps.ref_yx}')
 
     # Coordinate system: geocoded or not
     inps.geocoded = False
     if 'Y_FIRST' in atr.keys():
         inps.geocoded = True
-    print('geocoded: {}'.format(inps.geocoded))
+    print(f'geocoded: {inps.geocoded}')
 
     # Prepare DEM, inc_angle, lat/lon file for PyAPS to read
     if inps.geom_file:
@@ -286,11 +289,11 @@ def date_list2grib_file(date_list, hour, trop_model, grib_dir):
     grib_file_list = []
     for d in date_list:
         grib_file = grib_dir+'/'
-        if   trop_model == 'ECMWF' :  grib_file += 'ERA-Int_%s_%s.grb' % (d, hour)
-        elif trop_model == 'MERRA' :  grib_file += 'merra-%s-%s.nc4' % (d, hour)
-        elif trop_model == 'NARR'  :  grib_file += 'narr-a_221_%s_%s00_000.grb' % (d, hour)
-        elif trop_model == 'ERA'   :  grib_file += 'ERA_%s_%s.grb' % (d, hour)
-        elif trop_model == 'MERRA1':  grib_file += 'merra-%s-%s.hdf' % (d, hour)
+        if   trop_model == 'ECMWF' :  grib_file += f'ERA-Int_{d}_{hour}.grb'
+        elif trop_model == 'MERRA' :  grib_file += f'merra-{d}-{hour}.nc4'
+        elif trop_model == 'NARR'  :  grib_file += f'narr-a_221_{d}_{hour}00_000.grb'
+        elif trop_model == 'ERA'   :  grib_file += f'ERA_{d}_{hour}.grb'
+        elif trop_model == 'MERRA1':  grib_file += f'merra-{d}-{hour}.hdf'
         grib_file_list.append(grib_file)
     return grib_file_list
 
@@ -313,8 +316,8 @@ def check_exist_grib_file(gfile_list, print_msg=True):
         if file_sizes:
             comm_size = ut.most_common([i for i in file_sizes])
             if print_msg:
-                print('common file size: {} bytes'.format(comm_size))
-                print('number of grib files existed    : {}'.format(len(gfile_exist)))
+                print(f'common file size: {comm_size} bytes')
+                print(f'number of grib files existed    : {len(gfile_exist)}')
 
             gfile_corrupt = []
             for gfile in gfile_exist:
@@ -327,7 +330,7 @@ def check_exist_grib_file(gfile_list, print_msg=True):
             if print_msg:
                 print('------------------------------------------------------------------------------')
                 print('corrupted grib files detected! Delete them and re-download...')
-                print('number of grib files corrupted  : {}'.format(len(gfile_corrupt)))
+                print(f'number of grib files corrupted  : {len(gfile_corrupt)}')
 
             for gfile in gfile_corrupt:
                 os.remove(gfile)
@@ -349,13 +352,13 @@ def dload_grib_pyaps(grib_file_list):
     # Get date list to download (skip already downloaded files)
     grib_file_exist = check_exist_grib_file(grib_file_list, print_msg=True)
     grib_file2dload = sorted(list(set(grib_file_list) - set(grib_file_exist)))
-    date_list2dload = [str(re.findall('\d{8}', i)[0]) for i in grib_file2dload]
+    date_list2dload = [str(re.findall(r'\d{8}', i)[0]) for i in grib_file2dload]
     print('number of grib files to download: %d' % len(date_list2dload))
     print('------------------------------------------------------------------------------\n')
 
     # Download grib file using PyAPS
     if len(date_list2dload) > 0:
-        hour = re.findall('\d{8}[-_]\d{2}', grib_file2dload[0])[0].replace('-', '_').split('_')[1]
+        hour = re.findall(r'\d{8}[-_]\d{2}', grib_file2dload[0])[0].replace('-', '_').split('_')[1]
         grib_dir = os.path.dirname(grib_file2dload[0])
 
         # try 3 times to download, then use whatever downloaded to calculate delay
@@ -426,9 +429,9 @@ def get_delay_timeseries(inps, atr):
         atr = readfile.read_attribute(fname)
         return (atr['LENGTH'], atr['WIDTH'])
 
-    if (ut.run_or_skip(out_file=inps.trop_file, in_file=inps.grib_file_list, print_msg=False) == 'skip' 
+    if (ut.run_or_skip(out_file=inps.trop_file, in_file=inps.grib_file_list, print_msg=False) == 'skip'
             and get_dataset_size(inps.trop_file) == get_dataset_size(inps.geom_file)):
-        print('{} file exists and is newer than all GRIB files, skip updating.'.format(inps.trop_file))
+        print(f'{inps.trop_file} file exists and is newer than all GRIB files, skip updating.')
     else:
         if any(i is None for i in [inps.geom_file, inps.ref_yx]):
             print('No DEM / incidenceAngle / ref_yx found, skip calculating tropospheric delays.')
@@ -439,11 +442,11 @@ def get_delay_timeseries(inps, atr):
         # calculate phase delay
         length, width = int(atr['LENGTH']), int(atr['WIDTH'])
         num_date = len(inps.grib_file_list)
-        date_list = [str(re.findall('\d{8}', i)[0]) for i in inps.grib_file_list]
+        date_list = [str(re.findall(r'\d{8}', i)[0]) for i in inps.grib_file_list]
         trop_data = np.zeros((num_date, length, width), np.float32)
 
         print('calculating delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
-        print('number of grib files used: {}'.format(num_date))
+        print(f'number of grib files used: {num_date}')
         prog_bar = ptime.progressBar(maxValue=num_date)
         for i in range(num_date):
             grib_file = inps.grib_file_list[i]
@@ -477,7 +480,7 @@ def get_delay_timeseries(inps, atr):
                                          inps.lon_file]
                      if (fname is not None and 'pyaps' in fname)]
         if temp_files:
-            print('delete temporary geometry files: {}'.format(temp_files))
+            print(f'delete temporary geometry files: {temp_files}')
             for temp_file in temp_files:
                 os.remove(temp_file)
                 os.remove(temp_file+'.rsc')

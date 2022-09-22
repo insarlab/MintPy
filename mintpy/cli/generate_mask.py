@@ -11,7 +11,6 @@ import warnings
 
 from mintpy.utils.arg_utils import create_argument_parser
 
-
 ################################################################################################
 EXAMPLE = """example:
   generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5
@@ -137,8 +136,8 @@ def cmd_line_parse(iargs=None):
     if inps.base_file and inps.base_dataset:
         base_dataset_list = readfile.get_dataset_list(inps.base_file)
         if inps.base_dataset not in base_dataset_list:
-            msg = 'dataset {} NOT found in input base file {}'.format(inps.base_dataset, inps.base_file)
-            msg += '\navailable datasets:\n{}'.format(base_dataset_list)
+            msg = f'dataset {inps.base_dataset} NOT found in input base file {inps.base_file}'
+            msg += f'\navailable datasets:\n{base_dataset_list}'
             warnings.warn(msg)
             print('ignore --base --base-dset option and continue')
             inps.base_file = None

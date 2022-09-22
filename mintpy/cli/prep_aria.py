@@ -6,11 +6,11 @@
 ############################################################
 
 
+import glob
 import os
 import sys
-import glob
-from mintpy.utils.arg_utils import create_argument_parser
 
+from mintpy.utils.arg_utils import create_argument_parser
 
 ####################################################################################
 TEMPLATE = """template options:
@@ -140,7 +140,7 @@ def cmd_line_parse(iargs = None):
     print('search input data file info:')
     ds_keys = [key for key in list(iDict.keys()) if key.endswith('File')]
     required_ds_keys = ['unwFile', 'corFile', 'demFile', 'incAngleFile']
-    max_digit = max([len(i) for i in ds_keys])
+    max_digit = max(len(i) for i in ds_keys)
 
     for key in ds_keys:
         # search for wildcard pattern
@@ -153,7 +153,7 @@ def cmd_line_parse(iargs = None):
 
         elif key in required_ds_keys:
             # raise exception if any required DS is missing
-            raise SystemExit('ERROR: no file found for {} in input path: "{}"!'.format(key, iDict[key]))
+            raise SystemExit(f'ERROR: no file found for {key} in input path: "{iDict[key]}"!')
 
         else:
             iDict[key] = None
@@ -163,7 +163,7 @@ def cmd_line_parse(iargs = None):
 
 def read_template2inps(template_file, inps):
     """Read input template file into inps"""
-    print('read options from template file: {}'.format(os.path.basename(template_file)))
+    print(f'read options from template file: {os.path.basename(template_file)}')
 
     from mintpy.utils import readfile, utils1 as ut
 
@@ -214,7 +214,7 @@ def main(iargs=None):
 
     # run
     load_aria(inps)
-    
+
 
 ####################################################################################
 if __name__=="__main__":

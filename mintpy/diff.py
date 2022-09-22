@@ -13,9 +13,9 @@ import numpy as np
 from mintpy.objects import (
     IFGRAM_DSET_NAMES,
     cluster,
-    timeseries,
     giantTimeseries,
     ifgramStack,
+    timeseries,
 )
 from mintpy.utils import readfile, writefile
 
@@ -64,14 +64,14 @@ def diff_file(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
                 max_num_pixel - float, maximum number of pixels for each block
     """
     start_time = time.time()
-    print('{} - {} --> {}'.format(file1, file2, out_file))
+    print(f'{file1} - {file2} --> {out_file}')
 
     # Read basic info
     atr1 = readfile.read_attribute(file1)
     atr2 = readfile.read_attribute(file2[0])
     k1 = atr1['FILE_TYPE']
     k2 = atr2['FILE_TYPE']
-    print('the 1st input file is: {}'.format(k1))
+    print(f'the 1st input file is: {k1}')
 
     if k1 == 'timeseries':
         if k2 not in ['timeseries', 'giantTimeseries']:
@@ -94,11 +94,11 @@ def diff_file(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
         dateListShared = [i for i in dateList1 if i in dateList2]
         dateShared = np.ones((len(dateList1)), dtype=np.bool_)
         if dateListShared != dateList1:
-            print('WARNING: {} does not contain all dates in {}'.format(file2, file1))
+            print(f'WARNING: {file2} does not contain all dates in {file1}')
             if force_diff:
                 dateListEx = list(set(dateList1) - set(dateListShared))
                 print('Continue and enforce the differencing for their shared dates only.')
-                print('\twith following dates are ignored for differencing:\n{}'.format(dateListEx))
+                print(f'\twith following dates are ignored for differencing:\n{dateListEx}')
                 dateShared[np.array([dateList1.index(i) for i in dateListEx])] = 0
             else:
                 raise Exception('To enforce the differencing anyway, use --force option.')
@@ -122,26 +122,26 @@ def diff_file(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
 
         for i, box in enumerate(box_list):
             if num_box > 1:
-                print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
-                print('box: {}'.format(box))
+                print(f'\n------- processing patch {i+1} out of {num_box} --------------')
+                print(f'box: {box}')
 
             # read data2 (consider different reference_date/pixel)
-            print('read from file: {}'.format(file2[0]))
+            print(f'read from file: {file2[0]}')
             data2 = readfile.read(file2[0],
                                   datasetName=dateListShared,
                                   box=box)[0] * unit_fac
 
             if ref_y and ref_x:
-                print('* referencing data from {} to y/x: {}/{}'.format(os.path.basename(file2[0]), ref_y, ref_x))
+                print(f'* referencing data from {os.path.basename(file2[0])} to y/x: {ref_y}/{ref_x}')
                 data2 -= np.tile(ref_val.reshape(-1, 1, 1), (1, data2.shape[1], data2.shape[2]))
 
             if ref_date:
-                print('* referencing data from {} to date: {}'.format(os.path.basename(file2[0]), ref_date))
+                print(f'* referencing data from {os.path.basename(file2[0])} to date: {ref_date}')
                 ref_ind = dateListShared.index(ref_date)
                 data2 -= np.tile(data2[ref_ind, :, :], (data2.shape[0], 1, 1))
 
             # read data1
-            print('read from file: {}'.format(file1))
+            print(f'read from file: {file1}')
             data = readfile.read(file1, box=box)[0]
 
             # apply differencing
@@ -168,14 +168,14 @@ def diff_file(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
         ds_name = [i for i in IFGRAM_DSET_NAMES if i in ds_names][0]
 
         # read data
-        print('reading {} from file {} ...'.format(ds_name, file1))
+        print(f'reading {ds_name} from file {file1} ...')
         data1 = readfile.read(file1, datasetName=ds_name)[0]
-        print('reading {} from file {} ...'.format(ds_name, file2[0]))
+        print(f'reading {ds_name} from file {file2[0]} ...')
         data2 = readfile.read(file2[0], datasetName=ds_name)[0]
 
         # consider reference pixel
         if 'unwrapphase' in ds_name.lower():
-            print('referencing to pixel ({},{}) ...'.format(obj1.refY, obj1.refX))
+            print(f'referencing to pixel ({obj1.refY},{obj1.refX}) ...')
             ref1 = data1[:, obj1.refY, obj1.refX]
             ref2 = data2[:, obj2.refY, obj2.refX]
             for i in range(data1.shape[0]):
@@ -203,12 +203,12 @@ def diff_file(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
             ds_names = ds_names_list[0]
         print('List of common datasets across files: ', ds_names)
         if len(ds_names) < 1:
-            raise ValueError('No common datasets found among files:\n{}'.format([file1] + file2))
+            raise ValueError(f'No common datasets found among files:\n{[file1] + file2}')
 
         # loop over each file
         dsDict = {}
         for ds_name in ds_names:
-            print('differencing {} ...'.format(ds_name))
+            print(f'differencing {ds_name} ...')
             data = readfile.read(file1, datasetName=ds_name)[0]
             dtype = data.dtype
 
@@ -221,7 +221,7 @@ def diff_file(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
                 if ds_name == 'velocity':
                     ref_y, ref_x = check_reference(atr1, atr2)[1:]
                     if ref_y and ref_x:
-                        print('* referencing data from {} to y/x: {}/{}'.format(os.path.basename(file2[0]), ref_y, ref_x))
+                        print(f'* referencing data from {os.path.basename(file2[0])} to y/x: {ref_y}/{ref_x}')
                         data2 -= data2[ref_y, ref_x]
                 # convert to float32 to apply the operation because some types, e.g. bool, do not support it.
                 # then convert back to the original data type
@@ -231,11 +231,11 @@ def diff_file(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
             dsDict[ds_name] = np.array(data, dtype=dtype)
 
         # output
-        print('use metadata from the 1st file: {}'.format(file1))
+        print(f'use metadata from the 1st file: {file1}')
         writefile.write(dsDict, out_file=out_file, metadata=atr1, ref_file=file1)
 
     # used time
     m, s = divmod(time.time()-start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs')
 
     return out_file

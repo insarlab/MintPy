@@ -7,13 +7,13 @@
 
 import os
 import time
+
 import h5py
 import numpy as np
 
 from mintpy.objects import ifgramStack
 from mintpy.objects.conncomp import connectComponent
-from mintpy.utils import ptime, readfile, writefile, utils as ut
-
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 # key configuration parameter name
 key_prefix = 'mintpy.unwrapError.'
@@ -35,16 +35,16 @@ def run_or_skip(inps):
     with h5py.File(inps.ifgram_file, 'r') as f:
         if inps.datasetNameOut not in f.keys():
             flag = 'run'
-            print('1) output dataset: {} NOT found.'.format(inps.datasetNameOut))
+            print(f'1) output dataset: {inps.datasetNameOut} NOT found.')
         else:
-            print('1) output dataset: {} exists'.format(inps.datasetNameOut))
+            print(f'1) output dataset: {inps.datasetNameOut} exists')
             ti = float(f[inps.datasetNameIn].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
             to = float(f[inps.datasetNameOut].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
             if ti > to:
                 flag = 'run'
-                print('2) output dataset is NOT newer than input dataset: {}.'.format(inps.datasetNameIn))
+                print(f'2) output dataset is NOT newer than input dataset: {inps.datasetNameIn}.')
             else:
-                print('2) output dataset is newer than input dataset: {}'.format(inps.datasetNameIn))
+                print(f'2) output dataset is newer than input dataset: {inps.datasetNameIn}')
 
     # check configuration
     if flag == 'skip':
@@ -59,18 +59,18 @@ def run_or_skip(inps):
         atr = readfile.read_attribute(inps.ifgram_file)
 
         # check all keys
-        changed_keys = [key for key in config_keys 
+        changed_keys = [key for key in config_keys
                         if str(inps_dict[key]) != atr.get(key_prefix+key, 'no')]
         if len(changed_keys) > 0:
             flag = 'run'
-            print('3) NOT all key configuration parameters are the same: {}.'.format(config_keys))
+            print(f'3) NOT all key configuration parameters are the same: {config_keys}.')
             for key in changed_keys:
                 print('\t{}\t: {} --> {}'.format(key, atr.get(key_prefix+key, 'no'), str(inps_dict[key])))
         else:
-            print('3) all key configuration parameters are the same: {}.'.format(config_keys))
+            print(f'3) all key configuration parameters are the same: {config_keys}.')
 
     # result
-    print('run or skip: {}.'.format(flag))
+    print(f'run or skip: {flag}.')
     return flag
 
 
@@ -91,9 +91,9 @@ def run_unwrap_error_bridging(ifgram_file, water_mask_file, ramp_type=None, radi
     """
     start_time = time.time()
     print('-'*50)
-    print('correct unwrapping error in {} with bridging ...'.format(ifgram_file))
+    print(f'correct unwrapping error in {ifgram_file} with bridging ...')
     if ramp_type is not None:
-        print('estimate and remove a {} ramp while calculating phase offset'.format(ramp_type))
+        print(f'estimate and remove a {ramp_type} ramp while calculating phase offset')
 
     # read water mask
     if water_mask_file and os.path.isfile(water_mask_file):
@@ -116,13 +116,13 @@ def run_unwrap_error_bridging(ifgram_file, water_mask_file, ramp_type=None, radi
         shape_out = (num_ifgram, length, width)
 
         # prepare output data writing
-        print('open {} with r+ mode'.format(ifgram_file))
+        print(f'open {ifgram_file} with r+ mode')
         with h5py.File(ifgram_file, 'r+') as f:
             print('input  dataset:', dsNameIn)
             print('output dataset:', dsNameOut)
             if dsNameOut in f.keys():
                 ds = f[dsNameOut]
-                print('access /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
+                print(f'access /{dsNameOut} of np.float32 in size of {shape_out}')
             else:
                 ds = f.create_dataset(
                     dsNameOut,
@@ -131,7 +131,7 @@ def run_unwrap_error_bridging(ifgram_file, water_mask_file, ramp_type=None, radi
                     chunks=True,
                     compression=None,
                 )
-                print('create /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
+                print(f'create /{dsNameOut} of np.float32 in size of {shape_out}')
 
             # correct unwrap error ifgram by ifgram
             prog_bar = ptime.progressBar(maxValue=num_ifgram)
@@ -162,7 +162,7 @@ def run_unwrap_error_bridging(ifgram_file, water_mask_file, ramp_type=None, radi
                 prog_bar.update(i+1, suffix=date12)
             prog_bar.close()
             ds.attrs['MODIFICATION_TIME'] = str(time.time())
-        print('close {} file.'.format(ifgram_file))
+        print(f'close {ifgram_file} file.')
 
     if k == '.unw':
         # read unwrap phase
@@ -185,7 +185,7 @@ def run_unwrap_error_bridging(ifgram_file, water_mask_file, ramp_type=None, radi
 
         # write to hdf5 file
         out_file = f'{fbase}_unwCor{fext}'
-        print('writing >>> {}'.format(out_file))
+        print(f'writing >>> {out_file}')
         writefile.write(unw_cor, out_file=out_file, ref_file=ifgram_file)
 
     # update config parameter for HDF5 file
@@ -198,6 +198,6 @@ def run_unwrap_error_bridging(ifgram_file, water_mask_file, ramp_type=None, radi
 
     # used time
     m, s = divmod(time.time() - start_time, 60)
-    print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
+    print(f'\ntime used: {m:02.0f} mins {s:02.1f} secs\nDone.')
 
     return ifgram_file

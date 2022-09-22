@@ -29,7 +29,7 @@ from mintpy.utils import readfile
 def write_h5(datasetDict, out_file, metadata=None, ref_file=None, compression=None):
 
     if os.path.isfile(out_file):
-        print('delete exsited file: {}'.format(out_file))
+        print(f'delete exsited file: {out_file}')
         os.remove(out_file)
 
     with h5py.File(out_file, 'w') as f:
@@ -40,9 +40,9 @@ def write_h5(datasetDict, out_file, metadata=None, ref_file=None, compression=No
         for key, value in metadata.items():
             f.attrs[key] = str(value)
             #print(key + ': ' +  value)
-    print('finished writing to {}'.format(out_file))
+    print(f'finished writing to {out_file}')
 
-    return out_file  
+    return out_file
 
 
 def get_dataNames(FILE):
@@ -54,15 +54,15 @@ def get_dataNames(FILE):
 
 
 def parallel_process(array, function, n_jobs=16, use_kwargs=False, front_num=1):
-    """A parallel version of the map function with a progress bar. 
+    """A parallel version of the map function with a progress bar.
 
         Args:
             array (array-like): An array to iterate over.
             function (function): A python function to apply to the elements of array
             n_jobs (int, default=16): The number of cores to use
-            use_kwargs (boolean, default=False): Whether to consider the elements of array as dictionaries of 
-                keyword arguments to function 
-            front_num (int, default=3): The number of iterations to run serially before kicking off the parallel job. 
+            use_kwargs (boolean, default=False): Whether to consider the elements of array as dictionaries of
+                keyword arguments to function
+            front_num (int, default=3): The number of iterations to run serially before kicking off the parallel job.
                 Useful for catching bugs
         Returns:
             [function(array[0]), function(array[1]), ...]

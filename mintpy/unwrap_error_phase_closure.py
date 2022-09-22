@@ -14,11 +14,10 @@ from cvxopt import matrix
 from matplotlib import pyplot as plt
 from skimage import measure
 
-from mintpy.objects import ifgramStack, conncomp
-from mintpy.utils import ptime, readfile, writefile, utils as ut, plot as pp
-from mintpy.utils.solvers import l1regls
 from mintpy import ifgram_inversion as ifginv
-
+from mintpy.objects import conncomp, ifgramStack
+from mintpy.utils import plot as pp, ptime, readfile, utils as ut, writefile
+from mintpy.utils.solvers import l1regls
 
 key_prefix = 'mintpy.unwrapError.'
 
@@ -33,19 +32,19 @@ def run_or_skip(inps):
     with h5py.File(inps.ifgram_file, 'r') as f:
         if inps.datasetNameOut not in f.keys():
             flag = 'run'
-            print('1) output dataset: {} NOT found.'.format(inps.datasetNameOut))
+            print(f'1) output dataset: {inps.datasetNameOut} NOT found.')
         else:
-            print('1) output dataset: {} exists.'.format(inps.datasetNameOut))
+            print(f'1) output dataset: {inps.datasetNameOut} exists.')
             to = float(f[inps.datasetNameOut].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
             ti = float(f[inps.datasetNameIn].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
             if ti > to:
                 flag = 'run'
-                print('2) output dataset is NOT newer than input dataset: {}.'.format(inps.datasetNameIn))
+                print(f'2) output dataset is NOT newer than input dataset: {inps.datasetNameIn}.')
             else:
-                print('2) output dataset is newer than input dataset: {}.'.format(inps.datasetNameIn))
+                print(f'2) output dataset is newer than input dataset: {inps.datasetNameIn}.')
 
     # result
-    print('run or skip: {}.'.format(flag))
+    print(f'run or skip: {flag}.')
     return flag
 
 
@@ -76,7 +75,7 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
     # update mode
     if update_mode and os.path.isfile(out_file):
         print('update mode: ON')
-        print('1) output file "{}" already exists'.format(out_file))
+        print(f'1) output file "{out_file}" already exists')
         flag = 'skip'
 
         # check modification time
@@ -94,12 +93,12 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
         atri = readfile.read_attribute(ifgram_file)
         atro = readfile.read_attribute(out_file)
         if not all(atri[i] == atro[i] for i in key_list):
-            print('3) NOT all key configurations are the same: {}'.format(key_list))
+            print(f'3) NOT all key configurations are the same: {key_list}')
             flag = 'run'
         else:
-            print('3) all key configurations are the same: {}'.format(key_list))
+            print(f'3) all key configurations are the same: {key_list}')
 
-        print('run or skip: {}.'.format(flag))
+        print(f'run or skip: {flag}.')
         if flag == 'skip':
             return out_file
 
@@ -112,13 +111,13 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
 
     C = stack_obj.get_design_matrix4triplet(date12_list)
     if C is None:
-        msg = 'No triangles found from ifgramStack file: {}!'.format(ifgram_file)
+        msg = f'No triangles found from ifgramStack file: {ifgram_file}!'
         msg += '\n    Skip calculating the number of triplets with non-zero integer ambiguity.'
         print(msg)
         return None
     else:
-        print('number of interferograms: {}'.format(C.shape[1]))
-        print('number of triplets: {}'.format(C.shape[0]))
+        print(f'number of interferograms: {C.shape[1]}')
+        print(f'number of triplets: {C.shape[0]}')
 
     # calculate number of nonzero closure phase
     ds_size = (C.shape[0] * 2 + C.shape[1]) * length * width * 4
@@ -127,7 +126,7 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
     num_loop = int(np.ceil(length / step))
     num_nonzero_closure = np.zeros((length, width), dtype=np.float32)
     msg = 'calculating the number of triplets with non-zero integer ambiguity of closure phase ...'
-    msg += '\n    block by block with size up to {}, {} blocks in total'.format((step, width), num_loop)
+    msg += f'\n    block by block with size up to {(step, width)}, {num_loop} blocks in total'
     print(msg)
 
     ref_phase = stack_obj.get_reference_phase(
@@ -157,7 +156,7 @@ def calc_num_triplet_with_nonzero_integer_ambiguity(ifgram_file, mask_file=None,
         closure_int = np.round((closure_pha - ut.wrap(closure_pha)) / (2.*np.pi))
         num_nonzero_closure[r0:r1, :] = np.sum(closure_int != 0, axis=0).reshape(-1, width)
 
-        prog_bar.update(i+1, every=1, suffix='line {} / {}'.format(r0, length))
+        prog_bar.update(i+1, every=1, suffix=f'line {r0} / {length}')
     prog_bar.close()
 
     # mask
@@ -217,8 +216,8 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
         unwDatasetName=dsNameIn,
         dropIfgram=True,
     ).reshape(num_ifgram, -1)
-    print('number of interferograms: {}'.format(num_ifgram))
-    print('number of triplets: {}'.format(int(len(C)/num_ifgram)))
+    print(f'number of interferograms: {num_ifgram}')
+    print(f'number of triplets: {int(len(C)/num_ifgram)}')
 
     # prepare common label
     print('read common mask from', cc_mask_file)
@@ -233,13 +232,13 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
     print('number of common regions:', num_label)
     if num_label == 0:
         msg = 'WARNING: NO common region found! '
-        msg += 'Try a smaller value for the mintpy.unwrapError.connCompMinArea ({}) option.'.format(cc_min_area)
+        msg += f'Try a smaller value for the mintpy.unwrapError.connCompMinArea ({cc_min_area}) option.'
         print(msg)
 
     else:
         # add sample_coords / int_ambiguity
         print('number of samples per region:', num_sample)
-        print('solving the phase-unwrapping integer ambiguity for {}'.format(dsNameIn))
+        print(f'solving the phase-unwrapping integer ambiguity for {dsNameIn}')
         print('\tbased on the closure phase of interferograms triplets (Yunjun et al., 2019)')
         print('\tusing the L1-norm regularzed least squares approximation (LASSO) ...')
         for i in range(num_label):
@@ -251,10 +250,10 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
             # solve for int_ambiguity
             U = np.zeros((num_ifgram, num_sample))
             if common_reg.label == label_img[stack_obj.refY, stack_obj.refX]:
-                print('{}/{} skip calculation for the reference region'.format(i+1, num_label))
+                print(f'{i+1}/{num_label} skip calculation for the reference region')
 
             else:
-                prog_bar = ptime.progressBar(maxValue=num_sample, prefix='{}/{}'.format(i+1, num_label))
+                prog_bar = ptime.progressBar(maxValue=num_sample, prefix=f'{i+1}/{num_label}')
                 for j in range(num_sample):
                     # read unwrap phase
                     y, x = common_reg.sample_coords[j, :]
@@ -309,7 +308,7 @@ def correct_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_f
                                        ccName='connectComponent', dsNameIn='unwrapPhase',
                                        dsNameOut='unwrapPhase_phaseClosure'):
     print('-'*50)
-    print('correct unwrapping error in {} with phase closure ...'.format(ifgram_file))
+    print(f'correct unwrapping error in {ifgram_file} with phase closure ...')
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open()
     length, width = stack_obj.length, stack_obj.width
@@ -326,13 +325,13 @@ def correct_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_f
         water_mask = None
 
     # prepare output data writing
-    print('open {} with r+ mode'.format(ifgram_file))
+    print(f'open {ifgram_file} with r+ mode')
     with h5py.File(ifgram_file, 'r+') as f:
         print('input  dataset:', dsNameIn)
         print('output dataset:', dsNameOut)
         if dsNameOut in f.keys():
             ds = f[dsNameOut]
-            print('access /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
+            print(f'access /{dsNameOut} of np.float32 in size of {shape_out}')
         else:
             ds = f.create_dataset(
                 dsNameOut,
@@ -340,7 +339,7 @@ def correct_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_f
                 maxshape=(None, None, None),
                 chunks=True,
                 compression=None)
-            print('create /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
+            print(f'create /{dsNameOut} of np.float32 in size of {shape_out}')
 
         # correct unwrap error ifgram by ifgram
         prog_bar = ptime.progressBar(maxValue=num_ifgram)
@@ -380,7 +379,7 @@ def correct_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_f
             prog_bar.update(i+1, suffix=date12)
         prog_bar.close()
         ds.attrs['MODIFICATION_TIME'] = str(time.time())
-    print('close {} file.'.format(ifgram_file))
+    print(f'close {ifgram_file} file.')
 
     return ifgram_file
 
@@ -438,6 +437,6 @@ def run_unwrap_error_phase_closure(inps):
 
     # used time
     m, s = divmod(time.time() - start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs\nDone.')
 
     return

@@ -6,10 +6,10 @@
 ############################################################
 
 
-import sys
 import glob
-from mintpy.utils.arg_utils import create_argument_parser
+import sys
 
+from mintpy.utils.arg_utils import create_argument_parser
 
 #########################################################################
 GEOMETRY_PREFIXS = ['hgt', 'lat', 'lon', 'los', 'shadowMask', 'waterMask', 'incLocal']
@@ -28,7 +28,7 @@ EXAMPLE = """example:
   prep_isce.py -f "./Igrams/*/filt_*.unw" -m ./referenceShelve/data.dat -b ./baselines/ -g ./geom_reference/
 
   # stripmapApp
-  prep_isce.py -m 20120507_slc_crop.xml -g ./geometry 
+  prep_isce.py -m 20120507_slc_crop.xml -g ./geometry
 
   ## alosStack
   # where 150408 is the reference date
@@ -74,7 +74,7 @@ def create_parser(subparsers=None):
     parser.add_argument('-g', '--geometry-dir', dest='geom_dir', type=str, default=None, required=True,
                         help='Directory with geometry files ')
     parser.add_argument('--geom-files', dest='geom_files', type=str, nargs='*',
-                        default=['{}.rdr'.format(i) for i in GEOMETRY_PREFIXS],
+                        default=[f'{i}.rdr' for i in GEOMETRY_PREFIXS],
                         help='List of geometry file basenames. Default: %(default)s.\n'
                              'All geometry files need to be in the same directory.')
 

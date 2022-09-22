@@ -9,8 +9,8 @@
 
 import numpy as np
 from scipy import linalg
-from mintpy.utils import ptime
 
+from mintpy.utils import ptime
 
 MODEL_EXAMPLE = """time function configuration:
     model = {
@@ -159,7 +159,7 @@ def inps2model(inps, date_list=None, print_msg=True):
     if print_msg:
         print('estimate deformation model with the following assumed time functions:')
         for key, value in model.items():
-            print('    {:<10} : {}'.format(key, value))
+            print(f'    {key:<10} : {value}')
 
     # warning if no polynomial found
     if 'polynomial' not in model.keys():
@@ -179,8 +179,8 @@ def get_num_param(model):
         model['polynomial'] + 1
         + len(model['periodic']) * 2
         + len(model['stepDate'])
-        + sum([len(val) for key, val in model['exp'].items()])
-        + sum([len(val) for key, val in model['log'].items()])
+        + sum(len(val) for key, val in model['exp'].items())
+        + sum(len(val) for key, val in model['log'].items())
     )
 
     return num_param
@@ -220,8 +220,8 @@ def get_design_matrix4time_func(date_list, model=None, ref_date=None, seconds=0)
     logs       = model.get('log', dict())
     num_period = len(periods)
     num_step   = len(steps)
-    num_exp    = sum([len(val) for key, val in exps.items()])
-    num_log    = sum([len(val) for key, val in logs.items()])
+    num_exp    = sum(len(val) for key, val in exps.items())
+    num_log    = sum(len(val) for key, val in logs.items())
 
     num_param = (poly_deg + 1) + (2 * num_period) + num_step + num_exp + num_log
     if num_param <= 1:
@@ -349,7 +349,7 @@ def get_design_matrix4exp_func(date_list, exp_dict, seconds=0):
     Returns:    A              : 2D array of zeros & ones in size of (num_date, num_exp)
     """
     num_date = len(date_list)
-    num_exp  = sum([len(val) for key, val in exp_dict.items()])
+    num_exp  = sum(len(val) for key, val in exp_dict.items())
     A = np.zeros((num_date, num_exp), dtype=np.float32)
 
     t = np.array(ptime.yyyymmdd2years(date_list, seconds=seconds))
@@ -394,7 +394,7 @@ def get_design_matrix4log_func(date_list, log_dict, seconds=0):
     Returns:    A              : 2D array of zeros & ones in size of (num_date, num_log)
     """
     num_date = len(date_list)
-    num_log  = sum([len(log_dict[x]) for x in log_dict])
+    num_log  = sum(len(log_dict[x]) for x in log_dict)
     A = np.zeros((num_date, num_log), dtype=np.float32)
 
     t = np.array(ptime.yyyymmdd2years(date_list, seconds=seconds))

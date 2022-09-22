@@ -1,5 +1,2 @@
 # get version info
-from mintpy.version import (
-    version as __version__,
-    logo as __logo__,
-)
+from mintpy.version import logo as __logo__, version as __version__

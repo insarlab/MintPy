@@ -8,8 +8,8 @@
 
 import os
 import sys
-from mintpy.utils.arg_utils import create_argument_parser
 
+from mintpy.utils.arg_utils import create_argument_parser
 
 #####################################################################################
 REFERENCE = """references:
@@ -90,7 +90,7 @@ def cmd_line_parse(iargs=None):
     if inps.sub_tec_ratio is None:
         suffix = ''
     elif ut.is_number(inps.sub_tec_ratio):
-        suffix = 'R{:.0f}'.format(float(inps.sub_tec_ratio)*100)
+        suffix = f'R{float(inps.sub_tec_ratio)*100:.0f}'
     elif inps.sub_tec_ratio.startswith('adap'):
         suffix = 'RA'
     else:
@@ -102,7 +102,7 @@ def cmd_line_parse(iargs=None):
 
     if not inps.iono_file:
         geom_dir = os.path.dirname(inps.geom_file)
-        inps.iono_file = os.path.join(geom_dir, 'TEC{}lr{}.h5'.format(inps.sol_code[0], suffix))
+        inps.iono_file = os.path.join(geom_dir, f'TEC{inps.sol_code[0]}lr{suffix}.h5')
 
     #if not inps.cor_dis_file:
     #    dis_dir = os.path.dirname(inps.dis_file)

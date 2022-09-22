@@ -44,11 +44,11 @@ eigen3 +blas +gcc7
 gsl +gcc7
 cgal
 sfcgal
-bzr 
-git 
+bzr
+git
 rsync
 hdf5 +gcc7
-hdfeos 
+hdfeos
 hdfeos5
 h5utils
 netcdf +gcc7

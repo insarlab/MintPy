@@ -7,8 +7,8 @@
 
 import os
 import sys
-from mintpy.utils.arg_utils import create_argument_parser
 
+from mintpy.utils.arg_utils import create_argument_parser
 
 ###########################################################################################
 EXAMPLE = """Example:
@@ -38,7 +38,7 @@ def cmd_line_parse(iargs=None):
 
     # check: input file extension
     if os.path.splitext(inps.file)[1] not in ['.h5', '.he5']:
-        raise ValueError('input file is NOT HDF5: {}'.format(inps.file))
+        raise ValueError(f'input file is NOT HDF5: {inps.file}')
 
     return inps
 
@@ -51,6 +51,7 @@ def run_remove_hdf5_dset(fname, ds_names):
                 ds_names - list(str), name of the HDF5 dataset to be removed.
     """
     import h5py
+
     from mintpy.utils import writefile
 
     # grab exiting dataset list

@@ -9,16 +9,18 @@
 #     cmap = pp.ColormapExt('cmy').colormap
 
 
+import colorsys
+import glob
 import os
 import re
-import glob
-import colorsys
+
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LinearSegmentedColormap, to_rgb
 
 import mintpy
+
 MINTPY_CPT_DIR = os.path.join(os.path.dirname(mintpy.__file__), 'data', 'colormaps')
 GMT_CPT_DIR = '/opt/local/share/gmt/cpt'  #location of GMT colormap files, default for macOS with GMT installed via MacPorts
 
@@ -140,9 +142,9 @@ class ColormapExt(ScalarMappable):
 
             # check if input colormap name is supported
             if self.cmap_name not in self.cmap_name_list:
-                msg = 'un-recognized input colormap name: {}\n'.format(self.cmap_name)
-                msg += 'supported colormap from cpt files:\n{}\n'.format(self.cpt_cmap_name_list)
-                msg += 'supported colormap from matplotlib:\n{}\n'.format(self.plt_cmap_name_list)
+                msg = f'un-recognized input colormap name: {self.cmap_name}\n'
+                msg += f'supported colormap from cpt files:\n{self.cpt_cmap_name_list}\n'
+                msg += f'supported colormap from matplotlib:\n{self.plt_cmap_name_list}\n'
                 raise ValueError(msg)
         return
 
@@ -163,16 +165,21 @@ class ColormapExt(ScalarMappable):
             n2 = self.cmap_lut - n1
             colors1 = self.colormap(np.linspace(0.0, 0.3, n1))
             colors2 = self.colormap(np.linspace(0.6, 1.0, n2))
-            self.colormap = LinearSegmentedColormap.from_list(name=self.cmap_name+'_truncate',
-                                                              colors=np.vstack((colors1, colors2)),
-                                                              N=self.cmap_lut)
+            self.colormap = LinearSegmentedColormap.from_list(
+                name=self.cmap_name+'_truncate',
+                colors=np.vstack((colors1, colors2)),
+                N=self.cmap_lut,
+            )
 
         # repeat setting
         if self.num_repeat > 1:
             colors = np.tile(self.colormap(np.linspace(0., 1., self.cmap_lut)), (self.num_repeat,1))
-            self.colormap = LinearSegmentedColormap.from_list(name=self.cmap_name+'_{}'.format(self.num_repeat),
-                                                              colors=colors,
-                                                              N=cmap_lut*num_repeat)
+            self.colormap = LinearSegmentedColormap.from_list(
+                name=self.cmap_name+f'_{self.num_repeat}',
+                colors=colors,
+                N=self.cmap_lut*self.num_repeat,
+            )
+
         return self.colormap
 
 
@@ -261,7 +268,7 @@ class ColormapExt(ScalarMappable):
         # search for cpt_file
         cpt_file = None
         for cpt_dir in self.cpt_dirs:
-            cpt_file = os.path.join(cpt_dir, "{}.cpt".format(cmap_name))
+            cpt_file = os.path.join(cpt_dir, f"{cmap_name}.cpt")
             if os.path.isfile(cpt_file):
                 break
 
@@ -279,7 +286,7 @@ class ColormapExt(ScalarMappable):
         Link: http://scipy-cookbook.readthedocs.io/items/Matplotlib_Loading_a_colormap_dynamically.html
         """
         if not os.path.isfile(cpt_file):
-            raise FileNotFoundError("file {} not found".format(cpt_file))
+            raise FileNotFoundError(f"file {cpt_file} not found")
 
         # read file into list of strings
         with open(cpt_file) as f:

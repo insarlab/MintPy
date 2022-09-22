@@ -7,8 +7,8 @@
 
 
 import sys
-from mintpy.utils.arg_utils import create_argument_parser
 
+from mintpy.utils.arg_utils import create_argument_parser
 
 ##############################################################################
 EXAMPLE = """example:
@@ -76,9 +76,9 @@ def cmd_line_parse(iargs=None):
         ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
         if ftype == 'timeseries':
             inps.dset = timeseries(inps.file).get_date_list()[-1]
-            print('NO date specified >>> continue with the last date: {}'.format(inps.dset))
+            print(f'NO date specified >>> continue with the last date: {inps.dset}')
         elif ftype in ['ifgramStack', 'HDFEOS']:
-            raise Exception("NO input dataset! It's required for {} file".format(ftype))
+            raise Exception(f"NO input dataset! It's required for {ftype} file")
 
     return inps
 

@@ -7,16 +7,17 @@
 
 import os
 import sys
+
 # Always prefer setuptools over distutils
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 # Grab version and description from version.py
 # link: https://stackoverflow.com/questions/53648900
 sys.path.append(os.path.dirname(__file__))
-from mintpy.version import version, description
+from mintpy.version import description, version
 
 # Grab long_description from README.md
-with open("docs/README.md", "r") as f:
+with open("docs/README.md") as f:
     long_description = f.read()
 
 setup(
@@ -26,7 +27,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/insarlab/MintPy",
-    download_url=("https://github.com/insarlab/MintPy/archive/v{}.tar.gz".format(version)),
+    download_url=(f"https://github.com/insarlab/MintPy/archive/v{version}.tar.gz"),
     author="Zhang Yunjun, Heresh Fattahi",
     author_email="yunjunzgeo@gmail.com",
     license="GPL-3.0-or-later",

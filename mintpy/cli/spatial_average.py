@@ -7,8 +7,8 @@
 
 
 import sys
-from mintpy.utils.arg_utils import create_argument_parser
 
+from mintpy.utils.arg_utils import create_argument_parser
 
 #################################  Usage  ####################################
 EXAMPLE = """example:
@@ -43,7 +43,8 @@ def cmd_line_parse(iargs=None):
 def plot_spatial_average_ts(date_list:list, avg_list:list):
     """Plot the spatial average time-series."""
     import matplotlib.pyplot as plt
-    from mintpy.utils import ptime, plot as pp
+
+    from mintpy.utils import plot as pp, ptime
 
     dates = ptime.date_list2vector(date_list)[0]
 

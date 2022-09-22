@@ -5,12 +5,12 @@
 ############################################################
 
 
-import os
 import datetime as dt
+import os
 
-from mintpy.objects.constants import SPEED_OF_LIGHT
 from mintpy.objects import sensor
-from mintpy.utils import readfile, writefile, utils1 as ut
+from mintpy.objects.constants import SPEED_OF_LIGHT
+from mintpy.utils import readfile, utils1 as ut, writefile
 
 
 #########################################################################
@@ -34,7 +34,7 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
 
     # open and read hyp3 metadata
     hyp3_meta = {}
-    with open(meta_file, 'r') as f:
+    with open(meta_file) as f:
         for line in f:
             key, value = line.strip().replace(' ','').split(':')[:2]
             hyp3_meta[key] = value

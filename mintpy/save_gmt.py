@@ -8,7 +8,8 @@
 
 import numpy as np
 from scipy.io import netcdf
-from mintpy.utils import readfile, plot as pp
+
+from mintpy.utils import plot as pp, readfile
 
 
 ####################################################################################
@@ -127,12 +128,12 @@ def write_grd_file(data, atr, out_file=None):
 ####################################################################################
 def save_gmt(inps):
     # read data
-    data, atr = readfile.read(inps.file, datasetName=inps.dset) 
+    data, atr = readfile.read(inps.file, datasetName=inps.dset)
 
     # default output file name
     if not inps.outfile:
         outbase = pp.auto_figure_title(inps.file, inps.dset, vars(inps))
-        inps.outfile = '{}.grd'.format(outbase)
+        inps.outfile = f'{outbase}.grd'
 
     # write GMT *.grd file
     write_grd_file(data, atr, inps.outfile)

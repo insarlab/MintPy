@@ -8,17 +8,17 @@
 #     from mintpy.objects.gps import GPS
 
 
-import os
 import csv
-import glob
 import datetime as dt
-import numpy as np
-from pyproj import Geod
+import glob
+import os
 from urllib.request import urlretrieve
 
-from mintpy.objects.coord import coordinate
-from mintpy.utils import ptime, time_func, readfile, utils1 as ut
+import numpy as np
+from pyproj import Geod
 
+from mintpy.objects.coord import coordinate
+from mintpy.utils import ptime, readfile, time_func, utils1 as ut
 
 unr_site_list_file = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
 
@@ -29,7 +29,7 @@ def dload_site_list(out_file=None, print_msg=True):
     if not out_file:
         out_file = os.path.basename(url)
     if print_msg:
-        print('downloading site list from UNR Geod Lab: {}'.format(url))
+        print(f'downloading site list from UNR Geod Lab: {url}')
     urlretrieve(url, out_file)
     return out_file
 
@@ -157,7 +157,7 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, gps_comp='
 
     if not redo and os.path.isfile(csv_file) and num_row >= num_site:
         # read from existing CSV file
-        vprint('read GPS observations from file: {}'.format(csv_file))
+        vprint(f'read GPS observations from file: {csv_file}')
         fc = np.genfromtxt(csv_file, dtype=col_types, delimiter=',', names=True)
         site_obs = fc[col_names[obs_ind]]
 
@@ -180,7 +180,7 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, gps_comp='
         geom_file = ut.get_geometry_file(['incidenceAngle','azimuthAngle'], work_dir=file_dir, coord='geo')
         if geom_file:
             geom_obj = geom_file
-            vprint('use incidence / azimuth angle from file: {}'.format(os.path.basename(geom_file)))
+            vprint(f'use incidence / azimuth angle from file: {os.path.basename(geom_file)}')
         else:
             geom_obj = meta
             vprint('use incidence / azimuth angle from metadata')
@@ -188,7 +188,7 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, gps_comp='
         # loop for calculation
         prog_bar = ptime.progressBar(maxValue=num_site, print_msg=print_msg)
         for i, site_name in enumerate(site_names):
-            prog_bar.update(i+1, suffix='{}/{} {}'.format(i+1, num_site, site_name))
+            prog_bar.update(i+1, suffix=f'{i+1}/{num_site} {site_name}')
 
             # calculate gps data value
             obj = GPS(site_name)
@@ -213,7 +213,7 @@ def get_gps_los_obs(meta, obs_type, site_names, start_date, end_date, gps_comp='
         # data_list = [x for x in data_list if not np.isnan(x[-1])]
 
         # write to CSV file
-        vprint('write GPS observations to file: {}'.format(csv_file))
+        vprint(f'write GPS observations to file: {csv_file}')
         with open(csv_file, 'w') as fc:
             fcw = csv.writer(fc)
             fcw.writerow(col_names)
@@ -245,7 +245,7 @@ def read_pos_file(fname):
 
 
 def get_pos_years(gps_dir, site):
-    fnames = glob.glob(os.path.join(gps_dir, '{}.*.pos'.format(site)))
+    fnames = glob.glob(os.path.join(gps_dir, f'{site}.*.pos'))
     years = [os.path.basename(i).split('.')[1] for i in fnames]
     years = ptime.yy2yyyy(years)
     return years
@@ -259,7 +259,7 @@ def read_GSI_F3(gps_dir, site, start_date=None, end_date=None):
     dates, X, Y, Z = [], [], [], []
     for i in range(num_year):
         yeari = str(year0 + i)
-        fname = os.path.join(gps_dir, '{}.{}.pos'.format(site, yeari[2:]))
+        fname = os.path.join(gps_dir, f'{site}.{yeari[2:]}.pos')
         datesi, Xi, Yi, Zi = read_pos_file(fname)
         dates += datesi
         X += Xi
@@ -311,11 +311,11 @@ class GPS:
         # example link: http://geodesy.unr.edu/gps_timeseries/tenv3/IGS08/1LSU.IGS08.tenv3
         #               http://geodesy.unr.edu/gps_timeseries/tenv3/IGS14/CASU.tenv3
         if version == 'IGS08':
-            self.file = os.path.join(data_dir, '{s}.{v}.tenv3'.format(s=site, v=version))
+            self.file = os.path.join(data_dir, f'{site}.{version}.tenv3')
         elif version == 'IGS14':
-            self.file = os.path.join(data_dir, '{s}.tenv3'.format(s=site))
+            self.file = os.path.join(data_dir, f'{site}.tenv3')
         else:
-            raise ValueError('un-recognized GPS data version: {}'.format(version))
+            raise ValueError(f'un-recognized GPS data version: {version}')
 
         url_prefix = 'http://geodesy.unr.edu/gps_timeseries/tenv3'
         self.file_url = os.path.join(url_prefix, version, os.path.basename(self.file))
@@ -323,14 +323,14 @@ class GPS:
         # time-series plot from Nevada Geodetic Lab
         # example link: http://geodesy.unr.edu/tsplots/IGS08/TimeSeries/CAMO.png
         #               http://geodesy.unr.edu/tsplots/IGS14/IGS14/TimeSeries/CASU.png
-        self.plot_file = os.path.join(data_dir, 'pic/{}.png'.format(site))
+        self.plot_file = os.path.join(data_dir, f'pic/{site}.png')
 
         url_prefix = 'http://geodesy.unr.edu/tsplots'
         if version == 'IGS08':
-            url_prefix += '/{0}'.format(version)
+            url_prefix += f'/{version}'
         elif version == 'IGS14':
             url_prefix += '/{0}/{0}'.format(version)
-        self.plot_file_url = os.path.join(url_prefix, 'TimeSeries/{}.png'.format(site))
+        self.plot_file_url = os.path.join(url_prefix, f'TimeSeries/{site}.png')
 
         # list of stations from Nevada Geodetic Lab
         self.site_list_file = os.path.join(os.path.dirname(data_dir), 'DataHoldings.txt')
@@ -338,7 +338,7 @@ class GPS:
             dload_site_list()
         site_names = np.loadtxt(self.site_list_file, dtype=bytes, skiprows=1, usecols=(0)).astype(str)
         if site not in site_names:
-            raise ValueError('Site {} NOT found in file: {}'.format(site, unr_site_list_file))
+            raise ValueError(f'Site {site} NOT found in file: {unr_site_list_file}')
 
         # directories for data files and plot files
         for fdir in [data_dir, os.path.dirname(self.plot_file)]:
@@ -353,7 +353,7 @@ class GPS:
 
     def dload_site(self, print_msg=True):
         if print_msg:
-            print('downloading {} from {}'.format(self.site, self.file_url))
+            print(f'downloading {self.site} from {self.file_url}')
 
         urlretrieve(self.file_url, self.file)
         urlretrieve(self.plot_file_url, self.plot_file)
@@ -491,7 +491,7 @@ class GPS:
             az_angle  = ut.heading2azimuth_angle(float(geom_obj['HEADING']))
 
         else:
-            raise ValueError('input geom_obj is neight str nor dict: {}'.format(geom_obj))
+            raise ValueError(f'input geom_obj is neight str nor dict: {geom_obj}')
 
         return inc_angle, az_angle
 

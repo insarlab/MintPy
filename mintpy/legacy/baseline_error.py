@@ -6,11 +6,13 @@
 ############################################################
 
 
-import sys
 import os
+import sys
+
 import h5py
-import numpy as np
 import matplotlib
+import numpy as np
+
 from mintpy.utils import readfile
 
 
@@ -31,14 +33,14 @@ def to_percent(y, position):
 def usage():
     print('''usage: baseline_error.py [-h] timeseries_file [mask_file] [exclude_date]
 
-Estimating the errors in baseline components (bh,bv,dbh,dbv), and correcting the time-series. 
+Estimating the errors in baseline components (bh,bv,dbh,dbv), and correcting the time-series.
 
 arguments:
   timeseries_file : The timeseries in HDF5 format.
   mask_file       : a mask file to mask out points with high deformation or located in noisy areas
-      
+
 reference:
-  Gourmelen, N., F. Amelung, and R. Lanari (2010), Interferometric synthetic aperture radar-GPS 
+  Gourmelen, N., F. Amelung, and R. Lanari (2010), Interferometric synthetic aperture radar-GPS
   integration: Interseismic strain accumulation across the Hunter Mountain fault in the eastern
   California shear zone, JGR, 115(B9).
 

@@ -7,17 +7,17 @@
 #   from mintpy.objects.insar_vs_gps import insar_vs_gps
 
 
-import sys
 import datetime as dt
+import sys
+
 import numpy as np
 from scipy import stats
 from scipy.interpolate import griddata
 
-from mintpy.objects import timeseries, giantTimeseries
-from mintpy.utils import readfile, plot as pp, utils as ut
-from mintpy.objects.gps import GPS
 from mintpy.defaults.plot import *
-
+from mintpy.objects import giantTimeseries, timeseries
+from mintpy.objects.gps import GPS
+from mintpy.utils import plot as pp, readfile, utils as ut
 
 
 ############################## beginning of insar_vs_gps class ##############################
@@ -81,7 +81,7 @@ class insar_vs_gps:
         elif k == 'giantTimeseries':
             ts_obj = giantTimeseries(self.insar_file)
         else:
-            raise ValueError('Un-supported time-series file: {}'.format(k))
+            raise ValueError(f'Un-supported time-series file: {k}')
         ts_obj.open(print_msg=False)
         self.metadata = dict(ts_obj.metadata)
         self.num_date = ts_obj.numDate
@@ -126,7 +126,7 @@ class insar_vs_gps:
             site['reference_site'] = self.ref_site
             self.ds[sname] = site
 
-            sys.stdout.write('\rreading GPS {}'.format(sname))
+            sys.stdout.write(f'\rreading GPS {sname}')
             sys.stdout.flush()
         print()
         return
@@ -166,7 +166,7 @@ class insar_vs_gps:
         temp_coh = griddata(src_pts, src_value, dest_pts, method=interp_method)
 
         # 2.3 write interpolation result
-        self.insar_dis_name = 'insar_dis_{}'.format(interp_method)
+        self.insar_dis_name = f'insar_dis_{interp_method}'
         insar_dis_ref = insar_dis[self.site_names.index(self.ref_site),:]
         for i in range(self.num_site):
             site = self.ds[self.site_names[i]]
@@ -293,5 +293,3 @@ class insar_vs_gps:
         return ax
 
 ############################## end of insar_vs_gps class ####################################
-
-

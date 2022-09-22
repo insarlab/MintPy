@@ -7,10 +7,9 @@
 #   from mintpy.defaults import auto_path
 
 
+import glob
 import os
 import re
-import glob
-
 
 # Default path of data files from different InSAR processors to be loaded into MintPy
 AUTO_PATH_ISCE_TOPS = '''##----------Default file path of ISCE/topsStack products
@@ -182,11 +181,11 @@ def get_auto_path(processor, work_dir, template):
     for key, value in auto_path_dict.items():
         if value:
             for var1, var2 in var_dict.items():
-                value = value.replace(var1, var2)    
+                value = value.replace(var1, var2)
             auto_path_dict[key] = value
 
     ## 3. update input template option with auto value
-    max_digit = max([len(key) for key in auto_path_dict.keys()])
+    max_digit = max(len(key) for key in auto_path_dict.keys())
     for key, value in auto_path_dict.items():
         if value and template[key] == 'auto':
             template[key] = value
@@ -211,7 +210,7 @@ def get_reference_date12(proj_dir, processor='roipac'):
     if processor == 'roipac':
         try:
             lookup_file = glob.glob(os.path.join(proj_dir, 'PROCESS/GEO/geo_*/geomap*.trans'))[0]
-            m_date12 = re.findall('\d{6}-\d{6}', lookup_file)[0]
+            m_date12 = re.findall(r'\d{6}-\d{6}', lookup_file)[0]
         except:
             print("No reference interferogram found! Check the PROCESS/GEO/geo_* folder")
 
@@ -231,10 +230,10 @@ def get_dem_file(proj_dir, m_date12, processor):
 
     if m_date12 and processor == 'roipac':
         # get the number of looks used in lookup table file
-        lookup_file = os.path.join(proj_dir, 'PROCESS/GEO/geo_{}/geomap*.trans'.format(m_date12))
-        lks = re.findall('_\d+rlks', glob.glob(lookup_file)[0])[0]
+        lookup_file = os.path.join(proj_dir, f'PROCESS/GEO/geo_{m_date12}/geomap*.trans')
+        lks = re.findall(r'_\d+rlks', glob.glob(lookup_file)[0])[0]
 
         # use the one with same multilook info as the lookup table file.
-        dem_file = os.path.join(proj_dir, 'PROCESS/DONE/*${m_date12}*', 'radar{}.hgt'.format(lks))
+        dem_file = os.path.join(proj_dir, 'PROCESS/DONE/*${m_date12}*', f'radar{lks}.hgt')
 
     return dem_file

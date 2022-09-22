@@ -9,15 +9,18 @@
 
 import os
 import warnings
+
 import h5py
 import numpy as np
 from scipy import ndimage
 from scipy.interpolate import RegularGridInterpolator as RGI
+
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', UserWarning)
     import pyresample as pr
+
 from mintpy.objects.cluster import split_box2sub_boxes
-from mintpy.utils import readfile, ptime, utils0 as ut
+from mintpy.utils import ptime, readfile, utils0 as ut
 
 EARTH_RADIUS = 6378122.65   # m
 
@@ -152,7 +155,7 @@ class resample:
             raise ValueError('lookup table or source data metadata is None!')
 
         # prepare geometry for resampling
-        print('resampling software: {}'.format(self.software))
+        print(f'resampling software: {self.software}')
         if self.software == 'scipy':
             if 'Y_FIRST' in self.lut_meta.keys():
                 # gamma / roipac
@@ -218,7 +221,7 @@ class resample:
         ## scipy
         else:
             if print_msg:
-                print('{} resampling using scipy.interpolate.RegularGridInterpolator ...'.format(self.interp_method))
+                print(f'{self.interp_method} resampling using scipy.interpolate.RegularGridInterpolator ...')
             if len(src_data.shape) == 3:
                 dest_data = np.empty((src_data.shape[0], self.length, self.width), src_data.dtype)
                 prog_bar = ptime.progressBar(maxValue=src_data.shape[0], print_msg=print_msg)
@@ -256,7 +259,7 @@ class resample:
                 with h5py.File(src_file, 'r') as f:
                     ds_shapes = [f[i].shape for i in f.keys()
                                  if isinstance(f[i], h5py.Dataset)]
-                    max_ds_size = max([np.prod(i) for i in ds_shapes])
+                    max_ds_size = max(np.prod(i) for i in ds_shapes)
             else:
                 atr = readfile.read_attribute(src_file)
                 max_ds_size = int(atr['LENGTH']) * int(atr['WIDTH'])
@@ -320,7 +323,7 @@ class resample:
         # read lookup table: lat/lon at pixel center
         # src  for radar2geo
         # dest for geo2radar
-        print('read latitude / longitude from lookup table file: {}'.format(self.lut_file))
+        print(f'read latitude / longitude from lookup table file: {self.lut_file}')
         lat_file = self.lat_file if self.lat_file else self.lut_file
         lon_file = self.lon_file if self.lon_file else self.lut_file
         lut_lat = readfile.read(lat_file, datasetName='latitude')[0].astype(np.float32)
@@ -355,7 +358,7 @@ class resample:
                 # ensure lat/lon step sign
                 self.lalo_step = (abs(self.lalo_step[0]) * -1.,
                                   abs(self.lalo_step[1]) * 1.)
-            print('output pixel size in (lat, lon) in degree: {}'.format(self.lalo_step))
+            print(f'output pixel size in (lat, lon) in degree: {self.lalo_step}')
 
             # parameter 2 / 3 - SNWE (at pixel outer boundary; output grid) / length & width
             if self.SNWE is None:
@@ -370,8 +373,8 @@ class resample:
                          self.SNWE[1],
                          self.SNWE[2],
                          self.SNWE[2] + self.lalo_step[1] * self.width)
-            print('output area extent in (S, N, W, E) in degree: {}'.format(self.SNWE))
-            print('output file row / column number: ({}, {})'.format(self.length, self.width))
+            print(f'output area extent in (S, N, W, E) in degree: {self.SNWE}')
+            print(f'output file row / column number: ({self.length}, {self.width})')
 
             # parameter 4 - list of boxes & geometry definitions
             self.src_box_list = []
@@ -388,7 +391,7 @@ class resample:
             # dest_box --> src_box / src_def / dest_def
             for i, dest_box in enumerate(self.dest_box_list):
                 if self.num_box > 1:
-                    print('preparing geometry for dest_box {}/{}: {}'.format(i+1, self.num_box, dest_box))
+                    print(f'preparing geometry for dest_box {i+1}/{self.num_box}: {dest_box}')
 
                 # dest_lat/lon at pixel center
                 lat_num = dest_box[3] - dest_box[1]
@@ -436,7 +439,7 @@ class resample:
             # parameter 1 - lalo_step (input grid)
             self.lalo_step = [float(self.src_meta['Y_STEP']),
                               float(self.src_meta['X_STEP'])]
-            print('input pixel size in (lat, lon) in degree: {}'.format(self.lalo_step))
+            print(f'input pixel size in (lat, lon) in degree: {self.lalo_step}')
 
             # parameter 2 - SNWE (input grid)
             lat0 = float(self.src_meta['Y_FIRST'])
@@ -456,7 +459,7 @@ class resample:
                          lat0 + self.lalo_step[0] * src_box[1],  # N - y0
                          lon0 + self.lalo_step[1] * src_box[0],  # W - x0
                          lon0 + self.lalo_step[1] * src_box[2])  # E - x1
-            print('input area extent in (S, N, W, E) in degree: {}'.format(self.SNWE))
+            print(f'input area extent in (S, N, W, E) in degree: {self.SNWE}')
 
             # parameter 3 - length / width (output grid)
             self.length, self.width = lut_lat.shape
@@ -508,7 +511,7 @@ class resample:
             # multiple of Y/X_STEP
             self.lalo_step = (float(self.lut_meta['Y_STEP']),
                               float(self.lut_meta['X_STEP']))
-            print('output pixel size in (lat, lon) in degree: {}'.format(self.lalo_step))
+            print(f'output pixel size in (lat, lon) in degree: {self.lalo_step}')
 
             # parameter 2 - SNWE (output grid)
             lat0 = float(self.lut_meta['Y_FIRST'])
@@ -533,7 +536,7 @@ class resample:
                          lat0 + self.lalo_step[0] * dest_box[1],  # N - y0
                          lon0 + self.lalo_step[1] * dest_box[0],  # W - x0
                          lon0 + self.lalo_step[1] * dest_box[2])  # E - x1
-            print('output area extent in (S, N, W, E) in degree: {}'.format(self.SNWE))
+            print(f'output area extent in (S, N, W, E) in degree: {self.SNWE}')
 
             # parameter 3 - length / width (output grid)
             self.length = dest_box[3] - dest_box[1]
@@ -636,8 +639,8 @@ class resample:
         # resample
         if interp_method.startswith('near'):
             if print_msg:
-                msg = '{} resampling with pyresample.kd_tree '.format(interp_method)
-                msg += 'using {} CPU cores in {} segments ...'.format(nprocs, num_segment)
+                msg = f'{interp_method} resampling with pyresample.kd_tree '
+                msg += f'using {nprocs} CPU cores in {num_segment} segments ...'
                 print(msg)
             dest_data = pr.kd_tree.resample_nearest(src_def,
                                                     src_data,
@@ -650,8 +653,8 @@ class resample:
 
         elif interp_method.endswith('linear'):
             if print_msg:
-                msg = '{} resampling with pyresample.bilinear '.format(interp_method)
-                msg += 'using {} CPU cores ...'.format(nprocs)
+                msg = f'{interp_method} resampling with pyresample.bilinear '
+                msg += f'using {nprocs} CPU cores ...'
                 print(msg)
             dest_data = pr.bilinear.resample_bilinear(src_data,
                                                       src_def,

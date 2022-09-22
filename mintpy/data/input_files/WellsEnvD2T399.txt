@@ -28,5 +28,3 @@ first_frame         = 2781
 last_frame          = 2781
 beam_mode           = IS                   # S2,FB08,IW
 processing_software = GAMMA
-
-

@@ -7,33 +7,33 @@
 #   from mintpy.utils import readfile
 
 
-import os
-import sys
-import re
-import glob
 import datetime as dt
+import glob
+import os
+import re
+import sys
 import warnings
-import defusedxml.ElementTree as ET
 
+import defusedxml.ElementTree as ET
 import h5py
 import numpy as np
 
 from mintpy.objects import (
     DSET_UNIT_DICT,
+    HDFEOS,
     geometry,
     giantIfgramStack,
     giantTimeseries,
     ifgramStack,
+    sensor,
     timeseries,
-    HDFEOS,
 )
-from mintpy.objects import sensor
 from mintpy.utils import ptime, utils0 as ut
 
 SPEED_OF_LIGHT = 299792458  # meters per second
 
 
-standardMetadataKeys = {
+STD_METADATA_KEYS = {
     # ROI_PAC/MintPy attributes
     'ALOOKS'             : ['azimuth_looks'],
     'RLOOKS'             : ['range_looks'],
@@ -345,7 +345,7 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
     # a) if all digit, e.g. YYYYMMDD
     # b) if in isoformat(), YYYY-MM-DDTHH:MM, etc.
     if all(x.isdigit() or x[:4].isdigit() for x in datasetName):
-        datasetName = ['{}-{}'.format(ds_3d_list[0], x) for x in datasetName]
+        datasetName = [f'{ds_3d_list[0]}-{x}' for x in datasetName]
 
     # Input Argument: decompose slice list into dsFamily and inputDateList
     dsFamily = datasetName[0].split('-')[0]
@@ -357,13 +357,13 @@ def read_hdf5_file(fname, datasetName=None, box=None, xstep=1, ystep=1, print_ms
         # get dataset object
         dsNames = [i for i in [datasetName[0], dsFamily] if i in f.keys()]
         # support for old mintpy-v0.x files
-        dsNamesOld = [i for i in slice_list if '/{}'.format(datasetName[0]) in i]
+        dsNamesOld = [i for i in slice_list if f'/{datasetName[0]}' in i]
         if len(dsNames) > 0:
             ds = f[dsNames[0]]
         elif len(dsNamesOld) > 0:
             ds = f[dsNamesOld[0]]
         else:
-            raise ValueError('input dataset {} not found in file {}'.format(datasetName, fname))
+            raise ValueError(f'input dataset {datasetName} not found in file {fname}')
 
         # output size for >=2D dataset if x/ystep > 1
         xsize = int((box[2] - box[0]) / xstep)
@@ -647,7 +647,7 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
                 band = slice_list.index(datasetName) + 1
 
     else:
-        print('Unknown InSAR processor: {}'.format(processor))
+        print(f'Unknown InSAR processor: {processor}')
 
     # reading
     if processor in ['gdal', 'gmtsar', 'hyp3', 'cosicorr']:
@@ -736,15 +736,17 @@ def get_slice_list(fname, no_complex=False):
         else:
             ## Find slice by walking through the file structure
             length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+
             def get_hdf5_2d_dataset(name, obj):
                 global slice_list
                 if isinstance(obj, h5py.Dataset) and obj.shape[-2:] == (length, width):
                     if obj.ndim == 2:
                         slice_list.append(name)
                     elif obj.ndim == 3:
-                        slice_list += ['{}-{}'.format(name, i+1) for i in range(obj.shape[0])]
+                        slice_list += [f'{name}-{i+1}' for i in range(obj.shape[0])]
                     else:
-                        warnings.warn('file has un-defined {}D dataset: {}'.format(obj.ndim, name))
+                        warnings.warn(f'file has un-defined {obj.ndim}D dataset: {name}')
+
             slice_list = []
             with h5py.File(fname, 'r') as f:
                 f.visititems(get_hdf5_2d_dataset)
@@ -784,7 +786,7 @@ def get_slice_list(fname, no_complex=False):
             slice_list = ['latitude', 'longitude', 'height']
 
         else:
-            slice_list = ['band{}'.format(i+1) for i in range(num_band)]
+            slice_list = [f'band{i+1}' for i in range(num_band)]
 
     return slice_list
 
@@ -858,7 +860,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
     fbase, fext = os.path.splitext(os.path.basename(fname))
     fext = fext.lower()
     if not os.path.isfile(fname):
-        msg = 'input file not existed: {}\n'.format(fname)
+        msg = f'input file not existed: {fname}\n'
         msg += 'current directory: '+os.getcwd()
         raise Exception(msg)
 
@@ -919,6 +921,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             # otherwise, grab the list of attrs in HDF5 file
             # and use the attrs with most items
             global atr_list
+
             def get_hdf5_attrs(name, obj):
                 global atr_list
                 if len(obj.attrs) > 0 and 'WIDTH' in obj.attrs.keys():
@@ -955,10 +958,12 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             else:
                 # get the 1st dataset in deeper levels
                 global ds_list
+
                 def get_hdf5_dataset(name, obj):
                     global ds_list
                     if isinstance(obj, h5py.Dataset) and obj.ndim >= 2:
                         ds_list.append(obj)
+
                 ds_list = []
                 f.visititems(get_hdf5_dataset)
                 if ds_list:
@@ -1064,7 +1069,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
         if fext in GDAL_FILE_EXTS and not os.path.isfile(fname + '.rsc'):
             metafiles = [fname]
         elif len(metafiles) == 0:
-            raise FileNotFoundError('No metadata file found for data file: {}'.format(fname))
+            raise FileNotFoundError(f'No metadata file found for data file: {fname}')
 
         atr = {}
         # PROCESSOR
@@ -1188,10 +1193,8 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
     return atr
 
 
-def standardize_metadata(metaDictIn, standardKeys=None):
+def standardize_metadata(metaDictIn, standardKeys=STD_METADATA_KEYS):
     """Convert metadata input ROI_PAC/MintPy format (for metadata with the same values)."""
-    if standardKeys is None:
-        standardKeys = standardMetadataKeys
 
     # make a copy
     metaDict = dict()
@@ -1229,7 +1232,7 @@ def read_template(fname, delimiter='=', skip_chars=None):
 
     # read input text file / string
     if os.path.isfile(fname):
-        with open(fname, 'r') as f:
+        with open(fname) as f:
             lines = f.readlines()
     elif isinstance(fname, str):
         lines = fname.split('\n')
@@ -1270,7 +1273,7 @@ def read_roipac_rsc(fname, delimiter=' '):
         atr = readfile.read_roipac_rsc('filt_101120_110220_c10.unw.rsc')
     """
     # read .rsc file
-    with open(fname, 'r') as f:
+    with open(fname) as f:
         lines = f.readlines()
 
     # convert list of str into dict
@@ -1298,7 +1301,7 @@ def read_gamma_par(fname, delimiter=':', skiprows=3):
                     Attributes dictionary
     """
     # Read txt file
-    with open(fname, 'r') as f:
+    with open(fname) as f:
         lines = f.readlines()[skiprows:]
 
     # convert list of str into dict
@@ -1402,9 +1405,9 @@ def read_isce_xml(fname):
             v_step  = float(e_step.find('value').text)  if e_step  is not None else None
             v_first = float(e_first.find('value').text) if e_first is not None else None
             if v_step and v_first and abs(v_step) < 1. and abs(v_step) > 1e-7:
-                xmlDict['{}_STEP'.format(prefix)] = v_step
-                xmlDict['{}_FIRST'.format(prefix)] = v_first - v_step / 2.
-                xmlDict['{}_UNIT'.format(prefix)] = 'degrees'
+                xmlDict[f'{prefix}_STEP'] = v_step
+                xmlDict[f'{prefix}_FIRST'] = v_first - v_step / 2.
+                xmlDict[f'{prefix}_UNIT'] = 'degrees'
 
         # data_type
         xmlDict['data_type'] = DATA_TYPE_ISCE2NUMPY[xmlDict['data_type'].lower()]
@@ -1525,7 +1528,7 @@ def read_uavsar_ann(fname, comment=';', delimiter='='):
     """
     # read the entirer text file into list of strings
     lines = None
-    with open(fname, 'r') as f:
+    with open(fname) as f:
         lines = f.readlines()
 
     # convert the list of strings into a dict object
@@ -1549,7 +1552,7 @@ def read_gmtsar_prm(fname, delimiter='='):
                     Dictionary of keys and values in the PRM file.
     """
     # read .prm file
-    with open(fname, 'r') as f:
+    with open(fname) as f:
         lines = f.readlines()
 
     # convert list of str into dict
@@ -1686,7 +1689,7 @@ def read_snap_dim(fname):
 
     # date12
     dates = [x.get('name').split(':')[1].strip() for x in bases]
-    [date1, date2] = sorted([dt.datetime.strptime(x, '%d%b%Y').strftime('%Y%m%d') for x in dates])
+    [date1, date2] = sorted(dt.datetime.strptime(x, '%d%b%Y').strftime('%Y%m%d') for x in dates)
     dim_dict['DATE12'] = f'{date1[2:]}-{date2[2:]}'
 
     # p_baseline
@@ -1748,12 +1751,12 @@ def read_binary(fname, shape, box=None, data_type='float32', byte_order='l',
         box = (0, 0, width, length)
 
     if byte_order in ['b', 'big', 'big-endian', 'ieee-be']:
-        letter, digit = re.findall('(\d+|\D+)', data_type)
+        letter, digit = re.findall(r'(\d+|\D+)', data_type)
         # convert into short style: float32 --> c4
         if len(letter) > 1:
             letter = letter[0]
             digit = int(int(digit) / 8)
-        data_type = '>{}{}'.format(letter, digit)
+        data_type = f'>{letter}{digit}'
 
     # read data
     interleave = interleave.upper()
@@ -1902,7 +1905,7 @@ def read_gmt_lonlat_file(ll_file, SNWE=None, min_dist=10):
     """
     # read text file
     lines = None
-    with open(ll_file, 'r') as f:
+    with open(ll_file) as f:
         lines = f.readlines()
     lines = [x for x in lines if not x.startswith('#')]
 

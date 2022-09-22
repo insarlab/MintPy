@@ -2,7 +2,7 @@
 ##------------------------------- ISCE/topsStack ----------------------##
 #ssaraopt = --platform=SENTINEL-1A,SENTINEL-1B -r 128 -f 589,590,591,592,593  -e 2017-07-01
 #sentinelStack.boundingBox      = '-1 0.15 -91.6 -90.9'
-#sentinelStack.subswath         = 1 2     # comment 
+#sentinelStack.subswath         = 1 2     # comment
 #sentinelStack.numConnections   = 5       # comment
 #sentinelStack.azimuthLooks     = 5       # comment
 #sentinelStack.rangeLooks       = 15      # comment
@@ -35,4 +35,3 @@ mintpy.load.waterMaskFile    = None
 mintpy.reference.lalo        = -0.30,-91.43
 mintpy.topographicResidual.stepFuncDate  = 20170910,20180613  #eruption dates
 mintpy.deramp                = linear
-

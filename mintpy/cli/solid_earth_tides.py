@@ -12,7 +12,6 @@ import sys
 from mintpy.defaults.template import get_template_content
 from mintpy.utils.arg_utils import create_argument_parser
 
-
 ###############################################################
 TEMPLATE = get_template_content('correct_SET')
 
@@ -79,7 +78,7 @@ def cmd_line_parse(iargs=None):
 
         # check: metadata (coordinates + processors) - radar coord is NOT supported for gamma / roipac
         if coord1 == 'radar' and proc in ['gamma', 'roipac']:
-            msg = 'Radar-coded file from {} is NOT supported!'.format(proc)
+            msg = f'Radar-coded file from {proc} is NOT supported!'
             msg += '\n    Try to geocode the time-series & geometry files and re-run with them instead.'
             raise ValueError(msg)
 

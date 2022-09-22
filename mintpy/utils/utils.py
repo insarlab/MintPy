@@ -7,8 +7,9 @@
 #   from mintpy.utils import utils as ut
 
 
-import os
 import errno
+import os
+
 import numpy as np
 from scipy.ndimage import map_coordinates
 
@@ -18,12 +19,11 @@ from mintpy.objects import (
     ifgramStack,
     timeseries,
 )
-
-from mintpy.utils import ptime, readfile, attribute as attr
-from mintpy.utils.utils0 import *
-from mintpy.utils.utils1 import *
 from mintpy.objects.coord import coordinate
 from mintpy.objects.resample import resample
+from mintpy.utils import attribute as attr, ptime, readfile
+from mintpy.utils.utils0 import *
+from mintpy.utils.utils1 import *
 
 
 #################################################################################
@@ -171,8 +171,8 @@ def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_
     coord = coordinate(atr, lookup_file=lookup_file)
     y, x = coord.geo2radar(lat, lon)[0:2]
     if print_msg:
-        print('input lat / lon: {} / {}'.format(lat, lon))
-        print('corresponding y / x: {} / {}'.format(y, x))
+        print(f'input lat / lon: {lat} / {lon}')
+        print(f'corresponding y / x: {y} / {x}')
 
     # reference pixel
     ref_y, ref_x = None, None
@@ -213,7 +213,7 @@ def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None, zero_first=True,
 
     # read displacement
     if print_msg:
-        print('input y / x: {} / {}'.format(y, x))
+        print(f'input y / x: {y} / {x}')
     box = (x, y, x+1, y+1)
     dis = readfile.read(ts_file, box=box)[0]
     dis_std = None
@@ -232,7 +232,7 @@ def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None, zero_first=True,
             dis_std = median_abs_deviation(dis_win)
 
         else:
-            raise ValueError('un-recognized method: {}'.format(method))
+            raise ValueError(f'un-recognized method: {method}')
 
     # reference pixel
     if ref_y is not None:
@@ -253,7 +253,7 @@ def read_timeseries_yx(y, x, ts_file, ref_y=None, ref_x=None, zero_first=True,
         dis *= 1000.
         dis_std = None if dis_std is None else dis_std * 1000.
     else:
-        raise ValueError('un-supported output unit: {}'.format(unit))
+        raise ValueError(f'un-supported output unit: {unit}')
 
     return dates, dis, dis_std
 
@@ -289,9 +289,9 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
     if not all(0<= i < width and 0<= j < length for i,j in zip([x0,x1], [y0,y1])):
         msg = 'input start/end point is out of data coverage'
-        msg += '\nstart_yx: {}'.format(start_yx)
-        msg += '\nend_yx:{}'.format(end_yx)
-        msg += '\ndata size: ({}, {})'.format(length, width)
+        msg += f'\nstart_yx: {start_yx}'
+        msg += f'\nend_yx:{end_yx}'
+        msg += f'\ndata size: ({length}, {width})'
         raise ValueError(msg)
 
     # Determine points coordinates along the line
@@ -313,8 +313,8 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
             'quintic': 5,
         }
         if interpolation not in interpolate_name2order.keys():
-            msg = 'un-supported interpolation method: {}'.format(interpolation)
-            msg += '\navailable methods: {}'.format(interpolate_name2order.keys())
+            msg = f'un-supported interpolation method: {interpolation}'
+            msg += f'\navailable methods: {interpolate_name2order.keys()}'
             raise ValueError(msg)
         interp_order = interpolate_name2order[interpolation.lower()]
         # run interpolation
@@ -420,14 +420,14 @@ def prepare_geo_los_geometry(geom_file, unit='rad'):
                 atr       - dict, metadata in geo-coordinate
     """
 
-    print('prepare LOS geometry in geo-coordinates from file: {}'.format(geom_file))
+    print(f'prepare LOS geometry in geo-coordinates from file: {geom_file}')
     atr = readfile.read_attribute(geom_file)
 
-    print('read incidenceAngle from file: {}'.format(geom_file))
+    print(f'read incidenceAngle from file: {geom_file}')
     inc_angle = readfile.read(geom_file, datasetName='incidenceAngle')[0]
 
     if 'azimuthAngle' in readfile.get_dataset_list(geom_file):
-        print('read azimuthAngle   from file: {}'.format(geom_file))
+        print(f'read azimuthAngle   from file: {geom_file}')
         az_angle  = readfile.read(geom_file, datasetName='azimuthAngle')[0]
     else:
         print('use the HEADING attribute as the mean heading angle')

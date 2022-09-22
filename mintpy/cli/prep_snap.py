@@ -9,12 +9,12 @@
 
 import os
 import sys
-from mintpy.utils.arg_utils import create_argument_parser
 
+from mintpy.utils.arg_utils import create_argument_parser
 
 ##################################################################################################
 NOTE = """
-  For each interferogram, coherence or unwrapped .dim product this script will prepare.rsc 
+  For each interferogram, coherence or unwrapped .dim product this script will prepare.rsc
   metadata files for for mintpy based on .dim metadata file.
 
   The SNAP .dim file should contain all the required sensor / baseline metadata needed.
@@ -24,7 +24,7 @@ NOTE = """
 
   The file name should be yyyymmdd_yyyymmdd_type_tc.dim where type can be filt/unw/coh.
 
-  The DEM should be prepared by adding an elevation file to a coregestered product - 
+  The DEM should be prepared by adding an elevation file to a coregestered product -
   then extract the elevation band only. Use Band Subset > save BEAM-DIMAP file
 
   Currently only works for geocoded (terrain correction step in SNAP) interferograms.
@@ -60,7 +60,7 @@ def cmd_line_parse(iargs=None):
     # check: input file extensions
     for fname in inps.file:
         if not fname.endswith('.img'):
-            raise ValueError('Input data file does NOT end with .img: {}'.format(fname))
+            raise ValueError(f'Input data file does NOT end with .img: {fname}')
 
     return inps
 
@@ -90,7 +90,7 @@ def prep_snap_metadata(snap_file):
     # (over)write to rsc file if input atr has more items
     if not set(atr.items()).issubset(set(atr_orig.items())):
         atr_out = {**atr_orig, **atr}
-        print('write metadata to {} '.format(os.path.basename(rsc_file)))
+        print(f'write metadata to {os.path.basename(rsc_file)} ')
         writefile.write_roipac_rsc(atr_out, out_file=rsc_file)
 
     return rsc_file

@@ -6,15 +6,15 @@
 ############################################################
 
 
-import sys
 import argparse
+import random
+import sys
 from datetime import datetime as dt
 
 import h5py
 import numpy as np
-import random
-from mintpy.utils import readfile, ptime
 
+from mintpy.utils import ptime, readfile
 
 ##############################################################################################
 EXAMPLE = """example:

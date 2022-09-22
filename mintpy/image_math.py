@@ -6,7 +6,9 @@
 
 
 import os
+
 import numpy as np
+
 from mintpy.utils import readfile, writefile
 
 
@@ -34,7 +36,7 @@ def file_operation(fname, operator, operand, out_file=None):
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
     print('input is '+k+' file: '+fname)
-    print('operation: file %s %f' % (operator, operand))
+    print(f'operation: file {operator} {operand:f}')
 
     # default output filename
     if not out_file:

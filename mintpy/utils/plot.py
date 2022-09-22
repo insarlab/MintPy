@@ -8,28 +8,23 @@
 #     from mintpy.utils import plot as pp
 
 
-import os
 import argparse
-import warnings
 import datetime as dt
+import os
+import warnings
+
 import h5py
-import numpy as np
 import matplotlib as mpl
-from matplotlib import pyplot as plt, ticker, dates as mdates
+import numpy as np
+from matplotlib import dates as mdates, pyplot as plt, ticker
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import stats
 
-from mintpy.objects.coord import coordinate
+from mintpy.objects import TIMESERIES_DSET_NAMES, TIMESERIES_KEY_NAMES
 from mintpy.objects.colors import ColormapExt
-from mintpy.objects import TIMESERIES_KEY_NAMES, TIMESERIES_DSET_NAMES
+from mintpy.objects.coord import coordinate
+from mintpy.utils import network as pnet, ptime, readfile, utils0 as ut0
 from mintpy.utils.map import draw_lalo_label, draw_scalebar
-from mintpy.utils import (
-    ptime,
-    readfile,
-    network as pnet,
-    utils0 as ut0,
-)
-
 
 min_figsize_single = 6.0       # default min size in inch, for single plot
 max_figsize_single = 10.0      # default min size in inch, for single plot
@@ -58,7 +53,7 @@ def read_pts2inps(inps, coord_obj):
     ## 1. merge pts_file/lalo/yx into pts_yx
     # pts_file --> pts_lalo
     if inps.pts_file and os.path.isfile(inps.pts_file):
-        print('read points lat/lon from text file: {}'.format(inps.pts_file))
+        print(f'read points lat/lon from text file: {inps.pts_file}')
         inps.pts_lalo = np.loadtxt(inps.pts_file, usecols=(0,1), dtype=bytes).astype(float)
 
     # pts_lalo --> pts_yx
@@ -128,7 +123,7 @@ def auto_figure_size(ds_shape, scale=1.0, disp_cbar=False, disp_slider=False,
     # fig_shape/scale --> fig_size
     fig_size = [i*fig_scale*scale for i in fig_shape]
     if print_msg:
-        print('figure size : [{:.2f}, {:.2f}]'.format(fig_size[0], fig_size[1]))
+        print(f'figure size : [{fig_size[0]:.2f}, {fig_size[1]:.2f}]')
 
     return fig_size
 
@@ -177,7 +172,7 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
         if not ref_date:
             fig_title = datasetNames[0]
         else:
-            fig_title = '{}_{}'.format(ref_date, datasetNames[0])
+            fig_title = f'{ref_date}_{datasetNames[0]}'
 
         # grab info of applied phase corrections from filename
         if 'timeseries' in fname:
@@ -211,7 +206,7 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
         # show dataset name for multi-band binry files
         num_band = int(atr.get('BANDS', '1'))
         if num_band > 1 and len(datasetNames) == 1:
-            fig_title += ' - {}'.format(datasetNames[0])
+            fig_title += f' - {datasetNames[0]}'
 
     # suffix for subset
     if inps_dict.get('pix_box', None):
@@ -302,7 +297,7 @@ def auto_multilook_num(box, num_time, max_memory=4.0, print_msg=True):
 
     # print out msg
     if multilook_num > 1 and print_msg:
-        print('total number of pixels: {:.1E}'.format(num_pixel))
+        print(f'total number of pixels: {num_pixel:.1E}')
         print('* multilook {0} by {0} with nearest interpolation for display to save memory'.format(multilook_num))
 
     return multilook_num
@@ -406,7 +401,7 @@ def auto_adjust_colormap_lut_and_disp_limit(data, num_multilook=1, max_discrete_
             vlim = [min_val - vstep/2, max_val + vstep/2]
 
             if print_msg:
-                msg = 'data has uniform and limited number ({} <= {})'.format(unique_values.size, max_discrete_num_step)
+                msg = f'data has uniform and limited number ({unique_values.size} <= {max_discrete_num_step})'
                 msg += ' of unique values --> discretize colormap'
                 print(msg)
 
@@ -616,8 +611,8 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
         pbase12[i] = pbaseList[s_idx] - pbaseList[m_idx]
         tbase12[i] = tbaseList[s_idx] - tbaseList[m_idx]
     if print_msg:
-        print('max perpendicular baseline: {:.2f} m'.format(np.max(np.abs(pbase12))))
-        print('max temporal      baseline: {} days'.format(np.max(tbase12)))
+        print(f'max perpendicular baseline: {np.max(np.abs(pbase12)):.2f} m')
+        print(f'max temporal      baseline: {np.max(tbase12)} days')
 
     ## Keep/Drop - date12
     date12List_keep = sorted(list(set(date12List) - set(date12List_drop)))
@@ -640,7 +635,7 @@ def plot_network(ax, date12List, dateList, pbaseList, p_dict={}, date12List_drop
         disp_max = p_dict['vlim'][1]
         if print_msg:
             print('showing coherence')
-            print('data range: {}'.format([data_min, data_max]))
+            print(f'data range: {[data_min, data_max]}')
             print('display range: {}'.format(p_dict['vlim']))
 
         if p_dict['disp_cbar']:
@@ -798,7 +793,7 @@ def plot_rotate_diag_coherence_matrix(ax, coh_list, date12_list, date12_list_dro
     elif isinstance(cmap, mpl.colors.LinearSegmentedColormap):
         pass
     else:
-        raise ValueError('unrecognized colormap input: {}'.format(cmap))
+        raise ValueError(f'unrecognized colormap input: {cmap}')
 
     #calculate coherence matrix
     coh_mat = pnet.coherence_matrix(date12_list, coh_list)
@@ -808,7 +803,7 @@ def plot_rotate_diag_coherence_matrix(ax, coh_list, date12_list, date12_list_dro
         s_dates = [i.split('_')[1] for i in date12_list]
         date_list = sorted(list(set(m_dates + s_dates)))
         for date12 in date12_list_drop:
-            idx1, idx2 = [date_list.index(i) for i in date12.split('_')]
+            idx1, idx2 = (date_list.index(i) for i in date12.split('_'))
             coh_mat[idx2, idx1] = np.nan
 
     #aux info
@@ -884,7 +879,7 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
         dateList = sorted(list(set(m_dates + s_dates)))
         # Set dropped pairs' value to nan, in upper triangle only.
         for date12 in date12List_drop:
-            idx1, idx2 = [dateList.index(i) for i in date12.split('_')]
+            idx1, idx2 = (dateList.index(i) for i in date12.split('_'))
             coh_mat[idx1, idx2] = np.nan
 
     # Show diagonal value as black, to be distinguished from un-selected interferograms
@@ -976,7 +971,7 @@ def plot_num_triplet_with_nonzero_integer_ambiguity(fname, display=False, font_s
     fig.tight_layout()
 
     # output
-    out_fig = '{}.png'.format(os.path.splitext(fname)[0])
+    out_fig = f'{os.path.splitext(fname)[0]}.png'
     print('plot and save figure to file', out_fig)
     fig.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=300)
 
@@ -1030,7 +1025,7 @@ def plot_timeseries_rms(rms_file, cutoff=3, out_fig=None, disp_fig=True,
     # Plot rms_threshold line
     (ax, xmin, xmax) = auto_adjust_xaxis_date(ax, datevector, font_size, every_year=tick_year_num)
     ax.plot(np.array([xmin, xmax]), np.array([rms_threshold, rms_threshold]), '--k',
-            label='Median Abs Dev * {}'.format(cutoff))
+            label=f'Median Abs Dev * {cutoff}')
 
     # axis format
     ax = auto_adjust_yaxis(ax, np.append(rms, rms_threshold), font_size, ymin=0.0)
@@ -1065,7 +1060,7 @@ def plot_timeseries_rms(rms_file, cutoff=3, out_fig=None, disp_fig=True,
         yoff = (ymax - ymin) * 0.1
         if (rms_threshold - ymin) > 0.5 * (ymax - ymin):
             yoff *= -1.
-        ax.annotate('Median Abs Dev * {}'.format(cutoff),
+        ax.annotate(f'Median Abs Dev * {cutoff}',
                     xy=(xmin + (xmax-xmin)*0.05, rms_threshold + yoff ),
                     color='k', xycoords='data', fontsize=font_size)
 
@@ -1111,7 +1106,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     # query for GNSS stations
     site_names, site_lats, site_lons = gps.search_gps(SNWE, start_date, end_date)
     if site_names.size == 0:
-        warnings.warn('No GNSS found within {} during {} - {}!'.format(SNWE, start_date, end_date))
+        warnings.warn(f'No GNSS found within {SNWE} during {start_date} - {end_date}!')
         print('Continue without GNSS plots.')
         return ax
 
@@ -1130,25 +1125,25 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             raise ValueError('No GNSS left after --mask-gps!')
 
     if inps.ref_gps_site and inps.ref_gps_site not in site_names:
-        raise ValueError('input reference GPS site "{}" not available!'.format(inps.ref_gps_site))
+        raise ValueError(f'input reference GPS site "{inps.ref_gps_site}" not available!')
 
     k = metadata['FILE_TYPE']
     if inps.gps_component and k not in ['velocity', 'timeseries', 'displacement']:
         inps.gps_component = None
-        vprint('WARNING: --gps-comp is not implemented for {} file yet, set --gps-comp = None and continue'.format(k))
+        vprint(f'WARNING: --gps-comp is not implemented for {k} file yet, set --gps-comp = None and continue')
 
     if inps.gps_component:
         # plot GPS velocity/displacement along LOS direction
         vprint('-'*30)
         msg = 'plotting GPS '
         msg += 'velocity' if k == 'velocity' else 'displacement'
-        msg += ' in {} direction'.format(inps.gps_component)
-        msg += ' with respect to {} ...'.format(inps.ref_gps_site) if inps.ref_gps_site else ' ...'
+        msg += f' in {inps.gps_component} direction'
+        msg += f' with respect to {inps.ref_gps_site} ...' if inps.ref_gps_site else ' ...'
         vprint(msg)
-        vprint('number of available GPS stations: {}'.format(len(site_names)))
-        vprint('start date: {}'.format(start_date))
-        vprint('end   date: {}'.format(end_date))
-        vprint('components projection: {}'.format(inps.gps_component))
+        vprint(f'number of available GPS stations: {len(site_names)}')
+        vprint(f'start date: {start_date}')
+        vprint(f'end   date: {end_date}')
+        vprint(f'components projection: {inps.gps_component}')
 
         # get GPS LOS observations
         # save absolute value to support both spatially relative and absolute comparison
@@ -1182,7 +1177,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         if inps.ex_gps_sites:
             ex_flag = np.array([x in inps.ex_gps_sites for x in site_names], dtype=np.bool_)
             if np.sum(ex_flag) > 0:
-                vprint('ignore the following specified stations:\n  {}'.format(site_names[ex_flag]))
+                vprint(f'ignore the following specified stations:\n  {site_names[ex_flag]}')
                 site_names = site_names[~ex_flag]
                 site_lats = site_lats[~ex_flag]
                 site_lons = site_lons[~ex_flag]
@@ -1190,8 +1185,8 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
 
         nan_flag = np.isnan(site_obs)
         if np.sum(nan_flag) > 0:
-            vprint('ignore the following {} stations due to limited overlap/observations in time'.format(np.sum(nan_flag)))
-            vprint('  {}'.format(site_names[nan_flag]))
+            vprint(f'ignore the following {np.sum(nan_flag)} stations due to limited overlap/observations in time')
+            vprint(f'  {site_names[nan_flag]}')
 
         # plot
         for lat, lon, obs in zip(site_lats, site_lons, site_obs):
@@ -1245,7 +1240,7 @@ def plot_insar_vs_gps_scatter(vel_file, csv_file='gps_enu2los.csv', msk_file=Non
     num_col = len(col_names)
     col_types = ['U10'] + ['f8'] * (num_col - 1)
 
-    print('read GPS velocity from file: {}'.format(csv_file))
+    print(f'read GPS velocity from file: {csv_file}')
     fc = np.genfromtxt(csv_file, dtype=col_types, delimiter=',', names=True)
     sites = fc['Site']
     lats = fc['Lat']
@@ -1261,7 +1256,7 @@ def plot_insar_vs_gps_scatter(vel_file, csv_file='gps_enu2los.csv', msk_file=Non
             gps_obs = gps_obs[~ex_flag]
 
     # read InSAR velocity
-    print('read InSAR velocity from file: {}'.format(vel_file))
+    print(f'read InSAR velocity from file: {vel_file}')
     atr = readfile.read_attribute(vel_file)
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
     ys, xs = coordinate(atr).geo2radar(lats, lons)[:2]
@@ -1276,7 +1271,7 @@ def plot_insar_vs_gps_scatter(vel_file, csv_file='gps_enu2los.csv', msk_file=Non
         if (0 <= x < width) and (0 <= y < length) and msk[y, x]:
             box = (x, y, x+1, y+1)
             insar_obs[i] = readfile.read(vel_file, datasetName='velocity', box=box)[0] * unit_fac
-        prog_bar.update(i+1, suffix='{}/{} {}'.format(i+1, num_site, sites[i]))
+        prog_bar.update(i+1, suffix=f'{i+1}/{num_site} {sites[i]}')
     prog_bar.close()
 
     off_med = np.nanmedian(insar_obs - gps_obs)
@@ -1290,10 +1285,10 @@ def plot_insar_vs_gps_scatter(vel_file, csv_file='gps_enu2los.csv', msk_file=Non
         insar_obs -= insar_obs[ref_ind]
 
     # remove NaN value
-    print('removing sites with NaN values in GPS or {}'.format(xname))
+    print(f'removing sites with NaN values in GPS or {xname}')
     flag = np.multiply(~np.isnan(insar_obs), ~np.isnan(gps_obs))
     if vlim is not None:
-        print('pruning sites with value range: {} {}'.format(vlim, disp_unit))
+        print(f'pruning sites with value range: {vlim} {disp_unit}')
         flag *= gps_obs >= vlim[0]
         flag *= gps_obs <= vlim[1]
         flag *= insar_obs >= vlim[0]
@@ -1304,13 +1299,13 @@ def plot_insar_vs_gps_scatter(vel_file, csv_file='gps_enu2los.csv', msk_file=Non
     sites = sites[flag]
 
     # stats
-    print('GPS   min/max: {:.2f} / {:.2f}'.format(np.nanmin(gps_obs), np.nanmax(gps_obs)))
-    print('InSAR min/max: {:.2f} / {:.2f}'.format(np.nanmin(insar_obs), np.nanmax(insar_obs)))
+    print(f'GPS   min/max: {np.nanmin(gps_obs):.2f} / {np.nanmax(gps_obs):.2f}')
+    print(f'InSAR min/max: {np.nanmin(insar_obs):.2f} / {np.nanmax(insar_obs):.2f}')
 
     rmse = np.sqrt(np.sum((insar_obs - gps_obs)**2) / (gps_obs.size - 1))
     r2 = stats.linregress(insar_obs, gps_obs)[2]
-    print('RMSE = {:.2f} {}'.format(rmse, disp_unit))
-    print('R^2 = {:.2f}'.format(r2))
+    print(f'RMSE = {rmse:.2f} {disp_unit}')
+    print(f'R^2 = {r2:.2f}')
 
     # preliminary outlier detection
     diff_mad = ut0.median_abs_deviation(abs(insar_obs - gps_obs), center=0)
@@ -1341,7 +1336,7 @@ def plot_insar_vs_gps_scatter(vel_file, csv_file='gps_enu2los.csv', msk_file=Non
         fig.tight_layout()
 
         # output
-        out_fig = '{}_vs_gps_scatter.pdf'.format(xname.lower())
+        out_fig = f'{xname.lower()}_vs_gps_scatter.pdf'
         plt.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=300)
         print('save figure to file', out_fig)
         plt.show()
@@ -1474,7 +1469,7 @@ def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False, wrap_range=[-
         # wrap is supported for displacement file types only
         if disp_unit.split('/')[0] not in ['radian', 'm', 'cm', 'mm', '1', 'pixel']:
             wrap = False
-            print('WARNING: re-wrap is disabled for disp_unit = {}'.format(disp_unit))
+            print(f'WARNING: re-wrap is disabled for disp_unit = {disp_unit}')
         elif disp_unit.split('/')[0] != 'radian' and (wrap_range[1] - wrap_range[0]) == 2.*np.pi:
             disp_unit = 'radian'
             if print_msg:
@@ -1623,7 +1618,7 @@ def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False, 
     if wrap:
         data = wrap_range[0] + np.mod(data - wrap_range[0], wrap_range[1] - wrap_range[0])
         if print_msg:
-            print('re-wrapping data to {}'.format(wrap_range))
+            print(f're-wrapping data to {wrap_range}')
     return data, disp_unit, disp_scale, wrap
 
 
@@ -1652,7 +1647,7 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
 
             # check coordinate
             if os.path.basename(fname).startswith('geo_'):
-                mask_file = 'geo_{}'.format(mask_file)
+                mask_file = f'geo_{mask_file}'
 
             # absolute path and file existence
             mask_file = os.path.join(os.path.dirname(fname), str(mask_file))
@@ -1671,7 +1666,7 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
                 dsName=None
                 if all(meta['FILE_TYPE'] == 'ifgramStack' for meta in [atr, atr_msk]):
                     date12 = datasetName.split('-')[1]
-                    dsName = 'connectComponent-{}'.format(date12)
+                    dsName = f'connectComponent-{date12}'
 
                 # read mask data
                 mask = readfile.read(mask_file,
@@ -1682,7 +1677,7 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
 
             else:
                 mask_file = None
-                msg = 'WARNING: input file has different size from mask file: {}'.format(mask_file)
+                msg = f'WARNING: input file has different size from mask file: {mask_file}'
                 msg += '\n    data file {} row/column number: {} / {}'.format(fname, atr['LENGTH'], atr['WIDTH'])
                 msg += '\n    mask file {} row/column number: {} / {}'.format(mask_file, atr_msk['LENGTH'], atr_msk['WIDTH'])
                 msg += '\n    Continue without mask.'
@@ -1696,13 +1691,13 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
         if datasetName.split('-')[0] in TIMESERIES_DSET_NAMES:
             mask_file = fname
             mask = readfile.read(fname, datasetName='mask', print_msg=print_msg)[0]
-            vprint('read {} contained mask dataset.'.format(k))
+            vprint(f'read {k} contained mask dataset.')
 
     elif fname.endswith('PARAMS.h5'):
         mask_file = fname
         with h5py.File(fname, 'r') as f:
             mask = f['cmask'][:] == 1.
-        vprint('read {} contained cmask dataset'.format(os.path.basename(fname)))
+        vprint(f'read {os.path.basename(fname)} contained cmask dataset')
 
     # multilook
     if mask is not None and xstep * ystep > 1:
@@ -1737,7 +1732,7 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
 
 def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
     if print_msg:
-        print('reading DEM: {} ...'.format(os.path.basename(dem_file)))
+        print(f'reading DEM: {os.path.basename(dem_file)} ...')
 
     dem_metadata = readfile.read_attribute(dem_file)
     # read dem data

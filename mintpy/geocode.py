@@ -7,16 +7,11 @@
 
 import os
 import time
+
 import numpy as np
 
 from mintpy.objects.resample import resample
-from mintpy.utils import (
-    readfile,
-    writefile,
-    utils as ut,
-    attribute as attr,
-)
-
+from mintpy.utils import attribute as attr, readfile, utils as ut, writefile
 
 
 ############################################################################################
@@ -32,7 +27,7 @@ def auto_output_filename(in_file, inps):
     if inps.out_dir:
         if not os.path.isdir(inps.out_dir):
             os.makedirs(inps.out_dir)
-            print('create directory: {}'.format(inps.out_dir))
+            print(f'create directory: {inps.out_dir}')
         out_file = os.path.join(inps.out_dir, out_file)
 
     return out_file
@@ -65,7 +60,7 @@ def run_geocode(inps):
 
     # resample input files one by one
     for infile in inps.file:
-        print('-' * 50+'\nresampling file: {}'.format(infile))
+        print('-' * 50+f'\nresampling file: {infile}')
         atr = readfile.read_attribute(infile, datasetName=inps.dset)
         outfile = auto_output_filename(infile, inps)
 
@@ -92,7 +87,7 @@ def run_geocode(inps):
 
         ## run
         dsNames = readfile.get_dataset_list(infile, datasetName=inps.dset)
-        maxDigit = max([len(i) for i in dsNames])
+        maxDigit = max(len(i) for i in dsNames)
         for dsName in dsNames:
 
             if not file_is_hdf5:
@@ -125,7 +120,7 @@ def run_geocode(inps):
                              dest_box[0], dest_box[2]]
 
                 if file_is_hdf5:
-                    print('write data in block {} to file: {}'.format(block, outfile))
+                    print(f'write data in block {block} to file: {outfile}')
                     writefile.write_hdf5_block(outfile,
                                                data=data,
                                                datasetName=dsName,
@@ -150,6 +145,6 @@ def run_geocode(inps):
 
     # used time
     m, s = divmod(time.time()-start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs.\n')
 
     return outfile

@@ -1,6 +1,6 @@
 # scotland.cpt
 #
-# extracted from Scotland_topographic_map-fr.svg 
+# extracted from Scotland_topographic_map-fr.svg
 # Author Eric Gaba (Wikimedia Commons user: Sting)
 # Licence: Creative Commons Attribution-ShareAlike 3.0 Unported
 # (see http://creativecommons.org/licenses/by-sa/3.0/deed.en)
@@ -18,7 +18,7 @@
 -200  185 227 255 -100  185 227 255
 -100  200 235 255 -50   200 235 255
 -50   216 242 254 0     216 242 254
-0     172 208 165 50    172 208 165 
+0     172 208 165 50    172 208 165
 50    148 191 139 100   148 191 139
 100   168 198 143 200   168 198 143
 200   189 204 150 400   189 204 150

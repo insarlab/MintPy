@@ -6,12 +6,13 @@
 
 
 import os
+
 import numpy as np
 
+from mintpy.mask import mask_matrix
+from mintpy.multilook import multilook_data
 from mintpy.objects import timeseries
 from mintpy.utils import readfile, writefile
-from mintpy.multilook import multilook_data
-from mintpy.mask import mask_matrix
 
 
 ############################################################################
@@ -81,23 +82,23 @@ def estimate_phase_elevation_ratio(dem, ts_data, inps):
         plt.xlabel('Elevation (m)')
         plt.ylabel('Range Change (m)')
         plt.title(title)
-        out_file = 'phase_elevation_ratio_{}.png'.format(title)
+        out_file = f'phase_elevation_ratio_{title}.png'
         plt.savefig(out_file, bbox_inches='tight', transparent=True, dpi=300)
-        print('save to {}'.format(out_file))
+        print(f'save to {out_file}')
         plt.show()
 
     print('----------------------------------------------------------')
     print('Empirical tropospheric delay correction based on phase/elevation ratio (Doin et al., 2009)')
-    print('polynomial order: {}'.format(inps.poly_order))
+    print(f'polynomial order: {inps.poly_order}')
 
     if inps.num_multilook > 1:
-        print('number of multilook: {} (multilook data for estimation only)'.format(inps.num_multilook))
+        print(f'number of multilook: {inps.num_multilook} (multilook data for estimation only)')
         mask = multilook_data(mask, inps.num_multilook, inps.num_multilook)
         dem = multilook_data(dem, inps.num_multilook, inps.num_multilook)
         ts_data = multilook_data(ts_data, inps.num_multilook, inps.num_multilook)
 
     if inps.threshold > 0.:
-        print('correlation threshold: {}'.format(inps.threshold))
+        print(f'correlation threshold: {inps.threshold}')
 
     mask_nan = ~np.isnan(dem)
     dem = dem[mask_nan]
@@ -114,9 +115,9 @@ def estimate_phase_elevation_ratio(dem, ts_data, inps):
             comp_data = np.vstack((dem, phase))
             cc = np.corrcoef(comp_data)[0, 1]
             topo_trop_corr[i] = cc
-        print('{}: {:>5.2f}'.format(inps.date_list[i], cc))
+        print(f'{inps.date_list[i]}: {cc:>5.2f}')
     topo_trop_corr = np.abs(topo_trop_corr)
-    print('average correlation magnitude: {:>5.2f}'.format(np.nanmean(topo_trop_corr)))
+    print(f'average correlation magnitude: {np.nanmean(topo_trop_corr):>5.2f}')
 
     # estimate ratio parameter
     print('----------------------------------------------------------')

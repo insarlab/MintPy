@@ -7,13 +7,14 @@
 
 import os
 import re
+
 import h5py
 import numpy as np
-from skimage.transform import resize
 from scipy.interpolate import RegularGridInterpolator as RGI
+from skimage.transform import resize
 
 from mintpy.objects import timeseries
-from mintpy.utils import ptime, readfile, writefile, utils as ut
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 
 ############################################################################
@@ -105,18 +106,18 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, gacos_dir):
         date_list = ptime.yyyymmdd(date12.split('-'))
 
     else:
-        raise ValueError('un-supported displacement file type: {}'.format(ftype))
+        raise ValueError(f'un-supported displacement file type: {ftype}')
 
     # list of dates --> list of ztd files
     ztd_files = []
     flag = np.ones(len(date_list), dtype=np.bool_)
     for i, date_str in enumerate(date_list):
-        fnames = [os.path.join(gacos_dir, '{}{}'.format(date_str, fext)) for fext in ['.ztd', '.ztd.tif']]
+        fnames = [os.path.join(gacos_dir, f'{date_str}{fext}') for fext in ['.ztd', '.ztd.tif']]
         fnames = [f for f in fnames if os.path.exists(f)]
         if len(fnames) > 0:
             ztd_files.append(fnames[0])
         else:
-            print('WARNING: NO ztd file found for {}! Continue without it.'.format(date_str))
+            print(f'WARNING: NO ztd file found for {date_str}! Continue without it.')
             flag[i] = False
 
     # update date_list to be consistent with ztd_files
@@ -130,7 +131,7 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, gacos_dir):
 
     def run_or_skip(ztd_files, tropo_file, geom_file):
         print('update mode: ON')
-        print('output file: {}'.format(tropo_file))
+        print(f'output file: {tropo_file}')
         flag = 'skip'
 
         # check existence and modification time
@@ -142,7 +143,7 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, gacos_dir):
             print('1) output file exists and is newer than all ZTD files.')
 
             # check dataset size in space / time
-            date_list = [str(re.findall('\d{8}', i)[0]) for i in ztd_files]
+            date_list = [str(re.findall(r'\d{8}', i)[0]) for i in ztd_files]
             if (get_dataset_size(tropo_file) != get_dataset_size(geom_file)
                     or any(i not in timeseries(tropo_file).get_date_list() for i in date_list)):
                 flag = 'run'
@@ -160,7 +161,7 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, gacos_dir):
                         print('3) output file is fully written.')
 
         # result
-        print('run or skip: {}'.format(flag))
+        print(f'run or skip: {flag}')
         return flag
 
     if run_or_skip(ztd_files, tropo_file, geom_file) == 'skip':
@@ -193,7 +194,7 @@ def calculate_delay_timeseries(tropo_file, dis_file, geom_file, gacos_dir):
     ## calculate phase delay
 
     # read geometry
-    print('read incidenceAngle from file: {}'.format(geom_file))
+    print(f'read incidenceAngle from file: {geom_file}')
     inc_angle = readfile.read(geom_file, datasetName='incidenceAngle')[0]
     cos_inc_angle = np.cos(inc_angle * np.pi / 180.0)
 
@@ -254,16 +255,16 @@ def correct_single_ifgram(dis_file, tropo_file, cor_dis_file):
     print('\n------------------------------------------------------------------------------')
     print('correcting relative delay for input interferogram')
 
-    print('read data from {}'.format(dis_file))
+    print(f'read data from {dis_file}')
     data, atr = readfile.read(dis_file, datasetName='phase')
     date1, date2 = ptime.yyyymmdd(atr['DATE12'].split('-'))
 
-    print('calc tropospheric delay for {}-{} from {}'.format(date1, date2, tropo_file))
-    tropo  = readfile.read(tropo_file, datasetName='timeseries-{}'.format(date2))[0]
-    tropo -= readfile.read(tropo_file, datasetName='timeseries-{}'.format(date1))[0]
+    print(f'calc tropospheric delay for {date1}-{date2} from {tropo_file}')
+    tropo  = readfile.read(tropo_file, datasetName=f'timeseries-{date2}')[0]
+    tropo -= readfile.read(tropo_file, datasetName=f'timeseries-{date1}')[0]
     tropo *= -4. * np.pi / float(atr['WAVELENGTH'])
 
-    print('write corrected data to {}'.format(cor_dis_file))
+    print(f'write corrected data to {cor_dis_file}')
     writefile.write(data - tropo, cor_dis_file, atr)
     return cor_dis_file
 

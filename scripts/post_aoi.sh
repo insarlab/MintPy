@@ -51,7 +51,7 @@ if [ $subset -eq 1 ]; then
     $view -f ts.h5
 
     #generate_mask.py -f velocity_ex_masked.h5 -m 0.01 -o mask_vel_1.h5
-    #diff.py Mask_tempCoh.h5 mask_vel_1.h5 Mask_tempCoh_dis.h5 
+    #diff.py Mask_tempCoh.h5 mask_vel_1.h5 Mask_tempCoh_dis.h5
 fi
 msk='Mask_tempCoh_dis.h5'
 dem='gsi10m_30m.dem'
@@ -87,7 +87,7 @@ if [ $velocity -eq 1 ]; then
     view='view.py -u cm -m -2 -M 2 -D '$dem' --nodisplay --mask '${msk}' -f '
     $view velocity_ex.h5
     masking.py -f velocity_ex.h5 -m $msk
-    save_kmz.py -f velocity_ex_masked.h5 -m -0.02 -M 0.02 
+    save_kmz.py -f velocity_ex_masked.h5 -m -0.02 -M 0.02
 fi
 
 
@@ -138,4 +138,3 @@ if [ $key_ifg -eq 1 ]; then
     tsview='tsview.py -f '${ts}' -E drop_date.txt -F '$ts' -r 3 -D '$dem' -v '$vel' --displacement -a -0.05 -b 0.05 --rect-color black'
     #$tsview --lalo 31.9076,130.8284 -l -3 -h 3 --nodisplay --zoom-y 200:900 --zoom-x 700:1600
 fi
-

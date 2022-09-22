@@ -6,11 +6,12 @@
 
 
 import os
+
 import numpy as np
-from matplotlib import pyplot as plt, ticker, colors
+from matplotlib import colors, pyplot as plt, ticker
 
 from mintpy.objects import timeseries
-from mintpy.utils import readfile, writefile, s1_utils, plot as pp
+from mintpy.utils import plot as pp, readfile, s1_utils, writefile
 
 
 ####################################################################################
@@ -21,7 +22,7 @@ def estimate_s1ab_range_bias(ts_file, mask_file=None, safe_list_file=None):
                 mask_file      - str, path of the mask file, e.g., maskResInv.h5 file.
                 safe_list_file - str, path of the SAFE_files.txt file
     Returns:    bias_list      - list of float32, median bias per subswath in meters
-                bias_est       - 2D np.ndarray in size of (length, width) in float32, bias in meters    
+                bias_est       - 2D np.ndarray in size of (length, width) in float32, bias in meters
                 mask_list      - list of 2D np.ndarray in size of (length, width) in bool
     """
     mintpy_dir = os.path.dirname(ts_file)
@@ -56,9 +57,9 @@ def estimate_s1ab_range_bias(ts_file, mask_file=None, safe_list_file=None):
     flag = readfile.read(geom_file, datasetName='height')[0] != 0
     mask_list = s1_utils.get_subswath_masks(flag, cut_overlap_in_half=False)[:3]
     bias_list = [np.nanmedian(bias_est[x]) for x in mask_list]
-    print('IW1 : {:.3f} m'.format(bias_list[0]))
-    print('IW2 : {:.3f} m'.format(bias_list[1]))
-    print('IW3 : {:.3f} m'.format(bias_list[2]))
+    print(f'IW1 : {bias_list[0]:.3f} m')
+    print(f'IW2 : {bias_list[1]:.3f} m')
+    print(f'IW3 : {bias_list[2]:.3f} m')
 
     return bias_list, bias_est, mask_list
 
@@ -150,7 +151,7 @@ def write_s1ab_bias_file(bias_file, bias_list, geom_file, force=False):
     atr = readfile.read_attribute(geom_file)
     atr['FILE_TYPE'] = 'offset'
     atr['UNIT'] = 'm'
-    print('writing S1A/B range bias to file: {}'.format(bias_file))
+    print(f'writing S1A/B range bias to file: {bias_file}')
     writefile.write(bias_mat, out_file=bias_file, metadata=atr)
 
     return bias_file
@@ -188,11 +189,11 @@ def correct_s1ab_range_bias(ts_file, bias_file, ts_cor_file=None, safe_list_file
     mask = ts_data == 0
     ts_data[s1b_flag] -= np.tile(bias.reshape(1, -1), (np.sum(s1b_flag), 1))
     ts_data[mask] = 0                    # Do not change zero value in the input TS file
-    ts_data[:, np.isnan(bias)] = np.nan  # set to nan for pixels with nan in bias file 
+    ts_data[:, np.isnan(bias)] = np.nan  # set to nan for pixels with nan in bias file
 
     # write file
     if not ts_cor_file:
-        ts_cor_file = '{}_S1Bias.h5'.format(os.path.splitext(ts_file)[0])
+        ts_cor_file = f'{os.path.splitext(ts_file)[0]}_S1Bias.h5'
     atr = readfile.read_attribute(ts_file)
     length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
@@ -220,9 +221,9 @@ def run_s1ab_range_bias(inps):
             # option 1 - use the hardwired value from section VII-A in Yunjun et al. (2022)
             bias_list = [0.087, 0.106, 0.123]   # m
             print('Used hardwired S1A/B range bias values from Yunjun et al. (2022):')
-            print('IW1 : {:.3f} m'.format(bias_list[0]))
-            print('IW2 : {:.3f} m'.format(bias_list[1]))
-            print('IW3 : {:.3f} m'.format(bias_list[2]))
+            print(f'IW1 : {bias_list[0]:.3f} m')
+            print(f'IW2 : {bias_list[1]:.3f} m')
+            print(f'IW3 : {bias_list[2]:.3f} m')
 
         else:
             # option 2 - estimate from the time series of its dataset itself

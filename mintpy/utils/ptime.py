@@ -6,11 +6,14 @@
 # Recommend import:
 #   from mintpy.utils import ptime
 
+import datetime as dt
 import os
 import re
-import datetime as dt
+
 import numpy as np
+
 from mintpy.objects.progress import progressBar
+
 
 ################################################################
 def get_compact_isoformat(date_str):
@@ -45,35 +48,35 @@ def get_date_str_format(date_str):
         pass
 
     date_str_format = None
-    if len(re.findall('\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', date_str)) > 0:
+    if len(re.findall(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', date_str)) > 0:
         date_str_format = '%Y-%m-%dT%H:%M:%S'
 
-    elif len(re.findall('\d{4}-\d{2}-\d{2}T\d{2}:\d{2}', date_str)) > 0:
+    elif len(re.findall(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}', date_str)) > 0:
         date_str_format = '%Y-%m-%dT%H:%M'
 
-    elif len(re.findall('\d{4}-\d{2}-\d{2}T\d{2}', date_str)) > 0:
+    elif len(re.findall(r'\d{4}-\d{2}-\d{2}T\d{2}', date_str)) > 0:
         date_str_format = '%Y-%m-%dT%H'
 
-    elif len(re.findall('\d{4}-\d{2}-\d{2}', date_str)) > 0:
+    elif len(re.findall(r'\d{4}-\d{2}-\d{2}', date_str)) > 0:
         date_str_format = '%Y-%m-%d'
 
-    elif len(re.findall('\d{8}T\d{6}', date_str)) > 0:
+    elif len(re.findall(r'\d{8}T\d{6}', date_str)) > 0:
         date_str_format = '%Y%m%dT%H%M%S'
 
-    elif len(re.findall('\d{8}T\d{4}', date_str)) > 0:
+    elif len(re.findall(r'\d{8}T\d{4}', date_str)) > 0:
         date_str_format = '%Y%m%dT%H%M'
 
-    elif len(re.findall('\d{6}T\d{4}', date_str)) > 0:
+    elif len(re.findall(r'\d{6}T\d{4}', date_str)) > 0:
         date_str_format = '%y%m%dT%H%M'
 
-    elif len(re.findall('\d{8}', date_str)) > 0:
+    elif len(re.findall(r'\d{8}', date_str)) > 0:
         date_str_format = '%Y%m%d'
 
-    elif len(re.findall('\d{6}', date_str)) > 0:
+    elif len(re.findall(r'\d{6}', date_str)) > 0:
         date_str_format = '%y%m%d'
 
     else:
-        raise ValueError('un-recognized date string format for "{}"!'.format(date_str))
+        raise ValueError(f'un-recognized date string format for "{date_str}"!')
 
     return date_str_format
 
@@ -87,9 +90,9 @@ def get_date12_from_path(file_path):
 
     # support date string format
     date12_fmts = [
-        '\d{8}T\d{4}[-_]\d{8}T\d{4}',   # %Y%m%dT%H%M
-        '\d{8}[-_]\d{8}',               # %Y%m%d
-        '\d{6}[-_]\d{6}',               # %y%m%d
+        r'\d{8}T\d{4}[-_]\d{8}T\d{4}',   # %Y%m%dT%H%M
+        r'\d{8}[-_]\d{8}',               # %Y%m%d
+        r'\d{6}[-_]\d{6}',               # %y%m%d
     ]
 
     # search date12 pattern part by part in the file path
@@ -163,7 +166,7 @@ def decimal_year2datetime(years):
         x = float(x)
         year = np.floor(x).astype(int)
         yday = np.floor((x - year) * 365.25).astype(int) + 1
-        x2 = '{:d}-{:d}'.format(year, yday)
+        x2 = f'{year:d}-{yday:d}'
         try:
             xt = dt.datetime.strptime(x2, "%Y-%j")
         except:
@@ -179,7 +182,7 @@ def decimal_year2datetime(years):
             years_dt.append(decimal_year2datetime1(year))
 
     else:
-        raise ValueError('unrecognized input format: {}. Only float/str/list are supported.'.format(type(years)))
+        raise ValueError(f'unrecognized input format: {type(years)}. Only float/str/list are supported.')
     return years_dt
 
 
@@ -292,7 +295,7 @@ def yyyymmdd_date12(date12_list_in):
     # convert
     m_dates = yyyymmdd([i.replace('-', '_').split('_')[0] for i in date12_list])
     s_dates = yyyymmdd([i.replace('-', '_').split('_')[1] for i in date12_list])
-    date12_list_out = ['{}_{}'.format(m, s) for m, s in zip(m_dates, s_dates)]
+    date12_list_out = [f'{m}_{s}' for m, s in zip(m_dates, s_dates)]
 
     # ensure same type output
     if isinstance(date12_list_in, str):
@@ -315,7 +318,7 @@ def yymmdd_date12(date12_list_in):
     # convert
     m_dates = yymmdd([i.replace('-', '_').split('_')[0] for i in date12_list])
     s_dates = yymmdd([i.replace('-', '_').split('_')[1] for i in date12_list])
-    date12_list_out = ['{}-{}'.format(m, s) for m, s in zip(m_dates, s_dates)]
+    date12_list_out = [f'{m}-{s}' for m, s in zip(m_dates, s_dates)]
 
     # ensure same type output
     if isinstance(date12_list_in, str):
@@ -332,7 +335,7 @@ def read_date_txt(date_file):
 
     if os.path.isfile(date_file):
         # read text file
-        with open(date_file, 'r') as f:
+        with open(date_file) as f:
             date_list = f.read().splitlines()
 
         # format
@@ -496,7 +499,8 @@ def utc2solar_time(utc_time, longitude):
     Example:    utc_time = dt.datetime(2015, 2, 9, 3, 18, 48)
                 solar_time = ptime.utc2solar_time(utc_time, 130.7)
     """
-    from math import pi, cos, sin
+    from math import cos, pi, sin
+
     # use 366 for leap years
     if utc_time.year % 4 == 0 and utc_time.year % 100 != 0 and utc_time.year % 400 != 0:
         year_len = 366

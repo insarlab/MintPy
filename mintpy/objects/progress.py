@@ -94,7 +94,7 @@ class progressBar:
 
             # figure out where to put the percentage (roughly centered)
             percentPlace = int(len(self.prog_bar)/2 - len(str(percentDone)))
-            percentString = ' {}% '.format(percentDone)
+            percentString = f' {percentDone}% '
 
             # slice the percentage into the bar
             self.prog_bar = ''.join([self.prog_bar[0:percentPlace],
@@ -108,7 +108,7 @@ class progressBar:
             if percentDone > 0:
                 elapse_time = time.time() - self.start_time
                 remain_time = int(elapse_time * (100./percentDone-1))
-                self.prog_bar += '{:5d}s / {:5d}s'.format(int(elapse_time), int(remain_time))
+                self.prog_bar += f'{int(elapse_time):5d}s / {int(remain_time):5d}s'
 
     def update(self, value, every=1, suffix=''):
         """ Updates the amount, and writes to stdout.

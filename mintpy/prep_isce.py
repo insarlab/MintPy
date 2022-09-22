@@ -5,8 +5,9 @@
 ############################################################
 
 
-import os
 import glob
+import os
+
 import numpy as np
 
 from mintpy.utils import (
@@ -16,7 +17,6 @@ from mintpy.utils import (
     readfile,
     writefile,
 )
-
 
 GEOMETRY_PREFIXS = ['hgt', 'lat', 'lon', 'los', 'shadowMask', 'waterMask', 'incLocal']
 
@@ -35,7 +35,7 @@ def add_ifgram_metadata(metadata_in, dates=[], baseline_dict={}):
         metadata[k] = metadata_in[k]
 
     # DATE12
-    metadata['DATE12'] = '{}-{}'.format(dates[0][2:], dates[1][2:])
+    metadata['DATE12'] = f'{dates[0][2:]}-{dates[1][2:]}'
 
     # P_BASELINE*
     if baseline_dict:
@@ -61,16 +61,16 @@ def prepare_geometry(geom_dir, geom_files=[], metadata=dict(), processor='tops',
     # default file basenames
     if not geom_files:
         if processor in ['tops', 'stripmap']:
-            geom_files = ['{}.rdr'.format(i) for i in GEOMETRY_PREFIXS]
+            geom_files = [f'{i}.rdr' for i in GEOMETRY_PREFIXS]
 
         elif processor in ['alosStack']:
             alooks = metadata['ALOOKS']
             rlooks = metadata['RLOOKS']
             fexts = ['.hgt', '.lat', '.lon', '.los', '.wbd']
-            geom_files = ['*_{}rlks_{}alks{}'.format(rlooks, alooks, fext) for fext in fexts]
+            geom_files = [f'*_{rlooks}rlks_{alooks}alks{fext}' for fext in fexts]
 
         else:
-            raise Exception('unknown processor: {}'.format(processor))
+            raise Exception(f'unknown processor: {processor}')
 
     # get absolute file paths
     geom_files = [os.path.join(geom_dir, i) for i in geom_files]
@@ -108,7 +108,7 @@ def gen_random_baseline_timeseries(obs_file, max_bperp=10):
     with date12 values grabbed from the directory names of the given path pattern from obs_file.
     """
     # list of dates
-    date12s = sorted([os.path.basename(os.path.dirname(x)) for x in glob.glob(obs_file)])
+    date12s = sorted(os.path.basename(os.path.dirname(x)) for x in glob.glob(obs_file))
     date1s = [x.split('_')[0] for x in date12s]
     date2s = [x.split('_')[1] for x in date12s]
     date_list = sorted(list(set(date1s + date2s)))
@@ -134,7 +134,7 @@ def prepare_stack(obs_file, metadata=dict(), baseline_dict=dict(), update_mode=T
     print(f'preparing RSC file for: {obs_file}')
     isce_files = sorted(glob.glob(obs_file))
     if len(isce_files) == 0:
-        raise FileNotFoundError('NO file found with path pattern: {}'.format(obs_file))
+        raise FileNotFoundError(f'NO file found with path pattern: {obs_file}')
 
     # make a copy
     meta = {**metadata}

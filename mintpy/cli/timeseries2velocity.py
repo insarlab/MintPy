@@ -12,7 +12,6 @@ import sys
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import arg_utils
 
-
 ############################################################################
 TEMPLATE = get_template_content('velocity')
 
@@ -153,8 +152,8 @@ def cmd_line_parse(iargs=None):
         ref_y, ref_x = coord.geo2radar(inps.ref_lalo[0], inps.ref_lalo[1])[:2]
         if ref_y is not None and ref_x is not None:
             inps.ref_yx = [ref_y, ref_x]
-            print('input reference point in (lat, lon): ({}, {})'.format(inps.ref_lalo[0], inps.ref_lalo[1]))
-            print('corresponding   point in (y, x): ({}, {})'.format(inps.ref_yx[0], inps.ref_yx[1]))
+            print(f'input reference point in (lat, lon): ({inps.ref_lalo[0]}, {inps.ref_lalo[1]})')
+            print(f'corresponding   point in (y, x): ({inps.ref_yx[0]}, {inps.ref_yx[1]})')
 
     # default: --output option
     if not inps.outfile:
@@ -221,7 +220,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.timeseries2velocity import run_or_skip, run_timeseries2time_func
+    from mintpy.timeseries2velocity import (
+        run_or_skip,
+        run_timeseries2time_func,
+    )
 
     # run or skip
     if inps.update_mode and run_or_skip(inps) == 'skip':

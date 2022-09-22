@@ -6,12 +6,13 @@
 ############################################################
 
 
-import h5py
 import argparse
+
+import h5py
 import numpy as np
+
 from mintpy.objects import timeseries
 from mintpy.utils import ptime, readfile
-
 
 ################################################################################
 EXAMPLE = """example:
@@ -49,7 +50,7 @@ def run_2to3_timeseries(py2_file, py3_file):
         print('reading time-series ...')
         prog_bar = ptime.progressBar(maxValue=num_date)
         for i in range(num_date):
-            ts_data[i, :, :] = f['timeseries/{}'.format(date_list[i])][:]
+            ts_data[i, :, :] = f[f'timeseries/{date_list[i]}'][:]
             prog_bar.update(i+1, suffix=date_list[i])
         prog_bar.close()
 
@@ -60,7 +61,7 @@ def run_2to3_timeseries(py2_file, py3_file):
         bperp = np.array([float(i) for i in atr['P_BASELINE_TIMESERIES'].split()], dtype=np.float32)
     else:
         bperp = None
-    for key in ['P_BASELINE_TIMESERIES', 
+    for key in ['P_BASELINE_TIMESERIES',
                 'P_BASELINE_TOP_TIMESERIES',
                 'P_BASELINE_BOTTOM_TIMESERIES']:
         if key in atr.keys():

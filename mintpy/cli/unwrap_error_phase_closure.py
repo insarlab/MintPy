@@ -12,7 +12,6 @@ import sys
 from mintpy.defaults.template import get_template_content
 from mintpy.utils.arg_utils import create_argument_parser
 
-
 ##########################################################################################
 TEMPLATE1 = get_template_content('quick_overview')
 TEMPLATE2 = get_template_content('correct_unwrap_error')
@@ -40,7 +39,7 @@ NOTE = """
      at least of one triangular connection to form a closed circle; with more
      closed circles comes better constrain.
   b. majority rightness: most of interferograms have to be right (no unwrapping
-     error) to correct the wrong minority. And if most of interferograms have 
+     error) to correct the wrong minority. And if most of interferograms have
      unwrapping errors, then the minor right interferograms will turn into wrong.
 """
 
@@ -110,7 +109,7 @@ def cmd_line_parse(iargs=None):
 
     # default: --out-dataset option
     if not inps.datasetNameOut:
-        inps.datasetNameOut = '{}_phaseClosure'.format(inps.datasetNameIn)
+        inps.datasetNameOut = f'{inps.datasetNameIn}_phaseClosure'
 
     return inps
 
@@ -119,8 +118,8 @@ def read_template2inps(template_file, inps):
     """Read input template options into Namespace inps"""
     print('read options from tempalte file: '+os.path.basename(inps.template_file))
 
-    from mintpy.utils import readfile, utils1 as ut
     from mintpy.unwrap_error_phase_closure import key_prefix
+    from mintpy.utils import readfile, utils1 as ut
 
     inpsDict = vars(inps)
     template = readfile.read_template(template_file)
@@ -146,7 +145,9 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.unwrap_error_phase_closure import run_unwrap_error_phase_closure
+    from mintpy.unwrap_error_phase_closure import (
+        run_unwrap_error_phase_closure,
+    )
 
     # run
     run_unwrap_error_phase_closure(inps)

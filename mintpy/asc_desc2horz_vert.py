@@ -6,8 +6,9 @@
 
 
 import numpy as np
+
 from mintpy.objects import sensor
-from mintpy.utils import ptime, readfile, writefile, utils as ut
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 
 ################################################################################
@@ -161,7 +162,7 @@ def run_asc_desc2horz_vert(inps):
     lon_step = float(atr_list[0]['X_STEP'])
     length = int(round((S - N) / lat_step))
     width  = int(round((E - W) / lon_step))
-    print('overlaping area in SNWE: {}'.format((S, N, W, E)))
+    print(f'overlaping area in SNWE: {(S, N, W, E)}')
 
 
     ## 2. read LOS data and geometry
@@ -229,7 +230,7 @@ def run_asc_desc2horz_vert(inps):
     ref_file = inps.file[0] if atr_list[0]['FILE_TYPE'] == 'timeseries' else None
 
     if inps.one_outfile:
-        print('write asc/desc/horz/vert datasets into {}'.format(inps.one_outfile))
+        print(f'write asc/desc/horz/vert datasets into {inps.one_outfile}')
         dsDict = {}
         for i, atr_i in enumerate(atr_list):
             # dataset name for LOS data

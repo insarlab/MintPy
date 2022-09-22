@@ -7,8 +7,8 @@
 
 
 import sys
-from mintpy.utils.arg_utils import create_argument_parser
 
+from mintpy.utils.arg_utils import create_argument_parser
 
 ################################################################################
 REFERENCE = """reference:
@@ -108,18 +108,18 @@ def cmd_line_parse(iargs=None):
         msg  = '\tfile1: {}, Y/X_STEP: {} / {} {}\n'.format(inps.file[0], atr1['Y_STEP'], atr1['X_STEP'], atr1.get('X_UNIT', 'degrees'))
         msg += '\tfile2: {}, Y/X_STEP: {} / {} {}\n'.format(inps.file[1], atr2['Y_STEP'], atr2['X_STEP'], atr2.get('X_UNIT', 'degrees'))
         msg += '\tRe-run geocode.py --lat-step --lon-step to make them consistent.'
-        raise ValueError('input files do NOT have the same spatial resolution\n{}'.format(msg))
+        raise ValueError(f'input files do NOT have the same spatial resolution\n{msg}')
 
     # check: if input reference points are consistent
-    ref_lat1, ref_lon1 = [float(atr1[i]) for i in ['REF_LAT', 'REF_LON']]
-    ref_lat2, ref_lon2 = [float(atr2[i]) for i in ['REF_LAT', 'REF_LON']]
+    ref_lat1, ref_lon1 = (float(atr1[i]) for i in ['REF_LAT', 'REF_LON'])
+    ref_lat2, ref_lon2 = (float(atr2[i]) for i in ['REF_LAT', 'REF_LON'])
     ref_y_diff = abs((ref_lat1 - ref_lat2) / float(atr1['Y_STEP']))
     ref_x_diff = abs((ref_lon1 - ref_lon2) / float(atr1['X_STEP']))
     if any(ref_diff > inps.max_ref_yx_diff for ref_diff in [ref_y_diff, ref_x_diff]):
-        msg = 'REF_LAT/LON difference between input files > {} pixels!\n'.format(inps.max_ref_yx_diff)
+        msg = f'REF_LAT/LON difference between input files > {inps.max_ref_yx_diff} pixels!\n'
         for fname, ref_lat, ref_lon in zip(inps.file, [ref_lat1, ref_lat2], [ref_lon1, ref_lon2]):
-            msg += 'file: {}\n'.format(fname)
-            msg += '\tREF_LAT/LON: [{:.8f}, {:.8f}]\n'.format(ref_lat, ref_lon)
+            msg += f'file: {fname}\n'
+            msg += f'\tREF_LAT/LON: [{ref_lat:.8f}, {ref_lon:.8f}]\n'
         raise ValueError(msg)
 
     return inps

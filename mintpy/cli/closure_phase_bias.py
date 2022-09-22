@@ -11,7 +11,6 @@ import sys
 
 from mintpy.utils import arg_utils
 
-
 ################################################################################
 REFERENCE = """reference:
   Y. Zheng, H. Fattahi, P. Agram, M. Simons and P. Rosen, (2022). On Closure Phase

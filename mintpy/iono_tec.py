@@ -13,10 +13,10 @@ import h5py
 import numpy as np
 
 import mintpy
-from mintpy.objects import timeseries, ionex
+from mintpy.objects import ionex, timeseries
 from mintpy.objects.constants import SPEED_OF_LIGHT
-from mintpy.utils import ptime, readfile, writefile, utils as ut
 from mintpy.simulation import iono
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 
 #####################################################################################
@@ -28,7 +28,7 @@ def get_dataset_size(fname):
 
 def run_or_skip(iono_file, grib_files, dis_file, geom_file):
     print('update mode: ON')
-    print('output file: {}'.format(iono_file))
+    print(f'output file: {iono_file}')
     flag = 'skip'
 
     # check existence and modification time
@@ -60,7 +60,7 @@ def run_or_skip(iono_file, grib_files, dis_file, geom_file):
                     print('3) output file is fully written.')
 
     # result
-    print('run or skip: {}'.format(flag))
+    print(f'run or skip: {flag}')
     return flag
 
 
@@ -114,7 +114,7 @@ def download_ionex_files(date_list, tec_dir, sol_code='jpl'):
     else:
         for i, date_str in enumerate(date_list2dload):
             print('-'*20)
-            print('DATE {}/{}: {}'.format(i+1, num_date2dload, date_str))
+            print(f'DATE {i+1}/{num_date2dload}: {date_str}')
             ionex.dload_ionex(date_str, tec_dir=tec_dir, sol_code=sol_code, print_msg=True)
 
         # print file size info, after downloading
@@ -223,7 +223,7 @@ def vtec2iono_ramp_timeseries(date_list, vtec_list, geom_file, iono_file, sub_te
     # thus this is not used by default.
     if sub_tec_ratio is not None:
         if ut.is_number(sub_tec_ratio):
-            print('multiply VTEC by {}'.format(sub_tec_ratio))
+            print(f'multiply VTEC by {sub_tec_ratio}')
             vtec_list = (np.array(vtec_list).flatten() * float(sub_tec_ratio)).tolist()
 
         elif sub_tec_ratio.startswith('adap'):
@@ -325,6 +325,6 @@ def run_iono_tec(inps):
 
     # used time
     m, s = divmod(time.time() - start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs.\n')
 
     return

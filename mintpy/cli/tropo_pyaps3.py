@@ -8,8 +8,8 @@
 
 import os
 import sys
-from mintpy.utils.arg_utils import create_argument_parser
 
+from mintpy.utils.arg_utils import create_argument_parser
 
 ###############################################################
 REFERENCE = """reference:
@@ -19,8 +19,8 @@ REFERENCE = """reference:
   Jolivet, R., P. S. Agram, N. Y. Lin, M. Simons, M. P. Doin, G. Peltzer, and Z. Li (2014), Improving
     InSAR geodesy using global atmospheric models, Journal of Geophysical Research: Solid Earth, 119(3),
     2324-2341, doi:10.1002/2013JB010588.
-  Hersbach, H., Bell, B., Berrisford, P., Hirahara, S., Horányi, A., Muñoz-Sabater, J., et al. (2020). 
-    The ERA5 global reanalysis. Quarterly Journal of the Royal Meteorological Society, 146(730), 
+  Hersbach, H., Bell, B., Berrisford, P., Hirahara, S., Horányi, A., Muñoz-Sabater, J., et al. (2020).
+    The ERA5 global reanalysis. Quarterly Journal of the Royal Meteorological Society, 146(730),
     1999–2049, doi:10.1002/qj.3803
 """
 
@@ -130,7 +130,7 @@ def cmd_line_parse(iargs=None):
     # check: existence of input files
     for fname in [inps.dis_file, inps.geom_file]:
         if fname and not os.path.isfile(fname):
-            raise FileNotFoundError('input file not exist: {}'.format(fname))
+            raise FileNotFoundError(f'input file not exist: {fname}')
 
     # check: required options (for date/time): --file OR --date-list
     if (not inps.dis_file and not inps.date_list):

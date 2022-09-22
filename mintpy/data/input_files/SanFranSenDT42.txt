@@ -17,4 +17,3 @@ mintpy.deramp               = no
 ## options to speedup the processing (fast but not the best)
 mintpy.networkInversion.weightFunc              = no
 mintpy.topographicResidual.pixelwiseGeometry    = no
-

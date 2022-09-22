@@ -5,8 +5,9 @@
 ############################################################
 
 
-import os
 import glob
+import os
+
 import numpy as np
 
 try:
@@ -14,7 +15,7 @@ try:
 except ImportError:
     raise ImportError('Can not import gdal!')
 
-from mintpy.utils import ptime, readfile, writefile, utils as ut
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 
 #########################################################################
@@ -30,9 +31,9 @@ def get_prm_files(ifg_dir):
 def get_multilook_number(ifg_dir, fbases=['corr', 'phase', 'phasefilt', 'unwrap']):
     """Get the number of multilook in range and azimuth direction."""
     # grab an arbitrary file in radar-coordiantes
-    rdr_files = [os.path.join(ifg_dir, '{}.grd'.format(i)) for i in fbases]
+    rdr_files = [os.path.join(ifg_dir, f'{i}.grd') for i in fbases]
     if len(rdr_files) == 0:
-        raise ValueError('No radar-coord files found in {} with suffix: {}'.format(ifg_dir, fbases))
+        raise ValueError(f'No radar-coord files found in {ifg_dir} with suffix: {fbases}')
 
     # read step info into multilook number
     ds = gdal.Open(rdr_files[0], gdal.GA_ReadOnly)
@@ -45,9 +46,9 @@ def get_multilook_number(ifg_dir, fbases=['corr', 'phase', 'phasefilt', 'unwrap'
 def get_lalo_ref(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasefilt', 'unwrap']):
     """Get the LAT/LON_REF1/2/3/4 from *_ll.grd file."""
     # grab an arbitrary file in geo-coordiantes
-    geo_files = [os.path.join(ifg_dir, '{}_ll.grd'.format(i)) for i in fbases]
+    geo_files = [os.path.join(ifg_dir, f'{i}_ll.grd') for i in fbases]
     if len(geo_files) == 0:
-        print('WARNING: No geo-coord files found in {} with suffix: {}'.format(ifg_dir, fbases))
+        print(f'WARNING: No geo-coord files found in {ifg_dir} with suffix: {fbases}')
         return prm_dict
 
     # read corners lat/lon info
@@ -88,9 +89,9 @@ def get_lalo_ref(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasefilt', 'unwra
 def get_slant_range_distance(ifg_dir, prm_dict, fbases=['corr', 'phase', 'phasefilt', 'unwrap']):
     """Get a constant slant range distance in the image center, for dataset in geo-coord."""
     # grab an arbitrary file in radar-coordiantes
-    rdr_files = [os.path.join(ifg_dir, '{}.grd'.format(i)) for i in fbases]
+    rdr_files = [os.path.join(ifg_dir, f'{i}.grd') for i in fbases]
     if len(rdr_files) == 0:
-        raise ValueError('No radar-coord files found in {} with suffix: {}'.format(ifg_dir, fbases))
+        raise ValueError(f'No radar-coord files found in {ifg_dir} with suffix: {fbases}')
 
     # read width from rdr_file
     ds = gdal.Open(rdr_files[0], gdal.GA_ReadOnly)
@@ -222,8 +223,8 @@ def prepare_stack(unw_files, meta, update_mode=True):
 
         # add DATE12
         prm_files = get_prm_files(ifg_dir)
-        date1, date2 = [os.path.splitext(os.path.basename(i))[0] for i in prm_files]
-        ifg_meta['DATE12'] = '{}-{}'.format(ptime.yymmdd(date1), ptime.yymmdd(date2))
+        date1, date2 = (os.path.splitext(os.path.basename(i))[0] for i in prm_files)
+        ifg_meta['DATE12'] = f'{ptime.yymmdd(date1)}-{ptime.yymmdd(date2)}'
 
         # and P_BASELINE_TOP/BOTTOM_HDR
         baseline_file = os.path.join(ifg_dir, 'baseline.txt')
@@ -234,7 +235,7 @@ def prepare_stack(unw_files, meta, update_mode=True):
         else:
             ifg_meta['P_BASELINE_TOP_HDR'] = '0'
             ifg_meta['P_BASELINE_BOTTOM_HDR'] = '0'
-            msg = 'WARNING: No baseline file found in: {}. '.format(baseline_file)
+            msg = f'WARNING: No baseline file found in: {baseline_file}. '
             msg += 'Set P_BASELINE* to 0 and continue.'
             print(msg)
 
@@ -247,7 +248,7 @@ def prepare_stack(unw_files, meta, update_mode=True):
             print_msg=False,
         )
 
-        prog_bar.update(i+1, suffix='{}_{}'.format(date1, date2))
+        prog_bar.update(i+1, suffix=f'{date1}_{date2}')
     prog_bar.close()
 
 

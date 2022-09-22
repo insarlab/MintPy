@@ -7,8 +7,8 @@
 
 
 import sys
-from mintpy.utils.arg_utils import create_argument_parser
 
+from mintpy.utils.arg_utils import create_argument_parser
 
 #########################################################################
 NOTE = """
@@ -53,7 +53,7 @@ NOTE = """
   Notes:
     HyP3 currently only supports generation of Sentinel-1 interferograms, so
     some Sentinel-1 metadata is hard-coded. If HyP3 adds processing of interferograms
-    from other satellites, changes will be needed. 
+    from other satellites, changes will be needed.
 """
 
 EXAMPLE = """example:

@@ -11,7 +11,7 @@ import time
 import h5py
 import numpy as np
 
-from mintpy.utils import readfile, writefile, utils as ut
+from mintpy.utils import readfile, utils as ut, writefile
 
 
 ################################################################################################
@@ -23,27 +23,27 @@ def run_or_skip(inps):
     # check output file vs input dataset
     if not inps.outfile or not os.path.isfile(inps.outfile):
         flag = 'run'
-        print('1) output file {} NOT exist.'.format(inps.outfile))
+        print(f'1) output file {inps.outfile} NOT exist.')
     else:
-        print('1) output file {} already exists.'.format(inps.outfile))
+        print(f'1) output file {inps.outfile} already exists.')
         with h5py.File(inps.file, 'r') as f:
             ti = float(f[inps.dset].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.file)))
         to = os.path.getmtime(inps.outfile)
         if ti > to:
             flag = 'run'
-            print('2) output file is NOT newer than input dataset: {}.'.format(inps.dset))
+            print(f'2) output file is NOT newer than input dataset: {inps.dset}.')
         else:
-            print('2) output file is newer than input dataset: {}.'.format(inps.dset))
+            print(f'2) output file is newer than input dataset: {inps.dset}.')
 
     # result
-    print('run or skip: {}.'.format(flag))
+    print(f'run or skip: {flag}.')
     return flag
 
 
 ################################################################################################
 def create_threshold_mask(inps):
     if inps.dset:
-        print('read %s %s' % (inps.file, inps.dset))
+        print(f'read {inps.file} {inps.dset}')
     else:
         print('read %s' % (inps.file))
     data, atr = readfile.read(inps.file, datasetName=inps.dset)
@@ -103,7 +103,7 @@ def create_threshold_mask(inps):
             raise ValueError('Input file MUST be a velocity file when using the --vstd option!')
         data_std = readfile.read(inps.file, datasetName='velocityStd')[0]
         mask[nanmask] *= (np.abs(data[nanmask]) > (inps.vstd_num * data_std[nanmask]))
-        print('exclude pixels according to the formula: |velocity| > {} * velocityStd'.format(inps.vstd_num))
+        print(f'exclude pixels according to the formula: |velocity| > {inps.vstd_num} * velocityStd')
 
     # subset in Y
     if inps.subset_y is not None:
@@ -124,14 +124,14 @@ def create_threshold_mask(inps):
         x, y, r = inps.ex_circle
         cmask = ut.get_circular_mask(x, y, r, (length, width))
         mask[cmask == 1] = 0
-        print('exclude pixels inside of circle defined as (x={}, y={}, r={})'.format(x, y, r))
+        print(f'exclude pixels inside of circle defined as (x={x}, y={y}, r={r})')
 
     # include circular area
     if inps.in_circle:
         x, y, r = inps.in_circle
         cmask = ut.get_circular_mask(x, y, r, (length, width))
         mask[cmask == 0] = 0
-        print('exclude pixels outside of circle defined as (x={}, y={}, r={})'.format(x, y, r))
+        print(f'exclude pixels outside of circle defined as (x={x}, y={y}, r={r})')
 
     # interactively select polygonal region of interest (ROI)
     if inps.roipoly:
@@ -151,10 +151,10 @@ def create_threshold_mask(inps):
         mask[base_data == float(inps.base_value)] = 0
 
         # message
-        msg = 'exclude pixels in base file {} '.format(os.path.basename(inps.base_file))
+        msg = f'exclude pixels in base file {os.path.basename(inps.base_file)} '
         if inps.base_dataset:
-            msg += 'dataset {} '.format(inps.base_dataset)
-        msg += 'with value == {}'.format(inps.base_value)
+            msg += f'dataset {inps.base_dataset} '
+        msg += f'with value == {inps.base_value}'
         print(msg)
 
     # revert
@@ -176,7 +176,7 @@ def create_mask(inps):
 
     start_time = time.time()
     ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
-    print('input {} file: {}'.format(ftype, inps.file))
+    print(f'input {ftype} file: {inps.file}')
 
     # create mask using non-zero
     if inps.nonzero and ftype == 'ifgramStack':
@@ -197,6 +197,6 @@ def create_mask(inps):
 
     # used time
     m, s = divmod(time.time()-start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs.')
 
     return

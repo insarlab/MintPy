@@ -5,10 +5,12 @@
 ############################################################
 
 
-import os
 import datetime as dt
+import os
+
 import numpy as np
-from mintpy.utils import readfile, writefile, utils1 as ut
+
+from mintpy.utils import readfile, utils1 as ut, writefile
 
 
 #########################################################################
@@ -61,7 +63,7 @@ def prep_cosicorr(inps):
 
     # open and read hyp3 metadata
     date12_dict = {}
-    with open(inps.meta_file, 'r') as f:
+    with open(inps.meta_file) as f:
         for line in f:
             name, date1, date2 = line.strip().split(' ')
             date12_dict[name] = f'{date1}-{date2}'

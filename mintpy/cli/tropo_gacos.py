@@ -8,13 +8,13 @@
 
 import os
 import sys
-from mintpy.utils.arg_utils import create_argument_parser
 
+from mintpy.utils.arg_utils import create_argument_parser
 
 ############################################################################
 REFERENCE = """references:
   Yu, C., Li, Z., Penna, N. T., & Crippa, P. (2018). Generic atmospheric correction
-    model for Interferometric Synthetic Aperture Radar observations. Journal of 
+    model for Interferometric Synthetic Aperture Radar observations. Journal of
     Geophysical Research: Solid Earth, 123(10), 9202-9222, doi:10.1029/2017JB015305
 """
 
@@ -71,7 +71,7 @@ def cmd_line_parse(iargs=None):
     # check: exsitence of input files
     for fname in [inps.dis_file, inps.geom_file]:
         if fname and not os.path.isfile(fname):
-            raise FileNotFoundError('input file not exist: {}'.format(fname))
+            raise FileNotFoundError(f'input file not exist: {fname}')
 
     # check: processors & coordinates of input files
     atr1 = readfile.read_attribute(inps.dis_file)
@@ -82,7 +82,7 @@ def cmd_line_parse(iargs=None):
 
     # check: radar-coord product from gamma and roipac is not supported
     if coord1 == 'radar' and proc in ['gamma', 'roipac']:
-        msg = 'Radar-coded file from {} is NOT supported!'.format(proc)
+        msg = f'Radar-coded file from {proc} is NOT supported!'
         msg += '\n    Try to geocode the time-series and geometry files and re-run with them instead.'
         raise ValueError(msg)
 

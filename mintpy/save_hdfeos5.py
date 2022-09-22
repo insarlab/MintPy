@@ -5,15 +5,15 @@
 ############################################################
 
 
-import os
 import datetime as dt
+import os
+
 import h5py
 import numpy as np
 
-from mintpy.objects import timeseries, geometry, sensor
-from mintpy.utils import ptime, readfile, utils as ut
 from mintpy import info
-
+from mintpy.objects import geometry, sensor, timeseries
+from mintpy.utils import ptime, readfile, utils as ut
 
 BOOL_ZERO = np.bool_(0)
 INT_ZERO = np.int16(0)
@@ -212,14 +212,14 @@ def get_output_filename(metadata, suffix=None, update_mode=False, subset_mode=Fa
     SW = metadata['beam_mode']
     if metadata['beam_swath']:
         SW += str(metadata['beam_swath'])
-    RELORB = "%03d" % (int(metadata['relative_orbit']))
+    RELORB = "{:03d}".format(int(metadata['relative_orbit']))
 
     # Frist and/or Last Frame
     frame1 = metadata['first_frame']
     frame2 = metadata['last_frame']
-    FRAME = "%04d" % (int(frame1))
+    FRAME = f"{int(frame1):04d}"
     if frame2 != frame1:
-        FRAME += "_%04d" % (frame2)
+        FRAME += f"_{frame2:04d}"
 
     DATE1 = dt.datetime.strptime(metadata['first_date'], '%Y-%m-%d').strftime('%Y%m%d')
     DATE2 = dt.datetime.strptime(metadata['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
@@ -239,28 +239,28 @@ def get_output_filename(metadata, suffix=None, update_mode=False, subset_mode=Fa
         lat0 = lat1 + float(metadata['Y_STEP']) * int(metadata['LENGTH'])
         lon1 = lon0 + float(metadata['X_STEP']) * int(metadata['WIDTH'])
 
-        lat0Str = 'N%05d' % (round(lat0*1e3))
-        lat1Str = 'N%05d' % (round(lat1*1e3))
-        lon0Str = 'E%06d' % (round(lon0*1e3))
-        lon1Str = 'E%06d' % (round(lon1*1e3))
-        if lat0 < 0.0: lat0Str = 'S%05d' % (round(abs(lat0)*1e3))
-        if lat1 < 0.0: lat1Str = 'S%05d' % (round(abs(lat1)*1e3))
-        if lon0 < 0.0: lon0Str = 'W%06d' % (round(abs(lon0)*1e3))
-        if lon1 < 0.0: lon1Str = 'W%06d' % (round(abs(lon1)*1e3))
+        lat0Str = f'N{round(lat0*1e3):05d}'
+        lat1Str = f'N{round(lat1*1e3):05d}'
+        lon0Str = f'E{round(lon0*1e3):06d}'
+        lon1Str = f'E{round(lon1*1e3):06d}'
+        if lat0 < 0.0: lat0Str = f'S{round(abs(lat0)*1e3):05d}'
+        if lat1 < 0.0: lat1Str = f'S{round(abs(lat1)*1e3):05d}'
+        if lon0 < 0.0: lon0Str = f'W{round(abs(lon0)*1e3):06d}'
+        if lon1 < 0.0: lon1Str = f'W{round(abs(lon1)*1e3):06d}'
 
-        SUB = '_%s_%s_%s_%s' % (lat0Str, lat1Str, lon0Str, lon1Str)
-        outName = '{}{}{}'.format(os.path.splitext(outName)[0],
-                                  SUB,
-                                  os.path.splitext(outName)[1])
+        SUB = f'_{lat0Str}_{lat1Str}_{lon0Str}_{lon1Str}'
+        fbase, fext = os.path.splitext(outName)
+        outName = f'{fbase}{SUB}{fext}'
+
     return outName
 
 
 def create_hdf5_dataset(group, dsName, data, max_digit=55, compression=COMPRESSION):
     """Create HDF5 dataset and print out message."""
 
-    msg = 'create dataset {d:<{w}}'.format(d='{}/{}'.format(group.name, dsName), w=max_digit)
-    msg += ' of {t:<10} in size of {s}'.format(t=str(data.dtype), s=data.shape)
-    msg += ' with compression={c}'.format(c=compression)
+    msg = 'create dataset {d:<{w}}'.format(d=f'{group.name}/{dsName}', w=max_digit)
+    msg += f' of {str(data.dtype):<10} in size of {data.shape}'
+    msg += f' with compression={compression}'
     print(msg)
 
     if data.ndim == 1:
@@ -291,12 +291,12 @@ def write_hdf5_file(metadata, out_file, ts_file, tcoh_file, scoh_file, mask_file
 
     # Open HDF5 File
     f = h5py.File(out_file, 'w')
-    print('create HDF5 file: {} with w mode'.format(out_file))
+    print(f'create HDF5 file: {out_file} with w mode')
     max_digit = 55
 
     ##### Group - Observation
     gName = 'HDFEOS/GRIDS/timeseries/observation'
-    print('create group   /{}'.format(gName))
+    print(f'create group   /{gName}')
     group = f.create_group(gName)
 
     ## O1 - displacement
@@ -304,7 +304,7 @@ def write_hdf5_file(metadata, out_file, ts_file, tcoh_file, scoh_file, mask_file
     dsShape = (numDate, ts_obj.length, ts_obj.width)
     dsDataType = np.float32
     print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
-           ' with compression={c}').format(d='{}/{}'.format(gName, dsName),
+           ' with compression={c}').format(d=f'{gName}/{dsName}',
                                            w=max_digit,
                                            t='float32',
                                            s=dsShape,
@@ -320,7 +320,7 @@ def write_hdf5_file(metadata, out_file, ts_file, tcoh_file, scoh_file, mask_file
     prog_bar = ptime.progressBar(maxValue=numDate)
     for i in range(numDate):
         dset[i, :, :] = readfile.read(ts_file, datasetName=dateList[i])[0]
-        prog_bar.update(i+1, suffix='{}/{} {}'.format(i+1, numDate, dateList[i]))
+        prog_bar.update(i+1, suffix=f'{i+1}/{numDate} {dateList[i]}')
     prog_bar.close()
 
     # attributes
@@ -341,7 +341,7 @@ def write_hdf5_file(metadata, out_file, ts_file, tcoh_file, scoh_file, mask_file
 
     ##### Group - Quality
     gName = 'HDFEOS/GRIDS/timeseries/quality'
-    print('create group   /{}'.format(gName))
+    print(f'create group   /{gName}')
     group = f.create_group(gName)
 
     ## Q1 - temporalCoherence
@@ -385,7 +385,7 @@ def write_hdf5_file(metadata, out_file, ts_file, tcoh_file, scoh_file, mask_file
     # Optional: rangeCoord, azimuthCoord, azimuthAngle, slantRangeDistance,
     #           waterMask, shadowMask
     gName = 'HDFEOS/GRIDS/timeseries/geometry'
-    print('create group   /{}'.format(gName))
+    print(f'create group   /{gName}')
     group = f.create_group(gName)
 
     geom_obj = geometry(geom_file)
@@ -423,7 +423,7 @@ def write_hdf5_file(metadata, out_file, ts_file, tcoh_file, scoh_file, mask_file
     for key, value in iter(metadata.items()):
         f.attrs[key] = value
     f.close()
-    print('finished writing to {}'.format(out_file))
+    print(f'finished writing to {out_file}')
 
     return out_file
 

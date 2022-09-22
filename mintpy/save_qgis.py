@@ -5,8 +5,9 @@
 ############################################################
 
 
-import os
 import errno
+import os
+
 import h5py
 import numpy as np
 from osgeo import ogr
@@ -61,7 +62,7 @@ def gather_files(ts_file, geom_file):
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), fname)
 
     for key, value in fDict.items():
-        print('{:<12}: {}'.format(key, value))
+        print(f'{key:<12}: {value}')
     return fDict
 
 
@@ -76,11 +77,11 @@ def read_bounding_box(pix_box, geo_box, geom_file):
     if geo_box is not None:
         S, N, W, E = geo_box
         pix_box = coord.bbox_geo2radar((W, N, E, S))
-        print('input bounding box in (S, N, W, E): {}'.format(geo_box))
+        print(f'input bounding box in (S, N, W, E): {geo_box}')
 
     if pix_box is not None:
         pix_box = coord.check_box_within_data_coverage(pix_box)
-        print('bounding box in (x0, y0, x1, y1): {}'.format(pix_box))
+        print(f'bounding box in (x0, y0, x1, y1): {pix_box}')
 
     return pix_box
 
@@ -95,11 +96,11 @@ def write_shape_file(fDict, shp_file, box=None):
     '''
 
     shpDriver = ogr.GetDriverByName("ESRI Shapefile")
-    print('output shape file: {}'.format(shp_file))
+    print(f'output shape file: {shp_file}')
 
     ##Check if shape file already exists
     if os.path.exists(shp_file):
-        print('output shape file: {} exists, will be overwritten ....'.format(shp_file))
+        print(f'output shape file: {shp_file} exists, will be overwritten ....')
         shpDriver.DeleteDataSource(shp_file)
 
     ##Start creating shapefile dataset and layer definition
@@ -150,7 +151,7 @@ def write_shape_file(fDict, shp_file, box=None):
     ts_obj = timeseries(fDict['TimeSeries'])
     ts_obj.open(print_msg=False)
     for date in ts_obj.dateList:
-        fd = ogr.FieldDefn('D{0}'.format(date), ogr.OFTReal)
+        fd = ogr.FieldDefn(f'D{date}', ogr.OFTReal)
         fd.SetWidth(8)
         fd.SetPrecision(2)
         layer.CreateField(fd)
@@ -203,20 +204,20 @@ def write_shape_file(fDict, shp_file, box=None):
                                       'EFF_AREA'  : 1}
 
                             for ind, date in enumerate(ts_obj.dateList):
-                                rdict['D{0}'.format(date)] = ts[ind, j] * 1000
+                                rdict[f'D{date}'] = ts[ind, j] * 1000
 
                             #Create feature with definition
                             feature = ogr.Feature(layerDefn)
-                            add_metadata(feature, [lon[j], lat[j]], rdict) 
+                            add_metadata(feature, [lon[j], lat[j]], rdict)
                             layer.CreateFeature(feature)
                             feature = None
 
                             # update counter / progress bar
                             counter += 1
-                            prog_bar.update(counter, every=100, suffix='{}/{}'.format(counter, nValid))
+                            prog_bar.update(counter, every=100, suffix=f'{counter}/{nValid}')
                     prog_bar.close()
 
-    print('finished writing to file: {}'.format(shp_file))
+    print(f'finished writing to file: {shp_file}')
     return shp_file
 
 

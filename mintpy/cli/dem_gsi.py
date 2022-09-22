@@ -6,12 +6,11 @@
 ############################################################
 
 
+import glob
 import os
 import sys
-import glob
 
 from mintpy.utils.arg_utils import create_argument_parser
-
 
 ##################################################################################################
 EXAMPLE = """example:

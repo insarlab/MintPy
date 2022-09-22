@@ -4,9 +4,8 @@
 ##     import mintpy.workflow
 
 
-from pathlib import Path
 import importlib
-
+from pathlib import Path
 
 # expose the following modules
 __all__ = [

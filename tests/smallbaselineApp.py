@@ -1,22 +1,18 @@
 #!/usr/bin/env python3
-############################################################
-# Program is part of MintPy                                #
-# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Zhang Yunjun, Mar 2019                           #
-############################################################
-# Test example dataset for smallbaselineApp workflow
+# Author: Zhang Yunjun, Mar 2019
+"""Test example datasets for the small baseline time series analysis workflow."""
 
 
-import os
-import sys
-from pathlib import Path
-import time
-import shutil
 import argparse
+import os
+import shutil
 import subprocess
+import sys
 import tarfile
-import mintpy.cli.view
+import time
+from pathlib import Path
 
+import mintpy.cli.view
 
 CMAP_DICT = {
     'FernandinaSenDT128' : 'jet',
@@ -61,7 +57,7 @@ def create_parser():
 
     parser.add_argument('--dset', dest='dset_name', nargs='+', metavar='DSET', choices=PROJ_NAMES, default=PROJ_NAMES,
                         help='name(s) of datasets to be tested.\n'+
-                             'Available datasets: {}\n'.format(PROJ_NAMES) +
+                             f'Available datasets: {PROJ_NAMES}\n' +
                              '(default: all)')
 
     parser.add_argument('--test-pyaps', dest='test_pyaps', action='store_true',
@@ -102,7 +98,7 @@ def test_smallbaselineApp(dset_name, test_dir, fresh_start=True, test_pyaps=Fals
     tar_file = os.path.basename(dset_url)
     if not os.path.isfile(tar_file):
         print('downloading tar file ...')
-        cmd = 'wget {}'.format(dset_url)
+        cmd = f'wget {dset_url}'
         print(cmd)
         os.system(cmd)
     else:
@@ -110,15 +106,15 @@ def test_smallbaselineApp(dset_name, test_dir, fresh_start=True, test_pyaps=Fals
 
     # uncompress tar file
     if not fresh_start and os.path.isdir(dset_name):
-        print('use existing files in project directory: {}'.format(dset_name))
+        print(f'use existing files in project directory: {dset_name}')
     else:
         # remove existing directory
         if os.path.isdir(dset_name):
-            print('remove existing project directory: {}'.format(dset_name))
+            print(f'remove existing project directory: {dset_name}')
             shutil.rmtree(dset_name)
 
         # uncompress tar file
-        print('extracting content from tar file: {}'.format(tar_file))
+        print(f'extracting content from tar file: {tar_file}')
         tar = tarfile.open(tar_file)
         tar.extractall()
         tar.close()
@@ -144,16 +140,16 @@ def test_smallbaselineApp(dset_name, test_dir, fresh_start=True, test_pyaps=Fals
     # Note: execute script in command line instead of call main() for a clean run
     # to avoid strange error from prep_aria: not recognized as a supported file format.
     # which only occurs if all datasets are tested in one run
-    cmd = 'smallbaselineApp.py {}'.format(template_file)
+    cmd = f'smallbaselineApp.py {template_file}'
     print(cmd)
     status = subprocess.Popen(cmd, shell=True).wait()
     if status != 0:
-        raise RuntimeError('Test failed for example dataset {}'.format(dset_name))
+        raise RuntimeError(f'Test failed for example dataset {dset_name}')
 
     # custom plot of velocity map
     vel_files = [os.path.join(work_dir, i) for i in ['geo/geo_velocity.h5', 'velocity.h5']]
     vel_file = [i for i in vel_files if os.path.isfile(i)][0]
-    png_file = os.path.join(work_dir, 'pic', '{}.png'.format(os.path.splitext(os.path.basename(vel_file))[0]))
+    png_file = os.path.join(work_dir, 'pic', f'{os.path.splitext(os.path.basename(vel_file))[0]}.png')
     iargs = [vel_file, 'velocity', '--nodisplay', '--noverbose', '-o', png_file]
     if dset_name in CMAP_DICT.keys():
         iargs += ['-c', CMAP_DICT[dset_name]]
@@ -161,7 +157,7 @@ def test_smallbaselineApp(dset_name, test_dir, fresh_start=True, test_pyaps=Fals
 
     # open final velocity map if on mac
     if sys.platform.lower().startswith('darwin'):
-        cmd = 'open {}'.format(png_file)
+        cmd = f'open {png_file}'
         print(cmd)
         subprocess.Popen(cmd, shell=True).wait()
     return
@@ -205,4 +201,3 @@ def main(iargs=None):
 #####################################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
-

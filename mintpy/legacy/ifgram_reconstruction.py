@@ -6,12 +6,13 @@
 ############################################################
 
 
-import sys
 import argparse
+import sys
+
 import numpy as np
+
 from mintpy.objects import ifgramStack
 from mintpy.utils import readfile, writefile
-
 
 #####################################################################################
 EXAMPLE = """example:
@@ -42,7 +43,7 @@ def timeseries2ifgram(ts_file, ifgram_file, out_file='reconUnwrapIfgram.h5'):
     # read time-series
     atr = readfile.read_attribute(ts_file)
     range2phase = -4.*np.pi / float(atr['WAVELENGTH'])
-    print('reading timeseries data from file {} ...'.format(ts_file))
+    print(f'reading timeseries data from file {ts_file} ...')
     ts_data = readfile.read(ts_file)[0] * range2phase
     num_date, length, width = ts_data.shape
     ts_data = ts_data.reshape(num_date, -1)
@@ -73,4 +74,3 @@ def main(iargs=None):
 #####################################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
-

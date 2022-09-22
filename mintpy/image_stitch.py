@@ -7,12 +7,13 @@
 
 
 import os
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
 from skimage.transform import rescale
 
-from mintpy.utils import readfile, writefile, plot as pp
 from mintpy.multilook import multilook_data
+from mintpy.utils import plot as pp, readfile, writefile
 
 
 #############################################################################################
@@ -59,7 +60,7 @@ def manual_offset_estimate(mat1, mat2):
 
     # Calculate the Offset - Difference
     # offset=V2[y00:y11,x00:x11]-V2[y0:y1,x0:x1]
-    offset = (  np.nansum(mat2[y00:y11, x00:x11]) / np.sum(np.isfinite(mat2[y00:y11, x00:x11])) 
+    offset = (  np.nansum(mat2[y00:y11, x00:x11]) / np.sum(np.isfinite(mat2[y00:y11, x00:x11]))
               - np.nansum(mat1[y0:y1, x0:x1]) / np.sum(np.isfinite(mat1[y0:y1, x0:x1])))
 
     return offset
@@ -97,7 +98,7 @@ def get_corners(atr):
 
 
 def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=True):
-    """Stitch two geocoded matrices 
+    """Stitch two geocoded matrices
     and/or shift the 2nd matrix value to match with the 1st one.
 
     Parameters: mat1/2       - 2D np.ndarray
@@ -149,8 +150,8 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
     if apply_offset:
         offset = np.nansum(mat_diff) / np.sum(np.isfinite(mat_diff))
         if ~np.isnan(offset):
-            vprint('average offset between two matrices in the common area: {}'.format(offset))
-            vprint('offset all pixel values in the 2nd matrix by {} '.format(offset))
+            vprint(f'average offset between two matrices in the common area: {offset}')
+            vprint(f'offset all pixel values in the 2nd matrix by {offset} ')
             mat2 -= offset
         else:
             print('*'*50)
@@ -160,7 +161,7 @@ def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=Tru
 
     # initiate output matrix
     # with the default value of NaN for float type and 0 for the other types
-    vprint('create output metadata and matrix in shape of {}'.format((length, width)))
+    vprint(f'create output metadata and matrix in shape of {(length, width)}')
     fill_value = np.nan if str(mat1.dtype).startswith('float') else 0
     mat = np.zeros([length, width]) * fill_value
 
@@ -207,7 +208,7 @@ def plot_stitch(mat11, mat22, mat, mat_diff, out_fig=None):
 
     # output
     fig.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=150)
-    print('save figure to file: {}'.format(out_fig))
+    print(f'save figure to file: {out_fig}')
 
     return
 
@@ -231,8 +232,8 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
         if atr['FILE_TYPE'] == 'velocity' and len(ds_names) > 1:
             ds_names = ['velocity']
 
-    print('files to be stitched: {}'.format(fnames))
-    print('datasets to be stitched: {}'.format(ds_names))
+    print(f'files to be stitched: {fnames}')
+    print(f'datasets to be stitched: {ds_names}')
 
     # stitching
     dsDict = {}
@@ -245,7 +246,7 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
 
         # masking
         if no_data_value is not None:
-            print('convert no_data_value from {} to NaN'.format(no_data_value))
+            print(f'convert no_data_value from {no_data_value} to NaN')
             mat[mat==no_data_value] = np.nan
 
         # skip pixels with zero incidenceAngle for geometry files
@@ -256,7 +257,7 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
 
         for i, fname in enumerate(fnames[1:]):
             print('-'*30)
-            print('read data from file: {}'.format(fname))
+            print(f'read data from file: {fname}')
             # reading
             mat2, atr2 = readfile.read(fname, datasetName=ds_name)
             # masking
@@ -277,8 +278,8 @@ def stitch_files(fnames, out_file, apply_offset=True, disp_fig=True, no_data_val
             # plot
             if apply_offset:
                 print('plot stitching & shifting result ...')
-                suffix = '{}{}'.format(i, i+1)
-                out_fig = '{}_{}.png'.format(os.path.splitext(out_file)[0], suffix)
+                suffix = f'{i}{i+1}'
+                out_fig = f'{os.path.splitext(out_file)[0]}_{suffix}.png'
                 plot_stitch(mat11, mat22, mat, mat_diff, out_fig=out_fig)
 
         dsDict[ds_name_out] = mat

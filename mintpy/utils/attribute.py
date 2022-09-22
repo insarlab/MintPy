@@ -9,10 +9,11 @@
 
 
 import warnings
+
 import numpy as np
+
 from mintpy.objects.coord import coordinate
 from mintpy.utils import readfile
-
 
 
 def update_attribute4resize(atr_in, resize2shape, print_msg=True):
@@ -28,7 +29,7 @@ def update_attribute4resize(atr_in, resize2shape, print_msg=True):
 
     yscale = int(atr['LENGTH']) / resize2shape[0]
     xscale = int(atr['WIDTH']) / resize2shape[1]
-    vprint('output data in size: {}, {}'.format(resize2shape[0], resize2shape[1]))
+    vprint(f'output data in size: {resize2shape[0]}, {resize2shape[1]}')
 
     atr['LENGTH'] = resize2shape[0]
     atr['WIDTH'] = resize2shape[1]
@@ -72,7 +73,7 @@ def update_attribute4multilook(atr_in, lks_y, lks_x, box=None, print_msg=True):
 
     length_mli = length // lks_y
     width_mli = width // lks_x
-    vprint('output data in size: {}, {}'.format(length_mli, width_mli))
+    vprint(f'output data in size: {length_mli}, {width_mli}')
 
     # Update attributes
     atr['LENGTH'] = str(length_mli)

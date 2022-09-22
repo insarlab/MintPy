@@ -1,22 +1,24 @@
 #!/usr/bin/env python3
 # Author: Zhang Yunjun, Feb 2022
+"""Test ascending/descending LOS decomposition into horizontal/vertical."""
 
+import argparse
 import os
 import sys
-import argparse
+
 import numpy as np
 from matplotlib import pyplot as plt
 
-from mintpy.utils import utils as ut
 from mintpy.asc_desc2horz_vert import asc_desc2horz_vert
+from mintpy.utils import utils as ut
 
 plt.rcParams.update({'font.size': 12})
 
 
 ################################################################################
 EXAMPLE = """example:
-  test_asc_desc2horz_vert.py
-  test_asc_desc2horz_vert.py --plot
+  $MINTPY_HOME/tests/asc_desc2horz_vert.py
+  $MINTPY_HOME/tests/asc_desc2horz_vert.py --plot
 """
 
 def cmd_line_parse(iargs=None):
@@ -76,7 +78,7 @@ def main(iargs=None):
 
     # Plotting
     if inps.plot:
-        print('plot test result of {}'.format(os.path.basename(__file__)))
+        print(f'plot test result of {os.path.basename(__file__)}')
         fig, axs = plt.subplots(nrows=3, ncols=4, figsize=[8, 6], sharex=True, sharey=True)
         kwargs = dict(vmin=-1.5, vmax=1.5, cmap='RdBu', interpolation='nearest')
 

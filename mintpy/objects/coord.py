@@ -7,13 +7,11 @@
 #   from mintpy.utils import utils as ut
 
 
-import numpy as np
 from argparse import Namespace
-from mintpy.utils import (
-    readfile,
-    utils0 as ut0,
-    utils1 as ut1
-)
+
+import numpy as np
+
+from mintpy.utils import readfile, utils0 as ut0, utils1 as ut1
 
 
 #####################################  coordinate class begin ##############################################
@@ -188,7 +186,7 @@ class coordinate:
 
         row, col = np.nanmean(np.where(mask_yx), axis=1)
         if any(np.isnan(i) for i in [row, col]):
-            raise RuntimeError('No coresponding coordinate found for y/x: {}/{}'.format(y, x))
+            raise RuntimeError(f'No coresponding coordinate found for y/x: {y}/{x}')
 
         return row, col
 
@@ -445,7 +443,7 @@ class coordinate:
 
     def bbox_geo2radar(self, geo_box, print_msg=False):
         """Calculate bounding box in x/y for file in radar coord, based on input geo box.
-        Parameters: geo_box - tuple of 4 float, indicating the UL/LR lon/lat 
+        Parameters: geo_box - tuple of 4 float, indicating the UL/LR lon/lat
         Returns:    pix_box - tuple of 4 int, indicating the UL/LR x/y of the bounding box in radar coord
                               for the corresponding lat/lon coverage.
         """
@@ -472,10 +470,10 @@ class coordinate:
         if sub_y[0] >= length or sub_y[1] <= 0 or sub_x[0] >= width or sub_x[1] <= 0:
             data_box = (0, 0, width, length)
             msg = 'ERROR: input index is out of data range!\n'
-            msg += '\tdata   range in (x0,y0,x1,y1): {}\n'.format(data_box)
-            msg += '\tsubset range in (x0,y0,x1,y1): {}\n'.format(pixel_box)
-            msg += '\tdata   range in (W, N, E, S): {}\n'.format(self.box_pixel2geo(data_box))
-            msg += '\tsubset range in (W, N, E, S): {}\n'.format(self.box_pixel2geo(pixel_box))
+            msg += f'\tdata   range in (x0,y0,x1,y1): {data_box}\n'
+            msg += f'\tsubset range in (x0,y0,x1,y1): {pixel_box}\n'
+            msg += f'\tdata   range in (W, N, E, S): {self.box_pixel2geo(data_box)}\n'
+            msg += f'\tsubset range in (W, N, E, S): {self.box_pixel2geo(pixel_box)}\n'
             raise ValueError(msg)
 
         # Check Y/Azimuth/Latitude subset range
@@ -486,7 +484,7 @@ class coordinate:
         if sub_y[1] > length:
             sub_y[1] = length
             if print_msg:
-                print('WARNING: input y > max ({})! Set it to max.'.format(length))
+                print(f'WARNING: input y > max ({length})! Set it to max.')
 
         # Check X/Range/Longitude subset range
         if sub_x[0] < 0:
@@ -496,7 +494,7 @@ class coordinate:
         if sub_x[1] > width:
             sub_x[1] = width
             if print_msg:
-                print('WARNING: input x > max ({})! Set it to max.'.format(width))
+                print(f'WARNING: input x > max ({width})! Set it to max.')
 
         out_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
         return out_box

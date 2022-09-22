@@ -8,8 +8,8 @@
 
 import os
 import sys
-from mintpy.utils.arg_utils import create_argument_parser
 
+from mintpy.utils.arg_utils import create_argument_parser
 
 ###########################  Sub Function  #############################
 EXAMPLE = """example:
@@ -36,7 +36,7 @@ def create_parser(subparsers=None):
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('ifgram_file', help='interferogram stack file')
-    parser.add_argument('--yx', type=int, metavar=('Y', 'X'), nargs=2, 
+    parser.add_argument('--yx', type=int, metavar=('Y', 'X'), nargs=2,
                         help='Point of interest in y(row)/x(col)')
     parser.add_argument('--lalo', type=float, metavar=('LAT','LON'), nargs=2,
                         help='Point of interest in lat/lon')
@@ -84,7 +84,7 @@ def cmd_line_parse(iargs=None):
 
     # check: existence of auxliary files
     if not os.path.isfile(inps.img_file):
-        raise SystemExit('ERROR: input image file not found: {}'.format(inps.img_file))
+        raise SystemExit(f'ERROR: input image file not found: {inps.img_file}')
     if not os.path.isfile(inps.tcoh_file):
         inps.tcoh_file = None
     if not os.path.isfile(inps.template_file):

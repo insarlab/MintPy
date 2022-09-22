@@ -6,10 +6,10 @@
 ############################################################
 
 
-import sys
 import argparse
-from mintpy.utils import arg_utils
+import sys
 
+from mintpy.utils import arg_utils
 
 #####################################################################
 # Only one line is supported right now.
@@ -82,6 +82,7 @@ def cmd_line_parse(iargs=None):
 
     # import
     import numpy as np
+
     from mintpy.utils import readfile, utils as ut
 
     # save argv (to check the manually specified arguments)
@@ -112,8 +113,8 @@ def cmd_line_parse(iargs=None):
 
         # c) do not support any other numbers of inputs
         else:
-            msg = 'input number of offsets: {}.'.format(len(inps.offset))
-            msg += '\nIt should be 1 or number of files: {}'.format(inps.num_file)
+            msg = f'input number of offsets: {len(inps.offset)}.'
+            msg += f'\nIt should be 1 or number of files: {inps.num_file}'
             raise ValueError(msg)
     else:
         # disable offset for single input file
@@ -144,7 +145,7 @@ def read_lonlat_file(lonlat_file):
     Parameters: lonlat_file    - str, text file in gmt lonlat point file
     Returns:    start/end_lalo - list of 2 float
     """
-    fll = open(lonlat_file, 'r')
+    fll = open(lonlat_file)
     lines = fll.read().splitlines()
     [lon0, lat0] = [float(i) for i in lines[1].split()]
     [lon1, lat1] = [float(i) for i in lines[2].split()]
@@ -173,7 +174,7 @@ def get_view_cmd(iargs):
 
     # assemble view.py command line
     inps = cmd_line_parse(iargs)
-    view_cmd = 'view.py {} '.format(inps.file[0])
+    view_cmd = f'view.py {inps.file[0]} '
     view_cmd += f' {inps.dset} ' if inps.dset else ''
     view_cmd += ' '.join(view_args)
 

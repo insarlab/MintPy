@@ -9,9 +9,11 @@
 
 
 import math
+
 import numpy as np
 import scipy.stats as stats
 from matplotlib import pyplot as plt
+
 from mintpy.utils import ptime
 
 
@@ -138,10 +140,10 @@ def cross_correlation_std(N, coh, corr_type='intensity'):
     """Standard deviation of cross correlation for differential shift estimation.
 
     Reference:
-        Bamler, R., and M. Eineder (2005), Accuracy of differential shift estimation by 
-            correlation and split-bandwidth interferometry for wideband and delta-k SAR systems, 
+        Bamler, R., and M. Eineder (2005), Accuracy of differential shift estimation by
+            correlation and split-bandwidth interferometry for wideband and delta-k SAR systems,
             Geoscience and Remote Sensing Letters, IEEE, 2(2), 151-155, doi:10.1109/LGRS.2004.843203.
-        De Zan, F. (2014), Accuracy of Incoherent Speckle Tracking for Circular Gaussian Signals, 
+        De Zan, F. (2014), Accuracy of Incoherent Speckle Tracking for Circular Gaussian Signals,
             IEEE Geoscience and Remote Sensing Letters, 11(1), 264-267, doi:10.1109/LGRS.2013.2255259.
 
     Parameters: N         - int   / 2D np.ndarray in size of (n, 1), number of independent samples (resolution ceels)
@@ -163,7 +165,7 @@ def cross_correlation_std(N, coh, corr_type='intensity'):
         std = np.sqrt(3 / (10*N)) * np.sqrt(2 + 5*coh**2 - 7*coh**4) / (np.pi * coh**2)
 
     else:
-        raise ValueError('un-recognized corr_type={}'.format(corr_type))
+        raise ValueError(f'un-recognized corr_type={corr_type}')
 
     return std
 
@@ -187,7 +189,7 @@ def coherence2decorrelation_phase(coh, L, coh_step=0.01, num_repeat=1, scale=1.0
 
     # check number of looks
     L = int(L)
-    msg = 'number of independent looks L={}'.format(L)
+    msg = f'number of independent looks L={L}'
     if L > 80:
         L = 80
         msg += ', use L=80 to avoid dividing by 0 in calculation with negligible effect'
@@ -221,7 +223,7 @@ def coherence2decorrelation_phase(coh, L, coh_step=0.01, num_repeat=1, scale=1.0
             if num_coh_i > 0:
                 pha_i = sample_decorrelation_phase(coh_i, L, size=num_coh_i*num_repeat, scale=scale)
                 pha[flag,:] = pha_i.reshape(-1, num_repeat)
-            prog_bar.update(i+1, suffix='{:.3f}'.format(coh_i))
+            prog_bar.update(i+1, suffix=f'{coh_i:.3f}')
         prog_bar.close()
 
     if num_repeat == 1:
@@ -289,7 +291,7 @@ def coherence2phase_variance(coherence, L=32, scatter='DS', coh_step=0.005, prin
                 scatter   - str, type of scatterers, PS or DS
     Returns:    variance  - 1/2/3D np.ndarray of float32 for the phase variance in radians^2
     """
-    lineStr = '    number of independent looks L={}'.format(L)
+    lineStr = f'    number of independent looks L={L}'
     if L > 80:
         L = 80
         lineStr += ', use L=80 to avoid dividing by 0 with negligible effect'
@@ -315,14 +317,14 @@ def coherence2phase_variance(coherence, L=32, scatter='DS', coh_step=0.005, prin
         variance = phase_variance_ps(int(L), coherence)[0]
 
     else:
-        raise ValueError('un-recognized scatterer type: {}'.format(scatter))
+        raise ValueError(f'un-recognized scatterer type: {scatter}')
 
     return variance
 
 
 def coherence2fisher_info_index(data, L=32, epsilon=1e-3):
     """Convert coherence to Fisher information index (Seymour & Cumming, 1994, IGARSS)"""
-    print('    number of independent looks L={}'.format(L))
+    print(f'    number of independent looks L={L}')
     # prepare input data
     if data.dtype != np.float64:
         data = np.array(data, np.float64)
@@ -372,4 +374,3 @@ def coherence2weight(coh_data, weight_func='var', L=20, epsilon=5e-2, print_msg=
     del coh_data
 
     return weight
-

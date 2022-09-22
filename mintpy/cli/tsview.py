@@ -8,8 +8,8 @@
 
 import os
 import sys
-from mintpy.utils import arg_utils
 
+from mintpy.utils import arg_utils
 
 ###########################################################################################
 EXAMPLE = """example:
@@ -121,7 +121,7 @@ def cmd_line_parse(iargs=None):
 
     # check: --gps-comp option (not implemented for tsview yet)
     if inps.gps_component:
-        msg = '--gps-comp is not supported for {}'.format(os.path.basename(__file__))
+        msg = f'--gps-comp is not supported for {os.path.basename(__file__)}'
         raise NotImplementedError(msg)
 
     # check: --label option (same number as input files)

@@ -1,10 +1,9 @@
 # grab version / date of the latest commit
 
 
+import collections
 import os
 import subprocess
-import collections
-
 
 ###########################################################################
 Tag = collections.namedtuple('Tag', 'version date')
@@ -49,7 +48,7 @@ def get_version_info():
         # if there are new commits after the latest release
         if '-' in version:
             version, num_commit = version.split('-')[:2]
-            version += '-{}'.format(num_commit)
+            version += f'-{num_commit}'
 
         cmd = "git log -1 --date=short --format=%cd"
         date = subprocess.check_output(cmd.split(), stderr=subprocess.DEVNULL)
@@ -74,11 +73,11 @@ version_description = """MintPy version {v}, date {d}""".format(
 )
 
 # generate_from: http://patorjk.com/software/taag/
-logo = """
+logo = r"""
 ___________________________________________________________
 
-  /##      /## /##             /##     /#######           
- | ###    /###|__/            | ##    | ##__  ##          
+  /##      /## /##             /##     /#######
+ | ###    /###|__/            | ##    | ##__  ##
  | ####  /#### /## /#######  /######  | ##  \ ## /##   /##
  | ## ##/## ##| ##| ##__  ##|_  ##_/  | #######/| ##  | ##
  | ##  ###| ##| ##| ##  \ ##  | ##    | ##____/ | ##  | ##
@@ -87,7 +86,7 @@ ___________________________________________________________
  |__/     |__/|__/|__/  |__/   \___/  |__/       \____  ##
                                                  /##  | ##
                                                 |  ######/
-   Miami InSAR Time-series software in Python    \______/ 
+   Miami InSAR Time-series software in Python    \______/
           MintPy {v}, {d}
 ___________________________________________________________
 """.format(v=version, d=version_date)
@@ -95,4 +94,3 @@ ___________________________________________________________
 website = 'https://github.com/insarlab/MintPy'
 
 description = 'Miami INsar Time-series software in PYthon'
-

@@ -6,10 +6,10 @@
 ############################################################
 
 
-import sys
 import glob
-from mintpy.utils import arg_utils
+import sys
 
+from mintpy.utils import arg_utils
 
 ####################################################################################
 EXAMPLE = """example:

@@ -23,4 +23,3 @@ mintpy.load.waterMaskFile    = $DATA_DIR/NCalAlos2DT169/dates_resampled/150408/i
 mintpy.reference.yx                             = 1500, 200
 mintpy.networkInversion.weightFunc              = no
 mintpy.topographicResidual.pixelwiseGeometry    = no
-

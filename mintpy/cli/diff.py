@@ -11,7 +11,6 @@ import sys
 
 from mintpy.utils.arg_utils import create_argument_parser
 
-
 #####################################################################################
 EXAMPLE = """example:
   diff.py  velocity.h5    velocity_demErr.h5
