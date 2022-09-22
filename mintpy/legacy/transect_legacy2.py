@@ -6,14 +6,15 @@
 ############################################################
 
 
-import os
 import argparse
-import numpy as np
-import scipy.ndimage
-import scipy.io as sio
-import matplotlib.pyplot as plt
-from mintpy.utils import readfile, utils as ut, plot as pp
+import os
 
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.io as sio
+import scipy.ndimage
+
+from mintpy.utils import plot as pp, readfile, utils as ut
 
 #####################################################################
 EXAMPLE = """example:

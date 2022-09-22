@@ -5,8 +5,9 @@
 ############################################################
 
 
-import os
 import glob
+import os
+
 import numpy as np
 
 try:
@@ -14,7 +15,7 @@ try:
 except ImportError:
     raise ImportError('Can not import gdal!')
 
-from mintpy.utils import ptime, readfile, writefile, utils as ut
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 
 #########################################################################

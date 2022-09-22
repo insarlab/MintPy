@@ -14,8 +14,7 @@
 #
 
 
-from cvxopt import matrix, sparse, spmatrix
-from cvxopt import glpk
+from cvxopt import glpk, matrix, sparse, spmatrix
 
 
 def lst_l1(A, y, integer=False, xmax=1000):

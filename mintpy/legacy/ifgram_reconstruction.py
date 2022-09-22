@@ -6,12 +6,13 @@
 ############################################################
 
 
-import sys
 import argparse
+import sys
+
 import numpy as np
+
 from mintpy.objects import ifgramStack
 from mintpy.utils import readfile, writefile
-
 
 #####################################################################################
 EXAMPLE = """example:

@@ -9,18 +9,17 @@
 
 
 import random
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
 
 from mintpy.defaults.plot import *
 from mintpy.objects import sensor
-from mintpy.utils import ptime, time_func, network as pnet
-
 # load all modules in this sub-directory for easy import
 from mintpy.simulation.decorrelation import *
 from mintpy.simulation.defo_model import *
 from mintpy.simulation.fractal import *
-
+from mintpy.utils import network as pnet, ptime, time_func
 
 SPEED_OF_LIGHT = 299792458   # m/s
 

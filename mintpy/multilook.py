@@ -5,21 +5,18 @@
 ############################################################
 
 
+import logging
 import os
 import warnings
+
 import h5py
 import numpy as np
 
+from mintpy.utils import attribute as attr, readfile, writefile
+
 # suppress numpy.RuntimeWarning message
-import logging
 np_logger = logging.getLogger('numpy')
 np_logger.setLevel(logging.WARNING)
-
-from mintpy.utils import (
-    readfile,
-    writefile,
-    attribute as attr,
-)
 
 
 ######################################## Sub Functions ############################################

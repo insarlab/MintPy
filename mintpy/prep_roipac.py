@@ -7,7 +7,8 @@
 
 import os
 import shutil
-from mintpy.utils import readfile, writefile, utils1 as ut
+
+from mintpy.utils import readfile, utils1 as ut, writefile
 
 
 ######################################## Sub Functions ############################################

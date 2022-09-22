@@ -6,11 +6,14 @@
 # Recommend import:
 #   from mintpy.utils import ptime
 
+import datetime as dt
 import os
 import re
-import datetime as dt
+
 import numpy as np
+
 from mintpy.objects.progress import progressBar
+
 
 ################################################################
 def get_compact_isoformat(date_str):
@@ -496,7 +499,8 @@ def utc2solar_time(utc_time, longitude):
     Example:    utc_time = dt.datetime(2015, 2, 9, 3, 18, 48)
                 solar_time = ptime.utc2solar_time(utc_time, 130.7)
     """
-    from math import pi, cos, sin
+    from math import cos, pi, sin
+
     # use 366 for leap years
     if utc_time.year % 4 == 0 and utc_time.year % 100 != 0 and utc_time.year % 400 != 0:
         year_len = 366

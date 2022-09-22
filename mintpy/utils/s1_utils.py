@@ -7,12 +7,14 @@
 #   from mintpy.utils import s1_utils
 
 
-import os
 import glob
+import os
 import re
+
 import numpy as np
-from mintpy.utils import ptime, time_func
+
 from mintpy.objects import timeseries
+from mintpy.utils import ptime, time_func
 
 
 def estimate_s1ab_bias(mintpy_dir, ts_dis, safe_list_file=None):

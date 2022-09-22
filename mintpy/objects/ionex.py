@@ -11,15 +11,14 @@
 #   from mintpy.objects import ionex
 
 
+import datetime as dt
 import os
 import re
-import datetime as dt
 
 import numpy as np
 from scipy import interpolate
 
 from mintpy.utils import ptime
-
 
 IGS_SOLUTION_NAMES = {
     'cod' : 'CODE (1-hour)',

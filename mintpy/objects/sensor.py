@@ -9,7 +9,6 @@
 
 import os
 
-
 SENSOR_NAME_VARIATION = {
     'alos'  : ['alos', 'alos1', 'palsar', 'palsar1'],
     'alos2' : ['alos2', 'palsar2'],

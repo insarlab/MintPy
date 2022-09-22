@@ -6,14 +6,13 @@
 ############################################################
 
 
+import datetime
 import os
 import sys
-import datetime
 
 import mintpy
-from mintpy.utils.arg_utils import create_argument_parser
 from mintpy.defaults.template import STEP_LIST
-
+from mintpy.utils.arg_utils import create_argument_parser
 
 ##########################################################################
 STEP_HELP = """Command line options for steps processing with names are chosen from the following list:

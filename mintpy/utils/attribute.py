@@ -9,10 +9,11 @@
 
 
 import warnings
+
 import numpy as np
+
 from mintpy.objects.coord import coordinate
 from mintpy.utils import readfile
-
 
 
 def update_attribute4resize(atr_in, resize2shape, print_msg=True):

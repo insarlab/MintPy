@@ -7,17 +7,18 @@
 #   from mintpy.utils import network as pnet
 
 
+import itertools
 import os
 import sys
-import itertools
+
 import h5py
 import numpy as np
-from scipy import sparse
 from matplotlib import pyplot as plt
 from matplotlib.tri import Triangulation
+from scipy import sparse
+
 from mintpy.objects import ifgramStack, sensor
 from mintpy.utils import ptime, readfile
-
 
 SPEED_OF_LIGHT = 299792458   # m/s, speed of light
 

@@ -9,8 +9,8 @@
 
 import numpy as np
 from scipy import linalg
-from mintpy.utils import ptime
 
+from mintpy.utils import ptime
 
 MODEL_EXAMPLE = """time function configuration:
     model = {

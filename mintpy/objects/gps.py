@@ -8,17 +8,17 @@
 #     from mintpy.objects.gps import GPS
 
 
-import os
 import csv
-import glob
 import datetime as dt
-import numpy as np
-from pyproj import Geod
+import glob
+import os
 from urllib.request import urlretrieve
 
-from mintpy.objects.coord import coordinate
-from mintpy.utils import ptime, time_func, readfile, utils1 as ut
+import numpy as np
+from pyproj import Geod
 
+from mintpy.objects.coord import coordinate
+from mintpy.utils import ptime, readfile, time_func, utils1 as ut
 
 unr_site_list_file = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
 

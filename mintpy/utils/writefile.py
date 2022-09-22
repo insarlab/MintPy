@@ -9,8 +9,10 @@
 
 import os
 import shutil
+
 import h5py
 import numpy as np
+
 from mintpy.utils import readfile
 
 

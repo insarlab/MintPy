@@ -7,9 +7,10 @@
 
 
 import sys
-import numpy as np
-import mintpy.utils.readfile as readfile
 
+import numpy as np
+
+import mintpy.utils.readfile as readfile
 
 ################################################################################
 USAGE = """

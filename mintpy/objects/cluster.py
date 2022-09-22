@@ -8,11 +8,10 @@
 #     from mintpy.objects import cluster
 
 
-import os
-import time
 import glob
+import os
 import shutil
-
+import time
 
 # supported / tested clusters
 CLUSTER_LIST = ['lsf', 'pbs', 'slurm', 'local']

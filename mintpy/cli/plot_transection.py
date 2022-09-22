@@ -6,10 +6,10 @@
 ############################################################
 
 
-import sys
 import argparse
-from mintpy.utils import arg_utils
+import sys
 
+from mintpy.utils import arg_utils
 
 #####################################################################
 # Only one line is supported right now.
@@ -82,6 +82,7 @@ def cmd_line_parse(iargs=None):
 
     # import
     import numpy as np
+
     from mintpy.utils import readfile, utils as ut
 
     # save argv (to check the manually specified arguments)

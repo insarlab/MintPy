@@ -5,12 +5,12 @@
 ############################################################
 
 
-import os
 import argparse
+import os
+
 import numpy as np
 
 from mintpy.utils import writefile
-
 
 # DEHM basic info
 dehm = argparse.Namespace

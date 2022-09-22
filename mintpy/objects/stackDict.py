@@ -13,22 +13,19 @@
 import os
 import time
 import warnings
+
 import h5py
 import numpy as np
 from skimage.transform import resize
 
+from mintpy.multilook import multilook_data
 from mintpy.objects import (
     DATA_TYPE_DICT,
     GEOMETRY_DSET_NAMES,
     IFGRAM_DSET_NAMES,
 )
-from mintpy.utils import (
-    ptime,
-    readfile,
-    utils0 as ut,
-    attribute as attr,
-)
-from mintpy.multilook import multilook_data
+from mintpy.utils import attribute as attr, ptime, readfile, utils0 as ut
+
 
 ########################################################################################
 class ifgramStackDict:

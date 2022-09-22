@@ -12,7 +12,6 @@ import sys
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import arg_utils
 
-
 ############################################################################
 TEMPLATE = get_template_content('velocity')
 
@@ -221,7 +220,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.timeseries2velocity import run_or_skip, run_timeseries2time_func
+    from mintpy.timeseries2velocity import (
+        run_or_skip,
+        run_timeseries2time_func,
+    )
 
     # run or skip
     if inps.update_mode and run_or_skip(inps) == 'skip':

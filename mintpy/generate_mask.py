@@ -11,7 +11,7 @@ import time
 import h5py
 import numpy as np
 
-from mintpy.utils import readfile, writefile, utils as ut
+from mintpy.utils import readfile, utils as ut, writefile
 
 
 ################################################################################################

@@ -7,13 +7,13 @@
 
 import os
 import time
+
 import h5py
 import numpy as np
 from scipy import linalg
 
-from mintpy.objects import timeseries, geometry, cluster
-from mintpy.utils import ptime, time_func, readfile, writefile, utils as ut
-
+from mintpy.objects import cluster, geometry, timeseries
+from mintpy.utils import ptime, readfile, time_func, utils as ut, writefile
 
 # key configuration parameter name
 key_prefix = 'mintpy.topographicResidual.'

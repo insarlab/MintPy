@@ -11,7 +11,6 @@
 import os
 import re
 
-
 STEP_LIST4OFFSET = [
     'load_data',
     'modify_network',

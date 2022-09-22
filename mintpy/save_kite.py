@@ -6,10 +6,11 @@
 
 
 import datetime as dt
+
 import numpy as np
 
 from mintpy import subset
-from mintpy.utils import ptime, readfile, attribute as attr
+from mintpy.utils import attribute as attr, ptime, readfile
 
 d2r = np.pi / 180.
 r2d = 180. / np.pi

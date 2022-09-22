@@ -5,8 +5,9 @@
 ############################################################
 
 
-import os
 import glob
+import os
+
 import numpy as np
 
 from mintpy.utils import (
@@ -16,7 +17,6 @@ from mintpy.utils import (
     readfile,
     writefile,
 )
-
 
 GEOMETRY_PREFIXS = ['hgt', 'lat', 'lon', 'los', 'shadowMask', 'waterMask', 'incLocal']
 

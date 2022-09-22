@@ -10,10 +10,11 @@
 
 
 import os
+
 import numpy as np
 
 from mintpy.objects import timeseries
-from mintpy.utils import readfile, writefile, ptime
+from mintpy.utils import ptime, readfile, writefile
 
 
 #########################################################################################

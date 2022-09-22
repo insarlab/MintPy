@@ -7,15 +7,10 @@
 
 import h5py
 import numpy as np
-from matplotlib import pyplot as plt, dates as mdates
+from matplotlib import dates as mdates, pyplot as plt
 
 from mintpy.objects import ifgramStack
-from mintpy.utils import (
-    ptime,
-    utils as ut,
-    network as pnet,
-    plot as pp,
-)
+from mintpy.utils import network as pnet, plot as pp, ptime, utils as ut
 
 
 ###########################  Sub Function  #############################

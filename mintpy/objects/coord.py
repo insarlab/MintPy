@@ -7,13 +7,11 @@
 #   from mintpy.utils import utils as ut
 
 
-import numpy as np
 from argparse import Namespace
-from mintpy.utils import (
-    readfile,
-    utils0 as ut0,
-    utils1 as ut1
-)
+
+import numpy as np
+
+from mintpy.utils import readfile, utils0 as ut0, utils1 as ut1
 
 
 #####################################  coordinate class begin ##############################################

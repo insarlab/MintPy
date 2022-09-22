@@ -6,10 +6,12 @@
 
 
 import os
+
 import numpy as np
-from mintpy.objects import HDFEOS
-from mintpy.utils import ptime, readfile, writefile, utils as ut
+
 from mintpy import view
+from mintpy.objects import HDFEOS
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 
 ##############################################################################

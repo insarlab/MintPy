@@ -6,19 +6,13 @@
 ############################################################
 
 
+import argparse
 import os
 import sys
-import argparse
+
 import numpy as np
-from mintpy.utils import (
-    ptime,
-    arg_utils,
-    readfile,
-    writefile,
-    utils as ut,
-)
 
-
+from mintpy.utils import arg_utils, ptime, readfile, utils as ut, writefile
 
 DATA_TYPE_STR2OBJ = {
     "bool"       : np.bool_,

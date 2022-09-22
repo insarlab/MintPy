@@ -5,18 +5,18 @@
 #############################################################
 
 
+import argparse
 import os
 import re
-import argparse
+
 import numpy as np
+from matplotlib import patches, pyplot as plt, widgets
 from scipy import linalg, stats
-from matplotlib import pyplot as plt, widgets, patches
 
-from mintpy.objects import timeseries, giantTimeseries, HDFEOS
-from mintpy.utils import ptime, time_func, readfile, utils as ut, plot as pp
+from mintpy import subset, timeseries2velocity as ts2vel, view
 from mintpy.multilook import multilook_data
-from mintpy import subset, view, timeseries2velocity as ts2vel
-
+from mintpy.objects import HDFEOS, giantTimeseries, timeseries
+from mintpy.utils import plot as pp, ptime, readfile, time_func, utils as ut
 
 
 ###########################################################################################

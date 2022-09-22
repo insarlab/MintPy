@@ -6,22 +6,23 @@
 ############################################################
 
 
-import os
-import sys
-import glob
 import argparse
 import datetime
+import glob
 import inspect
+import os
+import sys
+
 import matplotlib.pyplot as plt
 
 import mintpy
-from mintpy.objects import sensor, ifgramStack
 from mintpy.defaults.template import get_template_content
+from mintpy.objects import ifgramStack, sensor
 from mintpy.utils import (
-    ptime,
-    readfile,
     network as pnet,
     plot as pp,
+    ptime,
+    readfile,
     utils as ut,
 )
 

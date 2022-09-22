@@ -6,12 +6,13 @@
 
 
 import os
+
 import numpy as np
 
+from mintpy.mask import mask_matrix
+from mintpy.multilook import multilook_data
 from mintpy.objects import timeseries
 from mintpy.utils import readfile, writefile
-from mintpy.multilook import multilook_data
-from mintpy.mask import mask_matrix
 
 
 ############################################################################

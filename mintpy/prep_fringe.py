@@ -5,26 +5,27 @@
 ############################################################
 
 
-import os
 import glob
+import os
+
+import defusedxml.ElementTree as ET
 import h5py
 import numpy as np
-import defusedxml.ElementTree as ET
 
 try:
     from osgeo import gdal
 except ImportError:
     raise ImportError("Can not import gdal!")
 
+from mintpy import subset
 from mintpy.utils import (
     attribute as attr,
+    isce_utils,
     ptime,
     readfile,
-    writefile,
-    isce_utils,
     utils as ut,
+    writefile,
 )
-from mintpy import subset
 
 
 ####################################################################################

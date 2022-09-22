@@ -10,8 +10,7 @@ import warnings
 
 from osgeo import gdal, osr
 
-from mintpy.utils import readfile, utils0 as ut, plot as pp
-
+from mintpy.utils import plot as pp, readfile, utils0 as ut
 
 # link: https://gdal.org/drivers/raster/index.html
 GDAL_DRIVER2EXT = {

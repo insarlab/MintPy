@@ -5,10 +5,12 @@
 ############################################################
 
 
-import os
 import datetime as dt
+import os
+
 import numpy as np
-from mintpy.utils import readfile, writefile, utils1 as ut
+
+from mintpy.utils import readfile, utils1 as ut, writefile
 
 
 #########################################################################

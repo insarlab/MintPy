@@ -6,15 +6,16 @@
 
 
 import os
+import warnings
+
 import numpy as np
 from matplotlib import pyplot as plt
 
-# suppress UserWarning from matplotlib
-import warnings
-warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
-
 from mintpy.objects import ifgramStack
-from mintpy.utils import readfile, utils as ut, plot as pp
+from mintpy.utils import plot as pp, readfile, utils as ut
+
+# suppress UserWarning from matplotlib
+warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 
 
 ###########################  Sub Function  #############################

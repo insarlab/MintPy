@@ -7,13 +7,14 @@
 
 import os
 import sys
+
 # Always prefer setuptools over distutils
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 # Grab version and description from version.py
 # link: https://stackoverflow.com/questions/53648900
 sys.path.append(os.path.dirname(__file__))
-from mintpy.version import version, description
+from mintpy.version import description, version
 
 # Grab long_description from README.md
 with open("docs/README.md", "r") as f:

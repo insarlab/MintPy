@@ -9,9 +9,9 @@
 
 import os
 from datetime import datetime as dt
+
 import h5py
 import numpy as np
-
 
 GIANT_DSET_NAMES = [
     'recons',        #Reconstructed filtered time-series in mm

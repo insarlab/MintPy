@@ -13,10 +13,10 @@ import h5py
 import numpy as np
 
 import mintpy
-from mintpy.objects import timeseries, ionex
+from mintpy.objects import ionex, timeseries
 from mintpy.objects.constants import SPEED_OF_LIGHT
-from mintpy.utils import ptime, readfile, writefile, utils as ut
 from mintpy.simulation import iono
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 
 #####################################################################################

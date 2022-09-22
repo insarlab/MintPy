@@ -7,10 +7,11 @@
 
 import os
 import re
-import numpy as np
-from mintpy.objects import sensor
-from mintpy.utils import readfile, writefile, ptime, utils as ut
 
+import numpy as np
+
+from mintpy.objects import sensor
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 SPEED_OF_LIGHT = 299792458  # m/s
 # list of par file extension for SAR images

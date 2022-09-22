@@ -6,10 +6,12 @@
 
 
 import os
+
 import numpy as np
+
+from mintpy.diff import check_reference
 from mintpy.objects import timeseries
 from mintpy.utils import readfile, writefile
-from mintpy.diff import check_reference
 
 
 ################################################################################

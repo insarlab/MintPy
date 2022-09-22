@@ -5,15 +5,15 @@
 ############################################################
 
 
-import os
 import datetime as dt
+import os
+
 import h5py
 import numpy as np
 
-from mintpy.objects import timeseries, geometry, sensor
-from mintpy.utils import ptime, readfile, utils as ut
 from mintpy import info
-
+from mintpy.objects import geometry, sensor, timeseries
+from mintpy.utils import ptime, readfile, utils as ut
 
 BOOL_ZERO = np.bool_(0)
 INT_ZERO = np.int16(0)

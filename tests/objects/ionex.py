@@ -10,9 +10,10 @@
 
 
 import os
-import numpy as np
-from mintpy.objects import ionex
 
+import numpy as np
+
+from mintpy.objects import ionex
 
 # test dataset at $MINTPY_HOME/tests/data directory
 tec_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")

@@ -8,13 +8,11 @@
 # OR from mintpy.utils import plot as pp
 
 
-import pyproj
 import numpy as np
-from matplotlib import pyplot as plt
+import pyproj
 from cartopy import crs as ccrs
 from cartopy.mpl import ticker as cticker
-
-
+from matplotlib import pyplot as plt
 
 ##########################################  Lat/Lon Labels  ##########################################
 

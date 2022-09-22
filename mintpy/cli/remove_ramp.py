@@ -9,8 +9,8 @@
 import os
 import sys
 import warnings
-from mintpy.utils.arg_utils import create_argument_parser
 
+from mintpy.utils.arg_utils import create_argument_parser
 
 # from mintpy.objects import RAMP_LIST
 # copy as below to avoid importing the non-empty mintpy.objects.__init__.py

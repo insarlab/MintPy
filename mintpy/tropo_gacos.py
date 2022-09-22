@@ -7,13 +7,14 @@
 
 import os
 import re
+
 import h5py
 import numpy as np
-from skimage.transform import resize
 from scipy.interpolate import RegularGridInterpolator as RGI
+from skimage.transform import resize
 
 from mintpy.objects import timeseries
-from mintpy.utils import ptime, readfile, writefile, utils as ut
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 
 ############################################################################

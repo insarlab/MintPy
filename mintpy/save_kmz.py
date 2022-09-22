@@ -13,18 +13,18 @@ from zipfile import ZipFile
 
 import numpy as np
 from lxml import etree
-from matplotlib import pyplot as plt, colors, colorbar, ticker
+from matplotlib import colorbar, colors, pyplot as plt, ticker
 from pykml.factory import KML_ElementMaker as KML
 
 import mintpy
+from mintpy import subset
 from mintpy.utils import (
     attribute as attr,
+    plot as pp,
     ptime,
     readfile,
     utils as ut,
-    plot as pp,
 )
-from mintpy import subset
 
 
 ############################################################

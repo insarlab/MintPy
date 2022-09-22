@@ -9,9 +9,11 @@
 
 
 import math
+
 import numpy as np
 import scipy.stats as stats
 from matplotlib import pyplot as plt
+
 from mintpy.utils import ptime
 
 

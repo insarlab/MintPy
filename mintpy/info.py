@@ -6,17 +6,18 @@
 
 
 import os
+
 import h5py
 import numpy as np
 
-from mintpy.utils import ptime, readfile
 from mintpy.objects import (
+    HDFEOS,
     giantIfgramStack,
     giantTimeseries,
     ifgramStack,
     timeseries,
-    HDFEOS,
 )
+from mintpy.utils import ptime, readfile
 
 
 ############################################################

@@ -11,16 +11,16 @@
 #   from mintpy.simulation import iono
 
 
-import os
-import sys
-import re
 import datetime as dt
-import numpy as np
+import os
+import re
+import sys
+
 import matplotlib.pyplot as plt
+import numpy as np
 from scipy import interpolate
 
 from mintpy.utils import readfile, utils0 as ut
-
 
 # constants
 SPEED_OF_LIGHT = 299792458 # m/s

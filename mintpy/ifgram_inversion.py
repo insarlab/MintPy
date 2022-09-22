@@ -10,13 +10,14 @@
 
 import os
 import time
+
 import h5py
 import numpy as np
-from scipy import linalg   # more effieint than numpy.linalg
-from mintpy.objects import ifgramStack, cluster
-from mintpy.simulation import decorrelation as decor
-from mintpy.utils import readfile, writefile, ptime, utils as ut
+from scipy import linalg  # more effieint than numpy.linalg
 
+from mintpy.objects import cluster, ifgramStack
+from mintpy.simulation import decorrelation as decor
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 # key configuration parameter name
 key_prefix = 'mintpy.networkInversion.'

@@ -16,28 +16,28 @@
 #   from mintpy.utils import isce_utils
 
 
-import os
 import datetime
 import glob
-import shelve
+import logging
+import os
 import re
+import shelve
 import time
 
 import numpy as np
 from scipy import ndimage
 
-from mintpy.objects.constants import SPEED_OF_LIGHT, EARTH_RADIUS
 from mintpy.objects import sensor
+from mintpy.objects.constants import EARTH_RADIUS, SPEED_OF_LIGHT
 from mintpy.utils import (
+    attribute as attr,
     ptime,
     readfile,
-    writefile,
-    attribute as attr,
     utils1 as ut,
+    writefile,
 )
 
 # suppress matplotlib DEBUG message
-import logging
 mpl_logger = logging.getLogger('matplotlib')
 mpl_logger.setLevel(logging.WARNING)
 

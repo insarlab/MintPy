@@ -6,13 +6,12 @@
 ############################################################
 
 
+import argparse
 import os
 import sys
-import argparse
 
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import arg_utils
-
 
 ############################################################################
 TEMPLATE = get_template_content('correct_topography')
@@ -119,8 +118,8 @@ def read_template2inps(template_file, inps):
     """Read input template file into inps.excludeDate"""
     print('read options from template file:', os.path.basename(template_file))
 
-    from mintpy.utils import ptime, readfile, utils1 as ut
     from mintpy.dem_error import key_prefix
+    from mintpy.utils import ptime, readfile, utils1 as ut
 
     iDict = vars(inps)
     template = readfile.read_template(template_file, skip_chars=['[', ']'])
@@ -160,7 +159,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.dem_error import run_or_skip, correct_dem_error
+    from mintpy.dem_error import correct_dem_error, run_or_skip
 
     # run or skip
     if inps.update_mode and run_or_skip(inps) == 'skip':

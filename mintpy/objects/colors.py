@@ -9,16 +9,18 @@
 #     cmap = pp.ColormapExt('cmy').colormap
 
 
+import colorsys
+import glob
 import os
 import re
-import glob
-import colorsys
+
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LinearSegmentedColormap, to_rgb
 
 import mintpy
+
 MINTPY_CPT_DIR = os.path.join(os.path.dirname(mintpy.__file__), 'data', 'colormaps')
 GMT_CPT_DIR = '/opt/local/share/gmt/cpt'  #location of GMT colormap files, default for macOS with GMT installed via MacPorts
 

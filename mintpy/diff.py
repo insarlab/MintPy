@@ -13,9 +13,9 @@ import numpy as np
 from mintpy.objects import (
     IFGRAM_DSET_NAMES,
     cluster,
-    timeseries,
     giantTimeseries,
     ifgramStack,
+    timeseries,
 )
 from mintpy.utils import readfile, writefile
 

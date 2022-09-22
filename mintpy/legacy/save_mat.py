@@ -9,11 +9,12 @@
 import os
 import sys
 from datetime import datetime as dt
+
 import h5py
 import numpy as np
 import scipy.io as sio
-from mintpy.utils import readfile
 
+from mintpy.utils import readfile
 
 ########################################################################################
 USAGE = """

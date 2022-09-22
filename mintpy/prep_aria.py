@@ -7,6 +7,7 @@
 
 import os
 import time
+
 import h5py
 import numpy as np
 
@@ -15,10 +16,10 @@ try:
 except ImportError:
     raise ImportError('Can not import gdal [version>=3.0]!')
 
-from mintpy.objects import ifgramStack, geometry, sensor
-from mintpy.utils import ptime, writefile, utils as ut, attribute as attr
-from mintpy.subset import read_subset_template2box
 from mintpy.multilook import multilook_data
+from mintpy.objects import geometry, ifgramStack, sensor
+from mintpy.subset import read_subset_template2box
+from mintpy.utils import attribute as attr, ptime, utils as ut, writefile
 
 
 ####################################################################################

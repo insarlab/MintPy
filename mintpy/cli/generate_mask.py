@@ -11,7 +11,6 @@ import warnings
 
 from mintpy.utils.arg_utils import create_argument_parser
 
-
 ################################################################################################
 EXAMPLE = """example:
   generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5

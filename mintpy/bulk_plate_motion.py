@@ -22,17 +22,18 @@
 
 
 import collections
+
 import numpy as np
 from skimage.transform import resize
 
-from mintpy.objects.resample import resample
-from mintpy.utils import readfile, writefile, utils as ut
 from mintpy.diff import diff_file
+from mintpy.objects.resample import resample
+from mintpy.utils import readfile, utils as ut, writefile
 
 # https://docs.astropy.org/en/stable/units/index.html
 try:
-    from platemotion import Plate
     from astropy import units as u
+    from platemotion import Plate
 except ImportError:
     msg = 'Can NOT import platemotion!'
     msg += '\nCheck more details at https://github.com/lcx366/PlateTectonic.'

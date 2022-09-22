@@ -3,16 +3,16 @@
 """Test example datasets for the small baseline time series analysis workflow."""
 
 
-import os
-import sys
-from pathlib import Path
-import time
-import shutil
 import argparse
+import os
+import shutil
 import subprocess
+import sys
 import tarfile
-import mintpy.cli.view
+import time
+from pathlib import Path
 
+import mintpy.cli.view
 
 CMAP_DICT = {
     'FernandinaSenDT128' : 'jet',

@@ -8,6 +8,7 @@
 
 import os
 import sys
+
 from mintpy.utils.arg_utils import create_argument_parser
 
 # from mintpy.objects.sensor import SENSOR_NAMES

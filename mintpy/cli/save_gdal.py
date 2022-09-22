@@ -7,8 +7,8 @@
 
 
 import sys
-from mintpy.utils.arg_utils import create_argument_parser
 
+from mintpy.utils.arg_utils import create_argument_parser
 
 EXAMPLE = """example:
   save_gdal.py geo/geo_velocity.h5

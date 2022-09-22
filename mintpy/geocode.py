@@ -7,16 +7,11 @@
 
 import os
 import time
+
 import numpy as np
 
 from mintpy.objects.resample import resample
-from mintpy.utils import (
-    readfile,
-    writefile,
-    utils as ut,
-    attribute as attr,
-)
-
+from mintpy.utils import attribute as attr, readfile, utils as ut, writefile
 
 
 ############################################################################################

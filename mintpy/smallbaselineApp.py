@@ -7,16 +7,17 @@
 ############################################################
 
 
-import os
 import glob
-import time
+import os
 import shutil
+import time
+
 import numpy as np
 
 import mintpy
-from mintpy.objects import sensor, cluster, RAMP_LIST
-from mintpy.utils import readfile, writefile, utils as ut
-import mintpy.workflow   # dynamic import of modules for smallbaselineApp
+import mintpy.workflow  # dynamic import of modules for smallbaselineApp
+from mintpy.objects import RAMP_LIST, cluster, sensor
+from mintpy.utils import readfile, utils as ut, writefile
 
 
 ##########################################################################

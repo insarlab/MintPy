@@ -2,14 +2,15 @@
 # Author: Zhang Yunjun, Feb 2022
 """Test ascending/descending LOS decomposition into horizontal/vertical."""
 
+import argparse
 import os
 import sys
-import argparse
+
 import numpy as np
 from matplotlib import pyplot as plt
 
-from mintpy.utils import utils as ut
 from mintpy.asc_desc2horz_vert import asc_desc2horz_vert
+from mintpy.utils import utils as ut
 
 plt.rcParams.update({'font.size': 12})
 

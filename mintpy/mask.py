@@ -7,7 +7,9 @@
 
 import os
 import shutil
+
 import numpy as np
+
 from mintpy.utils import readfile, writefile
 
 

@@ -25,9 +25,9 @@ CORRECTNESS. Use at your own risk.
 
 # PYTHON_ARGCOMPLETE_OK
 
-import sys
-import logging
 import argparse
+import logging
+import sys
 
 try:
     from os import EX_OK

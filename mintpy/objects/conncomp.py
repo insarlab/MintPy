@@ -7,18 +7,15 @@
 #   from mintpy.objects.conncomp import connectComponent
 
 
-try:
-    from skimage import measure, segmentation as seg, morphology as morph
-except ImportError:
-    raise ImportError('Could not import skimage!')
-
-import time
 import itertools
+import time
+
 import numpy as np
 from scipy.sparse import csgraph as csg
 from scipy.spatial import cKDTree
-from .ramp import deramp
+from skimage import measure, morphology as morph, segmentation as seg
 
+from mintpy.objects.ramp import deramp
 
 
 ######################################## utilities functions ##############################

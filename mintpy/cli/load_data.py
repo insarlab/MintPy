@@ -12,7 +12,6 @@ from mintpy.defaults import auto_path
 from mintpy.defaults.template import get_template_content
 from mintpy.utils.arg_utils import create_argument_parser
 
-
 #################################################################
 DEFAULT_TEMPLATE = """template:
 ########## 1. Load Data (--load to exit after this step)

@@ -6,6 +6,7 @@
 
 
 import os
+
 import h5py
 import numpy as np
 
@@ -13,8 +14,8 @@ from mintpy.utils import (
     attribute as attr,
     ptime,
     readfile,
-    writefile,
     utils as ut,
+    writefile,
 )
 
 

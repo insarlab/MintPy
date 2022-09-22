@@ -25,12 +25,14 @@ repos:
       - id: trailing-whitespace
         exclude: tests/data/
 
-  #- repo: https://github.com/PyCQA/isort
-  #  rev: "5.10.1"
-  #  hooks:
-  #    - id: isort
-  #      name: sort imports
-  #      args: ['--multi-line=VERTICAL_HANGING_INDENT', '--combine-as']
+  - repo: https://github.com/PyCQA/isort
+    rev: "5.10.1"
+    hooks:
+      - id: isort
+        name: sort imports
+        args: ['--multi-line=VERTICAL_HANGING_INDENT',
+               '--trailing-comma',
+               '--combine-as']
 
   #- repo: https://github.com/asottile/pyupgrade
   #  rev: "v2.37.3"

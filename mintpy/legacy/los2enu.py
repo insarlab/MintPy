@@ -6,12 +6,12 @@
 ############################################################
 
 
-import sys
-import os
 import getopt
-import numpy as np
-import h5py
+import os
+import sys
 
+import h5py
+import numpy as np
 
 ############################################################################
 USAGE = """

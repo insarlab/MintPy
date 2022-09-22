@@ -6,17 +6,19 @@
 ############################################################
 
 
+import argparse
 import os
 import sys
-import argparse
+
 from lxml import objectify
-from mintpy.utils import readfile, utils as ut
+
 from mintpy.objects import sensor
+from mintpy.utils import readfile, utils as ut
 
-
-key_giant2mintpy = {'xmin':'SUBSET_XMIN', 'xmax':'SUBSET_XMAX',
-                   'ymin':'SUBSET_YMIN', 'ymax':'SUBSET_YMAX',
-                  }
+key_giant2mintpy = {
+    'xmin':'SUBSET_XMIN', 'xmax':'SUBSET_XMAX',
+    'ymin':'SUBSET_YMIN', 'ymax':'SUBSET_YMAX',
+}
 
 
 ##################################################################################################

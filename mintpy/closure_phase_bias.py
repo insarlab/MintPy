@@ -7,22 +7,16 @@
 #   from mintpy import closure_phase_bias as cpbias
 
 
-import os
 import glob
+import os
 import time
 from datetime import datetime as dt
 
 import numpy as np
 
-from mintpy.objects import ifgramStack, cluster
-from mintpy.utils import (
-    ptime,
-    readfile,
-    writefile,
-    isce_utils,
-    utils as ut,
-)
 from mintpy.ifgram_inversion import estimate_timeseries
+from mintpy.objects import cluster, ifgramStack
+from mintpy.utils import isce_utils, ptime, readfile, utils as ut, writefile
 
 
 #################################  Mask  #######################################

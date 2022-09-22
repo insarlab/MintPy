@@ -14,11 +14,10 @@ from cvxopt import matrix
 from matplotlib import pyplot as plt
 from skimage import measure
 
-from mintpy.objects import ifgramStack, conncomp
-from mintpy.utils import ptime, readfile, writefile, utils as ut, plot as pp
-from mintpy.utils.solvers import l1regls
 from mintpy import ifgram_inversion as ifginv
-
+from mintpy.objects import conncomp, ifgramStack
+from mintpy.utils import plot as pp, ptime, readfile, utils as ut, writefile
+from mintpy.utils.solvers import l1regls
 
 key_prefix = 'mintpy.unwrapError.'
 

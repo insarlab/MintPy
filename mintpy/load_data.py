@@ -5,12 +5,13 @@
 ############################################################
 
 
-import os
 import glob
 import importlib
+import os
 import time
 import warnings
 
+from mintpy import subset
 from mintpy.defaults import auto_path
 from mintpy.objects import (
     GEOMETRY_DSET_NAMES,
@@ -19,14 +20,8 @@ from mintpy.objects import (
     ifgramStack,
     sensor,
 )
-from mintpy.objects.stackDict import (
-    geometryDict,
-    ifgramStackDict,
-    ifgramDict,
-)
-from mintpy.utils import readfile, ptime, utils as ut
-from mintpy import subset
-
+from mintpy.objects.stackDict import geometryDict, ifgramDict, ifgramStackDict
+from mintpy.utils import ptime, readfile, utils as ut
 
 #################################################################
 PROCESSOR_LIST = ['isce', 'aria', 'hyp3', 'gmtsar', 'snap', 'gamma', 'roipac', 'cosicorr']
@@ -639,7 +634,7 @@ def prepare_metadata(iDict):
                 prep_module.main(iargs)
 
     elif processor == 'isce':
-        from mintpy.utils import s1_utils, isce_utils
+        from mintpy.utils import isce_utils, s1_utils
 
         # --meta-file
         meta_files = sorted(glob.glob(iDict['mintpy.load.metaFile']))

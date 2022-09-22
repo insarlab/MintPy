@@ -8,8 +8,8 @@
 
 import os
 import sys
-from mintpy.utils import arg_utils
 
+from mintpy.utils import arg_utils
 
 ###########################################################################################
 EXAMPLE = """example:

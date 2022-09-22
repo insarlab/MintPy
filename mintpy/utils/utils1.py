@@ -8,15 +8,17 @@
 #   from mintpy.utils import utils as ut
 
 
+import glob
 import os
 import re
-import time
-import glob
 import shutil
+import time
+
 import h5py
 import numpy as np
+
 import mintpy
-from mintpy.objects import deramp, ifgramStack, timeseries, GEOMETRY_DSET_NAMES
+from mintpy.objects import GEOMETRY_DSET_NAMES, deramp, ifgramStack, timeseries
 from mintpy.utils import ptime, readfile, writefile
 from mintpy.utils.utils0 import *
 

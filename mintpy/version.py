@@ -1,10 +1,9 @@
 # grab version / date of the latest commit
 
 
+import collections
 import os
 import subprocess
-import collections
-
 
 ###########################################################################
 Tag = collections.namedtuple('Tag', 'version date')

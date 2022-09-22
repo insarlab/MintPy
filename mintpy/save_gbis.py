@@ -6,15 +6,17 @@
 
 
 import os
-import warnings       # suppress UserWarning from matplotlib
-warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
+import warnings
 
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy.io as sio
-import matplotlib.pyplot as plt
 
 from mintpy.objects import sensor
 from mintpy.utils import ptime, readfile, utils as ut
+
+# suppress UserWarning from matplotlib
+warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 
 
 ##############################################################################

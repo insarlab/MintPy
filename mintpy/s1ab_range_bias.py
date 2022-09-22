@@ -6,11 +6,12 @@
 
 
 import os
+
 import numpy as np
-from matplotlib import pyplot as plt, ticker, colors
+from matplotlib import colors, pyplot as plt, ticker
 
 from mintpy.objects import timeseries
-from mintpy.utils import readfile, writefile, s1_utils, plot as pp
+from mintpy.utils import plot as pp, readfile, s1_utils, writefile
 
 
 ####################################################################################

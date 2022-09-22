@@ -8,14 +8,15 @@
 #     from mintpy.objects import timeseries, ifgramStack, geometry
 
 
+import datetime as dt
+import itertools
 import os
 import time
-import itertools
-import datetime as dt
+
 import h5py
 import numpy as np
-from mintpy.utils import ptime
 
+from mintpy.utils import ptime
 
 ##------------------ Global Variables ---------------------##
 

@@ -6,10 +6,10 @@
 ############################################################
 
 
-import sys
 import glob
-from mintpy.utils.arg_utils import create_argument_parser
+import sys
 
+from mintpy.utils.arg_utils import create_argument_parser
 
 #########################################################################
 GEOMETRY_PREFIXS = ['hgt', 'lat', 'lon', 'los', 'shadowMask', 'waterMask', 'incLocal']

@@ -6,11 +6,12 @@
 
 
 import os
-import h5py
-import numpy as np
 import random
 
-from mintpy.utils import ptime, readfile, writefile, utils as ut
+import h5py
+import numpy as np
+
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 
 ###############################################################

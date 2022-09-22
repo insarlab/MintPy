@@ -9,16 +9,16 @@ import os
 import shutil
 from zipfile import ZipFile
 
-import numpy as np
 import matplotlib as mpl
+import numpy as np
 from lxml import etree
-from matplotlib import pyplot as plt, patches
+from matplotlib import patches, pyplot as plt
 from pykml.factory import KML_ElementMaker as KML
 
 import mintpy
-from mintpy.objects import timeseries, deramp
-from mintpy.utils import readfile, plot as pp, utils as ut
 from mintpy import save_kmz
+from mintpy.objects import deramp, timeseries
+from mintpy.utils import plot as pp, readfile, utils as ut
 
 
 ############################################################

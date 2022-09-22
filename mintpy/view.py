@@ -7,10 +7,11 @@
 #   from mintpy.view import prep_slice, plot_slice, viewer
 
 
+import datetime as dt
 import os
 import re
-import datetime as dt
-import warnings   # suppress UserWarning from matplotlib
+import warnings  # suppress UserWarning from matplotlib
+
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 
 import cartopy.crs as ccrs
@@ -18,21 +19,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from mintpy.objects import (
-    TIMESERIES_KEY_NAMES,
-    giantIfgramStack,
-    ifgramStack,
-)
-from mintpy.objects.gps import GPS
-from mintpy.utils import (
-    ptime,
-    readfile,
-    utils as ut,
-    plot as pp,
-)
-from mintpy.multilook import multilook_data
 from mintpy import subset, version
-
+from mintpy.multilook import multilook_data
+from mintpy.objects import TIMESERIES_KEY_NAMES, giantIfgramStack, ifgramStack
+from mintpy.objects.gps import GPS
+from mintpy.utils import plot as pp, ptime, readfile, utils as ut
 
 
 ##################################################################################################

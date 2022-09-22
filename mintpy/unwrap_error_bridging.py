@@ -7,13 +7,13 @@
 
 import os
 import time
+
 import h5py
 import numpy as np
 
 from mintpy.objects import ifgramStack
 from mintpy.objects.conncomp import connectComponent
-from mintpy.utils import ptime, readfile, writefile, utils as ut
-
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 # key configuration parameter name
 key_prefix = 'mintpy.unwrapError.'

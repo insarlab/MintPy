@@ -6,9 +6,10 @@
 
 
 import os
+
 import numpy as np
 
-from mintpy.utils import readfile, utils as ut, plot as pp
+from mintpy.utils import plot as pp, readfile, utils as ut
 
 
 ######################################################################################################

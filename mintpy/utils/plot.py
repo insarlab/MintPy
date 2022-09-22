@@ -8,28 +8,23 @@
 #     from mintpy.utils import plot as pp
 
 
-import os
 import argparse
-import warnings
 import datetime as dt
+import os
+import warnings
+
 import h5py
-import numpy as np
 import matplotlib as mpl
-from matplotlib import pyplot as plt, ticker, dates as mdates
+import numpy as np
+from matplotlib import dates as mdates, pyplot as plt, ticker
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import stats
 
-from mintpy.objects.coord import coordinate
+from mintpy.objects import TIMESERIES_DSET_NAMES, TIMESERIES_KEY_NAMES
 from mintpy.objects.colors import ColormapExt
-from mintpy.objects import TIMESERIES_KEY_NAMES, TIMESERIES_DSET_NAMES
+from mintpy.objects.coord import coordinate
+from mintpy.utils import network as pnet, ptime, readfile, utils0 as ut0
 from mintpy.utils.map import draw_lalo_label, draw_scalebar
-from mintpy.utils import (
-    ptime,
-    readfile,
-    network as pnet,
-    utils0 as ut0,
-)
-
 
 min_figsize_single = 6.0       # default min size in inch, for single plot
 max_figsize_single = 10.0      # default min size in inch, for single plot

@@ -11,7 +11,7 @@ import sys
 
 import numpy as np
 from scipy import ndimage
-from skimage import filters, feature, morphology
+from skimage import feature, filters, morphology
 
 from mintpy.utils import readfile, writefile
 

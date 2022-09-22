@@ -1,12 +1,12 @@
 # The 1-norm approximation example of section 8.7 (Exploiting structure).
 
-from cvxopt import blas, lapack, solvers
-from cvxopt import matrix, spdiag, mul, div
-from cvxopt import sqrt, base
+from cvxopt import base, blas, div, lapack, matrix, mul, solvers, spdiag, sqrt
 
 try:
-    import mosek
     import sys
+
+    # commrecial + free academic license upon requests
+    import mosek
     __MOSEK = True
 except:
     __MOSEK = False

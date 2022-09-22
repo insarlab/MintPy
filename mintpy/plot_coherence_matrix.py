@@ -6,12 +6,13 @@
 
 
 import os
-import numpy as np
-import matplotlib.pyplot as plt
 
-from mintpy.objects import ifgramStack
-from mintpy.utils import readfile, plot as pp, utils as ut
+import matplotlib.pyplot as plt
+import numpy as np
+
 from mintpy import view
+from mintpy.objects import ifgramStack
+from mintpy.utils import plot as pp, readfile, utils as ut
 
 
 ###########################  Sub Function  #############################

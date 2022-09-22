@@ -8,9 +8,9 @@
 
 import os
 import sys
+
 from mintpy.defaults.template import get_template_content
 from mintpy.utils.arg_utils import create_argument_parser
-
 
 ####################################################################################################
 TEMPLATE = get_template_content('correct_unwrap_error')
@@ -94,8 +94,8 @@ def read_template2inps(template_file, inps):
     """Read input template options into Namespace inps"""
     print('read options from template file: '+os.path.basename(template_file))
 
-    from mintpy.utils import readfile, utils1 as ut
     from mintpy.unwrap_error_bridging import key_prefix
+    from mintpy.utils import readfile, utils1 as ut
 
     inpsDict = vars(inps)
     template = readfile.read_template(inps.template_file)
@@ -124,7 +124,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.unwrap_error_bridging import run_or_skip, run_unwrap_error_bridging
+    from mintpy.unwrap_error_bridging import (
+        run_or_skip,
+        run_unwrap_error_bridging,
+    )
 
     # run or skip
     if inps.update_mode and run_or_skip(inps) == 'skip':

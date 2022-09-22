@@ -6,12 +6,13 @@
 ############################################################
 
 
-import h5py
 import argparse
+
+import h5py
 import numpy as np
+
 from mintpy.objects import timeseries
 from mintpy.utils import ptime, readfile
-
 
 ################################################################################
 EXAMPLE = """example:

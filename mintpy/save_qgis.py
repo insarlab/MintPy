@@ -5,8 +5,9 @@
 ############################################################
 
 
-import os
 import errno
+import os
+
 import h5py
 import numpy as np
 from osgeo import ogr

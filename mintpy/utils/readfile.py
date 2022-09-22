@@ -7,27 +7,27 @@
 #   from mintpy.utils import readfile
 
 
-import os
-import sys
-import re
-import glob
 import datetime as dt
+import glob
+import os
+import re
+import sys
 import warnings
-import defusedxml.ElementTree as ET
 
+import defusedxml.ElementTree as ET
 import h5py
 import numpy as np
 
 from mintpy.objects import (
     DSET_UNIT_DICT,
+    HDFEOS,
     geometry,
     giantIfgramStack,
     giantTimeseries,
     ifgramStack,
+    sensor,
     timeseries,
-    HDFEOS,
 )
-from mintpy.objects import sensor
 from mintpy.utils import ptime, utils0 as ut
 
 SPEED_OF_LIGHT = 299792458  # meters per second

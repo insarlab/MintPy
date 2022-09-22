@@ -6,11 +6,11 @@
 ############################################################
 
 
+import math
 import os
 import sys
-import math
-from mintpy.utils import arg_utils
 
+from mintpy.utils import arg_utils
 
 ############################################################
 EXAMPLE = """example:

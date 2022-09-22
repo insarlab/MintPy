@@ -9,12 +9,12 @@
 
 import os
 import time
+
 import numpy as np
 from scipy import linalg
 
-from mintpy.objects import timeseries, giantTimeseries, HDFEOS, cluster
-from mintpy.utils import ptime, time_func, readfile, writefile
-
+from mintpy.objects import HDFEOS, cluster, giantTimeseries, timeseries
+from mintpy.utils import ptime, readfile, time_func, writefile
 
 DATA_TYPE = np.float32
 # key configuration parameter name

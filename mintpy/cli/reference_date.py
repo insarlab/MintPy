@@ -7,9 +7,9 @@
 
 
 import sys
+
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import arg_utils
-
 
 ##################################################################
 TEMPLATE = get_template_content('reference_date')

@@ -8,7 +8,8 @@
 
 import numpy as np
 from scipy.io import netcdf
-from mintpy.utils import readfile, plot as pp
+
+from mintpy.utils import plot as pp, readfile
 
 
 ####################################################################################

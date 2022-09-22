@@ -6,11 +6,11 @@
 ############################################################
 
 
-import os
 import argparse
-from mintpy.objects import ifgramStack
-from mintpy.utils import readfile, ptime, utils as ut
+import os
 
+from mintpy.objects import ifgramStack
+from mintpy.utils import ptime, readfile, utils as ut
 
 ##################################################################################################
 EXAMPLE = """example:

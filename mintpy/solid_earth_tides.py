@@ -7,24 +7,20 @@
 #   from mintpy import solid_earth_tides as SET
 
 
-import os
 import datetime as dt
+import os
 import time
 
 import h5py
 import numpy as np
 import pysolid
 from matplotlib import pyplot as plt
+
 plt.rcParams.update({'font.size': 12})
 
 from mintpy.objects import timeseries
 from mintpy.objects.resample import resample
-from mintpy.utils import (
-    ptime,
-    readfile,
-    writefile,
-    utils as ut,
-)
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 
 ###############################################################

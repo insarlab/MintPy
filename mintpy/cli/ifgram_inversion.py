@@ -8,9 +8,9 @@
 
 import os
 import sys
+
 from mintpy.defaults.template import get_template_content
 from mintpy.utils import arg_utils
-
 
 ################################################################################################
 TEMPLATE = get_template_content('invert_network')
@@ -202,8 +202,8 @@ def read_template2inps(template_file, inps):
     """Read input template options into Namespace inps"""
     print('read input option from template file:', template_file)
 
-    from mintpy.utils import readfile, utils1 as ut
     from mintpy.ifgram_inversion import key_prefix
+    from mintpy.utils import readfile, utils1 as ut
 
     iDict = vars(inps)
     template = readfile.read_template(template_file)
@@ -247,7 +247,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.ifgram_inversion import run_or_skip, run_ifgram_inversion
+    from mintpy.ifgram_inversion import run_ifgram_inversion, run_or_skip
 
     # run or skip
     if inps.update_mode and run_or_skip(inps) == 'skip':

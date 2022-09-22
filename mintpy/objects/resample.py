@@ -9,15 +9,18 @@
 
 import os
 import warnings
+
 import h5py
 import numpy as np
 from scipy import ndimage
 from scipy.interpolate import RegularGridInterpolator as RGI
+
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', UserWarning)
     import pyresample as pr
+
 from mintpy.objects.cluster import split_box2sub_boxes
-from mintpy.utils import readfile, ptime, utils0 as ut
+from mintpy.utils import ptime, readfile, utils0 as ut
 
 EARTH_RADIUS = 6378122.65   # m
 

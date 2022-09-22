@@ -7,8 +7,8 @@
 
 from matplotlib import pyplot as plt, ticker
 
-from mintpy.utils import readfile, utils as ut, plot as pp
 from mintpy import view
+from mintpy.utils import plot as pp, readfile, utils as ut
 
 
 #####################################################################

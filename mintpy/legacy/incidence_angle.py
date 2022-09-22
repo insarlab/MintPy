@@ -7,9 +7,10 @@
 
 
 import argparse
-import numpy as np
-from mintpy.utils import readfile, writefile, utils as ut
 
+import numpy as np
+
+from mintpy.utils import readfile, utils as ut, writefile
 
 ############################################################
 EXAMPLE = """example:

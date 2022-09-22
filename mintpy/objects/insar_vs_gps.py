@@ -7,17 +7,17 @@
 #   from mintpy.objects.insar_vs_gps import insar_vs_gps
 
 
-import sys
 import datetime as dt
+import sys
+
 import numpy as np
 from scipy import stats
 from scipy.interpolate import griddata
 
-from mintpy.objects import timeseries, giantTimeseries
-from mintpy.utils import readfile, plot as pp, utils as ut
-from mintpy.objects.gps import GPS
 from mintpy.defaults.plot import *
-
+from mintpy.objects import giantTimeseries, timeseries
+from mintpy.objects.gps import GPS
+from mintpy.utils import plot as pp, readfile, utils as ut
 
 
 ############################## beginning of insar_vs_gps class ##############################

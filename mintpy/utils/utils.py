@@ -7,8 +7,9 @@
 #   from mintpy.utils import utils as ut
 
 
-import os
 import errno
+import os
+
 import numpy as np
 from scipy.ndimage import map_coordinates
 
@@ -18,12 +19,11 @@ from mintpy.objects import (
     ifgramStack,
     timeseries,
 )
-
-from mintpy.utils import ptime, readfile, attribute as attr
-from mintpy.utils.utils0 import *
-from mintpy.utils.utils1 import *
 from mintpy.objects.coord import coordinate
 from mintpy.objects.resample import resample
+from mintpy.utils import attribute as attr, ptime, readfile
+from mintpy.utils.utils0 import *
+from mintpy.utils.utils1 import *
 
 
 #################################################################################

@@ -7,12 +7,13 @@
 
 
 import sys
-import numpy as np
+
 import h5py
 import matplotlib.pyplot as plt
+import numpy as np
 from scipy.ndimage.filters import laplace
-from mintpy.utils import ptime
 
+from mintpy.utils import ptime
 
 ##############################################################################
 USAGE = """

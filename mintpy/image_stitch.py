@@ -7,12 +7,13 @@
 
 
 import os
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
 from skimage.transform import rescale
 
-from mintpy.utils import readfile, writefile, plot as pp
 from mintpy.multilook import multilook_data
+from mintpy.utils import plot as pp, readfile, writefile
 
 
 #############################################################################################

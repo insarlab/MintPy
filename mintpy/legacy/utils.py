@@ -6,6 +6,7 @@
 
 
 import time
+
 import numpy as np
 
 
@@ -92,8 +93,9 @@ def timeseries_inversion_FGLS(h5flat, h5timeseries):
 
 def timeseries_inversion_L1(h5flat, h5timeseries):
     try:
+        from cvxopt import matrix, normal
+
         from .l1 import l1
-        from cvxopt import normal, matrix
     except ImportError:
         raise ImportError('cvxopt should be installed to be able to use the L1 norm minimization.')
         # modified from sbas.py written by scott baker, 2012

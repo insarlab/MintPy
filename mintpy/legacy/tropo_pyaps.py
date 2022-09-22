@@ -8,17 +8,20 @@
 
 import os
 import re
-import sys
 import subprocess
+import sys
+
 try:
     import pyaps as pa
 except ImportError:
     raise ImportError('Cannot import pyaps!')
 
 import argparse
+
 import numpy as np
-from mintpy.objects import timeseries, geometry
-from mintpy.utils import readfile, writefile, ptime, utils as ut
+
+from mintpy.objects import geometry, timeseries
+from mintpy.utils import ptime, readfile, utils as ut, writefile
 
 standardWeatherModelNames = {
     'ERAI': 'ECMWF', 'ERAINT': 'ECMWF', 'ERAINTERIM': 'ECMWF',

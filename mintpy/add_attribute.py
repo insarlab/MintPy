@@ -8,9 +8,9 @@
 
 import os
 import sys
-from mintpy.utils import readfile, writefile, utils as ut
-from mintpy import info
 
+from mintpy import info
+from mintpy.utils import readfile, utils as ut, writefile
 
 ################################################################################
 USAGE = """

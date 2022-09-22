@@ -12,9 +12,20 @@
 # MIT Press.
 
 
-from cvxopt import matrix, spdiag, mul, div, sqrt, normal, setseed
-from cvxopt import blas, lapack, solvers
 import math
+
+from cvxopt import (
+    blas,
+    div,
+    lapack,
+    matrix,
+    mul,
+    normal,
+    setseed,
+    solvers,
+    spdiag,
+    sqrt,
+)
 
 
 def l1regls(A, y, alpha=1.0, show_progress=1):

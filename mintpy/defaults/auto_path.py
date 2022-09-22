@@ -7,10 +7,9 @@
 #   from mintpy.defaults import auto_path
 
 
+import glob
 import os
 import re
-import glob
-
 
 # Default path of data files from different InSAR processors to be loaded into MintPy
 AUTO_PATH_ISCE_TOPS = '''##----------Default file path of ISCE/topsStack products
