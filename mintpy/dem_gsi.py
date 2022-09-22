@@ -61,7 +61,7 @@ def write_dem_file(SNWE, dem_file, grid_dir):
     grids_W = xx_min + 100
     x_step = dehm.step
     y_step = -dehm.step
-    
+
     r0 = round((N - grids_N) / y_step)
     r1 = round((S - grids_N) / y_step)
     c0 = round((W - grids_W) / x_step)
@@ -132,7 +132,7 @@ def write_vrt_file(meta, fname):
 """.format(w=meta.width,
            l=meta.length,
            x0=meta.west,
-           xs=meta.lon_step, 
+           xs=meta.lon_step,
            y0=meta.north,
            ys=meta.lat_step,
            f=os.path.basename(meta.file_path),
@@ -188,10 +188,10 @@ def add_reference_datum(xml_file):
 
     # get property element for reference
     ref = ET.Element("property", attrib={'name': 'reference'})
-    
+
     val = ET.SubElement(ref, "value")
     val.text = "WGS84"
-    
+
     doc = ET.SubElement(ref, "doc")
     doc.text = "Geodetic datum"
 

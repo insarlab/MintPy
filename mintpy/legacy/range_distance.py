@@ -19,7 +19,7 @@ Generates range distance (in Radar Coordinate) for each pixel
 
 input arguments:
   file    : string, input  file name/path
-  outfile : string, output file name/path for 2D incidence angle 
+  outfile : string, output file name/path for 2D incidence angle
             calculated from file in radar coord
 
 example:

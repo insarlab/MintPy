@@ -46,7 +46,7 @@ STEP_LIST = [
 def get_template_content(step_name, template_file=None, indentation=2, header_footer=True):
     """Grab the related template content for each step
     To avoid duplication in each utility script.
-    
+
     Parameters: step_name     - str, step name
                 template_file - str, path of the template file
     Returns:    step_content  - str, comments and options of the step

@@ -36,7 +36,7 @@ def create_parser(subparsers=None):
         name, synopsis=synopsis, description=synopsis, epilog=epilog, subparsers=subparsers)
 
     parser.add_argument('ifgram_file', help='interferogram stack file')
-    parser.add_argument('--yx', type=int, metavar=('Y', 'X'), nargs=2, 
+    parser.add_argument('--yx', type=int, metavar=('Y', 'X'), nargs=2,
                         help='Point of interest in y(row)/x(col)')
     parser.add_argument('--lalo', type=float, metavar=('LAT','LON'), nargs=2,
                         help='Point of interest in lat/lon')

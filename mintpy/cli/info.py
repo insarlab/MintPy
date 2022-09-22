@@ -30,7 +30,7 @@ EXAMPLE = """example:
   info.py S1_IW12_128_0593_0597_20141213_20180619.h5 --date
 
   # save date1_date2 info of interferograms to a text file
-  info.py ifgramStack.h5 --date --show kept > date12_list.txt  
+  info.py ifgramStack.h5 --date --show kept > date12_list.txt
 
   # Slice / Dataset Info
   info.py timeseries.h5                              --slice

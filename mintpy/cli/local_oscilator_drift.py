@@ -15,7 +15,7 @@ from mintpy.utils.arg_utils import create_argument_parser
 TEMPLATE = get_template_content('correct_LOD')
 
 REFERENCE = """reference:
-  Marinkovic, P., and Y. Larsen (2013), Consequences of long-term ASAR local oscillator 
+  Marinkovic, P., and Y. Larsen (2013), Consequences of long-term ASAR local oscillator
     frequency decay - An empirical study of 10 years of data, 2013 Living Planet Symposium,
     Edinburgh, U.K.
 """

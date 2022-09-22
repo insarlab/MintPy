@@ -44,7 +44,7 @@ def get_distance(lat, lon, i):
     '''Return the distance of all points in lat/lon from its ith point'''
     lat1 = lat[i]*np.ones(lat.shape)
     lon1 = lon[i]*np.ones(lon.shape)
-    
+
     g = pyproj.Geod(ellps='WGS84')
     dist = g.inv(lon1, lat1, lon, lat)[2]
     return dist
@@ -79,7 +79,7 @@ def bin_variance(distance, variance, step=5e3, min_pair_num=100e3, print_msg=Tru
     var = np.zeros(x_steps.shape)
     var_std = np.zeros(var.shape)
     p_num = np.zeros(x_steps.shape)
-    
+
     if print_msg:
         prog_bar = ptime.progressBar(maxValue=num_step)
     for i in range(num_step):
@@ -92,6 +92,6 @@ def bin_variance(distance, variance, step=5e3, min_pair_num=100e3, print_msg=Tru
             prog_bar.update(i+1, every=10)
     if print_msg:
         prog_bar.close()
-    
+
     max_step_idx = int(max(np.argwhere(p_num > min_pair_num)))
     return x_steps[0:max_step_idx], var[0:max_step_idx], var_std[0:max_step_idx]

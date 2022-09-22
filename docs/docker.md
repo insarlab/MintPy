@@ -4,7 +4,7 @@
 
 ### 1. Pulling the mintpy Docker image ###
 
-We publish the mintpy Docker images in the [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry) at [ghcr.io/insarlab/mintpy](https://github.com/insarlab/MintPy/pkgs/container/mintpy). 
+We publish the mintpy Docker images in the [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry) at [ghcr.io/insarlab/mintpy](https://github.com/insarlab/MintPy/pkgs/container/mintpy).
 
 The latest stable released version can be pulled to your local machine via the `latest` tag as:
 

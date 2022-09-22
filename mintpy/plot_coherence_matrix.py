@@ -33,7 +33,7 @@ def read_network_info(inps):
     vprint('number of acquisitions: {}'.format(len(inps.date_list)))
 
     if inps.lalo:
-        if not inps.lookup_file:            
+        if not inps.lookup_file:
             lookup_file = os.path.join(os.path.dirname(inps.ifgram_file), 'geometry*.h5')
             inps.lookup_file = ut.get_lookup_file(filePattern=lookup_file)
         coord = ut.coordinate(obj.metadata, lookup_file=inps.lookup_file)

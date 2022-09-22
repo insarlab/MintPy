@@ -377,7 +377,7 @@ def plot_transect(ax, inps):
         if not inps.dem_disp_min:
             inps.dem_disp_min = np.floor(value_min*2.0)/2.0
         if not inps.dem_disp_max:
-            inps.dem_disp_max = np.ceil((value_max + 
+            inps.dem_disp_max = np.ceil((value_max +
                                          (value_max-value_min)*(len(inps.file)+0.0))*2.0)/2.0
         ax2.set_ylim(inps.dem_disp_min, inps.dem_disp_max)
         # Show lower part of yaxis
@@ -391,7 +391,7 @@ def plot_transect(ax, inps):
     distanceMax = np.nanmax(inps.transectList[0][:, 0]/1000.0)   # in km
     plt.xlim(0, distanceMax)
     plt.tight_layout()
-    return 
+    return
 
 
 def save_transect(fig_list, inps):

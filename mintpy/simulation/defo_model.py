@@ -59,7 +59,7 @@ def mogi(geometry, xloc, nu=0.25):
 
 def mogi_los(shape, source_geom, resolution=60., scale=1., display=True):
     """Simulate 2D deformation caused by the overpress of a Mogi source underneath
-    
+
     Parameters: shape: 2-tuple of int in (length, width) or 2D np.ndarray in size of (length, width) in np.bool_
                 source_geom : 4-tuple of float, Mogi source geometry: East, North, Depth, Volomn change in SI unit.
     Returns:    dis_los: 2D np.ndarray in size of (length, width), deformation in LOS direction in meter

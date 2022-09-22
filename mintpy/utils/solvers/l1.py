@@ -1,4 +1,4 @@
-# The 1-norm approximation example of section 8.7 (Exploiting structure).  
+# The 1-norm approximation example of section 8.7 (Exploiting structure).
 
 from cvxopt import blas, lapack, solvers
 from cvxopt import matrix, spdiag, mul, div
@@ -14,7 +14,7 @@ except:
 if __MOSEK:
 
     def l1mosek(P, q):
-        """ 
+        """
         minimize    e'*v
 
         subject to  P*u - v <=  q
@@ -60,7 +60,7 @@ if __MOSEK:
         return matrix(x)
 
     def l1mosek2(P, q):
-        """ 
+        """
         minimize    e'*s + e'*t
 
         subject to  P*u - q = s - t
@@ -111,7 +111,7 @@ def l1(P, q):
     """
     Returns the solution u of the ell-1 approximation problem
 
-        (primal) minimize ||P*u - q||_1       
+        (primal) minimize ||P*u - q||_1
 
         (dual)   maximize    q'*w
                  subject to  P'*w = 0
@@ -208,7 +208,7 @@ def l1blas(P, q):
     """
     Returns the solution u of the ell-1 approximation problem
 
-        (primal) minimize ||P*u - q||_1       
+        (primal) minimize ||P*u - q||_1
 
         (dual)   maximize    q'*w
                  subject to  P'*w = 0

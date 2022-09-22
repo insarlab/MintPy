@@ -426,7 +426,7 @@ def get_delay_timeseries(inps, atr):
         atr = readfile.read_attribute(fname)
         return (atr['LENGTH'], atr['WIDTH'])
 
-    if (ut.run_or_skip(out_file=inps.trop_file, in_file=inps.grib_file_list, print_msg=False) == 'skip' 
+    if (ut.run_or_skip(out_file=inps.trop_file, in_file=inps.grib_file_list, print_msg=False) == 'skip'
             and get_dataset_size(inps.trop_file) == get_dataset_size(inps.geom_file)):
         print('{} file exists and is newer than all GRIB files, skip updating.'.format(inps.trop_file))
     else:

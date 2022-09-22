@@ -40,7 +40,7 @@ NOTE = """
      at least of one triangular connection to form a closed circle; with more
      closed circles comes better constrain.
   b. majority rightness: most of interferograms have to be right (no unwrapping
-     error) to correct the wrong minority. And if most of interferograms have 
+     error) to correct the wrong minority. And if most of interferograms have
      unwrapping errors, then the minor right interferograms will turn into wrong.
 """
 

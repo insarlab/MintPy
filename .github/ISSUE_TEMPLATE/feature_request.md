@@ -29,7 +29,7 @@ assignees: ''
 <!-- Add any other context about the feature request here. -->
 
 
-**Are you willing to help implement and maintain this feature?** 
+**Are you willing to help implement and maintain this feature?**
 
 - [ ] Yes
 - [ ] No

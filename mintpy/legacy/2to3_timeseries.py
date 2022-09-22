@@ -60,7 +60,7 @@ def run_2to3_timeseries(py2_file, py3_file):
         bperp = np.array([float(i) for i in atr['P_BASELINE_TIMESERIES'].split()], dtype=np.float32)
     else:
         bperp = None
-    for key in ['P_BASELINE_TIMESERIES', 
+    for key in ['P_BASELINE_TIMESERIES',
                 'P_BASELINE_TOP_TIMESERIES',
                 'P_BASELINE_BOTTOM_TIMESERIES']:
         if key in atr.keys():

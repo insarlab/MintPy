@@ -315,14 +315,14 @@ def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor_name='En
         Guarnieri, A. M. (2013), Introduction to RADAR, Politecnico di Milano Dipartimento di Elettronica
             e Informazione, Milano.
         Zebker, H. A., & Villasenor, J. (1992). Decorrelation in interferometric radar echoes.
-            IEEE-TGRS, 30(5), 950-959. 
+            IEEE-TGRS, 30(5), 950-959.
         Hanssen, R. F. (2001). Radar interferometry: data interpretation and error analysis
             (Vol. 2). Dordrecht, Netherlands: Kluwer Academic Pub.
         Morishita, Y., & Hanssen, R. F. (2015). Temporal decorrelation in L-, C-, and X-band satellite
-            radar interferometry for pasture on drained peat soils. IEEE-TGRS, 53(2), 1096-1104. 
+            radar interferometry for pasture on drained peat soils. IEEE-TGRS, 53(2), 1096-1104.
         Parizzi, A., Cong, X., & Eineder, M. (2009). First Results from Multifrequency Interferometry.
             A comparison of different decorrelation time constants at L, C, and X Band. ESA Scientific
-            Publications(SP-677), 1-5. 
+            Publications(SP-677), 1-5.
     """
     date_list, pbase_list, dop_list = read_baseline_file(baseline_file)[0:3]
     tbase_list = ptime.date_list2tbase(date_list)[0]
@@ -558,7 +558,7 @@ def threshold_coherence_based_mst(date12_list, coh_list):
         date12_list - list of string in YYMMDD-YYMMDD format
         coh_list    - list of float, average coherence for each interferogram
     Output:
-        mst_date12_list - list of string in YYMMDD-YYMMDD format, for MST network of interferograms 
+        mst_date12_list - list of string in YYMMDD-YYMMDD format, for MST network of interferograms
     """
     # coh_list --> coh_mat --> weight_mat
     coh_mat = coherence_matrix(date12_list, coh_list)

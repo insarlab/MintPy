@@ -29,7 +29,7 @@ def label_conn_comp(mask, min_area=2.5e3, erosion_size=5, print_msg=False):
                 min_area     - float, minimum region/area size
                 erosion_size - int (odd number), size of erosion structure
                                set to 0 to turn it off.
-    Returns:    label_img    - 2d np.ndarray of int, labeled array where all 
+    Returns:    label_img    - 2d np.ndarray of int, labeled array where all
                                connected regions are assigned the same value
                 num_label    - int, number of labeled regions
     """

@@ -207,7 +207,7 @@ def write_shape_file(fDict, shp_file, box=None):
 
                             #Create feature with definition
                             feature = ogr.Feature(layerDefn)
-                            add_metadata(feature, [lon[j], lat[j]], rdict) 
+                            add_metadata(feature, [lon[j], lat[j]], rdict)
                             layer.CreateFeature(feature)
                             feature = None
 

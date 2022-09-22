@@ -57,9 +57,9 @@ Results are plotted in **./pic** folder. To explore more data information and vi
 ```bash
 info.py                    #check HDF5 file structure and metadata
 view.py                    #2D map view
-tsview.py                  #1D point time-series (interactive)   
+tsview.py                  #1D point time-series (interactive)
 plot_coherence_matrix.py   #plot coherence matrix for one pixel (interactive)
-plot_network.py            #plot network configuration of the dataset    
+plot_network.py            #plot network configuration of the dataset
 plot_transection.py        #plot 1D profile along a line of a 2D matrix (interactive)
 save_kmz.py                #generate Google Earth KMZ file in points or raster image
 save_kmz_timeseries.py     #generate Google Earth KMZ file in points for time-series (interactive)

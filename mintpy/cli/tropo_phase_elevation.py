@@ -19,7 +19,7 @@ REFERENCE = """reference:
 """
 
 EXAMPLE = """example:
-  tropo_phase_elevation.py  timeseries_demErr.h5      -g inputs/geometryRadar.h5  -m maskTempCoh.h5    
+  tropo_phase_elevation.py  timeseries_demErr.h5      -g inputs/geometryRadar.h5  -m maskTempCoh.h5
   tropo_phase_elevation.py  geo_timeseries_demErr.h5  -g geo_geometryRadar.h5     -m geo_maskTempCoh.h5
 """
 

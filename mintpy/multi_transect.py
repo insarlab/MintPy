@@ -17,22 +17,22 @@ import matplotlib.pyplot as plt
 def usage():
     print("""
 *****************************************************************************************
-   Generating multiple profiles(each profile includes seeveral transects [specified by -n])  
+   Generating multiple profiles(each profile includes seeveral transects [specified by -n])
    perpendicular to a Fault . Fault is a path specified by lat and lon coordinates.
 
    Usage:
        -n number of transects used to generate one profile
-       -d distance [in pixel] between individual transects to generate one profile   
+       -d distance [in pixel] between individual transects to generate one profile
        -F a txt file including the fault coordinates (first column lon , second column: lat)
        -p flip profile left-right (yes or no) [default: no]
        -u flip up - down [default: no]
        -g gps_file (if exists)
        -S source of GPS velocities (usgs,cmm4,mintpy)
-       -G gps stations to compare with InSAR  (all,insar,profile)  
-          "all": all gps stations is projected to the profile 
-          "insar": same as all but limited to the area covered by insar    
+       -G gps stations to compare with InSAR  (all,insar,profile)
+          "all": all gps stations is projected to the profile
+          "insar": same as all but limited to the area covered by insar
           "profile": only those gps stations which are in the profile area]
-    
+
        -x lower bound to display in x direction
        -X higher bound to display in x direction
        -l lower bound to display in y direction
@@ -45,7 +45,7 @@ def usage():
        -D Distance between two consequent average profile
 
    Example:
-       multi_transect.py -f geo_velocity_masked.h5 -n 50 -d 1 -W 10 -D 2 -F Chaman_fault.txt 
+       multi_transect.py -f geo_velocity_masked.h5 -n 50 -d 1 -W 10 -D 2 -F Chaman_fault.txt
 
 ********************************************************************************************
     """)
@@ -717,15 +717,15 @@ def main(argv=None):
                     insarData = insarData - insarData[IDYref][IDXref]
 
                 else:
-                    print(""" 
+                    print("""
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-      
+
       WARNING: nan value for InSAR data at the reference pixel!
                reference station should be a pixel with valid value in InSAR data.
-                               
+
                please select another GPS station as the reference station.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                       
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                    """)
                     sys.exit(1)
             else:

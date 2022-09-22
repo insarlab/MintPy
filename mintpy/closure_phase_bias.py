@@ -462,7 +462,7 @@ def estimate_wratio_all(bw, bias_free_conn, outdir, box):
                 box            - list in size of (4,) in integer, coordinates of bounding box
                 outdir         - string, the working directory
     Returns:    wratio         - 3D array in size of (bw+1, length, width) in float32,
-                                 the first slice (w[0,:,:]) is a padding 
+                                 the first slice (w[0,:,:]) is a padding
                                  to ensure that wratio[n,:,:] = w(n * delta_t) / w(delta_t).
     '''
     box_wid = box[2] - box[0]

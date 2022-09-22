@@ -138,10 +138,10 @@ def cross_correlation_std(N, coh, corr_type='intensity'):
     """Standard deviation of cross correlation for differential shift estimation.
 
     Reference:
-        Bamler, R., and M. Eineder (2005), Accuracy of differential shift estimation by 
-            correlation and split-bandwidth interferometry for wideband and delta-k SAR systems, 
+        Bamler, R., and M. Eineder (2005), Accuracy of differential shift estimation by
+            correlation and split-bandwidth interferometry for wideband and delta-k SAR systems,
             Geoscience and Remote Sensing Letters, IEEE, 2(2), 151-155, doi:10.1109/LGRS.2004.843203.
-        De Zan, F. (2014), Accuracy of Incoherent Speckle Tracking for Circular Gaussian Signals, 
+        De Zan, F. (2014), Accuracy of Incoherent Speckle Tracking for Circular Gaussian Signals,
             IEEE Geoscience and Remote Sensing Letters, 11(1), 264-267, doi:10.1109/LGRS.2013.2255259.
 
     Parameters: N         - int   / 2D np.ndarray in size of (n, 1), number of independent samples (resolution ceels)

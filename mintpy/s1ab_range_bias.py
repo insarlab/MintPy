@@ -21,7 +21,7 @@ def estimate_s1ab_range_bias(ts_file, mask_file=None, safe_list_file=None):
                 mask_file      - str, path of the mask file, e.g., maskResInv.h5 file.
                 safe_list_file - str, path of the SAFE_files.txt file
     Returns:    bias_list      - list of float32, median bias per subswath in meters
-                bias_est       - 2D np.ndarray in size of (length, width) in float32, bias in meters    
+                bias_est       - 2D np.ndarray in size of (length, width) in float32, bias in meters
                 mask_list      - list of 2D np.ndarray in size of (length, width) in bool
     """
     mintpy_dir = os.path.dirname(ts_file)
@@ -188,7 +188,7 @@ def correct_s1ab_range_bias(ts_file, bias_file, ts_cor_file=None, safe_list_file
     mask = ts_data == 0
     ts_data[s1b_flag] -= np.tile(bias.reshape(1, -1), (np.sum(s1b_flag), 1))
     ts_data[mask] = 0                    # Do not change zero value in the input TS file
-    ts_data[:, np.isnan(bias)] = np.nan  # set to nan for pixels with nan in bias file 
+    ts_data[:, np.isnan(bias)] = np.nan  # set to nan for pixels with nan in bias file
 
     # write file
     if not ts_cor_file:

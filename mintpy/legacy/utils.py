@@ -15,7 +15,7 @@ def timeseries_inversion_FGLS(h5flat, h5timeseries):
 
     Usage:
     timeseries_inversion(h5flat,h5timeseries)
-      h5flat: hdf5 file with the interferograms 
+      h5flat: hdf5 file with the interferograms
       h5timeseries: hdf5 file with the output from the inversion
     ##################################################
     """

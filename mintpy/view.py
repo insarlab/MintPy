@@ -355,7 +355,7 @@ def prep_slice(cmd, auto_fig=False):
     inps = update_inps_with_file_metadata(inps, atr)
 
     inps.msk, inps.mask_file = pp.read_mask(
-        inps.file, 
+        inps.file,
         mask_file=inps.mask_file,
         datasetName=inps.dset[0],
         box=inps.pix_box,
@@ -852,7 +852,7 @@ def read_dataset_input(inps):
     # read inps.plot_drop_ifgram
     drop_num_list = []
     ftype = readfile.read_attribute(inps.file)['FILE_TYPE']
-    
+
     if not inps.plot_drop_ifgram:
         if ftype == 'ifgramStack':
             vprint('do not show the dropped interferograms')
@@ -1226,7 +1226,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
                     # special titles for Sentinel-1 data
                     if metadata.get('PLATFORM', None) == 'Sen' and inps.disp_title4sentinel1:
                         # display S1A/B in different colors
-                        s1_sensor = metadata['SENTINEL1_SENSOR'].split()[i]                        
+                        s1_sensor = metadata['SENTINEL1_SENSOR'].split()[i]
                         kwarg['color'] = 'C0' if s1_sensor == 'A' else 'C1'
                         # display IPF in subplot title
                         s1_IPF = metadata['SENTINEL1_IPF'].split()[i]

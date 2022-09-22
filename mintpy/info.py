@@ -70,7 +70,7 @@ def print_hdf5_structure(fname, max_meta_num=200):
         h5_str += 'Attributes in / level:\n'
         h5_str += attributes2string(atr, max_meta_num=max_meta_num)+'\n'
 
-    # get maxDigit value 
+    # get maxDigit value
     maxDigit = max([len(i) for i in f.keys()])
     maxDigit = max(20, maxDigit+1)
     if atr.get('FILE_TYPE', 'timeseries') == 'HDFEOS':

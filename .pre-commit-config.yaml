@@ -21,9 +21,9 @@ repos:
       - id: check-yaml
       - id: debug-statements
       - id: end-of-file-fixer
-      #- id: mixed-line-ending
-      #- id: trailing-whitespace
-      #  exclude: tests/data/
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+        exclude: tests/data/
 
   #- repo: https://github.com/PyCQA/isort
   #  rev: "5.10.1"

@@ -53,7 +53,7 @@ NOTE = """
   Notes:
     HyP3 currently only supports generation of Sentinel-1 interferograms, so
     some Sentinel-1 metadata is hard-coded. If HyP3 adds processing of interferograms
-    from other satellites, changes will be needed. 
+    from other satellites, changes will be needed.
 """
 
 EXAMPLE = """example:

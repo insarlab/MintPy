@@ -68,7 +68,7 @@ def read_vrt_info(vrt_file):
     # in case of a (usually multilooked) vrt file missing SourceFilename field
     if not src_dir:
         src_dir = os.path.dirname(vrt_file)
-    
+
     return src_box, src_dir
 
 

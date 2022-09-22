@@ -59,7 +59,7 @@ def manual_offset_estimate(mat1, mat2):
 
     # Calculate the Offset - Difference
     # offset=V2[y00:y11,x00:x11]-V2[y0:y1,x0:x1]
-    offset = (  np.nansum(mat2[y00:y11, x00:x11]) / np.sum(np.isfinite(mat2[y00:y11, x00:x11])) 
+    offset = (  np.nansum(mat2[y00:y11, x00:x11]) / np.sum(np.isfinite(mat2[y00:y11, x00:x11]))
               - np.nansum(mat1[y0:y1, x0:x1]) / np.sum(np.isfinite(mat1[y0:y1, x0:x1])))
 
     return offset
@@ -97,7 +97,7 @@ def get_corners(atr):
 
 
 def stitch_two_matrices(mat1, atr1, mat2, atr2, apply_offset=True, print_msg=True):
-    """Stitch two geocoded matrices 
+    """Stitch two geocoded matrices
     and/or shift the 2nd matrix value to match with the 1st one.
 
     Parameters: mat1/2       - 2D np.ndarray

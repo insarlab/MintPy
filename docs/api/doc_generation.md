@@ -10,9 +10,9 @@ cd $MINTPY_HOME/docs/api
 open ../api_docs/html/index.html
 ```
 
-+ To generate hyperlinked PDF version of the API documentation from latex:    
++ To generate hyperlinked PDF version of the API documentation from latex:
 
 ```bash
-cd $MINTPY_HOME/docs/api_docs/latex    
+cd $MINTPY_HOME/docs/api_docs/latex
 make
 ```

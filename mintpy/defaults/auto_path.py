@@ -182,7 +182,7 @@ def get_auto_path(processor, work_dir, template):
     for key, value in auto_path_dict.items():
         if value:
             for var1, var2 in var_dict.items():
-                value = value.replace(var1, var2)    
+                value = value.replace(var1, var2)
             auto_path_dict[key] = value
 
     ## 3. update input template option with auto value

@@ -698,7 +698,7 @@ def run_tropo_pyaps3(inps):
 
     ## download
     inps.grib_files = dload_grib_files(
-        inps.grib_files, 
+        inps.grib_files,
         tropo_model=inps.tropo_model,
         snwe=inps.snwe)
 

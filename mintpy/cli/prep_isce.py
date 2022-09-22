@@ -28,7 +28,7 @@ EXAMPLE = """example:
   prep_isce.py -f "./Igrams/*/filt_*.unw" -m ./referenceShelve/data.dat -b ./baselines/ -g ./geom_reference/
 
   # stripmapApp
-  prep_isce.py -m 20120507_slc_crop.xml -g ./geometry 
+  prep_isce.py -m 20120507_slc_crop.xml -g ./geometry
 
   ## alosStack
   # where 150408 is the reference date

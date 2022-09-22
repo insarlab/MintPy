@@ -15,7 +15,7 @@ def extract_metadata(fname):
     """Read/extract attributes from ROI_PAC .unw, .int, .cor file.
 
     For each unwrapped interferogram or spatial coherence file, there are 2 .rsc files:
-        basic metadata file and baseline parameter file. 
+        basic metadata file and baseline parameter file.
         e.g. filt_100901-110117-sim_HDR_4rlks_c10.unw
              filt_100901-110117-sim_HDR_4rlks_c10.unw.rsc
              100901-110117_baseline.rsc

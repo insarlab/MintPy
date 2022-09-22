@@ -13,7 +13,7 @@ from mintpy.utils.arg_utils import create_argument_parser
 ################################################################################################
 REFERENCE = """references:
   Bekaert, D. P. S., Handwerger, A. L., Agram, P., & Kirschbaum, D. B. (2020). InSAR-based detection
-    method for mapping and monitoring slow-moving landslides in remote regions with steep and 
+    method for mapping and monitoring slow-moving landslides in remote regions with steep and
     mountainous terrain: An application to Nepal. Remote Sensing of Environment, 249, 111983.
     doi:10.1016/j.rse.2020.111983
 """

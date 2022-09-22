@@ -1,6 +1,6 @@
 # poly fit of the topside / total TEC ratio (alpha) as a function of day-of-year, for Sentinel-1.
 # reference: equation (14) in Yunjun et al. (2022, IEEE-TGRS)
-# alpha = 3.4302124e+01 
+# alpha = 3.4302124e+01
 #	- 3.4292573e-01 * t_d
 #	+ 2.4354539e-03 * t_d**2
 #	+ 4.5565852e-05 * t_d**3

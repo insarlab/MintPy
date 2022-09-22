@@ -368,7 +368,7 @@ def run_timeseries2time_func(inps):
             # =>  sigma_hat^2 = (e_hat.T * e_hat) / N               (10)
             # =>      sigma^2 = sigma_hat^2 * N / (N - P)           (11)
             #                 = (e_hat.T * e_hat) / (N - P)         (12)
-            # 
+            #
             # Eq. (10) in Fattahi & Amelung (2015, JGR) is a simplified form of eq. (12) for linear velocity.
 
             if inps.uncertaintyQuantification == 'covariance':

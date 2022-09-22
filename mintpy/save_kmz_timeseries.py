@@ -212,7 +212,7 @@ def generate_js_datastring(dates, dygraph_file, num_date, ts):
         js_data_string += date_displacement_string
 
     js_data_string += """
-    
+
     "",
        {
          width: 500,
@@ -227,7 +227,7 @@ def generate_js_datastring(dates, dygraph_file, num_date, ts):
                  },
                  valueFormatter: function (d) {
                      var date = new Date(d)
-                     var dateString = 'Date: ' + ('0' + date.getDate()).slice(-2) + 
+                     var dateString = 'Date: ' + ('0' + date.getDate()).slice(-2) +
                                       '/' + ('0' + (date.getMonth() + 1)).slice(-2) +
                                       '/' + date.getFullYear()
                      return dateString;
@@ -257,13 +257,13 @@ def generate_js_datastring(dates, dygraph_file, num_date, ts):
          panEdgeFraction: 0.0
        });
        </script>
-    
+
     """
     return js_data_string
 
 
 def create_kml_region_document(inps, box_list, ts_obj, step):
-    """Create list of KML.Document() objects 
+    """Create list of KML.Document() objects
     for one level of details defined by box_list and step
     """
     dot_file = '../../{}'.format(os.path.basename(inps.dot_file))
@@ -571,7 +571,7 @@ def save_kmz_timeseries(inps):
     # 2) zip all data files
     with ZipFile(kmz_file, 'w') as fz:
         kml_data_files = get_all_file_paths(inps.kml_data_dir)
-        for fname in [root_file, 
+        for fname in [root_file,
                       inps.cbar_file,
                       inps.dygraph_file,
                       inps.dot_file,

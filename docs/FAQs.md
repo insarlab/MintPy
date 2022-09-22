@@ -8,7 +8,7 @@ For LOS displacement (velocity) in the unit of meters (m/yr), i.e. 'timeseries' 
 
 ### 2. How to prepare the input for MintPy if I am using currently un-supported InSAR softwares?
 
-The input of MintPy routine workflow (`smallbaselineApp.py`) is a stack of unwrapped interferograms. For "stack", we mean all the interferograms (unwrapped phase and spatial coherence) and geometries (DEM, incidence angle, etc.) have the same spatial extent and same spatial resolution, either in geo-coordinates or radar (range-doppler) coordinates. The input has 2 components: data and attributes. 
+The input of MintPy routine workflow (`smallbaselineApp.py`) is a stack of unwrapped interferograms. For "stack", we mean all the interferograms (unwrapped phase and spatial coherence) and geometries (DEM, incidence angle, etc.) have the same spatial extent and same spatial resolution, either in geo-coordinates or radar (range-doppler) coordinates. The input has 2 components: data and attributes.
 
 All inputs are saved into the following HDF5 files during the data loading process in MintPy:
 
@@ -52,7 +52,7 @@ Note that MintPy assumes **date1_date2** convention for interferograms (date1 < 
 
 #### Attributes
 
-For each data file, MintPy requires some attributes/metadata in `ROI_PAC .rsc` format as described [here](https://mintpy.readthedocs.io/en/latest/api/attributes/). The optional attributes are highly recommend. The interferogram specific attributes (DATE12, P_BASELINE_TOP/BOTTOM_HDR) is not needed for geometry files (DEM, incidence angle, etc.). 
+For each data file, MintPy requires some attributes/metadata in `ROI_PAC .rsc` format as described [here](https://mintpy.readthedocs.io/en/latest/api/attributes/). The optional attributes are highly recommend. The interferogram specific attributes (DATE12, P_BASELINE_TOP/BOTTOM_HDR) is not needed for geometry files (DEM, incidence angle, etc.).
 
 For the supported InSAR software workflows, we prepare these metadata via `prep_isce.py`, `prep_gamma.py`, etc., to read their native metadata, convert and write them into `ROI_PAC .rsc` style for each data file.
 

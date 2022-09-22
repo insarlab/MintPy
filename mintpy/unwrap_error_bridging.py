@@ -59,7 +59,7 @@ def run_or_skip(inps):
         atr = readfile.read_attribute(inps.ifgram_file)
 
         # check all keys
-        changed_keys = [key for key in config_keys 
+        changed_keys = [key for key in config_keys
                         if str(inps_dict[key]) != atr.get(key_prefix+key, 'no')]
         if len(changed_keys) > 0:
             flag = 'run'

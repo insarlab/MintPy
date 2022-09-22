@@ -49,7 +49,7 @@ NOTE = """
   e.g. diff_filt_HDR_130118-130129_4rlks.unw.rsc
 
 
-  For DEM file in radar/geo coordinates (.hgt_sim or .rdc.dem / .utm.dem) and 
+  For DEM file in radar/geo coordinates (.hgt_sim or .rdc.dem / .utm.dem) and
       lookup table file for geocoding (.UTM_TO_RDC), 2 metadata files are required:
   1) .par      file, for DEM in geo   coordinates and lookup table, e.g.: sim_150911_4rlks.utm.dem.par
   2) .diff_par file, for DEM in radar coordinates, e.g. sim_150911_4rlks.diff_par
@@ -63,7 +63,7 @@ NOTE = """
           130129_4rlks.amp.par
           filt_130118-130129_4rlks.cor
           diff_130118-130129_4rlks.unw
-      For each dataset, only one sim* folder with 5 files are needed, 
+      For each dataset, only one sim* folder with 5 files are needed,
           sim_150911_4rlks.UTM_TO_RDC
           sim_150911_4rlks.diff_par
           sim_150911_4rlks.hgt_sim or sim_150911.rdc.dem
@@ -92,7 +92,7 @@ NOTE = """
           sim_150911_4rlks.utm.dem.par
           sim_150911_4rlks.utm.dem.rsc
 
-  Notes: both - and _ are supported; 
+  Notes: both - and _ are supported;
          both YYMMDD and YYYYMMDD naming are also supported;
          if no multilooking applied, do not add "_4rlks" in your file names.
 """

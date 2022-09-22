@@ -28,7 +28,7 @@ EXAMPLE = """example:
   # multiple files input
   subset.py *velocity*.h5 timeseries*.h5  -y 400 1500  -x 200 600
 
-  # crop to larger area with custom fill value 
+  # crop to larger area with custom fill value
   subset.py geo_velocity.h5 -l 32.2 33.5  --outfill-nan
   subset.py Mask.h5 -x 500 3500 --outfill 0
 

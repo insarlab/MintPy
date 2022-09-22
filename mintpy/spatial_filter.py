@@ -65,7 +65,7 @@ def filter_data(data, filter_type, filter_par=None):
             result =  regional mean of data - local mean of data
 
         where both the regional and local kernel size can be set using the
-        filter_par argument. The regional kernel has a doughnut shape 
+        filter_par argument. The regional kernel has a doughnut shape
         because the pixels used to calculate the local mean are not
         included in the regional mean. This ensures that the local mean
         and regional mean results are separate.
@@ -79,7 +79,7 @@ def filter_data(data, filter_type, filter_par=None):
 
         local_kernel /= local_kernel.sum(axis=(0,1))
         regional_kernel /= regional_kernel.sum(axis=(0,1))
-        
+
         combined_kernel = regional_kernel - local_kernel
 
         data_filt = ndimage.convolve(data, combined_kernel)

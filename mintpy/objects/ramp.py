@@ -11,7 +11,7 @@ import numpy as np
 
 # duplicated in mintpy.cli.remove_ramp
 RAMP_LIST = [
-    'linear', 
+    'linear',
     'linear_range',
     'linear_azimuth',
     'quadratic',
@@ -29,7 +29,7 @@ def deramp(data, mask_in=None, ramp_type='linear', metadata=None, max_num_sample
                 mask_in    : 2D np.ndarray, mask of pixels used for ramp estimation
                 ramp_type  : str, name of ramp to be estimated.
                 metadata   : dict, containing reference pixel info, REF_Y/X
-                max_num_sample : float, max number of pixel sample, 
+                max_num_sample : float, max number of pixel sample,
                              above which the uniform sampling is applied to reduce sample size
                 coeff_file : str, path to the text file to save the estimated ramp coefficients
                 ignore_zero_value : bool, ignore pixels with zero values, default is True

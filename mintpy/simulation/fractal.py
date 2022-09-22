@@ -8,7 +8,7 @@
 # Ramon Hanssen, May 2000, available in the following website:
 #     http://doris.tudelft.nl/software/insarfractal.tar.gz
 # Reference:
-#   Hanssen, R. F. (2001), Radar interferometry: data interpretation 
+#   Hanssen, R. F. (2001), Radar interferometry: data interpretation
 # and error analysis, Kluwer Academic Pub, Dordrecht, Netherlands. Chap. 4.7.
 
 
@@ -30,7 +30,7 @@ pyfftw.config.NUM_THREADS = NUM_THREADS
 
 def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., freq0=1e-3,
                           regime=(0.001, 0.999, 1.00), beta=(5./3., 8./3., 2./3.)):
-    """Simulate an isotropic 2D fractal surface with a power law behavior, which cooresponds with the 
+    """Simulate an isotropic 2D fractal surface with a power law behavior, which cooresponds with the
     [-5/3, -8/3, -2/3] power law.
 
     E.g. equation (4.7.28) from Hanssen (2001):
@@ -79,17 +79,17 @@ def fractal_surface_atmos(shape=(128, 128), resolution=60., p0=1., freq0=1e-3,
     """
     beta+1 is used as beta, since, the power exponent
     is defined for a 1D slice of the 2D spectrum:
-    austin94: "Adler, 1981, shows that the surface profile 
+    austin94: "Adler, 1981, shows that the surface profile
       created by the intersection of a plane and a
-      2-D fractal surface is itself fractal with 
-      a fractal dimension equal to that of the 2D 
+      2-D fractal surface is itself fractal with
+      a fractal dimension equal to that of the 2D
       surface decreased by one.
     """
     beta += 1.
 
     """
     The power beta/2 is used because the power spectral
-    density is proportional to the amplitude squared 
+    density is proportional to the amplitude squared
     Here we work with the amplitude, instead of the power
     so we should take sqrt( k.^beta) = k.^(beta/2)  RH
     """

@@ -1,6 +1,6 @@
 # Contributing Guidelines
 
-This document is inspired by similar instructions from numpy, GMT, ISCE, gdal and jupyterhub. If you're reading this section, you're probably interested in contributing to MintPy. Welcome and thanks for your interest in contributing! 
+This document is inspired by similar instructions from numpy, GMT, ISCE, gdal and jupyterhub. If you're reading this section, you're probably interested in contributing to MintPy. Welcome and thanks for your interest in contributing!
 
 These are several ways to contribute to the MintPy project:
 
@@ -14,7 +14,7 @@ These are several ways to contribute to the MintPy project:
 If you get stuck at any point you can open an [issue on GitHub](https://github.com/insarlab/MintPy/issues) or comment on any open issue or pull request or contact us on the [user forum](https://groups.google.com/forum/#!forum/mintpy).
 
 For more information on contributing to open source projects, [GitHub's own guide](https://guides.github.com/activities/contributing-to-open-source/)
-is a great starting point if you are new to version control. 
+is a great starting point if you are new to version control.
 
 ## Development process ##
 

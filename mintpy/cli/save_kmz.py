@@ -14,7 +14,7 @@ from mintpy.utils import arg_utils
 
 ############################################################
 EXAMPLE = """example:
-  save_kmz.py geo/geo_velocity.h5 
+  save_kmz.py geo/geo_velocity.h5
   save_kmz.py geo/geo_velocity.h5 -u cm --wrap --wrap-range -3 7
 
   save_kmz.py geo/geo_timeseries_ERA5_ramp_demErr.h5 20101120

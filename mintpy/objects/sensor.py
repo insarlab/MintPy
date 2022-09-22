@@ -81,7 +81,7 @@ def project_name2sensor_name(proj_names):
         if any(s in proj_path.lower() for s in SENSOR_NAMES) and proj_name is None:
             # exclude known words overlapping with sensor names
             # ers: users
-            proj_path_segs = [p for p in proj_path.split(os.sep) 
+            proj_path_segs = [p for p in proj_path.split(os.sep)
                               if p.lower() not in ['users']]
             for proj_path_seg in proj_path_segs:
                 if any(s.capitalize() in proj_path_seg for s in SENSOR_NAMES):
@@ -177,7 +177,7 @@ def get_unavco_mission_name(meta_dict):
 # Kim, Y., and R. L. Jordan (2006), Spaceborne SAR Antennas for Earth Science,
 #   in Spaceborne Antennas for Planetary Exploration, edited by W. A. Imbriale,
 #   pp. 305-340, doi:10.1002/0470052783.ch6.
-# Jung, H.-S., W.-J. Lee, and L. Zhang (2014), Theoretical accuracy of along-track 
+# Jung, H.-S., W.-J. Lee, and L. Zhang (2014), Theoretical accuracy of along-track
 #   displacement measurements from multiple-aperture interferometry (MAI), Sensors (Basel),
 #   14(9), 17703-17724, doi:10.3390/s140917703.
 # Zebker, H. A., C. L. Werner, P. A. Rosen, and S. Hensley (1994), Accuracy of topographic maps
@@ -284,7 +284,7 @@ RSAT2 = {
     'ground_range_pixel_size'    : 2.1,       # m
 }
 
-# GaoFen-3 
+# GaoFen-3
 # Table 2 & 6 in https://directory.eoportal.org/web/eoportal/satellite-missions/g/gaofen-3
 GF3 = {
     'carrier_frequency'          : 5.4e9,     # Hz

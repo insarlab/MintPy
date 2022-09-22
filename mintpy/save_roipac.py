@@ -207,7 +207,7 @@ def read_data(inps):
             if 'coherence' in k.lower():
                 atr['FILE_TYPE'] = '.cor'
             elif k in ['mask']:
-                atr['FILE_TYPE'] = '.msk'    
+                atr['FILE_TYPE'] = '.msk'
             elif k in ['geometry'] and inps.dset == 'height':
                 if 'Y_FIRST' in atr.keys():
                     atr['FILE_TYPE'] = '.dem'
