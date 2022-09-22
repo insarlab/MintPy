@@ -10,7 +10,6 @@
 import os
 import datetime as dt
 import time
-import warnings
 
 import h5py
 import numpy as np

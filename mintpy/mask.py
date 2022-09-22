@@ -105,15 +105,15 @@ def mask_isce_file(in_file, mask_file, out_file=None):
     num_band = int(atr['BANDS'])
 
     # default short name for data type from ISCE
-    dataTypeDict = {
+    data_type_dict = {
         'byte': 'bool_',
         'float': 'float32',
         'double': 'float64',
         'cfloat': 'complex64',
     }
     data_type = atr['DATA_TYPE'].lower()
-    if data_type in dataTypeDict.keys():
-        data_type = dataTypeDict[data_type]
+    if data_type in data_type_dict.keys():
+        data_type = data_type_dict[data_type]
 
     print('read {}'.format(in_file))
     print('setting the (phase) value on the masked out pixels to zero')

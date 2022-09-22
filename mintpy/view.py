@@ -19,9 +19,9 @@ import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from mintpy.objects import (
+    TIMESERIES_KEY_NAMES,
     giantIfgramStack,
     ifgramStack,
-    timeseriesKeyNames,
 )
 from mintpy.objects.gps import GPS
 from mintpy.utils import (
@@ -642,10 +642,11 @@ def plot_slice(ax, data, metadata, inps):
         # read lats/lons if exist
         geom_file = os.path.join(os.path.dirname(metadata['FILE_PATH']), 'inputs/geometryRadar.h5')
         if os.path.isfile(geom_file):
-            try:
+            geom_ds_list = readfile.get_dataset_list(geom_file)
+            if all(x in geom_ds_list for x in ['latitude', 'longitude']):
                 lats = readfile.read(geom_file, datasetName='latitude',  box=inps.pix_box, print_msg=False)[0]
                 lons = readfile.read(geom_file, datasetName='longitude', box=inps.pix_box, print_msg=False)[0]
-            except:
+            else:
                 msg = 'WARNING: no latitude / longitude found in file: {}, '.format(os.path.basename(geom_file))
                 msg += 'skip showing lat/lon in the status bar.'
                 vprint(msg)
@@ -868,7 +869,7 @@ def read_dataset_input(inps):
     inps.dsetNum = len(inps.dset)
 
     if inps.ref_date:
-        if inps.key not in timeseriesKeyNames:
+        if inps.key not in TIMESERIES_KEY_NAMES:
             inps.ref_date = None
 
         ref_date = search_dataset_input(
@@ -893,7 +894,7 @@ def read_dataset_input(inps):
         vprint('num of datasets in file {}: {}'.format(os.path.basename(inps.file), len(inps.sliceList)))
         vprint('datasets to exclude ({}):\n{}'.format(len(inps.exDsetList), inps.exDsetList))
         vprint('datasets to display ({}):\n{}'.format(len(inps.dset), inps.dset))
-    if inps.ref_date and inps.key in timeseriesKeyNames:
+    if inps.ref_date and inps.key in TIMESERIES_KEY_NAMES:
         vprint('input reference date: {}'.format(inps.ref_date))
 
     if inps.dsetNum == 0:
@@ -1179,7 +1180,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     if inps.disp_title:
         # get title
         subplot_title = None
-        if inps.key in timeseriesKeyNames or inps.dset[0].startswith('bperp'):
+        if inps.key in TIMESERIES_KEY_NAMES or inps.dset[0].startswith('bperp'):
             # support / for py2-mintpy
             date_str = inps.dset[i].replace('/','-').split('-')[1]
             try:

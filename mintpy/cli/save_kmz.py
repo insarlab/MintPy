@@ -108,7 +108,7 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # import
-    from mintpy.objects import timeseriesKeyNames
+    from mintpy.objects import TIMESERIES_KEY_NAMES
     from mintpy.utils import readfile, utils as ut
 
     # check
@@ -131,7 +131,7 @@ def cmd_line_parse(iargs=None):
 
     # check: dset option (required for timeseries and ifgramStack files)
     ftype = atr['FILE_TYPE']
-    if not inps.dset and ftype in timeseriesKeyNames + ['ifgramStack']:
+    if not inps.dset and ftype in TIMESERIES_KEY_NAMES + ['ifgramStack']:
         raise Exception(f'No date/date12 specified for {ftype} file!')
 
     return inps

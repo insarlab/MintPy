@@ -13,7 +13,7 @@ import numpy as np
 from scipy.ndimage import map_coordinates
 
 from mintpy.objects import (
-    geometryDatasetNames,
+    GEOMETRY_DSET_NAMES,
     geometry,
     ifgramStack,
     timeseries,
@@ -79,7 +79,7 @@ def check_loaded_dataset(work_dir='./', print_msg=True, relpath=False):
 
     # 2. [required] geom_file: height
     geom_file = os.path.join(work_dir, 'inputs', f'geometry{coord_type.capitalize()}.h5')
-    dname = geometryDatasetNames[0]
+    dname = GEOMETRY_DSET_NAMES[0]
 
     if is_file_exist(geom_file, abspath=True):
         obj = geometry(geom_file)
@@ -100,9 +100,9 @@ def check_loaded_dataset(work_dir='./', print_msg=True, relpath=False):
 
             # get the proper lookup table dataset names
             if processor in ['isce', 'doris']:
-                dnames = geometryDatasetNames[1:3]
+                dnames = GEOMETRY_DSET_NAMES[1:3]
             elif processor in ['gamma', 'roipac']:
-                dnames = geometryDatasetNames[3:5]
+                dnames = GEOMETRY_DSET_NAMES[3:5]
             else:
                 msg = f'Unknown InSAR processor: {processor} to locate look up table!'
                 raise AttributeError(msg)

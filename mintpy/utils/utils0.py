@@ -45,7 +45,7 @@ def misregistration2coherence(mu):
     coh = np.sinc(mu)
 
     # for coregistration errors >1, set coherence to zero
-    if type(mu) is np.ndarray:
+    if isinstance(mu, np.ndarray):
         coh[mu > 1] = 0
     else:
         if mu > 1:
@@ -215,16 +215,15 @@ def azimuth_ground_resolution(atr):
     if 'X_FIRST' in atr.keys():
         print('Input file is in geo coord, no azimuth resolution info.')
         return
-    try:
-        proc = atr['PROCESSOR']
-    except:
-        proc = 'isce'
+
+    proc = atr.get('PROCESSOR', 'isce')
     if proc in ['roipac', 'isce']:
         Re = float(atr['EARTH_RADIUS'])
         height = float(atr['HEIGHT'])
         az_step = float(atr['AZIMUTH_PIXEL_SIZE']) * Re / (Re + height)
     elif proc == 'gamma':
         az_step = float(atr['AZIMUTH_PIXEL_SIZE'])
+
     return az_step
 
 
@@ -659,7 +658,7 @@ def get_unit_vector4component_of_interest(los_inc_angle, los_az_angle, comp='enu
         raise ValueError('comp=horz requires horz_az_angle input!')
 
     # initiate output
-    unit_vect = None
+    unit_vec = None
 
     if comp in ['enu2los']:
         unit_vec = [

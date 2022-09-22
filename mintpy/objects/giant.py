@@ -13,14 +13,16 @@ import h5py
 import numpy as np
 
 
-giantDatasetNames = ['recons',        #Reconstructed filtered time-series in mm
-                     'rawts',         #Raw time-series in mm
-                     'ifgcnt',        #Number of interferograms used for every pixel.
-                     'figram',        #Deramped + atmosphere corrected interferograms. in mm
-                     'igram',         #Unwrapped IFGs read straight from files in mm
-                     'cmask',         #Common mask for pixels
-                     'igram_aps',     #Atmosphere corrected interferogram stack in mm
-                     'sar_aps']       #Atmospheric phase screen for each of the SAR scenes in mm
+GIANT_DSET_NAMES = [
+    'recons',        #Reconstructed filtered time-series in mm
+    'rawts',         #Raw time-series in mm
+    'ifgcnt',        #Number of interferograms used for every pixel.
+    'figram',        #Deramped + atmosphere corrected interferograms. in mm
+    'igram',         #Unwrapped IFGs read straight from files in mm
+    'cmask',         #Common mask for pixels
+    'igram_aps',     #Atmosphere corrected interferogram stack in mm
+    'sar_aps',       #Atmospheric phase screen for each of the SAR scenes in mm
+]
 
 
 ########################################################################################
@@ -56,12 +58,12 @@ class giantTimeseries:
 
         # Dataset Info
         with h5py.File(self.file, 'r') as f:
-            # get existed datasetNames in the order of ifgramDatasetNames
+            # get existed datasetNames in the order of GIANT_DSET_NAMES
             dsNames = [i for i in f.keys()
                        if (isinstance(f[i], h5py.Dataset)
                            and f[i].shape[-2:] == (self.length, self.width))]
-            self.datasetNames = [i for i in giantDatasetNames if i in dsNames]
-            self.datasetNames += [i for i in dsNames if i not in giantDatasetNames]
+            self.datasetNames = [i for i in GIANT_DSET_NAMES if i in dsNames]
+            self.datasetNames += [i for i in dsNames if i not in GIANT_DSET_NAMES]
 
             self.sliceList = []
             for dsName in self.datasetNames:
@@ -140,12 +142,12 @@ class giantIfgramStack:
         # Dataset Info
         with h5py.File(self.file, 'r') as f:
             self.pbaseIfgram = f['bperp'][:]
-            # get existed datasetNames in the order of ifgramDatasetNames
+            # get existed datasetNames in the order of GIANT_DSET_NAMES
             dsNames = [i for i in f.keys()
                        if (isinstance(f[i], h5py.Dataset)
                            and f[i].shape[-2:] == (self.length, self.width))]
-            self.datasetNames = [i for i in giantDatasetNames if i in dsNames]
-            self.datasetNames += [i for i in dsNames if i not in giantDatasetNames]
+            self.datasetNames = [i for i in GIANT_DSET_NAMES if i in dsNames]
+            self.datasetNames += [i for i in dsNames if i not in GIANT_DSET_NAMES]
 
             self.sliceList = []
             for dsName in self.datasetNames:

@@ -18,9 +18,9 @@ import numpy as np
 from skimage.transform import resize
 
 from mintpy.objects import (
-    dataTypeDict,
-    geometryDatasetNames,
-    ifgramDatasetNames,
+    DATA_TYPE_DICT,
+    GEOMETRY_DSET_NAMES,
+    IFGRAM_DSET_NAMES,
 )
 from mintpy.utils import (
     ptime,
@@ -47,7 +47,7 @@ class ifgramStackDict:
         stackObj.write2hdf5(outputFile='ifgramStack.h5', box=(200,500,300,600))
     """
 
-    def __init__(self, name='ifgramStack', pairsDict=None, dsName0=ifgramDatasetNames[0]):
+    def __init__(self, name='ifgramStack', pairsDict=None, dsName0=IFGRAM_DSET_NAMES[0]):
         self.name = name
         self.pairsDict = pairsDict
         self.dsName0 = dsName0        #reference dataset name, unwrapPhase OR azimuthOffset OR rangeOffset
@@ -123,7 +123,7 @@ class ifgramStackDict:
 
         self.pairs = sorted([pair for pair in self.pairsDict.keys()])
         self.dsNames = list(self.pairsDict[self.pairs[0]].datasetDict.keys())
-        self.dsNames = [i for i in ifgramDatasetNames if i in self.dsNames]
+        self.dsNames = [i for i in IFGRAM_DSET_NAMES if i in self.dsNames]
         maxDigit = max([len(i) for i in self.dsNames])
         numIfgram, length, width = self.get_size(
             box=box,
@@ -382,14 +382,14 @@ class ifgramDict:
 
         return data, meta
 
-    def get_size(self, family=ifgramDatasetNames[0]):
+    def get_size(self, family=IFGRAM_DSET_NAMES[0]):
         self.file = self.datasetDict[family]
         metadata = readfile.read_attribute(self.file)
         length = int(metadata['LENGTH'])
         width = int(metadata['WIDTH'])
         return length, width
 
-    def get_perp_baseline(self, family=ifgramDatasetNames[0]):
+    def get_perp_baseline(self, family=IFGRAM_DSET_NAMES[0]):
         self.file = self.datasetDict[family]
         metadata = readfile.read_attribute(self.file)
         self.bperp_top = float(metadata['P_BASELINE_TOP_HDR'])
@@ -397,7 +397,7 @@ class ifgramDict:
         self.bperp = (self.bperp_top + self.bperp_bottom) / 2.0
         return self.bperp
 
-    def get_metadata(self, family=ifgramDatasetNames[0]):
+    def get_metadata(self, family=IFGRAM_DSET_NAMES[0]):
         self.file = self.datasetDict[family]
         self.metadata = readfile.read_attribute(self.file)
         self.length = int(self.metadata['LENGTH'])
@@ -624,7 +624,7 @@ class geometryDict:
             os.makedirs(output_dir)
             print(f'create directory: {output_dir}')
 
-        maxDigit = max([len(i) for i in geometryDatasetNames])
+        maxDigit = max([len(i) for i in GEOMETRY_DSET_NAMES])
         length, width = self.get_size(box=box, xstep=xstep, ystep=ystep)
 
         self.outputFile = outputFile

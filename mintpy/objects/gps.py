@@ -497,7 +497,7 @@ class GPS:
 
 
     def read_gps_los_displacement(self, geom_obj, start_date=None, end_date=None, ref_site=None,
-                                  gps_comp:str='enu2los', horz_az_angle=-90., print_msg=False):
+                                  gps_comp='enu2los', horz_az_angle=-90., print_msg=False):
         """Read GPS displacement in LOS direction.
 
         Parameters: geom_obj      - dict / str, metadata of InSAR file, or geometry file path

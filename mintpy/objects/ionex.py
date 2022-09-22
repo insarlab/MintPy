@@ -284,7 +284,7 @@ def read_ionex(tec_file):
     # link: https://github.com/daniestevez/jupyter_notebooks/blob/master/IONEX.ipynb
     def parse_map(tec_map, key='TEC', exponent=-1):
         tec_map = re.split(f'.*END OF {key} MAP', tec_map)[0]
-        tec_map = [np.fromstring(l, sep=' ') for l in re.split('.*LAT/LON1/LON2/DLON/H\\n', tec_map)[1:]]
+        tec_map = [np.fromstring(x, sep=' ') for x in re.split('.*LAT/LON1/LON2/DLON/H\\n', tec_map)[1:]]
         return np.stack(tec_map) * 10**exponent
 
     # read IONEX file
@@ -376,6 +376,7 @@ def plot_ionex(tec_file, save_fig=False):
     # update image
     global ind
     ind = 0
+
     def animate(*args):
         global ind
         ind += 1
