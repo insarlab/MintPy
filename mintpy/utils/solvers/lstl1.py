@@ -66,4 +66,3 @@ def lst_l1(A, y, integer=False, xmax=1000):
         (status, x) = glpk.ilp(c, G, h, Al, bl)[0:2]
 
     return x
-

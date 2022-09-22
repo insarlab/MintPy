@@ -35,4 +35,3 @@ mintpy.load.waterMaskFile    = None
 mintpy.reference.lalo        = -0.30,-91.43
 mintpy.topographicResidual.stepFuncDate  = 20170910,20180613  #eruption dates
 mintpy.deramp                = linear
-

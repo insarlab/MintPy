@@ -35,4 +35,3 @@ assignees: ''
 - [ ] No
 
 <!-- Every feature we add is code that we will have to maintain and keep updated. This takes a lot of effort. If you are willing to be involved in the project and help maintain your feature, it will make it easier for us to accept it. -->
-

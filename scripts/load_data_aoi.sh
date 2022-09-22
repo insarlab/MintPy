@@ -59,4 +59,3 @@ echo "subset.py $src_file -o $dst_file $subset_opt"
 subset.py $src_file -o $dst_file $subset_opt
 
 echo "Done."
-

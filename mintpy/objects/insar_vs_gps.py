@@ -293,5 +293,3 @@ class insar_vs_gps:
         return ax
 
 ############################## end of insar_vs_gps class ####################################
-
-

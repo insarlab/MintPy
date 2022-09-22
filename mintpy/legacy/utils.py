@@ -184,6 +184,3 @@ def timeseries_inversion_L1(h5flat, h5timeseries):
     dset = gr.create_dataset('mask', data=L1ORL2, compression='gzip')
     L1orL2h5.close()
     return
-
-
-

@@ -205,5 +205,3 @@ class giantIfgramStack:
         self.metadata['LENGTH'] = str(self.length)
         self.metadata['WIDTH'] = str(self.width)
         return self.metadata
-
-

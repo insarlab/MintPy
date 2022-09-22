@@ -138,4 +138,3 @@ if [ $key_ifg -eq 1 ]; then
     tsview='tsview.py -f '${ts}' -E drop_date.txt -F '$ts' -r 3 -D '$dem' -v '$vel' --displacement -a -0.05 -b 0.05 --rect-color black'
     #$tsview --lalo 31.9076,130.8284 -l -3 -h 3 --nodisplay --zoom-y 200:900 --zoom-x 700:1600
 fi
-

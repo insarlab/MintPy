@@ -16,4 +16,3 @@ SPEED_OF_LIGHT = 299792458  # meters per second
 # arithmetic mean radius: R_1 = (2 * a + b) / 3 = 6371.0088e3
 #   defined by IUGG and used in geophysics
 EARTH_RADIUS = 6371.0088e3   # the arithmetic mean radius in meters
-

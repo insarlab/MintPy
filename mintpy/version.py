@@ -95,4 +95,3 @@ ___________________________________________________________
 website = 'https://github.com/insarlab/MintPy'
 
 description = 'Miami INsar Time-series software in PYthon'
-

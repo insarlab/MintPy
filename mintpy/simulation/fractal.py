@@ -319,4 +319,3 @@ def recon_power_spectral_density(N, step, p0, beta, f0=1e-4):
     p = np.power(10, logp)
     f = f.flatten()
     return f, p
-

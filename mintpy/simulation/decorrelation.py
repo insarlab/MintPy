@@ -372,4 +372,3 @@ def coherence2weight(coh_data, weight_func='var', L=20, epsilon=5e-2, print_msg=
     del coh_data
 
     return weight
-

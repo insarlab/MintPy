@@ -424,4 +424,3 @@ SENSOR_DICT = {
     'alos2' : ALOS2,
     'ni'    : NISAR_L,
 }
-

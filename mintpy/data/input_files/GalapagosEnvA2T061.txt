@@ -15,4 +15,3 @@ mintpy.load.lookupXFile      = ../GAMMA/geometry/sim*rlks.UTM_TO_RDC
 mintpy.subset.yx         = 200:2000,200:1562
 mintpy.reference.lalo    = -0.31,-91.22
 mintpy.deramp            = linear
-

@@ -165,4 +165,3 @@ def test():
     b = normal(m)
     x = l1regls(A, b)
     return x
-

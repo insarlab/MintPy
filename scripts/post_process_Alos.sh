@@ -282,4 +282,3 @@ if [ $geo2 -eq 1 ]; then
     #view.py -u cm/yr -m -2 -M 2 --mask subset_geo_$msk -D subset_gsi10m_150m.dem --save -f subset_Seeded_geo_velocity_ex.h5
     #save_kml.py -m -0.02 -M 0.02 -f subset_Seeded_geo_velocity_ex_masked.h5
 fi
-

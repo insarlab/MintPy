@@ -124,4 +124,3 @@ def deramp(data, mask_in=None, ramp_type='linear', metadata=None, max_num_sample
     ramp = ramp.reshape(dshape)
     data_out = data_out.reshape(dshape)
     return data_out, ramp
-

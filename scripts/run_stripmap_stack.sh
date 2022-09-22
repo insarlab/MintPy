@@ -23,4 +23,3 @@ submit_run_files4stripmap_stack.py
 # mintpy
 cd mintpy
 smallbaselineApp.py ../KirishimaAlosAT424F620_630.txt
-

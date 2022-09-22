@@ -103,4 +103,3 @@ def mogi_los(shape, source_geom, resolution=60., scale=1., display=True):
         plt.show()
 
     return dis_los
-
