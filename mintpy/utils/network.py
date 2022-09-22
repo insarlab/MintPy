@@ -104,8 +104,8 @@ def read_baseline_file(baselineFile, exDateList=[]):
     fb = open(baselineFile)
     lines = []
     for line in fb:
-        l = str.replace(line, '\n', '').strip()
-        lines.append(l)
+        line = str.replace(line, '\n', '').strip()
+        lines.append(line)
     fb.close()
 
     # Read each line and put the values into arrays

@@ -579,9 +579,9 @@ def read_tops_baseline(baseline_file):
     bperps = []
     with open(baseline_file) as f:
         for line in f:
-            l = line.split(":")
-            if l[0] == "Bperp (average)":
-                bperps.append(float(l[1]))
+            c = line.split(":")
+            if c[0] == "Bperp (average)":
+                bperps.append(float(c[1]))
     bperp_top = np.mean(bperps)
     bperp_bottom = np.mean(bperps)
     return [bperp_top, bperp_bottom]
@@ -923,9 +923,9 @@ def convolve(data, kernel):
     Parameters: data   - 2D np.ndarray in complex
                 kernel - 2D np.ndarray in float, convolution kernel
     '''
-    R = ndimage.convolve(data.real, kernel, mode='constant', cval=0.0)
-    I = ndimage.convolve(data.imag, kernel, mode='constant', cval=0.0)
-    return R + 1J*I
+    real = ndimage.convolve(data.real, kernel, mode='constant', cval=0.0)
+    imag = ndimage.convolve(data.imag, kernel, mode='constant', cval=0.0)
+    return real + 1J * imag
 
 
 def estimate_coherence(intfile, corfile):

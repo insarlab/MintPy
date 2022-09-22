@@ -33,7 +33,7 @@ from mintpy.utils import ptime, utils0 as ut
 SPEED_OF_LIGHT = 299792458  # meters per second
 
 
-standardMetadataKeys = {
+STD_METADATA_KEYS = {
     # ROI_PAC/MintPy attributes
     'ALOOKS'             : ['azimuth_looks'],
     'RLOOKS'             : ['range_looks'],
@@ -736,6 +736,7 @@ def get_slice_list(fname, no_complex=False):
         else:
             ## Find slice by walking through the file structure
             length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+
             def get_hdf5_2d_dataset(name, obj):
                 global slice_list
                 if isinstance(obj, h5py.Dataset) and obj.shape[-2:] == (length, width):
@@ -745,6 +746,7 @@ def get_slice_list(fname, no_complex=False):
                         slice_list += [f'{name}-{i+1}' for i in range(obj.shape[0])]
                     else:
                         warnings.warn(f'file has un-defined {obj.ndim}D dataset: {name}')
+
             slice_list = []
             with h5py.File(fname, 'r') as f:
                 f.visititems(get_hdf5_2d_dataset)
@@ -919,6 +921,7 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             # otherwise, grab the list of attrs in HDF5 file
             # and use the attrs with most items
             global atr_list
+
             def get_hdf5_attrs(name, obj):
                 global atr_list
                 if len(obj.attrs) > 0 and 'WIDTH' in obj.attrs.keys():
@@ -955,10 +958,12 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             else:
                 # get the 1st dataset in deeper levels
                 global ds_list
+
                 def get_hdf5_dataset(name, obj):
                     global ds_list
                     if isinstance(obj, h5py.Dataset) and obj.ndim >= 2:
                         ds_list.append(obj)
+
                 ds_list = []
                 f.visititems(get_hdf5_dataset)
                 if ds_list:
@@ -1188,10 +1193,8 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
     return atr
 
 
-def standardize_metadata(metaDictIn, standardKeys=None):
+def standardize_metadata(metaDictIn, standardKeys=STD_METADATA_KEYS):
     """Convert metadata input ROI_PAC/MintPy format (for metadata with the same values)."""
-    if standardKeys is None:
-        standardKeys = standardMetadataKeys
 
     # make a copy
     metaDict = dict()

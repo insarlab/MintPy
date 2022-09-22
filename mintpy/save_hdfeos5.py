@@ -212,14 +212,14 @@ def get_output_filename(metadata, suffix=None, update_mode=False, subset_mode=Fa
     SW = metadata['beam_mode']
     if metadata['beam_swath']:
         SW += str(metadata['beam_swath'])
-    RELORB = "{03d}".format(int(metadata['relative_orbit']))
+    RELORB = "{:03d}".format(int(metadata['relative_orbit']))
 
     # Frist and/or Last Frame
     frame1 = metadata['first_frame']
     frame2 = metadata['last_frame']
-    FRAME = "{04d}".format(int(frame1))
+    FRAME = f"{int(frame1):04d}"
     if frame2 != frame1:
-        FRAME += "_{04d}".format(frame2)
+        FRAME += f"_{frame2:04d}"
 
     DATE1 = dt.datetime.strptime(metadata['first_date'], '%Y-%m-%d').strftime('%Y%m%d')
     DATE2 = dt.datetime.strptime(metadata['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
@@ -239,14 +239,14 @@ def get_output_filename(metadata, suffix=None, update_mode=False, subset_mode=Fa
         lat0 = lat1 + float(metadata['Y_STEP']) * int(metadata['LENGTH'])
         lon1 = lon0 + float(metadata['X_STEP']) * int(metadata['WIDTH'])
 
-        lat0Str = 'N{05d}'.format(round(lat0*1e3))
-        lat1Str = 'N{05d}'.format(round(lat1*1e3))
-        lon0Str = 'E{06d}'.format(round(lon0*1e3))
-        lon1Str = 'E{06d}'.format(round(lon1*1e3))
-        if lat0 < 0.0: lat0Str = 'S{05d}'.format(round(abs(lat0)*1e3))
-        if lat1 < 0.0: lat1Str = 'S{05d}'.format(round(abs(lat1)*1e3))
-        if lon0 < 0.0: lon0Str = 'W{06d}'.format(round(abs(lon0)*1e3))
-        if lon1 < 0.0: lon1Str = 'W{06d}'.format(round(abs(lon1)*1e3))
+        lat0Str = f'N{round(lat0*1e3):05d}'
+        lat1Str = f'N{round(lat1*1e3):05d}'
+        lon0Str = f'E{round(lon0*1e3):06d}'
+        lon1Str = f'E{round(lon1*1e3):06d}'
+        if lat0 < 0.0: lat0Str = f'S{round(abs(lat0)*1e3):05d}'
+        if lat1 < 0.0: lat1Str = f'S{round(abs(lat1)*1e3):05d}'
+        if lon0 < 0.0: lon0Str = f'W{round(abs(lon0)*1e3):06d}'
+        if lon1 < 0.0: lon1Str = f'W{round(abs(lon1)*1e3):06d}'
 
         SUB = f'_{lat0Str}_{lat1Str}_{lon0Str}_{lon1Str}'
         fbase, fext = os.path.splitext(outName)

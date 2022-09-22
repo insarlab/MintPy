@@ -181,10 +181,12 @@ def print_aux_info(fname):
 def print_dataset(fname, dsName):
     # get available dataset list
     global dsNames
+
     def get_hdf5_dataset(name, obj):
         global dsNames
         if isinstance(obj, h5py.Dataset):
             dsNames.append(name)
+
     dsNames = []
     with h5py.File(fname, 'r') as f:
         f.visititems(get_hdf5_dataset)

@@ -177,7 +177,7 @@ class ColormapExt(ScalarMappable):
             self.colormap = LinearSegmentedColormap.from_list(
                 name=self.cmap_name+f'_{self.num_repeat}',
                 colors=colors,
-                N=cmap_lut*num_repeat,
+                N=self.cmap_lut*self.num_repeat,
             )
 
         return self.colormap
