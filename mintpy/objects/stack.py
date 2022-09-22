@@ -139,7 +139,6 @@ DSET_UNIT_DICT = {
     'dem'       : 'm',
     'hgt'       : 'm',
     'hgt_sim'   : 'm',
-    'magnitude' : '1',
     'intensity' : '1',
 }
 

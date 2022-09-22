@@ -94,7 +94,7 @@ class ifgramStackDict:
         ifgramObj = [v for v in self.pairsDict.values()][0]
         dsFile = ifgramObj.datasetDict[dsName]
         metadata = readfile.read_attribute(dsFile)
-        dataType = dataTypeDict[metadata.get('DATA_TYPE', 'float32').lower()]
+        dataType = DATA_TYPE_DICT[metadata.get('DATA_TYPE', 'float32').lower()]
         return dataType
 
     def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, xstep=1, ystep=1, mli_method='nearest',
