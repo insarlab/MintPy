@@ -89,12 +89,14 @@ conda activate mintpy
 Install MintPy into the current environment with pip by running:
 
 ```bash
+cd ~/tools
 python -m pip install MintPy
 ```
 
-Or install MintPy with pip in development mode as below. The development mode allows one to install the package without copying files to your interpreter directory (e.g. the `site-packages` directory), thus, one could "edit" the source code and have changes take effect immediately without having to rebuild and reinstall.
+Or install MintPy with pip in development mode [recommended] as below. The development mode allows one to install the package without copying files to your interpreter directory (e.g. the `site-packages` directory), thus, one could "edit" the source code and have changes take effect immediately without having to rebuild and reinstall.
 
 ```bash
+cd ~/tools
 python -m pip install -e MintPy
 ```
 

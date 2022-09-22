@@ -1404,7 +1404,8 @@ def read_isce_xml(fname):
             e_first = root.find(f"./component[@name='{coord_name}']/property[@name='startingvalue']")
             v_step  = float(e_step.find('value').text)  if e_step  is not None else None
             v_first = float(e_first.find('value').text) if e_first is not None else None
-            if v_step and v_first and abs(v_step) < 1. and abs(v_step) > 1e-7:
+            # check against None to better handle the valid v_first value of 0
+            if v_first is not None and v_step is not None and 1e-7 < abs(v_step) < 1.:
                 xmlDict[f'{prefix}_STEP'] = v_step
                 xmlDict[f'{prefix}_FIRST'] = v_first - v_step / 2.
                 xmlDict[f'{prefix}_UNIT'] = 'degrees'
