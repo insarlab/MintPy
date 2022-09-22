@@ -132,7 +132,7 @@ def safe_list_file2sensor_list(safe_list_file, date_list=None, print_msg=True):
     safe_fnames = [os.path.basename(i) for i in fc]
 
     # get date_list
-    date_list_out = [re.findall('_\d{8}T', i)[0][1:-1] for i in safe_fnames]
+    date_list_out = [re.findall(r'_\d{8}T', i)[0][1:-1] for i in safe_fnames]
     date_list_out = sorted(list(set(date_list_out)))
 
     # get sensor_list
@@ -147,7 +147,7 @@ def safe_list_file2sensor_list(safe_list_file, date_list=None, print_msg=True):
         # check possible missing dates
         dates_missing = [i for i in date_list if i not in date_list_out]
         if dates_missing:
-            raise ValueError('The following dates are missing:\n{}'.format(dates_missing))
+            raise ValueError(f'The following dates are missing:\n{dates_missing}')
 
         # prune dates not-needed
         flag = np.array([i in date_list for i in date_list_out], dtype=np.bool_)
@@ -156,7 +156,7 @@ def safe_list_file2sensor_list(safe_list_file, date_list=None, print_msg=True):
             dates_removed = np.array(date_list_out)[~flag].tolist()
             date_list_out = np.array(date_list_out)[flag].tolist()
             if print_msg:
-                print('The following dates are not needed and removed:\n{}'.format(dates_removed))
+                print(f'The following dates are not needed and removed:\n{dates_removed}')
 
     return sensor_list, date_list
 

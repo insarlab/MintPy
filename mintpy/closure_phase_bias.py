@@ -75,10 +75,10 @@ def calc_closure_phase_mask(stack_file, bias_free_conn, num_sigma=3, threshold_a
     avg_cp = np.zeros([length,width], dtype=np.complex64)
     for i, box in enumerate(box_list):
         if num_box > 1:
-            print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
+            print(f'\n------- processing patch {i+1} out of {num_box} --------------')
             print(f'box: {box}')
-            print('box width:  {}'.format(box[2] - box[0]))
-            print('box length: {}'.format(box[3] - box[1]))
+            print(f'box width:  {box[2] - box[0]}')
+            print(f'box length: {box[3] - box[1]}')
 
         avg_cp[box[1]:box[3], box[0]:box[2]], num_cp = stack_obj.get_sequential_closure_phase(
             box=box,
@@ -288,9 +288,9 @@ def compute_unwrap_closure_phase(stack_file, conn, num_worker=1, outdir='./', ma
         for i, box in enumerate(box_list):
             print(box)
             if num_box > 1:
-                print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
-                print('box length: {}'.format(box[3] - box[1]))
-                print('box width : {}'.format(box[2] - box[0]))
+                print(f'\n------- processing patch {i+1} out of {num_box} --------------')
+                print(f'box length: {box[3] - box[1]}')
+                print(f'box width : {box[2] - box[0]}')
 
             closure_phase[:, box[1]:box[3], box[0]:box[2]] = stack_obj.get_sequential_closure_phase(
                 box=box,
@@ -642,9 +642,9 @@ def estimate_bias_timeseries_approx(stack_file, bias_free_conn, bw, water_mask_f
         box_len = box[3] - box[1]
         print(box)
         if num_box > 1:
-            print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
-            print('box width:  {}'.format(box_wid))
-            print('box length: {}'.format(box_len))
+            print(f'\n------- processing patch {i+1} out of {num_box} --------------')
+            print(f'box width:  {box_wid}')
+            print(f'box length: {box_len}')
 
         # read water mask
         if water_mask_file:
@@ -851,7 +851,7 @@ def estimate_bias_timeseries_patch(stack_file, bias_free_conn, bw, wvl, box, wat
         # calculate the bias_stack = W * A * phi^x = W^r * A * w(delta_t) * phi^x
         bias_stack[:, idx] = np.linalg.multi_dot([np.diag(Wr[:, idx]), A, wPhi_x[:, idx]]).flatten()
 
-        prog_bar.update(i+1, every=3000, suffix='{}/{} pixels'.format(i+1, num_pix2inv))
+        prog_bar.update(i+1, every=3000, suffix=f'{i+1}/{num_pix2inv} pixels')
     prog_bar.close()
     del bias_ts_bw1_rough, bias_ts_bw1_fine, wPhi_x, Wr
 
@@ -898,7 +898,7 @@ def estimate_bias_timeseries_patch(stack_file, bias_free_conn, bw, wvl, box, wat
             # invert
             bias_ts[:, idx] = estimate_timeseries(y=bias_stack[:, idx], **kwargs)[0].flatten()
 
-            prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, num_pix_par))
+            prog_bar.update(i+1, every=200, suffix=f'{i+1}/{num_pix_par} pixels')
         prog_bar.close()
     del bias_stack
 
@@ -974,9 +974,9 @@ def estimate_bias_timeseries(stack_file, bias_free_conn, bw, cluster_kwargs, wat
         box_wid, box_len = box[2] - box[0], box[3] - box[1]
         print(box)
         if num_box > 1:
-            print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
-            print('box width : {}'.format(box_wid))
-            print('box length: {}'.format(box_len))
+            print(f'\n------- processing patch {i+1} out of {num_box} --------------')
+            print(f'box width : {box_wid}')
+            print(f'box length: {box_len}')
 
         #update box argument in the input data
         data_kwargs['box'] = box
@@ -1076,6 +1076,6 @@ def run_closure_phase_bias(inps):
 
     # used time
     m, s = divmod(time.time() - start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs.\n')
 
     return

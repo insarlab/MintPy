@@ -54,12 +54,12 @@ def get_template_content(step_name, template_file=None, indentation=2, header_fo
 
     # check
     if step_name not in STEP_LIST:
-        raise ValueError('input step name "{}" not found! STEP_LIST={}'.format(step_name, STEP_LIST))
+        raise ValueError(f'input step name "{step_name}" not found! STEP_LIST={STEP_LIST}')
 
     # read template file into a list of strings
     if template_file is None:
         template_file = os.path.join(os.path.dirname(mintpy.__file__), 'defaults/smallbaselineApp.cfg')
-    lines = open(template_file, 'r').readlines()
+    lines = open(template_file).readlines()
     lines = [line.strip(' ') for line in lines]
 
     # get starting line index
@@ -68,7 +68,7 @@ def get_template_content(step_name, template_file=None, indentation=2, header_fo
     if len(inds) > 0:
         ind0 = inds[0] + 1
     else:
-        raise ValueError('pattern "{}" is not found in file: {}!'.format(pattern, template_file))
+        raise ValueError(f'pattern "{pattern}" is not found in file: {template_file}!')
 
     # get ending line index: the next line with ten of #
     ind1 = -1

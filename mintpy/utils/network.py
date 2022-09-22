@@ -185,7 +185,7 @@ def get_date12_list(fname, dropIfgram=False):
 
 def igram_perp_baseline_list(fname):
     """Get perpendicular baseline list from input multi_group hdf5 file"""
-    print(('read perp baseline info from '+fname))
+    print('read perp baseline info from '+fname)
     k = readfile.read_attribute(fname)['FILE_TYPE']
     h5 = h5py.File(fname, 'r')
     epochList = sorted(h5[k].keys())
@@ -209,7 +209,7 @@ def critical_perp_baseline(sensor_name, inc_angle, print_msg=False):
     rg_bandwidth = sensor_dict['chirp_bandwidth']
     bperp_c = wvl * (rg_bandwidth / SPEED_OF_LIGHT) * near_range * np.tan(inc_angle * np.pi / 180.0)
     if print_msg:
-        print('Critical Perpendicular Baseline: {} m'.format(bperp_c))
+        print(f'Critical Perpendicular Baseline: {bperp_c} m')
     return bperp_c
 
 
@@ -279,7 +279,7 @@ def simulate_coherence_v2(date12_list, decor_time=200.0, coh_resid=0.2, inc_angl
         coh[i] = coh_geom * coh_temp
 
     if display:
-        print(('critical perp baseline: %.f m' % pbase_c))
+        print('critical perp baseline: %.f m' % pbase_c)
         coh_mat = coherence_matrix(date12_list, coh)
         plt.figure()
         plt.imshow(coh_mat, vmin=0.0, vmax=1.0, cmap='jet')
@@ -383,7 +383,7 @@ def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor_name='En
         print('')
 
     if display:
-        print(('critical perp baseline: %.f m' % pbase_c))
+        print('critical perp baseline: %.f m' % pbase_c)
         cohs_mat = coherence_matrix(date12_list, cohs)
         plt.figure()
         plt.imshow(cohs_mat, vmin=0.0, vmax=1.0, cmap='jet')
@@ -649,7 +649,7 @@ def select_pairs_sequential(date_list, num_conn=2, date_format=None):
     date12_inds = [sorted(i) for i in sorted(date12_inds)]
 
     # Convert index into date12
-    date12_list = ['{}_{}'.format(date_list[ind12[0]], date_list[ind12[1]])
+    date12_list = [f'{date_list[ind12[0]]}_{date_list[ind12[1]]}'
                   for ind12 in date12_inds]
 
     # adjust output date format
@@ -659,7 +659,7 @@ def select_pairs_sequential(date_list, num_conn=2, date_format=None):
         elif date_format == 'YYMMDD':
             date12_list = ptime.yymmdd_date12(date12_list)
         else:
-            raise ValueError('un-supported date format: {}!'.format(date_format))
+            raise ValueError(f'un-supported date format: {date_format}!')
 
     return date12_list
 
@@ -801,14 +801,14 @@ def select_pairs_star(date_list, m_date=None, pbase_list=[], date_format='YYMMDD
     # Select reference date if not existed
     if not m_date:
         m_date = select_reference_date(date8_list, pbase_list)
-        print(('auto select reference date: '+m_date))
+        print('auto select reference date: '+m_date)
 
     # Check input reference date
     m_date8 = ptime.yyyymmdd(m_date)
     if m_date8 not in date8_list:
         print('Input reference date is not existed in date list!')
-        print('Input reference date: {}'.format(m_date8))
-        print('Input date list: {}'.format(date8_list))
+        print(f'Input reference date: {m_date8}')
+        print(f'Input date list: {date8_list}')
         m_date8 = None
 
     # Generate star/ps network

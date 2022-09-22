@@ -100,8 +100,8 @@ def project_name2sensor_name(proj_names):
             # if more than one, i.e. ['Alos','Alos2'], use the last one
             sensor = sorted(sensors)[-1]
         else:
-            msg = "No sensor name found in project_name: {}\n".format(proj_name)
-            msg += "Available sensor names: {}".format(SENSOR_NAMES)
+            msg = f"No sensor name found in project_name: {proj_name}\n"
+            msg += f"Available sensor names: {SENSOR_NAMES}"
             raise ValueError(msg)
 
     return sensor, proj_name

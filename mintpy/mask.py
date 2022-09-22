@@ -24,7 +24,7 @@ def mask_matrix(data, mask, fill_value=np.nan):
     # check data type
     if np.isnan(fill_value) and data.dtype.kind not in ('f','d','c'):
         msg = 'in order to fill the invalid pixels with np.nan'
-        msg += '\n\tconvert input matrix from {} to np.float32'.format(data.dtype)
+        msg += f'\n\tconvert input matrix from {data.dtype} to np.float32'
         print(msg)
         data = np.array(data, dtype=np.float32)
 
@@ -41,18 +41,18 @@ def update_mask_with_inps(mask, inps, print_msg=True):
         mask[:, 0:inps.subset_x[0]] = 0
         mask[:, inps.subset_x[1]:] = 0
         if print_msg:
-            print('mask out area not in x: {}'.format(inps.subset_x))
+            print(f'mask out area not in x: {inps.subset_x}')
 
     if inps.subset_y:
         mask[0:inps.subset_y[0], :] = 0
         mask[inps.subset_y[1]:, :] = 0
         if print_msg:
-            print('mask out area not in y: {}'.format(inps.subset_y))
+            print(f'mask out area not in y: {inps.subset_y}')
 
     if inps.threshold:
         mask[mask < inps.threshold] = 0
         if print_msg:
-            print('mask out pixels with value < {} in mask file'.format(inps.threshold))
+            print(f'mask out pixels with value < {inps.threshold} in mask file')
     return mask
 
 
@@ -75,7 +75,7 @@ def mask_file(fname, mask_file, out_file=None, fill_value=np.nan, inps=None):
 
     # masking input file
     dsNames = readfile.get_dataset_list(fname)
-    maxDigit = max([len(i) for i in dsNames])
+    maxDigit = max(len(i) for i in dsNames)
     dsDict = {}
     for dsName in dsNames:
         print('masking {d:<{w}} from {f} ...'.format(d=dsName, w=maxDigit, f=fname))
@@ -86,7 +86,7 @@ def mask_file(fname, mask_file, out_file=None, fill_value=np.nan, inps=None):
     # default output filename
     if not out_file:
         fbase, fext = os.path.splitext(fname)
-        out_file = '{}_msk{}'.format(fbase, fext)
+        out_file = f'{fbase}_msk{fext}'
 
     writefile.write(dsDict, out_file=out_file, ref_file=fname)
     return out_file
@@ -97,7 +97,7 @@ def mask_isce_file(in_file, mask_file, out_file=None):
         return
 
     # read mask_file
-    print('read mask from {}'.format(mask_file))
+    print(f'read mask from {mask_file}')
     mask = readfile.read(mask_file)[0]
 
     # mask isce file
@@ -117,7 +117,7 @@ def mask_isce_file(in_file, mask_file, out_file=None):
     if data_type in data_type_dict.keys():
         data_type = data_type_dict[data_type]
 
-    print('read {}'.format(in_file))
+    print(f'read {in_file}')
     print('setting the (phase) value on the masked out pixels to zero')
     fbase, ext = os.path.splitext(in_file)
     if ext == '.unw':
@@ -135,34 +135,34 @@ def mask_isce_file(in_file, mask_file, out_file=None):
         data = readfile.read(in_file)[0] #, data_type=data_type, num_band=num_band, band_interleave=interleave, band=1)[0]
         data[mask == 0] = 0
     else:
-        raise ValueError('unsupported ISCE file: {}'.format(in_file))
+        raise ValueError(f'unsupported ISCE file: {in_file}')
 
     # output filename
     if not out_file:
         if ext in ['.int', '.cor', '.unw']:
-            out_file = '{}_msk{}'.format(fbase, ext)
+            out_file = f'{fbase}_msk{ext}'
         elif in_file.endswith('.unw.conncomp'):
             out_file = '{}_msk.unw.conncomp'.format(in_file.split('.unw.conncomp')[0])
         else:
-            raise ValueError('unrecognized input file type: {}'.format(in_file))
+            raise ValueError(f'unrecognized input file type: {in_file}')
 
     data.tofile(out_file)
-    print('finished writing to file {}'.format(out_file))
+    print(f'finished writing to file {out_file}')
 
     # prepare ISCE metadata file by
     # 1. copy and rename metadata files
     # 2. update file path inside files
     for ext in ['xml', 'vrt']:
         # copy
-        in_meta_file = '{}.{}'.format(in_file, ext)
-        out_meta_file = '{}.{}'.format(out_file, ext)
+        in_meta_file = f'{in_file}.{ext}'
+        out_meta_file = f'{out_file}.{ext}'
         shutil.copy2(in_meta_file, out_meta_file)
-        print('copy {} to {}'.format(in_meta_file, out_meta_file))
+        print(f'copy {in_meta_file} to {out_meta_file}')
         print('   and update the corresponding filename')
 
         # update file path
-        meta_file = '{o}.{e}'.format(o=out_file, e=ext)
-        with open(meta_file, 'r') as f:
+        meta_file = f'{out_file}.{ext}'
+        with open(meta_file) as f:
             s = f.read()
         s = s.replace(os.path.basename(in_file),
                       os.path.basename(out_file))

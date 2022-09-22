@@ -74,16 +74,16 @@ def gps_to_LOS(Ve, Vn, theta, heading):
 
 def check_st_in_box(x, y, x0, y0, x1, y1, X0, Y0, X1, Y1):
 
-    m1 = float(y1-y0)/float((x1-x0))
+    m1 = float(y1-y0)/float(x1-x0)
     c1 = float(y0-m1*x0)
 
-    m2 = float(Y1-Y0)/float((X1-X0))
+    m2 = float(Y1-Y0)/float(X1-X0)
     c2 = float(Y0-m2*X0)
 
-    m3 = float(y0-Y0)/float((x0-X0))
+    m3 = float(y0-Y0)/float(x0-X0)
     c3 = float(Y0-m3*X0)
 
-    m4 = float(y1-Y1)/float((x1-X1))
+    m4 = float(y1-Y1)/float(x1-X1)
     c4 = float(Y1-m4*X1)
 
     yy1 = m1*x+c1
@@ -129,7 +129,7 @@ def check_st_in_box2(x, y, x0, y0, x1, y1, X0, Y0, X1, Y1):
 
 
 def line(x0, y0, x1, y1):
-    m = float(y1-y0)/float((x1-x0))
+    m = float(y1-y0)/float(x1-x0)
     c = float(y0-m*x0)
     return m, c
 
@@ -636,7 +636,7 @@ def main(argv=None):
 
         if ntrans > 1:
 
-            m = float(y1-y0)/float((x1-x0))
+            m = float(y1-y0)/float(x1-x0)
             c = float(y0-m*x0)
             m1 = -1.0/m
             try:

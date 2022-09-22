@@ -78,7 +78,7 @@ def main(iargs=None):
 
     # Plotting
     if inps.plot:
-        print('plot test result of {}'.format(os.path.basename(__file__)))
+        print(f'plot test result of {os.path.basename(__file__)}')
         fig, axs = plt.subplots(nrows=3, ncols=4, figsize=[8, 6], sharex=True, sharey=True)
         kwargs = dict(vmin=-1.5, vmax=1.5, cmap='RdBu', interpolation='nearest')
 

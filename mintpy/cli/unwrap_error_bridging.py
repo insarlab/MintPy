@@ -85,7 +85,7 @@ def cmd_line_parse(iargs=None):
 
     # default: -o / --out-dataset option
     if not inps.datasetNameOut:
-        inps.datasetNameOut = '{}_bridging'.format(inps.datasetNameIn)
+        inps.datasetNameOut = f'{inps.datasetNameIn}_bridging'
 
     return inps
 

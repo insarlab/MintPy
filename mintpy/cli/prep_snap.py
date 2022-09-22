@@ -60,7 +60,7 @@ def cmd_line_parse(iargs=None):
     # check: input file extensions
     for fname in inps.file:
         if not fname.endswith('.img'):
-            raise ValueError('Input data file does NOT end with .img: {}'.format(fname))
+            raise ValueError(f'Input data file does NOT end with .img: {fname}')
 
     return inps
 
@@ -90,7 +90,7 @@ def prep_snap_metadata(snap_file):
     # (over)write to rsc file if input atr has more items
     if not set(atr.items()).issubset(set(atr_orig.items())):
         atr_out = {**atr_orig, **atr}
-        print('write metadata to {} '.format(os.path.basename(rsc_file)))
+        print(f'write metadata to {os.path.basename(rsc_file)} ')
         writefile.write_roipac_rsc(atr_out, out_file=rsc_file)
 
     return rsc_file

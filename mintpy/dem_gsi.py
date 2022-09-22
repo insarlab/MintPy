@@ -44,7 +44,7 @@ def write_dem_file(SNWE, dem_file, grid_dir):
             c0 = (xx - xx_min) * dehm.width
             c1 = c0 + dehm.width
 
-            grid_file = os.path.join(grid_dir, '{}{}.dehm'.format(yy, xx))
+            grid_file = os.path.join(grid_dir, f'{yy}{xx}.dehm')
             if os.path.isfile(grid_file):
                 print('read', grid_file)
                 data = np.fromfile(grid_file,
@@ -56,7 +56,7 @@ def write_dem_file(SNWE, dem_file, grid_dir):
                 data = np.zeros(dehm.length, dehm.width, dtype=dehm.data_type)
             dem0[r0:r1, c0:c1] = data
 
-    print('cropping based on the input SNWE: {} ...'.format(SNWE))
+    print(f'cropping based on the input SNWE: {SNWE} ...')
     grids_N = (yy_max + 1) / 1.5
     grids_W = xx_min + 100
     x_step = dehm.step
@@ -67,10 +67,10 @@ def write_dem_file(SNWE, dem_file, grid_dir):
     c0 = round((W - grids_W) / x_step)
     c1 = round((E - grids_W) / x_step)
     dem = np.array(dem0[r0:r1, c0:c1], dtype=np.int16)
-    print('file size in (row, col): {}'.format(dem.shape))
+    print(f'file size in (row, col): {dem.shape}')
 
     # write to binary file
-    print('writing {}'.format(dem_file))
+    print(f'writing {dem_file}')
     dem.tofile(dem_file)
 
     # generate meta namespace
@@ -95,10 +95,10 @@ def write_rsc_file(meta, fname):
     rsc['XMAX'] = meta.width - 1
     rsc['YMIN'] = 0
     rsc['YMAX'] = meta.length - 1
-    rsc['X_FIRST'] = '{:.12f}'.format(meta.west)
-    rsc['Y_FIRST'] = '{:.12f}'.format(meta.north)
-    rsc['X_STEP'] = '{:.12f}'.format(meta.lon_step)
-    rsc['Y_STEP'] = '{:.12f}'.format(meta.lat_step)
+    rsc['X_FIRST'] = f'{meta.west:.12f}'
+    rsc['Y_FIRST'] = f'{meta.north:.12f}'
+    rsc['X_STEP'] = f'{meta.lon_step:.12f}'
+    rsc['Y_STEP'] = f'{meta.lat_step:.12f}'
     rsc['X_UNIT'] = 'degrees'
     rsc['Y_UNIT'] = 'degrees'
     rsc['RLOOKS'] = 1
@@ -142,7 +142,7 @@ def write_vrt_file(meta, fname):
     vrt_file = fname + '.vrt'
     with open(vrt_file, 'w') as f:
         f.write(vrt_str)
-    print('write {}'.format(vrt_file))
+    print(f'write {vrt_file}')
 
     return vrt_file
 
@@ -184,7 +184,7 @@ def add_reference_datum(xml_file):
 
     import xml.etree.ElementTree as ET
     from xml.dom import minidom
-    print('add <reference> info to xml file: {}'.format(os.path.basename(xml_file)))
+    print(f'add <reference> info to xml file: {os.path.basename(xml_file)}')
 
     # get property element for reference
     ref = ET.Element("property", attrib={'name': 'reference'})

@@ -30,7 +30,7 @@ def extract_metadata(fname):
     basic_rsc_file = fname+'.rsc'
     if not os.path.isfile(basic_rsc_file) and fname.endswith('_snap_connect.byt'):
         unw_rsc_file = '{}.unw.rsc'.format(fname.split('_snap_connect.byt')[0])
-        print('copy {} to {}'.format(unw_rsc_file, basic_rsc_file))
+        print(f'copy {unw_rsc_file} to {basic_rsc_file}')
         shutil.copy2(unw_rsc_file, basic_rsc_file)
     basic_dict = readfile.read_roipac_rsc(basic_rsc_file)
 
@@ -75,8 +75,8 @@ def prep_roipac(inps):
     # check: input file type
     fext_list = ['.unw', '.cor', '.int', '.byt', '.hgt', '.dem', '.trans']
     if fext not in fext_list:
-        msg = 'unsupported input file extension: {}'.format(fext)
-        msg += '\nsupported file extensions: {}'.format(fext_list)
+        msg = f'unsupported input file extension: {fext}'
+        msg += f'\nsupported file extensions: {fext_list}'
         raise ValueError(msg)
 
     # loop over interferogram files

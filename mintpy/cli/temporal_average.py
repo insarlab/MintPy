@@ -74,7 +74,7 @@ def auto_output_filename(inps):
         inps.outfile = f'avg{fbase}'
 
     inps.outfile = os.path.join(fdir, inps.outfile)
-    print('output file: {}'.format(inps.outfile))
+    print(f'output file: {inps.outfile}')
 
     return inps.outfile
 
@@ -89,21 +89,21 @@ def run_or_skip(inps):
     # check output file vs input dataset
     if not os.path.isfile(inps.outfile):
         flag = 'run'
-        print('1) output file {} NOT exist.'.format(inps.outfile))
+        print(f'1) output file {inps.outfile} NOT exist.')
     else:
-        print('1) output file {} already exists.'.format(inps.outfile))
+        print(f'1) output file {inps.outfile} already exists.')
         with h5py.File(inps.file, 'r') as f:
             atr = f[inps.datasetName].attrs
             ti = float(atr.get('MODIFICATION_TIME', os.path.getmtime(inps.file)))
         to = os.path.getmtime(inps.outfile)
         if ti > to:
             flag = 'run'
-            print('2) output file is NOT newer than input dataset: {}.'.format(inps.datasetName))
+            print(f'2) output file is NOT newer than input dataset: {inps.datasetName}.')
         else:
-            print('2) output file is newer than input dataset: {}.'.format(inps.datasetName))
+            print(f'2) output file is newer than input dataset: {inps.datasetName}.')
 
     # result
-    print('run or skip: {}.'.format(flag))
+    print(f'run or skip: {flag}.')
     return flag
 
 
@@ -129,7 +129,7 @@ def main(iargs=None):
 
     # used time
     m, s = divmod(time.time()-start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs\n'.format(m, s))
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs\n')
 
     return
 

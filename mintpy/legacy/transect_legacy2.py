@@ -116,7 +116,7 @@ def read_lonlat_file(lonlat_file):
     Outputs:
         start/end_lalo : list of 2 float
     """
-    fll = open(lonlat_file, 'r')
+    fll = open(lonlat_file)
     lines = fll.read().splitlines()
     [lon0, lat0] = [float(i) for i in lines[1].split()]
     [lon1, lat1] = [float(i) for i in lines[2].split()]
@@ -283,11 +283,11 @@ def get_start_end_points(inps):
 
     # Message
     if inps.start_lalo and inps.end_lalo:
-        print('Start point in lat/lon: {}'.format(inps.start_lalo))
-        print('End   point in lat/lon: {}'.format(inps.end_lalo))
+        print(f'Start point in lat/lon: {inps.start_lalo}')
+        print(f'End   point in lat/lon: {inps.end_lalo}')
     else:
-        print('Start point in y/x: {}'.format(inps.start_yx))
-        print('End   point in y/x: {}'.format(inps.end_yx))
+        print(f'Start point in y/x: {inps.start_yx}')
+        print(f'End   point in y/x: {inps.end_yx}')
     return
 
 
@@ -318,11 +318,11 @@ def plot_transect_location(ax, inps):
             if 'X_FIRST' in atr0.keys():
                 lat = coord.yx2lalo(row, coord_type='row')
                 lon = coord.yx2lalo(col, coord_type='col')
-                return 'lon=%.4f, lat=%.4f, x=%.0f,  y=%.0f,  value=%.4f' % (lon, lat, x, y, z)
+                return f'lon={lon:.4f}, lat={lat:.4f}, x={x:.0f},  y={y:.0f},  value={z:.4f}'
             else:
-                return 'x=%.0f,  y=%.0f,  value=%.4f' % (x, y, z)
+                return f'x={x:.0f},  y={y:.0f},  value={z:.4f}'
         else:
-            return 'x=%.0f,  y=%.0f' % (x, y)
+            return f'x={x:.0f},  y={y:.0f}'
     ax.format_coord = format_coord
     return
 
@@ -360,7 +360,7 @@ def plot_transect(ax, inps):
     if not inps.disp_max:
         inps.disp_max = np.ceil(value_max)
     ax.set_ylim(inps.disp_min, inps.disp_max)
-    ax.set_ylabel('Mean LOS Velocity ({})'.format(inps.disp_unit), fontsize=inps.font_size)
+    ax.set_ylabel(f'Mean LOS Velocity ({inps.disp_unit})', fontsize=inps.font_size)
     # X axis
     ax.set_xlabel('Distance (km)', fontsize=inps.font_size)
     ax.tick_params(which='both', direction='out', labelsize=inps.font_size)
@@ -430,7 +430,7 @@ def save_transect(fig_list, inps):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
     print('\n**************** Transect *********************')
-    print('input files: ({})\n{}'.format(len(inps.file), inps.file))
+    print(f'input files: ({len(inps.file)})\n{inps.file}')
 
     get_start_end_points(inps)
 

@@ -57,8 +57,8 @@ def multilook_data(data, lks_y=1, lks_x=1, method='mean'):
     """
     method_list = ['mean', 'median', 'nearest']
     if method not in method_list:
-        msg = 'un-supported multilook method: {}. '.format(method)
-        msg += 'Available methods: {}'.format(method_list)
+        msg = f'un-supported multilook method: {method}. '
+        msg += f'Available methods: {method_list}'
         raise ValueError(msg)
 
     # do nothing if no multilook is applied
@@ -154,12 +154,12 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='mean', margin=[0,
     print('multilooking {} {} file: {}'.format(atr['PROCESSOR'], k, infile))
     print('number of looks in y / azimuth direction: %d' % lks_y)
     print('number of looks in x / range   direction: %d' % lks_x)
-    print('multilook method: {}'.format(method))
+    print(f'multilook method: {method}')
 
     # margin --> box
     if margin is not [0,0,0,0]:    # top, bottom, left, right
         box = (margin[2], margin[0], width - margin[3], length - margin[1])
-        print('number of pixels to skip in top/bottom/left/right boundaries: {}'.format(margin))
+        print(f'number of pixels to skip in top/bottom/left/right boundaries: {margin}')
     else:
         box = (0, 0, width, length)
 
@@ -180,7 +180,7 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='mean', margin=[0,
 
     # read source data and multilooking
     dsNames = readfile.get_dataset_list(infile)
-    maxDigit = max([len(i) for i in dsNames])
+    maxDigit = max(len(i) for i in dsNames)
     dsDict = dict()
     for dsName in dsNames:
         print('multilooking {d:<{w}} from {f} ...'.format(
@@ -210,7 +210,7 @@ def multilook_file(infile, lks_y, lks_x, outfile=None, method='mean', margin=[0,
                      int((r0     - box[1]) / lks_y),
                      int((box[2] - box[0]) / lks_x),
                      int((r1     - box[1]) / lks_y))
-            print('box: {}'.format(box_o))
+            print(f'box: {box_o}')
 
             # read / multilook
             if method == 'nearest':

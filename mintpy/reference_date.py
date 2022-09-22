@@ -38,16 +38,16 @@ def read_ref_date(inps):
                 # txt file
                 inps.refDate = ptime.read_date_txt(inps.refDate)[0]
         else:
-            print('input file {} does not exist, skip this step'.format(inps.refDate))
+            print(f'input file {inps.refDate} does not exist, skip this step')
             return None
     inps.refDate = ptime.yyyymmdd(inps.refDate)
-    print('input reference date: {}'.format(inps.refDate))
+    print(f'input reference date: {inps.refDate}')
 
     # check available dates
     date_list = timeseries(inps.timeseries_file[0]).get_date_list()
     if inps.refDate not in date_list:
-        msg = 'input reference date: {} is not found.'.format(inps.refDate)
-        msg += '\nAll available dates:\n{}'.format(date_list)
+        msg = f'input reference date: {inps.refDate} is not found.'
+        msg += f'\nAll available dates:\n{date_list}'
         raise Exception(msg)
 
     return inps.refDate
@@ -66,7 +66,7 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0, 
     outfile = os.path.abspath(outfile)
 
     print('-'*50)
-    print('change reference date for file: {}'.format(ts_file))
+    print(f'change reference date for file: {ts_file}')
     atr = readfile.read_attribute(ts_file)
     dsName = atr['FILE_TYPE']
 
@@ -77,7 +77,7 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0, 
             print('Nothing to be done.')
             return ts_file
         else:
-            print('Copy {} to {}'.format(ts_file, outfile))
+            print(f'Copy {ts_file} to {outfile}')
             shutil.copy2(ts_file, outfile)
             return outfile
 
@@ -111,9 +111,9 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0, 
         box_width  = box[2] - box[0]
         box_length = box[3] - box[1]
         if num_box > 1:
-            print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
-            print('box width:  {}'.format(box_width))
-            print('box length: {}'.format(box_length))
+            print(f'\n------- processing patch {i+1} out of {num_box} --------------')
+            print(f'box width:  {box_width}')
+            print(f'box length: {box_length}')
 
         # reading
         print('reading data ...')
@@ -135,7 +135,7 @@ def change_timeseries_ref_date(ts_file, ref_date, outfile=None, max_memory=4.0, 
         )
 
     # update metadata
-    print('update "REF_DATE" attribute value to {}'.format(ref_date))
+    print(f'update "REF_DATE" attribute value to {ref_date}')
     with h5py.File(outfile, 'r+') as f:
         f.attrs['REF_DATE'] = ref_date
         f.attrs['FILE_PATH'] = outfile
@@ -166,6 +166,6 @@ def run_reference_date(inps):
 
     # used time
     m, s = divmod(time.time() - start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs.')
 
     return

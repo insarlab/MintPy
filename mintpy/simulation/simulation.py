@@ -273,9 +273,9 @@ def add_unw_err2ifgram(ifgram, percentage=0.1, Nmax=2, print_msg=True):
     num_ifg_err = int(len(ifgram) * percentage)
     idx_ifg_err = random.sample(list(range(len(ifgram))), num_ifg_err)
     if print_msg:
-        print('ifgram with unwrap error: {}'.format(percentage))
+        print(f'ifgram with unwrap error: {percentage}')
         print('unwrap error jump in 2*pi*(-{n}, {n}): '.format(n=Nmax))
-        print('number of ifgrams with unwrap error: {}'.format(num_ifg_err))
+        print(f'number of ifgrams with unwrap error: {num_ifg_err}')
     ifgram_err = np.array(ifgram, dtype=np.float32)
     ifgram_err[idx_ifg_err] += 2.*np.pi*np.random.choice(Nlist, size=num_ifg_err)
     return ifgram_err, idx_ifg_err

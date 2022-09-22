@@ -152,8 +152,8 @@ def cmd_line_parse(iargs=None):
         ref_y, ref_x = coord.geo2radar(inps.ref_lalo[0], inps.ref_lalo[1])[:2]
         if ref_y is not None and ref_x is not None:
             inps.ref_yx = [ref_y, ref_x]
-            print('input reference point in (lat, lon): ({}, {})'.format(inps.ref_lalo[0], inps.ref_lalo[1]))
-            print('corresponding   point in (y, x): ({}, {})'.format(inps.ref_yx[0], inps.ref_yx[1]))
+            print(f'input reference point in (lat, lon): ({inps.ref_lalo[0]}, {inps.ref_lalo[1]})')
+            print(f'corresponding   point in (y, x): ({inps.ref_yx[0]}, {inps.ref_yx[1]})')
 
     # default: --output option
     if not inps.outfile:

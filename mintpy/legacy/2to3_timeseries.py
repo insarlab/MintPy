@@ -50,7 +50,7 @@ def run_2to3_timeseries(py2_file, py3_file):
         print('reading time-series ...')
         prog_bar = ptime.progressBar(maxValue=num_date)
         for i in range(num_date):
-            ts_data[i, :, :] = f['timeseries/{}'.format(date_list[i])][:]
+            ts_data[i, :, :] = f[f'timeseries/{date_list[i]}'][:]
             prog_bar.update(i+1, suffix=date_list[i])
         prog_bar.close()
 

@@ -76,7 +76,7 @@ def cmd_line_parse(iargs=None):
     # check: intput file coordinates system (required in geo)
     atr = readfile.read_attribute(inps.ts_file)
     if "Y_FIRST" not in atr.keys():
-        raise ValueError("input file {} is NOT geocoded".format(inps.ts_file))
+        raise ValueError(f"input file {inps.ts_file} is NOT geocoded")
 
     # default: auxliary files
     inps = get_aux_filename(inps)

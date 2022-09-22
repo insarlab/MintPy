@@ -47,7 +47,7 @@ def get_datetime_list(ts_file, date_wise_acq_time=False):
     dt_name = 'sensingMid'
     if dt_name in ds_names:
         # opt 1. read sensingMid if exists
-        print('read exact datetime info from /{} in file: {}'.format(dt_name, os.path.basename(ts_file)))
+        print(f'read exact datetime info from /{dt_name} in file: {os.path.basename(ts_file)}')
         with h5py.File(ts_file, 'r') as f:
             sensingMidStr = [i.decode('utf-8') for i in f[dt_name][:]]
 
@@ -121,7 +121,7 @@ def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_comp='enu2los',
 
     if update_mode and set_file and os.path.isfile(set_file):
         print('update mode: ON')
-        print('skip re-calculating and use existing file: {}'.format(set_file))
+        print(f'skip re-calculating and use existing file: {set_file}')
         return set_file
 
     # prepare LOS geometry: geocoding if in radar-coordinates
@@ -175,7 +175,7 @@ def calc_solid_earth_tides_timeseries(ts_file, geom_file, set_comp='enu2los',
                          + set_n * unit_vec[1]
                          + set_u * unit_vec[2])
 
-        prog_bar.update(i+1, suffix='{} ({}/{})'.format(dt_obj.isoformat(), i+1, num_date))
+        prog_bar.update(i+1, suffix=f'{dt_obj.isoformat()} ({i+1}/{num_date})')
     prog_bar.close()
 
     # radar-coding if input in radar-coordinates
@@ -257,6 +257,6 @@ def run_solid_earth_tides(inps):
 
     # used time
     m, s = divmod(time.time() - start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs.\n')
 
     return

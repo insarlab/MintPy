@@ -178,9 +178,9 @@ def read_subset_box(iDict):
     # Check conflict
     if geo_box and not geocoded and lookup_file is None:
         geo_box = None
-        print(('WARNING: mintpy.subset.lalo is not supported'
-               ' if 1) no lookup file AND'
-               '    2) radar/unkonwn coded dataset'))
+        print('WARNING: mintpy.subset.lalo is not supported'
+              ' if 1) no lookup file AND'
+              '    2) radar/unkonwn coded dataset')
         print('\tignore it and continue.')
 
     if not geo_box and not pix_box:
@@ -199,8 +199,8 @@ def read_subset_box(iDict):
     if geo_box is not None:
         pix_box = coord.bbox_geo2radar(geo_box)
         pix_box = coord.check_box_within_data_coverage(pix_box)
-        print('input bounding box of interest in lalo: {}'.format(geo_box))
-    print('box to read for datasets in y/x: {}'.format(pix_box))
+        print(f'input bounding box of interest in lalo: {geo_box}')
+    print(f'box to read for datasets in y/x: {pix_box}')
 
     # Get box for geocoded lookup table (for gamma/roipac)
     box4geo_lut = None
@@ -209,7 +209,7 @@ def read_subset_box(iDict):
         if not geocoded and 'Y_FIRST' in atrLut.keys():
             geo_box = coord.bbox_radar2geo(pix_box)
             box4geo_lut = ut.coordinate(atrLut).bbox_geo2radar(geo_box)
-            print('box to read for geocoded lookup file in y/x: {}'.format(box4geo_lut))
+            print(f'box to read for geocoded lookup file in y/x: {box4geo_lut}')
 
     iDict['box'] = pix_box
     iDict['box4geo'] = box4geo_lut if box4geo_lut else pix_box
@@ -235,7 +235,7 @@ def update_box4files_with_inconsistent_size(fnames):
         # print out warning message
         msg = '\n'+'*'*80
         msg += '\nWARNING: NOT all input unwrapped interferograms have the same row/column number!'
-        msg += '\nMinimum size is: ({}, {})'.format(min_length, min_width)
+        msg += f'\nMinimum size is: ({min_length}, {min_width})'
         msg += '\n'+'-'*30
         msg += '\nThe following dates have different size:'
 
@@ -280,7 +280,7 @@ def skip_files_with_inconsistent_size(dsPathDict, pix_box=None, dsName='unwrapPh
         # print out warning message
         msg = '\n'+'*'*80
         msg += '\nWARNING: NOT all input unwrapped interferograms have the same row/column number!'
-        msg += '\nThe most common size is: ({}, {})'.format(common_length, common_width)
+        msg += f'\nThe most common size is: ({common_length}, {common_width})'
         msg += '\n'+'-'*30
         msg += '\nThe following dates have different size:'
 
@@ -297,12 +297,12 @@ def skip_files_with_inconsistent_size(dsPathDict, pix_box=None, dsName='unwrapPh
                               if all(d[2:8] in i for d in dates)]
                     if len(fnames) > 0:
                         dsPathDict[dsName].remove(fnames[0])
-                msg += '\n\t{}\t({}, {})'.format(date12, length_list[i], width_list[i])
+                msg += f'\n\t{date12}\t({length_list[i]}, {width_list[i]})'
                 num_drop += 1
 
         msg += '\n'+'-'*30
-        msg += '\nSkip loading the above interferograms ({}).'.format(num_drop)
-        msg += '\nContinue to load the rest interferograms ({}).'.format(len(date12_list) - num_drop)
+        msg += f'\nSkip loading the above interferograms ({num_drop}).'
+        msg += f'\nContinue to load the rest interferograms ({len(date12_list) - num_drop}).'
         msg += '\n'+'*'*80+'\n'
         print(msg)
     return dsPathDict
@@ -329,7 +329,7 @@ def read_inps_dict2ifgram_stack_dict_object(iDict, ds_name2template_key):
     print('-'*50)
     print(f'searching {obs_type} pairs info')
     print('input data files:')
-    max_digit = max([len(i) for i in list(ds_name2template_key.keys())])
+    max_digit = max(len(i) for i in list(ds_name2template_key.keys()))
     dsPathDict = {}
     for dsName in [i for i in IFGRAM_DSET_NAMES if i in ds_name2template_key.keys()]:
         key = ds_name2template_key[dsName]
@@ -420,7 +420,7 @@ def read_inps_dict2ifgram_stack_dict_object(iDict, ds_name2template_key):
                 if len(dsPath2) > 0:
                     ifgramPathDict[dsName] = dsPath2[0]
                 else:
-                    print('WARNING: {:>18} file missing for pair {}'.format(dsName, date6s))
+                    print(f'WARNING: {dsName:>18} file missing for pair {date6s}')
 
         # initiate ifgramDict object
         ifgramObj = ifgramDict(datasetDict=ifgramPathDict)
@@ -464,7 +464,7 @@ def read_inps_dict2geometry_dict_object(iDict, dset_name2template_key):
     print('-'*50)
     print('searching geometry files info')
     print('input data files:')
-    max_digit = max([len(i) for i in list(dset_name2template_key.keys())])
+    max_digit = max(len(i) for i in list(dset_name2template_key.keys()))
     dsPathDict = {}
     for dsName in [i for i in GEOMETRY_DSET_NAMES if i in dset_name2template_key.keys()]:
         key = dset_name2template_key[dsName]
@@ -486,7 +486,7 @@ def read_inps_dict2geometry_dict_object(iDict, dset_name2template_key):
     # Check required dataset
     dsName0 = GEOMETRY_DSET_NAMES[0]
     if dsName0 not in dsPathDict.keys():
-        print('WARNING: No reqired {} data files found!'.format(dsName0))
+        print(f'WARNING: No reqired {dsName0} data files found!')
 
     # extra metadata from observations
     # e.g. EARTH_RADIUS, HEIGHT, etc.
@@ -578,8 +578,8 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1, geom_obj
             if (out_size == in_size
                     and set(in_dset_list).issubset(set(out_dset_list))
                     and set(in_date12_list).issubset(set(out_date12_list))):
-                print(('All date12   exists in file {} with same size as required,'
-                       ' no need to re-load.'.format(os.path.basename(outFile))))
+                print('All date12   exists in file {} with same size as required,'
+                      ' no need to re-load.'.format(os.path.basename(outFile)))
                 flag = 'skip'
 
         elif inObj.name == 'geometry':
@@ -593,8 +593,8 @@ def run_or_skip(outFile, inObj, box, updateMode=True, xstep=1, ystep=1, geom_obj
 
             if (out_size == in_size
                     and set(in_dset_list).issubset(set(out_dset_list))):
-                print(('All datasets exists in file {} with same size as required,'
-                       ' no need to re-load.'.format(os.path.basename(outFile))))
+                print('All datasets exists in file {} with same size as required,'
+                      ' no need to re-load.'.format(os.path.basename(outFile)))
                 flag = 'skip'
 
     return flag
@@ -604,13 +604,13 @@ def prepare_metadata(iDict):
     """Prepare metadata via prep_{processor}.py scripts."""
 
     processor = iDict['processor']
-    script_name = 'prep_{}.py'.format(processor)
+    script_name = f'prep_{processor}.py'
     print('-'*50)
-    print('prepare metadata files for {} products'.format(processor))
+    print(f'prepare metadata files for {processor} products')
 
     if processor not in PROCESSOR_LIST:
-        msg = 'un-recognized InSAR processor: {}'.format(processor)
-        msg += '\nsupported processors: {}'.format(PROCESSOR_LIST)
+        msg = f'un-recognized InSAR processor: {processor}'
+        msg += f'\nsupported processors: {PROCESSOR_LIST}'
         raise ValueError(msg)
 
     # import prep_{processor}
@@ -660,7 +660,7 @@ def prepare_metadata(iDict):
 
         # --geom-files for the basenames only
         geom_names = ['dem', 'lookupY', 'lookupX', 'incAngle', 'azAngle', 'shadowMask', 'waterMask']
-        geom_keys = ['mintpy.load.{}File'.format(i) for i in geom_names]
+        geom_keys = [f'mintpy.load.{i}File' for i in geom_names]
         geom_files = [os.path.basename(iDict[key]) for key in geom_keys
                       if iDict.get(key, 'auto') not in ['auto', 'None', 'no',  None, False]]
 
@@ -863,6 +863,6 @@ def load_data(inps):
 
     # used time
     m, s = divmod(time.time()-start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs.\n')
 
     return

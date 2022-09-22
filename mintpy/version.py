@@ -48,7 +48,7 @@ def get_version_info():
         # if there are new commits after the latest release
         if '-' in version:
             version, num_commit = version.split('-')[:2]
-            version += '-{}'.format(num_commit)
+            version += f'-{num_commit}'
 
         cmd = "git log -1 --date=short --format=%cd"
         date = subprocess.check_output(cmd.split(), stderr=subprocess.DEVNULL)
@@ -73,7 +73,7 @@ version_description = """MintPy version {v}, date {d}""".format(
 )
 
 # generate_from: http://patorjk.com/software/taag/
-logo = """
+logo = r"""
 ___________________________________________________________
 
   /##      /## /##             /##     /#######

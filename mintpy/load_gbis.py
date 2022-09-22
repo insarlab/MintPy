@@ -21,7 +21,7 @@ from mintpy.utils import writefile
 def grab_data_paths_from_inp_file(inp_file):
     """Grab data paths from inp file."""
     data_paths = []
-    with open(inp_file, 'r') as f:
+    with open(inp_file) as f:
         lines = f.readlines()
         lines = [i.strip() for i in lines if not i.startswith('%')]
         lines = [i for i in lines if i]
@@ -39,7 +39,7 @@ def gbis_mat2hdf5(inv_mat_file, display=True):
     out_dir = os.path.dirname(inv_mat_file)
     out_files = []
 
-    print('read mat file: {}'.format(inv_mat_file))
+    print(f'read mat file: {inv_mat_file}')
     mat = sio.loadmat(inv_mat_file, struct_as_record=False, squeeze_me=True)
 
     # when num_file == 1
@@ -47,7 +47,7 @@ def gbis_mat2hdf5(inv_mat_file, display=True):
         mat['insar'] = [mat['insar']]
         mat['insarPlot'] = [mat['insarPlot']]
     num_file = len(mat['insar'])
-    print('number of output HDF5 file: {}'.format(num_file))
+    print(f'number of output HDF5 file: {num_file}')
 
     # grab optimal model parameter
     parValue = mat['invResults'].optimalmodel
@@ -64,7 +64,7 @@ def gbis_mat2hdf5(inv_mat_file, display=True):
         fig_size = [12, 3*num_file]
         fig, axs = plt.subplots(nrows=num_file, ncols=3, figsize=fig_size)
         axs = axs.reshape(-1,3)   #convert to 2D array when num_file is 1.
-        print('creating figure in size of {}'.format(fig_size))
+        print(f'creating figure in size of {fig_size}')
 
     for i in range(num_file):
         insar_mat_file = mat['insar'][i].dataPath
@@ -72,7 +72,7 @@ def gbis_mat2hdf5(inv_mat_file, display=True):
             inp_file = os.path.dirname(os.path.dirname(inv_mat_file))+'.inp'
             insar_mat_file = grab_data_paths_from_inp_file(inp_file)[i]
         print('-'*30)
-        print('read mask from file: {}'.format(insar_mat_file))
+        print(f'read mask from file: {insar_mat_file}')
 
         # read 1D height and 2D mask
         hgt1 = sio.loadmat(insar_mat_file, struct_as_record=False, squeeze_me=True)['Height']
@@ -81,7 +81,7 @@ def gbis_mat2hdf5(inv_mat_file, display=True):
 
         # convert to 2D matrix
         insarPlot = mat['insarPlot'][i]
-        out_file = os.path.join(out_dir, '{}.h5'.format(insarPlot.name))
+        out_file = os.path.join(out_dir, f'{insarPlot.name}.h5')
         out_files.append(out_file)
 
         hgt2 = np.zeros((length, width), dtype=np.float32) * np.nan

@@ -72,7 +72,7 @@ class ifgramStackDict:
 
     def get_date12_list(self):
         pairs = [pair for pair in self.pairsDict.keys()]
-        self.date12List = ['{}_{}'.format(i[0], i[1]) for i in pairs]
+        self.date12List = [f'{i[0]}_{i[1]}' for i in pairs]
         return self.date12List
 
     def get_dataset_list(self):
@@ -118,10 +118,10 @@ class ifgramStackDict:
             os.makedirs(output_dir)
             print(f'create directory: {output_dir}')
 
-        self.pairs = sorted([pair for pair in self.pairsDict.keys()])
+        self.pairs = sorted(pair for pair in self.pairsDict.keys())
         self.dsNames = list(self.pairsDict[self.pairs[0]].datasetDict.keys())
         self.dsNames = [i for i in IFGRAM_DSET_NAMES if i in self.dsNames]
-        maxDigit = max([len(i) for i in self.dsNames])
+        maxDigit = max(len(i) for i in self.dsNames)
         numIfgram, length, width = self.get_size(
             box=box,
             xstep=xstep,
@@ -149,7 +149,7 @@ class ifgramStackDict:
 
         # write HDF5 file
         with h5py.File(outputFile, access_mode) as f:
-            print('create HDF5 file {} with {} mode'.format(outputFile, access_mode))
+            print(f'create HDF5 file {outputFile} with {access_mode} mode')
 
             ###############################
             # 3D datasets containing unwrapPhase, magnitude, coherence, connectComponent, wrapPhase, etc.
@@ -177,7 +177,7 @@ class ifgramStackDict:
 
                 # set no-data value - printout msg
                 if dsName.endswith('OffsetVar'):
-                    print('set no-data value for {} from 99 to NaN.'.format(dsName))
+                    print(f'set no-data value for {dsName} from 99 to NaN.')
                     dsFile = self.pairsDict[self.pairs[0]].datasetDict[dsName]
                     if dsFile.endswith('cov.bip'):
                         print('convert variance to standard deviation.')
@@ -262,7 +262,7 @@ class ifgramStackDict:
             meta = self.get_metadata()
             if extra_metadata:
                 meta.update(extra_metadata)
-                print('add extra metadata: {}'.format(extra_metadata))
+                print(f'add extra metadata: {extra_metadata}')
 
             # update metadata due to resize
             # for low resolution ionosphere from isce2/topsStack
@@ -285,7 +285,7 @@ class ifgramStackDict:
             for key, value in meta.items():
                 f.attrs[key] = value
 
-        print('Finished writing to {}'.format(outputFile))
+        print(f'Finished writing to {outputFile}')
         return outputFile
 
 
@@ -478,7 +478,7 @@ class geometryDict:
             ds_name = 'incidenceAngle'
             key = 'SLANT_RANGE_DISTANCE'
             if ds_name in self.dsNames:
-                print('    geocoded input, use incidenceAngle from file: {}'.format(os.path.basename(self.datasetDict[ds_name])))
+                print(f'    geocoded input, use incidenceAngle from file: {os.path.basename(self.datasetDict[ds_name])}')
                 inc_angle = self.read(family=ds_name)[0].astype(np.float32)
                 atr = readfile.read_attribute(self.file)
                 if atr.get('PROCESSOR', 'isce') == 'hyp3' and atr.get('UNIT', 'degrees').startswith('rad'):
@@ -488,7 +488,7 @@ class geometryDict:
                 data = ut.incidence_angle2slant_range_distance(self.extraMetadata, inc_angle)
 
             elif key in self.extraMetadata.keys():
-                print('geocoded input, use contant value from metadata {}'.format(key))
+                print(f'geocoded input, use contant value from metadata {key}')
                 length = int(self.extraMetadata['LENGTH'])
                 width = int(self.extraMetadata['WIDTH'])
                 range_dist = float(self.extraMetadata[key])
@@ -528,7 +528,7 @@ class geometryDict:
         if 'Y_FIRST' in self.extraMetadata.keys():
             # for dataset in geo-coordinates, use contant value from INCIDENCE_ANGLE.
             key = 'INCIDENCE_ANGLE'
-            print('geocoded input, use contant value from metadata {}'.format(key))
+            print(f'geocoded input, use contant value from metadata {key}')
             if key in self.extraMetadata.keys():
                 length = int(self.extraMetadata['LENGTH'])
                 width = int(self.extraMetadata['WIDTH'])
@@ -621,12 +621,12 @@ class geometryDict:
             os.makedirs(output_dir)
             print(f'create directory: {output_dir}')
 
-        maxDigit = max([len(i) for i in GEOMETRY_DSET_NAMES])
+        maxDigit = max(len(i) for i in GEOMETRY_DSET_NAMES)
         length, width = self.get_size(box=box, xstep=xstep, ystep=ystep)
 
         self.outputFile = outputFile
         with h5py.File(self.outputFile, access_mode) as f:
-            print('create HDF5 file {} with {} mode'.format(self.outputFile, access_mode))
+            print(f'create HDF5 file {self.outputFile} with {access_mode} mode')
 
             ###############################
             for dsName in self.dsNames:
@@ -702,21 +702,21 @@ class geometryDict:
                     fname = os.path.basename(self.datasetDict[dsName])
                     if fname.startswith('waterBody') or fname.endswith('.wbd'):
                         data = ~data
-                        print(('    input file "{}" is water body (True/False for water/land), '
-                               'convert to water mask (False/True for water/land).'.format(fname)))
+                        print('    input file "{}" is water body (True/False for water/land), '
+                              'convert to water mask (False/True for water/land).'.format(fname))
 
                     elif dsName == 'height':
                         noDataValueDEM = -32768
                         if np.any(data == noDataValueDEM):
                             data[data == noDataValueDEM] = np.nan
-                            print('    convert no-data value for DEM {} to NaN.'.format(noDataValueDEM))
+                            print(f'    convert no-data value for DEM {noDataValueDEM} to NaN.')
 
                     elif dsName == 'rangeCoord' and xstep != 1:
-                        print('    scale value of {:<15} by 1/{} due to multilooking'.format(dsName, xstep))
+                        print(f'    scale value of {dsName:<15} by 1/{xstep} due to multilooking')
                         data /= xstep
 
                     elif dsName == 'azimuthCoord' and ystep != 1:
-                        print('    scale value of {:<15} by 1/{} due to multilooking'.format(dsName, ystep))
+                        print(f'    scale value of {dsName:<15} by 1/{ystep} due to multilooking')
                         data /= ystep
 
                     elif dsName == 'incidenceAngle':
@@ -765,7 +765,7 @@ class geometryDict:
             self.get_metadata()
             if extra_metadata:
                 self.metadata.update(extra_metadata)
-                print('add extra metadata: {}'.format(extra_metadata))
+                print(f'add extra metadata: {extra_metadata}')
 
             # update due to subset
             self.metadata = attr.update_attribute4subset(self.metadata, box)
@@ -777,7 +777,7 @@ class geometryDict:
             for key, value in self.metadata.items():
                 f.attrs[key] = value
 
-        print('Finished writing to {}'.format(self.outputFile))
+        print(f'Finished writing to {self.outputFile}')
         return self.outputFile
 
 

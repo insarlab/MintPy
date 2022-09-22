@@ -146,8 +146,8 @@ def prep_geometry_iono(geom_file, box=None, iono_height=450e3, print_msg=True):
     iono_lat, iono_lon = lalo_ground2iono(lat, lon, inc_angle=inc_angle_center, az_angle=az_angle_center)
 
     if print_msg:
-        print('center lat/lon  on the ground    : {:.4f}/{:.4f} deg'.format(lat, lon))
-        print('center lat/lon  on the ionosphere: {:.4f}/{:.4f} deg'.format(iono_lat, iono_lon))
+        print(f'center lat/lon  on the ground    : {lat:.4f}/{lon:.4f} deg')
+        print(f'center lat/lon  on the ionosphere: {iono_lat:.4f}/{iono_lon:.4f} deg')
 
     return iono_inc_angle, iono_lat, iono_lon, iono_height
 
@@ -277,8 +277,8 @@ def get_gim_tec_list(gim_tec_dir, dt_objs, iono_lat, iono_lon):
         else:
             m1 = 0
             h1 = h0 + 1
-        hm0 = '{:02d}{:02d}'.format(h0, m0)
-        hm1 = '{:02d}{:02d}'.format(h1, m1)
+        hm0 = f'{h0:02d}{m0:02d}'
+        hm1 = f'{h1:02d}{m1:02d}'
         tec_file = 'gim_{}_{}_{}.tecgrd.txt'.format(dt_obj.strftime('%y%m%d'), hm0, hm1)
         tec_file = os.path.join(gim_tec_dir, tec_file)
 
@@ -291,7 +291,7 @@ def get_gim_tec_list(gim_tec_dir, dt_objs, iono_lat, iono_lon):
             ind_lon = np.argmin(np.abs(lons - iono_lon))
             vtec[i] = vtec_mat[ind_lat, ind_lon]
         else:
-            print('WARNING: NO file found in {}. Set to NaN.'.format(tec_file))
+            print(f'WARNING: NO file found in {tec_file}. Set to NaN.')
 
     return vtec
 
@@ -349,7 +349,7 @@ def get_sub_tec_list(gim_tec_dir, date_list, iono_lat, iono_lon,
     # read TEC into tDicts (list of dict objects)
     tDicts = []
     for date_str in date_list:
-        tec_file = os.path.join(gim_tec_dir, 'subtec_sent1_{}.txt.dt'.format(date_str))
+        tec_file = os.path.join(gim_tec_dir, f'subtec_sent1_{date_str}.txt.dt')
         if os.path.isfile(tec_file):
             tDict = read_sub_tec(tec_file, print_msg=False)
         else:
@@ -463,10 +463,10 @@ def read_sub_tec(tec_file, version=2.1, print_msg=True):
     """
 
     if not os.path.isfile(tec_file):
-        raise FileNotFoundError('No file found in {}'.format(tec_file))
+        raise FileNotFoundError(f'No file found in {tec_file}')
 
     if print_msg:
-        print('read JPL GIM TEC data from file: {}'.format(tec_file))
+        print(f'read JPL GIM TEC data from file: {tec_file}')
 
     # read data from text file
     fc = np.loadtxt(tec_file, dtype=bytes).astype(float)
@@ -499,7 +499,7 @@ def read_sub_tec(tec_file, version=2.1, print_msg=True):
          SUBTEC) = fc[:, 12:15].T
 
     # save for external plotting
-    date_str = re.findall('\d{8}', os.path.basename(tec_file))[0]
+    date_str = re.findall(r'\d{8}', os.path.basename(tec_file))[0]
     date_obj = dt.datetime.strptime(date_str, '%Y%m%d')
     tDict = {}
     tDict['date'] = date_str

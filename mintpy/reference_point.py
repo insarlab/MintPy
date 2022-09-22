@@ -127,7 +127,7 @@ def reference_file(inps):
 
             else:
                 ## write to a new file
-                print('writing the referenced data into file: {}'.format(inps.outfile))
+                print(f'writing the referenced data into file: {inps.outfile}')
 
                 # 1. read and update data value
                 data, atr = readfile.read(inps.file, datasetName=ftype)
@@ -217,13 +217,13 @@ def manual_select_reference_yx(data, inps, mask=None):
                 print('Try a difference location please.')
     cid = fig.canvas.mpl_connect('button_press_event', onclick)
     plt.show()
-    print('y/x: {}'.format((inps.ref_y, inps.ref_x)))
+    print(f'y/x: {(inps.ref_y, inps.ref_x)}')
     return inps
 
 
 def select_max_coherence_yx(coh_file, mask=None, min_coh=0.85):
     """Select pixel with coherence > min_coh in random"""
-    print('random select pixel with coherence > {}'.format(min_coh))
+    print(f'random select pixel with coherence > {min_coh}')
     print('\tbased on coherence file: '+coh_file)
     coh, coh_atr = readfile.read(coh_file)
     if mask is not None:
@@ -239,7 +239,7 @@ def select_max_coherence_yx(coh_file, mask=None, min_coh=0.85):
 
     y, x = random_select_reference_yx(coh_mask, print_msg=False)
     #y, x = np.unravel_index(np.argmax(coh), coh.shape)
-    print('y/x: {}'.format((y, x)))
+    print(f'y/x: {(y, x)}')
     return y, x
 
 
@@ -251,7 +251,7 @@ def random_select_reference_yx(data_mat, print_msg=True):
         y = random.choice(list(range(nrow)))
         x = random.choice(list(range(ncol)))
     if print_msg:
-        print('random select pixel\ny/x: {}'.format((y, x)))
+        print(f'random select pixel\ny/x: {(y, x)}')
     return y, x
 
 
@@ -277,13 +277,13 @@ def read_template2inps(template_file, inps):
     if key in template.keys():
         value = template[key]
         if value:
-            inps.ref_y, inps.ref_x = [int(i) for i in value.split(',')]
+            inps.ref_y, inps.ref_x = (int(i) for i in value.split(','))
 
     key = prefix+'lalo'
     if key in template.keys():
         value = template[key]
         if value:
-            inps.ref_lat, inps.ref_lon = [float(i) for i in value.split(',')]
+            inps.ref_lat, inps.ref_lon = (float(i) for i in value.split(','))
 
     return inps
 
@@ -336,11 +336,11 @@ def read_reference_input(inps):
         (inps.ref_y,
          inps.ref_x) = coord.geo2radar(np.array(inps.ref_lat),
                                        np.array(inps.ref_lon))[0:2]
-        print('input reference point in lat/lon: {}'.format((inps.ref_lat, inps.ref_lon)))
+        print(f'input reference point in lat/lon: {(inps.ref_lat, inps.ref_lon)}')
 
     # Check input ref_y/x
     if inps.ref_y is not None and inps.ref_x is not None:
-        print('input reference point in y/x: {}'.format((inps.ref_y, inps.ref_x)))
+        print(f'input reference point in y/x: {(inps.ref_y, inps.ref_x)}')
         # Do not use ref_y/x outside of data coverage
         if not (0 <= inps.ref_y < length and 0 <= inps.ref_x < width):
             inps.ref_y, inps.ref_x = None, None
@@ -354,7 +354,7 @@ def read_reference_input(inps):
             mask = readfile.read(inps.maskFile, datasetName=ds_name)[0]
             if mask[inps.ref_y, inps.ref_x] == 0:
                 inps.ref_y, inps.ref_x = None, None
-                msg = 'input reference point is in masked OUT area defined by {}!'.format(inps.maskFile)
+                msg = f'input reference point is in masked OUT area defined by {inps.maskFile}!'
                 raise ValueError(msg)
 
     else:

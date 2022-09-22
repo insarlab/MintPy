@@ -38,16 +38,16 @@ def gps_to_LOS(Ve, Vn, theta, heading):
 ############################################################
 def check_st_in_box(x,y,x0,y0,x1,y1,X0,Y0,X1,Y1):
 
-    m1=float(y1-y0)/float((x1-x0))
+    m1=float(y1-y0)/float(x1-x0)
     c1=float(y0-m1*x0)
 
-    m2=float(Y1-Y0)/float((X1-X0))
+    m2=float(Y1-Y0)/float(X1-X0)
     c2=float(Y0-m2*X0)
 
-    m3=float(y0-Y0)/float((x0-X0))
+    m3=float(y0-Y0)/float(x0-X0)
     c3=float(Y0-m3*X0)
 
-    m4=float(y1-Y1)/float((x1-X1))
+    m4=float(y1-Y1)/float(x1-X1)
     c4=float(Y1-m4*X1)
 
 
@@ -97,7 +97,7 @@ def check_st_in_box2(x, y, x0, y0, x1, y1, X0, Y0, X1, Y1):
 
 ############################################################
 def line(x0, y0, x1, y1):
-    m = float(y1-y0)/float((x1-x0))
+    m = float(y1-y0)/float(x1-x0)
     c = float(y0-m*x0)
     return m, c
 
@@ -369,8 +369,8 @@ def main(argv):
 
     for opt,arg in opts:
         if   opt == '-f':   velocityFile = arg
-        elif opt == '-s':   y0,x0  = [int(i) for i in arg.split(',')]
-        elif opt == '-e':   y1,x1  = [int(i) for i in arg.split(',')]
+        elif opt == '-s':   y0,x0  = (int(i) for i in arg.split(','))
+        elif opt == '-e':   y1,x1  = (int(i) for i in arg.split(','))
         elif opt == '-n':   ntrans = int(arg)
         elif opt == '-d':   dp     = float(arg)
         elif opt == '-g':   gpsFile=arg
@@ -474,7 +474,7 @@ def main(argv):
         y1 = yc[1]
     ##############################################################################
     try:
-        mf = float(Yf1-Yf0)/float((Xf1-Xf0))  # slope of the fault line
+        mf = float(Yf1-Yf0)/float(Xf1-Xf0)  # slope of the fault line
         cf = float(Yf0-mf*Xf0)   # intercept of the fault line
         # distance of the profile start point from the Fault line
         df0 = dist_point_from_line(mf, cf, x0, y0, 1, 1)
@@ -542,7 +542,7 @@ def main(argv):
     YY1.append(y1)
 
     if ntrans > 1:
-        m = float(y1-y0)/float((x1-x0))
+        m = float(y1-y0)/float(x1-x0)
         c = float(y0-m*x0)
         m1 = -1.0/m
         if lat_transect == 'Nan':

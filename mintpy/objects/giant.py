@@ -46,7 +46,7 @@ class giantTimeseries:
 
     def open(self, print_msg=True):
         if print_msg:
-            print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
+            print(f'open {self.name} file: {os.path.basename(self.file)}')
         self.get_size()
         self.get_metadata()
         self.numPixel = self.length * self.width
@@ -69,7 +69,7 @@ class giantTimeseries:
             for dsName in self.datasetNames:
                 ds = f[dsName]
                 if len(ds.shape) == 3:
-                    self.sliceList += ['{}-{}'.format(dsName, i) for i in self.dateList]
+                    self.sliceList += [f'{dsName}-{i}' for i in self.dateList]
                 elif len(ds.shape) == 2:
                     self.sliceList.append(dsName)
                 else:
@@ -133,7 +133,7 @@ class giantIfgramStack:
 
     def open(self, print_msg=True):
         if print_msg:
-            print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
+            print(f'open {self.name} file: {os.path.basename(self.file)}')
         self.get_size()
         self.get_date12_list()
         self.get_metadata()
@@ -154,9 +154,9 @@ class giantIfgramStack:
                 ds = f[dsName]
                 if len(ds.shape) == 3:
                     if ds.shape[0] == self.numIfgram:
-                        self.sliceList += ['{}-{}'.format(dsName, i) for i in self.date12List]
+                        self.sliceList += [f'{dsName}-{i}' for i in self.date12List]
                     elif ds.shape[0] == self.numDate:
-                        self.sliceList += ['{}-{}'.format(dsName, i) for i in self.dateList]
+                        self.sliceList += [f'{dsName}-{i}' for i in self.dateList]
                 elif len(ds.shape) == 2:
                     self.sliceList.append(dsName)
                 else:
@@ -182,7 +182,7 @@ class giantIfgramStack:
             for i in range(Jmat.shape[0]):
                 mDates.append(dates[Jmat[i, :] ==  1][0])
                 sDates.append(dates[Jmat[i, :] == -1][0])
-            self.date12List = ['{}_{}'.format(m, s) for m, s in zip(mDates, sDates)]
+            self.date12List = [f'{m}_{s}' for m, s in zip(mDates, sDates)]
             self.mDates = mDates
             self.sDates = sDates
         return self.date12List

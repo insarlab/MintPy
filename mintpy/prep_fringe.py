@@ -45,10 +45,10 @@ def read_vrt_info(vrt_file):
     if len(prefix_list) > 0:
         prefix = prefix_list[0]
     else:
-        msg = 'No pre-defined tag structure found in file: {}!'.format(vrt_file)
+        msg = f'No pre-defined tag structure found in file: {vrt_file}!'
         msg += '\nPre-defined tag structure candidates:'
         for prefix in prefix_cand:
-            msg += '\n    {}/SourceFilename'.format(prefix)
+            msg += f'\n    {prefix}/SourceFilename'
         raise ValueError(msg)
 
     # src_box
@@ -60,7 +60,7 @@ def read_vrt_info(vrt_file):
     xmax = xmin + xsize
     ymax = ymin + ysize
     src_box = (xmin, ymin, xmax, ymax)
-    print('read bounding box from VRT file: {} as (x0, y0, x1, y1): {}'.format(vrt_file, src_box))
+    print(f'read bounding box from VRT file: {vrt_file} as (x0, y0, x1, y1): {src_box}')
 
     # source dir
     type_tag = root.find(prefix + '/SourceFilename')
@@ -106,7 +106,7 @@ def prepare_metadata(meta_file, geom_src_dir, box=None, nlks_x=1, nlks_y=1):
 
 def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None, box=None):
     print('-'*50)
-    print('preparing timeseries file: {}'.format(outfile))
+    print(f'preparing timeseries file: {outfile}')
 
     # copy metadata to meta
     meta = {key : value for key, value in metadata.items()}
@@ -116,12 +116,12 @@ def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None
     unw_files = sorted(glob.glob(unw_file))
     date12_list = [os.path.splitext(os.path.basename(i))[0] for i in unw_files]
     num_file = len(unw_files)
-    print('number of unwrapped interferograms: {}'.format(num_file))
+    print(f'number of unwrapped interferograms: {num_file}')
 
     ref_date = date12_list[0].split('_')[0]
     date_list = [ref_date] + [date12.split('_')[1] for date12 in date12_list]
     num_date = len(date_list)
-    print('number of acquisitions: {}\n{}'.format(num_date, date_list))
+    print(f'number of acquisitions: {num_date}\n{date_list}')
 
     # baseline info
     if baseline_dir is not None:
@@ -162,7 +162,7 @@ def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None
     writefile.layout_hdf5(outfile, ds_name_dict, metadata=meta)
 
     # writing data to HDF5 file
-    print('writing data to HDF5 file {} with a mode ...'.format(outfile))
+    print(f'writing data to HDF5 file {outfile} with a mode ...')
     with h5py.File(outfile, "a") as f:
         prog_bar = ptime.progressBar(maxValue=num_file)
         for i, unw_file in enumerate(unw_files):
@@ -177,13 +177,13 @@ def prepare_timeseries(outfile, unw_file, metadata, processor, baseline_dir=None
         print('set value at the first acquisition to ZERO.')
         f["timeseries"][0] = 0.
 
-    print('finished writing to HDF5 file: {}'.format(outfile))
+    print(f'finished writing to HDF5 file: {outfile}')
     return outfile
 
 
 def prepare_temporal_coherence(outfile, infile, metadata, box=None):
     print('-'*50)
-    print('preparing temporal coherence file: {}'.format(outfile))
+    print(f'preparing temporal coherence file: {outfile}')
 
     # copy metadata to meta
     meta = {key : value for key, value in metadata.items()}
@@ -213,7 +213,7 @@ def prepare_temporal_coherence(outfile, infile, metadata, box=None):
 
 def prepare_ps_mask(outfile, infile, metadata, box=None):
     print('-'*50)
-    print('preparing PS mask file: {}'.format(outfile))
+    print(f'preparing PS mask file: {outfile}')
 
     # copy metadata to meta
     meta = {key : value for key, value in metadata.items()}
@@ -240,7 +240,7 @@ def prepare_ps_mask(outfile, infile, metadata, box=None):
 
 def prepare_geometry(outfile, geom_dir, box, metadata):
     print('-'*50)
-    print('preparing geometry file: {}'.format(outfile))
+    print(f'preparing geometry file: {outfile}')
 
     # copy metadata to meta
     meta = {key : value for key, value in metadata.items()}
@@ -270,7 +270,7 @@ def prepare_geometry(outfile, geom_dir, box, metadata):
 
 def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box=None):
     print('-'*50)
-    print('preparing ifgramStack file: {}'.format(outfile))
+    print(f'preparing ifgramStack file: {outfile}')
     # copy metadata to meta
     meta = {key : value for key, value in metadata.items()}
 
@@ -329,7 +329,7 @@ def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box
     writefile.layout_hdf5(outfile, ds_name_dict, metadata=meta)
 
     # writing data to HDF5 file
-    print('writing data to HDF5 file {} with a mode ...'.format(outfile))
+    print(f'writing data to HDF5 file {outfile} with a mode ...')
     with h5py.File(outfile, "a") as f:
         prog_bar = ptime.progressBar(maxValue=num_pair)
         for i, (unw_file, cc_file) in enumerate(zip(unw_files, cc_files)):
@@ -347,7 +347,7 @@ def prepare_stack(outfile, unw_file, metadata, processor, baseline_dir=None, box
             prog_bar.update(i+1, suffix=date12_list[i])
         prog_bar.close()
 
-    print('finished writing to HDF5 file: {}'.format(outfile))
+    print(f'finished writing to HDF5 file: {outfile}')
     return outfile
 
 
@@ -371,7 +371,7 @@ def load_fringe(inps):
     # subset - read pix_box for fringe file
     pix_box = subset.subset_input_dict2box(vars(inps), meta)[0]
     pix_box = ut.coordinate(meta).check_box_within_data_coverage(pix_box)
-    print('input subset in y/x: {}'.format(pix_box))
+    print(f'input subset in y/x: {pix_box}')
 
     # subset - update src_box for isce file and meta
     src_box = (pix_box[0] + src_box[0],
@@ -379,7 +379,7 @@ def load_fringe(inps):
                pix_box[2] + src_box[0],
                pix_box[3] + src_box[1])
     meta = attr.update_attribute4subset(meta, pix_box)
-    print('input subset in y/x with respect to the VRT file: {}'.format(src_box))
+    print(f'input subset in y/x with respect to the VRT file: {src_box}')
 
 
     ## output directory

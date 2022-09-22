@@ -48,7 +48,7 @@ def run_or_skip(inps):
 
     if flag == 'skip':
         ti = os.path.getmtime(inps.file)
-        to = min([os.path.getmtime(i) for i in outfiles])
+        to = min(os.path.getmtime(i) for i in outfiles)
         if ti > to:
             flag = 'run'
         else:
@@ -94,7 +94,7 @@ def update_inps_with_file_metadata(inps, metadata):
     # Convert ref_lalo if existed, to ref_yx, and use ref_yx for the following
     # ref_yx is referenced to input data coverage, not subseted area for display
     if inps.ref_lalo:
-        vprint('input reference point in lat/lon: {}'.format(inps.ref_lalo))
+        vprint(f'input reference point in lat/lon: {inps.ref_lalo}')
         if not inps.geo_box and not coord.lookup_file:
             print('WARNING: --ref-lalo is NOT supported when 1) file is radar-coded AND 2) no lookup table file found')
             print('    --> ignore the --ref-lalo input and continue.')
@@ -102,7 +102,7 @@ def update_inps_with_file_metadata(inps, metadata):
 
         else:
             inps.ref_yx = coord.geo2radar(inps.ref_lalo[0], inps.ref_lalo[1])[:2]
-            vprint('input reference point in y  /x  : {}'.format(inps.ref_yx))
+            vprint(f'input reference point in y  /x  : {inps.ref_yx}')
 
     # ref_lalo
     if inps.ref_yx and inps.geo_box:
@@ -155,7 +155,7 @@ def update_inps_with_file_metadata(inps, metadata):
 
     # Figure output file name
     if not inps.outfile:
-        inps.outfile = ['{}{}'.format(inps.fig_title, inps.fig_ext)]
+        inps.outfile = [f'{inps.fig_title}{inps.fig_ext}']
 
     inps = update_figure_setting(inps)
     return inps
@@ -206,7 +206,7 @@ def check_map_projection(inps, metadata, print_msg=True):
                     raise ValueError('--lalo-label is NOT supported for projection: UTM')
 
             else:
-                print('WARNING: Un-recognized coordinate unit: {}'.format(inps.coord_unit))
+                print(f'WARNING: Un-recognized coordinate unit: {inps.coord_unit}')
                 print('    Switch to the native Y/X and continue to plot')
                 inps.fig_coord = 'radar'
 
@@ -239,9 +239,9 @@ def update_data_with_plot_inps(data, metadata, inps):
             # applying spatial referencing
             if not np.ma.is_masked(ref_val) and not np.isnan(ref_val):
                 data -= ref_val
-                vprint('set reference pixel to: {}'.format(inps.ref_yx))
+                vprint(f'set reference pixel to: {inps.ref_yx}')
             else:
-                msg = 'WARNING: input reference pixel ({}, {}) has either masked or NaN value!'.format(ref_y, ref_x)
+                msg = f'WARNING: input reference pixel ({ref_y}, {ref_x}) has either masked or NaN value!'
                 msg += ' -> skip re-referencing.'
                 print(msg)
                 inps.ref_yx = None
@@ -253,14 +253,14 @@ def update_data_with_plot_inps(data, metadata, inps):
             elif inps.key == 'timeseries':
                 ref_val = readfile.read(inps.file, datasetName=inps.dset, box=inps.ref_box, print_msg=False)[0]
             else:
-                raise ValueError('input reference point {} is out of data coverage!'.format(inps.ref_yx))
+                raise ValueError(f'input reference point {inps.ref_yx} is out of data coverage!')
 
             # apply spatial referencing
             if not np.ma.is_masked(ref_val) and np.all(~np.isnan(ref_val)):
                 data -= np.tile(ref_val.reshape(-1, 1, 1), (1, data.shape[1], data.shape[2]))
-                vprint('set reference pixel to: {}'.format(inps.ref_yx))
+                vprint(f'set reference pixel to: {inps.ref_yx}')
             else:
-                msg = 'WARNING: input reference pixel ({}, {}) has either masked or NaN value!'.format(ref_y, ref_x)
+                msg = f'WARNING: input reference pixel ({ref_y}, {ref_x}) has either masked or NaN value!'
                 msg += ' -> skip re-referencing.'
                 print(msg)
                 inps.ref_yx = None
@@ -282,7 +282,7 @@ def update_data_with_plot_inps(data, metadata, inps):
 
     # math operation
     if inps.math_operation:
-        vprint('Apply math operation: {}'.format(inps.math_operation))
+        vprint(f'Apply math operation: {inps.math_operation}')
         if inps.math_operation == 'square':
             data = np.square(data)
         elif inps.math_operation == 'sqrt':
@@ -296,7 +296,7 @@ def update_data_with_plot_inps(data, metadata, inps):
         elif inps.math_operation == 'deg2rad':
             data *= np.pi / 180.
         else:
-            raise ValueError('un-recognized math operation: {}'.format(inps.math_operation))
+            raise ValueError(f'un-recognized math operation: {inps.math_operation}')
 
     # 4. update display min/max
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
@@ -304,8 +304,8 @@ def update_data_with_plot_inps(data, metadata, inps):
         (inps.cmap_lut,
          inps.vlim,
          inps.unique_values) = pp.auto_adjust_colormap_lut_and_disp_limit(data, print_msg=inps.print_msg)
-    vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
-    vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
+    vprint(f'data    range: {inps.dlim} {inps.disp_unit}')
+    vprint(f'display range: {inps.vlim} {inps.disp_unit}')
 
     return data, inps
 
@@ -458,7 +458,7 @@ def plot_slice(ax, data, metadata, inps):
 
         # Draw coastline using cartopy resolution parameters
         if inps.coastline:
-            vprint('draw coast line with resolution: {}'.format(inps.coastline))
+            vprint(f'draw coast line with resolution: {inps.coastline}')
             ax.coastlines(resolution=inps.coastline, linewidth=inps.coastline_linewidth)
 
         # Plot DEM
@@ -477,9 +477,9 @@ def plot_slice(ax, data, metadata, inps):
             y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
             ref_data = data[y - inps.pix_box[1], x - inps.pix_box[0]]
             data -= ref_data
-            vprint(('referencing InSAR data to the pixel nearest to GNSS station: '
-                    f'{inps.ref_gps_site} at [{ref_site_lalo[0]:.6f}, {ref_site_lalo[1]:.6f}] '
-                    f'by substrating {ref_data:.3f} {inps.disp_unit}'))
+            vprint('referencing InSAR data to the pixel nearest to GNSS station: '
+                   f'{inps.ref_gps_site} at [{ref_site_lalo[0]:.6f}, {ref_site_lalo[1]:.6f}] '
+                   f'by substrating {ref_data:.3f} {inps.disp_unit}')
             # do not show the original InSAR reference point
             inps.disp_ref_pixel = False
 
@@ -497,7 +497,7 @@ def plot_slice(ax, data, metadata, inps):
             inps.disp_scalebar = False
 
         if inps.disp_scalebar:
-            vprint('plot scale bar: {}'.format(inps.scalebar))
+            vprint(f'plot scale bar: {inps.scalebar}')
             pp.draw_scalebar(
                 ax,
                 geo_box=inps.geo_box,
@@ -638,7 +638,7 @@ def plot_slice(ax, data, metadata, inps):
                 lats = readfile.read(geom_file, datasetName='latitude',  box=inps.pix_box, print_msg=False)[0]
                 lons = readfile.read(geom_file, datasetName='longitude', box=inps.pix_box, print_msg=False)[0]
             else:
-                msg = 'WARNING: no latitude / longitude found in file: {}, '.format(os.path.basename(geom_file))
+                msg = f'WARNING: no latitude / longitude found in file: {os.path.basename(geom_file)}, '
                 msg += 'skip showing lat/lon in the status bar.'
                 vprint(msg)
                 geom_file = None
@@ -646,7 +646,7 @@ def plot_slice(ax, data, metadata, inps):
             geom_file = None
 
         def format_coord(x, y):
-            msg = 'x={:.1f}, y={:.1f}'.format(x, y)
+            msg = f'x={x:.1f}, y={y:.1f}'
             col = int(np.rint(x - inps.pix_box[0]))
             row = int(np.rint(y - inps.pix_box[1]))
             if 0 <= col < num_col and 0 <= row < num_row:
@@ -654,15 +654,15 @@ def plot_slice(ax, data, metadata, inps):
                 if np.isnan(v) or np.ma.is_masked(v):
                     msg += ', v=[]'
                 else:
-                    msg += ', v={:.3f}'.format(v)
+                    msg += f', v={v:.3f}'
                 # DEM
                 if inps.dem_file:
                     h = dem[row, col]
                     if not np.isnan(h):
-                        msg += ', h={:.0f} m'.format(h)
+                        msg += f', h={h:.0f} m'
                 # lat/lon
                 if geom_file:
-                    msg += ', lat={:.4f}, lon={:.4f}'.format(lats[row, col], lons[row, col])
+                    msg += f', lat={lats[row, col]:.4f}, lon={lons[row, col]:.4f}'
             return msg
         ax.format_coord = format_coord
 
@@ -729,7 +729,7 @@ def read_input_file_info(inps):
     if 'DATA_TYPE' in atr.keys():
         msg += ' in {} format'.format(atr['DATA_TYPE'])
 
-    vprint('run {} in {}'.format(os.path.basename(__file__), version.version_description))
+    vprint(f'run {os.path.basename(__file__)} in {version.version_description}')
     vprint(msg)
 
     ## size and name
@@ -738,7 +738,7 @@ def read_input_file_info(inps):
     inps.key = atr['FILE_TYPE']
     inps.fileBase = os.path.splitext(os.path.basename(inps.file))[0]
     inps.fileExt = os.path.splitext(inps.file)[1]
-    vprint('file size in y/x: {}'.format((inps.length, inps.width)))
+    vprint(f'file size in y/x: {(inps.length, inps.width)}')
 
     # File dataset List
     inps.sliceList = readfile.get_slice_list(inps.file, no_complex=True)
@@ -764,7 +764,7 @@ def search_dataset_input(all_list, in_list=[], in_num_list=[], search_dset=True)
             for ds in in_list:
                 # style of regular expression
                 if '*' not in ds:
-                    ds = '*{}*'.format(ds)
+                    ds = f'*{ds}*'
                 ds = ds.replace('*','.*')
 
                 # search
@@ -790,12 +790,12 @@ def read_dataset_input(inps):
     if len(inps.dset) > 0 or len(inps.dsetNumList) > 0:
         # message
         if len(inps.dset) > 0:
-            vprint('input dataset: "{}"'.format(inps.dset))
+            vprint(f'input dataset: "{inps.dset}"')
 
         # special rule for special file types
         if inps.key == 'velocity':
             inps.search_dset = False
-            vprint('turning glob search OFF for {} file'.format(inps.key))
+            vprint(f'turning glob search OFF for {inps.key} file')
 
         elif inps.key == 'timeseries' and len(inps.dset) == 1 and '_' in inps.dset[0]:
             date1, date2 = inps.dset[0].split('_')
@@ -878,19 +878,19 @@ def read_dataset_input(inps):
             inps.ref_date = ref_date
 
     if inps.key in ['ifgramStack']:
-        vprint('num of datasets in file {}: {}'.format(os.path.basename(inps.file), len(inps.sliceList)))
-        vprint('num of datasets to exclude: {}'.format(len(inps.exDsetList)))
-        vprint('num of datasets to display: {}'.format(len(inps.dset)))
+        vprint(f'num of datasets in file {os.path.basename(inps.file)}: {len(inps.sliceList)}')
+        vprint(f'num of datasets to exclude: {len(inps.exDsetList)}')
+        vprint(f'num of datasets to display: {len(inps.dset)}')
     else:
-        vprint('num of datasets in file {}: {}'.format(os.path.basename(inps.file), len(inps.sliceList)))
-        vprint('datasets to exclude ({}):\n{}'.format(len(inps.exDsetList), inps.exDsetList))
-        vprint('datasets to display ({}):\n{}'.format(len(inps.dset), inps.dset))
+        vprint(f'num of datasets in file {os.path.basename(inps.file)}: {len(inps.sliceList)}')
+        vprint(f'datasets to exclude ({len(inps.exDsetList)}):\n{inps.exDsetList}')
+        vprint(f'datasets to display ({len(inps.dset)}):\n{inps.dset}')
     if inps.ref_date and inps.key in TIMESERIES_KEY_NAMES:
-        vprint('input reference date: {}'.format(inps.ref_date))
+        vprint(f'input reference date: {inps.ref_date}')
 
     if inps.dsetNum == 0:
         msg = 'No input dataset found!'
-        msg += '\navailable datasets:\n{}'.format(inps.sliceList)
+        msg += f'\navailable datasets:\n{inps.sliceList}'
         raise Exception(msg)
 
     atr = readfile.read_attribute(inps.file, datasetName=inps.dset[0].split('-')[0])
@@ -926,7 +926,7 @@ def update_figure_setting(inps):
     else:
         if not inps.fig_size:
             inps.fig_size = pp.default_figsize_multi
-        vprint('figure size : [{:.2f}, {:.2f}]'.format(inps.fig_size[0], inps.fig_size[1]))
+        vprint(f'figure size : [{inps.fig_size[0]:.2f}, {inps.fig_size[1]:.2f}]')
 
         # Figure number (<= 200 subplots per figure)
         if not inps.fig_num:
@@ -980,9 +980,9 @@ def update_figure_setting(inps):
 
         # output file name list
         if inps.fig_num == 1:
-            inps.outfile = ['{}{}'.format(inps.outfile_base, inps.fig_ext)]
+            inps.outfile = [f'{inps.outfile_base}{inps.fig_ext}']
         else:
-            inps.outfile = ['{}_{}{}'.format(inps.outfile_base, str(j), inps.fig_ext)
+            inps.outfile = [f'{inps.outfile_base}_{str(j)}{inps.fig_ext}'
                             for j in range(1, inps.fig_num+1)]
         inps.outfile = [os.path.join(inps.outdir, outfile) for outfile in inps.outfile]
 
@@ -1079,7 +1079,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
             or inps.key in ['timeseries', 'inversion']
             or all(d in inps.dsetFamilyList for d in ['horizontal', 'vertical'])
             or inps.dsetFamilyList == ['data','model','residual']
-            or inps.dsetFamilyList == ['band{}'.format(i+1) for i in range(len(inps.dsetFamilyList))]):
+            or inps.dsetFamilyList == [f'band{i+1}' for i in range(len(inps.dsetFamilyList))]):
         same_unit4all_subplots = True
     else:
         same_unit4all_subplots = False
@@ -1164,7 +1164,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
 
     # status bar
     def format_coord(x, y):
-        return 'x={:.1f}, y={:.1f}, v ='.format(x, y)
+        return f'x={x:.1f}, y={y:.1f}, v ='
     ax.format_coord = format_coord
 
     # Title
@@ -1196,11 +1196,11 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
             if num_subplot <= 6:
                 subplot_title = title_str
             elif 6 < num_subplot <= 20:
-                subplot_title = '{}\n{}'.format(title_ind, title_str)
+                subplot_title = f'{title_ind}\n{title_str}'
             elif 20 < num_subplot <= 50:
                 subplot_title = title_str.replace('_','\n').replace('-','\n')
             else:
-                subplot_title = '{}'.format(title_ind)
+                subplot_title = f'{title_ind}'
 
         # plot title
         if subplot_title:
@@ -1221,7 +1221,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
                         kwarg['color'] = 'C0' if s1_sensor == 'A' else 'C1'
                         # display IPF in subplot title
                         s1_IPF = metadata['SENTINEL1_IPF'].split()[i]
-                        subplot_title += ' : {}'.format(s1_IPF)
+                        subplot_title += f' : {s1_IPF}'
                 ax.set_title(subplot_title, **kwarg)
 
     # Flip Left-Right / Up-Down
@@ -1243,7 +1243,7 @@ def plot_figure(j, inps, metadata):
     3) loop to plot each subplot using plot_subplot4figure()
     4) common colorbar and save
     """
-    fig_title = 'Figure {} - {}'.format(str(j), inps.outfile[j-1])
+    fig_title = f'Figure {str(j)} - {inps.outfile[j-1]}'
     vprint('----------------------------------------')
     vprint(fig_title)
 
@@ -1298,9 +1298,9 @@ def plot_figure(j, inps, metadata):
     # Min and Max for this figure
     inps.dlim_all = [np.nanmin([inps.dlim_all[0], inps.dlim[0]]),
                      np.nanmax([inps.dlim_all[1], inps.dlim[1]])]
-    vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
+    vprint(f'data    range: {inps.dlim} {inps.disp_unit}')
     if inps.vlim:
-        vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
+        vprint(f'display range: {inps.vlim} {inps.disp_unit}')
 
     # NOTE: For plt.subplots(), fig.tight_layout() should be run
     # before fig.add_axes(), which is the case of common colorbar
@@ -1342,7 +1342,7 @@ def plot_figure(j, inps, metadata):
 
     # Save Figure
     if inps.save_fig:
-        vprint('save figure to {} with dpi={}'.format(os.path.abspath(inps.outfile[j-1]), inps.fig_dpi))
+        vprint(f'save figure to {os.path.abspath(inps.outfile[j-1])} with dpi={inps.fig_dpi}')
         fig.savefig(inps.outfile[j-1], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
         if not inps.disp_fig:
             fig.clf()
@@ -1356,10 +1356,10 @@ def prepare4multi_subplots(inps, metadata):
     3) read dropIfgram info
     4) read and prepare DEM for background
     """
-    inps.dsetFamilyList = sorted(list(set(x.split('-')[0] for x in inps.dset)))
-    inps.dsetFamilyList = sorted(list(set(x.replace('Std','') for x in inps.dsetFamilyList)))
+    inps.dsetFamilyList = sorted(list({x.split('-')[0] for x in inps.dset}))
+    inps.dsetFamilyList = sorted(list({x.replace('Std','') for x in inps.dsetFamilyList}))
     if len(inps.dsetFamilyList) == 1 and inps.atr['FILE_TYPE'] == 'ifgramStack':
-        inps.date12List = sorted(list(set(x.split('-')[1] for x in inps.sliceList)))
+        inps.date12List = sorted(list({x.split('-')[1] for x in inps.sliceList}))
 
     if inps.multilook_num > 1 and inps.print_msg:
         print('multilook {0} by {0} with nearest interpolation'.format(inps.multilook_num))
@@ -1392,7 +1392,7 @@ def prepare4multi_subplots(inps, metadata):
         length, width = int(metadata['LENGTH']), int(metadata['WIDTH'])
         if 0 <= ref_y < length and 0 <= ref_x < width:
             inps.file_ref_yx = [ref_y, ref_x]
-            vprint('consider reference pixel in y/x: {}'.format(inps.file_ref_yx))
+            vprint(f'consider reference pixel in y/x: {inps.file_ref_yx}')
 
     if inps.dsetNum > 10:
         inps.ref_marker_size /= 10.
@@ -1406,14 +1406,14 @@ def prepare4multi_subplots(inps, metadata):
         obj.open(print_msg=False)
         dropDate12List = obj.get_drop_date12_list()
         for i in inps.dsetFamilyList:
-            inps.dropDatasetList += ['{}-{}'.format(i, j) for j in dropDate12List]
+            inps.dropDatasetList += [f'{i}-{j}' for j in dropDate12List]
         vprint("mark interferograms with 'dropIfgram=False' in red colored title")
 
     # Read DEM
     if inps.dem_file:
         dem_metadata = readfile.read_attribute(inps.dem_file)
         if all(dem_metadata[i] == metadata[i] for i in ['LENGTH', 'WIDTH']):
-            vprint('reading DEM: {} ... '.format(os.path.basename(inps.dem_file)))
+            vprint(f'reading DEM: {os.path.basename(inps.dem_file)} ... ')
             dem = readfile.read(
                 inps.dem_file,
                 datasetName='height',
@@ -1590,9 +1590,9 @@ class viewer():
             # stat
             if self.fig_num > 1:
                 vprint('----------------------------------------')
-                vprint('all data range: {} {}'.format(self.dlim_all, self.disp_unit))
+                vprint(f'all data range: {self.dlim_all} {self.disp_unit}')
                 if self.vlim:
-                    vprint('display  range: {} {}'.format(self.vlim, self.disp_unit))
+                    vprint(f'display  range: {self.vlim} {self.disp_unit}')
 
         # Display Figure
         if self.disp_fig:

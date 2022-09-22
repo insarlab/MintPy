@@ -30,7 +30,7 @@ def get_the_latest_default_template_file(work_dir):
     cfile = os.path.join(work_dir, 'smallbaselineApp.cfg')
 
     if not os.path.isfile(cfile):
-        print('copy default template file {} to work directory'.format(lfile))
+        print(f'copy default template file {lfile} to work directory')
         shutil.copy2(lfile, work_dir)
     else:
         #cfile is obsolete if any key is missing
@@ -145,7 +145,7 @@ class TimeSeriesAnalysis:
             for key in ['mintpy.save.hdfEos5', 'mintpy.save.kmz']:
                 if self.template[key] is True:
                     self.template['mintpy.geocode'] = True
-                    print('Turn ON mintpy.geocode in order to run {}.'.format(key))
+                    print(f'Turn ON mintpy.geocode in order to run {key}.')
                     break
 
 
@@ -201,7 +201,7 @@ class TimeSeriesAnalysis:
             for fname in flist:
                 if ut.run_or_skip(os.path.basename(fname), in_file=fname, readable=False) == 'run':
                     shutil.copy2(fname, self.workDir)
-                    print('copy {} to work directory'.format(os.path.basename(fname)))
+                    print(f'copy {os.path.basename(fname)} to work directory')
 
 
     def run_network_modification(self, step_name):
@@ -215,7 +215,7 @@ class TimeSeriesAnalysis:
         # 1) output waterMask.h5 to simplify the detection/use of waterMask
         water_mask_file = os.path.join(self.workDir, 'waterMask.h5')
         if 'waterMask' in readfile.get_dataset_list(geom_file):
-            print('generate {} from {} for conveniency'.format(water_mask_file, geom_file))
+            print(f'generate {water_mask_file} from {geom_file} for conveniency')
             if ut.run_or_skip(out_file=water_mask_file, in_file=geom_file) == 'run':
                 water_mask, atr = readfile.read(geom_file, datasetName='waterMask')
 
@@ -223,7 +223,7 @@ class TimeSeriesAnalysis:
                 ds_name_list = readfile.get_dataset_list(geom_file)
                 for ds_name in ['latitude','longitude']:
                     if ds_name in ds_name_list:
-                        print('set pixels with 0 in {} to 0 in waterMask'.format(ds_name))
+                        print(f'set pixels with 0 in {ds_name} to 0 in waterMask')
                         ds = readfile.read(geom_file, datasetName=ds_name)[0]
                         water_mask[ds == 0] = 0
 
@@ -355,7 +355,7 @@ class TimeSeriesAnalysis:
             mintpy.cli.unwrap_error_phase_closure.main(iargs_closure)
 
         else:
-            raise ValueError('un-recognized method: {}'.format(method))
+            raise ValueError(f'un-recognized method: {method}')
 
 
     def run_network_inversion(self, step_name):
@@ -393,20 +393,20 @@ class TimeSeriesAnalysis:
         # update mode: run only if:
         # 1) output file exists and newer than input file, AND
         # 2) all config keys are the same
-        config_keys = ['mintpy.networkInversion.{}'.format(i) for i in ['minTempCoh','shadowMask']]
+        config_keys = [f'mintpy.networkInversion.{i}' for i in ['minTempCoh','shadowMask']]
         print('update mode: ON')
         flag = 'skip'
         if ut.run_or_skip(out_file=mask_file, in_file=tcoh_file, print_msg=False) == 'run':
             flag = 'run'
         else:
-            print('1) output file: {} already exists and newer than input file: {}'.format(mask_file, tcoh_file))
+            print(f'1) output file: {mask_file} already exists and newer than input file: {tcoh_file}')
             atr = readfile.read_attribute(mask_file)
             if any(str(self.template[i]) != atr.get(i, 'False') for i in config_keys):
                 flag = 'run'
-                print('2) NOT all key configuration parameters are the same: {}'.format(config_keys))
+                print(f'2) NOT all key configuration parameters are the same: {config_keys}')
             else:
-                print('2) all key configuration parameters are the same: {}'.format(config_keys))
-        print('run or skip: {}'.format(flag))
+                print(f'2) all key configuration parameters are the same: {config_keys}')
+        print(f'run or skip: {flag}')
 
         if flag == 'run':
             mintpy.cli.generate_mask.main(iargs)
@@ -418,11 +418,11 @@ class TimeSeriesAnalysis:
 
         # check number of pixels selected in mask file for following analysis
         num_pixel = np.sum(readfile.read(mask_file)[0] != 0.)
-        print('number of reliable pixels: {}'.format(num_pixel))
+        print(f'number of reliable pixels: {num_pixel}')
 
         min_num_pixel = float(self.template['mintpy.networkInversion.minNumPixel'])
         if num_pixel < min_num_pixel:
-            msg = "Not enough reliable pixels (minimum of {}). ".format(int(min_num_pixel))
+            msg = f"Not enough reliable pixels (minimum of {int(min_num_pixel)}). "
             msg += "Try the following:\n"
             msg += "1) Check the reference pixel and make sure it's not in areas with unwrapping errors\n"
             msg += "2) Check the network and make sure it's fully connected without subsets"
@@ -459,44 +459,44 @@ class TimeSeriesAnalysis:
             fname0 = fname1
             if sname == 'correct_LOD':
                 if atr['PLATFORM'].lower().startswith('env'):
-                    fname1 = '{}_LOD.h5'.format(os.path.splitext(fname0)[0])
+                    fname1 = f'{os.path.splitext(fname0)[0]}_LOD.h5'
 
             elif sname == 'correct_SET':
                 method = template['mintpy.solidEarthTides']
                 if method:
-                    fname1 = '{}_SET.h5'.format(os.path.splitext(fname0)[0])
+                    fname1 = f'{os.path.splitext(fname0)[0]}_SET.h5'
 
             elif sname == 'correct_troposphere':
                 method = template['mintpy.troposphericDelay.method']
                 model  = template['mintpy.troposphericDelay.weatherModel']
                 if method:
                     if method == 'height_correlation':
-                        fname1 = '{}_tropHgt.h5'.format(os.path.splitext(fname0)[0])
+                        fname1 = f'{os.path.splitext(fname0)[0]}_tropHgt.h5'
 
                     elif method == 'gacos':
-                        fname1 = '{}_GACOS.h5'.format(os.path.splitext(fname0)[0])
+                        fname1 = f'{os.path.splitext(fname0)[0]}_GACOS.h5'
 
                     elif method == 'pyaps':
-                        fname1 = '{}_{}.h5'.format(os.path.splitext(fname0)[0], model)
+                        fname1 = f'{os.path.splitext(fname0)[0]}_{model}.h5'
 
                     else:
-                        msg = 'un-recognized tropospheric correction method: {}'.format(method)
+                        msg = f'un-recognized tropospheric correction method: {method}'
                         raise ValueError(msg)
 
             elif sname == 'deramp':
                 method = template['mintpy.deramp']
                 if method:
                     if method in RAMP_LIST:
-                        fname1 = '{}_ramp.h5'.format(os.path.splitext(fname0)[0])
+                        fname1 = f'{os.path.splitext(fname0)[0]}_ramp.h5'
                     else:
-                        msg = 'un-recognized phase ramp type: {}'.format(method)
-                        msg += '\navailable ramp types:\n{}'.format(RAMP_LIST)
+                        msg = f'un-recognized phase ramp type: {method}'
+                        msg += f'\navailable ramp types:\n{RAMP_LIST}'
                         raise ValueError(msg)
 
             elif sname == 'correct_topography':
                 method = template['mintpy.topographicResidual']
                 if method:
-                    fname1 = '{}_demErr.h5'.format(os.path.splitext(fname0)[0])
+                    fname1 = f'{os.path.splitext(fname0)[0]}_demErr.h5'
 
             step = dict()
             step['input'] = fname0
@@ -522,7 +522,7 @@ class TimeSeriesAnalysis:
             step = dict()
             fdir = os.path.dirname(steps['reference_date']['input'][-1])
             fbase = os.path.basename(steps['reference_date']['input'][-1])
-            step['input'] = os.path.join(fdir, 'geo/geo_{}'.format(fbase))
+            step['input'] = os.path.join(fdir, f'geo/geo_{fbase}')
         steps['hdfeos5'] = step
         return steps
 
@@ -544,7 +544,7 @@ class TimeSeriesAnalysis:
         else:
             atr = readfile.read_attribute(in_file)
             sat = atr.get('PLATFORM', None)
-            print('No local oscillator drift correction is needed for {}.'.format(sat))
+            print(f'No local oscillator drift correction is needed for {sat}.')
 
 
     def run_solid_earth_tides_correction(self, step_name):
@@ -612,13 +612,13 @@ class TimeSeriesAnalysis:
                 iargs = ['-f', in_file, '--model', tropo_model, '-g', geom_file, '-w', weather_dir]
                 print('Atmospheric correction using Weather Re-analysis dataset (PyAPS, Jolivet et al., 2011)')
                 print('Weather Re-analysis dataset:', tropo_model)
-                tropo_file = './inputs/{}.h5'.format(tropo_model)
+                tropo_file = f'./inputs/{tropo_model}.h5'
 
                 if ut.run_or_skip(out_file=out_file, in_file=[in_file, tropo_file]) == 'run':
                     if os.path.isfile(tropo_file) and get_dataset_size(tropo_file) == get_dataset_size(in_file):
                         iargs = [in_file, tropo_file, '-o', out_file, '--force']
                         print('--------------------------------------------')
-                        print('Use existed tropospheric delay file: {}'.format(tropo_file))
+                        print(f'Use existed tropospheric delay file: {tropo_file}')
                         print('\ndiff.py', ' '.join(iargs))
 
                         # import again to avoid the error below. reason is unclear.
@@ -652,7 +652,7 @@ class TimeSeriesAnalysis:
         in_file = fnames['input']
         out_file = fnames['output']
         if in_file != out_file:
-            print('Remove for each acquisition a phase ramp: {}'.format(method))
+            print(f'Remove for each acquisition a phase ramp: {method}')
             iargs = [in_file, '-s', method, '-m', mask_file, '-o', out_file, '--update']
             print('\nremove_ramp.py', ' '.join(iargs))
             mintpy.cli.remove_ramp.main(iargs)
@@ -715,10 +715,10 @@ class TimeSeriesAnalysis:
 
         # Velocity from estimated tropospheric delays
         tropo_model = self.template['mintpy.troposphericDelay.weatherModel'].upper()
-        tropo_file = os.path.join(self.workDir, 'inputs/{}.h5'.format(tropo_model))
+        tropo_file = os.path.join(self.workDir, f'inputs/{tropo_model}.h5')
         if os.path.isfile(tropo_file):
             suffix = os.path.splitext(os.path.basename(tropo_file))[0]
-            tropo_vel_file = '{}{}.h5'.format(os.path.splitext(vel_file)[0], suffix)
+            tropo_vel_file = f'{os.path.splitext(vel_file)[0]}{suffix}.h5'
             tropo_vel_file = os.path.join(self.workDir, tropo_vel_file)
 
             iargs = [tropo_file, '-t', self.templateFile, '-o', tropo_vel_file, '--update']
@@ -746,7 +746,7 @@ class TimeSeriesAnalysis:
                 mintpy.cli.geocode.main(iargs)
 
                 # 2. generate reliable pixel mask in geo coordinate
-                geom_file = os.path.join(out_dir, 'geo_{}'.format(os.path.basename(geom_file)))
+                geom_file = os.path.join(out_dir, f'geo_{os.path.basename(geom_file)}')
                 tcoh_file = os.path.join(out_dir, 'geo_temporalCoherence.h5')
                 mask_file = os.path.join(out_dir, 'geo_maskTempCoh.h5')
                 tcoh_min = self.template['mintpy.networkInversion.minTempCoh']
@@ -778,13 +778,13 @@ class TimeSeriesAnalysis:
                 vel_file = os.path.join(self.workDir, 'geo/geo_velocity.h5')
 
             # output
-            kmz_file = '{}.kmz'.format(os.path.splitext(vel_file)[0])
+            kmz_file = f'{os.path.splitext(vel_file)[0]}.kmz'
             iargs = [vel_file, '-o', kmz_file]
             print('\nsave_kmz.py', ' '.join(iargs))
 
             # update mode
             fbase = os.path.basename(kmz_file)
-            kmz_files = [i for i in [fbase, './geo/{}'.format(fbase), './pic/{}'.format(fbase)]
+            kmz_files = [i for i in [fbase, f'./geo/{fbase}', f'./pic/{fbase}']
                          if os.path.isfile(i)]
             kmz_file = kmz_files[0] if len(kmz_files) > 0 else None
 
@@ -812,7 +812,7 @@ class TimeSeriesAnalysis:
                 tcoh_file = os.path.join(self.workDir, 'geo/geo_temporalCoherence.h5')
                 scoh_file = os.path.join(self.workDir, 'geo/geo_avgSpatialCoh.h5')
                 mask_file = os.path.join(self.workDir, 'geo/geo_maskTempCoh.h5')
-                geom_file = os.path.join(self.workDir, 'geo/geo_{}'.format(os.path.basename(geom_file)))
+                geom_file = os.path.join(self.workDir, f'geo/geo_{os.path.basename(geom_file)}')
 
             # cmd
             print('--------------------------------------------')
@@ -827,7 +827,7 @@ class TimeSeriesAnalysis:
             # output (check existing file)
             atr = readfile.read_attribute(ts_file)
             SAT = sensor.get_unavco_mission_name(atr)
-            hdfeos5_files = ut.get_file_list('{}_*.he5'.format(SAT))
+            hdfeos5_files = ut.get_file_list(f'{SAT}_*.he5')
             hdfeos5_file = hdfeos5_files[0] if len(hdfeos5_files) > 0 else None
 
             if ut.run_or_skip(out_file=hdfeos5_file,
@@ -841,7 +841,7 @@ class TimeSeriesAnalysis:
     def run(self, steps):
         """run the chosen steps."""
         for sname in steps:
-            print('\n\n******************** step - {} ********************'.format(sname))
+            print(f'\n\n******************** step - {sname} ********************')
 
             if sname == 'load_data':
                 self.run_load_data(sname)
@@ -1025,7 +1025,7 @@ class TimeSeriesAnalysis:
             num_cores = min(num_cores, max(int(max_memory / plot_memory), 1))
 
         if run_parallel and num_cores > 1:
-            print("parallel processing using {} cores ...".format(num_cores))
+            print(f"parallel processing using {num_cores} cores ...")
             Parallel(n_jobs=num_cores)(delayed(mintpy.cli.view.main)(iargs) for iargs in iargs_list)
         else:
             for iargs in iargs_list:
@@ -1048,7 +1048,7 @@ class TimeSeriesAnalysis:
 
         # time info
         m, s = divmod(time.time()-start_time, 60)
-        print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+        print(f'time used: {m:02.0f} mins {s:02.1f} secs.')
 
         # message for more visualization scripts
         msg = """Explore more info & visualization options with the following scripts:
@@ -1098,6 +1098,6 @@ def run_smallbaselineApp(inps):
 
     # used time
     m, s = divmod(time.time()-start_time, 60)
-    print('Time used: {:02.0f} mins {:02.1f} secs\n'.format(m, s))
+    print(f'Time used: {m:02.0f} mins {s:02.1f} secs\n')
 
     return

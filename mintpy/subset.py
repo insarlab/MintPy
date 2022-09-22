@@ -68,8 +68,8 @@ def read_subset_template2box(template_file):
     # subset.lalo -> geo_box
     try:
         opts = [i.strip().replace('[','').replace(']','') for i in tmpl['mintpy.subset.lalo'].split(',')]
-        lat0, lat1 = sorted([float(i.strip()) for i in opts[0].split(':')])
-        lon0, lon1 = sorted([float(i.strip()) for i in opts[1].split(':')])
+        lat0, lat1 = sorted(float(i.strip()) for i in opts[0].split(':'))
+        lon0, lon1 = sorted(float(i.strip()) for i in opts[1].split(':'))
         geo_box = (lon0, lat1, lon1, lat0)
     except:
         geo_box = None
@@ -77,8 +77,8 @@ def read_subset_template2box(template_file):
     # subset.yx -> pix_box
     try:
         opts = [i.strip().replace('[','').replace(']','') for i in tmpl['mintpy.subset.yx'].split(',')]
-        y0, y1 = sorted([int(i.strip()) for i in opts[0].split(':')])
-        x0, x1 = sorted([int(i.strip()) for i in opts[1].split(':')])
+        y0, y1 = sorted(int(i.strip()) for i in opts[0].split(':'))
+        x0, x1 = sorted(int(i.strip()) for i in opts[1].split(':'))
         pix_box = (x0, y0, x1, y1)
     except:
         pix_box = None
@@ -121,8 +121,8 @@ def get_box_overlap_index(box1, box2):
     y1 = min(box1[3], box2[3])
     if x0 >= x1 or y0 >= y1:
         msg = 'No overlap between two input box range!\n'
-        msg += 'box 1: {}\n'.format(box1)
-        msg += 'box 2: {}\n'.format(box2)
+        msg += f'box 1: {box1}\n'
+        msg += f'box 2: {box2}\n'
         raise ValueError(msg)
     overlap_box = (x0, y0, x1, y1)
 
@@ -267,10 +267,10 @@ def subset_file(fname, subset_dict_input, out_file=None):
 
     geo_box = coord.box_pixel2geo(pix_box)
     data_box = (0, 0, width, length)
-    print('data   range in (x0,y0,x1,y1): {}'.format(data_box))
-    print('subset range in (x0,y0,x1,y1): {}'.format(pix_box))
-    print('data   range in (W, N, E, S): {}'.format(coord.box_pixel2geo(data_box)))
-    print('subset range in (W, N, E, S): {}'.format(geo_box))
+    print(f'data   range in (x0,y0,x1,y1): {data_box}')
+    print(f'subset range in (x0,y0,x1,y1): {pix_box}')
+    print(f'data   range in (W, N, E, S): {coord.box_pixel2geo(data_box)}')
+    print(f'subset range in (W, N, E, S): {geo_box}')
 
     if pix_box == data_box:
         print('Subset range == data coverage, no need to subset. Skip.')
@@ -362,9 +362,9 @@ def subset_file(fname, subset_dict_input, out_file=None):
                             block=block,
                             print_msg=False)
 
-                        prog_bar.update(i+1, suffix='{}/{}'.format(i+1, ds_shape[0]))
+                        prog_bar.update(i+1, suffix=f'{i+1}/{ds_shape[0]}')
                     prog_bar.close()
-                    print('finished writing to file: {}'.format(out_file))
+                    print(f'finished writing to file: {out_file}')
 
     else:
         # IO for binary files

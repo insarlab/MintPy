@@ -29,7 +29,7 @@ from mintpy.utils import readfile
 def write_h5(datasetDict, out_file, metadata=None, ref_file=None, compression=None):
 
     if os.path.isfile(out_file):
-        print('delete exsited file: {}'.format(out_file))
+        print(f'delete exsited file: {out_file}')
         os.remove(out_file)
 
     with h5py.File(out_file, 'w') as f:
@@ -40,7 +40,7 @@ def write_h5(datasetDict, out_file, metadata=None, ref_file=None, compression=No
         for key, value in metadata.items():
             f.attrs[key] = str(value)
             #print(key + ': ' +  value)
-    print('finished writing to {}'.format(out_file))
+    print(f'finished writing to {out_file}')
 
     return out_file
 

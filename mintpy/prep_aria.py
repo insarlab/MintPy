@@ -53,8 +53,8 @@ def run_or_skip(inps, ds_name_dict, out_file):
             out_date12_list = out_obj.get_date12_list(dropIfgram=False)
 
             if out_shape == in_shape and set(in_date12_list).issubset(set(out_date12_list)):
-                print(('All date12   exists in file {} with same size as required,'
-                       ' no need to re-load.'.format(os.path.basename(out_file))))
+                print('All date12   exists in file {} with same size as required,'
+                      ' no need to re-load.'.format(os.path.basename(out_file)))
                 flag = 'skip'
         except:
             pass
@@ -73,8 +73,8 @@ def run_or_skip(inps, ds_name_dict, out_file):
         if (set(in_dsNames).issubset(set(out_dsNames))
                 and out_shape == in_shape
                 and out_size > in_size * 0.3):
-            print(('All datasets exists in file {} with same size as required,'
-                   ' no need to re-load.'.format(os.path.basename(out_file))))
+            print('All datasets exists in file {} with same size as required,'
+                  ' no need to re-load.'.format(os.path.basename(out_file)))
             flag = 'skip'
 
     return flag
@@ -99,14 +99,14 @@ def read_subset_box(template_file, meta):
             coord = ut.coordinate(meta)
             pix_box = coord.bbox_geo2radar(geo_box)
             pix_box = coord.check_box_within_data_coverage(pix_box)
-            print('input bounding box in lalo: {}'.format(geo_box))
+            print(f'input bounding box in lalo: {geo_box}')
 
     else:
         pix_box = None
 
     if pix_box is not None:
         # update metadata against the new bounding box
-        print('input bounding box in yx: {}'.format(pix_box))
+        print(f'input bounding box in yx: {pix_box}')
         meta = attr.update_attribute4subset(meta, pix_box)
     else:
         # translate box of None to tuple of 4 int
@@ -114,7 +114,7 @@ def read_subset_box(template_file, meta):
         pix_box = (0, 0, width, length)
 
     # ensure all index are in int16
-    pix_box = tuple([int(i) for i in pix_box])
+    pix_box = tuple(int(i) for i in pix_box)
 
     return pix_box, meta
 
@@ -126,10 +126,10 @@ def extract_metadata(stack):
     meta = {}
     ds = gdal.Open(stack, gdal.GA_ReadOnly)
     if not ds:
-        raise RuntimeError('Failed to open file {} with GDAL.'.format(stack))
+        raise RuntimeError(f'Failed to open file {stack} with GDAL.')
 
     # read metadata from unwrapStack.vrt file
-    print('extract metadata from {}'.format(stack))
+    print(f'extract metadata from {stack}')
     metaUnw = ds.GetRasterBand(1).GetMetadata("unwrappedPhase")
 
     # copy over all metadata from unwrapStack
@@ -185,10 +185,10 @@ def extract_metadata(stack):
     E = W + x_step * ds.RasterXSize
     S = N + y_step * ds.RasterYSize
 
-    meta["X_FIRST"] = '{:.9f}'.format(W)
-    meta["Y_FIRST"] = '{:.9f}'.format(N)
-    meta["X_STEP"] = '{:.9f}'.format(x_step)
-    meta["Y_STEP"] = '{:.9f}'.format(y_step)
+    meta["X_FIRST"] = f'{W:.9f}'
+    meta["Y_FIRST"] = f'{N:.9f}'
+    meta["X_STEP"] = f'{x_step:.9f}'
+    meta["Y_STEP"] = f'{y_step:.9f}'
     meta["X_UNIT"] = "degrees"
     meta["Y_UNIT"] = "degrees"
 
@@ -241,7 +241,7 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
     else:
         kwargs = dict()
 
-    print('writing data to HDF5 file {} with a mode ...'.format(outfile))
+    print(f'writing data to HDF5 file {outfile} with a mode ...')
     with h5py.File(outfile, 'a') as f:
 
         # height
@@ -296,7 +296,7 @@ def write_geometry(outfile, demFile, incAngleFile, azAngleFile=None, waterMaskFi
             # write
             f['waterMask'][:,:] = water_mask
 
-    print('finished writing to HD5 file: {}'.format(outfile))
+    print(f'finished writing to HD5 file: {outfile}')
     return outfile
 
 
@@ -307,7 +307,7 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, ampStack=None
 
     print('-'*50)
     stackFiles = [unwStack, cohStack, connCompStack, ampStack]
-    max_digit = max([len(os.path.basename(str(i))) for i in stackFiles])
+    max_digit = max(len(os.path.basename(str(i))) for i in stackFiles)
     for stackFile in stackFiles:
         if stackFile is not None:
             print('open {f:<{w}} with gdal ...'.format(f=os.path.basename(stackFile), w=max_digit))
@@ -323,21 +323,21 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, ampStack=None
     # extract NoDataValue (from the last */date2_date1.vrt file for example)
     ds = gdal.Open(dsUnw.GetFileList()[-1], gdal.GA_ReadOnly)
     noDataValueUnw = ds.GetRasterBand(1).GetNoDataValue()
-    print('grab NoDataValue for unwrapPhase     : {:<5} and convert to 0.'.format(noDataValueUnw))
+    print(f'grab NoDataValue for unwrapPhase     : {noDataValueUnw:<5} and convert to 0.')
 
     ds = gdal.Open(dsCoh.GetFileList()[-1], gdal.GA_ReadOnly)
     noDataValueCoh = ds.GetRasterBand(1).GetNoDataValue()
-    print('grab NoDataValue for coherence       : {:<5} and convert to 0.'.format(noDataValueCoh))
+    print(f'grab NoDataValue for coherence       : {noDataValueCoh:<5} and convert to 0.')
 
     ds = gdal.Open(dsComp.GetFileList()[-1], gdal.GA_ReadOnly)
     noDataValueComp = ds.GetRasterBand(1).GetNoDataValue()
-    print('grab NoDataValue for connectComponent: {:<5} and convert to 0.'.format(noDataValueComp))
+    print(f'grab NoDataValue for connectComponent: {noDataValueComp:<5} and convert to 0.')
     ds = None
 
     if dsAmp is not None:
         ds = gdal.Open(dsAmp.GetFileList()[-1], gdal.GA_ReadOnly)
         noDataValueAmp = ds.GetRasterBand(1).GetNoDataValue()
-        print('grab NoDataValue for magnitude       : {:<5} and convert to 0.'.format(noDataValueAmp))
+        print(f'grab NoDataValue for magnitude       : {noDataValueAmp:<5} and convert to 0.')
         ds = None
 
     # sort the order of interferograms based on date1_date2 with date1 < date2
@@ -347,10 +347,10 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, ampStack=None
         bnd = dsUnw.GetRasterBand(ii+1)
         d12 = bnd.GetMetadata("unwrappedPhase")["Dates"]
         d12 = sorted(d12.split("_"))
-        d12 = '{}_{}'.format(d12[0], d12[1])
+        d12 = f'{d12[0]}_{d12[1]}'
         d12BandDict[d12] = ii+1
     d12List = sorted(d12BandDict.keys())
-    print('number of interferograms: {}'.format(len(d12List)))
+    print(f'number of interferograms: {len(d12List)}')
 
     # box to gdal arguments
     # link: https://gdal.org/python/osgeo.gdal.Band-class.html#ReadAsArray
@@ -368,7 +368,7 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, ampStack=None
         msg += ', magnitude' if dsAmp is not None else ''
         msg += f'\napply {xstep} x {ystep} multilooking/downsampling via nearest to: connectComponent'
         print(msg)
-    print('writing data to HDF5 file {} with a mode ...'.format(outfile))
+    print(f'writing data to HDF5 file {outfile} with a mode ...')
     with h5py.File(outfile, "a") as f:
 
         prog_bar = ptime.progressBar(maxValue=nPairs)
@@ -417,7 +417,7 @@ def write_ifgram_stack(outfile, unwStack, cohStack, connCompStack, ampStack=None
         for dsName in ['unwrapPhase','coherence','connectComponent']:
             f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
 
-    print('finished writing to HD5 file: {}'.format(outfile))
+    print(f'finished writing to HD5 file: {outfile}')
     dsUnw = None
     dsCoh = None
     dsComp = None
@@ -524,6 +524,6 @@ def load_aria(inps):
 
     # used time
     m, s = divmod(time.time() - start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs.')
 
     return

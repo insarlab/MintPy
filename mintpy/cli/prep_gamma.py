@@ -137,8 +137,8 @@ def cmd_line_parse(iargs=None):
     # check: input file extension
     ext_list = ['.unw', '.cor', '.int', '.dem', '.hgt_sim', '.UTM_TO_RDC']
     if inps.file_ext not in ext_list:
-        msg = 'unsupported input file extension: {}'.format(inps.file_ext)
-        msg += '\nsupported file extensions: {}'.format(ext_list)
+        msg = f'unsupported input file extension: {inps.file_ext}'
+        msg += f'\nsupported file extensions: {ext_list}'
         raise ValueError(msg)
 
     return inps

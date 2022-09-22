@@ -48,8 +48,8 @@ def main(argv):
 
     # Subset
     try:
-        y0, y1 = [int(i) for i in argv[2].split(':')]
-        x0, x1 = [int(i) for i in argv[3].split(':')]
+        y0, y1 = (int(i) for i in argv[2].split(':'))
+        x0, x1 = (int(i) for i in argv[3].split(':'))
         data = data[y0:y1, x0:x1]
         dem = dem[y0:y1, x0:x1]
     except:

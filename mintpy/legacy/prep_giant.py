@@ -57,7 +57,7 @@ def cmd_line_parse(iargs=None):
 
 
 def auto_xml_file4giant(fname):
-    file_list = [os.path.join(os.path.dirname(fname), '../{}'.format(i))
+    file_list = [os.path.join(os.path.dirname(fname), f'../{i}')
                  for i in ['data.xml',
                            'sbas.xml',
                            'mints.xml',
@@ -108,14 +108,14 @@ def prepare_metadata4giant(fname, meta_files=None):
     xml_files = [i for i in meta_files if i.endswith('.xml')]
     xml_dict = {}
     for rsc_file in rsc_files:
-        print('reading {}'.format(rsc_file))
+        print(f'reading {rsc_file}')
         rsc_dict = readfile.read_roipac_rsc(rsc_file)
         for key in ['length', 'LENGTH', 'FILE_LENGTH', 'width', 'WIDTH']:
             if key in rsc_dict.keys():
                 rsc_dict.pop(key)
         xml_dict.update(rsc_dict)
     for xml_file in xml_files:
-        print('reading {}'.format(xml_file))
+        print(f'reading {xml_file}')
         xml_dict.update(read_giant_xml(xml_file))
 
     if not xml_dict:

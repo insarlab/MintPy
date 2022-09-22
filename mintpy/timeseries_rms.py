@@ -58,7 +58,7 @@ def analyze_rms(date_list, rms_list, inps):
     if ex_idx:
         # print
         for i in ex_idx:
-            print('{} - {:.4f}'.format(date_list[i], rms_list[i]))
+            print(f'{date_list[i]} - {rms_list[i]:.4f}')
         # save to text file
         with open(ex_date_file, 'w') as f:
             for i in ex_idx:

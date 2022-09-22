@@ -49,7 +49,7 @@ def dload_ionex(date_str, tec_dir, sol_code='jpl', date_fmt='%Y%m%d', print_msg=
     fname_dst_uncomp = fname_dst[:-2]
 
     # download - compose cmd
-    cmd = 'wget --continue --auth-no-challenge "{}"'.format(fname_src)
+    cmd = f'wget --continue --auth-no-challenge "{fname_src}"'
     if os.path.isfile(fname_dst) and os.path.getsize(fname_dst) > 1000:
         cmd += ' --timestamping'
     cmd += ' --quiet' if not print_msg else ''
@@ -68,7 +68,7 @@ def dload_ionex(date_str, tec_dir, sol_code='jpl', date_fmt='%Y%m%d', print_msg=
     if (not os.path.isfile(fname_dst_uncomp)
             or os.path.getsize(fname_dst_uncomp) < 600e3
             or os.path.getmtime(fname_dst_uncomp) < os.path.getmtime(fname_dst)):
-        cmd = "gzip --force --keep --decompress {}".format(fname_dst)
+        cmd = f"gzip --force --keep --decompress {fname_dst}"
         if print_msg:
             print(cmd)
         os.system(cmd)
@@ -214,11 +214,11 @@ def get_ionex_filename(date_str, tec_dir=None, sol_code='jpl', date_fmt='%Y%m%d'
     Returns:    tec_file - str, path to the local uncompressed TEC file OR remote compressed TECfile
     """
     dd = dt.datetime.strptime(date_str, date_fmt)
-    doy = '{:03d}'.format(dd.timetuple().tm_yday)
+    doy = f'{dd.timetuple().tm_yday:03d}'
     yy = str(dd.year)[2:4]
 
     # file name base
-    fname = "{a}g{d}0.{y}i.Z".format(a=sol_code.lower(), d=doy, y=yy)
+    fname = f"{sol_code.lower()}g{doy}0.{yy}i.Z"
 
     # full path
     if tec_dir:
@@ -255,7 +255,7 @@ def get_ionex_height(tec_file):
     Returns:    ion_hgt  - float, height above the surface in meters
     """
 
-    with open(tec_file, 'r') as f:
+    with open(tec_file) as f:
         lines = f.readlines()
         for line in lines:
             if line.strip().endswith('DHGT'):
@@ -287,7 +287,7 @@ def read_ionex(tec_file):
         return np.stack(tec_map) * 10**exponent
 
     # read IONEX file
-    with open(tec_file, 'r') as f:
+    with open(tec_file) as f:
         fc = f.read()
 
         # read header
@@ -296,9 +296,9 @@ def read_ionex(tec_file):
             if line.strip().endswith('# OF MAPS IN FILE'):
                 num_map = int(line.split()[0])
             elif line.strip().endswith('DLAT'):
-                lat0, lat1, lat_step = [float(x) for x in line.split()[:3]]
+                lat0, lat1, lat_step = (float(x) for x in line.split()[:3])
             elif line.strip().endswith('DLON'):
-                lon0, lon1, lon_step = [float(x) for x in line.split()[:3]]
+                lon0, lon1, lon_step = (float(x) for x in line.split()[:3])
             elif line.strip().endswith('EXPONENT'):
                 exponent = float(line.split()[0])
 
@@ -392,9 +392,9 @@ def plot_ionex(tec_file, save_fig=False):
     ani = FuncAnimation(fig, animate, interval=200, blit=True, save_count=num_map)
 
     # output
-    out_fig = '{}.gif'.format(os.path.abspath(tec_file))
+    out_fig = f'{os.path.abspath(tec_file)}.gif'
     if save_fig:
-        print('saving animation to {}'.format(out_fig))
+        print(f'saving animation to {out_fig}')
         ani.save(out_fig, writer='imagemagick', dpi=300)
 
     print('showing animation ...')

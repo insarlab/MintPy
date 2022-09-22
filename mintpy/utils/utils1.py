@@ -65,7 +65,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
         print('No ramp removal')
         deramped_file = timeseries_resid_file
     else:
-        deramped_file = '{}_ramp.h5'.format(os.path.splitext(timeseries_resid_file)[0])
+        deramped_file = f'{os.path.splitext(timeseries_resid_file)[0]}_ramp.h5'
     std_file = os.path.splitext(deramped_file)[0]+'_std.txt'
 
     # Get residual std text file
@@ -114,9 +114,9 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
         print('No ramp removal')
         deramped_file = timeseries_resid_file
     else:
-        deramped_file = '{}_ramp.h5'.format(os.path.splitext(timeseries_resid_file)[0])
+        deramped_file = f'{os.path.splitext(timeseries_resid_file)[0]}_ramp.h5'
     rms_file = os.path.join(os.path.dirname(os.path.abspath(deramped_file)),
-                            'rms_{}.txt'.format(os.path.splitext(deramped_file)[0]))
+                            f'rms_{os.path.splitext(deramped_file)[0]}.txt')
 
     # Get residual RMS text file
     if run_or_skip(out_file=rms_file, in_file=[deramped_file, mask_file], readable=False) == 'run':
@@ -212,14 +212,14 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
         return meanList, dateList
 
     # Read existing txt file only if 1) data file is older AND 2) same AOI
-    file_line  = '# Data file: {}\n'.format(os.path.basename(File))
-    mask_line  = '# Mask file: {}\n'.format(maskFile)
-    aoi_line   = '# AOI box: {}\n'.format(box)
-    thres_line = '# Threshold: {}\n'.format(threshold)
+    file_line  = f'# Data file: {os.path.basename(File)}\n'
+    mask_line  = f'# Mask file: {maskFile}\n'
+    aoi_line   = f'# AOI box: {box}\n'
+    thres_line = f'# Threshold: {threshold}\n'
 
     try:
         # Read AOI line from existing txt file
-        fl = open(txtFile, 'r')
+        fl = open(txtFile)
         lines = fl.readlines()
         fl.close()
         if checkAoi:
@@ -300,7 +300,7 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
         else:
             fl.write('#\tDATE12\t\tMean\n')
             for i in range(numLine):
-                fl.write('%s\t%.4f\n' % (dateList[i], meanList[i]))
+                fl.write(f'{dateList[i]}\t{meanList[i]:.4f}\n')
         fl.close()
 
     if len(meanList) == 1:
@@ -330,7 +330,7 @@ def temporal_average(File, datasetName='coherence', updateMode=False, outFile=No
     atr = readfile.read_attribute(File, datasetName=datasetName)
     k = atr['FILE_TYPE']
     if k not in ['ifgramStack', 'timeseries']:
-        print('WARNING: input file is not multi-temporal file: {}, return itself.'.format(File))
+        print(f'WARNING: input file is not multi-temporal file: {File}, return itself.')
         data = readfile.read(File)[0]
         return data, File
 
@@ -344,13 +344,13 @@ def temporal_average(File, datasetName='coherence', updateMode=False, outFile=No
                 elif 'unwrapPhase' in datasetName:
                     outFile = 'avgPhaseVelocity.h5'
                 else:
-                    outFile = 'avg{}.h5'.format(datasetName)
+                    outFile = f'avg{datasetName}.h5'
             elif k == 'timeseries':
                 if k in File:
                     processMark = os.path.basename(File).split('timeseries')[1].split(ext)[0]
-                    outFile = 'avgDisplacement{}.h5'.format(processMark)
+                    outFile = f'avgDisplacement{processMark}.h5'
             else:
-                outFile = 'avg{}.h5'.format(File)
+                outFile = f'avg{File}.h5'
 
     if updateMode and os.path.isfile(outFile):
         dataMean = readfile.read(outFile)[0]
@@ -412,7 +412,7 @@ def get_file_list(file_list, abspath=False, coord=None):
                 if 'Y_FIRST' in atr.keys():
                     file_list_out.remove(fname)
             else:
-                msg = 'un-recognized input coord type: {}'.format(coord)
+                msg = f'un-recognized input coord type: {coord}'
                 raise ValueError(msg)
     return file_list_out
 
@@ -476,7 +476,7 @@ def get_geometry_file(dset_list, work_dir=None, coord='geo', abspath=True, print
         dset_list = [dset_list]
     for dset in dset_list:
         if dset not in GEOMETRY_DSET_NAMES:
-            raise ValueError('unrecognized geometry dataset name: {}'.format(dset))
+            raise ValueError(f'unrecognized geometry dataset name: {dset}')
 
     if not work_dir:
         work_dir = os.getcwd()
@@ -495,7 +495,7 @@ def get_geometry_file(dset_list, work_dir=None, coord='geo', abspath=True, print
             fname_list.remove(fname)
     if len(fname_list) == 0:
         if print_msg:
-            print('No geometry file with dataset {} found'.format(dset_list))
+            print(f'No geometry file with dataset {dset_list} found')
         return None
 
     geom_file = fname_list[0]
@@ -519,7 +519,7 @@ def update_template_file(template_file, extra_dict, delimiter='='):
     # Update template_file with new value from extra_dict
     tmp_file = template_file+'.tmp'
     f_tmp = open(tmp_file, 'w')
-    for line in open(template_file, 'r'):
+    for line in open(template_file):
         c = [i.strip() for i in line.strip().split(delimiter, 1)]
         if not line.startswith(('%', '#')) and len(c) > 1:
             key = c[0]
@@ -531,16 +531,16 @@ def update_template_file(template_file, extra_dict, delimiter='='):
                 value2search = value
                 # 1. interpret special symbols as characters
                 for symbol in ['*', '[', ']', '(', ')']:
-                    value2search = value2search.replace(symbol, "\{}".format(symbol))
+                    value2search = value2search.replace(symbol, fr"\{symbol}")
                 # 2. use "= {OLD_VALUE}" for search/replace to be more robust
                 # against the scenario when key name contains {OLD_VALUE}
                 # i.e. mintpy.load.autoPath
-                value2search = delimiter+'[\s]*'+value2search
+                value2search = delimiter+r'[\s]*'+value2search
 
                 old_value_str = re.findall(value2search, line)[0]
                 new_value_str = old_value_str.replace(value, extra_dict[key])
                 line = line.replace(old_value_str, new_value_str, 1)
-                print('    {}: {} --> {}'.format(key, value, extra_dict[key]))
+                print(f'    {key}: {value} --> {extra_dict[key]}')
 
         f_tmp.write(line)
     f_tmp.close()
@@ -562,8 +562,8 @@ def add_attribute(File, atr_new=dict(), print_msg=False):
     # Compare new attributes with exsiting ones
     update = update_attribute_or_not(atr_new, atr)
     if not update:
-        print(('All updated (removed) attributes already exists (do not exists)'
-               ' and have the same value, skip update.'))
+        print('All updated (removed) attributes already exists (do not exists)'
+              ' and have the same value, skip update.')
         return File
 
     # Update attributes
@@ -574,13 +574,13 @@ def add_attribute(File, atr_new=dict(), print_msg=False):
             try:
                 f.attrs.pop(key)
                 if print_msg:
-                    print('remove {}'.format(key))
+                    print(f'remove {key}')
             except:
                 pass
         else:
             f.attrs[key] = str(value)
             if print_msg:
-                print('{} = {}'.format(key, str(value)))
+                print(f'{key} = {str(value)}')
     f.close()
     return File
 
@@ -681,7 +681,7 @@ def run_or_skip(out_file, in_file=None, readable=True, print_msg=True):
             width = atr['WIDTH']
         except:
             if print_msg:
-                print('{} exists, but can not read, remove it.'.format(out_file[0]))
+                print(f'{out_file[0]} exists, but can not read, remove it.')
             os.remove(out_file[0])
             return 'run'
 
@@ -690,12 +690,12 @@ def run_or_skip(out_file, in_file=None, readable=True, print_msg=True):
         in_file = get_file_list(in_file)
         # Check modification time
         if in_file:
-            t_in  = max([os.path.getmtime(i) for i in in_file])
-            t_out = min([os.path.getmtime(i) for i in out_file])
+            t_in  = max(os.path.getmtime(i) for i in in_file)
+            t_out = min(os.path.getmtime(i) for i in out_file)
             if t_in > t_out:
                 return 'run'
             elif print_msg:
-                print('{} exists and is newer than {} --> skip.'.format(out_file, in_file))
+                print(f'{out_file} exists and is newer than {in_file} --> skip.')
     return 'skip'
 
 
@@ -760,7 +760,7 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
     length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
 
-    print('remove {} ramp from file: {}'.format(ramp_type, fname))
+    print(f'remove {ramp_type} ramp from file: {fname}')
     out_file = out_file if out_file else os.path.join(fdir, f'{fbase}_ramp{fext}')
     # ignore out_file for ifgramStack (write back to the same HDF5 file)
     if ftype == 'ifgramStack':
@@ -779,9 +779,9 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
     if save_ramp_coeff:
         coeff_file = os.path.join(fdir, f'rampCoeff_{fbase}.txt')
         with open(coeff_file, 'w') as f:
-            f.write('# input  file: {}\n'.format(fname))
-            f.write('# output file: {}\n'.format(out_file))
-            f.write('# ramp type: {}\n'.format(ramp_type))
+            f.write(f'# input  file: {fname}\n')
+            f.write(f'# output file: {out_file}\n')
+            f.write(f'# ramp type: {ramp_type}\n')
 
     # deramping
     if ftype == 'timeseries':
@@ -796,7 +796,7 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
             if coeff_file:
                 # prepend epoch name to line of coefficients
                 with open(coeff_file, 'a') as f:
-                    f.write('{}    '.format((date_list[i])))
+                    f.write(f'{(date_list[i])}    ')
 
             # read
             data = readfile.read(fname, datasetName=date_list[i])[0]
@@ -819,9 +819,9 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
                 print_msg=False,
             )
 
-            prog_bar.update(i+1, suffix='{}/{}'.format(i+1, num_date))
+            prog_bar.update(i+1, suffix=f'{i+1}/{num_date}')
         prog_bar.close()
-        print('finished writing to file: {}'.format(out_file))
+        print(f'finished writing to file: {out_file}')
 
     elif ftype == 'ifgramStack':
         obj = ifgramStack(fname)
@@ -831,10 +831,10 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
 
         with h5py.File(fname, 'a') as f:
             ds = f[datasetName]
-            dsNameOut = '{}_ramp'.format(datasetName)
+            dsNameOut = f'{datasetName}_ramp'
             if dsNameOut in f.keys():
                 dsOut = f[dsNameOut]
-                print('access HDF5 dataset /{}'.format(dsNameOut))
+                print(f'access HDF5 dataset /{dsNameOut}')
             else:
                 dsOut = f.create_dataset(
                     dsNameOut,
@@ -842,14 +842,14 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
                     dtype=np.float32,
                     chunks=True,
                     compression=None)
-                print('create HDF5 dataset /{}'.format(dsNameOut))
+                print(f'create HDF5 dataset /{dsNameOut}')
 
             prog_bar = ptime.progressBar(maxValue=obj.numIfgram)
             for i in range(obj.numIfgram):
                 if coeff_file:
                     # prepend IFG date12 to line of coefficients
                     with open(coeff_file, 'a') as f:
-                        f.write('{}    '.format(str(obj.date12List[i])))
+                        f.write(f'{str(obj.date12List[i])}    ')
 
                 # read
                 data = ds[i, :, :]
@@ -866,9 +866,9 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
                 # write
                 dsOut[i, :, :] = data
 
-                prog_bar.update(i+1, suffix='{}/{}'.format(i+1, obj.numIfgram))
+                prog_bar.update(i+1, suffix=f'{i+1}/{obj.numIfgram}')
             prog_bar.close()
-            print('finished writing to file: {}'.format(fname))
+            print(f'finished writing to file: {fname}')
 
     # Single Dataset File
     else:
@@ -892,7 +892,7 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
         )[0]
 
         # write
-        print('writing >>> {}'.format(out_file))
+        print(f'writing >>> {out_file}')
         writefile.write(data, out_file=out_file, ref_file=fname)
 
     # add extra_meta to the output file
@@ -902,6 +902,6 @@ def run_deramp(fname, ramp_type, mask_file=None, out_file=None, datasetName=None
 
     # used time
     m, s = divmod(time.time()-start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs.')
 
     return out_file

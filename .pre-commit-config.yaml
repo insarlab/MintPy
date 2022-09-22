@@ -34,12 +34,12 @@ repos:
                '--trailing-comma',
                '--combine-as']
 
-  #- repo: https://github.com/asottile/pyupgrade
-  #  rev: "v2.37.3"
-  #  hooks:
-  #    - id: pyupgrade
-  #      name: modernize python
-  #      args: ['--py36-plus']
+  - repo: https://github.com/asottile/pyupgrade
+    rev: "v2.37.3"
+    hooks:
+      - id: pyupgrade
+        name: modernize python
+        args: ['--py36-plus']
 
 
   ############################################################

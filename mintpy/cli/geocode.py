@@ -74,7 +74,7 @@ def create_parser(subparsers=None):
                           "for radar2geo, it's the output spatial extent\n"
                           "for geo2radar, it's the input  spatial extent")
     out.add_argument('--lalo', '--lalo-step', dest='laloStep', type=float, nargs=2, metavar=('LAT_STEP', 'LON_STEP'),
-                     help='output pixel size in degree in latitude / longitude.{}'.format(DEG2METER))
+                     help=f'output pixel size in degree in latitude / longitude.{DEG2METER}')
 
     # interpolation / resampling
     interp = parser.add_argument_group('interpolation')
@@ -226,7 +226,7 @@ def check_num_processor(nprocs):
             nprocs = int(os.cpu_count() / 2)
 
     nprocs = min(os.cpu_count(), nprocs)
-    print('number of processor to be used: {}'.format(nprocs))
+    print(f'number of processor to be used: {nprocs}')
 
     return nprocs
 

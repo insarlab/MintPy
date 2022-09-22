@@ -99,7 +99,7 @@ class transectionViewer():
 
         # save
         if self.save_fig:
-            outfile = '{}.pdf'.format(self.outfile_base)
+            outfile = f'{self.outfile_base}.pdf'
             self.fig.savefig(outfile, bbox_inches='tight', transparent=True, dpi=self.fig_dpi)
             vprint('saved transect to', outfile)
 

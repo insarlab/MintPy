@@ -38,7 +38,7 @@ def cmd_line_parse(iargs=None):
 
     # check: input file extension
     if os.path.splitext(inps.file)[1] not in ['.h5', '.he5']:
-        raise ValueError('input file is NOT HDF5: {}'.format(inps.file))
+        raise ValueError(f'input file is NOT HDF5: {inps.file}')
 
     return inps
 

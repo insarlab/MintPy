@@ -50,8 +50,8 @@ def read_data(inps):
         # update mask to exclude pixel with NaN value
         inps.mask *= ~np.isnan(inps.phase)
     else:
-        raise ValueError("input file not support yet: {}".format(k))
-    print('number of pixels: {}'.format(np.sum(inps.mask)))
+        raise ValueError(f"input file not support yet: {k}")
+    print(f'number of pixels: {np.sum(inps.mask)}')
 
     # change reference point
     if inps.ref_lalo:
@@ -71,7 +71,7 @@ def read_data(inps):
     ref_x = int(inps.metadata['REF_X'])
     inps.mask *= inps.phase != 0
     inps.mask[ref_y, ref_x] = 1
-    print('number of pixels after excluding zero phase value: {}'.format(np.sum(inps.mask)))
+    print(f'number of pixels after excluding zero phase value: {np.sum(inps.mask)}')
 
     # read geometry
     inps.lat, inps.lon = ut.get_lat_lon(inps.metadata, geom_file=inps.geom_file)
@@ -96,7 +96,7 @@ def read_data(inps):
 
         # print message
         msg = 'convert height from ellipsoid to geoid'
-        msg += '\n\tby subtracting a constant offset of {:.2f} m'.format(h_offset)
+        msg += f'\n\tby subtracting a constant offset of {h_offset:.2f} m'
         print(msg)
 
     # masking
@@ -133,7 +133,7 @@ def plot_data(inps):
     # reference point
     axs[0].plot(int(inps.metadata['REF_X']),
                 int(inps.metadata['REF_Y']), 'ks', ms=6)
-    axs[0].set_title('Phase [{:.1f}, {:.1f}] um'.format(dmin, dmax));
+    axs[0].set_title(f'Phase [{dmin:.1f}, {dmax:.1f}] um');
     # colorbar
     cbar = fig.colorbar(im, ax=axs[0]);
     cbar.set_label('cm')
@@ -151,9 +151,9 @@ def plot_data(inps):
             cbar.set_label('degree')
 
     # save figure to file
-    out_fig = '{}.png'.format(os.path.splitext(inps.outfile)[0])
+    out_fig = f'{os.path.splitext(inps.outfile)[0]}.png'
     plt.savefig(out_fig, bbox_inches='tight', transparent=True, dpi=300)
-    print('saved figure to {}'.format(out_fig))
+    print(f'saved figure to {out_fig}')
     return
 
 
@@ -172,7 +172,7 @@ def save2mat(inps):
     mdict['Metadata'] = inps.metadata
     # save to mat file
     sio.savemat(inps.outfile, mdict, long_field_names=True)
-    print('save to file: {}'.format(os.path.abspath(inps.outfile)))
+    print(f'save to file: {os.path.abspath(inps.outfile)}')
 
 
 ##############################################################################

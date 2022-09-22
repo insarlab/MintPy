@@ -45,28 +45,28 @@ def run_or_skip(inps):
     # check output file
     if not os.path.isfile(inps.outfile):
         flag = 'run'
-        print('1) output file {} NOT found.'.format(inps.outfile))
+        print(f'1) output file {inps.outfile} NOT found.')
     else:
-        print('1) output file {} already exists.'.format(inps.outfile))
+        print(f'1) output file {inps.outfile} already exists.')
         ti = os.path.getmtime(inps.timeseries_file)
         to = os.path.getmtime(inps.outfile)
         if ti > to:
             flag = 'run'
-            print('2) output file is NOT newer than input file: {}.'.format(inps.timeseries_file))
+            print(f'2) output file is NOT newer than input file: {inps.timeseries_file}.')
         else:
-            print('2) output file is newer than input file: {}.'.format(inps.timeseries_file))
+            print(f'2) output file is newer than input file: {inps.timeseries_file}.')
 
     # check configuration
     if flag == 'skip':
         atr = readfile.read_attribute(inps.outfile)
         if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in config_keys):
             flag = 'run'
-            print('3) NOT all key configuration parameters are the same: {}.'.format(config_keys))
+            print(f'3) NOT all key configuration parameters are the same: {config_keys}.')
         else:
-            print('3) all key configuration parameters are the same: {}.'.format(config_keys))
+            print(f'3) all key configuration parameters are the same: {config_keys}.')
 
     # result
-    print('run or skip: {}.'.format(flag))
+    print(f'run or skip: {flag}.')
     return flag
 
 
@@ -104,7 +104,7 @@ def read_date_info(inps):
         flag = np.nansum(data, axis=(1,2)) == 0
         flag[ts_obj.dateList.index(atr['REF_DATE'])] = 0
         if np.sum(flag) > 0:
-            print('number of empty dates to exclude: {}'.format(np.sum(flag)))
+            print(f'number of empty dates to exclude: {np.sum(flag)}')
             ex_date_list += np.array(ts_obj.dateList)[flag].tolist()
             ex_date_list = sorted(list(set(ex_date_list)))
 
@@ -116,7 +116,7 @@ def read_date_info(inps):
 
     # print out msg
     print('-'*50)
-    print('dates from input file: {}\n{}'.format(ts_obj.numDate, ts_obj.dateList))
+    print(f'dates from input file: {ts_obj.numDate}\n{ts_obj.dateList}')
     print('-'*50)
     if len(inps.date_list) == len(ts_obj.dateList):
         print('using all dates to calculate the time function')
@@ -144,7 +144,7 @@ def run_timeseries2time_func(inps):
     if "REF_DATE" not in atr.keys() and not inps.ref_date:
         inps.ref_date = inps.date_list[0]
         print('WARNING: No REF_DATE found in time-series file or input in command line.')
-        print('  Set "--ref-date {}" and continue.'.format(inps.date_list[0]))
+        print(f'  Set "--ref-date {inps.date_list[0]}" and continue.')
 
     # get deformation model from inputs
     model = time_func.inps2model(inps, date_list=inps.date_list)
@@ -168,7 +168,7 @@ def run_timeseries2time_func(inps):
         atrV['REF_DATE'] = inps.ref_date
 
     # time_func_param: config parameter
-    print('add/update the following configuration metadata:\n{}'.format(config_keys))
+    print(f'add/update the following configuration metadata:\n{config_keys}')
     for key in config_keys:
         atrV[key_prefix+key] = str(vars(inps)[key])
 
@@ -218,27 +218,27 @@ def run_timeseries2time_func(inps):
         box_len = box[3] - box[1]
         num_pixel = box_len * box_wid
         if num_box > 1:
-            print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
-            print('box width:  {}'.format(box_wid))
-            print('box length: {}'.format(box_len))
+            print(f'\n------- processing patch {i+1} out of {num_box} --------------')
+            print(f'box width:  {box_wid}')
+            print(f'box length: {box_len}')
 
         # initiate output
         m = np.zeros((num_param, num_pixel), dtype=DATA_TYPE)
         m_std = np.zeros((num_param, num_pixel), dtype=DATA_TYPE)
 
         # read input
-        print('reading data from file {} ...'.format(inps.timeseries_file))
+        print(f'reading data from file {inps.timeseries_file} ...')
         ts_data = readfile.read(inps.timeseries_file, box=box)[0]
 
         # referencing in time and space
         # for file w/o reference info. e.g. ERA5.h5
         if inps.ref_date:
-            print('referecing to date: {}'.format(inps.ref_date))
+            print(f'referecing to date: {inps.ref_date}')
             ref_ind = inps.date_list.index(inps.ref_date)
             ts_data -= np.tile(ts_data[ref_ind, :, :], (ts_data.shape[0], 1, 1))
 
         if inps.ref_yx:
-            print('referencing to point (y, x): ({}, {})'.format(inps.ref_yx[0], inps.ref_yx[1]))
+            print(f'referencing to point (y, x): ({inps.ref_yx[0]}, {inps.ref_yx[1]})')
             ref_box = (inps.ref_yx[1], inps.ref_yx[0], inps.ref_yx[1]+1, inps.ref_yx[0]+1)
             ref_val = readfile.read(inps.timeseries_file, box=ref_box)[0]
             ts_data -= np.tile(ref_val.reshape(ts_data.shape[0], 1, 1),
@@ -323,7 +323,7 @@ def run_timeseries2time_func(inps):
                     dis_ts=ts_data[boot_ind],
                     seconds=seconds)[1]
 
-                prog_bar.update(i+1, suffix='iteration {} / {}'.format(i+1, inps.bootstrapCount))
+                prog_bar.update(i+1, suffix=f'iteration {i+1} / {inps.bootstrapCount}')
             prog_bar.close()
             #del ts_data
 
@@ -395,7 +395,7 @@ def run_timeseries2time_func(inps):
                     m_cov = np.linalg.multi_dot([Gplus, ts_covi, Gplus.T])
                     m_std[:, idx] = np.sqrt(np.diag(m_cov))
 
-                    prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, num_pixel2inv))
+                    prog_bar.update(i+1, every=200, suffix=f'{i+1}/{num_pixel2inv} pixels')
                 prog_bar.close()
 
             elif inps.uncertaintyQuantification == 'residue':
@@ -439,7 +439,7 @@ def run_timeseries2time_func(inps):
 
     # used time
     m, s = divmod(time.time() - start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.'.format(m, s))
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs.')
 
     return inps.outfile
 
@@ -467,7 +467,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None, resi
     poly_deg   = model['polynomial']
     num_period = len(model['periodic'])
     num_step   = len(model['stepDate'])
-    num_exp    = sum([len(val) for key, val in model['exp'].items()])
+    num_exp    = sum(len(val) for key, val in model['exp'].items())
 
     # init output
     ds_dict = {}
@@ -571,7 +571,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None, resi
     for exp_onset in model['exp'].keys():
         for exp_tau in model['exp'][exp_onset]:
             # dataset name
-            dsName = 'exp{}Tau{}D'.format(exp_onset, exp_tau)
+            dsName = f'exp{exp_onset}Tau{exp_tau}D'
 
             # assign ds_dict
             if m is not None:
@@ -593,7 +593,7 @@ def model2hdf5_dataset(model, m=None, m_std=None, mask=None, ds_shape=None, resi
     for log_onset in model['log'].keys():
         for log_tau in model['log'][log_onset]:
             # dataset name
-            dsName = 'log{}Tau{}D'.format(log_onset, log_tau)
+            dsName = f'log{log_onset}Tau{log_tau}D'
 
             # assign ds_dict
             if m is not None:

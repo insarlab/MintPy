@@ -91,9 +91,9 @@ def run_or_skip(inps, extra_meta):
     # check output file
     if not os.path.isfile(inps.outfile):
         flag = 'run'
-        print('1) output file {} NOT found.'.format(inps.outfile))
+        print(f'1) output file {inps.outfile} NOT found.')
     else:
-        print('1) output file {} already exists.'.format(inps.outfile))
+        print(f'1) output file {inps.outfile} already exists.')
         infiles = [inps.file]
         if inps.mask_file:
             infiles.append(inps.mask_file)
@@ -101,21 +101,21 @@ def run_or_skip(inps, extra_meta):
         to = os.path.getmtime(inps.outfile)
         if ti > to:
             flag = 'run'
-            print('2) output file is NOT newer than input file: {}.'.format(infiles))
+            print(f'2) output file is NOT newer than input file: {infiles}.')
         else:
-            print('2) output file is newer than input file: {}.'.format(infiles))
+            print(f'2) output file is newer than input file: {infiles}.')
 
     # check configuration
     if flag == 'skip':
         atr = readfile.read_attribute(inps.outfile)
         if any(str(extra_meta[key]) != atr.get(key, 'None') for key in config_keys):
             flag = 'run'
-            print('3) NOT all key configuration parameters are the same:{}'.format(config_keys))
+            print(f'3) NOT all key configuration parameters are the same:{config_keys}')
         else:
-            print('3) all key configuration parameters are the same:{}'.format(config_keys))
+            print(f'3) all key configuration parameters are the same:{config_keys}')
 
     # result
-    print('run or skip: {}.'.format(flag))
+    print(f'run or skip: {flag}.')
     return flag
 
 

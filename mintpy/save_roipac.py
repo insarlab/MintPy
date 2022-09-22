@@ -39,10 +39,10 @@ def read_data(inps):
             ref_lat, ref_lon = coord.radar2geo(inps.ref_yx[0], inps.ref_yx[1])[0:2]
             atr['REF_LAT'] = ref_lat
             atr['REF_LON'] = ref_lon
-        print('change reference point to y/x: {}'.format(inps.ref_yx))
+        print(f'change reference point to y/x: {inps.ref_yx}')
 
     # various file types
-    print('read {} from file {}'.format(inps.dset, inps.file))
+    print(f'read {inps.dset} from file {inps.file}')
     k = atr['FILE_TYPE']
     if k == 'velocity':
         # read/prepare data
@@ -87,13 +87,13 @@ def read_data(inps):
 
         # metadata
         atr['DATE'] = date1[2:8]
-        atr['DATE12'] = '{}-{}'.format(date1[2:8], date2[2:8])
+        atr['DATE12'] = f'{date1[2:8]}-{date2[2:8]}'
         atr['FILE_TYPE'] = '.unw'
         atr['UNIT'] = 'radian'
 
         # output filename
         if not inps.outfile:
-            inps.outfile = '{}_{}.unw'.format(date1, date2)
+            inps.outfile = f'{date1}_{date2}.unw'
             if inps.file.startswith('geo_'):
                 inps.outfile = 'geo_'+inps.outfile
 
@@ -110,19 +110,19 @@ def read_data(inps):
                     date1 = atr['REF_DATE']
                     date2 = ptime.yyyymmdd(suffix)
             else:
-                raise ValueError("No '-' in input dataset! It is required for {}".format(dname))
+                raise ValueError(f"No '-' in input dataset! It is required for {dname}")
         else:
             date_list = HDFEOS(inps.file).get_date_list()
             date1 = date_list[0]
             date2 = date_list[-1]
-        date12 = '{}_{}'.format(date1, date2)
+        date12 = f'{date1}_{date2}'
 
         # read / prepare data
         slice_list = readfile.get_slice_list(inps.file)
         if 'displacement' in inps.dset:
             # read/prepare data
-            slice_name1 = view.search_dataset_input(slice_list, '{}-{}'.format(dname, date1))[0][0]
-            slice_name2 = view.search_dataset_input(slice_list, '{}-{}'.format(dname, date2))[0][0]
+            slice_name1 = view.search_dataset_input(slice_list, f'{dname}-{date1}')[0][0]
+            slice_name2 = view.search_dataset_input(slice_list, f'{dname}-{date2}')[0][0]
             data = readfile.read(inps.file, datasetName=slice_name1)[0]
             data -= readfile.read(inps.file, datasetName=slice_name2)[0]
             print('converting range to phase')
@@ -135,7 +135,7 @@ def read_data(inps):
 
         # metadata
         atr['DATE'] = date1[2:8]
-        atr['DATE12'] = '{}-{}'.format(date1[2:8], date2[2:8])
+        atr['DATE12'] = f'{date1[2:8]}-{date2[2:8]}'
         if dname == 'displacement':
             atr['FILE_TYPE'] = '.unw'
             atr['UNIT'] = 'radian'
@@ -146,7 +146,7 @@ def read_data(inps):
             atr['FILE_TYPE'] = '.dem'
             atr['DATA_TYPE'] = 'int16'
         else:
-            raise ValueError('unrecognized input dataset type: {}'.format(inps.dset))
+            raise ValueError(f'unrecognized input dataset type: {inps.dset}')
 
         # output filename
         if not inps.outfile:
@@ -167,7 +167,7 @@ def read_data(inps):
 
         # metadata
         atr['DATE'] = date1[2:8]
-        atr['DATE12'] = '{}-{}'.format(date1[2:8], date2[2:8])
+        atr['DATE12'] = f'{date1[2:8]}-{date2[2:8]}'
         if dname.startswith('unwrapPhase'):
             atr['FILE_TYPE'] = '.unw'
             atr['UNIT'] = 'radian'
@@ -182,7 +182,7 @@ def read_data(inps):
             atr['UNIT'] = '1'
             atr['DATA_TYPE'] = 'byte'
         else:
-            raise ValueError('unrecognized dataset type: {}'.format(inps.dset))
+            raise ValueError(f'unrecognized dataset type: {inps.dset}')
 
         # output filename
         if not inps.outfile:
@@ -224,7 +224,7 @@ def read_data(inps):
     # mask
     if inps.mask_file:
         for m_file in inps.mask_file:
-            print('mask data based on input file: {}'.format(m_file))
+            print(f'mask data based on input file: {m_file}')
             mask = readfile.read(m_file)[0]
             mask *= ~np.isnan(data)
             data[mask==0] = np.nan

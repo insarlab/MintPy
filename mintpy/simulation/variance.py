@@ -54,8 +54,8 @@ def get_distance(lat, lon, i):
 
 def structure_function(data, lat, lon, step=5e3, min_pair_num=100e3, print_msg=True):
     num_sample = len(data)
-    distance = np.zeros((num_sample**2))
-    variance = np.zeros((num_sample**2))
+    distance = np.zeros(num_sample**2)
+    variance = np.zeros(num_sample**2)
     if print_msg:
         prog_bar = ptime.progressBar(maxValue=num_sample)
     for i in range(num_sample):

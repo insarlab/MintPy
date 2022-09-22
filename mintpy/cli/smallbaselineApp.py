@@ -96,7 +96,7 @@ def cmd_line_parse(iargs=None):
 
     # check: -H option (print default template)
     if inps.print_template:
-        with open(template_file, 'r') as f:
+        with open(template_file) as f:
             lines = f.read()
         try:
             # syntax highlight via rich
@@ -156,8 +156,8 @@ def read_inps2run_steps(inps, step_list, plot_only=False):
     for key in ['startStep', 'endStep', 'doStep']:
         value = vars(inps)[key]
         if value and value not in step_list:
-            msg = 'Input step not found: {}'.format(value)
-            msg += '\nAvailable steps: {}'.format(step_list)
+            msg = f'Input step not found: {value}'
+            msg += f'\nAvailable steps: {step_list}'
             raise ValueError(msg)
 
     # check: ignore --start/end input if --dostep is specified
@@ -187,10 +187,10 @@ def read_inps2run_steps(inps, step_list, plot_only=False):
         else:
             print(mintpy.version.logo)
 
-        print('--RUN-at-{}--'.format(datetime.datetime.now()))
-        print('Current directory: {}'.format(os.getcwd()))
-        print('Run routine processing with {} on steps: {}'.format(os.path.basename(__file__), run_steps))
-        print('Remaining steps: {}'.format(step_list[idx0+1:]))
+        print(f'--RUN-at-{datetime.datetime.now()}--')
+        print(f'Current directory: {os.getcwd()}')
+        print(f'Run routine processing with {os.path.basename(__file__)} on steps: {run_steps}')
+        print(f'Remaining steps: {step_list[idx0+1:]}')
     print('-'*50)
 
     return run_steps

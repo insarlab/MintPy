@@ -74,7 +74,7 @@ def create_parser(subparsers=None):
     parser.add_argument('-g', '--geometry-dir', dest='geom_dir', type=str, default=None, required=True,
                         help='Directory with geometry files ')
     parser.add_argument('--geom-files', dest='geom_files', type=str, nargs='*',
-                        default=['{}.rdr'.format(i) for i in GEOMETRY_PREFIXS],
+                        default=[f'{i}.rdr' for i in GEOMETRY_PREFIXS],
                         help='List of geometry file basenames. Default: %(default)s.\n'
                              'All geometry files need to be in the same directory.')
 

@@ -33,7 +33,7 @@ def plot_colorbar(out_file, vmin, vmax, unit='cm/year', cmap='jet', figsize=(0.1
     fig, cax = plt.subplots(figsize=figsize)
     norm = colors.Normalize(vmin=vmin, vmax=vmax)
     cbar = colorbar.ColorbarBase(cax, cmap=plt.get_cmap(cmap), norm=norm, orientation='vertical')
-    cbar.set_label('{} [{}]'.format(label, unit), fontsize=12)
+    cbar.set_label(f'{label} [{unit}]', fontsize=12)
 
     # update ticks
     if nbins:
@@ -84,7 +84,7 @@ def generate_cbar_element(cbar_file, cmap, vmin, vmax, unit='cm/year', loc='lowe
     cbar_overlay = KML.ScreenOverlay(
         KML.name('colorbar'),
         KML.Icon(
-            KML.href("{}".format(os.path.basename(cbar_file))),
+            KML.href(f"{os.path.basename(cbar_file)}"),
             KML.viewBoundScale(0.75)
         ),
         KML.overlayXY(x=ox, y=oy, xunits="fraction", yunits="fraction"),
@@ -180,8 +180,8 @@ def write_kmz_file(out_file_base, kml_doc, data_files=None, res_files=None, keep
     res_files  = [] if res_files  is None else res_files
 
     work_dir = os.path.dirname(out_file_base)
-    kml_file = '{}.kml'.format(out_file_base)
-    kmz_file = '{}.kmz'.format(out_file_base)
+    kml_file = f'{out_file_base}.kml'
+    kmz_file = f'{out_file_base}.kmz'
 
     # 1. Write KML file
     kml = KML.kml()
@@ -197,7 +197,7 @@ def write_kmz_file(out_file_base, kml_doc, data_files=None, res_files=None, keep
         for fname in res_files:
             src_file = os.path.join(res_dir, os.path.basename(fname))
             shutil.copy2(src_file, work_dir)
-            print("copy {} to the local directory".format(src_file))
+            print(f"copy {src_file} to the local directory")
 
     # 3. Generate KMZ file, by
     # 1) go to the directory of kmz file
@@ -210,11 +210,11 @@ def write_kmz_file(out_file_base, kml_doc, data_files=None, res_files=None, keep
             fz.write(os.path.relpath(fname))
             if not keep_kml_file:
                 os.remove(fname)
-                print('remove {}'.format(fname))
+                print(f'remove {fname}')
 
     # 3) go back to the running directory
     os.chdir(run_dir)
-    print('merged all files to {}'.format(kmz_file))
+    print(f'merged all files to {kmz_file}')
 
     return kmz_file
 
@@ -266,7 +266,7 @@ def write_kmz_overlay(data, meta, out_file, inps):
 
     out_file_base = os.path.splitext(out_file)[0]
     data_png_file = out_file_base + '.png'
-    print('writing {} with dpi={}'.format(data_png_file, inps.fig_dpi))
+    print(f'writing {data_png_file} with dpi={inps.fig_dpi}')
     plt.savefig(data_png_file, pad_inches=0.0, transparent=True, dpi=inps.fig_dpi)
 
     # 2. Generate KML file
@@ -290,7 +290,7 @@ def write_kmz_overlay(data, meta, out_file, inps):
     kml_doc.append(img_overlay)
 
     # Add colorbar png file
-    cbar_file = '{}_cbar.png'.format(out_file_base)
+    cbar_file = f'{out_file_base}_cbar.png'
     cbar_overlay = generate_cbar_element(
         cbar_file,
         cmap=inps.colormap,
@@ -338,7 +338,7 @@ def write_kmz_placemark(data, meta, out_file, geom_file, inps):
 
     # 1. colorbar png file
     print('plot and add colorbar as a ScreenOverlay element')
-    cbar_file = '{}_cbar.png'.format(out_file_base)
+    cbar_file = f'{out_file_base}_cbar.png'
     cbar_overlay = generate_cbar_element(
         cbar_file,
         cmap=inps.colormap,
@@ -377,7 +377,7 @@ def write_kmz_placemark(data, meta, out_file, geom_file, inps):
     # 3. data folder for all points
     data_folder = KML.Folder(KML.name("Data"))
 
-    print('generating point element with step size of {} pixels'.format(inps.step))
+    print(f'generating point element with step size of {inps.step} pixels')
     length, width = data.shape
     prog_bar = ptime.progressBar(maxValue=length)
     for y in range(0, length, inps.step):
@@ -431,8 +431,8 @@ def save_kmz(inps):
     inps.pix_box = subset.subset_input_dict2box(vars(inps), atr)[0]
     inps.pix_box = ut.coordinate(atr).check_box_within_data_coverage(inps.pix_box)
     data_box = (0, 0, int(atr['WIDTH']), int(atr['LENGTH']))
-    print('data   coverage in y/x: {}'.format(data_box))
-    print('subset coverage in y/x: {}'.format(inps.pix_box))
+    print(f'data   coverage in y/x: {data_box}')
+    print(f'subset coverage in y/x: {inps.pix_box}')
     atr = attr.update_attribute4subset(atr, inps.pix_box)
 
     # read data
@@ -447,7 +447,7 @@ def save_kmz(inps):
         datasetName=inps.dset,
         box=inps.pix_box)[0]
     if mask is not None:
-        print('masking out pixels with zero value in file: {}'.format(inps.mask_file))
+        print(f'masking out pixels with zero value in file: {inps.mask_file}')
         data[mask == 0] = np.nan
     if inps.zero_mask:
         print('masking out pixels with zero value')

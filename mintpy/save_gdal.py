@@ -37,12 +37,12 @@ def array2raster(array, out_file, transform, epsg, out_fmt='GTiff'):
     """
 
     driver = gdal.GetDriverByName(out_fmt)
-    print('initiate GDAL driver: {}'.format(driver.LongName))
+    print(f'initiate GDAL driver: {driver.LongName}')
 
     rows, cols = array.shape
     print('create raster band')
-    print('raster row / column number: {}, {}'.format(rows, cols))
-    print('raster transform info: {}'.format(transform))
+    print(f'raster row / column number: {rows}, {cols}')
+    print(f'raster transform info: {transform}')
     raster = driver.Create(out_file, cols, rows, 1, gdal.GDT_Float32)
     raster.SetGeoTransform(transform)
 
@@ -50,13 +50,13 @@ def array2raster(array, out_file, transform, epsg, out_fmt='GTiff'):
     band = raster.GetRasterBand(1)
     band.WriteArray(array)
 
-    print('set projection as: EPSG {}'.format(epsg))
+    print(f'set projection as: EPSG {epsg}')
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(epsg)
     raster.SetProjection(srs.ExportToWkt())
 
     band.FlushCache()
-    print('finished writing to {}'.format(out_file))
+    print(f'finished writing to {out_file}')
 
     return out_file
 

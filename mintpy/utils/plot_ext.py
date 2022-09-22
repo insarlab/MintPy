@@ -16,7 +16,7 @@ from mintpy import view
 
 
 ################################# SelectFromCollection class begin ########################################
-class SelectFromCollection(object):
+class SelectFromCollection:
     """Select indices from a matplotlib collection using `PolygonSelector`.
 
     Selected pixels within the polygon is marked as True and saved in the
@@ -87,9 +87,9 @@ def get_poly_mask(fname, datasetName, print_msg=True, view_cmd=''):
     Returns:    mask : 2D np.arrat in size of (length, width) in np.bool_ format
     """
     # option 1 - Advanced plot using view.prep/plot_slice()
-    cmd = 'view.py {} '.format(fname)
+    cmd = f'view.py {fname} '
     if datasetName:
-        cmd += ' {} '.format(datasetName)
+        cmd += f' {datasetName} '
     if view_cmd:
         cmd += view_cmd
 
@@ -118,7 +118,7 @@ def get_poly_mask(fname, datasetName, print_msg=True, view_cmd=''):
     if hasattr(selector, 'mask'):
         mask = selector.mask
         if print_msg:
-            print('selected polygon: {}'.format(selector.poly_path))
+            print(f'selected polygon: {selector.poly_path}')
     else:
         mask = None
         if print_msg:

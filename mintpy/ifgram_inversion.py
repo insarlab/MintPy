@@ -43,7 +43,7 @@ def run_or_skip(inps):
     # check output files vs input dataset
     if not all(os.path.isfile(i) for i in inps.outfile):
         flag = 'run'
-        print('1) NOT ALL output files found: {}.'.format(inps.outfile))
+        print(f'1) NOT ALL output files found: {inps.outfile}.')
     else:
         # check if time-series file is partly written using file size
         # since time-series file is not compressed
@@ -52,19 +52,19 @@ def run_or_skip(inps):
         fsize = os.path.getsize(inps.outfile[0])
         if fsize <= fsize_ref:
             flag = 'run'
-            print('1) output file {} is NOT fully written.'.format(inps.outfile[0]))
+            print(f'1) output file {inps.outfile[0]} is NOT fully written.')
 
         else:
-            print('1) output files already exist: {}.'.format(inps.outfile))
+            print(f'1) output files already exist: {inps.outfile}.')
             # check modification time
             with h5py.File(inps.ifgramStackFile, 'r') as f:
                 ti = float(f[inps.obsDatasetName].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgramStackFile)))
             to = min(os.path.getmtime(i) for i in inps.outfile)
             if ti > to:
                 flag = 'run'
-                print('2) output files are NOT newer than input dataset: {}.'.format(inps.obsDatasetName))
+                print(f'2) output files are NOT newer than input dataset: {inps.obsDatasetName}.')
             else:
-                print('2) output dataset is newer than input dataset: {}.'.format(inps.obsDatasetName))
+                print(f'2) output dataset is newer than input dataset: {inps.obsDatasetName}.')
 
     # check configuration
     if flag == 'skip':
@@ -75,15 +75,15 @@ def run_or_skip(inps):
 
         if any(str(vars(inps)[key]) != atr_ts.get(key_prefix+key, 'None') for key in config_keys):
             flag = 'run'
-            print('3) NOT all key configuration parameters are the same: {}'.format(config_keys))
+            print(f'3) NOT all key configuration parameters are the same: {config_keys}')
         elif meta_keys and any(atr_ts[key] != atr_ifg[key] for key in meta_keys):
             flag = 'run'
-            print('3) NOT all the metadata are the same: {}'.format(meta_keys))
+            print(f'3) NOT all the metadata are the same: {meta_keys}')
         else:
-            print('3) all key configuration parameters are the same: {}.'.format(config_keys))
+            print(f'3) all key configuration parameters are the same: {config_keys}.')
 
     # result
-    print('run or skip: {}.'.format(flag))
+    print(f'run or skip: {flag}.')
     return flag
 
 
@@ -334,7 +334,7 @@ def calc_inv_quality(G, X, y, e2, inv_quality_name='temporalCoherence', weight_s
             # print out message
             chunk_step = max(1, int(ut.round_to_1(num_chunk / 5)))
             if print_msg and (i+1) % chunk_step == 0:
-                print('chunk {} / {}'.format(i+1, num_chunk))
+                print(f'chunk {i+1} / {num_chunk}')
 
     else:
         if inv_quality_name == 'temporalCoherence':
@@ -397,7 +397,7 @@ def read_stack_obs(stack_obj, box, ref_phase, obs_ds_name='unwrapPhase', dropIfg
     # Read unwrapPhase
     num_pair = stack_obj.get_size(dropIfgram=dropIfgram)[0]
     if print_msg:
-        print('reading {} in {} * {} ...'.format(obs_ds_name, box, num_pair))
+        print(f'reading {obs_ds_name} in {box} * {num_pair} ...')
     stack_obs = stack_obj.read(datasetName=obs_ds_name,
                                box=box,
                                dropIfgram=dropIfgram,
@@ -435,7 +435,7 @@ def mask_stack_obs(stack_obs, stack_obj, box, mask_ds_name=None, mask_threshold=
     num_pair = stack_obj.get_size(dropIfgram=dropIfgram)[0]
     if mask_ds_name and mask_ds_name in stack_obj.datasetNames:
         if print_msg:
-            print('reading {} in {} * {} ...'.format(mask_ds_name, box, num_pair))
+            print(f'reading {mask_ds_name} in {box} * {num_pair} ...')
 
         msk_data = stack_obj.read(datasetName=mask_ds_name,
                                   box=box,
@@ -449,17 +449,17 @@ def mask_stack_obs(stack_obs, stack_obj, box, mask_ds_name=None, mask_threshold=
         if mask_ds_name in ['connectComponent']:
             msk *= msk_data != 0
             if print_msg:
-                print('mask out pixels with {} == 0 by setting them to NaN'.format(mask_ds_name))
+                print(f'mask out pixels with {mask_ds_name} == 0 by setting them to NaN')
 
         elif mask_ds_name in ['coherence', 'offsetSNR']:
             msk *= msk_data >= mask_threshold
             if print_msg:
-                print('mask out pixels with {} < {} by setting them to NaN'.format(mask_ds_name, mask_threshold))
+                print(f'mask out pixels with {mask_ds_name} < {mask_threshold} by setting them to NaN')
 
         elif mask_ds_name.endswith('OffsetStd'):
             msk *= msk_data <= mask_threshold
             if print_msg:
-                print('mask out pixels with {} > {} by setting them to NaN'.format(mask_ds_name, mask_threshold))
+                print(f'mask out pixels with {mask_ds_name} > {mask_threshold} by setting them to NaN')
 
             # keep regions (ignore threshold-based masking) if:
             # 1. high SNR AND
@@ -473,10 +473,10 @@ def mask_stack_obs(stack_obs, stack_obj, box, mask_ds_name=None, mask_threshold=
             msk_snr = np.multiply(msk_data <= mask_threshold * 5, obs_snr >= min_snr)
             msk[msk_snr] = 1
             if print_msg:
-                print('keep pixels with {} <= {} and SNR >= {}'.format(mask_ds_name, mask_threshold*5, min_snr))
+                print(f'keep pixels with {mask_ds_name} <= {mask_threshold*5} and SNR >= {min_snr}')
 
         else:
-            raise ValueError('Un-recognized mask dataset name: {}'.format(mask_ds_name))
+            raise ValueError(f'Un-recognized mask dataset name: {mask_ds_name}')
 
         # set values of mask-out pixels to NaN
         stack_obs[msk == 0.] = np.nan
@@ -494,7 +494,7 @@ def read_coherence(stack_obj, box, dropIfgram=True, print_msg=True):
 
     num_pair = stack_obj.get_size(dropIfgram=dropIfgram)[0]
     if print_msg:
-        print('reading coherence in {} * {} ...'.format(box, num_pair))
+        print(f'reading coherence in {box} * {num_pair} ...')
     coh_data = stack_obj.read(datasetName='coherence',
                               box=box,
                               dropIfgram=dropIfgram,
@@ -545,7 +545,7 @@ def calc_weight_sqrt(stack_obj, box, weight_func='var', dropIfgram=True, chunk_s
 
         # print out message
         if (i+1) % 1 == 0:
-            print('chunk {} / {}'.format(i+1, num_chunk))
+            print(f'chunk {i+1} / {num_chunk}')
 
     return weight
 
@@ -708,7 +708,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
     # becuase it's the common filled value used in phase masking
     if 'phase' in obs_ds_name.lower():
         stack_obs[stack_obs == 0.] = np.nan
-        print('convert zero value in {} to NaN (no-data value)'.format(obs_ds_name))
+        print(f'convert zero value in {obs_ds_name} to NaN (no-data value)')
 
     (stack_obs,
      stack_std) = mask_stack_obs(stack_obs, stack_obj, box,
@@ -722,7 +722,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
 
     # 1.3.1 - Water Mask
     if water_mask_file:
-        print('skip pixels (on the water) with zero value in file: {}'.format(os.path.basename(water_mask_file)))
+        print(f'skip pixels (on the water) with zero value in file: {os.path.basename(water_mask_file)}')
         atr_msk = readfile.read_attribute(water_mask_file)
         len_msk, wid_msk = int(atr_msk['LENGTH']), int(atr_msk['WIDTH'])
         if (len_msk, wid_msk) != (stack_obj.length, stack_obj.width):
@@ -735,7 +735,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
         del waterMask
 
     # 1.3.2 - Mask for NaN value in ALL ifgrams
-    print('skip pixels with {} = NaN in all interferograms'.format(obs_ds_name))
+    print(f'skip pixels with {obs_ds_name} = NaN in all interferograms')
     mask *= ~np.all(np.isnan(stack_obs), axis=0)
 
     # 1.3.3 Mask for zero quality measure (average spatial coherence/SNR)
@@ -756,7 +756,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
         atr_stack = readfile.read_attribute(stack_quality_file)
         len_stack, wid_stack = int(atr_stack['LENGTH']), int(atr_stack['WIDTH'])
         if (len_stack, wid_stack) == (stack_obj.length, stack_obj.width):
-            print('skip pixels with zero value in file: {}'.format(os.path.basename(stack_quality_file)))
+            print(f'skip pixels with zero value in file: {os.path.basename(stack_quality_file)}')
             quality = readfile.read(stack_quality_file, box=box)[0].flatten()
             mask *= quality != 0.
             del quality
@@ -844,7 +844,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
                 inv_quality[idx] = inv_quali
                 num_inv_obs[idx] = num_obsi
 
-                prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, num_pixel2inv_part))
+                prog_bar.update(i+1, every=200, suffix=f'{i+1}/{num_pixel2inv_part} pixels')
             prog_bar.close()
 
     # 2.3 weighted inversion - pixel-by-pixel
@@ -865,7 +865,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
             inv_quality[idx] = inv_quali
             num_inv_obs[idx] = num_obsi
 
-            prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, num_pixel2inv))
+            prog_bar.update(i+1, every=200, suffix=f'{i+1}/{num_pixel2inv} pixels')
         prog_bar.close()
     del weight_sqrt
 
@@ -887,7 +887,7 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
             ts_cov[r1:, :r0, idx] = ts_covi[r0:, :r0]
             ts_cov[r1:, r1:, idx] = ts_covi[r0:, r0:]
 
-            prog_bar.update(i+1, every=200, suffix='{}/{} pixels'.format(i+1, num_pixel2inv))
+            prog_bar.update(i+1, every=200, suffix=f'{i+1}/{num_pixel2inv} pixels')
         prog_bar.close()
     del stack_obs
     del stack_std
@@ -913,14 +913,14 @@ def run_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, obs_ds_nam
         az_pixel_size /= float(stack_obj.metadata['ALOOKS'])
         ts *= az_pixel_size
         ts_cov = ts_cov * az_pixel_size if calc_cov else ts_cov
-        print('converting azimuth offset unit from pixel ({:.2f} m) to meter'.format(az_pixel_size))
+        print(f'converting azimuth offset unit from pixel ({az_pixel_size:.2f} m) to meter')
 
     elif (obs_ds_name == 'rangeOffset') & (stack_obj.metadata['PROCESSOR'] != 'cosicorr'):
         rg_pixel_size = float(stack_obj.metadata['RANGE_PIXEL_SIZE'])
         rg_pixel_size /= float(stack_obj.metadata['RLOOKS'])
         ts *= -1 * rg_pixel_size
         ts_cov = ts_cov * rg_pixel_size if calc_cov else ts_cov
-        print('converting range offset unit from pixel ({:.2f} m) to meter'.format(rg_pixel_size))
+        print(f'converting range offset unit from pixel ({rg_pixel_size:.2f} m) to meter')
 
     return ts, ts_cov, inv_quality, num_inv_obs, box
 
@@ -985,21 +985,21 @@ def run_ifgram_inversion(inps):
         suffix = 'deformation velocity'
     else:
         suffix = 'deformation phase'
-    msg += 'least-squares solution with L2 min-norm on: {}\n'.format(suffix)
-    msg += 'minimum redundancy: {}\n'.format(inps.minRedundancy)
-    msg += 'weight function: {}\n'.format(inps.weightFunc)
-    msg += 'calculate covariance: {} {}\n'.format(inps.calcCov, ref_msg)
+    msg += f'least-squares solution with L2 min-norm on: {suffix}\n'
+    msg += f'minimum redundancy: {inps.minRedundancy}\n'
+    msg += f'weight function: {inps.weightFunc}\n'
+    msg += f'calculate covariance: {inps.calcCov} {ref_msg}\n'
 
     if inps.maskDataset:
         if inps.maskDataset in ['connectComponent']:
-            suffix = '{} == 0'.format(inps.maskDataset)
+            suffix = f'{inps.maskDataset} == 0'
         elif inps.maskDataset in ['coherence', 'offsetSNR']:
-            suffix = '{} < {}'.format(inps.maskDataset, inps.maskThreshold)
+            suffix = f'{inps.maskDataset} < {inps.maskThreshold}'
         elif inps.maskDataset.endswith('OffsetStd'):
-            suffix = '{} > {}'.format(inps.maskDataset, inps.maskThreshold)
+            suffix = f'{inps.maskDataset} > {inps.maskThreshold}'
         else:
-            raise ValueError('Un-recognized mask dataset name: {}'.format(inps.maskDataset))
-        msg += 'mask out pixels with: {}\n'.format(suffix)
+            raise ValueError(f'Un-recognized mask dataset name: {inps.maskDataset}')
+        msg += f'mask out pixels with: {suffix}\n'
     else:
         msg += 'mask: no\n'
 
@@ -1010,10 +1010,10 @@ def run_ifgram_inversion(inps):
     msg += '-------------------------------------------------------------------------------'
     print(msg)
 
-    print('number of interferograms: {}'.format(num_pair))
-    print('number of acquisitions  : {}'.format(num_date))
-    print('number of lines   : {}'.format(length))
-    print('number of columns : {}'.format(width))
+    print(f'number of interferograms: {num_pair}')
+    print(f'number of acquisitions  : {num_date}')
+    print(f'number of lines   : {length}')
+    print(f'number of columns : {width}')
 
     ## 2. prepare output
 
@@ -1087,9 +1087,9 @@ def run_ifgram_inversion(inps):
         box_wid = box[2] - box[0]
         box_len = box[3] - box[1]
         if num_box > 1:
-            print('\n------- processing patch {} out of {} --------------'.format(i+1, num_box))
-            print('box width:  {}'.format(box_wid))
-            print('box length: {}'.format(box_len))
+            print(f'\n------- processing patch {i+1} out of {num_box} --------------')
+            print(f'box width:  {box_wid}')
+            print(f'box length: {box_len}')
 
         # update box argument in the input data
         data_kwargs['box'] = box
@@ -1154,7 +1154,7 @@ def run_ifgram_inversion(inps):
 
         if num_box > 1:
             m, s = divmod(time.time() - start_time, 60)
-            print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
+            print(f'time used: {m:02.0f} mins {s:02.1f} secs.\n')
 
     # 3.4 update output data on the reference pixel (for phase)
     if not inps.skip_ref:
@@ -1162,14 +1162,14 @@ def run_ifgram_inversion(inps):
         ref_y = int(stack_obj.metadata['REF_Y'])
         ref_x = int(stack_obj.metadata['REF_X'])
         print('-'*50)
-        print('update values on the reference pixel: ({}, {})'.format(ref_y, ref_x))
+        print(f'update values on the reference pixel: ({ref_y}, {ref_x})')
 
         ref_val = 0 if inv_quality_name == 'residual' else 1
-        print('set {} on the reference pixel to {}.'.format(inv_quality_name, ref_val))
+        print(f'set {inv_quality_name} on the reference pixel to {ref_val}.')
         with h5py.File(inps.invQualityFile, 'r+') as f:
             f[inv_quality_name][ref_y, ref_x] = ref_val
 
-        print('set  # of observations on the reference pixel as {}'.format(num_pair))
+        print(f'set  # of observations on the reference pixel as {num_pair}')
         with h5py.File(inps.numInvFile, 'r+') as f:
             f['mask'][ref_y, ref_x] = num_pair
 
@@ -1177,5 +1177,5 @@ def run_ifgram_inversion(inps):
     cluster.roll_back_num_threads(num_threads_dict)
 
     m, s = divmod(time.time() - start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs.\n'.format(m, s))
+    print(f'time used: {m:02.0f} mins {s:02.1f} secs.\n')
     return

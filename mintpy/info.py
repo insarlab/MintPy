@@ -72,7 +72,7 @@ def print_hdf5_structure(fname, max_meta_num=200):
         h5_str += attributes2string(atr, max_meta_num=max_meta_num)+'\n'
 
     # get maxDigit value
-    maxDigit = max([len(i) for i in f.keys()])
+    maxDigit = max(len(i) for i in f.keys())
     maxDigit = max(20, maxDigit+1)
     if atr.get('FILE_TYPE', 'timeseries') == 'HDFEOS':
         maxDigit += 35
@@ -89,10 +89,10 @@ def print_hdf5_structure(fname, max_meta_num=200):
 ############################################################
 def print_timseries_date_stat(dateList):
     datevector = ptime.date_list2vector(dateList)[1]
-    print('Start Date: {}'.format(dateList[0]))
-    print('End   Date: {}'.format(dateList[-1]))
-    print('Number of dates  : {}'.format(len(dateList)))
-    print('STD of datetimes : {:.2f} years'.format(np.std(datevector)))
+    print(f'Start Date: {dateList[0]}')
+    print(f'End   Date: {dateList[-1]}')
+    print(f'Number of dates  : {len(dateList)}')
+    print(f'STD of datetimes : {np.std(datevector):.2f} years')
     #print('----------------------')
     #print('List of dates:\n{}'.format(dateList))
     #print('----------------------')
@@ -132,7 +132,7 @@ def print_date_list(fname, disp_ifgram='all', disp_num=False, print_msg=False):
             dateList = sorted(list(set(dateListAll) - set(dateListKept)))
 
     else:
-        print('--date option can not be applied to {} file, ignore it.'.format(k))
+        print(f'--date option can not be applied to {k} file, ignore it.')
 
     # print list info
     if print_msg and dateList is not None:
@@ -142,7 +142,7 @@ def print_date_list(fname, disp_ifgram='all', disp_num=False, print_msg=False):
                     num = dateListAll.index(d)
                 else:
                     num = dateList.index(d)
-                msg = '{}\t{}'.format(d, num)
+                msg = f'{d}\t{num}'
             else:
                 msg = d
             print(msg)
@@ -191,8 +191,8 @@ def print_dataset(fname, dsName):
 
     # check input dataset
     if dsName not in dsNames:
-        msg = 'input dataset {} not found!'.format(dsName)
-        msg += '\navailable datasets: {}'.format(dsNames)
+        msg = f'input dataset {dsName} not found!'
+        msg += f'\navailable datasets: {dsNames}'
         raise ValueError(msg)
 
     # print dataset values
@@ -201,9 +201,9 @@ def print_dataset(fname, dsName):
         print(data)
 
     # data stats
-    print('dataset size: {}'.format(data.shape))
-    print('dataset min / max: {} / {}'.format(np.nanmin(data), np.nanmax(data)))
-    print('number of pixels in NaN: {}'.format(np.sum(np.isnan(data))))
+    print(f'dataset size: {data.shape}')
+    print(f'dataset min / max: {np.nanmin(data)} / {np.nanmax(data)}')
+    print(f'number of pixels in NaN: {np.sum(np.isnan(data))}')
 
     return
 

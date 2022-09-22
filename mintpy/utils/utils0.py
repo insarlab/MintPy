@@ -135,9 +135,9 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
     inc_angle_f = (np.pi - np.arccos((r**2 + range_f**2 - (r+H)**2)/(2*r*range_f))) * 180.0/np.pi
     inc_angle_c = (inc_angle_n + inc_angle_f) / 2.0
     if print_msg:
-        print('near   incidence angle : {:.4f} degree'.format(inc_angle_n))
-        print('center incidence angle : {:.4f} degree'.format(inc_angle_c))
-        print('far    incidence angle : {:.4f} degree'.format(inc_angle_f))
+        print(f'near   incidence angle : {inc_angle_n:.4f} degree')
+        print(f'center incidence angle : {inc_angle_c:.4f} degree')
+        print(f'far    incidence angle : {inc_angle_f:.4f} degree')
 
     if dimension == 0:
         inc_angle = inc_angle_c
@@ -158,7 +158,7 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
             inc_angle = np.tile(np.linspace(inc_angle_n, inc_angle_f, num=width,
                                             endpoint='FALSE', dtype=np.float32), (length, 1))
     else:
-        raise Exception('un-supported dimension input: {}'.format(dimension))
+        raise Exception(f'un-supported dimension input: {dimension}')
     return inc_angle
 
 
@@ -410,7 +410,7 @@ def get_lat_lon(meta, geom_file=None, box=None, dimension=2, ystep=1, xstep=1):
             lons = np.linspace(lon0, lon1, num=lon_num, endpoint=True)
 
         else:
-            raise ValueError('un-supported dimension = {}'.format(dimension))
+            raise ValueError(f'un-supported dimension = {dimension}')
 
     else:
         msg = 'Can not get pixel-wise lat/lon!'
@@ -445,8 +445,8 @@ def get_lat_lon_rdc(meta):
         raise Exception('Input file is in geo-coordinates, use more accurate get_lat_lon() instead.')
 
     length, width = int(meta['LENGTH']), int(meta['WIDTH'])
-    lats = [float(meta['LAT_REF{}'.format(i)]) for i in [1,2,3,4]]
-    lons = [float(meta['LON_REF{}'.format(i)]) for i in [1,2,3,4]]
+    lats = [float(meta[f'LAT_REF{i}']) for i in [1,2,3,4]]
+    lons = [float(meta[f'LON_REF{i}']) for i in [1,2,3,4]]
 
     lat = np.zeros((length,width),dtype = np.float32)
     lon = np.zeros((length,width),dtype = np.float32)
@@ -878,8 +878,8 @@ def circle_index(atr, circle_par):
             radius = int(float(cir_par[2]))
             c_y = np.rint((c_lat-float(atr['Y_FIRST'])) / float(atr['Y_STEP']))
             c_x = np.rint((c_lon-float(atr['X_FIRST'])) / float(atr['X_STEP']))
-            print(('Input circle index in lat/lon coord: '
-                   '{:.4f}, {:.4f}, {}'.format(c_lat, c_lon, radius)))
+            print('Input circle index in lat/lon coord: '
+                  '{:.4f}, {:.4f}, {}'.format(c_lat, c_lon, radius))
         except:
             print('\nERROR: Unrecognized circle index format: '+circle_par)
             print('Supported format:')
@@ -966,7 +966,7 @@ def check_parallel(file_num=1, print_msg=True, maxParallelNum=8):
     if num_cores <= 1:
         enable_parallel = False
         print('parallel processing is disabled because min of the following two numbers <= 1:')
-        print('available cpu number of the computer: {}'.format(os.cpu_count()))
+        print(f'available cpu number of the computer: {os.cpu_count()}')
     elif print_msg:
         print('parallel processing using %d cores ...' % (num_cores))
 
@@ -1054,7 +1054,7 @@ def root_mean_sq_error(x, y=None):
     if y is not None:
         y = np.array(y).flatten()
         if x.size != y.size:
-            raise ValueError('Input x & y have different size: {} vs. {}!'.format(x.size, y.size))
+            raise ValueError(f'Input x & y have different size: {x.size} vs. {y.size}!')
         x -= y
 
     # omit NaN values

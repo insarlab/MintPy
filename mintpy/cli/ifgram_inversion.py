@@ -155,14 +155,14 @@ def cmd_line_parse(iargs=None):
         if key in template.keys() and template[key]:
             unw_err_method = template[key].lower().replace(' ','')   # fix potential typo
             inps.obsDatasetName += obs_suffix_map[unw_err_method]
-            print('phase unwrapping error correction "{}" is turned ON'.format(unw_err_method))
-        print('use dataset "{}" by default'.format(inps.obsDatasetName))
+            print(f'phase unwrapping error correction "{unw_err_method}" is turned ON')
+        print(f'use dataset "{inps.obsDatasetName}" by default')
 
     # check: --dset option (if input observation dataset exists)
     stack_obj = ifgramStack(inps.ifgramStackFile)
     stack_obj.open(print_msg=False)
     if inps.obsDatasetName not in stack_obj.datasetNames:
-        msg = 'input dataset name "{}" not found in file: {}'.format(inps.obsDatasetName, inps.ifgramStackFile)
+        msg = f'input dataset name "{inps.obsDatasetName}" not found in file: {inps.ifgramStackFile}'
         raise ValueError(msg)
 
     # default: --skip-ref option
@@ -186,7 +186,7 @@ def cmd_line_parse(iargs=None):
             inps.outfile = ['timeseriesRg.h5', 'residualInvRg.h5', 'numInvOffRg.h5']
 
         else:
-            raise ValueError('un-recognized input observation dataset name: {}'.format(inps.obsDatasetName))
+            raise ValueError(f'un-recognized input observation dataset name: {inps.obsDatasetName}')
 
     # default: --output (split for easy reference)
     inps.tsFile, inps.invQualityFile, inps.numInvFile = inps.outfile

@@ -99,13 +99,13 @@ def get_aoi_pix_box(meta, lookup_file, pix_box, geo_box):
 
     # geo_box -> pix_box
     if geo_box and lookup_file:
-        print('input AOI in (lon0, lat1, lon1, lat0): {}'.format(geo_box))
+        print(f'input AOI in (lon0, lat1, lon1, lat0): {geo_box}')
         pix_box = coord.bbox_geo2radar(geo_box)
 
     # check pix_box
     if pix_box:
         pix_box = coord.check_box_within_data_coverage(pix_box)
-        print('input AOI in (x0,y0,x1,y1): {}'.format(pix_box))
+        print(f'input AOI in (x0,y0,x1,y1): {pix_box}')
 
     return pix_box
 
@@ -128,7 +128,7 @@ def get_mst_date12(keep_mst, par_list_all, date12_list_all, date12_to_drop, min_
         mst_date12_list = ptime.yyyymmdd_date12(mst_date12_list)
 
     else:
-        msg = 'Drop ifgrams with {} < {}: '.format(par_name, min_par)
+        msg = f'Drop ifgrams with {par_name} < {min_par}: '
         mst_date12_list = []
 
     return mst_date12_list, msg
@@ -143,7 +143,7 @@ def get_date12_to_drop(inps):
     obj.open()
     date12ListAll = obj.date12List
     dateList = obj.dateList
-    print('number of interferograms: {}'.format(len(date12ListAll)))
+    print(f'number of interferograms: {len(date12ListAll)}')
 
     # Get date12_to_drop
     date12_to_drop = []
@@ -152,11 +152,11 @@ def get_date12_to_drop(inps):
     if inps.referenceFile:
         date12_to_keep = pnet.get_date12_list(inps.referenceFile, dropIfgram=True)
         print('--------------------------------------------------')
-        print('use reference pairs info from file: {}'.format(inps.referenceFile))
-        print('number of interferograms in reference: {}'.format(len(date12_to_keep)))
+        print(f'use reference pairs info from file: {inps.referenceFile}')
+        print(f'number of interferograms in reference: {len(date12_to_keep)}')
         tempList = sorted(list(set(date12ListAll) - set(date12_to_keep)))
         date12_to_drop += tempList
-        print('date12 not in reference file: ({})\n{}'.format(len(tempList), tempList))
+        print(f'date12 not in reference file: ({len(tempList)})\n{tempList}')
 
     # temp baseline threshold
     if inps.tempBaseMax:
@@ -186,7 +186,7 @@ def get_date12_to_drop(inps):
         msg = 'Drop ifgrams with temporal baseline beyond {} neighbors: ({})'.format(
             inps.connNumMax, len(tempList))
         if len(tempList) <= 200:
-            msg += '\n{}'.format(tempList)
+            msg += f'\n{tempList}'
         print(msg)
 
     # excludeIfgIndex
@@ -194,9 +194,9 @@ def get_date12_to_drop(inps):
         tempList = [date12ListAll[i] for i in inps.excludeIfgIndex]
         date12_to_drop += tempList
         print('--------------------------------------------------')
-        print('Drop ifgrams with the following index number: {}'.format(len(tempList)))
+        print(f'Drop ifgrams with the following index number: {len(tempList)}')
         for i, date12 in enumerate(tempList):
-            print('{} : {}'.format(i, date12))
+            print(f'{i} : {date12}')
 
     # excludeDate
     if inps.excludeDate:
@@ -204,7 +204,7 @@ def get_date12_to_drop(inps):
         date12_to_drop += tempList
         print('-'*50+'\nDrop ifgrams including the following dates: ({})\n{}'.format(
             len(tempList), inps.excludeDate))
-        print('-'*30+'\n{}'.format(tempList))
+        print('-'*30+f'\n{tempList}')
 
     # startDate
     if inps.startDate:
@@ -251,9 +251,9 @@ def get_date12_to_drop(inps):
         tempList = sorted(list(set(date12ListAll) - set(coh_date12_list + mst_date12_list)))
         date12_to_drop += tempList
 
-        msg += '({})'.format(len(tempList))
+        msg += f'({len(tempList)})'
         if len(tempList) <= 200:
-            msg += '\n{}'.format(tempList)
+            msg += f'\n{tempList}'
         print(msg)
 
     # area ratio file
@@ -293,9 +293,9 @@ def get_date12_to_drop(inps):
         tempList = sorted(list(set(date12ListAll) - set(area_ratio_date12_list + mst_date12_list)))
         date12_to_drop += tempList
 
-        msg += '({})'.format(len(tempList))
+        msg += f'({len(tempList)})'
         if len(tempList) <= 200:
-            msg += '\n{}'.format(tempList)
+            msg += f'\n{tempList}'
         print(msg)
 
     # Manually drop pairs
@@ -304,7 +304,7 @@ def get_date12_to_drop(inps):
         if tempList is None:
             return None
         tempList = [i for i in tempList if i in date12ListAll]
-        print('date12 selected to remove: ({})\n{}'.format(len(tempList), tempList))
+        print(f'date12 selected to remove: ({len(tempList)})\n{tempList}')
         date12_to_drop += tempList
 
     ## summary
@@ -312,15 +312,15 @@ def get_date12_to_drop(inps):
     date12_to_drop = sorted(list(set(date12_to_drop)))
     date12_to_keep = sorted(list(set(date12ListAll) - set(date12_to_drop)))
     print('--------------------------------------------------')
-    print('number of interferograms to remove: {}'.format(len(date12_to_drop)))
-    print('number of interferograms to keep  : {}'.format(len(date12_to_keep)))
+    print(f'number of interferograms to remove: {len(date12_to_drop)}')
+    print(f'number of interferograms to keep  : {len(date12_to_keep)}')
 
     # print list of date to drop
     date_to_keep = [d for date12 in date12_to_keep for d in date12.split('_')]
     date_to_keep = sorted(list(set(date_to_keep)))
     date_to_drop = sorted(list(set(dateList) - set(date_to_keep)))
     if len(date_to_drop) > 0:
-        print('number of acquisitions to remove: {}\n{}'.format(len(date_to_drop), date_to_drop))
+        print(f'number of acquisitions to remove: {len(date_to_drop)}\n{date_to_drop}')
 
     # checking:
     # 1) no new date12 to drop against existing file

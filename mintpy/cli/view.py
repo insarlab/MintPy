@@ -111,7 +111,7 @@ def cmd_line_parse(iargs=None):
     for key in ['file','dem_file','mask_file','pts_file']:
         fname = vars(inps)[key]
         if fname not in [None, 'no'] and not os.path.isfile(fname):
-            raise FileNotFoundError('input {} file {} NOT exist!'.format(key, fname))
+            raise FileNotFoundError(f'input {key} file {fname} NOT exist!')
 
     # check: --exclude option
     if inps.exDsetList:

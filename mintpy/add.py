@@ -33,7 +33,7 @@ def add_file(fnames, out_file=None, force=False):
     Example:    'mask_all.h5' = add_file(['mask_1.h5','mask_2.h5','mask_3.h5'], 'mask_all.h5')
     """
     num_file = len(fnames)
-    print('input files to be added: ({})\n{}'.format(num_file, fnames))
+    print(f'input files to be added: ({num_file})\n{fnames}')
 
     # Default output file name
     ext = os.path.splitext(fnames[0])[1]
@@ -57,11 +57,11 @@ def add_file(fnames, out_file=None, force=False):
         dateListShared = [i for i in dateList1 if i in dateList2]
         dateShared = np.ones((len(dateList1)), dtype=np.bool_)
         if dateListShared != dateList1:
-            print('WARNING: {} does not contain all dates in {}'.format(file2, file1))
+            print(f'WARNING: {file2} does not contain all dates in {file1}')
             if force:
                 dateListEx = list(set(dateList1) - set(dateListShared))
                 print('Continue and enforce the differencing for their shared dates only.')
-                print('\twith following dates are ignored for differencing:\n{}'.format(dateListEx))
+                print(f'\twith following dates are ignored for differencing:\n{dateListEx}')
                 dateShared[np.array([dateList1.index(i) for i in dateListEx])] = 0
             else:
                 raise Exception('To enforce the differencing anyway, use --force option.')
@@ -70,22 +70,22 @@ def add_file(fnames, out_file=None, force=False):
         ref_date, ref_y, ref_x = check_reference(atr1, atr2)
 
         # read data2 (consider different reference_date/pixel)
-        print('read from file: {}'.format(file2))
+        print(f'read from file: {file2}')
         data2 = readfile.read(file2, datasetName=dateListShared)[0]
 
         if ref_y and ref_x:
-            print('* referencing data from {} to y/x: {}/{}'.format(os.path.basename(file2), ref_y, ref_x))
+            print(f'* referencing data from {os.path.basename(file2)} to y/x: {ref_y}/{ref_x}')
             ref_box = (ref_x, ref_y, ref_x + 1, ref_y + 1)
             ref_val = readfile.read(file2, datasetName=dateListShared, box=ref_box)[0]
             data2 -= np.tile(ref_val.reshape(-1, 1, 1), (1, data2.shape[1], data2.shape[2]))
 
         if ref_date:
-            print('* referencing data from {} to date: {}'.format(os.path.basename(file2), ref_date))
+            print(f'* referencing data from {os.path.basename(file2)} to date: {ref_date}')
             ref_ind = dateListShared.index(ref_date)
             data2 -= np.tile(data2[ref_ind, :, :], (data2.shape[0], 1, 1))
 
         # read data1
-        print('read from file: {}'.format(file1))
+        print(f'read from file: {file1}')
         data = readfile.read(file1)[0]
 
         # apply adding
@@ -106,12 +106,12 @@ def add_file(fnames, out_file=None, force=False):
             ds_names = ds_names_list[0]
         print('List of common datasets across files: ', ds_names)
         if len(ds_names) < 1:
-            raise ValueError('No common datasets found among files:\n{}'.format(fnames))
+            raise ValueError(f'No common datasets found among files:\n{fnames}')
 
         # loop over each file
         dsDict = {}
         for ds_name in ds_names:
-            print('adding {} ...'.format(ds_name))
+            print(f'adding {ds_name} ...')
             data, atr = readfile.read(fnames[0], datasetName=ds_name)
 
             for i, fname in enumerate(fnames[1:]):
@@ -124,7 +124,7 @@ def add_file(fnames, out_file=None, force=False):
             dsDict[ds_name] = data
 
         # output
-        print('use metadata from the 1st file: {}'.format(fnames[0]))
+        print(f'use metadata from the 1st file: {fnames[0]}')
         writefile.write(dsDict, out_file=out_file, metadata=atr, ref_file=fnames[0])
 
     return out_file

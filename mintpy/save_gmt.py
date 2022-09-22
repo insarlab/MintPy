@@ -133,7 +133,7 @@ def save_gmt(inps):
     # default output file name
     if not inps.outfile:
         outbase = pp.auto_figure_title(inps.file, inps.dset, vars(inps))
-        inps.outfile = '{}.grd'.format(outbase)
+        inps.outfile = f'{outbase}.grd'
 
     # write GMT *.grd file
     write_grd_file(data, atr, inps.outfile)

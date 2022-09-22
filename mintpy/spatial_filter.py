@@ -115,7 +115,7 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
         elif isinstance(filter_par, list):
             filter_par = filter_par[0]
         filter_par = int(filter_par)
-        msg += ' with kernel size of {}'.format(filter_par)
+        msg += f' with kernel size of {filter_par}'
 
     elif filter_type.endswith('gaussian'):
         if not filter_par:
@@ -123,13 +123,13 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
         elif isinstance(filter_par, list):
             filter_par = filter_par[0]
         filter_par = float(filter_par)
-        msg += ' with sigma of {:.1f}'.format(filter_par)
+        msg += f' with sigma of {filter_par:.1f}'
 
     elif filter_type == 'double_difference':
         if not filter_par:
             filter_par = [1, 10]
         local, regional = int(filter_par[0]), int(filter_par[1])
-        msg += ' with local/regional kernel sizes of {}/{}'.format(local, regional)
+        msg += f' with local/regional kernel sizes of {local}/{regional}'
     print(msg)
 
     # output filename
@@ -142,7 +142,7 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
     ds_names = ds_names if ds_names else ds_all
     ds_skips = list(set(ds_all) - set(ds_names))
 
-    maxDigit = max([len(i) for i in ds_names])
+    maxDigit = max(len(i) for i in ds_names)
     dsDict = dict()
 
     for ds_name in ds_skips:
@@ -160,7 +160,7 @@ def filter_file(fname, ds_names=None, filter_type='lowpass_gaussian', filter_par
             num_loop = data.shape[0]
             for i in range(num_loop):
                 data[i, :, :] = filter_data(data[i, :, :], filter_type, filter_par)
-                sys.stdout.write('\r{} {}/{} ...'.format(msg, i+1, num_loop))
+                sys.stdout.write(f'\r{msg} {i+1}/{num_loop} ...')
                 sys.stdout.flush()
             print('')
 

@@ -20,7 +20,7 @@ def read_network_info(inps):
     """Read the network information"""
     ftype = readfile.read_attribute(inps.ifgram_file)['FILE_TYPE']
     if ftype != 'ifgramStack':
-        raise ValueError('input file {} is not ifgramStack: {}'.format(inps.ifgram_file, ftype))
+        raise ValueError(f'input file {inps.ifgram_file} is not ifgramStack: {ftype}')
 
     obj = ifgramStack(inps.ifgram_file)
     obj.open(print_msg=inps.print_msg)
@@ -28,10 +28,10 @@ def read_network_info(inps):
     date12_kept = obj.get_date12_list(dropIfgram=True)
     inps.ex_date12_list = sorted(list(set(inps.date12_list) - set(date12_kept)))
     inps.date_list = obj.get_date_list(dropIfgram=False)
-    vprint('number of all     interferograms: {}'.format(len(inps.date12_list)))
-    vprint('number of dropped interferograms: {}'.format(len(inps.ex_date12_list)))
-    vprint('number of kept    interferograms: {}'.format(len(inps.date12_list) - len(inps.ex_date12_list)))
-    vprint('number of acquisitions: {}'.format(len(inps.date_list)))
+    vprint(f'number of all     interferograms: {len(inps.date12_list)}')
+    vprint(f'number of dropped interferograms: {len(inps.ex_date12_list)}')
+    vprint(f'number of kept    interferograms: {len(inps.date12_list) - len(inps.ex_date12_list)}')
+    vprint(f'number of acquisitions: {len(inps.date_list)}')
 
     if inps.lalo:
         if not inps.lookup_file:
@@ -42,7 +42,7 @@ def read_network_info(inps):
 
     if not inps.yx:
         inps.yx = (obj.refY, obj.refX)
-        vprint('plot initial coherence matrix at reference pixel: {}'.format(inps.yx))
+        vprint(f'plot initial coherence matrix at reference pixel: {inps.yx}')
     return inps
 
 
@@ -88,7 +88,7 @@ class coherenceMatrixViewer():
             ds_shape = readfile.read(self.img_file)[0].shape
             fig_size = pp.auto_figure_size(ds_shape, disp_cbar=True, scale=0.7)
             self.fig_size = [fig_size[0]+fig_size[1], fig_size[1]]
-            vprint('create figure in size of {} inches'.format(self.fig_size))
+            vprint(f'create figure in size of {self.fig_size} inches')
 
         # read aux data
         # 1. temporal coherence value
@@ -159,11 +159,11 @@ class coherenceMatrixViewer():
 
         # prep metadata
         plotDict = {}
-        plotDict['fig_title'] = 'Y = {}, X = {}'.format(yx[0], yx[1])
+        plotDict['fig_title'] = f'Y = {yx[0]}, X = {yx[1]}'
         # display temporal coherence value of the pixel
         if self.tcoh_file:
             tcoh = self.tcoh[yx[0], yx[1]]
-            plotDict['fig_title'] += ', tcoh = {:.2f}'.format(tcoh)
+            plotDict['fig_title'] += f', tcoh = {tcoh:.2f}'
         plotDict['colormap'] = self.colormap
         plotDict['cmap_vlist'] = self.cmap_vlist
         plotDict['disp_legend'] = False
@@ -183,15 +183,15 @@ class coherenceMatrixViewer():
         def format_coord(x, y):
             row, col = int(y+0.5), int(x+0.5)
             date12 = sorted([self.date_list[row], self.date_list[col]])
-            date12 = ['{}-{}-{}'.format(i[0:4], i[4:6], i[6:8]) for i in date12]
-            return 'x={}, y={}, v={:.3f}'.format(date12[0], date12[1], coh_mat[row, col])
+            date12 = [f'{i[0:4]}-{i[4:6]}-{i[6:8]}' for i in date12]
+            return f'x={date12[0]}, y={date12[1]}, v={coh_mat[row, col]:.3f}'
         self.ax_mat.format_coord = format_coord
 
         # info
-        msg = 'pixel in yx = {}, '.format(tuple(yx))
-        msg += 'min/max spatial coherence: {:.2f} / {:.2f}, '.format(np.min(coh), np.max(coh))
+        msg = f'pixel in yx = {tuple(yx)}, '
+        msg += f'min/max spatial coherence: {np.min(coh):.2f} / {np.max(coh):.2f}, '
         if self.tcoh_file:
-            msg += 'temporal coherence: {:.2f}'.format(tcoh)
+            msg += f'temporal coherence: {tcoh:.2f}'
         vprint(msg)
 
         # update figure

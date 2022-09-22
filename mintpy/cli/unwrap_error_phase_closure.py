@@ -109,7 +109,7 @@ def cmd_line_parse(iargs=None):
 
     # default: --out-dataset option
     if not inps.datasetNameOut:
-        inps.datasetNameOut = '{}_phaseClosure'.format(inps.datasetNameIn)
+        inps.datasetNameOut = f'{inps.datasetNameIn}_phaseClosure'
 
     return inps
 

@@ -84,7 +84,7 @@ def cmd_line_parse(iargs=None):
 
     # check: existence of auxliary files
     if not os.path.isfile(inps.img_file):
-        raise SystemExit('ERROR: input image file not found: {}'.format(inps.img_file))
+        raise SystemExit(f'ERROR: input image file not found: {inps.img_file}')
     if not os.path.isfile(inps.tcoh_file):
         inps.tcoh_file = None
     if not os.path.isfile(inps.template_file):

@@ -33,7 +33,7 @@ def read_init_info(inps):
     elif inps.key == 'HDFEOS':
         obj = HDFEOS(inps.file[0])
     else:
-        raise ValueError('input file is {}, not timeseries.'.format(inps.key))
+        raise ValueError(f'input file is {inps.key}, not timeseries.')
     obj.open(print_msg=inps.print_msg)
     inps.seconds = atr.get('CENTER_LINE_UTC', 0)
 
@@ -209,10 +209,10 @@ def read_init_info(inps):
             elif 'mm' == inps.disp_unit.split('/')[0]:   inps.range2phase /= 1000.
             elif 'm'  == inps.disp_unit.split('/')[0]:   inps.range2phase /= 1.
             else:
-                raise ValueError('un-recognized display unit: {}'.format(inps.disp_unit))
+                raise ValueError(f'un-recognized display unit: {inps.disp_unit}')
 
     inps.cbar_label = 'Amplitude' if atr['DATA_TYPE'].startswith('complex') else 'Displacement'
-    inps.cbar_label += ' [{}]'.format(inps.disp_unit_img)
+    inps.cbar_label += f' [{inps.disp_unit_img}]'
 
     ## fit a suite of time func to the time series
     inps.model = time_func.inps2model(inps, date_list=inps.date_list, print_msg=inps.print_msg)
@@ -292,10 +292,10 @@ def read_timeseries_data(inps):
             (ry, rx) = subset_and_multilook_yx(inps.ref_yx, inps.pix_box, inps.multilook_num)
             ref_phase = data[:, ry, rx]
             data -= np.tile(ref_phase.reshape(-1, 1, 1), (1, data.shape[-2], data.shape[-1]))
-            vprint('reference to pixel: {}'.format(inps.ref_yx))
+            vprint(f'reference to pixel: {inps.ref_yx}')
 
         if inps.ref_idx is not None:
-            vprint('reference to date: {}'.format(inps.date_list[inps.ref_idx]))
+            vprint(f'reference to date: {inps.date_list[inps.ref_idx]}')
             data -= np.tile(data[inps.ref_idx, :, :], (inps.num_date, 1, 1))
 
         # Display Unit
@@ -338,8 +338,8 @@ def read_timeseries_data(inps):
         inps.cmap_lut, inps.vlim = pp.auto_adjust_colormap_lut_and_disp_limit(
             ts_data[0], num_multilook=10, print_msg=inps.print_msg,
         )[:2]
-    vprint('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
-    vprint('display range: {} {}'.format(inps.vlim, inps.disp_unit))
+    vprint(f'data    range: {inps.dlim} {inps.disp_unit}')
+    vprint(f'display range: {inps.vlim} {inps.disp_unit}')
 
     ## default ylim
     num_file = len(inps.file)
@@ -476,8 +476,8 @@ def get_model_param_str(model, ds_dict, disp_unit='cm'):
 
     # list of dataset names
     ds_names = [x for x in ds_dict.keys() if not x.endswith('Std')]
-    w_key = max([len(x) for x in ds_names])
-    w_val = max([len('{:.2f}'.format(x[0])) for x in ds_dict.values()])
+    w_key = max(len(x) for x in ds_names)
+    w_val = max(len(f'{x[0]:.2f}') for x in ds_dict.values())
 
     ds_strs = []
     for ds_name in ds_names:
@@ -558,10 +558,10 @@ def fit_time_func(model, date_list, ts_dis, disp_unit='cm', G_fit=None, conf_lev
 
 
 def get_ts_title(y, x, coord_obj):
-    title = 'Y/X = {}, {}'.format(y, x)
+    title = f'Y/X = {y}, {x}'
     try:
         lat, lon = coord_obj.radar2geo(y, x, print_msg=False)[0:2]
-        title += ', lat/lon = {:.4f}, {:.4f}'.format(lat, lon)
+        title += f', lat/lon = {lat:.4f}, {lon:.4f}'
     except:
         pass
     return title
@@ -570,7 +570,7 @@ def get_ts_title(y, x, coord_obj):
 def save_ts_data_and_plot(yx, d_ts, m_strs, inps):
     """Save TS data and plots into files."""
     y, x = yx
-    vprint('save info on pixel ({}, {})'.format(y, x))
+    vprint(f'save info on pixel ({y}, {x})')
 
     # output file name
     if inps.outfile:
@@ -580,18 +580,18 @@ def save_ts_data_and_plot(yx, d_ts, m_strs, inps):
             msg += f' input extension {fext} is ignored.'
             vprint(msg)
     else:
-        inps.outfile_base = 'y{}x{}'.format(y, x)
+        inps.outfile_base = f'y{y}x{x}'
 
     # TXT - point time-series and time func param
-    outName = '{}_ts.txt'.format(inps.outfile_base)
-    header = 'time-series file = {}\n'.format(inps.file[0])
-    header += '{}\n'.format(get_ts_title(y, x, inps.coord))
-    header += 'reference pixel: y={}, x={}\n'.format(inps.ref_yx[0], inps.ref_yx[1]) if inps.ref_yx else ''
-    header += 'reference date: {}\n'.format(inps.date_list[inps.ref_idx]) if inps.ref_idx else ''
+    outName = f'{inps.outfile_base}_ts.txt'
+    header = f'time-series file = {inps.file[0]}\n'
+    header += f'{get_ts_title(y, x, inps.coord)}\n'
+    header += f'reference pixel: y={inps.ref_yx[0]}, x={inps.ref_yx[1]}\n' if inps.ref_yx else ''
+    header += f'reference date: {inps.date_list[inps.ref_idx]}\n' if inps.ref_idx else ''
     header += 'estimated time function parameters:\n'
     for m_str in m_strs:
         header += f'    {m_str}\n'
-    header += 'unit: {}'.format(inps.disp_unit)
+    header += f'unit: {inps.disp_unit}'
 
     # prepare data
     data = np.hstack((np.array(inps.date_list).reshape(-1, 1), d_ts.reshape(-1, 1)))
@@ -601,12 +601,12 @@ def save_ts_data_and_plot(yx, d_ts, m_strs, inps):
     vprint('save displacement time-series to file: '+outName)
 
     # Figure - point time-series
-    outName = '{}_ts.pdf'.format(inps.outfile_base)
+    outName = f'{inps.outfile_base}_ts.pdf'
     inps.fig_pts.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
     vprint('save time-series plot to file: '+outName)
 
     # Figure - map
-    outName = '{}_{}.png'.format(inps.outfile_base, inps.date_list[inps.idx])
+    outName = f'{inps.outfile_base}_{inps.date_list[inps.idx]}.png'
     inps.fig_img.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
     vprint('save map plot to file: '+outName)
     return
@@ -748,7 +748,7 @@ class timeseriesViewer():
             if idx is not None and idx != self.idx:
                 # update title
                 disp_date = self.dates[idx].strftime(self.disp_date_format)
-                sub_title = 'N = {n}, Time = {t}'.format(n=idx, t=disp_date)
+                sub_title = f'N = {idx}, Time = {disp_date}'
                 self.ax_img.set_title(sub_title, fontsize=self.font_size)
 
                 # read data
@@ -774,7 +774,7 @@ class timeseriesViewer():
 
         # update title
         disp_date = self.dates[self.idx].strftime(self.disp_date_format)
-        sub_title = 'N = {n}, Time = {t}'.format(n=self.idx, t=disp_date)
+        sub_title = f'N = {self.idx}, Time = {disp_date}'
         self.ax_img.set_title(sub_title, fontsize=self.font_size)
 
         # read/update 2D image data
@@ -804,7 +804,7 @@ class timeseriesViewer():
         # Title and Axis Label
         self.disp_date_format = ptime.get_compact_isoformat(self.date_list[0])
         disp_date = self.dates[self.idx].strftime(self.disp_date_format)
-        self.fig_title = 'N = {}, Time = {}'.format(self.idx, disp_date)
+        self.fig_title = f'N = {self.idx}, Time = {disp_date}'
 
         # Initial Pixel of interest
         self.pts_yx = None
@@ -935,7 +935,7 @@ class timeseriesViewer():
         # Print to terminal
         vprint('\n---------------------------------------')
         vprint(title)
-        float_formatter = lambda x: [float('{:.2f}'.format(i)) for i in x]
+        float_formatter = lambda x: [float(f'{i:.2f}') for i in x]
         if self.num_date <= 1e3:
             vprint(float_formatter(ts_dis))
 

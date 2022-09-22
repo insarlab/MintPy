@@ -66,7 +66,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
     out_dir = os.path.dirname(os.path.abspath(out_file))
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
-        vprint('create directory: {}'.format(out_dir))
+        vprint(f'create directory: {out_dir}')
 
     # HDF5 File
     if fext in ['.h5', '.he5']:
@@ -95,11 +95,11 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
         # remove existing file
         if os.path.isfile(out_file):
             os.remove(out_file)
-            vprint('delete exsited file: {}'.format(out_file))
+            vprint(f'delete exsited file: {out_file}')
 
         # writing
-        print('create HDF5 file: {} with w mode'.format(out_file))
-        maxDigit = max([len(i) for i in dsNames])
+        print(f'create HDF5 file: {out_file} with w mode')
+        maxDigit = max(len(i) for i in dsNames)
         with h5py.File(out_file, 'w') as f:
             # 1. write input datasets
             for dsName in datasetDict.keys():
@@ -145,7 +145,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
                         f[key].attrs['UNIT'] = value
                         vprint(f'add /{key:<{maxDigit}} attribute: UNIT = {value}')
 
-        vprint('finished writing to {}'.format(out_file))
+        vprint(f'finished writing to {out_file}')
 
     # ISCE / ROI_PAC GAMMA / Image product
     else:
@@ -209,12 +209,12 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
         data_types = ['bool', 'int8', 'uint8', 'int16', 'float32', 'float64', 'complex32', 'complex64', 'complex128']
         if meta['DATA_TYPE'] not in data_types:
             msg = 'Un-supported file type "{}" with data type "{}"!'.format(fext, meta['DATA_TYPE'])
-            msg += '\nSupported data type list: {}'.format(data_types)
+            msg += f'\nSupported data type list: {data_types}'
             raise ValueError(msg)
 
         # write binary file
         write_binary(data_list, out_file, data_type=meta['DATA_TYPE'], interleave=meta['INTERLEAVE'])
-        vprint('write file: {}'.format(out_file))
+        vprint(f'write file: {out_file}')
 
         # write metadata file
         write_roipac_rsc(meta, out_file+'.rsc', print_msg=print_msg)
@@ -281,7 +281,7 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
     elif ref_file:
         with h5py.File(ref_file, 'r') as fr:
             meta = {key: value for key, value in fr.attrs.items()}
-        vprint('grab metadata from ref_file: {}'.format(ref_file))
+        vprint(f'grab metadata from ref_file: {ref_file}')
     else:
         raise ValueError('No metadata or ref_file found.')
 
@@ -290,7 +290,7 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
         if not ref_file or not os.path.isfile(ref_file):
             raise FileNotFoundError('No ds_name_dict or ref_file found!')
         else:
-            vprint('grab dataset structure from ref_file: {}'.format(ref_file))
+            vprint(f'grab dataset structure from ref_file: {ref_file}')
 
         ds_name_dict = {}
         fext = os.path.splitext(ref_file)[1]
@@ -327,14 +327,14 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
     fdir = os.path.dirname(os.path.abspath(fname))
     if not os.path.isdir(fdir):
         os.makedirs(fdir)
-        vprint('crerate directory: {}'.format(fdir))
+        vprint(f'crerate directory: {fdir}')
 
     # create file
     with h5py.File(fname, "w") as f:
-        vprint('create HDF5 file: {} with w mode'.format(fname))
+        vprint(f'create HDF5 file: {fname} with w mode')
 
         # initiate dataset
-        max_digit = max([len(i) for i in ds_name_dict.keys()])
+        max_digit = max(len(i) for i in ds_name_dict.keys())
         for key in ds_name_dict.keys():
             data_type  = ds_name_dict[key][0]
             data_shape = ds_name_dict[key][1]
@@ -379,7 +379,7 @@ def layout_hdf5(fname, ds_name_dict=None, metadata=None, ds_unit_dict=None, ref_
                     f[key].attrs['UNIT'] = value
                     vprint(f'add /{key:<{max_digit}} attribute: UNIT = {value}')
 
-    vprint('close  HDF5 file: {}'.format(fname))
+    vprint(f'close  HDF5 file: {fname}')
 
     return fname
 
@@ -425,8 +425,8 @@ def write_hdf5_block(fname, data, datasetName, block=None, mode='a', print_msg=T
     # write
     if print_msg:
         print('-'*50)
-        print('open  HDF5 file {} in {} mode'.format(fname, mode))
-        print("writing dataset /{:<25} block: {}".format(datasetName, block))
+        print(f'open  HDF5 file {fname} in {mode} mode')
+        print(f"writing dataset /{datasetName:<25} block: {block}")
     with h5py.File(fname, mode) as f:
         if len(block) == 8:
             f[datasetName][block[0]:block[1],
@@ -447,7 +447,7 @@ def write_hdf5_block(fname, data, datasetName, block=None, mode='a', print_msg=T
             f[datasetName][block[0]:block[1]] = data
 
     if print_msg:
-        print('close HDF5 file {}.'.format(fname))
+        print(f'close HDF5 file {fname}.')
 
     return fname
 
@@ -464,22 +464,22 @@ def remove_hdf5_dataset(fname, datasetNames, print_msg=True):
     if isinstance(datasetNames, str):
         datasetNames = list(datasetNames)
     if print_msg:
-        print('delete {} from file {}'.format(datasetNames, fname))
+        print(f'delete {datasetNames} from file {fname}')
     # 1. rename the file to a temporary file
-    temp_file = os.path.join(os.path.dirname(fname), 'tmp_{}'.format(os.path.basename(fname)))
-    print('move {} to {}'.format(fname, temp_file))
+    temp_file = os.path.join(os.path.dirname(fname), f'tmp_{os.path.basename(fname)}')
+    print(f'move {fname} to {temp_file}')
     shutil.move(fname, temp_file)
 
     # 2. write a new file with all data except for the one to be deleted
     if print_msg:
-        print('read   HDF5 file: {} with r mode'.format(temp_file))
-        print('create HDF5 file: {} with w mode'.format(fname))
+        print(f'read   HDF5 file: {temp_file} with r mode')
+        print(f'create HDF5 file: {fname} with w mode')
     fi = h5py.File(temp_file, 'r')
     fo = h5py.File(fname, 'w')
 
     # datasets
     compression = None
-    maxDigit = max([len(i) for i in list(fi.keys())])
+    maxDigit = max(len(i) for i in list(fi.keys()))
     for dsName in [i for i in fi.keys() if i not in datasetNames]:
         ds = fi[dsName]
         if print_msg:
@@ -493,8 +493,8 @@ def remove_hdf5_dataset(fname, datasetNames, print_msg=True):
     fi.close()
     fo.close()
     if print_msg:
-        print('finished writing to {}'.format(fname))
-        print('old file is now saved as: {}. Use rm command to delete it.'.format(temp_file))
+        print(f'finished writing to {fname}')
+        print(f'old file is now saved as: {temp_file}. Use rm command to delete it.')
     return fname
 
 
@@ -536,7 +536,7 @@ def write_roipac_rsc(metadata, out_file, update_mode=False, print_msg=False):
 
         # writing .rsc file
         if print_msg:
-            print('write file: {}'.format(out_file))
+            print(f'write file: {out_file}')
         maxDigit = max([len(key) for key in metadata.keys()]+[2])
         with open(out_file, 'w') as f:
             for key in sorted(metadata.keys()):
@@ -589,7 +589,7 @@ def write_gdal_vrt(meta, out_file):
         line_offset  = pixel_offset * width
         image_offset = pixel_offset * width * length
     else:
-        raise ValueError('un-recognized band interleave type: {}'.format(interleave))
+        raise ValueError(f'un-recognized band interleave type: {interleave}')
 
     # compose VRT file string
     ds_str = '<VRTDataset rasterXSize="{w}" rasterYSize="{l}">\n'.format(w=meta['WIDTH'], l=meta['LENGTH'])
@@ -705,7 +705,7 @@ def write_isce_file(data, out_file, file_type='isce_unw'):
         meta['INTERLEAVE'] = 'BIP'
 
     else:
-        raise ValueError('un-recognized ISCE file type: {}'.format(file_type))
+        raise ValueError(f'un-recognized ISCE file type: {file_type}')
 
     write_isce_xml(meta, out_file)
 

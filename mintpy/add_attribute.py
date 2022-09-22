@@ -65,8 +65,8 @@ def update_file_attribute(fname, atr_new):
                 else:
                     atr[key] = value
 
-            rsc_file = '{}.rsc'.format(fname)
-            print('writing >>> {}'.format(rsc_file))
+            rsc_file = f'{fname}.rsc'
+            print(f'writing >>> {rsc_file}')
             writefile.write_roipac_rsc(atr, out_file=rsc_file)
     return fname
 

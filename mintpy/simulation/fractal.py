@@ -25,7 +25,7 @@ except ImportError:
 
 # speedup pyfftw
 NUM_THREADS = min(os.cpu_count(), 4)
-print('using {} threads for pyfftw computation.'.format(NUM_THREADS))
+print(f'using {NUM_THREADS} threads for pyfftw computation.')
 pyfftw.config.NUM_THREADS = NUM_THREADS
 
 
@@ -187,9 +187,9 @@ def get_power_spectral_density(data, resolution=60., freq0=1e-3, display=False, 
         # axis format
         ax.set_xlabel('Wavenumber [cycle/km]')
         ax.set_ylabel('Power '+r'$[cm^2]$')
-        msg = r'$f_0=$'+'{:.3f} '.format(freq0*1e3)+r'$km^{-1}$'
-        msg += '\n'+r'$p_0={:.1f}\/cm^2$'.format(p0*1e4)
-        msg += '\n'+r'$\beta={:.2f}$'.format(beta)
+        msg = r'$f_0=$'+f'{freq0*1e3:.3f} '+r'$km^{-1}$'
+        msg += '\n'+fr'$p_0={p0*1e4:.1f}\/cm^2$'
+        msg += '\n'+fr'$\beta={beta:.2f}$'
         ax.text(0.6, 0.55, msg, transform=ax.transAxes, fontsize=12)
         fig.tight_layout()
 
@@ -259,7 +259,7 @@ def power_slope(freq, psd, freq0=1e-3):
 
     # interpolate psd at reference frequency
     if freq0 < freq[0] or freq0 > freq[-1]:
-        raise ValueError('input frequency of interest {} is out of range ({}, {})'.format(freq0, freq[0], freq[-1]))
+        raise ValueError(f'input frequency of interest {freq0} is out of range ({freq[0]}, {freq[-1]})')
     position = np.interp(np.log10(freq0), logf, range(len(logf)))
     logp0 = np.interp(position, range(len(logp)), logp)
     p0 = np.power(10, logp0)
