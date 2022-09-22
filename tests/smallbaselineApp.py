@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
-############################################################
-# Program is part of MintPy                                #
-# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
-# Author: Zhang Yunjun, Mar 2019                           #
-############################################################
-# Test example dataset for smallbaselineApp workflow
+# Author: Zhang Yunjun, Mar 2019
+"""Test example datasets for the small baseline time series analysis workflow."""
 
 
 import os

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Author: Zhang Yunjun, Jun 2022
+"""Test mintpy.objects.ionex module for the IONEX file reading and interpolation."""
+
 ############################################################
 # Program is part of MintPy                                #
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
@@ -21,18 +24,22 @@ def prep_test_data(prep_mode=True):
     """Prepare the test data."""
 
     os.makedirs(tec_dir, exist_ok=True)
-    tec_file = ionex.get_ionex_filename(date_str,
-                                        tec_dir=tec_dir,
-                                        sol_code=sol_code)
+    tec_file = ionex.get_ionex_filename(
+        date_str,
+        tec_dir=tec_dir,
+        sol_code=sol_code,
+    )
 
     if prep_mode:
 
         # download
         if not os.path.isfile(tec_file):
             print(f'download IONEX at {date_str} from {sol_code} to {tec_dir}')
-            tec_file = ionex.dload_ionex(date_str=date_str,
-                                         tec_dir=tec_dir,
-                                         sol_code=sol_code)
+            tec_file = ionex.dload_ionex(
+                date_str=date_str,
+                tec_dir=tec_dir,
+                sol_code=sol_code,
+            )
 
         # plot
         print('plotting IONEX file as animation')
@@ -56,9 +63,11 @@ def test_read_ionex():
     )
 
     # get IONEX file path
-    tec_file = ionex.get_ionex_filename(date_str,
-                                        tec_dir=tec_dir,
-                                        sol_code=sol_code)
+    tec_file = ionex.get_ionex_filename(
+        date_str,
+        tec_dir=tec_dir,
+        sol_code=sol_code,
+    )
 
     # read IONEX
     mins, lats, lons, tec_maps = ionex.read_ionex(tec_file)[:4]
@@ -78,15 +87,19 @@ def test_get_ionex_value():
     values = [60.8, 58.90687978, 64.96605174, 65.15525905]
 
     # get IONEX file path
-    tec_file = ionex.get_ionex_filename(date_str,
-                                        tec_dir=tec_dir,
-                                        sol_code=sol_code)
+    tec_file = ionex.get_ionex_filename(
+        date_str,
+        tec_dir=tec_dir,
+        sol_code=sol_code,
+    )
 
     # compare
     for method, rotate, value in zip(methods, rotates, values):
-        tec_val = ionex.get_ionex_value(tec_file, utc_sec, lat, lon,
-                                        interp_method=method,
-                                        rotate_tec_map=rotate)
+        tec_val = ionex.get_ionex_value(
+            tec_file, utc_sec, lat, lon,
+            interp_method=method,
+            rotate_tec_map=rotate,
+        )
         assert np.allclose(tec_val, value, atol=1e-05, rtol=1e-05)
 
 

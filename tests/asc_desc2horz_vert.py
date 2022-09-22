@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # Author: Zhang Yunjun, Feb 2022
+"""Test ascending/descending LOS decomposition into horizontal/vertical."""
 
 import os
 import sys
@@ -15,8 +16,8 @@ plt.rcParams.update({'font.size': 12})
 
 ################################################################################
 EXAMPLE = """example:
-  test_asc_desc2horz_vert.py
-  test_asc_desc2horz_vert.py --plot
+  $MINTPY_HOME/tests/asc_desc2horz_vert.py
+  $MINTPY_HOME/tests/asc_desc2horz_vert.py --plot
 """
 
 def cmd_line_parse(iargs=None):
