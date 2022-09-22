@@ -4,7 +4,7 @@
 # Author: Zhang Yunjun, Heresh Fattahi, 2013               #
 ############################################################
 # Recommend import:
-#   from mintpy import view
+#   from mintpy.view import prep_slice, plot_slice, viewer
 
 
 import os
@@ -19,9 +19,9 @@ import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from mintpy.objects import (
+    TIMESERIES_KEY_NAMES,
     giantIfgramStack,
     ifgramStack,
-    timeseriesKeyNames,
 )
 from mintpy.objects.gps import GPS
 from mintpy.utils import (
@@ -321,12 +321,15 @@ def update_data_with_plot_inps(data, metadata, inps):
 
 ##################################################################################################
 def prep_slice(cmd, auto_fig=False):
-    """Prepare data from command line as input, for easy call plot_slice() externally
+    """Prepare data from command line as input, for easy call plot_slice() externally.
+
     Parameters: cmd  - string, command to be run in terminal
     Returns:    data - 2D np.ndarray, data to be plotted
                 atr  - dict, metadata
                 inps - namespace, input argument for plot setup
     Example:
+        from mintpy.view import prep_slice, plot_slice
+
         subplot_kw = dict(projection=ccrs.PlateCarree())
         fig, ax = plt.subplots(figsize=[4, 3], subplot_kw=subplot_kw)
         W, N, E, S = (-91.670, -0.255, -91.370, -0.515)    # geo_box
@@ -336,8 +339,8 @@ def prep_slice(cmd, auto_fig=False):
         cmd += '--cbar-loc bottom --cbar-nbins 3 --cbar-ext both --cbar-size 5% '
         cmd += '--lalo-step 0.2 --lalo-loc 1 0 1 0 --scalebar 0.3 0.80 0.05 --notitle'
 
-        data, atr, inps = view.prep_slice(cmd)
-        ax, inps, im, cbar = view.plot_slice(ax, data, atr, inps)
+        data, atr, inps = prep_slice(cmd)
+        ax, inps, im, cbar = plot_slice(ax, data, atr, inps)
         plt.show()
     """
     # parse
@@ -426,14 +429,15 @@ def plot_slice(ax, data, metadata, inps):
                 inps : Namespace for input options
                 im   : matplotlib.image.AxesImage object
                 cbar : matplotlib.colorbar.Colorbar object
-    Example:    import matplotlib.pyplot as plt
-                import mintpy.utils.readfile as readfile
-                import mintpy.view as pv
-                data, atr = readfile.read('velocity.h5')
-                fig = plt.figure()
-                ax = fig.add_axes([0.1,0.1,0.8,0.8])
-                ax = pv.plot_slice(ax, data, atr)[0]
-                plt.show()
+    Example:
+        from matplotlib import pyplot as plt
+        from mintpy.utils import readfile
+        from mintpy.view import plot_slice
+
+        data, atr = readfile.read('velocity.h5')
+        fig, ax = plt.subplots()
+        ax = plot_slice(ax, data, atr)[0]
+        plt.show()
     """
     global vprint
     vprint = print if inps.print_msg else lambda *args, **kwargs: None
@@ -638,10 +642,11 @@ def plot_slice(ax, data, metadata, inps):
         # read lats/lons if exist
         geom_file = os.path.join(os.path.dirname(metadata['FILE_PATH']), 'inputs/geometryRadar.h5')
         if os.path.isfile(geom_file):
-            try:
+            geom_ds_list = readfile.get_dataset_list(geom_file)
+            if all(x in geom_ds_list for x in ['latitude', 'longitude']):
                 lats = readfile.read(geom_file, datasetName='latitude',  box=inps.pix_box, print_msg=False)[0]
                 lons = readfile.read(geom_file, datasetName='longitude', box=inps.pix_box, print_msg=False)[0]
-            except:
+            else:
                 msg = 'WARNING: no latitude / longitude found in file: {}, '.format(os.path.basename(geom_file))
                 msg += 'skip showing lat/lon in the status bar.'
                 vprint(msg)
@@ -864,7 +869,7 @@ def read_dataset_input(inps):
     inps.dsetNum = len(inps.dset)
 
     if inps.ref_date:
-        if inps.key not in timeseriesKeyNames:
+        if inps.key not in TIMESERIES_KEY_NAMES:
             inps.ref_date = None
 
         ref_date = search_dataset_input(
@@ -889,7 +894,7 @@ def read_dataset_input(inps):
         vprint('num of datasets in file {}: {}'.format(os.path.basename(inps.file), len(inps.sliceList)))
         vprint('datasets to exclude ({}):\n{}'.format(len(inps.exDsetList), inps.exDsetList))
         vprint('datasets to display ({}):\n{}'.format(len(inps.dset), inps.dset))
-    if inps.ref_date and inps.key in timeseriesKeyNames:
+    if inps.ref_date and inps.key in TIMESERIES_KEY_NAMES:
         vprint('input reference date: {}'.format(inps.ref_date))
 
     if inps.dsetNum == 0:
@@ -1175,7 +1180,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     if inps.disp_title:
         # get title
         subplot_title = None
-        if inps.key in timeseriesKeyNames or inps.dset[0].startswith('bperp'):
+        if inps.key in TIMESERIES_KEY_NAMES or inps.dset[0].startswith('bperp'):
             # support / for py2-mintpy
             date_str = inps.dset[i].replace('/','-').split('-')[1]
             try:

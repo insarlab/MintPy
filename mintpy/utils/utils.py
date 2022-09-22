@@ -13,7 +13,7 @@ import numpy as np
 from scipy.ndimage import map_coordinates
 
 from mintpy.objects import (
-    geometryDatasetNames,
+    GEOMETRY_DSET_NAMES,
     geometry,
     ifgramStack,
     timeseries,
@@ -79,7 +79,7 @@ def check_loaded_dataset(work_dir='./', print_msg=True, relpath=False):
 
     # 2. [required] geom_file: height
     geom_file = os.path.join(work_dir, 'inputs', f'geometry{coord_type.capitalize()}.h5')
-    dname = geometryDatasetNames[0]
+    dname = GEOMETRY_DSET_NAMES[0]
 
     if is_file_exist(geom_file, abspath=True):
         obj = geometry(geom_file)
@@ -100,9 +100,9 @@ def check_loaded_dataset(work_dir='./', print_msg=True, relpath=False):
 
             # get the proper lookup table dataset names
             if processor in ['isce', 'doris']:
-                dnames = geometryDatasetNames[1:3]
+                dnames = GEOMETRY_DSET_NAMES[1:3]
             elif processor in ['gamma', 'roipac']:
-                dnames = geometryDatasetNames[3:5]
+                dnames = GEOMETRY_DSET_NAMES[3:5]
             else:
                 msg = f'Unknown InSAR processor: {processor} to locate look up table!'
                 raise AttributeError(msg)
@@ -411,11 +411,13 @@ def transect_lines(z, atr, lines):
 def prepare_geo_los_geometry(geom_file, unit='rad'):
     """Prepare LOS geometry data/info in geo-coordinates.
 
-    Parameters: geom_file  - str, path of geometry file
-                unit       - str, rad or deg, output angle unit
-    Returns:    inc_angle  - 2D np.ndarray, incidence angle in radians / degrees
-                head_angle - 2D np.ndarray, heading   angle in radians / degrees
-                atr        - dict, metadata in geo-coordinate
+    Parameters: geom_file - str, path of geometry file
+                unit      - str, rad or deg, output angle unit
+    Returns:    inc_angle - 2D np.ndarray, incidence angle in radians / degrees
+                            measured from the vertical
+                az_angle  - 2D np.ndarray, azimuth   angle in radians / degrees
+                            measured from the north with anti-clockwise direction as positive
+                atr       - dict, metadata in geo-coordinate
     """
 
     print('prepare LOS geometry in geo-coordinates from file: {}'.format(geom_file))
@@ -426,12 +428,12 @@ def prepare_geo_los_geometry(geom_file, unit='rad'):
 
     if 'azimuthAngle' in readfile.get_dataset_list(geom_file):
         print('read azimuthAngle   from file: {}'.format(geom_file))
-        print('convert azimuth angle to heading angle')
         az_angle  = readfile.read(geom_file, datasetName='azimuthAngle')[0]
-        head_angle = azimuth2heading_angle(az_angle)
     else:
         print('use the HEADING attribute as the mean heading angle')
+        print('convert heading angle to azimuth angle')
         head_angle = np.ones(inc_angle.shape, dtype=np.float32) * float(atr['HEADING'])
+        az_angle = heading2azimuth_angle(head_angle)
 
     # geocode inc/az angle data if in radar-coord
     if 'Y_FIRST' not in atr.keys():
@@ -443,8 +445,8 @@ def prepare_geo_los_geometry(geom_file, unit='rad'):
 
         # resample data
         box = res_obj.src_box_list[0]
-        inc_angle  = res_obj.run_resample(src_data=inc_angle[box[1]:box[3], box[0]:box[2]])
-        head_angle = res_obj.run_resample(src_data=head_angle[box[1]:box[3], box[0]:box[2]])
+        inc_angle = res_obj.run_resample(src_data=inc_angle[box[1]:box[3], box[0]:box[2]])
+        az_angle = res_obj.run_resample(src_data=az_angle[box[1]:box[3], box[0]:box[2]])
 
         # update attribute
         atr = attr.update_attribute4radar2geo(atr, res_obj=res_obj)
@@ -477,11 +479,10 @@ def prepare_geo_los_geometry(geom_file, unit='rad'):
 
     # set invalid values to nan
     inc_angle[inc_angle == 0] = np.nan
-    head_angle[head_angle == 90] = np.nan
 
     # unit: degree to radian
     if unit.startswith('rad'):
         inc_angle *= np.pi / 180.
-        head_angle *= np.pi / 180.
+        az_angle *= np.pi / 180.
 
-    return inc_angle, head_angle, atr
+    return inc_angle, az_angle, atr

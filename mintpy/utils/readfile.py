@@ -19,13 +19,13 @@ import h5py
 import numpy as np
 
 from mintpy.objects import (
-    datasetUnitDict,
+    DSET_UNIT_DICT,
     geometry,
     giantIfgramStack,
     giantTimeseries,
     ifgramStack,
     timeseries,
-    HDFEOS
+    HDFEOS,
 )
 from mintpy.objects import sensor
 from mintpy.utils import ptime, utils0 as ut
@@ -508,14 +508,14 @@ def read_binary_file(fname, datasetName=None, box=None, xstep=1, ystep=1):
     # ISCE
     if processor in ['isce']:
         # convert default short name for data type from ISCE
-        dataTypeDict = {
+        data_type_dict = {
             'byte': 'int8',
             'float': 'float32',
             'double': 'float64',
             'cfloat': 'complex64',
         }
-        if data_type in dataTypeDict.keys():
-            data_type = dataTypeDict[data_type]
+        if data_type in data_type_dict.keys():
+            data_type = data_type_dict[data_type]
 
         k = atr['FILE_TYPE'].lower().replace('.', '')
         if k in ['unw', 'cor', 'ion']:
@@ -1139,15 +1139,15 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
             atr['FILE_TYPE'] = fext
 
         # DATA_TYPE for ISCE products
-        dataTypeDict = {
+        data_type_dict = {
             'byte': 'int8',
             'float': 'float32',
             'double': 'float64',
             'cfloat': 'complex64',
         }
         data_type = atr.get('DATA_TYPE', 'none').lower()
-        if data_type != 'none' and data_type in dataTypeDict.keys():
-            atr['DATA_TYPE'] = dataTypeDict[data_type]
+        if data_type != 'none' and data_type in data_type_dict.keys():
+            atr['DATA_TYPE'] = data_type_dict[data_type]
 
     # UNIT
     if datasetName:
@@ -1156,20 +1156,20 @@ def read_attribute(fname, datasetName=None, metafile_ext=None):
         datasetName = datasetName.replace('Std','')
     k = atr['FILE_TYPE'].replace('.', '')
     if k == 'ifgramStack':
-        if datasetName and datasetName in datasetUnitDict.keys():
-            atr['UNIT'] = datasetUnitDict[datasetName]
+        if datasetName and datasetName in DSET_UNIT_DICT.keys():
+            atr['UNIT'] = DSET_UNIT_DICT[datasetName]
         else:
             atr['UNIT'] = 'radian'
 
-    elif datasetName and datasetName in datasetUnitDict.keys():
-        atr['UNIT'] = datasetUnitDict[datasetName]
+    elif datasetName and datasetName in DSET_UNIT_DICT.keys():
+        atr['UNIT'] = DSET_UNIT_DICT[datasetName]
         # SLC stack
         if datasetName == 'timeseries' and atr.get('DATA_TYPE', 'float32').startswith('complex'):
             atr['UNIT'] = '1'
 
     elif 'UNIT' not in atr.keys():
-        if k in datasetUnitDict.keys():
-            atr['UNIT'] = datasetUnitDict[k]
+        if k in DSET_UNIT_DICT.keys():
+            atr['UNIT'] = DSET_UNIT_DICT[k]
         else:
             atr['UNIT'] = '1'
 

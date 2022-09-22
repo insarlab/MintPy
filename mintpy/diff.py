@@ -11,11 +11,11 @@ import time
 import numpy as np
 
 from mintpy.objects import (
+    IFGRAM_DSET_NAMES,
     cluster,
     timeseries,
     giantTimeseries,
     ifgramStack,
-    ifgramDatasetNames,
 )
 from mintpy.utils import readfile, writefile
 
@@ -165,7 +165,7 @@ def diff_file(file1, file2, out_file, force_diff=False, max_num_pixel=2e8):
         ds_names = list(set(obj1.datasetNames) & set(obj2.datasetNames))
         if len(ds_names) == 0:
             raise ValueError('no common dataset between two files!')
-        ds_name = [i for i in ifgramDatasetNames if i in ds_names][0]
+        ds_name = [i for i in IFGRAM_DSET_NAMES if i in ds_names][0]
 
         # read data
         print('reading {} from file {} ...'.format(ds_name, file1))

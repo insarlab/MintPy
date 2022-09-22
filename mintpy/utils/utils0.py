@@ -7,6 +7,8 @@
 # Contents
 #   InSAR
 #   File Operation
+#   Coordinate
+#   Orbit
 #   Geometry
 #   Image Processing
 #   User Interaction
@@ -27,6 +29,31 @@ K = 40.31                  # m^3/s^2, constant
 
 
 #################################### InSAR ##########################################
+def misregistration2coherence(mu):
+    """Calculate the resulting coherence due to mis-registration (coregistration error).
+
+    Reference:
+      Equation (30) in Just and Bamler (1994); Equation (4.4.27) in Hanssen (2001).
+
+    Parameters: mu  - float / np.ndarray, mis-registration in the unit of resolution cell
+                      NOTE: the unit is resolution cell, NOT pixel size/spacing.
+                      Applicable to both SAR range and azimuth directions.
+    Returns:    coh - float / np.ndarray, coherence.
+    """
+
+    # https://numpy.org/doc/stable/reference/generated/numpy.sinc.html
+    coh = np.sinc(mu)
+
+    # for coregistration errors >1, set coherence to zero
+    if isinstance(mu, np.ndarray):
+        coh[mu > 1] = 0
+    else:
+        if mu > 1:
+            coh = 0
+
+    return coh
+
+
 def range_distance(atr, dimension=2, print_msg=True):
     """Calculate slant range distance from input attribute dict
     Parameters: atr : dict, including the following ROI_PAC attributes:
@@ -188,16 +215,15 @@ def azimuth_ground_resolution(atr):
     if 'X_FIRST' in atr.keys():
         print('Input file is in geo coord, no azimuth resolution info.')
         return
-    try:
-        proc = atr['PROCESSOR']
-    except:
-        proc = 'isce'
+
+    proc = atr.get('PROCESSOR', 'isce')
     if proc in ['roipac', 'isce']:
         Re = float(atr['EARTH_RADIUS'])
         height = float(atr['HEIGHT'])
         az_step = float(atr['AZIMUTH_PIXEL_SIZE']) * Re / (Re + height)
     elif proc == 'gamma':
         az_step = float(atr['AZIMUTH_PIXEL_SIZE'])
+
     return az_step
 
 
@@ -270,7 +296,7 @@ def touch(fname_list, times=None):
 
 
 
-#################################### Geometry ##########################################
+################################## Coordinate ##########################################
 def utm_zone2epsg_code(utm_zone):
     """Convert UTM Zone string to EPSG code.
     Parameters: utm_zone - str, atr['UTM_ZONE']
@@ -316,53 +342,6 @@ def to_latlon(infile, x, y):
     return y, x
 
 
-def xyz_to_local_radius(xyz):
-    """Calculate satellite height and ellpsoid local radius from orbital state vector.
-
-    This is a simplified version of the following functions from ISCE-2:
-    + isce.isceobj.Planet.xyz_to_llh()
-    + isce.isceobj.Ellipsoid.localRadius()
-
-    Parameters: xyz    - tuple of 3 float, orbital state vector
-    Reference:  height - float, satellite altitude in m
-                radius - float, Earth radius in m
-    """
-
-    # paramters from isce.isceobj.Planet.AstronomicalHandbook
-    a = 6378137.000       # WGS84 semimajor
-    e2 = 0.0066943799901  # WGS84 eccentricity squared
-
-    # xyz --> llh
-    a2 = a**2
-    e4 = e2**2
-    r_llh =  [0]*3
-    d_llh = [[0]*3 for i in range(len(xyz))]
-    xy2 = xyz[0]**2 + xyz[1]**2
-    p = (xy2) / a2
-    q = (1. - e2) * xyz[2]**2 / a2
-    r = (p + q - e4) / 6.
-    s = e4 * p * q / (4. * r**3)
-    t = (1. + s + math.sqrt(s * (2. + s))) **(1. / 3.)
-    u = r * (1. + t + 1./t)
-    v = math.sqrt(u**2 + e4 * q)
-    w = e2 * (u + v - q) / (2. * v)
-    k = math.sqrt(u + v + w**2) - w
-    D = k * math.sqrt(xy2) / (k + e2)
-    r_llh[0] = math.atan2(xyz[2], D)
-    r_llh[1] = math.atan2(xyz[1], xyz[0])
-    r_llh[2] = (k + e2 - 1.) * math.sqrt(D**2 + xyz[2]**2) / k
-    d_llh[0] = math.degrees(r_llh[0])
-    d_llh[1] = math.degrees(r_llh[1])
-    d_llh[2] = r_llh[2]
-    height = r_llh[2]
-
-    # calculate local radius
-    b = a * (1.0 - e2)**0.5
-    latg = math.atan( math.tan(math.radians(d_llh[0])) * a**2 / b**2 )
-    arg = (math.cos(latg)**2 / a**2) + (math.sin(latg)**2 / b**2)
-    radius = 1.0 / math.sqrt(arg)
-
-    return height, radius
 
 
 def snwe_to_wkt_polygon(snwe):
@@ -478,63 +457,6 @@ def get_lat_lon_rdc(meta):
     return lat, lon
 
 
-def azimuth2heading_angle(az_angle):
-    """Convert azimuth angle from ISCE los.rdr band2 into satellite orbit heading angle
-
-    ISCE-2 los.* file band2 is azimuth angle of LOS vector from ground target to the satellite
-        measured from the north in anti-clockwise as positive
-
-    Below are typical values in deg for satellites with near-polar orbit:
-        ascending  orbit: heading angle of -12  and azimuth angle of 102
-        descending orbit: heading angle of -168 and azimuth angle of -102
-    """
-    head_angle = 90 - az_angle
-    head_angle -= np.round(head_angle / 360.) * 360.
-    return head_angle
-
-
-def heading2azimuth_angle(head_angle):
-    """Convert satellite orbit heading angle into azimuth angle as defined in ISCE-2."""
-    az_angle = 90 - head_angle
-    az_angle -= np.round(az_angle / 360.) * 360.
-    return az_angle
-
-
-def enu2los(e, n, u, inc_angle, head_angle=None, az_angle=None):
-    """Project east/north/up motion into the line-of-sight direction defined by incidence/azimuth angle.
-    Parameters: e          - np.ndarray or float, displacement in east-west direction, east as positive
-                n          - np.ndarray or float, displacement in north-south direction, north as positive
-                u          - np.ndarray or float, displacement in vertical direction, up as positive
-                inc_angle  - np.ndarray or float, local incidence angle from vertical, in the unit of degrees
-                head_angle - np.ndarray or float, azimuth angle of the SAR platform along track direction
-                             measured from the north with clockwise direction as positive, in the unit of degrees
-                az_angle   - np.ndarray or float, azimuth angle of the LOS vector from the ground to the SAR platform
-                             measured from the north with anti-clockwise direction as positive, in the unit of degrees
-                             head_angle = 90 - az_angle
-    Returns:    v_los      - np.ndarray or float, displacement in line-of-sight direction, moving toward satellite as positive
-
-    Typical values in deg for satellites with near-polar orbit:
-        For AlosA: inc_angle = 34, head_angle = -12.9,  az_angle = 102.9
-        For AlosD: inc_angle = 34, head_angle = -167.2, az_angle = -102.8
-        For  SenD: inc_angle = 34, head_angle = -168.0, az_angle = -102.0
-    """
-    ## if input angle is azimuth angle
-    #if np.abs(np.abs(head_angle) - 90) < 30:
-    #    head_angle = azimuth2heading_angle(head_angle)
-    if az_angle is None:
-        # head_angle -> az_angle
-        if head_angle is not None:
-            az_angle = heading2azimuth_angle(head_angle)
-        else:
-            raise ValueError('az_angle can not be None!')
-
-    v_los = (  e * np.sin(np.deg2rad(inc_angle)) * np.sin(np.deg2rad(az_angle)) * -1
-             + n * np.sin(np.deg2rad(inc_angle)) * np.cos(np.deg2rad(az_angle))
-             + u * np.cos(np.deg2rad(inc_angle)))
-
-    return v_los
-
-
 def four_corners(atr):
     """Get the 4 corners coordinates from metadata dict in geo-coordinates.
     Parameters: atr - dict
@@ -553,67 +475,231 @@ def four_corners(atr):
     return south, north, west, east
 
 
-def get_circular_mask(x, y, radius, shape):
-    """Get mask of pixels within circle defined by (x, y, r)"""
-    length, width = shape
-    yy, xx = np.ogrid[-y:length-y,
-                      -x:width-x]
-    cmask = (xx**2 + yy**2 <= radius**2)
-    return cmask
 
+###################################### Orbit ###########################################
+def xyz_to_local_radius(xyz):
+    """Calculate satellite height and ellpsoid local radius from orbital state vector.
 
-def circle_index(atr, circle_par):
-    """Return Index of Elements within a Circle centered at input pixel
-    Parameters: atr : dictionary
-                    containging the following attributes:
-                    WIDT
-                    LENGTH
-                circle_par : string in the format of 'y,x,radius'
-                    i.e. '200,300,20'          for radar coord
-                         '31.0214,130.5699,20' for geo   coord
-    Returns:    idx : 2D np.array in bool type
-                    mask matrix for those pixel falling into the circle
-                    defined by circle_par
-    Examples:   idx_mat = ut.circle_index(atr, '200,300,20')
-                idx_mat = ut.circle_index(atr, '31.0214,130.5699,20')
+    This is a simplified version of the following functions from ISCE-2:
+    + isce.isceobj.Planet.xyz_to_llh()
+    + isce.isceobj.Ellipsoid.localRadius()
+
+    Parameters: xyz    - tuple of 3 float, orbital state vector
+    Reference:  height - float, satellite altitude in m
+                radius - float, Earth radius in m
     """
 
-    width = int(atr['WIDTH'])
-    length = int(atr['LENGTH'])
+    # paramters from isce.isceobj.Planet.AstronomicalHandbook
+    a = 6378137.000       # WGS84 semimajor
+    e2 = 0.0066943799901  # WGS84 eccentricity squared
 
-    if isinstance(circle_par, tuple):
-        cir_par = circle_par
-    elif isinstance(circle_par, list):
-        cir_par = circle_par
+    # xyz --> llh
+    a2 = a**2
+    e4 = e2**2
+    r_llh =  [0]*3
+    d_llh = [[0]*3 for i in range(len(xyz))]
+    xy2 = xyz[0]**2 + xyz[1]**2
+    p = (xy2) / a2
+    q = (1. - e2) * xyz[2]**2 / a2
+    r = (p + q - e4) / 6.
+    s = e4 * p * q / (4. * r**3)
+    t = (1. + s + math.sqrt(s * (2. + s))) **(1. / 3.)
+    u = r * (1. + t + 1./t)
+    v = math.sqrt(u**2 + e4 * q)
+    w = e2 * (u + v - q) / (2. * v)
+    k = math.sqrt(u + v + w**2) - w
+    D = k * math.sqrt(xy2) / (k + e2)
+    r_llh[0] = math.atan2(xyz[2], D)
+    r_llh[1] = math.atan2(xyz[1], xyz[0])
+    r_llh[2] = (k + e2 - 1.) * math.sqrt(D**2 + xyz[2]**2) / k
+    d_llh[0] = math.degrees(r_llh[0])
+    d_llh[1] = math.degrees(r_llh[1])
+    d_llh[2] = r_llh[2]
+    height = r_llh[2]
+
+    # calculate local radius
+    b = a * (1.0 - e2)**0.5
+    latg = math.atan( math.tan(math.radians(d_llh[0])) * a**2 / b**2 )
+    arg = (math.cos(latg)**2 / a**2) + (math.sin(latg)**2 / b**2)
+    radius = 1.0 / math.sqrt(arg)
+
+    return height, radius
+
+
+
+#################################### Geometry ##########################################
+# Definition of angles:
+# (los_)inc_angle - the incidence angle of the LOS vector (from the ground to the SAR platform)
+#                   measured from vertical. Used in isce2.
+# (los_)az_angle  - the azimuth   angle of the LOS vecotr (from the ground to the SAR platform)
+#                   measured from the north, with anti-clockwise as positive. Used in isce2.
+# orb_az_angle    - the azimuth   angle of the SAR platform's orbit (along-track direction)
+#                   measured from the north, with anti-clockwise as positive
+# head_angle      - the azimuth   angle of the SAR platform's orbit (along-track direction)
+#                   measured from the north, with      clockwise as positive. Used in roipac.
+#
+# Typical values in deg for satellites with near-polar orbit:
+#     AlosA: los_inc_angle = 34, los_az_angle =  102, orb_az_angle =  12, head_angle =  -12
+#     AlosD: los_inc_angle = 34, los_az_angle = -102, orb_az_angle = 168, head_angle = -168
+#     SenA : los_inc_angle = 40, los_az_angle =  102, orb_az_angle =  12, head_angle =  -12
+#     SenD : los_inc_angle = 40, los_az_angle = -102, orb_az_angle = 168, head_angle = -168
+#     NiA  : los_inc_angle = 42, los_az_angle =  -78, orb_az_angle =  12, head_angle =  -12
+#     NiD  : los_inc_angle = 42, los_az_angle =   78, orb_az_angle = 168, head_angle = -168
+
+def los2orbit_azimuth_angle(los_az_angle, look_direction='right'):
+    """Convert the azimuth angle of the LOS vector to the one of the orbit flight vector.
+    Parameters: los_az_angle - np.ndarray or float, azimuth angle of the LOS vector from the ground to the SAR platform
+                               measured from the north with anti-clockwise direction as positive, in the unit of degrees
+    Returns:    orb_az_angle - np.ndarray or float, azimuth angle of the SAR platform along track/orbit direction
+                               measured from the north with anti-clockwise direction as positive, in the unit of degrees
+    """
+    if look_direction == 'right':
+        orb_az_angle = los_az_angle - 90
     else:
-        cir_par = circle_par.replace(',', ' ').split()
-    cir_par = [str(i) for i in cir_par]
+        orb_az_angle = los_az_angle + 90
+    orb_az_angle -= np.round(orb_az_angle / 360.) * 360.
+    return orb_az_angle
 
-    try:
-        c_y = int(cir_par[0])
-        c_x = int(cir_par[1])
-        radius = int(float(cir_par[2]))
-        print('Input circle index in y/x coord: %d, %d, %d' % (c_y, c_x, radius))
-    except:
-        try:
-            c_lat = float(cir_par[0])
-            c_lon = float(cir_par[1])
-            radius = int(float(cir_par[2]))
-            c_y = np.rint((c_lat-float(atr['Y_FIRST'])) / float(atr['Y_STEP']))
-            c_x = np.rint((c_lon-float(atr['X_FIRST'])) / float(atr['X_STEP']))
-            print(('Input circle index in lat/lon coord: '
-                   '{:.4f}, {:.4f}, {}'.format(c_lat, c_lon, radius)))
-        except:
-            print('\nERROR: Unrecognized circle index format: '+circle_par)
-            print('Supported format:')
-            print('--circle 200,300,20            for radar coord input')
-            print('--circle 31.0214,130.5699,20   for geo   coord input\n')
-            return 0
 
-    y, x = np.ogrid[-c_y:length-c_y, -c_x:width-c_x]
-    idx = x**2 + y**2 <= radius**2
+def azimuth2heading_angle(az_angle, look_direction='right'):
+    """Convert azimuth angle from ISCE los.rdr band2 into satellite orbit heading angle
 
-    return idx
+    ISCE-2 los.* file band2 is azimuth angle of LOS vector from ground target to the satellite
+        measured from the north in anti-clockwise as positive
+
+    Below are typical values in deg for satellites with near-polar orbit:
+        ascending  orbit: heading angle of -12  and azimuth angle of 102
+        descending orbit: heading angle of -168 and azimuth angle of -102
+    """
+    if look_direction == 'right':
+        head_angle = (az_angle - 90) * -1
+    else:
+        head_angle = (az_angle + 90) * -1
+    head_angle -= np.round(head_angle / 360.) * 360.
+    return head_angle
+
+
+def heading2azimuth_angle(head_angle, look_direction='right'):
+    """Convert satellite orbit heading angle into azimuth angle as defined in ISCE-2."""
+    if look_direction == 'right':
+        az_angle = (head_angle - 90) * -1
+    else:
+        az_angle = (head_angle + 90) * -1
+    az_angle -= np.round(az_angle / 360.) * 360.
+    return az_angle
+
+
+def enu2los(v_e, v_n, v_u, inc_angle, head_angle=None, az_angle=None):
+    """Project east/north/up motion into the line-of-sight (LOS) direction defined by incidence/azimuth angle.
+    Parameters: v_e        - np.ndarray or float, displacement in east-west   direction, east  as positive
+                v_n        - np.ndarray or float, displacement in north-south direction, north as positive
+                v_u        - np.ndarray or float, displacement in vertical    direction, up    as positive
+                inc_angle  - np.ndarray or float, incidence angle from vertical, in the unit of degrees
+                head_angle - np.ndarray or float, azimuth angle of the SAR platform along track direction
+                             measured from the north with clockwise direction as positive, in the unit of degrees
+                az_angle   - np.ndarray or float, azimuth angle of the LOS vector from the ground to the SAR platform
+                             measured from the north with anti-clockwise direction as positive, in the unit of degrees
+                             head_angle = 90 - az_angle
+    Returns:    v_los      - np.ndarray or float, displacement in LOS direction, motion toward satellite as positive
+    """
+    # unite (los_)head/az_angle into (los_)az_angle
+    if az_angle is None:
+        if head_angle is not None:
+            az_angle = heading2azimuth_angle(head_angle)
+        else:
+            raise ValueError(f'invalid az_angle: {az_angle}!')
+
+    # project ENU onto LOS
+    v_los = (  v_e * np.sin(np.deg2rad(inc_angle)) * np.sin(np.deg2rad(az_angle)) * -1
+             + v_n * np.sin(np.deg2rad(inc_angle)) * np.cos(np.deg2rad(az_angle))
+             + v_u * np.cos(np.deg2rad(inc_angle)))
+
+    return v_los
+
+
+def en2az(v_e, v_n, orb_az_angle):
+    """Project east/north motion into the radar azimuth direction.
+    Parameters: v_e          - np.ndarray or float, displacement in east-west   direction, east  as positive
+                v_n          - np.ndarray or float, displacement in north-south direction, north as positive
+                orb_az_angle - np.ndarray or float, azimuth angle of the SAR platform along track/orbit direction
+                               measured from the north with anti-clockwise direction as positive, in the unit of degrees
+                               orb_az_angle = los_az_angle + 90 for right-looking radar.
+    Returns:    v_az         - np.ndarray or float, displacement in azimuth direction,
+                               motion along flight direction as positive
+    """
+    # project EN onto azimuth
+    v_az = (  v_e * np.sin(np.deg2rad(orb_az_angle)) * -1
+            + v_n * np.cos(np.deg2rad(orb_az_angle)))
+    return v_az
+
+
+def get_unit_vector4component_of_interest(los_inc_angle, los_az_angle, comp='enu2los', horz_az_angle=None):
+    """Get the unit vector for the component of interest.
+    Parameters: los_inc_angle - np.ndarray or float, incidence angle from vertical, in the unit of degrees
+                los_az_angle  - np.ndarray or float, azimuth angle of the LOS vector from the ground to the SAR platform
+                                measured from the north with anti-clockwise direction as positive, in the unit of degrees
+                comp          - str, component of interest, choose among the following values:
+                                enu2los, en2los, hz2los, u2los, up2los, orb(it)_az, vert, horz
+                horz_az_angle - np.ndarray or float, azimuth angle of the horizontal direction of interest
+                                measured from the north with anti-clockwise direction as positive, in the unit of degrees
+    Returns:    unit_vec      - list(np.ndarray/float), unit vector of the ENU component for the component of interest
+    """
+    # check input arguments
+    comps = [
+        'enu2los', 'en2los', 'hz2los', 'horz2los', 'u2los', 'vert2los',   # radar LOS / cross-track
+        'en2az', 'hz2az', 'orb_az', 'orbit_az',                           # radar azimuth / along-track
+        'vert', 'vertical', 'horz', 'horizontal',                         # vertical / arbitraty horizontal
+    ]
+
+    if comp not in comps:
+        raise ValueError(f'un-recognized comp input: {comp}.\nchoose from: {comps}')
+
+    if comp == 'horz' and horz_az_angle is None:
+        raise ValueError('comp=horz requires horz_az_angle input!')
+
+    # initiate output
+    unit_vec = None
+
+    if comp in ['enu2los']:
+        unit_vec = [
+            np.sin(np.deg2rad(los_inc_angle)) * np.sin(np.deg2rad(los_az_angle)) * -1,
+            np.sin(np.deg2rad(los_inc_angle)) * np.cos(np.deg2rad(los_az_angle)),
+            np.cos(np.deg2rad(los_inc_angle)),
+        ]
+
+    elif comp in ['en2los', 'hz2los', 'horz2los']:
+        unit_vec = [
+            np.sin(np.deg2rad(los_inc_angle)) * np.sin(np.deg2rad(los_az_angle)) * -1,
+            np.sin(np.deg2rad(los_inc_angle)) * np.cos(np.deg2rad(los_az_angle)),
+            np.zeros_like(los_inc_angle),
+        ]
+
+    elif comp in ['u2los', 'vert2los']:
+        unit_vec = [
+            np.zeros_like(los_inc_angle),
+            np.zeros_like(los_inc_angle),
+            np.cos(np.deg2rad(los_inc_angle)),
+        ]
+
+    elif comp in ['en2az', 'hz2az', 'orb_az', 'orbit_az']:
+        orb_az_angle = los2orbit_azimuth_angle(los_az_angle)
+        unit_vec = [
+            np.sin(np.deg2rad(orb_az_angle)) * -1,
+            np.cos(np.deg2rad(orb_az_angle)),
+            np.zeros_like(orb_az_angle),
+        ]
+
+    elif comp in ['vert', 'vertical']:
+        unit_vec = [0, 0, 1]
+
+    elif comp in ['horz', 'horizontal']:
+        unit_vec = [
+            np.sin(np.deg2rad(horz_az_angle)) * -1,
+            np.cos(np.deg2rad(horz_az_angle)),
+            np.zeros_like(horz_az_angle),
+        ]
+
+    return unit_vec
 
 
 
@@ -741,6 +827,69 @@ def polygon2mask(polygon, shape):
     mask = np.array(img, dtype=np.bool_)
 
     return mask
+
+
+def get_circular_mask(x, y, radius, shape):
+    """Get mask of pixels within circle defined by (x, y, r)"""
+    length, width = shape
+    yy, xx = np.ogrid[-y:length-y,
+                      -x:width-x]
+    cmask = (xx**2 + yy**2 <= radius**2)
+    return cmask
+
+
+def circle_index(atr, circle_par):
+    """Return Index of Elements within a Circle centered at input pixel
+    Parameters: atr : dictionary
+                    containging the following attributes:
+                    WIDT
+                    LENGTH
+                circle_par : string in the format of 'y,x,radius'
+                    i.e. '200,300,20'          for radar coord
+                         '31.0214,130.5699,20' for geo   coord
+    Returns:    idx : 2D np.array in bool type
+                    mask matrix for those pixel falling into the circle
+                    defined by circle_par
+    Examples:   idx_mat = ut.circle_index(atr, '200,300,20')
+                idx_mat = ut.circle_index(atr, '31.0214,130.5699,20')
+    """
+
+    width = int(atr['WIDTH'])
+    length = int(atr['LENGTH'])
+
+    if isinstance(circle_par, tuple):
+        cir_par = circle_par
+    elif isinstance(circle_par, list):
+        cir_par = circle_par
+    else:
+        cir_par = circle_par.replace(',', ' ').split()
+    cir_par = [str(i) for i in cir_par]
+
+    try:
+        c_y = int(cir_par[0])
+        c_x = int(cir_par[1])
+        radius = int(float(cir_par[2]))
+        print('Input circle index in y/x coord: %d, %d, %d' % (c_y, c_x, radius))
+    except:
+        try:
+            c_lat = float(cir_par[0])
+            c_lon = float(cir_par[1])
+            radius = int(float(cir_par[2]))
+            c_y = np.rint((c_lat-float(atr['Y_FIRST'])) / float(atr['Y_STEP']))
+            c_x = np.rint((c_lon-float(atr['X_FIRST'])) / float(atr['X_STEP']))
+            print(('Input circle index in lat/lon coord: '
+                   '{:.4f}, {:.4f}, {}'.format(c_lat, c_lon, radius)))
+        except:
+            print('\nERROR: Unrecognized circle index format: '+circle_par)
+            print('Supported format:')
+            print('--circle 200,300,20            for radar coord input')
+            print('--circle 31.0214,130.5699,20   for geo   coord input\n')
+            return 0
+
+    y, x = np.ogrid[-c_y:length-c_y, -c_x:width-c_x]
+    idx = x**2 + y**2 <= radius**2
+
+    return idx
 
 
 

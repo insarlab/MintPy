@@ -13,9 +13,9 @@ import warnings
 
 from mintpy.defaults import auto_path
 from mintpy.objects import (
-    geometryDatasetNames,
+    GEOMETRY_DSET_NAMES,
+    IFGRAM_DSET_NAMES,
     geometry,
-    ifgramDatasetNames,
     ifgramStack,
     sensor,
 )
@@ -336,7 +336,7 @@ def read_inps_dict2ifgram_stack_dict_object(iDict, ds_name2template_key):
     print('input data files:')
     max_digit = max([len(i) for i in list(ds_name2template_key.keys())])
     dsPathDict = {}
-    for dsName in [i for i in ifgramDatasetNames if i in ds_name2template_key.keys()]:
+    for dsName in [i for i in IFGRAM_DSET_NAMES if i in ds_name2template_key.keys()]:
         key = ds_name2template_key[dsName]
         if key in iDict.keys():
             files = sorted(glob.glob(str(iDict[key])))
@@ -471,7 +471,7 @@ def read_inps_dict2geometry_dict_object(iDict, dset_name2template_key):
     print('input data files:')
     max_digit = max([len(i) for i in list(dset_name2template_key.keys())])
     dsPathDict = {}
-    for dsName in [i for i in geometryDatasetNames if i in dset_name2template_key.keys()]:
+    for dsName in [i for i in GEOMETRY_DSET_NAMES if i in dset_name2template_key.keys()]:
         key = dset_name2template_key[dsName]
         if key in iDict.keys():
             files = sorted(glob.glob(str(iDict[key])))
@@ -489,7 +489,7 @@ def read_inps_dict2geometry_dict_object(iDict, dset_name2template_key):
                     print(f'{dsName:<{max_digit}}: {files[0]}')
 
     # Check required dataset
-    dsName0 = geometryDatasetNames[0]
+    dsName0 = GEOMETRY_DSET_NAMES[0]
     if dsName0 not in dsPathDict.keys():
         print('WARNING: No reqired {} data files found!'.format(dsName0))
 

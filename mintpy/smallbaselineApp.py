@@ -925,7 +925,7 @@ class TimeSeriesAnalysis:
         opt4ts = ['--noaxis', '-u', 'cm', '--wrap', '--wrap-range', '-5', '5']
         iargs_list0 = [
             # key files
-            ['velocity.h5',          '--dem', geom_file, '--mask', mask_file, '-u', 'cm'],
+            ['velocity.h5',          '--dem', geom_file, '--mask', mask_file],
             ['temporalCoherence.h5', '-c', 'gray', '-v', '0', '1'],
             ['maskTempCoh.h5',       '-c', 'gray', '-v', '0', '1'],
 

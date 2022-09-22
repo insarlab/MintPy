@@ -676,7 +676,8 @@ class timeseriesViewer():
                 ds_shape=self.ts_data[0].shape[-2:],
                 disp_cbar=True,
                 disp_slider=True,
-                print_msg=self.print_msg)
+                print_msg=False)
+        vprint(f'create figure for map in size of [{self.figsize_img[0]:.1f}, {self.figsize_img[1]:.1f}]')
         subplot_kw = dict(projection=self.map_proj_obj) if self.map_proj_obj is not None else {}
         self.fig_img, self.ax_img = plt.subplots(figsize=self.figsize_img, subplot_kw=subplot_kw)
 
@@ -690,6 +691,7 @@ class timeseriesViewer():
         self.tslider.on_changed(self.update_time_slider)
 
         # Figure 2 - Time Series Displacement - Point
+        vprint(f'create figure for point in size of [{self.figsize_pts[0]:.1f}, {self.figsize_pts[1]:.1f}]')
         self.fig_pts, self.ax_pts = plt.subplots(num=self.figname_pts, figsize=self.figsize_pts)
         if self.yx:
             d_ts, m_strs = self.plot_point_timeseries(self.yx)
@@ -814,7 +816,7 @@ class timeseriesViewer():
 
         # call view.py to plot
         self.img, self.cbar_img = view.plot_slice(self.ax_img, img_data, self.atr, self)[2:4]
-        self.fig_img.canvas.set_window_title(self.figname_img)
+        self.fig_img.canvas.manager.set_window_title(self.figname_img)
         self.fig_img.tight_layout(rect=(0,0,1,0.97))
 
         return self.img, self.cbar_img

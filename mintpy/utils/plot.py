@@ -21,7 +21,7 @@ from scipy import stats
 
 from mintpy.objects.coord import coordinate
 from mintpy.objects.colors import ColormapExt
-from mintpy.objects import timeseriesKeyNames, timeseriesDatasetNames
+from mintpy.objects import TIMESERIES_KEY_NAMES, TIMESERIES_DSET_NAMES
 from mintpy.utils.map import draw_lalo_label, draw_scalebar
 from mintpy.utils import (
     ptime,
@@ -166,7 +166,7 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
             if fbase.lower().startswith('ion'):
                 fig_title += '_ion'
 
-    elif k in timeseriesKeyNames and len(datasetNames) == 1:
+    elif k in TIMESERIES_KEY_NAMES and len(datasetNames) == 1:
         if 'ref_date' in inps_dict.keys():
             ref_date = inps_dict['ref_date']
         elif 'REF_DATE' in atr.keys():
@@ -1693,7 +1693,7 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
             vprint('Can not open mask file:', mask_file)
 
     elif k in ['HDFEOS']:
-        if datasetName.split('-')[0] in timeseriesDatasetNames:
+        if datasetName.split('-')[0] in TIMESERIES_DSET_NAMES:
             mask_file = fname
             mask = readfile.read(fname, datasetName='mask', print_msg=print_msg)[0]
             vprint('read {} contained mask dataset.'.format(k))

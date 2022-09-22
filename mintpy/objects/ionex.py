@@ -17,12 +17,8 @@ import datetime as dt
 
 import numpy as np
 from scipy import interpolate
-from matplotlib import pyplot as plt
-from matplotlib.animation import FuncAnimation
-from cartopy import crs as ccrs
 
 from mintpy.utils import ptime
-from mintpy.utils.map import draw_lalo_label, round_to_1
 
 
 IGS_SOLUTION_NAMES = {
@@ -288,7 +284,7 @@ def read_ionex(tec_file):
     # link: https://github.com/daniestevez/jupyter_notebooks/blob/master/IONEX.ipynb
     def parse_map(tec_map, key='TEC', exponent=-1):
         tec_map = re.split(f'.*END OF {key} MAP', tec_map)[0]
-        tec_map = [np.fromstring(l, sep=' ') for l in re.split('.*LAT/LON1/LON2/DLON/H\\n', tec_map)[1:]]
+        tec_map = [np.fromstring(x, sep=' ') for x in re.split('.*LAT/LON1/LON2/DLON/H\\n', tec_map)[1:]]
         return np.stack(tec_map) * 10**exponent
 
     # read IONEX file
@@ -335,6 +331,11 @@ def plot_ionex(tec_file, save_fig=False):
                 save_fig - bool, save the animation to file
     Returns:    out_fig  - str, path to the output animation file
     """
+    from cartopy import crs as ccrs
+    from matplotlib import pyplot as plt
+    from matplotlib.animation import FuncAnimation
+
+    from mintpy.utils.map import draw_lalo_label, round_to_1
 
     # read TEC file
     sol_code = os.path.basename(tec_file)[:3]
@@ -353,10 +354,20 @@ def plot_ionex(tec_file, save_fig=False):
     # init figure
     proj_obj = ccrs.PlateCarree()
     fig, ax = plt.subplots(figsize=[9, 4], subplot_kw=dict(projection=proj_obj))
-    im = ax.imshow(tec_maps[0,:,:], vmin=0, vmax=vmax, extent=(W, E, S, N),
-                   origin='upper', animated=True, interpolation='nearest')
+    im = ax.imshow(
+        tec_maps[0,:,:], vmin=0, vmax=vmax,
+        extent=(W, E, S, N), origin='upper',
+        animated=True, interpolation='nearest',
+    )
+
     ax.coastlines()
-    draw_lalo_label(ax, geo_box=(W, N, E, S), projection=proj_obj, print_msg=False)
+    draw_lalo_label(
+        ax,
+        geo_box=(W, N, E, S),
+        projection=proj_obj,
+        print_msg=False,
+    )
+
     # colorbar
     cbar = fig.colorbar(im, shrink=0.5)
     cbar.set_label('TECU')
@@ -365,6 +376,7 @@ def plot_ionex(tec_file, save_fig=False):
     # update image
     global ind
     ind = 0
+
     def animate(*args):
         global ind
         ind += 1

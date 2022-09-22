@@ -16,7 +16,7 @@ import shutil
 import h5py
 import numpy as np
 import mintpy
-from mintpy.objects import deramp, ifgramStack, timeseries, geometryDatasetNames
+from mintpy.objects import deramp, ifgramStack, timeseries, GEOMETRY_DSET_NAMES
 from mintpy.utils import ptime, readfile, writefile
 from mintpy.utils.utils0 import *
 
@@ -131,7 +131,10 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                                            out_file=deramped_file)
 
         print('\ncalculating residual RMS for each epoch from file: '+deramped_file)
-        rms_file = timeseries(deramped_file).timeseries_rms(maskFile=mask_file, outFile=rms_file)
+        rms_file = timeseries(deramped_file).timeseries_rms(
+            maskFile=mask_file,
+            outFile=rms_file,
+        )
 
     # Read residual RMS text file
     print('read timeseries residual RMS from file: '+rms_file)
@@ -470,7 +473,7 @@ def get_geometry_file(dset_list, work_dir=None, coord='geo', abspath=True, print
     if isinstance(dset_list, str):
         dset_list = [dset_list]
     for dset in dset_list:
-        if dset not in geometryDatasetNames:
+        if dset not in GEOMETRY_DSET_NAMES:
             raise ValueError('unrecognized geometry dataset name: {}'.format(dset))
 
     if not work_dir:
@@ -715,16 +718,17 @@ def check_template_auto_value(templateDict, auto_file='defaults/smallbaselineApp
             templateDict[key] = templateAutoDict[key]
 
     # Change yes --> True, no --> False and none --> None
-    specialValues = {'yes'  : True,
-                     'true' : True,
-                     'no'   : False,
-                     'false': False,
-                     'none' : None,
-                     }
+    special_values = {
+        'yes'  : True,
+        'true' : True,
+        'no'   : False,
+        'false': False,
+        'none' : None,
+    }
     for key, value in templateDict.items():
         value = value.lower()
-        if value in specialValues.keys():
-            templateDict[key] = specialValues[value]
+        if value in special_values.keys():
+            templateDict[key] = special_values[value]
 
     return templateDict
 

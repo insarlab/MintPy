@@ -19,7 +19,7 @@ from mintpy.utils import ptime
 
 ##------------------ Global Variables ---------------------##
 
-dataTypeDict = {
+DATA_TYPE_DICT = {
     'bool': np.bool_, 'byte': np.bool_, 'flag': np.bool_,
     'int': np.int16, 'int16': np.int16, 'short': np.int16, 'int32': np.int32,
     'int64': np.int64, 'long': np.int64,
@@ -30,9 +30,9 @@ dataTypeDict = {
     'complex128': np.complex128, 'complex_': np.complex128, 'cpx_float64': np.complex128,
 }
 
-timeseriesKeyNames = ['timeseries', 'HDFEOS', 'giantTimeseries']
+TIMESERIES_KEY_NAMES = ['timeseries', 'HDFEOS', 'giantTimeseries']
 
-timeseriesDatasetNames = [
+TIMESERIES_DSET_NAMES = [
     'timeseries',
     'raw',
     'troposphericDelay',
@@ -41,12 +41,14 @@ timeseriesDatasetNames = [
     'displacement',
 ]
 
-geometryDatasetNames = [
+GEOMETRY_DSET_NAMES = [
+    # coordinates
     'height',
     'latitude',
     'longitude',
     'rangeCoord',
     'azimuthCoord',
+    # others
     'incidenceAngle',
     'azimuthAngle',
     'slantRangeDistance',
@@ -56,7 +58,7 @@ geometryDatasetNames = [
     'bperp',
 ]
 
-ifgramDatasetNames = [
+IFGRAM_DSET_NAMES = [
     # interferogram
     'unwrapPhase',
     'unwrapPhase_bridging_phaseClosure',
@@ -75,7 +77,7 @@ ifgramDatasetNames = [
     'refPhase',
 ]
 
-datasetUnitDict = {
+DSET_UNIT_DICT = {
     # interferogram
     'unwrapPhase'      : 'radian',
     'coherence'        : '1',
@@ -137,7 +139,6 @@ datasetUnitDict = {
     'dem'       : 'm',
     'hgt'       : 'm',
     'hgt_sim'   : 'm',
-    'magnitude' : '1',
     'intensity' : '1',
 }
 
@@ -266,15 +267,29 @@ class timeseries:
             # Get Index in space/2_3 dimension
             if box is None:
                 box = [0, 0, self.width, self.length]
+            xsize = box[2] - box[0]
+            ysize = box[3] - box[1]
 
             # read
-            data = ds[:,
-                      box[1]:box[3],
-                      box[0]:box[2]][dateFlag]
+            num_slice = np.sum(dateFlag)
+            inds = np.where(dateFlag)[0].tolist()
+
+            if num_slice / dateFlag.size < 0.05:
+                # single indexing if only a small fraction is read
+                data = np.zeros((num_slice, ysize, xsize), dtype=ds.dtype)
+                for i, ind in enumerate(inds):
+                    data[i] = ds[ind,
+                                 box[1]:box[3],
+                                 box[0]:box[2]]
+            else:
+                data = ds[:,
+                          box[1]:box[3],
+                          box[0]:box[2]][dateFlag]
 
             if squeeze and any(i == 1 for i in data.shape):
                 data = np.squeeze(data)
         return data
+
 
     def write2hdf5(self, data, outFile=None, dates=None, bperp=None, metadata=None, refFile=None, compression=None):
         """
@@ -311,7 +326,7 @@ class timeseries:
             # get ref file compression type if input compression is None
             if compression is None:
                 with h5py.File(refFile, 'r') as rf:
-                    compression = rf[timeseriesDatasetNames[0]].compression
+                    compression = rf[TIMESERIES_DSET_NAMES[0]].compression
             refobj.close(print_msg=False)
         data = np.array(data, dtype=np.float32)
         dates = np.array(dates, dtype=np.string_)
@@ -568,7 +583,7 @@ class geometry:
 
     def get_size(self):
         with h5py.File(self.file, 'r') as f:
-            dsName = [i for i in f.keys() if i in geometryDatasetNames][0]
+            dsName = [i for i in f.keys() if i in GEOMETRY_DSET_NAMES][0]
             dsShape = f[dsName].shape
             if len(dsShape) == 3:
                 self.length, self.width = dsShape[1:3]
@@ -586,7 +601,7 @@ class geometry:
                 self.metadata[key] = value
         return self.metadata
 
-    def read(self, datasetName=geometryDatasetNames[0], box=None, print_msg=True):
+    def read(self, datasetName=GEOMETRY_DSET_NAMES[0], box=None, print_msg=True):
         """Read 2D / 3D dataset with bounding box in space
         Parameters: datasetName : (list of) string, to point to specific 2D dataset, e.g.:
                         height
@@ -613,7 +628,7 @@ class geometry:
             box = (0, 0, self.width, self.length)
 
         if datasetName is None:
-            datasetName = geometryDatasetNames[0]
+            datasetName = GEOMETRY_DSET_NAMES[0]
         elif isinstance(datasetName, str):
             datasetName = [datasetName]
 
@@ -691,12 +706,12 @@ class ifgramStack:
             self.dropIfgram = f['dropIfgram'][:]
             self.pbaseIfgram = f['bperp'][:]
 
-            # get existed datasetNames in the order of ifgramDatasetNames
+            # get existed datasetNames in the order of IFGRAM_DSET_NAMES
             dsNames = [i for i in f.keys()
                        if (isinstance(f[i], h5py.Dataset)
                            and f[i].shape[-2:] == (self.length, self.width))]
-            self.datasetNames = [i for i in ifgramDatasetNames if i in dsNames]
-            self.datasetNames += [i for i in dsNames if i not in ifgramDatasetNames]
+            self.datasetNames = [i for i in IFGRAM_DSET_NAMES if i in dsNames]
+            self.datasetNames += [i for i in dsNames if i not in IFGRAM_DSET_NAMES]
 
         # Get sliceList for self.read()
         self.sliceList = []
@@ -1336,8 +1351,8 @@ class ifgramStack:
             print('update HDF5 dataset "/dropIfgram".')
             f['dropIfgram'][:] = np.array([i not in date12List2Drop for i in date12ListAll], dtype=np.bool_)
 
-            # update MODIFICATION_TIME for all datasets in ifgramDatasetNames
-            for dsName in ifgramDatasetNames:
+            # update MODIFICATION_TIME for all datasets in IFGRAM_DSET_NAMES
+            for dsName in IFGRAM_DSET_NAMES:
                 if dsName in f.keys():
                     print('update MODIFICATION_TIME in HDF5 dataset "/{}"'.format(dsName))
                     f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
@@ -1471,7 +1486,7 @@ class HDFEOS:
             box = [0, 0, self.width, self.length]
 
         if datasetName is None:
-            datasetName = [timeseriesDatasetNames[-1]]
+            datasetName = [TIMESERIES_DSET_NAMES[-1]]
         elif isinstance(datasetName, str):
             datasetName = [datasetName]
 

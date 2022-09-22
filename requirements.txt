@@ -20,6 +20,7 @@ pykml>=0.2
 pyproj
 pyresample
 pysolid
+rich
 scikit-image
 scipy
 # for ISCE, ARIA, FRInGE, HyP3, GMTSAR
