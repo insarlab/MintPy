@@ -9,7 +9,7 @@ import os
 import h5py
 import numpy as np
 
-from mintpy.utils import readfile, ptime
+from mintpy.utils import ptime, readfile
 from mintpy.objects import (
     giantIfgramStack,
     giantTimeseries,
@@ -23,12 +23,12 @@ from mintpy.objects import (
 def attributes2string(atr, sorting=True, max_meta_num=200):
     ## Get Dictionary of Attributes
     digits = max([len(key) for key in list(atr.keys())] + [0])
-    atr_string = ''
+    atr_str = ''
     i = 0
     for key, value in sorted(atr.items(), key=lambda x: x[0]):
         i += 1
         if i > max_meta_num:
-            atr_string += '  ...\n'
+            atr_str += '  ...\n'
             break
         else:
             # format metadata key/value
@@ -36,42 +36,39 @@ def attributes2string(atr, sorting=True, max_meta_num=200):
                 value = value.decode('utf8')
             except:
                 pass
-            atr_string += '  {k:<{d}}    {v}\n'.format(k=key,
-                                                       d=digits,
-                                                       v=value)
-    return atr_string
+            atr_str += f'  {key:<{digits}}    {value}\n'
+
+    return atr_str
 
 
 def print_attributes(atr, max_meta_num=200):
-    atr_string = attributes2string(atr, max_meta_num=max_meta_num)
-    print(atr_string)
+    atr_str = attributes2string(atr, max_meta_num=max_meta_num)
+    print(atr_str)
 
 
 def print_hdf5_structure(fname, max_meta_num=200):
     # generate string
-    global h5_string, maxDigit
-    h5_string = ''
+    global h5_str, maxDigit
+    h5_str = ''
 
     def hdf5_structure2string(name, obj):
-        global h5_string, maxDigit
+        global h5_str, maxDigit
         if isinstance(obj, h5py.Group):
-            h5_string += 'HDF5 group   "/{n}"\n'.format(n=name)
+            h5_str += f'HDF5 group   "/{name}"\n'
         elif isinstance(obj, h5py.Dataset):
-            h5_string += ('HDF5 dataset "/{n:<{w}}": shape {s:<20}, '
-                          'dtype <{t}>\n').format(n=name,
-                                                  w=maxDigit,
-                                                  s=str(obj.shape),
-                                                  t=obj.dtype)
+            h5_str += f'HDF5 dataset "/{name:<{maxDigit}}": shape={str(obj.shape):<20}, '
+            h5_str += f'dtype={str(obj.dtype):<10}, compression={obj.compression}\n'
+
         atr = dict(obj.attrs)
         if len(atr) > 0:
-            h5_string += attributes2string(atr, max_meta_num=max_meta_num)+"\n"
+            h5_str += attributes2string(atr, max_meta_num=max_meta_num)
 
     f = h5py.File(fname, 'r')
     # grab metadata in root level as it will be missed in hdf5_structure2string()
     atr = dict(f.attrs)
     if len(atr) > 0:
-        h5_string += 'Attributes in / level:\n'
-        h5_string += attributes2string(atr, max_meta_num=max_meta_num)+'\n'
+        h5_str += 'Attributes in / level:\n'
+        h5_str += attributes2string(atr, max_meta_num=max_meta_num)+'\n'
 
     # get maxDigit value 
     maxDigit = max([len(i) for i in f.keys()])
@@ -84,8 +81,8 @@ def print_hdf5_structure(fname, max_meta_num=200):
     f.close()
 
     # print string
-    print(h5_string)
-    return h5_string
+    print(h5_str)
+    return h5_str
 
 
 ############################################################
@@ -215,10 +212,12 @@ def print_info(inps):
 
     # --date/--num option
     if inps.disp_date or inps.disp_num:
-        print_date_list(inps.file,
-                        disp_ifgram=inps.disp_ifgram,
-                        disp_num=inps.disp_num,
-                        print_msg=True)
+        print_date_list(
+            inps.file,
+            disp_ifgram=inps.disp_ifgram,
+            disp_num=inps.disp_num,
+            print_msg=True,
+        )
         return
 
     # --slice option
@@ -240,11 +239,17 @@ def print_info(inps):
     fext = os.path.splitext(inps.file)[1].lower()
     if fext in ['.h5', '.he5']:
         print('\n{} {:*<40}'.format('*'*20, 'HDF5 File Structure '))
-        print_hdf5_structure(inps.file, max_meta_num=inps.max_meta_num)
+        print_hdf5_structure(
+            inps.file,
+            max_meta_num=inps.max_meta_num,
+        )
 
     else:
         print('\n{} {:*<40}'.format('*'*20, 'Binary File Attributes '))
         atr = readfile.read_attribute(inps.file)
-        print_attributes(atr, max_meta_num=inps.max_meta_num)
+        print_attributes(
+            atr,
+            max_meta_num=inps.max_meta_num,
+        )
 
     return
