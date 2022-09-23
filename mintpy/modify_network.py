@@ -84,7 +84,8 @@ def manual_select_pairs_to_remove(stackFile):
             else:
                 print(date12+' is not existed in input file')
         plt.draw()
-    cid = fig.canvas.mpl_connect('button_press_event', onclick)
+
+    fig.canvas.mpl_connect('button_press_event', onclick)
     plt.show()
 
     if not ut.yes_or_no('Proceed to drop the ifgrams/date12?'):

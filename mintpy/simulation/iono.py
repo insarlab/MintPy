@@ -14,7 +14,6 @@
 import datetime as dt
 import os
 import re
-import sys
 
 import matplotlib.pyplot as plt
 import numpy as np

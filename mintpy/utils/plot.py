@@ -3,12 +3,10 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Zhang Yunjun, 2018                               #
 ############################################################
-#
 # Recommend import:
 #     from mintpy.utils import plot as pp
 
 
-import argparse
 import datetime as dt
 import os
 import warnings
@@ -61,9 +59,11 @@ def read_pts2inps(inps, coord_obj):
         # format pts_lalo to 2D array in size of (num_pts, 2)
         inps.pts_lalo = np.array(inps.pts_lalo).reshape(-1, 2)
         # pts_lalo --> pts_yx
-        inps.pts_yx = coord_obj.geo2radar(inps.pts_lalo[:, 0],
-                                          inps.pts_lalo[:, 1],
-                                          print_msg=False)[:2]
+        inps.pts_yx = coord_obj.geo2radar(
+            inps.pts_lalo[:, 0],
+            inps.pts_lalo[:, 1],
+            print_msg=False,
+        )[:2]
         inps.pts_yx = np.array(inps.pts_yx).T.reshape(-1, 2)
 
     ## 2. pts_yx --> pts_yx/lalo
@@ -73,9 +73,11 @@ def read_pts2inps(inps, coord_obj):
 
         # pts_yx --> pts_lalo
         try:
-            inps.pts_lalo = coord_obj.radar2geo(inps.pts_yx[:, 0],
-                                                inps.pts_yx[:, 1],
-                                                print_msg=False)[:2]
+            inps.pts_lalo = coord_obj.radar2geo(
+                inps.pts_yx[:, 0],
+                inps.pts_yx[:, 1],
+                print_msg=False,
+            )[:2]
             inps.pts_lalo = np.array(inps.pts_lalo).T.reshape(-1, 2)
         except ValueError:
             pass
@@ -367,9 +369,10 @@ def auto_colormap_name(metadata, cmap_name=None, datasetName=None, print_msg=Tru
         if metadata['FILE_TYPE'] == 'timeseries' and metadata['DATA_TYPE'].startswith('complex'):
             ds_names += ['.slc']
 
-        gray_ds_names = ['coherence', 'temporalCoherence', 'waterMask', 'shadowMask',
-                         '.cor', '.mli', '.slc', '.amp', '.ramp']
-
+        gray_ds_names = [
+            'coherence', 'temporalCoherence', 'waterMask', 'shadowMask',
+            '.cor', '.mli', '.slc', '.amp', '.ramp',
+        ]
         cmap_name = 'gray' if any(i in gray_ds_names for i in ds_names) else 'jet'
 
     if print_msg:
@@ -886,10 +889,13 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], p_dict={}
     diag_mat = np.diag(np.ones(coh_mat.shape[0]))
     diag_mat[diag_mat == 0.] = np.nan
     im = ax.imshow(diag_mat, cmap='gray_r', vmin=0.0, vmax=1.0, interpolation='nearest')
-    im = ax.imshow(coh_mat, cmap=cmap,
-                   vmin=p_dict['vlim'][0],
-                   vmax=p_dict['vlim'][1],
-                   interpolation='nearest')
+    im = ax.imshow(
+        coh_mat,
+        cmap=cmap,
+        vmin=p_dict['vlim'][0],
+        vmax=p_dict['vlim'][1],
+        interpolation='nearest',
+    )
 
     date_num = coh_mat.shape[0]
     if date_num < 30:    tick_step = 5
@@ -1158,7 +1164,8 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             gps_comp=inps.gps_component,
             horz_az_angle=inps.horz_az_angle,
             print_msg=print_msg,
-            redo=inps.gps_redo)
+            redo=inps.gps_redo,
+        )
 
         # reference GPS
         if inps.ref_gps_site:
@@ -1192,12 +1199,28 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
         for lat, lon, obs in zip(site_lats, site_lons, site_obs):
             if not np.isnan(obs):
                 color = cmap( (obs - vmin) / (vmax - vmin) )
-                ax.scatter(lon, lat, color=color, s=inps.gps_marker_size**2, edgecolors='k', lw=0.5, zorder=10)
+                ax.scatter(
+                    lon,
+                    lat,
+                    color=color,
+                    s=inps.gps_marker_size**2,
+                    edgecolors='k',
+                    lw=0.5,
+                    zorder=10,
+                )
 
     else:
         # plot GPS locations only
         vprint('showing GPS locations')
-        ax.scatter(site_lons, site_lats, s=inps.gps_marker_size**2, color='w', edgecolors='k', lw=0.5, zorder=10)
+        ax.scatter(
+            site_lons,
+            site_lats,
+            s=inps.gps_marker_size**2,
+            color='w',
+            edgecolors='k',
+            lw=0.5,
+            zorder=10,
+        )
 
     # plot GPS label
     if inps.disp_gps_label:
@@ -1229,7 +1252,13 @@ def plot_insar_vs_gps_scatter(vel_file, csv_file='gps_enu2los.csv', msk_file=Non
         csv_file = os.path.join(work_dir, 'geo/gps_enu2los.csv')
         vel_file = os.path.join(work_dir, 'geo/geo_velocity.h5')
         msk_file = os.path.join(work_dir, 'geo/geo_maskTempCoh.h5')
-        pp.plot_insar_vs_gps_scatter(vel_file, ref_gps_site='CACT', csv_file=csv_file, msk_file=msk_file, vlim=[-2.5, 2])
+        pp.plot_insar_vs_gps_scatter(
+            vel_file,
+            ref_gps_site='CACT',
+            csv_file=csv_file,
+            msk_file=msk_file,
+            vlim=[-2.5, 2],
+        )
     """
 
     disp_unit = 'cm/yr'
@@ -1601,18 +1630,22 @@ def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False, 
         wrap
     """
     if not disp_unit:
-        disp_unit, wrap = check_disp_unit_and_wrap(metadata,
-                                                   disp_unit=None,
-                                                   wrap=wrap,
-                                                   wrap_range=wrap_range,
-                                                   print_msg=print_msg)
+        disp_unit, wrap = check_disp_unit_and_wrap(
+            metadata,
+            disp_unit=None,
+            wrap=wrap,
+            wrap_range=wrap_range,
+            print_msg=print_msg,
+        )
 
     # Data Operation - Scale to display unit
     disp_scale = 1.0
     if not disp_unit == metadata['UNIT']:
-        data, disp_unit, disp_scale = scale_data2disp_unit(data,
-                                                           metadata=metadata,
-                                                           disp_unit=disp_unit)
+        data, disp_unit, disp_scale = scale_data2disp_unit(
+            data,
+            metadata=metadata,
+            disp_unit=disp_unit,
+        )
 
     # Data Operation - wrap
     if wrap:
@@ -1669,18 +1702,20 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
                     dsName = f'connectComponent-{date12}'
 
                 # read mask data
-                mask = readfile.read(mask_file,
-                                     box=box,
-                                     datasetName=dsName,
-                                     print_msg=print_msg)[0]
+                mask = readfile.read(
+                    mask_file,
+                    box=box,
+                    datasetName=dsName,
+                    print_msg=print_msg,
+                )[0]
                 vprint('read mask from file:', os.path.basename(mask_file))
 
             else:
                 mask_file = None
                 msg = f'WARNING: input file has different size from mask file: {mask_file}'
-                msg += '\n    data file {} row/column number: {} / {}'.format(fname, atr['LENGTH'], atr['WIDTH'])
-                msg += '\n    mask file {} row/column number: {} / {}'.format(mask_file, atr_msk['LENGTH'], atr_msk['WIDTH'])
-                msg += '\n    Continue without mask.'
+                msg += f'\n    data file {fname} row/column number: {atr["LENGTH"]} / {atr["WIDTH"]}'
+                msg += f'\n    mask file {mask_file} row/column number: {atr_msk["LENGTH"]} / {atr_msk["WIDTH"]}'
+                msg += f'\n    Continue without mask.'
                 vprint(msg)
 
         except:
@@ -1734,17 +1769,17 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
     if print_msg:
         print(f'reading DEM: {os.path.basename(dem_file)} ...')
 
-    dem_metadata = readfile.read_attribute(dem_file)
+    dem_meta = readfile.read_attribute(dem_file)
     # read dem data
-    if dem_metadata['FILE_TYPE'] == 'geometry':
+    if dem_meta['FILE_TYPE'] == 'geometry':
         dsName = 'height'
     else:
         dsName = None
 
     # get dem_pix_box
-    coord = coordinate(dem_metadata)
+    coord = coordinate(dem_meta)
     if pix_box is None:
-        pix_box = (0, 0, int(dem_metadata['WIDTH']), int(dem_metadata['LENGTH']))
+        pix_box = (0, 0, int(dem_meta['WIDTH']), int(dem_meta['LENGTH']))
 
     # Support DEM with different Resolution and Coverage
     if geo_box:
@@ -1753,10 +1788,12 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
         dem_pix_box = pix_box
     box2read = coord.check_box_within_data_coverage(dem_pix_box, print_msg=False)
 
-    dem, dem_metadata = readfile.read(dem_file,
-                                      datasetName=dsName,
-                                      box=box2read,
-                                      print_msg=print_msg)
+    dem, dem_meta = readfile.read(
+        dem_file,
+        datasetName=dsName,
+        box=box2read,
+        print_msg=print_msg,
+    )
 
     # if input DEM does not cover the entire AOI, fill with NaN
     if pix_box is not None and box2read != dem_pix_box:
@@ -1767,10 +1804,11 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
         dem_tmp[box2read[1]-dem_pix_box[1]:box2read[3]-dem_pix_box[1],
                 box2read[0]-dem_pix_box[0]:box2read[2]-dem_pix_box[0]] = dem
         dem = np.array(dem_tmp)
-    return dem, dem_metadata, dem_pix_box
+
+    return dem, dem_meta, dem_pix_box
 
 
-def prepare_dem_background(dem, inps=None, print_msg=True):
+def prepare_dem_background(dem, inps, print_msg=True):
     """Prepare to plot DEM on background
     Parameters: dem : 2D np.int16 matrix, dem data
                 inps : Namespace with the following 4 items:
@@ -1781,8 +1819,16 @@ def prepare_dem_background(dem, inps=None, print_msg=True):
     Returns:    dem_shade : 3D np.array in size of (length, width, 4)
                 dem_contour : 2D np.array in size of (length, width)
                 dem_contour_sequence : 1D np.array
-    Examples:   dem = readfile.read('inputs/geometryRadar.h5')[0]
-                dem_shade, dem_contour, dem_contour_seq = pp.prepare_dem_background(dem=dem)
+    Examples:
+        from mintpy.cli import view
+        from mintpy.utils import plot as pp
+
+        inps = view.cmd_line_parse()
+        dem = readfile.read('inputs/geometryRadar.h5')[0]
+        dem_shade, dem_contour, dem_contour_seq = pp.prepare_dem_background(
+            dem=dem,
+            inps=inps,
+        )
     """
     # default returns
     dem_shade = None
@@ -1790,8 +1836,6 @@ def prepare_dem_background(dem, inps=None, print_msg=True):
     dem_contour_sequence = None
 
     # default inputs
-    if inps is None:
-        inps = cmd_line_parse()
     if inps.shade_max == 999.:
         inps.shade_max = np.nanmax(dem) + 2000
 
@@ -1801,10 +1845,13 @@ def prepare_dem_background(dem, inps=None, print_msg=True):
         ls = LightSource(azdeg=inps.shade_azdeg, altdeg=inps.shade_altdeg)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            dem_shade = ls.shade(dem, vert_exag=inps.shade_exag,
-                                 cmap=ColormapExt('gray').colormap,
-                                 vmin=inps.shade_min,
-                                 vmax=inps.shade_max)
+            dem_shade = ls.shade(
+                dem,
+                vert_exag=inps.shade_exag,
+                cmap=ColormapExt('gray').colormap,
+                vmin=inps.shade_min,
+                vmax=inps.shade_max,
+            )
         dem_shade[np.isnan(dem_shade[:, :, 0])] = np.nan
         if print_msg:
             msg = f'show shaded relief DEM (min/max={inps.shade_min:.0f}/{inps.shade_max:.0f} m; '
@@ -1860,18 +1907,20 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
                     'dem_contour_smooth': float, 3.0
                     'pix_box'           : 4-tuple of int, (x0, y0, x1, y1)
     Returns:    ax : matplotlib.pyplot.Axes or BasemapExt object
-    Examples:   m = pp.plot_dem_background(m, geo_box=inps.geo_box, dem=dem, inps=inps)
-                ax = pp.plot_dem_background(ax=ax, geo_box=None, dem_shade=dem_shade,
-                                            dem_contour=dem_contour, dem_contour_seq=dem_contour_seq)
+    Examples:   ax = pp.plot_dem_background(ax, geo_box=inps.geo_box, dem=dem, inps=inps)
+                ax = pp.plot_dem_background(ax, geo_box=None, inps=inps,
+                                            dem_shade=dem_shade,
+                                            dem_contour=dem_contour,
+                                            dem_contour_seq=dem_contour_seq)
     """
-    # default inputs
-    if inps is None:
-        inps = cmd_line_parse()
 
+    # prepare DEM shade/contour datasets
     if all(i is None for i in [dem_shade, dem_contour, dem_contour_seq]) and dem is not None:
-        (dem_shade,
-         dem_contour,
-         dem_contour_seq) = prepare_dem_background(dem, inps=inps, print_msg=print_msg)
+        dem_shade, dem_contour, dem_contour_seq = prepare_dem_background(
+            dem,
+            inps=inps,
+            print_msg=print_msg,
+        )
 
     # get extent - (left, right, bottom, top) in data coordinates
     if geo_box is not None:

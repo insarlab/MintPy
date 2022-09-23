@@ -215,9 +215,11 @@ def manual_select_reference_yx(data, inps, mask=None):
                 print('\nWARNING:')
                 print('The selectd pixel has NaN value in data.')
                 print('Try a difference location please.')
-    cid = fig.canvas.mpl_connect('button_press_event', onclick)
+
+    fig.canvas.mpl_connect('button_press_event', onclick)
     plt.show()
     print(f'y/x: {(inps.ref_y, inps.ref_x)}')
+
     return inps
 
 

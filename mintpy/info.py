@@ -100,7 +100,7 @@ def print_timseries_date_stat(dateList):
     return
 
 
-def print_date_list(fname, disp_ifgram='all', disp_num=False, print_msg=False):
+def print_date_list(fname, disp_ifgram='all', disp_num=False, max_num=1e4, print_msg=False):
     """Print time/date info of file"""
     k = readfile.read_attribute(fname)['FILE_TYPE']
     dateList = None
@@ -135,8 +135,9 @@ def print_date_list(fname, disp_ifgram='all', disp_num=False, print_msg=False):
         print(f'--date option can not be applied to {k} file, ignore it.')
 
     # print list info
+    max_num = int(max_num)
     if print_msg and dateList is not None:
-        for d in dateList:
+        for d in dateList[:max_num]:
             if disp_num:
                 if k in ['ifgramStack']:
                     num = dateListAll.index(d)
@@ -146,6 +147,11 @@ def print_date_list(fname, disp_ifgram='all', disp_num=False, print_msg=False):
             else:
                 msg = d
             print(msg)
+
+        # add ... at the end if --compact
+        if max_num < len(dateList):
+            print('...\n')
+
     return dateList
 
 
@@ -219,6 +225,7 @@ def print_info(inps):
             inps.file,
             disp_ifgram=inps.disp_ifgram,
             disp_num=inps.disp_num,
+            max_num=inps.max_meta_num,
             print_msg=True,
         )
         return

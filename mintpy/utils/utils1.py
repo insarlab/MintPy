@@ -450,10 +450,10 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
     # Check Files Info
     outFile = None
     for fname in existFiles:
-        atr = readfile.read_attribute(fname)
+        readfile.read_attribute(fname)
         for dsName in ['longitude', 'rangeCoord']:
             try:
-                dset = readfile.read(fname, datasetName=dsName, print_msg=False)[0]
+                readfile.read(fname, datasetName=dsName, print_msg=False)[0]
                 outFile = fname
                 break
             except:
@@ -677,8 +677,7 @@ def run_or_skip(out_file, in_file=None, readable=True, print_msg=True):
     # 2 - check readability of output files
     if readable:
         try:
-            atr = readfile.read_attribute(out_file[0])
-            width = atr['WIDTH']
+            readfile.read_attribute(out_file[0])['WIDTH']
         except:
             if print_msg:
                 print(f'{out_file[0]} exists, but can not read, remove it.')

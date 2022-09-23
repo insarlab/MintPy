@@ -167,7 +167,6 @@ def run_asc_desc2horz_vert(inps):
 
     ## 2. read LOS data and geometry
     num_file = len(inps.file)
-    num_pixel = length * width
     dlos = np.zeros((num_file, length, width), dtype=np.float32)
     if inps.geom_file:
         los_inc_angle = np.zeros((num_file, length, width), dtype=np.float32)

@@ -20,7 +20,6 @@ import datetime
 import glob
 import logging
 import os
-import re
 import shelve
 import time
 

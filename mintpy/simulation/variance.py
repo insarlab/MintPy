@@ -8,8 +8,6 @@
 #   from mintpy.simulation import variance as var
 
 
-import random
-
 import numpy as np
 import pyproj
 

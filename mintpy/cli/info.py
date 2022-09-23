@@ -78,7 +78,7 @@ def cmd_line_parse(iargs=None):
         raise FileNotFoundError(inps.file)
 
     # default: --compact option and max number of metadata to show
-    inps.max_meta_num = 200
+    inps.max_meta_num = 10000
     if inps.compact:
         inps.max_meta_num = 20
 

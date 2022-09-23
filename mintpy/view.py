@@ -465,8 +465,10 @@ def plot_slice(ax, data, metadata, inps):
         if inps.dem_file:
             vprint('plotting DEM background ...')
             pp.plot_dem_background(
-                ax=ax, geo_box=inps.geo_box,
-                dem=dem, inps=inps,
+                ax=ax,
+                geo_box=inps.geo_box,
+                dem=dem,
+                inps=inps,
                 print_msg=inps.print_msg)
 
         # Plot Data
@@ -1125,7 +1127,8 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     # Plot DEM
     if inps.dem_file:
         pp.plot_dem_background(
-            ax=ax, geo_box=None,
+            ax=ax,
+            geo_box=None,
             dem_shade=inps.dem_shade,
             dem_contour=inps.dem_contour,
             dem_contour_seq=inps.dem_contour_seq,
