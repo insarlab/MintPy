@@ -453,7 +453,7 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
         readfile.read_attribute(fname)
         for dsName in ['longitude', 'rangeCoord']:
             try:
-                readfile.read(fname, datasetName=dsName, print_msg=False)[0]
+                readfile.read(fname, datasetName=dsName, print_msg=False)
                 outFile = fname
                 break
             except:

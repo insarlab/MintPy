@@ -1715,7 +1715,7 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, xstep=1, ystep=
                 msg = f'WARNING: input file has different size from mask file: {mask_file}'
                 msg += f'\n    data file {fname} row/column number: {atr["LENGTH"]} / {atr["WIDTH"]}'
                 msg += f'\n    mask file {mask_file} row/column number: {atr_msk["LENGTH"]} / {atr_msk["WIDTH"]}'
-                msg += f'\n    Continue without mask.'
+                msg += '\n    Continue without mask.'
                 vprint(msg)
 
         except:
