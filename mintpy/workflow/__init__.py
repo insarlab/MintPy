@@ -7,6 +7,9 @@
 import importlib
 from pathlib import Path
 
+# this fixes the UnboundLocalError: local variable 'mintpy' referenced before assignment
+import mintpy
+
 # expose the following modules
 __all__ = [
     'dem_error',
