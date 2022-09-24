@@ -7,7 +7,6 @@
 #   from mintpy.utils import s1_utils
 
 
-import glob
 import os
 import re
 
