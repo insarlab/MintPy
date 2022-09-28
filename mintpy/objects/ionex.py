@@ -82,10 +82,6 @@ def get_ionex_value(tec_file, utc_sec, lat, lon, interp_method='linear3d', rotat
                     print_msg=True):
     """Get the TEC value from input IONEX file for the input lat/lon/datetime.
 
-    Reference:
-        Schaer, S., Gurtner, W., & Feltens, J. (1998). IONEX: The ionosphere map exchange format
-        version 1.1. Paper presented at the Proceedings of the IGS AC workshop, Darmstadt, Germany.
-
     Parameters: tec_file       - str, path of local TEC file
                 utc_sec        - float or 1D np.ndarray, UTC time of the day in seconds
                 lat/lon        - float or 1D np.ndarray, latitude / longitude in degrees
@@ -96,7 +92,49 @@ def get_ionex_value(tec_file, utc_sec, lat, lon, interp_method='linear3d', rotat
     Returns:    tec_val        - float or 1D np.ndarray, vertical TEC value in TECU
     """
 
+    # time info
+    utc_min = utc_sec / 60.
+
+    # read TEC file
+    mins, lats, lons, tec_maps = read_ionex(tec_file)[:4]
+
+    # resample
+    tec_val = interp_3d_maps(
+        tec_maps,
+        mins, lats, lons,
+        utc_min, lat, lon,
+        interp_method=interp_method,
+        rotate_tec_map=rotate_tec_map,
+        print_msg=print_msg,
+    )
+
+    return tec_val
+
+
+def interp_3d_maps(tec_maps, mins, lats, lons, utc_min, lat, lon, interp_method='linear3d',
+                   rotate_tec_map=True, print_msg=True):
+    """Interpolate the 3D matrix at given time and location.
+
+    Reference:
+        Schaer, S., Gurtner, W., & Feltens, J. (1998). IONEX: The ionosphere map exchange format
+        version 1.1. Paper presented at the Proceedings of the IGS AC workshop, Darmstadt, Germany.
+
+    Parameters: tec_maps       - 3D np.ndarray in size of (num_time, num_lat, num_lon)
+                mins           - 1D np.ndarray in size of (num_time), UTC time of the day in minutes
+                lats/lons      - 1D np.ndarray in size of (num_lat/lon), latitude/longitude in degrees
+                utc_min        - float or 1D np.ndarray, UTC time of the day in minutes
+                lat/lon        - float or 1D np.ndarray, latitude / longitude in degrees
+                interp_method  - str, interpolation method.
+                rotate_tec_map - bool, rotate the TEC map along the SUN direction.
+                                 for "interp_method = linear3d" only (Schaer et al., 1998).
+                print_msg      - bool, print out progress bar or not.
+    Returns:    tec_val        - float or 1D np.ndarray, TEC value at the given time/location(s).
+    """
+
     def interp_3d_rotate(interpfs, mins, lats, lons, utc_min, lat, lon):
+        """Linear interpolation in space/time with rotation along longitude direction,
+        following Schaer et al. (1998).
+        """
         ind0 = np.where((mins - utc_min) <= 0)[0][-1]
         ind1 = ind0 + 1
         lon0 = lon + (utc_min - mins[ind0]) * 360. / (24. * 60.)
@@ -106,12 +144,6 @@ def get_ionex_value(tec_file, utc_sec, lat, lon, interp_method='linear3d', rotat
         tec_val = (  (mins[ind1] - utc_min) / (mins[ind1] - mins[ind0]) * tec_val0
                    + (utc_min - mins[ind0]) / (mins[ind1] - mins[ind0]) * tec_val1 )
         return tec_val
-
-    # time info
-    utc_min = utc_sec / 60.
-
-    # read TEC file
-    mins, lats, lons, tec_maps = read_ionex(tec_file)[:4]
 
     # resample
     if interp_method == 'nearest':
@@ -149,7 +181,6 @@ def get_ionex_value(tec_file, utc_sec, lat, lon, interp_method='linear3d', rotat
     elif interp_method in ['linear3d', 'trilinear']:
         if not rotate_tec_map:
             # option 1: interpolate between consecutive TEC maps
-            # testings shows better agreement with SAR obs than option 2.
             tec_val = interpolate.interpn(
                 points=(mins, np.flip(lats), lons),
                 values=np.flip(tec_maps, axis=1),
@@ -159,7 +190,7 @@ def get_ionex_value(tec_file, utc_sec, lat, lon, interp_method='linear3d', rotat
 
         else:
             # option 2: interpolate between consecutive rotated TEC maps
-            # reference: equation (3) in Schaer and Gurtner (1998)
+            # reference: equation (3) in Schaer et al. (1998)
 
             # prepare interpolation functions in advance to speed up
             interpfs = []
@@ -191,7 +222,7 @@ def get_ionex_value(tec_file, utc_sec, lat, lon, interp_method='linear3d', rotat
                     interpfs,
                     mins, lats, lons,
                     utc_min, lat, lon,
-                )
+                )[0]
 
     else:
         msg = f'Un-recognized interp_method input: {interp_method}!'
