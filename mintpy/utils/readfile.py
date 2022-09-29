@@ -246,15 +246,18 @@ SPECIAL_STR2NUM = {
 
 
 #########################################################################
-def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1, data_type=None):
+def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1, data_type=None,
+         no_data_values=None):
     """Read one dataset and its attributes from input file.
-    Parameters: fname       : str, path of file to read
-                datasetName : str or list of str, slice names
-                box         : 4-tuple of int area to read, defined in (x0, y0, x1, y1) in pixel coordinate
-                x/ystep     : int, number of pixels to pick/multilook for each output pixel
-                data_type   : numpy data type, e.g. np.float32, np.bool_, etc.
-    Returns:    data        : 2/3/4D matrix in numpy.array format, return None if failed
-                atr         : dictionary, attributes of data, return None if failed
+
+    Parameters: fname          - str, path of file to read
+                datasetName    - str or list of str, slice names
+                box            - 4-tuple of int area to read, defined in (x0, y0, x1, y1) in pixel coordinate
+                x/ystep        - int, number of pixels to pick/multilook for each output pixel
+                data_type      - numpy data type, e.g. np.float32, np.bool_, etc. Change the output data type
+                no_data_values - list of 2 numbers, change the no-data-value in the output
+    Returns:    data           - 2/3/4D matrix in numpy.array format, return None if failed
+                atr            - dictionary, attributes of data, return None if failed
     Examples:
         from mintpy.utils import readfile
         data, atr = readfile.read('velocity.h5')
@@ -298,8 +301,16 @@ def read(fname, box=None, datasetName=None, print_msg=True, xstep=1, ystep=1, da
                                      ystep=ystep)
 
     # customized output data type
-    if data_type:
+    if data_type is not None and data_type != data.dtype:
+        if print_msg:
+            print(f'convert numpy array from {data.dtype} to {data_type}')
         data = np.array(data, dtype=data_type)
+
+    # convert no-data-value
+    if isinstance(no_data_values, list):
+        if print_msg:
+            print(f'convert no-data-value from {no_data_values[0]} to {no_data_values[1]}')
+        data[data == no_data_values[0]] = no_data_values[1]
 
     return data, atr
 
