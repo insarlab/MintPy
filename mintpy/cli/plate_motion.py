@@ -16,9 +16,6 @@ REFERENCE = """reference:
   Stephenson, O. L., Liu, Y. K., Yunjun, Z., Simons, M., Rosen, P. and Xu, X., (2022), The Impact of
     Plate Motions on Long-Wavelength InSAR-Derived Velocity Fields, Geophys. Res. Lett. (under review)
     doi:10.1002/essoar.10511538.2
-  Peter, H., Fernández, M., Aguilar, J., & Fernández, J. (2021). Copernicus POD Product Handbook:
-    Copernicus Sentinel-1, -2 and -3 Precise orbit Determination Serivice (CPOD) (GMV-CPOD-TN-0009).
-    https://sentinels.copernicus.eu/documents/247904/3372484/Sentinels-POD-Product-Handbook-1.19.pdf
 
   # list of no-net-rotation (NNR) plate motion models (PMMs):
   # ONLY ITRF14 should be used, as Sentinel-1's orbit is in ITRF2014 reference frame.
@@ -36,9 +33,9 @@ REFERENCE = """reference:
 EXAMPLE = """example:
   # Cartesian form of Euler pole rotation in [wx, wy, wz] in unit of mas/year [milli arc second per year]
   # e.g., Arabia plate in ITRF14-PMM (Table 1 in Altamimi et al., 2017)
-  bulk_plate_motion.py -g inputs/geometryGeo.h5   --om-cart 1.154 -0.136  1.444 -v velocity.h5
-  bulk_plate_motion.py -g inputs/geometryRadar.h5 --om-cart 1.154 -0.136  1.444
-  bulk_plate_motion.py -g inputs/geometryRadar.h5 --om-cart 1.154 -0.136  1.444 --comp en2az
+  plate_motion.py -g inputs/geometryGeo.h5   --om-cart 1.154 -0.136  1.444 -v velocity.h5
+  plate_motion.py -g inputs/geometryRadar.h5 --om-cart 1.154 -0.136  1.444
+  plate_motion.py -g inputs/geometryRadar.h5 --om-cart 1.154 -0.136  1.444 --comp en2az
 
   # Simple constant local ENU translation (based on one GNSS vector) in [ve, vn, vu] in unit of m/year
   #   E.g., https://www.unavco.org/software/visualization/GPS-Velocity-Viewer/GPS-Velocity-Viewer.html
@@ -47,17 +44,18 @@ EXAMPLE = """example:
   #   -> navigate to the region of interest,
   #   -> click on a representative station,
   #   -> get the "Speed components" in mm/yr.
-  bulk_plate_motion.py -g inputs/geometryGeo.h5 --enu 25.0 30.5 0.0 -v velocity.h5
+  plate_motion.py -g inputs/geometryGeo.h5 --enu 25.0 30.5 0.0 -v velocity.h5
 """
 
 NOTE = """
-  Removing the effect of bulk traslation and rotation based on a given plate motion model (PMM).
-  For Sentinel-1, its orbit is measured with respect to ITRF2014 (Table 3-2 of Peter et al., 2021), which is an
-  Earth-centered, Earth-fixed (ECEF) reference frame in which there is no net rotation (NNR) of the Earth surface.
+  Removing the effect of rigid plate motion (translation and rotation) using plate motion model (PMM).
+  For Sentinel-1, its orbit is measured with respect to ITRF2014 (Table 3-2 of Peter et al., 2021,
+  Copernicus POD Product Handbook), which is an Earth-centered, Earth-fixed (ECEF) reference frame
+  in which there is no net rotation (NNR) of the Earth surface.
 """
 
 def create_parser(subparsers=None):
-    synopsis = 'Bulk Plate Motion Correction.'
+    synopsis = 'Plate Motion Correction.'
     epilog = REFERENCE + '\n' + EXAMPLE
     name = __name__.split('.')[-1]
     parser = create_argument_parser(
@@ -113,10 +111,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     # import
-    from mintpy.bulk_plate_motion import run_bulk_plate_motion
+    from mintpy.plate_motion import run_plate_motion
 
     # run
-    run_bulk_plate_motion(inps)
+    run_plate_motion(inps)
 
 
 ################################################################################################
