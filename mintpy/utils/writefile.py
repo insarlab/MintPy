@@ -461,40 +461,40 @@ def remove_hdf5_dataset(fname, datasetNames, print_msg=True):
                 remove_hdf5_dataset('./inputs/ifgramStack.h5', ['unwrapPhase_phaseClosure',
                                                                 'unwrapPhase_bridging'])
     """
+    vprint = print if print_msg else lambda *args, **kwargs: None
+
     if isinstance(datasetNames, str):
         datasetNames = list(datasetNames)
-    if print_msg:
-        print(f'delete {datasetNames} from file {fname}')
+    vprint(f'delete {datasetNames} from file {fname}')
+
     # 1. rename the file to a temporary file
     temp_file = os.path.join(os.path.dirname(fname), f'tmp_{os.path.basename(fname)}')
-    print(f'move {fname} to {temp_file}')
     shutil.move(fname, temp_file)
+    vprint(f'move {fname} to {temp_file}')
 
     # 2. write a new file with all data except for the one to be deleted
-    if print_msg:
-        print(f'read   HDF5 file: {temp_file} with r mode')
-        print(f'create HDF5 file: {fname} with w mode')
-    fi = h5py.File(temp_file, 'r')
-    fo = h5py.File(fname, 'w')
+    vprint(f'read   HDF5 file: {temp_file} with r mode')
+    vprint(f'create HDF5 file: {fname} with w mode')
+    with h5py.File(temp_file, 'r') as fi:
+        with h5py.File(fname, 'w') as fo:
 
-    # datasets
-    compression = None
-    maxDigit = max(len(i) for i in list(fi.keys()))
-    for dsName in [i for i in fi.keys() if i not in datasetNames]:
-        ds = fi[dsName]
-        if print_msg:
-            print('create dataset /{d:<{w}} of {t:<10} in size of {s:<20} with compression={c}'.format(
-                d=dsName, w=maxDigit, t=str(ds.dtype), s=str(ds.shape), c=compression))
-        fo.create_dataset(dsName, data=ds[:], chunks=True, compression=compression)
+            # datasets
+            compression = None
+            maxDigit = max(len(i) for i in list(fi.keys()))
+            for dsName in [i for i in fi.keys() if i not in datasetNames]:
+                ds = fi[dsName]
+                msg = f'create dataset /{dsName:<{maxDigit}} of {str(ds.dtype):<10}'
+                msg += f' in size of {str(ds.shape):<20} with compression={compression}'
+                vprint(msg)
+                fo.create_dataset(dsName, data=ds[:], chunks=True, compression=compression)
 
-    # metadata
-    for key, value in fi.attrs.items():
-        fo.attrs[key] = str(value)
-    fi.close()
-    fo.close()
-    if print_msg:
-        print(f'finished writing to {fname}')
-        print(f'old file is now saved as: {temp_file}. Use rm command to delete it.')
+            # metadata
+            for key, value in fi.attrs.items():
+                fo.attrs[key] = str(value)
+
+    vprint(f'finished writing to {fname}')
+    vprint(f'old file is now saved as: {temp_file}. Use rm command to delete it.')
+
     return fname
 
 

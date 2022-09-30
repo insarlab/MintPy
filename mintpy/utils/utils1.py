@@ -566,22 +566,24 @@ def add_attribute(File, atr_new=dict(), print_msg=False):
               ' and have the same value, skip update.')
         return File
 
-    # Update attributes
-    f = h5py.File(File, 'r+')
-    for key, value in iter(atr_new.items()):
-        # delete the item is new value is None
-        if value == 'None' or value is None:
-            try:
-                f.attrs.pop(key)
+    # Update attributes in HDF5 file
+    with h5py.File(File, 'r+') as f:
+        for key, value in iter(atr_new.items()):
+            if value == 'None' or value is None:
+                # delete the item for invalid input (None)
+                try:
+                    f.attrs.pop(key)
+                    if print_msg:
+                        print(f'remove {key}')
+                except:
+                    pass
+
+            else:
+                # update the item for valid input
+                f.attrs[key] = str(value)
                 if print_msg:
-                    print(f'remove {key}')
-            except:
-                pass
-        else:
-            f.attrs[key] = str(value)
-            if print_msg:
-                print(f'{key} = {str(value)}')
-    f.close()
+                    print(f'{key} = {str(value)}')
+
     return File
 
 

@@ -167,8 +167,8 @@ def get_date12_list(fname, dropIfgram=False):
     date12_list = []
     ext = os.path.splitext(fname)[1].lower()
     if ext == '.h5':
-        k = readfile.read_attribute(fname)['FILE_TYPE']
-        if k == 'ifgramStack':
+        ftype = readfile.read_attribute(fname)['FILE_TYPE']
+        if ftype == 'ifgramStack':
             date12_list = ifgramStack(fname).get_date12_list(dropIfgram=dropIfgram)
         else:
             return None
@@ -181,21 +181,6 @@ def get_date12_list(fname, dropIfgram=False):
     date12_list = sorted(date12_list)
     date12_list = ptime.yyyymmdd_date12(date12_list)
     return date12_list
-
-
-def igram_perp_baseline_list(fname):
-    """Get perpendicular baseline list from input multi_group hdf5 file"""
-    print('read perp baseline info from '+fname)
-    k = readfile.read_attribute(fname)['FILE_TYPE']
-    h5 = h5py.File(fname, 'r')
-    epochList = sorted(h5[k].keys())
-    p_baseline_list = []
-    for epoch in epochList:
-        p_baseline = (float(h5[k][epoch].attrs['P_BASELINE_BOTTOM_HDR']) +
-                      float(h5[k][epoch].attrs['P_BASELINE_TOP_HDR']))/2
-        p_baseline_list.append(p_baseline)
-    h5.close()
-    return p_baseline_list
 
 
 def critical_perp_baseline(sensor_name, inc_angle, print_msg=False):
