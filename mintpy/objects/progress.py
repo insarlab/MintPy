@@ -8,13 +8,43 @@
 # OR from mintpy.utils import ptime
 
 
+import io
+import os
 import sys
 import time
 
 import numpy as np
 
 
-###########################Simple progress bar######################
+########################### file progress class - begin ##########################
+class FileProgressObject(io.FileIO):
+    """Show tarfile progress.
+
+    Link: https://stackoverflow.com/questions/3667865/python-tarfile-progress-output
+
+    Example:
+        print(f'extracting content from tar file: {tar_file}')
+        tar = tarfile.open(fileobj=FileProgressObject(tar_file))
+        tar.extractall()
+        tar.close()
+        print('')
+    """
+
+    def __init__(self, path, *args, **kwargs):
+        self._total_size = os.path.getsize(path)
+        io.FileIO.__init__(self, path, *args, **kwargs)
+
+    def read(self, size):
+        perc = self.tell() / self._total_size * 100
+        msg = f"extracting: {self.tell()/(1024**2):.1f} of {self._total_size/(1024**2):.1f} MB - {perc:.0f}%"
+        sys.stdout.write("\r" + msg)
+        sys.stdout.flush()
+        return io.FileIO.read(self, size)
+
+########################### file progress class - end ############################
+
+
+########################### progress bar class - begin ###########################
 class progressBar:
     """Creates a text-based progress bar. Call the object with
     the simple print command to see the progress bar, which looks
@@ -52,10 +82,12 @@ class progressBar:
         self.width = totalWidth
         self.reset()
 
+
     def reset(self):
         self.start_time = time.time()
         self.amount = 0        # When amount == max, we are 100% done
         self.update_amount(0)  # Build progress bar string
+
 
     def update_amount(self, newAmount=0, suffix=''):
         """ Update the progress bar with the new amount (with min and max
@@ -110,6 +142,7 @@ class progressBar:
                 remain_time = int(elapse_time * (100./percentDone-1))
                 self.prog_bar += f'{int(elapse_time):5d}s / {int(remain_time):5d}s'
 
+
     def update(self, value, every=1, suffix=''):
         """ Updates the amount, and writes to stdout.
         Prints a carriage return first, so it will overwrite the current line in stdout.
@@ -120,10 +153,12 @@ class progressBar:
                 sys.stdout.write('\r' + self.prog_bar)
                 sys.stdout.flush()
 
+
     def close(self):
         """Prints a blank space at the end to ensure proper printing
         of future statements.
         """
         if self.print_msg:
             print(' ')
-################################End of progress bar class####################################
+
+########################### progress bar class - end #############################
