@@ -145,31 +145,32 @@ def pmm2enu_at(pmm_obj, lats, lons):
 
 
 ####################################### Sub Functions ##########################################
-def calc_bulk_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=None,
-                           pmm_enu_file=None, pmm_file=None, pmm_comp='enu2los', pmm_step=10.):
-    """Estimate LOS motion due to pure bulk tranlation or due to plate rotation
+def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=None,
+                      pmm_enu_file=None, pmm_file=None, pmm_comp='enu2los', pmm_step=10.):
+    """Estimate LOS motion due to the rigid plate motion (translation and/or rotation).
+
     Parameters: geom_file     - str, path to the input geometry file
                 omega_cart    - list or 1D array, Cartesian representation of plate rotation
                                 in [wx, wy, wz]  (mas/yr)
                 omega_sph     - list or 1D array, Spherical representation of plate rotation
                                 in [lat, lon, w] (deg, deg, deg/Ma)
                 const_vel_enu - list or 1D array, a single-vector [ve, vn, vu] (meter/year)
-                                simulating the bulk translation of the ground (e.g., from GNSS)
-                pmm_enu_file  - str, path to the output bulk plate motion in east, north, up direction
-                pmm_file      - str, path to the output bulk plate motion in LOS direction
+                                simulating the rigid translation of the ground (e.g., from GNSS)
+                pmm_enu_file  - str, path to the output plate motion in east, north, up direction
+                pmm_file      - str, path to the output plate motion in LOS direction
                 set_comp      - str, output PMM in the given component of interest
                 pmm_reso      - float, ground resolution for computing Plate rotation to ENU velocity (km)
-    Returns:    ve/vn/vu/vlos - 2D np.ndarray, bulk plate motion in east / north / up / LOS direction
+    Returns:    ve/vn/vu/vlos - 2D np.ndarray, ridig plate motion in east / north / up / LOS direction
     """
 
     # Get LOS geometry
     atr_geo = ut.prepare_geo_los_geometry(geom_file, unit='deg')[2]
     shape_geo = [int(atr_geo['LENGTH']), int(atr_geo['WIDTH'])]
 
-    ## Bulk motion model in the region
+    ## plate motion model in the region
     print('-'*50)
     if omega_cart or omega_sph:
-        print('compute the bulk plate motion using a plate motion model (PMM; translation & rotation)')
+        print('compute the rigid plate motion using a plate motion model (PMM; translation & rotation)')
         if omega_cart is not None:
             pmm_obj = build_plate_motion_model(omega_cart=omega_cart)
         else:
@@ -196,7 +197,7 @@ def calc_bulk_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel
         vu = resize(vu_low, shape_geo, **kwargs)
 
     elif const_vel_enu:
-        print(f'compute the bulk plate motion using a single vector (translation): {const_vel_enu}')
+        print(f'compute the rigid plate motion using a single vector (translation): {const_vel_enu}')
         ve = const_vel_enu[0] * np.ones(shape_geo, dtype=np.float32)
         vn = const_vel_enu[1] * np.ones(shape_geo, dtype=np.float32)
         vu = const_vel_enu[2] * np.ones(shape_geo, dtype=np.float32)
@@ -205,7 +206,7 @@ def calc_bulk_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel
     # radar-code PMM if input geometry is in radar coordinates
     atr = readfile.read_attribute(geom_file)
     if 'Y_FIRST' not in atr.keys():
-        print('radar-coding the bulk plate motion in ENU ...')
+        print('radar-coding the rigid plate motion in ENU ...')
         res_obj = resample(lut_file=geom_file)
         res_obj.open()
         res_obj.src_meta = atr_geo
@@ -220,7 +221,7 @@ def calc_bulk_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel
 
     # Project model from ENU to direction of interest
     c0, c1 = pmm_comp.split('2')
-    print(f'project the bulk plate motion from {c0.upper()} onto {c1.upper()} direction')
+    print(f'project the ridig plate motion from {c0.upper()} onto {c1.upper()} direction')
     los_inc_angle = readfile.read(geom_file, datasetName='incidenceAngle')[0]
     los_az_angle = readfile.read(geom_file, datasetName='azimuthAngle')[0]
     unit_vec = ut.get_unit_vector4component_of_interest(los_inc_angle, los_az_angle, comp=pmm_comp)
@@ -228,7 +229,7 @@ def calc_bulk_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel
             + vn * unit_vec[1]
             + vu * unit_vec[2])
 
-    # Save the bulk motion model velocity into HDF5 files
+    # Save the plate motion model velocity into HDF5 files
     # metadata
     atr['FILE_TYPE'] = 'velocity'
     atr['DATA_TYPE'] = 'float32'
@@ -254,8 +255,8 @@ def calc_bulk_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel
     return ve, vn, vu, vlos
 
 
-def correct_bulk_plate_motion(vel_file, mfile, ofile):
-    """Apply the bulk motion correction from files.
+def correct_plate_motion(vel_file, mfile, ofile):
+    """Apply the plate motion correction from files.
     """
     file1 = vel_file       # input uncorrected LOS velocity file
     file2 = [mfile]        # PMM LOS velocity file
@@ -264,10 +265,10 @@ def correct_bulk_plate_motion(vel_file, mfile, ofile):
 
 
 ################################################################################################
-def run_bulk_plate_motion(inps):
-    """Calculate and/or correct for bulk motion from tectonic plates."""
+def run_plate_motion(inps):
+    """Calculate and/or correct for the rigid motion from tectonic plates."""
 
-    calc_bulk_plate_motion(
+    calc_plate_motion(
         geom_file=inps.geom_file,
         omega_cart=inps.omega_cart,
         omega_sph=inps.omega_sph,
@@ -280,7 +281,7 @@ def run_bulk_plate_motion(inps):
 
     if inps.vel_file and inps.pmm_file and inps.cor_vel_file:
         print('-'*50)
-        print('Correct input velocity for the bulk plate motion')
-        correct_bulk_plate_motion(inps.vel_file, inps.pmm_file, inps.cor_vel_file)
+        print('Correct input velocity for the rigid plate motion')
+        correct_plate_motion(inps.vel_file, inps.pmm_file, inps.cor_vel_file)
 
     return

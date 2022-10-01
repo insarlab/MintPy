@@ -71,13 +71,6 @@ def get_asc_desc2horz_vert_parser(subparsers=None):
     return parser
 
 
-def get_bulk_plate_motion_parser(subparsers=None):
-    from mintpy.cli import bulk_plate_motion
-    parser = bulk_plate_motion.create_parser(subparsers)
-    parser.set_defaults(func=bulk_plate_motion.main)
-    return parser
-
-
 def get_closure_phase_bias_parser(subparsers=None):
     from mintpy.cli import closure_phase_bias
     parser = closure_phase_bias.create_parser(subparsers)
@@ -206,6 +199,13 @@ def get_modify_network_parser(subparsers=None):
 
 
 # O-Q
+def get_plate_motion_parser(subparsers=None):
+    from mintpy.cli import plate_motion
+    parser = plate_motion.create_parser(subparsers)
+    parser.set_defaults(func=plate_motion.main)
+    return parser
+
+
 def get_plot_coherence_matrix_parser(subparsers=None):
     from mintpy.cli import plot_coherence_matrix
     parser = plot_coherence_matrix.create_parser(subparsers)
@@ -546,14 +546,14 @@ def get_parser():
     get_subset_parser(sp)
 
     # noise reduction / error correction
-    try:
-        get_bulk_plate_motion_parser(sp)
-    except ImportError:
-        pass
     get_closure_phase_bias_parser(sp)
     get_dem_error_parser(sp)
     get_iono_tec_parser(sp)
     get_local_oscilator_drift_parser(sp)
+    try:
+        get_plate_motion_parser(sp)
+    except ImportError:
+        pass
     get_remove_ramp_parser(sp)
     get_s1ab_range_bias_parser(sp)
     get_solid_earth_tides_parser(sp)

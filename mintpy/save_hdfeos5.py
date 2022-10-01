@@ -259,8 +259,7 @@ def create_hdf5_dataset(group, dsName, data, max_digit=55, compression=COMPRESSI
     """Create HDF5 dataset and print out message."""
 
     msg = 'create dataset {d:<{w}}'.format(d=f'{group.name}/{dsName}', w=max_digit)
-    msg += f' of {str(data.dtype):<10} in size of {data.shape}'
-    msg += f' with compression={compression}'
+    msg += f' of {str(data.dtype):<10} in size of {data.shape} with compression={compression}'
     print(msg)
 
     if data.ndim == 1:
@@ -290,139 +289,140 @@ def write_hdf5_file(metadata, out_file, ts_file, tcoh_file, scoh_file, mask_file
     numDate = len(dateList)
 
     # Open HDF5 File
-    f = h5py.File(out_file, 'w')
     print(f'create HDF5 file: {out_file} with w mode')
     max_digit = 55
 
-    ##### Group - Observation
-    gName = 'HDFEOS/GRIDS/timeseries/observation'
-    print(f'create group   /{gName}')
-    group = f.create_group(gName)
+    with h5py.File(out_file, 'w') as f:
 
-    ## O1 - displacement
-    dsName = 'displacement'
-    dsShape = (numDate, ts_obj.length, ts_obj.width)
-    dsDataType = np.float32
-    print(('create dataset /{d:<{w}} of {t:<10} in size of {s}'
-           ' with compression={c}').format(d=f'{gName}/{dsName}',
-                                           w=max_digit,
-                                           t='float32',
-                                           s=dsShape,
-                                           c=COMPRESSION))
-    dset = group.create_dataset(dsName,
-                                shape=dsShape,
-                                maxshape=(None, dsShape[1], dsShape[2]),
-                                dtype=dsDataType,
-                                chunks=True,
-                                compression=COMPRESSION)
+        ##### Group - Observation
+        gName = 'HDFEOS/GRIDS/timeseries/observation'
+        print(f'create group   /{gName}')
+        group = f.create_group(gName)
 
-    print('write data acquition by acquition ...')
-    prog_bar = ptime.progressBar(maxValue=numDate)
-    for i in range(numDate):
-        dset[i, :, :] = readfile.read(ts_file, datasetName=dateList[i])[0]
-        prog_bar.update(i+1, suffix=f'{i+1}/{numDate} {dateList[i]}')
-    prog_bar.close()
+        ## O1 - displacement
+        dsName = 'displacement'
+        dsShape = (numDate, ts_obj.length, ts_obj.width)
+        dsDataType = np.float32
+        msg = 'create dataset /{d:<{w}}'.format(d=f'{gName}/{dsName}', w=max_digit)
+        msg += f' of {"float32":<10} in size of {dsShape} with compression={COMPRESSION}'
+        print(msg)
 
-    # attributes
-    dset.attrs['Title'] = dsName
-    dset.attrs['MissingValue'] = FLOAT_ZERO
-    dset.attrs['_FillValue'] = FLOAT_ZERO
-    dset.attrs['Units'] = 'meters'
+        dset = group.create_dataset(
+            dsName,
+            shape=dsShape,
+            maxshape=(None, dsShape[1], dsShape[2]),
+            dtype=dsDataType,
+            chunks=True,
+            compression=COMPRESSION,
+        )
 
-    ## O2 - date
-    dsName = 'date'
-    data = np.array(dateList, dtype=np.string_)
-    dset = create_hdf5_dataset(group, dsName, data)
-
-    ## O3 - perp baseline
-    dsName = 'bperp'
-    data = np.array(ts_obj.pbase, dtype=np.float32)
-    dset = create_hdf5_dataset(group, dsName, data)
-
-    ##### Group - Quality
-    gName = 'HDFEOS/GRIDS/timeseries/quality'
-    print(f'create group   /{gName}')
-    group = f.create_group(gName)
-
-    ## Q1 - temporalCoherence
-    dsName = 'temporalCoherence'
-    # read
-    data = readfile.read(tcoh_file)[0]
-    # write
-    dset = create_hdf5_dataset(group, dsName, data)
-    # attributes
-    dset.attrs['Title'] = dsName
-    dset.attrs['MissingValue'] = FLOAT_ZERO
-    dset.attrs['_FillValue'] = FLOAT_ZERO
-    dset.attrs['Units'] = '1'
-
-    ## Q2 - avgSpatialCoherence
-    dsName = 'avgSpatialCoherence'
-    # read
-    data = readfile.read(scoh_file)[0]
-    # write
-    dset = create_hdf5_dataset(group, dsName, data)
-    # attributes
-    dset.attrs['Title'] = dsName
-    dset.attrs['MissingValue'] = FLOAT_ZERO
-    dset.attrs['_FillValue'] = FLOAT_ZERO
-    dset.attrs['Units'] = '1'
-
-    ## Q3 - mask
-    dsName = 'mask'
-    # read
-    data = readfile.read(mask_file, datasetName='mask')[0]
-    # write
-    dset = create_hdf5_dataset(group, dsName, data)
-    # attributes
-    dset.attrs['Title'] = dsName
-    dset.attrs['MissingValue'] = BOOL_ZERO
-    dset.attrs['_FillValue'] = BOOL_ZERO
-    dset.attrs['Units'] = '1'
-
-    ##### Group - Write Geometry
-    # Required: height, incidenceAngle
-    # Optional: rangeCoord, azimuthCoord, azimuthAngle, slantRangeDistance,
-    #           waterMask, shadowMask
-    gName = 'HDFEOS/GRIDS/timeseries/geometry'
-    print(f'create group   /{gName}')
-    group = f.create_group(gName)
-
-    geom_obj = geometry(geom_file)
-    geom_obj.open(print_msg=False)
-    for dsName in geom_obj.datasetNames:
-        # read
-        data = geom_obj.read(datasetName=dsName, print_msg=False)
-        # write
-        dset = create_hdf5_dataset(group, dsName, data)
+        print('write data acquition by acquition ...')
+        prog_bar = ptime.progressBar(maxValue=numDate)
+        for i in range(numDate):
+            dset[i, :, :] = readfile.read(ts_file, datasetName=dateList[i])[0]
+            prog_bar.update(i+1, suffix=f'{i+1}/{numDate} {dateList[i]}')
+        prog_bar.close()
 
         # attributes
         dset.attrs['Title'] = dsName
-        if dsName in ['height', 'slantRangeDistance', 'bperp']:
-            dset.attrs['MissingValue'] = FLOAT_ZERO
-            dset.attrs['_FillValue'] = FLOAT_ZERO
-            dset.attrs['Units'] = 'meters'
+        dset.attrs['MissingValue'] = FLOAT_ZERO
+        dset.attrs['_FillValue'] = FLOAT_ZERO
+        dset.attrs['Units'] = 'meters'
 
-        elif dsName in ['incidenceAngle', 'azimuthAngle', 'latitude', 'longitude']:
-            dset.attrs['MissingValue'] = FLOAT_ZERO
-            dset.attrs['_FillValue'] = FLOAT_ZERO
-            dset.attrs['Units'] = 'degrees'
+        ## O2 - date
+        dsName = 'date'
+        data = np.array(dateList, dtype=np.string_)
+        dset = create_hdf5_dataset(group, dsName, data)
 
-        elif dsName in ['rangeCoord', 'azimuthCoord']:
-            dset.attrs['MissingValue'] = FLOAT_ZERO
-            dset.attrs['_FillValue'] = FLOAT_ZERO
-            dset.attrs['Units'] = '1'
+        ## O3 - perp baseline
+        dsName = 'bperp'
+        data = np.array(ts_obj.pbase, dtype=np.float32)
+        dset = create_hdf5_dataset(group, dsName, data)
 
-        elif dsName in ['waterMask', 'shadowMask']:
-            dset.attrs['MissingValue'] = BOOL_ZERO
-            dset.attrs['_FillValue'] = BOOL_ZERO
-            dset.attrs['Units'] = '1'
+        ##### Group - Quality
+        gName = 'HDFEOS/GRIDS/timeseries/quality'
+        print(f'create group   /{gName}')
+        group = f.create_group(gName)
 
-    # Write Attributes to the HDF File
-    print('write metadata to root level')
-    for key, value in iter(metadata.items()):
-        f.attrs[key] = value
-    f.close()
+        ## Q1 - temporalCoherence
+        dsName = 'temporalCoherence'
+        # read
+        data = readfile.read(tcoh_file)[0]
+        # write
+        dset = create_hdf5_dataset(group, dsName, data)
+        # attributes
+        dset.attrs['Title'] = dsName
+        dset.attrs['MissingValue'] = FLOAT_ZERO
+        dset.attrs['_FillValue'] = FLOAT_ZERO
+        dset.attrs['Units'] = '1'
+
+        ## Q2 - avgSpatialCoherence
+        dsName = 'avgSpatialCoherence'
+        # read
+        data = readfile.read(scoh_file)[0]
+        # write
+        dset = create_hdf5_dataset(group, dsName, data)
+        # attributes
+        dset.attrs['Title'] = dsName
+        dset.attrs['MissingValue'] = FLOAT_ZERO
+        dset.attrs['_FillValue'] = FLOAT_ZERO
+        dset.attrs['Units'] = '1'
+
+        ## Q3 - mask
+        dsName = 'mask'
+        # read
+        data = readfile.read(mask_file, datasetName='mask')[0]
+        # write
+        dset = create_hdf5_dataset(group, dsName, data)
+        # attributes
+        dset.attrs['Title'] = dsName
+        dset.attrs['MissingValue'] = BOOL_ZERO
+        dset.attrs['_FillValue'] = BOOL_ZERO
+        dset.attrs['Units'] = '1'
+
+        ##### Group - Write Geometry
+        # Required: height, incidenceAngle
+        # Optional: rangeCoord, azimuthCoord, azimuthAngle, slantRangeDistance,
+        #           waterMask, shadowMask
+        gName = 'HDFEOS/GRIDS/timeseries/geometry'
+        print(f'create group   /{gName}')
+        group = f.create_group(gName)
+
+        geom_obj = geometry(geom_file)
+        geom_obj.open(print_msg=False)
+        for dsName in geom_obj.datasetNames:
+            # read
+            data = geom_obj.read(datasetName=dsName, print_msg=False)
+            # write
+            dset = create_hdf5_dataset(group, dsName, data)
+
+            # attributes
+            dset.attrs['Title'] = dsName
+            if dsName in ['height', 'slantRangeDistance', 'bperp']:
+                dset.attrs['MissingValue'] = FLOAT_ZERO
+                dset.attrs['_FillValue'] = FLOAT_ZERO
+                dset.attrs['Units'] = 'meters'
+
+            elif dsName in ['incidenceAngle', 'azimuthAngle', 'latitude', 'longitude']:
+                dset.attrs['MissingValue'] = FLOAT_ZERO
+                dset.attrs['_FillValue'] = FLOAT_ZERO
+                dset.attrs['Units'] = 'degrees'
+
+            elif dsName in ['rangeCoord', 'azimuthCoord']:
+                dset.attrs['MissingValue'] = FLOAT_ZERO
+                dset.attrs['_FillValue'] = FLOAT_ZERO
+                dset.attrs['Units'] = '1'
+
+            elif dsName in ['waterMask', 'shadowMask']:
+                dset.attrs['MissingValue'] = BOOL_ZERO
+                dset.attrs['_FillValue'] = BOOL_ZERO
+                dset.attrs['Units'] = '1'
+
+        # Write Attributes to the HDF File
+        print('write metadata to root level')
+        for key, value in iter(metadata.items()):
+            f.attrs[key] = value
+
     print(f'finished writing to {out_file}')
 
     return out_file

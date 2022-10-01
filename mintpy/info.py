@@ -64,25 +64,26 @@ def print_hdf5_structure(fname, max_meta_num=200):
         if len(atr) > 0:
             h5_str += attributes2string(atr, max_meta_num=max_meta_num)
 
-    f = h5py.File(fname, 'r')
-    # grab metadata in root level as it will be missed in hdf5_structure2string()
-    atr = dict(f.attrs)
-    if len(atr) > 0:
-        h5_str += 'Attributes in / level:\n'
-        h5_str += attributes2string(atr, max_meta_num=max_meta_num)+'\n'
+    with h5py.File(fname, 'r') as f:
 
-    # get maxDigit value
-    maxDigit = max(len(i) for i in f.keys())
-    maxDigit = max(20, maxDigit+1)
-    if atr.get('FILE_TYPE', 'timeseries') == 'HDFEOS':
-        maxDigit += 35
+        # grab metadata in root level as it will be missed in hdf5_structure2string()
+        atr = dict(f.attrs)
+        if len(atr) > 0:
+            h5_str += 'Attributes in / level:\n'
+            h5_str += attributes2string(atr, max_meta_num=max_meta_num)+'\n'
 
-    # get structure string
-    f.visititems(hdf5_structure2string)
-    f.close()
+        # get maxDigit value
+        maxDigit = max(len(i) for i in f.keys())
+        maxDigit = max(20, maxDigit+1)
+        if atr.get('FILE_TYPE', 'timeseries') == 'HDFEOS':
+            maxDigit += 35
+
+        # get structure string
+        f.visititems(hdf5_structure2string)
 
     # print string
     print(h5_str)
+
     return h5_str
 
 
