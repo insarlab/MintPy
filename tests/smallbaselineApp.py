@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 
 import mintpy.cli.view
+from mintpy.objects.progress import FileProgressObject
 
 CMAP_DICT = {
     'FernandinaSenDT128' : 'jet',
@@ -95,14 +96,16 @@ def test_smallbaselineApp(dset_name, test_dir, fresh_start=True, test_pyaps=Fals
     template_file = TEMPLATE_FILES[dset_idx]
 
     # download tar file
-    tar_file = os.path.basename(dset_url)
-    if not os.path.isfile(tar_file):
-        print('downloading tar file ...')
-        cmd = f'wget {dset_url}'
-        print(cmd)
-        os.system(cmd)
-    else:
+    tar_fbase = os.path.splitext(os.path.basename(dset_url))[0]
+    tar_files = [tar_fbase + x for x in ['.xz', '.gz'] if os.path.isfile(tar_fbase + x)]
+    if tar_files:
+        tar_file = tar_files[0]
         print('tar file exists, skip re-downloading.')
+    else:
+        tar_file = os.path.basename(dset_url)
+        cmd = f'wget {dset_url}'
+        print(f'downloading tar file ...\n{cmd}')
+        os.system(cmd)
 
     # uncompress tar file
     if not fresh_start and os.path.isdir(dset_name):
@@ -115,9 +118,10 @@ def test_smallbaselineApp(dset_name, test_dir, fresh_start=True, test_pyaps=Fals
 
         # uncompress tar file
         print(f'extracting content from tar file: {tar_file}')
-        tar = tarfile.open(tar_file)
+        tar = tarfile.open(fileobj=FileProgressObject(tar_file))
         tar.extractall()
         tar.close()
+        print('')
 
     # set working directory
     work_dir = os.path.join(test_dir, dset_name, 'mintpy')
