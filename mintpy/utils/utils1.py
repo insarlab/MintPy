@@ -77,10 +77,12 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 raise Exception(msg)
             else:
                 #print('removing a {} ramp from file: {}'.format(ramp_type, timeseries_resid_file))
-                deramped_file = run_deramp(timeseries_resid_file,
-                                           ramp_type=ramp_type,
-                                           mask_file=mask_file,
-                                           out_file=deramped_file)
+                deramped_file = run_deramp(
+                    timeseries_resid_file,
+                    ramp_type=ramp_type,
+                    mask_file=mask_file,
+                    out_file=deramped_file,
+                )
         print('calculating residual standard deviation for each epoch from file: '+deramped_file)
         std_file = timeseries(deramped_file).timeseries_std(maskFile=mask_file, outFile=std_file)
 
@@ -115,8 +117,9 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
         deramped_file = timeseries_resid_file
     else:
         deramped_file = f'{os.path.splitext(timeseries_resid_file)[0]}_ramp.h5'
-    rms_file = os.path.join(os.path.dirname(os.path.abspath(deramped_file)),
-                            f'rms_{os.path.splitext(deramped_file)[0]}.txt')
+    fdir = os.path.dirname(os.path.abspath(deramped_file))
+    fbase = os.path.splitext(os.path.basename(deramped_file))[0]
+    rms_file = os.path.join(fdir, f'rms_{fbase}.txt')
 
     # Get residual RMS text file
     if run_or_skip(out_file=rms_file, in_file=[deramped_file, mask_file], readable=False) == 'run':
@@ -127,10 +130,12 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 raise Exception(msg)
             else:
                 #print('remove {} ramp from file: {}'.format(ramp_type, timeseries_resid_file))
-                deramped_file = run_deramp(timeseries_resid_file,
-                                           ramp_type=ramp_type,
-                                           mask_file=mask_file,
-                                           out_file=deramped_file)
+                deramped_file = run_deramp(
+                    timeseries_resid_file,
+                    ramp_type=ramp_type,
+                    mask_file=mask_file,
+                    out_file=deramped_file,
+                )
 
         print('\ncalculating residual RMS for each epoch from file: '+deramped_file)
         rms_file = timeseries(deramped_file).timeseries_rms(
@@ -254,20 +259,26 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
     if k == 'ifgramStack':
         obj = ifgramStack(File)
         obj.open(print_msg=False)
-        meanList, dateList = obj.spatial_average(datasetName=datasetName,
-                                                 maskFile=maskFile,
-                                                 box=box,
-                                                 useMedian=useMedian,
-                                                 reverseMask=reverseMask,
-                                                 threshold=threshold)
+        meanList, dateList = obj.spatial_average(
+            datasetName=datasetName,
+            maskFile=maskFile,
+            box=box,
+            useMedian=useMedian,
+            reverseMask=reverseMask,
+            threshold=threshold,
+        )
         pbase = obj.pbaseIfgram
         tbase = obj.tbaseIfgram
         obj.close()
+
     elif k == 'timeseries':
-        meanList, dateList = timeseries(File).spatial_average(maskFile=maskFile,
-                                                              box=box,
-                                                              reverseMask=reverseMask,
-                                                              threshold=threshold)
+        meanList, dateList = timeseries(File).spatial_average(
+            maskFile=maskFile,
+            box=box,
+            reverseMask=reverseMask,
+            threshold=threshold,
+        )
+
     else:
         data = readfile.read(File, box=box)[0]
         if maskFile and os.path.isfile(maskFile):
@@ -550,41 +561,60 @@ def update_template_file(template_file, extra_dict, delimiter='='):
     return template_file
 
 
-def add_attribute(File, atr_new=dict(), print_msg=False):
-    """Add/update input attribute into File
-    Parameters: File - string, path/name of file
-                atr_new - dict, attributes to be added/updated
-                    if value is None, delete the item from input File attributes
-    Returns:    File - string, path/name of updated file
-    """
-    atr = readfile.read_attribute(File)
+def add_attribute(fname, atr_new=dict(), print_msg=False):
+    """Add/update input attribute of the give file.
 
-    # Compare new attributes with exsiting ones
+    Parameters: fname   - string, path/name of file
+                atr_new - dict, attributes to be added/updated
+                          if value is None, delete the item from input file attributes
+    Returns:    fname   - string, path/name of updated file
+    """
+    vprint = print if print_msg else lambda *args, **kwargs: None
+
+    # read existing attributes
+    atr = readfile.read_attribute(fname)
+    key_list = list(atr.keys())
+
+    # compare new attributes with exsiting ones
     update = update_attribute_or_not(atr_new, atr)
     if not update:
-        print('All updated (removed) attributes already exists (do not exists)'
-              ' and have the same value, skip update.')
-        return File
+        vprint('All updated (removed) attributes already exists (do not exists)'
+               ' and have the same value, skip update.')
+        return fname
 
-    # Update attributes in HDF5 file
-    with h5py.File(File, 'r+') as f:
+    # update attributes in the inpupt data file
+    fext = os.path.splitext(fname)[1]
+    if fext in ['.h5', '.he5']:
+        with h5py.File(fname, 'r+') as f:
+            for key, value in iter(atr_new.items()):
+
+                if value == 'None' or value is None:
+                    # delete the item for invalid input (None)
+                    if key in key_list:
+                        f.attrs.pop(key)
+                        vprint(f'remove {key}')
+                else:
+                    # update the item for valid input
+                    f.attrs[key] = str(value)
+                    vprint(f'{key} = {str(value)}')
+
+    else:
         for key, value in iter(atr_new.items()):
+
             if value == 'None' or value is None:
                 # delete the item for invalid input (None)
-                try:
-                    f.attrs.pop(key)
-                    if print_msg:
-                        print(f'remove {key}')
-                except:
-                    pass
-
+                if key in key_list:
+                    atr.pop(key)
+                    vprint(f'remove {key}')
             else:
                 # update the item for valid input
-                f.attrs[key] = str(value)
-                if print_msg:
-                    print(f'{key} = {str(value)}')
+                atr[key] = str(value)
+                vprint(f'{key} = {str(value)}')
 
-    return File
+        # write to RSC file
+        writefile.write_roipac_rsc(atr, fname+'.rsc', print_msg=print_msg)
+
+    return fname
 
 
 def check_file_size(fname_list, mode_width=None, mode_length=None):
