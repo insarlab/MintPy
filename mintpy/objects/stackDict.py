@@ -719,14 +719,25 @@ class geometryDict:
                         print(f'    scale value of {dsName:<15} by 1/{ystep} due to multilooking')
                         data /= ystep
 
-                    elif dsName == 'incidenceAngle':
-                        # HyP3 (Gamma) incidence angle file 'theta' is measure from horizontal in radians
+                    elif dsName in ['incidenceAngle', 'azimuthAngle']:
+                        # HyP3 (Gamma) angle of the line-of-sight vector (from ground to SAR platform)
+                        # incidence angle 'theta' is measured from horizontal in radians
+                        # azimuth   angle 'phi'   is measured from the east with anti-clockwise as positivve in radians
                         atr = readfile.read_attribute(self.file)
-                        if (atr.get('PROCESSOR', 'isce') == 'hyp3'
-                                and atr.get('UNIT', 'degrees').startswith('rad')):
-                            print(('    convert {:<15} from Gamma (from horizontal in radian) to '
-                                  'MintPy (from vertical in degree) convention.').format(dsName))
-                            data = 90. - (data * 180. / np.pi)
+                        if (atr.get('PROCESSOR', 'isce') == 'hyp3' and atr.get('UNIT', 'degrees').startswith('rad')):
+
+                            if dsName == 'incidenceAngle':
+                                msg = f'    convert {dsName:<15} from Gamma (from horizontal in radian) '
+                                msg += ' to MintPy (from vertical in degree) convention.'
+                                print(msg)
+                                data = 90. - (data * 180. / np.pi)
+
+                            elif dsName == 'azimuthAngle':
+                                msg = f'    convert {dsName:<15} from Gamma (from east in radian) '
+                                msg += ' to MintPy (from north in degree) convention.'
+                                print(msg)
+                                data = data * 180. / np.pi - 90.
+                                data = ut.wrap(data, wrap_range=[-180, 180])
 
                     # write
                     ds = f.create_dataset(dsName,

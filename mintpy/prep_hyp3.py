@@ -85,9 +85,9 @@ def add_hyp3_metadata(fname,meta,is_ifg=True):
         meta['RANGE_PIXEL_SIZE'] = sensor.SEN['range_pixel_size'] * int(meta['RLOOKS'])
         meta['AZIMUTH_PIXEL_SIZE'] = sensor.SEN['azimuth_pixel_size'] * int(meta['ALOOKS'])
 
-    # note: HyP3 (incidence) angle datasets are in the unit of radian
+    # note: HyP3 (incidence, azimuth) angle datasets are in the unit of radian
     # which is different from the isce-2 convention of degree
-    if 'lv_theta' in os.path.basename(fname):
+    if any(x in os.path.basename(fname) for x in ['lv_theta', 'lv_phi']):
         meta['UNIT'] = 'radian'
 
     # add metadata that is only relevant to interferogram files
