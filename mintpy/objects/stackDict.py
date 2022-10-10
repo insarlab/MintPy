@@ -724,7 +724,7 @@ class geometryDict:
                         # incidence angle 'theta' is measured from horizontal in radians
                         # azimuth   angle 'phi'   is measured from the east with anti-clockwise as positivve in radians
                         atr = readfile.read_attribute(self.file)
-                        if (atr.get('PROCESSOR', 'isce') == 'hyp3' and atr.get('UNIT', 'degrees').startswith('rad')):
+                        if atr.get('PROCESSOR', 'isce') == 'hyp3' and atr.get('UNIT', 'degrees').startswith('rad'):
 
                             if dsName == 'incidenceAngle':
                                 msg = f'    convert {dsName:<15} from Gamma (from horizontal in radian) '
