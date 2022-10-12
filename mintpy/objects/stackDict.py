@@ -736,8 +736,9 @@ class geometryDict:
                                 msg = f'    convert {dsName:<15} from Gamma (from east in radian) '
                                 msg += ' to MintPy (from north in degree) convention.'
                                 print(msg)
-                                data = data * 180. / np.pi - 90.
-                                data = ut.wrap(data, wrap_range=[-180, 180])
+                                data[data == 0] = np.nan                        # convert no-data-value from 0 to nan
+                                data = data * 180. / np.pi - 90.                # hyp3/gamma to mintpy/isce2 convention
+                                data = ut.wrap(data, wrap_range=[-180, 180])    # rewrap within -180 to 180
 
                     # write
                     ds = f.create_dataset(dsName,
