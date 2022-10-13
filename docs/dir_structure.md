@@ -395,6 +395,7 @@ $DATA_DIR/RidgecrestSenDT71
 │   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_corr_clip.tif
 │   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_dem_clip.tif
 │   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_lv_theta_clip.tif
+│   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_lv_phi_clip.tif
 │   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_unw_phase_clip.tif
 │   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43_water_mask_clip.tif
 │   │   ├── S1AA_20190622T135157_20190704T135158_VVP012_INT80_G_ueF_4C43.txt
@@ -419,6 +420,7 @@ mintpy.load.corFile          = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*corr_clip.tif
 ##---------geometry datasets:
 mintpy.load.demFile          = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*dem_clip.tif
 mintpy.load.incAngleFile     = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*lv_theta_clip.tif
+mintpy.load.azAngleFile      = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*lv_phi_clip.tif
 mintpy.load.waterMaskFile    = $DATA_DIR/RidgecrestSenDT71/hyp3/*/*water_mask_clip.tif
 ```
 
