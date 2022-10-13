@@ -483,7 +483,8 @@ class geometryDict:
                 atr = readfile.read_attribute(self.file)
                 if atr.get('PROCESSOR', 'isce') == 'hyp3' and atr.get('UNIT', 'degrees').startswith('rad'):
                     print('    convert incidence angle from Gamma to MintPy convention.')
-                    inc_angle = 90. - (inc_angle * 180. / np.pi)
+                    inc_angle[inc_angle == 0] = np.nan              # convert the no-data-value from 0 to nan
+                    inc_angle = 90. - (inc_angle * 180. / np.pi)    # hyp3/gamma to mintpy/isce2 convention
                 # inc angle -> slant range distance
                 data = ut.incidence_angle2slant_range_distance(self.extraMetadata, inc_angle)
 
@@ -730,7 +731,8 @@ class geometryDict:
                                 msg = f'    convert {dsName:<15} from Gamma (from horizontal in radian) '
                                 msg += ' to MintPy (from vertical in degree) convention.'
                                 print(msg)
-                                data = 90. - (data * 180. / np.pi)
+                                data[data == 0] = np.nan                        # convert no-data-value from 0 to nan
+                                data = 90. - (data * 180. / np.pi)              # hyp3/gamma to mintpy/isce2 convention
 
                             elif dsName == 'azimuthAngle':
                                 msg = f'    convert {dsName:<15} from Gamma (from east in radian) '
