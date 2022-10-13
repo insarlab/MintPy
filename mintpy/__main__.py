@@ -550,10 +550,7 @@ def get_parser():
     get_dem_error_parser(sp)
     get_iono_tec_parser(sp)
     get_local_oscilator_drift_parser(sp)
-    try:
-        get_plate_motion_parser(sp)
-    except ImportError:
-        pass
+    get_plate_motion_parser(sp)
     get_remove_ramp_parser(sp)
     get_s1ab_range_bias_parser(sp)
     get_solid_earth_tides_parser(sp)

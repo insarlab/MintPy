@@ -15,7 +15,6 @@
 #   + [Transformations between ECEF and ENU coordinates](https://gssc.esa.int/navipedia/index.php/Transformations_between_ECEF_and_ENU_coordinates)
 
 
-
 import collections
 import sys
 

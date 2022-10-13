@@ -80,7 +80,6 @@ setup(
         "gbis": ["geoid"],                          # not available on pypi
         "isce": ["isce"],                           # not available on pypi
         "kite": ["kite"],
-        "platemotion": ["platemotion", "astropy"],  # will be removed in the coming new version of plate motion script
         "all": [
             "cli",
             "extra",
