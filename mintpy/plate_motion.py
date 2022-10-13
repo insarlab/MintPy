@@ -3,7 +3,8 @@
 # Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi         #
 # Author: Yuan-Kai Liu, Zhang Yunjun, May 2022             #
 ############################################################
-#
+# Recommend usage:
+#   from mintpy import plate_motion as pmm
 #
 # To-Do List (updated 2022.10.12 Yuan-Kai Liu):
 #   + Potentially, we can make built-in PMM tables/dictionaries for easier user string input of the plate name
@@ -16,17 +17,15 @@
 
 
 import collections
+import sys
 
 import numpy as np
+import pyproj
 from skimage.transform import resize
 
 from mintpy.diff import diff_file
 from mintpy.objects.resample import resample
 from mintpy.utils import readfile, utils as ut, writefile
-
-import sys
-import pyproj
-
 
 # ITRF2014-PMM defined in Altamimi et al. (2017)
 # units:
@@ -92,11 +91,11 @@ def calc_plate_motion(geom_file, omega_cart=None, omega_sph=None, const_vel_enu=
         lons_flt = lons.flatten()
         if omega_cart is not None:
             au = 'mas/yr' # angular velo unit
-            print('input omega_cartesian in [wx, wy, wz]: {:} ({:})'.format(omega_cart, au))
+            print(f'input omega_cartesian in [wx, wy, wz]: {omega_cart} ({au})')
             Omega = set_Omega(omega_cart, coord='cartesian', unit=au)
         else:
             au = 'deg/Ma' # angular velo unit
-            print('input omega_spherical in [lat, lon, w]: {:} (deg, deg, {:})'.format(omega_sph, au))
+            print(f'input omega_spherical in [lat, lon, w]: {omega_sph} (deg, deg, {au})')
             Omega = set_Omega(omega_sph, coord='spherical', unit=au)
 
         V_enu = Omega2Venu(Omega, lats_flt, lons_flt, alts=0.0, ellps=False)[0]
@@ -300,7 +299,7 @@ def T_enu2cart(lats, lons):
         sys.exit(1)
     else:
         npts = len(lats)
-        print('{} points'.format(npts))
+        print(f'{npts} points')
         Te = np.vstack((-np.sin(lons), -np.cos(lons)*np.sin(lats), np.cos(lons)*np.cos(lats))).T
         Tn = np.vstack((np.cos(lons), -np.sin(lons)*np.sin(lats), np.sin(lons)*np.cos(lats))).T
         Tu = np.vstack((np.zeros(npts), np.cos(lats), np.sin(lats))).T
@@ -365,13 +364,13 @@ def set_Omega(pole, coord='cartesian', unit='mas/yr'):
     print('\n---------------- Full Euler Pole description ---------------')
     print('Euler Pole')
     print(' (1) In spherical expression:')
-    print('   Pole Latitude : {:10.4f} DEG'.format(plat))
-    print('   Pole Longitude: {:10.4f} DEG'.format(plon))
-    print('   Rotation rate : {:10.4f} DEG/MA    {:10.4f} MAS/Y'.format(omega*MASY2DMY, omega))
+    print(f'   Pole Latitude : {plat:10.4f} DEG')
+    print(f'   Pole Longitude: {plon:10.4f} DEG')
+    print(f'   Rotation rate : {omega*MASY2DMY:10.4f} DEG/MA    {omega:10.4f} MAS/Y')
     print(' (2) In Cartesian expression (angular velocity vector):')
-    print('   wx:             {:10.4f} DEG/MA    {:10.4f} MAS/Y'.format(Omega[0]*MASY2DMY, Omega[0]))
-    print('   wy:             {:10.4f} DEG/MA    {:10.4f} MAS/Y'.format(Omega[1]*MASY2DMY, Omega[1]))
-    print('   wz:             {:10.4f} DEG/MA    {:10.4f} MAS/Y'.format(Omega[2]*MASY2DMY, Omega[2]))
+    print(f'   wx:             {Omega[0]*MASY2DMY:10.4f} DEG/MA    {Omega[0]:10.4f} MAS/Y')
+    print(f'   wy:             {Omega[1]*MASY2DMY:10.4f} DEG/MA    {Omega[1]:10.4f} MAS/Y')
+    print(f'   wz:             {Omega[2]*MASY2DMY:10.4f} DEG/MA    {Omega[2]:10.4f} MAS/Y')
     print('------------------------------------------------------------\n')
     return Omega
 
@@ -394,13 +393,13 @@ def Omega2Venu(Omega, lats, lons, alts=0.0, ellps=False):
         npts = len(lats)
     elif isinstance(lats, (int, float)):
         npts = 1
-    print('number of points to compute: {}'.format(npts))
+    print(f'number of points to compute: {npts}')
 
 
     ## Local coordinates handling for location(s) of interest
     if not ellps:
         # a perfect sphere
-        print('Assume a perfect spherical Earth, radius: {} km'.format(EARTH_RADIUS))
+        print(f'Assume a perfect spherical Earth, radius: {EARTH_RADIUS} km')
         locs_xyz = sph2cart(lats, lons, EARTH_RADIUS)                    # unit is km
     else:
         # WGS84 ellips; only supports uniform altitude now, but can change later
