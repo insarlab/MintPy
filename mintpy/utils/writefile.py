@@ -168,6 +168,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None,
             meta['INTERLEAVE'] = 'BIL'
             if key_list != ['magnitude', 'phase']:
                 data_list = [data_list[0], data_list[0]]
+                meta['BANDS'] = 2
 
         elif fext in ['.cor', '.hgt']:
             meta['DATA_TYPE'] = 'float32'
