@@ -9,8 +9,10 @@
 
 
 import sys
-import pyproj
+
 import numpy as np
+import pyproj
+
 from mintpy.objects.constants import EARTH_RADIUS
 
 ################################################################################################
@@ -19,9 +21,9 @@ MAS2RAD      = np.pi/3600000/180    #  1 mas (milliarcsecond) = yy radian
 MASY2DMY     = 1e6 / 3600000        #  1 mas per year         = xx degree per million year
 
 
-## Euler pole class object
+## Define the Euler pole class
 
-class EulerPole(object):
+class EulerPole:
 
     def __init__(self, pole, coord='cartesian', unit='mas/yr'):
         """Initialize the Euler pole
@@ -159,13 +161,6 @@ class EulerPole(object):
                     vy    -      ECEF y linear velocity             [meter/year]
                     vz    -      ECEF z linear velocity             [meter/year]
         """
-        ## report how many points of interest
-        if isinstance(lat, (list, tuple, np.ndarray)):
-            npts = len(lat)
-        elif isinstance(lat, (int, float)):
-            npts = 1
-        print(f'number of points to compute: {npts}')
-
         ## Local coordinates handling for location(s) of interest
         if not ellps:
             # a perfect sphere
@@ -244,7 +239,7 @@ def rotate_coord_cart2enu(lat, lon, x, y, z, reverse=False):
                 n       - 1D np.ndarray, north component
                 u       - 1D np.ndarray, up    component
     """
-    lat, lon = check_lalo(lat, lon)
+    lat, lon = check_lalo(lat, lon, print_msg=True)
     lat = np.deg2rad(lat)
     lon = np.deg2rad(lon)
 
@@ -306,13 +301,22 @@ def azimuth(east, north):
     return azi
 
 
-def check_lalo(lat, lon):
+def check_lalo(lat, lon, print_msg=False):
     """ ensure numpy array format
     """
     if isinstance(lat, (list, tuple, np.ndarray)):
         lat = np.array(lat).flatten()
         lon = np.array(lon).flatten()
+        nla, nlo = lat.size, lon.size
 
-        if not lat.size == lon.size:
-            raise ValueError(f'Inconsistent size between input lat ({lat.size}) and lon ({lon.size})!')
+        if not nla == nlo:
+            raise ValueError(f'Inconsistent size between input lat ({nla}) and lon ({nlo})!')
+
+    elif isinstance(lat, (int, float)):
+        nla, nlo = 1, 1
+
+    if print_msg:
+        ## report how many points of interest
+        print(f'number of points to compute: {nla}')
+
     return lat, lon

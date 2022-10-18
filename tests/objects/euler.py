@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Author: Yuan-Kai Liu, Oct 2022
-"""Test mintpy.objects.euler module for the Euler pole and linear velocity computation."""
+"""Test mintpy.objects.euler module for the Euler pole and velocity computation."""
 
 ############################################################
 # Program is part of MintPy                                #
@@ -13,7 +13,6 @@ import pandas as pd
 
 from mintpy.objects.euler import EulerPole
 from mintpy.plate_motion import ITRF2014_PMM
-
 
 # Read the Poles
 pmm = pd.DataFrame.from_dict(data=ITRF2014_PMM, orient='index')
