@@ -62,6 +62,7 @@ setup(
         "lxml",
         "matplotlib",
         "numpy",
+        "pre-commit",  # for developers
         "pyaps3>=0.3",
         "pykml>=0.2",
         "pyproj",

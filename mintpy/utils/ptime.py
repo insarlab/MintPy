@@ -337,6 +337,8 @@ def read_date_txt(date_file):
         # read text file
         with open(date_file) as f:
             date_list = f.read().splitlines()
+        # ignore invalid lines, e.g. empty
+        date_list = [x for x in date_list if x]
 
         # format
         date_list = sorted(yyyymmdd(date_list))
