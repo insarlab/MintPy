@@ -1308,7 +1308,7 @@ def read_template(fname, delimiter='=', skip_chars=None):
             # skip certain characters by replacing them with empty str
             if skip_chars:
                 for skip_char in skip_chars:
-                    value.replace(skip_char, '')
+                    value = value.replace(skip_char, '')
 
             if value != '':
                 template[key] = value
