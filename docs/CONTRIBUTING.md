@@ -35,7 +35,9 @@ is a great starting point if you are new to version control.
    - `upstream`, which refers to the `insarlab` repository
    - `origin`, which refers to your personal fork
 
-+ Run `pre-commit install` to set up the git hook scripts, so that `pre-commit` will run automatically on git commit ([https://pre-commit.com/](https://pre-commit.com/)).
++ Setting up `pre-commit` within `MintPy` directory:
+   - Run `pre-commit sample-config` to generate a very basic configuration (`.pre-commit-config.yaml`).
+   - Run `pre-commit install` to set up the git hook scripts, so that `pre-commit` will run automatically on git commit ([https://pre-commit.com/](https://pre-commit.com/)).
 
 #### 2. Develop your contribution: ####
 
