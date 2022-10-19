@@ -10,11 +10,13 @@ cvxopt
 dask>=1.0
 dask-jobqueue>=0.3
 defusedxml
+# gdal>=3     # for ISCE, ARIA, FRInGE, HyP3, GMTSAR users
 h5py
 joblib
 lxml
 matplotlib
 numpy
+pre-commit    # for developers
 pyaps3>=0.3
 pykml>=0.2
 pyproj
@@ -23,5 +25,3 @@ pysolid
 rich
 scikit-image
 scipy
-# for ISCE, ARIA, FRInGE, HyP3, GMTSAR
-# gdal>=3

@@ -35,6 +35,8 @@ is a great starting point if you are new to version control.
    - `upstream`, which refers to the `insarlab` repository
    - `origin`, which refers to your personal fork
 
++ Run `pre-commit install` to set up the git hook scripts, so that `pre-commit` will run automatically on git commit ([https://pre-commit.com/](https://pre-commit.com/)).
+
 #### 2. Develop your contribution: ####
 
 + **Open an [issue](https://github.com/insarlab/MintPy/issues) first** if you plan to introduce a new feature or to change funcationality, we may have easier ways to help you implement it. If there is already an issue that matches your idea, leave a comment there instead to let us know what you plan to do. For bug fixes, documentation updates, etc., this is generally not necessary.
