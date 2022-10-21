@@ -46,7 +46,10 @@ def read_data(inps):
     k = atr['FILE_TYPE']
     if k == 'velocity':
         # read/prepare data
-        data = readfile.read(inps.file)[0]
+        if inps.dset is None:
+            data = readfile.read(inps.file)[0]
+        else:
+            data = readfile.read(inps.file, datasetName = inps.dset)[0]
 
         # velocity to displacement
         print('convert velocity to displacement for {}'.format(atr['DATE12']))
