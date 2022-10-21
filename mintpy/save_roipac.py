@@ -52,10 +52,10 @@ def read_data(inps):
             data = readfile.read(inps.file, datasetName = inps.dset)[0]
 
         # velocity to displacement
-        print('convert velocity to displacement for {}'.format(atr['DATE12']))
-        date1, date2 = atr['DATE12'].split('_')
-        dt1, dt2 = ptime.date_list2vector([date1, date2])[0]
-        data *= (dt2 - dt1).days / 365.25
+        #print('convert velocity to displacement for {}'.format(atr['DATE12']))
+        #date1, date2 = atr['DATE12'].split('_')
+        #dt1, dt2 = ptime.date_list2vector([date1, date2])[0]
+        #data *= (dt2 - dt1).days / 365.25
 
         # displacement to phase
         print('convert displacement to phase in radian')
