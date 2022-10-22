@@ -196,8 +196,8 @@ def get_date12_to_drop(inps):
         date12_to_drop += tempList
         print('--------------------------------------------------')
         print(f'Drop ifgrams with the following index number: {len(tempList)}')
-        for i, date12 in enumerate(tempList):
-            print(f'{i} : {date12}')
+        for ifg_idx, date12 in zip(inps.excludeIfgIndex, tempList):
+            print(f'{ifg_idx} : {date12}')
 
     # excludeDate
     if inps.excludeDate:

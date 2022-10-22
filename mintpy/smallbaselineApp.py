@@ -128,9 +128,10 @@ class TimeSeriesAnalysis:
             os.makedirs(backup_dir, exist_ok=True)
 
             # back up to the directory
-            for tfile in [self.customTemplateFile, self.templateFile]:
+            tfiles = [x for x in [self.customTemplateFile, self.templateFile] if x]
+            for tfile in tfiles:
                 out_file = os.path.join(backup_dir, os.path.basename(tfile))
-                if tfile and ut.run_or_skip(out_file, in_file=tfile, readable=False, print_msg=False) == 'run':
+                if ut.run_or_skip(out_file, in_file=tfile, readable=False, print_msg=False) == 'run':
                     shutil.copy2(tfile, backup_dir)
                     print('copy {f:<{l}} to {d:<8} directory for backup.'.format(
                         f=os.path.basename(tfile), l=flen, d=os.path.basename(backup_dir)))
