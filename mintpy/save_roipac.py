@@ -44,18 +44,21 @@ def read_data(inps):
     # various file types
     print(f'read {inps.dset} from file {inps.file}')
     k = atr['FILE_TYPE']
-    if k == 'velocity':
+        if k == 'velocity':
         # read/prepare data
-        if inps.dset is None:
+        if inps.dset == None:
+            inps.dset = 'velocity'
+            print('No selected datset, assuming chosen dataset is velocity')
+        if inps.dset == 'velocity':
             data = readfile.read(inps.file)[0]
+            # velocity to displacement
+            print('convert velocity to displacement for {}'.format(atr['DATE12']))
+            date1, date2 = atr['DATE12'].split('_')
+            dt1, dt2 = ptime.date_list2vector([date1, date2])[0]
+            data *= (dt2 - dt1).days / 365.25
+            
         else:
             data = readfile.read(inps.file, datasetName = inps.dset)[0]
-
-        # velocity to displacement
-        #print('convert velocity to displacement for {}'.format(atr['DATE12']))
-        #date1, date2 = atr['DATE12'].split('_')
-        #dt1, dt2 = ptime.date_list2vector([date1, date2])[0]
-        #data *= (dt2 - dt1).days / 365.25
 
         # displacement to phase
         print('convert displacement to phase in radian')
